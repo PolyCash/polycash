@@ -374,10 +374,18 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 			}
 			else if ($explore_mode == "transactions") {
 				echo "<h3>EmpireCoin Transaction: ".$transaction['tx_hash']."</h3>\n";
-				$block_index = block_id_to_round_index($transaction['block_id']);
-				$round_id = block_to_round($transaction['block_id']);
+				if ($transaction['block_id'] > 0) {
+					$block_index = block_id_to_round_index($transaction['block_id']);
+					$round_id = block_to_round($transaction['block_id']);
+					$label_txt = "Confirmed in the <a href=\"/explorer/blocks/".$transaction['block_id']."\">".date("jS", strtotime("1/".$block_index."/2015"))." block</a> of <a href=\"/explorer/rounds/".$round_id."\">round ".$round_id."</a>";
+				}
+				else {
+					$block_index = false;
+					$round_id = false;
+					$label_txt = "This transaction is not yet confirmed.";
+				}
 				echo '<div style="border-bottom: 1px solid #bbb;">';
-				echo render_transaction($transaction, false, "Confirmed in the <a href=\"/explorer/blocks/".$transaction['block_id']."\">".date("jS", strtotime("1/".$block_index."/2015"))." block</a> of <a href=\"/explorer/rounds/".$round_id."\">round ".$round_id."</a>");
+				echo render_transaction($transaction, false, $label_txt);
 				echo "</div>\n";
 				echo "<br/><br/>\n";
 			}

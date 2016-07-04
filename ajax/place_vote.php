@@ -82,7 +82,11 @@ if ($thisuser) {
 			$transaction_id = new_webwallet_multi_transaction($game, $nation_ids, $amounts, $thisuser['user_id'], $thisuser['user_id'], false, 'transaction', $io_ids, false, false);
 			
 			if ($transaction_id) {
-				echo "0=====Your voting transaction has been submitted!";
+				$q = "SELECT * FROM webwallet_transactions WHERE transaction_id='".$transaction_id."';";
+				$r = run_query($q);
+				$transaction = mysql_fetch_array($r);
+
+				echo "0=====Your voting transaction has been submitted! <a href=\"/explorer/transactions/".$transaction['tx_hash']."\">Details</a>";
 			}
 			else {
 				echo "7=====Error, the transaction was canceled.";

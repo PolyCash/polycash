@@ -9,6 +9,8 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$r = run_query($q);
 	$game = mysql_fetch_array($r);
 	
+	echo "Running for ".$game['name']."<br/>\n";
+	
 	if ($GLOBALS['always_generate_coins']) {
 		$q = "SELECT * FROM blocks WHERE game_id='".$game['game_id']."' ORDER BY block_id DESC LIMIT 1;";
 		$r = run_query($q);

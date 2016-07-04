@@ -836,9 +836,11 @@ function new_webwallet_multi_transaction($game, $nation_ids, $amounts, $from_use
 			if ($game['game_type'] == "real") {
 				require_once($GLOBALS['install_path']."/includes/jsonRPCClient.php");
 				$empirecoin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
-				echo "<pre>";
 				try {
-					$real_transaction = $empirecoin_rpc->createrawtransaction($raw_txin, $raw_txout);
+					$raw_transaction = $empirecoin_rpc->createrawtransaction($raw_txin, $raw_txout);
+					$real_transaction = $empirecoin_rpc->decoderawtransaction($raw_transaction);
+					$q = "UPDATE webwallet_transactions SET tx_hash='".$real_transaction['txid']."' WHERE transaction_id='".$transaction_id."';";
+					$r = run_query($q);
 				} catch (Exception $e) {
 					$rpc_error = true;
 					cancel_transaction($transaction_id, $affected_input_ids, $created_input_ids);
