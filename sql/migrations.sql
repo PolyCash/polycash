@@ -74,3 +74,14 @@ ALTER TABLE `voting_options` CHANGE `address_character` `voting_character` VARCH
 UPDATE voting_options vo JOIN game_voting_options gvo ON vo.voting_option_id=gvo.voting_option_id SET gvo.voting_character=vo.voting_character;
 ALTER TABLE `games` CHANGE `creator_game_index` `creator_game_index` INT( 11 ) NULL DEFAULT NULL;
 ALTER TABLE `transactions` DROP INDEX `tx_hash`, ADD UNIQUE `tx_hash` (`tx_hash`) USING BTREE;
+INSERT INTO `images` (`image_id`, `access_key`, `extension`) VALUES
+(17, 'oRBJ38hs92l2Akjn', 'jpg'),
+(18, 'jBXvINRIJ9hLFJyT', 'jpg'),
+(19, 'Ngx8grW3QAoSKgIb', 'jpg'),
+(20, 'OKuBHiGc3fGTUcfW', 'jpg'),
+(21, 'qahuGE8QCWFWmmKx', 'jpg'),
+(22, 'LKavHWaVm7q3xs1Q', 'jpg'),
+(23, 'LTNuN3iVNskbr97D', 'jpg'),
+(24, '5yOJY1mQKHxhP127', 'jpg');
+UPDATE voting_options SET default_image_id=voting_option_id WHERE voting_option_id > 16 AND voting_option_id <= 24;
+UPDATE game_voting_options gvo JOIN voting_options vo ON vo.voting_option_id=gvo.voting_option_id SET gvo.image_id=vo.default_image_id WHERE vo.voting_option_id > 16 AND vo.voting_option_id <= 24;

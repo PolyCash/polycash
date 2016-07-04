@@ -224,14 +224,15 @@ class Game {
 			$pct_votes = 100*(floor(1000*$option_score/$score_sum)/1000);
 			
 			$sq_px = $pct_votes*$sq_px_per_pct_point;
-			$box_diam = round(sqrt($sq_px)) + $min_px_diam;
+			$box_diam = round(sqrt($sq_px));
+			if ($box_diam < $min_px_diam) $box_diam = $min_px_diam;
 			
 			$html .= '
 			<div class="vote_option_box_container">
 				<div class="vote_option_label';
 				if ($option_score > $max_score_sum) $html .=  " redtext";
 				else if ($winner_option_id == $round_stats[$i]['option_id']) $html .=  " greentext";
-				$html .= '">'.$round_stats[$i]['name'].' ('.$pct_votes.'%)</div>
+				$html .= '" onclick="option_selected('.$i.'); start_vote('.$round_stats[$i]['option_id'].');">'.$round_stats[$i]['name'].' ('.$pct_votes.'%)</div>
 				<div class="stage vote_option_box_holder" style="height: '.$box_diam.'px; width: '.$box_diam.'px;">
 					<div class="ball vote_option_box"';
 					if ($round_stats[$i]['image_id'] > 0) $html .= ' style="background-image: url(\'/img/custom/'.$round_stats[$i]['image_id'].'_'.$round_stats[$i]['access_key'].'.'.$round_stats[$i]['extension'].'\');"';
