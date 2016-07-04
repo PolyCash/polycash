@@ -153,6 +153,8 @@ var last_block_id = <?php echo $last_block_id; ?>;
 var last_transaction_id = <?php echo last_transaction_id(get_site_constant('primary_game_id')); ?>;
 var my_last_transaction_id = <?php echo my_last_transaction_id($thisuser['user_id'], $thisuser['game_id']); ?>;
 var mature_io_ids_csv = '<?php echo mature_io_ids_csv($thisuser['user_id'], $thisuser['game_id']); ?>';
+var game_loop_index = 1;
+var last_game_loop_index_applied = -1;
 
 var refresh_page = "home";
 var refresh_in_progress = false;

@@ -3,6 +3,8 @@ include("../includes/connect.php");
 include("../includes/get_session.php");
 
 if ($thisuser || $_REQUEST['refresh_page'] == "home") {
+	$game_loop_index = intval($_REQUEST['game_loop_index']);
+	
 	if ($thisuser) {
 		set_user_active($thisuser['user_id']);
 		$game_id = $thisuser['game_id'];
@@ -37,16 +39,21 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	$mature_balance = $account_value - $immature_balance;
 	
 	$output = false;
+	$output['game_loop_index'] = $game_loop_index;
 	
 	if ($last_block_id != $_REQUEST['last_block_id']) {
 		$performance_history_sections = intval($_REQUEST['performance_history_sections']);
 		$output['new_block'] = 1;
 		$output['last_block_id'] = $last_block_id;
 		
-		if ($_REQUEST['refresh_page'] == "wallet" && $last_block_id%10 == 0) {
+		$last_round_seen = block_to_round($_REQUEST['last_block_id']);
+		
+		if ($_REQUEST['refresh_page'] == "wallet" && $current_round != $last_round_seen) {
+			$output['new_performance_history'] = 1;
 			$output['performance_history'] = performance_history($thisuser, $current_round-(10*$performance_history_sections), $current_round-1);
 			$output['performance_history_start_round'] = $current_round-(10*$performance_history_sections);
 		}
+		else $output['new_performance_history'] = 0;
 	}
 	else $output['new_block'] = 0;
 	

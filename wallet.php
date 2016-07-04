@@ -318,6 +318,8 @@ $mature_balance = $account_value - $immature_balance;
 		var refresh_in_progress = false;
 		var last_refresh_time = 0;
 		var payout_weight = '<?php echo $game['payout_weight']; ?>';
+		var game_loop_index = 1;
+		var last_game_loop_index_applied = -1;
 		
 		var selected_nation_id = false;
 		
@@ -327,7 +329,6 @@ $mature_balance = $account_value - $immature_balance;
 		var initial_alias_pref = "<?php echo $thisuser['alias_preference']; ?>";
 		var initial_alias = "<?php echo $thisuser['alias']; ?>";
 		var started_checking_alias_settings = false;
-		
 		var performance_history_sections = 1;
 		var performance_history_start_round = <?php echo max(1, $current_round-10); ?>;
 		var performance_history_loading = false;

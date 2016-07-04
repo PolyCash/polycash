@@ -67,7 +67,7 @@ if ($thisuser) {
 	}
 	else {
 		if ($amount_sum <= $mature_balance && $amount_sum > 0) {
-			$transaction_id = new_webwallet_multi_transaction($thisuser['game_id'], $nation_ids, $amounts, $thisuser['user_id'], $last_block_id+1, 'transaction', $io_ids);
+			$transaction_id = new_webwallet_multi_transaction($thisuser['game_id'], $nation_ids, $amounts, $thisuser['user_id'], $thisuser['user_id'], $last_block_id+1, 'transaction', $io_ids, false);
 			
 			if ($transaction_id) {
 				echo "0=====Your voting transaction has been submitted!";

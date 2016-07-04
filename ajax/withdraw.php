@@ -25,7 +25,7 @@ if ($thisuser) {
 			if (mysql_numrows($r) == 1) {
 				$address = mysql_fetch_array($r);
 				
-				$transaction_id = new_webwallet_multi_transaction($game['game_id'], array($address['nation_id']), array($amount), $thisuser['user_id'], $mining_block_id, 'transaction', false);
+				$transaction_id = new_webwallet_multi_transaction($game['game_id'], false, array($amount), $thisuser['user_id'], $address['user_id'], $mining_block_id, 'transaction', false, array($address['address_id']));
 				
 				$output_obj['result_code'] = 5;
 				$output_obj['message'] = "Great, your coins have been sent!";
