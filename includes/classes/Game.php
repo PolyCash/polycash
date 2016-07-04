@@ -360,7 +360,7 @@ class Game {
 					if ($payback_address) {
 						$qq = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, game_id='".$this->db_game['game_id']."', user_id='".$payback_address['user_id']."', address_id='".$payback_address['address_id']."'";
 						if ($payback_address['option_id'] > 0) $qq .= ", option_id=".$payback_address['option_id'];
-						$qq .= ", create_transaction_id='".$transaction_id."', amount='".$win_amount."', create_block_id='".($mining_block_id-1)."';";
+						$qq .= ", create_transaction_id='".$transaction_id."', amount='".$win_amount."', create_block_id='".($mining_block_id-1)."', create_round_id='".$this->block_to_round($mining_block_id-1)."';";
 						$rr = $this->app->run_query($qq);
 						$output_id = $this->app->last_insert_id();
 						
@@ -609,6 +609,13 @@ class Game {
 						return true;
 					}
 					catch (Exception $e) {
+						var_dump($raw_txin);
+						echo "<br/><br/>\n\n";
+						var_dump($raw_txout);
+						echo "<br/><br/>\n\n";
+						var_dump($decoded_transaction);
+						echo "<br/><br/>\n\n";
+						var_dump($e);
 						return false;
 					}
 				}
@@ -849,21 +856,6 @@ class Game {
 			</div>';
 		}
 		return $html;
-	}
-
-	public function delete_unconfirmable_transactions() {
-		/*$q = "SELECT * FROM transactions WHERE transaction_desc='transaction' AND game_id='".$this->db_game['game_id']."' AND block_id IS NULL;";
-		$r = $this->app->run_query($q);
-		while ($transaction = $r->fetch()) {
-			$coins_in = $this->app->transaction_coins_in($transaction['transaction_id']);
-			$coins_out = $this->app->transaction_coins_out($transaction['transaction_id']);
-			if ($coins_out > $coins_in || $coins_out == 0) {
-				$qq = "DELETE t.*, io.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.transaction_id='".$transaction['transaction_id']."';";
-				$rr = $this->app->run_query($qq);
-				$qq = "UPDATE transaction_ios SET spend_transaction_id=NULL WHERE spend_transaction_id='".$transaction['transaction_id']."';";
-				$rr = $this->app->run_query($qq);
-			}
-		}*/
 	}
 
 	public function new_block() {
@@ -2358,6 +2350,8 @@ class Game {
 			
 			$html .= $block_height." ";
 
+			$transaction_rpcs = false;
+			
 			// Transactions are sequentially looped through twice
 			// This is the first loop, it creates all transactions. The 2nd verifies & deletes invalid TXs
 			for ($i=0; $i<count($lastblock_rpc['tx']); $i++) {
@@ -2368,55 +2362,52 @@ class Game {
 				
 				if ($r->rowCount() > 0) {
 					$unconfirmed_tx = $r->fetch();
-					$q = "UPDATE transactions SET block_id='".$block_height."', round_id='".$this->block_to_round($block_height)."' WHERE transaction_id='".$unconfirmed_tx['transaction_id']."';";
-					$r = $this->app->run_query($q);
-					$q = "UPDATE transaction_ios SET spend_status='unspent', create_block_id='".$block_height."' WHERE create_transaction_id='".$unconfirmed_tx['transaction_id']."';";
-					$r = $this->app->run_query($q);
-					$q = "UPDATE transaction_ios SET spend_status='spent', spend_block_id='".$block_height."' WHERE spend_transaction_id='".$unconfirmed_tx['transaction_id']."';";
+					
+					$q = "DELETE t.*, io.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';";
 					$r = $this->app->run_query($q);
 				}
-				else {
-					$transaction_rpc = false;
-					try {
-						$raw_transaction = $coin_rpc->getrawtransaction($tx_hash);
-						$transaction_rpc = $coin_rpc->decoderawtransaction($raw_transaction);
-					}
-					catch (Exception $e) {
-						$this->app->set_site_constant("sync_in_progress", "0");
-						die("Error, transaction ".$tx_hash." was not found in block ".$block_height.".");
-					}
+
+				$transaction_rpc = false;
+				try {
+					$raw_transaction = $coin_rpc->getrawtransaction($tx_hash);
+					$transaction_rpc = $coin_rpc->decoderawtransaction($raw_transaction);
+					$transaction_rpcs[$i] = $transaction_rpc;
+				}
+				catch (Exception $e) {
+					$this->app->set_site_constant("sync_in_progress", "0");
+					die("Error, transaction ".$tx_hash." was not found in block ".$block_height.".");
+				}
+				
+				$outputs = $transaction_rpc["vout"];
+				$inputs = $transaction_rpc["vin"];
+				
+				if (count($inputs) == 1 && $inputs[0]['coinbase']) {
+					$transaction_type = "coinbase";
+					if (count($outputs) > 1) $transaction_type = "votebase";
+				}
+				else $transaction_type = "transaction";
+				
+				$output_sum = 0;
+				for ($j=0; $j<count($outputs); $j++) {
+					$output_sum += pow(10,8)*$outputs[$j]["value"];
+				}
+				
+				$q = "INSERT INTO transactions SET game_id='".$this->db_game['game_id']."', amount='".$output_sum."', transaction_desc='".$transaction_type."', tx_hash='".$tx_hash."', address_id=NULL, block_id='".$block_height."', round_id='".$this->block_to_round($block_height)."', taper_factor='".$this->block_id_to_taper_factor($block_height)."', time_created='".time()."';";
+				$r = $this->app->run_query($q);
+				$db_transaction_id = $this->app->last_insert_id();
+				$html .= ". ";
+				
+				for ($j=0; $j<count($outputs); $j++) {
+					$address = $outputs[$j]["scriptPubKey"]["addresses"][0];
 					
-					$outputs = $transaction_rpc["vout"];
-					$inputs = $transaction_rpc["vin"];
+					$output_address = $this->create_or_fetch_address($address, true, $coin_rpc, false, true);
 					
-					if (count($inputs) == 1 && $inputs[0]['coinbase']) {
-						$transaction_type = "coinbase";
-						if (count($outputs) > 1) $transaction_type = "votebase";
-					}
-					else $transaction_type = "transaction";
-					
-					$output_sum = 0;
-					for ($j=0; $j<count($outputs); $j++) {
-						$output_sum += pow(10,8)*$outputs[$j]["value"];
-					}
-					
-					$q = "INSERT INTO transactions SET game_id='".$this->db_game['game_id']."', amount='".$output_sum."', transaction_desc='".$transaction_type."', tx_hash='".$tx_hash."', address_id=NULL, block_id='".$block_height."', round_id='".$this->block_to_round($block_height)."', taper_factor='".$this->block_id_to_taper_factor($block_height)."', time_created='".time()."';";
+					$q = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, game_id='".$this->db_game['game_id']."', out_index='".$j."'";
+					if ($output_address['user_id'] > 0) $q .= ", user_id='".$output_address['user_id']."'";
+					$q .= ", address_id='".$output_address['address_id']."'";
+					if ($output_address['option_id'] > 0) $q .= ", option_id=".$output_address['option_id'];
+					$q .= ", create_transaction_id='".$db_transaction_id."', amount='".($outputs[$j]["value"]*pow(10,8))."', create_block_id='".$block_height."', create_round_id='".$this->block_to_round($block_height)."';";
 					$r = $this->app->run_query($q);
-					$db_transaction_id = $this->app->last_insert_id();
-					$html .= ". ";
-					
-					for ($j=0; $j<count($outputs); $j++) {
-						$address = $outputs[$j]["scriptPubKey"]["addresses"][0];
-						
-						$output_address = $this->create_or_fetch_address($address, true, $coin_rpc, false, true);
-						
-						$q = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, game_id='".$this->db_game['game_id']."', out_index='".$j."'";
-						if ($output_address['user_id'] > 0) $q .= ", user_id='".$output_address['user_id']."'";
-						$q .= ", address_id='".$output_address['address_id']."'";
-						if ($output_address['option_id'] > 0) $q .= ", option_id=".$output_address['option_id'];
-						$q .= ", create_transaction_id='".$db_transaction_id."', amount='".($outputs[$j]["value"]*pow(10,8))."', create_block_id='".$block_height."';";
-						$r = $this->app->run_query($q);
-					}
 				}
 			}
 			
@@ -2428,8 +2419,7 @@ class Game {
 				$transaction = $r->fetch();
 				
 				try {
-					$raw_transaction = $coin_rpc->getrawtransaction($tx_hash);
-					$transaction_rpc = $coin_rpc->decoderawtransaction($raw_transaction);
+					$transaction_rpc = $transaction_rpcs[$i];
 				}
 				catch (Exception $e) {
 					$this->app->set_site_constant("sync_in_progress", "0");
@@ -2519,13 +2509,13 @@ class Game {
 	
 	public function sync_coind(&$coin_rpc) {
 		$html = "";
-		$sync_in_progress = $this->app->get_site_constant("sync_in_progress");
+		$sync_in_progress = (int) $this->app->get_site_constant("sync_in_progress");
 		
-		if ($sync_in_progress == "1") {
+		if ($sync_in_progress > time()-30) {
 			$html = "Synchronization is already running, skipping...\n";
 		}
 		else {
-			$this->app->set_site_constant("sync_in_progress", "1");
+			$this->app->set_site_constant("sync_in_progress", time());
 			
 			$last_block_id = $this->last_block_id();
 
