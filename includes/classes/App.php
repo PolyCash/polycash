@@ -634,12 +634,14 @@ class App {
 	public function update_schema() {
 		$migrations_path = realpath(dirname(__FILE__)."/../../sql");
 		
-		$migration_id = $this->get_site_constant("last_migration_id")+1;
+		$migration_id = ((int)$this->get_site_constant("last_migration_id"))+1;
 		$keep_looping = true;
 		do {
 			$fname = $migrations_path."/".$migration_id.".sql";
 			if (is_file($fname)) {
-				$cmd = "mysql -u ".$GLOBALS['mysql_user']." -h ".$GLOBALS['mysql_server']." -p".$GLOBALS['mysql_password']." ".$GLOBALS['mysql_database']." < ".$fname;
+				$cmd = $this->mysql_binary_location()." -u ".$GLOBALS['mysql_user']." -h ".$GLOBALS['mysql_server'];
+				if ($GLOBALS['mysql_password'] != "") $cmd .= " -p".$GLOBALS['mysql_password'];
+				$cmd .= " ".$GLOBALS['mysql_database']." < ".$fname;
 				exec($cmd);
 				$this->set_site_constant("last_migration_id", $migration_id);
 				$migration_id++;
@@ -662,6 +664,61 @@ class App {
 			$arg_i++;
 		}
 		return $arr;
+	}
+	
+	public function mysql_binary_location() {
+		if (!empty($GLOBALS['mysql_binary_location'])) return $GLOBALS['mysql_binary_location'];
+		else {
+			$var = $this->run_query("SHOW VARIABLES LIKE 'basedir';")->fetch();
+			if (PHP_OS == "WINNT") return $var['Value']."bin/mysql.exe";
+			else return $var['Value']."mysql";
+		}
+	}
+	
+	public function php_binary_location() {
+		if (!empty($GLOBALS['php_binary_location'])) return $GLOBALS['php_binary_location'];
+		else if (PHP_OS == "WINNT") return dirname(ini_get('extension_dir'))."\php.exe";
+		else return PHP_BINDIR ."/php";
+	}
+	
+	public function start_regular_background_processes() {
+		$html = "";
+		$process_count = 0;
+		
+		$pipe_config = array(
+			0 => array('pipe', 'r'),
+			1 => array('pipe', 'w'),
+			2 => array('pipe', 'w')
+		);
+		$pipes = array();
+
+		$cmd = $this->php_binary_location().' "'.realpath(dirname(dirname(dirname(__FILE__)))."/cron/minutely_main.php").'" key='.$GLOBALS['cron_key_string'];
+		$main_process = proc_open($cmd, $pipe_config, $pipes);
+		if (is_resource($main_process)) $process_count++;
+		else $html .= "Failed to start the main process.<br/>\n";
+		
+		$cmd = $this->php_binary_location().' "'.realpath(dirname(dirname(dirname(__FILE__)))."/cron/minutely_check_payments.php").'" key='.$GLOBALS['cron_key_string'];
+		$payments_process = proc_open($cmd, $pipe_config, $pipes);
+		if (is_resource($payments_process)) $process_count++;
+		else $html .= "Failed to start a process for processing payments.<br/>\n";
+		
+		$cmd = $this->php_binary_location().' "'.realpath(dirname(dirname(dirname(__FILE__)))."/cron/address_miner.php").'" key='.$GLOBALS['cron_key_string'];
+		$address_miner_process = proc_open($cmd, $pipe_config, $pipes);
+		if (is_resource($address_miner_process)) $process_count++;
+		else $html .= "Failed to start a process for mining addresses.<br/>\n";
+		
+		$cmd = $this->php_binary_location().' "'.realpath(dirname(dirname(dirname(__FILE__)))."/cron/fetch_currency_prices.php").'" key='.$GLOBALS['cron_key_string'];
+		$currency_prices_process = proc_open($cmd, $pipe_config, $pipes);
+		if (is_resource($currency_prices_process)) $process_count++;
+		else $html .= "Failed to start a process for updating currency prices.<br/>\n";
+		
+		$cmd = $this->php_binary_location().' "'.realpath(dirname(dirname(dirname(__FILE__)))."/cron/load_blocks.php").'" key='.$GLOBALS['cron_key_string'];
+		$block_loading_process = proc_open($cmd, $pipe_config, $pipes);
+		if (is_resource($block_loading_process)) $process_count++;
+		else $html .= "Failed to start a process for loading blocks.<br/>\n";
+		
+		$html .= $process_count." background processes were successfully started.<br/>\n";
+		return $html;
 	}
 }
 ?>

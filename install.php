@@ -15,23 +15,24 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			if (!$db_exists) {
 				$r = $app->run_query("CREATE DATABASE ".$GLOBALS['mysql_database']);
 				$app->set_db($GLOBALS['mysql_database']);
-				$app->set_site_constant("last_migration_id", 0);
 				
-				$cmd = "mysql -u ".$GLOBALS['mysql_user']." -h ".$GLOBALS['mysql_server']." -p".$GLOBALS['mysql_password']." ".$GLOBALS['mysql_database']." < ".realpath(dirname(__FILE__))."/sql/schema-initial.sql";
+				$cmd = $app->mysql_binary_location()." -u ".$GLOBALS['mysql_user']." -h ".$GLOBALS['mysql_server'];
+				if ($GLOBALS['mysql_password'] != "") $cmd .= " -p".$GLOBALS['mysql_password'];
+				$cmd .= " ".$GLOBALS['mysql_database']." < ".realpath(dirname(__FILE__))."/sql/schema-initial.sql";
 				echo exec($cmd);
 			}
 			else {
 				$app->set_db($GLOBALS['mysql_database']);
 			}
 			
-			$app->update_schema();
-			
-			$result = $app->run_query("SHOW TABLES LIKE 'games';");
+			$result = $app->run_query("SHOW TABLES;");
 			$table_exists = $result->rowCount() > 0;
 			if (!$table_exists) {
 				echo "Database tables failed to be created, please install manually by importing all files in the \"sql\" folder via phpMyAdmin or any other MySQL interface.<br/>\n";
 				die();
 			}
+			
+			$app->update_schema();
 			
 			$q = "SELECT * FROM games WHERE url_identifier='empirecoin-launch';";
 			$r = $app->run_query($q);
@@ -87,14 +88,21 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			include("includes/html_start.php");
 			?>
 			<div class="container" style="max-width: 1000px; padding: 10px;">
+				<h2>Install the MySQL database</h1>
 				Great, the database was installed.<br/>
 				If there was an error installing the database please use mysql to delete the database, then try again.<br/>
-				<br/>
+				
+				<h2>Run Empirecoin Web</h1>
 				Make sure this line has been added to your /etc/crontab:<br/>
 <pre>
-* * * * * root /usr/bin/php <?php echo realpath(dirname(__FILE__))."/cron/minutely.php key=".$GLOBALS['cron_key_string']; ?>
+* * * * * root <?php echo $app->php_binary_location(); ?> <?php echo realpath(dirname(__FILE__))."/cron/minutely.php key=".$GLOBALS['cron_key_string']; ?>
 </pre>
-				<br/>
+				If you can't use cron, open <a target="_blank" href="cron/minutely.php?key=<?php echo $GLOBALS['cron_key_string']; ?>">cron/minutely.php?key=<?php echo $GLOBALS['cron_key_string']; ?></a> in your browser any time you want to sync empirecoin web. Or run this command:
+				<pre>
+<?php echo $app->php_binary_location(); ?> <?php echo realpath(dirname(__FILE__))."/scripts/main.php key=".$GLOBALS['cron_key_string']; ?>
+				</pre>
+				
+				<h2>Configure Apache for symlinked URLs</h1>
 				Please run "a2enmod rewrite"<br/>
 				Then make sure the line "AllowOverride All" is included in your apache configuration file (/etc/apache2/apache2.conf or /etc/httpd/httpd.conf or /etc/httpd/conf/httpd.conf)<br/>
 				Example:
@@ -105,7 +113,8 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	Require all granted
 &lt;/Directory&gt;
 </pre>
-				<br/>
+				
+				<h2>Configure Bitcoin for accepting payments</h1>
 				<script type="text/javascript">
 				function generate_keypair() {
 					$('#keypair_details').slideDown('fast');
@@ -155,7 +164,8 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 					<?php
 				}
 				?>
-				<br/>
+				
+				<h2>Connect to bitcoind/empirecoind</h1>
 				<?php
 				$rpc_games_r = $app->run_query("SELECT * FROM games WHERE game_type='real' AND game_status='running';");
 				while ($rpc_game = $rpc_games_r->fetch()) {
@@ -170,12 +180,14 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 						echo "To reset and synchronize this game, run <a target=\"_blank\" href=\"/scripts/sync_coind_initial.php?key=".$GLOBALS['cron_key_string']."&game_id=".$testnet_game->db_game['game_id']."\">scripts/sync_coind_initial.php?game_id=".$testnet_game->db_game['game_id']."</a><br/>\n";
 					}
 					catch (Exception $e) {
+						echo "Failed to establish an RPC connection to ".$testnet_game->db_game['name'].". Make sure the coin daemon is running.<br/>\n";
 						var_dump($e);
-						echo "Failed to establish an RPC connection to ".$testnet_game->db_game['name'].".<br/>\n";
 					}
 				}
 				?>
-				<a href="/">Check if installation was successful.</a>
+				<br/>
+				
+				<a class="btn btn-success" href="/">Check if installation was successful</a>
 			</div>
 			<?php
 			include("includes/html_stop.php");

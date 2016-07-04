@@ -6,7 +6,7 @@ include(realpath(dirname(__FILE__))."/../includes/handle_script_shutdown.php");
 
 $script_start_time = microtime(true);
 
-if ($argv) {
+if (!empty($argv)) {
 	$cmd_vars = $app->argv_to_array($argv);
 	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
 	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
