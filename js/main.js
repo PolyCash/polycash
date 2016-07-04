@@ -678,8 +678,26 @@ function refresh_output_amounts() {
 		}
 	}
 }
-function format_coins(amount) {
-	return (Math.round(amount/Math.pow(10,6))/Math.pow(10,2)).toLocaleString();
+function rtrim(str, charlist) {
+  charlist = !charlist ? ' \\s\u00A0' : (charlist + '')
+    .replace(/([\[\]\(\)\.\?\/\*\{\}\+\$\^\:])/g, '\\$1');
+  var re = new RegExp('[' + charlist + ']+$', 'g');
+  return (str + '')
+    .replace(re, '');
+}
+function format_coins(amount_int) {
+	var amount = amount_int/Math.pow(10,8);
+	
+	if (amount > Math.pow(10, 10)) {
+		return (amount/Math.pow(10, 9)).toPrecision(4)+"B";
+	}
+	else if (amount > Math.pow(10, 7)) {
+		return (amount/Math.pow(10, 6)).toPrecision(4)+"M";
+	}
+	else if (amount > Math.pow(10, 4)) {
+		return (amount/Math.pow(10, 3)).toPrecision(4)+"k";
+	}
+	else return rtrim((amount).toPrecision(5), "0.");
 }
 function refresh_mature_io_btns() {
 	for (var i=0; i<mature_ios.length; i++) {

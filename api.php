@@ -18,7 +18,7 @@ if ($uri_parts[1] == "api") {
 			$last_block_id = last_block_id($game['game_id']);
 			$current_round = block_to_round($game, $last_block_id+1);
 			
-			$intval_vars = array('game_id','pos_reward','pow_reward','round_length','seconds_per_block','num_voting_options');
+			$intval_vars = array('game_id','pos_reward','pow_reward','round_length','seconds_per_block','num_voting_options', 'maturity', 'last_block_id');
 			for ($i=0; $i<count($intval_vars); $i++) {
 				$game[$intval_vars[$i]] = intval($game[$intval_vars[$i]]);
 			}
@@ -62,10 +62,13 @@ if ($uri_parts[1] == "api") {
 				$max_vote_sum = $round_stats[1];
 				$ranked_stats = $round_stats[2];
 				$nation_id_to_rank = $round_stats[3];
+				$confirmed_votes = $round_stats[4];
+				$unconfirmed_votes = $round_stats[5];
 				
 				$game['last_block_id'] = $last_block_id;
 				$game['current_round'] = $current_round;
-				$game['current_votes'] = $total_vote_sum;
+				$game['confirmed_votes'] = $confirmed_votes;
+				$game['unconfirmed_votes'] = $unconfirmed_votes;
 				$game['block_within_round'] = block_id_to_round_index($game, $last_block_id+1);
 				
 				$game_scores = false;
@@ -73,10 +76,11 @@ if ($uri_parts[1] == "api") {
 				for ($nation_id=0; $nation_id < 16; $nation_id++) {
 					$stat = $ranked_stats[$nation_id_to_rank[$nation_id+1]];
 					$api_stat = false;
-					$api_stat['empire_id'] = $nation_id;
+					$api_stat['empire_id'] = intval($nation_id);
 					$api_stat['empire_name'] = $stat['name'];
-					$api_stat['rank'] = $nation_id_to_rank[$nation_id+1]+1;
-					$api_stat['votes'] = $stat['coins_currently_voted'];
+					$api_stat['rank'] = intval($nation_id_to_rank[$nation_id+1]+1);
+					$api_stat['confirmed_votes'] = intval($stat[$game['payout_weight'].'_score']);
+					$api_stat['unconfirmed_votes'] = intval($stat['unconfirmed_'.$game['payout_weight'].'_score']);
 					
 					$game_scores[$nation_id] = $api_stat;
 				}
@@ -111,110 +115,141 @@ if ($uri_parts[1] == "api") {
 			
 <pre id="api_status_example" style="display: none;">
 {
-   "status":{
-      "last_block_id":"208",
-      "current_voting_round":21,
-      "total_coins_voted":1732612284738,
-      "empires":[
-         {
-            "empire_id":0,
-            "empire_name":"China",
-            "rank":13,
-            "coins_voted":0
-         },
-         {
-            "empire_id":1,
-            "empire_name":"USA",
-            "rank":14,
-            "coins_voted":0
-         },
-         {
-            "empire_id":2,
-            "empire_name":"India",
-            "rank":15,
-            "coins_voted":0
-         },
-         {
-            "empire_id":3,
-            "empire_name":"Japan",
-            "rank":1,
-            "coins_voted":"945158139395"
-         },
-         {
-            "empire_id":4,
-            "empire_name":"Germany",
-            "rank":16,
-            "coins_voted":0
-         },
-         {
-            "empire_id":5,
-            "empire_name":"Russia",
-            "rank":2,
-            "coins_voted":"787454145343"
-         },
-         {
-            "empire_id":6,
-            "empire_name":"Brazil",
-            "rank":3,
-            "coins_voted":0
-         },
-         {
-            "empire_id":7,
-            "empire_name":"Indonesia",
-            "rank":4,
-            "coins_voted":0
-         },
-         {
-            "empire_id":8,
-            "empire_name":"France",
-            "rank":5,
-            "coins_voted":0
-         },
-         {
-            "empire_id":9,
-            "empire_name":"UK",
-            "rank":6,
-            "coins_voted":0
-         },
-         {
-            "empire_id":10,
-            "empire_name":"Mexico",
-            "rank":7,
-            "coins_voted":0
-         },
-         {
-            "empire_id":11,
-            "empire_name":"Italy",
-            "rank":8,
-            "coins_voted":0
-         },
-         {
-            "empire_id":12,
-            "empire_name":"South Korea",
-            "rank":9,
-            "coins_voted":0
-         },
-         {
-            "empire_id":13,
-            "empire_name":"Saudi Arabia",
-            "rank":10,
-            "coins_voted":0
-         },
-         {
-            "empire_id":14,
-            "empire_name":"Canada",
-            "rank":11,
-            "coins_voted":0
-         },
-         {
-            "empire_id":15,
-            "empire_name":"Spain",
-            "rank":12,
-            "coins_voted":0
-         }
-      ]
+   "status_code":1,
+   "status_message":"Successful",
+   "game":{
+      "game_id":46,
+      "maturity":5,
+      "pos_reward":750000000000,
+      "pow_reward":2500000000,
+      "round_length":100,
+      "game_type":"simulation",
+      "payout_weight":"coin_block",
+      "seconds_per_block":12,
+      "name":"EmpireCoin Live",
+      "num_voting_options":16,
+      "max_voting_fraction":0.25,
+      "last_block_id":7629,
+      "current_round":77,
+      "confirmed_votes":1339142421477498,
+      "unconfirmed_votes":0,
+      "block_within_round":30
    },
-   "user":false
+   "game_scores":[
+      {
+         "empire_id":0,
+         "empire_name":"China",
+         "rank":2,
+         "confirmed_votes":343264178109758,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":1,
+         "empire_name":"USA",
+         "rank":1,
+         "confirmed_votes":348585570317453,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":2,
+         "empire_name":"India",
+         "rank":4,
+         "confirmed_votes":284247986344929,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":3,
+         "empire_name":"Brazil",
+         "rank":3,
+         "confirmed_votes":333874393690120,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":4,
+         "empire_name":"Indonesia",
+         "rank":5,
+         "confirmed_votes":29170293015238,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":5,
+         "empire_name":"Japan",
+         "rank":6,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":6,
+         "empire_name":"Russia",
+         "rank":7,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":7,
+         "empire_name":"Germany",
+         "rank":8,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":8,
+         "empire_name":"Mexico",
+         "rank":9,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":9,
+         "empire_name":"Nigeria",
+         "rank":10,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":10,
+         "empire_name":"France",
+         "rank":11,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":11,
+         "empire_name":"UK",
+         "rank":12,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":12,
+         "empire_name":"Pakistan",
+         "rank":13,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":13,
+         "empire_name":"Italy",
+         "rank":14,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":14,
+         "empire_name":"Turkey",
+         "rank":15,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":15,
+         "empire_name":"Iran",
+         "rank":16,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      }
+   ],
+   "user_info":false
 }
 </pre>
 			<br/><br/>
@@ -224,114 +259,178 @@ if ($uri_parts[1] == "api") {
 
 <pre id="api_status_user_example" style="display: none;">
 {
-   "status":{
-      "last_block_id":"209",
-      "current_voting_round":21,
-      "total_coins_voted":1732612284738,
-      "empires":[
+   "status_code":1,
+   "status_message":"Successful",
+   "game":{
+      "game_id":30,
+      "maturity":1,
+      "pos_reward":100000000000,
+      "pow_reward":2000000000,
+      "round_length":50,
+      "game_type":"simulation",
+      "payout_weight":"coin_block",
+      "seconds_per_block":6,
+      "name":"EmpireCoin Testnet",
+      "num_voting_options":16,
+      "max_voting_fraction":0.25,
+      "last_block_id":"8905",
+      "current_round":179,
+      "confirmed_votes":0,
+      "unconfirmed_votes":0,
+      "block_within_round":6
+   },
+   "game_scores":[
+      {
+         "empire_id":0,
+         "empire_name":"China",
+         "rank":1,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":1,
+         "empire_name":"USA",
+         "rank":2,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":2,
+         "empire_name":"India",
+         "rank":3,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":3,
+         "empire_name":"Brazil",
+         "rank":4,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":4,
+         "empire_name":"Indonesia",
+         "rank":5,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":5,
+         "empire_name":"Japan",
+         "rank":6,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":6,
+         "empire_name":"Russia",
+         "rank":7,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":7,
+         "empire_name":"Germany",
+         "rank":8,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":8,
+         "empire_name":"Mexico",
+         "rank":9,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":9,
+         "empire_name":"Nigeria",
+         "rank":10,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":10,
+         "empire_name":"France",
+         "rank":11,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":11,
+         "empire_name":"UK",
+         "rank":12,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":12,
+         "empire_name":"Pakistan",
+         "rank":13,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":13,
+         "empire_name":"Italy",
+         "rank":14,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":14,
+         "empire_name":"Turkey",
+         "rank":15,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      },
+      {
+         "empire_id":15,
+         "empire_name":"Iran",
+         "rank":16,
+         "confirmed_votes":0,
+         "unconfirmed_votes":0
+      }
+   ],
+   "user_info":{
+      "username":"freecoins",
+      "balance":1219439580239,
+      "mature_balance":1219439580239,
+      "immature_balance":0,
+      "votes_available":116797665503784,
+      "my_utxos":[
          {
-            "empire_id":0,
-            "empire_name":"China",
-            "rank":13,
-            "coins_voted":0
+            "utxo_id":198973,
+            "coins":373146560080,
+            "create_block_id":8804
          },
          {
-            "empire_id":1,
-            "empire_name":"USA",
-            "rank":14,
-            "coins_voted":0
+            "utxo_id":198974,
+            "coins":373146560080,
+            "create_block_id":8804
          },
          {
-            "empire_id":2,
-            "empire_name":"India",
-            "rank":15,
-            "coins_voted":0
+            "utxo_id":198991,
+            "coins":215033553248,
+            "create_block_id":8812
          },
          {
-            "empire_id":3,
-            "empire_name":"Japan",
-            "rank":1,
-            "coins_voted":"945158139395"
+            "utxo_id":198992,
+            "coins":158112906832,
+            "create_block_id":8812
          },
          {
-            "empire_id":4,
-            "empire_name":"Germany",
-            "rank":16,
-            "coins_voted":0
+            "utxo_id":199059,
+            "coins":34950683332,
+            "create_block_id":8850
          },
          {
-            "empire_id":5,
-            "empire_name":"Russia",
-            "rank":2,
-            "coins_voted":"787454145343"
-         },
-         {
-            "empire_id":6,
-            "empire_name":"Brazil",
-            "rank":3,
-            "coins_voted":0
-         },
-         {
-            "empire_id":7,
-            "empire_name":"Indonesia",
-            "rank":4,
-            "coins_voted":0
-         },
-         {
-            "empire_id":8,
-            "empire_name":"France",
-            "rank":5,
-            "coins_voted":0
-         },
-         {
-            "empire_id":9,
-            "empire_name":"UK",
-            "rank":6,
-            "coins_voted":0
-         },
-         {
-            "empire_id":10,
-            "empire_name":"Mexico",
-            "rank":7,
-            "coins_voted":0
-         },
-         {
-            "empire_id":11,
-            "empire_name":"Italy",
-            "rank":8,
-            "coins_voted":0
-         },
-         {
-            "empire_id":12,
-            "empire_name":"South Korea",
-            "rank":9,
-            "coins_voted":0
-         },
-         {
-            "empire_id":13,
-            "empire_name":"Saudi Arabia",
-            "rank":10,
-            "coins_voted":0
-         },
-         {
-            "empire_id":14,
-            "empire_name":"Canada",
-            "rank":11,
-            "coins_voted":0
-         },
-         {
-            "empire_id":15,
-            "empire_name":"Spain",
-            "rank":12,
-            "coins_voted":0
+            "utxo_id":199060,
+            "coins":65049316667,
+            "create_block_id":8850
          }
       ]
-   },
-   "user":{
-      "username":"apitester@gmail.com",
-      "balance":415407988104,
-      "mature_balance":100000000000,
-      "immature_balance":315407988104
    }
 }
 </pre>
@@ -345,39 +444,71 @@ if ($uri_parts[1] == "api") {
 			Here's an example of a valid API response:<br/>
 <pre>
 {
-  "recommendation_unit" : "coin",
-  "recommendations" :
-    [
+   "input_utxo_ids":[
+      166193,
+      166194,
+      166195,
+      166196,
+      166197
+   ],
+   "recommendation_unit":"coin",
+   "recommendations":[
       {
-        "empire_id" : 12,
-        "empire_name" : "South Korea",
-        "recommended_amount" : 8500000000
+         "empire_id":0,
+         "empire_name":"China",
+         "recommended_amount":80000000000
       },
       {
-        "empire_id" : 14,
-        "empire_name" : "Canada",
-        "recommended_amount" : 3500000000
+         "empire_id":1,
+         "empire_name":"USA",
+         "recommended_amount":60000000000
+      },
+      {
+         "empire_id":2,
+         "empire_name":"India",
+         "recommended_amount":40000000000
+      },
+      {
+         "empire_id":3,
+         "empire_name":"Brazil",
+         "recommended_amount":20000000000
       }
-    ]
+   ]
 }
 </pre>
 			Recommendations can also be denominated in percentage points rather than satoshis:<br/>
 <pre>
 {
-  "recommendation_unit" : "percent",
-  "recommendations" :
-    [
+   "input_utxo_ids":[
+      166193,
+      166194,
+      166195,
+      166196,
+      166197
+   ],
+   "recommendation_unit":"coin",
+   "recommendations":[
       {
-        "empire_id" : 12,
-        "empire_name" : "South Korea",
-        "recommended_amount" : 75
+         "empire_id":0,
+         "empire_name":"China",
+         "recommended_amount":40
       },
       {
-        "empire_id" : 14,
-        "empire_name" : "Canada",
-        "recommended_amount" : 25
+         "empire_id":1,
+         "empire_name":"USA",
+         "recommended_amount":30
+      },
+      {
+         "empire_id":2,
+         "empire_name":"India",
+         "recommended_amount":20
+      },
+      {
+         "empire_id":3,
+         "empire_name":"Brazil",
+         "recommended_amount":10
       }
-    ]
+   ]
 }
 </pre>
 			<br/><br/>
@@ -403,6 +534,10 @@ if ($uri_parts[1] == "api") {
 		header('Content-Length: '.strlen($raw));
 		header('Last-Modified: '.gmdate('D, d M Y H:i:s').' GMT');
 		echo $raw;
+	}
+	else if ($uri == "/api/") {
+		header("Location: /api/about");
+		die();
 	}
 	else {
 		echo json_encode(array('status_code'=>0, 'status_message'=>"You've reached an invalid URL."));

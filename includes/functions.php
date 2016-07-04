@@ -103,10 +103,10 @@ function mature_balance(&$game, $user) {
 }
 
 function user_coin_blocks($user_id, $game, $last_block_id) {
-	$q = "SELECT SUM(amount*(".($last_block_id+1)."-create_block_id)) FROM transaction_IOs WHERE spend_status='unspent' AND spend_transaction_id IS NULL AND game_id='".$game['game_id']."' AND user_id='".$user_id."' AND (create_block_id <= ".(last_block_id($game['game_id'])-$game['maturity'])." OR instantly_mature = 1);";
+	$q = "SELECT ROUND(SUM(amount*(".($last_block_id+1)."-create_block_id))) FROM transaction_IOs WHERE spend_status='unspent' AND spend_transaction_id IS NULL AND game_id='".$game['game_id']."' AND user_id='".$user_id."' AND (create_block_id <= ".(last_block_id($game['game_id'])-$game['maturity'])." OR instantly_mature = 1);";
 	$r = run_query($q);
 	$sum = mysql_fetch_row($r);
-	return intval($sum[0]);
+	return (int)$sum[0];
 }
 
 function current_block($game_id) {
@@ -224,8 +224,11 @@ function round_voting_stats_all(&$game, $voting_round) {
 	$r = run_query($q);
 	
 	while ($stat = mysql_fetch_array($r)) {
-		$stat['coin_score'] = 0;
-		$stat['coin_block_score'] = 0;
+		$stat['confirmed_coin_score'] = 0;
+		$stat['unconfirmed_coin_score'] = 0;
+		$stat['confirmed_coin_block_score'] = 0;
+		$stat['unconfirmed_coin_block_score'] = 0;
+		
 		$stats_all[$counter] = $stat;
 		$nation_id_to_rank[$stat['nation_id']] = $counter;
 		$counter++;
