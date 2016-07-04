@@ -10,6 +10,8 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$q = "SELECT * FROM currency_invoices i JOIN invoice_addresses a ON i.invoice_address_id=a.invoice_address_id WHERE i.status != 'confirmed' AND i.status != 'settled' AND (i.status='unconfirmed' OR i.expire_time >= ".time().");";
 	$r = run_query($q);
 
+	echo "Checking ".mysql_numrows($r)." invoices.<br/>\n";
+	
 	while ($invoice = mysql_fetch_array($r)) {
 		$confirm_it = false;
 
@@ -59,8 +61,13 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			}
 		}
 	}
-
-	echo "Script ran for ".round(microtime(true)-$script_start_time, 2)." seconds.<br/>\n";
+	
+	$runtime_sec = microtime(true)-$script_start_time;
+	$sec_until_refresh = round(60-$runtime_sec);
+	if ($sec_until_refresh < 0) $sec_until_refresh = 0;
+	
+	echo '<script type="text/javascript">setTimeout("window.location=window.location;", '.(1000*$sec_until_refresh).');</script>'."\n";
+	echo "Script ran for ".round($runtime_sec, 2)." seconds.<br/>\n";
 }
 else echo "Error: permission denied.";
 ?>

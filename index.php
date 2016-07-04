@@ -30,84 +30,69 @@ include('includes/html_start.php');
 	
 	<div class="paragraph">
 		<?php
-		$q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='editable' OR g.game_status='running');";
+		$player_variation_q = "SELECT COUNT(*), t.start_condition_players FROM game_types t JOIN game_type_variations tv ON t.game_type_id=tv.game_type_id JOIN games g ON tv.variation_id=g.variation_id WHERE g.game_status='published' GROUP BY t.start_condition_players ORDER BY t.start_condition_players ASC;";
+		$player_variation_r = run_query($player_variation_q);
+		
+		while ($player_variation = mysql_fetch_array($player_variation_r)) {
+			$game_q = "SELECT *, g.url_identifier AS url_identifier, c.symbol AS symbol FROM game_types t JOIN game_type_variations tv ON t.game_type_id=tv.game_type_id JOIN games g ON tv.variation_id=g.variation_id JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.game_status='published' AND g.giveaway_status IN ('public_free','public_pay') AND t.start_condition_players='".$player_variation['start_condition_players']."' ORDER BY g.invite_cost ASC;";
+			$game_r = run_query($game_q);
+			
+			echo '<h2>Join a '.$player_variation['start_condition_players'].' player game</h2>';
+			echo '<div class="bordered_table">';
+			while ($variation_game = mysql_fetch_array($game_r)) {
+				echo '<div class="row bordered_row">';
+				
+				echo '<div class="col-sm-3"><a title="'.game_description($variation_game).'" href="/'.$variation_game['url_identifier'].'/">'.ucfirst($variation_game['variation_name'])."</a></div>";
+				
+				$invite_disp = format_bignum($variation_game['invite_cost']);
+				echo '<div class="col-sm-4">';
+				
+				if ($variation_game['giveaway_status'] == 'public_free') {
+					$receive_disp = format_bignum($variation_game['giveaway_amount']/pow(10,8));
+					echo 'Start with '.$receive_disp.' free ';
+					if ($receive_disp == '1') echo $variation_game['coin_name'];
+					else echo $variation_game['coin_name_plural'];
+				}
+				else {
+					echo 'Buy in at '.$variation_game['symbol'].$invite_disp." ".$variation_game['short_name'];
+					if ($invite_disp != '1') echo 's';
+					echo " for ";
+					$receive_disp = format_bignum($variation_game['giveaway_amount']/pow(10,8));
+					echo $receive_disp.' ';
+					if ($receive_disp == '1') echo $variation_game['coin_name'];
+					else echo $variation_game['coin_name_plural'];
+				}
+				echo "</div>";
+				
+				$players = paid_players_in_game($variation_game);
+				echo '<div class="col-sm-2">'.$players."/".$variation_game['start_condition_players']." players</div>";
+				
+				echo '<div class="col-sm-3">';
+				if ($variation_game['final_round'] > 0) {
+					$final_inflation_pct = game_final_inflation_pct($variation_game);
+					$game_seconds = $variation_game['final_round']*$variation_game['round_length']*$variation_game['seconds_per_block'];
+					echo $final_inflation_pct."% inflation in ".format_seconds($game_seconds);
+				}
+				echo '</div>';
+				
+				echo "</div>\n";
+			}
+			echo "</div>\n";
+		}
+		
+		/*$q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='editable' OR g.game_status='running');";
 		$r = run_query($q);
 		echo '<div class="row">';
 		$counter = 0;
 		while ($featured_game = mysql_fetch_array($r)) {
-			$blocks_per_hour = 3600/$featured_game['seconds_per_block'];
-			$round_reward = ($featured_game['pos_reward']+$featured_game['pow_reward']*$featured_game['round_length'])/pow(10,8);
-			$rounds_per_hour = 3600/($featured_game['seconds_per_block']*$featured_game['round_length']);
-			$coins_per_hour = $round_reward*$rounds_per_hour;
-			$seconds_per_round = $featured_game['seconds_per_block']*$featured_game['round_length'];
-			$coins_per_block = format_bignum($featured_game['pow_reward']/pow(10,8));
-
 			echo '<div class="col-md-6">';
-
-			echo '<h3>'.$featured_game['name'].'</h3>';
-			if ($featured_game['giveaway_status'] == "invite_pay" || $featured_game['giveaway_status'] == "public_pay") {
-				echo "To join this game, buy ".format_bignum($featured_game['giveaway_amount']/pow(10,8))." ".$featured_game['coin_name_plural']." (".round((100*$featured_game['giveaway_amount']/coins_in_existence($featured_game, false)), 2)."% of the coins) for ".format_bignum($featured_game['invite_cost'])." ".$featured_game['currency_short_name']."s";
-			}
-			else echo "Join this game and get ".format_bignum($featured_game['giveaway_amount']/pow(10,8))." ".$featured_game['coin_name_plural']." (".round((100*$featured_game['giveaway_amount']/coins_in_existence($featured_game, false)), 2)."% of the coins) for free";
-			echo ". ";
-
-			if ($featured_game['game_status'] == "running") {
-				echo "This game started ".format_seconds(time()-$featured_game['start_time'])." ago; ".format_bignum(coins_in_existence($featured_game, false)/pow(10,8))." ".$featured_game['coin_name_plural']."  are already in circulation. ";
-
-			}
-			else {
-				if ($featured_game['start_condition'] == "fixed_time") {
-					$unix_starttime = strtotime($featured_game['start_datetime']);
-					echo "This game starts in ".format_seconds($unix_starttime-time())." at ".date("M j, Y g:ia", $unix_starttime).". ";
-				}
-				else {
-					$current_players = paid_players_in_game($featured_game);
-					echo "This game will start when ".$featured_game['start_condition_players']." player";
-					if ($featured_game['start_condition_players'] == 1) echo " joins";
-					else echo "s have joined";
-					echo ". ".($featured_game['start_condition_players']-$current_players)." player";
-					if ($featured_game['start_condition_players']-$current_players == 1) echo " is";
-					else echo "s are";
-					echo " needed, ".$current_players;
-					if ($current_players == 1) echo " has";
-					else echo " have";
-					echo " already joined. ";
-				}
-			}
-
-			if ($featured_game['final_round'] > 0) {
-				$game_total_seconds = $seconds_per_round*$featured_game['final_round'];
-				echo "This game will last ".$featured_game['final_round']." rounds (".format_seconds($game_total_seconds)."). ";
-			}
-			else echo "This game doesn't end, but you can sell out at any time. ";
-
-			echo '';
-			if ($featured_game['inflation'] == "linear") {
-				echo "This coin has linear inflation: ".format_bignum($round_reward)." ".$featured_game['coin_name_plural']." are minted approximately every ".format_seconds($seconds_per_round);
-				echo " (".format_bignum($coins_per_hour)." coins per hour)";
-				echo ". In each round, ".format_bignum($featured_game['pos_reward']/pow(10,8))." ".$featured_game['coin_name_plural']." are given to voters and ".format_bignum($featured_game['pow_reward']*$featured_game['round_length']/pow(10,8))." ".$featured_game['coin_name_plural']." are given to miners";
-				echo " (".$coins_per_block." coin";
-				if ($coins_per_block != 1) echo "s";
-				echo " per block). ";
-			}
-			else echo "This currency grows by ".(100*$featured_game['exponential_inflation_rate'])."% per round. ".(100 - 100*$featured_game['exponential_inflation_minershare'])."% is given to voters and ".(100*$featured_game['exponential_inflation_minershare'])."% is given to miners every ".format_seconds($seconds_per_round).". ";
-
-			echo "Each round consists of ".$featured_game['round_length'].", ".str_replace(" ", "-", rtrim(format_seconds($featured_game['seconds_per_block']), 's'))." blocks. ";
-			if ($featured_game['maturity'] > 0) {
-				echo ucwords($featured_game['coin_name_plural'])." are locked for ";
-				echo $featured_game['maturity']." block";
-				if ($featured_game['maturity'] != 1) echo "s";
-				echo " when spent. ";
-			}
-
-			echo "<br/>\n";
-			echo '<a class="btn btn-primary" style="margin-top: 5px;" href="/'.$featured_game['url_identifier'].'">Join '.$featured_game['name'].'</a>';
-
+			echo game_description($featured_game);
 			echo '</div>';
+			
 			if ($counter%2 == 1) echo '</div><div class="row">';
 			$counter++;
 		}
-		echo '</div>';
+		echo '</div>';*/
 		?>
 	</div>
 

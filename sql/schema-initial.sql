@@ -158,7 +158,7 @@ CREATE TABLE `games` (
   `pow_reward` bigint(20) NOT NULL DEFAULT '0',
   `pos_reward` bigint(20) NOT NULL DEFAULT '0',
   `giveaway_status` enum('on','off','invite_only') NOT NULL DEFAULT 'off',
-  `giveaway_amount` bigint(16) NOT NULL DEFAULT '0'
+  `giveaway_amount` bigint(20) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------

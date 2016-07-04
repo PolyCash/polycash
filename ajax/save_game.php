@@ -35,7 +35,7 @@ if ($thisuser) {
 					$game_var = $game_form_vars[$i];
 					$game_val = mysql_real_escape_string($_REQUEST[$game_form_vars[$i]]);
 					
-					if (in_array($game_var, array('pos_reward','pow_reward','giveaway_amount'))) $game_val = intval(floatval($game_val)*pow(10,8));
+					if (in_array($game_var, array('pos_reward','pow_reward','giveaway_amount'))) $game_val = (int) $game_val*pow(10,8);
 					else if (in_array($game_var, array("max_voting_fraction", "exponential_inflation_minershare", "exponential_inflation_rate"))) $game_val = intval($game_val)/100;
 					else if (in_array($game_var, array('maturity', 'round_length', 'seconds_per_block', 'final_round','invite_currency'))) $game_val = intval($game_val);
 					
@@ -45,7 +45,7 @@ if ($thisuser) {
 				$q = substr($q, 0, strlen($q)-2)." WHERE game_id='".$game['game_id']."';";
 				$r = run_query($q);
 				
-				$game_name = make_alphanumeric($_REQUEST['name'], " -()/!.,:;#");
+				$game_name = make_alphanumeric($_REQUEST['name'], "$ -()/!.,:;#");
 				
 				$url_error = false;
 

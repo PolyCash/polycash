@@ -267,7 +267,7 @@ if ($thisuser) {
 					}
 					</script>
 					
-					<h1>Join <?php echo $requested_game['name']; ?></h1>
+					<h1><?php echo $requested_game['name']; ?></h1>
 					
 					<div class="row">
 						<div class="col-md-7">
@@ -298,9 +298,18 @@ if ($thisuser) {
 								$invoice_address = mysql_fetch_array($r);
 
 								$coins_per_currency = ($requested_game['giveaway_amount']/pow(10,8))/$requested_game['invite_cost'];
-								echo $requested_game['name']." has an initial exchange rate of ".format_bignum($coins_per_currency)." ".$requested_game['coin_name_plural']." per ".$invite_currency['short_name'].". ";
-								echo "To join this game, you need to make a payment of ".format_bignum($requested_game['invite_cost'])." ".$invite_currency['short_name']."s in exchange for ".format_bignum($requested_game['giveaway_amount']/pow(10,8))." ".$requested_game['coin_name_plural'].".<br/>\n";
-
+								echo "This game has an initial exchange rate of ".format_bignum($coins_per_currency)." ".$requested_game['coin_name_plural']." per ".$invite_currency['short_name'].". ";
+								
+								$buyin_disp = format_bignum($requested_game['invite_cost']);
+								echo "To join this game, you need to make a payment of ".$buyin_disp." ".$invite_currency['short_name'];
+								if ($buyin_disp != '1') echo "s";
+								
+								$receive_disp = format_bignum($requested_game['giveaway_amount']/pow(10,8));
+								echo " in exchange for ".$receive_disp." ";
+								if ($receive_disp == '1') echo $requested_game['coin_name'];
+								else echo $requested_game['coin_name_plural'];
+								echo ".<br/>\n";
+								
 								if ($pay_currency['currency_id'] != $settle_currency['currency_id']) {
 									echo "<br/>The exchange rate is currently ".$invoice_exchange_rate." ".$settle_currency['short_name']."s per ".$pay_currency['short_name'].". ";
 								}
@@ -596,6 +605,8 @@ $mature_balance = mature_balance($game, $thisuser);
 		var fee_amount = <?php echo $user_strategy['transaction_fee']; ?>;
 		var game_id = <?php echo $game['game_id']; ?>;
 		var game_url_identifier = '<?php echo $game['url_identifier']; ?>';
+		var coin_name = '<?php echo $game['coin_name']; ?>';
+		var coin_name_plural = '<?php echo $game['coin_name_plural']; ?>';
 		
 		var selected_nation_id = false;
 		
@@ -715,20 +726,6 @@ $mature_balance = mature_balance($game, $thisuser);
 		<div class="row">
 			<div id="tabcontent0" class="tabcontent">
 				<?php
-				function game_status_explanation($game) {
-					$html = "";
-					if ($game['game_status'] == "editable") $html .= "The game creator hasn't yet published this game; it's parameters can still be changed.";
-					else if ($game['game_status'] == "published") {
-						if ($game['start_condition'] == "players_joined") {
-							$num_players = paid_players_in_game($game);
-							$html .= $num_players."/".$game['start_condition_players']." players have already joined, waiting for ".($game['start_condition_players']-$num_players)." more players.";
-						}
-						else $html .= "This game starts at ".$game['start_datetime'];
-					}
-					else if ($game['game_status'] == "completed") $html .= "This game is over.";
-
-					return $html;
-				}
 				$game_status_explanation =  game_status_explanation($game);
 				?>
 				<div id="game_status_explanation"<?php if ($game_status_explanation == "") echo ' style="display: none;"'; ?>><?php if ($game_status_explanation != "") echo $game_status_explanation; ?></div>
@@ -792,10 +789,17 @@ $mature_balance = mature_balance($game, $thisuser);
 				$q = "SELECT * FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$game['game_id']."';";
 				$r = run_query($q);
 				echo "<h3>".mysql_numrows($r)." players</h3>\n";
+				
 				while ($user_game = mysql_fetch_array($r)) {
 					echo '<div class="row">';
 					echo '<div class="col-sm-4"><a href="" onclick="openChatWindow('.$user_game['user_id'].'); return false;">'.$user_game['username'].'</a></div>';
-					echo '<div class="col-sm-4">'.format_bignum(account_coin_value($game, $user_game)/pow(10,8)).' coins</div>';
+					
+					$networth_disp = format_bignum(account_coin_value($game, $user_game)/pow(10,8));
+					echo '<div class="col-sm-4">'.$networth_disp.' ';
+					if ($networth_disp == '1') echo $game['coin_name'];
+					else echo $game['coin_name_plural'];
+					echo '</div>';
+					
 					echo '</div>';
 				}
 				?>

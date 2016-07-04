@@ -29,7 +29,7 @@ if ($thisuser) { ?>
 		<a href="/">&larr; All EmpireCoin Games</a>
 	</div>
 	<div class="paragraph">
-		<h1>Welcome to <?php echo $game['name']; ?></h1>
+		<h1><?php echo $game['name']; ?></h1>
 		<div class="row">
 			<div class="col-md-7">
 				<?php
@@ -64,17 +64,24 @@ if ($thisuser) { ?>
 					}
 					?>
 				</div>
-				<div class="paragraph">
-					In this game you can win free coins by casting your votes correctly.  Votes build up over time based on the number of <?php echo $game['coin_name_plural']; ?> that you hold, and when you vote for an empire, your votes are used up but your <?php echo $game['coin_name_plural']; ?> are retained. By collaborating with your teammates against competing groups, you can make real money by accumulating coins faster than average.  Through the EmpireCoin APIs you can even code up a custom strategy which makes smart, real-time decisions about how to cast your votes.
-				</div>
-				<?php
+								<?php
 				if ($game['giveaway_status'] == "public_pay" || $game['giveaway_status'] == "invite_pay") {
 					$q = "SELECT * FROM currencies WHERE currency_id='".$game['invite_currency']."';";
 					$r = run_query($q);
 					if (mysql_numrows($r) > 0) {
 						$invite_currency = mysql_fetch_array($r);
 						echo '<div class="paragraph">';
-						echo 'You can join this game by buying '.format_bignum($game['giveaway_amount']/pow(10,8)).' '.$game['coin_name_plural'].' for '.format_bignum($game['invite_cost']).' '.$invite_currency['short_name']."s. ";
+						
+						$receive_disp = format_bignum($game['giveaway_amount']/pow(10,8));
+						echo 'You can join this game by buying '.$receive_disp.' ';
+						if ($receive_disp == '1') echo $game['coin_name'];
+						else echo $game['coin_name_plural'];
+						
+						$buyin_disp = format_bignum($game['invite_cost']);
+						echo ' for '.$buyin_disp.' ';
+						echo $invite_currency['short_name'];
+						if ($buyin_disp != '1') echo "s";
+						echo ". ";
 
 						if ($game['game_status'] == "running") {
 							echo "This game started ".format_seconds(time()-$game['start_time'])." ago; ".format_bignum(coins_in_existence($game, false)/pow(10,8))." ".$game['coin_name_plural']."  are already in circulation. ";
@@ -102,6 +109,9 @@ if ($thisuser) { ?>
 					}
 				}
 				?>
+				<div class="paragraph">
+					In this game you can win <?php echo $game['coin_name_plural']; ?> by casting your votes correctly.  Votes build up over time based on the number of <?php echo $game['coin_name_plural']; ?> that you hold, and when you vote for an empire, your votes are used up but your <?php echo $game['coin_name_plural']; ?> are retained. By collaborating with your teammates against competing groups, you can make real money by accumulating money faster than the other players.  Through the EmpireCoin APIs you can even code up a custom strategy which makes smart, real-time decisions about how to cast your votes.
+				</div>
 				<div class="paragraph">
 					<a href="/wallet/<?php echo $game['url_identifier']; ?>/" class="btn btn-success">Play Now</a>
 					<a href="/explorer/<?php echo $game['url_identifier']; ?>/rounds/" class="btn btn-primary">Blockchain Explorer</a>
@@ -190,6 +200,10 @@ var mature_io_ids_csv = '<?php echo mature_io_ids_csv($thisuser['user_id'], $gam
 var game_round_length = <?php echo $game['round_length']; ?>;
 var game_id = <?php echo $game['game_id']; ?>;
 var game_loop_index = 1;
+
+var coin_name = '<?php echo $game['coin_name']; ?>';
+var coin_name_plural = '<?php echo $game['coin_name_plural']; ?>';
+
 var last_game_loop_index_applied = -1;
 var min_bet_round = <?php
 	$bet_round_range = bet_round_range($game);

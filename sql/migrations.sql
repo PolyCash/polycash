@@ -97,3 +97,51 @@ CREATE TABLE IF NOT EXISTS `game_giveaways` (
 ALTER TABLE `games` ADD `start_time` INT( 20 ) NULL DEFAULT NULL AFTER `start_condition_players` ;
 ALTER TABLE `transactions` ADD INDEX (`transaction_desc`);
 ALTER TABLE `transaction_IOs` ADD INDEX (`game_id`, `user_id`);
+ALTER TABLE `games` ADD `variation_id` INT(11) NULL DEFAULT NULL AFTER `creator_id`;
+ALTER TABLE `games` ADD INDEX (`variation_id`);
+CREATE TABLE IF NOT EXISTS `game_types` (
+  `game_type_id` int(11) NOT NULL AUTO_INCREMENT,
+  `game_type` enum('real','simulation') NOT NULL DEFAULT 'simulation',
+  `block_timing` enum('realistic','user_controlled') NOT NULL DEFAULT 'realistic',
+  `payout_weight` enum('coin','coin_block','coin_round') NOT NULL DEFAULT 'coin_round',
+  `start_condition` enum('fixed_time','players_joined') NOT NULL DEFAULT 'players_joined',
+  `inflation` enum('exponential','linear') NOT NULL DEFAULT 'exponential',
+  `url_identifier` varchar(100) DEFAULT NULL,
+  `start_condition_players` int(11) DEFAULT NULL,
+  `num_voting_options` int(11) NOT NULL DEFAULT '16',
+  `type_name` varchar(100) NOT NULL DEFAULT '',
+  `coin_name` varchar(100) NOT NULL DEFAULT '',
+  `coin_name_plural` varchar(100) NOT NULL DEFAULT '',
+  `coin_abbreviation` varchar(10) NOT NULL DEFAULT '',
+  PRIMARY KEY (`game_type_id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=4 ;
+INSERT INTO `game_types` (`game_type_id`, `game_type`, `block_timing`, `payout_weight`, `start_condition`, `inflation`, `url_identifier`, `start_condition_players`, `num_voting_options`, `type_name`, `coin_name`, `coin_name_plural`, `coin_abbreviation`) VALUES
+(1, 'simulation', 'realistic', 'coin_round', 'players_joined', 'exponential', 'two-player-dime-battle', 2, 16, 'two player dime battle', 'dime', 'dimes', '$'),
+(2, 'simulation', 'realistic', 'coin_round', 'players_joined', 'exponential', 'two-player-penny-battle', 2, 16, 'two player penny battle', 'penny', 'pennies', '$'),
+(3, 'simulation', 'realistic', 'coin_round', 'players_joined', 'exponential', 'two-player-dollar-battles', 2, 16, 'two player dollar battle', 'dollar', 'dollars', '$');
+CREATE TABLE IF NOT EXISTS `game_type_variations` (
+  `variation_id` int(11) NOT NULL AUTO_INCREMENT,
+  `game_type_id` int(11) DEFAULT NULL,
+  `target_open_games` int(11) NOT NULL DEFAULT '0',
+  `giveaway_status` enum('public_free','invite_free','public_pay','invite_pay') DEFAULT NULL,
+  `giveaway_amount` bigint(20) DEFAULT NULL,
+  `invite_currency` int(11) DEFAULT NULL,
+  `invite_cost` decimal(16,8) DEFAULT NULL,
+  `round_length` int(11) DEFAULT NULL,
+  `final_round` int(11) DEFAULT NULL,
+  `seconds_per_block` int(11) NOT NULL,
+  `max_voting_fraction` decimal(2,2) DEFAULT NULL,
+  `maturity` int(11) NOT NULL DEFAULT '0',
+  `exponential_inflation_minershare` decimal(9,8) DEFAULT NULL,
+  `exponential_inflation_rate` decimal(9,8) NOT NULL,
+  `pow_reward` bigint(20) DEFAULT NULL,
+  `pos_reward` bigint(20) DEFAULT NULL,
+  `variation_name` varchar(100) NOT NULL DEFAULT '',
+  PRIMARY KEY (`variation_id`),
+  KEY `game_type_id` (`game_type_id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=5 ;
+INSERT INTO `game_type_variations` (`variation_id`, `game_type_id`, `target_open_games`, `giveaway_status`, `giveaway_amount`, `invite_currency`, `invite_cost`, `round_length`, `final_round`, `seconds_per_block`, `max_voting_fraction`, `maturity`, `exponential_inflation_minershare`, `exponential_inflation_rate`, `pow_reward`, `pos_reward`, `variation_name`) VALUES
+(1, 1, 1, 'public_pay', 1000000000, 1, '1.00000000', 20, 10, 12, '0.40', 0, '0.01000000', '0.20000000', 0, 0, '2 player dime battle'),
+(2, 2, 1, 'public_pay', 1000000000, 1, '0.10000000', 20, 10, 12, '0.40', 0, '0.01000000', '0.20000000', 0, 0, '2 player penny battle'),
+(3, 3, 1, 'public_pay', 1000000000, 1, '10.00000000', 20, 10, 12, '0.40', 1, '0.01000000', '0.20000000', 0, 0, '2 player dollar battle'),
+(4, 3, 1, 'public_free', 100000000000, 1, '0.00000000', 20, 10, 12, '0.40', 0, '0.01000000', '0.20000000', 0, 0, 'free 2 player battle');

@@ -11,9 +11,13 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$btc_currency = get_currency_by_abbreviation('btc');
 	$latest_btc_price = latest_currency_price($btc_currency['currency_id']);
 	
+	if (!isset($GLOBALS['currency_price_refresh_seconds'])) die('Error: please add something like $GLOBALS[\'currency_price_refresh_seconds\'] = 60; to your config file.');
+	
 	if (!$latest_btc_price || $latest_btc_price['time_added'] < time()-$GLOBALS['currency_price_refresh_seconds']) {
 		$latest_btc_price = update_currency_price($btc_currency['currency_id']);
 	}
+	
+	generate_open_games();
 	
 	$q = "SELECT * FROM games WHERE game_status='published' AND start_condition='players_joined' AND start_condition_players > 0;";
 	$r = run_query($q);
@@ -117,7 +121,12 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		}
 	}
 	
-	echo "Script ran for ".round(microtime(true)-$script_start_time, 2)." seconds.<br/>\n";
+	$runtime_sec = microtime(true)-$script_start_time;
+	$sec_until_refresh = round(60-$runtime_sec);
+	if ($sec_until_refresh < 0) $sec_until_refresh = 0;
+	
+	echo '<script type="text/javascript">setTimeout("window.location=window.location;", '.(1000*$sec_until_refresh).');</script>'."\n";
+	echo "Script ran for ".round($runtime_sec, 2)." seconds.<br/>\n";
 	/*
 	$q = "UPDATE users SET logged_in=0 WHERE last_active<".(time()-60*2).";";
 	$r = run_query($q);

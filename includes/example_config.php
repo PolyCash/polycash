@@ -27,6 +27,9 @@ $GLOBALS['walletnotify_by_cron'] = true;
 $GLOBALS['pageview_tracking_enabled'] = false;
 $GLOBALS['min_unallocated_addresses'] = 40;
 
+$GLOBALS['currency_price_refresh_seconds'] = 30;
+$GLOBALS['invoice_expiration_seconds'] = 60*10;
+
 $GLOBALS['site_name_short'] = "EmpireCoin";
 $GLOBALS['site_name'] = "EmpireCoin.org";
 $GLOBALS['site_domain'] = strtolower($GLOBALS['site_name']);

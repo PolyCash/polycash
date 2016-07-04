@@ -230,21 +230,44 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					if ($my_votes[$round['winning_nation_id']] > 0) {
 						$payout_amt = (floor(100*pos_reward_in_round($game, $this_round)/pow(10,8)*$my_votes[$round['winning_nation_id']]['coins']/$round['winning_score'])/100);
 						
-						echo "You won <font class=\"greentext\">+".format_bignum($payout_amt)." EMP</font> by voting ".format_bignum($my_votes[$round['winning_nation_id']]['coins']/pow(10,8))." coins";
+						$payout_disp = format_bignum($payout_amt);
+						echo "You won <font class=\"greentext\">+".$payout_disp." ";
+						if ($payout_disp == '1') echo $game['coin_name'];
+						else echo $game['coin_name_plural'];
 						
-						if ($game['payout_weight'] != "coin") echo " (".format_bignum($my_votes[$round['winning_nation_id']][$game['payout_weight'].'s']/pow(10,8))." votes)";
+						$vote_disp = format_bignum($my_votes[$round['winning_nation_id']]['coins']/pow(10,8));
+						echo "</font> by voting ".$vote_disp." ";
+						if ($vote_disp == '1') echo $game['coin_name'];
+						else echo $game['coin_name_plural'];
+						
+						if ($game['payout_weight'] != "coin") {
+							$vote_disp = format_bignum($my_votes[$round['winning_nation_id']][$game['payout_weight'].'s']/pow(10,8));
+							echo " (".$vote_disp;
+							echo " vote";
+							if ($vote_disp != '1') echo 's';
+							echo ")";
+						}
 						
 						echo " for ".$round['name']."</font><br/>\n";
 					}
 					
 					if ($round['payout_transaction_id'] > 0) {
-						echo '<font class="greentext">'.format_bignum($round['amount']/pow(10,8))."</font> coins were paid out to the winners.<br/>\n";
+						$payout_disp = format_bignum($round['amount']/pow(10,8));
+						echo '<font class="greentext">'.$payout_disp."</font> ";
+						if ($payout_disp == '1') echo $game['coin_name']." was";
+						else echo $game['coin_name_plural']." were";
+						echo " paid out to the winners.<br/>\n";
 					}
 					$round_fee_q = "SELECT SUM(fee_amount) FROM transactions WHERE game_id='".$game['game_id']."' AND block_id > ".(($this_round-1)*$game['round_length'])." AND block_id < ".($this_round*$game['round_length']).";";
 					$round_fee_r = run_query($round_fee_q);
 					$round_fees = mysql_fetch_row($round_fee_r);
 					$round_fees = intval($round_fees[0]);
-					echo '<font class="redtext">'.format_bignum($round_fees/pow(10,8))."</font> coins were paid in fees during this round.<br/>\n";
+					
+					$fee_disp = format_bignum($round_fees/pow(10,8));
+					echo '<font class="redtext">'.$fee_disp."</font> ";
+					if ($fee_disp == '1') echo $game['coin_name']." was";
+					else echo $game['coin_name_plural']." were";
+					echo " paid in fees during this round.<br/>\n";
 					
 					$from_block_id = (($this_round-1)*$game['round_length'])+1;
 					$to_block_id = ($this_round*$game['round_length']);
@@ -298,9 +321,16 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 								
 								$score_qty = $my_votes[$ranked_nation['nation_id']][$game['payout_weight'].'s'];
 								
-								echo format_bignum($score_qty/pow(10,8));
-								if ($game['payout_weight'] == "coin") echo " coins";
-								else echo " votes";
+								$score_disp = format_bignum($score_qty/pow(10,8));
+								echo $score_disp." ";
+								if ($game['payout_weight'] == "coin") {
+									if ($score_disp == '1') echo $game['coin_name'];
+									else echo $game['coin_name_plural'];
+								}
+								else {
+									echo " vote";
+									if ($score_disp != '1') echo "s";
+								}
 								
 								echo ' ('.round(100*$score_qty/$nation_score, 3).'%)</div>';
 							}
@@ -317,7 +347,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 						$q = "SELECT * FROM transactions WHERE game_id='".$game['game_id']."' AND block_id='".$i."' AND amount > 0 ORDER BY transaction_id ASC;";
 						$r = run_query($q);
 						while ($transaction = mysql_fetch_array($r)) {
-							echo render_transaction($transaction, FALSE, "", $game['url_identifier']);
+							echo render_transaction($game, $transaction, FALSE, "", $game['url_identifier']);
 						}
 					}
 					echo '</div>';
@@ -404,7 +434,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					$r = run_query($q);
 					
 					while ($transaction = mysql_fetch_array($r)) {
-						echo render_transaction($transaction, FALSE, "", $game['url_identifier']);
+						echo render_transaction($game, $transaction, FALSE, "", $game['url_identifier']);
 					}
 					echo '</div>';
 					echo "<br/>\n";
@@ -454,7 +484,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				while ($transaction_io = mysql_fetch_array($r)) {
 					$block_index = block_id_to_round_index($game, $transaction_io['block_id']);
 					$round_id = block_to_round($game, $transaction_io['block_id']);
-					echo render_transaction($transaction_io, $address['address_id'], "Confirmed in the <a href=\"/explorer/".$game['url_identifier']."/blocks/".$transaction_io['block_id']."\">".date("jS", strtotime("1/".$block_index."/2015"))." block</a> of <a href=\"/explorer/".$game['url_identifier']."/rounds/".$round_id."\">round ".$round_id."</a>". $game['url_identifier']);
+					echo render_transaction($game, $transaction_io, $address['address_id'], "Confirmed in the <a href=\"/explorer/".$game['url_identifier']."/blocks/".$transaction_io['block_id']."\">".date("jS", strtotime("1/".$block_index."/2015"))." block</a> of <a href=\"/explorer/".$game['url_identifier']."/rounds/".$round_id."\">round ".$round_id."</a>". $game['url_identifier']);
 				}
 				echo "</div>\n";
 				
@@ -490,7 +520,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					$label_txt = "This transaction is <a href=\"/explorer/".$game['url_identifier']."/transactions/unconfirmed\">not yet confirmed</a>.";
 				}
 				echo '<div style="border-bottom: 1px solid #bbb;">';
-				echo render_transaction($transaction, false, $label_txt, $game['url_identifier']);
+				echo render_transaction($game, $transaction, false, $label_txt, $game['url_identifier']);
 				echo "</div>\n";
 				
 				if ($rpc_transaction || $rpc_raw_transaction) {

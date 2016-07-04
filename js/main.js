@@ -678,9 +678,12 @@ function input_amount_sums() {
 function set_input_amount_sums() {
 	var amount_sums = input_amount_sums();
 	
-	$('#input_amount_sum').html(format_coins(amount_sums[0]/Math.pow(10,8))+" coins");
+	var input_disp = format_coins(amount_sums[0]/Math.pow(10,8));
+	if (input_disp == '1') input_disp += ' '+coin_name;
+	else input_disp += ' '+coin_name_plural;
+	$('#input_amount_sum').html(input_disp);
 	
-	if (payout_weight == 'coin_block') {
+	if (payout_weight != 'coin') {
 		$('#input_vote_sum').html(format_coins(amount_sums[1]/Math.pow(10,8))+" votes");
 	}
 }
@@ -689,8 +692,11 @@ function render_selected_utxo(index_id) {
 	if (payout_weight == "coin") score_qty = vote_inputs[index_id].amount;
 	else if (payout_weight == "coin_round") score_qty = (block_to_round(1+last_block_id) - block_to_round(vote_inputs[index_id].create_block_id))*vote_inputs[index_id].amount;
 	else score_qty = (1 + last_block_id - vote_inputs[index_id].create_block_id)*vote_inputs[index_id].amount;
-	var render_text = format_coins(score_qty/Math.pow(10,8));
-	if (payout_weight == "coin") render_text += ' coins';
+	var render_text = format_coins(score_qty/Math.pow(10,8))+' ';
+	if (payout_weight == "coin") {
+		if (render_text == '1') render_text += coin_name_plural;
+		else render_text += coin_name;
+	}
 	else render_text += ' votes';
 	return render_text;
 }
@@ -834,9 +840,14 @@ function refresh_output_amounts() {
 			var output_val = 0;
 			if (payout_weight == "coin") output_val = output_coins;
 			else output_val = output_score;
+			
 			var output_val_disp = format_coins(output_val/Math.pow(10,8));
-			if (payout_weight == "coin") output_val_disp += " coins";
+			if (payout_weight == "coin") {
+				if (output_val_disp == '1') output_val_disp += " "+coin_name;
+				else output_val_disp += " "+coin_name_plural;
+			}
 			else output_val_disp += " votes";
+			
 			$('#output_amount_disp_'+i).html(output_val_disp);
 			
 			vote_nations[i].amount = output_coins;
@@ -863,7 +874,7 @@ function format_coins(amount) {
 	}
 	else if (amount == 0) return "0";
 	else if (amount < 1) {
-		return rtrim(amount, "0.");
+		return rtrim((amount).toPrecision(5), "0.");
 	}
 	else return parseFloat((amount).toPrecision(5));
 }
@@ -876,7 +887,13 @@ function refresh_mature_io_btns() {
 		else votes = (1 + last_block_id - mature_ios[i].create_block_id)*mature_ios[i].amount;
 		select_btn_text += 'Add '+format_coins(votes/Math.pow(10,8));
 		select_btn_text += ' votes';
-		if (payout_weight != 'coin') select_btn_text += "<br/>("+format_coins(mature_ios[i].amount/Math.pow(10,8))+" coins)";
+		if (payout_weight != 'coin') {
+			var coin_disp = format_coins(mature_ios[i].amount/Math.pow(10,8));
+			select_btn_text += "<br/>("+coin_disp+" ";
+			if (coin_disp == '1') select_btn_text += coin_name;
+			else select_btn_text += coin_name_plural;
+			select_btn_text += ")";
+		}
 		$('#select_utxo_'+mature_ios[i].io_id).html(select_btn_text);
 	}
 	for (var i=0; i<vote_inputs.length; i++) {

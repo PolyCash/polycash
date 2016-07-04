@@ -6,8 +6,6 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$r = run_query($q);
 
 	while ($mandatory_game = mysql_fetch_array($r)) {
-		update_nation_scores($mandatory_game);
-		
 		if ($mandatory_game['creator_id'] > 0) {}
 		else {
 			$qq = "SELECT * FROM users;";
@@ -19,6 +17,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				$success = try_capture_giveaway($mandatory_game, $user, $invitation);
 			}
 		}
+		
 		update_nation_scores($mandatory_game);
 		
 		echo $mandatory_game['name']."<br/>\n";
