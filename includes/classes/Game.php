@@ -638,7 +638,7 @@ class Game {
 		
 		$q = "UPDATE game_voting_options gvo INNER JOIN (
 			SELECT option_id, SUM(amount) sum_amount, SUM(coin_blocks_destroyed) sum_cbd, SUM(coin_rounds_destroyed) sum_crd, SUM(votes) sum_votes FROM transaction_ios 
-			WHERE game_id='".$this->db_game['game_id']."' AND create_round_id = ".((($round_id-1)*$this->db_game['round_length'])+1)." AND amount > 0
+			WHERE game_id='".$this->db_game['game_id']."' AND create_round_id=".$round_id." AND amount > 0
 			GROUP BY option_id
 		) i ON gvo.option_id=i.option_id SET gvo.coin_score=i.sum_amount, gvo.coin_block_score=i.sum_cbd, gvo.coin_round_score=i.sum_crd, gvo.votes=i.sum_votes WHERE gvo.game_id='".$this->db_game['game_id']."';";
 		$r = $this->app->run_query($q);
