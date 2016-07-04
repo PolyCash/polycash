@@ -107,3 +107,12 @@ ALTER TABLE `user_strategy_options`
   ADD KEY `strategy_id` (`strategy_id`);
 ALTER TABLE `user_strategy_options`
   MODIFY `strategy_option_id` int(11) NOT NULL AUTO_INCREMENT;
+INSERT INTO `voting_option_groups` (`option_group_id`, `option_name`, `option_name_plural`, `description`) VALUES (NULL, 'empire', 'empires', '8 biggest nations in the world');
+INSERT INTO `voting_options` SET option_group_id=4, name='China', voting_character='1', default_image_id=1;
+INSERT INTO `voting_options` SET option_group_id=4, name='USA', voting_character='2', default_image_id=2;
+INSERT INTO `voting_options` SET option_group_id=4, name='India', voting_character='3', default_image_id=3;
+INSERT INTO `voting_options` SET option_group_id=4, name='Brazil', voting_character='4', default_image_id=4;
+INSERT INTO `voting_options` SET option_group_id=4, name='Indonesia', voting_character='5', default_image_id=5;
+INSERT INTO `voting_options` SET option_group_id=4, name='Japan', voting_character='6', default_image_id=6;
+INSERT INTO `voting_options` SET option_group_id=4, name='Russia', voting_character='7', default_image_id=7;
+INSERT INTO `voting_options` SET option_group_id=4, name='Germany', voting_character='8', default_image_id=8;
