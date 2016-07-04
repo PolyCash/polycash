@@ -470,15 +470,25 @@ function wallet_text_stats($thisuser, $game, $current_round, $last_block_id, $bl
 			if ($next_transaction['transaction_desc'] == "votebase") $html .= "You won ";
 			$html .= "<font class=\"greentext\">".round($next_transaction['amount']/(pow(10, 8)), 2)."</font> ";
 			
-			if ($next_transaction['transaction_desc'] == "votebase") $html .= "coins in block ".$next_transaction['create_block_id'].". Coins";
-			else $html .= "coins received in block #".$next_transaction['create_block_id'];
-			
-			$html .= " can be spent in block #".$avail_block.". (Approximately ";
-			if ($minutes_to_avail > 1) $html .= $minutes_to_avail." minutes";
-			else $html .= $seconds_to_avail." seconds";
-			$html .= "). ";
-			if ($next_transaction['nation_id'] > 0) {
-				$html .= "You voted for ".$next_transaction['name']." in round #".block_to_round($next_transaction['create_block_id']).". ";
+			if ($next_transaction['create_block_id'] == "") {
+				$html .= "coins were just ";
+				if ($next_transaction['nation_id'] > 0) {
+					$html .= "voted for ".$next_transaction['name'];
+				}
+				else $html .= "spent";
+				$html .= ". This transaction is not yet confirmed.";
+			}
+			else {
+				if ($next_transaction['transaction_desc'] == "votebase") $html .= "coins in block ".$next_transaction['create_block_id'].". Coins";
+				else $html .= "coins received in block #".$next_transaction['create_block_id'];
+				
+				$html .= " can be spent in block #".$avail_block.". (Approximately ";
+				if ($minutes_to_avail > 1) $html .= $minutes_to_avail." minutes";
+				else $html .= $seconds_to_avail." seconds";
+				$html .= "). ";
+				if ($next_transaction['nation_id'] > 0) {
+					$html .= "You voted for ".$next_transaction['name']." in round #".block_to_round($next_transaction['create_block_id']).". ";
+				}
 			}
 			$html .= "<br/>\n";
 		}

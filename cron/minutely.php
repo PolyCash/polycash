@@ -66,6 +66,7 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		try {
 			$seconds_to_sleep = 5;
 			do {
+				echo apply_user_strategies($game);
 				echo walletnotify($game, $empirecoin_rpc, "");
 				update_nation_scores($game);
 				

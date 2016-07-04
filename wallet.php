@@ -186,7 +186,7 @@ else if ($_REQUEST['do'] == "logout" && $thisuser) {
 	$thisuser = FALSE;
 	$message = "You have been logged out. ";
 }
-else if ($thisuser && $_REQUEST['do'] == "save_voting_strategy") {
+else if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['do'] == "save_voting_strategy_fees")) {
 	$voting_strategy = $_REQUEST['voting_strategy'];
 	$voting_strategy_id = intval($_REQUEST['voting_strategy_id']);
 	$aggregate_threshold = intval($_REQUEST['aggregate_threshold']);
@@ -202,7 +202,7 @@ else if ($thisuser && $_REQUEST['do'] == "save_voting_strategy") {
 		else die("Invalid strategy ID");
 	}
 	else {
-		$q = "INSERT INTO user_strategies SET user_id='".$thisuser['user_id']."';";
+		$q = "INSERT INTO user_strategies SET user_id='".$thisuser['user_id']."', game_id='".$game['game_id']."';";
 		$r = run_query($q);
 		$voting_strategy_id = mysql_insert_id();
 		
@@ -210,58 +210,75 @@ else if ($thisuser && $_REQUEST['do'] == "save_voting_strategy") {
 		$r = run_query($q);
 		$user_strategy = mysql_fetch_array($r);
 	}
-	
-	if (in_array($voting_strategy, array('manual', 'by_rank', 'by_nation', 'api'))) {
-		for ($i=1; $i<=get_site_constant('num_voting_options'); $i++) {
-			if ($_REQUEST['by_rank_'.$i] == "1") $by_rank_csv .= $i.",";
-		}
-		if ($by_rank_csv != "") $by_rank_csv = substr($by_rank_csv, 0, strlen($by_rank_csv)-1);
-		
-		$q = "UPDATE user_strategies SET voting_strategy='".$voting_strategy."'";
-		if ($aggregate_threshold >= 0 && $aggregate_threshold <= 100) {
-			$q .= ", aggregate_threshold='".$aggregate_threshold."'";
-		}
-		for ($block=1; $block<=9; $block++) {
-			if ($_REQUEST['vote_on_block_'.$block] == "1") $vote_on_block = "1";
-			else $vote_on_block = "0";
-			$q .= ", vote_on_block_".$block."=".$vote_on_block;
-		}
-		
-		$nation_pct_sum = 0;
-		$nation_pct_q = "";
-		$nation_pct_error = FALSE;
-		
-		for ($nation_id=1; $nation_id<=get_site_constant('num_voting_options'); $nation_id++) {
-			$nation_pct = intval($_REQUEST['nation_pct_'.$nation_id]);
-			$nation_pct_q .= ", nation_pct_".$nation_id."=".$nation_pct;
-			$nation_pct_sum += $nation_pct;
-		}
-		if ($nation_pct_sum == 100) $q .= $nation_pct_q;
-		else $nation_pct_error = TRUE;
-		
-		$min_votesum_pct = intval($_REQUEST['min_votesum_pct']);
-		$max_votesum_pct = intval($_REQUEST['max_votesum_pct']);
-		if ($max_votesum_pct > 100) $max_votesum_pct = 100;
-		if ($min_votesum_pct < 0) $min_votesum_pct = 0;
-		if ($max_votesum_pct < $min_votesum_pct) $max_votesum_pct = $min_votesum_pct;
-		
-		$min_coins_available = round($_REQUEST['min_coins_available'], 3);
-		
-		$q .= ", min_coins_available='".$min_coins_available."', max_votesum_pct='".$max_votesum_pct."', min_votesum_pct='".$min_votesum_pct."', by_rank_ranks='".$by_rank_csv."', api_url='".$api_url."'";
-		$q .= " WHERE strategy_id='".$user_strategy['strategy_id']."';";
-		$r = run_query($q);
-		
-		if ($nation_pct_error && $voting_strategy == "by_nation") {
-			$q = "UPDATE user_strategies SET voting_strategy='".$user_strategy['voting_strategy']."' WHERE strategy_id='".$user_strategy['strategy_id']."';";
+	if ($_REQUEST['do'] == "save_voting_strategy_fees") {
+		$transaction_fee = floatval($_REQUEST['transaction_fee']);
+		if ($transaction_fee == floor($transaction_fee*pow(10,8))/pow(10,8)) {
+			$transaction_fee = $transaction_fee*pow(10,8);
+			$q = "UPDATE user_strategies SET transaction_fee='".$transaction_fee."' WHERE strategy_id='".$user_strategy['strategy_id']."';";
 			$r = run_query($q);
-			$voting_strategy = $user_strategy['voting_strategy'];
+			$user_strategy['transaction_fee'] = $transaction_fee;
 			
-			$acode = 0;
-			$message = "Error: voting strategy couldn't be set to \"Vote by nation\", the percentages you entered didn't add up to 100%.";
+			$acode = 1;
+			$message = "Great, your transaction fee has been updated!";
 		}
-		
-		$q = "UPDATE user_games SET strategy_id='".$user_strategy['strategy_id']."' WHERE game_id='".$thisuser['game_id']."' AND user_id='".$thisuser['user_id']."';";
-		$r = run_query($q);
+		else {
+			$acode = 0;
+			$message = "Error: that fee amount is invalid, your changes were not saved.";
+		}
+	}
+	else {
+		if (in_array($voting_strategy, array('manual', 'by_rank', 'by_nation', 'api'))) {
+			for ($i=1; $i<=get_site_constant('num_voting_options'); $i++) {
+				if ($_REQUEST['by_rank_'.$i] == "1") $by_rank_csv .= $i.",";
+			}
+			if ($by_rank_csv != "") $by_rank_csv = substr($by_rank_csv, 0, strlen($by_rank_csv)-1);
+			
+			$q = "UPDATE user_strategies SET voting_strategy='".$voting_strategy."'";
+			if ($aggregate_threshold >= 0 && $aggregate_threshold <= 100) {
+				$q .= ", aggregate_threshold='".$aggregate_threshold."'";
+			}
+			for ($block=1; $block<=9; $block++) {
+				if ($_REQUEST['vote_on_block_'.$block] == "1") $vote_on_block = "1";
+				else $vote_on_block = "0";
+				$q .= ", vote_on_block_".$block."=".$vote_on_block;
+			}
+			
+			$nation_pct_sum = 0;
+			$nation_pct_q = "";
+			$nation_pct_error = FALSE;
+			
+			for ($nation_id=1; $nation_id<=get_site_constant('num_voting_options'); $nation_id++) {
+				$nation_pct = intval($_REQUEST['nation_pct_'.$nation_id]);
+				$nation_pct_q .= ", nation_pct_".$nation_id."=".$nation_pct;
+				$nation_pct_sum += $nation_pct;
+			}
+			if ($nation_pct_sum == 100) $q .= $nation_pct_q;
+			else $nation_pct_error = TRUE;
+			
+			$min_votesum_pct = intval($_REQUEST['min_votesum_pct']);
+			$max_votesum_pct = intval($_REQUEST['max_votesum_pct']);
+			if ($max_votesum_pct > 100) $max_votesum_pct = 100;
+			if ($min_votesum_pct < 0) $min_votesum_pct = 0;
+			if ($max_votesum_pct < $min_votesum_pct) $max_votesum_pct = $min_votesum_pct;
+			
+			$min_coins_available = round($_REQUEST['min_coins_available'], 3);
+			
+			$q .= ", min_coins_available='".$min_coins_available."', max_votesum_pct='".$max_votesum_pct."', min_votesum_pct='".$min_votesum_pct."', by_rank_ranks='".$by_rank_csv."', api_url='".$api_url."'";
+			$q .= " WHERE strategy_id='".$user_strategy['strategy_id']."';";
+			$r = run_query($q);
+			
+			if ($nation_pct_error && $voting_strategy == "by_nation") {
+				$q = "UPDATE user_strategies SET voting_strategy='".$user_strategy['voting_strategy']."' WHERE strategy_id='".$user_strategy['strategy_id']."';";
+				$r = run_query($q);
+				$voting_strategy = $user_strategy['voting_strategy'];
+				
+				$acode = 0;
+				$message = "Error: voting strategy couldn't be set to \"Vote by nation\", the percentages you entered didn't add up to 100%.";
+			}
+			
+			$q = "UPDATE user_games SET strategy_id='".$user_strategy['strategy_id']."' WHERE game_id='".$thisuser['game_id']."' AND user_id='".$thisuser['user_id']."';";
+			$r = run_query($q);
+		}
 	}
 }
 
@@ -488,6 +505,22 @@ $mature_balance = $account_value - $immature_balance;
 				?>
 			</div>
 			<div id="tabcontent1" style="display: none;" class="tabcontent">
+				<h2>Transaction Fees</h2>
+				<form method="post" action="/wallet/">
+					<input type="hidden" name="do" value="save_voting_strategy_fees" />
+					<input type="hidden" name="voting_strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
+					Pay fees on every transaction of:<br/>
+					<div class="row">
+						<div class="col-sm-4"><input class="form-control" name="transaction_fee" value="<?php echo $user_strategy['transaction_fee']/pow(10,8); ?>" placeholder="0.001" /></div>
+						<div class="col-sm-4">coins</div>
+					</div>
+					<div class="row">
+						<div class="col-sm-3">
+							<input class="btn btn-primary" type="submit" value="Save" />
+						</div>
+					</div>
+				</form>
+				
 				<h2>My Games</h2>
 				<?php
 				echo "You're currently playing ".$game['name'].". ";
@@ -550,7 +583,7 @@ $mature_balance = $account_value - $immature_balance;
 				Instead of logging in every time you want to cast a vote, you can automate your voting behavior by choosing one of the automated voting strategies below. <br/><br/>
 				<form method="post" action="/wallet/">
 					<input type="hidden" name="do" value="save_voting_strategy" />
-					<input type="hidden" name="strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
+					<input type="hidden" name="voting_strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
 					
 					<div class="row bordered_row">
 						<div class="col-md-2">
