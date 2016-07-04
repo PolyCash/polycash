@@ -1330,8 +1330,10 @@ function delete_reset_game($delete_or_reset, $game_id) {
 	$q = "DELETE FROM game_nations WHERE game_id='".$game_id."';";
 	$r = run_query($q);
 	
-	$q = "DELETE FROM addresses WHERE game_id='".$game_id."';";
-	$r = run_query($q);
+	if ($game['game_type'] == "simulation") {
+		$q = "DELETE FROM addresses WHERE game_id='".$game_id."';";
+		$r = run_query($q);
+	}
 	
 	if ($delete_or_reset == "reset") {
 		ensure_game_nations($game_id);
