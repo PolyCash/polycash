@@ -764,7 +764,9 @@ function new_webwallet_multi_transaction($game, $nation_ids, $amounts, $from_use
 			$coin_blocks_destroyed = 0;
 			while ($transaction_input = mysql_fetch_array($r)) {
 				if ($input_sum < $amount) {
-					$qq = "UPDATE transaction_IOs SET spend_status='spent', spend_transaction_id='".$transaction_id."', spend_block_id='".$block_id."' WHERE io_id='".$transaction_input['io_id']."';";
+					$qq = "UPDATE transaction_IOs SET spend_transaction_id='".$transaction_id."', ";
+					if ($block_id) $qq .= "spend_status='spent', spend_block_id='".$block_id."' ";
+					$qq .= "WHERE io_id='".$transaction_input['io_id']."';";
 					$rr = run_query($qq);
 					$input_sum += $transaction_input['amount'];
 					if (!$overshoot_return_addr_id) $overshoot_return_addr_id = $transaction_input['address_id'];
@@ -796,9 +798,11 @@ function new_webwallet_multi_transaction($game, $nation_ids, $amounts, $from_use
 					$address = mysql_fetch_array($r);
 					
 					$output_cbd = floor($coin_blocks_destroyed*($amounts[$i]/$input_sum));
-					$q = "INSERT INTO transaction_IOs SET spend_status='unspent', ";
+					$q = "INSERT INTO transaction_IOs SET spend_status='unconfirmed', ";
 					if ($to_user_id) $q .= "user_id='".$to_user_id."', ";
-					$q .= "coin_blocks_destroyed='".$output_cbd."', instantly_mature='".$instantly_mature."', game_id='".$game['game_id']."', address_id='".$address_id."', nation_id='".$address['nation_id']."', create_transaction_id='".$transaction_id."', amount='".$amounts[$i]."';";
+					$q .= "coin_blocks_destroyed='".$output_cbd."', instantly_mature='".$instantly_mature."', game_id='".$game['game_id']."', ";
+					if ($block_id) $q .= "create_block_id='".$block_id."', ";
+					$q .= "address_id='".$address_id."', nation_id='".$address['nation_id']."', create_transaction_id='".$transaction_id."', amount='".$amounts[$i]."';";
 					$r = run_query($q);
 					$created_input_ids[count($created_input_ids)] = mysql_insert_id();
 					
@@ -820,7 +824,9 @@ function new_webwallet_multi_transaction($game, $nation_ids, $amounts, $from_use
 				$r = run_query($q);
 				$overshoot_address = mysql_fetch_array($r);
 				
-				$q = "INSERT INTO transaction_IOs SET spend_status='unspent', game_id='".$game['game_id']."', coin_blocks_destroyed='".$overshoot_cbd."', user_id='".$from_user_id."', address_id='".$overshoot_return_addr_id."', nation_id='".$overshoot_address['nation_id']."', create_transaction_id='".$transaction_id."', amount='".$overshoot_amount."';";
+				$q = "INSERT INTO transaction_IOs SET spend_status='unconfirmed', game_id='".$game['game_id']."', coin_blocks_destroyed='".$overshoot_cbd."', user_id='".$from_user_id."', address_id='".$overshoot_return_addr_id."', nation_id='".$overshoot_address['nation_id']."', create_transaction_id='".$transaction_id."', ";
+				if ($block_id) $q .= "create_block_id='".$block_id."', ";
+				$q .= "amount='".$overshoot_amount."';";
 				$r = run_query($q);
 				$created_input_ids[count($created_input_ids)] = mysql_insert_id();
 				
@@ -2137,9 +2143,9 @@ function walletnotify($game, $empirecoin_rpc, $tx_hash) {
 					$unconfirmed_tx = mysql_fetch_array($r);
 					$q = "UPDATE webwallet_transactions SET block_id='".$new_block_id."' WHERE transaction_id='".$unconfirmed_tx['transaction_id']."';";
 					$r = run_query($q);
-					$q = "UPDATE transaction_IOs SET create_block_id='".$new_block_id."' WHERE create_transaction_id='".$unconfirmed_tx['transaction_id']."';";
+					$q = "UPDATE transaction_IOs SET spend_status='unspent', create_block_id='".$new_block_id."' WHERE create_transaction_id='".$unconfirmed_tx['transaction_id']."';";
 					$r = run_query($q);
-					$q = "UPDATE transaction_IOs SET spend_block_id='".$new_block_id."' WHERE spend_transaction_id='".$unconfirmed_tx['transaction_id']."';";
+					$q = "UPDATE transaction_IOs SET spend_status='spent', spend_block_id='".$new_block_id."' WHERE spend_transaction_id='".$unconfirmed_tx['transaction_id']."';";
 					$r = run_query($q);
 				}
 				else {
@@ -2271,7 +2277,7 @@ function walletnotify($game, $empirecoin_rpc, $tx_hash) {
 					
 					$output_address = create_or_fetch_address($game, $address, true, $empirecoin_rpc, false);
 					
-					$q = "INSERT INTO transaction_IOs SET spend_status='unspent', instantly_mature=0, game_id='".$game['game_id']."', out_index='".$j."', user_id='".$output_address['user_id']."', address_id='".$output_address['address_id']."'";
+					$q = "INSERT INTO transaction_IOs SET spend_status='unconfirmed', instantly_mature=0, game_id='".$game['game_id']."', out_index='".$j."', user_id='".$output_address['user_id']."', address_id='".$output_address['address_id']."'";
 					if ($output_address['nation_id'] > 0) $q .= ", nation_id=".$output_address['nation_id'];
 					$q .= ", create_transaction_id='".$db_transaction_id."', amount='".($outputs[$j]["value"]*pow(10,8))."';";
 					$r = run_query($q);
