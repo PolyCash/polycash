@@ -810,8 +810,6 @@ function new_webwallet_multi_transaction($game, $nation_ids, $amounts, $from_use
 				
 				$raw_txout[$overshoot_address['address']] = $overshoot_amount/pow(10,8);
 			}
-		
-			$round_id = block_to_round($block_id);
 			
 			$rpc_error = false;
 			
@@ -833,9 +831,11 @@ function new_webwallet_multi_transaction($game, $nation_ids, $amounts, $from_use
 				}
 			}
 			
+			$round_id = block_to_round(last_block_id($game['game_id'])+1);
+			
 			$q = "UPDATE game_nations n INNER JOIN (
 				SELECT nation_id, SUM(amount) sum_amount, SUM(coin_blocks_destroyed) sum_cbd FROM transaction_IOs 
-				WHERE game_id='".$game['game_id']."' AND create_block_id >= ".((($round_id-1)*10)+1)." AND create_block_id <= ".($round_id*10-1)." AND amount > 0
+				WHERE game_id='".$game['game_id']."' AND ((create_block_id >= ".((($round_id-1)*10)+1)." AND create_block_id <= ".($round_id*10-1).") OR create_block_id IS NULL) AND amount > 0
 				GROUP BY nation_id
 			) i ON n.nation_id=i.nation_id SET n.coins_currently_voted=i.sum_amount, n.coin_block_score=i.sum_cbd, n.current_vote_score=i.sum_amount WHERE n.game_id='".$game['game_id']."';";
 			$r = run_query($q);
