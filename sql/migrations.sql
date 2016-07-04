@@ -13,3 +13,4 @@ ALTER TABLE `game_nations` ADD `coin_round_score` BIGINT(20) NOT NULL DEFAULT '0
 ALTER TABLE `game_nations` ADD `unconfirmed_coin_round_score` BIGINT(20) NOT NULL DEFAULT '0' AFTER `unconfirmed_coin_block_score`;
 ALTER TABLE `transaction_IOs` ADD `create_round_id` BIGINT(20) NULL DEFAULT NULL AFTER `spend_block_id`, ADD `spend_round_id` BIGINT(20) NULL DEFAULT NULL AFTER `create_round_id`;
 ALTER TABLE `transaction_IOs` ADD `coin_rounds_created` BIGINT(20) NULL DEFAULT NULL AFTER `coin_blocks_destroyed`, ADD `coin_rounds_destroyed` BIGINT(20) NULL DEFAULT NULL AFTER `coin_rounds_created`;
+ALTER TABLE `invitations` ADD `giveaway_transaction_id` INT(20) NULL DEFAULT NULL AFTER `inviter_id`;

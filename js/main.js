@@ -246,7 +246,7 @@ function refresh_if_needed() {
 									
 									performance_history_start_round = json_result['performance_history_start_round'];
 									
-									tab_clicked(2);
+									tab_clicked(3);
 								}
 								
 								if (parseInt(json_result['min_bet_round']) != min_bet_round) {
@@ -469,19 +469,17 @@ function switch_to_game(game_id, action) {
 				$('#fetch_game_link_'+game_id).html(fetch_link_text);
 			}
 			
-			if (json_result['my_game'] == true && json_result['game_status'] != "unstarted") {
+			if (json_result['my_game'] == true) {
 				$('#delete_game_btn').show();
 				$('#reset_game_btn').show();
+				$('#save_game_btn').show();
+				$('#invitations_game_btn').show();
 			}
 			else {
 				$('#delete_game_btn').hide();
 				$('#reset_game_btn').hide();
-			}
-			if (json_result['my_game'] == true) {
-				$('#save_game_btn').show();
-			}
-			else {
 				$('#save_game_btn').hide();
+				$('#invitations_game_btn').hide();
 			}
 			
 			$('#game_form').modal('show');
@@ -497,7 +495,7 @@ function switch_to_game(game_id, action) {
 				
 				$('#game_form_'+game_form_vars[i]).val(json_result[game_form_vars[i]]);
 				
-				if (json_result['game_status'] == "unstarted") $('#game_form_'+game_form_vars[i]).prop('disabled', false);
+				if (json_result['my_game'] && json_result['game_status'] == "unstarted") $('#game_form_'+game_form_vars[i]).prop('disabled', false);
 				else $('#game_form_'+game_form_vars[i]).prop('disabled', true);
 			}
 			if (json_result['my_game']) $('#game_form_game_status').prop('disabled', false);
@@ -507,7 +505,7 @@ function switch_to_game(game_id, action) {
 			if (action == "switch") $('#switch_game_btn').html(switch_link_text);
 			
 			if (json_result['status_code'] == 1) {
-				window.location = window.location;
+				window.location = json_result['redirect_url'];
 			}
 			else alert(json_result['message']);
 		}
@@ -527,7 +525,7 @@ function save_game() {
 		$('#save_game_btn').html(save_link_text);
 		var json_result = JSON.parse(result);
 		if (parseInt(json_result['status_code']) == 1) {
-			window.location = window.location;
+			window.location = '/wallet/'+json_result['url_identifier']+'/';
 		}
 		else alert(json_result['message']);
 	});

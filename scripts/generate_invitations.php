@@ -16,7 +16,7 @@ if ($thisuser) {
 		
 		for ($i=0; $i<$quantity; $i++) {
 			$invitation = false;
-			generate_invitation($game['game_id'], $thisuser['user_id'], $invitation);
+			generate_invitation($game, $thisuser['user_id'], $invitation, false);
 		}
 		echo "$quantity invitations have been generated.";
 	}

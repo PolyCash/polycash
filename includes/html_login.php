@@ -3,6 +3,15 @@ if ($redirect_id > 0) {}
 else if (intval($_REQUEST['redirect_id']) > 0) $redirect_id = intval($_REQUEST['redirect_id']);
 else $redirect_id = FALSE;
 
+$url_game = false;
+$login_url_parts = explode("/", rtrim(ltrim($_SERVER['REQUEST_URI'], "/"), "/"));
+if ($login_url_parts[0] == "wallet" && count($login_url_parts) > 1) {
+	$q = "SELECT * FROM games WHERE url_identifier='".$login_url_parts[1]."';";
+	$r = run_query($q);
+	if (mysql_numrows($r) == 1) {
+		$url_game = mysql_fetch_array($r);
+	}
+}
 ?>
 <script type="text/javascript">
 function autogen_password_changed() {
@@ -21,7 +30,7 @@ $(document).ready(function() {
 <div class="row" style="padding-top: 20px;">
 	<div class="col-md-6">
 		<b style="font-size: 17px; line-height: 24px;">Please log in to continue</b>
-		<form onsubmit="$('#login_password').val(Sha256.hash($('#login_password').val()));" action="/wallet/" method="post">
+		<form onsubmit="$('#login_password').val(Sha256.hash($('#login_password').val()));" action="/wallet/<?php if ($url_game) echo $url_game['url_identifier']."/"; ?>" method="post">
 			<input type="hidden" name="do" value="login" />
 			<?php
 			if ($redirect_id) echo "<input type=\"hidden\" name=\"redirect_id\" value=\"".$redirect_id."\" />\n";
@@ -56,7 +65,7 @@ $(document).ready(function() {
 	<div class="col-md-6">
 		<b style="font-size: 17px; line-height: 24px;">Or sign up for an account</b><br/>
 		
-		<form action="/wallet/" method="post" onsubmit="$('#signup_password').val(Sha256.hash($('#signup_password').val())); $('#signup_password2').val(Sha256.hash($('#signup_password2').val()));">
+		<form action="/wallet/<?php if ($url_game) echo $url_game['url_identifier']."/"; ?>" method="post" onsubmit="$('#signup_password').val(Sha256.hash($('#signup_password').val())); $('#signup_password2').val(Sha256.hash($('#signup_password2').val()));">
 			<input type="hidden" name="do" value="signup" />
 			<?php
 			if ($redirect_id) echo "<input type=\"hidden\" name=\"redirect_id\" value=\"".$redirect_id."\" />\n";

@@ -7,6 +7,10 @@ $pagetitle = "EmpireCoin - Vote for your empire in the very first decentralized 
 $nav_tab_selected = "home";
 include('includes/html_start.php');
 
+$q = "SELECT * FROM games WHERE game_id='".get_site_constant('primary_game_id')."';";
+$r = run_query($q);
+$game = mysql_fetch_array($r);
+
 if ($thisuser) { ?>
 	<div class="container" style="max-width: 1000px; padding: 10px 0px;">
 		<?php
@@ -16,10 +20,6 @@ if ($thisuser) { ?>
 	</div>
 	<?php
 }
-
-$q = "SELECT * FROM games WHERE game_id='".get_site_constant('primary_game_id')."';";
-$r = run_query($q);
-$game = mysql_fetch_array($r);
 
 ?>
 <div class="container-fluid nopadding">
@@ -172,6 +172,7 @@ var last_transaction_id = <?php echo last_transaction_id($game['game_id']); ?>;
 var my_last_transaction_id = <?php echo my_last_transaction_id($thisuser['user_id'], $thisuser['game_id']); ?>;
 var mature_io_ids_csv = '<?php echo mature_io_ids_csv($thisuser['user_id'], $game); ?>';
 var game_round_length = <?php echo $game['round_length']; ?>;
+var game_id = <?php echo $game['game_id']; ?>;
 var game_loop_index = 1;
 var last_game_loop_index_applied = -1;
 var min_bet_round = <?php

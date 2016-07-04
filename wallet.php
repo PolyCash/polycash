@@ -128,14 +128,8 @@ else if ($_REQUEST['do'] == "login") {
 	}
 	else if (mysql_numrows($r) == 1) {
 		$thisuser = mysql_fetch_array($r);
-		if ($thisuser['verified'] == 1) {
-			$message = "You have been logged in, redirecting...";
-			$error_code = 1;
-		}
-		else {
-			$message = "Your account is not yet verified.";
-			$error_code = 2;
-		}
+		$message = "You have been logged in, redirecting...";
+		$error_code = 1;
 	}
 	else {
 		$message = "System error, a duplicate user account was found.";
@@ -143,8 +137,37 @@ else if ($_REQUEST['do'] == "login") {
 	}
 	
 	if ($error_code == 1) {
-		if ($GLOBALS['pageview_tracking_enabled']) log_user_in($thisuser, $viewer_id);
-		else log_user_in($thisuser);
+		$redirect_url = false;
+		
+		if ($GLOBALS['pageview_tracking_enabled']) log_user_in($thisuser, $redirect_url, $viewer_id);
+		else log_user_in($thisuser, $redirect_url);
+		
+		if ($_REQUEST['invite_key'] != "") {
+			$invite_game = false;
+			$success = try_apply_invite_key($thisuser['user_id'], $_REQUEST['invite_key'], $invite_game);
+			if ($success) {
+				header("Location: /wallet/".$invite_game['url_identifier']);
+				die();
+			}
+		}
+		if ($redirect_url) {
+			header("Location: ".$redirect_url['url']);
+		}
+		else {
+			$header_loc = "/wallet/";
+			$url_game = false;
+			$login_url_parts = explode("/", rtrim(ltrim($_SERVER['REQUEST_URI'], "/"), "/"));
+			if ($login_url_parts[0] == "wallet" && count($login_url_parts) > 1) {
+				$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE g.url_identifier='".$login_url_parts[1]."' AND ug.user_id='".$thisuser['user_id']."';";
+				$r = run_query($q);
+				if (mysql_numrows($r) == 1) {
+					$url_game = mysql_fetch_array($r);
+					$header_loc .= $url_game['url_identifier']."/";
+				}
+			}
+			header("Location: ".$header_loc);
+		}
+		die();
 	}
 }
 else if ($_REQUEST['do'] == "logout" && $thisuser) {
@@ -163,10 +186,21 @@ else if ($_REQUEST['do'] == "logout" && $thisuser) {
 $game = false;
 
 if ($thisuser) {
+	if ($_REQUEST['invite_key'] != "") {
+		$invite_game = false;
+		$success = try_apply_invite_key($thisuser['user_id'], $_REQUEST['invite_key'], $invite_game);
+		if ($success) {
+			header("Location: /wallet/".$invite_game['url_identifier']);
+			die();
+		}
+	}
+	
 	$uri_parts = explode("/", $uri);
 	$url_identifier = $uri_parts[2];
 	$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND g.url_identifier='".mysql_real_escape_string($url_identifier)."';";
 	$r = run_query($q);
+	//die(mysql_numrows($r)." $q");
+	
 	if (mysql_numrows($r) > 0) {
 		$game = mysql_fetch_array($r);
 	}
@@ -330,15 +364,6 @@ if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['do'] =
 	}
 }
 
-if ($thisuser && $_REQUEST['invite_key'] != "") {
-	$invite_game = false;
-	$success = try_apply_invite_key($thisuser['user_id'], $_REQUEST['invite_key'], $invite_game);
-	if ($success) {
-		header("Location: /wallet/".$invite_game['url_identifier']);
-		die();
-	}
-}
-
 $pagetitle = $GLOBALS['site_name_short']." - My web wallet";
 $nav_tab_selected = "wallet";
 include('includes/html_start.php');
@@ -491,6 +516,9 @@ $mature_balance = mature_balance($game, $thisuser);
 			<?php if ($game['losable_bets_enabled'] == 1) { ?>
 			bet_loop();
 			<?php } ?>
+			<?php if ($game['game_status'] == 'unstarted') { ?>
+			switch_to_game(<?php echo $game['game_id']; ?>, 'fetch');
+			<?php } ?>
 		});
 		
 		$(document).keypress(function (e) {
@@ -509,52 +537,6 @@ $mature_balance = mature_balance($game, $thisuser);
 		echo $game['name'];
 		if ($game['game_status'] == "paused" || $game['game_status'] == "unstarted") echo " (Paused)";
 		?></h1>
-		
-		<div style="margin-bottom: 10px;">
-			<button class="btn btn-primary btn-sm" onclick="$('#my_games_list').modal('show');">My Games</button>
-			<button class="btn btn-danger btn-sm" onclick="window.location='/wallet/?do=logout';">Log Out</button>
-		</div>
-		
-		<div style="display: none;" class="modal fade" id="my_games_list">
-			<div class="modal-dialog">
-				<div class="modal-content">
-					<div class="modal-header">
-						<h4 class="modal-title">My Games</h4>
-					</div>
-					<div class="modal-body">
-						<?php
-						$q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser['user_id']."';";
-						$r = run_query($q);
-						
-						while ($user_game = mysql_fetch_array($r)) {
-							?>
-							<div class="row game_row<?php
-							if ($user_game['game_id'] == $game['game_id']) echo  ' boldtext';
-							?>">
-								<div class="col-sm-6 game_cell">
-									<a target="_blank" href="/wallet/<?php echo $user_game['url_identifier']; ?>/"><?php echo $user_game['name']; ?></a>
-								</div>
-								<div class="col-sm-3 game_cell">
-									<?php
-									echo '<a id="fetch_game_link_'.$user_game['game_id'].'" href="" onclick="switch_to_game('.$user_game['game_id'].', \'fetch\'); return false;">Settings</a>';
-									?>
-								</div>
-								<div class="col-sm-3 game_cell">
-									<?php if ($user_game['creator_id'] == $thisuser['user_id']) { ?>
-									<a href="" onclick="manage_game_invitations(<?php echo $game['game_id']; ?>); return false;">Invitations</a>
-									<?php } ?>
-								</div>
-							</div>
-							<?php
-						}
-						?>
-						<br/>
-						<button style="float: right;" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-						<button class="btn btn-primary" onclick="switch_to_game(0, 'new'); return false;">Start a new Practice Game</button>
-					</div>
-				</div>
-			</div>
-		</div>
 		
 		<div style="display: none;" class="modal fade" id="game_invitations">
 			<div class="modal-dialog modal-lg">
@@ -586,12 +568,13 @@ $mature_balance = mature_balance($game, $thisuser);
 		<div class="row">
 			<div class="col-xs-2 tabcell" id="tabcell0" onclick="tab_clicked(0);">Play&nbsp;Now</div>
 			<?php if ($game['losable_bets_enabled'] == 1) { ?>
-			<div class="col-xs-2 tabcell" id="tabcell5" onclick="tab_clicked(4);">Gamble</div>
+			<div class="col-xs-2 tabcell" id="tabcell6" onclick="tab_clicked(6);">Gamble</div>
 			<?php } ?>
-			<div class="col-xs-2 tabcell" id="tabcell1" onclick="tab_clicked(1);">Settings</div>
-			<div class="col-xs-2 tabcell" id="tabcell2" onclick="tab_clicked(2);">My&nbsp;Results</div>
-			<div class="col-xs-2 tabcell" id="tabcell3" onclick="tab_clicked(3);">Deposit&nbsp;or&nbsp;Withdraw</div>
-			<div class="col-xs-2 tabcell" id="tabcell5" onclick="tab_clicked(5);">Players</div>
+			<div class="col-xs-2 tabcell" id="tabcell1" onclick="tab_clicked(1);">Chat</div>
+			<div class="col-xs-2 tabcell" id="tabcell2" onclick="tab_clicked(2);">Strategy</div>
+			<div class="col-xs-2 tabcell" id="tabcell3" onclick="tab_clicked(3);">Results</div>
+			<div class="col-xs-2 tabcell" id="tabcell4" onclick="tab_clicked(4);">Deposit&nbsp;or&nbsp;Withdraw</div>
+			<div class="col-xs-2 tabcell" id="tabcell5" onclick="tab_clicked(5);">My&nbsp;Games</div>
 		</div>
 		<div class="row">
 			<div id="tabcontent0" class="tabcontent">
@@ -648,7 +631,22 @@ $mature_balance = mature_balance($game, $thisuser);
 				}
 				?>
 			</div>
-			<div id="tabcontent1" style="display: none;" class="tabcontent">
+			
+			<div class="tabcontent" style="display: none;" id="tabcontent1">
+				<?php
+				$q = "SELECT * FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$game['game_id']."';";
+				$r = run_query($q);
+				echo "<h3>".mysql_numrows($r)." players</h3>\n";
+				while ($user_game = mysql_fetch_array($r)) {
+					echo '<div class="row">';
+					echo '<div class="col-sm-4"><a href="" onclick="openChatWindow('.$user_game['user_id'].'); return false;">'.$user_game['username'].'</a></div>';
+					echo '<div class="col-sm-4">'.format_bignum(account_coin_value($game, $user_game)/pow(10,8)).' coins</div>';
+					echo '</div>';
+				}
+				?>
+			</div>
+			
+			<div id="tabcontent2" style="display: none;" class="tabcontent">
 				<h2>Transaction Fees</h2>
 				<form method="post" action="/wallet/<?php echo $game['url_identifier']; ?>/">
 					<input type="hidden" name="do" value="save_voting_strategy_fees" />
@@ -854,7 +852,7 @@ $mature_balance = mature_balance($game, $thisuser);
 					<input class="btn btn-primary" type="submit" value="Save Voting Strategy" />
 				</form>
 			</div>
-			<div id="tabcontent2" style="display: none;" class="tabcontent">
+			<div id="tabcontent3" style="display: none;" class="tabcontent">
 				<div id="performance_history">
 					<div id="performance_history_0">
 						<?php
@@ -866,9 +864,7 @@ $mature_balance = mature_balance($game, $thisuser);
 					<a href="" onclick="show_more_performance_history(); return false;">Show More</a>
 				</center>
 			</div>
-			<div id="tabcontent3" style="display: none;" class="tabcontent">
-				<h1>Deposit</h1>
-				
+			<div id="tabcontent4" style="display: none;" class="tabcontent">
 				<div id="giveaway_div">
 					<?php
 					$giveaway_avail_msg = 'You\'re eligible for a one time coin giveaway of '.number_format($game['giveaway_amount']/pow(10,8)).' EmpireCoins.<br/>';
@@ -877,42 +873,11 @@ $mature_balance = mature_balance($game, $thisuser);
 					$giveaway_available = check_giveaway_available($game, $thisuser);
 					
 					if ($giveaway_available) {
-						$initial_tab = 3;
+						$initial_tab = 4;
 						echo $giveaway_avail_msg;
 					}
 					?>
 				</div>
-				
-				<?php
-				$q = "SELECT * FROM addresses a LEFT JOIN nations n ON n.nation_id=a.nation_id WHERE a.game_id='".$game['game_id']."' AND a.user_id='".$thisuser['user_id']."' ORDER BY a.nation_id IS NULL ASC, a.nation_id ASC;";
-				$r = run_query($q);
-				?>
-				<b>You have <?php echo mysql_numrows($r); ?> addresses.</b><br/>
-				<?php
-				while ($address = mysql_fetch_array($r)) {
-					?>
-					<div class="row">
-						<div class="col-sm-3">
-							<?php
-							if ($address['nation_id'] > 0) {
-								echo nation_flag(false, $address['name']);
-								echo $address['name'];
-							}
-							else {
-								echo "Default Address";
-							}
-							?>
-						</div>
-						<div class="col-sm-1">
-							<a target="_blank" href="/explorer/<?php echo $game['url_identifier']; ?>/addresses/<?php echo $address['address']; ?>">Explore</a>
-						</div>
-						<div class="col-sm-5">
-							<input type="text" style="border: 0px; background-color: none; width: 100%; font-family: consolas" onclick="$(this).select();" value="<?php echo $address['address']; ?>" />
-						</div>
-					</div>
-					<?php
-				}
-				?>
 				
 				<h1>Withdraw</h1>
 				To withdraw coins please enter an EmpireCoin address below.<br/>
@@ -955,9 +920,74 @@ $mature_balance = mature_balance($game, $thisuser);
 						<button class="btn btn-success" id="withdraw_btn" onclick="attempt_withdrawal();">Withdraw</button>
 					</div>
 				</div>
+				
+				<h1>Deposit</h1>
+				<?php
+				$q = "SELECT * FROM addresses a LEFT JOIN nations n ON n.nation_id=a.nation_id WHERE a.game_id='".$game['game_id']."' AND a.user_id='".$thisuser['user_id']."' ORDER BY a.nation_id IS NULL ASC, a.nation_id ASC;";
+				$r = run_query($q);
+				?>
+				<b>You have <?php echo mysql_numrows($r); ?> addresses.</b><br/>
+				<?php
+				while ($address = mysql_fetch_array($r)) {
+					?>
+					<div class="row">
+						<div class="col-sm-3">
+							<?php
+							if ($address['nation_id'] > 0) {
+								echo nation_flag(false, $address['name']);
+								echo $address['name'];
+							}
+							else {
+								echo "Default Address";
+							}
+							?>
+						</div>
+						<div class="col-sm-1">
+							<a target="_blank" href="/explorer/<?php echo $game['url_identifier']; ?>/addresses/<?php echo $address['address']; ?>">Explore</a>
+						</div>
+						<div class="col-sm-5">
+							<input type="text" style="border: 0px; background-color: none; width: 100%; font-family: consolas" onclick="$(this).select();" value="<?php echo $address['address']; ?>" />
+						</div>
+					</div>
+					<?php
+				}
+				?>
 			</div>
+			
+			<div class="tabcontent" style="display: none;" id="tabcontent5">
+				<h4>My Games</h4>
+				<?php
+				$q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser['user_id']."';";
+				$r = run_query($q);
+				
+				while ($user_game = mysql_fetch_array($r)) {
+					?>
+					<div class="row game_row<?php
+					if ($user_game['game_id'] == $game['game_id']) echo  ' boldtext';
+					?>">
+						<div class="col-sm-6 game_cell">
+							<a target="_blank" href="/wallet/<?php echo $user_game['url_identifier']; ?>/"><?php echo $user_game['name']; ?></a>
+						</div>
+						<div class="col-sm-3 game_cell">
+							<?php
+							echo '<a id="fetch_game_link_'.$user_game['game_id'].'" href="" onclick="switch_to_game('.$user_game['game_id'].', \'fetch\'); return false;">Settings</a>';
+							?>
+						</div>
+						<div class="col-sm-3 game_cell">
+							<?php if ($user_game['creator_id'] == $thisuser['user_id']) { ?>
+							<a href="" onclick="manage_game_invitations(<?php echo $game['game_id']; ?>); return false;">Invitations</a>
+							<?php } ?>
+						</div>
+					</div>
+					<?php
+				}
+				?>
+				<br/>
+				<button class="btn btn-primary" onclick="switch_to_game(0, 'new'); return false;">Start a new Private Game</button>
+			</div>
+			
 			<?php if ($game['losable_bets_enabled'] == 1) { ?>
-				<div class="tabcontent" style="display: none;" id="tabcontent4">
+				<div class="tabcontent" style="display: none;" id="tabcontent6">
 					<div id="my_bets">
 						<?php
 						echo my_bets($game, $thisuser);
@@ -1031,20 +1061,6 @@ $mature_balance = mature_balance($game, $thisuser);
 					<br/>
 				</div>
 			<?php } ?>
-			
-			<div class="tabcontent" style="display: none;" id="tabcontent5">
-				<?php
-				$q = "SELECT * FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$game['game_id']."';";
-				$r = run_query($q);
-				echo "<h3>".mysql_numrows($r)." players</h3>\n";
-				while ($user_game = mysql_fetch_array($r)) {
-					echo '<div class="row">';
-					echo '<div class="col-sm-4"><a href="" onclick="openChatWindow('.$user_game['user_id'].'); return false;">'.$user_game['username'].'</a></div>';
-					echo '<div class="col-sm-4">'.format_bignum(account_coin_value($game, $user_game)/pow(10,8)).' coins</div>';
-					echo '</div>';
-				}
-				?>
-			</div>
 		</div>
 			
 		<div style="display: none;" class="modal fade" id="game_form">
@@ -1177,9 +1193,11 @@ $mature_balance = mature_balance($game, $thisuser);
 							<div style="height: 10px;"></div>
 							<button style="float: right;" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
 							
-							<button id="save_game_btn" type="button" class="btn btn-success" onclick="save_game();">Save Game Settings</button>
+							<button id="save_game_btn" type="button" class="btn btn-success" onclick="save_game();">Save Settings</button>
 							
-							<button id="switch_game_btn" type="button" class="btn btn-primary" onclick="switch_to_game(editing_game_id, 'switch');">Switch to this game</button>
+							<button id="switch_game_btn" type="button" class="btn btn-primary" onclick="switch_to_game(editing_game_id, 'switch');">Open this game</button>
+							
+							<button id="invitations_game_btn" type="button" class="btn btn-info" data-dismiss="modal" onclick="manage_game_invitations(editing_game_id);">Manage Invitations</button>
 						</form>
 					</div>
 				</div>

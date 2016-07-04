@@ -20,10 +20,7 @@ if ($thisuser) {
 			if (mysql_numrows($r) == 1) {
 				$user_game = mysql_fetch_array($r);
 				
-				$q = "UPDATE users SET game_id='".$user_game['game_id']."' WHERE user_id='".$thisuser['user_id']."';";
-				$r = run_query($q);
-				
-				output_message(1, "", false);
+				output_message(1, "", array('redirect_url'=>'/wallet/'.$game['url_identifier']));
 			}
 			else {
 				if ($game['creator_id'] > 0) {
@@ -35,7 +32,7 @@ if ($thisuser) {
 					$q = "UPDATE users SET game_id='".$game['game_id']."' WHERE user_id='".$thisuser['user_id']."';";
 					$r = run_query($q);
 					
-					output_message(1, "", false);
+					output_message(1, "", array('redirect_url'=>'/wallet/'.$game['url_identifier']));
 				}
 			}
 		}
@@ -55,7 +52,7 @@ if ($thisuser) {
 			$r = run_query($q);
 			$game_id = mysql_insert_id();
 			
-			$game_name = "Practice Game #".$game_id;
+			$game_name = "Private Game #".$game_id;
 			$url_identifier = game_url_identifier($game_name);
 			
 			$q = "UPDATE games SET name='".$game_name."', url_identifier='".$url_identifier."' WHERE game_id='".$game_id."';";
@@ -67,7 +64,6 @@ if ($thisuser) {
 			
 			ensure_game_nations($game_id);
 			
-			// Add this user and 10 random users to the game
 			ensure_user_in_game($thisuser['user_id'], $game_id);
 			
 			$q = "UPDATE users SET game_id='".$game_id."' WHERE user_id='".$thisuser['user_id']."';";
@@ -75,11 +71,6 @@ if ($thisuser) {
 			
 			$q = "UPDATE user_games ug, user_strategies s SET s.voting_strategy='manual' WHERE ug.strategy_id=s.strategy_id AND ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game_id."';";
 			$r = run_query($q);
-			
-			$invitation = false;
-			generate_invitation($game_id, $thisuser['user_id'], $invitation, $thisuser['user_id']);
-			$invitation = false;
-			$success = try_apply_giveaway($game, $user, $invitation);
 		}
 		
 		$q = "SELECT g.creator_id, g.game_id, g.game_status, g.block_timing, g.giveaway_status, g.giveaway_amount, g.maturity, g.max_voting_fraction, g.name, g.payout_weight, g.round_length, g.seconds_per_block, g.pos_reward, g.pow_reward FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game_id."';";
@@ -104,12 +95,20 @@ if ($thisuser) {
 				$success = delete_reset_game($action, $game_id);
 				
 				if ($success) {
+					$output_obj['redirect_url'] = '/wallet/'.$game['url_identifier'];
+					
 					if ($action == "delete") {
-						$q = "UPDATE users SET game_id='".get_site_constant('primary_game_id')."' WHERE user_id='".$thisuser['user_id']."';";
+						$q = "SELECT * FROM games WHERE game_id='".get_site_constant('primary_game_id')."';";
 						$r = run_query($q);
+						$primary_game = mysql_fetch_array($r);
+						
+						$q = "UPDATE users SET game_id='".$primary_game['game_id']."' WHERE user_id='".$thisuser['user_id']."';";
+						$r = run_query($q);
+						
+						$output_obj['redirect_url'] = '/wallet/'.$primary_game['url_identifier'];
 					}
 					
-					output_message(1, "", false);
+					output_message(1, "", $output_obj);
 				}
 				else output_message(2, "Error, the game couldn't be reset.", false);
 			}

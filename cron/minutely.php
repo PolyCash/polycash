@@ -13,7 +13,7 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	if (mysql_numrows($r) == 1)	$real_game = mysql_fetch_array($r);
 	
 	$running_games = array();
-	$q = "SELECT * FROM games WHERE game_status='running' AND creator_id IS NULL;";
+	$q = "SELECT * FROM games WHERE game_status='running';";
 	$r = run_query($q);
 	while ($running_game = mysql_fetch_array($r)) {
 		$running_games[count($running_games)] = $running_game;

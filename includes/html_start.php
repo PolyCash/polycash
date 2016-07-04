@@ -33,9 +33,23 @@
 			</div>
 			<div id="navbar" class="navbar-collapse collapse">
 				<ul class="nav navbar-nav">
-					<li<?php if ($nav_tab_selected == "wallet" && $_REQUEST['do'] != "logout") echo ' class="active"'; ?>><a href="/wallet/"><?php if ($thisuser) echo "My Account"; else echo "Log In"; ?></a></li>
+					<li<?php if ($nav_tab_selected == "wallet" && $_REQUEST['do'] != "logout") {
+						echo ' class="active"';
+					}
+					?>><a href="/wallet/<?php
+					if ($nav_tab_selected == "wallet") {}
+					else if ($game) echo $game['url_identifier']."/";
+					else {
+						$q = "SELECT * FROM games WHERE game_id='".get_site_constant('primary_game_id')."';";
+						$r = run_query($q);
+						if (mysql_numrows($r) > 0) {
+							$primary_game = mysql_fetch_array($r);
+							echo $primary_game['url_identifier']."/";
+						}
+					}
+					?>"><?php if ($thisuser) echo "My Account"; else echo "Log In"; ?></a></li>
 					<li<?php if ($nav_tab_selected == "download") echo ' class="active"'; ?>><a href="/download/">Download</a></li>
-					<li<?php if ($nav_tab_selected == "explorer") echo ' class="active"'; ?>><a href="/explorer/">Explorer</a></li>
+					<li<?php if ($nav_tab_selected == "explorer") echo ' class="active"'; ?>><a href="/explorer/<?php if ($game) echo $game['url_identifier']."/"; ?>">Explorer</a></li>
 					<?php
 					if ($thisuser || $_REQUEST['do'] == "logout") { ?>
 						<li<?php if ($nav_tab_selected == "wallet" && $_REQUEST['do'] == "logout") echo ' class="active"'; ?>><a href="/wallet/?do=logout">Log Out</a></li>

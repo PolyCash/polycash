@@ -5,6 +5,8 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuse
 
 if ($thisuser && $game) {
 	if ($game['creator_id'] == $thisuser['user_id']) {
+		$game_info['url_identifier'] = $game['url_identifier'];
+		
 		$from_game_status = $game['game_status'];
 		$game_status = mysql_real_escape_string($_REQUEST['game_status']);
 		$status_changed = false;
@@ -51,13 +53,14 @@ if ($thisuser && $game) {
 					$url_identifier = game_url_identifier($game_name);
 					$q = "UPDATE games SET name='".mysql_real_escape_string($game_name)."', url_identifier='".$url_identifier."' WHERE game_id='".$game['game_id']."';";
 					$r = run_query($q);
-					output_message(1, "Great, your changes have been saved.", false);
+					$game_info['url_identifier'] = $url_identifier;
+					output_message(1, "Great, your changes have been saved.", $game_info);
 				}
 			}
-			else output_message(1, "Great, your changes have been saved.", false);
+			else output_message(1, "Great, your changes have been saved.", $game_info);
 		}
 		else {
-			if ($status_changed) output_message(1, "Great, your changes have been saved.", false);
+			if ($status_changed) output_message(1, "Great, your changes have been saved.", $game_info);
 			else output_message(2, "This game can't be changed, it's already started.", false);
 		}
 		
