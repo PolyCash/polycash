@@ -1553,3 +1553,6 @@ function join_game_variation(variation_id) {
 		else alert(json_result['message']);
 	});
 }
+function explorer_search() {
+	window.location ='/explorer/'+game_url_identifier+'/transactions/'+$('#explorer_search').val();
+}

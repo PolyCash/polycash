@@ -168,6 +168,24 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 			<script type="text/javascript">
 			var game_id = <?php echo $game->db_game['game_id']; ?>;
 			</script>
+			
+			<div class="row">
+				<div class="col-sm-7 ">
+					<ul class="list-inline explorer_nav" id="explorer_nav">
+						<li><a<?php if ($explore_mode == 'blocks') echo ' class="selected"'; ?> href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/blocks/">Blocks</a></li>
+						<li><a<?php if ($explore_mode == 'rounds') echo ' class="selected"'; ?> href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/rounds/">Rounds</a></li>
+						<li><a<?php if ($explore_mode == 'unconfirmed') echo ' class="selected"'; ?> href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/transactions/unconfirmed/">Unconfirmed Transactions</a></li>
+						<?php if ($thisuser) { ?><li><a href="/wallet/">My Wallet</a></li><?php } ?>
+					</ul>
+				</div>
+				<div class="col-sm-4 row-no-padding">
+					<input type="text" class="form-control" placeholder="Search..." id="explorer_search" />
+				</div>
+				<div class="col-sm-1 row-no-padding">
+					<button class="btn btn-primary" onclick="explorer_search();">Go</button>
+				</div>
+			</div>
+			
 			<?php
 			if ($explore_mode == "rounds") {
 				if ($round || $round_status == "current") {
@@ -554,17 +572,6 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				}
 				
 				echo "<br/>\n";
-			}
-			else if ($explore_mode == "index") {
-				?>
-				<h3><?php echo $game->db_game['name']; ?> Block Explorer</h3>
-				<ul>
-					<li><a href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/blocks/">Blocks</a></li>
-					<li><a href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/rounds/">Rounds</a></li>
-					<li><a href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/transactions/unconfirmed/">Unconfirmed Transactions</a></li>
-					<?php if ($thisuser) { ?><li><a href="/wallet/">My Wallet</a></li><?php } ?>
-				</ul>
-				<?php
 			}
 			else if ($explore_mode == "games") {
 				?>
