@@ -228,7 +228,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					else $my_votes = false;
 					
 					if ($my_votes[$round['winning_nation_id']] > 0) {
-						$payout_amt = (floor(100*$game['pos_reward']/pow(10,8)*$my_votes[$round['winning_nation_id']]['coins']/$round['winning_score'])/100);
+						$payout_amt = (floor(100*pos_reward_in_round($game, $this_round)/pow(10,8)*$my_votes[$round['winning_nation_id']]['coins']/$round['winning_score'])/100);
 						
 						echo "You won <font class=\"greentext\">+".format_bignum($payout_amt)." EMP</font> by voting ".format_bignum($my_votes[$round['winning_nation_id']]['coins']/pow(10,8))." coins";
 						

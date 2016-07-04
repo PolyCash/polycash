@@ -73,7 +73,7 @@ if ($thisuser) {
 			$r = run_query($q);
 		}
 		
-		$q = "SELECT g.creator_id, g.game_id, g.game_status, g.block_timing, g.giveaway_status, g.giveaway_amount, g.maturity, g.max_voting_fraction, g.name, g.payout_weight, g.round_length, g.seconds_per_block, g.pos_reward, g.pow_reward FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game_id."';";
+		$q = "SELECT g.creator_id, g.game_id, g.game_status, g.block_timing, g.giveaway_status, g.giveaway_amount, g.maturity, g.max_voting_fraction, g.name, g.payout_weight, g.round_length, g.seconds_per_block, g.pos_reward, g.pow_reward, g.inflation, g.exponential_inflation_rate, g.exponential_inflation_minershare, g.final_round FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game_id."';";
 		$r = run_query($q);
 		
 		if (mysql_numrows($r) == 1) {

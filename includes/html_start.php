@@ -17,7 +17,9 @@
 	<script type="text/javascript" src="/js/jquery.nouislider.js"></script>
 	<script type="text/javascript" src="/js/sha256.js"></script>
 	<script type="text/javascript" src="/js/main.js"></script>
+	<?php if ($GLOBALS['signup_captcha_required']) { ?>
 	<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+	<?php } ?>
 </head>
 <body>
 	<nav class="navbar navbar-default navbar-fixed-top">

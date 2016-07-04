@@ -21,7 +21,7 @@ if ($GLOBALS['pageview_tracking_enabled']) include("pageview_functions.php");
 
 mysql_connect($GLOBALS['mysql_server'], $GLOBALS['mysql_user'], $GLOBALS['mysql_password']) or die("The server is unreachable.");
 if (!$skip_select_db) {
-	mysql_select_db($GLOBALS['mysql_database']) or die ( "Please <a href=\"/install.php\">install the database</a>");
+	mysql_select_db($GLOBALS['mysql_database']) or die ( "Please <a href=\"/install.php?key=\">install the database</a>");
 }
 mysql_set_charset('utf8');
 header('Content-Type: text/html; charset=UTF-8');

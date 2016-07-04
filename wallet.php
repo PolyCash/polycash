@@ -100,6 +100,12 @@ if ($_REQUEST['do'] == "signup") {
 					$r = run_query($q);
 					while ($mandatory_game = mysql_fetch_array($r)) {
 						ensure_user_in_game($user_id, $mandatory_game['game_id']);
+
+						if ($mandatory_game['giveaway_status'] == "on") {
+							$invitation = false;
+							generate_invitation($mandatory_game, $user_id, $invitation, $user_id);
+							$temp_thisuser['user_id'] = $user_id;
+						}
 					}
 				}
 			}
@@ -364,7 +370,7 @@ if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['do'] =
 	}
 }
 
-$pagetitle = $GLOBALS['site_name_short']." - My web wallet";
+if (!$pagetitle && $game) $pagetitle = $game['name']." - Wallet";
 $nav_tab_selected = "wallet";
 include('includes/html_start.php');
 
@@ -1096,6 +1102,27 @@ $mature_balance = mature_balance($game, $thisuser);
 							</div>
 							<div class="row">
 								<div class="col-sm-6 form-control-static">
+									Game ends?
+								</div>
+								<div class="col-sm-6">
+									<select class="form-control" id="game_form_has_final_round" onchange="final_round_changed();">
+										<option value="0">No</option>
+										<option value="1">Yes</option>
+									</select>
+								</div>
+							</div>
+							<div id="game_form_final_round_disp">
+								<div class="row">
+									<div class="col-sm-6 form-control-static">
+										Number of rounds in the game:
+									</div>
+									<div class="col-sm-6">
+										<input type="text" class="form-control" id="game_form_final_round" placeholder="0" />
+									</div>
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">
 									Blocks per round:
 								</div>
 								<div class="col-sm-3">
@@ -1117,7 +1144,7 @@ $mature_balance = mature_balance($game, $thisuser);
 							<div class="row">
 								<div class="col-sm-6 form-control-static">Definition of a vote:</div>
 								<div class="col-sm-6">
-									<select class="form-control" type="text" id="game_form_payout_weight">
+									<select class="form-control" id="game_form_payout_weight">
 										<option value="coin">Coins staked</option>
 										<option value="coin_block">Coins over time. 1 vote per block</option>
 										<option value="coin_round">Coins over time. 1 vote per round</option>
@@ -1163,21 +1190,52 @@ $mature_balance = mature_balance($game, $thisuser);
 								</div>
 							</div>
 							<div class="row">
-								<div class="col-sm-6 form-control-static">Voting payout reward:</div>
+								<div class="col-sm-6 form-control-static">Inflation:</div>
 								<div class="col-sm-3">
-									<input class="form-control" style="text-align: right;" type="text" id="game_form_pos_reward" />
-								</div>
-								<div class="col-sm-3 form-control-static">
-									coins
+									<select id="game_form_inflation" class="form-control" onchange="game_form_inflation_changed();">
+										<option value="linear">Linear</option>
+										<option value="exponential">Exponential</option>
+									</select>
 								</div>
 							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">Reward for mining a block:</div>
-								<div class="col-sm-3">
-									<input class="form-control" style="text-align: right;" type="text" id="game_form_pow_reward" />
+							<div id="game_form_inflation_exponential">
+								<div class="row">
+									<div class="col-sm-6 form-control-static">Inflation per round:</div>
+									<div class="col-sm-3">
+										<input class="form-control" style="text-align: right;" type="text" id="game_form_exponential_inflation_rate" />
+									</div>
+									<div class="col-sm-3 form-control-static">
+										%
+									</div>
 								</div>
-								<div class="col-sm-3 form-control-static">
-									coins
+								<div class="row">
+									<div class="col-sm-6 form-control-static">Percentage given to miners</div>
+									<div class="col-sm-3">
+										<input class="form-control" style="text-align: right;" type="text" id="game_form_exponential_inflation_minershare" />
+									</div>
+									<div class="col-sm-3 form-control-static">
+										%
+									</div>
+								</div>
+							</div>
+							<div id="game_form_inflation_linear">
+								<div class="row">
+									<div class="col-sm-6 form-control-static">Voting payout reward:</div>
+									<div class="col-sm-3">
+										<input class="form-control" style="text-align: right;" type="text" id="game_form_pos_reward" />
+									</div>
+									<div class="col-sm-3 form-control-static">
+										coins
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-sm-6 form-control-static">Reward for mining a block:</div>
+									<div class="col-sm-3">
+										<input class="form-control" style="text-align: right;" type="text" id="game_form_pow_reward" />
+									</div>
+									<div class="col-sm-3 form-control-static">
+										coins
+									</div>
 								</div>
 							</div>
 							<div class="row">

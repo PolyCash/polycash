@@ -14,3 +14,9 @@ ALTER TABLE `game_nations` ADD `unconfirmed_coin_round_score` BIGINT(20) NOT NUL
 ALTER TABLE `transaction_IOs` ADD `create_round_id` BIGINT(20) NULL DEFAULT NULL AFTER `spend_block_id`, ADD `spend_round_id` BIGINT(20) NULL DEFAULT NULL AFTER `create_round_id`;
 ALTER TABLE `transaction_IOs` ADD `coin_rounds_created` BIGINT(20) NULL DEFAULT NULL AFTER `coin_blocks_destroyed`, ADD `coin_rounds_destroyed` BIGINT(20) NULL DEFAULT NULL AFTER `coin_rounds_created`;
 ALTER TABLE `invitations` ADD `giveaway_transaction_id` INT(20) NULL DEFAULT NULL AFTER `inviter_id`;
+ALTER TABLE `games` ADD `inflation` ENUM( 'linear', 'exponential' ) NOT NULL DEFAULT 'linear' AFTER `block_timing` ;
+ALTER TABLE `games` ADD `exponential_inflation_rate` DECIMAL( 9, 8 ) NOT NULL DEFAULT '0' AFTER `inflation` ;
+ALTER TABLE `games` ADD `exponential_inflation_minershare` DECIMAL( 9, 8 ) NOT NULL DEFAULT '0' AFTER `inflation` ;
+ALTER TABLE `games` ADD `initial_coins` BIGINT( 20 ) NOT NULL DEFAULT '0' AFTER `exponential_inflation_minershare` ;
+ALTER TABLE `games` ADD `final_round` INT( 11 ) NULL DEFAULT NULL AFTER `initial_coins` ;
+ALTER TABLE `games` CHANGE `game_status` `game_status` ENUM( 'unstarted', 'running', 'paused', 'completed' ) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL DEFAULT 'unstarted';

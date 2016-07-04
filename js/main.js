@@ -448,7 +448,7 @@ function attempt_withdrawal() {
 	}
 }
 
-var game_form_vars = "giveaway_status,giveaway_amount,maturity,max_voting_fraction,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,game_status".split(",");
+var game_form_vars = "giveaway_status,giveaway_amount,maturity,max_voting_fraction,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,game_status,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round".split(",");
 function switch_to_game(game_id, action) {
 	var fetch_link_text = $('#fetch_game_link_'+game_id).html();
 	var switch_link_text = $('#switch_game_btn').html();
@@ -469,11 +469,14 @@ function switch_to_game(game_id, action) {
 				$('#fetch_game_link_'+game_id).html(fetch_link_text);
 			}
 			
+			$('#game_form_has_final_round').prop('disabled', true);
+
 			if (json_result['my_game'] == true) {
 				$('#delete_game_btn').show();
 				$('#reset_game_btn').show();
 				$('#save_game_btn').show();
 				$('#invitations_game_btn').show();
+				if (json_result['game_status'] == "unstarted") $('#game_form_has_final_round').prop('disabled', false);
 			}
 			else {
 				$('#delete_game_btn').hide();
@@ -489,7 +492,7 @@ function switch_to_game(game_id, action) {
 				if (game_form_vars[i] == "pos_reward" || game_form_vars[i] == "pow_reward" || game_form_vars[i] == "giveaway_amount") {
 					json_result[game_form_vars[i]] = parseInt(json_result[game_form_vars[i]])/Math.pow(10,8);
 				}
-				else if (game_form_vars[i] == "max_voting_fraction") {
+				else if (game_form_vars[i] == "max_voting_fraction" || game_form_vars[i] == "exponential_inflation_minershare" || game_form_vars[i] == "exponential_inflation_rate") {
 					json_result[game_form_vars[i]] = parseFloat(json_result[game_form_vars[i]]*100);
 				}
 				
@@ -498,6 +501,25 @@ function switch_to_game(game_id, action) {
 				if (json_result['my_game'] && json_result['game_status'] == "unstarted") $('#game_form_'+game_form_vars[i]).prop('disabled', false);
 				else $('#game_form_'+game_form_vars[i]).prop('disabled', true);
 			}
+
+			if (json_result['inflation'] == "exponential") {
+				$('#game_form_inflation_exponential').show();
+				$('#game_form_inflation_linear').hide();
+			}
+			else {
+				$('#game_form_inflation_exponential').hide();
+				$('#game_form_inflation_linear').show();
+			}
+
+			if (json_result['final_round'] > 0) {
+				$('#game_form_final_round_disp').show();
+				$('#game_form_has_final_round').val(1);
+			}
+			else {
+				$('#game_form_final_round_disp').hide();
+				$('#game_form_has_final_round').val(0);
+			}
+
 			if (json_result['my_game']) $('#game_form_game_status').prop('disabled', false);
 			else $('#game_form_game_status').prop('disabled', true);
 		}
@@ -510,6 +532,28 @@ function switch_to_game(game_id, action) {
 			else alert(json_result['message']);
 		}
 	});
+}
+function final_round_changed() {
+	var final_round = parseInt($('#game_form_has_final_round').val());
+	if (final_round == 1) {
+		$('#game_form_final_round_disp').slideDown('fast');
+		$('#game_form_final_round').focus();
+	}
+	else {
+		$('#game_form_final_round_disp').slideUp('fast');
+		$('#game_form_final_round').val(0);
+	}
+}
+function game_form_inflation_changed() {
+	var inflation_val = $('#game_form_inflation').val();
+	if (inflation_val == "exponential") {
+		$('#game_form_inflation_exponential').slideDown('fast');
+		$('#game_form_inflation_linear').hide();
+	}
+	else {
+		$('#game_form_inflation_exponential').hide();
+		$('#game_form_inflation_linear').slideDown('fast');
+	}
 }
 function save_game() {
 	var save_link_text = $('#save_game_btn').html();

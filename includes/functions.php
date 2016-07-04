@@ -301,9 +301,10 @@ function current_round_table(&$game, $current_round, $user, $show_intro_text) {
 		if ($block_within_round == $game['round_length']) {
 			$html .= format_bignum($score_sum/pow(10,8)).' votes were cast in this round.<br/>';
 			$my_votes = my_votes_in_round($game, $current_round, $user['user_id']);
+			$fees_paid = $my_votes['fee_amount'];
 			$my_winning_votes = $my_votes[0][$winner['nation_id']][$game['payout_weight']."s"];
 			if ($my_winning_votes > 0) {
-				$win_amount = floor($game['pos_reward']*$my_winning_votes/$winner['winning_score'])/pow(10,8);
+				$win_amount = floor(pos_reward_in_round($game, $current_round)*$my_winning_votes/$winner['winning_score'] - $fees_paid)/pow(10,8);
 				$html .= "You correctly ";
 				if ($game['payout_weight'] == "coin") $html .= "voted ".format_bignum($my_winning_votes/pow(10,8))." coins";
 				else $html .= "cast ".format_bignum($my_winning_votes/pow(10,8))." votes";
@@ -317,7 +318,7 @@ function current_round_table(&$game, $current_round, $user, $show_intro_text) {
 			$html .= format_bignum($confirmed_score_sum/pow(10,8)).' confirmed and '.format_bignum($unconfirmed_score_sum/pow(10,8)).' unconfirmed votes have been cast so far. Current votes count towards block '.$block_within_round.'/'.$game['round_length'].' in round #'.$current_round.'<br/>';
 			$seconds_left = round(($game['round_length'] - $last_block_id%$game['round_length'] - 1)*$game['seconds_per_block']);
 			$minutes_left = round($seconds_left/60);
-			$html .= format_bignum($game['pos_reward']/pow(10,8)).' coins will be given to the winners in approximately ';
+			$html .= format_bignum(pos_reward_in_round($game, $current_round)/pow(10,8)).' coins will be given to the winners in approximately ';
 			if ($minutes_left > 1) $html .= $minutes_left." minutes";
 			else $html .= $seconds_left." seconds";
 			$html .= '.<br/>';
@@ -401,7 +402,7 @@ function performance_history($user, &$game, $from_round_id, $to_round_id) {
 		$html .= ' <a href="/explorer/'.$game['url_identifier'].'/rounds/'.$round['round_id'].'" target="_blank">Details</a>';
 		$html .= '</div>';
 		
-		$win_amt = $game['pos_reward']*$my_votes[$round['winning_nation_id']][$game['payout_weight'].'s']/$nation_scores['sum'];
+		$win_amt = pos_reward_in_round($game, $round['round_id'])*$my_votes[$round['winning_nation_id']][$game['payout_weight'].'s']/$nation_scores['sum'];
 		$payout_amt = ($win_amt - $my_votes_in_round['fee_amount'])/pow(10,8);
 		
 		$html .= '<div class="col-sm-2">';
@@ -675,7 +676,7 @@ function new_payout_transaction(&$game, $voting_round, $block_id, $winning_natio
 	$out_index = 0;
 	
 	while ($input = mysql_fetch_array($r)) {
-		$payout_amount = floor($game['pos_reward']*$input[$score_field]/$winning_score);
+		$payout_amount = floor(pos_reward_in_round($game, $voting_round-1)*$input[$score_field]/$winning_score);
 		
 		$total_paid += $payout_amount;
 		
@@ -1100,7 +1101,7 @@ function my_votes_table(&$game, $round_id, $user) {
 		$color = "green";
 		$num_votes = $my_vote['SUM(io.'.$score_field.')'];
 		$nation_scores = nation_score_in_round($game, $my_vote['nation_id'], $round_id);
-		$expected_payout = floor($game['pos_reward']*($my_vote['SUM(io.'.$score_field.')']/$nation_scores['sum'])-$my_vote['fee_amount'])/pow(10,8);
+		$expected_payout = floor(pos_reward_in_round($game, $round_id)*($my_vote['SUM(io.'.$score_field.')']/$nation_scores['sum'])-$my_vote['fee_amount'])/pow(10,8);
 		if ($expected_payout < 0) $expected_payout = 0;
 		
 		$confirmed_html .= '<div class="row">';
@@ -1121,16 +1122,16 @@ function my_votes_table(&$game, $round_id, $user) {
 		if ($game['payout_weight'] == "coin_block") {
 			$transaction_cbd = $my_vote['ref_coin_blocks_destroyed'] + ((1+$last_block_id)-$my_vote['ref_block_id'])*$my_vote['transaction_amount'];
 			$num_votes = floor($transaction_cbd*($my_vote['amount']/$my_vote['transaction_amount']));
-			$expected_payout = floor($game['pos_reward']*($num_votes/$nation_scores['sum'])-$my_vote['fee_amount'])/pow(10,8);
+			$expected_payout = floor(pos_reward_in_round($game, $round_id)*($num_votes/$nation_scores['sum'])-$my_vote['fee_amount'])/pow(10,8);
 		}
 		else if ($game['payout_weight'] == "coin_round") {
 			$transaction_crd = $my_vote['ref_coin_rounds_destroyed'] + ($current_round-$my_vote['ref_round_id'])*$my_vote['transaction_amount'];
 			$num_votes = floor($transaction_crd*($my_vote['amount']/$my_vote['transaction_amount']));
-			$expected_payout = floor($game['pos_reward']*($num_votes/$nation_scores['sum'])-$my_vote['fee_amount'])/pow(10,8);
+			$expected_payout = floor(pos_reward_in_round($game, $round_id)*($num_votes/$nation_scores['sum'])-$my_vote['fee_amount'])/pow(10,8);
 		}
 		else {
 			$num_votes = $my_vote['SUM(io.'.$score_field.')'];
-			$expected_payout = floor($game['pos_reward']*($my_vote['SUM(io.'.$score_field.')']/$nation_scores['sum'])-$my_vote['fee_amount'])/pow(10,8);
+			$expected_payout = floor(pos_reward_in_round($game, $round_id)*($my_vote['SUM(io.'.$score_field.')']/$nation_scores['sum'])-$my_vote['fee_amount'])/pow(10,8);
 		}
 		if ($expected_payout < 0) $expected_payout = 0;
 		
@@ -1373,7 +1374,7 @@ function new_block($game_id) {
 	}
 	
 	$mined_address = create_or_fetch_address($game, "Ex".random_string(32), true, false, false);
-	$mined_transaction_id = new_transaction($game, array(false), array($game['pow_reward']+$fee_sum), false, false, $last_block_id, "coinbase", false, array($mined_address['address_id']), false, 0);
+	$mined_transaction_id = new_transaction($game, array(false), array(pow_reward_in_round($game, $voting_round)+$fee_sum), false, false, $last_block_id, "coinbase", false, array($mined_address['address_id']), false, 0);
 	
 	if ($GLOBALS['outbound_email_enabled'] && $game['game_type'] == "real") {
 		// Send notifications for coins that just became available
@@ -1459,6 +1460,11 @@ function new_block($game_id) {
 		}
 		$q .= ";";
 		$r = run_query($q);
+
+		if ($voting_round-1 == $game['final_round']) {
+			$q = "UPDATE games SET game_status='completed' WHERE game_id='".$game['game_id']."';";
+			$r = run_query($q);
+		}
 	}
 	
 	update_nation_scores($game);
@@ -1754,6 +1760,15 @@ function delete_reset_game($delete_or_reset, $game_id) {
 	$q = "DELETE FROM game_nations WHERE game_id='".$game_id."';";
 	$r = run_query($q);
 	
+	$invite_user_ids = array();
+	if ($delete_or_reset == "reset") {
+		$q = "SELECT * FROM invitations WHERE game_id='".$game_id."';";
+		$r = run_query($q);
+		while ($invitation = mysql_fetch_array($r)) {
+			$invite_user_ids[count($invite_user_ids)] = $invitation['used_user_id'];
+		}
+	}
+
 	$q = "DELETE FROM invitations WHERE game_id='".$game_id."';";
 	$r = run_query($q);
 	
@@ -1765,6 +1780,9 @@ function delete_reset_game($delete_or_reset, $game_id) {
 	if ($delete_or_reset == "reset") {
 		ensure_game_nations($game_id);
 		
+		$q = "UPDATE games SET game_status='unstarted' WHERE game_id='".$game_id."';";
+		$r = run_query($q);
+
 		$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.game_id='".$game_id."';";
 		$r = run_query($q);
 		
@@ -1773,6 +1791,11 @@ function delete_reset_game($delete_or_reset, $game_id) {
 		
 		while ($user_game = mysql_fetch_array($r)) {
 			generate_user_addresses($user_game);
+		}
+
+		for ($i=0; $i<count($invite_user_ids); $i++) {
+			$invitation = false;
+			generate_invitation($game, $invite_user_ids[$i], $invitation, $invite_user_ids[$i]);
 		}
 	}
 	else {
@@ -2752,21 +2775,13 @@ function generate_invitation(&$game, $inviter_id, &$invitation, $user_id) {
 
 function check_giveaway_available(&$game, $user, &$invitation) {
 	if ($game['game_type'] == "simulation" && ($game['giveaway_status'] == "on" || $game['giveaway_status'] == "invite_only")) {
-		if ($game['giveaway_status'] == "invite_only") {
-			$q = "SELECT * FROM invitations WHERE game_id='".$game['game_id']."' AND used_user_id='".$user['user_id']."' AND used_time=0 AND used=0;";
-			$r = run_query($q);
-			if (mysql_numrows($r) > 0) {
-				$invitation = mysql_fetch_array($r);
-				return true;
-			}
-			else return false;
+		$q = "SELECT * FROM invitations WHERE game_id='".$game['game_id']."' AND used_user_id='".$user['user_id']."' AND used_time=0 AND used=0;";
+		$r = run_query($q);
+		if (mysql_numrows($r) > 0) {
+			$invitation = mysql_fetch_array($r);
+			return true;
 		}
-		else {
-			$q = "SELECT * FROM transactions t JOIN transaction_IOs io ON t.transaction_id=io.create_transaction_id WHERE io.game_id='".$game['game_id']."' AND io.user_id='".$user['user_id']."' AND t.transaction_desc='giveaway';";
-			$r = run_query($q);
-			if (mysql_numrows($r) > 0) return false;
-			else return true;
-		}
+		else return false;
 	}
 	else return false;
 }
@@ -2774,18 +2789,9 @@ function check_giveaway_available(&$game, $user, &$invitation) {
 function try_apply_giveaway($game, $user, &$invitation) {
 	$giveaway_available = check_giveaway_available($game, $user, $invitation);
 	if ($giveaway_available) {
-		if ($game['giveaway_status'] == "invite_only") {
-			if ($invitation['giveaway_transaction_id'] > 0) {
-				$q = "UPDATE addresses a JOIN transaction_IOs io ON a.address_id=io.address_id SET a.user_id='".$user['user_id']."', io.user_id='".$user['user_id']."' WHERE io.create_transaction_id='".$invitation['giveaway_transaction_id']."';";
-				$r = run_query($q);
-			}
-		}
-		else {
-			$giveaway_block_id = last_block_id($game['game_id']);
-			
-			for ($i=0; $i<5; $i++) {
-				$transaction_id = new_transaction($game, false, array(intval($game['giveaway_amount']/5)), false, $user['user_id'], $giveaway_block_id, 'giveaway', false, false, false, 0);
-			}
+		if ($invitation['giveaway_transaction_id'] > 0) {
+			$q = "UPDATE addresses a JOIN transaction_IOs io ON a.address_id=io.address_id SET a.user_id='".$user['user_id']."', io.user_id='".$user['user_id']."' WHERE io.create_transaction_id='".$invitation['giveaway_transaction_id']."';";
+			$r = run_query($q);
 		}
 		
 		if ($invitation) {
@@ -2926,13 +2932,35 @@ function game_url_identifier($game_name) {
 	
 	return $url_identifier;
 }
-function coins_in_existence($game, $block_id) {
+function coins_in_existence(&$game, $block_id) {
 	$q = "SELECT SUM(amount) FROM transactions WHERE block_id IS NOT NULL AND game_id='".$game['game_id']."' AND transaction_desc IN ('giveaway','votebase','coinbase')";
 	if ($block_id) $q .= " AND block_id <= ".$block_id;
 	$q .= ";";
 	$r = run_query($q);
 	$coins = mysql_fetch_row($r);
 	return intval($coins[0]);
+}
+function ideal_coins_in_existence_after_round(&$game, $round_id) {
+	if ($game['inflation'] == "linear") return $game['initial_coins'] + $round_id*($game['pos_reward'] + $game['round_length']*$game['pow_reward']);
+	else return floor($game['initial_coins'] * pow(1 + $game['exponential_inflation_rate'], $round_id));
+}
+function coins_created_in_round(&$game, $round_id) {
+	return ideal_coins_in_existence_after_round($game, $round_id) - ideal_coins_in_existence_after_round($game, $round_id-1);
+}
+function pow_reward_in_round(&$game, $round_id) {
+	if ($game['inflation'] == "linear") return $game['pow_reward'];
+	else {
+		$round_coins_created = coins_created_in_round($game, $round_id);
+		$round_pow_coins = floor($game['exponential_inflation_minershare']*$round_coins_created);
+		return floor($round_pow_coins/$game['round_length']);
+	}
+}
+function pos_reward_in_round(&$game, $round_id) {
+	if ($game['inflation'] == "linear") return $game['pos_reward'];
+	else {
+		$round_coins_created = coins_created_in_round($game, $round_id);
+		return floor((1-$game['exponential_inflation_minershare'])*$round_coins_created);
+	}
 }
 function user_in_game($user_id, $game_id) {
 	$q = "SELECT * FROM user_games WHERE user_id='".$user_id."' AND game_id='".$game_id."';";

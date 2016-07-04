@@ -11,6 +11,9 @@ $q = "SELECT * FROM games WHERE game_id='".get_site_constant('primary_game_id').
 $r = run_query($q);
 $game = mysql_fetch_array($r);
 
+$last_block_id = last_block_id($game['game_id']);
+$current_round = block_to_round($game, $last_block_id+1);
+
 if ($thisuser) { ?>
 	<div class="container" style="max-width: 1000px; padding: 10px 0px;">
 		<?php
@@ -35,24 +38,38 @@ if ($thisuser) { ?>
 		<div class="col-sm-10">
 			<?php
 			$blocks_per_hour = 3600/$game['seconds_per_block'];
-			$round_reward = ($game['pos_reward']+$game['pow_reward']*$game['round_length'])/pow(10,8);
-			$rounds_per_hour = 3600/($game['seconds_per_block']*$game['round_length']);
-			$coins_per_hour = $round_reward*$rounds_per_hour;
 			$seconds_per_round = $game['seconds_per_block']*$game['round_length'];
-			$miner_pct = 100*($game['pow_reward']*$game['round_length'])/($round_reward*pow(10,8));
+			$round_reward = (coins_created_in_round($game, $current_round))/pow(10,8);
+
+			if ($game['inflation'] == "linear") {
+				$miner_pct = 100*($game['pow_reward']*$game['round_length'])/($round_reward*pow(10,8));
+			}
+			else $miner_pct = 100*$game['exponential_inflation_minershare'];
 			?>
 			<div class="paragraph">
 				Welcome to EmpireCoin, the first decentralized voting game on the planet. In EmpireCoin, you can bet money against players from around the world every <?php echo $seconds_per_round/60; ?> minutes in an epic and never-ending struggle for power. By correctly voting your coins you'll win money, but if you're wrong you won't lose anything. Do you love gambling, sports betting or speculating on currencies and stocks? Stop playing rigged games and get in on the first betting game where money is created from thin air and given out to the players. Start building your empire today in this massively multiplayer online game of chance!
 			</div>
 			<div class="paragraph">
 				<?php
-				echo "EmpireCoin is a cryptocurrency which generates ";
-				echo number_format($coins_per_hour)." coins every hour. ";
-				echo format_bignum($round_reward)." coins are given out per ".rtrim(format_seconds($seconds_per_round), 's')." voting round. ";
-				echo format_bignum($miner_pct);
-				?>% of the currency is given to proof of work miners for securing the network and the remaining <?php
-				echo format_bignum(100-$miner_pct);
-				?>% is given out to stakeholders for casting winning votes.
+				if ($game['inflation'] == "linear") {
+					$rounds_per_hour = 3600/($game['seconds_per_block']*$game['round_length']);
+					$coins_per_hour = $round_reward*$rounds_per_hour;
+					echo "EmpireCoin is a cryptocurrency which generates ";
+					echo number_format($coins_per_hour)." coins every hour. ";
+					echo format_bignum($round_reward)." coins are given out per ".rtrim(format_seconds($seconds_per_round), 's')." voting round. ";
+					echo format_bignum($miner_pct);
+					?>% of the currency is given to proof of work miners for securing the network and the remaining <?php
+					echo format_bignum(100-$miner_pct);
+					?>% is given out to stakeholders for casting winning votes.<?php
+				}
+				else {
+					echo "EmpireCoin is a cryptocurrency with ".(100*$game['exponential_inflation_rate'])."% inflation every ".format_seconds($seconds_per_round);
+					echo format_bignum($miner_pct);
+					?>% of the currency is given to proof of work miners for securing the network and the remaining <?php
+					echo format_bignum(100-$miner_pct);
+					?>% is given out to stakeholders for casting winning votes.<?php
+				}
+				?>
 			</div>
 			<div class="paragraph">
 				In EmpireCoin you can win a tiny number of free coins by casting your votes correctly.  Votes build up over time in proportion to the number of empirecoins that you hold. When you vote for an empire, your votes are used up but your empirecoins are retained. With a great coin staking strategy, you can accumulate empirecoins faster than inflation.  Automated voting is encouraged in EmpireCoin.  Through the EmpireCoin APIs it's easy to code up a custom strategy which makes smart, real-time decisions about how to stake your coins.
@@ -61,7 +78,7 @@ if ($thisuser) { ?>
 				To get started, please read the rules below and then <a href="/wallet/">sign up</a> for a beta account.  Or download the <a href="/EmpireCoin.pdf">EmpireCoin Whitepaper</a>.
 			</div>
 			<div class="paragraph">
-				<a href="/wallet/" class="btn btn-success" style="margin: 5px 0px;">Log In or Sign Up</a>
+				<a href="/wallet/<?php echo $game['url_identifier']; ?>/" class="btn btn-success" style="margin: 5px 0px;">Log In or Sign Up</a>
 				<a href="/explorer/<?php echo $game['url_identifier']; ?>/rounds/" class="btn btn-primary" style="margin: 5px 0px;">Blockchain Explorer</a>
 			</div>
 			<?php
@@ -70,7 +87,7 @@ if ($thisuser) { ?>
 					<div class="col-md-6">
 						<div id="my_current_votes">
 							<?php
-							echo my_votes_table($thisuser['game_id'], $current_round, $thisuser);
+							echo my_votes_table($game['game_id'], $current_round, $thisuser);
 							?>
 						</div>
 					</div>
@@ -86,8 +103,6 @@ if ($thisuser) { ?>
 		<ol class="rules_list">
 			<li>Coin holders can stake their coins for one of these <?php echo $game['num_voting_options']; ?> empires every <?php echo format_seconds($seconds_per_round); ?> by submitting a voting transaction.</li>
 			<?php
-			$last_block_id = last_block_id($game['game_id']);
-			$current_round = block_to_round($game, $last_block_id+1);
 			$block_within_round = $last_block_id%$game['round_length']+1;
 			$score_sums = total_score_in_round($game, $current_round, true);
 			
@@ -132,7 +147,7 @@ if ($thisuser) { ?>
 		<?php if ($game['giveaway_status'] == "on") { ?>We'll give you <?php echo format_bignum($game['giveaway_amount']/pow(10,8)); ?> beta empirecoins just for signing up.
 		<?php } ?>
 		Since EmpireCoin is in beta, please be aware that you may lose your coins at any time.<br/>
-		<a href="/wallet/" style="margin: 5px 0px;" class="btn btn-success">Sign Up</a>
+		<a href="/wallet/<?php echo $game['url_identifier']; ?>/" style="margin: 5px 0px;" class="btn btn-success">Sign Up</a>
 		<a href="/explorer/<?php echo $game['url_identifier']; ?>/rounds/" style="margin: 5px 0px;" class="btn btn-primary">Blockchain Explorer</a>
 	</div>
 	<div class="paragraph">
