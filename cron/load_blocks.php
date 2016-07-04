@@ -28,7 +28,7 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 			$real_game_obj = new Game($app, $real_game['game_id']);
 			$coin_rpc = new jsonRPCClient('http://'.$real_game['rpc_username'].':'.$real_game['rpc_password'].'@127.0.0.1:'.$real_game['rpc_port'].'/');
 			$real_game_obj->load_all_block_headers($coin_rpc, TRUE);
-			$real_games[$real_game_i]->load_all_blocks($coin_rpc, TRUE);
+			$real_game_obj->load_all_blocks($coin_rpc, TRUE);
 			//$real_games[$real_game_i]->load_all_block_headers($coin_rpc, FALSE);
 			//$real_games[$real_game_i]->load_all_blocks($coin_rpc, FALSE);
 		}
