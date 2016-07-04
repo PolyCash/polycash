@@ -99,7 +99,7 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				echo "Add ".($GLOBALS['min_unallocated_addresses']-$num_addr)." for ".$option['name']."<br/>\n";
 				for ($i=0; $i<($GLOBALS['min_unallocated_addresses']-$num_addr); $i++) {
 					$new_addr_str = $coin_rpc->getnewvotingaddress($option['name']);
-					$new_addr_db = $real_game->create_or_fetch_address($new_addr_str, false, $coin_rpc, true);
+					$new_addr_db = $real_game->create_or_fetch_address($new_addr_str, false, $coin_rpc, true, false);
 				}
 			}
 		}

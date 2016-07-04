@@ -41,7 +41,7 @@ if ($thisuser && $game) {
 					$validate_address = $coin_rpc->validateaddress($address_text);
 					$address_ok = $validate_address['isvalid'];
 					if ($address_ok) {
-						$db_address = $game->create_or_fetch_address($address_text, TRUE, $coin_rpc, FALSE);
+						$db_address = $game->create_or_fetch_address($address_text, TRUE, $coin_rpc, FALSE, FALSE);
 					}
 				}
 				else {

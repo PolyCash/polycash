@@ -58,7 +58,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			for ($j=0; $j<count($group_addresses); $j++) {
 				$rpc_address = $group_addresses[$j];
 				
-				$game->create_or_fetch_address($rpc_address[0], true, $coin_rpc, false);
+				$game->create_or_fetch_address($rpc_address[0], true, $coin_rpc, false, true);
 			}
 		}
 		
@@ -66,7 +66,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		for ($i=0; $i<count($more_addresses); $i++) {
 			$rpc_address = $more_addresses[$i];
 			
-			$game->create_or_fetch_address($rpc_address['address'], true, $coin_rpc, false);
+			$game->create_or_fetch_address($rpc_address['address'], true, $coin_rpc, false, false);
 		}
 		
 		$q = "SELECT COUNT(*) FROM addresses WHERE game_id='".$game->db_game['game_id']."' AND is_mine=1;";

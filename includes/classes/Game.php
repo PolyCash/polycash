@@ -933,7 +933,7 @@ class Game {
 			}
 		}
 		
-		$mined_address = $this->create_or_fetch_address("Ex".$GLOBALS['app']->random_string(32), true, false, false);
+		$mined_address = $this->create_or_fetch_address("Ex".$GLOBALS['app']->random_string(32), true, false, false, true);
 		$mined_transaction_id = $this->new_transaction(array(false), array(pow_reward_in_round($this->db_game, $justmined_round)+$fee_sum), false, false, $last_block_id, "coinbase", false, array($mined_address['address_id']), false, 0);
 		
 		if ($GLOBALS['outbound_email_enabled'] && $this->db_game['game_type'] == "real") {
@@ -1775,7 +1775,7 @@ class Game {
 		$r = $GLOBALS['app']->run_query($q);
 	}
 
-	public function create_or_fetch_address($address, $check_existing, $rpc, $delete_optionless) {
+	public function create_or_fetch_address($address, $check_existing, $rpc, $delete_optionless, $claimable) {
 		if ($check_existing) {
 			$q = "SELECT * FROM addresses WHERE game_id='".$this->db_game['game_id']."' AND address='".$address."';";
 			$r = $GLOBALS['app']->run_query($q);
@@ -1799,7 +1799,7 @@ class Game {
 				else $is_mine = 0;
 				
 				$q = "UPDATE addresses SET is_mine=".$is_mine;
-				if ($is_mine == 1 && $GLOBALS['default_coin_winner']) {
+				if ($is_mine == 1 && $GLOBALS['default_coin_winner'] && $claimable) {
 					$qq = "SELECT * FROM users WHERE username='".mysql_real_escape_string($GLOBALS['default_coin_winner'])."';";
 					$rr = $GLOBALS['app']->run_query($qq);
 					if (mysql_numrows($rr) > 0) {
@@ -1892,7 +1892,10 @@ class Game {
 					for ($j=0; $j<count($outputs); $j++) {
 						$address = $outputs[$j]["scriptPubKey"]["addresses"][0];
 						
-						$output_address = $this->create_or_fetch_address($address, true, $coin_rpc, false);
+						$claimable = false;
+						if ($transaction_type == "coinbase") $claimable = true;
+						
+						$output_address = $this->create_or_fetch_address($address, true, $coin_rpc, false, $claimable);
 						
 						$q = "INSERT INTO transaction_ios SET spend_status='unconfirmed', instantly_mature=0, game_id='".$this->db_game['game_id']."'";
 						$q .= ", out_index='".$j."'";
@@ -2346,7 +2349,7 @@ class Game {
 					for ($j=0; $j<count($outputs); $j++) {
 						$address = $outputs[$j]["scriptPubKey"]["addresses"][0];
 						
-						$output_address = $this->create_or_fetch_address($address, true, $coin_rpc, false);
+						$output_address = $this->create_or_fetch_address($address, true, $coin_rpc, false, true);
 						
 						$q = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, game_id='".$this->db_game['game_id']."', out_index='".$j."'";
 						if ($output_address['user_id'] > 0) $q .= ", user_id='".$output_address['user_id']."'";

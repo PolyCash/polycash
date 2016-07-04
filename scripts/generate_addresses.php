@@ -29,13 +29,13 @@ if ($quantity > 0) {
 	if ($option) {
 		for ($i=0; $i<$quantity; $i++) {
 			$new_addr_str = $coin_rpc->getnewvotingaddress($option['name']);
-			$new_addr_db = $game->create_or_fetch_address($new_addr_str, false, $coin_rpc, true);
+			$new_addr_db = $game->create_or_fetch_address($new_addr_str, false, $coin_rpc, true, false);
 		}
 	}
 	else {
 		for ($i=0; $i<$quantity; $i++) {
 			$new_addr_str = $coin_rpc->getnewaddress();
-			$new_addr_db = $game->create_or_fetch_address($new_addr_str, false, $coin_rpc, true);
+			$new_addr_db = $game->create_or_fetch_address($new_addr_str, false, $coin_rpc, true, false);
 		}
 	}
 }
