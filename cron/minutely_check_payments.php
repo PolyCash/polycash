@@ -129,13 +129,6 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			}
 		}
 	}
-	
-	$runtime_sec = microtime(true)-$script_start_time;
-	$sec_until_refresh = round(60-$runtime_sec);
-	if ($sec_until_refresh < 0) $sec_until_refresh = 0;
-	
-	echo '<script type="text/javascript">setTimeout("window.location=window.location;", '.(1000*$sec_until_refresh).');</script>'."\n";
-	echo "Script ran for ".round($runtime_sec, 2)." seconds.<br/>\n";
 }
 else echo "Error: incorrect key supplied in cron/minutely_check_payments.php\n";
 ?>

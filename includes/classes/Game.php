@@ -2818,7 +2818,7 @@ class Game {
 	public function coins_in_existence($block_id) {
 		$last_block_id = $this->last_block_id();
 		
-		if ($last_block_id != $this->db_game['coins_in_existence_block'] || ($block && $last_block_id != $block_id)) {
+		if ($last_block_id == 0 || ($last_block_id != $this->db_game['coins_in_existence_block'] || ($block && $last_block_id != $block_id))) {
 			$q = "SELECT SUM(amount) FROM transactions WHERE block_id IS NOT NULL AND game_id='".$this->db_game['game_id']."' AND transaction_desc IN ('giveaway','votebase','coinbase')";
 			if ($block_id) $q .= " AND block_id <= ".$block_id;
 			$q .= ";";

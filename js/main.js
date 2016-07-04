@@ -1300,7 +1300,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 	};
 	this.round_index_to_taper_factor = function(round_index) {
 		if (this.payout_taper_function == "linear_decrease") {
-			return Math.floor(Math.pow(10,8)*(this.game_round_length-this.round_index)/(this.game_round_length-1))/Math.pow(10,8);
+			return Math.floor(Math.pow(10,8)*(this.game_round_length-round_index)/(this.game_round_length-1))/Math.pow(10,8);
 		}
 		else return 1;
 	};
