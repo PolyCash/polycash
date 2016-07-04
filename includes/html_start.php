@@ -21,28 +21,28 @@
 </head>
 <body>
 	<nav class="navbar navbar-default navbar-fixed-top">
-	  <div class="container-fluid">
-		<div class="navbar-header">
-		  <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-			<span class="sr-only">Toggle navigation</span>
-			<span class="icon-bar"></span>
-			<span class="icon-bar"></span>
-			<span class="icon-bar"></span>
-		  </button>
-		  <a class="navbar-brand" href="/"><img alt="EmpireCoin Logo" id="nav_logo" src="/img/logo/icon-35x35.png" />EmpireCoin</a>
+		<div class="container-fluid">
+			<div class="navbar-header">
+				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+					<span class="sr-only">Toggle navigation</span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+				</button>
+				<a class="navbar-brand" href="/"><img alt="EmpireCoin Logo" id="nav_logo" src="/img/logo/icon-35x35.png" />EmpireCoin</a>
+			</div>
+			<div id="navbar" class="navbar-collapse collapse">
+				<ul class="nav navbar-nav">
+					<li<?php if ($nav_tab_selected == "wallet" && $_REQUEST['do'] != "logout") echo ' class="active"'; ?>><a href="/wallet/"><?php if ($thisuser) echo "My Account"; else echo "Log In"; ?></a></li>
+					<li<?php if ($nav_tab_selected == "download") echo ' class="active"'; ?>><a href="/download/">Download</a></li>
+					<li<?php if ($nav_tab_selected == "explorer") echo ' class="active"'; ?>><a href="/explorer/">Explorer</a></li>
+					<?php
+					if ($thisuser || $_REQUEST['do'] == "logout") { ?>
+						<li<?php if ($nav_tab_selected == "wallet" && $_REQUEST['do'] == "logout") echo ' class="active"'; ?>><a href="/wallet/?do=logout">Log Out</a></li>
+						<?php
+					}
+					?>
+				</ul>
+			</div>
 		</div>
-		<div id="navbar" class="navbar-collapse collapse">
-		  <ul class="nav navbar-nav">
-			<li<?php if ($nav_tab_selected == "wallet" && $_REQUEST['do'] != "logout") echo ' class="active"'; ?>><a href="/wallet/"><?php if ($thisuser) echo "My Account"; else echo "Log In"; ?></a></li>
-			<li<?php if ($nav_tab_selected == "download") echo ' class="active"'; ?>><a href="/download/">Download</a></li>
-			<li<?php if ($nav_tab_selected == "explorer") echo ' class="active"'; ?>><a href="/explorer/">Explorer</a></li>
-			<?php
-			if ($thisuser || $_REQUEST['do'] == "logout") { ?>
-				<li<?php if ($nav_tab_selected == "wallet" && $_REQUEST['do'] == "logout") echo ' class="active"'; ?>><a href="/wallet/?do=logout">Log Out</a></li>
-				<?php
-			}
-			?>
-		  </ul>
-		</div>
-	  </div>
 	</nav>

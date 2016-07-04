@@ -128,6 +128,18 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	}
 	else $output['new_votingaddresses'] = 0;
 	
+	$q = "SELECT * FROM user_messages WHERE game_id='".$game['game_id']."' AND to_user_id='".$thisuser['user_id']."' AND seen=0 GROUP BY from_user_id;";
+	$r = run_query($q);
+	if (mysql_numrows($r) > 0) {
+		$output['new_messages'] = 1;
+		$output['new_message_user_ids'] = "";
+		while ($thread = mysql_fetch_array($r)) {
+			$output['new_message_user_ids'] .= $thread['from_user_id'].",";
+		}
+		$output['new_message_user_ids'] = substr($output['new_message_user_ids'], 0, strlen($output['new_message_user_ids'])-1);
+	}
+	else $output['new_messages'] = 0;
+	
 	echo json_encode($output);
 }
 else echo "0";

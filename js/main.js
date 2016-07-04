@@ -35,6 +35,81 @@ function ImageCarousel(containerElementId) {
 		setTimeout(function() {_this.nextPhoto()}, this.slideTime);
 	};
 }
+function chatWindow(chatWindowId, toUserId) {
+	this.chatWindowId = chatWindowId;
+	this.toUserId = toUserId;
+	
+	this.initialize = function() {};
+}
+var chatWindows = new Array();
+var userId2ChatWindowId = new Array();
+var visibleChatWindows = 0;
+
+function openChatWindow(userId) {
+	if (typeof userId2ChatWindowId[userId] === 'undefined' || userId2ChatWindowId[userId] === false) {
+		var chatWindowId = chatWindows.length;
+		console.log('add chat window '+chatWindowId);
+		newChatWindow(chatWindowId, userId);
+	}
+	else {
+		console.log('already exists');
+	}
+}
+function newChatWindow(chatWindowId, userId) {
+	chatWindows[chatWindowId] = new chatWindow(chatWindowId, userId);
+	userId2ChatWindowId[userId] = chatWindowId;
+	
+	$('#chatWindows').append('<div id="chatWindow'+chatWindowId+'" class="chatWindow"></div>');
+	$('#chatWindow'+chatWindowId).css("right", chatWindowId*230);
+	$('#chatWindow'+chatWindowId).html(baseChatWindow(chatWindowId));
+	renderChatWindow(chatWindowId);
+	$('#chatWindowWriter'+chatWindowId).focus();
+}
+function closeChatWindow(chatWindowId) {
+	console.log('setting userId2ChatWindowId['+chatWindows[chatWindowId].toUserId+'] = false');
+	userId2ChatWindowId[chatWindows[chatWindowId].toUserId] = false;
+	for (var i=chatWindowId+1; i<chatWindows.length; i++) {
+		userId2ChatWindowId[chatWindows[i].toUserId] = i-1;
+		chatWindows[i-1] = chatWindows[i];
+		$('#chatWindow'+(i-1)).html(baseChatWindow(i-1));
+		renderChatWindow(i-1);
+	}
+	$('#chatWindow'+(chatWindows.length-1)).remove();
+	chatWindows.length = chatWindows.length-1;
+}
+function baseChatWindow(chatWindowId) {
+	return $('#chatWindowTemplate').html().replace(/CHATID/g, chatWindowId);
+}
+function renderChatWindow(chatWindowId) {
+	$('#chatWindowTitle'+chatWindowId).html('Loading...');
+	$('#chatWindowContent'+chatWindowId).html('');
+	$.get("/ajax/chat.php?action=fetch&game_id="+game_id+"&user_id="+chatWindows[chatWindowId].toUserId, function(result) {
+		var result_obj = JSON.parse(result);
+		$('#chatWindowTitle'+chatWindowId).html(result_obj['username']);
+		$('#chatWindowContent'+chatWindowId).html(result_obj['content']);
+		$('#chatWindowContent'+chatWindowId).scrollTop($('#chatWindowContent'+chatWindowId)[0].scrollHeight);
+	});
+}
+function sendChatMessage(chatWindowId) {
+	var message = $('#chatWindowWriter'+chatWindowId).val();
+	$('#chatWindowSendBtn'+chatWindowId).html("...");
+	$('#chatWindowWriter'+chatWindowId).val("");
+	$.get("/ajax/chat.php?action=send&game_id="+game_id+"&user_id="+chatWindows[chatWindowId].toUserId+"&message="+encodeURIComponent(message), function(result) {
+		$('#chatWindowSendBtn'+chatWindowId).html("Send");
+		var result_obj = JSON.parse(result);
+		$('#chatWindowContent'+chatWindowId).html(result_obj['content']);
+		$('#chatWindowContent'+chatWindowId).scrollTop($('#chatWindowContent'+chatWindowId)[0].scrollHeight);
+	});
+}
+$(window).keydown(function(e){
+	var key = (e.which) ? e.which : e.keyCode;
+	if (key == 13) {
+		if ($(":focus").attr("class") == "chatWindowWriter") {
+			var chatWindowId = $(":focus").attr("id").replace(/chatWindowWriter/g, '');
+			sendChatMessage(chatWindowId);
+		}
+	}
+});
 function tab_clicked(index_id) {
 	if (current_tab !== false) {
 		$('#tabcell'+current_tab).removeClass("tabcell_sel");
@@ -202,6 +277,13 @@ function refresh_if_needed() {
 								console.log("new voting addresses!");
 								nation_has_votingaddr = json_result['nation_has_votingaddr'];
 								votingaddr_count = parseInt(json_result['votingaddr_count']);
+							}
+							
+							if (parseInt(json_result['new_messages']) == 1) {
+								var new_message_user_ids = json_result['new_message_user_ids'].split(",");
+								for (var i=0; i<new_message_user_ids.length; i++) {
+									openChatWindow(new_message_user_ids[i]);
+								}
 							}
 						}
 						if (parseInt(json_result['new_transaction']) == 1) {
@@ -385,20 +467,25 @@ function switch_to_game(game_id, action) {
 			else {
 				editing_game_id = game_id;
 				$('#fetch_game_link_'+game_id).html(fetch_link_text);
-				if (json_result['my_game'] == true) {
-					$('#delete_game_btn').show();
-					$('#reset_game_btn').show();
-					$('#save_game_btn').show();
-				}
-				else {
-					$('#delete_game_btn').hide();
-					$('#reset_game_btn').hide();
-					$('#save_game_btn').hide();
-				}
+			}
+			
+			if (json_result['my_game'] == true && json_result['game_status'] != "unstarted") {
+				$('#delete_game_btn').show();
+				$('#reset_game_btn').show();
+			}
+			else {
+				$('#delete_game_btn').hide();
+				$('#reset_game_btn').hide();
+			}
+			if (json_result['my_game'] == true) {
+				$('#save_game_btn').show();
+			}
+			else {
+				$('#save_game_btn').hide();
 			}
 			
 			$('#game_form').modal('show');
-			$('#game_form_name').html("Settings: "+json_result['name']);
+			$('#game_form_name_disp').html("Settings: "+json_result['name']);
 			
 			for (var i=0; i<game_form_vars.length; i++) {
 				if (game_form_vars[i] == "pos_reward" || game_form_vars[i] == "pow_reward" || game_form_vars[i] == "giveaway_amount") {
@@ -1119,4 +1206,23 @@ function match_refresh_loop(match_id) {
 }
 function render_tx_fee() {
 	$('#display_tx_fee').html("TX fee: "+format_coins(fee_amount/Math.pow(10,8))+" coins");
+}
+function manage_game_invitations(game_id) {
+	$.get("/ajax/game_invitations.php?action=manage&game_id="+game_id, function(result) {
+		$('#game_invitations_inner').html(result);
+		$('#game_invitations').modal('show');
+	});
+}
+function generate_invitation(game_id) {
+	$.get("/ajax/game_invitations.php?action=generate&game_id="+game_id, function(result) {
+		manage_game_invitations(game_id);
+	});
+}
+function send_invitation(game_id, invitation_id) {
+	var to_email = prompt("Please enter the email address where you'd like to send this invitation.");
+	if (to_email) {
+		$.get("/ajax/game_invitations.php?action=send&game_id="+game_id+"&invitation_id="+invitation_id+"&to_email="+encodeURIComponent(to_email), function(result) {
+			manage_game_invitations(game_id);
+		});
+	}
 }

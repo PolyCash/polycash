@@ -1,6 +1,6 @@
 <?php
 $host_not_required = TRUE;
-require_once("/var/www/html/includes/connect.php");
+require_once(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
 if ($_REQUEST['delivery_id'] > 0) {
 	$delivery_id = intval($_REQUEST['delivery_id']);

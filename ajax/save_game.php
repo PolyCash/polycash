@@ -47,11 +47,22 @@ if ($thisuser) {
 				$q = substr($q, 0, strlen($q)-2)." WHERE game_id='".$game['game_id']."';";
 				$r = run_query($q);
 				
-				$q = "SELECT * FROM games WHERE game_id='".$game['game_id']."';";
-				$r = run_query($q);
-				$game = mysql_fetch_array($r);
+				$game_name = make_alphanumeric($_REQUEST['name'], " -()/!.,:;#");
 				
-				output_message(1, "Great, your changes have been saved.", false);
+				if ($game_name != $game['name']) {
+					$q = "SELECT * FROM games WHERE name='".mysql_real_escape_string($_REQUEST['name'])."' AND game_id != '".$game['game_id']."';";
+					$r = run_query($q);
+					if (mysql_numrows($r) > 0) {
+						output_message(2, "Game title could not be changed; a game with that name already exists.");
+					}
+					else {
+						$url_identifier = game_url_identifier($game_name);
+						$q = "UPDATE games SET name='".mysql_real_escape_string($game_name)."', url_identifier='".$url_identifier."' WHERE game_id='".$game['game_id']."';";
+						$r = run_query($q);
+						output_message(1, "Great, your changes have been saved.", false);
+					}
+				}
+				else output_message(1, "Great, your changes have been saved.", false);
 			}
 			else {
 				if ($status_changed) output_message(1, "Great, your changes have been saved.", false);

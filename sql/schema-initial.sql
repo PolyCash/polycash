@@ -473,6 +473,20 @@ CREATE TABLE `user_games` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `user_messages`
+--
+
+CREATE TABLE `user_messages` (
+  `message_id` int(20) NOT NULL,
+  `from_user_id` int(20) DEFAULT NULL,
+  `to_user_id` int(20) DEFAULT NULL,
+  `message` text NOT NULL,
+  `send_time` int(20) NOT NULL DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `user_resettokens`
 --
 
@@ -846,6 +860,14 @@ ALTER TABLE `user_games`
   ADD KEY `strategy_id` (`strategy_id`);
 
 --
+-- Indexes for table `user_messages`
+--
+ALTER TABLE `user_messages`
+  ADD PRIMARY KEY (`message_id`),
+  ADD KEY `from_user_id` (`from_user_id`),
+  ADD KEY `to_user_id` (`to_user_id`);
+
+--
 -- Indexes for table `user_resettokens`
 --
 ALTER TABLE `user_resettokens`
@@ -1026,6 +1048,11 @@ ALTER TABLE `users`
 --
 ALTER TABLE `user_games`
   MODIFY `user_game_id` int(11) NOT NULL AUTO_INCREMENT;
+--
+-- AUTO_INCREMENT for table `user_messages`
+--
+ALTER TABLE `user_messages`
+  MODIFY `message_id` int(20) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `user_resettokens`
 --

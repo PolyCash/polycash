@@ -1,3 +1,6 @@
 ALTER TABLE `games` ADD `url_identifier` VARCHAR(100) NULL DEFAULT NULL AFTER `creator_game_index`;
 ALTER TABLE `cached_rounds` ADD `payout_transaction_id` INT(20) NULL DEFAULT NULL AFTER `payout_block_id`;
-ALTER TABLE `empirecoin`.`cached_rounds` ADD UNIQUE (`payout_transaction_id`);
+ALTER TABLE `cached_rounds` ADD UNIQUE (`payout_transaction_id`);
+ALTER TABLE `invitations` ADD `sent_email_id` INT(20) NULL DEFAULT NULL AFTER `time_created`;
+ALTER TABLE `user_messages` ADD `game_id` INT(20) NULL DEFAULT NULL AFTER `message_id`;
+ALTER TABLE `user_messages` ADD `seen` TINYINT(1) NOT NULL DEFAULT '0' AFTER `message`;

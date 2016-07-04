@@ -51,21 +51,15 @@ if ($thisuser) {
 			}
 			else $game_index = 1;
 			
-			$append_index = 0;
-			$keeplooping = true;
-			do {
-				if ($append_index > 0) $append="(".$append_index.")";
-				else $append = "";
-				$url_identifier = make_alphanumeric($thisuser['username']."-practice-game-".$game_index.$append, "-()");
-				$q = "SELECT * FROM games WHERE url_identifier='".$url_identifier."';";
-				$r = run_query($q);
-				if (mysql_numrows($r) == 0) $keeplooping = false;
-				else $append_index++;
-			} while ($keeplooping);
-			
-			$q = "INSERT INTO games SET creator_id='".$thisuser['user_id']."', url_identifier='".$url_identifier."', maturity=0, round_length=10, seconds_per_block='15', block_timing='realistic', creator_game_index='".$game_index."', game_type='simulation', name='Practice Game #".$game_index."', pos_reward='".(1200*pow(10,8))."', pow_reward='".(50*pow(10,8))."';";
+			$q = "INSERT INTO games SET creator_id='".$thisuser['user_id']."', maturity=0, round_length=20, seconds_per_block='10', block_timing='realistic', creator_game_index='".$game_index."', game_type='simulation', pos_reward='".(6000*pow(10,8))."', pow_reward='".(200*pow(10,8))."';";
 			$r = run_query($q);
 			$game_id = mysql_insert_id();
+			
+			$game_name = "Practice Game #".$game_id;
+			$url_identifier = game_url_identifier($game_name);
+			
+			$q = "UPDATE games SET name='".$game_name."', url_identifier='".$url_identifier."' WHERE game_id='".$game_id."';";
+			$r = run_query($q);
 			
 			$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
 			$r = run_query($q);
@@ -81,6 +75,11 @@ if ($thisuser) {
 			
 			$q = "UPDATE user_games ug, user_strategies s SET s.voting_strategy='manual' WHERE ug.strategy_id=s.strategy_id AND ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game_id."';";
 			$r = run_query($q);
+			
+			$invitation = false;
+			generate_invitation($game_id, $thisuser['user_id'], $invitation, $thisuser['user_id']);
+			$invitation = false;
+			$success = try_apply_giveaway($game, $user, $invitation);
 		}
 		
 		$q = "SELECT g.creator_id, g.game_id, g.game_status, g.block_timing, g.giveaway_status, g.giveaway_amount, g.maturity, g.max_voting_fraction, g.name, g.payout_weight, g.round_length, g.seconds_per_block, g.pos_reward, g.pow_reward FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game_id."';";

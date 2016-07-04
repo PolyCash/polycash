@@ -94,10 +94,6 @@ if ($_REQUEST['do'] == "signup") {
 						$email_message .= "<p>This message was sent to you by ".$GLOBALS['base_url']."</p>";
 						
 						$email_id = mail_async($username, $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], "New account created", $email_message, "", "");
-						
-						if ($_REQUEST['invite_key'] != "") {
-							try_apply_invite_key($user_id, $_REQUEST['invite_key']);
-						}
 					}
 					
 					$q = "SELECT * FROM games WHERE creator_id IS NULL;";
@@ -272,6 +268,15 @@ else if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['d
 	}
 }
 
+if ($thisuser && $_REQUEST['invite_key'] != "") {
+	$reload_page = false;
+	$success = try_apply_invite_key($thisuser['user_id'], $_REQUEST['invite_key'], $reload_page);
+	if ($success) {
+		header("Location: /wallet/");
+		die();
+	}
+}
+
 $pagetitle = $GLOBALS['site_name_short']." - My web wallet";
 $nav_tab_selected = "wallet";
 include('includes/html_start.php');
@@ -369,6 +374,7 @@ $mature_balance = mature_balance($game, $thisuser);
 			echo $bet_round_range[0];
 		?>;
 		var fee_amount = <?php echo $user_strategy['transaction_fee']; ?>;
+		var game_id = <?php echo $game['game_id']; ?>;
 		
 		var selected_nation_id = false;
 		
@@ -440,6 +446,65 @@ $mature_balance = mature_balance($game, $thisuser);
 		echo $game['name'];
 		if ($game['game_status'] == "paused" || $game['game_status'] == "unstarted") echo " (Paused)";
 		?></h1>
+		
+		<div style="margin-bottom: 10px;">
+			<button class="btn btn-primary btn-sm" onclick="$('#my_games_list').modal('show');">My Games</button>
+			<button class="btn btn-danger btn-sm" onclick="window.location='/wallet/?do=logout';">Log Out</button>
+		</div>
+		
+		<div style="display: none;" class="modal fade" id="my_games_list">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h4 class="modal-title">My Games</h4>
+					</div>
+					<div class="modal-body">
+						<?php
+						$q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser['user_id']."';";
+						$r = run_query($q);
+						
+						while ($user_game = mysql_fetch_array($r)) {
+							?>
+							<div class="row game_row<?php
+							if ($user_game['game_id'] == $game['game_id']) echo  ' boldtext';
+							?>">
+								<div class="col-sm-6 game_cell">
+									<a href="" onclick="switch_to_game(<?php echo $user_game['game_id']; ?>, 'switch'); return false;"><?php echo $user_game['name']; ?></a>
+								</div>
+								<div class="col-sm-3 game_cell">
+									<?php
+									echo '<a id="fetch_game_link_'.$user_game['game_id'].'" href="" onclick="switch_to_game('.$user_game['game_id'].', \'fetch\'); return false;">Settings</a>';
+									?>
+								</div>
+								<div class="col-sm-3 game_cell">
+									<?php if ($user_game['creator_id'] == $thisuser['user_id']) { ?>
+									<a href="" onclick="manage_game_invitations(<?php echo $game['game_id']; ?>); return false;">Invitations</a>
+									<?php } ?>
+								</div>
+							</div>
+							<?php
+						}
+						?>
+						<br/>
+						<button style="float: right;" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+						<button class="btn btn-primary" onclick="switch_to_game(0, 'new'); return false;">Start a new Practice Game</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		<div style="display: none;" class="modal fade" id="game_invitations">
+			<div class="modal-dialog modal-lg">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h4 class="modal-title">Game Invitations</h4>
+					</div>
+					<div class="modal-body" id="game_invitations_inner">
+					</div>
+				</div>
+			</div>
+		</div>
+		
 		<?php
 		include("includes/wallet_status.php");
 		?>
@@ -463,6 +528,7 @@ $mature_balance = mature_balance($game, $thisuser);
 			<div class="col-xs-2 tabcell" id="tabcell1" onclick="tab_clicked(1);">Settings</div>
 			<div class="col-xs-2 tabcell" id="tabcell2" onclick="tab_clicked(2);">My&nbsp;Results</div>
 			<div class="col-xs-2 tabcell" id="tabcell3" onclick="tab_clicked(3);">Deposit&nbsp;or&nbsp;Withdraw</div>
+			<div class="col-xs-2 tabcell" id="tabcell5" onclick="tab_clicked(5);">Players</div>
 		</div>
 		<div class="row">
 			<div id="tabcontent0" class="tabcontent">
@@ -520,33 +586,6 @@ $mature_balance = mature_balance($game, $thisuser);
 				?>
 			</div>
 			<div id="tabcontent1" style="display: none;" class="tabcontent">
-				<h2>My Games</h2>
-				<?php
-				$q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser['user_id']."';";
-				$r = run_query($q);
-				
-				while ($user_game = mysql_fetch_array($r)) {
-					?>
-					<div class="row game_row">
-						<div class="col-sm-6 game_cell">
-							<?php
-							echo '<a id="fetch_game_link_'.$user_game['game_id'].'" href="" onclick="switch_to_game('.$user_game['game_id'].', \'fetch\'); return false;"';
-							if ($user_game['game_id'] == $game['game_id']) echo  ' class="selected_link"';
-							echo '>';
-							echo $user_game['name'];
-							echo "</a>";
-							?>
-						</div>
-					</div>
-					<?php
-				}
-				?>
-				<div class="row game_row">
-					<div class="col-sm-6 game_cell">
-						<a href="" onclick="switch_to_game(0, 'new'); return false;">Start a new Practice Game</a>
-					</div>
-				</div>
-				
 				<h2>Transaction Fees</h2>
 				<form method="post" action="/wallet/">
 					<input type="hidden" name="do" value="save_voting_strategy_fees" />
@@ -887,15 +926,37 @@ $mature_balance = mature_balance($game, $thisuser);
 					<br/>
 				</div>
 			<?php } ?>
+			
+			<div class="tabcontent" style="display: none;" id="tabcontent5">
+				<?php
+				$q = "SELECT * FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$game['game_id']."';";
+				$r = run_query($q);
+				echo "<h3>".mysql_numrows($r)." players</h3>\n";
+				while ($user_game = mysql_fetch_array($r)) {
+					echo '<div class="row">';
+					echo '<div class="col-sm-4"><a href="" onclick="openChatWindow('.$user_game['user_id'].'); return false;">'.$user_game['username'].'</a></div>';
+					echo '<div class="col-sm-4">'.format_bignum(account_coin_value($game, $user_game)/pow(10,8)).' coins</div>';
+					echo '</div>';
+				}
+				?>
+			</div>
 		</div>
 			
 		<div style="display: none;" class="modal fade" id="game_form">
 			<div class="modal-dialog">
 				<div class="modal-content">
+					<div class="modal-header">
+						<h4 class="modal-title" id="game_form_name_disp"></h4>
+					</div>
 					<div class="modal-body">
 						<form onsubmit="save_game();">
-							<div class="row" style="text-align: center;">
-								<h1 id="game_form_name"></h1>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">
+									Game title:
+								</div>
+								<div class="col-sm-6">
+									<input class="form-control" type="text" id="game_form_name" />
+								</div>
 							</div>
 							<div class="row">
 								<div class="col-sm-6 form-control-static">
@@ -960,6 +1021,16 @@ $mature_balance = mature_balance($game, $thisuser);
 									</select>
 								</div>
 							</div>
+							<?php /*<div class="row">
+								<div class="col-sm-6 form-control-static">Number of players:</div>
+								<div class="col-sm-6">
+									<select class="form-control" id="game_form_num_players_status">
+										<option value="unlimited">Unlimited</option>
+										<option value="capped">Capped at some number</option>
+										<option value="exactly">Exactly some number</option>
+									</select>
+								</div>
+							</div> */ ?>
 							<div class="row">
 								<div class="col-sm-6 form-control-static">Initial coins given to each player:</div>
 								<div class="col-sm-3">
@@ -998,11 +1069,11 @@ $mature_balance = mature_balance($game, $thisuser);
 							</div>
 							
 							<div style="height: 10px;"></div>
+							<button style="float: right;" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
 							
 							<button id="save_game_btn" type="button" class="btn btn-success" onclick="save_game();">Save Game Settings</button>
-							<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
 							
-							<button id="switch_game_btn" style="float: right;" type="button" class="btn btn-primary" onclick="switch_to_game(editing_game_id, 'switch');">Switch to this game</button>
+							<button id="switch_game_btn" type="button" class="btn btn-primary" onclick="switch_to_game(editing_game_id, 'switch');">Switch to this game</button>
 						</form>
 					</div>
 				</div>

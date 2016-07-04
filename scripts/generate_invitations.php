@@ -1,12 +1,24 @@
 <?php
 include('../includes/connect.php');
+include("../includes/get_session.php");
 
 die("This script is disabled.");
 
-$quantity = 100;
-for ($i=0; $i<$quantity; $i++) {
-	$q = "INSERT INTO invitations SET inviter_id=27, invitation_key='".strtolower(random_string(32))."', time_created='".time()."';";
+if ($thisuser) {
+	$game_id = intval($_REQUEST['game_id']);
+	
+	$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
 	$r = run_query($q);
+	
+	if (mysql_numrows($r) > 0) {
+		$game = mysql_fetch_array($r);
+		$quantity = 100;
+		
+		for ($i=0; $i<$quantity; $i++) {
+			$invitation = false;
+			generate_invitation($game['game_id'], $thisuser['user_id'], $invitation);
+		}
+		echo "$quantity invitations have been generated.";
+	}
 }
-echo "$quantity invitations have been generated.";
 ?>

@@ -4,7 +4,7 @@ if (is_file(realpath(dirname(__FILE__))."/config.php")) {
 }
 else die("Please create the file includes/config.php");
 
-if ($GLOBALS['base_url']) {
+if ($GLOBALS['base_url'] && !$host_not_required) {
 	$b_url = $_SERVER['HTTP_HOST'];
 	if (isset($_SERVER['HTTPS'])) $b_url = "https://".$b_url;
 	else $b_url = "http://".$b_url;
