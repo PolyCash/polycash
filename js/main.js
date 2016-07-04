@@ -1501,10 +1501,10 @@ function scramble_strategy(strategy_id) {
 	var btn_default_text = $('#scramble_plan_btn').html();
 	var btn_loading_text = "Randomizing...";
 	if ($('#scramble_plan_btn').html() != btn_loading_text) {
-		var user_confirmed = confirm('All of your current votes will be lost. Are you sure you want to randomize your votes?');
+		var user_confirmed = confirm('All of your votes in rounds '+$('#select_from_round').val()+' to '+$('#select_to_round').val()+' will be overwritten. Are you sure you want to randomize your votes?');
 		if (user_confirmed) {
 			$('#scramble_plan_btn').html(btn_loading_text);
-			$.get("/ajax/planned_allocations.php?game_id="+game_id+"&voting_strategy_id="+strategy_id+"&action=scramble", function(result) {
+			$.get("/ajax/planned_allocations.php?game_id="+game_id+"&voting_strategy_id="+strategy_id+"&action=scramble&from_round="+$('#select_from_round').val()+"&to_round="+$('#select_to_round').val(), function(result) {
 				$('#scramble_plan_btn').html(btn_default_text);
 				refresh_plan_allocations();
 			});

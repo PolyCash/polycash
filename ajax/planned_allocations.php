@@ -58,7 +58,9 @@ if ($thisuser && $game) {
 		echo json_encode($output_obj);
 	}
 	else if ($action == "scramble") {
-		scramble_plan_allocations($game, $user_strategy, array(0=>1, 1=>0.5));
+		$from_round = intval($_REQUEST['from_round']);
+		$to_round = intval($_REQUEST['to_round']);
+		scramble_plan_allocations($game, $user_strategy, array(0=>1, 1=>0.5), $from_round, $to_round);
 		output_message(1, "Scrambled it!", false);
 	}
 }

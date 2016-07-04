@@ -1343,13 +1343,20 @@ $mature_balance = mature_balance($game, $thisuser);
 						<p>
 							Hi <?php echo $thisuser['username']; ?>, thanks for joining <?php echo $game['name']; ?>! 
 							This game lasts for <?php echo $game['final_round']; ?> voting rounds.  
-							At the end of each round, the supply of <?php echo $game['coin_name_plural']; ?> inflates by <?php echo 100*$game['exponential_inflation_rate']; ?>%. These new <?php echo $game['coin_name_plural']; ?> are split up and given to everyone who voted for the winner.
+							At the end of each round, the supply of <?php echo $game['coin_name_plural']; ?> 
+							<?php
+							if ($game['inflation'] == "exponential") echo 'inflates by '.(100*$game['exponential_inflation_rate']).'%';
+							else echo 'increases by '.format_coins($game['pos_reward']/pow(10,8));
+							?>. These new <?php echo $game['coin_name_plural']; ?> are split up and given to everyone who voted for the winner.
 						</p>
 						<p>
-							To make sure you don't miss out on votes, a random voting strategy has been applied to your account.  You are currently on a planned voting strategy but several other strategy types are available.  You can change your voting strategy at any time by clicking on the "Strategy" tab.  Please click below to review or change the random votes that you have been assigned.<br/>
+							To make sure you don't miss out on votes, a random voting strategy has been applied to your account.  These random votes will only be applied at the end of the voting round.  You can still cast your votes manually by voting before the end of the round.
 						</p>
 						<p>
-							<button class="btn btn-primary" onclick="show_planned_votes();">Continue</button>
+							You are currently on a planned voting strategy but several other strategy types are available.  You can change your voting strategy at any time by clicking on the "Strategy" tab.  Please click below to check the random votes that you have been assigned.<br/>
+						</p>
+						<p>
+							<button class="btn btn-primary" onclick="$('#intro_message').modal('hide'); show_planned_votes();">Continue</button>
 						</p>
 					</div>
 				</div>
