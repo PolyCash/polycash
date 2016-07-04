@@ -369,7 +369,7 @@ if ($uri_parts[1] == "api") {
 </pre>
 			<br/><br/>
 			
-			Example voting recommendations API client.&nbsp;&nbsp;<a href="/api/download-example-client/">Click here to download (PHP)</a>
+			Example voting recommendations API client.&nbsp;&nbsp;<a href="/api/download-client-example/">Click here to download (PHP)</a>
 			<br/><br/>
 			
 			API clients must return JSON formatted recommendations. 

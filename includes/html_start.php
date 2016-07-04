@@ -7,7 +7,7 @@
 	<title><?php echo $pagetitle; ?></title>
 	
 	<link rel="stylesheet" type="text/css" href="/css/bootstrap.min.css" media="screen" />
-	<link rel="stylesheet" type="text/css" href="/css/style.css">
+	<link rel="stylesheet" type="text/css" href="/css/style.css?t=<?php echo time(); ?>">
 	<link rel="stylesheet" type="text/css" href="/css/jquery.ui.css">
 	
 	<script type="text/javascript" language="javascript" src="/js/jquery-1.11.3.js"></script>
@@ -25,13 +25,19 @@
 			<span class="icon-bar"></span>
 			<span class="icon-bar"></span>
 		  </button>
-		  <a class="navbar-brand" href="#"><img style="display: inline-block; margin-top: -6px; margin-right: 7px;" src="/img/logo/icon-35x35.png" />EmpireCoin</a>
+		  <a class="navbar-brand" href="/"><img style="display: inline-block; margin-top: -6px; margin-right: 7px;" src="/img/logo/icon-35x35.png" />EmpireCoin</a>
 		</div>
 		<div id="navbar" class="navbar-collapse collapse">
 		  <ul class="nav navbar-nav">
 			<li<?php if ($nav_tab_selected == "home") echo ' class="active"'; ?>><a href="/">Home</a></li>
 			<li<?php if ($nav_tab_selected == "download") echo ' class="active"'; ?>><a href="/download/">Download</a></li>
-			<li<?php if ($nav_tab_selected == "wallet") echo ' class="active"'; ?>><a href="/wallet/">Web Wallet</a></li>
+			<li<?php if ($nav_tab_selected == "wallet" && $_REQUEST['do'] != "logout") echo ' class="active"'; ?>><a href="/wallet/">Web Wallet</a></li>
+			<?php
+			if ($thisuser || $_REQUEST['do'] == "logout") { ?>
+				<li<?php if ($nav_tab_selected == "wallet" && $_REQUEST['do'] == "logout") echo ' class="active"'; ?>><a href="/wallet/?do=logout">Log Out</a></li>
+				<?php
+			}
+			?>
 		  </ul>
 		</div>
 	  </div>

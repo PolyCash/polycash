@@ -18,7 +18,7 @@ if ($thisuser) {
 		
 		if ($nation_id > 0 && $nation_id <= 16) {
 			$amount = floatval($_REQUEST['amount']);
-			if ($amount == round($amount, 5)) {
+			if ($amount == round($amount, 3)) {
 				if ($amount <= $mature_balance && $amount > 0) {
 					$q = "INSERT INTO webwallet_transactions SET currency_mode='".$thisuser['currency_mode']."', nation_id='".$nation_id."', transaction_desc='transaction', amount=".$amount*(pow(10, 8)).", user_id='".$thisuser['user_id']."', block_id='".($last_block_id+1)."', time_created='".time()."';";
 					$r = run_query($q);
@@ -30,7 +30,7 @@ if ($thisuser) {
 				}
 				else echo "1=====You don't have that many coins available to vote right now.";
 			}
-			else echo "2=====Please enter amounts rounded to 5 decimal places.";
+			else echo "2=====Please enter amounts rounded to 3 decimal places.";
 		}
 		else echo "3=====Invalid nation ID.";
 	}

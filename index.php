@@ -6,7 +6,17 @@ $viewer_id = insert_pageview($thisuser);
 $pagetitle = "EmpireCoin - Vote for your empire in the very first decentralized blockchain voting game.";
 $nav_tab_selected = "home";
 include('includes/html_start.php');
-?>	
+
+if ($thisuser) { ?>
+	<div class="container" style="max-width: 1000px; padding-top: 10px;">
+		<?php
+		$account_value = account_coin_value($thisuser);
+		include("includes/wallet_status.php");
+		?>
+	</div>
+	<?php
+}
+?>
 <div class="container-fluid nopadding">
 	<div class="top_banner" id="home_carousel">
 		<div class="carouselText">EmpireCoin</div>
@@ -22,6 +32,8 @@ include('includes/html_start.php');
 			</div>
 			<div class="col-sm-10">
 				Welcome to EmpireCoin, the first decentralized voting game on the planet!  With EmpireCoin, you can bet money against players from around the world every hour in an epic and never-ending struggle for power.  By correctly voting your coins you'll win money, but if you're wrong you won't lose anything.  Do you love gambling, sports betting or speculating on currencies and stocks?  Stop playing rigged games and get in on the first betting game where money is created from thin air and given out to the players. Start building your empire today in this massively multiplayer online game of chance!
+				<br/><br/>
+				EmpireCoin is currently in beta.  You can <a href="/wallet/">sign up</a> for a beta web wallet to try out the game, and the coin itself will be released soon. For more information, please download the <a href="/EmpireCoin.pdf">EmpireCoin Whitepaper</a>.
 			</div>
 		</div>
 		
@@ -59,19 +71,19 @@ include('includes/html_start.php');
 		<button style="margin: 10px 0px;" class="btn btn-primary" onclick="window.location='/wallet/';">Sign Up</button>
 		<br/>
 		<h1>EmpireCoin API</h1>
-		Automated & algorithmic voting strategies are encouraged in EmpireCoin.  After signing up for a web wallet, you can choose from one of several voting strategies and then tweak parameters to optimize your votes.  Or you can choose the "Vote by API" voting strategy and then write code to fully customize your voting strategy.  For more information, please visit the <a href="/api/about/">EmpireCoin API page</a>.
+		Automated & algorithmic voting strategies are encouraged in EmpireCoin.  After signing up for a web wallet, you can choose from one of several automated voting strategies and then tweak parameters to optimize your votes.  Or you can choose the "Vote by API" voting strategy and then write code to fully customize your voting strategy.  For more information, please visit the <a href="/api/about/">EmpireCoin API page</a>.
 		<br/><br/>
 		<?php
 		$last_block_id = last_block_id('beta');
 		$current_round = block_to_round($last_block_id+1);
 		$block_within_round = $last_block_id%get_site_constant('round_length')+1;
 		?>
-		<h1>Current Rankings - Voting round #<?php echo $current_round; ?></h1>
+		<h1>Current Rankings - Beta round #<?php echo $current_round; ?></h1>
 		Last block completed: #<?php echo $last_block_id; ?>, currently mining #<?php echo ($last_block_id+1); ?><br/>
 		Current votes count towards block <?php echo $block_within_round."/".get_site_constant('round_length')." in round #".$current_round; ?><br/>
 		Approximately <?php echo (get_site_constant('round_length')-$last_block_id%get_site_constant('round_length'))*get_site_constant('minutes_per_block'); ?> minutes left in this round.<br/><br/>
 		<?php
-		echo current_round_table($current_round);
+		echo current_round_table($current_round, $thisuser, false, false);
 		?>
 		<br/><br/><br/>
 	</p>

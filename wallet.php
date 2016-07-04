@@ -240,6 +240,13 @@ $pagetitle = "EmpireCoin - My web wallet";
 $nav_tab_selected = "wallet";
 include('includes/html_start.php');
 
+$initial_tab = 0;
+$account_value = account_coin_value($thisuser);
+$immature_balance = immature_balance($thisuser);
+$last_block_id = last_block_id($thisuser['currency_mode']);
+$current_round = block_to_round($last_block_id+1);
+$block_within_round = $last_block_id%get_site_constant('round_length')+1;
+$mature_balance = $account_value - $immature_balance;
 ?>
 <div class="container" style="max-width: 1000px; padding-top: 15px;">
 	<?php
@@ -256,6 +263,8 @@ include('includes/html_start.php');
 	if ($thisuser) { ?>
 		<script type="text/javascript">
 		var current_tab = false;
+		var last_block_id = <?php echo $last_block_id; ?>;
+		var last_transaction_id = <?php echo last_voting_transaction_id(); ?>;
 		
 		function tab_clicked(index_id) {
 			if (current_tab !== false) {
@@ -284,6 +293,7 @@ include('includes/html_start.php');
 		
 		function start_vote(nation_id) {
 			$('#vote_confirm_'+nation_id).modal('toggle');
+			$('#vote_details_'+nation_id).html($('#vote_details_general').html());
 			$('#vote_amount_'+nation_id).focus();
 		}
 		
@@ -293,7 +303,9 @@ include('includes/html_start.php');
 				$('#vote_confirm_btn_'+nation_id).html("Confirm Vote");
 				var result_parts = result.split("=====");
 				if (result_parts[0] == "0") {
-					window.location = window.location;
+					refresh_if_needed();
+					$('#vote_confirm_'+nation_id).modal('hide');
+					alert("Great, your vote has been submitted!");
 				}
 				else {
 					$('#vote_error_'+nation_id).html(result_parts[1]);
@@ -339,66 +351,82 @@ include('includes/html_start.php');
 			}
 			setTimeout("loop_event();", 1000);
 		}
+		
+		var refresh_in_progress = false;
+		function refresh_if_needed() {
+			if (!refresh_in_progress) {
+				refresh_in_progress = true;
+				$.get("/ajax/check_new_activity.php?last_block_id="+last_block_id+"&last_transaction_id="+last_transaction_id+"&performance_history_sections="+performance_history_sections, function(result) {
+					refresh_in_progress = false;
+					var json_result = $.parseJSON(result);
+					if (json_result['new_block'] == "1") {
+						last_block_id = parseInt(json_result['last_block_id']);
+						
+						if (last_block_id%10 == 0) {
+							$('#performance_history_0').html(json_result['performance_history']);
+							$('#performance_history_0').hide();
+							$('#performance_history_0').fadeIn('fast');
+							
+							performance_history_start_round = json_result['performance_history_start_round'];
+							
+							tab_clicked(2);
+						}
+					}
+					if (json_result['new_block'] == "1" || json_result['new_transaction'] == "1") {
+						last_transaction_id = parseInt(json_result['last_transaction_id']);
+						$('#current_round_table').html(json_result['current_round_table']);
+						$('#wallet_text_stats').html(json_result['wallet_text_stats']);
+						$('#vote_details_general').html(json_result['vote_details_general']);
+						
+						$('#current_round_table').hide();
+						$('#current_round_table').fadeIn('fast');
+						
+						$('#wallet_text_stats').hide();
+						$('#wallet_text_stats').fadeIn('fast');
+						
+						var vote_nation_details = json_result['vote_nation_details'];
+						for (var nation_id=1; nation_id<=16; nation_id++) {
+							$('#vote_nation_details_'+nation_id).html(vote_nation_details[nation_id]);
+						}
+					}
+				});
+			}
+			setTimeout("refresh_if_needed();", 2000);
+		}
 		$(document).ready(function() {
 			loop_event();
+			refresh_if_needed();
 		});
 		</script>
 		<?php
-		$initial_tab = 0;
-		$account_value = account_coin_value($thisuser);
-		$immature_balance = immature_balance($thisuser);
+		include("includes/wallet_status.php");
 		?>
-		<div style="margin-bottom: 10px;">
-			Account value:&nbsp;&nbsp;&nbsp;&nbsp;<font class="greentext"><?php echo number_format($account_value, 3); ?></font> EmpireCoins
-			<font style="float: right;">
-				Logged in as <?php echo $thisuser['username']; ?>. <a href="/wallet/?do=logout">Log Out</a>
-			</font>
-		</div>
 		<div class="row">
-			<div class="col-sm-2 tabcell" id="tabcell0" onclick="tab_clicked(0);">Vote&nbsp;Now</div>
-			<div class="col-sm-2 tabcell" id="tabcell1" onclick="tab_clicked(1);">Voting&nbsp;Strategy</div>
-			<div class="col-sm-2 tabcell" id="tabcell2" onclick="tab_clicked(2);">Performance&nbsp;History</div>
-			<div class="col-sm-2 tabcell" id="tabcell3" onclick="tab_clicked(3);">Deposit&nbsp;Coins</div>
-			<div class="col-sm-2 tabcell" id="tabcell4" onclick="tab_clicked(4);">Withdraw&nbsp;Coins</div>
+			<div class="col-xs-2 tabcell" id="tabcell0" onclick="tab_clicked(0);">Vote Now</div>
+			<div class="col-xs-2 tabcell" id="tabcell1" onclick="tab_clicked(1);">Voting Strategy</div>
+			<div class="col-xs-2 tabcell" id="tabcell2" onclick="tab_clicked(2);">Performance History</div>
+			<div class="col-xs-2 tabcell" id="tabcell3" onclick="tab_clicked(3);">Deposit Coins</div>
+			<div class="col-xs-2 tabcell" id="tabcell4" onclick="tab_clicked(4);">Withdraw Coins</div>
 		</div>
 		<div class="row">
 			<div id="tabcontent0" style="display: none;" class="tabcontent">
+				<div id="wallet_text_stats">
+					<?php
+					echo wallet_text_stats($thisuser, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance);
+					?>
+				</div>
+				
+				<br/>
+				
+				<div style="display: none;" id="vote_details_general">
+					<?php echo vote_details_general($mature_balance); ?>
+				</div>
 				<?php
-				$last_block_id = last_block_id($thisuser['currency_mode']);
-				$current_round = block_to_round($last_block_id+1);
-				$block_within_round = $last_block_id%get_site_constant('round_length')+1;
-				$mature_balance = $account_value - $immature_balance;
-				
-				echo "Last block completed: #".$last_block_id.", currently mining #".($last_block_id+1)."<br/>\n";
-				echo "Current votes count towards block ".$block_within_round."/".get_site_constant('round_length')." in round #".$current_round."<br/>\n";
-				echo "Locked funds: <font class=\"redtext\">".number_format($immature_balance, 3)."</font> EmpireCoins";
-				if ($immature_balance > 0) echo " <a href=\"\" onclick=\"$('#lockedfunds_details').toggle('fast'); return false;\">Details</a>";
-				echo "<br/>\n";
-				echo "Available funds: <font class=\"greentext\">".(floor($mature_balance*1000)/1000)."</font> EmpireCoins<br/>\n";
-				
-				if ($immature_balance > 0) {
-					$q = "SELECT * FROM webwallet_transactions t LEFT JOIN nations n ON t.nation_id=n.nation_id WHERE t.amount > 0 AND t.user_id='".$thisuser['user_id']."' AND t.currency_mode='".$thisuser['currency_mode']."' AND t.block_id > ".(last_block_id($thisuser['currency_mode']) - get_site_constant('maturity'))." AND t.transaction_desc != 'giveaway' ORDER BY t.block_id ASC, t.transaction_id ASC;";
-					$r = run_query($q);
-					
-					echo "<div style='display: none; border: 1px solid #ccc; padding: 8px; border-radius: 8px; margin-top: 8px;' id='lockedfunds_details'>";
-					while ($next_transaction = mysql_fetch_array($r)) {
-						$avail_block = get_site_constant('maturity') + $next_transaction['block_id'] + 1;
-						$minutes_to_avail = ($avail_block - $last_block_id - 1)*get_site_constant("minutes_per_block");
-						
-						if ($next_transaction['transaction_desc'] == "votebase") echo "You won ";
-						echo "<font class=\"greentext\">".round($next_transaction['amount']/(pow(10, 8)), 3)."</font> ";
-						if ($next_transaction['transaction_desc'] == "votebase") echo "coins in block ".$next_transaction['block_id'].". Coins";
-						else echo "coins received in block #".$next_transaction['block_id'];
-						echo " can be spent in block #".$avail_block.". (Approximately ".$minutes_to_avail." minutes). ";
-						if ($next_transaction['nation_id'] > 0) {
-							echo "Vote for ".$next_transaction['name']." in round #".block_to_round($next_transaction['block_id']).". ";
-						}
-						echo "<br/>\n";
-					}
-					echo "</div>\n";
-				}
-				
-				echo "<br/>\n";
+				$round_stats = round_voting_stats_all($current_round);
+				$totalVoteSum = $round_stats[0];
+				$maxVoteSum = $round_stats[1];
+				$nation_id_to_rank = $round_stats[3];
+				$round_stats = $round_stats[2];
 				
 				if (($last_block_id+1)%get_site_constant('round_length') == 0) {
 					echo "The final block of round ".$current_round." is being mined. Voting is currently disabled.<br/>\n";
@@ -408,7 +436,10 @@ include('includes/html_start.php');
 					$nation_q = "SELECT * FROM nations ORDER BY vote_id ASC;";
 					$nation_r = run_query($nation_q);
 					$n_counter = 1;
-					while ($nation = mysql_fetch_array($nation_r)) { ?>
+					while ($nation = mysql_fetch_array($nation_r)) {
+						$rank = $nation_id_to_rank[$nation['nation_id']]+1;
+						$voting_sum = $round_stats[$nation_id_to_rank[$nation['nation_id']]]['voting_sum'];
+						?>
 						<div class="vote_nation_box" onclick="start_vote(<?php echo $nation['nation_id']; ?>);">
 							<div class="vote_nation_flag <?php echo strtolower(str_replace(' ', '', $nation['name'])); ?>"></div>
 							<div class="vote_nation_flag_label"><?php echo $n_counter.". ".$nation['name']; ?></div>
@@ -418,6 +449,13 @@ include('includes/html_start.php');
 								<div class="modal-content">
 									<div class="modal-body">
 										<h2>Vote for <?php echo $nation['name']; ?></h2>
+										<div id="vote_details_<?php echo $nation['nation_id']; ?>"></div>
+										<div id="vote_nation_details_<?php echo $nation['nation_id']; ?>">
+											<?php
+											echo vote_nation_details($nation, $rank, $voting_sum, $totalVoteSum);
+											?>
+										</div>
+										<br/>
 										How many EmpireCoins do you want to vote?<br/>
 										<div class="row">
 											<div class="col-sm-2">
@@ -444,10 +482,9 @@ include('includes/html_start.php');
 					}
 				}
 				
-				echo "<br/>\n<div style=\"margin-top: 15px; border: 1px solid #aaa; padding: 10px; border-radius: 8px;\">";
-				echo "<b>Current Rankings - Round #".$current_round.". Approximately ".(get_site_constant('round_length')-$last_block_id%get_site_constant('round_length'))*get_site_constant('minutes_per_block')." minutes left.</b><br/>";
+				echo "<br/>\n<div style=\"margin-top: 15px; border: 1px solid #aaa; padding: 10px; border-radius: 8px;\" id=\"current_round_table\">";
 				
-				echo current_round_table($current_round);
+				echo current_round_table($current_round, $thisuser, true, true);
 				
 				echo "</div>";
 				?>
@@ -561,65 +598,36 @@ include('includes/html_start.php');
 				</form>
 			</div>
 			<div id="tabcontent2" style="display: none;" class="tabcontent">
-				<?php
-				$q = "SELECT * FROM cached_rounds r LEFT JOIN nations n ON r.winning_nation_id=n.nation_id ORDER BY r.round_id ASC;";
-				$r = run_query($q);
-				while ($round = mysql_fetch_array($r)) {
-					$first_voting_block_id = ($round['round_id']-1)*get_site_constant('round_length')+1;
-					$last_voting_block_id = $first_voting_block_id+get_site_constant('round_length')-1;
-					$vote_sum = 0;
-					$details_html = "";
-					
-					echo '<div class="row">';
-					echo '<div class="col-sm-2">Round #'.$round['round_id'].'</div>';
-					echo '<div class="col-sm-3">';
-					if ($round['name'] != "") echo $round['name']." won with ".round($round['winning_vote_sum']/pow(10,8), 3)." EMP";
-					else echo "No winner";
-					echo '</div>';
-					
-					$default_win_text = "You didn't vote for the winning empire.";
-					$win_text = $default_win_text;
-					$qq = "SELECT COUNT(*), SUM(t.amount), n.* FROM webwallet_transactions t, nations n WHERE t.block_id >= ".$first_voting_block_id." AND t.block_id <= ".$last_voting_block_id." AND t.user_id='".$thisuser['user_id']."' AND t.nation_id=n.nation_id GROUP BY n.nation_id;";
-					$rr = run_query($qq);
-					if (mysql_numrows($rr) > 0) {
-						while ($nation_votes = mysql_fetch_array($rr)) {
-							$vote_sum += $nation_votes['SUM(t.amount)'];
-							$details_html .= '<font class="';
-							if ($nation_votes['nation_id'] == $round['winning_nation_id']) {
-								$win_text = "You correctly voted ".round($nation_votes['SUM(t.amount)']/pow(10,8), 3)." EMP";
-								$details_html .= 'greentext';
-							}
-							else $details_html .= 'redtext';
-							$details_html .= '">You had '.$nation_votes['COUNT(*)']." vote";
-							if ($nation_votes['COUNT(*)'] != 1) $details_html .= "s";
-							$details_html .= " totalling ".round($nation_votes['SUM(t.amount)']/pow(10,8), 3)." EMP for ".$nation_votes['name'];
-							$details_html .= '</font><br/>';
-						}
+				<script type="text/javascript">
+				var performance_history_sections = 1;
+				var performance_history_start_round = <?php echo min(1, $current_round-12); ?>;
+				var performance_history_loading = false;
+				
+				function show_more_performance_history() {
+					if (!performance_history_loading) {
+						performance_history_loading = true;
+						performance_history_start_round -= 10;
+						$('#performance_history').append('<div id="performance_history_'+performance_history_sections+'"></div>');
+						$('#performance_history_'+performance_history_sections).html("Loading...");
+						
+						$.get("/ajax/performance_history.php?from_round_id="+performance_history_start_round+"&to_round_id="+(performance_history_start_round+10), function(result) {
+							$('#performance_history_'+performance_history_sections).html(result);
+							performance_history_sections++;
+							performance_history_loading = false;
+						});
 					}
-					else $details_html .= "You didn't cast any votes.";
-					
-					echo '<div class="col-sm-5">';
-					echo $win_text;
-					echo ' <a href="" onclick="$(\'#win_details_'.$round['round_id'].'\').toggle(\'fast\'); return false;">Details</a>';
-					echo '<div id="win_details_'.$round['round_id'].'" style="margin: 4px 0px; padding: 4px; border-radius: 5px; border: 1px solid #bbb; display: none;">';
-					echo $details_html;
-					echo '</div>';
-					echo '</div>';
-					
-					echo '<div class="col-sm-2">';
-					$qq = "SELECT SUM(amount) FROM webwallet_transactions WHERE block_id='".$round['payout_block_id']."' AND user_id='".$thisuser['user_id']."' AND transaction_desc='votebase';";
-					$rr = run_query($qq);
-					$win_amount = mysql_fetch_row($rr);
-					$win_amount = $win_amount[0]/pow(10,8);
-					echo '<font class="';
-					if ($win_amount > 0) echo 'greentext';
-					else echo 'redtext';
-					echo '">+'.number_format($win_amount, 3).' EMP</font>';
-					echo '</div>';
-					
-					echo "</div>\n";
 				}
-				?>
+				</script>
+				<div id="performance_history">
+					<div id="performance_history_0">
+						<?php
+						echo performance_history($thisuser, max(1, $current_round-11), $current_round-1);
+						?>
+					</div>
+				</div>
+				<center>
+					<a href="" onclick="show_more_performance_history(); return false;">Show More</a>
+				</center>
 			</div>
 			<div id="tabcontent3" style="display: none;" class="tabcontent">
 				<?php
@@ -633,13 +641,13 @@ include('includes/html_start.php');
 					<?php
 				}
 				else { ?>
-					To add coins to this account, please deposit coins to:
+					We're currently in beta; this feature isn't available right now.
 					<?php
 				}
 				?>
 			</div>
 			<div id="tabcontent4" style="display: none;" class="tabcontent">
-				<h1>Withdraw Coins</h1>
+				We're currently in beta; this feature isn't available right now.
 			</div>
 		</div>
 		

@@ -13,6 +13,11 @@ if ($_REQUEST['key'] == "2r987jifwow") {
 		
 		$voting_round = block_to_round($mining_block_id);
 		
+		if ($voting_round%100 == 1) {
+			$q = "UPDATE nations SET cached_force_multiplier=16, relevant_wins=1;";
+			$r = run_query($q);
+		}
+		
 		echo "Created block $last_block_id<br/>\n";
 		
 		if ($last_block_id%get_site_constant('round_length') == 0) {
@@ -51,7 +56,7 @@ if ($_REQUEST['key'] == "2r987jifwow") {
 				$q = "UPDATE nations SET relevant_wins=relevant_wins+1 WHERE nation_id='".$winning_nation."';";
 				$r = run_query($q);
 				
-				$q = "UPDATE nations SET cached_force_multiplier=ROUND((16+".($voting_round-1).")/relevant_wins, 8);";
+				$q = "UPDATE nations SET cached_force_multiplier=ROUND((16+".($voting_round%100 - 1).")/relevant_wins, 8);";
 				$r = run_query($q);
 				
 				echo $nation_names[$winning_nation]." wins with ".($winning_votesum/(pow(10, 8)))." EMP voted and ".$winning_score." points.<br/>";
