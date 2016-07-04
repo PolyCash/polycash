@@ -54,6 +54,8 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 		$pagetitle = $game->db_game['name']." Block Explorer";
 	}
 	if ($explore_mode == "rounds") {
+		$round_status = "";
+
 		if ($uri_parts[4] == "current") {
 			$round_status = "current";
 			$mode_error = false;
@@ -260,7 +262,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					}
 					else $my_votes = false;
 					
-					if ($my_votes[$round['winning_option_id']] > 0) {
+					if (!empty($my_votes[$round['winning_option_id']])) {
 						$payout_amt = (floor(100*pos_reward_in_round($game->db_game, $this_round)/pow(10,8)*$my_votes[$round['winning_option_id']]['coins']/$round['winning_score'])/100);
 						
 						$payout_disp = $app->format_bignum($payout_amt);
@@ -347,19 +349,20 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 							else if (!$winner_displayed && $option_score > 0) { echo ' greentext'; $winner_displayed = TRUE; }
 							echo '">';
 							echo '<div class="col-md-3">'.$rank.'. '.$ranked_option['name'].'</div>';
-							echo '<div class="col-md-1" style="text-align: center;">'.round(100*$option_score/$round_score_sum, 2).'%</div>';
+							echo '<div class="col-md-1" style="text-align: center;">'.($round_score_sum>0? round(100*$option_score/$round_score_sum, 2) : 0).'%</div>';
 							echo '<div class="col-md-3" style="text-align: center;">'.$app->format_bignum($option_score/pow(10,8)).' votes</div>';
 							if ($thisuser) {
 								echo '<div class="col-md-3" style="text-align: center;">';
 								
-								$score_qty = $my_votes[$ranked_option['option_id']]['votes'];
+								if (!empty($my_votes[$ranked_option['option_id']]['votes'])) $score_qty = $my_votes[$ranked_option['option_id']]['votes'];
+								else $score_qty = 0;
 								
 								$score_disp = $app->format_bignum($score_qty/pow(10,8));
 								echo $score_disp." ";
 								echo " vote";
 								if ($score_disp != '1') echo "s";
 								
-								echo ' ('.round(100*$score_qty/$option_score, 3).'%)</div>';
+								echo ' ('.($option_score>0? round(100*$score_qty/$option_score, 3) : 0).'%)</div>';
 							}
 							echo '</div>'."\n";
 						}

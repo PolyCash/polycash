@@ -15,13 +15,22 @@ if ($thisuser || $_REQUEST['refresh_page'] == "game") {
 	$bet_round_range = $game->bet_round_range();
 	$last_block_id = $game->last_block_id();
 	$last_transaction_id = $game->last_transaction_id();
-	$my_last_transaction_id = $thisuser->my_last_transaction_id($game->db_game['game_id']);
-	$mature_io_ids_csv = $game->mature_io_ids_csv($thisuser->db_user['user_id']);
 	$current_round = $game->block_to_round($last_block_id+1);
 	$block_within_round = $game->block_id_to_round_index($last_block_id+1);
-	$account_value = $thisuser->account_coin_value($game);
-	$immature_balance = $thisuser->immature_balance($game);
-	$mature_balance = $thisuser->mature_balance($game);
+	if ($thisuser) {
+		$my_last_transaction_id = $thisuser->my_last_transaction_id($game->db_game['game_id']);
+		$account_value = $thisuser->account_coin_value($game);
+		$immature_balance = $thisuser->immature_balance($game);
+		$mature_balance = $thisuser->mature_balance($game);
+		$mature_io_ids_csv = $game->mature_io_ids_csv($thisuser->db_user['user_id']);
+	}
+	else {
+		$my_last_transaction_id = false;
+		$account_value = 0;
+		$immature_balance = 0;
+		$mature_balance = 0;
+		$mature_io_ids_csv = "";
+	}
 	
 	$output = false;
 	$output['game_loop_index'] = $game_loop_index;
@@ -63,7 +72,7 @@ if ($thisuser || $_REQUEST['refresh_page'] == "game") {
 	else $output['new_my_transaction'] = 0;
 	
 	if ($output['new_my_transaction'] == 1 || $mature_io_ids_csv != $_REQUEST['mature_io_ids_csv'] || $output['new_block'] == 1) {
-		$output['select_input_buttons'] = $game->select_input_buttons($thisuser->db_user['user_id']);
+		$output['select_input_buttons'] = $thisuser? $game->select_input_buttons($thisuser->db_user['user_id']) : "";
 		$output['mature_io_ids_csv'] = $mature_io_ids_csv;
 		$output['new_mature_ios'] = 1;
 	}
@@ -94,10 +103,13 @@ if ($thisuser || $_REQUEST['refresh_page'] == "game") {
 		$output['vote_option_details'] = $stats_output;
 	}
 	
-	$q = "SELECT * FROM addresses WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."' AND option_id > 0 GROUP BY option_id;";
-	$r = $app->run_query($q);
-	$votingaddr_count = $r->rowCount();
-	
+	if ($thisuser) {
+		$q = "SELECT * FROM addresses WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."' AND option_id > 0 GROUP BY option_id;";
+		$r = $app->run_query($q);
+		$votingaddr_count = $r->rowCount();
+	}
+	else $votingaddr_count = 0;
+
 	if (intval($_REQUEST['votingaddr_count']) != $votingaddr_count) {
 		$output['new_votingaddresses'] = 1;
 		
@@ -114,15 +126,18 @@ if ($thisuser || $_REQUEST['refresh_page'] == "game") {
 	}
 	else $output['new_votingaddresses'] = 0;
 	
-	$q = "SELECT * FROM user_messages WHERE game_id='".$game->db_game['game_id']."' AND to_user_id='".$thisuser->db_user['user_id']."' AND seen=0 GROUP BY from_user_id;";
-	$r = $app->run_query($q);
-	if ($r->rowCount() > 0) {
-		$output['new_messages'] = 1;
-		$output['new_message_user_ids'] = "";
-		while ($thread = $r->fetch()) {
-			$output['new_message_user_ids'] .= $thread['from_user_id'].",";
+	if ($thisuser) {
+		$q = "SELECT * FROM user_messages WHERE game_id='".$game->db_game['game_id']."' AND to_user_id='".$thisuser->db_user['user_id']."' AND seen=0 GROUP BY from_user_id;";
+		$r = $app->run_query($q);
+		if ($r->rowCount() > 0) {
+			$output['new_messages'] = 1;
+			$output['new_message_user_ids'] = "";
+			while ($thread = $r->fetch()) {
+				$output['new_message_user_ids'] .= $thread['from_user_id'].",";
+			}
+			$output['new_message_user_ids'] = substr($output['new_message_user_ids'], 0, strlen($output['new_message_user_ids'])-1);
 		}
-		$output['new_message_user_ids'] = substr($output['new_message_user_ids'], 0, strlen($output['new_message_user_ids'])-1);
+		else $output['new_messages'] = 0;
 	}
 	else $output['new_messages'] = 0;
 	

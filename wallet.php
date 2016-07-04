@@ -1,10 +1,13 @@
 <?php
 include('includes/connect.php');
 include('includes/get_session.php');
+
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
 $error_code = false;
 $message = "";
+
+if (!isset($_REQUEST['do'])) $_REQUEST['do'] = "";
 
 if ($_REQUEST['do'] == "signup") {
 	$username = $_POST['username'];
@@ -126,13 +129,13 @@ if ($_REQUEST['do'] == "signup") {
 						$redirect_url = false;
 						
 						if ($GLOBALS['pageview_tracking_enabled']) $thisuser->log_user_in($redirect_url, $viewer_id);
-						else $thisuser->log_user_in($redirect_url);
+						else $thisuser->log_user_in($redirect_url, false);
 						
 						if ($redirect_url) {
 							header("Location: ".$redirect_url['url']);
 						}
 						else {
-							if ($_REQUEST['invite_key'] != "") {
+							if (!empty($_REQUEST['invite_key'])) {
 								$invite_game = false;
 								$success = $app->try_apply_invite_key($thisuser->db_user['user_id'], $_REQUEST['invite_key'], $invite_game);
 								if ($success) {
@@ -194,9 +197,9 @@ else if ($_REQUEST['do'] == "login") {
 		$redirect_url = false;
 		
 		if ($GLOBALS['pageview_tracking_enabled']) $thisuser->log_user_in($redirect_url, $viewer_id);
-		else $thisuser->log_user_in($redirect_url);
+		else $thisuser->log_user_in($redirect_url, false);
 		
-		if ($_REQUEST['invite_key'] != "") {
+		if (!empty($_REQUEST['invite_key'])) {
 			$invite_game = false;
 			$success = $app->try_apply_invite_key($thisuser->db_user['user_id'], $_REQUEST['invite_key'], $invite_game);
 			if ($success) {
@@ -235,7 +238,7 @@ else if ($_REQUEST['do'] == "logout" && $thisuser) {
 $game = false;
 
 if ($thisuser) {
-	if ($_REQUEST['invite_key'] != "") {
+	if (!empty($_REQUEST['invite_key'])) {
 		$invite_game = false;
 		$success = $app->try_apply_invite_key($thisuser->db_user['user_id'], $_REQUEST['invite_key'], $invite_game);
 		if ($success) {
@@ -612,7 +615,7 @@ if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['do'] =
 	}
 }
 
-if (!$pagetitle) {
+if (!empty($pagetitle)) {
 	if ($game) $pagetitle = $game->db_game['name']." - Wallet";
 	else $pagetitle = "Please log in";
 }
@@ -650,12 +653,14 @@ if ($thisuser && $game) {
 		echo "</font>\n";
 	}
 	
-	if ($game->db_game['giveaway_status'] == "invite_free" || $game->db_game['giveaway_status'] == "public_free") {
-		$qq = "SELECT * FROM game_giveaways WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."' AND type='initial_purchase';";
-		$rr = $app->run_query($qq);
+	if (!empty($game->db_game)) {
+		if ($game->db_game['giveaway_status'] == "invite_free" || $game->db_game['giveaway_status'] == "public_free") {
+			$qq = "SELECT * FROM game_giveaways WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."' AND type='initial_purchase';";
+			$rr = $app->run_query($qq);
 		
-		if ($rr->rowCount() == 0) {
-			$giveaway = $game->new_game_giveaway($thisuser->db_user['user_id'], 'initial_purchase', false);
+			if ($rr->rowCount() == 0) {
+				$giveaway = $game->new_game_giveaway($thisuser->db_user['user_id'], 'initial_purchase', false);
+			}
 		}
 	}
 	
@@ -1158,7 +1163,8 @@ if ($thisuser && $game) {
 					$giveaway_avail_msg = 'You\'re eligible for a one time coin giveaway of '.number_format($game->db_game['giveaway_amount']/pow(10,8)).' '.$game->db_game['coin_name_plural'].'.<br/>';
 					$giveaway_avail_msg .= '<button class="btn btn-success" onclick="claim_coin_giveaway();" id="giveaway_btn">Claim '.number_format($game->db_game['giveaway_amount']/pow(10,8)).' '.$game->db_game['coin_name_plural'].'</button><br/><br/>';
 					
-					$giveaway_available = $game->check_giveaway_available($thisuser);
+					$available_giveaway = false;
+					$giveaway_available = $game->check_giveaway_available($thisuser, $available_giveaway);
 					
 					if ($giveaway_available) {
 						$initial_tab = 4;

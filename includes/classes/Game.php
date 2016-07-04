@@ -203,7 +203,10 @@ class Game {
 			
 			if (!$winner_option_id && $option_score <= $max_score_sum && $option_score > 0) $winner_option_id = $round_stats[$i]['option_id'];
 			
-			$pct_votes = 100*(floor(1000*$option_score/$score_sum)/1000);
+			if ($score_sum > 0) {
+				$pct_votes = 100*(floor(1000*$option_score/$score_sum)/1000);
+			}
+			else $pct_votes = 0;
 			
 			$sq_px = $pct_votes*$sq_px_per_pct_point;
 			$box_diam = round(sqrt($sq_px));
@@ -689,6 +692,7 @@ class Game {
 		$r = $this->app->run_query($q);
 		$coins_voted = 0;
 		$coin_blocks_voted = 0;
+		$coin_rounds_voted = 0;
 		$votes = 0;
 		$my_votes = array();
 		while ($votesum = $r->fetch()) {
@@ -816,7 +820,7 @@ class Game {
 			if (!$option['last_win_round']) $losing_streak = false;
 			else $losing_streak = $current_round - $option['last_win_round'] - 1;
 			
-			$rank = $option_id2rank[$option['voting_option_id']]+1;
+			$rank = $option_id2rank[$option['option_id']]+1;
 			$confirmed_votes = $option[$this->db_game['payout_weight'].'_score'];
 			$unconfirmed_votes = $option['unconfirmed_'.$this->db_game['payout_weight'].'_score'];
 			$html .= '
@@ -838,7 +842,6 @@ class Game {
 					</div>
 				</div>
 			</div>';
-			$n_counter++;
 		}
 		return $html;
 	}
@@ -1548,7 +1551,7 @@ class Game {
 		else return "";
 	}
 	
-	public function bet_round_range(&$game) {
+	public function bet_round_range() {
 		$last_block_id = $this->last_block_id();
 		$mining_block_within_round = $this->block_id_to_round_index($last_block_id+1);
 		$current_round = $this->block_to_round($last_block_id+1);
@@ -2094,13 +2097,18 @@ class Game {
 	public function account_value_html($account_value) {
 		$html = '<font class="greentext">'.$this->app->format_bignum($account_value/pow(10,8), 2).'</font> '.$this->db_game['coin_name_plural'];
 		$html .= ' <font style="font-size: 12px;">(';
-		$html .= $this->app->format_bignum(100*$account_value/coins_in_existence($this->app, $this->db_game, false))."%";
-		
+		$coins_in_existence = coins_in_existence($this->app, $this->db_game, false);
+		if ($coins_in_existence > 0) $html .= $this->app->format_bignum(100*$account_value/$coins_in_existence)."%";
+		else $html .= "0%";
+
 		$q = "SELECT * FROM currencies WHERE currency_id='".$this->db_game['invite_currency']."';";
 		$r = $this->app->run_query($q);
 		if ($r->rowCount() > 0) {
 			$payout_currency = $r->fetch();
-			$payout_currency_value = $this->pot_value()*$account_value/coins_in_existence($this->app, $this->db_game, false);
+			$coins_in_existence = coins_in_existence($this->app, $this->db_game, false);
+			if ($coins_in_existence > 0) $payout_currency_value = $this->pot_value()*$account_value/$coins_in_existence;
+			else $payout_currency_value = 0;
+			
 			$html .= "&nbsp;=&nbsp;<a href=\"/".$this->db_game['url_identifier']."/?action=show_escrow\">".$payout_currency['symbol'].$this->app->format_bignum($payout_currency_value)."</a>";
 		}
 		$html .= ")</font>";
@@ -2186,7 +2194,9 @@ class Game {
 		$seconds_per_round = $this->db_game['seconds_per_block']*$this->db_game['round_length'];
 		$coins_per_block = $this->app->format_bignum($this->db_game['pow_reward']/pow(10,8));
 		
-		$receive_pct = (100*$this->db_game['giveaway_amount']/($this->db_game['giveaway_amount']+coins_in_existence($this->app, $this->db_game, false)));
+		$post_buyin_supply = $this->db_game['giveaway_amount']+coins_in_existence($this->app, $this->db_game, false);
+		if ($post_buyin_supply > 0) $receive_pct = (100*$this->db_game['giveaway_amount']/$post_buyin_supply);
+		else $receive_pct = 100;
 		
 		if ($this->db_game['giveaway_status'] == "invite_pay" || $this->db_game['giveaway_status'] == "public_pay") {
 			$invite_disp = $this->app->format_bignum($this->db_game['invite_cost']);
