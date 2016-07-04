@@ -21,7 +21,7 @@ $GLOBALS['outbound_email_enabled'] = false;
 $GLOBALS['sendgrid_user'] = "";
 $GLOBALS['sendgrid_pass'] = "";
 
-$GLOBALS['show_query_errors'] = false;
+$GLOBALS['show_query_errors'] = true;
 $GLOBALS['cron_key_string'] = "";
 
 $GLOBALS['coin_port'] = 11111;
@@ -69,3 +69,11 @@ Next, point your browser to http://localhost/install.php?key=<cron_key_string>, 
 Follow the instructions on install.php to configure your server for accepting Bitcoin payments and resolving any other potential issues.
 
 After completing this step, visit the home page in your browser, log in and create an account.  After logging in you can try creating a private via the "My Games" tab.
+
+If the home page doesn't load, it's possible that mod_rewrite needs to be enabled.  To enable mod_rewrite, edit your httpd.conf and make sure this line is uncommented:
+
+```
+#!php
+
+LoadModule rewrite_module modules/mod_rewrite.so
+```
