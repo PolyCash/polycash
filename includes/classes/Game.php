@@ -2434,7 +2434,7 @@ class Game {
 		
 		$current_block = $coin_rpc->getblock($last_block['block_hash']);
 		
-		$block_height = $last_block['block_id']-1;
+		$block_height = $last_block['block_id'];
 		$keep_looping = true;
 
 		do {
