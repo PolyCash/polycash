@@ -303,7 +303,7 @@ $mature_balance = $account_value - $immature_balance;
 			}
 		}
 		
-		$round_stats = round_voting_stats_all($thisuser['game_id'], $current_round);
+		$round_stats = round_voting_stats_all($game, $current_round);
 		$total_vote_sum = $round_stats[0];
 		$max_vote_sum = $round_stats[1];
 		$nation_id2rank = $round_stats[3];
@@ -317,6 +317,7 @@ $mature_balance = $account_value - $immature_balance;
 		var mature_io_ids_csv = '<?php echo mature_io_ids_csv($thisuser['user_id'], $thisuser['game_id']); ?>';
 		var refresh_in_progress = false;
 		var last_refresh_time = 0;
+		var payout_weight = '<?php echo $game['payout_weight']; ?>';
 		
 		var selected_nation_id = false;
 		
@@ -342,6 +343,7 @@ $mature_balance = $account_value - $immature_balance;
 			loop_event();
 			game_loop_event();
 			compose_vote_loop();
+			refresh_mature_io_btns();
 		});
 		
 		$(document).keypress(function (e) {
@@ -364,7 +366,7 @@ $mature_balance = $account_value - $immature_balance;
 		?>
 		<div id="wallet_text_stats">
 			<?php
-			echo wallet_text_stats($thisuser, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance, $game['seconds_per_block']);
+			echo wallet_text_stats($thisuser, $game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance);
 			?>
 		</div>
 		<br/>
@@ -372,7 +374,7 @@ $mature_balance = $account_value - $immature_balance;
 			<?php echo vote_details_general($mature_balance); ?>
 		</div>
 		
-		<div id="vote_popups"><?php	echo initialize_vote_nation_details($thisuser['game_id'], $nation_id2rank, $total_vote_sum, $thisuser['user_id']); ?></div>
+		<div id="vote_popups"><?php	echo initialize_vote_nation_details($game, $nation_id2rank, $total_vote_sum, $thisuser['user_id']); ?></div>
 		
 		<div class="row">
 			<div class="col-xs-2 tabcell" id="tabcell0" onclick="tab_clicked(0);">Play&nbsp;Now</div>
@@ -388,7 +390,7 @@ $mature_balance = $account_value - $immature_balance;
 						<h2>Current votes</h2>
 						<div id="my_current_votes">
 							<?php
-							echo my_votes_table($thisuser['game_id'], $current_round, $thisuser);
+							echo my_votes_table($game, $current_round, $thisuser);
 							?>
 						</div>
 					</div>
@@ -402,13 +404,13 @@ $mature_balance = $account_value - $immature_balance;
 					The final block of the round is being mined. Voting is currently disabled.
 				</div>
 				<div id="select_input_buttons"><?php
-					echo select_input_buttons($thisuser['user_id'], $thisuser['game_id']);
+					echo select_input_buttons($thisuser['user_id'], $game);
 				?></div>
 				<div id="compose_vote" style="display: none;">
 					<h2>Compose Your Voting Transaction</h2>
 					<div class="row bordered_row" style="border: 1px solid #bbb;">
 						<div class="col-md-6 bordered_cell" id="compose_vote_inputs">
-							<b>Inputs:</b><div style="display: inline-block; margin-left: 20px;" id="input_amount_sum"></div><br/>
+							<b>Inputs:</b><div style="display: inline-block; margin-left: 20px;" id="input_amount_sum"></div><div style="display: inline-block; margin-left: 20px;" id="input_vote_sum"></div><br/>
 							<div id="compose_input_start_msg">Add inputs by clicking on the coin blocks above.</div>
 						</div>
 						<div class="col-md-6 bordered_cell" id="compose_vote_outputs">

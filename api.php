@@ -9,6 +9,10 @@ $uri_parts = explode("/", $uri);
 if ($uri_parts[1] == "api") {
 	$game_id = get_site_constant('primary_game_id');
 	
+	$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
+	$r = run_query($q);
+	$game = mysql_fetch_array($r);
+	
 	$last_block_id = last_block_id($game_id);
 	$current_round = block_to_round($last_block_id+1);
 	
@@ -32,7 +36,7 @@ if ($uri_parts[1] == "api") {
 				$api_output_user['immature_balance'] = $immature_balance;
 			}
 		}
-		$round_stats = round_voting_stats_all($game_id, $current_round);
+		$round_stats = round_voting_stats_all($game, $current_round);
 		$total_vote_sum = $round_stats[0];
 		$max_vote_sum = $round_stats[1];
 		$ranked_stats = $round_stats[2];

@@ -10,7 +10,7 @@ if ($thisuser) {
 	
 	if ($game['game_type'] == "instant" && $game['creator_id'] == $thisuser['user_id'] && $game['block_timing'] == "user_controlled") {
 		$log_text = new_block($game['game_id']);
-		$log_text = apply_user_strategies($game['game_id']);
+		$log_text = apply_user_strategies($game);
 		echo "1";
 	}
 	else echo "2";

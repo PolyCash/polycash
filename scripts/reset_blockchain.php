@@ -17,4 +17,5 @@ if ($_REQUEST['key'] == "oiwreu2490f98") {
 	
 	echo "Great, the game has been reset!";
 }
+else echo "Incorrect key.";
 ?>

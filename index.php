@@ -16,6 +16,11 @@ if ($thisuser) { ?>
 	</div>
 	<?php
 }
+
+$q = "SELECT * FROM games WHERE game_id='".get_site_constant('primary_game_id')."';";
+$r = run_query($q);
+$game = mysql_fetch_array($r);
+
 ?>
 <div class="container-fluid nopadding">
 	<div class="top_banner" id="home_carousel">
@@ -99,9 +104,9 @@ if ($thisuser) { ?>
 			$last_block_id = last_block_id(get_site_constant('primary_game_id'));
 			$current_round = block_to_round($last_block_id+1);
 			$block_within_round = $last_block_id%get_site_constant('round_length')+1;
-			$total_vote_sum = total_votes_in_round(get_site_constant('primary_game_id'), $current_round);
+			$total_vote_sum = total_score_in_round(get_site_constant('primary_game_id'), $current_round, $game['payout_weight']);
 			
-			$round_stats = round_voting_stats_all(get_site_constant('primary_game_id'), $current_round);
+			$round_stats = round_voting_stats_all($game, $current_round);
 			$total_vote_sum = $round_stats[0];
 			$nation_id2rank = $round_stats[3];
 			
@@ -120,15 +125,11 @@ if ($thisuser) { ?>
 			} ?>
 			<div id="current_round_table">
 				<?php
-				$q = "SELECT * FROM games WHERE game_id='".get_site_constant('primary_game_id')."';";
-				$r = run_query($q);
-				$game = mysql_fetch_array($r);
-				
 				echo current_round_table($game, $current_round, $thisuser, true);
 				?>
 			</div>
 			
-			<div id="vote_popups"><?php	echo initialize_vote_nation_details(get_site_constant('primary_game_id'), $nation_id2rank, $total_vote_sum, $thisuser['user_id']); ?></div>
+			<div id="vote_popups"><?php	echo initialize_vote_nation_details($game, $nation_id2rank, $total_vote_sum, $thisuser['user_id']); ?></div>
 			
 			<?php
 			if ($thisuser) {

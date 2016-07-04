@@ -1,6 +1,7 @@
 <?php
 include("../includes/connect.php");
 
+/*
 $q = "DELETE FROM cached_rounds;";
 $r = run_query($q);
 
@@ -42,4 +43,5 @@ for ($round_id=1; $round_id<=$current_round-1; $round_id++) {
 	$r = run_query($q);
 	echo "q: $q<br/>\n";
 }
+*/
 ?>

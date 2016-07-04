@@ -13,6 +13,9 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	$r = run_query($q);
 	$game = mysql_fetch_array($r);
 	
+	if ($game['payout_weight'] == "coin") $score_field = "coins_currently_voted";
+	else $score_field = "coin_block_score";
+	
 	if ($game['game_type'] == "instant" && $game['block_timing'] == "realistic") {
 		$rand_max = floor($game['seconds_per_block']/get_site_constant('game_loop_seconds'))-1;
 		$num = rand(0, $rand_max);
@@ -20,7 +23,7 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 			$log_text = new_block($game['game_id']);
 		}
 		
-		$log_text = apply_user_strategies($game['game_id']);
+		$log_text = apply_user_strategies($game);
 	}
 	
 	$last_block_id = last_block_id($game_id);
@@ -54,7 +57,7 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	else $output['new_transaction'] = 0;
 	
 	if ($my_last_transaction_id != $_REQUEST['my_last_transaction_id'] && $thisuser) {
-		$output['select_input_buttons'] = select_input_buttons($thisuser['user_id'], $game_id);
+		$output['select_input_buttons'] = select_input_buttons($thisuser['user_id'], $game);
 		$output['new_my_transaction'] = 1;
 		$output['my_last_transaction_id'] = $my_last_transaction_id;
 	}
@@ -68,12 +71,12 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	
 	if ($last_block_id != $_REQUEST['last_block_id'] || $last_transaction_id != $_REQUEST['last_transaction_id']) {
 		$output['current_round_table'] = current_round_table($game, $current_round, $thisuser, true);
-		$output['wallet_text_stats'] = wallet_text_stats($thisuser, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance, $game['seconds_per_block']);
+		$output['wallet_text_stats'] = wallet_text_stats($thisuser, $game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance);
 		$output['my_current_votes'] = my_votes_table($game_id, $current_round, $thisuser);
 		$output['account_value'] = number_format($account_value/pow(10,8), 2);
 		$output['vote_details_general'] = vote_details_general($mature_balance);
 		
-		$round_stats = round_voting_stats_all($game_id, $current_round);
+		$round_stats = round_voting_stats_all($game, $current_round);
 		$total_vote_sum = $round_stats[0];
 		$nation_id2rank = $round_stats[3];
 		$round_stats = $round_stats[2];
@@ -81,7 +84,7 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 		$stats_output = false;
 		for ($nation_id=1; $nation_id<=16; $nation_id++) {
 			$nation = $round_stats[$nation_id2rank[$nation_id]];
-			$stats_output[$nation_id] = vote_nation_details($nation, $nation_id2rank[$nation['nation_id']]+1, $nation['coins_currently_voted'], $total_vote_sum, $nation['losing_streak']);
+			$stats_output[$nation_id] = vote_nation_details($nation, $nation_id2rank[$nation['nation_id']]+1, $nation[$score_field], $total_vote_sum, $nation['losing_streak']);
 		}
 		$output['vote_nation_details'] = $stats_output;
 	}

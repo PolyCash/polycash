@@ -1,6 +1,8 @@
 <?php
 include("../includes/connect.php");
 
+die('Script disabled');
+
 if ($_REQUEST['key'] == "2r987jifwow") {
 	$q = "UPDATE users SET logged_in=0 WHERE last_active<".(time()-60*2).";";
 	$r = run_query($q);
@@ -22,7 +24,7 @@ if ($_REQUEST['key'] == "2r987jifwow") {
 	}
 	
 	// Apply user strategies
-	echo apply_user_strategies(get_site_constant('primary_game_id'));
+	echo apply_user_strategies($game);
 }
 else echo "Error: permission denied.";
 ?>
