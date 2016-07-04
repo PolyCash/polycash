@@ -87,18 +87,27 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 		else {
 			if ($explore_mode == "rounds") {
 				if (!$round) {
-					$q = "SELECT * FROM cached_rounds r, nations n WHERE r.game_id='".$this_game['game_id']."' AND r.winning_nation_id=n.nation_id ORDER BY r.round_id ASC;";
-					$r = run_query($q);
-					echo "<h1>".$this_game['name'].". ".mysql_numrows($r)." Rounds Completed</h1>";
-					echo "<div style=\"border-bottom: 1px solid #bbb;\">";
-					while ($cached_round = mysql_fetch_array($r)) {
-						echo "<div class=\"row bordered_row\">";
-						echo "<div class=\"col-sm-2\"><a href=\"/explorer/rounds/".$cached_round['round_id']."\">Round #".$cached_round['round_id']."</a></div>";
-						echo "<div class=\"col-sm-7\">".$cached_round['name']." wins with ".number_format($cached_round['winning_score_sum']/pow(10,8), 2)." votes (".round(100*$cached_round['winning_score_sum']/$cached_round['score_sum'], 2)."%)</div>";
-						echo "<div class=\"col-sm-3\">".number_format($cached_round['score_sum']/pow(10,8), 2)." votes cast</div>";
-						echo "</div>\n";
-					}
-					echo "</div>\n";
+					?>
+					<h1><?php echo $this_game['name']; ?> Round Results</h1>
+					<div style="border-bottom: 1px solid #bbb; margin-bottom: 5px;" id="rounds_complete">
+						<div id="rounds_complete_0">
+							<?php
+							$rounds_complete = rounds_complete_html($this_game, $current_round-1, 20);
+							$last_round_shown = $rounds_complete[0];
+							echo $rounds_complete[1];
+							?>
+						</div>
+					</div>
+					<center>
+						<a href="" onclick="show_more_rounds_complete(); return false;" id="show_more_link">Show More</a>
+					</center>
+					<br/>
+					<script type="text/javascript">
+					$(document).ready(function() {
+						last_round_shown = <?php echo $last_round_shown; ?>;
+					});
+					</script>
+					<?php
 				}
 				else {
 					if ($round['winning_nation_id'] > 0) echo "<h1>".$round['name']." wins round #".$round['round_id']."</h1>\n";
@@ -110,7 +119,7 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 						<div class="col-md-6">
 							<div class="row">
 								<div class="col-sm-4">Total votes cast:</div>
-								<div class="col-sm-8"><?php echo number_format(round($round['score_sum']/pow(10,8))); ?> votes</div>
+								<div class="col-sm-8"><?php echo format_bignum($round['score_sum']/pow(10,8)); ?> votes</div>
 							</div>
 						</div>
 					</div>
@@ -128,8 +137,8 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 						if ($game['payout_weight'] == "coin") $payout_amt = (floor(100*750*$my_votes[$round['winning_nation_id']]['coins']/$round['winning_score'])/100);
 						else $payout_amt = (floor(100*750*$my_votes[$round['winning_nation_id']]['coin_blocks']/$round['winning_score'])/100);
 						
-						echo "You won <font class=\"greentext\">+".$payout_amt." EMP</font> by voting ".round($my_votes[$round['winning_nation_id']]['coins']/pow(10,8), 2)." coins";
-						if ($game['payout_weight'] == "coin_block") echo " (".round($my_votes[$round['winning_nation_id']]['coin_blocks']/pow(10,8))." votes)";
+						echo "You won <font class=\"greentext\">+".$payout_amt." EMP</font> by voting ".format_bignum($my_votes[$round['winning_nation_id']]['coins']/pow(10,8))." coins";
+						if ($game['payout_weight'] == "coin_block") echo " (".format_bignum($my_votes[$round['winning_nation_id']]['coin_blocks']/pow(10,8))." votes)";
 						echo " for ".$round['name']."</font><br/>\n";
 					}
 					
@@ -149,7 +158,7 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 					echo '<div class="col-md-3">Empire</div>';
 					echo '<div class="col-md-1" style="text-align: center;">Percent</div>';
 					echo '<div class="col-md-3" style="text-align: center;">Coin Votes</div>';
-					echo '<div class="col-md-3" style="text-align: center;">Your Votes</div>';
+					if ($thisuser) echo '<div class="col-md-3" style="text-align: center;">Your Votes</div>';
 					echo '</div>'."\n";
 					
 					$winner_displayed = FALSE;
@@ -167,7 +176,7 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 							echo '<div class="col-md-3">'.$rank.'. '.$ranked_nation['name'].'</div>';
 							echo '<div class="col-md-1" style="text-align: center;">'.round(100*$nation_score/$round['score_sum'], 2).'%</div>';
 							echo '<div class="col-md-3" style="text-align: center;">'.number_format(round($nation_score/pow(10,8))).' votes</div>';
-							if ($my_votes[$ranked_nation['nation_id']] > 0) {
+							if ($thisuser) {
 								echo '<div class="col-md-3" style="text-align: center;">';
 								
 								$score_qty = $my_votes[$ranked_nation['nation_id']][$game['payout_weight'].'s'];

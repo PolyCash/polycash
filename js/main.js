@@ -151,7 +151,7 @@ function refresh_if_needed() {
 		last_refresh_time = new Date().getTime();
 		refresh_in_progress = true;
 		
-		var check_activity_url = "/ajax/check_new_activity.php?refresh_page="+refresh_page+"&last_block_id="+last_block_id+"&last_transaction_id="+last_transaction_id+"&my_last_transaction_id="+my_last_transaction_id+"&mature_io_ids_csv="+mature_io_ids_csv+"&game_loop_index="+game_loop_index;
+		var check_activity_url = "/ajax/check_new_activity.php?refresh_page="+refresh_page+"&last_block_id="+last_block_id+"&last_transaction_id="+last_transaction_id+"&my_last_transaction_id="+my_last_transaction_id+"&mature_io_ids_csv="+mature_io_ids_csv+"&game_loop_index="+game_loop_index+"&min_bet_round="+min_bet_round;
 		if (refresh_page == "wallet") check_activity_url += "&performance_history_sections="+performance_history_sections;
 		
 		$.ajax({
@@ -193,6 +193,13 @@ function refresh_if_needed() {
 									tab_clicked(2);
 								}
 								
+								if (parseInt(json_result['min_bet_round']) != min_bet_round) {
+									min_bet_round = parseInt(json_result['min_bet_round']);
+									var selected_bet_round = $('#bet_round').val();
+									$('#select_bet_round').html(json_result['select_bet_round']);	
+									$('#bet_round').val(selected_bet_round);
+								}
+								
 								if (json_result['new_mature_ios'] == 1) {
 									mature_io_ids_csv = json_result['mature_io_ids_csv'];
 									reload_compose_vote();
@@ -207,6 +214,7 @@ function refresh_if_needed() {
 						}
 						if (json_result['new_my_transaction'] == "1") {
 							$('#select_input_buttons').html(json_result['select_input_buttons']);
+							$('#my_bets').html(json_result['my_bets']);
 							my_last_transaction_id = parseInt(json_result['my_last_transaction_id']);
 							reload_compose_vote();
 						}
@@ -354,7 +362,7 @@ function attempt_withdrawal() {
 	if ($('#withdraw_btn').html() == "Withdraw") {
 		var amount = $('#withdraw_amount').val();
 		var address = $('#withdraw_address').val();
-		console.log(amount);
+		
 		$('#withdraw_btn').html("Withdrawing...");
 		$.get("/ajax/withdraw.php?amount="+encodeURIComponent(amount)+"&address="+encodeURIComponent(address)+"&remainder_address_id="+$('#withdraw_remainder_address_id').val(), function(result) {
 			$('#withdraw_btn').html("Withdraw");
@@ -383,9 +391,25 @@ function toggle_block_timing() {
 var vote_inputs = new Array();
 var vote_nations = new Array();
 var output_amounts_need_update = false;
+var nation_bet_amounts_need_update = false;
 var io_id2input_index = {};
 var mature_ios = new Array();
+var nations = new Array();
+var nation_bets = new Array();
+var bet_sum = 0;
 
+function nation(nation_id, name) {
+	this.nation_id = nation_id;
+	this.name = name;
+	this.existing_bet_sum = 0;
+	this.bet_index = false;
+}
+function nation_bet(bet_index, nation_id) {
+	this.bet_index = bet_index;
+	this.nation_id = nation_id;
+	this.slider_val = 50;
+	this.amount = 0
+}
 function mature_io(io_index, io_id, amount, create_block_id) {
 	this.io_index = io_index;
 	this.io_id = io_id;
@@ -439,6 +463,11 @@ function render_nation_output(index_id, name) {
 	html += '<div><div id="output_threshold_'+index_id+'" class="noUiSlider"></div></div>';
 	return html;
 }
+function render_nation_bet(bet_index, nation_id) {
+	var html = nations[nation_id].name+'&nbsp;&nbsp; <div id="nation_bet_amount_disp_'+bet_index+'" style="display: inline-block;"></div> <font style="float: right; cursor: pointer" onclick="remove_nation_bet('+bet_index+');">&#215;</font>';
+	html += '<div><div id="nation_bet_threshold_'+bet_index+'" class="noUiSlider"></div></div>';
+	return html;
+}
 function add_utxo_to_vote(io_id, amount, create_block_id) {
 	var already_in = false;
 	for (var i=0; i<vote_inputs.length; i++) {
@@ -480,6 +509,22 @@ function load_nation_slider(index_id) {
 	   ,slide: function(){
 			vote_nations[index_id].slider_val = parseInt($('#output_threshold_'+index_id).val());
 			output_amounts_need_update = true;
+	   }
+	});
+}
+function load_nation_bet_slider(bet_index) {
+	$('#nation_bet_threshold_'+bet_index).noUiSlider({
+		range: [0, 100]
+	   ,start: 50, step: 1
+	   ,handles: 1
+	   ,connect: "lower"
+	   ,serialization: {
+			 to: [ false, false ]
+			,resolution: 1
+		}
+	   ,slide: function(){
+			nation_bets[bet_index].slider_val = parseInt($('#nation_bet_threshold_'+bet_index).val());
+			nation_bet_amounts_need_update = true;
 	   }
 	});
 }
@@ -593,7 +638,7 @@ function confirm_compose_vote() {
 			
 			$.get(place_vote_url, function(result) {
 				$('#confirm_compose_vote_btn').html("Submit Voting Transaction");
-				console.log(result);
+				
 				var result_parts = result.split("=====");
 				if (result_parts[0] == "0") {
 					refresh_if_needed();
@@ -651,5 +696,198 @@ function refresh_visible_inputs() {
 		if (typeof io_id2input_index[mature_io_ids[i]] == 'undefined' || io_id2input_index[mature_io_ids[i]] === false) {
 			$('#select_utxo_'+mature_io_ids[i]).show();
 		}
+	}
+}
+function bet_loop() {
+	if (nation_bet_amounts_need_update || bet_sum != parseFloat($('#bet_amount').val())) {
+		refresh_nation_bet_amounts();
+		nation_bet_amounts_need_update = false;
+		bet_sum = parseFloat($('#bet_amount').val());
+	}
+	setTimeout("bet_loop();", 400);
+}
+function refresh_nation_bet_amounts() {
+	if (nation_bets.length > 0) {
+		var coin_sum = $('#bet_amount').val()
+		if (coin_sum == '') coin_sum = 0;
+		else coin_sum = Math.floor(parseFloat(coin_sum)*Math.pow(10,8));
+		
+		var slider_sum = 0;
+		for (var i=0; i<nation_bets.length; i++) {
+			slider_sum += nation_bets[i].slider_val;
+		}
+		var coins_per_slider_val;
+		if (slider_sum > 0) coins_per_slider_val = Math.floor(coin_sum/slider_sum);
+		else coins_per_slider_val = 0;
+		
+		var bet_coins_sum = 0;
+		for (var i=0; i<nation_bets.length; i++) {
+			var bet_coins = Math.floor(coins_per_slider_val*nation_bets[i].slider_val);
+			
+			if (i == nation_bets.length - 1) bet_coins = coin_sum - bet_coins_sum;
+			
+			var output_val_disp = (Math.round(bet_coins/Math.pow(10,6))/Math.pow(10,2)).toLocaleString()+" coins";
+			if (coin_sum > 0) output_val_disp += " ("+(Math.round(1000*bet_coins/coin_sum)/10)+"%)";
+			$('#nation_bet_amount_disp_'+i).html(output_val_disp);
+			
+			nation_bets[i].amount = bet_coins;
+			bet_coins_sum += bet_coins;
+		}
+		
+		update_bet_chart();
+	}
+}
+function place_bet() {
+	if ($('#bet_confirm_btn').html() == "Place Bet") {
+		var round = $('#bet_round').val();
+		var amounts_csv = "";
+		var nations_csv = "";
+		
+		if (parseInt(round) > 0) {
+			$('#bet_confirm_btn').html("Loading...");
+			
+			for (var i=0; i<nation_bets.length; i++) {
+				amounts_csv += nation_bets[i].amount;
+				nations_csv += nation_bets[i].nation_id;
+				if (i != nation_bets.length-1) {
+					amounts_csv += ",";
+					nations_csv += ",";
+				}
+			}
+			
+			$.get("/ajax/place_bets.php?nations="+nations_csv+"&amounts="+amounts_csv+"&round="+round, function(result) {
+				$('#bet_confirm_btn').html("Place Bet");
+				
+				var json_result = JSON.parse(result);
+				alert(json_result['message']);
+				
+				if (json_result['result_code'] == 11) {
+					$('#bet_round').val("");
+					$('#bet_amount').val("");
+					$('#nation_bet_disp').html("");
+					$('#round_odds_chart').html("");
+					$('#round_odds_stats').html("");
+					$('#bet_charts').hide();
+					nation_bets.length = 0;
+				}
+			});
+		}
+		else alert('You need to select a round first.');
+	}
+}
+function add_bet_nation() {
+	var nation_id = $('#bet_nation').val();
+	add_bet_nation_by_id(nation_id);
+	$('#bet_nation').val("");
+	refresh_nation_bet_amounts();
+}
+function add_bet_nation_by_id(nation_id) {
+	if (nations[nation_id].bet_index === false) {
+		var bet_index = nation_bets.length;
+		$('#nation_bet_disp').append('<div id="nation_bet_'+bet_index+'" class="select_utxo">'+render_nation_bet(bet_index, nation_id)+'</div>');
+		nation_bets.push(new nation_bet(bet_index, nation_id));
+		nations[nation_id].bet_index = bet_index;
+		load_nation_bet_slider(bet_index);
+	}
+}
+function remove_nation_bet(bet_index) {
+	nations[nation_bets[bet_index].nation_id].bet_index = false;
+	
+	for (var i=bet_index+1; i<nation_bets.length; i++) {
+		$('#nation_bet_'+(i-1)).html(render_nation_bet(i-1, nation_bets[i].nation_id));
+		$('#nation_bet_'+i).html('');
+		nation_bets[i].bet_index = nation_bets[i].bet_index-1;
+		nations[nation_bets[i].nation_id].bet_index = nations[nation_bets[i].nation_id].bet_index-1;
+		nation_bets[i-1] = nation_bets[i];
+		load_nation_bet_slider(i-1);
+		$('#nation_bet_threshold_'+(i-1)).val(nation_bets[i-1].slider_val);
+	}
+	$('#nation_bet_'+(nation_bets.length-1)).remove();
+	nation_bets.length = nation_bets.length-1;
+	
+	refresh_nation_bet_amounts();
+}
+function add_all_bet_nations() {
+	for (var i=0; i<=16; i++) {
+		add_bet_nation_by_id(i);
+	}
+	refresh_nation_bet_amounts();
+}
+var last_round_shown;
+var round_sections_shown = 1;
+
+function show_more_rounds_complete() {
+	if ($('#show_more_link').html() == "Show More") {
+		$('#show_more_link').html("Loading...");
+		$.get("/ajax/show_rounds_complete.php?from_round_id="+(last_round_shown-1), function(result) {
+			$('#show_more_link').html("Show More");
+			var json_result = JSON.parse(result);
+			if (parseInt(json_result[0]) > 0) last_round_shown = parseInt(json_result[0]);
+			$('#rounds_complete').append('<div id="rounds_complete_'+round_sections_shown+'">'+json_result[1]+'</div>');
+			round_sections_shown++;
+		});
+	}
+}
+
+var nation_id2chart_index = {};
+var existingBetChartData = false;
+
+function bet_round_changed() {
+	var round_id = $('#bet_round').val();
+	
+	$('#bet_charts').hide('fast');
+	
+	$.get("/ajax/bet_round_details.php?round_id="+round_id, function(result) {
+		$('#bet_charts').slideDown('fast');
+		
+		var json_result = JSON.parse(result);
+		existingBetChartData = json_result[0];
+		
+		for (var i=0; i<existingBetChartData.length; i++) {
+			nations[existingBetChartData[i]['nation_id']].existing_bet_sum = parseInt(existingBetChartData[i]['amount']);
+		}
+		
+		$('#round_odds_stats').html(json_result[1]);
+		
+		update_bet_chart();
+	});
+}
+function update_bet_chart() {
+	if (existingBetChartData.length > 0) {
+		var chartData = new Array();
+		chartData.push(['Empire', 'Coins Staked']);
+		
+		var all_bets_sum = 0;
+		
+		for (var i=0; i<existingBetChartData.length; i++) {
+			var nation_id = existingBetChartData[i]['nation_id'];
+			var my_bet_amount = 0;
+			if (nations[nation_id].bet_index !== false) my_bet_amount = nation_bets[nations[nation_id].bet_index].amount;
+			var this_bet_amount = parseInt(existingBetChartData[i]['amount'])+my_bet_amount;
+			all_bets_sum += this_bet_amount;
+			chartData.push([existingBetChartData[i]['name'], Math.round(this_bet_amount/Math.pow(10,6))/Math.pow(10,2)]);
+			nation_id2chart_index[nation_id] = i;
+		}
+		
+		for (var i=0; i<=16; i++) {
+			var this_bet_amount = nations[i].existing_bet_sum;
+			if (nations[i].bet_index !== false) this_bet_amount += nation_bets[nations[i].bet_index].amount;
+			
+			if (all_bets_sum > 0) $('#bet_nation_pct_'+i).html(Math.round(100*100*this_bet_amount/all_bets_sum)/100+"%");
+			else $('#bet_nation_pct_'+i).html("0.00%");
+			
+			if (this_bet_amount > 0) $('#bet_nation_mult_'+i).html("&#215;"+Math.round(100*all_bets_sum/this_bet_amount)/100);
+			else $('#bet_nation_mult_'+i).html("");
+		}
+		
+		var data = google.visualization.arrayToDataTable(chartData);
+		var options = {
+			legend: {position: 'none'}
+		};
+		var chart = new google.visualization.PieChart(document.getElementById('round_odds_chart'));
+		chart.draw(data, options);
+	}
+	else {
+		$('#round_odds_chart').html("");
 	}
 }

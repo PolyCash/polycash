@@ -320,6 +320,10 @@ $mature_balance = $account_value - $immature_balance;
 		var payout_weight = '<?php echo $game['payout_weight']; ?>';
 		var game_loop_index = 1;
 		var last_game_loop_index_applied = -1;
+		var min_bet_round = parseInt(<?php
+			$bet_round_range = bet_round_range($game);
+			echo $bet_round_range[0];
+		?>);
 		
 		var selected_nation_id = false;
 		
@@ -337,13 +341,30 @@ $mature_balance = $account_value - $immature_balance;
 		
 		var refresh_page = "wallet";
 		
+		function load_nations() {
+			nations.push(new nation(0, 'No Winner'));<?php
+			$q = "SELECT * FROM nations ORDER BY nation_id ASC;";
+			$r = run_query($q);
+			while ($nation = mysql_fetch_array($r)) {
+				echo "\n\t\t\tnations.push(new nation(".$nation['nation_id'].", '".$nation['name']."'));";
+			}
+		?>}
+		
+		<?php if ($game['losable_bets_enabled'] == 1) { ?>
+		google.load("visualization", "1", {packages:["corechart"]});
+		<?php } ?>
+		
 		$(document).ready(function() {
+			load_nations();
 			notification_pref_changed();
 			alias_pref_changed();
 			nation_selected(0);
 			loop_event();
 			game_loop_event();
 			compose_vote_loop();
+			<?php if ($game['losable_bets_enabled'] == 1) { ?>
+			bet_loop();
+			<?php } ?>
 		});
 		
 		$(document).keypress(function (e) {
@@ -378,6 +399,9 @@ $mature_balance = $account_value - $immature_balance;
 		
 		<div class="row">
 			<div class="col-xs-2 tabcell" id="tabcell0" onclick="tab_clicked(0);">Play&nbsp;Now</div>
+			<?php if ($game['losable_bets_enabled'] == 1) { ?>
+			<div class="col-xs-2 tabcell" id="tabcell5" onclick="tab_clicked(5);">Gamble</div>
+			<?php } ?>
 			<div class="col-xs-2 tabcell" id="tabcell1" onclick="tab_clicked(1);">Settings</div>
 			<div class="col-xs-2 tabcell" id="tabcell2" onclick="tab_clicked(2);">My&nbsp;Results</div>
 			<div class="col-xs-2 tabcell" id="tabcell3" onclick="tab_clicked(3);">Addresses</div>
@@ -709,6 +733,81 @@ $mature_balance = $account_value - $immature_balance;
 					</div>
 				</div>
 			</div>
+			<?php if ($game['losable_bets_enabled'] == 1) { ?>
+				<div class="tabcontent" style="display: none;" id="tabcontent5">
+					<div id="my_bets">
+						<?php
+						echo my_bets($game, $thisuser);
+						?>
+					</div>
+					<h2>Place a Bet</h1>
+					<p>
+					In EmpireCoin, you can place unlosable bets where winnings are paid for by the coins inflation.  But as you've probably seen, the amount you get for winning an unlosable bet usually isn't very large.  In this tab, you can place traditional-style bets where you'll lose all of your money if you bet on the wrong empire, but you'll win a large amount if you're correct.  These bets are conducted through a decentralized protocol, which means there's no house taking an edge or charging a fee when you bet.
+					</p>
+					<p>
+					To place a bet, you need to burn your empirecoins by sending them to an unredeemable address. Once the outcome of the voting round is determined, the EmpireCoin protocol will check to see if you won the bet and if so, new coins will be created and sent to your wallet.  These are pari-mutuel style bets in which your payout multiplier may continue changing until the betting period is over.  You can bet on the outcome of a round until the fifth block of the round.  Bets confirmed in the sixth block of a round or later are considered invalid and will be refunded back to the bettor, but with a 20% fee applied.  To place a bet, please select a round which you'd like to bet for and select one or more empires that you expect to win the round.
+					</p>
+					<div class="row">
+						<div class="col-md-3">
+							Select a round:
+						</div>
+						<div class="col-md-6">
+							<div id="select_bet_round">
+								<?php
+								echo select_bet_round($game, $current_round);
+								?>
+							</div>
+						</div>
+					</div>
+					<div class="row" id="bet_charts" style="display: none;">
+						<div class="col-md-4">
+							<div id="round_odds_chart" style="height: 320px;"></div>
+						</div>
+						<div class="col-md-8" id="round_odds_stats" style="min-height: 320px; padding-top: 8px;"></div>
+					</div>
+					<div class="row">
+						<div class="col-md-3">
+							Amount to bet:
+						</div>
+						<div class="col-md-6">
+							<input class="form-control" type="tel" placeholder="0.000" id="bet_amount" style="text-align: right;" />
+						</div>
+						<div class="col-md-2">
+							coins
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-3">
+							Add an outcome:
+						</div>
+						<div class="col-md-6">
+							<select class="form-control" id="bet_nation" onchange="add_bet_nation();">
+								<option value="">-- Please Select --</option>
+								<option value="0">No winner</option>
+								<?php
+								$q = "SELECT * FROM nations ORDER BY name ASC;";
+								$r = run_query($q);
+								while ($nation = mysql_fetch_array($r)) {
+									echo "<option value=\"".$nation['nation_id']."\">".$nation['name']." wins</option>\n";
+								}
+								?>
+							</select>
+						</div>
+						<div class="col-md-2">
+							<a href="" onclick="add_all_bet_nations(); return false;">Add all</a>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-push-3 col-md-9" id="nation_bet_disp"></div>
+					</div>
+					<div class="row">
+						<div class="col-md-push-3 col-md-6">
+							<button class="btn btn-primary" onclick="place_bet();" id="bet_confirm_btn">Place Bet</button>
+						</div>
+					</div>
+					<br/>
+				</div>
+			<?php } ?>
 		</div>
 		
 		<br/><br/>

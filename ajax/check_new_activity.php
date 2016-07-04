@@ -28,6 +28,7 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 		$log_text = apply_user_strategies($game);
 	}
 	
+	$bet_round_range = bet_round_range($game);
 	$last_block_id = last_block_id($game_id);
 	$last_transaction_id = last_transaction_id($game_id);
 	$my_last_transaction_id = my_last_transaction_id($thisuser['user_id'], $game_id);
@@ -40,6 +41,12 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	
 	$output = false;
 	$output['game_loop_index'] = $game_loop_index;
+	
+	$output['min_bet_round'] = $bet_round_range[0];
+	
+	if ($bet_round_range[0] != $_REQUEST['min_bet_round']) {
+		$output['select_bet_round'] = select_bet_round($game, $current_round);
+	}
 	
 	if ($last_block_id != $_REQUEST['last_block_id']) {
 		$performance_history_sections = intval($_REQUEST['performance_history_sections']);
@@ -65,6 +72,7 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	
 	if ($my_last_transaction_id != $_REQUEST['my_last_transaction_id'] && $thisuser) {
 		$output['select_input_buttons'] = select_input_buttons($thisuser['user_id'], $game);
+		$output['my_bets'] = my_bets($game, $thisuser);
 		$output['new_my_transaction'] = 1;
 		$output['my_last_transaction_id'] = $my_last_transaction_id;
 	}

@@ -10,7 +10,9 @@ if ($thisuser) {
 	if (mysql_numrows($r) > 0) {
 		$invitation = mysql_fetch_array($r);
 		
-		new_webwallet_multi_transaction($thisuser['game_id'], false, array(100000000000), false, $thisuser['user_id'], last_block_id($thisuser['game_id']), 'giveaway', false, false, false);
+		for ($i=0; $i<5; $i++) {
+			new_webwallet_multi_transaction($thisuser['game_id'], false, array(20000000000), false, $thisuser['user_id'], last_block_id($thisuser['game_id']), 'giveaway', false, false, false);
+		}
 		
 		$q = "UPDATE invitations SET used_time='".time()."', used=1, used_ip='".mysql_real_escape_string($_SERVER['REMOTE_ADDR'])."' WHERE invitation_id='".$invitation['invitation_id']."';";
 		$r = run_query($q);

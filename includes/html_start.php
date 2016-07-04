@@ -17,6 +17,7 @@
 	<script type="text/javascript" language="javascript" src="/js/jquery.nouislider.js"></script>
 	<script type="text/javascript" language="javascript" src="/js/sha256.js"></script>
 	<script type="text/javascript" language="javascript" src="/js/main.js"></script>
+	<script type="text/javascript" src="https://www.google.com/jsapi"></script>
 </head>
 <body>
 	<nav class="navbar navbar-default navbar-fixed-top">
