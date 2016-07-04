@@ -411,6 +411,8 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 					<br/>
 					<a href="" onclick="$('#transaction_info').toggle('fast'); return false;">See transaction details</a><br/>
 					<pre id="transaction_info" style="display: none;"><?php
+					print_r($transaction);
+					echo "<br/>\n";
 					if ($rpc_transaction) echo print_r($rpc_transaction);
 					if ($rpc_raw_transaction) echo print_r($rpc_raw_transaction);
 					?></pre>

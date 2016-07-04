@@ -53,7 +53,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 					if (count($inputs) == 1 && $inputs[0]['coinbase']) {
 						$transactions[$transaction_id]->is_coinbase = true;
 						$transaction_type = "coinbase";
-						if ($block_id%10 == 0 && $block_id > 0) $transaction_type = "votebase";
+						if (count($outputs) > 1) $transaction_type = "votebase";
 					}
 					else $transaction_type = "transaction";
 					

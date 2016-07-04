@@ -837,21 +837,21 @@ function new_webwallet_multi_transaction($game, $nation_ids, $amounts, $from_use
 				}
 			}
 			
-			$round_id = block_to_round(last_block_id($game['game_id'])+1);
-			
-			$q = "UPDATE game_nations n INNER JOIN (
-				SELECT nation_id, SUM(amount) sum_amount, SUM(coin_blocks_destroyed) sum_cbd FROM transaction_IOs 
-				WHERE game_id='".$game['game_id']."' AND ((create_block_id >= ".((($round_id-1)*10)+1)." AND create_block_id <= ".($round_id*10-1).") OR create_block_id IS NULL) AND amount > 0
-				GROUP BY nation_id
-			) i ON n.nation_id=i.nation_id SET n.coins_currently_voted=i.sum_amount, n.coin_block_score=i.sum_cbd, n.current_vote_score=i.sum_amount WHERE n.game_id='".$game['game_id']."';";
-			$r = run_query($q);
-			
+			update_nation_scores($game);
 			return $transaction_id;
 		}
 	}
 	else return false;
 }
-
+function update_nation_scores($game) {
+	$round_id = block_to_round(last_block_id($game['game_id'])+1);
+	$q = "UPDATE game_nations n INNER JOIN (
+		SELECT nation_id, SUM(amount) sum_amount, SUM(coin_blocks_destroyed) sum_cbd FROM transaction_IOs 
+		WHERE game_id='".$game['game_id']."' AND (create_block_id >= ".((($round_id-1)*10)+1)." OR create_block_id IS NULL) AND amount > 0
+		GROUP BY nation_id
+	) i ON n.nation_id=i.nation_id SET n.coins_currently_voted=i.sum_amount, n.coin_block_score=i.sum_cbd, n.current_vote_score=i.sum_amount WHERE n.game_id='".$game['game_id']."';";
+	$r = run_query($q);
+}
 function cancel_transaction($transaction_id, $affected_input_ids, $created_input_ids) {
 	$q = "DELETE FROM webwallet_transactions WHERE transaction_id='".$transaction_id."';";
 	$r = run_query($q);
@@ -2107,6 +2107,12 @@ function walletnotify($game, $empirecoin_rpc, $tx_hash) {
 			$lastblock_rpc = $empirecoin_rpc->getblock($new_hash);
 			$q = "INSERT INTO blocks SET game_id='".$game['game_id']."', block_hash='".$new_hash."', block_id='".$new_block_id."', time_created='".time()."';";
 			$r = run_query($q);
+			
+			if ($block_i%get_site_constant('round_length') == 0) {
+				$q = "UPDATE game_nations SET current_vote_score=0, coins_currently_voted=0, coin_block_score=0, losing_streak=losing_streak+1 WHERE game_id='".$game['game_id']."';";
+				$r = run_query($q);
+			}
+			
 			$html .= "looping through ".count($lastblock_rpc['tx'])." transactions in block #".$new_block_id."<br/>\n";
 			
 			for ($i=0; $i<count($lastblock_rpc['tx']); $i++) {
@@ -2133,7 +2139,7 @@ function walletnotify($game, $empirecoin_rpc, $tx_hash) {
 					if (count($inputs) == 1 && $inputs[0]['coinbase']) {
 						$transaction_rpc->is_coinbase = true;
 						$transaction_type = "coinbase";
-						if ($block_id%10 == 0 && $block_id > 0) $transaction_type = "votebase";
+						if (count($outputs) > 1) $transaction_type = "votebase";
 					}
 					else $transaction_type = "transaction";
 					
@@ -2231,6 +2237,7 @@ function walletnotify($game, $empirecoin_rpc, $tx_hash) {
 
 				if (count($inputs) == 1 && $inputs[0]['coinbase']) {
 					$transaction_type = "coinbase";
+					if (count($outputs) > 1) $transaction_type = "votebase";
 				}
 				else $transaction_type = "transaction";
 
