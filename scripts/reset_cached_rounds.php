@@ -20,7 +20,9 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		$last_block_id = $game->last_block_id();
 		$current_round = $game->block_to_round($last_block_id+1);
 		
-		for ($round_id=1; $round_id<=$current_round-1; $round_id++) {
+		$start_round = $game->block_to_round($game->db_game['game_starting_block']);
+		
+		for ($round_id=$start_round; $round_id<=$current_round-1; $round_id++) {
 			if ($game->db_game['game_type'] == "real") {
 				$game->add_round_from_rpc($round_id);
 			}

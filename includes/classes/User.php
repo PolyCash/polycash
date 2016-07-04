@@ -51,7 +51,7 @@ class User {
 	public function performance_history($game, $from_round_id, $to_round_id) {
 		$html = "";
 		
-		$q = "SELECT * FROM cached_rounds r LEFT JOIN game_voting_options gvo ON r.winning_option_id=gvo.option_id WHERE r.game_id='".$game->db_game['game_id']."' AND r.round_id >= ".$from_round_id." AND r.round_id <= ".$to_round_id." ORDER BY r.round_id DESC;";
+		$q = "SELECT r.*, real_winner.name AS real_winner_name, derived_winner.name AS derived_winner_name FROM cached_rounds r LEFT JOIN game_voting_options real_winner ON r.winning_option_id=real_winner.option_id LEFT JOIN game_voting_options derived_winner ON r.derived_winning_option_id=derived_winner.option_id WHERE r.game_id='".$game->db_game['game_id']."' AND r.round_id >= ".$from_round_id." AND r.round_id <= ".$to_round_id." ORDER BY r.round_id DESC;";
 		$r = $this->app->run_query($q);
 		
 		while ($round = $r->fetch()) {
@@ -63,10 +63,16 @@ class User {
 			$option_scores = $game->option_score_in_round($round['winning_option_id'], $round['round_id']);
 			
 			$html .= '<div class="row" style="font-size: 13px;">';
-			$html .= '<div class="col-sm-1">Round&nbsp;#'.$round['round_id'].'</div>';
-			$html .= '<div class="col-sm-4">';
-			if ($round['name'] != "") $html .= $round['name']." won with ".$this->app->format_bignum($round['winning_score']/pow(10,8))." votes";
-			else $html .= "No winner";
+			$html .= '<div class="col-sm-2">Round&nbsp;#'.$round['round_id'].'</div>';
+			$html .= '<div class="col-sm-3">';
+			if ($round['real_winner_name'] != "") {
+				$html .= $round['real_winner_name']." won with ".$this->app->format_bignum($round['winning_score']/pow(10,8))." votes";
+				if ($round['derived_winner_name'] != "" && $round['derived_winner_name'] != $round['real_winner_name']) $html .= " (Should have been ".$round['derived_winner_name']." with ".$this->app->format_bignum($round['derived_winning_score']/pow(10,8))." votes)";
+			}
+			else {
+				if ($round['derived_winner_name'] != "") $html .= $round['derived_winner_name']." won with ".$this->app->format_bignum($round['derived_winning_score']/pow(10,8))." votes";
+				else $html .= "No winner";
+			}
 			$html .= '</div>';
 			
 			$my_votes_in_round = $game->my_votes_in_round($round['round_id'], $this->db_user['user_id']);
