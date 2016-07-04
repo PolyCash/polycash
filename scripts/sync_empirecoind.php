@@ -59,7 +59,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 					
 					$output_sum = 0;
 					for ($j=0; $j<count($outputs); $j++) {
-						$output_sum += pow(10,8)*$outputs[$j]["value"];
+						$output_sum += intval(pow(10,8)*$outputs[$j]["value"]);
 					}
 					
 					$q = "INSERT INTO webwallet_transactions SET game_id='".$game_id."', amount='".$output_sum."', transaction_desc='".$transaction_type."', tx_hash='".$tx_hash."', address_id=NULL, block_id='".$block_id."', time_created='".time()."';";
@@ -108,6 +108,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		
 		for ($i=$from_transaction_id; $i<=$to_transaction_id; $i++) {
 			if ($i > 0) {
+				$transaction_error = false;
 				$spend_io_ids = array();
 				$input_sum = 0;
 				
@@ -156,7 +157,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$r = run_query($q);
 	$max_block = mysql_fetch_row($r);
 	$max_block = $max_block[0];
-	$completed_rounds = floor($max_block/get_site_constant('round_length'));
+	$completed_rounds = floor($max_block/$game['round_length']);
 	
 	for ($round_id=1; $round_id<=$completed_rounds; $round_id++) {
 		add_round_from_rpc($game, $round_id);

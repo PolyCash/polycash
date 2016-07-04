@@ -32,11 +32,11 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	$last_block_id = last_block_id($game_id);
 	$last_transaction_id = last_transaction_id($game_id);
 	$my_last_transaction_id = my_last_transaction_id($thisuser['user_id'], $game_id);
-	$mature_io_ids_csv = mature_io_ids_csv($thisuser['user_id'], $thisuser['game_id']);
-	$current_round = block_to_round($last_block_id+1);
-	$block_within_round = $last_block_id%get_site_constant('round_length')+1;
-	$account_value = account_coin_value($game_id, $thisuser);
-	$immature_balance = immature_balance($game_id, $thisuser);
+	$mature_io_ids_csv = mature_io_ids_csv($thisuser['user_id'], $game);
+	$current_round = block_to_round($game, $last_block_id+1);
+	$block_within_round = $last_block_id%$game['round_length']+1;
+	$account_value = account_coin_value($game, $thisuser);
+	$immature_balance = immature_balance($game, $thisuser);
 	$mature_balance = $account_value - $immature_balance;
 	
 	$output = false;
@@ -53,7 +53,7 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 		$output['new_block'] = 1;
 		$output['last_block_id'] = $last_block_id;
 		
-		$client_round = block_to_round(intval($_REQUEST['last_block_id'])+1);
+		$client_round = block_to_round($game, intval($_REQUEST['last_block_id'])+1);
 		
 		if ($_REQUEST['refresh_page'] == "wallet" && $current_round != $client_round) {
 			$output['new_performance_history'] = 1;

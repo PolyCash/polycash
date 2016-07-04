@@ -16,7 +16,7 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 	$this_game = mysql_fetch_array($r);
 	
 	$last_block_id = last_block_id($this_game['game_id']);
-	$current_round = block_to_round($last_block_id+1);
+	$current_round = block_to_round($this_game, $last_block_id+1);
 	
 	$round = false;
 	$block = false;
@@ -52,7 +52,7 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 				}
 				else {
 					$last_block_id = last_block_id($this_game['game_id']);
-					$current_round = block_to_round($last_block_id+1);
+					$current_round = block_to_round($this_game, $last_block_id+1);
 					
 					if ($current_round == $round_id) {
 						$round_status = "current";
@@ -114,7 +114,7 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 	if ($thisuser) { ?>
 		<div class="container" style="max-width: 1000px; padding-top: 10px;">
 			<?php
-			$account_value = account_coin_value($this_game['game_id'], $thisuser);
+			$account_value = account_coin_value($this_game, $thisuser);
 			include("includes/wallet_status.php");
 			?>
 		</div>
@@ -131,7 +131,7 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 				if ($round || $round_status == "current") {
 					if ($round_status == "current") {
 						$last_block_id = last_block_id($this_game['game_id']);
-						$current_round = block_to_round($last_block_id+1);
+						$current_round = block_to_round($this_game, $last_block_id+1);
 						$round['round_id'] = $current_round;
 						echo "<h1>Round #".$current_round." is currently running</h1>\n";
 					}
@@ -151,7 +151,7 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 						</div>
 					</div>
 					<?php
-					$max_score_sum = floor($round['score_sum']*get_site_constant('max_voting_fraction'));
+					$max_score_sum = floor($round['score_sum']*$game['max_voting_fraction']);
 					
 					if ($thisuser) {
 						$returnvals = my_votes_in_round($this_game, $round['round_id'], $thisuser['user_id']);
@@ -172,7 +172,7 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 					$from_block_id = (($round['round_id']-1)*10)+1;
 					$to_block_id = ($round['round_id']*10);
 					
-					$q = "SELECT * FROM blocks WHERE game_id='".$game_id."' AND block_id >= '".$from_block_id."' AND block_id <= ".$to_block_id." ORDER BY block_id ASC;";
+					$q = "SELECT * FROM blocks WHERE game_id='".$this_game['game_id']."' AND block_id >= '".$from_block_id."' AND block_id <= ".$to_block_id." ORDER BY block_id ASC;";
 					$r = run_query($q);
 					echo "Blocks in this round: ";
 					while ($round_block = mysql_fetch_array($r)) {
@@ -276,8 +276,8 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 			else if ($explore_mode == "blocks" || $explore_mode == "unconfirmed") {
 				if ($block || $explore_mode == "unconfirmed") {
 					if ($block) {
-						$round_id = block_to_round($block['block_id']);
-						$block_index = block_id_to_round_index($block['block_id']);
+						$round_id = block_to_round($this_game, $block['block_id']);
+						$block_index = block_id_to_round_index($this_game, $block['block_id']);
 						
 						$q = "SELECT COUNT(*), SUM(amount) FROM webwallet_transactions WHERE game_id='".$this_game['game_id']."' AND block_id='".$block['block_id']."' AND amount > 0;";
 						$r = run_query($q);
@@ -298,8 +298,8 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 						$block_sum = $r[1];
 						
 						$expected_block_id = last_block_id($this_game['game_id'])+1;
-						$expected_round_id = block_to_round($expected_block_id);
-						$expected_block_index = block_id_to_round_index($expected_block_id);
+						$expected_round_id = block_to_round($this_game, $expected_block_id);
+						$expected_block_index = block_id_to_round_index($this_game, $expected_block_id);
 						
 						echo "<h1>Unconfirmed Transactions</h1>\n";
 						echo "<h3>".$this_game['name']."</h3>";
@@ -310,7 +310,7 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 					
 					echo '<div style="border-bottom: 1px solid #bbb;">';
 					
-					$q = "SELECT * FROM webwallet_transactions WHERE game_id='".$game_id."' AND block_id";
+					$q = "SELECT * FROM webwallet_transactions WHERE game_id='".$this_game['game_id']."' AND block_id";
 					if ($explore_mode == "unconfirmed") $q .= " IS NULL";
 					else $q .= "='".$block['block_id']."'";
 					$q .= " AND amount > 0 ORDER BY transaction_id ASC;";
@@ -329,8 +329,8 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 					
 					$next_link_target = false;
 					if ($explore_mode == "unconfirmed") {}
-					else if ($block['block_id'] == last_block_id($game['game_id'])) $next_link_target = "transactions/unconfirmed";
-					else if ($block['block_id'] < last_block_id($game['game_id'])) $next_link_target = "blocks/".($block['block_id']+1);
+					else if ($block['block_id'] == last_block_id($this_game['game_id'])) $next_link_target = "transactions/unconfirmed";
+					else if ($block['block_id'] < last_block_id($this_game['game_id'])) $next_link_target = "blocks/".($block['block_id']+1);
 					if ($next_link_target) echo '<a href="/explorer/'.$next_link_target.'">Next Block &rarr;</a>';
 					
 					if ($explore_mode == "blocks") {
@@ -340,7 +340,7 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 					echo "<br/><br/>\n";
 				}
 				else {
-					$q = "SELECT * FROM blocks WHERE game_id='".$game_id."' ORDER BY block_id ASC;";
+					$q = "SELECT * FROM blocks WHERE game_id='".$this_game['game_id']."' ORDER BY block_id ASC;";
 					$r = run_query($q);
 					
 					echo "<h1>EmpireCoin - List of Blocks</h1>\n";
@@ -365,8 +365,8 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 				
 				echo '<div style="border-bottom: 1px solid #bbb;">';
 				while ($transaction_io = mysql_fetch_array($r)) {
-					$block_index = block_id_to_round_index($transaction_io['block_id']);
-					$round_id = block_to_round($transaction_io['block_id']);
+					$block_index = block_id_to_round_index($this_game, $transaction_io['block_id']);
+					$round_id = block_to_round($this_game, $transaction_io['block_id']);
 					echo render_transaction($transaction_io, $address['address_id'], "Confirmed in the <a href=\"/explorer/blocks/".$transaction_io['block_id']."\">".date("jS", strtotime("1/".$block_index."/2015"))." block</a> of <a href=\"/explorer/rounds/".$round_id."\">round ".$round_id."</a>");
 				}
 				echo "</div>\n";
@@ -377,7 +377,7 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 				$rpc_transaction = false;
 				$rpc_raw_transaction = false;
 				
-				if ($game['game_type'] == "real") {
+				if ($this_game['game_type'] == "real") {
 					$empirecoin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
 					try {
 						$rpc_transaction = $empirecoin_rpc->gettransaction($transaction['tx_hash']);
@@ -393,8 +393,8 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 				
 				echo "<h3>EmpireCoin Transaction: ".$transaction['tx_hash']."</h3>\n";
 				if ($transaction['block_id'] > 0) {
-					$block_index = block_id_to_round_index($transaction['block_id']);
-					$round_id = block_to_round($transaction['block_id']);
+					$block_index = block_id_to_round_index($this_game, $transaction['block_id']);
+					$round_id = block_to_round($this_game, $transaction['block_id']);
 					$label_txt = "Confirmed in the <a href=\"/explorer/blocks/".$transaction['block_id']."\">".date("jS", strtotime("1/".$block_index."/2015"))." block</a> of <a href=\"/explorer/rounds/".$round_id."\">round ".$round_id."</a>";
 				}
 				else {

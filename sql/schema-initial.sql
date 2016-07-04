@@ -149,7 +149,11 @@ CREATE TABLE `games` (
   `block_timing` enum('realistic','user_controlled') NOT NULL DEFAULT 'realistic',
   `payout_weight` enum('coin','coin_block') NOT NULL DEFAULT 'coin_block',
   `seconds_per_block` int(11) NOT NULL DEFAULT '0',
-  `name` varchar(100) NOT NULL DEFAULT ''
+  `name` varchar(100) NOT NULL DEFAULT '',
+  `num_voting_options` int(10) NOT NULL DEFAULT '16',
+  `max_voting_fraction` decimal(2,2) NOT NULL DEFAULT '0.25',
+  `round_length` int(10) NOT NULL DEFAULT '10',
+  `maturity` int(10) NOT NULL DEFAULT '8'
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
@@ -315,7 +319,6 @@ CREATE TABLE `nations` (
   `name` varchar(100) NOT NULL DEFAULT '',
   `address_character` varchar(1) NOT NULL DEFAULT '',
   `relevant_wins` int(20) NOT NULL DEFAULT '1',
-  `cached_force_multiplier` decimal(10,8) NOT NULL DEFAULT '16.00000000',
   `vote_id` int(4) NOT NULL DEFAULT '0'
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -323,23 +326,23 @@ CREATE TABLE `nations` (
 -- Dumping data for table `nations`
 --
 
-INSERT INTO `nations` (`nation_id`, `name`, `address_character`, `relevant_wins`, `cached_force_multiplier`, `vote_id`) VALUES
-(1, 'China', '0', 1, 16.00000000, 0),
-(2, 'USA', '1', 1, 16.00000000, 1),
-(3, 'India', '2', 1, 16.00000000, 2),
-(4, 'Brazil', '3', 1, 16.00000000, 3),
-(5, 'Indonesia', '4', 1, 16.00000000, 4),
-(6, 'Japan', '5', 1, 16.00000000, 5),
-(7, 'Russia', '6', 1, 16.00000000, 6),
-(8, 'Germany', '7', 1, 16.00000000, 7),
-(9, 'Mexico', '8', 1, 16.00000000, 8),
-(10, 'Nigeria', '9', 1, 16.00000000, 9),
-(11, 'France', 'a', 1, 16.00000000, 10),
-(12, 'UK', 'b', 1, 16.00000000, 11),
-(13, 'Pakistan', 'c', 1, 16.00000000, 12),
-(14, 'Italy', 'd', 1, 16.00000000, 13),
-(15, 'Turkey', 'e', 1, 16.00000000, 14),
-(16, 'Iran', 'f', 1, 16.00000000, 15);
+INSERT INTO `nations` (`nation_id`, `name`, `address_character`, `relevant_wins`, `vote_id`) VALUES
+(1, 'China', '1', 1, 0),
+(2, 'USA', '2', 1, 1),
+(3, 'India', '3', 1, 2),
+(4, 'Brazil', '4', 1, 3),
+(5, 'Indonesia', '5', 1, 4),
+(6, 'Japan', '6', 1, 5),
+(7, 'Russia', '7', 1, 6),
+(8, 'Germany', '8', 1, 7),
+(9, 'Mexico', '9', 1, 8),
+(10, 'Nigeria', 'a', 1, 9),
+(11, 'France', 'b', 1, 10),
+(12, 'UK', 'c', 1, 11),
+(13, 'Pakistan', 'd', 1, 12),
+(14, 'Italy', 'e', 1, 13),
+(15, 'Turkey', 'f', 1, 14),
+(16, 'Iran', 'g', 1, 15);
 
 -- --------------------------------------------------------
 

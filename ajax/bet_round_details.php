@@ -12,7 +12,7 @@ if ($thisuser) {
 	
 	$outcomes = array();
 	
-	$q = "SELECT SUM(i.amount), n.* FROM transaction_IOs i JOIN addresses a ON i.address_id=a.address_id LEFT JOIN nations n ON a.bet_nation_id=n.nation_id WHERE i.game_id='".$game['game_id']."' AND a.bet_round_id = ".$round_id." AND i.create_block_id <= ".round_to_last_betting_block($round_id)." GROUP BY a.bet_nation_id ORDER BY SUM(i.amount) DESC;";
+	$q = "SELECT SUM(i.amount), n.* FROM transaction_IOs i JOIN addresses a ON i.address_id=a.address_id LEFT JOIN nations n ON a.bet_nation_id=n.nation_id WHERE i.game_id='".$game['game_id']."' AND a.bet_round_id = ".$round_id." AND i.create_block_id <= ".round_to_last_betting_block($game, $round_id)." GROUP BY a.bet_nation_id ORDER BY SUM(i.amount) DESC;";
 	$r = run_query($q);
 	
 	while ($bet_outcome = mysql_fetch_array($r)) {

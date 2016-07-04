@@ -12,10 +12,33 @@ $quantity = intval($_REQUEST['quantity']);
 
 if ($quantity > 0) {
 	$empirecoin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
-
-	for ($i=0; $i<$quantity; $i++) {
-		$new_addr_str = $empirecoin_rpc->getnewaddress();
-		$new_addr_db = create_or_fetch_address($game, $new_addr_str, false, $empirecoin_rpc, true);
+	
+	$nation_str = $_REQUEST['nation'];
+	$nation_id = intval($nation_str);
+	$nation = false;
+	
+	if ($nation_id > 0 && strval($nation_id) === $nation_str) {
+		$q = "SELECT * FROM nations WHERE nation_id='".$nation_id."';";
+		$r = run_query($q);
+		if (mysql_numrows($r) == 1) $nation = mysql_fetch_array($r);
+	}
+	else if ($nation_str != "") {
+		$q = "SELECT * FROM nations WHERE name='".mysql_real_escape_string($nation_str)."';";
+		$r = run_query($q);
+		if (mysql_numrows($r) == 1) $nation = mysql_fetch_array($r);
+	}
+	
+	if ($nation) {
+		for ($i=0; $i<$quantity; $i++) {
+			$new_addr_str = $empirecoin_rpc->getnewvotingaddress($nation['name']);
+			$new_addr_db = create_or_fetch_address($game, $new_addr_str, false, $empirecoin_rpc, true);
+		}
+	}
+	else {
+		for ($i=0; $i<$quantity; $i++) {
+			$new_addr_str = $empirecoin_rpc->getnewaddress();
+			$new_addr_db = create_or_fetch_address($game, $new_addr_str, false, $empirecoin_rpc, true);
+		}
 	}
 }
 

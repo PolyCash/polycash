@@ -63,8 +63,8 @@ if ($thisuser) {
 				if ($amount_sum > 0) {
 					$last_block_id = last_block_id($game['game_id']);
 					$mining_block_id = $last_block_id+1;
-					$account_value = account_coin_value($game['game_id'], $thisuser);
-					$immature_balance = immature_balance($game['game_id'], $thisuser);
+					$account_value = account_coin_value($game, $thisuser);
+					$immature_balance = immature_balance($game, $thisuser);
 					$mature_balance = $account_value - $immature_balance;
 					
 					if ($amount_sum <= $mature_balance) {

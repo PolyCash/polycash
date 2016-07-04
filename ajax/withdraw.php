@@ -14,8 +14,8 @@ if ($thisuser) {
 		$amount = $amount*pow(10,8);
 		$last_block_id = last_block_id($thisuser['game_id']);
 		$mining_block_id = $last_block_id+1;
-		$account_value = account_coin_value($thisuser['game_id'], $thisuser);
-		$immature_balance = immature_balance($thisuser['game_id'], $thisuser);
+		$account_value = account_coin_value($game, $thisuser);
+		$immature_balance = immature_balance($game, $thisuser);
 		$mature_balance = $account_value - $immature_balance;
 		
 		$remainder_address_id = $_REQUEST['remainder_address_id'];

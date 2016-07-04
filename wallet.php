@@ -228,7 +228,7 @@ else if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['d
 	}
 	else {
 		if (in_array($voting_strategy, array('manual', 'by_rank', 'by_nation', 'api'))) {
-			for ($i=1; $i<=get_site_constant('num_voting_options'); $i++) {
+			for ($i=1; $i<=$game['num_voting_options']; $i++) {
 				if ($_REQUEST['by_rank_'.$i] == "1") $by_rank_csv .= $i.",";
 			}
 			if ($by_rank_csv != "") $by_rank_csv = substr($by_rank_csv, 0, strlen($by_rank_csv)-1);
@@ -247,7 +247,7 @@ else if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['d
 			$nation_pct_q = "";
 			$nation_pct_error = FALSE;
 			
-			for ($nation_id=1; $nation_id<=get_site_constant('num_voting_options'); $nation_id++) {
+			for ($nation_id=1; $nation_id<=$game['num_voting_options']; $nation_id++) {
 				$nation_pct = intval($_REQUEST['nation_pct_'.$nation_id]);
 				$nation_pct_q .= ", nation_pct_".$nation_id."=".$nation_pct;
 				$nation_pct_sum += $nation_pct;
@@ -294,11 +294,11 @@ if (mysql_numrows($r) > 0) {
 }
 
 $initial_tab = 0;
-$account_value = account_coin_value($thisuser['game_id'], $thisuser);
-$immature_balance = immature_balance($thisuser['game_id'], $thisuser);
+$account_value = account_coin_value($game, $thisuser);
+$immature_balance = immature_balance($game, $thisuser);
 $last_block_id = last_block_id($thisuser['game_id']);
 $current_round = block_to_round($last_block_id+1);
-$block_within_round = $last_block_id%get_site_constant('round_length')+1;
+$block_within_round = $last_block_id%$game['round_length']+1;
 $mature_balance = $account_value - $immature_balance;
 ?>
 <div class="container" style="max-width: 1000px;">
@@ -343,7 +343,7 @@ $mature_balance = $account_value - $immature_balance;
 			if ($my_last_transaction_id) echo $my_last_transaction_id;
 			else echo 'false';
 		?>;
-		var mature_io_ids_csv = '<?php echo mature_io_ids_csv($thisuser['user_id'], $thisuser['game_id']); ?>';
+		var mature_io_ids_csv = '<?php echo mature_io_ids_csv($thisuser['user_id'], $game); ?>';
 		var refresh_in_progress = false;
 		var last_refresh_time = 0;
 		var payout_weight = '<?php echo $game['payout_weight']; ?>';
@@ -462,7 +462,7 @@ $mature_balance = $account_value - $immature_balance;
 				<?php if ($user_strategy && $user_strategy['voting_strategy'] != "manual") { ?>
 				You're logged in so your automated voting strategy is currently disabled.<br/>
 				<?php } ?>
-				<div id="vote_popups_disabled"<?php if (($last_block_id+1)%get_site_constant('round_length') != 0) echo ' style="display: none;"'; ?>>
+				<div id="vote_popups_disabled"<?php if (($last_block_id+1)%$game['round_length'] != 0) echo ' style="display: none;"'; ?>>
 					The final block of the round is being mined. Voting is currently disabled.
 				</div>
 				<div id="select_input_buttons"><?php

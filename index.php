@@ -10,7 +10,7 @@ include('includes/html_start.php');
 if ($thisuser) { ?>
 	<div class="container" style="max-width: 1000px; padding: 10px 0px;">
 		<?php
-		$account_value = account_coin_value($thisuser['game_id'], $thisuser);
+		$account_value = account_coin_value($game, $thisuser);
 		include("includes/wallet_status.php");
 		?>
 	</div>
@@ -110,9 +110,9 @@ $game = mysql_fetch_array($r);
 		<p>
 			<?php
 			$last_block_id = last_block_id(get_site_constant('primary_game_id'));
-			$current_round = block_to_round($last_block_id+1);
-			$block_within_round = $last_block_id%get_site_constant('round_length')+1;
-			$total_vote_sum = total_score_in_round(get_site_constant('primary_game_id'), $current_round, $game['payout_weight'], true);
+			$current_round = block_to_round($game, $last_block_id+1);
+			$block_within_round = $last_block_id%$game['round_length']+1;
+			$total_vote_sum = total_score_in_round($game['game_id'], $current_round, $game['payout_weight'], true);
 			
 			$round_stats = round_voting_stats_all($game, $current_round);
 			$total_vote_sum = $round_stats[0];
@@ -141,8 +141,8 @@ $game = mysql_fetch_array($r);
 			
 			<?php
 			if ($thisuser) {
-				$account_value = account_coin_value($thisuser['game_id'], $thisuser);
-				$immature_balance = immature_balance($thisuser['game_id'], $thisuser);
+				$account_value = account_coin_value($game, $thisuser);
+				$immature_balance = immature_balance($game, $thisuser);
 				$mature_balance = $account_value - $immature_balance;
 			}
 			else $mature_balance = 0;
@@ -158,9 +158,9 @@ $game = mysql_fetch_array($r);
 
 <script type="text/javascript">
 var last_block_id = <?php echo $last_block_id; ?>;
-var last_transaction_id = <?php echo last_transaction_id(get_site_constant('primary_game_id')); ?>;
+var last_transaction_id = <?php echo last_transaction_id($game['game_id']); ?>;
 var my_last_transaction_id = <?php echo my_last_transaction_id($thisuser['user_id'], $thisuser['game_id']); ?>;
-var mature_io_ids_csv = '<?php echo mature_io_ids_csv($thisuser['user_id'], $thisuser['game_id']); ?>';
+var mature_io_ids_csv = '<?php echo mature_io_ids_csv($thisuser['user_id'], $game); ?>';
 var game_loop_index = 1;
 var last_game_loop_index_applied = -1;
 

@@ -10,7 +10,21 @@ $q = "SELECT * FROM games WHERE game_id='".$game_id."';";
 $r = run_query($q);
 $game = mysql_fetch_array($r);
 
-if ($_REQUEST['do'] == "reset") {
+if ($_REQUEST['do'] == "set_nation_ids") {
+	$game_q = "SELECT * FROM games;";
+	$game_r = run_query($game_q);
+	while ($game = mysql_fetch_array($game_r)) {
+		$address_q = "SELECT * FROM addresses WHERE game_id='".$game['game_id']."';";
+		$address_r = run_query($address_q);
+		while ($address = mysql_fetch_array($address_r)) {
+			$nation_id = addr_text_to_nation_id($address['address']);
+			$qq = "UPDATE addresses SET nation_id='".$nation_id."' WHERE address_id='".$address['address_id']."';";
+			$rr = run_query($qq);
+		}
+	}
+	echo "Done!";
+}
+else if ($_REQUEST['do'] == "reset") {
 	$address_q = "SELECT * FROM addresses WHERE game_id='".$game['game_id']."';";
 	$address_r = run_query($address_q);
 

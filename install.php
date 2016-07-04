@@ -21,18 +21,14 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				
 				mysql_select_db($GLOBALS['mysql_database']) or die ("There was an error accessing the \"".$GLOBALS['mysql_database']."\" database");
 				
-				$q = "INSERT INTO games SET game_type='real', block_timing='realistic', payout_weight='coin', seconds_per_block=120, name='EmpireCoin Live';";
+				$q = "INSERT INTO games SET game_type='real', block_timing='realistic', payout_weight='coin', seconds_per_block=120, name='EmpireCoin Live', num_voting_options=16, maturity=8, round_length=10, max_voting_fraction=0.25;";
 				$r = run_query($q);
 				$game_id = mysql_insert_id();
 				
 				ensure_game_nations($game_id);
 				
 				set_site_constant("primary_game_id", $game_id);
-				set_site_constant("num_voting_options", 16);
 				set_site_constant("game_loop_seconds", 2);
-				set_site_constant("maturity", 8);
-				set_site_constant("round_length", 10);
-				set_site_constant("max_voting_fraction", 0.25);
 			}
 			else {
 				mysql_select_db($GLOBALS['mysql_database']) or die ("There was an error accessing the \"".$GLOBALS['mysql_database']."\" database");

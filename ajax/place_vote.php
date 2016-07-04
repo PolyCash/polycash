@@ -8,8 +8,8 @@ if ($thisuser) {
 	$r = run_query($q);
 	$game = mysql_fetch_array($r);
 	
-	$account_value = account_coin_value($thisuser['game_id'], $thisuser);
-	$immature_balance = immature_balance($thisuser['game_id'], $thisuser);
+	$account_value = account_coin_value($game, $thisuser);
+	$immature_balance = immature_balance($game, $thisuser);
 	$mature_balance = $account_value - $immature_balance;
 	
 	$noinfo_fail_output = "1=====Invalid URL";
@@ -46,7 +46,7 @@ if ($thisuser) {
 					die("x:".$io['user_id']." != ".$thisuser['user_id']." -- ".$noinfo_fail_output);
 				}
 				else {
-					if ($io['create_block_id'] <= last_block_id($thisuser['game_id'])-get_site_constant('maturity') || $io['instantly_mature'] == 1) $io_ids[$i] = $io_id;
+					if ($io['create_block_id'] <= last_block_id($thisuser['game_id'])-$game['maturity'] || $io['instantly_mature'] == 1) $io_ids[$i] = $io_id;
 					else die("3=====One of the coin inputs you selected is not yet mature.");
 				}
 			}
@@ -74,7 +74,7 @@ if ($thisuser) {
 	
 	$last_block_id = last_block_id($thisuser['game_id']);
 	
-	if (($last_block_id+1)%get_site_constant('round_length') == 0) {
+	if (($last_block_id+1)%$game['round_length'] == 0) {
 		echo "6=====The final block of the round is being mined, so you can't vote right now.";
 	}
 	else {

@@ -26,8 +26,8 @@ if ($uri_parts[1] == "api") {
 			if (mysql_numrows($r) == 1) {
 				$api_user = mysql_fetch_array($r);
 				
-				$account_value = account_coin_value($game_id, $api_user);
-				$immature_balance = immature_balance($game_id, $api_user);
+				$account_value = account_coin_value($game, $api_user);
+				$immature_balance = immature_balance($game, $api_user);
 				$mature_balance = $account_value - $immature_balance;
 				
 				$api_output_user['username'] = $api_user['username'];

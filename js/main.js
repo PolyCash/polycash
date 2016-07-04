@@ -545,17 +545,17 @@ function remove_utxo_from_vote(index_id) {
 	$('#select_utxo_'+vote_inputs[index_id].io_id).show('fast');
 	io_id2input_index[vote_inputs[index_id].io_id] = false;
 	
-	for (var i=index_id+1; i<vote_inputs.length; i++) {
-		$('#selected_utxo_'+(i-1)).html(render_selected_utxo(i-1));
-		$('#selected_utxo_'+i).html('');
-		vote_inputs[i-1] = vote_inputs[i];
-		io_id2input_index[vote_inputs[i-1].io_id] = i-1;
+	for (var i=index_id; i<vote_inputs.length-1; i++) {
+		vote_inputs[i] = vote_inputs[i+1];
+		io_id2input_index[vote_inputs[i].io_id] = i;
+		
+		$('#selected_utxo_'+i).html(render_selected_utxo(i));
 	}
 	$('#selected_utxo_'+(vote_inputs.length-1)).remove();
 	vote_inputs.length = vote_inputs.length-1;
 	set_input_amount_sums();
 	refresh_compose_vote();
-	refresh_output_amounts()
+	refresh_output_amounts();
 }
 function remove_nation_from_vote(index_id) {
 	for (var i=index_id+1; i<vote_nations.length; i++) {
@@ -658,8 +658,6 @@ function confirm_compose_vote() {
 					$('#compose_vote_success').html(result_parts[1]);
 					$('#compose_vote_success').slideDown('slow');
 					setTimeout("$('#compose_vote_success').slideUp('fast');", 2500);
-					
-					console.log('vote_nations.length = '+vote_nations.length);
 					
 					for (var i=0; i<vote_nations.length; i++) {
 						$('#compose_vote_output_'+i).remove();
@@ -990,7 +988,7 @@ function match_refresh_loop(match_id) {
 	if (!match_refresh_in_progress) {
 		match_refresh_in_progress = true;
 		var cached_move_amount = move_amount;
-		console.log('cached move amount: '+cached_move_amount);
+		
 		$.get("/ajax/check_match_activity.php?match_id="+match_id+"&last_move_number="+last_move_number+"&last_message_id="+last_message_id+"&current_round_number="+current_round_number, function(result) {
 			var result_json = JSON.parse(result);
 			
