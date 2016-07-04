@@ -37,40 +37,37 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			$r = $GLOBALS['app']->run_query($q);
 			
 			if (mysql_numrows($r) == 0) {
-				$address_id = new_invoice_address();
+				$address_id = $GLOBALS['app']->new_invoice_address();
 				
 				$q = "INSERT INTO games SET invoice_address_id='".$address_id."', option_group_id=1, featured=1, invite_currency=1, url_identifier='".strtolower($GLOBALS['coin_brand_name'])."-live', game_status='published', giveaway_status='public_free', giveaway_amount=100000000000, pow_reward=2500000000, pos_reward=75000000000, game_type='simulation', block_timing='realistic', payout_weight='coin_round', seconds_per_block=120, name='".$GLOBALS['coin_brand_name']." Live', num_voting_options=16, maturity=1, round_length=10, max_voting_fraction=0.25, option_name='empire', option_name_plural='empires', buyin_policy='none';";
 				$r = $GLOBALS['app']->run_query($q);
 				$primary_game_id = mysql_insert_id();
 				
-				$q = "SELECT * FROM games WHERE game_id='".$primary_game_id."';";
-				$r = $GLOBALS['app']->run_query($q);
-				$primary_game = mysql_fetch_array($r);
+				$primary_game = new Game($primary_game_id);
 				
-				ensure_game_options($primary_game);
+				$primary_game->ensure_game_options();
 				
-				set_site_constant("primary_game_id", $primary_game_id);
+				$GLOBALS['app']->set_site_constant("primary_game_id", $primary_game_id);
 				
-				start_game($primary_game);
+				$primary_game->start_game();
 			}
 
 			$q = "SELECT * FROM games WHERE url_identifier='".strtolower($GLOBALS['coin_brand_name'])."-testnet';";
 			$r = $GLOBALS['app']->run_query($q);
 			
 			if (mysql_numrows($r) == 0) {
-				$address_id = new_invoice_address();
+				$address_id = $GLOBALS['app']->new_invoice_address();
 				
 				$q = "INSERT INTO games SET invoice_address_id='".$address_id."', option_group_id=1, featured=1, invite_currency=1, url_identifier='".strtolower($GLOBALS['coin_brand_name'])."-testnet', game_status='published', giveaway_status='public_free', giveaway_amount=500000000000, pow_reward=100000000, pos_reward=500000000000, game_type='simulation', block_timing='realistic', payout_weight='coin_round', seconds_per_block=5, name='".$GLOBALS['coin_brand_name']." Testnet', num_voting_options=16, maturity=1, round_length=50, max_voting_fraction=0.15, option_name='empire', option_name_plural='empires', buyin_policy='none';";
 				$r = $GLOBALS['app']->run_query($q);
+				
 				$testnet_game_id = mysql_insert_id();
 				
-				$q = "SELECT * FROM games WHERE game_id='".$testnet_game_id."';";
-				$r = $GLOBALS['app']->run_query($q);
-				$testnet_game = mysql_fetch_array($r);
+				$testnet_game = new Game($testnet_game_id);
 				
-				ensure_game_options($testnet_game);
+				$testnet_game->ensure_game_options();
 				
-				start_game($testnet_game);
+				$testnet_game->start_game();
 			}
 			
 			$q = "SELECT * FROM currency_prices WHERE currency_id=1 AND reference_currency_id=1;";
@@ -80,8 +77,8 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				$r = $GLOBALS['app']->run_query($q);
 			}
 			
-			set_site_constant("game_loop_seconds", 2);
-			set_site_constant("reference_currency_id", 1);
+			$GLOBALS['app']->set_site_constant("game_loop_seconds", 2);
+			$GLOBALS['app']->set_site_constant("reference_currency_id", 1);
 			
 			$pagetitle = $GLOBALS['site_name']." - Installing...";
 			$include_crypto_js = TRUE;

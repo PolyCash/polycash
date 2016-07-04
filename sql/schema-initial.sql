@@ -322,6 +322,7 @@ CREATE TABLE IF NOT EXISTS `game_type_variations` (
   `exponential_inflation_rate` decimal(9,8) NOT NULL,
   `pow_reward` bigint(20) DEFAULT NULL,
   `pos_reward` bigint(20) DEFAULT NULL,
+  `url_identifier` VARCHAR(100) NOT NULL DEFAULT '',
   `variation_name` varchar(100) NOT NULL DEFAULT '',
   PRIMARY KEY (`variation_id`),
   KEY `game_type_id` (`game_type_id`)
@@ -1034,10 +1035,10 @@ INSERT INTO `currencies` (`currency_id`, `oracle_url_id`, `name`, `short_name`, 
 (1, NULL, 'US Dollar', 'dollar', 'USD', '$'),
 (2, 2, 'Bitcoin', 'bitcoin', 'BTC', '&#3647;'),
 (3, NULL, 'EmpireCoin', 'empirecoin', 'EMP', 'E'),
-(3, 1, 'Euro', 'euro', 'EUR', '€'),
-(3, 1, 'Renminbi', 'renminbi', 'CNY', '¥'),
-(3, 1, 'Pound sterling', 'pound', 'GBP', '£'),
-(3, 1, 'Japanese yen', 'yen', 'JPY', '¥');
+(4, 1, 'Euro', 'euro', 'EUR', '€'),
+(5, 1, 'Renminbi', 'renminbi', 'CNY', '¥'),
+(6, 1, 'Pound sterling', 'pound', 'GBP', '£'),
+(7, 1, 'Japanese yen', 'yen', 'JPY', '¥');
 
 INSERT INTO `site_constants` SET constant_name='reference_currency_id', constant_value=1;
 INSERT INTO `currency_prices` SET currency_id=1, reference_currency_id=1, price=1;

@@ -432,7 +432,7 @@ class App {
 					$price = $api_response->USD->bid;
 				}
 				else if ($currency_url['format_id'] == 1) {
-					$price = $api_response->rates->$currency['abbreviation'];
+					$price = 1/($api_response->rates->$currency['abbreviation']);
 				}
 				
 				$qqq = "INSERT INTO currency_prices SET currency_id='".$currency['currency_id']."', reference_currency_id='".$reference_currency_id."', price='".$price."', time_added='".time()."';";
