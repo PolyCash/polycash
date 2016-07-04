@@ -13,7 +13,8 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	if (!isset($GLOBALS['currency_price_refresh_seconds'])) die('Error: please add something like $GLOBALS[\'currency_price_refresh_seconds\'] = 60; to your config file.');
 	
 	if (!$latest_btc_price || $latest_btc_price['time_added'] < time()-$GLOBALS['currency_price_refresh_seconds']) {
-		$latest_btc_price = $GLOBALS['app']->update_currency_price($btc_currency['currency_id']);
+		$GLOBALS['app']->update_all_currency_prices();
+		$latest_btc_price = $GLOBALS['app']->latest_currency_price($btc_currency['currency_id']);
 	}
 	
 	$GLOBALS['app']->generate_open_games();

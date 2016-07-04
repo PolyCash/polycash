@@ -2094,7 +2094,7 @@ class Game {
 	}
 	
 	public function start_game() {
-		$qq = "UPDATE games SET initial_coins='".$this->coins_in_existence(false)."', game_status='running', start_time='".time()."', start_datetime=NOW() WHERE game_id='".$this->db_game['game_id']."';";
+		$qq = "UPDATE games SET initial_coins='".coins_in_existence($this->db_game, false)."', game_status='running', start_time='".time()."', start_datetime=NOW() WHERE game_id='".$this->db_game['game_id']."';";
 		$rr = $GLOBALS['app']->run_query($qq);
 
 		$qq = "SELECT * FROM user_games ug JOIN users u ON ug.game_id=u.user_id WHERE ug.game_id='".$this->db_game['game_id']."' AND u.notification_email LIKE '%@%';";
@@ -2102,8 +2102,8 @@ class Game {
 		while ($player = mysql_fetch_array($rr)) {
 			$subject = $GLOBALS['coin_brand_name']." game \"".$this->db_game['name']."\" has started.";
 			$message = $this->db_game['name']." has started. If haven't already entered your votes, please log in now and start playing.<br/>\n";
-			$message .= game_info_table($game);
-			$email_id = mail_async($player['notification_email'], $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "");
+			$message .= game_info_table($this->db_game);
+			$email_id = $GLOBALS['app']->mail_async($player['notification_email'], $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "");
 		}
 		
 		if ($this->db_game['variation_id'] > 0) {
@@ -2112,7 +2112,7 @@ class Game {
 			
 			if (mysql_numrows($r) > 0) {
 				$game_variation = mysql_fetch_array($r);
-				generate_open_games_by_variation($game_variation);
+				$GLOBALS['app']->generate_open_games_by_variation($game_variation);
 			}
 		}
 	}
