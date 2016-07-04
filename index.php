@@ -112,7 +112,7 @@ $game = mysql_fetch_array($r);
 			$last_block_id = last_block_id(get_site_constant('primary_game_id'));
 			$current_round = block_to_round($last_block_id+1);
 			$block_within_round = $last_block_id%get_site_constant('round_length')+1;
-			$total_vote_sum = total_score_in_round(get_site_constant('primary_game_id'), $current_round, $game['payout_weight']);
+			$total_vote_sum = total_score_in_round(get_site_constant('primary_game_id'), $current_round, $game['payout_weight'], true);
 			
 			$round_stats = round_voting_stats_all($game, $current_round);
 			$total_vote_sum = $round_stats[0];

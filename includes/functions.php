@@ -156,10 +156,12 @@ function round_voting_stats($game, $round_id) {
 	}
 }
 
-function total_score_in_round($game_id, $round_id, $payout_weight) {
+function total_score_in_round($game_id, $round_id, $payout_weight, $include_unconfirmed) {
 	if ($payout_weight == "coin") $score_field = "amount";
 	else $score_field = "coin_blocks_destroyed";
-	$q = "SELECT SUM(".$score_field.") FROM transaction_IOs WHERE game_id='".$game_id."' AND nation_id > 0 AND amount > 0 AND create_block_id >= ".((($round_id-1)*10)+1)." AND create_block_id <= ".($round_id*10-1).";";
+	$q = "SELECT SUM(".$score_field.") FROM transaction_IOs WHERE game_id='".$game_id."' AND nation_id > 0 AND amount > 0 AND ((create_block_id >= ".((($round_id-1)*10)+1)." AND create_block_id <= ".($round_id*10-1).")";
+	if ($include_unconfirmed) $q .= " OR create_block_id IS NULL";
+	$q .= ");";
 	$r = run_query($q);
 	$total_votes = mysql_fetch_row($r);
 	$total_votes = $total_votes[0];
@@ -196,7 +198,11 @@ function round_voting_stats_all($game, $voting_round) {
 		$counter++;
 	}
 	
-	$score_sum = total_score_in_round($game['game_id'], $voting_round, $game['payout_weight']);
+	$current_round = block_to_round(last_block_id($game['game_id'])+1);
+	if ($voting_round == $current_round) $include_unconfirmed = true;
+	else $include_unconfirmed = false;
+	
+	$score_sum = total_score_in_round($game['game_id'], $voting_round, $game['payout_weight'], $include_unconfirmed);
 	$output_arr[0] = $score_sum;
 	$output_arr[1] = floor($score_sum*get_site_constant('max_voting_fraction'));
 	$output_arr[2] = $stats_all;
