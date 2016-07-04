@@ -11,6 +11,9 @@ else if ($uri_parts[1] == "wallet") {
 else if ($uri_parts[1] == "api") {
 	include("api.php");
 }
+else if ($uri_parts[1] == "explorer") {
+	include("explorer.php");
+}
 else {
 	echo "404 - Page not found";
 }

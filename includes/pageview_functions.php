@@ -197,6 +197,9 @@ function insert_pageview($thisuser) {
 	$r = run_query($q);
 	$pageview_id = mysql_insert_id();
 	
+	if ($thisuser) {
+		set_user_active($thisuser['user_id']);
+	}
 	$result[0] = $pageview_id;
 	$result[1] = $cookie_identifier['viewer_id'];
 	

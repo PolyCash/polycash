@@ -42,7 +42,7 @@ include("includes/html_start.php");
 					<div class="row">
 						<div class="col-md-4">Enter a new password:</div>
 						<div class="col-md-4">
-							<input id="reset_password" name="password" class="responsive_input" type="password" size="30" />
+							<input id="reset_password" name="password" class="responsive_input form-control" type="password" size="30" />
 						</div>
 					</div>
 					<div class="row">
@@ -132,7 +132,7 @@ include("includes/html_start.php");
 			To reset your password, please enter your email address below and we'll send you a password reset link.<br/>
 			<div class="row bootstrap_pad_row">
 				<div class="col-md-6">
-					<input id="reset_email" type="text" size="40" class="responsive_input" placeholder="Please enter your email address" style="margin-bottom: 10px;" />
+					<input id="reset_email" type="text" size="40" class="responsive_input form-control" placeholder="Please enter your email address" style="margin-bottom: 10px;" />
 				</div>
 			</div>
 			<div class="row bootstrap_pad_row">

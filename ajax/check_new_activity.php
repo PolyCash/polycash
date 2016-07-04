@@ -1,9 +1,10 @@
 <?php
 include("../includes/connect.php");
 include("../includes/get_session.php");
-$viewer_id = insert_pageview($thisuser);
 
 if ($thisuser) {
+	set_user_active($thisuser['user_id']);
+	
 	$last_block_id = last_block_id($thisuser['currency_mode']);
 	$last_transaction_id = last_voting_transaction_id();
 	$current_round = block_to_round($last_block_id+1);
@@ -54,4 +55,5 @@ if ($thisuser) {
 	
 	echo json_encode($output);
 }
+else echo "0";
 ?>

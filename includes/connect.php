@@ -119,8 +119,23 @@ function get_site_constant($constant_name) {
 	else return "";
 }
 function round_voting_stats($round_id) {
-	$q = "SELECT * FROM nations ORDER BY current_vote_score DESC, nation_id ASC;";
-	return run_query($q);
+	$last_block_id = last_block_id('beta');
+	$current_round = block_to_round($last_block_id+1);
+	
+	if ($round_id == $current_round) {
+		$q = "SELECT * FROM nations ORDER BY current_vote_score DESC, nation_id ASC;";
+		return run_query($q);
+	}
+	else {
+		$q = "SELECT n.* FROM webwallet_transactions t, nations n WHERE t.nation_id=n.nation_id AND t.amount>0 AND t.block_id >= ".((($round_id-1)*10)+1)." AND t.block_id <= ".($round_id*10-1)." GROUP BY t.nation_id ORDER BY SUM(t.amount) DESC;";
+		return run_query($q);
+	}
+}
+function total_votes_in_round($round_id) {
+	$q = "SELECT SUM(amount) FROM webwallet_transactions WHERE nation_id > 0 AND amount > 0 AND block_id >= ".((($round_id-1)*10)+1)." AND block_id <= ".($round_id*10-1).";";
+	$r = run_query($q);
+	$total_votes = mysql_fetch_row($r);
+	return $total_votes[0];
 }
 function round_voting_stats_all($voting_round) {
 	$sumVotes = 0;
@@ -133,7 +148,6 @@ function round_voting_stats_all($voting_round) {
 	while ($stat = mysql_fetch_array($round_voting_stats)) {
 		$stats_all[$counter] = $stat;
 		$nation_id_csv .= $stat['nation_id'].",";
-		$sumVotes += $stat['coins_currently_voted'];
 		$nation_id_to_rank[$stat['nation_id']] = $counter;
 		$counter++;
 	}
@@ -152,8 +166,9 @@ function round_voting_stats_all($voting_round) {
 		$counter++;
 	}
 	
-	$output_arr[0] = $sumVotes;
-	$output_arr[1] = floor($sumVotes*get_site_constant('max_voting_fraction'));
+	$sum_votes = total_votes_in_round($voting_round);
+	$output_arr[0] = $sum_votes;
+	$output_arr[1] = floor($sum_votes*get_site_constant('max_voting_fraction'));
 	$output_arr[2] = $stats_all;
 	$output_arr[3] = $nation_id_to_rank;
 	
@@ -255,7 +270,9 @@ function performance_history($user, $from_round_id, $to_round_id) {
 				$details_html .= '</font><br/>';
 			}
 		}
-		else $details_html .= "You didn't cast any votes.";
+		else $details_html .= "You didn't cast any votes.<br/>";
+		
+		$details_html .= "<a href=\"/explorer/rounds/".$round['round_id']."\">See round results</a>";
 		
 		$html .= '<div class="col-sm-5">';
 		$html .= $win_text;
@@ -439,5 +456,9 @@ function my_votes_table($round_id, $user) {
 		$html .= "You haven't voted yet in this round.";
 	}
 	return $html;
+}
+function set_user_active($user_id) {
+	$q = "UPDATE users SET logged_in=1, last_active='".time()."' WHERE user_id='".$user_id."';";
+	$r = run_query($q);
 }
 ?>

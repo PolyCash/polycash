@@ -148,7 +148,7 @@ else if ($_REQUEST['do'] == "login") {
 		$query = "INSERT INTO user_sessions (user_id, session_key, login_time, logout_time, expire_time, ip_address) VALUES ('".$thisuser['user_id']."', '".$session_key."', '".time()."', 0, '".$expire_time."', '".$_SERVER['REMOTE_ADDR']."');";
 		$result = run_query($query);
 		
-		$query = "UPDATE users SET ip_address='".$_SERVER['REMOTE_ADDR']."' WHERE user_id='".$thisuser['user_id']."';";
+		$query = "UPDATE users SET logged_in=1, ip_address='".$_SERVER['REMOTE_ADDR']."' WHERE user_id='".$thisuser['user_id']."';";
 		$result = run_query($query);
 		
 		$redirect_url_id = intval($_REQUEST['redirect_id']);
@@ -166,9 +166,14 @@ else if ($_REQUEST['do'] == "login") {
 	}
 }
 else if ($_REQUEST['do'] == "logout" && $thisuser) {
-	$query = "UPDATE user_sessions SET logout_time='".time()."' WHERE session_id='".$session['session_id']."';";
-	$r = run_query($query);
+	$q = "UPDATE user_sessions SET logout_time='".time()."' WHERE session_id='".$session['session_id']."';";
+	$r = run_query($q);
+	
+	$q = "UPDATE users SET logged_in=0 WHERE user_id='".$thisuser['user_id']."';";
+	$r = run_query($q);
+	
 	session_regenerate_id();
+	
 	$thisuser = FALSE;
 	$message = "You have been logged out. ";
 }
@@ -253,13 +258,12 @@ $mature_balance = $account_value - $immature_balance;
 <div class="container" style="max-width: 1000px;">
 	<?php
 	if ($message != "") {
-		echo "<font style=\"color: #";
+		echo "<font style=\"display: block; margin: 10px 0px; color: #";
 		if ($acode == 0) echo "f00";
 		else echo "0a0";
 		echo "\">";
 		echo $message;
 		echo "</font>\n";
-		echo "<br/><br/>\n";
 	}
 	
 	if ($thisuser) { ?>
@@ -449,11 +453,11 @@ $mature_balance = $account_value - $immature_balance;
 		
 		<div class="row">
 			<div class="col-xs-2 tabcell" id="tabcell0" onclick="tab_clicked(0);">Play&nbsp;Now</div>
-			<div class="col-xs-2 tabcell" id="tabcell5" onclick="tab_clicked(5);">Practice</div>
 			<div class="col-xs-2 tabcell" id="tabcell1" onclick="tab_clicked(1);">Options</div>
 			<div class="col-xs-2 tabcell" id="tabcell2" onclick="tab_clicked(2);">My&nbsp;Results</div>
 			<div class="col-xs-2 tabcell" id="tabcell3" onclick="tab_clicked(3);">Addresses</div>
 			<div class="col-xs-2 tabcell" id="tabcell4" onclick="tab_clicked(4);">Withdraw</div>
+			<div class="col-xs-2 tabcell" id="tabcell5" onclick="tab_clicked(5);">Practice</div>
 		</div>
 		<div class="row">
 			<div id="tabcontent0" style="display: none;" class="tabcontent">
@@ -539,7 +543,9 @@ $mature_balance = $account_value - $immature_balance;
 				</div>
 				
 				<br/>To cast a vote please click on any of the empires below.<br/>
-				
+				<?php if ($thisuser['voting_strategy'] != "manual") { ?>
+				You're logged in so your automated voting strategy is currently disabled.<br/>
+				<?php } ?>
 				<div id="vote_buttons_disabled"<?php if (($last_block_id+1)%get_site_constant('round_length') != 0) echo ' style="display: none;"'; ?>>
 					The final block of the round is being mined. Voting is currently disabled.
 				</div>
@@ -593,8 +599,53 @@ $mature_balance = $account_value - $immature_balance;
 						});
 					}
 				}
+				
+				var initial_alias_pref = "<?php echo $thisuser['alias_preference']; ?>";
+				var initial_alias = "<?php echo $thisuser['alias']; ?>";
+				var started_checking_alias_settings = false;
+				
+				function alias_pref_changed() {
+					var alias_pref = $('#alias_preference').val();
+					if (alias_pref == "public") {
+						$('#alias').show('fast');
+						$('#alias').focus();
+					}
+					else {
+						$('#alias').hide();
+					}
+				}
+				function alias_focused() {
+					if (!started_checking_alias_settings) {
+						check_alias_settings();
+						started_checking_alias_settings = true;
+					}
+				}
+				function check_alias_settings() {
+					if ($('#alias_preference').val() != initial_alias_pref || $('#alias').val() != initial_alias) {
+						$('#alias_save_btn').show();
+					}
+					else {
+						$('#alias_save_btn').hide();
+					}
+					setTimeout("check_alias_settings();", 800);
+				}
+				function save_alias_preferences() {
+					if ($('#alias_save_btn').html() == "Save Privacy Settings") {
+						var alias_pref = $('#alias_preference').val();
+						var alias = $('#alias').val();
+						$('#notification_save_btn').html("Saving...");
+						$.get("/ajax/set_alias_preference.php?preference="+encodeURIComponent(alias_pref)+"&alias="+encodeURIComponent(alias), function(result) {
+							$('#notification_save_btn').html("Save Privacy Settings");
+							initial_alias_pref = alias_pref;
+							initial_alias = alias;
+							alert(result);
+						});
+					}
+				}
+				
 				$(document).ready(function() {
 					notification_pref_changed();
+					alias_pref_changed();
 				});
 				</script>
 				<h2>Notifications</h2>
@@ -612,6 +663,23 @@ $mature_balance = $account_value - $immature_balance;
 				</div>
 				<button style="display: none;" id="notification_save_btn" class="btn btn-primary" onclick="save_notification_preferences();">Save Notification Settings</button>
 				<br/>
+				
+				<h2>Privacy Settings</h2>
+				You can make your gameplay public by choosing an alias below.<br/>
+				<div class="row">
+					<div class="col-sm-6">
+						<select class="form-control" id="alias_preference" name="alias_preference" onfocus="alias_focused();" onchange="alias_pref_changed();">
+							<option <?php if ($thisuser['alias_preference'] == "private") echo 'selected="selected" '; ?>value="private">Keep my identity private</option>
+							<option <?php if ($thisuser['alias_preference'] == "public") echo 'selected="selected" '; ?>value="public">Let me choose a public alias</option>
+						</select>
+					</div>
+					<div class="col-sm-6">
+						<input style="display: none;" class="form-control" type="text" name="alias" id="alias" onfocus="alias_focused();" placeholder="Please enter an alias" value="<?php echo $thisuser['alias']; ?>" />
+					</div>
+				</div>
+				<button style="display: none;" id="alias_save_btn" class="btn btn-primary" onclick="save_alias_preferences();">Save Privacy Settings</button>
+				<br/>
+				
 				<h2>Choose your voting strategy</h2>
 				Instead of logging in every time you want to cast a vote, you can automate your voting behavior by choosing one of the automated voting strategies below. <br/><br/>
 				<form method="post" action="/wallet/">

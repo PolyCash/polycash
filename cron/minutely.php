@@ -2,6 +2,9 @@
 include("../includes/connect.php");
 
 if ($_REQUEST['key'] == "2r987jifwow") {
+	$q = "UPDATE users SET logged_in=0 WHERE last_active<".(time()-60*2).";";
+	$r = run_query($q);
+	
 	$num = rand(0, get_site_constant("minutes_per_block")-1);
 	if ($_REQUEST['force_new_block'] == "1") $num = 0;
 	
@@ -104,7 +107,7 @@ if ($_REQUEST['key'] == "2r987jifwow") {
 			
 			$q = "INSERT INTO cached_rounds SET round_id='".($voting_round-1)."', payout_block_id='".$last_block_id."'";
 			if ($winning_nation) $q .= ", winning_nation_id='".$winning_nation."'";
-			$q .= ", winning_vote_sum='".$winning_votesum."', winning_score='".$winning_score."', time_created='".time()."'";
+			$q .= ", winning_vote_sum='".$winning_votesum."', winning_score='".$winning_score."', total_vote_sum='".$vote_sum."', time_created='".time()."'";
 			for ($position=1; $position<=16; $position++) {
 				$q .= ", position_".$position."='".$nation_rank2db_id[$position]."'";
 			}
@@ -123,7 +126,7 @@ if ($_REQUEST['key'] == "2r987jifwow") {
 	$block_of_round = $mining_block_id%get_site_constant('round_length');
 	
 	if ($block_of_round != 0) {
-		$q = "SELECT * FROM users WHERE (voting_strategy='by_rank' OR voting_strategy='by_nation' OR voting_strategy='api') AND vote_on_block_".$block_of_round."=1 ORDER BY RAND();";
+		$q = "SELECT * FROM users WHERE logged_in=0 AND (voting_strategy='by_rank' OR voting_strategy='by_nation' OR voting_strategy='api') AND vote_on_block_".$block_of_round."=1 ORDER BY RAND();";
 		$r = run_query($q);
 		
 		echo "Applying user strategies for block #".$mining_block_id.", looping through ".mysql_numrows($r)." users.<br/>";
