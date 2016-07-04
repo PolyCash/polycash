@@ -1206,11 +1206,17 @@ function initialize_vote_nation_details(&$game, $nation_id2rank, $score_sum, $us
 }
 
 function ensure_user_in_game($user_id, $game_id) {
+	$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
+	$r = run_query($q);
+	$game = mysql_fetch_array($r);
+
 	$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$user_id."' AND ug.game_id='".$game_id."';";
 	$r = run_query($q);
 	
 	if (mysql_numrows($r) == 0) {
-		$q = "INSERT INTO user_games SET user_id='".$user_id."', game_id='".$game_id."';";
+		$q = "INSERT INTO user_games SET user_id='".$user_id."', game_id='".$game_id."'";
+		if ($game['giveaway_status'] == "public_pay" || $game['giveaway_status'] == "invite_pay") $q .= ", payment_required=1";
+		$q .= ";";
 		$r = run_query($q);
 		$user_game_id = mysql_insert_id();
 		
@@ -1224,10 +1230,6 @@ function ensure_user_in_game($user_id, $game_id) {
 	
 	if ($user_game['strategy_id'] > 0) {}
 	else {
-		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
-		$r = run_query($q);
-		$game = mysql_fetch_array($r);
-		
 		$q = "INSERT INTO user_strategies SET game_id='".$game_id."', user_id='".$user_game['user_id']."';";
 		$r = run_query($q);
 		$strategy_id = mysql_insert_id();
@@ -2742,17 +2744,7 @@ function refresh_utxo_user_ids($only_unspent_utxos) {
 	$update_user_id_r = run_query($update_user_id_q);
 }
 
-function generate_invitation(&$game, $inviter_id, &$invitation, $user_id) {
-	$q = "INSERT INTO invitations SET game_id='".$game['game_id']."', inviter_id=".$inviter_id.", invitation_key='".strtolower(random_string(32))."', time_created='".time()."'";
-	if ($user_id) $q .= ", used_user_id='".$user_id."'";
-	$q .= ";";
-	$r = run_query($q);
-	$invitation_id = mysql_insert_id();
-	
-	$q = "SELECT * FROM invitations WHERE invitation_id='".$invitation_id."';";
-	$r = run_query($q);
-	$invitation = mysql_fetch_array($r);
-	
+function new_game_giveaway(&$game, $user_id) {
 	$addr_id = new_nonuser_address($game['game_id']);
 	
 	$addr_ids = array();
@@ -2766,19 +2758,37 @@ function generate_invitation(&$game, $inviter_id, &$invitation, $user_id) {
 	}
 	
 	$transaction_id = new_transaction($game, $nation_ids, $amounts, false, false, 0, 'giveaway', false, $addr_ids, false, 0);
-	
-	if ($transaction_id) {
-		$q = "UPDATE invitations SET giveaway_transaction_id='".$transaction_id."' WHERE invitation_id='".$invitation['invitation_id']."';";
-		$r = run_query($q);
-	}
+
+	$q = "INSERT INTO game_giveaways SET game_id='".$game['game_id']."', transaction_id='".$transaction_id."'";
+	if ($user_id) $q .= ", user_id='".$user_id."', status='claimed'";
+	$q .= ";";
+	$r = run_query($q);
+	$giveaway_id = mysql_insert_id();
+
+	$q = "SELECT * FROM game_giveaways WHERE giveaway_id='".$giveaway_id."';";
+	$r = run_query($q);
+	return mysql_fetch_array($r);
 }
 
-function check_giveaway_available(&$game, $user, &$invitation) {
-	if ($game['game_type'] == "simulation" && ($game['giveaway_status'] == "on" || $game['giveaway_status'] == "invite_free")) {
-		$q = "SELECT * FROM invitations WHERE game_id='".$game['game_id']."' AND used_user_id='".$user['user_id']."' AND used_time=0 AND used=0;";
+function generate_invitation(&$game, $inviter_id, &$invitation, $user_id) {
+	$q = "INSERT INTO invitations SET game_id='".$game['game_id']."', inviter_id=".$inviter_id.", invitation_key='".strtolower(random_string(32))."', time_created='".time()."'";
+	if ($user_id) $q .= ", used_user_id='".$user_id."'";
+	$q .= ";";
+	$r = run_query($q);
+	$invitation_id = mysql_insert_id();
+	
+	$q = "SELECT * FROM invitations WHERE invitation_id='".$invitation_id."';";
+	$r = run_query($q);
+	$invitation = mysql_fetch_array($r);
+}
+
+function check_giveaway_available(&$game, $user, &$giveaway) {
+	if ($game['game_type'] == "simulation") {
+		$q = "SELECT * FROM game_giveaways g JOIN transactions t ON g.transaction_id=t.transaction_id WHERE g.status='claimed' AND g.game_id='".$game['game_id']."' AND g.user_id='".$user['user_id']."';";
 		$r = run_query($q);
+
 		if (mysql_numrows($r) > 0) {
-			$invitation = mysql_fetch_array($r);
+			$giveaway = mysql_fetch_array($r);
 			return true;
 		}
 		else return false;
@@ -2786,20 +2796,16 @@ function check_giveaway_available(&$game, $user, &$invitation) {
 	else return false;
 }
 
-function try_apply_giveaway($game, $user, &$invitation) {
-	$giveaway_available = check_giveaway_available($game, $user, $invitation);
+function try_capture_giveaway($game, $user, &$giveaway) {
+	$giveaway_available = check_giveaway_available($game, $user, $giveaway);
+
 	if ($giveaway_available) {
-		if ($invitation['giveaway_transaction_id'] > 0) {
-			$q = "UPDATE addresses a JOIN transaction_IOs io ON a.address_id=io.address_id SET a.user_id='".$user['user_id']."', io.user_id='".$user['user_id']."' WHERE io.create_transaction_id='".$invitation['giveaway_transaction_id']."';";
-			$r = run_query($q);
-		}
+		$q = "UPDATE addresses a JOIN transaction_IOs io ON a.address_id=io.address_id SET a.user_id='".$user['user_id']."', io.user_id='".$user['user_id']."' WHERE io.create_transaction_id='".$giveaway['transaction_id']."';";
+		$r = run_query($q);
 		
-		if ($invitation) {
-			$q = "UPDATE invitations SET used_time='".time()."', used=1";
-			if ($GLOBALS['pageview_tracking_enabled']) $q .= ", used_ip='".$_SERVER['REMOTE_ADDR']."'";
-			$q .= " WHERE invitation_id='".$invitation['invitation_id']."';";
-			$r = run_query($q);
-		}
+		$q = "UPDATE game_giveaways SET status='completed' WHERE giveaway_id='".$giveaway['giveaway_id']."';";
+		$r = run_query($q);
+
 		return true;
 	}
 	else return false;
@@ -2817,13 +2823,12 @@ function try_apply_invite_key($user_id, $invite_key, &$invite_game) {
 		$invitation = mysql_fetch_array($r);
 		
 		if ($invitation['used'] == 0 && $invitation['used_user_id'] == "" && $invitation['used_time'] == 0) {
-			$qq = "UPDATE invitations SET used_user_id='".$user_id."' WHERE invitation_id='".$invitation['invitation_id']."';";
+			$qq = "UPDATE invitations SET used_user_id='".$user_id."', used_time='".time()."', used=1";
+			if ($GLOBALS['pageview_tracking_enabled']) $q .= ", used_ip='".$_SERVER['REMOTE_ADDR']."'";
+			$q .= " WHERE invitation_id='".$invitation['invitation_id']."';";
 			$rr = run_query($qq);
 			
 			ensure_user_in_game($user_id, $invitation['game_id']);
-			
-			$qq = "UPDATE users SET game_id='".$invitation['game_id']."' WHERE user_id='".$user_id."';";
-			$rr = run_query($qq);
 			
 			$qq = "SELECT * FROM games WHERE game_id='".$invitation['game_id']."';";
 			$rr = run_query($qq);
@@ -3049,7 +3054,7 @@ function game_info_table($game) {
 	$html .= "<tr><td>Game name:</td><td>".$game['name']."</td></tr>\n";
 	$html .= "<tr><td>Game URL:</td><td><a href=\"".$game_url."\">".$game_url."</a></td></tr>\n";
 	$html .= "<tr><td>Cost to join:</td><td>";
-	if ($game['giveaway_status'] == "invite_pay" || $game['giveaway_status'] == "public_pay") $html .= number_format($game['invite_cost'])." ".$invite_currency['short_name']."s";
+	if ($game['giveaway_status'] == "invite_pay" || $game['giveaway_status'] == "public_pay") $html .= format_bignum($game['invite_cost'])." ".$invite_currency['short_name']."s";
 	else $html .= "Free";
 	$html .= "</td></tr>\n";
 	$html .= "<tr><td>Length of game:</td><td>";
@@ -3069,7 +3074,7 @@ function game_info_table($game) {
 	$html .= "<tr><td>Blocks per round:</td><td>".$game['round_length']."</td></tr>\n";
 	$html .= "<tr><td>Block target time:</td><td>".format_seconds($game['seconds_per_block'])."</td></tr>\n";
 	$html .= "<tr><td>Transaction maturity:&nbsp;&nbsp;&nbsp;</td><td>".$game['maturity']." block";
-	if ($game['maturity'] != 1) echo "s";
+	if ($game['maturity'] != 1) $html .= "s";
 	$html .= "</td></tr>\n";
 	$html .= "</table>\n";
 

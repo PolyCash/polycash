@@ -6,32 +6,15 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuse
 if ($thisuser && $game) {
 	if ($game['creator_id'] == $thisuser['user_id']) {
 		$game_info['url_identifier'] = $game['url_identifier'];
-		
-		$from_game_status = $game['game_status'];
-		$game_status = mysql_real_escape_string($_REQUEST['game_status']);
-		$status_changed = false;
-		if ($game_status != $from_game_status) {
-			if (in_array($game_status, array('paused','running')) && ($from_game_status == "unstarted" || ($from_game_status == "running" && $game_status == "paused") || ($from_game_status == "paused" && $game_status == "running"))) {
-				$q = "UPDATE games SET game_status='".$game_status."' WHERE game_id='".$game['game_id']."';";
-				$r = run_query($q);
-				$status_changed = true;
 
-				if ($from_game_status == "unstarted") {
-					$q = "UPDATE games SET initial_coins='".coins_in_existence($game, false)."' WHERE game_id='".$game['game_id']."';";
-					$r = run_query($q);
-				}
-			}
-			else {
-				output_message(2, "You can't switch the game to that status right now.", false);
-				die();
-			}
-		}
-		
-		if ($game['game_status'] == "unstarted") {
-			$game_form_vars = explode(",", "giveaway_status,giveaway_amount,maturity,max_voting_fraction,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,game_status,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation");
+		if ($game['game_status'] == "editable") {
+			$game_form_vars = explode(",", "giveaway_status,giveaway_amount,maturity,max_voting_fraction,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_condition_players");
 			
 			$q = "UPDATE games SET ";
-			
+
+			$start_datetime = date("Y-m-d g:\0\0", strtotime($_REQUEST['start_date']." ".$_REQUEST['start_time'].":00"));
+			$q .= "start_datetime='".$start_datetime."', ";
+
 			for ($i=0; $i<count($game_form_vars); $i++) {
 				$game_var = $game_form_vars[$i];
 				$game_val = mysql_real_escape_string($_REQUEST[$game_form_vars[$i]]);
@@ -48,45 +31,41 @@ if ($thisuser && $game) {
 			
 			$game_name = make_alphanumeric($_REQUEST['name'], " -()/!.,:;#");
 			
+			$url_error = false;
+
 			if ($game_name != $game['name']) {
 				$q = "SELECT * FROM games WHERE name='".mysql_real_escape_string($_REQUEST['name'])."' AND game_id != '".$game['game_id']."';";
 				$r = run_query($q);
 				if (mysql_numrows($r) > 0) {
-					output_message(2, "Game title could not be changed; a game with that name already exists.");
+					$url_error = true;
+					$error_message = "Game title could not be changed; a game with that name already exists.";
 				}
 				else {
 					$url_identifier = game_url_identifier($game_name);
 					$q = "UPDATE games SET name='".mysql_real_escape_string($game_name)."', url_identifier='".$url_identifier."' WHERE game_id='".$game['game_id']."';";
 					$r = run_query($q);
 					$game_info['url_identifier'] = $url_identifier;
+				}
+			}
+
+			if ($url_error) {
+				output_message(2, $error_message, false);
+			}
+			else {
+				$action = $_REQUEST['action'];
+
+				if ($action == "publish") {
+					$q = "UPDATE games SET game_status='published' WHERE game_id='".$game['game_id']."';";
+					$r = run_query($q);
+
+					output_message(1, "Great, your changes have been saved.", $game_info);
+				}
+				else {
 					output_message(1, "Great, your changes have been saved.", $game_info);
 				}
 			}
-			else output_message(1, "Great, your changes have been saved.", $game_info);
 		}
-		else {
-			if ($status_changed) output_message(1, "Great, your changes have been saved.", $game_info);
-			else output_message(2, "This game can't be changed, it's already started.", false);
-		}
-		
-		if ($status_changed) {
-			if ($from_game_status == "unstarted" && $game_status == "running" && $game['giveaway_status'] == "on" && $game['giveaway_amount'] > 0) {
-				$giveaway_utxo_count = 5;
-				
-				for ($i=0; $i<$giveaway_utxo_count; $i++) {
-					new_transaction($game, false, array(intval($game['giveaway_amount']/$giveaway_utxo_count)), false, $thisuser['user_id'], last_block_id($game_id), 'giveaway', false, false, false);
-				}
-				
-				$q = "SELECT u.* FROM users u JOIN user_strategies s ON u.user_id=s.user_id WHERE u.user_id != '".$thisuser['user_id']."' AND s.voting_strategy != 'manual' ORDER BY RAND() LIMIT 10;";
-				$r = run_query($q);
-				while ($player = mysql_fetch_array($r)) {
-					ensure_user_in_game($player['user_id'], $game_id);
-					for ($i=0; $i<$giveaway_utxo_count; $i++) {
-						new_transaction($game, false, array(intval($game['giveaway_amount']/$giveaway_utxo_count)), false, $player['user_id'], last_block_id($game_id), 'giveaway', false, false, false);
-					}
-				}
-			}
-		}
+		else output_message(2, "This game can't be changed, it's already started.", false);
 	}
 	else output_message(2, "You don't have permission to modify this game.", false);
 }

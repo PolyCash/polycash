@@ -6,12 +6,12 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	$game_loop_index = intval($_REQUEST['game_loop_index']);
 	
 	if (!$game) {
-		$game_id = get_site_constant('primary_game_id');
+		$game_id = intval($_REQUEST['game_id']);
 		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
 		$r = run_query($q);
-		if (mysql_numrows($r) == 1) $game = mysql_fetch_array($r);
-		else die("Invalid game.");
+		$game = mysql_fetch_array($r);
 	}
+
 	if ($thisuser) set_user_active($thisuser['user_id']);
 	
 	/*if ($game['game_status'] == "running") {

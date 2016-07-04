@@ -72,3 +72,15 @@ CREATE TABLE IF NOT EXISTS `invoice_addresses` (
   `priv_enc` varchar(300) NOT NULL,
   PRIMARY KEY (`invoice_address_id`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+ALTER TABLE `currency_invoices` ADD `confirmed_amount_paid` DECIMAL( 16, 8 ) NOT NULL DEFAULT '0' AFTER `settle_amount` ,
+ADD `unconfirmed_amount_paid` DECIMAL( 16, 8 ) NOT NULL DEFAULT '0' AFTER `confirmed_amount_paid` ;
+ALTER TABLE `games` ADD `start_condition` ENUM( 'fixed_time', 'players_joined' ) NOT NULL DEFAULT 'players_joined' AFTER `seconds_per_block` ;
+ALTER TABLE `games` ADD `start_datetime` DATETIME NULL DEFAULT NULL AFTER `start_condition` ;
+ALTER TABLE `games` ADD `start_condition_players` INT( 11 ) NULL DEFAULT NULL AFTER `start_datetime` ;
+ALTER TABLE `games` CHANGE `game_status` `game_status` ENUM( 'editable', 'published', 'running', 'completed' ) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL DEFAULT 'editable';
+ALTER TABLE `games` CHANGE `giveaway_status` `giveaway_status` ENUM( 'public_free', 'invite_free', 'invite_pay', 'public_pay' ) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL DEFAULT 'invite_pay';
+ALTER TABLE `user_games` ADD `payment_required` TINYINT( 1 ) NOT NULL DEFAULT '0';
+ALTER TABLE `currency_invoices` CHANGE `status` `status` ENUM( 'unpaid', 'unconfirmed', 'confirmed', 'settled', 'pending_refund', 'refunded' ) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL DEFAULT 'unpaid';
+ALTER TABLE `user_games` ADD `paid_invoice_id` INT( 11 ) NULL DEFAULT NULL ;
+ALTER TABLE `invitations` DROP `giveaway_transaction_id`;
+ALTER TABLE `invitations` ADD `giveaway_id` INT( 11 ) NULL DEFAULT NULL AFTER `game_id` ;

@@ -15,17 +15,17 @@ if ($thisuser) {
 			$game = mysql_fetch_array($r);
 			if ($thisuser['user_id'] == $game['creator_id']) {
 				if ($action == "manage") {
-					$q = "SELECT * FROM invitations i JOIN transactions t ON i.giveaway_transaction_id=t.transaction_id LEFT JOIN users u ON i.used_user_id=u.user_id LEFT JOIN async_email_deliveries d ON i.sent_email_id=d.delivery_id WHERE i.game_id='".$game['game_id']."';";
+					$q = "SELECT * FROM invitations i LEFT JOIN transactions t ON i.giveaway_transaction_id=t.transaction_id LEFT JOIN users u ON i.used_user_id=u.user_id LEFT JOIN async_email_deliveries d ON i.sent_email_id=d.delivery_id WHERE i.game_id='".$game['game_id']."';";
 					$r = run_query($q);
 					echo 'This game has '.mysql_numrows($r).' invitations.<br/>';
 					while ($invitation = mysql_fetch_array($r)) {
 						echo '<div class="row">';
-						echo '<div class="col-md-4"><a href="/wallet/'.$game['url_identifier'].'/?invite_key='.$invitation['invitation_key'].'">'.$invitation['invitation_key'].'</a></div>';
-						echo '<div class="col-md-4" style="font-size: 12px;">'.format_bignum($invitation['amount']/pow(10,8))." coins, ";
-						if ($invitation['used_user_id'] > 0) echo 'claimed by '.$invitation['username'];
-						else echo 'unclaimed';
+						echo '<div class="col-sm-6">';
+						if ($invitation['transaction_id'] > 0) echo format_bignum($invitation['amount']/pow(10,8))." coins. ";
+						if ($invitation['used_user_id'] > 0) echo 'Claimed by '.$invitation['username'];
+						else echo 'Unclaimed';
 						echo '</div>';
-						echo '<div class="col-md-4" style="font-size: 12px;">';
+						echo '<div class="col-sm-6">';
 						
 						if ($invitation['sent_email_id'] == 0) {
 							if ($invitation['used_user_id'] == 0) {
@@ -75,13 +75,13 @@ if ($thisuser) {
 
 							$subject = "You've been invited to join ".$game['name'];
 							if ($game['giveaway_status'] == "invite_pay" || $game['giveaway_status'] == "public_pay") {
-								$subject .= ". Join by paying ".number_format($game['invite_cost'])." ".$invite_currency['short_name']."s for ".format_bignum($game['giveaway_amount']/pow(10,8))." coins.";
+								$subject .= ". Join by paying ".format_bignum($game['invite_cost'])." ".$invite_currency['short_name']."s for ".format_bignum($game['giveaway_amount']/pow(10,8))." ".$game['coin_name_plural'].".";
 							}
 							else {
-								$subject .= ". Get ".format_bignum($game['giveaway_amount']/pow(10,8))." coins for free by accepting this invitation.";
+								$subject .= ". Get ".format_bignum($game['giveaway_amount']/pow(10,8))." ".$game['coin_name_plural']." for free by accepting this invitation.";
 							}
 							$message .= "<p>";
-							if ($game['inflation'] == "linear") $message .= $game['name']." is a cryptocurrency which generates ".$coins_per_hour." coins per hour. ";
+							if ($game['inflation'] == "linear") $message .= $game['name']." is a cryptocurrency which generates ".$coins_per_hour." ".$game['coin_name_plural']." per hour. ";
 							else $message .= $game['name']." is a cryptocurrency with ".($game['exponential_inflation_rate']*100)."% inflation every ".format_seconds($seconds_per_round).". ";
 							$message .= $miner_pct."% is given to miners for securing the network and the remaining ".(100-$miner_pct)."% is given to players for casting winning votes. ";
 							if ($game['final_round'] > 0) {
@@ -98,7 +98,7 @@ if ($thisuser) {
 							$message .= "<tr><td>Game name:</td><td>".$game['name']."</td></tr>\n";
 							$message .= "<tr><td>Game URL:</td><td><a href=\"".$game_url."\">".$game_url."</a></td></tr>\n";
 							$message .= "<tr><td>Cost to join:</td><td>";
-							if ($game['giveaway_status'] == "invite_pay" || $game['giveaway_status'] == "public_pay") $message .= number_format($game['invite_cost'])." ".$invite_currency['short_name']."s";
+							if ($game['giveaway_status'] == "invite_pay" || $game['giveaway_status'] == "public_pay") $message .= format_bignum($game['invite_cost'])." ".$invite_currency['short_name']."s";
 							else $message .= "Free";
 							$message .= "</td></tr>\n";
 							$message .= "<tr><td>Length of game:</td><td>";

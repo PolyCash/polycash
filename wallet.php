@@ -96,15 +96,13 @@ if ($_REQUEST['do'] == "signup") {
 						$email_id = mail_async($username, $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], "New account created", $email_message, "", "");
 					}
 					
-					$q = "SELECT * FROM games WHERE creator_id IS NULL;";
+					$q = "SELECT * FROM games WHERE game_id='".get_site_constant('primary_game_id')."';";
 					$r = run_query($q);
 					while ($mandatory_game = mysql_fetch_array($r)) {
 						ensure_user_in_game($user_id, $mandatory_game['game_id']);
 
-						if ($mandatory_game['giveaway_status'] == "on") {
-							$invitation = false;
-							generate_invitation($mandatory_game, $user_id, $invitation, $user_id);
-							$temp_thisuser['user_id'] = $user_id;
+						if ($mandatory_game['giveaway_status'] == "public_free") {
+							$giveaway = new_game_giveaway($mandatory_game, $user_id);
 						}
 					}
 				}
@@ -200,6 +198,13 @@ if ($thisuser) {
 			die();
 		}
 	}
+	if ($game['giveaway_status'] == "invite_free") {
+		$q = "SELECT * FROM game_giveaways WHERE game_id='".$game['game_id']."' AND user_id='".$thisuser['user_id']."';";
+		$r = run_query($q);
+		if (mysql_numrows($r) == 0) {
+			$giveaway = new_game_giveaway($game, $thisuser['user_id']);
+		}
+	}
 	
 	$uri_parts = explode("/", $uri);
 	$url_identifier = $uri_parts[2];
@@ -216,7 +221,27 @@ if ($thisuser) {
 		if (mysql_numrows($r) > 0) {
 			$game = mysql_fetch_array($r);
 		}
-		else {
+		else if ($requested_game['giveaway_status'] == "public_free" || $requested_game['giveaway_status'] == "public_pay") {
+			ensure_user_in_game($thisuser, $requested_game['game_id']);
+			$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND g.game_id='".$requested_game['game_id']."';";
+			$r = run_query($q);
+			$game = mysql_fetch_array($r);
+		}
+
+
+		if (!$game && ($requested_game['giveaway_status'] == "invite_free" || $requested_game['giveaway_status'] == "invite_pay")) {
+				$pagetitle = "Join ".$requested_game['name'];
+				$nav_tab_selected = "wallet";
+				include('includes/html_start.php');
+				?>
+				<div class="container" style="max-width: 1000px; padding-top: 10px;">
+					You need an invitation to join this game.
+				</div>
+				<?php
+				include('includes/html_stop.php');
+				die();
+		}
+		else if ($requested_game['giveaway_status'] == "public_pay" || $requested_game['giveaway_status'] == "invite_pay") {
 			$pagetitle = "Join ".$requested_game['name'];
 			$nav_tab_selected = "wallet";
 			include('includes/html_start.php');
@@ -231,54 +256,81 @@ if ($thisuser) {
 					$invite_currency = mysql_fetch_array($r);
 
 					$invoice = new_currency_invoice($invite_currency['currency_id'], $requested_game['invite_cost'], $thisuser['user_id'], $requested_game['game_id']);
-
-					echo "<h1>Join ".$requested_game['name']."?</h1>\n";
 					?>
+					<script type="text/javascript">
+					var game_id = '<?php echo $requested_game['game_id']; ?>';
+
+					$(document).ready(function() {
+						game_payment_loop_event();
+					});
+					function game_payment_loop_event() {
+						$.get("/ajax/check_game_payment.php?game_id="+game_id, function(result) {
+							var result_json = JSON.parse(result);
+							if (result_json['payment_required'] == 0) {
+								setTimeout("window.location = window.location", 200);
+							}
+							setTimeout("game_payment_loop_event()", 1000);
+						});
+					}
+					</script>
+					
+					<h1>Join <?php echo $requested_game['name']; ?></h1>
+					
 					<div class="row">
 						<div class="col-md-7">
 							<?php
-							if ($requested_game['giveaway_status'] == "public_pay") {
-								if ($GLOBALS['rsa_pub_key'] != "" && $GLOBALS['rsa_keyholder_email'] != "") {
-									$q = "SELECT * FROM currency_prices WHERE price_id='".$invoice['pay_price_id']."';";
-									$r = run_query($q);
-									$invoice_exchange_rate = historical_currency_conversion_rate($invoice['settle_price_id'], $invoice['pay_price_id']);
+							if ($thisuser['user_id'] == $requested_game['creator_id'] && $requested_game['game_status'] == "editable") {
+								$q = "SELECT * FROM games WHERE game_id='".get_site_constant('primary_game_id')."';";
+								$r = run_query($q);
+								$primary_game = mysql_fetch_array($r);
 
-									$q = "SELECT * FROM currencies WHERE currency_id='".$invoice['pay_currency_id']."';";
-									$r = run_query($q);
-									$pay_currency = mysql_fetch_array($r);
+								echo "You created this game, you can edit it <a href=\"/wallet/".$primary_game['url_identifier']."\">here</a>.<br/>\n";
+							}
 
-									$q = "SELECT * FROM currencies WHERE currency_id='".$invoice['settle_currency_id']."';";
-									$r = run_query($q);
-									$settle_currency = mysql_fetch_array($r);
+							if ($GLOBALS['rsa_pub_key'] != "" && $GLOBALS['rsa_keyholder_email'] != "") {
+								$q = "SELECT * FROM currency_prices WHERE price_id='".$invoice['pay_price_id']."';";
+								$r = run_query($q);
+								$invoice_exchange_rate = historical_currency_conversion_rate($invoice['settle_price_id'], $invoice['pay_price_id']);
 
-									$q = "SELECT * FROM invoice_addresses WHERE invoice_address_id='".$invoice['invoice_address_id']."';";
-									$r = run_query($q);
-									$invoice_address = mysql_fetch_array($r);
+								$q = "SELECT * FROM currencies WHERE currency_id='".$invoice['pay_currency_id']."';";
+								$r = run_query($q);
+								$pay_currency = mysql_fetch_array($r);
 
-									$coins_per_currency = ($requested_game['giveaway_amount']/pow(10,8))/$requested_game['invite_cost'];
-									echo $requested_game['name']." has an initial exchange rate of ".format_bignum($coins_per_currency)." ".$requested_game['coin_name_plural']." per ".$invite_currency['short_name'].". ";
-									echo "To join this game, you need to make a payment of ".format_bignum($requested_game['invite_cost'])." ".$invite_currency['short_name']."s in exchange for ".format_bignum($requested_game['giveaway_amount']/pow(10,8))." ".$requested_game['coin_name_plural'].".<br/>\n";
+								$q = "SELECT * FROM currencies WHERE currency_id='".$invoice['settle_currency_id']."';";
+								$r = run_query($q);
+								$settle_currency = mysql_fetch_array($r);
 
-									if ($pay_currency['currency_id'] != $settle_currency['currency_id']) {
-										echo "<br/>The exchange rate is currently ".$invoice_exchange_rate." ".$settle_currency['short_name']."s per ".$pay_currency['short_name'].". ";
-									}
-									echo "<br/>Make the ".format_bignum($requested_game['invite_cost'])." ".$invite_currency['short_name']." payment in Bitcoins by sending ".$invoice['pay_amount']." BTC to ".$invoice_address['pub_key']."<br/>\n";
-									echo '<center><img style="margin: 10px;" src="/render_qr_code.php?data='.$invoice_address['pub_key'].'" /></center>';
+								$q = "SELECT * FROM invoice_addresses WHERE invoice_address_id='".$invoice['invoice_address_id']."';";
+								$r = run_query($q);
+								$invoice_address = mysql_fetch_array($r);
+
+								$coins_per_currency = ($requested_game['giveaway_amount']/pow(10,8))/$requested_game['invite_cost'];
+								echo $requested_game['name']." has an initial exchange rate of ".format_bignum($coins_per_currency)." ".$requested_game['coin_name_plural']." per ".$invite_currency['short_name'].". ";
+								echo "To join this game, you need to make a payment of ".format_bignum($requested_game['invite_cost'])." ".$invite_currency['short_name']."s in exchange for ".format_bignum($requested_game['giveaway_amount']/pow(10,8))." ".$requested_game['coin_name_plural'].".<br/>\n";
+
+								if ($pay_currency['currency_id'] != $settle_currency['currency_id']) {
+									echo "<br/>The exchange rate is currently ".$invoice_exchange_rate." ".$settle_currency['short_name']."s per ".$pay_currency['short_name'].". ";
 								}
-								else {
-									echo "Sorry, this site is not configured to accept bitcoin payments. Please contact the site administrator to rectify this problem.";
-								}
+								echo "<br/>Make the ".format_bignum($requested_game['invite_cost'])." ".$invite_currency['short_name']." payment in Bitcoins by sending ".$invoice['pay_amount']." BTC to <a target=\"_blank\" href=\"https://blockchain.info/address/".$invoice_address['pub_key']."\">".$invoice_address['pub_key']."</a><br/>\n";
+								echo '<center><img style="margin: 10px;" src="/render_qr_code.php?data='.$invoice_address['pub_key'].'" /></center>';
+								echo 'You will automatically be redirected when the Bitcoins are received.';
+							}
+							else {
+								echo "Sorry, this site is not configured to accept bitcoin payments. Please contact the site administrator to rectify this problem.";
 							}
 							?>
 						</div>
 						<div class="col-md-5">
 							<div style="border: 1px solid #ccc; padding: 10px;">
-								<?php echo game_info_table($requested_game); ?>
+								<?php
+								echo game_info_table($requested_game);
+								?>
 							</div>
 						</div>
 					</div>
 					<?php
 				}
+				else echo "Error: an invalid buy-in currency was specified for this game.";
 				?>
 			</div>
 			<?php
@@ -588,6 +640,8 @@ $mature_balance = mature_balance($game, $thisuser);
 			nation_selected(0);
 			reload_compose_vote();
 			
+			$('.datepicker').datepicker();
+
 			loop_event();
 			game_loop_event();
 			compose_vote_loop();
@@ -618,7 +672,7 @@ $mature_balance = mature_balance($game, $thisuser);
 		?></h1>
 		
 		<div style="display: none;" class="modal fade" id="game_invitations">
-			<div class="modal-dialog modal-lg">
+			<div class="modal-dialog">
 				<div class="modal-content">
 					<div class="modal-header">
 						<h4 class="modal-title">Game Invitations</h4>
@@ -657,6 +711,29 @@ $mature_balance = mature_balance($game, $thisuser);
 		</div>
 		<div class="row">
 			<div id="tabcontent0" class="tabcontent">
+				<?php
+				function game_status_explanation($game) {
+					$html = "";
+					if ($game['game_status'] == "editable") $html .= "The game creator hasn't yet published this game; it's parameters can still be changed.";
+					else if ($game['game_status'] == "published") {
+						if ($game['start_condition'] == "players_joined") {
+							$q = "SELECT COUNT(*) FROM currency_invoices WHERE game_id='".$game['game_id']."' AND status='confirmed' GROUP BY user_id;";
+							$r = run_query($q);
+							$num_players = mysql_fetch_row($r);
+							$num_players = $num_players[0];
+
+							$html .= $num_players."/".$game['start_condition_players']." players have already joined, waiting for ".($game['start_condition_players']-$num_players)." more players.";
+						}
+						else $html .= "This game starts at ".$game['start_datetime'];
+					}
+					else if ($game['game_status'] == "completed") $html .= "This game is over.";
+
+					return $html;
+				}
+				$game_status_explanation =  game_status_explanation($game);
+				?>
+				<div id="game_status_explanation"<?php if ($game_status_explanation == "") echo ' style="display: none;"'; ?>><?php if ($game_status_explanation != "") echo $game_status_explanation; ?></div>
+
 				<div class="row">
 					<div class="col-md-6">
 						<h2>Current votes</h2>
@@ -1187,14 +1264,13 @@ $mature_balance = mature_balance($game, $thisuser);
 									Game status:
 								</div>
 								<div class="col-sm-6">
-									<select class="form-control" id="game_form_game_status">
-										<option value="unstarted">Not started</option>
-										<option value="paused">Paused</option>
-										<option value="running">Running</option>
-									</select>
+									<div id="game_form_game_status" class="form-control-static"></div>
 									
-									<button id="delete_game_btn" class="btn btn-danger" onclick="switch_to_game(editing_game_id, 'delete'); return false;">Delete Game</button>
-									<button id="reset_game_btn" class="btn btn-warning" onclick="switch_to_game(editing_game_id, 'reset'); return false;">Reset Game</button>
+									<button id="start_game_btn" class="btn btn-info" style="display: none;" onclick="switch_to_game(editing_game_id, 'running'); return false;">Start Game</button>
+									<button id="pause_game_btn" class="btn btn-info" style="display: none;" onclick="switch_to_game(editing_game_id, 'paused'); return false;">Pause Game</button>
+
+									<button id="delete_game_btn" class="btn btn-danger" style="display: none;" onclick="switch_to_game(editing_game_id, 'delete'); return false;">Delete Game</button>
+									<button id="reset_game_btn" class="btn btn-warning" style="display: none;" onclick="switch_to_game(editing_game_id, 'reset'); return false;">Reset Game</button>
 								</div>
 							</div>
 							<div class="row">
@@ -1215,6 +1291,55 @@ $mature_balance = mature_balance($game, $thisuser);
 									</div>
 									<div class="col-sm-6">
 										<input type="text" class="form-control" id="game_form_final_round" placeholder="0" />
+									</div>
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">
+									Start the game:
+								</div>
+								<div class="col-sm-6">
+									<select class="form-control" id="game_form_start_condition" onchange="game_form_start_condition_changed();">
+										<option value="fixed_time">At a particular time</option>
+										<option value="players_joined">When enough people join</option>
+									</select>
+								</div>
+							</div>
+							<div id="game_form_start_condition_fixed_time">
+								<div class="row">
+									<div class="col-sm-6 form-control-static">
+										When should the game start?
+									</div>
+									<div class="col-sm-3">
+										<input type="text" class="form-control datepicker" id="game_form_start_date" />
+									</div>
+									<div class="col-sm-3">
+										<select class="form-control" id="game_form_start_time">
+											<?php
+											for ($hour=0; $hour<=23; $hour++) {
+												$am_pm = "am";
+												if ($hour > 12) {
+													$am_pm = "pm";
+												}
+												if ($hour == 11) $am_pm = "noon";
+												else if ($hour == 23) $am_pm = "midnight";
+												echo '<option value="'.$hour.'">'.(($hour%12)+1).':00 '.$am_pm.'</option>'."\n";
+											}
+											?>
+										</select>
+									</div>
+								</div>
+							</div>
+							<div id="game_form_start_condition_players_joined">
+								<div class="row">
+									<div class="col-sm-6 form-control-static">
+										Start when how many players have joined?
+									</div>
+									<div class="col-sm-3">
+										<input type="text" class="form-control" id="game_form_start_condition_players" style="text-align: right;" />
+									</div>
+									<div class="col-sm-3 form-control-static">
+										players
 									</div>
 								</div>
 							</div>
@@ -1261,10 +1386,10 @@ $mature_balance = mature_balance($game, $thisuser);
 								<div class="col-sm-6 form-control-static">Give out coins to each player?</div>
 								<div class="col-sm-6">
 									<select class="form-control" id="game_form_giveaway_status" onchange="game_form_giveaway_status_changed();">
-										<option value="on">Yes</option>
+										<option value="public_free">Free coins for everyone</option>
 										<option value="invite_free">Free coins with invite</option>
-										<option value="invite_pay">Pay to accept an invitation</option>
 										<option value="public_pay">Pay to join, no invitation required</option>
+										<option value="invite_pay">Pay to accept an invitation</option>
 									</select>
 								</div>
 							</div>
@@ -1272,7 +1397,7 @@ $mature_balance = mature_balance($game, $thisuser);
 								<div class="row">
 									<div class="col-sm-6 form-control-static">Cost per invitation:</div>
 									<div class="col-sm-3">
-										<input type="text" class="form-control" id="game_form_invite_cost" />
+										<input type="text" class="form-control" id="game_form_invite_cost" style="text-align: right" />
 									</div>
 									<div class="col-sm-3">
 										<select class="form-control" id="game_form_invite_currency">
@@ -1368,11 +1493,11 @@ $mature_balance = mature_balance($game, $thisuser);
 							<div style="height: 10px;"></div>
 							<button style="float: right;" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
 							
-							<button id="save_game_btn" type="button" class="btn btn-success" onclick="save_game();">Save Settings</button>
+							<button id="save_game_btn" type="button" class="btn btn-success" onclick="save_game('save');">Save Settings</button>
 							
-							<button id="switch_game_btn" type="button" class="btn btn-primary" onclick="switch_to_game(editing_game_id, 'switch');">Open this game</button>
+							<button id="publish_game_btn" type="button" class="btn btn-primary" onclick="save_game('publish');">Save &amp; Publish</button>
 							
-							<button id="invitations_game_btn" type="button" class="btn btn-info" data-dismiss="modal" onclick="manage_game_invitations(editing_game_id);">Manage Invitations</button>
+							<button id="invitations_game_btn" type="button" class="btn btn-info" data-dismiss="modal" onclick="manage_game_invitations(editing_game_id);">Invite People</button>
 						</form>
 					</div>
 				</div>

@@ -5,7 +5,7 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuse
 
 if ($thisuser && $game) {
 	$invitation = false;
-	$success = try_apply_giveaway($game, $thisuser, $invitation);
+	$success = try_capture_giveaway($game, $thisuser, $invitation);
 	if ($success) echo "1";
 	else echo "0";
 }
