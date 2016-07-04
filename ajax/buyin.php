@@ -5,23 +5,23 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $GLOBALS['pageview_contr
 
 if ($thisuser && $game) {
 	$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND g.game_id='".$game->db_game['game_id']."';";
-	$r = $GLOBALS['app']->run_query($q);
+	$r = $app->run_query($q);
 	
-	if (mysql_numrows($r) > 0) {
-		$user_game = mysql_fetch_array($r);
+	if ($r->rowCount() > 0) {
+		$user_game = $r->fetch();
 		
 		$q = "SELECT * FROM currencies WHERE currency_id='".$game->db_game['invite_currency']."';";
-		$r = $GLOBALS['app']->run_query($q);
-		$invite_currency = mysql_fetch_array($r);
+		$r = $app->run_query($q);
+		$invite_currency = $r->fetch();
 		
-		$btc_currency = $GLOBALS['app']->get_currency_by_abbreviation('btc');
+		$btc_currency = $app->get_currency_by_abbreviation('btc');
 		
 		if ($_REQUEST['action'] == "submit") {
 			$btc_amount = floatval($_REQUEST['btc_amount']);
 			
 			$q = "INSERT INTO game_buyins SET status='unpaid', pay_currency_id='".$btc_currency['currency_id']."', settle_currency_id='".$invite_currency['currency_id']."', invoice_address_id='".$user_game['buyin_invoice_address_id']."', user_id='".$thisuser->db_user['user_id']."', game_id='".$game->db_game['game_id']."', pay_amount='".$btc_amount."', time_created='".time()."', expire_time='".(time()+$GLOBALS['invoice_expiration_seconds'])."';";
-			$r = $GLOBALS['app']->run_query($q);
-			$GLOBALS['app']->output_message(1, "Great! ".ucfirst($game->db_game['coin_name_plural'])." will be credited to your account as soon as your BTC payment is confirmed.");
+			$r = $app->run_query($q);
+			$app->output_message(1, "Great! ".ucfirst($game->db_game['coin_name_plural'])." will be credited to your account as soon as your BTC payment is confirmed.");
 		}
 		else {
 			?>
@@ -30,14 +30,14 @@ if ($thisuser && $game) {
 			</div>
 			<div class="modal-body">
 				<?php
-				$coins_in_existence = coins_in_existence($game->db_game, false);
+				$coins_in_existence = coins_in_existence($app, $game->db_game, false);
 				$pot_value = $game->pot_value();
 				if ($pot_value > 0) {
 					$exchange_rate = ($coins_in_existence/pow(10,8))/$pot_value;
 				}
 				else $exchange_rate = 0;
 				
-				$btc_exchange_rate = $GLOBALS['app']->currency_conversion_rate($invite_currency['currency_id'], $btc_currency['currency_id']);
+				$btc_exchange_rate = $app->currency_conversion_rate($invite_currency['currency_id'], $btc_currency['currency_id']);
 				?>
 				<script type="text/javascript">
 				function check_buyin_amount() {
@@ -64,9 +64,9 @@ if ($thisuser && $game) {
 				</script>
 				<?php
 				echo '<div class="paragraph">';
-				echo "Right now, there are ".$GLOBALS['app']->format_bignum($coins_in_existence/pow(10,8))." ".$game->db_game['coin_name_plural']." in circulation";
-				echo " and ".$GLOBALS['app']->format_bignum($pot_value)." ".$invite_currency['short_name']."s in the pot. ";
-				echo "The exchange rate is currently ".$GLOBALS['app']->format_bignum($exchange_rate)." ".$game->db_game['coin_name_plural']." per ".$invite_currency['short_name'].". ";
+				echo "Right now, there are ".$app->format_bignum($coins_in_existence/pow(10,8))." ".$game->db_game['coin_name_plural']." in circulation";
+				echo " and ".$app->format_bignum($pot_value)." ".$invite_currency['short_name']."s in the pot. ";
+				echo "The exchange rate is currently ".$app->format_bignum($exchange_rate)." ".$game->db_game['coin_name_plural']." per ".$invite_currency['short_name'].". ";
 				echo '</div>';
 				?>
 				<div class="paragraph">
@@ -79,7 +79,7 @@ if ($thisuser && $game) {
 						$user_buyin_limit = $thisuser->user_buyin_limit($game);
 						
 						if ($user_buyin_limit['user_buyin_total'] > 0) {
-							echo "You've already made buy-ins totalling ".$GLOBALS['app']->format_bignum($user_buyin_limit['user_buyin_total'])." ".$invite_currency['short_name']."s.<br/>\n";
+							echo "You've already made buy-ins totalling ".$app->format_bignum($user_buyin_limit['user_buyin_total'])." ".$invite_currency['short_name']."s.<br/>\n";
 						}
 						else echo "You haven't made any buy-ins yet.<br/>\n";
 						
@@ -87,34 +87,34 @@ if ($thisuser && $game) {
 							echo "You can buy in for as many coins as you want in this game. ";
 						}
 						else if ($game->db_game['buyin_policy'] == "per_user_cap") {
-							echo "This game allows each player to buy in for up to ".$GLOBALS['app']->format_bignum($game->db_game['per_user_buyin_cap'])." ".$invite_currency['short_name']."s. ";
+							echo "This game allows each player to buy in for up to ".$app->format_bignum($game->db_game['per_user_buyin_cap'])." ".$invite_currency['short_name']."s. ";
 						}
 						else if ($game->db_game['buyin_policy'] == "game_cap") {
-							echo "This game has a game-wide buy-in cap of ".$GLOBALS['app']->format_bignum($game->db_game['game_buyin_cap'])." ".$invite_currency['short_name']."s. ";
+							echo "This game has a game-wide buy-in cap of ".$app->format_bignum($game->db_game['game_buyin_cap'])." ".$invite_currency['short_name']."s. ";
 						}
 						else if ($game->db_game['buyin_policy'] == "game_and_user_cap") {
-							echo "This game has a total buy-in cap of ".$GLOBALS['app']->format_bignum($game->db_game['game_buyin_cap'])." ".$invite_currency['short_name']."s. ";
-							echo "Until this limit is reached, each player can buy in for up to ".$GLOBALS['app']->format_bignum($game->db_game['per_user_buyin_cap'])." ".$invite_currency['short_name']."s. ";
+							echo "This game has a total buy-in cap of ".$app->format_bignum($game->db_game['game_buyin_cap'])." ".$invite_currency['short_name']."s. ";
+							echo "Until this limit is reached, each player can buy in for up to ".$app->format_bignum($game->db_game['per_user_buyin_cap'])." ".$invite_currency['short_name']."s. ";
 						}
 						else die("Invalid buy-in policy.");
 						
 						if ($game->db_game['buyin_policy'] != "unlimited") {
-							echo "</div><div class=\"paragraph\">Your remaining buy-in limit is ".$GLOBALS['app']->format_bignum($user_buyin_limit['user_buyin_limit'])." ".$invite_currency['short_name']."s. ";
+							echo "</div><div class=\"paragraph\">Your remaining buy-in limit is ".$app->format_bignum($user_buyin_limit['user_buyin_limit'])." ".$invite_currency['short_name']."s. ";
 						}
 						
 						if ($game->db_game['buyin_policy'] == "unlimited" || $user_buyin_limit['user_buyin_limit'] > 0) {
 							if ($user_game['buyin_invoice_address_id'] > 0) {
 								$q = "SELECT * FROM invoice_addresses WHERE invoice_address_id='".$user_game['buyin_invoice_address_id']."';";
-								$r = $GLOBALS['app']->run_query($q);
-								$invoice_address = mysql_fetch_array($r);
+								$r = $app->run_query($q);
+								$invoice_address = $r->fetch();
 							}
 							else {
-								$invoice_address_id = $GLOBALS['app']->new_invoice_address();
+								$invoice_address_id = $app->new_invoice_address();
 								$q = "UPDATE user_games SET buyin_invoice_address_id='".$invoice_address_id."' WHERE user_game_id='".$user_game['user_game_id']."';";
-								$r = $GLOBALS['app']->run_query($q);
+								$r = $app->run_query($q);
 								$q = "SELECT * FROM invoice_addresses WHERE invoice_address_id='".$invoice_address_id."';";
-								$r = $GLOBALS['app']->run_query($q);
-								$invoice_address = mysql_fetch_array($r);
+								$r = $app->run_query($q);
+								$invoice_address = $r->fetch();
 							}
 							?>
 							</div><div class="paragraph">

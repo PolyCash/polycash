@@ -54,7 +54,7 @@
 					if ($nav_tab_selected == "wallet") {}
 					else if ($game) echo $game->db_game['url_identifier']."/";
 					else {
-						$primary_game = new Game($GLOBALS['app']->get_site_constant('primary_game_id'));
+						$primary_game = new Game($app, $app->get_site_constant('primary_game_id'));
 						echo $primary_game->db_game['url_identifier']."/";
 					}
 					?>"><?php if ($thisuser) echo "My Account"; else echo "Log In"; ?></a></li>

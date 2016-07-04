@@ -11,10 +11,10 @@ if ($uri_parts[1] == "api") {
 		$game_id = intval($uri_parts[2]);
 	
 		$q = "SELECT game_id, maturity, pos_reward, pow_reward, round_length, game_type, payout_weight, seconds_per_block, name, num_voting_options, max_voting_fraction FROM games WHERE game_id='".$game_id."';";
-		$r = $GLOBALS['app']->run_query($q);
+		$r = $app->run_query($q);
 		
-		if (mysql_numrows($r) == 1) {
-			$game = mysql_fetch_array($r, MYSQL_ASSOC);
+		if ($r->rowCount() == 1) {
+			$game = $r->fetch();
 			$last_block_id = last_block_id($game['game_id']);
 			$current_round = block_to_round($game, $last_block_id+1);
 			
@@ -29,11 +29,11 @@ if ($uri_parts[1] == "api") {
 				$api_user_info = FALSE;
 				
 				if ($_REQUEST['api_access_code'] != "") {
-					$q = "SELECT * FROM users WHERE api_access_code='".mysql_real_escape_string($_REQUEST['api_access_code'])."';";
-					$r = $GLOBALS['app']->run_query($q);
+					$q = "SELECT * FROM users WHERE api_access_code=".$app->quote_escape($_REQUEST['api_access_code']).";";
+					$r = $app->run_query($q);
 					
-					if (mysql_numrows($r) == 1) {
-						$api_user = mysql_fetch_array($r);
+					if ($r->rowCount() == 1) {
+						$api_user = $r->fetch();
 						
 						$account_value = account_coin_value($game, $api_user);
 						$immature_balance = immature_balance($game, $api_user);
@@ -48,9 +48,9 @@ if ($uri_parts[1] == "api") {
 						
 						$mature_utxos = array();
 						$mature_utxo_q = "SELECT * FROM transaction_ios i JOIN addresses a ON i.address_id=a.address_id WHERE i.spend_status='unspent' AND i.spend_transaction_id IS NULL AND a.user_id='".$api_user['user_id']."' AND i.game_id='".$game['game_id']."' AND (i.create_block_id <= ".($last_block_id-$game['maturity'])." OR i.instantly_mature = 1) ORDER BY i.io_id ASC;";
-						$mature_utxo_r = $GLOBALS['app']->run_query($mature_utxo_q);
+						$mature_utxo_r = $app->run_query($mature_utxo_q);
 						$utxo_i = 0;
-						while ($utxo = mysql_fetch_array($mature_utxo_r)) {
+						while ($utxo = $mature_utxo_r->fetch()) {
 							$mature_utxos[$utxo_i] = array('utxo_id'=>intval($utxo['io_id']), 'coins'=>$utxo['amount'], 'create_block_id'=>intval($utxo['create_block_id']));
 							$utxo_i++;
 						}
@@ -74,8 +74,8 @@ if ($uri_parts[1] == "api") {
 				$game_scores = false;
 				
 				$qq = "SELECT * FROM game_voting_options WHERE game_id='".$game['game_id']."';";
-				$rr = $GLOBALS['app']->run_query($qq);
-				while ($option = mysql_fetch_array($rr)) {
+				$rr = $app->run_query($qq);
+				while ($option = $rr->fetch()) {
 					$stat = $ranked_stats[$option_id_to_rank[$option['option_id']]];
 					$api_stat = false;
 					$api_stat['option_id'] = (int) $option['option_id'];
@@ -112,7 +112,7 @@ if ($uri_parts[1] == "api") {
 			
 			<?php echo $GLOBALS['coin_brand_name']; ?> web wallets provide several strategies for automating your <?php echo $GLOBALS['coin_brand_name']; ?> voting behavior.  However, some users may wish to use custom logic in their voting strategies. The <?php echo $GLOBALS['coin_brand_name']; ?> API allows this functionality through a standardized format for sharing <?php echo $GLOBALS['coin_brand_name']; ?> voting recommendations. Using the <?php echo $GLOBALS['coin_brand_name']; ?> API can be as simple as finding a public recommendations URL and plugging it into your <?php echo $GLOBALS['coin_brand_name']; ?> user account.  Or you can set up your own voting recommendations client using the information below.<br/>
 			<br/>
-			<a target="_blank" href="/api/<?php echo$GLOBALS['app']->get_site_constant('primary_game_id'); ?>/status/">/api/<?php echo$GLOBALS['app']->get_site_constant('primary_game_id'); ?>/status/</a> &nbsp;&nbsp;&nbsp; <a href="" onclick="$('#api_status_example').toggle('fast'); return false;">See Example</a><br/>
+			<a target="_blank" href="/api/<?php echo$app->get_site_constant('primary_game_id'); ?>/status/">/api/<?php echo$app->get_site_constant('primary_game_id'); ?>/status/</a> &nbsp;&nbsp;&nbsp; <a href="" onclick="$('#api_status_example').toggle('fast'); return false;">See Example</a><br/>
 			Yields information about current status of the blockchain.
 			
 <pre id="api_status_example" style="display: none;">

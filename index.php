@@ -24,30 +24,30 @@ include('includes/html_start.php');
 		</div>
 	</div>
 	<?php
-	$GLOBALS['app']->display_featured_games();
+	$app->display_featured_games();
 	?>
 	<div class="paragraph">
 		<?php
 		$player_variation_q = "SELECT COUNT(*), t.start_condition_players FROM game_types t JOIN game_type_variations tv ON t.game_type_id=tv.game_type_id JOIN games g ON tv.variation_id=g.variation_id WHERE g.game_status='published' GROUP BY t.start_condition_players ORDER BY t.start_condition_players ASC;";
-		$player_variation_r = $GLOBALS['app']->run_query($player_variation_q);
+		$player_variation_r = $app->run_query($player_variation_q);
 		
-		while ($player_variation = mysql_fetch_array($player_variation_r)) {
+		while ($player_variation = $player_variation_r->fetch()) {
 			$game_q = "SELECT *, tv.url_identifier AS url_identifier, c.symbol AS symbol, c.short_name AS currency_short_name FROM game_types t JOIN game_type_variations tv ON t.game_type_id=tv.game_type_id JOIN games g ON tv.variation_id=g.variation_id LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.game_status='published' AND g.giveaway_status IN ('public_free','public_pay') AND t.start_condition_players='".$player_variation['start_condition_players']."' ORDER BY g.invite_cost ASC;";
-			$game_r = $GLOBALS['app']->run_query($game_q);
+			$game_r = $app->run_query($game_q);
 			
 			echo '<h2>Join a '.$player_variation['start_condition_players'].' player game</h2>';
 			echo '<div class="bordered_table">';
-			while ($db_game = mysql_fetch_array($game_r)) {
-				$variation_game = new Game($db_game['game_id']);
+			while ($db_game = $game_r->fetch()) {
+				$variation_game = new Game($app, $db_game['game_id']);
 				echo '<div class="row bordered_row">';
 				
 				echo '<div class="col-sm-3"><a title="'.$variation_game->game_description().'" href="/'.$db_game['url_identifier'].'/">'.ucfirst($variation_game->db_game['type_name'])."</a></div>";
 				
-				$invite_disp = $GLOBALS['app']->format_bignum($variation_game->db_game['invite_cost']);
+				$invite_disp = $app->format_bignum($variation_game->db_game['invite_cost']);
 				echo '<div class="col-sm-4">';
 				
 				if ($variation_game->db_game['giveaway_status'] == 'public_free') {
-					$receive_disp = $GLOBALS['app']->format_bignum($variation_game->db_game['giveaway_amount']/pow(10,8));
+					$receive_disp = $app->format_bignum($variation_game->db_game['giveaway_amount']/pow(10,8));
 					echo 'Start with '.$receive_disp.' ';
 					if ($receive_disp == '1') echo $variation_game->db_game['coin_name'];
 					else echo $variation_game->db_game['coin_name_plural'];
@@ -57,7 +57,7 @@ include('includes/html_start.php');
 					echo 'Buy in at '.$db_game['symbol'].$invite_disp." ".$db_game['short_name'];
 					if ($invite_disp != '1') echo 's';
 					echo " for ";
-					$receive_disp = $GLOBALS['app']->format_bignum($variation_game->db_game['giveaway_amount']/pow(10,8));
+					$receive_disp = $app->format_bignum($variation_game->db_game['giveaway_amount']/pow(10,8));
 					echo $receive_disp.' ';
 					if ($receive_disp == '1') echo $variation_game->db_game['coin_name'];
 					else echo $variation_game->db_game['coin_name_plural'];
@@ -71,7 +71,7 @@ include('includes/html_start.php');
 				if ($variation_game->db_game['final_round'] > 0) {
 					$final_inflation_pct = game_final_inflation_pct($variation_game->db_game);
 					$game_seconds = $variation_game->db_game['final_round']*$variation_game->db_game['round_length']*$variation_game->db_game['seconds_per_block'];
-					echo number_format($final_inflation_pct)."% inflation in ".$GLOBALS['app']->format_seconds($game_seconds);
+					echo number_format($final_inflation_pct)."% inflation in ".$app->format_seconds($game_seconds);
 				}
 				echo '</div>';
 				

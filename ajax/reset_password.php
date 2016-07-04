@@ -7,22 +7,21 @@ if ($GLOBALS['outbound_email_enabled']) {
 	$success_msg = "A password reset link has been sent to that email address, please open your inbox and click the link to reset your password.";
 
 	$email = urldecode($_REQUEST['email']);
-	$GLOBALS['app']->safe_email($email);
 	
 	if ($email != "") {
-		$q = "SELECT * FROM users WHERE notification_email='".$email."';";
-		$r = $GLOBALS['app']->run_query($q);
+		$q = "SELECT * FROM users WHERE notification_email=".$app->quote_escape($email).";";
+		$r = $app->run_query($q);
 		
-		if (mysql_numrows($r) == 1) {
-			$user = mysql_fetch_array($r);
+		if ($r->rowCount() == 1) {
+			$user = $r->fetch();
 			
-			$token_key = $GLOBALS['app']->random_string(32);
+			$token_key = $app->random_string(32);
 			
-			$q = "INSERT INTO user_resettokens SET user_id='".$user['user_id']."', token_key='".$token_key."', token2_key='".$GLOBALS['app']->random_string(32)."', create_time='".time()."', expire_time='".(time()+3600*36)."'";
+			$q = "INSERT INTO user_resettokens SET user_id='".$user['user_id']."', token_key='".$token_key."', token2_key='".$app->random_string(32)."', create_time='".time()."', expire_time='".(time()+3600*36)."'";
 			if ($GLOBALS['pageview_tracking_enabled']) $q .= ", request_viewer_id='".$viewer_id."', requester_ip='".$_SERVER['REMOTE_ADDR']."'";
 			$q .= ";";
-			$r = $GLOBALS['app']->run_query($q);
-			$token_id = mysql_insert_id();
+			$r = $app->run_query($q);
+			$token_id = $app->last_insert_id();
 			
 			$reset_link = $GLOBALS['base_url']."/reset_password/?do=reset&tid=".$token_id."&reset_key=".$token_key;
 			
@@ -32,7 +31,7 @@ if ($GLOBALS['outbound_email_enabled']) {
 			$message .= "<p><a href=\"".$reset_link."\">".$reset_link."</a></p>";
 			$message .= "<p>Sent by <a href=\"".$GLOBALS['base_url']."\">".$GLOBALS['site_name_short']."</a></p>";
 			
-			$res = $GLOBALS['app']->mail_async($user['notification_email'], $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "");
+			$res = $app->mail_async($user['notification_email'], $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "");
 			
 			echo $success_msg;
 		}

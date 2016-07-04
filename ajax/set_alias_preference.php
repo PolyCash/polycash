@@ -11,8 +11,8 @@ if ($thisuser) {
 	
 	$alias = $_REQUEST['alias'];
 	
-	$q = "UPDATE users SET alias_preference='".$preference."', alias='".mysql_real_escape_string(strip_tags($alias))."' WHERE user_id='".$thisuser->db_user['user_id']."';";
-	$r = $GLOBALS['app']->run_query($q);
+	$q = "UPDATE users SET alias_preference='".$preference."', alias=".$app->quote_escape(strip_tags($alias))." WHERE user_id='".$thisuser->db_user['user_id']."';";
+	$r = $app->run_query($q);
 	
 	echo "Your notification settings have been saved.";
 }

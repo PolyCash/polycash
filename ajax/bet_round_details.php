@@ -13,9 +13,9 @@ if ($thisuser && $game) {
 	$outcomes = array();
 	
 	$q = "SELECT SUM(i.amount), n.* FROM transaction_ios i JOIN addresses a ON i.address_id=a.address_id LEFT JOIN game_voting_options gvo ON a.bet_option_id=gvo.option_id WHERE i.game_id='".$game->db_game['game_id']."' AND a.bet_round_id = ".$round_id." AND i.create_block_id <= ".$game->round_to_last_betting_block($round_id)." GROUP BY a.bet_option_id ORDER BY SUM(i.amount) DESC;";
-	$r = $GLOBALS['app']->run_query($q);
+	$r = $app->run_query($q);
 	
-	while ($bet_outcome = mysql_fetch_array($r)) {
+	while ($bet_outcome = $r->fetch()) {
 		if ($bet_outcome['name'] == "") {
 			$bet_outcome['name'] = "No Winner";
 			$bet_outcome['option_id'] = 0;
@@ -46,9 +46,9 @@ if ($thisuser && $game) {
 	$q = "SELECT * FROM game_voting_options";
 	if ($nation_id_csv != "") $q .= " WHERE option_id NOT IN (".$option_id_csv.")";
 	$q .= ";";
-	$r = $GLOBALS['app']->run_query($q);
+	$r = $app->run_query($q);
 	
-	while ($option = mysql_fetch_array($r)) {
+	while ($option = $r->fetch()) {
 		$html .= "<font style=\"display: inline-block; width: 120px;\">".$option['name']."</font> &nbsp;&nbsp; ";
 		$html .= "<font id=\"bet_option_pct_".$option['option_id']."\">0.00%</font> &nbsp;&nbsp; ";
 		$html .= "<font id=\"bet_option_mult_".$option['option_id']."\"></font><br/>\n";

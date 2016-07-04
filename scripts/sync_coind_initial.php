@@ -6,12 +6,12 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	
 	$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
 
-	$game_id = $GLOBALS['app']->get_site_constant('primary_game_id');
-	$game = new Game($game_id);
+	$game_id = $app->get_site_constant('primary_game_id');
+	$game = new Game($app, $game_id);
 	$game->delete_reset_game('reset');
 
 	$q = "DELETE FROM addresses WHERE game_id='".$game->db_game['game_id']."';";
-	$GLOBALS['app']->run_query($q);
+	$app->run_query($q);
 	
 	$blocks = array();
 	$transactions = array();
@@ -32,15 +32,15 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$output_address = $game->create_or_fetch_address("genesis_address", true, false, false);
 	
 	$q = "INSERT INTO transactions SET game_id='".$game->db_game['game_id']."', amount='".$game->db_game['pow_reward']."', transaction_desc='coinbase', tx_hash='".$tx_hash."', address_id=".$output_address['address_id'].", block_id='".$block_height."', time_created='".time()."';";
-	$r = $GLOBALS['app']->run_query($q);
-	$transaction_id = mysql_insert_id();
+	$r = $app->run_query($q);
+	$transaction_id = $app->last_insert_id();
 	
 	$q = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, game_id='".$game->db_game['game_id']."', user_id=NULL, address_id='".$output_address['address_id']."'";
 	$q .= ", create_transaction_id='".$transaction_id."', amount='".$game->db_game['pow_reward']."', create_block_id='".$block_height."';";
-	$r = $GLOBALS['app']->run_query($q);
+	$r = $app->run_query($q);
 	
 	$q = "INSERT INTO blocks SET game_id='".$game->db_game['game_id']."', block_hash='".$genesis_hash."', block_id='".$block_height."', time_created='".time()."';";
-	$r = $GLOBALS['app']->run_query($q);
+	$r = $app->run_query($q);
 	
 	echo "Added the genesis transaction!<br/>\n";
 	
@@ -53,7 +53,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		
 		if ($block_height == 1) {
 			$q = "UPDATE games SET start_time='".$blocks[$block_height]->json_obj['time']."', start_datetime=FROM_UNIXTIME(".$blocks[$block_height]->json_obj['time'].") WHERE game_id='".$game->db_game['game_id']."';";
-			$r = $GLOBALS['app']->run_query($q);
+			$r = $app->run_query($q);
 		}
 		
 		echo $game->coind_add_block($coin_rpc, $current_hash, $block_height);
@@ -66,8 +66,8 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	echo "<br/>Finished adding confirmed transactions at ".(microtime(true) - $start_time)." sec<br/>\n";
 	
 	$q = "SELECT MAX(block_id) FROM blocks WHERE game_id='".$game->db_game['game_id']."';";
-	$r = $GLOBALS['app']->run_query($q);
-	$max_block = mysql_fetch_row($r);
+	$r = $app->run_query($q);
+	$max_block = $r->fetch(PDO::FETCH_NUM);
 	$max_block = $max_block[0];
 	$completed_rounds = floor($max_block/$game->db_game['round_length']);
 	
@@ -83,7 +83,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		$game->walletnotify($coin_rpc, $unconfirmed_txs[$i]);
 	}
 	
-	$GLOBALS['app']->refresh_utxo_user_ids(false);
+	$app->refresh_utxo_user_ids(false);
 	$game->update_option_scores();
 	
 	echo "Completed sync ($completed_rounds rounds) at ".(microtime(true)-$start_time)." sec<br/>\n";

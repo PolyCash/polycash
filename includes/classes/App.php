@@ -1,17 +1,27 @@
 <?php
 class App {
+	public $dbh;
+	
+	public function __construct($dbh) {
+		$this->dbh = $dbh;
+	}
+	
+	public function quote_escape($string) {
+		return $this->dbh->quote($string);
+	}
+	
+	public function set_db($dbname) {
+		$this->dbh->exec("USE ".$db_name) or die ("There was an error accessing the '".$db_name."' database");
+	}
+	
+	public function last_insert_id() {
+		return $this->dbh->lastInsertId();
+	}
+	
 	public function run_query($query) {
-		if ($GLOBALS['show_query_errors'] == TRUE) $result = mysql_query($query) or die("Error in query: ".$query.", ".mysql_error());
-		else $result = mysql_query($query) or die("Error in query");
+		if ($GLOBALS['show_query_errors'] == TRUE) $result = $this->dbh->query($query) or die("Error in query: ".$query.", ".$this->dbh->errorInfo());
+		else $result = $this->dbh->query($query) or die("Error in query");
 		return $result;
-	}
-
-	public function safe_text(&$text, $extrachars) {
-		$text = mysql_real_escape_string($this->make_alphanumeric(strip_tags($this->utf8_clean($text)), $extrachars));
-	}
-
-	public function safe_email(&$text) {
-		$this->safe_text($text, '@!#$%&*+-/=?^_`{|}~.');
 	}
 
 	public function utf8_clean($str) {
@@ -47,27 +57,27 @@ class App {
 	}
 
 	public function get_redirect_url($url) {
-		$q = "SELECT * FROM redirect_urls WHERE url='".mysql_real_escape_string($url)."';";
+		$q = "SELECT * FROM redirect_urls WHERE url=".$app->quote_escape($url).";";
 		$r = $this->run_query($q);
-		if (mysql_numrows($r) > 0) {
-			$redirect_url = mysql_fetch_array($r);
+		if ($r->rowCount() > 0) {
+			$redirect_url = $r->fetch();
 		}
 		else {
-			$q = "INSERT INTO redirect_urls SET url='".mysql_real_escape_string($url)."', time_created='".time()."';";
+			$q = "INSERT INTO redirect_urls SET url=".$app->quote_escape($url).", time_created='".time()."';";
 			$r = $this->run_query($q);
-			$redirect_url_id = mysql_insert_id();
+			$redirect_url_id = $app->last_insert_id();
 			
 			$q = "SELECT * FROM redirect_urls WHERE redirect_url_id='".$redirect_url_id."';";
 			$r = $this->run_query($q);
-			$redirect_url = mysql_fetch_array($r);
+			$redirect_url = $r->fetch();
 		}
 		return $redirect_url;
 	}
 
 	public function mail_async($email, $from_name, $from, $subject, $message, $bcc, $cc) {
-		$q = "INSERT INTO async_email_deliveries SET to_email='".mysql_real_escape_string($email)."', from_name='".$from_name."', from_email='".mysql_real_escape_string($from)."', subject='".mysql_real_escape_string($subject)."', message='".mysql_real_escape_string($message)."', bcc='".mysql_real_escape_string($bcc)."', cc='".mysql_real_escape_string($cc)."', time_created='".time()."';";
+		$q = "INSERT INTO async_email_deliveries SET to_email=".$app->quote_escape($email).", from_name=".$from_name.", from_email=".$app->quote_escape($from).", subject=".$app->quote_escape($subject).", message=".$app->quote_escape($message).", bcc=".$app->quote_escape($bcc).", cc=".$app->quote_escape($cc).", time_created='".time()."';";
 		$r = $this->run_query($q);
-		$delivery_id = mysql_insert_id();
+		$delivery_id = $app->last_insert_id();
 		
 		$command = "/usr/bin/php ".realpath(dirname(dirname(__FILE__)))."/scripts/async_email_deliver.php ".$delivery_id." > /dev/null 2>/dev/null &";
 		exec($command);
@@ -86,8 +96,8 @@ class App {
 	public function get_site_constant($constant_name) {
 		$q = "SELECT * FROM site_constants WHERE constant_name='".$constant_name."';";
 		$r = $this->run_query($q);
-		if (mysql_numrows($r) == 1) {
-			$constant = mysql_fetch_array($r);
+		if ($r->rowCount() == 1) {
+			$constant = $r->fetch();
 			return $constant['constant_value'];
 		}
 		else return "";
@@ -96,8 +106,8 @@ class App {
 	public function set_site_constant($constant_name, $constant_value) {
 		$q = "SELECT * FROM site_constants WHERE constant_name='".$constant_name."';";
 		$r = $this->run_query($q);
-		if (mysql_numrows($r) > 0) {
-			$constant = mysql_fetch_array($r);
+		if ($r->rowCount() > 0) {
+			$constant = $r->fetch();
 			$q = "UPDATE site_constants SET constant_value='".$constant_value."' WHERE constant_id='".$constant['constant_id']."';";
 			$r = $this->run_query($q);
 		}
@@ -156,7 +166,7 @@ class App {
 	public function transaction_coins_in($transaction_id) {
 		$qq = "SELECT SUM(amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.spend_transaction_id='".$transaction_id."';";
 		$rr = $this->run_query($qq);
-		$coins_in = mysql_fetch_row($rr);
+		$coins_in = $rr->fetch(PDO::FETCH_NUM);
 		if ($coins_in[0] > 0) return $coins_in[0];
 		else return 0;
 	}
@@ -164,7 +174,7 @@ class App {
 	public function transaction_coins_out($transaction_id) {
 		$qq = "SELECT SUM(amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$transaction_id."';";
 		$rr = $this->run_query($qq);
-		$coins_out = mysql_fetch_row($rr);
+		$coins_out = $rr->fetch(PDO::FETCH_NUM);
 		if ($coins_out[0] > 0) return $coins_out[0];
 		else return 0;
 	}
@@ -172,7 +182,7 @@ class App {
 	public function transaction_voted_coins_out($transaction_id) {
 		$qq = "SELECT SUM(amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$transaction_id."' AND a.option_id > 0;";
 		$rr = $this->run_query($qq);
-		$voted_coins_out = mysql_fetch_row($rr);
+		$voted_coins_out = $rr->fetch(PDO::FETCH_NUM);
 		if ($voted_coins_out[0] > 0) return $voted_coins_out[0];
 		else return 0;
 	}
@@ -188,13 +198,13 @@ class App {
 
 	public function try_apply_invite_key($user_id, $invite_key, &$invite_game) {
 		$reload_page = false;
-		$invite_key = mysql_real_escape_string($invite_key);
+		$invite_key = $app->quote_escape($invite_key);
 		
-		$q = "SELECT * FROM invitations WHERE invitation_key='".$invite_key."';";
+		$q = "SELECT * FROM invitations WHERE invitation_key=".$invite_key.";";
 		$r = $this->run_query($q);
 		
-		if (mysql_numrows($r) == 1) {
-			$invitation = mysql_fetch_array($r);
+		if ($r->rowCount() == 1) {
+			$invitation = $r->fetch();
 			
 			if ($invitation['used'] == 0 && $invitation['used_user_id'] == "" && $invitation['used_time'] == 0) {
 				$qq = "UPDATE invitations SET used_user_id='".$user_id."', used_time='".time()."', used=1";
@@ -206,10 +216,10 @@ class App {
 					$qq = "UPDATE game_giveaways SET user_id='".$user_id."', status='claimed' WHERE giveaway_id='".$invitation['giveaway_id']."';";
 					$rr = $this->run_query($qq);
 				}
-				$user = new User($user_id);
+				$user = new User($app, $user_id);
 				$user->ensure_user_in_game($invitation['game_id']);
 
-				$invite_game = new Game($invitation['game_id']);
+				$invite_game = new Game($this, $invitation['game_id']);
 				
 				return true;
 			}
@@ -273,7 +283,7 @@ class App {
 			$url_identifier = $this->make_alphanumeric(str_replace(" ", "-", strtolower($game_name.$append)), "-().:;");
 			$q = "SELECT * FROM games WHERE url_identifier='".$url_identifier."';";
 			$r = $this->run_query($q);
-			if (mysql_numrows($r) == 0) $keeplooping = false;
+			if ($r->rowCount() == 0) $keeplooping = false;
 			else $append_index++;
 		} while ($keeplooping);
 		
@@ -289,7 +299,7 @@ class App {
 	public function generate_open_games() {
 		$q = "SELECT * FROM game_types t JOIN game_type_variations v ON t.game_type_id=v.game_type_id JOIN voting_option_groups vog ON vog.option_group_id=t.option_group_id WHERE v.target_open_games > 0;";
 		$r = $this->run_query($q);
-		while ($game_variation = mysql_fetch_array($r)) {
+		while ($game_variation = $r->fetch()) {
 			$this->generate_open_games_by_variation($game_variation);
 		}
 	}
@@ -299,7 +309,7 @@ class App {
 		
 		$qq = "SELECT COUNT(*) FROM games WHERE variation_id='".$game_variation['variation_id']."' AND game_status='published';";
 		$rr = $this->run_query($qq);
-		$variation_count = mysql_fetch_row($rr);
+		$variation_count = $rr->fetch(PDO::FETCH_NUM);
 		$variation_count = (int) $variation_count[0];
 		
 		$needed = $game_variation['target_open_games']-$variation_count;
@@ -314,9 +324,9 @@ class App {
 				}
 				$qq = substr($qq, 0, strlen($qq)-2).";";
 				$rr = $this->run_query($qq);
-				$game_id = mysql_insert_id();
+				$game_id = $app->last_insert_id();
 				
-				$game = new Game($game_id);
+				$game = new Game($this, $game_id);
 				
 				$game->ensure_game_options();
 				
@@ -336,10 +346,10 @@ class App {
 	public function fetch_game_from_url() {
 		$login_url_parts = explode("/", rtrim(ltrim($_SERVER['REQUEST_URI'], "/"), "/"));
 		if ($login_url_parts[0] == "wallet" && count($login_url_parts) > 1) {
-			$q = "SELECT * FROM games WHERE url_identifier='".mysql_real_escape_string($login_url_parts[1])."';";
+			$q = "SELECT * FROM games WHERE url_identifier=".$app->quote_escape($login_url_parts[1]).";";
 			$r = $this->run_query($q);
-			if (mysql_numrows($r) == 1) {
-				return mysql_fetch_array($r);
+			if ($r->rowCount() == 1) {
+				return $r->fetch();
 			}
 			else return false;
 		}
@@ -350,8 +360,8 @@ class App {
 		$q = "SELECT * FROM game_type_variations WHERE variation_id='".$variation_id."';";
 		$r = $this->run_query($q);
 		
-		if (mysql_numrows($r) == 1) {
-			$variation = mysql_fetch_array($r);
+		if ($r->rowCount() == 1) {
+			$variation = $r->fetch();
 			
 			if (in_array($variation['giveaway_status'], array('public_free', 'public_pay'))) {
 				$keeplooping = true;
@@ -360,17 +370,17 @@ class App {
 					$q = "SELECT * FROM game_join_requests WHERE variation_id='".$variation['variation_id']."' AND request_status='outstanding' AND join_request_id > ".$last_request_id." ORDER BY join_request_id ASC LIMIT 1;";
 					$r = $this->run_query($q);
 					
-					if (mysql_numrows($r) > 0) {
-						$join_request = mysql_fetch_array($r);
+					if ($r->rowCount() > 0) {
+						$join_request = $r->fetch();
 						$last_request_id = $join_request['join_request_id'];
 						
-						$join_user = new User($join_request['user_id']);
+						$join_user = new User($app, $join_request['user_id']);
 						
 						$qq = "SELECT * FROM games WHERE variation_id='".$variation['variation_id']."' AND game_status='published' ORDER BY game_id ASC LIMIT 1;";
 						$rr = $this->run_query($qq);
 						
-						if (mysql_numrows($rr) == 1) {
-							$db_join_game = mysql_fetch_array($rr);
+						if ($rr->rowCount() == 1) {
+							$db_join_game = $rr->fetch();
 							
 							$join_user->ensure_user_in_game($db_join_game['game_id']);
 							
@@ -387,8 +397,8 @@ class App {
 	public function bet_transaction_payback_address($transaction_id) {
 		$q = "SELECT * FROM transaction_ios i, transactions t, addresses a WHERE t.transaction_id='".$transaction_id."' AND i.spend_transaction_id=t.transaction_id AND i.address_id=a.address_id ORDER BY a.address ASC LIMIT 1;";
 		$r = $this->run_query($q);
-		if (mysql_numrows($r) == 1) {
-			return mysql_fetch_array($r);
+		if ($r->rowCount() == 1) {
+			return $r->fetch();
 		}
 		else return false;
 	}
@@ -396,8 +406,8 @@ class App {
 	public function latest_currency_price($currency_id) {
 		$q = "SELECT * FROM currency_prices WHERE currency_id='".$currency_id."' AND reference_currency_id='".$this->get_site_constant('reference_currency_id')."' ORDER BY price_id DESC LIMIT 1;";
 		$r = $this->run_query($q);
-		if (mysql_numrows($r) > 0) {
-			return mysql_fetch_array($r);
+		if ($r->rowCount() > 0) {
+			return $r->fetch();
 		}
 		else return false;
 	}
@@ -406,8 +416,8 @@ class App {
 		$q = "SELECT * FROM currencies WHERE abbreviation='".strtoupper($currency_abbreviation)."';";
 		$r = $this->run_query($q);
 
-		if (mysql_numrows($r) > 0) {
-			return mysql_fetch_array($r);
+		if ($r->rowCount() > 0) {
+			return $r->fetch();
 		}
 		else return false;
 	}
@@ -415,7 +425,7 @@ class App {
 	public function get_reference_currency() {
 		$q = "SELECT * FROM currencies WHERE currency_id='".$this->get_site_constant('reference_currency_id')."';";
 		$r = $this->run_query($q);
-		if (mysql_numrows($r) > 0) return mysql_fetch_array($r);
+		if ($r->rowCount() > 0) return $r->fetch();
 		else die('Error, reference_currency_id is not set properly in site_constants.');
 	}
 	
@@ -424,14 +434,14 @@ class App {
 		$q = "SELECT * FROM currencies c JOIN oracle_urls o ON c.oracle_url_id=o.oracle_url_id WHERE c.currency_id != '".$reference_currency_id."' GROUP BY o.oracle_url_id;";
 		$r = $this->run_query($q);
 		
-		while ($currency_url = mysql_fetch_array($r)) {
+		while ($currency_url = $r->fetch()) {
 			$api_response_raw = file_get_contents($currency_url['url']);
 			$api_response = json_decode($api_response_raw);
 			
 			$qq = "SELECT * FROM currencies WHERE oracle_url_id='".$currency_url['oracle_url_id']."';";
 			$rr = $this->run_query($qq);
 			
-			while ($currency = mysql_fetch_array($rr)) {
+			while ($currency = $rr->fetch()) {
 				if ($currency_url['format_id'] == 2) {
 					$price = $api_response->USD->bid;
 				}
@@ -449,8 +459,8 @@ class App {
 		$q = "SELECT * FROM currencies WHERE currency_id='".$currency_id."';";
 		$r = $this->run_query($q);
 
-		if (mysql_numrows($r) > 0) {
-			$currency = mysql_fetch_array($r);
+		if ($r->rowCount() > 0) {
+			$currency = $r->fetch();
 
 			if ($currency['abbreviation'] == "BTC") {
 				$reference_currency = $this->get_reference_currency();
@@ -464,11 +474,11 @@ class App {
 				if ($price > 0) {
 					$q = "INSERT INTO currency_prices SET currency_id='".$currency_id."', reference_currency_id='".$reference_currency['currency_id']."', price='".$price."', time_added='".time()."';";
 					$r = $this->run_query($q);
-					$currency_price_id = mysql_insert_id();
+					$currency_price_id = $app->last_insert_id();
 
 					$q = "SELECT * FROM currency_prices WHERE price_id='".$currency_price_id."';";
 					$r = $this->run_query($q);
-					return mysql_fetch_array($r);
+					return $r->fetch();
 				}
 				else return false;
 			}
@@ -490,11 +500,11 @@ class App {
 	public function historical_currency_conversion_rate($numerator_price_id, $denominator_price_id) {
 		$q = "SELECT * FROM currency_prices WHERE price_id='".$numerator_price_id."';";
 		$r = $this->run_query($q);
-		$numerator_rate = mysql_fetch_array($r);
+		$numerator_rate = $r->fetch();
 
 		$q = "SELECT * FROM currency_prices WHERE price_id='".$denominator_price_id."';";
 		$r = $this->run_query($q);
-		$denominator_rate = mysql_fetch_array($r);
+		$denominator_rate = $r->fetch();
 
 		return round(pow(10,8)*$denominator_rate['price']/$numerator_rate['price'])/pow(10,8);
 	}
@@ -502,7 +512,7 @@ class App {
 	public function new_currency_invoice($settle_currency_id, $settle_amount, $user_id, $game_id) {
 		$q = "SELECT * FROM currencies WHERE currency_id='".$settle_currency_id."';";
 		$r = $this->run_query($q);
-		$settle_currency = mysql_fetch_array($r);
+		$settle_currency = $r->fetch();
 
 		$pay_currency = $this->get_currency_by_abbreviation('btc');
 
@@ -518,11 +528,11 @@ class App {
 		$time = time();
 		$q = "INSERT INTO currency_invoices SET time_created='".$time."', invoice_address_id='".$invoice_address_id."', expire_time='".($time+$GLOBALS['invoice_expiration_seconds'])."', game_id='".$game_id."', user_id='".$user_id."', status='unpaid', invoice_key_string='".$this->random_string(32)."', settle_price_id='".$conversion['numerator_price_id']."', settle_currency_id='".$settle_currency['currency_id']."', settle_amount='".$settle_amount."', pay_price_id='".$conversion['denominator_price_id']."', pay_currency_id='".$pay_currency['currency_id']."', pay_amount='".$pay_amount."';";
 		$r = $this->run_query($q);
-		$invoice_id = mysql_insert_id();
+		$invoice_id = $app->last_insert_id();
 
 		$q = "SELECT * FROM currency_invoices WHERE invoice_id='".$invoice_id."';";
 		$r = $this->run_query($q);
-		return mysql_fetch_array($r);
+		return $r->fetch();
 	}
 	
 	public function vote_details_general($mature_balance) {
@@ -536,7 +546,7 @@ class App {
 	}
 
 	public function vote_option_details($option, $rank, $confirmed_votes, $unconfirmed_votes, $score_sum, $losing_streak) {
-		$html .= '
+		$html = '
 		<div class="row">
 			<div class="col-xs-4">Current&nbsp;rank:</div>
 			<div class="col-xs-8">'.$this->to_ranktext($rank).'</div>
@@ -572,7 +582,7 @@ class App {
 
 		$q = "INSERT INTO invoice_addresses SET pub_key='".$keySet['pubAdd']."', priv_enc='".$encWIF."';";
 		$r = $this->run_query($q);
-		$address_id = mysql_insert_id();
+		$address_id = $app->last_insert_id();
 		
 		return $address_id;
 	}
@@ -587,13 +597,13 @@ class App {
 		$q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='published' OR g.game_status='running');";
 		$r = $this->run_query($q);
 		$cell_width = 6;
-		if (mysql_numrows($r) == 1) $cell_width = 12;
+		if ($r->rowCount() == 1) $cell_width = 12;
 		
 		$counter = 0;
 		echo '<div class="row">';
 		
-		while ($db_game = mysql_fetch_array($r)) {
-			$featured_game = new Game($db_game['game_id']);
+		while ($db_game = $r->fetch()) {
+			$featured_game = new Game($this, $db_game['game_id']);
 			echo '<div class="col-md-'.$cell_width.'"><h3>'.$featured_game->db_game['name'].'</h3>';
 			echo $featured_game->game_description();
 			echo '<br/><a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-primary" style="margin-top: 5px;">Join '.$featured_game->db_game['name'].'</a></div>';

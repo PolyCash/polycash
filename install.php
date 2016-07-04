@@ -4,29 +4,29 @@ include("includes/connect.php");
 
 if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	if ($GLOBALS['mysql_database'] != "") {
-		if ($GLOBALS['mysql_database'] === mysql_real_escape_string($GLOBALS['mysql_database']) && $GLOBALS['mysql_database'] === strip_tags($GLOBALS['mysql_database'])) {
+		if (!strpos($GLOBALS['mysql_database'], "'") && $GLOBALS['mysql_database'] === strip_tags($GLOBALS['mysql_database'])) {
 			$db_exists = false;
 
-			$r = mysql_query("SHOW DATABASES;");
-			while ($dbname = mysql_fetch_assoc($r)) {
+			$r = $app->run_query("SHOW DATABASES;");
+			while ($dbname = $r->fetch()) {
 				if ($dbname['Database'] == $GLOBALS['mysql_database']) $db_exists = true;
 			}
 
 			if (!$db_exists) {
-				$r = mysql_query("CREATE DATABASE ".$GLOBALS['mysql_database']);
+				$r = $app->run_query("CREATE DATABASE ".$GLOBALS['mysql_database']);
 				
 				$cmd = "mysql -u ".$GLOBALS['mysql_user']." -h ".$GLOBALS['mysql_server']." -p".$GLOBALS['mysql_password']." ".$GLOBALS['mysql_database']." < ".realpath(dirname(__FILE__))."/sql/schema-initial.sql";
 				echo exec($cmd);
 				$cmd = "mysql -u ".$GLOBALS['mysql_user']." -h ".$GLOBALS['mysql_server']." -p".$GLOBALS['mysql_password']." ".$GLOBALS['mysql_database']." < ".realpath(dirname(__FILE__))."/sql/migrations.sql";
 				echo exec($cmd);
 
-				mysql_select_db($GLOBALS['mysql_database']) or die ("There was an error accessing the \"".$GLOBALS['mysql_database']."\" database");
+				$app->set_db($GLOBALS['mysql_database']);
 			}
 			else {
-				mysql_select_db($GLOBALS['mysql_database']) or die ("There was an error accessing the \"".$GLOBALS['mysql_database']."\" database");
+				$app->set_db($GLOBALS['mysql_database']);
 			}
 
-			$result = $GLOBALS['app']->run_query("SHOW TABLES LIKE 'games';");
+			$result = $app->run_query("SHOW TABLES LIKE 'games';");
 			$table_exists = mysql_num_rows($result) > 0;
 			if (!$table_exists) {
 				echo "Database tables failed to be created, please install manually by importing all files in the \"sql\" folder via phpMyAdmin or any other MySQL interface.<br/>\n";
@@ -34,16 +34,16 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			}
 			
 			$q = "SELECT * FROM games WHERE url_identifier='".strtolower($GLOBALS['coin_brand_name'])."-live';";
-			$r = $GLOBALS['app']->run_query($q);
+			$r = $app->run_query($q);
 			
-			if (mysql_numrows($r) == 0) {
-				$address_id = $GLOBALS['app']->new_invoice_address();
+			if ($r->rowCount() == 0) {
+				$address_id = $app->new_invoice_address();
 				
 				$q = "INSERT INTO games SET invoice_address_id='".$address_id."', option_group_id=1, featured=1, invite_currency=1, url_identifier='empirecoin-launch', game_status='published', giveaway_status='public_free', giveaway_amount=100000000000, pow_reward=2500000000, pos_reward=75000000000, game_type='simulation', block_timing='realistic', payout_weight='coin_round', seconds_per_block=120, name='EmpireCoin Launch', num_voting_options=16, maturity=1, round_length=10, max_voting_fraction=0.25, option_name='empire', option_name_plural='empires', buyin_policy='none';";
-				$r = $GLOBALS['app']->run_query($q);
-				$primary_game_id = mysql_insert_id();
+				$r = $app->run_query($q);
+				$primary_game_id = $app->last_insert_id();
 				
-				$primary_game = new Game($primary_game_id);
+				$primary_game = new Game($app, $primary_game_id);
 				
 				$primary_game->ensure_game_options();
 				
@@ -51,32 +51,32 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			}
 
 			$q = "SELECT * FROM games WHERE url_identifier='".strtolower($GLOBALS['coin_brand_name'])."-testnet';";
-			$r = $GLOBALS['app']->run_query($q);
+			$r = $app->run_query($q);
 			
-			if (mysql_numrows($r) == 0) {
-				$address_id = $GLOBALS['app']->new_invoice_address();
+			if ($r->rowCount() == 0) {
+				$address_id = $app->new_invoice_address();
 				
 				$q = "INSERT INTO games SET invoice_address_id='".$address_id."', option_group_id=1, featured=1, invite_currency=1, url_identifier='empirecoin-testnet', start_condition='fixed_time', game_status='running', giveaway_status='public_free', giveaway_amount=0, pow_reward=2500000000, pos_reward=75000000000, game_type='real', block_timing='realistic', payout_weight='coin', seconds_per_block=120, name='EmpireCoin Testnet', num_voting_options=16, maturity=10, round_length=10, max_voting_fraction=0.25, option_name='empire', option_name_plural='empires', buyin_policy='none';";
-				$r = $GLOBALS['app']->run_query($q);
+				$r = $app->run_query($q);
 				
-				$testnet_game_id = mysql_insert_id();
+				$testnet_game_id = $app->last_insert_id();
 				
-				$testnet_game = new Game($testnet_game_id);
+				$testnet_game = new Game($app, $testnet_game_id);
 				
 				$testnet_game->ensure_game_options();
 				
-				$GLOBALS['app']->set_site_constant('primary_game_id', $testnet_game_id);
+				$app->set_site_constant('primary_game_id', $testnet_game_id);
 			}
 			
 			$q = "SELECT * FROM currency_prices WHERE currency_id=1 AND reference_currency_id=1;";
-			$r = $GLOBALS['app']->run_query($q);
-			if (mysql_numrows($r) == 0) {
+			$r = $app->run_query($q);
+			if ($r->rowCount() == 0) {
 				$q = "INSERT INTO currency_prices SET currency_id=1, reference_currency_id=1, price=1, time_added='".time()."';";
-				$r = $GLOBALS['app']->run_query($q);
+				$r = $app->run_query($q);
 			}
 			
-			$GLOBALS['app']->set_site_constant("game_loop_seconds", 2);
-			$GLOBALS['app']->set_site_constant("reference_currency_id", 1);
+			$app->set_site_constant("game_loop_seconds", 2);
+			$app->set_site_constant("reference_currency_id", 1);
 			
 			$pagetitle = $GLOBALS['site_name']." - Installing...";
 			$include_crypto_js = TRUE;
@@ -181,7 +181,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	}
 }
 else {
-	echo "Please set the correct value for \"key\" in the URL.<br/>";
+	echo 'Please set the correct value for "key" in the URL.<br/>';
 	echo 'To find the correct key value, open includes/config.php and look for $GLOBALS[\'cron_key_string\'].';
 }
 ?>

@@ -3,7 +3,7 @@ include("../includes/connect.php");
 include("../includes/get_session.php");
 
 if (!$game) {
-	$game = new Game($GLOBALS['app']->get_site_constant('primary_game_id'));
+	$game = new Game($app->get_site_constant('primary_game_id'));
 }
 
 $from_round_id = intval($_REQUEST['from_round_id']);

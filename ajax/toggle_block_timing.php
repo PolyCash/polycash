@@ -9,7 +9,7 @@ if ($thisuser && $game) {
 		else $toggle_value = "user_controlled";
 		
 		$q = "UPDATE games SET block_timing='".$toggle_value."' WHERE game_id='".$game->db_game['game_id']."';";
-		$r = $GLOBALS['app']->run_query($q);
+		$r = $app->run_query($q);
 		
 		echo "1";
 	}

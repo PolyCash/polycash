@@ -65,9 +65,9 @@ if ($thisuser && $game) {
 		$io_id = intval($io_ids[$i]);
 		if ($io_id > 0) {
 			$qq = "SELECT * FROM transaction_ios WHERE io_id='".$io_id."';";
-			$rr = $GLOBALS['app']->run_query($qq);
-			if (mysql_numrows($rr) == 1) {
-				$io = mysql_fetch_array($rr);
+			$rr = $app->run_query($qq);
+			if ($rr->rowCount() == 1) {
+				$io = $rr->fetch();
 				
 				if ($io['user_id'] != $thisuser->db_user['user_id'] || $io['spend_status'] != "unspent" || $io['game_id'] != $game->db_game['game_id']) {
 					die($io['user_id'].' != '.$thisuser->db_user['user_id'].' || '.$io['spend_status'].' != "unspent" || '.$io['game_id'].' != '.$game->db_game['game_id']);
@@ -107,8 +107,8 @@ if ($thisuser && $game) {
 	for ($i=0; $i<count($option_ids); $i++) {
 		$option_id = intval($option_ids[$i]);
 		$q = "SELECT * FROM game_voting_options WHERE option_id='".$option_id."' AND game_id='".$game->db_game['game_id']."';";
-		$r = $GLOBALS['app']->run_query($q);
-		if (mysql_numrows($r) == 1) {
+		$r = $app->run_query($q);
+		if ($r->rowCount() == 1) {
 			$option_ids[$i] = $option_id;
 		}
 		else {
@@ -151,8 +151,8 @@ if ($thisuser && $game) {
 				$game->update_option_scores();
 				
 				$q = "SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';";
-				$r = $GLOBALS['app']->run_query($q);
-				$transaction = mysql_fetch_array($r);
+				$r = $app->run_query($q);
+				$transaction = $r->fetch();
 				
 				$api_output = (object)[
 					'status_code' => 0,

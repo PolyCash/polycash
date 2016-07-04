@@ -9,20 +9,20 @@ if ($thisuser && $game) {
 	
 	if ($voting_strategy_id > 0) {
 		$q = "SELECT * FROM user_strategies WHERE user_id='".$thisuser->db_user['user_id']."' AND strategy_id='".$voting_strategy_id."';";
-		$r = $GLOBALS['app']->run_query($q);
-		if (mysql_numrows($r) == 1) {
-			$user_strategy = mysql_fetch_array($r);
+		$r = $app->run_query($q);
+		if ($r->rowCount() == 1) {
+			$user_strategy = $r->fetch();
 		}
 		else die("Invalid strategy ID");
 	}
 	else {
 		$q = "INSERT INTO user_strategies SET user_id='".$thisuser->db_user['user_id']."', game_id='".$game->db_game['game_id']."';";
-		$r = $GLOBALS['app']->run_query($q);
-		$voting_strategy_id = mysql_insert_id();
+		$r = $app->run_query($q);
+		$voting_strategy_id = $app->last_insert_id();
 		
 		$q = "SELECT * FROM user_strategies WHERE strategy_id='".$voting_strategy_id."';";
-		$r = $GLOBALS['app']->run_query($q);
-		$user_strategy = mysql_fetch_array($r);
+		$r = $app->run_query($q);
+		$user_strategy = $r->fetch();
 	}
 	
 	if ($action == "save") {
@@ -31,7 +31,7 @@ if ($thisuser && $game) {
 		
 		$thisuser->save_plan_allocations($user_strategy, $from_round, $to_round);
 		
-		$GLOBALS['app']->output_message(1, "", false);
+		$app->output_message(1, "", false);
 	}
 	else if ($action == "fetch") {
 		$from_round = intval($_REQUEST['from_round']);
@@ -44,8 +44,8 @@ if ($thisuser && $game) {
 		$js .= "$(document).ready(function() {\n";
 		
 		$q = "SELECT * FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND round_id >= ".$from_round." AND round_id <= ".$to_round.";";
-		$r = $GLOBALS['app']->run_query($q);
-		while ($allocation = mysql_fetch_array($r)) {
+		$r = $app->run_query($q);
+		while ($allocation = $r->fetch()) {
 			$js .= "load_plan_option(".$allocation['round_id'].", option_id2option_index[".$allocation['option_id']."], ".$allocation['points'].");\n";
 		}
 		$js .= "load_plan_option_events();\n";
@@ -61,8 +61,8 @@ if ($thisuser && $game) {
 		$from_round = intval($_REQUEST['from_round']);
 		$to_round = intval($_REQUEST['to_round']);
 		$game->scramble_plan_allocations($user_strategy, array(0=>1, 1=>0.5), $from_round, $to_round);
-		$GLOBALS['app']->output_message(1, "Scrambled it!", false);
+		$app->output_message(1, "Scrambled it!", false);
 	}
 }
-else $GLOBALS['app']->output_message(2, "Please log in", false);
+else $app->output_message(2, "Please log in", false);
 ?>

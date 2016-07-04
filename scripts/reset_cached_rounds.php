@@ -3,11 +3,11 @@ include("../includes/connect.php");
 
 if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$game_id = intval($_REQUEST['game_id']);
-	$game = new Game($game_id);
+	$game = new Game($app, $game_id);
 	
 	if ($game) {
 		$q = "DELETE FROM cached_rounds WHERE game_id='".$game->db_game['game_id']."';";
-		$r = $GLOBALS['app']->run_query($q);
+		$r = $app->run_query($q);
 
 		$last_block_id = $game->last_block_id();
 		$current_round = $game->block_to_round($last_block_id+1);
@@ -41,9 +41,9 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			if ($winning_option) {
 				$q .= ", winning_option_id='".$winning_option."'";
 				$qq = "SELECT * FROM transactions WHERE transaction_desc='votebase' AND game_id='".$game->db_game['game_id']."' AND block_id = ".$round_id*$game->db_game['round_length'].";";
-				$rr = $GLOBALS['app']->run_query($qq);
-				if (mysql_numrows($rr) > 0) {
-					$payout_transaction = mysql_fetch_array($rr);
+				$rr = $app->run_query($qq);
+				if ($rr->rowCount() > 0) {
+					$payout_transaction = $rr->fetch();
 					$q .= ", payout_transaction_id='".$payout_transaction['transaction_id']."'";
 				}
 			}
@@ -52,7 +52,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				$q .= ", position_".$position."='".$option_rank2db_id[$position]."'";
 			}
 			$q .= ";";
-			$r = $GLOBALS['app']->run_query($q);
+			$r = $app->run_query($q);
 			echo "Added cached round #".$round_id." to ".$game['name']."<br/>\n";
 		}
 	}

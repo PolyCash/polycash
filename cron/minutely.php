@@ -7,22 +7,22 @@ $script_start_time = microtime(true);
 if ($argv) $_REQUEST['key'] = $argv[1];
 
 if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
-	$btc_currency = $GLOBALS['app']->get_currency_by_abbreviation('btc');
-	$latest_btc_price = $GLOBALS['app']->latest_currency_price($btc_currency['currency_id']);
+	$btc_currency = $app->get_currency_by_abbreviation('btc');
+	$latest_btc_price = $app->latest_currency_price($btc_currency['currency_id']);
 	
 	if (!isset($GLOBALS['currency_price_refresh_seconds'])) die('Error: please add something like $GLOBALS[\'currency_price_refresh_seconds\'] = 60; to your config file.');
 	
 	if (!$latest_btc_price || $latest_btc_price['time_added'] < time()-$GLOBALS['currency_price_refresh_seconds']) {
-		$GLOBALS['app']->update_all_currency_prices();
-		$latest_btc_price = $GLOBALS['app']->latest_currency_price($btc_currency['currency_id']);
+		$app->update_all_currency_prices();
+		$latest_btc_price = $app->latest_currency_price($btc_currency['currency_id']);
 	}
 	
-	$GLOBALS['app']->generate_open_games();
+	$app->generate_open_games();
 	
 	$q = "SELECT * FROM games WHERE game_status='published' AND start_condition='players_joined' AND start_condition_players > 0;";
-	$r = $GLOBALS['app']->run_query($q);
-	while ($db_unstarted_game = mysql_fetch_array($r)) {
-		$unstarted_game = new Game($db_unstarted_game['game_id']);
+	$r = $app->run_query($q);
+	while ($db_unstarted_game = $r->fetch()) {
+		$unstarted_game = new Game($app, $db_unstarted_game['game_id']);
 		$num_players = $unstarted_game->paid_players_in_game();
 		if ($num_players >= $unstarted_game->db_game['start_condition_players']) {
 			$unstarted_game->start_game();
@@ -30,52 +30,52 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	}
 	
 	$q = "SELECT * FROM games WHERE game_status='published' AND start_condition='fixed_time' AND start_datetime <= NOW() AND start_datetime IS NOT NULL;";
-	$r = $GLOBALS['app']->run_query($q);
-	while ($db_unstarted_game = mysql_fetch_array($r)) {
-		$unstarted_game = new Game($db_unstarted_game['game_id']);
+	$r = $app->run_query($q);
+	while ($db_unstarted_game = $r->fetch()) {
+		$unstarted_game = new Game($app, $db_unstarted_game['game_id']);
 		$unstarted_game->start_game();
 	}
 	
 	if ($GLOBALS['outbound_email_enabled']) {
 		$q = "SELECT *, TIME_TO_SEC(TIMEDIFF(NOW(), completion_datetime)) AS sec_since_completion FROM games WHERE giveaway_status IN ('public_pay','invite_pay') AND game_status='completed' AND payout_complete=0 AND (payout_reminder_datetime < DATE_SUB(NOW(), INTERVAL 30 MINUTE) OR payout_reminder_datetime IS NULL);";
-		$r = $GLOBALS['app']->run_query($q);
+		$r = $app->run_query($q);
 		
-		while ($completed_game = mysql_fetch_array($r)) {
+		while ($completed_game = $r->fetch()) {
 			$qq = "UPDATE games SET payout_reminder_datetime=NOW() WHERE game_id='".$completed_game['game_id']."';";
-			$rr = $GLOBALS['app']->run_query($qq);
+			$rr = $app->run_query($qq);
 			
 			$subject = $completed_game['name']." has finished, please process payouts.";
-			$message = "This game finished ".$GLOBALS['app']->format_seconds($completed_game['sec_since_completion'])." ago. Please log in with your admin account and follow this link to complete the payout: ".$GLOBALS['base_url']."/payout_game.php?game_id=".$completed_game['game_id'];
-			$GLOBALS['app']->mail_async($GLOBALS['rsa_keyholder_email'], $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "");
+			$message = "This game finished ".$app->format_seconds($completed_game['sec_since_completion'])." ago. Please log in with your admin account and follow this link to complete the payout: ".$GLOBALS['base_url']."/payout_game.php?game_id=".$completed_game['game_id'];
+			$app->mail_async($GLOBALS['rsa_keyholder_email'], $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "");
 		}
 	}
 	
 	$coin_rpc = false;
 	
 	$q = "SELECT * FROM games WHERE game_type='real';";
-	$r = $GLOBALS['app']->run_query($q);
+	$r = $app->run_query($q);
 	
-	if (mysql_numrows($r) == 1)	{
-		$db_real_game = mysql_fetch_array($r);
-		$real_game = new Game($db_real_game['game_id']);
+	if ($r->rowCount() == 1)	{
+		$db_real_game = $r->fetch();
+		$real_game = new Game($app, $db_real_game['game_id']);
 		
 		$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
 	}
 	
 	$running_games = array();
 	$q = "SELECT * FROM games WHERE game_status='running';";
-	$r = $GLOBALS['app']->run_query($q);
-	while ($running_game = mysql_fetch_array($r)) {
-		$running_games[count($running_games)] = new Game($running_game['game_id']);
+	$r = $app->run_query($q);
+	while ($running_game = $r->fetch()) {
+		$running_games[count($running_games)] = new Game($app, $running_game['game_id']);
 	}
 	
 	if ($real_game->db_game['game_status'] == "running") {
 		if ($GLOBALS['always_generate_coins']) {
 			$q = "SELECT * FROM blocks WHERE game_id='".$real_game->db_game['game_id']."' ORDER BY block_id DESC LIMIT 1;";
-			$r = $GLOBALS['app']->run_query($q);
+			$r = $app->run_query($q);
 			
-			if (mysql_numrows($r) > 0) {
-				$lastblock = mysql_fetch_array($r);
+			if ($r->rowCount() > 0) {
+				$lastblock = $r->fetch();
 				
 				if ($lastblock['time_created'] < time()-$GLOBALS['restart_generation_seconds']) {
 					$coin_rpc->setgenerate(false);
@@ -89,11 +89,11 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	if ($real_game && $GLOBALS['min_unallocated_addresses'] > 0) {
 		$need_addresses = false;
 		$q = "SELECT * FROM game_voting_options WHERE game_id='".$real_game->db_game['game_id']."' ORDER BY option_id ASC;";
-		$r = $GLOBALS['app']->run_query($q);
-		while ($option = mysql_fetch_array($r)) {
+		$r = $app->run_query($q);
+		while ($option = $r->fetch()) {
 			$qq = "SELECT COUNT(*) FROM addresses WHERE game_id='".$real_game->db_game['game_id']."' AND option_id='".$option['option_id']."' AND user_id IS NULL;";
-			$rr = $GLOBALS['app']->run_query($qq);
-			$num_addr = mysql_fetch_row($rr);
+			$rr = $app->run_query($qq);
+			$num_addr = $rr->fetch(PDO::FETCH_NUM);
 			$num_addr = $num_addr[0];
 			if ($num_addr < $GLOBALS['min_unallocated_addresses']) {
 				echo "Add ".($GLOBALS['min_unallocated_addresses']-$num_addr)." for ".$option['name']."<br/>\n";
@@ -155,7 +155,7 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	echo "Script ran for ".round($runtime_sec, 2)." seconds.<br/>\n";
 	/*
 	$q = "UPDATE users SET logged_in=0 WHERE last_active<".(time()-60*2).";";
-	$r = $GLOBALS['app']->run_query($q);
+	$r = $app->run_query($q);
 	*/
 }
 else echo "Error: permission denied.";

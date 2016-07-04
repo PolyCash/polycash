@@ -8,11 +8,11 @@ $game_identifier = $uri_parts[2];
 
 $user_game = false;
 
-$game_q = "SELECT * FROM games WHERE url_identifier='".mysql_real_escape_string($game_identifier)."' AND (game_status IN ('running','completed','published'));";
-$game_r = $GLOBALS['app']->run_query($game_q);
-if (mysql_numrows($game_r) == 1) {
-	$db_game = mysql_fetch_array($game_r);
-	$game = new Game($db_game['game_id']);
+$game_q = "SELECT * FROM games WHERE url_identifier=".$app->quote_escape($game_identifier)." AND (game_status IN ('running','completed','published'));";
+$game_r = $app->run_query($game_q);
+if ($game_r->rowCount() == 1) {
+	$db_game = $game_r->fetch();
+	$game = new Game($app, $db_game['game_id']);
 	
 	if ($game->db_game['game_type'] == "real") {
 		$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
@@ -20,10 +20,10 @@ if (mysql_numrows($game_r) == 1) {
 	
 	if ($thisuser) {
 		$qq = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
-		$rr = $GLOBALS['app']->run_query($qq);
+		$rr = $app->run_query($qq);
 		
-		if (mysql_numrows($rr) > 0) {
-			$user_game = mysql_fetch_array($rr);
+		if ($rr->rowCount() > 0) {
+			$user_game = $rr->fetch();
 		}
 	}
 	
@@ -75,9 +75,9 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				}
 				else {
 					$q = "SELECT r.*, gvo.*, t.amount FROM cached_rounds r LEFT JOIN game_voting_options gvo ON r.winning_option_id=gvo.option_id LEFT JOIN transactions t ON r.payout_transaction_id=t.transaction_id WHERE r.game_id=".$game->db_game['game_id']." AND r.round_id='".$round_id."';";
-					$r = $GLOBALS['app']->run_query($q);
-					if (mysql_numrows($r) == 1) {
-						$round = mysql_fetch_array($r);
+					$r = $app->run_query($q);
+					if ($r->rowCount() == 1) {
+						$round = $r->fetch();
 						$mode_error = false;
 						$pagetitle = $game->db_game['name']." - Results of round #".$round['round_id'];
 						$round_status = "completed";
@@ -98,10 +98,10 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 	}
 	if ($explore_mode == "addresses") {
 		$address_text = $uri_parts[4];
-		$q = "SELECT * FROM addresses WHERE address='".mysql_real_escape_string($address_text)."';";
-		$r = $GLOBALS['app']->run_query($q);
-		if (mysql_numrows($r) == 1) {
-			$address = mysql_fetch_array($r);
+		$q = "SELECT * FROM addresses WHERE address=".$app->quote_escape($address_text).";";
+		$r = $app->run_query($q);
+		if ($r->rowCount() == 1) {
+			$address = $r->fetch();
 			$mode_error = false;
 			$pagetitle = $game->db_game['name']." Address: ".$address['address'];
 		}
@@ -114,19 +114,19 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 		else {
 			$block_id = intval($uri_parts[4]);
 			$q = "SELECT * FROM blocks WHERE game_id='".$game->db_game['game_id']."' AND block_id='".$block_id."';";
-			$r = $GLOBALS['app']->run_query($q);
-			if (mysql_numrows($r) == 1) {
-				$block = mysql_fetch_array($r);
+			$r = $app->run_query($q);
+			if ($r->rowCount() == 1) {
+				$block = $r->fetch();
 				$mode_error = false;
 				$pagetitle = $game->db_game['name']." Block #".$block['block_id'];
 			}
 			else {
-				$q = "SELECT * FROM blocks WHERE game_id='".$game->db_game['game_id']."' AND block_hash='".mysql_real_escape_string($uri_parts[4])."';";
-				$r = $GLOBALS['app']->run_query($q);
-				echo mysql_numrows($r)." ".$q."<br/>\n";
+				$q = "SELECT * FROM blocks WHERE game_id='".$game->db_game['game_id']."' AND block_hash=".$app->quote_escape($uri_parts[4]).";";
+				$r = $app->run_query($q);
+				echo $r->rowCount()." ".$q."<br/>\n";
 				
-				if (mysql_numrows($r) == 1) {
-					$block = mysql_fetch_array($r);
+				if ($r->rowCount() == 1) {
+					$block = $r->fetch();
 					$mode_error = false;
 					$pagetitle = $game->db_game['name']." Block #".$block['block_id'];
 				}
@@ -146,12 +146,12 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 			}
 			else {
 				$tx_hash = $uri_parts[4];
-				$q = "SELECT * FROM transactions WHERE tx_hash='".mysql_real_escape_string($tx_hash)."';";
+				$q = "SELECT * FROM transactions WHERE tx_hash=".$app->quote_escape($tx_hash).";";
 			}
-			$r = $GLOBALS['app']->run_query($q);
+			$r = $app->run_query($q);
 			
-			if (mysql_numrows($r) == 1) {
-				$transaction = mysql_fetch_array($r);
+			if ($r->rowCount() == 1) {
+				$transaction = $r->fetch();
 				$mode_error = false;
 				$pagetitle = $game->db_game['name']." Transaction: ".$transaction['tx_hash'];
 			}
@@ -248,7 +248,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 						<div class="col-md-6">
 							<div class="row">
 								<div class="col-sm-4">Total votes cast:</div>
-								<div class="col-sm-8"><?php echo $GLOBALS['app']->format_bignum($round_score_sum/pow(10,8)); ?> votes</div>
+								<div class="col-sm-8"><?php echo $app->format_bignum($round_score_sum/pow(10,8)); ?> votes</div>
 							</div>
 						</div>
 					</div>
@@ -263,18 +263,18 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					if ($my_votes[$round['winning_option_id']] > 0) {
 						$payout_amt = (floor(100*pos_reward_in_round($game->db_game, $this_round)/pow(10,8)*$my_votes[$round['winning_option_id']]['coins']/$round['winning_score'])/100);
 						
-						$payout_disp = $GLOBALS['app']->format_bignum($payout_amt);
+						$payout_disp = $app->format_bignum($payout_amt);
 						echo "You won <font class=\"greentext\">+".$payout_disp." ";
 						if ($payout_disp == '1') echo $game->db_game['coin_name'];
 						else echo $game->db_game['coin_name_plural'];
 						
-						$vote_disp = $GLOBALS['app']->format_bignum($my_votes[$round['winning_option_id']]['coins']/pow(10,8));
+						$vote_disp = $app->format_bignum($my_votes[$round['winning_option_id']]['coins']/pow(10,8));
 						echo "</font> by voting ".$vote_disp." ";
 						if ($vote_disp == '1') echo $game->db_game['coin_name'];
 						else echo $game->db_game['coin_name_plural'];
 						
 						if ($game->db_game['payout_weight'] != "coin") {
-							$vote_disp = $GLOBALS['app']->format_bignum($my_votes[$round['winning_option_id']][$game->db_game['payout_weight'].'s']/pow(10,8));
+							$vote_disp = $app->format_bignum($my_votes[$round['winning_option_id']][$game->db_game['payout_weight'].'s']/pow(10,8));
 							echo " (".$vote_disp;
 							echo " vote";
 							if ($vote_disp != '1') echo 's';
@@ -285,18 +285,18 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					}
 					
 					if ($round['payout_transaction_id'] > 0) {
-						$payout_disp = $GLOBALS['app']->format_bignum($round['amount']/pow(10,8));
+						$payout_disp = $app->format_bignum($round['amount']/pow(10,8));
 						echo '<font class="greentext">'.$payout_disp."</font> ";
 						if ($payout_disp == '1') echo $game->db_game['coin_name']." was";
 						else echo $game->db_game['coin_name_plural']." were";
 						echo " paid out to the winners.<br/>\n";
 					}
 					$round_fee_q = "SELECT SUM(fee_amount) FROM transactions WHERE game_id='".$game->db_game['game_id']."' AND block_id > ".(($this_round-1)*$game->db_game['round_length'])." AND block_id < ".($this_round*$game->db_game['round_length']).";";
-					$round_fee_r = $GLOBALS['app']->run_query($round_fee_q);
-					$round_fees = mysql_fetch_row($round_fee_r);
+					$round_fee_r = $app->run_query($round_fee_q);
+					$round_fees = $round_fee_r->fetch(PDO::FETCH_NUM);
 					$round_fees = intval($round_fees[0]);
 					
-					$fee_disp = $GLOBALS['app']->format_bignum($round_fees/pow(10,8));
+					$fee_disp = $app->format_bignum($round_fees/pow(10,8));
 					echo '<font class="redtext">'.$fee_disp."</font> ";
 					if ($fee_disp == '1') echo $game->db_game['coin_name']." was";
 					else echo $game->db_game['coin_name_plural']." were";
@@ -306,9 +306,9 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					$to_block_id = ($this_round*$game->db_game['round_length']);
 					
 					$q = "SELECT * FROM blocks WHERE game_id='".$game->db_game['game_id']."' AND block_id >= '".$from_block_id."' AND block_id <= ".$to_block_id." ORDER BY block_id ASC;";
-					$r = $GLOBALS['app']->run_query($q);
+					$r = $app->run_query($q);
 					echo "Blocks in this round: ";
-					while ($round_block = mysql_fetch_array($r)) {
+					while ($round_block = $r->fetch()) {
 						echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/blocks/".$round_block['block_id']."\">".$round_block['block_id']."</a> ";
 					}
 					?>
@@ -329,12 +329,12 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					for ($rank=1; $rank<=$game->db_game['num_voting_options']; $rank++) {
 						if ($round) {
 							$q = "SELECT * FROM game_voting_options WHERE option_id='".$round['position_'.$rank]."';";
-							$r = $GLOBALS['app']->run_query($q);
+							$r = $app->run_query($q);
 						}
 						
-						if (!$round || mysql_numrows($r) == 1) {
+						if (!$round || $r->rowCount() == 1) {
 							if ($round) {
-								$ranked_option = mysql_fetch_array($r);
+								$ranked_option = $r->fetch();
 								$option_scores = $game->option_score_in_round($ranked_option['option_id'], $round['round_id']);
 								$option_score = $option_scores['sum'];
 							}
@@ -348,13 +348,13 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 							echo '">';
 							echo '<div class="col-md-3">'.$rank.'. '.$ranked_option['name'].'</div>';
 							echo '<div class="col-md-1" style="text-align: center;">'.round(100*$option_score/$round_score_sum, 2).'%</div>';
-							echo '<div class="col-md-3" style="text-align: center;">'.$GLOBALS['app']->format_bignum($option_score/pow(10,8)).' votes</div>';
+							echo '<div class="col-md-3" style="text-align: center;">'.$app->format_bignum($option_score/pow(10,8)).' votes</div>';
 							if ($thisuser) {
 								echo '<div class="col-md-3" style="text-align: center;">';
 								
 								$score_qty = $my_votes[$ranked_option['option_id']]['votes'];
 								
-								$score_disp = $GLOBALS['app']->format_bignum($score_qty/pow(10,8));
+								$score_disp = $app->format_bignum($score_qty/pow(10,8));
 								echo $score_disp." ";
 								echo " vote";
 								if ($score_disp != '1') echo "s";
@@ -372,8 +372,8 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					for ($i=$from_block_id; $i<=$to_block_id; $i++) {
 						echo "Block #".$i."<br/>\n";
 						$q = "SELECT * FROM transactions WHERE game_id='".$game->db_game['game_id']."' AND block_id='".$i."' AND amount > 0 ORDER BY transaction_id ASC;";
-						$r = $GLOBALS['app']->run_query($q);
-						while ($transaction = mysql_fetch_array($r)) {
+						$r = $app->run_query($q);
+						while ($transaction = $r->fetch()) {
 							echo $game->render_transaction($transaction, FALSE, "");
 						}
 					}
@@ -424,8 +424,8 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 						$block_index = $game->block_id_to_round_index($block['block_id']);
 						
 						$q = "SELECT COUNT(*), SUM(amount) FROM transactions WHERE game_id='".$game->db_game['game_id']."' AND block_id='".$block['block_id']."' AND amount > 0;";
-						$r = $GLOBALS['app']->run_query($q);
-						$r = mysql_fetch_row($r);
+						$r = $app->run_query($q);
+						$r = $r->fetch(PDO::FETCH_NUM);
 						$num_trans = $r[0];
 						$block_sum = $r[1];
 						
@@ -436,8 +436,8 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					}
 					else {
 						$q = "SELECT COUNT(*), SUM(amount) FROM transactions WHERE game_id='".$game->db_game['game_id']."' AND block_id IS NULL;";// AND amount > 0;";
-						$r = $GLOBALS['app']->run_query($q);
-						$r = mysql_fetch_row($r);
+						$r = $app->run_query($q);
+						$r = $r->fetch(PDO::FETCH_NUM);
 						$num_trans = $r[0];
 						$block_sum = $r[1];
 						
@@ -461,9 +461,9 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					if ($explore_mode == "unconfirmed") $q .= " IS NULL";
 					else $q .= "='".$block['block_id']."'";
 					$q .= " AND amount > 0 ORDER BY transaction_id ASC;";
-					$r = $GLOBALS['app']->run_query($q);
+					$r = $app->run_query($q);
 					
-					while ($transaction = mysql_fetch_array($r)) {
+					while ($transaction = $r->fetch()) {
 						echo $game->render_transaction($transaction, FALSE, "");
 					}
 					echo '</div>';
@@ -497,12 +497,12 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				}
 				else {
 					$q = "SELECT * FROM blocks WHERE game_id='".$game->db_game['game_id']."' ORDER BY block_id ASC;";
-					$r = $GLOBALS['app']->run_query($q);
+					$r = $app->run_query($q);
 					
 					echo "<h1>EmpireCoin - List of Blocks</h1>\n";
 					echo "<h3>".$game->db_game['name']."</h3>";
 					echo "<ul>\n";
-					while ($block = mysql_fetch_array($r)) {
+					while ($block = $r->fetch()) {
 						echo "<li><a href=\"/explorer/".$game->db_game['url_identifier']."/blocks/".$block['block_id']."\">Block #".$block['block_id']."</a></li>\n";
 					}
 					echo "</ul>\n";
@@ -514,13 +514,13 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				echo "<h3>EmpireCoin Address: ".$address['address']."</h3>\n";
 				
 				$q = "SELECT * FROM transactions t, transaction_ios i WHERE i.address_id='".$address['address_id']."' AND (t.transaction_id=i.create_transaction_id OR t.transaction_id=i.spend_transaction_id) GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;";
-				$r = $GLOBALS['app']->run_query($q);
+				$r = $app->run_query($q);
 				
-				echo "This address has been used in ".mysql_numrows($r)." transactions.<br/>\n";
+				echo "This address has been used in ".$r->rowCount()." transactions.<br/>\n";
 				if ($address['is_mine'] == 1) echo "This is one of your addresses.<br/>\n";
 				
 				echo '<div style="border-bottom: 1px solid #bbb;">';
-				while ($transaction_io = mysql_fetch_array($r)) {
+				while ($transaction_io = $r->fetch()) {
 					$block_index = $game->block_id_to_round_index($transaction_io['block_id']);
 					$round_id = $game->block_to_round($transaction_io['block_id']);
 					$desc = "Confirmed in ";
@@ -534,10 +534,10 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 			}
 			else if ($explore_mode == "initial") {
 				$q = "SELECT * FROM transactions WHERE game_id='".$game->db_game['game_id']."' AND round_id=0 AND amount > 0 ORDER BY transaction_id ASC;";
-				$r = $GLOBALS['app']->run_query($q);
+				$r = $app->run_query($q);
 				
 				echo '<div style="border-bottom: 1px solid #bbb;">';
-				while ($transaction = mysql_fetch_array($r)) {
+				while ($transaction = $r->fetch()) {
 					echo $game->render_transaction($transaction, FALSE, "");
 				}
 				echo '</div>';
@@ -596,9 +596,9 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				<h3>EmpireCoin - Please choose a game</h3>
 				<?php
 				$q = "SELECT * FROM games WHERE game_status IN ('running','published') AND creator_id IS NULL;";
-				$r = $GLOBALS['app']->run_query($q);
+				$r = $app->run_query($q);
 				$game_id_csv = "";
-				while ($temp_game = mysql_fetch_array($r)) {
+				while ($temp_game = $r->fetch()) {
 					echo '<a href="/explorer/'.$temp_game['url_identifier'].'">'.$temp_game['name']."</a><br/>\n";
 					$game_id_csv .= $temp_game['game_id'].",";
 				}
@@ -608,8 +608,8 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id AND ug.user_id='".$thisuser->db_user['user_id']."'";
 					$q .= " AND g.game_id NOT IN (".$game_id_csv.")";
 					$q .= ";";
-					$r = $GLOBALS['app']->run_query($q);
-					while ($temp_game = mysql_fetch_array($r)) {
+					$r = $app->run_query($q);
+					while ($temp_game = $r->fetch()) {
 						echo '<a href="/explorer/'.$temp_game['url_identifier'].'">'.$temp_game['name']."</a><br/>\n";
 					}
 				}

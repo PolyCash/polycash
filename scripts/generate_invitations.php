@@ -7,7 +7,7 @@ die("This script is disabled.");
 if ($thisuser) {
 	$game_id = intval($_REQUEST['game_id']);
 	
-	$game = new Game($game_id);
+	$game = new Game($app, $game_id);
 	
 	if ($game) {
 		$quantity = 100;

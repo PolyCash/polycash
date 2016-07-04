@@ -8,11 +8,11 @@ if ($argv) $_REQUEST['key'] = $argv[1];
 
 if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$q = "SELECT * FROM games WHERE game_type='real' ORDER BY game_id ASC;";
-	$r = $GLOBALS['app']->run_query($q);
+	$r = $app->run_query($q);
 	
-	if (mysql_numrows($r) > 0)	{
-		$db_real_game = mysql_fetch_array($r);
-		$real_game = new Game($db_real_game['game_id']);
+	if ($r->rowCount() > 0)	{
+		$db_real_game = $r->fetch();
+		$real_game = new Game($app, $db_real_game['game_id']);
 		$script_max_time = 60*5;
 		$min_sleep_time = 5;
 		

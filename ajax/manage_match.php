@@ -10,14 +10,14 @@ if ($thisuser) {
 		$match_type_id = intval($_REQUEST['match_type_id']);
 		
 		$q = "SELECT * FROM match_types WHERE match_type_id='".$match_type_id."';";
-		$r = $GLOBALS['app']->run_query($q);
+		$r = $app->run_query($q);
 		
-		if (mysql_numrows($r) == 1) {
-			$match_type = mysql_fetch_array($r);
+		if ($r->rowCount() == 1) {
+			$match_type = $r->fetch();
 			
 			$q = "INSERT INTO matches SET creator_id='".$thisuser->db_user['user_id']."', status='pending', match_type_id='".$match_type['match_type_id']."';";
-			$r = $GLOBALS['app']->run_query($q);
-			$match_id = mysql_insert_id();
+			$r = $app->run_query($q);
+			$match_id = $app->last_insert_id();
 			
 			$match = new Match($match_id);
 			
@@ -25,7 +25,7 @@ if ($thisuser) {
 			
 			for ($round_id=1; $round_id<=$match_type['num_rounds']; $round_id++) {
 				$q = "INSERT INTO match_rounds SET status='incomplete', match_id='".$match->db_match['match_id']."', round_number='".$round_id."';";
-				$r = $GLOBALS['app']->run_query($q);
+				$r = $app->run_query($q);
 			}
 			
 			$result_code = 1;
@@ -73,10 +73,10 @@ if ($thisuser) {
 			else if ($do == "move") {
 				if ($my_membership) {
 					$q = "SELECT * FROM match_moves WHERE membership_id='".$my_membership['membership_id']."' AND round_number='".$match->db_match['current_round_number']."';";
-					$r = $GLOBALS['app']->run_query($q);
+					$r = $app->run_query($q);
 					
-					if (mysql_numrows($r) > 0) {
-						$my_move = mysql_fetch_array($r);
+					if ($r->rowCount() > 0) {
+						$my_move = $r->fetch();
 						$result_code = 6;
 						$error_message = "You've already made your move for this round.";
 					}
@@ -122,5 +122,5 @@ else {
 $output['result_code'] = $result_code;
 $output['error_message'] = $error_message;
 
-echo $GLOBALS['app']->json_encode($output);
+echo $app->json_encode($output);
 ?>

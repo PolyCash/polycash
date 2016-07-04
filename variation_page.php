@@ -8,9 +8,9 @@ include('includes/html_start.php');
 $user_game = false;
 if ($game_variation) {
 	$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND g.variation_id='".$game_variation['variation_id']."';";
-	$r = $GLOBALS['app']->run_query($q);
-	if (mysql_numrows($r) == 1) {
-		$user_game = mysql_fetch_array($r);
+	$r = $app->run_query($q);
+	if ($r->rowCount() == 1) {
+		$user_game = $r->fetch();
 	}
 }
 else die("Error: you've reach an invalid URL.");
@@ -49,34 +49,34 @@ if ($_REQUEST['action'] == "join") { ?>
 						$coins_per_hour = $round_reward*$rounds_per_hour;
 						echo "In this game, ";
 						echo number_format($coins_per_hour)." ".$game_variation['coin_name_plural']." are generated every hour. ";
-						echo $GLOBALS['app']->format_bignum($round_reward)." ".$game_variation['coin_name_plural']." are given out per ".rtrim($GLOBALS['app']->format_seconds($seconds_per_round), 's')." voting round. ";
+						echo $app->format_bignum($round_reward)." ".$game_variation['coin_name_plural']." are given out per ".rtrim($app->format_seconds($seconds_per_round), 's')." voting round. ";
 					}
 					else {
-						echo "In this game, ".$game_variation['coin_name_plural']." experience an inflation of ".(100*$game_variation['exponential_inflation_rate'])."% every ".$GLOBALS['app']->format_seconds($seconds_per_round).". ";
+						echo "In this game, ".$game_variation['coin_name_plural']." experience an inflation of ".(100*$game_variation['exponential_inflation_rate'])."% every ".$app->format_seconds($seconds_per_round).". ";
 					}
 					
-					echo $GLOBALS['app']->format_bignum($miner_pct);
+					echo $app->format_bignum($miner_pct);
 					?>% of the currency is given to proof of work miners for securing the network and the remaining <?php
-					echo $GLOBALS['app']->format_bignum(100-$miner_pct);
+					echo $app->format_bignum(100-$miner_pct);
 					?>% is given out to the players for winning votes.<?php
 					?>
 				</div>
 				<?php
 				if ($game_variation['giveaway_status'] == "public_pay" || $game_variation['giveaway_status'] == "invite_pay") {
 					$q = "SELECT * FROM currencies WHERE currency_id='".$game_variation['invite_currency']."';";
-					$r = $GLOBALS['app']->run_query($q);
-					if (mysql_numrows($r) > 0) {
-						$invite_currency = mysql_fetch_array($r);
+					$r = $app->run_query($q);
+					if ($r->rowCount() > 0) {
+						$invite_currency = $r->fetch();
 						echo '<div class="paragraph">';
 						
-						$receive_disp = $GLOBALS['app']->format_bignum($game_variation['giveaway_amount']/pow(10,8));
+						$receive_disp = $app->format_bignum($game_variation['giveaway_amount']/pow(10,8));
 						if ($game_variation['giveaway_status'] == "invite_pay" || $game_variation['giveaway_status'] == "invite_free") echo "You need an invitation to join this game. After receiving an invitation you can join";
 						else echo 'You can join this game';
 						echo ' by buying '.$receive_disp.' ';
 						if ($receive_disp == '1') echo $game_variation['coin_name'];
 						else echo $game_variation['coin_name_plural'];
 						
-						$buyin_disp = $GLOBALS['app']->format_bignum($game_variation['invite_cost']);
+						$buyin_disp = $app->format_bignum($game_variation['invite_cost']);
 						echo ' for '.$buyin_disp.' ';
 						echo $invite_currency['short_name'];
 						if ($buyin_disp != '1') echo "s";
@@ -84,7 +84,7 @@ if ($_REQUEST['action'] == "join") { ?>
 
 						if ($game_variation['start_condition'] == "fixed_time") {
 							$unix_starttime = strtotime($game_variation['start_datetime']);
-							echo "This game starts in ".$GLOBALS['app']->format_seconds($unix_starttime-time())." at ".date("M j, Y g:ia", $unix_starttime).". ";
+							echo "This game starts in ".$app->format_seconds($unix_starttime-time())." at ".date("M j, Y g:ia", $unix_starttime).". ";
 						}
 						else {
 							$current_players = 0;//paid_players_in_game($game_variation);
@@ -104,7 +104,7 @@ if ($_REQUEST['action'] == "join") { ?>
 				}
 				?>
 				<div class="paragraph">
-					In this game you can win <?php echo $game_variation['coin_name_plural']; ?> by casting your votes correctly.  Votes build up over time based on the number of <?php echo $game_variation['coin_name_plural']; ?> that you hold.  When you vote for <?php echo $GLOBALS['app']->prepend_a_or_an($game_variation['option_name']); ?>, your votes are used up but your <?php echo $game_variation['coin_name_plural']; ?> are retained. By collaborating with your teammates against competing groups, you can make money by accumulating <?php echo $game_variation['coin_name_plural']; ?> faster than the other players.  Through the <?php echo $GLOBALS['coin_brand_name']; ?> API you can code up a custom strategy which makes smart, real-time decisions about how to cast your votes.
+					In this game you can win <?php echo $game_variation['coin_name_plural']; ?> by casting your votes correctly.  Votes build up over time based on the number of <?php echo $game_variation['coin_name_plural']; ?> that you hold.  When you vote for <?php echo $app->prepend_a_or_an($game_variation['option_name']); ?>, your votes are used up but your <?php echo $game_variation['coin_name_plural']; ?> are retained. By collaborating with your teammates against competing groups, you can make money by accumulating <?php echo $game_variation['coin_name_plural']; ?> faster than the other players.  Through the <?php echo $GLOBALS['coin_brand_name']; ?> API you can code up a custom strategy which makes smart, real-time decisions about how to cast your votes.
 				</div>
 				<div class="paragraph">
 					<button class="btn btn-success" onclick="join_game_variation(<?php echo $game_variation['variation_id']; ?>);">Play Now</button>
@@ -113,7 +113,7 @@ if ($_REQUEST['action'] == "join") { ?>
 			<div class="col-md-6">
 				<h2><?php echo $game_variation['type_name']; ?></h2>
 				<div style="border: 1px solid #ccc; padding: 10px;">
-					<?php echo game_info_table($game_variation); ?>
+					<?php echo game_info_table($app, $game_variation); ?>
 				</div>
 			</div>
 		</div>
@@ -123,15 +123,15 @@ if ($_REQUEST['action'] == "join") { ?>
 		<h2>Rules of the Game</h2>
 		
 		<ol class="rules_list">
-			<li>Players can vote on these <?php echo $game_variation['num_voting_options']." ".$game_variation['option_name_plural']." every ".$GLOBALS['app']->format_seconds($seconds_per_round); ?> by submitting a voting transaction.</li>
+			<li>Players can vote on these <?php echo $game_variation['num_voting_options']." ".$game_variation['option_name_plural']." every ".$app->format_seconds($seconds_per_round); ?> by submitting a voting transaction.</li>
 			
 			<div style="margin-bottom: 10px;">
 				<div class="row">
 					<?php
 					$q = "SELECT * FROM voting_options vo LEFT JOIN images i ON vo.default_image_id=i.image_id WHERE vo.option_group_id='".$game_variation['option_group_id']."';";
-					$r = $GLOBALS['app']->run_query($q);
+					$r = $app->run_query($q);
 					$i = 0;
-					while ($voting_option = mysql_fetch_array($r)) {
+					while ($voting_option = $r->fetch()) {
 						echo '
 						<div class="col-md-3">
 							<div class="vote_option_box">
@@ -163,18 +163,18 @@ if ($_REQUEST['action'] == "join") { ?>
 			</div>
 			
 			<li>Voting transactions are only counted if they are confirmed in a voting block. All blocks are voting blocks except for the final block of each round.</li>
-			<li>Blocks are mined approximately every <?php echo $GLOBALS['app']->format_seconds($game_variation['seconds_per_block']); ?> by the SHA256 algorithm. 
-			<?php if ($game_variation['inflation'] == "linear") { ?>Miners receive <?php echo $GLOBALS['app']->format_bignum($game_variation['pow_reward']/pow(10,8))." ".$game_variation['coin_name_plural']; ?> per block.<?php } ?></li>
+			<li>Blocks are mined approximately every <?php echo $app->format_seconds($game_variation['seconds_per_block']); ?> by the SHA256 algorithm. 
+			<?php if ($game_variation['inflation'] == "linear") { ?>Miners receive <?php echo $app->format_bignum($game_variation['pow_reward']/pow(10,8))." ".$game_variation['coin_name_plural']; ?> per block.<?php } ?></li>
 			<li>Blocks are grouped into voting rounds.  Blocks 1 through <?php echo $game_variation['round_length']; ?> make up the first round, and every subsequent <?php echo $game_variation['round_length']; ?> blocks are grouped into a round.</li>
 			<li>A voting round will have a winning <?php echo $game_variation['option_name']; ?> if at least one <?php echo $game_variation['option_name']; ?> receives votes but is not disqualified.</li>
-			<li>Any <?php echo $game_variation['option_name']; ?> with more than <?php echo $GLOBALS['app']->format_bignum(100*$game_variation['max_voting_fraction']); ?>% of the votes is disqualified from winning the round.</li>
+			<li>Any <?php echo $game_variation['option_name']; ?> with more than <?php echo $app->format_bignum(100*$game_variation['max_voting_fraction']); ?>% of the votes is disqualified from winning the round.</li>
 			<li>The eligible <?php echo $game_variation['option_name']; ?> with the most votes wins the round.</li>
 			<li>In case of a tie, the <?php echo $game_variation['option_name']; ?> with the lowest ID number wins.</li>
 			<li>When a round ends <?php
 			if ($game_variation['inflation'] == "linear") {
-				echo $GLOBALS['app']->format_bignum($game_variation['pos_reward']/pow(10,8))." ".$game_variation['coin_name_plural']." are divided up";
+				echo $app->format_bignum($game_variation['pos_reward']/pow(10,8))." ".$game_variation['coin_name_plural']." are divided up";
 			}
-			else echo $GLOBALS['app']->format_bignum(100*$game_variation['exponential_inflation_rate']).'% is added to the currency supply';
+			else echo $app->format_bignum(100*$game_variation['exponential_inflation_rate']).'% is added to the currency supply';
 			?> and given to the winning voters in proportion to their votes.</li>
 		</ol>
 	</div>

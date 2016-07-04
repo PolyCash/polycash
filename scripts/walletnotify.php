@@ -5,7 +5,7 @@ $start_time = microtime(true);
 
 $coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
 
-$game = new Game($GLOBALS['app']->get_site_constant('primary_game_id'));
+$game = new Game($app, $app->get_site_constant('primary_game_id'));
 
 echo $game->sync_coind($coin_rpc);
 

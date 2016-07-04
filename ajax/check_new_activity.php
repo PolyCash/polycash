@@ -7,7 +7,7 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	
 	if (!$game) {
 		$game_id = intval($_REQUEST['game_id']);
-		$game = new Game($game_id);
+		$game = new Game($app, $game_id);
 	}
 	
 	if ($thisuser) $thisuser->set_user_active();
@@ -77,7 +77,7 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 		$output['wallet_text_stats'] = $thisuser->wallet_text_stats($game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance);
 		$output['my_current_votes'] = $game->my_votes_table($current_round, $thisuser);
 		$output['account_value'] = $game->account_value_html($account_value);
-		$output['vote_details_general'] = $GLOBALS['app']->vote_details_general($mature_balance);
+		$output['vote_details_general'] = $app->vote_details_general($mature_balance);
 		
 		$round_stats = $game->round_voting_stats_all($current_round);
 		$total_vote_sum = $round_stats[0];
@@ -89,14 +89,14 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 			$option = $round_stats[$option_id2rank[$option_id]];
 			if (!$option['last_win_round']) $losing_streak = false;
 			else $losing_streak = $current_round - $option['last_win_round'] - 1;
-			$stats_output[$option_id] = $GLOBALS['app']->vote_option_details($option, $option_id2rank[$option['option_id']]+1, $option[$game->db_game['payout_weight'].'_score'], $option['unconfirmed_'.$game->db_game['payout_weight'].'_score'], $total_vote_sum, $losing_streak);
+			$stats_output[$option_id] = $app->vote_option_details($option, $option_id2rank[$option['option_id']]+1, $option[$game->db_game['payout_weight'].'_score'], $option['unconfirmed_'.$game->db_game['payout_weight'].'_score'], $total_vote_sum, $losing_streak);
 		}
 		$output['vote_option_details'] = $stats_output;
 	}
 	
 	$q = "SELECT * FROM addresses WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."' AND option_id > 0 GROUP BY option_id;";
-	$r = $GLOBALS['app']->run_query($q);
-	$votingaddr_count = mysql_numrows($r);
+	$r = $app->run_query($q);
+	$votingaddr_count = $r->rowCount();
 	
 	if (intval($_REQUEST['votingaddr_count']) != $votingaddr_count) {
 		$output['new_votingaddresses'] = 1;
@@ -104,8 +104,8 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 		$option_has_votingaddr = [];
 		$votingaddr_count = 0;
 		$q = "SELECT option_id FROM addresses WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."' AND option_id > 0 GROUP BY option_id ORDER BY option_id ASC;";
-		$r = $GLOBALS['app']->run_query($q);
-		while ($option_id = mysql_fetch_row($r)) {
+		$r = $app->run_query($q);
+		while ($option_id = $r->fetch(PDO::FETCH_NUM)) {
 			$option_has_votingaddr[$option_id[0]] = true;
 			$votingaddr_count++;
 		}
@@ -115,11 +115,11 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	else $output['new_votingaddresses'] = 0;
 	
 	$q = "SELECT * FROM user_messages WHERE game_id='".$game->db_game['game_id']."' AND to_user_id='".$thisuser->db_user['user_id']."' AND seen=0 GROUP BY from_user_id;";
-	$r = $GLOBALS['app']->run_query($q);
-	if (mysql_numrows($r) > 0) {
+	$r = $app->run_query($q);
+	if ($r->rowCount() > 0) {
 		$output['new_messages'] = 1;
 		$output['new_message_user_ids'] = "";
-		while ($thread = mysql_fetch_array($r)) {
+		while ($thread = $r->fetch()) {
 			$output['new_message_user_ids'] .= $thread['from_user_id'].",";
 		}
 		$output['new_message_user_ids'] = substr($output['new_message_user_ids'], 0, strlen($output['new_message_user_ids'])-1);

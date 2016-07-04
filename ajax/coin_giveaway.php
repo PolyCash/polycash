@@ -9,7 +9,7 @@ if ($thisuser && $game) {
 	
 	if ($success) {
 		$qq = "UPDATE user_games SET show_planned_votes=1 WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
-		$rr = $GLOBALS['app']->run_query($qq);
+		$rr = $app->run_query($qq);
 		
 		echo "1";
 	}

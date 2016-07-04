@@ -9,7 +9,7 @@ else die('Please add this line to your includes/config.php: $GLOBALS[\'coin_bran
 
 include(realpath(dirname(__FILE__))."/../lib/bitcoin-sci/common.lib.php");
 
-if ($GLOBALS['base_url'] && !$host_not_required) {
+if ($GLOBALS['base_url'] && (!isset($host_not_required) || !$host_not_required)) {
 	$b_url = $_SERVER['HTTP_HOST'];
 	if (isset($_SERVER['HTTPS'])) $b_url = "https://".$b_url;
 	else $b_url = "http://".$b_url;
@@ -24,15 +24,15 @@ date_default_timezone_set($GLOBALS['default_timezone']);
 
 if ($GLOBALS['pageview_tracking_enabled']) include("classes/PageviewController.php");
 
-mysql_connect($GLOBALS['mysql_server'], $GLOBALS['mysql_user'], $GLOBALS['mysql_password']) or die("The server is unreachable.");
-if (!$skip_select_db) {
-	mysql_select_db($GLOBALS['mysql_database']) or die ( "Please <a href=\"/install.php?key=\">install the database</a>");
+$dbh = new PDO("mysql:host=".$GLOBALS['mysql_server'].";charset=utf8", $GLOBALS['mysql_user'], $GLOBALS['mysql_password']) or die("Error, failed to connect to the database.");
+if (isset($skip_select_db) && $skip_select_db) {}
+else {
+	$dbh->query("USE ".$GLOBALS['mysql_database']) or die ("Please <a href=\"/install.php?key=\">install the database</a>");
 }
-mysql_set_charset('utf8');
+
 header('Content-Type: text/html; charset=UTF-8');
 
 include("global_functions.php");
-
 include("classes/Api.php");
 include("classes/App.php");
 include("classes/JsonRPCClient.php");
@@ -41,6 +41,6 @@ include("classes/Match.php");
 include("classes/PageviewController.php");
 include("classes/User.php");
 
-$GLOBALS['app'] = new App();
-$GLOBALS['pageview_controller'] = new PageviewController();
+$app = new App($dbh);
+$pageview_controller = new PageviewController($app);
 ?>
