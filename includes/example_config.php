@@ -12,7 +12,7 @@ $GLOBALS['outbound_email_enabled'] = false;
 $GLOBALS['sendgrid_user'] = "";
 $GLOBALS['sendgrid_pass'] = "";
 
-$GLOBALS['show_query_errors'] = false;
+$GLOBALS['show_query_errors'] = true;
 $GLOBALS['cron_key_string'] = "";
 
 $GLOBALS['coin_port'] = 23347;
@@ -35,5 +35,6 @@ $GLOBALS['base_url'] = "http://".$GLOBALS['site_domain'];
 $GLOBALS['default_timezone'] = 'America/Chicago';
 
 $GLOBALS['default_server_api_access_key'] = false;
+
 $GLOBALS['api_proxy_url'] = false;
 ?>

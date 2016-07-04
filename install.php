@@ -22,31 +22,43 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				echo exec($cmd);
 
 				mysql_select_db($GLOBALS['mysql_database']) or die ("There was an error accessing the \"".$GLOBALS['mysql_database']."\" database");
-				
-				$q = "INSERT INTO games SET featured=1, url_identifier='empirecoin-live', game_status='running', giveaway_status='on', giveaway_amount=100000000000, pow_reward=2500000000, pos_reward=75000000000, game_type='simulation', block_timing='realistic', payout_weight='coin_round', seconds_per_block=120, name='EmpireCoin Live', num_voting_options=16, maturity=1, round_length=10, max_voting_fraction=0.25;";
+			}
+			else {
+				mysql_select_db($GLOBALS['mysql_database']) or die ("There was an error accessing the \"".$GLOBALS['mysql_database']."\" database");
+			}
+
+			$q = "SELECT * FROM games WHERE url_identifier='empirecoin-live';";
+			$r = run_query($q);
+			if (mysql_numrows($r) == 0) {
+				$q = "INSERT INTO games SET featured=1, url_identifier='empirecoin-live', game_status='running', giveaway_status='public_free', giveaway_amount=100000000000, pow_reward=2500000000, pos_reward=75000000000, game_type='simulation', block_timing='realistic', payout_weight='coin_round', seconds_per_block=120, name='EmpireCoin Live', num_voting_options=16, maturity=1, round_length=10, max_voting_fraction=0.25;";
 				$r = run_query($q);
 				$primary_game_id = mysql_insert_id();
 				
 				ensure_game_nations($primary_game_id);
 				
 				set_site_constant("primary_game_id", $primary_game_id);
+			}
 
-				$q = "INSERT INTO games SET featured=1, url_identifier='empirecoin-testnet', game_status='running', giveaway_status='on', giveaway_amount=500000000000, pow_reward=100000000, pos_reward=500000000000, game_type='simulation', block_timing='realistic', payout_weight='coin_round', seconds_per_block=5, name='EmpireCoin Testnet', num_voting_options=16, maturity=1, round_length=50, max_voting_fraction=0.15;";
+			$q = "SELECT * FROM games WHERE url_identifier='empirecoin-testnet';";
+			$r = run_query($q);
+			if (mysql_numrows($r) == 0) {
+				$q = "INSERT INTO games SET featured=1, url_identifier='empirecoin-testnet', game_status='running', giveaway_status='public_free', giveaway_amount=500000000000, pow_reward=100000000, pos_reward=500000000000, game_type='simulation', block_timing='realistic', payout_weight='coin_round', seconds_per_block=5, name='EmpireCoin Testnet', num_voting_options=16, maturity=1, round_length=50, max_voting_fraction=0.15;";
 				$r = run_query($q);
-				$primary_game_id = mysql_insert_id();
+				$testnet_game_id = mysql_insert_id();
 				
-				ensure_game_nations($primary_game_id);
-
+				ensure_game_nations($testnet_game_id);
+			}
+			
+			$q = "SELECT * FROM currency_prices WHERE currency_id=1 AND reference_currency_id=1;";
+			$r = run_query($q);
+			if (mysql_numrows($r) == 0) {
 				$q = "INSERT INTO currency_prices SET currency_id=1, reference_currency_id=1, price=1, time_added='".time()."';";
 				$r = run_query($q);
-				
-				set_site_constant("game_loop_seconds", 2);
-				set_site_constant("reference_currency_id", 1);
 			}
-			else {
-				mysql_select_db($GLOBALS['mysql_database']) or die ("There was an error accessing the \"".$GLOBALS['mysql_database']."\" database");
-			}
-
+			
+			set_site_constant("game_loop_seconds", 2);
+			set_site_constant("reference_currency_id", 1);
+			
 			$pagetitle = $GLOBALS['site_name']." - Installing...";
 			$include_crypto_js = TRUE;
 			include("includes/html_start.php");
