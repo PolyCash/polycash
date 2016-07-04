@@ -137,5 +137,5 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	echo '<script type="text/javascript">setTimeout("window.location=window.location;", '.(1000*$sec_until_refresh).');</script>'."\n";
 	echo "Script ran for ".round($runtime_sec, 2)." seconds.<br/>\n";
 }
-else echo "Error: permission denied.";
+else echo "Error: incorrect key supplied in cron/minutely_check_payments.php\n";
 ?>

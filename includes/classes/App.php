@@ -652,11 +652,13 @@ class App {
 		$arr = array();
 		$arg_i = 0;
 		foreach ($argv as $arg) {
-			$arg_parts = explode("=", $arg);
-			if(count($arg_parts) == 2)
-				$arr[$arg_parts[0]] = $arg_parts[1];
-			else
-				$arr[$arg_i] = $arg_parts[0];
+			if ($arg_i > 0) {
+				$arg_parts = explode("=", $arg);
+				if(count($arg_parts) == 2)
+					$arr[$arg_parts[0]] = $arg_parts[1];
+				else
+					$arr[$arg_i-1] = $arg_parts[0];
+			}
 			$arg_i++;
 		}
 		return $arr;
