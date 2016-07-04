@@ -73,7 +73,8 @@ if ($thisuser) {
 						$rr = $app->run_query($qq);
 						
 						$output_sum = 0;
-						$coins_in_existence = coins_in_existence($app, $payout_game, false);
+						$payout_game_obj = new Game($app, $payout_game['game_id']);
+						$coins_in_existence = $payout_game_obj->coins_in_existence(false);
 						
 						while ($temp_user_game = $rr->fetch()) {
 							$payout_frac = account_coin_value($payout_game, $temp_user_game)/$coins_in_existence;

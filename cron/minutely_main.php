@@ -16,8 +16,10 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 	$main_loop_running = (int) $app->get_site_constant("main_loop_running");
 	
 	if ($main_loop_running == 0) {
-		$app->set_site_constant("main_loop_running", 1);
-		register_shutdown_function("script_shutdown", "main_loop_running");
+		$GLOBALS['app'] = $app;
+		$GLOBALS['shutdown_lock_name'] = "main_loop_running";
+		$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
+		register_shutdown_function("script_shutdown");
 		
 		$real_games = array();
 		$coin_rpcs = array();

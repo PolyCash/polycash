@@ -1,4 +1,9 @@
 <?php
+function new_db_conn() {
+	$conn = new PDO("mysql:host=".$GLOBALS['mysql_server'].";charset=utf8", $GLOBALS['mysql_user'], $GLOBALS['mysql_password']) or die("Error, failed to connect to the database.");
+	return $conn;
+}
+
 function game_info_table(&$app, &$db_game) {
 	$html = "";
 	
@@ -89,17 +94,6 @@ function game_final_inflation_pct(&$db_game) {
 		return $inflation_pct;
 	}
 	else return false;
-}
-	
-function coins_in_existence(&$app, &$db_game, $block_id) {
-	$q = "SELECT SUM(amount) FROM transactions WHERE block_id IS NOT NULL AND game_id='".$db_game['game_id']."' AND transaction_desc IN ('giveaway','votebase','coinbase')";
-	if ($block_id) $q .= " AND block_id <= ".$block_id;
-	$q .= ";";
-	$r = $app->run_query($q);
-	$coins = $r->fetch(PDO::FETCH_NUM);
-	$coins = $coins[0];
-	if ($coins > 0) return $coins;
-	else return 0;
 }
 
 function ideal_coins_in_existence_after_round(&$db_game, $round_id) {

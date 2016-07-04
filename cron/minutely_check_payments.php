@@ -109,7 +109,7 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				$invite_amount = min($invite_amount, $user_buyin_limit['user_buyin_limit']);
 			}
 			$pot_value = $buyin_game->pot_value();
-			$coins_in_existence = coins_in_existence($app, $buyin_game->db_game);
+			$coins_in_existence = $buyin_game->coins_in_existence(false);
 			
 			if ($pot_value > 0) {
 				$exchange_rate = ($coins_in_existence/pow(10,8))/$pot_value;

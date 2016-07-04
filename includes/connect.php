@@ -7,6 +7,7 @@ else die("Please create the file includes/config.php");
 if ($GLOBALS['coin_brand_name'] != "") {}
 else die('Please add this line to your includes/config.php: $GLOBALS[\'coin_brand_name\'] = \'EmpireCoin\';');
 
+include("global_functions.php");
 include(realpath(dirname(__FILE__))."/../lib/bitcoin-sci/common.lib.php");
 
 if ($GLOBALS['base_url'] && (!isset($host_not_required) || !$host_not_required)) {
@@ -21,10 +22,7 @@ if ($GLOBALS['base_url'] && (!isset($host_not_required) || !$host_not_required))
 }
 
 date_default_timezone_set($GLOBALS['default_timezone']);
-
-if ($GLOBALS['pageview_tracking_enabled']) include("classes/PageviewController.php");
-
-$dbh = new PDO("mysql:host=".$GLOBALS['mysql_server'].";charset=utf8", $GLOBALS['mysql_user'], $GLOBALS['mysql_password']) or die("Error, failed to connect to the database.");
+$dbh = new_db_conn();
 if (isset($skip_select_db) && $skip_select_db) {}
 else {
 	$dbh->query("USE ".$GLOBALS['mysql_database']) or die ("Please <a href=\"/install.php?key=\">install the database</a>");
@@ -34,15 +32,14 @@ $dbh->query("SET sql_mode='';");
 
 header('Content-Type: text/html; charset=UTF-8');
 
-include("global_functions.php");
 include("classes/Api.php");
 include("classes/App.php");
 include("classes/JsonRPCClient.php");
 include("classes/Game.php");
 include("classes/Match.php");
-include("classes/PageviewController.php");
+if ($GLOBALS['pageview_tracking_enabled']) include("classes/PageviewController.php");
 include("classes/User.php");
 
 $app = new App($dbh);
-$pageview_controller = new PageviewController($app);
+if ($GLOBALS['pageview_tracking_enabled']) $pageview_controller = new PageviewController($app);
 ?>

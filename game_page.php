@@ -79,7 +79,7 @@ if ($game && $thisuser) {
 						echo ". ";
 
 						if ($game->db_game['game_status'] == "running") {
-							echo "This game started ".$app->format_seconds(time()-$game->db_game['start_time'])." ago; ".$app->format_bignum(coins_in_existence($app, $game, false)/pow(10,8))." ".$game->db_game['coin_name_plural']."  are already in circulation. ";
+							echo "This game started ".$app->format_seconds(time()-$game->db_game['start_time'])." ago; ".$app->format_bignum($game->coins_in_existence(false)/pow(10,8))." ".$game->db_game['coin_name_plural']."  are already in circulation. ";
 						}
 						else {
 							if ($game->db_game['start_condition'] == "fixed_time") {

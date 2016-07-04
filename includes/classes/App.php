@@ -438,22 +438,22 @@ class App {
 			$api_response_raw = file_get_contents($currency_url['url']);
 			$api_response = json_decode($api_response_raw);
 			
-			if (!empty($api_response->rates)) {
-				$api_rates = (array) $api_response->rates;
-				$qq = "SELECT * FROM currencies WHERE oracle_url_id='".$currency_url['oracle_url_id']."';";
-				$rr = $this->run_query($qq);
+			$qq = "SELECT * FROM currencies WHERE oracle_url_id='".$currency_url['oracle_url_id']."';";
+			$rr = $this->run_query($qq);
 			
-				while ($currency = $rr->fetch()) {
-					if ($currency_url['format_id'] == 2) {
-						$price = $api_response->USD->bid;
-					}
-					else if ($currency_url['format_id'] == 1) {
+			while ($currency = $rr->fetch()) {
+				if ($currency_url['format_id'] == 2) {
+					$price = $api_response->USD->bid;
+				}
+				else if ($currency_url['format_id'] == 1) {
+					if (!empty($api_response->rates)) {
+						$api_rates = (array) $api_response->rates;
 						$price = 1/($api_rates[$currency['abbreviation']]);
 					}
-				
-					$qqq = "INSERT INTO currency_prices SET currency_id='".$currency['currency_id']."', reference_currency_id='".$reference_currency_id."', price='".$price."', time_added='".time()."';";
-					$rrr = $this->run_query($qqq);
 				}
+				
+				$qqq = "INSERT INTO currency_prices SET currency_id='".$currency['currency_id']."', reference_currency_id='".$reference_currency_id."', price='".$price."', time_added='".time()."';";
+				$rrr = $this->run_query($qqq);
 			}
 		}
 	}
