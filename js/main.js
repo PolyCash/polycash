@@ -1527,3 +1527,16 @@ function show_intro_message() {
 function show_planned_votes() {
 	$('#planned_votes').modal('show');
 }
+function join_game_variation(variation_id) {
+	$.get("/ajax/join_game_variation.php?variation_id="+variation_id, function(result) {
+		var json_result = JSON.parse(result);
+		if (json_result['status_code'] == 1) {
+			window.location = json_result['message'];
+		}
+		else if (json_result['status_code'] == 3) {
+			alert("You need to log in to join this game.");
+			window.location = json_result['message'];
+		}
+		else alert(json_result['message']);
+	});
+}

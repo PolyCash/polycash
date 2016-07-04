@@ -967,8 +967,6 @@ UPDATE `game_voting_options` gvo JOIN voting_options vo ON gvo.voting_option_id=
 ALTER TABLE `game_types` ADD `option_group_id` INT(11) NULL DEFAULT NULL AFTER `game_type_id`;
 ALTER TABLE `games` ADD `option_group_id` INT(11) NULL DEFAULT NULL AFTER `variation_id`;
 ALTER TABLE `voting_options` ADD `option_group_id` INT(11) NULL DEFAULT NULL AFTER `voting_option_id`;
-ALTER TABLE `games` ADD `buyins_allowed` TINYINT(1) NOT NULL DEFAULT '0' AFTER `seconds_per_block`;
-ALTER TABLE `game_types` ADD `buyins_allowed` TINYINT(1) NOT NULL DEFAULT '0' AFTER `payout_weight`;
 ALTER TABLE `games` ADD `option_name` VARCHAR(100) NOT NULL DEFAULT '' , ADD `option_name_plural` VARCHAR(100) NOT NULL DEFAULT '' ;
 UPDATE games g JOIN voting_option_groups og ON g.option_group_id=og.option_group_id SET g.option_name=og.option_name, g.option_name_plural=og.option_name_plural;
 ALTER TABLE `game_type_variations` DROP `max_voting_fraction`;
@@ -1026,13 +1024,13 @@ INSERT INTO `currencies` (`currency_id`, `name`, `short_name`, `abbreviation`, `
 INSERT INTO `site_constants` SET constant_name='reference_currency_id', constant_value=1;
 INSERT INTO `currency_prices` SET currency_id=1, reference_currency_id=1, price=1;
 
-INSERT INTO `game_types` (`game_type_id`, `option_group_id`, `game_type`, `block_timing`, `payout_weight`, `buyins_allowed`, `start_condition`, `inflation`, `url_identifier`, `start_condition_players`, `num_voting_options`, `max_voting_fraction`, `type_name`, `coin_name`, `coin_name_plural`, `coin_abbreviation`) VALUES
-(1, 1, 'simulation', 'realistic', 'coin_round', 0, 'players_joined', 'exponential', 'two-player-empire-battle', 2, 16, '0.40000000', '2 players, 16 empires, 40% cap', 'empirecoin', 'empirecoins', '$'),
-(2, 1, 'simulation', 'realistic', 'coin_round', 0, 'players_joined', 'exponential', 'two-player-penny-battle', 2, 16, '0.25000000', '2 players, 16 empires, 25% cap', 'dime', 'dimes', '$'),
-(3, 1, 'simulation', 'realistic', 'coin_round', 0, 'players_joined', 'exponential', 'two-player-dollar-battle', 2, 16, '0.50000000', '2 players, 16 empires, 50% cap', 'empirecoin', 'empirecoins', '$'),
-(4, 2, 'simulation', 'realistic', 'coin_round', 0, 'players_joined', 'exponential', 'presidential-election', 20, 8, '0.50000000', '20 players, 8 presidential candidates, 50% cap', 'empirecoin', 'empirecoins', 'EMP'),
-(5, 1, 'simulation', 'realistic', 'coin_round', 0, 'players_joined', 'exponential', '5-player-bitcoin-battle', 5, 16, '0.20000000', '5 players, 16 empires, 20% cap', 'bitcoin', 'bitcoins', 'BTC'),
-(6, 2, 'simulation', 'realistic', 'coin_round', 0, 'players_joined', 'exponential', '2-player-election-battle', 2, 8, '0.50000000', '2 players, 8 presidential candidates, 50% cap', 'buck', 'bucks', '$');
+INSERT INTO `game_types` (`game_type_id`, `option_group_id`, `game_type`, `block_timing`, `payout_weight`, `start_condition`, `inflation`, `url_identifier`, `start_condition_players`, `num_voting_options`, `max_voting_fraction`, `type_name`, `coin_name`, `coin_name_plural`, `coin_abbreviation`) VALUES
+(1, 1, 'simulation', 'realistic', 'coin_round', 'players_joined', 'exponential', 'two-player-empire-battle', 2, 16, '0.40000000', '2 players, 16 empires, 40% cap', 'empirecoin', 'empirecoins', '$'),
+(2, 1, 'simulation', 'realistic', 'coin_round', 'players_joined', 'exponential', 'two-player-penny-battle', 2, 16, '0.25000000', '2 players, 16 empires, 25% cap', 'dime', 'dimes', '$'),
+(3, 1, 'simulation', 'realistic', 'coin_round', 'players_joined', 'exponential', 'two-player-dollar-battle', 2, 16, '0.50000000', '2 players, 16 empires, 50% cap', 'empirecoin', 'empirecoins', '$'),
+(4, 2, 'simulation', 'realistic', 'coin_round', 'players_joined', 'exponential', 'presidential-election', 20, 8, '0.50000000', '20 players, 8 presidential candidates, 50% cap', 'empirecoin', 'empirecoins', 'EMP'),
+(5, 1, 'simulation', 'realistic', 'coin_round', 'players_joined', 'exponential', '5-player-bitcoin-battle', 5, 16, '0.20000000', '5 players, 16 empires, 20% cap', 'bitcoin', 'bitcoins', 'BTC'),
+(6, 2, 'simulation', 'realistic', 'coin_round', 'players_joined', 'exponential', '2-player-election-battle', 2, 8, '0.50000000', '2 players, 8 presidential candidates, 50% cap', 'buck', 'bucks', '$');
 
 INSERT INTO `game_type_variations` (`variation_id`, `game_type_id`, `target_open_games`, `giveaway_status`, `giveaway_amount`, `invite_currency`, `invite_cost`, `round_length`, `final_round`, `seconds_per_block`, `maturity`, `exponential_inflation_minershare`, `exponential_inflation_rate`, `pow_reward`, `pos_reward`, `variation_name`) VALUES
 (1, 1, 1, 'public_pay', 10000000000, 1, '1.00000000', 20, 10, 12, 0, '0.01000000', '0.20000000', 0, 0, 'Buy 100 dimes for $1'),

@@ -132,22 +132,27 @@ if ($_REQUEST['do'] == "signup") {
 						if ($GLOBALS['pageview_tracking_enabled']) log_user_in($thisuser, $redirect_url, $viewer_id);
 						else log_user_in($thisuser, $redirect_url);
 						
-						if ($_REQUEST['invite_key'] != "") {
-							$invite_game = false;
-							$success = try_apply_invite_key($thisuser['user_id'], $_REQUEST['invite_key'], $invite_game);
-							if ($success) {
-								header("Location: /wallet/".$invite_game['url_identifier']);
-								die();
+						if ($redirect_url) {
+							header("Location: ".$redirect_url['url']);
+						}
+						else {
+							if ($_REQUEST['invite_key'] != "") {
+								$invite_game = false;
+								$success = try_apply_invite_key($thisuser['user_id'], $_REQUEST['invite_key'], $invite_game);
+								if ($success) {
+									header("Location: /wallet/".$invite_game['url_identifier']);
+									die();
+								}
 							}
+							
+							$redir_game = fetch_game_from_url();
+							if ($redir_game) {
+								$header_loc = "/wallet/".$redir_game['url_identifier']."/";
+							}
+							else $header_loc = "/wallet/";
+							
+							header("Location: ".$header_loc);
 						}
-						
-						$redir_game = fetch_game_from_url();
-						if ($redir_game) {
-							$header_loc = "/wallet/".$redir_game['url_identifier']."/";
-						}
-						else $header_loc = "/wallet/";
-						
-						header("Location: ".$header_loc);
 						die();
 					}
 				}
@@ -1334,7 +1339,7 @@ $mature_balance = mature_balance($game, $thisuser);
 			<div class="modal-dialog">
 				<div class="modal-content">
 					<div class="modal-header">
-						<h4 class="modal-title">New message from <?php echo $GLOBALS['coin_brand_name']; ?></h4>
+						<h4 class="modal-title">New message from <?php echo $GLOBALS['site_name']; ?></h4>
 					</div>
 					<div class="modal-body">
 						<p>

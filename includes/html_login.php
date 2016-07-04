@@ -33,7 +33,7 @@ $(document).ready(function() {
 		<form onsubmit="$('#login_password').val(Sha256.hash($('#login_password').val()));" action="/wallet/<?php if ($url_game) echo $url_game['url_identifier']."/"; ?>" method="post">
 			<input type="hidden" name="do" value="login" />
 			<?php
-			if ($redirect_id) echo "<input type=\"hidden\" name=\"redirect_id\" value=\"".$redirect_id."\" />\n";
+			if ($redirect_id) echo '<input type="hidden" name="redirect_id" value="'.$redirect_id.'" />'."\n";
 			
 			if ($_REQUEST['invite_key'] != "") echo '<input type="hidden" name="invite_key" value="'.make_alphanumeric(strip_tags($_REQUEST['invite_key'])).'" />';
 			?>
@@ -68,7 +68,7 @@ $(document).ready(function() {
 		<form action="/wallet/<?php if ($url_game) echo $url_game['url_identifier']."/"; ?>" method="post" onsubmit="$('#signup_password').val(Sha256.hash($('#signup_password').val())); $('#signup_password2').val(Sha256.hash($('#signup_password2').val()));">
 			<input type="hidden" name="do" value="signup" />
 			<?php
-			if ($redirect_id) echo "<input type=\"hidden\" name=\"redirect_id\" value=\"".$redirect_id."\" />\n";
+			if ($redirect_id) echo '<input type="hidden" name="redirect_id" value="'.$redirect_id.'" />'."\n";
 			
 			if ($_REQUEST['invite_key'] != "") echo '<input type="hidden" name="invite_key" value="'.make_alphanumeric(strip_tags($_REQUEST['invite_key'])).'" />';
 			?>

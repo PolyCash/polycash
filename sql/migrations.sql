@@ -53,3 +53,6 @@ UPDATE game_voting_options gvo JOIN voting_options vo ON gvo.voting_option_id=vo
 ALTER TABLE `empirecoin`.`game_voting_options` ADD INDEX (`voting_option_id`);
 ALTER TABLE `empirecoin`.`game_voting_options` ADD INDEX (`image_id`);
 ALTER TABLE `user_games` ADD `show_planned_votes` TINYINT(1) NOT NULL DEFAULT '0' ;
+ALTER TABLE `game_type_variations` ADD `url_identifier` VARCHAR(100) NOT NULL DEFAULT '' AFTER `pos_reward`;
+ALTER TABLE `game_type_variations`  ADD `buyin_policy` ENUM('unlimited','per_user_cap','game_cap','game_and_user_cap','none') NOT NULL DEFAULT 'none'  AFTER `giveaway_amount`,  ADD `game_buyin_cap` DECIMAL(16,8) NOT NULL DEFAULT '0'  AFTER `buyin_policy`,  ADD `per_user_buyin_cap` DECIMAL(16,8) NOT NULL DEFAULT '0'  AFTER `game_buyin_cap`;
+

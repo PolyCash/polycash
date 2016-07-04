@@ -380,7 +380,7 @@ function current_round_table(&$game, $current_round, $user, $show_intro_text) {
 			</div>
 		</div>';
 		
-		if ($ncount%4 == 1) $html .= '</div><div class="row">';
+		if ($i%4 == 3) $html .= '</div><div class="row">';
 	}
 	$html .= "</div>";
 	$html .= "</div>";
@@ -3198,9 +3198,11 @@ function game_info_table($game) {
 		$invite_currency = mysql_fetch_array($r);
 	}
 
-	$html .= '<div class="row"><div class="col-sm-5">Game title:</div><div class="col-sm-7">'.$game['name']."</div></div>\n";
-	
-	$html .= '<div class="row"><div class="col-sm-5">Game URL:</div><div class="col-sm-7"><a href="'.$game_url.'">'.$game_url."</a></div></div>\n";
+	if ($game['game_id'] > 0) { // This function can also be called with a game variation
+		$html .= '<div class="row"><div class="col-sm-5">Game title:</div><div class="col-sm-7">'.$game['name']."</div></div>\n";
+		
+		$html .= '<div class="row"><div class="col-sm-5">Game URL:</div><div class="col-sm-7"><a href="'.$game_url.'">'.$game_url."</a></div></div>\n";
+	}
 	
 	$html .= '<div class="row"><div class="col-sm-5">Length of game:</div><div class="col-sm-7">';
 	if ($game['final_round'] > 0) $html .= $game['final_round']." rounds (".format_seconds($seconds_per_round*$game['final_round']).")";
@@ -3702,18 +3704,60 @@ function render_game_players(&$game) {
 	$html .= "<h3>".mysql_numrows($r)." players</h3>\n";
 	
 	while ($temp_user_game = mysql_fetch_array($r)) {
-		$html .= '<div class="row">';
-		$html .= '<div class="col-sm-4"><a href="" onclick="openChatWindow('.$temp_user_game['user_id'].'); return false;">'.$temp_user_game['username'].'</a></div>';
-		
 		$networth_disp = format_bignum(account_coin_value($game, $temp_user_game)/pow(10,8));
-		$html .= '<div class="col-sm-4">'.$networth_disp.' ';
-		if ($networth_disp == '1') $html .= $game['coin_name'];
-		else $html .= $game['coin_name_plural'];
-		$html .= '</div>';
 		
-		$html .= '</div>';
+		if ($networth_disp != "0") {
+			$html .= '<div class="row">';
+			$html .= '<div class="col-sm-4"><a href="" onclick="openChatWindow('.$temp_user_game['user_id'].'); return false;">'.$temp_user_game['username'].'</a></div>';
+			
+			$html .= '<div class="col-sm-4">'.$networth_disp.' ';
+			if ($networth_disp == '1') $html .= $game['coin_name'];
+			else $html .= $game['coin_name_plural'];
+			$html .= '</div>';
+			
+			$html .= '</div>';
+		}
 	}
 	
 	return $html;
+}
+function process_join_requests($variation_id) {
+	$q = "SELECT * FROM game_type_variations WHERE variation_id='".$variation_id."';";
+	$r = run_query($q);
+	
+	if (mysql_numrows($r) == 1) {
+		$variation = mysql_fetch_array($r);
+		
+		if (in_array($variation['giveaway_status'], array('public_free', 'public_pay'))) {
+			$keeplooping = true;
+			$last_request_id = 0;
+			do {
+				$q = "SELECT * FROM game_join_requests WHERE variation_id='".$variation['variation_id']."' AND request_status='outstanding' AND join_request_id > ".$last_request_id." ORDER BY join_request_id ASC LIMIT 1;";
+				$r = run_query($q);
+				
+				if (mysql_numrows($r) > 0) {
+					$join_request = mysql_fetch_array($r);
+					$last_request_id = $join_request['join_request_id'];
+					
+					$qq = "SELECT * FROM users WHERE user_id='".$join_request['user_id']."';";
+					$rr = run_query($qq);
+					$join_user = mysql_fetch_array($rr);
+					
+					$qq = "SELECT * FROM games WHERE variation_id='".$variation['variation_id']."' AND game_status='published' ORDER BY game_id ASC LIMIT 1;";
+					$rr = run_query($qq);
+					
+					if (mysql_numrows($rr) == 1) {
+						$join_game = mysql_fetch_array($rr);
+						
+						ensure_user_in_game($join_user, $join_game['game_id']);
+						
+						run_query("UPDATE game_join_requests SET request_status='complete', game_id='".$join_game['game_id']."' WHERE join_request_id='".$join_request['join_request_id']."';");
+					}
+				}
+				else $keeplooping = false;
+			}
+			while ($keeplooping);
+		}
+	}
 }
 ?>
