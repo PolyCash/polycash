@@ -144,7 +144,7 @@ function round_voting_stats_all($voting_round) {
 	
 	while ($stat = mysql_fetch_array($r)) {
 		$stat['voting_score'] = 0;
-		$stat['voting_point'] = 0;
+		$stat['voting_sum'] = 0;
 		$stats_all[$counter] = $stat;
 		$nation_id_to_rank[$stat['nation_id']] = $counter;
 		$counter++;
@@ -156,5 +156,28 @@ function round_voting_stats_all($voting_round) {
 	$output_arr[3] = $nation_id_to_rank;
 	
 	return $output_arr;
+}
+function current_round_table($current_round) {
+	$html = "";
+	$round_stats = round_voting_stats_all($current_round);
+	$totalVoteSum = $round_stats[0];
+	$maxVoteSum = $round_stats[1];
+	$round_stats = $round_stats[2];
+	$winner_nation_id = FALSE;
+	
+	for ($i=0; $i<count($round_stats); $i++) {
+		if (!$winner_nation_id && $round_stats[$i]['voting_sum'] <= $maxVoteSum && $round_stats[$i]['voting_score'] > 0) $winner_nation_id = $round_stats[$i]['nation_id'];
+		$html .= "<div class=\"row";
+		if ($round_stats[$i]['voting_sum'] > $maxVoteSum) $html .=  " redtext";
+		else if ($winner_nation_id == $round_stats[$i]['nation_id']) $html .=  " greentext";
+		$html .=  "\">";
+		$html .=  "<div class=\"col-sm-3\">".($i+1).". ".$round_stats[$i]['name']."</div>\n";
+		$html .=  "<div class=\"col-sm-1\">x".round($round_stats[$i]['cached_force_multiplier'], 3)."</div>\n";
+		$html .=  "<div class=\"col-sm-2\">".round(($round_stats[$i]['voting_sum'])/pow(10,8), 3)." EMP</div>\n";
+		$html .=  "<div class=\"col-sm-2\">".number_format(100*$round_stats[$i]['voting_sum']/$totalVoteSum, 2)."%</div>\n";
+		$html .=  "<div class=\"col-sm-2\">".number_format(($round_stats[$i]['voting_score'])/pow(10,8))." points</div>\n";
+		$html .=  "</div>";
+	}
+	return $html;
 }
 ?>

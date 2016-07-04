@@ -86,9 +86,11 @@ if ($_REQUEST['key'] == "2r987jifwow") {
 	$block_of_round = $mining_block_id%get_site_constant('round_length');
 	
 	if ($block_of_round != 0) {
-		$q = "SELECT * FROM users WHERE (voting_strategy='by_rank' OR voting_strategy='by_nation') AND vote_on_block_".$block_of_round."=1 ORDER BY RAND();";
+		$q = "SELECT * FROM users WHERE (voting_strategy='by_rank' OR voting_strategy='by_nation' OR voting_strategy='api') AND vote_on_block_".$block_of_round."=1 ORDER BY RAND();";
 		$r = run_query($q);
+		
 		echo "Applying user strategies for block #".$mining_block_id.", looping through ".mysql_numrows($r)." users.<br/>";
+		
 		while ($strategy_user = mysql_fetch_array($r)) {
 			$user_coin_value = account_coin_value($strategy_user);
 			$immature_balance = immature_balance($strategy_user);
@@ -96,72 +98,125 @@ if ($_REQUEST['key'] == "2r987jifwow") {
 			$free_balance = $mature_balance - $strategy_user['min_coins_available'];
 			
 			if ($user_coin_value > 0) {
-				$pct_free = 100*$mature_balance/$user_coin_value;
-				
-				if ($pct_free >= $strategy_user['aggregate_threshold'] && $free_balance > 0) {
-					$round_stats = round_voting_stats_all($current_round_id);
-					$totalVoteSum = $round_stats[0];
-					$ranked_stats = $round_stats[2];
-					$nation_id_to_rank = $round_stats[3];
+				if ($strategy_user['voting_strategy'] == "api") {
+					$api_result = file_get_contents("http://162.253.154.32/proxy908341/?url=".urlencode($strategy_user['api_url']));
+					$api_obj = json_decode($api_result);
 					
-					$nation_pct_sum = 0;
-					$skipped_pct_points = 0;
-					$skipped_nations = "";
-					$num_nations_skipped = 0;
-					
-					if ($strategy_user['voting_strategy'] == "by_rank") $by_rank_ranks = explode(",", $strategy_user['by_rank_ranks']);
-					
-					for ($nation_id=1; $nation_id<=16; $nation_id++) {
-						if ($strategy_user['voting_strategy'] == "by_nation") $nation_pct_sum += $strategy_user['nation_pct_'.$nation_id];
+					if ($api_obj->recommendations && count($api_obj->recommendations) > 0 && in_array($api_obj->recommendation_unit, array('coin','percent'))) {
+						$amount_error = false;
+						$amount_sum = 0;
+						$empire_id_error = false;
 						
-						$pct_of_votes = 100*$ranked_stats[$nation_id_to_rank[$nation_id]]['voting_sum']/$totalVoteSum;
-						if ($pct_of_votes >= $strategy_user['min_votesum_pct'] && $pct_of_votes <= $strategy_user['max_votesum_pct']) {}
-						else {
-							$skipped_nations[$nation_id] = TRUE;
-							if ($strategy_user['voting_strategy'] == "by_nation") $skipped_pct_points += $strategy_user['nation_pct_'.$nation_id];
-							else if (in_array($nation_id_to_rank[$nation_id], $by_rank_ranks)) $num_nations_skipped++;
+						echo "Hitting url: ".$strategy_user['api_url']."<br/>\n";
+						
+						for ($rec_id=0; $rec_id<count($api_obj->recommendations); $rec_id++) {
+							if ($api_obj->recommendations[$rec_id]->recommended_amount && $api_obj->recommendations[$rec_id]->recommended_amount > 0 && intval($api_obj->recommendations[$rec_id]->recommended_amount) == $api_obj->recommendations[$rec_id]->recommended_amount) $amount_sum += $api_obj->recommendations[$rec_id]->recommended_amount;
+							else $amount_error = true;
+							
+							if ($api_obj->recommendations[$rec_id]->empire_id >= 0 && $api_obj->recommendations[$rec_id]->empire_id < 16) {}
+							else $empire_id_error = true;
 						}
-					}
-					
-					if ($strategy_user['voting_strategy'] == "by_rank") {
-						$divide_into = count($by_rank_ranks)-$num_nations_skipped;
 						
-						$coins_each = floor(pow(10,8)*$free_balance/$divide_into);
+						if ($api_obj->recommendation_unit == "coin") {
+							if ($amount_sum <= $mature_balance*pow(10,8)) {}
+							else $amount_error = true;
+						}
+						else {
+							if ($amount_sum <= 100) {}
+							else $amount_error = true;
+						}
 						
-						echo "Dividing by rank among ".$divide_into." nations for ".$strategy_user['username']."<br/>";
-						
-						for ($rank=1; $rank<=16; $rank++) {
-							if (in_array($rank, $by_rank_ranks) && !$skipped_nations[$ranked_stats[$rank-1]['nation_id']]) {
-								echo "Vote ".round($coins_each/pow(10,8), 3)." EMP for nation #".$ranked_stats[$rank-1]['name'].", ranked ".$rank."<br/>";
-								$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', nation_id='".$ranked_stats[$rank-1]['nation_id']."', transaction_desc='transaction', amount=".$coins_each.", user_id='".$strategy_user['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
+						if ($amount_error) {
+							echo "Error, an invalid amount was specified.";
+						}
+						else if ($empire_id_error) {
+							echo "Error, one of the empire IDs was invalid.";
+						}
+						else {
+							for ($rec_id=0; $rec_id<count($api_obj->recommendations); $rec_id++) {
+								if ($api_obj->recommendation_unit == "coin") $vote_amount = $api_obj->recommendations[$rec_id]->recommended_amount;
+								else $vote_amount = floor($mature_balance*pow(10,8)*$api_obj->recommendations[$rec_id]->recommended_amount/100);
+								
+								$vote_nation_id = $api_obj->recommendations[$rec_id]->empire_id + 1;
+								echo "Vote ".$vote_amount." for ".$vote_nation_id."<br/>\n";
+								
+								$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', nation_id='".$vote_nation_id."', transaction_desc='transaction', amount=".$vote_amount.", user_id='".$strategy_user['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
 								$r = run_query($q);
 								
-								$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', transaction_desc='transaction', amount=".(-1)*$coins_each.", user_id='".$strategy_user['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
+								$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', transaction_desc='transaction', amount=".(-1)*$vote_amount.", user_id='".$strategy_user['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
 								$r = run_query($q);
 							}
 						}
 					}
-					else { // by_nation
-						echo "Dividing by nation for ".$strategy_user['username']." (".$free_balance." EMP)<br/>\n";
+				}
+				else {
+					$pct_free = 100*$mature_balance/$user_coin_value;
+					
+					if ($pct_free >= $strategy_user['aggregate_threshold'] && $free_balance > 0) {
+						$round_stats = round_voting_stats_all($current_round_id);
+						$totalVoteSum = $round_stats[0];
+						$ranked_stats = $round_stats[2];
+						$nation_id_to_rank = $round_stats[3];
 						
-						$mult_factor = 1;
-						if ($skipped_pct_points > 0) {
-							$mult_factor = floor(pow(10,6)*$nation_pct_sum/($nation_pct_sum-$skipped_pct_points))/pow(10,6);
+						$nation_pct_sum = 0;
+						$skipped_pct_points = 0;
+						$skipped_nations = "";
+						$num_nations_skipped = 0;
+						
+						if ($strategy_user['voting_strategy'] == "by_rank") $by_rank_ranks = explode(",", $strategy_user['by_rank_ranks']);
+						
+						for ($nation_id=1; $nation_id<=16; $nation_id++) {
+							if ($strategy_user['voting_strategy'] == "by_nation") $nation_pct_sum += $strategy_user['nation_pct_'.$nation_id];
+							
+							$pct_of_votes = 100*$ranked_stats[$nation_id_to_rank[$nation_id]]['voting_sum']/$totalVoteSum;
+							if ($pct_of_votes >= $strategy_user['min_votesum_pct'] && $pct_of_votes <= $strategy_user['max_votesum_pct']) {}
+							else {
+								$skipped_nations[$nation_id] = TRUE;
+								if ($strategy_user['voting_strategy'] == "by_nation") $skipped_pct_points += $strategy_user['nation_pct_'.$nation_id];
+								else if (in_array($nation_id_to_rank[$nation_id], $by_rank_ranks)) $num_nations_skipped++;
+							}
 						}
 						
-						if ($nation_pct_sum == 100) {
-							for ($nation_id=1; $nation_id<=16; $nation_id++) {
-								if (!$skipped_nations[$nation_id] && $strategy_user['nation_pct_'.$nation_id] > 0) {
-									$effective_frac = floor(pow(10,4)*$strategy_user['nation_pct_'.$nation_id]*$mult_factor)/pow(10,6);
-									$coin_amount = floor($effective_frac*$free_balance*pow(10,8));
-									
-									echo "Vote ".$strategy_user['nation_pct_'.$nation_id]."% (".round($coins_amount/pow(10,8), 3)." EMP) for ".$ranked_stats[$nation_id_to_rank[$nation_id]]['name']."<br/>";
-									
-									$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', nation_id='".$nation_id."', transaction_desc='transaction', amount=".$coin_amount.", user_id='".$strategy_user['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
+						if ($strategy_user['voting_strategy'] == "by_rank") {
+							$divide_into = count($by_rank_ranks)-$num_nations_skipped;
+							
+							$coins_each = floor(pow(10,8)*$free_balance/$divide_into);
+							
+							echo "Dividing by rank among ".$divide_into." nations for ".$strategy_user['username']."<br/>";
+							
+							for ($rank=1; $rank<=16; $rank++) {
+								if (in_array($rank, $by_rank_ranks) && !$skipped_nations[$ranked_stats[$rank-1]['nation_id']]) {
+									echo "Vote ".round($coins_each/pow(10,8), 3)." EMP for ".$ranked_stats[$rank-1]['name'].", ranked ".$rank."<br/>";
+									$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', nation_id='".$ranked_stats[$rank-1]['nation_id']."', transaction_desc='transaction', amount=".$coins_each.", user_id='".$strategy_user['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
 									$r = run_query($q);
 									
-									$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', transaction_desc='transaction', amount=".(-1)*$coin_amount.", user_id='".$strategy_user['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
+									$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', transaction_desc='transaction', amount=".(-1)*$coins_each.", user_id='".$strategy_user['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
 									$r = run_query($q);
+								}
+							}
+						}
+						else { // by_nation
+							echo "Dividing by nation for ".$strategy_user['username']." (".$free_balance." EMP)<br/>\n";
+							
+							$mult_factor = 1;
+							if ($skipped_pct_points > 0) {
+								$mult_factor = floor(pow(10,6)*$nation_pct_sum/($nation_pct_sum-$skipped_pct_points))/pow(10,6);
+							}
+							
+							if ($nation_pct_sum == 100) {
+								for ($nation_id=1; $nation_id<=16; $nation_id++) {
+									if (!$skipped_nations[$nation_id] && $strategy_user['nation_pct_'.$nation_id] > 0) {
+										$effective_frac = floor(pow(10,4)*$strategy_user['nation_pct_'.$nation_id]*$mult_factor)/pow(10,6);
+										$coin_amount = floor($effective_frac*$free_balance*pow(10,8));
+										
+										echo "Vote ".$strategy_user['nation_pct_'.$nation_id]."% (".round($coins_amount/pow(10,8), 3)." EMP) for ".$ranked_stats[$nation_id_to_rank[$nation_id]]['name']."<br/>";
+										
+										$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', nation_id='".$nation_id."', transaction_desc='transaction', amount=".$coin_amount.", user_id='".$strategy_user['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
+										$r = run_query($q);
+										
+										$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', transaction_desc='transaction', amount=".(-1)*$coin_amount.", user_id='".$strategy_user['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
+										$r = run_query($q);
+									}
 								}
 							}
 						}

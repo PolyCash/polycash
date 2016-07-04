@@ -25,6 +25,7 @@ include('includes/html_start.php');
 			</div>
 		</div>
 		
+		<br/>
 		<h1>Rules of the Game</h1>
 		<ol class="rules_list">
 			<li>
@@ -53,6 +54,26 @@ include('includes/html_start.php');
 			<li>If any nation achieves greater than 50% of the coin votes in a particular round, it is disqualified from winning that round for tyranny of the majority and the nation with the next highest voting score wins the round.</li>
 		</ol>
 		<br/>
+		<h1>Get Started</h1>
+		We're still developing EmpireCoin and it's not ready to download just yet.  But you can try out a simulation of the EmpireCoin game for free by signing up for an EmpireCo.in web wallet. We'll give you 1,000 beta EmpireCoins just for signing up.  But remember, this is just a simulation; rules of the game could change and your coins might be lost at any time.<br/>
+		<button style="margin: 10px 0px;" class="btn btn-primary" onclick="window.location='/wallet/';">Sign Up</button>
+		<br/>
+		<h1>EmpireCoin API</h1>
+		Automated & algorithmic voting strategies are encouraged in EmpireCoin.  After signing up for a web wallet, you can choose from one of several voting strategies and then tweak parameters to optimize your votes.  Or you can choose the "Vote by API" voting strategy and then write code to fully customize your voting strategy.  For more information, please visit the <a href="/api/about/">EmpireCoin API page</a>.
+		<br/><br/>
+		<?php
+		$last_block_id = last_block_id('beta');
+		$current_round = block_to_round($last_block_id+1);
+		$block_within_round = $last_block_id%get_site_constant('round_length')+1;
+		?>
+		<h1>Current Rankings - Voting round #<?php echo $current_round; ?></h1>
+		Last block completed: #<?php echo $last_block_id; ?>, currently mining #<?php echo ($last_block_id+1); ?><br/>
+		Current votes count towards block <?php echo $block_within_round."/".get_site_constant('round_length')." in round #".$current_round; ?><br/>
+		Approximately <?php echo (get_site_constant('round_length')-$last_block_id%get_site_constant('round_length'))*get_site_constant('minutes_per_block'); ?> minutes left in this round.<br/><br/>
+		<?php
+		echo current_round_table($current_round);
+		?>
+		<br/><br/><br/>
 	</p>
 </div>
 

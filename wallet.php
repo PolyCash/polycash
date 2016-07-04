@@ -44,7 +44,7 @@ if ($_REQUEST['do'] == "signup") {
 				else {
 					$verify_code = random_string(32);
 					
-					$query = "INSERT INTO users SET first_name='".$first."', last_name='".$last."', username='".$email."', password='".$new_pass_hash."', ip_address='".mysql_real_escape_string($_SERVER['REMOTE_ADDR'])."', time_created='".time()."', verify_code='".$verify_code."';";
+					$query = "INSERT INTO users SET first_name='".$first."', last_name='".$last."', username='".$email."', api_access_code='".mysql_real_escape_string(random_string(32))."', password='".$new_pass_hash."', ip_address='".mysql_real_escape_string($_SERVER['REMOTE_ADDR'])."', time_created='".time()."', verify_code='".$verify_code."';";
 					$result = run_query($query);
 					$user_id = mysql_insert_id();
 					
@@ -173,7 +173,7 @@ else if ($_REQUEST['do'] == "logout" && $thisuser) {
 else if ($thisuser && $_REQUEST['do'] == "save_voting_strategy") {
 	$voting_strategy = $_REQUEST['voting_strategy'];
 	$aggregate_threshold = intval($_REQUEST['aggregate_threshold']);
-	$api_url = mysql_real_escape_string($_REQUEST['api_url']);
+	$api_url = strip_tags(mysql_real_escape_string($_REQUEST['api_url']));
 	$by_rank_csv = "";
 	
 	if (in_array($voting_strategy, array('manual', 'by_rank', 'by_nation', 'api'))) {
@@ -446,25 +446,8 @@ include('includes/html_start.php');
 				
 				echo "<br/>\n<div style=\"margin-top: 15px; border: 1px solid #aaa; padding: 10px; border-radius: 8px;\">";
 				echo "<b>Current Rankings - Round #".$current_round.". Approximately ".(get_site_constant('round_length')-$last_block_id%get_site_constant('round_length'))*get_site_constant('minutes_per_block')." minutes left.</b><br/>";
-				$round_stats = round_voting_stats_all($current_round);
-				$totalVoteSum = $round_stats[0];
-				$maxVoteSum = $round_stats[1];
-				$round_stats = $round_stats[2];
-				$winner_nation_id = FALSE;
 				
-				for ($i=0; $i<count($round_stats); $i++) {
-					if (!$winner_nation_id && $round_stats[$i]['voting_sum'] <= $maxVoteSum && $round_stats[$i]['voting_score'] > 0) $winner_nation_id = $round_stats[$i]['nation_id'];
-					echo "<div class=\"row";
-					if ($round_stats[$i]['voting_sum'] > $maxVoteSum) echo " redtext";
-					else if ($winner_nation_id == $round_stats[$i]['nation_id']) echo " greentext";
-					echo "\">";
-					echo "<div class=\"col-sm-3\">".($i+1).". ".$round_stats[$i]['name']."</div>\n";
-					echo "<div class=\"col-sm-1\">x".round($round_stats[$i]['cached_force_multiplier'], 3)."</div>\n";
-					echo "<div class=\"col-sm-2\">".round(($round_stats[$i]['voting_sum'])/pow(10,8), 3)." EMP</div>\n";
-					echo "<div class=\"col-sm-2\">".number_format(100*$round_stats[$i]['voting_sum']/$totalVoteSum, 2)."%</div>\n";
-					echo "<div class=\"col-sm-2\">".number_format(($round_stats[$i]['voting_score'])/pow(10,8))." points</div>\n";
-					echo "</div>";
-				}
+				echo current_round_table($current_round);
 				
 				echo "</div>";
 				?>
@@ -490,9 +473,9 @@ include('includes/html_start.php');
 						</div>
 						<div class="col-md-10">
 							<label class="plainlabel" for="voting_strategy_api">
-								Hit a custom URL whenever I have coins available to determine my votes: <input type="text" size="20" placeholder="http://" name="api_url" id="api_url" value="<?php echo $thisuser['api_url']; ?>" />
-							</label>
-							<a href="/api/about/">API documentation</a><br/>
+								Hit a custom URL whenever I have coins available to determine my votes: <input type="text" size="40" placeholder="http://" name="api_url" id="api_url" value="<?php echo $thisuser['api_url']; ?>" />
+							</label><br/>
+							Your API access code is <?php echo $thisuser['api_access_code']; ?> <a href="/api/about/">API documentation</a><br/>
 						</div>
 					</div>
 					<div class="row bordered_row">
@@ -594,7 +577,7 @@ include('includes/html_start.php');
 					else echo "No winner";
 					echo '</div>';
 					
-					$default_win_text = "You didn't vote for the winning nation.";
+					$default_win_text = "You didn't vote for the winning empire.";
 					$win_text = $default_win_text;
 					$qq = "SELECT COUNT(*), SUM(t.amount), n.* FROM webwallet_transactions t, nations n WHERE t.block_id >= ".$first_voting_block_id." AND t.block_id <= ".$last_voting_block_id." AND t.user_id='".$thisuser['user_id']."' AND t.nation_id=n.nation_id GROUP BY n.nation_id;";
 					$rr = run_query($qq);
