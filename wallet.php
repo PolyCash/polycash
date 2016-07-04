@@ -310,6 +310,11 @@ if ($thisuser) {
 			?>
 			<div class="container" style="max-width: 1000px; padding-top: 10px;">
 				You need an invitation to join this game.
+				<?php
+				if ($requested_game['invitation_link'] != "") {
+					echo " To receive an invitation please follow <a href=\"".$requested_game['invitation_link']."\">this link</a>.";
+				}
+				?>
 			</div>
 			<?php
 			include('includes/html_stop.php');
@@ -338,12 +343,19 @@ if ($thisuser) {
 						game_payment_loop_event();
 					});
 					function game_payment_loop_event() {
-						$.get("/ajax/check_game_payment.php?game_id="+game_id+"&invoice_id=<?php echo $invoice['invoice_id']; ?>", function(result) {
-							var result_json = JSON.parse(result);
-							if (result_json['payment_required'] == 0) {
-								setTimeout("window.location = window.location", 200);
+						var check_url = "/ajax/check_game_payment.php?game_id="+game_id+"&invoice_id=<?php echo $invoice['invoice_id']; ?>";
+						$.ajax({
+							url: check_url,
+							success: function(result) {
+								var result_json = JSON.parse(result);
+								if (result_json['payment_required'] == 0) {
+									setTimeout("window.location = window.location", 200);
+								}
+								setTimeout("game_payment_loop_event()", 1000);
+							},
+							error: function(XMLHttpRequest, textStatus, errorThrown) {
+								setTimeout("game_payment_loop_event()", 1000);
 							}
-							setTimeout("game_payment_loop_event()", 1000);
 						});
 					}
 					</script>
@@ -394,7 +406,10 @@ if ($thisuser) {
 								if ($pay_currency['currency_id'] != $settle_currency['currency_id']) {
 									echo "<br/>The exchange rate is currently ".$invoice_exchange_rate." ".$settle_currency['short_name']."s per ".$pay_currency['short_name'].". ";
 								}
-								echo "<br/>Make the ".format_bignum($requested_game['invite_cost'])." ".$invite_currency['short_name']." payment in Bitcoins by sending ".$invoice['pay_amount']." BTC to <a target=\"_blank\" href=\"https://blockchain.info/address/".$invoice_address['pub_key']."\">".$invoice_address['pub_key']."</a><br/>\n";
+								echo "<br/>";
+								if ($invite_currency['abbreviation'] == "btc") echo "To join, send ".decimal_to_float($invoice['pay_amount'])." to ";
+								else echo "Make the ".decimal_to_float($requested_game['invite_cost'])." ".$invite_currency['short_name']." payment in Bitcoins by sending ".decimal_to_float($invoice['pay_amount'])." BTC to ";
+								echo "<a target=\"_blank\" href=\"https://blockchain.info/address/".$invoice_address['pub_key']."\">".$invoice_address['pub_key']."</a><br/>\n";
 								echo '<center><img style="margin: 10px;" src="/render_qr_code.php?data='.$invoice_address['pub_key'].'" /></center>';
 								echo 'You will automatically be redirected when the Bitcoins are received.';
 							}
