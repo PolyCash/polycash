@@ -75,7 +75,7 @@ function account_coin_value($game_id, $user) {
 	$r = run_query($q);
 	$sum = mysql_fetch_row($r);
 	
-	return $sum[0]/(pow(10, 8));
+	return $sum[0];
 }
 
 function immature_balance($game_id, $user) {
@@ -83,14 +83,14 @@ function immature_balance($game_id, $user) {
 	$r = run_query($q);
 	$sum = mysql_fetch_row($r);
 	
-	return $sum[0]/(pow(10, 8));
+	return $sum[0];
 }
 
 function mature_balance($game_id, $user) {
 	$account_value = account_coin_value($game_id, $user);
 	$immature_balance = immature_balance($game_id, $user);
 	
-	return ($account_value - $immature_balance)/(pow(10, 8));
+	return ($account_value - $immature_balance);
 }
 
 function current_block($game_id) {
@@ -246,7 +246,7 @@ function performance_history($user, $from_round_id, $to_round_id) {
 		$html .= '<div class="row" style="font-size: 13px;">';
 		$html .= '<div class="col-sm-1">Round&nbsp;#'.$round['round_id'].'</div>';
 		$html .= '<div class="col-sm-4">';
-		if ($round['name'] != "") $html .= $round['name']." won with ".number_format($round['winning_vote_sum']/pow(10,8), 3)." EMP";
+		if ($round['name'] != "") $html .= $round['name']." won with ".number_format($round['winning_vote_sum']/pow(10,8), 2)." EMP";
 		else $html .= "No winner";
 		$html .= '</div>';
 		
@@ -259,13 +259,13 @@ function performance_history($user, $from_round_id, $to_round_id) {
 				$vote_sum += $nation_votes['SUM(t.amount)'];
 				$details_html .= '<font class="';
 				if ($nation_votes['nation_id'] == $round['winning_nation_id']) {
-					$win_text = "You correctly voted ".round($nation_votes['SUM(t.amount)']/pow(10,8), 3)." EMP";
+					$win_text = "You correctly voted ".round($nation_votes['SUM(t.amount)']/pow(10,8), 2)." EMP";
 					$details_html .= 'greentext';
 				}
 				else $details_html .= 'redtext';
 				$details_html .= '">You had '.$nation_votes['COUNT(*)']." vote";
 				if ($nation_votes['COUNT(*)'] != 1) $details_html .= "s";
-				$details_html .= " totalling ".round($nation_votes['SUM(t.amount)']/pow(10,8), 3)." EMP for ".$nation_votes['name'];
+				$details_html .= " totalling ".round($nation_votes['SUM(t.amount)']/pow(10,8), 2)." EMP for ".$nation_votes['name'];
 				$details_html .= '</font><br/>';
 			}
 		}
@@ -289,7 +289,7 @@ function performance_history($user, $from_round_id, $to_round_id) {
 		$html .= '<font class="';
 		if ($win_amount > 0) $html .= 'greentext';
 		else $html .= 'redtext';
-		$html .= '">+'.number_format($win_amount, 3).' EMP</font>';
+		$html .= '">+'.number_format($win_amount, 2).' EMP</font>';
 		$html .= '</div>';
 		
 		$html .= "</div>\n";
@@ -311,8 +311,8 @@ function last_transaction_id($game_id) {
 	return $r[0];
 }
 function wallet_text_stats($thisuser, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance) {
-	$html = "<div class=\"row\"><div class=\"col-sm-2\">Available&nbsp;funds:</div><div class=\"col-sm-3\" style=\"text-align: right;\"><font class=\"greentext\">".number_format(floor($mature_balance*1000)/1000, 3)."</font> EmpireCoins</div></div>\n";
-	$html .= "<div class=\"row\"><div class=\"col-sm-2\">Locked&nbsp;funds:</div><div class=\"col-sm-3\" style=\"text-align: right;\"><font class=\"redtext\">".number_format($immature_balance, 3)."</font> EmpireCoins</div>";
+	$html = "<div class=\"row\"><div class=\"col-sm-2\">Available&nbsp;funds:</div><div class=\"col-sm-3\" style=\"text-align: right;\"><font class=\"greentext\">".number_format(floor($mature_balance/pow(10,5))/1000, 2)."</font> EmpireCoins</div></div>\n";
+	$html .= "<div class=\"row\"><div class=\"col-sm-2\">Locked&nbsp;funds:</div><div class=\"col-sm-3\" style=\"text-align: right;\"><font class=\"redtext\">".number_format($immature_balance/pow(10,8), 2)."</font> EmpireCoins</div>";
 	if ($immature_balance > 0) $html .= "<div class=\"col-sm-1\"><a href=\"\" onclick=\"$('#lockedfunds_details').toggle('fast'); return false;\">Details</a></div>";
 	$html .= "</div>\n";
 	$html .= "Last block completed: #".$last_block_id.", currently mining #".($last_block_id+1)."<br/>\n";
@@ -328,7 +328,7 @@ function wallet_text_stats($thisuser, $current_round, $last_block_id, $block_wit
 			$minutes_to_avail = ($avail_block - $last_block_id - 1)*get_site_constant("minutes_per_block");
 			
 			if ($next_transaction['transaction_desc'] == "votebase") $html .= "You won ";
-			$html .= "<font class=\"greentext\">".round($next_transaction['amount']/(pow(10, 8)), 3)."</font> ";
+			$html .= "<font class=\"greentext\">".round($next_transaction['amount']/(pow(10, 8)), 2)."</font> ";
 			if ($next_transaction['transaction_desc'] == "votebase") $html .= "coins in block ".$next_transaction['block_id'].". Coins";
 			else $html .= "coins received in block #".$next_transaction['block_id'];
 			$html .= " can be spent in block #".$avail_block.". (Approximately ".$minutes_to_avail." minutes). ";
@@ -345,7 +345,7 @@ function vote_details_general($mature_balance) {
 	$html = '
 	<div class="row">
 		<div class="col-xs-6">Your balance:</div>
-		<div class="col-xs-6 greentext">'.number_format(floor($mature_balance*1000)/1000, 3).' EMP</div>
+		<div class="col-xs-6 greentext">'.number_format(floor($mature_balance/pow(10,5))/1000, 2).' EMP</div>
 	</div>	';
 	return $html;
 }
@@ -357,7 +357,7 @@ function vote_nation_details($nation, $rank, $voting_sum, $total_vote_sum, $losi
 	</div>
 	<div class="row">
 		<div class="col-xs-6">Coin&nbsp;votes:</div>
-		<div class="col-xs-5">'.number_format($voting_sum/pow(10,8), 3).' EMP</div>
+		<div class="col-xs-5">'.number_format($voting_sum/pow(10,8), 2).' EMP</div>
 	</div>
 	<div class="row">
 		<div class="col-xs-6">Percent&nbsp;of&nbsp;votes:</div>
@@ -404,32 +404,42 @@ function generate_user_addresses($game_id, $user_id) {
 	}
 }
 function user_address_id($game_id, $user_id, $nation_id) {
-	$q = "SELECT * FROM addresses WHERE game_id='".$game_id."' AND user_id='".$user_id."' AND nation_id='".$nation_id."';";
+	$q = "SELECT * FROM addresses WHERE game_id='".$game_id."' AND user_id='".$user_id."'";
+	if ($nation_id) $q .= " AND nation_id='".$nation_id."'";
+	else $q .= " AND nation_id IS NULL";
+	$q .= ";";
 	$r = run_query($q);
 	
 	if (mysql_numrows($r) > 0) {
 		$address = mysql_fetch_array($r);
 		return $address['address_id'];
 	}
-	else return -1;
+	else return false;
 }
 
-function new_webwallet_transaction($game_id, $nation_id, $amount, $user_id, $block_id) {
-	$q = "INSERT INTO webwallet_transactions SET game_id='".$game_id."', nation_id='".$nation_id."', transaction_desc='transaction', amount=".$amount.", user_id='".$user_id."', address_id='".user_address_id($user_id, $nation_id)."', block_id='".$block_id."', time_created='".time()."';";
+function new_webwallet_transaction($game_id, $nation_id, $amount, $user_id, $block_id, $type) {
+	if (!$type || $type == "") $type = "transaction";
+	
+	$q = "INSERT INTO webwallet_transactions SET game_id='".$game_id."'";
+	if ($nation_id) $q .= ", nation_id='".$nation_id."'";
+	$q .= ", transaction_desc='".$type."', amount=".$amount.", user_id='".$user_id."', address_id='".user_address_id($game_id, $user_id, $nation_id)."', block_id='".$block_id."', time_created='".time()."';";
 	$r = run_query($q);
 	$transaction_id = mysql_insert_id();
 	
-	$q = "INSERT INTO webwallet_transactions SET game_id='".$game_id."', transaction_desc='transaction', amount=".(-1)*$amount.", user_id='".$user_id."', block_id='".$block_id."', time_created='".time()."';";
-	$r = run_query($q);
-	
+	if ($type != "giveaway" && $type != "votebase") {
+		$q = "INSERT INTO webwallet_transactions SET game_id='".$game_id."', transaction_desc='transaction', amount=".(-1)*$amount.", user_id='".$user_id."', block_id='".$block_id."', time_created='".time()."';";
+		$r = run_query($q);
+	}
 	$round_id = block_to_round($block_id);
 	
-	$q = "UPDATE game_nations n INNER JOIN (
-		SELECT nation_id, SUM(amount) sum_amount FROM webwallet_transactions 
-		WHERE game_id='".$game_id."' AND block_id >= ".((($round_id-1)*10)+1)." AND block_id <= ".($round_id*10-1)." AND amount > 0
-		GROUP BY nation_id
-	) tt ON n.nation_id=tt.nation_id SET n.coins_currently_voted=tt.sum_amount, n.current_vote_score=tt.sum_amount WHERE n.game_id='".$game_id."';";
-	$r = run_query($q);
+	if ($nation_id > 0) {
+		$q = "UPDATE game_nations n INNER JOIN (
+			SELECT nation_id, SUM(amount) sum_amount FROM webwallet_transactions 
+			WHERE game_id='".$game_id."' AND block_id >= ".((($round_id-1)*10)+1)." AND block_id <= ".($round_id*10-1)." AND amount > 0
+			GROUP BY nation_id
+		) tt ON n.nation_id=tt.nation_id SET n.coins_currently_voted=tt.sum_amount, n.current_vote_score=tt.sum_amount WHERE n.game_id='".$game_id."';";
+		$r = run_query($q);
+	}
 	
 	return $transaction_id;
 }

@@ -20,7 +20,7 @@ if ($thisuser) {
 			$amount = floatval($_REQUEST['amount']);
 			if ($amount == round($amount, 5)) {
 				if ($amount <= $mature_balance && $amount > 0) {
-					$transaction_id = new_webwallet_transaction($thisuser['game_id'], $nation_id, $amount*(pow(10, 8)), $thisuser['user_id'], $last_block_id+1);
+					$transaction_id = new_webwallet_transaction($thisuser['game_id'], $nation_id, $amount*(pow(10, 8)), $thisuser['user_id'], $last_block_id+1, 'transaction');
 					
 					echo "0=====";
 				}

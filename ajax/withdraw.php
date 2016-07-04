@@ -11,7 +11,7 @@ if ($thisuser) {
 	$address = $_REQUEST['address'];
 	
 	if ($amount > 0) {
-		$last_block_id = last_block_id($thisuser['game_id'], $thisuser['currency_mode']);
+		$last_block_id = last_block_id($thisuser['game_id']);
 		$mining_block_id = $last_block_id+1;
 		$account_value = account_coin_value($thisuser);
 		$immature_balance = immature_balance($thisuser);
@@ -24,10 +24,10 @@ if ($thisuser) {
 			if (mysql_numrows($r) == 1) {
 				$address = mysql_fetch_array($r);
 				
-				$q = "INSERT INTO webwallet_transactions SET game_id='".$thisuser['game_id']."', currency_mode='beta', transaction_desc='transaction', amount=".(-1*$amount*pow(10,8)).", user_id='".$thisuser['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
+				$q = "INSERT INTO webwallet_transactions SET game_id='".$thisuser['game_id']."', transaction_desc='transaction', amount=".(-1*$amount*pow(10,8)).", user_id='".$thisuser['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
 				$r = run_query($q);
 				
-				$q = "INSERT INTO webwallet_transactions SET game_id='".$thisuser['game_id']."', currency_mode='beta', transaction_desc='transaction', amount=".($amount*pow(10,8)).", user_id='".$address['user_id']."', block_id='".$mining_block_id."', nation_id='".$address['nation_id']."', time_created='".time()."';";
+				$q = "INSERT INTO webwallet_transactions SET game_id='".$thisuser['game_id']."', transaction_desc='transaction', amount=".($amount*pow(10,8)).", user_id='".$address['user_id']."', block_id='".$mining_block_id."', nation_id='".$address['nation_id']."', time_created='".time()."';";
 				$r = run_query($q);
 				
 				$output_obj['result_code'] = 5;

@@ -6,7 +6,10 @@ $viewer_id = insert_pageview($thisuser);
 $explore_mode = $uri_parts[2];
 
 if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
-	$last_block_id = last_block_id('beta');
+	if ($thisuser) $game_id = $thisuser['game_id'];
+	else $game_id = get_site_constant('primary_game_id');
+	
+	$last_block_id = last_block_id($game_id);
 	$current_round = block_to_round($last_block_id+1);
 	
 	$round = false;
@@ -17,7 +20,7 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 	
 	if ($explore_mode == "rounds") {
 		$round_id = intval($uri_parts[3]);
-		$q = "SELECT * FROM cached_rounds r LEFT JOIN nations n ON r.winning_nation_id=n.nation_id WHERE r.round_id='".$round_id."';";
+		$q = "SELECT * FROM cached_rounds r LEFT JOIN nations n ON r.game_id=".$game_id." AND r.winning_nation_id=n.nation_id WHERE r.round_id='".$round_id."';";
 		$r = run_query($q);
 		if (mysql_numrows($r) == 1) {
 			$round = mysql_fetch_array($r);
@@ -37,7 +40,7 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 	}
 	if ($explore_mode == "blocks") {
 		$block_id = intval($uri_parts[3]);
-		$q = "SELECT * FROM blocks WHERE block_id='".$block_id."';";
+		$q = "SELECT * FROM blocks WHERE game_id='".$game_id."' AND block_id='".$block_id."';";
 		$r = do_query($q);
 		if (mysql_numrows($r) == 1) {
 			$block = mysql_fetch_array($r);
@@ -53,7 +56,7 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 	if ($thisuser) { ?>
 		<div class="container" style="max-width: 1000px; padding-top: 10px;">
 			<?php
-			$account_value = account_coin_value($thisuser);
+			$account_value = account_coin_value($game_id, $thisuser);
 			include("includes/wallet_status.php");
 			?>
 		</div>
@@ -88,7 +91,7 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 					$r = run_query($q);
 					if (mysql_numrows($r) == 1) {
 						$ranked_nation = mysql_fetch_array($r);
-						$nation_score = nation_score_in_round($ranked_nation['nation_id'], $round['round_id']);
+						$nation_score = nation_score_in_round($game_id, $ranked_nation['nation_id'], $round['round_id']);
 						echo '<div class="row';
 						if ($nation_score > $max_vote_sum) echo ' redtext';
 						else if (!$winner_displayed && $nation_score > 0) { echo ' greentext'; $winner_displayed = TRUE; }
@@ -102,7 +105,7 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 				
 				echo "<br/>\n";
 				
-				if ($round['round_id'] > 0) { ?>
+				if ($round['round_id'] > 1) { ?>
 					<a href="/explorer/rounds/<?php echo $round['round_id']-1; ?>" style="display: inline-block; margin-right: 30px;">&larr; Previous Round</a>
 					<?php
 				}

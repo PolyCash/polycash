@@ -38,7 +38,7 @@ if ($thisuser) {
 		$output['current_round_table'] = current_round_table($current_round, $thisuser, true);
 		$output['wallet_text_stats'] = wallet_text_stats($thisuser, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance);
 		$output['my_current_votes'] = my_votes_table($current_round, $thisuser);
-		$output['account_value'] = number_format($account_value, 3);
+		$output['account_value'] = number_format($account_value/pow(10,8), 2);
 		
 		$round_stats = round_voting_stats_all($thisuser['game_id'], $current_round);
 		$total_vote_sum = $round_stats[0];

@@ -497,7 +497,7 @@ $mature_balance = $account_value - $immature_balance;
 								?>
 							</div>
 							Only vote for nations which have between <input type="tel" size="4" value="<?php echo $thisuser['min_votesum_pct']; ?>" name="min_votesum_pct" id="min_votesum_pct" />% and <input type="tel" size="4" value="<?php echo $thisuser['max_votesum_pct']; ?>" name="max_votesum_pct" id="max_votesum_pct" />% of the current votes.<br/>
-							Maintain <input type="tel" size="6" id="min_coins_available" name="min_coins_available" value="<?php echo round($thisuser['min_coins_available'], 3); ?>" /> EMP available at all times.  This number of coins will be reserved and won't be voted.
+							Maintain <input type="tel" size="6" id="min_coins_available" name="min_coins_available" value="<?php echo round($thisuser['min_coins_available'], 2); ?>" /> EMP available at all times.  This number of coins will be reserved and won't be voted.
 						</div>
 					</div>
 					<br/>

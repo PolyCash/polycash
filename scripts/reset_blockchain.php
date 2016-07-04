@@ -2,7 +2,7 @@
 include("../includes/connect.php");
 
 if ($_REQUEST['key'] == "oiwreu2490f98") {
-	$q = "DELETE FROM webwallet_transactions WHERE transaction_desc != 'giveaway';";
+	$q = "DELETE FROM webwallet_transactions;";
 	$r = run_query($q);
 	
 	$q = "UPDATE webwallet_transactions SET block_id=2;";
@@ -35,6 +35,12 @@ if ($_REQUEST['key'] == "oiwreu2490f98") {
 			$qqq = "INSERT INTO game_nations SET game_id='".$game['game_id']."', nation_id='".$nation['nation_id']."';";
 			$rrr = run_query($qqq);
 		}
+	}
+	
+	$q = "SELECT * FROM user_games;";
+	$r = run_query($q);
+	while ($user_game = mysql_fetch_array($r)) {
+		new_webwallet_transaction($user_game['game_id'], false, 100000000000, $user_game['user_id'], last_block_id($user_game['game_id']), 'giveaway');
 	}
 	
 	echo "Great, the game has been reset!";
