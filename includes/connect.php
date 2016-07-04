@@ -174,10 +174,19 @@ function round_voting_stats_all($voting_round) {
 	
 	return $output_arr;
 }
-function current_round_table($current_round, $user, $show_vote_links, $show_intro_text) {
+function current_round_table($current_round, $user, $show_intro_text) {
+	$last_block_id = last_block_id('beta');
+	$current_round = block_to_round($last_block_id+1);
+	$block_within_round = $last_block_id%get_site_constant('round_length')+1;
+	
 	$html = "<div style=\"padding: 5px;\">";
 	
-	if ($show_intro_text) $html .= "<b>Current Rankings - Round #".$current_round.". Approximately ".(get_site_constant('round_length')-last_block_id('beta')%get_site_constant('round_length'))*get_site_constant('minutes_per_block')." minutes left.</b><br/>";
+	if ($show_intro_text) {
+		$html .= "<h1>Current Rankings - Round #".$current_round."</h1>\n";
+		$html .= 'Last block completed: #'.$last_block_id.', currently mining #'.($last_block_id+1).'<br/>';
+		$html .= 'Current votes count towards block '.$block_within_round.'/'.get_site_constant('round_length').' in round #'.$current_round.'<br/>';
+		$html .= 'Approximately '.(get_site_constant('round_length')-$last_block_id%get_site_constant('round_length'))*get_site_constant('minutes_per_block').' minutes left in this round.<br/>';
+	}
 	
 	$html .= "<div class='row'>";
 	
@@ -217,18 +226,6 @@ function current_round_table($current_round, $user, $show_vote_links, $show_intr
 		</div>';
 		
 		if ($ncount%4 == 1) $html .= '</div><div class="row">';
-		/*
-		if ($user) {
-			$html .= "<div class=\"col-sm-2\">";
-			$qq = "SELECT SUM(amount) FROM webwallet_transactions WHERE currency_mode='beta' AND nation_id='".$round_stats[$i]['nation_id']."' AND user_id='".$user['user_id']."' AND block_id >= ".(($current_round-1)*get_site_constant('round_length')+1)." AND block_id <= ".($current_round*get_site_constant('round_length')-1).";";
-			$rr = run_query($qq);
-			$user_coinvotes = mysql_fetch_row($rr);
-			$user_coinvotes = $user_coinvotes[0]/pow(10,8);
-			$html .=  number_format($user_coinvotes, 3)." EMP";
-			$html .= "</div>";
-			if ($show_vote_links) $html .= "<div class=\"col-sm-1\"><a href=\"\" onclick=\"start_vote(".$round_stats[$i]['nation_id'].");return false;\">Vote</a></div>";
-		}
-		*/
 	}
 	$html .= "</div>";
 	$html .= "</div>";
@@ -436,18 +433,18 @@ function my_votes_table($round_id, $user) {
 	$q = "SELECT n.*, SUM(t.amount) FROM webwallet_transactions t, nations n WHERE t.nation_id=n.nation_id AND t.block_id >= ".((($round_id-1)*10)+1)." AND t.block_id <= ".($round_id*10-1)." AND t.user_id='".$user['user_id']."' AND t.amount > 0 GROUP BY t.nation_id ORDER BY SUM(t.amount) DESC;";
 	$r = run_query($q);
 	if (mysql_numrows($r) > 0) {
-		$html .= "<b>Your current votes</b><br/><div style=\"border: 1px solid #ddd; padding: 5px;\">";
+		$html .= "<div style=\"border: 1px solid #ddd; padding: 5px;\">";
 		$html .= "<div class=\"row\" style=\"font-weight: bold;\">";
-		$html .= "<div class=\"col-md-4\">Nation</div>";
-		$html .= "<div class=\"col-md-4\">Amount</div>";
-		$html .= "<div class=\"col-md-4\">Payout</div>";
+		$html .= "<div class=\"col-sm-4\">Nation</div>";
+		$html .= "<div class=\"col-sm-4\">Amount</div>";
+		$html .= "<div class=\"col-sm-4\">Payout</div>";
 		$html .= "</div>\n";
 		while ($my_vote = mysql_fetch_array($r)) {
 			$expected_payout = floor(750*pow(10,8)*($my_vote['SUM(t.amount)']/nation_score_in_round($my_vote['nation_id'], $round_id)))/pow(10,8);
 			$html .= "<div class=\"row\">";
-			$html .= "<div class=\"col-md-4\">".$my_vote['name']."</div>";
-			$html .= "<div class=\"col-md-4 greentext\">".number_format(round($my_vote['SUM(t.amount)']/pow(10,8), 5))." EMP</div>";
-			$html .= "<div class=\"col-md-4 greentext\">".number_format(round($expected_payout, 5))." EMP</div>";
+			$html .= "<div class=\"col-sm-4\">".$my_vote['name']."</div>";
+			$html .= "<div class=\"col-sm-4 greentext\">".number_format(round($my_vote['SUM(t.amount)']/pow(10,8), 5))." EMP</div>";
+			$html .= "<div class=\"col-sm-4 greentext\">+".number_format(round($expected_payout, 5))." EMP</div>";
 			$html .= "</div>\n";
 		}
 		$html .= "</div>";
@@ -460,5 +457,50 @@ function my_votes_table($round_id, $user) {
 function set_user_active($user_id) {
 	$q = "UPDATE users SET logged_in=1, last_active='".time()."' WHERE user_id='".$user_id."';";
 	$r = run_query($q);
+}
+function initialize_vote_nation_details($nation_id2rank, $total_vote_sum) {
+	$html = "";
+	$nation_q = "SELECT * FROM nations ORDER BY nation_id ASC;";
+	$nation_r = run_query($nation_q);
+	
+	$nation_id = 0;
+	while ($nation = mysql_fetch_array($nation_r)) {
+		$rank = $nation_id2rank[$nation['nation_id']]+1;
+		$voting_sum = $nation['coins_currently_voted'];
+		$html .= '
+		<div style="display: none;" class="modal fade" id="vote_confirm_'.$nation['nation_id'].'">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-body">
+						<h2>Vote for '.$nation['name'].'</h2>
+						<div id="vote_nation_details_'.$nation['nation_id'].'">
+							'.vote_nation_details($nation, $rank, $voting_sum, $total_vote_sum, $nation['losing_streak']).'
+						</div>
+						<div id="vote_details_'.$nation['nation_id'].'"></div>
+						<br/>
+						How many EmpireCoins do you want to vote?<br/>
+						<div class="row">
+							<div class="col-xs-4">
+								Amount:
+							</div>
+							<div class="col-sm-4">
+								<input type="text" class="responsive_input" placeholder="0.00" size="10" id="vote_amount_'.$nation['nation_id'].'" />
+							</div>
+							<div class="col-sm-4">
+								EmpireCoins
+							</div>
+						</div>
+						<div class="redtext" id="vote_error_'.$nation['nation_id'].'"></div>
+					</div>
+					<div class="modal-footer">
+						<button class="btn btn-primary" id="vote_confirm_btn_'.$nation['nation_id'].'" onclick="confirm_vote('.$nation['nation_id'].');">Confirm Vote</button>
+						<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+					</div>
+				</div>
+			</div>
+		</div>';
+		$n_counter++;
+	}
+	return $html;
 }
 ?>

@@ -36,7 +36,7 @@ if ($thisuser) {
 	else $output['new_transaction'] = 0;
 	
 	if ($last_block_id != $_REQUEST['last_block_id'] || $last_transaction_id != $_REQUEST['last_transaction_id']) {
-		$output['current_round_table'] = current_round_table($current_round, $thisuser, true, true);
+		$output['current_round_table'] = current_round_table($current_round, $thisuser, true);
 		$output['wallet_text_stats'] = wallet_text_stats($thisuser, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance);
 		$output['my_current_votes'] = my_votes_table($current_round, $thisuser);
 		

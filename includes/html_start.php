@@ -14,6 +14,7 @@
 	<script type="text/javascript" language="javascript" src="/js/bootstrap.min.js"></script>
 	<script type="text/javascript" language="javascript" src="/js/jquery.ui.js"></script>
 	<script type="text/javascript" language="javascript" src="/js/sha256.js"></script>
+	<script type="text/javascript" language="javascript" src="/js/main.js"></script>
 </head>
 <body>
 	<nav class="navbar navbar-default navbar-fixed-top">

@@ -44,8 +44,8 @@ body {
 .nation_flag {
 	display: inline-block;
 	float: left;
-	width: 70px;
-	height: 42px;
+	width: 50px;
+	height: 33px;
 	margin-right: 10px;
 	background-size: cover;
 	background-position: center center;

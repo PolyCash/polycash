@@ -31,5 +31,5 @@ if ($thisuser) {
 		else echo "3=====Invalid nation ID.";
 	}
 }
-else echo "5=====Please log in.";
+else echo "5=====Please <a href=\"/wallet/\">log in</a>.";
 ?>
