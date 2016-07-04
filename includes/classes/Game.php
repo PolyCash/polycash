@@ -2521,6 +2521,7 @@ class Game {
 			$html = "Synchronization is already running, skipping...\n";
 		}
 		else {
+$this->app->set_site_constant("last_sync_start_time", time());
 			$last_block_id = $this->last_block_id();
 
 			$startblock_q = "SELECT * FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id='".$last_block_id."';";
