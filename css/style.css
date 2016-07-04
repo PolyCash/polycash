@@ -1,0 +1,184 @@
+body {
+  padding-top: 50px;
+}
+.top_banner {
+	text-align: center;
+	height: 400px;
+	position: relative;
+}
+.carouselImage {
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	right: 0px;
+	height: 400px;
+	display: none;
+	background-size: cover;
+	background-position: center center;
+	z-index: 1;
+}
+.carouselText {
+	position: absolute;
+	top: 150px;
+	left: 0px;
+	right: 0px;
+	height: 100px;
+	line-height: 100px;
+	z-index: 2;
+	font-size: 70px;
+	font-family: Helvetica;
+	color: #fff;
+	text-shadow: 0px 0px 8px rgba(0, 0, 0, 0.8);
+	font-weight: bold;
+}
+.nopadding {
+   padding: 0 !important;
+   margin: 0 !important;
+}
+.nation_box {
+	display: inline-block;
+	width: 200px;
+	line-height: 36px;
+	height: 36px;
+}
+.nation_flag {
+	display: inline-block;
+	float: left;
+	width: 50px;
+	height: 30px;
+	margin-top: 2px;
+	margin-right: 6px;
+	background-size: cover;
+	background-position: center center;
+	border: 1px solid rgba(0,0,0,0.5);
+}
+.nation_flag_label {
+	display: inline-block;
+	float: left;
+}
+
+.vote_nation_box {
+	display: inline-block;
+	width: 200px;
+	line-height: 36px;
+	border: 1px solid #ccc;
+	margin: 5px;
+	border-radius: 5px;
+	padding: 5px;
+	background-color: #fafafa;
+	cursor: pointer;
+}
+.vote_nation_flag {
+	display: inline-block;
+	float: left;
+	width: 50px;
+	height: 30px;
+	margin-top: 2px;
+	margin-right: 6px;
+	background-size: cover;
+	background-position: center center;
+	border: 1px solid rgba(0,0,0,0.5);
+}
+.vote_nation_flag_label {
+	display: inline-block;
+	float: left;
+}
+
+.rules_list {
+	margin: 0px !important;
+	margin-left: 15px !important;
+	padding: 0px !important;
+}
+.china {
+	background-image: url('/img/flags/China.jpg');
+}
+.unitedstates {
+	background-image: url('/img/flags/UnitedStates.jpg');
+}
+.india {
+	background-image: url('/img/flags/India.jpg');
+}
+.japan {
+	background-image: url('/img/flags/Japan.jpg');
+}
+.germany {
+	background-image: url('/img/flags/Germany.jpg');
+}
+.russia {
+	background-image: url('/img/flags/Russia.jpg');
+}
+.brazil {
+	background-image: url('/img/flags/Brazil.jpg');
+}
+.indonesia {
+	background-image: url('/img/flags/Indonesia.jpg');
+}
+.france {
+	background-image: url('/img/flags/France.jpg');
+}
+.unitedkingdom {
+	background-image: url('/img/flags/UnitedKingdom.jpg');
+}
+.mexico {
+	background-image: url('/img/flags/Mexico.jpg');
+}
+.italy {
+	background-image: url('/img/flags/Italy.jpg');
+}
+.southkorea {
+	background-image: url('/img/flags/SouthKorea.jpg');
+}
+.saudiarabia {
+	background-image: url('/img/flags/SaudiArabia.jpg');
+}
+.canada {
+	background-image: url('/img/flags/Canada.jpg');
+}
+.spain {
+	background-image: url('/img/flags/Spain.jpg');
+}
+
+@media all and (max-device-width: 480px) {
+    .carouselText {
+        font-size: 50px;
+    }
+}
+
+.tabcell {
+	border: 1px solid #999;
+	border-top-right-radius: 4px;
+	border-top-left-radius: 4px;
+	background-color: #f6f6f6;
+	margin-right: 5px;
+	margin-left: 5px;
+	line-height: 30px;
+	cursor: pointer;
+}
+.tabcell_sel {
+	border-bottom: 1px solid #fff;
+	background-color: #fff;
+}
+.tabcontent {
+	border: 1px solid #999;
+	margin-top: -1px;
+	padding: 8px;
+}
+.greentext {
+	color: #0a0;
+}
+.redtext {
+	color: #f00;
+}
+.responsive_input {
+	width: 100%;
+}
+.plainlabel {
+	font-weight: normal ! important;
+}
+.bordered_row {
+	border-top: 1px solid #bbb;
+	padding-top: 5px;
+	padding-bottom: 2px;
+	margin-left: 5px;
+	margin-right: 5px;
+}
