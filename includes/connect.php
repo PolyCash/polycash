@@ -4,11 +4,13 @@ if (is_file(realpath(dirname(__FILE__))."/config.php")) {
 }
 else die("Please create the file includes/config.php");
 
-if ($GLOBALS['enforce_domain'] != "") {
-	$domain_parts = explode(".", $_SERVER['HTTP_HOST']);
-	$domain = $domain_parts[count($domain_parts)-2].".".$domain_parts[count($domain_parts)-1];
-	if ($domain != $GLOBALS['enforce_domain']) {
-		header("Location: http://".$GLOBALS['enforce_domain']);
+if ($GLOBALS['base_url']) {
+	$b_url = $_SERVER['HTTP_HOST'];
+	if (isset($_SERVER['HTTPS'])) $b_url = "https://".$b_url;
+	else $b_url = "http://".$b_url;
+	
+	if ($GLOBALS['b_url'] != $base_url) {
+		header("Location: ".$GLOBALS['base_url'].$_SERVER['REQUEST_URI']);
 		die();
 	}
 }

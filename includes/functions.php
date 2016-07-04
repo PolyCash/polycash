@@ -403,7 +403,7 @@ function performance_history($user, $from_round_id, $to_round_id) {
 		
 		$html .= '<div class="col-sm-5">';
 		$html .= $win_text;
-		$html .= ' <a href="/explorer/rounds/'.$round['round_id'].'" target="_blank">Details</a>';
+		$html .= ' <a href="/explorer/'.$game['url_identifier'].'/rounds/'.$round['round_id'].'" target="_blank">Details</a>';
 		$html .= '</div>';
 		
 		$payout_amt = ($game['pos_reward']*$my_votes[$round['winning_nation_id']][$game['payout_weight'].'s']/$nation_scores['sum'] - $my_votes_in_round['fee_amount'])/pow(10,8);
@@ -529,7 +529,7 @@ function wallet_text_stats($thisuser, &$game, $current_round, $last_block_id, $b
 					$html .= "You voted for ".$next_transaction['name']." in round #".block_to_round($game, $next_transaction['create_block_id']).". ";
 				}
 			}
-			$html .= '(tx: <a target="_blank" href="/explorer/transactions/'.$next_transaction['tx_hash'].'">'.$next_transaction['transaction_id']."</a>)<br/>\n";
+			$html .= '(tx: <a target="_blank" href="/explorer/'.$game['url_identifier'].'/transactions/'.$next_transaction['tx_hash'].'">'.$next_transaction['transaction_id']."</a>)<br/>\n";
 		}
 		$html .= "</div>\n";
 	}
@@ -1068,7 +1068,7 @@ function my_votes_table(&$game, $round_id, $user) {
 		
 		$confirmed_html .= '<div class="row">';
 		$confirmed_html .= '<div class="col-sm-4 '.$color.'text">'.$my_vote['name'].'</div>';
-		$confirmed_html .= '<div class="col-sm-4 '.$color.'text"><a target="_blank" href="/explorer/transactions/'.$my_vote['transaction_id'].'">'.format_bignum($num_votes/pow(10,8), 2).' votes</a></div>';
+		$confirmed_html .= '<div class="col-sm-4 '.$color.'text"><a target="_blank" href="/explorer/'.$game['url_identifier'].'/transactions/'.$my_vote['transaction_id'].'">'.format_bignum($num_votes/pow(10,8), 2).' votes</a></div>';
 		$confirmed_html .= '<div class="col-sm-4 '.$color.'text">+'.format_bignum($expected_payout).' EMP</div>';
 		$confirmed_html .= "</div>\n";
 		
@@ -1094,7 +1094,7 @@ function my_votes_table(&$game, $round_id, $user) {
 		
 		$unconfirmed_html .= '<div class="row">';
 		$unconfirmed_html .= '<div class="col-sm-4 '.$color.'text">'.$my_vote['name'].'</a></div>';
-		$unconfirmed_html .= '<div class="col-sm-4 '.$color.'text"><a target="_blank" href="/explorer/transactions/'.$my_vote['transaction_id'].'">'.format_bignum($num_votes/pow(10,8), 2).' votes</a></div>';
+		$unconfirmed_html .= '<div class="col-sm-4 '.$color.'text"><a target="_blank" href="/explorer/'.$game['url_identifier'].'/transactions/'.$my_vote['transaction_id'].'">'.format_bignum($num_votes/pow(10,8), 2).' votes</a></div>';
 		$unconfirmed_html .= '<div class="col-sm-4 '.$color.'text">+'.format_bignum($expected_payout).' EMP</div>';
 		$unconfirmed_html .= "</div>\n";
 		
@@ -1684,10 +1684,10 @@ function block_id_to_round_index(&$game, $mining_block_id) {
 	return (($mining_block_id-1)%$game['round_length'])+1;
 }
 
-function render_transaction($transaction, $selected_address_id, $firstcell_text) {
+function render_transaction($transaction, $selected_address_id, $firstcell_text, $game_url_identifier) {
 	$html = "";
 	$html .= '<div class="row bordered_row"><div class="col-md-6">';
-	$html .= '<a href="/explorer/transactions/'.$transaction['tx_hash'].'" class="display_address" style="display: inline-block; max-width: 100%; overflow: hidden;">TX:&nbsp;'.$transaction['tx_hash'].'</a><br/>';
+	$html .= '<a href="/explorer/'.$game_url_identifier.'/transactions/'.$transaction['tx_hash'].'" class="display_address" style="display: inline-block; max-width: 100%; overflow: hidden;">TX:&nbsp;'.$transaction['tx_hash'].'</a><br/>';
 	if ($firstcell_text != "") $html .= $firstcell_text."<br/>\n";
 	
 	if ($transaction['transaction_desc'] == "votebase") {
@@ -1704,7 +1704,7 @@ function render_transaction($transaction, $selected_address_id, $firstcell_text)
 			$html .= number_format($input['amount']/pow(10,8), 2)."&nbsp;coins&nbsp; ";
 			$html .= '<a class="display_address" style="';
 			if ($input['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
-			$html .= '" href="/explorer/addresses/'.$input['address'].'">'.$input['address'].'</a>';
+			$html .= '" href="/explorer/'.$game_url_identifier.'/addresses/'.$input['address'].'">'.$input['address'].'</a>';
 			if ($input['name'] != "") $html .= "&nbsp;&nbsp;(".$input['name'].")";
 			$html .= "<br/>\n";
 			$input_sum += $input['amount'];
@@ -1717,7 +1717,7 @@ function render_transaction($transaction, $selected_address_id, $firstcell_text)
 	while ($output = mysql_fetch_array($rr)) {
 		$html .= '<a class="display_address" style="';
 		if ($output['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
-		$html .= '" href="/explorer/addresses/'.$output['address'].'">'.$output['address'].'</a>&nbsp; ';
+		$html .= '" href="/explorer/'.$game_url_identifier.'/addresses/'.$output['address'].'">'.$output['address'].'</a>&nbsp; ';
 		$html .= number_format($output['amount']/pow(10,8), 2)."&nbsp;coins";
 		if ($output['name'] != "") $html .= "&nbsp;&nbsp;".$output['name'];
 		if ($output['payout_amount'] > 0) $html .= '&nbsp;&nbsp;<font class="greentext">+'.round($output['payout_amount']/pow(10,8), 2).'</font>';
@@ -1880,11 +1880,16 @@ function rounds_complete_html(&$game, $max_round_id, $limit) {
 	$last_block_id = last_block_id($game['game_id']);
 	$current_round = block_to_round($game, $last_block_id+1);
 	if ($max_round_id == $current_round) {
+		$current_score_q = "SELECT SUM(unconfirmed_coin_block_score+coin_block_score) coin_block_score, SUM(unconfirmed_coin_score+coin_score) coin_score FROM game_nations WHERE game_id='".$game['game_id']."';";
+		$current_score_r = run_query($current_score_q);
+		$current_score = mysql_fetch_row($current_score_r);
+		$current_score = intval($current_score[0]);
+		
 		$html .= '<div class="row bordered_row">';
-		$html .= '<div class="col-sm-2"><a href="/explorer/rounds/'.$max_round_id.'">Round #'.$max_round_id.'</a></div>';
+		$html .= '<div class="col-sm-2"><a href="/explorer/'.$game['url_identifier'].'/rounds/'.$max_round_id.'">Round #'.$max_round_id.'</a></div>';
 		$html .= '<div class="col-sm-7">Not yet decided';
 		$html .= '</div>';
-		$html .= '<div class="col-sm-3">'.format_bignum(0).' votes cast</div>';
+		$html .= '<div class="col-sm-3">'.format_bignum($current_score/pow(10,8)).' votes cast</div>';
 		$html .= '</div>'."\n";
 	}
 	
@@ -1894,7 +1899,7 @@ function rounds_complete_html(&$game, $max_round_id, $limit) {
 	$last_round_shown = 0;
 	while ($cached_round = mysql_fetch_array($r)) {
 		$html .= '<div class="row bordered_row">';
-		$html .= '<div class="col-sm-2"><a href="/explorer/rounds/'.$cached_round['round_id'].'">Round #'.$cached_round['round_id'].'</a></div>';
+		$html .= '<div class="col-sm-2"><a href="/explorer/'.$game['url_identifier'].'/rounds/'.$cached_round['round_id'].'">Round #'.$cached_round['round_id'].'</a></div>';
 		$html .= '<div class="col-sm-7">';
 		if ($cached_round['winning_nation_id'] > 0) {
 			$html .= $cached_round['name']." wins with ".format_bignum($cached_round['winning_score']/pow(10,8))." votes (".round(100*$cached_round['winning_score']/$cached_round['score_sum'], 2)."%)";
@@ -1949,7 +1954,7 @@ function my_bets(&$game, $user) {
 				$coins_bet_for_round += $nation_bet['SUM(i.amount)'];
 				$disp_html .= '<div class="">';
 				$disp_html .= '<div class="col-md-5">'.number_format($nation_bet['SUM(i.amount)']/pow(10,8), 2)." coins towards ".$nation_bet['name'].'</div>';
-				$disp_html .= '<div class="col-md-5"><a href="/explorer/addresses/'.$nation_bet['address'].'">'.$nation_bet['address'].'</a></div>';
+				$disp_html .= '<div class="col-md-5"><a href="/explorer/'.$game['url_identifier'].'/addresses/'.$nation_bet['address'].'">'.$nation_bet['address'].'</a></div>';
 				$disp_html .= "</div>\n";
 			}
 			if ($bet_round['bet_round_id'] >= $current_round) {

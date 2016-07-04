@@ -156,7 +156,7 @@ if ($thisuser) {
 				
 				$api_output = (object)[
 					'status_code' => 0,
-					'message' => "Your voting transaction has been submitted! <a href=\"/explorer/transactions/".$transaction['tx_hash']."\">Details</a>"
+					'message' => "Your voting transaction has been submitted! <a href=\"/explorer/".$game['url_identifier']."/transactions/".$transaction['tx_hash']."\">Details</a>"
 				];
 			}
 			else {

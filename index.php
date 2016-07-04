@@ -41,7 +41,7 @@ $game = mysql_fetch_array($r);
 			</div>
 			<div class="paragraph">
 				<a href="/wallet/" class="btn btn-success" style="margin: 5px 0px;">Log In or Sign Up</a>
-				<a href="/explorer/rounds/" class="btn btn-primary" style="margin: 5px 0px;">Blockchain Explorer</a>
+				<a href="/explorer/<?php echo $game['url_identifier']; ?>/rounds/" class="btn btn-primary" style="margin: 5px 0px;">Blockchain Explorer</a>
 			</div>
 			<div class="paragraph">
 				<?php
@@ -129,7 +129,7 @@ $game = mysql_fetch_array($r);
 		<?php } ?>
 		Since EmpireCoin is in beta, please be aware that you may lose your coins at any time.<br/>
 		<a href="/wallet/" style="margin: 5px 0px;" class="btn btn-success">Sign Up</a>
-		<a href="/explorer/rounds/" style="margin: 5px 0px;" class="btn btn-primary">Blockchain Explorer</a>
+		<a href="/explorer/<?php echo $game['url_identifier']; ?>/rounds/" style="margin: 5px 0px;" class="btn btn-primary">Blockchain Explorer</a>
 	</div>
 	<div class="paragraph">
 		<h1>EmpireCoin API</h1>

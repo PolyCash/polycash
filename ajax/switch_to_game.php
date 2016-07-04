@@ -7,17 +7,37 @@ if ($thisuser) {
 	$action = $_REQUEST['action'];
 	$game_id = intval($_REQUEST['game_id']);
 	
-	if ($action == "switch" && $game_id > 0) {
-		$q = "SELECT * FROM user_games WHERE user_id='".$thisuser['user_id']."' AND game_id='".$game_id."';";
+	if ($action == "switch") {
+		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
 		$r = run_query($q);
 		
 		if (mysql_numrows($r) == 1) {
-			$user_game = mysql_fetch_array($r);
+			$game = mysql_fetch_array($r);
 			
-			$q = "UPDATE users SET game_id='".$user_game['game_id']."' WHERE user_id='".$thisuser['user_id']."';";
+			$q = "SELECT * FROM user_games WHERE user_id='".$thisuser['user_id']."' AND game_id='".$game_id."';";
 			$r = run_query($q);
 			
-			output_message(1, "", false);
+			if (mysql_numrows($r) == 1) {
+				$user_game = mysql_fetch_array($r);
+				
+				$q = "UPDATE users SET game_id='".$user_game['game_id']."' WHERE user_id='".$thisuser['user_id']."';";
+				$r = run_query($q);
+				
+				output_message(1, "", false);
+			}
+			else {
+				if ($game['creator_id'] > 0) {
+					output_message(2, "That game doesn't exist or you don't have permission to join it.");
+				}
+				else {
+					ensure_user_in_game($thisuser['user_id'], $game['game_id']);
+					
+					$q = "UPDATE users SET game_id='".$game['game_id']."' WHERE user_id='".$thisuser['user_id']."';";
+					$r = run_query($q);
+					
+					output_message(1, "", false);
+				}
+			}
 		}
 		else output_message(2, "That game doesn't exist or you don't have permission to join it.");
 	}
@@ -31,7 +51,19 @@ if ($thisuser) {
 			}
 			else $game_index = 1;
 			
-			$q = "INSERT INTO games SET creator_id='".$thisuser['user_id']."', maturity=0, round_length=10, seconds_per_block='15', block_timing='realistic', creator_game_index='".$game_index."', game_type='simulation', name='Practice Game #".$game_index."', pos_reward='".(1200*pow(10,8))."', pow_reward='".(50*pow(10,8))."';";
+			$append_index = 0;
+			$keeplooping = true;
+			do {
+				if ($append_index > 0) $append="(".$append_index.")";
+				else $append = "";
+				$url_identifier = make_alphanumeric($thisuser['username']."-practice-game-".$game_index.$append, "-()");
+				$q = "SELECT * FROM games WHERE url_identifier='".$url_identifier."';";
+				$r = run_query($q);
+				if (mysql_numrows($r) == 0) $keeplooping = false;
+				else $append_index++;
+			} while ($keeplooping);
+			
+			$q = "INSERT INTO games SET creator_id='".$thisuser['user_id']."', url_identifier='".$url_identifier."', maturity=0, round_length=10, seconds_per_block='15', block_timing='realistic', creator_game_index='".$game_index."', game_type='simulation', name='Practice Game #".$game_index."', pos_reward='".(1200*pow(10,8))."', pow_reward='".(50*pow(10,8))."';";
 			$r = run_query($q);
 			$game_id = mysql_insert_id();
 			

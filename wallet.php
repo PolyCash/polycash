@@ -708,7 +708,7 @@ $mature_balance = mature_balance($game, $thisuser);
 				<div id="giveaway_div">
 					<?php
 					$giveaway_avail_msg = 'You\'re eligible for a one time coin giveaway of '.number_format($game['giveaway_amount']/pow(10,8)).' EmpireCoins.<br/>';
-					$giveaway_avail_msg .= '<button class="btn btn-success" onclick="claim_coin_giveaway();" id="giveaway_btn">Claim '.number_format($game['giveaway_amount']/pow(10,8)).' EmpireCoins</button><br/>';
+					$giveaway_avail_msg .= '<button class="btn btn-success" onclick="claim_coin_giveaway();" id="giveaway_btn">Claim '.number_format($game['giveaway_amount']/pow(10,8)).' EmpireCoins</button><br/><br/>';
 					
 					$giveaway_available = check_giveaway_available($game, $thisuser);
 					
@@ -740,7 +740,7 @@ $mature_balance = mature_balance($game, $thisuser);
 							?>
 						</div>
 						<div class="col-sm-1">
-							<a target="_blank" href="/explorer/addresses/<?php echo $address['address']; ?>">Explore</a>
+							<a target="_blank" href="/explorer/<?php echo $game['url_identifier']; ?>/addresses/<?php echo $address['address']; ?>">Explore</a>
 						</div>
 						<div class="col-sm-5">
 							<input type="text" style="border: 0px; background-color: none; width: 100%; font-family: consolas" onclick="$(this).select();" value="<?php echo $address['address']; ?>" />
