@@ -1,7 +1,7 @@
 <?php
 include("../includes/connect.php");
 include("../includes/get_session.php");
-$viewer_id = insert_pageview($thisuser);
+if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuser);
 
 $output_obj['result_code'] = 0;
 $output_obj['message'] = "";

@@ -2,7 +2,7 @@
 $thispage = "account.php";
 require_once("includes/connect.php");
 include("includes/get_session.php");
-$viewer_id = insert_pageview($thisuser);
+if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuser);
 
 $pagetitle = "Reset your password - EmpireCoin";
 include("includes/html_start.php");

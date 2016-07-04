@@ -1,8 +1,10 @@
 <?php
-include("../includes/connect.php");
-include("../includes/jsonRPCClient.php");
+include(realpath(dirname(__FILE__))."/../includes/connect.php");
+include(realpath(dirname(__FILE__))."/../includes/jsonRPCClient.php");
 
 $script_start_time = microtime(true);
+
+if ($argv) $_REQUEST['key'] = $argv[1];
 
 if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$q = "SELECT * FROM games WHERE game_id='".get_site_constant('primary_game_id')."';";
@@ -32,11 +34,16 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		$r = run_query($q);
 		$game = mysql_fetch_array($r);
 		
-		$seconds_to_sleep = 5;
-		do {
-			echo walletnotify($game, $empirecoin_rpc, "");
-			sleep($seconds_to_sleep);
-		} while (microtime(true) < $script_start_time + (60-$seconds_to_sleep));
+		try {
+			$seconds_to_sleep = 5;
+			do {
+				echo walletnotify($game, $empirecoin_rpc, "");
+				sleep($seconds_to_sleep);
+			} while (microtime(true) < $script_start_time + (60-$seconds_to_sleep));
+		}
+		catch (Exception $e) {
+			die("An error occurred when attempting a coin RPC call.");
+		}
 	}
 	/*
 	$q = "UPDATE users SET logged_in=0 WHERE last_active<".(time()-60*2).";";
