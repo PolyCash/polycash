@@ -200,7 +200,7 @@ else if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['d
 		}
 	}
 	else {
-		if (in_array($voting_strategy, array('manual', 'by_rank', 'by_nation', 'api'))) {
+		if (in_array($voting_strategy, array('manual', 'by_rank', 'by_nation', 'api', 'by_plan'))) {
 			for ($i=1; $i<=$game['num_voting_options']; $i++) {
 				if ($_REQUEST['by_rank_'.$i] == "1") $by_rank_csv .= $i.",";
 			}
@@ -244,8 +244,25 @@ else if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['d
 				$message = "Error: voting strategy couldn't be set to \"Vote by nation\", the percentages you entered didn't add up to 100%.";
 			}
 			
-			$q = "UPDATE user_games SET strategy_id='".$user_strategy['strategy_id']."' WHERE game_id='".$thisuser['game_id']."' AND user_id='".$thisuser['user_id']."';";
+			$q = "UPDATE user_games SET strategy_id='".$user_strategy['strategy_id']."' WHERE game_id='".$game['game_id']."' AND user_id='".$thisuser['user_id']."';";
 			$r = run_query($q);
+		}
+		
+		$by_plan_from_round = intval($_REQUEST['by_plan_from_round']);
+		$by_plan_to_round = intval($_REQUEST['by_plan_to_round']);
+		if ($by_plan_from_round > 0 && $by_plan_to_round > 0 && $by_plan_to_round >= $by_plan_from_round) {
+			$q = "DELETE FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND round_id >= ".$by_plan_from_round." AND round_id <= ".$by_plan_to_round.";";
+			$r = run_query($q);
+			
+			for ($round_id=$by_plan_from_round; $round_id<=$by_plan_to_round; $round_id++) {
+				for ($i=0; $i<16; $i++) {
+					$points = intval($_REQUEST['poi_'.$round_id.'_'.$i]);
+					if ($points > 0) {
+						$q = "INSERT INTO strategy_round_allocations SET strategy_id='".$user_strategy['strategy_id']."', round_id='".$round_id."', nation_id='".($i+1)."', points='".$points."';";
+						$r = run_query($q);
+					}
+				}
+			}
 		}
 		
 		for ($block=1; $block<$game['round_length']; $block++) {
@@ -709,6 +726,50 @@ $mature_balance = mature_balance($game, $thisuser);
 								if ($rank%4 == 0) echo "</div>\n";
 							}
 							?>
+						</div>
+					</div>
+					<div class="row bordered_row">
+						<div class="col-md-12">
+							<input type="radio" id="voting_strategy_by_plan" name="voting_strategy" value="by_plan"<?php if ($user_strategy['voting_strategy'] == "by_plan") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_plan">&nbsp;Plan&nbsp;my&nbsp;votes</label>
+							<br/>
+							<?php
+							$plan_ahead_rounds = 10;
+							for ($round=$current_round; $round<$current_round+$plan_ahead_rounds; $round++) {
+								$q = "SELECT * FROM game_nations gn JOIN nations n ON gn.nation_id=n.nation_id WHERE gn.game_id='".$game['game_id']."' ORDER BY n.nation_id ASC;";
+								$r = run_query($q);
+								echo '<div class="plan_row">#'.$round.": ";
+								while ($game_nation = mysql_fetch_array($r)) {
+									$option_id = $game_nation['nation_id']-1;
+									echo '<div class="plan_option" id="plan_option_'.$round.'_'.$option_id.'" onclick="plan_option_clicked('.$round.', '.$option_id.');">';
+									echo '<div class="plan_option_label" id="plan_option_label_'.$round.'_'.$option_id.'">'.$game_nation['name']."</div>";
+									echo '<div class="plan_option_amount" id="plan_option_amount_'.$round.'_'.$option_id.'"></div>';
+									echo '<input type="hidden" id="plan_option_input_'.$round.'_'.$option_id.'" name="poi_'.$round.'_'.$option_id.'" value="" />';
+									echo '</div>';
+								}
+								echo "</div>\n";
+							}
+							?>
+							<input type="hidden" id="by_plan_from_round" name="by_plan_from_round" value="<?php echo $current_round; ?>" />
+							<input type="hidden" id="by_plan_to_round" name="by_plan_to_round" value="<?php echo ($current_round+$plan_ahead_rounds-1); ?>" />
+							
+							<script type="text/javascript">
+							var plan_option_max_points = 5;
+							var plan_option_increment = 1;
+							var plan_options = new Array();
+							var plan_option_row_sums = new Array();
+							var round_id2row_id = new Array();
+							
+							$(document).ready(function() {
+								initialize_plan_options(<?php echo $current_round; ?>, <?php echo $current_round+$plan_ahead_rounds-1; ?>);
+								<?php
+								$q = "SELECT * FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND round_id >= ".$current_round." AND round_id <= ".($current_round+$plan_ahead_rounds-1).";";
+								$r = run_query($q);
+								while ($allocation = mysql_fetch_array($r)) {
+									echo "load_plan_option(".$allocation['round_id'].", ".($allocation['nation_id']-1).", ".$allocation['points'].");\n";
+								}
+								?>
+							});
+							</script>
 						</div>
 					</div>
 					<div class="row bordered_row">

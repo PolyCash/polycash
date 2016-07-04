@@ -69,7 +69,6 @@ function mail_async($email, $from_name, $from, $subject, $message, $bcc, $cc) {
 	$delivery_id = mysql_insert_id();
 	
 	$command = "/usr/bin/php ".realpath(dirname(dirname(__FILE__)))."/scripts/async_email_deliver.php ".$delivery_id." > /dev/null 2>/dev/null &";
-	echo "$command<br/>\n";
 	exec($command);
 	
 	return $delivery_id;

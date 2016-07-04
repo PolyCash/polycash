@@ -366,3 +366,23 @@ footer {
 .user_message_sent {
 	float: left;
 }
+.plan_row {
+	display: block;
+	overflow: hidden;
+}
+.plan_option {
+	display: inline-block;
+	line-height: 15px;
+	border: 1px solid #aaa;
+	font-size: 11px;
+	padding: 5px 3px;
+	margin-right: -1px;
+	cursor: pointer;
+}
+.plan_option_label {
+	text-align: center;
+}
+.plan_option_amount {
+	min-width: 47px;
+	text-align: center;
+}

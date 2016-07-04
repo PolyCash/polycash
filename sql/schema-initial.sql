@@ -394,6 +394,20 @@ CREATE TABLE `redirect_urls` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `strategy_round_allocations`
+--
+
+CREATE TABLE `strategy_round_allocations` (
+  `allocation_id` int(20) NOT NULL,
+  `strategy_id` int(20) DEFAULT NULL,
+  `round_id` int(20) DEFAULT NULL,
+  `nation_id` int(20) DEFAULT NULL,
+  `points` int(20) NOT NULL DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `site_constants`
 --
 
@@ -825,6 +839,15 @@ ALTER TABLE `site_constants`
   ADD UNIQUE KEY `constant_name` (`constant_name`);
 
 --
+-- Indexes for table `strategy_round_allocations`
+--
+ALTER TABLE `strategy_round_allocations`
+  ADD PRIMARY KEY (`allocation_id`),
+  ADD KEY `strategy_id` (`strategy_id`),
+  ADD KEY `round_id` (`round_id`),
+  ADD KEY `nation_id` (`nation_id`);
+
+--
 -- Indexes for table `transaction_IOs`
 --
 ALTER TABLE `transaction_IOs`
@@ -1033,6 +1056,11 @@ ALTER TABLE `redirect_urls`
 --
 ALTER TABLE `site_constants`
   MODIFY `constant_id` int(20) NOT NULL AUTO_INCREMENT;
+--
+-- AUTO_INCREMENT for table `strategy_round_allocations`
+--
+ALTER TABLE `strategy_round_allocations`
+  MODIFY `allocation_id` int(20) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `transaction_IOs`
 --

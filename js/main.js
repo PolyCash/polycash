@@ -1226,3 +1226,56 @@ function send_invitation(game_id, invitation_id) {
 		});
 	}
 }
+function plan_option(round_id, option_id) {
+	this.round_id = round_id;
+	this.option_id = option_id;
+	this.points = 0;
+}
+function initialize_plan_options(from_round_id, to_round_id) {
+	for (var round_id=from_round_id; round_id<=to_round_id; round_id++) {
+		round_id2row_id[round_id] = plan_options.length;
+		var options_row = new Array();
+		for (var option_id=0; option_id<16; option_id++) {
+			options_row.push(new plan_option(round_id, option_id));
+		}
+		plan_options.push(options_row);
+		var row_sum = 0;
+		for (var option_id=0; option_id<16; option_id++) {
+			render_plan_option(round_id, option_id);
+			row_sum += plan_options[round_id2row_id[round_id]][option_id].points;
+		}
+		plan_option_row_sums.push(row_sum);
+	}
+}
+function render_plan_option(round_id, option_id) {
+	var pct_points = 0;
+	var row_sum = plan_option_row_sums[round_id2row_id[round_id]];
+	var this_option = plan_options[round_id2row_id[round_id]][option_id];
+	if (row_sum > 0) pct_points = Math.round(100*this_option.points/row_sum);
+	$('#plan_option_'+round_id+'_'+option_id).css("background-color", "rgba(0,0,255,"+(pct_points/100)+")");
+	if (pct_points >= 50) $('#plan_option_'+round_id+'_'+option_id).css("color", "#fff");
+	else $('#plan_option_'+round_id+'_'+option_id).css("color", "#000");
+	$('#plan_option_amount_'+round_id+'_'+option_id).html(this_option.points+" ("+pct_points+"%)");
+	$('#plan_option_input_'+round_id+'_'+option_id).val(this_option.points);
+}
+function plan_option_clicked(round_id, option_id) {
+	var this_option = plan_options[round_id2row_id[round_id]][option_id];
+	var new_points = (this_option.points+plan_option_increment)%(plan_option_max_points+1);
+	plan_option_row_sums[round_id2row_id[round_id]] += (new_points-this_option.points);
+	this_option.points = new_points;
+	for (var i=0; i<16; i++) {
+		if (i == option_id || plan_options[round_id2row_id[round_id]][i].points > 0) {
+			render_plan_option(round_id, i);
+		}
+	}
+}
+function load_plan_option(round_id, option_id, points) {
+	var this_option = plan_options[round_id2row_id[round_id]][option_id];
+	plan_option_row_sums[round_id2row_id[round_id]] += (points-this_option.points);
+	this_option.points = points;
+	for (var i=0; i<16; i++) {
+		if (i == option_id || plan_options[round_id2row_id[round_id]][i].points > 0) {
+			render_plan_option(round_id, i);
+		}
+	}
+}
