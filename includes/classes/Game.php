@@ -606,7 +606,9 @@ class Game {
 						$this->walletnotify($coin_rpc, $verified_tx_hash);
 						$this->update_option_scores();
 						
-						return true;
+						$db_transaction = $this->app->run_query("SELECT * FROM transactions WHERE tx_hash=".$this->app->quote_escape($tx_hash).";")->fetch();
+						
+						return $db_transaction['transaction_id'];
 					}
 					catch (Exception $e) {
 						var_dump($raw_txin);
@@ -876,8 +878,6 @@ class Game {
 		$justmined_round = $this->block_to_round($last_block_id);
 		
 		$log_text .= "Created block $last_block_id<br/>\n";
-		
-		$this->delete_unconfirmable_transactions();
 		
 		// Include all unconfirmed TXs in the just-mined block
 		$q = "SELECT * FROM transactions WHERE transaction_desc='transaction' AND game_id='".$this->db_game['game_id']."' AND block_id IS NULL;";
