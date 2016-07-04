@@ -37,3 +37,38 @@ INSERT INTO `currencies` (`currency_id`, `name`, `short_name`, `abbreviation`, `
 (1, 'US Dollar', 'dollar', 'USD', '$'),
 (2, 'Bitcoin', 'bitcoin', 'BTC', '&#3647;'),
 (3, 'EmpireCoin', 'empirecoin', 'EMP', 'E');
+CREATE TABLE IF NOT EXISTS `currency_invoices` (
+  `invoice_id` int(11) NOT NULL AUTO_INCREMENT,
+  `pay_currency_id` int(11) NOT NULL,
+  `settle_currency_id` int(11) NOT NULL,
+  `pay_price_id` int(11) DEFAULT NULL,
+  `settle_price_id` int(11) DEFAULT NULL,
+  `user_id` int(11) NOT NULL,
+  `game_id` int(11) DEFAULT NULL,
+  `invoice_address_id` int(11) DEFAULT NULL,
+  `status` enum('unpaid','unconfirmed','confirmed','settled') NOT NULL DEFAULT 'unpaid',
+  `invoice_key_string` varchar(64) NOT NULL DEFAULT '',
+  `pay_amount` decimal(16,8) NOT NULL DEFAULT '0.00000000',
+  `settle_amount` decimal(16,8) NOT NULL DEFAULT '0.00000000',
+  `time_created` int(20) NOT NULL DEFAULT '0',
+  `time_seen` int(20) NOT NULL DEFAULT '0',
+  `time_confirmed` int(20) NOT NULL DEFAULT '0',
+  `expire_time` int(20) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`invoice_id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+CREATE TABLE IF NOT EXISTS `currency_prices` (
+  `price_id` int(11) NOT NULL AUTO_INCREMENT,
+  `currency_id` int(11) DEFAULT NULL,
+  `reference_currency_id` int(11) DEFAULT NULL,
+  `price` decimal(16,8) NOT NULL DEFAULT '0.00000000',
+  `time_added` int(20) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`price_id`),
+  KEY `currency_id` (`currency_id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+CREATE TABLE IF NOT EXISTS `invoice_addresses` (
+  `invoice_address_id` int(11) NOT NULL AUTO_INCREMENT,
+  `currency_id` int(11) DEFAULT NULL,
+  `pub_key` varchar(40) NOT NULL,
+  `priv_enc` varchar(300) NOT NULL,
+  PRIMARY KEY (`invoice_address_id`)
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;

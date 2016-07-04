@@ -4,6 +4,8 @@ if (is_file(realpath(dirname(__FILE__))."/config.php")) {
 }
 else die("Please create the file includes/config.php");
 
+include("lib/bitcoin-sci/common.lib.php");
+
 if ($GLOBALS['base_url'] && !$host_not_required) {
 	$b_url = $_SERVER['HTTP_HOST'];
 	if (isset($_SERVER['HTTPS'])) $b_url = "https://".$b_url;

@@ -3065,6 +3065,7 @@ function game_info_table($game) {
 	if ($game['inflation'] == "linear") $html .= format_bignum($game['pos_reward']/pow(10,8))." to voters, ".format_bignum($game['pow_reward']*$game['round_length']/pow(10,8))." to miners";
 	else $html .= (100 - 100*$game['exponential_inflation_minershare'])."% to voters, ".(100*$game['exponential_inflation_minershare'])."% to miners";
 	$html .= "</td></tr>\n";
+	$html .= "<tr><td>Voting percentage cap:&nbsp;&nbsp;&nbsp;</td><td>".(100*$game['max_voting_fraction'])."%</td></tr>\n";
 	$html .= "<tr><td>Blocks per round:</td><td>".$game['round_length']."</td></tr>\n";
 	$html .= "<tr><td>Block target time:</td><td>".format_seconds($game['seconds_per_block'])."</td></tr>\n";
 	$html .= "<tr><td>Transaction maturity:&nbsp;&nbsp;&nbsp;</td><td>".$game['maturity']." block";
@@ -3073,5 +3074,108 @@ function game_info_table($game) {
 	$html .= "</table>\n";
 
 	return $html;
+}
+function latest_currency_price($currency_id) {
+	$q = "SELECT * FROM currency_prices WHERE currency_id='".$currency_id."' AND reference_currency_id='".get_site_constant('reference_currency_id')."' ORDER BY price_id DESC LIMIT 1;";
+	$r = run_query($q);
+	if (mysql_numrows($r) > 0) {
+		return mysql_fetch_array($r);
+	}
+	else return false;
+}
+function get_currency_by_abbreviation($currency_abbreviation) {
+	$q = "SELECT * FROM currencies WHERE abbreviation='".strtoupper($currency_abbreviation)."';";
+	$r = run_query($q);
+
+	if (mysql_numrows($r) > 0) {
+		return mysql_fetch_array($r);
+	}
+	else return false;
+}
+function get_reference_currency() {
+	$q = "SELECT * FROM currencies WHERE currency_id='".get_site_constant('reference_currency_id')."';";
+	$r = run_query($q);
+	return mysql_fetch_array($r);
+}
+function update_currency_price($currency_id) {
+	$q = "SELECT * FROM currencies WHERE currency_id='".$currency_id."';";
+	$r = run_query($q);
+
+	if (mysql_numrows($r) > 0) {
+		$currency = mysql_fetch_array($r);
+
+		if ($currency['abbreviation'] == "BTC") {
+			$reference_currency = get_reference_currency();
+
+			$api_url = "https://api.bitcoinaverage.com/ticker/global/all";
+			$api_response_raw = file_get_contents($api_url);
+			$api_response = json_decode($api_response_raw);
+
+			$price = $api_response->$reference_currency['abbreviation']->bid;
+
+			$q = "INSERT INTO currency_prices SET currency_id='".$currency_id."', reference_currency_id='".$reference_currency['currency_id']."', price='".$price."', time_added='".time()."';";
+			$r = run_query($q);
+			$currency_price_id = mysql_insert_id();
+
+			$q = "SELECT * FROM currency_prices WHERE price_id='".$currency_price_id."';";
+			$r = run_query($q);
+			return mysql_fetch_array($r);
+		}
+		else return false;
+	}
+	else return false;
+}
+function currency_conversion_rate($numerator_currency_id, $denominator_currency_id) {
+	$latest_numerator_rate = latest_currency_price($numerator_currency_id);
+	$latest_denominator_rate = latest_currency_price($denominator_currency_id);
+
+	$returnvals['numerator_price_id'] = $latest_numerator_rate['price_id'];
+	$returnvals['denominator_price_id'] = $latest_denominator_rate['price_id'];
+	$returnvals['conversion_rate'] = round(pow(10,8)*$latest_denominator_rate['price']/$latest_numerator_rate['price'])/pow(10,8);
+	return $returnvals;
+}
+function historical_currency_conversion_rate($numerator_price_id, $denominator_price_id) {
+	$q = "SELECT * FROM currency_prices WHERE price_id='".$numerator_price_id."';";
+	$r = run_query($q);
+	$numerator_rate = mysql_fetch_array($r);
+
+	$q = "SELECT * FROM currency_prices WHERE price_id='".$denominator_price_id."';";
+	$r = run_query($q);
+	$denominator_rate = mysql_fetch_array($r);
+
+	return round(pow(10,8)*$denominator_rate['price']/$numerator_rate['price'])/pow(10,8);
+}
+function new_currency_invoice($settle_currency_id, $settle_amount, $user_id, $game_id) {
+	$q = "SELECT * FROM currencies WHERE currency_id='".$settle_currency_id."';";
+	$r = run_query($q);
+	$settle_currency = mysql_fetch_array($r);
+
+	$pay_currency = get_currency_by_abbreviation('btc');
+
+	$conversion = currency_conversion_rate($settle_currency_id, $pay_currency['currency_id']);
+	$settle_curr_per_pay_curr = $conversion['conversion_rate'];
+
+	$pay_amount = round(pow(10,8)*$settle_amount/$settle_curr_per_pay_curr)/pow(10,8);
+
+	$keySet = bitcoin::getNewKeySet();
+
+	if (empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
+		die("<p>There was an error generating the payment address. Please go back and try again.</p>");
+	}
+
+	$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
+
+	$q = "INSERT INTO invoice_addresses SET currency_id='".$pay_currency['currency_id']."', pub_key='".$keySet['pubAdd']."', priv_enc='".$encWIF."';";
+	$r = run_query($q);
+	$invoice_address_id = mysql_insert_id();
+
+	$time = time();
+	$q = "INSERT INTO currency_invoices SET time_created='".$time."', invoice_address_id='".$invoice_address_id."', expire_time='".($time+$GLOBALS['invoice_expiration_seconds'])."', game_id='".$game_id."', user_id='".$user_id."', status='unpaid', invoice_key_string='".random_string(32)."', settle_price_id='".$conversion['numerator_price_id']."', settle_currency_id='".$settle_currency['currency_id']."', settle_amount='".$settle_amount."', pay_price_id='".$conversion['denominator_price_id']."', pay_currency_id='".$pay_currency['currency_id']."', pay_amount='".$pay_amount."';";
+	$r = run_query($q);
+	$invoice_id = mysql_insert_id();
+
+	$q = "SELECT * FROM currency_invoices WHERE invoice_id='".$invoice_id."';";
+	$r = run_query($q);
+	return mysql_fetch_array($r);
 }
 ?>

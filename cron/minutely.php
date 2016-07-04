@@ -7,6 +7,13 @@ $script_start_time = microtime(true);
 if ($argv) $_REQUEST['key'] = $argv[1];
 
 if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+	$btc_currency = get_currency_by_abbreviation('btc');
+	$latest_btc_price = latest_currency_price($btc_currency['currency_id']);
+
+	if (!$latest_btc_price || $latest_btc_price['time_added'] < time()-$GLOBALS['currency_price_refresh_seconds']) {
+		$latest_btc_price = update_currency_price($btc_currency['currency_id']);
+	}
+
 	$real_game = false;
 	$q = "SELECT * FROM games WHERE game_type='real';";
 	$r = run_query($q);

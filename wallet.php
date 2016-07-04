@@ -226,26 +226,60 @@ if ($thisuser) {
 				$invite_currency = false;
 				$q = "SELECT * FROM currencies WHERE currency_id='".$requested_game['invite_currency']."';";
 				$r = run_query($q);
-				if (mysql_numrows($r) > 0) $invite_currency = mysql_fetch_array($r);
 
-				echo "<h1>Join ".$requested_game['name']."?</h1>\n";
-				?>
-				<div class="row">
-					<div class="col-md-7">
-						<?php
-						if ($requested_game['giveaway_status'] == "public_pay") {
-							$coins_per_currency = ($requested_game['giveaway_amount']/pow(10,8))/$requested_game['invite_cost'];
-							echo $requested_game['name']." has an initial exchange rate of ".format_bignum($coins_per_currency)." ".$requested_game['coin_name_plural']." per ".$invite_currency['short_name'].". ";
-							echo "To join this game, you need to make a payment of ".format_bignum($requested_game['invite_cost'])." ".$invite_currency['short_name']."s in exchange for ".format_bignum($requested_game['giveaway_amount']/pow(10,8))." ".$requested_game['coin_name_plural'].".<br/>\n";
-						}
-						?>
-					</div>
-					<div class="col-md-5">
-						<div style="border: 1px solid #ccc; padding: 10px;">
-							<?php echo game_info_table($requested_game); ?>
+				if (mysql_numrows($r) > 0) {
+					$invite_currency = mysql_fetch_array($r);
+
+					$invoice = new_currency_invoice($invite_currency['currency_id'], $requested_game['invite_cost'], $thisuser['user_id'], $requested_game['game_id']);
+
+					echo "<h1>Join ".$requested_game['name']."?</h1>\n";
+					?>
+					<div class="row">
+						<div class="col-md-7">
+							<?php
+							if ($requested_game['giveaway_status'] == "public_pay") {
+								if ($GLOBALS['rsa_pub_key'] != "" && $GLOBALS['rsa_keyholder_email'] != "") {
+									$q = "SELECT * FROM currency_prices WHERE price_id='".$invoice['pay_price_id']."';";
+									$r = run_query($q);
+									$invoice_exchange_rate = historical_currency_conversion_rate($invoice['settle_price_id'], $invoice['pay_price_id']);
+
+									$q = "SELECT * FROM currencies WHERE currency_id='".$invoice['pay_currency_id']."';";
+									$r = run_query($q);
+									$pay_currency = mysql_fetch_array($r);
+
+									$q = "SELECT * FROM currencies WHERE currency_id='".$invoice['settle_currency_id']."';";
+									$r = run_query($q);
+									$settle_currency = mysql_fetch_array($r);
+
+									$q = "SELECT * FROM invoice_addresses WHERE invoice_address_id='".$invoice['invoice_address_id']."';";
+									$r = run_query($q);
+									$invoice_address = mysql_fetch_array($r);
+
+									$coins_per_currency = ($requested_game['giveaway_amount']/pow(10,8))/$requested_game['invite_cost'];
+									echo $requested_game['name']." has an initial exchange rate of ".format_bignum($coins_per_currency)." ".$requested_game['coin_name_plural']." per ".$invite_currency['short_name'].". ";
+									echo "To join this game, you need to make a payment of ".format_bignum($requested_game['invite_cost'])." ".$invite_currency['short_name']."s in exchange for ".format_bignum($requested_game['giveaway_amount']/pow(10,8))." ".$requested_game['coin_name_plural'].".<br/>\n";
+
+									if ($pay_currency['currency_id'] != $settle_currency['currency_id']) {
+										echo "<br/>The exchange rate is currently ".$invoice_exchange_rate." ".$settle_currency['short_name']."s per ".$pay_currency['short_name'].". ";
+									}
+									echo "<br/>Make the ".format_bignum($requested_game['invite_cost'])." ".$invite_currency['short_name']." payment in Bitcoins by sending ".$invoice['pay_amount']." BTC to ".$invoice_address['pub_key']."<br/>\n";
+									echo '<center><img style="margin: 10px;" src="/render_qr_code.php?data='.$invoice_address['pub_key'].'" /></center>';
+								}
+								else {
+									echo "Sorry, this site is not configured to accept bitcoin payments. Please contact the site administrator to rectify this problem.";
+								}
+							}
+							?>
+						</div>
+						<div class="col-md-5">
+							<div style="border: 1px solid #ccc; padding: 10px;">
+								<?php echo game_info_table($requested_game); ?>
+							</div>
 						</div>
 					</div>
-				</div>
+					<?php
+				}
+				?>
 			</div>
 			<?php
 			include('includes/html_stop.php');

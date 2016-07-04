@@ -17,6 +17,18 @@
 	<script type="text/javascript" src="/js/jquery.nouislider.js"></script>
 	<script type="text/javascript" src="/js/sha256.js"></script>
 	<script type="text/javascript" src="/js/main.js"></script>
+
+	<?php if ($include_crypto_js) { ?>
+	<script type="text/javascript" src="/js/base64.lib.js" ></script>
+	<script type="text/javascript" src="/js/rsa/prng4.js"></script>
+	<script type="text/javascript" src="/js/rsa/rng.js"></script>
+	<script type="text/javascript" src="/js/rsa/rsa.js"></script>
+	<script type="text/javascript" src="/js/rsa/rsa2.js"></script>
+	<script type="text/javascript" src="/js/rsa/base64.js"></script>
+	<script type="text/javascript" src="/js/rsa/jsbn.js"></script>
+	<script type="text/javascript" src="/js/rsa/jsbn2.js"></script>
+	<?php } ?>
+
 	<?php if ($GLOBALS['signup_captcha_required']) { ?>
 	<script type="text/javascript" src="https://www.google.com/jsapi"></script>
 	<?php } ?>
