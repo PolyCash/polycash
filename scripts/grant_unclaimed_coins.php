@@ -40,7 +40,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			echo "Please supply a valid user ID or email address in the \"to\" parameter. $q<br/>\n";
 		}
 		
-		refresh_utxo_user_ids();
+		refresh_utxo_user_ids(false);
 	}
 	else {
 		echo "Please specify a valid number of coins in the URL.  You specified ".$coins_to_grant." and there are ".$unclaimed_coins." unclaimed coins on this wallet.";

@@ -167,7 +167,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		walletnotify($game, $empirecoin_rpc, $unconfirmed_txs[$i]);
 	}
 	
-	refresh_utxo_user_ids();
+	refresh_utxo_user_ids(false);
 	update_nation_scores($game);
 	
 	echo "$completed_rounds rounds have been added.";

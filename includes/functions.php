@@ -2296,8 +2296,10 @@ function walletnotify($game, $empirecoin_rpc, $tx_hash) {
 	return $html;
 }
 
-function refresh_utxo_user_ids() {
-	$update_user_id_q = "UPDATE transaction_IOs io JOIN addresses a ON io.address_id=a.address_id SET io.user_id=a.user_id WHERE io.spend_status='unspent';";
+function refresh_utxo_user_ids($only_unspent_utxos) {
+	$update_user_id_q = "UPDATE transaction_IOs io JOIN addresses a ON io.address_id=a.address_id SET io.user_id=a.user_id";
+	if ($only_unspent_utxos) $update_user_id_q .= " WHERE io.spend_status='unspent'";
+	$update_user_id_q .= ";";
 	$update_user_id_r = run_query($update_user_id_q);
 }
 ?>
