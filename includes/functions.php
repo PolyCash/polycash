@@ -764,8 +764,8 @@ function new_webwallet_multi_transaction($game, $nation_ids, $amounts, $from_use
 			$coin_blocks_destroyed = 0;
 			while ($transaction_input = mysql_fetch_array($r)) {
 				if ($input_sum < $amount) {
-					$qq = "UPDATE transaction_IOs SET spend_transaction_id='".$transaction_id."', ";
-					if ($block_id) $qq .= "spend_status='spent', spend_block_id='".$block_id."' ";
+					$qq = "UPDATE transaction_IOs SET spend_transaction_id='".$transaction_id."'";
+					if ($block_id) $qq .= ", spend_status='spent', spend_block_id='".$block_id."' ";
 					$qq .= "WHERE io_id='".$transaction_input['io_id']."';";
 					$rr = run_query($qq);
 					$input_sum += $transaction_input['amount'];
@@ -2170,7 +2170,7 @@ function walletnotify($game, $empirecoin_rpc, $tx_hash) {
 					$q = "INSERT INTO webwallet_transactions SET game_id='".$game['game_id']."', amount='".$output_sum."', transaction_desc='".$transaction_type."', tx_hash='".$tx_hash."', address_id=NULL, block_id='".$new_block_id."', time_created='".time()."';";
 					$r = run_query($q);
 					$db_transaction_id = mysql_insert_id();
-					$html .= "just added a transaction: $q\n";
+					$html .= ". ";
 					
 					for ($j=0; $j<count($outputs); $j++) {
 						$address = $outputs[$j]["scriptPubKey"]["addresses"][0];
@@ -2181,7 +2181,6 @@ function walletnotify($game, $empirecoin_rpc, $tx_hash) {
 						if ($output_address['nation_id'] > 0) $q .= ", nation_id=".$output_address['nation_id'];
 						$q .= ", create_transaction_id='".$db_transaction_id."', amount='".($outputs[$j]["value"]*pow(10,8))."', create_block_id='".$new_block_id."';";
 						$r = run_query($q);
-						$html .= "qqqq: $q\n";
 					}
 				}
 			}
@@ -2227,7 +2226,7 @@ function walletnotify($game, $empirecoin_rpc, $tx_hash) {
 						if (count($spend_io_ids) > 0) {
 							$q = "UPDATE transaction_IOs SET spend_status='spent', spend_transaction_id='".$transaction['transaction_id']."' WHERE io_id IN (".implode(",", $spend_io_ids).");";
 							$r = run_query($q);
-							$html .= "qqqqq: $q\n";
+							$html .= ", ";
 						}
 					}
 					else {
