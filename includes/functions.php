@@ -406,10 +406,11 @@ function performance_history($user, $from_round_id, $to_round_id) {
 		$html .= ' <a href="/explorer/'.$game['url_identifier'].'/rounds/'.$round['round_id'].'" target="_blank">Details</a>';
 		$html .= '</div>';
 		
-		$payout_amt = ($game['pos_reward']*$my_votes[$round['winning_nation_id']][$game['payout_weight'].'s']/$nation_scores['sum'] - $my_votes_in_round['fee_amount'])/pow(10,8);
+		$win_amt = $game['pos_reward']*$my_votes[$round['winning_nation_id']][$game['payout_weight'].'s']/$nation_scores['sum'];
+		$payout_amt = ($win_amt - $my_votes_in_round['fee_amount'])/pow(10,8);
 		
 		$html .= '<div class="col-sm-2">';
-		$html .= '<font class="';
+		$html .= '<font title="'.format_bignum($win_amt/pow(10,8)).' coins won, '.format_bignum($my_votes_in_round['fee_amount']/pow(10,8)).' paid in fees" class="';
 		if ($payout_amt >= 0) $html .= 'greentext';
 		else $html .= 'redtext';
 		
@@ -467,18 +468,22 @@ function to_significant_digits($number, $significant_digits) {
 }
 
 function format_bignum($number) {
+	if ($number >= 0) $sign = "";
+	else $sign = "-";
+	
+	$number = abs($number);
 	if ($number > 1) $number = to_significant_digits($number, 5);
 	
 	if ($number > pow(10, 9)) {
-		return $number/pow(10, 9)."B";
+		return $sign.($number/pow(10, 9))."B";
 	}
 	else if ($number > pow(10, 6)) {
-		return $number/pow(10, 6)."M";
+		return $sign.($number/pow(10, 6))."M";
 	}
 	else if ($number > pow(10, 4)) {
-		return $number/pow(10, 3)."k";
+		return $sign.($number/pow(10, 3))."k";
 	}
-	else return rtrim(rtrim(number_format(sprintf('%.8F', $number), 8), '0'), ".");
+	else return $sign.rtrim(rtrim(number_format(sprintf('%.8F', $number), 8), '0'), ".");
 }
 
 function wallet_text_stats($thisuser, &$game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance) {
@@ -1025,23 +1030,26 @@ function nation_score_in_round(&$game, $nation_id, $round_id) {
 }
 
 function my_votes_in_round(&$game, $round_id, $user_id) {
-	$q = "SELECT n.*, SUM(t.fee_amount) AS fee_amount, SUM(io.amount), SUM(io.coin_blocks_destroyed) FROM transaction_IOs io JOIN nations n ON io.nation_id=n.nation_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.game_id='".$game['game_id']."' AND io.create_block_id >= ".((($round_id-1)*$game['round_length'])+1)." AND io.create_block_id <= ".($round_id*$game['round_length']-1)." AND io.user_id='".$user_id."' GROUP BY io.nation_id ORDER BY n.nation_id ASC;";
+	$q = "SELECT SUM(t_fees.fee_amount) FROM (SELECT t.fee_amount FROM transaction_IOs io JOIN nations n ON io.nation_id=n.nation_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE t.game_id='".$game['game_id']."' AND io.create_block_id >= ".((($round_id-1)*$game['round_length'])+1)." AND io.create_block_id <= ".($round_id*$game['round_length']-1)." AND io.user_id='".$user_id."' GROUP BY t.transaction_id) t_fees;";
+	$r = run_query($q);
+	$fee_amount = mysql_fetch_row($r);
+	$fee_amount = intval($fee_amount[0]);
+	
+	$q = "SELECT n.*, SUM(io.amount), SUM(io.coin_blocks_destroyed) FROM transaction_IOs io JOIN nations n ON io.nation_id=n.nation_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.game_id='".$game['game_id']."' AND io.create_block_id >= ".((($round_id-1)*$game['round_length'])+1)." AND io.create_block_id <= ".($round_id*$game['round_length']-1)." AND io.user_id='".$user_id."' GROUP BY io.nation_id ORDER BY n.nation_id ASC;";
 	$r = run_query($q);
 	$coins_voted = 0;
 	$coin_blocks_voted = 0;
 	$my_votes = array();
-	$fee_sum = 0;
 	while ($votesum = mysql_fetch_array($r)) {
 		$my_votes[$votesum['nation_id']]['coins'] = $votesum['SUM(io.amount)'];
 		$my_votes[$votesum['nation_id']]['coin_blocks'] = $votesum['SUM(io.coin_blocks_destroyed)'];
 		$coins_voted += $votesum['SUM(io.amount)'];
 		$coin_blocks_voted += $votesum['SUM(io.coin_blocks_destroyed)'];
-		$fee_sum += $votesum['fee_amount'];
 	}
 	$returnvals[0] = $my_votes;
 	$returnvals[1] = $coins_voted;
 	$returnvals[2] = $coin_blocks_voted;
-	$returnvals['fee_amount'] = $fee_sum;
+	$returnvals['fee_amount'] = $fee_amount;
 	return $returnvals;
 }
 
@@ -1199,9 +1207,18 @@ function ensure_user_in_game($user_id, $game_id) {
 	
 	if ($user_game['strategy_id'] > 0) {}
 	else {
+		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
+		$r = run_query($q);
+		$game = mysql_fetch_array($r);
+		
 		$q = "INSERT INTO user_strategies SET game_id='".$game_id."', user_id='".$user_game['user_id']."';";
 		$r = run_query($q);
 		$strategy_id = mysql_insert_id();
+		
+		for ($block=1; $block<$game['round_length']; $block++) {
+			$q = "INSERT INTO user_strategy_blocks SET strategy_id='".$strategy_id."', block_within_round='".$block."';";
+			$r = run_query($q);
+		}
 		
 		$q = "SELECT * FROM users u, user_games g, user_strategies s WHERE u.user_id=g.user_id AND u.game_id=g.game_id AND g.strategy_id=s.strategy_id AND u.user_id='".$user_id."';";
 		$r = run_query($q);
@@ -1213,9 +1230,6 @@ function ensure_user_in_game($user_id, $game_id) {
 			$q = "UPDATE user_strategies SET ";
 			for ($i=0; $i<count($strategy_vars); $i++) {
 				$q .= $strategy_vars[$i]."='".mysql_real_escape_string($copy_strategy[$strategy_vars[$i]])."', ";
-			}
-			for ($i=1; $i<=9; $i++) {
-				$q .= "vote_on_block_".$i."=".$copy_strategy['vote_on_block_'.$i].", ";
 			}
 			for ($i=1; $i<=16; $i++) {
 				$q .= "nation_pct_".$i."=".$copy_strategy['nation_pct_'.$i].", ";
@@ -1372,13 +1386,15 @@ function new_block($game_id) {
 		$q = "UPDATE game_nations SET coin_score=0, coin_block_score=0 WHERE game_id='".$game['game_id']."';";
 		$r = run_query($q);
 		
+		$payout_transaction_id = false;
+		
 		if ($winning_nation) {
 			$q = "UPDATE game_nations SET last_win_round=".($voting_round-1)." WHERE game_id='".$game['game_id']."' AND nation_id='".$winning_nation."';";
 			$r = run_query($q);
 			
 			$log_text .= $round_voting_stats[$nation_id2rank[$winning_nation]]['name']." wins with ".($winning_votesum/(pow(10, 8)))." EMP voted.<br/>";
 			$payout_response = new_payout_transaction($game, $voting_round, $last_block_id, $winning_nation, $winning_votesum);
-			$transaction_id = $payout_response[0];
+			$payout_transaction_id = $payout_response[0];
 			$log_text .= "Payout response: ".$payout_response[1];
 			$log_text .= "<br/>\n";
 		}
@@ -1389,7 +1405,7 @@ function new_block($game_id) {
 			$log_text .= $betbase_response[1];
 		}
 		
-		$q = "INSERT INTO cached_rounds SET game_id='".$game['game_id']."', round_id='".($voting_round-1)."', payout_block_id='".$last_block_id."'";
+		$q = "INSERT INTO cached_rounds SET game_id='".$game['game_id']."', round_id='".($voting_round-1)."', payout_block_id='".$last_block_id."', payout_transaction_id='".$payout_transaction_id."'";
 		if ($winning_nation) $q .= ", winning_nation_id='".$winning_nation."'";
 		$q .= ", winning_score='".$winning_score."', score_sum='".$score_sum."', time_created='".time()."'";
 		for ($position=1; $position<=$game['num_voting_options']; $position++) {
@@ -1413,9 +1429,10 @@ function apply_user_strategies(&$game) {
 	$block_of_round = block_id_to_round_index($game, $mining_block_id);
 	
 	if ($block_of_round != $game['round_length']) {
-		$q = "SELECT * FROM users u INNER JOIN user_games g ON u.user_id=g.user_id INNER JOIN user_strategies s ON g.strategy_id=s.strategy_id WHERE g.game_id='".$game['game_id']."'";
+		$q = "SELECT * FROM users u JOIN user_games g ON u.user_id=g.user_id JOIN user_strategies s ON g.strategy_id=s.strategy_id";
+		$q .= " JOIN user_strategy_blocks usb ON s.strategy_id=usb.strategy_id";
+		$q .= " WHERE g.game_id='".$game['game_id']."' AND usb.block_within_round='".$block_of_round."'";
 		$q .= " AND (s.voting_strategy='by_rank' OR s.voting_strategy='by_nation' OR s.voting_strategy='api')";
-		if ($block_of_round <= 9) $q .= " AND s.vote_on_block_".$block_of_round."=1";
 		$q .= " ORDER BY RAND();";
 		$r = run_query($q);
 		
@@ -1424,10 +1441,10 @@ function apply_user_strategies(&$game) {
 		while ($strategy_user = mysql_fetch_array($r)) {
 			$user_coin_value = account_coin_value($game, $strategy_user);
 			$immature_balance = immature_balance($game, $strategy_user);
-			$mature_balance = $user_coin_value - $immature_balance;
-			$free_balance = $mature_balance - $strategy_user['min_coins_available']*pow(10,8);
+			$mature_balance = mature_balance($game, $strategy_user);
+			$free_balance = $mature_balance;// - $strategy_user['min_coins_available']*pow(10,8);
 			
-			if ($mature_balance > 0) {
+			if ($free_balance > 0) {
 				if ($strategy_user['voting_strategy'] == "api") {
 					if ($GLOBALS['api_proxy_url']) $api_client_url = $GLOBALS['api_proxy_url'].urlencode($strategy_user['api_url']);
 					else $api_client_url = $strategy_user['api_url'];

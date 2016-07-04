@@ -84,7 +84,7 @@ function rank_check_all_changed() {
 function vote_on_block_all_changed() {
 	var set_checked = false;
 	if ($('#vote_on_block_all').is(":checked")) set_checked = true;
-	for (var i=1; i<=9; i++) {
+	for (var i=1; i<game_round_length; i++) {
 		$('#vote_on_block_'+i).prop("checked", set_checked);
 	}
 }
@@ -184,21 +184,19 @@ function refresh_if_needed() {
 						}
 						if (refresh_page == "wallet") {
 							if (parseInt(json_result['new_my_transaction']) == 1) {
-								$('#select_input_buttons').html(json_result['select_input_buttons']);
 								$('#my_bets').html(json_result['my_bets']);
 								my_last_transaction_id = parseInt(json_result['my_last_transaction_id']);
 							}
 							
-							if (parseInt(json_result['new_mature_ios']) == 1) {
+							if (parseInt(json_result['new_mature_ios']) == 1 || parseInt(json_result['new_my_transaction']) == 1 || json_result['new_block'] == "1") {
 								mature_io_ids_csv = json_result['mature_io_ids_csv'];
-							}
-							
-							if (parseInt(json_result['new_mature_ios']) == 1 || parseInt(json_result['new_my_transaction']) == 1) {
+								$('#select_input_buttons').html(json_result['select_input_buttons']);
+								console.log("refreshing transaction inputs: "+mature_io_ids_csv);
 								reload_compose_vote();
 							}
 							
-							refresh_mature_io_btns();
 							set_input_amount_sums();
+							refresh_mature_io_btns();
 							
 							if (parseInt(json_result['new_votingaddresses']) == 1) {
 								console.log("new voting addresses!");
@@ -756,12 +754,10 @@ function confirm_compose_vote() {
 						}
 						vote_nations.length = 0;
 						
-						for (var i=0; i<vote_inputs.length; i++) {
-							$('#selected_utxo_'+i).remove();
+						var num_inputs = vote_inputs.length;
+						for (var i=0; i<num_inputs; i++) {
+							remove_utxo_from_vote(0);
 						}
-						vote_inputs.length = 0;
-						
-						setTimeout("refresh_compose_vote();", 3000);
 					}
 					else {
 						$('#compose_vote_errors').html(result_obj['message']);
@@ -791,6 +787,7 @@ function reload_compose_vote() {
 	$('#select_input_buttons').find('.select_utxo').each(function() {
 		$(this).hide();
 	});
+	
 	if (mature_io_ids_csv == "") {
 		$('#select_input_buttons_msg').html("<font class=\"redtext\">You don't have any coins available to vote right now.</font>");
 	}
@@ -806,6 +803,9 @@ function refresh_visible_inputs() {
 		if (typeof io_id2input_index[mature_io_ids[i]] == 'undefined' || io_id2input_index[mature_io_ids[i]] === false) {
 			$('#select_utxo_'+mature_io_ids[i]).show();
 			show_count++;
+		}
+		else {
+			add_utxo_to_vote(mature_io_ids[i], mature_ios[i].amount, mature_ios[i].create_block_id);
 		}
 	}
 }

@@ -34,7 +34,7 @@ $game = mysql_fetch_array($r);
 		</div>
 		<div class="col-sm-10">
 			<div class="paragraph">
-				EmpireCoin is a coin voting game where you can win a tiny number of free coins by casting your votes correctly.  Votes build up over time in proportion to the number of empirecoins that you hold. When you vote for an empire, your votes are used up but your empirecoins are retained. With a great coin staking strategy, you can accumulate empirecoins faster than inflation.  EmpireCoin is equally playable by humans and algorithms.  With the EmpireCoin APIs it's easy to write a custom staking strategy which makes smart, real-time decisions about how to stake your coins.
+				EmpireCoin is a game where you can win a tiny number of free coins by casting your votes correctly.  Votes build up over time in proportion to the number of empirecoins that you hold. When you vote for an empire, your votes are used up but your empirecoins are retained. With a great coin staking strategy, you can accumulate empirecoins faster than inflation.  EmpireCoin is equally playable by humans and algorithms.  With the EmpireCoin APIs it's easy to write a custom staking strategy which makes smart, real-time decisions about how to stake your coins.
 			</div>
 			<div class="paragraph">
 				Do you love gambling, sports betting or speculating on currencies and stocks?  Stop paying fees and start playing EmpireCoin: the first blockchain-based coin staking game on the planet. To get started in this massively multiplayer online game of chance, please read the rules below and then <a href="/wallet/">sign up</a> for a beta account.  Or download the <a href="/EmpireCoin.pdf">EmpireCoin Whitepaper</a>.

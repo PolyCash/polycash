@@ -293,3 +293,6 @@ and (max-device-width : 480px) {
 	margin: 0px;
 	padding: 6px;
 }
+.paragraph {
+	margin-bottom: 12px;
+}

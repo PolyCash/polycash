@@ -214,11 +214,6 @@ else if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['d
 			if ($aggregate_threshold >= 0 && $aggregate_threshold <= 100) {
 				$q .= ", aggregate_threshold='".$aggregate_threshold."'";
 			}
-			for ($block=1; $block<=9; $block++) {
-				if ($_REQUEST['vote_on_block_'.$block] == "1") $vote_on_block = "1";
-				else $vote_on_block = "0";
-				$q .= ", vote_on_block_".$block."=".$vote_on_block;
-			}
 			
 			$nation_pct_sum = 0;
 			$nation_pct_q = "";
@@ -255,6 +250,24 @@ else if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['d
 			
 			$q = "UPDATE user_games SET strategy_id='".$user_strategy['strategy_id']."' WHERE game_id='".$thisuser['game_id']."' AND user_id='".$thisuser['user_id']."';";
 			$r = run_query($q);
+		}
+		
+		for ($block=1; $block<$game['round_length']; $block++) {
+			$strategy_block = false;
+			$q = "SELECT * FROM user_strategy_blocks WHERE strategy_id='".$user_strategy['strategy_id']."' AND block_within_round='".$block."';";
+			$r = run_query($q);
+			if (mysql_numrows($r) > 0) $strategy_block = mysql_fetch_array($r);
+			
+			if ($_REQUEST['vote_on_block_'.$block] == "1") {
+				if (!$strategy_block) {
+					$q = "INSERT INTO user_strategy_blocks SET strategy_id='".$user_strategy['strategy_id']."', block_within_round='".$block."';";
+					$r = run_query($q);
+				}
+			}
+			else if ($strategy_block) {
+				$q = "DELETE FROM user_strategy_blocks WHERE strategy_block_id='".$strategy_block['strategy_block_id']."';";
+				$r = run_query($q);
+			}
 		}
 	}
 }
@@ -668,22 +681,29 @@ $mature_balance = mature_balance($game, $thisuser);
 							Only vote in these blocks of the round:<br/>
 							<div class="row">
 								<div class="col-md-2">
-									<input type="checkbox" id="vote_on_block_all" onchange="vote_on_block_all_changed();" /><label class="plainlabel" for="vote_on_block_all"> All</label>
+									<input type="checkbox" id="vote_on_block_all" onchange="vote_on_block_all_changed();" /><label class="plainlabel" for="vote_on_block_all">&nbsp;&nbsp;All</label>
 								</div>
+							</div>
+							<div class="row">
 								<?php
-								for ($block=1; $block<=9; $block++) {
+								for ($block=1; $block<$game['round_length']; $block++) {
 									echo '<div class="col-md-2">';
 									echo '<input type="checkbox" name="vote_on_block_'.$block.'" id="vote_on_block_'.$block.'" value="1"';
-									if ($user_strategy['vote_on_block_'.$block] == 1) echo ' checked="checked"';
-									echo '><label class="plainlabel" for="vote_on_block_'.$block.'"> ';
-									echo $block.date("S", strtotime("1/".$block."/2015"))."</label>";
+									
+									$strategy_block_q = "SELECT * FROM user_strategy_blocks WHERE strategy_id='".$user_strategy['strategy_id']."' AND block_within_round='".$block."';";
+									$strategy_block_r = run_query($strategy_block_q);
+									if (mysql_numrows($strategy_block_r) > 0) echo ' checked="checked"';
+									
+									echo '><label class="plainlabel" for="vote_on_block_'.$block.'">&nbsp;&nbsp;';
+									echo $block."</label>";
 									echo '</div>';
-									if ($block == 4) echo '</div><div class="row">';
+									if ($block%6 == 0) echo '</div><div class="row">';
 								}
 								?>
 							</div>
 							Only vote for nations which have between <input type="tel" size="4" value="<?php echo $user_strategy['min_votesum_pct']; ?>" name="min_votesum_pct" id="min_votesum_pct" />% and <input type="tel" size="4" value="<?php echo $user_strategy['max_votesum_pct']; ?>" name="max_votesum_pct" id="max_votesum_pct" />% of the current votes.<br/>
-							Maintain <input type="tel" size="6" id="min_coins_available" name="min_coins_available" value="<?php echo round($user_strategy['min_coins_available'], 2); ?>" /> EMP available at all times.  This number of coins will be reserved and won't be voted.
+							<?php /*
+							Maintain <input type="tel" size="6" id="min_coins_available" name="min_coins_available" value="<?php echo round($user_strategy['min_coins_available'], 2); ?>" /> EMP available at all times.  This number of coins will be reserved and won't be voted. */ ?>
 						</div>
 					</div>
 					<br/>

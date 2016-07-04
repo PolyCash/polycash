@@ -70,14 +70,14 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	else $output['new_transaction'] = 0;
 	
 	if ($my_last_transaction_id != $_REQUEST['my_last_transaction_id'] && $thisuser) {
-		$output['select_input_buttons'] = select_input_buttons($thisuser['user_id'], $game);
 		$output['my_bets'] = my_bets($game, $thisuser);
 		$output['new_my_transaction'] = 1;
 		$output['my_last_transaction_id'] = $my_last_transaction_id;
 	}
 	else $output['new_my_transaction'] = 0;
 	
-	if ($mature_io_ids_csv != $_REQUEST['mature_io_ids_csv']) {
+	if ($output['new_my_transaction'] == 1 || $mature_io_ids_csv != $_REQUEST['mature_io_ids_csv']) {
+		$output['select_input_buttons'] = select_input_buttons($thisuser['user_id'], $game);
 		$output['mature_io_ids_csv'] = $mature_io_ids_csv;
 		$output['new_mature_ios'] = 1;
 	}

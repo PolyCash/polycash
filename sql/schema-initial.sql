@@ -526,15 +526,6 @@ CREATE TABLE `user_strategies` (
   `min_votesum_pct` int(11) NOT NULL DEFAULT '0',
   `max_votesum_pct` int(11) NOT NULL DEFAULT '100',
   `min_coins_available` decimal(10,8) NOT NULL DEFAULT '0.00000000',
-  `vote_on_block_1` tinyint(1) NOT NULL DEFAULT '1',
-  `vote_on_block_2` tinyint(1) NOT NULL DEFAULT '1',
-  `vote_on_block_3` tinyint(1) NOT NULL DEFAULT '1',
-  `vote_on_block_4` tinyint(1) NOT NULL DEFAULT '1',
-  `vote_on_block_5` tinyint(1) NOT NULL DEFAULT '1',
-  `vote_on_block_6` tinyint(1) NOT NULL DEFAULT '1',
-  `vote_on_block_7` tinyint(1) NOT NULL DEFAULT '1',
-  `vote_on_block_8` tinyint(1) NOT NULL DEFAULT '1',
-  `vote_on_block_9` tinyint(1) NOT NULL DEFAULT '1',
   `nation_pct_1` int(11) NOT NULL DEFAULT '0',
   `nation_pct_2` int(11) NOT NULL DEFAULT '0',
   `nation_pct_3` int(11) NOT NULL DEFAULT '0',
@@ -618,6 +609,17 @@ CREATE TABLE `transactions` (
   `ref_coin_blocks_destroyed` bigint(20) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_strategy_blocks`
+--
+
+CREATE TABLE `user_strategy_blocks` (
+  `strategy_block_id` int(20) NOT NULL,
+  `strategy_id` int(20) DEFAULT NULL,
+  `block_within_round` int(20) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 --
 -- Indexes for dumped tables
 --
@@ -892,6 +894,15 @@ ALTER TABLE `transactions`
   ADD KEY `tx_hash` (`tx_hash`);
 
 --
+-- Indexes for table `user_strategy_blocks`
+--
+ALTER TABLE `user_strategy_blocks`
+  ADD PRIMARY KEY (`strategy_block_id`),
+  ADD UNIQUE KEY `strategy_id` (`strategy_id`,`block_within_round`),
+  ADD INDEX (`strategy_id`),
+  ADD INDEX (`block_within_round`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -1050,6 +1061,11 @@ ALTER TABLE `viewer_identifiers`
 --
 ALTER TABLE `transactions`
   MODIFY `transaction_id` int(20) NOT NULL AUTO_INCREMENT;
+--
+-- AUTO_INCREMENT for table `user_strategy_blocks`
+--
+ALTER TABLE `user_strategy_blocks`
+  MODIFY `strategy_block_id` int(20) NOT NULL AUTO_INCREMENT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

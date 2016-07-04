@@ -74,7 +74,7 @@ if ($explore_mode == "games" || ($this_game && in_array($explore_mode, array('in
 				$pagetitle = "Round Results - ".$this_game['name'];
 			}
 			else {
-				$q = "SELECT * FROM cached_rounds r LEFT JOIN nations n ON r.winning_nation_id=n.nation_id WHERE r.game_id=".$this_game['game_id']." AND r.round_id='".$round_id."';";
+				$q = "SELECT * FROM cached_rounds r LEFT JOIN nations n ON r.winning_nation_id=n.nation_id LEFT JOIN transactions t ON r.payout_transaction_id=t.transaction_id WHERE r.game_id=".$this_game['game_id']." AND r.round_id='".$round_id."';";
 				$r = run_query($q);
 				if (mysql_numrows($r) == 1) {
 					$round = mysql_fetch_array($r);
@@ -235,6 +235,15 @@ if ($explore_mode == "games" || ($this_game && in_array($explore_mode, array('in
 						if ($this_game['payout_weight'] == "coin_block") echo " (".format_bignum($my_votes[$round['winning_nation_id']]['coin_blocks']/pow(10,8))." votes)";
 						echo " for ".$round['name']."</font><br/>\n";
 					}
+					
+					if ($round['payout_transaction_id'] > 0) {
+						echo '<font class="greentext">'.format_bignum($round['amount']/pow(10,8))."</font> coins were paid out to the winners.<br/>\n";
+					}
+					$round_fee_q = "SELECT SUM(fee_amount) FROM transactions WHERE game_id='".$this_game['game_id']."' AND block_id > ".(($this_round-1)*$this_game['round_length'])." AND block_id < ".($this_round*$this_game['round_length']).";";
+					$round_fee_r = run_query($round_fee_q);
+					$round_fees = mysql_fetch_row($round_fee_r);
+					$round_fees = intval($round_fees[0]);
+					echo '<font class="redtext">'.format_bignum($round_fees/pow(10,8))."</font> coins were paid in fees during this round.<br/>\n";
 					
 					$from_block_id = (($this_round-1)*$this_game['round_length'])+1;
 					$to_block_id = ($this_round*$this_game['round_length']);

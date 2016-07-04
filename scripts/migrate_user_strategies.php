@@ -1,6 +1,19 @@
 <?php
 include("../includes/connect.php");
 
+/*
+$q = "SELECT * FROM user_strategies us JOIN games g ON us.game_id=g.game_id;";
+$r = run_query($q);
+while ($user_strategy = mysql_fetch_array($r)) {
+	for ($block=1; $block<$user_strategy['round_length']; $block++) {
+		$qq = "INSERT INTO user_strategy_blocks SET strategy_id='".$user_strategy['strategy_id']."', block_within_round='".$block."';";
+		$rr = run_query($qq);
+	}
+}
+echo "Done!";
+*/
+
+/*
 $q = "SELECT * FROM users u INNER JOIN user_games g ON u.user_id=g.user_id WHERE (g.strategy_id IS NULL OR g.strategy_id=0);";
 $r = run_query($q);
 
@@ -12,9 +25,6 @@ while ($user_game = mysql_fetch_array($r)) {
 	for ($i=0; $i<count($strategy_vars); $i++) {
 		$qq .= $strategy_vars[$i]."='".mysql_real_escape_string($user_game[$strategy_vars[$i]])."', ";
 	}
-	for ($i=1; $i<=9; $i++) {
-		$qq .= "vote_on_block_".$i."=".$user_game['vote_on_block_'.$i].", ";
-	}
 	for ($i=1; $i<=16; $i++) {
 		$qq .= "nation_pct_".$i."=".$user_game['nation_pct_'.$i].", ";
 	}
@@ -24,5 +34,5 @@ while ($user_game = mysql_fetch_array($r)) {
 	
 	$qq = "UPDATE user_games SET strategy_id='".$strategy_id."' WHERE user_game_id='".$user_game['user_game_id']."';";
 	$rr = run_query($qq);
-}
+}*/
 ?>
