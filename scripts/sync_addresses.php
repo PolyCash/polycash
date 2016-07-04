@@ -2,7 +2,12 @@
 $host_not_required = TRUE;
 include(realpath(dirname(__FILE__))."/../includes/connect.php");
 
-if ($argv) $_REQUEST['key'] = $argv[1];
+if (!empty($argv)) {
+	$cmd_vars = $app->argv_to_array($argv);
+	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
+	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
+	$_REQUEST['game_id'] = $cmd_vars['game_id'];
+}
 
 if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$game_id = $_REQUEST['game_id'];
@@ -11,20 +16,15 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$coin_rpc = new jsonRPCClient('http://'.$game->db_game['rpc_username'].':'.$game->db_game['rpc_password'].'@127.0.0.1:'.$game->db_game['rpc_port'].'/');
 	
 	if ($_REQUEST['do'] == "set_option_ids") {
-		$game_q = "SELECT * FROM games;";
-		$game_r = $app->run_query($game_q);
+		$address_q = "SELECT * FROM addresses WHERE game_id='".$game->db_game['game_id']."';";
+		$address_r = $app->run_query($address_q);
 		
-		while ($db_game = $game_r->fetch()) {
-			$game = new Game($app, $db_game['game_id']);
-			$address_q = "SELECT * FROM addresses WHERE game_id='".$game->db_game['game_id']."';";
-			$address_r = $app->run_query($address_q);
-			
-			while ($address = $address_r->fetch()) {
-				$option_id = $game->addr_text_to_option_id($address['address']);
-				$qq = "UPDATE addresses SET option_id='".$option_id."' WHERE address_id='".$address['address_id']."';";
-				$rr = $app->run_query($qq);
-			}
+		while ($address = $address_r->fetch()) {
+			$option_id = $game->addr_text_to_option_id($address['address']);
+			$qq = "UPDATE addresses SET option_id='".$option_id."' WHERE address_id='".$address['address_id']."';";
+			$rr = $app->run_query($qq);
 		}
+		$app->run_query("UPDATE addresses a JOIN transaction_ios io ON a.address_id=io.address_id SET io.option_id=a.option_id;");
 		echo "Done!";
 	}
 	else if ($_REQUEST['do'] == "reset") {

@@ -2,7 +2,11 @@
 $host_not_required = TRUE;
 include(realpath(dirname(__FILE__))."/../includes/connect.php");
 
-if (!empty($argv)) $_REQUEST['key'] = $argv[1];
+if (!empty($argv)) {
+	$cmd_vars = $app->argv_to_array($argv);
+	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
+	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
+}
 
 if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$start_time = microtime(true);
@@ -45,59 +49,24 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		else die("Error, that block was not found (".$r->rowCount().").");
 	}
 	else {
-		$r = $app->run_query("SELECT * FROM blocks WHERE block_id='0' AND game_id='".$game->db_game['game_id']."';");
-		
 		$game->delete_reset_game('reset');
-		
-		$q = "DELETE FROM addresses WHERE game_id='".$game->db_game['game_id']."';";
-		$app->run_query($q);
 		
 		$returnvals = $game->add_genesis_block($coin_rpc);
 		$current_hash = $returnvals['nextblockhash'];
 	}
 	
-	do {
-		$block_height++;
-		
-		$blocks[$block_height] = new block($coin_rpc->getblock($current_hash), $block_height, $current_hash);
-		
-		if ($block_height == 1) {
-			$q = "UPDATE games SET start_time='".$blocks[$block_height]->json_obj['time']."', start_datetime=FROM_UNIXTIME(".$blocks[$block_height]->json_obj['time'].") WHERE game_id='".$game->db_game['game_id']."';";
-			$r = $app->run_query($q);
-		}
-		
-		echo $game->coind_add_block($coin_rpc, $current_hash, $block_height);
-		
-		if (empty($blocks[$block_height]->json_obj['nextblockhash'])) $current_hash = "";
-		else $current_hash = $blocks[$block_height]->json_obj['nextblockhash'];
-		
-		if (!$current_hash || $current_hash == "") $keep_looping = false;
-	} while ($keep_looping);
+	$game->insert_initial_blocks($coin_rpc);
 	
-	echo "<br/>Finished adding confirmed transactions at ".(microtime(true) - $start_time)." sec<br/>\n";
+	echo "<br/>Finished inserting blocks at ".(microtime(true) - $start_time)." sec<br/>\n";
 	
-	$q = "SELECT MAX(block_id) FROM blocks WHERE game_id='".$game->db_game['game_id']."';";
-	$r = $app->run_query($q);
-	$max_block = $r->fetch(PDO::FETCH_NUM);
-	$max_block = $max_block[0];
-	$completed_rounds = floor($max_block/$game->db_game['round_length']);
+	echo "Syncing with daemon...<br/>\n";
+	echo $game->sync_coind($coin_rpc);
 	
-	echo "Finished adding rounds at ".(microtime(true)-$start_time)." sec<br/>\n";
-	
-	$unconfirmed_txs = $coin_rpc->getrawmempool();
-	echo "Looping through ".count($unconfirmed_txs)." unconfirmed transactions.<br/>\n";
-	for ($i=0; $i<count($unconfirmed_txs); $i++) {
-		$game->walletnotify($coin_rpc, $unconfirmed_txs[$i]);
-	}
-	
-	$app->refresh_utxo_user_ids(false);
-	$game->update_option_scores();
-
 	$app->set_site_constant("last_sync_start_time", 0);
 	
-	echo "Completed sync ($completed_rounds rounds) at ".(microtime(true)-$start_time)." sec<br/>\n";
+	echo "Completed sync at ".(microtime(true)-$start_time)." sec<br/>\n";
 }
 else {
-	echo "Please supply the correct key.";
+	echo "Error: you supplied the wrong key for scripts/sync_coind_initial.php\n";
 }
 ?>

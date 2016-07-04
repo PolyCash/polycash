@@ -1,4 +1,15 @@
 <?php
+if (!$argv) {
+	include("../includes/connect.php");
+	
+	if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+		$cmd = "php ".realpath(__FILE__)." key=".$GLOBALS['cron_key_string'];
+		passthru($cmd);
+	}
+	else echo "Syntax is: minutely.php?key=<CRON_KEY_STRING>&game_id=<GAME_ID>\n";
+	die();
+}
+
 $payments_pid = pcntl_fork();
 
 if ($payments_pid == -1) {
