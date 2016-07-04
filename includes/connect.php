@@ -73,6 +73,7 @@ function mail_async($email, $from_name, $from, $subject, $message, $bcc, $cc) {
 function account_coin_value($game_id, $user) {
 	$q = "SELECT SUM(amount) FROM transaction_IOs WHERE spend_status='unspent' AND game_id='".$game_id."' AND user_id='".$user['user_id']."';";
 	$r = run_query($q);
+	//echo "$q<br/>\n";
 	$sum = mysql_fetch_row($r);
 	return $sum[0];
 }
@@ -554,82 +555,6 @@ function new_payout_transaction($game, $voting_round, $block_id, $winning_nation
 	return $returnvals;
 }
 
-function new_webwallet_transaction($game_id, $nation_id, $amount, $user_id, $block_id, $type) {
-	if (!$type || $type == "") $type = "transaction";
-	
-	if ($type == "giveaway") $instantly_mature = 1;
-	else $instantly_mature = 0;
-	
-	$temp_user['user_id'] = $user_id;
-	
-	$account_value = account_coin_value($game_id, $temp_user);
-	$immature_balance = immature_balance($game_id, $temp_user);
-	$mature_balance = $account_value - $immature_balance;
-	
-	if ($amount <= $mature_balance || ($type == "giveaway" || $type == "votebase")) {
-		$to_address_id = user_address_id($game_id, $user_id, $nation_id);
-		
-		$q = "INSERT INTO webwallet_transactions SET game_id='".$game_id."'";
-		if ($nation_id) $q .= ", nation_id='".$nation_id."'";
-		$q .= ", transaction_desc='".$type."', amount=".$amount.", user_id='".$user_id."', address_id='".$to_address_id."', block_id='".$block_id."', time_created='".time()."';";
-		$r = run_query($q);
-		$transaction_id = mysql_insert_id();
-		
-		$overshoot_amount = 0;
-		$overshoot_return_addr_id = false;
-		
-		if ($type == "giveaway" || $type == "votebase") {}
-		else {
-			$q = "INSERT INTO webwallet_transactions SET game_id='".$game_id."', transaction_desc='transaction', amount=".(-1)*$amount.", user_id='".$user_id."', block_id='".$block_id."', time_created='".time()."';";
-			$r = run_query($q);
-			
-			$q = "SELECT * FROM transaction_IOs WHERE spend_status='unspent' AND user_id='".$user_id."' AND game_id='".$game_id."' AND (create_block_id <= ".(last_block_id($game_id)-get_site_constant('maturity'))." OR instantly_mature=1) ORDER BY amount ASC;";
-			$r = run_query($q);
-			$input_sum = 0;
-			$coin_blocks_destroyed = 0;
-			while ($transaction_input = mysql_fetch_array($r)) {
-				if ($input_sum < $amount) {
-					$qq = "UPDATE transaction_IOs SET spend_status='spent', spend_transaction_id='".$transaction_id."', user_id='".$user_id."', spend_block_id='".$block_id."' WHERE io_id='".$transaction_input['io_id']."';";
-					$rr = run_query($qq);
-					$input_sum += $transaction_input['amount'];
-					$overshoot_return_addr_id = $transaction_input['address_id'];
-					$coin_blocks_destroyed += ($block_id - $transaction_input['create_block_id'])*$transaction_input['amount'];
-				}
-			}
-			$overshoot_amount = $input_sum - $amount;
-		}
-		
-		$main_output_cbd = floor($coin_blocks_destroyed*($amount/$input_sum));
-		$overshoot_output_cbd = floor($coin_block_destroyed*($overshoot_amount/$input_sum));
-		
-		$q = "INSERT INTO transaction_IOs SET spend_status='unspent', coin_blocks_destroyed='".$main_output_cbd."', instantly_mature='".$instantly_mature."', game_id='".$game_id."', user_id='".$user_id."', address_id='".$to_address_id."', nation_id='".$nation_id."', create_transaction_id='".$transaction_id."', amount='".$amount."', create_block_id='".$block_id."';";
-		$r = run_query($q);
-		$output_id = mysql_insert_id();
-		
-		if ($overshoot_amount > 0) {
-			$q = "SELECT * FROM addresses WHERE address_id='".$overshoot_return_addr_id."';";
-			$r = run_query($q);
-			$overshoot_address = mysql_fetch_array($r);
-			
-			$q = "INSERT INTO transaction_IOs SET spend_status='unspent', coin_blocks_destroyed='".$overshoot_output_cbd."', user_id='".$user_id."', address_id='".$overshoot_return_addr_id."', nation_id='".$overshoot_address['address_id']."', create_transaction_id='".$transaction_id."', amount='".$overshoot_amount."', create_block_id='".$block_id."';";
-			$r = run_query($q);
-			$output_id = mysql_insert_id();
-		}
-		
-		$round_id = block_to_round($block_id);
-		
-		$q = "UPDATE game_nations n INNER JOIN (
-			SELECT nation_id, SUM(amount) sum_amount, SUM(coin_blocks_destroyed) sum_cbd FROM transaction_IOs 
-			WHERE game_id='".$game_id."' AND create_block_id >= ".((($round_id-1)*10)+1)." AND create_block_id <= ".($round_id*10-1)." AND amount > 0
-			GROUP BY nation_id
-		) i ON n.nation_id=i.nation_id SET n.coins_currently_voted=i.sum_amount, n.coin_block_score=i.sum_cbd, n.current_vote_score=i.sum_amount WHERE n.game_id='".$game_id."';";
-		$r = run_query($q);
-		
-		return $transaction_id;
-	}
-	else return false;
-}
-
 function new_webwallet_multi_transaction($game_id, $nation_ids, $amounts, $user_id, $block_id, $type, $io_ids) {
 	if (!$type || $type == "") $type = "transaction";
 	
@@ -659,9 +584,6 @@ function new_webwallet_multi_transaction($game_id, $nation_ids, $amounts, $user_
 		
 		if ($type == "giveaway" || $type == "votebase") {}
 		else {
-			$q = "INSERT INTO webwallet_transactions SET game_id='".$game_id."', transaction_desc='transaction', amount=".(-1)*$amount.", user_id='".$user_id."', block_id='".$block_id."', time_created='".time()."';";
-			$r = run_query($q);
-			
 			$q = "SELECT * FROM transaction_IOs WHERE spend_status='unspent' AND user_id='".$user_id."' AND game_id='".$game_id."' AND (create_block_id <= ".(last_block_id($game_id)-get_site_constant('maturity'))." OR instantly_mature=1)";
 			if ($io_ids) $q .= " AND io_id IN (".implode(",", $io_ids).")";
 			$q .= " ORDER BY amount ASC;";
@@ -694,7 +616,7 @@ function new_webwallet_multi_transaction($game_id, $nation_ids, $amounts, $user_
 			$r = run_query($q);
 			$overshoot_address = mysql_fetch_array($r);
 			
-			$q = "INSERT INTO transaction_IOs SET spend_status='unspent', coin_blocks_destroyed='".$overshoot_cbd."', user_id='".$user_id."', address_id='".$overshoot_return_addr_id."', nation_id='".$overshoot_address['address_id']."', create_transaction_id='".$transaction_id."', amount='".$overshoot_amount."', create_block_id='".$block_id."';";
+			$q = "INSERT INTO transaction_IOs SET spend_status='unspent', game_id='".$game_id."', coin_blocks_destroyed='".$overshoot_cbd."', user_id='".$user_id."', address_id='".$overshoot_return_addr_id."', nation_id='".$overshoot_address['address_id']."', create_transaction_id='".$transaction_id."', amount='".$overshoot_amount."', create_block_id='".$block_id."';";
 			$r = run_query($q);
 			$output_id = mysql_insert_id();
 		}
@@ -1186,7 +1108,7 @@ function delete_reset_game($delete_or_reset, $game_id) {
 		$q = "SELECT * FROM user_games WHERE game_id='".$game_id."';;";
 		$r = run_query($q);
 		while ($user_game = mysql_fetch_array($r)) {
-			new_webwallet_transaction($game_id, false, 100000000000, $user_game['user_id'], last_block_id($game_id), 'giveaway');
+			new_webwallet_multi_transaction($game_id, false, array(100000000000), $user_game['user_id'], last_block_id($game_id), 'giveaway', false);
 		}
 	}
 	else {
@@ -1271,8 +1193,7 @@ function select_input_buttons($user_id, $game) {
 		
 		$js .= "mature_ios.push(new mature_io(mature_ios.length, ".$utxo['io_id'].", ".$utxo['amount'].", ".$utxo['create_block_id']."));\n";
 	}
-	
-	$html .= "<script type=\"text/javascript\">".$js."</script>\n";
+	$js .= "refresh_mature_io_btns();\n";
 	
 	$html .= "<div id=\"select_input_buttons_msg\">";
 	if ($viewable_count > 0) {
@@ -1284,6 +1205,8 @@ function select_input_buttons($user_id, $game) {
 	$html .= "</div>\n";
 	
 	$html .= $input_buttons_html;
+
+	$html .= "<script type=\"text/javascript\">".$js."</script>\n";
 	
 	return $html;
 }

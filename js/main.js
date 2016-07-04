@@ -206,7 +206,6 @@ function refresh_if_needed() {
 						$('#select_input_buttons').html(json_result['select_input_buttons']);
 						my_last_transaction_id = parseInt(json_result['my_last_transaction_id']);
 						reload_compose_vote();
-						refresh_mature_io_btns();
 					}
 					if (json_result['new_block'] == "1" || json_result['new_transaction'] == "1") {
 						$('#current_round_table').html(json_result['current_round_table']);
@@ -350,6 +349,7 @@ function attempt_withdrawal() {
 	if ($('#withdraw_btn').html() == "Withdraw") {
 		var amount = $('#withdraw_amount').val();
 		var address = $('#withdraw_address').val();
+		console.log(amount);
 		$('#withdraw_btn').html("Withdrawing...");
 		$.get("/ajax/withdraw.php?amount="+encodeURIComponent(amount)+"&address="+encodeURIComponent(address), function(result) {
 			$('#withdraw_btn').html("Withdraw");
@@ -537,7 +537,6 @@ function refresh_output_amounts() {
 			var output_val = 0;
 			if (payout_weight == "coin") output_val = output_coins;
 			else output_val = output_score;
-			console.log('output val: '+output_val);
 			var output_val_disp = (Math.round(output_val/Math.pow(10,6))/Math.pow(10,2)).toLocaleString();
 			if (payout_weight == "coin") output_val_disp += " coins";
 			else output_val_disp += " votes";

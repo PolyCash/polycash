@@ -7,14 +7,15 @@ $output_obj['result_code'] = 0;
 $output_obj['message'] = "";
 
 if ($thisuser) {
-	$amount = $_REQUEST['amount'];
+	$amount = floatval($_REQUEST['amount']);
 	$address = $_REQUEST['address'];
 	
 	if ($amount > 0) {
+		$amount = $amount*pow(10,8);
 		$last_block_id = last_block_id($thisuser['game_id']);
 		$mining_block_id = $last_block_id+1;
-		$account_value = account_coin_value($thisuser);
-		$immature_balance = immature_balance($thisuser);
+		$account_value = account_coin_value($thisuser['game_id'], $thisuser);
+		$immature_balance = immature_balance($thisuser['game_id'], $thisuser);
 		$mature_balance = $account_value - $immature_balance;
 		
 		if ($amount <= $mature_balance) {
@@ -24,11 +25,7 @@ if ($thisuser) {
 			if (mysql_numrows($r) == 1) {
 				$address = mysql_fetch_array($r);
 				
-				$q = "INSERT INTO webwallet_transactions SET game_id='".$thisuser['game_id']."', transaction_desc='transaction', amount=".(-1*$amount*pow(10,8)).", user_id='".$thisuser['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
-				$r = run_query($q);
-				
-				$q = "INSERT INTO webwallet_transactions SET game_id='".$thisuser['game_id']."', transaction_desc='transaction', amount=".($amount*pow(10,8)).", user_id='".$address['user_id']."', block_id='".$mining_block_id."', nation_id='".$address['nation_id']."', time_created='".time()."';";
-				$r = run_query($q);
+				$transaction_id = new_webwallet_multi_transaction($game['game_id'], array($address['nation_id']), array($amount), $thisuser['user_id'], $mining_block_id, 'transaction', false);
 				
 				$output_obj['result_code'] = 5;
 				$output_obj['message'] = "Great, your coins have been sent!";

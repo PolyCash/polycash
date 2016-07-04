@@ -343,7 +343,6 @@ $mature_balance = $account_value - $immature_balance;
 			loop_event();
 			game_loop_event();
 			compose_vote_loop();
-			refresh_mature_io_btns();
 		});
 		
 		$(document).keypress(function (e) {
@@ -662,7 +661,7 @@ $mature_balance = $account_value - $immature_balance;
 						<?php
 					}
 					else { ?>
-						We're currently in beta; this feature isn't available right now.
+						To make a deposit, please send coins to one your <a href="" onclick="tab_clicked(3); return false;">addresses</a>.
 						<?php
 					}
 					?>
