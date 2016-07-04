@@ -104,6 +104,26 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 		$output['vote_nation_details'] = $stats_output;
 	}
 	
+	$q = "SELECT * FROM addresses WHERE game_id='".$game['game_id']."' AND user_id='".$thisuser['user_id']."' AND nation_id > 0 GROUP BY nation_id;";
+	$r = run_query($q);
+	$votingaddr_count = mysql_numrows($r);
+	
+	if (intval($_REQUEST['votingaddr_count']) != $votingaddr_count) {
+		$output['new_votingaddresses'] = 1;
+		
+		$nation_has_votingaddr = [];
+		$votingaddr_count = 0;
+		$q = "SELECT nation_id FROM addresses WHERE game_id='".$game['game_id']."' AND user_id='".$thisuser['user_id']."' AND nation_id > 0 GROUP BY nation_id ORDER BY nation_id ASC;";
+		$r = run_query($q);
+		while ($nation_id = mysql_fetch_row($r)) {
+			$nation_has_votingaddr[$nation_id[0]] = true;
+			$votingaddr_count++;
+		}
+		$output['nation_has_votingaddr'] = $nation_has_votingaddr;
+		$output['votingaddr_count'] = $votingaddr_count;
+	}
+	else $output['new_votingaddresses'] = 0;
+	
 	echo json_encode($output);
 }
 else echo "0";

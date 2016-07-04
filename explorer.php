@@ -1,6 +1,7 @@
 <?php
 include('includes/connect.php');
 include('includes/get_session.php');
+include('includes/jsonRPCClient.php');
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuser);
 
 $explore_mode = $uri_parts[2];
@@ -373,6 +374,23 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 				echo "<br/><br/>\n";
 			}
 			else if ($explore_mode == "transactions") {
+				$rpc_transaction = false;
+				$rpc_raw_transaction = false;
+				
+				if ($game['game_type'] == "real") {
+					$empirecoin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
+					try {
+						$rpc_transaction = $empirecoin_rpc->gettransaction($transaction['tx_hash']);
+					}
+					catch (Exception $e) {}
+					
+					try {
+						$rpc_raw_transaction = $empirecoin_rpc->getrawtransaction($transaction['tx_hash']);
+						$rpc_raw_transaction = $empirecoin_rpc->decoderawtransaction($rpc_raw_transaction);
+					}
+					catch (Exception $e) {}
+				}
+				
 				echo "<h3>EmpireCoin Transaction: ".$transaction['tx_hash']."</h3>\n";
 				if ($transaction['block_id'] > 0) {
 					$block_index = block_id_to_round_index($transaction['block_id']);
@@ -382,11 +400,23 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 				else {
 					$block_index = false;
 					$round_id = false;
-					$label_txt = "This transaction is not yet confirmed.";
+					$label_txt = "This transaction is <a href=\"/explorer/transactions/unconfirmed\">not yet confirmed</a>.";
 				}
 				echo '<div style="border-bottom: 1px solid #bbb;">';
 				echo render_transaction($transaction, false, $label_txt);
 				echo "</div>\n";
+				
+				if ($rpc_transaction || $rpc_raw_transaction) {
+					?>
+					<br/>
+					<a href="" onclick="$('#transaction_info').toggle('fast'); return false;">See transaction details</a><br/>
+					<pre id="transaction_info" style="display: none;"><?php
+					if ($rpc_transaction) echo print_r($rpc_transaction);
+					if ($rpc_raw_transaction) echo print_r($rpc_raw_transaction);
+					?></pre>
+					<?php
+				}
+				
 				echo "<br/><br/>\n";
 			}
 			else if ($explore_mode == "index") {

@@ -61,19 +61,21 @@ function claim_coin_giveaway() {
 	});
 }
 function start_vote(nation_id) {
-	if ((last_block_id+1)%10 != 0) {
-		$('#vote_confirm_'+nation_id).modal('toggle');
-		$('#vote_details_'+nation_id).html($('#vote_details_general').html());
-		$('#vote_amount_'+nation_id).focus();
-		
-		setTimeout("$('#vote_amount_"+nation_id+"').focus();", 500);
-		
-		// Line below is needed to reselect the nation button which has accidentally been unselected by the modal
-		setTimeout('nation_selected('+$('#nation_id2rank_'+nation_id).val()+');', 100);
-	}
-	else {
-		alert('Voting is currently disabled.');
-	}
+	//if ((last_block_id+1)%10 != 0) {
+	
+	$('#vote_confirm_'+nation_id).modal('toggle');
+	$('#vote_details_'+nation_id).html($('#vote_details_general').html());
+	$('#vote_amount_'+nation_id).focus();
+	
+	setTimeout("$('#vote_amount_"+nation_id+"').focus();", 500);
+	
+	// Line below is needed to reselect the nation button which has accidentally been unselected by the modal
+	setTimeout('nation_selected('+$('#nation_id2rank_'+nation_id).val()+');', 100);
+	
+	//}
+	//else {
+	//	alert('Voting is currently disabled.');
+	//}
 }
 function confirm_vote(nation_id) {
 	$('#vote_confirm_btn_'+nation_id).html("Loading...");
@@ -151,7 +153,7 @@ function refresh_if_needed() {
 		last_refresh_time = new Date().getTime();
 		refresh_in_progress = true;
 		
-		var check_activity_url = "/ajax/check_new_activity.php?refresh_page="+refresh_page+"&last_block_id="+last_block_id+"&last_transaction_id="+last_transaction_id+"&my_last_transaction_id="+my_last_transaction_id+"&mature_io_ids_csv="+mature_io_ids_csv+"&game_loop_index="+game_loop_index+"&min_bet_round="+min_bet_round;
+		var check_activity_url = "/ajax/check_new_activity.php?refresh_page="+refresh_page+"&last_block_id="+last_block_id+"&last_transaction_id="+last_transaction_id+"&my_last_transaction_id="+my_last_transaction_id+"&mature_io_ids_csv="+mature_io_ids_csv+"&game_loop_index="+game_loop_index+"&min_bet_round="+min_bet_round+"&votingaddr_count="+votingaddr_count;
 		if (refresh_page == "wallet") check_activity_url += "&performance_history_sections="+performance_history_sections;
 		
 		$.ajax({
@@ -206,6 +208,12 @@ function refresh_if_needed() {
 								}
 								refresh_mature_io_btns();
 								set_input_amount_sums();
+								
+								if (parseInt(json_result['new_votingaddresses']) == 1) {
+									console.log("new voting addresses!");
+									nation_has_votingaddr = json_result['nation_has_votingaddr'];
+									votingaddr_count = parseInt(json_result['votingaddr_count']);
+								}
 							}
 						}
 						if (json_result['new_transaction'] == "1") {
@@ -486,15 +494,20 @@ function add_utxo_to_vote(io_id, amount, create_block_id) {
 }
 function add_nation_to_vote(nation_id, name) {
 	var index_id = vote_nations.length;
-	vote_nations.push(new vote_nation(index_id, name, nation_id));
-	$('#compose_vote_outputs').append('<div id="compose_vote_output_'+index_id+'" class="select_utxo">'+render_nation_output(index_id, name)+'</div>');
-	
-	load_nation_slider(index_id);
-	
-	$('#vote_confirm_'+nation_id).modal('hide');
-	
-	refresh_compose_vote();
-	refresh_output_amounts();
+	if (nation_has_votingaddr[nation_id]) {
+		vote_nations.push(new vote_nation(index_id, name, nation_id));
+		$('#compose_vote_outputs').append('<div id="compose_vote_output_'+index_id+'" class="select_utxo">'+render_nation_output(index_id, name)+'</div>');
+		
+		load_nation_slider(index_id);
+		
+		$('#vote_confirm_'+nation_id).modal('hide');
+		
+		refresh_compose_vote();
+		refresh_output_amounts();
+	}
+	else {
+		alert("You can't vote for this empire yet, you don't have a voting address for it.");
+	}
 }
 function load_nation_slider(index_id) {
 	$('#output_threshold_'+index_id).noUiSlider({
@@ -646,8 +659,10 @@ function confirm_compose_vote() {
 					$('#compose_vote_success').slideDown('slow');
 					setTimeout("$('#compose_vote_success').slideUp('fast');", 2500);
 					
+					console.log('vote_nations.length = '+vote_nations.length);
+					
 					for (var i=0; i<vote_nations.length; i++) {
-						remove_nation_from_vote(i);
+						$('#compose_vote_output_'+i).remove();
 					}
 					vote_nations.length = 0;
 					
