@@ -20,8 +20,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 
 	$current_hash = $genesis_hash;
 	$keep_looping = true;
-
-	echo "<pre>\n";
+	
 	$new_transaction_count = 0;
 
 	do {
@@ -35,7 +34,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		$from_transaction_id = false;
 		$to_transaction_id = false;
 		
-		echo "\nAdding ".count($blocks[$block_id]->json_obj['tx'])." transactions in block #".$block_id;
+		echo $block_id." ";
 		for ($i=0; $i<count($blocks[$block_id]->json_obj['tx']); $i++) {
 			$transaction_id = count($transactions);
 			if ($i == 0) $from_transaction_id = $transaction_id;
@@ -149,23 +148,21 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		$current_hash = $blocks[$block_id]->json_obj['nextblockhash'];
 		
 		if (!$current_hash || $current_hash == "") $keep_looping = false;
-	} while ($keep_looping && $block_id < 902);
-
-	echo "\n$new_transaction_count transactions have been added.\n";
-
+	} while ($keep_looping);
+	
+	echo "<br/>$new_transaction_count transactions have been added.<br/>";
+	
 	$q = "SELECT MAX(block_id) FROM blocks WHERE game_id='".$game['game_id']."';";
 	$r = run_query($q);
 	$max_block = mysql_fetch_row($r);
 	$max_block = $max_block[0];
 	$completed_rounds = floor($max_block/get_site_constant('round_length'));
-
+	
 	for ($round_id=1; $round_id<=$completed_rounds; $round_id++) {
 		add_round_from_rpc($game, $round_id);
 	}
-
+	
 	echo "$completed_rounds rounds have been added.";
-
-	echo "</pre>";
 }
 else {
 	echo "Please supply the correct key.";

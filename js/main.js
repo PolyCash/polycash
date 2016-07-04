@@ -659,8 +659,10 @@ function confirm_compose_vote() {
 					$('#compose_vote_success').slideDown('slow');
 					setTimeout("$('#compose_vote_success').slideUp('fast');", 2500);
 					
+					console.log('vote_nations.length = '+vote_nations.length);
+					
 					for (var i=0; i<vote_nations.length; i++) {
-						remove_nation_from_vote(i);
+						$('#compose_vote_output_'+i).remove();
 					}
 					vote_nations.length = 0;
 					
