@@ -1261,6 +1261,13 @@ function ensure_user_in_game($user_id, $game_id) {
 		$r = run_query($q);
 	}
 	
+	if ($game['start_condition'] == "num_players") {
+		$num_players = paid_players_in_game($game);
+		if ($num_players >= $game['start_condition_players']) {
+			start_game($game);
+		}
+	}
+
 	generate_user_addresses($user_game);
 }
 
@@ -2803,7 +2810,7 @@ function try_capture_giveaway($game, $user, &$giveaway) {
 		$q = "UPDATE addresses a JOIN transaction_IOs io ON a.address_id=io.address_id SET a.user_id='".$user['user_id']."', io.user_id='".$user['user_id']."' WHERE io.create_transaction_id='".$giveaway['transaction_id']."';";
 		$r = run_query($q);
 		
-		$q = "UPDATE game_giveaways SET status='completed' WHERE giveaway_id='".$giveaway['giveaway_id']."';";
+		$q = "UPDATE game_giveaways SET status='redeemed' WHERE giveaway_id='".$giveaway['giveaway_id']."';";
 		$r = run_query($q);
 
 		return true;
@@ -2825,11 +2832,11 @@ function try_apply_invite_key($user_id, $invite_key, &$invite_game) {
 		if ($invitation['used'] == 0 && $invitation['used_user_id'] == "" && $invitation['used_time'] == 0) {
 			$qq = "UPDATE invitations SET used_user_id='".$user_id."', used_time='".time()."', used=1";
 			if ($GLOBALS['pageview_tracking_enabled']) $q .= ", used_ip='".$_SERVER['REMOTE_ADDR']."'";
-			$q .= " WHERE invitation_id='".$invitation['invitation_id']."';";
+			$qq .= " WHERE invitation_id='".$invitation['invitation_id']."';";
 			$rr = run_query($qq);
 			
 			ensure_user_in_game($user_id, $invitation['game_id']);
-			
+
 			$qq = "SELECT * FROM games WHERE game_id='".$invitation['game_id']."';";
 			$rr = run_query($qq);
 			$invite_game = mysql_fetch_array($rr);
@@ -2918,7 +2925,7 @@ function format_seconds($seconds) {
 	$minutes = floor($seconds / 60);
 	
 	if ($weeks > 0) {
-		if ($weeks != 1) $str = $weeks." week";
+		if ($weeks == 1) $str = $weeks." week";
 		else $str = $weeks." weeks";
 		$days = $days - 7*$weeks;
 		if ($days != 1) $str .= " and ".$days." days";
@@ -3070,7 +3077,7 @@ function game_info_table($game) {
 	if ($game['inflation'] == "linear") $html .= format_bignum($game['pos_reward']/pow(10,8))." to voters, ".format_bignum($game['pow_reward']*$game['round_length']/pow(10,8))." to miners";
 	else $html .= (100 - 100*$game['exponential_inflation_minershare'])."% to voters, ".(100*$game['exponential_inflation_minershare'])."% to miners";
 	$html .= "</td></tr>\n";
-	$html .= "<tr><td>Voting percentage cap:&nbsp;&nbsp;&nbsp;</td><td>".(100*$game['max_voting_fraction'])."%</td></tr>\n";
+	$html .= "<tr><td>Max voting percentage:&nbsp;&nbsp;&nbsp;</td><td>".(100*$game['max_voting_fraction'])."%</td></tr>\n";
 	$html .= "<tr><td>Blocks per round:</td><td>".$game['round_length']."</td></tr>\n";
 	$html .= "<tr><td>Block target time:</td><td>".format_seconds($game['seconds_per_block'])."</td></tr>\n";
 	$html .= "<tr><td>Transaction maturity:&nbsp;&nbsp;&nbsp;</td><td>".$game['maturity']." block";
@@ -3191,5 +3198,24 @@ function user_can_invite_game(&$game, $user_id) {
 	}
 	else if ($game['giveaway_status'] == "public_pay" || $game['giveaway_status'] == "public_free") return true;
 	else return false;
+}
+function paid_players_in_game(&$game) {
+	$q = "SELECT COUNT(*) FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$game['game_id']."' AND ug.payment_required=0;";
+	$r = run_query($q);
+	$num_players = mysql_fetch_row($r);
+	return intval($num_players[0]);
+}
+function start_game(&$game) {
+	$qq = "UPDATE games SET initial_coins='".coins_in_existence($game, false)."', game_status='running', start_time='".time()."' WHERE game_id='".$game['game_id']."';";
+	$rr = run_query($qq);
+
+	$qq = "SELECT * FROM user_games ug JOIN users u ON ug.game_id=u.user_id WHERE ug.game_id='".$game['game_id']."' AND u.username LIKE '%@%';";
+	$rr = run_query($qq);
+	while ($player = mysql_fetch_array($rr)) {
+		$subject = "EmpireCoin game \"".$game['name']."\" has started.";
+		$message = $game['name']." has started. If haven't already entered your votes, please log in now and start playing.<br/>\n";
+		$message .= game_info_table($game);
+		$email_id = mail_async($player['username'], $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "");
+	}
 }
 ?>

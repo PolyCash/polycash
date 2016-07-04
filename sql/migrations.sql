@@ -94,3 +94,4 @@ CREATE TABLE IF NOT EXISTS `game_giveaways` (
   `status` enum('unclaimed','claimed','redeemed') NOT NULL DEFAULT 'unclaimed',
   PRIMARY KEY (`giveaway_id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+ALTER TABLE `games` ADD `start_time` INT( 20 ) NULL DEFAULT NULL AFTER `start_condition_players` ;

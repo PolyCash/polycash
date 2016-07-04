@@ -75,6 +75,29 @@ if ($thisuser) { ?>
 						$invite_currency = mysql_fetch_array($r);
 						echo '<div class="paragraph">';
 						echo 'You can join this game by buying '.format_bignum($game['giveaway_amount']/pow(10,8)).' '.$game['coin_name_plural'].' for '.format_bignum($game['invite_cost']).' '.$invite_currency['short_name']."s. ";
+
+						if ($game['game_status'] == "running") {
+							echo "This game started ".format_seconds(time()-$game['start_time'])." ago; ".format_bignum(coins_in_existence($game, false)/pow(10,8))." ".$game['coin_name_plural']."  are already in circulation. ";
+						}
+						else {
+							if ($game['start_condition'] == "fixed_time") {
+								$unix_starttime = strtotime($game['start_datetime']);
+								echo "This game starts in ".format_seconds($unix_starttime-time())." at ".date("M j, Y g:ia", $unix_starttime).". ";
+							}
+							else {
+								$current_players = paid_players_in_game($game);
+								echo "This game will start when ".$game['start_condition_players']." player";
+								if ($game['start_condition_players'] == 1) echo " joins";
+								else echo "s have joined";
+								echo ". ".($game['start_condition_players']-$current_players)." player";
+								if ($game['start_condition_players']-$current_players == 1) echo " is";
+								else echo "s are";
+								echo " needed, ".$current_players;
+								if ($current_players == 1) echo " has";
+								else echo " have";
+								echo " already joined. ";
+							}
+						}
 						echo '</div>';
 					}
 				}

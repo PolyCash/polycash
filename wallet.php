@@ -198,10 +198,12 @@ if ($thisuser) {
 			die();
 		}
 	}
-	if ($game['giveaway_status'] == "invite_free") {
-		$q = "SELECT * FROM game_giveaways WHERE game_id='".$game['game_id']."' AND user_id='".$thisuser['user_id']."';";
-		$r = run_query($q);
-		if (mysql_numrows($r) == 0) {
+
+	if ($game['giveaway_status'] == "invite_free" || $game['giveaway_status'] == "public_free") {
+		$qq = "SELECT * FROM game_giveaways WHERE game_id='".$game['game_id']."' AND user_id='".$thisuser['user_id']."';";
+		$rr = run_query($qq);
+		
+		if (mysql_numrows($rr) == 0) {
 			$giveaway = new_game_giveaway($game, $thisuser['user_id']);
 		}
 	}
@@ -717,11 +719,7 @@ $mature_balance = mature_balance($game, $thisuser);
 					if ($game['game_status'] == "editable") $html .= "The game creator hasn't yet published this game; it's parameters can still be changed.";
 					else if ($game['game_status'] == "published") {
 						if ($game['start_condition'] == "players_joined") {
-							$q = "SELECT COUNT(*) FROM currency_invoices WHERE game_id='".$game['game_id']."' AND status='confirmed' GROUP BY user_id;";
-							$r = run_query($q);
-							$num_players = mysql_fetch_row($r);
-							$num_players = $num_players[0];
-
+							$num_players = paid_players_in_game($game);
 							$html .= $num_players."/".$game['start_condition_players']." players have already joined, waiting for ".($game['start_condition_players']-$num_players)." more players.";
 						}
 						else $html .= "This game starts at ".$game['start_datetime'];

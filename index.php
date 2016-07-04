@@ -35,7 +35,7 @@ include('includes/html_start.php');
 	<div class="paragraph">
 		We're still developing the decentralized version of EmpireCoin and it's not yet ready to download.  But you can get involved with EmpireCoin now by joining one of these private games and buying in with Bitcoins or dollars:<br/>
 		<?php
-		$q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE featured=1;";
+		$q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='editable' OR g.game_status='running');";
 		$r = run_query($q);
 		echo '<div class="row">';
 		$counter = 0;
@@ -55,6 +55,30 @@ include('includes/html_start.php');
 			}
 			else echo "Join this game and get ".format_bignum($featured_game['giveaway_amount']/pow(10,8))." ".$featured_game['coin_name_plural']." (".round((100*$featured_game['giveaway_amount']/coins_in_existence($featured_game, false)), 2)."% of the coins) for free";
 			echo ". ";
+
+			if ($featured_game['game_status'] == "running") {
+				echo "This game started ".format_seconds(time()-$featured_game['start_time'])." ago; ".format_bignum(coins_in_existence($featured_game, false)/pow(10,8))." ".$featured_game['coin_name_plural']."  are already in circulation.";
+
+			}
+			else {
+				if ($featured_game['start_condition'] == "fixed_time") {
+					$unix_starttime = strtotime($featured_game['start_datetime']);
+					echo "This game starts in ".format_seconds($unix_starttime-time())." at ".date("M j, Y g:ia", $unix_starttime).". ";
+				}
+				else {
+					$current_players = paid_players_in_game($featured_game);
+					echo "This game will start when ".$featured_game['start_condition_players']." player";
+					if ($featured_game['start_condition_players'] == 1) echo " joins";
+					else echo "s have joined";
+					echo ". ".($featured_game['start_condition_players']-$current_players)." player";
+					if ($featured_game['start_condition_players']-$current_players == 1) echo " is";
+					else echo "s are";
+					echo " needed, ".$current_players;
+					if ($current_players == 1) echo " has";
+					else echo " have";
+					echo " already joined. ";
+				}
+			}
 
 			if ($featured_game['final_round'] > 0) {
 				$game_total_seconds = $seconds_per_round*$featured_game['final_round'];
@@ -80,16 +104,6 @@ include('includes/html_start.php');
 				if ($featured_game['maturity'] != 1) echo "s";
 				echo " when spent. ";
 			}
-
-			$featured_last_block_id = last_block_id($featured_game['game_id']);
-			if ($featured_last_block_id > 0) {
-				$featured_current_round = block_to_round($featured_game, $featured_last_block_id+1);
-				$money_supply = ideal_coins_in_existence_after_round($featured_game, $featured_current_round-1);
-				$seconds_running = $featured_last_block_id*$featured_game['seconds_per_block'];
-
-				echo "This game has already been running for ".format_seconds($seconds_running)."; ".format_bignum($money_supply/pow(10,8))." ".$featured_game['coin_name_plural']."  have been minted so far.";
-			}
-			else echo "This game hasn't started yet. ";
 
 			echo "<br/>\n";
 			echo '<a class="btn btn-primary" style="margin-top: 5px;" href="/'.$featured_game['url_identifier'].'">Join '.$featured_game['name'].'</a>';

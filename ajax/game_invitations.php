@@ -94,30 +94,8 @@ if ($thisuser) {
 							$message .= "</p>";
 
 							$message .= "<p>In this game, you can vote for one of ".$game['num_voting_options']." empires every ".format_seconds($seconds_per_round).".  Team up with other players and cast your votes strategically to win coins and destroy your competitors.</p>";
-
-							$game_url = $GLOBALS['base_url']."/".$game['url_identifier'];
-							$message .= "<p><table>";
-							$message .= "<tr><td>Game name:</td><td>".$game['name']."</td></tr>\n";
-							$message .= "<tr><td>Game URL:</td><td><a href=\"".$game_url."\">".$game_url."</a></td></tr>\n";
-							$message .= "<tr><td>Cost to join:</td><td>";
-							if ($game['giveaway_status'] == "invite_pay" || $game['giveaway_status'] == "public_pay") $message .= format_bignum($game['invite_cost'])." ".$invite_currency['short_name']."s";
-							else $message .= "Free";
-							$message .= "</td></tr>\n";
-							$message .= "<tr><td>Length of game:</td><td>";
-							if ($game['final_round'] > 0) $message .= $game['final_round']." rounds (".format_seconds($game_total_seconds).")";
-							$message .= "</td></tr>\n";
-							$message .= "<tr><td>Inflation:</td><td>".ucwords($game['inflation'])."</td></tr>\n";
-							$message .= "<tr><td>Inflation Rate:</td><td>";
-							if ($game['inflation'] == "linear") $message .= format_bignum($round_reward)." coins per round (".format_bignum($game['pos_reward']/pow(10,8))." to voters, ".format_bignum($game['pow_reward']*$game['round_length']/pow(10,8))." to miners)";
-							else $message .= 100*$game['exponential_inflation_rate']."% per round (".(100 - 100*$game['exponential_inflation_minershare'])."% to voters, ".(100*$game['exponential_inflation_minershare'])." to miners)";
-							$message .= "</td></tr>\n";
-							$message .= "<tr><td>Blocks per round:</td><td>".$game['round_length']."</td></tr>\n";
-							$message .= "<tr><td>Block target time:</td><td>".format_seconds($game['seconds_per_block'])."</td></tr>\n";
-							$message .= "<tr><td>Coins locked after transaction for:&nbsp;&nbsp;</td><td>".$game['maturity']." blocks</td></tr>\n";
-							$message .= "</table></p>\n";
-
+							$message .= game_info_table($game);
 							$message .= "<p>To start playing, accept your invitation by following <a href=\"".$GLOBALS['base_url']."/wallet/".$game['url_identifier']."/?invite_key=".$invitation['invitation_key']."\">this link</a>.</p>";
-
 							$message .= "<p>This message was sent to you by ".$GLOBALS['site_name']."</p>";
 
 							$email_id = mail_async($to_email, $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "");
@@ -134,7 +112,7 @@ if ($thisuser) {
 				else {
 					$invitation = false;
 					generate_invitation($game, $thisuser['user_id'], $invitation, false);
-					output_message(1, "An invitation has been generated.", $invitation);
+					output_message(1, "An invitation has been generated.", false);
 				}
 			}
 			else output_message(2, "Error: you don't have permission to generate invitations for this game.", $invitation);
