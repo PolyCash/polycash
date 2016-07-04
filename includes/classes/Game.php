@@ -2278,13 +2278,19 @@ class Game {
 		}
 	}
 
-	public function coind_add_block($coin_rpc, $block_hash, $block_height) {
+	public function coind_add_block(&$coin_rpc, $block_hash, $block_height) {
 		$html = "";
 		
-		$lastblock_rpc = $coin_rpc->getblock($block_hash);
+		try {
+			$lastblock_rpc = $coin_rpc->getblock($block_hash);
+		}
+		catch (Exception $e) {
+			var_dump($e);
+			die("RPC failed to get block $block_hash");
+		}
 		
 		$q = "SELECT * FROM blocks WHERE block_hash='".$block_hash."';";
-		$r = run_query($q);
+		$r = $GLOBALS['app']->run_query($q);
 		
 		if (mysql_numrows($r) == 0) {
 			$q = "INSERT INTO blocks SET game_id='".$this->db_game['game_id']."', block_hash='".$block_hash."', block_id='".($block_height+1)."', time_created='".time()."';";
@@ -2297,13 +2303,14 @@ class Game {
 				
 				$q = "SELECT * FROM transactions WHERE game_id='".$this->db_game['game_id']."' AND tx_hash='".$tx_hash."';";
 				$r = $GLOBALS['app']->run_query($q);
+				
 				if (mysql_numrows($r) > 0) {
 					$unconfirmed_tx = mysql_fetch_array($r);
-					$q = "UPDATE transactions SET block_id='".$block_height."' WHERE transaction_id='".$unconfirmed_tx['transaction_id']."';";
+					$q = "UPDATE transactions SET block_id='".($block_height+1)."' WHERE transaction_id='".$unconfirmed_tx['transaction_id']."';";
 					$r = $GLOBALS['app']->run_query($q);
-					$q = "UPDATE transaction_ios SET spend_status='unspent', create_block_id='".$block_height."' WHERE create_transaction_id='".$unconfirmed_tx['transaction_id']."';";
+					$q = "UPDATE transaction_ios SET spend_status='unspent', create_block_id='".($block_height+1)."' WHERE create_transaction_id='".$unconfirmed_tx['transaction_id']."';";
 					$r = $GLOBALS['app']->run_query($q);
-					$q = "UPDATE transaction_ios SET spend_status='spent', spend_block_id='".$block_height."' WHERE spend_transaction_id='".$unconfirmed_tx['transaction_id']."';";
+					$q = "UPDATE transaction_ios SET spend_status='spent', spend_block_id='".($block_height+1)."' WHERE spend_transaction_id='".$unconfirmed_tx['transaction_id']."';";
 					$r = $GLOBALS['app']->run_query($q);
 				}
 				else {
@@ -2357,8 +2364,14 @@ class Game {
 				$r = $GLOBALS['app']->run_query($q);
 				$transaction = mysql_fetch_array($r);
 				
-				$raw_transaction = $coin_rpc->getrawtransaction($tx_hash);
-				$transaction_rpc = $coin_rpc->decoderawtransaction($raw_transaction);
+				try {
+					$raw_transaction = $coin_rpc->getrawtransaction($tx_hash);
+					$transaction_rpc = $coin_rpc->decoderawtransaction($raw_transaction);
+				}
+				catch (Exception $e) {
+					var_dump($e);
+					die("Failed to get transaction ".$tx_hash);
+				}
 				
 				$outputs = $transaction_rpc["vout"];
 				$inputs = $transaction_rpc["vin"];
@@ -2411,7 +2424,7 @@ class Game {
 		return $html;
 	}
 	
-	public function sync_coind($coin_rpc) {
+	public function sync_coind(&$coin_rpc) {
 		$html = "";
 		$last_block_id = $this->last_block_id();
 
@@ -2420,7 +2433,7 @@ class Game {
 		$last_block = mysql_fetch_array($r);
 		
 		$current_block = $coin_rpc->getblock($last_block['block_hash']);
-
+		
 		$block_height = $last_block['block_id']-1;
 		$keep_looping = true;
 
