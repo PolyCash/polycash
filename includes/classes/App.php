@@ -631,5 +631,25 @@ class App {
 	public function log($message) {
 		$this->run_query("INSERT INTO log_messages SET message=".$this->quote_escape($message).";");
 	}
+	public function update_schema() {
+		$migrations_path = realpath(dirname(__FILE__))."/../sql/";
+		
+		if ($dir_handle = opendir($migrations_path)) {
+			while (false !== ($fname = readdir($dir_handle))) {
+				if ('.' === $fname) continue;
+				if ('..' === $fname) continue;
+				if ('schema-initial.sql' === $file) continue;
+				
+				$fname_parts = explode(".", $fname);
+				$migration_id = intval($fname_parts[0]);
+				if ($migration_id > 0 && $migration_id > $this->get_site_constant("last_migration_id")) {
+					$cmd = "mysql -u ".$GLOBALS['mysql_user']." -h ".$GLOBALS['mysql_server']." -p".$GLOBALS['mysql_password']." ".$GLOBALS['mysql_database']." < ".$migrations_path.$file;
+					exec($cmd);
+					$this->set_site_constant("last_migration_id", $migration_id);
+				}
+			}
+			closedir($dir_handle);
+		}
+	}
 }
 ?>

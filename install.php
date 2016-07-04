@@ -14,13 +14,13 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 
 			if (!$db_exists) {
 				$r = $app->run_query("CREATE DATABASE ".$GLOBALS['mysql_database']);
+				$app->set_db($GLOBALS['mysql_database']);
+				$app->set_site_constant("last_migration_id", 0);
 				
 				$cmd = "mysql -u ".$GLOBALS['mysql_user']." -h ".$GLOBALS['mysql_server']." -p".$GLOBALS['mysql_password']." ".$GLOBALS['mysql_database']." < ".realpath(dirname(__FILE__))."/sql/schema-initial.sql";
 				echo exec($cmd);
-				$cmd = "mysql -u ".$GLOBALS['mysql_user']." -h ".$GLOBALS['mysql_server']." -p".$GLOBALS['mysql_password']." ".$GLOBALS['mysql_database']." < ".realpath(dirname(__FILE__))."/sql/migrations.sql";
-				echo exec($cmd);
-
-				$app->set_db($GLOBALS['mysql_database']);
+				
+				$app->update_schema();
 			}
 			else {
 				$app->set_db($GLOBALS['mysql_database']);
@@ -56,7 +56,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			if ($r->rowCount() == 0) {
 				$address_id = $app->new_invoice_address();
 				
-				$q = "INSERT INTO games SET invoice_address_id='".$address_id."', option_group_id=1, featured=1, invite_currency=1, url_identifier='empirecoin-testnet', start_condition='fixed_time', game_status='running', giveaway_status='public_free', giveaway_amount=0, pow_reward=2500000000, pos_reward=75000000000, game_type='real', block_timing='realistic', payout_weight='coin', seconds_per_block=120, name='EmpireCoin Testnet', num_voting_options=16, maturity=10, round_length=10, max_voting_fraction=0.25, option_name='empire', option_name_plural='empires', buyin_policy='none';";
+				$q = "INSERT INTO games SET invoice_address_id='".$address_id."', option_group_id=1, featured=1, invite_currency=1, url_identifier='empirecoin-testnet', start_condition='fixed_time', game_status='running', giveaway_status='public_free', giveaway_amount=0, pow_reward=2500000000, pos_reward=75000000000, game_type='real', rpc_port=23345, rpc_username='EmpireCoinrpc', rpc_password='', block_timing='realistic', payout_weight='coin', seconds_per_block=120, name='EmpireCoin Testnet', num_voting_options=16, maturity=9, round_length=10, max_voting_fraction=0.25, option_name='empire', option_name_plural='empires', buyin_policy='none', always_generate_coins=0, sync_coind_by_cron=1;";
 				$r = $app->run_query($q);
 				
 				$testnet_game_id = $app->last_insert_id();
@@ -154,20 +154,18 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				<br/>
 				<?php
 				try {
-					$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
+					$coin_rpc = new jsonRPCClient('http://'.$testnet_game->db_game['rpc_username'].':'.$testnet_game['rpc_password'].'@127.0.0.1:'.$testnet_game['rpc_port'].'/');
 					$getinfo = $coin_rpc->getinfo();
 					echo "Great, you're connected to ".$GLOBALS['coin_brand_name']." core.<br/>\n";
 					echo "<pre>getinfo()\n";
 					print_r($getinfo);
-					echo "\n\ngetgenerate()\n";
-					print_r($coin_rpc->getgenerate());
 					echo "</pre>";
 					
-					echo "Next, please run <a target=\"_blank\" href=\"/scripts/sync_coind_initial.php?key=".$GLOBALS['cron_key_string']."\">scripts/sync_coind_initial.php</a><br/>\n";
+					echo "Next, please run <a target=\"_blank\" href=\"/scripts/sync_coind_initial.php?key=".$GLOBALS['cron_key_string']."&game_id=".$testnet_game->db_game['game_id']."\">scripts/sync_coind_initial.php?game_id=".$testnet_game->db_game['game_id']."</a><br/>\n";
 				}
 				catch (Exception $e) {
 					var_dump($e);
-					echo "Failed to establish a connection to ".$GLOBALS['coin_brand_name']." core, please check coin parameters in includes/config.php<br/>";
+					echo "Failed to establish an RPC connection to ".$testnet_game->db_game['name'].".<br/>\n";
 				}
 				?>
 				<a href="/">Check if installation was successful.</a>

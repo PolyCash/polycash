@@ -26,22 +26,13 @@ $GLOBALS['sendgrid_pass'] = "";
 $GLOBALS['show_query_errors'] = true;
 $GLOBALS['cron_key_string'] = "";
 
-$GLOBALS['coin_port'] = 11111;
-$GLOBALS['coin_testnet_port'] = 22222;
-$GLOBALS['coin_rpc_user'] = "";
-$GLOBALS['coin_rpc_password'] = "";
-
 $GLOBALS['bitcoin_port'] = 8332;
 $GLOBALS['bitcoin_rpc_user'] = "bitcoinrpc";
 $GLOBALS['bitcoin_rpc_password'] = "";
 
-$GLOBALS['always_generate_coins'] = false;
-$GLOBALS['restart_generation_seconds'] = 60;
 $GLOBALS['default_coin_winner'] = 'your_username';
 
-$GLOBALS['walletnotify_by_cron'] = true;
 $GLOBALS['pageview_tracking_enabled'] = false;
-$GLOBALS['min_unallocated_addresses'] = 40;
 
 $GLOBALS['currency_price_refresh_seconds'] = 2*60;
 $GLOBALS['invoice_expiration_seconds'] = 15*60;

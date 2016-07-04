@@ -37,7 +37,7 @@ if ($thisuser && $game) {
 				$address_ok = false;
 				
 				if ($game->db_game['game_type'] == "real") {
-					$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
+					$coin_rpc = new jsonRPCClient('http://'.$game->db_game['rpc_username'].':'.$game->db_game['rpc_password'].'@127.0.0.1:'.$game->db_game['rpc_port'].'/');
 					$validate_address = $coin_rpc->validateaddress($address_text);
 					$address_ok = $validate_address['isvalid'];
 					if ($address_ok) {

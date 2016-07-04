@@ -594,7 +594,7 @@ class Game {
 				$rpc_error = false;
 				
 				if ($this->db_game['game_type'] == "real") {
-					$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
+					$coin_rpc = new jsonRPCClient('http://'.$this->db_game['rpc_username'].':'.$this->db_game['rpc_password'].'@127.0.0.1:'.$this->db_game['rpc_port'].'/');
 					try {
 						$raw_transaction = $coin_rpc->createrawtransaction($raw_txin, $raw_txout);
 						$signed_raw_transaction = $coin_rpc->signrawtransaction($raw_transaction);

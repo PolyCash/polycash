@@ -7,21 +7,23 @@ if (!empty($argv)) $_REQUEST['key'] = $argv[1];
 if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$start_time = microtime(true);
 	
-	$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
-
 	$game_id = $app->get_site_constant('primary_game_id');
+	if (!empty($_REQUEST['game_id'])) $game_id = intval($_REQUEST['game_id']);
+	
 	$game = new Game($app, $game_id);
-
+	
+	$coin_rpc = new jsonRPCClient('http://'.$game->db_game['rpc_username'].':'.$game->db_game['rpc_password'].'@127.0.0.1:'.$game->db_game['rpc_port'].'/');
+	
 	$start_round_id = false;
 	
 	$blocks = array();
 	$transactions = array();
 	$block_height = 0;
-
+	
 	$keep_looping = true;
 	
 	$new_transaction_count = 0;
-
+	
 	if (!empty($_REQUEST['block_id']) || !empty($_REQUEST['round_id'])) {
 		if (!empty($_REQUEST['block_id'])) {
 			$block_height = intval($_REQUEST['block_id'])-1;
