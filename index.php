@@ -19,7 +19,7 @@ include('includes/html_start.php');
 		</div>
 		<div class="col-sm-10">
 			<div class="paragraph">
-				Welcome to <?php echo $GLOBALS['coin_brand_name']; ?>, an innovative blockchain-based gaming platform.  In <?php echo $GLOBALS['coin_brand_name']; ?> games the in-game currency inflates rapidly and players compete to win coins by casting votes.  One empire wins in each round and the reward is split among everyone who voted correctly.  <?php echo $GLOBALS['coin_brand_name']; ?> supports a wide variety of game types.  Battle against a single opponent in a quick two player game, set up a daily fantasy sports game with your friends or join a massive battle with thousands of other players.  Free games are available so that you can try <?php echo $GLOBALS['coin_brand_name']; ?> without any risk, but most games are played with real money.  You can buy in with bitcoins or dollars and then sell out at any time. <?php echo $GLOBALS['coin_brand_name']; ?> strategy is all about collaborating with your teammates and scheming against your enemies to get ahead. Start building your empire today in this massively multiplayer online game of chance.
+				Welcome to <?php echo $GLOBALS['coin_brand_name']; ?>, an innovative blockchain based gaming platform.  In <?php echo $GLOBALS['coin_brand_name']; ?> games the in-game currency inflates rapidly and players compete to win coins by strategically casting votes.  One empire wins in each round and the reward is split among everyone who voted correctly.  <?php echo $GLOBALS['coin_brand_name']; ?> supports a wide variety of game types.  Battle against a single opponent in a quick two player game, set up a daily fantasy sports game with your friends or join a massive battle with thousands of other players.  Free games are available so that you can try <?php echo $GLOBALS['coin_brand_name']; ?> without any risk, but most games are played with real money.  You can buy in with bitcoins or dollars and then sell out at any time. Start building your empire today in this massively multiplayer online game of chance.
 			</div>
 		</div>
 	</div>
@@ -96,23 +96,46 @@ include('includes/html_start.php');
 		The winning empire for an <?php echo $GLOBALS['coin_brand_name']; ?> voting round is determined entirely by the votes of the players.  Therefore, winning in <?php echo $GLOBALS['coin_brand_name']; ?> is all about colluding with other players and organizing against competing factions.  Players can form voting pools and vote together to influence the winning empire.
 	</div>
 	<div class="paragraph">
-		As with other cryptocurrencies like Bitcoin, miners have veto authority over any transactions included in their block.  Because miners have some influence on the winning empire it is possible that your votes may not be counted.
-	</div>
-	<div class="paragraph">
 		<h2>Voting Pools</h2>
 		<?php echo $GLOBALS['coin_brand_name']; ?>'s unique gameplay encourages stakeholders to cooperate and vote together against the other teams.  Groups can create voting pools by coding up an API endpoint which incorporates their custom voting logic.  You can assign your voting decisions to a voting pool by entering it's URL into your web wallet.
 	</div>
 	<div class="paragraph">
 		<h2><?php echo $GLOBALS['coin_brand_name']; ?> API</h2>
-		Automated &amp; algorithmic voting strategies are encouraged in <?php echo $GLOBALS['coin_brand_name']; ?>.  After signing up for a web wallet, you can choose from one of several automated voting strategies and then tweak parameters to optimize your votes.  Or you can choose the "Vote by API" voting strategy and then write code to fully customize your voting strategy.  For more information, please visit the <a href="/api/about/"><?php echo $GLOBALS['coin_brand_name']; ?> API page</a>.
+		<?php echo $GLOBALS['coin_brand_name']; ?> makes it easy to set up an algorithmic voting strategy.  After signing in, choose from one of several automated voting strategies and then tweak parameters to optimize your strategy.  Or if you're a programmer, select the "Vote by API" option, download our example strategy script and then start writing code to fully customize your voting strategy.  For more information, please visit our <a href="/api/about/"><?php echo $GLOBALS['coin_brand_name']; ?> API</a> page.
 	</div>
 	<?php /*<div class="paragraph">
 		<h2>Proof of Burn Betting</h2>
 		In addition to <?php echo $GLOBALS['coin_brand_name']; ?>'s gamified inflation, the <?php echo $GLOBALS['coin_brand_name']; ?> protocol also enables decentralized betting through a unique proof-of-burn protocol.  By sending coins to an address like "china_wins_round_777", anyone can place a bet against other bettors.  If correct, new coins will be created and sent to the winner.
 	</div>*/ ?>
-
-	<div class="paragraph text-center">
-		<?php echo $GLOBALS['site_name'].", ".date("Y"); ?>
+</div>
+<div class="navbar navbar-default" style="margin-top: 10px; margin-bottom: 0px; color: #fff;">
+	<div class="container" style="max-width: 1000px;">
+		<div class="row">
+			<div class="col-md-6">
+				<h2>Sign Up</h2>
+				<p>
+					To get started, please create a web wallet account.
+				</p>
+				<a class="btn btn-success" href="/wallet/">Create a Wallet</a>
+			</div>
+			<div class="col-md-6">
+				<h2>Newsletter</h2>
+				<p>
+					If you'd like to receive important updates about this project, please subscribe to our newsletter.
+				</p>
+				<form onsubmit="newsletter_signup(); return false;">
+					<div class="row">
+						<div class="col-md-9">
+							<input id="newsletter_email" class="form-control" placeholder="Enter your email address" />
+						</div>
+						<div class="col-md-3">
+							<input type="submit" class="btn btn-primary" value="Subscribe" />
+						</div>
+					</div>
+				</form>
+				<br/><br/><br/>
+			</div>
+		</div>
 	</div>
 </div>
 <script type="text/javascript">

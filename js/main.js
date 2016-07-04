@@ -1627,4 +1627,11 @@ function match_refresh_loop(match_id) {
 	}
 	setTimeout("match_refresh_loop("+match_id+");", 1000);
 }
+function newsletter_signup() {
+	var email = $('#newsletter_email').val();
+	$.get("/ajax/newsletter.php?action=signup&email="+encodeURIComponent(email), function(result) {
+		var resultObj = JSON.parse(result);
+		alert(resultObj['message']);
+	});
+}
 
