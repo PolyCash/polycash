@@ -40,6 +40,7 @@ class User {
 		$r = $GLOBALS['app']->run_query($q);
 		$sum = mysql_fetch_array($r);
 		$votes = $sum[$game->db_game['payout_weight']."s"];
+		$votes = floor($game->block_id_to_taper_factor($last_block_id+1)*$votes);
 		if ($votes > 0) return $votes;
 		else return 0;
 	}
@@ -135,7 +136,8 @@ class User {
 		if ($immature_balance > 0) $html .= '<div class="col-sm-1"><a href="" onclick="$(\'#lockedfunds_details\').toggle(\'fast\'); return false;">Details</a></div>';
 		$html .= "</div>\n";
 		$html .= "Last block completed: #".$last_block_id.", currently mining #".($last_block_id+1)."<br/>\n";
-		$html .= "Current votes count towards block ".$block_within_round."/".$game->db_game['round_length']." in round #".$current_round."<br/>\n";
+		$html .= "Current votes count towards block ".$block_within_round."/".$game->db_game['round_length']." in round #".$current_round.".<br/>\n";
+		if ($game->db_game['payout_taper_function'] != "constant") $html .= "Votes are ".round(100*$game->round_index_to_taper_factor($block_within_round),1)."% effective right now.<br/>\n";
 		
 		if ($immature_balance > 0) {
 			$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id LEFT JOIN game_voting_options gvo ON i.option_id=gvo.option_id WHERE i.game_id='".$game->db_game['game_id']."' AND i.user_id='".$this->db_user['user_id']."' AND (i.create_block_id > ".($game->last_block_id() - $game->db_game['maturity'])." OR i.create_block_id IS NULL) ORDER BY i.io_id ASC;";

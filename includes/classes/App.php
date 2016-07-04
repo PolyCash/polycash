@@ -202,6 +202,10 @@ class App {
 				$qq .= " WHERE invitation_id='".$invitation['invitation_id']."';";
 				$rr = $this->run_query($qq);
 				
+				if ($invitation['giveaway_id'] > 0) {
+					$qq = "UPDATE game_giveaways SET user_id='".$user_id."', status='claimed' WHERE giveaway_id='".$invitation['giveaway_id']."';";
+					$rr = $this->run_query($qq);
+				}
 				$user = new User($user_id);
 				$user->ensure_user_in_game($invitation['game_id']);
 

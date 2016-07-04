@@ -340,7 +340,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 							}
 							else {
 								$ranked_option = $stats_all[$rank-1];
-								$option_score = $ranked_option[$game->db_game['payout_weight'].'_score']+$ranked_option['unconfirmed_'.$game->db_game['payout_weight'].'_score'];
+								$option_score = $ranked_option['votes']+$ranked_option['unconfirmed_votes'];
 							}
 							echo '<div class="row';
 							if ($option_score > $max_score) echo ' redtext';
@@ -352,18 +352,12 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 							if ($thisuser) {
 								echo '<div class="col-md-3" style="text-align: center;">';
 								
-								$score_qty = $my_votes[$ranked_option['option_id']][$game->db_game['payout_weight'].'s'];
+								$score_qty = $my_votes[$ranked_option['option_id']]['votes'];
 								
 								$score_disp = $GLOBALS['app']->format_bignum($score_qty/pow(10,8));
 								echo $score_disp." ";
-								if ($game->db_game['payout_weight'] == "coin") {
-									if ($score_disp == '1') echo $game->db_game['coin_name'];
-									else echo $game->db_game['coin_name_plural'];
-								}
-								else {
-									echo " vote";
-									if ($score_disp != '1') echo "s";
-								}
+								echo " vote";
+								if ($score_disp != '1') echo "s";
 								
 								echo ' ('.round(100*$score_qty/$option_score, 3).'%)</div>';
 							}

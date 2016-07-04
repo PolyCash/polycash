@@ -477,7 +477,7 @@ function attempt_withdrawal() {
 	}
 }
 
-var game_form_vars = "giveaway_status,giveaway_amount,maturity,max_voting_fraction,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_date,start_time,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap,option_group_id".split(",");
+var game_form_vars = "giveaway_status,giveaway_amount,maturity,max_voting_fraction,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_date,start_time,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap,option_group_id,payout_taper_function".split(",");
 function switch_to_game(game_id, action) {
 	var fetch_link_text = $('#fetch_game_link_'+game_id).html();
 	var switch_link_text = $('#switch_game_btn').html();
@@ -729,10 +729,10 @@ function input_amount_sums() {
 	for (var i=0; i<vote_inputs.length; i++) {
 		amount_sum += vote_inputs[i].amount;
 		if (payout_weight == "coin_block") {
-			vote_sum += (1 + last_block_id - vote_inputs[i].create_block_id)*vote_inputs[i].amount;
+			vote_sum += Math.floor(block_id_to_taper_factor(last_block_id+1)*(1 + last_block_id - vote_inputs[i].create_block_id)*vote_inputs[i].amount);
 		}
 		else if (payout_weight == "coin_round") {
-			vote_sum += (block_to_round(1+last_block_id) - block_to_round(vote_inputs[i].create_block_id))*vote_inputs[i].amount;
+			vote_sum += Math.floor(block_id_to_taper_factor(last_block_id+1)*(block_to_round(1+last_block_id) - block_to_round(vote_inputs[i].create_block_id))*vote_inputs[i].amount);
 		}
 	}
 	return [amount_sum, vote_sum];
@@ -751,9 +751,9 @@ function set_input_amount_sums() {
 }
 function render_selected_utxo(index_id) {
 	var score_qty = 0;
-	if (payout_weight == "coin") score_qty = vote_inputs[index_id].amount;
-	else if (payout_weight == "coin_round") score_qty = (block_to_round(1+last_block_id) - block_to_round(vote_inputs[index_id].create_block_id))*vote_inputs[index_id].amount;
-	else score_qty = (1 + last_block_id - vote_inputs[index_id].create_block_id)*vote_inputs[index_id].amount;
+	if (payout_weight == "coin") score_qty = Math.floor(block_id_to_taper_factor(last_block_id+1)*vote_inputs[index_id].amount);
+	else if (payout_weight == "coin_round") score_qty = Math.floor(block_id_to_taper_factor(last_block_id+1)*(block_to_round(1+last_block_id) - block_to_round(vote_inputs[index_id].create_block_id))*vote_inputs[index_id].amount);
+	else score_qty = Math.floor(block_id_to_taper_factor(last_block_id+1)*(1 + last_block_id - vote_inputs[index_id].create_block_id)*vote_inputs[index_id].amount);
 	var render_text = format_coins(score_qty/Math.pow(10,8))+' ';
 	if (payout_weight == "coin") {
 		if (render_text == '1') render_text += coin_name_plural;
@@ -944,9 +944,9 @@ function refresh_mature_io_btns() {
 	for (var i=0; i<mature_ios.length; i++) {
 		var select_btn_text = "";
 		var votes;
-		if (payout_weight == 'coin') votes = mature_ios[i].amount;
-		else if (payout_weight == 'coin_round') votes = (block_to_round(1+last_block_id) - block_to_round(mature_ios[i].create_block_id))*mature_ios[i].amount;
-		else votes = (1 + last_block_id - mature_ios[i].create_block_id)*mature_ios[i].amount;
+		if (payout_weight == 'coin') votes = Math.floor(block_id_to_taper_factor(last_block_id+1)*mature_ios[i].amount);
+		else if (payout_weight == 'coin_round') votes = Math.floor(block_id_to_taper_factor(last_block_id+1)*(block_to_round(1+last_block_id) - block_to_round(mature_ios[i].create_block_id))*mature_ios[i].amount);
+		else votes = Math.floor(block_id_to_taper_factor(last_block_id+1)*(1 + last_block_id - mature_ios[i].create_block_id)*mature_ios[i].amount);
 		select_btn_text += 'Add '+format_coins(votes/Math.pow(10,8));
 		select_btn_text += ' votes';
 		if (payout_weight != 'coin') {
@@ -1555,4 +1555,16 @@ function join_game_variation(variation_id) {
 }
 function explorer_search() {
 	window.location ='/explorer/'+game_url_identifier+'/transactions/'+$('#explorer_search').val();
+}
+function round_index_to_taper_factor(round_index) {
+	if (payout_taper_function == "linear_decrease") {
+		return Math.floor(Math.pow(10,8)*(game_round_length-round_index)/(game_round_length-1))/Math.pow(10,8);
+	}
+	else return 1;
+}
+function block_id_to_taper_factor(block_id) {
+	return round_index_to_taper_factor(block_id_to_round_index(block_id));
+}
+function block_id_to_round_index(block_id) {
+	return ((block_id-1)%game_round_length)+1;
 }

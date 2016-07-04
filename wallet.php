@@ -726,6 +726,7 @@ if ($thisuser && $game) {
 		var coin_name = '<?php echo $game->db_game['coin_name']; ?>';
 		var coin_name_plural = '<?php echo $game->db_game['coin_name_plural']; ?>';
 		var num_voting_options = <?php echo $game->db_game['num_voting_options']; ?>;
+		var payout_taper_function = '<?php echo $game->db_game['payout_taper_function']; ?>';
 		
 		var selected_option_id = false;
 		
@@ -1354,7 +1355,7 @@ if ($thisuser && $game) {
 					<div class="modal-body">
 						<p>
 							Hi <?php echo $thisuser->db_user['username']; ?>, thanks for joining <?php echo $game->db_game['name']; ?>! 
-							<?php if ($game->db_game['final_round'] > 0) echo 'This game lasts for '.$game->db_game['final_round'].'voting rounds.  '; ?>
+							<?php if ($game->db_game['final_round'] > 0) echo 'This game lasts for '.$game->db_game['final_round'].' voting rounds.  '; ?>
 							At the end of each round, the supply of <?php echo $game->db_game['coin_name_plural']; ?> 
 							<?php
 							if ($game->db_game['inflation'] == "exponential") echo 'inflates by '.(100*$game->db_game['exponential_inflation_rate']).'%';
@@ -1609,6 +1610,15 @@ if ($thisuser && $game) {
 										<option value="coin">Coins staked</option>
 										<option value="coin_block">Coins over time. 1 vote per block</option>
 										<option value="coin_round">Coins over time. 1 vote per round</option>
+									</select>
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">Vote tapering function:</div>
+								<div class="col-sm-6">
+									<select class="form-control" id="game_form_payout_taper_function">
+										<option value="constant">Votes count equally throughout the round</option>
+										<option value="linear_decrease">Votes decrease from 100% to 0% through the round</option>
 									</select>
 								</div>
 							</div>
