@@ -228,7 +228,7 @@ class User {
 			$r = $this->app->run_query($q);
 			$strategy = $r->fetch();
 			
-			$q = "INSERT INTO user_strategy_blocks SET strategy_id='".$strategy_id."', block_within_round='".($game->db_game['round_length']-1)."';";
+			$q = "INSERT INTO user_strategy_blocks SET strategy_id='".$strategy_id."', block_within_round='1';";
 			$r = $this->app->run_query($q);
 			
 			$scramble_from_round = 1;

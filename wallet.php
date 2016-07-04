@@ -542,20 +542,6 @@ if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['do'] =
 				$q .= ", aggregate_threshold='".$aggregate_threshold."'";
 			}
 			
-			$option_pct_sum = 0;
-			$option_pct_q = "";
-			$option_pct_error = FALSE;
-			
-			$qq = "SELECT * FROM game_voting_options WHERE game_id='".$game->db_game['game_id']."';";
-			$rr = $app->run_query($qq);
-			while ($voting_option = $rr->fetch()) {
-				$option_pct = intval($_REQUEST['option_pct_'.$voting_option['option_id']]);
-				$option_pct_q .= ", option_pct_".$voting_option['option_id']."=".$option_pct;
-				$option_pct_sum += $option_pct;
-			}
-			if ($option_pct_sum == 100) $q .= $option_pct_q;
-			else $option_pct_error = TRUE;
-			
 			$min_votesum_pct = intval($_REQUEST['min_votesum_pct']);
 			$max_votesum_pct = intval($_REQUEST['max_votesum_pct']);
 			if ($max_votesum_pct > 100) $max_votesum_pct = 100;
@@ -568,17 +554,38 @@ if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['do'] =
 			$q .= " WHERE strategy_id='".$user_strategy['strategy_id']."';";
 			$r = $app->run_query($q);
 			
-			if ($option_pct_error && $voting_strategy == "by_option") {
-				$q = "UPDATE user_strategies SET voting_strategy='".$user_strategy['voting_strategy']."' WHERE strategy_id='".$user_strategy['strategy_id']."';";
-				$r = $app->run_query($q);
-				$voting_strategy = $user_strategy['voting_strategy'];
-				
-				$error_code = 2;
-				$message = "Error: voting strategy couldn't be set to \"Vote by option\", the percentages you entered didn't add up to 100%.";
-			}
-			
 			$q = "UPDATE user_games SET strategy_id='".$user_strategy['strategy_id']."' WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."';";
 			$r = $app->run_query($q);
+		}
+		
+		$option_pct_sum = 0;
+		$option_pct_error = FALSE;
+		
+		$qq = "SELECT * FROM game_voting_options WHERE game_id='".$game->db_game['game_id']."';";
+		$rr = $app->run_query($qq);
+		while ($voting_option = $rr->fetch()) {
+			$option_pct = intval($_REQUEST['option_pct_'.$voting_option['option_id']]);
+			$option_pct_sum += $option_pct;
+		}
+		
+		if ($option_pct_sum == 100) {
+			$qq = "DELETE FROM user_strategy_options WHERE strategy_id='".$user_strategy['strategy_id']."';";
+			$rr = $app->run_query($qq);
+			
+			$qq = "SELECT * FROM game_voting_options WHERE game_id='".$game->db_game['game_id']."';";
+			$rr = $app->run_query($qq);
+			
+			while ($voting_option = $rr->fetch()) {
+				$option_pct = intval($_REQUEST['option_pct_'.$voting_option['option_id']]);
+				if ($option_pct > 0) {
+					$qqq = "INSERT INTO user_strategy_options SET strategy_id='".$user_strategy['strategy_id']."', option_id='".$voting_option['option_id']."', pct_points='".$option_pct."';";
+					$rrr = $app->run_query($qqq);
+				}
+			}
+		}
+		else {
+			$error_code = 2;
+			$message = "Error: the percentages that you entered did not add up to 100, your changes were discarded.";
 		}
 		
 		$from_round = intval($_REQUEST['from_round']);
@@ -971,6 +978,7 @@ if ($thisuser && $game) {
 							</label>
 						</div>
 					</div>
+					
 					<div class="row bordered_row">
 						<div class="col-md-2">
 							<input type="radio" id="voting_strategy_api" name="voting_strategy" value="api"<?php if ($user_strategy['voting_strategy'] == "api") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_api">&nbsp;Vote&nbsp;by&nbsp;API</label>
@@ -982,7 +990,8 @@ if ($thisuser && $game) {
 							Your API access code is <?php echo $thisuser->db_user['api_access_code']; ?> <a href="/api/about/">API documentation</a><br/>
 						</div>
 					</div>
-					<?php /*<div class="row bordered_row">
+					
+					<div class="row bordered_row">
 						<div class="col-md-2">
 							<input type="radio" id="voting_strategy_by_option" name="voting_strategy" value="by_option"<?php if ($user_strategy['voting_strategy'] == "by_option") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_option">&nbsp;Vote&nbsp;by&nbsp;option</label>
 						</div>
@@ -996,18 +1005,27 @@ if ($thisuser && $game) {
 							$r = $app->run_query($q);
 							$option_i = 0;
 							while ($option = $r->fetch()) {
+								$qq = "SELECT * FROM user_strategy_options WHERE strategy_id='".$user_strategy['strategy_id']."' AND option_id='".$option['option_id']."';";
+								$rr = $app->run_query($qq);
+								if ($rr->rowCount() > 0) {
+									$pct_points = $rr->fetch()['pct_points'];
+								}
+								else $pct_points = "";
+								
 								if ($option_i%4 == 0) echo '<div class="row">';
 								echo '<div class="col-md-3">';
-								echo '<input type="tel" size="4" name="option_pct_'.$option['option_id'].'" id="option_pct_'.$option['option_id'].'" placeholder="0" value="'.$user_strategy['option_pct_'.$option['option_id']].'" />';
-								echo '<label class="plainlabel" for="option_pct_'.$option['option_id'].'">% ';
+								echo '<input type="tel" size="4" name="option_pct_'.$option['option_id'].'" id="option_pct_'.$option_i.'" placeholder="0" value="'.$pct_points.'" />';
+								echo '<label class="plainlabel" for="option_pct_'.$option_i.'">% ';
 								echo $option['name']."</label>";
 								echo '</div>';
 								if ($option_i%4 == 3) echo "</div>\n";
 								$option_i++;
 							}
+							if ($option_i%4 != 0) echo "</div>\n";
 							?>
 						</div>
-					</div> */ ?>
+					</div>
+					
 					<div class="row bordered_row">
 						<div class="col-md-2">
 							<input type="radio" id="voting_strategy_by_rank" name="voting_strategy" value="by_rank"<?php if ($user_strategy['voting_strategy'] == "by_rank") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_rank">&nbsp;Vote&nbsp;by&nbsp;rank</label>
@@ -1358,10 +1376,7 @@ if ($thisuser && $game) {
 							?>. These new <?php echo $game->db_game['coin_name_plural']; ?> are split up and given to everyone who voted for the winner.
 						</p>
 						<p>
-							To make sure you don't miss out on votes, a random voting strategy has been applied to your account.  These random votes will only be applied at the end of the voting round.  You can still cast your votes manually by voting before the end of the round.
-						</p>
-						<p>
-							You are currently on a planned voting strategy but several other strategy types are available.  You can change your voting strategy at any time by clicking on the "Strategy" tab.  Please click below to check the random votes that you have been assigned.<br/>
+							To make sure you don't miss out on votes, a random voting strategy has been applied to your account.  You are currently on a planned voting strategy but several other strategy types are available.  You can change your voting strategy at any time by clicking on the "Strategy" tab.  Please click below to check the random votes that you have been assigned.<br/>
 						</p>
 						<p>
 							<button class="btn btn-primary" onclick="$('#intro_message').modal('hide'); show_planned_votes();">Continue</button>

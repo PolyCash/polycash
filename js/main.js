@@ -182,7 +182,7 @@ function by_option_reset_pct() {
 }
 function loop_event() {
 	var option_pct_sum = 0;
-	for (var i=1; i<=num_voting_options; i++) {
+	for (var i=0; i<num_voting_options; i++) {
 		var temp_pct = parseInt($('#option_pct_'+i).val());
 		if (temp_pct && !$('#option_pct_'+i).is(":focus") && temp_pct != $('#option_pct_'+i).val()) {
 			$('#option_pct_'+i).val(temp_pct);

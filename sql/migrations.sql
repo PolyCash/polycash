@@ -95,3 +95,15 @@ INSERT INTO `voting_options` (`voting_option_id`, `option_group_id`, `name`, `vo
 (27, 3, 'Hillary Clinton', '3', 19),
 (26, 3, 'Donald Trump', '2', 18),
 (25, 3, 'Bernie Sanders', '1', 17);
+CREATE TABLE `user_strategy_options` (
+  `strategy_option_id` int(11) NOT NULL,
+  `strategy_id` int(11) DEFAULT NULL,
+  `option_id` int(11) DEFAULT NULL,
+  `pct_points` int(3) NOT NULL DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+ALTER TABLE `user_strategy_options`
+  ADD PRIMARY KEY (`strategy_option_id`),
+  ADD UNIQUE KEY `strategy_id_2` (`strategy_id`,`option_id`),
+  ADD KEY `strategy_id` (`strategy_id`);
+ALTER TABLE `user_strategy_options`
+  MODIFY `strategy_option_id` int(11) NOT NULL AUTO_INCREMENT;

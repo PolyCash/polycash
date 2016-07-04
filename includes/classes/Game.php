@@ -1047,6 +1047,7 @@ class Game {
 		$current_round_id = $this->block_to_round($mining_block_id);
 		$block_of_round = $this->block_id_to_round_index($mining_block_id);
 		
+		echo 'applying user strategies, block of round = '.$block_of_round.', round length: '.$this->db_game['round_length'].'<br/>';
 		if ($block_of_round != $this->db_game['round_length']) {
 			$q = "SELECT * FROM users u JOIN user_games g ON u.user_id=g.user_id JOIN user_strategies s ON g.strategy_id=s.strategy_id";
 			$q .= " JOIN user_strategy_blocks usb ON s.strategy_id=usb.strategy_id";
@@ -1055,7 +1056,7 @@ class Game {
 			$q .= " ORDER BY RAND();";
 			$r = $this->app->run_query($q);
 			
-			$log_text .= "Applying user strategies for block #".$mining_block_id.", looping through ".$r->rowCount()." users.<br/>";
+			$log_text .= "Applying user strategies for block #".$mining_block_id." of ".$this->db_game['name']." looping through ".$r->rowCount()." users.<br/>";
 			while ($db_user = $r->fetch()) {
 				$strategy_user = new User($this->app, $db_user['user_id']);
 				$user_coin_value = $strategy_user->account_coin_value($this);
@@ -1064,7 +1065,7 @@ class Game {
 				$free_balance = $mature_balance;
 				$available_votes = $strategy_user->user_current_votes($this, $last_block_id, $current_round_id);
 				
-				$log_text .= $strategy_user->db_user['username'].": ".$this->app->format_bignum($free_balance/pow(10,8))." coins ".$db_user['voting_strategy']."<br/>";
+				$log_text .= $strategy_user->db_user['username'].": ".$this->app->format_bignum($free_balance/pow(10,8))." coins (".$mature_balance.") ".$db_user['voting_strategy']."<br/>";
 				
 				if ($free_balance > 0 && $available_votes > 0) {
 					if ($db_user['voting_strategy'] == "api") {
@@ -1192,16 +1193,27 @@ class Game {
 							
 							if ($db_user['voting_strategy'] == "by_rank") $by_rank_ranks = explode(",", $db_user['by_rank_ranks']);
 							
+							$strategy_option_points = false;
+							$qq = "SELECT * FROM user_strategy_options WHERE strategy_id='".$db_user['strategy_id']."';";
+							$rr = $this->app->run_query($qq);
+							while ($strategy_option = $rr->fetch()) {
+								$strategy_option_points[$strategy_option['option_id']] = intval($strategy_option['pct_points']);
+							}
+							
 							$qq = "SELECT * FROM game_voting_options WHERE game_id='".$this->db_game['game_id']."';";
 							$rr = $this->app->run_query($qq);
 							while ($voting_option = $rr->fetch()) {
-								if ($db_user['voting_strategy'] == "by_option") $option_pct_sum += $strategy_user->db_user['option_pct_'.$voting_option['option_id']];
+								if ($db_user['voting_strategy'] == "by_option") {
+									$by_option_pct_points = 0;
+									if ($strategy_option_points[$voting_option['option_id']]) $by_option_pct_points = $strategy_option_points[$voting_option['option_id']];
+									$option_pct_sum += $by_option_pct_points;
+								}
 								
 								$pct_of_votes = 100*$ranked_stats[$option_id2rank[$voting_option['option_id']]]['voting_sum']/$score_sum;
 								if ($pct_of_votes >= $strategy_user->db_user['min_votesum_pct'] && $pct_of_votes <= $strategy_user->db_user['max_votesum_pct']) {}
 								else {
 									$skipped_options[$voting_option['option_id']] = TRUE;
-									if ($db_user == "by_option") $skipped_pct_points += $strategy_user->db_user['option_pct_'.$voting_option['option_id']];
+									if ($db_user == "by_option") $skipped_pct_points += $by_option_pct_points;
 									else if (in_array($option_id2rank[$voting_option['option_id']], $by_rank_ranks)) $num_options_skipped++;
 								}
 							}
@@ -1252,11 +1264,13 @@ class Game {
 									$qq = "SELECT * FROM game_voting_options WHERE game_id='".$this->db_game['game_id']."';";
 									$rr = $this->app->run_query($qq);
 									while ($voting_option = $rr->fetch()) {
-										if (!$skipped_options[$voting_option['option_id']] && $strategy_user->db_user['option_pct_'.$voting_option['option_id']] > 0) {
-											$effective_frac = floor(pow(10,4)*$strategy_user->db_user['option_pct_'.$voting_option['option_id']]*$mult_factor)/pow(10,6);
+										$by_option_pct_points = 0;
+										if ($strategy_option_points[$voting_option['option_id']]) $by_option_pct_points = $strategy_option_points[$voting_option['option_id']];
+										if (!$skipped_options[$voting_option['option_id']] && $by_option_pct_points > 0) {
+											$effective_frac = floor(pow(10,4)*$by_option_pct_points*$mult_factor)/pow(10,6);
 											$coin_amount = floor($effective_frac*($free_balance-$db_user['transaction_fee']));
 											
-											$log_text .= "Vote ".$strategy_user->db_user['option_pct_'.$voting_option['option_id']]."% (".round($coin_amount/pow(10,8), 3)." coins) for ".$ranked_stats[$option_id2rank[$voting_option['option_id']]]['name']."<br/>";
+											$log_text .= "Vote ".$by_option_pct_points."% (".round($coin_amount/pow(10,8), 3)." coins) for ".$ranked_stats[$option_id2rank[$voting_option['option_id']]]['name']."<br/>";
 											
 											$option_ids[count($option_ids)] = $voting_option['option_id'];
 											$amounts[count($amounts)] = $coin_amount;
