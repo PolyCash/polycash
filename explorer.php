@@ -255,7 +255,10 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					</div>
 					<?php
 					if ($thisuser) {
-						$returnvals = $game->my_votes_in_round($this_round, $thisuser->db_user['user_id']);
+						$include_unconfirmed = false;
+						if ($round_status == "current") $include_unconfirmed = true;
+						
+						$returnvals = $game->my_votes_in_round($this_round, $thisuser->db_user['user_id'], $include_unconfirmed);
 						$my_votes = $returnvals[0];
 						$coins_voted = $returnvals[1];
 					}
@@ -322,7 +325,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					<div class="row" style="font-weight: bold;">
 					<div class="col-md-3">Empire</div>
 					<div class="col-md-1" style="text-align: center;">Percent</div>
-					<div class="col-md-3" style="text-align: center;">Coin Votes</div>
+					<div class="col-md-3" style="text-align: center;">Votes</div>
 					<?php if ($thisuser) { ?><div class="col-md-3" style="text-align: center;">Your Votes</div><?php } ?>
 					</div>
 					<?php

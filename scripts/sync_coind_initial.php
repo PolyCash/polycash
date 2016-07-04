@@ -11,46 +11,72 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 
 	$game_id = $app->get_site_constant('primary_game_id');
 	$game = new Game($app, $game_id);
-	$game->delete_reset_game('reset');
 
-	$q = "DELETE FROM addresses WHERE game_id='".$game->db_game['game_id']."';";
-	$app->run_query($q);
+	$start_round_id = false;
 	
 	$blocks = array();
 	$transactions = array();
 	$block_height = 0;
 
-	$genesis_hash = $coin_rpc->getblockhash(0);
-	echo "genesis hash: ".$genesis_hash."<br/>\n";
-
-	$current_hash = $genesis_hash;
 	$keep_looping = true;
 	
 	$new_transaction_count = 0;
 
-	$blocks[$block_height] = new block($coin_rpc->getblock($current_hash), $block_height, $current_hash);
-	$tx_hash = $blocks[$block_height]->json_obj['tx'][0];
-	$transactions[0] = new transaction($tx_hash, "", false, $block_height);
+	if (!empty($_REQUEST['block_id']) || !empty($_REQUEST['round_id'])) {
+		if (!empty($_REQUEST['block_id'])) {
+			$block_height = intval($_REQUEST['block_id'])-1;
+		}
+		else {
+			$start_round_id = intval($_REQUEST['round_id']);
+			$block_height = ($start_round_id-1)*$game->db_game['round_length'];
+		}
+		
+		$q = "SELECT * FROM blocks WHERE game_id='".$game->db_game['game_id']."' AND block_id='".$block_height."';";
+		$r = $app->run_query($q);
+		
+		if ($r->rowCount() == 1) {
+			$db_prev_block = $r->fetch();
+			$temp_block = $coin_rpc->getblock($db_prev_block['block_hash']);
+			$current_hash = $temp_block['nextblockhash'];
+			$game->delete_blocks_from_height($block_height);
+		}
+		else die("Error, that block was not found.");
+	}
+	else {
+		$game->delete_reset_game('reset');
+
+		$q = "DELETE FROM addresses WHERE game_id='".$game->db_game['game_id']."';";
+		$app->run_query($q);
+
+		$genesis_hash = $coin_rpc->getblockhash(0);
+		echo "genesis hash: ".$genesis_hash."<br/>\n";
+
+		$current_hash = $genesis_hash;
+
+		$blocks[$block_height] = new block($coin_rpc->getblock($current_hash), $block_height, $current_hash);
+		$tx_hash = $blocks[$block_height]->json_obj['tx'][0];
+		$transactions[0] = new transaction($tx_hash, "", false, $block_height);
 	
-	$output_address = $game->create_or_fetch_address("genesis_address", true, false, false, false);
+		$output_address = $game->create_or_fetch_address("genesis_address", true, false, false, false);
 	
-	$q = "INSERT INTO transactions SET game_id='".$game->db_game['game_id']."', amount='".$game->db_game['pow_reward']."', transaction_desc='coinbase', tx_hash='".$tx_hash."', address_id=".$output_address['address_id'].", block_id='".$block_height."', time_created='".time()."';";
-	$r = $app->run_query($q);
-	$transaction_id = $app->last_insert_id();
+		$q = "INSERT INTO transactions SET game_id='".$game->db_game['game_id']."', amount='".$game->db_game['pow_reward']."', transaction_desc='coinbase', tx_hash='".$tx_hash."', address_id=".$output_address['address_id'].", block_id='".$block_height."', time_created='".time()."';";
+		$r = $app->run_query($q);
+		$transaction_id = $app->last_insert_id();
 	
-	$q = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, game_id='".$game->db_game['game_id']."', user_id=NULL, address_id='".$output_address['address_id']."'";
-	$q .= ", create_transaction_id='".$transaction_id."', amount='".$game->db_game['pow_reward']."', create_block_id='".$block_height."';";
-	$r = $app->run_query($q);
+		$q = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, game_id='".$game->db_game['game_id']."', user_id=NULL, address_id='".$output_address['address_id']."'";
+		$q .= ", create_transaction_id='".$transaction_id."', amount='".$game->db_game['pow_reward']."', create_block_id='".$block_height."';";
+		$r = $app->run_query($q);
 	
-	$q = "INSERT INTO blocks SET game_id='".$game->db_game['game_id']."', block_hash='".$genesis_hash."', block_id='".$block_height."', time_created='".time()."';";
-	$r = $app->run_query($q);
+		$q = "INSERT INTO blocks SET game_id='".$game->db_game['game_id']."', block_hash='".$genesis_hash."', block_id='".$block_height."', time_created='".time()."';";
+		$r = $app->run_query($q);
 	
-	echo "Added the genesis transaction!<br/>\n";
+		echo "Added the genesis transaction!<br/>\n";
 	
-	$current_hash = $blocks[$block_height]->json_obj['nextblockhash'];
+		$current_hash = $blocks[$block_height]->json_obj['nextblockhash'];
+	}
 	
 	do {
-		$block_height = count($blocks);
+		$block_height++;
 		
 		$blocks[$block_height] = new block($coin_rpc->getblock($current_hash), $block_height, $current_hash);
 		
@@ -75,10 +101,6 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$max_block = $max_block[0];
 	$completed_rounds = floor($max_block/$game->db_game['round_length']);
 	
-	echo "Looping through rounds 1 to $completed_rounds.<br/>\n";
-	for ($round_id=1; $round_id<=$completed_rounds; $round_id++) {
-		$game->add_round_from_rpc($round_id);
-	}
 	echo "Finished adding rounds at ".(microtime(true)-$start_time)." sec<br/>\n";
 	
 	$unconfirmed_txs = $coin_rpc->getrawmempool();

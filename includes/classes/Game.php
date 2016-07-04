@@ -687,7 +687,7 @@ class Game {
 		return array('confirmed'=>$confirmed_score, 'unconfirmed'=>$unconfirmed_score, 'sum'=>$confirmed_score+$unconfirmed_score);
 	}
 
-	public function my_votes_in_round($round_id, $user_id) {
+	public function my_votes_in_round($round_id, $user_id, $include_unconfirmed) {
 		$q = "SELECT SUM(t_fees.fee_amount) FROM (SELECT t.fee_amount FROM transaction_ios io JOIN game_voting_options gvo ON io.option_id=gvo.option_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE t.game_id='".$this->db_game['game_id']."' AND io.create_block_id >= ".((($round_id-1)*$this->db_game['round_length'])+1)." AND io.create_block_id <= ".($round_id*$this->db_game['round_length']-1)." AND io.user_id='".$user_id."' GROUP BY t.transaction_id) t_fees;";
 		$r = $this->app->run_query($q);
 		$fee_amount = $r->fetch(PDO::FETCH_NUM);
@@ -1399,9 +1399,11 @@ class Game {
 		
 		if ($delete_or_reset == "reset") {
 			$this->ensure_game_options();
-			$q = "UPDATE games SET game_status='published' WHERE game_id='".$this->db_game['game_id']."';";
-			$r = $this->app->run_query($q);
-
+			if ($this->db_game['game_type'] == "simulation") {
+				$q = "UPDATE games SET game_status='published' WHERE game_id='".$this->db_game['game_id']."';";
+				$r = $this->app->run_query($q);
+			}
+			
 			$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.game_id='".$this->db_game['game_id']."';";
 			$r = $this->app->run_query($q);
 			
@@ -1804,6 +1806,8 @@ class Game {
 		$q .= ";";
 		$r = $this->app->run_query($q);
 		$internal_round_id = $this->app->last_insert_id();
+		
+		$this->app->run_query("DELETE FROM cached_round_options WHERE round_id='".$round_id."' AND game_id='".$this->db_game['game_id']."';");
 		
 		for ($i=0; $i<count($rankings); $i++) {
 			$qq = "INSERT INTO cached_round_options SET internal_round_id='".$internal_round_id."', round_id='".$round_id."', game_id='".$this->db_game['game_id']."', option_id='".$rankings[$i]['option_id']."', rank='".($i+1)."', score='".$rankings[$i]['votes']."';";
@@ -2359,7 +2363,7 @@ class Game {
 				
 				if ($r->rowCount() > 0) {
 					$unconfirmed_tx = $r->fetch();
-					$q = "UPDATE transactions SET block_id='".$block_height."' WHERE transaction_id='".$unconfirmed_tx['transaction_id']."';";
+					$q = "UPDATE transactions SET block_id='".$block_height."', round_id='".$this->block_to_round($block_height)."' WHERE transaction_id='".$unconfirmed_tx['transaction_id']."';";
 					$r = $this->app->run_query($q);
 					$q = "UPDATE transaction_ios SET spend_status='unspent', create_block_id='".$block_height."' WHERE create_transaction_id='".$unconfirmed_tx['transaction_id']."';";
 					$r = $this->app->run_query($q);
@@ -2390,7 +2394,7 @@ class Game {
 						$output_sum += pow(10,8)*$outputs[$j]["value"];
 					}
 					
-					$q = "INSERT INTO transactions SET game_id='".$this->db_game['game_id']."', amount='".$output_sum."', transaction_desc='".$transaction_type."', tx_hash='".$tx_hash."', address_id=NULL, block_id='".$block_height."', taper_factor='".$this->block_id_to_taper_factor($block_height)."', time_created='".time()."';";
+					$q = "INSERT INTO transactions SET game_id='".$this->db_game['game_id']."', amount='".$output_sum."', transaction_desc='".$transaction_type."', tx_hash='".$tx_hash."', address_id=NULL, block_id='".$block_height."', round_id='".$this->block_to_round($block_height)."', taper_factor='".$this->block_id_to_taper_factor($block_height)."', time_created='".time()."';";
 					$r = $this->app->run_query($q);
 					$db_transaction_id = $this->app->last_insert_id();
 					$html .= ". ";

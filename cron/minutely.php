@@ -92,10 +92,10 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		$q = "SELECT * FROM game_voting_options WHERE game_id='".$real_game->db_game['game_id']."' ORDER BY option_id ASC;";
 		$r = $app->run_query($q);
 		while ($option = $r->fetch()) {
-			$qq = "SELECT COUNT(*) FROM addresses WHERE game_id='".$real_game->db_game['game_id']."' AND option_id='".$option['option_id']."' AND user_id IS NULL;";
+			$qq = "SELECT * FROM addresses WHERE game_id='".$real_game->db_game['game_id']."' AND option_id='".$option['option_id']."' AND user_id IS NULL;";
 			$rr = $app->run_query($qq);
-			$num_addr = $rr->fetch(PDO::FETCH_NUM);
-			$num_addr = $num_addr[0];
+			$num_addr = $rr->rowCount();
+			
 			if ($num_addr < $GLOBALS['min_unallocated_addresses']) {
 				echo "Generate ".($GLOBALS['min_unallocated_addresses']-$num_addr)." unallocated ".$option['name']." addresses in \"".$real_game->db_game['name']."\"<br/>\n";
 				for ($i=0; $i<($GLOBALS['min_unallocated_addresses']-$num_addr); $i++) {
@@ -117,7 +117,7 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				for ($game_i=0; $game_i<count($running_games); $game_i++) {
 					if ($GLOBALS['walletnotify_by_cron'] && $running_games[$game_i]->db_game['game_type'] == "real") {
 						echo $running_games[$game_i]->apply_user_strategies();
-						echo $running_games[$game_i]->walletnotify($coin_rpc, "");
+						echo $running_games[$game_i]->sync_coind($coin_rpc);
 						$running_games[$game_i]->update_option_scores();
 					}
 					if ($running_games[$game_i]->db_game['game_type'] == "simulation") {
