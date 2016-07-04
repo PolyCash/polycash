@@ -21,10 +21,6 @@ include('includes/html_start.php');
 			<div class="paragraph">
 				Welcome to EmpireCoin, a unique gaming platform where anyone can create a currency backed by dollars or Bitcoins.  To set up an EmpireCoin game, everyone contributes money to the pot in exchange for an initial share of the coins.  Once the game starts, coins are given out at regular intervals following linear or exponential inflation.  Players compete to win a share of the new coins by casting votes for any of 16 empires.  A winning empire is determined in each round and the newly created coins are split up and given out to everyone who voted correctly.  Some EmpireCoin games last forever and you can buy in or sell out at any time.  Other games end at a certain time and then the pot is split up and given out to players in proportion to their final balances.  EmpireCoin strategy is all about collaborating with your teammates and betraying your enemies to get ahead. Start building your empire today in this massively multiplayer online game of chance.
 			</div>
-			<div class="paragraph">
-				For more information, please download the <a href="/EmpireCoin.pdf">EmpireCoin Whitepaper</a>. 
-				Or get started in EmpireCoin now by joining one of these games.<br/>
-			</div>
 		</div>
 	</div>
 	
