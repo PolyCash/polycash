@@ -305,28 +305,28 @@ function wallet_text_stats($thisuser, $current_round, $last_block_id, $block_wit
 function vote_details_general($mature_balance) {
 	$html = '
 	<div class="row">
-		<div class="col-sm-5">Your balance:</div>
-		<div class="col-sm-5 greentext">'.number_format(floor($mature_balance*1000)/1000, 3).' EMP</div>
+		<div class="col-xs-6">Your balance:</div>
+		<div class="col-xs-6 greentext">'.number_format(floor($mature_balance*1000)/1000, 3).' EMP</div>
 	</div>	';
 	return $html;
 }
 function vote_nation_details($nation, $rank, $voting_sum, $totalVoteSum) {
 	$html .= '
 	<div class="row">
-		<div class="col-sm-5">Force multiplier:</div>
-		<div class="col-sm-5">&times;'.number_format($nation['cached_force_multiplier'], 5).'</div>
+		<div class="col-xs-6">Force multiplier:</div>
+		<div class="col-xs-6">&times;'.number_format($nation['cached_force_multiplier'], 5).'</div>
 	</div>
 	<div class="row">
-		<div class="col-sm-5">Rank:</div>
-		<div class="col-sm-5">'.$rank.date("S", strtotime("1/".$rank."/2015")).'</div>
+		<div class="col-xs-6">Rank:</div>
+		<div class="col-xs-6">'.$rank.date("S", strtotime("1/".$rank."/2015")).'</div>
 	</div>
 	<div class="row">
-		<div class="col-sm-5">Votes:</div>
-		<div class="col-sm-5">'.number_format($voting_sum/pow(10,8), 3).' EMP</div>
+		<div class="col-xs-6">Votes:</div>
+		<div class="col-xs-5">'.number_format($voting_sum/pow(10,8), 3).' EMP</div>
 	</div>
 	<div class="row">
-		<div class="col-sm-5">Voting percentage:</div>
-		<div class="col-sm-5">'.(ceil(100*10000*$voting_sum/$totalVoteSum)/10000).'%</div>
+		<div class="col-xs-6">Voting&nbsp;percentage:</div>
+		<div class="col-xs-5">'.(ceil(100*10000*$voting_sum/$totalVoteSum)/10000).'%</div>
 	</div>';
 	return $html;
 }
