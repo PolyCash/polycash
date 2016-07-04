@@ -1032,15 +1032,15 @@ INSERT INTO `game_types` (`game_type_id`, `option_group_id`, `game_type`, `block
 (5, 1, 'simulation', 'realistic', 'coin_round', 'players_joined', 'exponential', '5-player-bitcoin-battle', 5, 16, '0.20000000', '5 players, 16 empires, 20% cap', 'bitcoin', 'bitcoins', 'BTC'),
 (6, 2, 'simulation', 'realistic', 'coin_round', 'players_joined', 'exponential', '2-player-election-battle', 2, 8, '0.50000000', '2 players, 8 presidential candidates, 50% cap', 'buck', 'bucks', '$');
 
-INSERT INTO `game_type_variations` (`variation_id`, `game_type_id`, `target_open_games`, `giveaway_status`, `giveaway_amount`, `invite_currency`, `invite_cost`, `round_length`, `final_round`, `seconds_per_block`, `maturity`, `exponential_inflation_minershare`, `exponential_inflation_rate`, `pow_reward`, `pos_reward`, `variation_name`) VALUES
-(1, 1, 1, 'public_pay', 10000000000, 1, '1.00000000', 20, 10, 12, 0, '0.01000000', '0.20000000', 0, 0, 'Buy 100 dimes for $1'),
-(3, 3, 1, 'public_pay', 100000000000, 1, '10.00000000', 20, 10, 12, 1, '0.01000000', '0.20000000', 0, 0, 'Buy 1000 empirecoins for $10'),
-(4, 3, 1, 'public_free', 100000000000, 1, '0.00000000', 20, 10, 12, 0, '0.01000000', '0.20000000', 0, 0, 'Get 1000 empirecoins for free'),
-(5, 4, 1, 'public_pay', 270000000000, 1, '27.00000000', 100, 100, 18, 0, '0.01000000', '0.05000000', 0, 0, 'Buy 2,700 coins for $27'),
-(6, 4, 1, 'public_free', 270000000000, 1, '0.00000000', 100, 100, 18, 0, '0.01000000', '0.05000000', 0, 0, 'Get 2,700 coins for free'),
-(7, 5, 1, 'public_pay', 80000000000, 2, '0.10000000', 20, 20, 12, 0, '0.01000000', '0.10000000', 0, 0, 'Buy 800 bitcoins for 0.1 BTC'),
-(8, 5, 1, 'public_free', 10000000000, 1, '0.00000000', 20, 20, 12, 0, '0.01000000', '0.10000000', 0, 0, 'Get 800 bitcoins for free'),
-(9, 6, 1, 'public_free', 500000000000, 1, '0.00000000', 30, 15, 4, 0, '0.01000000', '0.12000000', 0, 0, 'Get 5,000 bucks for free');
+INSERT INTO `game_type_variations` (`variation_id`, `game_type_id`, `target_open_games`, `giveaway_status`, `giveaway_amount`, `invite_currency`, `invite_cost`, `round_length`, `final_round`, `seconds_per_block`, `maturity`, `exponential_inflation_minershare`, `exponential_inflation_rate`, `pow_reward`, `pos_reward`, `url_identifier`, `variation_name`) VALUES
+(1, 1, 1, 'public_pay', 10000000000, 1, '1.00000000', 20, 10, 12, 0, '0.01000000', '0.20000000', 0, 0, 'two-player-empire-battle-100-dimes-for-$1', 'Buy 100 dimes for $1'),
+(3, 3, 1, 'public_pay', 100000000000, 1, '10.00000000', 20, 10, 12, 1, '0.01000000', '0.20000000', 0, 0, 'two-player-dollar-battle-1000-empirecoins-for-$10', 'Buy 1000 empirecoins for $10'),
+(4, 3, 1, 'public_free', 100000000000, 1, '0.00000000', 20, 10, 12, 0, '0.01000000', '0.20000000', 0, 0, 'two-player-dollar-battle-1000-empirecoins-free', 'Get 1000 empirecoins for free'),
+(5, 4, 1, 'public_pay', 270000000000, 1, '27.00000000', 100, 100, 18, 0, '0.01000000', '0.05000000', 0, 0, 'presidential-election-2700-empirecoins-for-$27', 'Buy 2,700 coins for $27'),
+(6, 4, 1, 'public_free', 270000000000, 1, '0.00000000', 100, 100, 18, 0, '0.01000000', '0.05000000', 0, 0, 'presidential-election-2700-empirecoins-free', 'Get 2,700 coins for free'),
+(7, 5, 1, 'public_pay', 80000000000, 2, '0.10000000', 20, 20, 12, 0, '0.01000000', '0.10000000', 0, 0, '5-player-bitcoin-battle-800-coins-for-0.1-btc', 'Buy 800 bitcoins for 0.1 BTC'),
+(8, 5, 1, 'public_free', 10000000000, 1, '0.00000000', 20, 20, 12, 0, '0.01000000', '0.10000000', 0, 0, '5-player-bitcoin-battle-800-coins-free', 'Get 800 bitcoins for free'),
+(9, 6, 1, 'public_free', 500000000000, 1, '0.00000000', 30, 15, 4, 0, '0.01000000', '0.12000000', 0, 0, 'two-player-election-battle-5000-bucks-free', 'Get 5,000 bucks for free');
 
 INSERT INTO `voting_option_groups` (`option_group_id`, `option_name`, `option_name_plural`, `description`) VALUES
 (1, 'empire', 'empires', '16 biggest nations in the world'),

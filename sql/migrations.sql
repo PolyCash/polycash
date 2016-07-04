@@ -55,4 +55,16 @@ ALTER TABLE `empirecoin`.`game_voting_options` ADD INDEX (`image_id`);
 ALTER TABLE `user_games` ADD `show_planned_votes` TINYINT(1) NOT NULL DEFAULT '0' ;
 ALTER TABLE `game_type_variations` ADD `url_identifier` VARCHAR(100) NOT NULL DEFAULT '' AFTER `pos_reward`;
 ALTER TABLE `game_type_variations`  ADD `buyin_policy` ENUM('unlimited','per_user_cap','game_cap','game_and_user_cap','none') NOT NULL DEFAULT 'none'  AFTER `giveaway_amount`,  ADD `game_buyin_cap` DECIMAL(16,8) NOT NULL DEFAULT '0'  AFTER `buyin_policy`,  ADD `per_user_buyin_cap` DECIMAL(16,8) NOT NULL DEFAULT '0'  AFTER `game_buyin_cap`;
-
+CREATE TABLE IF NOT EXISTS `game_join_requests` (
+  `join_request_id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) DEFAULT NULL,
+  `variation_id` int(11) DEFAULT NULL,
+  `game_id` int(11) DEFAULT NULL,
+  `request_status` enum('outstanding','complete','canceled') NOT NULL DEFAULT 'outstanding',
+  `time_requested` int(20) NOT NULL,
+  PRIMARY KEY (`join_request_id`),
+  KEY `user_id` (`user_id`),
+  KEY `variation_id` (`variation_id`),
+  KEY `game_id` (`game_id`),
+  KEY `request_status` (`request_status`)
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
