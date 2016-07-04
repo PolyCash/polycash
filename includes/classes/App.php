@@ -641,7 +641,7 @@ class App {
 			echo $featured_game->current_round_table($current_round_id, false, false, true, $counter);
 			echo '</div>';
 			echo '<a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-success">Play Now</a>';
-			echo ' <a href="/explorer/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-primary">Blockchain Explorer</a>';
+			echo ' <a href="/explorer/'.$featured_game->db_game['url_identifier'].'/rounds/" class="btn btn-primary">Blockchain Explorer</a>';
 			echo '<br/><br/></div>';
 			
 			echo $featured_game->initialize_vote_option_details($option_id2rank, $score_sums['sum'], false, $counter);
