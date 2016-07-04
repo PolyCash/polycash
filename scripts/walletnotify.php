@@ -9,5 +9,11 @@ $r = run_query($q);
 $game = mysql_fetch_array($r);
 
 echo walletnotify($game, $empirecoin_rpc, $argv[1]);
+
+$unconfirmed_txs = $empirecoin_rpc->getrawmempool();
+for ($i=0; $i<count($unconfirmed_txs); $i++) {
+	walletnotify($game, $empirecoin_rpc, $unconfirmed_txs[$i]);
+}
+
 echo "Done!";
 ?>
