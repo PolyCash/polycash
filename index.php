@@ -25,7 +25,7 @@ include('includes/html_start.php');
 	</div>
 	<?php
 	echo '<div class="paragraph">';
-	$q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='editable' OR g.game_status='running');";
+	$q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='published' OR g.game_status='running');";
 	$r = run_query($q);
 	
 	$cell_width = 6;
@@ -115,10 +115,10 @@ include('includes/html_start.php');
 		<h2><?php echo $GLOBALS['coin_brand_name']; ?> API</h2>
 		Automated &amp; algorithmic voting strategies are encouraged in <?php echo $GLOBALS['coin_brand_name']; ?>.  After signing up for a web wallet, you can choose from one of several automated voting strategies and then tweak parameters to optimize your votes.  Or you can choose the "Vote by API" voting strategy and then write code to fully customize your voting strategy.  For more information, please visit the <a href="/api/about/"><?php echo $GLOBALS['coin_brand_name']; ?> API page</a>.
 	</div>
-	<div class="paragraph">
+	<?php /*<div class="paragraph">
 		<h2>Proof of Burn Betting</h2>
 		In addition to <?php echo $GLOBALS['coin_brand_name']; ?>'s gamified inflation, the <?php echo $GLOBALS['coin_brand_name']; ?> protocol also enables decentralized betting through a unique proof-of-burn protocol.  By sending coins to an address like "china_wins_round_777", anyone can place a bet against other bettors.  If correct, new coins will be created and sent to the winner.
-	</div>
+	</div>*/ ?>
 
 	<div class="paragraph text-center">
 		<?php echo $GLOBALS['site_name'].", ".date("Y"); ?>
