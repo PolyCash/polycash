@@ -613,6 +613,9 @@ $mature_balance = $account_value - $immature_balance;
 							Default Address
 							<?php } ?>
 						</div>
+						<div class="col-sm-1">
+							<a target="_blank" href="/explorer/addresses/<?php echo $address['address']; ?>">Explore</a>
+						</div>
 						<div class="col-sm-5">
 							<input type="text" style="border: 0px; background-color: none; width: 100%; font-family: consolas" onclick="$(this).select();" value="<?php echo $address['address']; ?>" />
 						</div>

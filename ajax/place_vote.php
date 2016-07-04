@@ -24,8 +24,12 @@ if ($thisuser) {
 				
 				if ($amount <= $mature_balance && $amount > 0) {
 					$transaction_id = new_webwallet_transaction($thisuser['game_id'], $nation_id, $amount, $thisuser['user_id'], $last_block_id+1, 'transaction');
-					
-					echo "0=====";
+					if ($transaction_id) {
+						echo "0=====";
+					}
+					else {
+						echo "4=====Error, the transaction was canceled.";
+					}
 				}
 				else echo "1=====You don't have that many coins available to vote right now.";
 			}

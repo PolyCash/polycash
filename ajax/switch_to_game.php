@@ -16,32 +16,17 @@ if ($thisuser) {
 			$this_game = mysql_fetch_array($r);
 			
 			if ($this_game['game_type'] == "instant" && $this_game['creator_id'] == $thisuser['user_id']) {
-				$q = "DELETE FROM webwallet_transactions WHERE game_id='".$this_game['game_id']."';";
-				$r = run_query($q);
+				$success = delete_reset_game($game, $game_id);
 				
-				$q = "DELETE FROM blocks WHERE game_id='".$this_game['game_id']."';";
-				$r = run_query($q);
-				
-				$q = "DELETE FROM cached_rounds WHERE game_id='".$this_game['game_id']."';";
-				$r = run_query($q);
-				
-				$q = "DELETE FROM game_nations WHERE game_id='".$this_game['game_id']."';";
-				$r = run_query($q);
-				
-				if ($game == "reset") {
-					ensure_game_nations($this_game['game_id']);
-				}
-				else {
-					$q = "DELETE g.*, ug.* FROM games g, user_games ug WHERE g.game_id=".$this_game['game_id']." AND ug.game_id=g.game_id;";
-					$r = run_query($q);
+				if ($success) {
+					if ($game == "delete") {
+						$q = "UPDATE users SET game_id='".get_site_constant('primary_game_id')."' WHERE user_id='".$thisuser['user_id']."';";
+						$r = run_query($q);
+					}
 					
-					$q = "DELETE FROM user_strategies WHERE game_id='".$this_game['game_id']."';";
-					$r = run_query($q);
-					
-					$q = "UPDATE users SET game_id='".get_site_constant('primary_game_id')."' WHERE user_id='".$thisuser['user_id']."';";
-					$r = run_query($q);
+					echo "1";
 				}
-				echo "1";
+				else echo "Error, the game couldn't be reset.";
 			}
 			else echo "You can't modify this game.";
 		}

@@ -39,13 +39,19 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 		}
 	}
 	if ($explore_mode == "blocks") {
-		$block_id = intval($uri_parts[3]);
-		$q = "SELECT * FROM blocks WHERE game_id='".$game_id."' AND block_id='".$block_id."';";
-		$r = run_query($q);
-		if (mysql_numrows($r) == 1) {
-			$block = mysql_fetch_array($r);
+		if ($_SERVER['REQUEST_URI'] == "/explorer/blocks" || $_SERVER['REQUEST_URI'] == "/explorer/blocks/") {
 			$mode_error = false;
-			$pagetitle = "EmpireCoin - Block #".$block['block_id'];
+			$pagetitle = "EmpireCoin - List of blocks";
+		}
+		else {
+			$block_id = intval($uri_parts[3]);
+			$q = "SELECT * FROM blocks WHERE game_id='".$game_id."' AND block_id='".$block_id."';";
+			$r = run_query($q);
+			if (mysql_numrows($r) == 1) {
+				$block = mysql_fetch_array($r);
+				$mode_error = false;
+				$pagetitle = "EmpireCoin - Block #".$block['block_id'];
+			}
 		}
 	}
 	
@@ -72,6 +78,8 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 			if ($explore_mode == "rounds") {
 				if ($round['winning_nation_id'] > 0) echo "<h1>".$round['name']." wins round #".$round['round_id']."</h1>\n";
 				else echo "<h1>Round #".$round['round_id'].": No winner</h1>\n";
+				
+				echo "<h3>".$game['name']."</h3>";
 				?>
 				<div class="row">
 					<div class="col-md-6">
@@ -92,8 +100,16 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 				else $my_votes = false;
 				
 				if ($my_votes[$round['winning_nation_id']] > 0) {
-					echo "You won <font class=\"greentext\">+".(floor(100*750*$my_votes[$round['winning_nation_id']]/$round['winning_score'])/100)." EMP</font> by voting ".round($my_votes[$round['winning_nation_id']]/pow(10,8), 2)." coins for ".$round['name']."</font>\n";
+					echo "You won <font class=\"greentext\">+".(floor(100*750*$my_votes[$round['winning_nation_id']]/$round['winning_score'])/100)." EMP</font> by voting ".round($my_votes[$round['winning_nation_id']]/pow(10,8), 2)." coins for ".$round['name']."</font><br/>\n";
 				}
+				
+				$q = "SELECT * FROM blocks WHERE game_id='".$game_id."' AND block_id > '".(($round['round_id']-1)*10)."' AND block_id <= ".($round['round_id']*10)." ORDER BY block_id ASC;";
+				$r = run_query($q);
+				echo "Blocks in this round: ";
+				while ($round_block = mysql_fetch_array($r)) {
+					echo "<a href=\"/explorer/blocks/".$round_block['block_id']."\">".$round_block['block_id']."</a> ";
+				}
+				echo "<br/>\n";
 				
 				echo "<h2>Rankings</h2>";
 				
@@ -138,6 +154,71 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 					<a href="/explorer/rounds/<?php echo $round['round_id']+1; ?>">Next Round &rarr;</a>
 					<?php
 				}
+				
+				echo "<br/><br/>\n";
+			}
+			else if ($explore_mode == "blocks") {
+				if ($block) {
+					$q = "SELECT COUNT(*), SUM(amount) FROM webwallet_transactions WHERE game_id='".$game_id."' AND block_id='".$block['block_id']."' AND amount > 0;";
+					$r = run_query($q);
+					$num_trans = mysql_fetch_row($r);
+					$block_sum = $num_trans[1];
+					$num_trans = $num_trans[0];
+					
+					$round_id = block_to_round($block['block_id']);
+					$block_index = block_id_to_round_index($block['block_id']);
+					
+					echo "<h1>Block #".$block['block_id']."</h1>";
+					echo "<h3>".$game['name']."</h3>";
+					echo "This block contains $num_trans transactions totaling ".number_format($block_sum/pow(10,8), 2)." coins.<br/>\n";
+					echo "This is block ".$block_index." of <a href=\"/explorer/rounds/".$round_id."\">round #".$round_id."</a><br/><br/>\n";
+					
+					echo '<div style="border-bottom: 1px solid #bbb;">';
+					$q = "SELECT * FROM webwallet_transactions WHERE game_id='".$game_id."' AND block_id='".$block['block_id']."' AND amount > 0 ORDER BY transaction_id ASC;";
+					$r = run_query($q);
+					while ($transaction = mysql_fetch_array($r)) {
+						echo render_transaction($transaction, FALSE, "");
+					}
+					echo '</div>';
+					echo "<br/>\n";
+					
+					if ($block['block_id'] > 1) echo '<a href="/explorer/blocks/'.($block['block_id']-1).'" style="margin-right: 30px;">&larr; Previous Block</a>';
+					echo '<a href="/explorer/blocks/'.($block['block_id']+1).'">Next Block &rarr;</a>';
+					
+					echo "<br/><br/>\n";
+				}
+				else {
+					$q = "SELECT * FROM blocks WHERE game_id='".$game_id."' ORDER BY block_id ASC;";
+					$r = run_query($q);
+					
+					echo "<h1>EmpireCoin - List of Blocks</h1>\n";
+					echo "<h3>".$game['name']."</h3>";
+					echo "<ul>\n";
+					while ($block = mysql_fetch_array($r)) {
+						echo "<li><a href=\"/explorer/blocks/".$block['block_id']."\">Block #".$block['block_id']."</a></li>\n";
+					}
+					echo "</ul>\n";
+					
+					echo "<br/><br/>\n";
+				}
+			}
+			else if ($explore_mode == "addresses") {
+				echo "<h3>EmpireCoin Address: ".$address['address']."</h3>\n";
+				
+				$q = "SELECT * FROM webwallet_transactions t, transaction_IOs i WHERE i.address_id='".$address['address_id']."' AND (t.transaction_id=i.create_transaction_id OR t.transaction_id=i.spend_transaction_id) GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;";
+				$r = run_query($q);
+				
+				echo "This address has been used in ".mysql_numrows($r)." transactions.<br/>\n";
+				
+				echo '<div style="border-bottom: 1px solid #bbb;">';
+				while ($transaction_io = mysql_fetch_array($r)) {
+					$block_index = block_id_to_round_index($transaction_io['block_id']);
+					$round_id = block_to_round($transaction_io['block_id']);
+					echo render_transaction($transaction_io, $address['address_id'], "Confirmed in the <a href=\"/explorer/blocks/".$transaction_io['block_id']."\">".date("jS", strtotime("1/".$block_index."/2015"))." block</a> of <a href=\"/explorer/rounds/".$round_id."\">round ".$round_id."</a>");
+				}
+				echo "</div>\n";
+				
+				echo "<br/><br/>\n";
 			}
 		}
 		?>
