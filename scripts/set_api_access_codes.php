@@ -1,7 +1,10 @@
 <?php
-include("../includes/connect.php");
+$host_not_required = TRUE;
+include(realpath(dirname(__FILE__))."/../includes/connect.php");
 
-if ($_REQUEST['key'] == "9841ujoifhWR4") {
+if ($argv) $_REQUEST['key'] = $argv[1];
+
+if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$q = "SELECT * FROM users WHERE api_access_code='' OR api_access_code IS NULL;";
 	$r = $app->run_query($q);
 	$counter = 0;

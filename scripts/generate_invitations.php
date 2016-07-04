@@ -1,6 +1,7 @@
 <?php
-include('../includes/connect.php');
-include("../includes/get_session.php");
+$host_not_required = TRUE;
+include(realpath(dirname(__FILE__))."/../includes/connect.php");
+include(realpath(dirname(__FILE__))."/../includes/get_session.php");
 
 die("This script is disabled.");
 

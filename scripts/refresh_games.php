@@ -1,5 +1,8 @@
 <?php
+$host_not_required = TRUE;
 include(realpath(dirname(__FILE__))."/../includes/connect.php");
+
+if ($argv) $_REQUEST['key'] = $argv[1];
 
 if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$q = "SELECT * FROM games";

@@ -130,3 +130,21 @@ ALTER TABLE `cached_round_options`
   ADD KEY `round_id` (`round_id`,`game_id`);
 ALTER TABLE `cached_round_options`
   MODIFY `round_option_id` int(11) NOT NULL AUTO_INCREMENT;
+ALTER TABLE `cached_rounds`
+  DROP `position_1`,
+  DROP `position_2`,
+  DROP `position_3`,
+  DROP `position_4`,
+  DROP `position_5`,
+  DROP `position_6`,
+  DROP `position_7`,
+  DROP `position_8`,
+  DROP `position_9`,
+  DROP `position_10`,
+  DROP `position_11`,
+  DROP `position_12`,
+  DROP `position_13`,
+  DROP `position_14`,
+  DROP `position_15`,
+  DROP `position_16`;
+

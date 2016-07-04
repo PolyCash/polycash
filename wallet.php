@@ -615,7 +615,7 @@ if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['do'] =
 	}
 }
 
-if (!empty($pagetitle)) {
+if (empty($pagetitle)) {
 	if ($game) $pagetitle = $game->db_game['name']." - Wallet";
 	else $pagetitle = "Please log in";
 }

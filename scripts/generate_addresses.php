@@ -1,7 +1,8 @@
 <?php
 set_time_limit(0);
 
-include("../includes/connect.php");
+$host_not_required = TRUE;
+include(realpath(dirname(__FILE__))."/../includes/connect.php");
 
 $game = new Game($app, $app->get_site_constant('primary_game_id'));
 if (!$game) die("Failed to get the game.");

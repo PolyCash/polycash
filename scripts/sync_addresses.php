@@ -1,5 +1,8 @@
 <?php
-include("../includes/connect.php");
+$host_not_required = TRUE;
+include(realpath(dirname(__FILE__))."/../includes/connect.php");
+
+if ($argv) $_REQUEST['key'] = $argv[1];
 
 if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');

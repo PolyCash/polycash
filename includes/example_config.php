@@ -32,7 +32,7 @@ $GLOBALS['default_coin_winner'] = 'your_username';
 
 $GLOBALS['walletnotify_by_cron'] = true;
 $GLOBALS['pageview_tracking_enabled'] = false;
-$GLOBALS['min_unallocated_addresses'] = 40;
+$GLOBALS['min_unallocated_addresses'] = 2;
 
 $GLOBALS['currency_price_refresh_seconds'] = 30;
 $GLOBALS['invoice_expiration_seconds'] = 60*10;

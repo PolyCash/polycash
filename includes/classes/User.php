@@ -73,7 +73,7 @@ class User {
 			$my_votes = $my_votes_in_round[0];
 			$coins_voted = $my_votes_in_round[1];
 			
-			if ($my_votes[$round['winning_option_id']] > 0) {
+			if (!empty($my_votes[$round['winning_option_id']])) {
 				if ($game->db_game['payout_weight'] == "coin") $win_text = "You correctly voted ".$this->app->format_bignum($my_votes[$round['winning_option_id']]['coins']/pow(10,8))." coins.";
 				else $win_text = "You correctly cast ".$this->app->format_bignum($my_votes[$round['winning_option_id']][$game->db_game['payout_weight'].'s']/pow(10,8))." votes.";
 			}
@@ -85,8 +85,17 @@ class User {
 			$html .= ' <a href="/explorer/'.$game->db_game['url_identifier'].'/rounds/'.$round['round_id'].'" target="_blank">Details</a>';
 			$html .= '</div>';
 			
-			$win_amt = pos_reward_in_round($game->db_game, $round['round_id'])*$my_votes[$round['winning_option_id']][$game->db_game['payout_weight'].'s']/$option_scores['sum'];
-			$payout_amt = ($win_amt - $my_votes_in_round['fee_amount'])/pow(10,8);
+			if (empty($round['winning_option_id'])) {
+				$win_amt = 0;
+				$payout_amt = 0;
+			}
+			else {
+				if (empty($my_votes[$round['winning_option_id']])) $win_amt_temp = 0;
+				else $win_amt_temp = pos_reward_in_round($game->db_game, $round['round_id'])*$my_votes[$round['winning_option_id']][$game->db_game['payout_weight'].'s'];
+				if ($option_scores['sum'] > 0) $win_amt = $win_amt_temp/$option_scores['sum'];
+				else $win_amt = 0;
+				$payout_amt = ($win_amt - $my_votes_in_round['fee_amount'])/pow(10,8);
+			}
 			
 			$html .= '<div class="col-sm-2">';
 			$html .= '<font title="'.$this->app->format_bignum($win_amt/pow(10,8)).' coins won, '.$this->app->format_bignum($my_votes_in_round['fee_amount']/pow(10,8)).' paid in fees" class="';

@@ -175,14 +175,16 @@ class Game {
 				$html .= $this->app->format_bignum($score_sum/pow(10,8)).' votes were cast in this round.<br/>';
 				$my_votes = $this->my_votes_in_round($current_round, $user->db_user['user_id']);
 				$fees_paid = $my_votes['fee_amount'];
-				$my_winning_votes = $my_votes[0][$winner['option_id']]["votes"];
-				if ($my_winning_votes > 0) {
+
+				if (empty($my_votes[0])) {
+					$my_winning_votes = 0;
+					$html .= "You didn't cast any votes for ".$winner['name'].".<br/>\n";
+				}
+				else {
+					$my_winning_votes = $my_votes[0][$winner['option_id']]["votes"];
 					$win_amount = floor(pos_reward_in_round($this->db_game, $current_round)*$my_winning_votes/$winner['winning_score'] - $fees_paid)/pow(10,8);
 					$html .= "You correctly cast ".$this->app->format_bignum($my_winning_votes/pow(10,8))." votes";
 					$html .= ' and won <font class="greentext">+'.$this->app->format_bignum($win_amount)."</font> coins.<br/>\n";
-				}
-				else if ($winner) {
-					$html .= "You didn't cast any votes for ".$winner['name'].".<br/>\n";
 				}
 			}
 			else {
@@ -464,6 +466,7 @@ class Game {
 				$ref_block_id = $this->last_block_id()+1;
 				$ref_round_id = $this->block_to_round($ref_block_id);
 				$ref_cbd = 0;
+				$ref_crd = 0;
 				
 				while ($transaction_input = $r->fetch()) {
 					if ($input_sum < $amount) {
@@ -1052,7 +1055,7 @@ class Game {
 		$current_round_id = $this->block_to_round($mining_block_id);
 		$block_of_round = $this->block_id_to_round_index($mining_block_id);
 		
-		echo 'applying user strategies, block of round = '.$block_of_round.', round length: '.$this->db_game['round_length'].'<br/>';
+		echo 'applying user strategies, block of round = '.$block_of_round.', round length: '.$this->db_game['round_length']."<br/>\n";
 		if ($block_of_round != $this->db_game['round_length']) {
 			$q = "SELECT * FROM users u JOIN user_games g ON u.user_id=g.user_id JOIN user_strategies s ON g.strategy_id=s.strategy_id";
 			$q .= " JOIN user_strategy_blocks usb ON s.strategy_id=usb.strategy_id";
@@ -1061,7 +1064,7 @@ class Game {
 			$q .= " ORDER BY RAND();";
 			$r = $this->app->run_query($q);
 			
-			$log_text .= "Applying user strategies for block #".$mining_block_id." of ".$this->db_game['name']." looping through ".$r->rowCount()." users.<br/>";
+			$log_text .= "Applying user strategies for block #".$mining_block_id." of ".$this->db_game['name']." looping through ".$r->rowCount()." users.<br/>\n";
 			while ($db_user = $r->fetch()) {
 				$strategy_user = new User($this->app, $db_user['user_id']);
 				$user_coin_value = $strategy_user->account_coin_value($this);
@@ -1070,7 +1073,7 @@ class Game {
 				$free_balance = $mature_balance;
 				$available_votes = $strategy_user->user_current_votes($this, $last_block_id, $current_round_id);
 				
-				$log_text .= $strategy_user->db_user['username'].": ".$this->app->format_bignum($free_balance/pow(10,8))." coins (".$mature_balance.") ".$db_user['voting_strategy']."<br/>";
+				$log_text .= $strategy_user->db_user['username'].": ".$this->app->format_bignum($free_balance/pow(10,8))." coins (".$mature_balance.") ".$db_user['voting_strategy']."<br/>\n";
 				
 				if ($free_balance > 0 && $available_votes > 0) {
 					if ($db_user['voting_strategy'] == "api") {
@@ -1185,7 +1188,7 @@ class Game {
 					else {
 						$pct_free = 100*$mature_balance/$user_coin_value;
 						
-						if ($pct_free >= $strategy_user->db_user['aggregate_threshold']) {
+						if ($pct_free >= $db_user['aggregate_threshold']) {
 							$round_stats = $this->round_voting_stats_all($current_round_id);
 							$score_sum = $round_stats[0];
 							$ranked_stats = $round_stats[2];
@@ -1210,16 +1213,19 @@ class Game {
 							while ($voting_option = $rr->fetch()) {
 								if ($db_user['voting_strategy'] == "by_option") {
 									$by_option_pct_points = 0;
-									if ($strategy_option_points[$voting_option['option_id']]) $by_option_pct_points = $strategy_option_points[$voting_option['option_id']];
+									if (empty($strategy_option_points[$voting_option['option_id']])) $by_option_pct_points = 0;
+									else $by_option_pct_points = $strategy_option_points[$voting_option['option_id']];
 									$option_pct_sum += $by_option_pct_points;
 								}
 								
-								$pct_of_votes = 100*$ranked_stats[$option_id2rank[$voting_option['option_id']]]['voting_sum']/$score_sum;
-								if ($pct_of_votes >= $strategy_user->db_user['min_votesum_pct'] && $pct_of_votes <= $strategy_user->db_user['max_votesum_pct']) {}
-								else {
-									$skipped_options[$voting_option['option_id']] = TRUE;
-									if ($db_user == "by_option") $skipped_pct_points += $by_option_pct_points;
-									else if (in_array($option_id2rank[$voting_option['option_id']], $by_rank_ranks)) $num_options_skipped++;
+								if ($score_sum > 0) {
+									$pct_of_votes = 100*$ranked_stats[$option_id2rank[$voting_option['option_id']]]['votes']/$score_sum;
+									if ($pct_of_votes >= $db_user['min_votesum_pct'] && $pct_of_votes <= $db_user['max_votesum_pct']) {}
+									else {
+										$skipped_options[$voting_option['option_id']] = TRUE;
+										if ($db_user == "by_option") $skipped_pct_points += $by_option_pct_points;
+										else if (in_array($option_id2rank[$voting_option['option_id']], $by_rank_ranks)) $num_options_skipped++;
+									}
 								}
 							}
 							
@@ -1239,7 +1245,7 @@ class Game {
 								
 								while ($voting_option = $rr->fetch()) {
 									$rank = $option_id2rank[$voting_option['option_id']]+1;
-									if (in_array($rank, $by_rank_ranks) && !$skipped_options[$ranked_stats[$rank-1]['option_id']]) {
+									if (in_array($rank, $by_rank_ranks) && empty($skipped_options[$ranked_stats[$rank-1]['option_id']])) {
 										$log_text .= "Vote ".round($coins_each/pow(10,8), 3)." coins for ".$ranked_stats[$rank-1]['name'].", ranked ".$rank."<br/>";
 										
 										$option_ids[count($option_ids)] = $ranked_stats[$rank-1]['option_id'];
@@ -1270,8 +1276,8 @@ class Game {
 									$rr = $this->app->run_query($qq);
 									while ($voting_option = $rr->fetch()) {
 										$by_option_pct_points = 0;
-										if ($strategy_option_points[$voting_option['option_id']]) $by_option_pct_points = $strategy_option_points[$voting_option['option_id']];
-										if (!$skipped_options[$voting_option['option_id']] && $by_option_pct_points > 0) {
+										if (!empty($strategy_option_points[$voting_option['option_id']])) $by_option_pct_points = $strategy_option_points[$voting_option['option_id']];
+										if (empty($skipped_options[$voting_option['option_id']]) && $by_option_pct_points > 0) {
 											$effective_frac = floor(pow(10,4)*$by_option_pct_points*$mult_factor)/pow(10,6);
 											$coin_amount = floor($effective_frac*($free_balance-$db_user['transaction_fee']));
 											
@@ -1850,13 +1856,13 @@ class Game {
 		$start_time = microtime(true);
 		$this->app->set_site_constant('walletnotify', $tx_hash);
 		
+		$html = "";
+		
 		if ($tx_hash != "") {
 			$q = "SELECT * FROM transactions WHERE tx_hash='".$tx_hash."';";
 			$r = $this->app->run_query($q);
 			
 			if ($r->rowCount() == 0) {
-				$html = "";
-				
 				$lastblock_id = $this->last_block_id();
 			
 				try {
@@ -2475,7 +2481,7 @@ class Game {
 									else if ($this->db_game['payout_weight'] == "coin_round") $votes = $output_crd;
 									else $votes = 0;
 
-									$votes = floor($votes*$this->block_id_to_taper_factor($block_id));
+									$votes = floor($votes*$this->block_id_to_taper_factor($block_height));
 									$q = "UPDATE transaction_ios SET votes='".$votes."' WHERE io_id='".$db_output['io_id']."';";
 									$r = $this->app->run_query($q);
 								}
@@ -2510,15 +2516,17 @@ class Game {
 		$keep_looping = true;
 
 		do {
-			$nextblockhash = $current_block['nextblockhash'];
 			$block_height++;
 			
-			if ($nextblockhash) {
+			if (empty($current_block['nextblockhash'])) {
+				$keep_looping = false;
+			}
+			else {
+				$nextblockhash = $current_block['nextblockhash'];
 				$current_block = $coin_rpc->getblock($nextblockhash);
 				
 				echo $this->coind_add_block($coin_rpc, $nextblockhash, $block_height);
 			}
-			else $keep_looping = false;
 		}
 		while ($keep_looping);
 

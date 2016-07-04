@@ -1,5 +1,6 @@
 <?php
-include("../includes/connect.php");
+$host_not_required = TRUE;
+include(realpath(dirname(__FILE__))."/../includes/connect.php");
 
 $game_q = "SELECT * FROM games;";
 $game_r = $app->run_query($game_q);

@@ -94,7 +94,7 @@ if ($thisuser || $_REQUEST['refresh_page'] == "game") {
 		$round_stats = $round_stats[2];
 		
 		$stats_output = false;
-		for ($option_id=1; $option_id<=$game->db_game['num_voting_options']; $option_id++) {
+		for ($option_id=0; $option_id<$game->db_game['num_voting_options']; $option_id++) {
 			$option = $round_stats[$option_id2rank[$option_id]];
 			if (!$option['last_win_round']) $losing_streak = false;
 			else $losing_streak = $current_round - $option['last_win_round'] - 1;

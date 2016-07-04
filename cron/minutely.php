@@ -67,6 +67,7 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$r = $app->run_query($q);
 	while ($running_game = $r->fetch()) {
 		$running_games[count($running_games)] = new Game($app, $running_game['game_id']);
+		echo "Including game: ".$running_game['name']."<br/>\n";
 	}
 	
 	if ($real_game->db_game['game_status'] == "running") {
@@ -96,7 +97,7 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			$num_addr = $rr->fetch(PDO::FETCH_NUM);
 			$num_addr = $num_addr[0];
 			if ($num_addr < $GLOBALS['min_unallocated_addresses']) {
-				echo "Add ".($GLOBALS['min_unallocated_addresses']-$num_addr)." for ".$option['name']."<br/>\n";
+				echo "Generate ".($GLOBALS['min_unallocated_addresses']-$num_addr)." unallocated ".$option['name']." addresses in \"".$real_game->db_game['name']."\"<br/>\n";
 				for ($i=0; $i<($GLOBALS['min_unallocated_addresses']-$num_addr); $i++) {
 					$new_addr_str = $coin_rpc->getnewvotingaddress($option['name']);
 					$new_addr_db = $real_game->create_or_fetch_address($new_addr_str, false, $coin_rpc, true, false);
@@ -124,7 +125,7 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 						
 						$block_prob = min(1, round($seconds_to_sleep/$running_games[$game_i]->db_game['seconds_per_block'], 4));
 						$rand_num = rand(0, pow(10,4))/pow(10,4);
-						if ($_REQUEST['force_new_block'] == "1") $rand_num = 0;
+						if (!empty($_REQUEST['force_new_block'])) $rand_num = 0;
 						
 						echo $running_games[$game_i]->db_game['name']." (".$rand_num." vs ".$block_prob."): ";
 						if ($rand_num <= $block_prob) {
