@@ -420,7 +420,6 @@ $mature_balance = mature_balance($game, $thisuser);
 		</script>
 		
 		<h1><?php
-		if ($game['game_id'] != get_site_constant('primary_game_id')) echo $GLOBALS['site_name_short']." - ";
 		echo $game['name'];
 		if ($game['game_status'] == "paused" || $game['game_status'] == "unstarted") echo " (Paused)";
 		?></h1>

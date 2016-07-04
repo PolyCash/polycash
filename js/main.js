@@ -517,17 +517,17 @@ function input_amount_sums() {
 function set_input_amount_sums() {
 	var amount_sums = input_amount_sums();
 	
-	$('#input_amount_sum').html((Math.round(amount_sums[0]/Math.pow(10,6))/Math.pow(10,2)).toLocaleString()+" coins");
+	$('#input_amount_sum').html(format_coins(amount_sums[0]/Math.pow(10,8))+" coins");
 	
 	if (payout_weight == 'coin_block') {
-		$('#input_vote_sum').html((Math.round(amount_sums[1]/Math.pow(10,6))/Math.pow(10,2)).toLocaleString()+" votes");
+		$('#input_vote_sum').html(format_coins(amount_sums[1]/Math.pow(10,8))+" votes");
 	}
 }
 function render_selected_utxo(index_id) {
 	var score_qty = 0;
 	if (payout_weight == "coin") score_qty = vote_inputs[index_id].amount;
 	else score_qty = (1 + last_block_id - vote_inputs[index_id].create_block_id)*vote_inputs[index_id].amount;
-	var render_text = (Math.round(score_qty/Math.pow(10,6))/Math.pow(10,2)).toLocaleString();
+	var render_text = format_coins(score_qty/Math.pow(10,8));
 	if (payout_weight == "coin") render_text += ' coins';
 	else render_text += ' votes';
 	render_text += ' &nbsp;&nbsp; <font style="cursor: pointer" onclick="remove_utxo_from_vote('+index_id+');">&#215;</font>';
@@ -668,7 +668,7 @@ function refresh_output_amounts() {
 			var output_val = 0;
 			if (payout_weight == "coin") output_val = output_coins;
 			else output_val = output_score;
-			var output_val_disp = (Math.round(output_val/Math.pow(10,6))/Math.pow(10,2)).toLocaleString();
+			var output_val_disp = format_coins(output_val/Math.pow(10,8));
 			if (payout_weight == "coin") output_val_disp += " coins";
 			else output_val_disp += " votes";
 			$('#output_amount_disp_'+i).html(output_val_disp);
@@ -685,9 +685,7 @@ function rtrim(str, charlist) {
   return (str + '')
     .replace(re, '');
 }
-function format_coins(amount_int) {
-	var amount = amount_int/Math.pow(10,8);
-	
+function format_coins(amount) {
 	if (amount > Math.pow(10, 10)) {
 		return (amount/Math.pow(10, 9)).toPrecision(4)+"B";
 	}
@@ -705,9 +703,9 @@ function refresh_mature_io_btns() {
 		var votes;
 		if (payout_weight == 'coin') votes = mature_ios[i].amount;
 		else votes = ((1 + last_block_id - mature_ios[i].create_block_id)*mature_ios[i].amount);
-		select_btn_text += 'Add '+format_coins(votes);
+		select_btn_text += 'Add '+format_coins(votes/Math.pow(10,8));
 		select_btn_text += ' votes';
-		if (payout_weight == 'coin_block') select_btn_text += "<br/>("+format_coins(mature_ios[i].amount)+" coins)";
+		if (payout_weight == 'coin_block') select_btn_text += "<br/>("+format_coins(mature_ios[i].amount/Math.pow(10,8))+" coins)";
 		$('#select_utxo_'+mature_ios[i].io_id).html(select_btn_text);
 	}
 	for (var i=0; i<vote_inputs.length; i++) {
@@ -835,7 +833,7 @@ function refresh_nation_bet_amounts() {
 			
 			if (i == nation_bets.length - 1) bet_coins = coin_sum - bet_coins_sum;
 			
-			var output_val_disp = (Math.round(bet_coins/Math.pow(10,6))/Math.pow(10,2)).toLocaleString()+" coins";
+			var output_val_disp = format_coins(bet_coins/Math.pow(10,8))+" coins";
 			if (coin_sum > 0) output_val_disp += " ("+(Math.round(1000*bet_coins/coin_sum)/10)+"%)";
 			$('#nation_bet_amount_disp_'+i).html(output_val_disp);
 			
@@ -1116,5 +1114,5 @@ function match_refresh_loop(match_id) {
 	setTimeout("match_refresh_loop("+match_id+");", 1000);
 }
 function render_tx_fee() {
-	$('#display_tx_fee').html("TX fee: "+(fee_amount/Math.pow(10,8)).toLocaleString()+" coins");
+	$('#display_tx_fee').html("TX fee: "+format_coins(fee_amount/Math.pow(10,8))+" coins");
 }
