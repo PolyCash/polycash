@@ -67,6 +67,10 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				
 				$app->set_site_constant('primary_game_id', $testnet_game_id);
 			}
+			else {
+				$db_testnet_game = $r->fetch();
+				$testnet_game = new Game($app, $db_testnet_game['game_id']);
+			}
 			
 			$q = "SELECT * FROM currency_prices WHERE currency_id=1 AND reference_currency_id=1;";
 			$r = $app->run_query($q);
@@ -154,7 +158,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				<br/>
 				<?php
 				try {
-					$coin_rpc = new jsonRPCClient('http://'.$testnet_game->db_game['rpc_username'].':'.$testnet_game['rpc_password'].'@127.0.0.1:'.$testnet_game['rpc_port'].'/');
+					$coin_rpc = new jsonRPCClient('http://'.$testnet_game->db_game['rpc_username'].':'.$testnet_game->db_game['rpc_password'].'@127.0.0.1:'.$testnet_game->db_game['rpc_port'].'/');
 					$getinfo = $coin_rpc->getinfo();
 					echo "Great, you're connected to ".$GLOBALS['coin_brand_name']." core.<br/>\n";
 					echo "<pre>getinfo()\n";
