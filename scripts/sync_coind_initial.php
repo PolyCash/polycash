@@ -38,7 +38,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			$db_prev_block = $r->fetch();
 			$temp_block = $coin_rpc->getblock($db_prev_block['block_hash']);
 			$current_hash = $temp_block['nextblockhash'];
-			$game->delete_blocks_from_height($block_height);
+			$game->delete_blocks_from_height($block_height+1);
 		}
 		else die("Error, that block was not found (".$r->rowCount().").");
 	}
@@ -47,16 +47,19 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		
 		if ($r->rowCount() == 0) {
 			$game->delete_reset_game('reset');
-
+			
 			$q = "DELETE FROM addresses WHERE game_id='".$game->db_game['game_id']."';";
 			$app->run_query($q);
-		
+			
 			$returnvals = $game->add_genesis_block($coin_rpc);
 			$current_hash = $returnvals['nextblockhash'];
 		}
 		else {
 			$db_block = $r->fetch();
 			$current_hash = $db_block['block_hash'];
+			$rpc_genesis_block = $coin_rpc->getblock($current_hash);
+			$current_hash = $rpc_genesis_block['nextblockhash'];
+			$game->delete_blocks_from_height(1);
 		}
 	}
 	

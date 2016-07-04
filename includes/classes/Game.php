@@ -2343,6 +2343,7 @@ class Game {
 			$lastblock_rpc = $coin_rpc->getblock($block_hash);
 		}
 		catch (Exception $e) {
+			$this->app->set_site_constant("sync_in_progress", "0");
 			var_dump($e);
 			die("RPC failed to get block $block_hash");
 		}
@@ -2381,6 +2382,7 @@ class Game {
 						$transaction_rpc = $coin_rpc->decoderawtransaction($raw_transaction);
 					}
 					catch (Exception $e) {
+						$this->app->set_site_constant("sync_in_progress", "0");
 						die("Error, transaction ".$tx_hash." was not found in block ".$block_height.".");
 					}
 					
@@ -2430,6 +2432,7 @@ class Game {
 					$transaction_rpc = $coin_rpc->decoderawtransaction($raw_transaction);
 				}
 				catch (Exception $e) {
+					$this->app->set_site_constant("sync_in_progress", "0");
 					var_dump($e);
 					die("Failed to get transaction ".$tx_hash);
 				}
@@ -2465,13 +2468,13 @@ class Game {
 						}
 						else {
 							$transaction_error = true;
-							$html .= "Error in block ".$block_height.", Nothing found for: ".$q."\n";
+							$html .= "Error in block ".$block_height.", Nothing found for: ".$q."<br/>\n";
 						}
 					}
 					
 					if (!$transaction_error && $input_sum >= $output_sum) {
 						if (count($spend_io_ids) > 0) {
-							$q = "UPDATE transaction_ios SET spend_status='spent', spend_transaction_id='".$transaction['transaction_id']."' WHERE io_id IN (".implode(",", $spend_io_ids).");";
+							$q = "UPDATE transaction_ios SET spend_status='spent', spend_transaction_id='".$transaction['transaction_id']."', spend_block_id='".$block_height."' WHERE io_id IN (".implode(",", $spend_io_ids).");";
 							$r = $this->app->run_query($q);
 							
 							$q = "UPDATE transactions SET fee_amount='".($input_sum-$output_sum)."' WHERE transaction_id='".$transaction['transaction_id']."';";
@@ -2495,6 +2498,7 @@ class Game {
 									$votes = floor($votes*$this->block_id_to_taper_factor($block_height));
 									$q = "UPDATE transaction_ios SET votes='".$votes."' WHERE io_id='".$db_output['io_id']."';";
 									$r = $this->app->run_query($q);
+									$html .= $q."<br/>\n";
 								}
 							}
 
@@ -2502,7 +2506,7 @@ class Game {
 						}
 					}
 					else {
-						$html .= "Error in transaction #".$transaction['transaction_id']." (".$input_sum." vs ".$output_sum.")\n";
+						$html .= "Error in transaction #".$transaction['transaction_id']." (".$input_sum." vs ".$output_sum.")<br/>\n";
 					}
 				}
 			}
@@ -2515,74 +2519,92 @@ class Game {
 	
 	public function sync_coind(&$coin_rpc) {
 		$html = "";
-		$last_block_id = $this->last_block_id();
-
-		$startblock_q = "SELECT * FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id='".$last_block_id."';";
-		$startblock_r = $this->app->run_query($startblock_q);
+		$sync_in_progress = $this->app->get_site_constant("sync_in_progress");
 		
-		if ($startblock_r->rowCount() == 0) {
-			if ($last_block_id == 0) {
-				$this->add_genesis_block($coin_rpc);
-				$startblock_r = $this->app->run_query($startblock_q);
-			}
-			else die("sync_coind failed, block $last_block_id is missing.\n");
+		if ($sync_in_progress == "1") {
+			$html = "Synchronization is already running, skipping...\n";
 		}
+		else {
+			$this->app->set_site_constant("sync_in_progress", "1");
+			
+			$last_block_id = $this->last_block_id();
+
+			$startblock_q = "SELECT * FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id='".$last_block_id."';";
+			$startblock_r = $this->app->run_query($startblock_q);
 		
-		if ($startblock_r->rowCount() == 1) {
-			$last_block = $startblock_r->fetch();
-			
-			$current_block = $coin_rpc->getblock($last_block['block_hash']);
-			
-			if ($current_block['confirmations'] < 0) {
-				$delete_block_height = $last_block_id;
-				$delete_block = $current_block;
-				$keep_looping = true;
-				do {
-					$prev_block = $coin_rpc->getblock($delete_block['previousblockhash']);
-					if ($prev_block['confirmations'] < 0) {
-						$delete_block = $prev_block;
-						$delete_block_height--;
-					}
-					else $keep_looping = false;
-				}
-				while ($keep_looping);
-			
-				$this->delete_blocks_from_height($delete_block_height);
-
-				$last_block_id = $this->last_block_id();
-
-				$q = "SELECT * FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id='".$last_block_id."';";
-				$r = $this->app->run_query($q);
-				$last_block = $r->fetch();
-	
-				$current_block = $coin_rpc->getblock($last_block['block_hash']);
-			}
-		
-			$block_height = $last_block['block_id'];
-			$keep_looping = true;
-
-			do {
-				$block_height++;
-			
-				if (empty($current_block['nextblockhash'])) {
-					$keep_looping = false;
+			if ($startblock_r->rowCount() == 0) {
+				if ($last_block_id == 0) {
+					$this->add_genesis_block($coin_rpc);
+					$startblock_r = $this->app->run_query($startblock_q);
 				}
 				else {
-					$nextblockhash = $current_block['nextblockhash'];
-					$current_block = $coin_rpc->getblock($nextblockhash);
-				
-					echo $this->coind_add_block($coin_rpc, $nextblockhash, $block_height);
+					$this->app->set_site_constant("sync_in_progress", "0");
+					die("sync_coind failed, block $last_block_id is missing.\n");
 				}
 			}
-			while ($keep_looping);
+		
+			if ($startblock_r->rowCount() == 1) {
+				$last_block = $startblock_r->fetch();
+			
+				$current_block = $coin_rpc->getblock($last_block['block_hash']);
+			
+				if ($current_block['confirmations'] < 0) {
+					$this->app->log("Detected a chain fork at block #".$last_block['block_id']);
+					
+					$delete_block_height = $last_block_id;
+					$delete_block = $current_block;
+					$keep_looping = true;
+					do {
+						$prev_block = $coin_rpc->getblock($delete_block['previousblockhash']);
+						if ($prev_block['confirmations'] < 0) {
+							$delete_block = $prev_block;
+							$delete_block_height--;
+						}
+						else $keep_looping = false;
+					}
+					while ($keep_looping);
+					
+					$this->app->log("Deleting blocks #".$delete_block_height." and above.");
+					
+					$this->delete_blocks_from_height($delete_block_height);
 
-			$unconfirmed_txs = $coin_rpc->getrawmempool();
-			$html .= "Looping through ".count($unconfirmed_txs)." unconfirmed transactions.<br/>\n";
-			for ($i=0; $i<count($unconfirmed_txs); $i++) {
-				$this->walletnotify($coin_rpc, $unconfirmed_txs[$i]);
+					$last_block_id = $this->last_block_id();
+
+					$q = "SELECT * FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id='".$last_block_id."';";
+					$r = $this->app->run_query($q);
+					$last_block = $r->fetch();
+	
+					$current_block = $coin_rpc->getblock($last_block['block_hash']);
+				}
+		
+				$block_height = $last_block['block_id'];
+				$keep_looping = true;
+
+				do {
+					$block_height++;
+			
+					if (empty($current_block['nextblockhash'])) {
+						$keep_looping = false;
+					}
+					else {
+						$nextblockhash = $current_block['nextblockhash'];
+						$current_block = $coin_rpc->getblock($nextblockhash);
+				
+						echo $this->coind_add_block($coin_rpc, $nextblockhash, $block_height);
+					}
+				}
+				while ($keep_looping);
+
+				$unconfirmed_txs = $coin_rpc->getrawmempool();
+				$html .= "Looping through ".count($unconfirmed_txs)." unconfirmed transactions.<br/>\n";
+				for ($i=0; $i<count($unconfirmed_txs); $i++) {
+					$this->walletnotify($coin_rpc, $unconfirmed_txs[$i]);
+				}
+
+				$this->update_option_scores();
 			}
-
-			$this->update_option_scores();
+			
+			$this->app->set_site_constant("sync_in_progress", "0");
 		}
 		
 		return $html;
@@ -2600,6 +2622,7 @@ class Game {
 	}
 	
 	function delete_blocks_from_height($block_height) {
+		echo "deleting from block #".$block_height." and up.<br/>\n";
 		$this->app->run_query("DELETE FROM transactions WHERE game_id='".$this->db_game['game_id']."' AND block_id >= ".$block_height.";");
 		$this->app->run_query("DELETE FROM transaction_ios WHERE game_id='".$this->db_game['game_id']."' AND create_block_id >= ".$block_height.";");
 		$this->app->run_query("UPDATE transaction_ios SET spend_round_id=NULL, coin_blocks_created=0, coin_rounds_created=0, votes=0, spend_transaction_id=NULL, spend_status='unspent', payout_io_id=NULL WHERE game_id='".$this->db_game['game_id']."' AND spend_block_id >= ".$block_height.";");

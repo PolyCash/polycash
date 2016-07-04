@@ -534,9 +534,14 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				while ($transaction_io = $r->fetch()) {
 					$block_index = $game->block_id_to_round_index($transaction_io['block_id']);
 					$round_id = $game->block_to_round($transaction_io['block_id']);
-					$desc = "Confirmed in ";
-					if ($block_index != 0) $desc .= "the <a href=\"/explorer/".$game->db_game['url_identifier']."/blocks/".$transaction_io['block_id']."\">".date("jS", strtotime("1/".$block_index."/2015"))." block</a> of ";
-					$desc .= "<a href=\"/explorer/".$game->db_game['url_identifier']."/rounds/".$round_id."\">round ".$round_id."</a>";
+					if ($transaction_io['block_id'] == "") {
+						$desc = "This transaction has not yet been confirmed.";
+					}
+					else {
+						$desc = "Confirmed in ";
+						if ($block_index != 0) $desc .= "the <a href=\"/explorer/".$game->db_game['url_identifier']."/blocks/".$transaction_io['block_id']."\">".date("jS", strtotime("1/".$block_index."/2015"))." block</a> of ";
+						$desc .= "<a href=\"/explorer/".$game->db_game['url_identifier']."/rounds/".$round_id."\">round ".$round_id."</a>";
+					}
 					echo $game->render_transaction($transaction_io, $address['address_id'], $desc);
 				}
 				echo "</div>\n";

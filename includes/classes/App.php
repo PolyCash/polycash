@@ -628,5 +628,8 @@ class App {
 		$update_user_id_q .= ";";
 		$update_user_id_r = $this->run_query($update_user_id_q);
 	}
+	public function log($message) {
+		$this->run_query("INSERT INTO log_messages SET message=".$this->quote_escape($message).";");
+	}
 }
 ?>

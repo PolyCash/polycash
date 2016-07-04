@@ -149,4 +149,13 @@ ALTER TABLE `cached_rounds`
   DROP `position_16`;
 ALTER TABLE `strategy_round_allocations` ADD UNIQUE (`strategy_id`, `round_id`, `option_id`);
 ALTER TABLE `strategy_round_allocations` ADD INDEX (`strategy_id`, `round_id`);
+CREATE TABLE `log_messages` (
+  `message_id` int(11) NOT NULL,
+  `message` varchar(255) NOT NULL DEFAULT '',
+  `timestamp` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+ALTER TABLE `log_messages`
+  ADD PRIMARY KEY (`message_id`);
+ALTER TABLE `log_messages`
+  MODIFY `message_id` int(11) NOT NULL AUTO_INCREMENT;
 
