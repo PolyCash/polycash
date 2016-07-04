@@ -6,6 +6,8 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$r = run_query($q);
 
 	while ($mandatory_game = mysql_fetch_array($r)) {
+		ensure_game_options($mandatory_game);
+		
 		if ($mandatory_game['creator_id'] > 0) {}
 		else {
 			$qq = "SELECT * FROM users;";
