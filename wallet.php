@@ -44,7 +44,7 @@ if ($_REQUEST['do'] == "signup") {
 				else {
 					$verify_code = random_string(32);
 					
-					$query = "INSERT INTO users SET first_name='".$first."', last_name='".$last."', username='".$email."', api_access_code='".mysql_real_escape_string(random_string(32))."', password='".$new_pass_hash."', ip_address='".mysql_real_escape_string($_SERVER['REMOTE_ADDR'])."', time_created='".time()."', verify_code='".$verify_code."';";
+					$query = "INSERT INTO users SET first_name='".$first."', last_name='".$last."', username='".$email."', notification_email='".$email."', api_access_code='".mysql_real_escape_string(random_string(32))."', password='".$new_pass_hash."', ip_address='".mysql_real_escape_string($_SERVER['REMOTE_ADDR'])."', time_created='".time()."', verify_code='".$verify_code."';";
 					$result = run_query($query);
 					$user_id = mysql_insert_id();
 					
@@ -250,7 +250,7 @@ $current_round = block_to_round($last_block_id+1);
 $block_within_round = $last_block_id%get_site_constant('round_length')+1;
 $mature_balance = $account_value - $immature_balance;
 ?>
-<div class="container" style="max-width: 1000px; padding-top: 15px;">
+<div class="container" style="max-width: 1000px;">
 	<?php
 	if ($message != "") {
 		echo "<font style=\"color: #";
@@ -298,6 +298,11 @@ $mature_balance = $account_value - $immature_balance;
 				$('#vote_confirm_'+nation_id).modal('toggle');
 				$('#vote_details_'+nation_id).html($('#vote_details_general').html());
 				$('#vote_amount_'+nation_id).focus();
+				// Line below is needed to reselect the nation button which has accidentally been unselected by the modal
+				setTimeout('nation_selected('+$('#nation_id2rank_'+nation_id).val()+');', 100);
+			}
+			else {
+				alert('Voting is currently disabled.');
 			}
 		}
 		
@@ -410,6 +415,10 @@ $mature_balance = $account_value - $immature_balance;
 						$('#wallet_text_stats').fadeIn('fast');
 						var vote_nation_details = json_result['vote_nation_details'];
 						
+						$('#my_current_votes').html(json_result['my_current_votes']);
+						$('#my_current_votes').hide();
+						$('#my_current_votes').fadeIn('fast');
+						
 						for (var nation_id=1; nation_id<=16; nation_id++) {
 							$('#vote_nation_details_'+nation_id).html(vote_nation_details[nation_id]);
 						}
@@ -423,6 +432,8 @@ $mature_balance = $account_value - $immature_balance;
 			refresh_if_needed();
 		});
 		</script>
+		
+		<h1>EmpireCoin</h1>
 		<?php
 		include("includes/wallet_status.php");
 		?>
@@ -437,39 +448,47 @@ $mature_balance = $account_value - $immature_balance;
 		</div>
 		
 		<div class="row">
-			<div class="col-xs-2 tabcell" id="tabcell0" onclick="tab_clicked(0);">Vote Now</div>
-			<div class="col-xs-2 tabcell" id="tabcell1" onclick="tab_clicked(1);">Voting Strategy</div>
-			<div class="col-xs-2 tabcell" id="tabcell2" onclick="tab_clicked(2);">Performance History</div>
-			<div class="col-xs-2 tabcell" id="tabcell3" onclick="tab_clicked(3);">My Addresses</div>
-			<div class="col-xs-2 tabcell" id="tabcell4" onclick="tab_clicked(4);">Deposit / Withdraw</div>
+			<div class="col-xs-2 tabcell" id="tabcell0" onclick="tab_clicked(0);">Play&nbsp;Now</div>
+			<div class="col-xs-2 tabcell" id="tabcell5" onclick="tab_clicked(5);">Practice</div>
+			<div class="col-xs-2 tabcell" id="tabcell1" onclick="tab_clicked(1);">Options</div>
+			<div class="col-xs-2 tabcell" id="tabcell2" onclick="tab_clicked(2);">My&nbsp;Results</div>
+			<div class="col-xs-2 tabcell" id="tabcell3" onclick="tab_clicked(3);">Addresses</div>
+			<div class="col-xs-2 tabcell" id="tabcell4" onclick="tab_clicked(4);">Withdraw</div>
 		</div>
 		<div class="row">
 			<div id="tabcontent0" style="display: none;" class="tabcontent">
 				<?php
 				$round_stats = round_voting_stats_all($current_round);
-				$totalVoteSum = $round_stats[0];
+				$total_vote_sum = $round_stats[0];
 				$maxVoteSum = $round_stats[1];
 				$nation_id_to_rank = $round_stats[3];
 				$round_stats = $round_stats[2];
 				?>
-				<div id="vote_buttons_disabled"<?php if (($last_block_id+1)%get_site_constant('round_length') != 0) echo ' style="display: none;"'; ?>>
-					The final block of the round is being mined. Voting is currently disabled.
-				</div>
-				
-				<div id="vote_buttons"<?php if (($last_block_id+1)%get_site_constant('round_length') == 0) echo ' style="display: none;"'; ?>>
-					To cast a vote please click on any of the empires below.<br/>
+				<script type="text/javascript">
+				var selected_nation_id = false;
+				function nation_selected(nation_id) {
+					if (selected_nation_id !== false) nation_deselected(selected_nation_id);
+					$('#vote_nation_'+nation_id).addClass('vote_nation_box_sel');
+					selected_nation_id = nation_id;
+				}
+				function nation_deselected(nation_id) {
+					$('#vote_nation_'+nation_id).removeClass('vote_nation_box_sel');
+					selected_nation_id = false;
+				}
+				$(document).ready(function() {
+					nation_selected(0);
+				});
+				</script>
+				<div id="vote_buttons">
 					<?php
-					$nation_q = "SELECT * FROM nations ORDER BY vote_id ASC;";
+					$nation_q = "SELECT * FROM nations ORDER BY nation_id ASC;";
 					$nation_r = run_query($nation_q);
-					$n_counter = 1;
+					
+					$nation_id = 0;
 					while ($nation = mysql_fetch_array($nation_r)) {
 						$rank = $nation_id_to_rank[$nation['nation_id']]+1;
-						$voting_sum = $round_stats[$nation_id_to_rank[$nation['nation_id']]]['voting_sum'];
+						$voting_sum = $round_stats[$nation_id_to_rank[$nation['nation_id']]]['coins_currently_voted'];
 						?>
-						<div class="vote_nation_box" onclick="start_vote(<?php echo $nation['nation_id']; ?>);">
-							<div class="vote_nation_flag <?php echo strtolower(str_replace(' ', '', $nation['name'])); ?>"></div>
-							<div class="vote_nation_flag_label"><?php echo $n_counter.". ".$nation['name']; ?></div>
-						</div>
 						<div style="display: none;" class="modal fade" id="vote_confirm_<?php echo $nation['nation_id']; ?>">
 							<div class="modal-dialog">
 								<div class="modal-content">
@@ -477,7 +496,7 @@ $mature_balance = $account_value - $immature_balance;
 										<h2>Vote for <?php echo $nation['name']; ?></h2>
 										<div id="vote_nation_details_<?php echo $nation['nation_id']; ?>">
 											<?php
-											echo vote_nation_details($nation, $rank, $voting_sum, $totalVoteSum);
+											echo vote_nation_details($nation, $rank, $voting_sum, $total_vote_sum, $nation['losing_streak']);
 											?>
 										</div>
 										<div id="vote_details_<?php echo $nation['nation_id']; ?>"></div>
@@ -509,14 +528,90 @@ $mature_balance = $account_value - $immature_balance;
 					?>
 				</div>
 				
-				<br/>
-				<div style="margin-top: 15px; border: 1px solid #aaa; padding: 10px; border-radius: 8px;" id="current_round_table">
+				<div class="row">
+					<div class="col-md-6">
+						<div id="my_current_votes">
+							<?php
+							echo my_votes_table($current_round, $thisuser);
+							?>
+						</div>
+					</div>
+				</div>
+				
+				<br/>To cast a vote please click on any of the empires below.<br/>
+				
+				<div id="vote_buttons_disabled"<?php if (($last_block_id+1)%get_site_constant('round_length') != 0) echo ' style="display: none;"'; ?>>
+					The final block of the round is being mined. Voting is currently disabled.
+				</div>
+				<div id="current_round_table">
 					<?php
 					echo current_round_table($current_round, $thisuser, true, true);
 					?>
 				</div>
 			</div>
 			<div id="tabcontent1" style="display: none;" class="tabcontent">
+				<script type="text/javascript">
+				var initial_notification_pref = "<?php echo $thisuser['notification_preference']; ?>";
+				var initial_notification_email = "<?php echo $thisuser['notification_email']; ?>";
+				var started_checking_notification_settings = false;
+				
+				function notification_pref_changed() {
+					var notification_pref = $('#notification_preference').val();
+					if (notification_pref == "email") {
+						$('#notification_email').show('fast');
+						$('#notification_email').focus();
+					}
+					else {
+						$('#notification_email').hide();
+					}
+				}
+				function notification_focused() {
+					if (!started_checking_notification_settings) {
+						check_notification_settings();
+						started_checking_notification_settings = true;
+					}
+				}
+				function check_notification_settings() {
+					if ($('#notification_preference').val() != initial_notification_pref || $('#notification_email').val() != initial_notification_email) {
+						$('#notification_save_btn').show();
+					}
+					else {
+						$('#notification_save_btn').hide();
+					}
+					setTimeout("check_notification_settings();", 800);
+				}
+				function save_notification_preferences() {
+					if ($('#notification_save_btn').html() == "Save Notification Settings") {
+						var notification_pref = $('#notification_preference').val();
+						var notification_email = $('#notification_email').val();
+						$('#notification_save_btn').html("Saving...");
+						$.get("/ajax/set_notification_preference.php?preference="+encodeURIComponent(notification_pref)+"&email="+encodeURIComponent(notification_email), function(result) {
+							$('#notification_save_btn').html("Save Notification Settings");
+							initial_notification_pref = notification_pref;
+							initial_notification_email = notification_email;
+							alert(result);
+						});
+					}
+				}
+				$(document).ready(function() {
+					notification_pref_changed();
+				});
+				</script>
+				<h2>Notifications</h2>
+				You can receive notifications whenever your coins are unlocked and ready to vote.<br/>
+				<div class="row">
+					<div class="col-sm-6">
+						<select class="form-control" id="notification_preference" name="notification_preference" onfocus="notification_focused();" onchange="notification_pref_changed();">
+							<option <?php if ($thisuser['notification_preference'] == "none") echo 'selected="selected" '; ?>value="none">Don't send me any notifications</option>
+							<option <?php if ($thisuser['notification_preference'] == "email") echo 'selected="selected" '; ?>value="email">Send me an email notification when coins become available</option>
+						</select>
+					</div>
+					<div class="col-sm-6">
+						<input style="display: none;" class="form-control" type="text" name="notification_email" id="notification_email" onfocus="notification_focused();" placeholder="Enter your email address" value="<?php echo $thisuser['notification_email']; ?>" />
+					</div>
+				</div>
+				<button style="display: none;" id="notification_save_btn" class="btn btn-primary" onclick="save_notification_preferences();">Save Notification Settings</button>
+				<br/>
 				<h2>Choose your voting strategy</h2>
 				Instead of logging in every time you want to cast a vote, you can automate your voting behavior by choosing one of the automated voting strategies below. <br/><br/>
 				<form method="post" action="/wallet/">
@@ -734,6 +829,9 @@ $mature_balance = $account_value - $immature_balance;
 						<button class="btn btn-success" id="withdraw_btn" onclick="attempt_withdrawal();">Withdraw</button>
 					</div>
 				</div>
+			</div>
+			<div id="tabcontent5" style="display: none;" class="tabcontent">
+				<h1>Practice Mode</h1>
 			</div>
 		</div>
 		

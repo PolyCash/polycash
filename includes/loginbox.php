@@ -14,7 +14,7 @@ function autogen_password_changed() {
 	}
 }
 </script>
-<div class="row">
+<div class="row" style="padding-top: 20px;">
 	<div class="col-md-6">
 		<b style="font-size: 17px; line-height: 24px;">Please log in to continue</b>
 		<form onsubmit="$('#login_password').val(Sha256.hash($('#login_password').val()));" action="/wallet/" method="post">
@@ -25,13 +25,13 @@ function autogen_password_changed() {
 			<div class="row">
 				<div class="col-sm-4">Email Address:</div>
 				<div class="col-sm-6">
-					<input class="responsive_input" name="username" type="text" size="25" maxlength="40" value="<?php echo $email; ?>" />
+					<input class="responsive_input form-control" name="username" type="text" size="25" maxlength="40" value="<?php echo $email; ?>" />
 				</div>
 			</div>
 			<div class="row">
 				<div class="col-sm-4">Password:</div>
 				<div class="col-sm-6">
-					<input class="responsive_input" id="login_password" name="password" type="password" size="25" maxlength="25" />
+					<input class="responsive_input form-control" id="login_password" name="password" type="password" size="25" maxlength="25" />
 				</div>
 			</div>
 			<div class="row">
@@ -64,7 +64,7 @@ function autogen_password_changed() {
 			</div> */ ?>
 			<div class="row">
 				<div class="col-sm-10">
-					<select id="autogen_password" name="autogen_password" class="responsive_input" onchange="autogen_password_changed();">
+					<select id="autogen_password" name="autogen_password" class="responsive_input form-control" onchange="autogen_password_changed();">
 						<option value="1">Email me a random password</option>
 						<option value="0">I'll create my own password</option>
 					</select>
@@ -72,19 +72,19 @@ function autogen_password_changed() {
 			</div>
 			<div class="row">
 				<div class="col-sm-4">Email address:</div>
-				<div class="col-sm-6"><input type="text" name="email" size="25" class="responsive_input"></div>
+				<div class="col-sm-6"><input type="text" name="email" size="25" class="responsive_input form-control"></div>
 			</div>
 			<div style="display: none;" id="signup_password_disp">
 				<div class="row">
 					<div class="col-sm-4">Password:</div>
 					<div class="col-sm-6">
-						<input class="responsive_input" id="signup_password" name="password" type="password" size="25" maxlength="25" />
+						<input class="responsive_input form-control" id="signup_password" name="password" type="password" size="25" maxlength="25" />
 					</div>
 				</div>
 				<div class="row">
 					<div class="col-sm-4">Repeat Password:</div>
 					<div class="col-sm-6">
-						<input class="responsive_input" id="signup_password2" name="password2" type="password" size="25" maxlength="25" />
+						<input class="responsive_input form-control" id="signup_password2" name="password2" type="password" size="25" maxlength="25" />
 					</div>
 				</div>
 			</div>

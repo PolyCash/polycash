@@ -37,16 +37,17 @@ if ($thisuser) {
 	if ($last_block_id != $_REQUEST['last_block_id'] || $last_transaction_id != $_REQUEST['last_transaction_id']) {
 		$output['current_round_table'] = current_round_table($current_round, $thisuser, true, true);
 		$output['wallet_text_stats'] = wallet_text_stats($thisuser, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance);
+		$output['my_current_votes'] = my_votes_table($current_round, $thisuser);
 		
 		$round_stats = round_voting_stats_all($current_round);
-		$totalVoteSum = $round_stats[0];
+		$total_vote_sum = $round_stats[0];
 		$nation_id_to_rank = $round_stats[3];
 		$round_stats = $round_stats[2];
 		
 		$stats_output = false;
 		for ($nation_id=1; $nation_id<=16; $nation_id++) {
 			$nation = $round_stats[$nation_id_to_rank[$nation_id]];
-			$stats_output[$nation_id] = vote_nation_details($nation, $nation_id_to_rank[$nation['nation_id']]+1, $nation['voting_sum'], $totalVoteSum);
+			$stats_output[$nation_id] = vote_nation_details($nation, $nation_id_to_rank[$nation['nation_id']]+1, $nation['coins_currently_voted'], $total_vote_sum, $nation['losing_streak']);
 		}
 		$output['vote_nation_details'] = $stats_output;
 	}

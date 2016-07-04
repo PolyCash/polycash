@@ -47,9 +47,9 @@ if ($uri_parts[1] == "api") {
 			$api_stat['empire_id'] = $nation_id;
 			$api_stat['empire_name'] = $stat['name'];
 			$api_stat['rank'] = $nation_id_to_rank[$nation_id+1]+1;
-			$api_stat['force_multiplier'] = $stat['cached_force_multiplier'];
-			$api_stat['coins_voted'] = $stat['voting_sum'];
-			$api_stat['score'] = $stat['voting_score'];
+			//$api_stat['force_multiplier'] = $stat['cached_force_multiplier'];
+			$api_stat['coins_voted'] = $stat['coins_currently_voted'];
+			//$api_stat['score'] = $stat['voting_score'];
 			
 			$api_status['empires'][$nation_id] = $api_stat;
 		}

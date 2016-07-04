@@ -13,59 +13,86 @@ if ($_REQUEST['key'] == "2r987jifwow") {
 		
 		$voting_round = block_to_round($mining_block_id);
 		
-		if ($voting_round%100 == 1) {
-			$q = "UPDATE nations SET cached_force_multiplier=16, relevant_wins=1;";
+		if (get_site_constant('blocks_in_era') == 0 || $voting_round%get_site_constant('blocks_in_era') == 1) {
+			$q = "UPDATE nations SET cached_force_multiplier=".get_site_constant('num_voting_options').", relevant_wins=1;";
 			$r = run_query($q);
 		}
 		
 		echo "Created block $last_block_id<br/>\n";
 		
+		// Send notifications for coins that just became available
+		$q = "SELECT u.* FROM users u, webwallet_transactions t WHERE t.user_id=u.user_id AND u.notification_preference='email' AND u.notification_email != '' AND t.block_id='".($last_block_id - get_site_constant('maturity'))."' AND t.amount > 0 GROUP BY u.user_id;";
+		$r = run_query($q);
+		while ($notify_user = mysql_fetch_array($r)) {
+			$account_value = account_coin_value($notify_user);
+			$immature_balance = immature_balance($notify_user);
+			$mature_balance = $account_value - $immature_balance;
+			
+			if ($mature_balance >= $account_value*$notify_user['aggregate_threshold']/100) {
+				$subject = number_format($mature_balance, 5)." EmpireCoins are now available to vote.";
+				$message = "<p>Some of your EmpireCoins just became available.</p>";
+				$message .= "<p>You currently have ".number_format($mature_balance, 5)." coins available to vote. To cast a vote, please log in:</p>";
+				$message .= "<p><a href=\"http://empireco.in/wallet/\">http://empireco.in/wallet/</a></p>";
+				$message .= "<p>This message was sent by EmpireCo.in<br/>To disable these notifications, please log in and then click \"Voting Strategy\"";
+				
+				$delivery_id = mail_async($notify_user['notification_email'], "EmpireCo.in", "noreply@empireco.in", $subject, $message, "", "");
+				
+				echo "A notification of new coins available has been sent to ".$notify_user['notification_email'].".<br/>\n";
+			}
+		}
+		
+		// Run payouts
 		if ($last_block_id%get_site_constant('round_length') == 0) {
 			echo "<br/>Running payout on voting round #".($voting_round-1).", it's now round ".$voting_round."<br/>\n";
-			$round_voting_stats = round_voting_stats($voting_round-1);
+			$round_voting_stats = round_voting_stats_all($voting_round-1);
 			
-			$nation_votes = "";
-			$nation_names = "";
-			$vote_sum = 0;
-			
-			while ($nationsum = mysql_fetch_array($round_voting_stats)) {
-				$vote_sum += $nationsum['voting_sum'];
-				$nation_votes[$nationsum['nation_id']] = $nationsum['voting_sum'];
-				$nation_names[$nationsum['nation_id']] = $nationsum['name'];
-				$nation_scores[$nationsum['nation_id']] = $nationsum['voting_score'];
-				echo $nationsum['name']." has ".($nationsum['voting_sum']/(pow(10, 8)))." EMP voted with a score of ".$nationsum['voting_score']." points.<br/>\n";
-			}
-			
-			$maxVoteSum = floor($vote_sum*get_site_constant('max_voting_fraction'));
-			echo "Total votes: ".($vote_sum/(pow(10, 8)))." EMP<br/>\n";
-			echo "Cutoff: ".($maxVoteSum/(pow(10, 8)))." EMP<br/>\n";
+			$vote_sum = $round_voting_stats[0];
+			$max_vote_sum = $round_voting_stats[1];
+			$nation_id2rank = $round_voting_stats[3];
+			$round_voting_stats = $round_voting_stats[2];
 			
 			$winning_nation = FALSE;
 			$winning_votesum = 0;
 			$winning_score = 0;
-			for ($nation_id = 1; $nation_id <= 16; $nation_id++) {
-				if ($nation_votes[$nation_id] > $maxVoteSum) {}
-				else if ($nation_votes[$nation_id] > $winning_votesum) {
+			$rank = 1;
+			for ($rank=1; $rank<=get_site_constant('num_voting_options'); $rank++) {
+				$nation_id = $round_voting_stats[$rank-1]['nation_id'];
+				$nation_rank2db_id[$rank] = $nation_id;
+				$nation_score = nation_score_in_round($nation_id, $voting_round-1);
+				
+				if ($nation_score > $max_vote_sum) {}
+				else if (!$winning_nation && $nation_score > 0) {
 					$winning_nation = $nation_id;
-					$winning_votesum = $nation_votes[$nation_id];
-					$winning_score = $nation_scores[$nation_id];
+					$winning_votesum = $nation_score;
+					$winning_score = $nation_score;
 				}
 			}
 			
+			echo "Total votes: ".($vote_sum/(pow(10, 8)))." EMP<br/>\n";
+			echo "Cutoff: ".($max_vote_sum/(pow(10, 8)))." EMP<br/>\n";
+			
 			if ($winning_nation) {
-				$q = "UPDATE nations SET relevant_wins=relevant_wins+1 WHERE nation_id='".$winning_nation."';";
+				if (get_site_constant('blocks_in_era') > 0) {
+					$q = "UPDATE nations SET relevant_wins=relevant_wins+1 WHERE nation_id='".$winning_nation."';";
+					$r = run_query($q);
+					
+					$q = "UPDATE nations SET cached_force_multiplier=ROUND((16+".($voting_round%100 - 1).")/relevant_wins, 8);";
+					$r = run_query($q);
+				}
+				
+				$q = "UPDATE nations SET losing_streak=losing_streak+1;";
 				$r = run_query($q);
 				
-				$q = "UPDATE nations SET cached_force_multiplier=ROUND((16+".($voting_round%100 - 1).")/relevant_wins, 8);";
+				$q = "UPDATE nations SET losing_streak=0 WHERE nation_id='".$winning_nation."';";
 				$r = run_query($q);
 				
-				echo $nation_names[$winning_nation]." wins with ".($winning_votesum/(pow(10, 8)))." EMP voted and ".$winning_score." points.<br/>";
+				echo $round_voting_stats[$nation_id2rank[$winning_nation]]['name']." wins with ".($winning_votesum/(pow(10, 8)))." EMP voted.<br/>";
 				
 				$q = "SELECT * FROM webwallet_transactions t, users u WHERE t.user_id=u.user_id AND t.block_id >= ".((($voting_round-2)*get_site_constant('round_length'))+1)." AND t.block_id <= ".(($voting_round-1)*get_site_constant('round_length')-1)." AND t.amount > 0 AND t.nation_id=".$winning_nation.";";
 				$r = run_query($q);
 				
 				while ($transaction = mysql_fetch_array($r)) {
-					$payout_amount = floor(750*pow(10,8)*$transaction['amount']/$nation_votes[$winning_nation]);
+					$payout_amount = floor(750*pow(10,8)*$transaction['amount']/$winning_votesum);
 					$qq = "INSERT INTO webwallet_transactions SET currency_mode='beta', vote_transaction_id='".$transaction['transaction_id']."', transaction_desc='votebase', amount=".$payout_amount.", user_id='".$transaction['user_id']."', address_id='".user_address_id($transaction['user_id'], false)."', block_id='".$last_block_id."', time_created='".time()."';";
 					$rr = run_query($qq);
 					echo "Pay ".$payout_amount/(pow(10,8))." EMP to ".$transaction['username']."<br/>\n";
@@ -73,9 +100,14 @@ if ($_REQUEST['key'] == "2r987jifwow") {
 			}
 			else echo "No winner<br/>";
 			
+			echo "<br/>\n";
+			
 			$q = "INSERT INTO cached_rounds SET round_id='".($voting_round-1)."', payout_block_id='".$last_block_id."'";
 			if ($winning_nation) $q .= ", winning_nation_id='".$winning_nation."'";
-			$q .= ", winning_vote_sum='".$winning_votesum."', winning_score='".$winning_score."'";
+			$q .= ", winning_vote_sum='".$winning_votesum."', winning_score='".$winning_score."', time_created='".time()."'";
+			for ($position=1; $position<=16; $position++) {
+				$q .= ", position_".$position."='".$nation_rank2db_id[$position]."'";
+			}
 			$q .= ";";
 			$r = run_query($q);
 		}
@@ -145,11 +177,7 @@ if ($_REQUEST['key'] == "2r987jifwow") {
 								$vote_nation_id = $api_obj->recommendations[$rec_id]->empire_id + 1;
 								echo "Vote ".$vote_amount." for ".$vote_nation_id."<br/>\n";
 								
-								$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', nation_id='".$vote_nation_id."', transaction_desc='transaction', amount=".$vote_amount.", user_id='".$strategy_user['user_id']."', address_id='".user_address_id($strategy_user['user_id'], $vote_nation_id)."', block_id='".$mining_block_id."', time_created='".time()."';";
-								$r = run_query($q);
-								
-								$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', transaction_desc='transaction', amount=".(-1)*$vote_amount.", user_id='".$strategy_user['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
-								$r = run_query($q);
+								$transaction_id = new_webwallet_transaction('beta', $vote_nation_id, $vote_amount, $strategy_user['user_id'], $mining_block_id);
 							}
 						}
 					}
@@ -161,7 +189,7 @@ if ($_REQUEST['key'] == "2r987jifwow") {
 						$round_stats = round_voting_stats_all($current_round_id);
 						$totalVoteSum = $round_stats[0];
 						$ranked_stats = $round_stats[2];
-						$nation_id_to_rank = $round_stats[3];
+						$nation_id2rank = $round_stats[3];
 						
 						$nation_pct_sum = 0;
 						$skipped_pct_points = 0;
@@ -173,12 +201,12 @@ if ($_REQUEST['key'] == "2r987jifwow") {
 						for ($nation_id=1; $nation_id<=16; $nation_id++) {
 							if ($strategy_user['voting_strategy'] == "by_nation") $nation_pct_sum += $strategy_user['nation_pct_'.$nation_id];
 							
-							$pct_of_votes = 100*$ranked_stats[$nation_id_to_rank[$nation_id]]['voting_sum']/$totalVoteSum;
+							$pct_of_votes = 100*$ranked_stats[$nation_id2rank[$nation_id]]['voting_sum']/$totalVoteSum;
 							if ($pct_of_votes >= $strategy_user['min_votesum_pct'] && $pct_of_votes <= $strategy_user['max_votesum_pct']) {}
 							else {
 								$skipped_nations[$nation_id] = TRUE;
 								if ($strategy_user['voting_strategy'] == "by_nation") $skipped_pct_points += $strategy_user['nation_pct_'.$nation_id];
-								else if (in_array($nation_id_to_rank[$nation_id], $by_rank_ranks)) $num_nations_skipped++;
+								else if (in_array($nation_id2rank[$nation_id], $by_rank_ranks)) $num_nations_skipped++;
 							}
 						}
 						
@@ -192,11 +220,8 @@ if ($_REQUEST['key'] == "2r987jifwow") {
 							for ($rank=1; $rank<=16; $rank++) {
 								if (in_array($rank, $by_rank_ranks) && !$skipped_nations[$ranked_stats[$rank-1]['nation_id']]) {
 									echo "Vote ".round($coins_each/pow(10,8), 3)." EMP for ".$ranked_stats[$rank-1]['name'].", ranked ".$rank."<br/>";
-									$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', nation_id='".$ranked_stats[$rank-1]['nation_id']."', address_id='".user_address_id($strategy_user['user_id'], $ranked_stats[$rank-1]['nation_id'])."', transaction_desc='transaction', amount=".$coins_each.", user_id='".$strategy_user['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
-									$r = run_query($q);
 									
-									$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', transaction_desc='transaction', amount=".(-1)*$coins_each.", user_id='".$strategy_user['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
-									$r = run_query($q);
+									$transaction_id = new_webwallet_transaction('beta', $ranked_stats[$rank-1]['nation_id'], $coins_each, $strategy_user['user_id'], $mining_block_id);
 								}
 							}
 						}
@@ -214,13 +239,9 @@ if ($_REQUEST['key'] == "2r987jifwow") {
 										$effective_frac = floor(pow(10,4)*$strategy_user['nation_pct_'.$nation_id]*$mult_factor)/pow(10,6);
 										$coin_amount = floor($effective_frac*$free_balance*pow(10,8));
 										
-										echo "Vote ".$strategy_user['nation_pct_'.$nation_id]."% (".round($coins_amount/pow(10,8), 3)." EMP) for ".$ranked_stats[$nation_id_to_rank[$nation_id]]['name']."<br/>";
+										echo "Vote ".$strategy_user['nation_pct_'.$nation_id]."% (".round($coin_amount/pow(10,8), 3)." EMP) for ".$ranked_stats[$nation_id2rank[$nation_id]]['name']."<br/>";
 										
-										$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', nation_id='".$nation_id."', transaction_desc='transaction', amount=".$coin_amount.", user_id='".$strategy_user['user_id']."', address_id='".user_address_id($strategy_user['user_id'], $nation_id)."', block_id='".$mining_block_id."', time_created='".time()."';";
-										$r = run_query($q);
-										
-										$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', transaction_desc='transaction', amount=".(-1)*$coin_amount.", user_id='".$strategy_user['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
-										$r = run_query($q);
+										$transaction_id = new_webwallet_transaction('beta', $nation_id, $coin_amount, $strategy_user['user_id'], $mining_block_id);
 									}
 								}
 							}

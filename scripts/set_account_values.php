@@ -10,6 +10,6 @@ while ($user = mysql_fetch_array($r)) {
 	$account_value = account_coin_value($user);
 	$qq = "UPDATE users SET account_value='".$account_value."' WHERE user_id='".$user['user_id']."';";
 	$rr = run_query($qq);
-	echo "qq: $qq<br/>\n";
+	echo number_format($account_value).", ".$user['username'].", qq: $qq<br/>\n";
 }
 ?>

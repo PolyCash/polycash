@@ -20,11 +20,7 @@ if ($thisuser) {
 			$amount = floatval($_REQUEST['amount']);
 			if ($amount == round($amount, 5)) {
 				if ($amount <= $mature_balance && $amount > 0) {
-					$q = "INSERT INTO webwallet_transactions SET currency_mode='".$thisuser['currency_mode']."', nation_id='".$nation_id."', transaction_desc='transaction', amount=".$amount*(pow(10, 8)).", user_id='".$thisuser['user_id']."', address_id='".user_address_id($thisuser['user_id'], $nation_id)."', block_id='".($last_block_id+1)."', time_created='".time()."';";
-					$r = run_query($q);
-					
-					$q = "INSERT INTO webwallet_transactions SET currency_mode='".$thisuser['currency_mode']."', transaction_desc='transaction', amount=".(-1)*$amount*(pow(10, 8)).", user_id='".$thisuser['user_id']."', block_id='".($last_block_id+1)."', time_created='".time()."';";
-					$r = run_query($q);
+					$transaction_id = new_webwallet_transaction($thisuser['currency_mode'], $nation_id, $amount*(pow(10, 8)), $thisuser['user_id'], $last_block_id+1);
 					
 					echo "0=====";
 				}
