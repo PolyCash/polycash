@@ -245,6 +245,7 @@ and (max-device-width : 480px) {
 .my_votes_table {
 	border: 1px solid #ddd;
 	padding: 5px;
+	margin-bottom: 10px;
 }
 .my_votes_header {
 	font-weight: bold;
@@ -260,4 +261,35 @@ and (max-device-width : 480px) {
 #home_logo {
 	width: 100%;
 	max-width: 120px;
+}
+.output_removal_link {
+	font-size: 18px;
+	float: right;
+	cursor: pointer;
+}
+.output_amount_disp {
+	display: inline-block;
+}
+.nation_bet_amount_disp {
+	display: inline-block;
+}
+.nation_bet_removal_link {
+	float: right;
+	cursor: pointer;
+	font-size: 18px;
+}
+.lockedfunds_details {
+	display: none;
+	border: 1px solid #ccc;
+	padding: 8px;
+	border-radius: 8px;
+	margin-top: 8px;
+}
+.bets_table {
+	border: 1px solid #bbb;
+	border-top: 0px;
+}
+.bet_row {
+	margin: 0px;
+	padding: 6px;
 }

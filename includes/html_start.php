@@ -7,7 +7,7 @@
 	<title><?php echo $pagetitle; ?></title>
 	
 	<link rel="stylesheet" type="text/css" href="/css/bootstrap.min.css" media="screen" />
-	<link rel="stylesheet" type="text/css" href="/css/style.css?t=<?php echo time(); ?>" />
+	<link rel="stylesheet" type="text/css" href="/css/style.css" />
 	<link rel="stylesheet" type="text/css" href="/css/jquery.ui.css" />
 	<link rel="stylesheet" type="text/css" href="/css/jquery.nouislider.css" />
 	

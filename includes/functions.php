@@ -297,7 +297,7 @@ function current_round_table(&$game, $current_round, $user, $show_intro_text) {
 			else $html .= "<h1>No winner in round #".$current_round."</h1>";
 		}
 		if ($last_block_id == 0) $html .= 'Currently mining the first block.<br/>';
-		else $html .= 'Last block completed: #'.$last_block_id.', currently mining #'.($last_block_id+1).'<br/>';
+		else $html .= 'Last block completed was #'.$last_block_id.', currently mining #'.($last_block_id+1).'<br/>';
 		
 		if ($block_within_round == $game['round_length']) {
 			$html .= format_bignum($score_sum/pow(10,8)).' votes were cast in this round.<br/>';
@@ -308,20 +308,20 @@ function current_round_table(&$game, $current_round, $user, $show_intro_text) {
 				$html .= "You correctly ";
 				if ($game['payout_weight'] == "coin") $html .= "voted ".format_bignum($my_winning_votes/pow(10,8))." coins";
 				else $html .= "cast ".format_bignum($my_winning_votes/pow(10,8))." votes";
-				$html .= " and won <font class=\"greentext\">+".number_format($win_amount, 2)."</font> coins.<br/>\n";
+				$html .= ' and won <font class="greentext">+'.number_format($win_amount, 2)."</font> coins.<br/>\n";
 			}
 			else if ($winner) {
 				$html .= "You didn't cast any votes for ".$winner['name'].".<br/>\n";
 			}
 		}
 		else {
-			$html .= format_bignum($confirmed_score_sum/pow(10,8)).' confirmed and '.format_bignum($unconfirmed_score_sum/pow(10,8)).' unconfirmed votes have been cast so far, current votes count towards block '.$block_within_round.'/'.$game['round_length'].' in round #'.$current_round.'<br/>';
+			$html .= format_bignum($confirmed_score_sum/pow(10,8)).' confirmed and '.format_bignum($unconfirmed_score_sum/pow(10,8)).' unconfirmed votes have been cast so far. Current votes count towards block '.$block_within_round.'/'.$game['round_length'].' in round #'.$current_round.'<br/>';
 			$seconds_left = round(($game['round_length'] - $last_block_id%$game['round_length'] - 1)*$game['seconds_per_block']);
 			$minutes_left = round($seconds_left/60);
-			$html .= 'Approximately ';
+			$html .= format_bignum($game['pos_reward']/pow(10,8)).' coins will be given to the winners in approximately ';
 			if ($minutes_left > 1) $html .= $minutes_left." minutes";
 			else $html .= $seconds_left." seconds";
-			$html .= ' of voting left in this round.<br/>';
+			$html .= '.<br/>';
 		}
 	}
 	
@@ -482,16 +482,16 @@ function format_bignum($number) {
 }
 
 function wallet_text_stats($thisuser, &$game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance) {
-	$html = "<div class=\"row\"><div class=\"col-sm-2\">Available&nbsp;funds:</div>";
-	$html .= "<div class=\"col-sm-3\" style=\"text-align: right;\"><font class=\"greentext\">";
+	$html = '<div class="row"><div class="col-sm-2">Available&nbsp;funds:</div>';
+	$html .= '<div class="col-sm-3 text-right"><font class="greentext">';
 	$html .= format_bignum($mature_balance/pow(10,8));
 	$html .= "</font> EmpireCoins</div></div>\n";
 	if ($game['payout_weight'] == "coin_block") {
-		$html .= "<div class=\"row\"><div class=\"col-sm-2\">Votes:</div><div class=\"col-sm-3\" style=\"text-align: right;\"><font class=\"greentext\">".format_bignum(user_coin_blocks($thisuser['user_id'], $game, $last_block_id)/pow(10,8))."</font> votes available</div></div>\n";
+		$html .= '<div class="row"><div class="col-sm-2">Votes:</div><div class="col-sm-3 text-right"><font class="greentext">'.format_bignum(user_coin_blocks($thisuser['user_id'], $game, $last_block_id)/pow(10,8)).'</font> votes available</div></div>'."\n";
 	}
-	$html .= "<div class=\"row\"><div class=\"col-sm-2\">Locked&nbsp;funds:</div>";
-	$html .= "<div class=\"col-sm-3\" style=\"text-align: right;\"><font class=\"redtext\">".format_bignum($immature_balance/pow(10,8))."</font> EmpireCoins</div>";
-	if ($immature_balance > 0) $html .= "<div class=\"col-sm-1\"><a href=\"\" onclick=\"$('#lockedfunds_details').toggle('fast'); return false;\">Details</a></div>";
+	$html .= '<div class="row"><div class="col-sm-2">Locked&nbsp;funds:</div>';
+	$html .= '<div class="col-sm-3 text-right"><font class="redtext">'.format_bignum($immature_balance/pow(10,8)).'</font> EmpireCoins</div>';
+	if ($immature_balance > 0) $html .= '<div class="col-sm-1"><a href="" onclick="$(\'#lockedfunds_details\').toggle(\'fast\'); return false;">Details</a></div>';
 	$html .= "</div>\n";
 	$html .= "Last block completed: #".$last_block_id.", currently mining #".($last_block_id+1)."<br/>\n";
 	$html .= "Current votes count towards block ".$block_within_round."/".$game['round_length']." in round #".$current_round."<br/>\n";
@@ -500,14 +500,14 @@ function wallet_text_stats($thisuser, &$game, $current_round, $last_block_id, $b
 		$q = "SELECT * FROM transactions t JOIN transaction_IOs i ON t.transaction_id=i.create_transaction_id LEFT JOIN nations n ON i.nation_id=n.nation_id WHERE i.game_id='".$game['game_id']."' AND i.user_id='".$thisuser['user_id']."' AND (i.create_block_id > ".(last_block_id($thisuser['game_id']) - $game['maturity'])." OR i.create_block_id IS NULL) ORDER BY i.io_id ASC;";
 		$r = run_query($q);
 		
-		$html .= "<div style='display: none; border: 1px solid #ccc; padding: 8px; border-radius: 8px; margin-top: 8px;' id='lockedfunds_details'>";
+		$html .= '<div class="lockedfunds_details" id="lockedfunds_details">';
 		while ($next_transaction = mysql_fetch_array($r)) {
 			$avail_block = $game['maturity'] + $next_transaction['create_block_id'] + 1;
 			$seconds_to_avail = round(($avail_block - $last_block_id - 1)*$game['seconds_per_block']);
 			$minutes_to_avail = round($seconds_to_avail/60);
 			
 			if ($next_transaction['transaction_desc'] == "votebase") $html .= "You won ";
-			$html .= "<font class=\"greentext\">".round($next_transaction['amount']/(pow(10, 8)), 2)."</font> ";
+			$html .= '<font class="greentext">'.format_bignum($next_transaction['amount']/(pow(10, 8)))."</font> ";
 			
 			if ($next_transaction['create_block_id'] == "") {
 				$html .= "coins were just ";
@@ -529,7 +529,7 @@ function wallet_text_stats($thisuser, &$game, $current_round, $last_block_id, $b
 					$html .= "You voted for ".$next_transaction['name']." in round #".block_to_round($game, $next_transaction['create_block_id']).". ";
 				}
 			}
-			$html .= "(tx: <a target=\"_blank\" href=\"/explorer/transactions/".$next_transaction['tx_hash']."\">".$next_transaction['transaction_id']."</a>)<br/>\n";
+			$html .= '(tx: <a target="_blank" href="/explorer/transactions/'.$next_transaction['tx_hash'].'">'.$next_transaction['transaction_id']."</a>)<br/>\n";
 		}
 		$html .= "</div>\n";
 	}
@@ -537,34 +537,36 @@ function wallet_text_stats($thisuser, &$game, $current_round, $last_block_id, $b
 }
 
 function vote_details_general($mature_balance) {
-	$html = '
+	return "";
+	/*$html = '
 	<div class="row">
-		<div class="col-xs-6">Your balance:</div>
-		<div class="col-xs-6 greentext">'.number_format(floor($mature_balance/pow(10,5))/1000, 2).' EMP</div>
+		<div class="col-xs-4">Your balance:</div>
+		<div class="col-xs-8 greentext">'.number_format(floor($mature_balance/pow(10,5))/1000, 2).' EMP</div>
 	</div>	';
-	return $html;
+	return $html;*/
 }
 
-function vote_nation_details($nation, $rank, $nation_score, $score_sum, $losing_streak) {
+function to_ranktext($rank) {
+	return $rank.date("S", strtotime("1/".$rank."/".date("Y")));
+}
+
+function vote_nation_details($nation, $rank, $confirmed_votes, $unconfirmed_votes, $score_sum, $losing_streak) {
 	$html .= '
 	<div class="row">
-		<div class="col-xs-6">Current&nbsp;rank:</div>
-		<div class="col-xs-6">'.$rank.date("S", strtotime("1/".$rank."/2015")).'</div>
+		<div class="col-xs-4">Current&nbsp;rank:</div>
+		<div class="col-xs-8">'.to_ranktext($rank).'</div>
 	</div>
 	<div class="row">
-		<div class="col-xs-6">Votes:</div>
-		<div class="col-xs-5">'.number_format($nation_score/pow(10,8), 2).' votes</div>
+		<div class="col-xs-4">Confirmed Votes:</div>
+		<div class="col-xs-8">'.format_bignum($confirmed_votes/pow(10,8)).' votes ('.(ceil(100*100*$confirmed_votes/$score_sum)/100).'%)</div>
 	</div>
 	<div class="row">
-		<div class="col-xs-6">Percent&nbsp;of&nbsp;votes:</div>
-		<div class="col-xs-5">';
-	if ($score_sum > 0) $html .= (ceil(100*100*$nation_score/$score_sum)/100);
-	else $html .= '0';
-	$html .= '%</div>
+		<div class="col-xs-4">Unconfirmed Votes:</div>
+		<div class="col-xs-8">'.format_bignum($unconfirmed_votes/pow(10,8)).' votes ('.(ceil(100*100*$unconfirmed_votes/$score_sum)/100).'%)</div>
 	</div>
 	<div class="row">
-		<div class="col-xs-6">Last&nbsp;win:</div>
-		<div class="col-xs-5">';
+		<div class="col-xs-4">Last&nbsp;win:</div>
+		<div class="col-xs-8">';
 	if ($losing_streak === 0) $html .= "Last&nbsp;round";
 	else if ($losing_streak) $html .= $losing_streak.'&nbsp;rounds&nbsp;ago';
 	else $html .= "Never";
@@ -1064,10 +1066,10 @@ function my_votes_table(&$game, $round_id, $user) {
 		$expected_payout = floor($game['pos_reward']*($my_vote['SUM(io.'.$score_field.')']/$nation_scores['sum'])-$my_vote['fee_amount'])/pow(10,8);
 		if ($expected_payout < 0) $expected_payout = 0;
 		
-		$confirmed_html .= "<div class=\"row\">";
-		$confirmed_html .= "<div class=\"col-sm-4 ".$color."text\">".$my_vote['name']."</div>";
-		$confirmed_html .= "<div class=\"col-sm-4 ".$color."text\"><a target=\"_blank\" href=\"/explorer/transactions/".$my_vote['transaction_id']."\">".format_bignum($num_votes/pow(10,8), 2)." votes</a></div>";
-		$confirmed_html .= "<div class=\"col-sm-4 ".$color."text\">+".format_bignum($expected_payout)." EMP</div>";
+		$confirmed_html .= '<div class="row">';
+		$confirmed_html .= '<div class="col-sm-4 '.$color.'text">'.$my_vote['name'].'</div>';
+		$confirmed_html .= '<div class="col-sm-4 '.$color.'text"><a target="_blank" href="/explorer/transactions/'.$my_vote['transaction_id'].'">'.format_bignum($num_votes/pow(10,8), 2).' votes</a></div>';
+		$confirmed_html .= '<div class="col-sm-4 '.$color.'text">+'.format_bignum($expected_payout).' EMP</div>';
 		$confirmed_html .= "</div>\n";
 		
 		$num_confirmed++;
@@ -1090,10 +1092,10 @@ function my_votes_table(&$game, $round_id, $user) {
 		}
 		if ($expected_payout < 0) $expected_payout = 0;
 		
-		$unconfirmed_html .= "<div class=\"row\">";
-		$unconfirmed_html .= "<div class=\"col-sm-4 ".$color."text\">".$my_vote['name']."</a></div>";
-		$unconfirmed_html .= "<div class=\"col-sm-4 ".$color."text\"><a target=\"_blank\" href=\"/explorer/transactions/".$my_vote['transaction_id']."\">".format_bignum($num_votes/pow(10,8), 2)." votes</a></div>";
-		$unconfirmed_html .= "<div class=\"col-sm-4 ".$color."text\">+".format_bignum($expected_payout)." EMP</div>";
+		$unconfirmed_html .= '<div class="row">';
+		$unconfirmed_html .= '<div class="col-sm-4 '.$color.'text">'.$my_vote['name'].'</a></div>';
+		$unconfirmed_html .= '<div class="col-sm-4 '.$color.'text"><a target="_blank" href="/explorer/transactions/'.$my_vote['transaction_id'].'">'.format_bignum($num_votes/pow(10,8), 2).' votes</a></div>';
+		$unconfirmed_html .= '<div class="col-sm-4 '.$color.'text">+'.format_bignum($expected_payout).' EMP</div>';
 		$unconfirmed_html .= "</div>\n";
 		
 		$num_unconfirmed++;
@@ -1134,8 +1136,8 @@ function initialize_vote_nation_details(&$game, $nation_id2rank, $score_sum, $us
 		else $losing_streak = $current_round - $nation['last_win_round'] - 1;
 		
 		$rank = $nation_id2rank[$nation['nation_id']]+1;
-		if ($game['payout_weight'] == "coin") $voting_sum = $nation['coin_score'];
-		else $voting_sum = $nation['coin_block_score'];
+		$confirmed_votes = $nation[$game['payout_weight'].'_score'];
+		$unconfirmed_votes = $nation['unconfirmed_'.$game['payout_weight'].'_score'];
 		$html .= '
 		<div style="display: none;" class="modal fade" id="vote_confirm_'.$nation['nation_id'].'">
 			<div class="modal-dialog">
@@ -1143,7 +1145,7 @@ function initialize_vote_nation_details(&$game, $nation_id2rank, $score_sum, $us
 					<div class="modal-body">
 						<h2>Vote for '.$nation['name'].'</h2>
 						<div id="vote_nation_details_'.$nation['nation_id'].'">
-							'.vote_nation_details($nation, $rank, $voting_sum, $score_sum, $losing_streak).'
+							'.vote_nation_details($nation, $rank, $confirmed_votes, $unconfirmed_votes, $score_sum, $losing_streak).'
 						</div>
 						<div id="vote_details_'.$nation['nation_id'].'"></div>
 						<div class="redtext" id="vote_error_'.$nation['nation_id'].'"></div>
@@ -1327,8 +1329,8 @@ function new_block($game_id) {
 				$subject = number_format($mature_balance/pow(10,8), 5)." empirecoins are now available to vote.";
 				$message = "<p>Some of your coins just became available.</p>";
 				$message .= "<p>You currently have ".format_bignum($mature_balance/pow(10,8))." coins available to vote. To cast a vote, please log in:</p>";
-				$message .= "<p><a href=\"".$GLOBALS['base_url']."/wallet/\">".$GLOBALS['base_url']."/wallet/</a></p>";
-				$message .= "<p>This message was sent by ".$GLOBALS['site_domain']."<br/>To disable these notifications, please log in and then click \"Settings\"";
+				$message .= '<p><a href="'.$GLOBALS['base_url'].'/wallet/">'.$GLOBALS['base_url'].'/wallet/</a></p>';
+				$message .= '<p>This message was sent by '.$GLOBALS['site_domain'].'<br/>To disable these notifications, please log in and then click "Settings"';
 				
 				$delivery_id = mail_async($notify_user['notification_email'], $GLOBALS['site_name'], "noreply@".$GLOBALS['site_domain'], $subject, $message, "", "");
 				
@@ -1367,11 +1369,11 @@ function new_block($game_id) {
 		$log_text .= "Total votes: ".($score_sum/(pow(10, 8)))."<br/>\n";
 		$log_text .= "Cutoff: ".($max_score_sum/(pow(10, 8)))."<br/>\n";
 		
-		$q = "UPDATE game_nations SET coin_score=0, coin_block_score=0, losing_streak=losing_streak+1 WHERE game_id='".$game['game_id']."';";
+		$q = "UPDATE game_nations SET coin_score=0, coin_block_score=0 WHERE game_id='".$game['game_id']."';";
 		$r = run_query($q);
 		
 		if ($winning_nation) {
-			$q = "UPDATE game_nations SET losing_streak=0 WHERE game_id='".$game['game_id']."' AND nation_id='".$winning_nation."';";
+			$q = "UPDATE game_nations SET last_win_round=".($voting_round-1)." WHERE game_id='".$game['game_id']."' AND nation_id='".$winning_nation."';";
 			$r = run_query($q);
 			
 			$log_text .= $round_voting_stats[$nation_id2rank[$winning_nation]]['name']." wins with ".($winning_votesum/(pow(10, 8)))." EMP voted.<br/>";
@@ -1413,7 +1415,7 @@ function apply_user_strategies(&$game) {
 	if ($block_of_round != $game['round_length']) {
 		$q = "SELECT * FROM users u INNER JOIN user_games g ON u.user_id=g.user_id INNER JOIN user_strategies s ON g.strategy_id=s.strategy_id WHERE g.game_id='".$game['game_id']."'";
 		$q .= " AND (s.voting_strategy='by_rank' OR s.voting_strategy='by_nation' OR s.voting_strategy='api')";
-		$q .= " AND s.vote_on_block_".$block_of_round."=1";
+		if ($block_of_round <= 9) $q .= " AND s.vote_on_block_".$block_of_round."=1";
 		$q .= " ORDER BY RAND();";
 		$r = run_query($q);
 		
@@ -1685,7 +1687,7 @@ function block_id_to_round_index(&$game, $mining_block_id) {
 function render_transaction($transaction, $selected_address_id, $firstcell_text) {
 	$html = "";
 	$html .= '<div class="row bordered_row"><div class="col-md-6">';
-	$html .= "<a href=\"/explorer/transactions/".$transaction['tx_hash']."\" class=\"display_address\" style=\"display: inline-block; max-width: 100%; overflow: hidden;\">TX:&nbsp;".$transaction['tx_hash']."</a><br/>";
+	$html .= '<a href="/explorer/transactions/'.$transaction['tx_hash'].'" class="display_address" style="display: inline-block; max-width: 100%; overflow: hidden;">TX:&nbsp;'.$transaction['tx_hash'].'</a><br/>';
 	if ($firstcell_text != "") $html .= $firstcell_text."<br/>\n";
 	
 	if ($transaction['transaction_desc'] == "votebase") {
@@ -1700,9 +1702,9 @@ function render_transaction($transaction, $selected_address_id, $firstcell_text)
 		$input_sum = 0;
 		while ($input = mysql_fetch_array($rr)) {
 			$html .= number_format($input['amount']/pow(10,8), 2)."&nbsp;coins&nbsp; ";
-			$html .= "<a class=\"display_address\" style=\"";
+			$html .= '<a class="display_address" style="';
 			if ($input['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
-			$html .= "\" href=\"/explorer/addresses/".$input['address']."\">".$input['address']."</a>";
+			$html .= '" href="/explorer/addresses/'.$input['address'].'">'.$input['address'].'</a>';
 			if ($input['name'] != "") $html .= "&nbsp;&nbsp;(".$input['name'].")";
 			$html .= "<br/>\n";
 			$input_sum += $input['amount'];
@@ -1713,12 +1715,12 @@ function render_transaction($transaction, $selected_address_id, $firstcell_text)
 	$rr = run_query($qq);
 	$output_sum = 0;
 	while ($output = mysql_fetch_array($rr)) {
-		$html .= "<a class=\"display_address\" style=\"";
+		$html .= '<a class="display_address" style="';
 		if ($output['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
-		$html .= "\" href=\"/explorer/addresses/".$output['address']."\">".$output['address']."</a>&nbsp; ";
+		$html .= '" href="/explorer/addresses/'.$output['address'].'">'.$output['address'].'</a>&nbsp; ';
 		$html .= number_format($output['amount']/pow(10,8), 2)."&nbsp;coins";
 		if ($output['name'] != "") $html .= "&nbsp;&nbsp;".$output['name'];
-		if ($output['payout_amount'] > 0) $html .= "&nbsp;&nbsp;<font class=\"greentext\">+".round($output['payout_amount']/pow(10,8), 2)."</font>";
+		if ($output['payout_amount'] > 0) $html .= '&nbsp;&nbsp;<font class="greentext">+'.round($output['payout_amount']/pow(10,8), 2).'</font>';
 		$html .= "<br/>\n";
 		$output_sum += $output['amount'];
 	}
@@ -1760,18 +1762,11 @@ function select_input_buttons($user_id, &$game) {
 	}
 	$js .= "refresh_mature_io_btns();\n";
 	
-	$html .= "<div id=\"select_input_buttons_msg\">";
-	if ($viewable_count > 0) {
-		$html .= "To compose a voting transaction, please add money with the boxes below and then select the nations that you want to vote for.";
-	}
-	else {
-		$html .= '<font class="redtext">You don\'t have any coins available to vote right now.</font>';
-	}
-	$html .= "</div>\n";
+	$html .= '<div id="select_input_buttons_msg"></div>'."\n";
 	
 	$html .= $input_buttons_html;
 
-	$html .= "<script type=\"text/javascript\">".$js."</script>\n";
+	$html .= '<script type="text/javascript">'.$js."</script>\n";
 	
 	return $html;
 }
@@ -1807,7 +1802,7 @@ function select_bet_round(&$game, $current_round) {
 	$html .= '<option value="">-- Please Select --</option>'."\n";
 	$bet_round_range = bet_round_range($game);
 	for ($round_id=$bet_round_range[0]; $round_id<=$bet_round_range[1]; $round_id++) {
-		$html .= "<option value=\"".$round_id."\">Round #".$round_id;
+		$html .= '<option value="'.$round_id.'">Round #'.$round_id;
 		if ($round_id == $current_round) $html .= " (Current round)";
 		else {
 			$seconds_until = floor(($round_id-$current_round)*$game['round_length']*$game['seconds_per_block']);
@@ -1821,7 +1816,7 @@ function select_bet_round(&$game, $current_round) {
 		}
 		$html .= "</option>\n";
 	}
-	$html .= '</select>'."\n";
+	$html .= "</select>\n";
 	return $html;
 }
 
@@ -1885,12 +1880,12 @@ function rounds_complete_html(&$game, $max_round_id, $limit) {
 	$last_block_id = last_block_id($game['game_id']);
 	$current_round = block_to_round($game, $last_block_id+1);
 	if ($max_round_id == $current_round) {
-		$html .= "<div class=\"row bordered_row\">";
-		$html .= "<div class=\"col-sm-2\"><a href=\"/explorer/rounds/".$max_round_id."\">Round #".$max_round_id."</a></div>";
-		$html .= "<div class=\"col-sm-7\">Not yet decided";
-		$html .= "</div>";
-		$html .= "<div class=\"col-sm-3\">".format_bignum(0)." votes cast</div>";
-		$html .= "</div>\n";
+		$html .= '<div class="row bordered_row">';
+		$html .= '<div class="col-sm-2"><a href="/explorer/rounds/'.$max_round_id.'">Round #'.$max_round_id.'</a></div>';
+		$html .= '<div class="col-sm-7">Not yet decided';
+		$html .= '</div>';
+		$html .= '<div class="col-sm-3">'.format_bignum(0).' votes cast</div>';
+		$html .= '</div>'."\n";
 	}
 	
 	$q = "SELECT * FROM cached_rounds r LEFT JOIN nations n ON r.winning_nation_id=n.nation_id WHERE r.game_id='".$game['game_id']."' AND r.round_id <= ".$max_round_id." ORDER BY r.round_id DESC LIMIT ".$limit.";";
@@ -1898,15 +1893,15 @@ function rounds_complete_html(&$game, $max_round_id, $limit) {
 	
 	$last_round_shown = 0;
 	while ($cached_round = mysql_fetch_array($r)) {
-		$html .= "<div class=\"row bordered_row\">";
-		$html .= "<div class=\"col-sm-2\"><a href=\"/explorer/rounds/".$cached_round['round_id']."\">Round #".$cached_round['round_id']."</a></div>";
-		$html .= "<div class=\"col-sm-7\">";
+		$html .= '<div class="row bordered_row">';
+		$html .= '<div class="col-sm-2"><a href="/explorer/rounds/'.$cached_round['round_id'].'">Round #'.$cached_round['round_id'].'</a></div>';
+		$html .= '<div class="col-sm-7">';
 		if ($cached_round['winning_nation_id'] > 0) {
 			$html .= $cached_round['name']." wins with ".format_bignum($cached_round['winning_score']/pow(10,8))." votes (".round(100*$cached_round['winning_score']/$cached_round['score_sum'], 2)."%)";
 		}
 		else $html .= "No winner";
 		$html .= "</div>";
-		$html .= "<div class=\"col-sm-3\">".format_bignum($cached_round['score_sum']/pow(10,8))." votes cast</div>";
+		$html .= '<div class="col-sm-3">'.format_bignum($cached_round['score_sum']/pow(10,8)).' votes cast</div>';
 		$html .= "</div>\n";
 		$last_round_shown = $cached_round['round_id'];
 	}
@@ -1942,9 +1937,9 @@ function my_bets(&$game, $user) {
 		$html .= "<h2>You've placed bets on ".mysql_numrows($r)." round";
 		if (mysql_numrows($r) != 1) $html .= "s";
 		$html .= ".</h2>\n";
-		$html .= "<div style=\"border: 1px solid #bbb; border-top: 0px;\">";
+		$html .= '<div class="bets_table">';
 		while ($bet_round = mysql_fetch_array($r)) {
-			$html .= "<div class=\"row bordered_row\" style=\"margin: 0px; padding: 6px;\">";
+			$html .= '<div class="row bordered_row bet_row">';
 			$disp_html = "";
 			$qq = "SELECT a.*, n.*, SUM(i.amount) FROM transactions t JOIN transaction_IOs i ON i.create_transaction_id=t.transaction_id JOIN addresses a ON i.address_id=a.address_id LEFT JOIN nations n ON a.bet_nation_id=n.nation_id WHERE t.game_id='".$game['game_id']."' AND t.from_user_id='".$user['user_id']."' AND t.bet_round_id='".$bet_round['bet_round_id']."' AND a.bet_round_id > 0 GROUP BY a.address_id ORDER BY SUM(i.amount) DESC;";
 			$rr = run_query($qq);
@@ -1952,9 +1947,9 @@ function my_bets(&$game, $user) {
 			while ($nation_bet = mysql_fetch_array($rr)) {
 				if ($nation_bet['name'] == "") $nation_bet['name'] = "No Winner";
 				$coins_bet_for_round += $nation_bet['SUM(i.amount)'];
-				$disp_html .= "<div class=\"row\">";
-				$disp_html .= "<div class=\"col-md-5\">".number_format($nation_bet['SUM(i.amount)']/pow(10,8), 2)." coins towards ".$nation_bet['name']."</div>";
-				$disp_html .= "<div class=\"col-md-5\"><a href=\"/explorer/addresses/".$nation_bet['address']."\">".$nation_bet['address']."</a></div>";
+				$disp_html .= '<div class="">';
+				$disp_html .= '<div class="col-md-5">'.number_format($nation_bet['SUM(i.amount)']/pow(10,8), 2)." coins towards ".$nation_bet['name'].'</div>';
+				$disp_html .= '<div class="col-md-5"><a href="/explorer/addresses/'.$nation_bet['address'].'">'.$nation_bet['address'].'</a></div>';
 				$disp_html .= "</div>\n";
 			}
 			if ($bet_round['bet_round_id'] >= $current_round) {
@@ -1967,12 +1962,12 @@ function my_bets(&$game, $user) {
 				$amount_won = $amount_won[0];
 				if ($amount_won > 0) {
 					$html .= "You bet ".number_format($coins_bet_for_round/pow(10,8), 2)." coins and won ".number_format($amount_won/pow(10,8), 2)." back for a ";
-					if (round(($amount_won-$coins_bet_for_round)/pow(10,8), 2) >= 0) $html .= "profit of <font class=\"greentext\">+".number_format(round(($amount_won-$coins_bet_for_round)/pow(10,8), 2), 2)."</font> coins.";
-					else $html .= "loss of <font class=\"redtext\">".number_format(($coins_bet_for_round-$amount_won)/pow(10,8), 2)."</font> coins.";
+					if (round(($amount_won-$coins_bet_for_round)/pow(10,8), 2) >= 0) $html .= 'profit of <font class="greentext">+'.number_format(round(($amount_won-$coins_bet_for_round)/pow(10,8), 2), 2).'</font> coins.';
+					else $html .= 'loss of <font class="redtext">'.number_format(($coins_bet_for_round-$amount_won)/pow(10,8), 2)."</font> coins.";
 				}
 			}
-			$html .= "&nbsp;&nbsp; <a href=\"\" onclick=\"$('#my_bets_details_".$bet_round['bet_round_id']."').toggle('fast'); return false;\">Details</a><br/>\n";
-			$html .= "<div id=\"my_bets_details_".$bet_round['bet_round_id']."\" style=\"display: none;\">".$disp_html."</div>\n";
+			$html .= '&nbsp;&nbsp; <a href="" onclick="$(\'#my_bets_details_'.$bet_round['bet_round_id'].'\').toggle(\'fast\'); return false;">Details</a><br/>'."\n";
+			$html .= '<div id="my_bets_details_'.$bet_round['bet_round_id'].'" style="display: none;">'.$disp_html."</div>\n";
 			$html .= "</div>\n";
 		}
 		$html .= "</div>\n";
@@ -1981,7 +1976,7 @@ function my_bets(&$game, $user) {
 }
 
 function add_round_from_rpc(&$game, $round_id) {
-	$q = "UPDATE game_nations SET coin_score=0, coin_block_score=0, losing_streak=losing_streak+1 WHERE game_id='".$game['game_id']."';";
+	$q = "UPDATE game_nations SET coin_score=0, coin_block_score=0 WHERE game_id='".$game['game_id']."';";
 	$r = run_query($q);
 	
 	$winning_nation_id = false;
@@ -2302,15 +2297,15 @@ function match_body(& $match, & $my_membership, $thisuser) {
 			$player_wins = mysql_fetch_row($rr);
 			$player_wins = $player_wins[0];
 			
-			$html .= "<div class=\"row\"";
-			if ($thisuser['user_id'] == $player['user_id']) $html .= " style=\"font-weight: bold;\"";
-			$html .= "><div class=\"col-sm-8\">";
+			$html .= '<div class="row"';
+			if ($thisuser['user_id'] == $player['user_id']) $html .= ' style="font-weight: bold;"';
+			$html .= '><div class="col-sm-8">';
 			if ($thisuser['user_id'] == $player['user_id']) $html .= "You have: ";
 			else $html .= "Player #".($player['player_position']+1).": ";
 			$html .= $player_wins." win";
 			if ($player_wins != 1) $html .= "s";
 			$html .= ", ".match_mature_balance($player['membership_id'])/pow(10,8)." coins left";
-			$html .= "</div><div class=\"col-sm-4\">";
+			$html .= '</div><div class="col-sm-4">';
 			$qq = "SELECT * FROM match_moves WHERE membership_id='".$player['membership_id']."' AND round_number='".$match['current_round_number']."';";
 			$rr = run_query($qq);
 			if (mysql_numrows($rr) > 0) $html .= "Moved submitted";
@@ -2324,7 +2319,7 @@ function match_body(& $match, & $my_membership, $thisuser) {
 		$r = run_query($q);
 		if (mysql_numrows($r) > 0) {
 			$my_move = mysql_fetch_array($r);
-			$html .= "You put <font class=\"greentext\">".$my_move['amount']/pow(10,8)." coins</font> down on this round.<br/>\n";
+			$html .= 'You put <font class="greentext">'.$my_move['amount']/pow(10,8)." coins</font> down on this round.<br/>\n";
 			$html .= "Waiting on your opponent...";
 		}
 		else {
@@ -2364,9 +2359,9 @@ function round_result_html($match, $round_number, $thisuser) {
 	$q = "SELECT * FROM match_memberships mem JOIN users u ON mem.user_id=u.user_id JOIN match_moves mv ON mv.membership_id=mem.membership_id WHERE mem.match_id='".$match['match_id']."' AND mv.round_number='".$round_number."' ORDER BY mv.amount DESC;";
 	$r = run_query($q);
 	while ($player = mysql_fetch_array($r)) {
-		$html .= "<div class=\"row\"><div class=\"col-sm-6\">";
+		$html .= '<div class="row"><div class="col-sm-6">';
 		$html .= "Player #".($player['player_position']+1);
-		$html .= "</div><div class=\"col-sm-6\" style=\"text-align: right;\">";
+		$html .= '</div><div class="col-sm-6 text-right">';
 		$html .= $player['amount']/pow(10,8)." coins";
 		$html .= "</div></div>\n";
 	}
@@ -2429,7 +2424,7 @@ function walletnotify(&$game, $empirecoin_rpc, $tx_hash) {
 			$r = run_query($q);
 			
 			if ($block_i%$game['round_length'] == 0) {
-				$q = "UPDATE game_nations SET coin_score=0, coin_block_score=0, losing_streak=losing_streak+1 WHERE game_id='".$game['game_id']."';";
+				$q = "UPDATE game_nations SET coin_score=0, coin_block_score=0 WHERE game_id='".$game['game_id']."';";
 				$r = run_query($q);
 			}
 			

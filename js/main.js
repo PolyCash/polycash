@@ -74,25 +74,6 @@ function start_vote(nation_id) {
 	setTimeout('nation_selected('+$('#nation_id2rank_'+nation_id).val()+');', 100);
 }
 
-/*function confirm_vote(nation_id) {
-	$('#vote_confirm_btn_'+nation_id).html("Loading...");
-	$.get("/ajax/place_vote.php?nation_id="+nation_id+"&amount="+encodeURIComponent($('#vote_amount_'+nation_id).val()), function(result) {
-		$('#vote_confirm_btn_'+nation_id).html("Confirm Vote");
-		var result_parts = result.split("=====");
-		if (result_parts[0] == "0") {
-			refresh_if_needed();
-			$('#vote_confirm_'+nation_id).modal('hide');
-			$('#vote_amount_'+nation_id).val("");
-			alert("Great, your vote has been submitted!");
-		}
-		else {
-			$('#vote_error_'+nation_id).html(result_parts[1]);
-			$('#vote_error_'+nation_id).slideDown('slow');
-			setTimeout("$('#vote_error_"+nation_id+"').slideUp('fast');", 2500);
-		}
-	});
-}*/
-
 function rank_check_all_changed() {
 	var set_checked = false;
 	if ($('#rank_check_all').is(":checked")) set_checked = true;
@@ -257,6 +238,8 @@ function refresh_if_needed() {
 							for (var nation_id=1; nation_id<=16; nation_id++) {
 								$('#vote_nation_details_'+nation_id).html(vote_nation_details[nation_id]);
 							}
+							
+							refresh_output_amounts();
 						}
 						last_game_loop_index_applied = json_result['game_loop_index'];
 					}
@@ -404,6 +387,16 @@ function switch_to_game(game_id, action) {
 			else {
 				editing_game_id = game_id;
 				$('#fetch_game_link_'+game_id).html(fetch_link_text);
+				if (json_result['my_game'] == true) {
+					$('#delete_game_btn').show();
+					$('#reset_game_btn').show();
+					$('#save_game_btn').show();
+				}
+				else {
+					$('#delete_game_btn').hide();
+					$('#reset_game_btn').hide();
+					$('#save_game_btn').hide();
+				}
 			}
 			
 			$('#game_form').modal('show');
@@ -419,9 +412,11 @@ function switch_to_game(game_id, action) {
 				
 				$('#game_form_'+game_form_vars[i]).val(json_result[game_form_vars[i]]);
 				
-				if (json_result['game_status'] == "unstarted" || game_form_vars[i] == "game_status") $('#game_form_'+game_form_vars[i]).prop('disabled', false);
+				if (json_result['game_status'] == "unstarted") $('#game_form_'+game_form_vars[i]).prop('disabled', false);
 				else $('#game_form_'+game_form_vars[i]).prop('disabled', true);
 			}
+			if (json_result['my_game']) $('#game_form_game_status').prop('disabled', false);
+			else $('#game_form_game_status').prop('disabled', true);
 		}
 		else if (action == "switch" || action == "delete" || action == "reset") {
 			if (action == "switch") $('#switch_game_btn').html(switch_link_text);
@@ -526,17 +521,16 @@ function render_selected_utxo(index_id) {
 	var render_text = format_coins(score_qty/Math.pow(10,8));
 	if (payout_weight == "coin") render_text += ' coins';
 	else render_text += ' votes';
-	render_text += ' &nbsp;&nbsp; <font style="cursor: pointer" onclick="remove_utxo_from_vote('+index_id+');">&#215;</font>';
 	return render_text;
 }
 function render_nation_output(index_id, name) {
 	var html = "";
-	html += name+'&nbsp;&nbsp; <div id="output_amount_disp_'+index_id+'" style="display: inline-block;"></div> <font style="float: right; cursor: pointer" onclick="remove_nation_from_vote('+index_id+');">&#215;</font>';
+	html += name+'&nbsp;&nbsp; <div id="output_amount_disp_'+index_id+'" class="output_amount_disp"></div> <font class="output_removal_link" onclick="remove_nation_from_vote('+index_id+');">&#215;</font>';
 	html += '<div><div id="output_threshold_'+index_id+'" class="noUiSlider"></div></div>';
 	return html;
 }
 function render_nation_bet(bet_index, nation_id) {
-	var html = nations[nation_id].name+'&nbsp;&nbsp; <div id="nation_bet_amount_disp_'+bet_index+'" style="display: inline-block;"></div> <font style="float: right; cursor: pointer" onclick="remove_nation_bet('+bet_index+');">&#215;</font>';
+	var html = nations[nation_id].name+'&nbsp;&nbsp; <div id="nation_bet_amount_disp_'+bet_index+'" class="nation_bet_amount_disp"></div> <font class="nation_bet_removal_link" onclick="remove_nation_bet('+bet_index+');">&#215;</font>';
 	html += '<div><div id="nation_bet_threshold_'+bet_index+'" class="noUiSlider"></div></div>';
 	return html;
 }
@@ -549,7 +543,7 @@ function add_utxo_to_vote(io_id, amount, create_block_id) {
 		var index_id = vote_inputs.length;
 		vote_inputs.push(new vote_input(index_id, io_id, amount, create_block_id));
 		$('#select_utxo_'+io_id).hide();
-		$('#compose_vote_inputs').append('<div id="selected_utxo_'+index_id+'" class="select_utxo">'+render_selected_utxo(index_id)+'</div>');
+		$('#compose_vote_inputs').append('<div id="selected_utxo_'+index_id+'" onclick="remove_utxo_from_vote('+index_id+');" class="select_utxo">'+render_selected_utxo(index_id)+'</div>');
 		io_id2input_index[io_id] = index_id;
 		refresh_compose_vote();
 		set_input_amount_sums();
@@ -688,18 +682,19 @@ function rtrim(str, charlist) {
 }
 function format_coins(amount) {
 	if (amount > Math.pow(10, 10)) {
-		return (amount/Math.pow(10, 9)).toPrecision(4)+"B";
+		return parseFloat((amount/Math.pow(10, 9)).toPrecision(5))+"B";
 	}
 	else if (amount > Math.pow(10, 7)) {
-		return (amount/Math.pow(10, 6)).toPrecision(4)+"M";
+		return parseFloat((amount/Math.pow(10, 6)).toPrecision(5))+"M";
 	}
 	else if (amount > Math.pow(10, 4)) {
-		return (amount/Math.pow(10, 3)).toPrecision(4)+"k";
+		return parseFloat((amount/Math.pow(10, 3)).toPrecision(5))+"k";
 	}
+	else if (amount == 0) return "0";
 	else if (amount < 1) {
 		return rtrim(amount, "0.");
 	}
-	else return (amount).toPrecision(4);
+	else return parseFloat((amount).toPrecision(5));
 }
 function refresh_mature_io_btns() {
 	for (var i=0; i<mature_ios.length; i++) {
@@ -800,7 +795,7 @@ function reload_compose_vote() {
 		$('#select_input_buttons_msg').html("<font class=\"redtext\">You don't have any coins available to vote right now.</font>");
 	}
 	else {
-		$('#select_input_buttons_msg').html("To compose a voting transaction, please add money with the boxes below and then select the nations that you want to vote for.");
+		$('#select_input_buttons_msg').html("To cast votes please add money with the boxes below, then select the empires that you wish to vote for.");
 	}
 	refresh_visible_inputs();
 }

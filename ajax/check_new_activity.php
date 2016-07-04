@@ -15,9 +15,6 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	$r = run_query($q);
 	$game = mysql_fetch_array($r);
 	
-	if ($game['payout_weight'] == "coin") $score_field = "coin_score";
-	else $score_field = "coin_block_score";
-	
 	if ($game['game_status'] == "running") {
 		if ($game['game_type'] == "simulation" && $game['block_timing'] == "realistic") {
 			$rand_max = floor($game['seconds_per_block']/get_site_constant('game_loop_seconds'))-1;
@@ -106,7 +103,7 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 			$nation = $round_stats[$nation_id2rank[$nation_id]];
 			if (!$nation['last_win_round']) $losing_streak = false;
 			else $losing_streak = $current_round - $nation['last_win_round'] - 1;
-			$stats_output[$nation_id] = vote_nation_details($nation, $nation_id2rank[$nation['nation_id']]+1, $nation[$score_field], $total_vote_sum, $losing_streak);
+			$stats_output[$nation_id] = vote_nation_details($nation, $nation_id2rank[$nation['nation_id']]+1, $nation[$game['payout_weight'].'_score'], $nation['unconfirmed_'.$game['payout_weight'].'_score'], $total_vote_sum, $losing_streak);
 		}
 		$output['vote_nation_details'] = $stats_output;
 	}

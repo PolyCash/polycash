@@ -401,6 +401,8 @@ $mature_balance = mature_balance($game, $thisuser);
 			notification_pref_changed();
 			alias_pref_changed();
 			nation_selected(0);
+			reload_compose_vote();
+			
 			loop_event();
 			game_loop_event();
 			compose_vote_loop();
@@ -462,7 +464,6 @@ $mature_balance = mature_balance($game, $thisuser);
 					</div>
 				</div>
 				
-				<br/>To cast a vote please click on any of the empires below.<br/>
 				<div id="vote_popups_disabled"<?php if ($block_within_round != $game['round_length']) echo ' style="display: none;"'; ?>>
 					The final block of the round is being mined. Voting is currently disabled.
 				</div>
@@ -470,7 +471,7 @@ $mature_balance = mature_balance($game, $thisuser);
 					echo select_input_buttons($thisuser['user_id'], $game);
 				?></div>
 				<div id="compose_vote" style="display: none;">
-					<h2>Compose Your Voting Transaction</h2>
+					<h2>Vote Now</h2>
 					<div class="row bordered_row" style="border: 1px solid #bbb;">
 						<div class="col-md-6 bordered_cell" id="compose_vote_inputs">
 							<b>Inputs:</b><div style="display: inline-block; margin-left: 20px;" id="input_amount_sum"></div><div style="display: inline-block; margin-left: 20px;" id="input_vote_sum"></div><br/>
@@ -651,8 +652,7 @@ $mature_balance = mature_balance($game, $thisuser);
 								echo '<div class="col-md-3">';
 								echo '<input type="checkbox" name="by_rank_'.$rank.'" id="by_rank_'.$rank.'" value="1"';
 								if (in_array($rank, $by_rank_ranks)) echo ' checked="checked"';
-								echo '><label class="plainlabel" for="by_rank_'.$rank.'"> ';
-								echo $rank.date("S", strtotime("1/".$rank."/2015"))."</label>";
+								echo '><label class="plainlabel" for="by_rank_'.$rank.'"> '.to_ranktext($rank)."</label>";
 								echo '</div>';
 								if ($rank%4 == 0) echo "</div>\n";
 							}
@@ -887,9 +887,9 @@ $mature_balance = mature_balance($game, $thisuser);
 										<option value="paused">Paused</option>
 										<option value="running">Running</option>
 									</select>
-									<br/>
-									<button class="btn btn-danger" onclick="switch_to_game(editing_game_id, 'delete'); return false;">Delete Game</button>
-									<button class="btn btn-warning" onclick="switch_to_game(editing_game_id, 'reset'); return false;">Reset Game</button>
+									
+									<button id="delete_game_btn" class="btn btn-danger" onclick="switch_to_game(editing_game_id, 'delete'); return false;">Delete Game</button>
+									<button id="reset_game_btn" class="btn btn-warning" onclick="switch_to_game(editing_game_id, 'reset'); return false;">Reset Game</button>
 								</div>
 							</div>
 							<div class="row">
