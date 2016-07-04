@@ -198,15 +198,6 @@ if ($thisuser) {
 			die();
 		}
 	}
-
-	if ($game['giveaway_status'] == "invite_free" || $game['giveaway_status'] == "public_free") {
-		$qq = "SELECT * FROM game_giveaways WHERE game_id='".$game['game_id']."' AND user_id='".$thisuser['user_id']."';";
-		$rr = run_query($qq);
-		
-		if (mysql_numrows($rr) == 0) {
-			$giveaway = new_game_giveaway($game, $thisuser['user_id']);
-		}
-	}
 	
 	$uri_parts = explode("/", $uri);
 	$url_identifier = $uri_parts[2];
@@ -224,24 +215,24 @@ if ($thisuser) {
 			$game = mysql_fetch_array($r);
 		}
 		else if ($requested_game['giveaway_status'] == "public_free" || $requested_game['giveaway_status'] == "public_pay") {
-			ensure_user_in_game($thisuser, $requested_game['game_id']);
+			ensure_user_in_game($thisuser['user_id'], $requested_game['game_id']);
 			$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND g.game_id='".$requested_game['game_id']."';";
 			$r = run_query($q);
 			$game = mysql_fetch_array($r);
 		}
-
-
-		if (!$game && ($requested_game['giveaway_status'] == "invite_free" || $requested_game['giveaway_status'] == "invite_pay")) {
-				$pagetitle = "Join ".$requested_game['name'];
-				$nav_tab_selected = "wallet";
-				include('includes/html_start.php');
-				?>
-				<div class="container" style="max-width: 1000px; padding-top: 10px;">
-					You need an invitation to join this game.
-				</div>
-				<?php
-				include('includes/html_stop.php');
-				die();
+		
+		if ($requested_game['giveaway_status'] == "public_free") {}
+		else if (!$game && ($requested_game['giveaway_status'] == "invite_free" || $requested_game['giveaway_status'] == "invite_pay")) {
+			$pagetitle = "Join ".$requested_game['name'];
+			$nav_tab_selected = "wallet";
+			include('includes/html_start.php');
+			?>
+			<div class="container" style="max-width: 1000px; padding-top: 10px;">
+				You need an invitation to join this game.
+			</div>
+			<?php
+			include('includes/html_stop.php');
+			die();
 		}
 		else if (!$game || $game['payment_required'] == 1) {
 			$pagetitle = "Join ".$requested_game['name'];
@@ -339,6 +330,7 @@ if ($thisuser) {
 			include('includes/html_stop.php');
 			die();
 		}
+		else die("Error: this game has an invalid giveaway_status");
 	}
 	else {
 		$pagetitle = $GLOBALS['site_name_short']." - My web wallet";
@@ -527,6 +519,15 @@ $mature_balance = mature_balance($game, $thisuser);
 		echo '">';
 		echo $message;
 		echo "</font>\n";
+	}
+	
+	if ($game['giveaway_status'] == "invite_free" || $game['giveaway_status'] == "public_free") {
+		$qq = "SELECT * FROM game_giveaways WHERE game_id='".$game['game_id']."' AND user_id='".$thisuser['user_id']."';";
+		$rr = run_query($qq);
+		
+		if (mysql_numrows($rr) == 0) {
+			$giveaway = new_game_giveaway($game, $thisuser['user_id']);
+		}
 	}
 	
 	if ($thisuser) {

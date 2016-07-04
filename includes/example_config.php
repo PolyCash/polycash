@@ -12,7 +12,7 @@ $GLOBALS['outbound_email_enabled'] = false;
 $GLOBALS['sendgrid_user'] = "";
 $GLOBALS['sendgrid_pass'] = "";
 
-$GLOBALS['show_query_errors'] = false;
+$GLOBALS['show_query_errors'] = true;
 $GLOBALS['cron_key_string'] = "";
 
 $GLOBALS['coin_port'] = 11111;
@@ -38,4 +38,6 @@ $GLOBALS['rsa_keyholder_email'] = "";
 $GLOBALS['rsa_pub_key'] = "";
 
 $GLOBALS['api_proxy_url'] = "";
+
+$GLOBALS['default_server_api_access_key'] = false;
 ?>
