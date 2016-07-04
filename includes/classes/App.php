@@ -648,5 +648,18 @@ class App {
 		}
 		while ($keep_looping);
 	}
+	public function argv_to_array($argv) {
+		$arr = array();
+		$arg_i = 0;
+		foreach ($argv as $arg) {
+			$arg_parts = explode("=", $arg);
+			if(count($arg_parts) == 2)
+				$arr[$arg_parts[0]] = $arg_parts[1];
+			else
+				$arr[$arg_i] = $arg_parts[0];
+			$arg_i++;
+		}
+		return $arr;
+	}
 }
 ?>

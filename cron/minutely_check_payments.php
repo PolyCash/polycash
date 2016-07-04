@@ -4,7 +4,11 @@ include(realpath(dirname(__FILE__))."/../includes/connect.php");
 
 $script_start_time = microtime(true);
 
-if ($argv) $_REQUEST['key'] = $argv[1];
+if ($argv) {
+	$cmd_vars = $app->argv_to_array($argv);
+	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
+	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
+}
 
 if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$q = "SELECT * FROM currency_invoices i JOIN invoice_addresses a ON i.invoice_address_id=a.invoice_address_id WHERE i.status != 'confirmed' AND i.status != 'settled' AND (i.status='unconfirmed' OR i.expire_time >= ".time().");";

@@ -20,8 +20,12 @@ else {
 
 	$script_start_time = microtime(true);
 
-	if ($argv) $_REQUEST['key'] = $argv[1];
-
+	if ($argv) {
+		$cmd_vars = $app->argv_to_array($argv);
+		if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
+		else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
+	}
+	
 	if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		$btc_currency = $app->get_currency_by_abbreviation('btc');
 		$latest_btc_price = $app->latest_currency_price($btc_currency['currency_id']);
