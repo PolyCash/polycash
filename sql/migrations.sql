@@ -6,3 +6,8 @@ ALTER TABLE `users` ADD `bitcoin_address_id` INT(11) NULL DEFAULT NULL AFTER `ga
 ALTER TABLE `user_games` ADD `bitcoin_address_id` INT(11) NULL DEFAULT NULL ;
 ALTER TABLE `games` ADD `payout_tx_hash` VARCHAR(255) NOT NULL DEFAULT '' AFTER `payout_complete`;
 ALTER TABLE `users` ADD `authorized_games` INT(11) NOT NULL DEFAULT '0' ;
+ALTER TABLE `games` ADD `buyin_policy` ENUM('unlimited','per_user_cap','game_cap','game_and_user_cap','none') NOT NULL DEFAULT 'none' AFTER `payout_weight`;
+ALTER TABLE `games` DROP `buyins_allowed`;
+ALTER TABLE `games` ADD `per_user_buyin_cap` DECIMAL(16,8) NOT NULL DEFAULT '0' AFTER `buyin_policy`;
+ALTER TABLE `games` ADD `game_buyin_cap` DECIMAL(16,8) NOT NULL DEFAULT '0' AFTER `per_user_buyin_cap`;
+ALTER TABLE `user_games` ADD `buyin_invoice_address_id` INT(11) NULL DEFAULT NULL ;

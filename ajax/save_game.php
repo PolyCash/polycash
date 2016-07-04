@@ -24,11 +24,11 @@ if ($thisuser) {
 			$game_info['url_identifier'] = $game['url_identifier'];
 
 			if ($game['game_status'] == "editable") {
-				$game_form_vars = explode(",", "giveaway_status,giveaway_amount,maturity,max_voting_fraction,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_condition_players");
+				$game_form_vars = explode(",", "giveaway_status,giveaway_amount,maturity,max_voting_fraction,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap");
 				
 				$q = "UPDATE games SET ";
 
-				$start_datetime = date("Y-m-d g:\0\0", strtotime($_REQUEST['start_date']." ".$_REQUEST['start_time'].":00"));
+				$start_datetime = date("Y-m-d g:\\0\\0", strtotime($_REQUEST['start_date']." ".$_REQUEST['start_time'].":00"));
 				$q .= "start_datetime='".$start_datetime."', ";
 
 				for ($i=0; $i<count($game_form_vars); $i++) {

@@ -79,7 +79,7 @@ if ($thisuser) {
 			}
 		}
 		
-		$q = "SELECT creator_id, game_id, game_status, block_timing, giveaway_status, giveaway_amount, maturity, max_voting_fraction, name, payout_weight, round_length, seconds_per_block, pos_reward, pow_reward, inflation, exponential_inflation_rate, exponential_inflation_minershare, final_round, invite_cost, invite_currency, coin_name, coin_name_plural, coin_abbreviation, start_condition, start_datetime, start_condition_players FROM games WHERE game_id='".$game_id."';";
+		$q = "SELECT creator_id, game_id, game_status, block_timing, giveaway_status, giveaway_amount, maturity, max_voting_fraction, name, payout_weight, round_length, seconds_per_block, pos_reward, pow_reward, inflation, exponential_inflation_rate, exponential_inflation_minershare, final_round, invite_cost, invite_currency, coin_name, coin_name_plural, coin_abbreviation, start_condition, start_datetime, start_condition_players, buyin_policy, per_user_buyin_cap, game_buyin_cap FROM games WHERE game_id='".$game_id."';";
 		$r = run_query($q);
 		
 		if (mysql_numrows($r) == 1) {

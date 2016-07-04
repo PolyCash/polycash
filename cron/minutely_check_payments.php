@@ -67,6 +67,40 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		}
 	}
 	
+	$q = "SELECT * FROM game_buyins gb JOIN invoice_addresses a ON gb.invoice_address_id=a.invoice_address_id WHERE gb.status IN ('unpaid','unconfirmed') AND gb.expire_time >= ".time().";";
+	$r = run_query($q);
+	
+	echo "Checking ".mysql_numrows($r)." buyins.<br/>\n";
+	
+	while ($buyin = mysql_fetch_array($r)) {
+		$confirm_it = false;
+
+		$qq = "SELECT SUM(gb.unconfirmed_amount_paid) FROM game_buyins gb JOIN invoice_addresses a ON gb.invoice_address_id=a.invoice_address_id WHERE gb.buyin_id != '".$buyin['buyin_id']."';";
+		$rr = run_query($qq);
+		$existing_bal = mysql_fetch_row($rr);
+		$existing_bal = floatval($existing_bal[0]);
+		
+		$api_unconfirmed_balance = json_decode(file_get_contents('https://blockchain.info/q/addressbalance/'.$buyin['pub_key'].'?confirmations=0'))/pow(10,8);
+		$api_confirmed_balance = json_decode(file_get_contents('https://blockchain.info/q/addressbalance/'.$buyin['pub_key'].'?confirmations=1'))/pow(10,8);
+
+		$unconfirmed_added = $api_unconfirmed_balance - $existing_bal;
+		$confirmed_added = $api_confirmed_balance - $existing_bal;
+		
+		$qq = "UPDATE game_buyins SET confirmed_amount_paid='".$api_confirmed_balance."', unconfirmed_amount_paid='".$api_unconfirmed_balance."'";
+		if ($confirmed_added >= $buyin['pay_amount'] || $confirmed_added >= $buyin['pay_amount']) {
+			$qq .= ", status='confirmed'";
+			$confirm_it = true;
+		}
+		else if ($unconfirmed_added > 0) {
+			$qq .= ", status='unconfirmed'";
+		}
+		$qq .= " WHERE buyin_id='".$buyin['buyin_id']."';";
+		$rr = run_query($qq);
+
+		//if ($confirm_it) {
+		//}
+	}
+	
 	$runtime_sec = microtime(true)-$script_start_time;
 	$sec_until_refresh = round(60-$runtime_sec);
 	if ($sec_until_refresh < 0) $sec_until_refresh = 0;

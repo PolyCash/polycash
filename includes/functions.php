@@ -3335,6 +3335,10 @@ function start_game(&$game) {
 		}
 	}
 }
+function pot_value(&$game) {
+	$value = paid_players_in_game($game)*$game['invite_cost'];
+	return $value;
+}
 function account_value_html(&$game, $account_value) {
 	$html = '<font class="greentext">'.format_bignum($account_value/pow(10,8), 2).'</font> '.$game['coin_name_plural'];
 	$html .= ' <font style="font-size: 12px;">(';
@@ -3344,7 +3348,7 @@ function account_value_html(&$game, $account_value) {
 	$r = run_query($q);
 	if (mysql_numrows($r) > 0) {
 		$payout_currency = mysql_fetch_array($r);
-		$payout_currency_value = paid_players_in_game($game)*$game['invite_cost']*$account_value/coins_in_existence($game, false);
+		$payout_currency_value = pot_value($game)*$account_value/coins_in_existence($game, false);
 		$html .= "&nbsp;=&nbsp;<a href=\"/".$game['url_identifier']."/?action=show_escrow\">".$payout_currency['symbol'].format_bignum($payout_currency_value)."</a>";
 	}
 	$html .= ")</font>";

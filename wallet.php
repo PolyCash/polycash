@@ -814,6 +814,13 @@ $mature_balance = mature_balance($game, $thisuser);
 				?>
 				<div id="game_status_explanation"<?php if ($game_status_explanation == "") echo ' style="display: none;"'; ?>><?php if ($game_status_explanation != "") echo $game_status_explanation; ?></div>
 
+				<?php
+				if ($game['buyin_policy'] != "none") { ?>
+					<button style="float: right;" class="btn btn-success" onclick="initiate_buyin();">Buy more <?php echo $game['coin_name_plural']; ?></button>
+					<?php
+				}
+				?>
+				
 				<div class="row">
 					<div class="col-md-6">
 						<h2>Current votes</h2>
@@ -1333,7 +1340,15 @@ $mature_balance = mature_balance($game, $thisuser);
 				</div>
 			<?php } ?>
 		</div>
-			
+		
+		
+		<div style="display: none;" class="modal fade" id="buyin_modal">
+			<div class="modal-dialog">
+				<div class="modal-content" id="buyin_modal_content">
+				</div>
+			</div>
+		</div>
+		
 		<div style="display: none;" class="modal fade" id="game_form">
 			<div class="modal-dialog">
 				<div class="modal-content">
@@ -1544,6 +1559,40 @@ $mature_balance = mature_balance($game, $thisuser);
 								</div>
 								<div class="col-sm-3 form-control-static">
 									coins
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">Buy-in policy:</div>
+								<div class="col-sm-6">
+									<select class="form-control" id="game_form_buyin_policy" onchange="game_form_buyin_policy_changed();">
+										<option value="none">No additional buy-ins</option>
+										<option value="unlimited">Unlimited buy-ins</option>
+										<option value="per_user_cap">Limit buy-ins per user</option>
+										<option value="game_cap">Buy-in cap for the whole game</option>
+										<option value="game_and_user_cap">Game-wide cap &amp; user cap</option>
+									</select>
+								</div>
+							</div>
+							<div id="game_form_per_user_buyin_cap_disp">
+								<div class="row">
+									<div class="col-sm-6 form-control-static">Buy-in limit per user:</div>
+									<div class="col-sm-3">
+										<input class="form-control" style="text-align: right;" type="text" id="game_form_per_user_buyin_cap" />
+									</div>
+									<div class="col-sm-3 form-control-static">
+										invite currency units
+									</div>
+								</div>
+							</div>
+							<div id="game_form_game_buyin_cap_disp">
+								<div class="row">
+									<div class="col-sm-6 form-control-static">Game-wide buy-in cap:</div>
+									<div class="col-sm-3">
+										<input class="form-control" style="text-align: right;" type="text" id="game_form_game_buyin_cap" />
+									</div>
+									<div class="col-sm-3 form-control-static">
+										invite currency units
+									</div>
 								</div>
 							</div>
 							<div class="row">
