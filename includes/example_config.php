@@ -5,8 +5,8 @@ $GLOBALS['mysql_password'] = "";
 $GLOBALS['mysql_database'] = "empirecoin";
 
 $GLOBALS['signup_captcha_required'] = false;
-$GLOBALS['recaptcha_publickey'] = false;
-$GLOBALS['recaptcha_privatekey'] = false;
+$GLOBALS['recaptcha_publickey'] = "";
+$GLOBALS['recaptcha_privatekey'] = "";
 
 $GLOBALS['outbound_email_enabled'] = false;
 $GLOBALS['sendgrid_user'] = "";
@@ -15,9 +15,9 @@ $GLOBALS['sendgrid_pass'] = "";
 $GLOBALS['show_query_errors'] = false;
 $GLOBALS['cron_key_string'] = "";
 
-$GLOBALS['coin_port'] = 23347;
-$GLOBALS['coin_testnet_port'] = 23345;
-$GLOBALS['coin_rpc_user'] = "EmpireCoinrpc";
+$GLOBALS['coin_port'] = 11111;
+$GLOBALS['coin_testnet_port'] = 22222;
+$GLOBALS['coin_rpc_user'] = "";
 $GLOBALS['coin_rpc_password'] = "";
 
 $GLOBALS['always_generate_coins'] = false;
@@ -34,6 +34,8 @@ $GLOBALS['base_url'] = "http://".$GLOBALS['site_domain'];
 
 $GLOBALS['default_timezone'] = 'America/Chicago';
 
-$GLOBALS['default_server_api_access_key'] = false;
-$GLOBALS['api_proxy_url'] = false;
+$GLOBALS['rsa_keyholder_email'] = "";
+$GLOBALS['rsa_pub_key'] = "";
+
+$GLOBALS['api_proxy_url'] = "";
 ?>

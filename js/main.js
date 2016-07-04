@@ -5,7 +5,7 @@ function Image(id) {
 function ImageCarousel(containerElementId) {
 	this.numPhotos = 16;
 	this.currentPhotoId = -1;
-	this.slideTime = 10000;
+	this.slideTime = 5000;
 	this.widthToHeight = Math.round(1800/570, 6);
 	this.containerElementId = containerElementId;
 	this.images = new Array();

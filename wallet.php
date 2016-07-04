@@ -243,7 +243,7 @@ if ($thisuser) {
 				include('includes/html_stop.php');
 				die();
 		}
-		else if ($requested_game['giveaway_status'] == "public_pay" || $requested_game['giveaway_status'] == "invite_pay") {
+		else if (!$game || $game['payment_required'] == 1) {
 			$pagetitle = "Join ".$requested_game['name'];
 			$nav_tab_selected = "wallet";
 			include('includes/html_start.php');

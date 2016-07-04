@@ -1261,7 +1261,7 @@ function ensure_user_in_game($user_id, $game_id) {
 		$r = run_query($q);
 	}
 	
-	if ($game['start_condition'] == "num_players") {
+	if ($game['game_status'] == "published" && $game['start_condition'] == "num_players") {
 		$num_players = paid_players_in_game($game);
 		if ($num_players >= $game['start_condition_players']) {
 			start_game($game);
@@ -3217,5 +3217,20 @@ function start_game(&$game) {
 		$message .= game_info_table($game);
 		$email_id = mail_async($player['username'], $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "");
 	}
+}
+function account_value_html(&$game, $account_value) {
+	$html = '<font class="greentext">'.format_bignum($account_value/pow(10,8), 2).'</font> '.$game['coin_name_plural'];
+	$html .= ' <font style="font-size: 12px;">(';
+	$html .= format_bignum(100*$account_value/coins_in_existence($game, false))."%";
+	
+	$q = "SELECT * FROM currencies WHERE currency_id='".$game['invite_currency']."';";
+	$r = run_query($q);
+	if (mysql_numrows($r) > 0) {
+		$payout_currency = mysql_fetch_array($r);
+		$payout_currency_value = paid_players_in_game($game)*$game['invite_cost']*$account_value/coins_in_existence($game, false);
+		$html .= "&nbsp;=&nbsp;".$payout_currency['symbol'].format_bignum($payout_currency_value);
+	}
+	$html .= ")</font>";
+	return $html;
 }
 ?>

@@ -15,7 +15,7 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		$latest_btc_price = update_currency_price($btc_currency['currency_id']);
 	}
 	
-	$q = "SELECT * FROM games WHERE game_status='published' AND start_condition='players_joined';";
+	$q = "SELECT * FROM games WHERE game_status='published' AND start_condition='players_joined' AND start_condition_players > 0;";
 	$r = run_query($q);
 	while ($unstarted_game = mysql_fetch_array($r)) {
 		$num_players = paid_players_in_game($unstarted_game);
@@ -24,7 +24,7 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		}
 	}
 	
-	$q = "SELECT * FROM games WHERE game_status='published' AND start_condition='fixed_time' AND start_datetime <= NOW();";
+	$q = "SELECT * FROM games WHERE game_status='published' AND start_condition='fixed_time' AND start_datetime <= NOW() AND start_datetime IS NOT NULL;";
 	$r = run_query($q);
 	while ($unstarted_game = mysql_fetch_array($r)) {
 		start_game($unstarted_game);
