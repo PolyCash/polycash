@@ -134,7 +134,7 @@ else {
 				
 					for ($game_i=0; $game_i<count($running_games); $game_i++) {
 						if ($GLOBALS['walletnotify_by_cron'] && $running_games[$game_i]->db_game['game_type'] == "real") {
-							echo $running_games[$game_i]->apply_user_strategies();
+							$app->set_site_constant("last_sync_start_time", time());
 							echo $running_games[$game_i]->sync_coind($coin_rpc);
 							$running_games[$game_i]->update_option_scores();
 						}

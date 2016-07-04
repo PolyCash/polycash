@@ -87,8 +87,9 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				If there was an error installing the database please use mysql to delete the database, then try again.<br/>
 				<br/>
 				Make sure this line has been added to your /etc/crontab:<br/>
-				* * * * * root /usr/bin/php <?php echo realpath(dirname(__FILE__))."/cron/minutely.php ".$GLOBALS['cron_key_string']; ?><br/>
-				*/5 * * * * root /usr/bin/php <?php echo realpath(dirname(__FILE__))."/cron/sync_coind.php ".$GLOBALS['cron_key_string']; ?><br/>
+<pre>
+* * * * * root /usr/bin/php <?php echo realpath(dirname(__FILE__))."/cron/minutely.php ".$GLOBALS['cron_key_string']; ?>
+</pre>
 				<br/>
 				Please run "a2enmod rewrite"<br/>
 				Then make sure the line "AllowOverride All" is included in your apache configuration file (/etc/apache2/apache2.conf or /etc/httpd/httpd.conf or /etc/httpd/conf/httpd.conf)<br/>

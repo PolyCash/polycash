@@ -158,4 +158,5 @@ ALTER TABLE `log_messages`
   ADD PRIMARY KEY (`message_id`);
 ALTER TABLE `log_messages`
   MODIFY `message_id` int(11) NOT NULL AUTO_INCREMENT;
+ALTER TABLE `transaction_ios` ADD `spend_count` INT NULL DEFAULT '0' AFTER `spend_block_id`;
 

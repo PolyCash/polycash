@@ -471,7 +471,7 @@ class Game {
 				while ($transaction_input = $r->fetch()) {
 					if ($input_sum < $amount) {
 						if ($this->db_game['game_type'] != "real") {
-							$qq = "UPDATE transaction_ios SET spend_transaction_id='".$transaction_id."'";
+							$qq = "UPDATE transaction_ios SET spend_count=spend_count+1, spend_transaction_id='".$transaction_id."'";
 							if ($block_id !== false) $qq .= ", spend_status='spent', spend_block_id='".$block_id."', spend_round_id='".$this->block_to_round($block_id)."'";
 							$qq .= " WHERE io_id='".$transaction_input['io_id']."';";
 							$rr = $this->app->run_query($qq);
@@ -1913,7 +1913,7 @@ class Game {
 							$ref_cbd += ($ref_block_id-$db_input['create_block_id'])*$db_input['amount'];
 							$ref_crd += ($ref_round_id-$db_input['create_round_id'])*$db_input['amount'];
 							
-							$q = "UPDATE transaction_ios SET spend_transaction_id='".$db_transaction_id."' WHERE io_id='".$db_input['io_id']."';";
+							$q = "UPDATE transaction_ios SET spend_count=spend_count+1, spend_transaction_id='".$db_transaction_id."' WHERE io_id='".$db_input['io_id']."';";
 							$r = $this->app->run_query($q);
 						}
 					}
@@ -2335,7 +2335,7 @@ class Game {
 			$lastblock_rpc = $coin_rpc->getblock($block_hash);
 		}
 		catch (Exception $e) {
-			$this->app->set_site_constant("sync_in_progress", "0");
+			$this->app->set_site_constant("last_sync_start_time", "0");
 			var_dump($e);
 			die("RPC failed to get block $block_hash");
 		}
@@ -2344,6 +2344,8 @@ class Game {
 		$r = $this->app->run_query($q);
 		
 		if ($r->rowCount() == 0) {
+			$this->app->set_site_constant("last_sync_start_time", time());
+			
 			$q = "INSERT INTO blocks SET game_id='".$this->db_game['game_id']."', block_hash='".$block_hash."', block_id='".$block_height."', time_created='".time()."', taper_factor='".$this->block_id_to_taper_factor($block_height)."';";
 			$r = $this->app->run_query($q);
 			$block_within_round = $this->block_id_to_round_index($block_height);
@@ -2374,7 +2376,7 @@ class Game {
 					$transaction_rpcs[$i] = $transaction_rpc;
 				}
 				catch (Exception $e) {
-					$this->app->set_site_constant("sync_in_progress", "0");
+					$this->app->set_site_constant("last_sync_start_time", "0");
 					die("Error, transaction ".$tx_hash." was not found in block ".$block_height.".");
 				}
 				
@@ -2427,7 +2429,7 @@ class Game {
 					$transaction_rpc = $transaction_rpcs[$i];
 				}
 				catch (Exception $e) {
-					$this->app->set_site_constant("sync_in_progress", "0");
+					$this->app->set_site_constant("last_sync_start_time", "0");
 					var_dump($e);
 					die("Failed to get transaction ".$tx_hash);
 				}
@@ -2469,7 +2471,7 @@ class Game {
 					
 					if (!$transaction_error && $input_sum >= $output_sum) {
 						if (count($spend_io_ids) > 0) {
-							$q = "UPDATE transaction_ios SET spend_status='spent', spend_transaction_id='".$transaction['transaction_id']."', spend_block_id='".$block_height."' WHERE io_id IN (".implode(",", $spend_io_ids).");";
+							$q = "UPDATE transaction_ios SET spend_count=spend_count+1, spend_status='spent', spend_transaction_id='".$transaction['transaction_id']."', spend_block_id='".$block_height."' WHERE io_id IN (".implode(",", $spend_io_ids).");";
 							$r = $this->app->run_query($q);
 							
 							$q = "UPDATE transactions SET fee_amount='".($input_sum-$output_sum)."' WHERE transaction_id='".$transaction['transaction_id']."';";
@@ -2513,14 +2515,12 @@ class Game {
 	
 	public function sync_coind(&$coin_rpc) {
 		$html = "";
-		$sync_in_progress = (int) $this->app->get_site_constant("sync_in_progress");
+		$last_sync_start_time = (int) $this->app->get_site_constant("last_sync_start_time");
 		
-		if ($sync_in_progress > time()-30) {
+		if ($last_sync_start_time > time()-30) {
 			$html = "Synchronization is already running, skipping...\n";
 		}
 		else {
-			$this->app->set_site_constant("sync_in_progress", time());
-			
 			$last_block_id = $this->last_block_id();
 
 			$startblock_q = "SELECT * FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id='".$last_block_id."';";
@@ -2532,7 +2532,7 @@ class Game {
 					$startblock_r = $this->app->run_query($startblock_q);
 				}
 				else {
-					$this->app->set_site_constant("sync_in_progress", "0");
+					$this->app->set_site_constant("last_sync_start_time", "0");
 					die("sync_coind failed, block $last_block_id is missing.\n");
 				}
 			}
@@ -2597,8 +2597,6 @@ class Game {
 
 				$this->update_option_scores();
 			}
-			
-			$this->app->set_site_constant("sync_in_progress", "0");
 		}
 		
 		return $html;
@@ -2617,9 +2615,9 @@ class Game {
 	
 	function delete_blocks_from_height($block_height) {
 		echo "deleting from block #".$block_height." and up.<br/>\n";
-		$this->app->run_query("DELETE FROM transactions WHERE game_id='".$this->db_game['game_id']."' AND block_id >= ".$block_height.";");
-		$this->app->run_query("DELETE FROM transaction_ios WHERE game_id='".$this->db_game['game_id']."' AND create_block_id >= ".$block_height.";");
-		$this->app->run_query("UPDATE transaction_ios SET spend_round_id=NULL, coin_blocks_created=0, coin_rounds_created=0, votes=0, spend_transaction_id=NULL, spend_status='unspent', payout_io_id=NULL WHERE game_id='".$this->db_game['game_id']."' AND spend_block_id >= ".$block_height.";");
+		$this->app->run_query("DELETE FROM transactions WHERE game_id='".$this->db_game['game_id']."' AND (block_id >= ".$block_height." OR block_id IS NULL);");
+		$this->app->run_query("DELETE FROM transaction_ios WHERE game_id='".$this->db_game['game_id']."' AND (create_block_id >= ".$block_height." OR create_block_id IS NULL);");
+		$this->app->run_query("UPDATE transaction_ios SET spend_round_id=NULL, coin_blocks_created=0, coin_rounds_created=0, votes=0, spend_transaction_id=NULL, spend_count=NULL, spend_status='unspent', payout_io_id=NULL WHERE game_id='".$this->db_game['game_id']."' AND spend_block_id >= ".$block_height.";");
 		
 		$this->app->run_query("DELETE FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id >= ".$block_height.";");
 
