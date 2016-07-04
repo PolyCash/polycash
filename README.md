@@ -65,7 +65,12 @@ $GLOBALS['api_proxy_url'] = "";
 
 ```
 
-Be sure to configure your database correctly by entering the correct mysql password, username and database into this config file.
+Enter the username, password and database name for your MySQL database into your includes/config.php.
+
+Next, configure cron to poll empirecoin every minute. This keeps empirecoin-web in sync with empirecoind. Add these lines to your /etc/crontab:
+```
+* * * * * root /usr/bin/php /var/www/html/empirecoin-web/cron/minutely.php <CRON_KEY_STRING>
+```
 
 You can configure outbound emails by setting $GLOBALS['outbound_email_enabled'] = true, and then entering your sendgrid credentials in the following 2 parameters.
 
