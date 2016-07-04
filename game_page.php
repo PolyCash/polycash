@@ -193,7 +193,7 @@ if ($game && $thisuser) {
 		if ($thisuser) { ?>
 			<div class="row">
 				<div class="col-md-6">
-					<div id="my_current_votes">
+					<div id="game0_my_current_votes">
 						<?php
 						echo $game->my_votes_table($current_round, $thisuser);
 						?>

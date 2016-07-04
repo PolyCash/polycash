@@ -879,7 +879,7 @@ if ($thisuser && $game) {
 				<div class="row">
 					<div class="col-md-6">
 						<h2>My Votes</h2>
-						<div id="my_current_votes">
+						<div id="game0_my_current_votes">
 							<?php
 							echo $game->my_votes_table($current_round, $thisuser);
 							?>

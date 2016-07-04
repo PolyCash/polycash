@@ -57,7 +57,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			if ($r->rowCount() == 0) {
 				$address_id = $app->new_invoice_address();
 				
-				$q = "INSERT INTO games SET invoice_address_id='".$address_id."', option_group_id=1, featured=1, invite_currency=1, url_identifier='empirecoin-testnet', start_condition='fixed_time', game_status='running', giveaway_status='public_free', giveaway_amount=0, pow_reward=2500000000, pos_reward=75000000000, game_type='real', rpc_port=23345, rpc_username='EmpireCoinrpc', rpc_password='', block_timing='realistic', payout_weight='coin', seconds_per_block=120, name='EmpireCoin Testnet', num_voting_options=16, maturity=8, round_length=10, max_voting_fraction=0.25, option_name='empire', option_name_plural='empires', buyin_policy='none', always_generate_coins=0, sync_coind_by_cron=1;";
+				$q = "INSERT INTO games SET invoice_address_id='".$address_id."', option_group_id=1, featured=1, invite_currency=1, url_identifier='empirecoin-testnet', start_condition='fixed_time', game_status='running', giveaway_status='public_free', giveaway_amount=0, pow_reward=2500000000, pos_reward=75000000000, game_type='real', rpc_port=23345, rpc_username='', rpc_password='', block_timing='realistic', payout_weight='coin', seconds_per_block=120, name='EmpireCoin Testnet', num_voting_options=16, maturity=9, round_length=10, max_voting_fraction=0.25, option_name='empire', option_name_plural='empires', buyin_policy='none', always_generate_coins=0, sync_coind_by_cron=1;";
 				$r = $app->run_query($q);
 				
 				$testnet_game_id = $app->last_insert_id();
@@ -82,6 +82,19 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			
 			$app->set_site_constant("game_loop_seconds", 2);
 			$app->set_site_constant("reference_currency_id", 1);
+			
+			if ($_REQUEST['action'] == "save_rpc_params") {
+				$game_id = (int) $_REQUEST['game_id'];
+				$q = "SELECT * FROM games WHERE game_type='real' AND rpc_username='' AND rpc_password='' AND game_id=".$app->quote_escape($game_id).";";
+				$r = $app->run_query($q);
+				if ($r->rowCount() == 1) {
+					$temp_rpc_game = $r->fetch();
+					$rpc_username = $_REQUEST['rpc_username'];
+					$rpc_password = $_REQUEST['rpc_password'];
+					$r = $app->run_query("UPDATE games SET rpc_username=".$app->quote_escape($rpc_username).", rpc_password=".$app->quote_escape($rpc_password)." WHERE game_id=".$temp_rpc_game['game_id'].";");
+				}
+				else die("Error, please manually save RPC parameters in the database ($q).");
+			}
 			
 			$pagetitle = $GLOBALS['site_name']." - Installing...";
 			$include_crypto_js = TRUE;
@@ -172,22 +185,37 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				<?php
 				$rpc_games_r = $app->run_query("SELECT * FROM games WHERE game_type='real' AND game_status='running';");
 				while ($rpc_game = $rpc_games_r->fetch()) {
-					echo "<b>Connecting RPC client to ".$rpc_game['name']."...";
-					try {
-						$coin_rpc = new jsonRPCClient('http://'.$rpc_game['rpc_username'].':'.$rpc_game['rpc_password'].'@127.0.0.1:'.$rpc_game['rpc_port'].'/');
-						$getinfo = $coin_rpc->getinfo();
-						echo " <font class=\"greentext\">Connected on port ".$rpc_game['rpc_port']."</font></b><br/>\n";
-						echo "<pre>getinfo()\n";
-						print_r($getinfo);
-						echo "</pre>";
-						
-						echo "To reset and synchronize this game, run <a target=\"_blank\" href=\"/scripts/sync_coind_initial.php?key=".$GLOBALS['cron_key_string']."&game_id=".$testnet_game->db_game['game_id']."\">scripts/sync_coind_initial.php?game_id=".$rpc_game['game_id']."</a>\n";
-						echo "<br/><br/>\n";
+					if ($rpc_game['rpc_username'] != "" && $rpc_game['rpc_password'] != "") {
+						echo "<b>Connecting RPC client to ".$rpc_game['name']."...";
+						try {
+							$coin_rpc = new jsonRPCClient('http://'.$rpc_game['rpc_username'].':'.$rpc_game['rpc_password'].'@127.0.0.1:'.$rpc_game['rpc_port'].'/');
+							$getinfo = $coin_rpc->getinfo();
+							echo " <font class=\"greentext\">Connected on port ".$rpc_game['rpc_port']."</font></b><br/>\n";
+							echo "<pre>getinfo()\n";
+							print_r($getinfo);
+							echo "</pre>";
+							
+							echo "To reset and synchronize this game, run <a target=\"_blank\" href=\"/scripts/sync_coind_initial.php?key=".$GLOBALS['cron_key_string']."&game_id=".$testnet_game->db_game['game_id']."\">scripts/sync_coind_initial.php?game_id=".$rpc_game['game_id']."</a>\n";
+							echo "<br/><br/>\n";
+						}
+						catch (Exception $e) {
+							echo " <font class=\"redtext\">Failed to connect on port ".$rpc_game['rpc_port']."</font></b><br/>";
+							echo "<pre>Make sure the coin daemon is running.</pre>\n";
+							echo "<br/>\n";
+						}
 					}
-					catch (Exception $e) {
-						echo " <font class=\"redtext\">Failed to connect on port ".$rpc_game['rpc_port']."</font></b><br/>";
-						echo "<pre>Make sure the coin daemon is running.</pre>\n";
-						echo "<br/>\n";
+					else { ?>
+						Please enter the RPC username and password for connecting to the <b><?php echo $rpc_game['name']; ?></b> daemon:<br/>
+						<form method="post" action="install.php">
+							<input type="hidden" name="key" value="<?php echo $GLOBALS['cron_key_string']; ?>" />
+							<input type="hidden" name="action" value="save_rpc_params" />
+							<input type="hidden" name="game_id" value="<?php echo $rpc_game['game_id']; ?>" />
+							<input class="form-control" name="rpc_username" placeholder="RPC username" />
+							<input class="form-control" name="rpc_password" placeholder="RPC password" />
+							<input type="submit" class="btn btn-primary" value="Save" />
+						</form>
+						<br/>
+						<?php
 					}
 				}
 				?>
