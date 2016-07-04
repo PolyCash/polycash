@@ -34,8 +34,9 @@ if ($thisuser) { ?>
 				Welcome to EmpireCoin, the first decentralized voting game on the planet.  In EmpireCoin, you can bet money against players from around the world every half hour in an epic and never-ending struggle for power.  By correctly voting your coins you'll win money, but if you're wrong you won't lose anything.  Do you love gambling, sports betting or speculating on currencies and stocks?  Stop playing rigged games and get in on the first betting game where money is created from thin air and given out to the players. Start building your empire today in this massively multiplayer online game of chance!
 				<br/><br/>
 				EmpireCoin is currently in beta.  You can <a href="/wallet/">sign up</a> for a beta web wallet to try out the game, and the coin itself will be released soon. For more information, please download the <a href="/EmpireCoin.pdf">EmpireCoin Whitepaper</a>.<br/>
-				<button onclick="window.location='/wallet/';" class="btn btn-success">Log In</button>
-				<button onclick="window.location='/wallet/';" class="btn btn-primary">Sign Up</button> 
+				<a href="/wallet/" class="btn btn-success">Log In</a>
+				<a href="/wallet/" class="btn btn-primary">Sign Up</a> 
+				<a href="/explorer/rounds/" class="btn btn-info">Blockchain Explorer</a>
 			</div>
 		</div>
 		<p>
@@ -82,8 +83,9 @@ if ($thisuser) { ?>
 		</p>
 		<p>
 			<h1>Get Started</h1>
-			We're still developing EmpireCoin and it's not ready to download just yet.  But you can try out a simulation of the EmpireCoin game for free by signing up for an EmpireCo.in web wallet. We'll give you 1,000 beta EmpireCoins just for signing up.  But remember, this is just a simulation; rules of the game could change and your coins might be lost at any time.<br/>
-			<button style="margin: 10px 0px;" class="btn btn-primary" onclick="window.location='/wallet/';">Sign Up</button>
+			We're still developing EmpireCoin and it's not ready to download just yet.  But you can try out a simulation of the EmpireCoin game for free by signing up for an EmpireCo.in web wallet. We'll give you 1,000 beta EmpireCoins just for signing up.  But remember, this is just a simulation; rules of the game could change and your coins might be lost at any time. Or browse the blockchain by clicking on the blockchain explorer below.<br/>
+			<a href="/wallet/" style="margin: 10px 0px;" class="btn btn-success">Sign Up</a>
+			<a href="/explorer/rounds/" style="margin: 10px 0px;" class="btn btn-primary">Blockchain Explorer</a>
 		</p>
 		<p>
 			<h1>EmpireCoin API</h1>
