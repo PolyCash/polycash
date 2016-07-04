@@ -240,7 +240,7 @@ if ($thisuser) {
 	$uri_parts = explode("/", $uri);
 	$url_identifier = $uri_parts[2];
 	
-	$q = "SELECT * FROM games WHERE url_identifier='".mysql_real_escape_string($url_identifier)."';";
+	$q = "SELECT * FROM games WHERE url_identifier='".mysql_real_escape_string($url_identifier)."' AND (game_status IN ('published','running','completed') OR creator_id='".$thisuser['user_id']."');";
 	$r = run_query($q);
 
 	if (mysql_numrows($r) > 0) {
@@ -444,7 +444,7 @@ if ($thisuser) {
 		?>
 		<div class="container" style="max-width: 1000px;">
 			<?php
-			$q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser['user_id']."';";
+			$q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser['user_id']."' AND (g.creator_id='".$thisuser['user_id']."' OR g.game_status IN ('running','completed','published'));";
 			$r = run_query($q);
 			
 			echo "<br/>Please select a game.<br/>\n";

@@ -27,14 +27,19 @@ include('includes/html_start.php');
 	echo '<div class="paragraph">';
 	$q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='editable' OR g.game_status='running');";
 	$r = run_query($q);
-	echo '<div class="row">';
+	
+	$cell_width = 6;
+	if (mysql_numrows($r) == 1) $cell_width = 12;
+	
 	$counter = 0;
+	echo '<div class="row">';
+	
 	while ($featured_game = mysql_fetch_array($r)) {
-		echo '<div class="col-md-6"><h3>'.$featured_game['name'].'</h3>';
+		echo '<div class="col-md-'.$cell_width.'"><h3>'.$featured_game['name'].'</h3>';
 		echo game_description($featured_game);
-		echo '<br/><a href="/'.$featured_game['url_identifier'].'/" class="btn btn-primary">Join '.$featured_game['name'].'</a></div>';
+		echo '<br/><a href="/'.$featured_game['url_identifier'].'/" class="btn btn-primary" style="margin-top: 5px;">Join '.$featured_game['name'].'</a></div>';
 		
-		if ($counter%2 == 1) echo '</div><div class="row">';
+		if ($counter%(12/$cell_width) == 1) echo '</div><div class="row">';
 		$counter++;
 	}
 	echo '</div>';

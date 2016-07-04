@@ -64,7 +64,9 @@ if ($game) {
 						echo '<div class="paragraph">';
 						
 						$receive_disp = format_bignum($game['giveaway_amount']/pow(10,8));
-						echo 'You can join this game by buying '.$receive_disp.' ';
+						if ($game['giveaway_status'] == "invite_pay" || $game['giveaway_status'] == "invite_free") echo "You need an invitation to join this game. After receiving an invitation you can join";
+						else echo 'You can join this game';
+						echo ' by buying '.$receive_disp.' ';
 						if ($receive_disp == '1') echo $game['coin_name'];
 						else echo $game['coin_name_plural'];
 						
@@ -101,7 +103,7 @@ if ($game) {
 				}
 				?>
 				<div class="paragraph">
-					In this game you can win <?php echo $game['coin_name_plural']; ?> by casting your votes correctly.  Votes build up over time based on the number of <?php echo $game['coin_name_plural']; ?> that you hold, and when you vote for <?php echo prepend_a_or_an($game['option_name']); ?>, your votes are used up but your <?php echo $game['coin_name_plural']; ?> are retained. By collaborating with your teammates against competing groups, you can make real money by accumulating money faster than the other players.  Through the <?php echo $GLOBALS['coin_brand_name']; ?> APIs you can even code up a custom strategy which makes smart, real-time decisions about how to cast your votes.
+					In this game you can win <?php echo $game['coin_name_plural']; ?> by casting your votes correctly.  Votes build up over time based on the number of <?php echo $game['coin_name_plural']; ?> that you hold.  When you vote for <?php echo prepend_a_or_an($game['option_name']); ?>, your votes are used up but your <?php echo $game['coin_name_plural']; ?> are retained. By collaborating with your teammates against competing groups, you can make money by accumulating <?php echo $game['coin_name_plural']; ?> faster than the other players.  Through the <?php echo $GLOBALS['coin_brand_name']; ?> API you can code up a custom strategy which makes smart, real-time decisions about how to cast your votes.
 				</div>
 				<div class="paragraph">
 					<a href="/wallet/<?php echo $game['url_identifier']; ?>/" class="btn btn-success">Play Now</a>
@@ -138,25 +140,42 @@ if ($game) {
 					<div class="modal-body">
 						<?php
 						if ($user_game) {
+							$escrow_html = "";
+							$btc_sum = 0;
+							$settle_sum = 0;
+							
 							$q = "SELECT * FROM currency_invoices ci JOIN invoice_addresses ia ON ci.invoice_address_id=ia.invoice_address_id JOIN currencies c ON ci.settle_currency_id=c.currency_id WHERE ci.game_id='".$game['game_id']."' AND ci.status='confirmed';";
 							$r = run_query($q);
 							
-							if (mysql_numrows($r) > 0) {
-								$btc_sum = 0;
-								$settle_sum = 0;
-								while ($currency_invoice = mysql_fetch_array($r)) {
-									echo '<div class="row">';
-									echo '<div class="col-sm-3">'.format_bignum($currency_invoice['settle_amount']).' '.$currency_invoice['short_name'].'s</div>';
-									echo '<div class="col-sm-3">'.format_bignum($currency_invoice['unconfirmed_amount_paid']).' BTC</div>';
-									echo '<div class="col-sm-5"><a target="_blank" href="https://blockchain.info/address/'.$currency_invoice['pub_key'].'">'.$currency_invoice['pub_key'].'</a></div>';
-									echo '</div>';
-									$btc_sum += $currency_invoice['unconfirmed_amount_paid'];
-									$settle_sum += $currency_invoice['settle_amount'];
-								}
-								echo '<br/>In total, escrowed funds are worth '.format_bignum($settle_sum)." ".$invite_currency['short_name']."s. ";
+							while ($currency_invoice = mysql_fetch_array($r)) {
+								$escrow_html .= '<div class="row">';
+								$escrow_html .= '<div class="col-sm-3">'.format_bignum($currency_invoice['settle_amount']).' '.$currency_invoice['short_name'].'s</div>';
+								$escrow_html .= '<div class="col-sm-3">'.format_bignum($currency_invoice['unconfirmed_amount_paid']).' BTC</div>';
+								$escrow_html .= '<div class="col-sm-5"><a target="_blank" href="https://blockchain.info/address/'.$currency_invoice['pub_key'].'">'.$currency_invoice['pub_key'].'</a></div>';
+								$escrow_html .= '</div>';
+								$btc_sum += $currency_invoice['unconfirmed_amount_paid'];
+								$settle_sum += $currency_invoice['settle_amount'];
+							}
+							
+							$q = "SELECT * FROM game_buyins gb JOIN invoice_addresses ia ON gb.invoice_address_id=ia.invoice_address_id JOIN currencies c ON gb.settle_currency_id=c.currency_id WHERE gb.game_id='".$game['game_id']."' AND gb.status='confirmed';";
+							$r = run_query($q);
+							
+							while ($buyin = mysql_fetch_array($r)) {
+								$escrow_html .= '<div class="row">';
+								$escrow_html .= '<div class="col-sm-3">'.format_bignum($buyin['settle_amount']).' '.$buyin['short_name'].'s</div>';
+								$escrow_html .= '<div class="col-sm-3">'.format_bignum($buyin['unconfirmed_amount_paid']).' BTC</div>';
+								$escrow_html .= '<div class="col-sm-5"><a target="_blank" href="https://blockchain.info/address/'.$buyin['pub_key'].'">'.$buyin['pub_key'].'</a></div>';
+								$escrow_html .= '</div>';
+								$btc_sum += $buyin['unconfirmed_amount_paid'];
+								$settle_sum += $buyin['settle_amount'];
+							}
+							
+							if ($escrow_html == "") {
+								echo "No funds are currently in escrow for this game.";
 							}
 							else {
-								echo "No funds are currently in escrow for this game.";
+								echo $escrow_html;
+								echo '<br/>In total, escrowed funds are worth '.format_bignum($settle_sum)." ".$invite_currency['short_name']."s. ";
 							}
 						}
 						else {
@@ -201,7 +220,7 @@ if ($game) {
 				?>
 			</div>
 			
-			<li>Voting transactions are only counted if they are confirmed in a voting block. All blocks are voting blocks except for the final transaction of each round.</li>
+			<li>Voting transactions are only counted if they are confirmed in a voting block. All blocks are voting blocks except for the final block of each round.</li>
 			<li>Blocks are mined approximately every <?php echo format_seconds($game['seconds_per_block']); ?> by the SHA256 algorithm. 
 			<?php if ($game['inflation'] == "linear") { ?>Miners receive <?php echo format_bignum($game['pow_reward']/pow(10,8))." ".$game['coin_name_plural']; ?> per block.<?php } ?></li>
 			<li>Blocks are grouped into voting rounds.  Blocks 1 through <?php echo $game['round_length']; ?> make up the first round, and every subsequent <?php echo $game['round_length']; ?> blocks are grouped into a round.</li>

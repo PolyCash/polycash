@@ -9,9 +9,8 @@ $game_identifier = $uri_parts[2];
 
 $user_game = false;
 
-$game_q = "SELECT * FROM games WHERE url_identifier='".mysql_real_escape_string($game_identifier)."';";
+$game_q = "SELECT * FROM games WHERE url_identifier='".mysql_real_escape_string($game_identifier)."' AND (game_status IN ('running','completed','published'));";
 $game_r = run_query($game_q);
-
 if (mysql_numrows($game_r) == 1) {
 	$game = mysql_fetch_array($game_r);
 	
@@ -24,7 +23,7 @@ if (mysql_numrows($game_r) == 1) {
 		}
 	}
 	
-	if (!$user_game) $game = false;
+	if (!$user_game && $game['creator_id'] > 0) $game = false;
 }
 
 if (rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer") $explore_mode = "games";
@@ -55,29 +54,37 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 			$pagetitle = $game['name']." - Current Scores";
 		}
 		else {
-			$round_id = intval($uri_parts[4]);
+			$round_id = $uri_parts[4];
 			
-			if ($round_id == 0) {
+			if ($round_id == '0') {
 				$mode_error = false;
-				$pagetitle = "Round Results - ".$game['name'];
+				$pagetitle = $game['name']." - Initial Distribution";
+				$explore_mode = "initial";
 			}
 			else {
-				$q = "SELECT r.*, gvo.*, t.amount FROM cached_rounds r LEFT JOIN game_voting_options gvo ON r.winning_option_id=gvo.option_id LEFT JOIN transactions t ON r.payout_transaction_id=t.transaction_id WHERE r.game_id=".$game['game_id']." AND r.round_id='".$round_id."';";
-				$r = run_query($q);
-				if (mysql_numrows($r) == 1) {
-					$round = mysql_fetch_array($r);
+				$round_id = intval($round_id);
+				if ($round_id == 0) {
 					$mode_error = false;
-					$pagetitle = $game['name']." - Results of round #".$round['round_id'];
-					$round_status = "completed";
+					$pagetitle = "Round Results - ".$game['name'];
 				}
 				else {
-					$last_block_id = last_block_id($game['game_id']);
-					$current_round = block_to_round($game, $last_block_id+1);
-					
-					if ($current_round == $round_id) {
-						$round_status = "current";
+					$q = "SELECT r.*, gvo.*, t.amount FROM cached_rounds r LEFT JOIN game_voting_options gvo ON r.winning_option_id=gvo.option_id LEFT JOIN transactions t ON r.payout_transaction_id=t.transaction_id WHERE r.game_id=".$game['game_id']." AND r.round_id='".$round_id."';";
+					$r = run_query($q);
+					if (mysql_numrows($r) == 1) {
+						$round = mysql_fetch_array($r);
 						$mode_error = false;
-						$pagetitle = $game['name']." - Current Scores";
+						$pagetitle = $game['name']." - Results of round #".$round['round_id'];
+						$round_status = "completed";
+					}
+					else {
+						$last_block_id = last_block_id($game['game_id']);
+						$current_round = block_to_round($game, $last_block_id+1);
+						
+						if ($current_round == $round_id) {
+							$round_status = "current";
+							$mode_error = false;
+							$pagetitle = $game['name']." - Current Scores";
+						}
 					}
 				}
 			}
@@ -155,6 +162,11 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 			echo "Error, you've reached an invalid page.";
 		}
 		else {
+			?>
+			<script type="text/javascript">
+			var game_id = <?php echo $game['game_id']; ?>;
+			</script>
+			<?php
 			if ($explore_mode == "rounds") {
 				if ($round || $round_status == "current") {
 					if ($round_status == "current") {
@@ -332,13 +344,13 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 						$q = "SELECT * FROM transactions WHERE game_id='".$game['game_id']."' AND block_id='".$i."' AND amount > 0 ORDER BY transaction_id ASC;";
 						$r = run_query($q);
 						while ($transaction = mysql_fetch_array($r)) {
-							echo render_transaction($game, $transaction, FALSE, "", $game['url_identifier']);
+							echo render_transaction($game, $transaction, FALSE, "");
 						}
 					}
 					echo '</div>';
 					
 					echo "<br/>\n";
-					echo "<br/>\n";
+					if ($round['round_id'] > 1 || $round['round_id'] < $current_round) echo "<br/>\n";
 					
 					if ($round['round_id'] > 1) { ?>
 						<a href="/explorer/<?php echo $game['url_identifier']; ?>/rounds/<?php echo $round['round_id']-1; ?>" style="display: inline-block; margin-right: 30px;">&larr; Previous Round</a>
@@ -365,7 +377,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					<center>
 						<a href="" onclick="show_more_rounds_complete(); return false;" id="show_more_link">Show More</a>
 					</center>
-					<br/>
+					
 					<script type="text/javascript">
 					$(document).ready(function() {
 						last_round_shown = <?php echo $last_round_shown; ?>;
@@ -373,7 +385,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					</script>
 					<?php
 				}
-				echo "<br/><br/>\n";
+				echo "<br/>\n";
 			}
 			else if ($explore_mode == "blocks" || $explore_mode == "unconfirmed") {
 				if ($block || $explore_mode == "unconfirmed") {
@@ -419,7 +431,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					$r = run_query($q);
 					
 					while ($transaction = mysql_fetch_array($r)) {
-						echo render_transaction($game, $transaction, FALSE, "", $game['url_identifier']);
+						echo render_transaction($game, $transaction, FALSE, "");
 					}
 					echo '</div>';
 					echo "<br/>\n";
@@ -439,7 +451,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 						echo "<br/><a href=\"/explorer/".$game['url_identifier']."/transactions/unconfirmed\">Unconfirmed transactions</a>\n";
 					}
 					
-					echo "<br/><br/>\n";
+					echo "<br/>\n";
 				}
 				else {
 					$q = "SELECT * FROM blocks WHERE game_id='".$game['game_id']."' ORDER BY block_id ASC;";
@@ -453,7 +465,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					}
 					echo "</ul>\n";
 					
-					echo "<br/><br/>\n";
+					echo "<br/>\n";
 				}
 			}
 			else if ($explore_mode == "addresses") {
@@ -469,11 +481,24 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				while ($transaction_io = mysql_fetch_array($r)) {
 					$block_index = block_id_to_round_index($game, $transaction_io['block_id']);
 					$round_id = block_to_round($game, $transaction_io['block_id']);
-					echo render_transaction($game, $transaction_io, $address['address_id'], "Confirmed in the <a href=\"/explorer/".$game['url_identifier']."/blocks/".$transaction_io['block_id']."\">".date("jS", strtotime("1/".$block_index."/2015"))." block</a> of <a href=\"/explorer/".$game['url_identifier']."/rounds/".$round_id."\">round ".$round_id."</a>". $game['url_identifier']);
+					$desc = "Confirmed in ";
+					if ($block_index != 0) $desc .= "the <a href=\"/explorer/".$game['url_identifier']."/blocks/".$transaction_io['block_id']."\">".date("jS", strtotime("1/".$block_index."/2015"))." block</a> of ";
+					$desc .= "<a href=\"/explorer/".$game['url_identifier']."/rounds/".$round_id."\">round ".$round_id."</a>";
+					echo render_transaction($game, $transaction_io, $address['address_id'], $desc);
 				}
 				echo "</div>\n";
 				
-				echo "<br/><br/>\n";
+				echo "<br/>\n";
+			}
+			else if ($explore_mode == "initial") {
+				$q = "SELECT * FROM transactions WHERE game_id='".$game['game_id']."' AND round_id=0 AND amount > 0 ORDER BY transaction_id ASC;";
+				$r = run_query($q);
+				
+				echo '<div style="border-bottom: 1px solid #bbb;">';
+				while ($transaction = mysql_fetch_array($r)) {
+					echo render_transaction($game, $transaction, FALSE, "");
+				}
+				echo '</div>';
 			}
 			else if ($explore_mode == "transactions") {
 				$rpc_transaction = false;
@@ -502,10 +527,12 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				else {
 					$block_index = false;
 					$round_id = false;
-					$label_txt = "This transaction is <a href=\"/explorer/".$game['url_identifier']."/transactions/unconfirmed\">not yet confirmed</a>.";
+					if ($transaction['transaction_desc'] != 'giveaway') {
+						$label_txt = "This transaction is <a href=\"/explorer/".$game['url_identifier']."/transactions/unconfirmed\">not yet confirmed</a>.";
+					}
 				}
 				echo '<div style="border-bottom: 1px solid #bbb;">';
-				echo render_transaction($game, $transaction, false, $label_txt, $game['url_identifier']);
+				echo render_transaction($game, $transaction, false, $label_txt);
 				echo "</div>\n";
 				
 				if ($rpc_transaction || $rpc_raw_transaction) {
@@ -521,7 +548,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					<?php
 				}
 				
-				echo "<br/><br/>\n";
+				echo "<br/>\n";
 			}
 			else if ($explore_mode == "index") {
 				?>
@@ -538,7 +565,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				?>
 				<h3>EmpireCoin - Please choose a game</h3>
 				<?php
-				$q = "SELECT * FROM games WHERE creator_id IS NULL;";
+				$q = "SELECT * FROM games WHERE game_status IN ('running','published') AND creator_id IS NULL;";
 				$r = run_query($q);
 				$game_id_csv = "";
 				while ($game = mysql_fetch_array($r)) {
@@ -547,12 +574,14 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				}
 				if ($game_id_csv != "") $game_id_csv = substr($game_id_csv, 0, strlen($game_id_csv)-1);
 				
-				$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id AND ug.user_id='".$thisuser['user_id']."'";
-				$q .= " AND g.game_id NOT IN (".$game_id_csv.")";
-				$q .= ";";
-				$r = run_query($q);
-				while ($game = mysql_fetch_array($r)) {
-					echo '<a href="/explorer/'.$game['url_identifier'].'">'.$game['name']."</a><br/>\n";
+				if ($thisuser) {
+					$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id AND ug.user_id='".$thisuser['user_id']."'";
+					$q .= " AND g.game_id NOT IN (".$game_id_csv.")";
+					$q .= ";";
+					$r = run_query($q);
+					while ($game = mysql_fetch_array($r)) {
+						echo '<a href="/explorer/'.$game['url_identifier'].'">'.$game['name']."</a><br/>\n";
+					}
 				}
 			}
 		}
@@ -560,15 +589,17 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 		if ($game) { ?>
 			<br/>
 			<a href="/wallet/<?php echo $game['url_identifier']; ?>/" class="btn btn-default">Join this game</a>
+			<br/>
 			<?php
 		}
 		?>
+		<br/>
 	</div>
 	<?php
 	include('includes/html_stop.php');
 }
 else {
-	$pagetitle = "EmpireCoin - Blockchain Explorer";
+	$pagetitle = $GLOBALS['coin_brand_name']." - Blockchain Explorer";
 	include('includes/html_start.php');
 	?>
 	<div class="container" style="max-width: 1000px;">

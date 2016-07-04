@@ -1872,13 +1872,21 @@ function block_id_to_round_index(&$game, $mining_block_id) {
 	return (($mining_block_id-1)%$game['round_length'])+1;
 }
 
-function render_transaction(&$game, $transaction, $selected_address_id, $firstcell_text, $game_url_identifier) {
+function render_transaction(&$game, $transaction, $selected_address_id, $firstcell_text) {
 	$html = "";
 	$html .= '<div class="row bordered_row"><div class="col-md-6">';
-	$html .= '<a href="/explorer/'.$game_url_identifier.'/transactions/'.$transaction['tx_hash'].'" class="display_address" style="display: inline-block; max-width: 100%; overflow: hidden;">TX:&nbsp;'.$transaction['tx_hash'].'</a><br/>';
+	$html .= '<a href="/explorer/'.$game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'" class="display_address" style="display: inline-block; max-width: 100%; overflow: hidden;">TX:&nbsp;'.$transaction['tx_hash'].'</a><br/>';
 	if ($firstcell_text != "") $html .= $firstcell_text."<br/>\n";
 	
-	if ($transaction['transaction_desc'] == "votebase") {
+	if ($transaction['transaction_desc'] == "giveaway") {
+		$q = "SELECT * FROM game_giveaways WHERE transaction_id='".$transaction['transaction_id']."';";
+		$r = run_query($q);
+		if (mysql_numrows($r) > 0) {
+			$giveaway = mysql_fetch_array($r);
+			$html .= format_bignum($giveaway['amount']/pow(10,8))." ".$game['coin_name_plural']." were given to a player for joining.";
+		}
+	}
+	else if ($transaction['transaction_desc'] == "votebase") {
 		$payout_disp = round($transaction['amount']/pow(10,8), 2);
 		$html .= "Voting Payout&nbsp;&nbsp;".$payout_disp." ";
 		if ($payout_disp == '1') $html .= $game['coin_name'];
@@ -1899,7 +1907,7 @@ function render_transaction(&$game, $transaction, $selected_address_id, $firstce
 			$html .= "&nbsp; ";
 			$html .= '<a class="display_address" style="';
 			if ($input['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
-			$html .= '" href="/explorer/'.$game_url_identifier.'/addresses/'.$input['address'].'">'.$input['address'].'</a>';
+			$html .= '" href="/explorer/'.$game['url_identifier'].'/addresses/'.$input['address'].'">'.$input['address'].'</a>';
 			if ($input['name'] != "") $html .= "&nbsp;&nbsp;(".$input['name'].")";
 			$html .= "<br/>\n";
 			$input_sum += $input['amount'];
@@ -1912,7 +1920,7 @@ function render_transaction(&$game, $transaction, $selected_address_id, $firstce
 	while ($output = mysql_fetch_array($rr)) {
 		$html .= '<a class="display_address" style="';
 		if ($output['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
-		$html .= '" href="/explorer/'.$game_url_identifier.'/addresses/'.$output['address'].'">'.$output['address'].'</a>&nbsp; ';
+		$html .= '" href="/explorer/'.$game['url_identifier'].'/addresses/'.$output['address'].'">'.$output['address'].'</a>&nbsp; ';
 		
 		$amount_disp = number_format($output['amount']/pow(10,8), 2);
 		$html .= $amount_disp."&nbsp;";
@@ -1925,7 +1933,7 @@ function render_transaction(&$game, $transaction, $selected_address_id, $firstce
 		$html .= "<br/>\n";
 		$output_sum += $output['amount'];
 	}
-	$transaction_fee = $input_sum-$output_sum;
+	$transaction_fee = $transaction['fee_amount'];
 	if ($transaction['transaction_desc'] != "coinbase" && $transaction['transaction_desc'] != "votebase") {
 		$fee_disp = format_bignum($transaction_fee/pow(10,8));
 		$html .= "Transaction fee: ".$fee_disp." ";
@@ -2103,6 +2111,7 @@ function rounds_complete_html(&$game, $max_round_id, $limit) {
 	$q = "SELECT * FROM cached_rounds r LEFT JOIN game_voting_options gvo ON r.winning_option_id=gvo.option_id WHERE r.game_id='".$game['game_id']."' AND r.round_id <= ".$max_round_id." ORDER BY r.round_id DESC LIMIT ".$limit.";";
 	$r = run_query($q);
 	
+	$show_initial = false;
 	$last_round_shown = 0;
 	while ($cached_round = mysql_fetch_array($r)) {
 		$html .= '<div class="row bordered_row">';
@@ -2116,6 +2125,14 @@ function rounds_complete_html(&$game, $max_round_id, $limit) {
 		$html .= '<div class="col-sm-3">'.format_bignum($cached_round['score_sum']/pow(10,8)).' votes cast</div>';
 		$html .= "</div>\n";
 		$last_round_shown = $cached_round['round_id'];
+		if ($cached_round['round_id'] == 1) $show_initial = true;
+	}
+	
+	if ($show_initial) {
+		$html .= '<div class="row bordered_row">';
+		$html .= '<div class="col-sm-2"><a href="/explorer/'.$game['url_identifier'].'/rounds/0">Round #0</a></div>';
+		$html .= '<div class="col-sm-10">Initial Distribution</div>';
+		$html .= '</div>';
 	}
 	
 	$returnvals[0] = $last_round_shown;
@@ -3153,6 +3170,11 @@ function game_info_table($game) {
 	
 	$html .= '<div class="row"><div class="col-sm-5">Game URL:</div><div class="col-sm-7"><a href="'.$game_url.'">'.$game_url."</a></div></div>\n";
 	
+	$html .= '<div class="row"><div class="col-sm-5">Length of game:</div><div class="col-sm-7">';
+	if ($game['final_round'] > 0) $html .= $game['final_round']." rounds (".format_seconds($seconds_per_round*$game['final_round']).")";
+	else $html .= "Game does not end";
+	$html .= "</div></div>\n";
+	
 	$html .= '<div class="row"><div class="col-sm-5">'.ucfirst($game['option_name_plural']).'</div><div class="col-sm-7">'.$game['num_voting_options']." </div></div>\n";
 	
 	$html .= '<div class="row"><div class="col-sm-5">'.ucfirst($game['option_name']).' voting cap:</div><div class="col-sm-7">'.(100*$game['max_voting_fraction'])."%</div></div>\n";
@@ -3162,15 +3184,24 @@ function game_info_table($game) {
 	else $html .= "Free";
 	$html .= "</div></div>\n";
 	
-	$html .= '<div class="row"><div class="col-sm-5">Length of game:</div><div class="col-sm-7">';
-	if ($game['final_round'] > 0) $html .= $game['final_round']." rounds (".format_seconds($seconds_per_round*$game['final_round']).")";
-	else $html .= "Game does not end";
+	
+	$html .= '<div class="row"><div class="col-sm-5">Additional buy-ins?</div><div class="col-sm-7">';
+	if ($game['buyin_policy'] == "unlimited") $html .= "Unlimited";
+	else if ($game['buyin_policy'] == "none") $html .= "Not allowed";
+	else if ($game['buyin_policy'] == "per_user_cap") $html .= "Up to ".format_bignum($game['per_user_buyin_cap'])." ".$invite_currency['short_name']."s per player";
+	else if ($game['buyin_policy'] == "game_cap") $html .= format_bignum($game['game_buyin_cap'])." ".$invite_currency['short_name']."s available";
+	else if ($game['buyin_policy'] == "game_and_user_cap") $html .= format_bignum($game['per_user_buyin_cap'])." ".$invite_currency['short_name']."s per person until ".format_bignum($game['game_buyin_cap'])." ".$invite_currency['short_name']."s are reached";
 	$html .= "</div></div>\n";
 	
 	$html .= '<div class="row"><div class="col-sm-5">Inflation:</div><div class="col-sm-7">'.ucwords($game['inflation'])." (";	
 	if ($game['inflation'] == "linear") $html .= format_bignum($round_reward)." coins per round";
 	else $html .= 100*$game['exponential_inflation_rate']."% per round";
 	$html .= ")</div></div>\n";
+	
+	$total_inflation_pct = game_final_inflation_pct($game);
+	if ($total_inflation_pct) {
+		$html .= '<div class="row"><div class="col-sm-5">Total inflation:</div><div class="col-sm-7">'.number_format($total_inflation_pct)."%</div></div>\n";
+	}
 	
 	$html .= '<div class="row"><div class="col-sm-5">Distribution:</div><div class="col-sm-7">';
 	if ($game['inflation'] == "linear") $html .= format_bignum($game['pos_reward']/pow(10,8))." to voters, ".format_bignum($game['pow_reward']*$game['round_length']/pow(10,8))." to miners";
@@ -3181,13 +3212,12 @@ function game_info_table($game) {
 	
 	$html .= '<div class="row"><div class="col-sm-5">Block target time:</div><div class="col-sm-7">'.format_seconds($game['seconds_per_block'])."</div></div>\n";
 	
-	$html .= '<div class="row"><div class="col-sm-5">Transaction maturity:</div><div class="col-sm-7">'.$game['maturity']." block";
-	if ($game['maturity'] != 1) $html .= "s";
-	$html .= "</div></div>\n";
+	$html .= '<div class="row"><div class="col-sm-5">Average time per round:</div><div class="col-sm-7">'.format_seconds($game['round_length']*$game['seconds_per_block'])."</div></div>\n";
 	
-	$total_inflation_pct = game_final_inflation_pct($game);
-	if ($total_inflation_pct) {
-		$html .= '<div class="row"><div class="col-sm-5">Final inflation:</div><div class="col-sm-7">'.number_format($total_inflation_pct)."%</div></div>\n";
+	if ($game['maturity'] != 0) {
+		$html .= '<div class="row"><div class="col-sm-5">Transaction maturity:</div><div class="col-sm-7">'.$game['maturity']." block";
+		if ($game['maturity'] != 1) $html .= "s";
+		$html .= "</div></div>\n";
 	}
 
 	return $html;
@@ -3402,7 +3432,10 @@ function send_invitation_email(&$game, $to_email, &$invitation) {
 	$message .= "</p>";
 
 	$message .= "<p>In this game, you can vote for one of ".$game['num_voting_options']." ".$game['option_name_plural']." every ".format_seconds($seconds_per_round).".  Team up with other players and cast your votes strategically to win coins and destroy your competitors.</p>";
-	$message .= game_info_table($game);
+	$table = str_replace('<div class="row"><div class="col-sm-5">', '<tr><td>', game_info_table($game));
+	$table = str_replace('</div><div class="col-sm-7">', '</td><td>', $table);
+	$table = str_replace('</div></div>', '</td></tr>', $table);
+	$message .= '<table>'.$table.'</table>';
 	$message .= "<p>To start playing, accept your invitation by following <a href=\"".$GLOBALS['base_url']."/wallet/".$game['url_identifier']."/?invite_key=".$invitation['invitation_key']."\">this link</a>.</p>";
 	$message .= "<p>This message was sent to you by ".$GLOBALS['site_name']."</p>";
 

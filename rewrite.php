@@ -25,7 +25,10 @@ else {
 	$r = run_query($q);
 	if (mysql_numrows($r) == 1) {
 		$game = mysql_fetch_array($r);
-		include("game_homepage.php");
+		if (in_array($game['game_status'], array("running","published","completed"))) {
+			include("game_homepage.php");
+		}
+		else echo "404 - Page not found";
 	}
 	else echo "404 - Page not found";
 }
