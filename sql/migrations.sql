@@ -85,7 +85,7 @@ INSERT INTO `images` (`image_id`, `access_key`, `extension`) VALUES
 (24, '5yOJY1mQKHxhP127', 'jpg');
 UPDATE voting_options SET default_image_id=voting_option_id WHERE voting_option_id > 16 AND voting_option_id <= 24;
 UPDATE game_voting_options gvo JOIN voting_options vo ON vo.voting_option_id=gvo.voting_option_id SET gvo.image_id=vo.default_image_id WHERE vo.voting_option_id > 16 AND vo.voting_option_id <= 24;
-ALTER TABLE `blocks` ADD `taper_factor` DECIMAL(9,8) NOT NULL DEFAULT '0' AFTER `miner_user_id`;
+ALTER TABLE `blocks` ADD `taper_factor` DECIMAL(9,8) NOT NULL DEFAULT '1' AFTER `miner_user_id`;
 ALTER TABLE `transaction_ios` ADD `votes` BIGINT(20) NOT NULL DEFAULT '0' AFTER `coin_rounds_destroyed`;
-ALTER TABLE `transactions` ADD `taper_factor` DECIMAL(9,8) NOT NULL DEFAULT '0';
-ALTER TABLE `game_voting_options` ADD `votes` BIGINT(20) NOT NULL DEFAULT '0' AFTER `unconfirmed_coin_round_score`, ADD `unconfirmed_votes` BIGINT(20) NOT NULL DEFAULT '0' AFTER `confirmed_votes`;
+ALTER TABLE `transactions` ADD `taper_factor` DECIMAL(9,8) NOT NULL DEFAULT '1';
+ALTER TABLE `game_voting_options` ADD `votes` BIGINT(20) NOT NULL DEFAULT '0' AFTER `unconfirmed_coin_round_score`, ADD `unconfirmed_votes` BIGINT(20) NOT NULL DEFAULT '0' AFTER `votes`;
