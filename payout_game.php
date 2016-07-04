@@ -42,7 +42,7 @@ if ($thisuser) {
 						
 						for ($t=0; $t<count($api_result->txs); $t++) {
 							for ($o=0; $o<count($api_result->txs[$t]->out); $o++) {
-								if (!$api_result->txs[$t]->out[$o]->spent) {
+								if (!$api_result->txs[$t]->out[$o]->spent && $api_result->txs[$t]->out[$o]->addr == $addresses[$i]) {
 									$raw_txin[count($raw_txin)] = array('txid'=>$api_result->txs[$t]->hash, 'vout'=>$api_result->txs[$t]->out[$o]->n);
 									
 									array_push($sign_arr1, array('txid'=>$api_result->txs[$t]->hash, 'vout'=>$api_result->txs[$t]->out[$o]->n, 'scriptPubKey'=>$api_result->txs[$t]->out[$o]->script));
@@ -54,7 +54,7 @@ if ($thisuser) {
 					}
 					
 					if ((string)($total/pow(10,8)) != (string)$input_sum) {
-						output_message(4, "Error, expected inputs to sum to ".$input_sum." but they only summed to ".$total/pow(10,8));
+						output_message(4, "Error, expected inputs to sum to ".$input_sum." but they only summed to ".($total/pow(10,8)));
 					}
 					else {
 						$fee_satoshis = 5000;
@@ -65,13 +65,16 @@ if ($thisuser) {
 							$payout_currency = mysql_fetch_array($r);
 						}
 						
-						$qq = "SELECT *, ug.bitcoin_address_id AS bitcoin_address_id FROM users u JOIN user_games ug ON u.user_id=ug.user_id LEFT JOIN external_addresses ea ON ug.bitcoin_address_id=ea.address_id;";
+						$qq = "SELECT *, ug.bitcoin_address_id AS bitcoin_address_id, u.user_id AS user_id FROM users u JOIN user_games ug ON u.user_id=ug.user_id LEFT JOIN external_addresses ea ON ug.bitcoin_address_id=ea.address_id WHERE ug.game_id='".$payout_game['game_id']."' AND ug.payment_required=0;";
 						$rr = run_query($qq);
+						
 						$output_sum = 0;
 						$coins_in_existence = coins_in_existence($payout_game, false);
+						
 						while ($temp_user_game = mysql_fetch_array($rr)) {
-							$payout_frac = account_coin_value($payout_game, $temp_user_game)/$coins_in_existence($game, false);
+							$payout_frac = account_coin_value($payout_game, $temp_user_game)/$coins_in_existence;
 							$payout_amt = floor($payout_frac*($total-$fee_satoshis));
+							
 							if ($temp_user_game['bitcoin_address_id'] > 0) {
 								$raw_txout[$temp_user_game['address']] = $payout_amt/pow(10,8);
 							}
@@ -97,115 +100,163 @@ if ($thisuser) {
 						}
 					}
 				}
+				else if ($_REQUEST['action'] == "submit_tx_hash") {
+					$tx_hash = $_REQUEST['tx_hash'];
+					
+					$pagetitle = "";
+					$include_crypto_js = true;
+					include('includes/html_start.php');
+					echo '<div class="container" style="max-width: 1000px; padding: 10px;">';
+					
+					if ($payout_game['payout_tx_hash'] == "") {
+						$q = "UPDATE games SET payout_complete=1, payout_tx_hash='".mysql_real_escape_string($tx_hash)."' WHERE game_id='".$payout_game['game_id']."';";
+						$r = run_query($q);
+						echo "Great, the tx hash has been saved!";
+					}
+					else echo "Error, a payout tx hash has already been set for this game.";
+					
+					echo '</div>';
+					include('includes/html_stop.php');
+					die();
+				}
 				else {
 					$pagetitle = "";
 					$include_crypto_js = true;
 					include('includes/html_start.php');
 					echo '<div class="container" style="max-width: 1000px; padding: 10px;">';
-					?>
-					<script type="text/javascript">
-					var public_key = '<?php echo $GLOBALS['rsa_pub_key']; ?>';
-					var inputs = new Array();
-					
-					function input(index, address, private_key_enc) {
-						this.index = index;
-						this.address = address;
-						this.private_key_enc = private_key_enc;
-						this.private_key = "";
+					if ($payout_game['game_status'] != "completed") {
+						echo "This game isn't complete, it has '".$payout_game['game_status']."' status.";
 					}
-					
-					function rsa_decrypt(decryption_key, ciphertext) {
-						var rsa = new RSAKey();
-						var pri_dat = decryption_key.split(':');
-
-						var n = public_key;
-
-						var d = pri_dat[0];
-						var p = pri_dat[1];
-						var q = pri_dat[2];
-						var dp = pri_dat[3];
-						var dq = pri_dat[4];
-						var c = pri_dat[5];
-
-						rsa.setPrivateEx(n, '10001', d, p, q, dp, dq, c);
-
-						return rsa.decrypt(ciphertext);
-					}
-
-					function load_addresses() {<?php
-						$q = "SELECT * FROM currency_invoices i JOIN invoice_addresses a ON i.invoice_address_id=a.invoice_address_id JOIN users u ON i.user_id=u.user_id JOIN currencies pc ON i.pay_currency_id=pc.currency_id WHERE i.game_id='".$payout_game['game_id']."' AND i.status='confirmed';";
-						$r = run_query($q);
-						$addr_html = "";
-						$input_sum = 0;
-						while ($invoice = mysql_fetch_array($r)) {
-							echo 'inputs.push(new input(inputs.length, "'.$invoice['pub_key'].'", "'.$invoice['priv_enc'].'"));'."\n";
-							$addr_html .= $invoice['username']." paid ".$invoice['pay_amount']." ".$invoice['short_name']."s to <a href=\"https://blockchain.info/address/".$invoice['pub_key']."\">".$invoice['pub_key']."</a><br/>\n";
-							$input_sum += $invoice['pay_amount'];
-						}
+					else {
 						?>
-					}
-					
-					function initiate_withdrawal() {
-						var decryption_key = prompt("Please enter your private key:");
+						<script type="text/javascript">
+						var public_key = '<?php echo $GLOBALS['rsa_pub_key']; ?>';
+						var inputs = new Array();
 						
-						if (decryption_key) {
-							var addr_csv = "";
-							var privkey_csv = "";
+						function input(index, address, private_key_enc) {
+							this.index = index;
+							this.address = address;
+							this.private_key_enc = private_key_enc;
+							this.private_key = "";
+						}
+						
+						function rsa_decrypt(decryption_key, ciphertext) {
+							var rsa = new RSAKey();
+							var pri_dat = decryption_key.split(':');
+
+							var n = public_key;
+
+							var d = pri_dat[0];
+							var p = pri_dat[1];
+							var q = pri_dat[2];
+							var dp = pri_dat[3];
+							var dq = pri_dat[4];
+							var c = pri_dat[5];
+
+							rsa.setPrivateEx(n, '10001', d, p, q, dp, dq, c);
+
+							return rsa.decrypt(ciphertext);
+						}
+
+						function load_addresses() {<?php
+							$q = "SELECT * FROM currency_invoices i JOIN invoice_addresses a ON i.invoice_address_id=a.invoice_address_id JOIN users u ON i.user_id=u.user_id JOIN currencies pc ON i.pay_currency_id=pc.currency_id WHERE i.game_id='".$payout_game['game_id']."' AND i.status='confirmed';";
+							$r = run_query($q);
+							$addr_html = "";
+							$input_sum = 0;
+							while ($invoice = mysql_fetch_array($r)) {
+								echo 'inputs.push(new input(inputs.length, "'.$invoice['pub_key'].'", "'.$invoice['priv_enc'].'"));'."\n";
+								$addr_html .= $invoice['username']." paid ".$invoice['pay_amount']." ".$invoice['short_name']."s to <a href=\"https://blockchain.info/address/".$invoice['pub_key']."\">".$invoice['pub_key']."</a><br/>\n";
+								$input_sum += $invoice['pay_amount'];
+							}
+							?>
+						}
+						
+						function initiate_withdrawal() {
+							var decryption_key = prompt("Please enter your private key:");
 							
-							var loop = true;
-							
-							for (var i=0; i<inputs.length; i++) {
-								if (loop) {
-									var privkey = rsa_decrypt(decryption_key, inputs[i].private_key_enc);
-									if (privkey) {
-										inputs[i].private_key = privkey;
-										
-										addr_csv += inputs[i].address+",";
-										privkey_csv += inputs[i].private_key+",";
-									}
-									else {
-										alert('Failed to decrypt a private key.');
-										loop = false;
+							if (decryption_key) {
+								var addr_csv = "";
+								var privkey_csv = "";
+								
+								var loop = true;
+								
+								for (var i=0; i<inputs.length; i++) {
+									if (loop) {
+										var privkey = rsa_decrypt(decryption_key, inputs[i].private_key_enc);
+										if (privkey) {
+											inputs[i].private_key = privkey;
+											
+											addr_csv += inputs[i].address+",";
+											privkey_csv += inputs[i].private_key+",";
+										}
+										else {
+											alert('Failed to decrypt a private key.');
+											loop = false;
+										}
 									}
 								}
-							}
-							
-							if (loop) {
-								var postvars = {};
-								postvars['game_id'] = '<?php echo $payout_game['game_id']; ?>';
-								postvars['input_sum'] = '<?php echo $input_sum; ?>';
-								postvars['action'] = 'generate_payout';
-								if (addr_csv != "") addr_csv = addr_csv.substr(0, addr_csv.length-1);
-								if (privkey_csv != "") privkey_csv = privkey_csv.substr(0, privkey_csv.length-1);
-								postvars['addrs'] = addr_csv;
-								postvars['privkeys'] = privkey_csv;
 								
-								$('#generate_result').html("Loading...");
-								$('#generate_result').show('fast');
-								
-								$.ajax({
-									type: "POST",
-									url: "/payout_game.php",
-									data: postvars,
-									success: function(result) {
-										var result_json = JSON.parse(result);
-										$('#generate_result').html(result_json['message']);
-									}
-								});
+								if (loop) {
+									var postvars = {};
+									postvars['game_id'] = '<?php echo $payout_game['game_id']; ?>';
+									postvars['input_sum'] = '<?php echo $input_sum; ?>';
+									postvars['action'] = 'generate_payout';
+									if (addr_csv != "") addr_csv = addr_csv.substr(0, addr_csv.length-1);
+									if (privkey_csv != "") privkey_csv = privkey_csv.substr(0, privkey_csv.length-1);
+									postvars['addrs'] = addr_csv;
+									postvars['privkeys'] = privkey_csv;
+									
+									$('#generate_result').html("Loading...");
+									$('#generate_result').show('fast');
+									
+									$.ajax({
+										type: "POST",
+										url: "/payout_game.php",
+										data: postvars,
+										success: function(result) {
+											var result_json = JSON.parse(result);
+											$('#generate_result').html(result_json['message']);
+											if (result_json['status_code'] == 1) {
+												$('#tx_hash_form').show('fast');
+											}
+										}
+									});
+								}
 							}
 						}
+						
+						function submit_tx_hash() {
+							window.location = '/payout_game.php?game_id=<?php echo $payout_game['game_id']; ?>&action=submit_tx_hash&tx_hash='+$('#tx_hash').val();
+						}
+						
+						$(document).ready(function() {
+							load_addresses();
+						});
+						</script>
+						<?php
+						echo "<h2>".$payout_game['name']." - Generate payout transaction</h2>";
+						echo "bitcoind must be running for this step to work, but it doesn't have to be fully synced.<br/>\n";
+						echo 'Once the transaction is signed, broadcast it via <a target="_blank" href="https://blockr.io/tx/push">this link</a>.<br/><br/>';
+						echo $addr_html;
+						?>
+						<button id="generate_btn" class="btn btn-primary" onclick="initiate_withdrawal();" style="margin: 10px 0px;">Generate Payout Transaction</button>
+						
+						<div id="generate_result" style="display: none; word-wrap: break-word; margin: 10px 0px;"></div>
+						
+						<div id="tx_hash_form" style="margin: 10px 0px; display: none;">
+							After broadcasting the transaction, please enter the transaction hash here:<br/>
+							<div class="row">
+								<div class="col-md-4">
+									<input type="text" id="tx_hash" class="form-control" />
+								</div>
+								<div class="col-md-2">
+									<button class="btn btn-primary" onclick="submit_tx_hash();">Submit</button>
+								</div>
+							</div>
+						</div>
+						<?php
 					}
 					
-					$(document).ready(function() {
-						load_addresses();
-					});
-					</script>
-					<?php
-					echo $addr_html;
-					?>
-					<button id="generate_btn" class="btn btn-default" onclick="initiate_withdrawal();">Generate Payout Transaction</button>
-					<div id="generate_result" style="display: none;"></div>
-					<?php
 					echo '</div>';
 					include('includes/html_stop.php');
 					die();
