@@ -386,7 +386,7 @@ CREATE TABLE IF NOT EXISTS `invoice_addresses` (
   `pub_key` varchar(40) NOT NULL,
   `priv_enc` varchar(300) NOT NULL,
   PRIMARY KEY (`invoice_address_id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
