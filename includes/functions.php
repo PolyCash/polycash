@@ -71,7 +71,7 @@ function account_coin_value($game_id, $user) {
 }
 
 function immature_balance($game_id, $user) {
-	$q = "SELECT SUM(amount) FROM transaction_IOs WHERE spend_status='unspent' AND game_id='".$game_id."' AND user_id='".$user['user_id']."' AND create_block_id > ".(last_block_id($game_id)-get_site_constant("maturity"))." AND instantly_mature = 0;";
+	$q = "SELECT SUM(amount) FROM transaction_IOs WHERE spend_status='unspent' AND game_id='".$game_id."' AND user_id='".$user['user_id']."' AND (create_block_id > ".(last_block_id($game_id)-get_site_constant("maturity"))." OR create_block_id IS NULL) AND instantly_mature = 0;";
 	$r = run_query($q);
 	$sum = mysql_fetch_row($r);
 	
@@ -458,7 +458,7 @@ function wallet_text_stats($thisuser, $game, $current_round, $last_block_id, $bl
 	$html .= "Current votes count towards block ".$block_within_round."/".get_site_constant('round_length')." in round #".$current_round."<br/>\n";
 	
 	if ($immature_balance > 0) {
-		$q = "SELECT * FROM webwallet_transactions t, transaction_IOs i LEFT JOIN nations n ON i.nation_id=n.nation_id WHERE t.transaction_id=i.create_transaction_id AND i.game_id='".$thisuser['game_id']."' AND i.user_id='".$thisuser['user_id']."' AND i.create_block_id > ".(last_block_id($thisuser['game_id']) - get_site_constant('maturity'))." ORDER BY i.io_id ASC;";
+		$q = "SELECT * FROM webwallet_transactions t, transaction_IOs i LEFT JOIN nations n ON i.nation_id=n.nation_id WHERE t.transaction_id=i.create_transaction_id AND i.game_id='".$thisuser['game_id']."' AND i.user_id='".$thisuser['user_id']."' AND (i.create_block_id > ".(last_block_id($thisuser['game_id']) - get_site_constant('maturity'))." OR i.create_block_id IS NULL) ORDER BY i.io_id ASC;";
 		$r = run_query($q);
 		
 		$html .= "<div style='display: none; border: 1px solid #ccc; padding: 8px; border-radius: 8px; margin-top: 8px;' id='lockedfunds_details'>";
