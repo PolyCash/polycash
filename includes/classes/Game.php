@@ -305,7 +305,9 @@ class Game {
 			
 			$total_paid += $payout_amount;
 			
-			$qq = "INSERT INTO transaction_ios SET spend_status='unspent', out_index='".$out_index."', instantly_mature=0, game_id='".$this->db_game['game_id']."', user_id='".$input['user_id']."', address_id='".$input['address_id']."', option_id='".$winning_option."', create_transaction_id='".$transaction_id."', amount='".$payout_amount."', create_block_id='".$block_id."', create_round_id='".$round_id."';";
+			$qq = "INSERT INTO transaction_ios SET spend_status='unspent', out_index='".$out_index."', instantly_mature=0, game_id='".$this->db_game['game_id']."', user_id='".$input['user_id']."', address_id='".$input['address_id']."'";
+			if ($winning_option > 0) $qq .= ", option_id='".$winning_option."'";
+			$qq .= ", create_transaction_id='".$transaction_id."', amount='".$payout_amount."', create_block_id='".$block_id."', create_round_id='".$round_id."';";
 			$rr = $GLOBALS['app']->run_query($qq);
 			$output_id = mysql_insert_id();
 			
@@ -537,7 +539,9 @@ class Game {
 						if ($block_id !== false) {
 							$q .= "create_block_id='".$block_id."', create_round_id='".$this->block_to_round($block_id)."', ";
 						}
-						$q .= "address_id='".$address_id."', option_id='".$address['option_id']."', create_transaction_id='".$transaction_id."', amount='".$amounts[$out_index]."';";
+						$q .= "address_id='".$address_id."', ";
+						if ($address['option_id'] > 0) $q .= "option_id='".$address['option_id']."', ";
+						$q .= "create_transaction_id='".$transaction_id."', amount='".$amounts[$out_index]."';";
 						
 						$r = $GLOBALS['app']->run_query($q);
 						$created_input_ids[count($created_input_ids)] = mysql_insert_id();
@@ -566,7 +570,9 @@ class Game {
 						$overshoot_crd = floor($coin_rounds_destroyed*($overshoot_amount/$input_sum));
 						$q .= "coin_blocks_destroyed='".$overshoot_cbd."', coin_rounds_destroyed='".$overshoot_crd."', ";
 					}
-					$q .= "user_id='".$from_user_id."', address_id='".$overshoot_return_addr_id."', option_id='".$overshoot_address['option_id']."', create_transaction_id='".$transaction_id."', ";
+					$q .= "user_id='".$from_user_id."', address_id='".$overshoot_return_addr_id."', ";
+					if ($overshoot_address['option_id'] > 0) $q .= "option_id='".$overshoot_address['option_id']."', ";
+					$q .= "create_transaction_id='".$transaction_id."', ";
 					if ($block_id !== false) {
 						$q .= "create_block_id='".$block_id."', create_round_id='".$this->block_to_round($block_id)."', ";
 					}
@@ -1289,10 +1295,12 @@ class Game {
 	}
 
 	public function ensure_game_options() {
-		$qq = "SELECT * FROM voting_options WHERE option_group_id='".$this->db_game['option_group_id']."';";
+		$qq = "SELECT * FROM voting_options vo WHERE vo.option_group_id='".$this->db_game['option_group_id']."' AND NOT EXISTS (SELECT * FROM game_voting_options gvo WHERE gvo.game_id='".$this->db_game['game_id']."' AND gvo.voting_option_id=vo.voting_option_id);";
 		$rr = $GLOBALS['app']->run_query($qq);
 		while ($option = mysql_fetch_array($rr)) {
-			$qqq = "INSERT INTO game_voting_options SET game_id='".$this->db_game['game_id']."', voting_option_id='".$option['voting_option_id']."', image_id='".$option['default_image_id']."', name='".$option['name']."', voting_character='".$option['voting_character']."';";
+			$qqq = "INSERT INTO game_voting_options SET game_id='".$this->db_game['game_id']."', voting_option_id='".$option['voting_option_id']."'";
+			if ($option['default_image_id'] > 0) $qqq .= ", image_id='".$option['default_image_id']."'";
+			$qqq .= ", name='".$option['name']."', voting_character='".$option['voting_character']."';";
 			$rrr = $GLOBALS['app']->run_query($qqq);
 		}
 	}
@@ -1992,20 +2000,24 @@ class Game {
 			$amount = $this->db_game['giveaway_amount'];
 		}
 		
-		$addr_id = $this->new_nonuser_address();
-		
-		$addr_ids = array();
-		$amounts = array();
-		$option_ids = array();
-		
-		for ($i=0; $i<5; $i++) {
-			$amounts[$i] = floor($amount/5);
-			$addr_ids[$i] = $addr_id;
-			$option_ids[$i] = false;
+		$transaction_id = false;
+		if ($amount > 0) {
+			$addr_id = $this->new_nonuser_address();
+			
+			$addr_ids = array();
+			$amounts = array();
+			$option_ids = array();
+			
+			for ($i=0; $i<5; $i++) {
+				$amounts[$i] = floor($amount/5);
+				$addr_ids[$i] = $addr_id;
+				$option_ids[$i] = false;
+			}
+			$transaction_id = $this->new_transaction($option_ids, $amounts, false, false, 0, 'giveaway', false, $addr_ids, false, 0);
 		}
-		$transaction_id = $this->new_transaction($option_ids, $amounts, false, false, 0, 'giveaway', false, $addr_ids, false, 0);
 		
-		$q = "INSERT INTO game_giveaways SET type='".$type."', game_id='".$this->db_game['game_id']."', transaction_id='".$transaction_id."'";
+		$q = "INSERT INTO game_giveaways SET type='".$type."', game_id='".$this->db_game['game_id']."'";
+		if ($transaction_id > 0) $q .= ", transaction_id='".$transaction_id."'";
 		if ($user_id) $q .= ", user_id='".$user_id."', status='claimed'";
 		$q .= ";";
 		$r = $GLOBALS['app']->run_query($q);

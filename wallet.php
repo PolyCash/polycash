@@ -60,7 +60,7 @@ if ($_REQUEST['do'] == "signup") {
 						if ($GLOBALS['pageview_tracking_enabled']) {
 							$q .= ", ip_address='".$_SERVER['REMOTE_ADDR']."'";
 						}
-						if ($GLOBALS['new_games_per_user'] != "unlimited") {
+						if ($GLOBALS['new_games_per_user'] != "unlimited" && $GLOBALS['new_games_per_user'] > 0) {
 							$q .= ", authorized_games='".$GLOBALS['new_games_per_user']."'";
 						}
 						$bitcoin_address = $_REQUEST['bitcoin_address'];

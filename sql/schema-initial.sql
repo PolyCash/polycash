@@ -45,13 +45,13 @@ CREATE TABLE IF NOT EXISTS `async_email_deliveries` (
   `from_email` varchar(100) NOT NULL DEFAULT '',
   `from_name` varchar(100) NOT NULL DEFAULT '',
   `subject` varchar(100) NOT NULL DEFAULT '',
-  `message` text NOT NULL,
+  `message` text NOT NULL DEFAULT '',
   `cc` varchar(255) NOT NULL DEFAULT '',
   `bcc` varchar(255) NOT NULL DEFAULT '',
   `time_created` int(20) NOT NULL DEFAULT '0',
   `time_delivered` int(20) NOT NULL DEFAULT '0',
   `successful` tinyint(1) NOT NULL DEFAULT '0',
-  `sendgrid_response` text NOT NULL,
+  `sendgrid_response` text NOT NULL DEFAULT '',
   PRIMARY KEY (`delivery_id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
@@ -84,8 +84,8 @@ CREATE TABLE IF NOT EXISTS `blocks` (
 
 CREATE TABLE IF NOT EXISTS `browsers` (
   `browser_id` int(20) NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) COLLATE latin1_german2_ci NOT NULL,
-  `display_name` varchar(255) COLLATE latin1_german2_ci NOT NULL,
+  `name` varchar(255) COLLATE latin1_german2_ci NOT NULL DEFAULT '',
+  `display_name` varchar(255) COLLATE latin1_german2_ci NOT NULL DEFAULT '',
   PRIMARY KEY (`browser_id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
 
@@ -97,13 +97,13 @@ CREATE TABLE IF NOT EXISTS `browsers` (
 
 CREATE TABLE IF NOT EXISTS `browserstrings` (
   `browserstring_id` int(30) NOT NULL AUTO_INCREMENT,
-  `viewer_id` int(20) NOT NULL,
-  `browser_string` varchar(255) COLLATE latin1_german2_ci NOT NULL,
-  `browser_id` int(20) NOT NULL,
-  `name` varchar(100) COLLATE latin1_german2_ci NOT NULL,
-  `version` varchar(100) COLLATE latin1_german2_ci NOT NULL,
-  `platform` varchar(100) COLLATE latin1_german2_ci NOT NULL,
-  `pattern` varchar(150) COLLATE latin1_german2_ci NOT NULL,
+  `viewer_id` int(20) DEFAULT NULL,
+  `browser_string` varchar(255) COLLATE latin1_german2_ci NOT NULL DEFAULT '',
+  `browser_id` int(20) DEFAULT NULL,
+  `name` varchar(100) COLLATE latin1_german2_ci NOT NULL DEFAULT '',
+  `version` varchar(100) COLLATE latin1_german2_ci NOT NULL DEFAULT '',
+  `platform` varchar(100) COLLATE latin1_german2_ci NOT NULL DEFAULT '',
+  `pattern` varchar(150) COLLATE latin1_german2_ci NOT NULL DEFAULT '',
   PRIMARY KEY (`browserstring_id`),
   KEY `v1` (`viewer_id`),
   KEY `b1` (`browser_id`)
@@ -174,11 +174,11 @@ CREATE TABLE IF NOT EXISTS `currencies` (
 
 CREATE TABLE IF NOT EXISTS `currency_invoices` (
   `invoice_id` int(11) NOT NULL AUTO_INCREMENT,
-  `pay_currency_id` int(11) NOT NULL,
-  `settle_currency_id` int(11) NOT NULL,
+  `pay_currency_id` int(11) DEFAULT NULL,
+  `settle_currency_id` int(11) DEFAULT NULL,
   `pay_price_id` int(11) DEFAULT NULL,
   `settle_price_id` int(11) DEFAULT NULL,
-  `user_id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
   `game_id` int(11) DEFAULT NULL,
   `invoice_address_id` int(11) DEFAULT NULL,
   `status` enum('unpaid','unconfirmed','confirmed','settled','pending_refund','refunded') NOT NULL DEFAULT 'unpaid',
@@ -315,11 +315,11 @@ CREATE TABLE IF NOT EXISTS `game_type_variations` (
   `invite_cost` decimal(16,8) DEFAULT NULL,
   `round_length` int(11) DEFAULT NULL,
   `final_round` int(11) DEFAULT NULL,
-  `seconds_per_block` int(11) NOT NULL,
+  `seconds_per_block` int(11) NOT NULL DEFAULT '0',
   `max_voting_fraction` decimal(2,2) DEFAULT NULL,
   `maturity` int(11) NOT NULL DEFAULT '0',
   `exponential_inflation_minershare` decimal(9,8) DEFAULT NULL,
-  `exponential_inflation_rate` decimal(9,8) NOT NULL,
+  `exponential_inflation_rate` decimal(9,8) NOT NULL DEFAULT '0',
   `pow_reward` bigint(20) DEFAULT NULL,
   `pos_reward` bigint(20) DEFAULT NULL,
   `url_identifier` VARCHAR(100) NOT NULL DEFAULT '',
@@ -383,8 +383,8 @@ CREATE TABLE IF NOT EXISTS `invitations` (
 CREATE TABLE IF NOT EXISTS `invoice_addresses` (
   `invoice_address_id` int(11) NOT NULL AUTO_INCREMENT,
   `currency_id` int(11) DEFAULT NULL,
-  `pub_key` varchar(40) NOT NULL,
-  `priv_enc` varchar(300) NOT NULL,
+  `pub_key` varchar(40) NOT NULL DEFAULT '',
+  `priv_enc` varchar(300) NOT NULL DEFAULT '',
   PRIMARY KEY (`invoice_address_id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
@@ -542,7 +542,7 @@ CREATE TABLE IF NOT EXISTS `pageviews` (
   `cookie_id` int(20) NOT NULL DEFAULT '0',
   `time` int(20) NOT NULL DEFAULT '0',
   `pv_page_id` int(20) NOT NULL DEFAULT '0',
-  `refer_url` varchar(255) NOT NULL,
+  `refer_url` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`pageview_id`),
   KEY `viewer_id` (`viewer_id`),
   KEY `user_id` (`user_id`),
@@ -701,20 +701,20 @@ CREATE TABLE IF NOT EXISTS `users` (
   `game_id` int(11) NOT NULL DEFAULT '1',
   `logged_in` tinyint(4) NOT NULL DEFAULT '0',
   `account_value` decimal(16,8) NOT NULL DEFAULT '0.00000000',
-  `username` varchar(100) COLLATE latin1_german2_ci NOT NULL,
+  `username` varchar(100) COLLATE latin1_german2_ci NOT NULL DEFAULT '',
   `alias_preference` enum('public','private') COLLATE latin1_german2_ci NOT NULL DEFAULT 'private',
   `alias` varchar(100) COLLATE latin1_german2_ci NOT NULL DEFAULT '',
-  `password` varchar(64) COLLATE latin1_german2_ci NOT NULL,
-  `first_name` varchar(30) COLLATE latin1_german2_ci NOT NULL,
-  `last_name` varchar(30) COLLATE latin1_german2_ci NOT NULL,
-  `ip_address` varchar(40) COLLATE latin1_german2_ci NOT NULL,
-  `time_created` int(20) NOT NULL,
-  `verify_code` varchar(64) COLLATE latin1_german2_ci NOT NULL,
+  `password` varchar(64) COLLATE latin1_german2_ci NOT NULL DEFAULT '',
+  `first_name` varchar(30) COLLATE latin1_german2_ci NOT NULL DEFAULT '',
+  `last_name` varchar(30) COLLATE latin1_german2_ci NOT NULL DEFAULT '',
+  `ip_address` varchar(40) COLLATE latin1_german2_ci NOT NULL DEFAULT '',
+  `time_created` int(20) DEFAULT NULL,
+  `verify_code` varchar(64) COLLATE latin1_german2_ci NOT NULL DEFAULT '',
   `api_access_code` varchar(50) COLLATE latin1_german2_ci DEFAULT NULL,
   `verified` tinyint(1) NOT NULL DEFAULT '1',
   `notification_preference` enum('email','none') COLLATE latin1_german2_ci NOT NULL DEFAULT 'none',
   `notification_email` varchar(100) COLLATE latin1_german2_ci NOT NULL DEFAULT '',
-  `last_active` int(30) NOT NULL,
+  `last_active` int(30) NOT NULL DEFAULT '0',
   PRIMARY KEY (`user_id`),
   UNIQUE KEY `username` (`username`),
   UNIQUE KEY `api_access_code` (`api_access_code`),
@@ -751,7 +751,7 @@ CREATE TABLE IF NOT EXISTS `user_messages` (
   `game_id` int(20) DEFAULT NULL,
   `from_user_id` int(20) DEFAULT NULL,
   `to_user_id` int(20) DEFAULT NULL,
-  `message` text NOT NULL,
+  `message` text NOT NULL DEFAULT '',
   `seen` tinyint(1) NOT NULL DEFAULT '0',
   `send_time` int(20) NOT NULL DEFAULT '0',
   PRIMARY KEY (`message_id`),
@@ -795,7 +795,7 @@ CREATE TABLE IF NOT EXISTS `user_sessions` (
   `login_time` int(12) NOT NULL DEFAULT '0',
   `logout_time` int(12) NOT NULL DEFAULT '0',
   `expire_time` int(12) NOT NULL DEFAULT '0',
-  `ip_address` varchar(30) COLLATE latin1_german2_ci NOT NULL,
+  `ip_address` varchar(30) COLLATE latin1_german2_ci NOT NULL DEFAULT '',
   PRIMARY KEY (`session_id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
 
@@ -873,9 +873,9 @@ CREATE TABLE IF NOT EXISTS `viewers` (
 
 CREATE TABLE IF NOT EXISTS `viewer_connections` (
   `connection_id` int(20) NOT NULL AUTO_INCREMENT,
-  `type` enum('viewer2viewer','viewer2user') COLLATE latin1_german2_ci NOT NULL,
-  `from_id` int(20) NOT NULL,
-  `to_id` int(20) NOT NULL,
+  `type` enum('viewer2viewer','viewer2user') COLLATE latin1_german2_ci NOT NULL DEFAULT 'viewer2user',
+  `from_id` int(20) NOT NULL DEFAULT '0',
+  `to_id` int(20) NOT NULL DEFAULT '0',
   PRIMARY KEY (`connection_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
 
@@ -888,7 +888,7 @@ CREATE TABLE IF NOT EXISTS `viewer_connections` (
 CREATE TABLE IF NOT EXISTS `viewer_identifiers` (
   `identifier_id` int(11) NOT NULL AUTO_INCREMENT,
   `viewer_id` int(20) NOT NULL DEFAULT '0',
-  `type` enum('ip','cookie') NOT NULL,
+  `type` enum('ip','cookie') NOT NULL DEFAULT 'ip',
   `identifier` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`identifier_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
@@ -930,8 +930,8 @@ CREATE TABLE IF NOT EXISTS `voting_option_groups` (
 CREATE TABLE IF NOT EXISTS `game_buyins` (
   `buyin_id` int(11) NOT NULL AUTO_INCREMENT,
   `pay_currency_id` int(11) DEFAULT NULL,
-  `settle_currency_id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
+  `settle_currency_id` int(11) DEFAULT NULL,
+  `user_id` int(11) DEFAULT NULL,
   `game_id` int(11) DEFAULT NULL,
   `invoice_address_id` int(11) DEFAULT NULL,
   `giveaway_id` int(11) DEFAULT NULL,
@@ -970,7 +970,7 @@ CREATE TABLE IF NOT EXISTS `external_addresses` (
 CREATE TABLE IF NOT EXISTS `oracle_urls` (
   `oracle_url_id` int(11) NOT NULL AUTO_INCREMENT,
   `format_id` int(11) DEFAULT NULL,
-  `url` varchar(255) NOT NULL,
+  `url` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`oracle_url_id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=3 ;
 
