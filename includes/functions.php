@@ -480,10 +480,7 @@ function format_bignum($number) {
 	else if ($number > pow(10, 4)) {
 		return $number/pow(10, 3)."k";
 	}
-	else if ($number > pow(10, 3)) {
-		return number_format($number, 1);
-	}
-	else return rtrim(rtrim(sprintf('%.8F', $number), '0'), ".");
+	else return rtrim(rtrim(number_format(sprintf('%.8F', $number), 8), '0'), ".");
 }
 
 function wallet_text_stats($thisuser, &$game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance) {
@@ -2721,5 +2718,13 @@ function nation_flag($nation_id, $nation_name) {
 		$nation_name = $nation['name'];
 	}
 	return '<img class="small_flag" src="/img/flags/'.$nation_name.'.jpg" />&nbsp;';
+}
+function format_seconds($seconds) {
+	$seconds = intval($seconds);
+	$minutes = floor($seconds / 60);
+	$seconds = $seconds % 60;
+	
+	if ($minutes > 0) return $minutes." minutes";
+	else return $seconds." seconds";
 }
 ?>

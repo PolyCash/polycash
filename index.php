@@ -36,70 +36,103 @@ $game = mysql_fetch_array($r);
 				</center>
 			</div>
 			<div class="col-sm-10">
-				Welcome to EmpireCoin, the first decentralized voting game on the planet.  In EmpireCoin, you can bet money against players from around the world every thirty minutes in an epic and never-ending struggle for power.  By correctly voting your coins you'll win money, but if you're wrong you won't lose anything.  Do you love gambling, sports betting or speculating on currencies and stocks?  Stop playing rigged games and get in on the first betting game where money is created from thin air and given out to the players. Start building your empire today in this massively multiplayer online game of chance!
-				<br/><br/>
-				EmpireCoin is currently in beta.  You can <a href="/wallet/">sign up</a> for a beta web wallet to try out the game, and the coin itself will be released soon. For more information, please download the <a href="/EmpireCoin.pdf">EmpireCoin Whitepaper</a>.<br/>
-				<a href="/wallet/" class="btn btn-success" style="margin: 5px 0px;">Log In or Sign Up</a>
-				<a href="/explorer/rounds/" class="btn btn-primary" style="margin: 5px 0px;">Blockchain Explorer</a>
+				<p>
+					EmpireCoin is a coin staking game where you can win a tiny number of free coins by casting your votes correctly.  Votes build up over time in proportion to the number of empirecoins that you hold. When you vote for an empire, your votes are used up but your empirecoins are retained. With a great coin staking strategy, you can accumulate empirecoins faster than inflation.  EmpireCoin is equally playable by humans and algorithms.  With the EmpireCoin APIs it's easy to write a custom staking strategy which makes smart, real-time decisions about how to stake your coins.
+				</p>
+				<p>
+					Do you love gambling, sports betting or speculating on currencies and stocks?  Stop paying fees and start playing EmpireCoin: the first blockchain-based coin staking game on the planet. To get started in this massively multiplayer online game of chance, please read the rules below and then <a href="/wallet/">sign up</a> for a beta account.  Or download the <a href="/EmpireCoin.pdf">EmpireCoin Whitepaper</a>.
+				</p>
+				<p>
+					<a href="/wallet/" class="btn btn-success" style="margin: 5px 0px;">Log In or Sign Up</a>
+					<a href="/explorer/rounds/" class="btn btn-primary" style="margin: 5px 0px;">Blockchain Explorer</a>
+				</p>
+				<p>
+					<?php
+					echo "EmpireCoin is a cryptocurrency which generates ";
+					$blocks_per_hour = 3600/$game['seconds_per_block'];
+					$round_reward = ($game['pos_reward']+$game['pow_reward']*$game['round_length'])/pow(10,8);
+					$rounds_per_hour = 3600/($game['seconds_per_block']*$game['round_length']);
+					$coins_per_hour = $round_reward*$rounds_per_hour;
+					$seconds_per_round = $game['seconds_per_block']*$game['round_length'];
+					$miner_pct = 100*($game['pow_reward']*$game['round_length'])/($round_reward*pow(10,8));
+					
+					echo number_format($coins_per_hour)." coins every hour. ";
+					echo format_bignum($round_reward)." coins are given out per ".rtrim(format_seconds($seconds_per_round), 's')." voting round. ";
+					echo format_bignum($miner_pct);
+					?>% of the currency is given to proof of work miners to secure the network and the remaining <?php
+					echo format_bignum(100-$miner_pct);
+					?>% is given out to stakeholders for casting winning votes.
+				</p>
+				<p>
+					<?php
+					if ($thisuser) { ?>
+						<div class="row">
+							<div class="col-md-6">
+								<div id="my_current_votes">
+									<?php
+									echo my_votes_table($thisuser['game_id'], $current_round, $thisuser);
+									?>
+								</div>
+							</div>
+						</div>
+						<?php
+					}
+					?>
+				</p>
 			</div>
 		</div>
 		<p>
 			<h1>Rules of the Game</h1>
+			
 			<ol class="rules_list">
-				<li>
-					In EmpireCoin, a voting round is concluded approximately thirty minutes, with one of these 16 empires winning each round:
-					<div style="max-width: 900px; margin: 8x 0px;">
-						<?php
-						$nation_q = "SELECT * FROM nations ORDER BY vote_id ASC;";
-						$nation_r = run_query($nation_q);
-						$n_counter = 1;
-						while ($nation = mysql_fetch_array($nation_r)) { ?>
-							<div class="nation_box">
-								<div class="nation_flag <?php echo strtolower(str_replace(' ', '', $nation['name'])); ?>"></div>
-								<div class="nation_flag_label"><?php echo $n_counter.". ".$nation['name']; ?></div>
-							</div>
-							<?php
-							$n_counter++;
-						}
-						?>
-					</div>
-				</li>
-				<li>Blocks are mined approximately every 3 minutes with the SHA256 algorithm. Miners receive 25 empirecoins per block.</li>
-				<li>Blocks are grouped into voting rounds.  Blocks 1 through 10 make up the first round, and every 10 blocks after that are grouped into a round.</li>
-				<li>A voting round may have a winning empire.  The winning empire for a round is determined by the votes cast in that round.</li>
-				<li>Votes may be cast by creating a voting transaction in which coins are sent to voting addresses.</li>
-				<li>A voting address is any address which matches the format for one of the 16 empires.  All other addresses are considered non-voting.</li>
-				<li>The winning empire for a round is the eligible empire with the highest number of votes.  Any empire with more than 25% of the votes is ineligible and cannot win the round.</li>
+				<li>Coin holders can stake their coins for one of these <?php echo $game['num_voting_options']; ?> empires every <?php echo format_seconds($seconds_per_round); ?> by submitting a voting transaction.</li>
+				<?php
+				$last_block_id = last_block_id($game['game_id']);
+				$current_round = block_to_round($game, $last_block_id+1);
+				$block_within_round = $last_block_id%$game['round_length']+1;
+				$score_sums = total_score_in_round($game, $current_round, true);
+				
+				$round_stats = round_voting_stats_all($game, $current_round);
+				$nation_id2rank = $round_stats[3];
+				?>
+				<div id="current_round_table" style="margin-bottom: 10px;">
+					<?php
+					echo current_round_table($game, $current_round, $thisuser, false);
+					?>
+				</div>
+				
+				<li>Voting transactions are only counted if they are confirmed in a voting block. All blocks are voting blocks except for the final transaction of each round.</li>
+				<li>Blocks are mined approximately every <?php echo format_seconds($game['seconds_per_block']); ?> by the SHA256 algorithm. Miners receive <?php echo format_bignum($game['pow_reward']/pow(10,8)); ?> empirecoins per block.</li>
+				<li>Blocks are grouped into voting rounds.  Blocks 1 through <?php echo $game['round_length']; ?> make up the first round, and every subsequent <?php echo $game['round_length']; ?> blocks are grouped into a round.</li>
+				<li>A voting round will have a winning empire if at least one empire receives votes but is not disqualified.</li>
+				<li>Any empire with more than <?php echo format_bignum(100*$game['max_voting_fraction']); ?>% of the votes is disqualified from winning the round.</li>
+				<li>The eligible empire with the most votes wins the round.</li>
 				<li>In case of a tie, the empire with the lowest ID number wins.</li>
-				<li>Upon the conclusion of a round, 750 empirecoins are divided up and given out to the winning voters in proportion to the amounts of their votes.</li>
-				<li>Votes may only be cast in the first 9 blocks of the round. Transactions can be included in the 10th block of the round but do not count as votes.</li>
+				<li>When a round ends <?php echo format_bignum($game['pos_reward']/pow(10,8)); ?> empirecoins are divided up and given out to the winning voters in proportion to the amounts of their votes.</li>
 			</ol>
 		</p>
 		<p>
 			<h1>Strategy & Gameplay</h1>
-			EmpireCoin transactions have a maturity of 8 blocks; this means that coins can be spent every 9 blocks.  Voting rounds consist of 10 blocks but the final block is non-voting, therefore it's only possible to vote each coin once in a voting round. There is no penalty for voting incorrectly except for an optional transaction fee, therefore each stakeholder should vote his or her coins in every round to maximize profits.
+			Because coin rewards are divided up and given out proportionally to the winning team, winning as part of a small group yields the highest rewards.  The <?php echo format_bignum(100*$game['max_voting_fraction']); ?>% voting cap is instituted to avoid voting centralization and to encourage high rewards for winning voters.  Players may benefit by forming voting pools and voting together to influence the winning empire.
 		</p>
 		<p>
-			Because coin rewards are divided up and given out proportionally to the winning team, winning as part of a small group yields the highest rewards.  The 25% voting cap is instituted to avoid voting centralization and to encourage high rewards for winning voters.  A coalition of stakeholders controlling nearly 25% of the currency is ideally positioned to win a round.
+			As in other cryptocurrencies like Bitcoin, miners have veto authority over any transactions included in their block.  Because miners have some influence on the winning empire it is possible that your votes may not be counted.
 		</p>
-		<p>
-			As in other cryptocurrencies like Bitcoin, miners have veto authority over any transactions included in their block.  Therefore miners have some influence over the outcome of voting rounds and votes which are cast may not always be included in the current voting round.  Votes cast in the 8th or 9th block of the round are likely to be vetoed by corrupt miners, encouraging voters to stake their coins early within the round.
-		</p>
+		<!--
 		<p>
 			<h1>Gamified Proof of Stake</h1>
-			EmpireCoin is fundamentally a proof of work cryptocurrency, with SHA256 miners earning 25 empirecoins per block.  But as described above, 75 coins per block are also created per block by proof-of-stake for an inflation of 100 coins per 3-minute block, or approximately 7.5 million coins per year.  Unlike Bitcoin, EmpireCoin avoids block-reward halving in favor of a fixed linear inflation.
-		</p>
-		<p>
-			<h1>Proof of Burn Betting</h1>
-			In addition to EmpireCoin's gamified inflation, the EmpireCoin protocol also enables decentralized betting through a unique proof-of-burn protocol.  By sending coins to an address like "china_wins_round_777", anyone can place a bet against other bettors.  If correct, new coins will be created and sent to the winner.  Proof-of-burn bets are completely decentralized, guaranteeing 0% fee bets to all EmpireCoin stakeholders.
-		</p>
+			EmpireCoin is fundamentally a proof of work cryptocurrency, with SHA256 miners earning <?php echo format_bignum($game['pow_reward']/pow(10,8)); ?> empirecoins per block.  Unlike Bitcoin, EmpireCoin avoids block-reward halving in favor of a fixed linear inflation.
+		</p>-->
 		<p>
 			<h1>Voting Pools</h1>
-			EmpireCoin's unique gameplay encourages stakeholders to cooperate and vote together against competing groups.  These groups are called voting pools and anyone can create their own voting pool by coding up an API endpoint which incorporates their custom voting logic.  Or you can join an existing voting pool by entering a voting pool's URL which will control your voting decisions.
+			EmpireCoin's unique gameplay encourages stakeholders to cooperate and vote together against competing factions.  Groups can create voting pools by coding up an API endpoint which incorporates their custom voting logic.  Or you can join an existing voting pool by entering a voting pool's URL which will control your voting decisions.
 		</p>
 		<p>
 			<h1>Get Started</h1>
-			We're still developing EmpireCoin and it's not ready to download just yet.  But you can try out a simulation of the EmpireCoin game for free by signing up for an EmpireCo.in web wallet. We'll give you 1,000 beta EmpireCoins just for signing up.  But remember, this is just a simulation; rules of the game could change and your coins might be lost at any time. Or browse the blockchain by clicking on the blockchain explorer below.<br/>
+			We're still developing EmpireCoin and it's not yet ready to download.  But you can try out a simulation of the EmpireCoin game for free by signing up for an <?php echo $GLOBALS['site_name']; ?> web wallet. 
+			<?php if ($game['giveaway_status'] == "on") { ?>We'll give you <?php echo format_bignum($game['giveaway_amount']/pow(10,8)); ?> beta empirecoins just for signing up.
+			<?php } ?>
+			Since EmpireCoin is in beta, please be aware that you may lose your coins at any time.<br/>
 			<a href="/wallet/" style="margin: 5px 0px;" class="btn btn-success">Sign Up</a>
 			<a href="/explorer/rounds/" style="margin: 5px 0px;" class="btn btn-primary">Blockchain Explorer</a>
 		</p>
@@ -108,35 +141,16 @@ $game = mysql_fetch_array($r);
 			Automated & algorithmic voting strategies are encouraged in EmpireCoin.  After signing up for a web wallet, you can choose from one of several automated voting strategies and then tweak parameters to optimize your votes.  Or you can choose the "Vote by API" voting strategy and then write code to fully customize your voting strategy.  For more information, please visit the <a href="/api/about/">EmpireCoin API page</a>.
 		</p>
 		<p>
-			<?php
-			$last_block_id = last_block_id($game['game_id']);
-			$current_round = block_to_round($game, $last_block_id+1);
-			$block_within_round = $last_block_id%$game['round_length']+1;
-			$score_sum = total_score_in_round($game, $current_round, true);
-			
-			$round_stats = round_voting_stats_all($game, $current_round);
-			$nation_id2rank = $round_stats[3];
-			
-			if ($thisuser) { ?>
-				<div class="row">
-					<div class="col-md-6">
-						<h1>Your current votes</h1>
-						<div id="my_current_votes">
-							<?php
-							echo my_votes_table($thisuser['game_id'], $current_round, $thisuser);
-							?>
-						</div>
-					</div>
-				</div>
-				<?php
-			} ?>
-			<div id="current_round_table">
-				<?php
-				echo current_round_table($game, $current_round, $thisuser, true);
-				?>
-			</div>
-			
-			<div id="vote_popups"><?php	echo initialize_vote_nation_details($game, $nation_id2rank, $score_sum, $thisuser['user_id']); ?></div>
+			<h1>Proof of Burn Betting</h1>
+			In addition to EmpireCoin's gamified inflation, the EmpireCoin protocol also enables decentralized betting through a unique proof-of-burn protocol.  By sending coins to an address like "china_wins_round_777", anyone can place a bet against other bettors.  If correct, new coins will be created and sent to the winner.
+		</p>
+		<p>
+			<center><?php echo $GLOBALS['site_name'].", ".date("Y"); ?></center>
+		</p>
+		<p>
+			<div id="vote_popups"><?php
+			echo initialize_vote_nation_details($game, $nation_id2rank, $score_sums['sum'], $thisuser['user_id']);
+			?></div>
 			
 			<?php
 			if ($thisuser) {
@@ -150,8 +164,6 @@ $game = mysql_fetch_array($r);
 				<?php echo vote_details_general($mature_balance); ?>
 			</div>
 		</p>
-		<br/>
-		<br/>
 	</p>
 </div>
 
