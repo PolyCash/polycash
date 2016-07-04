@@ -106,7 +106,7 @@ if ($thisuser) { ?>
 						<h1>Your current votes</h1>
 						<div id="my_current_votes">
 							<?php
-							echo my_votes_table($current_round, $thisuser);
+							echo my_votes_table($thisuser['game_id'], $current_round, $thisuser);
 							?>
 						</div>
 					</div>
@@ -115,7 +115,7 @@ if ($thisuser) { ?>
 			} ?>
 			<div id="current_round_table">
 				<?php
-				echo current_round_table($current_round, $thisuser, true);
+				echo current_round_table(get_site_constant('primary_game_id'), $current_round, $thisuser, true);
 				?>
 			</div>
 			
@@ -140,7 +140,7 @@ if ($thisuser) { ?>
 
 <script type="text/javascript">
 var last_block_id = <?php echo $last_block_id; ?>;
-var last_transaction_id = <?php echo last_voting_transaction_id(); ?>;
+var last_transaction_id = <?php echo last_transaction_id(get_site_constant('primary_game_id')); ?>;
 
 var refresh_page = "home";
 var refresh_in_progress = false;
@@ -152,8 +152,8 @@ var homeCarousel;
 $(document).ready(function() {
 	homeCarousel = new ImageCarousel('home_carousel');
 	homeCarousel.initialize();
-	refresh_if_needed();
 	nation_selected(0);
+	game_loop_event();
 });
 
 $(".navbar-toggle").click(function(event) {

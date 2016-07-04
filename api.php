@@ -7,7 +7,9 @@ $uri = $_SERVER['REQUEST_URI'];
 $uri_parts = explode("/", $uri);
 
 if ($uri_parts[1] == "api") {
-	$last_block_id = last_block_id('beta');
+	$game_id = get_site_constant('primary_game_id');
+	
+	$last_block_id = last_block_id($game_id);
 	$current_round = block_to_round($last_block_id+1);
 	
 	if ($uri_parts[2] == "status") {
@@ -20,8 +22,8 @@ if ($uri_parts[1] == "api") {
 			if (mysql_numrows($r) == 1) {
 				$api_user = mysql_fetch_array($r);
 				
-				$account_value = account_coin_value($api_user)*pow(10,8);
-				$immature_balance = immature_balance($api_user)*pow(10,8);
+				$account_value = account_coin_value($game_id, $api_user);
+				$immature_balance = immature_balance($game_id, $api_user);
 				$mature_balance = $account_value - $immature_balance;
 				
 				$api_output_user['username'] = $api_user['username'];
@@ -30,16 +32,16 @@ if ($uri_parts[1] == "api") {
 				$api_output_user['immature_balance'] = $immature_balance;
 			}
 		}
-		$round_stats = round_voting_stats_all($current_round);
-		$totalVoteSum = $round_stats[0];
-		$maxVoteSum = $round_stats[1];
+		$round_stats = round_voting_stats_all($game_id, $current_round);
+		$total_vote_sum = $round_stats[0];
+		$max_vote_sum = $round_stats[1];
 		$ranked_stats = $round_stats[2];
 		$nation_id_to_rank = $round_stats[3];
 		
 		$api_status = false;
 		$api_status['last_block_id'] = $last_block_id;
 		$api_status['current_voting_round'] = $current_round;
-		$api_status['total_coins_voted'] = $totalVoteSum;
+		$api_status['total_coins_voted'] = $total_vote_sum;
 		
 		for ($nation_id=0; $nation_id < 16; $nation_id++) {
 			$stat = $ranked_stats[$nation_id_to_rank[$nation_id+1]];
@@ -88,129 +90,97 @@ if ($uri_parts[1] == "api") {
             "empire_id":0,
             "empire_name":"China",
             "rank":13,
-            "force_multiplier":"12.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":1,
-            "empire_name":"United States",
+            "empire_name":"USA",
             "rank":14,
-            "force_multiplier":"12.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":2,
             "empire_name":"India",
             "rank":15,
-            "force_multiplier":"12.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":3,
             "empire_name":"Japan",
             "rank":1,
-            "force_multiplier":"18.00000000",
-            "coins_voted":"945158139395",
-            "score":"17012846509110"
+            "coins_voted":"945158139395"
          },
          {
             "empire_id":4,
             "empire_name":"Germany",
             "rank":16,
-            "force_multiplier":"12.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":5,
             "empire_name":"Russia",
             "rank":2,
-            "force_multiplier":"18.00000000",
-            "coins_voted":"787454145343",
-            "score":"14174174616174"
+            "coins_voted":"787454145343"
          },
          {
             "empire_id":6,
             "empire_name":"Brazil",
             "rank":3,
-            "force_multiplier":"18.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":7,
             "empire_name":"Indonesia",
             "rank":4,
-            "force_multiplier":"18.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":8,
             "empire_name":"France",
             "rank":5,
-            "force_multiplier":"18.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":9,
-            "empire_name":"United Kingdom",
+            "empire_name":"UK",
             "rank":6,
-            "force_multiplier":"18.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":10,
             "empire_name":"Mexico",
             "rank":7,
-            "force_multiplier":"18.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":11,
             "empire_name":"Italy",
             "rank":8,
-            "force_multiplier":"18.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":12,
             "empire_name":"South Korea",
             "rank":9,
-            "force_multiplier":"18.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":13,
             "empire_name":"Saudi Arabia",
             "rank":10,
-            "force_multiplier":"18.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":14,
             "empire_name":"Canada",
             "rank":11,
-            "force_multiplier":"18.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":15,
             "empire_name":"Spain",
             "rank":12,
-            "force_multiplier":"18.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          }
       ]
    },
@@ -233,129 +203,97 @@ if ($uri_parts[1] == "api") {
             "empire_id":0,
             "empire_name":"China",
             "rank":13,
-            "force_multiplier":"12.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":1,
-            "empire_name":"United States",
+            "empire_name":"USA",
             "rank":14,
-            "force_multiplier":"12.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":2,
             "empire_name":"India",
             "rank":15,
-            "force_multiplier":"12.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":3,
             "empire_name":"Japan",
             "rank":1,
-            "force_multiplier":"18.00000000",
-            "coins_voted":"945158139395",
-            "score":"17012846509110"
+            "coins_voted":"945158139395"
          },
          {
             "empire_id":4,
             "empire_name":"Germany",
             "rank":16,
-            "force_multiplier":"12.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":5,
             "empire_name":"Russia",
             "rank":2,
-            "force_multiplier":"18.00000000",
-            "coins_voted":"787454145343",
-            "score":"14174174616174"
+            "coins_voted":"787454145343"
          },
          {
             "empire_id":6,
             "empire_name":"Brazil",
             "rank":3,
-            "force_multiplier":"18.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":7,
             "empire_name":"Indonesia",
             "rank":4,
-            "force_multiplier":"18.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":8,
             "empire_name":"France",
             "rank":5,
-            "force_multiplier":"18.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":9,
-            "empire_name":"United Kingdom",
+            "empire_name":"UK",
             "rank":6,
-            "force_multiplier":"18.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":10,
             "empire_name":"Mexico",
             "rank":7,
-            "force_multiplier":"18.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":11,
             "empire_name":"Italy",
             "rank":8,
-            "force_multiplier":"18.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":12,
             "empire_name":"South Korea",
             "rank":9,
-            "force_multiplier":"18.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":13,
             "empire_name":"Saudi Arabia",
             "rank":10,
-            "force_multiplier":"18.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":14,
             "empire_name":"Canada",
             "rank":11,
-            "force_multiplier":"18.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          },
          {
             "empire_id":15,
             "empire_name":"Spain",
             "rank":12,
-            "force_multiplier":"18.00000000",
-            "coins_voted":0,
-            "score":0
+            "coins_voted":0
          }
       ]
    },

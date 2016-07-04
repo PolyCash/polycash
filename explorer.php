@@ -20,7 +20,7 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 	
 	if ($explore_mode == "rounds") {
 		$round_id = intval($uri_parts[3]);
-		$q = "SELECT * FROM cached_rounds r LEFT JOIN nations n ON r.game_id=".$game_id." AND r.winning_nation_id=n.nation_id WHERE r.round_id='".$round_id."';";
+		$q = "SELECT * FROM cached_rounds r LEFT JOIN nations n ON r.winning_nation_id=n.nation_id WHERE r.game_id=".$game_id." AND r.round_id='".$round_id."';";
 		$r = run_query($q);
 		if (mysql_numrows($r) == 1) {
 			$round = mysql_fetch_array($r);
@@ -41,7 +41,7 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 	if ($explore_mode == "blocks") {
 		$block_id = intval($uri_parts[3]);
 		$q = "SELECT * FROM blocks WHERE game_id='".$game_id."' AND block_id='".$block_id."';";
-		$r = do_query($q);
+		$r = run_query($q);
 		if (mysql_numrows($r) == 1) {
 			$block = mysql_fetch_array($r);
 			$mode_error = false;
@@ -84,7 +84,26 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 				<?php
 				$max_vote_sum = floor($round['total_vote_sum']*get_site_constant('max_voting_fraction'));
 				
+				if ($thisuser) {
+					$returnvals = my_votes_in_round($game_id, $round['round_id'], $thisuser['user_id']);
+					$my_votes = $returnvals[0];
+					$coins_voted = $returnvals[1];
+				}
+				else $my_votes = false;
+				
+				if ($my_votes[$round['winning_nation_id']] > 0) {
+					echo "You won <font class=\"greentext\">+".(floor(100*750*$my_votes[$round['winning_nation_id']]/$round['winning_score'])/100)." EMP</font> by voting ".round($my_votes[$round['winning_nation_id']]/pow(10,8), 3)." coins for ".$round['name']."</font>\n";
+				}
+				
 				echo "<h2>Rankings</h2>";
+				
+				echo '<div class="row" style="font-weight: bold;">';
+				echo '<div class="col-md-3">Empire</div>';
+				echo '<div class="col-md-1" style="text-align: center;">Percent</div>';
+				echo '<div class="col-md-3" style="text-align: center;">Coin Votes</div>';
+				echo '<div class="col-md-3" style="text-align: center;">Your Votes</div>';
+				echo '</div>'."\n";
+				
 				$winner_displayed = FALSE;
 				for ($rank=1; $rank<=16; $rank++) {
 					$q = "SELECT * FROM nations WHERE nation_id='".$round['position_'.$rank]."';";
@@ -92,13 +111,19 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 					if (mysql_numrows($r) == 1) {
 						$ranked_nation = mysql_fetch_array($r);
 						$nation_score = nation_score_in_round($game_id, $ranked_nation['nation_id'], $round['round_id']);
+						
 						echo '<div class="row';
 						if ($nation_score > $max_vote_sum) echo ' redtext';
 						else if (!$winner_displayed && $nation_score > 0) { echo ' greentext'; $winner_displayed = TRUE; }
 						echo '">';
 						echo '<div class="col-md-3">'.$rank.'. '.$ranked_nation['name'].'</div>';
 						echo '<div class="col-md-1" style="text-align: center;">'.round(100*$nation_score/$round['total_vote_sum'], 2).'%</div>';
-						echo '<div class="col-md-3" style="text-align: right;">'.number_format(round($nation_score/pow(10,8))).' empirecoins</div>';
+						echo '<div class="col-md-3" style="text-align: center;">'.number_format(round($nation_score/pow(10,8))).' votes</div>';
+						if ($my_votes[$ranked_nation['nation_id']] > 0) {
+							echo '<div class="col-md-3" style="text-align: center;">';
+							echo number_format(floor($my_votes[$ranked_nation['nation_id']]/pow(10,8)*100)/100);
+							echo ' votes ('.round(100*$my_votes[$ranked_nation['nation_id']]/$nation_score, 3).'%)</div>';
+						}
 						echo '</div>'."\n";
 					}
 				}

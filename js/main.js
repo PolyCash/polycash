@@ -124,13 +124,18 @@ function loop_event() {
 	else {
 		$('#nation_pct_subtotal').html("<font class='redtext'>"+nation_pct_sum+"/100 allocated</font>");
 	}
+	
 	setTimeout("loop_event();", 1000);
+}
+function game_loop_event() {
+	refresh_if_needed();
+	setTimeout("game_loop_event();", 2000);
 }
 function refresh_if_needed() {
 	if (!refresh_in_progress) {
 		refresh_in_progress = true;
 		
-		var check_activity_url = "/ajax/check_new_activity.php?last_block_id="+last_block_id+"&last_transaction_id="+last_transaction_id;
+		var check_activity_url = "/ajax/check_new_activity.php?refresh_page="+refresh_page+"&last_block_id="+last_block_id+"&last_transaction_id="+last_transaction_id;
 		if (refresh_page == "wallet") check_activity_url += "&performance_history_sections="+performance_history_sections;
 		
 		$.get(check_activity_url, function(result) {
@@ -203,7 +208,6 @@ function refresh_if_needed() {
 			}
 		});
 	}
-	setTimeout("refresh_if_needed();", 2000);
 }
 function nation_selected(nation_id) {
 	if (selected_nation_id !== false) nation_deselected(selected_nation_id);

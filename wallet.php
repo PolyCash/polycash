@@ -90,7 +90,6 @@ if ($_REQUEST['do'] == "signup") {
 					}
 					
 					ensure_user_in_game($user_id, get_site_constant('primary_game_id'));
-					generate_user_addresses(get_site_constant('primary_game_id'), $user_id);
 				}
 			}
 		}
@@ -188,9 +187,28 @@ else if ($_REQUEST['do'] == "logout" && $thisuser) {
 }
 else if ($thisuser && $_REQUEST['do'] == "save_voting_strategy") {
 	$voting_strategy = $_REQUEST['voting_strategy'];
+	$voting_strategy_id = intval($_REQUEST['voting_strategy_id']);
 	$aggregate_threshold = intval($_REQUEST['aggregate_threshold']);
 	$api_url = strip_tags(mysql_real_escape_string($_REQUEST['api_url']));
 	$by_rank_csv = "";
+	
+	if ($voting_strategy_id > 0) {
+		$q = "SELECT * FROM user_strategies WHERE user_id='".$thisuser['user_id']."' AND strategy_id='".$voting_strategy_id."';";
+		$r = run_query($q);
+		if (mysql_numrows($r) == 1) {
+			$user_strategy = mysql_fetch_array($r);
+		}
+		else die("Invalid strategy ID");
+	}
+	else {
+		$q = "INSERT INTO user_strategies SET user_id='".$thisuser['user_id']."';";
+		$r = run_query($q);
+		$voting_strategy_id = mysql_insert_id();
+		
+		$q = "SELECT * FROM user_strategies WHERE strategy_id='".$voting_strategy_id."';";
+		$r = run_query($q);
+		$user_strategy = mysql_fetch_array($r);
+	}
 	
 	if (in_array($voting_strategy, array('manual', 'by_rank', 'by_nation', 'api'))) {
 		for ($i=1; $i<=get_site_constant('num_voting_options'); $i++) {
@@ -198,16 +216,14 @@ else if ($thisuser && $_REQUEST['do'] == "save_voting_strategy") {
 		}
 		if ($by_rank_csv != "") $by_rank_csv = substr($by_rank_csv, 0, strlen($by_rank_csv)-1);
 		
-		$q = "UPDATE users SET voting_strategy='".$voting_strategy."'";
+		$q = "UPDATE user_strategies SET voting_strategy='".$voting_strategy."'";
 		if ($aggregate_threshold >= 0 && $aggregate_threshold <= 100) {
 			$q .= ", aggregate_threshold='".$aggregate_threshold."'";
-			$thisuser['aggregate_threshold'] = $aggregate_threshold;
 		}
 		for ($block=1; $block<=9; $block++) {
 			if ($_REQUEST['vote_on_block_'.$block] == "1") $vote_on_block = "1";
 			else $vote_on_block = "0";
 			$q .= ", vote_on_block_".$block."=".$vote_on_block;
-			$thisuser['vote_on_block_'.$block] = $vote_on_block;
 		}
 		
 		$nation_pct_sum = 0;
@@ -231,24 +247,20 @@ else if ($thisuser && $_REQUEST['do'] == "save_voting_strategy") {
 		$min_coins_available = round($_REQUEST['min_coins_available'], 3);
 		
 		$q .= ", min_coins_available='".$min_coins_available."', max_votesum_pct='".$max_votesum_pct."', min_votesum_pct='".$min_votesum_pct."', by_rank_ranks='".$by_rank_csv."', api_url='".$api_url."'";
-		$q .= " WHERE user_id='".$thisuser['user_id']."';";
+		$q .= " WHERE strategy_id='".$user_strategy['strategy_id']."';";
 		$r = run_query($q);
 		
 		if ($nation_pct_error && $voting_strategy == "by_nation") {
-			$q = "UPDATE users SET voting_strategy='".$thisuser['voting_strategy']."' WHERE user_id='".$thisuser['user_id']."';";
+			$q = "UPDATE user_strategies SET voting_strategy='".$user_strategy['voting_strategy']."' WHERE strategy_id='".$user_strategy['strategy_id']."';";
 			$r = run_query($q);
-			$voting_strategy = $thisuser['voting_strategy'];
+			$voting_strategy = $user_strategy['voting_strategy'];
 			
 			$acode = 0;
 			$message = "Error: voting strategy couldn't be set to \"Vote by nation\", the percentages you entered didn't add up to 100%.";
 		}
 		
-		$thisuser['voting_strategy'] = $voting_strategy;
-		$thisuser['api_url'] = $api_url;
-		$thisuser['by_rank_ranks'] = $by_rank_csv;
-		$thisuser['max_votesum_pct'] = $max_votesum_pct;
-		$thisuser['min_votesum_pct'] = $min_votesum_pct;
-		$thisuser['min_coins_available'] = $min_coins_available;
+		$q = "UPDATE user_games SET strategy_id='".$user_strategy['strategy_id']."' WHERE game_id='".$thisuser['game_id']."' AND user_id='".$thisuser['user_id']."';";
+		$r = run_query($q);
 	}
 }
 
@@ -276,6 +288,21 @@ $mature_balance = $account_value - $immature_balance;
 	}
 	
 	if ($thisuser) {
+		$user_game = FALSE;
+		$user_strategy = FALSE;
+		
+		$q = "SELECT * FROM user_games WHERE user_id='".$thisuser['user_id']."' AND game_id='".$thisuser['game_id']."';";
+		$r = run_query($q);
+		if (mysql_numrows($r) == 1) {
+			$user_game = mysql_fetch_array($r);
+			
+			$q = "SELECT * FROM user_strategies WHERE strategy_id='".$user_game['strategy_id']."';";
+			$r = run_query($q);
+			if (mysql_numrows($r) == 1) {
+				$user_strategy = mysql_fetch_array($r);
+			}
+		}
+		
 		$round_stats = round_voting_stats_all($thisuser['game_id'], $current_round);
 		$total_vote_sum = $round_stats[0];
 		$max_vote_sum = $round_stats[1];
@@ -310,7 +337,7 @@ $mature_balance = $account_value - $immature_balance;
 			alias_pref_changed();
 			nation_selected(0);
 			loop_event();
-			refresh_if_needed();
+			game_loop_event();
 		});
 		</script>
 		
@@ -328,6 +355,8 @@ $mature_balance = $account_value - $immature_balance;
 			<?php echo vote_details_general($mature_balance); ?>
 		</div>
 		
+		<div id="vote_popups"><?php	echo initialize_vote_nation_details($thisuser['game_id'], $nation_id2rank, $total_vote_sum); ?></div>
+		
 		<div class="row">
 			<div class="col-xs-2 tabcell" id="tabcell0" onclick="tab_clicked(0);">Play&nbsp;Now</div>
 			<div class="col-xs-2 tabcell" id="tabcell1" onclick="tab_clicked(1);">Options</div>
@@ -338,21 +367,19 @@ $mature_balance = $account_value - $immature_balance;
 		</div>
 		<div class="row">
 			<div id="tabcontent0" style="display: none;" class="tabcontent">
-				<div id="vote_popups"><?php	echo initialize_vote_nation_details($thisuser['game_id'], $nation_id2rank, $total_vote_sum); ?></div>
-				
 				<div class="row">
 					<div class="col-md-6">
 						<h1>Your current votes</h1>
 						<div id="my_current_votes">
 							<?php
-							echo my_votes_table($current_round, $thisuser);
+							echo my_votes_table($thisuser['game_id'], $current_round, $thisuser);
 							?>
 						</div>
 					</div>
 				</div>
 				
 				<br/>To cast a vote please click on any of the empires below.<br/>
-				<?php if ($thisuser['voting_strategy'] != "manual") { ?>
+				<?php if ($user_strategy && $user_strategy['voting_strategy'] != "manual") { ?>
 				You're logged in so your automated voting strategy is currently disabled.<br/>
 				<?php } ?>
 				<div id="vote_popups_disabled"<?php if (($last_block_id+1)%get_site_constant('round_length') != 0) echo ' style="display: none;"'; ?>>
@@ -360,7 +387,7 @@ $mature_balance = $account_value - $immature_balance;
 				</div>
 				<div id="current_round_table">
 					<?php
-					echo current_round_table($current_round, $thisuser, true);
+					echo current_round_table($thisuser['game_id'], $current_round, $thisuser, true);
 					?>
 				</div>
 			</div>
@@ -401,9 +428,11 @@ $mature_balance = $account_value - $immature_balance;
 				Instead of logging in every time you want to cast a vote, you can automate your voting behavior by choosing one of the automated voting strategies below. <br/><br/>
 				<form method="post" action="/wallet/">
 					<input type="hidden" name="do" value="save_voting_strategy" />
+					<input type="hidden" name="strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
+					
 					<div class="row bordered_row">
 						<div class="col-md-2">
-							<input type="radio" id="voting_strategy_manual" name="voting_strategy" value="manual"<?php if ($thisuser['voting_strategy'] == "manual") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_manual">&nbsp;Vote&nbsp;manually</label>
+							<input type="radio" id="voting_strategy_manual" name="voting_strategy" value="manual"<?php if ($user_strategy['voting_strategy'] == "manual") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_manual">&nbsp;Vote&nbsp;manually</label>
 						</div>
 						<div class="col-md-10">
 							<label class="plainlabel" for="voting_strategy_manual"> 
@@ -413,18 +442,18 @@ $mature_balance = $account_value - $immature_balance;
 					</div>
 					<div class="row bordered_row">
 						<div class="col-md-2">
-							<input type="radio" id="voting_strategy_api" name="voting_strategy" value="api"<?php if ($thisuser['voting_strategy'] == "api") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_api">&nbsp;Vote&nbsp;by&nbsp;API</label>
+							<input type="radio" id="voting_strategy_api" name="voting_strategy" value="api"<?php if ($user_strategy['voting_strategy'] == "api") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_api">&nbsp;Vote&nbsp;by&nbsp;API</label>
 						</div>
 						<div class="col-md-10">
 							<label class="plainlabel" for="voting_strategy_api">
-								Hit a custom URL whenever I have coins available to determine my votes: <input type="text" size="40" placeholder="http://" name="api_url" id="api_url" value="<?php echo $thisuser['api_url']; ?>" />
+								Hit a custom URL whenever I have coins available to determine my votes: <input type="text" size="40" placeholder="http://" name="api_url" id="api_url" value="<?php echo $user_strategy['api_url']; ?>" />
 							</label><br/>
 							Your API access code is <?php echo $thisuser['api_access_code']; ?> <a href="/api/about/">API documentation</a><br/>
 						</div>
 					</div>
 					<div class="row bordered_row">
 						<div class="col-md-2">
-							<input type="radio" id="voting_strategy_by_nation" name="voting_strategy" value="by_nation"<?php if ($thisuser['voting_strategy'] == "by_nation") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_nation">&nbsp;Vote&nbsp;by&nbsp;nation</label>
+							<input type="radio" id="voting_strategy_by_nation" name="voting_strategy" value="by_nation"<?php if ($user_strategy['voting_strategy'] == "by_nation") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_nation">&nbsp;Vote&nbsp;by&nbsp;nation</label>
 						</div>
 						<div class="col-md-10">
 							<label class="plainlabel" for="voting_strategy_by_nation"> 
@@ -438,7 +467,7 @@ $mature_balance = $account_value - $immature_balance;
 							while ($nation = mysql_fetch_array($r)) {
 								if ($nation_i%4 == 0) echo '<div class="row">';
 								echo '<div class="col-md-3">';
-								echo '<input type="tel" size="4" name="nation_pct_'.$nation['nation_id'].'" id="nation_pct_'.$nation['nation_id'].'" placeholder="0" value="'.$thisuser['nation_pct_'.$nation['nation_id']].'" />';
+								echo '<input type="tel" size="4" name="nation_pct_'.$nation['nation_id'].'" id="nation_pct_'.$nation['nation_id'].'" placeholder="0" value="'.$user_strategy['nation_pct_'.$nation['nation_id']].'" />';
 								echo '<label class="plainlabel" for="nation_pct_'.$nation['nation_id'].'">% ';
 								echo $nation['name']."</label>";
 								echo '</div>';
@@ -450,7 +479,7 @@ $mature_balance = $account_value - $immature_balance;
 					</div>
 					<div class="row bordered_row">
 						<div class="col-md-2">
-							<input type="radio" id="voting_strategy_by_rank" name="voting_strategy" value="by_rank"<?php if ($thisuser['voting_strategy'] == "by_rank") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_rank">&nbsp;Vote&nbsp;by&nbsp;rank</label>
+							<input type="radio" id="voting_strategy_by_rank" name="voting_strategy" value="by_rank"<?php if ($user_strategy['voting_strategy'] == "by_rank") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_rank">&nbsp;Vote&nbsp;by&nbsp;rank</label>
 						</div>
 						<div class="col-md-10">
 							<label class="plainlabel" for="voting_strategy_by_rank">
@@ -458,7 +487,7 @@ $mature_balance = $account_value - $immature_balance;
 							</label><br/>
 							<input type="checkbox" id="rank_check_all" onchange="rank_check_all_changed();" /><label class="plainlabel" for="rank_check_all"> All</label><br/>
 							<?php
-							$by_rank_ranks = explode(",", $thisuser['by_rank_ranks']);
+							$by_rank_ranks = explode(",", $user_strategy['by_rank_ranks']);
 							
 							for ($rank=1; $rank<=16; $rank++) {
 								if ($rank%4 == 1) echo '<div class="row">';
@@ -478,7 +507,7 @@ $mature_balance = $account_value - $immature_balance;
 							<br/><br/>
 							<b>Settings</b><br/>
 							These settings apply to "Vote by nation" and "Vote by rank" options above.<br/>
-							Wait until <input size="4" type="text" name="aggregate_threshold" id="aggregate_threshold" value="<?php echo $thisuser['aggregate_threshold']; ?>" />% of my coins are available to vote. <br/>
+							Wait until <input size="4" type="text" name="aggregate_threshold" id="aggregate_threshold" value="<?php echo $user_strategy['aggregate_threshold']; ?>" />% of my coins are available to vote. <br/>
 							Only vote in these blocks of the round:<br/>
 							<div class="row">
 								<div class="col-md-2">
@@ -488,7 +517,7 @@ $mature_balance = $account_value - $immature_balance;
 								for ($block=1; $block<=9; $block++) {
 									echo '<div class="col-md-2">';
 									echo '<input type="checkbox" name="vote_on_block_'.$block.'" id="vote_on_block_'.$block.'" value="1"';
-									if ($thisuser['vote_on_block_'.$block] == 1) echo ' checked="checked"';
+									if ($user_strategy['vote_on_block_'.$block] == 1) echo ' checked="checked"';
 									echo '><label class="plainlabel" for="vote_on_block_'.$block.'"> ';
 									echo $block.date("S", strtotime("1/".$block."/2015"))."</label>";
 									echo '</div>';
@@ -496,8 +525,8 @@ $mature_balance = $account_value - $immature_balance;
 								}
 								?>
 							</div>
-							Only vote for nations which have between <input type="tel" size="4" value="<?php echo $thisuser['min_votesum_pct']; ?>" name="min_votesum_pct" id="min_votesum_pct" />% and <input type="tel" size="4" value="<?php echo $thisuser['max_votesum_pct']; ?>" name="max_votesum_pct" id="max_votesum_pct" />% of the current votes.<br/>
-							Maintain <input type="tel" size="6" id="min_coins_available" name="min_coins_available" value="<?php echo round($thisuser['min_coins_available'], 2); ?>" /> EMP available at all times.  This number of coins will be reserved and won't be voted.
+							Only vote for nations which have between <input type="tel" size="4" value="<?php echo $user_strategy['min_votesum_pct']; ?>" name="min_votesum_pct" id="min_votesum_pct" />% and <input type="tel" size="4" value="<?php echo $user_strategy['max_votesum_pct']; ?>" name="max_votesum_pct" id="max_votesum_pct" />% of the current votes.<br/>
+							Maintain <input type="tel" size="6" id="min_coins_available" name="min_coins_available" value="<?php echo round($user_strategy['min_coins_available'], 2); ?>" /> EMP available at all times.  This number of coins will be reserved and won't be voted.
 						</div>
 					</div>
 					<br/>
@@ -584,12 +613,22 @@ $mature_balance = $account_value - $immature_balance;
 			</div>
 			<div id="tabcontent5" style="display: none;" class="tabcontent">
 				<h1>Practice Mode</h1>
+				<button class="btn btn-success" onclick="set_game_mode('instant');">Start a Practice Game</button>
 			</div>
 		</div>
 		
 		<br/><br/>
 		
 		<script type="text/javascript">
+		function set_game_mode(mode) {
+			$.get("/ajax/set_game_mode.php?mode="+mode, function(result) {
+				if (result == "1") {
+					window.location = window.location;
+				}
+				else alert(result);
+			});
+		}
+		
 		$(document).ready(function() {
 			tab_clicked(<?php echo $initial_tab; ?>);
 		});

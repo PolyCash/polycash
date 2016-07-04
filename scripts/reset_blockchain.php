@@ -5,9 +5,6 @@ if ($_REQUEST['key'] == "oiwreu2490f98") {
 	$q = "DELETE FROM webwallet_transactions;";
 	$r = run_query($q);
 	
-	$q = "UPDATE webwallet_transactions SET block_id=2;";
-	$r = run_query($q);
-	
 	$q = "DELETE FROM blocks;";
 	$r = run_query($q);
 	
@@ -29,12 +26,7 @@ if ($_REQUEST['key'] == "oiwreu2490f98") {
 		$qq = "INSERT INTO blocks SET game_id='".$game['game_id']."', block_id='1', currency_mode='beta', time_created='".time()."';";
 		$rr = run_query($qq);
 		
-		$qq = "SELECT * FROM nations;";
-		$rr = run_query($qq);
-		while ($nation = mysql_fetch_array($rr)) {
-			$qqq = "INSERT INTO game_nations SET game_id='".$game['game_id']."', nation_id='".$nation['nation_id']."';";
-			$rrr = run_query($qqq);
-		}
+		ensure_game_nations($game['game_id']);
 	}
 	
 	$q = "SELECT * FROM user_games;";
