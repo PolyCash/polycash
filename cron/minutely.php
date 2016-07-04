@@ -113,10 +113,6 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			do {
 				$loop_start_time = microtime(true);
 				
-				if ($real_game) {
-					$real_game->sync_coind($coin_rpc);
-				}
-				
 				for ($game_i=0; $game_i<count($running_games); $game_i++) {
 					if ($GLOBALS['walletnotify_by_cron'] && $running_games[$game_i]->db_game['game_type'] == "real") {
 						echo $running_games[$game_i]->apply_user_strategies();
