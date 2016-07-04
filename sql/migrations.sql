@@ -23,3 +23,30 @@ ALTER TABLE `game_buyins` ADD INDEX (`giveaway_id`);
 ALTER TABLE `game_buyins` ADD INDEX (`status`);
 ALTER TABLE `games` CHANGE `invite_cost` `invite_cost` DECIMAL(16,8) NOT NULL DEFAULT '0.00';
 ALTER TABLE `games` ADD `invitation_link` VARCHAR(200) NOT NULL DEFAULT '' AFTER `option_name_plural`;
+CREATE TABLE IF NOT EXISTS `images` (
+  `image_id` int(11) NOT NULL AUTO_INCREMENT,
+  `access_key` varchar(50) NOT NULL DEFAULT '',
+  `extension` varchar(10) NOT NULL DEFAULT '',
+  PRIMARY KEY (`image_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+INSERT INTO `images` (`image_id`, `access_key`, `extension`) VALUES
+(1, 'CbGULeWBFdFHjLoE', 'jpg'),
+(2, 'cAmH53sosXKTIans', 'jpg'),
+(3, 'PJkb84shHd5JkZJN', 'jpg'),
+(4, 'w5uNMflPjHZ2soyH', 'jpg'),
+(5, 'ZGkf0Pn54OqNpHCG', 'jpg'),
+(6, 'Xr38svRwT87qoHz5', 'jpg'),
+(7, 'Xcqtmp7JMtPIXYKp', 'jpg'),
+(8, '7ZbyYnuHAuqvZMeg', 'jpg'),
+(9, 'QUetoFCnsqawYqta', 'jpg'),
+(10, '8JNwcRyNX8jDCDFS', 'jpg'),
+(11, '9SJzffH1p8QXSTQD', 'jpg'),
+(12, 'pytNrzMUbLHm7404', 'jpg'),
+(13, 'Clqh36lP7eLWXYJd', 'jpg'),
+(14, 'jBxIsTQ7iVy7aaHO', 'jpg'),
+(15, 'k49ZaVs16GC3UYRV', 'jpg'),
+(16, 'hNe7REoWmxiWzSvP', 'jpg');
+ALTER TABLE `voting_options` ADD `default_image_id` INT(11) NULL DEFAULT NULL ;
+UPDATE `voting_options` SET default_image_id=voting_option_id WHERE voting_option_id<=16;
+ALTER TABLE `game_voting_options` ADD `image_id` INT(11) NULL DEFAULT NULL AFTER `voting_option_id`;
+UPDATE game_voting_options gvo JOIN voting_options vo ON gvo.voting_option_id=vo.voting_option_id SET gvo.image_id=vo.default_image_id;

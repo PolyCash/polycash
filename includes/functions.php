@@ -173,11 +173,11 @@ function round_voting_stats(&$game, $round_id) {
 	$current_round = block_to_round($game, $last_block_id+1);
 	
 	if ($round_id == $current_round) {
-		$q = "SELECT * FROM game_voting_options WHERE game_id='".$game['game_id']."' ORDER BY (".$score_field."+unconfirmed_".$score_field.") DESC, option_id ASC;";
+		$q = "SELECT * FROM game_voting_options gvo LEFT JOIN images i ON gvo.image_id=i.image_id WHERE gvo.game_id='".$game['game_id']."' ORDER BY (gvo.".$score_field."+gvo.unconfirmed_".$score_field.") DESC, gvo.option_id ASC;";
 		return run_query($q);
 	}
 	else {
-		$q = "SELECT gvo.* FROM transaction_ios i JOIN game_voting_options gvo ON i.option_id=gvo.option_id WHERE i.game_id='".$game['game_id']."' AND i.create_block_id >= ".((($round_id-1)*$game['round_length'])+1)." AND i.create_block_id <= ".($round_id*$game['round_length']-1)." GROUP BY i.option_id ORDER BY SUM(".$sum_field.") DESC, i.option_id ASC;";
+		$q = "SELECT gvo.*, i.* FROM transaction_ios i JOIN game_voting_options gvo ON i.option_id=gvo.option_id LEFT JOIN images i ON gvo.image_id=i.image_id WHERE i.game_id='".$game['game_id']."' AND i.create_block_id >= ".((($round_id-1)*$game['round_length'])+1)." AND i.create_block_id <= ".($round_id*$game['round_length']-1)." GROUP BY i.option_id ORDER BY SUM(".$sum_field.") DESC, i.option_id ASC;";
 		return run_query($q);
 	}
 }
@@ -228,9 +228,9 @@ function round_voting_stats_all(&$game, $voting_round) {
 	}
 	if ($option_id_csv != "") $option_id_csv = substr($option_id_csv, 0, strlen($option_id_csv)-1);
 	
-	$q = "SELECT * FROM game_voting_options WHERE game_id='".$game['game_id']."'";
-	if ($option_id_csv != "") $q .= " AND option_id NOT IN (".$option_id_csv.")";
-	$q .= " ORDER BY option_id ASC;";
+	$q = "SELECT * FROM game_voting_options gvo LEFT JOIN images i ON gvo.image_id=i.image_id WHERE gvo.game_id='".$game['game_id']."'";
+	if ($option_id_csv != "") $q .= " AND gvo.option_id NOT IN (".$option_id_csv.")";
+	$q .= " ORDER BY gvo.option_id ASC;";
 	$r = run_query($q);
 	
 	while ($stat = mysql_fetch_array($r)) {
@@ -358,14 +358,16 @@ function current_round_table(&$game, $current_round, $user, $show_intro_text) {
 			$html .='" id="vote_option_'.$i.'" onmouseover="option_selected('.$i.');" onclick="option_selected('.$i.'); start_vote('.$round_stats[$i]['option_id'].');">
 				<input type="hidden" id="option_id2rank_'.$round_stats[$i]['option_id'].'" value="'.$i.'" />
 				<input type="hidden" id="rank2option_id_'.$i.'" value="'.$round_stats[$i]['option_id'].'" />
-				<table>
-					<tr>
+				<table style="width: 100%">
+					<tr>';
+			if ($round_stats[$i]['image_id'] > 0) $html .= '
 						<td>
-							<div class="vote_option_flag '.strtolower(str_replace(' ', '', $round_stats[$i]['name'])).'"></div>
-						</td>
+							<div class="vote_option_image" style="background-image: url(\'/img/custom/'.$round_stats[$i]['image_id'].'_'.$round_stats[$i]['access_key'].'.'.$round_stats[$i]['extension'].'\');"></div>
+						</td>';
+			$html .= '
 						<td style="width: 100%;">
 							<span style="float: left;">
-								<div class="vote_option_flag_label">'.($i+1).'. '.$round_stats[$i]['name'].'</div>
+								<div class="vote_option_label">'.($i+1).'. '.$round_stats[$i]['name'].'</div>
 							</span>
 							<span style="float: right; padding-right: 5px;">';
 								$pct_votes = 100*(floor(1000*$option_score/$score_sum)/1000);
@@ -1795,7 +1797,7 @@ function ensure_game_options(&$game) {
 	$qq = "SELECT * FROM voting_options WHERE option_group_id='".$game['option_group_id']."';";
 	$rr = run_query($qq);
 	while ($option = mysql_fetch_array($rr)) {
-		$qqq = "INSERT INTO game_voting_options SET game_id='".$game['game_id']."', voting_option_id='".$option['voting_option_id']."', name='".$option['name']."', voting_character='".$option['voting_character']."';";
+		$qqq = "INSERT INTO game_voting_options SET game_id='".$game['game_id']."', voting_option_id='".$option['voting_option_id']."', image_id='".$option['default_image_id']."', name='".$option['name']."', voting_character='".$option['voting_character']."';";
 		$rrr = run_query($qqq);
 	}
 }

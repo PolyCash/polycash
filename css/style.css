@@ -79,7 +79,7 @@ body {
 .vote_option_box_sel {
 	border: 1px solid #555 ! important;
 }
-.vote_option_flag {
+.vote_option_image {
 	display: block;
 	width: 64px;
 	height: 42px;
@@ -88,7 +88,8 @@ body {
 	border-right: 1px solid #d6d6d6;
 	margin-right: 5px;
 }
-.vote_option_flag_label {
+.vote_option_label {
+	padding-left: 5px;
 }
 
 .rules_list {
