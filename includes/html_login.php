@@ -76,7 +76,7 @@ $(document).ready(function() {
 				<div class="col-sm-10">
 					<select id="autogen_password" name="autogen_password" class="responsive_input form-control" onchange="autogen_password_changed();" style="margin-bottom: 5px;">
 						<option value="0">I'll create my own password</option>
-						<option value="1">Email me a random password</option>
+						<option value="1">Generate a random password for me</option>
 					</select>
 				</div>
 			</div>

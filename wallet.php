@@ -127,7 +127,7 @@ else if ($_REQUEST['do'] == "login") {
 	$r = run_query($q);
 	
 	if (mysql_numrows($r) == 0) {
-		$message = "Incorrect username or password, please try again $q.";
+		$message = "Incorrect username or password, please try again.";
 		$error_code = 2;
 	}
 	else if (mysql_numrows($r) == 1) {
