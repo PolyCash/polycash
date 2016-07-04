@@ -1,21 +1,20 @@
 <?php
 include('includes/connect.php');
 include('includes/get_session.php');
-if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuser);
+if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $GLOBALS['pageview_controller']->insert_pageview($thisuser);
 
 if ($thisuser) {
 	if ($GLOBALS['rsa_keyholder_email'] != "" && $GLOBALS['rsa_pub_key'] != "") {
-		if ($thisuser['username'] == $GLOBALS['rsa_keyholder_email']) {
+		if ($thisuser->db_user['username'] == $GLOBALS['rsa_keyholder_email']) {
 			$game_id = intval($_REQUEST['game_id']);
 			
 			$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
-			$r = run_query($q);
+			$r = $GLOBALS['app']->run_query($q);
 
 			if (mysql_numrows($r) > 0) {
 				$payout_game = mysql_fetch_array($r);
 				
 				if ($_REQUEST['action'] == "generate_payout") {
-					include("includes/jsonRPCClient.php");
 					$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['bitcoin_rpc_user'].':'.$GLOBALS['bitcoin_rpc_password'].'@127.0.0.1:'.$GLOBALS['bitcoin_port'].'/');
 
 					$addresses = explode(",", $_REQUEST['addrs']);
@@ -29,7 +28,7 @@ if ($thisuser) {
 
 					for ($i=0; $i<count($addresses); $i++) {
 						$q = "SELECT * FROM invoice_addresses WHERE pub_key='".mysql_real_escape_string($addresses[$i])."';";
-						$r = run_query($q);
+						$r = $GLOBALS['app']->run_query($q);
 						if (mysql_numrows($r) == 1) {
 							$address = mysql_fetch_array($r);
 						}
@@ -65,13 +64,13 @@ if ($thisuser) {
 						$fee_satoshis = 5000;
 						
 						$q = "SELECT * FROM currencies WHERE currency_id='".$payout_game['invite_currency']."';";
-						$r = run_query($q);
+						$r = $GLOBALS['app']->run_query($q);
 						if (mysql_numrows($r) > 0) {
 							$payout_currency = mysql_fetch_array($r);
 						}
 						
 						$qq = "SELECT *, ug.bitcoin_address_id AS bitcoin_address_id, u.user_id AS user_id FROM users u JOIN user_games ug ON u.user_id=ug.user_id LEFT JOIN external_addresses ea ON ug.bitcoin_address_id=ea.address_id WHERE ug.game_id='".$payout_game['game_id']."' AND ug.payment_required=0;";
-						$rr = run_query($qq);
+						$rr = $GLOBALS['app']->run_query($qq);
 						
 						$output_sum = 0;
 						$coins_in_existence = coins_in_existence($payout_game, false);
@@ -127,7 +126,7 @@ if ($thisuser) {
 					
 					if ($payout_game['payout_tx_hash'] == "") {
 						$q = "UPDATE games SET payout_complete=1, payout_tx_hash='".mysql_real_escape_string($tx_hash)."' WHERE game_id='".$payout_game['game_id']."';";
-						$r = run_query($q);
+						$r = $GLOBALS['app']->run_query($q);
 						echo "Great, the tx hash has been saved!";
 					}
 					else echo "Error, a payout tx hash has already been set for this game.";
@@ -177,7 +176,7 @@ if ($thisuser) {
 
 						function load_addresses() {<?php
 							$q = "SELECT * FROM currency_invoices i JOIN invoice_addresses a ON i.invoice_address_id=a.invoice_address_id JOIN users u ON i.user_id=u.user_id JOIN currencies pc ON i.pay_currency_id=pc.currency_id WHERE i.game_id='".$payout_game['game_id']."' AND i.status='confirmed';";
-							$r = run_query($q);
+							$r = $GLOBALS['app']->run_query($q);
 							
 							$addr_html = "";
 							$input_sum = 0;
@@ -189,7 +188,7 @@ if ($thisuser) {
 							}
 							
 							$q = "SELECT * FROM game_buyins gb JOIN invoice_addresses a ON gb.invoice_address_id=a.invoice_address_id JOIN users u ON gb.user_id=u.user_id JOIN currencies pc ON gb.pay_currency_id=pc.currency_id WHERE gb.game_id='".$payout_game['game_id']."' AND gb.status='confirmed';";
-							$r = run_query($q);
+							$r = $GLOBALS['app']->run_query($q);
 							
 							while ($buyin = mysql_fetch_array($r)) {
 								echo 'inputs.push(new input(inputs.length, "'.$buyin['pub_key'].'", "'.$buyin['priv_enc'].'"));'."\n";

@@ -464,7 +464,7 @@ function attempt_withdrawal() {
 	}
 }
 
-var game_form_vars = "giveaway_status,giveaway_amount,maturity,max_voting_fraction,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_date,start_time,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap".split(",");
+var game_form_vars = "giveaway_status,giveaway_amount,maturity,max_voting_fraction,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_date,start_time,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap,option_group_id".split(",");
 function switch_to_game(game_id, action) {
 	var fetch_link_text = $('#fetch_game_link_'+game_id).html();
 	var switch_link_text = $('#switch_game_btn').html();

@@ -1,7 +1,7 @@
 <?php
 include("../includes/connect.php");
 include("../includes/get_session.php");
-if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuser);
+if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $GLOBALS['pageview_controller']->insert_pageview($thisuser);
 
 die('This functionality is currently disabled.');
 /*
@@ -11,8 +11,8 @@ if ($thisuser) {
 	
 	$email = $_REQUEST['email'];
 	
-	$q = "UPDATE users SET notification_preference='".$preference."', notification_email='".mysql_real_escape_string(strip_tags($email))."' WHERE user_id='".$thisuser['user_id']."';";
-	$r = run_query($q);
+	$q = "UPDATE users SET notification_preference='".$preference."', notification_email='".mysql_real_escape_string(strip_tags($email))."' WHERE user_id='".$thisuser->db_user['user_id']."';";
+	$r = $GLOBALS['app']->run_query($q);
 	
 	echo "Your notification settings have been saved.";
 }

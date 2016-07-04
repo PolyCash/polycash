@@ -1,7 +1,7 @@
 <?php
 include('includes/connect.php');
 include('includes/get_session.php');
-if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuser);
+if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $GLOBALS['pageview_controller']->insert_pageview($thisuser);
 
 $pagetitle = "EmpireCoin - Coin games";
 $nav_tab_selected = "wallet";
@@ -15,12 +15,12 @@ include('includes/html_start.php');
 		
 		if ($match_id > 0) {
 			$q = "SELECT * FROM match_types t JOIN matches m ON t.match_type_id=m.match_type_id WHERE m.match_id='".$match_id."';";
-			$r = run_query($q);
+			$r = $GLOBALS['app']->run_query($q);
 			
 			if (mysql_numrows($r) > 0) {
 				$match = mysql_fetch_array($r);
 				
-				$my_membership = user_match_membership($thisuser['user_id'], $match['match_id']);
+				$my_membership = user_match_membership($thisuser->db_user['user_id'], $match['match_id']);
 				
 				if ($my_membership) {
 					?>
@@ -57,7 +57,7 @@ include('includes/html_start.php');
 					<div class="row">
 						<div class="col-md-4">
 							<div style="font-size: 11px; border: 1px solid #555; padding: 5px; margin-bottom: 8px;" id="match_messages">
-								<?php echo show_match_messages($match, $thisuser['user_id'], false); ?>
+								<?php echo show_match_messages($match, $thisuser->db_user['user_id'], false); ?>
 							</div>
 						</div>
 						<div class="col-md-8" id="match_body_container">
@@ -97,8 +97,8 @@ include('includes/html_start.php');
 			else echo "The match ID you submitted wasn't found.";
 		}
 		else {
-			$my_matches_q = "SELECT * FROM match_types t JOIN matches m ON t.match_type_id=m.match_type_id JOIN match_memberships mm ON mm.match_id=m.match_id WHERE mm.user_id='".$thisuser['user_id']."';";
-			$my_matches_r = run_query($my_matches_q);
+			$my_matches_q = "SELECT * FROM match_types t JOIN matches m ON t.match_type_id=m.match_type_id JOIN match_memberships mm ON mm.match_id=m.match_id WHERE mm.user_id='".$thisuser->db_user['user_id']."';";
+			$my_matches_r = $GLOBALS['app']->run_query($my_matches_q);
 			
 			if (mysql_numrows($my_matches_r) > 0) {
 				echo "<ul>";
@@ -109,8 +109,8 @@ include('includes/html_start.php');
 				echo "</ul>\n";
 			}
 			
-			$joinable_q = "SELECT * FROM match_types t JOIN matches m ON t.match_type_id=m.match_type_id WHERE m.num_joined < t.num_players AND NOT EXISTS (SELECT * FROM match_memberships mm WHERE mm.match_id=m.match_id AND mm.user_id='".$thisuser['user_id']."') ORDER BY t.name ASC, m.match_id ASC;";
-			$joinable_r = run_query($joinable_q);
+			$joinable_q = "SELECT * FROM match_types t JOIN matches m ON t.match_type_id=m.match_type_id WHERE m.num_joined < t.num_players AND NOT EXISTS (SELECT * FROM match_memberships mm WHERE mm.match_id=m.match_id AND mm.user_id='".$thisuser->db_user['user_id']."') ORDER BY t.name ASC, m.match_id ASC;";
+			$joinable_r = $GLOBALS['app']->run_query($joinable_q);
 			if (mysql_numrows($joinable_r) > 0) {
 				echo "<ul>";
 				echo "<h1>Open Games</h1>";
@@ -133,7 +133,7 @@ include('includes/html_start.php');
 							<select id="new_match_type" class="form-control" required="required">
 							<?php
 							$q = "SELECT * FROM match_types ORDER BY name ASC;";
-							$r = run_query($q);
+							$r = $GLOBALS['app']->run_query($q);
 							while ($match_type = mysql_fetch_array($r)) {
 								echo "<option value=\"".$match_type['match_type_id']."\">".$match_type['num_players']."-player ".$match_type['name']."</option>\n";
 							}

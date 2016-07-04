@@ -12,32 +12,28 @@ $game = FALSE;
 
 if (strlen($session_key) > 0) {
 	$q = "SELECT * FROM user_sessions WHERE session_key='".$session_key."' AND expire_time > '".time()."' AND logout_time=0;";
-	$r = run_query($q);
+	$r = $GLOBALS['app']->run_query($q);
 	
 	if (mysql_numrows($r) > 0) {
 		$session = mysql_fetch_array($r);
 		
-		$q = "SELECT * FROM users WHERE user_id='".$session['user_id']."';";
-		$r = run_query($q);
+		$thisuser = new User($session['user_id']);
 		
-		if (mysql_numrows($r) == 1) {
-			$thisuser = mysql_fetch_array($r);
-			
+		if ($thisuser->db_user) {
 			$game_id = intval($_REQUEST['game_id']);
+			
 			if ($game_id > 0) {
-				$q = "SELECT g.* FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND g.game_id='".$game_id."';";
-				$r = run_query($q);
+				$q = "SELECT g.* FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND g.game_id='".$game_id."';";
+				$r = $GLOBALS['app']->run_query($q);
+				
 				if (mysql_numrows($r) > 0) {
-					$game = mysql_fetch_array($r);
+					$db_game = mysql_fetch_array($r);
+					
+					$game = new Game($db_game['game_id']);
 				}
 			}
-			/*$q = "SELECT * FROM games WHERE game_id='".$thisuser['game_id']."';";
-			$r = run_query($q);
-			if (mysql_numrows($r) == 1) {
-				$game = mysql_fetch_array($r);
-			}
-			else die("Invalid game selected.");*/
 		}
+		else $thisuser = false;
 	}
 }
 ?>

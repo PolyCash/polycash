@@ -6,29 +6,31 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$game_id = intval($_REQUEST['game_id']);
 	if ($game_id) $q .= " WHERE game_id='".$game_id."'";
 	$q .= ";";
-	$r = run_query($q);
+	$r = $GLOBALS['app']->run_query($q);
 
-	while ($mandatory_game = mysql_fetch_array($r)) {
-		ensure_game_options($mandatory_game);
+	while ($db_game = mysql_fetch_array($r)) {
+		$mandatory_game = new Game($db_game['game_id']);
+		$mandatory_game->ensure_game_options();
 		
-		if ($mandatory_game['creator_id'] > 0) {}
+		if ($mandatory_game->db_game['creator_id'] > 0) {}
 		else {
 			$qq = "SELECT * FROM users;";
-			$rr = run_query($qq);
+			$rr = $GLOBALS['app']->run_query($qq);
 			
-			while ($user = mysql_fetch_array($rr)) {
-				ensure_user_in_game($user, $mandatory_game['game_id']);
+			while ($db_user = mysql_fetch_array($rr)) {
+				$user = new User($db_user['user_id']);
+				$user->ensure_user_in_game($mandatory_game->db_game['game_id']);
 				$invitation = false;
-				$success = try_capture_giveaway($mandatory_game, $user, $invitation);
+				$success = $mandatory_game->try_capture_giveaway($user, $invitation);
 			}
 		}
 		
-		update_option_scores($mandatory_game);
+		$mandatory_game->update_option_scores();
 		
-		echo $mandatory_game['name']."<br/>\n";
+		echo $mandatory_game->db_game['name']."<br/>\n";
 		
-		$qq = "SELECT s.voting_strategy, COUNT(*) FROM user_strategies s JOIN user_games ug ON s.strategy_id=ug.strategy_id JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$mandatory_game['game_id']."' GROUP BY s.voting_strategy;";
-		$rr = run_query($qq);
+		$qq = "SELECT s.voting_strategy, COUNT(*) FROM user_strategies s JOIN user_games ug ON s.strategy_id=ug.strategy_id JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$mandatory_game->db_game['game_id']."' GROUP BY s.voting_strategy;";
+		$rr = $GLOBALS['app']->run_query($qq);
 		
 		while ($strategy_count = mysql_fetch_array($rr)) {
 			echo "&nbsp;&nbsp;".$strategy_count['COUNT(*)']."&nbsp;".$strategy_count['voting_strategy']."<br/>\n";

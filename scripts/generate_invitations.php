@@ -7,16 +7,14 @@ die("This script is disabled.");
 if ($thisuser) {
 	$game_id = intval($_REQUEST['game_id']);
 	
-	$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
-	$r = run_query($q);
+	$game = new Game($game_id);
 	
-	if (mysql_numrows($r) > 0) {
-		$game = mysql_fetch_array($r);
+	if ($game) {
 		$quantity = 100;
 		
 		for ($i=0; $i<$quantity; $i++) {
 			$invitation = false;
-			generate_invitation($game, $thisuser['user_id'], $invitation, false);
+			$game->generate_invitation($thisuser->db_user['user_id'], $invitation, false);
 		}
 		echo "$quantity invitations have been generated.";
 	}

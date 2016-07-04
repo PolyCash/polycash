@@ -2,7 +2,7 @@
 $thispage = "account.php";
 require_once("includes/connect.php");
 include("includes/get_session.php");
-if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuser);
+if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $GLOBALS['pageview_controller']->insert_pageview($thisuser);
 
 $pagetitle = $GLOBALS['site_name']." - Reset your password";
 include("includes/html_start.php");
@@ -15,20 +15,20 @@ include("includes/html_start.php");
 			$token_id = intval($_REQUEST['tid']);
 			
 			$q = "SELECT * FROM user_resettokens WHERE token_id='".$token_id."';";
-			$r = run_query($q);
+			$r = $GLOBALS['app']->run_query($q);
 			
 			if (mysql_numrows($r) == 1) {
 				$reset_token = mysql_fetch_array($r);
 				
 				if ($reset_token['firstclick_time'] == 0 && $reset_token['expire_time'] > time()) {
 					$q = "SELECT * FROM users WHERE user_id='".$reset_token['user_id']."';";
-					$r = run_query($q);
+					$r = $GLOBALS['app']->run_query($q);
 					$user = mysql_fetch_array($r);
 					
 					$q = "UPDATE user_resettokens SET firstclick_time='".time()."'";
 					if ($GLOBALS['pageview_tracking_enabled']) $q .= ", firstclick_ip='".$_SERVER['REMOTE_ADDR']."'";
 					$q .= ", firstclick_viewer_id='".$viewer_id."' WHERE token_id='".$reset_token['token_id']."';";
-					$r = run_query($q);
+					$r = $GLOBALS['app']->run_query($q);
 					?>
 					Please enter a new password for your user account:<br/>
 					<form action="/reset_password/" method="post" onsubmit="$('#reset_password').val(Sha256.hash($('#reset_password').val())); $('#reset_password_confirm').val(Sha256.hash($('#reset_password_confirm').val()));">
@@ -72,7 +72,7 @@ include("includes/html_start.php");
 			$token_id = intval($_REQUEST['tid']);
 			
 			$q = "SELECT * FROM user_resettokens WHERE token_id='".$token_id."';";
-			$r = run_query($q);
+			$r = $GLOBALS['app']->run_query($q);
 			if (mysql_numrows($r) == 1) {
 				$reset_token = mysql_fetch_array($r);
 				
@@ -86,12 +86,12 @@ include("includes/html_start.php");
 					
 					if ($password == $password_confirm) {
 						$q = "UPDATE users SET password='".mysql_real_escape_string($password)."' WHERE user_id='".$reset_token['user_id']."';";
-						$r = run_query($q);
+						$r = $GLOBALS['app']->run_query($q);
 						
 						$reset_success = true;
 						
 						$q = "UPDATE user_resettokens SET completed=2 WHERE token_id='".$reset_token['token_id']."';";
-						$r = run_query($q);
+						$r = $GLOBALS['app']->run_query($q);
 					}
 					
 					if ($reset_success) {
@@ -101,7 +101,7 @@ include("includes/html_start.php");
 						echo "The passwords that you entered didn't match, please <a href=\"/reset_password/\">click here</a> to try again.<br/><br/>\n";
 						
 						$q = "UPDATE user_resettokens SET completed=1 WHERE token_id='".$reset_token['token_id']."';";
-						$r = run_query($q);
+						$r = $GLOBALS['app']->run_query($q);
 					}
 				}
 				else {

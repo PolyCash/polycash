@@ -52,18 +52,14 @@
 					}
 					?>><a href="/wallet/<?php
 					if ($nav_tab_selected == "wallet") {}
-					else if ($game) echo $game['url_identifier']."/";
+					else if ($game) echo $game->db_game['url_identifier']."/";
 					else {
-						$q = "SELECT * FROM games WHERE game_id='".get_site_constant('primary_game_id')."';";
-						$r = run_query($q);
-						if (mysql_numrows($r) > 0) {
-							$primary_game = mysql_fetch_array($r);
-							echo $primary_game['url_identifier']."/";
-						}
+						$primary_game = new Game($GLOBALS['app']->get_site_constant('primary_game_id'));
+						echo $primary_game->db_game['url_identifier']."/";
 					}
 					?>"><?php if ($thisuser) echo "My Account"; else echo "Log In"; ?></a></li>
-					<?php if ($game) { ?><li<?php if ($nav_tab_selected == "game_homepage") echo ' class="active"'; ?>><a href="/<?php echo $game['url_identifier']; ?>/">About</a></li><?php } ?>
-					<li<?php if ($nav_tab_selected == "explorer") echo ' class="active"'; ?>><a href="/explorer/<?php if ($game) echo $game['url_identifier']."/"; ?>">Explore</a></li>
+					<?php if ($game) { ?><li<?php if ($nav_tab_selected == "game_homepage") echo ' class="active"'; ?>><a href="/<?php echo $game->db_game['url_identifier']; ?>/">About</a></li><?php } ?>
+					<li<?php if ($nav_tab_selected == "explorer") echo ' class="active"'; ?>><a href="/explorer/<?php if ($game) echo $game->db_game['url_identifier']."/"; ?>">Explore</a></li>
 					<?php
 					if ($thisuser || $_REQUEST['do'] == "logout") { ?>
 						<li<?php if ($nav_tab_selected == "wallet" && $_REQUEST['do'] == "logout") echo ' class="active"'; ?>><a href="/wallet/?do=logout">Log Out</a></li>

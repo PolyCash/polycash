@@ -1,7 +1,7 @@
 <?php
 include("../includes/connect.php");
 include("../includes/get_session.php");
-if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuser);
+if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $GLOBALS['pageview_controller']->insert_pageview($thisuser);
 
 if ($thisuser) {
 	$do = $_REQUEST['do'];
@@ -10,20 +10,22 @@ if ($thisuser) {
 		$match_type_id = intval($_REQUEST['match_type_id']);
 		
 		$q = "SELECT * FROM match_types WHERE match_type_id='".$match_type_id."';";
-		$r = run_query($q);
+		$r = $GLOBALS['app']->run_query($q);
 		
 		if (mysql_numrows($r) == 1) {
 			$match_type = mysql_fetch_array($r);
 			
-			$q = "INSERT INTO matches SET creator_id='".$thisuser['user_id']."', status='pending', match_type_id='".$match_type['match_type_id']."';";
-			$r = run_query($q);
+			$q = "INSERT INTO matches SET creator_id='".$thisuser->db_user['user_id']."', status='pending', match_type_id='".$match_type['match_type_id']."';";
+			$r = $GLOBALS['app']->run_query($q);
 			$match_id = mysql_insert_id();
 			
-			add_user_to_match($thisuser['user_id'], $match_id, false, false);
+			$match = new Match($match_id);
+			
+			$match->add_user_to_match($thisuser->db_user['user_id'], false, false);
 			
 			for ($round_id=1; $round_id<=$match_type['num_rounds']; $round_id++) {
-				$q = "INSERT INTO match_rounds SET status='incomplete', match_id='".$match_id."', round_number='".$round_id."';";
-				$r = run_query($q);
+				$q = "INSERT INTO match_rounds SET status='incomplete', match_id='".$match->db_match['match_id']."', round_number='".$round_id."';";
+				$r = $GLOBALS['app']->run_query($q);
 			}
 			
 			$result_code = 1;
@@ -37,12 +39,10 @@ if ($thisuser) {
 	else if ($do == "join" || $do == "start" || $do == "move") {
 		$match_id = intval($_REQUEST['match_id']);
 		
-		$q = "SELECT * FROM match_types t JOIN matches m ON t.match_type_id=m.match_type_id WHERE m.match_id='".$match_id."';";
-		$r = run_query($q);
+		$match = new Match($match_id);
 		
-		if (mysql_numrows($r) == 1) {
-			$match = mysql_fetch_array($r);
-			$my_membership = user_match_membership($thisuser['user_id'], $match['match_id']);
+		if ($match) {
+			$my_membership = $match->user_match_membership($thisuser->db_user['user_id']);
 			
 			if ($do == "join") {
 				if ($my_membership) {
@@ -50,8 +50,8 @@ if ($thisuser) {
 					$error_message = "You've already joined this game.";
 				}
 				else {
-					if ($match['num_players'] > $match['num_joined']) {
-						add_user_to_match($thisuser['user_id'], $match['match_id'], false, false);
+					if ($match->db_match['num_players'] > $match->db_match['num_joined']) {
+						$match->add_user_to_match($thisuser->db_user['user_id'], false, false);
 						$result_code = 1;
 					}
 					else {
@@ -62,7 +62,7 @@ if ($thisuser) {
 			}
 			else if ($do== "start") {
 				if ($my_membership) {
-					set_match_status($match, "running");
+					$match->set_match_status("running");
 					$result_code = 1;
 				}
 				else {
@@ -72,8 +72,8 @@ if ($thisuser) {
 			}
 			else if ($do == "move") {
 				if ($my_membership) {
-					$q = "SELECT * FROM match_moves WHERE membership_id='".$my_membership['membership_id']."' AND round_number='".$match['current_round_number']."';";
-					$r = run_query($q);
+					$q = "SELECT * FROM match_moves WHERE membership_id='".$my_membership['membership_id']."' AND round_number='".$match->db_match['current_round_number']."';";
+					$r = $GLOBALS['app']->run_query($q);
 					
 					if (mysql_numrows($r) > 0) {
 						$my_move = mysql_fetch_array($r);
@@ -82,11 +82,13 @@ if ($thisuser) {
 					}
 					else {
 						$amount = floatval($_REQUEST['amount']);
-						$account_value = match_mature_balance($my_membership['membership_id']);
+						$account_value = $match->match_mature_balance($my_membership['membership_id']);
+						
 						if ($amount == round($amount, 2)) {
 							$amount = $amount*pow(10,8);
+							
 							if ($amount <= $account_value) {
-								$move_id = start_match_move($match, $my_membership['membership_id'], 'burn', $amount);
+								$move_id = $match->start_match_move($my_membership['membership_id'], 'burn', $amount);
 								$result_code = 1;
 							}
 							else {
@@ -120,5 +122,5 @@ else {
 $output['result_code'] = $result_code;
 $output['error_message'] = $error_message;
 
-echo json_encode($output);
+echo $GLOBALS['app']->json_encode($output);
 ?>

@@ -7,7 +7,7 @@ if ($_REQUEST['delivery_id'] > 0) {
 } else $delivery_id = intval($argv[1]);
 
 $q = "SELECT * FROM async_email_deliveries WHERE delivery_id='".$delivery_id."' AND time_delivered=0;";
-$r = run_query($q);
+$r = $GLOBALS['app']->run_query($q);
 
 if (mysql_numrows($r) == 1) {
 	$delivery = mysql_fetch_array($r);
@@ -51,7 +51,7 @@ if (mysql_numrows($r) == 1) {
 	else $successful = 0;
 	
 	$q = "UPDATE async_email_deliveries SET time_delivered='".time()."', successful=$successful, sendgrid_response='".mysql_real_escape_string($response)."' WHERE delivery_id='".$delivery['delivery_id']."';";
-	$r = run_query($q);
+	$r = $GLOBALS['app']->run_query($q);
 	
 	echo "response from Sendgrid was: ".$response;
 }

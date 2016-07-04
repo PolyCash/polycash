@@ -7,7 +7,7 @@ $url_game = false;
 $login_url_parts = explode("/", rtrim(ltrim($_SERVER['REQUEST_URI'], "/"), "/"));
 if ($login_url_parts[0] == "wallet" && count($login_url_parts) > 1) {
 	$q = "SELECT * FROM games WHERE url_identifier='".$login_url_parts[1]."';";
-	$r = run_query($q);
+	$r = $GLOBALS['app']->run_query($q);
 	if (mysql_numrows($r) == 1) {
 		$url_game = mysql_fetch_array($r);
 	}

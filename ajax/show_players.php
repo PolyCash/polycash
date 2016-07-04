@@ -1,9 +1,9 @@
 <?php
 include("../includes/connect.php");
 include("../includes/get_session.php");
-if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuser);
+if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $GLOBALS['pageview_controller']->insert_pageview($thisuser);
 
 if ($thisuser && $game) {
-	echo render_game_players($game);
+	echo $game->render_game_players();
 }
 ?>

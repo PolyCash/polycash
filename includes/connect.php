@@ -1,5 +1,7 @@
 <?php
-ini_set('display_errors', 'Off');
+//ini_set('display_errors', 'Off');
+error_reporting( E_ALL );
+ini_set( "display_errors", 1 );
 
 if (is_file(realpath(dirname(__FILE__))."/config.php")) {
 	include("config.php");
@@ -24,7 +26,7 @@ if ($GLOBALS['base_url'] && !$host_not_required) {
 
 date_default_timezone_set($GLOBALS['default_timezone']);
 
-if ($GLOBALS['pageview_tracking_enabled']) include("pageview_functions.php");
+if ($GLOBALS['pageview_tracking_enabled']) include("classes/PageviewController.php");
 
 mysql_connect($GLOBALS['mysql_server'], $GLOBALS['mysql_user'], $GLOBALS['mysql_password']) or die("The server is unreachable.");
 if (!$skip_select_db) {
@@ -33,6 +35,16 @@ if (!$skip_select_db) {
 mysql_set_charset('utf8');
 header('Content-Type: text/html; charset=UTF-8');
 
-include("functions.php");
-include("classes.php");
+include("global_functions.php");
+
+include("classes/Api.php");
+include("classes/App.php");
+include("classes/JsonRPCClient.php");
+include("classes/Game.php");
+include("classes/Match.php");
+include("classes/PageviewController.php");
+include("classes/User.php");
+
+$GLOBALS['app'] = new App();
+$GLOBALS['pageview_controller'] = new PageviewController();
 ?>

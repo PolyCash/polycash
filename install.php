@@ -1,7 +1,6 @@
 <?php
 $skip_select_db = TRUE;
 include("includes/connect.php");
-include("includes/jsonRPCClient.php");
 
 if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	if ($GLOBALS['mysql_database'] != "") {
@@ -27,7 +26,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				mysql_select_db($GLOBALS['mysql_database']) or die ("There was an error accessing the \"".$GLOBALS['mysql_database']."\" database");
 			}
 
-			$result = run_query("SHOW TABLES LIKE 'games';");
+			$result = $GLOBALS['app']->run_query("SHOW TABLES LIKE 'games';");
 			$table_exists = mysql_num_rows($result) > 0;
 			if (!$table_exists) {
 				echo "Database tables failed to be created, please install manually by importing all files in the \"sql\" folder via phpMyAdmin or any other MySQL interface.<br/>\n";
@@ -35,17 +34,17 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			}
 			
 			$q = "SELECT * FROM games WHERE url_identifier='".strtolower($GLOBALS['coin_brand_name'])."-live';";
-			$r = run_query($q);
+			$r = $GLOBALS['app']->run_query($q);
 			
 			if (mysql_numrows($r) == 0) {
 				$address_id = new_invoice_address();
 				
 				$q = "INSERT INTO games SET invoice_address_id='".$address_id."', option_group_id=1, featured=1, invite_currency=1, url_identifier='".strtolower($GLOBALS['coin_brand_name'])."-live', game_status='published', giveaway_status='public_free', giveaway_amount=100000000000, pow_reward=2500000000, pos_reward=75000000000, game_type='simulation', block_timing='realistic', payout_weight='coin_round', seconds_per_block=120, name='".$GLOBALS['coin_brand_name']." Live', num_voting_options=16, maturity=1, round_length=10, max_voting_fraction=0.25, option_name='empire', option_name_plural='empires', buyin_policy='none';";
-				$r = run_query($q);
+				$r = $GLOBALS['app']->run_query($q);
 				$primary_game_id = mysql_insert_id();
 				
 				$q = "SELECT * FROM games WHERE game_id='".$primary_game_id."';";
-				$r = run_query($q);
+				$r = $GLOBALS['app']->run_query($q);
 				$primary_game = mysql_fetch_array($r);
 				
 				ensure_game_options($primary_game);
@@ -56,17 +55,17 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			}
 
 			$q = "SELECT * FROM games WHERE url_identifier='".strtolower($GLOBALS['coin_brand_name'])."-testnet';";
-			$r = run_query($q);
+			$r = $GLOBALS['app']->run_query($q);
 			
 			if (mysql_numrows($r) == 0) {
 				$address_id = new_invoice_address();
 				
 				$q = "INSERT INTO games SET invoice_address_id='".$address_id."', option_group_id=1, featured=1, invite_currency=1, url_identifier='".strtolower($GLOBALS['coin_brand_name'])."-testnet', game_status='published', giveaway_status='public_free', giveaway_amount=500000000000, pow_reward=100000000, pos_reward=500000000000, game_type='simulation', block_timing='realistic', payout_weight='coin_round', seconds_per_block=5, name='".$GLOBALS['coin_brand_name']." Testnet', num_voting_options=16, maturity=1, round_length=50, max_voting_fraction=0.15, option_name='empire', option_name_plural='empires', buyin_policy='none';";
-				$r = run_query($q);
+				$r = $GLOBALS['app']->run_query($q);
 				$testnet_game_id = mysql_insert_id();
 				
 				$q = "SELECT * FROM games WHERE game_id='".$testnet_game_id."';";
-				$r = run_query($q);
+				$r = $GLOBALS['app']->run_query($q);
 				$testnet_game = mysql_fetch_array($r);
 				
 				ensure_game_options($testnet_game);
@@ -75,10 +74,10 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			}
 			
 			$q = "SELECT * FROM currency_prices WHERE currency_id=1 AND reference_currency_id=1;";
-			$r = run_query($q);
+			$r = $GLOBALS['app']->run_query($q);
 			if (mysql_numrows($r) == 0) {
 				$q = "INSERT INTO currency_prices SET currency_id=1, reference_currency_id=1, price=1, time_added='".time()."';";
-				$r = run_query($q);
+				$r = $GLOBALS['app']->run_query($q);
 			}
 			
 			set_site_constant("game_loop_seconds", 2);

@@ -1,7 +1,7 @@
 <?php
 include("../includes/connect.php");
 include("../includes/get_session.php");
-if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuser);
+if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $GLOBALS['pageview_controller']->insert_pageview($thisuser);
 
 $api_output = false;
 
@@ -12,7 +12,8 @@ $noinfo_fail_obj = (object) [
 
 if ($thisuser && $game) {
 	$user_strategy = false;
-	$success = get_user_strategy($thisuser['user_id'], $game['game_id'], $user_strategy);
+	$success = $game->get_user_strategy($thisuser->db_user['user_id'], $user_strategy);
+	
 	if (!$success) {
 		$api_output = (object)[
 			'status_code' => 2,
@@ -22,9 +23,9 @@ if ($thisuser && $game) {
 		die();
 	}
 	
-	$account_value = account_coin_value($game, $thisuser);
-	$immature_balance = immature_balance($game, $thisuser);
-	$mature_balance = mature_balance($game, $thisuser);
+	$account_value = $thisuser->account_coin_value($game);
+	$immature_balance = $thisuser->immature_balance($game);
+	$mature_balance = $thisuser->mature_balance($game);
 	
 	$io_ids_csv = $_REQUEST['io_ids'];
 	$io_ids = explode(",", $io_ids_csv);
@@ -64,17 +65,18 @@ if ($thisuser && $game) {
 		$io_id = intval($io_ids[$i]);
 		if ($io_id > 0) {
 			$qq = "SELECT * FROM transaction_ios WHERE io_id='".$io_id."';";
-			$rr = run_query($qq);
+			$rr = $GLOBALS['app']->run_query($qq);
 			if (mysql_numrows($rr) == 1) {
 				$io = mysql_fetch_array($rr);
 				
-				if ($io['user_id'] != $thisuser['user_id'] || $io['spend_status'] != "unspent" || $io['game_id'] != $game['game_id']) {
+				if ($io['user_id'] != $thisuser->db_user['user_id'] || $io['spend_status'] != "unspent" || $io['game_id'] != $game->db_game['game_id']) {
+					die($io['user_id'].' != '.$thisuser->db_user['user_id'].' || '.$io['spend_status'].' != "unspent" || '.$io['game_id'].' != '.$game->db_game['game_id']);
 					$api_output = $noinfo_fail_obj;
 					echo json_encode($api_output);
 					die();
 				}
 				else {
-					if ($io['create_block_id'] <= last_block_id($game['game_id'])-$game['maturity'] || $io['instantly_mature'] == 1) {
+					if ($io['create_block_id'] <= $game->last_block_id() - $game->db_game['maturity'] || $io['instantly_mature'] == 1) {
 						$io_ids[$i] = $io_id;
 					}
 					else {
@@ -104,8 +106,8 @@ if ($thisuser && $game) {
 	
 	for ($i=0; $i<count($option_ids); $i++) {
 		$option_id = intval($option_ids[$i]);
-		$q = "SELECT * FROM game_voting_options WHERE option_id='".$option_id."' AND game_id='".$game['game_id']."';";
-		$r = run_query($q);
+		$q = "SELECT * FROM game_voting_options WHERE option_id='".$option_id."' AND game_id='".$game->db_game['game_id']."';";
+		$r = $GLOBALS['app']->run_query($q);
 		if (mysql_numrows($r) == 1) {
 			$option_ids[$i] = $option_id;
 		}
@@ -133,9 +135,9 @@ if ($thisuser && $game) {
 		}
 	}
 	
-	$last_block_id = last_block_id($game['game_id']);
+	$last_block_id = $game->last_block_id();
 	
-	if (($last_block_id+1)%$game['round_length'] == 0) {
+	if (($last_block_id+1)%$game->db_game['round_length'] == 0) {
 		$api_output = (object)[
 			'status_code' => 6,
 			'message' => "The final block of the round is being mined, so you can't vote right now."
@@ -143,18 +145,18 @@ if ($thisuser && $game) {
 	}
 	else {
 		if ($amount_sum+$user_strategy['transaction_fee'] <= $mature_balance && $amount_sum > 0) {
-			$transaction_id = new_transaction($game, $option_ids, $amounts, $thisuser['user_id'], $thisuser['user_id'], false, 'transaction', $io_ids, false, false, intval($user_strategy['transaction_fee']));
+			$transaction_id = $game->new_transaction($option_ids, $amounts, $thisuser->db_user['user_id'], $thisuser->db_user['user_id'], false, 'transaction', $io_ids, false, false, intval($user_strategy['transaction_fee']));
 			
 			if ($transaction_id) {
-				update_option_scores($game);
+				$game->update_option_scores();
 				
 				$q = "SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';";
-				$r = run_query($q);
+				$r = $GLOBALS['app']->run_query($q);
 				$transaction = mysql_fetch_array($r);
 				
 				$api_output = (object)[
 					'status_code' => 0,
-					'message' => "Your voting transaction has been submitted! <a href=\"/explorer/".$game['url_identifier']."/transactions/".$transaction['tx_hash']."\">Details</a>"
+					'message' => "Your voting transaction has been submitted! <a href=\"/explorer/".$game->db_game['url_identifier']."/transactions/".$transaction['tx_hash']."\">Details</a>"
 				];
 			}
 			else {

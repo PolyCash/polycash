@@ -1,7 +1,7 @@
 <?php
 include('includes/connect.php');
 include('includes/get_session.php');
-if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuser);
+if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $GLOBALS['pageview_controller']->insert_pageview($thisuser);
 
 $uri = $_SERVER['REQUEST_URI'];
 $uri_parts = explode("/", $uri);
@@ -11,7 +11,7 @@ if ($uri_parts[1] == "api") {
 		$game_id = intval($uri_parts[2]);
 	
 		$q = "SELECT game_id, maturity, pos_reward, pow_reward, round_length, game_type, payout_weight, seconds_per_block, name, num_voting_options, max_voting_fraction FROM games WHERE game_id='".$game_id."';";
-		$r = run_query($q);
+		$r = $GLOBALS['app']->run_query($q);
 		
 		if (mysql_numrows($r) == 1) {
 			$game = mysql_fetch_array($r, MYSQL_ASSOC);
@@ -30,7 +30,7 @@ if ($uri_parts[1] == "api") {
 				
 				if ($_REQUEST['api_access_code'] != "") {
 					$q = "SELECT * FROM users WHERE api_access_code='".mysql_real_escape_string($_REQUEST['api_access_code'])."';";
-					$r = run_query($q);
+					$r = $GLOBALS['app']->run_query($q);
 					
 					if (mysql_numrows($r) == 1) {
 						$api_user = mysql_fetch_array($r);
@@ -48,7 +48,7 @@ if ($uri_parts[1] == "api") {
 						
 						$mature_utxos = array();
 						$mature_utxo_q = "SELECT * FROM transaction_ios i JOIN addresses a ON i.address_id=a.address_id WHERE i.spend_status='unspent' AND i.spend_transaction_id IS NULL AND a.user_id='".$api_user['user_id']."' AND i.game_id='".$game['game_id']."' AND (i.create_block_id <= ".($last_block_id-$game['maturity'])." OR i.instantly_mature = 1) ORDER BY i.io_id ASC;";
-						$mature_utxo_r = run_query($mature_utxo_q);
+						$mature_utxo_r = $GLOBALS['app']->run_query($mature_utxo_q);
 						$utxo_i = 0;
 						while ($utxo = mysql_fetch_array($mature_utxo_r)) {
 							$mature_utxos[$utxo_i] = array('utxo_id'=>intval($utxo['io_id']), 'coins'=>$utxo['amount'], 'create_block_id'=>intval($utxo['create_block_id']));
@@ -74,7 +74,7 @@ if ($uri_parts[1] == "api") {
 				$game_scores = false;
 				
 				$qq = "SELECT * FROM game_voting_options WHERE game_id='".$game['game_id']."';";
-				$rr = run_query($qq);
+				$rr = $GLOBALS['app']->run_query($qq);
 				while ($option = mysql_fetch_array($rr)) {
 					$stat = $ranked_stats[$option_id_to_rank[$option['option_id']]];
 					$api_stat = false;
@@ -101,7 +101,7 @@ if ($uri_parts[1] == "api") {
 	else if ($uri_parts[2] == "about") {
 		require_once('includes/connect.php');
 		require_once('includes/get_session.php');
-		if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuser);
+		if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $GLOBALS['pageview_controller']->insert_pageview($thisuser);
 		
 		$pagetitle = $GLOBALS['coin_brand_name']." API Documentation";
 		$nav_tab_selected = "home";
@@ -112,7 +112,7 @@ if ($uri_parts[1] == "api") {
 			
 			<?php echo $GLOBALS['coin_brand_name']; ?> web wallets provide several strategies for automating your <?php echo $GLOBALS['coin_brand_name']; ?> voting behavior.  However, some users may wish to use custom logic in their voting strategies. The <?php echo $GLOBALS['coin_brand_name']; ?> API allows this functionality through a standardized format for sharing <?php echo $GLOBALS['coin_brand_name']; ?> voting recommendations. Using the <?php echo $GLOBALS['coin_brand_name']; ?> API can be as simple as finding a public recommendations URL and plugging it into your <?php echo $GLOBALS['coin_brand_name']; ?> user account.  Or you can set up your own voting recommendations client using the information below.<br/>
 			<br/>
-			<a target="_blank" href="/api/<?php echo get_site_constant('primary_game_id'); ?>/status/">/api/<?php echo get_site_constant('primary_game_id'); ?>/status/</a> &nbsp;&nbsp;&nbsp; <a href="" onclick="$('#api_status_example').toggle('fast'); return false;">See Example</a><br/>
+			<a target="_blank" href="/api/<?php echo$GLOBALS['app']->get_site_constant('primary_game_id'); ?>/status/">/api/<?php echo$GLOBALS['app']->get_site_constant('primary_game_id'); ?>/status/</a> &nbsp;&nbsp;&nbsp; <a href="" onclick="$('#api_status_example').toggle('fast'); return false;">See Example</a><br/>
 			Yields information about current status of the blockchain.
 			
 <pre id="api_status_example" style="display: none;">

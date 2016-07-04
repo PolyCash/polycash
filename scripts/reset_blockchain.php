@@ -4,19 +4,15 @@ include("../includes/connect.php");
 if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$game_id = intval($_REQUEST['game_id']);
 	
-	$q = "SELECT * FROM games";
-	if ($game_id > 0) $q .= " WHERE game_id='".$game_id."'";
-	$q .= ";";
-	$r = run_query($q);
+	$game = new Game($game_id);
 	
-	if (mysql_numrows($r) == 1) {
-		$game = mysql_fetch_array($r);
+	if ($game) {
 		$action = 'reset';
 		if ($_REQUEST['action'] == "delete") $action = "delete";
-		delete_reset_game($action, $game['game_id']);
+		$game->delete_reset_game($action);
 	}
 	
-	echo "Great, the game has been reset!";
+	echo "Great, the game has been ".$action."!";
 }
 else echo "Incorrect key.";
 ?>
