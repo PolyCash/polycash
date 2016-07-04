@@ -173,7 +173,7 @@ function baseChatWindow(chatWindowId) {
 function renderChatWindow(chatWindowId) {
 	$('#chatWindowTitle'+chatWindowId).html('Loading...');
 	$('#chatWindowContent'+chatWindowId).html('');
-	$.get("/ajax/chat.php?action=fetch&game_id="+game_id+"&user_id="+chatWindows[chatWindowId].toUserId, function(result) {
+	$.get("/ajax/chat.php?action=fetch&game_id="+Games[0].game_id+"&user_id="+chatWindows[chatWindowId].toUserId, function(result) {
 		var result_obj = JSON.parse(result);
 		$('#chatWindowTitle'+chatWindowId).html(result_obj['username']);
 		$('#chatWindowContent'+chatWindowId).html(result_obj['content']);
@@ -279,7 +279,7 @@ function next_block() {
 	if ($('#next_block_btn').html() == "Next Block") {
 		$('#next_block_btn').html("Loading...");
 		
-		$.get("/ajax/next_block.php?game_id="+game_id, function(result) {
+		$.get("/ajax/next_block.php?game_id="+Games[0].game_id, function(result) {
 			Games[0].refresh_if_needed();
 		});
 	}
@@ -437,7 +437,7 @@ function set_input_amount_sums() {
 function render_selected_utxo(index_id) {
 	var score_qty = 0;
 	if (Games[0].payout_weight == "coin") score_qty = Math.floor(Games[0].block_id_to_taper_factor(Games[0].last_block_id+1)*vote_inputs[index_id].amount);
-	else if (Games[0].payout_weight == "coin_round") score_qty = Math.floor(Games[0].block_id_to_taper_factor(Games[0].last_block_id+1)*(Games[0].block_to_round(1+last_block_id) - Games[0].block_to_round(vote_inputs[index_id].create_block_id))*vote_inputs[index_id].amount);
+	else if (Games[0].payout_weight == "coin_round") score_qty = Math.floor(Games[0].block_id_to_taper_factor(Games[0].last_block_id+1)*(Games[0].block_to_round(1+Games[0].last_block_id) - Games[0].block_to_round(vote_inputs[index_id].create_block_id))*vote_inputs[index_id].amount);
 	else score_qty = Math.floor(Games[0].block_id_to_taper_factor(Games[0].last_block_id+1)*(1 + Games[0].last_block_id - vote_inputs[index_id].create_block_id)*vote_inputs[index_id].amount);
 	var render_text = format_coins(score_qty/Math.pow(10,8))+' ';
 	if (Games[0].payout_weight == "coin") {
@@ -803,8 +803,8 @@ function refresh_mature_io_btns() {
 		if (Games[0].payout_weight != 'coin') {
 			var coin_disp = format_coins(mature_ios[i].amount/Math.pow(10,8));
 			select_btn_text += "<br/>("+coin_disp+" ";
-			if (coin_disp == '1') select_btn_text += coin_name;
-			else select_btn_text += coin_name_plural;
+			if (coin_disp == '1') select_btn_text += Games[0].coin_name;
+			else select_btn_text += Games[0].coin_name_plural;
 			select_btn_text += ")";
 		}
 		$('#select_utxo_'+mature_ios[i].io_id).html(select_btn_text);
@@ -916,7 +916,7 @@ function refresh_visible_inputs() {
 function show_more_rounds_complete() {
 	if ($('#show_more_link').html() == "Show More") {
 		$('#show_more_link').html("Loading...");
-		$.get("/ajax/show_rounds_complete.php?game_id="+game_id+"&from_round_id="+(last_round_shown-1), function(result) {
+		$.get("/ajax/show_rounds_complete.php?game_id="+Games[0].game_id+"&from_round_id="+(last_round_shown-1), function(result) {
 			$('#show_more_link').html("Show More");
 			var json_result = JSON.parse(result);
 			if (parseInt(json_result[0]) > 0) last_round_shown = parseInt(json_result[0]);
@@ -1055,7 +1055,7 @@ function load_plan_rounds() {
 function refresh_plan_allocations() {
 	var from_round = parseInt($('#select_from_round').val());
 	var to_round = parseInt($('#select_to_round').val());
-	$.get("/ajax/planned_allocations.php?game_id="+game_id+"&action=fetch&voting_strategy_id="+$('#voting_strategy_id').val()+"&from_round="+from_round+"&to_round="+to_round, function(result) {
+	$.get("/ajax/planned_allocations.php?game_id="+Games[0].game_id+"&action=fetch&voting_strategy_id="+$('#voting_strategy_id').val()+"&from_round="+from_round+"&to_round="+to_round, function(result) {
 		$('#from_round').val(from_round);
 		$('#to_round').val(to_round);
 		var json_obj = JSON.parse(result);
@@ -1128,7 +1128,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 
 	this.setVotingOptions = function(optionData) {
 		for (var i=0; i<optionData.length; i++) {
-			this.options.push(new option(this.options.length, optionData[0], optionData[1]));
+			this.options.push(new option(this.options.length, optionData[i][0], optionData[i][1]));
 		}
 	};
 	this.setVotingAddresses = function(votingAddrOptions) {
@@ -1319,11 +1319,11 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 			if (Games[0].option_has_votingaddr[option_id]) {
 				vote_options.push(new vote_option(index_id, name, option_id));
 				$('#compose_vote_outputs').append('<div id="compose_vote_output_'+index_id+'" class="select_utxo">'+render_option_output(index_id, name)+'</div>');
-			
+				
 				load_option_slider(index_id);
-			
-				$('#vote_confirm_'+option_id).modal('hide');
-			
+				
+				$('#game'+this.instance_id+'_vote_confirm_'+option_id).modal('hide');
+				
 				refresh_compose_vote();
 				refresh_output_amounts();
 			}
@@ -1395,7 +1395,7 @@ function place_bet() {
 				}
 			}
 			
-			$.get("/ajax/place_bets.php?game_id="+game_id+"&options="+options_csv+"&amounts="+amounts_csv+"&round="+round, function(result) {
+			$.get("/ajax/place_bets.php?game_id="+Games[0].game_id+"&options="+options_csv+"&amounts="+amounts_csv+"&round="+round, function(result) {
 				$('#bet_confirm_btn').html("Place Bet");
 				
 				var json_result = JSON.parse(result);
@@ -1458,7 +1458,7 @@ function bet_round_changed() {
 	
 	$('#bet_charts').hide('fast');
 	
-	$.get("/ajax/bet_round_details.php?game_id="+game_id+"&round_id="+round_id, function(result) {
+	$.get("/ajax/bet_round_details.php?game_id="+Games[0].game_id+"&round_id="+round_id, function(result) {
 		$('#bet_charts').slideDown('fast');
 		
 		var json_result = JSON.parse(result);
