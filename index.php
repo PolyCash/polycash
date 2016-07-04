@@ -20,6 +20,12 @@ include('includes/html_start.php');
 		<div class="col-sm-10">
 			<div class="paragraph">
 				Welcome to <?php echo $GLOBALS['coin_brand_name']; ?>, an innovative blockchain based gaming platform.  In <?php echo $GLOBALS['coin_brand_name']; ?> games the in-game currency inflates rapidly and players compete to win coins by strategically casting votes.  One empire wins in each round and the reward is split among everyone who voted correctly.  <?php echo $GLOBALS['coin_brand_name']; ?> supports a wide variety of game types.  Battle against a single opponent in a quick two player game, set up a daily fantasy sports game with your friends or join a massive battle with thousands of other players.  Free games are available so that you can try <?php echo $GLOBALS['coin_brand_name']; ?> without any risk, but most games are played with real money.  You can buy in with bitcoins or dollars and then sell out at any time. Start building your empire today in this massively multiplayer online game of chance.
+				<?php
+				$whitepaper_fname = "EmpirecoinWhitepaper.pdf";
+				if (is_file($whitepaper_fname)) {
+					echo "  For more information, please read the <a href=\"".$whitepaper_fname."\">EmpireCoin Whitepaper</a>.";
+				}
+				?>
 			</div>
 		</div>
 	</div>
@@ -102,6 +108,10 @@ include('includes/html_start.php');
 	<div class="paragraph">
 		<h2><?php echo $GLOBALS['coin_brand_name']; ?> API</h2>
 		<?php echo $GLOBALS['coin_brand_name']; ?> makes it easy to set up an algorithmic voting strategy.  After signing in, choose from one of several automated voting strategies and then tweak parameters to optimize your strategy.  Or if you're a programmer, select the "Vote by API" option, download our example strategy script and then start writing code to fully customize your voting strategy.  For more information, please visit our <a href="/api/about/"><?php echo $GLOBALS['coin_brand_name']; ?> API</a> page.
+	</div>
+	<div class="paragraph">
+		<h2>Create Your Own Coin</h2>
+		Using the <?php echo $GLOBALS['coin_brand_name']; ?> platform, anyone can create an escrow-backed blockchain game, running on top of the bitcoin blockchain or a centralized game server.  To create your own coin game, select the parameters for your game, send out invitations and then launch your game.  Games can be free or paid.  For paid games, each player must contribute bitcoins to an escrow address.  Games end after a certain number of rounds and then the escrowed bitcoins are paid back to the players in proportion to their final in-game balances. 
 	</div>
 	<?php /*<div class="paragraph">
 		<h2>Proof of Burn Betting</h2>
