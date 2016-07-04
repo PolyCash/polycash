@@ -2293,9 +2293,9 @@ class Game {
 		$r = $GLOBALS['app']->run_query($q);
 		
 		if (mysql_numrows($r) == 0) {
-			$q = "INSERT INTO blocks SET game_id='".$this->db_game['game_id']."', block_hash='".$block_hash."', block_id='".($block_height+1)."', time_created='".time()."';";
+			$q = "INSERT INTO blocks SET game_id='".$this->db_game['game_id']."', block_hash='".$block_hash."', block_id='".$block_height."', time_created='".time()."';";
 			$r = $GLOBALS['app']->run_query($q);
-			$block_within_round = $this->block_id_to_round_index($block_height+1);
+			$block_within_round = $this->block_id_to_round_index($block_height);
 			
 			$html .= $block_height." ";
 			for ($i=0; $i<count($lastblock_rpc['tx']); $i++) {
@@ -2306,11 +2306,11 @@ class Game {
 				
 				if (mysql_numrows($r) > 0) {
 					$unconfirmed_tx = mysql_fetch_array($r);
-					$q = "UPDATE transactions SET block_id='".($block_height+1)."' WHERE transaction_id='".$unconfirmed_tx['transaction_id']."';";
+					$q = "UPDATE transactions SET block_id='".$block_height."' WHERE transaction_id='".$unconfirmed_tx['transaction_id']."';";
 					$r = $GLOBALS['app']->run_query($q);
-					$q = "UPDATE transaction_ios SET spend_status='unspent', create_block_id='".($block_height+1)."' WHERE create_transaction_id='".$unconfirmed_tx['transaction_id']."';";
+					$q = "UPDATE transaction_ios SET spend_status='unspent', create_block_id='".$block_height."' WHERE create_transaction_id='".$unconfirmed_tx['transaction_id']."';";
 					$r = $GLOBALS['app']->run_query($q);
-					$q = "UPDATE transaction_ios SET spend_status='spent', spend_block_id='".($block_height+1)."' WHERE spend_transaction_id='".$unconfirmed_tx['transaction_id']."';";
+					$q = "UPDATE transaction_ios SET spend_status='spent', spend_block_id='".$block_height."' WHERE spend_transaction_id='".$unconfirmed_tx['transaction_id']."';";
 					$r = $GLOBALS['app']->run_query($q);
 				}
 				else {
@@ -2397,7 +2397,7 @@ class Game {
 						}
 						else {
 							$transaction_error = true;
-							$html .= "Error in block $block_height, Nothing found for: ".$q."\n";
+							$html .= "Error in block ".$block_height.", Nothing found for: ".$q."\n";
 						}
 					}
 					
