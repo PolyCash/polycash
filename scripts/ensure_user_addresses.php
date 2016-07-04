@@ -5,7 +5,7 @@ $q = "SELECT * FROM users;";
 $r = run_query($q);
 
 while ($user = mysql_fetch_array($r)) {
-	ensure_user_in_game($user['user_id'], get_site_constant('primary_game_id'));
+	ensure_user_in_game($user, get_site_constant('primary_game_id'));
 }
 
 $q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id;";

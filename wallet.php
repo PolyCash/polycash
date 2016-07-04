@@ -59,9 +59,21 @@ if ($_REQUEST['do'] == "signup") {
 					if ($GLOBALS['pageview_tracking_enabled']) {
 						$q .= ", ip_address='".$_SERVER['REMOTE_ADDR']."'";
 					}
+					
+					$bitcoin_address = $_REQUEST['bitcoin_address'];
+					safe_text($bitcoin_address);
+					
+					if ($bitcoin_address != "") {
+						$qq = "INSERT INTO external_addresses SET user_id='".$user_id."', currency_id=2, address='".$bitcoin_address."', time_created='".time()."';";
+						$rr = run_query($qq);
+						$address_id = mysql_insert_id();
+						$q .= ", bitcoin_address_id='".$address_id."'";
+					}
+					
 					$q .= ", time_created='".time()."', verify_code='".$verify_code."';";
 					$r = run_query($q);
 					$user_id = mysql_insert_id();
+					
 					
 					$q = "SELECT * FROM users WHERE user_id='".$user_id."';";
 					$r = run_query($q);
@@ -105,7 +117,7 @@ if ($_REQUEST['do'] == "signup") {
 					
 					if (mysql_numrows($r) == 1) {
 						$primary_game = mysql_fetch_array($r);
-						ensure_user_in_game($user_id, $primary_game['game_id']);
+						ensure_user_in_game($thisuser, $primary_game['game_id']);
 
 						if ($primary_game['giveaway_status'] == "public_free") {
 							$giveaway = new_game_giveaway($primary_game, $user_id);
@@ -231,7 +243,7 @@ if ($thisuser) {
 
 	if (mysql_numrows($r) > 0) {
 		$requested_game = mysql_fetch_array($r);
-
+		
 		$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND g.game_id='".$requested_game['game_id']."';";
 		$r = run_query($q);
 		
@@ -239,13 +251,56 @@ if ($thisuser) {
 			$game = mysql_fetch_array($r);
 		}
 		else if ($requested_game['giveaway_status'] == "public_free" || $requested_game['giveaway_status'] == "public_pay") {
-			ensure_user_in_game($thisuser['user_id'], $requested_game['game_id']);
+			ensure_user_in_game($thisuser, $requested_game['game_id']);
 			$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND g.game_id='".$requested_game['game_id']."';";
 			$r = run_query($q);
 			$game = mysql_fetch_array($r);
 		}
 		
-		if ($game && $game['payment_required'] == 0) {}
+		if ($game && $game['payment_required'] == 0) {
+			if ($_REQUEST['do'] == "save_address") {
+				$bitcoin_address = $_REQUEST['bitcoin_address'];
+				safe_text($bitcoin_address);
+				
+				if ($bitcoin_address != "") {
+					$qq = "INSERT INTO external_addresses SET user_id='".$thisuser['user_id']."', currency_id=2, address='".$bitcoin_address."', time_created='".time()."';";
+					$rr = run_query($qq);
+					$address_id = mysql_insert_id();
+					
+					$qq = "UPDATE user_games SET bitcoin_address_id='".$address_id."' WHERE user_game_id='".$game['user_game_id']."';";
+					$rr = run_query($qq);
+					$game['bitcoin_address_id'] = $address_id;
+				}
+			}
+			
+			if ($game['bitcoin_address_id'] > 0) {}
+			else if ($requested_game['giveaway_status'] == "invite_pay" || $requested_game['giveaway_status'] == "public_pay") {
+				$pagetitle = "Join ".$requested_game['name'];
+				$nav_tab_selected = "wallet";
+				include('includes/html_start.php');
+				?>
+				<script type="text/javascript">
+				$(document).ready(function() {
+					$('#bitcoin_address').focus();
+				});
+				</script>
+				<div class="container" style="max-width: 1000px; padding-top: 10px;">
+					<form action="/wallet/<?php echo $requested_game['url_identifier']; ?>/" method="post">
+						<input type="hidden" name="do" value="save_address" />
+						This is a paid game; please specify a Bitcoin address where your winnings should be sent:<br/>
+						<div class="row">
+							<div class="col-md-8">
+								<input class="form-control" id="bitcoin_address" name="bitcoin_address" />
+							</div>
+						</div>
+						<input type="submit" class="btn btn-primary" value="Save Address" />
+					</form>
+				</div>
+				<?php
+				include('includes/html_stop.php');
+				die();
+			}
+		}
 		else if (!$game && ($requested_game['giveaway_status'] == "invite_free" || $requested_game['giveaway_status'] == "invite_pay")) {
 			$pagetitle = "Join ".$requested_game['name'];
 			$nav_tab_selected = "wallet";
@@ -281,7 +336,7 @@ if ($thisuser) {
 						game_payment_loop_event();
 					});
 					function game_payment_loop_event() {
-						$.get("/ajax/check_game_payment.php?game_id="+game_id, function(result) {
+						$.get("/ajax/check_game_payment.php?game_id="+game_id+"&invoice_id=<?php echo $invoice['invoice_id']; ?>", function(result) {
 							var result_json = JSON.parse(result);
 							if (result_json['payment_required'] == 0) {
 								setTimeout("window.location = window.location", 200);
@@ -393,7 +448,7 @@ if ($thisuser) {
 		generate_user_addresses($user_game);
 	}
 	else {
-		ensure_user_in_game($thisuser['user_id'], $game['game_id']);
+		ensure_user_in_game($thisuser, $game['game_id']);
 		
 		$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game['game_id']."';";
 		$r = run_query($q);
@@ -744,7 +799,7 @@ $mature_balance = mature_balance($game, $thisuser);
 			<?php if ($game['losable_bets_enabled'] == 1) { ?>
 			<div class="col-xs-2 tabcell" id="tabcell6" onclick="tab_clicked(6);">Gamble</div>
 			<?php } ?>
-			<div class="col-xs-2 tabcell" id="tabcell1" onclick="tab_clicked(1);">Chat</div>
+			<div class="col-xs-2 tabcell" id="tabcell1" onclick="tab_clicked(1);">Players</div>
 			<div class="col-xs-2 tabcell" id="tabcell2" onclick="tab_clicked(2);">Strategy</div>
 			<div class="col-xs-2 tabcell" id="tabcell3" onclick="tab_clicked(3);">Results</div>
 			<div class="col-xs-2 tabcell" id="tabcell4" onclick="tab_clicked(4);">Deposit&nbsp;or&nbsp;Withdraw</div>
@@ -817,11 +872,11 @@ $mature_balance = mature_balance($game, $thisuser);
 				$r = run_query($q);
 				echo "<h3>".mysql_numrows($r)." players</h3>\n";
 				
-				while ($user_game = mysql_fetch_array($r)) {
+				while ($temp_user_game = mysql_fetch_array($r)) {
 					echo '<div class="row">';
-					echo '<div class="col-sm-4"><a href="" onclick="openChatWindow('.$user_game['user_id'].'); return false;">'.$user_game['username'].'</a></div>';
+					echo '<div class="col-sm-4"><a href="" onclick="openChatWindow('.$temp_user_game['user_id'].'); return false;">'.$temp_user_game['username'].'</a></div>';
 					
-					$networth_disp = format_bignum(account_coin_value($game, $user_game)/pow(10,8));
+					$networth_disp = format_bignum(account_coin_value($game, $temp_user_game)/pow(10,8));
 					echo '<div class="col-sm-4">'.$networth_disp.' ';
 					if ($networth_disp == '1') echo $game['coin_name'];
 					else echo $game['coin_name_plural'];
@@ -833,6 +888,18 @@ $mature_balance = mature_balance($game, $thisuser);
 			</div>
 			
 			<div id="tabcontent2" style="display: none;" class="tabcontent">
+				<?php
+				if ($user_game['bitcoin_address_id'] > 0) {
+					$qq = "SELECT * FROM external_addresses WHERE address_id='".$user_game['bitcoin_address_id']."';";
+					$rr = run_query($qq);
+					$payout_address = mysql_fetch_array($rr);
+					echo "Payout address: ".$payout_address['address'];
+				}
+				else {
+					echo "You haven't specified a payout address for this game.";
+				}
+				?>
+				<br/>
 				<h2>Transaction Fees</h2>
 				<form method="post" action="/wallet/<?php echo $game['url_identifier']; ?>/">
 					<input type="hidden" name="do" value="save_voting_strategy_fees" />

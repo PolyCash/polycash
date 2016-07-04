@@ -14,7 +14,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			$rr = run_query($qq);
 			
 			while ($user = mysql_fetch_array($rr)) {
-				ensure_user_in_game($user['user_id'], $mandatory_game['game_id']);
+				ensure_user_in_game($user, $mandatory_game['game_id']);
 				$invitation = false;
 				$success = try_capture_giveaway($mandatory_game, $user, $invitation);
 			}

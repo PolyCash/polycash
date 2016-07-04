@@ -72,7 +72,6 @@ function mail_async($email, $from_name, $from, $subject, $message, $bcc, $cc) {
 	exec($command);
 	
 	$curl_url = $GLOBALS['base_url']."/scripts/async_email_deliver.php?delivery_id=".$delivery_id;
-	die($curl_url);
 	$ch = curl_init();
 	curl_setopt($ch, CURLOPT_URL, $curl_url);
 	curl_setopt($ch, CURLOPT_HEADER, 0);
@@ -1247,16 +1246,17 @@ function initialize_vote_option_details(&$game, $option_id2rank, $score_sum, $us
 	return $html;
 }
 
-function ensure_user_in_game($user_id, $game_id) {
+function ensure_user_in_game($user, $game_id) {
 	$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
 	$r = run_query($q);
 	$game = mysql_fetch_array($r);
 
-	$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$user_id."' AND ug.game_id='".$game_id."';";
+	$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$user['user_id']."' AND ug.game_id='".$game_id."';";
 	$r = run_query($q);
 	
 	if (mysql_numrows($r) == 0) {
-		$q = "INSERT INTO user_games SET user_id='".$user_id."', game_id='".$game_id."'";
+		$q = "INSERT INTO user_games SET user_id='".$user['user_id']."', game_id='".$game_id."'";
+		if ($user['bitcoin_address_id'] > 0) $q .= ", bitcoin_address_id='".$user['bitcoin_address_id']."'";
 		if ($game['giveaway_status'] == "public_pay" || $game['giveaway_status'] == "invite_pay") $q .= ", payment_required=1";
 		$q .= ";";
 		$r = run_query($q);
@@ -1281,7 +1281,7 @@ function ensure_user_in_game($user_id, $game_id) {
 			$r = run_query($q);
 		}
 		
-		$q = "SELECT * FROM users u, user_games g, user_strategies s WHERE u.user_id=g.user_id AND u.game_id=g.game_id AND g.strategy_id=s.strategy_id AND u.user_id='".$user_id."';";
+		/*$q = "SELECT * FROM users u, user_games g, user_strategies s WHERE u.user_id=g.user_id AND u.game_id=g.game_id AND g.strategy_id=s.strategy_id AND u.user_id='".$user_id."';";
 		$r = run_query($q);
 		
 		if (mysql_numrows($r) == 1) {
@@ -1297,7 +1297,7 @@ function ensure_user_in_game($user_id, $game_id) {
 			}
 			$q = substr($q, 0, strlen($q)-2)." WHERE strategy_id='".$strategy_id."';";
 			$r = run_query($q);
-		}
+		}*/
 		
 		$q = "UPDATE user_games SET strategy_id='".$strategy_id."' WHERE user_game_id='".$user_game['user_game_id']."';";
 		$r = run_query($q);
@@ -2905,7 +2905,11 @@ function try_apply_invite_key($user_id, $invite_key, &$invite_game) {
 			$qq .= " WHERE invitation_id='".$invitation['invitation_id']."';";
 			$rr = run_query($qq);
 			
-			ensure_user_in_game($user_id, $invitation['game_id']);
+			$qq = "SELECT * FROM users WHERE user_id='".$user_id."';";
+			$rr = run_query($qq);
+			$user = mysql_fetch_array($rr);
+			
+			ensure_user_in_game($user, $invitation['game_id']);
 
 			$qq = "SELECT * FROM games WHERE game_id='".$invitation['game_id']."';";
 			$rr = run_query($qq);
@@ -3309,7 +3313,7 @@ function paid_players_in_game(&$game) {
 	return intval($num_players[0]);
 }
 function start_game(&$game) {
-	$qq = "UPDATE games SET initial_coins='".coins_in_existence($game, false)."', game_status='running', start_time='".time()."' WHERE game_id='".$game['game_id']."';";
+	$qq = "UPDATE games SET initial_coins='".coins_in_existence($game, false)."', game_status='running', start_time='".time()."', start_datetime=NOW() WHERE game_id='".$game['game_id']."';";
 	$rr = run_query($qq);
 
 	$qq = "SELECT * FROM user_games ug JOIN users u ON ug.game_id=u.user_id WHERE ug.game_id='".$game['game_id']."' AND u.username LIKE '%@%';";

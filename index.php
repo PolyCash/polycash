@@ -19,7 +19,7 @@ include('includes/html_start.php');
 		</div>
 		<div class="col-sm-10">
 			<div class="paragraph">
-				Welcome to <?php echo $GLOBALS['coin_brand_name']; ?>, a unique gaming platform where anyone can create a currency backed by dollars or Bitcoins.  To set up an <?php echo $GLOBALS['coin_brand_name']; ?> game, everyone contributes money to the pot in exchange for an initial share of the coins.  Once the game starts, coins are given out at regular intervals following linear or exponential inflation.  Players compete to win a share of the new coins by casting votes.  A winner is determined in each round and the newly created coins are split up and given out to everyone who voted correctly.  Some <?php echo $GLOBALS['coin_brand_name']; ?> games last forever and you can buy in or sell out at any time.  Other games end at a certain time and then the pot is split up and given out to players in proportion to their final balances.  <?php echo $GLOBALS['coin_brand_name']; ?> strategy is all about collaborating with your teammates and betraying your enemies to get ahead. Start building your empire today in this massively multiplayer online game of chance.
+				Welcome to <?php echo $GLOBALS['coin_brand_name']; ?>, an innovative blockchain-based gaming platform.  In <?php echo $GLOBALS['coin_brand_name']; ?> games the in-game currency inflates rapidly and players compete to win coins by casting votes.  One empire wins in each round and the reward is split among everyone who voted correctly.  <?php echo $GLOBALS['coin_brand_name']; ?> supports a wide variety of game types.  Battle against a single opponent in a quick two player game, set up a daily fantasy sports game with your friends or join a massive battle with thousands of other players lasting indefinitely.  Free games are available so that you can try EmpireCoin without any risk, but most games are played with real money.  You can buy in with bitcoins or dollars and then sell out at any time. <?php echo $GLOBALS['coin_brand_name']; ?> strategy is all about collaborating with your teammates and scheming against your enemies to get ahead. Start building your empire today in this massively multiplayer online game of chance.
 			</div>
 		</div>
 	</div>
@@ -100,7 +100,7 @@ include('includes/html_start.php');
 		The winning empire for an <?php echo $GLOBALS['coin_brand_name']; ?> voting round is determined entirely by the votes of the players.  Therefore, winning in <?php echo $GLOBALS['coin_brand_name']; ?> is all about colluding with other players and organizing against competing factions.  Players can form voting pools and vote together to influence the winning empire.
 	</div>
 	<div class="paragraph">
-		As in other cryptocurrencies like Bitcoin, miners have veto authority over any transactions included in their block.  Because miners have some influence on the winning empire it is possible that your votes may not be counted.
+		As with other cryptocurrencies like Bitcoin, miners have veto authority over any transactions included in their block.  Because miners have some influence on the winning empire it is possible that your votes may not be counted.
 	</div>
 	<div class="paragraph">
 		<h2>Voting Pools</h2>

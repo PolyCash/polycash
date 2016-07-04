@@ -27,7 +27,7 @@ if ($thisuser) {
 					output_message(2, "That game doesn't exist or you don't have permission to join it.");
 				}
 				else {
-					ensure_user_in_game($thisuser['user_id'], $game['game_id']);
+					ensure_user_in_game($thisuser, $game['game_id']);
 					
 					$q = "UPDATE users SET game_id='".$game['game_id']."' WHERE user_id='".$thisuser['user_id']."';";
 					$r = run_query($q);
@@ -65,7 +65,7 @@ if ($thisuser) {
 			ensure_game_options($game);
 			
 			if ($game['giveaway_status'] == "public_free") {
-				ensure_user_in_game($thisuser['user_id'], $game_id);
+				ensure_user_in_game($thisuser, $game_id);
 			}
 			
 			$q = "UPDATE users SET game_id='".$game_id."' WHERE user_id='".$thisuser['user_id']."';";

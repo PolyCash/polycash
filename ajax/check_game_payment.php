@@ -13,7 +13,13 @@ if ($thisuser) {
 		
 		if ($user_game['payment_required'] == 0) $status_code = 1;
 		else $status_code = 2;
-
+		
+		$invoice_id = intval($_REQUEST['invoice_id']);
+		if ($invoice_id > 0) {
+			$q = "UPDATE currency_invoices SET expire_time=".(time()+$GLOBALS['invoice_expiration_seconds'])." WHERE invoice_id='".$invoice_id."';";
+			$r = run_query($q);
+		}
+		
 		output_message($status_code, "", $user_game);
 	}
 	else output_message(2, "", array('payment_required'=>1));

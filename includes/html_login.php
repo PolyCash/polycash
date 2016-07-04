@@ -93,6 +93,10 @@ $(document).ready(function() {
 				<div class="col-sm-4">Username or email:</div>
 				<div class="col-sm-6"><input type="text" name="email" size="25" class="responsive_input form-control"></div>
 			</div>
+			<div class="row" title="Please enter a bitcoin address where you can receive payments.">
+				<div class="col-sm-4">Bitcoin address:</div>
+				<div class="col-sm-6"><input type="text" name="bitcoin_address" size="25" class="responsive_input form-control"></div>
+			</div>
 			<div style="display: none;" id="signup_password_disp">
 				<div class="row">
 					<div class="col-sm-4">Password:</div>

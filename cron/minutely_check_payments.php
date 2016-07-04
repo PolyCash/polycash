@@ -39,7 +39,10 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			$game = mysql_fetch_array($rr);
 
 			if ($game['giveaway_status'] == "public_pay" || $game['giveaway_status'] == "invite_pay") {
-				ensure_user_in_game($invoice['user_id'], $game['game_id']);
+				$qq = "SELECT * FROM users WHERE user_id='".$invoice['user_id']."';";
+				$rr = run_query($qq);
+				$invoice_user = mysql_fetch_array($rr);
+				ensure_user_in_game($invoice_user, $game['game_id']);
 
 				$qq = "SELECT * FROM user_games WHERE user_id='".$invoice['user_id']."' AND game_id='".$game['game_id']."';";
 				$rr = run_query($qq);
@@ -48,8 +51,10 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 					$user_game = mysql_fetch_array($rr);
 
 					if ($user_game['paid_invoice_id'] > 0) {
-						$qq = "UPDATE currency_invoices SET status='pending_refund' WHERE invoice_id='".$invoice['invoice_id']."';";
-						$rr = run_query($qq);
+						if ($invoice['invoice_id'] != $user_game['paid_invoice_id']) {
+							$qq = "UPDATE currency_invoices SET status='pending_refund' WHERE invoice_id='".$invoice['invoice_id']."';";
+							$rr = run_query($qq);
+						}
 					}
 					else {
 						$qq = "UPDATE user_games SET paid_invoice_id='".$invoice['invoice_id']."', payment_required=0 WHERE user_game_id='".$user_game['user_game_id']."';";
