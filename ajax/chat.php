@@ -14,7 +14,7 @@ if ($thisuser && $game) {
 			$action = $_REQUEST['action'];
 			
 			if ($action == "send") {
-				$message = mysql_real_escape_string(strip_tags(utf8_clean(urldecode($_REQUEST['message']))));
+				$message = mysql_real_escape_string(strip_tags($GLOBALS['app']->utf8_clean(urldecode($_REQUEST['message']))));
 				
 				if ($message != "") {
 					$q = "INSERT INTO user_messages SET game_id='".$game->db_game['game_id']."', from_user_id='".$thisuser->db_user['user_id']."', to_user_id='".$to_user->db_user['user_id']."', message='".$message."', send_time='".time()."';";
