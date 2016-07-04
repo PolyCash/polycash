@@ -57,6 +57,9 @@ if ($thisuser) {
 		$q = "UPDATE users SET game_id='".$game_id."' WHERE user_id='".$thisuser['user_id']."';";
 		$r = run_query($q);
 		
+		$q = "UPDATE user_games ug, user_strategies s SET s.voting_strategy='manual' WHERE ug.strategy_id=s.strategy_id AND ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game_id."';";
+		$r = run_query($q);
+		
 		echo "1";
 	}
 	else {

@@ -31,12 +31,11 @@ if ($thisuser) { ?>
 				</center>
 			</div>
 			<div class="col-sm-10">
-				Welcome to EmpireCoin, the first decentralized voting game on the planet.  In EmpireCoin, you can bet money against players from around the world every half hour in an epic and never-ending struggle for power.  By correctly voting your coins you'll win money, but if you're wrong you won't lose anything.  Do you love gambling, sports betting or speculating on currencies and stocks?  Stop playing rigged games and get in on the first betting game where money is created from thin air and given out to the players. Start building your empire today in this massively multiplayer online game of chance!
+				Welcome to EmpireCoin, the first decentralized voting game on the planet.  In EmpireCoin, you can bet money against players from around the world every thirty minutes in an epic and never-ending struggle for power.  By correctly voting your coins you'll win money, but if you're wrong you won't lose anything.  Do you love gambling, sports betting or speculating on currencies and stocks?  Stop playing rigged games and get in on the first betting game where money is created from thin air and given out to the players. Start building your empire today in this massively multiplayer online game of chance!
 				<br/><br/>
 				EmpireCoin is currently in beta.  You can <a href="/wallet/">sign up</a> for a beta web wallet to try out the game, and the coin itself will be released soon. For more information, please download the <a href="/EmpireCoin.pdf">EmpireCoin Whitepaper</a>.<br/>
-				<a href="/wallet/" class="btn btn-success">Log In</a>
-				<a href="/wallet/" class="btn btn-primary">Sign Up</a> 
-				<a href="/explorer/rounds/" class="btn btn-info">Blockchain Explorer</a>
+				<a href="/wallet/" class="btn btn-success" style="margin: 5px 0px;">Log In or Sign Up</a>
+				<a href="/explorer/rounds/" class="btn btn-primary" style="margin: 5px 0px;">Blockchain Explorer</a>
 			</div>
 		</div>
 		<p>
@@ -82,10 +81,14 @@ if ($thisuser) { ?>
 			As in other cryptocurrencies such as Bitcoin, empirecoin miners have veto authority over any transactions included in their block.  Therefore miners have some influence over the outcome of voting rounds and votes which are cast may not always be included in the current voting round.  To ensure that votes are counted, users should cast their votes early in the round to make it more likely that an honest miner will include their vote in the round. Votes cast in the 8th or 9th block of the round are likely to be vetoed by corrupt miners and included in the following voting round, potentially tying up a players money in an undesired voting position.
 		</p>
 		<p>
+			<h1>Voting Pools</h1>
+			EmpireCoin's unique gameplay encourages stakeholders to cooperate and vote together against competing groups.  These groups are called voting pools and anyone can create their own voting pool by coding up an API endpoint which incorporates their custom voting logic.  Or you can join an existing voting pool by entering a voting pool's URL which will control your voting decisions.
+		</p>
+		<p>
 			<h1>Get Started</h1>
 			We're still developing EmpireCoin and it's not ready to download just yet.  But you can try out a simulation of the EmpireCoin game for free by signing up for an EmpireCo.in web wallet. We'll give you 1,000 beta EmpireCoins just for signing up.  But remember, this is just a simulation; rules of the game could change and your coins might be lost at any time. Or browse the blockchain by clicking on the blockchain explorer below.<br/>
-			<a href="/wallet/" style="margin: 10px 0px;" class="btn btn-success">Sign Up</a>
-			<a href="/explorer/rounds/" style="margin: 10px 0px;" class="btn btn-primary">Blockchain Explorer</a>
+			<a href="/wallet/" style="margin: 5px 0px;" class="btn btn-success">Sign Up</a>
+			<a href="/explorer/rounds/" style="margin: 5px 0px;" class="btn btn-primary">Blockchain Explorer</a>
 		</p>
 		<p>
 			<h1>EmpireCoin API</h1>
@@ -125,7 +128,7 @@ if ($thisuser) { ?>
 				?>
 			</div>
 			
-			<div id="vote_popups"><?php	echo initialize_vote_nation_details(get_site_constant('primary_game_id'), $nation_id2rank, $total_vote_sum); ?></div>
+			<div id="vote_popups"><?php	echo initialize_vote_nation_details(get_site_constant('primary_game_id'), $nation_id2rank, $total_vote_sum, $thisuser['user_id']); ?></div>
 			
 			<?php
 			if ($thisuser) {
@@ -147,6 +150,8 @@ if ($thisuser) { ?>
 <script type="text/javascript">
 var last_block_id = <?php echo $last_block_id; ?>;
 var last_transaction_id = <?php echo last_transaction_id(get_site_constant('primary_game_id')); ?>;
+var my_last_transaction_id = <?php echo my_last_transaction_id($thisuser['user_id'], $thisuser['game_id']); ?>;
+var mature_io_ids_csv = '<?php echo mature_io_ids_csv($thisuser['user_id'], $thisuser['game_id']); ?>';
 
 var refresh_page = "home";
 var refresh_in_progress = false;

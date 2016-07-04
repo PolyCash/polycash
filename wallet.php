@@ -313,6 +313,8 @@ $mature_balance = $account_value - $immature_balance;
 		var current_tab = false;
 		var last_block_id = <?php echo $last_block_id; ?>;
 		var last_transaction_id = <?php echo last_transaction_id($thisuser['game_id']); ?>;
+		var my_last_transaction_id = <?php echo my_last_transaction_id($thisuser['user_id'], $thisuser['game_id']); ?>;
+		var mature_io_ids_csv = '<?php echo mature_io_ids_csv($thisuser['user_id'], $thisuser['game_id']); ?>';
 		var refresh_in_progress = false;
 		var last_refresh_time = 0;
 		
@@ -339,6 +341,7 @@ $mature_balance = $account_value - $immature_balance;
 			nation_selected(0);
 			loop_event();
 			game_loop_event();
+			compose_vote_loop();
 		});
 		
 		$(document).keypress(function (e) {
@@ -369,7 +372,7 @@ $mature_balance = $account_value - $immature_balance;
 			<?php echo vote_details_general($mature_balance); ?>
 		</div>
 		
-		<div id="vote_popups"><?php	echo initialize_vote_nation_details($thisuser['game_id'], $nation_id2rank, $total_vote_sum); ?></div>
+		<div id="vote_popups"><?php	echo initialize_vote_nation_details($thisuser['game_id'], $nation_id2rank, $total_vote_sum, $thisuser['user_id']); ?></div>
 		
 		<div class="row">
 			<div class="col-xs-2 tabcell" id="tabcell0" onclick="tab_clicked(0);">Play&nbsp;Now</div>
@@ -397,6 +400,25 @@ $mature_balance = $account_value - $immature_balance;
 				<?php } ?>
 				<div id="vote_popups_disabled"<?php if (($last_block_id+1)%get_site_constant('round_length') != 0) echo ' style="display: none;"'; ?>>
 					The final block of the round is being mined. Voting is currently disabled.
+				</div>
+				<div id="select_input_buttons"><?php
+					echo select_input_buttons($thisuser['user_id'], $thisuser['game_id']);
+				?></div>
+				<div id="compose_vote" style="display: none;">
+					<h2>Compose Your Voting Transaction</h2>
+					<div class="row bordered_row" style="border: 1px solid #bbb;">
+						<div class="col-md-6 bordered_cell" id="compose_vote_inputs">
+							<b>Inputs:</b><div style="display: inline-block; margin-left: 20px;" id="input_amount_sum"></div><br/>
+							<div id="compose_input_start_msg">Add inputs by clicking on the coin blocks above.</div>
+						</div>
+						<div class="col-md-6 bordered_cell" id="compose_vote_outputs">
+							<b>Outputs:</b><br/>
+							<div id="compose_output_start_msg">Add outputs by clicking on the empires below.</div>
+						</div>
+					</div>
+					<div class="redtext" id="compose_vote_errors" style="margin-top: 5px;"></div>
+					<div class="greentext" id="compose_vote_success" style="margin-top: 5px;"></div>
+					<button class="btn btn-primary" id="confirm_compose_vote_btn" style="margin-top: 5px; margin-left: 5px;" onclick="confirm_compose_vote();">Submit Voting Transaction</button>
 				</div>
 				<div id="current_round_table">
 					<?php

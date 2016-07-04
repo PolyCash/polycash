@@ -150,7 +150,7 @@ function refresh_if_needed() {
 		last_refresh_time = new Date().getTime();
 		refresh_in_progress = true;
 		
-		var check_activity_url = "/ajax/check_new_activity.php?refresh_page="+refresh_page+"&last_block_id="+last_block_id+"&last_transaction_id="+last_transaction_id;
+		var check_activity_url = "/ajax/check_new_activity.php?refresh_page="+refresh_page+"&last_block_id="+last_block_id+"&last_transaction_id="+last_transaction_id+"&my_last_transaction_id="+my_last_transaction_id+"&mature_io_ids_csv="+mature_io_ids_csv;
 		if (refresh_page == "wallet") check_activity_url += "&performance_history_sections="+performance_history_sections;
 		
 		$.ajax({
@@ -189,11 +189,21 @@ function refresh_if_needed() {
 								
 								tab_clicked(2);
 							}
+							
+							if (json_result['new_mature_ios'] == 1) {
+								mature_io_ids_csv = json_result['mature_io_ids_csv'];
+								refresh_visible_inputs();
+							}
 						}
 					}
 					if (json_result['new_transaction'] == "1") {
 						last_transaction_id = parseInt(json_result['last_transaction_id']);
 						if (user_logged_in) $('#vote_details_general').html(json_result['vote_details_general']);
+					}
+					if (json_result['new_my_transaction'] == "1") {
+						$('#select_input_buttons').html(json_result['select_input_buttons']);
+						my_last_transaction_id = parseInt(json_result['my_last_transaction_id']);
+						reload_compose_vote();
 					}
 					if (json_result['new_block'] == "1" || json_result['new_transaction'] == "1") {
 						$('#current_round_table').html(json_result['current_round_table']);
@@ -360,4 +370,235 @@ function toggle_block_timing() {
 	$.get("/ajax/toggle_block_timing.php", function(result) {
 		window.location = window.location;
 	});
+}
+
+var vote_inputs = new Array();
+var vote_nations = new Array();
+var output_amounts_need_update = false;
+var io_id2input_index = {};
+
+function vote_input(input_index, io_id, amount_disp, amount) {
+	this.input_index = input_index;
+	this.io_id = io_id;
+	this.amount_disp = amount_disp;
+	this.amount = amount;
+}
+function vote_nation(nation_index, name, nation_id) {
+	this.nation_index = nation_index;
+	this.name = name;
+	this.nation_id = nation_id;
+	this.slider_val = 100;
+	this.amount = 0;
+}
+function input_amount_sum() {
+	var amount_sum = 0;
+	for (var i=0; i<vote_inputs.length; i++) {
+		amount_sum += vote_inputs[i].amount;
+	}
+	return amount_sum;
+}
+function set_input_amount_sum() {
+	$('#input_amount_sum').html((Math.round(input_amount_sum()/Math.pow(10,6))/Math.pow(10,2)).toLocaleString()+" coins");
+}
+function render_selected_utxo(index_id, amount_disp) {
+	return amount_disp+' coins&nbsp;&nbsp; <font style="cursor: pointer" onclick="remove_utxo_from_vote('+index_id+');">&#215;</font>';
+}
+function render_nation_output(index_id, name) {
+	var html = "";
+	html += name+'&nbsp;&nbsp; <div id="output_amount_disp_'+index_id+'" style="display: inline-block;"></div> <font style="float: right; cursor: pointer" onclick="remove_nation_from_vote('+index_id+');">&#215;</font>';
+	html += '<div><div id="output_threshold_'+index_id+'" class="noUiSlider"></div></div>';
+	return html;
+}
+function add_utxo_to_vote(io_id, amount_disp, amount) {
+	var already_in = false;
+	for (var i=0; i<vote_inputs.length; i++) {
+		if (vote_inputs[i].io_id == io_id) already_in = true;
+	}
+	if (!already_in) {
+		var index_id = vote_inputs.length;
+		vote_inputs.push(new vote_input(index_id, io_id, amount_disp, amount));
+		$('#select_utxo_'+io_id).hide();
+		$('#compose_vote_inputs').append('<div id="selected_utxo_'+index_id+'" class="select_utxo">'+render_selected_utxo(index_id, amount_disp)+'</div>');
+		io_id2input_index[io_id] = index_id;
+		refresh_compose_vote();
+		set_input_amount_sum();
+		refresh_output_amounts();
+	}
+}
+function add_nation_to_vote(nation_id, name) {
+	/*var already_in = false;
+	for (var i=0; i<vote_nations.length; i++) {
+		if (vote_nations[i].nation_id == nation_id) already_in = true;
+	}
+	if (!already_in) {*/
+		var index_id = vote_nations.length;
+		vote_nations.push(new vote_nation(index_id, name, nation_id));
+		$('#compose_vote_outputs').append('<div id="compose_vote_output_'+index_id+'" class="select_utxo">'+render_nation_output(index_id, name)+'</div>');
+		
+		load_nation_slider(index_id);
+		
+		$('#vote_confirm_'+nation_id).modal('hide');
+		
+		refresh_compose_vote();
+		refresh_output_amounts();
+	//}
+}
+function load_nation_slider(index_id) {
+	$('#output_threshold_'+index_id).noUiSlider({
+		range: [0, 100]
+	   ,start: 100, step: 1
+	   ,handles: 1
+	   ,connect: "lower"
+	   ,serialization: {
+			 to: [ false, false ]
+			,resolution: 1
+		}
+	   ,slide: function(){
+			vote_nations[index_id].slider_val = parseInt($('#output_threshold_'+index_id).val());
+			output_amounts_need_update = true;
+	   }
+	});
+}
+function remove_utxo_from_vote(index_id) {
+	$('#select_utxo_'+vote_inputs[index_id].io_id).show('fast');
+	io_id2input_index[vote_inputs[index_id].io_id] = false;
+	
+	for (var i=index_id+1; i<vote_inputs.length; i++) {
+		$('#selected_utxo_'+(i-1)).html(render_selected_utxo(i-1, vote_inputs[i].amount_disp));
+		$('#selected_utxo_'+i).html('');
+		vote_inputs[i-1] = vote_inputs[i];
+		io_id2input_index[vote_inputs[i-1].io_id] = i-1;
+	}
+	$('#selected_utxo_'+(vote_inputs.length-1)).remove();
+	vote_inputs.length = vote_inputs.length-1;
+	set_input_amount_sum();
+	refresh_compose_vote();
+	refresh_output_amounts()
+}
+function remove_nation_from_vote(index_id) {
+	for (var i=index_id+1; i<vote_nations.length; i++) {
+		$('#compose_vote_output_'+(i-1)).html(render_nation_output(i-1, vote_nations[i].name));
+		$('#compose_vote_output_'+i).html('');
+		vote_nations[i-1] = vote_nations[i];
+		load_nation_slider(i-1);
+		$('#output_threshold_'+(i-1)).val(vote_nations[i-1].slider_val);
+	}
+	$('#compose_vote_output_'+(vote_nations.length-1)).remove();
+	vote_nations.length = vote_nations.length-1;
+	
+	refresh_output_amounts();
+}
+function refresh_compose_vote() {
+	if (vote_inputs.length > 0 || vote_nations.length > 0) $('#compose_vote').show('fast');
+	else $('#compose_vote').hide('fast');
+}
+function refresh_output_amounts() {
+	if (vote_nations.length > 0) {
+		var amount_sum = input_amount_sum();
+		var slider_sum = 0;
+		for (var i=0; i<vote_nations.length; i++) {
+			slider_sum += vote_nations[i].slider_val;
+		}
+		var coins_per_slider_val = Math.floor(amount_sum/slider_sum);
+		
+		var output_sum = 0;
+		for (var i=0; i<vote_nations.length; i++) {
+			var output_amount = Math.floor(coins_per_slider_val*vote_nations[i].slider_val);
+			if (i == vote_nations.length - 1) output_amount = amount_sum - output_sum;
+			$('#output_amount_disp_'+i).html((Math.round(output_amount/Math.pow(10,6))/Math.pow(10,2)).toLocaleString()+" coins");
+			vote_nations[i].amount = output_amount;
+			output_sum += output_amount;
+		}
+		console.log('output sum: '+output_sum+', amount sum: '+amount_sum);
+	}
+}
+function compose_vote_loop() {
+	if (output_amounts_need_update) refresh_output_amounts();
+	output_amounts_need_update = false;
+	setTimeout("compose_vote_loop();", 400);
+}
+function confirm_compose_vote() {
+	if (vote_inputs.length > 0) {
+		if (vote_nations.length > 0) {
+			$('#confirm_compose_vote_btn').html("Loading...");
+			
+			var place_vote_url = "/ajax/place_vote.php?io_ids=";
+			for (var i=0; i<vote_inputs.length; i++) {
+				place_vote_url += vote_inputs[i].io_id;
+				if (i != vote_inputs.length-1) place_vote_url += ",";
+			}
+			
+			place_vote_url += "&nation_ids=";
+			var amounts_url = "&amounts=";
+			
+			for (var i=0; i<vote_nations.length; i++) {
+				place_vote_url += vote_nations[i].nation_id;
+				if (i != vote_nations.length-1) place_vote_url += ",";
+				
+				amounts_url += vote_nations[i].amount;
+				if (i != vote_nations.length-1) amounts_url += ",";
+			}
+			place_vote_url += amounts_url;
+			
+			$.get(place_vote_url, function(result) {
+				$('#confirm_compose_vote_btn').html("Submit Voting Transaction");
+				console.log(result);
+				var result_parts = result.split("=====");
+				if (result_parts[0] == "0") {
+					refresh_if_needed();
+					$('#compose_vote_success').html(result_parts[1]);
+					$('#compose_vote_success').slideDown('slow');
+					setTimeout("$('#compose_vote_success').slideUp('fast');", 2500);
+					
+					for (var i=0; i<vote_nations.length; i++) {
+						$('#compose_vote_output_'+i).remove();
+					}
+					vote_nations.length = 0;
+					
+					for (var i=0; i<vote_inputs.length; i++) {
+						$('#selected_utxo_'+i).remove();
+					}
+					vote_inputs.length = 0;
+					
+					setTimeout("refresh_compose_vote();", 3000);
+				}
+				else {
+					$('#compose_vote_errors').html(result_parts[1]);
+					$('#compose_vote_errors').slideDown('slow');
+					setTimeout("$('#compose_vote_errors').slideUp('fast');", 2500);
+				}
+			});
+		}
+		else {
+			alert("First, please add the empires that you wish to vote for.");
+		}
+	}
+	else {
+		alert("First, please add coin inputs to your voting transaction.");
+	}
+}
+function reload_compose_vote() {
+	for (var i=0; i<vote_inputs.length; i++) {
+		$('#selected_utxo_'+i).remove();
+	}
+	vote_inputs.length = 0;
+	
+	$('#select_input_buttons').find('.select_utxo').each(function() {
+		$(this).hide();
+	});
+	if (mature_io_ids_csv == "") {
+		$('#select_input_buttons_msg').html("You don't have any coins available to vote right now.");
+	}
+	else {
+		$('#select_input_buttons_msg').html("To compose a voting transaction, please add money with the boxes below and then select the nations that you want to vote for.");
+	}
+	refresh_visible_inputs();
+}
+function refresh_visible_inputs() {
+	var mature_io_ids = mature_io_ids_csv.split(",");
+	for (var i=0; i<mature_io_ids.length; i++) {
+		if (typeof io_id2input_index[mature_io_ids[i]] == 'undefined' || io_id2input_index[mature_io_ids[i]] === false) {
+			$('#select_utxo_'+mature_io_ids[i]).show();
+		}
+	}
 }

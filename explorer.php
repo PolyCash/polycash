@@ -90,13 +90,15 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 					$q = "SELECT * FROM cached_rounds r, nations n WHERE r.game_id='".$game_id."' AND r.winning_nation_id=n.nation_id ORDER BY r.round_id ASC;";
 					$r = run_query($q);
 					echo "<h1>".$this_game['name'].". ".mysql_numrows($r)." Rounds Completed</h1>";
+					echo "<div style=\"border-bottom: 1px solid #bbb;\">";
 					while ($cached_round = mysql_fetch_array($r)) {
-						echo "<div class=\"row\">";
+						echo "<div class=\"row bordered_row\">";
 						echo "<div class=\"col-sm-2\"><a href=\"/explorer/rounds/".$cached_round['round_id']."\">Round #".$cached_round['round_id']."</a></div>";
-						echo "<div class=\"col-sm-5\">".$cached_round['name']." wins with ".number_format($cached_round['winning_vote_sum']/pow(10,8), 2)." votes (".round(100*$cached_round['winning_vote_sum']/$cached_round['total_vote_sum'], 2)."%)</div>";
-						echo "<div class=\"col-sm-3\">".number_format($cached_round['total_vote_sum']/pow(10,8), 2)." total votes cast</div>";
+						echo "<div class=\"col-sm-7\">".$cached_round['name']." wins with ".number_format($cached_round['winning_vote_sum']/pow(10,8), 2)." votes (".round(100*$cached_round['winning_vote_sum']/$cached_round['total_vote_sum'], 2)."%)</div>";
+						echo "<div class=\"col-sm-3\">".number_format($cached_round['total_vote_sum']/pow(10,8), 2)." votes cast</div>";
 						echo "</div>\n";
 					}
+					echo "</div>\n";
 				}
 				else {
 					if ($round['winning_nation_id'] > 0) echo "<h1>".$round['name']." wins round #".$round['round_id']."</h1>\n";

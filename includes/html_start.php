@@ -9,10 +9,12 @@
 	<link rel="stylesheet" type="text/css" href="/css/bootstrap.min.css" media="screen" />
 	<link rel="stylesheet" type="text/css" href="/css/style.css?t=<?php echo time(); ?>">
 	<link rel="stylesheet" type="text/css" href="/css/jquery.ui.css">
+	<link rel="stylesheet" type="text/css" href="/css/jquery.nouislider.css">
 	
 	<script type="text/javascript" language="javascript" src="/js/jquery-1.11.3.js"></script>
 	<script type="text/javascript" language="javascript" src="/js/bootstrap.min.js"></script>
 	<script type="text/javascript" language="javascript" src="/js/jquery.ui.js"></script>
+	<script type="text/javascript" language="javascript" src="/js/jquery.nouislider.js"></script>
 	<script type="text/javascript" language="javascript" src="/js/sha256.js"></script>
 	<script type="text/javascript" language="javascript" src="/js/main.js"></script>
 </head>

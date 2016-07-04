@@ -327,6 +327,17 @@ function last_transaction_id($game_id) {
 	return $r[0];
 }
 
+function my_last_transaction_id($user_id, $game_id) {
+	if ($user_id > 0 && $game_id > 0) {
+		$q = "SELECT t.transaction_id FROM webwallet_transactions t, addresses a, transaction_IOs i WHERE a.address_id=i.address_id AND i.create_transaction_id=t.transaction_id AND a.user_id='".$user_id."' AND i.game_id='".$game_id."' ORDER BY t.transaction_id DESC LIMIT 1;";
+		$r = run_query($q);
+		$r = mysql_fetch_row($r);
+		if ($r[0] > 0) {} else $r[0] = 0;
+		return $r[0];
+	}
+	else return 0;
+}
+
 function wallet_text_stats($thisuser, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance, $seconds_per_block) {
 	$html = "<div class=\"row\"><div class=\"col-sm-2\">Available&nbsp;funds:</div><div class=\"col-sm-3\" style=\"text-align: right;\"><font class=\"greentext\">".number_format(floor($mature_balance/pow(10,5))/1000, 2)."</font> EmpireCoins</div></div>\n";
 	$html .= "<div class=\"row\"><div class=\"col-sm-2\">Locked&nbsp;funds:</div><div class=\"col-sm-3\" style=\"text-align: right;\"><font class=\"redtext\">".number_format($immature_balance/pow(10,8), 2)."</font> EmpireCoins</div>";
@@ -544,7 +555,7 @@ function new_webwallet_transaction($game_id, $nation_id, $amount, $user_id, $blo
 	else return false;
 }
 
-function new_webwallet_multi_transaction($game_id, $nation_ids, $amounts, $user_id, $block_id, $type) {
+function new_webwallet_multi_transaction($game_id, $nation_ids, $amounts, $user_id, $block_id, $type, $io_ids) {
 	if (!$type || $type == "") $type = "transaction";
 	
 	$amount = 0;
@@ -576,7 +587,9 @@ function new_webwallet_multi_transaction($game_id, $nation_ids, $amounts, $user_
 			$q = "INSERT INTO webwallet_transactions SET game_id='".$game_id."', transaction_desc='transaction', amount=".(-1)*$amount.", user_id='".$user_id."', block_id='".$block_id."', time_created='".time()."';";
 			$r = run_query($q);
 			
-			$q = "SELECT * FROM transaction_IOs WHERE spend_status='unspent' AND user_id='".$user_id."' AND game_id='".$game_id."' AND (create_block_id <= ".(last_block_id($game_id)-get_site_constant('maturity'))." OR instantly_mature=1) ORDER BY amount ASC;";
+			$q = "SELECT * FROM transaction_IOs WHERE spend_status='unspent' AND user_id='".$user_id."' AND game_id='".$game_id."' AND (create_block_id <= ".(last_block_id($game_id)-get_site_constant('maturity'))." OR instantly_mature=1)";
+			if ($io_ids) $q .= " AND io_id IN (".implode(",", $io_ids).")";
+			$q .= " ORDER BY amount ASC;";
 			$r = run_query($q);
 			$input_sum = 0;
 			while ($transaction_input = mysql_fetch_array($r)) {
@@ -656,8 +669,8 @@ function my_votes_table($game_id, $round_id, $user) {
 			$expected_payout = floor(750*pow(10,8)*($my_vote['SUM(i.amount)']/nation_score_in_round($game_id, $my_vote['nation_id'], $round_id)))/pow(10,8);
 			$html .= "<div class=\"row\">";
 			$html .= "<div class=\"col-sm-4\">".$my_vote['name']."</div>";
-			$html .= "<div class=\"col-sm-4 greentext\">".number_format(round($my_vote['SUM(i.amount)']/pow(10,8), 5))." EMP</div>";
-			$html .= "<div class=\"col-sm-4 greentext\">+".number_format(round($expected_payout, 5))." EMP</div>";
+			$html .= "<div class=\"col-sm-4 greentext\">".number_format($my_vote['SUM(i.amount)']/pow(10,8), 2)." EMP</div>";
+			$html .= "<div class=\"col-sm-4 greentext\">+".number_format($expected_payout, 2)." EMP</div>";
 			$html .= "</div>\n";
 		}
 		$html .= "</div>";
@@ -673,7 +686,7 @@ function set_user_active($user_id) {
 	$r = run_query($q);
 }
 
-function initialize_vote_nation_details($game_id, $nation_id2rank, $total_vote_sum) {
+function initialize_vote_nation_details($game_id, $nation_id2rank, $total_vote_sum, $user_id) {
 	$html = "";
 	$nation_q = "SELECT * FROM nations n INNER JOIN game_nations gn ON n.nation_id=gn.nation_id WHERE gn.game_id='".$game_id."' ORDER BY n.nation_id ASC;";
 	$nation_r = run_query($nation_q);
@@ -692,23 +705,10 @@ function initialize_vote_nation_details($game_id, $nation_id2rank, $total_vote_s
 							'.vote_nation_details($nation, $rank, $voting_sum, $total_vote_sum, $nation['losing_streak']).'
 						</div>
 						<div id="vote_details_'.$nation['nation_id'].'"></div>
-						<br/>
-						How many EmpireCoins do you want to vote?<br/>
-						<div class="row">
-							<div class="col-xs-4">
-								Amount:
-							</div>
-							<div class="col-sm-4">
-								<input type="text" class="form-control responsive_input" placeholder="0.00" size="10" id="vote_amount_'.$nation['nation_id'].'" />
-							</div>
-							<div class="col-sm-4">
-								EmpireCoins
-							</div>
-						</div>
 						<div class="redtext" id="vote_error_'.$nation['nation_id'].'"></div>
 					</div>
 					<div class="modal-footer">
-						<button class="btn btn-primary" id="vote_confirm_btn_'.$nation['nation_id'].'" onclick="confirm_vote('.$nation['nation_id'].');">Confirm Vote</button>
+						<button class="btn btn-primary" id="vote_confirm_btn_'.$nation['nation_id'].'" onclick="add_nation_to_vote('.$nation['nation_id'].', \''.$nation['name'].'\');">Add '.$nation['name'].' to my vote</button>
 						<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
 					</div>
 				</div>
@@ -978,7 +978,7 @@ function apply_user_strategies($game_id) {
 								$log_text .= "Vote ".$vote_amount." for ".$vote_nation_id."<br/>\n";
 							}
 							
-							$transaction_id = new_webwallet_multi_transaction($game_id, $vote_nation_ids, $vote_amounts, $strategy_user['user_id'], $mining_block_id, 'transaction');
+							$transaction_id = new_webwallet_multi_transaction($game_id, $vote_nation_ids, $vote_amounts, $strategy_user['user_id'], $mining_block_id, 'transaction', false);
 						}
 					}
 				}
@@ -1028,7 +1028,7 @@ function apply_user_strategies($game_id) {
 									$amounts[count($amounts)] = $coins_each;
 								}
 							}
-							$transaction_id = new_webwallet_multi_transaction($game_id, $nation_ids, $amounts, $strategy_user['user_id'], $mining_block_id, 'transaction');
+							$transaction_id = new_webwallet_multi_transaction($game_id, $nation_ids, $amounts, $strategy_user['user_id'], $mining_block_id, 'transaction', false);
 						}
 						else { // by_nation
 							$log_text .= "Dividing by nation for ".$strategy_user['username']." (".($free_balance/pow(10,8))." EMP)<br/>\n";
@@ -1053,7 +1053,7 @@ function apply_user_strategies($game_id) {
 										$amounts[count($amounts)] = $coin_amount;
 									}
 								}
-								$transaction_id = new_webwallet_multi_transaction($game_id, $nation_ids, $amounts, $strategy_user['user_id'], $mining_block_id, 'transaction');
+								$transaction_id = new_webwallet_multi_transaction($game_id, $nation_ids, $amounts, $strategy_user['user_id'], $mining_block_id, 'transaction', false);
 							}
 						}
 					}
@@ -1125,11 +1125,10 @@ function render_transaction($transaction, $selected_address_id, $firstcell_text)
 		$rr = run_query($qq);
 		$input_sum = 0;
 		while ($input = mysql_fetch_array($rr)) {
-			$html .= number_format($input['amount']/pow(10,8), 2)." coins&nbsp;&nbsp;";
-			$html .= "<font style=\"font-family: consolas; font-size: 11px;\">";
-			$html .= "<a style=\"";
+			$html .= number_format($input['amount']/pow(10,8), 2)."&nbsp;coins&nbsp; ";
+			$html .= "<a class=\"display_address\" style=\"";
 			if ($input['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
-			$html .= "\" href=\"/explorer/addresses/".$input['address']."\">".$input['address']."</a></font>";
+			$html .= "\" href=\"/explorer/addresses/".$input['address']."\">".$input['address']."</a>";
 			if ($input['name'] != "") $html .= "&nbsp;&nbsp;(".$input['name'].")";
 			$html .= "<br/>\n";
 			$input_sum += $input['amount'];
@@ -1140,10 +1139,10 @@ function render_transaction($transaction, $selected_address_id, $firstcell_text)
 	$rr = run_query($qq);
 	$output_sum = 0;
 	while ($output = mysql_fetch_array($rr)) {
-		$html .= "<font style=\"font-family: consolas; font-size: 11px;\"><a style=\"";
+		$html .= "<a class=\"display_address\" style=\"";
 		if ($output['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
-		$html .= "\" href=\"/explorer/addresses/".$output['address']."\">".$output['address']."</a></font>&nbsp;&nbsp;";
-		$html .= number_format($output['amount']/pow(10,8), 2)." coins";
+		$html .= "\" href=\"/explorer/addresses/".$output['address']."\">".$output['address']."</a>&nbsp; ";
+		$html .= number_format($output['amount']/pow(10,8), 2)."&nbsp;coins";
 		if ($output['name'] != "") $html .= "&nbsp;&nbsp;".$output['name'];
 		if ($output['payout_amount'] > 0) $html .= "&nbsp;&nbsp;<font class=\"greentext\">+".round($output['payout_amount']/pow(10,8), 2)."</font>";
 		$html .= "<br/>\n";
@@ -1152,5 +1151,56 @@ function render_transaction($transaction, $selected_address_id, $firstcell_text)
 	$html .= '</div></div>'."\n";
 	
 	return $html;
+}
+function select_input_buttons($user_id, $game_id) {
+	$html = "";
+	$input_buttons_html = "";
+	
+	$last_block_id = last_block_id($game_id);
+	
+	$output_q = "SELECT * FROM transaction_IOs i, addresses a WHERE i.address_id=a.address_id AND i.spend_status='unspent' AND a.user_id='".$user_id."' AND i.game_id='".$game_id."' ORDER BY i.amount ASC;";
+	$output_r = run_query($output_q);
+	
+	$utxos = array();
+	$viewable_count = 0;
+	
+	while ($utxo = mysql_fetch_array($output_r)) {
+		$utxos[count($utxos)] = $utxo;
+		$input_buttons_html .= '<div ';
+		
+		if ($utxo['create_block_id'] > $last_block_id-get_site_constant('maturity') && $utxo['instantly_mature'] == 0) {
+			$utxo['initially_hidden'] = true;
+			$input_buttons_html .= 'style="display: none;" ';
+		}
+		else $viewable_count++;
+		
+		$input_buttons_html .= 'id="select_utxo_'.$utxo['io_id'].'" class="select_utxo" onclick="add_utxo_to_vote(\''.$utxo['io_id'].'\', \''.number_format($utxo['amount']/pow(10,8), 3).'\', '.$utxo['amount'].');">Add '.round($utxo['amount']/pow(10,8), 2).' coins to my vote</div>'."\n";
+	}
+	
+	$html .= "<div id=\"select_input_buttons_msg\">";
+	if ($viewable_count > 0) {
+		$html .= "To compose a voting transaction, please add money with the boxes below and then select the nations that you want to vote for.";
+	}
+	else {
+		$html .= "You don't have any coins available to vote right now.";
+	}
+	$html .= "</div>\n";
+	
+	$html .= $input_buttons_html;
+	
+	return $html;
+}
+function mature_io_ids_csv($user_id, $game_id) {
+	if ($user_id > 0 && $game_id > 0) {
+		$ids_csv = "";
+		$io_q = "SELECT i.io_id FROM transaction_IOs i, addresses a WHERE i.address_id=a.address_id AND i.spend_status='unspent' AND a.user_id='".$user_id."' AND i.game_id='".$game_id."' AND (i.create_block_id <= ".(last_block_id($game_id)-get_site_constant("maturity"))." OR i.instantly_mature = 1) ORDER BY i.io_id ASC;";
+		$io_r = run_query($io_q);
+		while ($io = mysql_fetch_row($io_r)) {
+			$ids_csv .= $io[0].",";
+		}
+		if ($ids_csv != "") $ids_csv = substr($ids_csv, 0, strlen($ids_csv)-1);
+		return $ids_csv;
+	}
+	else return "";
 }
 ?>

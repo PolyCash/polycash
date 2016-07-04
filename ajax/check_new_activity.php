@@ -25,6 +25,8 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	
 	$last_block_id = last_block_id($game_id);
 	$last_transaction_id = last_transaction_id($game_id);
+	$my_last_transaction_id = my_last_transaction_id($thisuser['user_id'], $game_id);
+	$mature_io_ids_csv = mature_io_ids_csv($thisuser['user_id'], $thisuser['game_id']);
 	$current_round = block_to_round($last_block_id+1);
 	$block_within_round = $last_block_id%get_site_constant('round_length')+1;
 	$account_value = account_coin_value($game_id, $thisuser);
@@ -50,6 +52,19 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 		$output['last_transaction_id'] = $last_transaction_id;
 	}
 	else $output['new_transaction'] = 0;
+	
+	if ($my_last_transaction_id != $_REQUEST['my_last_transaction_id'] && $thisuser) {
+		$output['select_input_buttons'] = select_input_buttons($thisuser['user_id'], $game_id);
+		$output['new_my_transaction'] = 1;
+		$output['my_last_transaction_id'] = $my_last_transaction_id;
+	}
+	else $output['new_my_transaction'] = 0;
+	
+	if ($mature_io_ids_csv != $_REQUEST['mature_io_ids_csv']) {
+		$output['mature_io_ids_csv'] = $mature_io_ids_csv;
+		$output['new_mature_ios'] = 1;
+	}
+	else $output['new_mature_ios'] = 0;
 	
 	if ($last_block_id != $_REQUEST['last_block_id'] || $last_transaction_id != $_REQUEST['last_transaction_id']) {
 		$output['current_round_table'] = current_round_table($game, $current_round, $thisuser, true);
