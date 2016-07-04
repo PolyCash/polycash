@@ -2178,7 +2178,11 @@ class Game {
 		}
 		else {
 			if ($this->db_game['giveaway_amount'] > 0) {
-				$html .= "Join this game and get ".$this->app->format_bignum($this->db_game['giveaway_amount']/pow(10,8))." ".$this->db_game['coin_name_plural']." (".round($receive_pct, 2)."% of the coins) for free. ";
+				$coin_disp = $this->app->format_bignum($this->db_game['giveaway_amount']/pow(10,8));
+				$html .= "Join this game and get ".$coin_disp." ";
+				if ($coin_disp == "1") $html .= $this->db_game['coin_name'];
+				else $html .= $this->db_game['coin_name_plural'];
+				$html .= " (".round($receive_pct, 2)."% of the coins) for free. ";
 			}
 		}
 

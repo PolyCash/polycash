@@ -89,3 +89,9 @@ ALTER TABLE `blocks` ADD `taper_factor` DECIMAL(9,8) NOT NULL DEFAULT '1' AFTER 
 ALTER TABLE `transaction_ios` ADD `votes` BIGINT(20) NOT NULL DEFAULT '0' AFTER `coin_rounds_destroyed`;
 ALTER TABLE `transactions` ADD `taper_factor` DECIMAL(9,8) NOT NULL DEFAULT '1';
 ALTER TABLE `game_voting_options` ADD `votes` BIGINT(20) NOT NULL DEFAULT '0' AFTER `unconfirmed_coin_round_score`, ADD `unconfirmed_votes` BIGINT(20) NOT NULL DEFAULT '0' AFTER `votes`;
+INSERT INTO `voting_option_groups` (`option_group_id`, `option_name`, `option_name_plural`, `description`) VALUES
+(3, 'candidate', 'candidates', 'top three 2016 presidential candidates');
+INSERT INTO `voting_options` (`voting_option_id`, `option_group_id`, `name`, `voting_character`, `default_image_id`) VALUES
+(27, 3, 'Hillary Clinton', '3', 19),
+(26, 3, 'Donald Trump', '2', 18),
+(25, 3, 'Bernie Sanders', '1', 17);
