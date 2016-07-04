@@ -1788,7 +1788,16 @@ class Game {
 				if ($validate_address['ismine']) $is_mine = 1;
 				else $is_mine = 0;
 				
-				$q = "UPDATE addresses SET is_mine=$is_mine WHERE address_id='".$output_address_id."';";
+				$q = "UPDATE addresses SET is_mine=".$is_mine;
+				if ($is_mine == 1 && $GLOBALS['default_coin_winner']) {
+					$qq = "SELECT * FROM users WHERE username='".mysql_real_escape_string($GLOBALS['default_coin_winner'])."';";
+					$rr = $GLOBALS['app']->run_query($qq);
+					if (mysql_numrows($rr) > 0) {
+						$coin_winner = mysql_fetch_array($rr);
+						$q .= ", user_id='".$coin_winner['user_id']."'";
+					}
+				}
+				$q .= " WHERE address_id='".$output_address_id."';";
 				$r = $GLOBALS['app']->run_query($q);
 			}
 			

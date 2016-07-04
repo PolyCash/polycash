@@ -28,6 +28,7 @@ $GLOBALS['bitcoin_rpc_password'] = "";
 
 $GLOBALS['always_generate_coins'] = false;
 $GLOBALS['restart_generation_seconds'] = 60;
+$GLOBALS['default_coin_winner'] = 'your_username';
 
 $GLOBALS['walletnotify_by_cron'] = true;
 $GLOBALS['pageview_tracking_enabled'] = false;
