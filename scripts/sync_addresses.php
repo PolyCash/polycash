@@ -18,7 +18,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			$address_q = "SELECT * FROM addresses WHERE game_id='".$game['game_id']."';";
 			$address_r = run_query($address_q);
 			while ($address = mysql_fetch_array($address_r)) {
-				$option_id = addr_text_to_option_id($address['address']);
+				$option_id = addr_text_to_option_id($game, $address['address']);
 				$qq = "UPDATE addresses SET option_id='".$option_id."' WHERE address_id='".$address['address_id']."';";
 				$rr = run_query($qq);
 			}

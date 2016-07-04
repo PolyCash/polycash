@@ -63,7 +63,7 @@ if ($thisuser && $game) {
 	for ($i=0; $i<count($io_ids); $i++) {
 		$io_id = intval($io_ids[$i]);
 		if ($io_id > 0) {
-			$qq = "SELECT * FROM transaction_IOs WHERE io_id='".$io_id."';";
+			$qq = "SELECT * FROM transaction_ios WHERE io_id='".$io_id."';";
 			$rr = run_query($qq);
 			if (mysql_numrows($rr) == 1) {
 				$io = mysql_fetch_array($rr);
@@ -104,7 +104,9 @@ if ($thisuser && $game) {
 	
 	for ($i=0; $i<count($option_ids); $i++) {
 		$option_id = intval($option_ids[$i]);
-		if ($option_id > 0 && $option_id <= 16) {
+		$q = "SELECT * FROM game_voting_options WHERE option_id='".$option_id."' AND game_id='".$game['game_id']."';";
+		$r = run_query($q);
+		if (mysql_numrows($r) == 1) {
 			$option_ids[$i] = $option_id;
 		}
 		else {

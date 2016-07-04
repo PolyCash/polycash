@@ -11,20 +11,8 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 		$r = run_query($q);
 		$game = mysql_fetch_array($r);
 	}
-
-	if ($thisuser) set_user_active($thisuser['user_id']);
 	
-	/*if ($game['game_status'] == "running") {
-		if ($game['game_type'] == "simulation" && $game['block_timing'] == "realistic") {
-			$rand_max = floor($game['seconds_per_block']/get_site_constant('game_loop_seconds'))-1;
-			$num = rand(0, $rand_max);
-			if ($num == 0) {
-				$log_text = new_block($game['game_id']);
-			}
-			
-			$log_text = apply_user_strategies($game);
-		}
-	}*/
+	if ($thisuser) set_user_active($thisuser['user_id']);
 	
 	$bet_round_range = bet_round_range($game);
 	$last_block_id = last_block_id($game['game_id']);
@@ -41,6 +29,7 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	$output['game_loop_index'] = $game_loop_index;
 	
 	$output['min_bet_round'] = $bet_round_range[0];
+	$output['game_status_explanation'] = game_status_explanation($game);
 	
 	if ($bet_round_range[0] != $_REQUEST['min_bet_round']) {
 		$output['select_bet_round'] = select_bet_round($game, $current_round);

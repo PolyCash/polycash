@@ -11,7 +11,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$coins_to_grant = floatval($_REQUEST['coins']);
 	$coins_granted = 0;
 	
-	$unclaimed_coins_q = "SELECT SUM(amount) FROM transaction_IOs io JOIN addresses a ON io.address_id=a.address_id WHERE io.game_id=".get_site_constant('primary_game_id')." AND io.spend_status='unspent' AND io.user_id IS NULL AND a.user_id IS NULL AND a.is_mine=1;";
+	$unclaimed_coins_q = "SELECT SUM(amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.game_id=".get_site_constant('primary_game_id')." AND io.spend_status='unspent' AND io.user_id IS NULL AND a.user_id IS NULL AND a.is_mine=1;";
 	$unclaimed_coins_r = run_query($unclaimed_coins_q);
 	$unclaimed_coins = mysql_fetch_row($unclaimed_coins_r);
 	$unclaimed_coins = $unclaimed_coins[0]/pow(10,8);
@@ -25,11 +25,11 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		if (mysql_numrows($user_r) > 0) {
 			$user = mysql_fetch_array($user_r);
 			
-			$unclaimed_output_q = "SELECT * FROM transaction_IOs io JOIN addresses a ON io.address_id=a.address_id WHERE io.game_id=".get_site_constant('primary_game_id')." AND io.spend_status='unspent' AND io.user_id IS NULL AND a.user_id IS NULL AND a.is_mine=1;";
+			$unclaimed_output_q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.game_id=".get_site_constant('primary_game_id')." AND io.spend_status='unspent' AND io.user_id IS NULL AND a.user_id IS NULL AND a.is_mine=1;";
 			$unclaimed_output_r = run_query($unclaimed_output_q);
 			echo "Looping through ".mysql_numrows($unclaimed_output_r)." unclaimed outputs.<br/>\n";
 			while ($utxo = mysql_fetch_array($unclaimed_output_r)) {
-				$assign_output_q = "UPDATE transaction_IOs io JOIN addresses a ON io.address_id=a.address_id SET io.user_id='".$user['user_id']."', a.user_id='".$user['user_id']."' WHERE io.io_id='".$utxo['io_id']."';";
+				$assign_output_q = "UPDATE transaction_ios io JOIN addresses a ON io.address_id=a.address_id SET io.user_id='".$user['user_id']."', a.user_id='".$user['user_id']."' WHERE io.io_id='".$utxo['io_id']."';";
 				$assign_output_r = run_query($assign_output_q);
 				$coins_granted += $utxo['amount']/pow(10,8);
 				if ($coins_granted >= $coins_to_grant) $unclaimed_output_r = false;

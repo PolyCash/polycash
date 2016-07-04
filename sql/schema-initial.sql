@@ -907,6 +907,30 @@ CREATE TABLE IF NOT EXISTS `voting_options` (
 
 -- --------------------------------------------------------
 
+--
+-- Table structure for table `voting_option_groups`
+--
+
+CREATE TABLE IF NOT EXISTS `voting_option_groups` (
+  `option_group_id` int(11) NOT NULL AUTO_INCREMENT,
+  `option_name` varchar(100) NOT NULL DEFAULT '',
+  `option_name_plural` varchar(100) NOT NULL DEFAULT '',
+  `description` varchar(100) NOT NULL DEFAULT '',
+  PRIMARY KEY (`option_group_id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+
+
+-- --------------------------------------------------------
+
+ALTER TABLE `game_voting_options` ADD `name` VARCHAR(100) NOT NULL DEFAULT '' AFTER `voting_option_id`;
+ALTER TABLE `game_voting_options` ADD `voting_character` VARCHAR(1) NOT NULL DEFAULT '' AFTER `name`;
+UPDATE `game_voting_options` gvo JOIN voting_options vo ON gvo.voting_option_id=vo.voting_option_id SET gvo.name=vo.name, gvo.voting_character=vo.address_character;
+ALTER TABLE `game_types` ADD `option_group_id` INT(11) NULL DEFAULT NULL AFTER `game_type_id`;
+ALTER TABLE `games` ADD `option_group_id` INT(11) NULL DEFAULT NULL AFTER `variation_id`;
+ALTER TABLE `voting_options` ADD `option_group_id` INT(11) NULL DEFAULT NULL AFTER `voting_option_id`;
+
+-- --------------------------------------------------------
+
 -- 
 -- INSERTS
 --
@@ -922,23 +946,31 @@ INSERT INTO `browsers` (`browser_id`, `name`, `display_name`) VALUES
 INSERT INTO `match_types` (`match_type_id`, `name`, `num_players`, `num_rounds`, `initial_coins_per_player`, `max_payout_per_round`, `min_payout_per_round`, `payout_weight`) VALUES
 (1, 'standard coin battle', 2, 10, 10000000000, 1000000000, 0, 'coin_block');
 
-INSERT INTO `voting_options` (`voting_option_id`, `name`, `address_character`) VALUES
-(1, 'China', '1'),
-(2, 'USA', '2'),
-(3, 'India', '3'),
-(4, 'Brazil', '4'),
-(5, 'Indonesia', '5'),
-(6, 'Japan', '6'),
-(7, 'Russia', '7'),
-(8, 'Germany', '8'),
-(9, 'Mexico', '9'),
-(10, 'Nigeria', 'a'),
-(11, 'France', 'b'),
-(12, 'UK', 'c'),
-(13, 'Pakistan', 'd'),
-(14, 'Italy', 'e'),
-(15, 'Turkey', 'f'),
-(16, 'Iran', 'g');
+INSERT INTO `voting_options` (`voting_option_id`, `option_group_id`, `name`, `address_character`) VALUES
+(1, 1, 'China', '1'),
+(2, 1, 'USA', '2'),
+(3, 1, 'India', '3'),
+(4, 1, 'Brazil', '4'),
+(5, 1, 'Indonesia', '5'),
+(6, 1, 'Japan', '6'),
+(7, 1, 'Russia', '7'),
+(8, 1, 'Germany', '8'),
+(9, 1, 'Mexico', '9'),
+(10, 1, 'Nigeria', 'a'),
+(11, 1, 'France', 'b'),
+(12, 1, 'UK', 'c'),
+(13, 1, 'Pakistan', 'd'),
+(14, 1, 'Italy', 'e'),
+(15, 1, 'Turkey', 'f'),
+(16, 1, 'Iran', 'g'),
+(17, 2, 'Bernie Sanders', '1'),
+(18, 2, 'Donald Trump', '2'),
+(19, 2, 'Hillary Clinton', '3'),
+(20, 2, 'John Kasich', '4'),
+(21, 2, 'Joe Biden', '5'),
+(22, 2, 'Mitt Romney', '6'),
+(23, 2, 'Paul Ryan', '7'),
+(24, 2, 'Ted Cruz', '8');
 
 INSERT INTO `currencies` (`currency_id`, `name`, `short_name`, `abbreviation`, `symbol`) VALUES
 (1, 'US Dollar', 'dollar', 'USD', '$'),
@@ -948,16 +980,26 @@ INSERT INTO `currencies` (`currency_id`, `name`, `short_name`, `abbreviation`, `
 INSERT INTO `site_constants` SET constant_name='reference_currency_id', constant_value=1;
 INSERT INTO `currency_prices` SET currency_id=1, reference_currency_id=1, price=1;
 
-INSERT INTO `game_types` (`game_type_id`, `game_type`, `block_timing`, `payout_weight`, `start_condition`, `inflation`, `url_identifier`, `start_condition_players`, `num_voting_options`, `type_name`, `coin_name`, `coin_name_plural`, `coin_abbreviation`) VALUES
-(1, 'simulation', 'realistic', 'coin_round', 'players_joined', 'exponential', 'two-player-dime-battle', 2, 16, 'two player dime battle', 'dime', 'dimes', '$'),
-(2, 'simulation', 'realistic', 'coin_round', 'players_joined', 'exponential', 'two-player-penny-battle', 2, 16, 'two player penny battle', 'penny', 'pennies', '$'),
-(3, 'simulation', 'realistic', 'coin_round', 'players_joined', 'exponential', 'two-player-dollar-battles', 2, 16, 'two player dollar battle', 'dollar', 'dollars', '$');
+INSERT INTO `game_types` (`game_type_id`, `option_group_id`, `game_type`, `block_timing`, `payout_weight`, `buyins_allowed`, `start_condition`, `inflation`, `url_identifier`, `start_condition_players`, `num_voting_options`, `type_name`, `coin_name`, `coin_name_plural`, `coin_abbreviation`) VALUES
+(1, 1, 'simulation', 'realistic', 'coin_round', 0, 'players_joined', 'exponential', 'two-player-dime-battle', 2, 16, 'two player dime battle', 'dime', 'dimes', '$'),
+(2, 1, 'simulation', 'realistic', 'coin_round', 0, 'players_joined', 'exponential', 'two-player-penny-battle', 2, 16, 'two player penny battle', 'penny', 'pennies', '$'),
+(3, 2, 'simulation', 'realistic', 'coin_round', 0, 'players_joined', 'exponential', 'two-player-dollar-battles', 2, 16, 'two player dollar battle', 'dollar', 'dollars', '$'),
+(4, 1, 'simulation', 'realistic', 'coin_round', 0, 'players_joined', 'exponential', '20-player-empirecoin-battle', 20, 16, '20 player empirecoin battle', 'empirecoin', 'empirecoins', 'EMP'),
+(5, 1, 'simulation', 'realistic', 'coin_round', 0, 'players_joined', 'exponential', '5 player bitcoin battle', 5, 16, '5 player bitcoin battle', 'bitcoin', 'bitcoins', 'BTC');
 
 INSERT INTO `game_type_variations` (`variation_id`, `game_type_id`, `target_open_games`, `giveaway_status`, `giveaway_amount`, `invite_currency`, `invite_cost`, `round_length`, `final_round`, `seconds_per_block`, `max_voting_fraction`, `maturity`, `exponential_inflation_minershare`, `exponential_inflation_rate`, `pow_reward`, `pos_reward`, `variation_name`) VALUES
 (1, 1, 1, 'public_pay', 1000000000, 1, '1.00000000', 20, 10, 12, '0.40', 0, '0.01000000', '0.20000000', 0, 0, '2 player dime battle'),
 (2, 2, 1, 'public_pay', 1000000000, 1, '0.10000000', 20, 10, 12, '0.40', 0, '0.01000000', '0.20000000', 0, 0, '2 player penny battle'),
 (3, 3, 1, 'public_pay', 1000000000, 1, '10.00000000', 20, 10, 12, '0.40', 1, '0.01000000', '0.20000000', 0, 0, '2 player dollar battle'),
-(4, 3, 1, 'public_free', 100000000000, 1, '0.00000000', 20, 10, 12, '0.40', 0, '0.01000000', '0.20000000', 0, 0, 'free 2 player battle');
+(4, 3, 1, 'public_free', 100000000000, 1, '0.00000000', 20, 10, 12, '0.40', 0, '0.01000000', '0.20000000', 0, 0, 'free 2 player battle'),
+(5, 4, 1, 'public_pay', 50000000000, 1, '10.00000000', 100, 100, 18, '0.25', 0, '0.01000000', '0.05000000', 0, 0, 'two day, 20 player battle'),
+(6, 4, 1, 'public_free', 50000000000, 1, '0.00000000', 100, 100, 18, '0.25', 0, '0.01000000', '0.05000000', 0, 0, 'free two day, 20 player battle'),
+(7, 5, 1, 'public_pay', 10000000000, 2, '0.10000000', 20, 20, 12, '0.40', 0, '0.01000000', '0.10000000', 0, 0, '5 player bitcoin battle'),
+(8, 5, 1, 'public_free', 10000000000, 1, '0.00000000', 20, 20, 12, '0.40', 0, '0.01000000', '0.10000000', 0, 0, 'Free 5 player bitcoin battle');
+
+INSERT INTO `voting_option_groups` (`option_group_id`, `option_name`, `option_name_plural`, `description`) VALUES
+(1, 'empire', 'empires', '16 biggest nations in the world'),
+(2, 'candidate', 'candidates', '2016 presidential candidates');
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;

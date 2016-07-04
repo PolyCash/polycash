@@ -74,7 +74,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 						
 						$output_address = create_or_fetch_address($game, $address, true, $empirecoin_rpc, false);
 						
-						$q = "INSERT INTO transaction_IOs SET spend_status='unspent', instantly_mature=0, game_id='".$game_id."', out_index='".$j."', user_id=NULL, address_id='".$output_address['address_id']."'";
+						$q = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, game_id='".$game_id."', out_index='".$j."', user_id=NULL, address_id='".$output_address['address_id']."'";
 						if ($output_address['nation_id'] > 0) $q .= ", nation_id=".$output_address['nation_id'];
 						$q .= ", create_transaction_id='".$db_transaction_id."', amount='".($outputs[$j]["value"]*pow(10,8))."', create_block_id='".$block_id."';";
 						$r = run_query($q);
@@ -99,7 +99,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				$r = run_query($q);
 				$transaction_id = mysql_insert_id();
 				
-				$q = "INSERT INTO transaction_IOs SET spend_status='unspent', instantly_mature=0, game_id='".$game_id."', user_id=NULL, address_id='".$output_address['address_id']."'";
+				$q = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, game_id='".$game_id."', user_id=NULL, address_id='".$output_address['address_id']."'";
 				$q .= ", create_transaction_id='".$transaction_id."', amount='".(25*pow(10,8))."', create_block_id='".$block_id."';";
 				$r = run_query($q);
 				echo "\nAdded the genesis transaction!";
@@ -116,7 +116,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 					$inputs = $transactions[$i]->json_obj["vin"];
 					
 					for ($j=0; $j<count($inputs); $j++) {
-						$q = "SELECT * FROM transactions t JOIN transaction_IOs i ON t.transaction_id=i.create_transaction_id WHERE t.game_id='".$game_id."' AND i.spend_status='unspent' AND t.tx_hash='".$inputs[$j]["txid"]."' AND i.out_index='".$inputs[$j]["vout"]."';";
+						$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id WHERE t.game_id='".$game_id."' AND i.spend_status='unspent' AND t.tx_hash='".$inputs[$j]["txid"]."' AND i.out_index='".$inputs[$j]["vout"]."';";
 						$r = run_query($q);
 						if (mysql_numrows($r) > 0) {
 							$spend_io = mysql_fetch_array($r);
@@ -133,7 +133,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 					
 					if (!$transaction_error && $input_sum >= $transactions[$i]->output_sum) {
 						if (count($spend_io_ids) > 0) {
-							$q = "UPDATE transaction_IOs SET spend_status='spent', spend_transaction_id='".$transactions[$i]->db_id."' WHERE io_id IN (".implode(",", $spend_io_ids).");";
+							$q = "UPDATE transaction_ios SET spend_status='spent', spend_transaction_id='".$transactions[$i]->db_id."' WHERE io_id IN (".implode(",", $spend_io_ids).");";
 							$r = run_query($q);
 						}
 					}

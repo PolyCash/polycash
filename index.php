@@ -34,7 +34,7 @@ include('includes/html_start.php');
 		$player_variation_r = run_query($player_variation_q);
 		
 		while ($player_variation = mysql_fetch_array($player_variation_r)) {
-			$game_q = "SELECT *, g.url_identifier AS url_identifier, c.symbol AS symbol FROM game_types t JOIN game_type_variations tv ON t.game_type_id=tv.game_type_id JOIN games g ON tv.variation_id=g.variation_id JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.game_status='published' AND g.giveaway_status IN ('public_free','public_pay') AND t.start_condition_players='".$player_variation['start_condition_players']."' ORDER BY g.invite_cost ASC;";
+			$game_q = "SELECT *, g.url_identifier AS url_identifier, c.symbol AS symbol FROM game_types t JOIN game_type_variations tv ON t.game_type_id=tv.game_type_id JOIN games g ON tv.variation_id=g.variation_id LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.game_status='published' AND g.giveaway_status IN ('public_free','public_pay') AND t.start_condition_players='".$player_variation['start_condition_players']."' ORDER BY g.invite_cost ASC;";
 			$game_r = run_query($game_q);
 			
 			echo '<h2>Join a '.$player_variation['start_condition_players'].' player game</h2>';
@@ -71,7 +71,7 @@ include('includes/html_start.php');
 				if ($variation_game['final_round'] > 0) {
 					$final_inflation_pct = game_final_inflation_pct($variation_game);
 					$game_seconds = $variation_game['final_round']*$variation_game['round_length']*$variation_game['seconds_per_block'];
-					echo $final_inflation_pct."% inflation in ".format_seconds($game_seconds);
+					echo number_format($final_inflation_pct)."% inflation in ".format_seconds($game_seconds);
 				}
 				echo '</div>';
 				

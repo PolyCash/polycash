@@ -152,7 +152,7 @@ function start_vote(option_id) {
 function rank_check_all_changed() {
 	var set_checked = false;
 	if ($('#rank_check_all').is(":checked")) set_checked = true;
-	for (var i=1; i<=16; i++) {
+	for (var i=1; i<=num_voting_options; i++) {
 		$('#by_rank_'+i).prop("checked", set_checked);
 	}
 }
@@ -164,13 +164,13 @@ function vote_on_block_all_changed() {
 	}
 }
 function by_option_reset_pct() {
-	for (var option_id=1; option_id<=16; option_id++) {
+	for (var option_id=1; option_id<=num_voting_options; option_id++) {
 		$('#option_pct_'+option_id).val("0");
 	}
 }
 function loop_event() {
 	var option_pct_sum = 0;
-	for (var i=1; i<=16; i++) {
+	for (var i=1; i<=num_voting_options; i++) {
 		var temp_pct = parseInt($('#option_pct_'+i).val());
 		if (temp_pct && !$('#option_pct_'+i).is(":focus") && temp_pct != $('#option_pct_'+i).val()) {
 			$('#option_pct_'+i).val(temp_pct);
@@ -258,6 +258,10 @@ function refresh_if_needed() {
 							}
 						}
 						if (refresh_page == "wallet") {
+							$('#game_status_explanation').html(json_result['game_status_explanation']);
+							if (json_result['game_status_explanation'] == '') $('#game_status_explanation').hide();
+							else $('#game_status_explanation').show();
+							
 							if (parseInt(json_result['new_my_transaction']) == 1) {
 								$('#my_bets').html(json_result['my_bets']);
 								my_last_transaction_id = parseInt(json_result['my_last_transaction_id']);
@@ -315,7 +319,7 @@ function refresh_if_needed() {
 								$('#my_current_votes').fadeIn('fast');
 							}
 							
-							for (var option_id=1; option_id<=16; option_id++) {
+							for (var option_id=1; option_id<=num_voting_options; option_id++) {
 								$('#vote_option_details_'+option_id).html(vote_option_details[option_id]);
 							}
 							
@@ -1110,7 +1114,7 @@ function remove_option_bet(bet_index) {
 	refresh_option_bet_amounts();
 }
 function add_all_bet_options() {
-	for (var i=0; i<=16; i++) {
+	for (var i=0; i<=num_voting_options; i++) {
 		add_bet_option_by_id(i);
 	}
 	refresh_option_bet_amounts();
@@ -1171,7 +1175,7 @@ function update_bet_chart() {
 			option_id2chart_index[option_id] = i;
 		}
 		
-		for (var i=0; i<=16; i++) {
+		for (var i=0; i<=num_voting_options; i++) {
 			var this_bet_amount = options[i].existing_bet_sum;
 			if (options[i].bet_index !== false) this_bet_amount += option_bets[options[i].bet_index].amount;
 			
@@ -1350,12 +1354,12 @@ function initialize_plan_options(from_round_id, to_round_id) {
 	for (var round_id=from_round_id; round_id<=to_round_id; round_id++) {
 		round_id2row_id[round_id] = plan_options.length;
 		var options_row = new Array();
-		for (var option_id=0; option_id<16; option_id++) {
+		for (var option_id=0; option_id<num_voting_options; option_id++) {
 			options_row.push(new plan_option(round_id, option_id));
 		}
 		plan_options.push(options_row);
 		var row_sum = 0;
-		for (var option_id=0; option_id<16; option_id++) {
+		for (var option_id=0; option_id<num_voting_options; option_id++) {
 			render_plan_option(round_id, option_id);
 			row_sum += plan_options[round_id2row_id[round_id]][option_id].points;
 		}
@@ -1378,7 +1382,7 @@ function plan_option_clicked(round_id, option_id) {
 	var new_points = (this_option.points+plan_option_increment)%(plan_option_max_points+1);
 	plan_option_row_sums[round_id2row_id[round_id]] += (new_points-this_option.points);
 	this_option.points = new_points;
-	for (var i=0; i<16; i++) {
+	for (var i=0; i<num_voting_options; i++) {
 		if (i == option_id || plan_options[round_id2row_id[round_id]][i].points > 0) {
 			render_plan_option(round_id, i);
 		}
@@ -1388,7 +1392,7 @@ function load_plan_option(round_id, option_id, points) {
 	var this_option = plan_options[round_id2row_id[round_id]][option_id];
 	plan_option_row_sums[round_id2row_id[round_id]] += (points-this_option.points);
 	this_option.points = points;
-	for (var i=0; i<16; i++) {
+	for (var i=0; i<num_voting_options; i++) {
 		if (i == option_id || plan_options[round_id2row_id[round_id]][i].points > 0) {
 			render_plan_option(round_id, i);
 		}
@@ -1398,7 +1402,7 @@ function save_plan_allocations() {
 	var postvars = {game_id: game_id, action: "save", voting_strategy_id: parseInt($('#voting_strategy_id').val()), from_round: parseInt($('#from_round').val()), to_round: parseInt($('#to_round').val())};
 	
 	for (var round_id=postvars['from_round']; round_id<=postvars['to_round']; round_id++) {
-		for (var i=0; i<16; i++) {
+		for (var i=0; i<num_voting_options; i++) {
 			var points = parseInt($('#plan_option_input_'+round_id+'_'+i).val());
 			if (points > 0) {
 				postvars['poi_'+round_id+'_'+i] = points;

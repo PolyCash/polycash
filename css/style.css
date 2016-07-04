@@ -6,6 +6,12 @@ body {
 	height: 400px;
 	position: relative;
 }
+.top_banner_slim {
+	text-align: center;
+	height: 250px ! important;
+	position: relative;
+	overflow: hidden;
+}
 .carouselImage {
 	position: absolute;
 	top: 0px;
@@ -30,6 +36,9 @@ body {
 	color: #fff;
 	text-shadow: 0px 0px 8px rgba(0, 0, 0, 0.8);
 	font-weight: bold;
+}
+.top_banner_slim h1 {
+	top: 63px ! important;
 }
 .nopadding {
    padding: 0 !important;

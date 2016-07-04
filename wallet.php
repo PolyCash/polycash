@@ -607,6 +607,7 @@ $mature_balance = mature_balance($game, $thisuser);
 		var game_url_identifier = '<?php echo $game['url_identifier']; ?>';
 		var coin_name = '<?php echo $game['coin_name']; ?>';
 		var coin_name_plural = '<?php echo $game['coin_name_plural']; ?>';
+		var num_voting_options = <?php echo $game['num_voting_options']; ?>;
 		
 		var selected_option_id = false;
 		
@@ -621,7 +622,7 @@ $mature_balance = mature_balance($game, $thisuser);
 		var performance_history_loading = false;
 		
 		var option_has_votingaddr = [];
-		for (var i=1; i<=16; i++) { option_has_votingaddr[i] = false; }
+		for (var i=1; i<=num_voting_options; i++) { option_has_votingaddr[i] = false; }
 		var votingaddr_count = 0;
 		
 		var user_logged_in = true;
@@ -726,7 +727,7 @@ $mature_balance = mature_balance($game, $thisuser);
 		<div class="row">
 			<div id="tabcontent0" class="tabcontent">
 				<?php
-				$game_status_explanation =  game_status_explanation($game);
+				$game_status_explanation = game_status_explanation($game);
 				?>
 				<div id="game_status_explanation"<?php if ($game_status_explanation == "") echo ' style="display: none;"'; ?>><?php if ($game_status_explanation != "") echo $game_status_explanation; ?></div>
 
@@ -752,7 +753,7 @@ $mature_balance = mature_balance($game, $thisuser);
 					<div class="row bordered_row" style="border: 1px solid #bbb;">
 						<div class="col-md-6 bordered_cell" id="compose_vote_inputs">
 							<b>Inputs:</b><div style="display: inline-block; margin-left: 20px;" id="input_amount_sum"></div><div style="display: inline-block; margin-left: 20px;" id="input_vote_sum"></div><br/>
-							<div id="compose_input_start_msg">Add inputs by clicking on the coin blocks above.</div>
+							<div id="compose_input_start_msg">Add inputs by clicking on the votes above.</div>
 						</div>
 						<div class="col-md-6 bordered_cell" id="compose_vote_outputs">
 							<b>Outputs:</b><div id="display_tx_fee"></div><br/>
@@ -813,7 +814,7 @@ $mature_balance = mature_balance($game, $thisuser);
 					Pay fees on every transaction of:<br/>
 					<div class="row">
 						<div class="col-sm-4"><input class="form-control" name="transaction_fee" value="<?php echo format_bignum($user_strategy['transaction_fee']/pow(10,8)); ?>" placeholder="0.001" /></div>
-						<div class="col-sm-4 form-control-static">coins</div>
+						<div class="col-sm-4 form-control-static"><?php echo $game['coin_name_plural']; ?></div>
 					</div>
 					<div class="row">
 						<div class="col-sm-3">
@@ -823,12 +824,12 @@ $mature_balance = mature_balance($game, $thisuser);
 				</form>
 				
 				<h2>Notifications</h2>
-				You can receive notifications whenever your coins are unlocked and ready to vote.<br/>
+				You can receive notifications whenever your <?php echo $game['coin_name_plural']; ?> are unlocked and ready to vote.<br/>
 				<div class="row">
 					<div class="col-sm-6">
 						<select class="form-control" id="notification_preference" name="notification_preference" onfocus="notification_focused();" onchange="notification_pref_changed();">
 							<option <?php if ($thisuser['notification_preference'] == "none") echo 'selected="selected" '; ?>value="none">Don't send me any notifications</option>
-							<option <?php if ($thisuser['notification_preference'] == "email") echo 'selected="selected" '; ?>value="email">Send me an email notification when coins become available</option>
+							<option <?php if ($thisuser['notification_preference'] == "email") echo 'selected="selected" '; ?>value="email">Send me an email notification when <?php echo $game['coin_name_plural']; ?> become available</option>
 						</select>
 					</div>
 					<div class="col-sm-6">
@@ -876,7 +877,7 @@ $mature_balance = mature_balance($game, $thisuser);
 						</div>
 						<div class="col-md-10">
 							<label class="plainlabel" for="voting_strategy_api">
-								Hit a custom URL whenever I have coins available to determine my votes: <input type="text" size="40" placeholder="http://" name="api_url" id="api_url" value="<?php echo $user_strategy['api_url']; ?>" />
+								Hit a custom URL whenever I have <?php echo $game['coin_name_plural']; ?> available to determine my votes: <input type="text" size="40" placeholder="http://" name="api_url" id="api_url" value="<?php echo $user_strategy['api_url']; ?>" />
 							</label><br/>
 							Your API access code is <?php echo $thisuser['api_access_code']; ?> <a href="/api/about/">API documentation</a><br/>
 						</div>
@@ -1124,7 +1125,10 @@ $mature_balance = mature_balance($game, $thisuser);
 					<div class="row game_row<?php
 					if ($user_game['game_id'] == $game['game_id']) echo  ' boldtext';
 					?>">
-						<div class="col-sm-6 game_cell">
+						<div class="col-sm-1 game_cell">
+							<?php echo ucwords($user_game['game_status']); ?>
+						</div>
+						<div class="col-sm-5 game_cell">
 							<a target="_blank" href="/wallet/<?php echo $user_game['url_identifier']; ?>/"><?php echo $user_game['name']; ?></a>
 						</div>
 						<div class="col-sm-3 game_cell">

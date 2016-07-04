@@ -71,7 +71,9 @@ if ($thisuser) {
 					$action = $_REQUEST['action'];
 
 					if ($action == "publish") {
-						$q = "UPDATE games SET game_status='published' WHERE game_id='".$game['game_id']."';";
+						$q = "UPDATE games SET game_status='published'";
+						if ($game['start_condition'] == "players_joined") $q .= ", initial_coins='".($game['start_condition_players']*$game['giveaway_amount'])."'";
+						$q .= " WHERE game_id='".$game['game_id']."';";
 						$r = run_query($q);
 
 						output_message(1, "Great, your changes have been saved.", $game_info);

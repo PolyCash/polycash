@@ -7,23 +7,7 @@ include('includes/html_start.php');
 
 $last_block_id = last_block_id($game['game_id']);
 $current_round = block_to_round($game, $last_block_id+1);
-
-if ($thisuser) { ?>
-	<div class="container" style="max-width: 1000px; padding: 10px 0px;">
-		<?php
-		$account_value = account_coin_value($game, $thisuser);
-		include("includes/wallet_status.php");
-		?>
-	</div>
-	<?php
-}
-
 ?>
-<div class="container-fluid nopadding">
-	<div class="top_banner" id="home_carousel">
-		<div class="carouselText"><h1><?php echo $game['name']; ?></h1></div>
-	</div>
-</div>
 <div class="container" style="max-width: 1000px; padding-top: 10px;">
 	<div class="paragraph">
 		<a href="/">&larr; All EmpireCoin Games</a>
@@ -200,6 +184,7 @@ var mature_io_ids_csv = '<?php echo mature_io_ids_csv($thisuser['user_id'], $gam
 var game_round_length = <?php echo $game['round_length']; ?>;
 var game_id = <?php echo $game['game_id']; ?>;
 var game_loop_index = 1;
+var num_voting_options = <?php echo $game['num_voting_options']; ?>;
 
 var coin_name = '<?php echo $game['coin_name']; ?>';
 var coin_name_plural = '<?php echo $game['coin_name_plural']; ?>';
@@ -210,7 +195,7 @@ var min_bet_round = <?php
 	echo $bet_round_range[0];
 ?>;
 var option_has_votingaddr = [];
-for (var i=1; i<=16; i++) { option_has_votingaddr[i] = false; }
+for (var i=1; i<=num_voting_options; i++) { option_has_votingaddr[i] = false; }
 var votingaddr_count = 0;
 
 var refresh_page = "home";

@@ -47,7 +47,7 @@ if ($uri_parts[1] == "api") {
 						$api_user_info['votes_available'] = $votes_available;
 						
 						$mature_utxos = array();
-						$mature_utxo_q = "SELECT * FROM transaction_IOs i JOIN addresses a ON i.address_id=a.address_id WHERE i.spend_status='unspent' AND i.spend_transaction_id IS NULL AND a.user_id='".$api_user['user_id']."' AND i.game_id='".$game['game_id']."' AND (i.create_block_id <= ".($last_block_id-$game['maturity'])." OR i.instantly_mature = 1) ORDER BY i.io_id ASC;";
+						$mature_utxo_q = "SELECT * FROM transaction_ios i JOIN addresses a ON i.address_id=a.address_id WHERE i.spend_status='unspent' AND i.spend_transaction_id IS NULL AND a.user_id='".$api_user['user_id']."' AND i.game_id='".$game['game_id']."' AND (i.create_block_id <= ".($last_block_id-$game['maturity'])." OR i.instantly_mature = 1) ORDER BY i.io_id ASC;";
 						$mature_utxo_r = run_query($mature_utxo_q);
 						$utxo_i = 0;
 						while ($utxo = mysql_fetch_array($mature_utxo_r)) {

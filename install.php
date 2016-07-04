@@ -37,11 +37,15 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			$q = "SELECT * FROM games WHERE url_identifier='empirecoin-live';";
 			$r = run_query($q);
 			if (mysql_numrows($r) == 0) {
-				$q = "INSERT INTO games SET featured=1, url_identifier='empirecoin-live', game_status='running', giveaway_status='public_free', giveaway_amount=100000000000, pow_reward=2500000000, pos_reward=75000000000, game_type='simulation', block_timing='realistic', payout_weight='coin_round', seconds_per_block=120, name='EmpireCoin Live', num_voting_options=16, maturity=1, round_length=10, max_voting_fraction=0.25;";
+				$q = "INSERT INTO games SET option_group_id=1, featured=1, url_identifier='empirecoin-live', game_status='running', giveaway_status='public_free', giveaway_amount=100000000000, pow_reward=2500000000, pos_reward=75000000000, game_type='simulation', block_timing='realistic', payout_weight='coin_round', seconds_per_block=120, name='EmpireCoin Live', num_voting_options=16, maturity=1, round_length=10, max_voting_fraction=0.25;";
 				$r = run_query($q);
 				$primary_game_id = mysql_insert_id();
 				
-				ensure_game_options($primary_game_id);
+				$q = "SELECT * FROM games WHERE game_id='".$primary_game_id."';";
+				$r = run_query($q);
+				$primary_game = mysql_fetch_array($r);
+				
+				ensure_game_options($primary_game);
 				
 				set_site_constant("primary_game_id", $primary_game_id);
 			}
@@ -49,11 +53,15 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			$q = "SELECT * FROM games WHERE url_identifier='empirecoin-testnet';";
 			$r = run_query($q);
 			if (mysql_numrows($r) == 0) {
-				$q = "INSERT INTO games SET featured=1, url_identifier='empirecoin-testnet', game_status='running', giveaway_status='public_free', giveaway_amount=500000000000, pow_reward=100000000, pos_reward=500000000000, game_type='simulation', block_timing='realistic', payout_weight='coin_round', seconds_per_block=5, name='EmpireCoin Testnet', num_voting_options=16, maturity=1, round_length=50, max_voting_fraction=0.15;";
+				$q = "INSERT INTO games SET option_group_id=1, featured=1, url_identifier='empirecoin-testnet', game_status='running', giveaway_status='public_free', giveaway_amount=500000000000, pow_reward=100000000, pos_reward=500000000000, game_type='simulation', block_timing='realistic', payout_weight='coin_round', seconds_per_block=5, name='EmpireCoin Testnet', num_voting_options=16, maturity=1, round_length=50, max_voting_fraction=0.15;";
 				$r = run_query($q);
 				$testnet_game_id = mysql_insert_id();
 				
-				ensure_game_options($testnet_game_id);
+				$q = "SELECT * FROM games WHERE game_id='".$testnet_game_id."';";
+				$r = run_query($q);
+				$testnet_game = mysql_fetch_array($r);
+				
+				ensure_game_options($testnet_game);
 			}
 			
 			$q = "SELECT * FROM currency_prices WHERE currency_id=1 AND reference_currency_id=1;";
@@ -78,7 +86,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				* * * * * root /usr/bin/php <?php echo realpath(dirname(__FILE__))."/cron/minutely.php ".$GLOBALS['cron_key_string']; ?><br/>
 				<br/>
 				Please run "a2enmod rewrite"<br/>
-				Then make sure the line "AllowOverride All" is included in your apache configuration file (/etc/apache2/apache2.conf or /etc/httpd/httpd.conf)<br/>
+				Then make sure the line "AllowOverride All" is included in your apache configuration file (/etc/apache2/apache2.conf or /etc/httpd/httpd.conf or /etc/httpd/conf/httpd.conf)<br/>
 				Example:
 <pre>
 &lt;Directory <?php echo realpath(dirname(__FILE__)); ?>&gt;

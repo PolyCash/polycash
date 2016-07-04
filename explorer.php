@@ -474,7 +474,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 			else if ($explore_mode == "addresses") {
 				echo "<h3>EmpireCoin Address: ".$address['address']."</h3>\n";
 				
-				$q = "SELECT * FROM transactions t, transaction_IOs i WHERE i.address_id='".$address['address_id']."' AND (t.transaction_id=i.create_transaction_id OR t.transaction_id=i.spend_transaction_id) GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;";
+				$q = "SELECT * FROM transactions t, transaction_ios i WHERE i.address_id='".$address['address_id']."' AND (t.transaction_id=i.create_transaction_id OR t.transaction_id=i.spend_transaction_id) GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;";
 				$r = run_query($q);
 				
 				echo "This address has been used in ".mysql_numrows($r)." transactions.<br/>\n";
