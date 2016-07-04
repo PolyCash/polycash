@@ -177,7 +177,7 @@ function round_voting_stats(&$game, $round_id) {
 		return run_query($q);
 	}
 	else {
-		$q = "SELECT gvo.*, i.* FROM transaction_ios i JOIN game_voting_options gvo ON i.option_id=gvo.option_id LEFT JOIN images i ON gvo.image_id=i.image_id WHERE i.game_id='".$game['game_id']."' AND i.create_block_id >= ".((($round_id-1)*$game['round_length'])+1)." AND i.create_block_id <= ".($round_id*$game['round_length']-1)." GROUP BY i.option_id ORDER BY SUM(".$sum_field.") DESC, i.option_id ASC;";
+		$q = "SELECT gvo.*, i.* FROM transaction_ios i JOIN game_voting_options gvo ON i.option_id=gvo.option_id LEFT JOIN images im ON gvo.image_id=im.image_id WHERE i.game_id='".$game['game_id']."' AND i.create_block_id >= ".((($round_id-1)*$game['round_length'])+1)." AND i.create_block_id <= ".($round_id*$game['round_length']-1)." GROUP BY i.option_id ORDER BY SUM(".$sum_field.") DESC, i.option_id ASC;";
 		return run_query($q);
 	}
 }
