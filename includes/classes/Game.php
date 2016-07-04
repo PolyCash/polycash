@@ -1045,7 +1045,7 @@ class Game {
 				$log_text .= $strategy_user->db_user['username'].": ".$GLOBALS['app']->format_bignum($free_balance/pow(10,8))." coins ".$db_user['voting_strategy']."<br/>";
 				
 				if ($free_balance > 0 && $available_votes > 0) {
-					if ($db_user == "api") {
+					if ($db_user['voting_strategy'] == "api") {
 						if ($GLOBALS['api_proxy_url']) $api_client_url = $GLOBALS['api_proxy_url'].urlencode($strategy_user->db_user['api_url']);
 						else $api_client_url = $strategy_user->db_user['api_url'];
 						
@@ -1246,7 +1246,7 @@ class Game {
 							else { // by_plan
 								$log_text .= "Dividing by plan for ".$strategy_user->db_user['username']."<br/>";
 								
-								$qq = "SELECT * FROM strategy_round_allocations WHERE strategy_id='".$strategy_user->db_user['strategy_id']."' AND round_id='".$current_round_id."' AND applied=0;";
+								$qq = "SELECT * FROM strategy_round_allocations WHERE strategy_id='".$db_user['strategy_id']."' AND round_id='".$current_round_id."' AND applied=0;";
 								$rr = $GLOBALS['app']->run_query($qq);
 								
 								if (mysql_numrows($rr) > 0) {
@@ -1303,10 +1303,6 @@ class Game {
 	}
 
 	public function delete_reset_game($delete_or_reset) {
-		$q = "SELECT * FROM games WHERE game_id='".$this->db_game['game_id']."';";
-		$r = $GLOBALS['app']->run_query($q);
-		$game = mysql_fetch_array($r);
-		
 		$q = "DELETE FROM transactions WHERE game_id='".$this->db_game['game_id']."';";
 		$r = $GLOBALS['app']->run_query($q);
 		
@@ -1324,7 +1320,7 @@ class Game {
 		
 		$invite_user_ids = array();
 		if ($delete_or_reset == "reset") {
-			$q = "SELECT * FROM invitations WHERE game_id='".$this->db_game['game_id']."';";
+			$q = "SELECT * FROM invitations WHERE game_id='".$this->db_game['game_id']."' AND used_user_id > 0;";
 			$r = $GLOBALS['app']->run_query($q);
 			while ($invitation = mysql_fetch_array($r)) {
 				$invite_user_ids[count($invite_user_ids)] = $invitation['used_user_id'];
@@ -1340,9 +1336,8 @@ class Game {
 		}
 		
 		if ($delete_or_reset == "reset") {
-			$game->ensure_game_options();
-			
-			$q = "UPDATE games SET game_status='unstarted' WHERE game_id='".$this->db_game['game_id']."';";
+			$this->ensure_game_options();
+			$q = "UPDATE games SET game_status='published' WHERE game_id='".$this->db_game['game_id']."';";
 			$r = $GLOBALS['app']->run_query($q);
 
 			$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.game_id='".$this->db_game['game_id']."';";
@@ -1352,12 +1347,15 @@ class Game {
 			if (!$giveaway_block_id) $giveaway_block_id = 0;
 			
 			while ($user_game = mysql_fetch_array($r)) {
-				$this->generate_user_addresses($user_game);
+				$temp_user = new User($user_game['user_id']);
+				$temp_user->generate_user_addresses($this);
 			}
-
+			
 			for ($i=0; $i<count($invite_user_ids); $i++) {
 				$invitation = false;
-				$this->generate_invitation($invite_user_ids[$i], $invitation, $invite_user_ids[$i]);
+				$this->generate_invitation($this->db_game['creator_id'], $invitation, $invite_user_ids[$i]);
+				$invite_game = false;
+				$GLOBALS['app']->try_apply_invite_key($invite_user_ids[$i], $invitation['invitation_key'], $invite_game);
 			}
 		}
 		else {
@@ -2014,6 +2012,12 @@ class Game {
 		$q .= ";";
 		$r = $GLOBALS['app']->run_query($q);
 		$invitation_id = mysql_insert_id();
+		
+		if (in_array($this->db_game['giveaway_status'], array("invite_free", "public_free"))) {
+			$giveaway = $this->new_game_giveaway($user_id, 'initial_purchase', false);
+			$q = "UPDATE invitations SET giveaway_id='".$giveaway['giveaway_id']."' WHERE invitation_id='".$invitation_id."';";
+			$r = $GLOBALS['app']->run_query($q);
+		}
 		
 		$q = "SELECT * FROM invitations WHERE invitation_id='".$invitation_id."';";
 		$r = $GLOBALS['app']->run_query($q);
