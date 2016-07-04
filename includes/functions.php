@@ -764,7 +764,7 @@ function new_webwallet_multi_transaction($game, $nation_ids, $amounts, $from_use
 			$coin_blocks_destroyed = 0;
 			while ($transaction_input = mysql_fetch_array($r)) {
 				if ($input_sum < $amount) {
-					$qq = "UPDATE transaction_IOs SET memo=CONCAT(memo,' new_webwallet_multi_transaction'), spend_transaction_id='".$transaction_id."'";
+					$qq = "UPDATE transaction_IOs SET spend_transaction_id='".$transaction_id."'";
 					if ($block_id) $qq .= ", spend_status='spent', spend_block_id='".$block_id."'";
 					$qq .= " WHERE io_id='".$transaction_input['io_id']."';";
 					$rr = run_query($qq);
@@ -799,7 +799,7 @@ function new_webwallet_multi_transaction($game, $nation_ids, $amounts, $from_use
 					$address = mysql_fetch_array($r);
 					
 					$output_cbd = floor($coin_blocks_destroyed*($amounts[$i]/$input_sum));
-					$q = "INSERT INTO transaction_IOs SET spend_status='unconfirmed', ";
+					$q = "INSERT INTO transaction_IOs SET spend_status='unconfirmed', out_index='".$i."', ";
 					if ($to_user_id) $q .= "user_id='".$to_user_id."', ";
 					$q .= "coin_blocks_destroyed='".$output_cbd."', instantly_mature='".$instantly_mature."', game_id='".$game['game_id']."', ";
 					if ($block_id) $q .= "create_block_id='".$block_id."', ";
@@ -850,7 +850,6 @@ function new_webwallet_multi_transaction($game, $nation_ids, $amounts, $from_use
 				} catch (Exception $e) {
 					$rpc_error = true;
 					cancel_transaction($transaction_id, $affected_input_ids, $created_input_ids);
-					var_dump($e);
 					return false;
 				}
 			}
@@ -1492,7 +1491,7 @@ function mature_io_ids_csv($user_id, $game) {
 }
 function bet_round_range($game) {
 	$last_block_id = last_block_id($game['game_id']);
-	$mining_block_within_round = block_id_to_round_index($last_block_id+1);
+	$mining_block_within_round = block_id_to_round_index($game, $last_block_id+1);
 	$current_round = block_to_round($game, $last_block_id+1);
 	
 	if ($mining_block_within_round <= 5) $start_round_id = $current_round;
@@ -2245,7 +2244,7 @@ function walletnotify($game, $empirecoin_rpc, $tx_hash) {
 		try {
 			$raw_transaction = $empirecoin_rpc->getrawtransaction($tx_hash);
 			$transaction_obj = $empirecoin_rpc->decoderawtransaction($raw_transaction);
-
+			
 			$q = "SELECT * FROM webwallet_transactions WHERE tx_hash='".$tx_hash."';";
 			$r = run_query($q);
 			if (mysql_numrows($r) > 0) {
@@ -2254,13 +2253,13 @@ function walletnotify($game, $empirecoin_rpc, $tx_hash) {
 			else {
 				$outputs = $transaction_obj["vout"];
 				$inputs = $transaction_obj["vin"];
-
+				
 				if (count($inputs) == 1 && $inputs[0]['coinbase']) {
 					$transaction_type = "coinbase";
 					if (count($outputs) > 1) $transaction_type = "votebase";
 				}
 				else $transaction_type = "transaction";
-
+				
 				$output_sum = 0;
 				for ($j=0; $j<count($outputs); $j++) {
 					$output_sum += pow(10,8)*$outputs[$j]["value"];
@@ -2279,7 +2278,7 @@ function walletnotify($game, $empirecoin_rpc, $tx_hash) {
 					$r = run_query($q);
 					if (mysql_numrows($r) == 1) {
 						$db_input = mysql_fetch_array($r);
-						$q = "UPDATE transaction_IOs SET memo=CONCAT(memo, ' walletnotified'), spend_transaction_id='".$db_transaction_id."' WHERE io_id='".$db_input['io_id']."';";
+						$q = "UPDATE transaction_IOs SET spend_transaction_id='".$db_transaction_id."' WHERE io_id='".$db_input['io_id']."';";
 						$r = run_query($q);
 					}
 				}
@@ -2302,7 +2301,7 @@ function walletnotify($game, $empirecoin_rpc, $tx_hash) {
 			$html .= json_encode($e);
 			die();
 		}
-
+		
 		set_site_constant('walletnotify', $tx_hash);
 	}
 	return $html;

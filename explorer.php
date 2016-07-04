@@ -96,9 +96,16 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 			$pagetitle = $this_game['name']." - Unconfirmed Transactions";
 		}
 		else {
-			$tx_hash = $uri_parts[3];
-			$q = "SELECT * FROM webwallet_transactions WHERE tx_hash='".mysql_real_escape_string($tx_hash)."';";
+			if (strlen($uri_parts[3]) < 20) {
+				$tx_id = intval($uri_parts[3]);
+				$q = "SELECT * FROM webwallet_transactions WHERE transaction_id='".$tx_id."';";
+			}
+			else {
+				$tx_hash = $uri_parts[3];
+				$q = "SELECT * FROM webwallet_transactions WHERE tx_hash='".mysql_real_escape_string($tx_hash)."';";
+			}
 			$r = run_query($q);
+			
 			if (mysql_numrows($r) == 1) {
 				$transaction = mysql_fetch_array($r);
 				$mode_error = false;

@@ -77,7 +77,8 @@ function start_vote(nation_id) {
 	//	alert('Voting is currently disabled.');
 	//}
 }
-function confirm_vote(nation_id) {
+
+/*function confirm_vote(nation_id) {
 	$('#vote_confirm_btn_'+nation_id).html("Loading...");
 	$.get("/ajax/place_vote.php?nation_id="+nation_id+"&amount="+encodeURIComponent($('#vote_amount_'+nation_id).val()), function(result) {
 		$('#vote_confirm_btn_'+nation_id).html("Confirm Vote");
@@ -94,7 +95,8 @@ function confirm_vote(nation_id) {
 			setTimeout("$('#vote_error_"+nation_id+"').slideUp('fast');", 2500);
 		}
 	});
-}
+}*/
+
 function rank_check_all_changed() {
 	var set_checked = false;
 	if ($('#rank_check_all').is(":checked")) set_checked = true;
@@ -652,10 +654,11 @@ function confirm_compose_vote() {
 			$.get(place_vote_url, function(result) {
 				$('#confirm_compose_vote_btn').html("Submit Voting Transaction");
 				
-				var result_parts = result.split("=====");
-				if (result_parts[0] == "0") {
+				var result_obj = JSON.parse(result);
+				
+				if (result_obj['status_code'] == 0) {
 					refresh_if_needed();
-					$('#compose_vote_success').html(result_parts[1]);
+					$('#compose_vote_success').html(result_obj['message']);
 					$('#compose_vote_success').slideDown('slow');
 					setTimeout("$('#compose_vote_success').slideUp('fast');", 2500);
 					
@@ -672,7 +675,7 @@ function confirm_compose_vote() {
 					setTimeout("refresh_compose_vote();", 3000);
 				}
 				else {
-					$('#compose_vote_errors').html(result_parts[1]);
+					$('#compose_vote_errors').html(result_obj['message']);
 					$('#compose_vote_errors').slideDown('slow');
 					setTimeout("$('#compose_vote_errors').slideUp('fast');", 2500);
 				}

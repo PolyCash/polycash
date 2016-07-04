@@ -3,6 +3,13 @@ include("../includes/connect.php");
 include("../includes/get_session.php");
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuser);
 
+$api_output = false;
+
+$noinfo_fail_obj = (object) [
+	'status_code' => 1,
+	'message' => "Invalid URL"
+];
+
 if ($thisuser) {
 	$q = "SELECT * FROM games WHERE game_id='".$thisuser['game_id']."';";
 	$r = run_query($q);
@@ -11,8 +18,6 @@ if ($thisuser) {
 	$account_value = account_coin_value($game, $thisuser);
 	$immature_balance = immature_balance($game, $thisuser);
 	$mature_balance = $account_value - $immature_balance;
-	
-	$noinfo_fail_output = "1=====Invalid URL";
 	
 	$io_ids_csv = $_REQUEST['io_ids'];
 	$io_ids = explode(",", $io_ids_csv);
@@ -29,9 +34,24 @@ if ($thisuser) {
 	$amounts = explode(",", $amounts_csv);
 	
 	if (count($io_ids) > 0 && count($amounts) > 0) {}
-	else die($noinfo_fail_output);
+	else {
+		$api_output = $noinfo_fail_obj;
+		echo json_encode($api_output);
+		die();
+	}
 	
-	if (count($amounts) != count($nation_ids)) die("2=====Nation IDs and amounts do not match");
+	for ($i=0; $i<count($nation_ids); $i++) {
+		$int_nation_ids[$i] = intval($nation_ids[$i]);
+	}
+	
+	if (count($amounts) != count($nation_ids)) {
+		$api_output = (object)[
+			'status_code' => 2,
+			'message' => "Nation IDs and amounts do not match"
+		];
+		echo json_encode($api_output);
+		die();
+	}
 	
 	for ($i=0; $i<count($io_ids); $i++) {
 		$io_id = intval($io_ids[$i]);
@@ -42,17 +62,35 @@ if ($thisuser) {
 				$io = mysql_fetch_array($rr);
 				
 				if ($io['user_id'] != $thisuser['user_id'] || $io['spend_status'] != "unspent" || $io['game_id'] != $thisuser['game_id']) {
-					var_dump($io);
-					die("x:".$io['user_id']." != ".$thisuser['user_id']." -- ".$noinfo_fail_output);
+					$api_output = $noinfo_fail_obj;
+					echo json_encode($api_output);
+					die();
 				}
 				else {
-					if ($io['create_block_id'] <= last_block_id($thisuser['game_id'])-$game['maturity'] || $io['instantly_mature'] == 1) $io_ids[$i] = $io_id;
-					else die("3=====One of the coin inputs you selected is not yet mature.");
+					if ($io['create_block_id'] <= last_block_id($thisuser['game_id'])-$game['maturity'] || $io['instantly_mature'] == 1) {
+						$io_ids[$i] = $io_id;
+					}
+					else {
+						$api_output = (object)[
+							'status_code' => 3,
+							'message' => "One of the coin inputs you selected is not yet mature."
+						];
+						echo json_encode($api_output);
+						die();
+					}
 				}
 			}
-			else die($noinfo_fail_output);
+			else {
+				$api_output = $noinfo_fail_obj;
+				echo json_encode($api_output);
+				die();
+			}
 		}
-		else die($noinfo_fail_output);
+		else {
+			$api_output = $noinfo_fail_obj;
+			echo json_encode($api_output);
+			die();
+		}
 	}
 	
 	$amount_sum = 0;
@@ -62,20 +100,37 @@ if ($thisuser) {
 		if ($nation_id > 0 && $nation_id <= 16) {
 			$nation_ids[$i] = $nation_id;
 		}
-		else die("4=====Invalid nation ID");
+		else {
+			$api_output = (object)[
+				'status_code' => 4,
+				'message' => "Invalid nation ID"
+			];
+			echo json_encode($api_output);
+			die();
+		}
 		
 		$amount = intval($amounts[$i]);
 		if ($amount > 0) {
 			$amounts[$i] = $amount;
 			$amount_sum += $amount;
 		}
-		else die("5=====An invalid amount was included.");
+		else {
+			$api_output = (object)[
+				'status_code' => 5,
+				'message' => "An invalid amount was included."
+			];
+			echo json_encode($api_output);
+			die();
+		}
 	}
 	
 	$last_block_id = last_block_id($thisuser['game_id']);
 	
 	if (($last_block_id+1)%$game['round_length'] == 0) {
-		echo "6=====The final block of the round is being mined, so you can't vote right now.";
+		$api_output = (object)[
+			'status_code' => 6,
+			'message' => "The final block of the round is being mined, so you can't vote right now."
+		];
 	}
 	else {
 		if ($amount_sum <= $mature_balance && $amount_sum > 0) {
@@ -85,15 +140,33 @@ if ($thisuser) {
 				$q = "SELECT * FROM webwallet_transactions WHERE transaction_id='".$transaction_id."';";
 				$r = run_query($q);
 				$transaction = mysql_fetch_array($r);
-
-				echo "0=====Your voting transaction has been submitted! <a href=\"/explorer/transactions/".$transaction['tx_hash']."\">Details</a>";
+				
+				$api_output = (object)[
+					'status_code' => 0,
+					'message' => "Your voting transaction has been submitted! <a href=\"/explorer/transactions/".$transaction['tx_hash']."\">Details</a>"
+				];
 			}
 			else {
-				echo "7=====Error, the transaction was canceled.";
+				$api_output = (object)[
+					'status_code' => 7,
+					'message' => "Error, the transaction was canceled."
+				];
 			}
 		}
-		else echo "8=====You don't have that many coins available to vote right now.";
+		else {
+			$api_output = (object)[
+				'status_code' => 8,
+				'message' => "You don't have that many coins available to vote right now."
+			];
+		}
 	}
 }
-else echo "9=====Please <a href=\"/wallet/\">log in</a>.";
+else {
+	$api_output = (object)[
+		'status_code' => 9,
+		'message' => 'Please <a href=\"/wallet/\">log in</a>.'
+	];
+}
+
+echo json_encode($api_output);
 ?>
