@@ -91,6 +91,8 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		try {
 			$seconds_to_sleep = 5;
 			do {
+				$loop_start_time = microtime(true);
+				
 				for ($game_i=0; $game_i<count($running_games); $game_i++) {
 					if ($GLOBALS['walletnotify_by_cron'] && $running_games[$game_i]['game_type'] == "real") {
 						echo apply_user_strategies($running_games[$game_i]);
@@ -100,20 +102,25 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 					if ($running_games[$game_i]['game_type'] == "simulation") {
 						$last_block_id = last_block_id($running_games[$game_i]['game_id']);
 						
-						$num = rand(0, round($running_games[$game_i]['seconds_per_block']/$seconds_to_sleep)-1);
-						if ($_REQUEST['force_new_block'] == "1") $num = 0;
+						$block_prob = min(1, round($seconds_to_sleep/$running_games[$game_i]['seconds_per_block'], 4));
+						$rand_num = rand(0, pow(10,4))/pow(10,4);
+						if ($_REQUEST['force_new_block'] == "1") $rand_num = 0;
 						
-						if ($num == 0) {
+						echo $running_games[$game_i]['name']." (".$rand_num." vs ".$block_prob."): ";
+						if ($rand_num <= $block_prob) {
 							echo new_block($running_games[$game_i]['game_id']);
 						}
 						else {
-							echo $running_games[$game_i]['name'].": No block (".$num." vs ".$running_games[$game_i]['seconds_per_block']/$seconds_to_sleep.")<br/>\n";
+							echo "No block<br/>\n";
 						}
 					}
 					
 					apply_user_strategies($running_games[$game_i]);
 				}
-				sleep($seconds_to_sleep);
+				
+				$loop_stop_time = microtime(true);
+				
+				sleep($seconds_to_sleep - ($loop_stop_time - $loop_start_time));
 			} while (microtime(true) < $script_start_time + (60-$seconds_to_sleep));
 		}
 		catch (Exception $e) {
