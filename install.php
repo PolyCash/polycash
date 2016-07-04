@@ -36,8 +36,11 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			
 			$q = "SELECT * FROM games WHERE url_identifier='".strtolower($GLOBALS['coin_brand_name'])."-live';";
 			$r = run_query($q);
+			
 			if (mysql_numrows($r) == 0) {
-				$q = "INSERT INTO games SET option_group_id=1, featured=1, url_identifier='".strtolower($GLOBALS['coin_brand_name'])."-live', game_status='published', giveaway_status='public_free', giveaway_amount=100000000000, pow_reward=2500000000, pos_reward=75000000000, game_type='simulation', block_timing='realistic', payout_weight='coin_round', seconds_per_block=120, name='".$GLOBALS['coin_brand_name']." Live', num_voting_options=16, maturity=1, round_length=10, max_voting_fraction=0.25, option_name='empire', option_name_plural='empires';";
+				$address_id = new_invoice_address();
+				
+				$q = "INSERT INTO games SET invoice_address_id='".$address_id."', option_group_id=1, featured=1, url_identifier='".strtolower($GLOBALS['coin_brand_name'])."-live', game_status='published', giveaway_status='public_free', giveaway_amount=100000000000, pow_reward=2500000000, pos_reward=75000000000, game_type='simulation', block_timing='realistic', payout_weight='coin_round', seconds_per_block=120, name='".$GLOBALS['coin_brand_name']." Live', num_voting_options=16, maturity=1, round_length=10, max_voting_fraction=0.25, option_name='empire', option_name_plural='empires';";
 				$r = run_query($q);
 				$primary_game_id = mysql_insert_id();
 				
@@ -54,8 +57,11 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 
 			$q = "SELECT * FROM games WHERE url_identifier='".strtolower($GLOBALS['coin_brand_name'])."-testnet';";
 			$r = run_query($q);
+			
 			if (mysql_numrows($r) == 0) {
-				$q = "INSERT INTO games SET option_group_id=1, featured=1, url_identifier='".strtolower($GLOBALS['coin_brand_name'])."-testnet', game_status='published', giveaway_status='public_free', giveaway_amount=500000000000, pow_reward=100000000, pos_reward=500000000000, game_type='simulation', block_timing='realistic', payout_weight='coin_round', seconds_per_block=5, name='".$GLOBALS['coin_brand_name']." Testnet', num_voting_options=16, maturity=1, round_length=50, max_voting_fraction=0.15;";
+				$address_id = new_invoice_address();
+				
+				$q = "INSERT INTO games SET invoice_address_id='".$address_id."', option_group_id=1, featured=1, url_identifier='".strtolower($GLOBALS['coin_brand_name'])."-testnet', game_status='published', giveaway_status='public_free', giveaway_amount=500000000000, pow_reward=100000000, pos_reward=500000000000, game_type='simulation', block_timing='realistic', payout_weight='coin_round', seconds_per_block=5, name='".$GLOBALS['coin_brand_name']." Testnet', num_voting_options=16, maturity=1, round_length=50, max_voting_fraction=0.15;";
 				$r = run_query($q);
 				$testnet_game_id = mysql_insert_id();
 				

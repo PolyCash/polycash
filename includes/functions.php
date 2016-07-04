@@ -71,6 +71,15 @@ function mail_async($email, $from_name, $from, $subject, $message, $bcc, $cc) {
 	$command = "/usr/bin/php ".realpath(dirname(dirname(__FILE__)))."/scripts/async_email_deliver.php ".$delivery_id." > /dev/null 2>/dev/null &";
 	exec($command);
 	
+	$curl_url = $GLOBALS['base_url']."/scripts/async_email_deliver.php?delivery_id=".$delivery_id;
+	die($curl_url);
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_URL, $curl_url);
+	curl_setopt($ch, CURLOPT_HEADER, 0);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	$output = curl_exec($ch);
+	curl_close($ch);
+
 	return $delivery_id;
 }
 
@@ -1507,14 +1516,18 @@ function new_block($game_id) {
 		$r = run_query($q);
 
 		if ($justmined_round == $game['final_round']) {
-			$q = "UPDATE games SET game_status='completed' WHERE game_id='".$game['game_id']."';";
-			$r = run_query($q);
+			set_game_completed($game);
 		}
 	}
 	
 	update_option_scores($game);
 	
 	return $log_text;
+}
+
+function set_game_completed(&$game) {
+	$q = "UPDATE games SET game_status='completed', completion_datetime=NOW() WHERE game_id='".$game['game_id']."';";
+	$r = run_query($q);
 }
 
 function apply_user_strategies(&$game) {
@@ -3252,19 +3265,11 @@ function new_currency_invoice($settle_currency_id, $settle_amount, $user_id, $ga
 	$settle_curr_per_pay_curr = $conversion['conversion_rate'];
 
 	$pay_amount = round(pow(10,8)*$settle_amount/$settle_curr_per_pay_curr)/pow(10,8);
-
-	$keySet = bitcoin::getNewKeySet();
-
-	if (empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
-		die("<p>There was an error generating the payment address. Please go back and try again.</p>");
-	}
-
-	$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
-
-	$q = "INSERT INTO invoice_addresses SET currency_id='".$pay_currency['currency_id']."', pub_key='".$keySet['pubAdd']."', priv_enc='".$encWIF."';";
+	
+	$invoice_address_id = new_invoice_address();
+	$q = "UPDATE invoice_addresses SET currency_id='".$pay_currency['currency_id']."' WHERE invoice_address_id='".$invoice_address_id."';";
 	$r = run_query($q);
-	$invoice_address_id = mysql_insert_id();
-
+	
 	$time = time();
 	$q = "INSERT INTO currency_invoices SET time_created='".$time."', invoice_address_id='".$invoice_address_id."', expire_time='".($time+$GLOBALS['invoice_expiration_seconds'])."', game_id='".$game_id."', user_id='".$user_id."', status='unpaid', invoice_key_string='".random_string(32)."', settle_price_id='".$conversion['numerator_price_id']."', settle_currency_id='".$settle_currency['currency_id']."', settle_amount='".$settle_amount."', pay_price_id='".$conversion['denominator_price_id']."', pay_currency_id='".$pay_currency['currency_id']."', pay_amount='".$pay_amount."';";
 	$r = run_query($q);
@@ -3273,6 +3278,21 @@ function new_currency_invoice($settle_currency_id, $settle_amount, $user_id, $ga
 	$q = "SELECT * FROM currency_invoices WHERE invoice_id='".$invoice_id."';";
 	$r = run_query($q);
 	return mysql_fetch_array($r);
+}
+function new_invoice_address() {
+	$keySet = bitcoin::getNewKeySet();
+
+	if (empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
+		die("<p>There was an error generating the payment address. Please go back and try again.</p>");
+	}
+
+	$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
+
+	$q = "INSERT INTO invoice_addresses SET pub_key='".$keySet['pubAdd']."', priv_enc='".$encWIF."';";
+	$r = run_query($q);
+	$address_id = mysql_insert_id();
+	
+	return $address_id;
 }
 function user_can_invite_game(&$game, $user_id) {
 	if ($game['giveaway_status'] == "invite_free" || $game['giveaway_status'] == "invite_pay") {
@@ -3321,7 +3341,7 @@ function account_value_html(&$game, $account_value) {
 	if (mysql_numrows($r) > 0) {
 		$payout_currency = mysql_fetch_array($r);
 		$payout_currency_value = paid_players_in_game($game)*$game['invite_cost']*$account_value/coins_in_existence($game, false);
-		$html .= "&nbsp;=&nbsp;".$payout_currency['symbol'].format_bignum($payout_currency_value);
+		$html .= "&nbsp;=&nbsp;<a href=\"/".$game['url_identifier']."/?action=show_escrow\">".$payout_currency['symbol'].format_bignum($payout_currency_value)."</a>";
 	}
 	$html .= ")</font>";
 	return $html;
@@ -3393,7 +3413,9 @@ function generate_open_games_by_variation(&$game_variation) {
 	
 	if ($needed > 0) {
 		for ($newgame_i=0; $newgame_i<$needed; $newgame_i++) {
-			$qq = "INSERT INTO games SET game_status='published', variation_id='".$game_variation['variation_id']."', ";
+			$address_id = new_invoice_address();
+			
+			$qq = "INSERT INTO games SET invoice_address_id='".$address_id."', game_status='published', variation_id='".$game_variation['variation_id']."', ";
 			for ($gamevar_i=0; $gamevar_i<count($game_vars); $gamevar_i++) {
 				$qq .= $game_vars[$gamevar_i]."='".$game_variation[$game_vars[$gamevar_i]]."', ";
 			}

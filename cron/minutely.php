@@ -34,6 +34,20 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		start_game($unstarted_game);
 	}
 	
+	if ($GLOBALS['outbound_email_enabled']) {
+		$q = "SELECT *, TIME_TO_SEC(TIMEDIFF(NOW(), completion_datetime)) AS sec_since_completion FROM games WHERE giveaway_status IN ('public_pay','invite_pay') AND game_status='completed' AND payout_complete=0 AND (payout_reminder_datetime < DATE_SUB(NOW(), INTERVAL 30 MINUTE) OR payout_reminder_datetime IS NULL);";
+		$r = run_query($q);
+		
+		while ($completed_game = mysql_fetch_array($r)) {
+			$qq = "UPDATE games SET payout_reminder_datetime=NOW() WHERE game_id='".$completed_game['game_id']."';";
+			$rr = run_query($qq);
+			
+			$subject = $completed_game['name']." has finished, please process payouts.";
+			$message = "This game finished ".format_seconds($completed_game['sec_since_completion'])." ago. Please log in with your admin account and follow this link to complete the payout: ".$GLOBALS['base_url']."/payout_game.php?game_id=".$completed_game['game_id'];
+			mail_async($GLOBALS['rsa_keyholder_email'], $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "");
+		}
+	}
+	
 	$real_game = false;
 	$q = "SELECT * FROM games WHERE game_type='real';";
 	$r = run_query($q);

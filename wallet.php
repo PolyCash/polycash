@@ -117,14 +117,14 @@ if ($_REQUEST['do'] == "signup") {
 					if ($GLOBALS['pageview_tracking_enabled']) log_user_in($thisuser, $redirect_url, $viewer_id);
 					else log_user_in($thisuser, $redirect_url);
 					
-					/*if ($_REQUEST['invite_key'] != "") {
+					if ($_REQUEST['invite_key'] != "") {
 						$invite_game = false;
 						$success = try_apply_invite_key($thisuser['user_id'], $_REQUEST['invite_key'], $invite_game);
 						if ($success) {
 							header("Location: /wallet/".$invite_game['url_identifier']);
 							die();
 						}
-					}*/
+					}
 					
 					$redir_game = fetch_game_from_url();
 					if ($redir_game) {
