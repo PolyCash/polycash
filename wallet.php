@@ -221,8 +221,7 @@ if ($thisuser) {
 			$game = mysql_fetch_array($r);
 		}
 		
-		if ($requested_game['giveaway_status'] == "public_free") {}
-		else if ($game && $requested_game['giveaway_status'] == "invite_free") {}
+		if ($game && $game['payment_required'] == 0) {}
 		else if (!$game && ($requested_game['giveaway_status'] == "invite_free" || $requested_game['giveaway_status'] == "invite_pay")) {
 			$pagetitle = "Join ".$requested_game['name'];
 			$nav_tab_selected = "wallet";
@@ -235,7 +234,7 @@ if ($thisuser) {
 			include('includes/html_stop.php');
 			die();
 		}
-		else if (!$game && $game['payment_required'] == 1) {
+		else if ($game['payment_required'] == 1) {
 			$pagetitle = "Join ".$requested_game['name'];
 			$nav_tab_selected = "wallet";
 			include('includes/html_start.php');
