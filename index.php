@@ -33,32 +33,36 @@ $game = mysql_fetch_array($r);
 			<img alt="EmpireCoin Logo" id="home_logo" src="/img/logo/icon-150x150.png" />
 		</div>
 		<div class="col-sm-10">
+			<?php
+			$blocks_per_hour = 3600/$game['seconds_per_block'];
+			$round_reward = ($game['pos_reward']+$game['pow_reward']*$game['round_length'])/pow(10,8);
+			$rounds_per_hour = 3600/($game['seconds_per_block']*$game['round_length']);
+			$coins_per_hour = $round_reward*$rounds_per_hour;
+			$seconds_per_round = $game['seconds_per_block']*$game['round_length'];
+			$miner_pct = 100*($game['pow_reward']*$game['round_length'])/($round_reward*pow(10,8));
+			?>
 			<div class="paragraph">
-				EmpireCoin is a game where you can win a tiny number of free coins by casting your votes correctly.  Votes build up over time in proportion to the number of empirecoins that you hold. When you vote for an empire, your votes are used up but your empirecoins are retained. With a great coin staking strategy, you can accumulate empirecoins faster than inflation.  EmpireCoin is equally playable by humans and algorithms.  With the EmpireCoin APIs it's easy to write a custom staking strategy which makes smart, real-time decisions about how to stake your coins.
-			</div>
-			<div class="paragraph">
-				Do you love gambling, sports betting or speculating on currencies and stocks?  Stop paying fees and start playing EmpireCoin: the first blockchain-based coin staking game on the planet. To get started in this massively multiplayer online game of chance, please read the rules below and then <a href="/wallet/">sign up</a> for a beta account.  Or download the <a href="/EmpireCoin.pdf">EmpireCoin Whitepaper</a>.
-			</div>
-			<div class="paragraph">
-				<a href="/wallet/" class="btn btn-success" style="margin: 5px 0px;">Log In or Sign Up</a>
-				<a href="/explorer/<?php echo $game['url_identifier']; ?>/rounds/" class="btn btn-primary" style="margin: 5px 0px;">Blockchain Explorer</a>
+				Welcome to EmpireCoin, the first decentralized voting game on the planet. In EmpireCoin, you can bet money against players from around the world every <?php echo $seconds_per_round/60; ?> minutes in an epic and never-ending struggle for power. By correctly voting your coins you'll win money, but if you're wrong you won't lose anything. Do you love gambling, sports betting or speculating on currencies and stocks? Stop playing rigged games and get in on the first betting game where money is created from thin air and given out to the players. Start building your empire today in this massively multiplayer online game of chance!
 			</div>
 			<div class="paragraph">
 				<?php
 				echo "EmpireCoin is a cryptocurrency which generates ";
-				$blocks_per_hour = 3600/$game['seconds_per_block'];
-				$round_reward = ($game['pos_reward']+$game['pow_reward']*$game['round_length'])/pow(10,8);
-				$rounds_per_hour = 3600/($game['seconds_per_block']*$game['round_length']);
-				$coins_per_hour = $round_reward*$rounds_per_hour;
-				$seconds_per_round = $game['seconds_per_block']*$game['round_length'];
-				$miner_pct = 100*($game['pow_reward']*$game['round_length'])/($round_reward*pow(10,8));
-				
 				echo number_format($coins_per_hour)." coins every hour. ";
 				echo format_bignum($round_reward)." coins are given out per ".rtrim(format_seconds($seconds_per_round), 's')." voting round. ";
 				echo format_bignum($miner_pct);
-				?>% of the currency is given to proof of work miners to secure the network and the remaining <?php
+				?>% of the currency is given to proof of work miners for securing the network and the remaining <?php
 				echo format_bignum(100-$miner_pct);
 				?>% is given out to stakeholders for casting winning votes.
+			</div>
+			<div class="paragraph">
+				In EmpireCoin you can win a tiny number of free coins by casting your votes correctly.  Votes build up over time in proportion to the number of empirecoins that you hold. When you vote for an empire, your votes are used up but your empirecoins are retained. With a great coin staking strategy, you can accumulate empirecoins faster than inflation.  Automated voting is encouraged in EmpireCoin.  Through the EmpireCoin APIs it's easy to code up a custom strategy which makes smart, real-time decisions about how to stake your coins.
+			</div>
+			<div class="paragraph">
+				To get started, please read the rules below and then <a href="/wallet/">sign up</a> for a beta account.  Or download the <a href="/EmpireCoin.pdf">EmpireCoin Whitepaper</a>.
+			</div>
+			<div class="paragraph">
+				<a href="/wallet/" class="btn btn-success" style="margin: 5px 0px;">Log In or Sign Up</a>
+				<a href="/explorer/<?php echo $game['url_identifier']; ?>/rounds/" class="btn btn-primary" style="margin: 5px 0px;">Blockchain Explorer</a>
 			</div>
 			<?php
 			if ($thisuser) { ?>

@@ -6,3 +6,10 @@ ALTER TABLE `user_messages` ADD `game_id` INT(20) NULL DEFAULT NULL AFTER `messa
 ALTER TABLE `user_messages` ADD `seen` TINYINT(1) NOT NULL DEFAULT '0' AFTER `message`;
 ALTER TABLE `user_strategies` CHANGE `voting_strategy` `voting_strategy` ENUM('manual','by_rank','by_nation','by_plan','api','') CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL DEFAULT 'manual';
 ALTER TABLE `strategy_round_allocations` ADD `applied` TINYINT(1) NOT NULL DEFAULT '0' AFTER `points`;
+ALTER TABLE `games` CHANGE `payout_weight` `payout_weight` ENUM('coin','coin_block','coin_round') CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL DEFAULT 'coin_block';
+ALTER TABLE `transactions` ADD `round_id` BIGINT(20) NULL DEFAULT NULL AFTER `block_id`;
+ALTER TABLE `transactions` ADD `ref_round_id` BIGINT(20) NULL DEFAULT NULL AFTER `ref_coin_blocks_destroyed`, ADD `ref_coin_rounds_destroyed` INT(20) NOT NULL DEFAULT '0' AFTER `ref_round_id`;
+ALTER TABLE `game_nations` ADD `coin_round_score` BIGINT(20) NOT NULL DEFAULT '0' AFTER `coin_block_score`;
+ALTER TABLE `game_nations` ADD `unconfirmed_coin_round_score` BIGINT(20) NOT NULL DEFAULT '0' AFTER `unconfirmed_coin_block_score`;
+ALTER TABLE `transaction_IOs` ADD `create_round_id` BIGINT(20) NULL DEFAULT NULL AFTER `spend_block_id`, ADD `spend_round_id` BIGINT(20) NULL DEFAULT NULL AFTER `create_round_id`;
+ALTER TABLE `transaction_IOs` ADD `coin_rounds_created` BIGINT(20) NULL DEFAULT NULL AFTER `coin_blocks_destroyed`, ADD `coin_rounds_destroyed` BIGINT(20) NULL DEFAULT NULL AFTER `coin_rounds_created`;

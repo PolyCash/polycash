@@ -1044,7 +1044,8 @@ $mature_balance = mature_balance($game, $thisuser);
 								<div class="col-sm-6">
 									<select class="form-control" type="text" id="game_form_payout_weight">
 										<option value="coin">Coins staked</option>
-										<option value="coin_block">Coins over time (coin blocks)</option>
+										<option value="coin_block">Coins over time. 1 vote per block</option>
+										<option value="coin_round">Coins over time. 1 vote per round</option>
 									</select>
 								</div>
 							</div>

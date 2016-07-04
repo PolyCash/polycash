@@ -581,12 +581,20 @@ function vote_nation(nation_index, name, nation_id) {
 	this.slider_val = 50;
 	this.amount = 0;
 }
+function block_to_round(block_id) {
+	return Math.ceil(block_id/game_round_length);
+}
 function input_amount_sums() {
 	var amount_sum = 0;
 	var vote_sum = 0;
 	for (var i=0; i<vote_inputs.length; i++) {
 		amount_sum += vote_inputs[i].amount;
-		vote_sum += (1 + last_block_id - vote_inputs[i].create_block_id)*vote_inputs[i].amount;
+		if (payout_weight == "coin_block") {
+			vote_sum += (1 + last_block_id - vote_inputs[i].create_block_id)*vote_inputs[i].amount;
+		}
+		else if (payout_weight == "coin_round") {
+			vote_sum += (block_to_round(1+last_block_id) - block_to_round(vote_inputs[i].create_block_id))*vote_inputs[i].amount;
+		}
 	}
 	return [amount_sum, vote_sum];
 }
@@ -602,6 +610,7 @@ function set_input_amount_sums() {
 function render_selected_utxo(index_id) {
 	var score_qty = 0;
 	if (payout_weight == "coin") score_qty = vote_inputs[index_id].amount;
+	else if (payout_weight == "coin_round") score_qty = (block_to_round(1+last_block_id) - block_to_round(vote_inputs[index_id].create_block_id))*vote_inputs[index_id].amount;
 	else score_qty = (1 + last_block_id - vote_inputs[index_id].create_block_id)*vote_inputs[index_id].amount;
 	var render_text = format_coins(score_qty/Math.pow(10,8));
 	if (payout_weight == "coin") render_text += ' coins';
@@ -786,10 +795,11 @@ function refresh_mature_io_btns() {
 		var select_btn_text = "";
 		var votes;
 		if (payout_weight == 'coin') votes = mature_ios[i].amount;
-		else votes = ((1 + last_block_id - mature_ios[i].create_block_id)*mature_ios[i].amount);
+		else if (payout_weight == 'coin_round') votes = (block_to_round(1+last_block_id) - block_to_round(mature_ios[i].create_block_id))*mature_ios[i].amount;
+		else votes = (1 + last_block_id - mature_ios[i].create_block_id)*mature_ios[i].amount;
 		select_btn_text += 'Add '+format_coins(votes/Math.pow(10,8));
 		select_btn_text += ' votes';
-		if (payout_weight == 'coin_block') select_btn_text += "<br/>("+format_coins(mature_ios[i].amount/Math.pow(10,8))+" coins)";
+		if (payout_weight != 'coin') select_btn_text += "<br/>("+format_coins(mature_ios[i].amount/Math.pow(10,8))+" coins)";
 		$('#select_utxo_'+mature_ios[i].io_id).html(select_btn_text);
 	}
 	for (var i=0; i<vote_inputs.length; i++) {

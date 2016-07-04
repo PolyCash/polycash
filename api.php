@@ -38,7 +38,7 @@ if ($uri_parts[1] == "api") {
 						$account_value = account_coin_value($game, $api_user);
 						$immature_balance = immature_balance($game, $api_user);
 						$mature_balance = mature_balance($game, $api_user);
-						$votes_available = user_coin_blocks($api_user['user_id'], $game, $last_block_id);
+						$votes_available = user_current_votes($api_user['user_id'], $game, $last_block_id, $current_round);
 						
 						$api_user_info['username'] = $api_user['username'];
 						$api_user_info['balance'] = $account_value;

@@ -97,11 +97,11 @@ function mature_balance(&$game, $user) {
 	return intval($sum[0]);
 }
 
-function user_coin_blocks($user_id, $game, $last_block_id) {
-	$q = "SELECT ROUND(SUM(amount*(".($last_block_id+1)."-create_block_id))) FROM transaction_IOs WHERE spend_status='unspent' AND spend_transaction_id IS NULL AND game_id='".$game['game_id']."' AND user_id='".$user_id."' AND (create_block_id <= ".(last_block_id($game['game_id'])-$game['maturity'])." OR instantly_mature = 1);";
+function user_current_votes($user_id, $game, $last_block_id, $current_round) {
+	$q = "SELECT ROUND(SUM(amount)) coins, ROUND(SUM(amount*(".($last_block_id+1)."-create_block_id))) coin_blocks, ROUND(SUM(amount*(".$current_round."-create_round_id))) coin_rounds FROM transaction_IOs WHERE spend_status='unspent' AND spend_transaction_id IS NULL AND game_id='".$game['game_id']."' AND user_id='".$user_id."' AND (create_block_id <= ".(last_block_id($game['game_id'])-$game['maturity'])." OR instantly_mature = 1);";
 	$r = run_query($q);
-	$sum = mysql_fetch_row($r);
-	return (int)$sum[0];
+	$sum = mysql_fetch_array($r);
+	return (int)$sum[$game['payout_weight']."s"];
 }
 
 function current_block($game_id) {
@@ -151,8 +151,8 @@ function round_voting_stats(&$game, $round_id) {
 		$sum_field = "i.amount";
 	}
 	else {
-		$score_field = "coin_block_score";
-		$sum_field = "i.coin_blocks_destroyed";
+		$score_field = $game['payout_weight']."_score";
+		$sum_field = "i.".$game['payout_weight']."s_destroyed";
 	}
 	
 	$last_block_id = last_block_id($game['game_id']);
@@ -170,7 +170,7 @@ function round_voting_stats(&$game, $round_id) {
 
 function total_score_in_round(&$game, $round_id, $include_unconfirmed) {
 	if ($game['payout_weight'] == "coin") $score_field = "amount";
-	else $score_field = "coin_blocks_destroyed";
+	else $score_field = $game['payout_weight']."s_destroyed";
 	
 	$sum = 0;
 	
@@ -183,12 +183,11 @@ function total_score_in_round(&$game, $round_id, $include_unconfirmed) {
 	$returnvals['confirmed'] = $confirmed_score;
 	
 	if ($include_unconfirmed) {
-		$q = "SELECT SUM(unconfirmed_coin_block_score), SUM(unconfirmed_coin_score) FROM game_nations WHERE game_id='".$game['game_id']."';";
+		$q = "SELECT SUM(unconfirmed_coin_round_score), SUM(unconfirmed_coin_block_score), SUM(unconfirmed_coin_score) FROM game_nations WHERE game_id='".$game['game_id']."';";
 		$r = run_query($q);
 		$sums = mysql_fetch_array($r);
 		
-		if ($game['payout_weight'] == "coin") $unconfirmed_score = intval($sums['SUM(unconfirmed_coin_score)']);
-		else $unconfirmed_score = intval($sums['SUM(unconfirmed_coin_block_score)']);
+		$unconfirmed_score = intval($sums['SUM(unconfirmed_'.$game['payout_weight'].'_score)']);
 		
 		$sum += $unconfirmed_score;
 		$returnvals['unconfirmed'] = $unconfirmed_score;
@@ -223,6 +222,8 @@ function round_voting_stats_all(&$game, $voting_round) {
 		$stat['unconfirmed_coin_score'] = 0;
 		$stat['confirmed_coin_block_score'] = 0;
 		$stat['unconfirmed_coin_block_score'] = 0;
+		$stat['confirmed_coin_round_score'] = 0;
+		$stat['unconfirmed_coin_round_score'] = 0;
 		
 		$stats_all[$counter] = $stat;
 		$nation_id_to_rank[$stat['nation_id']] = $counter;
@@ -245,8 +246,7 @@ function round_voting_stats_all(&$game, $voting_round) {
 }
 
 function get_round_winner($round_stats_all, $game) {
-	if ($game['payout_weight'] == "coin") $score_field = "coin_score";
-	else $score_field = "coin_block_score";
+	$score_field = $game['payout_weight']."_score";
 	
 	$winner_nation_id = false;
 	$winner_index = false;
@@ -271,8 +271,7 @@ function get_round_winner($round_stats_all, $game) {
 }
 
 function current_round_table(&$game, $current_round, $user, $show_intro_text) {
-	if ($game['payout_weight'] == "coin") $score_field = "coin_score";
-	else $score_field = "coin_block_score";
+	$score_field = $game['payout_weight']."_score";
 	
 	$last_block_id = last_block_id($game['game_id']);
 	$current_round = block_to_round($game, $last_block_id+1);
@@ -395,8 +394,8 @@ function performance_history($user, $from_round_id, $to_round_id) {
 		$coins_voted = $my_votes_in_round[1];
 		
 		if ($my_votes[$round['winning_nation_id']] > 0) {
-			if ($game['payout_weight'] == "coin_block") $win_text = "You correctly cast ".format_bignum($my_votes[$round['winning_nation_id']]['coin_blocks']/pow(10,8))." votes.";
-			else $win_text = "You correctly voted ".format_bignum($my_votes[$round['winning_nation_id']]['coins']/pow(10,8))." coins.";
+			if ($game['payout_weight'] == "coin") $win_text = "You correctly voted ".format_bignum($my_votes[$round['winning_nation_id']]['coins']/pow(10,8))." coins.";
+			else $win_text = "You correctly cast ".format_bignum($my_votes[$round['winning_nation_id']][$game['payout_weight'].'s']/pow(10,8))." votes.";
 		}
 		else if ($coins_voted > 0) $win_text = "You didn't vote for the winning empire.";
 		else $win_text = "You didn't cast any votes.";
@@ -491,8 +490,8 @@ function wallet_text_stats($thisuser, &$game, $current_round, $last_block_id, $b
 	$html .= '<div class="col-sm-3 text-right"><font class="greentext">';
 	$html .= format_bignum($mature_balance/pow(10,8));
 	$html .= "</font> EmpireCoins</div></div>\n";
-	if ($game['payout_weight'] == "coin_block") {
-		$html .= '<div class="row"><div class="col-sm-2">Votes:</div><div class="col-sm-3 text-right"><font class="greentext">'.format_bignum(user_coin_blocks($thisuser['user_id'], $game, $last_block_id)/pow(10,8)).'</font> votes available</div></div>'."\n";
+	if ($game['payout_weight'] != "coin") {
+		$html .= '<div class="row"><div class="col-sm-2">Votes:</div><div class="col-sm-3 text-right"><font class="greentext">'.format_bignum(user_current_votes($thisuser['user_id'], $game, $last_block_id, $current_round)/pow(10,8)).'</font> votes available</div></div>'."\n";
 	}
 	$html .= '<div class="row"><div class="col-sm-2">Locked&nbsp;funds:</div>';
 	$html .= '<div class="col-sm-3 text-right"><font class="redtext">'.format_bignum($immature_balance/pow(10,8)).'</font> EmpireCoins</div>';
@@ -654,7 +653,7 @@ function new_payout_transaction(&$game, $voting_round, $block_id, $winning_natio
 	$log_text = "";
 	
 	if ($game['payout_weight'] == "coin") $score_field = "amount";
-	else $score_field = "coin_blocks_destroyed";
+	else $score_field = $game['payout_weight']."s_destroyed";
 	
 	$q = "INSERT INTO transactions SET game_id='".$game['game_id']."', transaction_desc='votebase', amount=0, block_id='".$block_id."', time_created='".time()."';";
 	$r = run_query($q);
@@ -812,7 +811,7 @@ function new_transaction(&$game, $nation_ids, $amounts, $from_user_id, $to_user_
 			$q .= "bet_round_id='".$bet_round_id."', ";
 		}
 		$q .= "address_id=NULL";
-		if ($block_id !== false) $q .= ", block_id='".$block_id."'";
+		if ($block_id !== false) $q .= ", block_id='".$block_id."', round_id='".block_to_round($game, $block_id)."'";
 		$q .= ", time_created='".time()."';";
 		$r = run_query($q);
 		$transaction_id = mysql_insert_id();
@@ -829,14 +828,16 @@ function new_transaction(&$game, $nation_ids, $amounts, $from_user_id, $to_user_
 			
 			$input_sum = 0;
 			$coin_blocks_destroyed = 0;
+			$coin_rounds_destroyed = 0;
 			
 			$ref_block_id = last_block_id($game['game_id'])+1;
+			$ref_round_id = block_to_round($game, $ref_block_id);
 			$ref_cbd = 0;
 			
 			while ($transaction_input = mysql_fetch_array($r)) {
 				if ($input_sum < $amount) {
 					$qq = "UPDATE transaction_IOs SET spend_transaction_id='".$transaction_id."'";
-					if ($block_id !== false) $qq .= ", spend_status='spent', spend_block_id='".$block_id."'";
+					if ($block_id !== false) $qq .= ", spend_status='spent', spend_block_id='".$block_id."', spend_round_id='".block_to_round($game, $block_id)."'";
 					$qq .= " WHERE io_id='".$transaction_input['io_id']."';";
 					$rr = run_query($qq);
 					
@@ -844,8 +845,12 @@ function new_transaction(&$game, $nation_ids, $amounts, $from_user_id, $to_user_
 					
 					$input_sum += $transaction_input['amount'];
 					$ref_cbd += ($ref_block_id-$transaction_input['create_block_id'])*$transaction_input['amount'];
+					$ref_crd += ($ref_round_id-$transaction_input['create_round_id'])*$transaction_input['amount'];
 					
-					if ($block_id !== false) $coin_blocks_destroyed += ($block_id - $transaction_input['create_block_id'])*$transaction_input['amount'];
+					if ($block_id !== false) {
+						$coin_blocks_destroyed += ($block_id - $transaction_input['create_block_id'])*$transaction_input['amount'];
+						$coin_rounds_destroyed += (block_to_round($game, $block_id) - $transaction_input['create_round_id'])*$transaction_input['amount'];
+					}
 					
 					$affected_input_ids[count($affected_input_ids)] = $transaction_input['io_id'];
 					
@@ -858,7 +863,7 @@ function new_transaction(&$game, $nation_ids, $amounts, $from_user_id, $to_user_
 			
 			$overshoot_amount = $input_sum - $amount;
 			
-			$qq = "UPDATE transactions SET ref_block_id='".$ref_block_id."', ref_coin_blocks_destroyed='".$ref_cbd."' WHERE transaction_id='".$transaction_id."';";
+			$qq = "UPDATE transactions SET ref_block_id='".$ref_block_id."', ref_coin_blocks_destroyed='".$ref_cbd."', ref_round_id='".$ref_round_id."', ref_coin_rounds_destroyed='".$ref_crd."' WHERE transaction_id='".$transaction_id."';";
 			$rr = run_query($qq);
 		}
 		
@@ -884,10 +889,13 @@ function new_transaction(&$game, $nation_ids, $amounts, $from_user_id, $to_user_
 					if ($to_user_id) $q .= "user_id='".$to_user_id."', ";
 					if ($block_id !== false) {
 						$output_cbd = floor($coin_blocks_destroyed*($amounts[$out_index]/$input_sum));
-						$q .= "coin_blocks_destroyed='".$output_cbd."', ";
+						$output_crd = floor($coin_rounds_destroyed*($amounts[$out_index]/$input_sum));
+						$q .= "coin_blocks_destroyed='".$output_cbd."', coin_rounds_destroyed='".$output_crd."', ";
 					}
 					$q .= "instantly_mature='".$instantly_mature."', game_id='".$game['game_id']."', ";
-					if ($block_id !== false) $q .= "create_block_id='".$block_id."', ";
+					if ($block_id !== false) {
+						$q .= "create_block_id='".$block_id."', create_round_id='".block_to_round($game, $block_id)."', ";
+					}
 					$q .= "address_id='".$address_id."', nation_id='".$address['nation_id']."', create_transaction_id='".$transaction_id."', amount='".$amounts[$out_index]."';";
 					$r = run_query($q);
 					$created_input_ids[count($created_input_ids)] = mysql_insert_id();
@@ -913,10 +921,13 @@ function new_transaction(&$game, $nation_ids, $amounts, $from_user_id, $to_user_
 				$q = "INSERT INTO transaction_IOs SET out_index='".$out_index."', spend_status='unconfirmed', game_id='".$game['game_id']."', ";
 				if ($block_id !== false) {
 					$overshoot_cbd = floor($coin_blocks_destroyed*($overshoot_amount/$input_sum));
-					$q .= "coin_blocks_destroyed='".$overshoot_cbd."', ";
+					$overshoot_crd = floor($coin_rounds_destroyed*($overshoot_amount/$input_sum));
+					$q .= "coin_blocks_destroyed='".$overshoot_cbd."', coin_rounds_destroyed='".$overshoot_crd."', ";
 				}
 				$q .= "user_id='".$from_user_id."', address_id='".$overshoot_return_addr_id."', nation_id='".$overshoot_address['nation_id']."', create_transaction_id='".$transaction_id."', ";
-				if ($block_id !== false) $q .= "create_block_id='".$block_id."', ";
+				if ($block_id !== false) {
+					$q .= "create_block_id='".$block_id."', create_round_id='".block_to_round($game, $block_id)."', ";
+				}
 				$q .= "amount='".$overshoot_amount."';";
 				$r = run_query($q);
 				$created_input_ids[count($created_input_ids)] = mysql_insert_id();
@@ -954,13 +965,13 @@ function update_nation_scores(&$game) {
 	$last_block_id = last_block_id($game['game_id']);
 	$round_id = block_to_round($game, $last_block_id+1);
 	$q = "UPDATE game_nations n INNER JOIN (
-		SELECT nation_id, SUM(amount) sum_amount, SUM(coin_blocks_destroyed) sum_cbd FROM transaction_IOs 
+		SELECT nation_id, SUM(amount) sum_amount, SUM(coin_blocks_destroyed) sum_cbd, SUM(coin_rounds_destroyed) sum_crd FROM transaction_IOs 
 		WHERE game_id='".$game['game_id']."' AND create_block_id >= ".((($round_id-1)*$game['round_length'])+1)." AND amount > 0
 		GROUP BY nation_id
-	) i ON n.nation_id=i.nation_id SET n.coin_score=i.sum_amount, n.coin_block_score=i.sum_cbd WHERE n.game_id='".$game['game_id']."';";
+	) i ON n.nation_id=i.nation_id SET n.coin_score=i.sum_amount, n.coin_block_score=i.sum_cbd, n.coin_round_score=i.sum_crd WHERE n.game_id='".$game['game_id']."';";
 	$r = run_query($q);
 	
-	$q = "UPDATE game_nations SET unconfirmed_coin_score=0, unconfirmed_coin_block_score=0 WHERE game_id='".$game['game_id']."';";
+	$q = "UPDATE game_nations SET unconfirmed_coin_score=0, unconfirmed_coin_block_score=0, unconfirmed_coin_round_score=0 WHERE game_id='".$game['game_id']."';";
 	$r = run_query($q);
 	
 	if ($game['payout_weight'] == "coin") {
@@ -971,12 +982,20 @@ function update_nation_scores(&$game) {
 		) i ON n.nation_id=i.nation_id SET n.unconfirmed_coin_score=i.sum_amount WHERE n.game_id='".$game['game_id']."';";	
 		$r = run_query($q);
 	}
-	else {
+	else if ($game['payout_weight'] == "coin_block") {
 		$q = "UPDATE game_nations n INNER JOIN (
 			SELECT io.nation_id, SUM((t.ref_coin_blocks_destroyed+(".($last_block_id+1)."-t.ref_block_id)*t.amount)*io.amount/t.amount) sum_cbd FROM transaction_IOs io JOIN transactions t ON io.create_transaction_id=t.transaction_id
 			WHERE t.game_id='".$game['game_id']."' AND io.create_block_id IS NULL AND io.amount > 0 AND t.block_id IS NULL
 			GROUP BY io.nation_id
 		) i ON n.nation_id=i.nation_id SET n.unconfirmed_coin_block_score=i.sum_cbd WHERE n.game_id='".$game['game_id']."';";
+		$r = run_query($q);
+	}
+	else {
+		$q = "UPDATE game_nations n INNER JOIN (
+			SELECT io.nation_id, SUM((t.ref_coin_rounds_destroyed+(".$round_id."-t.ref_round_id)*t.amount)*io.amount/t.amount) sum_crd FROM transaction_IOs io JOIN transactions t ON io.create_transaction_id=t.transaction_id
+			WHERE t.game_id='".$game['game_id']."' AND io.create_block_id IS NULL AND io.amount > 0 AND t.block_id IS NULL
+			GROUP BY io.nation_id
+		) i ON n.nation_id=i.nation_id SET n.unconfirmed_coin_round_score=i.sum_crd WHERE n.game_id='".$game['game_id']."';";
 		$r = run_query($q);
 	}
 }
@@ -997,23 +1016,17 @@ function cancel_transaction($transaction_id, $affected_input_ids, $created_input
 
 function nation_score_in_round(&$game, $nation_id, $round_id) {
 	if ($game['payout_weight'] == "coin") $score_field = "amount";
-	else $score_field = "coin_blocks_destroyed";
+	else $score_field = $game['payout_weight']."s_destroyed";
 	
 	$mining_block_id = last_block_id($game['game_id'])+1;
 	$current_round_id = block_to_round($game, $mining_block_id);
 	
 	if ($current_round_id == $round_id) {
-		$q = "SELECT SUM(coin_score), SUM(unconfirmed_coin_score), SUM(coin_block_score), SUM(unconfirmed_coin_block_score) FROM game_nations WHERE nation_id='".$nation_id."' AND game_id='".$game['game_id']."';";
+		$q = "SELECT SUM(coin_score), SUM(unconfirmed_coin_score), SUM(coin_block_score), SUM(unconfirmed_coin_block_score), SUM(coin_round_score), SUM(unconfirmed_coin_round_score) FROM game_nations WHERE nation_id='".$nation_id."' AND game_id='".$game['game_id']."';";
 		$r = run_query($q);
 		$sums = mysql_fetch_array($r);
-		if ($game['payout_weight'] == "coin") {
-			$confirmed_score = $sums['SUM(coin_score)'];
-			$unconfirmed_score = $sums['SUM(unconfirmed_coin_score)'];
-		}
-		else {
-			$confirmed_score = $sums['SUM(coin_block_score)'];
-			$unconfirmed_score = $sums['SUM(unconfirmed_coin_block_score)'];
-		}
+		$confirmed_score = $sums['SUM('.$game['payout_weight'].'_score)'];
+		$unconfirmed_score = $sums['SUM(unconfirmed_'.$game['payout_weight'].'_score)'];
 	}
 	else {
 		$q = "SELECT SUM(".$score_field.") FROM transaction_IOs WHERE game_id='".$game['game_id']."' AND ";
@@ -1035,7 +1048,7 @@ function my_votes_in_round(&$game, $round_id, $user_id) {
 	$fee_amount = mysql_fetch_row($r);
 	$fee_amount = intval($fee_amount[0]);
 	
-	$q = "SELECT n.*, SUM(io.amount), SUM(io.coin_blocks_destroyed) FROM transaction_IOs io JOIN nations n ON io.nation_id=n.nation_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.game_id='".$game['game_id']."' AND io.create_block_id >= ".((($round_id-1)*$game['round_length'])+1)." AND io.create_block_id <= ".($round_id*$game['round_length']-1)." AND io.user_id='".$user_id."' GROUP BY io.nation_id ORDER BY n.nation_id ASC;";
+	$q = "SELECT n.*, SUM(io.amount), SUM(io.coin_blocks_destroyed), SUM(io.coin_rounds_destroyed) FROM transaction_IOs io JOIN nations n ON io.nation_id=n.nation_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.game_id='".$game['game_id']."' AND io.create_block_id >= ".((($round_id-1)*$game['round_length'])+1)." AND io.create_block_id <= ".($round_id*$game['round_length']-1)." AND io.user_id='".$user_id."' GROUP BY io.nation_id ORDER BY n.nation_id ASC;";
 	$r = run_query($q);
 	$coins_voted = 0;
 	$coin_blocks_voted = 0;
@@ -1043,17 +1056,23 @@ function my_votes_in_round(&$game, $round_id, $user_id) {
 	while ($votesum = mysql_fetch_array($r)) {
 		$my_votes[$votesum['nation_id']]['coins'] = $votesum['SUM(io.amount)'];
 		$my_votes[$votesum['nation_id']]['coin_blocks'] = $votesum['SUM(io.coin_blocks_destroyed)'];
+		$my_votes[$votesum['nation_id']]['coin_rounds'] = $votesum['SUM(io.coin_rounds_destroyed)'];
 		$coins_voted += $votesum['SUM(io.amount)'];
 		$coin_blocks_voted += $votesum['SUM(io.coin_blocks_destroyed)'];
+		$coin_rounds_voted += $votesum['SUM(io.coin_rounds_destroyed)'];
 	}
 	$returnvals[0] = $my_votes;
 	$returnvals[1] = $coins_voted;
 	$returnvals[2] = $coin_blocks_voted;
+	$returnvals[3] = $coin_rounds_voted;
 	$returnvals['fee_amount'] = $fee_amount;
 	return $returnvals;
 }
 
 function my_votes_table(&$game, $round_id, $user) {
+	$last_block_id = last_block_id($game['game_id']);
+	$current_round = block_to_round($game, $last_block_id+1);
+	
 	$html = "";
 	
 	$confirmed_html = "";
@@ -1063,9 +1082,9 @@ function my_votes_table(&$game, $round_id, $user) {
 	$num_unconfirmed = 0;
 	
 	if ($game['payout_weight'] == "coin") $score_field = "amount";
-	else $score_field = "coin_blocks_destroyed";
+	else $score_field = $game['payout_weight']."s_destroyed";
 	
-	$q = "SELECT n.*, t.transaction_id, t.fee_amount, io.spend_status, SUM(io.amount), SUM(io.coin_blocks_destroyed) FROM transaction_IOs io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN nations n ON io.nation_id=n.nation_id WHERE io.game_id='".$game['game_id']."' AND (io.create_block_id > ".(($round_id-1)*$game['round_length'])." AND io.create_block_id < ".($round_id*$game['round_length']).") AND io.user_id='".$user['user_id']."' AND t.block_id=io.create_block_id GROUP BY io.nation_id ORDER BY SUM(io.amount) DESC;";
+	$q = "SELECT n.*, t.transaction_id, t.fee_amount, io.spend_status, SUM(io.amount), SUM(io.coin_blocks_destroyed), SUM(io.coin_rounds_destroyed) FROM transaction_IOs io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN nations n ON io.nation_id=n.nation_id WHERE io.game_id='".$game['game_id']."' AND (io.create_block_id > ".(($round_id-1)*$game['round_length'])." AND io.create_block_id < ".($round_id*$game['round_length']).") AND io.user_id='".$user['user_id']."' AND t.block_id=io.create_block_id GROUP BY io.nation_id ORDER BY SUM(io.amount) DESC;";
 	$r = run_query($q);
 	while ($my_vote = mysql_fetch_array($r)) {
 		$color = "green";
@@ -1083,15 +1102,20 @@ function my_votes_table(&$game, $round_id, $user) {
 		$num_confirmed++;
 	}
 	
-	$q = "SELECT n.*, io.amount, t.transaction_id, t.fee_amount, t.amount AS transaction_amount, t.ref_block_id, t.ref_coin_blocks_destroyed FROM transaction_IOs io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN nations n ON io.nation_id=n.nation_id WHERE io.game_id='".$game['game_id']."' AND io.create_block_id IS NULL AND t.block_id IS NULL AND io.user_id='".$user['user_id']."' ORDER BY io.amount DESC;";
+	$q = "SELECT n.*, io.amount, t.transaction_id, t.fee_amount, t.amount AS transaction_amount, t.ref_block_id, t.ref_coin_blocks_destroyed, t.ref_round_id, t.ref_coin_rounds_destroyed FROM transaction_IOs io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN nations n ON io.nation_id=n.nation_id WHERE io.game_id='".$game['game_id']."' AND io.create_block_id IS NULL AND t.block_id IS NULL AND io.user_id='".$user['user_id']."' ORDER BY io.amount DESC;";
 	$r = run_query($q);
 	while ($my_vote = mysql_fetch_array($r)) {
 		$color = "yellow";
 		$nation_scores = nation_score_in_round($game, $my_vote['nation_id'], $round_id);
 		
-		if ($game['payout_weight'] != "coin") {
-			$transaction_cbd = $my_vote['ref_coin_blocks_destroyed'] + ((1+last_block_id($game['game_id']))-$my_vote['ref_block_id'])*$my_vote['transaction_amount'];
+		if ($game['payout_weight'] == "coin_block") {
+			$transaction_cbd = $my_vote['ref_coin_blocks_destroyed'] + ((1+$last_block_id)-$my_vote['ref_block_id'])*$my_vote['transaction_amount'];
 			$num_votes = floor($transaction_cbd*($my_vote['amount']/$my_vote['transaction_amount']));
+			$expected_payout = floor($game['pos_reward']*($num_votes/$nation_scores['sum'])-$my_vote['fee_amount'])/pow(10,8);
+		}
+		else if ($game['payout_weight'] == "coin_round") {
+			$transaction_crd = $my_vote['ref_coin_rounds_destroyed'] + ($current_round-$my_vote['ref_round_id'])*$my_vote['transaction_amount'];
+			$num_votes = floor($transaction_crd*($my_vote['amount']/$my_vote['transaction_amount']));
 			$expected_payout = floor($game['pos_reward']*($num_votes/$nation_scores['sum'])-$my_vote['fee_amount'])/pow(10,8);
 		}
 		else {
@@ -1303,28 +1327,35 @@ function new_block($game_id) {
 			
 			$qq = "SELECT * FROM transaction_IOs WHERE spend_transaction_id='".$unconfirmed_tx['transaction_id']."';";
 			$rr = run_query($qq);
+			
 			$total_coin_blocks_created = 0;
+			$total_coin_rounds_created = 0;
+			
 			while ($input_utxo = mysql_fetch_array($rr)) {
 				$coin_blocks_created = ($last_block_id - $input_utxo['create_block_id'])*$input_utxo['amount'];
-				$qqq = "UPDATE transaction_IOs SET coin_blocks_created='".$coin_blocks_created."' WHERE io_id='".$input_utxo['io_id']."';";
+				$coin_rounds_created = ($voting_round - $input_utxo['create_round_id'])*$input_utxo['amount'];
+				$qqq = "UPDATE transaction_IOs SET coin_blocks_created='".$coin_blocks_created."', coin_rounds_created='".$coin_rounds_created."' WHERE io_id='".$input_utxo['io_id']."';";
 				$rrr = run_query($qqq);
 				$total_coin_blocks_created += $coin_blocks_created;
+				$total_coin_rounds_created += $coin_rounds_created;
 			}
 			
 			$voted_coins_out = transaction_voted_coins_out($unconfirmed_tx['transaction_id']);
 			
 			$cbd_per_coin_out = floor(pow(10,8)*$total_coin_blocks_created/$voted_coins_out)/pow(10,8);
+			$crd_per_coin_out = floor(pow(10,8)*$total_coin_rounds_created/$voted_coins_out)/pow(10,8);
 			
 			$qq = "SELECT * FROM transaction_IOs io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$unconfirmed_tx['transaction_id']."' AND a.nation_id > 0;";
 			$rr = run_query($qq);
 			
 			while ($output_utxo = mysql_fetch_array($rr)) {
 				$coin_blocks_destroyed = floor($cbd_per_coin_out*$output_utxo['amount']);
-				$qqq = "UPDATE transaction_IOs SET coin_blocks_destroyed='".$coin_blocks_destroyed."' WHERE io_id='".$output_utxo['io_id']."';";
+				$coin_rounds_destroyed = floor($crd_per_coin_out*$output_utxo['amount']);
+				$qqq = "UPDATE transaction_IOs SET coin_blocks_destroyed='".$coin_blocks_destroyed."', coin_rounds_destroyed='".$coin_rounds_destroyed."' WHERE io_id='".$output_utxo['io_id']."';";
 				$rrr = run_query($qqq);
 			}
 			
-			$qq = "UPDATE transactions t JOIN transaction_IOs o ON t.transaction_id=o.create_transaction_id JOIN transaction_IOs i ON t.transaction_id=i.spend_transaction_id SET t.block_id='".$last_block_id."', o.spend_status='unspent', o.create_block_id='".$last_block_id."', i.spend_status='spent', i.spend_block_id='".$last_block_id."' WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';";
+			$qq = "UPDATE transactions t JOIN transaction_IOs o ON t.transaction_id=o.create_transaction_id JOIN transaction_IOs i ON t.transaction_id=i.spend_transaction_id SET t.block_id='".$last_block_id."', t.round_id='".$voting_round."', o.spend_status='unspent', o.create_block_id='".$last_block_id."', i.spend_status='spent', i.spend_block_id='".$last_block_id."', i.spend_round_id='".$voting_round."' WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';";
 			$rr = run_query($qq);
 			
 			$fee_sum += $fee_amount;
@@ -1387,7 +1418,7 @@ function new_block($game_id) {
 		$log_text .= "Total votes: ".($score_sum/(pow(10, 8)))."<br/>\n";
 		$log_text .= "Cutoff: ".($max_score_sum/(pow(10, 8)))."<br/>\n";
 		
-		$q = "UPDATE game_nations SET coin_score=0, unconfirmed_coin_score=0, coin_block_score=0, unconfirmed_coin_block_score=0 WHERE game_id='".$game['game_id']."';";
+		$q = "UPDATE game_nations SET coin_score=0, unconfirmed_coin_score=0, coin_block_score=0, unconfirmed_coin_block_score=0, coin_round_score=0, unconfirmed_coin_round_score=0 WHERE game_id='".$game['game_id']."';";
 		$r = run_query($q);
 		
 		$payout_transaction_id = false;
