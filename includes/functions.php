@@ -486,12 +486,12 @@ function wallet_text_stats($thisuser, &$game, $current_round, $last_block_id, $b
 	$html = '<div class="row"><div class="col-sm-2">Available&nbsp;funds:</div>';
 	$html .= '<div class="col-sm-3 text-right"><font class="greentext">';
 	$html .= format_bignum($mature_balance/pow(10,8));
-	$html .= "</font> EmpireCoins</div></div>\n";
+	$html .= "</font> ".$game['coin_name_plural']."</div></div>\n";
 	if ($game['payout_weight'] != "coin") {
 		$html .= '<div class="row"><div class="col-sm-2">Votes:</div><div class="col-sm-3 text-right"><font class="greentext">'.format_bignum(user_current_votes($thisuser['user_id'], $game, $last_block_id, $current_round)/pow(10,8)).'</font> votes available</div></div>'."\n";
 	}
 	$html .= '<div class="row"><div class="col-sm-2">Locked&nbsp;funds:</div>';
-	$html .= '<div class="col-sm-3 text-right"><font class="redtext">'.format_bignum($immature_balance/pow(10,8)).'</font> EmpireCoins</div>';
+	$html .= '<div class="col-sm-3 text-right"><font class="redtext">'.format_bignum($immature_balance/pow(10,8)).'</font> '.$game['coin_name_plural'].'</div>';
 	if ($immature_balance > 0) $html .= '<div class="col-sm-1"><a href="" onclick="$(\'#lockedfunds_details\').toggle(\'fast\'); return false;">Details</a></div>';
 	$html .= "</div>\n";
 	$html .= "Last block completed: #".$last_block_id.", currently mining #".($last_block_id+1)."<br/>\n";
@@ -2911,7 +2911,6 @@ function format_seconds($seconds) {
 	$days = floor($seconds/(3600*24));
 	$hours = floor($seconds / 3600);
 	$minutes = floor($seconds / 60);
-	$seconds = $seconds % 60;
 	
 	if ($weeks > 0) {
 		if ($weeks != 1) $str = $weeks." week";
@@ -2929,8 +2928,12 @@ function format_seconds($seconds) {
 		else return $hours." hour";
 	}
 	else if ($minutes > 0) {
-		if ($minutes != 1) return $minutes." minutes";
-		else return $minutes." minute";
+		$remainder_sec = $seconds-$minutes*60;
+		$str = "";
+		if ($minutes != 1) $str .= $minutes." minutes";
+		else return $str .= $minutes." minute";
+		if ($remainder_sec > 0) $str .= " and ".$remainder_sec." seconds";
+		return $str;
 	}
 	else {
 		if ($seconds != 1) return $seconds." seconds";
@@ -3022,6 +3025,53 @@ function plan_options_html(&$game, $from_round, $to_round) {
 		}
 		$html .= "</div>\n";
 	}
+	return $html;
+}
+function prepend_a_or_an($word) {
+	$firstletter = strtolower($word[0]);
+	if (strpos($firstletter, 'aeiou')) return "an ".$word;
+	else return "a ".$word;
+}
+function game_info_table($game) {
+	$blocks_per_hour = 3600/$game['seconds_per_block'];
+	$round_reward = ($game['pos_reward']+$game['pow_reward']*$game['round_length'])/pow(10,8);
+	$seconds_per_round = $game['seconds_per_block']*$game['round_length'];
+	$game_url = $GLOBALS['base_url']."/".$game['url_identifier'];
+
+	$invite_currency = false;
+	if ($game['invite_currency'] > 0) {
+		$q = "SELECT * FROM currencies WHERE currency_id='".$game['invite_currency']."';";
+		$r = run_query($q);
+		$invite_currency = mysql_fetch_array($r);
+	}
+
+	$html = "<table>";
+	$html .= "<tr><td>Game name:</td><td>".$game['name']."</td></tr>\n";
+	$html .= "<tr><td>Game URL:</td><td><a href=\"".$game_url."\">".$game_url."</a></td></tr>\n";
+	$html .= "<tr><td>Cost to join:</td><td>";
+	if ($game['giveaway_status'] == "invite_pay" || $game['giveaway_status'] == "public_pay") $html .= number_format($game['invite_cost'])." ".$invite_currency['short_name']."s";
+	else $html .= "Free";
+	$html .= "</td></tr>\n";
+	$html .= "<tr><td>Length of game:</td><td>";
+	if ($game['final_round'] > 0) $html .= $game['final_round']." rounds (".format_seconds($seconds_per_round*$game['final_round']).")";
+	else $html .= "Game does not end";
+	$html .= "</td></tr>\n";
+	$html .= "<tr><td>Inflation:</td><td>".ucwords($game['inflation'])."</td></tr>\n";
+	$html .= "<tr><td>Inflation Rate:</td><td>";
+	if ($game['inflation'] == "linear") $html .= format_bignum($round_reward)." coins per round";
+	else $html .= 100*$game['exponential_inflation_rate']."% per round";
+	$html .= "</td></tr>\n";
+	$html .= "<tr><td>Distribution:</td><td>";
+	if ($game['inflation'] == "linear") $html .= format_bignum($game['pos_reward']/pow(10,8))." to voters, ".format_bignum($game['pow_reward']*$game['round_length']/pow(10,8))." to miners";
+	else $html .= (100 - 100*$game['exponential_inflation_minershare'])."% to voters, ".(100*$game['exponential_inflation_minershare'])."% to miners";
+	$html .= "</td></tr>\n";
+	$html .= "<tr><td>Blocks per round:</td><td>".$game['round_length']."</td></tr>\n";
+	$html .= "<tr><td>Block target time:</td><td>".format_seconds($game['seconds_per_block'])."</td></tr>\n";
+	$html .= "<tr><td>Transaction maturity:&nbsp;&nbsp;&nbsp;</td><td>".$game['maturity']." block";
+	if ($game['maturity'] != 1) echo "s";
+	$html .= "</td></tr>\n";
+	$html .= "</table>\n";
+
 	return $html;
 }
 ?>

@@ -216,7 +216,7 @@ function refresh_if_needed() {
 				if (reset_next_block_text) { $('#next_block_btn').html("Next Block"); reset_next_block_text = false;}
 				
 				if (refresh_page == "wallet" && result == "0") {
-					window.location = '/wallet/?do=logout';
+					window.location = '/wallet/'+game_url_identifier+'/?do=logout';
 				}
 				else {
 					refresh_in_progress = false;
@@ -448,7 +448,7 @@ function attempt_withdrawal() {
 	}
 }
 
-var game_form_vars = "giveaway_status,giveaway_amount,maturity,max_voting_fraction,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,game_status,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency".split(",");
+var game_form_vars = "giveaway_status,giveaway_amount,maturity,max_voting_fraction,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,game_status,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation".split(",");
 function switch_to_game(game_id, action) {
 	var fetch_link_text = $('#fetch_game_link_'+game_id).html();
 	var switch_link_text = $('#switch_game_btn').html();
@@ -486,7 +486,7 @@ function switch_to_game(game_id, action) {
 			}
 			
 			$('#game_form').modal('show');
-			$('#game_form_name_disp').html("Settings: "+json_result['name']);
+			$('#game_form_name_disp').html("Settings: "+json_result['name_disp']);
 			
 			for (var i=0; i<game_form_vars.length; i++) {
 				if (game_form_vars[i] == "pos_reward" || game_form_vars[i] == "pow_reward" || game_form_vars[i] == "giveaway_amount") {

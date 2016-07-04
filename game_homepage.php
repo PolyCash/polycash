@@ -25,68 +25,86 @@ if ($thisuser) { ?>
 	</div>
 </div>
 <div class="container" style="max-width: 1000px; padding-top: 10px;">
-	<div class="row">
-		<div class="col-sm-2 text-center">
-			<img alt="EmpireCoin Logo" id="home_logo" src="/img/logo/icon-150x150.png" />
-		</div>
-		<div class="col-sm-10">
-			<?php
-			$blocks_per_hour = 3600/$game['seconds_per_block'];
-			$seconds_per_round = $game['seconds_per_block']*$game['round_length'];
-			$round_reward = (coins_created_in_round($game, $current_round))/pow(10,8);
-
-			if ($game['inflation'] == "linear") {
-				$miner_pct = 100*($game['pow_reward']*$game['round_length'])/($round_reward*pow(10,8));
-			}
-			else $miner_pct = 100*$game['exponential_inflation_minershare'];
-			?>
-			<div class="paragraph">
-				<a href="/">&larr; All EmpireCoin Games</a>
-			</div>
-			<div class="paragraph">
+	<div class="paragraph">
+		<a href="/">&larr; All EmpireCoin Games</a>
+	</div>
+	<div class="paragraph">
+		<h1>Welcome to <?php echo $game['name']; ?></h1>
+		<div class="row">
+			<div class="col-md-7">
 				<?php
+				$blocks_per_hour = 3600/$game['seconds_per_block'];
+				$seconds_per_round = $game['seconds_per_block']*$game['round_length'];
+				$round_reward = (coins_created_in_round($game, $current_round))/pow(10,8);
+
 				if ($game['inflation'] == "linear") {
-					$rounds_per_hour = 3600/($game['seconds_per_block']*$game['round_length']);
-					$coins_per_hour = $round_reward*$rounds_per_hour;
-					echo $game['name']." is a cryptocurrency which generates ";
-					echo number_format($coins_per_hour)." coins every hour. ";
-					echo format_bignum($round_reward)." coins are given out per ".rtrim(format_seconds($seconds_per_round), 's')." voting round. ";
-					echo format_bignum($miner_pct);
-					?>% of the currency is given to proof of work miners for securing the network and the remaining <?php
-					echo format_bignum(100-$miner_pct);
-					?>% is given out to stakeholders for casting winning votes.<?php
+					$miner_pct = 100*($game['pow_reward']*$game['round_length'])/($round_reward*pow(10,8));
 				}
-				else {
-					echo $game['name']." is a cryptocurrency with ".(100*$game['exponential_inflation_rate'])."% inflation every ".format_seconds($seconds_per_round).". ";
-					echo format_bignum($miner_pct);
-					?>% of the currency is given to proof of work miners for securing the network and the remaining <?php
-					echo format_bignum(100-$miner_pct);
-					?>% is given out to stakeholders for casting winning votes.<?php
-				}
+				else $miner_pct = 100*$game['exponential_inflation_minershare'];
 				?>
-			</div>
-			<div class="paragraph">
-				In this game you can win free coins by casting your votes correctly.  Votes build up over time based on the number of coins that you hold, and when you vote for an empire, your votes are used up but your coins are retained. By collaborating with your teammates against competing groups, you can make real money by accumulating coins faster than inflation.  Through the EmpireCoin APIs you can even code up a custom strategy which makes smart, real-time decisions about how to cast your votes.
-			</div>
-			<div class="paragraph">
-				<a href="/wallet/<?php echo $game['url_identifier']; ?>/" class="btn btn-success">Log In or Sign Up</a>
-				<a href="/explorer/<?php echo $game['url_identifier']; ?>/rounds/" class="btn btn-primary">Blockchain Explorer</a>
-			</div>
-			<?php
-			if ($thisuser) { ?>
-				<div class="row">
-					<div class="col-md-6">
-						<div id="my_current_votes">
-							<?php
-							echo my_votes_table($game, $current_round, $thisuser);
-							?>
-						</div>
-					</div>
+				<div class="paragraph">
+					<?php
+					if ($game['inflation'] == "linear") {
+						$rounds_per_hour = 3600/($game['seconds_per_block']*$game['round_length']);
+						$coins_per_hour = $round_reward*$rounds_per_hour;
+						echo $game['name']." is a cryptocurrency which generates ";
+						echo number_format($coins_per_hour)." coins every hour. ";
+						echo format_bignum($round_reward)." coins are given out per ".rtrim(format_seconds($seconds_per_round), 's')." voting round. ";
+						echo format_bignum($miner_pct);
+						?>% of the currency is given to proof of work miners for securing the network and the remaining <?php
+						echo format_bignum(100-$miner_pct);
+						?>% is given out to stakeholders for casting winning votes.<?php
+					}
+					else {
+						echo $game['name']." is a cryptocurrency with ".(100*$game['exponential_inflation_rate'])."% inflation every ".format_seconds($seconds_per_round).". ";
+						echo format_bignum($miner_pct);
+						?>% of the currency is given to proof of work miners for securing the network and the remaining <?php
+						echo format_bignum(100-$miner_pct);
+						?>% is given out to stakeholders for casting winning votes.<?php
+					}
+					?>
+				</div>
+				<div class="paragraph">
+					In this game you can win free coins by casting your votes correctly.  Votes build up over time based on the number of <?php echo $game['coin_name_plural']; ?> that you hold, and when you vote for an empire, your votes are used up but your <?php echo $game['coin_name_plural']; ?> are retained. By collaborating with your teammates against competing groups, you can make real money by accumulating coins faster than average.  Through the EmpireCoin APIs you can even code up a custom strategy which makes smart, real-time decisions about how to cast your votes.
 				</div>
 				<?php
-			}
-			?>
+				if ($game['giveaway_status'] == "public_pay" || $game['giveaway_status'] == "invite_pay") {
+					$q = "SELECT * FROM currencies WHERE currency_id='".$game['invite_currency']."';";
+					$r = run_query($q);
+					if (mysql_numrows($r) > 0) {
+						$invite_currency = mysql_fetch_array($r);
+						echo '<div class="paragraph">';
+						echo 'You can join this game by buying '.format_bignum($game['giveaway_amount']/pow(10,8)).' '.$game['coin_name_plural'].' for '.format_bignum($game['invite_cost']).' '.$invite_currency['short_name']."s. ";
+						echo '</div>';
+					}
+				}
+				?>
+				<div class="paragraph">
+					<a href="/wallet/<?php echo $game['url_identifier']; ?>/" class="btn btn-success">Play Now</a>
+					<a href="/explorer/<?php echo $game['url_identifier']; ?>/rounds/" class="btn btn-primary">Blockchain Explorer</a>
+				</div>
+			</div>
+			<div class="col-md-5">
+				<div style="border: 1px solid #ccc; padding: 10px;">
+					<?php echo game_info_table($game); ?>
+				</div>
+			</div>
 		</div>
+
+		<?php
+		if ($thisuser) { ?>
+			<div class="row">
+				<div class="col-md-6">
+					<div id="my_current_votes">
+						<?php
+						echo my_votes_table($game, $current_round, $thisuser);
+						?>
+					</div>
+				</div>
+			</div>
+			<?php
+		}
+		?>
 	</div>
 	<div class="paragraph">
 		<h1>Rules of the Game</h1>
@@ -107,13 +125,13 @@ if ($thisuser) { ?>
 			</div>
 			
 			<li>Voting transactions are only counted if they are confirmed in a voting block. All blocks are voting blocks except for the final transaction of each round.</li>
-			<li>Blocks are mined approximately every <?php echo format_seconds($game['seconds_per_block']); ?> by the SHA256 algorithm. Miners receive <?php echo format_bignum($game['pow_reward']/pow(10,8)); ?> empirecoins per block.</li>
+			<li>Blocks are mined approximately every <?php echo format_seconds($game['seconds_per_block']); ?> by the SHA256 algorithm. Miners receive <?php echo format_bignum($game['pow_reward']/pow(10,8))." ".$game['coin_name_plural']; ?> per block.</li>
 			<li>Blocks are grouped into voting rounds.  Blocks 1 through <?php echo $game['round_length']; ?> make up the first round, and every subsequent <?php echo $game['round_length']; ?> blocks are grouped into a round.</li>
 			<li>A voting round will have a winning empire if at least one empire receives votes but is not disqualified.</li>
 			<li>Any empire with more than <?php echo format_bignum(100*$game['max_voting_fraction']); ?>% of the votes is disqualified from winning the round.</li>
 			<li>The eligible empire with the most votes wins the round.</li>
 			<li>In case of a tie, the empire with the lowest ID number wins.</li>
-			<li>When a round ends <?php echo format_bignum($game['pos_reward']/pow(10,8)); ?> empirecoins are divided up and given out to the winning voters in proportion to the amounts of their votes.</li>
+			<li>When a round ends <?php echo format_bignum($game['pos_reward']/pow(10,8))." ".$game['coin_name_plural']; ?> are divided up and given out to the winning voters in proportion to the amounts of their votes.</li>
 		</ol>
 	</div>
 

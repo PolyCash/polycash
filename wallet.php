@@ -164,7 +164,7 @@ else if ($_REQUEST['do'] == "login") {
 			$url_game = false;
 			$login_url_parts = explode("/", rtrim(ltrim($_SERVER['REQUEST_URI'], "/"), "/"));
 			if ($login_url_parts[0] == "wallet" && count($login_url_parts) > 1) {
-				$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE g.url_identifier='".$login_url_parts[1]."' AND ug.user_id='".$thisuser['user_id']."';";
+				$q = "SELECT * FROM games WHERE url_identifier='".$login_url_parts[1]."';";
 				$r = run_query($q);
 				if (mysql_numrows($r) == 1) {
 					$url_game = mysql_fetch_array($r);
@@ -203,41 +203,76 @@ if ($thisuser) {
 	
 	$uri_parts = explode("/", $uri);
 	$url_identifier = $uri_parts[2];
-	$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND g.url_identifier='".mysql_real_escape_string($url_identifier)."';";
-	$r = run_query($q);
-	//die(mysql_numrows($r)." $q");
 	
+	$q = "SELECT * FROM games WHERE url_identifier='".mysql_real_escape_string($url_identifier)."';";
+	$r = run_query($q);
+
 	if (mysql_numrows($r) > 0) {
-		$game = mysql_fetch_array($r);
-	}
-	else {
-		$q = "SELECT g.* FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser['user_id']."';";
+		$requested_game = mysql_fetch_array($r);
+
+		$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND g.game_id='".$requested_game['game_id']."';";
 		$r = run_query($q);
-		if (mysql_numrows($r) == 1) {
+		
+		if (mysql_numrows($r) > 0) {
 			$game = mysql_fetch_array($r);
 		}
 		else {
-			$pagetitle = $GLOBALS['site_name_short']." - My web wallet";
+			$pagetitle = "Join ".$requested_game['name'];
 			$nav_tab_selected = "wallet";
 			include('includes/html_start.php');
 			?>
-			<div class="container" style="max-width: 1000px;">
+			<div class="container" style="max-width: 1000px; padding-top: 10px;">
 				<?php
-				$q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser['user_id']."';";
+				$invite_currency = false;
+				$q = "SELECT * FROM currencies WHERE currency_id='".$requested_game['invite_currency']."';";
 				$r = run_query($q);
-				
-				echo "<br/>Please select a game.<br/>\n";
-				while ($user_game = mysql_fetch_array($r)) {
-					echo "<a href=\"/wallet/".$user_game['url_identifier']."/\">".$user_game['name']."</a><br/>\n";
-				}
+				if (mysql_numrows($r) > 0) $invite_currency = mysql_fetch_array($r);
+
+				echo "<h1>Join ".$requested_game['name']."?</h1>\n";
 				?>
+				<div class="row">
+					<div class="col-md-7">
+						<?php
+						if ($requested_game['giveaway_status'] == "public_pay") {
+							$coins_per_currency = ($requested_game['giveaway_amount']/pow(10,8))/$requested_game['invite_cost'];
+							echo $requested_game['name']." has an initial exchange rate of ".format_bignum($coins_per_currency)." ".$requested_game['coin_name_plural']." per ".$invite_currency['short_name'].". ";
+							echo "To join this game, you need to make a payment of ".format_bignum($requested_game['invite_cost'])." ".$invite_currency['short_name']."s in exchange for ".format_bignum($requested_game['giveaway_amount']/pow(10,8))." ".$requested_game['coin_name_plural'].".<br/>\n";
+						}
+						?>
+					</div>
+					<div class="col-md-5">
+						<div style="border: 1px solid #ccc; padding: 10px;">
+							<?php echo game_info_table($requested_game); ?>
+						</div>
+					</div>
+				</div>
 			</div>
 			<?php
 			include('includes/html_stop.php');
 			die();
 		}
 	}
-	
+	else {
+		$pagetitle = $GLOBALS['site_name_short']." - My web wallet";
+		$nav_tab_selected = "wallet";
+		include('includes/html_start.php');
+		?>
+		<div class="container" style="max-width: 1000px;">
+			<?php
+			$q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser['user_id']."';";
+			$r = run_query($q);
+			
+			echo "<br/>Please select a game.<br/>\n";
+			while ($user_game = mysql_fetch_array($r)) {
+				echo "<a href=\"/wallet/".$user_game['url_identifier']."/\">".$user_game['name']."</a><br/>\n";
+			}
+			?>
+		</div>
+		<?php
+		include('includes/html_stop.php');
+		die();
+	}
+
 	$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game['game_id']."';";
 	$r = run_query($q);
 	if (mysql_numrows($r) > 0) {
@@ -370,7 +405,10 @@ if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['do'] =
 	}
 }
 
-if (!$pagetitle && $game) $pagetitle = $game['name']." - Wallet";
+if (!$pagetitle) {
+	if ($game) $pagetitle = $game['name']." - Wallet";
+	else $pagetitle = "Please log in";
+}
 $nav_tab_selected = "wallet";
 include('includes/html_start.php');
 
@@ -874,8 +912,8 @@ $mature_balance = mature_balance($game, $thisuser);
 			<div id="tabcontent4" style="display: none;" class="tabcontent">
 				<div id="giveaway_div">
 					<?php
-					$giveaway_avail_msg = 'You\'re eligible for a one time coin giveaway of '.number_format($game['giveaway_amount']/pow(10,8)).' EmpireCoins.<br/>';
-					$giveaway_avail_msg .= '<button class="btn btn-success" onclick="claim_coin_giveaway();" id="giveaway_btn">Claim '.number_format($game['giveaway_amount']/pow(10,8)).' EmpireCoins</button><br/><br/>';
+					$giveaway_avail_msg = 'You\'re eligible for a one time coin giveaway of '.number_format($game['giveaway_amount']/pow(10,8)).' '.$game['coin_name_plural'].'.<br/>';
+					$giveaway_avail_msg .= '<button class="btn btn-success" onclick="claim_coin_giveaway();" id="giveaway_btn">Claim '.number_format($game['giveaway_amount']/pow(10,8)).' '.$game['coin_name_plural'].'</button><br/><br/>';
 					
 					$giveaway_available = check_giveaway_available($game, $thisuser);
 					
@@ -887,7 +925,7 @@ $mature_balance = mature_balance($game, $thisuser);
 				</div>
 				
 				<h1>Withdraw</h1>
-				To withdraw coins please enter an EmpireCoin address below.<br/>
+				To withdraw coins please enter <?php echo prepend_a_or_an($game['name']); ?> address below.<br/>
 				<div class="row">
 					<div class="col-md-3">
 						Amount:
@@ -1005,7 +1043,7 @@ $mature_balance = mature_balance($game, $thisuser);
 					In the "Play Now" tab you can win coins for free from the coins inflation.  But winnings are small compared to the amount of coins you're staking.  In this tab, you can place traditional-style bets where you'll lose all of your money if you bet on the wrong empire, but you'll win a large amount if you're correct.  These bets are conducted through a decentralized protocol, which means there's no house taking an edge or charging a fee when you bet.
 					</p>
 					<p>
-					To place a bet, you'll burn your empirecoins by sending them to an unredeemable address. Once the outcome of the voting round is determined, the EmpireCoin protocol will check to see if you bet correctly and if so, new coins will be created and sent to your wallet.  These are pari-mutuel style bets in which your payout multiplier may continue changing until the betting period is over.  You can bet on the outcome of a round until the fifth block of the round.  Bets confirmed in the sixth block of a round or later are considered invalid and will be refunded back to the bettor, but with a 10% fee applied.  To place a bet, please select a round which you'd like to bet for and select one or more empires that you expect to win the round.
+					To place a bet, you'll burn your <?php echo $game['coin_name_plural']; ?> by sending them to an unredeemable address. Once the outcome of the voting round is determined, the <?php echo $game['name']; ?> protocol will check to see if you bet correctly and if so, new coins will be created and sent to your wallet.  These are pari-mutuel style bets in which your payout multiplier may continue changing until the betting period is over.  You can bet on the outcome of a round until the fifth block of the round.  Bets confirmed in the sixth block of a round or later are considered invalid and will be refunded back to the bettor, but with a 10% fee applied.  To place a bet, please select a round which you'd like to bet for and select one or more empires that you expect to win the round.
 					</p>
 					<div class="row">
 						<div class="col-md-3">
@@ -1088,6 +1126,30 @@ $mature_balance = mature_balance($game, $thisuser);
 							</div>
 							<div class="row">
 								<div class="col-sm-6 form-control-static">
+									Each coin is called a(n):
+								</div>
+								<div class="col-sm-6">
+									<input class="form-control" type="text" id="game_form_coin_name" />
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">
+									Coins (plural) are called:
+								</div>
+								<div class="col-sm-6">
+									<input class="form-control" type="text" id="game_form_coin_name_plural" />
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">
+									Currency abbreviation:
+								</div>
+								<div class="col-sm-6">
+									<input class="form-control" type="text" id="game_form_coin_abbreviation" />
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">
 									Game status:
 								</div>
 								<div class="col-sm-6">
@@ -1166,7 +1228,6 @@ $mature_balance = mature_balance($game, $thisuser);
 								<div class="col-sm-6">
 									<select class="form-control" id="game_form_giveaway_status" onchange="game_form_giveaway_status_changed();">
 										<option value="on">Yes</option>
-										<option value="off">No</option>
 										<option value="invite_free">Free coins with invite</option>
 										<option value="invite_pay">Pay to accept an invitation</option>
 										<option value="public_pay">Pay to join, no invitation required</option>

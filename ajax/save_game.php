@@ -28,7 +28,7 @@ if ($thisuser && $game) {
 		}
 		
 		if ($game['game_status'] == "unstarted") {
-			$game_form_vars = explode(",", "giveaway_status,giveaway_amount,maturity,max_voting_fraction,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,game_status,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency");
+			$game_form_vars = explode(",", "giveaway_status,giveaway_amount,maturity,max_voting_fraction,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,game_status,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation");
 			
 			$q = "UPDATE games SET ";
 			

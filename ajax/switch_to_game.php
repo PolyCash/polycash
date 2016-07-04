@@ -73,14 +73,19 @@ if ($thisuser) {
 			$r = run_query($q);
 		}
 		
-		$q = "SELECT g.creator_id, g.game_id, g.game_status, g.block_timing, g.giveaway_status, g.giveaway_amount, g.maturity, g.max_voting_fraction, g.name, g.payout_weight, g.round_length, g.seconds_per_block, g.pos_reward, g.pow_reward, g.inflation, g.exponential_inflation_rate, g.exponential_inflation_minershare, g.final_round, g.invite_cost, g.invite_currency FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game_id."';";
+		$q = "SELECT g.creator_id, g.game_id, g.game_status, g.block_timing, g.giveaway_status, g.giveaway_amount, g.maturity, g.max_voting_fraction, g.name, g.payout_weight, g.round_length, g.seconds_per_block, g.pos_reward, g.pow_reward, g.inflation, g.exponential_inflation_rate, g.exponential_inflation_minershare, g.final_round, g.invite_cost, g.invite_currency, g.coin_name, g.coin_name_plural, g.coin_abbreviation FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game_id."';";
 		$r = run_query($q);
 		
 		if (mysql_numrows($r) == 1) {
 			$switch_game = mysql_fetch_array($r);
+
 			if ($switch_game['creator_id'] == $thisuser['user_id']) $switch_game['my_game'] = true;
 			else $switch_game['my_game'] = false;
+
 			$switch_game['creator_id'] = false;
+
+			$switch_game['name_disp'] = '<a target="_blank" href="/'.$game['url_identifier'].'">'.$switch_game['name'].'</a>';
+			
 			output_message(1, "", $switch_game);
 		}
 		else output_message(2, "Access denied", false);
