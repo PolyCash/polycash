@@ -233,7 +233,10 @@ class User {
 			
 			$scramble_from_round = 1;
 			$scramble_to_round = $scramble_from_round+19;
-			if ($game->db_game['final_round'] > 0) $scramble_to_round = $game->db_game['final_round'];
+			if ($game->db_game['final_round'] > 0) {
+				$scramble_to_round = $game->db_game['final_round'];
+				if ($scramble_to_round > 100) $scramble_to_round = 100;
+			}
 			
 			$game->scramble_plan_allocations($strategy, array(0=>1, 1=>0.5), $scramble_from_round, $scramble_to_round);
 			
