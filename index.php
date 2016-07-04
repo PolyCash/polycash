@@ -87,7 +87,7 @@ $game = mysql_fetch_array($r);
 		</p>
 		<p>
 			<h1>Gamified Proof of Stake</h1>
-			EmpireCoin is fundamentally a proof of work cryptocurrency, with SHA256 miners earning 25 empirecoins per block.  But as described above, 75 coins per block are also created per block for an inflation of 100 coins per 3-minute block, or approximately 7.5 million coins per year.  Unlike Bitcoin, EmpireCoin avoids block-reward halving in favor of a fixed linear inflation.
+			EmpireCoin is fundamentally a proof of work cryptocurrency, with SHA256 miners earning 25 empirecoins per block.  But as described above, 75 coins per block are also created per block by proof-of-stake for an inflation of 100 coins per 3-minute block, or approximately 7.5 million coins per year.  Unlike Bitcoin, EmpireCoin avoids block-reward halving in favor of a fixed linear inflation.
 		</p>
 		<p>
 			<h1>Proof of Burn Betting</h1>
