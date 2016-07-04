@@ -22,7 +22,7 @@ ALTER TABLE `games` ADD `final_round` INT( 11 ) NULL DEFAULT NULL AFTER `initial
 ALTER TABLE `games` CHANGE `game_status` `game_status` ENUM( 'unstarted', 'running', 'paused', 'completed' ) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL DEFAULT 'unstarted';
 ALTER TABLE `games` CHANGE `giveaway_status` `giveaway_status` ENUM( 'on', 'off', 'invite_free', 'invite_pay', 'public_pay' ) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL DEFAULT 'off';
 ALTER TABLE `games` ADD `invite_cost` DECIMAL( 10, 2 ) NOT NULL DEFAULT '0', ADD `invite_currency` INT NULL DEFAULT NULL ;
-ALTER TABLE `games` ADD `featured` TINYINT(1) NOT NULL DEFAULT `0` AFTER `game_status`;
+ALTER TABLE `games` ADD `featured` TINYINT(1) NOT NULL DEFAULT '0' AFTER `game_status`;
 ALTER TABLE `games` CHANGE `giveaway_status` `giveaway_status` ENUM( 'on', 'invite_free', 'invite_pay', 'public_pay' ) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL DEFAULT 'invite_pay';
 ALTER TABLE `games` ADD `coin_name` VARCHAR( 100 ) NOT NULL DEFAULT 'empirecoin' AFTER `name`, ADD `coin_name_plural` VARCHAR( 100 ) NOT NULL DEFAULT 'empirecoins' AFTER `coin_name`, ADD `coin_abbreviation` VARCHAR( 10 ) NOT NULL DEFAULT 'EMP' AFTER `coin_name_plural` ;
 CREATE TABLE IF NOT EXISTS `currencies` (
