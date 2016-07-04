@@ -2403,6 +2403,11 @@ class Game {
 					$output_address = $this->create_or_fetch_address($address, true, $coin_rpc, false, true);
 					
 					$q = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, game_id='".$this->db_game['game_id']."', out_index='".$j."'";
+					// Coinbases don't get updated in 2nd loop, so we need to set votes here.
+					// For coin_block and coin_round payout weights, coinbase txns always have 0 votes
+					if ($this->db_game['payout_weight'] == "coin" && $transaction_type == "coinbase" && $j==0 && !empty($output_address['option_id'])) {
+						$q .= ", votes='".$outputs[$j]["value"]*pow(10,8)."'";
+					}
 					if ($output_address['user_id'] > 0) $q .= ", user_id='".$output_address['user_id']."'";
 					$q .= ", address_id='".$output_address['address_id']."'";
 					if ($output_address['option_id'] > 0) $q .= ", option_id=".$output_address['option_id'];
@@ -2488,7 +2493,6 @@ class Game {
 									$votes = floor($votes*$this->block_id_to_taper_factor($block_height));
 									$q = "UPDATE transaction_ios SET votes='".$votes."' WHERE io_id='".$db_output['io_id']."';";
 									$r = $this->app->run_query($q);
-									$html .= $q."<br/>\n";
 								}
 							}
 
