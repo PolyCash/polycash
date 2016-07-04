@@ -328,15 +328,21 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					</div>
 					<?php
 					$winner_displayed = FALSE;
+					
+					if ($round) {
+						$q = "SELECT gvo.* FROM game_voting_options gvo JOIN cached_round_options cro ON cro.option_id=gvo.option_id WHERE cro.game_id='".$game->db_game['game_id']."' AND cro.round_id='".$round['round_id']."' ORDER BY cro.rank ASC;";
+						$r = $app->run_query($q);
+					}
+					else $r = false;
+					
 					for ($rank=1; $rank<=$game->db_game['num_voting_options']; $rank++) {
 						if ($round) {
-							$q = "SELECT * FROM game_voting_options WHERE option_id='".$round['position_'.$rank]."';";
-							$r = $app->run_query($q);
+							$ranked_option = $r->fetch();
 						}
+						else $ranked_option = false;
 						
-						if (!$round || $r->rowCount() == 1) {
+						if (!$round || $ranked_option) {
 							if ($round) {
-								$ranked_option = $r->fetch();
 								$option_scores = $game->option_score_in_round($ranked_option['option_id'], $round['round_id']);
 								$option_score = $option_scores['sum'];
 							}

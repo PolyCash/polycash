@@ -17,8 +17,8 @@ $GLOBALS['sendgrid_pass'] = "";
 $GLOBALS['show_query_errors'] = true;
 $GLOBALS['cron_key_string'] = "";
 
-$GLOBALS['coin_port'] = 11111;
-$GLOBALS['coin_testnet_port'] = 22222;
+$GLOBALS['coin_port'] = 23347;
+$GLOBALS['coin_testnet_port'] = 23345;
 $GLOBALS['coin_rpc_user'] = "";
 $GLOBALS['coin_rpc_password'] = "";
 

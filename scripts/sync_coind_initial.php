@@ -26,10 +26,10 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$new_transaction_count = 0;
 
 	$blocks[$block_height] = new block($coin_rpc->getblock($current_hash), $block_height, $current_hash);
-	$tx_hash = $blocks[$block_height]->json_obj['tx'][$i];
+	$tx_hash = $blocks[$block_height]->json_obj['tx'][0];
 	$transactions[0] = new transaction($tx_hash, "", false, $block_height);
 	
-	$output_address = $game->create_or_fetch_address("genesis_address", true, false, false);
+	$output_address = $game->create_or_fetch_address("genesis_address", true, false, false, false);
 	
 	$q = "INSERT INTO transactions SET game_id='".$game->db_game['game_id']."', amount='".$game->db_game['pow_reward']."', transaction_desc='coinbase', tx_hash='".$tx_hash."', address_id=".$output_address['address_id'].", block_id='".$block_height."', time_created='".time()."';";
 	$r = $app->run_query($q);
@@ -58,7 +58,8 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		
 		echo $game->coind_add_block($coin_rpc, $current_hash, $block_height);
 		
-		$current_hash = $blocks[$block_height]->json_obj['nextblockhash'];
+		if (empty($blocks[$block_height]->json_obj['nextblockhash'])) $current_hash = "";
+		else $current_hash = $blocks[$block_height]->json_obj['nextblockhash'];
 		
 		if (!$current_hash || $current_hash == "") $keep_looping = false;
 	} while ($keep_looping);

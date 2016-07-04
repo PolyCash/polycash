@@ -107,3 +107,18 @@ ALTER TABLE `user_strategy_options`
   ADD KEY `strategy_id` (`strategy_id`);
 ALTER TABLE `user_strategy_options`
   MODIFY `strategy_option_id` int(11) NOT NULL AUTO_INCREMENT;
+CREATE TABLE `cached_round_options` (
+  `round_option_id` int(11) NOT NULL,
+  `internal_round_id` int(11) DEFAULT NULL,
+  `round_id` int(11) DEFAULT NULL,
+  `game_id` int(11) DEFAULT NULL,
+  `option_id` int(11) DEFAULT NULL,
+  `rank` int(11) DEFAULT NULL,
+  `score` bigint(20) NOT NULL DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+ALTER TABLE `cached_round_options`
+  ADD PRIMARY KEY (`round_option_id`),
+  ADD KEY `round_id` (`round_id`,`game_id`);
+ALTER TABLE `cached_round_options`
+  MODIFY `round_option_id` int(11) NOT NULL AUTO_INCREMENT;
+
