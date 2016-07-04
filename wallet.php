@@ -349,6 +349,10 @@ $mature_balance = $account_value - $immature_balance;
 		var performance_history_start_round = <?php echo max(1, $current_round-10); ?>;
 		var performance_history_loading = false;
 		
+		var nation_has_votingaddr = [];
+		for (var i=1; i<=16; i++) { nation_has_votingaddr[i] = false; }
+		var votingaddr_count = 0;
+		
 		var user_logged_in = true;
 		
 		var refresh_page = "wallet";
@@ -359,6 +363,11 @@ $mature_balance = $account_value - $immature_balance;
 			$r = run_query($q);
 			while ($nation = mysql_fetch_array($r)) {
 				echo "\n\t\t\tnations.push(new nation(".$nation['nation_id'].", '".$nation['name']."'));";
+				$votingaddr_id = user_address_id($game['game_id'], $thisuser['user_id'], $nation['nation_id']);
+				if ($votingaddr_id !== false) {
+					echo "\n\t\t\tnation_has_votingaddr[".$nation['nation_id']."] = true;";
+					echo "\n\t\t\tvotingaddr_count++;";
+				}
 			}
 		?>}
 		

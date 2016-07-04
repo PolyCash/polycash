@@ -1,6 +1,7 @@
 <?php
 include('includes/connect.php');
 include('includes/get_session.php');
+include('includes/jsonRPCClient.php');
 $viewer_id = insert_pageview($thisuser);
 
 $explore_mode = $uri_parts[2];
@@ -373,6 +374,15 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 				echo "<br/><br/>\n";
 			}
 			else if ($explore_mode == "transactions") {
+				$transaction_rpc_info = false;
+				if ($game['game_type'] == "real") {
+					$empirecoin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
+					try {
+						$transaction_rpc_info = $empirecoin_rpc->gettransaction($transaction['tx_hash']);
+					}
+					catch (Exception $e) {}
+				}
+				
 				echo "<h3>EmpireCoin Transaction: ".$transaction['tx_hash']."</h3>\n";
 				if ($transaction['block_id'] > 0) {
 					$block_index = block_id_to_round_index($transaction['block_id']);
@@ -387,6 +397,15 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 				echo '<div style="border-bottom: 1px solid #bbb;">';
 				echo render_transaction($transaction, false, $label_txt);
 				echo "</div>\n";
+				
+				if ($transaction_rpc_info) {
+					?>
+					<br/>
+					<a href="" onclick="$('#transaction_info').toggle('fast'); return false;">See transaction details</a><br/>
+					<pre id="transaction_info" style="display: none;"><?php echo print_r($transaction_rpc_info); ?></pre>
+					<?php
+				}
+				
 				echo "<br/><br/>\n";
 			}
 			else if ($explore_mode == "index") {

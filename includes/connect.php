@@ -838,6 +838,8 @@ function new_webwallet_multi_transaction($game, $nation_ids, $amounts, $from_use
 				$empirecoin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
 				try {
 					$raw_transaction = $empirecoin_rpc->createrawtransaction($raw_txin, $raw_txout);
+					die("raw: $raw_transaction");
+					$empirecoin_rpc->sendrawtransaction($raw_transaction);
 					$real_transaction = $empirecoin_rpc->decoderawtransaction($raw_transaction);
 					$q = "UPDATE webwallet_transactions SET tx_hash='".$real_transaction['txid']."' WHERE transaction_id='".$transaction_id."';";
 					$r = run_query($q);
@@ -858,7 +860,9 @@ function new_webwallet_multi_transaction($game, $nation_ids, $amounts, $from_use
 			return $transaction_id;
 		}
 	}
-	else return false;
+	else {
+		return false;
+	}
 }
 
 function cancel_transaction($transaction_id, $affected_input_ids, $created_input_ids) {
