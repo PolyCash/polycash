@@ -2126,7 +2126,7 @@ class Game {
 		$message .= "</p>";
 		
 		$message .= "<p>In this game, you can vote for one of ".$this->db_game['num_voting_options']." ".$this->db_game['option_name_plural']." every ".$this->app->format_seconds($seconds_per_round).".  Team up with other players and cast your votes strategically to win coins and destroy your competitors.</p>";
-		$table = str_replace('<div class="row"><div class="col-sm-5">', '<tr><td>', game_info_table($game->app, $game->db_game));
+		$table = str_replace('<div class="row"><div class="col-sm-5">', '<tr><td>', game_info_table($this->app, $this->db_game));
 		$table = str_replace('</div><div class="col-sm-7">', '</td><td>', $table);
 		$table = str_replace('</div></div>', '</td></tr>', $table);
 		$message .= '<table>'.$table.'</table>';

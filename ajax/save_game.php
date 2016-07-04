@@ -70,6 +70,7 @@ if ($thisuser) {
 					$qq = "SELECT * FROM voting_option_groups WHERE option_group_id='".$option_group_id."';";
 					$rr = $app->run_query($qq);
 					$option_group = $rr->fetch();
+					$game->db_game['option_group_id'] = $option_group['option_group_id'];
 					
 					$qq = "UPDATE games SET option_group_id='".$option_group['option_group_id']."', option_name='".$option_group['option_name']."', option_name_plural='".$option_group['option_name_plural']."' WHERE game_id='".$game->db_game['game_id']."';";
 					$rr = $app->run_query($qq);
@@ -89,7 +90,11 @@ if ($thisuser) {
 					$action = $_REQUEST['action'];
 
 					if ($action == "publish") {
-						$q = "UPDATE games SET game_status='published'";
+						$q = "SELECT COUNT(*) FROM voting_options WHERE option_group_id='".$game->db_game['option_group_id']."';";
+						$r = $app->run_query($q);
+						$option_count = $r->fetch()[0];
+						
+						$q = "UPDATE games SET game_status='published', num_voting_options='".$option_count."'";
 						if ($game->db_game['start_condition'] == "players_joined") $q .= ", initial_coins='".($game->db_game['start_condition_players']*$game->db_game['giveaway_amount'])."'";
 						$q .= " WHERE game_id='".$game->db_game['game_id']."';";
 						$r = $app->run_query($q);

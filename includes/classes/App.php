@@ -75,7 +75,7 @@ class App {
 	}
 
 	public function mail_async($email, $from_name, $from, $subject, $message, $bcc, $cc) {
-		$q = "INSERT INTO async_email_deliveries SET to_email=".$this->quote_escape($email).", from_name=".$from_name.", from_email=".$this->quote_escape($from).", subject=".$this->quote_escape($subject).", message=".$this->quote_escape($message).", bcc=".$this->quote_escape($bcc).", cc=".$this->quote_escape($cc).", time_created='".time()."';";
+		$q = "INSERT INTO async_email_deliveries SET to_email=".$this->quote_escape($email).", from_name=".$this->quote_escape($from_name).", from_email=".$this->quote_escape($from).", subject=".$this->quote_escape($subject).", message=".$this->quote_escape($message).", bcc=".$this->quote_escape($bcc).", cc=".$this->quote_escape($cc).", time_created='".time()."';";
 		$r = $this->run_query($q);
 		$delivery_id = $this->last_insert_id();
 		
@@ -216,7 +216,7 @@ class App {
 					$qq = "UPDATE game_giveaways SET user_id='".$user_id."', status='claimed' WHERE giveaway_id='".$invitation['giveaway_id']."';";
 					$rr = $this->run_query($qq);
 				}
-				$user = new User($app, $user_id);
+				$user = new User($this, $user_id);
 				$user->ensure_user_in_game($invitation['game_id']);
 
 				$invite_game = new Game($this, $invitation['game_id']);
@@ -374,7 +374,7 @@ class App {
 						$join_request = $r->fetch();
 						$last_request_id = $join_request['join_request_id'];
 						
-						$join_user = new User($app, $join_request['user_id']);
+						$join_user = new User($this, $join_request['user_id']);
 						
 						$qq = "SELECT * FROM games WHERE variation_id='".$variation['variation_id']."' AND game_status='published' ORDER BY game_id ASC LIMIT 1;";
 						$rr = $this->run_query($qq);
