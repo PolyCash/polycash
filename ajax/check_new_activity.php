@@ -46,9 +46,9 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 		$output['new_block'] = 1;
 		$output['last_block_id'] = $last_block_id;
 		
-		$last_round_seen = block_to_round($_REQUEST['last_block_id']);
+		$client_round = block_to_round(intval($_REQUEST['last_block_id'])+1);
 		
-		if ($_REQUEST['refresh_page'] == "wallet" && $current_round != $last_round_seen) {
+		if ($_REQUEST['refresh_page'] == "wallet" && $current_round != $client_round) {
 			$output['new_performance_history'] = 1;
 			$output['performance_history'] = performance_history($thisuser, $current_round-(10*$performance_history_sections), $current_round-1);
 			$output['performance_history_start_round'] = $current_round-(10*$performance_history_sections);
