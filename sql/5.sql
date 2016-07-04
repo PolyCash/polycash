@@ -1,4 +1,4 @@
-ALTER TABLE `transaction_ios` DROP ` memo `;
+ALTER TABLE `transaction_ios` DROP `memo`;
 ALTER TABLE `transaction_ios` ADD INDEX (`create_round_id`);
 ALTER TABLE `transaction_ios` ADD INDEX (`spend_round_id`);
 ALTER TABLE `games` ADD `game_starting_block` INT NOT NULL DEFAULT '0' AFTER `rpc_password`;

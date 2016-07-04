@@ -2578,8 +2578,8 @@ class Game {
 			echo "Loading new blocks...\n";
 			$this->load_new_blocks($coin_rpc);
 			
-			//echo "Loading unconfirmed transactions...\n";
-			//$this->load_unconfirmed_transactions($coin_rpc);
+			echo "Loading unconfirmed transactions...\n";
+			$this->load_unconfirmed_transactions($coin_rpc);
 			
 			echo "Updating option scores...\n";
 			$this->update_option_scores();
