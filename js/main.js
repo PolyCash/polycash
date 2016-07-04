@@ -55,7 +55,9 @@ function claim_coin_giveaway() {
 		if (result == "1") alert("Great, 1,000 EmpireCoins have been added to your account!");
 		else alert("Your free coins have already been claimed.");
 		
-		window.location = '/wallet/';
+		$('#giveaway_div').html("We're currently in beta; this feature isn't available right now.");
+		
+		refresh_if_needed();
 	});
 }
 function start_vote(nation_id) {
@@ -141,10 +143,6 @@ function refresh_if_needed() {
 				if (json_result['new_block'] == "1") {
 					last_block_id = parseInt(json_result['last_block_id']);
 					
-					$('#account_value').html(json_result['account_value']);
-					$('#account_value').hide();
-					$('#account_value').fadeIn('medium');
-					
 					if (refresh_page == "wallet") {
 						if ((last_block_id+1)%16 == 0) {
 							$('#vote_popups').slideUp('medium');
@@ -175,6 +173,10 @@ function refresh_if_needed() {
 				}
 				if (json_result['new_block'] == "1" || json_result['new_transaction'] == "1") {
 					$('#current_round_table').html(json_result['current_round_table']);
+					
+					$('#account_value').html(json_result['account_value']);
+					$('#account_value').hide();
+					$('#account_value').fadeIn('medium');
 					
 					if (refresh_page == "wallet") var lockedfunds_details_shown = $('#lockedfunds_details').is(":visible");
 					$('#wallet_text_stats').html(json_result['wallet_text_stats']);
@@ -309,6 +311,7 @@ function attempt_withdrawal() {
 		$('#withdraw_btn').html("Withdrawing...");
 		$.get("/ajax/withdraw.php?amount="+encodeURIComponent(amount)+"&address="+encodeURIComponent(address), function(result) {
 			$('#withdraw_btn').html("Withdraw");
+			$('#withdraw_amount').val("");
 			var result_obj = JSON.parse(result);
 			alert(result_obj['message']);
 			refresh_if_needed();

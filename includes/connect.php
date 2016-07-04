@@ -300,6 +300,12 @@ function last_voting_transaction_id() {
 	$r = mysql_fetch_row($r);
 	return $r[0];
 }
+function last_transaction_id() {
+	$q = "SELECT transaction_id FROM webwallet_transactions ORDER BY transaction_id DESC LIMIT 1;";
+	$r = run_query($q);
+	$r = mysql_fetch_row($r);
+	return $r[0];
+}
 function wallet_text_stats($thisuser, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance) {
 	$html = "<div class=\"row\"><div class=\"col-sm-2\">Available&nbsp;funds:</div><div class=\"col-sm-3\" style=\"text-align: right;\"><font class=\"greentext\">".number_format(floor($mature_balance*1000)/1000, 3)."</font> EmpireCoins</div></div>\n";
 	$html .= "<div class=\"row\"><div class=\"col-sm-2\">Locked&nbsp;funds:</div><div class=\"col-sm-3\" style=\"text-align: right;\"><font class=\"redtext\">".number_format($immature_balance, 3)."</font> EmpireCoins</div>";
@@ -502,5 +508,22 @@ function initialize_vote_nation_details($nation_id2rank, $total_vote_sum) {
 		$n_counter++;
 	}
 	return $html;
+}
+function try_apply_invite_key($user_id, $invite_key) {
+	$invite_key = mysql_real_escape_string($invite_key);
+	
+	$q = "SELECT * FROM invitations WHERE invitation_key='".$invite_key."';";
+	$r = run_query($q);
+	if (mysql_numrows($r) == 1) {
+		$invitation = mysql_fetch_array($r);
+		
+		if ($invitation['used'] == 0 && $invitation['used_user_id'] == "" && $invitation['used_time'] == 0) {
+			$qq = "UPDATE invitations SET used_user_id='".$user_id."' WHERE invitation_id='".$invitation['invitation_id']."';";
+			$rr = run_query($qq);
+			return true;
+		}
+		else return false;
+	}
+	else return false;
 }
 ?>

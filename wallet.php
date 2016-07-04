@@ -85,6 +85,10 @@ if ($_REQUEST['do'] == "signup") {
 					
 					$email_id = mail_async($email, "EmpireCo.in", "no-reply@empireco.in", "New account created", $email_message, "", "");
 					
+					if ($_REQUEST['invite_key'] != "") {
+						try_apply_invite_key($user_id, $_REQUEST['invite_key']);
+					}
+					
 					generate_user_addresses($user_id);
 				}
 			}
@@ -155,6 +159,10 @@ else if ($_REQUEST['do'] == "login") {
 		
 		$q = "SELECT * FROM redirect_urls WHERE redirect_url_id='".$redirect_url_id."';";
 		$r = run_query($q);
+		
+		if ($_REQUEST['invite_key'] != "") {
+			try_apply_invite_key($thisuser['user_id'], $_REQUEST['invite_key']);
+		}
 		
 		if (mysql_numrows($r) == 1) {
 			$redirect_url = mysql_fetch_array($r);
@@ -532,21 +540,23 @@ $mature_balance = $account_value - $immature_balance;
 			</div>
 			<div id="tabcontent4" style="display: none;" class="tabcontent">
 				<h1>Deposit</h1>
-				<?php
-				$q = "SELECT * FROM webwallet_transactions WHERE currency_mode='beta' AND transaction_desc='giveaway' AND user_id='".$thisuser['user_id']."';";
-				$r = run_query($q);
-				if (mysql_numrows($r) == 0) {
-					$initial_tab = 3;
+				<div id="giveaway_div">
+					<?php
+					$q = "SELECT * FROM invitations WHERE used_user_id='".$thisuser['user_id']."' AND used_time=0 AND used=0;";
+					$r = run_query($q);
+					if (mysql_numrows($r) > 0) {
+						$initial_tab = 4;
+						?>
+						You're eligible for a one time coin giveaway of 1,000 EmpireCoins.<br/>
+						<button class="btn btn-success" onclick="claim_coin_giveaway();" id="giveaway_btn">Claim 1,000 EmpireCoins</button>
+						<?php
+					}
+					else { ?>
+						We're currently in beta; this feature isn't available right now.
+						<?php
+					}
 					?>
-					You're eligible for a one time coin giveaway of 1,000 EmpireCoins.<br/>
-					<button class="btn btn-success" onclick="claim_coin_giveaway();" id="giveaway_btn">Claim 1,000 EmpireCoins</button>
-					<?php
-				}
-				else { ?>
-					We're currently in beta; this feature isn't available right now.
-					<?php
-				}
-				?>
+				</div>
 				<h1>Withdraw</h1>
 				To withdraw coins, please enter an amount and an EmpireCoin address below then click "Withdraw"<br/>
 				<div class="row">

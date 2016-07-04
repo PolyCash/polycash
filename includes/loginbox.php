@@ -21,9 +21,11 @@ function autogen_password_changed() {
 			<input type="hidden" name="do" value="login" />
 			<?php
 			if ($redirect_id) echo "<input type=\"hidden\" name=\"redirect_id\" value=\"".$redirect_id."\" />\n";
+			
+			if ($_REQUEST['invite_key'] != "") echo '<input type="hidden" name="invite_key" value="'.make_alphanumeric(strip_tags($_REQUEST['invite_key'])).'" />';
 			?>
 			<div class="row">
-				<div class="col-sm-4">Email Address:</div>
+				<div class="col-sm-4">Username or email:</div>
 				<div class="col-sm-6">
 					<input class="responsive_input form-control" name="username" type="text" size="25" maxlength="40" value="<?php echo $email; ?>" />
 				</div>
@@ -49,10 +51,16 @@ function autogen_password_changed() {
 	</div>
 	<div class="col-md-6">
 		<b style="font-size: 17px; line-height: 24px;">Or sign up for an account</b><br/>
-		Your password will be emailed to you.  This website allows password resets by email; your account here is only as secure as your email account.
+		If you use an email address as your username, your password will be emailed to you.  This website allows password resets by email so your account will only as secure as your email account.<br/>
+		But if you choose a non-email for your username, be sure to store your password safely; you'll have no recourse if you lose your password. 
+		
 		<form action="/wallet/" method="post" onsubmit="$('#signup_password').val(Sha256.hash($('#signup_password').val())); $('#signup_password2').val(Sha256.hash($('#signup_password2').val()));">
 			<input type="hidden" name="do" value="signup" />
-			<?php if ($redirect_id) echo "<input type=\"hidden\" name=\"redirect_id\" value=\"".$redirect_id."\" />\n"; ?>
+			<?php
+			if ($redirect_id) echo "<input type=\"hidden\" name=\"redirect_id\" value=\"".$redirect_id."\" />\n";
+			
+			if ($_REQUEST['invite_key'] != "") echo '<input type="hidden" name="invite_key" value="'.make_alphanumeric(strip_tags($_REQUEST['invite_key'])).'" />';
+			?>
 			<?php /*
 			<div class="row">
 				<div class="col-sm-4">First Name: (Optional)</div>
@@ -71,7 +79,7 @@ function autogen_password_changed() {
 				</div>
 			</div>
 			<div class="row">
-				<div class="col-sm-4">Email address:</div>
+				<div class="col-sm-4">Username or email:</div>
 				<div class="col-sm-6"><input type="text" name="email" size="25" class="responsive_input form-control"></div>
 			</div>
 			<div style="display: none;" id="signup_password_disp">
