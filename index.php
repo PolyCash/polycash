@@ -144,6 +144,7 @@ var last_transaction_id = <?php echo last_transaction_id(get_site_constant('prim
 
 var refresh_page = "home";
 var refresh_in_progress = false;
+var last_refresh_time = 0;
 var selected_nation_id = false;
 var user_logged_in = <?php if ($thisuser) echo 'true'; else echo 'false'; ?>;
 

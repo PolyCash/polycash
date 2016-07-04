@@ -314,6 +314,7 @@ $mature_balance = $account_value - $immature_balance;
 		var last_block_id = <?php echo $last_block_id; ?>;
 		var last_transaction_id = <?php echo last_transaction_id($thisuser['game_id']); ?>;
 		var refresh_in_progress = false;
+		var last_refresh_time = 0;
 		
 		var selected_nation_id = false;
 		
@@ -341,7 +342,10 @@ $mature_balance = $account_value - $immature_balance;
 		});
 		</script>
 		
-		<h1>EmpireCoin</h1>
+		<h1><?php
+		if ($game['game_id'] != get_site_constant('primary_game_id')) echo "EmpireCoin - ";
+		echo $game['name'];
+		?></h1>
 		<?php
 		include("includes/wallet_status.php");
 		?>
@@ -359,17 +363,16 @@ $mature_balance = $account_value - $immature_balance;
 		
 		<div class="row">
 			<div class="col-xs-2 tabcell" id="tabcell0" onclick="tab_clicked(0);">Play&nbsp;Now</div>
-			<div class="col-xs-2 tabcell" id="tabcell1" onclick="tab_clicked(1);">Options</div>
+			<div class="col-xs-2 tabcell" id="tabcell1" onclick="tab_clicked(1);">Settings</div>
 			<div class="col-xs-2 tabcell" id="tabcell2" onclick="tab_clicked(2);">My&nbsp;Results</div>
 			<div class="col-xs-2 tabcell" id="tabcell3" onclick="tab_clicked(3);">Addresses</div>
 			<div class="col-xs-2 tabcell" id="tabcell4" onclick="tab_clicked(4);">Withdraw</div>
-			<div class="col-xs-2 tabcell" id="tabcell5" onclick="tab_clicked(5);">Practice</div>
 		</div>
 		<div class="row">
 			<div id="tabcontent0" style="display: none;" class="tabcontent">
 				<div class="row">
 					<div class="col-md-6">
-						<h1>Your current votes</h1>
+						<h2>Current votes</h2>
 						<div id="my_current_votes">
 							<?php
 							echo my_votes_table($thisuser['game_id'], $current_round, $thisuser);
@@ -390,8 +393,48 @@ $mature_balance = $account_value - $immature_balance;
 					echo current_round_table($thisuser['game_id'], $current_round, $thisuser, true);
 					?>
 				</div>
+				<?php
+				if ($game['game_type'] == "instant" && $thisuser['user_id'] == $game['creator_id']) {
+					if ($game['block_timing'] == "user_controlled") $toggle_text = "Switch to realistic block timing";
+					else $toggle_text = "Switch to user-controlled block timing";
+					?>
+					<div style="margin-top: 10px; overflow: hidden;">
+						<button class="btn btn-primary" onclick="toggle_block_timing();" id="timing_toggle_btn"><?php echo $toggle_text; ?></button>
+						<?php if ($game['block_timing'] == "user_controlled") { ?>
+						<button style="float: right;" class="btn btn-success" onclick="next_block();" id="next_block_btn">Next Block</button>
+						<?php } ?>
+					</div>
+					<?php
+				}
+				?>
 			</div>
 			<div id="tabcontent1" style="display: none;" class="tabcontent">
+				<h2>My Games</h2>
+				<?php
+				echo "You're currently playing ".$game['name'].". ";
+				if ($game['game_type'] == "instant" && $game['creator_id'] == $thisuser['user_id']) {
+					echo "<br/><a href=\"\" onclick=\"switch_to_game('reset'); return false;\">Reset this game</a> or ";
+					echo "<a href=\"\" onclick=\"switch_to_game('delete'); return false;\">Delete this game</a>";
+				}
+				?>
+				<ul style="margin-top: 6px;">
+					<?php
+					$q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser['user_id']."' AND (g.game_id='".get_site_constant('primary_game_id')."' OR g.creator_id='".$thisuser['user_id']."');";
+					$r = run_query($q);
+					while ($user_game = mysql_fetch_array($r)) {
+						echo "<li>";
+						if ($user_game['game_id'] == $game['game_id']) echo  "<b>";
+						else echo "<a href=\"\" onclick=\"switch_to_game(".$user_game['game_id']."); return false;\">";
+						echo $user_game['name'];
+						if ($user_game['game_id'] == $game['game_id']) echo  "</b>";
+						else echo "</a>";
+						echo "</li>";
+					}
+					?>
+					<li><a href="" onclick="switch_to_game('new'); return false;">Start a new Practice Game</a></li>
+				</ul>
+				<br/>
+				
 				<h2>Notifications</h2>
 				You can receive notifications whenever your coins are unlocked and ready to vote.<br/>
 				<div class="row">
@@ -611,24 +654,11 @@ $mature_balance = $account_value - $immature_balance;
 					</div>
 				</div>
 			</div>
-			<div id="tabcontent5" style="display: none;" class="tabcontent">
-				<h1>Practice Mode</h1>
-				<button class="btn btn-success" onclick="set_game_mode('instant');">Start a Practice Game</button>
-			</div>
 		</div>
 		
 		<br/><br/>
 		
 		<script type="text/javascript">
-		function set_game_mode(mode) {
-			$.get("/ajax/set_game_mode.php?mode="+mode, function(result) {
-				if (result == "1") {
-					window.location = window.location;
-				}
-				else alert(result);
-			});
-		}
-		
 		$(document).ready(function() {
 			tab_clicked(<?php echo $initial_tab; ?>);
 		});

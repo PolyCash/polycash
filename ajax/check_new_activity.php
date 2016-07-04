@@ -13,13 +13,13 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	$r = run_query($q);
 	$game = mysql_fetch_array($r);
 	
-	if ($game['game_type'] == "instant") {
-		$log_text = apply_user_strategies($game_id);
-		
+	if ($game['game_type'] == "instant" && $game['block_timing'] == "realistic") {
 		$num = rand(0, 4);
 		if ($num == 0) {
 			$log_text = new_block($game['game_id']);
 		}
+		
+		$log_text = apply_user_strategies($game['game_id']);
 	}
 	
 	$last_block_id = last_block_id($game_id);

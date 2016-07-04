@@ -65,6 +65,9 @@ function start_vote(nation_id) {
 		$('#vote_confirm_'+nation_id).modal('toggle');
 		$('#vote_details_'+nation_id).html($('#vote_details_general').html());
 		$('#vote_amount_'+nation_id).focus();
+		
+		setTimeout("$('#vote_amount_"+nation_id+"').focus();", 500);
+		
 		// Line below is needed to reselect the nation button which has accidentally been unselected by the modal
 		setTimeout('nation_selected('+$('#nation_id2rank_'+nation_id).val()+');', 100);
 	}
@@ -131,80 +134,102 @@ function game_loop_event() {
 	refresh_if_needed();
 	setTimeout("game_loop_event();", 2000);
 }
+var reset_next_block_text = false;
+function next_block() {
+	if ($('#next_block_btn').html() == "Next Block") {
+		$('#next_block_btn').html("Loading...");
+		
+		$.get("/ajax/next_block.php", function(result) {
+			reset_next_block_text = true;
+			refresh_if_needed();
+		});
+	}
+}
 function refresh_if_needed() {
-	if (!refresh_in_progress) {
+	if (!refresh_in_progress || last_refresh_time < new Date().getTime() - 1000*5) {
+		last_refresh_time = new Date().getTime();
 		refresh_in_progress = true;
 		
 		var check_activity_url = "/ajax/check_new_activity.php?refresh_page="+refresh_page+"&last_block_id="+last_block_id+"&last_transaction_id="+last_transaction_id;
 		if (refresh_page == "wallet") check_activity_url += "&performance_history_sections="+performance_history_sections;
 		
-		$.get(check_activity_url, function(result) {
-			if (refresh_page == "wallet" && result == "0") {
-				window.location = '/wallet/?do=logout';
-			}
-			else {
-				refresh_in_progress = false;
-				var json_result = $.parseJSON(result);
-				if (json_result['new_block'] == "1") {
-					last_block_id = parseInt(json_result['last_block_id']);
-					
-					if (refresh_page == "wallet") {
-						if ((last_block_id+1)%16 == 0) {
-							$('#vote_popups').slideUp('medium');
-							$('#vote_popups_disabled').slideDown('fast');
+		$.ajax({
+			url: check_activity_url,
+			success: function(result) {
+				if (reset_next_block_text) { $('#next_block_btn').html("Next Block"); reset_next_block_text = false;}
+				
+				if (refresh_page == "wallet" && result == "0") {
+					window.location = '/wallet/?do=logout';
+				}
+				else {
+					refresh_in_progress = false;
+					var json_result = $.parseJSON(result);
+					if (json_result['new_block'] == "1") {
+						last_block_id = parseInt(json_result['last_block_id']);
+						
+						if (refresh_page == "wallet") {
+							if ((last_block_id+1)%16 == 0) {
+								$('#vote_popups').slideUp('medium');
+								$('#vote_popups_disabled').slideDown('fast');
+							}
+							else {
+								$('#vote_popups').show('fast');
+								$('#vote_popups_disabled').hide('fast');
+							}
+							
+							if (last_block_id%10 == 0) {
+								for (var i=1; i<performance_history_sections; i++) {
+									$('#performance_history_'+i).html("");
+								}
+								$('#performance_history_0').html(json_result['performance_history']);
+								$('#performance_history_0').hide();
+								$('#performance_history_0').fadeIn('fast');
+								
+								performance_history_start_round = json_result['performance_history_start_round'];
+								
+								tab_clicked(2);
+							}
 						}
-						else {
-							$('#vote_popups').show('fast');
-							$('#vote_popups_disabled').hide('fast');
+					}
+					if (json_result['new_transaction'] == "1") {
+						last_transaction_id = parseInt(json_result['last_transaction_id']);
+						if (user_logged_in) $('#vote_details_general').html(json_result['vote_details_general']);
+					}
+					if (json_result['new_block'] == "1" || json_result['new_transaction'] == "1") {
+						$('#current_round_table').html(json_result['current_round_table']);
+						
+						$('#account_value').html(json_result['account_value']);
+						$('#account_value').hide();
+						$('#account_value').fadeIn('medium');
+						
+						if (refresh_page == "wallet") var lockedfunds_details_shown = $('#lockedfunds_details').is(":visible");
+						$('#wallet_text_stats').html(json_result['wallet_text_stats']);
+						if (refresh_page == "wallet" && lockedfunds_details_shown) $('#lockedfunds_details').show();
+						
+						$('#current_round_table').hide();
+						$('#current_round_table').fadeIn('fast');
+						
+						$('#wallet_text_stats').hide();
+						$('#wallet_text_stats').fadeIn('fast');
+						
+						var vote_nation_details = json_result['vote_nation_details'];
+						
+						if (user_logged_in) {
+							$('#my_current_votes').html(json_result['my_current_votes']);
+							$('#my_current_votes').hide();
+							$('#my_current_votes').fadeIn('fast');
 						}
 						
-						if (last_block_id%10 == 0) {
-							for (var i=1; i<performance_history_sections; i++) {
-								$('#performance_history_'+i).html("");
-							}
-							$('#performance_history_0').html(json_result['performance_history']);
-							$('#performance_history_0').hide();
-							$('#performance_history_0').fadeIn('fast');
-							
-							performance_history_start_round = json_result['performance_history_start_round'];
-							
-							tab_clicked(2);
+						for (var nation_id=1; nation_id<=16; nation_id++) {
+							$('#vote_nation_details_'+nation_id).html(vote_nation_details[nation_id]);
 						}
 					}
 				}
-				if (json_result['new_transaction'] == "1") {
-					last_transaction_id = parseInt(json_result['last_transaction_id']);
-					if (user_logged_in) $('#vote_details_general').html(json_result['vote_details_general']);
-				}
-				if (json_result['new_block'] == "1" || json_result['new_transaction'] == "1") {
-					$('#current_round_table').html(json_result['current_round_table']);
-					
-					$('#account_value').html(json_result['account_value']);
-					$('#account_value').hide();
-					$('#account_value').fadeIn('medium');
-					
-					if (refresh_page == "wallet") var lockedfunds_details_shown = $('#lockedfunds_details').is(":visible");
-					$('#wallet_text_stats').html(json_result['wallet_text_stats']);
-					if (refresh_page == "wallet" && lockedfunds_details_shown) $('#lockedfunds_details').show();
-					
-					$('#current_round_table').hide();
-					$('#current_round_table').fadeIn('fast');
-					
-					$('#wallet_text_stats').hide();
-					$('#wallet_text_stats').fadeIn('fast');
-					
-					var vote_nation_details = json_result['vote_nation_details'];
-					
-					if (user_logged_in) {
-						$('#my_current_votes').html(json_result['my_current_votes']);
-						$('#my_current_votes').hide();
-						$('#my_current_votes').fadeIn('fast');
-					}
-					
-					for (var nation_id=1; nation_id<=16; nation_id++) {
-						$('#vote_nation_details_'+nation_id).html(vote_nation_details[nation_id]);
-					}
-				}
+			},
+			error: function(XMLHttpRequest, textStatus, errorThrown) {
+				refresh_in_progress = false;
+				console.log("Game loop web request failed.");
+				if (reset_next_block_text) { $('#next_block_btn').html("Next Block"); reset_next_block_text = false;}
 			}
 		});
 	}
@@ -321,4 +346,18 @@ function attempt_withdrawal() {
 			refresh_if_needed();
 		});
 	}
+}
+function switch_to_game(game) {
+	$.get("/ajax/switch_to_game.php?game="+game, function(result) {
+		if (result == "1") {
+			window.location = window.location;
+		}
+		else alert(result);
+	});
+}
+function toggle_block_timing() {
+	$('#toggle_timing_btn').html("Loading...");
+	$.get("/ajax/toggle_block_timing.php", function(result) {
+		window.location = window.location;
+	});
 }

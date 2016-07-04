@@ -142,7 +142,7 @@ function total_votes_in_round($game_id, $round_id) {
 function round_voting_stats_all($game_id, $voting_round) {
 	$sumVotes = 0;
 	$round_voting_stats = round_voting_stats($game_id, $voting_round);
-	$stats_all = "";
+	$stats_all = false;
 	$counter = 0;
 	$nation_id_csv = "";
 	$nation_id_to_rank = "";
@@ -205,7 +205,7 @@ function current_round_table($game_id, $current_round, $user, $show_intro_text) 
 	$html = "<div style=\"padding: 5px;\">";
 	
 	if ($show_intro_text) {
-		if ($block_within_round != 10) $html .= "<h1>Current Rankings - Round #".$current_round."</h1>\n";
+		if ($block_within_round != 10) $html .= "<h2>Current Rankings - Round #".$current_round."</h2>\n";
 		else {
 			$winner = get_round_winner($round_stats_all);
 			if ($winner) $html .= "<h1>".$winner['name']." won round #".$current_round."</h1>";
@@ -524,7 +524,7 @@ function initialize_vote_nation_details($game_id, $nation_id2rank, $total_vote_s
 								Amount:
 							</div>
 							<div class="col-sm-4">
-								<input type="text" class="responsive_input" placeholder="0.00" size="10" id="vote_amount_'.$nation['nation_id'].'" />
+								<input type="text" class="form-control responsive_input" placeholder="0.00" size="10" id="vote_amount_'.$nation['nation_id'].'" />
 							</div>
 							<div class="col-sm-4">
 								EmpireCoins
@@ -579,7 +579,7 @@ function ensure_user_in_game($user_id, $game_id) {
 	
 	if ($user_game['strategy_id'] > 0) {}
 	else {
-		$q = "INSERT INTO user_strategies SET user_id='".$user_game['user_id']."';";
+		$q = "INSERT INTO user_strategies SET game_id='".$game_id."', user_id='".$user_game['user_id']."';";
 		$r = run_query($q);
 		$strategy_id = mysql_insert_id();
 		
