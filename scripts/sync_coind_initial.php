@@ -99,6 +99,8 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	
 	$app->refresh_utxo_user_ids(false);
 	$game->update_option_scores();
+
+	$this->app->set_site_constant("last_sync_start_time", 0);
 	
 	echo "Completed sync ($completed_rounds rounds) at ".(microtime(true)-$start_time)." sec<br/>\n";
 }
