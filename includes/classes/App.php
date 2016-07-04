@@ -415,6 +415,32 @@ class App {
 		else die('Error, reference_currency_id is not set properly in site_constants.');
 	}
 	
+	public function update_all_currency_prices() {
+		$reference_currency_id = $this->get_site_constant('reference_currency_id');
+		$q = "SELECT * FROM currencies c JOIN oracle_urls o ON c.oracle_url_id=o.oracle_url_id WHERE c.currency_id != '".$reference_currency_id."' GROUP BY o.oracle_url_id;";
+		$r = $this->run_query($q);
+		
+		while ($currency_url = mysql_fetch_array($r)) {
+			$api_response_raw = file_get_contents($currency_url['url']);
+			$api_response = json_decode($api_response_raw);
+			
+			$qq = "SELECT * FROM currencies WHERE oracle_url_id='".$currency_url['oracle_url_id']."';";
+			$rr = $this->run_query($qq);
+			
+			while ($currency = mysql_fetch_array($rr)) {
+				if ($currency_url['format_id'] == 2) {
+					$price = $api_response->USD->bid;
+				}
+				else if ($currency_url['format_id'] == 1) {
+					$price = $api_response->rates->$currency['abbreviation'];
+				}
+				
+				$qqq = "INSERT INTO currency_prices SET currency_id='".$currency['currency_id']."', reference_currency_id='".$reference_currency_id."', price='".$price."', time_added='".time()."';";
+				$rrr = $this->run_query($qqq);
+			}
+		}
+	}
+	
 	public function update_currency_price($currency_id) {
 		$q = "SELECT * FROM currencies WHERE currency_id='".$currency_id."';";
 		$r = $this->run_query($q);

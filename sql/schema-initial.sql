@@ -158,6 +158,7 @@ CREATE TABLE IF NOT EXISTS `cached_rounds` (
 
 CREATE TABLE IF NOT EXISTS `currencies` (
   `currency_id` int(11) NOT NULL AUTO_INCREMENT,
+  `oracle_url_id` INT(11) NULL DEFAULT NULL,
   `name` varchar(100) NOT NULL DEFAULT '',
   `short_name` varchar(100) NOT NULL DEFAULT '',
   `abbreviation` varchar(10) NOT NULL DEFAULT '',
@@ -961,6 +962,19 @@ CREATE TABLE IF NOT EXISTS `external_addresses` (
 
 -- --------------------------------------------------------
 
+--
+-- Table structure for table `oracle_urls`
+--
+
+CREATE TABLE IF NOT EXISTS `oracle_urls` (
+  `oracle_url_id` int(11) NOT NULL AUTO_INCREMENT,
+  `format_id` int(11) DEFAULT NULL,
+  `url` varchar(255) NOT NULL,
+  PRIMARY KEY (`oracle_url_id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=3 ;
+
+-- --------------------------------------------------------
+
 ALTER TABLE `game_voting_options` ADD `name` VARCHAR(100) NOT NULL DEFAULT '' AFTER `voting_option_id`;
 ALTER TABLE `game_voting_options` ADD `voting_character` VARCHAR(1) NOT NULL DEFAULT '' AFTER `name`;
 UPDATE `game_voting_options` gvo JOIN voting_options vo ON gvo.voting_option_id=vo.voting_option_id SET gvo.name=vo.name, gvo.voting_character=vo.address_character;
@@ -1016,10 +1030,14 @@ INSERT INTO `voting_options` (`voting_option_id`, `option_group_id`, `name`, `ad
 (23, 2, 'Paul Ryan', '7'),
 (24, 2, 'Ted Cruz', '8');
 
-INSERT INTO `currencies` (`currency_id`, `name`, `short_name`, `abbreviation`, `symbol`) VALUES
-(1, 'US Dollar', 'dollar', 'USD', '$'),
-(2, 'Bitcoin', 'bitcoin', 'BTC', '&#3647;'),
-(3, 'EmpireCoin', 'empirecoin', 'EMP', 'E');
+INSERT INTO `currencies` (`currency_id`, `oracle_url_id`, `name`, `short_name`, `abbreviation`, `symbol`) VALUES
+(1, NULL, 'US Dollar', 'dollar', 'USD', '$'),
+(2, 2, 'Bitcoin', 'bitcoin', 'BTC', '&#3647;'),
+(3, NULL, 'EmpireCoin', 'empirecoin', 'EMP', 'E'),
+(3, 1, 'Euro', 'euro', 'EUR', '€'),
+(3, 1, 'Renminbi', 'renminbi', 'CNY', '¥'),
+(3, 1, 'Pound sterling', 'pound', 'GBP', '£'),
+(3, 1, 'Japanese yen', 'yen', 'JPY', '¥');
 
 INSERT INTO `site_constants` SET constant_name='reference_currency_id', constant_value=1;
 INSERT INTO `currency_prices` SET currency_id=1, reference_currency_id=1, price=1;
@@ -1045,6 +1063,10 @@ INSERT INTO `game_type_variations` (`variation_id`, `game_type_id`, `target_open
 INSERT INTO `voting_option_groups` (`option_group_id`, `option_name`, `option_name_plural`, `description`) VALUES
 (1, 'empire', 'empires', '16 biggest nations in the world'),
 (2, 'candidate', 'candidates', '2016 presidential candidates');
+
+INSERT INTO `oracle_urls` (`oracle_url_id`, `format_id`, `url`) VALUES
+(1, 1, 'http://api.fixer.io/latest?base=USD'),
+(2, 2, 'https://api.bitcoinaverage.com/ticker/global/all');
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;

@@ -68,3 +68,7 @@ CREATE TABLE IF NOT EXISTS `game_join_requests` (
   KEY `game_id` (`game_id`),
   KEY `request_status` (`request_status`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
+
+ALTER TABLE `currencies` ADD INDEX (`oracle_url_id`);
+ALTER TABLE `currencies` ADD INDEX (`abbreviation`);
+ALTER TABLE `games` ADD `payout_taper_function` ENUM('constant','linear_decrease') NOT NULL DEFAULT 'constant' AFTER `payout_weight`;
