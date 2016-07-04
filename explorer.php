@@ -125,7 +125,6 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 			else {
 				$q = "SELECT * FROM blocks WHERE game_id='".$game->db_game['game_id']."' AND block_hash=".$app->quote_escape($uri_parts[4]).";";
 				$r = $app->run_query($q);
-				echo $r->rowCount()." ".$q."<br/>\n";
 				
 				if ($r->rowCount() == 1) {
 					$block = $r->fetch();

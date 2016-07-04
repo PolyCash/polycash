@@ -1235,7 +1235,7 @@ class Game {
 								$coins_each = floor(($free_balance-$db_user['transaction_fee'])/$divide_into);
 								$remainder_coins = ($free_balance-$db_user['transaction_fee']) - count($by_rank_ranks)*$coins_each;
 								
-								$log_text .= "Dividing by rank among ".$divide_into." options for ".$strategy_user->db_user['username']."<br/>";
+								$log_text .= "Dividing by rank among ".$divide_into." options for ".$strategy_user->db_user['username']."<br/>\n";
 								
 								$option_ids = array();
 								$amounts = array();
@@ -1246,7 +1246,7 @@ class Game {
 								while ($voting_option = $rr->fetch()) {
 									$rank = $option_id2rank[$voting_option['option_id']]+1;
 									if (in_array($rank, $by_rank_ranks) && empty($skipped_options[$ranked_stats[$rank-1]['option_id']])) {
-										$log_text .= "Vote ".round($coins_each/pow(10,8), 3)." coins for ".$ranked_stats[$rank-1]['name'].", ranked ".$rank."<br/>";
+										$log_text .= "Vote ".round($coins_each/pow(10,8), 3)." coins for ".$ranked_stats[$rank-1]['name'].", ranked ".$rank."<br/>\n";
 										
 										$option_ids[count($option_ids)] = $ranked_stats[$rank-1]['option_id'];
 										$amounts[count($amounts)] = $coins_each;
@@ -1281,7 +1281,7 @@ class Game {
 											$effective_frac = floor(pow(10,4)*$by_option_pct_points*$mult_factor)/pow(10,6);
 											$coin_amount = floor($effective_frac*($free_balance-$db_user['transaction_fee']));
 											
-											$log_text .= "Vote ".$by_option_pct_points."% (".round($coin_amount/pow(10,8), 3)." coins) for ".$ranked_stats[$option_id2rank[$voting_option['option_id']]]['name']."<br/>";
+											$log_text .= "Vote ".$by_option_pct_points."% (".round($coin_amount/pow(10,8), 3)." coins) for ".$ranked_stats[$option_id2rank[$voting_option['option_id']]]['name']."<br/>\n";
 											
 											$option_ids[count($option_ids)] = $voting_option['option_id'];
 											$amounts[count($amounts)] = $coin_amount;
@@ -1297,7 +1297,7 @@ class Game {
 								}
 							}
 							else { // by_plan
-								$log_text .= "Dividing by plan for ".$strategy_user->db_user['username']."<br/>";
+								$log_text .= "Dividing by plan for ".$strategy_user->db_user['username']."<br/>\n";
 								
 								$qq = "SELECT * FROM strategy_round_allocations WHERE strategy_id='".$db_user['strategy_id']."' AND round_id='".$current_round_id."' AND applied=0;";
 								$rr = $this->app->run_query($qq);
@@ -1374,6 +1374,9 @@ class Game {
 		$q = "DELETE FROM cached_rounds WHERE game_id='".$this->db_game['game_id']."';";
 		$r = $this->app->run_query($q);
 		
+		$q = "DELETE FROM cached_round_options WHERE game_id='".$this->db_game['game_id']."';";
+		$r = $this->app->run_query($q);
+
 		$q = "DELETE FROM game_voting_options WHERE game_id='".$this->db_game['game_id']."';";
 		$r = $this->app->run_query($q);
 		
@@ -2512,6 +2515,31 @@ class Game {
 		
 		$current_block = $coin_rpc->getblock($last_block['block_hash']);
 		
+		if ($current_block['confirmations'] < 0) {
+			$delete_block_height = $last_block_id;
+			$delete_block = $current_block;
+			$keep_looping = true;
+			do {
+				$prev_block = $coin_rpc->getblock($delete_block['previousblockhash']);
+				if ($prev_block['confirmations'] < 0) {
+					$delete_block = $prev_block;
+					$delete_block_height--;
+				}
+				else $keep_looping = false;
+			}
+			while ($keep_looping);
+			
+			$this->delete_blocks_from_height($delete_block_height);
+
+			$last_block_id = $this->last_block_id();
+
+			$q = "SELECT * FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id='".$last_block_id."';";
+			$r = $this->app->run_query($q);
+			$last_block = $r->fetch();
+	
+			$current_block = $coin_rpc->getblock($last_block['block_hash']);
+		}
+		
 		$block_height = $last_block['block_id'];
 		$keep_looping = true;
 
@@ -2550,6 +2578,22 @@ class Game {
 	
 	function block_id_to_taper_factor($block_id) {
 		return $this->round_index_to_taper_factor($this->block_id_to_round_index($block_id));
+	}
+	
+	function delete_blocks_from_height($block_height) {
+		$this->app->run_query("DELETE FROM transactions WHERE game_id='".$this->db_game['game_id']."' AND block_id >= ".$block_height.";");
+		$this->app->run_query("DELETE FROM transaction_ios WHERE game_id='".$this->db_game['game_id']."' AND create_block_id >= ".$block_height.";");
+		$this->app->run_query("UPDATE transaction_ios SET spend_round_id=NULL, coin_blocks_created=0, coin_rounds_created=0, votes=0, spend_transaction_id=NULL, spend_status='unspent', payout_io_id=NULL WHERE game_id='".$this->db_game['game_id']."' AND spend_block_id >= ".$block_height.";");
+		
+		$this->app->run_query("DELETE FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id >= ".$block_height.";");
+
+		$round_id = $this->block_to_round($block_height);
+		$this->app->run_query("DELETE FROM cached_rounds WHERE game_id='".$this->db_game['game_id']."' AND round_id >= ".$round_id.";");
+		$this->app->run_query("DELETE FROM cached_round_options WHERE game_id='".$this->db_game['game_id']."' AND round_id >= ".$round_id.";");
+
+		$this->app->run_query("UPDATE strategy_round_allocations sra JOIN user_strategies us ON us.strategy_id=sra.strategy_id SET sra.applied=0 WHERE us.game_id='".$this->db_game['game_id']."' AND sra.round_id >= ".$round_id.";");
+		
+		$this->update_option_scores();
 	}
 }
 ?>
