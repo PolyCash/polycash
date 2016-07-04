@@ -2420,7 +2420,8 @@ class Game {
 					$q = "DELETE t.*, io.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';";
 					$r = $this->app->run_query($q);
 				}
-
+				
+				$tx_error = false;
 				$transaction_rpc = false;
 				try {
 					$raw_transaction = $coin_rpc->getrawtransaction($tx_hash);
@@ -2428,44 +2429,46 @@ class Game {
 					$transaction_rpcs[$i] = $transaction_rpc;
 				}
 				catch (Exception $e) {
-					die("Error, transaction ".$tx_hash." was not found in block ".$block_height.".");
+					$tx_error = TRUE;
 				}
 				
-				$outputs = $transaction_rpc["vout"];
-				$inputs = $transaction_rpc["vin"];
+				if (!$tx_error) {
+					$outputs = $transaction_rpc["vout"];
+					$inputs = $transaction_rpc["vin"];
 				
-				if (count($inputs) == 1 && !empty($inputs[0]['coinbase'])) {
-					$transaction_type = "coinbase";
-					if (count($outputs) > 1) $transaction_type = "votebase";
-				}
-				else $transaction_type = "transaction";
-				
-				$output_sum = 0;
-				for ($j=0; $j<count($outputs); $j++) {
-					$output_sum += pow(10,8)*$outputs[$j]["value"];
-				}
-				
-				$q = "INSERT INTO transactions SET game_id='".$this->db_game['game_id']."', amount='".$output_sum."', transaction_desc='".$transaction_type."', tx_hash='".$tx_hash."', block_id='".$block_height."', round_id='".$this->block_to_round($block_height)."', taper_factor='".$this->block_id_to_taper_factor($block_height)."', time_created='".time()."';";
-				$r = $this->app->run_query($q);
-				$db_transaction_id = $this->app->last_insert_id();
-				echo ". ";
-				
-				for ($j=0; $j<count($outputs); $j++) {
-					$address = $outputs[$j]["scriptPubKey"]["addresses"][0];
-				
-					$output_address = $this->create_or_fetch_address($address, true, $coin_rpc, false, true);
-				
-					$q = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, game_id='".$this->db_game['game_id']."', out_index='".$j."'";
-					// Coinbases don't get updated in 2nd loop, so we need to set votes here.
-					// For coin_block and coin_round payout weights, coinbase txns always have 0 votes
-					if ($this->db_game['payout_weight'] == "coin" && $transaction_type == "coinbase" && $j==0 && !empty($output_address['option_id'])) {
-						$q .= ", votes='".$outputs[$j]["value"]*pow(10,8)."'";
+					if (count($inputs) == 1 && !empty($inputs[0]['coinbase'])) {
+						$transaction_type = "coinbase";
+						if (count($outputs) > 1) $transaction_type = "votebase";
 					}
-					if ($output_address['user_id'] > 0) $q .= ", user_id='".$output_address['user_id']."'";
-					$q .= ", address_id='".$output_address['address_id']."'";
-					if ($output_address['option_id'] > 0) $q .= ", option_id=".$output_address['option_id'];
-					$q .= ", create_transaction_id='".$db_transaction_id."', amount='".($outputs[$j]["value"]*pow(10,8))."', create_block_id='".$block_height."', create_round_id='".$this->block_to_round($block_height)."';";
+					else $transaction_type = "transaction";
+				
+					$output_sum = 0;
+					for ($j=0; $j<count($outputs); $j++) {
+						$output_sum += pow(10,8)*$outputs[$j]["value"];
+					}
+				
+					$q = "INSERT INTO transactions SET game_id='".$this->db_game['game_id']."', amount='".$output_sum."', transaction_desc='".$transaction_type."', tx_hash='".$tx_hash."', block_id='".$block_height."', round_id='".$this->block_to_round($block_height)."', taper_factor='".$this->block_id_to_taper_factor($block_height)."', time_created='".time()."';";
 					$r = $this->app->run_query($q);
+					$db_transaction_id = $this->app->last_insert_id();
+					echo ". ";
+				
+					for ($j=0; $j<count($outputs); $j++) {
+						$address = $outputs[$j]["scriptPubKey"]["addresses"][0];
+				
+						$output_address = $this->create_or_fetch_address($address, true, $coin_rpc, false, true);
+				
+						$q = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, game_id='".$this->db_game['game_id']."', out_index='".$j."'";
+						// Coinbases don't get updated in 2nd loop, so we need to set votes here.
+						// For coin_block and coin_round payout weights, coinbase txns always have 0 votes
+						if ($this->db_game['payout_weight'] == "coin" && $transaction_type == "coinbase" && $j==0 && !empty($output_address['option_id'])) {
+							$q .= ", votes='".$outputs[$j]["value"]*pow(10,8)."'";
+						}
+						if ($output_address['user_id'] > 0) $q .= ", user_id='".$output_address['user_id']."'";
+						$q .= ", address_id='".$output_address['address_id']."'";
+						if ($output_address['option_id'] > 0) $q .= ", option_id=".$output_address['option_id'];
+						$q .= ", create_transaction_id='".$db_transaction_id."', amount='".($outputs[$j]["value"]*pow(10,8))."', create_block_id='".$block_height."', create_round_id='".$this->block_to_round($block_height)."';";
+						$r = $this->app->run_query($q);
+					}
 				}
 			}
 			
@@ -2638,14 +2641,15 @@ class Game {
 		$keep_looping = true;
 		do {
 			$q = "SELECT * FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_hash IS NULL";
-			if ($required_blocks_only) $q .= " AND block_id >= ".$this->db_game['game_starting_block'];
+			if ($required_blocks_only && $this->db_game['game_starting_block'] > 0) $q .= " AND block_id >= ".$this->db_game['game_starting_block'];
 			$q .= " ORDER BY block_id DESC LIMIT 1;";
 			$r = $this->app->run_query($q);
+			
 			if ($r->rowCount() > 0) {
 				$unknown_block = $r->fetch();
 				
 				$unknown_block_hash = $coin_rpc->getblockhash((int) $unknown_block['block_id']);
-				echo $this->coind_add_block($coin_rpc, $unknown_block_hash, $unknown_block['block_id'], TRUE);
+				$this->coind_add_block($coin_rpc, $unknown_block_hash, $unknown_block['block_id'], TRUE);
 				
 				$html .= $unknown_block['block_id']." ";
 			}

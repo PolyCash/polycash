@@ -14,7 +14,7 @@ if (!empty($argv)) {
 
 if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	do {
-		echo $app->start_regular_background_processes();
+		echo $app->start_regular_background_processes($_REQUEST['key']);
 		sleep(60);
 	}
 	while (true);

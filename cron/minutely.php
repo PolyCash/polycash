@@ -10,7 +10,7 @@ if (!empty($argv)) {
 }
 
 if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
-	echo $app->start_regular_background_processes();
+	echo $app->start_regular_background_processes($_REQUEST['key']);
 	
 	if (empty($argv)) {
 		$runtime_sec = microtime(true)-$script_start_time;

@@ -681,7 +681,7 @@ class App {
 		else return PHP_BINDIR ."/php";
 	}
 	
-	public function start_regular_background_processes() {
+	public function start_regular_background_processes($key_string) {
 		$html = "";
 		$process_count = 0;
 		
@@ -692,30 +692,34 @@ class App {
 		);
 		$pipes = array();
 
-		$cmd = $this->php_binary_location().' "'.realpath(dirname(dirname(dirname(__FILE__)))."/cron/minutely_main.php").'" key='.$GLOBALS['cron_key_string'];
-		$main_process = proc_open($cmd, $pipe_config, $pipes);
-		if (is_resource($main_process)) $process_count++;
-		else $html .= "Failed to start the main process.<br/>\n";
-		
-		$cmd = $this->php_binary_location().' "'.realpath(dirname(dirname(dirname(__FILE__)))."/cron/minutely_check_payments.php").'" key='.$GLOBALS['cron_key_string'];
-		$payments_process = proc_open($cmd, $pipe_config, $pipes);
-		if (is_resource($payments_process)) $process_count++;
-		else $html .= "Failed to start a process for processing payments.<br/>\n";
-		
-		$cmd = $this->php_binary_location().' "'.realpath(dirname(dirname(dirname(__FILE__)))."/cron/address_miner.php").'" key='.$GLOBALS['cron_key_string'];
-		$address_miner_process = proc_open($cmd, $pipe_config, $pipes);
-		if (is_resource($address_miner_process)) $process_count++;
-		else $html .= "Failed to start a process for mining addresses.<br/>\n";
-		
-		$cmd = $this->php_binary_location().' "'.realpath(dirname(dirname(dirname(__FILE__)))."/cron/fetch_currency_prices.php").'" key='.$GLOBALS['cron_key_string'];
-		$currency_prices_process = proc_open($cmd, $pipe_config, $pipes);
-		if (is_resource($currency_prices_process)) $process_count++;
-		else $html .= "Failed to start a process for updating currency prices.<br/>\n";
-		
-		$cmd = $this->php_binary_location().' "'.realpath(dirname(dirname(dirname(__FILE__)))."/cron/load_blocks.php").'" key='.$GLOBALS['cron_key_string'];
+		$cmd = $this->php_binary_location().' "'.realpath(dirname(dirname(dirname(__FILE__)))."/cron/load_blocks.php").'" key='.$key_string;
 		$block_loading_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($block_loading_process)) $process_count++;
 		else $html .= "Failed to start a process for loading blocks.<br/>\n";
+		sleep(0.1);
+		
+		$cmd = $this->php_binary_location().' "'.realpath(dirname(dirname(dirname(__FILE__)))."/cron/minutely_main.php").'" key='.$key_string;
+		$main_process = proc_open($cmd, $pipe_config, $pipes);
+		if (is_resource($main_process)) $process_count++;
+		else $html .= "Failed to start the main process.<br/>\n";
+		sleep(0.1);
+		
+		$cmd = $this->php_binary_location().' "'.realpath(dirname(dirname(dirname(__FILE__)))."/cron/minutely_check_payments.php").'" key='.$key_string;
+		$payments_process = proc_open($cmd, $pipe_config, $pipes);
+		if (is_resource($payments_process)) $process_count++;
+		else $html .= "Failed to start a process for processing payments.<br/>\n";
+		sleep(0.1);
+		
+		$cmd = $this->php_binary_location().' "'.realpath(dirname(dirname(dirname(__FILE__)))."/cron/address_miner.php").'" key='.$key_string;
+		$address_miner_process = proc_open($cmd, $pipe_config, $pipes);
+		if (is_resource($address_miner_process)) $process_count++;
+		else $html .= "Failed to start a process for mining addresses.<br/>\n";
+		sleep(0.1);
+		
+		$cmd = $this->php_binary_location().' "'.realpath(dirname(dirname(dirname(__FILE__)))."/cron/fetch_currency_prices.php").'" key='.$key_string;
+		$currency_prices_process = proc_open($cmd, $pipe_config, $pipes);
+		if (is_resource($currency_prices_process)) $process_count++;
+		else $html .= "Failed to start a process for updating currency prices.<br/>\n";
 		
 		$html .= $process_count." background processes were successfully started.<br/>\n";
 		return $html;

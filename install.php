@@ -149,45 +149,51 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 					<br/>
 					<div id="keypair_details" style="display: none; border: 1px solid #aaa; padding: 10px; margin-top: 10px;">
 						<b>A new RSA keypair has just been generated.</b><br/>
-						Public key: <input type="text" id="pub_key_disp" /><br/>
-						Private key: <input type="text" id="priv_key_disp" /><br/>
 						<br/>
-						Please save your public key by adding these lines into includes/config.php:<br/>
-						To be safe, you should save your public key somewhere else as well.<br/>
+						This is your <font class="greentext">public key</font>. Copy and save your public key into includes/config.php.
+						<input type="text" id="pub_key_disp" class="form-control" /><br/>
+						This is your <font class="redtext">private key</font>. Save it somewhere safe.
+						<input type="text" id="priv_key_disp" class="form-control" />
+						<br/>
+						Add your public key into includes/config.php like this:<br/>
 						<pre id="pub_key_config_line"></pre>
-						Please enter your email address in place of 'myname@myemailprovider.com'.  This email address will not be shown to anyone.  But when a private game ends, an email will be sent to this address prompting you to enter your private key in order to unlock the escrowed funds.<br/>
+						But replace 'myname@myemailprovider.com' with an email address.  This email address will not be shown to anyone but will receive an email prompting you to enter your private key whenever a game that you administer finishes.<br/>
 						<br/>
-						Now save your private key somewhere extremely safe.<br/>
+						After saving your public key in includes/config.php, save your private key somewhere safe. Your public key can be derived from your private key. Next <a href="" onclick="window.location=window.location;">click here</a> to reload this page.<br/>
+						<br/>
 						If you lose or leak your private key, all escrowed bitcoins on this site will be irrevocably lost.<br/>
-						Once you have saved includes/config.php and stored this keypair safely, please <a href="" onclick="window.location=window.location;">click here</a> to reload this page.
+						
 					</div>
 					<?php
 				}
 				?>
 				
-				<h2>Connect to bitcoind/empirecoind</h1>
+				<h2>Connect to bitcoind/empirecoind</h2>
 				<?php
 				$rpc_games_r = $app->run_query("SELECT * FROM games WHERE game_type='real' AND game_status='running';");
 				while ($rpc_game = $rpc_games_r->fetch()) {
+					echo "<b>Connecting RPC client to ".$rpc_game['name']."...";
 					try {
 						$coin_rpc = new jsonRPCClient('http://'.$rpc_game['rpc_username'].':'.$rpc_game['rpc_password'].'@127.0.0.1:'.$rpc_game['rpc_port'].'/');
 						$getinfo = $coin_rpc->getinfo();
-						echo "Great, RPC connection was made for ".$rpc_game['name'].".<br/>\n";
+						echo " <font class=\"greentext\">Connected on port ".$rpc_game['rpc_port']."</font></b><br/>\n";
 						echo "<pre>getinfo()\n";
 						print_r($getinfo);
 						echo "</pre>";
-					
-						echo "To reset and synchronize this game, run <a target=\"_blank\" href=\"/scripts/sync_coind_initial.php?key=".$GLOBALS['cron_key_string']."&game_id=".$testnet_game->db_game['game_id']."\">scripts/sync_coind_initial.php?game_id=".$testnet_game->db_game['game_id']."</a><br/>\n";
+						
+						echo "To reset and synchronize this game, run <a target=\"_blank\" href=\"/scripts/sync_coind_initial.php?key=".$GLOBALS['cron_key_string']."&game_id=".$testnet_game->db_game['game_id']."\">scripts/sync_coind_initial.php?game_id=".$rpc_game['game_id']."</a>\n";
+						echo "<br/><br/>\n";
 					}
 					catch (Exception $e) {
-						echo "Failed to establish an RPC connection to ".$testnet_game->db_game['name'].". Make sure the coin daemon is running.<br/>\n";
-						var_dump($e);
+						echo " <font class=\"redtext\">Failed to connect on port ".$rpc_game['rpc_port']."</font></b><br/>";
+						echo "<pre>Make sure the coin daemon is running.</pre>\n";
+						echo "<br/>\n";
 					}
 				}
 				?>
-				<br/>
 				
 				<a class="btn btn-success" href="/">Check if installation was successful</a>
+				<br/><br/>
 			</div>
 			<?php
 			include("includes/html_stop.php");

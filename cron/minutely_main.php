@@ -26,7 +26,7 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		$game_id2real_game_i = array();
 
 		$q = "SELECT * FROM games WHERE game_type='real';";
-		$r = $app->run_query($q);
+		$r = $GLOBALS['app']->run_query($q);
 		$real_game_i = 0;
 
 		while ($db_real_game = $r->fetch()) {
@@ -52,7 +52,7 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 				}
 			}
 		}
-	
+		
 		$app->generate_open_games();
 
 		$q = "SELECT * FROM games WHERE game_status='published' AND start_condition='players_joined' AND start_condition_players > 0;";
@@ -88,12 +88,12 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 
 		$running_games = array();
 		$q = "SELECT * FROM games WHERE game_status='running';";
-		$r = $app->run_query($q);
+		$r = $GLOBALS['app']->run_query($q);
 		while ($running_game = $r->fetch()) {
 			$running_games[count($running_games)] = new Game($app, $running_game['game_id']);
 			echo "Including game: ".$running_game['name']."<br/>\n";
 		}
-	
+		
 		if (count($running_games) > 0) {
 			try {
 				$seconds_to_sleep = 5;

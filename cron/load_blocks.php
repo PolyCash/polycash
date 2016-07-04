@@ -3,7 +3,6 @@ set_time_limit(0);
 $host_not_required = TRUE;
 include(realpath(dirname(__FILE__))."/../includes/connect.php");
 include(realpath(dirname(__FILE__))."/../includes/handle_script_shutdown.php");
-
 $script_start_time = microtime(true);
 
 if (!empty($argv)) {
@@ -22,16 +21,13 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		register_shutdown_function("script_shutdown");
 		
 		$real_games = array();
-		$q = "SELECT * FROM games WHERE game_type='real' AND game_status='running';";
-		$r = $app->run_query($q);
-		while ($real_game = $r->fetch()) {
-			$real_games[count($real_games)] = new Game($app, $real_game['game_id']);
-			echo "Including game: ".$real_game['name']."<br/>\n";
-		}
-	
-		for ($real_game_i=0; $real_game_i<count($real_games); $real_game_i++) {
-			$coin_rpc = new jsonRPCClient('http://'.$real_games[$real_game_i]->db_game['rpc_username'].':'.$real_games[$real_game_i]->db_game['rpc_password'].'@127.0.0.1:'.$real_games[$real_game_i]->db_game['rpc_port'].'/');
-			$real_games[$real_game_i]->load_all_block_headers($coin_rpc, TRUE);
+		$real_game_q = "SELECT * FROM games WHERE game_type='real' AND game_status='running';";
+		$real_game_r = $GLOBALS['app']->run_query($real_game_q);
+
+		while ($real_game = $real_game_r->fetch()) {
+			$real_game_obj = new Game($app, $real_game['game_id']);
+			$coin_rpc = new jsonRPCClient('http://'.$real_game['rpc_username'].':'.$real_game['rpc_password'].'@127.0.0.1:'.$real_game['rpc_port'].'/');
+			$real_game_obj->load_all_block_headers($coin_rpc, TRUE);
 			$real_games[$real_game_i]->load_all_blocks($coin_rpc, TRUE);
 			//$real_games[$real_game_i]->load_all_block_headers($coin_rpc, FALSE);
 			//$real_games[$real_game_i]->load_all_blocks($coin_rpc, FALSE);
