@@ -3100,7 +3100,8 @@ function get_currency_by_abbreviation($currency_abbreviation) {
 function get_reference_currency() {
 	$q = "SELECT * FROM currencies WHERE currency_id='".get_site_constant('reference_currency_id')."';";
 	$r = run_query($q);
-	return mysql_fetch_array($r);
+	if (mysql_numrows($r) > 0) return mysql_fetch_array($r);
+	else die('Error, reference_currency_id is not set properly in site_constants.');
 }
 function update_currency_price($currency_id) {
 	$q = "SELECT * FROM currencies WHERE currency_id='".$currency_id."';";

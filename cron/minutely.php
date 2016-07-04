@@ -1,4 +1,5 @@
 <?php
+$host_not_required = TRUE;
 include(realpath(dirname(__FILE__))."/../includes/connect.php");
 include(realpath(dirname(__FILE__))."/../includes/jsonRPCClient.php");
 

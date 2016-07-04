@@ -65,6 +65,8 @@ CREATE TABLE IF NOT EXISTS `currency_prices` (
   PRIMARY KEY (`price_id`),
   KEY `currency_id` (`currency_id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+INSERT INTO `site_constants` SET constant_name='reference_currency_id', constant_value=1;
+INSERT INTO `currency_prices` SET currency_id=1, reference_currency_id=1, price=1;
 CREATE TABLE IF NOT EXISTS `invoice_addresses` (
   `invoice_address_id` int(11) NOT NULL AUTO_INCREMENT,
   `currency_id` int(11) DEFAULT NULL,
@@ -84,3 +86,11 @@ ALTER TABLE `currency_invoices` CHANGE `status` `status` ENUM( 'unpaid', 'unconf
 ALTER TABLE `user_games` ADD `paid_invoice_id` INT( 11 ) NULL DEFAULT NULL ;
 ALTER TABLE `invitations` DROP `giveaway_transaction_id`;
 ALTER TABLE `invitations` ADD `giveaway_id` INT( 11 ) NULL DEFAULT NULL AFTER `game_id` ;
+CREATE TABLE IF NOT EXISTS `game_giveaways` (
+  `giveaway_id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) DEFAULT NULL,
+  `game_id` int(11) DEFAULT NULL,
+  `transaction_id` int(11) DEFAULT NULL,
+  `status` enum('unclaimed','claimed','redeemed') NOT NULL DEFAULT 'unclaimed',
+  PRIMARY KEY (`giveaway_id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
