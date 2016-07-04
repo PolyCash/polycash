@@ -2322,12 +2322,16 @@ class Game {
 		while ($db_voting_options[count($db_voting_options)] = $r->fetch()) {}
 		
 		for ($round_id=$from_round; $round_id<=$to_round; $round_id++) {
+			$used_option_ids = false;
 			for ($i=0; $i<count($weight_map); $i++) {
 				$option_index = rand(0,$num_voting_options-1);
-				$points = round($weight_map[$i]*rand(1, 5));
+				if (empty($used_option_ids[$option_index])) {
+					$points = round($weight_map[$i]*rand(1, 5));
 				
-				$qq = "INSERT INTO strategy_round_allocations SET strategy_id='".$strategy['strategy_id']."', round_id='".$round_id."', option_id='".$db_voting_options[$option_index]['option_id']."', points='".$points."';";
-				$rr = $this->app->run_query($qq);
+					$qq = "INSERT INTO strategy_round_allocations SET strategy_id='".$strategy['strategy_id']."', round_id='".$round_id."', option_id='".$db_voting_options[$option_index]['option_id']."', points='".$points."';";
+					$rr = $this->app->run_query($qq);
+					$used_option_ids[$option_index] = true;
+				}
 			}
 		}
 	}
