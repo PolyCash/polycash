@@ -60,36 +60,48 @@ body {
 	background-position: center center;
 	border: 1px solid rgba(0,0,0,0.5);
 }
-.option_flag_label {
+.vote_option_box_container {
 	display: inline-block;
-	float: left;
-}
-
-.vote_option_box {
-	line-height: 42px;
-	height: 44px;
-	cursor: pointer;
-	padding: 0px;
-	margin: 0px;
-	display: block;
-	margin-top: -1px;
-	margin-top: 10px;
-	border: 1px solid #d6d6d6;
-}
-.vote_option_box_sel {
-	border: 1px solid #555 ! important;
-}
-.vote_option_image {
-	display: block;
-	width: 64px;
-	height: 42px;
-	background-size: cover;
-	background-position: center center;
-	border-right: 1px solid #d6d6d6;
-	margin-right: 5px;
+	margin: 10px 10px;
 }
 .vote_option_label {
-	padding-left: 5px;
+	display: block;
+	font-size: 14px;
+	text-align: center;
+	line-height: 20px;
+}
+.vote_option_box {
+	cursor: pointer;
+	display: block;
+	display: inline-block;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	border-radius: 50%;
+	position: relative;
+	background-repeat: no-repeat;
+	background-size: auto auto;
+	background-position: center center;
+	position: absolute;
+	border: 1px solid rgba(0,0,0,0.8);
+}
+.vote_option_box_holder {
+	width: 100px;
+	height: 100px;
+	
+	display: inline-block;
+	-webkit-perspective: 1200px;
+	-moz-perspective: 1200px;
+	-ms-perspective: 1200px;
+	-o-perspective: 1200px;
+	perspective: 1200px;
+	-webkit-perspective-origin: 50% 50%;
+	-moz-perspective-origin: 50% 50%;
+	-ms-perspective-origin: 50% 50%;
+	-o-perspective-origin: 50% 50%;
+	perspective-origin: 50% 50%;
+}
+.vote_option_box_sel {
 }
 
 .rules_list {

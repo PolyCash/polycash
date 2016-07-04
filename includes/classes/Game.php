@@ -171,6 +171,10 @@ class Game {
 		
 		$html = '<div id="round_table">';
 		
+		$max_circle_diam = 200;
+		$sq_px_per_pct_point = pow($max_circle_diam, 2)/100;
+		$min_px_diam = 30;
+		
 		if ($show_intro_text) {
 			if ($block_within_round != $this->db_game['round_length']) $html .= "<h2>Current Rankings - Round #".$current_round."</h2>\n";
 			else {
@@ -212,44 +216,33 @@ class Game {
 			}
 		}
 		
-		$html .= "<div class='row'>";
-		
 		for ($i=0; $i<count($round_stats); $i++) {
 			$option_score = $round_stats[$i][$score_field] + $round_stats[$i]['unconfirmed_'.$score_field];
+			
 			if (!$winner_option_id && $option_score <= $max_score_sum && $option_score > 0) $winner_option_id = $round_stats[$i]['option_id'];
+			
+			$pct_votes = 100*(floor(1000*$option_score/$score_sum)/1000);
+			
+			$sq_px = $pct_votes*$sq_px_per_pct_point;
+			$box_diam = round(sqrt($sq_px)) + $min_px_diam;
+			
 			$html .= '
-			<div class="col-md-3">
-				<div class="vote_option_box';
+			<div class="vote_option_box_container">
+				<div class="vote_option_label';
 				if ($option_score > $max_score_sum) $html .=  " redtext";
 				else if ($winner_option_id == $round_stats[$i]['option_id']) $html .=  " greentext";
-				$html .='" id="vote_option_'.$i.'" onmouseover="option_selected('.$i.');" onclick="option_selected('.$i.'); start_vote('.$round_stats[$i]['option_id'].');">
-					<input type="hidden" id="option_id2rank_'.$round_stats[$i]['option_id'].'" value="'.$i.'" />
-					<input type="hidden" id="rank2option_id_'.$i.'" value="'.$round_stats[$i]['option_id'].'" />
-					<table style="width: 100%">
-						<tr>';
-				if ($round_stats[$i]['image_id'] > 0) $html .= '
-							<td>
-								<div class="vote_option_image" style="background-image: url(\'/img/custom/'.$round_stats[$i]['image_id'].'_'.$round_stats[$i]['access_key'].'.'.$round_stats[$i]['extension'].'\');"></div>
-							</td>';
-				$html .= '
-							<td style="width: 100%;">
-								<span style="float: left;">
-									<div class="vote_option_label">'.($i+1).'. '.$round_stats[$i]['name'].'</div>
-								</span>
-								<span style="float: right; padding-right: 5px;">';
-									$pct_votes = 100*(floor(1000*$option_score/$score_sum)/1000);
-									$html .= $pct_votes;
-									$html .= '%
-								</span>
-							</td>
-						</tr>
-					</table>
+				$html .= '">'.$round_stats[$i]['name'].' ('.$pct_votes.'%)</div>
+				<div class="stage vote_option_box_holder" style="height: '.$box_diam.'px; width: '.$box_diam.'px;">
+					<div class="ball vote_option_box"';
+					if ($round_stats[$i]['image_id'] > 0) $html .= ' style="background-image: url(\'/img/custom/'.$round_stats[$i]['image_id'].'_'.$round_stats[$i]['access_key'].'.'.$round_stats[$i]['extension'].'\');"';
+					$html .= ' id="vote_option_'.$i.'" onmouseover="option_selected('.$i.');"';
+					$html .= ' onclick="option_selected('.$i.'); start_vote('.$round_stats[$i]['option_id'].');">
+						<input type="hidden" id="option_id2rank_'.$round_stats[$i]['option_id'].'" value="'.$i.'" />
+						<input type="hidden" id="rank2option_id_'.$i.'" value="'.$round_stats[$i]['option_id'].'" />
+					</div>
 				</div>
 			</div>';
-			
-			if ($i%4 == 3) $html .= '</div><div class="row">';
 		}
-		$html .= "</div>";
 		$html .= "</div>";
 		
 		return $html;
