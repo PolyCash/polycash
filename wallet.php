@@ -872,6 +872,11 @@ if ($thisuser && $game) {
 					<?php
 				}
 				?>
+				<div id="current_round_table">
+					<?php
+					echo $game->current_round_table($current_round, $thisuser, true, true);
+					?>
+				</div>
 				
 				<div class="row">
 					<div class="col-md-6">
@@ -906,11 +911,7 @@ if ($thisuser && $game) {
 					<div class="greentext" id="compose_vote_success" style="margin-top: 5px;"></div>
 					<button class="btn btn-primary" id="confirm_compose_vote_btn" style="margin-top: 5px; margin-left: 5px;" onclick="confirm_compose_vote();">Submit Voting Transaction</button>
 				</div>
-				<div id="current_round_table">
-					<?php
-					echo $game->current_round_table($current_round, $thisuser, true, true);
-					?>
-				</div>
+				
 				<?php
 				if (FALSE && $game->db_game['game_type'] == "simulation" && $thisuser->db_user['user_id'] == $game->db_game['creator_id']) {
 					if ($game->db_game['block_timing'] == "user_controlled") $toggle_text = "Switch to automatic block timing";
