@@ -147,7 +147,7 @@ function next_block() {
 	}
 }
 function refresh_if_needed() {
-	if (!refresh_in_progress || last_refresh_time < new Date().getTime() - 1000*5) {
+	if (!refresh_in_progress) {
 		last_refresh_time = new Date().getTime();
 		refresh_in_progress = true;
 		

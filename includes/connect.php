@@ -1,4 +1,11 @@
 <?php
+$domain_parts = explode(".", $_SERVER['HTTP_HOST']);
+$domain = $domain_parts[count($domain_parts)-2].".".$domain_parts[count($domain_parts)-1];
+if ($domain != "empireco.in") {
+	header("Location: http://empireco.in");
+	die();
+}
+
 date_default_timezone_set('America/Chicago');
 
 include("mysql_config.php");
@@ -251,7 +258,7 @@ function current_round_table($game, $current_round, $user, $show_intro_text) {
 		else $html .= 'Last block completed: #'.$last_block_id.', currently mining #'.($last_block_id+1).'<br/>';
 		
 		if ($block_within_round == 10) {
-			$html .= number_format($score_sum/pow(10,8)).' votes were cast in this round.<br/>';
+			$html .= format_bignum($score_sum/pow(10,8)).' votes were cast in this round.<br/>';
 			$my_votes = my_votes_in_round($game, $current_round, $user['user_id']);
 			$my_winning_votes = $my_votes[0][$winner['nation_id']][$game['payout_weight']."s"];
 			if ($my_winning_votes > 0) {
@@ -266,7 +273,7 @@ function current_round_table($game, $current_round, $user, $show_intro_text) {
 			}
 		}
 		else {
-			$html .= number_format($score_sum/pow(10,8)).' votes cast so far, current votes count towards block '.$block_within_round.'/'.get_site_constant('round_length').' in round #'.$current_round.'<br/>';
+			$html .= format_bignum($score_sum/pow(10,8)).' votes cast so far, current votes count towards block '.$block_within_round.'/'.get_site_constant('round_length').' in round #'.$current_round.'<br/>';
 			$seconds_left = round((get_site_constant('round_length') - $last_block_id%get_site_constant('round_length') - 1)*$game['seconds_per_block']);
 			$minutes_left = round($seconds_left/60);
 			$html .= 'Approximately ';
@@ -390,11 +397,19 @@ function last_transaction_id($game_id) {
 
 function my_last_transaction_id($user_id, $game_id) {
 	if ($user_id > 0 && $game_id > 0) {
-		$q = "SELECT t.transaction_id FROM webwallet_transactions t, addresses a, transaction_IOs i WHERE a.address_id=i.address_id AND (i.create_transaction_id=t.transaction_id OR i.spend_transaction_id=t.transaction_id) AND a.user_id='".$user_id."' AND i.game_id='".$game_id."' ORDER BY t.transaction_id DESC LIMIT 1;";
-		$r = run_query($q);
-		$r = mysql_fetch_row($r);
-		if ($r[0] > 0) {} else $r[0] = 0;
-		return $r[0];
+		$start_q = "SELECT t.transaction_id FROM webwallet_transactions t, addresses a, transaction_IOs i WHERE a.address_id=i.address_id AND ";
+		$end_q .= " AND a.user_id='".$user_id."' AND i.game_id='".$game_id."' ORDER BY t.transaction_id DESC LIMIT 1;";
+		
+		$create_r = run_query($start_q."i.create_transaction_id=t.transaction_id".$end_q);
+		$create_trans_id = mysql_fetch_row($create_r);
+		$create_trans_id = $create_trans_id[0];
+		
+		$spend_r = run_query($start_q."i.spend_transaction_id=t.transaction_id".$end_q);
+		$spend_trans_id = mysql_fetch_row($spend_r);
+		$spend_trans_id = $spend_trans_id[0];
+		
+		if ($create_trans_id > $spend_trans_id) return $create_trans_id;
+		else return $spend_trans_id;
 	}
 	else return 0;
 }
@@ -595,7 +610,6 @@ function new_betbase_transaction($game, $round_id, $mining_block_id, $winning_na
 	$bet_mid_q = "transaction_IOs i, addresses a WHERE i.game_id='".$game['game_id']."' AND i.address_id=a.address_id AND a.bet_round_id = ".$round_id." AND i.create_block_id <= ".round_to_last_betting_block($round_id);
 	
 	$total_burned_q = "SELECT SUM(i.amount) FROM ".$bet_mid_q.";";
-	echo "total burned q: ".$total_burned_q."<br/>\n";
 	$total_burned_r = run_query($total_burned_q);
 	$total_burned = mysql_fetch_row($total_burned_r);
 	$total_burned = $total_burned[0];
