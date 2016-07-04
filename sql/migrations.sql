@@ -14,4 +14,12 @@ ALTER TABLE `user_games` ADD `buyin_invoice_address_id` INT(11) NULL DEFAULT NUL
 ALTER TABLE `game_giveaways` ADD `type` ENUM('initial_purchase','buyin') NOT NULL DEFAULT 'initial_purchase' ;
 ALTER TABLE `game_giveaways` ADD `amount` BIGINT(20) NOT NULL DEFAULT '0' ;
 UPDATE game_giveaways gg JOIN games ga ON gg.game_id=ga.game_id SET gg.amount=ga.giveaway_amount WHERE gg.type='initial_purchase';
-ALTER TABLE `game_buyins` ADD `giveaway_id` INT(11) NULL DEFAULT NULL AFTER `invoice_address_id`;
+ALTER TABLE `game_buyins` ADD INDEX (`pay_currency_id`);
+ALTER TABLE `game_buyins` ADD INDEX (`settle_currency_id`);
+ALTER TABLE `game_buyins` ADD INDEX (`user_id`);
+ALTER TABLE `game_buyins` ADD INDEX (`game_id`);
+ALTER TABLE `game_buyins` ADD INDEX (`invoice_address_id`);
+ALTER TABLE `game_buyins` ADD INDEX (`giveaway_id`);
+ALTER TABLE `game_buyins` ADD INDEX (`status`);
+ALTER TABLE `games` CHANGE `invite_cost` `invite_cost` DECIMAL(16,8) NOT NULL DEFAULT '0.00';
+ALTER TABLE `games` ADD `invitation_link` VARCHAR(200) NOT NULL DEFAULT '' AFTER `option_name_plural`;

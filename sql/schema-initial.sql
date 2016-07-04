@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS `addresses` (
   KEY `bet_round_id` (`bet_round_id`),
   KEY `option_id` (`option_id`),
   KEY `bet_option_id` (`bet_option_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS `async_email_deliveries` (
   `successful` tinyint(1) NOT NULL DEFAULT '0',
   `sendgrid_response` text NOT NULL,
   PRIMARY KEY (`delivery_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS `blocks` (
   KEY `miner_user_id` (`miner_user_id`),
   KEY `game_id` (`game_id`),
   KEY `block_id` (`block_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS `browsers` (
   `name` varchar(255) COLLATE latin1_german2_ci NOT NULL,
   `display_name` varchar(255) COLLATE latin1_german2_ci NOT NULL,
   PRIMARY KEY (`browser_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
 
 -- --------------------------------------------------------
 
@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS `browserstrings` (
   PRIMARY KEY (`browserstring_id`),
   KEY `v1` (`viewer_id`),
   KEY `b1` (`browser_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
 
 -- --------------------------------------------------------
 
@@ -148,7 +148,7 @@ CREATE TABLE IF NOT EXISTS `cached_rounds` (
   KEY `round_id` (`round_id`),
   KEY `payout_block_id` (`payout_block_id`),
   KEY `winning_option_id` (`winning_option_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -163,7 +163,7 @@ CREATE TABLE IF NOT EXISTS `currencies` (
   `abbreviation` varchar(10) NOT NULL DEFAULT '',
   `symbol` varchar(10) NOT NULL DEFAULT '',
   PRIMARY KEY (`currency_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -191,7 +191,7 @@ CREATE TABLE IF NOT EXISTS `currency_invoices` (
   `time_confirmed` int(20) NOT NULL DEFAULT '0',
   `expire_time` int(20) NOT NULL DEFAULT '0',
   PRIMARY KEY (`invoice_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -207,7 +207,7 @@ CREATE TABLE IF NOT EXISTS `currency_prices` (
   `time_added` int(20) NOT NULL DEFAULT '0',
   PRIMARY KEY (`price_id`),
   KEY `currency_id` (`currency_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -258,7 +258,7 @@ CREATE TABLE IF NOT EXISTS `games` (
   KEY `payout_weight` (`payout_weight`),
   KEY `variation_id` (`variation_id`),
   KEY `variation_id_2` (`variation_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -273,7 +273,7 @@ CREATE TABLE IF NOT EXISTS `game_giveaways` (
   `transaction_id` int(11) DEFAULT NULL,
   `status` enum('unclaimed','claimed','redeemed') NOT NULL DEFAULT 'unclaimed',
   PRIMARY KEY (`giveaway_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -296,7 +296,7 @@ CREATE TABLE IF NOT EXISTS `game_types` (
   `coin_name_plural` varchar(100) NOT NULL DEFAULT '',
   `coin_abbreviation` varchar(10) NOT NULL DEFAULT '',
   PRIMARY KEY (`game_type_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -324,7 +324,7 @@ CREATE TABLE IF NOT EXISTS `game_type_variations` (
   `variation_name` varchar(100) NOT NULL DEFAULT '',
   PRIMARY KEY (`variation_id`),
   KEY `game_type_id` (`game_type_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -345,7 +345,7 @@ CREATE TABLE IF NOT EXISTS `game_voting_options` (
   `last_win_round` int(11) DEFAULT NULL,
   PRIMARY KEY (`option_id`),
   UNIQUE KEY `game_id` (`game_id`,`voting_option_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -370,7 +370,7 @@ CREATE TABLE IF NOT EXISTS `invitations` (
   KEY `inviter_id` (`inviter_id`),
   KEY `game_id` (`game_id`),
   KEY `used` (`used`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -384,7 +384,7 @@ CREATE TABLE IF NOT EXISTS `invoice_addresses` (
   `pub_key` varchar(40) NOT NULL,
   `priv_enc` varchar(300) NOT NULL,
   PRIMARY KEY (`invoice_address_id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -406,7 +406,7 @@ CREATE TABLE IF NOT EXISTS `matches` (
   KEY `match_type_id` (`match_type_id`),
   KEY `creator_id` (`creator_id`),
   KEY `status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -428,7 +428,7 @@ CREATE TABLE IF NOT EXISTS `match_ios` (
   KEY `spend_status` (`spend_status`),
   KEY `create_move_id` (`create_move_id`),
   KEY `spend_move_id` (`spend_move_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -446,7 +446,7 @@ CREATE TABLE IF NOT EXISTS `match_memberships` (
   KEY `user_id` (`user_id`),
   KEY `match_id` (`match_id`),
   KEY `player_position` (`player_position`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -467,7 +467,7 @@ CREATE TABLE IF NOT EXISTS `match_messages` (
   KEY `from_user_id` (`from_user_id`),
   KEY `to_user_id` (`to_user_id`),
   KEY `hide_user_id` (`hide_user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -486,7 +486,7 @@ CREATE TABLE IF NOT EXISTS `match_moves` (
   PRIMARY KEY (`move_id`),
   KEY `membership_id` (`membership_id`),
   KEY `round_number` (`round_number`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -505,7 +505,7 @@ CREATE TABLE IF NOT EXISTS `match_rounds` (
   KEY `round_number` (`round_number`),
   KEY `match_id` (`match_id`),
   KEY `winning_membership_id` (`winning_membership_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -523,7 +523,7 @@ CREATE TABLE IF NOT EXISTS `match_types` (
   `min_payout_per_round` bigint(11) NOT NULL DEFAULT '0',
   `payout_weight` enum('coin','coin_block') NOT NULL DEFAULT 'coin_block',
   PRIMARY KEY (`match_type_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -548,7 +548,7 @@ CREATE TABLE IF NOT EXISTS `pageviews` (
   KEY `ip_id` (`ip_id`),
   KEY `cookie_id` (`cookie_id`),
   KEY `pv_page_id` (`pv_page_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -561,7 +561,7 @@ CREATE TABLE IF NOT EXISTS `page_urls` (
   `url` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`page_url_id`),
   UNIQUE KEY `url` (`url`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -575,7 +575,7 @@ CREATE TABLE IF NOT EXISTS `redirect_urls` (
   `time_created` int(20) NOT NULL DEFAULT '0',
   PRIMARY KEY (`redirect_url_id`),
   UNIQUE KEY `url` (`url`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -589,7 +589,7 @@ CREATE TABLE IF NOT EXISTS `site_constants` (
   `constant_value` varchar(100) NOT NULL DEFAULT '',
   PRIMARY KEY (`constant_id`),
   UNIQUE KEY `constant_name` (`constant_name`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -608,7 +608,7 @@ CREATE TABLE IF NOT EXISTS `strategy_round_allocations` (
   KEY `strategy_id` (`strategy_id`),
   KEY `round_id` (`round_id`),
   KEY `option_id` (`option_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -643,7 +643,7 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   KEY `vote_transaction_id` (`vote_transaction_id`),
   KEY `game_id` (`game_id`),
   KEY `tx_hash` (`tx_hash`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -686,7 +686,7 @@ CREATE TABLE IF NOT EXISTS `transaction_ios` (
   KEY `spend_block_id` (`spend_block_id`),
   KEY `payout_io_id` (`payout_io_id`),
   KEY `option_id` (`option_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -717,7 +717,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   UNIQUE KEY `username` (`username`),
   UNIQUE KEY `api_access_code` (`api_access_code`),
   KEY `password` (`password`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
 
 -- --------------------------------------------------------
 
@@ -736,7 +736,7 @@ CREATE TABLE IF NOT EXISTS `user_games` (
   PRIMARY KEY (`user_game_id`),
   UNIQUE KEY `user_id` (`user_id`,`game_id`),
   KEY `strategy_id` (`strategy_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -755,7 +755,7 @@ CREATE TABLE IF NOT EXISTS `user_messages` (
   PRIMARY KEY (`message_id`),
   KEY `from_user_id` (`from_user_id`),
   KEY `to_user_id` (`to_user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -777,7 +777,7 @@ CREATE TABLE IF NOT EXISTS `user_resettokens` (
   `firstclick_viewer_id` int(20) NOT NULL DEFAULT '0',
   `completed` int(2) NOT NULL DEFAULT '0',
   PRIMARY KEY (`token_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
 
 -- --------------------------------------------------------
 
@@ -795,7 +795,7 @@ CREATE TABLE IF NOT EXISTS `user_sessions` (
   `expire_time` int(12) NOT NULL DEFAULT '0',
   `ip_address` varchar(30) COLLATE latin1_german2_ci NOT NULL,
   PRIMARY KEY (`session_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
 
 -- --------------------------------------------------------
 
@@ -832,7 +832,7 @@ CREATE TABLE IF NOT EXISTS `user_strategies` (
   `option_pct_15` int(11) NOT NULL DEFAULT '0',
   `option_pct_16` int(11) NOT NULL DEFAULT '0',
   PRIMARY KEY (`strategy_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -848,7 +848,7 @@ CREATE TABLE IF NOT EXISTS `user_strategy_blocks` (
   UNIQUE KEY `strategy_id` (`strategy_id`,`block_within_round`),
   KEY `strategy_id_2` (`strategy_id`),
   KEY `block_within_round` (`block_within_round`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -861,7 +861,7 @@ CREATE TABLE IF NOT EXISTS `viewers` (
   `account_id` int(20) NOT NULL DEFAULT '0',
   `time_created` int(20) NOT NULL DEFAULT '0',
   PRIMARY KEY (`viewer_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -875,7 +875,7 @@ CREATE TABLE IF NOT EXISTS `viewer_connections` (
   `from_id` int(20) NOT NULL,
   `to_id` int(20) NOT NULL,
   PRIMARY KEY (`connection_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
 
 -- --------------------------------------------------------
 
@@ -889,7 +889,7 @@ CREATE TABLE IF NOT EXISTS `viewer_identifiers` (
   `type` enum('ip','cookie') NOT NULL,
   `identifier` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`identifier_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -903,7 +903,7 @@ CREATE TABLE IF NOT EXISTS `voting_options` (
   `address_character` varchar(1) NOT NULL DEFAULT '',
   PRIMARY KEY (`voting_option_id`),
   KEY `address_character` (`address_character`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -917,8 +917,47 @@ CREATE TABLE IF NOT EXISTS `voting_option_groups` (
   `option_name_plural` varchar(100) NOT NULL DEFAULT '',
   `description` varchar(100) NOT NULL DEFAULT '',
   PRIMARY KEY (`option_group_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `game_buyins`
+--
+
+CREATE TABLE IF NOT EXISTS `game_buyins` (
+  `buyin_id` int(11) NOT NULL AUTO_INCREMENT,
+  `pay_currency_id` int(11) DEFAULT NULL,
+  `settle_currency_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `game_id` int(11) DEFAULT NULL,
+  `invoice_address_id` int(11) DEFAULT NULL,
+  `giveaway_id` int(11) DEFAULT NULL,
+  `status` enum('unpaid','unconfirmed','confirmed','settled','pending_refund','refunded') NOT NULL DEFAULT 'unpaid',
+  `pay_amount` decimal(16,8) NOT NULL DEFAULT '0.00000000',
+  `settle_amount` decimal(16,8) NOT NULL DEFAULT '0.00000000',
+  `confirmed_amount_paid` decimal(16,8) NOT NULL DEFAULT '0.00000000',
+  `unconfirmed_amount_paid` decimal(16,8) NOT NULL DEFAULT '0.00000000',
+  `time_created` int(20) NOT NULL DEFAULT '0',
+  `time_confirmed` int(20) NOT NULL DEFAULT '0',
+  `expire_time` int(20) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`buyin_id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `external_addresses`
+--
+
+CREATE TABLE IF NOT EXISTS `external_addresses` (
+  `address_id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) DEFAULT NULL,
+  `currency_id` int(11) DEFAULT NULL,
+  `address` varchar(100) DEFAULT '',
+  `time_created` int(20) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`address_id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
