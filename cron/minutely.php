@@ -27,6 +27,9 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		}
 	}
 	
+	// Apply user strategies
+	echo apply_user_strategies($game);
+	
 	if ($GLOBALS['walletnotify_by_cron'] || $GLOBALS['min_unallocated_addresses'] > 0) {
 		$empirecoin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
 	}
@@ -90,9 +93,6 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	else {
 		echo "No block (".$num.")<br/>";
 	}
-	
-	// Apply user strategies
-	echo apply_user_strategies($game);
 	*/
 }
 else echo "Error: permission denied.";

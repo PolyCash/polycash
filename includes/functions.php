@@ -1665,6 +1665,9 @@ function my_bets($game, $user) {
 }
 
 function add_round_from_rpc($game, $round_id) {
+	$q = "UPDATE game_nations SET current_vote_score=0, coins_currently_voted=0, coin_block_score=0, losing_streak=losing_streak+1 WHERE game_id='".$game['game_id']."';";
+	$r = run_query($q);
+	
 	$winning_nation_id = false;
 	$q = "SELECT * FROM webwallet_transactions t JOIN transaction_IOs i ON i.create_transaction_id=t.transaction_id JOIN addresses a ON a.address_id=i.address_id WHERE t.game_id='".$game['game_id']."' AND t.block_id='".$round_id*get_site_constant('round_length')."' AND t.transaction_desc='votebase' AND i.out_index=1;";
 	$r = run_query($q);
