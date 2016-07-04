@@ -27,6 +27,13 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				mysql_select_db($GLOBALS['mysql_database']) or die ("There was an error accessing the \"".$GLOBALS['mysql_database']."\" database");
 			}
 
+			$result = run_query("SHOW TABLES LIKE 'games';");
+			$table_exists = mysql_num_rows($result) > 0;
+			if (!$table_exists) {
+				echo "Database tables failed to be created, please install manually by importing all files in the \"sql\" folder via phpMyAdmin or any other MySQL interface.<br/>\n";
+				die();
+			}
+			
 			$q = "SELECT * FROM games WHERE url_identifier='empirecoin-live';";
 			$r = run_query($q);
 			if (mysql_numrows($r) == 0) {
