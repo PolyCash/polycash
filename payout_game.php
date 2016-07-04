@@ -49,8 +49,13 @@ if ($thisuser) {
 								}
 							}
 						}
-						
-						$coin_rpc->importprivkey($privkeys[$i]);
+						try {
+							$coin_rpc->importprivkey($privkeys[$i]);
+						}
+						catch (Exception $e) {
+							output_message(7, "Error importing private key. Is bitcoind running on port ".$GLOBALS['bitcoin_port']."?");
+							die();
+						}
 					}
 					
 					if ((string)($total/pow(10,8)) != (string)$input_sum) {
@@ -173,12 +178,23 @@ if ($thisuser) {
 						function load_addresses() {<?php
 							$q = "SELECT * FROM currency_invoices i JOIN invoice_addresses a ON i.invoice_address_id=a.invoice_address_id JOIN users u ON i.user_id=u.user_id JOIN currencies pc ON i.pay_currency_id=pc.currency_id WHERE i.game_id='".$payout_game['game_id']."' AND i.status='confirmed';";
 							$r = run_query($q);
+							
 							$addr_html = "";
 							$input_sum = 0;
+							
 							while ($invoice = mysql_fetch_array($r)) {
 								echo 'inputs.push(new input(inputs.length, "'.$invoice['pub_key'].'", "'.$invoice['priv_enc'].'"));'."\n";
 								$addr_html .= $invoice['username']." paid ".$invoice['pay_amount']." ".$invoice['short_name']."s to <a href=\"https://blockchain.info/address/".$invoice['pub_key']."\">".$invoice['pub_key']."</a><br/>\n";
 								$input_sum += $invoice['pay_amount'];
+							}
+							
+							$q = "SELECT * FROM game_buyins gb JOIN invoice_addresses a ON gb.invoice_address_id=a.invoice_address_id JOIN users u ON gb.user_id=u.user_id JOIN currencies pc ON gb.pay_currency_id=pc.currency_id WHERE gb.game_id='".$payout_game['game_id']."' AND gb.status='confirmed';";
+							$r = run_query($q);
+							
+							while ($buyin = mysql_fetch_array($r)) {
+								echo 'inputs.push(new input(inputs.length, "'.$buyin['pub_key'].'", "'.$buyin['priv_enc'].'"));'."\n";
+								$addr_html .= $buyin['username']." bought in for ".$buyin['unconfirmed_amount_paid']." ".$buyin['short_name']."s to <a href=\"https://blockchain.info/address/".$buyin['pub_key']."\">".$buyin['pub_key']."</a><br/>\n";
+								$input_sum += $buyin['unconfirmed_amount_paid'];
 							}
 							?>
 						}
