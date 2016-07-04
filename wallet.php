@@ -122,7 +122,7 @@ if ($_REQUEST['do'] == "signup") {
 						ensure_user_in_game($thisuser, $primary_game['game_id']);
 
 						if ($primary_game['giveaway_status'] == "public_free") {
-							$giveaway = new_game_giveaway($primary_game, $user_id);
+							$giveaway = new_game_giveaway($primary_game, $user_id, 'initial_purchase', false);
 						}
 					}
 					
@@ -612,11 +612,11 @@ $mature_balance = mature_balance($game, $thisuser);
 	}
 	
 	if ($game['giveaway_status'] == "invite_free" || $game['giveaway_status'] == "public_free") {
-		$qq = "SELECT * FROM game_giveaways WHERE game_id='".$game['game_id']."' AND user_id='".$thisuser['user_id']."';";
+		$qq = "SELECT * FROM game_giveaways WHERE game_id='".$game['game_id']."' AND user_id='".$thisuser['user_id']."' AND type='initial_purchase';";
 		$rr = run_query($qq);
 		
 		if (mysql_numrows($rr) == 0) {
-			$giveaway = new_game_giveaway($game, $thisuser['user_id']);
+			$giveaway = new_game_giveaway($game, $thisuser['user_id'], 'initial_purchase', false);
 		}
 	}
 	

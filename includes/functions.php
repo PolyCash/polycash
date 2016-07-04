@@ -2821,7 +2821,12 @@ function refresh_utxo_user_ids($only_unspent_utxos) {
 	$update_user_id_r = run_query($update_user_id_q);
 }
 
-function new_game_giveaway(&$game, $user_id) {
+function new_game_giveaway(&$game, $user_id, $type, $amount) {
+	if ($type != "buyin") {
+		$type = "initial_purchase";
+		$amount = $game['giveaway_amount'];
+	}
+	
 	$addr_id = new_nonuser_address($game['game_id']);
 	
 	$addr_ids = array();
@@ -2829,14 +2834,14 @@ function new_game_giveaway(&$game, $user_id) {
 	$option_ids = array();
 	
 	for ($i=0; $i<5; $i++) {
-		$amounts[$i] = $game['giveaway_amount']/5;
+		$amounts[$i] = floor($amount/5);
 		$addr_ids[$i] = $addr_id;
 		$option_ids[$i] = false;
 	}
 	
 	$transaction_id = new_transaction($game, $option_ids, $amounts, false, false, 0, 'giveaway', false, $addr_ids, false, 0);
 
-	$q = "INSERT INTO game_giveaways SET game_id='".$game['game_id']."', transaction_id='".$transaction_id."'";
+	$q = "INSERT INTO game_giveaways SET type='".$type."', game_id='".$game['game_id']."', transaction_id='".$transaction_id."'";
 	if ($user_id) $q .= ", user_id='".$user_id."', status='claimed'";
 	$q .= ";";
 	$r = run_query($q);
@@ -3226,13 +3231,16 @@ function update_currency_price($currency_id) {
 			
 			$price = $api_response->$reference_currency['abbreviation']->bid;
 
-			$q = "INSERT INTO currency_prices SET currency_id='".$currency_id."', reference_currency_id='".$reference_currency['currency_id']."', price='".$price."', time_added='".time()."';";
-			$r = run_query($q);
-			$currency_price_id = mysql_insert_id();
+			if ($price > 0) {
+				$q = "INSERT INTO currency_prices SET currency_id='".$currency_id."', reference_currency_id='".$reference_currency['currency_id']."', price='".$price."', time_added='".time()."';";
+				$r = run_query($q);
+				$currency_price_id = mysql_insert_id();
 
-			$q = "SELECT * FROM currency_prices WHERE price_id='".$currency_price_id."';";
-			$r = run_query($q);
-			return mysql_fetch_array($r);
+				$q = "SELECT * FROM currency_prices WHERE price_id='".$currency_price_id."';";
+				$r = run_query($q);
+				return mysql_fetch_array($r);
+			}
+			else return false;
 		}
 		else return false;
 	}
@@ -3337,6 +3345,10 @@ function start_game(&$game) {
 }
 function pot_value(&$game) {
 	$value = paid_players_in_game($game)*$game['invite_cost'];
+	$qq = "SELECT SUM(settle_amount) FROM game_buyins WHERE game_id='".$game['game_id']."';";
+	$rr = run_query($qq);
+	$amt = mysql_fetch_row($rr);
+	$value += $amt[0];
 	return $value;
 }
 function account_value_html(&$game, $account_value) {
@@ -3578,5 +3590,39 @@ function new_game_permission($user) {
 	if ((string)$GLOBALS['new_games_per_user'] == "unlimited") return true;
 	else if ($games_created_by_user < $user['authorized_games']) return true;
 	else return false;
+}
+
+function user_buyin_limit(&$game, $user) {
+	$q = "SELECT COUNT(*), SUM(pay_amount), SUM(settle_amount) FROM game_buyins WHERE user_id='".$user['user_id']."' AND game_id='".$game['game_id']."' AND status IN ('confirmed','settled');";
+	$r = run_query($q);
+	$buyin_stats = mysql_fetch_array($r);
+	$user_buyin_total = $buyin_stats['SUM(settle_amount)'];
+	
+	$q = "SELECT COUNT(*), SUM(pay_amount), SUM(settle_amount) FROM game_buyins WHERE game_id='".$game['game_id']."' AND status IN ('confirmed','settled');";
+	$r = run_query($q);
+	$buyin_stats = mysql_fetch_array($r);
+	$game_buyin_total = $buyin_stats['SUM(settle_amount)'];
+	
+	$returnvals['user_buyin_total'] = $user_buyin_total;
+	$returnvals['game_buyin_total'] = $game_buyin_total;
+	
+	if ($game['buyin_policy'] == "unlimited") {
+		$user_buyin_limit = false;
+	}
+	else if ($game['buyin_policy'] == "per_user_cap") {
+		$user_buyin_limit = max(0, $game['per_user_buyin_cap']-$user_buyin_total);
+	}
+	else if ($game['buyin_policy'] == "game_cap") {
+		$user_buyin_limit = max(0, $game['game_buyin_cap']-$game_buyin_total);
+	}
+	else if ($game['buyin_policy'] == "game_and_user_cap") {
+		$user_buyin_limit = max(0, $game['game_buyin_cap']-$game_buyin_total);
+		$user_buyin_limit = min($user_buyin_limit, $game['per_user_buyin_cap']-$user_buyin_total);
+	}
+	else die("Invalid buy-in policy.");
+	
+	$returnvals['user_buyin_limit'] = $user_buyin_limit;
+	
+	return $returnvals;
 }
 ?>

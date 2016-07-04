@@ -11,3 +11,7 @@ ALTER TABLE `games` DROP `buyins_allowed`;
 ALTER TABLE `games` ADD `per_user_buyin_cap` DECIMAL(16,8) NOT NULL DEFAULT '0' AFTER `buyin_policy`;
 ALTER TABLE `games` ADD `game_buyin_cap` DECIMAL(16,8) NOT NULL DEFAULT '0' AFTER `per_user_buyin_cap`;
 ALTER TABLE `user_games` ADD `buyin_invoice_address_id` INT(11) NULL DEFAULT NULL ;
+ALTER TABLE `game_giveaways` ADD `type` ENUM('initial_purchase','buyin') NOT NULL DEFAULT 'initial_purchase' ;
+ALTER TABLE `game_giveaways` ADD `amount` BIGINT(20) NOT NULL DEFAULT '0' ;
+UPDATE game_giveaways gg JOIN games ga ON gg.game_id=ga.game_id SET gg.amount=ga.giveaway_amount WHERE gg.type='initial_purchase';
+ALTER TABLE `game_buyins` ADD `giveaway_id` INT(11) NULL DEFAULT NULL AFTER `invoice_address_id`;

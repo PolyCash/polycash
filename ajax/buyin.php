@@ -66,7 +66,7 @@ if ($thisuser && $game) {
 				echo '<div class="paragraph">';
 				echo "Right now, there are ".format_bignum($coins_in_existence/pow(10,8))." ".$game['coin_name_plural']." in circulation";
 				echo " and ".format_bignum($pot_value)." ".$invite_currency['short_name']."s in the pot. ";
-				echo "The exchange rate is currently ".format_bignum($exchange_rate)." ".$invite_currency['short_name']."s per ".$game['coin_name'].". ";
+				echo "The exchange rate is currently ".format_bignum($exchange_rate)." ".$game['coin_name_plural']." per ".$invite_currency['short_name'].". ";
 				echo '</div>';
 				?>
 				<div class="paragraph">
@@ -76,45 +76,31 @@ if ($thisuser && $game) {
 						echo "Sorry, buy-ins are not allowed in this game.";
 					}
 					else {
-						$q = "SELECT COUNT(*), SUM(pay_amount), SUM(settle_amount) FROM game_buyins WHERE user_id='".$thisuser['user_id']."' AND game_id='".$game['game_id']."' AND status IN ('confirmed','settled');";
-						$r = run_query($q);
-						$buyin_stats = mysql_fetch_array($r);
-						$user_buyin_total = $buyin_stats['SUM(settle_amount)'];
+						$user_buyin_limit = user_buyin_limit($game, $thisuser);
 						
-						$q = "SELECT COUNT(*), SUM(pay_amount), SUM(settle_amount) FROM game_buyins WHERE game_id='".$game['game_id']."' AND status IN ('confirmed','settled');";
-						$r = run_query($q);
-						$buyin_stats = mysql_fetch_array($r);
-						$game_buyin_total = $buyin_stats['SUM(settle_amount)'];
-						
-						if ($user_buyin_total > 0) {
-							echo "You've already made buy-ins totalling ".format_bignum($user_buyin_total)." ".$invite_currency['short_name']."s.<br/>\n";
+						if ($user_buyin_limit['user_buyin_total'] > 0) {
+							echo "You've already made buy-ins totalling ".format_bignum($user_buyin_limit['user_buyin_total'])." ".$invite_currency['short_name']."s.<br/>\n";
 						}
 						else echo "You haven't made any buy-ins yet.<br/>\n";
-						
-						$user_buyin_limit = 0;
 						
 						if ($game['buyin_policy'] == "unlimited") {
 							echo "You can buy in for as many coins as you want in this game. ";
 						}
 						else if ($game['buyin_policy'] == "per_user_cap") {
 							echo "This game allows each player to buy in for up to ".format_bignum($game['per_user_buyin_cap'])." ".$invite_currency['short_name']."s. ";
-							$user_buyin_limit = max(0, $game['per_user_buyin_cap']-$user_buyin_total);
 						}
 						else if ($game['buyin_policy'] == "game_cap") {
 							echo "This game has a game-wide buy-in cap of ".format_bignum($game['game_buyin_cap'])." ".$invite_currency['short_name']."s. ";
-							$user_buyin_limit = max(0, $game['game_buyin_cap']-$game_buyin_total);
 						}
 						else if ($game['buyin_policy'] == "game_and_user_cap") {
 							echo "This game has a total buy-in cap of ".format_bignum($game['game_buyin_cap'])." ".$invite_currency['short_name']."s. ";
 							echo "Until this limit is reached, each player can buy in for up to ".format_bignum($game['per_user_buyin_cap'])." ".$invite_currency['short_name']."s. ";
-							$user_buyin_limit = max(0, $game['game_buyin_cap']-$game_buyin_total);
-							$user_buyin_limit = min($user_buyin_limit, $game['per_user_buyin_cap']-$user_buyin_total);
 						}
 						else die("Invalid buy-in policy.");
 						
-						echo "</div><div class=\"paragraph\">Your remaining buy-in limit is ".format_bignum($user_buyin_limit)." ".$invite_currency['short_name']."s. ";
+						echo "</div><div class=\"paragraph\">Your remaining buy-in limit is ".format_bignum($user_buyin_limit['user_buyin_limit'])." ".$invite_currency['short_name']."s. ";
 						
-						if ($user_buyin_limit > 0) {
+						if ($user_buyin_limit['user_buyin_limit'] > 0) {
 							if ($user_game['buyin_invoice_address_id'] > 0) {
 								$q = "SELECT * FROM invoice_addresses WHERE invoice_address_id='".$user_game['buyin_invoice_address_id']."';";
 								$r = run_query($q);
