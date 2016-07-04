@@ -1578,7 +1578,7 @@ class Game {
 			}
 			else {
 				$q = "INSERT INTO addresses SET game_id='".$this->db_game['game_id']."', address='".$burn_address_text."', bet_round_id='".$round_id."'";
-				$q .= ", bet_option_id='".$option_id."'";
+				if ($option_id > 0) $q .= ", bet_option_id='".$option_id."'";
 				$q .= ";";
 				$r = $GLOBALS['app']->run_query($q);
 				$burn_address_id = mysql_insert_id();
@@ -1763,7 +1763,9 @@ class Game {
 		$address_option_id = $this->addr_text_to_option_id($address);
 		
 		if ($address_option_id > 0 || !$delete_optionless) {
-			$q = "INSERT INTO addresses SET game_id='".$this->db_game['game_id']."', address='".$address."', option_id='".$address_option_id."', time_created='".time()."';";
+			$q = "INSERT INTO addresses SET game_id='".$this->db_game['game_id']."', address='".$address."'";
+			if ($address_option_id > 0) $q .= ", option_id='".$address_option_id."'";
+			$q .= ", time_created='".time()."';";
 			$r = $GLOBALS['app']->run_query($q);
 			$output_address_id = mysql_insert_id();
 			

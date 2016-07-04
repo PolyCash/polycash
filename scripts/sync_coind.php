@@ -155,17 +155,19 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$max_block = $max_block[0];
 	$completed_rounds = floor($max_block/$game->db_game['round_length']);
 	
+	echo "Looping through rounds 1 to $completed_rounds.<br/>";
 	for ($round_id=1; $round_id<=$completed_rounds; $round_id++) {
 		$game->add_round_from_rpc($round_id);
 	}
 	
 	$unconfirmed_txs = $coin_rpc->getrawmempool();
+	echo "Looping through ".count($unconfirmed_txs)." unconfirmed transactions.<br/>\n";
 	for ($i=0; $i<count($unconfirmed_txs); $i++) {
 		$game->walletnotify($coin_rpc, $unconfirmed_txs[$i]);
 	}
 	
 	$GLOBALS['app']->refresh_utxo_user_ids(false);
-	$game->update_nation_scores();
+	$game->update_option_scores();
 	
 	echo "$completed_rounds rounds have been added.";
 }
