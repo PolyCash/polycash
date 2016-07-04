@@ -880,7 +880,7 @@ if ($thisuser && $game) {
 				
 				<div class="row">
 					<div class="col-md-6">
-						<h2>Current votes</h2>
+						<h2>My Votes</h2>
 						<div id="my_current_votes">
 							<?php
 							echo $game->my_votes_table($current_round, $thisuser);
@@ -904,7 +904,16 @@ if ($thisuser && $game) {
 						</div>
 						<div class="col-md-6 bordered_cell" id="compose_vote_outputs">
 							<b>Outputs:</b><div id="display_tx_fee"></div><br/>
-							<div id="compose_output_start_msg">Add outputs by clicking on the empires below.</div>
+							<select class="form-control" id="select_add_output" onchange="select_add_output_changed();">
+								<option value="">Please select <?php echo $app->prepend_a_or_an($game->db_game['option_name']); ?>...</option>
+								<?php
+								$q = "SELECT * FROM game_voting_options WHERE game_id='".$game->db_game['game_id']."' ORDER BY option_id ASC;";
+								$r = $app->run_query($q);
+								while ($voting_option = $r->fetch()) {
+									echo '<option value="'.$voting_option['option_id'].'">'.$voting_option['name']."</option>\n";
+								}
+								?>
+							</select>
 						</div>
 					</div>
 					<div class="redtext" id="compose_vote_errors" style="margin-top: 5px;"></div>

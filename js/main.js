@@ -780,6 +780,8 @@ function add_utxo_to_vote(io_id, amount, create_block_id) {
 	}
 	if (!already_in) {
 		var index_id = vote_inputs.length;
+		var focus_select_output = false;
+		if (index_id == 0) focus_select_output = true;
 		vote_inputs.push(new vote_input(index_id, io_id, amount, create_block_id));
 		$('#select_utxo_'+io_id).hide();
 		$('#compose_vote_inputs').append('<div id="selected_utxo_'+index_id+'" onclick="remove_utxo_from_vote('+index_id+');" class="select_utxo btn btn-default">'+render_selected_utxo(index_id)+'</div>');
@@ -787,6 +789,7 @@ function add_utxo_to_vote(io_id, amount, create_block_id) {
 		refresh_compose_vote();
 		set_input_amount_sums();
 		refresh_output_amounts();
+		if (focus_select_output) setTimeout("$('#select_add_output').focus();", 600);
 	}
 }
 function add_option_to_vote(option_id, name) {
@@ -1567,4 +1570,13 @@ function block_id_to_taper_factor(block_id) {
 }
 function block_id_to_round_index(block_id) {
 	return ((block_id-1)%game_round_length)+1;
+}
+function select_add_output_changed() {
+	var option_id = $('#select_add_output').val();
+	
+	if (option_id != "") {
+		var option_name = $('#select_add_output option:selected').text();
+		add_option_to_vote(option_id, option_name);
+		$('#select_add_output').val("");
+	}
 }

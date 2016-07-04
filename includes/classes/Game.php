@@ -160,7 +160,7 @@ class Game {
 		$min_px_diam = 30;
 		
 		if ($show_intro_text) {
-			if ($block_within_round != $this->db_game['round_length']) $html .= "<h2>Current Rankings - Round #".$current_round."</h2>\n";
+			if ($block_within_round != $this->db_game['round_length']) $html .= "<h2>".ucwords($this->db_game['option_name'])." Rankings - Round #".$current_round."</h2>\n";
 			else {
 				$winner = $this->get_round_winner($round_stats_all);
 				if ($winner) $html .= "<h1>".$winner['name']." won round #".$current_round."</h1>";
