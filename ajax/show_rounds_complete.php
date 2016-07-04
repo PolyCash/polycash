@@ -2,6 +2,12 @@
 include("../includes/connect.php");
 include("../includes/get_session.php");
 
+if (!$game) {
+	$q = "SELECT * FROM games WHERE game_id='".get_site_constant('primary_game_id')."';";
+	$r = run_query($q);
+	$game = mysql_fetch_array($r);
+}
+
 $from_round_id = intval($_REQUEST['from_round_id']);
 
 $last_block_id = last_block_id($game['game_id']);

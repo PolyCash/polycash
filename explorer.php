@@ -188,7 +188,7 @@ if (in_array($explore_mode, array('rounds','blocks','addresses','transactions'))
 							echo '">';
 							echo '<div class="col-md-3">'.$rank.'. '.$ranked_nation['name'].'</div>';
 							echo '<div class="col-md-1" style="text-align: center;">'.round(100*$nation_score/$round['score_sum'], 2).'%</div>';
-							echo '<div class="col-md-3" style="text-align: center;">'.$nation_score/pow(10,8).' votes</div>';
+							echo '<div class="col-md-3" style="text-align: center;">'.round($nation_score/pow(10,8), 2).' votes</div>';
 							if ($thisuser) {
 								echo '<div class="col-md-3" style="text-align: center;">';
 								
