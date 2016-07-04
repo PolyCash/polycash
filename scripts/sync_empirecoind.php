@@ -168,6 +168,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	}
 	
 	refresh_utxo_user_ids();
+	update_nation_scores($game);
 	
 	echo "$completed_rounds rounds have been added.";
 }
