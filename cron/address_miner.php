@@ -33,10 +33,10 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			$q = "SELECT * FROM game_voting_options WHERE game_id='".$real_games[$real_game_i]->db_game['game_id']."' ORDER BY option_id ASC;";
 			$r = $app->run_query($q);
 			while ($option = $r->fetch()) {
-				$qq = "SELECT * FROM addresses WHERE game_id='".$real_games[$real_game_i]->db_game['game_id']."' AND option_id='".$option['option_id']."' AND user_id IS NULL;";
+				$qq = "SELECT * FROM addresses WHERE game_id='".$real_games[$real_game_i]->db_game['game_id']."' AND option_id='".$option['option_id']."' AND user_id IS NULL AND is_mine=1;";
 				$rr = $app->run_query($qq);
 				$num_addr = $rr->rowCount();
-	
+				
 				if ($num_addr < $real_games[$real_game_i]->db_game['min_unallocated_addresses']) {
 					echo "Generate ".($real_games[$real_game_i]->db_game['min_unallocated_addresses']-$num_addr)." unallocated ".$option['name']." addresses in \"".$real_games[$real_game_i]->db_game['name']."\"<br/>\n";
 					try {
