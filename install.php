@@ -19,13 +19,13 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				
 				$cmd = "mysql -u ".$GLOBALS['mysql_user']." -h ".$GLOBALS['mysql_server']." -p".$GLOBALS['mysql_password']." ".$GLOBALS['mysql_database']." < ".realpath(dirname(__FILE__))."/sql/schema-initial.sql";
 				echo exec($cmd);
-				
-				$app->update_schema();
 			}
 			else {
 				$app->set_db($GLOBALS['mysql_database']);
 			}
-
+			
+			$app->update_schema();
+			
 			$result = $app->run_query("SHOW TABLES LIKE 'games';");
 			$table_exists = $result->rowCount() > 0;
 			if (!$table_exists) {

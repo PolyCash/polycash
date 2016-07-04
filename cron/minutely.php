@@ -112,7 +112,7 @@ else {
 			if ($real_games[$real_game_i]->db_game['min_unallocated_addresses'] > 0) {
 				$has_newvotingaddress_func = true;
 				try {
-					$coin_rpc->getnewvotingaddress($option['name']);
+					$coin_rpcs[$real_game_i]->getnewvotingaddress($option['name']);
 				}
 				catch (Exception $e) {
 					$has_newvotingaddress_func = false;
