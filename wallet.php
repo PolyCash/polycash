@@ -686,6 +686,24 @@ $mature_balance = $account_value - $immature_balance;
 					</div>
 				</div>
 				<div class="row">
+					<div class="col-md-3">
+						Vote remainder towards:
+					</div>
+					<div class="col-md-5">
+						<select class="form-control" id="withdraw_remainder_address_id">
+							<option value="random">Random</option>
+							<?php
+							$q = "SELECT * FROM addresses a LEFT JOIN nations n ON n.nation_id=a.nation_id WHERE a.game_id='".$thisuser['game_id']."' AND a.user_id='".$thisuser['user_id']."' ORDER BY a.nation_id IS NULL ASC, a.nation_id ASC;";
+							$r = run_query($q);
+							while ($address = mysql_fetch_array($r)) {
+								if ($address['name'] == "") $address['name'] = "None";
+								echo "<option value=\"".$address['address_id']."\">".$address['name']."</option>\n";
+							}
+							?>
+						</select>
+					</div>
+				</div>
+				<div class="row">
 					<div class="col-md-push-3 col-md-2">
 						<button class="btn btn-success" id="withdraw_btn" onclick="attempt_withdrawal();">Withdraw</button>
 					</div>

@@ -18,6 +18,16 @@ if ($thisuser) {
 		$immature_balance = immature_balance($thisuser['game_id'], $thisuser);
 		$mature_balance = $account_value - $immature_balance;
 		
+		$remainder_address_id = $_REQUEST['remainder_address_id'];
+		
+		if ($remainder_address_id == "random") {
+			$q = "SELECT * FROM addresses WHERE user_id='".$thisuser['user_id']."' AND nation_id > 0 ORDER BY RAND() LIMIT 1;";
+			$r = run_query($q);
+			$remainder_address = mysql_fetch_array($r);
+			$remainder_address_id = $remainder_address['address_id'];
+		}
+		else $remainder_address_id = intval($remainder_address_id);
+		
 		if ($amount <= $mature_balance) {
 			$q = "SELECT * FROM addresses a LEFT JOIN users u ON a.user_id=u.user_id WHERE a.address='".mysql_real_escape_string($address)."' AND a.game_id='".$thisuser['game_id']."';";
 			$r = run_query($q);
@@ -25,7 +35,7 @@ if ($thisuser) {
 			if (mysql_numrows($r) == 1) {
 				$address = mysql_fetch_array($r);
 				
-				$transaction_id = new_webwallet_multi_transaction($game['game_id'], false, array($amount), $thisuser['user_id'], $address['user_id'], $mining_block_id, 'transaction', false, array($address['address_id']));
+				$transaction_id = new_webwallet_multi_transaction($game['game_id'], false, array($amount), $thisuser['user_id'], $address['user_id'], $mining_block_id, 'transaction', false, array($address['address_id']), $remainder_address_id);
 				
 				$output_obj['result_code'] = 5;
 				$output_obj['message'] = "Great, your coins have been sent!";

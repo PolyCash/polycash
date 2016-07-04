@@ -554,7 +554,7 @@ function new_payout_transaction($game, $voting_round, $block_id, $winning_nation
 	return $returnvals;
 }
 
-function new_webwallet_multi_transaction($game_id, $nation_ids, $amounts, $from_user_id, $to_user_id, $block_id, $type, $io_ids, $address_ids) {
+function new_webwallet_multi_transaction($game_id, $nation_ids, $amounts, $from_user_id, $to_user_id, $block_id, $type, $io_ids, $address_ids, $remainder_address_id) {
 	if (!$type || $type == "") $type = "transaction";
 	
 	$amount = 0;
@@ -579,7 +579,7 @@ function new_webwallet_multi_transaction($game_id, $nation_ids, $amounts, $from_
 		$transaction_id = mysql_insert_id();
 		
 		$overshoot_amount = 0;
-		$overshoot_return_addr_id = false;
+		$overshoot_return_addr_id = $remainder_address_id;
 		
 		if ($type == "giveaway" || $type == "votebase") {}
 		else {
@@ -594,7 +594,7 @@ function new_webwallet_multi_transaction($game_id, $nation_ids, $amounts, $from_
 					$qq = "UPDATE transaction_IOs SET spend_status='spent', spend_transaction_id='".$transaction_id."', spend_block_id='".$block_id."' WHERE io_id='".$transaction_input['io_id']."';";
 					$rr = run_query($qq);
 					$input_sum += $transaction_input['amount'];
-					$overshoot_return_addr_id = $transaction_input['address_id'];
+					if (!$overshoot_return_addr_id) $overshoot_return_addr_id = $transaction_input['address_id'];
 					$coin_blocks_destroyed += ($block_id - $transaction_input['create_block_id'])*$transaction_input['amount'];
 				}
 			}
@@ -625,7 +625,7 @@ function new_webwallet_multi_transaction($game_id, $nation_ids, $amounts, $from_
 			$r = run_query($q);
 			$overshoot_address = mysql_fetch_array($r);
 			
-			$q = "INSERT INTO transaction_IOs SET spend_status='unspent', game_id='".$game_id."', coin_blocks_destroyed='".$overshoot_cbd."', user_id='".$from_user_id."', address_id='".$overshoot_return_addr_id."', nation_id='".$overshoot_address['address_id']."', create_transaction_id='".$transaction_id."', amount='".$overshoot_amount."', create_block_id='".$block_id."';";
+			$q = "INSERT INTO transaction_IOs SET spend_status='unspent', game_id='".$game_id."', coin_blocks_destroyed='".$overshoot_cbd."', user_id='".$from_user_id."', address_id='".$overshoot_return_addr_id."', nation_id='".$overshoot_address['nation_id']."', create_transaction_id='".$transaction_id."', amount='".$overshoot_amount."', create_block_id='".$block_id."';";
 			$r = run_query($q);
 			$output_id = mysql_insert_id();
 		}
@@ -832,11 +832,6 @@ function new_block($game_id) {
 	
 	$voting_round = block_to_round($mining_block_id);
 	
-	/*if (get_site_constant('blocks_in_era') == 0 || $voting_round%get_site_constant('blocks_in_era') == 1) {
-		$q = "UPDATE nations SET cached_force_multiplier=".get_site_constant('num_voting_options').", relevant_wins=1;";
-		$r = run_query($q);
-	}*/
-	
 	$log_text .= "Created block $last_block_id<br/>\n";
 	
 	// Send notifications for coins that just became available
@@ -896,14 +891,6 @@ function new_block($game_id) {
 		$r = run_query($q);
 		
 		if ($winning_nation) {
-			/*if (get_site_constant('blocks_in_era') > 0) {
-				$q = "UPDATE nations SET relevant_wins=relevant_wins+1 WHERE nation_id='".$winning_nation."';";
-				$r = run_query($q);
-				
-				$q = "UPDATE nations SET cached_force_multiplier=ROUND((16+".($voting_round%100 - 1).")/relevant_wins, 8);";
-				$r = run_query($q);
-			}*/
-			
 			$q = "UPDATE game_nations SET losing_streak=0 WHERE game_id='".$game['game_id']."' AND nation_id='".$winning_nation."';";
 			$r = run_query($q);
 			
@@ -1001,7 +988,7 @@ function apply_user_strategies($game) {
 								$log_text .= "Vote ".$vote_amount." for ".$vote_nation_id."<br/>\n";
 							}
 							
-							$transaction_id = new_webwallet_multi_transaction($game['game_id'], $vote_nation_ids, $vote_amounts, $strategy_user['user_id'], $strategy_user['user_id'], $mining_block_id, 'transaction', false, false);
+							$transaction_id = new_webwallet_multi_transaction($game['game_id'], $vote_nation_ids, $vote_amounts, $strategy_user['user_id'], $strategy_user['user_id'], $mining_block_id, 'transaction', false, false, false);
 						}
 					}
 				}
@@ -1051,7 +1038,7 @@ function apply_user_strategies($game) {
 									$amounts[count($amounts)] = $coins_each;
 								}
 							}
-							$transaction_id = new_webwallet_multi_transaction($game['game_id'], $nation_ids, $amounts, $strategy_user['user_id'], $strategy_user['user_id'], $mining_block_id, 'transaction', false, false);
+							$transaction_id = new_webwallet_multi_transaction($game['game_id'], $nation_ids, $amounts, $strategy_user['user_id'], $strategy_user['user_id'], $mining_block_id, 'transaction', false, false, false);
 						}
 						else { // by_nation
 							$log_text .= "Dividing by nation for ".$strategy_user['username']." (".($free_balance/pow(10,8))." EMP)<br/>\n";
@@ -1076,7 +1063,7 @@ function apply_user_strategies($game) {
 										$amounts[count($amounts)] = $coin_amount;
 									}
 								}
-								$transaction_id = new_webwallet_multi_transaction($game['game_id'], $nation_ids, $amounts, $strategy_user['user_id'], $strategy_user['user_id'], $mining_block_id, 'transaction', false, false);
+								$transaction_id = new_webwallet_multi_transaction($game['game_id'], $nation_ids, $amounts, $strategy_user['user_id'], $strategy_user['user_id'], $mining_block_id, 'transaction', false, false, false);
 							}
 						}
 					}
@@ -1118,7 +1105,7 @@ function delete_reset_game($delete_or_reset, $game_id) {
 		$q = "SELECT * FROM user_games WHERE game_id='".$game_id."';;";
 		$r = run_query($q);
 		while ($user_game = mysql_fetch_array($r)) {
-			new_webwallet_multi_transaction($game_id, false, array(100000000000), $user_game['user_id'], $user_game['user_id'], last_block_id($game_id), 'giveaway', false, false);
+			new_webwallet_multi_transaction($game_id, false, array(100000000000), $user_game['user_id'], $user_game['user_id'], last_block_id($game_id), 'giveaway', false, false, false);
 		}
 	}
 	else {

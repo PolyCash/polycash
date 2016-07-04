@@ -356,7 +356,7 @@ function attempt_withdrawal() {
 		var address = $('#withdraw_address').val();
 		console.log(amount);
 		$('#withdraw_btn').html("Withdrawing...");
-		$.get("/ajax/withdraw.php?amount="+encodeURIComponent(amount)+"&address="+encodeURIComponent(address), function(result) {
+		$.get("/ajax/withdraw.php?amount="+encodeURIComponent(amount)+"&address="+encodeURIComponent(address)+"&remainder_address_id="+$('#withdraw_remainder_address_id').val(), function(result) {
 			$('#withdraw_btn').html("Withdraw");
 			$('#withdraw_amount').val("");
 			var result_obj = JSON.parse(result);
