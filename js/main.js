@@ -390,12 +390,72 @@ function attempt_withdrawal() {
 		});
 	}
 }
-function switch_to_game(game) {
-	$.get("/ajax/switch_to_game.php?game="+game, function(result) {
-		if (result == "1") {
+
+var game_form_vars = "giveaway_status,giveaway_amount,maturity,max_voting_fraction,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,game_status".split(",");
+function switch_to_game(game_id, action) {
+	var fetch_link_text = $('#fetch_game_link_'+game_id).html();
+	var switch_link_text = $('#switch_game_btn').html();
+	
+	if (action == "fetch") $('#fetch_game_link_'+game_id).html("Loading...");
+	if (action == "switch") $('#switch_game_btn').html("Switching...");
+	
+	$.get("/ajax/switch_to_game.php?game_id="+game_id+"&action="+action, function(result) {
+		var json_result = JSON.parse(result);
+		
+		if (action == "fetch" || action == "new") {
+			console.log(json_result);
+			if (action == "new") {
+				editing_game_id = json_result['game_id'];
+			}
+			else {
+				editing_game_id = game_id;
+				$('#fetch_game_link_'+game_id).html(fetch_link_text);
+			}
+			
+			$('#game_form').modal('show');
+			$('#game_form_name').html("Settings: "+json_result['name']);
+			
+			for (var i=0; i<game_form_vars.length; i++) {
+				if (game_form_vars[i] == "pos_reward" || game_form_vars[i] == "pow_reward" || game_form_vars[i] == "giveaway_amount") {
+					json_result[game_form_vars[i]] = parseInt(json_result[game_form_vars[i]])/Math.pow(10,8);
+				}
+				else if (game_form_vars[i] == "max_voting_fraction") {
+					json_result[game_form_vars[i]] = parseFloat(json_result[game_form_vars[i]]*100);
+				}
+				
+				$('#game_form_'+game_form_vars[i]).val(json_result[game_form_vars[i]]);
+				
+				if (json_result['game_status'] == "unstarted" || game_form_vars[i] == "game_status") $('#game_form_'+game_form_vars[i]).prop('disabled', false);
+				else $('#game_form_'+game_form_vars[i]).prop('disabled', true);
+			}
+		}
+		else if (action == "switch" || action == "delete" || action == "reset") {
+			if (action == "switch") $('#switch_game_btn').html(switch_link_text);
+			
+			if (json_result['status_code'] == 1) {
+				window.location = window.location;
+			}
+			else alert(json_result['message']);
+		}
+	});
+}
+function save_game() {
+	var save_link_text = $('#save_game_btn').html();
+	var save_url = "/ajax/save_game.php?game_id="+editing_game_id;
+	
+	for (var i=0; i<game_form_vars.length; i++) {
+		save_url += "&"+game_form_vars[i]+"="+encodeURIComponent($('#game_form_'+game_form_vars[i]).val());
+	}
+	
+	$('#save_game_btn').html("Loading...");
+	
+	$.get(save_url, function(result) {
+		$('#save_game_btn').html(save_link_text);
+		var json_result = JSON.parse(result);
+		if (parseInt(json_result['status_code']) == 1) {
 			window.location = window.location;
 		}
-		else alert(result);
+		else alert(json_result['message']);
 	});
 }
 function toggle_block_timing() {
@@ -414,6 +474,7 @@ var mature_ios = new Array();
 var nations = new Array();
 var nation_bets = new Array();
 var bet_sum = 0;
+var editing_game_id = false;
 
 function nation(nation_id, name) {
 	this.nation_id = nation_id;
@@ -619,11 +680,18 @@ function refresh_output_amounts() {
 		}
 	}
 }
+function format_coins(amount) {
+	return (Math.round(amount/Math.pow(10,6))/Math.pow(10,2)).toLocaleString();
+}
 function refresh_mature_io_btns() {
-	var select_btn_text = "";
 	for (var i=0; i<mature_ios.length; i++) {
-		if (payout_weight == "coin") select_btn_text = 'Add '+(Math.round(mature_ios[i].amount/Math.pow(10,6))/Math.pow(10,2)).toLocaleString()+' coins to my vote';
-		else select_btn_text = 'Cast '+(Math.round(((1 + last_block_id - mature_ios[i].create_block_id)*mature_ios[i].amount)/Math.pow(10,6))/Math.pow(10,2)).toLocaleString()+' votes';
+		var select_btn_text = "";
+		var votes;
+		if (payout_weight == 'coin') votes = mature_ios[i].amount;
+		else votes = ((1 + last_block_id - mature_ios[i].create_block_id)*mature_ios[i].amount);
+		select_btn_text += 'Add '+format_coins(votes);
+		select_btn_text += ' votes';
+		if (payout_weight == 'coin_block') select_btn_text += "<br/>("+format_coins(mature_ios[i].amount)+" coins)";
 		$('#select_utxo_'+mature_ios[i].io_id).html(select_btn_text);
 	}
 	for (var i=0; i<vote_inputs.length; i++) {

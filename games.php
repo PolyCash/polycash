@@ -153,7 +153,7 @@ include('includes/html_start.php');
 	else {
 		$redirect_url = get_redirect_url("/games/");
 		$redirect_id = $redirect_url['redirect_url_id'];
-		include("includes/loginbox.php");
+		include("includes/html_login.php");
 	}
 	?>
 </div>

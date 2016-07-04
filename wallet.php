@@ -13,7 +13,7 @@ if ($_REQUEST['do'] == "signup") {
 	$query = "SELECT * FROM users WHERE username='".$email."';";
 	$result = run_query($query);
 	
-	$query = "SELECT * FROM users WHERE ip_address='".$_SERVER['REMOTE_ADDR']."';";
+	$query = "SELECT * FROM users WHERE ip_address='".mysql_real_escape_string($_SERVER['REMOTE_ADDR'])."';";
 	$r = run_query($query);
 	
 	if (mysql_numrows($r) <= 20) {
@@ -86,7 +86,7 @@ if ($_REQUEST['do'] == "signup") {
 						$email_message .= "<p>This message was sent to you by http://empirecoin.org</p>";
 					}
 					
-					$email_id = mail_async($email, "EmpireCoin.org", "no-reply@empirecoiin.org", "New account created", $email_message, "", "");
+					$email_id = mail_async($email, "EmpireCoin.org", "no-reply@empirecoin.org", "New account created", $email_message, "", "");
 					
 					if ($_REQUEST['invite_key'] != "") {
 						try_apply_invite_key(get_site_constant('primary_game_id'), $user_id, $_REQUEST['invite_key']);
@@ -435,6 +435,7 @@ $mature_balance = $account_value - $immature_balance;
 		<h1><?php
 		if ($game['game_id'] != get_site_constant('primary_game_id')) echo "EmpireCoin - ";
 		echo $game['name'];
+		if ($game['game_status'] == "paused" || $game['game_status'] == "unstarted") echo " (Paused)";
 		?></h1>
 		<?php
 		include("includes/wallet_status.php");
@@ -454,12 +455,11 @@ $mature_balance = $account_value - $immature_balance;
 		<div class="row">
 			<div class="col-xs-2 tabcell" id="tabcell0" onclick="tab_clicked(0);">Play&nbsp;Now</div>
 			<?php if ($game['losable_bets_enabled'] == 1) { ?>
-			<div class="col-xs-2 tabcell" id="tabcell5" onclick="tab_clicked(5);">Gamble</div>
+			<div class="col-xs-2 tabcell" id="tabcell5" onclick="tab_clicked(4);">Gamble</div>
 			<?php } ?>
 			<div class="col-xs-2 tabcell" id="tabcell1" onclick="tab_clicked(1);">Settings</div>
 			<div class="col-xs-2 tabcell" id="tabcell2" onclick="tab_clicked(2);">My&nbsp;Results</div>
-			<div class="col-xs-2 tabcell" id="tabcell3" onclick="tab_clicked(3);">Addresses</div>
-			<div class="col-xs-2 tabcell" id="tabcell4" onclick="tab_clicked(4);">Withdraw</div>
+			<div class="col-xs-2 tabcell" id="tabcell3" onclick="tab_clicked(3);">Deposit&nbsp;or&nbsp;Withdraw</div>
 		</div>
 		<div class="row">
 			<div id="tabcontent0" class="tabcontent">
@@ -521,6 +521,33 @@ $mature_balance = $account_value - $immature_balance;
 				?>
 			</div>
 			<div id="tabcontent1" style="display: none;" class="tabcontent">
+				<h2>My Games</h2>
+				<?php
+				$q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser['user_id']."' AND (g.game_id='".get_site_constant('primary_game_id')."' OR g.creator_id='".$thisuser['user_id']."');";
+				$r = run_query($q);
+				
+				while ($user_game = mysql_fetch_array($r)) {
+					?>
+					<div class="row game_row">
+						<div class="col-sm-6 game_cell">
+							<?php
+							echo '<a id="fetch_game_link_'.$user_game['game_id'].'" href="" onclick="switch_to_game('.$user_game['game_id'].', \'fetch\'); return false;"';
+							if ($user_game['game_id'] == $game['game_id']) echo  ' class="selected_link"';
+							echo '>';
+							echo $user_game['name'];
+							echo "</a>";
+							?>
+						</div>
+					</div>
+					<?php
+				}
+				?>
+				<div class="row game_row">
+					<div class="col-sm-6 game_cell">
+						<a href="" onclick="switch_to_game(0, 'new'); return false;">Start a new Practice Game</a>
+					</div>
+				</div>
+				
 				<h2>Transaction Fees</h2>
 				<form method="post" action="/wallet/">
 					<input type="hidden" name="do" value="save_voting_strategy_fees" />
@@ -536,32 +563,6 @@ $mature_balance = $account_value - $immature_balance;
 						</div>
 					</div>
 				</form>
-				
-				<h2>My Games</h2>
-				<?php
-				echo "You're currently playing ".$game['name'].". ";
-				if ($game['game_type'] == "simulation" && $game['creator_id'] == $thisuser['user_id']) {
-					echo "<br/><a href=\"\" onclick=\"switch_to_game('reset'); return false;\">Reset this game</a> or ";
-					echo "<a href=\"\" onclick=\"switch_to_game('delete'); return false;\">Delete this game</a>";
-				}
-				?>
-				<ul style="margin-top: 6px;">
-					<?php
-					$q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser['user_id']."' AND (g.game_id='".get_site_constant('primary_game_id')."' OR g.creator_id='".$thisuser['user_id']."');";
-					$r = run_query($q);
-					while ($user_game = mysql_fetch_array($r)) {
-						echo "<li>";
-						if ($user_game['game_id'] == $game['game_id']) echo  "<b>";
-						else echo "<a href=\"\" onclick=\"switch_to_game(".$user_game['game_id']."); return false;\">";
-						echo $user_game['name'];
-						if ($user_game['game_id'] == $game['game_id']) echo  "</b>";
-						else echo "</a>";
-						echo "</li>";
-					}
-					?>
-					<li><a href="" onclick="switch_to_game('new'); return false;">Start a new Practice Game</a></li>
-				</ul>
-				<br/>
 				
 				<h2>Notifications</h2>
 				You can receive notifications whenever your coins are unlocked and ready to vote.<br/>
@@ -717,16 +718,49 @@ $mature_balance = $account_value - $immature_balance;
 				</center>
 			</div>
 			<div id="tabcontent3" style="display: none;" class="tabcontent">
+				<h1>Deposit</h1>
+				
+				<div id="giveaway_div">
+					<?php
+					$giveaway_avail_msg = 'You\'re eligible for a one time coin giveaway of '.number_format($game['giveaway_amount']/pow(10,8)).' EmpireCoins.<br/>';
+					$giveaway_avail_msg .= '<button class="btn btn-success" onclick="claim_coin_giveaway();" id="giveaway_btn">Claim '.number_format($game['giveaway_amount']/pow(10,8)).' EmpireCoins</button><br/>';
+					
+					if ($game['game_type'] == "simulation" && ($game['giveaway_status'] == "on" || $game['giveaway_status'] == "invite_only")) {
+						if ($game['giveaway_status'] == "invite_only") {
+							$q = "SELECT * FROM invitations WHERE used_user_id='".$thisuser['user_id']."' AND used_time=0 AND used=0;";
+							$r = run_query($q);
+							
+							if (mysql_numrows($r) > 0) {
+								$initial_tab = 3;
+								echo $giveaway_avail_msg;
+							}
+						}
+						else {
+							$q = "SELECT * FROM webwallet_transactions t JOIN transaction_IOs io ON t.transaction_id=io.create_transaction_id WHERE io.game_id='".$game['game_id']."' AND io.user_id='".$thisuser['user_id']."' AND t.transaction_desc='giveaway';";
+							$r = run_query($q);
+							
+							if (mysql_numrows($r) > 0) {}
+							else {
+								$initial_tab = 3;
+								echo $giveaway_avail_msg;
+							}
+						}
+					}
+					?>
+				</div>
+				
 				<?php
 				$q = "SELECT * FROM addresses a LEFT JOIN nations n ON n.nation_id=a.nation_id WHERE a.game_id='".$thisuser['game_id']."' AND a.user_id='".$thisuser['user_id']."' ORDER BY a.nation_id IS NULL ASC, a.nation_id ASC;";
 				$r = run_query($q);
-				echo "<b>You have ".mysql_numrows($r)." addresses.</b><br/>\n";
+				?>
+				<b>You have <?php echo mysql_numrows($r); ?> addresses.</b><br/>
+				<?php
 				while ($address = mysql_fetch_array($r)) {
 					?>
 					<div class="row">
 						<div class="col-sm-3">
 							<?php if ($address['nation_id'] > 0) { ?>
-							<img style="height: 12px; border: 1px solid rgba(0,0,0,0.5);" src="/img/flags/<?php echo str_replace(" ", "", $address['name']); ?>.jpg"> <?php echo $address['name']; ?>
+							<img style="height: 12px; border: 1px solid rgba(0,0,0,0.5);" src="/img/flags/<?php echo $address['name']; ?>.jpg"> <?php echo $address['name']; ?>
 							<?php } else { ?>
 							Default Address
 							<?php } ?>
@@ -741,43 +775,7 @@ $mature_balance = $account_value - $immature_balance;
 					<?php
 				}
 				?>
-			</div>
-			<div id="tabcontent4" style="display: none;" class="tabcontent">
-				<h1>Deposit</h1>
-				<div id="giveaway_div">
-					<?php
-					$giveaway_unavail_msg = 'To make a deposit, please send coins to one your <a href="" onclick="tab_clicked(3); return false;">addresses</a>.';
-					
-					$giveaway_avail_msg = 'You\'re eligible for a one time coin giveaway of '.number_format($game['giveaway_amount']/pow(10,8)).' EmpireCoins.<br/>';
-					$giveaway_avail_msg .= '<button class="btn btn-success" onclick="claim_coin_giveaway();" id="giveaway_btn">Claim '.number_format($game['giveaway_amount']/pow(10,8)).' EmpireCoins</button>';
-					
-					if ($game['game_type'] == "simulation" && ($game['giveaway_status'] == "on" || $game['giveaway_status'] == "invite_only")) {
-						if ($game['giveaway_status'] == "invite_only") {
-							$q = "SELECT * FROM invitations WHERE used_user_id='".$thisuser['user_id']."' AND used_time=0 AND used=0;";
-							$r = run_query($q);
-							
-							if (mysql_numrows($r) > 0) {
-								$initial_tab = 4;
-								echo $giveaway_avail_msg;
-							}
-							else echo $giveaway_unavail_msg;
-						}
-						else {
-							$q = "SELECT * FROM webwallet_transactions t JOIN transaction_IOs io ON t.transaction_id=io.create_transaction_id WHERE io.game_id='".$game['game_id']."' AND io.user_id='".$thisuser['user_id']."' AND t.transaction_desc='giveaway';";
-							$r = run_query($q);
-							
-							if (mysql_numrows($r) > 0) {
-								echo $giveaway_unavail_msg;
-							}
-							else {
-								$initial_tab = 4;
-								echo $giveaway_avail_msg;
-							}
-						}
-					}
-					else echo $giveaway_unavail_msg;
-					?>
-				</div>
+				
 				<h1>Withdraw</h1>
 				To withdraw coins, please enter an amount and an EmpireCoin address below then click "Withdraw"<br/>
 				<div class="row">
@@ -821,7 +819,7 @@ $mature_balance = $account_value - $immature_balance;
 				</div>
 			</div>
 			<?php if ($game['losable_bets_enabled'] == 1) { ?>
-				<div class="tabcontent" style="display: none;" id="tabcontent5">
+				<div class="tabcontent" style="display: none;" id="tabcontent4">
 					<div id="my_bets">
 						<?php
 						echo my_bets($game, $thisuser);
@@ -896,6 +894,126 @@ $mature_balance = $account_value - $immature_balance;
 				</div>
 			<?php } ?>
 		</div>
+			
+		<div style="display: none;" class="modal fade" id="game_form">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-body">
+						<form onsubmit="save_game();">
+							<div class="row" style="text-align: center;">
+								<h1 id="game_form_name"></h1>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">
+									Game status:
+								</div>
+								<div class="col-sm-6">
+									<select class="form-control" id="game_form_game_status">
+										<option value="unstarted">Not started</option>
+										<option value="paused">Paused</option>
+										<option value="running">Running</option>
+									</select>
+									<br/>
+									<button class="btn btn-danger" onclick="switch_to_game(editing_game_id, 'delete'); return false;">Delete this Game</button>
+									<button class="btn btn-warning" onclick="switch_to_game(editing_game_id, 'reset'); return false;">Reset this Game</button>
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">
+									Blocks per round:
+								</div>
+								<div class="col-sm-3">
+									<input class="form-control" style="text-align: right;" type="text" id="game_form_round_length" />
+								</div>
+								<div class="col-sm-3 form-control-static">
+									blocks
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">Seconds per block:</div>
+								<div class="col-sm-3">
+									<input class="form-control" style="text-align: right;" type="text" id="game_form_seconds_per_block" />
+								</div>
+								<div class="col-sm-3 form-control-static">
+									seconds
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">Definition of a vote:</div>
+								<div class="col-sm-6">
+									<select class="form-control" type="text" id="game_form_payout_weight">
+										<option value="coin">Coins staked</option>
+										<option value="coin_block">Coins over time (coin blocks)</option>
+									</select>
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">Transaction lock time:</div>
+								<div class="col-sm-3">
+									<input class="form-control" style="text-align: right;" type="text" id="game_form_maturity" />
+								</div>
+								<div class="col-sm-3 form-control-static">
+									blocks
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">Give out coins to each player?</div>
+								<div class="col-sm-6">
+									<select class="form-control" id="game_form_giveaway_status">
+										<option value="on">Yes</option>
+										<option value="off">No</option>
+										<option value="invite_only">Invite Only</option>
+									</select>
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">Initial coins given to each player:</div>
+								<div class="col-sm-3">
+									<input class="form-control" style="text-align: right;" type="text" id="game_form_giveaway_amount" />
+								</div>
+								<div class="col-sm-3 form-control-static">
+									coins
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">Voting payout reward:</div>
+								<div class="col-sm-3">
+									<input class="form-control" style="text-align: right;" type="text" id="game_form_pos_reward" />
+								</div>
+								<div class="col-sm-3 form-control-static">
+									coins
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">Reward for mining a block:</div>
+								<div class="col-sm-3">
+									<input class="form-control" style="text-align: right;" type="text" id="game_form_pow_reward" />
+								</div>
+								<div class="col-sm-3 form-control-static">
+									coins
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">Winning percentage limit:</div>
+								<div class="col-sm-3">
+									<input class="form-control" style="text-align: right;" type="text" id="game_form_max_voting_fraction" />
+								</div>
+								<div class="col-sm-3 form-control-static">
+									%
+								</div>
+							</div>
+							
+							<div style="height: 10px;"></div>
+							
+							<button id="save_game_btn" type="button" class="btn btn-success" onclick="save_game();">Save Game Settings</button>
+							<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+							
+							<button id="switch_game_btn" style="float: right;" type="button" class="btn btn-primary" onclick="switch_to_game(editing_game_id, 'switch');">Switch to this game</button>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
 		
 		<br/><br/>
 		
@@ -907,7 +1025,7 @@ $mature_balance = $account_value - $immature_balance;
 		<?php
 	}
 	else {
-		include("includes/loginbox.php");
+		include("includes/html_login.php");
 	}
 	?>
 </div>

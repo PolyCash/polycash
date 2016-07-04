@@ -4,77 +4,10 @@ include("../includes/get_session.php");
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuser);
 
 if ($thisuser) {
-	$action = $_REQUEST['game'];
+	$action = $_REQUEST['action'];
+	$game_id = intval($_REQUEST['game_id']);
 	
-	if ($action == "reset" || $action == "delete") {
-		$game_id = intval($thisuser['game_id']);
-		
-		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
-		$r = run_query($q);
-		
-		if (mysql_numrows($r) == 1) {
-			$this_game = mysql_fetch_array($r);
-			
-			if ($this_game['game_type'] == "simulation" && $this_game['creator_id'] == $thisuser['user_id']) {
-				$success = delete_reset_game($action, $game_id);
-				
-				if ($success) {
-					if ($action == "delete") {
-						$q = "UPDATE users SET game_id='".get_site_constant('primary_game_id')."' WHERE user_id='".$thisuser['user_id']."';";
-						$r = run_query($q);
-					}
-					
-					echo "1";
-				}
-				else echo "Error, the game couldn't be reset.";
-			}
-			else echo "You can't modify this game.";
-		}
-		else echo "You can't modify this game.";
-	}
-	else if ($action == "new") {
-		$q = "SELECT MAX(creator_game_index) FROM games WHERE creator_id='".$thisuser['user_id']."';";
-		$r = run_query($q);
-		if (mysql_numrows($r) > 0) {
-			$game_index = mysql_fetch_row($r);
-			$game_index = $game_index[0]+1;
-		}
-		else $game_index = 1;
-		
-		$q = "INSERT INTO games SET creator_id='".$thisuser['user_id']."', seconds_per_block='8', block_timing='realistic', creator_game_index='".$game_index."', game_type='simulation', name='Practice Game #".$game_index."';";
-		$r = run_query($q);
-		$game_id = mysql_insert_id();
-		
-		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
-		$r = run_query($q);
-		$game = mysql_fetch_array($r);
-		
-		ensure_game_nations($game_id);
-		
-		ensure_user_in_game($thisuser['user_id'], $game_id);
-		for ($i=0; $i<5; $i++) {
-			new_webwallet_multi_transaction($game, false, array(20000000000), false, $thisuser['user_id'], last_block_id($game_id), 'giveaway', false, false, false);
-		}
-		
-		$q = "SELECT * FROM users WHERE user_id != '".$thisuser['user_id']."' ORDER BY RAND() LIMIT 10;";
-		$r = run_query($q);
-		while ($player = mysql_fetch_array($r)) {
-			ensure_user_in_game($player['user_id'], $game_id);
-			for ($i=0; $i<5; $i++) {
-				new_webwallet_multi_transaction($game, false, array(20000000000), false, $player['user_id'], last_block_id($game_id), 'giveaway', false, false, false);
-			}
-		}
-		
-		$q = "UPDATE users SET game_id='".$game_id."' WHERE user_id='".$thisuser['user_id']."';";
-		$r = run_query($q);
-		
-		$q = "UPDATE user_games ug, user_strategies s SET s.voting_strategy='manual' WHERE ug.strategy_id=s.strategy_id AND ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game_id."';";
-		$r = run_query($q);
-		
-		echo "1";
-	}
-	else {
-		$game_id = intval($action);
+	if ($action == "switch" && $game_id > 0) {
 		$q = "SELECT * FROM user_games WHERE user_id='".$thisuser['user_id']."' AND game_id='".$game_id."';";
 		$r = run_query($q);
 		
@@ -84,10 +17,73 @@ if ($thisuser) {
 			$q = "UPDATE users SET game_id='".$user_game['game_id']."' WHERE user_id='".$thisuser['user_id']."';";
 			$r = run_query($q);
 			
-			echo "1";
+			output_message(1, "", false);
 		}
-		else echo "That game doesn't exist or you don't have permission to join it.";
+		else output_message(2, "That game doesn't exist or you don't have permission to join it.");
 	}
+	else if ($action == "fetch" || $action == "new") {
+		if ($action == "new") {
+			$q = "SELECT MAX(creator_game_index) FROM games WHERE creator_id='".$thisuser['user_id']."';";
+			$r = run_query($q);
+			if (mysql_numrows($r) > 0) {
+				$game_index = mysql_fetch_row($r);
+				$game_index = $game_index[0]+1;
+			}
+			else $game_index = 1;
+			
+			$q = "INSERT INTO games SET creator_id='".$thisuser['user_id']."', maturity=0, round_length=10, seconds_per_block='15', block_timing='realistic', creator_game_index='".$game_index."', game_type='simulation', name='Practice Game #".$game_index."', pos_reward='".(1200*pow(10,8))."', pow_reward='".(50*pow(10,8))."';";
+			$r = run_query($q);
+			$game_id = mysql_insert_id();
+			
+			$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
+			$r = run_query($q);
+			$game = mysql_fetch_array($r);
+			
+			ensure_game_nations($game_id);
+			
+			// Add this user and 10 random users to the game
+			ensure_user_in_game($thisuser['user_id'], $game_id);
+			
+			$q = "UPDATE users SET game_id='".$game_id."' WHERE user_id='".$thisuser['user_id']."';";
+			$r = run_query($q);
+			
+			$q = "UPDATE user_games ug, user_strategies s SET s.voting_strategy='manual' WHERE ug.strategy_id=s.strategy_id AND ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game_id."';";
+			$r = run_query($q);
+		}
+		
+		$q = "SELECT g.game_id, g.game_status, g.block_timing, g.giveaway_status, g.giveaway_amount, g.maturity, g.max_voting_fraction, g.name, g.payout_weight, g.round_length, g.seconds_per_block, g.pos_reward, g.pow_reward FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game_id."';";
+		$r = run_query($q);
+		
+		if (mysql_numrows($r) == 1) {
+			$switch_game = mysql_fetch_array($r);
+			output_message(1, "", $switch_game);
+		}
+		else output_message(2, "Access denied", false);
+	}
+	else if ($action == "reset" || $action == "delete") {
+		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
+		$r = run_query($q);
+		
+		if (mysql_numrows($r) == 1) {
+			$this_game = mysql_fetch_array($r);
+			if ($this_game['game_type'] == "simulation" && $this_game['creator_id'] == $thisuser['user_id']) {
+				$success = delete_reset_game($action, $game_id);
+				
+				if ($success) {
+					if ($action == "delete") {
+						$q = "UPDATE users SET game_id='".get_site_constant('primary_game_id')."' WHERE user_id='".$thisuser['user_id']."';";
+						$r = run_query($q);
+					}
+					
+					output_message(1, "", false);
+				}
+				else output_message(2, "Error, the game couldn't be reset.", false);
+			}
+			else output_message(2, "You can't modify this game.", false);
+		}
+		else output_message(2, "You can't modify this game.", false);
+	}
+	else output_message(3, "Bad URL", false);
 }
-else echo "Please log in.";
+else output_message(2, "Please log in.", false);
 ?>

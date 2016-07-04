@@ -185,19 +185,20 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 					while ($round_block = mysql_fetch_array($r)) {
 						echo "<a href=\"/explorer/blocks/".$round_block['block_id']."\">".$round_block['block_id']."</a> ";
 					}
-					echo "<br/>\n";
+					?>
+					<br/>
 					
-					echo "<a href=\"/explorer/rounds/\">See all rounds</a><br/>";
+					<a href="/explorer/rounds/">See all rounds</a><br/>
 					
-					echo "<h2>Rankings</h2>";
+					<h2>Rankings</h2>
 					
-					echo '<div class="row" style="font-weight: bold;">';
-					echo '<div class="col-md-3">Empire</div>';
-					echo '<div class="col-md-1" style="text-align: center;">Percent</div>';
-					echo '<div class="col-md-3" style="text-align: center;">Coin Votes</div>';
-					if ($thisuser) echo '<div class="col-md-3" style="text-align: center;">Your Votes</div>';
-					echo '</div>'."\n";
-					
+					<div class="row" style="font-weight: bold;">
+					<div class="col-md-3">Empire</div>
+					<div class="col-md-1" style="text-align: center;">Percent</div>
+					<div class="col-md-3" style="text-align: center;">Coin Votes</div>
+					<?php if ($thisuser) { ?><div class="col-md-3" style="text-align: center;">Your Votes</div><?php } ?>
+					</div>
+					<?php
 					// Todo: This section doesn't work for the current round because $round['position_1'] etc are not defined.
 					$winner_displayed = FALSE;
 					for ($rank=1; $rank<=16; $rank++) {
@@ -229,11 +230,11 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 							echo '</div>'."\n";
 						}
 					}
-					
-					echo "<br/>\n";
-					
-					echo "<h2>Transactions</h2>";
-					echo '<div style="border-bottom: 1px solid #bbb;">';
+					?>
+					<br/>
+					<h2>Transactions</h2>
+					<div class="transaction_table">
+					<?php
 					for ($i=$from_block_id; $i<=$to_block_id; $i++) {
 						echo "Block #".$i."<br/>\n";
 						$q = "SELECT * FROM webwallet_transactions WHERE game_id='".$this_game['game_id']."' AND block_id='".$i."' AND amount > 0 ORDER BY transaction_id ASC;";

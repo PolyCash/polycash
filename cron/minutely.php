@@ -13,22 +13,24 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	
 	echo "Running for ".$game['name']."<br/>\n";
 	
-	if ($GLOBALS['always_generate_coins']) {
-		$q = "SELECT * FROM blocks WHERE game_id='".$game['game_id']."' ORDER BY block_id DESC LIMIT 1;";
-		$r = run_query($q);
-		if (mysql_numrows($r) > 0) {
-			$lastblock = mysql_fetch_array($r);
-			if ($lastblock['time_created'] < time()-$GLOBALS['restart_generation_seconds']) {
-				$empirecoin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
-				$empirecoin_rpc->setgenerate(false);
-				$empirecoin_rpc->setgenerate(true);
-				echo "Started generating coins...<br/>\n";
+	if ($game['game_status'] == "running") {
+		if ($GLOBALS['always_generate_coins']) {
+			$q = "SELECT * FROM blocks WHERE game_id='".$game['game_id']."' ORDER BY block_id DESC LIMIT 1;";
+			$r = run_query($q);
+			if (mysql_numrows($r) > 0) {
+				$lastblock = mysql_fetch_array($r);
+				if ($lastblock['time_created'] < time()-$GLOBALS['restart_generation_seconds']) {
+					$empirecoin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
+					$empirecoin_rpc->setgenerate(false);
+					$empirecoin_rpc->setgenerate(true);
+					echo "Started generating coins...<br/>\n";
+				}
 			}
 		}
+		
+		// Apply user strategies
+		echo apply_user_strategies($game);
 	}
-	
-	// Apply user strategies
-	echo apply_user_strategies($game);
 	
 	if ($GLOBALS['walletnotify_by_cron'] || $GLOBALS['min_unallocated_addresses'] > 0) {
 		$empirecoin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
@@ -55,7 +57,7 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		echo "Done generating addresses at ".round(microtime(true)-$script_start_time, 2)." seconds.<br/>\n";
 	}
 	
-	if (($GLOBALS['walletnotify_by_cron'] && $game['game_type'] == "real") || $game['game_type'] == "simulation") {
+	if ($game['game_status'] == "running" && (($GLOBALS['walletnotify_by_cron'] && $game['game_type'] == "real") || $game['game_type'] == "simulation")) {
 		try {
 			$seconds_to_sleep = 5;
 			do {

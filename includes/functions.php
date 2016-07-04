@@ -151,7 +151,7 @@ function round_voting_stats($game, $round_id) {
 		return run_query($q);
 	}
 	else {
-		$q = "SELECT n.*, gn.* FROM transaction_IOs i, game_nations gn, nations n WHERE gn.nation_id=n.nation_id AND i.game_id='".$game['game_id']."' AND i.nation_id=gn.nation_id AND i.create_block_id >= ".((($round_id-1)*10)+1)." AND i.create_block_id <= ".($round_id*10-1)." GROUP BY i.nation_id ORDER BY SUM(".$sum_field.") DESC, i.nation_id ASC;";
+		$q = "SELECT n.*, gn.* FROM transaction_IOs i, game_nations gn, nations n WHERE gn.nation_id=n.nation_id AND i.game_id='".$game['game_id']."' AND i.nation_id=gn.nation_id AND i.create_block_id >= ".((($round_id-1)*$game['round_length'])+1)." AND i.create_block_id <= ".($round_id*$game['round_length']-1)." GROUP BY i.nation_id ORDER BY SUM(".$sum_field.") DESC, i.nation_id ASC;";
 		return run_query($q);
 	}
 }
@@ -254,7 +254,7 @@ function current_round_table($game, $current_round, $user, $show_intro_text) {
 	$html = "<div style=\"padding: 5px;\">";
 	
 	if ($show_intro_text) {
-		if ($block_within_round != 10) $html .= "<h2>Current Rankings - Round #".$current_round."</h2>\n";
+		if ($block_within_round != $game['round_length']) $html .= "<h2>Current Rankings - Round #".$current_round."</h2>\n";
 		else {
 			$winner = get_round_winner($round_stats_all, $game);
 			if ($winner) $html .= "<h1>".$winner['name']." won round #".$current_round."</h1>";
@@ -263,7 +263,7 @@ function current_round_table($game, $current_round, $user, $show_intro_text) {
 		if ($last_block_id == 0) $html .= 'Currently mining the first block.<br/>';
 		else $html .= 'Last block completed: #'.$last_block_id.', currently mining #'.($last_block_id+1).'<br/>';
 		
-		if ($block_within_round == 10) {
+		if ($block_within_round == $game['round_length']) {
 			$html .= format_bignum($score_sum/pow(10,8)).' votes were cast in this round.<br/>';
 			$my_votes = my_votes_in_round($game, $current_round, $user['user_id']);
 			$my_winning_votes = $my_votes[0][$winner['nation_id']][$game['payout_weight']."s"];
@@ -891,7 +891,7 @@ function update_nation_scores($game) {
 	$round_id = block_to_round($game, last_block_id($game['game_id'])+1);
 	$q = "UPDATE game_nations n INNER JOIN (
 		SELECT nation_id, SUM(amount) sum_amount, SUM(coin_blocks_destroyed) sum_cbd FROM transaction_IOs 
-		WHERE game_id='".$game['game_id']."' AND (create_block_id >= ".((($round_id-1)*10)+1)." OR create_block_id IS NULL) AND amount > 0
+		WHERE game_id='".$game['game_id']."' AND (create_block_id >= ".((($round_id-1)*$game['round_length'])+1)." OR create_block_id IS NULL) AND amount > 0
 		GROUP BY nation_id
 	) i ON n.nation_id=i.nation_id SET n.coins_currently_voted=i.sum_amount, n.coin_block_score=i.sum_cbd, n.current_vote_score=i.sum_amount WHERE n.game_id='".$game['game_id']."';";
 	$r = run_query($q);
@@ -1142,7 +1142,6 @@ function new_block($game_id) {
 	$mining_block_id = $last_block_id+1;
 	
 	$mined_address = create_or_fetch_address($game, "Ex".random_string(32), true, false, false);
-	//						new_webwallet_multi_transaction($game, $nation_ids, $amounts, $from_user_id, $to_user_id, $block_id, $type, $io_ids, $address_ids, $remainder_address_id) {
 	$mined_transaction_id = new_webwallet_multi_transaction($game, array(false), array($game['pow_reward']), false, false, $last_block_id, "coinbase", false, array($mined_address['address_id']), false);
 	
 	$voting_round = block_to_round($game, $mining_block_id);
@@ -1291,8 +1290,9 @@ function apply_user_strategies($game) {
 	
 	if ($block_of_round != 0) {
 		$q = "SELECT * FROM users u INNER JOIN user_games g ON u.user_id=g.user_id INNER JOIN user_strategies s ON g.strategy_id=s.strategy_id WHERE g.game_id='".$game['game_id']."'";
-		//if ($game['game_id'] == get_site_constant('primary_game_id')) $q .= " AND (u.logged_in=0 OR u.game_id='".$game['game_id']."')";
-		$q .= " AND (s.voting_strategy='by_rank' OR s.voting_strategy='by_nation' OR s.voting_strategy='api') AND s.vote_on_block_".$block_of_round."=1 ORDER BY RAND();";
+		$q .= " AND (s.voting_strategy='by_rank' OR s.voting_strategy='by_nation' OR s.voting_strategy='api')";
+		//$q .= " AND s.vote_on_block_".$block_of_round."=1";
+		$q .= " ORDER BY RAND();";
 		$r = run_query($q);
 		
 		$log_text .= "Applying user strategies for block #".$mining_block_id.", looping through ".mysql_numrows($r)." users.<br/>";
@@ -2443,5 +2443,14 @@ function refresh_utxo_user_ids($only_unspent_utxos) {
 	if ($only_unspent_utxos) $update_user_id_q .= " WHERE io.spend_status='unspent'";
 	$update_user_id_q .= ";";
 	$update_user_id_r = run_query($update_user_id_q);
+}
+
+function output_message($status_code, $message, $dump_object) {
+	if (!$dump_object) $dump_object = array("status_code"=>$status_code, "message"=>$message);
+	else {
+		$dump_object['status_code'] = $status_code;
+		$dump_object['message'] = $message;
+	}
+	echo json_encode($dump_object);
 }
 ?>

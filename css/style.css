@@ -160,12 +160,10 @@ and (max-device-width : 480px) {
 }
 
 .tabcell {
-	border: 1px solid #999;
-	border-top-right-radius: 25px;
-	border-top-left-radius: 25px;
-	background-color: #f6f6f6;
+	border: 1px solid #aaa;
+	background-color: #f9f9f9;
 	line-height: 30px;
-	margin-left: -1px;
+	margin-right: -1px;
 	cursor: pointer;
 	overflow: hidden;
 	text-align: center;
@@ -217,9 +215,21 @@ and (max-device-width : 480px) {
 	padding: 4px 10px;
 	margin: 5px;
 	cursor: pointer;
+	text-align: center;
 }
 .select_utxo_disabled {
 	background-color: #555;
 	color: #fff;
 	border: 1px solid #555;
+}
+.transaction_table {
+	border-bottom: 1px solid #bbb;
+}
+.game_cell {
+}
+.game_row {
+}
+.selected_link {
+	font-weight: bold;
+	color: #000;
 }
