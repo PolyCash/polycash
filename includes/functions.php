@@ -1239,6 +1239,9 @@ function apply_user_strategies($game) {
 							}
 							
 							$transaction_id = new_webwallet_multi_transaction($game, $vote_nation_ids, $vote_amounts, $strategy_user['user_id'], $strategy_user['user_id'], false, 'transaction', false, false, false);
+							
+							if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
+							else $log_text .= "Failed to add transaction.<br/>\n";
 						}
 					}
 				}
@@ -1289,6 +1292,9 @@ function apply_user_strategies($game) {
 								}
 							}
 							$transaction_id = new_webwallet_multi_transaction($game, $nation_ids, $amounts, $strategy_user['user_id'], $strategy_user['user_id'], false, 'transaction', false, false, false);
+							
+							if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
+							else $log_text .= "Failed to add transaction.<br/>\n";
 						}
 						else { // by_nation
 							$log_text .= "Dividing by nation for ".$strategy_user['username']." (".($free_balance/pow(10,8))." EMP)<br/>\n";
@@ -1314,6 +1320,9 @@ function apply_user_strategies($game) {
 									}
 								}
 								$transaction_id = new_webwallet_multi_transaction($game, $nation_ids, $amounts, $strategy_user['user_id'], $strategy_user['user_id'], false, 'transaction', false, false, false);
+								
+								if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
+								else $log_text .= "Failed to add transaction.<br/>\n";
 							}
 						}
 					}
@@ -1398,7 +1407,7 @@ function render_transaction($transaction, $selected_address_id, $firstcell_text)
 		$html .= "Voting Payout&nbsp;&nbsp;".round($transaction['amount']/pow(10,8), 2)." coins";
 	}
 	else {
-		$qq = "SELECT * FROM transaction_IOs i, addresses a LEFT JOIN nations n ON a.nation_id=n.nation_id WHERE i.spend_transaction_id='".$transaction['transaction_id']."' AND i.address_id=a.address_id ORDER BY i.amount DESC;";
+		$qq = "SELECT * FROM transaction_IOs i JOIN addresses a ON i.address_id=a.address_id LEFT JOIN nations n ON a.nation_id=n.nation_id WHERE i.spend_transaction_id='".$transaction['transaction_id']."' ORDER BY i.amount DESC;";
 		$rr = run_query($qq);
 		$input_sum = 0;
 		while ($input = mysql_fetch_array($rr)) {
