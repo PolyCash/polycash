@@ -180,30 +180,30 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 			echo "Error, you've reached an invalid page.";
 		}
 		else {
-			?>
-			<script type="text/javascript">
-			var game_id = <?php echo $game->db_game['game_id']; ?>;
-			var game_url_identifier = '<?php echo $game->db_game['url_identifier']; ?>';
-			</script>
+			if ($game) { ?>
+				<script type="text/javascript">
+				var game_id = <?php echo $game->db_game['game_id']; ?>;
+				var game_url_identifier = '<?php echo $game->db_game['url_identifier']; ?>';
+				</script>
 			
-			<div class="row">
-				<div class="col-sm-7 ">
-					<ul class="list-inline explorer_nav" id="explorer_nav">
-						<li><a<?php if ($explore_mode == 'blocks') echo ' class="selected"'; ?> href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/blocks/">Blocks</a></li>
-						<li><a<?php if ($explore_mode == 'rounds') echo ' class="selected"'; ?> href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/rounds/">Rounds</a></li>
-						<li><a<?php if ($explore_mode == 'unconfirmed') echo ' class="selected"'; ?> href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/transactions/unconfirmed/">Unconfirmed Transactions</a></li>
-						<?php if ($thisuser) { ?><li><a href="/wallet/">My Wallet</a></li><?php } ?>
-					</ul>
+				<div class="row">
+					<div class="col-sm-7 ">
+						<ul class="list-inline explorer_nav" id="explorer_nav">
+							<li><a<?php if ($explore_mode == 'blocks') echo ' class="selected"'; ?> href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/blocks/">Blocks</a></li>
+							<li><a<?php if ($explore_mode == 'rounds') echo ' class="selected"'; ?> href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/rounds/">Rounds</a></li>
+							<li><a<?php if ($explore_mode == 'unconfirmed') echo ' class="selected"'; ?> href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/transactions/unconfirmed/">Unconfirmed Transactions</a></li>
+							<?php if ($thisuser) { ?><li><a href="/wallet/">My Wallet</a></li><?php } ?>
+						</ul>
+					</div>
+					<div class="col-sm-4 row-no-padding">
+						<input type="text" class="form-control" placeholder="Search..." id="explorer_search" />
+					</div>
+					<div class="col-sm-1 row-no-padding">
+						<button class="btn btn-primary" onclick="explorer_search();">Go</button>
+					</div>
 				</div>
-				<div class="col-sm-4 row-no-padding">
-					<input type="text" class="form-control" placeholder="Search..." id="explorer_search" />
-				</div>
-				<div class="col-sm-1 row-no-padding">
-					<button class="btn btn-primary" onclick="explorer_search();">Go</button>
-				</div>
-			</div>
-			
-			<?php
+				<?php
+			}
 			if ($explore_mode == "rounds") {
 				if ($round || $round_status == "current") {
 					if ($round_status == "current") {
