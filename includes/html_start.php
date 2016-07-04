@@ -62,7 +62,6 @@
 						}
 					}
 					?>"><?php if ($thisuser) echo "My Account"; else echo "Log In"; ?></a></li>
-					<li<?php if ($nav_tab_selected == "download") echo ' class="active"'; ?>><a href="/download/">Download</a></li>
 					<li<?php if ($nav_tab_selected == "explorer") echo ' class="active"'; ?>><a href="/explorer/<?php if ($game) echo $game['url_identifier']."/"; ?>">Explorer</a></li>
 					<?php
 					if ($thisuser || $_REQUEST['do'] == "logout") { ?>
