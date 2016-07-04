@@ -64,7 +64,7 @@ function mail_async($email, $from_name, $from, $subject, $message, $bcc, $cc) {
 }
 
 function account_coin_value($game_id, $user) {
-	$q = "SELECT SUM(amount) FROM transaction_IOs WHERE spend_status='unspent' AND game_id='".$game_id."' AND user_id='".$user['user_id']."';";
+	$q = "SELECT SUM(amount) FROM transaction_IOs WHERE spend_status='unspent' AND game_id='".$game_id."' AND user_id='".$user['user_id']."' AND create_block_id IS NOT NULL;";
 	$r = run_query($q);
 	$sum = mysql_fetch_row($r);
 	return $sum[0];
