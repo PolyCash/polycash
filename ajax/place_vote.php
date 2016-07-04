@@ -28,7 +28,7 @@ if ($thisuser) {
 	
 	$account_value = account_coin_value($game, $thisuser);
 	$immature_balance = immature_balance($game, $thisuser);
-	$mature_balance = $account_value - $immature_balance;
+	$mature_balance = mature_balance($game, $thisuser);
 	
 	$io_ids_csv = $_REQUEST['io_ids'];
 	$io_ids = explode(",", $io_ids_csv);

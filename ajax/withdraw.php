@@ -16,7 +16,7 @@ if ($thisuser) {
 		$mining_block_id = $last_block_id+1;
 		$account_value = account_coin_value($game, $thisuser);
 		$immature_balance = immature_balance($game, $thisuser);
-		$mature_balance = $account_value - $immature_balance;
+		$mature_balance = mature_balance($game, $thisuser);
 		
 		$remainder_address_id = $_REQUEST['remainder_address_id'];
 		
@@ -28,35 +28,43 @@ if ($thisuser) {
 		}
 		else $remainder_address_id = intval($remainder_address_id);
 		
-		if ($amount <= $mature_balance) {
-			$q = "SELECT * FROM addresses a LEFT JOIN users u ON a.user_id=u.user_id WHERE a.address='".mysql_real_escape_string($address)."' AND a.game_id='".$thisuser['game_id']."';";
-			$r = run_query($q);
-			
-			if (mysql_numrows($r) == 1) {
-				$address = mysql_fetch_array($r);
+		$user_strategy = false;
+		$success = get_user_strategy($thisuser['user_id'], $game['game_id'], $user_strategy);
+		if ($success) {
+			if ($amount <= $mature_balance) {
+				$q = "SELECT * FROM addresses a LEFT JOIN users u ON a.user_id=u.user_id WHERE a.address='".mysql_real_escape_string($address)."' AND a.game_id='".$thisuser['game_id']."';";
+				$r = run_query($q);
 				
-				$transaction_id = new_webwallet_multi_transaction($game, false, array($amount), $thisuser['user_id'], $address['user_id'], false, 'transaction', false, array($address['address_id']), $remainder_address_id);
-				
-				$output_obj['result_code'] = 5;
-				$output_obj['message'] = "Great, your coins have been sent!";
+				if (mysql_numrows($r) == 1) {
+					$address = mysql_fetch_array($r);
+					
+					$transaction_id = new_webwallet_multi_transaction($game, false, array($amount), $thisuser['user_id'], $address['user_id'], false, 'transaction', false, array($address['address_id']), $remainder_address_id);
+					
+					$output_obj['result_code'] = 1;
+					$output_obj['message'] = "Great, your coins have been sent!";
+				}
+				else {
+					$output_obj['result_code'] = 6;
+					$output_obj['message'] = "It looks like you entered an invalid address.";
+				}
 			}
 			else {
-				$output_obj['result_code'] = 4;
-				$output_obj['message'] = "It looks like you entered an invalid address.";
+				$output_obj['result_code'] = 5;
+				$output_obj['message'] = "You don't have that many coins to spend, your transaction has been canceled.";
 			}
 		}
 		else {
-			$output_obj['result_code'] = 3;
-			$output_obj['message'] = "You don't have that many coins to spend, your transaction has been canceled.";
+			$output_obj['result_code'] = 4;
+			$output_obj['message'] = "It looks like you entered an invalid address.";
 		}
 	}
 	else {
-		$output_obj['result_code'] = 2;
+		$output_obj['result_code'] = 3;
 		$output_obj['message'] = "Please enter a valid amount.";
 	}
 }
 else {
-	$output_obj['result_code'] = 1;
+	$output_obj['result_code'] = 2;
 	$output_obj['message'] = "Please log in to withdraw coins.";
 }
 

@@ -72,7 +72,7 @@ if ($thisuser) {
 					$mining_block_id = $last_block_id+1;
 					$account_value = account_coin_value($game, $thisuser);
 					$immature_balance = immature_balance($game, $thisuser);
-					$mature_balance = $account_value - $immature_balance;
+					$mature_balance = mature_balance($game, $thisuser);
 					
 					if ($amount_sum <= $mature_balance) {
 						$transaction_id = new_webwallet_multi_transaction($game, false, $amounts, $thisuser['user_id'], false, false, 'bet', false, $address_ids, $remainder_address_id, $user_strategy['transaction_fee']);

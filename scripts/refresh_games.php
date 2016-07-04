@@ -19,8 +19,9 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				$success = try_apply_giveaway($mandatory_game, $user, $invitation);
 			}
 		}
+		update_nation_scores($mandatory_game);
+		echo $mandatory_game['name'].", Done!<br/>\n";
 	}
-	echo "Done!";
 }
 else echo "Incorrect key.";
 ?>

@@ -237,3 +237,16 @@ and (max-device-width : 480px) {
 	display: inline-block;
 	margin-left: 15px;
 }
+.small_flag {
+	height: 12px;
+}
+.my_votes_table {
+	border: 1px solid #ddd;
+	padding: 5px;
+}
+.my_votes_header {
+	font-weight: bold;
+}
+#round_table {
+	padding: 5px;
+}

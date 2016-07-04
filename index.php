@@ -142,7 +142,7 @@ $game = mysql_fetch_array($r);
 			if ($thisuser) {
 				$account_value = account_coin_value($game, $thisuser);
 				$immature_balance = immature_balance($game, $thisuser);
-				$mature_balance = $account_value - $immature_balance;
+				$mature_balance = mature_balance($game, $thisuser);
 			}
 			else $mature_balance = 0;
 			?>

@@ -299,7 +299,7 @@ $immature_balance = immature_balance($game, $thisuser);
 $last_block_id = last_block_id($thisuser['game_id']);
 $current_round = block_to_round($game, $last_block_id+1);
 $block_within_round = block_id_to_round_index($game, $last_block_id+1);
-$mature_balance = $account_value - $immature_balance;
+$mature_balance = mature_balance($game, $thisuser);
 ?>
 <div class="container" style="max-width: 1000px;">
 	<?php
@@ -490,7 +490,7 @@ $mature_balance = $account_value - $immature_balance;
 					?>
 				</div>
 				<?php
-				if ($game['game_type'] == "simulation" && $thisuser['user_id'] == $game['creator_id']) {
+				if (FALSE && $game['game_type'] == "simulation" && $thisuser['user_id'] == $game['creator_id']) {
 					if ($game['block_timing'] == "user_controlled") $toggle_text = "Switch to automatic block timing";
 					else $toggle_text = "Switch to user-controlled block timing";
 					?>
@@ -538,7 +538,7 @@ $mature_balance = $account_value - $immature_balance;
 					<input type="hidden" name="voting_strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
 					Pay fees on every transaction of:<br/>
 					<div class="row">
-						<div class="col-sm-4"><input class="form-control" name="transaction_fee" value="<?php echo $user_strategy['transaction_fee']/pow(10,8); ?>" placeholder="0.001" /></div>
+						<div class="col-sm-4"><input class="form-control" name="transaction_fee" value="<?php echo format_bignum($user_strategy['transaction_fee']/pow(10,8)); ?>" placeholder="0.001" /></div>
 						<div class="col-sm-4 form-control-static">coins</div>
 					</div>
 					<div class="row">
@@ -728,11 +728,15 @@ $mature_balance = $account_value - $immature_balance;
 					?>
 					<div class="row">
 						<div class="col-sm-3">
-							<?php if ($address['nation_id'] > 0) { ?>
-							<img style="height: 12px; border: 1px solid rgba(0,0,0,0.5);" src="/img/flags/<?php echo $address['name']; ?>.jpg"> <?php echo $address['name']; ?>
-							<?php } else { ?>
-							Default Address
-							<?php } ?>
+							<?php
+							if ($address['nation_id'] > 0) {
+								echo nation_flag(false, $address['name']);
+								echo $address['name'];
+							}
+							else {
+								echo "Default Address";
+							}
+							?>
 						</div>
 						<div class="col-sm-1">
 							<a target="_blank" href="/explorer/addresses/<?php echo $address['address']; ?>">Explore</a>

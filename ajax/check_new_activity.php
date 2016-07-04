@@ -39,7 +39,7 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	$block_within_round = $last_block_id%$game['round_length']+1;
 	$account_value = account_coin_value($game, $thisuser);
 	$immature_balance = immature_balance($game, $thisuser);
-	$mature_balance = $account_value - $immature_balance;
+	$mature_balance = mature_balance($game, $thisuser);
 	
 	$output = false;
 	$output['game_loop_index'] = $game_loop_index;
