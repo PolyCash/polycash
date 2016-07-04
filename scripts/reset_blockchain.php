@@ -1,7 +1,7 @@
 <?php
 include("../includes/connect.php");
 
-if ($_REQUEST['key'] == "oiwreu2490f98") {
+if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$q = "SELECT * FROM games;";
 	$r = run_query($q);
 	

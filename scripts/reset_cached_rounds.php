@@ -33,9 +33,9 @@ for ($round_id=1; $round_id<=$current_round-1; $round_id++) {
 		}
 	}
 	
-	$q = "INSERT INTO cached_rounds SET round_id='".$round_id."', payout_block_id='".($round_id*10)."'";
+	$q = "INSERT INTO cached_rounds SET game_id='".get_site_constant('game_id')."', round_id='".$round_id."', payout_block_id='".($round_id*10)."'";
 	if ($winning_nation) $q .= ", winning_nation_id='".$winning_nation."'";
-	$q .= ", winning_vote_sum='".$winning_votesum."', winning_score='".$winning_score."', total_vote_sum='".$vote_sum."', time_created='".time()."'";
+	$q .= ", winning_score='".$winning_score."', score_sum='".$vote_sum."', time_created='".time()."'";
 	for ($position=1; $position<=16; $position++) {
 		$q .= ", position_".$position."='".$nation_rank2db_id[$position]."'";
 	}

@@ -14,8 +14,8 @@ date_default_timezone_set('America/Chicago');
 
 include("pageview_functions.php");
 
-mysql_connect($server, $user, $password) or die("<H3>Server unreachable</H3>");
-mysql_select_db($database) or die ( "<H3>Database non existent</H3>");
+mysql_connect($GLOBALS['mysql_server'], $GLOBALS['mysql_user'], $GLOBALS['mysql_password']) or die("<H3>Server unreachable</H3>");
+mysql_select_db($GLOBALS['mysql_database']) or die ( "<H3>Database non existent</H3>");
 
 function run_query($query) {
 	if ($GLOBALS['show_query_errors'] == TRUE) $result = mysql_query($query) or die("Error in query: ".$query.", ".mysql_error());
@@ -155,7 +155,7 @@ function round_voting_stats($game, $round_id) {
 		return run_query($q);
 	}
 	else {
-		$q = "SELECT n.*, gn.* FROM transaction_IOs i, game_nations gn, nations n WHERE gn.nation_id=n.nation_id AND i.game_id='".$game['game_id']."' AND i.nation_id=gn.nation_id AND i.create_block_id >= ".((($round_id-1)*10)+1)." AND i.create_block_id <= ".($round_id*10-1)." GROUP BY i.nation_id ORDER BY SUM(".$sum_field.") DESC;";
+		$q = "SELECT n.*, gn.* FROM transaction_IOs i, game_nations gn, nations n WHERE gn.nation_id=n.nation_id AND i.game_id='".$game['game_id']."' AND i.nation_id=gn.nation_id AND i.create_block_id >= ".((($round_id-1)*10)+1)." AND i.create_block_id <= ".($round_id*10-1)." GROUP BY i.nation_id ORDER BY SUM(".$sum_field.") DESC, i.nation_id ASC;";
 		return run_query($q);
 	}
 }
@@ -964,7 +964,7 @@ function new_block($game_id) {
 	$log_text .= "Created block $last_block_id<br/>\n";
 	
 	// Send notifications for coins that just became available
-	if ($game['game_type'] != "instant") {
+	if ($game['game_type'] == "real") {
 		$q = "SELECT u.* FROM users u, transaction_IOs i WHERE i.game_id='".$game['game_id']."' AND i.user_id=u.user_id AND u.notification_preference='email' AND u.notification_email != '' AND i.create_block_id='".($last_block_id - get_site_constant('maturity'))."' AND i.amount > 0 GROUP BY u.user_id;";
 		$r = run_query($q);
 		while ($notify_user = mysql_fetch_array($r)) {
@@ -1215,6 +1215,10 @@ function ensure_game_nations($game_id) {
 }
 
 function delete_reset_game($delete_or_reset, $game_id) {
+	$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
+	$r = run_query($q);
+	$game = mysql_fetch_array($r);
+	
 	$q = "DELETE FROM webwallet_transactions WHERE game_id='".$game_id."';";
 	$r = run_query($q);
 	
@@ -1238,10 +1242,14 @@ function delete_reset_game($delete_or_reset, $game_id) {
 		
 		$q = "SELECT * FROM user_games WHERE game_id='".$game_id."';";
 		$r = run_query($q);
+		
 		while ($user_game = mysql_fetch_array($r)) {
 			generate_user_addresses($user_game['game_id'], $user_game['user_id']);
-			for ($i=0; $i<5; $i++) {
-				new_webwallet_multi_transaction($game_id, false, array(20000000000), false, $user_game['user_id'], last_block_id($game_id), 'giveaway', false, false, false);
+			
+			if ($game['game_type'] == "simulation") {
+				for ($i=0; $i<5; $i++) {
+					new_webwallet_multi_transaction($game_id, false, array(20000000000), false, $user_game['user_id'], last_block_id($game_id), 'giveaway', false, false, false);
+				}
 			}
 		}
 	}
@@ -1262,6 +1270,7 @@ function block_id_to_round_index($mining_block_id) {
 function render_transaction($transaction, $selected_address_id, $firstcell_text) {
 	$html = "";
 	$html .= '<div class="row bordered_row"><div class="col-md-6">';
+	$html .= "<a href=\"/explorer/transactions/".$transaction['tx_hash']."\" class=\"display_address\" style=\"display: inline-block; max-width: 100%; overflow: hidden;\">TX:&nbsp;".$transaction['tx_hash']."</a><br/>";
 	if ($firstcell_text != "") $html .= $firstcell_text."<br/>\n";
 	
 	if ($transaction['transaction_desc'] == "votebase") {
@@ -1282,7 +1291,7 @@ function render_transaction($transaction, $selected_address_id, $firstcell_text)
 		}
 	}
 	$html .= '</div><div class="col-md-6">';
-	$qq = "SELECT i.*, n.*, a.*, p.amount AS payout_amount FROM transaction_IOs i LEFT JOIN transaction_IOs p ON i.payout_io_id=p.io_id, addresses a LEFT JOIN nations n ON a.nation_id=n.nation_id WHERE i.create_transaction_id='".$transaction['transaction_id']."' AND i.address_id=a.address_id ORDER BY i.amount DESC;";
+	$qq = "SELECT i.*, n.*, a.*, p.amount AS payout_amount FROM transaction_IOs i LEFT JOIN transaction_IOs p ON i.payout_io_id=p.io_id, addresses a LEFT JOIN nations n ON a.nation_id=n.nation_id WHERE i.create_transaction_id='".$transaction['transaction_id']."' AND i.address_id=a.address_id ORDER BY i.out_index ASC;";
 	$rr = run_query($qq);
 	$output_sum = 0;
 	while ($output = mysql_fetch_array($rr)) {
@@ -1450,13 +1459,19 @@ function bet_transaction_payback_address($transaction_id) {
 
 function rounds_complete_html($game, $max_round_id, $limit) {
 	$html = "";
-	$q = "SELECT * FROM cached_rounds r, nations n WHERE r.game_id='".$game['game_id']."' AND r.winning_nation_id=n.nation_id AND r.round_id <= ".$max_round_id." ORDER BY r.round_id DESC LIMIT ".$limit.";";
+	$q = "SELECT * FROM cached_rounds r LEFT JOIN nations n ON r.winning_nation_id=n.nation_id WHERE r.game_id='".$game['game_id']."' AND r.round_id <= ".$max_round_id." ORDER BY r.round_id DESC LIMIT ".$limit.";";
 	$r = run_query($q);
+	
 	$last_round_shown = 0;
 	while ($cached_round = mysql_fetch_array($r)) {
 		$html .= "<div class=\"row bordered_row\">";
 		$html .= "<div class=\"col-sm-2\"><a href=\"/explorer/rounds/".$cached_round['round_id']."\">Round #".$cached_round['round_id']."</a></div>";
-		$html .= "<div class=\"col-sm-7\">".$cached_round['name']." wins with ".format_bignum($cached_round['winning_score']/pow(10,8))." votes (".round(100*$cached_round['winning_score']/$cached_round['score_sum'], 2)."%)</div>";
+		$html .= "<div class=\"col-sm-7\">";
+		if ($cached_round['winning_nation_id'] > 0) {
+			$html .= $cached_round['name']." wins with ".format_bignum($cached_round['winning_score']/pow(10,8))." votes (".round(100*$cached_round['winning_score']/$cached_round['score_sum'], 2)."%)";
+		}
+		else $html .= "No winner";
+		$html .= "</div>";
 		$html .= "<div class=\"col-sm-3\">".format_bignum($cached_round['score_sum']/pow(10,8))." votes cast</div>";
 		$html .= "</div>\n";
 		$last_round_shown = $cached_round['round_id'];
@@ -1466,6 +1481,19 @@ function rounds_complete_html($game, $max_round_id, $limit) {
 	$returnvals[1] = $html;
 	
 	return $returnvals;
+}
+
+function addr_text_to_nation_id($addr_text) {
+	$nation_id = false;
+	if (strtolower($addr_text[0].$addr_text[1]) == "ee") {
+		$q = "SELECT * FROM nations WHERE address_character='".strtolower($addr_text[2])."';";
+		$r = run_query($q);
+		if (mysql_numrows($r) > 0) {
+			$nation = mysql_fetch_array($r);
+			$nation_id = $nation['nation_id'];
+		}
+	}
+	return $nation_id;
 }
 
 function my_bets($game, $user) {

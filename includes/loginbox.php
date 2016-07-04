@@ -100,7 +100,7 @@ function autogen_password_changed() {
 			<div class="row">
 				<div class="col-sm-12">
 					Solve a CAPTCHA:<br/>
-					<div class="g-recaptcha" data-sitekey="<?php echo $recaptcha_publickey; ?>"></div>
+					<div class="g-recaptcha" data-sitekey="<?php echo $GLOBALS['recaptcha_publickey']; ?>"></div>
 				</div>
 			</div>
 			<?php } ?>

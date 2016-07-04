@@ -8,7 +8,7 @@ if ($thisuser) {
 	$r = run_query($q);
 	$game = mysql_fetch_array($r);
 	
-	if ($game['game_type'] == "instant" && $game['creator_id'] == $thisuser['user_id']) {
+	if ($game['game_type'] == "simulation" && $game['creator_id'] == $thisuser['user_id']) {
 		if ($game['block_timing'] == "user_controlled") $toggle_value = "realistic";
 		else $toggle_value = "user_controlled";
 		

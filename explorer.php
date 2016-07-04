@@ -5,7 +5,7 @@ $viewer_id = insert_pageview($thisuser);
 
 $explore_mode = $uri_parts[2];
 
-if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
+if (in_array($explore_mode, array('rounds','blocks','addresses','transactions'))) {
 	if ($thisuser) $game_id = $thisuser['game_id'];
 	else $game_id = get_site_constant('primary_game_id');
 	
@@ -62,6 +62,16 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 				$mode_error = false;
 				$pagetitle = $this_game['name']." Block #".$block['block_id'];
 			}
+		}
+	}
+	if ($explore_mode == "transactions") {
+		$tx_hash = $uri_parts[3];
+		$q = "SELECT * FROM webwallet_transactions WHERE tx_hash='".mysql_real_escape_string($tx_hash)."';";
+		$r = run_query($q);
+		if (mysql_numrows($r) == 1) {
+			$transaction = mysql_fetch_array($r);
+			$mode_error = false;
+			$pagetitle = $this_game['name']." Transaction: ".$transaction['tx_hash'];
 		}
 	}
 	
@@ -127,22 +137,25 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 					$max_score_sum = floor($round['score_sum']*get_site_constant('max_voting_fraction'));
 					
 					if ($thisuser) {
-						$returnvals = my_votes_in_round($game, $round['round_id'], $thisuser['user_id']);
+						$returnvals = my_votes_in_round($this_game, $round['round_id'], $thisuser['user_id']);
 						$my_votes = $returnvals[0];
 						$coins_voted = $returnvals[1];
 					}
 					else $my_votes = false;
 					
 					if ($my_votes[$round['winning_nation_id']] > 0) {
-						if ($game['payout_weight'] == "coin") $payout_amt = (floor(100*750*$my_votes[$round['winning_nation_id']]['coins']/$round['winning_score'])/100);
+						if ($this_game['payout_weight'] == "coin") $payout_amt = (floor(100*750*$my_votes[$round['winning_nation_id']]['coins']/$round['winning_score'])/100);
 						else $payout_amt = (floor(100*750*$my_votes[$round['winning_nation_id']]['coin_blocks']/$round['winning_score'])/100);
 						
 						echo "You won <font class=\"greentext\">+".$payout_amt." EMP</font> by voting ".format_bignum($my_votes[$round['winning_nation_id']]['coins']/pow(10,8))." coins";
-						if ($game['payout_weight'] == "coin_block") echo " (".format_bignum($my_votes[$round['winning_nation_id']]['coin_blocks']/pow(10,8))." votes)";
+						if ($this_game['payout_weight'] == "coin_block") echo " (".format_bignum($my_votes[$round['winning_nation_id']]['coin_blocks']/pow(10,8))." votes)";
 						echo " for ".$round['name']."</font><br/>\n";
 					}
 					
-					$q = "SELECT * FROM blocks WHERE game_id='".$game_id."' AND block_id > '".(($round['round_id']-1)*10)."' AND block_id <= ".($round['round_id']*10)." ORDER BY block_id ASC;";
+					$from_block_id = (($round['round_id']-1)*10)+1;
+					$to_block_id = ($round['round_id']*10);
+					
+					$q = "SELECT * FROM blocks WHERE game_id='".$game_id."' AND block_id >= '".$from_block_id."' AND block_id <= ".$to_block_id." ORDER BY block_id ASC;";
 					$r = run_query($q);
 					echo "Blocks in this round: ";
 					while ($round_block = mysql_fetch_array($r)) {
@@ -167,7 +180,7 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 						$r = run_query($q);
 						if (mysql_numrows($r) == 1) {
 							$ranked_nation = mysql_fetch_array($r);
-							$nation_score = nation_score_in_round($game, $ranked_nation['nation_id'], $round['round_id']);
+							$nation_score = nation_score_in_round($this_game, $ranked_nation['nation_id'], $round['round_id']);
 							
 							echo '<div class="row';
 							if ($nation_score > $max_score_sum) echo ' redtext';
@@ -175,14 +188,14 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 							echo '">';
 							echo '<div class="col-md-3">'.$rank.'. '.$ranked_nation['name'].'</div>';
 							echo '<div class="col-md-1" style="text-align: center;">'.round(100*$nation_score/$round['score_sum'], 2).'%</div>';
-							echo '<div class="col-md-3" style="text-align: center;">'.number_format(round($nation_score/pow(10,8))).' votes</div>';
+							echo '<div class="col-md-3" style="text-align: center;">'.$nation_score/pow(10,8).' votes</div>';
 							if ($thisuser) {
 								echo '<div class="col-md-3" style="text-align: center;">';
 								
-								$score_qty = $my_votes[$ranked_nation['nation_id']][$game['payout_weight'].'s'];
+								$score_qty = $my_votes[$ranked_nation['nation_id']][$this_game['payout_weight'].'s'];
 								
 								echo number_format(floor($my_votes[$ranked_nation['nation_id']]['coin_blocks']/pow(10,8)*100)/100);
-								if ($game['payout_weight'] == "coin") echo " coins";
+								if ($this_game['payout_weight'] == "coin") echo " coins";
 								else echo " votes";
 								
 								echo ' ('.round(100*$score_qty/$nation_score, 3).'%)</div>';
@@ -191,6 +204,21 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 						}
 					}
 					
+					echo "<br/>\n";
+					
+					echo "<h2>Transactions</h2>";
+					echo '<div style="border-bottom: 1px solid #bbb;">';
+					for ($i=$from_block_id; $i<=$to_block_id; $i++) {
+						echo "Block #".$i."<br/>\n";
+						$q = "SELECT * FROM webwallet_transactions WHERE game_id='".$this_game['game_id']."' AND block_id='".$i."' AND amount > 0 ORDER BY transaction_id ASC;";
+						$r = run_query($q);
+						while ($transaction = mysql_fetch_array($r)) {
+							echo render_transaction($transaction, FALSE, "");
+						}
+					}
+					echo '</div>';
+					
+					echo "<br/>\n";
 					echo "<br/>\n";
 					
 					if ($round['round_id'] > 1) { ?>
@@ -216,7 +244,7 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 					$block_index = block_id_to_round_index($block['block_id']);
 					
 					echo "<h1>Block #".$block['block_id']."</h1>";
-					echo "<h3>".$game['name']."</h3>";
+					echo "<h3>".$this_game['name']."</h3>";
 					echo "This block contains $num_trans transactions totaling ".number_format($block_sum/pow(10,8), 2)." coins.<br/>\n";
 					echo "This is block ".$block_index." of <a href=\"/explorer/rounds/".$round_id."\">round #".$round_id."</a><br/><br/>\n";
 					
@@ -239,7 +267,7 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 					$r = run_query($q);
 					
 					echo "<h1>EmpireCoin - List of Blocks</h1>\n";
-					echo "<h3>".$game['name']."</h3>";
+					echo "<h3>".$this_game['name']."</h3>";
 					echo "<ul>\n";
 					while ($block = mysql_fetch_array($r)) {
 						echo "<li><a href=\"/explorer/blocks/".$block['block_id']."\">Block #".$block['block_id']."</a></li>\n";
@@ -265,6 +293,15 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 				}
 				echo "</div>\n";
 				
+				echo "<br/><br/>\n";
+			}
+			else if ($explore_mode == "transactions") {
+				echo "<h3>EmpireCoin Transaction: ".$transaction['tx_hash']."</h3>\n";
+				$block_index = block_id_to_round_index($transaction['block_id']);
+				$round_id = block_to_round($transaction['block_id']);
+				echo '<div style="border-bottom: 1px solid #bbb;">';
+				echo render_transaction($transaction, false, "Confirmed in the <a href=\"/explorer/blocks/".$transaction['block_id']."\">".date("jS", strtotime("1/".$block_index."/2015"))." block</a> of <a href=\"/explorer/rounds/".$round_id."\">round ".$round_id."</a>");
+				echo "</div>\n";
 				echo "<br/><br/>\n";
 			}
 		}

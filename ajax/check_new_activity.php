@@ -18,7 +18,7 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	if ($game['payout_weight'] == "coin") $score_field = "coins_currently_voted";
 	else $score_field = "coin_block_score";
 	
-	if ($game['game_type'] == "instant" && $game['block_timing'] == "realistic") {
+	if ($game['game_type'] == "simulation" && $game['block_timing'] == "realistic") {
 		$rand_max = floor($game['seconds_per_block']/get_site_constant('game_loop_seconds'))-1;
 		$num = rand(0, $rand_max);
 		if ($num == 0) {

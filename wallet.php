@@ -19,7 +19,7 @@ if ($_REQUEST['do'] == "signup") {
 	if (mysql_numrows($r) <= 20) {
 		if (mysql_numrows($result) == 0) {
 			if ($GLOBALS['signup_captcha_required']) {
-				$recaptcha_resp = recaptcha_check_answer($recaptcha_privatekey, $_SERVER["REMOTE_ADDR"], $_POST["g-recaptcha-response"]);
+				$recaptcha_resp = recaptcha_check_answer($GLOBALS['recaptcha_privatekey'], $_SERVER["REMOTE_ADDR"], $_POST["g-recaptcha-response"]);
 			}
 			if (!$recaptcha_resp && $GLOBALS['signup_captcha_required']) {
 				$acode = 0;
@@ -457,7 +457,7 @@ $mature_balance = $account_value - $immature_balance;
 					?>
 				</div>
 				<?php
-				if ($game['game_type'] == "instant" && $thisuser['user_id'] == $game['creator_id']) {
+				if ($game['game_type'] == "simulation" && $thisuser['user_id'] == $game['creator_id']) {
 					if ($game['block_timing'] == "user_controlled") $toggle_text = "Switch to automatic block timing";
 					else $toggle_text = "Switch to user-controlled block timing";
 					?>
@@ -475,7 +475,7 @@ $mature_balance = $account_value - $immature_balance;
 				<h2>My Games</h2>
 				<?php
 				echo "You're currently playing ".$game['name'].". ";
-				if ($game['game_type'] == "instant" && $game['creator_id'] == $thisuser['user_id']) {
+				if ($game['game_type'] == "simulation" && $game['creator_id'] == $thisuser['user_id']) {
 					echo "<br/><a href=\"\" onclick=\"switch_to_game('reset'); return false;\">Reset this game</a> or ";
 					echo "<a href=\"\" onclick=\"switch_to_game('delete'); return false;\">Delete this game</a>";
 				}
@@ -747,10 +747,10 @@ $mature_balance = $account_value - $immature_balance;
 					</div>
 					<h2>Place a Bet</h1>
 					<p>
-					In EmpireCoin, you can place unlosable bets where winnings are paid for by the coins inflation.  But as you've probably seen, the amount you get for winning an unlosable bet usually isn't very large.  In this tab, you can place traditional-style bets where you'll lose all of your money if you bet on the wrong empire, but you'll win a large amount if you're correct.  These bets are conducted through a decentralized protocol, which means there's no house taking an edge or charging a fee when you bet.
+					In the "Play Now" tab you can win coins for free from the coins inflation.  But winnings are small compared to the amount of coins you're staking.  In this tab, you can place traditional-style bets where you'll lose all of your money if you bet on the wrong empire, but you'll win a large amount if you're correct.  These bets are conducted through a decentralized protocol, which means there's no house taking an edge or charging a fee when you bet.
 					</p>
 					<p>
-					To place a bet, you need to burn your empirecoins by sending them to an unredeemable address. Once the outcome of the voting round is determined, the EmpireCoin protocol will check to see if you won the bet and if so, new coins will be created and sent to your wallet.  These are pari-mutuel style bets in which your payout multiplier may continue changing until the betting period is over.  You can bet on the outcome of a round until the fifth block of the round.  Bets confirmed in the sixth block of a round or later are considered invalid and will be refunded back to the bettor, but with a 10% fee applied.  To place a bet, please select a round which you'd like to bet for and select one or more empires that you expect to win the round.
+					To place a bet, you'll burn your empirecoins by sending them to an unredeemable address. Once the outcome of the voting round is determined, the EmpireCoin protocol will check to see if you bet correctly and if so, new coins will be created and sent to your wallet.  These are pari-mutuel style bets in which your payout multiplier may continue changing until the betting period is over.  You can bet on the outcome of a round until the fifth block of the round.  Bets confirmed in the sixth block of a round or later are considered invalid and will be refunded back to the bettor, but with a 10% fee applied.  To place a bet, please select a round which you'd like to bet for and select one or more empires that you expect to win the round.
 					</p>
 					<div class="row">
 						<div class="col-md-3">

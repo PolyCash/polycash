@@ -16,7 +16,7 @@ if ($thisuser) {
 		if (mysql_numrows($r) == 1) {
 			$this_game = mysql_fetch_array($r);
 			
-			if ($this_game['game_type'] == "instant" && $this_game['creator_id'] == $thisuser['user_id']) {
+			if ($this_game['game_type'] == "simulation" && $this_game['creator_id'] == $thisuser['user_id']) {
 				$success = delete_reset_game($action, $game_id);
 				
 				if ($success) {
@@ -42,7 +42,7 @@ if ($thisuser) {
 		}
 		else $game_index = 1;
 		
-		$q = "INSERT INTO games SET creator_id='".$thisuser['user_id']."', seconds_per_block='8', block_timing='realistic', creator_game_index='".$game_index."', game_type='instant', name='Practice Game #".$game_index."';";
+		$q = "INSERT INTO games SET creator_id='".$thisuser['user_id']."', seconds_per_block='8', block_timing='realistic', creator_game_index='".$game_index."', game_type='simulation', name='Practice Game #".$game_index."';";
 		$r = run_query($q);
 		$game_id = mysql_insert_id();
 		
