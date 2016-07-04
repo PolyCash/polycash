@@ -122,6 +122,16 @@ function tab_clicked(index_id) {
 	$('#tabcontent'+index_id).show();
 	
 	current_tab = index_id;
+	
+	if (index_id == 1) {
+		refresh_players();
+	}
+}
+function refresh_players() {
+	$('#tabcontent1').html("Loading...");
+	$.get("/ajax/show_players.php?game_id="+game_id, function(result) {
+		$('#tabcontent1').html(result);
+	});
 }
 function claim_coin_giveaway() {
 	var giveaway_btn_txt = $('#giveaway_btn').html();

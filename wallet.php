@@ -915,22 +915,7 @@ $mature_balance = mature_balance($game, $thisuser);
 			
 			<div class="tabcontent" style="display: none;" id="tabcontent1">
 				<?php
-				$q = "SELECT * FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$game['game_id']."';";
-				$r = run_query($q);
-				echo "<h3>".mysql_numrows($r)." players</h3>\n";
-				
-				while ($temp_user_game = mysql_fetch_array($r)) {
-					echo '<div class="row">';
-					echo '<div class="col-sm-4"><a href="" onclick="openChatWindow('.$temp_user_game['user_id'].'); return false;">'.$temp_user_game['username'].'</a></div>';
-					
-					$networth_disp = format_bignum(account_coin_value($game, $temp_user_game)/pow(10,8));
-					echo '<div class="col-sm-4">'.$networth_disp.' ';
-					if ($networth_disp == '1') echo $game['coin_name'];
-					else echo $game['coin_name_plural'];
-					echo '</div>';
-					
-					echo '</div>';
-				}
+				echo render_game_players($game);
 				?>
 			</div>
 			

@@ -3694,4 +3694,26 @@ function decimal_to_float($number) {
 	if (strpos($number, ".") === false) return $number;
 	else return rtrim(rtrim($number, '0'), '.');
 }
+function render_game_players(&$game) {
+	$html = "";
+	
+	$q = "SELECT * FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$game['game_id']."';";
+	$r = run_query($q);
+	$html .= "<h3>".mysql_numrows($r)." players</h3>\n";
+	
+	while ($temp_user_game = mysql_fetch_array($r)) {
+		$html .= '<div class="row">';
+		$html .= '<div class="col-sm-4"><a href="" onclick="openChatWindow('.$temp_user_game['user_id'].'); return false;">'.$temp_user_game['username'].'</a></div>';
+		
+		$networth_disp = format_bignum(account_coin_value($game, $temp_user_game)/pow(10,8));
+		$html .= '<div class="col-sm-4">'.$networth_disp.' ';
+		if ($networth_disp == '1') $html .= $game['coin_name'];
+		else $html .= $game['coin_name_plural'];
+		$html .= '</div>';
+		
+		$html .= '</div>';
+	}
+	
+	return $html;
+}
 ?>
