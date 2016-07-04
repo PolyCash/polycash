@@ -88,7 +88,6 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				<br/>
 				Make sure this line has been added to your /etc/crontab:<br/>
 				* * * * * root /usr/bin/php <?php echo realpath(dirname(__FILE__))."/cron/minutely.php ".$GLOBALS['cron_key_string']; ?><br/>
-				* * * * * root /usr/bin/php <?php echo realpath(dirname(__FILE__))."/cron/minutely_check_payments.php ".$GLOBALS['cron_key_string']; ?><br/>
 				*/5 * * * * root /usr/bin/php <?php echo realpath(dirname(__FILE__))."/cron/sync_coind.php ".$GLOBALS['cron_key_string']; ?><br/>
 				<br/>
 				Please run "a2enmod rewrite"<br/>
