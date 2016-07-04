@@ -1,11 +1,12 @@
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+00:00";
 
-
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
 /*!40101 SET NAMES utf8mb4 */;
+
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `addresses`
@@ -21,7 +22,7 @@ CREATE TABLE `addresses` (
   `game_id` int(11) NOT NULL DEFAULT '1',
   `bet_round_id` int(20) DEFAULT NULL,
   `bet_nation_id` int(20) DEFAULT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -42,7 +43,7 @@ CREATE TABLE `async_email_deliveries` (
   `time_delivered` int(20) NOT NULL DEFAULT '0',
   `successful` tinyint(1) NOT NULL DEFAULT '0',
   `sendgrid_response` text NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -53,12 +54,11 @@ CREATE TABLE `async_email_deliveries` (
 CREATE TABLE `blocks` (
   `internal_block_id` int(11) NOT NULL,
   `block_id` int(11) DEFAULT NULL,
-  `block_hash` varchar(100) NOT NULL DEFAULT '',
-  `currency_mode` enum('beta','live') NOT NULL DEFAULT 'beta',
+  `block_hash` varchar(100) DEFAULT NULL,
   `game_id` int(11) NOT NULL DEFAULT '1',
   `miner_user_id` int(20) DEFAULT NULL,
   `time_created` int(20) NOT NULL DEFAULT '0'
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -70,7 +70,7 @@ CREATE TABLE `browsers` (
   `browser_id` int(20) NOT NULL,
   `name` varchar(255) COLLATE latin1_german2_ci NOT NULL,
   `display_name` varchar(255) COLLATE latin1_german2_ci NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
 
 --
 -- Dumping data for table `browsers`
@@ -99,7 +99,7 @@ CREATE TABLE `browserstrings` (
   `version` varchar(100) COLLATE latin1_german2_ci NOT NULL,
   `platform` varchar(100) COLLATE latin1_german2_ci NOT NULL,
   `pattern` varchar(150) COLLATE latin1_german2_ci NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
 
 -- --------------------------------------------------------
 
@@ -132,7 +132,7 @@ CREATE TABLE `cached_rounds` (
   `position_14` int(8) DEFAULT NULL,
   `position_15` int(8) DEFAULT NULL,
   `position_16` int(8) DEFAULT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -145,6 +145,7 @@ CREATE TABLE `games` (
   `creator_id` int(11) DEFAULT NULL,
   `creator_game_index` int(11) NOT NULL DEFAULT '0',
   `game_type` enum('real','simulation') NOT NULL DEFAULT 'real',
+  `game_status` enum('unstarted','running','paused') NOT NULL DEFAULT 'unstarted',
   `losable_bets_enabled` tinyint(1) NOT NULL DEFAULT '0',
   `block_timing` enum('realistic','user_controlled') NOT NULL DEFAULT 'realistic',
   `payout_weight` enum('coin','coin_block') NOT NULL DEFAULT 'coin_block',
@@ -153,8 +154,12 @@ CREATE TABLE `games` (
   `num_voting_options` int(10) NOT NULL DEFAULT '16',
   `max_voting_fraction` decimal(2,2) NOT NULL DEFAULT '0.25',
   `round_length` int(10) NOT NULL DEFAULT '10',
-  `maturity` int(10) NOT NULL DEFAULT '8'
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+  `maturity` int(10) NOT NULL DEFAULT '8',
+  `pow_reward` bigint(20) NOT NULL DEFAULT '0',
+  `pos_reward` bigint(20) NOT NULL DEFAULT '0',
+  `giveaway_status` enum('on','off','invite_only') NOT NULL DEFAULT 'off',
+  `giveaway_amount` bigint(16) NOT NULL DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -170,8 +175,8 @@ CREATE TABLE `game_nations` (
   `coin_block_score` bigint(20) NOT NULL DEFAULT '0',
   `unconfirmed_coin_score` bigint(20) NOT NULL DEFAULT '0',
   `unconfirmed_coin_block_score` bigint(20) NOT NULL DEFAULT '0',
-  `losing_streak` int(11) NOT NULL DEFAULT '0'
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+  `last_win_round` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -189,7 +194,7 @@ CREATE TABLE `invitations` (
   `used_ip` varchar(50) NOT NULL DEFAULT '',
   `used_user_id` int(20) DEFAULT NULL,
   `used_time` int(20) NOT NULL DEFAULT '0'
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -321,7 +326,7 @@ CREATE TABLE `nations` (
   `address_character` varchar(1) NOT NULL DEFAULT '',
   `relevant_wins` int(20) NOT NULL DEFAULT '1',
   `vote_id` int(4) NOT NULL DEFAULT '0'
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 --
 -- Dumping data for table `nations`
@@ -355,14 +360,13 @@ CREATE TABLE `pageviews` (
   `pageview_id` int(20) NOT NULL,
   `viewer_id` int(20) NOT NULL DEFAULT '0',
   `user_id` int(20) NOT NULL DEFAULT '0',
-  `account_id` int(20) NOT NULL DEFAULT '0',
   `browserstring_id` int(20) NOT NULL DEFAULT '0',
   `ip_id` int(20) NOT NULL DEFAULT '0',
   `cookie_id` int(20) NOT NULL DEFAULT '0',
   `time` int(20) NOT NULL DEFAULT '0',
   `pv_page_id` int(20) NOT NULL DEFAULT '0',
   `refer_url` varchar(255) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -373,7 +377,7 @@ CREATE TABLE `pageviews` (
 CREATE TABLE `page_urls` (
   `page_url_id` int(11) NOT NULL,
   `url` varchar(255) NOT NULL DEFAULT ''
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -385,7 +389,7 @@ CREATE TABLE `redirect_urls` (
   `redirect_url_id` int(20) NOT NULL,
   `url` varchar(255) NOT NULL DEFAULT '',
   `time_created` int(20) NOT NULL DEFAULT '0'
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -397,7 +401,7 @@ CREATE TABLE `site_constants` (
   `constant_id` int(20) NOT NULL,
   `constant_name` varchar(100) NOT NULL DEFAULT '',
   `constant_value` varchar(100) NOT NULL DEFAULT ''
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -407,21 +411,23 @@ CREATE TABLE `site_constants` (
 
 CREATE TABLE `transaction_IOs` (
   `io_id` int(20) NOT NULL,
+  `memo` varchar(100) NOT NULL DEFAULT '',
   `address_id` int(20) DEFAULT NULL,
   `game_id` int(20) DEFAULT NULL,
   `user_id` int(20) DEFAULT NULL,
   `nation_id` int(11) DEFAULT NULL,
   `instantly_mature` tinyint(1) NOT NULL DEFAULT '0',
-  `spend_status` enum('spent','unspent') NOT NULL DEFAULT 'unspent',
+  `spend_status` enum('spent','unspent','unconfirmed') NOT NULL DEFAULT 'unconfirmed',
   `out_index` int(11) DEFAULT '0',
   `create_transaction_id` int(20) DEFAULT NULL,
   `spend_transaction_id` int(20) DEFAULT NULL,
   `amount` double DEFAULT '0',
+  `coin_blocks_created` bigint(20) DEFAULT NULL,
   `coin_blocks_destroyed` bigint(20) NOT NULL DEFAULT '0',
   `create_block_id` int(20) DEFAULT NULL,
   `spend_block_id` int(20) DEFAULT NULL,
   `payout_io_id` int(11) DEFAULT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -448,7 +454,7 @@ CREATE TABLE `users` (
   `notification_preference` enum('email','none') COLLATE latin1_german2_ci NOT NULL DEFAULT 'none',
   `notification_email` varchar(100) COLLATE latin1_german2_ci NOT NULL DEFAULT '',
   `last_active` int(30) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
 
 -- --------------------------------------------------------
 
@@ -462,7 +468,7 @@ CREATE TABLE `user_games` (
   `game_id` int(11) NOT NULL DEFAULT '1',
   `strategy_id` int(11) DEFAULT NULL,
   `account_value` decimal(10,8) NOT NULL DEFAULT '0.00000000'
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -483,7 +489,7 @@ CREATE TABLE `user_resettokens` (
   `request_viewer_id` int(20) NOT NULL DEFAULT '0',
   `firstclick_viewer_id` int(20) NOT NULL DEFAULT '0',
   `completed` int(2) NOT NULL DEFAULT '0'
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
 
 -- --------------------------------------------------------
 
@@ -500,7 +506,7 @@ CREATE TABLE `user_sessions` (
   `logout_time` int(12) NOT NULL DEFAULT '0',
   `expire_time` int(12) NOT NULL DEFAULT '0',
   `ip_address` varchar(30) COLLATE latin1_german2_ci NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
 
 -- --------------------------------------------------------
 
@@ -512,6 +518,7 @@ CREATE TABLE `user_strategies` (
   `strategy_id` int(11) NOT NULL,
   `user_id` int(11) DEFAULT NULL,
   `game_id` int(11) DEFAULT NULL,
+  `transaction_fee` bigint(20) NOT NULL DEFAULT '100000',
   `voting_strategy` enum('manual','by_rank','by_nation','api','') NOT NULL DEFAULT 'manual',
   `aggregate_threshold` int(11) NOT NULL DEFAULT '50',
   `by_rank_ranks` varchar(100) NOT NULL DEFAULT '',
@@ -544,7 +551,7 @@ CREATE TABLE `user_strategies` (
   `nation_pct_14` int(11) NOT NULL DEFAULT '0',
   `nation_pct_15` int(11) NOT NULL DEFAULT '0',
   `nation_pct_16` int(11) NOT NULL DEFAULT '0'
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -556,7 +563,7 @@ CREATE TABLE `viewers` (
   `viewer_id` int(20) NOT NULL,
   `account_id` int(20) NOT NULL DEFAULT '0',
   `time_created` int(20) NOT NULL DEFAULT '0'
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
@@ -569,7 +576,7 @@ CREATE TABLE `viewer_connections` (
   `type` enum('viewer2viewer','viewer2user') COLLATE latin1_german2_ci NOT NULL,
   `from_id` int(20) NOT NULL,
   `to_id` int(20) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
 
 -- --------------------------------------------------------
 
@@ -582,20 +589,22 @@ CREATE TABLE `viewer_identifiers` (
   `viewer_id` int(20) NOT NULL DEFAULT '0',
   `type` enum('ip','cookie') NOT NULL,
   `identifier` varchar(255) NOT NULL DEFAULT ''
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `webwallet_transactions`
+-- Table structure for table `transactions`
 --
 
-CREATE TABLE `webwallet_transactions` (
+CREATE TABLE `transactions` (
   `transaction_id` int(20) NOT NULL,
   `currency_mode` enum('beta','live') NOT NULL DEFAULT 'beta',
   `transaction_desc` enum('coinbase','giveaway','transaction','votebase','bet','betbase','') NOT NULL DEFAULT '',
   `tx_hash` varchar(64) NOT NULL DEFAULT '',
+  `tx_memo` varchar(255) NOT NULL DEFAULT '',
   `amount` bigint(20) NOT NULL DEFAULT '0',
+  `fee_amount` bigint(20) NOT NULL DEFAULT '0',
   `from_user_id` int(20) DEFAULT NULL,
   `to_user_id` int(20) DEFAULT NULL,
   `address_id` int(11) DEFAULT NULL,
@@ -604,8 +613,10 @@ CREATE TABLE `webwallet_transactions` (
   `vote_transaction_id` int(20) DEFAULT NULL,
   `time_created` int(20) NOT NULL DEFAULT '0',
   `game_id` int(11) NOT NULL DEFAULT '1',
-  `bet_round_id` int(11) DEFAULT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+  `bet_round_id` int(11) DEFAULT NULL,
+  `ref_block_id` bigint(20) DEFAULT NULL,
+  `ref_coin_blocks_destroyed` bigint(20) NOT NULL DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 --
 -- Indexes for dumped tables
@@ -619,7 +630,10 @@ ALTER TABLE `addresses`
   ADD UNIQUE KEY `address` (`address`,`game_id`),
   ADD KEY `nation_id` (`nation_id`),
   ADD KEY `user_id` (`user_id`),
-  ADD KEY `game_id` (`game_id`);
+  ADD KEY `game_id` (`game_id`),
+  ADD KEY `is_mine` (`is_mine`),
+  ADD KEY `bet_round_id` (`bet_round_id`),
+  ADD KEY `bet_nation_id` (`bet_nation_id`);
 
 --
 -- Indexes for table `async_email_deliveries`
@@ -632,8 +646,11 @@ ALTER TABLE `async_email_deliveries`
 --
 ALTER TABLE `blocks`
   ADD PRIMARY KEY (`internal_block_id`),
+  ADD UNIQUE KEY `block_id_2` (`block_id`,`game_id`),
+  ADD UNIQUE KEY `block_hash` (`block_hash`),
   ADD KEY `miner_user_id` (`miner_user_id`),
-  ADD KEY `game_id` (`game_id`);
+  ADD KEY `game_id` (`game_id`),
+  ADD KEY `block_id` (`block_id`);
 
 --
 -- Indexes for table `browsers`
@@ -657,13 +674,18 @@ ALTER TABLE `cached_rounds`
   ADD UNIQUE KEY `round_id_2` (`round_id`,`game_id`),
   ADD KEY `winning_nation_id` (`winning_nation_id`),
   ADD KEY `game_id` (`game_id`),
-  ADD KEY `round_id` (`round_id`);
+  ADD KEY `round_id` (`round_id`),
+  ADD KEY `payout_block_id` (`payout_block_id`);
 
 --
 -- Indexes for table `games`
 --
 ALTER TABLE `games`
-  ADD PRIMARY KEY (`game_id`);
+  ADD PRIMARY KEY (`game_id`),
+  ADD KEY `creator_id` (`creator_id`),
+  ADD KEY `game_type` (`game_type`),
+  ADD KEY `game_status` (`game_status`),
+  ADD KEY `payout_weight` (`payout_weight`);
 
 --
 -- Indexes for table `game_nations`
@@ -678,7 +700,9 @@ ALTER TABLE `game_nations`
 ALTER TABLE `invitations`
   ADD PRIMARY KEY (`invitation_id`),
   ADD UNIQUE KEY `invitation_key` (`invitation_key`),
-  ADD KEY `inviter_id` (`inviter_id`);
+  ADD KEY `inviter_id` (`inviter_id`),
+  ADD KEY `game_id` (`game_id`),
+  ADD KEY `used` (`used`);
 
 --
 -- Indexes for table `matches`
@@ -686,13 +710,19 @@ ALTER TABLE `invitations`
 ALTER TABLE `matches`
   ADD PRIMARY KEY (`match_id`),
   ADD KEY `match_type_id` (`match_type_id`),
-  ADD KEY `creator_id` (`creator_id`);
+  ADD KEY `creator_id` (`creator_id`),
+  ADD KEY `status` (`status`);
 
 --
 -- Indexes for table `match_IOs`
 --
 ALTER TABLE `match_IOs`
-  ADD PRIMARY KEY (`io_id`);
+  ADD PRIMARY KEY (`io_id`),
+  ADD KEY `membership_id` (`membership_id`),
+  ADD KEY `match_id` (`match_id`),
+  ADD KEY `spend_status` (`spend_status`),
+  ADD KEY `create_move_id` (`create_move_id`),
+  ADD KEY `spend_move_id` (`spend_move_id`);
 
 --
 -- Indexes for table `match_memberships`
@@ -700,25 +730,36 @@ ALTER TABLE `match_IOs`
 ALTER TABLE `match_memberships`
   ADD PRIMARY KEY (`membership_id`),
   ADD KEY `user_id` (`user_id`),
-  ADD KEY `match_id` (`match_id`);
+  ADD KEY `match_id` (`match_id`),
+  ADD KEY `player_position` (`player_position`);
 
 --
 -- Indexes for table `match_messages`
 --
 ALTER TABLE `match_messages`
-  ADD PRIMARY KEY (`message_id`);
+  ADD PRIMARY KEY (`message_id`),
+  ADD KEY `match_id` (`match_id`),
+  ADD KEY `from_user_id` (`from_user_id`),
+  ADD KEY `to_user_id` (`to_user_id`),
+  ADD KEY `hide_user_id` (`hide_user_id`);
 
 --
 -- Indexes for table `match_moves`
 --
 ALTER TABLE `match_moves`
-  ADD PRIMARY KEY (`move_id`);
+  ADD PRIMARY KEY (`move_id`),
+  ADD KEY `membership_id` (`membership_id`),
+  ADD KEY `round_number` (`round_number`);
 
 --
 -- Indexes for table `match_rounds`
 --
 ALTER TABLE `match_rounds`
-  ADD PRIMARY KEY (`match_round_id`);
+  ADD PRIMARY KEY (`match_round_id`),
+  ADD KEY `status` (`status`),
+  ADD KEY `round_number` (`round_number`),
+  ADD KEY `match_id` (`match_id`),
+  ADD KEY `winning_membership_id` (`winning_membership_id`);
 
 --
 -- Indexes for table `match_types`
@@ -730,20 +771,28 @@ ALTER TABLE `match_types`
 -- Indexes for table `nations`
 --
 ALTER TABLE `nations`
-  ADD PRIMARY KEY (`nation_id`);
+  ADD PRIMARY KEY (`nation_id`),
+  ADD UNIQUE KEY `vote_id` (`vote_id`),
+  ADD KEY `address_character` (`address_character`);
 
 --
 -- Indexes for table `pageviews`
 --
 ALTER TABLE `pageviews`
-  ADD PRIMARY KEY (`pageview_id`);
+  ADD PRIMARY KEY (`pageview_id`),
+  ADD KEY `viewer_id` (`viewer_id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `browserstring_id` (`browserstring_id`),
+  ADD KEY `ip_id` (`ip_id`),
+  ADD KEY `cookie_id` (`cookie_id`),
+  ADD KEY `pv_page_id` (`pv_page_id`);
 
 --
 -- Indexes for table `page_urls`
 --
 ALTER TABLE `page_urls`
   ADD PRIMARY KEY (`page_url_id`),
-  ADD KEY `url1` (`url`);
+  ADD UNIQUE KEY `url` (`url`) USING BTREE;
 
 --
 -- Indexes for table `redirect_urls`
@@ -764,6 +813,7 @@ ALTER TABLE `site_constants`
 --
 ALTER TABLE `transaction_IOs`
   ADD PRIMARY KEY (`io_id`),
+  ADD UNIQUE KEY `create_transaction_id_2` (`create_transaction_id`,`out_index`),
   ADD KEY `address_id` (`address_id`),
   ADD KEY `game_id` (`game_id`),
   ADD KEY `user_id` (`user_id`),
@@ -773,7 +823,8 @@ ALTER TABLE `transaction_IOs`
   ADD KEY `create_transaction_id` (`create_transaction_id`),
   ADD KEY `spend_transaction_id` (`spend_transaction_id`),
   ADD KEY `create_block_id` (`create_block_id`),
-  ADD KEY `spend_block_id` (`spend_block_id`);
+  ADD KEY `spend_block_id` (`spend_block_id`),
+  ADD KEY `payout_io_id` (`payout_io_id`);
 
 --
 -- Indexes for table `users`
@@ -829,9 +880,9 @@ ALTER TABLE `viewer_identifiers`
   ADD PRIMARY KEY (`identifier_id`);
 
 --
--- Indexes for table `webwallet_transactions`
+-- Indexes for table `transactions`
 --
-ALTER TABLE `webwallet_transactions`
+ALTER TABLE `transactions`
   ADD PRIMARY KEY (`transaction_id`),
   ADD KEY `user_id` (`from_user_id`),
   ADD KEY `block_id` (`block_id`),
@@ -995,11 +1046,10 @@ ALTER TABLE `viewer_connections`
 ALTER TABLE `viewer_identifiers`
   MODIFY `identifier_id` int(11) NOT NULL AUTO_INCREMENT;
 --
--- AUTO_INCREMENT for table `webwallet_transactions`
+-- AUTO_INCREMENT for table `transactions`
 --
-ALTER TABLE `webwallet_transactions`
+ALTER TABLE `transactions`
   MODIFY `transaction_id` int(20) NOT NULL AUTO_INCREMENT;
-
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

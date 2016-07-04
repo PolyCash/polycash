@@ -64,19 +64,14 @@ function claim_coin_giveaway() {
 	});
 }
 function start_vote(nation_id) {
-	if ((last_block_id+1)%game_round_length != 0) {
-		$('#vote_confirm_'+nation_id).modal('toggle');
-		$('#vote_details_'+nation_id).html($('#vote_details_general').html());
-		$('#vote_amount_'+nation_id).focus();
-		
-		setTimeout("$('#vote_amount_"+nation_id+"').focus();", 500);
-		
-		// Line below is needed to reselect the nation button which has accidentally been unselected by the modal
-		setTimeout('nation_selected('+$('#nation_id2rank_'+nation_id).val()+');', 100);
-	}
-	else {
-		alert('Voting is currently disabled.');
-	}
+	$('#vote_confirm_'+nation_id).modal('toggle');
+	$('#vote_details_'+nation_id).html($('#vote_details_general').html());
+	$('#vote_amount_'+nation_id).focus();
+	
+	setTimeout("$('#vote_amount_"+nation_id+"').focus();", 500);
+	
+	// Line below is needed to reselect the nation button which has accidentally been unselected by the modal
+	setTimeout('nation_selected('+$('#nation_id2rank_'+nation_id).val()+');', 100);
 }
 
 /*function confirm_vote(nation_id) {
@@ -204,29 +199,30 @@ function refresh_if_needed() {
 									$('#select_bet_round').html(json_result['select_bet_round']);	
 									$('#bet_round').val(selected_bet_round);
 								}
-								
-								if (parseInt(json_result['new_my_transaction']) == 1) {
-									$('#select_input_buttons').html(json_result['select_input_buttons']);
-									$('#my_bets').html(json_result['my_bets']);
-									my_last_transaction_id = parseInt(json_result['my_last_transaction_id']);
-								}
-								
-								if (parseInt(json_result['new_mature_ios']) == 1) {
-									mature_io_ids_csv = json_result['mature_io_ids_csv'];
-								}
-								
-								if (parseInt(json_result['new_mature_ios']) == 1 || parseInt(json_result['new_my_transaction']) == 1) {
-									reload_compose_vote();
-								}
-								
-								refresh_mature_io_btns();
-								set_input_amount_sums();
-								
-								if (parseInt(json_result['new_votingaddresses']) == 1) {
-									console.log("new voting addresses!");
-									nation_has_votingaddr = json_result['nation_has_votingaddr'];
-									votingaddr_count = parseInt(json_result['votingaddr_count']);
-								}
+							}
+						}
+						if (refresh_page == "wallet") {
+							if (parseInt(json_result['new_my_transaction']) == 1) {
+								$('#select_input_buttons').html(json_result['select_input_buttons']);
+								$('#my_bets').html(json_result['my_bets']);
+								my_last_transaction_id = parseInt(json_result['my_last_transaction_id']);
+							}
+							
+							if (parseInt(json_result['new_mature_ios']) == 1) {
+								mature_io_ids_csv = json_result['mature_io_ids_csv'];
+							}
+							
+							if (parseInt(json_result['new_mature_ios']) == 1 || parseInt(json_result['new_my_transaction']) == 1) {
+								reload_compose_vote();
+							}
+							
+							refresh_mature_io_btns();
+							set_input_amount_sums();
+							
+							if (parseInt(json_result['new_votingaddresses']) == 1) {
+								console.log("new voting addresses!");
+								nation_has_votingaddr = json_result['nation_has_votingaddr'];
+								votingaddr_count = parseInt(json_result['votingaddr_count']);
 							}
 						}
 						if (parseInt(json_result['new_transaction']) == 1) {
@@ -561,20 +557,25 @@ function add_utxo_to_vote(io_id, amount, create_block_id) {
 	}
 }
 function add_nation_to_vote(nation_id, name) {
-	var index_id = vote_nations.length;
-	if (nation_has_votingaddr[nation_id]) {
-		vote_nations.push(new vote_nation(index_id, name, nation_id));
-		$('#compose_vote_outputs').append('<div id="compose_vote_output_'+index_id+'" class="select_utxo">'+render_nation_output(index_id, name)+'</div>');
-		
-		load_nation_slider(index_id);
-		
-		$('#vote_confirm_'+nation_id).modal('hide');
-		
-		refresh_compose_vote();
-		refresh_output_amounts();
+	if (refresh_page == "home") {
+		alert("To cast votes, first log in to your wallet.");
 	}
 	else {
-		alert("You can't vote for this empire yet, you don't have a voting address for it.");
+		var index_id = vote_nations.length;
+		if (nation_has_votingaddr[nation_id]) {
+			vote_nations.push(new vote_nation(index_id, name, nation_id));
+			$('#compose_vote_outputs').append('<div id="compose_vote_output_'+index_id+'" class="select_utxo">'+render_nation_output(index_id, name)+'</div>');
+			
+			load_nation_slider(index_id);
+			
+			$('#vote_confirm_'+nation_id).modal('hide');
+			
+			refresh_compose_vote();
+			refresh_output_amounts();
+		}
+		else {
+			alert("You can't vote for this empire yet, you don't have a voting address for it.");
+		}
 	}
 }
 function load_nation_slider(index_id) {
@@ -695,7 +696,10 @@ function format_coins(amount) {
 	else if (amount > Math.pow(10, 4)) {
 		return (amount/Math.pow(10, 3)).toPrecision(4)+"k";
 	}
-	else return rtrim((amount).toPrecision(5), "0.");
+	else if (amount < 1) {
+		return rtrim(amount, "0.");
+	}
+	else return (amount).toPrecision(4);
 }
 function refresh_mature_io_btns() {
 	for (var i=0; i<mature_ios.length; i++) {
@@ -720,55 +724,60 @@ function compose_vote_loop() {
 function confirm_compose_vote() {
 	if (vote_inputs.length > 0) {
 		if (vote_nations.length > 0) {
-			$('#confirm_compose_vote_btn').html("Loading...");
-			
-			var place_vote_url = "/ajax/place_vote.php?io_ids=";
-			for (var i=0; i<vote_inputs.length; i++) {
-				place_vote_url += vote_inputs[i].io_id;
-				if (i != vote_inputs.length-1) place_vote_url += ",";
-			}
-			
-			place_vote_url += "&nation_ids=";
-			var amounts_url = "&amounts=";
-			
-			for (var i=0; i<vote_nations.length; i++) {
-				place_vote_url += vote_nations[i].nation_id;
-				if (i != vote_nations.length-1) place_vote_url += ",";
+			if ((last_block_id+1)%game_round_length != 0) {
+				$('#confirm_compose_vote_btn').html("Loading...");
 				
-				amounts_url += vote_nations[i].amount;
-				if (i != vote_nations.length-1) amounts_url += ",";
-			}
-			place_vote_url += amounts_url;
-			
-			$.get(place_vote_url, function(result) {
-				$('#confirm_compose_vote_btn').html("Submit Voting Transaction");
-				
-				var result_obj = JSON.parse(result);
-				
-				if (result_obj['status_code'] == 0) {
-					refresh_if_needed();
-					$('#compose_vote_success').html(result_obj['message']);
-					$('#compose_vote_success').slideDown('slow');
-					setTimeout("$('#compose_vote_success').slideUp('fast');", 2500);
-					
-					for (var i=0; i<vote_nations.length; i++) {
-						$('#compose_vote_output_'+i).remove();
-					}
-					vote_nations.length = 0;
-					
-					for (var i=0; i<vote_inputs.length; i++) {
-						$('#selected_utxo_'+i).remove();
-					}
-					vote_inputs.length = 0;
-					
-					setTimeout("refresh_compose_vote();", 3000);
+				var place_vote_url = "/ajax/place_vote.php?io_ids=";
+				for (var i=0; i<vote_inputs.length; i++) {
+					place_vote_url += vote_inputs[i].io_id;
+					if (i != vote_inputs.length-1) place_vote_url += ",";
 				}
-				else {
-					$('#compose_vote_errors').html(result_obj['message']);
-					$('#compose_vote_errors').slideDown('slow');
-					setTimeout("$('#compose_vote_errors').slideUp('fast');", 2500);
+				
+				place_vote_url += "&nation_ids=";
+				var amounts_url = "&amounts=";
+				
+				for (var i=0; i<vote_nations.length; i++) {
+					place_vote_url += vote_nations[i].nation_id;
+					if (i != vote_nations.length-1) place_vote_url += ",";
+					
+					amounts_url += vote_nations[i].amount;
+					if (i != vote_nations.length-1) amounts_url += ",";
 				}
-			});
+				place_vote_url += amounts_url;
+				
+				$.get(place_vote_url, function(result) {
+					$('#confirm_compose_vote_btn').html("Submit Voting Transaction");
+					
+					var result_obj = JSON.parse(result);
+					
+					if (result_obj['status_code'] == 0) {
+						refresh_if_needed();
+						$('#compose_vote_success').html(result_obj['message']);
+						$('#compose_vote_success').slideDown('slow');
+						setTimeout("$('#compose_vote_success').slideUp('fast');", 2500);
+						
+						for (var i=0; i<vote_nations.length; i++) {
+							$('#compose_vote_output_'+i).remove();
+						}
+						vote_nations.length = 0;
+						
+						for (var i=0; i<vote_inputs.length; i++) {
+							$('#selected_utxo_'+i).remove();
+						}
+						vote_inputs.length = 0;
+						
+						setTimeout("refresh_compose_vote();", 3000);
+					}
+					else {
+						$('#compose_vote_errors').html(result_obj['message']);
+						$('#compose_vote_errors').slideDown('slow');
+						setTimeout("$('#compose_vote_errors').slideUp('fast');", 2500);
+					}
+				});
+			}
+			else {
+				alert("It's the final block of the round; you can't vote right now.");
+			}
 		}
 		else {
 			alert("First, please add the empires that you wish to vote for.");

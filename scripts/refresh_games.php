@@ -20,7 +20,15 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			}
 		}
 		update_nation_scores($mandatory_game);
-		echo $mandatory_game['name'].", Done!<br/>\n";
+		
+		echo $mandatory_game['name']."<br/>\n";
+		
+		$qq = "SELECT s.voting_strategy, COUNT(*) FROM user_strategies s JOIN user_games ug ON s.strategy_id=ug.strategy_id JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$mandatory_game['game_id']."' GROUP BY s.voting_strategy;";
+		$rr = run_query($qq);
+		
+		while ($strategy_count = mysql_fetch_array($rr)) {
+			echo "&nbsp;&nbsp;".$strategy_count['COUNT(*)']."&nbsp;".$strategy_count['voting_strategy']."<br/>\n";
+		}
 	}
 }
 else echo "Incorrect key.";

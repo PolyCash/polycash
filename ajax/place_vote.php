@@ -145,12 +145,12 @@ if ($thisuser) {
 	}
 	else {
 		if ($amount_sum+$user_strategy['transaction_fee'] <= $mature_balance && $amount_sum > 0) {
-			$transaction_id = new_webwallet_multi_transaction($game, $nation_ids, $amounts, $thisuser['user_id'], $thisuser['user_id'], false, 'transaction', $io_ids, false, false, intval($user_strategy['transaction_fee']));
+			$transaction_id = new_transaction($game, $nation_ids, $amounts, $thisuser['user_id'], $thisuser['user_id'], false, 'transaction', $io_ids, false, false, intval($user_strategy['transaction_fee']));
 			
 			if ($transaction_id) {
 				update_nation_scores($game);
 				
-				$q = "SELECT * FROM webwallet_transactions WHERE transaction_id='".$transaction_id."';";
+				$q = "SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';";
 				$r = run_query($q);
 				$transaction = mysql_fetch_array($r);
 				

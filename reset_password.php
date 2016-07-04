@@ -25,7 +25,9 @@ include("includes/html_start.php");
 					$r = run_query($q);
 					$user = mysql_fetch_array($r);
 					
-					$q = "UPDATE user_resettokens SET firstclick_time='".time()."', firstclick_ip='".$_SERVER['REMOTE_ADDR']."', firstclick_viewer_id='".$viewer_id."' WHERE token_id='".$reset_token['token_id']."';";
+					$q = "UPDATE user_resettokens SET firstclick_time='".time()."'";
+					if ($GLOBALS['pageview_tracking_enabled']) $q .= ", firstclick_ip='".$_SERVER['REMOTE_ADDR']."'";
+					$q .= ", firstclick_viewer_id='".$viewer_id."' WHERE token_id='".$reset_token['token_id']."';";
 					$r = run_query($q);
 					?>
 					Please enter a new password for your user account:<br/>

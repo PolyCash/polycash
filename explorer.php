@@ -98,11 +98,11 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 		else {
 			if (strlen($uri_parts[3]) < 20) {
 				$tx_id = intval($uri_parts[3]);
-				$q = "SELECT * FROM webwallet_transactions WHERE transaction_id='".$tx_id."';";
+				$q = "SELECT * FROM transactions WHERE transaction_id='".$tx_id."';";
 			}
 			else {
 				$tx_hash = $uri_parts[3];
-				$q = "SELECT * FROM webwallet_transactions WHERE tx_hash='".mysql_real_escape_string($tx_hash)."';";
+				$q = "SELECT * FROM transactions WHERE tx_hash='".mysql_real_escape_string($tx_hash)."';";
 			}
 			$r = run_query($q);
 			
@@ -248,7 +248,7 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 					<?php
 					for ($i=$from_block_id; $i<=$to_block_id; $i++) {
 						echo "Block #".$i."<br/>\n";
-						$q = "SELECT * FROM webwallet_transactions WHERE game_id='".$this_game['game_id']."' AND block_id='".$i."' AND amount > 0 ORDER BY transaction_id ASC;";
+						$q = "SELECT * FROM transactions WHERE game_id='".$this_game['game_id']."' AND block_id='".$i."' AND amount > 0 ORDER BY transaction_id ASC;";
 						$r = run_query($q);
 						while ($transaction = mysql_fetch_array($r)) {
 							echo render_transaction($transaction, FALSE, "");
@@ -300,7 +300,7 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 						$round_id = block_to_round($this_game, $block['block_id']);
 						$block_index = block_id_to_round_index($this_game, $block['block_id']);
 						
-						$q = "SELECT COUNT(*), SUM(amount) FROM webwallet_transactions WHERE game_id='".$this_game['game_id']."' AND block_id='".$block['block_id']."' AND amount > 0;";
+						$q = "SELECT COUNT(*), SUM(amount) FROM transactions WHERE game_id='".$this_game['game_id']."' AND block_id='".$block['block_id']."' AND amount > 0;";
 						$r = run_query($q);
 						$r = mysql_fetch_row($r);
 						$num_trans = $r[0];
@@ -312,7 +312,7 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 						echo "This is block ".$block_index." of <a href=\"/explorer/rounds/".$round_id."\">round #".$round_id."</a><br/><br/>\n";
 					}
 					else {
-						$q = "SELECT COUNT(*), SUM(amount) FROM webwallet_transactions WHERE game_id='".$this_game['game_id']."' AND block_id IS NULL;";// AND amount > 0;";
+						$q = "SELECT COUNT(*), SUM(amount) FROM transactions WHERE game_id='".$this_game['game_id']."' AND block_id IS NULL;";// AND amount > 0;";
 						$r = run_query($q);
 						$r = mysql_fetch_row($r);
 						$num_trans = $r[0];
@@ -331,7 +331,7 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 					
 					echo '<div style="border-bottom: 1px solid #bbb;">';
 					
-					$q = "SELECT * FROM webwallet_transactions WHERE game_id='".$this_game['game_id']."' AND block_id";
+					$q = "SELECT * FROM transactions WHERE game_id='".$this_game['game_id']."' AND block_id";
 					if ($explore_mode == "unconfirmed") $q .= " IS NULL";
 					else $q .= "='".$block['block_id']."'";
 					$q .= " AND amount > 0 ORDER BY transaction_id ASC;";
@@ -378,7 +378,7 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 			else if ($explore_mode == "addresses") {
 				echo "<h3>EmpireCoin Address: ".$address['address']."</h3>\n";
 				
-				$q = "SELECT * FROM webwallet_transactions t, transaction_IOs i WHERE i.address_id='".$address['address_id']."' AND (t.transaction_id=i.create_transaction_id OR t.transaction_id=i.spend_transaction_id) GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;";
+				$q = "SELECT * FROM transactions t, transaction_IOs i WHERE i.address_id='".$address['address_id']."' AND (t.transaction_id=i.create_transaction_id OR t.transaction_id=i.spend_transaction_id) GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;";
 				$r = run_query($q);
 				
 				echo "This address has been used in ".mysql_numrows($r)." transactions.<br/>\n";

@@ -62,7 +62,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 						$output_sum += intval(pow(10,8)*$outputs[$j]["value"]);
 					}
 					
-					$q = "INSERT INTO webwallet_transactions SET game_id='".$game_id."', amount='".$output_sum."', transaction_desc='".$transaction_type."', tx_hash='".$tx_hash."', address_id=NULL, block_id='".$block_id."', time_created='".time()."';";
+					$q = "INSERT INTO transactions SET game_id='".$game_id."', amount='".$output_sum."', transaction_desc='".$transaction_type."', tx_hash='".$tx_hash."', address_id=NULL, block_id='".$block_id."', time_created='".time()."';";
 					$r = run_query($q);
 					$db_transaction_id = mysql_insert_id();
 					$transactions[$transaction_id]->db_id = $db_transaction_id;
@@ -95,7 +95,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				
 				$output_address = create_or_fetch_address($game, "genesis_address", true, false, false);
 				
-				$q = "INSERT INTO webwallet_transactions SET game_id='".$game_id."', amount='".(25*pow(10,8))."', transaction_desc='coinbase', tx_hash='".$tx_hash."', address_id=".$output_address['address_id'].", block_id='".$block_id."', time_created='".time()."';";
+				$q = "INSERT INTO transactions SET game_id='".$game_id."', amount='".(25*pow(10,8))."', transaction_desc='coinbase', tx_hash='".$tx_hash."', address_id=".$output_address['address_id'].", block_id='".$block_id."', time_created='".time()."';";
 				$r = run_query($q);
 				$transaction_id = mysql_insert_id();
 				
@@ -116,7 +116,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 					$inputs = $transactions[$i]->json_obj["vin"];
 					
 					for ($j=0; $j<count($inputs); $j++) {
-						$q = "SELECT * FROM webwallet_transactions t JOIN transaction_IOs i ON t.transaction_id=i.create_transaction_id WHERE t.game_id='".$game_id."' AND i.spend_status='unspent' AND t.tx_hash='".$inputs[$j]["txid"]."' AND i.out_index='".$inputs[$j]["vout"]."';";
+						$q = "SELECT * FROM transactions t JOIN transaction_IOs i ON t.transaction_id=i.create_transaction_id WHERE t.game_id='".$game_id."' AND i.spend_status='unspent' AND t.tx_hash='".$inputs[$j]["txid"]."' AND i.out_index='".$inputs[$j]["vout"]."';";
 						$r = run_query($q);
 						if (mysql_numrows($r) > 0) {
 							$spend_io = mysql_fetch_array($r);

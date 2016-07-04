@@ -75,7 +75,7 @@ if ($thisuser) {
 					$mature_balance = mature_balance($game, $thisuser);
 					
 					if ($amount_sum <= $mature_balance) {
-						$transaction_id = new_webwallet_multi_transaction($game, false, $amounts, $thisuser['user_id'], false, false, 'bet', false, $address_ids, $remainder_address_id, $user_strategy['transaction_fee']);
+						$transaction_id = new_transaction($game, false, $amounts, $thisuser['user_id'], false, false, 'bet', false, $address_ids, $remainder_address_id, $user_strategy['transaction_fee']);
 						if ($transaction_id > 0) {
 							$output_obj['result_code'] = 11;
 							$output_obj['message'] = "Great, your bet has been placed!";

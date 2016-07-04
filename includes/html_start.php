@@ -1,22 +1,22 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
-	<meta http-equiv="content-type" content="text/html; charset=UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	
 	<title><?php echo $pagetitle; ?></title>
 	
 	<link rel="stylesheet" type="text/css" href="/css/bootstrap.min.css" media="screen" />
-	<link rel="stylesheet" type="text/css" href="/css/style.css?t=<?php echo time(); ?>">
-	<link rel="stylesheet" type="text/css" href="/css/jquery.ui.css">
-	<link rel="stylesheet" type="text/css" href="/css/jquery.nouislider.css">
+	<link rel="stylesheet" type="text/css" href="/css/style.css?t=<?php echo time(); ?>" />
+	<link rel="stylesheet" type="text/css" href="/css/jquery.ui.css" />
+	<link rel="stylesheet" type="text/css" href="/css/jquery.nouislider.css" />
 	
-	<script type="text/javascript" language="javascript" src="/js/jquery-1.11.3.js"></script>
-	<script type="text/javascript" language="javascript" src="/js/bootstrap.min.js"></script>
-	<script type="text/javascript" language="javascript" src="/js/jquery.ui.js"></script>
-	<script type="text/javascript" language="javascript" src="/js/jquery.nouislider.js"></script>
-	<script type="text/javascript" language="javascript" src="/js/sha256.js"></script>
-	<script type="text/javascript" language="javascript" src="/js/main.js"></script>
+	<script type="text/javascript" src="/js/jquery-1.11.3.js"></script>
+	<script type="text/javascript" src="/js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="/js/jquery.ui.js"></script>
+	<script type="text/javascript" src="/js/jquery.nouislider.js"></script>
+	<script type="text/javascript" src="/js/sha256.js"></script>
+	<script type="text/javascript" src="/js/main.js"></script>
 	<script type="text/javascript" src="https://www.google.com/jsapi"></script>
 </head>
 <body>
@@ -29,7 +29,7 @@
 			<span class="icon-bar"></span>
 			<span class="icon-bar"></span>
 		  </button>
-		  <a class="navbar-brand" href="/"><img style="display: inline-block; margin-top: -6px; margin-right: 7px;" src="/img/logo/icon-35x35.png" />EmpireCoin</a>
+		  <a class="navbar-brand" href="/"><img alt="EmpireCoin Logo" id="nav_logo" src="/img/logo/icon-35x35.png" />EmpireCoin</a>
 		</div>
 		<div id="navbar" class="navbar-collapse collapse">
 		  <ul class="nav navbar-nav">

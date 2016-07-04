@@ -167,6 +167,8 @@ and (max-device-width : 480px) {
 	cursor: pointer;
 	overflow: hidden;
 	text-align: center;
+	padding-left: 0px ! important;
+	padding-right: 0px ! important;
 }
 .tabcell_sel {
 	border-bottom: 1px solid #fff;
@@ -249,4 +251,13 @@ and (max-device-width : 480px) {
 }
 #round_table {
 	padding: 5px;
+}
+#nav_logo {
+	display: inline-block;
+	margin-top: -6px;
+	margin-right: 7px;
+}
+#home_logo {
+	width: 100%;
+	max-width: 120px;
 }

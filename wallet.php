@@ -335,6 +335,7 @@ $mature_balance = mature_balance($game, $thisuser);
 		$round_stats = $round_stats[2];
 		?>
 		<script type="text/javascript">
+		//<![CDATA[
 		var current_tab = 0;
 		var last_block_id = <?php echo $last_block_id; ?>;
 		var last_transaction_id = <?php echo last_transaction_id($thisuser['game_id']); ?>;
@@ -417,6 +418,7 @@ $mature_balance = mature_balance($game, $thisuser);
 				}
 			}
 		});
+		//]]>
 		</script>
 		
 		<h1><?php
@@ -461,7 +463,7 @@ $mature_balance = mature_balance($game, $thisuser);
 				</div>
 				
 				<br/>To cast a vote please click on any of the empires below.<br/>
-				<div id="vote_popups_disabled"<?php if ($block_within_round == $game['round_length']) echo ' style="display: none;"'; ?>>
+				<div id="vote_popups_disabled"<?php if ($block_within_round != $game['round_length']) echo ' style="display: none;"'; ?>>
 					The final block of the round is being mined. Voting is currently disabled.
 				</div>
 				<div id="select_input_buttons"><?php

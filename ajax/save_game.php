@@ -63,7 +63,7 @@ if ($thisuser) {
 					$giveaway_utxo_count = 5;
 					
 					for ($i=0; $i<$giveaway_utxo_count; $i++) {
-						new_webwallet_multi_transaction($game, false, array(intval($game['giveaway_amount']/$giveaway_utxo_count)), false, $thisuser['user_id'], last_block_id($game_id), 'giveaway', false, false, false);
+						new_transaction($game, false, array(intval($game['giveaway_amount']/$giveaway_utxo_count)), false, $thisuser['user_id'], last_block_id($game_id), 'giveaway', false, false, false);
 					}
 					
 					$q = "SELECT u.* FROM users u JOIN user_strategies s ON u.user_id=s.user_id WHERE u.user_id != '".$thisuser['user_id']."' AND s.voting_strategy != 'manual' ORDER BY RAND() LIMIT 10;";
@@ -71,7 +71,7 @@ if ($thisuser) {
 					while ($player = mysql_fetch_array($r)) {
 						ensure_user_in_game($player['user_id'], $game_id);
 						for ($i=0; $i<$giveaway_utxo_count; $i++) {
-							new_webwallet_multi_transaction($game, false, array(intval($game['giveaway_amount']/$giveaway_utxo_count)), false, $player['user_id'], last_block_id($game_id), 'giveaway', false, false, false);
+							new_transaction($game, false, array(intval($game['giveaway_amount']/$giveaway_utxo_count)), false, $player['user_id'], last_block_id($game_id), 'giveaway', false, false, false);
 						}
 					}
 				}

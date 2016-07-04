@@ -11,7 +11,7 @@ if ($session_key == "") {
 $game = FALSE;
 
 if (strlen($session_key) > 0) {
-	$q = "SELECT * FROM user_sessions WHERE session_key='".$session_key."' AND expire_time > '".time()."' AND logout_time=0;";// AND ip_address='".$_SERVER['REMOTE_ADDR']."';";
+	$q = "SELECT * FROM user_sessions WHERE session_key='".$session_key."' AND expire_time > '".time()."' AND logout_time=0;";
 	$r = run_query($q);
 	
 	if (mysql_numrows($r) > 0) {
