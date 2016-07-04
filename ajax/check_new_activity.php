@@ -15,7 +15,7 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	$r = run_query($q);
 	$game = mysql_fetch_array($r);
 	
-	if ($game['payout_weight'] == "coin") $score_field = "coins_currently_voted";
+	if ($game['payout_weight'] == "coin") $score_field = "coin_score";
 	else $score_field = "coin_block_score";
 	
 	if ($game['game_status'] == "running") {
@@ -90,7 +90,7 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 		$output['current_round_table'] = current_round_table($game, $current_round, $thisuser, true);
 		$output['wallet_text_stats'] = wallet_text_stats($thisuser, $game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance);
 		$output['my_current_votes'] = my_votes_table($game, $current_round, $thisuser);
-		$output['account_value'] = number_format($account_value/pow(10,8), 2);
+		$output['account_value'] = format_bignum($account_value/pow(10,8));
 		$output['vote_details_general'] = vote_details_general($mature_balance);
 		
 		$round_stats = round_voting_stats_all($game, $current_round);

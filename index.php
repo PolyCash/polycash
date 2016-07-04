@@ -112,10 +112,9 @@ $game = mysql_fetch_array($r);
 			$last_block_id = last_block_id($game['game_id']);
 			$current_round = block_to_round($game, $last_block_id+1);
 			$block_within_round = $last_block_id%$game['round_length']+1;
-			$total_vote_sum = total_score_in_round($game, $current_round, $game['payout_weight'], true);
+			$score_sum = total_score_in_round($game, $current_round, true);
 			
 			$round_stats = round_voting_stats_all($game, $current_round);
-			$total_vote_sum = $round_stats[0];
 			$nation_id2rank = $round_stats[3];
 			
 			if ($thisuser) { ?>
@@ -137,7 +136,7 @@ $game = mysql_fetch_array($r);
 				?>
 			</div>
 			
-			<div id="vote_popups"><?php	echo initialize_vote_nation_details($game, $nation_id2rank, $total_vote_sum, $thisuser['user_id']); ?></div>
+			<div id="vote_popups"><?php	echo initialize_vote_nation_details($game, $nation_id2rank, $score_sum, $thisuser['user_id']); ?></div>
 			
 			<?php
 			if ($thisuser) {

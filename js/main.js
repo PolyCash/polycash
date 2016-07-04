@@ -64,21 +64,19 @@ function claim_coin_giveaway() {
 	});
 }
 function start_vote(nation_id) {
-	//if ((last_block_id+1)%10 != 0) {
-	
-	$('#vote_confirm_'+nation_id).modal('toggle');
-	$('#vote_details_'+nation_id).html($('#vote_details_general').html());
-	$('#vote_amount_'+nation_id).focus();
-	
-	setTimeout("$('#vote_amount_"+nation_id+"').focus();", 500);
-	
-	// Line below is needed to reselect the nation button which has accidentally been unselected by the modal
-	setTimeout('nation_selected('+$('#nation_id2rank_'+nation_id).val()+');', 100);
-	
-	//}
-	//else {
-	//	alert('Voting is currently disabled.');
-	//}
+	if ((last_block_id+1)%game_round_length != 0) {
+		$('#vote_confirm_'+nation_id).modal('toggle');
+		$('#vote_details_'+nation_id).html($('#vote_details_general').html());
+		$('#vote_amount_'+nation_id).focus();
+		
+		setTimeout("$('#vote_amount_"+nation_id+"').focus();", 500);
+		
+		// Line below is needed to reselect the nation button which has accidentally been unselected by the modal
+		setTimeout('nation_selected('+$('#nation_id2rank_'+nation_id).val()+');', 100);
+	}
+	else {
+		alert('Voting is currently disabled.');
+	}
 }
 
 /*function confirm_vote(nation_id) {

@@ -137,6 +137,8 @@ if ($thisuser) {
 			$transaction_id = new_webwallet_multi_transaction($game, $nation_ids, $amounts, $thisuser['user_id'], $thisuser['user_id'], false, 'transaction', $io_ids, false, false);
 			
 			if ($transaction_id) {
+				update_nation_scores($game);
+				
 				$q = "SELECT * FROM webwallet_transactions WHERE transaction_id='".$transaction_id."';";
 				$r = run_query($q);
 				$transaction = mysql_fetch_array($r);

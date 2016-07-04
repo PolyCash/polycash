@@ -72,27 +72,31 @@ if ($_REQUEST['do'] == "signup") {
 					}
 					
 					if ($_REQUEST['autogen_password'] == "1") {
-						$email_message = "<p>You've created a new EmpireCoin web wallet for <b>".$email."</b>.</p>";
+						$email_message = "<p>You've created a new ".$GLOBALS['site_name_short']." web wallet for <b>".$email."</b>.</p>";
 						$email_message .= "<p>A password was automatically generated for your user account.<p>";
 						$email_message .= "<p>Your password is: ".$new_pass."</p>";
-						$email_message .= "<p>If you'd like to set a new password, please visit: http://empirecoin.org/reset_password/</p>";
+						$email_message .= "<p>If you'd like to set a new password, please visit: ".$GLOBALS['base_url']."/reset_password/</p>";
 						$email_message .= "<p>Thanks for signing up!</p>";
-						$email_message .= "<p>This message was sent to you by http://empirecoin.org</p>";
+						$email_message .= "<p>This message was sent to you by ".$GLOBALS['base_url']."</p>";
 					}
 					else {
-						$email_message = "<p>A new EmpireCoin web wallet has been created for <b>".$email."</b>.</p>";
+						$email_message = "<p>A new ".$GLOBALS['site_name_short']." web wallet has been created for <b>".$email."</b>.</p>";
 						$email_message .= "<p>Thanks for signing up!</p>";
-						$email_message .= "<p>To log in any time please visit http://empirecoin.org/wallet/</p>";
-						$email_message .= "<p>This message was sent to you by http://empirecoin.org</p>";
+						$email_message .= "<p>To log in any time please visit ".$GLOBALS['base_url']."/wallet/</p>";
+						$email_message .= "<p>This message was sent to you by ".$GLOBALS['base_url']."</p>";
 					}
 					
-					$email_id = mail_async($email, "EmpireCoin.org", "no-reply@empirecoin.org", "New account created", $email_message, "", "");
+					$email_id = mail_async($email, $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], "New account created", $email_message, "", "");
 					
 					if ($_REQUEST['invite_key'] != "") {
 						try_apply_invite_key(get_site_constant('primary_game_id'), $user_id, $_REQUEST['invite_key']);
 					}
 					
-					ensure_user_in_game($user_id, get_site_constant('primary_game_id'));
+					$q = "SELECT * FROM games WHERE creator_id IS NULL;";
+					$r = run_query($q);
+					while ($mandatory_game = mysql_fetch_array($r)) {
+						ensure_user_in_game($user_id, $mandatory_game['game_id']);
+					}
 				}
 			}
 		}
@@ -284,7 +288,7 @@ else if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['d
 	}
 }
 
-$pagetitle = "EmpireCoin - My web wallet";
+$pagetitle = $GLOBALS['site_name_short']." - My web wallet";
 $nav_tab_selected = "wallet";
 include('includes/html_start.php');
 
@@ -433,7 +437,7 @@ $mature_balance = $account_value - $immature_balance;
 		</script>
 		
 		<h1><?php
-		if ($game['game_id'] != get_site_constant('primary_game_id')) echo "EmpireCoin - ";
+		if ($game['game_id'] != get_site_constant('primary_game_id')) echo $GLOBALS['site_name_short']." - ";
 		echo $game['name'];
 		if ($game['game_status'] == "paused" || $game['game_status'] == "unstarted") echo " (Paused)";
 		?></h1>
@@ -475,10 +479,7 @@ $mature_balance = $account_value - $immature_balance;
 				</div>
 				
 				<br/>To cast a vote please click on any of the empires below.<br/>
-				<?php if ($user_strategy && $user_strategy['voting_strategy'] != "manual") { ?>
-				You're logged in so your automated voting strategy is currently disabled.<br/>
-				<?php } ?>
-				<div id="vote_popups_disabled"<?php if (($last_block_id+1)%$game['round_length'] != 0) echo ' style="display: none;"'; ?>>
+				<div id="vote_popups_disabled"<?php if ($block_within_round == $game['round_length']) echo ' style="display: none;"'; ?>>
 					The final block of the round is being mined. Voting is currently disabled.
 				</div>
 				<div id="select_input_buttons"><?php
@@ -523,7 +524,7 @@ $mature_balance = $account_value - $immature_balance;
 			<div id="tabcontent1" style="display: none;" class="tabcontent">
 				<h2>My Games</h2>
 				<?php
-				$q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser['user_id']."' AND (g.game_id='".get_site_constant('primary_game_id')."' OR g.creator_id='".$thisuser['user_id']."');";
+				$q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser['user_id']."';";
 				$r = run_query($q);
 				
 				while ($user_game = mysql_fetch_array($r)) {
@@ -914,8 +915,8 @@ $mature_balance = $account_value - $immature_balance;
 										<option value="running">Running</option>
 									</select>
 									<br/>
-									<button class="btn btn-danger" onclick="switch_to_game(editing_game_id, 'delete'); return false;">Delete this Game</button>
-									<button class="btn btn-warning" onclick="switch_to_game(editing_game_id, 'reset'); return false;">Reset this Game</button>
+									<button class="btn btn-danger" onclick="switch_to_game(editing_game_id, 'delete'); return false;">Delete Game</button>
+									<button class="btn btn-warning" onclick="switch_to_game(editing_game_id, 'reset'); return false;">Reset Game</button>
 								</div>
 							</div>
 							<div class="row">

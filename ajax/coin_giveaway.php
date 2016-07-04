@@ -9,7 +9,7 @@ if ($thisuser) {
 	$game = mysql_fetch_array($r);
 	
 	if ($game['game_type'] == "simulation" && ($game['giveaway_status'] == "on" || $game['giveaway_status'] == "invite_only")) {
-		$giveaway_block_id = last_block_id($thisuser['game_id']);
+		$giveaway_block_id = last_block_id($game['game_id']);
 		if (!$giveaway_block_id) $giveaway_block_id = 0;
 		
 		if ($game['giveaway_status'] == "invite_only") {

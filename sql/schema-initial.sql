@@ -166,9 +166,10 @@ CREATE TABLE `game_nations` (
   `game_nation_id` int(11) NOT NULL,
   `game_id` int(11) DEFAULT NULL,
   `nation_id` int(11) DEFAULT NULL,
-  `coins_currently_voted` bigint(20) NOT NULL DEFAULT '0',
-  `current_vote_score` bigint(20) NOT NULL DEFAULT '0',
+  `coin_score` bigint(20) NOT NULL DEFAULT '0',
   `coin_block_score` bigint(20) NOT NULL DEFAULT '0',
+  `unconfirmed_coin_score` bigint(20) NOT NULL DEFAULT '0',
+  `unconfirmed_coin_block_score` bigint(20) NOT NULL DEFAULT '0',
   `losing_streak` int(11) NOT NULL DEFAULT '0'
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 

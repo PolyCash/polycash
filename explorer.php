@@ -207,15 +207,15 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 						
 						if (mysql_numrows($r) == 1) {
 							$ranked_nation = mysql_fetch_array($r);
-							$nation_score = nation_score_in_round($this_game, $ranked_nation['nation_id'], $round['round_id']);
+							$nation_scores = nation_score_in_round($this_game, $ranked_nation['nation_id'], $round['round_id']);
 							
 							echo '<div class="row';
-							if ($nation_score > $max_score_sum) echo ' redtext';
-							else if (!$winner_displayed && $nation_score > 0) { echo ' greentext'; $winner_displayed = TRUE; }
+							if ($nation_scores['sum'] > $max_score_sum) echo ' redtext';
+							else if (!$winner_displayed && $nation_scores['sum'] > 0) { echo ' greentext'; $winner_displayed = TRUE; }
 							echo '">';
 							echo '<div class="col-md-3">'.$rank.'. '.$ranked_nation['name'].'</div>';
-							echo '<div class="col-md-1" style="text-align: center;">'.round(100*$nation_score/$round['score_sum'], 2).'%</div>';
-							echo '<div class="col-md-3" style="text-align: center;">'.round($nation_score/pow(10,8), 2).' votes</div>';
+							echo '<div class="col-md-1" style="text-align: center;">'.round(100*$nation_scores['sum']/$round['score_sum'], 2).'%</div>';
+							echo '<div class="col-md-3" style="text-align: center;">'.number_format($nation_scores['sum']/pow(10,8), 2).' votes</div>';
 							if ($thisuser) {
 								echo '<div class="col-md-3" style="text-align: center;">';
 								
@@ -225,7 +225,7 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 								if ($this_game['payout_weight'] == "coin") echo " coins";
 								else echo " votes";
 								
-								echo ' ('.round(100*$score_qty/$nation_score, 3).'%)</div>';
+								echo ' ('.round(100*$score_qty/$nation_scores['sum'], 3).'%)</div>';
 							}
 							echo '</div>'."\n";
 						}
