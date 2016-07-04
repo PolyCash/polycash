@@ -1206,8 +1206,8 @@ class Game {
 							if ($db_user['voting_strategy'] == "by_rank") {
 								$divide_into = count($by_rank_ranks)-$num_options_skipped;
 								
-								$coins_each = floor(($free_balance-$strategy_user->db_user['transaction_fee'])/$divide_into);
-								$remainder_coins = ($free_balance-$strategy_user->db_user['transaction_fee']) - count($by_rank_ranks)*$coins_each;
+								$coins_each = floor(($free_balance-$db_user['transaction_fee'])/$divide_into);
+								$remainder_coins = ($free_balance-$db_user['transaction_fee']) - count($by_rank_ranks)*$coins_each;
 								
 								$log_text .= "Dividing by rank among ".$divide_into." options for ".$strategy_user->db_user['username']."<br/>";
 								
@@ -1228,13 +1228,13 @@ class Game {
 								}
 								if ($remainder_coins > 0) $amounts[count($amounts)-1] += $remainder_coins;
 								
-								$transaction_id = $this->new_transaction($option_ids, $amounts, $strategy_user->db_user['user_id'], $strategy_user->db_user['user_id'], false, 'transaction', false, false, false, $strategy_user->db_user['transaction_fee']);
+								$transaction_id = $this->new_transaction($option_ids, $amounts, $strategy_user->db_user['user_id'], $strategy_user->db_user['user_id'], false, 'transaction', false, false, false, $db_user['transaction_fee']);
 								
 								if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
 								else $log_text .= "Failed to add transaction.<br/>\n";
 							}
 							else if ($db_user['voting_strategy'] == "by_option") {
-								$log_text .= "Dividing by option for ".$strategy_user->db_user['username']." (".(($free_balance-$strategy_user->db_user['transaction_fee'])/pow(10,8))." coins)<br/>\n";
+								$log_text .= "Dividing by option for ".$strategy_user->db_user['username']." (".(($free_balance-$db_user['transaction_fee'])/pow(10,8))." coins)<br/>\n";
 								
 								$mult_factor = 1;
 								if ($skipped_pct_points > 0) {
@@ -1251,7 +1251,7 @@ class Game {
 									while ($voting_option = mysql_fetch_array($rr)) {
 										if (!$skipped_options[$voting_option['option_id']] && $strategy_user->db_user['option_pct_'.$voting_option['option_id']] > 0) {
 											$effective_frac = floor(pow(10,4)*$strategy_user->db_user['option_pct_'.$voting_option['option_id']]*$mult_factor)/pow(10,6);
-											$coin_amount = floor($effective_frac*($free_balance-$strategy_user->db_user['transaction_fee']));
+											$coin_amount = floor($effective_frac*($free_balance-$db_user['transaction_fee']));
 											
 											$log_text .= "Vote ".$strategy_user->db_user['option_pct_'.$voting_option['option_id']]."% (".round($coin_amount/pow(10,8), 3)." coins) for ".$ranked_stats[$option_id2rank[$voting_option['option_id']]]['name']."<br/>";
 											
@@ -1260,9 +1260,9 @@ class Game {
 											$amount_sum += $coin_amount;
 										}
 									}
-									if ($amount_sum < ($free_balance-$strategy_user->db_user['transaction_fee'])) $amounts[count($amounts)-1] += ($free_balance-$strategy_user->db_user['transaction_fee']) - $amount_sum;
+									if ($amount_sum < ($free_balance-$db_user['transaction_fee'])) $amounts[count($amounts)-1] += ($free_balance-$db_user['transaction_fee']) - $amount_sum;
 									
-									$transaction_id = $this->new_transaction($option_ids, $amounts, $strategy_user->db_user['user_id'], $strategy_user->db_user['user_id'], false, 'transaction', false, false, false, $strategy_user->db_user['transaction_fee']);
+									$transaction_id = $this->new_transaction($option_ids, $amounts, $strategy_user->db_user['user_id'], $strategy_user->db_user['user_id'], false, 'transaction', false, false, false, $db_user['transaction_fee']);
 									
 									if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
 									else $log_text .= "Failed to add transaction.<br/>\n";
@@ -1289,13 +1289,13 @@ class Game {
 									
 									for ($i=0; $i<count($allocations); $i++) {
 										$option_ids[$i] = $allocations[$i]['option_id'];
-										$amount = intval(floor(($free_balance-$strategy_user->db_user['transaction_fee'])*$allocations[$i]['points']/$point_sum));
+										$amount = intval(floor(($free_balance-$db_user['transaction_fee'])*$allocations[$i]['points']/$point_sum));
 										$amounts[$i] = $amount;
 										$amount_sum += $amount;
 									}
-									if ($amount_sum < ($free_balance-$strategy_user->db_user['transaction_fee'])) $amounts[count($amounts)-1] += ($free_balance-$strategy_user->db_user['transaction_fee']) - $amount_sum;
+									if ($amount_sum < ($free_balance-$db_user['transaction_fee'])) $amounts[count($amounts)-1] += ($free_balance-$db_user['transaction_fee']) - $amount_sum;
 									
-									$transaction_id = $this->new_transaction($option_ids, $amounts, $strategy_user->db_user['user_id'], $strategy_user->db_user['user_id'], false, 'transaction', false, false, false, $strategy_user->db_user['transaction_fee']);
+									$transaction_id = $this->new_transaction($option_ids, $amounts, $strategy_user->db_user['user_id'], $strategy_user->db_user['user_id'], false, 'transaction', false, false, false, $db_user['transaction_fee']);
 									
 									if ($transaction_id) {
 										$log_text .= "Added transaction $transaction_id<br/>\n";
