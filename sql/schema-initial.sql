@@ -966,8 +966,8 @@ INSERT INTO `voting_options` (`voting_option_id`, `option_group_id`, `name`, `ad
 (17, 2, 'Bernie Sanders', '1'),
 (18, 2, 'Donald Trump', '2'),
 (19, 2, 'Hillary Clinton', '3'),
-(20, 2, 'John Kasich', '4'),
-(21, 2, 'Joe Biden', '5'),
+(21, 2, 'Joe Biden', '4'),
+(20, 2, 'John Kasich', '5'),
 (22, 2, 'Mitt Romney', '6'),
 (23, 2, 'Paul Ryan', '7'),
 (24, 2, 'Ted Cruz', '8');

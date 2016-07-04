@@ -44,6 +44,8 @@ function chatWindow(chatWindowId, toUserId) {
 var chatWindows = new Array();
 var userId2ChatWindowId = new Array();
 var visibleChatWindows = 0;
+var option_id2option_index = {};
+var option_index2option_id = {};
 
 function openChatWindow(userId) {
 	if (typeof userId2ChatWindowId[userId] === 'undefined' || userId2ChatWindowId[userId] === false) {
@@ -631,11 +633,15 @@ var option_bets = new Array();
 var bet_sum = 0;
 var editing_game_id = false;
 
-function option(option_id, name) {
+function option(option_index, option_id, name) {
+	this.option_index = option_index;
 	this.option_id = option_id;
 	this.name = name;
 	this.existing_bet_sum = 0;
 	this.bet_index = false;
+	
+	option_id2option_index[option_id] = option_index;
+	option_index2option_id[option_index] = option_id;
 }
 function option_bet(bet_index, option_id) {
 	this.bet_index = bet_index;
@@ -1341,9 +1347,9 @@ function send_invitation(this_game_id, invitation_id, send_method) {
 		});
 	}
 }
-function plan_option(round_id, option_id) {
+function plan_option(round_id, option_index) {
 	this.round_id = round_id;
-	this.option_id = option_id;
+	this.option_index = option_index;
 	this.points = 0;
 }
 function initialize_plan_options(from_round_id, to_round_id) {
@@ -1354,46 +1360,46 @@ function initialize_plan_options(from_round_id, to_round_id) {
 	for (var round_id=from_round_id; round_id<=to_round_id; round_id++) {
 		round_id2row_id[round_id] = plan_options.length;
 		var options_row = new Array();
-		for (var option_id=0; option_id<num_voting_options; option_id++) {
-			options_row.push(new plan_option(round_id, option_id));
+		for (var option_index=0; option_index<num_voting_options; option_index++) {
+			options_row.push(new plan_option(round_id, option_index));
 		}
 		plan_options.push(options_row);
 		var row_sum = 0;
-		for (var option_id=0; option_id<num_voting_options; option_id++) {
-			render_plan_option(round_id, option_id);
-			row_sum += plan_options[round_id2row_id[round_id]][option_id].points;
+		for (var option_index=0; option_index<num_voting_options; option_index++) {
+			render_plan_option(round_id, option_index);
+			row_sum += plan_options[round_id2row_id[round_id]][option_index].points;
 		}
 		plan_option_row_sums.push(row_sum);
 	}
 }
-function render_plan_option(round_id, option_id) {
+function render_plan_option(round_id, option_index) {
 	var pct_points = 0;
 	var row_sum = plan_option_row_sums[round_id2row_id[round_id]];
-	var this_option = plan_options[round_id2row_id[round_id]][option_id];
+	var this_option = plan_options[round_id2row_id[round_id]][option_index];
 	if (row_sum > 0) pct_points = Math.round(100*this_option.points/row_sum);
-	$('#plan_option_'+round_id+'_'+option_id).css("background-color", "rgba(0,0,255,"+(pct_points/100)+")");
-	if (pct_points >= 50) $('#plan_option_'+round_id+'_'+option_id).css("color", "#fff");
-	else $('#plan_option_'+round_id+'_'+option_id).css("color", "#000");
-	$('#plan_option_amount_'+round_id+'_'+option_id).html(this_option.points+" ("+pct_points+"%)");
-	$('#plan_option_input_'+round_id+'_'+option_id).val(this_option.points);
+	$('#plan_option_'+round_id+'_'+option_index).css("background-color", "rgba(0,0,255,"+(pct_points/100)+")");
+	if (pct_points >= 50) $('#plan_option_'+round_id+'_'+option_index).css("color", "#fff");
+	else $('#plan_option_'+round_id+'_'+option_index).css("color", "#000");
+	$('#plan_option_amount_'+round_id+'_'+option_index).html(this_option.points+" ("+pct_points+"%)");
+	$('#plan_option_input_'+round_id+'_'+option_index).val(this_option.points);
 }
-function plan_option_clicked(round_id, option_id) {
-	var this_option = plan_options[round_id2row_id[round_id]][option_id];
+function plan_option_clicked(round_id, option_index) {
+	var this_option = plan_options[round_id2row_id[round_id]][option_index];
 	var new_points = (this_option.points+plan_option_increment)%(plan_option_max_points+1);
 	plan_option_row_sums[round_id2row_id[round_id]] += (new_points-this_option.points);
 	this_option.points = new_points;
 	for (var i=0; i<num_voting_options; i++) {
-		if (i == option_id || plan_options[round_id2row_id[round_id]][i].points > 0) {
+		if (i == option_index || plan_options[round_id2row_id[round_id]][i].points > 0) {
 			render_plan_option(round_id, i);
 		}
 	}
 }
-function load_plan_option(round_id, option_id, points) {
-	var this_option = plan_options[round_id2row_id[round_id]][option_id];
+function load_plan_option(round_id, option_index, points) {
+	var this_option = plan_options[round_id2row_id[round_id]][option_index];
 	plan_option_row_sums[round_id2row_id[round_id]] += (points-this_option.points);
 	this_option.points = points;
 	for (var i=0; i<num_voting_options; i++) {
-		if (i == option_id || plan_options[round_id2row_id[round_id]][i].points > 0) {
+		if (i == option_index || plan_options[round_id2row_id[round_id]][i].points > 0) {
 			render_plan_option(round_id, i);
 		}
 	}
@@ -1405,7 +1411,7 @@ function save_plan_allocations() {
 		for (var i=0; i<num_voting_options; i++) {
 			var points = parseInt($('#plan_option_input_'+round_id+'_'+i).val());
 			if (points > 0) {
-				postvars['poi_'+round_id+'_'+i] = points;
+				postvars['poi_'+round_id+'_'+option_index2option_id[i]] = points;
 			}
 		}
 	}

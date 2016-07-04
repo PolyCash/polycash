@@ -61,9 +61,10 @@ include('includes/html_start.php');
 				
 				if ($variation_game['giveaway_status'] == 'public_free') {
 					$receive_disp = format_bignum($variation_game['giveaway_amount']/pow(10,8));
-					echo 'Start with '.$receive_disp.' free ';
+					echo 'Start with '.$receive_disp.' ';
 					if ($receive_disp == '1') echo $variation_game['coin_name'];
 					else echo $variation_game['coin_name_plural'];
+					echo ' for free';
 				}
 				else {
 					echo 'Buy in at '.$variation_game['symbol'].$invite_disp." ".$variation_game['short_name'];

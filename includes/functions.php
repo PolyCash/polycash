@@ -1164,7 +1164,7 @@ function my_votes_table(&$game, $round_id, $user) {
 		if ($expected_payout < 0) $expected_payout = 0;
 		
 		$unconfirmed_html .= '<div class="row">';
-		$unconfirmed_html .= '<div class="col-sm-4 '.$color.'text">'.$my_vote['name'].'</a></div>';
+		$unconfirmed_html .= '<div class="col-sm-4 '.$color.'text">'.$my_vote['name'].'</div>';
 		$unconfirmed_html .= '<div class="col-sm-3 '.$color.'text"><a target="_blank" href="/explorer/'.$game['url_identifier'].'/transactions/'.$my_vote['transaction_id'].'">'.format_bignum($num_votes/pow(10,8), 2).' votes</a></div>';
 		
 		$payout_disp = format_bignum($expected_payout);
@@ -3077,12 +3077,14 @@ function save_plan_allocations($user_strategy, $from_round, $to_round) {
 		$q = "DELETE FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND round_id >= ".$from_round." AND round_id <= ".$to_round.";";
 		$r = run_query($q);
 		
-		for ($round_id=$from_round; $round_id<=$to_round; $round_id++) {
-			for ($i=0; $i<16; $i++) {
-				$points = intval($_REQUEST['poi_'.$round_id.'_'.$i]);
+		$q = "SELECT * FROM game_voting_options WHERE game_id='".$user_strategy['game_id']."';";
+		$r = run_query($q);
+		while ($gvo = mysql_fetch_array($r)) {
+			for ($round_id=$from_round; $round_id<=$to_round; $round_id++) {
+				$points = intval($_REQUEST['poi_'.$round_id.'_'.$gvo['option_id']]);
 				if ($points > 0) {
-					$q = "INSERT INTO strategy_round_allocations SET strategy_id='".$user_strategy['strategy_id']."', round_id='".$round_id."', option_id='".($i+1)."', points='".$points."';";
-					$r = run_query($q);
+					$qq = "INSERT INTO strategy_round_allocations SET strategy_id='".$user_strategy['strategy_id']."', round_id='".$round_id."', option_id='".$gvo['option_id']."', points='".$points."';";
+					$rr = run_query($qq);
 				}
 			}
 		}
@@ -3094,12 +3096,14 @@ function plan_options_html(&$game, $from_round, $to_round) {
 		$q = "SELECT * FROM game_voting_options WHERE game_id='".$game['game_id']."' ORDER BY option_id ASC;";
 		$r = run_query($q);
 		$html .= '<div class="plan_row">#'.$round.": ";
+		$option_index = 1;
 		while ($game_option = mysql_fetch_array($r)) {
-			$html .= '<div class="plan_option" id="plan_option_'.$round.'_'.$game_option['option_id'].'" onclick="plan_option_clicked('.$round.', '.$game_option['option_id'].');">';
-			$html .= '<div class="plan_option_label" id="plan_option_label_'.$round.'_'.$game_option['option_id'].'">'.$game_option['name']."</div>";
-			$html .= '<div class="plan_option_amount" id="plan_option_amount_'.$round.'_'.$game_option['option_id'].'"></div>';
-			$html .= '<input type="hidden" id="plan_option_input_'.$round.'_'.$game_option['option_id'].'" name="poi_'.$round.'_'.$game_option['option_id'].'" value="" />';
+			$html .= '<div class="plan_option" id="plan_option_'.$round.'_'.$option_index.'" onclick="plan_option_clicked('.$round.', '.$option_index.');">';
+			$html .= '<div class="plan_option_label" id="plan_option_label_'.$round.'_'.$option_index.'">'.$game_option['name']."</div>";
+			$html .= '<div class="plan_option_amount" id="plan_option_amount_'.$round.'_'.$option_index.'"></div>';
+			$html .= '<input type="hidden" id="plan_option_input_'.$round.'_'.$option_index.'" name="poi_'.$round.'_'.$game_option['option_id'].'" value="" />';
 			$html .= '</div>';
+			$option_index++;
 		}
 		$html .= "</div>\n";
 	}
@@ -3107,7 +3111,7 @@ function plan_options_html(&$game, $from_round, $to_round) {
 }
 function prepend_a_or_an($word) {
 	$firstletter = strtolower($word[0]);
-	if (strpos($firstletter, 'aeiou')) return "an ".$word;
+	if (strpos('aeiou', $firstletter)) return "an ".$word;
 	else return "a ".$word;
 }
 function game_info_table($game) {
@@ -3129,7 +3133,7 @@ function game_info_table($game) {
 	
 	$html .= '<div class="row"><div class="col-sm-5">'.ucfirst($game['option_name_plural']).'</div><div class="col-sm-7">'.$game['num_voting_options']." </div></div>\n";
 	
-	$html .= '<div class="row"><div class="col-sm-5">'.ucfirst($game['option_name']).' voting cap:</div><div class="col-sm-7">'.(100*$game['max_voting_fraction'])."% maximum</div></div>\n";
+	$html .= '<div class="row"><div class="col-sm-5">'.ucfirst($game['option_name']).' voting cap:</div><div class="col-sm-7">'.(100*$game['max_voting_fraction'])."%</div></div>\n";
 	
 	$html .= '<div class="row"><div class="col-sm-5">Cost to join:</div><div class="col-sm-7">';
 	if ($game['giveaway_status'] == "invite_pay" || $game['giveaway_status'] == "public_pay") $html .= format_bignum($game['invite_cost'])." ".$invite_currency['short_name']."s";

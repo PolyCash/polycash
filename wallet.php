@@ -621,25 +621,27 @@ $mature_balance = mature_balance($game, $thisuser);
 		var performance_history_start_round = <?php echo max(1, $current_round-10); ?>;
 		var performance_history_loading = false;
 		
-		var option_has_votingaddr = [];
-		for (var i=1; i<=num_voting_options; i++) { option_has_votingaddr[i] = false; }
-		var votingaddr_count = 0;
-		
 		var user_logged_in = true;
 		
 		var refresh_page = "wallet";
 		
+		var option_has_votingaddr = [];
+		var votingaddr_count = 0;
+		
 		function load_options() {
-			options.push(new option(0, 'No Winner'));<?php
-			$q = "SELECT * FROM game_voting_options ORDER BY option_id ASC;";
+			options.push(new option(0, false, 'No Winner'));
+			<?php
+			$q = "SELECT * FROM game_voting_options WHERE game_id='".$game['game_id']."' ORDER BY option_id ASC;";
 			$r = run_query($q);
+			$option_index = 1;
 			while ($option = mysql_fetch_array($r)) {
-				echo "\n\t\t\toptions.push(new option(".$option['option_id'].", '".$option['name']."'));";
+				echo "\n\t\t\toptions.push(new option(".$option_index.", ".$option['option_id'].", '".$option['name']."'));";
 				$votingaddr_id = user_address_id($game['game_id'], $thisuser['user_id'], $option['option_id']);
 				if ($votingaddr_id !== false) {
 					echo "\n\t\t\toption_has_votingaddr[".$option['option_id']."] = true;";
 					echo "\n\t\t\tvotingaddr_count++;";
 				}
+				$option_index++;
 			}
 		?>}
 		
@@ -963,11 +965,13 @@ $mature_balance = mature_balance($game, $thisuser);
 							
 							$(document).ready(function() {
 								initialize_plan_options(<?php echo $current_round; ?>, <?php echo $current_round+$plan_ahead_rounds-1; ?>);
+								console.log(option_id2option_index);
+								console.log(option_index2option_id);
 								<?php
 								$q = "SELECT * FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND round_id >= ".$current_round." AND round_id <= ".($current_round+$plan_ahead_rounds-1).";";
 								$r = run_query($q);
 								while ($allocation = mysql_fetch_array($r)) {
-									echo "load_plan_option(".$allocation['round_id'].", ".($allocation['option_id']-1).", ".$allocation['points'].");\n";
+									echo "load_plan_option(".$allocation['round_id'].", option_id2option_index[".$allocation['option_id']."], ".$allocation['points'].");\n";
 								}
 								?>
 							});
@@ -1065,7 +1069,7 @@ $mature_balance = mature_balance($game, $thisuser);
 						<select class="form-control" id="withdraw_remainder_address_id">
 							<option value="random">Random</option>
 							<?php
-							$q = "SELECT * FROM addresses a LEFT JOIN game_voting_options vo ON vo.option_id=a.option_id WHERE a.game_id='".$game['game_id']."' AND a.user_id='".$thisuser['user_id']."' ORDER BY a.option_id IS NULL ASC, a.option_id ASC;";
+							$q = "SELECT * FROM addresses a LEFT JOIN game_voting_options vo ON vo.option_id=a.option_id WHERE vo.game_id='".$game['game_id']."' AND a.user_id='".$thisuser['user_id']."' GROUP BY a.option_id ORDER BY vo.option_id IS NULL ASC, vo.option_id ASC;";
 							$r = run_query($q);
 							while ($address = mysql_fetch_array($r)) {
 								if ($address['name'] == "") $address['name'] = "None";
@@ -1083,7 +1087,7 @@ $mature_balance = mature_balance($game, $thisuser);
 				
 				<h1>Deposit</h1>
 				<?php
-				$q = "SELECT * FROM addresses a LEFT JOIN game_voting_options gvo ON gvo.option_id=a.option_id WHERE a.game_id='".$game['game_id']."' AND a.user_id='".$thisuser['user_id']."' ORDER BY a.option_id IS NULL ASC, a.option_id ASC;";
+				$q = "SELECT * FROM addresses a LEFT JOIN game_voting_options gvo ON gvo.option_id=a.option_id WHERE gvo.game_id='".$game['game_id']."' AND a.user_id='".$thisuser['user_id']."' ORDER BY gvo.option_id IS NULL ASC, gvo.option_id ASC;";
 				$r = run_query($q);
 				?>
 				<b>You have <?php echo mysql_numrows($r); ?> addresses.</b><br/>
