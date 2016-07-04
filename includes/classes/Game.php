@@ -139,7 +139,7 @@ class Game {
 		else return false;
 	}
 
-	public function current_round_table($current_round, $user, $show_intro_text, $clickable) {
+	public function current_round_table($current_round, $user, $show_intro_text, $clickable, $game_instance_id) {
 		$score_field = $this->db_game['payout_weight']."_score";
 		
 		$last_block_id = $this->last_block_id();
@@ -155,7 +155,7 @@ class Game {
 		
 		$winner_option_id = FALSE;
 		
-		$html = '<div id="round_table">';
+		$html = '<div id="game'.$game_instance_id.'_round_table">';
 		
 		$max_circle_diam = 200;
 		$sq_px_per_pct_point = pow($max_circle_diam, 2)/100;
@@ -222,17 +222,17 @@ class Game {
 				if ($option_score > $max_score_sum) $html .=  " redtext";
 				else if ($winner_option_id == $round_stats[$i]['option_id']) $html .=  " greentext";
 				$html .= '"';
-				if ($clickable) $html .= ' style="cursor: pointer;" onclick="option_selected('.$i.'); start_vote('.$round_stats[$i]['option_id'].');"';
+				if ($clickable) $html .= ' style="cursor: pointer;" onclick="Games['.$game_instance_id.'].option_selected('.$i.'); Games['.$game_instance_id.'].start_vote('.$round_stats[$i]['option_id'].');"';
 				$html .= '>'.$round_stats[$i]['name'].' ('.$pct_votes.'%)</div>
 				<div class="stage vote_option_box_holder" style="height: '.$box_diam.'px; width: '.$box_diam.'px;">
 					<div class="ball vote_option_box" style="';
 					if ($round_stats[$i]['image_id'] > 0) $html .= 'background-image: url(\'/img/custom/'.$round_stats[$i]['image_id'].'_'.$round_stats[$i]['access_key'].'.'.$round_stats[$i]['extension'].'\');';
 					if ($clickable) $html .= 'cursor: pointer;';
-					$html .= '" id="vote_option_'.$i.'"';
-					if ($clickable) $html .= ' onmouseover="option_selected('.$i.');" onclick="option_selected('.$i.'); start_vote('.$round_stats[$i]['option_id'].');"';
+					$html .= '" id="game'.$game_instance_id.'_vote_option_'.$i.'"';
+					if ($clickable) $html .= ' onmouseover="Games['.$game_instance_id.'].option_selected('.$i.');" onclick="Games['.$game_instance_id.'].option_selected('.$i.'); Games['.$game_instance_id.'].start_vote('.$round_stats[$i]['option_id'].');"';
 					$html .= '>
-						<input type="hidden" id="option_id2rank_'.$round_stats[$i]['option_id'].'" value="'.$i.'" />
-						<input type="hidden" id="rank2option_id_'.$i.'" value="'.$round_stats[$i]['option_id'].'" />
+						<input type="hidden" id="game'.$game_instance_id.'_option_id2rank_'.$round_stats[$i]['option_id'].'" value="'.$i.'" />
+						<input type="hidden" id="game'.$game_instance_id.'_rank2option_id_'.$i.'" value="'.$round_stats[$i]['option_id'].'" />
 					</div>
 				</div>
 			</div>';
@@ -825,7 +825,7 @@ class Game {
 		return $html;
 	}
 	
-	public function initialize_vote_option_details($option_id2rank, $score_sum, $user_id) {
+	public function initialize_vote_option_details($option_id2rank, $score_sum, $user_id, $game_instance_id) {
 		$html = "";
 		$option_q = "SELECT * FROM game_voting_options WHERE game_id='".$this->db_game['game_id']."' ORDER BY option_id ASC;";
 		$option_r = $this->app->run_query($option_q);
@@ -841,19 +841,19 @@ class Game {
 			$confirmed_votes = $option[$this->db_game['payout_weight'].'_score'];
 			$unconfirmed_votes = $option['unconfirmed_'.$this->db_game['payout_weight'].'_score'];
 			$html .= '
-			<div style="display: none;" class="modal fade" id="vote_confirm_'.$option['option_id'].'">
+			<div style="display: none;" class="modal fade" id="game'.$game_instance_id.'_vote_confirm_'.$option['option_id'].'">
 				<div class="modal-dialog">
 					<div class="modal-content">
 						<div class="modal-body">
 							<h2>Vote for '.$option['name'].'</h2>
-							<div id="vote_option_details_'.$option['option_id'].'">
+							<div id="game'.$game_instance_id.'_vote_option_details_'.$option['option_id'].'">
 								'.$this->app->vote_option_details($option, $rank, $confirmed_votes, $unconfirmed_votes, $score_sum, $losing_streak).'
 							</div>
-							<div id="vote_details_'.$option['option_id'].'"></div>
-							<div class="redtext" id="vote_error_'.$option['option_id'].'"></div>
+							<div id="game'.$game_instance_id.'_vote_details_'.$option['option_id'].'"></div>
+							<div class="redtext" id="game'.$game_instance_id.'_vote_error_'.$option['option_id'].'"></div>
 						</div>
 						<div class="modal-footer">
-							<button class="btn btn-primary" id="vote_confirm_btn_'.$option['option_id'].'" onclick="add_option_to_vote('.$option['option_id'].', \''.$option['name'].'\');">Add '.$option['name'].' to my vote</button>
+							<button class="btn btn-primary" id="game'.$game_instance_id.'_vote_confirm_btn_'.$option['option_id'].'" onclick="Games['.$game_instance_id.'].add_option_to_vote('.$option['option_id'].', \''.$option['name'].'\');">Add '.$option['name'].' to my vote</button>
 							<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
 						</div>
 					</div>

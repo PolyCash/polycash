@@ -24,6 +24,9 @@ include('includes/html_start.php');
 		</div>
 	</div>
 	
+	<script type="text/javascript">
+	var Games = new Array();
+	</script>
 	<?php
 	$app->display_featured_games();
 	?>

@@ -32,7 +32,7 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		while ($db_real_game = $r->fetch()) {
 			$game_id2real_game_i[$db_real_game['game_id']] = $real_game_i;
 			$real_games[$real_game_i] = new Game($app, $db_real_game['game_id']);
-			$coin_rpcs[$real_game_i] = new jsonRPCClient('http://'.$real_games[$real_game_i]->db_game['rpc_username'].':'.$real_games[$real_game_i]->db_game['rpc_password'].'@127.0.0.1:'.$real_games[$real_game_i]->db_game['rpc_port'].'/');
+			$coin_rpcs[$real_game_i] = new jsonRPCClient('http://'.$db_real_game['rpc_username'].':'.$db_real_game['rpc_password'].'@127.0.0.1:'.$db_real_game['rpc_port'].'/');
 			$real_game_i++;
 		}
 

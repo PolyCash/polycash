@@ -707,37 +707,33 @@ if ($thisuser && $game) {
 		$max_vote_sum = $round_stats[1];
 		$option_id2rank = $round_stats[3];
 		$round_stats = $round_stats[2];
+
+		$my_last_transaction_id = $thisuser->my_last_transaction_id($game->db_game['game_id']);
 		?>
 		<script type="text/javascript">
 		//<![CDATA[
 		var current_tab = 0;
-		var last_block_id = <?php echo $last_block_id; ?>;
-		var last_transaction_id = <?php echo $game->last_transaction_id(); ?>;
-		var my_last_transaction_id = <?php
-		$my_last_transaction_id = $thisuser->my_last_transaction_id($game->db_game['game_id']);
+		var Games = new Array();
+		Games.push(new Game(<?php
+			echo $game->db_game['game_id'];
+			echo ', '.$last_block_id;
+			echo ', '.$game->last_transaction_id().', ';
 			if ($my_last_transaction_id) echo $my_last_transaction_id;
 			else echo 'false';
-		?>;
-		var mature_io_ids_csv = '<?php echo $game->mature_io_ids_csv($thisuser->db_user['user_id']); ?>';
-		var refresh_in_progress = false;
-		var last_refresh_time = 0;
-		var payout_weight = '<?php echo $game->db_game['payout_weight']; ?>';
-		var game_round_length = <?php echo $game->db_game['round_length']; ?>;
-		var game_loop_index = 1;
-		var last_game_loop_index_applied = -1;
-		var min_bet_round = <?php
+			echo ', "'.$game->mature_io_ids_csv($thisuser->db_user['user_id']).'"';
+			echo ', "'.$game->db_game['payout_weight'].'"';
+			echo ', '.$game->db_game['round_length'];
 			$bet_round_range = $game->bet_round_range();
-			echo $bet_round_range[0];
-		?>;
-		var fee_amount = <?php echo $user_strategy['transaction_fee']; ?>;
-		var game_id = <?php echo $game->db_game['game_id']; ?>;
-		var game_url_identifier = '<?php echo $game->db_game['url_identifier']; ?>';
-		var coin_name = '<?php echo $game->db_game['coin_name']; ?>';
-		var coin_name_plural = '<?php echo $game->db_game['coin_name_plural']; ?>';
-		var num_voting_options = <?php echo $game->db_game['num_voting_options']; ?>;
-		var payout_taper_function = '<?php echo $game->db_game['payout_taper_function']; ?>';
-		
-		var selected_option_id = false;
+			$min_bet_round = $bet_round_range[0];
+			echo ', '.$min_bet_round;
+			echo ', '.$user_strategy['transaction_fee'];
+			echo ', "'.$game->db_game['url_identifier'].'"';
+			echo ', "'.$game->db_game['coin_name'].'"';
+			echo ', "'.$game->db_game['coin_name_plural'].'"';
+			echo ', '.$game->db_game['num_voting_options'];
+			echo ', "'.$game->db_game['payout_taper_function'].'"';
+			echo ', "wallet"';
+		?>));
 		
 		var initial_notification_pref = "<?php echo $thisuser->db_user['notification_preference']; ?>";
 		var initial_notification_email = "<?php echo $thisuser->db_user['notification_email']; ?>";
@@ -751,26 +747,22 @@ if ($thisuser && $game) {
 		
 		var user_logged_in = true;
 		
-		var refresh_page = "wallet";
-		
-		var option_has_votingaddr = [];
-		var votingaddr_count = 0;
-		
-		function load_options() {
-			<?php
-			$q = "SELECT * FROM game_voting_options WHERE game_id='".$game->db_game['game_id']."' ORDER BY option_id ASC;";
-			$r = $app->run_query($q);
-			$option_index = 0;
-			while ($option = $r->fetch()) {
-				echo "\n\t\t\toptions.push(new option(".$option_index.", ".$option['option_id'].", '".$option['name']."'));";
-				$votingaddr_id = $thisuser->user_address_id($game->db_game['game_id'], $option['option_id']);
-				if ($votingaddr_id !== false) {
-					echo "\n\t\t\toption_has_votingaddr[".$option['option_id']."] = true;";
-					echo "\n\t\t\tvotingaddr_count++;";
-				}
-				$option_index++;
+		var optionData = new Array();
+		var votingAddrOptions = new Array();
+		<?php
+		$q = "SELECT * FROM game_voting_options WHERE game_id='".$game->db_game['game_id']."' ORDER BY option_id ASC;";
+		$r = $app->run_query($q);
+		while ($option = $r->fetch()) {
+			echo "optionData.push(new Array(".$option['option_id'].", '".$option['name']."'));\n";
+			$votingaddr_id = $thisuser->user_address_id($game->db_game['game_id'], $option['option_id']);
+			if ($votingaddr_id !== false) {
+				echo "votingAddrOptions.push(".$option['option_id'].");\n";
 			}
-		?>}
+		}
+		?>
+		Games[0].setVotingOptions(optionData);
+		Games[0].setVotingAddresses(votingAddrOptions);
+		Games[0].option_selected(0);
 		
 		<?php if ($game->db_game['losable_bets_enabled'] == 1) { ?>
 		google.load("visualization", "1", {packages:["corechart"]});
@@ -778,18 +770,16 @@ if ($thisuser && $game) {
 		
 		$(document).ready(function() {
 			render_tx_fee();
-			load_options();
 			load_plan_option_events();
 			notification_pref_changed();
 			alias_pref_changed();
-			option_selected(0);
 			reload_compose_vote();
 			
 			$('.datepicker').datepicker();
 
 			loop_event();
-			game_loop_event();
 			compose_vote_loop();
+			Games[0].game_loop_event();
 			
 			<?php
 			if ($game->db_game['losable_bets_enabled'] == 1) { ?>
@@ -811,10 +801,10 @@ if ($thisuser && $game) {
 		
 		$(document).keypress(function (e) {
 			if (e.which == 13) {
-				var selected_option_db_id = $('#rank2option_id_'+selected_option_id).val();
+				var selected_option_db_id = $('#game0_rank2option_id_'+selected_option_id).val();
 				
-				if ($('#vote_amount_'+selected_option_db_id).is(":focus")) {
-					confirm_vote(selected_option_db_id);
+				if ($('#game0_vote_amount_'+selected_option_db_id).is(":focus")) {
+					Games[0].confirm_vote(selected_option_db_id);
 				}
 			}
 		});
@@ -852,7 +842,9 @@ if ($thisuser && $game) {
 			<?php echo $app->vote_details_general($mature_balance); ?>
 		</div>
 		
-		<div id="vote_popups"><?php	echo $game->initialize_vote_option_details($option_id2rank, $total_vote_sum, $thisuser->db_user['user_id']); ?></div>
+		<div id="game0_vote_popups"><?php
+		echo $game->initialize_vote_option_details($option_id2rank, $total_vote_sum, $thisuser->db_user['user_id'], 0);
+		?></div>
 		
 		<div class="row">
 			<div class="col-xs-2 tabcell" id="tabcell0" onclick="tab_clicked(0);">Play&nbsp;Now</div>
@@ -878,9 +870,9 @@ if ($thisuser && $game) {
 					<?php
 				}
 				?>
-				<div id="current_round_table">
+				<div id="game0_current_round_table">
 					<?php
-					echo $game->current_round_table($current_round, $thisuser, true, true);
+					echo $game->current_round_table($current_round, $thisuser, true, true, 0);
 					?>
 				</div>
 				

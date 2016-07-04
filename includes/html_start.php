@@ -57,7 +57,7 @@
 						$primary_game = new Game($app, $app->get_site_constant('primary_game_id'));
 						echo $primary_game->db_game['url_identifier']."/";
 					}
-					?>"><?php if ($thisuser) echo "My Account"; else echo "Log In"; ?></a></li>
+					?>"><?php if ($thisuser) echo "Wallet"; else echo "Log In"; ?></a></li>
 					<?php if ($game) { ?><li<?php if ($nav_tab_selected == "game_homepage") echo ' class="active"'; ?>><a href="/<?php echo $game->db_game['url_identifier']; ?>/">About</a></li><?php } ?>
 					<li<?php if ($nav_tab_selected == "explorer") echo ' class="active"'; ?>><a href="/explorer/<?php if ($game) echo $game->db_game['url_identifier']."/"; ?>">Explore</a></li>
 					<?php

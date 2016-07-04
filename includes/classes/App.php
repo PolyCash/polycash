@@ -608,12 +608,41 @@ class App {
 			$featured_game = new Game($this, $db_game['game_id']);
 			$mining_block_id = $featured_game->last_block_id()+1;
 			$current_round_id = $featured_game->block_to_round($mining_block_id);
-			
+
+			$score_sums = $featured_game->total_score_in_round($current_round_id, true);
+			$round_stats = $featured_game->round_voting_stats_all($current_round_id);
+			$option_id2rank = $round_stats[3];
+			?>
+			<script type="text/javascript">
+			Games.push(new Game(<?php
+				echo $db_game['game_id'];
+				echo ', '.($mining_block_id-1);
+				echo ', '.$featured_game->last_transaction_id().', ';
+				echo 'false';
+				echo ', ""';
+				echo ', "'.$db_game['payout_weight'].'"';
+				echo ', '.$db_game['round_length'];
+				$bet_round_range = $featured_game->bet_round_range();
+				$min_bet_round = $bet_round_range[0];
+				echo ', '.$min_bet_round;
+				echo ', 0';
+				echo ', "'.$db_game['url_identifier'].'"';
+				echo ', "'.$db_game['coin_name'].'"';
+				echo ', "'.$db_game['coin_name_plural'].'"';
+				echo ', '.$db_game['num_voting_options'];
+				echo ', "'.$db_game['payout_taper_function'].'"';
+				echo ', "home"';
+			?>));
+			Games[<?php echo $counter; ?>].game_loop_event();
+			</script>
+			<?php
 			echo '<div class="col-md-'.$cell_width.'"><h3 style="display: inline-block" title="'.$featured_game->game_description().'">'.$featured_game->db_game['name'].'</h3>';
-			echo $featured_game->current_round_table($current_round_id, false, false, false);
+			echo $featured_game->current_round_table($current_round_id, false, false, true, $counter);
 			echo '<a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-success">Play Now</a>';
 			echo ' <a href="/explorer/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-primary">Blockchain Explorer</a>';
 			echo '<br/><br/></div>';
+			
+			echo $featured_game->initialize_vote_option_details($option_id2rank, $score_sums['sum'], false, $counter);
 			
 			if ($counter%(12/$cell_width) == 1) echo '</div><div class="row">';
 			$counter++;

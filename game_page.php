@@ -216,9 +216,9 @@ if ($game && $thisuser) {
 			$round_stats = $game->round_voting_stats_all($current_round);
 			$option_id2rank = $round_stats[3];
 			?>
-			<div id="current_round_table" style="margin-bottom: 10px;">
+			<div id="game0_current_round_table" style="margin-bottom: 10px;">
 				<?php
-				echo $game->current_round_table($current_round, $thisuser, false, true);
+				echo $game->current_round_table($current_round, $thisuser, false, true, 0);
 				?>
 			</div>
 			
@@ -244,8 +244,8 @@ if ($game && $thisuser) {
 	</div>
 
 	<div class="paragraph">
-		<div id="vote_popups"><?php
-		echo $game->initialize_vote_option_details($option_id2rank, $score_sums['sum'], empty($thisuser)? false : $thisuser->db_user['user_id']);
+		<div id="game0_vote_popups"><?php
+		echo $game->initialize_vote_option_details($option_id2rank, $score_sums['sum'], empty($thisuser)? false : $thisuser->db_user['user_id'], 0);
 		?></div>
 		
 		<?php
@@ -256,7 +256,7 @@ if ($game && $thisuser) {
 		}
 		else $mature_balance = 0;
 		?>
-		<div style="display: none;" id="vote_details_general">
+		<div style="display: none;" id="game0_vote_details_general">
 			<?php echo $app->vote_details_general($mature_balance); ?>
 		</div>
 	</div>
@@ -264,34 +264,32 @@ if ($game && $thisuser) {
 
 <script type="text/javascript">
 //<![CDATA[
-var last_block_id = <?php echo $last_block_id; ?>;
-var last_transaction_id = <?php echo $game->last_transaction_id(); ?>;
-var my_last_transaction_id = <?php
-if ($thisuser) echo $thisuser->my_last_transaction_id($game->db_game['game_id']);
-else echo 'false';
-?>;
-var mature_io_ids_csv = '<?php echo empty($thisuser)? 0 : $game->mature_io_ids_csv($thisuser->db_user['user_id']); ?>';
-var game_round_length = <?php echo $game->db_game['round_length']; ?>;
-var game_id = <?php echo $game->db_game['game_id']; ?>;
-var game_loop_index = 1;
-var num_voting_options = <?php echo $game->db_game['num_voting_options']; ?>;
-
-var coin_name = '<?php echo $game->db_game['coin_name']; ?>';
-var coin_name_plural = '<?php echo $game->db_game['coin_name_plural']; ?>';
-
-var last_game_loop_index_applied = -1;
-var min_bet_round = <?php
+var Games = new Array();
+Games.push(new Game(<?php
+	if ($thisuser) $my_last_transaction_id = $thisuser->my_last_transaction_id($game->db_game['game_id']);
+	else $my_last_transaction_id = false;
+	
+	echo $game->db_game['game_id'];
+	echo ', '.$last_block_id;
+	echo ', '.$game->last_transaction_id().', ';
+	if ($my_last_transaction_id) echo $my_last_transaction_id;
+	else echo 'false';
+	echo ', "';
+	echo empty($thisuser)? 0 : $game->mature_io_ids_csv($thisuser->db_user['user_id']);
+	echo '", "'.$game->db_game['payout_weight'].'"';
+	echo ', '.$game->db_game['round_length'];
 	$bet_round_range = $game->bet_round_range();
-	echo $bet_round_range[0];
-?>;
-var option_has_votingaddr = [];
-for (var i=1; i<=num_voting_options; i++) { option_has_votingaddr[i] = false; }
-var votingaddr_count = 0;
+	$min_bet_round = $bet_round_range[0];
+	echo ', '.$min_bet_round;
+	echo ', 0';
+	echo ', "'.$game->db_game['url_identifier'].'"';
+	echo ', "'.$game->db_game['coin_name'].'"';
+	echo ', "'.$game->db_game['coin_name_plural'].'"';
+	echo ', '.$game->db_game['num_voting_options'];
+	echo ', "'.$game->db_game['payout_taper_function'].'"';
+	echo ', "game"';
+?>));
 
-var refresh_page = "game";
-var refresh_in_progress = false;
-var last_refresh_time = 0;
-var selected_option_id = false;
 var user_logged_in = <?php if ($thisuser) echo 'true'; else echo 'false'; ?>;
 
 var homeCarousel;
@@ -299,8 +297,8 @@ var homeCarousel;
 $(document).ready(function() {
 	homeCarousel = new ImageCarousel('home_carousel');
 	homeCarousel.initialize();
-	option_selected(0);
-	game_loop_event();
+	Games[0].option_selected(0);
+	Games[0].game_loop_event();
 });
 
 $(".navbar-toggle").click(function(event) {
