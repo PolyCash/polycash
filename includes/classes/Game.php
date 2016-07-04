@@ -1698,7 +1698,7 @@ class Game {
 	public function addr_text_to_option_id($addr_text) {
 		$option_id = false;
 		
-		if (strtolower($addr_text[0].$addr_text[1]) == "ee") {
+		if (strtolower($addr_text[1]) == "e") {
 			$q = "SELECT * FROM game_voting_options WHERE game_id='".$this->db_game['game_id']."' AND voting_character='".strtolower($addr_text[2])."';";
 			$r = $this->app->run_query($q);
 			

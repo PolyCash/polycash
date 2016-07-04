@@ -33,7 +33,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				die();
 			}
 			
-			$q = "SELECT * FROM games WHERE url_identifier='".strtolower($GLOBALS['coin_brand_name'])."-live';";
+			$q = "SELECT * FROM games WHERE url_identifier='empirecoin-launch';";
 			$r = $app->run_query($q);
 			
 			if ($r->rowCount() == 0) {
@@ -50,7 +50,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				$primary_game->start_game();
 			}
 
-			$q = "SELECT * FROM games WHERE url_identifier='".strtolower($GLOBALS['coin_brand_name'])."-testnet';";
+			$q = "SELECT * FROM games WHERE url_identifier='empirecoin-testnet';";
 			$r = $app->run_query($q);
 			
 			if ($r->rowCount() == 0) {
@@ -166,6 +166,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 					echo "Next, please run <a target=\"_blank\" href=\"/scripts/sync_coind_initial.php?key=".$GLOBALS['cron_key_string']."\">scripts/sync_coind_initial.php</a><br/>\n";
 				}
 				catch (Exception $e) {
+					var_dump($e);
 					echo "Failed to establish a connection to ".$GLOBALS['coin_brand_name']." core, please check coin parameters in includes/config.php<br/>";
 				}
 				?>

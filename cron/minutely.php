@@ -106,19 +106,39 @@ else {
 		}
 	
 		if ($real_game && $GLOBALS['min_unallocated_addresses'] > 0) {
+			$has_newvotingaddress_func = true;
+			try {
+				$coin_rpc->getnewvotingaddress($option['name']);
+			}
+			catch (Exception $e) {
+				$has_newvotingaddress_func = false;
+			}
+			
 			$need_addresses = false;
 			$q = "SELECT * FROM game_voting_options WHERE game_id='".$real_game->db_game['game_id']."' ORDER BY option_id ASC;";
 			$r = $app->run_query($q);
 			while ($option = $r->fetch()) {
-				$qq = "SELECT * FROM addresses WHERE game_id='".$real_game->db_game['game_id']."' AND option_id='".$option['option_id']."' AND user_id IS NULL;";
+				$qq = "SELECT * FROM addresses WHERE game_id='".$real_game->db_game['game_id']."' AND is_mine=1 AND option_id='".$option['option_id']."' AND user_id IS NULL;";
 				$rr = $app->run_query($qq);
 				$num_addr = $rr->rowCount();
-			
+				
 				if ($num_addr < $GLOBALS['min_unallocated_addresses']) {
 					echo "Generate ".($GLOBALS['min_unallocated_addresses']-$num_addr)." unallocated ".$option['name']." addresses in \"".$real_game->db_game['name']."\"<br/>\n";
-					for ($i=0; $i<($GLOBALS['min_unallocated_addresses']-$num_addr); $i++) {
-						$new_addr_str = $coin_rpc->getnewvotingaddress($option['name']);
-						$new_addr_db = $real_game->create_or_fetch_address($new_addr_str, false, $coin_rpc, true, false);
+					
+					if ($has_newvotingaddress_func) {
+						for ($i=0; $i<($GLOBALS['min_unallocated_addresses']-$num_addr); $i++) {
+							$new_addr_str = $coin_rpc->getnewvotingaddress($option['name']);
+							$new_addr_db = $real_game->create_or_fetch_address($new_addr_str, false, $coin_rpc, true, false);
+						}
+					}
+					else {
+						$new_voting_addr_count = 0;
+						do {
+							$temp_address = $coin_rpc->getnewaddress();
+							$new_addr_db = $real_game->create_or_fetch_address($temp_address, false, $coin_rpc, true, false);
+							if ($new_addr_db['option_id'] == $option['option_id']) $new_voting_addr_count++;
+						}
+						while ($new_voting_addr_count < ($GLOBALS['min_unallocated_addresses']-$num_addr));
 					}
 				}
 			}
