@@ -39,15 +39,13 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			if (mysql_numrows($r) == 0) {
 				$address_id = $GLOBALS['app']->new_invoice_address();
 				
-				$q = "INSERT INTO games SET invoice_address_id='".$address_id."', option_group_id=1, featured=1, invite_currency=1, url_identifier='".strtolower($GLOBALS['coin_brand_name'])."-live', game_status='published', giveaway_status='public_free', giveaway_amount=100000000000, pow_reward=2500000000, pos_reward=75000000000, game_type='simulation', block_timing='realistic', payout_weight='coin_round', seconds_per_block=120, name='".$GLOBALS['coin_brand_name']." Live', num_voting_options=16, maturity=1, round_length=10, max_voting_fraction=0.25, option_name='empire', option_name_plural='empires', buyin_policy='none';";
+				$q = "INSERT INTO games SET invoice_address_id='".$address_id."', option_group_id=1, featured=1, invite_currency=1, url_identifier='empirecoin-launch', game_status='published', giveaway_status='public_free', giveaway_amount=100000000000, pow_reward=2500000000, pos_reward=75000000000, game_type='simulation', block_timing='realistic', payout_weight='coin_round', seconds_per_block=120, name='EmpireCoin Launch', num_voting_options=16, maturity=1, round_length=10, max_voting_fraction=0.25, option_name='empire', option_name_plural='empires', buyin_policy='none';";
 				$r = $GLOBALS['app']->run_query($q);
 				$primary_game_id = mysql_insert_id();
 				
 				$primary_game = new Game($primary_game_id);
 				
 				$primary_game->ensure_game_options();
-				
-				$GLOBALS['app']->set_site_constant("primary_game_id", $primary_game_id);
 				
 				$primary_game->start_game();
 			}
@@ -58,7 +56,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			if (mysql_numrows($r) == 0) {
 				$address_id = $GLOBALS['app']->new_invoice_address();
 				
-				$q = "INSERT INTO games SET invoice_address_id='".$address_id."', option_group_id=1, featured=1, invite_currency=1, url_identifier='".strtolower($GLOBALS['coin_brand_name'])."-testnet', game_status='published', giveaway_status='public_free', giveaway_amount=500000000000, pow_reward=100000000, pos_reward=500000000000, game_type='simulation', block_timing='realistic', payout_weight='coin_round', seconds_per_block=5, name='".$GLOBALS['coin_brand_name']." Testnet', num_voting_options=16, maturity=1, round_length=50, max_voting_fraction=0.15, option_name='empire', option_name_plural='empires', buyin_policy='none';";
+				$q = "INSERT INTO games SET invoice_address_id='".$address_id."', option_group_id=1, featured=1, invite_currency=1, url_identifier='empirecoin-testnet', start_condition='fixed_time', game_status='running', giveaway_status='public_free', giveaway_amount=0, pow_reward=2500000000, pos_reward=75000000000, game_type='real', block_timing='realistic', payout_weight='coin', seconds_per_block=120, name='EmpireCoin Testnet', num_voting_options=16, maturity=10, round_length=10, max_voting_fraction=0.25, option_name='empire', option_name_plural='empires', buyin_policy='none';";
 				$r = $GLOBALS['app']->run_query($q);
 				
 				$testnet_game_id = mysql_insert_id();
@@ -67,7 +65,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				
 				$testnet_game->ensure_game_options();
 				
-				$testnet_game->start_game();
+				$GLOBALS['app']->set_site_constant('primary_game_id', $testnet_game_id);
 			}
 			
 			$q = "SELECT * FROM currency_prices WHERE currency_id=1 AND reference_currency_id=1;";
@@ -163,7 +161,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 					print_r($coin_rpc->getgenerate());
 					echo "</pre>";
 					
-					echo "Next, please run <a target=\"_blank\" href=\"/scripts/sync_coind.php?key=".$GLOBALS['cron_key_string']."\">scripts/sync_coind.php</a><br/>\n";
+					echo "Next, please run <a target=\"_blank\" href=\"/scripts/sync_coind_initial.php?key=".$GLOBALS['cron_key_string']."\">scripts/sync_coind_initial.php</a><br/>\n";
 				}
 				catch (Exception $e) {
 					echo "Failed to establish a connection to ".$GLOBALS['coin_brand_name']." core, please check coin parameters in includes/config.php<br/>";

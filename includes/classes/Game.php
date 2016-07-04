@@ -440,24 +440,27 @@ class Game {
 		else $amount_ok = false;
 		
 		if ($amount_ok && (count($option_ids) == count($amounts) || ($type == "bet" && count($amounts) == count($address_ids)))) {
-			$q = "INSERT INTO transactions SET game_id='".$this->db_game['game_id']."', fee_amount='".$transaction_fee."'";
-			if ($this->db_game['game_type'] == "simulation") $q .= ", tx_hash='".$GLOBALS['app']->random_string(64)."'";
-			if ($option_id) $q .= ", option_id=NULL";
-			$q .= ", transaction_desc='".$type."', amount=".$amount.", ";
-			if ($from_user_id) $q .= "from_user_id='".$from_user_id."', ";
-			if ($to_user_id) $q .= "to_user_id='".$to_user_id."', ";
-			if ($type == "bet") {
-				$qq = "SELECT bet_round_id FROM addresses WHERE address_id='".$address_ids[0]."';";
-				$rr = $GLOBALS['app']->run_query($qq);
-				$bet_round_id = mysql_fetch_row($rr);
-				$bet_round_id = $bet_round_id[0];
-				$q .= "bet_round_id='".$bet_round_id."', ";
+			// For real games, don't insert a tx record, it will come in via walletnotify
+			if ($this->db_game['game_type'] != "real") {
+				$q = "INSERT INTO transactions SET game_id='".$this->db_game['game_id']."', fee_amount='".$transaction_fee."'";
+				if ($this->db_game['game_type'] == "simulation") $q .= ", tx_hash='".$GLOBALS['app']->random_string(64)."'";
+				if ($option_id) $q .= ", option_id=NULL";
+				$q .= ", transaction_desc='".$type."', amount=".$amount.", ";
+				if ($from_user_id) $q .= "from_user_id='".$from_user_id."', ";
+				if ($to_user_id) $q .= "to_user_id='".$to_user_id."', ";
+				if ($type == "bet") {
+					$qq = "SELECT bet_round_id FROM addresses WHERE address_id='".$address_ids[0]."';";
+					$rr = $GLOBALS['app']->run_query($qq);
+					$bet_round_id = mysql_fetch_row($rr);
+					$bet_round_id = $bet_round_id[0];
+					$q .= "bet_round_id='".$bet_round_id."', ";
+				}
+				$q .= "address_id=NULL";
+				if ($block_id !== false) $q .= ", block_id='".$block_id."', round_id='".$this->block_to_round($block_id)."'";
+				$q .= ", time_created='".time()."';";
+				$r = $GLOBALS['app']->run_query($q);
+				$transaction_id = mysql_insert_id();
 			}
-			$q .= "address_id=NULL";
-			if ($block_id !== false) $q .= ", block_id='".$block_id."', round_id='".$this->block_to_round($block_id)."'";
-			$q .= ", time_created='".time()."';";
-			$r = $GLOBALS['app']->run_query($q);
-			$transaction_id = mysql_insert_id();
 			
 			$overshoot_amount = 0;
 			$overshoot_return_addr_id = $remainder_address_id;
@@ -479,10 +482,12 @@ class Game {
 				
 				while ($transaction_input = mysql_fetch_array($r)) {
 					if ($input_sum < $amount) {
-						$qq = "UPDATE transaction_ios SET spend_transaction_id='".$transaction_id."'";
-						if ($block_id !== false) $qq .= ", spend_status='spent', spend_block_id='".$block_id."', spend_round_id='".$this->block_to_round($block_id)."'";
-						$qq .= " WHERE io_id='".$transaction_input['io_id']."';";
-						$rr = $GLOBALS['app']->run_query($qq);
+						if ($this->db_game['game_type'] != "real") {
+							$qq = "UPDATE transaction_ios SET spend_transaction_id='".$transaction_id."'";
+							if ($block_id !== false) $qq .= ", spend_status='spent', spend_block_id='".$block_id."', spend_round_id='".$this->block_to_round($block_id)."'";
+							$qq .= " WHERE io_id='".$transaction_input['io_id']."';";
+							$rr = $GLOBALS['app']->run_query($qq);
+						}
 						
 						if (!$overshoot_return_addr_id) $overshoot_return_addr_id = intval($transaction_input['address_id']);
 						
@@ -506,8 +511,10 @@ class Game {
 				
 				$overshoot_amount = $input_sum - $amount;
 				
-				$qq = "UPDATE transactions SET ref_block_id='".$ref_block_id."', ref_coin_blocks_destroyed='".$ref_cbd."', ref_round_id='".$ref_round_id."', ref_coin_rounds_destroyed='".$ref_crd."' WHERE transaction_id='".$transaction_id."';";
-				$rr = $GLOBALS['app']->run_query($qq);
+				if ($this->db_game['game_type'] != "real") {
+					$qq = "UPDATE transactions SET ref_block_id='".$ref_block_id."', ref_coin_blocks_destroyed='".$ref_cbd."', ref_round_id='".$ref_round_id."', ref_coin_rounds_destroyed='".$ref_crd."' WHERE transaction_id='".$transaction_id."';";
+					$rr = $GLOBALS['app']->run_query($qq);
+				}
 			}
 			
 			$output_error = false;
@@ -525,26 +532,28 @@ class Game {
 						$r = $GLOBALS['app']->run_query($q);
 						$address = mysql_fetch_array($r);
 						
-						$q = "INSERT INTO transaction_ios SET spend_status='";
-						if ($instantly_mature == 1) $q .= "unspent";
-						else $q .= "unconfirmed";
-						$q .= "', out_index='".$out_index."', ";
-						if ($to_user_id) $q .= "user_id='".$to_user_id."', ";
-						if ($block_id !== false) {
-							$output_cbd = floor($coin_blocks_destroyed*($amounts[$out_index]/$input_sum));
-							$output_crd = floor($coin_rounds_destroyed*($amounts[$out_index]/$input_sum));
-							$q .= "coin_blocks_destroyed='".$output_cbd."', coin_rounds_destroyed='".$output_crd."', ";
+						if ($this->db_game['game_type'] != "real") {
+							$q = "INSERT INTO transaction_ios SET spend_status='";
+							if ($instantly_mature == 1) $q .= "unspent";
+							else $q .= "unconfirmed";
+							$q .= "', out_index='".$out_index."', ";
+							if ($to_user_id) $q .= "user_id='".$to_user_id."', ";
+							if ($block_id !== false) {
+								$output_cbd = floor($coin_blocks_destroyed*($amounts[$out_index]/$input_sum));
+								$output_crd = floor($coin_rounds_destroyed*($amounts[$out_index]/$input_sum));
+								$q .= "coin_blocks_destroyed='".$output_cbd."', coin_rounds_destroyed='".$output_crd."', ";
+							}
+							$q .= "instantly_mature='".$instantly_mature."', game_id='".$this->db_game['game_id']."', ";
+							if ($block_id !== false) {
+								$q .= "create_block_id='".$block_id."', create_round_id='".$this->block_to_round($block_id)."', ";
+							}
+							$q .= "address_id='".$address_id."', ";
+							if ($address['option_id'] > 0) $q .= "option_id='".$address['option_id']."', ";
+							$q .= "create_transaction_id='".$transaction_id."', amount='".$amounts[$out_index]."';";
+							
+							$r = $GLOBALS['app']->run_query($q);
+							$created_input_ids[count($created_input_ids)] = mysql_insert_id();
 						}
-						$q .= "instantly_mature='".$instantly_mature."', game_id='".$this->db_game['game_id']."', ";
-						if ($block_id !== false) {
-							$q .= "create_block_id='".$block_id."', create_round_id='".$this->block_to_round($block_id)."', ";
-						}
-						$q .= "address_id='".$address_id."', ";
-						if ($address['option_id'] > 0) $q .= "option_id='".$address['option_id']."', ";
-						$q .= "create_transaction_id='".$transaction_id."', amount='".$amounts[$out_index]."';";
-						
-						$r = $GLOBALS['app']->run_query($q);
-						$created_input_ids[count($created_input_ids)] = mysql_insert_id();
 						
 						$raw_txout[$address['address']] = $amounts[$out_index]/pow(10,8);
 					}
@@ -564,21 +573,23 @@ class Game {
 					$r = $GLOBALS['app']->run_query($q);
 					$overshoot_address = mysql_fetch_array($r);
 					
-					$q = "INSERT INTO transaction_ios SET out_index='".$out_index."', spend_status='unconfirmed', game_id='".$this->db_game['game_id']."', ";
-					if ($block_id !== false) {
-						$overshoot_cbd = floor($coin_blocks_destroyed*($overshoot_amount/$input_sum));
-						$overshoot_crd = floor($coin_rounds_destroyed*($overshoot_amount/$input_sum));
-						$q .= "coin_blocks_destroyed='".$overshoot_cbd."', coin_rounds_destroyed='".$overshoot_crd."', ";
+					if ($this->db_game['game_type'] != "real") {
+						$q = "INSERT INTO transaction_ios SET out_index='".$out_index."', spend_status='unconfirmed', game_id='".$this->db_game['game_id']."', ";
+						if ($block_id !== false) {
+							$overshoot_cbd = floor($coin_blocks_destroyed*($overshoot_amount/$input_sum));
+							$overshoot_crd = floor($coin_rounds_destroyed*($overshoot_amount/$input_sum));
+							$q .= "coin_blocks_destroyed='".$overshoot_cbd."', coin_rounds_destroyed='".$overshoot_crd."', ";
+						}
+						$q .= "user_id='".$from_user_id."', address_id='".$overshoot_return_addr_id."', ";
+						if ($overshoot_address['option_id'] > 0) $q .= "option_id='".$overshoot_address['option_id']."', ";
+						$q .= "create_transaction_id='".$transaction_id."', ";
+						if ($block_id !== false) {
+							$q .= "create_block_id='".$block_id."', create_round_id='".$this->block_to_round($block_id)."', ";
+						}
+						$q .= "amount='".$overshoot_amount."';";
+						$r = $GLOBALS['app']->run_query($q);
+						$created_input_ids[count($created_input_ids)] = mysql_insert_id();
 					}
-					$q .= "user_id='".$from_user_id."', address_id='".$overshoot_return_addr_id."', ";
-					if ($overshoot_address['option_id'] > 0) $q .= "option_id='".$overshoot_address['option_id']."', ";
-					$q .= "create_transaction_id='".$transaction_id."', ";
-					if ($block_id !== false) {
-						$q .= "create_block_id='".$block_id."', create_round_id='".$this->block_to_round($block_id)."', ";
-					}
-					$q .= "amount='".$overshoot_amount."';";
-					$r = $GLOBALS['app']->run_query($q);
-					$created_input_ids[count($created_input_ids)] = mysql_insert_id();
 					
 					$raw_txout[$overshoot_address['address']] = $overshoot_amount/pow(10,8);
 				}
@@ -592,17 +603,19 @@ class Game {
 						$signed_raw_transaction = $coin_rpc->signrawtransaction($raw_transaction);
 						$decoded_transaction = $coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
 						$tx_hash = $decoded_transaction['txid'];
-						$q = "UPDATE transactions SET tx_hash='".$tx_hash."' WHERE transaction_id='".$transaction_id."';";
-						$r = $GLOBALS['app']->run_query($q);
 						$verified_tx_hash = $coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
-					} catch (Exception $e) {
-						$rpc_error = true;
-						$GLOBALS['app']->cancel_transaction($transaction_id, $affected_input_ids, $created_input_ids);
+						
+						$this->walletnotify($coin_rpc, $tx_hash);
+						$this->walletnotify($coin_rpc, $verified_tx_hash);
+						$this->update_option_scores();
+						
+						return true;
+					}
+					catch (Exception $e) {
 						return false;
 					}
 				}
-				
-				return $transaction_id;
+				else return $transaction_id;
 			}
 		}
 		else return false;
@@ -760,8 +773,8 @@ class Game {
 				$expected_payout = floor(pos_reward_in_round($this->db_game, $round_id)*($num_votes/$option_scores['sum'])-$my_vote['fee_amount'])/pow(10,8);
 			}
 			else {
-				$num_votes = $my_vote['SUM(io.'.$score_field.')'];
-				$expected_payout = floor(pos_reward_in_round($this->db_game, $round_id)*($my_vote['SUM(io.'.$score_field.')']/$option_scores['sum'])-$my_vote['fee_amount'])/pow(10,8);
+				$num_votes = $my_vote[$score_field];
+				$expected_payout = floor(pos_reward_in_round($this->db_game, $round_id)*($my_vote[$score_field]/$option_scores['sum'])-$my_vote['fee_amount'])/pow(10,8);
 			}
 			if ($expected_payout < 0) $expected_payout = 0;
 			
@@ -1791,158 +1804,25 @@ class Game {
 		$start_time = microtime(true);
 		$GLOBALS['app']->set_site_constant('walletnotify', $tx_hash);
 		
-		$html = "";
-		
-		$lastblock_id = $this->last_block_id();
-		/*
-		$getinfo = $coin_rpc->getinfo();
-		
-		if ($getinfo['blocks'] > $lastblock_id) {
-			$html .= "Need to add ".($getinfo['blocks']-$lastblock_id)."<br/>";
-			$q = "SELECT * FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id='".$lastblock_id."';";
-			$r = $GLOBALS['app']->run_query($q);
-			$lastblock = mysql_fetch_array($r);
-			
-			$lastblock_rpc = $coin_rpc->getblock($lastblock['block_hash']);
-			
-			for ($block_i=1; $block_i<=$getinfo['blocks']-$lastblock_id; $block_i++) {
-				$new_block_id = ($lastblock['block_id']+$block_i);
-				$new_hash = $lastblock_rpc['nextblockhash'];
-				$lastblock_rpc = $coin_rpc->getblock($new_hash);
-				$q = "INSERT INTO blocks SET game_id='".$this->db_game['game_id']."', block_hash='".$new_hash."', block_id='".$new_block_id."', time_created='".time()."';";
-				$r = $GLOBALS['app']->run_query($q);
-				
-				if ($block_i%$this->db_game['round_length'] == 0) {
-					$q = "UPDATE game_voting_options SET coin_score=0, coin_block_score=0 WHERE game_id='".$this->db_game['game_id']."';";
-					$r = $GLOBALS['app']->run_query($q);
-				}
-				
-				$html .= "looping through ".count($lastblock_rpc['tx'])." transactions in block #".$new_block_id."<br/>\n";
-				
-				for ($i=0; $i<count($lastblock_rpc['tx']); $i++) {
-					$tx_hash = $lastblock_rpc['tx'][$i];
-					
-					$q = "SELECT * FROM transactions WHERE game_id='".$this->db_game['game_id']."' AND tx_hash='".$tx_hash."';";
-					$r = $GLOBALS['app']->run_query($q);
-					if (mysql_numrows($r) > 0) {
-						$unconfirmed_tx = mysql_fetch_array($r);
-						$q = "UPDATE transactions SET block_id='".$new_block_id."' WHERE transaction_id='".$unconfirmed_tx['transaction_id']."';";
-						$r = $GLOBALS['app']->run_query($q);
-						$q = "UPDATE transaction_ios SET spend_status='unspent', create_block_id='".$new_block_id."' WHERE create_transaction_id='".$unconfirmed_tx['transaction_id']."';";
-						$r = $GLOBALS['app']->run_query($q);
-						$q = "UPDATE transaction_ios SET spend_status='spent', spend_block_id='".$new_block_id."' WHERE spend_transaction_id='".$unconfirmed_tx['transaction_id']."';";
-						$r = $GLOBALS['app']->run_query($q);
-					}
-					else {
-						$raw_transaction = $coin_rpc->getrawtransaction($tx_hash);
-						$transaction_rpc = $coin_rpc->decoderawtransaction($raw_transaction);
-						
-						$outputs = $transaction_rpc["vout"];
-						$inputs = $transaction_rpc["vin"];
-						
-						if (count($inputs) == 1 && $inputs[0]['coinbase']) {
-							$transaction_rpc->is_coinbase = true;
-							$transaction_type = "coinbase";
-							if (count($outputs) > 1) $transaction_type = "votebase";
-						}
-						else $transaction_type = "transaction";
-						
-						$output_sum = 0;
-						for ($j=0; $j<count($outputs); $j++) {
-							$output_sum += pow(10,8)*$outputs[$j]["value"];
-						}
-						
-						$q = "INSERT INTO transactions SET game_id='".$this->db_game['game_id']."', amount='".$output_sum."', transaction_desc='".$transaction_type."', tx_hash='".$tx_hash."', address_id=NULL, block_id='".$new_block_id."', time_created='".time()."';";
-						$r = $GLOBALS['app']->run_query($q);
-						$db_transaction_id = mysql_insert_id();
-						$html .= ". ";
-						
-						for ($j=0; $j<count($outputs); $j++) {
-							$address = $outputs[$j]["scriptPubKey"]["addresses"][0];
-							
-							$output_address = $this->create_or_fetch_address($address, true, $coin_rpc, false);
-							
-							$q = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, game_id='".$this->db_game['game_id']."', out_index='".$j."'";
-							if ($output_address['user_id'] > 0) $q .= ", user_id='".$output_address['user_id']."'";
-							$q .= ", address_id='".$output_address['address_id']."'";
-							if ($output_address['option_id'] > 0) $q .= ", option_id=".$output_address['option_id'];
-							$q .= ", create_transaction_id='".$db_transaction_id."', amount='".($outputs[$j]["value"]*pow(10,8))."', create_block_id='".$new_block_id."';";
-							$r = $GLOBALS['app']->run_query($q);
-						}
-					}
-				}
-				
-				for ($i=0; $i<count($lastblock_rpc['tx']); $i++) {
-					$tx_hash = $lastblock_rpc['tx'][$i];
-					$q = "SELECT * FROM transactions WHERE tx_hash='".$tx_hash."';";
-					$r = $GLOBALS['app']->run_query($q);
-					$transaction = mysql_fetch_array($r);
-					
-					$raw_transaction = $coin_rpc->getrawtransaction($tx_hash);
-					$transaction_rpc = $coin_rpc->decoderawtransaction($raw_transaction);
-					
-					$outputs = $transaction_rpc["vout"];
-					$inputs = $transaction_rpc["vin"];
-					
-					$transaction_error = false;
-					
-					$output_sum = 0;
-					for ($j=0; $j<count($outputs); $j++) {
-						$output_sum += pow(10,8)*$outputs[$j]["value"];
-					}
-					
-					$spend_io_ids = array();
-					$input_sum = 0;
-					
-					if ($transaction['transaction_desc'] == "transaction") {
-						for ($j=0; $j<count($inputs); $j++) {
-							$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id WHERE t.game_id='".$this->db_game['game_id']."' AND i.spend_status='unspent' AND t.tx_hash='".$inputs[$j]["txid"]."' AND i.out_index='".$inputs[$j]["vout"]."';";
-							$r = $GLOBALS['app']->run_query($q);
-							if (mysql_numrows($r) > 0) {
-								$spend_io = mysql_fetch_array($r);
-								$spend_io_ids[$j] = $spend_io['io_id'];
-								$input_sum += $spend_io['amount'];
-							}
-							else {
-								$transaction_error = true;
-								$html .= "Error in block $block_id, Nothing found for: ".$q."\n";
-							}
-						}
-						
-						if (!$transaction_error && $input_sum >= $output_sum) {
-							if (count($spend_io_ids) > 0) {
-								$q = "UPDATE transaction_ios SET spend_status='spent', spend_transaction_id='".$transaction['transaction_id']."' WHERE io_id IN (".implode(",", $spend_io_ids).");";
-								$r = $GLOBALS['app']->run_query($q);
-								$html .= ", ";
-							}
-						}
-						else {
-							$html .= "Error in transaction #".$transaction['transaction_id']." (".$input_sum." vs ".$output_sum.")\n";
-						}
-					}
-				}
-				
-				if ($new_block_id%$this->db_game['round_length'] == 0) $this->add_round_from_rpc($new_block_id/$this->db_game['round_length']);
-			}
-		}
-		*/
 		if ($tx_hash != "") {
-			try {
-				try {
-					$raw_transaction = $coin_rpc->getrawtransaction($tx_hash);
-					$transaction_obj = $coin_rpc->decoderawtransaction($raw_transaction);
-				}
-				catch (Exception $e) {
-					echo "Failed to get/decode the transaction";
-					die();
-				}
+			$q = "SELECT * FROM transactions WHERE tx_hash='".$tx_hash."';";
+			$r = $GLOBALS['app']->run_query($q);
+			
+			if (mysql_numrows($r) == 0) {
+				$html = "";
 				
-				$q = "SELECT * FROM transactions WHERE tx_hash='".$tx_hash."';";
-				$r = $GLOBALS['app']->run_query($q);
-				if (mysql_numrows($r) > 0) {
-					$transaction = mysql_fetch_array($r);
-				}
-				else {
+				$lastblock_id = $this->last_block_id();
+			
+				try {
+					try {
+						$raw_transaction = $coin_rpc->getrawtransaction($tx_hash);
+						$transaction_obj = $coin_rpc->decoderawtransaction($raw_transaction);
+					}
+					catch (Exception $e) {
+						echo "Failed to get/decode the transaction";
+						die();
+					}
+					
 					$outputs = $transaction_obj["vout"];
 					$inputs = $transaction_obj["vin"];
 					
@@ -1965,15 +1845,30 @@ class Game {
 					$r = $GLOBALS['app']->run_query($q);
 					$transaction = mysql_fetch_array($r);
 					
+					$input_sum = 0;
+					$ref_block_id = $this->last_block_id()+1;
+					$ref_round_id = $this->block_to_round($ref_block_id);
+					$ref_cbd = 0;
+					$ref_crd = 0;
+					
 					for ($j=0; $j<count($inputs); $j++) {
 						$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id WHERE t.tx_hash='".$inputs[$j]['txid']."' AND i.out_index='".$inputs[$j]['vout']."';";
 						$r = $GLOBALS['app']->run_query($q);
+						
 						if (mysql_numrows($r) == 1) {
 							$db_input = mysql_fetch_array($r);
+							$input_sum += $db_input['amount'];
+							
+							$ref_cbd += ($ref_block_id-$db_input['create_block_id'])*$db_input['amount'];
+							$ref_crd += ($ref_round_id-$db_input['create_round_id'])*$db_input['amount'];
+							
 							$q = "UPDATE transaction_ios SET spend_transaction_id='".$db_transaction_id."' WHERE io_id='".$db_input['io_id']."';";
 							$r = $GLOBALS['app']->run_query($q);
 						}
 					}
+					
+					$q = "UPDATE transactions SET ref_block_id='".$ref_block_id."', ref_coin_blocks_destroyed='".$ref_cbd."', ref_round_id='".$ref_round_id."', ref_coin_rounds_destroyed='".$ref_crd."', fee_amount='".($input_sum-$output_sum)."' WHERE transaction_id='".$db_transaction_id."';";
+					$r = $GLOBALS['app']->run_query($q);
 					
 					for ($j=0; $j<count($outputs); $j++) {
 						$address = $outputs[$j]["scriptPubKey"]["addresses"][0];
@@ -1989,12 +1884,12 @@ class Game {
 						$r = $GLOBALS['app']->run_query($q);
 					}
 				}
-			}
-			catch (Exception $e) {
-				$html .= "Please make sure that txindex=1 is included in your EmpireCoin.conf<br/>\n";
-				$html .= "Exception Error:<br/>\n";
-				$html .= json_encode($e);
-				die($html);
+				catch (Exception $e) {
+					$html .= "Please make sure that txindex=1 is included in your EmpireCoin.conf<br/>\n";
+					$html .= "Exception Error:<br/>\n";
+					$html .= json_encode($e);
+					die($html);
+				}
 			}
 		}
 		return $html;
@@ -2256,11 +2151,13 @@ class Game {
 			$invite_disp = $GLOBALS['app']->format_bignum($this->db_game['invite_cost']);
 			$html .= "To join this game, buy ".$GLOBALS['app']->format_bignum($this->db_game['giveaway_amount']/pow(10,8))." ".$this->db_game['coin_name_plural']." (".round($receive_pct, 2)."% of the coins) for ".$invite_disp." ".$this->db_game['currency_short_name'];
 			if ($invite_disp != '1') $html .= "s";
+			$html .= ". ";
 		}
 		else {
-			$html .= "Join this game and get ".$GLOBALS['app']->format_bignum($this->db_game['giveaway_amount']/pow(10,8))." ".$this->db_game['coin_name_plural']." (".round($receive_pct, 2)."% of the coins) for free";
+			if ($this->db_game['giveaway_amount'] > 0) {
+				$html .= "Join this game and get ".$GLOBALS['app']->format_bignum($this->db_game['giveaway_amount']/pow(10,8))." ".$this->db_game['coin_name_plural']." (".round($receive_pct, 2)."% of the coins) for free. ";
+			}
 		}
-		$html .= ". ";
 
 		if ($this->db_game['game_status'] == "running") {
 			$html .= "This game started ".$GLOBALS['app']->format_seconds(time()-$this->db_game['start_time'])." ago; ".$GLOBALS['app']->format_bignum(coins_in_existence($this->db_game, false)/pow(10,8))." ".$this->db_game['coin_name_plural']."  are already in circulation. ";
@@ -2268,6 +2165,7 @@ class Game {
 		else {
 			if ($this->db_game['start_condition'] == "fixed_time") {
 				$unix_starttime = strtotime($this->db_game['start_datetime']);
+				
 				$html .= "This game starts in ".$GLOBALS['app']->format_seconds($unix_starttime-time())." at ".date("M j, Y g:ia", $unix_starttime).". ";
 			}
 			else {
@@ -2359,6 +2257,169 @@ class Game {
 				$rr = $GLOBALS['app']->run_query($qq);
 			}
 		}
+	}
+
+	public function coind_add_block($coin_rpc, $block_hash, $block_height) {
+		$html = "";
+		
+		$lastblock_rpc = $coin_rpc->getblock($block_hash);
+		$q = "INSERT INTO blocks SET game_id='".$this->db_game['game_id']."', block_hash='".$block_hash."', block_id='".($block_height+1)."', time_created='".time()."';";
+		$r = $GLOBALS['app']->run_query($q);
+		$block_within_round = $this->block_id_to_round_index($block_height+1);
+		
+		$html .= $block_height." ";
+		for ($i=0; $i<count($lastblock_rpc['tx']); $i++) {
+			$tx_hash = $lastblock_rpc['tx'][$i];
+			
+			$q = "SELECT * FROM transactions WHERE game_id='".$this->db_game['game_id']."' AND tx_hash='".$tx_hash."';";
+			$r = $GLOBALS['app']->run_query($q);
+			if (mysql_numrows($r) > 0) {
+				$unconfirmed_tx = mysql_fetch_array($r);
+				$q = "UPDATE transactions SET block_id='".$block_height."' WHERE transaction_id='".$unconfirmed_tx['transaction_id']."';";
+				$r = $GLOBALS['app']->run_query($q);
+				$q = "UPDATE transaction_ios SET spend_status='unspent', create_block_id='".$block_height."' WHERE create_transaction_id='".$unconfirmed_tx['transaction_id']."';";
+				$r = $GLOBALS['app']->run_query($q);
+				$q = "UPDATE transaction_ios SET spend_status='spent', spend_block_id='".$block_height."' WHERE spend_transaction_id='".$unconfirmed_tx['transaction_id']."';";
+				$r = $GLOBALS['app']->run_query($q);
+			}
+			else {
+				$transaction_rpc = false;
+				try {
+					$raw_transaction = $coin_rpc->getrawtransaction($tx_hash);
+					$transaction_rpc = $coin_rpc->decoderawtransaction($raw_transaction);
+				}
+				catch (Exception $e) {
+					die("Error, transaction ".$tx_hash." was not found in block ".$block_height.".");
+				}
+				
+				$outputs = $transaction_rpc["vout"];
+				$inputs = $transaction_rpc["vin"];
+				
+				if (count($inputs) == 1 && $inputs[0]['coinbase']) {
+					$transaction_rpc->is_coinbase = true;
+					$transaction_type = "coinbase";
+					if (count($outputs) > 1) $transaction_type = "votebase";
+				}
+				else $transaction_type = "transaction";
+				
+				$output_sum = 0;
+				for ($j=0; $j<count($outputs); $j++) {
+					$output_sum += pow(10,8)*$outputs[$j]["value"];
+				}
+				
+				$q = "INSERT INTO transactions SET game_id='".$this->db_game['game_id']."', amount='".$output_sum."', transaction_desc='".$transaction_type."', tx_hash='".$tx_hash."', address_id=NULL, block_id='".$block_height."', time_created='".time()."';";
+				$r = $GLOBALS['app']->run_query($q);
+				$db_transaction_id = mysql_insert_id();
+				$html .= ". ";
+				
+				for ($j=0; $j<count($outputs); $j++) {
+					$address = $outputs[$j]["scriptPubKey"]["addresses"][0];
+					
+					$output_address = $this->create_or_fetch_address($address, true, $coin_rpc, false);
+					
+					$q = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, game_id='".$this->db_game['game_id']."', out_index='".$j."'";
+					if ($output_address['user_id'] > 0) $q .= ", user_id='".$output_address['user_id']."'";
+					$q .= ", address_id='".$output_address['address_id']."'";
+					if ($output_address['option_id'] > 0) $q .= ", option_id=".$output_address['option_id'];
+					$q .= ", create_transaction_id='".$db_transaction_id."', amount='".($outputs[$j]["value"]*pow(10,8))."', create_block_id='".$block_height."';";
+					$r = $GLOBALS['app']->run_query($q);
+				}
+			}
+		}
+		
+		for ($i=0; $i<count($lastblock_rpc['tx']); $i++) {
+			$tx_hash = $lastblock_rpc['tx'][$i];
+			$q = "SELECT * FROM transactions WHERE tx_hash='".$tx_hash."';";
+			$r = $GLOBALS['app']->run_query($q);
+			$transaction = mysql_fetch_array($r);
+			
+			$raw_transaction = $coin_rpc->getrawtransaction($tx_hash);
+			$transaction_rpc = $coin_rpc->decoderawtransaction($raw_transaction);
+			
+			$outputs = $transaction_rpc["vout"];
+			$inputs = $transaction_rpc["vin"];
+			
+			$transaction_error = false;
+			
+			$output_sum = 0;
+			for ($j=0; $j<count($outputs); $j++) {
+				$output_sum += pow(10,8)*$outputs[$j]["value"];
+			}
+			
+			$spend_io_ids = array();
+			$input_sum = 0;
+			
+			if ($transaction['transaction_desc'] == "transaction") {
+				for ($j=0; $j<count($inputs); $j++) {
+					$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id WHERE t.game_id='".$this->db_game['game_id']."' AND i.spend_status='unspent' AND t.tx_hash='".$inputs[$j]["txid"]."' AND i.out_index='".$inputs[$j]["vout"]."';";
+					$r = $GLOBALS['app']->run_query($q);
+					if (mysql_numrows($r) > 0) {
+						$spend_io = mysql_fetch_array($r);
+						$spend_io_ids[$j] = $spend_io['io_id'];
+						$input_sum += $spend_io['amount'];
+					}
+					else {
+						$transaction_error = true;
+						$html .= "Error in block $block_height, Nothing found for: ".$q."\n";
+					}
+				}
+				
+				if (!$transaction_error && $input_sum >= $output_sum) {
+					if (count($spend_io_ids) > 0) {
+						$q = "UPDATE transaction_ios SET spend_status='spent', spend_transaction_id='".$transaction['transaction_id']."' WHERE io_id IN (".implode(",", $spend_io_ids).");";
+						$r = $GLOBALS['app']->run_query($q);
+						
+						$q = "UPDATE transactions SET fee_amount='".($input_sum-$output_sum)."' WHERE transaction_id='".$transaction['transaction_id']."';";
+						$r = $GLOBALS['app']->run_query($q);
+						
+						$html .= ", ";
+					}
+				}
+				else {
+					$html .= "Error in transaction #".$transaction['transaction_id']." (".$input_sum." vs ".$output_sum.")\n";
+				}
+			}
+		}
+		
+		if ($block_height%$this->db_game['round_length'] == 0) $this->add_round_from_rpc($block_height/$this->db_game['round_length']);
+		
+		return $html;
+	}
+	
+	public function sync_coind($coin_rpc) {
+		$html = "";
+		$last_block_id = $this->last_block_id();
+
+		$q = "SELECT * FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id='".$last_block_id."';";
+		$r = $GLOBALS['app']->run_query($q);
+		$last_block = mysql_fetch_array($r);
+		$current_block = $coin_rpc->getblock($last_block['block_hash']);
+
+		$block_height = $last_block['block_id']-1;
+		$keep_looping = true;
+
+		do {
+			$nextblockhash = $current_block['nextblockhash'];
+			$block_height++;
+			
+			if ($nextblockhash) {
+				$current_block = $coin_rpc->getblock($nextblockhash);
+				
+				echo $this->coind_add_block($coin_rpc, $nextblockhash, $block_height);
+			}
+			else $keep_looping = false;
+		}
+		while ($keep_looping);
+
+		$unconfirmed_txs = $coin_rpc->getrawmempool();
+		$html .= "Looping through ".count($unconfirmed_txs)." unconfirmed transactions.<br/>\n";
+		for ($i=0; $i<count($unconfirmed_txs); $i++) {
+			$this->walletnotify($coin_rpc, $unconfirmed_txs[$i]);
+		}
+
+		$this->update_option_scores();
+		
+		return $html;
 	}
 }
 ?>

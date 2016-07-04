@@ -50,11 +50,16 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		}
 	}
 	
+	$coin_rpc = false;
+	
 	$q = "SELECT * FROM games WHERE game_type='real';";
 	$r = $GLOBALS['app']->run_query($q);
+	
 	if (mysql_numrows($r) == 1)	{
 		$db_real_game = mysql_fetch_array($r);
 		$real_game = new Game($db_real_game['game_id']);
+		
+		$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
 	}
 	
 	$running_games = array();
@@ -73,17 +78,12 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				$lastblock = mysql_fetch_array($r);
 				
 				if ($lastblock['time_created'] < time()-$GLOBALS['restart_generation_seconds']) {
-					$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
 					$coin_rpc->setgenerate(false);
 					$coin_rpc->setgenerate(true);
 					echo "Started generating coins...<br/>\n";
 				}
 			}
 		}
-	}
-	
-	if ($real_game && ($GLOBALS['walletnotify_by_cron'] || $GLOBALS['min_unallocated_addresses'] > 0)) {
-		$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
 	}
 	
 	if ($real_game && $GLOBALS['min_unallocated_addresses'] > 0) {
@@ -112,6 +112,10 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			$seconds_to_sleep = 5;
 			do {
 				$loop_start_time = microtime(true);
+				
+				if ($real_game) {
+					$real_game->sync_coind($coin_rpc);
+				}
 				
 				for ($game_i=0; $game_i<count($running_games); $game_i++) {
 					if ($GLOBALS['walletnotify_by_cron'] && $running_games[$game_i]->db_game['game_type'] == "real") {

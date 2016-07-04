@@ -14,6 +14,10 @@ if (mysql_numrows($game_r) == 1) {
 	$db_game = mysql_fetch_array($game_r);
 	$game = new Game($db_game['game_id']);
 	
+	if ($game->db_game['game_type'] == "real") {
+		$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
+	}
+	
 	if ($thisuser) {
 		$qq = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
 		$rr = $GLOBALS['app']->run_query($qq);
@@ -116,6 +120,17 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				$mode_error = false;
 				$pagetitle = $game->db_game['name']." Block #".$block['block_id'];
 			}
+			else {
+				$q = "SELECT * FROM blocks WHERE game_id='".$game->db_game['game_id']."' AND block_hash='".mysql_real_escape_string($uri_parts[4])."';";
+				$r = $GLOBALS['app']->run_query($q);
+				echo mysql_numrows($r)." ".$q."<br/>\n";
+				
+				if (mysql_numrows($r) == 1) {
+					$block = mysql_fetch_array($r);
+					$mode_error = false;
+					$pagetitle = $game->db_game['name']." Block #".$block['block_id'];
+				}
+			}
 		}
 	}
 	if ($explore_mode == "transactions") {
@@ -167,6 +182,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 			?>
 			<script type="text/javascript">
 			var game_id = <?php echo $game->db_game['game_id']; ?>;
+			var game_url_identifier = '<?php echo $game->db_game['url_identifier']; ?>';
 			</script>
 			
 			<div class="row">
@@ -470,11 +486,20 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					else if ($block['block_id'] < $game->last_block_id()) $next_link_target = "blocks/".($block['block_id']+1);
 					if ($next_link_target) echo '<a href="/explorer/'.$game->db_game['url_identifier'].'/'.$next_link_target.'">Next Block &rarr;</a>';
 					
-					if ($explore_mode == "blocks") {
-						echo "<br/><a href=\"/explorer/".$game->db_game['url_identifier']."/transactions/unconfirmed\">Unconfirmed transactions</a>\n";
-					}
+					?>
+					<br/><br/>
+					<a href="" onclick="$('#block_info').toggle('fast'); return false;">See block details</a><br/>
+					<pre id="block_info" style="display: none;"><?php
+					print_r($block);
 					
-					echo "<br/>\n";
+					if ($game->db_game['game_type'] == "real") {
+						$rpc_block = $coin_rpc->getblock($block['block_hash']);
+						if ($rpc_block) echo print_r($rpc_block);
+					}
+					?>
+					</pre>
+					<br/>
+					<?php
 				}
 				else {
 					$q = "SELECT * FROM blocks WHERE game_id='".$game->db_game['game_id']."' ORDER BY block_id ASC;";
@@ -528,7 +553,6 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				$rpc_raw_transaction = false;
 				
 				if ($game->db_game['game_type'] == "real") {
-					$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
 					try {
 						$rpc_transaction = $coin_rpc->gettransaction($transaction['tx_hash']);
 					}
