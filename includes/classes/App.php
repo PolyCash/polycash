@@ -603,10 +603,11 @@ class App {
 		
 		while ($db_game = $r->fetch()) {
 			$featured_game = new Game($this, $db_game['game_id']);
-			echo '<div class="col-md-'.$cell_width.'"><h3>'.$featured_game->db_game['name'].'</h3>';
+			echo '<div class="col-md-'.$cell_width.'"><h3 style="display: inline-block" title="'.$featured_game->game_description().'">'.$featured_game->db_game['name'].'</h3>';
 			echo $featured_game->current_round_table($current_round, false, false, false);
-			echo $featured_game->game_description();
-			echo '<br/><a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-primary" style="margin-top: 5px;">Join '.$featured_game->db_game['name'].'</a></div>';
+			echo '<a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-success">Play Now</a>';
+			echo ' <a href="/explorer/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-primary">Blockchain Explorer</a>';
+			echo '<br/><br/></div>';
 			
 			if ($counter%(12/$cell_width) == 1) echo '</div><div class="row">';
 			$counter++;
