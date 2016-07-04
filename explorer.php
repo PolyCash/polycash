@@ -381,14 +381,14 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					
 					echo "<br/>\n";
 					if ($round['round_id'] > 1 || $round['round_id'] < $current_round) echo "<br/>\n";
-					
-					if ($round['round_id'] > 1) { ?>
-						<a href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/rounds/<?php echo $round['round_id']-1; ?>" style="display: inline-block; margin-right: 30px;">&larr; Previous Round</a>
+
+					if ($this_round > 1) { ?>
+						<a href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/rounds/<?php echo $this_round-1; ?>" style="display: inline-block; margin-right: 30px;">&larr; Previous Round</a>
 						<?php
 					}
 					
-					if ($round['round_id'] < $current_round) { ?>
-						<a href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/rounds/<?php echo $round['round_id']+1; ?>">Next Round &rarr;</a>
+					if ($this_round < $current_round) { ?>
+						<a href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/rounds/<?php echo $this_round+1; ?>">Next Round &rarr;</a>
 						<?php
 					}
 				}

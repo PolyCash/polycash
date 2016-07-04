@@ -177,7 +177,7 @@ class Game {
 				if ($my_winning_votes > 0) {
 					$win_amount = floor(pos_reward_in_round($this->db_game, $current_round)*$my_winning_votes/$winner['winning_score'] - $fees_paid)/pow(10,8);
 					$html .= "You correctly cast ".$this->app->format_bignum($my_winning_votes/pow(10,8))." votes";
-					$html .= ' and won <font class="greentext">+'.number_format($win_amount, 2)."</font> coins.<br/>\n";
+					$html .= ' and won <font class="greentext">+'.$this->app->format_bignum($win_amount)."</font> coins.<br/>\n";
 				}
 				else if ($winner) {
 					$html .= "You didn't cast any votes for ".$winner['name'].".<br/>\n";
@@ -945,7 +945,7 @@ class Game {
 				$mature_balance = $this->mature_balance($notify_user);
 				
 				if ($mature_balance >= $account_value*$notify_user['aggregate_threshold']/100) {
-					$subject = number_format($mature_balance/pow(10,8), 5)." ".$this->db_game['coin_name_plural']." are now available to vote.";
+					$subject = $this->app->format_bignum($mature_balance/pow(10,8))." ".$this->db_game['coin_name_plural']." are now available to vote.";
 					$message = "<p>Some of your coins just became available.</p>";
 					$message .= "<p>You currently have ".$this->app->format_bignum($mature_balance/pow(10,8))." coins available to vote. To cast a vote, please log in:</p>";
 					$message .= '<p><a href="'.$GLOBALS['base_url'].'/wallet/">'.$GLOBALS['base_url'].'/wallet/</a></p>';
@@ -1430,7 +1430,7 @@ class Game {
 			$rr = $this->app->run_query($qq);
 			$input_sum = 0;
 			while ($input = $rr->fetch()) {
-				$amount_disp = number_format($input['amount']/pow(10,8), 2);
+				$amount_disp = $this->app->format_bignum($input['amount']/pow(10,8));
 				$html .= $amount_disp."&nbsp;";
 				if ($amount_disp == '1') $html .= $this->db_game['coin_name'];
 				else $html .= $this->db_game['coin_name_plural'];
@@ -1452,14 +1452,14 @@ class Game {
 			if ($output['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
 			$html .= '" href="/explorer/'.$this->db_game['url_identifier'].'/addresses/'.$output['address'].'">'.$output['address'].'</a>&nbsp; ';
 			
-			$amount_disp = number_format($output['amount']/pow(10,8), 2);
+			$amount_disp = $this->app->format_bignum($output['amount']/pow(10,8));
 			$html .= $amount_disp."&nbsp;";
 			if ($amount_disp == '1') $html .= $this->db_game['coin_name'];
 			else $html .= $this->db_game['coin_name_plural'];
 			$html .= '&nbsp; ';
 			
 			if ($output['name'] != "") $html .= "&nbsp;&nbsp;".$output['name'];
-			if ($output['payout_amount'] > 0) $html .= '&nbsp;&nbsp;<font class="greentext">+'.round($output['payout_amount']/pow(10,8), 2).'</font>';
+			if ($output['payout_amount'] > 0) $html .= '&nbsp;&nbsp;<font class="greentext">+'.$this->app->format_bignum($output['payout_amount']/pow(10,8)).'</font>';
 			$html .= "<br/>\n";
 			$output_sum += $output['amount'];
 		}
@@ -1708,12 +1708,12 @@ class Game {
 					if ($option_bet['name'] == "") $option_bet['name'] = "No Winner";
 					$coins_bet_for_round += $option_bet['SUM(i.amount)'];
 					$disp_html .= '<div class="">';
-					$disp_html .= '<div class="col-md-5">'.number_format($option_bet['SUM(i.amount)']/pow(10,8), 2)." coins towards ".$option_bet['name'].'</div>';
+					$disp_html .= '<div class="col-md-5">'.$this->app->format_bignum($option_bet['SUM(i.amount)']/pow(10,8))." coins towards ".$option_bet['name'].'</div>';
 					$disp_html .= '<div class="col-md-5"><a href="/explorer/'.$this->db_game['url_identifier'].'/addresses/'.$option_bet['address'].'">'.$option_bet['address'].'</a></div>';
 					$disp_html .= "</div>\n";
 				}
 				if ($bet_round['bet_round_id'] >= $current_round) {
-					$html .= "You made bets totalling ".number_format($coins_bet_for_round/pow(10,8), 2)." coins on round ".$bet_round['bet_round_id'].".";
+					$html .= "You made bets totalling ".$this->app->format_bignum($coins_bet_for_round/pow(10,8))." coins on round ".$bet_round['bet_round_id'].".";
 				}
 				else {
 					$qq = "SELECT SUM(i.amount) FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id JOIN addresses a ON i.address_id=a.address_id WHERE t.block_id='".($bet_round['bet_round_id']*$this->db_game['round_length'])."' AND t.transaction_desc='betbase' AND a.user_id='".$user['user_id']."';";
@@ -1721,9 +1721,9 @@ class Game {
 					$amount_won = $rr->fetch(PDO::FETCH_NUM);
 					$amount_won = $amount_won[0];
 					if ($amount_won > 0) {
-						$html .= "You bet ".number_format($coins_bet_for_round/pow(10,8), 2)." coins and won ".number_format($amount_won/pow(10,8), 2)." back for a ";
-						if (round(($amount_won-$coins_bet_for_round)/pow(10,8), 2) >= 0) $html .= 'profit of <font class="greentext">+'.number_format(round(($amount_won-$coins_bet_for_round)/pow(10,8), 2), 2).'</font> coins.';
-						else $html .= 'loss of <font class="redtext">'.number_format(($coins_bet_for_round-$amount_won)/pow(10,8), 2)."</font> coins.";
+						$html .= "You bet ".$this->app->format_bignum($coins_bet_for_round/pow(10,8))." coins and won ".$this->app->format_bignum($amount_won/pow(10,8))." back for a ";
+						if ($amount_won-$coins_bet_for_round >= 0) $html .= 'profit of <font class="greentext">+'.$this->app->format_bignum(($amount_won-$coins_bet_for_round)/pow(10,8)).'</font> coins.';
+						else $html .= 'loss of <font class="redtext">'.$this->app->format_bignum(($coins_bet_for_round-$amount_won)/pow(10,8))."</font> coins.";
 					}
 				}
 				$html .= '&nbsp;&nbsp; <a href="" onclick="$(\'#my_bets_details_'.$bet_round['bet_round_id'].'\').toggle(\'fast\'); return false;">Details</a><br/>'."\n";
