@@ -31,13 +31,13 @@ $(document).ready(function() {
 			<div class="row">
 				<div class="col-sm-4">Username or email:</div>
 				<div class="col-sm-6">
-					<input class="responsive_input form-control" name="username" type="text" size="25" maxlength="40" value="<?php echo $email; ?>" />
+					<input id="login_username" class="responsive_input form-control" name="username" type="text" size="25" maxlength="40" value="<?php echo $email; ?>" />
 				</div>
 			</div>
 			<div class="row">
 				<div class="col-sm-4">Password:</div>
 				<div class="col-sm-6">
-					<input class="responsive_input form-control" id="login_password" name="password" type="password" size="25" maxlength="25" />
+					<input id="login_password" class="responsive_input form-control" name="password" type="password" size="25" maxlength="25" />
 				</div>
 			</div>
 			<div class="row">

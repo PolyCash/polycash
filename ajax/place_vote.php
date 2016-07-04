@@ -15,6 +15,17 @@ if ($thisuser) {
 	$r = run_query($q);
 	$game = mysql_fetch_array($r);
 	
+	$user_strategy = false;
+	$success = get_user_strategy($thisuser['user_id'], $game['game_id'], $user_strategy);
+	if (!$success) {
+		$api_output = (object)[
+			'status_code' => 2,
+			'message' => "Error, the transaction fee amount could not be determined."
+		];
+		echo json_encode($api_output);
+		die();
+	}
+	
 	$account_value = account_coin_value($game, $thisuser);
 	$immature_balance = immature_balance($game, $thisuser);
 	$mature_balance = $account_value - $immature_balance;
@@ -133,8 +144,8 @@ if ($thisuser) {
 		];
 	}
 	else {
-		if ($amount_sum <= $mature_balance && $amount_sum > 0) {
-			$transaction_id = new_webwallet_multi_transaction($game, $nation_ids, $amounts, $thisuser['user_id'], $thisuser['user_id'], false, 'transaction', $io_ids, false, false);
+		if ($amount_sum+$user_strategy['transaction_fee'] <= $mature_balance && $amount_sum > 0) {
+			$transaction_id = new_webwallet_multi_transaction($game, $nation_ids, $amounts, $thisuser['user_id'], $thisuser['user_id'], false, 'transaction', $io_ids, false, false, intval($user_strategy['transaction_fee']));
 			
 			if ($transaction_id) {
 				update_nation_scores($game);

@@ -16,7 +16,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			if (!$db_exists) {
 				$r = mysql_query("CREATE DATABASE ".$GLOBALS['mysql_database']);
 				
-				$cmd = "mysql -u ".$GLOBALS['mysql_user']." -h ".$GLOBALS['mysql_server']." -p".$GLOBALS['mysql_password']." ".$GLOBALS['mysql_database']." < ".$GLOBALS['install_path']."/sql/schema-initial.sql";
+				$cmd = "mysql -u ".$GLOBALS['mysql_user']." -h ".$GLOBALS['mysql_server']." -p".$GLOBALS['mysql_password']." ".$GLOBALS['mysql_database']." < ".realpath(dirname(__FILE__))."/sql/schema-initial.sql";
 				echo exec($cmd);
 				
 				mysql_select_db($GLOBALS['mysql_database']) or die ("There was an error accessing the \"".$GLOBALS['mysql_database']."\" database");

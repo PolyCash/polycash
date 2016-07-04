@@ -3,58 +3,75 @@ include('includes/connect.php');
 include('includes/get_session.php');
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuser);
 
+$error_code = false;
 $message = "";
 
 if ($_REQUEST['do'] == "signup") {
-	$first = mysql_real_escape_string(strip_tags(make_alphanumeric($_POST['first'], "")));
-	$last = mysql_real_escape_string(strip_tags(make_alphanumeric($_POST['last'], "")));
-	$email = mysql_real_escape_string(strip_tags(str_replace('"', '', str_replace("'", "", $_POST['email']))));
+	$first = safe_text($_POST['first']);
+	$last = safe_text($_POST['last']);
+	$username = $_POST['email'];
+	safe_email($username);
 	
-	$query = "SELECT * FROM users WHERE username='".$email."';";
-	$result = run_query($query);
+	if ($GLOBALS['pageview_tracking_enabled']) {
+		$ip_match_q = "SELECT * FROM users WHERE ip_address='".$_SERVER['REMOTE_ADDR']."';";
+		$ip_match_r = run_query($ip_match_q);
+		
+		if (mysql_numrows($ip_match_r) <= 20) {}
+		else {
+			$error_code = 2;
+			$message = "Sorry, there was an error creating your new account.";
+		}
+	}
 	
-	$query = "SELECT * FROM users WHERE ip_address='".mysql_real_escape_string($_SERVER['REMOTE_ADDR'])."';";
-	$r = run_query($query);
-	
-	if (mysql_numrows($r) <= 20) {
-		if (mysql_numrows($result) == 0) {
+	if (!$error_code) {
+		$user_q = "SELECT * FROM users WHERE username='".$username."';";
+		$user_r = run_query($user_q);
+		
+		if (mysql_numrows($user_r) == 0) {
 			if ($GLOBALS['signup_captcha_required']) {
 				$recaptcha_resp = recaptcha_check_answer($GLOBALS['recaptcha_privatekey'], $_SERVER["REMOTE_ADDR"], $_POST["g-recaptcha-response"]);
 			}
-			if (!$recaptcha_resp && $GLOBALS['signup_captcha_required']) {
-				$acode = 0;
+			if ($GLOBALS['signup_captcha_required'] && !$recaptcha_resp) {
+				$error_code = 2;
 				$message = "You entered the wrong CAPTCHA code. Please try again. ";
 			}
 			else {
 				$pass_error = FALSE;
 				
 				if ($_REQUEST['autogen_password'] == "1") {
-					$new_pass = random_string(10);
+					$new_pass = random_string(12);
 					$new_pass_hash = hash('sha256', $new_pass);
 				}
 				else {
-					$new_pass = $_REQUEST['password'];
+					$new_pass = mysql_real_escape_string($_REQUEST['password']);
 					if ($_REQUEST['password2'] != $new_pass) $pass_error = TRUE;
 					$new_pass_hash = $new_pass;
 				}
 				
 				if ($pass_error) {
-					$acode = 0;
+					$error_code = 2;
 					$message = "The passwords that you entered did not match. Please try again. ";
 				}
 				else {
 					$verify_code = random_string(32);
 					
-					$query = "INSERT INTO users SET game_id='".get_site_constant('primary_game_id')."', first_name='".$first."', last_name='".$last."', username='".$email."', notification_email='".$email."', api_access_code='".mysql_real_escape_string(random_string(32))."', password='".$new_pass_hash."', ip_address='".mysql_real_escape_string($_SERVER['REMOTE_ADDR'])."', time_created='".time()."', verify_code='".$verify_code."';";
-					$result = run_query($query);
+					$q = "INSERT INTO users SET game_id='".get_site_constant('primary_game_id')."', first_name='".$first."', last_name='".$last."', username='".$username."', notification_email='".$username."', api_access_code='".mysql_real_escape_string(random_string(32))."', password='".$new_pass_hash."'";
+					if ($GLOBALS['pageview_tracking_enabled']) {
+						$q .= ", ip_address='".$_SERVER['REMOTE_ADDR']."'";
+					}
+					$q .= ", time_created='".time()."', verify_code='".$verify_code."';";
+					$r = run_query($q);
 					$user_id = mysql_insert_id();
 					
-					$acode = 1;
+					$session_key = session_id();
+					$expire_time = time()+3600*24;
+					
+					$error_code = 1;
 					if ($_REQUEST['autogen_password'] == "1") {
-						$message = "Your account has been created.  A new password was generated and emailed to your inbox.  Please check your inbox and then log in below. ";
+						$message = "Your account was with this password: <b>".$new_pass."</b>. Please save this password now; it will not be displayed again.";
 					}
 					else {
-						$message = "Your account has been created.  Please log in below. ";
+						$message = "Your account has been created.  Please enter your password below to log in.";
 					}
 					
 					if ($GLOBALS['pageview_tracking_enabled']) {
@@ -64,32 +81,23 @@ if ($_REQUEST['do'] == "signup") {
 							$q = "INSERT INTO viewer_connections SET type='viewer2user', from_id='".$viewer_id."', to_id='".$thisuser['user_id']."';";
 							$r = run_query($q);
 						}
-						$session_key = session_id();
-						$expire_time = time()+3600*24;
 						
-						$query = "UPDATE users SET ip_address='".mysql_real_escape_string($_SERVER['REMOTE_ADDR'])."' WHERE user_id='".$thisuser['user_id']."';";
-						$result = run_query($query);
+						$q = "UPDATE users SET ip_address='".$_SERVER['REMOTE_ADDR']."' WHERE user_id='".$thisuser['user_id']."';";
+						$r = run_query($q);
 					}
 					
-					if ($_REQUEST['autogen_password'] == "1") {
-						$email_message = "<p>You've created a new ".$GLOBALS['site_name_short']." web wallet for <b>".$email."</b>.</p>";
-						$email_message .= "<p>A password was automatically generated for your user account.<p>";
-						$email_message .= "<p>Your password is: ".$new_pass."</p>";
-						$email_message .= "<p>If you'd like to set a new password, please visit: ".$GLOBALS['base_url']."/reset_password/</p>";
-						$email_message .= "<p>Thanks for signing up!</p>";
-						$email_message .= "<p>This message was sent to you by ".$GLOBALS['base_url']."</p>";
-					}
-					else {
-						$email_message = "<p>A new ".$GLOBALS['site_name_short']." web wallet has been created for <b>".$email."</b>.</p>";
+					// Send an email if the username includes
+					if ($GLOBALS['outbound_email_enabled'] && strpos($username, '@')) {
+						$email_message = "<p>A new ".$GLOBALS['site_name_short']." web wallet has been created for <b>".$username."</b>.</p>";
 						$email_message .= "<p>Thanks for signing up!</p>";
 						$email_message .= "<p>To log in any time please visit ".$GLOBALS['base_url']."/wallet/</p>";
 						$email_message .= "<p>This message was sent to you by ".$GLOBALS['base_url']."</p>";
-					}
-					
-					$email_id = mail_async($email, $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], "New account created", $email_message, "", "");
-					
-					if ($_REQUEST['invite_key'] != "") {
-						try_apply_invite_key(get_site_constant('primary_game_id'), $user_id, $_REQUEST['invite_key']);
+						
+						$email_id = mail_async($username, $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], "New account created", $email_message, "", "");
+						
+						if ($_REQUEST['invite_key'] != "") {
+							try_apply_invite_key($user_id, $_REQUEST['invite_key']);
+						}
 					}
 					
 					$q = "SELECT * FROM games WHERE creator_id IS NULL;";
@@ -101,83 +109,46 @@ if ($_REQUEST['do'] == "signup") {
 			}
 		}
 		else {
-			$acode = 0;
+			$error_code = 2;
 			$message = "Sorry the email address you entered is already registered.";
 		}
 	}
 	else {
-		$acode = 0;
+		$error_code = 2;
 		$message = "Sorry, there was an error creating your new account.";
 	}
 }
 else if ($_REQUEST['do'] == "login") {
-	$username = mysql_real_escape_string($_POST['username']);
+	$username = $_POST['username'];
+	safe_email($username);
 	$password = mysql_real_escape_string($_POST['password']);
 	
-	$query = "SELECT * FROM users WHERE username='".$username."' AND password='".$password."';";
-	$result = run_query($query);
+	$q = "SELECT * FROM users WHERE username='".$username."' AND password='".$password."';";
+	$r = run_query($q);
 	
-	$message = "";
-	$login_error = TRUE;
-	
-	if (mysql_numrows($result) == 0) {
-		$message = "Incorrect username or password - try again.";
-		$acode = 0;
+	if (mysql_numrows($r) == 0) {
+		$message = "Incorrect username or password, please try again $q.";
+		$error_code = 2;
 	}
-	else if (mysql_numrows($result) == 1) {
-		$q = "SELECT * FROM users WHERE username='".$username."' AND password='".$password."' AND verified=1;";
-		$r = run_query($q);
-		
-		if (mysql_numrows($r) > 0) {
-			$message = "Login successful - redirecting...";
-			$login_error = FALSE;
+	else if (mysql_numrows($r) == 1) {
+		$thisuser = mysql_fetch_array($r);
+		if ($thisuser['verified'] == 1) {
+			$message = "You have been logged in, redirecting...";
+			$error_code = 1;
 		}
 		else {
-			$result2 = run_query($query);
-			$user_tmp = mysql_fetch_array($result2);
 			$message = "Your account is not yet verified.";
-			$acode = 0;
+			$error_code = 2;
 		}
-	} else {
-		$message = "Sorry, a duplicate user account was found.";
-		$acode = 0;
+	}
+	else {
+		$message = "System error, a duplicate user account was found.";
+		$error_code = 2;
 	}
 	
-	if ($login_error == FALSE) {		
-		$thisuser = mysql_fetch_array($result);
-		
-		$q = "SELECT * FROM viewer_connections WHERE type='viewer2user' AND from_id='".$viewer_id."' AND to_id='".$thisuser['user_id']."';";
-		$r = run_query($q);
-		
-		if (mysql_numrows($r) == 0) {
-			$q = "INSERT INTO viewer_connections SET type='viewer2user', from_id='".$viewer_id."', to_id='".$thisuser['user_id']."';";
-			$r = run_query($q);
-		}
-		$session_key = session_id();
-		$expire_time = time()+3600*24;
-		
-		$query = "INSERT INTO user_sessions (user_id, session_key, login_time, logout_time, expire_time, ip_address) VALUES ('".$thisuser['user_id']."', '".$session_key."', '".time()."', 0, '".$expire_time."', '".$_SERVER['REMOTE_ADDR']."');";
-		$result = run_query($query);
-		
-		$query = "UPDATE users SET logged_in=1, ip_address='".$_SERVER['REMOTE_ADDR']."' WHERE user_id='".$thisuser['user_id']."';";
-		$result = run_query($query);
-		
-		$redirect_url_id = intval($_REQUEST['redirect_id']);
-		
-		$q = "SELECT * FROM redirect_urls WHERE redirect_url_id='".$redirect_url_id."';";
-		$r = run_query($q);
-		
-		if ($_REQUEST['invite_key'] != "") {
-			try_apply_invite_key($thisuser['game_id'], $thisuser['user_id'], $_REQUEST['invite_key']);
-		}
-		
-		if (mysql_numrows($r) == 1) {
-			$redirect_url = mysql_fetch_array($r);
-			header("Location: ".$redirect_url['url']);
-		}
-		else header("Location: /wallet/");
-		
-		die();
+	if ($error_code == 1) {
+		if ($GLOBALS['pageview_tracking_enabled']) log_user_in($thisuser, $viewer_id);
+		else log_user_in($thisuser);
 	}
 }
 else if ($_REQUEST['do'] == "logout" && $thisuser) {
@@ -224,11 +195,11 @@ else if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['d
 			$r = run_query($q);
 			$user_strategy['transaction_fee'] = $transaction_fee;
 			
-			$acode = 1;
+			$error_code = 1;
 			$message = "Great, your transaction fee has been updated!";
 		}
 		else {
-			$acode = 0;
+			$error_code = 2;
 			$message = "Error: that fee amount is invalid, your changes were not saved.";
 		}
 	}
@@ -278,7 +249,7 @@ else if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['d
 				$r = run_query($q);
 				$voting_strategy = $user_strategy['voting_strategy'];
 				
-				$acode = 0;
+				$error_code = 2;
 				$message = "Error: voting strategy couldn't be set to \"Vote by nation\", the percentages you entered didn't add up to 100%.";
 			}
 			
@@ -291,6 +262,16 @@ else if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['d
 $pagetitle = $GLOBALS['site_name_short']." - My web wallet";
 $nav_tab_selected = "wallet";
 include('includes/html_start.php');
+
+if ($_REQUEST['do'] == "signup" && $error_code == 1) { ?>
+	<script type="text/javascript">
+	$(document).ready(function() {
+		$('#login_username').val('<?php echo $username; ;?>');
+		$('#login_password').focus();
+	});
+	</script>
+	<?php
+}
 
 if ($thisuser) {
 	$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game['game_id']."';";
@@ -323,10 +304,10 @@ $mature_balance = $account_value - $immature_balance;
 <div class="container" style="max-width: 1000px;">
 	<?php
 	if ($message != "") {
-		echo "<font style=\"display: block; margin: 10px 0px; color: #";
-		if ($acode == 0) echo "f00";
-		else echo "0a0";
-		echo "\">";
+		echo '<font style="display: block; margin: 10px 0px;" class="';
+		if ($error_code == 1) echo "greentext";
+		else echo "redtext";
+		echo '">';
 		echo $message;
 		echo "</font>\n";
 	}
@@ -369,10 +350,11 @@ $mature_balance = $account_value - $immature_balance;
 		var game_round_length = <?php echo $game['round_length']; ?>;
 		var game_loop_index = 1;
 		var last_game_loop_index_applied = -1;
-		var min_bet_round = parseInt(<?php
+		var min_bet_round = <?php
 			$bet_round_range = bet_round_range($game);
 			echo $bet_round_range[0];
-		?>);
+		?>;
+		var fee_amount = <?php echo $user_strategy['transaction_fee']; ?>;
 		
 		var selected_nation_id = false;
 		
@@ -413,6 +395,7 @@ $mature_balance = $account_value - $immature_balance;
 		<?php } ?>
 		
 		$(document).ready(function() {
+			render_tx_fee();
 			load_nations();
 			notification_pref_changed();
 			alias_pref_changed();
@@ -493,7 +476,7 @@ $mature_balance = $account_value - $immature_balance;
 							<div id="compose_input_start_msg">Add inputs by clicking on the coin blocks above.</div>
 						</div>
 						<div class="col-md-6 bordered_cell" id="compose_vote_outputs">
-							<b>Outputs:</b><br/>
+							<b>Outputs:</b><div id="display_tx_fee"></div><br/>
 							<div id="compose_output_start_msg">Add outputs by clicking on the empires below.</div>
 						</div>
 					</div>
@@ -556,7 +539,7 @@ $mature_balance = $account_value - $immature_balance;
 					Pay fees on every transaction of:<br/>
 					<div class="row">
 						<div class="col-sm-4"><input class="form-control" name="transaction_fee" value="<?php echo $user_strategy['transaction_fee']/pow(10,8); ?>" placeholder="0.001" /></div>
-						<div class="col-sm-4">coins</div>
+						<div class="col-sm-4 form-control-static">coins</div>
 					</div>
 					<div class="row">
 						<div class="col-sm-3">
@@ -763,7 +746,7 @@ $mature_balance = $account_value - $immature_balance;
 				?>
 				
 				<h1>Withdraw</h1>
-				To withdraw coins, please enter an amount and an EmpireCoin address below then click "Withdraw"<br/>
+				To withdraw coins please enter an EmpireCoin address below.<br/>
 				<div class="row">
 					<div class="col-md-3">
 						Amount:

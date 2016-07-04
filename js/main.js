@@ -645,7 +645,7 @@ function refresh_compose_vote() {
 function refresh_output_amounts() {
 	if (vote_nations.length > 0) {
 		var input_sums = input_amount_sums();
-		var coin_sum = input_sums[0];
+		var coin_sum = input_sums[0]-fee_amount;
 		var score_sum = input_sums[1];
 		
 		var slider_sum = 0;
@@ -1096,4 +1096,7 @@ function match_refresh_loop(match_id) {
 		});
 	}
 	setTimeout("match_refresh_loop("+match_id+");", 1000);
+}
+function render_tx_fee() {
+	$('#display_tx_fee').html("TX fee: "+(fee_amount/Math.pow(10,8)).toLocaleString()+" coins");
 }

@@ -115,7 +115,7 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 	}
 	
 	if ($mode_error) $pagetitle = "EmpireCoin - Blockchain Explorer";
-	
+	$nav_tab_selected = "explorer";
 	include('includes/html_start.php');
 	
 	if ($thisuser) { ?>
