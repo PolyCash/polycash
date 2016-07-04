@@ -3,7 +3,7 @@ $host_not_required = TRUE;
 include(realpath(dirname(__FILE__))."/../includes/connect.php");
 include(realpath(dirname(__FILE__))."/../includes/handle_script_shutdown.php");
 
-$script_target_time = 120;
+$script_target_time = 59;
 $script_start_time = microtime(true);
 
 if (!empty($argv)) {
@@ -140,7 +140,7 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		$sec_until_refresh = round($script_target_time-$runtime_sec);
 		if ($sec_until_refresh < 0) $sec_until_refresh = 0;
 
-		echo '<script type="text/javascript">setTimeout("window.location=window.location;", '.(1000*$sec_until_refresh).');</script>'."\n";
+		if (empty($argv)) echo '<script type="text/javascript">setTimeout("window.location=window.location;", '.(1000*$sec_until_refresh).');</script>'."\n";
 		echo "Script ran for ".round($runtime_sec, 2)." seconds.<br/>\n";
 	}
 	else echo "Skipped starting the game loop; it's already running.\n";

@@ -290,7 +290,7 @@ Games.push(new Game(<?php
 	echo ', "game"';
 ?>));
 
-var user_logged_in = <?php if ($thisuser) echo 'true'; else echo 'false'; ?>;
+var user_logged_in = <?php if (empty($thisuser)) echo 'false'; else echo 'true'; ?>;
 
 var homeCarousel;
 

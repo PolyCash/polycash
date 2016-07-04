@@ -637,7 +637,9 @@ class App {
 			</script>
 			<?php
 			echo '<div class="col-md-'.$cell_width.'"><h3 style="display: inline-block" title="'.$featured_game->game_description().'">'.$featured_game->db_game['name'].'</h3>';
+			echo '<div id="game'.$counter.'_current_round_table">';
 			echo $featured_game->current_round_table($current_round_id, false, false, true, $counter);
+			echo '</div>';
 			echo '<a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-success">Play Now</a>';
 			echo ' <a href="/explorer/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-primary">Blockchain Explorer</a>';
 			echo '<br/><br/></div>';
@@ -722,30 +724,35 @@ class App {
 		$pipes = array();
 
 		$cmd = $this->php_binary_location().' "'.realpath(dirname(dirname(dirname(__FILE__)))."/cron/load_blocks.php").'" key='.$key_string;
+		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
 		$block_loading_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($block_loading_process)) $process_count++;
 		else $html .= "Failed to start a process for loading blocks.<br/>\n";
 		sleep(0.1);
 		
 		$cmd = $this->php_binary_location().' "'.realpath(dirname(dirname(dirname(__FILE__)))."/cron/minutely_main.php").'" key='.$key_string;
+		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
 		$main_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($main_process)) $process_count++;
 		else $html .= "Failed to start the main process.<br/>\n";
 		sleep(0.1);
 		
 		$cmd = $this->php_binary_location().' "'.realpath(dirname(dirname(dirname(__FILE__)))."/cron/minutely_check_payments.php").'" key='.$key_string;
+		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
 		$payments_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($payments_process)) $process_count++;
 		else $html .= "Failed to start a process for processing payments.<br/>\n";
 		sleep(0.1);
 		
 		$cmd = $this->php_binary_location().' "'.realpath(dirname(dirname(dirname(__FILE__)))."/cron/address_miner.php").'" key='.$key_string;
+		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
 		$address_miner_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($address_miner_process)) $process_count++;
 		else $html .= "Failed to start a process for mining addresses.<br/>\n";
 		sleep(0.1);
 		
 		$cmd = $this->php_binary_location().' "'.realpath(dirname(dirname(dirname(__FILE__)))."/cron/fetch_currency_prices.php").'" key='.$key_string;
+		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
 		$currency_prices_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($currency_prices_process)) $process_count++;
 		else $html .= "Failed to start a process for updating currency prices.<br/>\n";

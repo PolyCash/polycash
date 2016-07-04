@@ -1158,7 +1158,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 			this.last_refresh_time = new Date().getTime();
 			this.refresh_in_progress = true;
 			
-			var check_activity_url = "/ajax/check_new_activity.php?game_id="+this.game_id+"&refresh_page="+this.refresh_page+"&last_block_id="+this.last_block_id+"&last_transaction_id="+this.last_transaction_id+"&my_last_transaction_id="+this.my_last_transaction_id+"&mature_io_ids_csv="+this.mature_io_ids_csv+"&game_loop_index="+this.game_loop_index+"&min_bet_round="+this.min_bet_round+"&votingaddr_count="+this.votingaddr_count;
+			var check_activity_url = "/ajax/check_new_activity.php?instance_id="+this.instance_id+"&game_id="+this.game_id+"&refresh_page="+this.refresh_page+"&last_block_id="+this.last_block_id+"&last_transaction_id="+this.last_transaction_id+"&my_last_transaction_id="+this.my_last_transaction_id+"&mature_io_ids_csv="+this.mature_io_ids_csv+"&game_loop_index="+this.game_loop_index+"&min_bet_round="+this.min_bet_round+"&votingaddr_count="+this.votingaddr_count;
 			if (this.refresh_page == "wallet") check_activity_url += "&performance_history_sections="+this.performance_history_sections;
 			
 			var _this = this;

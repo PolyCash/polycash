@@ -119,6 +119,8 @@ include('includes/html_start.php');
 //<![CDATA[
 var homeCarousel;
 
+var user_logged_in = <?php if (empty($thisuser)) echo 'false'; else echo 'true'; ?>;
+
 $(document).ready(function() {
 	homeCarousel = new ImageCarousel('home_carousel');
 	homeCarousel.initialize();

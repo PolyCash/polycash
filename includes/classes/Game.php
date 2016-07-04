@@ -2715,7 +2715,6 @@ class Game {
 	public function load_unconfirmed_transactions(&$coin_rpc) {
 		$unconfirmed_txs = $coin_rpc->getrawmempool();
 		echo "Looping through ".count($unconfirmed_txs)." unconfirmed transactions.<br/>\n";
-		echo $html;
 		for ($i=0; $i<count($unconfirmed_txs); $i++) {
 			$this->walletnotify($coin_rpc, $unconfirmed_txs[$i], TRUE);
 			if ($i%100 == 0) echo "$i ";
