@@ -30,7 +30,7 @@ if ($thisuser && $game) {
 			</div>
 			<div class="modal-body">
 				<?php
-				$coins_in_existence = coins_in_existence($app, $game->db_game, false);
+				$coins_in_existence = $game->coins_in_existence(false);
 				$pot_value = $game->pot_value();
 				if ($pot_value > 0) {
 					$exchange_rate = ($coins_in_existence/pow(10,8))/$pot_value;
