@@ -480,7 +480,7 @@ if ($thisuser) {
 	$r = $GLOBALS['app']->run_query($q);
 	if (mysql_numrows($r) > 0) {
 		$user_game = mysql_fetch_array($r);
-		$thisuser->generate_user_addresses($user_game);
+		$thisuser->generate_user_addresses($game);
 	}
 	else {
 		$thisuser->ensure_user_in_game($game->db_game['game_id']);
@@ -490,7 +490,7 @@ if ($thisuser) {
 		
 		if (mysql_numrows($r) > 0) {
 			$user_game = mysql_fetch_array($r);
-			$thisuser->generate_user_addresses($user_game);
+			$thisuser->generate_user_addresses($game);
 		}
 	}
 }

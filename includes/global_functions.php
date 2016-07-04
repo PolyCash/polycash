@@ -108,7 +108,10 @@ function ideal_coins_in_existence_after_round(&$game, $round_id) {
 }
 
 function coins_created_in_round(&$game, $round_id) {
-	return ideal_coins_in_existence_after_round($game, $round_id) - ideal_coins_in_existence_after_round($game, $round_id-1);
+	$thisround_coins = ideal_coins_in_existence_after_round($game, $round_id);
+	$prevround_coins = ideal_coins_in_existence_after_round($game, $round_id-1);
+	if (is_nan($thisround_coins) || is_nan($prevround_coins) || is_infinite($thisround_coins) || is_infinite($prevround_coins)) return 0;
+	else return $thisround_coins - $prevround_coins;
 }
 
 function pow_reward_in_round(&$game, $round_id) {

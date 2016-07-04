@@ -4,7 +4,7 @@ include("../includes/connect.php");
 if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
 
-	$game_id =$GLOBALS['app']->get_site_constant('primary_game_id');
+	$game_id = $GLOBALS['app']->get_site_constant('primary_game_id');
 	$game = new Game($game_id);
 	$game->delete_reset_game('reset');
 
@@ -153,7 +153,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$r = $GLOBALS['app']->run_query($q);
 	$max_block = mysql_fetch_row($r);
 	$max_block = $max_block[0];
-	$completed_rounds = floor($max_block/$game['round_length']);
+	$completed_rounds = floor($max_block/$game->db_game['round_length']);
 	
 	for ($round_id=1; $round_id<=$completed_rounds; $round_id++) {
 		$game->add_round_from_rpc($round_id);

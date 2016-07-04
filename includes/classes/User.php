@@ -352,6 +352,7 @@ class User {
 		$q = "SELECT * FROM game_voting_options gvo WHERE game_id='".$game->db_game['game_id']."' AND NOT EXISTS(SELECT * FROM addresses a WHERE a.user_id='".$this->db_user['user_id']."' AND a.game_id='".$game->db_game['game_id']."' AND a.option_id=gvo.option_id) ORDER BY gvo.option_id ASC;";
 		$r = $GLOBALS['app']->run_query($q);
 		
+		// Try to give the user voting addresses for all options in this game
 		while ($option = mysql_fetch_array($r)) {
 			if ($game->db_game['game_type'] == "real") {
 				$qq = "SELECT * FROM addresses WHERE option_id='".$option['option_id']."' AND game_id='".$game->db_game['game_id']."' AND is_mine=1 AND user_id IS NULL;";
@@ -370,8 +371,8 @@ class User {
 				$rand2 = rand(0, 1);
 				if ($rand1 == 0) $new_address .= "e";
 				else $new_address .= "E";
-				if ($rand2 == 0) $new_address .= strtoupper($option['address_character']);
-				else $new_address .= $option['address_character'];
+				if ($rand2 == 0) $new_address .= strtoupper($option['voting_character']);
+				else $new_address .= $option['voting_character'];
 				$new_address .= $GLOBALS['app']->random_string(31);
 				
 				$qq = "INSERT INTO addresses SET game_id='".$game->db_game['game_id']."', option_id='".$option['option_id']."', user_id='".$this->db_user['user_id']."', address='".$new_address."', time_created='".time()."';";
@@ -379,6 +380,7 @@ class User {
 			}
 		}
 		
+		// Make sure the user has a non-voting address
 		$q = "SELECT * FROM addresses WHERE option_id IS NULL AND game_id='".$game->db_game['game_id']."' AND user_id='".$this->db_user['user_id']."';";
 		$r = $GLOBALS['app']->run_query($q);
 		

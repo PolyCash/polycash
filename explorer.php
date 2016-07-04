@@ -30,8 +30,10 @@ if (rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer") $explore_mode = "games";
 else if (rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer/".$game->db_game['url_identifier']) $explore_mode = "index";
 
 if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index','rounds','blocks','addresses','transactions')))) {
-	$last_block_id = $game->last_block_id();
-	$current_round = $game->block_to_round($last_block_id+1);
+	if ($game) {
+		$last_block_id = $game->last_block_id();
+		$current_round = $game->block_to_round($last_block_id+1);
+	}
 	
 	$round = false;
 	$block = false;
@@ -417,7 +419,10 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 						
 						echo "<h1>Unconfirmed Transactions</h1>\n";
 						echo "<h3>".$game->db_game['name']."</h3>";
-						echo "$num_trans known transactions are awaiting confirmation with a sum of ".number_format($block_sum/pow(10,8), 2)." coins.<br/>\n";
+						echo $num_trans." known transaction";
+						if ($num_trans == 1) echo " is";
+						else echo "s are";
+						echo " awaiting confirmation with a sum of ".number_format($block_sum/pow(10,8), 2)." coins.<br/>\n";
 						echo "Block #".$expected_block_id." is currently being mined.  It will be block $expected_block_index of ";
 						echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/rounds/".$expected_round_id."\">round #".$expected_round_id."</a><br/><br/>\n";
 					}
