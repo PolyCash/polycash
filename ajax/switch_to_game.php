@@ -56,7 +56,7 @@ if ($thisuser) {
 		}
 		else $game_index = 1;
 		
-		$q = "INSERT INTO games SET creator_id='".$thisuser['user_id']."', block_timing='realistic', creator_game_index='".$game_index."', game_type='instant', name='Practice Game #".$game_index."';";
+		$q = "INSERT INTO games SET creator_id='".$thisuser['user_id']."', seconds_per_block='8', block_timing='realistic', creator_game_index='".$game_index."', game_type='instant', name='Practice Game #".$game_index."';";
 		$r = run_query($q);
 		$game_id = mysql_insert_id();
 		

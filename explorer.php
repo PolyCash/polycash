@@ -92,7 +92,7 @@ if (in_array($explore_mode, array('rounds','blocks','addresses'))) {
 				else $my_votes = false;
 				
 				if ($my_votes[$round['winning_nation_id']] > 0) {
-					echo "You won <font class=\"greentext\">+".(floor(100*750*$my_votes[$round['winning_nation_id']]/$round['winning_score'])/100)." EMP</font> by voting ".round($my_votes[$round['winning_nation_id']]/pow(10,8), 3)." coins for ".$round['name']."</font>\n";
+					echo "You won <font class=\"greentext\">+".(floor(100*750*$my_votes[$round['winning_nation_id']]/$round['winning_score'])/100)." EMP</font> by voting ".round($my_votes[$round['winning_nation_id']]/pow(10,8), 2)." coins for ".$round['name']."</font>\n";
 				}
 				
 				echo "<h2>Rankings</h2>";

@@ -78,7 +78,7 @@ function account_coin_value($game_id, $user) {
 }
 
 function immature_balance($game_id, $user) {
-	$q = "SELECT SUM(amount) FROM webwallet_transactions WHERE game_id='".$user['game_id']."' AND user_id='".$user['user_id']."' AND block_id > ".(last_block_id($game_id)-get_site_constant("maturity"))." AND amount > 0 AND transaction_desc != 'giveaway';";
+	$q = "SELECT SUM(amount) FROM webwallet_transactions WHERE game_id='".$game_id."' AND user_id='".$user['user_id']."' AND block_id > ".(last_block_id($game_id)-get_site_constant("maturity"))." AND amount > 0 AND transaction_desc != 'giveaway';";
 	$r = run_query($q);
 	$sum = mysql_fetch_row($r);
 	
@@ -285,7 +285,7 @@ function performance_history($user, $from_round_id, $to_round_id) {
 		$my_votes = $returnvals[0];
 		$coins_voted = $returnvals[1];
 		
-		if ($my_votes[$round['winning_nation_id']] > 0) $win_text = "You correctly voted ".round($my_votes[$round['winning_nation_id']]/pow(10,8), 2)." coins.";
+		if ($my_votes[$round['winning_nation_id']] > 0) $win_text = "You correctly voted ".number_format(round($my_votes[$round['winning_nation_id']]/pow(10,8), 2), 2)." coins.";
 		else if ($coins_voted > 0) $win_text = "You didn't vote for the winning empire.";
 		else $win_text = "You didn't cast any votes.";
 		
@@ -766,7 +766,7 @@ function apply_user_strategies($game_id) {
 			$user_coin_value = account_coin_value($game_id, $strategy_user);
 			$immature_balance = immature_balance($game_id, $strategy_user);
 			$mature_balance = $user_coin_value - $immature_balance;
-			$free_balance = $mature_balance - $strategy_user['min_coins_available'];
+			$free_balance = $mature_balance - $strategy_user['min_coins_available']*pow(10,8);
 			
 			if ($user_coin_value > 0) {
 				if ($strategy_user['voting_strategy'] == "api") {
@@ -778,7 +778,7 @@ function apply_user_strategies($game_id) {
 						$amount_sum = 0;
 						$empire_id_error = false;
 						
-						$log_text .= "Hitting url: ".$strategy_user['api_url']."<br/>\n";
+						$log_text .= "For ".$strategy_user['username'].", hitting url: ".$strategy_user['api_url']."<br/>\n";
 						
 						for ($rec_id=0; $rec_id<count($api_obj->recommendations); $rec_id++) {
 							if ($api_obj->recommendations[$rec_id]->recommended_amount && $api_obj->recommendations[$rec_id]->recommended_amount > 0 && intval($api_obj->recommendations[$rec_id]->recommended_amount) == $api_obj->recommendations[$rec_id]->recommended_amount) $amount_sum += $api_obj->recommendations[$rec_id]->recommended_amount;
@@ -860,7 +860,7 @@ function apply_user_strategies($game_id) {
 							}
 						}
 						else { // by_nation
-							$log_text .= "Dividing by nation for ".$strategy_user['username']." (".$free_balance." EMP)<br/>\n";
+							$log_text .= "Dividing by nation for ".$strategy_user['username']." (".($free_balance/pow(10,8))." EMP)<br/>\n";
 							
 							$mult_factor = 1;
 							if ($skipped_pct_points > 0) {
