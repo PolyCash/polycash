@@ -96,12 +96,14 @@ function autogen_password_changed() {
 					</div>
 				</div>
 			</div>
+			<?php if ($GLOBALS['signup_captcha_required']) { ?>
 			<div class="row">
 				<div class="col-sm-12">
 					Solve a CAPTCHA:<br/>
 					<div class="g-recaptcha" data-sitekey="<?php echo $recaptcha_publickey; ?>"></div>
 				</div>
 			</div>
+			<?php } ?>
 			<div class="row">
 				<div class="col-sm-6">
 					<input type="submit" value="Sign Up" class="btn btn-primary" />

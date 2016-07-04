@@ -1,7 +1,7 @@
 <?php
 include("../includes/connect.php");
 
-if ($_REQUEST['key'] == "2r987jifwow") {
+if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$q = "UPDATE users SET logged_in=0 WHERE last_active<".(time()-60*2).";";
 	$r = run_query($q);
 	

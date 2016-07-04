@@ -1,21 +1,25 @@
 <?php
-$domain_parts = explode(".", $_SERVER['HTTP_HOST']);
-$domain = $domain_parts[count($domain_parts)-2].".".$domain_parts[count($domain_parts)-1];
-if ($domain != "empireco.in") {
-	header("Location: http://empireco.in");
-	die();
+include("mysql_config.php");
+
+if ($GLOBALS['enforce_domain'] != "") {
+	$domain_parts = explode(".", $_SERVER['HTTP_HOST']);
+	$domain = $domain_parts[count($domain_parts)-2].".".$domain_parts[count($domain_parts)-1];
+	if ($domain != $GLOBALS['enforce_domain']) {
+		header("Location: http://".$GLOBALS['enforce_domain']);
+		die();
+	}
 }
 
 date_default_timezone_set('America/Chicago');
 
-include("mysql_config.php");
 include("pageview_functions.php");
 
 mysql_connect($server, $user, $password) or die("<H3>Server unreachable</H3>");
 mysql_select_db($database) or die ( "<H3>Database non existent</H3>");
 
 function run_query($query) {
-	$result = mysql_query($query) or die("Error in query: ".$query.", ".mysql_error());
+	if ($GLOBALS['show_query_errors'] == TRUE) $result = mysql_query($query) or die("Error in query: ".$query.", ".mysql_error());
+	else $result = mysql_query($query) or die("Error in query");
 	return $result;
 }
 
@@ -1232,7 +1236,7 @@ function delete_reset_game($delete_or_reset, $game_id) {
 	if ($delete_or_reset == "reset") {
 		ensure_game_nations($game_id);
 		
-		$q = "SELECT * FROM user_games WHERE game_id='".$game_id."';;";
+		$q = "SELECT * FROM user_games WHERE game_id='".$game_id."';";
 		$r = run_query($q);
 		while ($user_game = mysql_fetch_array($r)) {
 			generate_user_addresses($user_game['game_id'], $user_game['user_id']);

@@ -18,9 +18,10 @@ if ($_REQUEST['do'] == "signup") {
 	
 	if (mysql_numrows($r) <= 20) {
 		if (mysql_numrows($result) == 0) {
-			$recaptcha_resp = recaptcha_check_answer($recaptcha_privatekey, $_SERVER["REMOTE_ADDR"], $_POST["g-recaptcha-response"]);
-			
-			if (!$recaptcha_resp) {
+			if ($GLOBALS['signup_captcha_required']) {
+				$recaptcha_resp = recaptcha_check_answer($recaptcha_privatekey, $_SERVER["REMOTE_ADDR"], $_POST["g-recaptcha-response"]);
+			}
+			if (!$recaptcha_resp && $GLOBALS['signup_captcha_required']) {
 				$acode = 0;
 				$message = "You entered the wrong CAPTCHA code. Please try again. ";
 			}
@@ -313,7 +314,11 @@ $mature_balance = $account_value - $immature_balance;
 		var current_tab = false;
 		var last_block_id = <?php echo $last_block_id; ?>;
 		var last_transaction_id = <?php echo last_transaction_id($thisuser['game_id']); ?>;
-		var my_last_transaction_id = <?php echo my_last_transaction_id($thisuser['user_id'], $thisuser['game_id']); ?>;
+		var my_last_transaction_id = <?php
+		$my_last_transaction_id = my_last_transaction_id($thisuser['user_id'], $thisuser['game_id']);
+			if ($my_last_transaction_id) echo $my_last_transaction_id;
+			else echo 'false';
+		?>;
 		var mature_io_ids_csv = '<?php echo mature_io_ids_csv($thisuser['user_id'], $thisuser['game_id']); ?>';
 		var refresh_in_progress = false;
 		var last_refresh_time = 0;

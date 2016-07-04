@@ -7,6 +7,7 @@ if ($thisuser) {
 	$game = $_REQUEST['game'];
 	
 	if ($game == "reset" || $game == "delete") {
+		$action = $game;
 		$game_id = $thisuser['game_id'];
 		
 		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
@@ -16,10 +17,10 @@ if ($thisuser) {
 			$this_game = mysql_fetch_array($r);
 			
 			if ($this_game['game_type'] == "instant" && $this_game['creator_id'] == $thisuser['user_id']) {
-				$success = delete_reset_game($game, $game_id);
+				$success = delete_reset_game($action, $game_id);
 				
 				if ($success) {
-					if ($game == "delete") {
+					if ($action == "delete") {
 						$q = "UPDATE users SET game_id='".get_site_constant('primary_game_id')."' WHERE user_id='".$thisuser['user_id']."';";
 						$r = run_query($q);
 					}
@@ -47,11 +48,18 @@ if ($thisuser) {
 		
 		ensure_game_nations($game_id);
 		
-		$q = "SELECT * FROM users ORDER BY RAND() LIMIT 10;";
+		ensure_user_in_game($thisuser['user_id'], $game_id);
+		for ($i=0; $i<5; $i++) {
+			new_webwallet_multi_transaction($game_id, false, array(20000000000), false, $thisuser['user_id'], last_block_id($game_id), 'giveaway', false, false, false);
+		}
+		
+		$q = "SELECT * FROM users WHERE user_id != '".$thisuser['user_id']."' ORDER BY RAND() LIMIT 10;";
 		$r = run_query($q);
 		while ($player = mysql_fetch_array($r)) {
 			ensure_user_in_game($player['user_id'], $game_id);
-			new_webwallet_multi_transaction($game_id, false, array(100000000000), false, $player['user_id'], last_block_id($game_id), 'giveaway', false, false, false);
+			for ($i=0; $i<5; $i++) {
+				new_webwallet_multi_transaction($game_id, false, array(20000000000), false, $player['user_id'], last_block_id($game_id), 'giveaway', false, false, false);
+			}
 		}
 		
 		$q = "UPDATE users SET game_id='".$game_id."' WHERE user_id='".$thisuser['user_id']."';";
