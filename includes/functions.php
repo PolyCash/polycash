@@ -1492,7 +1492,7 @@ function new_block($game_id) {
 			$q = "UPDATE game_voting_options SET last_win_round=".$justmined_round." WHERE game_id='".$game['game_id']."' AND option_id='".$winning_option."';";
 			$r = run_query($q);
 			
-			$log_text .= $round_voting_stats[$option_id2rank[$winning_option]]['name']." wins with ".($winning_votesum/(pow(10, 8)))." EMP voted.<br/>";
+			$log_text .= $round_voting_stats[$option_id2rank[$winning_option]]['name']." wins with ".($winning_votesum/(pow(10, 8)))." coins voted.<br/>";
 			$payout_response = new_payout_transaction($game, $justmined_round, $last_block_id, $winning_option, $winning_votesum);
 			$payout_transaction_id = $payout_response[0];
 			$log_text .= "Payout response: ".$payout_response[1];
@@ -1706,7 +1706,7 @@ function apply_user_strategies(&$game) {
 							
 							for ($rank=1; $rank<=16; $rank++) {
 								if (in_array($rank, $by_rank_ranks) && !$skipped_options[$ranked_stats[$rank-1]['option_id']]) {
-									$log_text .= "Vote ".round($coins_each/pow(10,8), 3)." EMP for ".$ranked_stats[$rank-1]['name'].", ranked ".$rank."<br/>";
+									$log_text .= "Vote ".round($coins_each/pow(10,8), 3)." coins for ".$ranked_stats[$rank-1]['name'].", ranked ".$rank."<br/>";
 									
 									$option_ids[count($option_ids)] = $ranked_stats[$rank-1]['option_id'];
 									$amounts[count($amounts)] = $coins_each;
@@ -1718,7 +1718,7 @@ function apply_user_strategies(&$game) {
 							else $log_text .= "Failed to add transaction.<br/>\n";
 						}
 						else if ($strategy_user['voting_strategy'] == "by_option") {
-							$log_text .= "Dividing by option for ".$strategy_user['username']." (".(($free_balance-$strategy_user['transaction_fee'])/pow(10,8))." EMP)<br/>\n";
+							$log_text .= "Dividing by option for ".$strategy_user['username']." (".(($free_balance-$strategy_user['transaction_fee'])/pow(10,8))." coins)<br/>\n";
 							
 							$mult_factor = 1;
 							if ($skipped_pct_points > 0) {
@@ -1734,7 +1734,7 @@ function apply_user_strategies(&$game) {
 										$effective_frac = floor(pow(10,4)*$strategy_user['option_pct_'.$option_id]*$mult_factor)/pow(10,6);
 										$coin_amount = floor($effective_frac*($free_balance-$strategy_user['transaction_fee']));
 										
-										$log_text .= "Vote ".$strategy_user['option_pct_'.$option_id]."% (".round($coin_amount/pow(10,8), 3)." EMP) for ".$ranked_stats[$option_id2rank[$option_id]]['name']."<br/>";
+										$log_text .= "Vote ".$strategy_user['option_pct_'.$option_id]."% (".round($coin_amount/pow(10,8), 3)." coins) for ".$ranked_stats[$option_id2rank[$option_id]]['name']."<br/>";
 										
 										$option_ids[count($option_ids)] = $option_id;
 										$amounts[count($amounts)] = $coin_amount;

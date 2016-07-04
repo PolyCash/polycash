@@ -20,6 +20,10 @@ $GLOBALS['coin_testnet_port'] = 22222;
 $GLOBALS['coin_rpc_user'] = "";
 $GLOBALS['coin_rpc_password'] = "";
 
+$GLOBALS['bitcoin_port'] = 8332;
+$GLOBALS['bitcoin_rpc_user'] = "bitcoinrpc";
+$GLOBALS['bitcoin_rpc_password'] = "";
+
 $GLOBALS['always_generate_coins'] = false;
 $GLOBALS['restart_generation_seconds'] = 60;
 
@@ -40,6 +44,7 @@ $GLOBALS['default_timezone'] = 'America/Chicago';
 
 $GLOBALS['rsa_keyholder_email'] = "";
 $GLOBALS['rsa_pub_key'] = "";
+$GLOBALS['profit_btc_address'] = "";
 
 $GLOBALS['api_proxy_url'] = "";
 

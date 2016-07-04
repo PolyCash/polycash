@@ -16,7 +16,7 @@ if ($thisuser) {
 				
 				if ($_REQUEST['action'] == "generate_payout") {
 					include("includes/jsonRPCClient.php");
-					$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
+					$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['bitcoin_rpc_user'].':'.$GLOBALS['bitcoin_rpc_password'].'@127.0.0.1:'.$GLOBALS['bitcoin_port'].'/');
 
 					$addresses = explode(",", $_REQUEST['addrs']);
 					$privkeys = explode(",", $_REQUEST['privkeys']);
@@ -54,7 +54,7 @@ if ($thisuser) {
 					}
 					
 					if ((string)($total/pow(10,8)) != (string)$input_sum) {
-						output_message(4, "Error, expected inputs to sum to ".$input_sum." but they only summed to ".($total/pow(10,8)));
+						output_message(4, "Error, expected inputs to sum to ".$input_sum." but they summed to ".($total/pow(10,8)));
 					}
 					else {
 						$fee_satoshis = 5000;
@@ -77,10 +77,22 @@ if ($thisuser) {
 							
 							if ($temp_user_game['bitcoin_address_id'] > 0) {
 								$raw_txout[$temp_user_game['address']] = $payout_amt/pow(10,8);
+								$output_sum += $payout_amt;
 							}
 							else {
 								output_message(5, "User #".$temp_user_game['user_id']." doesn't have a valid BTC address, cancelling the transaction...");
 								die();
+							}
+						}
+						
+						$profit_satoshis = $total - $fee_satoshis - $output_sum;
+						if ($profit_satoshis > 0) {
+							if (!$GLOBALS['profit_btc_address']) {
+								output_message(6, 'You made a profit but no BTC profit address was specified. Please set $GLOBALS[\'profit_btc_address\'] to a BTC address in your includes/config.php');
+								die();
+							}
+							else {
+								$raw_txout[$GLOBALS['profit_btc_address']] = $profit_satoshis/pow(10,8);
 							}
 						}
 						
