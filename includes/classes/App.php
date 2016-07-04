@@ -702,7 +702,7 @@ class App {
 		else {
 			$var = $this->run_query("SHOW VARIABLES LIKE 'basedir';")->fetch();
 			if (PHP_OS == "WINNT") return $var['Value']."bin/mysql.exe";
-			else return $var['Value']."mysql";
+			else return $var['Value']."/bin/mysql";
 		}
 	}
 	
