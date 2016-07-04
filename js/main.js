@@ -1232,6 +1232,10 @@ function plan_option(round_id, option_id) {
 	this.points = 0;
 }
 function initialize_plan_options(from_round_id, to_round_id) {
+	round_id2row_id = new Array();
+	plan_options = new Array();
+	plan_option_row_sums = new Array();
+	
 	for (var round_id=from_round_id; round_id<=to_round_id; round_id++) {
 		round_id2row_id[round_id] = plan_options.length;
 		var options_row = new Array();
@@ -1278,4 +1282,40 @@ function load_plan_option(round_id, option_id, points) {
 			render_plan_option(round_id, i);
 		}
 	}
+}
+function save_plan_allocations() {
+	var postvars = {action: "save", voting_strategy_id: parseInt($('#voting_strategy_id').val()), from_round: parseInt($('#from_round').val()), to_round: parseInt($('#to_round').val())};
+	
+	for (var round_id=postvars['from_round']; round_id<=postvars['to_round']; round_id++) {
+		for (var i=0; i<16; i++) {
+			var points = parseInt($('#plan_option_input_'+round_id+'_'+i).val());
+			if (points > 0) {
+				postvars['poi_'+round_id+'_'+i] = points;
+			}
+		}
+	}
+	
+	$('#save_plan_btn').html("Saving...");
+	$.ajax({
+		type: "POST",
+		url: "/ajax/planned_allocations.php",
+		data: postvars,
+		success: function(result) {
+			$('#save_plan_btn').html("Save");
+		}
+	});
+}
+
+function load_plan_rounds() {
+	save_plan_allocations();
+	var from_round = $('#select_from_round').val();
+	var to_round = $('#select_to_round').val();
+	$.get("/ajax/planned_allocations.php?action=fetch&voting_strategy_id="+$('#voting_strategy_id').val()+"&from_round="+from_round+"&to_round="+to_round, function(result) {
+		$('#from_round').val(from_round);
+		$('#to_round').val(to_round);
+		var json_obj = JSON.parse(result);
+		$('#plan_rows').html(json_obj['html']);
+		initialize_plan_options(from_round, to_round);
+		$('#plan_rows_js').html(json_obj['js']);
+	});
 }

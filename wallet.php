@@ -248,22 +248,9 @@ else if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['d
 			$r = run_query($q);
 		}
 		
-		$by_plan_from_round = intval($_REQUEST['by_plan_from_round']);
-		$by_plan_to_round = intval($_REQUEST['by_plan_to_round']);
-		if ($by_plan_from_round > 0 && $by_plan_to_round > 0 && $by_plan_to_round >= $by_plan_from_round) {
-			$q = "DELETE FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND round_id >= ".$by_plan_from_round." AND round_id <= ".$by_plan_to_round.";";
-			$r = run_query($q);
-			
-			for ($round_id=$by_plan_from_round; $round_id<=$by_plan_to_round; $round_id++) {
-				for ($i=0; $i<16; $i++) {
-					$points = intval($_REQUEST['poi_'.$round_id.'_'.$i]);
-					if ($points > 0) {
-						$q = "INSERT INTO strategy_round_allocations SET strategy_id='".$user_strategy['strategy_id']."', round_id='".$round_id."', nation_id='".($i+1)."', points='".$points."';";
-						$r = run_query($q);
-					}
-				}
-			}
-		}
+		$from_round = intval($_REQUEST['from_round']);
+		$to_round = intval($_REQUEST['to_round']);
+		save_plan_allocations($user_strategy, $from_round, $to_round);
 		
 		for ($block=1; $block<$game['round_length']; $block++) {
 			$strategy_block = false;
@@ -655,7 +642,7 @@ $mature_balance = mature_balance($game, $thisuser);
 				Instead of logging in every time you want to cast a vote, you can automate your voting behavior by choosing one of the automated voting strategies below. <br/><br/>
 				<form method="post" action="/wallet/">
 					<input type="hidden" name="do" value="save_voting_strategy" />
-					<input type="hidden" name="voting_strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
+					<input type="hidden" id="voting_strategy_id" name="voting_strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
 					
 					<div class="row bordered_row">
 						<div class="col-md-2">
@@ -730,27 +717,25 @@ $mature_balance = mature_balance($game, $thisuser);
 					</div>
 					<div class="row bordered_row">
 						<div class="col-md-12">
-							<input type="radio" id="voting_strategy_by_plan" name="voting_strategy" value="by_plan"<?php if ($user_strategy['voting_strategy'] == "by_plan") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_plan">&nbsp;Plan&nbsp;my&nbsp;votes</label>
-							<br/>
 							<?php
 							$plan_ahead_rounds = 10;
-							for ($round=$current_round; $round<$current_round+$plan_ahead_rounds; $round++) {
-								$q = "SELECT * FROM game_nations gn JOIN nations n ON gn.nation_id=n.nation_id WHERE gn.game_id='".$game['game_id']."' ORDER BY n.nation_id ASC;";
-								$r = run_query($q);
-								echo '<div class="plan_row">#'.$round.": ";
-								while ($game_nation = mysql_fetch_array($r)) {
-									$option_id = $game_nation['nation_id']-1;
-									echo '<div class="plan_option" id="plan_option_'.$round.'_'.$option_id.'" onclick="plan_option_clicked('.$round.', '.$option_id.');">';
-									echo '<div class="plan_option_label" id="plan_option_label_'.$round.'_'.$option_id.'">'.$game_nation['name']."</div>";
-									echo '<div class="plan_option_amount" id="plan_option_amount_'.$round.'_'.$option_id.'"></div>';
-									echo '<input type="hidden" id="plan_option_input_'.$round.'_'.$option_id.'" name="poi_'.$round.'_'.$option_id.'" value="" />';
-									echo '</div>';
-								}
-								echo "</div>\n";
-							}
 							?>
-							<input type="hidden" id="by_plan_from_round" name="by_plan_from_round" value="<?php echo $current_round; ?>" />
-							<input type="hidden" id="by_plan_to_round" name="by_plan_to_round" value="<?php echo ($current_round+$plan_ahead_rounds-1); ?>" />
+							<input type="radio" id="voting_strategy_by_plan" name="voting_strategy" value="by_plan"<?php if ($user_strategy['voting_strategy'] == "by_plan") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_plan">&nbsp;Plan&nbsp;my&nbsp;votes</label>
+							
+							<font style="margin-left: 30px;">Load rounds: </font><input type="text" size="4" id="select_from_round" value="<?php echo $current_round; ?>" /> to <input type="text" size="4" id="select_to_round" value="<?php echo $current_round+$plan_ahead_rounds-1; ?>" /> <button class="btn btn-primary btn-sm" onclick="load_plan_rounds(); return false;">Go</button>
+							
+							<button id="save_plan_btn" style="float: right; margin-right: 20px;" class="btn btn-primary btn-sm" onclick="save_plan_allocations(); return false;">Save this Plan</button>
+							
+							<br/>
+							<div id="plan_rows">
+								<?php
+								echo plan_options_html($game, $current_round, $current_round+$plan_ahead_rounds-1);
+								?>
+							</div>
+							<div id="plan_rows_js"></div>
+							
+							<input type="hidden" id="from_round" name="from_round" value="<?php echo $current_round; ?>" />
+							<input type="hidden" id="to_round" name="to_round" value="<?php echo ($current_round+$plan_ahead_rounds-1); ?>" />
 							
 							<script type="text/javascript">
 							var plan_option_max_points = 5;

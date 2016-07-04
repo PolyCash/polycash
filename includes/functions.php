@@ -1437,7 +1437,7 @@ function apply_user_strategies(&$game) {
 		$q = "SELECT * FROM users u JOIN user_games g ON u.user_id=g.user_id JOIN user_strategies s ON g.strategy_id=s.strategy_id";
 		$q .= " JOIN user_strategy_blocks usb ON s.strategy_id=usb.strategy_id";
 		$q .= " WHERE g.game_id='".$game['game_id']."' AND usb.block_within_round='".$block_of_round."'";
-		$q .= " AND (s.voting_strategy='by_rank' OR s.voting_strategy='by_nation' OR s.voting_strategy='api')";
+		$q .= " AND (s.voting_strategy='by_rank' OR s.voting_strategy='by_nation' OR s.voting_strategy='api' OR s.voting_strategy='by_plan')";
 		$q .= " ORDER BY RAND();";
 		$r = run_query($q);
 		
@@ -1609,7 +1609,7 @@ function apply_user_strategies(&$game) {
 							if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
 							else $log_text .= "Failed to add transaction.<br/>\n";
 						}
-						else { // by_nation
+						else if ($strategy_user['voting_strategy'] == "by_nation") {
 							$log_text .= "Dividing by nation for ".$strategy_user['username']." (".(($free_balance-$strategy_user['transaction_fee'])/pow(10,8))." EMP)<br/>\n";
 							
 							$mult_factor = 1;
@@ -1635,6 +1635,42 @@ function apply_user_strategies(&$game) {
 								$transaction_id = new_transaction($game, $nation_ids, $amounts, $strategy_user['user_id'], $strategy_user['user_id'], false, 'transaction', false, false, false, $strategy_user['transaction_fee']);
 								
 								if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
+								else $log_text .= "Failed to add transaction.<br/>\n";
+							}
+						}
+						else { // by_plan
+							$log_text .= "Dividing by plan for ".$strategy_user['username']."<br/>";
+							
+							$qq = "SELECT * FROM strategy_round_allocations WHERE strategy_id='".$strategy_user['strategy_id']."' AND round_id='".$current_round_id."' AND applied=0;";
+							$rr = run_query($qq);
+							
+							if (mysql_numrows($rr) > 0) {
+								$allocations = array();
+								$point_sum = 0;
+								
+								while ($allocation = mysql_fetch_array($rr)) {
+									$allocations[count($allocations)] = $allocation;
+									$point_sum += intval($allocation['points']);
+								}
+								
+								$nation_ids = array();
+								$amounts = array();
+								
+								for ($i=0; $i<count($allocations); $i++) {
+									$nation_ids[$i] = $allocations[$i]['nation_id'];
+									$amounts[$i] = intval(floor(($free_balance-$strategy_user['transaction_fee'])*$allocations[$i]['points']/$point_sum));
+								}
+								
+								$transaction_id = new_transaction($game, $nation_ids, $amounts, $strategy_user['user_id'], $strategy_user['user_id'], false, 'transaction', false, false, false, $strategy_user['transaction_fee']);
+								
+								if ($transaction_id) {
+									$log_text .= "Added transaction $transaction_id<br/>\n";
+									
+									for ($i=0; $i<count($allocations); $i++) {
+										$qq = "UPDATE strategy_round_allocations SET applied=1 WHERE allocation_id='".$allocations[$i]['allocation_id']."';";
+										$rr = run_query($qq);
+									}
+								}
 								else $log_text .= "Failed to add transaction.<br/>\n";
 							}
 						}
@@ -2830,5 +2866,39 @@ function user_in_game($user_id, $game_id) {
 	$r = run_query($q);
 	if (mysql_numrows($r) > 0) return true;
 	else return false;
+}
+function save_plan_allocations($user_strategy, $from_round, $to_round) {
+	if ($from_round > 0 && $to_round > 0 && $to_round >= $from_round) {
+		$q = "DELETE FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND round_id >= ".$from_round." AND round_id <= ".$to_round.";";
+		$r = run_query($q);
+		
+		for ($round_id=$from_round; $round_id<=$to_round; $round_id++) {
+			for ($i=0; $i<16; $i++) {
+				$points = intval($_REQUEST['poi_'.$round_id.'_'.$i]);
+				if ($points > 0) {
+					$q = "INSERT INTO strategy_round_allocations SET strategy_id='".$user_strategy['strategy_id']."', round_id='".$round_id."', nation_id='".($i+1)."', points='".$points."';";
+					$r = run_query($q);
+				}
+			}
+		}
+	}
+}
+function plan_options_html(&$game, $from_round, $to_round) {
+	$html = "";
+	for ($round=$from_round; $round<=$to_round; $round++) {
+		$q = "SELECT * FROM game_nations gn JOIN nations n ON gn.nation_id=n.nation_id WHERE gn.game_id='".$game['game_id']."' ORDER BY n.nation_id ASC;";
+		$r = run_query($q);
+		$html .= '<div class="plan_row">#'.$round.": ";
+		while ($game_nation = mysql_fetch_array($r)) {
+			$option_id = $game_nation['nation_id']-1;
+			$html .= '<div class="plan_option" id="plan_option_'.$round.'_'.$option_id.'" onclick="plan_option_clicked('.$round.', '.$option_id.');">';
+			$html .= '<div class="plan_option_label" id="plan_option_label_'.$round.'_'.$option_id.'">'.$game_nation['name']."</div>";
+			$html .= '<div class="plan_option_amount" id="plan_option_amount_'.$round.'_'.$option_id.'"></div>';
+			$html .= '<input type="hidden" id="plan_option_input_'.$round.'_'.$option_id.'" name="poi_'.$round.'_'.$option_id.'" value="" />';
+			$html .= '</div>';
+		}
+		$html .= "</div>\n";
+	}
+	return $html;
 }
 ?>
