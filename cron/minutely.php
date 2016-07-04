@@ -1,13 +1,44 @@
 <?php
 include("../includes/connect.php");
+include("../includes/jsonRPCClient.php");
+
+$script_start_time = microtime(true);
 
 if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
-	$q = "UPDATE users SET logged_in=0 WHERE last_active<".(time()-60*2).";";
-	$r = run_query($q);
-	
 	$q = "SELECT * FROM games WHERE game_id='".get_site_constant('primary_game_id')."';";
 	$r = run_query($q);
 	$game = mysql_fetch_array($r);
+	
+	if ($GLOBALS['always_generate_coins']) {
+		$q = "SELECT * FROM blocks WHERE game_id='".$game['game_id']."' ORDER BY block_id DESC LIMIT 1;";
+		$r = run_query($q);
+		if (mysql_numrows($r) > 0) {
+			$lastblock = mysql_fetch_array($r);
+			if ($lastblock['time_created'] < time()-$GLOBALS['restart_generation_seconds']) {
+				$empirecoin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
+				$empirecoin_rpc->setgenerate(false);
+				$empirecoin_rpc->setgenerate(true);
+				echo "Started generating coins...<br/>\n";
+			}
+		}
+	}
+	
+	if ($GLOBALS['walletnotify_by_cron']) {
+		$empirecoin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
+		
+		$q = "SELECT * FROM games WHERE game_id='".get_site_constant('primary_game_id')."';";
+		$r = run_query($q);
+		$game = mysql_fetch_array($r);
+		
+		$seconds_to_sleep = 5;
+		do {
+			echo walletnotify($game, $empirecoin_rpc, "");
+			sleep($seconds_to_sleep);
+		} while (microtime(true) < $script_start_time + (60-$seconds_to_sleep));
+	}
+	/*
+	$q = "UPDATE users SET logged_in=0 WHERE last_active<".(time()-60*2).";";
+	$r = run_query($q);
 	
 	$last_block_id = last_block_id(get_site_constant('primary_game_id'));
 	
@@ -23,6 +54,7 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	
 	// Apply user strategies
 	echo apply_user_strategies($game);
+	*/
 }
 else echo "Error: permission denied.";
 ?>

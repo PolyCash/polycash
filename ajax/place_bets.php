@@ -25,9 +25,9 @@ if ($thisuser) {
 			
 			if ($round_id >= $bet_round_range[0] && $round_id  <= $bet_round_range[1]) {
 				for ($i=0; $i<count($amounts); $i++) {
-					if ($amounts[$i] != intval($amounts[$i])) {
+					if ($nations[$i] != intval($nations[$i]) || $amounts[$i] != intval($amounts[$i])) {
 						$output_obj['result_code'] = 5;
-						$output_obj['message'] = "You submitted an invalid amount.";
+						$output_obj['message'] = "You submitted an invalid number.";
 						echo json_encode($output_obj);
 						die();
 					}
@@ -68,7 +68,7 @@ if ($thisuser) {
 					$mature_balance = $account_value - $immature_balance;
 					
 					if ($amount_sum <= $mature_balance) {
-						$transaction_id = new_webwallet_multi_transaction($game['game_id'], false, $amounts, $thisuser['user_id'], false, $mining_block_id, 'bet', false, $address_ids, $remainder_address_id);
+						$transaction_id = new_webwallet_multi_transaction($game, false, $amounts, $thisuser['user_id'], false, false, 'bet', false, $address_ids, $remainder_address_id);
 						if ($transaction_id > 0) {
 							$output_obj['result_code'] = 11;
 							$output_obj['message'] = "Great, your bet has been placed!";

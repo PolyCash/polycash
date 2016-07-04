@@ -4,6 +4,10 @@ include("../includes/get_session.php");
 $viewer_id = insert_pageview($thisuser);
 
 if ($thisuser) {
+	$q = "SELECT * FROM games WHERE game_id='".$thisuser['game_id']."';";
+	$r = run_query($q);
+	$game = mysql_fetch_array($r);
+	
 	$account_value = account_coin_value($thisuser['game_id'], $thisuser);
 	$immature_balance = immature_balance($thisuser['game_id'], $thisuser);
 	$mature_balance = $account_value - $immature_balance;
@@ -15,6 +19,11 @@ if ($thisuser) {
 	
 	$nation_ids_csv = $_REQUEST['nation_ids'];
 	$nation_ids = explode(",", $nation_ids_csv);
+	$int_nation_ids = [];
+	for ($i=0; $i<count($nation_ids); $i++) {
+		$int_nation_ids[$i] = intval($nation_ids[$i]);
+	}
+	$nation_ids = $int_nation_ids;
 	
 	$amounts_csv = $_REQUEST['amounts'];
 	$amounts = explode(",", $amounts_csv);
@@ -32,7 +41,10 @@ if ($thisuser) {
 			if (mysql_numrows($rr) == 1) {
 				$io = mysql_fetch_array($rr);
 				
-				if ($io['user_id'] != $thisuser['user_id'] || $io['spend_status'] != "unspent" || $io['game_id'] != $thisuser['game_id']) die($noinfo_fail_output);
+				if ($io['user_id'] != $thisuser['user_id'] || $io['spend_status'] != "unspent" || $io['game_id'] != $thisuser['game_id']) {
+					var_dump($io);
+					die("x:".$io['user_id']." != ".$thisuser['user_id']." -- ".$noinfo_fail_output);
+				}
 				else {
 					if ($io['create_block_id'] <= last_block_id($thisuser['game_id'])-get_site_constant('maturity') || $io['instantly_mature'] == 1) $io_ids[$i] = $io_id;
 					else die("3=====One of the coin inputs you selected is not yet mature.");
@@ -67,7 +79,7 @@ if ($thisuser) {
 	}
 	else {
 		if ($amount_sum <= $mature_balance && $amount_sum > 0) {
-			$transaction_id = new_webwallet_multi_transaction($thisuser['game_id'], $nation_ids, $amounts, $thisuser['user_id'], $thisuser['user_id'], $last_block_id+1, 'transaction', $io_ids, false, false);
+			$transaction_id = new_webwallet_multi_transaction($game, $nation_ids, $amounts, $thisuser['user_id'], $thisuser['user_id'], false, 'transaction', $io_ids, false, false);
 			
 			if ($transaction_id) {
 				echo "0=====Your voting transaction has been submitted!";

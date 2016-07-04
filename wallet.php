@@ -269,6 +269,13 @@ $pagetitle = "EmpireCoin - My web wallet";
 $nav_tab_selected = "wallet";
 include('includes/html_start.php');
 
+$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game['game_id']."';";
+$r = run_query($q);
+if (mysql_numrows($r) > 0) {
+	$user_game = mysql_fetch_array($r);
+	generate_user_addresses($user_game);
+}
+
 $initial_tab = 0;
 $account_value = account_coin_value($thisuser['game_id'], $thisuser);
 $immature_balance = immature_balance($thisuser['game_id'], $thisuser);
@@ -311,7 +318,7 @@ $mature_balance = $account_value - $immature_balance;
 		$round_stats = $round_stats[2];
 		?>
 		<script type="text/javascript">
-		var current_tab = false;
+		var current_tab = 0;
 		var last_block_id = <?php echo $last_block_id; ?>;
 		var last_transaction_id = <?php echo last_transaction_id($thisuser['game_id']); ?>;
 		var my_last_transaction_id = <?php
@@ -413,7 +420,7 @@ $mature_balance = $account_value - $immature_balance;
 			<div class="col-xs-2 tabcell" id="tabcell4" onclick="tab_clicked(4);">Withdraw</div>
 		</div>
 		<div class="row">
-			<div id="tabcontent0" style="display: none;" class="tabcontent">
+			<div id="tabcontent0" class="tabcontent">
 				<div class="row">
 					<div class="col-md-6">
 						<h2>Current votes</h2>
@@ -653,7 +660,7 @@ $mature_balance = $account_value - $immature_balance;
 			</div>
 			<div id="tabcontent3" style="display: none;" class="tabcontent">
 				<?php
-				$q = "SELECT * FROM addresses a LEFT JOIN nations n ON n.nation_id=a.nation_id WHERE a.game_id='".$thisuser['game_id']."' AND a.user_id='".$thisuser['user_id']."' ORDER BY a.nation_id IS NULL DESC, a.nation_id ASC;";
+				$q = "SELECT * FROM addresses a LEFT JOIN nations n ON n.nation_id=a.nation_id WHERE a.game_id='".$thisuser['game_id']."' AND a.user_id='".$thisuser['user_id']."' ORDER BY a.nation_id IS NULL ASC, a.nation_id ASC;";
 				$r = run_query($q);
 				echo "<b>You have ".mysql_numrows($r)." addresses.</b><br/>\n";
 				while ($address = mysql_fetch_array($r)) {

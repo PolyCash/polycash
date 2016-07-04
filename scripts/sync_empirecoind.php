@@ -74,22 +74,7 @@ do {
 				for ($j=0; $j<count($outputs); $j++) {
 					$address = $outputs[$j]["scriptPubKey"]["addresses"][0];
 					
-					$q = "SELECT * FROM addresses WHERE game_id='".$game_id."' AND address='".$address."';";
-					$r = run_query($q);
-					
-					if (mysql_numrows($r) > 0) {
-						$output_address = mysql_fetch_array($r);
-					}
-					else {
-						$address_nation_id = addr_text_to_nation_id($address);
-						$q = "INSERT INTO addresses SET game_id='".$game_id."', address='".$address."', nation_id='".$address_nation_id."', time_created='".time()."';";
-						$r = run_query($q);
-						echo "qqq: $q\n";
-						$output_address_id = mysql_insert_id();
-						$q = "SELECT * FROM addresses WHERE address_id='".$output_address_id."';";
-						$r = run_query($q);
-						$output_address = mysql_fetch_array($r);
-					}
+					$output_address = create_or_fetch_address($game, $address, true, $empirecoin_rpc, false);
 					
 					$q = "INSERT INTO transaction_IOs SET spend_status='unspent', instantly_mature=0, game_id='".$game_id."', out_index='".$j."', user_id=NULL, address_id='".$output_address['address_id']."'";
 					if ($output_address['nation_id'] > 0) $q .= ", nation_id=".$output_address['nation_id'];
@@ -111,22 +96,8 @@ do {
 			$tx_hash = $blocks[$block_id]->json_obj['tx'][$i];
 			$transactions[0] = new transaction($tx_hash, "", false, $block_id);
 			
-			$address = "genesis_address";
+			$output_address = create_or_fetch_address($game, "genesis_address", true, false, false);
 			
-			$q = "SELECT * FROM addresses WHERE game_id='".$game_id."' AND address='".$address."';";
-			$r = run_query($q);
-			
-			if (mysql_numrows($r) > 0) {
-				$output_address = mysql_fetch_array($r);
-			}
-			else {
-				$q = "INSERT INTO addresses SET game_id='".$game_id."', address='".$address."', time_created='".time()."';";
-				$r = run_query($q);
-				$output_address_id = mysql_insert_id();
-				$q = "SELECT * FROM addresses WHERE address_id='".$output_address_id."';";
-				$r = run_query($q);
-				$output_address = mysql_fetch_array($r);
-			}
 			$q = "INSERT INTO webwallet_transactions SET game_id='".$game_id."', amount='".(25*pow(10,8))."', transaction_desc='coinbase', tx_hash='".$tx_hash."', address_id=".$output_address['address_id'].", block_id='".$block_id."', time_created='".time()."';";
 			$r = run_query($q);
 			$transaction_id = mysql_insert_id();

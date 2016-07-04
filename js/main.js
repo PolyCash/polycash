@@ -426,7 +426,7 @@ function vote_nation(nation_index, name, nation_id) {
 	this.nation_index = nation_index;
 	this.name = name;
 	this.nation_id = nation_id;
-	this.slider_val = 100;
+	this.slider_val = 50;
 	this.amount = 0;
 }
 function input_amount_sums() {
@@ -499,7 +499,7 @@ function add_nation_to_vote(nation_id, name) {
 function load_nation_slider(index_id) {
 	$('#output_threshold_'+index_id).noUiSlider({
 		range: [0, 100]
-	   ,start: 100, step: 1
+	   ,start: 50, step: 1
 	   ,handles: 1
 	   ,connect: "lower"
 	   ,serialization: {
@@ -647,7 +647,7 @@ function confirm_compose_vote() {
 					setTimeout("$('#compose_vote_success').slideUp('fast');", 2500);
 					
 					for (var i=0; i<vote_nations.length; i++) {
-						$('#compose_vote_output_'+i).remove();
+						remove_nation_from_vote(i);
 					}
 					vote_nations.length = 0;
 					

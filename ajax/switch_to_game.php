@@ -4,11 +4,10 @@ include("../includes/get_session.php");
 $viewer_id = insert_pageview($thisuser);
 
 if ($thisuser) {
-	$game = $_REQUEST['game'];
+	$action = $_REQUEST['game'];
 	
-	if ($game == "reset" || $game == "delete") {
-		$action = $game;
-		$game_id = $thisuser['game_id'];
+	if ($action == "reset" || $action == "delete") {
+		$game_id = intval($thisuser['game_id']);
 		
 		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
 		$r = run_query($q);
@@ -46,11 +45,15 @@ if ($thisuser) {
 		$r = run_query($q);
 		$game_id = mysql_insert_id();
 		
+		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
+		$r = run_query($q);
+		$game = mysql_fetch_array($r);
+		
 		ensure_game_nations($game_id);
 		
 		ensure_user_in_game($thisuser['user_id'], $game_id);
 		for ($i=0; $i<5; $i++) {
-			new_webwallet_multi_transaction($game_id, false, array(20000000000), false, $thisuser['user_id'], last_block_id($game_id), 'giveaway', false, false, false);
+			new_webwallet_multi_transaction($game, false, array(20000000000), false, $thisuser['user_id'], last_block_id($game_id), 'giveaway', false, false, false);
 		}
 		
 		$q = "SELECT * FROM users WHERE user_id != '".$thisuser['user_id']."' ORDER BY RAND() LIMIT 10;";
@@ -58,7 +61,7 @@ if ($thisuser) {
 		while ($player = mysql_fetch_array($r)) {
 			ensure_user_in_game($player['user_id'], $game_id);
 			for ($i=0; $i<5; $i++) {
-				new_webwallet_multi_transaction($game_id, false, array(20000000000), false, $player['user_id'], last_block_id($game_id), 'giveaway', false, false, false);
+				new_webwallet_multi_transaction($game, false, array(20000000000), false, $player['user_id'], last_block_id($game_id), 'giveaway', false, false, false);
 			}
 		}
 		

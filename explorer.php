@@ -90,6 +90,7 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 	}
 	if ($explore_mode == "transactions") {
 		if ($uri_parts[3] == "unconfirmed") {
+			$explore_mode = "unconfirmed";
 			$mode_error = false;
 			$pagetitle = $this_game['name']." - Unconfirmed Transactions";
 		}
@@ -240,7 +241,8 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 						<a href="/explorer/rounds/<?php echo $round['round_id']-1; ?>" style="display: inline-block; margin-right: 30px;">&larr; Previous Round</a>
 						<?php
 					}
-					if ($round['round_id'] < $current_round-1) { ?>
+					
+					if ($round['round_id'] < $current_round) { ?>
 						<a href="/explorer/rounds/<?php echo $round['round_id']+1; ?>">Next Round &rarr;</a>
 						<?php
 					}
@@ -270,33 +272,69 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 				}
 				echo "<br/><br/>\n";
 			}
-			else if ($explore_mode == "blocks") {
-				if ($block) {
-					$q = "SELECT COUNT(*), SUM(amount) FROM webwallet_transactions WHERE game_id='".$game_id."' AND block_id='".$block['block_id']."' AND amount > 0;";
-					$r = run_query($q);
-					$num_trans = mysql_fetch_row($r);
-					$block_sum = $num_trans[1];
-					$num_trans = $num_trans[0];
-					
-					$round_id = block_to_round($block['block_id']);
-					$block_index = block_id_to_round_index($block['block_id']);
-					
-					echo "<h1>Block #".$block['block_id']."</h1>";
-					echo "<h3>".$this_game['name']."</h3>";
-					echo "This block contains $num_trans transactions totaling ".number_format($block_sum/pow(10,8), 2)." coins.<br/>\n";
-					echo "This is block ".$block_index." of <a href=\"/explorer/rounds/".$round_id."\">round #".$round_id."</a><br/><br/>\n";
+			else if ($explore_mode == "blocks" || $explore_mode == "unconfirmed") {
+				if ($block || $explore_mode == "unconfirmed") {
+					if ($block) {
+						$round_id = block_to_round($block['block_id']);
+						$block_index = block_id_to_round_index($block['block_id']);
+						
+						$q = "SELECT COUNT(*), SUM(amount) FROM webwallet_transactions WHERE game_id='".$this_game['game_id']."' AND block_id='".$block['block_id']."' AND amount > 0;";
+						$r = run_query($q);
+						$r = mysql_fetch_row($r);
+						$num_trans = $r[0];
+						$block_sum = $r[1];
+						
+						echo "<h1>Block #".$block['block_id']."</h1>";
+						echo "<h3>".$this_game['name']."</h3>";
+						echo "This block contains $num_trans transactions totaling ".number_format($block_sum/pow(10,8), 2)." coins.<br/>\n";
+						echo "This is block ".$block_index." of <a href=\"/explorer/rounds/".$round_id."\">round #".$round_id."</a><br/><br/>\n";
+					}
+					else {
+						$q = "SELECT COUNT(*), SUM(amount) FROM webwallet_transactions WHERE game_id='".$this_game['game_id']."' AND block_id IS NULL;";// AND amount > 0;";
+						$r = run_query($q);
+						$r = mysql_fetch_row($r);
+						$num_trans = $r[0];
+						$block_sum = $r[1];
+						
+						$expected_block_id = last_block_id($this_game['game_id'])+1;
+						$expected_round_id = block_to_round($expected_block_id);
+						$expected_block_index = block_id_to_round_index($expected_block_id);
+						
+						echo "<h1>Unconfirmed Transactions</h1>\n";
+						echo "<h3>".$this_game['name']."</h3>";
+						echo "$num_trans known transactions are awaiting confirmation with a sum of ".number_format($block_sum/pow(10,8), 2)." coins.<br/>\n";
+						echo "Block #".$expected_block_id." is currently being mined.  It will be block $expected_block_index of ";
+						echo "<a href=\"/explorer/rounds/".$expected_round_id."\">round #".$expected_round_id."</a><br/><br/>\n";
+					}
 					
 					echo '<div style="border-bottom: 1px solid #bbb;">';
-					$q = "SELECT * FROM webwallet_transactions WHERE game_id='".$game_id."' AND block_id='".$block['block_id']."' AND amount > 0 ORDER BY transaction_id ASC;";
+					
+					$q = "SELECT * FROM webwallet_transactions WHERE game_id='".$game_id."' AND block_id";
+					if ($explore_mode == "unconfirmed") $q .= " IS NULL";
+					else $q .= "='".$block['block_id']."'";
+					$q .= " AND amount > 0 ORDER BY transaction_id ASC;";
 					$r = run_query($q);
+					
 					while ($transaction = mysql_fetch_array($r)) {
 						echo render_transaction($transaction, FALSE, "");
 					}
 					echo '</div>';
 					echo "<br/>\n";
 					
-					if ($block['block_id'] > 1) echo '<a href="/explorer/blocks/'.($block['block_id']-1).'" style="margin-right: 30px;">&larr; Previous Block</a>';
-					echo '<a href="/explorer/blocks/'.($block['block_id']+1).'">Next Block &rarr;</a>';
+					$prev_link_target = false;
+					if ($explore_mode == "unconfirmed") $prev_link_target = "blocks/".last_block_id($this_game['game_id']);
+					else if ($block['block_id'] > 1) $prev_link_target = "blocks/".($block['block_id']-1);
+					if ($prev_link_target) echo '<a href="/explorer/'.$prev_link_target.'" style="margin-right: 30px;">&larr; Previous Block</a>';
+					
+					$next_link_target = false;
+					if ($explore_mode == "unconfirmed") {}
+					else if ($block['block_id'] == last_block_id($game['game_id'])) $next_link_target = "transactions/unconfirmed";
+					else if ($block['block_id'] < last_block_id($game['game_id'])) $next_link_target = "blocks/".($block['block_id']+1);
+					if ($next_link_target) echo '<a href="/explorer/'.$next_link_target.'">Next Block &rarr;</a>';
+					
+					if ($explore_mode == "blocks") {
+						echo "<br/><a href=\"/explorer/transactions/unconfirmed\">Unconfirmed transactions</a>\n";
+					}
 					
 					echo "<br/><br/>\n";
 				}
@@ -322,6 +360,7 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 				$r = run_query($q);
 				
 				echo "This address has been used in ".mysql_numrows($r)." transactions.<br/>\n";
+				if ($address['is_mine'] == 1) echo "This is one of your addresses.<br/>\n";
 				
 				echo '<div style="border-bottom: 1px solid #bbb;">';
 				while ($transaction_io = mysql_fetch_array($r)) {
@@ -334,26 +373,13 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 				echo "<br/><br/>\n";
 			}
 			else if ($explore_mode == "transactions") {
-				if ($uri_parts[3] == "unconfirmed") {
-					echo "<h3>".$this_game['name']." - Unconfirmed Transactions</h3>\n";
-					$q = "SELECT * FROM webwallet_transactions WHERE block_id IS NULL ORDER BY transaction_id ASC;";
-					$r = run_query($q);
-					echo '<div style="border-bottom: 1px solid #bbb;">';
-					while ($transaction = mysql_fetch_array($r)) {
-						echo render_transaction($transaction, false, false);
-					}
-					echo "</div>\n";
-					echo "<br/><br/>\n";
-				}
-				else {
-					echo "<h3>EmpireCoin Transaction: ".$transaction['tx_hash']."</h3>\n";
-					$block_index = block_id_to_round_index($transaction['block_id']);
-					$round_id = block_to_round($transaction['block_id']);
-					echo '<div style="border-bottom: 1px solid #bbb;">';
-					echo render_transaction($transaction, false, "Confirmed in the <a href=\"/explorer/blocks/".$transaction['block_id']."\">".date("jS", strtotime("1/".$block_index."/2015"))." block</a> of <a href=\"/explorer/rounds/".$round_id."\">round ".$round_id."</a>");
-					echo "</div>\n";
-					echo "<br/><br/>\n";
-				}
+				echo "<h3>EmpireCoin Transaction: ".$transaction['tx_hash']."</h3>\n";
+				$block_index = block_id_to_round_index($transaction['block_id']);
+				$round_id = block_to_round($transaction['block_id']);
+				echo '<div style="border-bottom: 1px solid #bbb;">';
+				echo render_transaction($transaction, false, "Confirmed in the <a href=\"/explorer/blocks/".$transaction['block_id']."\">".date("jS", strtotime("1/".$block_index."/2015"))." block</a> of <a href=\"/explorer/rounds/".$round_id."\">round ".$round_id."</a>");
+				echo "</div>\n";
+				echo "<br/><br/>\n";
 			}
 			else if ($explore_mode == "index") {
 				?>
