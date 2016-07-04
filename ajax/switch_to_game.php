@@ -40,39 +40,43 @@ if ($thisuser) {
 	}
 	else if ($action == "fetch" || $action == "new") {
 		if ($action == "new") {
-			$q = "SELECT MAX(creator_game_index) FROM games WHERE creator_id='".$thisuser['user_id']."';";
-			$r = run_query($q);
-			if (mysql_numrows($r) > 0) {
-				$game_index = mysql_fetch_row($r);
-				$game_index = $game_index[0]+1;
+			$new_game_perm = new_game_permission($thisuser);
+			
+			if ($new_game_perm) {
+				$q = "SELECT MAX(creator_game_index) FROM games WHERE creator_id='".$thisuser['user_id']."';";
+				$r = run_query($q);
+				if (mysql_numrows($r) > 0) {
+					$game_index = mysql_fetch_row($r);
+					$game_index = $game_index[0]+1;
+				}
+				else $game_index = 1;
+				
+				$q = "INSERT INTO games SET creator_id='".$thisuser['user_id']."', maturity=0, round_length=60, seconds_per_block='6', block_timing='realistic', creator_game_index='".$game_index."', game_type='simulation', pos_reward='".(6000*pow(10,8))."', pow_reward='".(200*pow(10,8))."', start_datetime='".date("Y-m-d g:\\0\\0a", time()+(2*60*60))."';";
+				$r = run_query($q);
+				$game_id = mysql_insert_id();
+				
+				$game_name = "Private Game #".$game_id;
+				$url_identifier = game_url_identifier($game_name);
+				
+				$q = "UPDATE games SET name='".$game_name."', url_identifier='".$url_identifier."' WHERE game_id='".$game_id."';";
+				$r = run_query($q);
+				
+				$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
+				$r = run_query($q);
+				$game = mysql_fetch_array($r);
+				
+				ensure_game_options($game);
+				
+				if ($game['giveaway_status'] == "public_free") {
+					ensure_user_in_game($thisuser, $game_id);
+				}
+				
+				$q = "UPDATE users SET game_id='".$game_id."' WHERE user_id='".$thisuser['user_id']."';";
+				$r = run_query($q);
+				
+				$q = "UPDATE user_games ug, user_strategies s SET s.voting_strategy='manual' WHERE ug.strategy_id=s.strategy_id AND ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game_id."';";
+				$r = run_query($q);
 			}
-			else $game_index = 1;
-			
-			$q = "INSERT INTO games SET creator_id='".$thisuser['user_id']."', maturity=0, round_length=60, seconds_per_block='6', block_timing='realistic', creator_game_index='".$game_index."', game_type='simulation', pos_reward='".(6000*pow(10,8))."', pow_reward='".(200*pow(10,8))."', start_datetime='".date("Y-m-d g:\\0\\0a", time()+(2*60*60))."';";
-			$r = run_query($q);
-			$game_id = mysql_insert_id();
-			
-			$game_name = "Private Game #".$game_id;
-			$url_identifier = game_url_identifier($game_name);
-			
-			$q = "UPDATE games SET name='".$game_name."', url_identifier='".$url_identifier."' WHERE game_id='".$game_id."';";
-			$r = run_query($q);
-			
-			$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
-			$r = run_query($q);
-			$game = mysql_fetch_array($r);
-			
-			ensure_game_options($game);
-			
-			if ($game['giveaway_status'] == "public_free") {
-				ensure_user_in_game($thisuser, $game_id);
-			}
-			
-			$q = "UPDATE users SET game_id='".$game_id."' WHERE user_id='".$thisuser['user_id']."';";
-			$r = run_query($q);
-			
-			$q = "UPDATE user_games ug, user_strategies s SET s.voting_strategy='manual' WHERE ug.strategy_id=s.strategy_id AND ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game_id."';";
-			$r = run_query($q);
 		}
 		
 		$q = "SELECT creator_id, game_id, game_status, block_timing, giveaway_status, giveaway_amount, maturity, max_voting_fraction, name, payout_weight, round_length, seconds_per_block, pos_reward, pow_reward, inflation, exponential_inflation_rate, exponential_inflation_minershare, final_round, invite_cost, invite_currency, coin_name, coin_name_plural, coin_abbreviation, start_condition, start_datetime, start_condition_players FROM games WHERE game_id='".$game_id."';";

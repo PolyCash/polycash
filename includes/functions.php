@@ -3563,4 +3563,16 @@ function fetch_game_from_url() {
 	}
 	else return false;
 }
+function count_user_games_created($user) {
+	$q = "SELECT * FROM games WHERE creator_id='".$user['user_id']."';";
+	$r = run_query($q);
+	$num_games = mysql_numrows($r);
+	return $num_games;
+}
+function new_game_permission($user) {
+	$games_created_by_user = count_user_games_created($user);
+	if ((string)$GLOBALS['new_games_per_user'] == "unlimited") return true;
+	else if ($games_created_by_user < $user['authorized_games']) return true;
+	else return false;
+}
 ?>

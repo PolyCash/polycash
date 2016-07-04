@@ -34,6 +34,8 @@ $GLOBALS['min_unallocated_addresses'] = 40;
 $GLOBALS['currency_price_refresh_seconds'] = 30;
 $GLOBALS['invoice_expiration_seconds'] = 60*10;
 
+$GLOBALS['new_games_per_user'] = "unlimited";
+
 $GLOBALS['coin_brand_name'] = "EmpireCoin";
 $GLOBALS['site_name_short'] = "EmpireCoin";
 $GLOBALS['site_name'] = "EmpireCoin.org";

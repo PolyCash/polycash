@@ -59,7 +59,9 @@ if ($_REQUEST['do'] == "signup") {
 					if ($GLOBALS['pageview_tracking_enabled']) {
 						$q .= ", ip_address='".$_SERVER['REMOTE_ADDR']."'";
 					}
-					
+					if ($GLOBALS['new_games_per_user'] != "unlimited") {
+						$q .= ", authorized_games='".$GLOBALS['new_games_per_user']."'";
+					}
 					$bitcoin_address = $_REQUEST['bitcoin_address'];
 					safe_text($bitcoin_address);
 					
@@ -1244,9 +1246,15 @@ $mature_balance = mature_balance($game, $thisuser);
 					</div>
 					<?php
 				}
+				
+				$new_game_perm = new_game_permission($thisuser);
+				
+				if ($new_game_perm) { ?>
+					<br/>
+					<button class="btn btn-primary" onclick="switch_to_game(0, 'new'); return false;">Start a new Private Game</button>
+					<?php
+				}
 				?>
-				<br/>
-				<button class="btn btn-primary" onclick="switch_to_game(0, 'new'); return false;">Start a new Private Game</button>
 			</div>
 			
 			<?php if ($game['losable_bets_enabled'] == 1) { ?>
