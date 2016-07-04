@@ -26,7 +26,7 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 	
 	if ($explore_mode == "index") {
 		$mode_error = false;
-		$pagetitle = "EmpireCoin Block Explorer";
+		$pagetitle = $this_game['name']." Block Explorer";
 	}
 	if ($explore_mode == "rounds") {
 		if ($uri_parts[3] == "current") {
@@ -136,6 +136,18 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 		else {
 			if ($explore_mode == "rounds") {
 				if ($round || $round_status == "current") {
+					
+					if ($round['round_id'] > 1 || $round['round_id'] < $current_round) echo "<br/>";
+					if ($round['round_id'] > 1) { ?>
+						<a href="/explorer/rounds/<?php echo $round['round_id']-1; ?>" style="display: inline-block; margin-right: 30px;">&larr; Previous Round</a>
+						<?php
+					}
+					if ($round['round_id'] < $current_round) { ?>
+						<a href="/explorer/rounds/<?php echo $round['round_id']+1; ?>">Next Round &rarr;</a>
+						<?php
+					}
+					if ($round['round_id'] > 1 || $round['round_id'] < $current_round) echo "<br/>";
+					
 					if ($round_status == "current") {
 						$last_block_id = last_block_id($this_game['game_id']);
 						$current_round = block_to_round($this_game, $last_block_id+1);
@@ -171,7 +183,7 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 						if ($this_game['payout_weight'] == "coin") $payout_amt = (floor(100*$this_game['pos_reward']/pow(10,8)*$my_votes[$round['winning_nation_id']]['coins']/$round['winning_score'])/100);
 						else $payout_amt = (floor(100*$this_game['pos_reward']/pow(10,8)*$my_votes[$round['winning_nation_id']]['coin_blocks']/$round['winning_score'])/100);
 						
-						echo "You won <font class=\"greentext\">+".$payout_amt." EMP</font> by voting ".format_bignum($my_votes[$round['winning_nation_id']]['coins']/pow(10,8))." coins";
+						echo "You won <font class=\"greentext\">+".format_bignum($payout_amt)." EMP</font> by voting ".format_bignum($my_votes[$round['winning_nation_id']]['coins']/pow(10,8))." coins";
 						if ($this_game['payout_weight'] == "coin_block") echo " (".format_bignum($my_votes[$round['winning_nation_id']]['coin_blocks']/pow(10,8))." votes)";
 						echo " for ".$round['name']."</font><br/>\n";
 					}
@@ -201,27 +213,26 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 					<?php
 					// Todo: This section doesn't work for the current round because $round['position_1'] etc are not defined.
 					$winner_displayed = FALSE;
-					for ($rank=1; $rank<=16; $rank++) {
+					for ($rank=1; $rank<=$this_game['num_voting_options']; $rank++) {
 						$q = "SELECT * FROM nations WHERE nation_id='".$round['position_'.$rank]."';";
 						$r = run_query($q);
 						
 						if (mysql_numrows($r) == 1) {
 							$ranked_nation = mysql_fetch_array($r);
 							$nation_scores = nation_score_in_round($this_game, $ranked_nation['nation_id'], $round['round_id']);
-							
 							echo '<div class="row';
 							if ($nation_scores['sum'] > $max_score_sum) echo ' redtext';
 							else if (!$winner_displayed && $nation_scores['sum'] > 0) { echo ' greentext'; $winner_displayed = TRUE; }
 							echo '">';
 							echo '<div class="col-md-3">'.$rank.'. '.$ranked_nation['name'].'</div>';
 							echo '<div class="col-md-1" style="text-align: center;">'.round(100*$nation_scores['sum']/$round['score_sum'], 2).'%</div>';
-							echo '<div class="col-md-3" style="text-align: center;">'.number_format($nation_scores['sum']/pow(10,8), 2).' votes</div>';
+							echo '<div class="col-md-3" style="text-align: center;">'.format_bignum($nation_scores['sum']/pow(10,8), 2).' votes</div>';
 							if ($thisuser) {
 								echo '<div class="col-md-3" style="text-align: center;">';
 								
 								$score_qty = $my_votes[$ranked_nation['nation_id']][$this_game['payout_weight'].'s'];
 								
-								echo number_format(floor($score_qty/pow(10,8)*100)/100);
+								echo format_bignum(floor($score_qty/pow(10,8)*100)/100);
 								if ($this_game['payout_weight'] == "coin") echo " coins";
 								else echo " votes";
 								

@@ -1383,7 +1383,7 @@ function new_block($game_id) {
 		$q = "INSERT INTO cached_rounds SET game_id='".$game['game_id']."', round_id='".($voting_round-1)."', payout_block_id='".$last_block_id."'";
 		if ($winning_nation) $q .= ", winning_nation_id='".$winning_nation."'";
 		$q .= ", winning_score='".$winning_score."', score_sum='".$score_sum."', time_created='".time()."'";
-		for ($position=1; $position<=16; $position++) {
+		for ($position=1; $position<=$game['num_voting_options']; $position++) {
 			$q .= ", position_".$position."='".$nation_rank2db_id[$position]."'";
 		}
 		$q .= ";";
