@@ -2,41 +2,7 @@
 include("../includes/connect.php");
 include("../includes/jsonRPCClient.php");
 
-$empirecoin = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
-
-class block {
-	public $block_id;
-	public $hash;
-	public $json_obj;
-	
-	public function __construct($json_obj, $block_id, $hash) {
-		$this->json_obj = $json_obj;
-		$this->block_id = $block_id;
-		$this->hash = $hash;
-	}
-}
-
-class transaction {
-	public $hash;
-	public $raw;
-	public $json_obj;
-	public $block_id;
-	public $is_coinbase;
-	public $is_votebase;
-	public $db_id;
-	public $output_sum;
-	
-	public function __construct($hash, $raw, $json_obj, $block_id) {
-		$this->hash = $hash;
-		$this->raw = $raw;
-		$this->json_obj = $json_obj;
-		$this->block_id = $block_id;
-		$this->is_coinbase = false;
-		$this->is_votebase = false;
-		$this->db_id = false;
-		$this->output_sum = 0;
-	}
-}
+$empirecoin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
 
 $game_id = get_site_constant('primary_game_id');
 delete_reset_game('reset', $game_id);
@@ -48,7 +14,7 @@ $game = mysql_fetch_array($r);
 $blocks = array();
 $transactions = array();
 
-$genesis_hash = $empirecoin->getblockhash(0);
+$genesis_hash = $empirecoin_rpc->getblockhash(0);
 echo "genesis hash: ".$genesis_hash."<br/>\n";
 
 $current_hash = $genesis_hash;
@@ -59,9 +25,9 @@ $new_transaction_count = 0;
 
 do {
 	$block_id = count($blocks);
-	$blocks[$block_id] = new block($empirecoin->getblock($current_hash), $block_id, $current_hash);
+	$blocks[$block_id] = new block($empirecoin_rpc->getblock($current_hash), $block_id, $current_hash);
 	
-	$q = "INSERT INTO blocks SET game_id='".$game_id."', block_id='".$block_id."', time_created='".time()."';";
+	$q = "INSERT INTO blocks SET game_id='".$game_id."', block_hash='".$current_hash."', block_id='".$block_id."', time_created='".time()."';";
 	$r = run_query($q);
 	echo "q: $q\n";
 	$internal_block_id = mysql_insert_id();
@@ -77,8 +43,9 @@ do {
 		
 		if ($transaction_id > 0) {
 			$tx_hash = $blocks[$block_id]->json_obj['tx'][$i];
-			$raw_transaction = $empirecoin->getrawtransaction($tx_hash);
-			$transactions[$transaction_id] = new transaction($tx_hash, $raw_transaction, $empirecoin->decoderawtransaction($raw_transaction), $block_id);
+			echo "getrawtransaction $tx_hash<br/>\n";
+			$raw_transaction = $empirecoin_rpc->getrawtransaction($tx_hash);
+			$transactions[$transaction_id] = new transaction($tx_hash, $raw_transaction, $empirecoin_rpc->decoderawtransaction($raw_transaction), $block_id);
 			
 			$outputs = $transactions[$transaction_id]->json_obj["vout"];
 			$inputs = $transactions[$transaction_id]->json_obj["vin"];
@@ -205,42 +172,18 @@ do {
 	$current_hash = $blocks[$block_id]->json_obj['nextblockhash'];
 	
 	if (!$current_hash || $current_hash == "") $keep_looping = false;
-} while ($keep_looping);
+} while ($keep_looping && $block_id < 902);
 
 echo "$new_transaction_count transactions were added.\n";
 
-$q = "SELECT MAX(block_id) FROM blocks WHERE game_id='".$game_id."';";
+$q = "SELECT MAX(block_id) FROM blocks WHERE game_id='".$game['game_id']."';";
 $r = run_query($q);
 $max_block = mysql_fetch_row($r);
 $max_block = $max_block[0];
 $completed_rounds = floor($max_block/get_site_constant('round_length'));
 
 for ($round_id=1; $round_id<=$completed_rounds; $round_id++) {
-	$winning_nation_id = false;
-	$q = "SELECT * FROM webwallet_transactions t JOIN transaction_IOs i ON i.create_transaction_id=t.transaction_id JOIN addresses a ON a.address_id=i.address_id WHERE t.game_id='".$game_id."' AND t.block_id='".$round_id*get_site_constant('round_length')."' AND t.transaction_desc='votebase' AND i.out_index=1;";
-	$r = run_query($q);
-	if (mysql_numrows($r) == 1) {
-		$votebase_transaction = mysql_fetch_array($r);
-		$winning_nation_id = $votebase_transaction['nation_id'];
-	}
-	
-	$q = "SELECT * FROM webwallet_transactions t JOIN transaction_IOs i ON i.create_transaction_id=t.transaction_id JOIN addresses a ON a.address_id=i.address_id WHERE t.game_id='".$game_id."' AND t.block_id >= $from_block_id AND t.block_id <= $to_block_id AND a.nation_id > 0 GROUP BY;";
-	$q = "INSERT INTO cached_rounds SET game_id='".$game_id."', round_id='".$round_id."', payout_block_id='".($round_id*get_site_constant('round_length'))."'";
-	if ($winning_nation_id) $q .= ", winning_nation_id='".$winning_nation_id."'";
-	
-	$rankings = round_voting_stats_all($game, $round_id);
-	$score_sum = $rankings[0];
-	$nation_id_to_rank = $rankings[3];
-	$rankings = $rankings[2];
-	
-	for ($i=0; $i<count($rankings); $i++) {
-		$q .= ", position_".($i+1)."=".$rankings[$i]['nation_id'];
-	}
-	
-	$q .= ", winning_score='".nation_score_in_round($game, $winning_nation_id, $round_id)."', score_sum='".$score_sum."', time_created='".time()."';";
-	$r = run_query($q);
-	
-	echo "q: $q\n";
+	add_round_from_rpc($game, $round_id);
 }
 
 echo "$completed_rounds rounds have been added.";

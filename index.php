@@ -67,7 +67,7 @@ $game = mysql_fetch_array($r);
 				<li>Blocks are mined approximately every 3 minutes with the SHA256 algorithm. Miners receive 25 empirecoins per block.</li>
 				<li>Blocks are grouped into voting rounds.  Blocks 1 through 10 make up the first round, and every 10 blocks after that are grouped into a round.</li>
 				<li>A voting round may have a winning empire.  The winning empire for a round is determined by the votes cast in that round.</li>
-				<li>Votes may be cast by creating a voting transaction in which coins are sent to a voting address.</li>
+				<li>Votes may be cast by creating a voting transaction in which coins are sent to voting addresses.</li>
 				<li>A voting address is any address which matches the format for one of the 16 empires.  All other addresses are considered non-voting.</li>
 				<li>The winning empire for a round is the eligible empire with the highest number of votes.  Any empire with more than 25% of the votes is ineligible and cannot win the round.</li>
 				<li>In case of a tie, the empire with the lowest ID number wins.</li>
@@ -80,10 +80,18 @@ $game = mysql_fetch_array($r);
 			EmpireCoin transactions have a maturity of 8 blocks; this means that coins can be spent every 9 blocks.  Voting rounds consist of 10 blocks but the final block is non-voting, therefore it's only possible to vote each coin once in a voting round. There is no penalty for voting incorrectly except for an optional transaction fee, therefore each stakeholder should vote his or her coins in every round to maximize profits.
 		</p>
 		<p>
-			Because coin rewards are divided up and given out proportionally to the winning team, winning as part of a small group yields the highest rewards.  The 25% voting cap is instituted to avoid voting centralization and to encourage high rewards for winning voters.  A coalition of stakeholders controlling nearly 25% of the currency is ideally positioned to win a round.  But other voters can sacrifice their votes to sabotage such a coalition by voting with them in order to push the empire over the 25% limit.
+			Because coin rewards are divided up and given out proportionally to the winning team, winning as part of a small group yields the highest rewards.  The 25% voting cap is instituted to avoid voting centralization and to encourage high rewards for winning voters.  A coalition of stakeholders controlling nearly 25% of the currency is ideally positioned to win a round.
 		</p>
 		<p>
-			As in other cryptocurrencies such as Bitcoin, empirecoin miners have veto authority over any transactions included in their block.  Therefore miners have some influence over the outcome of voting rounds and votes which are cast may not always be included in the current voting round.  To ensure that votes are counted, users should cast their votes early in the round to make it more likely that an honest miner will include their vote in the round. Votes cast in the 8th or 9th block of the round are likely to be vetoed by corrupt miners and included in the following voting round, potentially tying up a players money in an undesired voting position.
+			As in other cryptocurrencies like Bitcoin, miners have veto authority over any transactions included in their block.  Therefore miners have some influence over the outcome of voting rounds and votes which are cast may not always be included in the current voting round.  Votes cast in the 8th or 9th block of the round are likely to be vetoed by corrupt miners, encouraging voters to stake their coins early within the round.
+		</p>
+		<p>
+			<h1>Gamified Proof of Stake</h1>
+			EmpireCoin is fundamentally a proof of work cryptocurrency, with SHA256 miners earning 25 empirecoins per block.  But as described above, 75 coins per block are also created per block for an inflation of 100 coins per 3-minute block, or approximately 7.5 million coins per year.  Unlike Bitcoin, EmpireCoin avoids block-reward halving in favor of a fixed linear inflation.
+		</p>
+		<p>
+			<h1>Proof of Burn Betting</h1>
+			In addition to EmpireCoin's gamified inflation, the EmpireCoin protocol also enables decentralized betting through a unique proof-of-burn protocol.  By sending coins to an address like "china_wins_round_777", anyone can place a bet against other bettors.  If correct, new coins will be created and sent to the winner.  Proof-of-burn bets are completely decentralized, guaranteeing 0% fee bets to all EmpireCoin stakeholders.
 		</p>
 		<p>
 			<h1>Voting Pools</h1>

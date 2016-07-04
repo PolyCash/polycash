@@ -137,6 +137,20 @@ function get_site_constant($constant_name) {
 	else return "";
 }
 
+function set_site_constant($constant_name, $constant_value) {
+	$q = "SELECT * FROM site_constants WHERE constant_name='".$constant_name."';";
+	$r = run_query($q);
+	if (mysql_numrows($r) == 1) {
+		$constant = mysql_fetch_array($r);
+		$q = "UPDATE site_constants SET constant_value='".$constant_value."' WHERE constant_id='".$constant['constant_id']."';";
+		$r = run_query($q);
+	}
+	else {
+		$q = "INSERT INTO site_constants SET constant_name='".$constant_name."', constant_value='".$constant_value."';";
+		$r = run_query($q);
+	}
+}
+
 function round_voting_stats($game, $round_id) {
 	if ($game['payout_weight'] == "coin") {
 		$score_field = "gn.current_vote_score";
@@ -1459,6 +1473,18 @@ function bet_transaction_payback_address($transaction_id) {
 
 function rounds_complete_html($game, $max_round_id, $limit) {
 	$html = "";
+	
+	$last_block_id = last_block_id($game['game_id']);
+	$current_round = block_to_round($last_block_id+1);
+	if ($max_round_id == $current_round) {
+		$html .= "<div class=\"row bordered_row\">";
+		$html .= "<div class=\"col-sm-2\"><a href=\"/explorer/rounds/".$max_round_id."\">Round #".$max_round_id."</a></div>";
+		$html .= "<div class=\"col-sm-7\">Not yet decided";
+		$html .= "</div>";
+		$html .= "<div class=\"col-sm-3\">".format_bignum(0)." votes cast</div>";
+		$html .= "</div>\n";
+	}
+	
 	$q = "SELECT * FROM cached_rounds r LEFT JOIN nations n ON r.winning_nation_id=n.nation_id WHERE r.game_id='".$game['game_id']."' AND r.round_id <= ".$max_round_id." ORDER BY r.round_id DESC LIMIT ".$limit.";";
 	$r = run_query($q);
 	
@@ -1544,5 +1570,66 @@ function my_bets($game, $user) {
 		$html .= "</div>\n";
 	}
 	return $html;
+}
+
+function add_round_from_rpc($game, $round_id) {
+	$winning_nation_id = false;
+	$q = "SELECT * FROM webwallet_transactions t JOIN transaction_IOs i ON i.create_transaction_id=t.transaction_id JOIN addresses a ON a.address_id=i.address_id WHERE t.game_id='".$game['game_id']."' AND t.block_id='".$round_id*get_site_constant('round_length')."' AND t.transaction_desc='votebase' AND i.out_index=1;";
+	$r = run_query($q);
+	if (mysql_numrows($r) == 1) {
+		$votebase_transaction = mysql_fetch_array($r);
+		$winning_nation_id = $votebase_transaction['nation_id'];
+	}
+	
+	$q = "INSERT INTO cached_rounds SET game_id='".$game['game_id']."', round_id='".$round_id."', payout_block_id='".($round_id*get_site_constant('round_length'))."'";
+	if ($winning_nation_id) $q .= ", winning_nation_id='".$winning_nation_id."'";
+	
+	$rankings = round_voting_stats_all($game, $round_id);
+	$score_sum = $rankings[0];
+	$nation_id_to_rank = $rankings[3];
+	$rankings = $rankings[2];
+	
+	for ($i=0; $i<count($rankings); $i++) {
+		$q .= ", position_".($i+1)."=".$rankings[$i]['nation_id'];
+	}
+	
+	$q .= ", winning_score='".nation_score_in_round($game, $winning_nation_id, $round_id)."', score_sum='".$score_sum."', time_created='".time()."';";
+	$r = run_query($q);
+	
+	echo "q: $q<br/>\n";
+}
+
+class block {
+	public $block_id;
+	public $hash;
+	public $json_obj;
+	
+	public function __construct($json_obj, $block_id, $hash) {
+		$this->json_obj = $json_obj;
+		$this->block_id = $block_id;
+		$this->hash = $hash;
+	}
+}
+
+class transaction {
+	public $hash;
+	public $raw;
+	public $json_obj;
+	public $block_id;
+	public $is_coinbase;
+	public $is_votebase;
+	public $db_id;
+	public $output_sum;
+	
+	public function __construct($hash, $raw, $json_obj, $block_id) {
+		$this->hash = $hash;
+		$this->raw = $raw;
+		$this->json_obj = $json_obj;
+		$this->block_id = $block_id;
+		$this->is_coinbase = false;
+		$this->is_votebase = false;
+		$this->db_id = false;
+		$this->output_sum = 0;
+	}
 }
 ?>
