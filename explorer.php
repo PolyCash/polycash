@@ -7,7 +7,6 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuse
 $explore_mode = $uri_parts[3];
 $game_identifier = $uri_parts[2];
 
-$show_join_game = false;
 $user_game = false;
 
 $game_q = "SELECT * FROM games WHERE url_identifier='".mysql_real_escape_string($game_identifier)."';";
@@ -22,21 +21,10 @@ if (mysql_numrows($game_r) == 1) {
 		
 		if (mysql_numrows($rr) > 0) {
 			$user_game = mysql_fetch_array($rr);
-			
-			if ($game['game_id'] != $thisuser['game_id']) {
-				$qq = "UPDATE users SET game_id='".$game['game_id']."' WHERE user_id='".$thisuser['user_id']."';";
-				$rr = run_query($qq);
-			}
 		}
 	}
 	
-	if ($user_game) {}
-	else {
-		if ($game['creator_id'] > 0) {
-			$game = false;
-		}
-		else if ($thisuser) $show_join_game = true;
-	}
+	if (!$user_game) $game = false;
 }
 
 if (rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer") $explore_mode = "games";
@@ -161,11 +149,8 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 	}
 	?>
 	<div class="container" style="max-width: 1000px;">
+		<br/>
 		<?php
-		if ($show_join_game) {
-			echo '<br/><button id="switch_game_btn" type="button" class="btn btn-primary" onclick="switch_to_game('.$game['game_id'].', \'switch\');">Join this game</button>';
-		}
-		
 		if ($mode_error) {
 			echo "Error, you've reached an invalid page.";
 		}
@@ -572,6 +557,8 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 			}
 		}
 		?>
+		<br/>
+		<a href="/wallet/<?php echo $game['url_identifier']; ?>/" class="btn btn-default">Join this game</a>
 	</div>
 	<?php
 	include('includes/html_stop.php');

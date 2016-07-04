@@ -2,7 +2,7 @@
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuser);
 
 $pagetitle = $game['name']." - Play now and win coins in this blockchain voting game.";
-$nav_tab_selected = "home";
+$nav_tab_selected = "game_homepage";
 include('includes/html_start.php');
 
 $last_block_id = last_block_id($game['game_id']);
@@ -13,9 +13,10 @@ $current_round = block_to_round($game, $last_block_id+1);
 		<a href="/">&larr; All <?php echo $GLOBALS['coin_brand_name']; ?> Games</a>
 	</div>
 	<div class="paragraph">
-		<h1><?php echo $game['name']; ?></h1>
+		<h1 style="margin-bottom: 2px;"><?php echo $game['name']; ?></h1>
 		<div class="row">
-			<div class="col-md-7">
+			<div class="col-md-6">
+				<h4><?php echo $game['variation_name']; ?></h4>
 				<?php
 				$blocks_per_hour = 3600/$game['seconds_per_block'];
 				$seconds_per_round = $game['seconds_per_block']*$game['round_length'];
@@ -31,24 +32,21 @@ $current_round = block_to_round($game, $last_block_id+1);
 					if ($game['inflation'] == "linear") {
 						$rounds_per_hour = 3600/($game['seconds_per_block']*$game['round_length']);
 						$coins_per_hour = $round_reward*$rounds_per_hour;
-						echo $game['name']." is a cryptocurrency which generates ";
-						echo number_format($coins_per_hour)." coins every hour. ";
-						echo format_bignum($round_reward)." coins are given out per ".rtrim(format_seconds($seconds_per_round), 's')." voting round. ";
-						echo format_bignum($miner_pct);
-						?>% of the currency is given to proof of work miners for securing the network and the remaining <?php
-						echo format_bignum(100-$miner_pct);
-						?>% is given out to stakeholders for casting winning votes.<?php
+						echo "In this game, ";
+						echo number_format($coins_per_hour)." ".$game['coin_name_plural']." are generated every hour. ";
+						echo format_bignum($round_reward)." ".$game['coin_name_plural']." are given out per ".rtrim(format_seconds($seconds_per_round), 's')." voting round. ";
 					}
 					else {
-						echo $game['name']." is a cryptocurrency with ".(100*$game['exponential_inflation_rate'])."% inflation every ".format_seconds($seconds_per_round).". ";
-						echo format_bignum($miner_pct);
-						?>% of the currency is given to proof of work miners for securing the network and the remaining <?php
-						echo format_bignum(100-$miner_pct);
-						?>% is given out to stakeholders for casting winning votes.<?php
+						echo "In this game, ".$game['coin_name_plural']." experience an inflation of ".(100*$game['exponential_inflation_rate'])."% every ".format_seconds($seconds_per_round).". ";
 					}
+					
+					echo format_bignum($miner_pct);
+					?>% of the currency is given to proof of work miners for securing the network and the remaining <?php
+					echo format_bignum(100-$miner_pct);
+					?>% is given out to the players for winning votes.<?php
 					?>
 				</div>
-								<?php
+				<?php
 				if ($game['giveaway_status'] == "public_pay" || $game['giveaway_status'] == "invite_pay") {
 					$q = "SELECT * FROM currencies WHERE currency_id='".$game['invite_currency']."';";
 					$r = run_query($q);
@@ -94,14 +92,15 @@ $current_round = block_to_round($game, $last_block_id+1);
 				}
 				?>
 				<div class="paragraph">
-					In this game you can win <?php echo $game['coin_name_plural']; ?> by casting your votes correctly.  Votes build up over time based on the number of <?php echo $game['coin_name_plural']; ?> that you hold, and when you vote for an <?php echo $game['option_name']; ?>, your votes are used up but your <?php echo $game['coin_name_plural']; ?> are retained. By collaborating with your teammates against competing groups, you can make real money by accumulating money faster than the other players.  Through the <?php echo $GLOBALS['coin_brand_name']; ?> APIs you can even code up a custom strategy which makes smart, real-time decisions about how to cast your votes.
+					In this game you can win <?php echo $game['coin_name_plural']; ?> by casting your votes correctly.  Votes build up over time based on the number of <?php echo $game['coin_name_plural']; ?> that you hold, and when you vote for <?php echo prepend_a_or_an($game['option_name']); ?>, your votes are used up but your <?php echo $game['coin_name_plural']; ?> are retained. By collaborating with your teammates against competing groups, you can make real money by accumulating money faster than the other players.  Through the <?php echo $GLOBALS['coin_brand_name']; ?> APIs you can even code up a custom strategy which makes smart, real-time decisions about how to cast your votes.
 				</div>
 				<div class="paragraph">
 					<a href="/wallet/<?php echo $game['url_identifier']; ?>/" class="btn btn-success">Play Now</a>
 					<a href="/explorer/<?php echo $game['url_identifier']; ?>/rounds/" class="btn btn-primary">Blockchain Explorer</a>
 				</div>
 			</div>
-			<div class="col-md-5">
+			<div class="col-md-6">
+				<h4><?php echo $game['type_name']; ?></h4>
 				<div style="border: 1px solid #ccc; padding: 10px;">
 					<?php echo game_info_table($game); ?>
 				</div>
@@ -127,7 +126,7 @@ $current_round = block_to_round($game, $last_block_id+1);
 		<h1>Rules of the Game</h1>
 		
 		<ol class="rules_list">
-			<li>Coin holders can stake their coins for one of these <?php echo $game['num_voting_options']." ".$game['option_name']." every ".format_seconds($seconds_per_round); ?> by submitting a voting transaction.</li>
+			<li>Players can vote on these <?php echo $game['num_voting_options']." ".$game['option_name_plural']." every ".format_seconds($seconds_per_round); ?> by submitting a voting transaction.</li>
 			<?php
 			$block_within_round = $last_block_id%$game['round_length']+1;
 			$score_sums = total_score_in_round($game, $current_round, true);
@@ -142,13 +141,19 @@ $current_round = block_to_round($game, $last_block_id+1);
 			</div>
 			
 			<li>Voting transactions are only counted if they are confirmed in a voting block. All blocks are voting blocks except for the final transaction of each round.</li>
-			<li>Blocks are mined approximately every <?php echo format_seconds($game['seconds_per_block']); ?> by the SHA256 algorithm. Miners receive <?php echo format_bignum($game['pow_reward']/pow(10,8))." ".$game['coin_name_plural']; ?> per block.</li>
+			<li>Blocks are mined approximately every <?php echo format_seconds($game['seconds_per_block']); ?> by the SHA256 algorithm. 
+			<?php if ($game['inflation'] == "linear") { ?>Miners receive <?php echo format_bignum($game['pow_reward']/pow(10,8))." ".$game['coin_name_plural']; ?> per block.<?php } ?></li>
 			<li>Blocks are grouped into voting rounds.  Blocks 1 through <?php echo $game['round_length']; ?> make up the first round, and every subsequent <?php echo $game['round_length']; ?> blocks are grouped into a round.</li>
 			<li>A voting round will have a winning <?php echo $game['option_name']; ?> if at least one <?php echo $game['option_name']; ?> receives votes but is not disqualified.</li>
 			<li>Any <?php echo $game['option_name']; ?> with more than <?php echo format_bignum(100*$game['max_voting_fraction']); ?>% of the votes is disqualified from winning the round.</li>
 			<li>The eligible <?php echo $game['option_name']; ?> with the most votes wins the round.</li>
 			<li>In case of a tie, the <?php echo $game['option_name']; ?> with the lowest ID number wins.</li>
-			<li>When a round ends <?php echo format_bignum($game['pos_reward']/pow(10,8))." ".$game['coin_name_plural']; ?> are divided up and given out to the winning voters in proportion to the amounts of their votes.</li>
+			<li>When a round ends <?php
+			if ($game['inflation'] == "linear") {
+				echo format_bignum($game['pos_reward']/pow(10,8))." ".$game['coin_name_plural']." are divided up";
+			}
+			else echo format_bignum(100*$game['exponential_inflation_rate']).'% is added to the currency supply';
+			?> and given to the winning voters in proportion to their votes.</li>
 		</ol>
 	</div>
 

@@ -724,7 +724,7 @@ function add_utxo_to_vote(io_id, amount, create_block_id) {
 		var index_id = vote_inputs.length;
 		vote_inputs.push(new vote_input(index_id, io_id, amount, create_block_id));
 		$('#select_utxo_'+io_id).hide();
-		$('#compose_vote_inputs').append('<div id="selected_utxo_'+index_id+'" onclick="remove_utxo_from_vote('+index_id+');" class="select_utxo">'+render_selected_utxo(index_id)+'</div>');
+		$('#compose_vote_inputs').append('<div id="selected_utxo_'+index_id+'" onclick="remove_utxo_from_vote('+index_id+');" class="select_utxo btn btn-default">'+render_selected_utxo(index_id)+'</div>');
 		io_id2input_index[io_id] = index_id;
 		refresh_compose_vote();
 		set_input_amount_sums();

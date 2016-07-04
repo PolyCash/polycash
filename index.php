@@ -54,7 +54,7 @@ include('includes/html_start.php');
 			while ($variation_game = mysql_fetch_array($game_r)) {
 				echo '<div class="row bordered_row">';
 				
-				echo '<div class="col-sm-3"><a title="'.game_description($variation_game).'" href="/'.$variation_game['url_identifier'].'/">'.ucfirst($variation_game['variation_name'])."</a></div>";
+				echo '<div class="col-sm-3"><a title="'.game_description($variation_game).'" href="/'.$variation_game['url_identifier'].'/">'.ucfirst($variation_game['type_name'])."</a></div>";
 				
 				$invite_disp = format_bignum($variation_game['invite_cost']);
 				echo '<div class="col-sm-4">';

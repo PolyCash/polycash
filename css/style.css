@@ -223,12 +223,7 @@ and (max-device-width : 480px) {
 	font-size: 11px;
 }
 .select_utxo {
-	display: inline-block;
-	border: 1px solid #aaa;
-	padding: 4px 10px;
-	margin: 5px;
-	cursor: pointer;
-	text-align: center;
+	margin: 4px 2px;
 }
 .select_utxo_disabled {
 	background-color: #555;

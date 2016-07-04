@@ -1943,7 +1943,7 @@ function select_input_buttons($user_id, &$game) {
 		$utxos[count($utxos)] = $utxo;
 		$input_buttons_html .= '<div ';
 		
-		$input_buttons_html .= 'id="select_utxo_'.$utxo['io_id'].'" class="select_utxo" onclick="add_utxo_to_vote(\''.$utxo['io_id'].'\', '.$utxo['amount'].', '.$utxo['create_block_id'].');">';
+		$input_buttons_html .= 'id="select_utxo_'.$utxo['io_id'].'" class="btn btn-default select_utxo" onclick="add_utxo_to_vote(\''.$utxo['io_id'].'\', '.$utxo['amount'].', '.$utxo['create_block_id'].');">';
 		$input_buttons_html .= '</div>'."\n";
 		
 		$js .= "mature_ios.push(new mature_io(mature_ios.length, ".$utxo['io_id'].", ".$utxo['amount'].", ".$utxo['create_block_id']."));\n";
@@ -3025,7 +3025,7 @@ function game_url_identifier($game_name) {
 	do {
 		if ($append_index > 0) $append = "(".$append_index.")";
 		else $append = "";
-		$url_identifier = make_alphanumeric(str_replace(" ", "-", strtolower($game_name.$append)), "-().,:;");
+		$url_identifier = make_alphanumeric(str_replace(" ", "-", strtolower($game_name.$append)), "-().:;");
 		$q = "SELECT * FROM games WHERE url_identifier='".$url_identifier."';";
 		$r = run_query($q);
 		if (mysql_numrows($r) == 0) $keeplooping = false;
@@ -3123,33 +3123,46 @@ function game_info_table($game) {
 		$invite_currency = mysql_fetch_array($r);
 	}
 
-	$html = "<table>";
-	$html .= "<tr><td>Game name:</td><td>".$game['name']."</td></tr>\n";
-	$html .= "<tr><td>Game URL:</td><td><a href=\"".$game_url."\">".$game_url."</a></td></tr>\n";
-	$html .= "<tr><td>Cost to join:</td><td>";
+	$html .= '<div class="row"><div class="col-sm-5">Game title:</div><div class="col-sm-7">'.$game['name']."</div></div>\n";
+	
+	$html .= '<div class="row"><div class="col-sm-5">Game URL:</div><div class="col-sm-7"><a href="'.$game_url.'">'.$game_url."</a></div></div>\n";
+	
+	$html .= '<div class="row"><div class="col-sm-5">'.ucfirst($game['option_name_plural']).'</div><div class="col-sm-7">'.$game['num_voting_options']." </div></div>\n";
+	
+	$html .= '<div class="row"><div class="col-sm-5">'.ucfirst($game['option_name']).' voting cap:</div><div class="col-sm-7">'.(100*$game['max_voting_fraction'])."% maximum</div></div>\n";
+	
+	$html .= '<div class="row"><div class="col-sm-5">Cost to join:</div><div class="col-sm-7">';
 	if ($game['giveaway_status'] == "invite_pay" || $game['giveaway_status'] == "public_pay") $html .= format_bignum($game['invite_cost'])." ".$invite_currency['short_name']."s";
 	else $html .= "Free";
-	$html .= "</td></tr>\n";
-	$html .= "<tr><td>Length of game:</td><td>";
+	$html .= "</div></div>\n";
+	
+	$html .= '<div class="row"><div class="col-sm-5">Length of game:</div><div class="col-sm-7">';
 	if ($game['final_round'] > 0) $html .= $game['final_round']." rounds (".format_seconds($seconds_per_round*$game['final_round']).")";
 	else $html .= "Game does not end";
-	$html .= "</td></tr>\n";
-	$html .= "<tr><td>Inflation:</td><td>".ucwords($game['inflation'])."</td></tr>\n";
-	$html .= "<tr><td>Inflation Rate:</td><td>";
+	$html .= "</div></div>\n";
+	
+	$html .= '<div class="row"><div class="col-sm-5">Inflation:</div><div class="col-sm-7">'.ucwords($game['inflation'])." (";	
 	if ($game['inflation'] == "linear") $html .= format_bignum($round_reward)." coins per round";
 	else $html .= 100*$game['exponential_inflation_rate']."% per round";
-	$html .= "</td></tr>\n";
-	$html .= "<tr><td>Distribution:</td><td>";
+	$html .= ")</div></div>\n";
+	
+	$html .= '<div class="row"><div class="col-sm-5">Distribution:</div><div class="col-sm-7">';
 	if ($game['inflation'] == "linear") $html .= format_bignum($game['pos_reward']/pow(10,8))." to voters, ".format_bignum($game['pow_reward']*$game['round_length']/pow(10,8))." to miners";
 	else $html .= (100 - 100*$game['exponential_inflation_minershare'])."% to voters, ".(100*$game['exponential_inflation_minershare'])."% to miners";
-	$html .= "</td></tr>\n";
-	$html .= "<tr><td>Max voting percentage:&nbsp;&nbsp;&nbsp;</td><td>".(100*$game['max_voting_fraction'])."%</td></tr>\n";
-	$html .= "<tr><td>Blocks per round:</td><td>".$game['round_length']."</td></tr>\n";
-	$html .= "<tr><td>Block target time:</td><td>".format_seconds($game['seconds_per_block'])."</td></tr>\n";
-	$html .= "<tr><td>Transaction maturity:&nbsp;&nbsp;&nbsp;</td><td>".$game['maturity']." block";
+	$html .= "</div></div>\n";
+	
+	$html .= '<div class="row"><div class="col-sm-5">Blocks per round:</div><div class="col-sm-7">'.$game['round_length']."</div></div>\n";
+	
+	$html .= '<div class="row"><div class="col-sm-5">Block target time:</div><div class="col-sm-7">'.format_seconds($game['seconds_per_block'])."</div></div>\n";
+	
+	$html .= '<div class="row"><div class="col-sm-5">Transaction maturity:</div><div class="col-sm-7">'.$game['maturity']." block";
 	if ($game['maturity'] != 1) $html .= "s";
-	$html .= "</td></tr>\n";
-	$html .= "</table>\n";
+	$html .= "</div></div>\n";
+	
+	$total_inflation_pct = game_final_inflation_pct($game);
+	if ($total_inflation_pct) {
+		$html .= '<div class="row"><div class="col-sm-5">Final inflation:</div><div class="col-sm-7">'.$total_inflation_pct."%</div></div>\n";
+	}
 
 	return $html;
 }
@@ -3285,7 +3298,7 @@ function start_game(&$game) {
 	}
 	
 	if ($game['variation_id'] > 0) {
-		$q = "SELECT * FROM game_types gt JOIN game_type_variations tv ON gt.game_type_id=tv.game_type_id WHERE tv.variation_id='".$game['variation_id']."';";
+		$q = "SELECT * FROM game_types gt JOIN game_type_variations tv ON gt.game_type_id=tv.game_type_id JOIN voting_option_groups vog ON gt.option_group_id=vog.option_group_id WHERE tv.variation_id='".$game['variation_id']."';";
 		$r = run_query($q);
 		
 		if (mysql_numrows($r) > 0) {
@@ -3358,14 +3371,14 @@ function send_invitation_email(&$game, $to_email, &$invitation) {
 }
 
 function generate_open_games() {
-	$q = "SELECT * FROM game_types t JOIN game_type_variations v ON t.game_type_id=v.game_type_id WHERE v.target_open_games > 0;";
+	$q = "SELECT * FROM game_types t JOIN game_type_variations v ON t.game_type_id=v.game_type_id JOIN voting_option_groups vog ON vog.option_group_id=t.option_group_id WHERE v.target_open_games > 0;";
 	$r = run_query($q);
 	while ($game_variation = mysql_fetch_array($r)) {
 		generate_open_games_by_variation($game_variation);
 	}
 }
 function generate_open_games_by_variation(&$game_variation) {
-	$game_vars = explode(",", "game_type,option_group_id,giveaway_status,giveaway_amount,maturity,max_voting_fraction,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_condition_players");
+	$game_vars = explode(",", "game_type,option_group_id,giveaway_status,giveaway_amount,maturity,max_voting_fraction,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,type_name,variation_name,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_condition_players,option_name,option_name_plural");
 	
 	$qq = "SELECT COUNT(*) FROM games WHERE variation_id='".$game_variation['variation_id']."' AND game_status='published';";
 	$rr = run_query($qq);
@@ -3390,14 +3403,9 @@ function generate_open_games_by_variation(&$game_variation) {
 			
 			ensure_game_options($game);
 			
-			$game_name = ucfirst($game_variation['variation_name']." #".$game_id);
+			$game_name = ucfirst($game['start_condition_players']."-player battle #".$game_id);
 			
-			$qq = "SELECT COUNT(*) FROM game_voting_options WHERE game_id='".$game_id."';";
-			$rr = run_query($qq);
-			$num_voting_options = mysql_fetch_row($rr);
-			$num_voting_options = intval($num_voting_options[0]);
-			
-			$qq = "UPDATE games SET num_voting_options='".$num_voting_options."', name='".$game_name."', url_identifier='".game_url_identifier($game_name)."' WHERE game_id='".$game_id."';";
+			$qq = "UPDATE games SET name='".$game_name."', url_identifier='".game_url_identifier($game_name)."' WHERE game_id='".$game_id."';";
 			$rr = run_query($qq);
 		}
 	}
