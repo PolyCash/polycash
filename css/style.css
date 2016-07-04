@@ -97,66 +97,6 @@ body {
 	margin-left: 15px !important;
 	padding: 0px !important;
 }
-.china {
-	background-image: url('/img/flags/China.jpg');
-}
-.usa {
-	background-image: url('/img/flags/USA.jpg');
-}
-.india {
-	background-image: url('/img/flags/India.jpg');
-}
-.japan {
-	background-image: url('/img/flags/Japan.jpg');
-}
-.germany {
-	background-image: url('/img/flags/Germany.jpg');
-}
-.russia {
-	background-image: url('/img/flags/Russia.jpg');
-}
-.brazil {
-	background-image: url('/img/flags/Brazil.jpg');
-}
-.indonesia {
-	background-image: url('/img/flags/Indonesia.jpg');
-}
-.france {
-	background-image: url('/img/flags/France.jpg');
-}
-.uk {
-	background-image: url('/img/flags/UK.jpg');
-}
-.mexico {
-	background-image: url('/img/flags/Mexico.jpg');
-}
-.italy {
-	background-image: url('/img/flags/Italy.jpg');
-}
-.southkorea {
-	background-image: url('/img/flags/SouthKorea.jpg');
-}
-.saudiarabia {
-	background-image: url('/img/flags/SaudiArabia.jpg');
-}
-.canada {
-	background-image: url('/img/flags/Canada.jpg');
-}
-.spain {
-	background-image: url('/img/flags/Spain.jpg');
-}
-.nigeria {
-	background-image: url('/img/flags/Nigeria.jpg');
-}
-.turkey {
-	background-image: url('/img/flags/Turkey.jpg');
-}
-.iran {
-	background-image: url('/img/flags/Iran.jpg');
-}
-.pakistan {
-	background-image: url('/img/flags/Pakistan.jpg');
-}
 
 @media only screen 
 and (min-device-width : 320px) 

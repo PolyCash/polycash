@@ -50,3 +50,5 @@ ALTER TABLE `voting_options` ADD `default_image_id` INT(11) NULL DEFAULT NULL ;
 UPDATE `voting_options` SET default_image_id=voting_option_id WHERE voting_option_id<=16;
 ALTER TABLE `game_voting_options` ADD `image_id` INT(11) NULL DEFAULT NULL AFTER `voting_option_id`;
 UPDATE game_voting_options gvo JOIN voting_options vo ON gvo.voting_option_id=vo.voting_option_id SET gvo.image_id=vo.default_image_id;
+ALTER TABLE `empirecoin`.`game_voting_options` ADD INDEX (`voting_option_id`);
+ALTER TABLE `empirecoin`.`game_voting_options` ADD INDEX (`image_id`);
