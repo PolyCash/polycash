@@ -8,6 +8,8 @@ To get started, first please install and secure Apache, MySQL and PHP.  Then cre
 #!php
 
 <?php
+error_reporting(0);
+
 $GLOBALS['mysql_server'] = "localhost";
 $GLOBALS['mysql_user'] = "root";
 $GLOBALS['mysql_password'] = "";
@@ -64,7 +66,7 @@ Also enter values for site_name_short, site_name, and site_domain.
 
 Next, use a password generator or otherwise generate a secure random string of at least 10 characters, and enter it into the config file as $GLOBALS['cron_key_string'].  Certain actions such as installing the application should only be accessible by the site administrator; this secret string protects all of these actions.
 
-Next, point your browser to http://localhost/install.php?key=<cron_key_string>, where <cron_key_string> is the random string that you generated above.  If Apache, MySQL and PHP are all installed correctly, Empirecoin Web should automatically install.
+Next, point your browser to http://localhost/install.php?key=<cron_key_string> where <cron_key_string> is the random string that you generated above.  If Apache, MySQL and PHP are all installed correctly, Empirecoin Web should automatically install.
 
 Follow the instructions on install.php to configure your server for accepting Bitcoin payments and resolving any other potential issues.
 
