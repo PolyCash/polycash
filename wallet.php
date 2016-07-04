@@ -422,7 +422,7 @@ if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['do'] =
 		}
 	}
 	else {
-		if (in_array($voting_strategy, array('manual', 'by_rank', 'by_nation', 'api', 'by_plan'))) {
+		if (in_array($voting_strategy, array('manual', 'by_rank', 'by_option', 'api', 'by_plan'))) {
 			for ($i=1; $i<=$game['num_voting_options']; $i++) {
 				if ($_REQUEST['by_rank_'.$i] == "1") $by_rank_csv .= $i.",";
 			}
@@ -433,17 +433,17 @@ if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['do'] =
 				$q .= ", aggregate_threshold='".$aggregate_threshold."'";
 			}
 			
-			$nation_pct_sum = 0;
-			$nation_pct_q = "";
-			$nation_pct_error = FALSE;
+			$option_pct_sum = 0;
+			$option_pct_q = "";
+			$option_pct_error = FALSE;
 			
-			for ($nation_id=1; $nation_id<=$game['num_voting_options']; $nation_id++) {
-				$nation_pct = intval($_REQUEST['nation_pct_'.$nation_id]);
-				$nation_pct_q .= ", nation_pct_".$nation_id."=".$nation_pct;
-				$nation_pct_sum += $nation_pct;
+			for ($option_id=1; $option_id<=$game['num_voting_options']; $option_id++) {
+				$option_pct = intval($_REQUEST['option_pct_'.$option_id]);
+				$option_pct_q .= ", option_pct_".$option_id."=".$option_pct;
+				$option_pct_sum += $option_pct;
 			}
-			if ($nation_pct_sum == 100) $q .= $nation_pct_q;
-			else $nation_pct_error = TRUE;
+			if ($option_pct_sum == 100) $q .= $option_pct_q;
+			else $option_pct_error = TRUE;
 			
 			$min_votesum_pct = intval($_REQUEST['min_votesum_pct']);
 			$max_votesum_pct = intval($_REQUEST['max_votesum_pct']);
@@ -457,13 +457,13 @@ if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['do'] =
 			$q .= " WHERE strategy_id='".$user_strategy['strategy_id']."';";
 			$r = run_query($q);
 			
-			if ($nation_pct_error && $voting_strategy == "by_nation") {
+			if ($option_pct_error && $voting_strategy == "by_option") {
 				$q = "UPDATE user_strategies SET voting_strategy='".$user_strategy['voting_strategy']."' WHERE strategy_id='".$user_strategy['strategy_id']."';";
 				$r = run_query($q);
 				$voting_strategy = $user_strategy['voting_strategy'];
 				
 				$error_code = 2;
-				$message = "Error: voting strategy couldn't be set to \"Vote by nation\", the percentages you entered didn't add up to 100%.";
+				$message = "Error: voting strategy couldn't be set to \"Vote by option\", the percentages you entered didn't add up to 100%.";
 			}
 			
 			$q = "UPDATE user_games SET strategy_id='".$user_strategy['strategy_id']."' WHERE game_id='".$game['game_id']."' AND user_id='".$thisuser['user_id']."';";
@@ -578,7 +578,7 @@ $mature_balance = mature_balance($game, $thisuser);
 		$round_stats = round_voting_stats_all($game, $current_round);
 		$total_vote_sum = $round_stats[0];
 		$max_vote_sum = $round_stats[1];
-		$nation_id2rank = $round_stats[3];
+		$option_id2rank = $round_stats[3];
 		$round_stats = $round_stats[2];
 		?>
 		<script type="text/javascript">
@@ -608,7 +608,7 @@ $mature_balance = mature_balance($game, $thisuser);
 		var coin_name = '<?php echo $game['coin_name']; ?>';
 		var coin_name_plural = '<?php echo $game['coin_name_plural']; ?>';
 		
-		var selected_nation_id = false;
+		var selected_option_id = false;
 		
 		var initial_notification_pref = "<?php echo $thisuser['notification_preference']; ?>";
 		var initial_notification_email = "<?php echo $thisuser['notification_email']; ?>";
@@ -620,23 +620,23 @@ $mature_balance = mature_balance($game, $thisuser);
 		var performance_history_start_round = <?php echo max(1, $current_round-10); ?>;
 		var performance_history_loading = false;
 		
-		var nation_has_votingaddr = [];
-		for (var i=1; i<=16; i++) { nation_has_votingaddr[i] = false; }
+		var option_has_votingaddr = [];
+		for (var i=1; i<=16; i++) { option_has_votingaddr[i] = false; }
 		var votingaddr_count = 0;
 		
 		var user_logged_in = true;
 		
 		var refresh_page = "wallet";
 		
-		function load_nations() {
-			nations.push(new nation(0, 'No Winner'));<?php
-			$q = "SELECT * FROM nations ORDER BY nation_id ASC;";
+		function load_options() {
+			options.push(new option(0, 'No Winner'));<?php
+			$q = "SELECT * FROM game_voting_options ORDER BY option_id ASC;";
 			$r = run_query($q);
-			while ($nation = mysql_fetch_array($r)) {
-				echo "\n\t\t\tnations.push(new nation(".$nation['nation_id'].", '".$nation['name']."'));";
-				$votingaddr_id = user_address_id($game['game_id'], $thisuser['user_id'], $nation['nation_id']);
+			while ($option = mysql_fetch_array($r)) {
+				echo "\n\t\t\toptions.push(new option(".$option['option_id'].", '".$option['name']."'));";
+				$votingaddr_id = user_address_id($game['game_id'], $thisuser['user_id'], $option['option_id']);
 				if ($votingaddr_id !== false) {
-					echo "\n\t\t\tnation_has_votingaddr[".$nation['nation_id']."] = true;";
+					echo "\n\t\t\toption_has_votingaddr[".$option['option_id']."] = true;";
 					echo "\n\t\t\tvotingaddr_count++;";
 				}
 			}
@@ -648,10 +648,10 @@ $mature_balance = mature_balance($game, $thisuser);
 		
 		$(document).ready(function() {
 			render_tx_fee();
-			load_nations();
+			load_options();
 			notification_pref_changed();
 			alias_pref_changed();
-			nation_selected(0);
+			option_selected(0);
 			reload_compose_vote();
 			
 			$('.datepicker').datepicker();
@@ -669,10 +669,10 @@ $mature_balance = mature_balance($game, $thisuser);
 		
 		$(document).keypress(function (e) {
 			if (e.which == 13) {
-				var selected_nation_db_id = $('#rank2nation_id_'+selected_nation_id).val();
+				var selected_option_db_id = $('#rank2option_id_'+selected_option_id).val();
 				
-				if ($('#vote_amount_'+selected_nation_db_id).is(":focus")) {
-					confirm_vote(selected_nation_db_id);
+				if ($('#vote_amount_'+selected_option_db_id).is(":focus")) {
+					confirm_vote(selected_option_db_id);
 				}
 			}
 		});
@@ -710,7 +710,7 @@ $mature_balance = mature_balance($game, $thisuser);
 			<?php echo vote_details_general($mature_balance); ?>
 		</div>
 		
-		<div id="vote_popups"><?php	echo initialize_vote_nation_details($game, $nation_id2rank, $total_vote_sum, $thisuser['user_id']); ?></div>
+		<div id="vote_popups"><?php	echo initialize_vote_option_details($game, $option_id2rank, $total_vote_sum, $thisuser['user_id']); ?></div>
 		
 		<div class="row">
 			<div class="col-xs-2 tabcell" id="tabcell0" onclick="tab_clicked(0);">Play&nbsp;Now</div>
@@ -883,26 +883,26 @@ $mature_balance = mature_balance($game, $thisuser);
 					</div>
 					<div class="row bordered_row">
 						<div class="col-md-2">
-							<input type="radio" id="voting_strategy_by_nation" name="voting_strategy" value="by_nation"<?php if ($user_strategy['voting_strategy'] == "by_nation") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_nation">&nbsp;Vote&nbsp;by&nbsp;nation</label>
+							<input type="radio" id="voting_strategy_by_option" name="voting_strategy" value="by_option"<?php if ($user_strategy['voting_strategy'] == "by_option") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_option">&nbsp;Vote&nbsp;by&nbsp;option</label>
 						</div>
 						<div class="col-md-10">
-							<label class="plainlabel" for="voting_strategy_by_nation"> 
-								Vote for these nations every time. The percentages you enter below must add up to 100.<br/>
-								<a href="" onclick="by_nation_reset_pct(); return false;">Set all to zero</a> <div style="margin-left: 15px; display: inline-block;" id="nation_pct_subtotal">&nbsp;</div>
+							<label class="plainlabel" for="voting_strategy_by_option"> 
+								Vote for these options every time. The percentages you enter below must add up to 100.<br/>
+								<a href="" onclick="by_option_reset_pct(); return false;">Set all to zero</a> <div style="margin-left: 15px; display: inline-block;" id="option_pct_subtotal">&nbsp;</div>
 							</label><br/>
 							<?php
-							$q = "SELECT * FROM nations ORDER BY nation_id ASC;";
+							$q = "SELECT * FROM game_voting_options WHERE game_id='".$game['game_id']."' ORDER BY option_id ASC;";
 							$r = run_query($q);
-							$nation_i = 0;
-							while ($nation = mysql_fetch_array($r)) {
-								if ($nation_i%4 == 0) echo '<div class="row">';
+							$option_i = 0;
+							while ($option = mysql_fetch_array($r)) {
+								if ($option_i%4 == 0) echo '<div class="row">';
 								echo '<div class="col-md-3">';
-								echo '<input type="tel" size="4" name="nation_pct_'.$nation['nation_id'].'" id="nation_pct_'.$nation['nation_id'].'" placeholder="0" value="'.$user_strategy['nation_pct_'.$nation['nation_id']].'" />';
-								echo '<label class="plainlabel" for="nation_pct_'.$nation['nation_id'].'">% ';
-								echo $nation['name']."</label>";
+								echo '<input type="tel" size="4" name="option_pct_'.$option['option_id'].'" id="option_pct_'.$option['option_id'].'" placeholder="0" value="'.$user_strategy['option_pct_'.$option['option_id']].'" />';
+								echo '<label class="plainlabel" for="option_pct_'.$option['option_id'].'">% ';
+								echo $option['name']."</label>";
 								echo '</div>';
-								if ($nation_i%4 == 3) echo "</div>\n";
-								$nation_i++;
+								if ($option_i%4 == 3) echo "</div>\n";
+								$option_i++;
 							}
 							?>
 						</div>
@@ -913,7 +913,7 @@ $mature_balance = mature_balance($game, $thisuser);
 						</div>
 						<div class="col-md-10">
 							<label class="plainlabel" for="voting_strategy_by_rank">
-								Split up my free balance and vote it across nations ranked:
+								Split up my free balance and vote it across options ranked:
 							</label><br/>
 							<input type="checkbox" id="rank_check_all" onchange="rank_check_all_changed();" /><label class="plainlabel" for="rank_check_all"> All</label><br/>
 							<?php
@@ -966,7 +966,7 @@ $mature_balance = mature_balance($game, $thisuser);
 								$q = "SELECT * FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND round_id >= ".$current_round." AND round_id <= ".($current_round+$plan_ahead_rounds-1).";";
 								$r = run_query($q);
 								while ($allocation = mysql_fetch_array($r)) {
-									echo "load_plan_option(".$allocation['round_id'].", ".($allocation['nation_id']-1).", ".$allocation['points'].");\n";
+									echo "load_plan_option(".$allocation['round_id'].", ".($allocation['option_id']-1).", ".$allocation['points'].");\n";
 								}
 								?>
 							});
@@ -977,7 +977,7 @@ $mature_balance = mature_balance($game, $thisuser);
 						<div class="col-md-12">
 							<br/><br/>
 							<b>Settings</b><br/>
-							These settings apply to "Vote by nation" and "Vote by rank" options above.<br/>
+							These settings apply to "Vote by option" and "Vote by rank" options above.<br/>
 							Wait until <input size="4" type="text" name="aggregate_threshold" id="aggregate_threshold" value="<?php echo $user_strategy['aggregate_threshold']; ?>" />% of my coins are available to vote. <br/>
 							Only vote in these blocks of the round:<br/>
 							<div class="row">
@@ -1002,7 +1002,7 @@ $mature_balance = mature_balance($game, $thisuser);
 								}
 								?>
 							</div>
-							Only vote for nations which have between <input type="tel" size="4" value="<?php echo $user_strategy['min_votesum_pct']; ?>" name="min_votesum_pct" id="min_votesum_pct" />% and <input type="tel" size="4" value="<?php echo $user_strategy['max_votesum_pct']; ?>" name="max_votesum_pct" id="max_votesum_pct" />% of the current votes.<br/>
+							Only vote for options which have between <input type="tel" size="4" value="<?php echo $user_strategy['min_votesum_pct']; ?>" name="min_votesum_pct" id="min_votesum_pct" />% and <input type="tel" size="4" value="<?php echo $user_strategy['max_votesum_pct']; ?>" name="max_votesum_pct" id="max_votesum_pct" />% of the current votes.<br/>
 							<?php /*
 							Maintain <input type="tel" size="6" id="min_coins_available" name="min_coins_available" value="<?php echo round($user_strategy['min_coins_available'], 2); ?>" /> EMP available at all times.  This number of coins will be reserved and won't be voted. */ ?>
 						</div>
@@ -1064,7 +1064,7 @@ $mature_balance = mature_balance($game, $thisuser);
 						<select class="form-control" id="withdraw_remainder_address_id">
 							<option value="random">Random</option>
 							<?php
-							$q = "SELECT * FROM addresses a LEFT JOIN nations n ON n.nation_id=a.nation_id WHERE a.game_id='".$game['game_id']."' AND a.user_id='".$thisuser['user_id']."' ORDER BY a.nation_id IS NULL ASC, a.nation_id ASC;";
+							$q = "SELECT * FROM addresses a LEFT JOIN game_voting_options vo ON vo.option_id=a.option_id WHERE a.game_id='".$game['game_id']."' AND a.user_id='".$thisuser['user_id']."' ORDER BY a.option_id IS NULL ASC, a.option_id ASC;";
 							$r = run_query($q);
 							while ($address = mysql_fetch_array($r)) {
 								if ($address['name'] == "") $address['name'] = "None";
@@ -1082,7 +1082,7 @@ $mature_balance = mature_balance($game, $thisuser);
 				
 				<h1>Deposit</h1>
 				<?php
-				$q = "SELECT * FROM addresses a LEFT JOIN nations n ON n.nation_id=a.nation_id WHERE a.game_id='".$game['game_id']."' AND a.user_id='".$thisuser['user_id']."' ORDER BY a.nation_id IS NULL ASC, a.nation_id ASC;";
+				$q = "SELECT * FROM addresses a LEFT JOIN game_voting_options gvo ON gvo.option_id=a.option_id WHERE a.game_id='".$game['game_id']."' AND a.user_id='".$thisuser['user_id']."' ORDER BY a.option_id IS NULL ASC, a.option_id ASC;";
 				$r = run_query($q);
 				?>
 				<b>You have <?php echo mysql_numrows($r); ?> addresses.</b><br/>
@@ -1092,8 +1092,8 @@ $mature_balance = mature_balance($game, $thisuser);
 					<div class="row">
 						<div class="col-sm-3">
 							<?php
-							if ($address['nation_id'] > 0) {
-								echo nation_flag(false, $address['name']);
+							if ($address['option_id'] > 0) {
+								echo option_flag(false, $address['name']);
 								echo $address['name'];
 							}
 							else {
@@ -1198,24 +1198,24 @@ $mature_balance = mature_balance($game, $thisuser);
 							Add an outcome:
 						</div>
 						<div class="col-md-6">
-							<select class="form-control" id="bet_nation" onchange="add_bet_nation();">
+							<select class="form-control" id="bet_option" onchange="add_bet_option();">
 								<option value="">-- Please Select --</option>
 								<option value="0">No winner</option>
 								<?php
-								$q = "SELECT * FROM nations ORDER BY name ASC;";
+								$q = "SELECT * FROM options ORDER BY name ASC;";
 								$r = run_query($q);
-								while ($nation = mysql_fetch_array($r)) {
-									echo "<option value=\"".$nation['nation_id']."\">".$nation['name']." wins</option>\n";
+								while ($option = mysql_fetch_array($r)) {
+									echo "<option value=\"".$option['option_id']."\">".$option['name']." wins</option>\n";
 								}
 								?>
 							</select>
 						</div>
 						<div class="col-md-2">
-							<a href="" onclick="add_all_bet_nations(); return false;">Add all</a>
+							<a href="" onclick="add_all_bet_options(); return false;">Add all</a>
 						</div>
 					</div>
 					<div class="row">
-						<div class="col-md-push-3 col-md-9" id="nation_bet_disp"></div>
+						<div class="col-md-push-3 col-md-9" id="option_bet_disp"></div>
 					</div>
 					<div class="row">
 						<div class="col-md-push-3 col-md-6">

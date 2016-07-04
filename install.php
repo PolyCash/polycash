@@ -41,7 +41,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				$r = run_query($q);
 				$primary_game_id = mysql_insert_id();
 				
-				ensure_game_nations($primary_game_id);
+				ensure_game_options($primary_game_id);
 				
 				set_site_constant("primary_game_id", $primary_game_id);
 			}
@@ -53,7 +53,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				$r = run_query($q);
 				$testnet_game_id = mysql_insert_id();
 				
-				ensure_game_nations($testnet_game_id);
+				ensure_game_options($testnet_game_id);
 			}
 			
 			$q = "SELECT * FROM currency_prices WHERE currency_id=1 AND reference_currency_id=1;";

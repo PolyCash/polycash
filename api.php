@@ -61,7 +61,7 @@ if ($uri_parts[1] == "api") {
 				$total_vote_sum = $round_stats[0];
 				$max_vote_sum = $round_stats[1];
 				$ranked_stats = $round_stats[2];
-				$nation_id_to_rank = $round_stats[3];
+				$option_id_to_rank = $round_stats[3];
 				$confirmed_votes = $round_stats[4];
 				$unconfirmed_votes = $round_stats[5];
 				
@@ -73,16 +73,16 @@ if ($uri_parts[1] == "api") {
 				
 				$game_scores = false;
 				
-				for ($nation_id=0; $nation_id < 16; $nation_id++) {
-					$stat = $ranked_stats[$nation_id_to_rank[$nation_id+1]];
+				for ($option_id=0; $option_id < 16; $option_id++) {
+					$stat = $ranked_stats[$option_id_to_rank[$option_id+1]];
 					$api_stat = false;
-					$api_stat['empire_id'] = intval($nation_id);
-					$api_stat['empire_name'] = $stat['name'];
-					$api_stat['rank'] = intval($nation_id_to_rank[$nation_id+1]+1);
+					$api_stat['option_id'] = intval($option_id);
+					$api_stat['name'] = $stat['name'];
+					$api_stat['rank'] = intval($option_id_to_rank[$option_id+1]+1);
 					$api_stat['confirmed_votes'] = intval($stat[$game['payout_weight'].'_score']);
 					$api_stat['unconfirmed_votes'] = intval($stat['unconfirmed_'.$game['payout_weight'].'_score']);
 					
-					$game_scores[$nation_id] = $api_stat;
+					$game_scores[$option_id] = $api_stat;
 				}
 				
 				$api_output = array('status_code'=>1, 'status_message'=>"Successful", 'game'=>$game, 'game_scores'=>$game_scores, 'user_info'=>$api_user_info);
@@ -137,112 +137,112 @@ if ($uri_parts[1] == "api") {
    },
    "game_scores":[
       {
-         "empire_id":0,
+         "option_id":0,
          "empire_name":"China",
          "rank":2,
          "confirmed_votes":343264178109758,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":1,
+         "option_id":1,
          "empire_name":"USA",
          "rank":1,
          "confirmed_votes":348585570317453,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":2,
+         "option_id":2,
          "empire_name":"India",
          "rank":4,
          "confirmed_votes":284247986344929,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":3,
+         "option_id":3,
          "empire_name":"Brazil",
          "rank":3,
          "confirmed_votes":333874393690120,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":4,
+         "option_id":4,
          "empire_name":"Indonesia",
          "rank":5,
          "confirmed_votes":29170293015238,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":5,
+         "option_id":5,
          "empire_name":"Japan",
          "rank":6,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":6,
+         "option_id":6,
          "empire_name":"Russia",
          "rank":7,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":7,
+         "option_id":7,
          "empire_name":"Germany",
          "rank":8,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":8,
+         "option_id":8,
          "empire_name":"Mexico",
          "rank":9,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":9,
+         "option_id":9,
          "empire_name":"Nigeria",
          "rank":10,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":10,
+         "option_id":10,
          "empire_name":"France",
          "rank":11,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":11,
+         "option_id":11,
          "empire_name":"UK",
          "rank":12,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":12,
+         "option_id":12,
          "empire_name":"Pakistan",
          "rank":13,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":13,
+         "option_id":13,
          "empire_name":"Italy",
          "rank":14,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":14,
+         "option_id":14,
          "empire_name":"Turkey",
          "rank":15,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":15,
+         "option_id":15,
          "empire_name":"Iran",
          "rank":16,
          "confirmed_votes":0,
@@ -281,112 +281,112 @@ if ($uri_parts[1] == "api") {
    },
    "game_scores":[
       {
-         "empire_id":0,
+         "option_id":0,
          "empire_name":"China",
          "rank":1,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":1,
+         "option_id":1,
          "empire_name":"USA",
          "rank":2,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":2,
+         "option_id":2,
          "empire_name":"India",
          "rank":3,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":3,
+         "option_id":3,
          "empire_name":"Brazil",
          "rank":4,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":4,
+         "option_id":4,
          "empire_name":"Indonesia",
          "rank":5,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":5,
+         "option_id":5,
          "empire_name":"Japan",
          "rank":6,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":6,
+         "option_id":6,
          "empire_name":"Russia",
          "rank":7,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":7,
+         "option_id":7,
          "empire_name":"Germany",
          "rank":8,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":8,
+         "option_id":8,
          "empire_name":"Mexico",
          "rank":9,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":9,
+         "option_id":9,
          "empire_name":"Nigeria",
          "rank":10,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":10,
+         "option_id":10,
          "empire_name":"France",
          "rank":11,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":11,
+         "option_id":11,
          "empire_name":"UK",
          "rank":12,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":12,
+         "option_id":12,
          "empire_name":"Pakistan",
          "rank":13,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":13,
+         "option_id":13,
          "empire_name":"Italy",
          "rank":14,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":14,
+         "option_id":14,
          "empire_name":"Turkey",
          "rank":15,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
-         "empire_id":15,
+         "option_id":15,
          "empire_name":"Iran",
          "rank":16,
          "confirmed_votes":0,
@@ -454,22 +454,22 @@ if ($uri_parts[1] == "api") {
    "recommendation_unit":"coin",
    "recommendations":[
       {
-         "empire_id":0,
+         "option_id":0,
          "empire_name":"China",
          "recommended_amount":80000000000
       },
       {
-         "empire_id":1,
+         "option_id":1,
          "empire_name":"USA",
          "recommended_amount":60000000000
       },
       {
-         "empire_id":2,
+         "option_id":2,
          "empire_name":"India",
          "recommended_amount":40000000000
       },
       {
-         "empire_id":3,
+         "option_id":3,
          "empire_name":"Brazil",
          "recommended_amount":20000000000
       }
@@ -489,23 +489,23 @@ if ($uri_parts[1] == "api") {
    "recommendation_unit":"coin",
    "recommendations":[
       {
-         "empire_id":0,
-         "empire_name":"China",
+         "option_id":0,
+         "name":"China",
          "recommended_amount":40
       },
       {
-         "empire_id":1,
-         "empire_name":"USA",
+         "option_id":1,
+         "name":"USA",
          "recommended_amount":30
       },
       {
-         "empire_id":2,
-         "empire_name":"India",
+         "option_id":2,
+         "name":"India",
          "recommended_amount":20
       },
       {
-         "empire_id":3,
-         "empire_name":"Brazil",
+         "option_id":3,
+         "name":"Brazil",
          "recommended_amount":10
       }
    ]

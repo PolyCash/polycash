@@ -15,9 +15,9 @@ if ($thisuser && $game) {
 	}
 	
 	$amounts = explode(",", $_REQUEST['amounts']);
-	$nations = explode(",", $_REQUEST['nations']);
+	$options = explode(",", $_REQUEST['options']);
 	
-	if (count($amounts) != count($nations)) {
+	if (count($amounts) != count($options)) {
 		$output_obj['result_code'] = 2;
 		$output_obj['message'] = "You've reached an invalid URL.";
 	}
@@ -25,21 +25,21 @@ if ($thisuser && $game) {
 		if ($game['losable_bets_enabled'] == 1) {
 			$amount_sum = 0;
 			$address_ids = array();
-			$max_nation_id = false;
+			$max_option_id = false;
 			$max_amount = -1;
 			$round_id = intval($_REQUEST['round']);
 			$bet_round_range = bet_round_range($game);
 			
 			if ($round_id >= $bet_round_range[0] && $round_id  <= $bet_round_range[1]) {
 				for ($i=0; $i<count($amounts); $i++) {
-					if ($nations[$i] != intval($nations[$i]) || $amounts[$i] != intval($amounts[$i])) {
+					if ($options[$i] != intval($options[$i]) || $amounts[$i] != intval($amounts[$i])) {
 						$output_obj['result_code'] = 5;
 						$output_obj['message'] = "You submitted an invalid number.";
 						echo json_encode($output_obj);
 						die();
 					}
-					if ($nations[$i] == 0) $nations[$i] = false;
-					else if ($nations[$i] > 0 && $nations[$i] <= 16) {}
+					if ($options[$i] == 0) $options[$i] = false;
+					else if ($options[$i] > 0 && $options[$i] <= 16) {}
 					else {
 						$output_obj['result_code'] = 6;
 						$output_obj['message'] = "Please select a valid betting outcome.";
@@ -48,11 +48,11 @@ if ($thisuser && $game) {
 					}
 					
 					if ($amounts[$i] > $max_amount) {
-						$max_nation_id = $nations[$i];
+						$max_option_id = $options[$i];
 						$max_amount = $amounts[$i];
 					}
 					
-					$burn_address = get_bet_burn_address($game, $round_id, $nations[$i]);
+					$burn_address = get_bet_burn_address($game, $round_id, $options[$i]);
 					if ($burn_address) {
 						$address_ids[$i] = $burn_address['address_id'];
 					}
@@ -65,7 +65,7 @@ if ($thisuser && $game) {
 					$amount_sum += $amounts[$i];
 				}
 				
-				$remainder_address_id = user_address_id($game['game_id'], $thisuser['user_id'], $max_nation_id);
+				$remainder_address_id = user_address_id($game['game_id'], $thisuser['user_id'], $max_option_id);
 				
 				if ($amount_sum > 0) {
 					$last_block_id = last_block_id($game['game_id']);

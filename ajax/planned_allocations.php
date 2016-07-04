@@ -45,7 +45,7 @@ if ($thisuser && $game) {
 		$q = "SELECT * FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND round_id >= ".$from_round." AND round_id <= ".$to_round.";";
 		$r = run_query($q);
 		while ($allocation = mysql_fetch_array($r)) {
-			$js .= "load_plan_option(".$allocation['round_id'].", ".($allocation['nation_id']-1).", ".$allocation['points'].");\n";
+			$js .= "load_plan_option(".$allocation['round_id'].", ".($allocation['option_id']-1).", ".$allocation['points'].");\n";
 		}
 		$js .= "});\n";
 		$js .= "</script>\n";

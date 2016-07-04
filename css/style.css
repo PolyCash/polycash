@@ -35,13 +35,13 @@ body {
    padding: 0 !important;
    margin: 0 !important;
 }
-.nation_box {
+.option_box {
 	display: inline-block;
 	width: 200px;
 	line-height: 36px;
 	height: 36px;
 }
-.nation_flag {
+.option_flag {
 	display: inline-block;
 	float: left;
 	width: 50px;
@@ -51,12 +51,12 @@ body {
 	background-position: center center;
 	border: 1px solid rgba(0,0,0,0.5);
 }
-.nation_flag_label {
+.option_flag_label {
 	display: inline-block;
 	float: left;
 }
 
-.vote_nation_box {
+.vote_option_box {
 	line-height: 42px;
 	height: 44px;
 	cursor: pointer;
@@ -67,10 +67,10 @@ body {
 	margin-top: 10px;
 	border: 1px solid #d6d6d6;
 }
-.vote_nation_box_sel {
+.vote_option_box_sel {
 	border: 1px solid #555 ! important;
 }
-.vote_nation_flag {
+.vote_option_flag {
 	display: block;
 	width: 64px;
 	height: 42px;
@@ -79,7 +79,7 @@ body {
 	border-right: 1px solid #d6d6d6;
 	margin-right: 5px;
 }
-.vote_nation_flag_label {
+.vote_option_flag_label {
 }
 
 .rules_list {
@@ -273,10 +273,10 @@ and (max-device-width : 480px) {
 .output_amount_disp {
 	display: inline-block;
 }
-.nation_bet_amount_disp {
+.option_bet_amount_disp {
 	display: inline-block;
 }
-.nation_bet_removal_link {
+.option_bet_removal_link {
 	float: right;
 	cursor: pointer;
 	font-size: 18px;

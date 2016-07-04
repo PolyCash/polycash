@@ -11,15 +11,15 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$r = run_query($q);
 	$game = mysql_fetch_array($r);
 
-	if ($_REQUEST['do'] == "set_nation_ids") {
+	if ($_REQUEST['do'] == "set_option_ids") {
 		$game_q = "SELECT * FROM games;";
 		$game_r = run_query($game_q);
 		while ($game = mysql_fetch_array($game_r)) {
 			$address_q = "SELECT * FROM addresses WHERE game_id='".$game['game_id']."';";
 			$address_r = run_query($address_q);
 			while ($address = mysql_fetch_array($address_r)) {
-				$nation_id = addr_text_to_nation_id($address['address']);
-				$qq = "UPDATE addresses SET nation_id='".$nation_id."' WHERE address_id='".$address['address_id']."';";
+				$option_id = addr_text_to_option_id($address['address']);
+				$qq = "UPDATE addresses SET option_id='".$option_id."' WHERE address_id='".$address['address_id']."';";
 				$rr = run_query($qq);
 			}
 		}
@@ -75,7 +75,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		$my_addr_count = mysql_fetch_row($r);
 		$my_addr_count = $my_addr_count[0];
 		
-		$q = "SELECT COUNT(*) FROM addresses WHERE game_id='".$game['game_id']."' AND is_mine=1 AND nation_id > 0;";
+		$q = "SELECT COUNT(*) FROM addresses WHERE game_id='".$game['game_id']."' AND is_mine=1 AND option_id > 0;";
 		$r = run_query($q);
 		$voting_addr_count = mysql_fetch_row($r);
 		$voting_addr_count = $voting_addr_count[0];

@@ -62,7 +62,7 @@ if ($thisuser) {
 			$r = run_query($q);
 			$game = mysql_fetch_array($r);
 			
-			ensure_game_nations($game_id);
+			ensure_game_voting_options($game_id);
 			
 			if ($game['giveaway_status'] == "public_free") {
 				ensure_user_in_game($thisuser['user_id'], $game_id);

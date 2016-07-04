@@ -68,17 +68,17 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	
 	if ($real_game && $GLOBALS['min_unallocated_addresses'] > 0) {
 		$need_addresses = false;
-		$q = "SELECT * FROM nations ORDER BY nation_id ASC;";
+		$q = "SELECT * FROM game_voting_options WHERE game_id='".$real_game['game_id']."' ORDER BY option_id ASC;";
 		$r = run_query($q);
-		while ($nation = mysql_fetch_array($r)) {
-			$qq = "SELECT COUNT(*) FROM addresses WHERE game_id='".$real_game['game_id']."' AND nation_id='".$nation['nation_id']."' AND user_id IS NULL;";
+		while ($option = mysql_fetch_array($r)) {
+			$qq = "SELECT COUNT(*) FROM addresses WHERE game_id='".$real_game['game_id']."' AND option_id='".$option['option_id']."' AND user_id IS NULL;";
 			$rr = run_query($qq);
 			$num_addr = mysql_fetch_row($rr);
 			$num_addr = $num_addr[0];
 			if ($num_addr < $GLOBALS['min_unallocated_addresses']) {
-				echo "Add ".($GLOBALS['min_unallocated_addresses']-$num_addr)." for ".$nation['name']."<br/>\n";
+				echo "Add ".($GLOBALS['min_unallocated_addresses']-$num_addr)." for ".$option['name']."<br/>\n";
 				for ($i=0; $i<($GLOBALS['min_unallocated_addresses']-$num_addr); $i++) {
-					$new_addr_str = $empirecoin_rpc->getnewvotingaddress($nation['name']);
+					$new_addr_str = $empirecoin_rpc->getnewvotingaddress($option['name']);
 					$new_addr_db = create_or_fetch_address($real_game, $new_addr_str, false, $empirecoin_rpc, true);
 				}
 			}
@@ -95,7 +95,7 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 					if ($GLOBALS['walletnotify_by_cron'] && $running_games[$game_i]['game_type'] == "real") {
 						echo apply_user_strategies($running_games[$game_i]);
 						echo walletnotify($running_games[$game_i], $empirecoin_rpc, "");
-						update_nation_scores($running_games[$game_i]);
+						update_option_scores($running_games[$game_i]);
 					}
 					if ($running_games[$game_i]['game_type'] == "simulation") {
 						$last_block_id = last_block_id($running_games[$game_i]['game_id']);

@@ -149,7 +149,7 @@ if ($thisuser) { ?>
 			$score_sums = total_score_in_round($game, $current_round, true);
 			
 			$round_stats = round_voting_stats_all($game, $current_round);
-			$nation_id2rank = $round_stats[3];
+			$option_id2rank = $round_stats[3];
 			?>
 			<div id="current_round_table" style="margin-bottom: 10px;">
 				<?php
@@ -174,7 +174,7 @@ if ($thisuser) { ?>
 
 	<div class="paragraph">
 		<div id="vote_popups"><?php
-		echo initialize_vote_nation_details($game, $nation_id2rank, $score_sums['sum'], $thisuser['user_id']);
+		echo initialize_vote_option_details($game, $option_id2rank, $score_sums['sum'], $thisuser['user_id']);
 		?></div>
 		
 		<?php
@@ -209,14 +209,14 @@ var min_bet_round = <?php
 	$bet_round_range = bet_round_range($game);
 	echo $bet_round_range[0];
 ?>;
-var nation_has_votingaddr = [];
-for (var i=1; i<=16; i++) { nation_has_votingaddr[i] = false; }
+var option_has_votingaddr = [];
+for (var i=1; i<=16; i++) { option_has_votingaddr[i] = false; }
 var votingaddr_count = 0;
 
 var refresh_page = "home";
 var refresh_in_progress = false;
 var last_refresh_time = 0;
-var selected_nation_id = false;
+var selected_option_id = false;
 var user_logged_in = <?php if ($thisuser) echo 'true'; else echo 'false'; ?>;
 
 var homeCarousel;
@@ -224,7 +224,7 @@ var homeCarousel;
 $(document).ready(function() {
 	homeCarousel = new ImageCarousel('home_carousel');
 	homeCarousel.initialize();
-	nation_selected(0);
+	option_selected(0);
 	game_loop_event();
 });
 

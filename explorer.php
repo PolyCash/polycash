@@ -74,7 +74,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				$pagetitle = "Round Results - ".$game['name'];
 			}
 			else {
-				$q = "SELECT r.*, n.*, t.amount FROM cached_rounds r LEFT JOIN nations n ON r.winning_nation_id=n.nation_id LEFT JOIN transactions t ON r.payout_transaction_id=t.transaction_id WHERE r.game_id=".$game['game_id']." AND r.round_id='".$round_id."';";
+				$q = "SELECT r.*, gvo.*, t.amount FROM cached_rounds r LEFT JOIN game_voting_options gvo ON r.winning_option_id=gvo.option_id LEFT JOIN transactions t ON r.payout_transaction_id=t.transaction_id WHERE r.game_id=".$game['game_id']." AND r.round_id='".$round_id."';";
 				$r = run_query($q);
 				if (mysql_numrows($r) == 1) {
 					$round = mysql_fetch_array($r);
@@ -195,14 +195,14 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 						$round_score_sum = $rankings[0];
 						$max_score = $rankings[1];
 						$stats_all = $rankings[2];
-						$nation_id_to_rank = $rankings[3];
+						$option_id_to_rank = $rankings[3];
 						$confirmed_score = $rankings[4];
 						$unconfirmed_score = $rankings[5];
 						
 						echo "<h1>Round #".$current_round." is currently running</h1>\n";
 					}
 					else {
-						if ($round['winning_nation_id'] > 0) echo "<h1>".$round['name']." wins round #".$round['round_id']."</h1>\n";
+						if ($round['winning_option_id'] > 0) echo "<h1>".$round['name']." wins round #".$round['round_id']."</h1>\n";
 						else echo "<h1>Round #".$round['round_id'].": No winner</h1>\n";
 						
 						$max_score = floor($round['score_sum']*$game['max_voting_fraction']);
@@ -227,21 +227,21 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					}
 					else $my_votes = false;
 					
-					if ($my_votes[$round['winning_nation_id']] > 0) {
-						$payout_amt = (floor(100*pos_reward_in_round($game, $this_round)/pow(10,8)*$my_votes[$round['winning_nation_id']]['coins']/$round['winning_score'])/100);
+					if ($my_votes[$round['winning_option_id']] > 0) {
+						$payout_amt = (floor(100*pos_reward_in_round($game, $this_round)/pow(10,8)*$my_votes[$round['winning_option_id']]['coins']/$round['winning_score'])/100);
 						
 						$payout_disp = format_bignum($payout_amt);
 						echo "You won <font class=\"greentext\">+".$payout_disp." ";
 						if ($payout_disp == '1') echo $game['coin_name'];
 						else echo $game['coin_name_plural'];
 						
-						$vote_disp = format_bignum($my_votes[$round['winning_nation_id']]['coins']/pow(10,8));
+						$vote_disp = format_bignum($my_votes[$round['winning_option_id']]['coins']/pow(10,8));
 						echo "</font> by voting ".$vote_disp." ";
 						if ($vote_disp == '1') echo $game['coin_name'];
 						else echo $game['coin_name_plural'];
 						
 						if ($game['payout_weight'] != "coin") {
-							$vote_disp = format_bignum($my_votes[$round['winning_nation_id']][$game['payout_weight'].'s']/pow(10,8));
+							$vote_disp = format_bignum($my_votes[$round['winning_option_id']][$game['payout_weight'].'s']/pow(10,8));
 							echo " (".$vote_disp;
 							echo " vote";
 							if ($vote_disp != '1') echo 's';
@@ -295,31 +295,31 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					$winner_displayed = FALSE;
 					for ($rank=1; $rank<=$game['num_voting_options']; $rank++) {
 						if ($round) {
-							$q = "SELECT * FROM nations WHERE nation_id='".$round['position_'.$rank]."';";
+							$q = "SELECT * FROM game_voting_options WHERE option_id='".$round['position_'.$rank]."';";
 							$r = run_query($q);
 						}
 						
 						if (!$round || mysql_numrows($r) == 1) {
 							if ($round) {
-								$ranked_nation = mysql_fetch_array($r);
-								$nation_scores = nation_score_in_round($game, $ranked_nation['nation_id'], $round['round_id']);
-								$nation_score = $nation_scores['sum'];
+								$ranked_option = mysql_fetch_array($r);
+								$option_scores = option_score_in_round($game, $ranked_option['option_id'], $round['round_id']);
+								$option_score = $option_scores['sum'];
 							}
 							else {
-								$ranked_nation = $stats_all[$rank-1];
-								$nation_score = $ranked_nation[$game['payout_weight'].'_score']+$ranked_nation['unconfirmed_'.$game['payout_weight'].'_score'];
+								$ranked_option = $stats_all[$rank-1];
+								$option_score = $ranked_option[$game['payout_weight'].'_score']+$ranked_option['unconfirmed_'.$game['payout_weight'].'_score'];
 							}
 							echo '<div class="row';
-							if ($nation_score > $max_score) echo ' redtext';
-							else if (!$winner_displayed && $nation_score > 0) { echo ' greentext'; $winner_displayed = TRUE; }
+							if ($option_score > $max_score) echo ' redtext';
+							else if (!$winner_displayed && $option_score > 0) { echo ' greentext'; $winner_displayed = TRUE; }
 							echo '">';
-							echo '<div class="col-md-3">'.$rank.'. '.$ranked_nation['name'].'</div>';
-							echo '<div class="col-md-1" style="text-align: center;">'.round(100*$nation_score/$round_score_sum, 2).'%</div>';
-							echo '<div class="col-md-3" style="text-align: center;">'.format_bignum($nation_score/pow(10,8)).' votes</div>';
+							echo '<div class="col-md-3">'.$rank.'. '.$ranked_option['name'].'</div>';
+							echo '<div class="col-md-1" style="text-align: center;">'.round(100*$option_score/$round_score_sum, 2).'%</div>';
+							echo '<div class="col-md-3" style="text-align: center;">'.format_bignum($option_score/pow(10,8)).' votes</div>';
 							if ($thisuser) {
 								echo '<div class="col-md-3" style="text-align: center;">';
 								
-								$score_qty = $my_votes[$ranked_nation['nation_id']][$game['payout_weight'].'s'];
+								$score_qty = $my_votes[$ranked_option['option_id']][$game['payout_weight'].'s'];
 								
 								$score_disp = format_bignum($score_qty/pow(10,8));
 								echo $score_disp." ";
@@ -332,7 +332,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 									if ($score_disp != '1') echo "s";
 								}
 								
-								echo ' ('.round(100*$score_qty/$nation_score, 3).'%)</div>';
+								echo ' ('.round(100*$score_qty/$option_score, 3).'%)</div>';
 							}
 							echo '</div>'."\n";
 						}

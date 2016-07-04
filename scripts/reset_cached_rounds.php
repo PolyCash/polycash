@@ -19,28 +19,28 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			$vote_sum = $round_voting_stats[0];
 			$max_vote_sum = $round_voting_stats[1];
 			$round_voting_stats = $round_voting_stats[2];
-			$nation_id2rank = $round_voting_stats[3];
+			$option_id2rank = $round_voting_stats[3];
 			
-			$winning_nation = FALSE;
+			$winning_option = FALSE;
 			$winning_votesum = 0;
 			$winning_score = 0;
 			$rank = 1;
 			for ($rank=1; $rank<=$game['num_voting_options']; $rank++) {
-				$nation_id = $round_voting_stats[$rank-1]['nation_id'];
-				$nation_rank2db_id[$rank] = $nation_id;
-				$nation_scores = nation_score_in_round($game, $nation_id, $round_id);
+				$option_id = $round_voting_stats[$rank-1]['option_id'];
+				$option_rank2db_id[$rank] = $option_id;
+				$option_scores = option_score_in_round($game, $option_id, $round_id);
 				
-				if ($nation_scores['sum'] > $max_vote_sum) {}
-				else if (!$winning_nation && $nation_scores['sum'] > 0) {
-					$winning_nation = $nation_id;
-					$winning_votesum = $nation_scores['sum'];
-					$winning_score = $nation_scores['sum'];
+				if ($option_scores['sum'] > $max_vote_sum) {}
+				else if (!$winning_option && $option_scores['sum'] > 0) {
+					$winning_option = $option_id;
+					$winning_votesum = $option_scores['sum'];
+					$winning_score = $option_scores['sum'];
 				}
 			}
 			
 			$q = "INSERT INTO cached_rounds SET game_id='".$game['game_id']."', round_id='".$round_id."', payout_block_id='".($round_id*$game['round_length'])."'";
-			if ($winning_nation) {
-				$q .= ", winning_nation_id='".$winning_nation."'";
+			if ($winning_option) {
+				$q .= ", winning_option_id='".$winning_option."'";
 				$qq = "SELECT * FROM transactions WHERE transaction_desc='votebase' AND game_id='".$game['game_id']."' AND block_id = ".$round_id*$game['round_length'].";";
 				$rr = run_query($qq);
 				if (mysql_numrows($rr) > 0) {
@@ -50,7 +50,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			}
 			$q .= ", winning_score='".$winning_score."', score_sum='".$vote_sum."', time_created='".time()."'";
 			for ($position=1; $position <= $game['num_voting_options']; $position++) {
-				$q .= ", position_".$position."='".$nation_rank2db_id[$position]."'";
+				$q .= ", position_".$position."='".$option_rank2db_id[$position]."'";
 			}
 			$q .= ";";
 			$r = run_query($q);

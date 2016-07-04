@@ -29,13 +29,13 @@ if ($thisuser && $game) {
 	$io_ids_csv = $_REQUEST['io_ids'];
 	$io_ids = explode(",", $io_ids_csv);
 	
-	$nation_ids_csv = $_REQUEST['nation_ids'];
-	$nation_ids = explode(",", $nation_ids_csv);
-	$int_nation_ids = [];
-	for ($i=0; $i<count($nation_ids); $i++) {
-		$int_nation_ids[$i] = intval($nation_ids[$i]);
+	$option_ids_csv = $_REQUEST['option_ids'];
+	$option_ids = explode(",", $option_ids_csv);
+	$int_option_ids = [];
+	for ($i=0; $i<count($option_ids); $i++) {
+		$int_option_ids[$i] = intval($option_ids[$i]);
 	}
-	$nation_ids = $int_nation_ids;
+	$option_ids = $int_option_ids;
 	
 	$amounts_csv = $_REQUEST['amounts'];
 	$amounts = explode(",", $amounts_csv);
@@ -47,14 +47,14 @@ if ($thisuser && $game) {
 		die();
 	}
 	
-	for ($i=0; $i<count($nation_ids); $i++) {
-		$int_nation_ids[$i] = intval($nation_ids[$i]);
+	for ($i=0; $i<count($option_ids); $i++) {
+		$int_option_ids[$i] = intval($option_ids[$i]);
 	}
 	
-	if (count($amounts) != count($nation_ids)) {
+	if (count($amounts) != count($option_ids)) {
 		$api_output = (object)[
 			'status_code' => 2,
-			'message' => "Nation IDs and amounts do not match"
+			'message' => "Option IDs and amounts do not match"
 		];
 		echo json_encode($api_output);
 		die();
@@ -102,21 +102,21 @@ if ($thisuser && $game) {
 	
 	$amount_sum = 0;
 	
-	for ($i=0; $i<count($nation_ids); $i++) {
-		$nation_id = intval($nation_ids[$i]);
-		if ($nation_id > 0 && $nation_id <= 16) {
-			$nation_ids[$i] = $nation_id;
+	for ($i=0; $i<count($option_ids); $i++) {
+		$option_id = intval($option_ids[$i]);
+		if ($option_id > 0 && $option_id <= 16) {
+			$option_ids[$i] = $option_id;
 		}
 		else {
 			$api_output = (object)[
 				'status_code' => 4,
-				'message' => "Invalid nation ID"
+				'message' => "Invalid option ID"
 			];
 			echo json_encode($api_output);
 			die();
 		}
 		
-		$amount = intval($amounts[$i]);
+		$amount = $amounts[$i];
 		if ($amount > 0) {
 			$amounts[$i] = $amount;
 			$amount_sum += $amount;
@@ -141,10 +141,10 @@ if ($thisuser && $game) {
 	}
 	else {
 		if ($amount_sum+$user_strategy['transaction_fee'] <= $mature_balance && $amount_sum > 0) {
-			$transaction_id = new_transaction($game, $nation_ids, $amounts, $thisuser['user_id'], $thisuser['user_id'], false, 'transaction', $io_ids, false, false, intval($user_strategy['transaction_fee']));
+			$transaction_id = new_transaction($game, $option_ids, $amounts, $thisuser['user_id'], $thisuser['user_id'], false, 'transaction', $io_ids, false, false, intval($user_strategy['transaction_fee']));
 			
 			if ($transaction_id) {
-				update_nation_scores($game);
+				update_option_scores($game);
 				
 				$q = "SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';";
 				$r = run_query($q);

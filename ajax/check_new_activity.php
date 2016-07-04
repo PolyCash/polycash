@@ -94,35 +94,35 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 		
 		$round_stats = round_voting_stats_all($game, $current_round);
 		$total_vote_sum = $round_stats[0];
-		$nation_id2rank = $round_stats[3];
+		$option_id2rank = $round_stats[3];
 		$round_stats = $round_stats[2];
 		
 		$stats_output = false;
-		for ($nation_id=1; $nation_id<=16; $nation_id++) {
-			$nation = $round_stats[$nation_id2rank[$nation_id]];
-			if (!$nation['last_win_round']) $losing_streak = false;
-			else $losing_streak = $current_round - $nation['last_win_round'] - 1;
-			$stats_output[$nation_id] = vote_nation_details($nation, $nation_id2rank[$nation['nation_id']]+1, $nation[$game['payout_weight'].'_score'], $nation['unconfirmed_'.$game['payout_weight'].'_score'], $total_vote_sum, $losing_streak);
+		for ($option_id=1; $option_id<=16; $option_id++) {
+			$option = $round_stats[$option_id2rank[$option_id]];
+			if (!$option['last_win_round']) $losing_streak = false;
+			else $losing_streak = $current_round - $option['last_win_round'] - 1;
+			$stats_output[$option_id] = vote_option_details($option, $option_id2rank[$option['option_id']]+1, $option[$game['payout_weight'].'_score'], $option['unconfirmed_'.$game['payout_weight'].'_score'], $total_vote_sum, $losing_streak);
 		}
-		$output['vote_nation_details'] = $stats_output;
+		$output['vote_option_details'] = $stats_output;
 	}
 	
-	$q = "SELECT * FROM addresses WHERE game_id='".$game['game_id']."' AND user_id='".$thisuser['user_id']."' AND nation_id > 0 GROUP BY nation_id;";
+	$q = "SELECT * FROM addresses WHERE game_id='".$game['game_id']."' AND user_id='".$thisuser['user_id']."' AND option_id > 0 GROUP BY option_id;";
 	$r = run_query($q);
 	$votingaddr_count = mysql_numrows($r);
 	
 	if (intval($_REQUEST['votingaddr_count']) != $votingaddr_count) {
 		$output['new_votingaddresses'] = 1;
 		
-		$nation_has_votingaddr = [];
+		$option_has_votingaddr = [];
 		$votingaddr_count = 0;
-		$q = "SELECT nation_id FROM addresses WHERE game_id='".$game['game_id']."' AND user_id='".$thisuser['user_id']."' AND nation_id > 0 GROUP BY nation_id ORDER BY nation_id ASC;";
+		$q = "SELECT option_id FROM addresses WHERE game_id='".$game['game_id']."' AND user_id='".$thisuser['user_id']."' AND option_id > 0 GROUP BY option_id ORDER BY option_id ASC;";
 		$r = run_query($q);
-		while ($nation_id = mysql_fetch_row($r)) {
-			$nation_has_votingaddr[$nation_id[0]] = true;
+		while ($option_id = mysql_fetch_row($r)) {
+			$option_has_votingaddr[$option_id[0]] = true;
 			$votingaddr_count++;
 		}
-		$output['nation_has_votingaddr'] = $nation_has_votingaddr;
+		$output['option_has_votingaddr'] = $option_has_votingaddr;
 		$output['votingaddr_count'] = $votingaddr_count;
 	}
 	else $output['new_votingaddresses'] = 0;

@@ -26,7 +26,7 @@ while ($user_game = mysql_fetch_array($r)) {
 		$qq .= $strategy_vars[$i]."='".mysql_real_escape_string($user_game[$strategy_vars[$i]])."', ";
 	}
 	for ($i=1; $i<=16; $i++) {
-		$qq .= "nation_pct_".$i."=".$user_game['nation_pct_'.$i].", ";
+		$qq .= "option_pct_".$i."=".$user_game['option_pct_'.$i].", ";
 	}
 	$qq = substr($qq, 0, strlen($qq)-2).";";
 	$rr = run_query($qq);

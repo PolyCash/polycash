@@ -21,7 +21,7 @@ if ($thisuser && $game) {
 		$remainder_address_id = $_REQUEST['remainder_address_id'];
 		
 		if ($remainder_address_id == "random") {
-			$q = "SELECT * FROM addresses WHERE user_id='".$thisuser['user_id']."' AND nation_id > 0 ORDER BY RAND() LIMIT 1;";
+			$q = "SELECT * FROM addresses WHERE user_id='".$thisuser['user_id']."' AND option_id > 0 ORDER BY RAND() LIMIT 1;";
 			$r = run_query($q);
 			$remainder_address = mysql_fetch_array($r);
 			$remainder_address_id = $remainder_address['address_id'];
