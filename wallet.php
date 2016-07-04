@@ -84,6 +84,8 @@ if ($_REQUEST['do'] == "signup") {
 					}
 					
 					$email_id = mail_async($email, "EmpireCo.in", "no-reply@empireco.in", "New account created", $email_message, "", "");
+					
+					generate_user_addresses($user_id);
 				}
 			}
 		}
@@ -292,9 +294,11 @@ $mature_balance = $account_value - $immature_balance;
 		}
 		
 		function start_vote(nation_id) {
-			$('#vote_confirm_'+nation_id).modal('toggle');
-			$('#vote_details_'+nation_id).html($('#vote_details_general').html());
-			$('#vote_amount_'+nation_id).focus();
+			if ((last_block_id+1)%<?php echo get_site_constant('round_length'); ?> != 0) {
+				$('#vote_confirm_'+nation_id).modal('toggle');
+				$('#vote_details_'+nation_id).html($('#vote_details_general').html());
+				$('#vote_amount_'+nation_id).focus();
+			}
 		}
 		
 		function confirm_vote(nation_id) {
@@ -305,6 +309,7 @@ $mature_balance = $account_value - $immature_balance;
 				if (result_parts[0] == "0") {
 					refresh_if_needed();
 					$('#vote_confirm_'+nation_id).modal('hide');
+					$('#vote_amount_'+nation_id).val("");
 					alert("Great, your vote has been submitted!");
 				}
 				else {
@@ -338,7 +343,6 @@ $mature_balance = $account_value - $immature_balance;
 			for (var i=1; i<=16; i++) {
 				var temp_pct = parseInt($('#nation_pct_'+i).val());
 				if (temp_pct && !$('#nation_pct_'+i).is(":focus") && temp_pct != $('#nation_pct_'+i).val()) {
-					console.log("Setting nation_pct_"+i+" from "+$('#nation_pct_'+i).val()+" to "+temp_pct);
 					$('#nation_pct_'+i).val(temp_pct);
 				}
 				if (temp_pct) nation_pct_sum += temp_pct;
@@ -362,7 +366,23 @@ $mature_balance = $account_value - $immature_balance;
 					if (json_result['new_block'] == "1") {
 						last_block_id = parseInt(json_result['last_block_id']);
 						
+						if ((last_block_id+1)%<?php echo get_site_constant('round_length'); ?> == 0) {
+							$('#vote_buttons').slideUp('medium');
+							$('#vote_buttons_disabled').slideDown('fast');
+						}
+						else {
+							$('#vote_buttons').show('fast');
+							$('#vote_buttons_disabled').hide('fast');
+						}
+						
+						$('#account_value').html(json_result['account_value']);
+						$('#account_value').hide();
+						$('#account_value').fadeIn('medium');
+						
 						if (last_block_id%10 == 0) {
+							for (var i=1; i<performance_history_sections; i++) {
+								$('#performance_history_'+i).html("");
+							}
 							$('#performance_history_0').html(json_result['performance_history']);
 							$('#performance_history_0').hide();
 							$('#performance_history_0').fadeIn('fast');
@@ -372,19 +392,24 @@ $mature_balance = $account_value - $immature_balance;
 							tab_clicked(2);
 						}
 					}
-					if (json_result['new_block'] == "1" || json_result['new_transaction'] == "1") {
+					if (json_result['new_transaction'] == "1") {
 						last_transaction_id = parseInt(json_result['last_transaction_id']);
-						$('#current_round_table').html(json_result['current_round_table']);
-						$('#wallet_text_stats').html(json_result['wallet_text_stats']);
 						$('#vote_details_general').html(json_result['vote_details_general']);
+					}
+					if (json_result['new_block'] == "1" || json_result['new_transaction'] == "1") {
+						$('#current_round_table').html(json_result['current_round_table']);
+						
+						var lockedfunds_details_shown = $('#lockedfunds_details').is(":visible");
+						$('#wallet_text_stats').html(json_result['wallet_text_stats']);
+						if (lockedfunds_details_shown) $('#lockedfunds_details').show();
 						
 						$('#current_round_table').hide();
 						$('#current_round_table').fadeIn('fast');
 						
 						$('#wallet_text_stats').hide();
 						$('#wallet_text_stats').fadeIn('fast');
-						
 						var vote_nation_details = json_result['vote_nation_details'];
+						
 						for (var nation_id=1; nation_id<=16; nation_id++) {
 							$('#vote_nation_details_'+nation_id).html(vote_nation_details[nation_id]);
 						}
@@ -401,38 +426,39 @@ $mature_balance = $account_value - $immature_balance;
 		<?php
 		include("includes/wallet_status.php");
 		?>
+		<div id="wallet_text_stats">
+			<?php
+			echo wallet_text_stats($thisuser, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance);
+			?>
+		</div>
+		<br/>
+		<div style="display: none;" id="vote_details_general">
+			<?php echo vote_details_general($mature_balance); ?>
+		</div>
+		
 		<div class="row">
 			<div class="col-xs-2 tabcell" id="tabcell0" onclick="tab_clicked(0);">Vote Now</div>
 			<div class="col-xs-2 tabcell" id="tabcell1" onclick="tab_clicked(1);">Voting Strategy</div>
 			<div class="col-xs-2 tabcell" id="tabcell2" onclick="tab_clicked(2);">Performance History</div>
-			<div class="col-xs-2 tabcell" id="tabcell3" onclick="tab_clicked(3);">Deposit Coins</div>
-			<div class="col-xs-2 tabcell" id="tabcell4" onclick="tab_clicked(4);">Withdraw Coins</div>
+			<div class="col-xs-2 tabcell" id="tabcell3" onclick="tab_clicked(3);">My Addresses</div>
+			<div class="col-xs-2 tabcell" id="tabcell4" onclick="tab_clicked(4);">Deposit / Withdraw</div>
 		</div>
 		<div class="row">
 			<div id="tabcontent0" style="display: none;" class="tabcontent">
-				<div id="wallet_text_stats">
-					<?php
-					echo wallet_text_stats($thisuser, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance);
-					?>
-				</div>
-				
-				<br/>
-				
-				<div style="display: none;" id="vote_details_general">
-					<?php echo vote_details_general($mature_balance); ?>
-				</div>
 				<?php
 				$round_stats = round_voting_stats_all($current_round);
 				$totalVoteSum = $round_stats[0];
 				$maxVoteSum = $round_stats[1];
 				$nation_id_to_rank = $round_stats[3];
 				$round_stats = $round_stats[2];
+				?>
+				<div id="vote_buttons_disabled"<?php if (($last_block_id+1)%get_site_constant('round_length') != 0) echo ' style="display: none;"'; ?>>
+					The final block of the round is being mined. Voting is currently disabled.
+				</div>
 				
-				if (($last_block_id+1)%get_site_constant('round_length') == 0) {
-					echo "The final block of round ".$current_round." is being mined. Voting is currently disabled.<br/>\n";
-				}
-				else {
-					echo "To cast a vote please click on any of the nations below.<br/>\n";
+				<div id="vote_buttons"<?php if (($last_block_id+1)%get_site_constant('round_length') == 0) echo ' style="display: none;"'; ?>>
+					To cast a vote please click on any of the empires below.<br/>
+					<?php
 					$nation_q = "SELECT * FROM nations ORDER BY vote_id ASC;";
 					$nation_r = run_query($nation_q);
 					$n_counter = 1;
@@ -480,14 +506,15 @@ $mature_balance = $account_value - $immature_balance;
 						<?php
 						$n_counter++;
 					}
-				}
+					?>
+				</div>
 				
-				echo "<br/>\n<div style=\"margin-top: 15px; border: 1px solid #aaa; padding: 10px; border-radius: 8px;\" id=\"current_round_table\">";
-				
-				echo current_round_table($current_round, $thisuser, true, true);
-				
-				echo "</div>";
-				?>
+				<br/>
+				<div style="margin-top: 15px; border: 1px solid #aaa; padding: 10px; border-radius: 8px;" id="current_round_table">
+					<?php
+					echo current_round_table($current_round, $thisuser, true, true);
+					?>
+				</div>
 			</div>
 			<div id="tabcontent1" style="display: none;" class="tabcontent">
 				<h2>Choose your voting strategy</h2>
@@ -600,7 +627,7 @@ $mature_balance = $account_value - $immature_balance;
 			<div id="tabcontent2" style="display: none;" class="tabcontent">
 				<script type="text/javascript">
 				var performance_history_sections = 1;
-				var performance_history_start_round = <?php echo min(1, $current_round-12); ?>;
+				var performance_history_start_round = <?php echo max(1, $current_round-10); ?>;
 				var performance_history_loading = false;
 				
 				function show_more_performance_history() {
@@ -610,7 +637,7 @@ $mature_balance = $account_value - $immature_balance;
 						$('#performance_history').append('<div id="performance_history_'+performance_history_sections+'"></div>');
 						$('#performance_history_'+performance_history_sections).html("Loading...");
 						
-						$.get("/ajax/performance_history.php?from_round_id="+performance_history_start_round+"&to_round_id="+(performance_history_start_round+10), function(result) {
+						$.get("/ajax/performance_history.php?from_round_id="+performance_history_start_round+"&to_round_id="+(performance_history_start_round+9), function(result) {
 							$('#performance_history_'+performance_history_sections).html(result);
 							performance_history_sections++;
 							performance_history_loading = false;
@@ -621,7 +648,7 @@ $mature_balance = $account_value - $immature_balance;
 				<div id="performance_history">
 					<div id="performance_history_0">
 						<?php
-						echo performance_history($thisuser, max(1, $current_round-11), $current_round-1);
+						echo performance_history($thisuser, max(1, $current_round-10), $current_round-1);
 						?>
 					</div>
 				</div>
@@ -630,6 +657,30 @@ $mature_balance = $account_value - $immature_balance;
 				</center>
 			</div>
 			<div id="tabcontent3" style="display: none;" class="tabcontent">
+				<?php
+				$q = "SELECT * FROM addresses a LEFT JOIN nations n ON n.nation_id=a.nation_id WHERE a.user_id='".$thisuser['user_id']."' ORDER BY a.nation_id IS NULL DESC, a.nation_id ASC;";
+				$r = run_query($q);
+				echo "<b>You have ".mysql_numrows($r)." addresses.</b><br/>\n";
+				while ($address = mysql_fetch_array($r)) {
+					?>
+					<div class="row">
+						<div class="col-sm-3">
+							<?php if ($address['nation_id'] > 0) { ?>
+							<img style="height: 12px; border: 1px solid rgba(0,0,0,0.5);" src="/img/flags/<?php echo str_replace(" ", "", $address['name']); ?>.jpg"> <?php echo $address['name']; ?>
+							<?php } else { ?>
+							Default Address
+							<?php } ?>
+						</div>
+						<div class="col-sm-5">
+							<input type="text" style="border: 0px; background-color: none; width: 100%; font-family: consolas" onclick="$(this).select();" value="<?php echo $address['address']; ?>" />
+						</div>
+					</div>
+					<?php
+				}
+				?>
+			</div>
+			<div id="tabcontent4" style="display: none;" class="tabcontent">
+				<h1>Deposit</h1>
 				<?php
 				$q = "SELECT * FROM webwallet_transactions WHERE currency_mode='beta' AND transaction_desc='giveaway' AND user_id='".$thisuser['user_id']."';";
 				$r = run_query($q);
@@ -645,9 +696,44 @@ $mature_balance = $account_value - $immature_balance;
 					<?php
 				}
 				?>
-			</div>
-			<div id="tabcontent4" style="display: none;" class="tabcontent">
-				We're currently in beta; this feature isn't available right now.
+				<script type="text/javascript">
+				function attempt_withdrawal() {
+					if ($('#withdraw_btn').html() == "Withdraw") {
+						var amount = $('#withdraw_amount').val();
+						var address = $('#withdraw_address').val();
+						$('#withdraw_btn').html("Withdrawing...");
+						$.get("/ajax/withdraw.php?amount="+encodeURIComponent(amount)+"&address="+encodeURIComponent(address), function(result) {
+							$('#withdraw_btn').html("Withdraw");
+							var result_obj = JSON.parse(result);
+							alert(result_obj['message']);
+							refresh_if_needed();
+						});
+					}
+				}
+				</script>
+				<h1>Withdraw</h1>
+				To withdraw coins, please enter an amount and an EmpireCoin address below then click "Withdraw"<br/>
+				<div class="row">
+					<div class="col-md-3">
+						Amount:
+					</div>
+					<div class="col-md-3">
+						<input class="form-control" type="tel" placeholder="0.000" id="withdraw_amount" style="text-align: right;" />
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-3">
+						Address:
+					</div>
+					<div class="col-md-5">
+						<input class="form-control" type="text" id="withdraw_address" />
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-push-3 col-md-2">
+						<button class="btn btn-success" id="withdraw_btn" onclick="attempt_withdrawal();">Withdraw</button>
+					</div>
+				</div>
 			</div>
 		</div>
 		

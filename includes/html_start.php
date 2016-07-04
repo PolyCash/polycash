@@ -31,7 +31,7 @@
 		  <ul class="nav navbar-nav">
 			<li<?php if ($nav_tab_selected == "home") echo ' class="active"'; ?>><a href="/">Home</a></li>
 			<li<?php if ($nav_tab_selected == "download") echo ' class="active"'; ?>><a href="/download/">Download</a></li>
-			<li<?php if ($nav_tab_selected == "wallet" && $_REQUEST['do'] != "logout") echo ' class="active"'; ?>><a href="/wallet/">Web Wallet</a></li>
+			<li<?php if ($nav_tab_selected == "wallet" && $_REQUEST['do'] != "logout") echo ' class="active"'; ?>><a href="/wallet/"><?php if ($thisuser) echo "My Account"; else echo "Log In"; ?></a></li>
 			<?php
 			if ($thisuser || $_REQUEST['do'] == "logout") { ?>
 				<li<?php if ($nav_tab_selected == "wallet" && $_REQUEST['do'] == "logout") echo ' class="active"'; ?>><a href="/wallet/?do=logout">Log Out</a></li>

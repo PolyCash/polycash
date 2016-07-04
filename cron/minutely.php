@@ -36,7 +36,7 @@ if ($_REQUEST['key'] == "2r987jifwow") {
 				echo $nationsum['name']." has ".($nationsum['voting_sum']/(pow(10, 8)))." EMP voted with a score of ".$nationsum['voting_score']." points.<br/>\n";
 			}
 			
-			$maxVoteSum = floor($vote_sum/2);
+			$maxVoteSum = floor($vote_sum*get_site_constant('max_voting_fraction'));
 			echo "Total votes: ".($vote_sum/(pow(10, 8)))." EMP<br/>\n";
 			echo "Cutoff: ".($maxVoteSum/(pow(10, 8)))." EMP<br/>\n";
 			
@@ -66,7 +66,7 @@ if ($_REQUEST['key'] == "2r987jifwow") {
 				
 				while ($transaction = mysql_fetch_array($r)) {
 					$payout_amount = floor(750*pow(10,8)*$transaction['amount']/$nation_votes[$winning_nation]);
-					$qq = "INSERT INTO webwallet_transactions SET currency_mode='beta', vote_transaction_id='".$transaction['transaction_id']."', transaction_desc='votebase', amount=".$payout_amount.", user_id='".$transaction['user_id']."', block_id='".$last_block_id."', time_created='".time()."';";
+					$qq = "INSERT INTO webwallet_transactions SET currency_mode='beta', vote_transaction_id='".$transaction['transaction_id']."', transaction_desc='votebase', amount=".$payout_amount.", user_id='".$transaction['user_id']."', address_id='".user_address_id($transaction['user_id'], false)."', block_id='".$last_block_id."', time_created='".time()."';";
 					$rr = run_query($qq);
 					echo "Pay ".$payout_amount/(pow(10,8))." EMP to ".$transaction['username']."<br/>\n";
 				}
@@ -145,7 +145,7 @@ if ($_REQUEST['key'] == "2r987jifwow") {
 								$vote_nation_id = $api_obj->recommendations[$rec_id]->empire_id + 1;
 								echo "Vote ".$vote_amount." for ".$vote_nation_id."<br/>\n";
 								
-								$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', nation_id='".$vote_nation_id."', transaction_desc='transaction', amount=".$vote_amount.", user_id='".$strategy_user['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
+								$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', nation_id='".$vote_nation_id."', transaction_desc='transaction', amount=".$vote_amount.", user_id='".$strategy_user['user_id']."', address_id='".user_address_id($strategy_user['user_id'], $vote_nation_id)."', block_id='".$mining_block_id."', time_created='".time()."';";
 								$r = run_query($q);
 								
 								$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', transaction_desc='transaction', amount=".(-1)*$vote_amount.", user_id='".$strategy_user['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
@@ -192,7 +192,7 @@ if ($_REQUEST['key'] == "2r987jifwow") {
 							for ($rank=1; $rank<=16; $rank++) {
 								if (in_array($rank, $by_rank_ranks) && !$skipped_nations[$ranked_stats[$rank-1]['nation_id']]) {
 									echo "Vote ".round($coins_each/pow(10,8), 3)." EMP for ".$ranked_stats[$rank-1]['name'].", ranked ".$rank."<br/>";
-									$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', nation_id='".$ranked_stats[$rank-1]['nation_id']."', transaction_desc='transaction', amount=".$coins_each.", user_id='".$strategy_user['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
+									$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', nation_id='".$ranked_stats[$rank-1]['nation_id']."', address_id='".user_address_id($strategy_user['user_id'], $ranked_stats[$rank-1]['nation_id'])."', transaction_desc='transaction', amount=".$coins_each.", user_id='".$strategy_user['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
 									$r = run_query($q);
 									
 									$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', transaction_desc='transaction', amount=".(-1)*$coins_each.", user_id='".$strategy_user['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
@@ -216,7 +216,7 @@ if ($_REQUEST['key'] == "2r987jifwow") {
 										
 										echo "Vote ".$strategy_user['nation_pct_'.$nation_id]."% (".round($coins_amount/pow(10,8), 3)." EMP) for ".$ranked_stats[$nation_id_to_rank[$nation_id]]['name']."<br/>";
 										
-										$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', nation_id='".$nation_id."', transaction_desc='transaction', amount=".$coin_amount.", user_id='".$strategy_user['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
+										$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', nation_id='".$nation_id."', transaction_desc='transaction', amount=".$coin_amount.", user_id='".$strategy_user['user_id']."', address_id='".user_address_id($strategy_user['user_id'], $nation_id)."', block_id='".$mining_block_id."', time_created='".time()."';";
 										$r = run_query($q);
 										
 										$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', transaction_desc='transaction', amount=".(-1)*$coin_amount.", user_id='".$strategy_user['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";

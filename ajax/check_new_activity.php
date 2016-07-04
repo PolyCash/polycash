@@ -18,10 +18,11 @@ if ($thisuser) {
 		$performance_history_sections = intval($_REQUEST['performance_history_sections']);
 		$output['new_block'] = 1;
 		$output['last_block_id'] = $last_block_id;
+		$output['account_value'] = number_format($account_value, 3);
 		
 		if ($last_block_id%10 == 0) {
-			$output['performance_history'] = performance_history($thisuser, $current_round-(10*$performance_history_sections)-1, $current_round-1);
-			$output['performance_history_start_round'] = $current_round-(10*$performance_history_sections)-2;
+			$output['performance_history'] = performance_history($thisuser, $current_round-(10*$performance_history_sections), $current_round-1);
+			$output['performance_history_start_round'] = $current_round-(10*$performance_history_sections);
 		}
 	}
 	else $output['new_block'] = 0;
@@ -29,9 +30,13 @@ if ($thisuser) {
 	if ($last_transaction_id != $_REQUEST['last_transaction_id']) {
 		$output['new_transaction'] = 1;
 		$output['last_transaction_id'] = $last_transaction_id;
+		$output['vote_details_general'] = vote_details_general($mature_balance);
+	}
+	else $output['new_transaction'] = 0;
+	
+	if ($last_block_id != $_REQUEST['last_block_id'] || $last_transaction_id != $_REQUEST['last_transaction_id']) {
 		$output['current_round_table'] = current_round_table($current_round, $thisuser, true, true);
 		$output['wallet_text_stats'] = wallet_text_stats($thisuser, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance);
-		$output['vote_details_general'] = vote_details_general($mature_balance);
 		
 		$round_stats = round_voting_stats_all($current_round);
 		$totalVoteSum = $round_stats[0];
@@ -45,7 +50,6 @@ if ($thisuser) {
 		}
 		$output['vote_nation_details'] = $stats_output;
 	}
-	else $output['new_transaction'] = 0;
 	
 	echo json_encode($output);
 }

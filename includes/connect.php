@@ -27,7 +27,7 @@ function random_string($length) {
     $string ="";
 
     for ($p = 0; $p < $length; $p++) {
-        $string .= $characters[mt_rand(0, strlen($characters))];
+        $string .= $characters[mt_rand(0, strlen($characters)-1)];
     }
 
     return $string;
@@ -151,7 +151,7 @@ function round_voting_stats_all($voting_round) {
 	}
 	
 	$output_arr[0] = $sumVotes;
-	$output_arr[1] = floor($sumVotes/2);
+	$output_arr[1] = floor($sumVotes*get_site_constant('max_voting_fraction'));
 	$output_arr[2] = $stats_all;
 	$output_arr[3] = $nation_id_to_rank;
 	
@@ -174,8 +174,10 @@ function current_round_table($current_round, $user, $show_vote_links, $show_intr
 	$html .= "<div class=\"col-sm-2\">Coins Voted</div>\n";
 	$html .= "<div class=\"col-sm-1\">%</div>\n";
 	$html .= "<div class=\"col-sm-2\">Score</div>\n";
-	$html .= "<div class=\"col-sm-2\">Your Votes</div>";
-	$html .= "<div class=\"col-sm-1\">&nbsp;</div>";
+	if ($user) {
+		$html .= "<div class=\"col-sm-2\">Your Votes</div>";
+		$html .= "<div class=\"col-sm-1\">&nbsp;</div>";
+	}
 	$html .=  "</div>";
 	
 	for ($i=0; $i<count($round_stats); $i++) {
@@ -189,16 +191,16 @@ function current_round_table($current_round, $user, $show_vote_links, $show_intr
 		$html .= "<div class=\"col-sm-2\">".number_format(($round_stats[$i]['voting_sum'])/pow(10,8), 3)." EMP</div>\n";
 		$html .= "<div class=\"col-sm-1\">".number_format(ceil(100*100*$round_stats[$i]['voting_sum']/$totalVoteSum)/100, 2)."%</div>\n";
 		$html .= "<div class=\"col-sm-2\">".number_format(($round_stats[$i]['voting_score'])/pow(10,8))." points</div>\n";
-		$html .= "<div class=\"col-sm-2\">";
 		if ($user) {
+			$html .= "<div class=\"col-sm-2\">";
 			$qq = "SELECT SUM(amount) FROM webwallet_transactions WHERE currency_mode='beta' AND nation_id='".$round_stats[$i]['nation_id']."' AND user_id='".$user['user_id']."' AND block_id >= ".(($current_round-1)*get_site_constant('round_length')+1)." AND block_id <= ".($current_round*get_site_constant('round_length')-1).";";
 			$rr = run_query($qq);
 			$user_coinvotes = mysql_fetch_row($rr);
 			$user_coinvotes = $user_coinvotes[0]/pow(10,8);
 			$html .=  number_format($user_coinvotes, 3)." EMP";
+			$html .= "</div>";
+			if ($show_vote_links) $html .= "<div class=\"col-sm-1\"><a href=\"\" onclick=\"start_vote(".$round_stats[$i]['nation_id'].");return false;\">Vote</a></div>";
 		}
-		$html .= "</div>";
-		if ($show_vote_links) $html .= "<div class=\"col-sm-1\"><a href=\"\" onclick=\"start_vote(".$round_stats[$i]['nation_id'].");return false;\">Vote</a></div>";
 		$html .=  "</div>";
 	}
 	$html .= "</div>";
@@ -272,12 +274,12 @@ function last_voting_transaction_id() {
 	return $r[0];
 }
 function wallet_text_stats($thisuser, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance) {
-	$html = "Last block completed: #".$last_block_id.", currently mining #".($last_block_id+1)."<br/>\n";
+	$html = "<div class=\"row\"><div class=\"col-sm-2\">Available&nbsp;funds:</div><div class=\"col-sm-3\" style=\"text-align: right;\"><font class=\"greentext\">".number_format(floor($mature_balance*1000)/1000, 3)."</font> EmpireCoins</div></div>\n";
+	$html .= "<div class=\"row\"><div class=\"col-sm-2\">Locked&nbsp;funds:</div><div class=\"col-sm-3\" style=\"text-align: right;\"><font class=\"redtext\">".number_format($immature_balance, 3)."</font> EmpireCoins</div>";
+	if ($immature_balance > 0) $html .= "<div class=\"col-sm-1\"><a href=\"\" onclick=\"$('#lockedfunds_details').toggle('fast'); return false;\">Details</a></div>";
+	$html .= "</div>\n";
+	$html .= "Last block completed: #".$last_block_id.", currently mining #".($last_block_id+1)."<br/>\n";
 	$html .= "Current votes count towards block ".$block_within_round."/".get_site_constant('round_length')." in round #".$current_round."<br/>\n";
-	$html .= "Locked funds: <font class=\"redtext\">".number_format($immature_balance, 3)."</font> EmpireCoins";
-	if ($immature_balance > 0) $html .= " <a href=\"\" onclick=\"$('#lockedfunds_details').toggle('fast'); return false;\">Details</a>";
-	$html .= "<br/>\n";
-	$html .= "Available funds: <font class=\"greentext\">".number_format(floor($mature_balance*1000)/1000, 3)."</font> EmpireCoins<br/>\n";
 	
 	if ($immature_balance > 0) {
 		$q = "SELECT * FROM webwallet_transactions t LEFT JOIN nations n ON t.nation_id=n.nation_id WHERE t.amount > 0 AND t.user_id='".$thisuser['user_id']."' AND t.currency_mode='".$thisuser['currency_mode']."' AND t.block_id > ".(last_block_id($thisuser['currency_mode']) - get_site_constant('maturity'))." AND t.transaction_desc != 'giveaway' ORDER BY t.block_id ASC, t.transaction_id ASC;";
@@ -329,5 +331,42 @@ function vote_nation_details($nation, $rank, $voting_sum, $totalVoteSum) {
 		<div class="col-xs-5">'.(ceil(100*10000*$voting_sum/$totalVoteSum)/10000).'%</div>
 	</div>';
 	return $html;
+}
+function generate_user_addresses($user_id) {
+	$q = "SELECT * FROM nations n WHERE NOT EXISTS(SELECT * FROM addresses a WHERE a.user_id='".$user_id."' AND a.nation_id=n.nation_id) ORDER BY n.nation_id ASC;";
+	$r = run_query($q);
+	while ($nation = mysql_fetch_array($r)) {
+		$new_address = "E";
+		$rand1 = rand(0, 1);
+		$rand2 = rand(0, 1);
+		if ($rand1 == 0) $new_address .= "e";
+		else $new_address .= "E";
+		if ($rand2 == 0) $new_address .= strtoupper($nation['address_character']);
+		else $new_address .= $nation['address_character'];
+		$new_address .= random_string(31);
+		
+		$qq = "INSERT INTO addresses SET nation_id='".$nation['nation_id']."', user_id='".$user_id."', address='".$new_address."', time_created='".time()."';";
+		$rr = run_query($qq);
+	}
+	
+	$q = "SELECT * FROM addresses WHERE nation_id IS NULL AND user_id='".$user_id."';";
+	$r = run_query($q);
+	if (mysql_numrows($r) == 0) {
+		$new_address = "Ex";
+		$new_address .= random_string(32);
+		
+		$qq = "INSERT INTO addresses SET user_id='".$user_id."', address='".$new_address."', time_created='".time()."';";
+		$rr = run_query($qq);
+	}
+}
+function user_address_id($user_id, $nation_id) {
+	$q = "SELECT * FROM addresses WHERE user_id='".$user_id."' AND nation_id='".$nation_id."';";
+	$r = run_query($q);
+	
+	if (mysql_numrows($r) > 0) {
+		$address = mysql_fetch_array($r);
+		return $address['address_id'];
+	}
+	else return -1;
 }
 ?>

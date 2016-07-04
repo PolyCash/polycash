@@ -140,6 +140,18 @@ body {
 .spain {
 	background-image: url('/img/flags/Spain.jpg');
 }
+.nigeria {
+	background-image: url('/img/flags/Nigeria.jpg');
+}
+.turkey {
+	background-image: url('/img/flags/Turkey.jpg');
+}
+.iran {
+	background-image: url('/img/flags/Iran.jpg');
+}
+.pakistan {
+	background-image: url('/img/flags/Pakistan.jpg');
+}
 
 @media only screen 
 and (min-device-width : 320px) 

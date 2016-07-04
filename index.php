@@ -8,7 +8,7 @@ $nav_tab_selected = "home";
 include('includes/html_start.php');
 
 if ($thisuser) { ?>
-	<div class="container" style="max-width: 1000px; padding-top: 10px;">
+	<div class="container" style="max-width: 1000px; padding: 10px 0px;">
 		<?php
 		$account_value = account_coin_value($thisuser);
 		include("includes/wallet_status.php");
@@ -31,7 +31,7 @@ if ($thisuser) { ?>
 				</center>
 			</div>
 			<div class="col-sm-10">
-				Welcome to EmpireCoin, the first decentralized voting game on the planet!  With EmpireCoin, you can bet money against players from around the world every hour in an epic and never-ending struggle for power.  By correctly voting your coins you'll win money, but if you're wrong you won't lose anything.  Do you love gambling, sports betting or speculating on currencies and stocks?  Stop playing rigged games and get in on the first betting game where money is created from thin air and given out to the players. Start building your empire today in this massively multiplayer online game of chance!
+				Welcome to EmpireCoin, the first decentralized voting game on the planet!  With EmpireCoin, you can bet money against players from around the world every half hour in an epic and never-ending struggle for power.  By correctly voting your coins you'll win money, but if you're wrong you won't lose anything.  Do you love gambling, sports betting or speculating on currencies and stocks?  Stop playing rigged games and get in on the first betting game where money is created from thin air and given out to the players. Start building your empire today in this massively multiplayer online game of chance!
 				<br/><br/>
 				EmpireCoin is currently in beta.  You can <a href="/wallet/">sign up</a> for a beta web wallet to try out the game, and the coin itself will be released soon. For more information, please download the <a href="/EmpireCoin.pdf">EmpireCoin Whitepaper</a>.
 			</div>
@@ -41,7 +41,7 @@ if ($thisuser) { ?>
 		<h1>Rules of the Game</h1>
 		<ol class="rules_list">
 			<li>
-				In EmpireCoin, a voting round is concluded approximately every hour, with one of these 16 nations winning each round:
+				In EmpireCoin, a voting round is concluded approximately every hour, with one of these 16 empires winning each round:
 				<div style="max-width: 900px; margin: 8x 0px;">
 					<?php
 					$nation_q = "SELECT * FROM nations ORDER BY vote_id ASC;";
@@ -59,12 +59,27 @@ if ($thisuser) { ?>
 				</div>
 			</li>
 			<li>Blocks are mined approximately every 6 minutes with the SHA256 algorithm. Miners receive 25 empirecoins per block.</li>
-			<li>A voting round is concluded after every 10th block is mined.  Upon the conclusion of a round, 750 empirecoins are divided up and given out to voters who voted correctly in that round, in proportion to the amounts of their votes.</li>
-			<li>Every nation has a force multiplier which is initially set to 16.  The numerator of each force multiplier is increased by 1 after every voting round, and winning a round increases the denominator of that nation's force multiplier by 1.</li>
-			<li>The voting score for each nation is calculated upon the conclusion of a round as it's force multiplier times the sum of its coin votes during that round. This voting score determines the winning nation for the round.</li>
-			<li>The eligible nation with the highest voting score wins the round.  In the case of an exact tie of voting scores, the nation with the lowest ID number wins.</li>
-			<li>If any nation achieves greater than 50% of the coin votes in a particular round, it is disqualified from winning that round for tyranny of the majority and the nation with the next highest voting score wins the round.</li>
+			<li>A voting round is concluded after every 10th block is mined.  Upon the conclusion of a round, 750 empirecoins are divided up and given out to the winning voters in proportion to the amounts of their votes.</li>
+			<li>If any empire achieves greater than 25% of the coin votes in a particular round, it is disqualified from winning that round.</li>
+			<li>Every empire has a force multiplier which is initially set to 16.  The numerator of each force multiplier is increased by 1 after every voting round.  Winning a round increases the denominator of an empire's force multiplier by 1.</li>
+			<li>In each round, every empire has a voting score which determines its ranking in relation to the other empires. An empire's voting score is equal to its coin votes times its force multiplier.</li>
+			<li>The eligible empire with the highest voting score wins the round.  In the case of an exact tie of voting scores, the empire with the lowest ID number wins.</li>
 		</ol>
+		<br/>
+		<h1>Strategy & Gameplay</h1>
+		<p>
+		EmpireCoin transactions have a maturity of 8 blocks; this means that coins can be spent every 9 blocks.  Voting rounds consist of 10 blocks but the final block is non-voting, therefore it's only possible to vote each coin once in a voting round. There is no penalty for voting incorrectly except for an optional transaction fee, therefore each stakeholder should vote his or her coins in every round to maximize profits.
+		</p>
+		<p>
+		Because coin rewards are divided up and given out proportionally to the winning team, winning as part of a small group yields the highest rewards.  The 25% voting cap is instituted to avoid voting centralization and to encourage high rewards for winning voters.  A coalition of stakeholders controlling nearly 25% of the currency is ideally positioned to win a round.  But other voters can sacrifice their votes to sabotage such a coalition by voting with them in order to push the empire over the 25% limit.
+		</p>
+		<p>
+		As in other cryptocurrencies such as Bitcoin, empirecoin miners have veto authority over any transactions included in their block.  Therefore miners have some influence over the outcome of voting rounds and votes which are cast may not always be included in the current voting round.  To ensure that votes are counted, users should cast their votes early in the round to make it more likely that an honest miner will include their vote in the round. Votes cast in the 8th or 9th block of the round are likely to be vetoed by corrupt miners and included in the following voting round, potentially tying up a players money in an undesired voting position.
+		</p>
+		<p>
+		EmpireCoin's force multipliers are set up to ensure diversity in the winning nations.  Empires which haven't won in a long time will have a high force multiplier, making it easy for them to win the round with only a small number of coins voted.  Empires which have won many times will have low force multipliers, discouraging voters from voting for them.
+		</p>
+		<!--As with other cryptocurrencies such as Bitcoin, unconfirmed transactions are at risk of being double-spent until the next block is solved.  -->
 		<br/>
 		<h1>Get Started</h1>
 		We're still developing EmpireCoin and it's not ready to download just yet.  But you can try out a simulation of the EmpireCoin game for free by signing up for an EmpireCo.in web wallet. We'll give you 1,000 beta EmpireCoins just for signing up.  But remember, this is just a simulation; rules of the game could change and your coins might be lost at any time.<br/>
