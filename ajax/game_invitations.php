@@ -80,8 +80,8 @@ if ($thisuser) {
 									$invite_game = false;
 									try_apply_invite_key($send_to_user['user_id'], $invitation['invitation_key'], $invite_game);
 									
-									if (strpos($send_to_user['username'], '@')) {
-										$email_id = send_invitation_email($game, $send_to, $invitation);
+									if (strpos($send_to_user['notification_email'], '@')) {
+										$email_id = send_invitation_email($game, $send_to_user['notification_email'], $invitation);
 									}
 									
 									output_message(1, "Great, the invitation has been sent.", false);

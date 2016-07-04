@@ -3386,13 +3386,13 @@ function start_game(&$game) {
 	$qq = "UPDATE games SET initial_coins='".coins_in_existence($game, false)."', game_status='running', start_time='".time()."', start_datetime=NOW() WHERE game_id='".$game['game_id']."';";
 	$rr = run_query($qq);
 
-	$qq = "SELECT * FROM user_games ug JOIN users u ON ug.game_id=u.user_id WHERE ug.game_id='".$game['game_id']."' AND u.username LIKE '%@%';";
+	$qq = "SELECT * FROM user_games ug JOIN users u ON ug.game_id=u.user_id WHERE ug.game_id='".$game['game_id']."' AND u.notification_email LIKE '%@%';";
 	$rr = run_query($qq);
 	while ($player = mysql_fetch_array($rr)) {
 		$subject = $GLOBALS['coin_brand_name']." game \"".$game['name']."\" has started.";
 		$message = $game['name']." has started. If haven't already entered your votes, please log in now and start playing.<br/>\n";
 		$message .= game_info_table($game);
-		$email_id = mail_async($player['username'], $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "");
+		$email_id = mail_async($player['notification_email'], $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "");
 	}
 	
 	if ($game['variation_id'] > 0) {

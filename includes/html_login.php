@@ -38,20 +38,20 @@ $(document).ready(function() {
 			if ($_REQUEST['invite_key'] != "") echo '<input type="hidden" name="invite_key" value="'.make_alphanumeric(strip_tags($_REQUEST['invite_key'])).'" />';
 			?>
 			<div class="row">
-				<div class="col-sm-4">Username or email:</div>
+				<div class="col-sm-4 form-control-static">Alias:</div>
 				<div class="col-sm-6">
 					<input id="login_username" class="responsive_input form-control" name="username" type="text" size="25" maxlength="40" value="<?php echo $email; ?>" />
 				</div>
 			</div>
 			<div class="row">
-				<div class="col-sm-4">Password:</div>
+				<div class="col-sm-4 form-control-static">Password:</div>
 				<div class="col-sm-6">
 					<input id="login_password" class="responsive_input form-control" name="password" type="password" size="25" maxlength="25" />
 				</div>
 			</div>
 			<div class="row">
 				<div class="col-sm-6 col-sm-push-4">
-					<input type="submit" class="btn btn-primary" value="Log in" />
+					<input type="submit" class="btn btn-primary" value="Log In" />
 				</div>
 			</div>
 			<div class="row">
@@ -72,15 +72,6 @@ $(document).ready(function() {
 			
 			if ($_REQUEST['invite_key'] != "") echo '<input type="hidden" name="invite_key" value="'.make_alphanumeric(strip_tags($_REQUEST['invite_key'])).'" />';
 			?>
-			<?php /*
-			<div class="row">
-				<div class="col-sm-4">First Name: (Optional)</div>
-				<div class="col-sm-6"><input type="text" name="first" size="25" class="responsive_input"></div>
-			</div>
-			<div class="row">
-				<div class="col-sm-4">Last Name: (Optional)</div>
-				<div class="col-sm-6"><input type="text" name="last" size="25" class="responsive_input"></div>
-			</div> */ ?>
 			<div class="row">
 				<div class="col-sm-10">
 					<select id="autogen_password" name="autogen_password" class="responsive_input form-control" onchange="autogen_password_changed();" style="margin-bottom: 5px;">
@@ -90,24 +81,28 @@ $(document).ready(function() {
 				</div>
 			</div>
 			<div class="row">
-				<div class="col-sm-4">Username or email:</div>
-				<div class="col-sm-6"><input type="text" name="email" size="25" class="responsive_input form-control"></div>
+				<div class="col-sm-4 form-control-static">Alias:</div>
+				<div class="col-sm-6"><input type="text" name="username" size="25" class="responsive_input form-control" required="required"></div>
+			</div>
+			<div class="row">
+				<div class="col-sm-4 form-control-static">Email address:</div>
+				<div class="col-sm-6"><input type="text" name="notification_email" size="25" class="responsive_input form-control"></div>
 			</div>
 			<div class="row" title="Please enter a bitcoin address where you can receive payments.">
-				<div class="col-sm-4">Bitcoin address:</div>
+				<div class="col-sm-4 form-control-static">Bitcoin address:</div>
 				<div class="col-sm-6"><input type="text" name="bitcoin_address" size="25" class="responsive_input form-control"></div>
 			</div>
 			<div style="display: none;" id="signup_password_disp">
 				<div class="row">
-					<div class="col-sm-4">Password:</div>
+					<div class="col-sm-4 form-control-static">Password:</div>
 					<div class="col-sm-6">
-						<input class="responsive_input form-control" id="signup_password" name="password" type="password" size="25" maxlength="25" />
+						<input class="responsive_input form-control" id="signup_password" name="password" type="password" size="25" maxlength="25" required="required" />
 					</div>
 				</div>
 				<div class="row">
-					<div class="col-sm-4">Repeat Password:</div>
+					<div class="col-sm-4 form-control-static">Repeat Password:</div>
 					<div class="col-sm-6">
-						<input class="responsive_input form-control" id="signup_password2" name="password2" type="password" size="25" maxlength="25" />
+						<input class="responsive_input form-control" id="signup_password2" name="password2" type="password" size="25" maxlength="25" required="required" />
 					</div>
 				</div>
 			</div>
@@ -120,7 +115,7 @@ $(document).ready(function() {
 			</div>
 			<?php } ?>
 			<div class="row">
-				<div class="col-sm-6">
+				<div class="col-sm-6 col-sm-push-4">
 					<input type="submit" value="Sign Up" class="btn btn-primary" />
 					<br/><br/>
 				</div>

@@ -7,10 +7,10 @@ $error_code = false;
 $message = "";
 
 if ($_REQUEST['do'] == "signup") {
-	$first = safe_text($_POST['first']);
-	$last = safe_text($_POST['last']);
-	$username = $_POST['email'];
+	$username = $_POST['username'];
+	$notification_email = $_POST['notification_email'];
 	safe_email($username);
+	safe_email($notification_email);
 	
 	if ($GLOBALS['pageview_tracking_enabled']) {
 		$ip_match_q = "SELECT * FROM users WHERE ip_address='".$_SERVER['REMOTE_ADDR']."';";
@@ -28,132 +28,138 @@ if ($_REQUEST['do'] == "signup") {
 		$user_r = run_query($user_q);
 		
 		if (mysql_numrows($user_r) == 0) {
-			if ($GLOBALS['signup_captcha_required']) {
-				$recaptcha_resp = recaptcha_check_answer($GLOBALS['recaptcha_privatekey'], $_SERVER["REMOTE_ADDR"], $_POST["g-recaptcha-response"]);
-			}
-			if ($GLOBALS['signup_captcha_required'] && !$recaptcha_resp) {
-				$error_code = 2;
-				$message = "You entered the wrong CAPTCHA code. Please try again. ";
-			}
-			else {
-				$pass_error = FALSE;
-				
-				if ($_REQUEST['autogen_password'] == "1") {
-					$new_pass = random_string(12);
-					$new_pass_hash = hash('sha256', $new_pass);
+			if ($notification_email == "" || mysql_numrows(run_query("SELECT * FROM users WHERE notification_email='".$notification_email."';")) == 0) {
+				if ($GLOBALS['signup_captcha_required']) {
+					$recaptcha_resp = recaptcha_check_answer($GLOBALS['recaptcha_privatekey'], $_SERVER["REMOTE_ADDR"], $_POST["g-recaptcha-response"]);
 				}
-				else {
-					$new_pass = mysql_real_escape_string($_REQUEST['password']);
-					if ($_REQUEST['password2'] != $new_pass) $pass_error = TRUE;
-					$new_pass_hash = $new_pass;
-				}
-				
-				if ($pass_error) {
+				if ($GLOBALS['signup_captcha_required'] && !$recaptcha_resp) {
 					$error_code = 2;
-					$message = "The passwords that you entered did not match. Please try again. ";
+					$message = "You entered the wrong CAPTCHA code. Please try again. ";
 				}
 				else {
-					$verify_code = random_string(32);
+					$pass_error = FALSE;
 					
-					$q = "INSERT INTO users SET game_id='".get_site_constant('primary_game_id')."', first_name='".$first."', last_name='".$last."', username='".$username."', notification_email='".$username."', api_access_code='".mysql_real_escape_string(random_string(32))."', password='".$new_pass_hash."'";
-					if ($GLOBALS['pageview_tracking_enabled']) {
-						$q .= ", ip_address='".$_SERVER['REMOTE_ADDR']."'";
-					}
-					if ($GLOBALS['new_games_per_user'] != "unlimited") {
-						$q .= ", authorized_games='".$GLOBALS['new_games_per_user']."'";
-					}
-					$bitcoin_address = $_REQUEST['bitcoin_address'];
-					safe_text($bitcoin_address);
-					
-					if ($bitcoin_address != "") {
-						$qq = "INSERT INTO external_addresses SET user_id='".$user_id."', currency_id=2, address='".$bitcoin_address."', time_created='".time()."';";
-						$rr = run_query($qq);
-						$address_id = mysql_insert_id();
-						$q .= ", bitcoin_address_id='".$address_id."'";
-					}
-					
-					$q .= ", time_created='".time()."', verify_code='".$verify_code."';";
-					$r = run_query($q);
-					$user_id = mysql_insert_id();
-					
-					
-					$q = "SELECT * FROM users WHERE user_id='".$user_id."';";
-					$r = run_query($q);
-					$thisuser = mysql_fetch_array($r);
-					
-					$session_key = session_id();
-					$expire_time = time()+3600*24;
-					
-					$error_code = 1;
 					if ($_REQUEST['autogen_password'] == "1") {
-						$message = "Your account was with this password: <b>".$new_pass."</b>. Please save this password now; it will not be displayed again.";
+						$new_pass = random_string(12);
+						$new_pass_hash = hash('sha256', $new_pass);
 					}
 					else {
-						$message = "Your account has been created.  Please enter your password below to log in.";
+						$new_pass = mysql_real_escape_string($_REQUEST['password']);
+						if ($_REQUEST['password2'] != $new_pass) $pass_error = TRUE;
+						$new_pass_hash = $new_pass;
 					}
 					
-					if ($GLOBALS['pageview_tracking_enabled']) {
-						$q = "SELECT * FROM viewer_connections WHERE type='viewer2user' AND from_id='".$viewer_id."' AND to_id='".$thisuser['user_id']."';";
+					if ($pass_error) {
+						$error_code = 2;
+						$message = "The passwords that you entered did not match. Please try again. ";
+					}
+					else {
+						$verify_code = random_string(32);
+						
+						$q = "INSERT INTO users SET game_id='".get_site_constant('primary_game_id')."', username='".$username."', notification_email='".$notification_email."', api_access_code='".mysql_real_escape_string(random_string(32))."', password='".$new_pass_hash."'";
+						if ($GLOBALS['pageview_tracking_enabled']) {
+							$q .= ", ip_address='".$_SERVER['REMOTE_ADDR']."'";
+						}
+						if ($GLOBALS['new_games_per_user'] != "unlimited") {
+							$q .= ", authorized_games='".$GLOBALS['new_games_per_user']."'";
+						}
+						$bitcoin_address = $_REQUEST['bitcoin_address'];
+						safe_text($bitcoin_address);
+						
+						if ($bitcoin_address != "") {
+							$qq = "INSERT INTO external_addresses SET user_id='".$user_id."', currency_id=2, address='".$bitcoin_address."', time_created='".time()."';";
+							$rr = run_query($qq);
+							$address_id = mysql_insert_id();
+							$q .= ", bitcoin_address_id='".$address_id."'";
+						}
+						
+						$q .= ", time_created='".time()."', verify_code='".$verify_code."';";
 						$r = run_query($q);
-						if (mysql_numrows($r) == 0) {
-							$q = "INSERT INTO viewer_connections SET type='viewer2user', from_id='".$viewer_id."', to_id='".$thisuser['user_id']."';";
+						$user_id = mysql_insert_id();
+						
+						
+						$q = "SELECT * FROM users WHERE user_id='".$user_id."';";
+						$r = run_query($q);
+						$thisuser = mysql_fetch_array($r);
+						
+						$session_key = session_id();
+						$expire_time = time()+3600*24;
+						
+						$error_code = 1;
+						if ($_REQUEST['autogen_password'] == "1") {
+							$message = "Your account was with this password: <b>".$new_pass."</b>. Please save this password now; it will not be displayed again.";
+						}
+						else {
+							$message = "Your account has been created.  Please enter your password below to log in.";
+						}
+						
+						if ($GLOBALS['pageview_tracking_enabled']) {
+							$q = "SELECT * FROM viewer_connections WHERE type='viewer2user' AND from_id='".$viewer_id."' AND to_id='".$thisuser['user_id']."';";
+							$r = run_query($q);
+							if (mysql_numrows($r) == 0) {
+								$q = "INSERT INTO viewer_connections SET type='viewer2user', from_id='".$viewer_id."', to_id='".$thisuser['user_id']."';";
+								$r = run_query($q);
+							}
+							
+							$q = "UPDATE users SET ip_address='".$_SERVER['REMOTE_ADDR']."' WHERE user_id='".$thisuser['user_id']."';";
 							$r = run_query($q);
 						}
 						
-						$q = "UPDATE users SET ip_address='".$_SERVER['REMOTE_ADDR']."' WHERE user_id='".$thisuser['user_id']."';";
-						$r = run_query($q);
-					}
-					
-					// Send an email if the username includes
-					if ($GLOBALS['outbound_email_enabled'] && strpos($username, '@')) {
-						$email_message = "<p>A new ".$GLOBALS['site_name_short']." web wallet has been created for <b>".$username."</b>.</p>";
-						$email_message .= "<p>Thanks for signing up!</p>";
-						$email_message .= "<p>To log in any time please visit ".$GLOBALS['base_url']."/wallet/</p>";
-						$email_message .= "<p>This message was sent to you by ".$GLOBALS['base_url']."</p>";
+						// Send an email if the username includes
+						if ($GLOBALS['outbound_email_enabled'] && strpos($notification_email, '@')) {
+							$email_message = "<p>A new ".$GLOBALS['site_name_short']." web wallet has been created for <b>".$username."</b>.</p>";
+							$email_message .= "<p>Thanks for signing up!</p>";
+							$email_message .= "<p>To log in any time please visit ".$GLOBALS['base_url']."/wallet/</p>";
+							$email_message .= "<p>This message was sent to you by ".$GLOBALS['base_url']."</p>";
+							
+							$email_id = mail_async($notification_email, $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], "New account created", $email_message, "", "");
+						}
 						
-						$email_id = mail_async($username, $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], "New account created", $email_message, "", "");
-					}
-					
-					$q = "SELECT * FROM games WHERE game_id='".get_site_constant('primary_game_id')."';";
-					$r = run_query($q);
-					
-					if (mysql_numrows($r) == 1) {
-						$primary_game = mysql_fetch_array($r);
-						ensure_user_in_game($thisuser, $primary_game['game_id']);
+						$q = "SELECT * FROM games WHERE game_id='".get_site_constant('primary_game_id')."';";
+						$r = run_query($q);
+						
+						if (mysql_numrows($r) == 1) {
+							$primary_game = mysql_fetch_array($r);
+							ensure_user_in_game($thisuser, $primary_game['game_id']);
 
-						if ($primary_game['giveaway_status'] == "public_free") {
-							$giveaway = new_game_giveaway($primary_game, $user_id, 'initial_purchase', false);
+							if ($primary_game['giveaway_status'] == "public_free") {
+								$giveaway = new_game_giveaway($primary_game, $user_id, 'initial_purchase', false);
+							}
 						}
-					}
-					
-					$redirect_url = false;
-					
-					if ($GLOBALS['pageview_tracking_enabled']) log_user_in($thisuser, $redirect_url, $viewer_id);
-					else log_user_in($thisuser, $redirect_url);
-					
-					if ($_REQUEST['invite_key'] != "") {
-						$invite_game = false;
-						$success = try_apply_invite_key($thisuser['user_id'], $_REQUEST['invite_key'], $invite_game);
-						if ($success) {
-							header("Location: /wallet/".$invite_game['url_identifier']);
-							die();
+						
+						$redirect_url = false;
+						
+						if ($GLOBALS['pageview_tracking_enabled']) log_user_in($thisuser, $redirect_url, $viewer_id);
+						else log_user_in($thisuser, $redirect_url);
+						
+						if ($_REQUEST['invite_key'] != "") {
+							$invite_game = false;
+							$success = try_apply_invite_key($thisuser['user_id'], $_REQUEST['invite_key'], $invite_game);
+							if ($success) {
+								header("Location: /wallet/".$invite_game['url_identifier']);
+								die();
+							}
 						}
+						
+						$redir_game = fetch_game_from_url();
+						if ($redir_game) {
+							$header_loc = "/wallet/".$redir_game['url_identifier']."/";
+						}
+						else $header_loc = "/wallet/";
+						
+						header("Location: ".$header_loc);
+						die();
 					}
-					
-					$redir_game = fetch_game_from_url();
-					if ($redir_game) {
-						$header_loc = "/wallet/".$redir_game['url_identifier']."/";
-					}
-					else $header_loc = "/wallet/";
-					
-					header("Location: ".$header_loc);
-					die();
 				}
+			}
+			else {
+				$error_code = 2;
+				$message = "Sorry, someone has already registered that email address.";
 			}
 		}
 		else {
 			$error_code = 2;
-			$message = "Sorry that username is already registered.";
+			$message = "Sorry, someone has already registered that alias.";
 		}
 	}
 	else {
@@ -442,14 +448,19 @@ if ($thisuser) {
 		$nav_tab_selected = "wallet";
 		include('includes/html_start.php');
 		?>
-		<div class="container" style="max-width: 1000px;">
+		<div class="container" style="max-width: 1000px;"><br/>
 			<?php
 			$q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser['user_id']."' AND (g.creator_id='".$thisuser['user_id']."' OR g.game_status IN ('running','completed','published'));";
 			$r = run_query($q);
 			
-			echo "<br/>Please select a game.<br/>\n";
-			while ($user_game = mysql_fetch_array($r)) {
-				echo "<a href=\"/wallet/".$user_game['url_identifier']."/\">".$user_game['name']."</a><br/>\n";
+			if (mysql_numrows($r) > 0) {
+				echo "Please select a game.<br/>\n";
+				while ($user_game = mysql_fetch_array($r)) {
+					echo "<a href=\"/wallet/".$user_game['url_identifier']."/\">".$user_game['name']."</a><br/>\n";
+				}
+			}
+			else {
+				echo "You haven't joined any games yet.  <a href=\"/\">Click here</a> to see a list of available games.<br/>\n";
 			}
 			?>
 		</div>
@@ -1075,6 +1086,7 @@ $mature_balance = mature_balance($game, $thisuser);
 					<input class="btn btn-primary" type="submit" value="Save Voting Strategy" />
 				</form>
 				
+				<?php /*
 				<h2>Notifications</h2>
 				You can receive notifications whenever your <?php echo $game['coin_name_plural']; ?> are unlocked and ready to vote.<br/>
 				<div class="row">
@@ -1106,7 +1118,7 @@ $mature_balance = mature_balance($game, $thisuser);
 				</div>
 				<button style="display: none;" id="alias_save_btn" class="btn btn-primary" onclick="save_alias_preferences();">Save Privacy Settings</button>
 				<br/>
-				
+				*/ ?>
 			</div>
 			<div id="tabcontent3" style="display: none;" class="tabcontent">
 				<div id="performance_history">

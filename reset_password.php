@@ -36,23 +36,23 @@ include("includes/html_start.php");
 						<input type="hidden" name="do" value="reset_confirm" />
 						<input type="hidden" name="token2" value="<?php echo $reset_token['token2_key']; ?>" />
 						<div class="row">
-							<div class="col-md-4">
-								Username:
+							<div class="col-md-4 form-control-static">
+								Alias:
 							</div>
 							<div class="col-md-4"><b><?php echo $user['username']; ?></b></div>
 						</div>
 						<div class="row">
-							<div class="col-md-4">Enter a new password:</div>
+							<div class="col-md-4 form-control-static">Enter a new password:</div>
 							<div class="col-md-4">
-								<input id="reset_password" name="password" class="responsive_input form-control" type="password" size="30" />
+								<input id="reset_password" name="password" class="form-control" type="password" size="30" required="required" />
 							</div>
 						</div>
 						<div class="row">
-							<div class="col-md-4">
+							<div class="col-md-4 form-control-static">
 								Please re-enter the password:
 							</div>
 							<div class="col-md-4">
-								<input id="reset_password_confirm" name="password_confirm" class="responsive_input" type="password" size="30" />
+								<input id="reset_password_confirm" name="password_confirm" class="form-control" type="password" size="30" required="required" />
 							</div>
 						</div>
 						<div class="row">

@@ -7,9 +7,10 @@ if ($GLOBALS['outbound_email_enabled']) {
 	$success_msg = "A password reset link has been sent to that email address, please open your inbox and click the link to reset your password.";
 
 	$email = urldecode($_REQUEST['email']);
-
+	safe_email($email);
+	
 	if ($email != "") {
-		$q = "SELECT * FROM users WHERE username='".safe_email($email)."';";
+		$q = "SELECT * FROM users WHERE notification_email='".$email."';";
 		$r = run_query($q);
 		
 		if (mysql_numrows($r) == 1) {
@@ -31,7 +32,7 @@ if ($GLOBALS['outbound_email_enabled']) {
 			$message .= "<p><a href=\"".$reset_link."\">".$reset_link."</a></p>";
 			$message .= "<p>Sent by <a href=\"".$GLOBALS['base_url']."\">".$GLOBALS['site_name_short']."</a></p>";
 			
-			$res = mail_async($user['username'], $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "");
+			$res = mail_async($user['notification_email'], $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "");
 			
 			echo $success_msg;
 		}
