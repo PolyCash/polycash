@@ -115,7 +115,11 @@ if ($thisuser) { ?>
 			} ?>
 			<div id="current_round_table">
 				<?php
-				echo current_round_table(get_site_constant('primary_game_id'), $current_round, $thisuser, true);
+				$q = "SELECT * FROM games WHERE game_id='".get_site_constant('primary_game_id')."';";
+				$r = run_query($q);
+				$game = mysql_fetch_array($r);
+				
+				echo current_round_table($game, $current_round, $thisuser, true);
 				?>
 			</div>
 			

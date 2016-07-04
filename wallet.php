@@ -340,6 +340,16 @@ $mature_balance = $account_value - $immature_balance;
 			loop_event();
 			game_loop_event();
 		});
+		
+		$(document).keypress(function (e) {
+			if (e.which == 13) {
+				var selected_nation_db_id = $('#rank2nation_id_'+selected_nation_id).val();
+				
+				if ($('#vote_amount_'+selected_nation_db_id).is(":focus")) {
+					confirm_vote(selected_nation_db_id);
+				}
+			}
+		});
 		</script>
 		
 		<h1><?php
@@ -351,7 +361,7 @@ $mature_balance = $account_value - $immature_balance;
 		?>
 		<div id="wallet_text_stats">
 			<?php
-			echo wallet_text_stats($thisuser, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance);
+			echo wallet_text_stats($thisuser, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance, $game['seconds_per_block']);
 			?>
 		</div>
 		<br/>
@@ -390,16 +400,16 @@ $mature_balance = $account_value - $immature_balance;
 				</div>
 				<div id="current_round_table">
 					<?php
-					echo current_round_table($thisuser['game_id'], $current_round, $thisuser, true);
+					echo current_round_table($game, $current_round, $thisuser, true);
 					?>
 				</div>
 				<?php
 				if ($game['game_type'] == "instant" && $thisuser['user_id'] == $game['creator_id']) {
-					if ($game['block_timing'] == "user_controlled") $toggle_text = "Switch to realistic block timing";
+					if ($game['block_timing'] == "user_controlled") $toggle_text = "Switch to automatic block timing";
 					else $toggle_text = "Switch to user-controlled block timing";
 					?>
 					<div style="margin-top: 10px; overflow: hidden;">
-						<button class="btn btn-primary" onclick="toggle_block_timing();" id="timing_toggle_btn"><?php echo $toggle_text; ?></button>
+						<button class="btn btn-primary" onclick="toggle_block_timing();" id="toggle_timing_btn"><?php echo $toggle_text; ?></button>
 						<?php if ($game['block_timing'] == "user_controlled") { ?>
 						<button style="float: right;" class="btn btn-success" onclick="next_block();" id="next_block_btn">Next Block</button>
 						<?php } ?>

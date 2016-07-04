@@ -14,7 +14,8 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	$game = mysql_fetch_array($r);
 	
 	if ($game['game_type'] == "instant" && $game['block_timing'] == "realistic") {
-		$num = rand(0, 4);
+		$rand_max = floor($game['seconds_per_block']/get_site_constant('game_loop_seconds'))-1;
+		$num = rand(0, $rand_max);
 		if ($num == 0) {
 			$log_text = new_block($game['game_id']);
 		}
@@ -47,15 +48,15 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	if ($last_transaction_id != $_REQUEST['last_transaction_id']) {
 		$output['new_transaction'] = 1;
 		$output['last_transaction_id'] = $last_transaction_id;
-		$output['vote_details_general'] = vote_details_general($mature_balance);
 	}
 	else $output['new_transaction'] = 0;
 	
 	if ($last_block_id != $_REQUEST['last_block_id'] || $last_transaction_id != $_REQUEST['last_transaction_id']) {
-		$output['current_round_table'] = current_round_table($game_id, $current_round, $thisuser, true);
-		$output['wallet_text_stats'] = wallet_text_stats($thisuser, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance);
+		$output['current_round_table'] = current_round_table($game, $current_round, $thisuser, true);
+		$output['wallet_text_stats'] = wallet_text_stats($thisuser, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance, $game['seconds_per_block']);
 		$output['my_current_votes'] = my_votes_table($game_id, $current_round, $thisuser);
 		$output['account_value'] = number_format($account_value/pow(10,8), 2);
+		$output['vote_details_general'] = vote_details_general($mature_balance);
 		
 		$round_stats = round_voting_stats_all($game_id, $current_round);
 		$total_vote_sum = $round_stats[0];

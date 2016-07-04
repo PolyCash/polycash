@@ -191,12 +191,12 @@ function get_round_winner($round_stats_all) {
 	}
 	else return false;
 }
-function current_round_table($game_id, $current_round, $user, $show_intro_text) {
-	$last_block_id = last_block_id($game_id);
+function current_round_table($game, $current_round, $user, $show_intro_text) {
+	$last_block_id = last_block_id($game['game_id']);
 	$current_round = block_to_round($last_block_id+1);
 	$block_within_round = $last_block_id%get_site_constant('round_length')+1;
 	
-	$round_stats_all = round_voting_stats_all($game_id, $current_round);
+	$round_stats_all = round_voting_stats_all($game['game_id'], $current_round);
 	$total_vote_sum = $round_stats_all[0];
 	$max_vote_sum = $round_stats_all[1];
 	$round_stats = $round_stats_all[2];
@@ -214,7 +214,13 @@ function current_round_table($game_id, $current_round, $user, $show_intro_text) 
 		if ($last_block_id == 0) $html .= 'Currently mining the first block.<br/>';
 		else $html .= 'Last block completed: #'.$last_block_id.', currently mining #'.($last_block_id+1).'<br/>';
 		$html .= 'Current votes count towards block '.$block_within_round.'/'.get_site_constant('round_length').' in round #'.$current_round.'<br/>';
-		$html .= 'Approximately '.(get_site_constant('round_length')-$last_block_id%get_site_constant('round_length'))*get_site_constant('minutes_per_block').' minutes left in this round.<br/>';
+		
+		$seconds_left = round((get_site_constant('round_length')-$last_block_id%get_site_constant('round_length'))*$game['seconds_per_block']);
+		$minutes_left = round($seconds_left/60);
+		$html .= 'Approximately ';
+		if ($minutes_left > 1) $html .= $minutes_left." minutes";
+		else $html .= $seconds_left." seconds";
+		$html .= ' left in this round.<br/>';
 	}
 	
 	$html .= "<div class='row'>";
@@ -228,6 +234,7 @@ function current_round_table($game_id, $current_round, $user, $show_intro_text) 
 			else if ($winner_nation_id == $round_stats[$i]['nation_id']) $html .=  " greentext";
 			$html .='" id="vote_nation_'.$i.'" onmouseover="nation_selected('.$i.');" onclick="nation_selected('.$i.'); start_vote('.$round_stats[$i]['nation_id'].');">
 				<input type="hidden" id="nation_id2rank_'.$round_stats[$i]['nation_id'].'" value="'.$i.'" />
+				<input type="hidden" id="rank2nation_id_'.$i.'" value="'.$round_stats[$i]['nation_id'].'" />
 				<table>
 					<tr>
 						<td>
@@ -312,7 +319,7 @@ function last_transaction_id($game_id) {
 	if ($r[0] > 0) {} else $r[0] = 0;
 	return $r[0];
 }
-function wallet_text_stats($thisuser, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance) {
+function wallet_text_stats($thisuser, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance, $seconds_per_block) {
 	$html = "<div class=\"row\"><div class=\"col-sm-2\">Available&nbsp;funds:</div><div class=\"col-sm-3\" style=\"text-align: right;\"><font class=\"greentext\">".number_format(floor($mature_balance/pow(10,5))/1000, 2)."</font> EmpireCoins</div></div>\n";
 	$html .= "<div class=\"row\"><div class=\"col-sm-2\">Locked&nbsp;funds:</div><div class=\"col-sm-3\" style=\"text-align: right;\"><font class=\"redtext\">".number_format($immature_balance/pow(10,8), 2)."</font> EmpireCoins</div>";
 	if ($immature_balance > 0) $html .= "<div class=\"col-sm-1\"><a href=\"\" onclick=\"$('#lockedfunds_details').toggle('fast'); return false;\">Details</a></div>";
@@ -327,13 +334,17 @@ function wallet_text_stats($thisuser, $current_round, $last_block_id, $block_wit
 		$html .= "<div style='display: none; border: 1px solid #ccc; padding: 8px; border-radius: 8px; margin-top: 8px;' id='lockedfunds_details'>";
 		while ($next_transaction = mysql_fetch_array($r)) {
 			$avail_block = get_site_constant('maturity') + $next_transaction['block_id'] + 1;
-			$minutes_to_avail = ($avail_block - $last_block_id - 1)*get_site_constant("minutes_per_block");
+			$seconds_to_avail = round(($avail_block - $last_block_id - 1)*$seconds_per_block);
+			$minutes_to_avail = round($seconds_to_avail/60);
 			
 			if ($next_transaction['transaction_desc'] == "votebase") $html .= "You won ";
 			$html .= "<font class=\"greentext\">".round($next_transaction['amount']/(pow(10, 8)), 2)."</font> ";
 			if ($next_transaction['transaction_desc'] == "votebase") $html .= "coins in block ".$next_transaction['block_id'].". Coins";
 			else $html .= "coins received in block #".$next_transaction['block_id'];
-			$html .= " can be spent in block #".$avail_block.". (Approximately ".$minutes_to_avail." minutes). ";
+			$html .= " can be spent in block #".$avail_block.". (Approximately ";
+			if ($minutes_to_avail > 1) $html .= $minutes_to_avail." minutes";
+			else $html .= $seconds_to_avail." seconds";
+			$html .= "). ";
 			if ($next_transaction['nation_id'] > 0) {
 				$html .= "You voted for ".$next_transaction['name']." in round #".block_to_round($next_transaction['block_id']).". ";
 			}
