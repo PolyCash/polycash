@@ -1146,7 +1146,7 @@ if ($thisuser && $game) {
 				<h1>Withdraw</h1>
 				To withdraw coins please enter <?php echo $GLOBALS['app']->prepend_a_or_an($game->db_game['name']); ?> address below.<br/>
 				<div class="row">
-					<div class="col-md-3">
+					<div class="col-md-3 form-control-static">
 						Amount:
 					</div>
 					<div class="col-md-3">
@@ -1154,7 +1154,15 @@ if ($thisuser && $game) {
 					</div>
 				</div>
 				<div class="row">
+					<div class="col-md-3 form-control-static">
+						Fee:
+					</div>
 					<div class="col-md-3">
+						<input class="form-control" type="tel" value="<?php echo $user_strategy['transaction_fee']/pow(10,8); ?>" id="withdraw_fee" style="text-align: right;" />
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-3 form-control-static">
 						Address:
 					</div>
 					<div class="col-md-5">
@@ -1162,7 +1170,7 @@ if ($thisuser && $game) {
 					</div>
 				</div>
 				<div class="row">
-					<div class="col-md-3">
+					<div class="col-md-3 form-control-static">
 						Vote remainder towards:
 					</div>
 					<div class="col-md-5">
@@ -1180,8 +1188,9 @@ if ($thisuser && $game) {
 					</div>
 				</div>
 				<div class="row">
-					<div class="col-md-push-3 col-md-2">
+					<div class="col-md-push-3 col-md-5">
 						<button class="btn btn-success" id="withdraw_btn" onclick="attempt_withdrawal();">Withdraw</button>
+						<div id="withdraw_message" style="display: none; margin-top: 15px;"></div>
 					</div>
 				</div>
 				

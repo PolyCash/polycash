@@ -8,10 +8,12 @@ $output_obj['message'] = "";
 
 if ($thisuser && $game) {
 	$amount = floatval($_REQUEST['amount']);
-	$address = $_REQUEST['address'];
+	$fee = floatval($_REQUEST['fee']);
+	$address_text = $_REQUEST['address'];
 	
 	if ($amount > 0) {
 		$amount = $amount*pow(10,8);
+		$fee = $fee*pow(10,8);
 		$last_block_id = $game->last_block_id();
 		$mining_block_id = $last_block_id+1;
 		$account_value = $thisuser->account_coin_value($game);
@@ -21,7 +23,7 @@ if ($thisuser && $game) {
 		$remainder_address_id = $_REQUEST['remainder_address_id'];
 		
 		if ($remainder_address_id == "random") {
-			$q = "SELECT * FROM addresses WHERE user_id='".$thisuser->db_user['user_id']."' AND option_id > 0 ORDER BY RAND() LIMIT 1;";
+			$q = "SELECT * FROM addresses WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."' AND option_id > 0 AND is_mine=1 ORDER BY RAND() LIMIT 1;";
 			$r = $GLOBALS['app']->run_query($q);
 			$remainder_address = mysql_fetch_array($r);
 			$remainder_address_id = $remainder_address['address_id'];
@@ -31,42 +33,43 @@ if ($thisuser && $game) {
 		$user_strategy = false;
 		$success = $game->get_user_strategy($thisuser->db_user['user_id'], $user_strategy);
 		if ($success) {
-			if ($amount <= $mature_balance) {
-				$q = "SELECT * FROM addresses a LEFT JOIN users u ON a.user_id=u.user_id WHERE a.address='".mysql_real_escape_string($address)."' AND a.game_id='".$game->db_game['game_id']."';";
-				$r = $GLOBALS['app']->run_query($q);
+			if ($amount+$fee <= $mature_balance) {
+				$address_ok = false;
 				
-				if (mysql_numrows($r) == 1) {
-					$address = mysql_fetch_array($r);
-					
-					$transaction_id = $game->new_transaction(false, array($amount), $thisuser->db_user['user_id'], $address['user_id'], false, 'transaction', false, array($address['address_id']), $remainder_address_id);
-					
-					$output_obj['result_code'] = 1;
-					$output_obj['message'] = "Great, your coins have been sent!";
+				if ($game->db_game['game_type'] == "real") {
+					$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
+					$validate_address = $coin_rpc->validateaddress($address_text);
+					$address_ok = $validate_address['isvalid'];
+					if ($address_ok) {
+						$db_address = $game->create_or_fetch_address($address_text, TRUE, $coin_rpc, FALSE);
+					}
 				}
 				else {
-					$output_obj['result_code'] = 6;
-					$output_obj['message'] = "It looks like you entered an invalid address.";
+					$q = "SELECT * FROM addresses a LEFT JOIN users u ON a.user_id=u.user_id WHERE a.address='".mysql_real_escape_string($address_text)."' AND a.game_id='".$game->db_game['game_id']."';";
+					$r = $GLOBALS['app']->run_query($q);
+					if (mysql_numrows($r) == 1) {
+						$db_address = mysql_fetch_array($r);
+						$address_ok = true;
+					}
 				}
+				
+				if ($address_ok) {
+					$address = mysql_fetch_array($r);
+					
+					$transaction_id = $game->new_transaction(false, array($amount), $thisuser->db_user['user_id'], $db_address['user_id'], false, 'transaction', false, array($db_address['address_id']), $remainder_address_id, $fee);
+					
+					if ($transaction_id) {
+						$GLOBALS['app']->output_message(1, 'Great, your coins have been sent! <a target="_blank" href="/explorer/'.$game->db_game['url_identifier'].'/transactions/'.$transaction_id.'">View Transaction</a>');
+					}
+					else $GLOBALS['app']->output_message(7, "There was an error creating the transaction");
+				}
+				else $GLOBALS['app']->output_message(6, "It looks like you entered an invalid address.");
 			}
-			else {
-				$output_obj['result_code'] = 5;
-				$output_obj['message'] = "You don't have that many coins to spend, your transaction has been canceled.";
-			}
+			else $GLOBALS['app']->output_message(5, "You don't have that many coins to spend, your transaction has been canceled.");
 		}
-		else {
-			$output_obj['result_code'] = 4;
-			$output_obj['message'] = "It looks like you entered an invalid address.";
-		}
+		else $GLOBALS['app']->output_message(4, "It looks like you entered an invalid address.");
 	}
-	else {
-		$output_obj['result_code'] = 3;
-		$output_obj['message'] = "Please enter a valid amount.";
-	}
+	else $GLOBALS['app']->output_message(3, "Please enter a valid amount.");
 }
-else {
-	$output_obj['result_code'] = 2;
-	$output_obj['message'] = "Please log in to withdraw coins.";
-}
-
-echo json_encode($output_obj);
+else $GLOBALS['app']->output_message(2, "Please log in to withdraw coins.");
 ?>

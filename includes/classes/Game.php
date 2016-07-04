@@ -1862,7 +1862,9 @@ class Game {
 							
 							$output_address = $this->create_or_fetch_address($address, true, $coin_rpc, false);
 							
-							$q = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, game_id='".$this->db_game['game_id']."', out_index='".$j."', user_id='".$output_address['user_id']."', address_id='".$output_address['address_id']."'";
+							$q = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, game_id='".$this->db_game['game_id']."', out_index='".$j."'";
+							if ($output_address['user_id'] > 0) $q .= ", user_id='".$output_address['user_id']."'";
+							$q .= ", address_id='".$output_address['address_id']."'";
 							if ($output_address['option_id'] > 0) $q .= ", option_id=".$output_address['option_id'];
 							$q .= ", create_transaction_id='".$db_transaction_id."', amount='".($outputs[$j]["value"]*pow(10,8))."', create_block_id='".$new_block_id."';";
 							$r = $GLOBALS['app']->run_query($q);
@@ -1924,7 +1926,6 @@ class Game {
 			}
 		}
 		*/
-		
 		if ($tx_hash != "") {
 			try {
 				try {
@@ -1979,7 +1980,10 @@ class Game {
 						
 						$output_address = $this->create_or_fetch_address($address, true, $coin_rpc, false);
 						
-						$q = "INSERT INTO transaction_ios SET spend_status='unconfirmed', instantly_mature=0, game_id='".$this->db_game['game_id']."', out_index='".$j."', user_id='".$output_address['user_id']."', address_id='".$output_address['address_id']."'";
+						$q = "INSERT INTO transaction_ios SET spend_status='unconfirmed', instantly_mature=0, game_id='".$this->db_game['game_id']."'";
+						$q .= ", out_index='".$j."'";
+						if ($output_address['user_id'] > 0) $q .= ", user_id='".$output_address['user_id']."'";
+						$q .= ", address_id='".$output_address['address_id']."'";
 						if ($output_address['option_id'] > 0) $q .= ", option_id=".$output_address['option_id'];
 						$q .= ", create_transaction_id='".$db_transaction_id."', amount='".($outputs[$j]["value"]*pow(10,8))."';";
 						$r = $GLOBALS['app']->run_query($q);

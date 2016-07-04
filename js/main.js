@@ -454,11 +454,24 @@ function attempt_withdrawal() {
 		var address = $('#withdraw_address').val();
 		
 		$('#withdraw_btn').html("Withdrawing...");
-		$.get("/ajax/withdraw.php?game_id="+game_id+"&amount="+encodeURIComponent(amount)+"&address="+encodeURIComponent(address)+"&remainder_address_id="+$('#withdraw_remainder_address_id').val(), function(result) {
+		
+		$.get("/ajax/withdraw.php?game_id="+game_id+"&amount="+encodeURIComponent(amount)+"&address="+encodeURIComponent(address)+"&remainder_address_id="+$('#withdraw_remainder_address_id').val()+"&fee="+encodeURIComponent($('#withdraw_fee').val()), function(result) {
+			var result_obj = JSON.parse(result);
+			
 			$('#withdraw_btn').html("Withdraw");
 			$('#withdraw_amount').val("");
-			var result_obj = JSON.parse(result);
-			alert(result_obj['message']);
+			
+			$('#withdraw_message').removeClass("redtext");
+			$('#withdraw_message').removeClass("greentext");
+			
+			$('#withdraw_message').show('fast');
+			$('#withdraw_message').html(result_obj['message']);
+			
+			if (result_obj['status_code'] == 1) $('#withdraw_message').addClass("greentext");
+			else $('#withdraw_message').addClass("redtext");
+			
+			setTimeout("$('#withdraw_message').slideUp('fast');", 5000);
+			
 			refresh_if_needed();
 		});
 	}
