@@ -8,7 +8,7 @@ ALTER TABLE `user_strategies` CHANGE `voting_strategy` `voting_strategy` ENUM('m
 ALTER TABLE `strategy_round_allocations` ADD `applied` TINYINT(1) NOT NULL DEFAULT '0' AFTER `points`;
 ALTER TABLE `games` CHANGE `payout_weight` `payout_weight` ENUM('coin','coin_block','coin_round') CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL DEFAULT 'coin_block';
 ALTER TABLE `transactions` ADD `round_id` BIGINT(20) NULL DEFAULT NULL AFTER `block_id`;
-ALTER TABLE `transactions` ADD `ref_round_id` BIGINT(20) NULL DEFAULT NULL AFTER `ref_coin_blocks_destroyed`, ADD `ref_coin_rounds_destroyed` INT(20) NOT NULL DEFAULT '0' AFTER `ref_round_id`;
+ALTER TABLE `transactions` ADD `ref_round_id` BIGINT(20) NULL DEFAULT NULL AFTER `ref_coin_blocks_destroyed`, ADD `ref_coin_rounds_destroyed` BIGINT(20) NOT NULL DEFAULT '0' AFTER `ref_round_id`;
 ALTER TABLE `game_nations` ADD `coin_round_score` BIGINT(20) NOT NULL DEFAULT '0' AFTER `coin_block_score`;
 ALTER TABLE `game_nations` ADD `unconfirmed_coin_round_score` BIGINT(20) NOT NULL DEFAULT '0' AFTER `unconfirmed_coin_block_score`;
 ALTER TABLE `transaction_IOs` ADD `create_round_id` BIGINT(20) NULL DEFAULT NULL AFTER `spend_block_id`, ADD `spend_round_id` BIGINT(20) NULL DEFAULT NULL AFTER `create_round_id`;
@@ -20,3 +20,6 @@ ALTER TABLE `games` ADD `exponential_inflation_minershare` DECIMAL( 9, 8 ) NOT N
 ALTER TABLE `games` ADD `initial_coins` BIGINT( 20 ) NOT NULL DEFAULT '0' AFTER `exponential_inflation_minershare` ;
 ALTER TABLE `games` ADD `final_round` INT( 11 ) NULL DEFAULT NULL AFTER `initial_coins` ;
 ALTER TABLE `games` CHANGE `game_status` `game_status` ENUM( 'unstarted', 'running', 'paused', 'completed' ) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL DEFAULT 'unstarted';
+ALTER TABLE `games` CHANGE `giveaway_status` `giveaway_status` ENUM( 'on', 'off', 'invite_free', 'invite_pay', 'public_pay' ) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL DEFAULT 'off';
+ALTER TABLE `games` ADD `invite_cost` DECIMAL( 10, 2 ) NOT NULL DEFAULT '0', ADD `invite_currency` INT NULL DEFAULT NULL ;
+ALTER TABLE `games` ADD `featured` TINYINT(1) NOT NULL DEFAULT `0` AFTER `game_status`;

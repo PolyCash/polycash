@@ -449,8 +449,8 @@ function my_last_transaction_id($user_id, $game_id) {
 		$spend_trans_id = mysql_fetch_row($spend_r);
 		$spend_trans_id = $spend_trans_id[0];
 		
-		if ($create_trans_id > $spend_trans_id) return $create_trans_id;
-		else return $spend_trans_id;
+		if ($create_trans_id > $spend_trans_id) return intval($create_trans_id);
+		else return intval($spend_trans_id);
 	}
 	else return 0;
 }
@@ -658,7 +658,7 @@ function user_address_id($game_id, $user_id, $nation_id) {
 	else return false;
 }
 
-function new_payout_transaction(&$game, $voting_round, $block_id, $winning_nation, $winning_score) {
+function new_payout_transaction(&$game, $round_id, $block_id, $winning_nation, $winning_score) {
 	$log_text = "";
 	
 	if ($game['payout_weight'] == "coin") $score_field = "amount";
@@ -669,18 +669,18 @@ function new_payout_transaction(&$game, $voting_round, $block_id, $winning_natio
 	$transaction_id = mysql_insert_id();
 	
 	// Loop through the correctly voted UTXOs
-	$q = "SELECT * FROM transaction_IOs i, users u WHERE i.game_id='".$game['game_id']."' AND i.user_id=u.user_id AND i.create_block_id > ".(($voting_round-2)*$game['round_length'])." AND i.create_block_id < ".(($voting_round-1)*$game['round_length'])." AND i.nation_id=".$winning_nation.";";
+	$q = "SELECT * FROM transaction_IOs i, users u WHERE i.game_id='".$game['game_id']."' AND i.user_id=u.user_id AND i.create_block_id > ".(($round_id-1)*$game['round_length'])." AND i.create_block_id < ".($round_id*$game['round_length'])." AND i.nation_id=".$winning_nation.";";
 	$r = run_query($q);
 	
 	$total_paid = 0;
 	$out_index = 0;
 	
 	while ($input = mysql_fetch_array($r)) {
-		$payout_amount = floor(pos_reward_in_round($game, $voting_round-1)*$input[$score_field]/$winning_score);
+		$payout_amount = floor(pos_reward_in_round($game, $round_id)*$input[$score_field]/$winning_score);
 		
 		$total_paid += $payout_amount;
 		
-		$qq = "INSERT INTO transaction_IOs SET spend_status='unspent', out_index='".$out_index."', instantly_mature=0, game_id='".$game['game_id']."', user_id='".$input['user_id']."', address_id='".$input['address_id']."', nation_id=NULL, create_transaction_id='".$transaction_id."', amount='".$payout_amount."', create_block_id='".$block_id."', create_round_id='".block_to_round($game, $block_id)."';";
+		$qq = "INSERT INTO transaction_IOs SET spend_status='unspent', out_index='".$out_index."', instantly_mature=0, game_id='".$game['game_id']."', user_id='".$input['user_id']."', address_id='".$input['address_id']."', nation_id=NULL, create_transaction_id='".$transaction_id."', amount='".$payout_amount."', create_block_id='".$block_id."', create_round_id='".$round_id."';";
 		$rr = run_query($qq);
 		$output_id = mysql_insert_id();
 		
@@ -1318,7 +1318,7 @@ function new_block($game_id) {
 	$last_block_id = $block['block_id'];
 	$mining_block_id = $last_block_id+1;
 	
-	$voting_round = block_to_round($game, $mining_block_id);
+	$justmined_round = block_to_round($game, $last_block_id);
 	
 	$log_text .= "Created block $last_block_id<br/>\n";
 	
@@ -1344,7 +1344,7 @@ function new_block($game_id) {
 			
 			while ($input_utxo = mysql_fetch_array($rr)) {
 				$coin_blocks_created = ($last_block_id - $input_utxo['create_block_id'])*$input_utxo['amount'];
-				$coin_rounds_created = ($voting_round - $input_utxo['create_round_id'])*$input_utxo['amount'];
+				$coin_rounds_created = ($justmined_round - $input_utxo['create_round_id'])*$input_utxo['amount'];
 				$qqq = "UPDATE transaction_IOs SET coin_blocks_created='".$coin_blocks_created."', coin_rounds_created='".$coin_rounds_created."' WHERE io_id='".$input_utxo['io_id']."';";
 				$rrr = run_query($qqq);
 				$total_coin_blocks_created += $coin_blocks_created;
@@ -1366,7 +1366,7 @@ function new_block($game_id) {
 				$rrr = run_query($qqq);
 			}
 			
-			$qq = "UPDATE transactions t JOIN transaction_IOs o ON t.transaction_id=o.create_transaction_id JOIN transaction_IOs i ON t.transaction_id=i.spend_transaction_id SET t.block_id='".$last_block_id."', t.round_id='".$voting_round."', o.spend_status='unspent', o.create_block_id='".$last_block_id."', o.create_round_id='".block_to_round($game, $last_block_id)."', i.spend_status='spent', i.spend_block_id='".$last_block_id."', i.spend_round_id='".$voting_round."' WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';";
+			$qq = "UPDATE transactions t JOIN transaction_IOs o ON t.transaction_id=o.create_transaction_id JOIN transaction_IOs i ON t.transaction_id=i.spend_transaction_id SET t.block_id='".$last_block_id."', t.round_id='".$justmined_round."', o.spend_status='unspent', o.create_block_id='".$last_block_id."', o.create_round_id='".$justmined_round."', i.spend_status='spent', i.spend_block_id='".$last_block_id."', i.spend_round_id='".$justmined_round."' WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';";
 			$rr = run_query($qq);
 			
 			$fee_sum += $fee_amount;
@@ -1374,7 +1374,7 @@ function new_block($game_id) {
 	}
 	
 	$mined_address = create_or_fetch_address($game, "Ex".random_string(32), true, false, false);
-	$mined_transaction_id = new_transaction($game, array(false), array(pow_reward_in_round($game, $voting_round)+$fee_sum), false, false, $last_block_id, "coinbase", false, array($mined_address['address_id']), false, 0);
+	$mined_transaction_id = new_transaction($game, array(false), array(pow_reward_in_round($game, $justmined_round)+$fee_sum), false, false, $last_block_id, "coinbase", false, array($mined_address['address_id']), false, 0);
 	
 	if ($GLOBALS['outbound_email_enabled'] && $game['game_type'] == "real") {
 		// Send notifications for coins that just became available
@@ -1401,8 +1401,8 @@ function new_block($game_id) {
 	
 	// Run payouts
 	if ($last_block_id%$game['round_length'] == 0) {
-		$log_text .= "<br/>Running payout on voting round #".($voting_round-1).", it's now round ".$voting_round."<br/>\n";
-		$round_voting_stats = round_voting_stats_all($game, $voting_round-1);
+		$log_text .= "<br/>Running payout on voting round #".$justmined_round.", it's now round ".($justmined_round+1)."<br/>\n";
+		$round_voting_stats = round_voting_stats_all($game, $justmined_round);
 		
 		$score_sum = $round_voting_stats[0];
 		$max_score_sum = $round_voting_stats[1];
@@ -1416,7 +1416,7 @@ function new_block($game_id) {
 		for ($rank=1; $rank<=$game['num_voting_options']; $rank++) {
 			$nation_id = $round_voting_stats[$rank-1]['nation_id'];
 			$nation_rank2db_id[$rank] = $nation_id;
-			$nation_scores = nation_score_in_round($game, $nation_id, $voting_round-1);
+			$nation_scores = nation_score_in_round($game, $nation_id, $justmined_round);
 			
 			if ($nation_scores['sum'] > $max_score_sum) {}
 			else if (!$winning_nation && $nation_scores['sum'] > 0) {
@@ -1435,11 +1435,11 @@ function new_block($game_id) {
 		$payout_transaction_id = false;
 		
 		if ($winning_nation) {
-			$q = "UPDATE game_nations SET last_win_round=".($voting_round-1)." WHERE game_id='".$game['game_id']."' AND nation_id='".$winning_nation."';";
+			$q = "UPDATE game_nations SET last_win_round=".$justmined_round." WHERE game_id='".$game['game_id']."' AND nation_id='".$winning_nation."';";
 			$r = run_query($q);
 			
 			$log_text .= $round_voting_stats[$nation_id2rank[$winning_nation]]['name']." wins with ".($winning_votesum/(pow(10, 8)))." EMP voted.<br/>";
-			$payout_response = new_payout_transaction($game, $voting_round, $last_block_id, $winning_nation, $winning_votesum);
+			$payout_response = new_payout_transaction($game, $justmined_round, $last_block_id, $winning_nation, $winning_votesum);
 			$payout_transaction_id = $payout_response[0];
 			$log_text .= "Payout response: ".$payout_response[1];
 			$log_text .= "<br/>\n";
@@ -1447,11 +1447,11 @@ function new_block($game_id) {
 		else $log_text .= "No winner<br/>";
 		
 		if ($game['losable_bets_enabled'] == 1) {
-			$betbase_response = new_betbase_transaction($game, $voting_round-1, $last_block_id+1, $winning_nation);
+			$betbase_response = new_betbase_transaction($game, $justmined_round, $last_block_id+1, $winning_nation);
 			$log_text .= $betbase_response[1];
 		}
 		
-		$q = "INSERT INTO cached_rounds SET game_id='".$game['game_id']."', round_id='".($voting_round-1)."', payout_block_id='".$last_block_id."'";
+		$q = "INSERT INTO cached_rounds SET game_id='".$game['game_id']."', round_id='".$justmined_round."', payout_block_id='".$last_block_id."'";
 		if ($payout_transaction_id) $q .= ", payout_transaction_id='".$payout_transaction_id."'";
 		if ($winning_nation) $q .= ", winning_nation_id='".$winning_nation."'";
 		$q .= ", winning_score='".$winning_score."', score_sum='".$score_sum."', time_created='".time()."'";
@@ -1461,7 +1461,7 @@ function new_block($game_id) {
 		$q .= ";";
 		$r = run_query($q);
 
-		if ($voting_round-1 == $game['final_round']) {
+		if ($justmined_round == $game['final_round']) {
 			$q = "UPDATE games SET game_status='completed' WHERE game_id='".$game['game_id']."';";
 			$r = run_query($q);
 		}
@@ -2774,7 +2774,7 @@ function generate_invitation(&$game, $inviter_id, &$invitation, $user_id) {
 }
 
 function check_giveaway_available(&$game, $user, &$invitation) {
-	if ($game['game_type'] == "simulation" && ($game['giveaway_status'] == "on" || $game['giveaway_status'] == "invite_only")) {
+	if ($game['game_type'] == "simulation" && ($game['giveaway_status'] == "on" || $game['giveaway_status'] == "invite_free")) {
 		$q = "SELECT * FROM invitations WHERE game_id='".$game['game_id']."' AND used_user_id='".$user['user_id']."' AND used_time=0 AND used=0;";
 		$r = run_query($q);
 		if (mysql_numrows($r) > 0) {
@@ -2907,13 +2907,35 @@ function nation_flag($nation_id, $nation_name) {
 }
 function format_seconds($seconds) {
 	$seconds = intval($seconds);
+	$weeks = floor($seconds/(3600*24*7));
+	$days = floor($seconds/(3600*24));
 	$hours = floor($seconds / 3600);
 	$minutes = floor($seconds / 60);
 	$seconds = $seconds % 60;
 	
-	if ($hours > 0) return $hours." hours";
-	else if ($minutes > 0) return $minutes." minutes";
-	else return $seconds." seconds";
+	if ($weeks > 0) {
+		if ($weeks != 1) $str = $weeks." week";
+		else $str = $weeks." weeks";
+		$days = $days - 7*$weeks;
+		if ($days != 1) $str .= " and ".$days." days";
+		else $str .= " and ".$days." day";
+		return $str;
+	}
+	else if ($days > 1) {
+		return $days." days";
+	}
+	else if ($hours > 0) {
+		if ($hours != 1) return $hours." hours";
+		else return $hours." hour";
+	}
+	else if ($minutes > 0) {
+		if ($minutes != 1) return $minutes." minutes";
+		else return $minutes." minute";
+	}
+	else {
+		if ($seconds != 1) return $seconds." seconds";
+		else return $seconds." second";
+	}
 }
 function game_url_identifier($game_name) {
 	$url_identifier = "";

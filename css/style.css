@@ -17,7 +17,7 @@ body {
 	background-position: center center;
 	z-index: 1;
 }
-.carouselText {
+.carouselText h1 {
 	position: absolute;
 	top: 150px;
 	left: 0px;

@@ -18,6 +18,15 @@ else if ($uri_parts[1] == "explorer") {
 	include("explorer.php");
 }
 else {
-	echo "404 - Page not found";
+	include("includes/connect.php");
+	include("includes/get_session.php");
+
+	$q = "SELECT * FROM games WHERE url_identifier='".mysql_real_escape_string($uri_parts[1])."';";
+	$r = run_query($q);
+	if (mysql_numrows($r) == 1) {
+		$game = mysql_fetch_array($r);
+		include("game_homepage.php");
+	}
+	else echo "404 - Page not found";
 }
 ?>

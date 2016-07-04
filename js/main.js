@@ -448,7 +448,7 @@ function attempt_withdrawal() {
 	}
 }
 
-var game_form_vars = "giveaway_status,giveaway_amount,maturity,max_voting_fraction,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,game_status,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round".split(",");
+var game_form_vars = "giveaway_status,giveaway_amount,maturity,max_voting_fraction,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,game_status,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency".split(",");
 function switch_to_game(game_id, action) {
 	var fetch_link_text = $('#fetch_game_link_'+game_id).html();
 	var switch_link_text = $('#switch_game_btn').html();
@@ -520,6 +520,13 @@ function switch_to_game(game_id, action) {
 				$('#game_form_has_final_round').val(0);
 			}
 
+			if (json_result['giveaway_status'] == "invite_pay" || json_result['giveaway_status'] == "public_pay") {
+				$('#game_form_giveaway_status_pay').show();
+			}
+			else {
+				$('#game_form_giveaway_status_pay').hide();
+			}
+
 			if (json_result['my_game']) $('#game_form_game_status').prop('disabled', false);
 			else $('#game_form_game_status').prop('disabled', true);
 		}
@@ -533,7 +540,7 @@ function switch_to_game(game_id, action) {
 		}
 	});
 }
-function final_round_changed() {
+function game_form_final_round_changed() {
 	var final_round = parseInt($('#game_form_has_final_round').val());
 	if (final_round == 1) {
 		$('#game_form_final_round_disp').slideDown('fast');
@@ -553,6 +560,15 @@ function game_form_inflation_changed() {
 	else {
 		$('#game_form_inflation_exponential').hide();
 		$('#game_form_inflation_linear').slideDown('fast');
+	}
+}
+function game_form_giveaway_status_changed() {
+	var giveaway_status = $('#game_form_giveaway_status').val();
+	if (giveaway_status == "invite_pay" || giveaway_status == "public_pay") {
+		$('#game_form_giveaway_status_pay').slideDown('fast');
+	}
+	else {
+		$('#game_form_giveaway_status_pay').hide();
 	}
 }
 function save_game() {
@@ -1267,7 +1283,7 @@ function manage_game_invitations(this_game_id) {
 }
 function generate_invitation(this_game_id) {
 	$.get("/ajax/game_invitations.php?action=generate&game_id="+this_game_id, function(result) {
-		manage_game_invitations(game_id);
+		manage_game_invitations(this_game_id);
 	});
 }
 function send_invitation(this_game_id, invitation_id) {

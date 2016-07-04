@@ -6,28 +6,10 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuse
 $pagetitle = "EmpireCoin - Vote for your empire in the very first decentralized blockchain voting game.";
 $nav_tab_selected = "home";
 include('includes/html_start.php');
-
-$q = "SELECT * FROM games WHERE game_id='".get_site_constant('primary_game_id')."';";
-$r = run_query($q);
-$game = mysql_fetch_array($r);
-
-$last_block_id = last_block_id($game['game_id']);
-$current_round = block_to_round($game, $last_block_id+1);
-
-if ($thisuser) { ?>
-	<div class="container" style="max-width: 1000px; padding: 10px 0px;">
-		<?php
-		$account_value = account_coin_value($game, $thisuser);
-		include("includes/wallet_status.php");
-		?>
-	</div>
-	<?php
-}
-
 ?>
 <div class="container-fluid nopadding">
 	<div class="top_banner" id="home_carousel">
-		<div class="carouselText">EmpireCoin</div>
+		<div class="carouselText"><h1>EmpireCoin</h1></div>
 	</div>
 </div>
 <div class="container" style="max-width: 1000px; padding-top: 10px;">
@@ -36,185 +18,101 @@ if ($thisuser) { ?>
 			<img alt="EmpireCoin Logo" id="home_logo" src="/img/logo/icon-150x150.png" />
 		</div>
 		<div class="col-sm-10">
-			<?php
-			$blocks_per_hour = 3600/$game['seconds_per_block'];
-			$seconds_per_round = $game['seconds_per_block']*$game['round_length'];
-			$round_reward = (coins_created_in_round($game, $current_round))/pow(10,8);
-
-			if ($game['inflation'] == "linear") {
-				$miner_pct = 100*($game['pow_reward']*$game['round_length'])/($round_reward*pow(10,8));
-			}
-			else $miner_pct = 100*$game['exponential_inflation_minershare'];
-			?>
 			<div class="paragraph">
-				Welcome to EmpireCoin, the first decentralized voting game on the planet. In EmpireCoin, you can bet money against players from around the world every <?php echo $seconds_per_round/60; ?> minutes in an epic and never-ending struggle for power. By correctly voting your coins you'll win money, but if you're wrong you won't lose anything. Do you love gambling, sports betting or speculating on currencies and stocks? Stop playing rigged games and get in on the first betting game where money is created from thin air and given out to the players. Start building your empire today in this massively multiplayer online game of chance!
+				Welcome to EmpireCoin, the first decentralized voting game on the planet. EmpireCoin is a cryptocurrency where you can bet money against players from around the world every day in an epic and never-ending struggle for power. By correctly voting your coins you'll win money, but if you're wrong you won't lose anything. Do you love gambling, sports betting or speculating on currencies and stocks? Stop playing rigged games and get in on the first betting game where money is created from thin air and given out to the players. Start building your empire today in this massively multiplayer online game of chance!
 			</div>
 			<div class="paragraph">
-				<?php
-				if ($game['inflation'] == "linear") {
-					$rounds_per_hour = 3600/($game['seconds_per_block']*$game['round_length']);
-					$coins_per_hour = $round_reward*$rounds_per_hour;
-					echo "EmpireCoin is a cryptocurrency which generates ";
-					echo number_format($coins_per_hour)." coins every hour. ";
-					echo format_bignum($round_reward)." coins are given out per ".rtrim(format_seconds($seconds_per_round), 's')." voting round. ";
-					echo format_bignum($miner_pct);
-					?>% of the currency is given to proof of work miners for securing the network and the remaining <?php
-					echo format_bignum(100-$miner_pct);
-					?>% is given out to stakeholders for casting winning votes.<?php
-				}
-				else {
-					echo "EmpireCoin is a cryptocurrency with ".(100*$game['exponential_inflation_rate'])."% inflation every ".format_seconds($seconds_per_round);
-					echo format_bignum($miner_pct);
-					?>% of the currency is given to proof of work miners for securing the network and the remaining <?php
-					echo format_bignum(100-$miner_pct);
-					?>% is given out to stakeholders for casting winning votes.<?php
-				}
-				?>
+				For more information, please download the <a href="/EmpireCoin.pdf">EmpireCoin Whitepaper</a>.
 			</div>
-			<div class="paragraph">
-				In EmpireCoin you can win a tiny number of free coins by casting your votes correctly.  Votes build up over time in proportion to the number of empirecoins that you hold. When you vote for an empire, your votes are used up but your empirecoins are retained. With a great coin staking strategy, you can accumulate empirecoins faster than inflation.  Automated voting is encouraged in EmpireCoin.  Through the EmpireCoin APIs it's easy to code up a custom strategy which makes smart, real-time decisions about how to stake your coins.
-			</div>
-			<div class="paragraph">
-				To get started, please read the rules below and then <a href="/wallet/">sign up</a> for a beta account.  Or download the <a href="/EmpireCoin.pdf">EmpireCoin Whitepaper</a>.
-			</div>
-			<div class="paragraph">
-				<a href="/wallet/<?php echo $game['url_identifier']; ?>/" class="btn btn-success" style="margin: 5px 0px;">Log In or Sign Up</a>
-				<a href="/explorer/<?php echo $game['url_identifier']; ?>/rounds/" class="btn btn-primary" style="margin: 5px 0px;">Blockchain Explorer</a>
-			</div>
-			<?php
-			if ($thisuser) { ?>
-				<div class="row">
-					<div class="col-md-6">
-						<div id="my_current_votes">
-							<?php
-							echo my_votes_table($game['game_id'], $current_round, $thisuser);
-							?>
-						</div>
-					</div>
-				</div>
-				<?php
-			}
-			?>
 		</div>
 	</div>
+
 	<div class="paragraph">
-		<h1>Rules of the Game</h1>
-		
-		<ol class="rules_list">
-			<li>Coin holders can stake their coins for one of these <?php echo $game['num_voting_options']; ?> empires every <?php echo format_seconds($seconds_per_round); ?> by submitting a voting transaction.</li>
-			<?php
-			$block_within_round = $last_block_id%$game['round_length']+1;
-			$score_sums = total_score_in_round($game, $current_round, true);
-			
-			$round_stats = round_voting_stats_all($game, $current_round);
-			$nation_id2rank = $round_stats[3];
-			?>
-			<div id="current_round_table" style="margin-bottom: 10px;">
-				<?php
-				echo current_round_table($game, $current_round, $thisuser, false);
-				?>
-			</div>
-			
-			<li>Voting transactions are only counted if they are confirmed in a voting block. All blocks are voting blocks except for the final transaction of each round.</li>
-			<li>Blocks are mined approximately every <?php echo format_seconds($game['seconds_per_block']); ?> by the SHA256 algorithm. Miners receive <?php echo format_bignum($game['pow_reward']/pow(10,8)); ?> empirecoins per block.</li>
-			<li>Blocks are grouped into voting rounds.  Blocks 1 through <?php echo $game['round_length']; ?> make up the first round, and every subsequent <?php echo $game['round_length']; ?> blocks are grouped into a round.</li>
-			<li>A voting round will have a winning empire if at least one empire receives votes but is not disqualified.</li>
-			<li>Any empire with more than <?php echo format_bignum(100*$game['max_voting_fraction']); ?>% of the votes is disqualified from winning the round.</li>
-			<li>The eligible empire with the most votes wins the round.</li>
-			<li>In case of a tie, the empire with the lowest ID number wins.</li>
-			<li>When a round ends <?php echo format_bignum($game['pos_reward']/pow(10,8)); ?> empirecoins are divided up and given out to the winning voters in proportion to the amounts of their votes.</li>
-		</ol>
+		<h2>EmpireCoin Private Games</h2>
+		In addition to the EmpireCoin decentralized currency, EmpireCoin's unique software allows anyone to create a private currency backed by dollars or Bitcoins which incorporates EmpireCoin gameplay.  Users can create a private game and then invite friends to buy in and play for real money.  Unlike the official EmpireCoin currency, private games end after a certain number of rounds and the money that was initially paid in is split up and given out in proportion to players' final balances.
 	</div>
+
 	<div class="paragraph">
-		<h1>Strategy & Gameplay</h1>
-		Because coin rewards are divided up and given out proportionally to the winning team, winning as part of a small group yields the highest rewards.  The <?php echo format_bignum(100*$game['max_voting_fraction']); ?>% voting cap is instituted to avoid voting centralization and to encourage high rewards for winning voters.  Players may benefit by forming voting pools and voting together to influence the winning empire.
+		We're still developing the decentralized version of EmpireCoin and it's not yet ready to download.  But you can get involved with EmpireCoin now by joining one of these private games and buying in with Bitcoins or dollars:<br/>
+		<?php
+		$q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE featured=1;";
+		$r = run_query($q);
+		echo '<div class="row">';
+		$counter = 0;
+		while ($featured_game = mysql_fetch_array($r)) {
+			$blocks_per_hour = 3600/$featured_game['seconds_per_block'];
+			$round_reward = ($featured_game['pos_reward']+$featured_game['pow_reward']*$featured_game['round_length'])/pow(10,8);
+			$rounds_per_hour = 3600/($featured_game['seconds_per_block']*$featured_game['round_length']);
+			$coins_per_hour = $round_reward*$rounds_per_hour;
+			$seconds_per_round = $featured_game['seconds_per_block']*$featured_game['round_length'];
+			echo '<div class="col-md-6">';
+
+			echo '<h3>'.$featured_game['name'].'</h3>';
+			if ($featured_game['giveaway_status'] == "invite_pay" || $featured_game['giveaway_status'] == "public_pay") {
+				echo "You can join this game by paying ".number_format($featured_game['invite_cost'])." ".$featured_game['currency_short_name']."s for ".format_bignum($featured_game['giveaway_amount']/pow(10,8))." coins. ";
+			}
+			else echo "You can join this game and receive ".format_bignum($featured_game['giveaway_amount']/pow(10,8))." coins for free. ";
+
+			if ($featured_game['final_round'] > 0) {
+				$game_total_seconds = $seconds_per_round*$featured_game['final_round'];
+				echo "This game will last ".$featured_game['final_round']." rounds (".format_seconds($game_total_seconds)."). ";
+			}
+			else echo "This game doesn't end, but you can sell your coins at any time. ";
+
+			echo 'This coin has '.$featured_game['inflation'].' inflation';
+			if ($featured_game['inflation'] == "linear") echo format_bignum($round_reward)."; coins are created per round with ".format_bignum($featured_game['pos_reward']/pow(10,8))." coins given to voters, and ".format_bignum($featured_game['pow_reward']*$featured_game['round_length']/pow(10,8))." coins given to miners. ";
+			else echo " of ".(100*$featured_game['exponential_inflation_rate'])."% per round  with ".(100 - 100*$featured_game['exponential_inflation_minershare'])."% given to voters and ".(100*$featured_game['exponential_inflation_minershare'])."% given to miners. ";
+
+			echo "Each round consists of ".$featured_game['round_length'].", ".rtrim(format_seconds($featured_game['seconds_per_block']), 's')." blocks and coins are ";
+			if ($featured_game['maturity'] > 0) {
+				echo "locked for ";
+				echo $featured_game['maturity']." block";
+				if ($featured_game['maturity'] != 1) echo "s";
+				echo " after being spent.";
+			}
+			else echo "immediately available after being confirmed in a transaction.";
+			echo "<br/>\n";
+			echo '<a class="btn btn-primary" style="margin-top: 5px;" href="/'.$featured_game['url_identifier'].'">Join '.$featured_game['name'].'</a>';
+
+			echo '</div>';
+			if ($counter != 0 && $counter%2 == 0) echo '</div><div class="row">';
+			$counter++;
+		}
+		echo '</div>';
+		?>
+	</div>
+
+	<div class="paragraph">
+		<h2>Strategy &amp; Gameplay</h2>
+		The winning empire for an EmpireCoin voting round is determined entirely by the votes of the players.  Therefore, winning in EmpireCoin is all about colluding with other players and organizing against competing factions.  Players can form voting pools and vote together to influence the winning empire.
 	</div>
 	<div class="paragraph">
 		As in other cryptocurrencies like Bitcoin, miners have veto authority over any transactions included in their block.  Because miners have some influence on the winning empire it is possible that your votes may not be counted.
 	</div>
-	<!--
 	<div class="paragraph">
-		<h1>Gamified Proof of Stake</h1>
-		EmpireCoin is fundamentally a proof of work cryptocurrency, with SHA256 miners earning <?php echo format_bignum($game['pow_reward']/pow(10,8)); ?> empirecoins per block.  Unlike Bitcoin, EmpireCoin avoids block-reward halving in favor of a fixed linear inflation.
-	</div>-->
-	<div class="paragraph">
-		<h1>Voting Pools</h1>
+		<h2>Voting Pools</h2>
 		EmpireCoin's unique gameplay encourages stakeholders to cooperate and vote together against competing factions.  Groups can create voting pools by coding up an API endpoint which incorporates their custom voting logic.  Or you can join an existing voting pool by entering a voting pool's URL which will control your voting decisions.
 	</div>
 	<div class="paragraph">
-		<h1>Get Started</h1>
-		We're still developing EmpireCoin and it's not yet ready to download.  But you can try out a simulation of the EmpireCoin game for free by signing up for an <?php echo $GLOBALS['site_name']; ?> web wallet. 
-		<?php if ($game['giveaway_status'] == "on") { ?>We'll give you <?php echo format_bignum($game['giveaway_amount']/pow(10,8)); ?> beta empirecoins just for signing up.
-		<?php } ?>
-		Since EmpireCoin is in beta, please be aware that you may lose your coins at any time.<br/>
-		<a href="/wallet/<?php echo $game['url_identifier']; ?>/" style="margin: 5px 0px;" class="btn btn-success">Sign Up</a>
-		<a href="/explorer/<?php echo $game['url_identifier']; ?>/rounds/" style="margin: 5px 0px;" class="btn btn-primary">Blockchain Explorer</a>
+		<h2>EmpireCoin API</h2>
+		Automated &amp; algorithmic voting strategies are encouraged in EmpireCoin.  After signing up for a web wallet, you can choose from one of several automated voting strategies and then tweak parameters to optimize your votes.  Or you can choose the "Vote by API" voting strategy and then write code to fully customize your voting strategy.  For more information, please visit the <a href="/api/about/">EmpireCoin API page</a>.
 	</div>
 	<div class="paragraph">
-		<h1>EmpireCoin API</h1>
-		Automated & algorithmic voting strategies are encouraged in EmpireCoin.  After signing up for a web wallet, you can choose from one of several automated voting strategies and then tweak parameters to optimize your votes.  Or you can choose the "Vote by API" voting strategy and then write code to fully customize your voting strategy.  For more information, please visit the <a href="/api/about/">EmpireCoin API page</a>.
-	</div>
-	<div class="paragraph">
-		<h1>Proof of Burn Betting</h1>
+		<h2>Proof of Burn Betting</h2>
 		In addition to EmpireCoin's gamified inflation, the EmpireCoin protocol also enables decentralized betting through a unique proof-of-burn protocol.  By sending coins to an address like "china_wins_round_777", anyone can place a bet against other bettors.  If correct, new coins will be created and sent to the winner.
 	</div>
+
 	<div class="paragraph text-center">
 		<?php echo $GLOBALS['site_name'].", ".date("Y"); ?>
 	</div>
-	<div class="paragraph">
-		<div id="vote_popups"><?php
-		echo initialize_vote_nation_details($game, $nation_id2rank, $score_sums['sum'], $thisuser['user_id']);
-		?></div>
-		
-		<?php
-		if ($thisuser) {
-			$account_value = account_coin_value($game, $thisuser);
-			$immature_balance = immature_balance($game, $thisuser);
-			$mature_balance = mature_balance($game, $thisuser);
-		}
-		else $mature_balance = 0;
-		?>
-		<div style="display: none;" id="vote_details_general">
-			<?php echo vote_details_general($mature_balance); ?>
-		</div>
-	</div>
 </div>
-
 <script type="text/javascript">
 //<![CDATA[
-var last_block_id = <?php echo $last_block_id; ?>;
-var last_transaction_id = <?php echo last_transaction_id($game['game_id']); ?>;
-var my_last_transaction_id = <?php echo my_last_transaction_id($thisuser['user_id'], $thisuser['game_id']); ?>;
-var mature_io_ids_csv = '<?php echo mature_io_ids_csv($thisuser['user_id'], $game); ?>';
-var game_round_length = <?php echo $game['round_length']; ?>;
-var game_id = <?php echo $game['game_id']; ?>;
-var game_loop_index = 1;
-var last_game_loop_index_applied = -1;
-var min_bet_round = <?php
-	$bet_round_range = bet_round_range($game);
-	echo $bet_round_range[0];
-?>;
-var nation_has_votingaddr = [];
-for (var i=1; i<=16; i++) { nation_has_votingaddr[i] = false; }
-var votingaddr_count = 0;
-
-var refresh_page = "home";
-var refresh_in_progress = false;
-var last_refresh_time = 0;
-var selected_nation_id = false;
-var user_logged_in = <?php if ($thisuser) echo 'true'; else echo 'false'; ?>;
-
 var homeCarousel;
 
 $(document).ready(function() {
 	homeCarousel = new ImageCarousel('home_carousel');
 	homeCarousel.initialize();
-	nation_selected(0);
-	game_loop_event();
-});
-
-$(".navbar-toggle").click(function(event) {
-	$(".navbar-collapse").toggle('in');
 });
 //]]>
 </script>

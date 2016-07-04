@@ -542,6 +542,7 @@ $mature_balance = mature_balance($game, $thisuser);
 		<h1><?php
 		echo $game['name'];
 		if ($game['game_status'] == "paused" || $game['game_status'] == "unstarted") echo " (Paused)";
+		else if ($game['game_status'] == "completed") echo " (Completed)";
 		?></h1>
 		
 		<div style="display: none;" class="modal fade" id="game_invitations">
@@ -981,7 +982,7 @@ $mature_balance = mature_balance($game, $thisuser);
 						</div>
 						<div class="col-sm-3 game_cell">
 							<?php if ($user_game['creator_id'] == $thisuser['user_id']) { ?>
-							<a href="" onclick="manage_game_invitations(<?php echo $game['game_id']; ?>); return false;">Invitations</a>
+							<a href="" onclick="manage_game_invitations(<?php echo $user_game['game_id']; ?>); return false;">Invitations</a>
 							<?php } ?>
 						</div>
 					</div>
@@ -1105,7 +1106,7 @@ $mature_balance = mature_balance($game, $thisuser);
 									Game ends?
 								</div>
 								<div class="col-sm-6">
-									<select class="form-control" id="game_form_has_final_round" onchange="final_round_changed();">
+									<select class="form-control" id="game_form_has_final_round" onchange="game_form_final_round_changed();">
 										<option value="0">No</option>
 										<option value="1">Yes</option>
 									</select>
@@ -1163,11 +1164,32 @@ $mature_balance = mature_balance($game, $thisuser);
 							<div class="row">
 								<div class="col-sm-6 form-control-static">Give out coins to each player?</div>
 								<div class="col-sm-6">
-									<select class="form-control" id="game_form_giveaway_status">
+									<select class="form-control" id="game_form_giveaway_status" onchange="game_form_giveaway_status_changed();">
 										<option value="on">Yes</option>
 										<option value="off">No</option>
-										<option value="invite_only">Invite Only</option>
+										<option value="invite_free">Free coins with invite</option>
+										<option value="invite_pay">Pay to accept an invitation</option>
+										<option value="public_pay">Pay to join, no invitation required</option>
 									</select>
+								</div>
+							</div>
+							<div id="game_form_giveaway_status_pay">
+								<div class="row">
+									<div class="col-sm-6 form-control-static">Cost per invitation:</div>
+									<div class="col-sm-3">
+										<input type="text" class="form-control" id="game_form_invite_cost" />
+									</div>
+									<div class="col-sm-3">
+										<select class="form-control" id="game_form_invite_currency">
+											<?php
+											$q = "SELECT * FROM currencies ORDER BY currency_id ASC;";
+											$r = run_query($q);
+											while ($currency = mysql_fetch_array($r)) {
+												echo '<option value="'.$currency['currency_id'].'">'.ucwords($currency['short_name']).'s</option>'."\n";
+											}
+											?>
+										</select>
+									</div>
 								</div>
 							</div>
 							<?php /*<div class="row">
@@ -1181,7 +1203,7 @@ $mature_balance = mature_balance($game, $thisuser);
 								</div>
 							</div> */ ?>
 							<div class="row">
-								<div class="col-sm-6 form-control-static">Initial coins given to each player:</div>
+								<div class="col-sm-6 form-control-static">Coins given out per invitation:</div>
 								<div class="col-sm-3">
 									<input class="form-control" style="text-align: right;" type="text" id="game_form_giveaway_amount" />
 								</div>

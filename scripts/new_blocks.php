@@ -10,7 +10,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	if (mysql_numrows($r) == 1) {
 		$game = mysql_fetch_array($r);
 
-		if ($game['game_type'] == "simulation") {
+		if ($game['game_type'] == "simulation" && $game['game_status'] != "completed") {
 			$quantity = intval($_REQUEST['quantity']);
 			if (!$quantity) $quantity = 1;
 

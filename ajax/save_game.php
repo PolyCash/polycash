@@ -28,7 +28,7 @@ if ($thisuser && $game) {
 		}
 		
 		if ($game['game_status'] == "unstarted") {
-			$game_form_vars = explode(",", "giveaway_status,giveaway_amount,maturity,max_voting_fraction,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,game_status,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round");
+			$game_form_vars = explode(",", "giveaway_status,giveaway_amount,maturity,max_voting_fraction,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,game_status,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency");
 			
 			$q = "UPDATE games SET ";
 			
@@ -38,7 +38,7 @@ if ($thisuser && $game) {
 				
 				if (in_array($game_var, array('pos_reward','pow_reward','giveaway_amount'))) $game_val = intval(floatval($game_val)*pow(10,8));
 				else if (in_array($game_var, array("max_voting_fraction", "exponential_inflation_minershare", "exponential_inflation_rate"))) $game_val = intval($game_val)/100;
-				else if (in_array($game_var, array('maturity', 'round_length', 'seconds_per_block', 'final_round'))) $game_val = intval($game_val);
+				else if (in_array($game_var, array('maturity', 'round_length', 'seconds_per_block', 'final_round','invite_currency'))) $game_val = intval($game_val);
 				
 				$q .= $game_var."='".$game_val."', ";
 			}
