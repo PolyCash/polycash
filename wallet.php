@@ -222,6 +222,7 @@ if ($thisuser) {
 		}
 		
 		if ($requested_game['giveaway_status'] == "public_free") {}
+		else if ($game && $requested_game['giveaway_status'] == "invite_free") {}
 		else if (!$game && ($requested_game['giveaway_status'] == "invite_free" || $requested_game['giveaway_status'] == "invite_pay")) {
 			$pagetitle = "Join ".$requested_game['name'];
 			$nav_tab_selected = "wallet";
@@ -234,7 +235,7 @@ if ($thisuser) {
 			include('includes/html_stop.php');
 			die();
 		}
-		else if (!$game || $game['payment_required'] == 1) {
+		else if (!$game && $game['payment_required'] == 1) {
 			$pagetitle = "Join ".$requested_game['name'];
 			$nav_tab_selected = "wallet";
 			include('includes/html_start.php');
@@ -1112,7 +1113,7 @@ $mature_balance = mature_balance($game, $thisuser);
 			<div class="tabcontent" style="display: none;" id="tabcontent5">
 				<h4>My Games</h4>
 				<?php
-				$q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser['user_id']."';";
+				$q = "SELECT *, g.game_id AS game_id FROM games g LEFT JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser['user_id']."' OR g.creator_id='".$thisuser['user_id']."';";
 				$r = run_query($q);
 				
 				while ($user_game = mysql_fetch_array($r)) {

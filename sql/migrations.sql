@@ -95,3 +95,5 @@ CREATE TABLE IF NOT EXISTS `game_giveaways` (
   PRIMARY KEY (`giveaway_id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 ALTER TABLE `games` ADD `start_time` INT( 20 ) NULL DEFAULT NULL AFTER `start_condition_players` ;
+ALTER TABLE `transactions` ADD INDEX (`transaction_desc`);
+ALTER TABLE `transaction_IOs` ADD INDEX (`game_id`, `user_id`);

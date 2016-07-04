@@ -19,21 +19,16 @@ include('includes/html_start.php');
 		</div>
 		<div class="col-sm-10">
 			<div class="paragraph">
-				Welcome to EmpireCoin, the first decentralized voting game on the planet. EmpireCoin is a cryptocurrency where you can compete against players around the world in epic coin battles. Buy votes and collude with your teammates or betray your enemies to maximize your net worth.  Do you love gambling, sports betting or speculating on currencies and stocks? Stop playing rigged games and get in on the first provably fair betting game where money is created from thin air and given out to the players. Start building your empire today in this massively multiplayer online game of chance.
+				Welcome to EmpireCoin, a unique gaming platform where anyone can create a currency backed by dollars or Bitcoins.  To set up an EmpireCoin game, everyone contributes money to the pot in exchange for an initial share of the coins.  Once the game starts, coins are given out at regular intervals following linear or exponential inflation.  Players compete to win a share of the new coins by casting votes for any of 16 empires.  A winning empire is determined in each round and the new coins are split up and given out to everyone who voted correctly.  EmpireCoin games can be set up to last indefinitely or to end after some number of hours, days or weeks.  When the game is over, the pot is split up and returned to players in proportion to their final balances.  EmpireCoin is all about collaborating with your teammates or betraying your enemies to get ahead. Start building your empire today in this massively multiplayer online game of chance.
 			</div>
 			<div class="paragraph">
-				For more information, please download the <a href="/EmpireCoin.pdf">EmpireCoin Whitepaper</a>.
+				For more information, please download the <a href="/EmpireCoin.pdf">EmpireCoin Whitepaper</a>. 
+				Or get started in EmpireCoin now by joining one of these games.<br/>
 			</div>
 		</div>
 	</div>
-
+	
 	<div class="paragraph">
-		<h2>EmpireCoin Private Games</h2>
-		In addition to the EmpireCoin decentralized currency, EmpireCoin's unique software allows anyone to create a private currency backed by dollars or Bitcoins which incorporates EmpireCoin gameplay.  Users can create a private game and then invite friends to buy in and play for real money.  Unlike the official EmpireCoin currency, private games end after a certain number of rounds and the money that was initially contributed is given out in proportion to players' final balances.
-	</div>
-
-	<div class="paragraph">
-		We're still developing the decentralized version of EmpireCoin and it's not yet ready to download.  But you can get involved with EmpireCoin now by joining one of these private games and buying in with Bitcoins or dollars:<br/>
 		<?php
 		$q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='editable' OR g.game_status='running');";
 		$r = run_query($q);
@@ -57,7 +52,7 @@ include('includes/html_start.php');
 			echo ". ";
 
 			if ($featured_game['game_status'] == "running") {
-				echo "This game started ".format_seconds(time()-$featured_game['start_time'])." ago; ".format_bignum(coins_in_existence($featured_game, false)/pow(10,8))." ".$featured_game['coin_name_plural']."  are already in circulation.";
+				echo "This game started ".format_seconds(time()-$featured_game['start_time'])." ago; ".format_bignum(coins_in_existence($featured_game, false)/pow(10,8))." ".$featured_game['coin_name_plural']."  are already in circulation. ";
 
 			}
 			else {

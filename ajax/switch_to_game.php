@@ -64,7 +64,9 @@ if ($thisuser) {
 			
 			ensure_game_nations($game_id);
 			
-			ensure_user_in_game($thisuser['user_id'], $game_id);
+			if ($game['giveaway_status'] == "public_free") {
+				ensure_user_in_game($thisuser['user_id'], $game_id);
+			}
 			
 			$q = "UPDATE users SET game_id='".$game_id."' WHERE user_id='".$thisuser['user_id']."';";
 			$r = run_query($q);
@@ -73,23 +75,30 @@ if ($thisuser) {
 			$r = run_query($q);
 		}
 		
-		$q = "SELECT g.creator_id, g.game_id, g.game_status, g.block_timing, g.giveaway_status, g.giveaway_amount, g.maturity, g.max_voting_fraction, g.name, g.payout_weight, g.round_length, g.seconds_per_block, g.pos_reward, g.pow_reward, g.inflation, g.exponential_inflation_rate, g.exponential_inflation_minershare, g.final_round, g.invite_cost, g.invite_currency, g.coin_name, g.coin_name_plural, g.coin_abbreviation, g.start_condition, g.start_datetime, g.start_condition_players FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game_id."';";
+		$q = "SELECT creator_id, game_id, game_status, block_timing, giveaway_status, giveaway_amount, maturity, max_voting_fraction, name, payout_weight, round_length, seconds_per_block, pos_reward, pow_reward, inflation, exponential_inflation_rate, exponential_inflation_minershare, final_round, invite_cost, invite_currency, coin_name, coin_name_plural, coin_abbreviation, start_condition, start_datetime, start_condition_players FROM games WHERE game_id='".$game_id."';";
 		$r = run_query($q);
 		
 		if (mysql_numrows($r) == 1) {
 			$switch_game = mysql_fetch_array($r);
 
-			if ($switch_game['creator_id'] == $thisuser['user_id']) $switch_game['my_game'] = true;
-			else $switch_game['my_game'] = false;
-
-			$switch_game['creator_id'] = false;
-
-			$switch_game['name_disp'] = '<a target="_blank" href="/'.$game['url_identifier'].'">'.$switch_game['name'].'</a>';
-
-			$switch_game['start_date'] = date("n/j/Y", strtotime($switch_game['start_datetime']));
-			$switch_game['start_time'] = date("G", strtotime($switch_game['start_datetime']));
+			$q = "SELECT * FROM user_games WHERE user_id='".$thisuser['user_id']."' AND game_id='".$switch_game['game_id']."';";
+			$r = run_query($q);
+			$user_game = mysql_fetch_array($r);
 			
-			output_message(1, "", $switch_game);
+			if ($switch_game['creator_id'] == $thisuser['user_id'] || $user_game) {
+				if ($switch_game['creator_id'] == $thisuser['user_id']) $switch_game['my_game'] = true;
+				else $switch_game['my_game'] = false;
+
+				$switch_game['creator_id'] = false;
+
+				$switch_game['name_disp'] = '<a target="_blank" href="/'.$game['url_identifier'].'">'.$switch_game['name'].'</a>';
+
+				$switch_game['start_date'] = date("n/j/Y", strtotime($switch_game['start_datetime']));
+				$switch_game['start_time'] = date("G", strtotime($switch_game['start_datetime']));
+				
+				output_message(1, "", $switch_game);
+			}
+			else output_message(2, "Access denied", false);
 		}
 		else output_message(2, "Access denied", false);
 	}
