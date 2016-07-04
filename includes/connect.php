@@ -70,38 +70,38 @@ function mail_async($email, $from_name, $from, $subject, $message, $bcc, $cc) {
 	return $delivery_id;
 }
 	
-function account_coin_value($user) {
-	$q = "SELECT SUM(amount) FROM webwallet_transactions WHERE user_id='".$user['user_id']."' AND currency_mode='".$user['currency_mode']."';";
+function account_coin_value($game_id, $user) {
+	$q = "SELECT SUM(amount) FROM webwallet_transactions WHERE game_id='".$game_id."' AND user_id='".$user['user_id']."';";
 	$r = run_query($q);
 	$sum = mysql_fetch_row($r);
 	
 	return $sum[0]/(pow(10, 8));
 }
 
-function immature_balance($user) {
-	$q = "SELECT SUM(amount) FROM webwallet_transactions WHERE user_id='".$user['user_id']."' AND currency_mode='".$user['currency_mode']."' AND block_id > ".(last_block_id($user['currency_mode'])-get_site_constant("maturity"))." AND amount > 0 AND transaction_desc != 'giveaway';";
+function immature_balance($game_id, $user) {
+	$q = "SELECT SUM(amount) FROM webwallet_transactions WHERE game_id='".$user['game_id']."' AND user_id='".$user['user_id']."' AND block_id > ".(last_block_id($game_id)-get_site_constant("maturity"))." AND amount > 0 AND transaction_desc != 'giveaway';";
 	$r = run_query($q);
 	$sum = mysql_fetch_row($r);
 	
 	return $sum[0]/(pow(10, 8));
 }
 
-function mature_balance($user) {
-	$account_value = account_coin_value($user);
-	$immature_balance = immature_balance($user);
+function mature_balance($game_id, $user) {
+	$account_value = account_coin_value($game_id, $user);
+	$immature_balance = immature_balance($game_id, $user);
 	
 	return ($account_value - $immature_balance)/(pow(10, 8));
 }
 
-function current_block($currency_mode) {
-	$q = "SELECT * FROM blocks WHERE currency_mode='".$currency_mode."' ORDER BY block_id DESC LIMIT 1;";
+function current_block($game_id) {
+	$q = "SELECT * FROM blocks WHERE game_id='".$game_id."' ORDER BY block_id DESC LIMIT 1;";
 	$r = run_query($q);
 	$block = mysql_fetch_array($r);
 	return $block;
 }
 
-function last_block_id($currency_mode) {
-	$block = current_block($currency_mode);
+function last_block_id($game_id) {
+	$block = current_block($game_id);
 	return $block['block_id'];
 }
 
@@ -118,28 +118,30 @@ function get_site_constant($constant_name) {
 	}
 	else return "";
 }
-function round_voting_stats($round_id) {
-	$last_block_id = last_block_id('beta');
+function round_voting_stats($game_id, $round_id) {
+	$last_block_id = last_block_id($game_id);
 	$current_round = block_to_round($last_block_id+1);
 	
 	if ($round_id == $current_round) {
-		$q = "SELECT * FROM nations ORDER BY current_vote_score DESC, nation_id ASC;";
+		$q = "SELECT n.*, gn.* FROM nations n, game_nations gn WHERE n.nation_id=gn.nation_id AND gn.game_id='".$game_id."' ORDER BY gn.current_vote_score DESC, n.nation_id ASC;";
 		return run_query($q);
 	}
 	else {
-		$q = "SELECT n.* FROM webwallet_transactions t, nations n WHERE t.nation_id=n.nation_id AND t.amount>0 AND t.block_id >= ".((($round_id-1)*10)+1)." AND t.block_id <= ".($round_id*10-1)." GROUP BY t.nation_id ORDER BY SUM(t.amount) DESC;";
+		$q = "SELECT n.*, gn.* FROM webwallet_transactions t, game_nations gn, nations n WHERE gn.nation_id=n.nation_id AND t.game_id='".$game_id."' AND t.nation_id=gn.nation_id AND t.amount>0 AND t.block_id >= ".((($round_id-1)*10)+1)." AND t.block_id <= ".($round_id*10-1)." GROUP BY t.nation_id ORDER BY SUM(t.amount) DESC;";
 		return run_query($q);
 	}
 }
-function total_votes_in_round($round_id) {
-	$q = "SELECT SUM(amount) FROM webwallet_transactions WHERE nation_id > 0 AND amount > 0 AND block_id >= ".((($round_id-1)*10)+1)." AND block_id <= ".($round_id*10-1).";";
+function total_votes_in_round($game_id, $round_id) {
+	$q = "SELECT SUM(amount) FROM webwallet_transactions WHERE game_id='".$game_id."' AND nation_id > 0 AND amount > 0 AND block_id >= ".((($round_id-1)*10)+1)." AND block_id <= ".($round_id*10-1).";";
 	$r = run_query($q);
 	$total_votes = mysql_fetch_row($r);
-	return $total_votes[0];
+	$total_votes = $total_votes[0];
+	if ($total_votes > 0) {} else $total_votes = 0;
+	return $total_votes;
 }
-function round_voting_stats_all($voting_round) {
+function round_voting_stats_all($game_id, $voting_round) {
 	$sumVotes = 0;
-	$round_voting_stats = round_voting_stats($voting_round);
+	$round_voting_stats = round_voting_stats($game_id, $voting_round);
 	$stats_all = "";
 	$counter = 0;
 	$nation_id_csv = "";
@@ -166,7 +168,7 @@ function round_voting_stats_all($voting_round) {
 		$counter++;
 	}
 	
-	$sum_votes = total_votes_in_round($voting_round);
+	$sum_votes = total_votes_in_round($game_id, $voting_round);
 	$output_arr[0] = $sum_votes;
 	$output_arr[1] = floor($sum_votes*get_site_constant('max_voting_fraction'));
 	$output_arr[2] = $stats_all;
@@ -175,7 +177,7 @@ function round_voting_stats_all($voting_round) {
 	return $output_arr;
 }
 function current_round_table($current_round, $user, $show_intro_text) {
-	$last_block_id = last_block_id('beta');
+	$last_block_id = last_block_id($user['game_id']);
 	$current_round = block_to_round($last_block_id+1);
 	$block_within_round = $last_block_id%get_site_constant('round_length')+1;
 	
@@ -190,18 +192,18 @@ function current_round_table($current_round, $user, $show_intro_text) {
 	
 	$html .= "<div class='row'>";
 	
-	$round_stats = round_voting_stats_all($current_round);
+	$round_stats = round_voting_stats_all($user['game_id'], $current_round);
 	$total_vote_sum = $round_stats[0];
-	$maxVoteSum = $round_stats[1];
+	$max_vote_sum = $round_stats[1];
 	$round_stats = $round_stats[2];
 	$winner_nation_id = FALSE;
 	
 	for ($i=0; $i<count($round_stats); $i++) {
-		if (!$winner_nation_id && $round_stats[$i]['coins_currently_voted'] <= $maxVoteSum && $round_stats[$i]['current_vote_score'] > 0) $winner_nation_id = $round_stats[$i]['nation_id'];
+		if (!$winner_nation_id && $round_stats[$i]['coins_currently_voted'] <= $max_vote_sum && $round_stats[$i]['current_vote_score'] > 0) $winner_nation_id = $round_stats[$i]['nation_id'];
 		$html .= '
 		<div class="col-md-3">
 			<div class="vote_nation_box';
-			if ($round_stats[$i]['coins_currently_voted'] > $maxVoteSum) $html .=  " redtext";
+			if ($round_stats[$i]['coins_currently_voted'] > $max_vote_sum) $html .=  " redtext";
 			else if ($winner_nation_id == $round_stats[$i]['nation_id']) $html .=  " greentext";
 			$html .='" id="vote_nation_'.$i.'" onmouseover="nation_selected('.$i.');" onclick="nation_selected('.$i.'); start_vote('.$round_stats[$i]['nation_id'].');">
 				<input type="hidden" id="nation_id2rank_'.$round_stats[$i]['nation_id'].'" value="'.$i.'" />
@@ -233,7 +235,7 @@ function current_round_table($current_round, $user, $show_intro_text) {
 }
 function performance_history($user, $from_round_id, $to_round_id) {
 	$html = "";
-	$q = "SELECT * FROM cached_rounds r LEFT JOIN nations n ON r.winning_nation_id=n.nation_id WHERE r.round_id >= ".$from_round_id." AND r.round_id <= ".$to_round_id." ORDER BY r.round_id DESC;";
+	$q = "SELECT * FROM cached_rounds r LEFT JOIN nations n ON r.winning_nation_id=n.nation_id WHERE r.game_id='".$user['game_id']."' AND r.round_id >= ".$from_round_id." AND r.round_id <= ".$to_round_id." ORDER BY r.round_id DESC;";
 	$r = run_query($q);
 	while ($round = mysql_fetch_array($r)) {
 		$first_voting_block_id = ($round['round_id']-1)*get_site_constant('round_length')+1;
@@ -250,7 +252,7 @@ function performance_history($user, $from_round_id, $to_round_id) {
 		
 		$default_win_text = "You didn't vote for the winning empire.";
 		$win_text = $default_win_text;
-		$qq = "SELECT COUNT(*), SUM(t.amount), n.* FROM webwallet_transactions t, nations n WHERE t.block_id >= ".$first_voting_block_id." AND t.block_id <= ".$last_voting_block_id." AND t.user_id='".$user['user_id']."' AND t.nation_id=n.nation_id GROUP BY n.nation_id;";
+		$qq = "SELECT COUNT(*), SUM(t.amount), n.* FROM webwallet_transactions t, nations n WHERE t.game_id='".$user['game_id']."' AND t.block_id >= ".$first_voting_block_id." AND t.block_id <= ".$last_voting_block_id." AND t.user_id='".$user['user_id']."' AND t.nation_id=n.nation_id GROUP BY n.nation_id;";
 		$rr = run_query($qq);
 		if (mysql_numrows($rr) > 0) {
 			while ($nation_votes = mysql_fetch_array($rr)) {
@@ -280,7 +282,7 @@ function performance_history($user, $from_round_id, $to_round_id) {
 		$html .= '</div>';
 		
 		$html .= '<div class="col-sm-2">';
-		$qq = "SELECT SUM(amount) FROM webwallet_transactions WHERE block_id='".$round['payout_block_id']."' AND user_id='".$user['user_id']."' AND transaction_desc='votebase';";
+		$qq = "SELECT SUM(amount) FROM webwallet_transactions WHERE game_id='".$user['game_id']."' AND block_id='".$round['payout_block_id']."' AND user_id='".$user['user_id']."' AND transaction_desc='votebase';";
 		$rr = run_query($qq);
 		$win_amount = mysql_fetch_row($rr);
 		$win_amount = $win_amount[0]/pow(10,8);
@@ -294,16 +296,18 @@ function performance_history($user, $from_round_id, $to_round_id) {
 	}
 	return $html;
 }
-function last_voting_transaction_id() {
-	$q = "SELECT transaction_id FROM webwallet_transactions WHERE nation_id > 0 ORDER BY transaction_id DESC LIMIT 1;";
+function last_voting_transaction_id($game_id) {
+	$q = "SELECT transaction_id FROM webwallet_transactions WHERE game_id='".$game_id."' AND nation_id > 0 ORDER BY transaction_id DESC LIMIT 1;";
 	$r = run_query($q);
 	$r = mysql_fetch_row($r);
+	if ($r[0] > 0) {} else $r[0] = 0;
 	return $r[0];
 }
-function last_transaction_id() {
-	$q = "SELECT transaction_id FROM webwallet_transactions ORDER BY transaction_id DESC LIMIT 1;";
+function last_transaction_id($game_id) {
+	$q = "SELECT transaction_id FROM webwallet_transactions WHERE game_id='".$game_id."' ORDER BY transaction_id DESC LIMIT 1;";
 	$r = run_query($q);
 	$r = mysql_fetch_row($r);
+	if ($r[0] > 0) {} else $r[0] = 0;
 	return $r[0];
 }
 function wallet_text_stats($thisuser, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance) {
@@ -315,7 +319,7 @@ function wallet_text_stats($thisuser, $current_round, $last_block_id, $block_wit
 	$html .= "Current votes count towards block ".$block_within_round."/".get_site_constant('round_length')." in round #".$current_round."<br/>\n";
 	
 	if ($immature_balance > 0) {
-		$q = "SELECT * FROM webwallet_transactions t LEFT JOIN nations n ON t.nation_id=n.nation_id WHERE t.amount > 0 AND t.user_id='".$thisuser['user_id']."' AND t.currency_mode='".$thisuser['currency_mode']."' AND t.block_id > ".(last_block_id($thisuser['currency_mode']) - get_site_constant('maturity'))." AND t.transaction_desc != 'giveaway' ORDER BY t.block_id ASC, t.transaction_id ASC;";
+		$q = "SELECT * FROM webwallet_transactions t LEFT JOIN nations n ON t.nation_id=n.nation_id WHERE t.game_id='".$thisuser['game_id']."' AND t.amount > 0 AND t.user_id='".$thisuser['user_id']."' AND t.block_id > ".(last_block_id($thisuser['game_id']) - get_site_constant('maturity'))." AND t.transaction_desc != 'giveaway' ORDER BY t.block_id ASC, t.transaction_id ASC;";
 		$r = run_query($q);
 		
 		$html .= "<div style='display: none; border: 1px solid #ccc; padding: 8px; border-radius: 8px; margin-top: 8px;' id='lockedfunds_details'>";
@@ -357,7 +361,10 @@ function vote_nation_details($nation, $rank, $voting_sum, $total_vote_sum, $losi
 	</div>
 	<div class="row">
 		<div class="col-xs-6">Percent&nbsp;of&nbsp;votes:</div>
-		<div class="col-xs-5">'.(ceil(100*10000*$voting_sum/$total_vote_sum)/10000).'%</div>
+		<div class="col-xs-5">';
+	if ($total_vote_sum > 0) $html .= (ceil(100*10000*$voting_sum/$total_vote_sum)/10000);
+	else $html .= '0';
+	$html .= '%</div>
 	</div>
 	<div class="row">
 		<div class="col-xs-6">Last&nbsp;win:</div>
@@ -369,8 +376,8 @@ function vote_nation_details($nation, $rank, $voting_sum, $total_vote_sum, $losi
 	</div>';
 	return $html;
 }
-function generate_user_addresses($user_id) {
-	$q = "SELECT * FROM nations n WHERE NOT EXISTS(SELECT * FROM addresses a WHERE a.user_id='".$user_id."' AND a.nation_id=n.nation_id) ORDER BY n.nation_id ASC;";
+function generate_user_addresses($game_id, $user_id) {
+	$q = "SELECT * FROM nations n WHERE NOT EXISTS(SELECT * FROM addresses a WHERE a.user_id='".$user_id."' AND a.game_id='".$game_id."' AND a.nation_id=n.nation_id) ORDER BY n.nation_id ASC;";
 	$r = run_query($q);
 	while ($nation = mysql_fetch_array($r)) {
 		$new_address = "E";
@@ -382,22 +389,22 @@ function generate_user_addresses($user_id) {
 		else $new_address .= $nation['address_character'];
 		$new_address .= random_string(31);
 		
-		$qq = "INSERT INTO addresses SET nation_id='".$nation['nation_id']."', user_id='".$user_id."', address='".$new_address."', time_created='".time()."';";
+		$qq = "INSERT INTO addresses SET game_id='".$game_id."', nation_id='".$nation['nation_id']."', user_id='".$user_id."', address='".$new_address."', time_created='".time()."';";
 		$rr = run_query($qq);
 	}
 	
-	$q = "SELECT * FROM addresses WHERE nation_id IS NULL AND user_id='".$user_id."';";
+	$q = "SELECT * FROM addresses WHERE nation_id IS NULL AND game_id='".$game_id."' AND user_id='".$user_id."';";
 	$r = run_query($q);
 	if (mysql_numrows($r) == 0) {
 		$new_address = "Ex";
 		$new_address .= random_string(32);
 		
-		$qq = "INSERT INTO addresses SET user_id='".$user_id."', address='".$new_address."', time_created='".time()."';";
+		$qq = "INSERT INTO addresses SET game_id='".$game_id."', user_id='".$user_id."', address='".$new_address."', time_created='".time()."';";
 		$rr = run_query($qq);
 	}
 }
-function user_address_id($user_id, $nation_id) {
-	$q = "SELECT * FROM addresses WHERE user_id='".$user_id."' AND nation_id='".$nation_id."';";
+function user_address_id($game_id, $user_id, $nation_id) {
+	$q = "SELECT * FROM addresses WHERE game_id='".$game_id."' AND user_id='".$user_id."' AND nation_id='".$nation_id."';";
 	$r = run_query($q);
 	
 	if (mysql_numrows($r) > 0) {
@@ -407,27 +414,27 @@ function user_address_id($user_id, $nation_id) {
 	else return -1;
 }
 
-function new_webwallet_transaction($currency_mode, $nation_id, $amount, $user_id, $block_id) {
-	$q = "INSERT INTO webwallet_transactions SET currency_mode='".$currency_mode."', nation_id='".$nation_id."', transaction_desc='transaction', amount=".$amount.", user_id='".$user_id."', address_id='".user_address_id($user_id, $nation_id)."', block_id='".$block_id."', time_created='".time()."';";
+function new_webwallet_transaction($game_id, $nation_id, $amount, $user_id, $block_id) {
+	$q = "INSERT INTO webwallet_transactions SET game_id='".$game_id."', nation_id='".$nation_id."', transaction_desc='transaction', amount=".$amount.", user_id='".$user_id."', address_id='".user_address_id($user_id, $nation_id)."', block_id='".$block_id."', time_created='".time()."';";
 	$r = run_query($q);
 	$transaction_id = mysql_insert_id();
 	
-	$q = "INSERT INTO webwallet_transactions SET currency_mode='".$currency_mode."', transaction_desc='transaction', amount=".(-1)*$amount.", user_id='".$user_id."', block_id='".$block_id."', time_created='".time()."';";
+	$q = "INSERT INTO webwallet_transactions SET game_id='".$game_id."', transaction_desc='transaction', amount=".(-1)*$amount.", user_id='".$user_id."', block_id='".$block_id."', time_created='".time()."';";
 	$r = run_query($q);
 	
 	$round_id = block_to_round($block_id);
 	
-	$q = "UPDATE nations n INNER JOIN (
+	$q = "UPDATE game_nations n INNER JOIN (
 		SELECT nation_id, SUM(amount) sum_amount FROM webwallet_transactions 
-		WHERE block_id >= ".((($round_id-1)*10)+1)." AND block_id <= ".($round_id*10-1)." AND amount > 0
+		WHERE game_id='".$game_id."' AND block_id >= ".((($round_id-1)*10)+1)." AND block_id <= ".($round_id*10-1)." AND amount > 0
 		GROUP BY nation_id
-	) tt ON n.nation_id=tt.nation_id SET n.coins_currently_voted=tt.sum_amount, n.current_vote_score=FLOOR(tt.sum_amount*n.cached_force_multiplier);";
+	) tt ON n.nation_id=tt.nation_id SET n.coins_currently_voted=tt.sum_amount, n.current_vote_score=tt.sum_amount WHERE n.game_id='".$game_id."';";
 	$r = run_query($q);
 	
 	return $transaction_id;
 }
 
-function nation_score_in_round($nation_id, $round_id) {
+function nation_score_in_round($game_id, $nation_id, $round_id) {
 	$q = "SELECT SUM(amount) FROM webwallet_transactions WHERE block_id >= ".((($round_id-1)*10)+1)." AND block_id <= ".($round_id*10-1)." AND amount > 0 AND nation_id='".$nation_id."';";
 	$r = run_query($q);
 	$score = mysql_fetch_row($r);
@@ -436,7 +443,7 @@ function nation_score_in_round($nation_id, $round_id) {
 
 function my_votes_table($round_id, $user) {
 	$html = "";
-	$q = "SELECT n.*, SUM(t.amount) FROM webwallet_transactions t, nations n WHERE t.nation_id=n.nation_id AND t.block_id >= ".((($round_id-1)*10)+1)." AND t.block_id <= ".($round_id*10-1)." AND t.user_id='".$user['user_id']."' AND t.amount > 0 GROUP BY t.nation_id ORDER BY SUM(t.amount) DESC;";
+	$q = "SELECT n.*, SUM(t.amount) FROM webwallet_transactions t, nations n WHERE t.game_id='".$user['game_id']."' AND t.nation_id=n.nation_id AND t.block_id >= ".((($round_id-1)*10)+1)." AND t.block_id <= ".($round_id*10-1)." AND t.user_id='".$user['user_id']."' AND t.amount > 0 GROUP BY t.nation_id ORDER BY SUM(t.amount) DESC;";
 	$r = run_query($q);
 	if (mysql_numrows($r) > 0) {
 		$html .= "<div style=\"border: 1px solid #ddd; padding: 5px;\">";
@@ -446,7 +453,7 @@ function my_votes_table($round_id, $user) {
 		$html .= "<div class=\"col-sm-4\">Payout</div>";
 		$html .= "</div>\n";
 		while ($my_vote = mysql_fetch_array($r)) {
-			$expected_payout = floor(750*pow(10,8)*($my_vote['SUM(t.amount)']/nation_score_in_round($my_vote['nation_id'], $round_id)))/pow(10,8);
+			$expected_payout = floor(750*pow(10,8)*($my_vote['SUM(t.amount)']/nation_score_in_round($user['game_id'], $my_vote['nation_id'], $round_id)))/pow(10,8);
 			$html .= "<div class=\"row\">";
 			$html .= "<div class=\"col-sm-4\">".$my_vote['name']."</div>";
 			$html .= "<div class=\"col-sm-4 greentext\">".number_format(round($my_vote['SUM(t.amount)']/pow(10,8), 5))." EMP</div>";
@@ -464,9 +471,9 @@ function set_user_active($user_id) {
 	$q = "UPDATE users SET logged_in=1, last_active='".time()."' WHERE user_id='".$user_id."';";
 	$r = run_query($q);
 }
-function initialize_vote_nation_details($nation_id2rank, $total_vote_sum) {
+function initialize_vote_nation_details($game_id, $nation_id2rank, $total_vote_sum) {
 	$html = "";
-	$nation_q = "SELECT * FROM nations ORDER BY nation_id ASC;";
+	$nation_q = "SELECT * FROM game_nations WHERE game_id='".$game_id."' ORDER BY nation_id ASC;";
 	$nation_r = run_query($nation_q);
 	
 	$nation_id = 0;
@@ -509,7 +516,7 @@ function initialize_vote_nation_details($nation_id2rank, $total_vote_sum) {
 	}
 	return $html;
 }
-function try_apply_invite_key($user_id, $invite_key) {
+function try_apply_invite_key($game_id, $user_id, $invite_key) {
 	$invite_key = mysql_real_escape_string($invite_key);
 	
 	$q = "SELECT * FROM invitations WHERE invitation_key='".$invite_key."';";
@@ -525,5 +532,13 @@ function try_apply_invite_key($user_id, $invite_key) {
 		else return false;
 	}
 	else return false;
+}
+function ensure_user_in_game($user_id, $game_id) {
+	$q = "SELECT * FROM user_games WHERE user_id='".$user_id."' AND game_id='".$game_id."';";
+	$r = run_query($q);
+	if (mysql_numrows($r) == 0) {
+		$q = "INSERT INTO user_games SET user_id='".$user_id."', game_id='".$game_id."';";
+		$r = run_query($q);
+	}
 }
 ?>

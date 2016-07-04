@@ -44,7 +44,7 @@ if ($_REQUEST['do'] == "signup") {
 				else {
 					$verify_code = random_string(32);
 					
-					$query = "INSERT INTO users SET first_name='".$first."', last_name='".$last."', username='".$email."', notification_email='".$email."', api_access_code='".mysql_real_escape_string(random_string(32))."', password='".$new_pass_hash."', ip_address='".mysql_real_escape_string($_SERVER['REMOTE_ADDR'])."', time_created='".time()."', verify_code='".$verify_code."';";
+					$query = "INSERT INTO users SET game_id='".get_site_constant('primary_game_id')."', first_name='".$first."', last_name='".$last."', username='".$email."', notification_email='".$email."', api_access_code='".mysql_real_escape_string(random_string(32))."', password='".$new_pass_hash."', ip_address='".mysql_real_escape_string($_SERVER['REMOTE_ADDR'])."', time_created='".time()."', verify_code='".$verify_code."';";
 					$result = run_query($query);
 					$user_id = mysql_insert_id();
 					
@@ -86,10 +86,11 @@ if ($_REQUEST['do'] == "signup") {
 					$email_id = mail_async($email, "EmpireCo.in", "no-reply@empireco.in", "New account created", $email_message, "", "");
 					
 					if ($_REQUEST['invite_key'] != "") {
-						try_apply_invite_key($user_id, $_REQUEST['invite_key']);
+						try_apply_invite_key(get_site_constant('primary_game_id'), $user_id, $_REQUEST['invite_key']);
 					}
 					
-					generate_user_addresses($user_id);
+					ensure_user_in_game($user_id, get_site_constant('primary_game_id'));
+					generate_user_addresses(get_site_constant('primary_game_id'), $user_id);
 				}
 			}
 		}
@@ -161,7 +162,7 @@ else if ($_REQUEST['do'] == "login") {
 		$r = run_query($q);
 		
 		if ($_REQUEST['invite_key'] != "") {
-			try_apply_invite_key($thisuser['user_id'], $_REQUEST['invite_key']);
+			try_apply_invite_key($thisuser['game_id'], $thisuser['user_id'], $_REQUEST['invite_key']);
 		}
 		
 		if (mysql_numrows($r) == 1) {
@@ -192,7 +193,7 @@ else if ($thisuser && $_REQUEST['do'] == "save_voting_strategy") {
 	$by_rank_csv = "";
 	
 	if (in_array($voting_strategy, array('manual', 'by_rank', 'by_nation', 'api'))) {
-		for ($i=1; $i<=16; $i++) {
+		for ($i=1; $i<=get_site_constant('num_voting_options'); $i++) {
 			if ($_REQUEST['by_rank_'.$i] == "1") $by_rank_csv .= $i.",";
 		}
 		if ($by_rank_csv != "") $by_rank_csv = substr($by_rank_csv, 0, strlen($by_rank_csv)-1);
@@ -213,7 +214,7 @@ else if ($thisuser && $_REQUEST['do'] == "save_voting_strategy") {
 		$nation_pct_q = "";
 		$nation_pct_error = FALSE;
 		
-		for ($nation_id=1; $nation_id<=16; $nation_id++) {
+		for ($nation_id=1; $nation_id<=get_site_constant('num_voting_options'); $nation_id++) {
 			$nation_pct = intval($_REQUEST['nation_pct_'.$nation_id]);
 			$nation_pct_q .= ", nation_pct_".$nation_id."=".$nation_pct;
 			$nation_pct_sum += $nation_pct;
@@ -256,9 +257,9 @@ $nav_tab_selected = "wallet";
 include('includes/html_start.php');
 
 $initial_tab = 0;
-$account_value = account_coin_value($thisuser);
-$immature_balance = immature_balance($thisuser);
-$last_block_id = last_block_id($thisuser['currency_mode']);
+$account_value = account_coin_value($thisuser['game_id'], $thisuser);
+$immature_balance = immature_balance($thisuser['game_id'], $thisuser);
+$last_block_id = last_block_id($thisuser['game_id']);
 $current_round = block_to_round($last_block_id+1);
 $block_within_round = $last_block_id%get_site_constant('round_length')+1;
 $mature_balance = $account_value - $immature_balance;
@@ -275,7 +276,7 @@ $mature_balance = $account_value - $immature_balance;
 	}
 	
 	if ($thisuser) {
-		$round_stats = round_voting_stats_all($current_round);
+		$round_stats = round_voting_stats_all($thisuser['game_id'], $current_round);
 		$total_vote_sum = $round_stats[0];
 		$max_vote_sum = $round_stats[1];
 		$nation_id2rank = $round_stats[3];
@@ -284,7 +285,7 @@ $mature_balance = $account_value - $immature_balance;
 		<script type="text/javascript">
 		var current_tab = false;
 		var last_block_id = <?php echo $last_block_id; ?>;
-		var last_transaction_id = <?php echo last_voting_transaction_id(); ?>;
+		var last_transaction_id = <?php echo last_transaction_id($thisuser['game_id']); ?>;
 		var refresh_in_progress = false;
 		
 		var selected_nation_id = false;
@@ -337,7 +338,7 @@ $mature_balance = $account_value - $immature_balance;
 		</div>
 		<div class="row">
 			<div id="tabcontent0" style="display: none;" class="tabcontent">
-				<div id="vote_popups"><?php	echo initialize_vote_nation_details($nation_id2rank, $total_vote_sum); ?></div>
+				<div id="vote_popups"><?php	echo initialize_vote_nation_details($thisuser['game_id'], $nation_id2rank, $total_vote_sum); ?></div>
 				
 				<div class="row">
 					<div class="col-md-6">
@@ -517,7 +518,7 @@ $mature_balance = $account_value - $immature_balance;
 			</div>
 			<div id="tabcontent3" style="display: none;" class="tabcontent">
 				<?php
-				$q = "SELECT * FROM addresses a LEFT JOIN nations n ON n.nation_id=a.nation_id WHERE a.user_id='".$thisuser['user_id']."' ORDER BY a.nation_id IS NULL DESC, a.nation_id ASC;";
+				$q = "SELECT * FROM addresses a LEFT JOIN nations n ON n.nation_id=a.nation_id WHERE a.game_id='".$thisuser['game_id']."' AND a.user_id='".$thisuser['user_id']."' ORDER BY a.nation_id IS NULL DESC, a.nation_id ASC;";
 				$r = run_query($q);
 				echo "<b>You have ".mysql_numrows($r)." addresses.</b><br/>\n";
 				while ($address = mysql_fetch_array($r)) {

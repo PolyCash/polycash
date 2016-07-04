@@ -10,7 +10,7 @@ include('includes/html_start.php');
 if ($thisuser) { ?>
 	<div class="container" style="max-width: 1000px; padding: 10px 0px;">
 		<?php
-		$account_value = account_coin_value($thisuser);
+		$account_value = account_coin_value($thisuser['game_id'], $thisuser);
 		include("includes/wallet_status.php");
 		?>
 	</div>
@@ -91,12 +91,12 @@ if ($thisuser) { ?>
 		</p>
 		<p>
 			<?php
-			$last_block_id = last_block_id('beta');
+			$last_block_id = last_block_id(get_site_constant('primary_game_id'));
 			$current_round = block_to_round($last_block_id+1);
 			$block_within_round = $last_block_id%get_site_constant('round_length')+1;
-			$total_vote_sum = total_votes_in_round($current_round);
+			$total_vote_sum = total_votes_in_round(get_site_constant('primary_game_id'), $current_round);
 			
-			$round_stats = round_voting_stats_all($current_round);
+			$round_stats = round_voting_stats_all(get_site_constant('primary_game_id'), $current_round);
 			$total_vote_sum = $round_stats[0];
 			$nation_id2rank = $round_stats[3];
 			
@@ -119,12 +119,12 @@ if ($thisuser) { ?>
 				?>
 			</div>
 			
-			<div id="vote_popups"><?php	echo initialize_vote_nation_details($nation_id2rank, $total_vote_sum); ?></div>
+			<div id="vote_popups"><?php	echo initialize_vote_nation_details(get_site_constant('primary_game_id'), $nation_id2rank, $total_vote_sum); ?></div>
 			
 			<?php
 			if ($thisuser) {
-				$account_value = account_coin_value($thisuser);
-				$immature_balance = immature_balance($thisuser);
+				$account_value = account_coin_value($thisuser['game_id'], $thisuser);
+				$immature_balance = immature_balance($thisuser['game_id'], $thisuser);
 				$mature_balance = $account_value - $immature_balance;
 			}
 			else $mature_balance = 0;

@@ -11,23 +11,23 @@ if ($thisuser) {
 	$address = $_REQUEST['address'];
 	
 	if ($amount > 0) {
-		$last_block_id = last_block_id($thisuser['currency_mode']);
+		$last_block_id = last_block_id($thisuser['game_id'], $thisuser['currency_mode']);
 		$mining_block_id = $last_block_id+1;
 		$account_value = account_coin_value($thisuser);
 		$immature_balance = immature_balance($thisuser);
 		$mature_balance = $account_value - $immature_balance;
 		
 		if ($amount <= $mature_balance) {
-			$q = "SELECT * FROM addresses a LEFT JOIN users u ON a.user_id=u.user_id WHERE a.address='".mysql_real_escape_string($address)."';";
+			$q = "SELECT * FROM addresses a LEFT JOIN users u ON a.user_id=u.user_id WHERE a.address='".mysql_real_escape_string($address)."' AND a.game_id='".$thisuser['game_id']."';";
 			$r = run_query($q);
 			
 			if (mysql_numrows($r) == 1) {
 				$address = mysql_fetch_array($r);
 				
-				$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', transaction_desc='transaction', amount=".(-1*$amount*pow(10,8)).", user_id='".$thisuser['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
+				$q = "INSERT INTO webwallet_transactions SET game_id='".$thisuser['game_id']."', currency_mode='beta', transaction_desc='transaction', amount=".(-1*$amount*pow(10,8)).", user_id='".$thisuser['user_id']."', block_id='".$mining_block_id."', time_created='".time()."';";
 				$r = run_query($q);
 				
-				$q = "INSERT INTO webwallet_transactions SET currency_mode='beta', transaction_desc='transaction', amount=".($amount*pow(10,8)).", user_id='".$address['user_id']."', block_id='".$mining_block_id."', nation_id='".$address['nation_id']."', time_created='".time()."';";
+				$q = "INSERT INTO webwallet_transactions SET game_id='".$thisuser['game_id']."', currency_mode='beta', transaction_desc='transaction', amount=".($amount*pow(10,8)).", user_id='".$address['user_id']."', block_id='".$mining_block_id."', nation_id='".$address['nation_id']."', time_created='".time()."';";
 				$r = run_query($q);
 				
 				$output_obj['result_code'] = 5;

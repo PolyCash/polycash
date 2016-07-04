@@ -4,11 +4,11 @@ include("../includes/get_session.php");
 $viewer_id = insert_pageview($thisuser);
 
 if ($thisuser) {
-	$account_value = account_coin_value($thisuser);
-	$immature_balance = immature_balance($thisuser);
+	$account_value = account_coin_value($thisuser['game_id'], $thisuser);
+	$immature_balance = immature_balance($thisuser['game_id'], $thisuser);
 	$mature_balance = $account_value - $immature_balance;
 	
-	$last_block_id = last_block_id($thisuser['currency_mode']);
+	$last_block_id = last_block_id($thisuser['game_id']);
 	
 	if (($last_block_id+1)%get_site_constant('round_length') == 0) {
 		echo "4=====The final block of the round is being mined, so you can't vote right now.";
@@ -20,7 +20,7 @@ if ($thisuser) {
 			$amount = floatval($_REQUEST['amount']);
 			if ($amount == round($amount, 5)) {
 				if ($amount <= $mature_balance && $amount > 0) {
-					$transaction_id = new_webwallet_transaction($thisuser['currency_mode'], $nation_id, $amount*(pow(10, 8)), $thisuser['user_id'], $last_block_id+1);
+					$transaction_id = new_webwallet_transaction($thisuser['game_id'], $nation_id, $amount*(pow(10, 8)), $thisuser['user_id'], $last_block_id+1);
 					
 					echo "0=====";
 				}
