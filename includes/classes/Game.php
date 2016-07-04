@@ -137,7 +137,7 @@ class Game {
 		else return false;
 	}
 
-	public function current_round_table($current_round, $user, $show_intro_text) {
+	public function current_round_table($current_round, $user, $show_intro_text, $clickable) {
 		$score_field = $this->db_game['payout_weight']."_score";
 		
 		$last_block_id = $this->last_block_id();
@@ -214,12 +214,16 @@ class Game {
 				<div class="vote_option_label';
 				if ($option_score > $max_score_sum) $html .=  " redtext";
 				else if ($winner_option_id == $round_stats[$i]['option_id']) $html .=  " greentext";
-				$html .= '" onclick="option_selected('.$i.'); start_vote('.$round_stats[$i]['option_id'].');">'.$round_stats[$i]['name'].' ('.$pct_votes.'%)</div>
+				$html .= '"';
+				if ($clickable) $html .= ' style="cursor: pointer;" onclick="option_selected('.$i.'); start_vote('.$round_stats[$i]['option_id'].');"';
+				$html .= '>'.$round_stats[$i]['name'].' ('.$pct_votes.'%)</div>
 				<div class="stage vote_option_box_holder" style="height: '.$box_diam.'px; width: '.$box_diam.'px;">
-					<div class="ball vote_option_box"';
-					if ($round_stats[$i]['image_id'] > 0) $html .= ' style="background-image: url(\'/img/custom/'.$round_stats[$i]['image_id'].'_'.$round_stats[$i]['access_key'].'.'.$round_stats[$i]['extension'].'\');"';
-					$html .= ' id="vote_option_'.$i.'" onmouseover="option_selected('.$i.');"';
-					$html .= ' onclick="option_selected('.$i.'); start_vote('.$round_stats[$i]['option_id'].');">
+					<div class="ball vote_option_box" style="';
+					if ($round_stats[$i]['image_id'] > 0) $html .= 'background-image: url(\'/img/custom/'.$round_stats[$i]['image_id'].'_'.$round_stats[$i]['access_key'].'.'.$round_stats[$i]['extension'].'\');';
+					if ($clickable) $html .= 'cursor: pointer;';
+					$html .= '" id="vote_option_'.$i.'"';
+					if ($clickable) $html .= ' onmouseover="option_selected('.$i.');" onclick="option_selected('.$i.'); start_vote('.$round_stats[$i]['option_id'].');"';
+					$html .= '>
 						<input type="hidden" id="option_id2rank_'.$round_stats[$i]['option_id'].'" value="'.$i.'" />
 						<input type="hidden" id="rank2option_id_'.$i.'" value="'.$round_stats[$i]['option_id'].'" />
 					</div>

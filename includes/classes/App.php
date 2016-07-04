@@ -596,8 +596,7 @@ class App {
 		echo '<div class="paragraph">';
 		$q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='published' OR g.game_status='running');";
 		$r = $this->run_query($q);
-		$cell_width = 6;
-		if ($r->rowCount() == 1) $cell_width = 12;
+		$cell_width = 12;
 		
 		$counter = 0;
 		echo '<div class="row">';
@@ -605,6 +604,7 @@ class App {
 		while ($db_game = $r->fetch()) {
 			$featured_game = new Game($this, $db_game['game_id']);
 			echo '<div class="col-md-'.$cell_width.'"><h3>'.$featured_game->db_game['name'].'</h3>';
+			echo $featured_game->current_round_table($current_round, false, false, false);
 			echo $featured_game->game_description();
 			echo '<br/><a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-primary" style="margin-top: 5px;">Join '.$featured_game->db_game['name'].'</a></div>';
 			

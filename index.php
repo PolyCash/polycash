@@ -23,10 +23,16 @@ include('includes/html_start.php');
 			</div>
 		</div>
 	</div>
+	
 	<?php
 	$app->display_featured_games();
 	?>
+	
 	<div class="paragraph">
+		<a href="" onclick="$('#variation_games').toggle('fast'); return false;">See more games</a>
+	</div>
+	
+	<div id="variation_games" class="paragraph" style="display: none;">
 		<?php
 		$player_variation_q = "SELECT COUNT(*), t.start_condition_players FROM game_types t JOIN game_type_variations tv ON t.game_type_id=tv.game_type_id JOIN games g ON tv.variation_id=g.variation_id WHERE g.game_status='published' GROUP BY t.start_condition_players ORDER BY t.start_condition_players ASC;";
 		$player_variation_r = $app->run_query($player_variation_q);

@@ -216,7 +216,7 @@ if ($game) {
 			?>
 			<div id="current_round_table" style="margin-bottom: 10px;">
 				<?php
-				echo $game->current_round_table($current_round, $thisuser, false);
+				echo $game->current_round_table($current_round, $thisuser, false, true);
 				?>
 			</div>
 			
@@ -283,7 +283,7 @@ var option_has_votingaddr = [];
 for (var i=1; i<=num_voting_options; i++) { option_has_votingaddr[i] = false; }
 var votingaddr_count = 0;
 
-var refresh_page = "home";
+var refresh_page = "game";
 var refresh_in_progress = false;
 var last_refresh_time = 0;
 var selected_option_id = false;

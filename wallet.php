@@ -901,7 +901,7 @@ if ($thisuser && $game) {
 				</div>
 				<div id="current_round_table">
 					<?php
-					echo $game->current_round_table($current_round, $thisuser, true);
+					echo $game->current_round_table($current_round, $thisuser, true, true);
 					?>
 				</div>
 				<?php

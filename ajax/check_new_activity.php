@@ -2,7 +2,7 @@
 include("../includes/connect.php");
 include("../includes/get_session.php");
 
-if ($thisuser || $_REQUEST['refresh_page'] == "home") {
+if ($thisuser || $_REQUEST['refresh_page'] == "game") {
 	$game_loop_index = intval($_REQUEST['game_loop_index']);
 	
 	if (!$game) {
@@ -70,9 +70,9 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	else $output['new_mature_ios'] = 0;
 	
 	if ($last_block_id != $_REQUEST['last_block_id'] || $last_transaction_id != $_REQUEST['last_transaction_id']) {
-		if ($_REQUEST['refresh_page'] == "home") $show_intro_text = false;
+		if ($_REQUEST['refresh_page'] == "game") $show_intro_text = false;
 		else $show_intro_text = true;
-		$output['current_round_table'] = $game->current_round_table($current_round, $thisuser, $show_intro_text);
+		$output['current_round_table'] = $game->current_round_table($current_round, $thisuser, $show_intro_text, true);
 		
 		$output['wallet_text_stats'] = $thisuser->wallet_text_stats($game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance);
 		$output['my_current_votes'] = $game->my_votes_table($current_round, $thisuser);
