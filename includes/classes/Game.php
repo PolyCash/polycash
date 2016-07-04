@@ -2418,6 +2418,7 @@ class Game {
 		$q = "SELECT * FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id='".$last_block_id."';";
 		$r = $GLOBALS['app']->run_query($q);
 		$last_block = mysql_fetch_array($r);
+		
 		$current_block = $coin_rpc->getblock($last_block['block_hash']);
 
 		$block_height = $last_block['block_id']-1;

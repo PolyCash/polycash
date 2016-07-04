@@ -38,6 +38,9 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$q .= ", create_transaction_id='".$transaction_id."', amount='".$game->db_game['pow_reward']."', create_block_id='1';";
 	$r = $GLOBALS['app']->run_query($q);
 	
+	$q = "INSERT INTO blocks SET game_id='".$game->db_game['game_id']."', block_hash='".$genesis_hash."', block_id='1', time_created='".time()."';";
+	$r = $GLOBALS['app']->run_query($q);
+	
 	echo "Added the genesis transaction!<br/>\n";
 	
 	$current_hash = $blocks[0]->json_obj['nextblockhash'];
