@@ -727,10 +727,10 @@ function new_webwallet_multi_transaction($game, $nation_ids, $amounts, $from_use
 	$immature_balance = immature_balance($game, $from_user);
 	$mature_balance = $account_value - $immature_balance;
 	
-	$raw_txin = [];
-	$raw_txout = [];
-	$affected_input_ids = [];
-	$created_input_ids = [];
+	$raw_txin = array();
+	$raw_txout = array();
+	$affected_input_ids = array();
+	$created_input_ids = array();
 	
 	if ((count($nation_ids) == count($amounts) || ($type == "bet" && count($amounts) == count($address_ids))) && ($amount <= $mature_balance || $type == "giveaway" || $type == "votebase")) {
 		$q = "INSERT INTO webwallet_transactions SET game_id='".$game['game_id']."'";
