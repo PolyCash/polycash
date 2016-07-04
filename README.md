@@ -3,6 +3,10 @@ Empirecoin Web can act as front end web wallet for the decentralized EmpireCoin 
 To use Empirecoin Web as a wallet for the Empirecoin currency, first install empirecoind and ensure that RPC calls can be made.  If you are only using Empirecoin Web to host private games, you don't need to install empirecoind.
 
 To get started, first please install and secure Apache, MySQL and PHP.  Then create a new file: includes/config.php and paste the following code into this file.  You can also find an example config file in includes/example_config.php
+
+```
+#!php
+
 <?php
 $GLOBALS['mysql_server'] = "localhost";
 $GLOBALS['mysql_user'] = "root";
@@ -44,6 +48,8 @@ $GLOBALS['rsa_pub_key'] = "";
 
 $GLOBALS['api_proxy_url'] = "";
 ?>
+
+```
 
 Be sure to configure your database correctly by entering the correct mysql password, username and database into this config file.
 
