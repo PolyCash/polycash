@@ -6,13 +6,17 @@ else $redirect_id = FALSE;
 ?>
 <script type="text/javascript">
 function autogen_password_changed() {
-	if ($('#autogen_password').val() == "1") {
-		$('#signup_password_disp').hide();
-	}
-	else {
+	if ($('#autogen_password').val() == "0") {
 		$('#signup_password_disp').show();
 	}
+	else {
+		$('#signup_password_disp').hide();
+	}
 }
+$(document).ready(function() {
+	$('#autogen_password').val(0);
+	autogen_password_changed();
+});
 </script>
 <div class="row" style="padding-top: 20px;">
 	<div class="col-md-6">
@@ -51,8 +55,6 @@ function autogen_password_changed() {
 	</div>
 	<div class="col-md-6">
 		<b style="font-size: 17px; line-height: 24px;">Or sign up for an account</b><br/>
-		If you use an email address as your username, your password will be emailed to you.  This website allows password resets by email so your account will only as secure as your email account.<br/>
-		But if you choose a non-email for your username, be sure to store your password safely; you'll have no recourse if you lose your password. 
 		
 		<form action="/wallet/" method="post" onsubmit="$('#signup_password').val(Sha256.hash($('#signup_password').val())); $('#signup_password2').val(Sha256.hash($('#signup_password2').val()));">
 			<input type="hidden" name="do" value="signup" />
@@ -72,9 +74,9 @@ function autogen_password_changed() {
 			</div> */ ?>
 			<div class="row">
 				<div class="col-sm-10">
-					<select id="autogen_password" name="autogen_password" class="responsive_input form-control" onchange="autogen_password_changed();">
-						<option value="1">Email me a random password</option>
+					<select id="autogen_password" name="autogen_password" class="responsive_input form-control" onchange="autogen_password_changed();" style="margin-bottom: 5px;">
 						<option value="0">I'll create my own password</option>
+						<option value="1">Email me a random password</option>
 					</select>
 				</div>
 			</div>

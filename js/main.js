@@ -891,3 +891,118 @@ function update_bet_chart() {
 		$('#round_odds_chart').html("");
 	}
 }
+
+function new_match() {
+	$('#new_match_modal').modal('toggle');
+}
+function confirm_new_match() {
+	var match_type_id = $('#new_match_type').val();
+	$.get("/ajax/manage_match.php?do=new&match_type_id="+match_type_id, function(result) {
+		var result_json = JSON.parse(result);
+		if (parseInt(result_json['result_code']) == 1) {
+			window.location = "/games/?match_id="+result_json['match_id'];
+		}
+		else alert(result_json['error_message']);
+	});
+}
+function join_match(match_id) {
+	$.get("/ajax/manage_match.php?do=join&match_id="+match_id, function(result) {
+		var result_json = JSON.parse(result);
+		if (parseInt(result_json['result_code']) == 1) {
+			window.location = "/games/?match_id="+match_id;
+		}
+		else alert(result_json['error_message']);
+	});
+}
+function start_match(match_id) {
+	$.get("/ajax/manage_match.php?do=start&match_id="+match_id, function(result) {
+		var result_json = JSON.parse(result);
+		if (parseInt(result_json['result_code']) == 1) {
+			window.location = "/games/?match_id="+match_id;
+		}
+		else alert(result_json['error_message']);
+	});
+}
+function match_loop() {
+	if (match_text_amount != $('#match_move_amount').val()) {
+		match_text_amount = $('#match_move_amount').val();
+		
+		if (match_text_amount != "") {
+			var match_move_amount = parseFloat(match_text_amount);
+			$('#match_slider').val(match_move_amount*100);
+			refresh_match_slider(false);
+		}
+	}
+	
+	if (match_slider_changed) refresh_match_slider(true);
+	
+	match_slider_changed = false;
+	setTimeout("match_loop();", 500);
+}
+function submit_move(match_id) {
+	$.get("/ajax/manage_match.php?do=move&match_id="+match_id+"&amount="+move_amount, function(result) {
+		var result_json = JSON.parse(result);
+		if (parseInt(result_json['result_code']) == 1) {}
+		else {
+			alert(result_json['error_message']);
+		}
+	});
+}
+function refresh_match_slider(update_text_input) {
+	var match_move_amount = parseInt($('#match_slider').val())/100;
+	move_amount = match_move_amount;
+	$('#match_slider_label').html("Wager "+match_move_amount+" coins");
+	if (update_text_input) $('#match_move_amount').val(match_move_amount);
+}
+function load_match_slider(max_coins) {
+	console.log('loading match slider to: '+max_coins);
+	
+	$('#match_slider').noUiSlider({
+		range: [0, max_coins*100]
+	   ,start: max_coins*50, step: 1
+	   ,handles: 1
+	   ,connect: "lower"
+	   ,serialization: {
+			to: [ false, false ]
+			,resolution: 1
+		}
+	   ,slide: function() {
+		   match_slider_changed = true;
+	   }
+	});
+}
+function match_refresh_loop(match_id) {
+	if (!match_refresh_in_progress) {
+		match_refresh_in_progress = true;
+		var cached_move_amount = move_amount;
+		console.log('cached move amount: '+cached_move_amount);
+		$.get("/ajax/check_match_activity.php?match_id="+match_id+"&last_move_number="+last_move_number+"&last_message_id="+last_message_id+"&current_round_number="+current_round_number, function(result) {
+			var result_json = JSON.parse(result);
+			
+			if (result_json['new_messages'] != "0") {
+				$('#match_messages').append(result_json['new_messages']);
+				last_message_id = result_json['last_message_id'];
+			}
+			
+			if (result_json['new_move'] == "1") {
+				$('#match_body_container').html(result_json['match_body']);
+				last_move_number = result_json['last_move_number'];
+				account_value = parseInt(result_json['account_value']);
+				load_match_slider(account_value/Math.pow(10,8));
+				
+				$('#match_move_amount').val(cached_move_amount);
+				$('#match_slider').val(cached_move_amount*100);
+				refresh_match_slider(true);
+				
+				if (result_json['new_round'] == "1") {
+					current_round_number = parseInt(result_json['current_round_number']);
+					$('#last_round_result').html(result_json['last_round_result']);
+					$('#last_round_result_modal').modal('show');
+				}
+			}
+			
+			match_refresh_in_progress = false;
+		});
+	}
+	setTimeout("match_refresh_loop("+match_id+");", 1000);
+}

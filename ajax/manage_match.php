@@ -86,7 +86,7 @@ if ($thisuser) {
 						if ($amount == round($amount, 2)) {
 							$amount = $amount*pow(10,8);
 							if ($amount <= $account_value) {
-								add_match_move($match, $my_membership['membership_id'], 'burn', $amount);
+								$move_id = start_match_move($match, $my_membership['membership_id'], 'burn', $amount);
 								$result_code = 1;
 							}
 							else {

@@ -1639,7 +1639,7 @@ function user_match_membership($user_id, $match_id) {
 	else return false;
 }
 
-function add_match_move(& $match, $membership_id, $type, $amount) {
+function start_match_move(& $match, $membership_id, $type, $amount) {
 	$initial_round_number = $match['current_round_number'];
 	
 	$qqq = "INSERT INTO match_moves SET membership_id='".$membership_id."', move_type='".$type."', amount='".$amount."', round_number='".$match['current_round_number']."', move_number='".($match['last_move_number']+1)."', time_created='".time()."';";
@@ -1658,18 +1658,39 @@ function add_match_move(& $match, $membership_id, $type, $amount) {
 	$rrr = run_query($qqq);
 	$match = mysql_fetch_array($rrr);
 	
+	if ($match['current_round_number'] != $initial_round_number) {
+		$qqq = "SELECT * FROM match_moves mv JOIN match_memberships mem ON mv.membership_id=mem.membership_id WHERE mem.match_id='".$match['match_id']."' AND mv.round_number='".$initial_round_number."';";
+		$rrr = run_query($qqq);
+		while ($match_move = mysql_fetch_array($rrr)) {
+			finalize_match_move($match_move['move_id']);
+		}
+		finish_match_round($match, $initial_round_number);
+	}
+	
+	return $move_id;
+}
+
+function finalize_match_move($move_id) {
+	$q = "SELECT * FROM match_moves WHERE move_id='".$move_id."';";
+	$r = run_query($q);
+	$match_move = mysql_fetch_array($r);
+	
+	$qqq = "SELECT * FROM match_types t JOIN matches m ON t.match_type_id=m.match_type_id AND m.match_id='".$match_move['match_id']."';";
+	$rrr = run_query($qqq);
+	$match = mysql_fetch_array($rrr);
+	
 	if ($type == "deposit") {
-		$qqq = "INSERT INTO match_IOs SET membership_id='".$membership_id."', match_id='".$match['match_id']."', create_move_id='".$move_id."', amount='".$amount."';";
+		$qqq = "INSERT INTO match_IOs SET membership_id='".$match_move['membership_id']."', match_id='".$match['match_id']."', create_move_id='".$move_id."', amount='".$match_move['amount']."';";
 		$rrr = run_query($qqq);
 	}
 	else if ($type == "burn") {
-		$qqq = "SELECT * FROM match_IOs WHERE membership_id='".$membership_id."' AND spend_status='unspent' ORDER BY amount DESC;";
+		$qqq = "SELECT * FROM match_IOs WHERE membership_id='".$match_move['membership_id']."' AND spend_status='unspent' ORDER BY amount DESC;";
 		$rrr = run_query($qqq);
 		
 		$input_sum = 0;
 		
 		while ($match_io = mysql_fetch_array($rrr)) {
-			if ($input_sum < $amount) {
+			if ($input_sum < $match_move['amount']) {
 				$q = "UPDATE match_IOs SET spend_status='spent', spend_move_id='".$move_id."' WHERE io_id='".$match_io['io_id']."';";
 				$r = run_query($q);
 				$input_sum += $match_io['amount'];
@@ -1679,17 +1700,13 @@ function add_match_move(& $match, $membership_id, $type, $amount) {
 		$overshoot_amount = $input_sum - $amount;
 		
 		if ($overshoot_amount > 0) {
-			$q = "INSERT INTO match_IOs SET membership_id='".$membership_id."', match_id='".$match['match_id']."', create_move_id='".$move_id."', amount='".$overshoot_amount."';";
+			$q = "INSERT INTO match_IOs SET membership_id='".$match_move['membership_id']."', match_id='".$match['match_id']."', create_move_id='".$move_id."', amount='".$overshoot_amount."';";
 			$r = run_query($q);
 			$output_id = mysql_insert_id();	
 		}
 		
-		$qqq = "INSERT INTO match_IOs SET spend_status='spent', membership_id='".$membership_id."', match_id='".$match['match_id']."', create_move_id='".$move_id."', amount='".$amount."';";
+		$qqq = "INSERT INTO match_IOs SET spend_status='spent', membership_id='".$match_move['membership_id']."', match_id='".$match['match_id']."', create_move_id='".$move_id."', amount='".$match_move['amount']."';";
 		$rrr = run_query($qqq);
-		
-		if ($match['current_round_number'] != $initial_round_number) {
-			finish_match_round($match, $initial_round_number);
-		}
 	}
 	
 	return $move_id;
@@ -1776,7 +1793,8 @@ function initialize_match(& $match) {
 		add_match_message($match['match_id'], "Anonymous joined the game at ".date("g:ia", $membership['time_joined'])." as player #".($membership['player_position']+1), false, false, $membership['user_id']);
 		add_match_message($match['match_id'], "You joined the game at ".date("g:ia", $membership['time_joined'])." as player #".($membership['player_position']+1), false, $membership['user_id'], false);
 		
-		$move_id = add_match_move($match, $membership['membership_id'], 'deposit', $match['initial_coins_per_player']);
+		$move_id = start_match_move($match, $membership['membership_id'], 'deposit', $match['initial_coins_per_player']);
+		finalize_match_move($move_id);
 	}
 	$deposit_msg = "The dealer hands out ".number_format($match['initial_coins_per_player']/pow(10,8))." coins to each player, the game begins.";
 	add_match_message($match['match_id'], $deposit_msg, false, false, false);
@@ -1817,12 +1835,16 @@ function add_match_message($match_id, $message, $from_user_id, $to_user_id, $hid
 	$r = run_query($q);
 }
 
-function show_match_messages(& $match, $user_id) {
-	$q = "SELECT * FROM match_messages WHERE match_id='".$match['match_id']."' AND (to_user_id='".$user_id."' OR to_user_id IS NULL) AND (hide_user_id != '".$user_id."' OR hide_user_id IS NULL) ORDER BY time_created ASC;";
+function show_match_messages(& $match, $user_id, $last_message_id) {
+	$q = "SELECT * FROM match_messages WHERE match_id='".$match['match_id']."' AND (to_user_id='".$user_id."' OR to_user_id IS NULL) AND (hide_user_id != '".$user_id."' OR hide_user_id IS NULL)";
+	if ($last_message_id) $q .= " AND message_id > ".$last_message_id;
+	$q .= " ORDER BY time_created ASC;";
 	$r = run_query($q);
+	$html = "";
 	while ($message = mysql_fetch_array($r)) {
-		echo $message['message']."<br/>\n";
+		$html .= $message['message']."<br/>\n";
 	}
+	return $html;
 }
 
 function match_current_player(& $match) {
@@ -1831,6 +1853,103 @@ function match_current_player(& $match) {
 	$r = run_query($q);
 	$player = mysql_fetch_array($r);
 	return $player;
+}
+
+function last_match_message($match_id) {
+	$q = "SELECT message_id FROM match_messages WHERE match_id='".$match_id."' ORDER BY message_id DESC LIMIT 1;";
+	$r = run_query($q);
+	if (mysql_numrows($r) > 0) {
+		$last_message = mysql_fetch_array($r);
+		return $last_message['message_id'];
+	}
+	else return 0;
+}
+function match_body(& $match, & $my_membership, $thisuser) {
+	$html = "";
+	
+	if ($match['status'] == "pending") {
+		$html .= "Great, this game is ready to begin!<br/>";
+		$html .= '<button class="btn btn-success" onclick="start_match('.$match['match_id'].');">Begin the game</button>';
+	}
+	else if ($match['status'] == "running") {
+		$q = "SELECT * FROM match_memberships mem JOIN users u ON mem.user_id=u.user_id WHERE mem.match_id='".$match['match_id']."' ORDER BY player_position ASC;";
+		$r = run_query($q);
+		while ($player = mysql_fetch_array($r)) {
+			$qq = "SELECT COUNT(*) FROM match_rounds WHERE match_id='".$match['match_id']."' AND winning_membership_id='".$player['membership_id']."';";
+			$rr = run_query($qq);
+			$player_wins = mysql_fetch_row($rr);
+			$player_wins = $player_wins[0];
+			
+			$html .= "<div class=\"row\"";
+			if ($thisuser['user_id'] == $player['user_id']) $html .= " style=\"font-weight: bold;\"";
+			$html .= "><div class=\"col-sm-8\">";
+			if ($thisuser['user_id'] == $player['user_id']) $html .= "You have: ";
+			else $html .= "Player #".($player['player_position']+1).": ";
+			$html .= $player_wins." win";
+			if ($player_wins != 1) $html .= "s";
+			$html .= ", ".match_mature_balance($player['membership_id'])/pow(10,8)." coins left";
+			$html .= "</div><div class=\"col-sm-4\">";
+			$qq = "SELECT * FROM match_moves WHERE membership_id='".$player['membership_id']."' AND round_number='".$match['current_round_number']."';";
+			$rr = run_query($qq);
+			if (mysql_numrows($rr) > 0) $html .= "Moved submitted";
+			else $html .= "Awaiting move...";
+			$html .= "</div></div>\n";
+		}
+		
+		$html .= "<br/>You're currently on round ".$match['current_round_number']." of ".$match['num_rounds']."<br/>\n";
+		
+		$q = "SELECT * FROM match_moves WHERE membership_id='".$my_membership['membership_id']."' AND round_number='".$match['current_round_number']."';";
+		$r = run_query($q);
+		if (mysql_numrows($r) > 0) {
+			$my_move = mysql_fetch_array($r);
+			$html .= "You put <font class=\"greentext\">".$my_move['amount']/pow(10,8)." coins</font> down on this round.<br/>\n";
+			$html .= "Waiting on your opponent...";
+		}
+		else {
+			$html .= 'Please enter an amount or use the sliders below, then submit your move for this round.<br/><br/>';
+			$html .= '
+			<div class="row">
+				<div class="col-sm-4">
+					<input class="form-control" id="match_move_amount" type="tel" size="6" placeholder="0.00" />
+				</div>
+			</div>
+			
+			<div id="match_slider" class="noUiSlider"></div>
+			
+			<button id="match_slider_label" class="btn btn-primary" onclick="submit_move('.$match['match_id'].');">Submit Move</button>';
+		}
+	}
+	else if ($match['status'] == "finished") {}
+	
+	return $html;
+}
+
+function round_result_html($match, $round_number, $thisuser) {
+	$html = "";
+	
+	$match_round = get_match_round($match['match_id'], $round_number);
+	
+	if ($match_round['status'] == "won") {
+		$qq = "SELECT * FROM match_memberships WHERE membership_id='".$match_round['winning_membership_id']."';";
+		$rr = run_query($qq);
+		$winner = mysql_fetch_array($rr);
+		$html .= "<h1>";
+		if ($winner['user_id'] == $thisuser['user_id']) $html .= "You won round #".$round_number."!";
+		else $html .= "Player #".($winner['player_position']+1)." won round #".$round_number;
+		$html .= "</h1>\n";
+	}
+	
+	$q = "SELECT * FROM match_memberships mem JOIN users u ON mem.user_id=u.user_id JOIN match_moves mv ON mv.membership_id=mem.membership_id WHERE mem.match_id='".$match['match_id']."' AND mv.round_number='".$round_number."' ORDER BY mv.amount DESC;";
+	$r = run_query($q);
+	while ($player = mysql_fetch_array($r)) {
+		$html .= "<div class=\"row\"><div class=\"col-sm-6\">";
+		$html .= "Player #".($player['player_position']+1);
+		$html .= "</div><div class=\"col-sm-6\" style=\"text-align: right;\">";
+		$html .= $player['amount']/pow(10,8)." coins";
+		$html .= "</div></div>\n";
+	}
+	
+	return $html;
 }
 
 class block {
