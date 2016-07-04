@@ -2,7 +2,10 @@
 include(realpath(dirname(__FILE__))."/../includes/connect.php");
 
 if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
-	$q = "SELECT * FROM games;";
+	$q = "SELECT * FROM games";
+	$game_id = intval($_REQUEST['game_id']);
+	if ($game_id) $q .= " WHERE game_id='".$game_id."'";
+	$q .= ";";
 	$r = run_query($q);
 
 	while ($mandatory_game = mysql_fetch_array($r)) {

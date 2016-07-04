@@ -3187,7 +3187,7 @@ function game_info_table($game) {
 	
 	$total_inflation_pct = game_final_inflation_pct($game);
 	if ($total_inflation_pct) {
-		$html .= '<div class="row"><div class="col-sm-5">Final inflation:</div><div class="col-sm-7">'.$total_inflation_pct."%</div></div>\n";
+		$html .= '<div class="row"><div class="col-sm-5">Final inflation:</div><div class="col-sm-7">'.number_format($total_inflation_pct)."%</div></div>\n";
 	}
 
 	return $html;
@@ -3486,7 +3486,7 @@ function game_description($game) {
 	
 	if ($game['giveaway_status'] == "invite_pay" || $game['giveaway_status'] == "public_pay") {
 		$invite_disp = format_bignum($game['invite_cost']);
-		$html .= "To join this game, buy ".format_bignum($game['giveaway_amount']/pow(10,8))." ".$game['coin_name_plural']." (".round($receive_pct, 2)."% of the coins) for ".$invite_disp." ".$game['short_name'];
+		$html .= "To join this game, buy ".format_bignum($game['giveaway_amount']/pow(10,8))." ".$game['coin_name_plural']." (".round($receive_pct, 2)."% of the coins) for ".$invite_disp." ".$game['currency_short_name'];
 		if ($invite_disp != '1') $html .= "s";
 	}
 	else {
@@ -3624,5 +3624,9 @@ function user_buyin_limit(&$game, $user) {
 	$returnvals['user_buyin_limit'] = $user_buyin_limit;
 	
 	return $returnvals;
+}
+function decimal_to_float($number) {
+	if (strpos($number, ".") === false) return $number;
+	else return rtrim(rtrim($number, '0'), '.');
 }
 ?>

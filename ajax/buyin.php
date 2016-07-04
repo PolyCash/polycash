@@ -48,7 +48,7 @@ if ($thisuser && $game) {
 					
 					$('#buyin_disp').show();
 					$('#buyin_amount_disp').html(amount_in);
-					$('#buyin_receive_amount_disp').html(amount_out);
+					$('#buyin_receive_amount_disp').html(format_coins(amount_out));
 					$('#buyin_send_amount_btc').html(format_coins(amount_in/btc_exchange_rate));
 					$('#buyin_btc_pay_amount').val(format_coins(amount_in/btc_exchange_rate));
 					$('#btc_exchange_rate').html(format_coins(btc_exchange_rate));
@@ -128,7 +128,10 @@ if ($thisuser && $game) {
 							<button class="btn btn-primary" onclick="check_buyin_amount();">Check</button>
 							
 							<div style="display: none; margin: 10px 0px;" id="buyin_disp">
-								The <?php echo $invite_currency['short_name']; ?> / BTC exchange rate is <div id="btc_exchange_rate" style="display: inline-block;"></div> <?php echo $invite_currency['short_name']; ?>s / BTC right now. For <div id="buyin_amount_disp" style="display: inline-block;"></div> <?php echo $invite_currency['short_name']."s"; ?>, you'll receive approximately <div id="buyin_receive_amount_disp" style="display: inline-block;"></div> <?php echo $game['coin_name_plural']; ?>. Send <div id="buyin_send_amount_btc" style="display: inline-block;"></div> BTC to <a target="_blank" href="https://blockchain.info/address/<?php echo $invoice_address['pub_key']; ?>"><?php echo $invoice_address['pub_key']; ?></a>
+								<?php if ($invite_currency['currency_id'] != $btc_currency['currency_id']) { ?>
+								The <?php echo $invite_currency['short_name']; ?> / BTC exchange rate is <div id="btc_exchange_rate" style="display: inline-block;"></div> <?php echo $invite_currency['short_name']; ?>s / BTC right now. 
+								<?php } ?>
+								For <div id="buyin_amount_disp" style="display: inline-block;"></div> <?php echo $invite_currency['short_name']."s"; ?>, you'll receive approximately <div id="buyin_receive_amount_disp" style="display: inline-block;"></div> <?php echo $game['coin_name_plural']; ?>. Send <div id="buyin_send_amount_btc" style="display: inline-block;"></div> BTC to <a target="_blank" href="https://blockchain.info/address/<?php echo $invoice_address['pub_key']; ?>"><?php echo $invoice_address['pub_key']; ?></a>
 								<br/>
 								<center><img style="margin: 10px;" src="/render_qr_code.php?data=<?php echo $invoice_address['pub_key']; ?>" /></center>
 								<br/>

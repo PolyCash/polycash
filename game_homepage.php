@@ -138,7 +138,7 @@ if ($game) {
 					<div class="modal-body">
 						<?php
 						if ($user_game) {
-							$q = "SELECT * FROM currency_invoices ci JOIN invoice_addresses ia ON ci.invoice_address_id=ia.invoice_address_id JOIN currencies c ON ci.settle_currency_id=c.currency_id WHERE ci.game_id='".$game['game_id']."';";
+							$q = "SELECT * FROM currency_invoices ci JOIN invoice_addresses ia ON ci.invoice_address_id=ia.invoice_address_id JOIN currencies c ON ci.settle_currency_id=c.currency_id WHERE ci.game_id='".$game['game_id']."' AND ci.status='confirmed';";
 							$r = run_query($q);
 							
 							if (mysql_numrows($r) > 0) {
