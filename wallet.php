@@ -1130,9 +1130,14 @@ $mature_balance = mature_balance($game, $thisuser);
 							?>
 						</div>
 						<div class="col-sm-3 game_cell">
-							<?php if ($user_game['creator_id'] == $thisuser['user_id']) { ?>
-							<a href="" onclick="manage_game_invitations(<?php echo $user_game['game_id']; ?>); return false;">Invitations</a>
-							<?php } ?>
+							<?php
+							$perm_to_invite = user_can_invite_game($user_game, $thisuser['user_id']);
+							if ($perm_to_invite) {
+								?>
+								<a href="" onclick="manage_game_invitations(<?php echo $user_game['game_id']; ?>); return false;">Invitations</a>
+								<?php
+							}
+							?>
 						</div>
 					</div>
 					<?php

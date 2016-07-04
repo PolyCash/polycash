@@ -481,14 +481,14 @@ function switch_to_game(game_id, action) {
 				$('#save_game_btn').hide();
 				$('#publish_game_btn').hide();
 			}
+			
 			if (json_result['giveaway_status'] == "invite_free" || json_result['giveaway_status'] == "invite_pay") {
 				if (json_result['my_game'] == true) {
 					$('#invitations_game_btn').show();
 				}
 				else $('#invitations_game_btn').hide();
 			}
-			else if (json_result['giveaway_status'] == "public_pay") $('#invitations_game_btn').show();
-			else if (json_result['giveaway_status'] == "on") $('#invitations_game_btn').show();
+			else if (json_result['giveaway_status'] == "public_pay" || json_result['giveaway_status'] == "public_free") $('#invitations_game_btn').show();
 			else $('#invitations_game_btn').hide();
 			
 			$('#game_form').modal('show');

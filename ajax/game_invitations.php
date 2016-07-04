@@ -13,15 +13,17 @@ if ($thisuser) {
 		
 		if (mysql_numrows($r) > 0) {
 			$game = mysql_fetch_array($r);
-			if ($thisuser['user_id'] == $game['creator_id']) {
+
+			$perm_to_invite = user_can_invite_game($game, $thisuser['user_id']);
+
+			if ($perm_to_invite) {
 				if ($action == "manage") {
-					$q = "SELECT * FROM invitations i LEFT JOIN transactions t ON i.giveaway_transaction_id=t.transaction_id LEFT JOIN users u ON i.used_user_id=u.user_id LEFT JOIN async_email_deliveries d ON i.sent_email_id=d.delivery_id WHERE i.game_id='".$game['game_id']."';";
+					$q = "SELECT * FROM invitations i LEFT JOIN users u ON i.used_user_id=u.user_id LEFT JOIN async_email_deliveries d ON i.sent_email_id=d.delivery_id WHERE i.game_id='".$game['game_id']."' AND i.inviter_id='".$thisuser['user_id']."';";
 					$r = run_query($q);
-					echo 'This game has '.mysql_numrows($r).' invitations.<br/>';
+					echo 'You\'ve generated '.mysql_numrows($r).' invitations for this game.<br/>';
 					while ($invitation = mysql_fetch_array($r)) {
 						echo '<div class="row">';
 						echo '<div class="col-sm-6">';
-						if ($invitation['transaction_id'] > 0) echo format_bignum($invitation['amount']/pow(10,8))." coins. ";
 						if ($invitation['used_user_id'] > 0) echo 'Claimed by '.$invitation['username'];
 						else echo 'Unclaimed';
 						echo '</div>';
@@ -50,7 +52,7 @@ if ($thisuser) {
 					$to_email = urldecode($_REQUEST['to_email']);
 					$invitation_id = intval($_REQUEST['invitation_id']);
 					
-					$q = "SELECT * FROM invitations WHERE invitation_id='".$invitation_id."';";
+					$q = "SELECT * FROM invitations WHERE invitation_id='".$invitation_id."' AND inviter_id='".$thisuser['user_id']."';";
 					$r = run_query($q);
 					
 					if (mysql_numrows($r) > 0) {
@@ -122,8 +124,12 @@ if ($thisuser) {
 							
 							$q = "UPDATE invitations SET sent_email_id='".$email_id."' WHERE invitation_id='".$invitation['invitation_id']."';";
 							$r = run_query($q);
+
+							output_message(1, "Great, the invitation has been sent.", $invitation);
 						}
+						else output_message(2, "Error: that invitation has already been sent or used.", $invitation);
 					}
+					else output_message(2, "Error: you can't send that invitation.", $invitation);
 				}
 				else {
 					$invitation = false;
@@ -131,7 +137,10 @@ if ($thisuser) {
 					output_message(1, "An invitation has been generated.", $invitation);
 				}
 			}
+			else output_message(2, "Error: you don't have permission to generate invitations for this game.", $invitation);
 		}
+		else output_message(2, "Error: you don't have permission to generate invitations for this game.", $invitation);
 	}
+	else output_message(2, "Error: you specified an invalid action.", $invitation);
 }
 ?>

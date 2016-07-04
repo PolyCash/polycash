@@ -3184,4 +3184,12 @@ function new_currency_invoice($settle_currency_id, $settle_amount, $user_id, $ga
 	$r = run_query($q);
 	return mysql_fetch_array($r);
 }
+function user_can_invite_game(&$game, $user_id) {
+	if ($game['giveaway_status'] == "invite_free" || $game['giveaway_status'] == "invite_pay") {
+		if ($user_id == $game['creator_id']) return true;
+		else return false;
+	}
+	else if ($game['giveaway_status'] == "public_pay" || $game['giveaway_status'] == "public_free") return true;
+	else return false;
+}
 ?>
