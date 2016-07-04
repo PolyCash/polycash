@@ -51,40 +51,42 @@ if ($_REQUEST['do'] == "signup") {
 					
 					$acode = 1;
 					if ($_REQUEST['autogen_password'] == "1") {
-						$message = "Your account has been created.  A new password was generated and emailed to <b>$email</b>.  Please check your inbox and then log in below. ";
+						$message = "Your account has been created.  A new password was generated and emailed to your inbox.  Please check your inbox and then log in below. ";
 					}
 					else {
 						$message = "Your account has been created.  Please log in below. ";
 					}
 					
-					$q = "SELECT * FROM viewer_connections WHERE type='viewer2user' AND from_id='".$viewer_id."' AND to_id='".$thisuser['user_id']."';";
-					$r = run_query($q);
-					if (mysql_numrows($r) == 0) {
-						$q = "INSERT INTO viewer_connections SET type='viewer2user', from_id='".$viewer_id."', to_id='".$thisuser['user_id']."';";
+					if ($GLOBALS['pageview_tracking_enabled']) {
+						$q = "SELECT * FROM viewer_connections WHERE type='viewer2user' AND from_id='".$viewer_id."' AND to_id='".$thisuser['user_id']."';";
 						$r = run_query($q);
+						if (mysql_numrows($r) == 0) {
+							$q = "INSERT INTO viewer_connections SET type='viewer2user', from_id='".$viewer_id."', to_id='".$thisuser['user_id']."';";
+							$r = run_query($q);
+						}
+						$session_key = session_id();
+						$expire_time = time()+3600*24;
+						
+						$query = "UPDATE users SET ip_address='".mysql_real_escape_string($_SERVER['REMOTE_ADDR'])."' WHERE user_id='".$thisuser['user_id']."';";
+						$result = run_query($query);
 					}
-					$session_key = session_id();
-					$expire_time = time()+3600*24;
-					
-					$query = "UPDATE users SET ip_address='".mysql_real_escape_string($_SERVER['REMOTE_ADDR'])."' WHERE user_id='".$thisuser['user_id']."';";
-					$result = run_query($query);
 					
 					if ($_REQUEST['autogen_password'] == "1") {
 						$email_message = "<p>You've created a new EmpireCoin web wallet for <b>".$email."</b>.</p>";
 						$email_message .= "<p>A password was automatically generated for your user account.<p>";
 						$email_message .= "<p>Your password is: ".$new_pass."</p>";
-						$email_message .= "<p>If you'd like to set a new password, please visit: http://empireco.in/reset_password/</p>";
+						$email_message .= "<p>If you'd like to set a new password, please visit: http://empirecoin.org/reset_password/</p>";
 						$email_message .= "<p>Thanks for signing up!</p>";
-						$email_message .= "<p>This message was sent to you by http://empireco.in</p>";
+						$email_message .= "<p>This message was sent to you by http://empirecoin.org</p>";
 					}
 					else {
 						$email_message = "<p>A new EmpireCoin web wallet has been created for <b>".$email."</b>.</p>";
 						$email_message .= "<p>Thanks for signing up!</p>";
-						$email_message .= "<p>To log in any time please visit http://empireco.in/wallet/</p>";
-						$email_message .= "<p>This message was sent to you by http://empireco.in</p>";
+						$email_message .= "<p>To log in any time please visit http://empirecoin.org/wallet/</p>";
+						$email_message .= "<p>This message was sent to you by http://empirecoin.org</p>";
 					}
 					
-					$email_id = mail_async($email, "EmpireCo.in", "no-reply@empireco.in", "New account created", $email_message, "", "");
+					$email_id = mail_async($email, "EmpireCoin.org", "no-reply@empirecoiin.org", "New account created", $email_message, "", "");
 					
 					if ($_REQUEST['invite_key'] != "") {
 						try_apply_invite_key(get_site_constant('primary_game_id'), $user_id, $_REQUEST['invite_key']);
@@ -96,7 +98,7 @@ if ($_REQUEST['do'] == "signup") {
 		}
 		else {
 			$acode = 0;
-			$message = "Sorry the email '$email' is already registered.";
+			$message = "Sorry the email address you entered is already registered.";
 		}
 	}
 	else {
@@ -286,19 +288,32 @@ $pagetitle = "EmpireCoin - My web wallet";
 $nav_tab_selected = "wallet";
 include('includes/html_start.php');
 
-$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game['game_id']."';";
-$r = run_query($q);
-if (mysql_numrows($r) > 0) {
-	$user_game = mysql_fetch_array($r);
-	generate_user_addresses($user_game);
+if ($thisuser) {
+	$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game['game_id']."';";
+	$r = run_query($q);
+	if (mysql_numrows($r) > 0) {
+		$user_game = mysql_fetch_array($r);
+		generate_user_addresses($user_game);
+	}
+	else {
+		ensure_user_in_game($thisuser['user_id'], $game['game_id']);
+		
+		$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game['game_id']."';";
+		$r = run_query($q);
+		
+		if (mysql_numrows($r) > 0) {
+			$user_game = mysql_fetch_array($r);
+			generate_user_addresses($user_game);
+		}
+	}
 }
 
 $initial_tab = 0;
 $account_value = account_coin_value($game, $thisuser);
 $immature_balance = immature_balance($game, $thisuser);
 $last_block_id = last_block_id($thisuser['game_id']);
-$current_round = block_to_round($last_block_id+1);
-$block_within_round = $last_block_id%$game['round_length']+1;
+$current_round = block_to_round($game, $last_block_id+1);
+$block_within_round = block_id_to_round_index($game, $last_block_id+1);
 $mature_balance = $account_value - $immature_balance;
 ?>
 <div class="container" style="max-width: 1000px;">
@@ -347,6 +362,7 @@ $mature_balance = $account_value - $immature_balance;
 		var refresh_in_progress = false;
 		var last_refresh_time = 0;
 		var payout_weight = '<?php echo $game['payout_weight']; ?>';
+		var game_round_length = <?php echo $game['round_length']; ?>;
 		var game_loop_index = 1;
 		var last_game_loop_index_applied = -1;
 		var min_bet_round = parseInt(<?php
@@ -730,19 +746,36 @@ $mature_balance = $account_value - $immature_balance;
 				<h1>Deposit</h1>
 				<div id="giveaway_div">
 					<?php
-					$q = "SELECT * FROM invitations WHERE used_user_id='".$thisuser['user_id']."' AND used_time=0 AND used=0;";
-					$r = run_query($q);
-					if (mysql_numrows($r) > 0) {
-						$initial_tab = 4;
-						?>
-						You're eligible for a one time coin giveaway of 1,000 EmpireCoins.<br/>
-						<button class="btn btn-success" onclick="claim_coin_giveaway();" id="giveaway_btn">Claim 1,000 EmpireCoins</button>
-						<?php
+					$giveaway_unavail_msg = 'To make a deposit, please send coins to one your <a href="" onclick="tab_clicked(3); return false;">addresses</a>.';
+					
+					$giveaway_avail_msg = 'You\'re eligible for a one time coin giveaway of '.number_format($game['giveaway_amount']/pow(10,8)).' EmpireCoins.<br/>';
+					$giveaway_avail_msg .= '<button class="btn btn-success" onclick="claim_coin_giveaway();" id="giveaway_btn">Claim '.number_format($game['giveaway_amount']/pow(10,8)).' EmpireCoins</button>';
+					
+					if ($game['game_type'] == "simulation" && ($game['giveaway_status'] == "on" || $game['giveaway_status'] == "invite_only")) {
+						if ($game['giveaway_status'] == "invite_only") {
+							$q = "SELECT * FROM invitations WHERE used_user_id='".$thisuser['user_id']."' AND used_time=0 AND used=0;";
+							$r = run_query($q);
+							
+							if (mysql_numrows($r) > 0) {
+								$initial_tab = 4;
+								echo $giveaway_avail_msg;
+							}
+							else echo $giveaway_unavail_msg;
+						}
+						else {
+							$q = "SELECT * FROM webwallet_transactions t JOIN transaction_IOs io ON t.transaction_id=io.create_transaction_id WHERE io.game_id='".$game['game_id']."' AND io.user_id='".$thisuser['user_id']."' AND t.transaction_desc='giveaway';";
+							$r = run_query($q);
+							
+							if (mysql_numrows($r) > 0) {
+								echo $giveaway_unavail_msg;
+							}
+							else {
+								$initial_tab = 4;
+								echo $giveaway_avail_msg;
+							}
+						}
 					}
-					else { ?>
-						To make a deposit, please send coins to one your <a href="" onclick="tab_clicked(3); return false;">addresses</a>.
-						<?php
-					}
+					else echo $giveaway_unavail_msg;
 					?>
 				</div>
 				<h1>Withdraw</h1>

@@ -109,10 +109,10 @@ $game = mysql_fetch_array($r);
 		</p>
 		<p>
 			<?php
-			$last_block_id = last_block_id(get_site_constant('primary_game_id'));
+			$last_block_id = last_block_id($game['game_id']);
 			$current_round = block_to_round($game, $last_block_id+1);
 			$block_within_round = $last_block_id%$game['round_length']+1;
-			$total_vote_sum = total_score_in_round($game['game_id'], $current_round, $game['payout_weight'], true);
+			$total_vote_sum = total_score_in_round($game, $current_round, $game['payout_weight'], true);
 			
 			$round_stats = round_voting_stats_all($game, $current_round);
 			$total_vote_sum = $round_stats[0];
@@ -161,6 +161,7 @@ var last_block_id = <?php echo $last_block_id; ?>;
 var last_transaction_id = <?php echo last_transaction_id($game['game_id']); ?>;
 var my_last_transaction_id = <?php echo my_last_transaction_id($thisuser['user_id'], $thisuser['game_id']); ?>;
 var mature_io_ids_csv = '<?php echo mature_io_ids_csv($thisuser['user_id'], $game); ?>';
+var game_round_length = <?php echo $game['round_length']; ?>;
 var game_loop_index = 1;
 var last_game_loop_index_applied = -1;
 

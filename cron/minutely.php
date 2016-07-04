@@ -34,7 +34,7 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		$empirecoin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
 	}
 	
-	if ($GLOBALS['min_unallocated_addresses'] > 0) {
+	if ($game['game_type'] == "real" && $GLOBALS['min_unallocated_addresses'] > 0) {
 		$need_addresses = false;
 		$q = "SELECT * FROM nations ORDER BY nation_id ASC;";
 		$r = run_query($q);
@@ -54,19 +54,29 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		
 		echo "Done generating addresses at ".round(microtime(true)-$script_start_time, 2)." seconds.<br/>\n";
 	}
-
-	if ($GLOBALS['walletnotify_by_cron']) {
-		$q = "SELECT * FROM games WHERE game_id='".get_site_constant('primary_game_id')."';";
-		$r = run_query($q);
-		$game = mysql_fetch_array($r);
-		
+	
+	if (($GLOBALS['walletnotify_by_cron'] && $game['game_type'] == "real") || $game['game_type'] == "simulation") {
 		try {
 			$seconds_to_sleep = 5;
 			do {
-				echo apply_user_strategies($game);
-				echo walletnotify($game, $empirecoin_rpc, "");
-				update_nation_scores($game);
-				
+				if ($GLOBALS['walletnotify_by_cron'] && $game['game_type'] == "real") {
+					echo apply_user_strategies($game);
+					echo walletnotify($game, $empirecoin_rpc, "");
+					update_nation_scores($game);
+				}
+				if ($game['game_type'] == "simulation") {
+					$last_block_id = last_block_id($game['game_id']);
+					
+					$num = rand(0, round($game['seconds_per_block']/$seconds_to_sleep)-1);
+					if ($_REQUEST['force_new_block'] == "1") $num = 0;
+					
+					if ($num == 0) {
+						echo new_block($game['game_id']);
+					}
+					else {
+						echo "No block (".$num." vs ".$game['seconds_per_block']/$seconds_to_sleep.")<br/>\n";
+					}
+				}
 				sleep($seconds_to_sleep);
 			} while (microtime(true) < $script_start_time + (60-$seconds_to_sleep));
 		}
@@ -79,18 +89,6 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	/*
 	$q = "UPDATE users SET logged_in=0 WHERE last_active<".(time()-60*2).";";
 	$r = run_query($q);
-	
-	$last_block_id = last_block_id(get_site_constant('primary_game_id'));
-	
-	$num = rand(0, round($game['seconds_per_block']/60)-1);
-	if ($_REQUEST['force_new_block'] == "1") $num = 0;
-	
-	if ($num == 0) {
-		echo new_block(get_site_constant('primary_game_id'));
-	}
-	else {
-		echo "No block (".$num.")<br/>";
-	}
 	*/
 }
 else echo "Error: permission denied.";

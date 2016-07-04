@@ -168,16 +168,16 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 					else $my_votes = false;
 					
 					if ($my_votes[$round['winning_nation_id']] > 0) {
-						if ($this_game['payout_weight'] == "coin") $payout_amt = (floor(100*750*$my_votes[$round['winning_nation_id']]['coins']/$round['winning_score'])/100);
-						else $payout_amt = (floor(100*750*$my_votes[$round['winning_nation_id']]['coin_blocks']/$round['winning_score'])/100);
+						if ($this_game['payout_weight'] == "coin") $payout_amt = (floor(100*$this_game['pos_reward']/pow(10,8)*$my_votes[$round['winning_nation_id']]['coins']/$round['winning_score'])/100);
+						else $payout_amt = (floor(100*$this_game['pos_reward']/pow(10,8)*$my_votes[$round['winning_nation_id']]['coin_blocks']/$round['winning_score'])/100);
 						
 						echo "You won <font class=\"greentext\">+".$payout_amt." EMP</font> by voting ".format_bignum($my_votes[$round['winning_nation_id']]['coins']/pow(10,8))." coins";
 						if ($this_game['payout_weight'] == "coin_block") echo " (".format_bignum($my_votes[$round['winning_nation_id']]['coin_blocks']/pow(10,8))." votes)";
 						echo " for ".$round['name']."</font><br/>\n";
 					}
 					
-					$from_block_id = (($round['round_id']-1)*10)+1;
-					$to_block_id = ($round['round_id']*10);
+					$from_block_id = (($round['round_id']-1)*$this_game['round_length'])+1;
+					$to_block_id = ($round['round_id']*$this_game['round_length']);
 					
 					$q = "SELECT * FROM blocks WHERE game_id='".$this_game['game_id']."' AND block_id >= '".$from_block_id."' AND block_id <= ".$to_block_id." ORDER BY block_id ASC;";
 					$r = run_query($q);
@@ -198,10 +198,12 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 					if ($thisuser) echo '<div class="col-md-3" style="text-align: center;">Your Votes</div>';
 					echo '</div>'."\n";
 					
+					// Todo: This section doesn't work for the current round because $round['position_1'] etc are not defined.
 					$winner_displayed = FALSE;
 					for ($rank=1; $rank<=16; $rank++) {
 						$q = "SELECT * FROM nations WHERE nation_id='".$round['position_'.$rank]."';";
 						$r = run_query($q);
+						
 						if (mysql_numrows($r) == 1) {
 							$ranked_nation = mysql_fetch_array($r);
 							$nation_score = nation_score_in_round($this_game, $ranked_nation['nation_id'], $round['round_id']);

@@ -185,6 +185,9 @@ and (max-device-width : 480px) {
 .redtext {
 	color: #f00;
 }
+.yellowtext {
+	color: #fa0;
+}
 .responsive_input {
 	width: 100%;
 }

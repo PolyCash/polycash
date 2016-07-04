@@ -32,7 +32,7 @@ if ($thisuser) {
 		}
 		else echo "You can't modify this game.";
 	}
-	else if ($game == "new") {
+	else if ($action == "new") {
 		$q = "SELECT MAX(creator_game_index) FROM games WHERE creator_id='".$thisuser['user_id']."';";
 		$r = run_query($q);
 		if (mysql_numrows($r) > 0) {
@@ -74,13 +74,14 @@ if ($thisuser) {
 		echo "1";
 	}
 	else {
-		$game_id = intval($game);
-		
+		$game_id = intval($action);
 		$q = "SELECT * FROM user_games WHERE user_id='".$thisuser['user_id']."' AND game_id='".$game_id."';";
 		$r = run_query($q);
 		
 		if (mysql_numrows($r) == 1) {
-			$q = "UPDATE users SET game_id='".$game_id."' WHERE user_id='".$thisuser['user_id']."';";
+			$user_game = mysql_fetch_array($r);
+			
+			$q = "UPDATE users SET game_id='".$user_game['game_id']."' WHERE user_id='".$thisuser['user_id']."';";
 			$r = run_query($q);
 			
 			echo "1";

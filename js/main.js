@@ -47,15 +47,18 @@ function tab_clicked(index_id) {
 	current_tab = index_id;
 }
 function claim_coin_giveaway() {
+	var giveaway_btn_txt = $('#giveaway_btn').html();
 	$('#giveaway_btn').html("Loading...");
 	
 	$.get("/ajax/coin_giveaway.php?do=claim", function(result) {
-		$('#giveaway_btn').html("Claim 1,000 EmpireCoins");
+		$('#giveaway_btn').html(giveaway_btn_txt);
 		
-		if (result == "1") alert("Great, 1,000 EmpireCoins have been added to your account!");
+		if (result == "1") {
+			alert("Great, EmpireCoins have been added to your account!");
+			window.location = '/wallet/';
+			return false;
+		}
 		else alert("Your free coins have already been claimed.");
-		
-		$('#giveaway_div').html("We're currently in beta; this feature isn't available right now.");
 		
 		refresh_if_needed();
 	});
@@ -175,7 +178,7 @@ function refresh_if_needed() {
 							last_block_id = parseInt(json_result['last_block_id']);
 							
 							if (refresh_page == "wallet") {
-								if ((last_block_id+1)%10 == 0) {
+								if ((last_block_id+1)%game_round_length == 0) {
 									$('#vote_popups').slideUp('medium');
 									$('#vote_popups_disabled').slideDown('fast');
 								}
@@ -184,7 +187,7 @@ function refresh_if_needed() {
 									$('#vote_popups_disabled').hide('fast');
 								}
 								
-								if (json_result['new_performance_history'] == 1) {
+								if (parseInt(json_result['new_performance_history']) == 1) {
 									for (var i=1; i<performance_history_sections; i++) {
 										$('#performance_history_'+i).html("");
 									}
@@ -204,10 +207,20 @@ function refresh_if_needed() {
 									$('#bet_round').val(selected_bet_round);
 								}
 								
-								if (json_result['new_mature_ios'] == 1) {
+								if (parseInt(json_result['new_my_transaction']) == 1) {
+									$('#select_input_buttons').html(json_result['select_input_buttons']);
+									$('#my_bets').html(json_result['my_bets']);
+									my_last_transaction_id = parseInt(json_result['my_last_transaction_id']);
+								}
+								
+								if (parseInt(json_result['new_mature_ios']) == 1) {
 									mature_io_ids_csv = json_result['mature_io_ids_csv'];
+								}
+								
+								if (parseInt(json_result['new_mature_ios']) == 1 || parseInt(json_result['new_my_transaction']) == 1) {
 									reload_compose_vote();
 								}
+								
 								refresh_mature_io_btns();
 								set_input_amount_sums();
 								
@@ -218,17 +231,11 @@ function refresh_if_needed() {
 								}
 							}
 						}
-						if (json_result['new_transaction'] == "1") {
+						if (parseInt(json_result['new_transaction']) == 1) {
 							last_transaction_id = parseInt(json_result['last_transaction_id']);
 							if (user_logged_in) $('#vote_details_general').html(json_result['vote_details_general']);
 						}
-						if (json_result['new_my_transaction'] == "1") {
-							$('#select_input_buttons').html(json_result['select_input_buttons']);
-							$('#my_bets').html(json_result['my_bets']);
-							my_last_transaction_id = parseInt(json_result['my_last_transaction_id']);
-							reload_compose_vote();
-						}
-						if (json_result['new_block'] == "1" || json_result['new_transaction'] == "1") {
+						if (parseInt(json_result['new_block']) == 1 || parseInt(json_result['new_transaction']) == 1) {
 							$('#current_round_table').html(json_result['current_round_table']);
 							
 							$('#account_value').html(json_result['account_value']);
@@ -707,10 +714,12 @@ function reload_compose_vote() {
 	refresh_visible_inputs();
 }
 function refresh_visible_inputs() {
+	var show_count = 0;
 	var mature_io_ids = mature_io_ids_csv.split(",");
 	for (var i=0; i<mature_io_ids.length; i++) {
 		if (typeof io_id2input_index[mature_io_ids[i]] == 'undefined' || io_id2input_index[mature_io_ids[i]] === false) {
 			$('#select_utxo_'+mature_io_ids[i]).show();
+			show_count++;
 		}
 	}
 }
