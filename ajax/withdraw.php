@@ -6,13 +6,13 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuse
 $output_obj['result_code'] = 0;
 $output_obj['message'] = "";
 
-if ($thisuser) {
+if ($thisuser && $game) {
 	$amount = floatval($_REQUEST['amount']);
 	$address = $_REQUEST['address'];
 	
 	if ($amount > 0) {
 		$amount = $amount*pow(10,8);
-		$last_block_id = last_block_id($thisuser['game_id']);
+		$last_block_id = last_block_id($game['game_id']);
 		$mining_block_id = $last_block_id+1;
 		$account_value = account_coin_value($game, $thisuser);
 		$immature_balance = immature_balance($game, $thisuser);
@@ -32,7 +32,7 @@ if ($thisuser) {
 		$success = get_user_strategy($thisuser['user_id'], $game['game_id'], $user_strategy);
 		if ($success) {
 			if ($amount <= $mature_balance) {
-				$q = "SELECT * FROM addresses a LEFT JOIN users u ON a.user_id=u.user_id WHERE a.address='".mysql_real_escape_string($address)."' AND a.game_id='".$thisuser['game_id']."';";
+				$q = "SELECT * FROM addresses a LEFT JOIN users u ON a.user_id=u.user_id WHERE a.address='".mysql_real_escape_string($address)."' AND a.game_id='".$game['game_id']."';";
 				$r = run_query($q);
 				
 				if (mysql_numrows($r) == 1) {

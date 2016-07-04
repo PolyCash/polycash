@@ -364,12 +364,8 @@ function current_round_table(&$game, $current_round, $user, $show_intro_text) {
 	return $html;
 }
 
-function performance_history($user, $from_round_id, $to_round_id) {
+function performance_history($user, &$game, $from_round_id, $to_round_id) {
 	$html = "";
-	
-	$q = "SELECT * FROM games WHERE game_id='".$user['game_id']."';";
-	$r = run_query($q);
-	$game = mysql_fetch_array($r);
 	
 	$q = "SELECT * FROM cached_rounds r LEFT JOIN nations n ON r.winning_nation_id=n.nation_id WHERE r.game_id='".$game['game_id']."' AND r.round_id >= ".$from_round_id." AND r.round_id <= ".$to_round_id." ORDER BY r.round_id DESC;";
 	$r = run_query($q);
@@ -1257,7 +1253,7 @@ function delete_unconfirmable_transactions(&$game) {
 	while ($transaction = mysql_fetch_array($r)) {
 		$coins_in = transaction_coins_in($transaction['transaction_id']);
 		$coins_out = transaction_coins_out($transaction['transaction_id']);
-		if ($coins_out > $coins_in) {
+		if ($coins_out > $coins_in || $coins_out == 0) {
 			$qq = "DELETE t.*, io.* FROM transactions t JOIN transaction_IOs io ON t.transaction_id=io.create_transaction_id WHERE t.transaction_id='".$transaction['transaction_id']."';";
 			$rr = run_query($qq);
 			$qq = "UPDATE transaction_IOs SET spend_transaction_id=NULL WHERE spend_transaction_id='".$transaction['transaction_id']."';";
@@ -2758,7 +2754,7 @@ function try_apply_giveaway($game, $user, &$invitation) {
 }
 
 
-function try_apply_invite_key($user_id, $invite_key, &$reload_page) {
+function try_apply_invite_key($user_id, $invite_key, &$invite_game) {
 	$reload_page = false;
 	$invite_key = mysql_real_escape_string($invite_key);
 	
@@ -2776,6 +2772,10 @@ function try_apply_invite_key($user_id, $invite_key, &$reload_page) {
 			
 			$qq = "UPDATE users SET game_id='".$invitation['game_id']."' WHERE user_id='".$user_id."';";
 			$rr = run_query($qq);
+			
+			$qq = "SELECT * FROM games WHERE game_id='".$invitation['game_id']."';";
+			$rr = run_query($qq);
+			$invite_game = mysql_fetch_array($rr);
 			
 			return true;
 		}

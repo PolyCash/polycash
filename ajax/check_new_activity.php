@@ -5,15 +5,14 @@ include("../includes/get_session.php");
 if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	$game_loop_index = intval($_REQUEST['game_loop_index']);
 	
-	if ($thisuser) {
-		set_user_active($thisuser['user_id']);
-		$game_id = $thisuser['game_id'];
+	if (!$game) {
+		$game_id = get_site_constant('primary_game_id');
+		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
+		$r = run_query($q);
+		if (mysql_numrows($r) == 1) $game = mysql_fetch_array($r);
+		else die("Invalid game.");
 	}
-	else $game_id = get_site_constant('primary_game_id');
-	
-	$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
-	$r = run_query($q);
-	$game = mysql_fetch_array($r);
+	if ($thisuser) set_user_active($thisuser['user_id']);
 	
 	if ($game['game_status'] == "running") {
 		if ($game['game_type'] == "simulation" && $game['block_timing'] == "realistic") {
@@ -28,9 +27,9 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	}
 	
 	$bet_round_range = bet_round_range($game);
-	$last_block_id = last_block_id($game_id);
-	$last_transaction_id = last_transaction_id($game_id);
-	$my_last_transaction_id = my_last_transaction_id($thisuser['user_id'], $game_id);
+	$last_block_id = last_block_id($game['game_id']);
+	$last_transaction_id = last_transaction_id($game['game_id']);
+	$my_last_transaction_id = my_last_transaction_id($thisuser['user_id'], $game['game_id']);
 	$mature_io_ids_csv = mature_io_ids_csv($thisuser['user_id'], $game);
 	$current_round = block_to_round($game, $last_block_id+1);
 	$block_within_round = $last_block_id%$game['round_length']+1;
@@ -56,7 +55,7 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 		
 		if ($_REQUEST['refresh_page'] == "wallet" && $current_round != $client_round) {
 			$output['new_performance_history'] = 1;
-			$output['performance_history'] = performance_history($thisuser, $current_round-(10*$performance_history_sections), $current_round-1);
+			$output['performance_history'] = performance_history($thisuser, $game, $current_round-(10*$performance_history_sections), $current_round-1);
 			$output['performance_history_start_round'] = $current_round-(10*$performance_history_sections);
 		}
 		else $output['new_performance_history'] = 0;

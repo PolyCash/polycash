@@ -125,12 +125,12 @@ function claim_coin_giveaway() {
 	var giveaway_btn_txt = $('#giveaway_btn').html();
 	$('#giveaway_btn').html("Loading...");
 	
-	$.get("/ajax/coin_giveaway.php?do=claim", function(result) {
+	$.get("/ajax/coin_giveaway.php?game_id="+game_id+"&do=claim", function(result) {
 		$('#giveaway_btn').html(giveaway_btn_txt);
 		
 		if (result == "1") {
 			alert("Great, EmpireCoins have been added to your account!");
-			window.location = '/wallet/';
+			window.location = '/wallet/'+game_url_identifier+'/';
 			return false;
 		}
 		else alert("Your free coins have already been claimed.");
@@ -196,7 +196,7 @@ function next_block() {
 	if ($('#next_block_btn').html() == "Next Block") {
 		$('#next_block_btn').html("Loading...");
 		
-		$.get("/ajax/next_block.php", function(result) {
+		$.get("/ajax/next_block.php?game_id="+game_id, function(result) {
 			reset_next_block_text = true;
 			refresh_if_needed();
 		});
@@ -207,7 +207,7 @@ function refresh_if_needed() {
 		last_refresh_time = new Date().getTime();
 		refresh_in_progress = true;
 		
-		var check_activity_url = "/ajax/check_new_activity.php?refresh_page="+refresh_page+"&last_block_id="+last_block_id+"&last_transaction_id="+last_transaction_id+"&my_last_transaction_id="+my_last_transaction_id+"&mature_io_ids_csv="+mature_io_ids_csv+"&game_loop_index="+game_loop_index+"&min_bet_round="+min_bet_round+"&votingaddr_count="+votingaddr_count;
+		var check_activity_url = "/ajax/check_new_activity.php?game_id="+game_id+"&refresh_page="+refresh_page+"&last_block_id="+last_block_id+"&last_transaction_id="+last_transaction_id+"&my_last_transaction_id="+my_last_transaction_id+"&mature_io_ids_csv="+mature_io_ids_csv+"&game_loop_index="+game_loop_index+"&min_bet_round="+min_bet_round+"&votingaddr_count="+votingaddr_count;
 		if (refresh_page == "wallet") check_activity_url += "&performance_history_sections="+performance_history_sections;
 		
 		$.ajax({
@@ -372,7 +372,7 @@ function save_notification_preferences() {
 		var notification_pref = $('#notification_preference').val();
 		var notification_email = $('#notification_email').val();
 		$('#notification_save_btn').html("Saving...");
-		$.get("/ajax/set_notification_preference.php?preference="+encodeURIComponent(notification_pref)+"&email="+encodeURIComponent(notification_email), function(result) {
+		$.get("/ajax/set_notification_preference.php?game_id="+game_id+"&preference="+encodeURIComponent(notification_pref)+"&email="+encodeURIComponent(notification_email), function(result) {
 			$('#notification_save_btn').html("Save Notification Settings");
 			initial_notification_pref = notification_pref;
 			initial_notification_email = notification_email;
@@ -410,7 +410,7 @@ function save_alias_preferences() {
 		var alias_pref = $('#alias_preference').val();
 		var alias = $('#alias').val();
 		$('#notification_save_btn').html("Saving...");
-		$.get("/ajax/set_alias_preference.php?preference="+encodeURIComponent(alias_pref)+"&alias="+encodeURIComponent(alias), function(result) {
+		$.get("/ajax/set_alias_preference.php?game_id="+game_id+"&preference="+encodeURIComponent(alias_pref)+"&alias="+encodeURIComponent(alias), function(result) {
 			$('#notification_save_btn').html("Save Privacy Settings");
 			initial_alias_pref = alias_pref;
 			initial_alias = alias;
@@ -425,7 +425,7 @@ function show_more_performance_history() {
 		$('#performance_history').append('<div id="performance_history_'+performance_history_sections+'"></div>');
 		$('#performance_history_'+performance_history_sections).html("Loading...");
 		
-		$.get("/ajax/performance_history.php?from_round_id="+performance_history_start_round+"&to_round_id="+(performance_history_start_round+9), function(result) {
+		$.get("/ajax/performance_history.php?game_id="+game_id+"&from_round_id="+performance_history_start_round+"&to_round_id="+(performance_history_start_round+9), function(result) {
 			$('#performance_history_'+performance_history_sections).html(result);
 			performance_history_sections++;
 			performance_history_loading = false;
@@ -438,7 +438,7 @@ function attempt_withdrawal() {
 		var address = $('#withdraw_address').val();
 		
 		$('#withdraw_btn').html("Withdrawing...");
-		$.get("/ajax/withdraw.php?amount="+encodeURIComponent(amount)+"&address="+encodeURIComponent(address)+"&remainder_address_id="+$('#withdraw_remainder_address_id').val(), function(result) {
+		$.get("/ajax/withdraw.php?game_id="+game_id+"&amount="+encodeURIComponent(amount)+"&address="+encodeURIComponent(address)+"&remainder_address_id="+$('#withdraw_remainder_address_id').val(), function(result) {
 			$('#withdraw_btn').html("Withdraw");
 			$('#withdraw_amount').val("");
 			var result_obj = JSON.parse(result);
@@ -534,7 +534,7 @@ function save_game() {
 }
 function toggle_block_timing() {
 	$('#toggle_timing_btn').html("Loading...");
-	$.get("/ajax/toggle_block_timing.php", function(result) {
+	$.get("/ajax/toggle_block_timing.php?game_id="+game_id, function(result) {
 		window.location = window.location;
 	});
 }
@@ -817,7 +817,7 @@ function confirm_compose_vote() {
 			if ((last_block_id+1)%game_round_length != 0) {
 				$('#confirm_compose_vote_btn').html("Loading...");
 				
-				var place_vote_url = "/ajax/place_vote.php?io_ids=";
+				var place_vote_url = "/ajax/place_vote.php?game_id="+game_id+"&io_ids=";
 				for (var i=0; i<vote_inputs.length; i++) {
 					place_vote_url += vote_inputs[i].io_id;
 					if (i != vote_inputs.length-1) place_vote_url += ",";
@@ -963,7 +963,7 @@ function place_bet() {
 				}
 			}
 			
-			$.get("/ajax/place_bets.php?nations="+nations_csv+"&amounts="+amounts_csv+"&round="+round, function(result) {
+			$.get("/ajax/place_bets.php?game_id="+game_id+"&nations="+nations_csv+"&amounts="+amounts_csv+"&round="+round, function(result) {
 				$('#bet_confirm_btn').html("Place Bet");
 				
 				var json_result = JSON.parse(result);
@@ -1027,7 +1027,7 @@ var round_sections_shown = 1;
 function show_more_rounds_complete() {
 	if ($('#show_more_link').html() == "Show More") {
 		$('#show_more_link').html("Loading...");
-		$.get("/ajax/show_rounds_complete.php?from_round_id="+(last_round_shown-1), function(result) {
+		$.get("/ajax/show_rounds_complete.php?game_id="+game_id+"&from_round_id="+(last_round_shown-1), function(result) {
 			$('#show_more_link').html("Show More");
 			var json_result = JSON.parse(result);
 			if (parseInt(json_result[0]) > 0) last_round_shown = parseInt(json_result[0]);
@@ -1045,7 +1045,7 @@ function bet_round_changed() {
 	
 	$('#bet_charts').hide('fast');
 	
-	$.get("/ajax/bet_round_details.php?round_id="+round_id, function(result) {
+	$.get("/ajax/bet_round_details.php?game_id="+game_id+"&round_id="+round_id, function(result) {
 		$('#bet_charts').slideDown('fast');
 		
 		var json_result = JSON.parse(result);
@@ -1217,22 +1217,22 @@ function match_refresh_loop(match_id) {
 function render_tx_fee() {
 	$('#display_tx_fee').html("TX fee: "+format_coins(fee_amount/Math.pow(10,8))+" coins");
 }
-function manage_game_invitations(game_id) {
-	$.get("/ajax/game_invitations.php?action=manage&game_id="+game_id, function(result) {
+function manage_game_invitations(this_game_id) {
+	$.get("/ajax/game_invitations.php?action=manage&game_id="+this_game_id, function(result) {
 		$('#game_invitations_inner').html(result);
 		$('#game_invitations').modal('show');
 	});
 }
-function generate_invitation(game_id) {
-	$.get("/ajax/game_invitations.php?action=generate&game_id="+game_id, function(result) {
+function generate_invitation(this_game_id) {
+	$.get("/ajax/game_invitations.php?action=generate&game_id="+this_game_id, function(result) {
 		manage_game_invitations(game_id);
 	});
 }
-function send_invitation(game_id, invitation_id) {
+function send_invitation(this_game_id, invitation_id) {
 	var to_email = prompt("Please enter the email address where you'd like to send this invitation.");
 	if (to_email) {
-		$.get("/ajax/game_invitations.php?action=send&game_id="+game_id+"&invitation_id="+invitation_id+"&to_email="+encodeURIComponent(to_email), function(result) {
-			manage_game_invitations(game_id);
+		$.get("/ajax/game_invitations.php?action=send&game_id="+this_game_id+"&invitation_id="+invitation_id+"&to_email="+encodeURIComponent(to_email), function(result) {
+			manage_game_invitations(this_game_id);
 		});
 	}
 }
@@ -1294,7 +1294,7 @@ function load_plan_option(round_id, option_id, points) {
 	}
 }
 function save_plan_allocations() {
-	var postvars = {action: "save", voting_strategy_id: parseInt($('#voting_strategy_id').val()), from_round: parseInt($('#from_round').val()), to_round: parseInt($('#to_round').val())};
+	var postvars = {game_id: game_id, action: "save", voting_strategy_id: parseInt($('#voting_strategy_id').val()), from_round: parseInt($('#from_round').val()), to_round: parseInt($('#to_round').val())};
 	
 	for (var round_id=postvars['from_round']; round_id<=postvars['to_round']; round_id++) {
 		for (var i=0; i<16; i++) {
@@ -1320,7 +1320,7 @@ function load_plan_rounds() {
 	save_plan_allocations();
 	var from_round = $('#select_from_round').val();
 	var to_round = $('#select_to_round').val();
-	$.get("/ajax/planned_allocations.php?action=fetch&voting_strategy_id="+$('#voting_strategy_id').val()+"&from_round="+from_round+"&to_round="+to_round, function(result) {
+	$.get("/ajax/planned_allocations.php?game_id="+game_id+"&action=fetch&voting_strategy_id="+$('#voting_strategy_id').val()+"&from_round="+from_round+"&to_round="+to_round, function(result) {
 		$('#from_round').val(from_round);
 		$('#to_round').val(to_round);
 		var json_obj = JSON.parse(result);

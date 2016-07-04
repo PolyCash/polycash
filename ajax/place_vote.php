@@ -10,11 +10,7 @@ $noinfo_fail_obj = (object) [
 	'message' => "Invalid URL"
 ];
 
-if ($thisuser) {
-	$q = "SELECT * FROM games WHERE game_id='".$thisuser['game_id']."';";
-	$r = run_query($q);
-	$game = mysql_fetch_array($r);
-	
+if ($thisuser && $game) {
 	$user_strategy = false;
 	$success = get_user_strategy($thisuser['user_id'], $game['game_id'], $user_strategy);
 	if (!$success) {
@@ -72,13 +68,13 @@ if ($thisuser) {
 			if (mysql_numrows($rr) == 1) {
 				$io = mysql_fetch_array($rr);
 				
-				if ($io['user_id'] != $thisuser['user_id'] || $io['spend_status'] != "unspent" || $io['game_id'] != $thisuser['game_id']) {
+				if ($io['user_id'] != $thisuser['user_id'] || $io['spend_status'] != "unspent" || $io['game_id'] != $game['game_id']) {
 					$api_output = $noinfo_fail_obj;
 					echo json_encode($api_output);
 					die();
 				}
 				else {
-					if ($io['create_block_id'] <= last_block_id($thisuser['game_id'])-$game['maturity'] || $io['instantly_mature'] == 1) {
+					if ($io['create_block_id'] <= last_block_id($game['game_id'])-$game['maturity'] || $io['instantly_mature'] == 1) {
 						$io_ids[$i] = $io_id;
 					}
 					else {
@@ -135,7 +131,7 @@ if ($thisuser) {
 		}
 	}
 	
-	$last_block_id = last_block_id($thisuser['game_id']);
+	$last_block_id = last_block_id($game['game_id']);
 	
 	if (($last_block_id+1)%$game['round_length'] == 0) {
 		$api_output = (object)[

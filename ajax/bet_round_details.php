@@ -2,7 +2,7 @@
 include("../includes/connect.php");
 include("../includes/get_session.php");
 
-if ($thisuser) {
+if ($thisuser && $game) {
 	$round_id = intval($_REQUEST['round_id']);
 	
 	$amount_sum = 0;

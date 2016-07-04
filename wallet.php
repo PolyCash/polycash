@@ -159,7 +159,65 @@ else if ($_REQUEST['do'] == "logout" && $thisuser) {
 	$thisuser = FALSE;
 	$message = "You have been logged out. ";
 }
-else if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['do'] == "save_voting_strategy_fees")) {
+
+$game = false;
+
+if ($thisuser) {
+	$uri_parts = explode("/", $uri);
+	$url_identifier = $uri_parts[2];
+	$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND g.url_identifier='".mysql_real_escape_string($url_identifier)."';";
+	$r = run_query($q);
+	if (mysql_numrows($r) > 0) {
+		$game = mysql_fetch_array($r);
+	}
+	else {
+		$q = "SELECT g.* FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser['user_id']."';";
+		$r = run_query($q);
+		if (mysql_numrows($r) == 1) {
+			$game = mysql_fetch_array($r);
+		}
+		else {
+			$pagetitle = $GLOBALS['site_name_short']." - My web wallet";
+			$nav_tab_selected = "wallet";
+			include('includes/html_start.php');
+			?>
+			<div class="container" style="max-width: 1000px;">
+				<?php
+				$q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser['user_id']."';";
+				$r = run_query($q);
+				
+				echo "<br/>Please select a game.<br/>\n";
+				while ($user_game = mysql_fetch_array($r)) {
+					echo "<a href=\"/wallet/".$user_game['url_identifier']."/\">".$user_game['name']."</a><br/>\n";
+				}
+				?>
+			</div>
+			<?php
+			include('includes/html_stop.php');
+			die();
+		}
+	}
+	
+	$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game['game_id']."';";
+	$r = run_query($q);
+	if (mysql_numrows($r) > 0) {
+		$user_game = mysql_fetch_array($r);
+		generate_user_addresses($user_game);
+	}
+	else {
+		ensure_user_in_game($thisuser['user_id'], $game['game_id']);
+		
+		$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game['game_id']."';";
+		$r = run_query($q);
+		
+		if (mysql_numrows($r) > 0) {
+			$user_game = mysql_fetch_array($r);
+			generate_user_addresses($user_game);
+		}
+	}
+}
+
+if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['do'] == "save_voting_strategy_fees")) {
 	$voting_strategy = $_REQUEST['voting_strategy'];
 	$voting_strategy_id = intval($_REQUEST['voting_strategy_id']);
 	$aggregate_threshold = intval($_REQUEST['aggregate_threshold']);
@@ -273,10 +331,10 @@ else if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['d
 }
 
 if ($thisuser && $_REQUEST['invite_key'] != "") {
-	$reload_page = false;
-	$success = try_apply_invite_key($thisuser['user_id'], $_REQUEST['invite_key'], $reload_page);
+	$invite_game = false;
+	$success = try_apply_invite_key($thisuser['user_id'], $_REQUEST['invite_key'], $invite_game);
 	if ($success) {
-		header("Location: /wallet/");
+		header("Location: /wallet/".$invite_game['url_identifier']);
 		die();
 	}
 }
@@ -295,30 +353,10 @@ if ($_REQUEST['do'] == "signup" && $error_code == 1) { ?>
 	<?php
 }
 
-if ($thisuser) {
-	$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game['game_id']."';";
-	$r = run_query($q);
-	if (mysql_numrows($r) > 0) {
-		$user_game = mysql_fetch_array($r);
-		generate_user_addresses($user_game);
-	}
-	else {
-		ensure_user_in_game($thisuser['user_id'], $game['game_id']);
-		
-		$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser['user_id']."' AND ug.game_id='".$game['game_id']."';";
-		$r = run_query($q);
-		
-		if (mysql_numrows($r) > 0) {
-			$user_game = mysql_fetch_array($r);
-			generate_user_addresses($user_game);
-		}
-	}
-}
-
 $initial_tab = 0;
 $account_value = account_coin_value($game, $thisuser);
 $immature_balance = immature_balance($game, $thisuser);
-$last_block_id = last_block_id($thisuser['game_id']);
+$last_block_id = last_block_id($game['game_id']);
 $current_round = block_to_round($game, $last_block_id+1);
 $block_within_round = block_id_to_round_index($game, $last_block_id+1);
 $mature_balance = mature_balance($game, $thisuser);
@@ -338,16 +376,36 @@ $mature_balance = mature_balance($game, $thisuser);
 		$user_game = FALSE;
 		$user_strategy = FALSE;
 		
-		$q = "SELECT * FROM user_games WHERE user_id='".$thisuser['user_id']."' AND game_id='".$thisuser['game_id']."';";
+		$q = "SELECT * FROM user_games WHERE user_id='".$thisuser['user_id']."' AND game_id='".$game['game_id']."';";
 		$r = run_query($q);
+		
 		if (mysql_numrows($r) == 1) {
 			$user_game = mysql_fetch_array($r);
 			
 			$q = "SELECT * FROM user_strategies WHERE strategy_id='".$user_game['strategy_id']."';";
 			$r = run_query($q);
-			if (mysql_numrows($r) == 1) {
+			
+			if (mysql_numrows($r) > 0) {
 				$user_strategy = mysql_fetch_array($r);
 			}
+			else {
+				$q = "SELECT * FROM user_strategies WHERE user_id='".$thisuser['user_id']."' AND game_id='".$game['game_id']."';";
+				$r = run_query($q);
+				
+				if (mysql_numrows($r) > 0) {
+					$user_strategy = mysql_fetch_array($r);
+					$q = "UPDATE user_games SET strategy_id='".$user_strategy['strategy_id']."' WHERE user_game_id='".$user_game['user_game_id']."';";
+					$r = run_query($q);
+				}
+				else {
+					$q = "DELETE FROM user_games WHERE user_game_id='".$user_game['user_game_id']."';";
+					$r = run_query($q);
+					die("No strategy!");
+				}
+			}
+		}
+		else {
+			die("Error: you're not in this game.");
 		}
 		
 		$round_stats = round_voting_stats_all($game, $current_round);
@@ -360,9 +418,9 @@ $mature_balance = mature_balance($game, $thisuser);
 		//<![CDATA[
 		var current_tab = 0;
 		var last_block_id = <?php echo $last_block_id; ?>;
-		var last_transaction_id = <?php echo last_transaction_id($thisuser['game_id']); ?>;
+		var last_transaction_id = <?php echo last_transaction_id($game['game_id']); ?>;
 		var my_last_transaction_id = <?php
-		$my_last_transaction_id = my_last_transaction_id($thisuser['user_id'], $thisuser['game_id']);
+		$my_last_transaction_id = my_last_transaction_id($thisuser['user_id'], $game['game_id']);
 			if ($my_last_transaction_id) echo $my_last_transaction_id;
 			else echo 'false';
 		?>;
@@ -379,6 +437,7 @@ $mature_balance = mature_balance($game, $thisuser);
 		?>;
 		var fee_amount = <?php echo $user_strategy['transaction_fee']; ?>;
 		var game_id = <?php echo $game['game_id']; ?>;
+		var game_url_identifier = '<?php echo $game['url_identifier']; ?>';
 		
 		var selected_nation_id = false;
 		
@@ -473,7 +532,7 @@ $mature_balance = mature_balance($game, $thisuser);
 							if ($user_game['game_id'] == $game['game_id']) echo  ' boldtext';
 							?>">
 								<div class="col-sm-6 game_cell">
-									<a href="" onclick="switch_to_game(<?php echo $user_game['game_id']; ?>, 'switch'); return false;"><?php echo $user_game['name']; ?></a>
+									<a target="_blank" href="/wallet/<?php echo $user_game['url_identifier']; ?>/"><?php echo $user_game['name']; ?></a>
 								</div>
 								<div class="col-sm-3 game_cell">
 									<?php
@@ -591,7 +650,7 @@ $mature_balance = mature_balance($game, $thisuser);
 			</div>
 			<div id="tabcontent1" style="display: none;" class="tabcontent">
 				<h2>Transaction Fees</h2>
-				<form method="post" action="/wallet/">
+				<form method="post" action="/wallet/<?php echo $game['url_identifier']; ?>/">
 					<input type="hidden" name="do" value="save_voting_strategy_fees" />
 					<input type="hidden" name="voting_strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
 					Pay fees on every transaction of:<br/>
@@ -640,7 +699,7 @@ $mature_balance = mature_balance($game, $thisuser);
 				
 				<h2>Choose your voting strategy</h2>
 				Instead of logging in every time you want to cast a vote, you can automate your voting behavior by choosing one of the automated voting strategies below. <br/><br/>
-				<form method="post" action="/wallet/">
+				<form method="post" action="/wallet/<?php echo $game['url_identifier']; ?>/">
 					<input type="hidden" name="do" value="save_voting_strategy" />
 					<input type="hidden" id="voting_strategy_id" name="voting_strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
 					
@@ -799,7 +858,7 @@ $mature_balance = mature_balance($game, $thisuser);
 				<div id="performance_history">
 					<div id="performance_history_0">
 						<?php
-						echo performance_history($thisuser, max(1, $current_round-10), $current_round-1);
+						echo performance_history($thisuser, $game, max(1, $current_round-10), $current_round-1);
 						?>
 					</div>
 				</div>
@@ -825,7 +884,7 @@ $mature_balance = mature_balance($game, $thisuser);
 				</div>
 				
 				<?php
-				$q = "SELECT * FROM addresses a LEFT JOIN nations n ON n.nation_id=a.nation_id WHERE a.game_id='".$thisuser['game_id']."' AND a.user_id='".$thisuser['user_id']."' ORDER BY a.nation_id IS NULL ASC, a.nation_id ASC;";
+				$q = "SELECT * FROM addresses a LEFT JOIN nations n ON n.nation_id=a.nation_id WHERE a.game_id='".$game['game_id']."' AND a.user_id='".$thisuser['user_id']."' ORDER BY a.nation_id IS NULL ASC, a.nation_id ASC;";
 				$r = run_query($q);
 				?>
 				<b>You have <?php echo mysql_numrows($r); ?> addresses.</b><br/>
@@ -881,7 +940,7 @@ $mature_balance = mature_balance($game, $thisuser);
 						<select class="form-control" id="withdraw_remainder_address_id">
 							<option value="random">Random</option>
 							<?php
-							$q = "SELECT * FROM addresses a LEFT JOIN nations n ON n.nation_id=a.nation_id WHERE a.game_id='".$thisuser['game_id']."' AND a.user_id='".$thisuser['user_id']."' ORDER BY a.nation_id IS NULL ASC, a.nation_id ASC;";
+							$q = "SELECT * FROM addresses a LEFT JOIN nations n ON n.nation_id=a.nation_id WHERE a.game_id='".$game['game_id']."' AND a.user_id='".$thisuser['user_id']."' ORDER BY a.nation_id IS NULL ASC, a.nation_id ASC;";
 							$r = run_query($q);
 							while ($address = mysql_fetch_array($r)) {
 								if ($address['name'] == "") $address['name'] = "None";

@@ -6,7 +6,7 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuse
 $output_obj['result_code'] = 0;
 $output_obj['message'] = "";
 
-if ($thisuser) {
+if ($thisuser && $game) {
 	$user_strategy = false;
 	$success = get_user_strategy($thisuser['user_id'], $game['game_id'], $user_strategy);
 	if (!$success) {
