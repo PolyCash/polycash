@@ -71,7 +71,7 @@ function mail_async($email, $from_name, $from, $subject, $message, $bcc, $cc) {
 }
 	
 function account_coin_value($game_id, $user) {
-	$q = "SELECT SUM(amount) FROM transaction_IOs WHERE spend_status='unspent' AND game_id='".$game_id."' AND user_id='".$user['user_id']."' AND create_block_id <= ".last_block_id($game_id).";";
+	$q = "SELECT SUM(amount) FROM transaction_IOs WHERE spend_status='unspent' AND game_id='".$game_id."' AND user_id='".$user['user_id']."';";
 	$r = run_query($q);
 	$sum = mysql_fetch_row($r);
 	return $sum[0];
@@ -913,7 +913,7 @@ function apply_user_strategies($game_id) {
 	if ($block_of_round != 0) {
 		$q = "SELECT * FROM users u INNER JOIN user_games g ON u.user_id=g.user_id INNER JOIN user_strategies s ON g.strategy_id=s.strategy_id WHERE g.game_id='".$game_id."'";
 		if ($game_id == get_site_constant('primary_game_id')) $q .= " AND (u.logged_in=0 OR u.game_id='".$game_id."')";
-		$q .= " AND (s.voting_strategy='by_rank' OR s.voting_strategy='by_nation' OR s.voting_strategy='api') AND s.vote_on_block_".$block_of_round."=1 ORDER BY u.user_id ASC;";//RAND();";
+		$q .= " AND (s.voting_strategy='by_rank' OR s.voting_strategy='by_nation' OR s.voting_strategy='api') AND s.vote_on_block_".$block_of_round."=1 ORDER BY RAND();";
 		$r = run_query($q);
 		
 		$log_text .= "Applying user strategies for block #".$mining_block_id.", looping through ".mysql_numrows($r)." users.<br/>";
