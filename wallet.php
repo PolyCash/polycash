@@ -755,7 +755,6 @@ if ($thisuser && $game) {
 		var votingaddr_count = 0;
 		
 		function load_options() {
-			options.push(new option(0, false, 'No Winner'));
 			<?php
 			$q = "SELECT * FROM game_voting_options WHERE game_id='".$game->db_game['game_id']."' ORDER BY option_id ASC;";
 			$r = $app->run_query($q);

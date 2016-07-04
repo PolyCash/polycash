@@ -147,4 +147,6 @@ ALTER TABLE `cached_rounds`
   DROP `position_14`,
   DROP `position_15`,
   DROP `position_16`;
+ALTER TABLE `strategy_round_allocations` ADD UNIQUE (`strategy_id`, `round_id`, `option_id`);
+ALTER TABLE `strategy_round_allocations` ADD INDEX (`strategy_id`, `round_id`);
 

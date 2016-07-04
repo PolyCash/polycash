@@ -40,7 +40,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			$current_hash = $temp_block['nextblockhash'];
 			$game->delete_blocks_from_height($block_height);
 		}
-		else die("Error, that block was not found.");
+		else die("Error, that block was not found (".$r->rowCount().").");
 	}
 	else {
 		$game->delete_reset_game('reset');
