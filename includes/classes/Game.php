@@ -2598,6 +2598,9 @@ class Game {
 				$last_block = $this->app->run_query("SELECT * FROM blocks WHERE internal_block_id='".$last_block['internal_block_id']."';")->fetch();
 			}
 			
+			echo "Resolving potential fork on block #".$last_block['block_id']."<br/>\n";
+			$this->resolve_potential_fork_on_block($coin_rpc, $last_block);
+
 			echo "Loading new blocks...\n";
 			$this->load_new_blocks($coin_rpc);
 			
@@ -2607,7 +2610,6 @@ class Game {
 			echo "Updating option scores...\n";
 			$this->update_option_scores();
 			
-			$this->resolve_potential_fork_on_block($coin_rpc, $last_block);
 			echo "Done syncing!\n";
 		}
 		
