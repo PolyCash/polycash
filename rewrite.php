@@ -25,7 +25,7 @@ else {
 	$r = run_query($q);
 	if (mysql_numrows($r) == 1) {
 		$game_variation = mysql_fetch_array($r);
-		include("variation_homepage.php");
+		include("variation_page.php");
 	}
 	else {
 		$q = "SELECT * FROM games WHERE url_identifier='".mysql_real_escape_string($uri_parts[1])."';";
@@ -33,7 +33,7 @@ else {
 		if (mysql_numrows($r) == 1) {
 			$game = mysql_fetch_array($r);
 			if (in_array($game['game_status'], array("running","published","completed"))) {
-				include("game_homepage.php");
+				include("game_page.php");
 			}
 			else echo "404 - Page not found";
 		}
