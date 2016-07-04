@@ -11,7 +11,7 @@ $game = mysql_fetch_array($r) or die("Failed to get the game.");
 $quantity = intval($_REQUEST['quantity']);
 
 if ($quantity > 0) {
-	$empirecoin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
+	$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
 	
 	$option_str = $_REQUEST['option'];
 	$option_id = intval($option_str);
@@ -30,14 +30,14 @@ if ($quantity > 0) {
 	
 	if ($option) {
 		for ($i=0; $i<$quantity; $i++) {
-			$new_addr_str = $empirecoin_rpc->getnewvotingaddress($option['name']);
-			$new_addr_db = create_or_fetch_address($game, $new_addr_str, false, $empirecoin_rpc, true);
+			$new_addr_str = $coin_rpc->getnewvotingaddress($option['name']);
+			$new_addr_db = create_or_fetch_address($game, $new_addr_str, false, $coin_rpc, true);
 		}
 	}
 	else {
 		for ($i=0; $i<$quantity; $i++) {
-			$new_addr_str = $empirecoin_rpc->getnewaddress();
-			$new_addr_db = create_or_fetch_address($game, $new_addr_str, false, $empirecoin_rpc, true);
+			$new_addr_str = $coin_rpc->getnewaddress();
+			$new_addr_db = create_or_fetch_address($game, $new_addr_str, false, $coin_rpc, true);
 		}
 	}
 }

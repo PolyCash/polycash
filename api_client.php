@@ -1,5 +1,6 @@
 <?php
 include("includes/config.php");
+ini_set('display_errors', 'Off');
 /*
 EmpireCoin Voting Recommendations API Client
 To use custom logic for voting your empirecoins, install this PHP script on a webserver
@@ -20,13 +21,13 @@ if (!$game_id) die("Please provide a valid game_id");
 if ($_REQUEST['key'] == $client_access_key) {
 	// Many VotingRecommendations can be sent at once; each consists of an empire and a number of votes.
 	class VotingRecommendation {
-		public $empire_id;
-		public $empire_name;
+		public $option_id;
+		public $name;
 		public $recommended_amount;
 		
-		public function __construct($empire_id, $empire_name, $recommendation_amount) {
-			$this->empire_id = $empire_id;
-			$this->empire_name = $empire_name;
+		public function __construct($option_id, $name, $recommendation_amount) {
+			$this->option_id = $option_id;
+			$this->name = $name;
 			$this->recommended_amount = 0;
 		}
 	}
@@ -38,8 +39,8 @@ if ($_REQUEST['key'] == $client_access_key) {
 		public $error_message;
 		public $total_vote_amount;
 		public $server_result;
-		public $name2empire_id;
-		public $rank2empire_id;
+		public $name2option_id;
+		public $rank2option_id;
 		public $recommendation_unit;
 		public $server_host;
 		public $server_access_key;
@@ -59,37 +60,18 @@ if ($_REQUEST['key'] == $client_access_key) {
 			$this->error_code = FALSE;
 			$this->error_message = "";
 			$this->total_vote_amount = FALSE;
-			$this->name2empire_id = FALSE;
-			$this->rank2empire_id = FALSE;
+			$this->name2option_id = FALSE;
+			$this->rank2option_id = FALSE;
 			$this->recommendation_unit = FALSE;
 			$this->input_utxo_ids = array();
 			
 			$this->recommendations = array();
-			$empire_id = 0;
-			$this->recommendations[$empire_id] = new VotingRecommendation($empire_id, 'China'); $empire_id++;
-			$this->recommendations[$empire_id] = new VotingRecommendation($empire_id, 'USA'); $empire_id++;
-			$this->recommendations[$empire_id] = new VotingRecommendation($empire_id, 'India'); $empire_id++;
-			$this->recommendations[$empire_id] = new VotingRecommendation($empire_id, 'Brazil'); $empire_id++;
-			$this->recommendations[$empire_id] = new VotingRecommendation($empire_id, 'Indonesia'); $empire_id++;
-			$this->recommendations[$empire_id] = new VotingRecommendation($empire_id, 'Japan'); $empire_id++;
-			$this->recommendations[$empire_id] = new VotingRecommendation($empire_id, 'Russia'); $empire_id++;
-			$this->recommendations[$empire_id] = new VotingRecommendation($empire_id, 'Germany'); $empire_id++;
-			$this->recommendations[$empire_id] = new VotingRecommendation($empire_id, 'Mexico'); $empire_id++;
-			$this->recommendations[$empire_id] = new VotingRecommendation($empire_id, 'Nigeria'); $empire_id++;
-			$this->recommendations[$empire_id] = new VotingRecommendation($empire_id, 'France'); $empire_id++;
-			$this->recommendations[$empire_id] = new VotingRecommendation($empire_id, 'UK'); $empire_id++;
-			$this->recommendations[$empire_id] = new VotingRecommendation($empire_id, 'Pakistan'); $empire_id++;
-			$this->recommendations[$empire_id] = new VotingRecommendation($empire_id, 'Italy'); $empire_id++;
-			$this->recommendations[$empire_id] = new VotingRecommendation($empire_id, 'Turkey'); $empire_id++;
-			$this->recommendations[$empire_id] = new VotingRecommendation($empire_id, 'Iran'); $empire_id++;
-			
-			$this->setname2empire_id();
 		}
 		
 		// Define a map from empire names to empire IDs so that we can reference empires by name
-		public function setname2empire_id() {
-			for ($empire_id=0; $empire_id<count($this->recommendations); $empire_id++) {
-				$this->name2empire_id[$this->recommendations[$empire_id]->empire_name] = $empire_id;
+		public function setname2option_id() {
+			for ($option_id=0; $option_id<count($this->recommendations); $option_id++) {
+				$this->name2option_id[$this->recommendations[$option_id]->name] = $option_id;
 			}
 		}
 		
@@ -111,21 +93,30 @@ if ($_REQUEST['key'] == $client_access_key) {
 				$this->game_scores = $this->server_result->game_scores;
 				$this->user_info = $this->server_result->user_info;
 				
-				// Define the rank2empire_id map so that we can reference nations by rank in setOutputs()
-				for ($empire_id=0; $empire_id<count($this->recommendations); $empire_id++) {
-					$this->rank2empire_id[$this->game_scores[$empire_id]->rank] = $empire_id;
+				if (!$this->game) {
+					$this->error_code = 2;
+					$this->error_message = "Error: the server didn't return a valid game.";
+					$this->outputJSON();
+					die();
+				}
+				else {
+					// Define the rank2option_id map so that we can reference nations by rank in setOutputs()
+					foreach ($this->game_scores as $game_score) {
+						$this->rank2option_id[$game_score->rank] = $game_score->option_id;
+						$this->recommendations[$game_score->option_id] = new VotingRecommendation($game_score->option_id, $game_score->name);
+					}
+					$this->setname2option_id();
 				}
 			}
 		}
 		
 		// Only recommendations with amounts greater than 0 need to be sent back to the server
 		public function nonzeroRecommendations() {
-			$empire_id = 0;
 			$nonzeroRecommendations = array();
 			
-			for ($empire_id=0; $empire_id<count($this->recommendations); $empire_id++) {
-				if ($this->recommendations[$empire_id]->recommended_amount > 0) {
-					$nonzeroRecommendations[count($nonzeroRecommendations)] = $this->recommendations[$empire_id];
+			foreach ($this->recommendations as $recommendation) {
+				if ($recommendation->recommended_amount > 0) {
+					$nonzeroRecommendations[count($nonzeroRecommendations)] = $recommendation;
 				}
 			}
 			
@@ -178,28 +169,28 @@ if ($_REQUEST['key'] == $client_access_key) {
 			if ($this->total_vote_amount) {
 				if ($this->server_result) {
 					// Only cast votes late in the round
-					if ($this->game->block_within_round >= 5) {
+					if ($this->game->block_within_round >= 2) {
 						if ($this->user_info) { // Recommendations specified in coins
-							if ($this->user_info->votes_available >= $this->user_info->mature_balance*8) {
+							if ($this->user_info->votes_available >= $this->user_info->mature_balance) {
 								$coins_out = 0;
 								
 								$rec_amount = floor($this->total_vote_amount*0.15); $coins_out += $rec_amount;
-								$this->recommendations[$this->rank2empire_id[1]]->recommended_amount = $rec_amount;
+								$this->recommendations[$this->rank2option_id[1]]->recommended_amount = $rec_amount;
 								
 								$rec_amount = floor($this->total_vote_amount*0.25); $coins_out += $rec_amount;
-								$this->recommendations[$this->rank2empire_id[2]]->recommended_amount = $rec_amount;
+								$this->recommendations[$this->rank2option_id[2]]->recommended_amount = $rec_amount;
 								
 								$rec_amount = floor($this->total_vote_amount*0.30); $coins_out += $rec_amount;
-								$this->recommendations[$this->rank2empire_id[3]]->recommended_amount = $rec_amount;
+								$this->recommendations[$this->rank2option_id[3]]->recommended_amount = $rec_amount;
 								
-								$this->recommendations[$this->rank2empire_id[4]]->recommended_amount = $this->total_vote_amount-$coins_out;
+								$this->recommendations[$this->rank2option_id[4]]->recommended_amount = $this->total_vote_amount-$coins_out;
 							}
 						}
 						else { // Recommendations specified in percent of user's mature balance
-							$this->recommendations[$this->rank2empire_id[1]]->recommended_amount = 15;
-							$this->recommendations[$this->rank2empire_id[2]]->recommended_amount = 25;
-							$this->recommendations[$this->rank2empire_id[3]]->recommended_amount = 30;
-							$this->recommendations[$this->rank2empire_id[4]]->recommended_amount = 30;
+							$this->recommendations[$this->rank2option_id[1]]->recommended_amount = 15;
+							$this->recommendations[$this->rank2option_id[2]]->recommended_amount = 25;
+							$this->recommendations[$this->rank2option_id[3]]->recommended_amount = 30;
+							$this->recommendations[$this->rank2option_id[4]]->recommended_amount = 30;
 						}
 					}
 				}

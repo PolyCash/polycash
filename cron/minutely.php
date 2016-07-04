@@ -53,9 +53,9 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			if (mysql_numrows($r) > 0) {
 				$lastblock = mysql_fetch_array($r);
 				if ($lastblock['time_created'] < time()-$GLOBALS['restart_generation_seconds']) {
-					$empirecoin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
-					$empirecoin_rpc->setgenerate(false);
-					$empirecoin_rpc->setgenerate(true);
+					$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
+					$coin_rpc->setgenerate(false);
+					$coin_rpc->setgenerate(true);
 					echo "Started generating coins...<br/>\n";
 				}
 			}
@@ -63,7 +63,7 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	}
 	
 	if ($real_game && ($GLOBALS['walletnotify_by_cron'] || $GLOBALS['min_unallocated_addresses'] > 0)) {
-		$empirecoin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
+		$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
 	}
 	
 	if ($real_game && $GLOBALS['min_unallocated_addresses'] > 0) {
@@ -78,8 +78,8 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			if ($num_addr < $GLOBALS['min_unallocated_addresses']) {
 				echo "Add ".($GLOBALS['min_unallocated_addresses']-$num_addr)." for ".$option['name']."<br/>\n";
 				for ($i=0; $i<($GLOBALS['min_unallocated_addresses']-$num_addr); $i++) {
-					$new_addr_str = $empirecoin_rpc->getnewvotingaddress($option['name']);
-					$new_addr_db = create_or_fetch_address($real_game, $new_addr_str, false, $empirecoin_rpc, true);
+					$new_addr_str = $coin_rpc->getnewvotingaddress($option['name']);
+					$new_addr_db = create_or_fetch_address($real_game, $new_addr_str, false, $coin_rpc, true);
 				}
 			}
 		}
@@ -94,7 +94,7 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				for ($game_i=0; $game_i<count($running_games); $game_i++) {
 					if ($GLOBALS['walletnotify_by_cron'] && $running_games[$game_i]['game_type'] == "real") {
 						echo apply_user_strategies($running_games[$game_i]);
-						echo walletnotify($running_games[$game_i], $empirecoin_rpc, "");
+						echo walletnotify($running_games[$game_i], $coin_rpc, "");
 						update_option_scores($running_games[$game_i]);
 					}
 					if ($running_games[$game_i]['game_type'] == "simulation") {
@@ -107,7 +107,7 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 							echo new_block($running_games[$game_i]['game_id']);
 						}
 						else {
-							echo "No block (".$num." vs ".$running_games[$game_i]['seconds_per_block']/$seconds_to_sleep.")<br/>\n";
+							echo $running_games[$game_i]['name'].": No block (".$num." vs ".$running_games[$game_i]['seconds_per_block']/$seconds_to_sleep.")<br/>\n";
 						}
 					}
 					

@@ -406,7 +406,7 @@ function performance_history($user, &$game, $from_round_id, $to_round_id) {
 			if ($game['payout_weight'] == "coin") $win_text = "You correctly voted ".format_bignum($my_votes[$round['winning_option_id']]['coins']/pow(10,8))." coins.";
 			else $win_text = "You correctly cast ".format_bignum($my_votes[$round['winning_option_id']][$game['payout_weight'].'s']/pow(10,8))." votes.";
 		}
-		else if ($coins_voted > 0) $win_text = "You didn't vote for the winning empire.";
+		else if ($coins_voted > 0) $win_text = "You didn't vote for the winning ".$game['option_name'].".";
 		else $win_text = "You didn't cast any votes.";
 		
 		$html .= '<div class="col-sm-5">';
@@ -970,15 +970,15 @@ function new_transaction(&$game, $option_ids, $amounts, $from_user_id, $to_user_
 			
 			if ($game['game_type'] == "real") {
 				require_once(realpath(dirname(__FILE__))."/jsonRPCClient.php");
-				$empirecoin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
+				$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
 				try {
-					$raw_transaction = $empirecoin_rpc->createrawtransaction($raw_txin, $raw_txout);
-					$signed_raw_transaction = $empirecoin_rpc->signrawtransaction($raw_transaction);
-					$decoded_transaction = $empirecoin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
+					$raw_transaction = $coin_rpc->createrawtransaction($raw_txin, $raw_txout);
+					$signed_raw_transaction = $coin_rpc->signrawtransaction($raw_transaction);
+					$decoded_transaction = $coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
 					$tx_hash = $decoded_transaction['txid'];
 					$q = "UPDATE transactions SET tx_hash='".$tx_hash."' WHERE transaction_id='".$transaction_id."';";
 					$r = run_query($q);
-					$verified_tx_hash = $empirecoin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
+					$verified_tx_hash = $coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
 				} catch (Exception $e) {
 					$rpc_error = true;
 					cancel_transaction($transaction_id, $affected_input_ids, $created_input_ids);
@@ -1127,10 +1127,10 @@ function my_votes_table(&$game, $round_id, $user) {
 		
 		$confirmed_html .= '<div class="row">';
 		$confirmed_html .= '<div class="col-sm-4 '.$color.'text">'.$my_vote['name'].'</div>';
-		$confirmed_html .= '<div class="col-sm-4 '.$color.'text"><a target="_blank" href="/explorer/'.$game['url_identifier'].'/transactions/'.$my_vote['transaction_id'].'">'.format_bignum($num_votes/pow(10,8), 2).' votes</a></div>';
+		$confirmed_html .= '<div class="col-sm-3 '.$color.'text"><a target="_blank" href="/explorer/'.$game['url_identifier'].'/transactions/'.$my_vote['transaction_id'].'">'.format_bignum($num_votes/pow(10,8), 2).' votes</a></div>';
 		
 		$payout_disp = format_bignum($expected_payout);
-		$confirmed_html .= '<div class="col-sm-4 '.$color.'text">+'.$payout_disp.' ';
+		$confirmed_html .= '<div class="col-sm-5 '.$color.'text">+'.$payout_disp.' ';
 		if ($payout_disp == '1') $confirmed_html .= $game['coin_name'];
 		else $confirmed_html .= $game['coin_name_plural'];
 		$confirmed_html .= '</div>';
@@ -1165,10 +1165,10 @@ function my_votes_table(&$game, $round_id, $user) {
 		
 		$unconfirmed_html .= '<div class="row">';
 		$unconfirmed_html .= '<div class="col-sm-4 '.$color.'text">'.$my_vote['name'].'</a></div>';
-		$unconfirmed_html .= '<div class="col-sm-4 '.$color.'text"><a target="_blank" href="/explorer/'.$game['url_identifier'].'/transactions/'.$my_vote['transaction_id'].'">'.format_bignum($num_votes/pow(10,8), 2).' votes</a></div>';
+		$unconfirmed_html .= '<div class="col-sm-3 '.$color.'text"><a target="_blank" href="/explorer/'.$game['url_identifier'].'/transactions/'.$my_vote['transaction_id'].'">'.format_bignum($num_votes/pow(10,8), 2).' votes</a></div>';
 		
 		$payout_disp = format_bignum($expected_payout);
-		$unconfirmed_html .= '<div class="col-sm-4 '.$color.'text">+'.$payout_disp.' ';
+		$unconfirmed_html .= '<div class="col-sm-5 '.$color.'text">+'.$payout_disp.' ';
 		if ($payout_disp == '1') $unconfirmed_html .= $game['coin_name'];
 		else $unconfirmed_html .= $game['coin_name_plural'];
 		$unconfirmed_html .= '</div>';
@@ -1182,9 +1182,9 @@ function my_votes_table(&$game, $round_id, $user) {
 		$html .= '
 		<div class="my_votes_table">
 			<div class="row my_votes_header">
-				<div class="col-sm-4">Empire</div>
-				<div class="col-sm-4">Amount</div>
-				<div class="col-sm-4">Payout</div>
+				<div class="col-sm-4">'.$game['option_name'].'</div>
+				<div class="col-sm-3">Amount</div>
+				<div class="col-sm-5">Payout</div>
 			</div>
 			'.$unconfirmed_html.$confirmed_html.'
 		</div>';
@@ -1431,7 +1431,7 @@ function new_block($game_id) {
 			$mature_balance = mature_balance($game, $notify_user);
 			
 			if ($mature_balance >= $account_value*$notify_user['aggregate_threshold']/100) {
-				$subject = number_format($mature_balance/pow(10,8), 5)." empirecoins are now available to vote.";
+				$subject = number_format($mature_balance/pow(10,8), 5)." ".$game['coin_name_plural']." are now available to vote.";
 				$message = "<p>Some of your coins just became available.</p>";
 				$message .= "<p>You currently have ".format_bignum($mature_balance/pow(10,8))." coins available to vote. To cast a vote, please log in:</p>";
 				$message .= '<p><a href="'.$GLOBALS['base_url'].'/wallet/">'.$GLOBALS['base_url'].'/wallet/</a></p>';
@@ -1601,16 +1601,18 @@ function apply_user_strategies(&$game) {
 						
 						$amount_error = false;
 						$amount_sum = 0;
-						$empire_id_error = false;
+						$option_id_error = false;
 						
 						$log_text .= $strategy_user['username']." has ".$mature_balance/pow(10,8)." coins available, hitting url: ".$strategy_user['api_url']."<br/>\n";
 						
-						for ($rec_id=0; $rec_id<count($api_obj->recommendations); $rec_id++) {
-							if ($api_obj->recommendations[$rec_id]->recommended_amount && $api_obj->recommendations[$rec_id]->recommended_amount > 0 && intval($api_obj->recommendations[$rec_id]->recommended_amount) == $api_obj->recommendations[$rec_id]->recommended_amount) $amount_sum += $api_obj->recommendations[$rec_id]->recommended_amount;
+						foreach ($api_obj->recommendations as $recommendation) {
+							if ($recommendation->recommended_amount && $recommendation->recommended_amount > 0 && friendly_intval($recommendation->recommended_amount) == $recommendation->recommended_amount) $amount_sum += $recommendation->recommended_amount;
 							else $amount_error = true;
 							
-							if ($api_obj->recommendations[$rec_id]->empire_id >= 0 && $api_obj->recommendations[$rec_id]->empire_id < 16) {}
-							else $empire_id_error = true;
+							$qq = "SELECT * FROM game_voting_options WHERE option_id='".$recommendation->option_id."' AND game_id='".$game['game_id']."';";
+							$rr = run_query($qq);
+							if (mysql_numrows($rr) == 1) {}
+							else $option_id_error = true;
 						}
 						
 						if ($api_obj->recommendation_unit == "coin") {
@@ -1625,18 +1627,18 @@ function apply_user_strategies(&$game) {
 						if ($amount_error) {
 							$log_text .= "Error, an invalid amount was specified.";
 						}
-						else if ($empire_id_error) {
-							$log_text .= "Error, one of the empire IDs was invalid.";
+						else if ($option_id_error) {
+							$log_text .= "Error, one of the option IDs was invalid.";
 						}
 						else {
 							$vote_option_ids = array();
 							$vote_amounts = array();
 							
-							for ($rec_id=0; $rec_id<count($api_obj->recommendations); $rec_id++) {
-								if ($api_obj->recommendation_unit == "coin") $vote_amount = $api_obj->recommendations[$rec_id]->recommended_amount;
-								else $vote_amount = floor($mature_balance*$api_obj->recommendations[$rec_id]->recommended_amount/100);
+							foreach ($api_obj->recommendations as $recommendation) {
+								if ($api_obj->recommendation_unit == "coin") $vote_amount = $recommendation->recommended_amount;
+								else $vote_amount = floor($mature_balance*$recommendation->recommended_amount/100);
 								
-								$vote_option_id = $api_obj->recommendations[$rec_id]->empire_id + 1;
+								$vote_option_id = $recommendation->option_id;
 								
 								$vote_option_ids[count($vote_option_ids)] = $vote_option_id;
 								$vote_amounts[count($vote_amounts)] = $vote_amount;
@@ -2598,12 +2600,12 @@ function create_or_fetch_address(&$game, $address, $check_existing, $rpc, $delet
 	else return false;
 }
 
-function walletnotify(&$game, $empirecoin_rpc, $tx_hash) {
+function walletnotify(&$game, $coin_rpc, $tx_hash) {
 	$html = "";
 	
 	$lastblock_id = last_block_id($game['game_id']);
 	
-	$getinfo = $empirecoin_rpc->getinfo();
+	$getinfo = $coin_rpc->getinfo();
 	
 	if ($getinfo['blocks'] > $lastblock_id) {
 		$html .= "Need to add ".($getinfo['blocks']-$lastblock_id)."<br/>";
@@ -2611,12 +2613,12 @@ function walletnotify(&$game, $empirecoin_rpc, $tx_hash) {
 		$r = run_query($q);
 		$lastblock = mysql_fetch_array($r);
 		
-		$lastblock_rpc = $empirecoin_rpc->getblock($lastblock['block_hash']);
+		$lastblock_rpc = $coin_rpc->getblock($lastblock['block_hash']);
 		
 		for ($block_i=1; $block_i<=$getinfo['blocks']-$lastblock_id; $block_i++) {
 			$new_block_id = ($lastblock['block_id']+$block_i);
 			$new_hash = $lastblock_rpc['nextblockhash'];
-			$lastblock_rpc = $empirecoin_rpc->getblock($new_hash);
+			$lastblock_rpc = $coin_rpc->getblock($new_hash);
 			$q = "INSERT INTO blocks SET game_id='".$game['game_id']."', block_hash='".$new_hash."', block_id='".$new_block_id."', time_created='".time()."';";
 			$r = run_query($q);
 			
@@ -2642,8 +2644,8 @@ function walletnotify(&$game, $empirecoin_rpc, $tx_hash) {
 					$r = run_query($q);
 				}
 				else {
-					$raw_transaction = $empirecoin_rpc->getrawtransaction($tx_hash);
-					$transaction_rpc = $empirecoin_rpc->decoderawtransaction($raw_transaction);
+					$raw_transaction = $coin_rpc->getrawtransaction($tx_hash);
+					$transaction_rpc = $coin_rpc->decoderawtransaction($raw_transaction);
 					
 					$outputs = $transaction_rpc["vout"];
 					$inputs = $transaction_rpc["vin"];
@@ -2668,7 +2670,7 @@ function walletnotify(&$game, $empirecoin_rpc, $tx_hash) {
 					for ($j=0; $j<count($outputs); $j++) {
 						$address = $outputs[$j]["scriptPubKey"]["addresses"][0];
 						
-						$output_address = create_or_fetch_address($game, $address, true, $empirecoin_rpc, false);
+						$output_address = create_or_fetch_address($game, $address, true, $coin_rpc, false);
 						
 						$q = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, game_id='".$game['game_id']."', out_index='".$j."', user_id='".$output_address['user_id']."', address_id='".$output_address['address_id']."'";
 						if ($output_address['option_id'] > 0) $q .= ", option_id=".$output_address['option_id'];
@@ -2684,8 +2686,8 @@ function walletnotify(&$game, $empirecoin_rpc, $tx_hash) {
 				$r = run_query($q);
 				$transaction = mysql_fetch_array($r);
 				
-				$raw_transaction = $empirecoin_rpc->getrawtransaction($tx_hash);
-				$transaction_rpc = $empirecoin_rpc->decoderawtransaction($raw_transaction);
+				$raw_transaction = $coin_rpc->getrawtransaction($tx_hash);
+				$transaction_rpc = $coin_rpc->decoderawtransaction($raw_transaction);
 				
 				$outputs = $transaction_rpc["vout"];
 				$inputs = $transaction_rpc["vin"];
@@ -2734,8 +2736,8 @@ function walletnotify(&$game, $empirecoin_rpc, $tx_hash) {
 
 	if ($tx_hash != "") {
 		try {
-			$raw_transaction = $empirecoin_rpc->getrawtransaction($tx_hash);
-			$transaction_obj = $empirecoin_rpc->decoderawtransaction($raw_transaction);
+			$raw_transaction = $coin_rpc->getrawtransaction($tx_hash);
+			$transaction_obj = $coin_rpc->decoderawtransaction($raw_transaction);
 			
 			$q = "SELECT * FROM transactions WHERE tx_hash='".$tx_hash."';";
 			$r = run_query($q);
@@ -2778,7 +2780,7 @@ function walletnotify(&$game, $empirecoin_rpc, $tx_hash) {
 				for ($j=0; $j<count($outputs); $j++) {
 					$address = $outputs[$j]["scriptPubKey"]["addresses"][0];
 					
-					$output_address = create_or_fetch_address($game, $address, true, $empirecoin_rpc, false);
+					$output_address = create_or_fetch_address($game, $address, true, $coin_rpc, false);
 					
 					$q = "INSERT INTO transaction_ios SET spend_status='unconfirmed', instantly_mature=0, game_id='".$game['game_id']."', out_index='".$j."', user_id='".$output_address['user_id']."', address_id='".$output_address['address_id']."'";
 					if ($output_address['option_id'] > 0) $q .= ", option_id=".$output_address['option_id'];
@@ -3276,7 +3278,7 @@ function start_game(&$game) {
 	$qq = "SELECT * FROM user_games ug JOIN users u ON ug.game_id=u.user_id WHERE ug.game_id='".$game['game_id']."' AND u.username LIKE '%@%';";
 	$rr = run_query($qq);
 	while ($player = mysql_fetch_array($rr)) {
-		$subject = "EmpireCoin game \"".$game['name']."\" has started.";
+		$subject = $GLOBALS['coin_brand_name']." game \"".$game['name']."\" has started.";
 		$message = $game['name']." has started. If haven't already entered your votes, please log in now and start playing.<br/>\n";
 		$message .= game_info_table($game);
 		$email_id = mail_async($player['username'], $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "");
@@ -3342,7 +3344,7 @@ function send_invitation_email(&$game, $to_email, &$invitation) {
 	}
 	$message .= "</p>";
 
-	$message .= "<p>In this game, you can vote for one of ".$game['num_voting_options']." empires every ".format_seconds($seconds_per_round).".  Team up with other players and cast your votes strategically to win coins and destroy your competitors.</p>";
+	$message .= "<p>In this game, you can vote for one of ".$game['num_voting_options']." ".$game['option_name_plural']." every ".format_seconds($seconds_per_round).".  Team up with other players and cast your votes strategically to win coins and destroy your competitors.</p>";
 	$message .= game_info_table($game);
 	$message .= "<p>To start playing, accept your invitation by following <a href=\"".$GLOBALS['base_url']."/wallet/".$game['url_identifier']."/?invite_key=".$invitation['invitation_key']."\">this link</a>.</p>";
 	$message .= "<p>This message was sent to you by ".$GLOBALS['site_name']."</p>";
@@ -3426,12 +3428,16 @@ function game_description($game) {
 	$seconds_per_round = $game['seconds_per_block']*$game['round_length'];
 	$coins_per_block = format_bignum($game['pow_reward']/pow(10,8));
 	
+	$receive_pct = (100*$game['giveaway_amount']/($game['giveaway_amount']+coins_in_existence($game, false)));
+	
 	if ($game['giveaway_status'] == "invite_pay" || $game['giveaway_status'] == "public_pay") {
 		$invite_disp = format_bignum($game['invite_cost']);
-		$html .= "To join this game, buy ".format_bignum($game['giveaway_amount']/pow(10,8))." ".$game['coin_name_plural']." (".round((100*$game['giveaway_amount']/coins_in_existence($game, false)), 2)."% of the coins) for ".$invite_disp." ".$game['short_name'];
+		$html .= "To join this game, buy ".format_bignum($game['giveaway_amount']/pow(10,8))." ".$game['coin_name_plural']." (".round($receive_pct, 2)."% of the coins) for ".$invite_disp." ".$game['short_name'];
 		if ($invite_disp != '1') $html .= "s";
 	}
-	else $html .= "Join this game and get ".format_bignum($game['giveaway_amount']/pow(10,8))." ".$game['coin_name_plural']." (".round((100*$game['giveaway_amount']/coins_in_existence($game, false)), 2)."% of the coins) for free";
+	else {
+		$html .= "Join this game and get ".format_bignum($game['giveaway_amount']/pow(10,8))." ".$game['coin_name_plural']." (".round($receive_pct, 2)."% of the coins) for free";
+	}
 	$html .= ". ";
 
 	if ($game['game_status'] == "running") {
@@ -3502,5 +3508,9 @@ function game_final_inflation_pct(&$game) {
 		return $inflation_pct;
 	}
 	else return false;
+}
+function friendly_intval($val) {
+	if ($val > 0) return $val;
+	else return 0;
 }
 ?>

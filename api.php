@@ -18,7 +18,7 @@ if ($uri_parts[1] == "api") {
 			$last_block_id = last_block_id($game['game_id']);
 			$current_round = block_to_round($game, $last_block_id+1);
 			
-			$intval_vars = array('game_id','pos_reward','pow_reward','round_length','seconds_per_block','num_voting_options', 'maturity', 'last_block_id');
+			$intval_vars = array('game_id','round_length','seconds_per_block','num_voting_options', 'maturity', 'last_block_id');
 			for ($i=0; $i<count($intval_vars); $i++) {
 				$game[$intval_vars[$i]] = intval($game[$intval_vars[$i]]);
 			}
@@ -51,7 +51,7 @@ if ($uri_parts[1] == "api") {
 						$mature_utxo_r = run_query($mature_utxo_q);
 						$utxo_i = 0;
 						while ($utxo = mysql_fetch_array($mature_utxo_r)) {
-							$mature_utxos[$utxo_i] = array('utxo_id'=>intval($utxo['io_id']), 'coins'=>intval($utxo['amount']), 'create_block_id'=>intval($utxo['create_block_id']));
+							$mature_utxos[$utxo_i] = array('utxo_id'=>intval($utxo['io_id']), 'coins'=>$utxo['amount'], 'create_block_id'=>intval($utxo['create_block_id']));
 							$utxo_i++;
 						}
 						$api_user_info['my_utxos'] = $mature_utxos;
@@ -73,16 +73,18 @@ if ($uri_parts[1] == "api") {
 				
 				$game_scores = false;
 				
-				for ($option_id=0; $option_id < 16; $option_id++) {
-					$stat = $ranked_stats[$option_id_to_rank[$option_id+1]];
+				$qq = "SELECT * FROM game_voting_options WHERE game_id='".$game['game_id']."';";
+				$rr = run_query($qq);
+				while ($option = mysql_fetch_array($rr)) {
+					$stat = $ranked_stats[$option_id_to_rank[$option['option_id']]];
 					$api_stat = false;
-					$api_stat['option_id'] = intval($option_id);
+					$api_stat['option_id'] = (int) $option['option_id'];
 					$api_stat['name'] = $stat['name'];
-					$api_stat['rank'] = intval($option_id_to_rank[$option_id+1]+1);
-					$api_stat['confirmed_votes'] = intval($stat[$game['payout_weight'].'_score']);
-					$api_stat['unconfirmed_votes'] = intval($stat['unconfirmed_'.$game['payout_weight'].'_score']);
+					$api_stat['rank'] = $option_id_to_rank[$option['option_id']]+1;
+					$api_stat['confirmed_votes'] = friendly_intval($stat[$game['payout_weight'].'_score']);
+					$api_stat['unconfirmed_votes'] = friendly_intval($stat['unconfirmed_'.$game['payout_weight'].'_score']);
 					
-					$game_scores[$option_id] = $api_stat;
+					$game_scores[$option['option_id']] = $api_stat;
 				}
 				
 				$api_output = array('status_code'=>1, 'status_message'=>"Successful", 'game'=>$game, 'game_scores'=>$game_scores, 'user_info'=>$api_user_info);
@@ -101,14 +103,14 @@ if ($uri_parts[1] == "api") {
 		require_once('includes/get_session.php');
 		if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuser);
 		
-		$pagetitle = "EmpireCoin API Documentation";
+		$pagetitle = $GLOBALS['coin_brand_name']." API Documentation";
 		$nav_tab_selected = "home";
 		include('includes/html_start.php');
 		?>
 		<div class="container" style="max-width: 1000px;">
-			<h1>EmpireCoin API Documentation</h1>
+			<h1><?php echo $GLOBALS['coin_brand_name']; ?> API Documentation</h1>
 			
-			EmpireCoin web wallets provide several strategies for automating your EmpireCoin voting behavior.  However, some users may wish to use custom logic in their voting strategies. The EmpireCoin API allows this functionality through a standardized format for sharing EmpireCoin voting recommendations. Using the EmpireCoin API can be as simple as finding a public recommendations URL and plugging it into your EmpireCoin user account.  Or you can set up your own voting recommendations client using the information below.<br/>
+			<?php echo $GLOBALS['coin_brand_name']; ?> web wallets provide several strategies for automating your <?php echo $GLOBALS['coin_brand_name']; ?> voting behavior.  However, some users may wish to use custom logic in their voting strategies. The <?php echo $GLOBALS['coin_brand_name']; ?> API allows this functionality through a standardized format for sharing <?php echo $GLOBALS['coin_brand_name']; ?> voting recommendations. Using the <?php echo $GLOBALS['coin_brand_name']; ?> API can be as simple as finding a public recommendations URL and plugging it into your <?php echo $GLOBALS['coin_brand_name']; ?> user account.  Or you can set up your own voting recommendations client using the information below.<br/>
 			<br/>
 			<a target="_blank" href="/api/<?php echo get_site_constant('primary_game_id'); ?>/status/">/api/<?php echo get_site_constant('primary_game_id'); ?>/status/</a> &nbsp;&nbsp;&nbsp; <a href="" onclick="$('#api_status_example').toggle('fast'); return false;">See Example</a><br/>
 			Yields information about current status of the blockchain.
@@ -126,7 +128,7 @@ if ($uri_parts[1] == "api") {
       "game_type":"simulation",
       "payout_weight":"coin_block",
       "seconds_per_block":12,
-      "name":"EmpireCoin Live",
+      "name":"<?php echo $GLOBALS['coin_brand_name']; ?> Live",
       "num_voting_options":16,
       "max_voting_fraction":0.25,
       "last_block_id":7629,
@@ -138,112 +140,112 @@ if ($uri_parts[1] == "api") {
    "game_scores":[
       {
          "option_id":0,
-         "empire_name":"China",
+         "name":"China",
          "rank":2,
          "confirmed_votes":343264178109758,
          "unconfirmed_votes":0
       },
       {
          "option_id":1,
-         "empire_name":"USA",
+         "name":"USA",
          "rank":1,
          "confirmed_votes":348585570317453,
          "unconfirmed_votes":0
       },
       {
          "option_id":2,
-         "empire_name":"India",
+         "name":"India",
          "rank":4,
          "confirmed_votes":284247986344929,
          "unconfirmed_votes":0
       },
       {
          "option_id":3,
-         "empire_name":"Brazil",
+         "name":"Brazil",
          "rank":3,
          "confirmed_votes":333874393690120,
          "unconfirmed_votes":0
       },
       {
          "option_id":4,
-         "empire_name":"Indonesia",
+         "name":"Indonesia",
          "rank":5,
          "confirmed_votes":29170293015238,
          "unconfirmed_votes":0
       },
       {
          "option_id":5,
-         "empire_name":"Japan",
+         "name":"Japan",
          "rank":6,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":6,
-         "empire_name":"Russia",
+         "name":"Russia",
          "rank":7,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":7,
-         "empire_name":"Germany",
+         "name":"Germany",
          "rank":8,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":8,
-         "empire_name":"Mexico",
+         "name":"Mexico",
          "rank":9,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":9,
-         "empire_name":"Nigeria",
+         "name":"Nigeria",
          "rank":10,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":10,
-         "empire_name":"France",
+         "name":"France",
          "rank":11,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":11,
-         "empire_name":"UK",
+         "name":"UK",
          "rank":12,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":12,
-         "empire_name":"Pakistan",
+         "name":"Pakistan",
          "rank":13,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":13,
-         "empire_name":"Italy",
+         "name":"Italy",
          "rank":14,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":14,
-         "empire_name":"Turkey",
+         "name":"Turkey",
          "rank":15,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":15,
-         "empire_name":"Iran",
+         "name":"Iran",
          "rank":16,
          "confirmed_votes":0,
          "unconfirmed_votes":0
@@ -270,7 +272,7 @@ if ($uri_parts[1] == "api") {
       "game_type":"simulation",
       "payout_weight":"coin_block",
       "seconds_per_block":6,
-      "name":"EmpireCoin Testnet",
+      "name":"<?php echo $GLOBALS['coin_brand_name']; ?> Testnet",
       "num_voting_options":16,
       "max_voting_fraction":0.25,
       "last_block_id":"8905",
@@ -282,112 +284,112 @@ if ($uri_parts[1] == "api") {
    "game_scores":[
       {
          "option_id":0,
-         "empire_name":"China",
+         "name":"China",
          "rank":1,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":1,
-         "empire_name":"USA",
+         "name":"USA",
          "rank":2,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":2,
-         "empire_name":"India",
+         "name":"India",
          "rank":3,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":3,
-         "empire_name":"Brazil",
+         "name":"Brazil",
          "rank":4,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":4,
-         "empire_name":"Indonesia",
+         "name":"Indonesia",
          "rank":5,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":5,
-         "empire_name":"Japan",
+         "name":"Japan",
          "rank":6,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":6,
-         "empire_name":"Russia",
+         "name":"Russia",
          "rank":7,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":7,
-         "empire_name":"Germany",
+         "name":"Germany",
          "rank":8,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":8,
-         "empire_name":"Mexico",
+         "name":"Mexico",
          "rank":9,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":9,
-         "empire_name":"Nigeria",
+         "name":"Nigeria",
          "rank":10,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":10,
-         "empire_name":"France",
+         "name":"France",
          "rank":11,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":11,
-         "empire_name":"UK",
+         "name":"UK",
          "rank":12,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":12,
-         "empire_name":"Pakistan",
+         "name":"Pakistan",
          "rank":13,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":13,
-         "empire_name":"Italy",
+         "name":"Italy",
          "rank":14,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":14,
-         "empire_name":"Turkey",
+         "name":"Turkey",
          "rank":15,
          "confirmed_votes":0,
          "unconfirmed_votes":0
       },
       {
          "option_id":15,
-         "empire_name":"Iran",
+         "name":"Iran",
          "rank":16,
          "confirmed_votes":0,
          "unconfirmed_votes":0
@@ -455,22 +457,22 @@ if ($uri_parts[1] == "api") {
    "recommendations":[
       {
          "option_id":0,
-         "empire_name":"China",
+         "name":"China",
          "recommended_amount":80000000000
       },
       {
          "option_id":1,
-         "empire_name":"USA",
+         "name":"USA",
          "recommended_amount":60000000000
       },
       {
          "option_id":2,
-         "empire_name":"India",
+         "name":"India",
          "recommended_amount":40000000000
       },
       {
          "option_id":3,
-         "empire_name":"Brazil",
+         "name":"Brazil",
          "recommended_amount":20000000000
       }
    ]
@@ -528,7 +530,7 @@ if ($uri_parts[1] == "api") {
 		$raw = str_replace('$GLOBALS[\'default_server_api_access_key\']', '""', $raw);
 		
 		header('Content-Type: application/x-download');
-		header('Content-disposition: attachment; filename="EmpirecoinAPIClient.php"');
+		header('Content-disposition: attachment; filename="'.$GLOBALS['coin_brand_name'].'APIClient.php"');
 		header('Cache-Control: public, must-revalidate, max-age=0');
 		header('Pragma: public');
 		header('Content-Length: '.strlen($raw));

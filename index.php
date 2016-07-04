@@ -3,27 +3,43 @@ include("includes/connect.php");
 include("includes/get_session.php");
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuser);
 
-$pagetitle = "EmpireCoin - Vote for your empire in the first decentralized blockchain voting game.";
+$pagetitle = $GLOBALS['coin_brand_name']." - Vote for your empire in the first decentralized blockchain voting game.";
 $nav_tab_selected = "home";
 include('includes/html_start.php');
 ?>
 <div class="container-fluid nopadding">
 	<div class="top_banner" id="home_carousel">
-		<div class="carouselText"><h1>EmpireCoin</h1></div>
+		<div class="carouselText"><h1><?php echo $GLOBALS['coin_brand_name']; ?></h1></div>
 	</div>
 </div>
 <div class="container" style="max-width: 1000px; padding-top: 10px;">
 	<div class="row">
 		<div class="col-sm-2 text-center">
-			<img alt="EmpireCoin Logo" id="home_logo" src="/img/logo/icon-150x150.png" />
+			<img alt="<?php echo $GLOBALS['coin_brand_name']; ?> Logo" id="home_logo" src="/img/logo/icon-150x150.png" />
 		</div>
 		<div class="col-sm-10">
 			<div class="paragraph">
-				Welcome to EmpireCoin, a unique gaming platform where anyone can create a currency backed by dollars or Bitcoins.  To set up an EmpireCoin game, everyone contributes money to the pot in exchange for an initial share of the coins.  Once the game starts, coins are given out at regular intervals following linear or exponential inflation.  Players compete to win a share of the new coins by casting votes for any of 16 empires.  A winning empire is determined in each round and the newly created coins are split up and given out to everyone who voted correctly.  Some EmpireCoin games last forever and you can buy in or sell out at any time.  Other games end at a certain time and then the pot is split up and given out to players in proportion to their final balances.  EmpireCoin strategy is all about collaborating with your teammates and betraying your enemies to get ahead. Start building your empire today in this massively multiplayer online game of chance.
+				Welcome to <?php echo $GLOBALS['coin_brand_name']; ?>, a unique gaming platform where anyone can create a currency backed by dollars or Bitcoins.  To set up an <?php echo $GLOBALS['coin_brand_name']; ?> game, everyone contributes money to the pot in exchange for an initial share of the coins.  Once the game starts, coins are given out at regular intervals following linear or exponential inflation.  Players compete to win a share of the new coins by casting votes.  A winner is determined in each round and the newly created coins are split up and given out to everyone who voted correctly.  Some <?php echo $GLOBALS['coin_brand_name']; ?> games last forever and you can buy in or sell out at any time.  Other games end at a certain time and then the pot is split up and given out to players in proportion to their final balances.  <?php echo $GLOBALS['coin_brand_name']; ?> strategy is all about collaborating with your teammates and betraying your enemies to get ahead. Start building your empire today in this massively multiplayer online game of chance.
 			</div>
 		</div>
 	</div>
-	
+	<?php
+	echo '<div class="paragraph">';
+	$q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='editable' OR g.game_status='running');";
+	$r = run_query($q);
+	echo '<div class="row">';
+	$counter = 0;
+	while ($featured_game = mysql_fetch_array($r)) {
+		echo '<div class="col-md-6"><h3>'.$featured_game['name'].'</h3>';
+		echo game_description($featured_game);
+		echo '<br/><a href="/'.$featured_game['url_identifier'].'/" class="btn btn-primary">Join '.$featured_game['name'].'</a></div>';
+		
+		if ($counter%2 == 1) echo '</div><div class="row">';
+		$counter++;
+	}
+	echo '</div>';
+	echo '</div>';
+	?>
 	<div class="paragraph">
 		<?php
 		$player_variation_q = "SELECT COUNT(*), t.start_condition_players FROM game_types t JOIN game_type_variations tv ON t.game_type_id=tv.game_type_id JOIN games g ON tv.variation_id=g.variation_id WHERE g.game_status='published' GROUP BY t.start_condition_players ORDER BY t.start_condition_players ASC;";
@@ -75,41 +91,27 @@ include('includes/html_start.php');
 			}
 			echo "</div>\n";
 		}
-		
-		/*$q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='editable' OR g.game_status='running');";
-		$r = run_query($q);
-		echo '<div class="row">';
-		$counter = 0;
-		while ($featured_game = mysql_fetch_array($r)) {
-			echo '<div class="col-md-6">';
-			echo game_description($featured_game);
-			echo '</div>';
-			
-			if ($counter%2 == 1) echo '</div><div class="row">';
-			$counter++;
-		}
-		echo '</div>';*/
 		?>
 	</div>
 
 	<div class="paragraph">
 		<h2>Strategy &amp; Gameplay</h2>
-		The winning empire for an EmpireCoin voting round is determined entirely by the votes of the players.  Therefore, winning in EmpireCoin is all about colluding with other players and organizing against competing factions.  Players can form voting pools and vote together to influence the winning empire.
+		The winning empire for an <?php echo $GLOBALS['coin_brand_name']; ?> voting round is determined entirely by the votes of the players.  Therefore, winning in <?php echo $GLOBALS['coin_brand_name']; ?> is all about colluding with other players and organizing against competing factions.  Players can form voting pools and vote together to influence the winning empire.
 	</div>
 	<div class="paragraph">
 		As in other cryptocurrencies like Bitcoin, miners have veto authority over any transactions included in their block.  Because miners have some influence on the winning empire it is possible that your votes may not be counted.
 	</div>
 	<div class="paragraph">
 		<h2>Voting Pools</h2>
-		EmpireCoin's unique gameplay encourages stakeholders to cooperate and vote together against the other teams.  Groups can create voting pools by coding up an API endpoint which incorporates their custom voting logic.  You can assign your voting decisions to a voting pool by entering it's URL into your web wallet.
+		<?php echo $GLOBALS['coin_brand_name']; ?>'s unique gameplay encourages stakeholders to cooperate and vote together against the other teams.  Groups can create voting pools by coding up an API endpoint which incorporates their custom voting logic.  You can assign your voting decisions to a voting pool by entering it's URL into your web wallet.
 	</div>
 	<div class="paragraph">
-		<h2>EmpireCoin API</h2>
-		Automated &amp; algorithmic voting strategies are encouraged in EmpireCoin.  After signing up for a web wallet, you can choose from one of several automated voting strategies and then tweak parameters to optimize your votes.  Or you can choose the "Vote by API" voting strategy and then write code to fully customize your voting strategy.  For more information, please visit the <a href="/api/about/">EmpireCoin API page</a>.
+		<h2><?php echo $GLOBALS['coin_brand_name']; ?> API</h2>
+		Automated &amp; algorithmic voting strategies are encouraged in <?php echo $GLOBALS['coin_brand_name']; ?>.  After signing up for a web wallet, you can choose from one of several automated voting strategies and then tweak parameters to optimize your votes.  Or you can choose the "Vote by API" voting strategy and then write code to fully customize your voting strategy.  For more information, please visit the <a href="/api/about/"><?php echo $GLOBALS['coin_brand_name']; ?> API page</a>.
 	</div>
 	<div class="paragraph">
 		<h2>Proof of Burn Betting</h2>
-		In addition to EmpireCoin's gamified inflation, the EmpireCoin protocol also enables decentralized betting through a unique proof-of-burn protocol.  By sending coins to an address like "china_wins_round_777", anyone can place a bet against other bettors.  If correct, new coins will be created and sent to the winner.
+		In addition to <?php echo $GLOBALS['coin_brand_name']; ?>'s gamified inflation, the <?php echo $GLOBALS['coin_brand_name']; ?> protocol also enables decentralized betting through a unique proof-of-burn protocol.  By sending coins to an address like "china_wins_round_777", anyone can place a bet against other bettors.  If correct, new coins will be created and sent to the winner.
 	</div>
 
 	<div class="paragraph text-center">

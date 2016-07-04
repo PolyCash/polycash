@@ -495,15 +495,15 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				$rpc_raw_transaction = false;
 				
 				if ($game['game_type'] == "real") {
-					$empirecoin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
+					$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
 					try {
-						$rpc_transaction = $empirecoin_rpc->gettransaction($transaction['tx_hash']);
+						$rpc_transaction = $coin_rpc->gettransaction($transaction['tx_hash']);
 					}
 					catch (Exception $e) {}
 					
 					try {
-						$rpc_raw_transaction = $empirecoin_rpc->getrawtransaction($transaction['tx_hash']);
-						$rpc_raw_transaction = $empirecoin_rpc->decoderawtransaction($rpc_raw_transaction);
+						$rpc_raw_transaction = $coin_rpc->getrawtransaction($transaction['tx_hash']);
+						$rpc_raw_transaction = $coin_rpc->decoderawtransaction($rpc_raw_transaction);
 					}
 					catch (Exception $e) {}
 				}

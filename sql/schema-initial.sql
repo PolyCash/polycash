@@ -980,12 +980,12 @@ INSERT INTO `currencies` (`currency_id`, `name`, `short_name`, `abbreviation`, `
 INSERT INTO `site_constants` SET constant_name='reference_currency_id', constant_value=1;
 INSERT INTO `currency_prices` SET currency_id=1, reference_currency_id=1, price=1;
 
-INSERT INTO `game_types` (`game_type_id`, `option_group_id`, `game_type`, `block_timing`, `payout_weight`, `buyins_allowed`, `start_condition`, `inflation`, `url_identifier`, `start_condition_players`, `num_voting_options`, `type_name`, `coin_name`, `coin_name_plural`, `coin_abbreviation`) VALUES
-(1, 1, 'simulation', 'realistic', 'coin_round', 0, 'players_joined', 'exponential', 'two-player-dime-battle', 2, 16, 'two player dime battle', 'dime', 'dimes', '$'),
-(2, 1, 'simulation', 'realistic', 'coin_round', 0, 'players_joined', 'exponential', 'two-player-penny-battle', 2, 16, 'two player penny battle', 'penny', 'pennies', '$'),
-(3, 2, 'simulation', 'realistic', 'coin_round', 0, 'players_joined', 'exponential', 'two-player-dollar-battles', 2, 16, 'two player dollar battle', 'dollar', 'dollars', '$'),
-(4, 1, 'simulation', 'realistic', 'coin_round', 0, 'players_joined', 'exponential', '20-player-empirecoin-battle', 20, 16, '20 player empirecoin battle', 'empirecoin', 'empirecoins', 'EMP'),
-(5, 1, 'simulation', 'realistic', 'coin_round', 0, 'players_joined', 'exponential', '5 player bitcoin battle', 5, 16, '5 player bitcoin battle', 'bitcoin', 'bitcoins', 'BTC');
+INSERT INTO `game_types` (`game_type_id`, `option_group_id`, `game_type`, `block_timing`, `payout_weight`, `start_condition`, `inflation`, `url_identifier`, `start_condition_players`, `num_voting_options`, `type_name`, `coin_name`, `coin_name_plural`, `coin_abbreviation`) VALUES
+(1, 1, 'simulation', 'realistic', 'coin_round', 'players_joined', 'exponential', 'two-player-dime-battle', 2, 16, 'two player dime battle', 'dime', 'dimes', '$'),
+(2, 1, 'simulation', 'realistic', 'coin_round', 'players_joined', 'exponential', 'two-player-penny-battle', 2, 16, 'two player penny battle', 'penny', 'pennies', '$'),
+(3, 1, 'simulation', 'realistic', 'coin_round', 'players_joined', 'exponential', 'two-player-dollar-battles', 2, 16, 'two player dollar battle', 'dollar', 'dollars', '$'),
+(4, 1, 'simulation', 'realistic', 'coin_round', 'players_joined', 'exponential', '20-player-empirecoin-battle', 20, 16, '20 player empirecoin battle', 'empirecoin', 'empirecoins', 'EMP'),
+(5, 1, 'simulation', 'realistic', 'coin_round', 'players_joined', 'exponential', '5 player bitcoin battle', 5, 16, '5 player bitcoin battle', 'bitcoin', 'bitcoins', 'BTC');
 
 INSERT INTO `game_type_variations` (`variation_id`, `game_type_id`, `target_open_games`, `giveaway_status`, `giveaway_amount`, `invite_currency`, `invite_cost`, `round_length`, `final_round`, `seconds_per_block`, `max_voting_fraction`, `maturity`, `exponential_inflation_minershare`, `exponential_inflation_rate`, `pow_reward`, `pos_reward`, `variation_name`) VALUES
 (1, 1, 1, 'public_pay', 1000000000, 1, '1.00000000', 20, 10, 12, '0.40', 0, '0.01000000', '0.20000000', 0, 0, '2 player dime battle'),

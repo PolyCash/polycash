@@ -3,7 +3,7 @@ include("../includes/connect.php");
 include("../includes/jsonRPCClient.php");
 
 if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
-	$empirecoin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
+	$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
 
 	$game_id = get_site_constant('primary_game_id');
 
@@ -32,7 +32,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		$my_addr_count = 0;
 
 		while ($address = mysql_fetch_array($address_r)) {
-			$validate_address = $empirecoin_rpc->validateaddress($address['address']);
+			$validate_address = $coin_rpc->validateaddress($address['address']);
 			
 			if ($validate_address['ismine']) $is_mine = 1;
 			else $is_mine = 0;
@@ -51,7 +51,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			$address_r = run_query($address_q);
 		}
 		
-		$my_addresses = $empirecoin_rpc->listaddressgroupings();
+		$my_addresses = $coin_rpc->listaddressgroupings();
 		
 		for ($i=0; $i<count($my_addresses); $i++) {
 			$group_addresses = $my_addresses[$i];
@@ -59,15 +59,15 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			for ($j=0; $j<count($group_addresses); $j++) {
 				$rpc_address = $group_addresses[$j];
 				
-				create_or_fetch_address($game, $rpc_address[0], true, $empirecoin_rpc, false);
+				create_or_fetch_address($game, $rpc_address[0], true, $coin_rpc, false);
 			}
 		}
 		
-		$more_addresses = $empirecoin_rpc->listreceivedbyaddress(0, true);
+		$more_addresses = $coin_rpc->listreceivedbyaddress(0, true);
 		for ($i=0; $i<count($more_addresses); $i++) {
 			$rpc_address = $more_addresses[$i];
 			
-			create_or_fetch_address($game, $rpc_address['address'], true, $empirecoin_rpc, false);
+			create_or_fetch_address($game, $rpc_address['address'], true, $coin_rpc, false);
 		}
 		
 		$q = "SELECT COUNT(*) FROM addresses WHERE game_id='".$game['game_id']."' AND is_mine=1;";

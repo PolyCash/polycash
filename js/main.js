@@ -749,7 +749,7 @@ function add_option_to_vote(option_id, name) {
 			refresh_output_amounts();
 		}
 		else {
-			alert("You can't vote for this empire yet, you don't have a voting address for it.");
+			alert("You can't vote for this candidate yet, you don't have a voting address for it.");
 		}
 	}
 }
@@ -966,7 +966,7 @@ function confirm_compose_vote() {
 			}
 		}
 		else {
-			alert("First, please add the empires that you wish to vote for.");
+			alert("First, please add the candidates that you wish to vote for.");
 		}
 	}
 	else {
@@ -987,7 +987,7 @@ function reload_compose_vote() {
 		$('#select_input_buttons_msg').html("<font class=\"redtext\">You don't have any coins available to vote right now.</font>");
 	}
 	else {
-		$('#select_input_buttons_msg').html("To cast votes please add money with the boxes below, then select the empires that you wish to vote for.");
+		$('#select_input_buttons_msg').html("To cast votes please add money with the boxes below, then select the candidates that you wish to vote for.");
 	}
 	refresh_visible_inputs();
 }

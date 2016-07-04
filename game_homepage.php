@@ -10,7 +10,7 @@ $current_round = block_to_round($game, $last_block_id+1);
 ?>
 <div class="container" style="max-width: 1000px; padding-top: 10px;">
 	<div class="paragraph">
-		<a href="/">&larr; All EmpireCoin Games</a>
+		<a href="/">&larr; All <?php echo $GLOBALS['coin_brand_name']; ?> Games</a>
 	</div>
 	<div class="paragraph">
 		<h1><?php echo $game['name']; ?></h1>
@@ -94,7 +94,7 @@ $current_round = block_to_round($game, $last_block_id+1);
 				}
 				?>
 				<div class="paragraph">
-					In this game you can win <?php echo $game['coin_name_plural']; ?> by casting your votes correctly.  Votes build up over time based on the number of <?php echo $game['coin_name_plural']; ?> that you hold, and when you vote for an empire, your votes are used up but your <?php echo $game['coin_name_plural']; ?> are retained. By collaborating with your teammates against competing groups, you can make real money by accumulating money faster than the other players.  Through the EmpireCoin APIs you can even code up a custom strategy which makes smart, real-time decisions about how to cast your votes.
+					In this game you can win <?php echo $game['coin_name_plural']; ?> by casting your votes correctly.  Votes build up over time based on the number of <?php echo $game['coin_name_plural']; ?> that you hold, and when you vote for an <?php echo $game['option_name']; ?>, your votes are used up but your <?php echo $game['coin_name_plural']; ?> are retained. By collaborating with your teammates against competing groups, you can make real money by accumulating money faster than the other players.  Through the <?php echo $GLOBALS['coin_brand_name']; ?> APIs you can even code up a custom strategy which makes smart, real-time decisions about how to cast your votes.
 				</div>
 				<div class="paragraph">
 					<a href="/wallet/<?php echo $game['url_identifier']; ?>/" class="btn btn-success">Play Now</a>
@@ -127,7 +127,7 @@ $current_round = block_to_round($game, $last_block_id+1);
 		<h1>Rules of the Game</h1>
 		
 		<ol class="rules_list">
-			<li>Coin holders can stake their coins for one of these <?php echo $game['num_voting_options']; ?> empires every <?php echo format_seconds($seconds_per_round); ?> by submitting a voting transaction.</li>
+			<li>Coin holders can stake their coins for one of these <?php echo $game['num_voting_options']." ".$game['option_name']." every ".format_seconds($seconds_per_round); ?> by submitting a voting transaction.</li>
 			<?php
 			$block_within_round = $last_block_id%$game['round_length']+1;
 			$score_sums = total_score_in_round($game, $current_round, true);
@@ -144,10 +144,10 @@ $current_round = block_to_round($game, $last_block_id+1);
 			<li>Voting transactions are only counted if they are confirmed in a voting block. All blocks are voting blocks except for the final transaction of each round.</li>
 			<li>Blocks are mined approximately every <?php echo format_seconds($game['seconds_per_block']); ?> by the SHA256 algorithm. Miners receive <?php echo format_bignum($game['pow_reward']/pow(10,8))." ".$game['coin_name_plural']; ?> per block.</li>
 			<li>Blocks are grouped into voting rounds.  Blocks 1 through <?php echo $game['round_length']; ?> make up the first round, and every subsequent <?php echo $game['round_length']; ?> blocks are grouped into a round.</li>
-			<li>A voting round will have a winning empire if at least one empire receives votes but is not disqualified.</li>
-			<li>Any empire with more than <?php echo format_bignum(100*$game['max_voting_fraction']); ?>% of the votes is disqualified from winning the round.</li>
-			<li>The eligible empire with the most votes wins the round.</li>
-			<li>In case of a tie, the empire with the lowest ID number wins.</li>
+			<li>A voting round will have a winning <?php echo $game['option_name']; ?> if at least one <?php echo $game['option_name']; ?> receives votes but is not disqualified.</li>
+			<li>Any <?php echo $game['option_name']; ?> with more than <?php echo format_bignum(100*$game['max_voting_fraction']); ?>% of the votes is disqualified from winning the round.</li>
+			<li>The eligible <?php echo $game['option_name']; ?> with the most votes wins the round.</li>
+			<li>In case of a tie, the <?php echo $game['option_name']; ?> with the lowest ID number wins.</li>
 			<li>When a round ends <?php echo format_bignum($game['pos_reward']/pow(10,8))." ".$game['coin_name_plural']; ?> are divided up and given out to the winning voters in proportion to the amounts of their votes.</li>
 		</ol>
 	</div>

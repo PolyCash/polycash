@@ -6,6 +6,9 @@ if (is_file(realpath(dirname(__FILE__))."/config.php")) {
 }
 else die("Please create the file includes/config.php");
 
+if ($GLOBALS['coin_brand_name'] != "") {}
+else die('Please add this line to your includes/config.php: $GLOBALS[\'coin_brand_name\'] = \'EmpireCoin\';');
+
 include("lib/bitcoin-sci/common.lib.php");
 
 if ($GLOBALS['base_url'] && !$host_not_required) {
