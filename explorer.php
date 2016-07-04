@@ -211,7 +211,7 @@ if (in_array($explore_mode, array('index','rounds','blocks','addresses','transac
 								
 								$score_qty = $my_votes[$ranked_nation['nation_id']][$this_game['payout_weight'].'s'];
 								
-								echo number_format(floor($my_votes[$ranked_nation['nation_id']]['coin_blocks']/pow(10,8)*100)/100);
+								echo number_format(floor($score_qty/pow(10,8)*100)/100);
 								if ($this_game['payout_weight'] == "coin") echo " coins";
 								else echo " votes";
 								

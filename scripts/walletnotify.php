@@ -9,4 +9,5 @@ $r = run_query($q);
 $game = mysql_fetch_array($r);
 
 echo walletnotify($game, $empirecoin_rpc, $argv[1]);
+echo "Done!";
 ?>

@@ -40,9 +40,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			echo "Please supply a valid user ID or email address in the \"to\" parameter. $q<br/>\n";
 		}
 		
-		$update_user_id_q = "UPDATE transaction_IOs io JOIN addresses a ON io.address_id=a.address_id SET io.user_id=a.user_id WHERE io.spend_status='unspent';";
-		$update_user_id_r = run_query($update_user_id_q);
-		echo "q: $update_user_id_q<br/>\n";
+		refresh_utxo_user_ids();
 	}
 	else {
 		echo "Please specify a valid number of coins in the URL.  You specified ".$coins_to_grant." and there are ".$unclaimed_coins." unclaimed coins on this wallet.";

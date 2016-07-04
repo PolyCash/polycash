@@ -162,6 +162,13 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		add_round_from_rpc($game, $round_id);
 	}
 	
+	$unconfirmed_txs = $empirecoin_rpc->getrawmempool();
+	for ($i=0; $i<count($unconfirmed_txs); $i++) {
+		walletnotify($game, $empirecoin_rpc, $unconfirmed_txs[$i]);
+	}
+	
+	refresh_utxo_user_ids();
+	
 	echo "$completed_rounds rounds have been added.";
 }
 else {
