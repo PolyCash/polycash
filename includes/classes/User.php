@@ -229,7 +229,7 @@ class User {
 		
 		if ($user_game['strategy_id'] > 0) {}
 		else {
-			$q = "INSERT INTO user_strategies SET voting_strategy='by_plan', game_id='".$game_id."', user_id='".$user_game['user_id']."';";
+			$q = "INSERT INTO user_strategies SET voting_strategy='manual', game_id='".$game_id."', user_id='".$user_game['user_id']."';";
 			$r = $this->app->run_query($q);
 			$strategy_id = $this->app->last_insert_id();
 			
@@ -237,8 +237,10 @@ class User {
 			$r = $this->app->run_query($q);
 			$strategy = $r->fetch();
 			
-			$q = "INSERT INTO user_strategy_blocks SET strategy_id='".$strategy_id."', block_within_round='1';";
-			$r = $this->app->run_query($q);
+			for ($block=1; $block<$game->db_game['round_length']; $block++) {
+				$q = "INSERT INTO user_strategy_blocks SET strategy_id='".$strategy_id."', block_within_round='".$block."';";
+				$r = $this->app->run_query($q);
+			}
 			
 			$scramble_from_round = 1;
 			$scramble_to_round = $scramble_from_round+19;

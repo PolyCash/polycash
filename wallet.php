@@ -587,8 +587,10 @@ if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['do'] =
 			}
 		}
 		else {
-			$error_code = 2;
-			$message = "Error: the percentages that you entered did not add up to 100, your changes were discarded.";
+			if ($voting_strategy == "by_option") {
+				$error_code = 2;
+				$message = "Error: the percentages that you entered did not add up to 100, your changes were discarded.";
+			}
 		}
 		
 		$from_round = intval($_REQUEST['from_round']);
