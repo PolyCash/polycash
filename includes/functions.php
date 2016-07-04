@@ -816,7 +816,7 @@ function new_webwallet_multi_transaction($game, $nation_ids, $amounts, $from_use
 			$rpc_error = false;
 			
 			if ($game['game_type'] == "real") {
-				require_once($GLOBALS['install_path']."/includes/jsonRPCClient.php");
+				require_once(realpath(dirname(__FILE__))."/jsonRPCClient.php");
 				$empirecoin_rpc = new jsonRPCClient('http://'.$GLOBALS['coin_rpc_user'].':'.$GLOBALS['coin_rpc_password'].'@127.0.0.1:'.$GLOBALS['coin_testnet_port'].'/');
 				try {
 					$raw_transaction = $empirecoin_rpc->createrawtransaction($raw_txin, $raw_txout);
