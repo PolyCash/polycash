@@ -63,7 +63,7 @@ function mail_async($email, $from_name, $from, $subject, $message, $bcc, $cc) {
 	return $delivery_id;
 }
 
-function account_coin_value($game, $user) {
+function account_coin_value(&$game, $user) {
 	$q = "SELECT SUM(amount) FROM transaction_IOs WHERE spend_status='unspent' AND game_id='".$game['game_id']."' AND user_id='".$user['user_id']."' AND create_block_id IS NOT NULL;";
 	$r = run_query($q);
 	$sum = mysql_fetch_row($r);
@@ -71,7 +71,7 @@ function account_coin_value($game, $user) {
 	return $sum[0];
 }
 
-function immature_balance($game, $user) {
+function immature_balance(&$game, $user) {
 	$q = "SELECT SUM(amount) FROM transaction_IOs WHERE game_id='".$game['game_id']."' AND user_id='".$user['user_id']."' AND (create_block_id > ".(last_block_id($game['game_id'])-$game['maturity'])." OR create_block_id IS NULL) AND instantly_mature = 0;";
 	$r = run_query($q);
 	$sum = mysql_fetch_row($r);
@@ -79,7 +79,7 @@ function immature_balance($game, $user) {
 	return $sum[0];
 }
 
-function mature_balance($game, $user) {
+function mature_balance(&$game, $user) {
 	$account_value = account_coin_value($game, $user);
 	$immature_balance = immature_balance($game, $user);
 	
@@ -87,10 +87,10 @@ function mature_balance($game, $user) {
 }
 
 function user_coin_blocks($user_id, $game, $last_block_id) {
-	$q = "SELECT SUM(amount*(".($last_block_id+1)."-create_block_id)) FROM transaction_IOs WHERE spend_status='unspent' AND game_id='".$game['game_id']."' AND user_id='".$user_id."' AND (create_block_id <= ".(last_block_id($game['game_id'])-$game['maturity'])." OR instantly_mature = 1);";
+	$q = "SELECT SUM(amount*(".($last_block_id+1)."-create_block_id)) FROM transaction_IOs WHERE spend_status='unspent' AND spend_transaction_id IS NULL AND game_id='".$game['game_id']."' AND user_id='".$user_id."' AND (create_block_id <= ".(last_block_id($game['game_id'])-$game['maturity'])." OR instantly_mature = 1);";
 	$r = run_query($q);
 	$sum = mysql_fetch_row($r);
-	return $sum[0];
+	return intval($sum[0]);
 }
 
 function current_block($game_id) {
@@ -106,7 +106,7 @@ function last_block_id($game_id) {
 	else return 0;
 }
 
-function block_to_round($game, $mining_block_id) {
+function block_to_round(&$game, $mining_block_id) {
 	return ceil($mining_block_id/$game['round_length']);
 }
 
@@ -134,7 +134,7 @@ function set_site_constant($constant_name, $constant_value) {
 	}
 }
 
-function round_voting_stats($game, $round_id) {
+function round_voting_stats(&$game, $round_id) {
 	if ($game['payout_weight'] == "coin") {
 		$score_field = "coin_score";
 		$sum_field = "i.amount";
@@ -157,7 +157,7 @@ function round_voting_stats($game, $round_id) {
 	}
 }
 
-function total_score_in_round($game, $round_id, $include_unconfirmed) {
+function total_score_in_round(&$game, $round_id, $include_unconfirmed) {
 	if ($game['payout_weight'] == "coin") $score_field = "amount";
 	else $score_field = "coin_blocks_destroyed";
 	
@@ -187,7 +187,7 @@ function total_score_in_round($game, $round_id, $include_unconfirmed) {
 	return $returnvals;
 }
 
-function round_voting_stats_all($game, $voting_round) {
+function round_voting_stats_all(&$game, $voting_round) {
 	$round_voting_stats = round_voting_stats($game, $voting_round);
 	$stats_all = false;
 	$counter = 0;
@@ -256,7 +256,7 @@ function get_round_winner($round_stats_all, $game) {
 	else return false;
 }
 
-function current_round_table($game, $current_round, $user, $show_intro_text) {
+function current_round_table(&$game, $current_round, $user, $show_intro_text) {
 	if ($game['payout_weight'] == "coin") $score_field = "coin_score";
 	else $score_field = "coin_block_score";
 	
@@ -470,7 +470,7 @@ function format_bignum($number) {
 	else return $rounded_number;
 }
 
-function wallet_text_stats($thisuser, $game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance) {
+function wallet_text_stats($thisuser, &$game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance) {
 	$html = "<div class=\"row\"><div class=\"col-sm-2\">Available&nbsp;funds:</div>";
 	$html .= "<div class=\"col-sm-3\" style=\"text-align: right;\"><font class=\"greentext\">";
 	$html .= format_bignum($mature_balance/pow(10,8));
@@ -486,7 +486,7 @@ function wallet_text_stats($thisuser, $game, $current_round, $last_block_id, $bl
 	$html .= "Current votes count towards block ".$block_within_round."/".$game['round_length']." in round #".$current_round."<br/>\n";
 	
 	if ($immature_balance > 0) {
-		$q = "SELECT * FROM webwallet_transactions t, transaction_IOs i LEFT JOIN nations n ON i.nation_id=n.nation_id WHERE t.transaction_id=i.create_transaction_id AND i.game_id='".$thisuser['game_id']."' AND i.user_id='".$thisuser['user_id']."' AND (i.create_block_id > ".(last_block_id($thisuser['game_id']) - $game['maturity'])." OR i.create_block_id IS NULL) ORDER BY i.io_id ASC;";
+		$q = "SELECT * FROM webwallet_transactions t JOIN transaction_IOs i ON t.transaction_id=i.create_transaction_id LEFT JOIN nations n ON i.nation_id=n.nation_id WHERE i.game_id='".$game['game_id']."' AND i.user_id='".$thisuser['user_id']."' AND (i.create_block_id > ".(last_block_id($thisuser['game_id']) - $game['maturity'])." OR i.create_block_id IS NULL) ORDER BY i.io_id ASC;";
 		$r = run_query($q);
 		
 		$html .= "<div style='display: none; border: 1px solid #ccc; padding: 8px; border-radius: 8px; margin-top: 8px;' id='lockedfunds_details'>";
@@ -518,7 +518,7 @@ function wallet_text_stats($thisuser, $game, $current_round, $last_block_id, $bl
 					$html .= "You voted for ".$next_transaction['name']." in round #".block_to_round($game, $next_transaction['create_block_id']).". ";
 				}
 			}
-			$html .= "<br/>\n";
+			$html .= "(tx: <a target=\"_blank\" href=\"/explorer/transactions/".$next_transaction['tx_hash']."\">".$next_transaction['transaction_id']."</a>)<br/>\n";
 		}
 		$html .= "</div>\n";
 	}
@@ -631,7 +631,7 @@ function user_address_id($game_id, $user_id, $nation_id) {
 	else return false;
 }
 
-function new_payout_transaction($game, $voting_round, $block_id, $winning_nation, $winning_score) {
+function new_payout_transaction(&$game, $voting_round, $block_id, $winning_nation, $winning_score) {
 	$log_text = "";
 	
 	if ($game['payout_weight'] == "coin") $score_field = "amount";
@@ -671,7 +671,7 @@ function new_payout_transaction($game, $voting_round, $block_id, $winning_nation
 	return $returnvals;
 }
 
-function new_betbase_transaction($game, $round_id, $mining_block_id, $winning_nation) {
+function new_betbase_transaction(&$game, $round_id, $mining_block_id, $winning_nation) {
 	$log_text = "";
 	
 	$q = "INSERT INTO webwallet_transactions SET game_id='".$game['game_id']."', transaction_desc='betbase', block_id='".($mining_block_id-1)."', time_created='".time()."';";
@@ -743,7 +743,7 @@ function new_betbase_transaction($game, $round_id, $mining_block_id, $winning_na
 	return $returnvals;
 }
 
-function new_webwallet_multi_transaction($game, $nation_ids, $amounts, $from_user_id, $to_user_id, $block_id, $type, $io_ids, $address_ids, $remainder_address_id) {
+function new_webwallet_multi_transaction(&$game, $nation_ids, $amounts, $from_user_id, $to_user_id, $block_id, $type, $io_ids, $address_ids, $remainder_address_id) {
 	if (!$type || $type == "") $type = "transaction";
 	
 	$amount = 0;
@@ -915,7 +915,7 @@ function new_webwallet_multi_transaction($game, $nation_ids, $amounts, $from_use
 	}
 	else return false;
 }
-function update_nation_scores($game) {
+function update_nation_scores(&$game) {
 	$last_block_id = last_block_id($game['game_id']);
 	$round_id = block_to_round($game, $last_block_id+1);
 	$q = "UPDATE game_nations n INNER JOIN (
@@ -960,7 +960,7 @@ function cancel_transaction($transaction_id, $affected_input_ids, $created_input
 	}
 }
 
-function nation_score_in_round($game, $nation_id, $round_id) {
+function nation_score_in_round(&$game, $nation_id, $round_id) {
 	if ($game['payout_weight'] == "coin") $score_field = "amount";
 	else $score_field = "coin_blocks_destroyed";
 	
@@ -994,7 +994,7 @@ function nation_score_in_round($game, $nation_id, $round_id) {
 	return array('confirmed'=>$confirmed_score, 'unconfirmed'=>$unconfirmed_score, 'sum'=>$confirmed_score+$unconfirmed_score);
 }
 
-function my_votes_in_round($game, $round_id, $user_id) {
+function my_votes_in_round(&$game, $round_id, $user_id) {
 	$q = "SELECT n.*, SUM(i.amount), SUM(i.coin_blocks_destroyed) FROM transaction_IOs i, nations n WHERE i.game_id='".$game['game_id']."' AND i.nation_id=n.nation_id AND i.create_block_id >= ".((($round_id-1)*$game['round_length'])+1)." AND i.create_block_id <= ".($round_id*$game['round_length']-1)." AND i.user_id='".$user_id."' GROUP BY i.nation_id ORDER BY n.nation_id ASC;";
 	$r = run_query($q);
 	$coins_voted = 0;
@@ -1012,7 +1012,7 @@ function my_votes_in_round($game, $round_id, $user_id) {
 	return $returnvals;
 }
 
-function my_votes_table($game, $round_id, $user) {
+function my_votes_table(&$game, $round_id, $user) {
 	$html = "";
 	
 	$confirmed_html = "";
@@ -1069,7 +1069,7 @@ function my_votes_table($game, $round_id, $user) {
 	if ($num_unconfirmed + $num_confirmed > 0) {
 		$html .= "<div style=\"border: 1px solid #ddd; padding: 5px;\">";
 		$html .= "<div class=\"row\" style=\"font-weight: bold;\">";
-		$html .= "<div class=\"col-sm-4\">Nation</div>";
+		$html .= "<div class=\"col-sm-4\">Empire</div>";
 		$html .= "<div class=\"col-sm-4\">Amount</div>";
 		$html .= "<div class=\"col-sm-4\">Payout</div>";
 		$html .= "</div>\n";
@@ -1088,7 +1088,7 @@ function set_user_active($user_id) {
 	$r = run_query($q);
 }
 
-function initialize_vote_nation_details($game, $nation_id2rank, $score_sum, $user_id) {
+function initialize_vote_nation_details(&$game, $nation_id2rank, $score_sum, $user_id) {
 	$html = "";
 	$nation_q = "SELECT * FROM nations n INNER JOIN game_nations gn ON n.nation_id=gn.nation_id WHERE gn.game_id='".$game['game_id']."' ORDER BY n.nation_id ASC;";
 	$nation_r = run_query($nation_q);
@@ -1350,7 +1350,7 @@ function new_block($game_id) {
 	return $log_text;
 }
 
-function apply_user_strategies($game) {
+function apply_user_strategies(&$game) {
 	$log_text = "";
 	$last_block_id = last_block_id($game['game_id']);
 	$mining_block_id = $last_block_id+1;
@@ -1382,6 +1382,53 @@ function apply_user_strategies($game) {
 					$api_obj = json_decode($api_result);
 					
 					if ($api_obj->recommendations && count($api_obj->recommendations) > 0 && in_array($api_obj->recommendation_unit, array('coin','percent'))) {
+						$input_error = false;
+						$input_io_ids = array();
+						
+						if ($api_obj->input_utxo_ids) {
+							if (count($api_obj->input_utxo_ids) > 0) {
+								for ($i=0; $i<count($api_obj->input_utxo_ids); $i++) {
+									if (!$input_error) {
+										$utxo_id = intval($api_obj->input_utxo_ids[$i]);
+										if (strval($utxo_id) === strval($api_obj->input_utxo_ids[$i])) {
+											$utxo_q = "SELECT *, io.user_id AS io_user_id, a.user_id AS address_user_id FROM transaction_IOs io JOIN addresses a ON io.address_id=a.address_id WHERE io.io_id='".$utxo_id."' AND io.game_id='".$game['game_id']."';";
+											$utxo_r = run_query($utxo_q);
+											if (mysql_numrows($utxo_r) == 1) {
+												$utxo = mysql_fetch_array($utxo_r);
+												if ($utxo['io_user_id'] == $strategy_user['user_id'] && $utxo['address_user_id'] == $strategy_user['user_id']) {
+													if (!$utxo['spend_transaction_id'] && $utxo['spend_status'] == "unspent" && $utxo['create_block_id'] !== "") {
+														$input_io_ids[count($input_io_ids)] = $utxo['io_id'];
+													}
+													else {
+														$input_error = true;
+														$log_text .= "Error, you specified an input which has already been spent.";
+													}
+												}
+												else {
+													$input_error = true;
+													$log_text .= "Error, you specified an input which is not associated with your user account.";
+												}
+											}
+											else {
+												$input_error = true;
+												$log_text .= "Error, an invalid transaction input was specified.";
+											}
+										}
+										else {
+											$input_error = true;
+											$log_text .= "Error, an invalid transaction input was specified.";
+										}
+									}
+								}
+							}
+							else {
+								$input_error = true;
+								$log_text .= "Error, invalid format for transaction inputs.";
+							}
+						}
+						if (count($input_io_ids) > 0 && $input_error == false) {}
+						else $input_io_ids = false;
+						
 						$amount_error = false;
 						$amount_sum = 0;
 						$empire_id_error = false;
@@ -1427,7 +1474,7 @@ function apply_user_strategies($game) {
 								$log_text .= "Vote ".$vote_amount." for ".$vote_nation_id."<br/>\n";
 							}
 							
-							$transaction_id = new_webwallet_multi_transaction($game, $vote_nation_ids, $vote_amounts, $strategy_user['user_id'], $strategy_user['user_id'], false, 'transaction', false, false, false);
+							$transaction_id = new_webwallet_multi_transaction($game, $vote_nation_ids, $vote_amounts, $strategy_user['user_id'], $strategy_user['user_id'], false, 'transaction', $input_io_ids, false, false);
 							
 							if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
 							else $log_text .= "Failed to add transaction.<br/>\n";
@@ -1585,7 +1632,7 @@ function delete_reset_game($delete_or_reset, $game_id) {
 	return true;
 }
 
-function block_id_to_round_index($game, $mining_block_id) {
+function block_id_to_round_index(&$game, $mining_block_id) {
 	return (($mining_block_id-1)%$game['round_length'])+1;
 }
 
@@ -1633,7 +1680,7 @@ function render_transaction($transaction, $selected_address_id, $firstcell_text)
 	
 	return $html;
 }
-function select_input_buttons($user_id, $game) {
+function select_input_buttons($user_id, &$game) {
 	$js = "mature_ios.length = 0;\n";
 	$html = "";
 	$input_buttons_html = "";
@@ -1680,7 +1727,7 @@ function select_input_buttons($user_id, $game) {
 	
 	return $html;
 }
-function mature_io_ids_csv($user_id, $game) {
+function mature_io_ids_csv($user_id, &$game) {
 	if ($user_id > 0 && $game) {
 		$ids_csv = "";
 		$io_q = "SELECT i.io_id FROM transaction_IOs i, addresses a WHERE i.address_id=a.address_id AND i.spend_status='unspent' AND a.user_id='".$user_id."' AND i.game_id='".$game['game_id']."' AND (i.create_block_id <= ".(last_block_id($game['game_id'])-$game['maturity'])." OR i.instantly_mature = 1) ORDER BY i.io_id ASC;";
@@ -1693,7 +1740,7 @@ function mature_io_ids_csv($user_id, $game) {
 	}
 	else return "";
 }
-function bet_round_range($game) {
+function bet_round_range(&$game) {
 	$last_block_id = last_block_id($game['game_id']);
 	$mining_block_within_round = block_id_to_round_index($game, $last_block_id+1);
 	$current_round = block_to_round($game, $last_block_id+1);
@@ -1704,10 +1751,10 @@ function bet_round_range($game) {
 	
 	return array($start_round_id, $stop_round_id);
 }
-function round_to_last_betting_block($game, $round_id) {
+function round_to_last_betting_block(&$game, $round_id) {
 	return ($round_id-1)*$game['round_length']+5;
 }
-function select_bet_round($game, $current_round) {
+function select_bet_round(&$game, $current_round) {
 	$html = '<select id="bet_round" class="form-control" required="required" onchange="bet_round_changed();">';
 	$html .= '<option value="">-- Please Select --</option>'."\n";
 	$bet_round_range = bet_round_range($game);
@@ -1730,7 +1777,7 @@ function select_bet_round($game, $current_round) {
 	return $html;
 }
 
-function burn_address_text($game, $round_id, $winner) {
+function burn_address_text(&$game, $round_id, $winner) {
 	$addr_text = "";
 	if ($winner) {
 		$q = "SELECT * FROM nations WHERE nation_id='".$winner."';";
@@ -1749,7 +1796,7 @@ function burn_address_text($game, $round_id, $winner) {
 	return $addr_text;
 }
 
-function get_bet_burn_address($game, $round_id, $nation_id) {
+function get_bet_burn_address(&$game, $round_id, $nation_id) {
 	if ($game['losable_bets_enabled'] == 1) {
 		$burn_address_text = burn_address_text($game, $round_id, $nation_id);
 		
@@ -1784,7 +1831,7 @@ function bet_transaction_payback_address($transaction_id) {
 	else return false;
 }
 
-function rounds_complete_html($game, $max_round_id, $limit) {
+function rounds_complete_html(&$game, $max_round_id, $limit) {
 	$html = "";
 	
 	$last_block_id = last_block_id($game['game_id']);
@@ -1835,7 +1882,7 @@ function addr_text_to_nation_id($addr_text) {
 	return $nation_id;
 }
 
-function my_bets($game, $user) {
+function my_bets(&$game, $user) {
 	$html = "";
 	$q = "SELECT * FROM webwallet_transactions WHERE transaction_desc='bet' AND game_id='".$game['game_id']."' AND from_user_id='".$user['user_id']."' GROUP BY bet_round_id ORDER BY bet_round_id ASC;";
 	$r = run_query($q);
@@ -1885,7 +1932,7 @@ function my_bets($game, $user) {
 	return $html;
 }
 
-function add_round_from_rpc($game, $round_id) {
+function add_round_from_rpc(&$game, $round_id) {
 	$q = "UPDATE game_nations SET coin_score=0, coin_block_score=0, losing_streak=losing_streak+1 WHERE game_id='".$game['game_id']."';";
 	$r = run_query($q);
 	
@@ -2279,7 +2326,7 @@ function round_result_html($match, $round_number, $thisuser) {
 	return $html;
 }
 
-function create_or_fetch_address($game, $address, $check_existing, $rpc, $delete_nationless) {
+function create_or_fetch_address(&$game, $address, $check_existing, $rpc, $delete_nationless) {
 	if ($check_existing) {
 		$q = "SELECT * FROM addresses WHERE game_id='".$game['game_id']."' AND address='".$address."';";
 		$r = run_query($q);
@@ -2311,7 +2358,7 @@ function create_or_fetch_address($game, $address, $check_existing, $rpc, $delete
 	else return false;
 }
 
-function walletnotify($game, $empirecoin_rpc, $tx_hash) {
+function walletnotify(&$game, $empirecoin_rpc, $tx_hash) {
 	$html = "";
 	
 	$lastblock_id = last_block_id($game['game_id']);
@@ -2517,6 +2564,45 @@ function refresh_utxo_user_ids($only_unspent_utxos) {
 	if ($only_unspent_utxos) $update_user_id_q .= " WHERE io.spend_status='unspent'";
 	$update_user_id_q .= ";";
 	$update_user_id_r = run_query($update_user_id_q);
+}
+
+function check_giveaway_available(&$game, $user, $invitation) {
+	if ($game['game_type'] == "simulation" && ($game['giveaway_status'] == "on" || $game['giveaway_status'] == "invite_only")) {
+		if ($game['giveaway_status'] == "invite_only") {
+			$q = "SELECT * FROM invitations WHERE used_user_id='".$user['user_id']."' AND used_time=0 AND used=0;";
+			$r = run_query($q);
+			if (mysql_numrows($r) > 0) {
+				$invitation = mysql_fetch_array($r);
+				return true;
+			}
+			else return false;
+		}
+		else {
+			$q = "SELECT * FROM webwallet_transactions t JOIN transaction_IOs io ON t.transaction_id=io.create_transaction_id WHERE io.game_id='".$game['game_id']."' AND io.user_id='".$user['user_id']."' AND t.transaction_desc='giveaway';";
+			$r = run_query($q);
+			if (mysql_numrows($r) > 0) return false;
+			else return true;
+		}
+	}
+	else return false;
+}
+
+function try_apply_giveaway($game, $user, $invitation) {
+	$giveaway_available = check_giveaway_available($game, $user, $invitation);
+	if ($giveaway_available) {
+		$giveaway_block_id = last_block_id($game['game_id']);
+		
+		for ($i=0; $i<5; $i++) {
+			$transaction_id = new_webwallet_multi_transaction($game, false, array(intval($game['giveaway_amount']/5)), false, $user['user_id'], $giveaway_block_id, 'giveaway', false, false, false);
+		}
+		
+		if ($invitation) {
+			$q = "UPDATE invitations SET used_time='".time()."', used=1, used_ip='".mysql_real_escape_string($_SERVER['REMOTE_ADDR'])."' WHERE invitation_id='".$invitation['invitation_id']."';";
+			$r = run_query($q);
+		}
+		return true;
+	}
+	else return false;
 }
 
 function output_message($status_code, $message, $dump_object) {

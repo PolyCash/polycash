@@ -9,6 +9,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		$game = mysql_fetch_array($r);
 		if ($game['game_type'] == "simulation") {
 			echo new_block($game['game_id']);
+			apply_user_strategies($game);
 		}
 		else echo "A block can't be added for this game.";
 	}

@@ -38,11 +38,13 @@ if ($uri_parts[1] == "api") {
 						$account_value = account_coin_value($game, $api_user);
 						$immature_balance = immature_balance($game, $api_user);
 						$mature_balance = $account_value - $immature_balance;
+						$votes_available = user_coin_blocks($api_user['user_id'], $game, $last_block_id);
 						
 						$api_user_info['username'] = $api_user['username'];
 						$api_user_info['balance'] = $account_value;
 						$api_user_info['mature_balance'] = $mature_balance;
 						$api_user_info['immature_balance'] = $immature_balance;
+						$api_user_info['votes_available'] = $votes_available;
 						
 						$mature_utxos = array();
 						$mature_utxo_q = "SELECT * FROM transaction_IOs i JOIN addresses a ON i.address_id=a.address_id WHERE i.spend_status='unspent' AND i.spend_transaction_id IS NULL AND a.user_id='".$api_user['user_id']."' AND i.game_id='".$game['game_id']."' AND (i.create_block_id <= ".($last_block_id-$game['maturity'])." OR i.instantly_mature = 1) ORDER BY i.io_id ASC;";

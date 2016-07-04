@@ -111,7 +111,7 @@ if ($_REQUEST['key'] == $client_access_key) {
 				$this->game_scores = $this->server_result->game_scores;
 				$this->user_info = $this->server_result->user_info;
 				
-				// Define the rank2empire_id map so that we can reference nations by rank in setRecommendations()
+				// Define the rank2empire_id map so that we can reference nations by rank in setOutputs()
 				for ($empire_id=0; $empire_id<count($this->recommendations); $empire_id++) {
 					$this->rank2empire_id[$this->game_scores[$empire_id]->rank] = $empire_id;
 				}
@@ -132,28 +132,6 @@ if ($_REQUEST['key'] == $client_access_key) {
 			return $nonzeroRecommendations;
 		}
 		
-		// If a valid server access code has been specified, recommendations are denominated in satoshis
-		// and should sum up to the user's mature balance.  If no user account is specified, recommendations are 
-		// denominated in percentage points; the server will convert percentages based on the user's mature balance.
-		public function initializeVoteAmount() {
-			if ($this->server_result->user) {
-				$total_vote_amount = $this->server_result->user->mature_balance;
-				$this->recommendation_unit = "coin";
-			}
-			else {
-				$total_vote_amount = 100;
-				$this->recommendation_unit = "percent";
-			}
-			
-			if ($total_vote_amount > 0 && $total_vote_amount == round($total_vote_amount)) {
-				$this->total_vote_amount = $total_vote_amount;
-			}
-			else {
-				$this->error_code = 1;
-				$this->error_message = "Please specify a valid amount to vote.";
-			}
-		}
-		
 		// Output our response to JSON
 		public function outputJSON() {
 			$output_obj = array();
@@ -171,50 +149,72 @@ if ($_REQUEST['key'] == $client_access_key) {
 			echo json_encode($output_obj);
 		}
 		
-		// Put your custom voting logic here
-		public function setRecommendations() {
+		
+		// If a valid server access code has been specified, recommendations are denominated in satoshis
+		// and should sum up to the user's mature balance.  If no user account is specified, recommendations are 
+		// denominated in percentage points; the server will convert percentages based on the user's mature balance.
+		public function setInputs() {
+			if ($this->user_info) {
+				$input_coins = 0;
+				$input_utxo_ids = array();
+				for ($i=0; $i<count($this->user_info->my_utxos); $i++) {
+					$input_utxo_ids[count($input_utxo_ids)] = $this->user_info->my_utxos[$i]->utxo_id;
+					$input_coins += $this->user_info->my_utxos[$i]->coins;
+				}
+				$this->input_utxo_ids = $input_utxo_ids;
+				
+				$total_vote_amount = $input_coins;
+				$this->recommendation_unit = "coin";
+			}
+			else {
+				$total_vote_amount = 100;
+				$this->recommendation_unit = "percent";
+			}
+			
+			$this->total_vote_amount = $total_vote_amount;
+		}
+		
+		public function setOutputs() {
 			if ($this->total_vote_amount) {
 				if ($this->server_result) {
-					if ($this->user_info) {
-						$input_utxo_ids = array();
-						for ($i=0; $i<count($this->user_info->my_utxos); $i++) {
-							$input_utxo_ids[count($input_utxo_ids)] = $this->user_info->my_utxos[$i]->utxo_id;
+					// Only cast votes late in the round
+					if ($this->game->block_within_round >= 5) {
+						if ($this->user_info) { // Recommendations specified in coins
+							if ($this->user_info->votes_available >= $this->user_info->mature_balance*8) {
+								$coins_out = 0;
+								
+								$rec_amount = floor($this->total_vote_amount*0.15); $coins_out += $rec_amount;
+								$this->recommendations[$this->rank2empire_id[1]]->recommended_amount = $rec_amount;
+								
+								$rec_amount = floor($this->total_vote_amount*0.25); $coins_out += $rec_amount;
+								$this->recommendations[$this->rank2empire_id[2]]->recommended_amount = $rec_amount;
+								
+								$rec_amount = floor($this->total_vote_amount*0.30); $coins_out += $rec_amount;
+								$this->recommendations[$this->rank2empire_id[3]]->recommended_amount = $rec_amount;
+								
+								$this->recommendations[$this->rank2empire_id[4]]->recommended_amount = $this->total_vote_amount-$coins_out;
+							}
 						}
-						$this->input_utxo_ids = $input_utxo_ids;
-						
-						$this->recommendation_unit = "percent";
-						$this->recommendations[$this->rank2empire_id[1]]->recommended_amount = 30;
-						$this->recommendations[$this->rank2empire_id[2]]->recommended_amount = 30;
-						$this->recommendations[$this->rank2empire_id[3]]->recommended_amount = 30;
-						$this->recommendations[$this->rank2empire_id[4]]->recommended_amount = 10;
-					}
-					else {
-						// In this example, 75% of the user's mature balance is voted towards the 1st ranked nation
-						// And 25% is voted towards the 2nd ranked nation, but only when block 5+ of the round is being mined.
-						if ($this->game->block_within_round >= 5) {
-							$this->recommendations[$this->rank2empire_id[1]]->recommended_amount = floor($this->total_vote_amount*0.10);
-							$this->recommendations[$this->rank2empire_id[2]]->recommended_amount = floor($this->total_vote_amount*0.25);
-							$this->recommendations[$this->rank2empire_id[3]]->recommended_amount = floor($this->total_vote_amount*0.30);
-							$this->recommendations[$this->rank2empire_id[4]]->recommended_amount = floor($this->total_vote_amount*0.35);
+						else { // Recommendations specified in percent of user's mature balance
+							$this->recommendations[$this->rank2empire_id[1]]->recommended_amount = 15;
+							$this->recommendations[$this->rank2empire_id[2]]->recommended_amount = 25;
+							$this->recommendations[$this->rank2empire_id[3]]->recommended_amount = 30;
+							$this->recommendations[$this->rank2empire_id[4]]->recommended_amount = 30;
 						}
 					}
-				}
-				else {
-					// If the API call to get the current status failed for some reason, vote everything for the US
-					$this->recommendations[$this->name2empire_id['USA']]->recommended_amount = $this->total_vote_amount;
 				}
 			}
 			else if (!$this->error_code) {
 				$this->error_code = 2;
-				$this->error_message = "Please run initializeVoteAmount before calling setRecommendations.";
+				$this->error_message = "Please run setInputs before calling setOutputs.";
 			}
 		}
 	}
 	
 	$recommendations = new VotingRecommendations($game_id, $server_host, $server_access_key);
 	$recommendations->getCurrentStatus();
-	$recommendations->initializeVoteAmount();
-	$recommendations->setRecommendations();
+	$recommendations->setInputs();
+	$recommendations->setOutputs();
 	$recommendations->outputJSON();
 }
 else echo "Error, please supply the correct key.";

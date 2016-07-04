@@ -8,7 +8,7 @@ $message = "";
 if ($_REQUEST['do'] == "signup") {
 	$first = mysql_real_escape_string(strip_tags(make_alphanumeric($_POST['first'], "")));
 	$last = mysql_real_escape_string(strip_tags(make_alphanumeric($_POST['last'], "")));
-	$email = mysql_real_escape_string(strip_tags($_POST['email']));
+	$email = mysql_real_escape_string(strip_tags(str_replace('"', '', str_replace("'", "", $_POST['email']))));
 	
 	$query = "SELECT * FROM users WHERE username='".$email."';";
 	$result = run_query($query);
@@ -726,26 +726,11 @@ $mature_balance = $account_value - $immature_balance;
 					$giveaway_avail_msg = 'You\'re eligible for a one time coin giveaway of '.number_format($game['giveaway_amount']/pow(10,8)).' EmpireCoins.<br/>';
 					$giveaway_avail_msg .= '<button class="btn btn-success" onclick="claim_coin_giveaway();" id="giveaway_btn">Claim '.number_format($game['giveaway_amount']/pow(10,8)).' EmpireCoins</button><br/>';
 					
-					if ($game['game_type'] == "simulation" && ($game['giveaway_status'] == "on" || $game['giveaway_status'] == "invite_only")) {
-						if ($game['giveaway_status'] == "invite_only") {
-							$q = "SELECT * FROM invitations WHERE used_user_id='".$thisuser['user_id']."' AND used_time=0 AND used=0;";
-							$r = run_query($q);
-							
-							if (mysql_numrows($r) > 0) {
-								$initial_tab = 3;
-								echo $giveaway_avail_msg;
-							}
-						}
-						else {
-							$q = "SELECT * FROM webwallet_transactions t JOIN transaction_IOs io ON t.transaction_id=io.create_transaction_id WHERE io.game_id='".$game['game_id']."' AND io.user_id='".$thisuser['user_id']."' AND t.transaction_desc='giveaway';";
-							$r = run_query($q);
-							
-							if (mysql_numrows($r) > 0) {}
-							else {
-								$initial_tab = 3;
-								echo $giveaway_avail_msg;
-							}
-						}
+					$giveaway_available = check_giveaway_available($game, $thisuser);
+					
+					if ($giveaway_available) {
+						$initial_tab = 3;
+						echo $giveaway_avail_msg;
 					}
 					?>
 				</div>

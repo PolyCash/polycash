@@ -772,7 +772,7 @@ function reload_compose_vote() {
 		$(this).hide();
 	});
 	if (mature_io_ids_csv == "") {
-		$('#select_input_buttons_msg').html("You don't have any coins available to vote right now.");
+		$('#select_input_buttons_msg').html("<font class=\"redtext\">You don't have any coins available to vote right now.</font>");
 	}
 	else {
 		$('#select_input_buttons_msg').html("To compose a voting transaction, please add money with the boxes below and then select the nations that you want to vote for.");
