@@ -14,7 +14,7 @@ class App {
 		$this->dbh->exec("USE ".$db_name) or die ("There was an error accessing the '".$db_name."' database");
 	}
 	
-	public function db_insert_id() {
+	public function last_insert_id() {
 		return $this->dbh->lastInsertId();
 	}
 	
@@ -65,7 +65,7 @@ class App {
 		else {
 			$q = "INSERT INTO redirect_urls SET url=".$this->quote_escape($url).", time_created='".time()."';";
 			$r = $this->run_query($q);
-			$redirect_url_id = $this->db_insert_id();
+			$redirect_url_id = $this->last_insert_id();
 			
 			$q = "SELECT * FROM redirect_urls WHERE redirect_url_id='".$redirect_url_id."';";
 			$r = $this->run_query($q);
@@ -77,7 +77,7 @@ class App {
 	public function mail_async($email, $from_name, $from, $subject, $message, $bcc, $cc) {
 		$q = "INSERT INTO async_email_deliveries SET to_email=".$this->quote_escape($email).", from_name=".$from_name.", from_email=".$this->quote_escape($from).", subject=".$this->quote_escape($subject).", message=".$this->quote_escape($message).", bcc=".$this->quote_escape($bcc).", cc=".$this->quote_escape($cc).", time_created='".time()."';";
 		$r = $this->run_query($q);
-		$delivery_id = $this->db_insert_id();
+		$delivery_id = $this->last_insert_id();
 		
 		$command = "/usr/bin/php ".realpath(dirname(dirname(__FILE__)))."/scripts/async_email_deliver.php ".$delivery_id." > /dev/null 2>/dev/null &";
 		exec($command);
@@ -324,7 +324,7 @@ class App {
 				}
 				$qq = substr($qq, 0, strlen($qq)-2).";";
 				$rr = $this->run_query($qq);
-				$game_id = $this->db_insert_id();
+				$game_id = $this->last_insert_id();
 				
 				$game = new Game($this, $game_id);
 				
@@ -474,7 +474,7 @@ class App {
 				if ($price > 0) {
 					$q = "INSERT INTO currency_prices SET currency_id='".$currency_id."', reference_currency_id='".$reference_currency['currency_id']."', price='".$price."', time_added='".time()."';";
 					$r = $this->run_query($q);
-					$currency_price_id = $this->db_insert_id();
+					$currency_price_id = $this->last_insert_id();
 
 					$q = "SELECT * FROM currency_prices WHERE price_id='".$currency_price_id."';";
 					$r = $this->run_query($q);
@@ -528,7 +528,7 @@ class App {
 		$time = time();
 		$q = "INSERT INTO currency_invoices SET time_created='".$time."', invoice_address_id='".$invoice_address_id."', expire_time='".($time+$GLOBALS['invoice_expiration_seconds'])."', game_id='".$game_id."', user_id='".$user_id."', status='unpaid', invoice_key_string='".$this->random_string(32)."', settle_price_id='".$conversion['numerator_price_id']."', settle_currency_id='".$settle_currency['currency_id']."', settle_amount='".$settle_amount."', pay_price_id='".$conversion['denominator_price_id']."', pay_currency_id='".$pay_currency['currency_id']."', pay_amount='".$pay_amount."';";
 		$r = $this->run_query($q);
-		$invoice_id = $this->db_insert_id();
+		$invoice_id = $this->last_insert_id();
 
 		$q = "SELECT * FROM currency_invoices WHERE invoice_id='".$invoice_id."';";
 		$r = $this->run_query($q);
@@ -582,7 +582,7 @@ class App {
 
 		$q = "INSERT INTO invoice_addresses SET pub_key='".$keySet['pubAdd']."', priv_enc='".$encWIF."';";
 		$r = $this->run_query($q);
-		$address_id = $this->db_insert_id();
+		$address_id = $this->last_insert_id();
 		
 		return $address_id;
 	}
