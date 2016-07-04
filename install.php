@@ -27,7 +27,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			}
 
 			$result = $app->run_query("SHOW TABLES LIKE 'games';");
-			$table_exists = mysql_num_rows($result) > 0;
+			$table_exists = $result->rowCount() > 0;
 			if (!$table_exists) {
 				echo "Database tables failed to be created, please install manually by importing all files in the \"sql\" folder via phpMyAdmin or any other MySQL interface.<br/>\n";
 				die();

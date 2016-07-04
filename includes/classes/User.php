@@ -110,7 +110,7 @@ class User {
 	public function my_last_transaction_id($game_id) {
 		if ($game_id > 0) {
 			$start_q = "SELECT t.transaction_id FROM transactions t, addresses a, transaction_ios i WHERE a.address_id=i.address_id AND ";
-			$end_q .= " AND a.user_id='".$this->db_user['user_id']."' AND i.game_id='".$game_id."' ORDER BY t.transaction_id DESC LIMIT 1;";
+			$end_q = " AND a.user_id='".$this->db_user['user_id']."' AND i.game_id='".$game_id."' ORDER BY t.transaction_id DESC LIMIT 1;";
 			
 			$create_r = $this->app->run_query($start_q."i.create_transaction_id=t.transaction_id".$end_q);
 			$create_trans_id = $create_r->fetch(PDO::FETCH_NUM);
@@ -282,16 +282,18 @@ class User {
 		$q .= " WHERE user_id='".$this->db_user['user_id']."';";
 		$r = $this->app->run_query($q);
 		
-		if ($_REQUEST['invite_key'] != "") {
+		if (!empty($_REQUEST['invite_key'])) {
 			$this->app->try_apply_invite_key($this->db_user['user_id'], $_REQUEST['invite_key']);
 		}
 		
-		$redirect_url_id = intval($_REQUEST['redirect_id']);
-		$q = "SELECT * FROM redirect_urls WHERE redirect_url_id='".$redirect_url_id."';";
-		$r = $this->app->run_query($q);
+		if (!empty($_REQUEST['redirect_id'])) {
+			$redirect_url_id = intval($_REQUEST['redirect_id']);
+			$q = "SELECT * FROM redirect_urls WHERE redirect_url_id='".$redirect_url_id."';";
+			$r = $this->app->run_query($q);
 		
-		if ($r->rowCount() == 1) {
-			$redirect_url = $r->fetch();
+			if ($r->rowCount() == 1) {
+				$redirect_url = $r->fetch();
+			}
 		}
 	}
 	public function user_in_game($game_id) {

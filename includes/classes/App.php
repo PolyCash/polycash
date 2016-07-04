@@ -10,8 +10,8 @@ class App {
 		return $this->dbh->quote($string);
 	}
 	
-	public function set_db($dbname) {
-		$this->dbh->exec("USE ".$db_name) or die ("There was an error accessing the '".$db_name."' database");
+	public function set_db($db_name) {
+		$this->dbh->query("USE ".$db_name) or die("There was an error accessing the '".$db_name."' database.");
 	}
 	
 	public function last_insert_id() {
@@ -553,11 +553,11 @@ class App {
 		</div>
 		<div class="row">
 			<div class="col-xs-4">Confirmed Votes:</div>
-			<div class="col-xs-8">'.$this->format_bignum($confirmed_votes/pow(10,8)).' votes ('.(ceil(100*100*$confirmed_votes/$score_sum)/100).'%)</div>
+			<div class="col-xs-8">'.$this->format_bignum($confirmed_votes/pow(10,8)).' votes ('.(empty($score_sum)? 0 : (ceil(100*100*$confirmed_votes/$score_sum)/100)).'%)</div>
 		</div>
 		<div class="row">
 			<div class="col-xs-4">Unconfirmed Votes:</div>
-			<div class="col-xs-8">'.$this->format_bignum($unconfirmed_votes/pow(10,8)).' votes ('.(ceil(100*100*$unconfirmed_votes/$score_sum)/100).'%)</div>
+			<div class="col-xs-8">'.$this->format_bignum($unconfirmed_votes/pow(10,8)).' votes ('.(empty($score_sum)? 0 : (ceil(100*100*$unconfirmed_votes/$score_sum)/100)).'%)</div>
 		</div>
 		<div class="row">
 			<div class="col-xs-4">Last&nbsp;win:</div>
@@ -603,8 +603,11 @@ class App {
 		
 		while ($db_game = $r->fetch()) {
 			$featured_game = new Game($this, $db_game['game_id']);
+			$mining_block_id = $featured_game->last_block_id()+1;
+			$current_round_id = $featured_game->block_to_round($mining_block_id);
+			
 			echo '<div class="col-md-'.$cell_width.'"><h3 style="display: inline-block" title="'.$featured_game->game_description().'">'.$featured_game->db_game['name'].'</h3>';
-			echo $featured_game->current_round_table($current_round, false, false, false);
+			echo $featured_game->current_round_table($current_round_id, false, false, false);
 			echo '<a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-success">Play Now</a>';
 			echo ' <a href="/explorer/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-primary">Blockchain Explorer</a>';
 			echo '<br/><br/></div>';

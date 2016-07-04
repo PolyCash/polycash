@@ -1,6 +1,6 @@
 <?php
-if ($redirect_id > 0) {}
-else if (intval($_REQUEST['redirect_id']) > 0) $redirect_id = intval($_REQUEST['redirect_id']);
+if (!empty($redirect_id)) {}
+else if (!empty($_REQUEST['redirect_id']) > 0) $redirect_id = intval($_REQUEST['redirect_id']);
 else $redirect_id = FALSE;
 
 $url_game = false;
@@ -35,12 +35,12 @@ $(document).ready(function() {
 			<?php
 			if ($redirect_id) echo '<input type="hidden" name="redirect_id" value="'.$redirect_id.'" />'."\n";
 			
-			if ($_REQUEST['invite_key'] != "") echo '<input type="hidden" name="invite_key" value="'.make_alphanumeric(strip_tags($_REQUEST['invite_key'])).'" />';
+			if (!empty($_REQUEST['invite_key'])) echo '<input type="hidden" name="invite_key" value="'.make_alphanumeric(strip_tags($_REQUEST['invite_key'])).'" />';
 			?>
 			<div class="row">
 				<div class="col-sm-4 form-control-static">Alias:</div>
 				<div class="col-sm-6">
-					<input id="login_username" class="responsive_input form-control" name="username" type="text" size="25" maxlength="40" value="<?php echo $email; ?>" />
+					<input id="login_username" class="responsive_input form-control" name="username" type="text" size="25" maxlength="40" value="<?php if (!empty($email)) echo $email; ?>" />
 				</div>
 			</div>
 			<div class="row">
@@ -70,7 +70,7 @@ $(document).ready(function() {
 			<?php
 			if ($redirect_id) echo '<input type="hidden" name="redirect_id" value="'.$redirect_id.'" />'."\n";
 			
-			if ($_REQUEST['invite_key'] != "") echo '<input type="hidden" name="invite_key" value="'.make_alphanumeric(strip_tags($_REQUEST['invite_key'])).'" />';
+			if (!empty($_REQUEST['invite_key'])) echo '<input type="hidden" name="invite_key" value="'.make_alphanumeric(strip_tags($_REQUEST['invite_key'])).'" />';
 			?>
 			<div class="row">
 				<div class="col-sm-10">

@@ -1,6 +1,8 @@
 <?php
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $GLOBALS['pageview_controller']->insert_pageview($thisuser);
 
+if (!isset($_REQUEST['action'])) $_REQUEST['action'] = "";
+
 $pagetitle = $game->db_game['name']." - Play now and win coins in this blockchain voting game.";
 $nav_tab_selected = "game_homepage";
 include('includes/html_start.php');
@@ -9,7 +11,7 @@ $last_block_id = $game->last_block_id();
 $current_round = $game->block_to_round($last_block_id+1);
 
 $user_game = false;
-if ($game) {
+if ($game && $thisuser) {
 	$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
 	$r = $app->run_query($q);
 	if ($r->rowCount() == 1) {
@@ -243,7 +245,7 @@ if ($game) {
 
 	<div class="paragraph">
 		<div id="vote_popups"><?php
-		echo $game->initialize_vote_option_details($option_id2rank, $score_sums['sum'], $thisuser->db_user['user_id']);
+		echo $game->initialize_vote_option_details($option_id2rank, $score_sums['sum'], empty($thisuser)? false : $thisuser->db_user['user_id']);
 		?></div>
 		
 		<?php
@@ -264,8 +266,11 @@ if ($game) {
 //<![CDATA[
 var last_block_id = <?php echo $last_block_id; ?>;
 var last_transaction_id = <?php echo $game->last_transaction_id(); ?>;
-var my_last_transaction_id = <?php echo $thisuser->my_last_transaction_id($game->db_game['game_id']); ?>;
-var mature_io_ids_csv = '<?php echo $game->mature_io_ids_csv($thisuser->db_user['user_id']); ?>';
+var my_last_transaction_id = <?php
+if ($thisuser) echo $thisuser->my_last_transaction_id($game->db_game['game_id']);
+else echo 'false';
+?>;
+var mature_io_ids_csv = '<?php echo empty($thisuser)? 0 : $game->mature_io_ids_csv($thisuser->db_user['user_id']); ?>';
 var game_round_length = <?php echo $game->db_game['round_length']; ?>;
 var game_id = <?php echo $game->db_game['game_id']; ?>;
 var game_loop_index = 1;

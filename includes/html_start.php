@@ -4,7 +4,7 @@
 	<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	
-	<title><?php echo $pagetitle; ?></title>
+	<title><?php if (!empty($pagetitle)) echo $pagetitle; ?></title>
 	
 	<link rel="stylesheet" type="text/css" href="/css/bootstrap.min.css" media="screen" />
 	<link rel="stylesheet" type="text/css" href="/css/style.css" />
@@ -18,7 +18,7 @@
 	<script type="text/javascript" src="/js/sha256.js"></script>
 	<script type="text/javascript" src="/js/main.js"></script>
 
-	<?php if ($include_crypto_js) { ?>
+	<?php if (!empty($include_crypto_js)) { ?>
 	<script type="text/javascript" src="/js/base64.lib.js" ></script>
 	<script type="text/javascript" src="/js/rsa/prng4.js"></script>
 	<script type="text/javascript" src="/js/rsa/rng.js"></script>
@@ -61,7 +61,7 @@
 					<?php if ($game) { ?><li<?php if ($nav_tab_selected == "game_homepage") echo ' class="active"'; ?>><a href="/<?php echo $game->db_game['url_identifier']; ?>/">About</a></li><?php } ?>
 					<li<?php if ($nav_tab_selected == "explorer") echo ' class="active"'; ?>><a href="/explorer/<?php if ($game) echo $game->db_game['url_identifier']."/"; ?>">Explore</a></li>
 					<?php
-					if ($thisuser || $_REQUEST['do'] == "logout") { ?>
+					if ($thisuser || (isset($_REQUEST['do']) && $_REQUEST['do'] == "logout")) { ?>
 						<li<?php if ($nav_tab_selected == "wallet" && $_REQUEST['do'] == "logout") echo ' class="active"'; ?>><a href="/wallet/?do=logout">Log Out</a></li>
 						<?php
 					}

@@ -64,6 +64,8 @@ class Game {
 			$sum += $unconfirmed_score;
 			$returnvals['unconfirmed'] = $unconfirmed_score;
 		}
+		else $returnvals['unconfirmed'] = 0;
+		
 		$returnvals['sum'] = $sum;
 		
 		return $returnvals;
@@ -203,7 +205,10 @@ class Game {
 			
 			if (!$winner_option_id && $option_score <= $max_score_sum && $option_score > 0) $winner_option_id = $round_stats[$i]['option_id'];
 			
-			$pct_votes = 100*(floor(1000*$option_score/$score_sum)/1000);
+			if ($score_sum > 0) {
+				$pct_votes = 100*(floor(1000*$option_score/$score_sum)/1000);
+			}
+			else $pct_votes = 0;
 			
 			$sq_px = $pct_votes*$sq_px_per_pct_point;
 			$box_diam = round(sqrt($sq_px));
@@ -689,6 +694,7 @@ class Game {
 		$r = $this->app->run_query($q);
 		$coins_voted = 0;
 		$coin_blocks_voted = 0;
+		$coin_rounds_voted = 0;
 		$votes = 0;
 		$my_votes = array();
 		while ($votesum = $r->fetch()) {
@@ -816,7 +822,7 @@ class Game {
 			if (!$option['last_win_round']) $losing_streak = false;
 			else $losing_streak = $current_round - $option['last_win_round'] - 1;
 			
-			$rank = $option_id2rank[$option['voting_option_id']]+1;
+			$rank = $option_id2rank[$option['option_id']]+1;
 			$confirmed_votes = $option[$this->db_game['payout_weight'].'_score'];
 			$unconfirmed_votes = $option['unconfirmed_'.$this->db_game['payout_weight'].'_score'];
 			$html .= '
@@ -838,7 +844,6 @@ class Game {
 					</div>
 				</div>
 			</div>';
-			$n_counter++;
 		}
 		return $html;
 	}
@@ -1548,7 +1553,7 @@ class Game {
 		else return "";
 	}
 	
-	public function bet_round_range(&$game) {
+	public function bet_round_range() {
 		$last_block_id = $this->last_block_id();
 		$mining_block_within_round = $this->block_id_to_round_index($last_block_id+1);
 		$current_round = $this->block_to_round($last_block_id+1);
@@ -1779,19 +1784,22 @@ class Game {
 		if ($winning_option_id) $q .= ", winning_option_id='".$winning_option_id."'";
 		
 		$rankings = $this->round_voting_stats_all($round_id);
+		
 		$score_sum = $rankings[0];
 		$option_id_to_rank = $rankings[3];
 		$rankings = $rankings[2];
-		
-		for ($i=0; $i<count($rankings); $i++) {
-			$q .= ", position_".($i+1)."=".$rankings[$i]['option_id'];
-		}
 		
 		$option_scores = $this->option_score_in_round($winning_option_id, $round_id);
 		$q .= ", winning_score='".$option_scores['sum']."', score_sum='".$score_sum."', time_created='".time()."'";
 		if ($update_insert == "update") $q .= " WHERE internal_round_id='".$existing_round['internal_round_id']."'";
 		$q .= ";";
 		$r = $this->app->run_query($q);
+		$internal_round_id = $this->app->last_insert_id();
+		
+		for ($i=0; $i<count($rankings); $i++) {
+			$qq = "INSERT INTO cached_round_options SET internal_round_id='".$internal_round_id."', round_id='".$round_id."', game_id='".$this->db_game['game_id']."', option_id='".$rankings[$i]['option_id']."', rank='".($i+1)."', score='".$rankings[$i]['votes']."';";
+			$rr = $this->app->run_query($qq);
+		}
 	}
 
 	public function create_or_fetch_address($address, $check_existing, $rpc, $delete_optionless, $claimable) {
@@ -2094,13 +2102,18 @@ class Game {
 	public function account_value_html($account_value) {
 		$html = '<font class="greentext">'.$this->app->format_bignum($account_value/pow(10,8), 2).'</font> '.$this->db_game['coin_name_plural'];
 		$html .= ' <font style="font-size: 12px;">(';
-		$html .= $this->app->format_bignum(100*$account_value/coins_in_existence($this->app, $this->db_game, false))."%";
-		
+		$coins_in_existence = coins_in_existence($this->app, $this->db_game, false);
+		if ($coins_in_existence > 0) $html .= $this->app->format_bignum(100*$account_value/$coins_in_existence)."%";
+		else $html .= "0%";
+
 		$q = "SELECT * FROM currencies WHERE currency_id='".$this->db_game['invite_currency']."';";
 		$r = $this->app->run_query($q);
 		if ($r->rowCount() > 0) {
 			$payout_currency = $r->fetch();
-			$payout_currency_value = $this->pot_value()*$account_value/coins_in_existence($this->app, $this->db_game, false);
+			$coins_in_existence = coins_in_existence($this->app, $this->db_game, false);
+			if ($coins_in_existence > 0) $payout_currency_value = $this->pot_value()*$account_value/$coins_in_existence;
+			else $payout_currency_value = 0;
+			
 			$html .= "&nbsp;=&nbsp;<a href=\"/".$this->db_game['url_identifier']."/?action=show_escrow\">".$payout_currency['symbol'].$this->app->format_bignum($payout_currency_value)."</a>";
 		}
 		$html .= ")</font>";
@@ -2186,7 +2199,9 @@ class Game {
 		$seconds_per_round = $this->db_game['seconds_per_block']*$this->db_game['round_length'];
 		$coins_per_block = $this->app->format_bignum($this->db_game['pow_reward']/pow(10,8));
 		
-		$receive_pct = (100*$this->db_game['giveaway_amount']/($this->db_game['giveaway_amount']+coins_in_existence($this->app, $this->db_game, false)));
+		$post_buyin_supply = $this->db_game['giveaway_amount']+coins_in_existence($this->app, $this->db_game, false);
+		if ($post_buyin_supply > 0) $receive_pct = (100*$this->db_game['giveaway_amount']/$post_buyin_supply);
+		else $receive_pct = 100;
 		
 		if ($this->db_game['giveaway_status'] == "invite_pay" || $this->db_game['giveaway_status'] == "public_pay") {
 			$invite_disp = $this->app->format_bignum($this->db_game['invite_cost']);
@@ -2324,6 +2339,9 @@ class Game {
 			$block_within_round = $this->block_id_to_round_index($block_height);
 			
 			$html .= $block_height." ";
+
+			// Transactions are sequentially looped through twice
+			// This is the first loop, it creates all transactions. The 2nd verifies & deletes invalid TXs
 			for ($i=0; $i<count($lastblock_rpc['tx']); $i++) {
 				$tx_hash = $lastblock_rpc['tx'][$i];
 				
@@ -2353,7 +2371,6 @@ class Game {
 					$inputs = $transaction_rpc["vin"];
 					
 					if (count($inputs) == 1 && $inputs[0]['coinbase']) {
-						$transaction_rpc->is_coinbase = true;
 						$transaction_type = "coinbase";
 						if (count($outputs) > 1) $transaction_type = "votebase";
 					}
@@ -2384,6 +2401,7 @@ class Game {
 				}
 			}
 			
+			// Loop through and verify TXs; delete invalid ones
 			for ($i=0; $i<count($lastblock_rpc['tx']); $i++) {
 				$tx_hash = $lastblock_rpc['tx'][$i];
 				$q = "SELECT * FROM transactions WHERE tx_hash='".$tx_hash."';";
@@ -2413,13 +2431,20 @@ class Game {
 				$input_sum = 0;
 				
 				if ($transaction['transaction_desc'] == "transaction") {
+					$coin_blocks_destroyed = 0;
+					$coin_rounds_destroyed = 0;
+					
 					for ($j=0; $j<count($inputs); $j++) {
 						$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id WHERE t.game_id='".$this->db_game['game_id']."' AND i.spend_status='unspent' AND t.tx_hash='".$inputs[$j]["txid"]."' AND i.out_index='".$inputs[$j]["vout"]."';";
 						$r = $this->app->run_query($q);
+						
 						if ($r->rowCount() > 0) {
 							$spend_io = $r->fetch();
 							$spend_io_ids[$j] = $spend_io['io_id'];
 							$input_sum += $spend_io['amount'];
+							
+							$coin_blocks_destroyed += ($block_height - $spend_io['block_id'])*$spend_io['amount'];
+							$coin_rounds_destroyed += ($this->block_to_round($block_height) - $spend_io['create_round_id'])*$spend_io['amount'];
 						}
 						else {
 							$transaction_error = true;
@@ -2435,6 +2460,27 @@ class Game {
 							$q = "UPDATE transactions SET fee_amount='".($input_sum-$output_sum)."' WHERE transaction_id='".$transaction['transaction_id']."';";
 							$r = $this->app->run_query($q);
 							
+							for ($j=0; $j<count($outputs); $j++) {
+								$q = "SELECT * FROM transaction_ios WHERE create_transaction_id='".$transaction['transaction_id']."' AND out_index='".$j."';";
+								$r = $this->app->run_query($q);
+
+								if ($r->rowCount() == 1) {
+									$db_output = $r->fetch();
+									
+									$output_cbd = floor($coin_blocks_destroyed*($db_output['amount']/$input_sum));
+									$output_crd = floor($coin_rounds_destroyed*($db_output['amount']*pow(10,8)/$input_sum));
+
+									if ($this->db_game['payout_weight'] == "coin") $votes = $db_output['amount'];
+									else if ($this->db_game['payout_weight'] == "coin_block") $votes = $output_cbd;
+									else if ($this->db_game['payout_weight'] == "coin_round") $votes = $output_crd;
+									else $votes = 0;
+
+									$votes = floor($votes*$this->block_id_to_taper_factor($block_id));
+									$q = "UPDATE transaction_ios SET votes='".$votes."' WHERE io_id='".$db_output['io_id']."';";
+									$r = $this->app->run_query($q);
+								}
+							}
+
 							$html .= ", ";
 						}
 					}

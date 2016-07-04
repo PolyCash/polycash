@@ -30,6 +30,8 @@ else {
 	$dbh->query("USE ".$GLOBALS['mysql_database']) or die ("Please <a href=\"/install.php?key=\">install the database</a>");
 }
 
+$dbh->query("SET sql_mode='';");
+
 header('Content-Type: text/html; charset=UTF-8');
 
 include("global_functions.php");

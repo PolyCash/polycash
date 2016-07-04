@@ -1,5 +1,5 @@
 <?php
-if ($session_key == "") {
+if (!isset($session_key)) {
 	$session_key = session_id();
 }
 
@@ -8,6 +8,7 @@ if ($session_key == "") {
 	$session_key = session_id();
 }
 
+$thisuser = FALSE;
 $game = FALSE;
 
 if (strlen($session_key) > 0) {
@@ -20,9 +21,9 @@ if (strlen($session_key) > 0) {
 		$thisuser = new User($app, $session['user_id']);
 		
 		if ($thisuser->db_user) {
-			$game_id = intval($_REQUEST['game_id']);
+			if (!empty($_REQUEST['game_id'])) {
+				$game_id = intval($_REQUEST['game_id']);
 			
-			if ($game_id > 0) {
 				$q = "SELECT g.* FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND g.game_id='".$game_id."';";
 				$r = $app->run_query($q);
 				
