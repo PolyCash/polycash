@@ -45,22 +45,13 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	else {
 		$r = $app->run_query("SELECT * FROM blocks WHERE block_id='0' AND game_id='".$game->db_game['game_id']."';");
 		
-		if ($r->rowCount() == 0) {
-			$game->delete_reset_game('reset');
-			
-			$q = "DELETE FROM addresses WHERE game_id='".$game->db_game['game_id']."';";
-			$app->run_query($q);
-			
-			$returnvals = $game->add_genesis_block($coin_rpc);
-			$current_hash = $returnvals['nextblockhash'];
-		}
-		else {
-			$db_block = $r->fetch();
-			$current_hash = $db_block['block_hash'];
-			$rpc_genesis_block = $coin_rpc->getblock($current_hash);
-			$current_hash = $rpc_genesis_block['nextblockhash'];
-			$game->delete_blocks_from_height(1);
-		}
+		$game->delete_reset_game('reset');
+		
+		$q = "DELETE FROM addresses WHERE game_id='".$game->db_game['game_id']."';";
+		$app->run_query($q);
+		
+		$returnvals = $game->add_genesis_block($coin_rpc);
+		$current_hash = $returnvals['nextblockhash'];
 	}
 	
 	do {
@@ -100,7 +91,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$app->refresh_utxo_user_ids(false);
 	$game->update_option_scores();
 
-	$this->app->set_site_constant("last_sync_start_time", 0);
+	$app->set_site_constant("last_sync_start_time", 0);
 	
 	echo "Completed sync ($completed_rounds rounds) at ".(microtime(true)-$start_time)." sec<br/>\n";
 }
