@@ -1506,8 +1506,8 @@ function load_plan_rounds() {
 	refresh_plan_allocations();
 }
 function refresh_plan_allocations() {
-	var from_round = $('#select_from_round').val();
-	var to_round = $('#select_to_round').val();
+	var from_round = parseInt($('#select_from_round').val());
+	var to_round = parseInt($('#select_to_round').val());
 	$.get("/ajax/planned_allocations.php?game_id="+game_id+"&action=fetch&voting_strategy_id="+$('#voting_strategy_id').val()+"&from_round="+from_round+"&to_round="+to_round, function(result) {
 		$('#from_round').val(from_round);
 		$('#to_round').val(to_round);
