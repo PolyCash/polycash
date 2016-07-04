@@ -6,6 +6,9 @@ if (!empty($argv)) {
 	$cmd_vars = $app->argv_to_array($argv);
 	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
 	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
+	if (!empty($cmd_vars['game_id'])) $_REQUEST['game_id'] = $cmd_vars['game_id'];
+	if (!empty($cmd_vars['block_id'])) $_REQUEST['block_id'] = $cmd_vars['block_id'];
+	if (!empty($cmd_vars['round_id'])) $_REQUEST['round_id'] = $cmd_vars['round_id'];
 }
 
 if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
@@ -61,8 +64,6 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	
 	echo "Syncing with daemon...<br/>\n";
 	echo $game->sync_coind($coin_rpc);
-	
-	$app->set_site_constant("last_sync_start_time", 0);
 	
 	echo "Completed sync at ".(microtime(true)-$start_time)." sec<br/>\n";
 }

@@ -606,8 +606,8 @@ class Game {
 						$tx_hash = $decoded_transaction['txid'];
 						$verified_tx_hash = $coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
 						
-						$this->walletnotify($coin_rpc, $tx_hash);
-						$this->walletnotify($coin_rpc, $verified_tx_hash);
+						$this->walletnotify($coin_rpc, $tx_hash, FALSE);
+						$this->walletnotify($coin_rpc, $verified_tx_hash, FALSE);
 						$this->update_option_scores();
 						
 						$db_transaction = $this->app->run_query("SELECT * FROM transactions WHERE tx_hash=".$this->app->quote_escape($tx_hash).";")->fetch();
@@ -1854,9 +1854,9 @@ class Game {
 		else return false;
 	}
 
-	public function walletnotify($coin_rpc, $tx_hash) {
+	public function walletnotify($coin_rpc, $tx_hash, $skip_set_site_constant) {
 		$start_time = microtime(true);
-		$this->app->set_site_constant('walletnotify', $tx_hash);
+		if (!$skip_set_site_constant) $this->app->set_site_constant('walletnotify', $tx_hash);
 		
 		$html = "";
 		
@@ -1905,6 +1905,8 @@ class Game {
 					$ref_cbd = 0;
 					$ref_crd = 0;
 					
+					$missing_inputs = false;
+					
 					for ($j=0; $j<count($inputs); $j++) {
 						$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id WHERE t.tx_hash='".$inputs[$j]['txid']."' AND i.out_index='".$inputs[$j]['vout']."';";
 						$r = $this->app->run_query($q);
@@ -1919,9 +1921,13 @@ class Game {
 							$q = "UPDATE transaction_ios SET spend_count=spend_count+1, spend_transaction_id='".$db_transaction_id."' WHERE io_id='".$db_input['io_id']."';";
 							$r = $this->app->run_query($q);
 						}
+						else $missing_inputs = true;
 					}
+
+					$fee_amount = ($input_sum-$output_sum);
+					if ($missing_inputs) $fee_amount = 0;
 					
-					$q = "UPDATE transactions SET ref_block_id='".$ref_block_id."', ref_coin_blocks_destroyed='".$ref_cbd."', ref_round_id='".$ref_round_id."', ref_coin_rounds_destroyed='".$ref_crd."', fee_amount='".($input_sum-$output_sum)."' WHERE transaction_id='".$db_transaction_id."';";
+					$q = "UPDATE transactions SET ref_block_id='".$ref_block_id."', ref_coin_blocks_destroyed='".$ref_cbd."', ref_round_id='".$ref_round_id."', ref_coin_rounds_destroyed='".$ref_crd."', fee_amount='".$fee_amount."' WHERE transaction_id='".$db_transaction_id."';";
 					$r = $this->app->run_query($q);
 					
 					for ($j=0; $j<count($outputs); $j++) {
@@ -2361,12 +2367,9 @@ class Game {
 				}
 			}
 			catch (Exception $e) {
-				$this->app->set_site_constant("last_sync_start_time", "0");
 				var_dump($e);
 				die("RPC failed to get block $block_hash");
 			}
-			
-			$this->app->set_site_constant("last_sync_start_time", time());
 			
 			$block_within_round = $this->block_id_to_round_index($block_height);
 		
@@ -2396,7 +2399,6 @@ class Game {
 					$transaction_rpcs[$i] = $transaction_rpc;
 				}
 				catch (Exception $e) {
-					$this->app->set_site_constant("last_sync_start_time", "0");
 					die("Error, transaction ".$tx_hash." was not found in block ".$block_height.".");
 				}
 			
@@ -2449,7 +2451,6 @@ class Game {
 					$transaction_rpc = $transaction_rpcs[$i];
 				}
 				catch (Exception $e) {
-					$this->app->set_site_constant("last_sync_start_time", "0");
 					var_dump($e);
 					die("Failed to get transaction ".$tx_hash);
 				}
@@ -2536,58 +2537,68 @@ class Game {
 	
 	public function sync_coind(&$coin_rpc) {
 		$html = "";
-		$last_sync_start_time = (int) $this->app->get_site_constant("last_sync_start_time");
 		
-		if ($last_sync_start_time > time()-300) {
-			$html = "Synchronization is already running, skipping...\n";
-		}
-		else {
-			$this->app->set_site_constant("last_sync_start_time", time());
-			$last_block_id = $this->last_block_id();
+		$last_block_id = $this->last_block_id();
 
-			$startblock_q = "SELECT * FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id='".$last_block_id."';";
-			$startblock_r = $this->app->run_query($startblock_q);
-		
-			if ($startblock_r->rowCount() == 0) {
-				if ($last_block_id == 0) {
-					$this->add_genesis_block($coin_rpc);
-					$startblock_r = $this->app->run_query($startblock_q);
-				}
-				else {
-					$this->app->set_site_constant("last_sync_start_time", "0");
-					die("sync_coind failed, block $last_block_id is missing.\n");
-				}
+		$startblock_q = "SELECT * FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id='".$last_block_id."';";
+		$startblock_r = $this->app->run_query($startblock_q);
+	
+		if ($startblock_r->rowCount() == 0) {
+			if ($last_block_id == 0) {
+				$this->add_genesis_block($coin_rpc);
+				$startblock_r = $this->app->run_query($startblock_q);
 			}
+			else {
+				die("sync_coind failed, block $last_block_id is missing.\n");
+			}
+		}
 		
-			if ($startblock_r->rowCount() == 1) {
-				$last_block = $startblock_r->fetch();
-				if ($last_block['block_hash'] == "") {
-					$last_block_hash = $coin_rpc->getblockhash($last_block['block_id']);
-					$this->coind_add_block($coin_rpc, $last_block_hash, $last_block['block_id'], TRUE);
-					$last_block = $this->app->run_query("SELECT * FROM blocks WHERE internal_block_id='".$last_block['internal_block_id']."';")->fetch();
-				}
-				
-				$this->load_unconfirmed_transactions($coin_rpc);
-				
-				$this->update_option_scores();
-				
-				$html .= "Downloading block headers...<br/>\n";
-				$html .= $this->load_all_block_headers($coin_rpc);
-				
-				$this->resolve_potential_fork_on_block($coin_rpc, $last_block);
-				
-				$html .= "Downloading full blocks...<br/>\n";
-				$this->load_all_blocks($coin_rpc);
+		if ($startblock_r->rowCount() == 1) {
+			$last_block = $startblock_r->fetch();
+			if ($last_block['block_hash'] == "") {
+				$last_block_hash = $coin_rpc->getblockhash((int) $last_block['block_id']);
+				$this->coind_add_block($coin_rpc, $last_block_hash, $last_block['block_id'], TRUE);
+				$last_block = $this->app->run_query("SELECT * FROM blocks WHERE internal_block_id='".$last_block['internal_block_id']."';")->fetch();
 			}
 			
-			$this->app->set_site_constant("last_sync_start_time", "0");
+			echo "Loading new blocks...\n";
+			$this->load_new_blocks($coin_rpc);
+			
+			echo "Loading unconfirmed transactions...\n";
+			$this->load_unconfirmed_transactions($coin_rpc);
+			
+			$this->update_option_scores();
+			
+			$this->resolve_potential_fork_on_block($coin_rpc, $last_block);
 		}
 		
 		return $html;
 	}
 	
+	public function load_new_blocks(&$coin_rpc) {
+		$last_block_id = $this->last_block_id();
+		$last_block = $this->app->run_query("SELECT * FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id='".$last_block_id."';")->fetch();
+		$block_height = $last_block['block_id'];
+		$rpc_block = $coin_rpc->getblock($last_block['block_hash']);
+		$keep_looping = true;
+		do {
+			$block_height++;
+			if (empty($rpc_block['nextblockhash'])) {
+				$keep_looping = false;
+			}
+			else {
+				echo "Add block #$block_height (".$rpc_block['nextblockhash'].")\n";
+				$rpc_block = $coin_rpc->getblock($rpc_block['nextblockhash']);
+				$this->coind_add_block($coin_rpc, $rpc_block['hash'], $block_height, FALSE);
+			}
+		}
+		while ($keep_looping);
+	}
+	
 	public function load_all_block_headers(&$coin_rpc) {
 		$html = "";
+		
+		// Load headers for blocks with NULL block hash
 		$keep_looping = true;
 		do {
 			$q = "SELECT * FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_hash IS NULL ORDER BY block_id DESC LIMIT 1;";
@@ -2628,24 +2639,6 @@ class Game {
 			else $keep_looping = false;
 		}
 		while ($keep_looping);
-		
-		// Check for new blocks which aren't yet in the db, and fully load them
-		$last_block_id = $this->last_block_id();
-		$last_block = $this->app->run_query("SELECT * FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id='".$last_block_id."';")->fetch();
-		$block_height = $last_block['block_id'];
-		$rpc_block = $coin_rpc->getblock($last_block['block_hash']);
-		$keep_looping = true;
-		do {
-			$block_height++;
-			if (empty($rpc_block['nextblockhash'])) {
-				$keep_looping = false;
-			}
-			else {
-				$rpc_block = $coin_rpc->getblock($rpc_block['nextblockhash']);
-				$this->coind_add_block($coin_rpc, $rpc_block['hash'], $block_height, FALSE);
-			}
-		}
-		while ($keep_looping);
 	}
 	
 	public function resolve_potential_fork_on_block(&$coin_rpc, &$db_block) {
@@ -2676,9 +2669,12 @@ class Game {
 	public function load_unconfirmed_transactions(&$coin_rpc) {
 		$unconfirmed_txs = $coin_rpc->getrawmempool();
 		$html = "Looping through ".count($unconfirmed_txs)." unconfirmed transactions.<br/>\n";
+		echo $html;
 		for ($i=0; $i<count($unconfirmed_txs); $i++) {
-			$this->walletnotify($coin_rpc, $unconfirmed_txs[$i]);
+			$this->walletnotify($coin_rpc, $unconfirmed_txs[$i], TRUE);
+			if ($i%100 == 0) echo "$i ";
 		}
+		$this->app->set_site_constant('walletnotify', $unconfirmed_txs[count($unconfirmed_txs)-1]);
 		return $html;
 	}
 	

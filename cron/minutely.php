@@ -40,8 +40,19 @@ else {
 			die();
 		}
 		else {
-			include("minutely_main.php");
-			die();
+			$loadblocks_pid = pcntl_fork();
+			
+			if ($loadblocks_pid == -1) {
+				die("Failed to create a thread for loading blocks.");
+			}
+			else if ($loadblocks_pid) {
+				include("load_blocks.php");
+				die();
+			}
+			else {
+				include("minutely_main.php");
+				die();
+			}
 		}
 	}
 }

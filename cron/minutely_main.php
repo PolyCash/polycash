@@ -83,18 +83,17 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		$running_games[count($running_games)] = new Game($app, $running_game['game_id']);
 		echo "Including game: ".$running_game['name']."<br/>\n";
 	}
-
+	
 	if (count($running_games) > 0) {
 		try {
 			$seconds_to_sleep = 5;
 			do {
 				$loop_start_time = microtime(true);
-		
+				echo "loop time: ".($loop_start_time-$script_start_time)." sec.\n";
 				for ($running_game_i=0; $running_game_i<count($running_games); $running_game_i++) {
 					if ($running_games[$running_game_i]->db_game['sync_coind_by_cron'] == 1 && $running_games[$running_game_i]->db_game['game_type'] == "real") {
 						$real_game_i = $game_id2real_game_i[$running_games[$running_game_i]->db_game['game_id']];
 						echo $running_games[$running_game_i]->sync_coind($coin_rpcs[$real_game_i]);
-						$running_games[$running_game_i]->update_option_scores();
 					}
 					if ($running_games[$running_game_i]->db_game['game_type'] == "simulation") {
 						$last_block_id = $running_games[$running_game_i]->last_block_id();
@@ -115,12 +114,13 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 					echo $running_games[$running_game_i]->apply_user_strategies();
 				}
 				$loop_stop_time = microtime(true);
-		
+				
 				$sleep_time = $seconds_to_sleep - ($loop_stop_time - $loop_start_time);
 				if ($sleep_time > 0) sleep($sleep_time);
 			} while (microtime(true) < $script_start_time + (60-$seconds_to_sleep));
 		}
 		catch (Exception $e) {
+			var_dump($e);
 			die("An error occurred when attempting a coin RPC call.\n");
 		}
 	}

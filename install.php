@@ -157,19 +157,22 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				?>
 				<br/>
 				<?php
-				try {
-					$coin_rpc = new jsonRPCClient('http://'.$testnet_game->db_game['rpc_username'].':'.$testnet_game->db_game['rpc_password'].'@127.0.0.1:'.$testnet_game->db_game['rpc_port'].'/');
-					$getinfo = $coin_rpc->getinfo();
-					echo "Great, you're connected to ".$GLOBALS['coin_brand_name']." core.<br/>\n";
-					echo "<pre>getinfo()\n";
-					print_r($getinfo);
-					echo "</pre>";
+				$rpc_games_r = $app->run_query("SELECT * FROM games WHERE game_type='real' AND game_status='running';");
+				while ($rpc_game = $rpc_games_r->fetch()) {
+					try {
+						$coin_rpc = new jsonRPCClient('http://'.$rpc_game['rpc_username'].':'.$rpc_game['rpc_password'].'@127.0.0.1:'.$rpc_game['rpc_port'].'/');
+						$getinfo = $coin_rpc->getinfo();
+						echo "Great, RPC connection was made for ".$rpc_game['name'].".<br/>\n";
+						echo "<pre>getinfo()\n";
+						print_r($getinfo);
+						echo "</pre>";
 					
-					echo "Next, please run <a target=\"_blank\" href=\"/scripts/sync_coind_initial.php?key=".$GLOBALS['cron_key_string']."&game_id=".$testnet_game->db_game['game_id']."\">scripts/sync_coind_initial.php?game_id=".$testnet_game->db_game['game_id']."</a><br/>\n";
-				}
-				catch (Exception $e) {
-					var_dump($e);
-					echo "Failed to establish an RPC connection to ".$testnet_game->db_game['name'].".<br/>\n";
+						echo "To reset and synchronize this game, run <a target=\"_blank\" href=\"/scripts/sync_coind_initial.php?key=".$GLOBALS['cron_key_string']."&game_id=".$testnet_game->db_game['game_id']."\">scripts/sync_coind_initial.php?game_id=".$testnet_game->db_game['game_id']."</a><br/>\n";
+					}
+					catch (Exception $e) {
+						var_dump($e);
+						echo "Failed to establish an RPC connection to ".$testnet_game->db_game['name'].".<br/>\n";
+					}
 				}
 				?>
 				<a href="/">Check if installation was successful.</a>
