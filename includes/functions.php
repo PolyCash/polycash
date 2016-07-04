@@ -1256,6 +1256,9 @@ function ensure_user_in_game($user, $game_id) {
 	$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$user['user_id']."' AND ug.game_id='".$game_id."';";
 	$r = run_query($q);
 	
+	if ($game['final_round'] > 0) $scramble_it = true;
+	else $scramble_it = false;
+	
 	if (mysql_numrows($r) == 0) {
 		$q = "INSERT INTO user_games SET user_id='".$user['user_id']."', game_id='".$game_id."'";
 		if ($user['bitcoin_address_id'] > 0) $q .= ", bitcoin_address_id='".$user['bitcoin_address_id']."'";
@@ -1274,14 +1277,18 @@ function ensure_user_in_game($user, $game_id) {
 	
 	if ($user_game['strategy_id'] > 0) {}
 	else {
-		$q = "INSERT INTO user_strategies SET game_id='".$game_id."', user_id='".$user_game['user_id']."';";
+		$q = "INSERT INTO user_strategies SET voting_strategy='by_plan', game_id='".$game_id."', user_id='".$user_game['user_id']."';";
 		$r = run_query($q);
 		$strategy_id = mysql_insert_id();
 		
-		for ($block=1; $block<$game['round_length']; $block++) {
-			$q = "INSERT INTO user_strategy_blocks SET strategy_id='".$strategy_id."', block_within_round='".$block."';";
-			$r = run_query($q);
-		}
+		$q = "SELECT * FROM user_strategies WHERE strategy_id='".$strategy_id."';";
+		$r = run_query($q);
+		$strategy = mysql_fetch_array($r);
+		
+		$q = "INSERT INTO user_strategy_blocks SET strategy_id='".$strategy_id."', block_within_round='".($game['round_length']-1)."';";
+		$r = run_query($q);
+		
+		if ($scramble_it) scramble_plan_allocations($game, $strategy, array(0=>1, 1=>0.5));
 		
 		/*$q = "SELECT * FROM users u, user_games g, user_strategies s WHERE u.user_id=g.user_id AND u.game_id=g.game_id AND g.strategy_id=s.strategy_id AND u.user_id='".$user_id."';";
 		$r = run_query($q);
@@ -3131,13 +3138,41 @@ function save_plan_allocations($user_strategy, $from_round, $to_round) {
 		}
 	}
 }
+function scramble_plan_allocations($game, $strategy, $weight_map) {
+	if (!$weight_map) $weight_map[0] = 1;
+	
+	$from_round = 1;
+	
+	if ($game['final_round'] > 0) {
+		$to_round = $game['final_round'];
+		
+		$q = "DELETE FROM strategy_round_allocations WHERE strategy_id='".$strategy['strategy_id']."' AND round_id >= ".$from_round." AND round_id <= ".$to_round.";";
+		$r = run_query($q);
+		
+		$db_voting_options = array();
+		$q = "SELECT * FROM game_voting_options WHERE game_id='".$game['game_id']."';";
+		$r = run_query($q);
+		$num_voting_options = mysql_numrows($r);
+		while ($db_voting_options[count($db_voting_options)] = mysql_fetch_array($r)) {}
+		
+		for ($round_id=$from_round; $round_id<=$to_round; $round_id++) {
+			for ($i=0; $i<count($weight_map); $i++) {
+				$option_index = rand(0,$num_voting_options-1);
+				$points = round($weight_map[$i]*rand(1, 5));
+				
+				$qq = "INSERT INTO strategy_round_allocations SET strategy_id='".$strategy['strategy_id']."', round_id='".$round_id."', option_id='".$db_voting_options[$option_index]['option_id']."', points='".$points."';";
+				$rr = run_query($qq);
+			}
+		}
+	}
+}
 function plan_options_html(&$game, $from_round, $to_round) {
 	$html = "";
 	for ($round=$from_round; $round<=$to_round; $round++) {
 		$q = "SELECT * FROM game_voting_options WHERE game_id='".$game['game_id']."' ORDER BY option_id ASC;";
 		$r = run_query($q);
 		$html .= '<div class="plan_row">#'.$round.": ";
-		$option_index = 1;
+		$option_index = 0;
 		while ($game_option = mysql_fetch_array($r)) {
 			$html .= '<div class="plan_option" id="plan_option_'.$round.'_'.$option_index.'" onclick="plan_option_clicked('.$round.', '.$option_index.');">';
 			$html .= '<div class="plan_option_label" id="plan_option_label_'.$round.'_'.$option_index.'">'.$game_option['name']."</div>";

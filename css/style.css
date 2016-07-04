@@ -333,3 +333,6 @@ footer {
 	min-width: 47px;
 	text-align: center;
 }
+.modal-lg {
+	width: 1000px;
+}

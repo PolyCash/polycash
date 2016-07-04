@@ -153,7 +153,7 @@ if ($_REQUEST['do'] == "signup") {
 		}
 		else {
 			$error_code = 2;
-			$message = "Sorry the email address you entered is already registered.";
+			$message = "Sorry that username is already registered.";
 		}
 	}
 	else {
@@ -729,7 +729,7 @@ $mature_balance = mature_balance($game, $thisuser);
 			<?php
 			$q = "SELECT * FROM game_voting_options WHERE game_id='".$game['game_id']."' ORDER BY option_id ASC;";
 			$r = run_query($q);
-			$option_index = 1;
+			$option_index = 0;
 			while ($option = mysql_fetch_array($r)) {
 				echo "\n\t\t\toptions.push(new option(".$option_index.", ".$option['option_id'].", '".$option['name']."'));";
 				$votingaddr_id = user_address_id($game['game_id'], $thisuser['user_id'], $option['option_id']);
@@ -748,6 +748,7 @@ $mature_balance = mature_balance($game, $thisuser);
 		$(document).ready(function() {
 			render_tx_fee();
 			load_options();
+			load_plan_option_events();
 			notification_pref_changed();
 			alias_pref_changed();
 			option_selected(0);
@@ -758,12 +759,23 @@ $mature_balance = mature_balance($game, $thisuser);
 			loop_event();
 			game_loop_event();
 			compose_vote_loop();
-			<?php if ($game['losable_bets_enabled'] == 1) { ?>
-			bet_loop();
-			<?php } ?>
-			<?php if ($game['game_status'] == 'unstarted') { ?>
-			switch_to_game(<?php echo $game['game_id']; ?>, 'fetch');
-			<?php } ?>
+			
+			<?php
+			if ($game['losable_bets_enabled'] == 1) { ?>
+				bet_loop();
+				<?php
+			}
+			if ($game['game_status'] == 'unstarted') { ?>
+				switch_to_game(<?php echo $game['game_id']; ?>, 'fetch');
+				<?php
+			}
+			if ($user_game['show_planned_votes'] == 1) { ?>
+				show_intro_message();
+				<?php
+				$qq = "UPDATE user_games SET show_planned_votes=0 WHERE user_game_id='".$user_game['user_game_id']."';";
+				$rr = run_query($qq);
+			}
+			?>
 		});
 		
 		$(document).keypress(function (e) {
@@ -940,47 +952,15 @@ $mature_balance = mature_balance($game, $thisuser);
 					</div>
 				</form>
 				
-				<h2>Notifications</h2>
-				You can receive notifications whenever your <?php echo $game['coin_name_plural']; ?> are unlocked and ready to vote.<br/>
-				<div class="row">
-					<div class="col-sm-6">
-						<select class="form-control" id="notification_preference" name="notification_preference" onfocus="notification_focused();" onchange="notification_pref_changed();">
-							<option <?php if ($thisuser['notification_preference'] == "none") echo 'selected="selected" '; ?>value="none">Don't send me any notifications</option>
-							<option <?php if ($thisuser['notification_preference'] == "email") echo 'selected="selected" '; ?>value="email">Send me an email notification when <?php echo $game['coin_name_plural']; ?> become available</option>
-						</select>
-					</div>
-					<div class="col-sm-6">
-						<input style="display: none;" class="form-control" type="text" name="notification_email" id="notification_email" onfocus="notification_focused();" placeholder="Enter your email address" value="<?php echo $thisuser['notification_email']; ?>" />
-					</div>
-				</div>
-				<button style="display: none;" id="notification_save_btn" class="btn btn-primary" onclick="save_notification_preferences();">Save Notification Settings</button>
-				<br/>
-				
-				<h2>Privacy Settings</h2>
-				You can make your gameplay public by choosing an alias below.<br/>
-				<div class="row">
-					<div class="col-sm-6">
-						<select class="form-control" id="alias_preference" name="alias_preference" onfocus="alias_focused();" onchange="alias_pref_changed();">
-							<option <?php if ($thisuser['alias_preference'] == "private") echo 'selected="selected" '; ?>value="private">Keep my identity private</option>
-							<option <?php if ($thisuser['alias_preference'] == "public") echo 'selected="selected" '; ?>value="public">Let me choose a public alias</option>
-						</select>
-					</div>
-					<div class="col-sm-6">
-						<input style="display: none;" class="form-control" type="text" name="alias" id="alias" onfocus="alias_focused();" placeholder="Please enter an alias" value="<?php echo $thisuser['alias']; ?>" />
-					</div>
-				</div>
-				<button style="display: none;" id="alias_save_btn" class="btn btn-primary" onclick="save_alias_preferences();">Save Privacy Settings</button>
-				<br/>
-				
 				<h2>Choose your voting strategy</h2>
-				Instead of logging in every time you want to cast a vote, you can automate your voting behavior by choosing one of the automated voting strategies below. <br/><br/>
+				Please set up a voting strategy so that your votes can be cast even when you're not online to vote.<br/><br/>
 				<form method="post" action="/wallet/<?php echo $game['url_identifier']; ?>/">
 					<input type="hidden" name="do" value="save_voting_strategy" />
 					<input type="hidden" id="voting_strategy_id" name="voting_strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
 					
 					<div class="row bordered_row">
 						<div class="col-md-2">
-							<input type="radio" id="voting_strategy_manual" name="voting_strategy" value="manual"<?php if ($user_strategy['voting_strategy'] == "manual") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_manual">&nbsp;Vote&nbsp;manually</label>
+							<input type="radio" id="voting_strategy_manual" name="voting_strategy" value="manual"<?php if ($user_strategy['voting_strategy'] == "manual") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_manual">&nbsp;No&nbsp;auto-strategy</label>
 						</div>
 						<div class="col-md-10">
 							<label class="plainlabel" for="voting_strategy_manual"> 
@@ -1050,47 +1030,11 @@ $mature_balance = mature_balance($game, $thisuser);
 						</div>
 					</div>
 					<div class="row bordered_row">
-						<div class="col-md-12">
-							<?php
-							$plan_ahead_rounds = 10;
-							?>
+						<div class="col-md-2">
 							<input type="radio" id="voting_strategy_by_plan" name="voting_strategy" value="by_plan"<?php if ($user_strategy['voting_strategy'] == "by_plan") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_plan">&nbsp;Plan&nbsp;my&nbsp;votes</label>
-							
-							<font style="margin-left: 30px;">Load rounds: </font><input type="text" size="4" id="select_from_round" value="<?php echo $current_round; ?>" /> to <input type="text" size="4" id="select_to_round" value="<?php echo $current_round+$plan_ahead_rounds-1; ?>" /> <button class="btn btn-primary btn-sm" onclick="load_plan_rounds(); return false;">Go</button>
-							
-							<button id="save_plan_btn" style="float: right; margin-right: 20px;" class="btn btn-primary btn-sm" onclick="save_plan_allocations(); return false;">Save this Plan</button>
-							
-							<br/>
-							<div id="plan_rows">
-								<?php
-								echo plan_options_html($game, $current_round, $current_round+$plan_ahead_rounds-1);
-								?>
-							</div>
-							<div id="plan_rows_js"></div>
-							
-							<input type="hidden" id="from_round" name="from_round" value="<?php echo $current_round; ?>" />
-							<input type="hidden" id="to_round" name="to_round" value="<?php echo ($current_round+$plan_ahead_rounds-1); ?>" />
-							
-							<script type="text/javascript">
-							var plan_option_max_points = 5;
-							var plan_option_increment = 1;
-							var plan_options = new Array();
-							var plan_option_row_sums = new Array();
-							var round_id2row_id = new Array();
-							
-							$(document).ready(function() {
-								initialize_plan_options(<?php echo $current_round; ?>, <?php echo $current_round+$plan_ahead_rounds-1; ?>);
-								console.log(option_id2option_index);
-								console.log(option_index2option_id);
-								<?php
-								$q = "SELECT * FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND round_id >= ".$current_round." AND round_id <= ".($current_round+$plan_ahead_rounds-1).";";
-								$r = run_query($q);
-								while ($allocation = mysql_fetch_array($r)) {
-									echo "load_plan_option(".$allocation['round_id'].", option_id2option_index[".$allocation['option_id']."], ".$allocation['points'].");\n";
-								}
-								?>
-							});
-							</script>
+						</div>
+						<div class="col-md-10">
+							<button class="btn btn-success" onclick="show_planned_votes(); return false;">Edit my planned votes</button>
 						</div>
 					</div>
 					<div class="row bordered_row">
@@ -1130,6 +1074,39 @@ $mature_balance = mature_balance($game, $thisuser);
 					<br/>
 					<input class="btn btn-primary" type="submit" value="Save Voting Strategy" />
 				</form>
+				
+				<h2>Notifications</h2>
+				You can receive notifications whenever your <?php echo $game['coin_name_plural']; ?> are unlocked and ready to vote.<br/>
+				<div class="row">
+					<div class="col-sm-6">
+						<select class="form-control" id="notification_preference" name="notification_preference" onfocus="notification_focused();" onchange="notification_pref_changed();">
+							<option <?php if ($thisuser['notification_preference'] == "none") echo 'selected="selected" '; ?>value="none">Don't send me any notifications</option>
+							<option <?php if ($thisuser['notification_preference'] == "email") echo 'selected="selected" '; ?>value="email">Send me an email notification when <?php echo $game['coin_name_plural']; ?> become available</option>
+						</select>
+					</div>
+					<div class="col-sm-6">
+						<input style="display: none;" class="form-control" type="text" name="notification_email" id="notification_email" onfocus="notification_focused();" placeholder="Enter your email address" value="<?php echo $thisuser['notification_email']; ?>" />
+					</div>
+				</div>
+				<button style="display: none;" id="notification_save_btn" class="btn btn-primary" onclick="save_notification_preferences();">Save Notification Settings</button>
+				<br/>
+				
+				<h2>Privacy Settings</h2>
+				You can make your gameplay public by choosing an alias below.<br/>
+				<div class="row">
+					<div class="col-sm-6">
+						<select class="form-control" id="alias_preference" name="alias_preference" onfocus="alias_focused();" onchange="alias_pref_changed();">
+							<option <?php if ($thisuser['alias_preference'] == "private") echo 'selected="selected" '; ?>value="private">Keep my identity private</option>
+							<option <?php if ($thisuser['alias_preference'] == "public") echo 'selected="selected" '; ?>value="public">Let me choose a public alias</option>
+						</select>
+					</div>
+					<div class="col-sm-6">
+						<input style="display: none;" class="form-control" type="text" name="alias" id="alias" onfocus="alias_focused();" placeholder="Please enter an alias" value="<?php echo $thisuser['alias']; ?>" />
+					</div>
+				</div>
+				<button style="display: none;" id="alias_save_btn" class="btn btn-primary" onclick="save_alias_preferences();">Save Privacy Settings</button>
+				<br/>
+				
 			</div>
 			<div id="tabcontent3" style="display: none;" class="tabcontent">
 				<div id="performance_history">
@@ -1356,6 +1333,88 @@ $mature_balance = mature_balance($game, $thisuser);
 			<?php } ?>
 		</div>
 		
+		<div style="display: none;" class="modal fade" id="intro_message">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h4 class="modal-title">New message from <?php echo $GLOBALS['coin_brand_name']; ?></h4>
+					</div>
+					<div class="modal-body">
+						<p>
+							Hi <?php echo $thisuser['username']; ?>, thanks for joining <?php echo $game['name']; ?>! 
+							This game lasts for <?php echo $game['final_round']; ?> voting rounds.  
+							At the end of each round, the supply of <?php echo $game['coin_name_plural']; ?> inflates by <?php echo 100*$game['exponential_inflation_rate']; ?>%. These new <?php echo $game['coin_name_plural']; ?> are split up and given to everyone who voted for the winner.
+						</p>
+						<p>
+							To make sure you don't miss out on votes, a random voting strategy has been applied to your account.  You are currently on a planned voting strategy but several other strategy types are available.  You can change your voting strategy at any time by clicking on the "Strategy" tab.  Please click below to review or change the random votes that you have been assigned.<br/>
+						</p>
+						<p>
+							<button class="btn btn-primary" onclick="show_planned_votes();">Continue</button>
+						</p>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		<div style="display: none;" class="modal fade" id="planned_votes">
+			<div class="modal-dialog modal-lg">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h4 class="modal-title">My Planned Votes</h4>
+					</div>
+					<div class="modal-body">
+						<?php
+						if ($game['final_round'] > 0) {
+							$plan_start_round = 1;
+							$plan_stop_round = $game['final_round'];
+						}
+						else {
+							$plan_start_round = $current_round;
+							$plan_stop_round = $plan_start_round+10;
+						}
+						?>
+						
+						<button id="scramble_plan_btn" class="btn btn-warning" onclick="scramble_strategy(<?php echo $user_strategy['strategy_id']; ?>); return false;">Randomize my Votes</button>
+						
+						<font style="margin-left: 25px;">Load rounds: </font><input type="text" size="4" id="select_from_round" value="<?php echo $plan_start_round; ?>" /> to <input type="text" size="4" id="select_to_round" value="<?php echo $plan_stop_round; ?>" /> <button class="btn btn-default btn-sm" onclick="load_plan_rounds(); return false;">Go</button>
+						
+						<br/>
+						<div id="plan_rows" style="margin: 10px 0px; max-height: 450px; overflow-y: scroll; border: 1px solid #bbb; padding: 0px 10px;">
+							<?php
+							echo plan_options_html($game, $plan_start_round, $plan_stop_round);
+							?>
+						</div>
+						
+						<button id="save_plan_btn" class="btn btn-success" onclick="save_plan_allocations(); return false;">Save Changes</button>
+						<button style="float: right;" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+						
+						<div id="plan_rows_js"></div>
+						
+						<input type="hidden" id="from_round" name="from_round" value="<?php echo $plan_start_round; ?>" />
+						<input type="hidden" id="to_round" name="to_round" value="<?php echo ($plan_stop_round); ?>" />
+						
+						<script type="text/javascript">
+						var plan_option_max_points = 5;
+						var plan_option_increment = 1;
+						var plan_options = new Array();
+						var plan_option_row_sums = new Array();
+						var round_id2row_id = new Array();
+						
+						$(document).ready(function() {
+							initialize_plan_options(<?php echo $plan_start_round; ?>, <?php echo $plan_stop_round; ?>);
+							<?php
+							$q = "SELECT * FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND round_id >= ".$plan_start_round." AND round_id <= ".$plan_stop_round.";";
+							$r = run_query($q);
+							while ($allocation = mysql_fetch_array($r)) {
+								echo "load_plan_option(".$allocation['round_id'].", option_id2option_index[".$allocation['option_id']."], ".$allocation['points'].");\n";
+							}
+							?>
+						});
+						</script>
+					</div>
+				</div>
+			</div>
+		</div>
 		
 		<div style="display: none;" class="modal fade" id="buyin_modal">
 			<div class="modal-dialog">

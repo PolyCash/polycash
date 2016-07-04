@@ -1423,6 +1423,26 @@ function plan_option_clicked(round_id, option_index) {
 		}
 	}
 }
+// Right click sets a planned vote to 0
+function load_plan_option_events() {
+	$('.plan_option').contextmenu(function() {
+		var id_parts = $(this).attr("id").split('_');
+		var round_id = parseInt(id_parts[2]);
+		var option_index = parseInt(id_parts[3]);
+		
+		var this_option = plan_options[round_id2row_id[round_id]][option_index];
+		var new_points = 0;
+		plan_option_row_sums[round_id2row_id[round_id]] += new_points-this_option.points;
+		this_option.points = new_points;
+		for (var i=0; i<num_voting_options; i++) {
+			if (i == option_index || plan_options[round_id2row_id[round_id]][i].points > 0) {
+				render_plan_option(round_id, i);
+			}
+		}
+		
+		return false;
+	});
+}
 function load_plan_option(round_id, option_index, points) {
 	var this_option = plan_options[round_id2row_id[round_id]][option_index];
 	plan_option_row_sums[round_id2row_id[round_id]] += (points-this_option.points);
@@ -1455,9 +1475,11 @@ function save_plan_allocations() {
 		}
 	});
 }
-
 function load_plan_rounds() {
 	save_plan_allocations();
+	refresh_plan_allocations();
+}
+function refresh_plan_allocations() {
 	var from_round = $('#select_from_round').val();
 	var to_round = $('#select_to_round').val();
 	$.get("/ajax/planned_allocations.php?game_id="+game_id+"&action=fetch&voting_strategy_id="+$('#voting_strategy_id').val()+"&from_round="+from_round+"&to_round="+to_round, function(result) {
@@ -1474,4 +1496,24 @@ function initiate_buyin() {
 		$('#buyin_modal_content').html(result);
 		$('#buyin_modal').modal('show');
 	});
+}
+function scramble_strategy(strategy_id) {
+	var btn_default_text = $('#scramble_plan_btn').html();
+	var btn_loading_text = "Randomizing...";
+	if ($('#scramble_plan_btn').html() != btn_loading_text) {
+		var user_confirmed = confirm('All of your current votes will be lost. Are you sure you want to randomize your votes?');
+		if (user_confirmed) {
+			$('#scramble_plan_btn').html(btn_loading_text);
+			$.get("/ajax/planned_allocations.php?game_id="+game_id+"&voting_strategy_id="+strategy_id+"&action=scramble", function(result) {
+				$('#scramble_plan_btn').html(btn_default_text);
+				refresh_plan_allocations();
+			});
+		}
+	}
+}
+function show_intro_message() {
+	$('#intro_message').modal('show');
+}
+function show_planned_votes() {
+	$('#planned_votes').modal('show');
 }

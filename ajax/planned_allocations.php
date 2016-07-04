@@ -36,6 +36,7 @@ if ($thisuser && $game) {
 	else if ($action == "fetch") {
 		$from_round = intval($_REQUEST['from_round']);
 		$to_round = intval($_REQUEST['to_round']);
+		if ($game['final_round'] > 0 && $to_round > $game['final_round']) $to_round = $game['final_round'];
 		
 		$html = plan_options_html($game, $from_round, $to_round);
 		
@@ -45,8 +46,9 @@ if ($thisuser && $game) {
 		$q = "SELECT * FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND round_id >= ".$from_round." AND round_id <= ".$to_round.";";
 		$r = run_query($q);
 		while ($allocation = mysql_fetch_array($r)) {
-			$js .= "load_plan_option(".$allocation['round_id'].", ".($allocation['option_id']-1).", ".$allocation['points'].");\n";
+			$js .= "load_plan_option(".$allocation['round_id'].", option_id2option_index[".$allocation['option_id']."], ".$allocation['points'].");\n";
 		}
+		$js .= "load_plan_option_events();\n";
 		$js .= "});\n";
 		$js .= "</script>\n";
 		
@@ -54,6 +56,10 @@ if ($thisuser && $game) {
 		$output_obj['js'] = $js;
 		
 		echo json_encode($output_obj);
+	}
+	else if ($action == "scramble") {
+		scramble_plan_allocations($game, $user_strategy, array(0=>1, 1=>0.5));
+		output_message(1, "Scrambled it!", false);
 	}
 }
 else output_message(2, "Please log in", false);
