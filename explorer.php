@@ -1,7 +1,7 @@
 <?php
 include('includes/connect.php');
 include('includes/get_session.php');
-$viewer_id = insert_pageview($thisuser);
+if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuser);
 
 $explore_mode = $uri_parts[2];
 if ($_SERVER['REQUEST_URI'] == "/explorer/") $explore_mode = "index";

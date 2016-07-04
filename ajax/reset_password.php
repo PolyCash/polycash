@@ -1,7 +1,7 @@
 <?php
 include("../includes/connect.php");
 include("../includes/get_session.php");
-$viewer_id = insert_pageview($thisuser);
+if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = insert_pageview($thisuser);
 
 $success_msg = "A password reset link has been sent to that email address, please open your inbox and click the link to reset your password.";
 
