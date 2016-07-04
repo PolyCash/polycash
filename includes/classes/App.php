@@ -556,7 +556,6 @@ class App {
 		echo '<div class="paragraph">';
 		$q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='published' OR g.game_status='running');";
 		$r = $this->run_query($q);
-		
 		$cell_width = 6;
 		if (mysql_numrows($r) == 1) $cell_width = 12;
 		

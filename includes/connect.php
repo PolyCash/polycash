@@ -1,8 +1,4 @@
 <?php
-//ini_set('display_errors', 'Off');
-error_reporting( E_ALL );
-ini_set( "display_errors", 1 );
-
 if (is_file(realpath(dirname(__FILE__))."/config.php")) {
 	include("config.php");
 }

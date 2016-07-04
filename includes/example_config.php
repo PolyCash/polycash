@@ -1,4 +1,6 @@
 <?php
+error_reporting(0);
+
 $GLOBALS['mysql_server'] = "localhost";
 $GLOBALS['mysql_user'] = "root";
 $GLOBALS['mysql_password'] = "";
