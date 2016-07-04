@@ -107,11 +107,16 @@ include('includes/html_start.php');
 	</div>
 	<div class="paragraph">
 		<h2><?php echo $GLOBALS['coin_brand_name']; ?> API</h2>
-		<?php echo $GLOBALS['coin_brand_name']; ?> makes it easy to set up an algorithmic voting strategy.  After signing in, choose from one of several automated voting strategies and then tweak parameters to optimize your strategy.  Or if you're a programmer, select the "Vote by API" option, download our example strategy script and then start writing code to fully customize your voting strategy.  For more information, please visit our <a href="/api/about/"><?php echo $GLOBALS['coin_brand_name']; ?> API</a> page.
+		<?php echo $GLOBALS['coin_brand_name']; ?> makes it easy to set up an algorithmic voting strategy.  After signing in, choose from one of several automated voting strategies and then tweak parameters to optimize your strategy.  Or if you're a programmer, select the "Vote by API" option, download our example strategy script and then start writing code to fully customize your voting strategy.  To start coding your strategy, please read more about the <a href="/api/about/"><?php echo $GLOBALS['coin_brand_name']; ?> API</a>.
 	</div>
 	<div class="paragraph">
 		<h2>Create Your Own Coin</h2>
 		Using the <?php echo $GLOBALS['coin_brand_name']; ?> platform, anyone can create an escrow-backed blockchain game, running on top of the bitcoin blockchain or a centralized game server.  To create your own coin game, select the parameters for your game, send out invitations and then launch your game.  Games can be free or paid.  For paid games, each player must contribute bitcoins to an escrow address.  Games end after a certain number of rounds and then the escrowed bitcoins are paid back to the players in proportion to their final in-game balances. 
+	</div>
+	<div class="paragraph">
+		<h2>Get Involved</h2>
+		Are you a developer?  We'd love some help testing, fixing bugs and building new features.  To get started, please visit our Github page, build the EmpireCoin daemon from source and then start mining on our testnet.  To avoid compile errors, please use Ubuntu.<br/>
+		<a target="_blank" href="https://github.com/TeamEmpireCoin/EmpireCoin">https://github.com/TeamEmpireCoin/EmpireCoin</a>
 	</div>
 	<?php /*<div class="paragraph">
 		<h2>Proof of Burn Betting</h2>

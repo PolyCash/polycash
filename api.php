@@ -9,20 +9,21 @@ $uri_parts = explode("/", $uri);
 if ($uri_parts[1] == "api") {
 	if ($uri_parts[2] != "" && strval(intval($uri_parts[2])) === strval($uri_parts[2])) {
 		$game_id = intval($uri_parts[2]);
-	
+		
 		$q = "SELECT game_id, maturity, pos_reward, pow_reward, round_length, game_type, payout_weight, seconds_per_block, name, num_voting_options, max_voting_fraction FROM games WHERE game_id='".$game_id."';";
 		$r = $app->run_query($q);
 		
 		if ($r->rowCount() == 1) {
-			$game = $r->fetch();
-			$last_block_id = last_block_id($game['game_id']);
-			$current_round = block_to_round($game, $last_block_id+1);
+			$db_game = $r->fetch();
+			$game = new Game($app, $db_game['game_id']);
+			$last_block_id = $game->last_block_id();
+			$current_round = $game->block_to_round($last_block_id+1);
 			
 			$intval_vars = array('game_id','round_length','seconds_per_block','num_voting_options', 'maturity', 'last_block_id');
 			for ($i=0; $i<count($intval_vars); $i++) {
-				$game[$intval_vars[$i]] = intval($game[$intval_vars[$i]]);
+				$game->db_game[$intval_vars[$i]] = intval($game->db_game[$intval_vars[$i]]);
 			}
-			$game['max_voting_fraction'] = floatval($game['max_voting_fraction']);
+			$game->db_game['max_voting_fraction'] = floatval($game->db_game['max_voting_fraction']);
 			
 			if ($uri_parts[3] == "status") {
 				$api_user = FALSE;
@@ -31,23 +32,22 @@ if ($uri_parts[1] == "api") {
 				if ($_REQUEST['api_access_code'] != "") {
 					$q = "SELECT * FROM users WHERE api_access_code=".$app->quote_escape($_REQUEST['api_access_code']).";";
 					$r = $app->run_query($q);
-					
 					if ($r->rowCount() == 1) {
-						$api_user = $r->fetch();
+						$db_api_user = $r->fetch();
+						$api_user = new User($app, $db_api_user['user_id']);
+						$account_value = $api_user->account_coin_value($game);
+						$immature_balance = $api_user->immature_balance($game);
+						$mature_balance = $api_user->mature_balance($game);
+						$votes_available = $api_user->user_current_votes($game, $last_block_id, $current_round);
 						
-						$account_value = account_coin_value($game, $api_user);
-						$immature_balance = immature_balance($game, $api_user);
-						$mature_balance = mature_balance($game, $api_user);
-						$votes_available = user_current_votes($api_user['user_id'], $game, $last_block_id, $current_round);
-						
-						$api_user_info['username'] = $api_user['username'];
+						$api_user_info['username'] = $api_user->db_user['username'];
 						$api_user_info['balance'] = $account_value;
 						$api_user_info['mature_balance'] = $mature_balance;
 						$api_user_info['immature_balance'] = $immature_balance;
 						$api_user_info['votes_available'] = $votes_available;
 						
 						$mature_utxos = array();
-						$mature_utxo_q = "SELECT * FROM transaction_ios i JOIN addresses a ON i.address_id=a.address_id WHERE i.spend_status='unspent' AND i.spend_transaction_id IS NULL AND a.user_id='".$api_user['user_id']."' AND i.game_id='".$game['game_id']."' AND (i.create_block_id <= ".($last_block_id-$game['maturity'])." OR i.instantly_mature = 1) ORDER BY i.io_id ASC;";
+						$mature_utxo_q = "SELECT * FROM transaction_ios i JOIN addresses a ON i.address_id=a.address_id WHERE i.spend_status='unspent' AND i.spend_transaction_id IS NULL AND a.user_id='".$api_user->db_user['user_id']."' AND i.game_id='".$game->db_game['game_id']."' AND (i.create_block_id <= ".($last_block_id-$game->db_game['maturity'])." OR i.instantly_mature = 1) ORDER BY i.io_id ASC;";
 						$mature_utxo_r = $app->run_query($mature_utxo_q);
 						$utxo_i = 0;
 						while ($utxo = $mature_utxo_r->fetch()) {
@@ -57,7 +57,7 @@ if ($uri_parts[1] == "api") {
 						$api_user_info['my_utxos'] = $mature_utxos;
 					}
 				}
-				$round_stats = round_voting_stats_all($game, $current_round);
+				$round_stats = $game->round_voting_stats_all($current_round);
 				$total_vote_sum = $round_stats[0];
 				$max_vote_sum = $round_stats[1];
 				$ranked_stats = $round_stats[2];
@@ -65,15 +65,15 @@ if ($uri_parts[1] == "api") {
 				$confirmed_votes = $round_stats[4];
 				$unconfirmed_votes = $round_stats[5];
 				
-				$game['last_block_id'] = $last_block_id;
-				$game['current_round'] = $current_round;
-				$game['confirmed_votes'] = $confirmed_votes;
-				$game['unconfirmed_votes'] = $unconfirmed_votes;
-				$game['block_within_round'] = block_id_to_round_index($game, $last_block_id+1);
+				$output_game['last_block_id'] = $last_block_id;
+				$output_game['current_round'] = $current_round;
+				$output_game['confirmed_votes'] = $confirmed_votes;
+				$output_game['unconfirmed_votes'] = $unconfirmed_votes;
+				$output_game['block_within_round'] = $game->block_id_to_round_index($last_block_id+1);
 				
 				$game_scores = false;
 				
-				$qq = "SELECT * FROM game_voting_options WHERE game_id='".$game['game_id']."';";
+				$qq = "SELECT * FROM game_voting_options WHERE game_id='".$game->db_game['game_id']."';";
 				$rr = $app->run_query($qq);
 				while ($option = $rr->fetch()) {
 					$stat = $ranked_stats[$option_id_to_rank[$option['option_id']]];
@@ -81,13 +81,13 @@ if ($uri_parts[1] == "api") {
 					$api_stat['option_id'] = (int) $option['option_id'];
 					$api_stat['name'] = $stat['name'];
 					$api_stat['rank'] = $option_id_to_rank[$option['option_id']]+1;
-					$api_stat['confirmed_votes'] = friendly_intval($stat[$game['payout_weight'].'_score']);
-					$api_stat['unconfirmed_votes'] = friendly_intval($stat['unconfirmed_'.$game['payout_weight'].'_score']);
+					$api_stat['confirmed_votes'] = $app->friendly_intval($stat[$game->db_game['payout_weight'].'_score']);
+					$api_stat['unconfirmed_votes'] = $app->friendly_intval($stat['unconfirmed_'.$game->db_game['payout_weight'].'_score']);
 					
 					$game_scores[$option['option_id']] = $api_stat;
 				}
 				
-				$api_output = array('status_code'=>1, 'status_message'=>"Successful", 'game'=>$game, 'game_scores'=>$game_scores, 'user_info'=>$api_user_info);
+				$api_output = array('status_code'=>1, 'status_message'=>"Successful", 'game'=>$output_game, 'game_scores'=>$game_scores, 'user_info'=>$api_user_info);
 			}
 			else {
 				$api_output = array('status_code'=>0, 'status_message'=>'Error, URL not recognized');
@@ -109,12 +109,19 @@ if ($uri_parts[1] == "api") {
 		?>
 		<div class="container" style="max-width: 1000px;">
 			<h1><?php echo $GLOBALS['coin_brand_name']; ?> API Documentation</h1>
-			
-			<?php echo $GLOBALS['coin_brand_name']; ?> web wallets provide several strategies for automating your <?php echo $GLOBALS['coin_brand_name']; ?> voting behavior.  However, some users may wish to use custom logic in their voting strategies. The <?php echo $GLOBALS['coin_brand_name']; ?> API allows this functionality through a standardized format for sharing <?php echo $GLOBALS['coin_brand_name']; ?> voting recommendations. Using the <?php echo $GLOBALS['coin_brand_name']; ?> API can be as simple as finding a public recommendations URL and plugging it into your <?php echo $GLOBALS['coin_brand_name']; ?> user account.  Or you can set up your own voting recommendations client using the information below.<br/>
-			<br/>
-			<a target="_blank" href="/api/<?php echo$app->get_site_constant('primary_game_id'); ?>/status/">/api/<?php echo$app->get_site_constant('primary_game_id'); ?>/status/</a> &nbsp;&nbsp;&nbsp; <a href="" onclick="$('#api_status_example').toggle('fast'); return false;">See Example</a><br/>
-			Yields information about current status of the blockchain.
-			
+			<p>
+				<?php echo $GLOBALS['coin_brand_name']; ?> web wallets provide several strategies for automating your <?php echo $GLOBALS['coin_brand_name']; ?> voting behavior.  However, some users may wish to use custom logic in their voting strategies. The <?php echo $GLOBALS['coin_brand_name']; ?> API allows this functionality through a standardized format for sharing <?php echo $GLOBALS['coin_brand_name']; ?> voting recommendations. Using the <?php echo $GLOBALS['coin_brand_name']; ?> API can be as simple as finding a public recommendations URL and plugging it into your <?php echo $GLOBALS['coin_brand_name']; ?> user account.  Or you can set up your own voting recommendations client using the information below.
+			</p>
+			<p>
+				To get started, please download this example API client written in PHP.<br/>
+				<a class="btn btn-success" href="/api/download-client-example/">Download example API client</a>
+				<br/><br/>
+			</p>
+			<p>
+				<a target="_blank" href="/api/<?php echo$app->get_site_constant('primary_game_id'); ?>/status/">/api/<?php echo$app->get_site_constant('primary_game_id'); ?>/status/</a> &nbsp;&nbsp;&nbsp; <a href="" onclick="$('#api_status_example').toggle('fast'); return false;">See Example</a><br/>
+				Yields information about current status of the blockchain.
+				<br/><br/>
+			</p>
 <pre id="api_status_example" style="display: none;">
 {
    "status_code":1,
@@ -254,11 +261,11 @@ if ($uri_parts[1] == "api") {
    "user_info":false
 }
 </pre>
-			<br/><br/>
-			
-			/api/status/?api_access_code=ACCESS_CODE_GOES_HERE &nbsp;&nbsp;&nbsp; <a href="" onclick="$('#api_status_user_example').toggle('fast'); return false;">See Example</a><br/>
-			Supply your API access code to get relevant info on your user account in addition to general blockchain information.
-
+			<p>
+				/api/status/?api_access_code=ACCESS_CODE_GOES_HERE &nbsp;&nbsp;&nbsp; <a href="" onclick="$('#api_status_user_example').toggle('fast'); return false;">See Example</a><br/>
+				Supply your API access code to get relevant info on your user account in addition to general blockchain information.
+				<br/><br/>
+			</p>
 <pre id="api_status_user_example" style="display: none;">
 {
    "status_code":1,
@@ -436,14 +443,11 @@ if ($uri_parts[1] == "api") {
    }
 }
 </pre>
-			<br/><br/>
-			
-			Example voting recommendations API client.&nbsp;&nbsp;<a href="/api/download-client-example/">Click here to download (PHP)</a>
-			<br/><br/>
-			
+			<p>
 			API clients must return JSON formatted recommendations. 
-			Any errors in your API response such as invalid formatting, empire IDs which are not between 0 and 15, or amounts which are greater than your mature balance will cause your recommendations to be ignored.<br/>
-			Here's an example of a valid API response:<br/>
+			Any errors in your API response will result in your voting recommendations being ignored.<br/>
+			Here's an example of a valid API response:
+			</p>
 <pre>
 {
    "input_utxo_ids":[
@@ -478,7 +482,9 @@ if ($uri_parts[1] == "api") {
    ]
 }
 </pre>
-			Recommendations can also be denominated in percentage points rather than satoshis:<br/>
+			<p>
+				Recommendations can also be denominated in percentage points rather than satoshis:
+			</p>
 <pre>
 {
    "input_utxo_ids":[
@@ -513,7 +519,6 @@ if ($uri_parts[1] == "api") {
    ]
 }
 </pre>
-			<br/><br/>
 		</div>
 		<?php
 		include('includes/html_stop.php');
