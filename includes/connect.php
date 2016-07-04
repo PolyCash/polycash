@@ -203,15 +203,22 @@ function get_round_winner($round_stats_all, $game) {
 	else $score_field = "coin_block_score";
 	
 	$winner_nation_id = false;
+	$winner_index = false;
 	$max_score_sum = $round_stats_all[1];
 	$round_stats = $round_stats_all[2];
 	for ($i=0; $i<count($round_stats); $i++) {
-		if (!$winner_nation_id && $round_stats[$i][$score_field] <= $max_score_sum && $round_stats[$i][$score_field] > 0) $winner_nation_id = $round_stats[$i]['nation_id'];
+		if (!$winner_nation_id && $round_stats[$i][$score_field] <= $max_score_sum && $round_stats[$i][$score_field] > 0) {
+			$winner_nation_id = $round_stats[$i]['nation_id'];
+			$winner_index = $i;
+		}
 	}
 	if ($winner_nation_id) {
 		$q = "SELECT * FROM nations WHERE nation_id='".$winner_nation_id."';";
 		$r = run_query($q);
 		$nation = mysql_fetch_array($r);
+		
+		$nation['winning_score'] = $round_stats[$winner_index][$score_field];
+		
 		return $nation;
 	}
 	else return false;
@@ -242,14 +249,32 @@ function current_round_table($game, $current_round, $user, $show_intro_text) {
 		}
 		if ($last_block_id == 0) $html .= 'Currently mining the first block.<br/>';
 		else $html .= 'Last block completed: #'.$last_block_id.', currently mining #'.($last_block_id+1).'<br/>';
-		$html .= number_format($score_sum/pow(10,8)).' votes cast so far, current votes count towards block '.$block_within_round.'/'.get_site_constant('round_length').' in round #'.$current_round.'<br/>';
 		
-		$seconds_left = round((get_site_constant('round_length')-$last_block_id%get_site_constant('round_length'))*$game['seconds_per_block']);
-		$minutes_left = round($seconds_left/60);
-		$html .= 'Approximately ';
-		if ($minutes_left > 1) $html .= $minutes_left." minutes";
-		else $html .= $seconds_left." seconds";
-		$html .= ' left in this round.<br/>';
+		if ($block_within_round == 10) {
+			$html .= number_format($score_sum/pow(10,8)).' votes were cast in this round.<br/>';
+			$my_votes = my_votes_in_round($game, $current_round, $user['user_id']);
+			$my_winning_votes = $my_votes[0][$winner['nation_id']][$game['payout_weight']."s"];
+			if ($my_winning_votes > 0) {
+				$win_amount = floor(750*pow(10,8)*$my_winning_votes/$winner['winning_score'])/pow(10,8);
+				$html .= "You correctly ";
+				if ($game['payout_weight'] == "coin") $html .= "voted ".format_bignum($my_winning_votes/pow(10,8))." coins";
+				else $html .= "cast ".format_bignum($my_winning_votes/pow(10,8))." votes";
+				$html .= " and won <font class=\"greentext\">+".number_format($win_amount, 2)."</font> coins.";
+			}
+			else {
+				$html .= "You didn't cast any votes for ".$winner['name'].".";
+			}
+			$html .= "<br/>\n";
+		}
+		else {
+			$html .= number_format($score_sum/pow(10,8)).' votes cast so far, current votes count towards block '.$block_within_round.'/'.get_site_constant('round_length').' in round #'.$current_round.'<br/>';
+			$seconds_left = round((get_site_constant('round_length') - $last_block_id%get_site_constant('round_length') - 1)*$game['seconds_per_block']);
+			$minutes_left = round($seconds_left/60);
+			$html .= 'Approximately ';
+			if ($minutes_left > 1) $html .= $minutes_left." minutes";
+			else $html .= $seconds_left." seconds";
+			$html .= ' of voting left in this round.<br/>';
+		}
 	}
 	
 	$html .= "<div class='row'>";
@@ -383,7 +408,7 @@ function to_significant_digits($number, $significant_digits) {
 	return $returnval;
 }
 
-function bignum_format($number) {
+function format_bignum($number) {
 	$rounded_number = to_significant_digits($number, 3);
 	
 	if ($rounded_number > pow(10, 9)) {
@@ -404,7 +429,7 @@ function bignum_format($number) {
 function wallet_text_stats($thisuser, $game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance) {
 	$html = "<div class=\"row\"><div class=\"col-sm-2\">Available&nbsp;funds:</div><div class=\"col-sm-3\" style=\"text-align: right;\"><font class=\"greentext\">".number_format(floor($mature_balance/pow(10,5))/1000, 2)."</font> EmpireCoins</div></div>\n";
 	if ($game['payout_weight'] == "coin_block") {
-		$html .= "<div class=\"row\"><div class=\"col-sm-2\">Votes:</div><div class=\"col-sm-3\" style=\"text-align: right;\"><font class=\"greentext\">".bignum_format(user_coin_blocks($thisuser['user_id'], $game['game_id'], $last_block_id)/pow(10,8))."</font> votes available</div></div>\n";
+		$html .= "<div class=\"row\"><div class=\"col-sm-2\">Votes:</div><div class=\"col-sm-3\" style=\"text-align: right;\"><font class=\"greentext\">".format_bignum(user_coin_blocks($thisuser['user_id'], $game['game_id'], $last_block_id)/pow(10,8))."</font> votes available</div></div>\n";
 	}
 	$html .= "<div class=\"row\"><div class=\"col-sm-2\">Locked&nbsp;funds:</div><div class=\"col-sm-3\" style=\"text-align: right;\"><font class=\"redtext\">".number_format($immature_balance/pow(10,8), 2)."</font> EmpireCoins</div>";
 	if ($immature_balance > 0) $html .= "<div class=\"col-sm-1\"><a href=\"\" onclick=\"$('#lockedfunds_details').toggle('fast'); return false;\">Details</a></div>";
@@ -1105,7 +1130,7 @@ function delete_reset_game($delete_or_reset, $game_id) {
 		$q = "SELECT * FROM user_games WHERE game_id='".$game_id."';;";
 		$r = run_query($q);
 		while ($user_game = mysql_fetch_array($r)) {
-			new_webwallet_multi_transaction($game_id, false, array(100000000000), $user_game['user_id'], $user_game['user_id'], last_block_id($game_id), 'giveaway', false, false, false);
+			new_webwallet_multi_transaction($game_id, false, array(100000000000), false, $user_game['user_id'], last_block_id($game_id), 'giveaway', false, false, false);
 		}
 	}
 	else {

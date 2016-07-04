@@ -51,7 +51,7 @@ if ($thisuser) {
 		$r = run_query($q);
 		while ($player = mysql_fetch_array($r)) {
 			ensure_user_in_game($player['user_id'], $game_id);
-			new_webwallet_transaction($game_id, false, 100000000000, $player['user_id'], last_block_id($game_id), 'giveaway');
+			new_webwallet_multi_transaction($game_id, false, array(100000000000), false, $player['user_id'], last_block_id($game_id), 'giveaway', false, false, false);
 		}
 		
 		$q = "UPDATE users SET game_id='".$game_id."' WHERE user_id='".$thisuser['user_id']."';";
