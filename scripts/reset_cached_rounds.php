@@ -39,7 +39,15 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			}
 			
 			$q = "INSERT INTO cached_rounds SET game_id='".$game['game_id']."', round_id='".$round_id."', payout_block_id='".($round_id*$game['round_length'])."'";
-			if ($winning_nation) $q .= ", winning_nation_id='".$winning_nation."'";
+			if ($winning_nation) {
+				$q .= ", winning_nation_id='".$winning_nation."'";
+				$qq = "SELECT * FROM transactions WHERE transaction_desc='votebase' AND game_id='".$game['game_id']."' AND block_id = ".$round_id*$game['round_length'].";";
+				$rr = run_query($qq);
+				if (mysql_numrows($rr) > 0) {
+					$payout_transaction = mysql_fetch_array($rr);
+					$q .= ", payout_transaction_id='".$payout_transaction['transaction_id']."'";
+				}
+			}
 			$q .= ", winning_score='".$winning_score."', score_sum='".$vote_sum."', time_created='".time()."'";
 			for ($position=1; $position <= $game['num_voting_options']; $position++) {
 				$q .= ", position_".$position."='".$nation_rank2db_id[$position]."'";

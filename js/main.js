@@ -188,7 +188,7 @@ function refresh_if_needed() {
 								my_last_transaction_id = parseInt(json_result['my_last_transaction_id']);
 							}
 							
-							if (parseInt(json_result['new_mature_ios']) == 1 || parseInt(json_result['new_my_transaction']) == 1 || json_result['new_block'] == "1") {
+							if (parseInt(json_result['new_mature_ios']) == 1 || parseInt(json_result['new_my_transaction']) == 1 || json_result['new_block'] == 1) {
 								mature_io_ids_csv = json_result['mature_io_ids_csv'];
 								$('#select_input_buttons').html(json_result['select_input_buttons']);
 								console.log("refreshing transaction inputs: "+mature_io_ids_csv);

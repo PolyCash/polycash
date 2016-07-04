@@ -76,7 +76,7 @@ if ($thisuser || $_REQUEST['refresh_page'] == "home") {
 	}
 	else $output['new_my_transaction'] = 0;
 	
-	if ($output['new_my_transaction'] == 1 || $mature_io_ids_csv != $_REQUEST['mature_io_ids_csv']) {
+	if ($output['new_my_transaction'] == 1 || $mature_io_ids_csv != $_REQUEST['mature_io_ids_csv'] || $output['new_block'] == 1) {
 		$output['select_input_buttons'] = select_input_buttons($thisuser['user_id'], $game);
 		$output['mature_io_ids_csv'] = $mature_io_ids_csv;
 		$output['new_mature_ios'] = 1;
