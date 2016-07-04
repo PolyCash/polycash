@@ -101,8 +101,10 @@ do {
 				$new_transaction_count++;
 			}
 			catch (Exception $e) {
-				echo "<br/><br/>\n\nException Error:<br/>\n";
+				echo "Please make sure that txindex=1 is included in your EmpireCoin.conf<br/>\n";
+				echo "Exception Error:<br/>\n";
 				var_dump($e);
+				die();
 			}
 		}
 		else {

@@ -158,59 +158,67 @@ if ($getinfo['blocks'] > $lastblock_id) {
 
 $tx_hash = $argv[1];
 
-$raw_transaction = $empirecoin_rpc->getrawtransaction($tx_hash);
-$transaction_obj = $empirecoin_rpc->decoderawtransaction($raw_transaction);
+try {
+	$raw_transaction = $empirecoin_rpc->getrawtransaction($tx_hash);
+	$transaction_obj = $empirecoin_rpc->decoderawtransaction($raw_transaction);
 
-$q = "SELECT * FROM webwallet_transactions WHERE tx_hash='".$tx_hash."';";
-$r = run_query($q);
-if (mysql_numrows($r) > 0) {
-	$transaction = mysql_fetch_array($r);
+	$q = "SELECT * FROM webwallet_transactions WHERE tx_hash='".$tx_hash."';";
+	$r = run_query($q);
+	if (mysql_numrows($r) > 0) {
+		$transaction = mysql_fetch_array($r);
+	}
+	else {
+		$outputs = $transaction_obj["vout"];
+		$inputs = $transaction_obj["vin"];
+
+		if (count($inputs) == 1 && $inputs[0]['coinbase']) {
+			$transaction_type = "coinbase";
+		}
+		else $transaction_type = "transaction";
+
+		$output_sum = 0;
+		for ($j=0; $j<count($outputs); $j++) {
+			$output_sum += pow(10,8)*$outputs[$j]["value"];
+		}
+		
+		$q = "INSERT INTO webwallet_transactions SET game_id='".$game['game_id']."', amount='".$output_sum."', transaction_desc='".$transaction_type."', tx_hash='".$tx_hash."', address_id=NULL, block_id=NULL, time_created='".time()."';";
+		$r = run_query($q);
+		$db_transaction_id = mysql_insert_id();
+		$q = "SELECT * FROM webwallet_transactions WHERE transaction_id='".$db_transaction_id."';";
+		$r = run_query($q);
+		$transaction = mysql_fetch_array($r);
+		
+		for ($j=0; $j<count($outputs); $j++) {
+			$address = $outputs[$j]["scriptPubKey"]["addresses"][0];
+			
+			$q = "SELECT * FROM addresses WHERE game_id='".$game['game_id']."' AND address='".$address."';";
+			$r = run_query($q);
+			
+			if (mysql_numrows($r) > 0) {
+				$output_address = mysql_fetch_array($r);
+			}
+			else {
+				$address_nation_id = addr_text_to_nation_id($address);
+				$q = "INSERT INTO addresses SET game_id='".$game['game_id']."', address='".$address."', nation_id='".$address_nation_id."', time_created='".time()."';";
+				$r = run_query($q);
+				$output_address_id = mysql_insert_id();
+				$q = "SELECT * FROM addresses WHERE address_id='".$output_address_id."';";
+				$r = run_query($q);
+				$output_address = mysql_fetch_array($r);
+			}
+			
+			$q = "INSERT INTO transaction_IOs SET spend_status='unspent', instantly_mature=0, game_id='".$game['game_id']."', out_index='".$j."', user_id=NULL, address_id='".$output_address['address_id']."'";
+			if ($output_address['nation_id'] > 0) $q .= ", nation_id=".$output_address['nation_id'];
+			$q .= ", create_transaction_id='".$db_transaction_id."', amount='".($outputs[$j]["value"]*pow(10,8))."';";
+			$r = run_query($q);
+		}
+	}
 }
-else {
-	$outputs = $transaction_obj["vout"];
-	$inputs = $transaction_obj["vin"];
-
-	if (count($inputs) == 1 && $inputs[0]['coinbase']) {
-		$transaction_type = "coinbase";
-	}
-	else $transaction_type = "transaction";
-
-	$output_sum = 0;
-	for ($j=0; $j<count($outputs); $j++) {
-		$output_sum += pow(10,8)*$outputs[$j]["value"];
-	}
-	
-	$q = "INSERT INTO webwallet_transactions SET game_id='".$game['game_id']."', amount='".$output_sum."', transaction_desc='".$transaction_type."', tx_hash='".$tx_hash."', address_id=NULL, block_id=NULL, time_created='".time()."';";
-	$r = run_query($q);
-	$db_transaction_id = mysql_insert_id();
-	$q = "SELECT * FROM webwallet_transactions WHERE transaction_id='".$db_transaction_id."';";
-	$r = run_query($q);
-	$transaction = mysql_fetch_array($r);
-	
-	for ($j=0; $j<count($outputs); $j++) {
-		$address = $outputs[$j]["scriptPubKey"]["addresses"][0];
-		
-		$q = "SELECT * FROM addresses WHERE game_id='".$game['game_id']."' AND address='".$address."';";
-		$r = run_query($q);
-		
-		if (mysql_numrows($r) > 0) {
-			$output_address = mysql_fetch_array($r);
-		}
-		else {
-			$address_nation_id = addr_text_to_nation_id($address);
-			$q = "INSERT INTO addresses SET game_id='".$game['game_id']."', address='".$address."', nation_id='".$address_nation_id."', time_created='".time()."';";
-			$r = run_query($q);
-			$output_address_id = mysql_insert_id();
-			$q = "SELECT * FROM addresses WHERE address_id='".$output_address_id."';";
-			$r = run_query($q);
-			$output_address = mysql_fetch_array($r);
-		}
-		
-		$q = "INSERT INTO transaction_IOs SET spend_status='unspent', instantly_mature=0, game_id='".$game['game_id']."', out_index='".$j."', user_id=NULL, address_id='".$output_address['address_id']."'";
-		if ($output_address['nation_id'] > 0) $q .= ", nation_id=".$output_address['nation_id'];
-		$q .= ", create_transaction_id='".$db_transaction_id."', amount='".($outputs[$j]["value"]*pow(10,8))."';";
-		$r = run_query($q);
-	}
+catch (Exception $e) {
+	echo "Please make sure that txindex=1 is included in your EmpireCoin.conf<br/>\n";
+	echo "Exception Error:<br/>\n";
+	var_dump($e);
+	die();
 }
 
 set_site_constant('walletnotify', $tx_hash);
