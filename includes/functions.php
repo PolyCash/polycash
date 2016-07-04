@@ -594,7 +594,7 @@ function vote_option_details($option, $rank, $confirmed_votes, $unconfirmed_vote
 }
 
 function generate_user_addresses($user_game) {
-	$q = "SELECT * FROM game_voting_options gvo WHERE NOT EXISTS(SELECT * FROM addresses a WHERE a.user_id='".$user_game['user_id']."' AND a.game_id='".$user_game['game_id']."' AND a.option_id=gvo.option_id) ORDER BY gvo.option_id ASC;";
+	$q = "SELECT * FROM game_voting_options gvo WHERE game_id='".$user_game['game_id']."' AND NOT EXISTS(SELECT * FROM addresses a WHERE a.user_id='".$user_game['user_id']."' AND a.game_id='".$user_game['game_id']."' AND a.option_id=gvo.option_id) ORDER BY gvo.option_id ASC;";
 	$r = run_query($q);
 	
 	while ($option = mysql_fetch_array($r)) {
@@ -3524,5 +3524,17 @@ function game_final_inflation_pct(&$game) {
 function friendly_intval($val) {
 	if ($val > 0) return $val;
 	else return 0;
+}
+function fetch_game_from_url() {
+	$login_url_parts = explode("/", rtrim(ltrim($_SERVER['REQUEST_URI'], "/"), "/"));
+	if ($login_url_parts[0] == "wallet" && count($login_url_parts) > 1) {
+		$q = "SELECT * FROM games WHERE url_identifier='".mysql_real_escape_string($login_url_parts[1])."';";
+		$r = run_query($q);
+		if (mysql_numrows($r) == 1) {
+			return mysql_fetch_array($r);
+		}
+		else return false;
+	}
+	else return false;
 }
 ?>

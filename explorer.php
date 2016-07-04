@@ -556,9 +556,13 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				}
 			}
 		}
+		
+		if ($game) { ?>
+			<br/>
+			<a href="/wallet/<?php echo $game['url_identifier']; ?>/" class="btn btn-default">Join this game</a>
+			<?php
+		}
 		?>
-		<br/>
-		<a href="/wallet/<?php echo $game['url_identifier']; ?>/" class="btn btn-default">Join this game</a>
 	</div>
 	<?php
 	include('includes/html_stop.php');

@@ -63,6 +63,10 @@ if ($_REQUEST['do'] == "signup") {
 					$r = run_query($q);
 					$user_id = mysql_insert_id();
 					
+					$q = "SELECT * FROM users WHERE user_id='".$user_id."';";
+					$r = run_query($q);
+					$thisuser = mysql_fetch_array($r);
+					
 					$session_key = session_id();
 					$expire_time = time()+3600*24;
 					
@@ -98,13 +102,38 @@ if ($_REQUEST['do'] == "signup") {
 					
 					$q = "SELECT * FROM games WHERE game_id='".get_site_constant('primary_game_id')."';";
 					$r = run_query($q);
-					while ($mandatory_game = mysql_fetch_array($r)) {
-						ensure_user_in_game($user_id, $mandatory_game['game_id']);
+					
+					if (mysql_numrows($r) == 1) {
+						$primary_game = mysql_fetch_array($r);
+						ensure_user_in_game($user_id, $primary_game['game_id']);
 
-						if ($mandatory_game['giveaway_status'] == "public_free") {
-							$giveaway = new_game_giveaway($mandatory_game, $user_id);
+						if ($primary_game['giveaway_status'] == "public_free") {
+							$giveaway = new_game_giveaway($primary_game, $user_id);
 						}
 					}
+					
+					$redirect_url = false;
+					
+					if ($GLOBALS['pageview_tracking_enabled']) log_user_in($thisuser, $redirect_url, $viewer_id);
+					else log_user_in($thisuser, $redirect_url);
+					
+					/*if ($_REQUEST['invite_key'] != "") {
+						$invite_game = false;
+						$success = try_apply_invite_key($thisuser['user_id'], $_REQUEST['invite_key'], $invite_game);
+						if ($success) {
+							header("Location: /wallet/".$invite_game['url_identifier']);
+							die();
+						}
+					}*/
+					
+					$redir_game = fetch_game_from_url();
+					if ($redir_game) {
+						$header_loc = "/wallet/".$redir_game['url_identifier']."/";
+					}
+					else $header_loc = "/wallet/";
+					
+					header("Location: ".$header_loc);
+					die();
 				}
 			}
 		}
@@ -158,17 +187,12 @@ else if ($_REQUEST['do'] == "login") {
 			header("Location: ".$redirect_url['url']);
 		}
 		else {
-			$header_loc = "/wallet/";
-			$url_game = false;
-			$login_url_parts = explode("/", rtrim(ltrim($_SERVER['REQUEST_URI'], "/"), "/"));
-			if ($login_url_parts[0] == "wallet" && count($login_url_parts) > 1) {
-				$q = "SELECT * FROM games WHERE url_identifier='".$login_url_parts[1]."';";
-				$r = run_query($q);
-				if (mysql_numrows($r) == 1) {
-					$url_game = mysql_fetch_array($r);
-					$header_loc .= $url_game['url_identifier']."/";
-				}
+			$redir_game = fetch_game_from_url();
+			if ($redir_game) {
+				$header_loc = "/wallet/".$redir_game['url_identifier']."/";
 			}
+			else $header_loc = "/wallet/";
+			
 			header("Location: ".$header_loc);
 		}
 		die();
@@ -1087,7 +1111,7 @@ $mature_balance = mature_balance($game, $thisuser);
 				
 				<h1>Deposit</h1>
 				<?php
-				$q = "SELECT * FROM addresses a LEFT JOIN game_voting_options gvo ON gvo.option_id=a.option_id WHERE gvo.game_id='".$game['game_id']."' AND a.user_id='".$thisuser['user_id']."' ORDER BY gvo.option_id IS NULL ASC, gvo.option_id ASC;";
+				$q = "SELECT * FROM addresses a LEFT JOIN game_voting_options gvo ON gvo.option_id=a.option_id WHERE a.game_id='".$game['game_id']."' AND a.user_id='".$thisuser['user_id']."' ORDER BY a.option_id IS NULL DESC, a.option_id ASC;";
 				$r = run_query($q);
 				?>
 				<b>You have <?php echo mysql_numrows($r); ?> addresses.</b><br/>
