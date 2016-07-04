@@ -461,6 +461,9 @@ function new_payout_transaction($game_id, $voting_round, $block_id, $winning_nat
 		$rr = run_query($qq);
 		$output_id = mysql_insert_id();
 		
+		$qq = "UPDATE transaction_IOs SET payout_io_id='".$output_id."' WHERE io_id='".$input['io_id']."';";
+		$rr = run_query($qq);
+		
 		$log_text .= "Pay ".$payout_amount/(pow(10,8))." EMP to ".$input['username']."<br/>\n";
 	}
 	
@@ -1115,7 +1118,7 @@ function render_transaction($transaction, $selected_address_id, $firstcell_text)
 	if ($firstcell_text != "") $html .= $firstcell_text."<br/>\n";
 	
 	if ($transaction['transaction_desc'] == "votebase") {
-		$html .= "Voting Payout&nbsp;&nbsp;".$transaction['amount']/pow(10,8)." coins";
+		$html .= "Voting Payout&nbsp;&nbsp;".round($transaction['amount']/pow(10,8), 2)." coins";
 	}
 	else {
 		$qq = "SELECT * FROM transaction_IOs i, addresses a LEFT JOIN nations n ON a.nation_id=n.nation_id WHERE i.spend_transaction_id='".$transaction['transaction_id']."' AND i.address_id=a.address_id ORDER BY i.amount DESC;";
@@ -1133,7 +1136,7 @@ function render_transaction($transaction, $selected_address_id, $firstcell_text)
 		}
 	}
 	$html .= '</div><div class="col-md-6">';
-	$qq = "SELECT * FROM transaction_IOs i, addresses a LEFT JOIN nations n ON a.nation_id=n.nation_id WHERE i.create_transaction_id='".$transaction['transaction_id']."' AND i.address_id=a.address_id ORDER BY i.amount DESC;";
+	$qq = "SELECT i.*, n.*, a.*, p.amount AS payout_amount FROM transaction_IOs i LEFT JOIN transaction_IOs p ON i.payout_io_id=p.io_id, addresses a LEFT JOIN nations n ON a.nation_id=n.nation_id WHERE i.create_transaction_id='".$transaction['transaction_id']."' AND i.address_id=a.address_id ORDER BY i.amount DESC;";
 	$rr = run_query($qq);
 	$output_sum = 0;
 	while ($output = mysql_fetch_array($rr)) {
@@ -1142,6 +1145,7 @@ function render_transaction($transaction, $selected_address_id, $firstcell_text)
 		$html .= "\" href=\"/explorer/addresses/".$output['address']."\">".$output['address']."</a></font>&nbsp;&nbsp;";
 		$html .= number_format($output['amount']/pow(10,8), 2)." coins";
 		if ($output['name'] != "") $html .= "&nbsp;&nbsp;".$output['name'];
+		if ($output['payout_amount'] > 0) $html .= "&nbsp;&nbsp;<font class=\"greentext\">+".round($output['payout_amount']/pow(10,8), 2)."</font>";
 		$html .= "<br/>\n";
 		$output_sum += $output['amount'];
 	}
