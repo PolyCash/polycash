@@ -601,7 +601,10 @@ function save_game(action) {
 		$('#save_game_btn').html(save_link_text);
 		var json_result = JSON.parse(result);
 		if (parseInt(json_result['status_code']) == 1) {
-			window.location = '/wallet/'+json_result['url_identifier']+'/';
+			if (json_result['user_in_game'] == 1) {
+				window.location = '/wallet/'+json_result['url_identifier']+'/';
+			}
+			else window.location = window.location;
 		}
 		else alert(json_result['message']);
 	});
@@ -1302,11 +1305,18 @@ function generate_invitation(this_game_id) {
 		manage_game_invitations(this_game_id);
 	});
 }
-function send_invitation(this_game_id, invitation_id) {
-	var to_email = prompt("Please enter the email address where you'd like to send this invitation.");
-	if (to_email) {
-		$.get("/ajax/game_invitations.php?action=send&game_id="+this_game_id+"&invitation_id="+invitation_id+"&to_email="+encodeURIComponent(to_email), function(result) {
-			manage_game_invitations(this_game_id);
+function send_invitation(this_game_id, invitation_id, send_method) {
+	var send_to = "";
+	if (send_method == 'email') {
+		send_to = prompt("Please enter the email address where you'd like to send this invitation.");
+	}
+	else send_to = prompt("Please enter the username of the account where the invitation should be sent.");
+	
+	if (send_to) {
+		$.get("/ajax/game_invitations.php?action=send&send_method="+send_method+"&game_id="+this_game_id+"&invitation_id="+invitation_id+"&send_to="+encodeURIComponent(send_to), function(result) {
+			var json_result = JSON.parse(result);
+			if (json_result['status_code'] == 1) manage_game_invitations(this_game_id);
+			else alert(json_result['message']);
 		});
 	}
 }

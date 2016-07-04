@@ -18,7 +18,7 @@ if ($thisuser) {
 
 			if ($perm_to_invite) {
 				if ($action == "manage") {
-					$q = "SELECT * FROM invitations i LEFT JOIN users u ON i.used_user_id=u.user_id LEFT JOIN async_email_deliveries d ON i.sent_email_id=d.delivery_id WHERE i.game_id='".$game['game_id']."' AND i.inviter_id='".$thisuser['user_id']."';";
+					$q = "SELECT * FROM invitations i LEFT JOIN users u ON i.used_user_id=u.user_id LEFT JOIN async_email_deliveries d ON i.sent_email_id=d.delivery_id WHERE i.game_id='".$game['game_id']."' AND i.inviter_id='".$thisuser['user_id']."' ORDER BY invitation_id ASC;";
 					$r = run_query($q);
 					echo 'You\'ve generated '.mysql_numrows($r).' invitations for this game.<br/>';
 					while ($invitation = mysql_fetch_array($r)) {
@@ -31,7 +31,8 @@ if ($thisuser) {
 						
 						if ($invitation['sent_email_id'] == 0) {
 							if ($invitation['used_user_id'] == 0) {
-								echo '<a href="" onclick="send_invitation('.$game['game_id'].', '.$invitation['invitation_id'].'); return false;">Send</a>';
+								echo '<a href="" onclick="send_invitation('.$game['game_id'].', '.$invitation['invitation_id'].', \'email\'); return false;">Send by email</a>&nbsp;&nbsp; ';
+								echo '<a href="" onclick="send_invitation('.$game['game_id'].', '.$invitation['invitation_id'].', \'user\'); return false;">Send to user</a>';
 							}
 						}
 						else {
@@ -49,7 +50,7 @@ if ($thisuser) {
 					<?php
 				}
 				else if ($action == "send") {
-					$to_email = urldecode($_REQUEST['to_email']);
+					$send_to = urldecode($_REQUEST['send_to']);
 					$invitation_id = intval($_REQUEST['invitation_id']);
 					
 					$q = "SELECT * FROM invitations WHERE invitation_id='".$invitation_id."' AND inviter_id='".$thisuser['user_id']."';";
@@ -58,56 +59,40 @@ if ($thisuser) {
 					if (mysql_numrows($r) > 0) {
 						$invitation = mysql_fetch_array($r);
 						
-						if ($invitation['game_id'] == $game['game_id'] && $invitation['used'] == 0 && $invitation['sent_email_id'] == 0) {
-							$blocks_per_hour = 3600/$game['seconds_per_block'];
-							$round_reward = ($game['pos_reward']+$game['pow_reward']*$game['round_length'])/pow(10,8);
-							$rounds_per_hour = 3600/($game['seconds_per_block']*$game['round_length']);
-							$coins_per_hour = $round_reward*$rounds_per_hour;
-							$seconds_per_round = $game['seconds_per_block']*$game['round_length'];
+						if ($invitation['game_id'] == $game['game_id'] && $invitation['used'] == 0) {
+							$send_method = $_REQUEST['send_method'];
 							
-							if ($game['inflation'] == "linear") $miner_pct = 100*($game['pow_reward']*$game['round_length'])/($round_reward*pow(10,8));
-							else $miner_pct = 100*$game['exponential_inflation_minershare'];
-
-							$invite_currency = false;
-							if ($game['invite_currency'] > 0) {
-								$q = "SELECT * FROM currencies WHERE currency_id='".$game['invite_currency']."';";
+							if ($send_method == "email") {
+								if ($invitation['sent_email_id'] == 0) {
+									$email_id = send_invitation_email($game, $send_to, $invitation);
+									
+									output_message(1, "Great, the invitation has been sent.", $invitation);
+								}
+								else output_message(2, "Error: that invitation has already been sent or used.", $invitation);
+							}
+							else if ($send_method == "user") {
+								$q = "SELECT * FROM users WHERE username='".mysql_real_escape_string($send_to)."';";
 								$r = run_query($q);
-								$invite_currency = mysql_fetch_array($r);
+								
+								if (mysql_numrows($r) > 0) {
+									$send_to_user = mysql_fetch_array($r);
+									
+									$invite_game = false;
+									try_apply_invite_key($send_to_user['user_id'], $invitation['invitation_key'], $invite_game);
+									
+									if (strpos($send_to_user['username'], '@')) {
+										$email_id = send_invitation_email($game, $send_to, $invitation);
+									}
+									
+									output_message(1, "Great, the invitation has been sent.", false);
+								}
+								else output_message(2, "No one with that username was found.", false);
 							}
-
-							$subject = "You've been invited to join ".$game['name'];
-							if ($game['giveaway_status'] == "invite_pay" || $game['giveaway_status'] == "public_pay") {
-								$subject .= ". Join by paying ".format_bignum($game['invite_cost'])." ".$invite_currency['short_name']."s for ".format_bignum($game['giveaway_amount']/pow(10,8))." ".$game['coin_name_plural'].".";
-							}
-							else {
-								$subject .= ". Get ".format_bignum($game['giveaway_amount']/pow(10,8))." ".$game['coin_name_plural']." for free by accepting this invitation.";
-							}
-							$message .= "<p>";
-							if ($game['inflation'] == "linear") $message .= $game['name']." is a cryptocurrency which generates ".$coins_per_hour." ".$game['coin_name_plural']." per hour. ";
-							else $message .= $game['name']." is a cryptocurrency with ".($game['exponential_inflation_rate']*100)."% inflation every ".format_seconds($seconds_per_round).". ";
-							$message .= $miner_pct."% is given to miners for securing the network and the remaining ".(100-$miner_pct)."% is given to players for casting winning votes. ";
-							if ($game['final_round'] > 0) {
-								$game_total_seconds = $seconds_per_round*$game['final_round'];
-								$message .= "Once this game starts, it will last for ".format_seconds($game_total_seconds)." (".$game['final_round']." rounds). ";
-								$message .= "At the end, all ".$invite_currency['short_name']."s that have been paid in will be divided up and given out to all players in proportion to players' final balances.";
-							}
-							$message .= "</p>";
-
-							$message .= "<p>In this game, you can vote for one of ".$game['num_voting_options']." empires every ".format_seconds($seconds_per_round).".  Team up with other players and cast your votes strategically to win coins and destroy your competitors.</p>";
-							$message .= game_info_table($game);
-							$message .= "<p>To start playing, accept your invitation by following <a href=\"".$GLOBALS['base_url']."/wallet/".$game['url_identifier']."/?invite_key=".$invitation['invitation_key']."\">this link</a>.</p>";
-							$message .= "<p>This message was sent to you by ".$GLOBALS['site_name']."</p>";
-
-							$email_id = mail_async($to_email, $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "");
-							
-							$q = "UPDATE invitations SET sent_email_id='".$email_id."' WHERE invitation_id='".$invitation['invitation_id']."';";
-							$r = run_query($q);
-
-							output_message(1, "Great, the invitation has been sent.", $invitation);
+							else output_message(2, "Invalid URL", false);
 						}
-						else output_message(2, "Error: that invitation has already been sent or used.", $invitation);
+						else output_message(2, "Error: that invitation has already been sent or used.", false);
 					}
-					else output_message(2, "Error: you can't send that invitation.", $invitation);
+					else output_message(2, "Error: you can't send that invitation.", false);
 				}
 				else {
 					$invitation = false;
@@ -115,10 +100,10 @@ if ($thisuser) {
 					output_message(1, "An invitation has been generated.", false);
 				}
 			}
-			else output_message(2, "Error: you don't have permission to generate invitations for this game.", $invitation);
+			else output_message(2, "Error: you don't have permission to generate invitations for this game.", false);
 		}
-		else output_message(2, "Error: you don't have permission to generate invitations for this game.", $invitation);
+		else output_message(2, "Error: you don't have permission to generate invitations for this game.", false);
 	}
-	else output_message(2, "Error: you specified an invalid action.", $invitation);
+	else output_message(2, "Error: you specified an invalid action.", false);
 }
 ?>

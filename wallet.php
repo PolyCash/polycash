@@ -1112,7 +1112,7 @@ $mature_balance = mature_balance($game, $thisuser);
 			<div class="tabcontent" style="display: none;" id="tabcontent5">
 				<h4>My Games</h4>
 				<?php
-				$q = "SELECT *, g.game_id AS game_id FROM games g LEFT JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser['user_id']."' OR g.creator_id='".$thisuser['user_id']."';";
+				$q = "SELECT *, g.game_id AS game_id FROM games g LEFT JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser['user_id']."' OR g.creator_id='".$thisuser['user_id']."' ORDER BY g.game_id ASC;";
 				$r = run_query($q);
 				
 				while ($user_game = mysql_fetch_array($r)) {

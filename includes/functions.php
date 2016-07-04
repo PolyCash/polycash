@@ -3233,4 +3233,51 @@ function account_value_html(&$game, $account_value) {
 	$html .= ")</font>";
 	return $html;
 }
+function send_invitation_email(&$game, $to_email, &$invitation) {
+	$blocks_per_hour = 3600/$game['seconds_per_block'];
+	$round_reward = ($game['pos_reward']+$game['pow_reward']*$game['round_length'])/pow(10,8);
+	$rounds_per_hour = 3600/($game['seconds_per_block']*$game['round_length']);
+	$coins_per_hour = $round_reward*$rounds_per_hour;
+	$seconds_per_round = $game['seconds_per_block']*$game['round_length'];
+	
+	if ($game['inflation'] == "linear") $miner_pct = 100*($game['pow_reward']*$game['round_length'])/($round_reward*pow(10,8));
+	else $miner_pct = 100*$game['exponential_inflation_minershare'];
+
+	$invite_currency = false;
+	if ($game['invite_currency'] > 0) {
+		$q = "SELECT * FROM currencies WHERE currency_id='".$game['invite_currency']."';";
+		$r = run_query($q);
+		$invite_currency = mysql_fetch_array($r);
+	}
+
+	$subject = "You've been invited to join ".$game['name'];
+	if ($game['giveaway_status'] == "invite_pay" || $game['giveaway_status'] == "public_pay") {
+		$subject .= ". Join by paying ".format_bignum($game['invite_cost'])." ".$invite_currency['short_name']."s for ".format_bignum($game['giveaway_amount']/pow(10,8))." ".$game['coin_name_plural'].".";
+	}
+	else {
+		$subject .= ". Get ".format_bignum($game['giveaway_amount']/pow(10,8))." ".$game['coin_name_plural']." for free by accepting this invitation.";
+	}
+	$message .= "<p>";
+	if ($game['inflation'] == "linear") $message .= $game['name']." is a cryptocurrency which generates ".$coins_per_hour." ".$game['coin_name_plural']." per hour. ";
+	else $message .= $game['name']." is a cryptocurrency with ".($game['exponential_inflation_rate']*100)."% inflation every ".format_seconds($seconds_per_round).". ";
+	$message .= $miner_pct."% is given to miners for securing the network and the remaining ".(100-$miner_pct)."% is given to players for casting winning votes. ";
+	if ($game['final_round'] > 0) {
+		$game_total_seconds = $seconds_per_round*$game['final_round'];
+		$message .= "Once this game starts, it will last for ".format_seconds($game_total_seconds)." (".$game['final_round']." rounds). ";
+		$message .= "At the end, all ".$invite_currency['short_name']."s that have been paid in will be divided up and given out to all players in proportion to players' final balances.";
+	}
+	$message .= "</p>";
+
+	$message .= "<p>In this game, you can vote for one of ".$game['num_voting_options']." empires every ".format_seconds($seconds_per_round).".  Team up with other players and cast your votes strategically to win coins and destroy your competitors.</p>";
+	$message .= game_info_table($game);
+	$message .= "<p>To start playing, accept your invitation by following <a href=\"".$GLOBALS['base_url']."/wallet/".$game['url_identifier']."/?invite_key=".$invitation['invitation_key']."\">this link</a>.</p>";
+	$message .= "<p>This message was sent to you by ".$GLOBALS['site_name']."</p>";
+
+	$email_id = mail_async($to_email, $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "");
+	
+	$q = "UPDATE invitations SET sent_email_id='".$email_id."' WHERE invitation_id='".$invitation['invitation_id']."';";
+	$r = run_query($q);
+	
+	return $email_id;
+}
 ?>

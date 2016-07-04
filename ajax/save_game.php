@@ -11,6 +11,14 @@ if ($thisuser) {
 	
 	if (mysql_numrows($r) == 1) {
 		$game = mysql_fetch_array($r);
+		$game_info = false;
+		
+		$q = "SELECT * FROM user_games WHERE user_id='".$thisuser['user_id']."' AND game_id='".$game['game_id']."';";
+		$r = run_query($q);
+		if (mysql_numrows($r) > 0) {
+			$game_info['user_in_game'] = 1;
+		}
+		else $game_info['user_in_game'] = 0;
 		
 		if ($game['creator_id'] == $thisuser['user_id']) {
 			$game_info['url_identifier'] = $game['url_identifier'];
