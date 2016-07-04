@@ -1027,7 +1027,7 @@ function load_plan_option(round_id, option_index, points) {
 	}
 }
 function save_plan_allocations() {
-	var postvars = {game_id: game_id, action: "save", voting_strategy_id: parseInt($('#voting_strategy_id').val()), from_round: parseInt($('#from_round').val()), to_round: parseInt($('#to_round').val())};
+	var postvars = {game_id: Games[0].game_id, action: "save", voting_strategy_id: parseInt($('#voting_strategy_id').val()), from_round: parseInt($('#from_round').val()), to_round: parseInt($('#to_round').val())};
 	
 	for (var round_id=postvars['from_round']; round_id<=postvars['to_round']; round_id++) {
 		for (var i=0; i<Games[0].num_voting_options; i++) {

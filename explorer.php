@@ -265,7 +265,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					else $my_votes = false;
 					
 					if (!empty($my_votes[$round['winning_option_id']])) {
-						$payout_amt = (floor(100*pos_reward_in_round($game->db_game, $this_round)/pow(10,8)*$my_votes[$round['winning_option_id']]['coins']/$round['winning_score'])/100);
+						$payout_amt = (floor(100*pos_reward_in_round($game->db_game, $this_round)/pow(10,8)*$my_votes[$round['winning_option_id']]['votes']/$round['winning_score'])/100);
 						
 						$payout_disp = $app->format_bignum($payout_amt);
 						echo "You won <font class=\"greentext\">+".$payout_disp." ";

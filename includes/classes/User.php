@@ -97,7 +97,7 @@ class User {
 			}
 			else {
 				if (empty($my_votes[$round['winning_option_id']])) $win_amt_temp = 0;
-				else $win_amt_temp = pos_reward_in_round($game->db_game, $round['round_id'])*$my_votes[$round['winning_option_id']][$game->db_game['payout_weight'].'s'];
+				else $win_amt_temp = pos_reward_in_round($game->db_game, $round['round_id'])*$my_votes[$round['winning_option_id']]['votes'];
 				if ($option_scores['sum'] > 0) $win_amt = $win_amt_temp/$option_scores['sum'];
 				else $win_amt = 0;
 				$payout_amt = ($win_amt - $my_votes_in_round['fee_amount'])/pow(10,8);

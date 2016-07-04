@@ -96,7 +96,8 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		
 		if (count($running_games) > 0) {
 			try {
-				$seconds_to_sleep = 5;
+				if (empty($GLOBALS['cron_interval_seconds'])) $seconds_to_sleep = 5;
+				else $seconds_to_sleep = $GLOBALS['cron_interval_seconds'];
 				do {
 					$loop_start_time = microtime(true);
 
