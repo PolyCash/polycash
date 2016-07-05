@@ -36,6 +36,7 @@ $GLOBALS['pageview_tracking_enabled'] = false;
 
 $GLOBALS['currency_price_refresh_seconds'] = 2*60;
 $GLOBALS['invoice_expiration_seconds'] = 15*60;
+$GLOBALS['cron_interval_seconds'] = 5;
 
 $GLOBALS['new_games_per_user'] = "unlimited";
 
@@ -64,8 +65,6 @@ Next, configure cron to poll empirecoin every minute. This keeps empirecoin-web 
 ```
 
 You can configure outbound emails by setting $GLOBALS['outbound_email_enabled'] = true, and then entering your sendgrid credentials in the following 2 parameters.
-
-If you are integrating with empirecoind, enter the correct value for all parameters starting with "coin_" in the config file.
 
 Set $GLOBALS['pageview_tracking_enabled'] = true if you want to track all user's pageviews.  This may help you to detect malicious activity on your server.  If you set $GLOBALS['pageview_tracking_enabled'] = false; no IP addresses or pageviews from users will be tracked.
 
