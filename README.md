@@ -11,8 +11,8 @@ To get started, first please install and secure Apache, MySQL and PHP.  Then cre
 error_reporting(0);
 
 $GLOBALS['mysql_server'] = "localhost";
-$GLOBALS['mysql_user'] = "root";
-$GLOBALS['mysql_password'] = "";
+$GLOBALS['mysql_user'] = "root"; // Enter your mysql username here
+$GLOBALS['mysql_password'] = ""; // Enter your mysql password here
 $GLOBALS['mysql_database'] = "empirecoin";
 
 $GLOBALS['signup_captcha_required'] = false;
@@ -24,13 +24,14 @@ $GLOBALS['sendgrid_user'] = "";
 $GLOBALS['sendgrid_pass'] = "";
 
 $GLOBALS['show_query_errors'] = true;
-$GLOBALS['cron_key_string'] = "";
+$GLOBALS['cron_key_string'] = ""; // Enter a random string / password here
 
 $GLOBALS['bitcoin_port'] = 8332;
 $GLOBALS['bitcoin_rpc_user'] = "bitcoinrpc";
-$GLOBALS['bitcoin_rpc_password'] = "";
+$GLOBALS['bitcoin_rpc_password'] = ""; // Enter your bitcoin RPC password here
 
-$GLOBALS['default_coin_winner'] = 'your_username';
+// After installing, you'll create a user account.
+$GLOBALS['default_coin_winner'] = 'your_username'; // Enter that username here
 
 $GLOBALS['pageview_tracking_enabled'] = false;
 
@@ -43,7 +44,7 @@ $GLOBALS['new_games_per_user'] = "unlimited";
 $GLOBALS['coin_brand_name'] = "EmpireCoin";
 $GLOBALS['site_name_short'] = "EmpireCoin";
 $GLOBALS['site_name'] = "EmpireCoin.org";
-$GLOBALS['site_domain'] = strtolower($GLOBALS['site_name']);
+$GLOBALS['site_domain'] = "localhost"; // Enter localhost or your public IP/domain here
 $GLOBALS['base_url'] = "http://".$GLOBALS['site_domain'];
 
 $GLOBALS['default_timezone'] = 'America/Chicago';
