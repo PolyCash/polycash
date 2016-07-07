@@ -180,10 +180,34 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 			echo "Error, you've reached an invalid page.";
 		}
 		else {
-			if ($game) { ?>
+			if ($game) {
+				if (empty($thisuser)) $my_last_transaction_id = false;
+				else $my_last_transaction_id = $thisuser->my_last_transaction_id($game->db_game['game_id']);
+				?>
 				<script type="text/javascript">
-				var game_id = <?php echo $game->db_game['game_id']; ?>;
-				var game_url_identifier = '<?php echo $game->db_game['url_identifier']; ?>';
+				var Games = new Array();
+				Games.push(new Game(<?php
+					echo $game->db_game['game_id'];
+					echo ', '.$game->last_block_id();
+					echo ', '.$game->last_transaction_id().', ';
+					if ($my_last_transaction_id) echo $my_last_transaction_id;
+					else echo 'false';
+					echo ', "';
+					if (empty($thisuser)) echo "";
+					else echo $game->mature_io_ids_csv($thisuser->db_user['user_id']);
+					echo '", "'.$game->db_game['payout_weight'].'"';
+					echo ', '.$game->db_game['round_length'];
+					$bet_round_range = $game->bet_round_range();
+					$min_bet_round = $bet_round_range[0];
+					echo ', '.$min_bet_round;
+					echo ', 0';
+					echo ', "'.$game->db_game['url_identifier'].'"';
+					echo ', "'.$game->db_game['coin_name'].'"';
+					echo ', "'.$game->db_game['coin_name_plural'].'"';
+					echo ', '.$game->db_game['num_voting_options'];
+					echo ', "'.$game->db_game['payout_taper_function'].'"';
+					echo ', "explorer"';
+				?>));
 				</script>
 			
 				<div class="row">

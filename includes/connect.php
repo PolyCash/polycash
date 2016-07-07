@@ -1,6 +1,6 @@
 <?php
 if (is_file(realpath(dirname(__FILE__))."/config.php")) {
-	include("config.php");
+	include(realpath(dirname(__FILE__))."/config.php");
 }
 else die("Please create the file includes/config.php");
 
