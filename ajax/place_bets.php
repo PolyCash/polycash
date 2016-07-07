@@ -75,7 +75,7 @@ if ($thisuser && $game) {
 					$mature_balance = $thisuser->mature_balance($game);
 					
 					if ($amount_sum <= $mature_balance) {
-						$transaction_id = $game->new_transaction(false, $amounts, $thisuser->db_user['user_id'], false, false, 'bet', false, $address_ids, $remainder_address_id, $user_strategy['transaction_fee']);
+						$transaction_id = $game->create_transaction(false, $amounts, $thisuser->db_user['user_id'], false, false, 'bet', false, $address_ids, $remainder_address_id, $user_strategy['transaction_fee']);
 						if ($transaction_id > 0) {
 							$output_obj['result_code'] = 11;
 							$output_obj['message'] = "Great, your bet has been placed!";
