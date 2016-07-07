@@ -145,7 +145,7 @@ if ($thisuser && $game) {
 	}
 	else {
 		if ($amount_sum+$user_strategy['transaction_fee'] <= $mature_balance && $amount_sum > 0) {
-			$transaction_id = $game->new_transaction($option_ids, $amounts, $thisuser->db_user['user_id'], $thisuser->db_user['user_id'], false, 'transaction', $io_ids, false, false, intval($user_strategy['transaction_fee']));
+			$transaction_id = $game->create_transaction($option_ids, $amounts, $thisuser->db_user['user_id'], $thisuser->db_user['user_id'], false, 'transaction', $io_ids, false, false, intval($user_strategy['transaction_fee']));
 			
 			if ($transaction_id) {
 				$game->update_option_scores();
