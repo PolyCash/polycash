@@ -139,7 +139,7 @@ if ($_REQUEST['action'] == "join") { ?>
 									<tr>';
 						if ($voting_option['image_id'] > 0) echo '
 										<td>
-											<div class="vote_option_image" style="background-image: url(\'/img/custom/'.$voting_option['image_id'].'_'.$voting_option['access_key'].'.'.$voting_option['extension'].'\');"></div>
+											<div class="vote_option_image" style="background-image: url(\''.$app->image_url($voting_option).'\');"></div>
 										</td>';
 						echo '
 										<td style="width: 100%;">
