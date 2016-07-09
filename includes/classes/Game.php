@@ -226,7 +226,7 @@ class Game {
 				$html .= '>'.$round_stats[$i]['name'].' ('.$pct_votes.'%)</div>
 				<div class="stage vote_option_box_holder" style="height: '.$box_diam.'px; width: '.$box_diam.'px;">
 					<div class="ball vote_option_box" style="';
-					if ($round_stats[$i]['image_id'] > 0) $html .= 'background-image: url(\'/img/custom/'.$round_stats[$i]['image_id'].'_'.$round_stats[$i]['access_key'].'.'.$round_stats[$i]['extension'].'\');';
+					if ($round_stats[$i]['image_id'] > 0) $html .= 'background-image: url(\''.$this->app->image_url($round_stats[$i]).'\');';
 					if ($clickable) $html .= 'cursor: pointer;';
 					$html .= '" id="game'.$game_instance_id.'_vote_option_'.$i.'"';
 					if ($clickable) $html .= ' onmouseover="Games['.$game_instance_id.'].option_selected('.$i.');" onclick="Games['.$game_instance_id.'].option_selected('.$i.'); Games['.$game_instance_id.'].start_vote('.$round_stats[$i]['option_id'].');"';
@@ -1415,6 +1415,12 @@ class Game {
 				$invite_game = false;
 				$this->app->try_apply_invite_key($invite_user_ids[$i], $invitation['invitation_key'], $invite_game);
 			}
+			
+			$q = "SELECT * FROM game_giveaways WHERE game_id='".$this->db_game['game_id']."';";
+			$r = $this->app->run_query($q);
+			while ($giveaway = $r->fetch()) {
+				$replacement_giveaway = $this->new_game_giveaway($giveaway['user_id'], $giveaway['type'], $giveaway['amount']);
+			}
 		}
 		else {
 			$q = "DELETE g.*, ug.* FROM games g, user_games ug WHERE g.game_id=".$this->db_game['game_id']." AND ug.game_id=g.game_id;";
@@ -1423,7 +1429,7 @@ class Game {
 			$q = "DELETE s.*, sra.* FROM user_strategies s LEFT JOIN strategy_round_allocations sra ON s.strategy_id=sra.strategy_id WHERE s.game_id='".$this->db_game['game_id']."';";
 			$r = $this->app->run_query($q);
 		}
-		return true;
+		$this->update_option_scores();
 	}
 
 	public function block_id_to_round_index($block_id) {
