@@ -56,7 +56,7 @@ if ($thisuser && $game) {
 				if ($address_ok) {
 					$address = $r->fetch();
 					
-					$transaction_id = $game->new_transaction(false, array($amount), $thisuser->db_user['user_id'], $db_address['user_id'], false, 'transaction', false, array($db_address['address_id']), $remainder_address_id, $fee);
+					$transaction_id = $game->create_transaction(false, array($amount), $thisuser->db_user['user_id'], $db_address['user_id'], false, 'transaction', false, array($db_address['address_id']), $remainder_address_id, $fee);
 					
 					if ($transaction_id) {
 						$app->output_message(1, 'Great, your coins have been sent! <a target="_blank" href="/explorer/'.$game->db_game['url_identifier'].'/transactions/'.$transaction_id.'">View Transaction</a>');

@@ -1,3 +1,4 @@
+ALTER TABLE `transactions` ADD `has_all_inputs` TINYINT(1) NOT NULL DEFAULT '0' AFTER `taper_factor`, ADD `has_all_outputs` TINYINT(1) NOT NULL DEFAULT '0' AFTER `has_all_inputs`;
 INSERT INTO voting_option_groups SET option_group_id=5, option_name='empire', option_name_plural='empires', description='World War 2 belligerents';
 INSERT INTO `images` (`image_id`, `access_key`, `extension`) VALUES
 (25, '', 'png'),

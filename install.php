@@ -195,7 +195,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 							print_r($getinfo);
 							echo "</pre>";
 							
-							echo "To reset and synchronize this game, run <a target=\"_blank\" href=\"/scripts/sync_coind_initial.php?key=".$GLOBALS['cron_key_string']."&game_id=".$testnet_game->db_game['game_id']."\">scripts/sync_coind_initial.php?game_id=".$rpc_game['game_id']."</a>\n";
+							echo "To reset and synchronize this game, run <a target=\"_blank\" href=\"/scripts/sync_coind_initial.php?key=".$GLOBALS['cron_key_string']."&game_id=".$rpc_game['game_id']."\">scripts/sync_coind_initial.php?game_id=".$rpc_game['game_id']."</a>\n";
 							echo "<br/><br/>\n";
 						}
 						catch (Exception $e) {
