@@ -637,6 +637,7 @@ class App {
 			</script>
 			<?php
 			echo '<div class="col-md-'.$cell_width.'"><h3 style="display: inline-block" title="'.$featured_game->game_description().'">'.$featured_game->db_game['name'].'</h3>';
+			if ($featured_game->db_game['short_description'] != "") echo "<br/>".$featured_game->db_game['short_description'];
 			echo '<div id="game'.$counter.'_current_round_table">';
 			echo $featured_game->current_round_table($current_round_id, false, false, true, $counter);
 			echo '</div>';
