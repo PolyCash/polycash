@@ -1029,7 +1029,7 @@ class Game {
 				$rr = $this->app->run_query($qq);
 			}
 			
-			if ($justmined_round >= $this->db_game['final_round']) {
+			if ($this->db_game['final_round'] > 0 && $justmined_round >= $this->db_game['final_round']) {
 				$this->set_game_completed();
 			}
 		}
@@ -1042,6 +1042,7 @@ class Game {
 	public function set_game_completed() {
 		$q = "UPDATE games SET game_status='completed', completion_datetime=NOW() WHERE game_id='".$this->db_game['game_id']."';";
 		$r = $this->app->run_query($q);
+		$this->db_game['game_status'] = "completed";
 	}
 
 	public function apply_user_strategies() {
