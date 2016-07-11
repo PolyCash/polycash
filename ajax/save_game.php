@@ -58,7 +58,7 @@ if ($thisuser) {
 					}
 					else {
 						$url_identifier = $app->game_url_identifier($game_name);
-						$q = "UPDATE games SET name=".$app->quote_escape($game_name).", url_identifier=".$app->quote_escape($url_identifier)."' WHERE game_id='".$game->db_game['game_id']."';";
+						$q = "UPDATE games SET name=".$app->quote_escape($game_name).", url_identifier=".$app->quote_escape($url_identifier)." WHERE game_id='".$game->db_game['game_id']."';";
 						$r = $app->run_query($q);
 						$game_info['url_identifier'] = $url_identifier;
 					}
