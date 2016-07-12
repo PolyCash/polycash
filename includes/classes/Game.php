@@ -1421,6 +1421,7 @@ class Game {
 			$r = $this->app->run_query($q);
 			while ($giveaway = $r->fetch()) {
 				$replacement_giveaway = $this->new_game_giveaway($giveaway['user_id'], $giveaway['type'], $giveaway['amount']);
+				$this->app->run_query("DELETE FROM game_giveaways WHERE giveaway_id='".$giveaway['giveaway_id']."';");
 			}
 		}
 		else {
@@ -2738,6 +2739,31 @@ class Game {
 		else {
 			return $this->db_game['coins_in_existence'];
 		}
+	}
+	
+	public function fetch_user_strategy(&$user_game) {
+		$q = "SELECT * FROM user_strategies WHERE strategy_id='".$user_game['strategy_id']."';";
+		$r = $this->app->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			$user_strategy = $r->fetch();
+		}
+		else {
+			$q = "SELECT * FROM user_strategies WHERE user_id='".$user_game['user_id']."' AND game_id='".$user_game['game_id']."';";
+			$r = $this->app->run_query($q);
+			
+			if ($r->rowCount() == 1) {
+				$user_strategy = $r->fetch();
+				$q = "UPDATE user_games SET strategy_id='".$user_strategy['strategy_id']."' WHERE user_game_id='".$user_game['user_game_id']."';";
+				$r = $this->app->run_query($q);
+			}
+			else {
+				$q = "DELETE FROM user_games WHERE user_game_id='".$user_game['user_game_id']."';";
+				$r = $this->app->run_query($q);
+				die("No strategy!");
+			}
+		}
+		return $user_strategy;
 	}
 }
 ?>

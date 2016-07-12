@@ -7,9 +7,9 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->in
 $error_code = false;
 $message = "";
 
-if (!isset($_REQUEST['do'])) $_REQUEST['do'] = "";
+if (!isset($_REQUEST['action'])) $_REQUEST['action'] = "";
 
-if ($_REQUEST['do'] == "signup") {
+if ($_REQUEST['action'] == "signup") {
 	$username = $_POST['username'];
 	$notification_email = $_POST['notification_email'];
 	
@@ -171,9 +171,9 @@ if ($_REQUEST['do'] == "signup") {
 		$message = "Sorry, there was an error creating your new account.";
 	}
 }
-else if ($_REQUEST['do'] == "login") {
-	$username = $_POST['username'];
-	$password = $_POST['password'];
+else if ($_REQUEST['action'] == "login") {
+	$username = $_REQUEST['username'];
+	$password = $_REQUEST['password'];
 	
 	$q = "SELECT * FROM users WHERE username=".$app->quote_escape($username)." AND password=".$app->quote_escape($password).";";
 	$r = $app->run_query($q);
@@ -212,6 +212,7 @@ else if ($_REQUEST['do'] == "login") {
 		}
 		else {
 			$redir_game = $app->fetch_game_from_url();
+			
 			if ($redir_game) {
 				$header_loc = "/wallet/".$redir_game['url_identifier']."/";
 			}
@@ -222,7 +223,7 @@ else if ($_REQUEST['do'] == "login") {
 		die();
 	}
 }
-else if ($_REQUEST['do'] == "logout" && $thisuser) {
+else if ($_REQUEST['action'] == "logout" && $thisuser) {
 	$q = "UPDATE user_sessions SET logout_time='".time()."' WHERE session_id='".$session['session_id']."';";
 	$r = $app->run_query($q);
 	
@@ -274,7 +275,7 @@ if ($thisuser) {
 		}
 		
 		if ($user_game && $user_game['payment_required'] == 0) {
-			if ($_REQUEST['do'] == "save_address") {
+			if ($_REQUEST['action'] == "save_address") {
 				$bitcoin_address = $_REQUEST['bitcoin_address'];
 				
 				if ($bitcoin_address != "") {
@@ -301,7 +302,7 @@ if ($thisuser) {
 				</script>
 				<div class="container" style="max-width: 1000px; padding-top: 10px;">
 					<form action="/wallet/<?php echo $requested_game['url_identifier']; ?>/" method="post">
-						<input type="hidden" name="do" value="save_address" />
+						<input type="hidden" name="action" value="save_address" />
 						This is a paid game; please specify a Bitcoin address where your winnings should be sent:<br/>
 						<div class="row">
 							<div class="col-md-8">
@@ -493,7 +494,7 @@ if ($thisuser) {
 	}
 }
 
-if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['do'] == "save_voting_strategy_fees")) {
+if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['action'] == "save_voting_strategy_fees")) {
 	$voting_strategy = $_REQUEST['voting_strategy'];
 	$voting_strategy_id = intval($_REQUEST['voting_strategy_id']);
 	$aggregate_threshold = intval($_REQUEST['aggregate_threshold']);
@@ -517,7 +518,7 @@ if ($thisuser && ($_REQUEST['do'] == "save_voting_strategy" || $_REQUEST['do'] =
 		$r = $app->run_query($q);
 		$user_strategy = $r->fetch();
 	}
-	if ($_REQUEST['do'] == "save_voting_strategy_fees") {
+	if ($_REQUEST['action'] == "save_voting_strategy_fees") {
 		$transaction_fee = floatval($_REQUEST['transaction_fee']);
 		if ($transaction_fee == floor($transaction_fee*pow(10,8))/pow(10,8)) {
 			$transaction_fee = $transaction_fee*pow(10,8);
@@ -624,7 +625,7 @@ if (empty($pagetitle)) {
 $nav_tab_selected = "wallet";
 include('includes/html_start.php');
 
-if ($_REQUEST['do'] == "signup" && $error_code == 1) { ?>
+if ($_REQUEST['action'] == "signup" && $error_code == 1) { ?>
 	<script type="text/javascript">
 	$(document).ready(function() {
 		$('#login_username').val('<?php echo $username; ;?>');
@@ -676,27 +677,7 @@ if ($thisuser && $game) {
 		if ($r->rowCount() == 1) {
 			$user_game = $r->fetch();
 			
-			$q = "SELECT * FROM user_strategies WHERE strategy_id='".$user_game['strategy_id']."';";
-			$r = $app->run_query($q);
-			
-			if ($r->rowCount() > 0) {
-				$user_strategy = $r->fetch();
-			}
-			else {
-				$q = "SELECT * FROM user_strategies WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
-				$r = $app->run_query($q);
-				
-				if ($r->rowCount() > 0) {
-					$user_strategy = $r->fetch();
-					$q = "UPDATE user_games SET strategy_id='".$user_strategy['strategy_id']."' WHERE user_game_id='".$user_game['user_game_id']."';";
-					$r = $app->run_query($q);
-				}
-				else {
-					$q = "DELETE FROM user_games WHERE user_game_id='".$user_game['user_game_id']."';";
-					$r = $app->run_query($q);
-					die("No strategy!");
-				}
-			}
+			$user_strategy = $game->fetch_user_strategy($user_game);
 		}
 		else {
 			die("Error: you're not in this game.");
@@ -956,7 +937,7 @@ if ($thisuser && $game) {
 				<br/>
 				<h2>Transaction Fees</h2>
 				<form method="post" action="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">
-					<input type="hidden" name="do" value="save_voting_strategy_fees" />
+					<input type="hidden" name="action" value="save_voting_strategy_fees" />
 					<input type="hidden" name="voting_strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
 					Pay fees on every transaction of:<br/>
 					<div class="row">
@@ -973,7 +954,7 @@ if ($thisuser && $game) {
 				<h2>Choose your voting strategy</h2>
 				Please set up a voting strategy so that your votes can be cast even when you're not online to vote.<br/><br/>
 				<form method="post" action="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">
-					<input type="hidden" name="do" value="save_voting_strategy" />
+					<input type="hidden" name="action" value="save_voting_strategy" />
 					<input type="hidden" id="voting_strategy_id" name="voting_strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
 					
 					<div class="row bordered_row">
@@ -1046,14 +1027,14 @@ if ($thisuser && $game) {
 							<?php
 							$by_rank_ranks = explode(",", $user_strategy['by_rank_ranks']);
 							
-							for ($rank=1; $rank<=16; $rank++) {
+							for ($rank=1; $rank<=$game->db_game['num_voting_options']; $rank++) {
 								if ($rank%4 == 1) echo '<div class="row">';
 								echo '<div class="col-md-3">';
 								echo '<input type="checkbox" name="by_rank_'.$rank.'" id="by_rank_'.$rank.'" value="1"';
 								if (in_array($rank, $by_rank_ranks)) echo ' checked="checked"';
 								echo '><label class="plainlabel" for="by_rank_'.$rank.'"> '.$app->to_ranktext($rank)."</label>";
 								echo '</div>';
-								if ($rank%4 == 0) echo "</div>\n";
+								if ($rank%4 == 0 || $rank == $game->db_game['num_voting_options']) echo "</div>\n";
 							}
 							?>
 						</div>

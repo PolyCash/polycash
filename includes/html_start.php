@@ -51,7 +51,7 @@
 			</div>
 			<div id="navbar" class="navbar-collapse collapse">
 				<ul class="nav navbar-nav">
-					<li<?php if ($nav_tab_selected == "wallet" && $_REQUEST['do'] != "logout") {
+					<li<?php if ($nav_tab_selected == "wallet" && $_REQUEST['action'] != "logout") {
 						echo ' class="active"';
 					}
 					?>><a href="/wallet/<?php
@@ -65,8 +65,8 @@
 					<?php if ($game) { ?><li<?php if ($nav_tab_selected == "game_homepage") echo ' class="active"'; ?>><a href="/<?php echo $game->db_game['url_identifier']; ?>/">About</a></li><?php } ?>
 					<li<?php if ($nav_tab_selected == "explorer") echo ' class="active"'; ?>><a href="/explorer/<?php if ($game) echo $game->db_game['url_identifier']."/"; ?>">Explorer</a></li>
 					<?php
-					if ($thisuser || (isset($_REQUEST['do']) && $_REQUEST['do'] == "logout")) { ?>
-						<li<?php if ($nav_tab_selected == "wallet" && $_REQUEST['do'] == "logout") echo ' class="active"'; ?>><a href="/wallet/?do=logout">Log Out</a></li>
+					if ($thisuser || (isset($_REQUEST['action']) && $_REQUEST['action'] == "logout")) { ?>
+						<li<?php if ($nav_tab_selected == "wallet" && $_REQUEST['action'] == "logout") echo ' class="active"'; ?>><a href="/wallet/?action=logout">Log Out</a></li>
 						<?php
 					}
 					?>

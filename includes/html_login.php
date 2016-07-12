@@ -31,7 +31,7 @@ $(document).ready(function() {
 	<div class="col-md-6">
 		<b style="font-size: 17px; line-height: 24px;">Please log in to continue</b>
 		<form onsubmit="$('#login_password').val(Sha256.hash($('#login_password').val()));" action="/wallet/<?php if ($url_game) echo $url_game['url_identifier']."/"; ?>" method="post">
-			<input type="hidden" name="do" value="login" />
+			<input type="hidden" name="action" value="login" />
 			<?php
 			if ($redirect_id) echo '<input type="hidden" name="redirect_id" value="'.$redirect_id.'" />'."\n";
 			
@@ -66,7 +66,7 @@ $(document).ready(function() {
 		<b style="font-size: 17px; line-height: 24px;">Or sign up for an account</b><br/>
 		
 		<form action="/wallet/<?php if ($url_game) echo $url_game['url_identifier']."/"; ?>" method="post" onsubmit="$('#signup_password').val(Sha256.hash($('#signup_password').val())); $('#signup_password2').val(Sha256.hash($('#signup_password2').val()));">
-			<input type="hidden" name="do" value="signup" />
+			<input type="hidden" name="action" value="signup" />
 			<?php
 			if ($redirect_id) echo '<input type="hidden" name="redirect_id" value="'.$redirect_id.'" />'."\n";
 			
