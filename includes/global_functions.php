@@ -1,6 +1,9 @@
 <?php
-function new_db_conn() {
+function new_db_conn($skip_select_db) {
 	$conn = new PDO("mysql:host=".$GLOBALS['mysql_server'].";charset=utf8", $GLOBALS['mysql_user'], $GLOBALS['mysql_password']) or die("Error, failed to connect to the database.");
+	if (empty($skip_select_db)) {
+		$conn->query("USE ".$GLOBALS['mysql_database']);
+	}
 	return $conn;
 }
 
@@ -120,7 +123,15 @@ function pow_reward_in_round(&$db_game, $round_id) {
 function pos_reward_in_round(&$db_game, $round_id) {
 	if ($db_game['inflation'] == "linear") return $db_game['pos_reward'];
 	else {
-		$round_coins_created = coins_created_in_round($db_game, $round_id);
+		if ($round_id > 1 || empty($db_game['game_id'])) {
+			$round_coins_created = coins_created_in_round($db_game, $round_id);
+		}
+		else {
+			$dbh = new_db_conn(false);
+			$app = new App($dbh);
+			$game = new game($app, $db_game['game_id']);
+			$round_coins_created = $game->coins_in_existence(false)*$db_game['exponential_inflation_rate'];
+		}
 		return floor((1-$db_game['exponential_inflation_minershare'])*$round_coins_created);
 	}
 }
