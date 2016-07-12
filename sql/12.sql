@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `login_method` ENUM('password','email') NOT NULL DEFAULT 'password' AFTER `logged_in`;

@@ -305,9 +305,9 @@ class User {
 		
 		if (!empty($_REQUEST['redirect_id'])) {
 			$redirect_url_id = intval($_REQUEST['redirect_id']);
-			$q = "SELECT * FROM redirect_urls WHERE redirect_url_id='".$redirect_url_id."';";
+			$q = "SELECT * FROM redirect_urls WHERE redirect_url_id=".$this->app->quote_escape($redirect_url_id).";";
 			$r = $this->app->run_query($q);
-		
+			
 			if ($r->rowCount() == 1) {
 				$redirect_url = $r->fetch();
 			}

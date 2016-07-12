@@ -641,7 +641,7 @@ class App {
 			echo '<div id="game'.$counter.'_current_round_table">';
 			echo $featured_game->current_round_table($current_round_id, false, false, true, $counter);
 			echo '</div>';
-			echo '<a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-success">Play Now</a>';
+			echo '<a href="/wallet/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-success">Play Now</a>';
 			echo ' <a href="/explorer/'.$featured_game->db_game['url_identifier'].'/rounds/" class="btn btn-primary">Blockchain Explorer</a>';
 			echo '<br/><br/></div>';
 			

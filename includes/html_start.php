@@ -35,7 +35,7 @@
 	<?php
 	}
 	?>
-	<meta property="og:image" content="http://empirecoin.org/img/logo/icon-150x150.png"/>
+	<meta property="og:image" content="<?php echo $GLOBALS['base_url']; ?>/img/logo/icon-150x150.png"/>
 </head>
 <body>
 	<nav class="navbar navbar-default navbar-fixed-top">
