@@ -216,6 +216,16 @@ class Game {
 			$box_diam = round(sqrt($sq_px));
 			if ($box_diam < $min_px_diam) $box_diam = $min_px_diam;
 			
+			$holder_width = $box_diam;
+			
+			$show_boundbox = false;
+			if ($i == 0 || $option_score > $max_score_sum) {
+				$show_boundbox = true;
+				$boundbox_sq_px = $this->db_game['max_voting_fraction']*100*$sq_px_per_pct_point;
+				$boundbox_diam = round(sqrt($boundbox_sq_px));
+				if ($boundbox_diam > $holder_width) $holder_width = $boundbox_diam;
+			}
+			
 			$html .= '
 			<div class="vote_option_box_container">
 				<div class="vote_option_label';
@@ -224,10 +234,19 @@ class Game {
 				$html .= '"';
 				if ($clickable) $html .= ' style="cursor: pointer;" onclick="Games['.$game_instance_id.'].option_selected('.$i.'); Games['.$game_instance_id.'].start_vote('.$round_stats[$i]['option_id'].');"';
 				$html .= '>'.$round_stats[$i]['name'].' ('.$pct_votes.'%)</div>
-				<div class="stage vote_option_box_holder" style="height: '.$box_diam.'px; width: '.$box_diam.'px;">
-					<div class="ball vote_option_box" style="';
+				<div class="stage vote_option_box_holder" style="height: '.$holder_width.'px; width: '.$holder_width.'px;">';
+				if ($show_boundbox) {
+					$html .= '<div class="vote_option_boundbox" style="height: '.$boundbox_diam.'px; width: '.$boundbox_diam.'px;';
+					if ($holder_width != $boundbox_diam) $html .= 'left: '.(($holder_width-$boundbox_diam)/2).'px; top: '.(($holder_width-$boundbox_diam)/2).'px;';
+					$html .= '"></div>';
+				}
+				$html .= '
+					<div class="ball vote_option_box" style="width: '.$box_diam.'px; height: '.$box_diam.'px;';
+					if ($holder_width != $box_diam) $html .= 'left: '.(($holder_width-$box_diam)/2).'px; top: '.(($holder_width-$box_diam)/2).'px;';
 					if ($round_stats[$i]['image_id'] > 0) $html .= 'background-image: url(\''.$this->app->image_url($round_stats[$i]).'\');';
 					if ($clickable) $html .= 'cursor: pointer;';
+					if ($option_score > $max_score_sum) $html .= 'opacity: 0.5; z-index: 1;';
+					else $html .= 'z-index: 3;';
 					$html .= '" id="game'.$game_instance_id.'_vote_option_'.$i.'"';
 					if ($clickable) $html .= ' onmouseover="Games['.$game_instance_id.'].option_selected('.$i.');" onclick="Games['.$game_instance_id.'].option_selected('.$i.'); Games['.$game_instance_id.'].start_vote('.$round_stats[$i]['option_id'].');"';
 					$html .= '>
