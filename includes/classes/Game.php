@@ -654,6 +654,9 @@ class Game {
 		$round_id = $this->block_to_round($last_block_id+1);
 		$taper_factor = $this->block_id_to_taper_factor($last_block_id+1);
 		
+		$q = "UPDATE game_voting_options SET coin_score=0, coin_block_score=0, coin_round_score=0, votes=0 WHERE game_id='".$this->db_game['game_id']."';";
+		$r = $this->app->run_query($q);
+		
 		$q = "UPDATE game_voting_options gvo INNER JOIN (
 			SELECT option_id, SUM(amount) sum_amount, SUM(coin_blocks_destroyed) sum_cbd, SUM(coin_rounds_destroyed) sum_crd, SUM(votes) sum_votes FROM transaction_ios 
 			WHERE game_id='".$this->db_game['game_id']."' AND create_round_id=".$round_id." AND amount > 0
@@ -1736,9 +1739,6 @@ class Game {
 	}
 
 	public function add_round_from_rpc($round_id) {
-		$q = "UPDATE game_voting_options SET coin_score=0, coin_block_score=0, coin_round_score=0, votes=0 WHERE game_id='".$this->db_game['game_id']."';";
-		$r = $this->app->run_query($q);
-		
 		$rankings = $this->round_voting_stats_all($round_id);
 		
 		$score_sum = $rankings[0];
@@ -2085,7 +2085,7 @@ class Game {
 					$html .= $num_players."/".$this->db_game['start_condition_players']." players have already joined, waiting for ".$players_needed." more players.";
 				}
 			}
-			else $html .= "This game starts at ".$this->db_game['start_datetime'];
+			else $html .= "This game starts in ".$this->app->format_seconds(strtotime($this->db_game['start_datetime'])-time())." at ".$this->db_game['start_datetime'];
 		}
 		else if ($this->db_game['game_status'] == "completed") $html .= "This game is over.";
 

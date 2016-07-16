@@ -88,6 +88,8 @@ if ($game->db_game['invite_currency'] > 0) {
 						}
 					}
 					
+					echo "So far, ".$game->paid_players_in_game()." have joined this game. ";
+					
 					if ($game->db_game['short_description'] != "") {
 						echo $game->db_game['short_description']." ";
 					}

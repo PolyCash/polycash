@@ -79,7 +79,7 @@ class App {
 		$r = $this->run_query($q);
 		$delivery_id = $this->last_insert_id();
 		
-		$command = "/usr/bin/php ".realpath(dirname(dirname(__FILE__)))."/scripts/async_email_deliver.php ".$delivery_id." > /dev/null 2>/dev/null &";
+		$command = $this->php_binary_location()." ".realpath(dirname(dirname(dirname(__FILE__))))."/scripts/async_email_deliver.php ".$delivery_id." > /dev/null 2>/dev/null &";
 		exec($command);
 		
 		/*$curl_url = $GLOBALS['base_url']."/scripts/async_email_deliver.php?delivery_id=".$delivery_id;

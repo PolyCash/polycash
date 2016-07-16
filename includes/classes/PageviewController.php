@@ -109,8 +109,8 @@ class PageviewController {
 		else return -1;
 	}
 	function insert_pageview($thisuser) {
-		$ip_identifier = ip_identifier();
-		$cookie_identifier = cookie_identifier();
+		$ip_identifier = $this->ip_identifier();
+		$cookie_identifier = $this->cookie_identifier();
 		
 		if ($ip_identifier != -1 && $cookie_identifier != -1) {}
 		else if ($ip_identifier == -1 && $cookie_identifier == -1) {
@@ -163,7 +163,7 @@ class PageviewController {
 			$browserstring_id = $browserstring['browserstring_id'];
 		}
 		else {
-			$ub = getBrowser();
+			$ub = $this->getBrowser();
 			$b_searchname = strtolower(str_replace(" ", "_", $ub['name']));
 			$q = "SELECT browser_id FROM browsers WHERE name=".$this->app->quote_escape($b_searchname).";";
 			$r = $this->app->run_query($q);
@@ -177,7 +177,7 @@ class PageviewController {
 				$browser_id = $this->app->last_insert_id();
 			}
 			
-			if (IsTorExitPoint()) $browser_id = 1; // ID number for Tor
+			if ($this->IsTorExitPoint()) $browser_id = 1; // ID number for Tor
 			
 			$q = "INSERT INTO browserstrings SET viewer_id='".$cookie_identifier['viewer_id']."', browser_string=".$this->app->quote_escape($_SERVER['HTTP_USER_AGENT']).", browser_id='$browser_id', ";
 			$q .= "name=".$this->app->quote_escape($ub['name']).", version=".$this->app->quote_escape($ub['version']).", platform=".$this->app->quote_escape($ub['platform']).", pattern=".$this->app->quote_escape($ub['pattern']).";";
@@ -193,7 +193,7 @@ class PageviewController {
 			$pv_page_id = $pv_page_id[0];
 		}
 		else {
-			$q = "INSERT INTO page_urls SET url='".$page_url."';";
+			$q = "INSERT INTO page_urls SET url=".$page_url.";";
 			$r = $this->app->run_query($q);
 			$pv_page_id = $this->app->last_insert_id();
 		}
@@ -203,9 +203,6 @@ class PageviewController {
 		$r = $this->app->run_query($q);
 		$pageview_id = $this->app->last_insert_id();
 		
-		if ($thisuser) {
-			set_user_active($thisuser->db_user['user_id']);
-		}
 		$result[0] = $pageview_id;
 		$result[1] = $cookie_identifier['viewer_id'];
 		
@@ -245,7 +242,7 @@ class PageviewController {
 		return $html;
 	}
 	function IsTorExitPoint(){
-		if (gethostbyname(ReverseIPOctets($_SERVER['REMOTE_ADDR']).".".$_SERVER['SERVER_PORT'].".".ReverseIPOctets($_SERVER['SERVER_ADDR']).".ip-port.exitlist.torproject.org")=="127.0.0.2") {
+		if (gethostbyname($this->ReverseIPOctets($_SERVER['REMOTE_ADDR']).".".$_SERVER['SERVER_PORT'].".".$this->ReverseIPOctets($_SERVER['SERVER_ADDR']).".ip-port.exitlist.torproject.org")=="127.0.0.2") {
 			return true;
 		} else {
 			return false;
