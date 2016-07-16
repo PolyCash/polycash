@@ -747,6 +747,23 @@ if ($thisuser && $game) {
 						</div>
 					</div>
 				</form>
+				<br/>
+				
+				<h2>Notifications</h2>
+				Would you like to receive notifications whenever a new round begins?<br/>
+				<div class="row">
+					<div class="col-sm-6">
+						<select class="form-control" id="notification_preference" name="notification_preference" onfocus="notification_focused();" onchange="notification_pref_changed();">
+							<option <?php if ($user_game['notification_preference'] == "none") echo 'selected="selected" '; ?>value="none">No, don't notify me</option>
+							<option <?php if ($user_game['notification_preference'] == "email") echo 'selected="selected" '; ?>value="email">Yes, email me whenever a new round starts</option>
+						</select>
+					</div>
+					<div class="col-sm-6">
+						<input style="display: none;" class="form-control" type="text" name="notification_email" id="notification_email" onfocus="notification_focused();" placeholder="Enter your email address" value="<?php echo $thisuser->db_user['notification_email']; ?>" />
+					</div>
+				</div>
+				<button style="display: none;" id="notification_save_btn" class="btn btn-primary" onclick="save_notification_preferences();">Save Notification Settings</button>
+				<br/>
 				
 				<h2>Choose your voting strategy</h2>
 				Please set up a voting strategy so that your votes can be cast even when you're not online to vote.<br/><br/>
@@ -881,24 +898,8 @@ if ($thisuser && $game) {
 					<br/>
 					<input class="btn btn-primary" type="submit" value="Save Voting Strategy" />
 				</form>
-				
-				<?php /*
-				<h2>Notifications</h2>
-				You can receive notifications whenever your <?php echo $game->db_game['coin_name_plural']; ?> are unlocked and ready to vote.<br/>
-				<div class="row">
-					<div class="col-sm-6">
-						<select class="form-control" id="notification_preference" name="notification_preference" onfocus="notification_focused();" onchange="notification_pref_changed();">
-							<option <?php if ($thisuser->db_user['notification_preference'] == "none") echo 'selected="selected" '; ?>value="none">Don't send me any notifications</option>
-							<option <?php if ($thisuser->db_user['notification_preference'] == "email") echo 'selected="selected" '; ?>value="email">Send me an email notification when <?php echo $game->db_game['coin_name_plural']; ?> become available</option>
-						</select>
-					</div>
-					<div class="col-sm-6">
-						<input style="display: none;" class="form-control" type="text" name="notification_email" id="notification_email" onfocus="notification_focused();" placeholder="Enter your email address" value="<?php echo $thisuser->db_user['notification_email']; ?>" />
-					</div>
-				</div>
-				<button style="display: none;" id="notification_save_btn" class="btn btn-primary" onclick="save_notification_preferences();">Save Notification Settings</button>
 				<br/>
-				
+				<?php /*
 				<h2>Privacy Settings</h2>
 				You can make your gameplay public by choosing an alias below.<br/>
 				<div class="row">

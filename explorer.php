@@ -279,37 +279,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					</div>
 					<?php
 					if ($thisuser) {
-						$include_unconfirmed = false;
-						if ($round_status == "current") $include_unconfirmed = true;
-						
-						$returnvals = $game->my_votes_in_round($this_round, $thisuser->db_user['user_id'], $include_unconfirmed);
-						$my_votes = $returnvals[0];
-						$coins_voted = $returnvals[1];
-					}
-					else $my_votes = false;
-					
-					if (!empty($my_votes[$round['winning_option_id']])) {
-						$payout_amt = (floor(100*pos_reward_in_round($game->db_game, $this_round)/pow(10,8)*$my_votes[$round['winning_option_id']]['votes']/$round['winning_score'])/100);
-						
-						$payout_disp = $app->format_bignum($payout_amt);
-						echo "You won <font class=\"greentext\">+".$payout_disp." ";
-						if ($payout_disp == '1') echo $game->db_game['coin_name'];
-						else echo $game->db_game['coin_name_plural'];
-						
-						$vote_disp = $app->format_bignum($my_votes[$round['winning_option_id']]['coins']/pow(10,8));
-						echo "</font> by voting ".$vote_disp." ";
-						if ($vote_disp == '1') echo $game->db_game['coin_name'];
-						else echo $game->db_game['coin_name_plural'];
-						
-						if ($game->db_game['payout_weight'] != "coin") {
-							$vote_disp = $app->format_bignum($my_votes[$round['winning_option_id']][$game->db_game['payout_weight'].'s']/pow(10,8));
-							echo " (".$vote_disp;
-							echo " vote";
-							if ($vote_disp != '1') echo 's';
-							echo ")";
-						}
-						
-						echo " for ".$round['name']."</font><br/>\n";
+						echo $game->user_winnings_in_round_description($thisuser->db_user['user_id'], $this_round, $round_status, $round['winning_option_id'], $round['winning_score'], $round['name'])."<br/>";
 					}
 					
 					if ($round['payout_transaction_id'] > 0) {
