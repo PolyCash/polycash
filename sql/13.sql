@@ -1,0 +1,1 @@
+ALTER TABLE `games` ADD `public_unclaimed_invitations` TINYINT(1) NOT NULL DEFAULT '0' AFTER `giveaway_amount`;

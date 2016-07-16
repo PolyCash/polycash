@@ -83,12 +83,17 @@ function login() {
 	if ($('#login_password_password').val() != "") $('#login_password_password').val(Sha256.hash($('#login_password_password').val()));
 	var alias = $('#alias').val();
 	var password = $('#login_password_password').val();
+	$('#login_btn').val("Loading...");
 	$.get("/ajax/log_in.php?alias="+encodeURIComponent(alias)+"&password="+encodeURIComponent(password)+"&redirect_id="+parseInt($('#redirect_id').val()), function(result) {
+		$('#login_btn').val("Log In");
 		var result_obj = JSON.parse(result);
 		if (result_obj['status_code'] == 1) {
 			window.location = result_obj['message'];
 		}
-		else alert(result_obj['message']);
+		else {
+			alert(result_obj['message']);
+			$('#login_password_password').val("");
+		}
 	});
 }
 </script>
@@ -150,7 +155,7 @@ function login() {
 			<div class="col-md-8 col-md-push-2">
 				Please enter your password:<br/>
 				<input id="login_password_password" style="margin-top: 10px;" type="password" required="required" class="form-control" />
-				<input type="submit" style="margin-top: 10px;" class="btn btn-success" value="Log In" />
+				<input id="login_btn" type="submit" style="margin-top: 10px;" class="btn btn-success" value="Log In" />
 			</div>
 		</div>
 	</form>

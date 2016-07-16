@@ -76,7 +76,7 @@ if ($thisuser) {
 			}
 			
 			if ($user_game['bitcoin_address_id'] > 0) {}
-			else if ($requested_game['giveaway_status'] == "invite_pay" || $requested_game['giveaway_status'] == "public_pay") {
+			else if ($requested_game['giveaway_status'] == "invite_pay" || $requested_game['giveaway_status'] == "public_pay" || $game->pot_value() > 0) {
 				$pagetitle = "Join ".$requested_game['name'];
 				$nav_tab_selected = "wallet";
 				include('includes/html_start.php');
@@ -89,8 +89,8 @@ if ($thisuser) {
 				<div class="container" style="max-width: 1000px; padding-top: 10px;">
 					<form action="/wallet/<?php echo $requested_game['url_identifier']; ?>/" method="post">
 						<input type="hidden" name="action" value="save_address" />
-						This is a paid game; please specify a Bitcoin address where your winnings should be sent:<br/>
-						<div class="row">
+						This game is played for real money; please specify a Bitcoin address where your winnings should be sent:<br/>
+						<div class="row" style="margin-top: 10px;">
 							<div class="col-md-8">
 								<input class="form-control" id="bitcoin_address" name="bitcoin_address" />
 							</div>
@@ -104,6 +104,17 @@ if ($thisuser) {
 			}
 		}
 		else if (!$user_game && ($requested_game['giveaway_status'] == "invite_free" || $requested_game['giveaway_status'] == "invite_pay")) {
+			if ($requested_game['public_unclaimed_invitations'] == 1) {
+				$q = "SELECT * FROM invitations WHERE game_id='".$requested_game['game_id']."' AND used=0 AND used_user_id IS NULL ORDER BY invitation_id DESC LIMIT 1;";
+				$r = $app->run_query($q);
+				if ($r->rowCount() > 0) {
+					$invitation = $r->fetch();
+					$invite_game = false;
+					$app->try_apply_invite_key($thisuser->db_user['user_id'], $invitation['invitation_key'], $invite_game);
+					header("Location: /wallet/".$invite_game->db_game['url_identifier']);
+					die();
+				}
+			}
 			$pagetitle = "Join ".$requested_game['name'];
 			$nav_tab_selected = "wallet";
 			include('includes/html_start.php');
