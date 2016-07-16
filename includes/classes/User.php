@@ -221,6 +221,7 @@ class User {
 			$q = "INSERT INTO user_games SET user_id='".$this->db_user['user_id']."', game_id='".$game_id."'";
 			if ($this->db_user['bitcoin_address_id'] > 0) $q .= ", bitcoin_address_id='".$this->db_user['bitcoin_address_id']."'";
 			if ($game->db_game['giveaway_status'] == "public_pay" || $game->db_game['giveaway_status'] == "invite_pay") $q .= ", payment_required=1";
+			if (strpos($this->db_user['notification_email'], '@')) $q .= ", notification_preference='email'";
 			$q .= ";";
 			$r = $this->app->run_query($q);
 			$user_game_id = $this->app->last_insert_id();
