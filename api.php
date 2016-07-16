@@ -1,7 +1,7 @@
 <?php
 include('includes/connect.php');
 include('includes/get_session.php');
-if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $GLOBALS['pageview_controller']->insert_pageview($thisuser);
+if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
 $uri = $_SERVER['REQUEST_URI'];
 $uri_parts = explode("/", $uri);
@@ -101,7 +101,7 @@ if ($uri_parts[1] == "api") {
 	else if ($uri_parts[2] == "about") {
 		require_once('includes/connect.php');
 		require_once('includes/get_session.php');
-		if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $GLOBALS['pageview_controller']->insert_pageview($thisuser);
+		if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 		
 		$pagetitle = $GLOBALS['coin_brand_name']." API Documentation";
 		$nav_tab_selected = "home";

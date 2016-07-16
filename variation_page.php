@@ -1,5 +1,5 @@
 <?php
-if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $GLOBALS['pageview_controller']->insert_pageview($thisuser);
+if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
 $pagetitle = $game_variation['type_name']." - ".$game_variation['variation_name']." - ".$GLOBALS['coin_brand_name'];
 $nav_tab_selected = "game_homepage";

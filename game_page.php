@@ -1,5 +1,5 @@
 <?php
-if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $GLOBALS['pageview_controller']->insert_pageview($thisuser);
+if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
 if (!isset($_REQUEST['action'])) $_REQUEST['action'] = "";
 
