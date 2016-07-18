@@ -1027,37 +1027,21 @@ if ($thisuser && $game) {
 			<div class="tabcontent" style="display: none;" id="tabcontent5">
 				<h4>My Games</h4>
 				<?php
-				$q = "SELECT *, g.game_id AS game_id FROM games g LEFT JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' OR g.creator_id='".$thisuser->db_user['user_id']."' ORDER BY g.game_id ASC;";
+				$game_id_csv = "";
+				$q = "SELECT * FROM games WHERE creator_id='".$thisuser->db_user['user_id']."' ORDER BY game_id ASC;";
 				$r = $app->run_query($q);
-				
 				while ($user_game = $r->fetch()) {
-					?>
-					<div class="row game_row<?php
-					if ($user_game['game_id'] == $game->db_game['game_id']) echo  ' boldtext';
-					?>">
-						<div class="col-sm-1 game_cell">
-							<?php echo ucwords($user_game['game_status']); ?>
-						</div>
-						<div class="col-sm-5 game_cell">
-							<a target="_blank" href="/wallet/<?php echo $user_game['url_identifier']; ?>/"><?php echo $user_game['name']; ?></a>
-						</div>
-						<div class="col-sm-3 game_cell">
-							<?php
-							echo '<a id="fetch_game_link_'.$user_game['game_id'].'" href="" onclick="switch_to_game('.$user_game['game_id'].', \'fetch\'); return false;">Settings</a>';
-							?>
-						</div>
-						<div class="col-sm-3 game_cell">
-							<?php
-							$perm_to_invite = $thisuser->user_can_invite_game($user_game);
-							if ($perm_to_invite) {
-								?>
-								<a href="" onclick="manage_game_invitations(<?php echo $user_game['game_id']; ?>); return false;">Invitations</a>
-								<?php
-							}
-							?>
-						</div>
-					</div>
-					<?php
+					$game_id_csv .= $user_game['game_id'].",";
+					echo $app->game_admin_row($thisuser, $user_game, $game->db_game['game_id']);
+				}
+				if ($game_id_csv != "") $game_id_csv = substr($game_id_csv, 0, strlen($game_id_csv)-1);
+				
+				$q = "SELECT * FROM games g LEFT JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."'";
+				if ($game_id_csv != "") $q .= " AND g.game_id NOT IN (".$game_id_csv.")";
+				$q .= " ORDER BY g.game_id ASC;";
+				$r = $app->run_query($q);
+				while ($user_game = $r->fetch()) {
+					echo $app->game_admin_row($thisuser, $user_game, $game->db_game['game_id']);
 				}
 				
 				$new_game_perm = $thisuser->new_game_permission();
