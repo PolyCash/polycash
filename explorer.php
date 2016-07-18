@@ -279,7 +279,8 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					</div>
 					<?php
 					if ($thisuser) {
-						echo $game->user_winnings_in_round_description($thisuser->db_user['user_id'], $this_round, $round_status, $round['winning_option_id'], $round['winning_score'], $round['name'])."<br/>";
+						$my_votes = false;
+						echo $game->user_winnings_in_round_description($thisuser->db_user['user_id'], $this_round, $round_status, $round['winning_option_id'], $round['winning_score'], $round['name'], $my_votes)."<br/>";
 					}
 					
 					if ($round['payout_transaction_id'] > 0) {

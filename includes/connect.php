@@ -22,12 +22,7 @@ if ($GLOBALS['base_url'] && (!isset($host_not_required) || !$host_not_required))
 }
 
 date_default_timezone_set($GLOBALS['default_timezone']);
-$dbh = new_db_conn();
-if (isset($skip_select_db) && $skip_select_db) {}
-else {
-	$dbh->query("USE ".$GLOBALS['mysql_database']) or die ("Please <a href=\"/install.php?key=\">install the database</a>");
-}
-
+$dbh = new_db_conn($skip_select_db);
 $dbh->query("SET sql_mode='';");
 
 header('Content-Type: text/html; charset=UTF-8');

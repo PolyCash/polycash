@@ -49,7 +49,7 @@ else {
 				$r = $app->run_query($q);
 			}
 			
-			$q = "UPDATE users SET ip_address=".$app->quote_escape($_SERVER['REMOTE_ADDR'])."' WHERE user_id='".$thisuser->db_user['user_id']."';";
+			$q = "UPDATE users SET ip_address=".$app->quote_escape($_SERVER['REMOTE_ADDR'])." WHERE user_id='".$thisuser->db_user['user_id']."';";
 			$r = $app->run_query($q);
 		}
 		
@@ -63,16 +63,15 @@ else {
 			$email_id = $app->mail_async($email, $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], "New account created", $email_message, "", "");
 		}
 		
-		$q = "SELECT * FROM games WHERE game_id='".$app->get_site_constant('primary_game_id')."';";
-		$r = $app->run_query($q);
-		
-		if ($r->rowCount() == 1) {
-			$db_primary_game = $r->fetch();
-			$primary_game = new Game($app, $db_primary_game['game_id']);
+		if ($primary_game['giveaway_status'] == "public_free") {
+			$q = "SELECT * FROM games WHERE game_id='".$app->get_site_constant('primary_game_id')."';";
+			$r = $app->run_query($q);
 			
-			$thisuser->ensure_user_in_game($primary_game->db_game['game_id']);
-			
-			if ($primary_game->db_game['giveaway_status'] == "public_free") {
+			if ($r->rowCount() == 1) {
+				$db_primary_game = $r->fetch();
+				$primary_game = new Game($app, $db_primary_game['game_id']);
+				
+				$thisuser->ensure_user_in_game($primary_game->db_game['game_id']);
 				$giveaway = $primary_game->new_game_giveaway($user_id, 'initial_purchase', false);
 			}
 		}

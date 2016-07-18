@@ -768,5 +768,28 @@ class App {
 		$url .= '.'.$db_image['extension'];
 		return $url;
 	}
+	
+	public function delete_unconfirmable_transactions() {
+		$start_time = microtime(true);
+		$unconfirmed_tx_r = $this->run_query("SELECT * FROM transactions WHERE block_id IS NULL ORDER BY game_id ASC;");
+		$game_id = false;
+		
+		while ($unconfirmed_tx = $unconfirmed_tx_r->fetch()) {
+			if ($unconfirmed_tx['game_id'] != $game_id) {
+				$game_id = $unconfirmed_tx['game_id'];
+				$game = new Game($this, $game_id);
+			}
+			
+			$coins_in = $this->transaction_coins_in($unconfirmed_tx['transaction_id']);
+			//$coins_out = $this->transaction_coins_out($unconfirmed_tx['transaction_id']);
+			if ($coins_in == 0) {
+				$this->run_query("DELETE t.*, io.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';");
+			}
+			else if ($unconfirmed_tx['fee_amount'] < 0) {
+				$this->run_query("DELETE t.*, io.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';");
+			}
+		}
+		echo "\nTook ".(microtime(true)-$start_time)." sec to delete unconfirmable transactions.\n\n";
+	}
 }
 ?>
