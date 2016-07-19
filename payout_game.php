@@ -7,6 +7,7 @@ if ($thisuser) {
 	if ($GLOBALS['rsa_keyholder_email'] != "" && $GLOBALS['rsa_pub_key'] != "") {
 		if ($thisuser->db_user['username'] == $GLOBALS['rsa_keyholder_email']) {
 			$game_id = intval($_REQUEST['game_id']);
+			$fee_satoshis = 5000;
 			
 			$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
 			$r = $app->run_query($q);
@@ -61,8 +62,6 @@ if ($thisuser) {
 						output_message(4, "Error, expected inputs to sum to ".$input_sum." but they summed to ".($total/pow(10,8)));
 					}
 					else {
-						$fee_satoshis = 5000;
-						
 						$q = "SELECT * FROM currencies WHERE currency_id='".$payout_game['invite_currency']."';";
 						$r = $app->run_query($q);
 						if ($r->rowCount() > 0) {
@@ -263,26 +262,62 @@ if ($thisuser) {
 						</script>
 						<?php
 						echo "<h2>".$payout_game['name']." - Generate payout transaction</h2>";
-						echo "bitcoind must be running for this step to work, but it doesn't have to be fully synced.<br/>\n";
-						echo 'Once the transaction is signed, broadcast it via <a target="_blank" href="https://blockr.io/tx/push">this link</a>.<br/><br/>';
-						echo $addr_html;
-						?>
-						<button id="generate_btn" class="btn btn-primary" onclick="initiate_withdrawal();" style="margin: 10px 0px;">Generate Payout Transaction</button>
 						
-						<div id="generate_result" style="display: none; word-wrap: break-word; margin: 10px 0px;"></div>
-						
-						<div id="tx_hash_form" style="margin: 10px 0px; display: none;">
-							After broadcasting the transaction, please enter the transaction hash here:<br/>
-							<div class="row">
-								<div class="col-md-4">
-									<input type="text" id="tx_hash" class="form-control" />
-								</div>
-								<div class="col-md-2">
-									<button class="btn btn-primary" onclick="submit_tx_hash();">Submit</button>
+						try {
+							$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['bitcoin_rpc_user'].':'.$GLOBALS['bitcoin_rpc_password'].'@127.0.0.1:'.$GLOBALS['bitcoin_port'].'/');
+							$getinfo = $coin_rpc->getinfo();
+							
+							echo "bitcoind must be running for this step to work, but it doesn't have to be fully synced.<br/>\n";
+							echo 'Once the transaction is signed, broadcast it via <a target="_blank" href="https://blockr.io/tx/push">this link</a>.<br/><br/>';
+							echo $addr_html;
+							?>
+							<button id="generate_btn" class="btn btn-primary" onclick="initiate_withdrawal();" style="margin: 10px 0px;">Generate Payout Transaction</button>
+							
+							<div id="generate_result" style="display: none; word-wrap: break-word; margin: 10px 0px;"></div>
+							
+							<div id="tx_hash_form" style="margin: 10px 0px; display: none;">
+								After broadcasting the transaction, please enter the transaction hash here:<br/>
+								<div class="row">
+									<div class="col-md-4">
+										<input type="text" id="tx_hash" class="form-control" />
+									</div>
+									<div class="col-md-2">
+										<button class="btn btn-primary" onclick="submit_tx_hash();">Submit</button>
+									</div>
 								</div>
 							</div>
-						</div>
-						<?php
+							<?php
+						}
+						catch (Exception $e) {
+							echo "Failed to connect to Bitcoin by RPC. Please connect to bitcoin and then reload this page.<br/>\n";
+							echo "Or sweep all bitcoins from these deposit addresses, then manually send bitcoins to players' addresses.<br/>\n";
+							echo $addr_html."<br/>\n";
+							
+							$qq = "SELECT *, ug.bitcoin_address_id AS bitcoin_address_id, u.user_id AS user_id FROM users u JOIN user_games ug ON u.user_id=ug.user_id LEFT JOIN external_addresses ea ON ug.bitcoin_address_id=ea.address_id WHERE ug.game_id='".$payout_game['game_id']."' AND ug.payment_required=0 ORDER BY ug.account_value DESC;";
+							$rr = $app->run_query($qq);
+							
+							$output_sum = 0;
+							$payout_game_obj = new Game($app, $payout_game['game_id']);
+							$coins_in_existence = $payout_game_obj->coins_in_existence(false);
+							
+							while ($temp_user_game = $rr->fetch()) {
+								$temp_user = new User($app, $temp_user_game['user_id']);
+								$payout_frac = $temp_user->account_coin_value($payout_game_obj)/$coins_in_existence;
+								$payout_amt = floor($payout_frac*(pow(10,8)*$input_sum - $fee_satoshis))/pow(10,8);
+								
+								if ($payout_amt > 0) {
+									if ($temp_user_game['bitcoin_address_id'] > 0) {
+										echo $temp_user_game['username']." has an end-of-game balance of ".$app->format_bignum($temp_user->account_coin_value($payout_game_obj)/pow(10,8))." coins. Pay ".$app->format_bignum($payout_amt)." BTC to ".$temp_user_game['address']."<br/>\n";
+										$output_sum += $payout_amt;
+									}
+									else {
+										echo $temp_user_game['username']." doesn't have a valid BTC address, cancelling the transaction...<br/>\n";
+									}
+								}
+							}
+							
+							echo "<br/><a href=\"\" onclick=\"initiate_withdrawal(); return false;\">Try creating bitcoind transaction</a>";
+						}
 					}
 					
 					echo '</div>';
