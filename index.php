@@ -15,7 +15,7 @@ include('includes/html_start.php');
 <div class="container" style="max-width: 1000px; padding-top: 10px;">
 	<div class="row">
 		<div class="col-sm-2 text-center">
-			<img alt="<?php echo $GLOBALS['coin_brand_name']; ?> Logo" id="home_logo" src="/img/logo/icon-150x150.png" />
+			<img alt="<?php echo $GLOBALS['coin_brand_name']; ?> Logo" id="home_logo" src="/images/logo/icon-150x150.png" />
 		</div>
 		<div class="col-sm-10">
 			<div class="paragraph">

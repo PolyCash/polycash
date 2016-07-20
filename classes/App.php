@@ -763,7 +763,7 @@ class App {
 	}
 	
 	public function image_url(&$db_image) {
-		$url = '/img/custom/'.$db_image['image_id'];
+		$url = '/images/custom/'.$db_image['image_id'];
 		if ($db_image['access_key'] != "") $url .= '_'.$db_image['access_key'];
 		$url .= '.'.$db_image['extension'];
 		return $url;

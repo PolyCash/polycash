@@ -35,7 +35,7 @@
 	<?php
 	}
 	?>
-	<meta property="og:image" content="<?php echo $GLOBALS['base_url']; ?>/img/logo/icon-150x150.png"/>
+	<meta property="og:image" content="<?php echo $GLOBALS['base_url']; ?>/images/logo/icon-150x150.png"/>
 </head>
 <body>
 	<nav class="navbar navbar-default navbar-fixed-top">
@@ -47,7 +47,7 @@
 					<span class="icon-bar"></span>
 					<span class="icon-bar"></span>
 				</button>
-				<a class="navbar-brand" href="/"><img alt="EmpireCoin Logo" id="nav_logo" src="/img/logo/icon-35x35.png" />EmpireCoin</a>
+				<a class="navbar-brand" href="/"><img alt="EmpireCoin Logo" id="nav_logo" src="/images/logo/icon-35x35.png" />EmpireCoin</a>
 			</div>
 			<div id="navbar" class="navbar-collapse collapse">
 				<ul class="nav navbar-nav">
