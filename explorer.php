@@ -205,7 +205,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					echo ', "'.$game->db_game['coin_name'].'"';
 					echo ', "'.$game->db_game['coin_name_plural'].'"';
 					echo ', '.$game->db_game['num_voting_options'];
-					echo ', "'.$game->db_game['payout_taper_function'].'"';
+					echo ', "'.$game->db_game['vote_effectiveness_function'].'"';
 					echo ', "explorer"';
 				?>));
 				</script>
@@ -250,7 +250,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					
 					if ($round_status == "current") {
 						$rankings = $game->round_voting_stats_all($current_round);
-						$round_score_sum = $rankings[0];
+						$round_sum_votes = $rankings[0];
 						$max_score = $rankings[1];
 						$stats_all = $rankings[2];
 						$option_id_to_rank = $rankings[3];
@@ -263,8 +263,8 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 						if ($round['winning_option_id'] > 0) echo "<h1>".$round['name']." wins round #".$round['round_id']."</h1>\n";
 						else echo "<h1>Round #".$round['round_id'].": No winner</h1>\n";
 						
-						$max_score = floor($round['score_sum']*$game->db_game['max_voting_fraction']);
-						$round_score_sum = $round['score_sum'];
+						$max_score = floor($round['sum_votes']*$game->db_game['max_voting_fraction']);
+						$round_sum_votes = $round['sum_votes'];
 					}
 					
 					echo "<h3>".$game->db_game['name']."</h3>";
@@ -273,7 +273,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 						<div class="col-md-6">
 							<div class="row">
 								<div class="col-sm-4">Total votes cast:</div>
-								<div class="col-sm-8"><?php echo $app->format_bignum($round_score_sum/pow(10,8)); ?> votes</div>
+								<div class="col-sm-8"><?php echo $app->format_bignum($round_sum_votes/pow(10,8)); ?> votes</div>
 							</div>
 						</div>
 					</div>
@@ -352,7 +352,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 							else if (!$winner_displayed && $option_score > 0) { echo ' greentext'; $winner_displayed = TRUE; }
 							echo '">';
 							echo '<div class="col-md-3">'.$rank.'. '.$ranked_option['name'].'</div>';
-							echo '<div class="col-md-1" style="text-align: center;">'.($round_score_sum>0? round(100*$option_score/$round_score_sum, 2) : 0).'%</div>';
+							echo '<div class="col-md-1" style="text-align: center;">'.($round_sum_votes>0? round(100*$option_score/$round_sum_votes, 2) : 0).'%</div>';
 							echo '<div class="col-md-3" style="text-align: center;">'.$app->format_bignum($option_score/pow(10,8)).' votes</div>';
 							if ($thisuser) {
 								echo '<div class="col-md-3" style="text-align: center;">';

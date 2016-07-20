@@ -43,7 +43,7 @@ class User {
 		$r = $this->app->run_query($q);
 		$sum = $r->fetch();
 		$votes = $sum[$game->db_game['payout_weight']."s"];
-		$votes = floor($game->block_id_to_taper_factor($last_block_id+1)*$votes);
+		$votes = floor($game->block_id_to_effectiveness_factor($last_block_id+1)*$votes);
 		if ($votes > 0) return $votes;
 		else return 0;
 	}
@@ -57,7 +57,7 @@ class User {
 		while ($round = $r->fetch()) {
 			$first_voting_block_id = ($round['round_id']-1)*$game->db_game['round_length']+1;
 			$last_voting_block_id = $first_voting_block_id + $game->db_game['round_length']-1;
-			$score_sum = 0;
+			$sum_votes = 0;
 			$details_html = "";
 			
 			$option_scores = $game->option_score_in_round($round['winning_option_id'], $round['round_id']);
@@ -97,7 +97,7 @@ class User {
 			}
 			else {
 				if (empty($my_votes[$round['winning_option_id']])) $win_amt_temp = 0;
-				else $win_amt_temp = pos_reward_in_round($game->db_game, $round['round_id'])*$my_votes[$round['winning_option_id']]['votes'];
+				else $win_amt_temp = $this->app->pos_reward_in_round($game->db_game, $round['round_id'])*$my_votes[$round['winning_option_id']]['votes'];
 				if ($option_scores['sum'] > 0) $win_amt = $win_amt_temp/$option_scores['sum'];
 				else $win_amt = 0;
 				$payout_amt = ($win_amt - $my_votes_in_round['fee_amount'])/pow(10,8);
@@ -155,7 +155,7 @@ class User {
 		$html .= "</div>\n";
 		$html .= "Last block completed: #".$last_block_id.", currently mining #".($last_block_id+1)."<br/>\n";
 		$html .= "Current votes count towards block ".$block_within_round."/".$game->db_game['round_length']." in round #".$current_round.".<br/>\n";
-		if ($game->db_game['payout_taper_function'] != "constant") $html .= "Votes are ".round(100*$game->round_index_to_taper_factor($block_within_round),1)."% effective right now.<br/>\n";
+		if ($game->db_game['vote_effectiveness_function'] != "constant") $html .= "Votes are ".round(100*$game->round_index_to_effectiveness_factor($block_within_round),1)."% effective right now.<br/>\n";
 		
 		if ($immature_balance > 0) {
 			$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id LEFT JOIN game_voting_options gvo ON i.option_id=gvo.option_id WHERE i.game_id='".$game->db_game['game_id']."' AND i.user_id='".$this->db_user['user_id']."' AND (i.create_block_id > ".($game->last_block_id() - $game->db_game['maturity'])." OR i.create_block_id IS NULL) ORDER BY i.io_id ASC;";

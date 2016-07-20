@@ -230,7 +230,7 @@ if ($thisuser) {
 						<div class="col-md-5">
 							<div style="border: 1px solid #ccc; padding: 10px;">
 								<?php
-								echo game_info_table($app, $requested_game);
+								echo $app->game_info_table($requested_game);
 								?>
 							</div>
 						</div>
@@ -509,7 +509,7 @@ if ($thisuser && $game) {
 			echo ', "'.$game->db_game['coin_name'].'"';
 			echo ', "'.$game->db_game['coin_name_plural'].'"';
 			echo ', '.$game->db_game['num_voting_options'];
-			echo ', "'.$game->db_game['payout_taper_function'].'"';
+			echo ', "'.$game->db_game['vote_effectiveness_function'].'"';
 			echo ', "wallet"';
 		?>));
 		
@@ -609,6 +609,11 @@ if ($thisuser && $game) {
 		
 		<?php
 		include("includes/wallet_status.php");
+		
+		if ($game->db_game['inflation'] == "exponential") {
+			echo '<div class="row"><div class="col-sm-2">Exchange Rate:</div><div style="text-align: right;" class="col-sm-3"><font class="greentext">';
+			echo $app->format_bignum($app->votes_per_coin($game->db_game)).'</font> votes per coin</div></div>';
+		}
 		?>
 		<div id="wallet_text_stats">
 			<?php
@@ -1140,12 +1145,19 @@ if ($thisuser && $game) {
 					<div class="modal-body">
 						<p>
 							Hi <?php echo $thisuser->db_user['username']; ?>, thanks for joining <?php echo $game->db_game['name']; ?>! 
-							<?php if ($game->db_game['final_round'] > 0) echo 'This game lasts for '.$game->db_game['final_round'].' voting rounds.  '; ?>
-							At the end of each round, the supply of <?php echo $game->db_game['coin_name_plural']; ?> 
-							<?php
-							if ($game->db_game['inflation'] == "exponential") echo 'inflates by '.(100*$game->db_game['exponential_inflation_rate']).'%';
-							else echo 'increases by '.$app->format_bignum($game->db_game['pos_reward']/pow(10,8));
-							?>. These new <?php echo $game->db_game['coin_name_plural']; ?> are split up and given to everyone who voted for the winner.
+							<?php if ($game->db_game['final_round'] > 0) echo 'This game lasts for '.$game->db_game['final_round'].' voting rounds.  ';
+							if ($game->db_game['inflation'] == "exponential") {
+							}
+							else {
+								?>
+								At the end of each round, the supply of <?php echo $game->db_game['coin_name_plural']; ?> 
+								<?php
+								if ($game->db_game['inflation'] == "fixed_exponential") echo 'inflates by '.(100*$game->db_game['exponential_inflation_rate']).'%';
+								else echo 'increases by '.$app->format_bignum($game->db_game['pos_reward']/pow(10,8));
+								echo ". ";
+							}
+							?>
+							These new <?php echo $game->db_game['coin_name_plural']; ?> are split up and given to everyone who voted for the winner.
 						</p>
 						<p>
 							To make sure you don't miss out on votes, a random voting strategy has been applied to your account.  You are currently on a planned voting strategy but several other strategy types are available.  You can change your voting strategy at any time by clicking on the "Strategy" tab.  Please click below to check the random votes that you have been assigned.<br/>
@@ -1396,9 +1408,9 @@ if ($thisuser && $game) {
 								</div>
 							</div>
 							<div class="row">
-								<div class="col-sm-6 form-control-static">Vote tapering function:</div>
+								<div class="col-sm-6 form-control-static">Vote effectiveness function:</div>
 								<div class="col-sm-6">
-									<select class="form-control" id="game_form_payout_taper_function">
+									<select class="form-control" id="game_form_vote_effectiveness_function">
 										<option value="constant">Votes count equally throughout the round</option>
 										<option value="linear_decrease">Votes decrease from 100% to 0% through the round</option>
 									</select>
@@ -1501,6 +1513,7 @@ if ($thisuser && $game) {
 								<div class="col-sm-3">
 									<select id="game_form_inflation" class="form-control" onchange="game_form_inflation_changed();">
 										<option value="linear">Linear</option>
+										<option value="fixed_exponential">Fixed Exponential</option>
 										<option value="exponential">Exponential</option>
 									</select>
 								</div>

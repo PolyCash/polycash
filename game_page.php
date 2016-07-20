@@ -45,7 +45,7 @@ if ($game->db_game['invite_currency'] > 0) {
 				
 				$blocks_per_hour = 3600/$game->db_game['seconds_per_block'];
 				$seconds_per_round = $game->db_game['seconds_per_block']*$game->db_game['round_length'];
-				$round_reward = (coins_created_in_round($game->db_game, $current_round))/pow(10,8);
+				$round_reward = ($app->coins_created_in_round($game->db_game, $current_round))/pow(10,8);
 
 				if ($game->db_game['inflation'] == "linear") {
 					$miner_pct = 100*($game->db_game['pow_reward']*$game->db_game['round_length'])/($round_reward*pow(10,8));
@@ -64,7 +64,9 @@ if ($game->db_game['invite_currency'] > 0) {
 						//echo number_format($coins_per_hour)." ".$game->db_game['coin_name_plural']." are generated every hour. ";
 					}
 					else {
-						echo "Rounds take about ".$app->format_seconds($seconds_per_round).", and the supply of coins increases by ".(100*$game->db_game['exponential_inflation_rate'])."% after each round. ";
+						echo "Rounds take about ".$app->format_seconds($seconds_per_round)." each";
+						if ($game->db_game['inflation'] == "exponential") echo ". Votes can be traded for ".$game->db_game['coin_name_plural']." at a rate of ".$app->votes_per_coin($game->db_game)." votes per ".$game->db_game['coin_name'].", giving this game an inflation rate of approximately ".(100*$game->db_game['exponential_inflation_rate'])."% per round. ";
+						else ", and the supply of coins increases by ".(100*$game->db_game['exponential_inflation_rate'])."% after each round. ";
 					}
 					
 					if ($game->db_game['start_condition'] == "players_joined") {
@@ -86,9 +88,8 @@ if ($game->db_game['invite_currency'] > 0) {
 						else {
 							echo "This game starts in ".$app->format_seconds(strtotime($game->db_game['start_datetime'])-time())." on ".date("M d Y", strtotime($game->db_game['start_datetime'])).". ";
 						}
+						echo "So far, ".$game->paid_players_in_game()." have joined this game. ";
 					}
-					
-					echo "So far, ".$game->paid_players_in_game()." have joined this game. ";
 					
 					if ($game->db_game['short_description'] != "") {
 						echo $game->db_game['short_description']." ";
@@ -163,7 +164,7 @@ if ($game->db_game['invite_currency'] > 0) {
 			<div class="col-md-6">
 				<h4><?php echo $game->db_game['type_name']; ?></h4>
 				<div style="border: 1px solid #ccc; padding: 10px;">
-					<?php echo game_info_table($app, $game->db_game); ?>
+					<?php echo $app->game_info_table($game->db_game); ?>
 				</div>
 			</div>
 		</div>
@@ -258,7 +259,7 @@ if ($game->db_game['invite_currency'] > 0) {
 			<li>Players can vote on these <?php echo $game->db_game['num_voting_options']." ".$game->db_game['option_name_plural']." every ".$app->format_seconds($seconds_per_round); ?> by submitting a voting transaction.</li>
 			<?php
 			$block_within_round = $last_block_id%$game->db_game['round_length']+1;
-			$score_sums = $game->total_score_in_round($current_round, true);
+			$sum_votess = $game->total_score_in_round($current_round, true);
 			*/
 			$round_stats = $game->round_voting_stats_all($current_round);
 			$option_id2rank = $round_stats[3];
@@ -293,7 +294,7 @@ if ($game->db_game['invite_currency'] > 0) {
 
 	<div class="paragraph">
 		<div id="game0_vote_popups"><?php
-		echo $game->initialize_vote_option_details($option_id2rank, $score_sums['sum'], empty($thisuser)? false : $thisuser->db_user['user_id'], 0);
+		echo $game->initialize_vote_option_details($option_id2rank, $sum_votess['sum'], empty($thisuser)? false : $thisuser->db_user['user_id'], 0);
 		?></div>
 		
 		<?php
@@ -334,7 +335,7 @@ Games.push(new Game(<?php
 	echo ', "'.$game->db_game['coin_name'].'"';
 	echo ', "'.$game->db_game['coin_name_plural'].'"';
 	echo ', '.$game->db_game['num_voting_options'];
-	echo ', "'.$game->db_game['payout_taper_function'].'"';
+	echo ', "'.$game->db_game['vote_effectiveness_function'].'"';
 	echo ', "game"';
 ?>));
 

@@ -113,7 +113,7 @@ if ($_REQUEST['action'] == "join") { ?>
 			<div class="col-md-6">
 				<h2><?php echo $game_variation['type_name']; ?></h2>
 				<div style="border: 1px solid #ccc; padding: 10px;">
-					<?php echo game_info_table($app, $game_variation); ?>
+					<?php echo $app->game_info_table($game_variation); ?>
 				</div>
 			</div>
 		</div>

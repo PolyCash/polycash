@@ -28,7 +28,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			}
 		}
 		
-		$mandatory_game->update_option_scores();
+		$mandatory_game->update_option_votes();
 		
 		echo $mandatory_game->db_game['name']."<br/>\n";
 		

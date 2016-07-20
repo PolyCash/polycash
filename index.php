@@ -84,7 +84,7 @@ include('includes/html_start.php');
 				
 				echo '<div class="col-sm-3">';
 				if ($variation_game->db_game['final_round'] > 0) {
-					$final_inflation_pct = game_final_inflation_pct($variation_game->db_game);
+					$final_inflation_pct = $app->game_final_inflation_pct($variation_game->db_game);
 					$game_seconds = $variation_game->db_game['final_round']*$variation_game->db_game['round_length']*$variation_game->db_game['seconds_per_block'];
 					echo number_format($final_inflation_pct)."% inflation in ".$app->format_seconds($game_seconds);
 				}

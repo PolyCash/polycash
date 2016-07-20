@@ -148,7 +148,7 @@ if ($thisuser && $game) {
 			$transaction_id = $game->create_transaction($option_ids, $amounts, $thisuser->db_user['user_id'], $thisuser->db_user['user_id'], false, 'transaction', $io_ids, false, false, intval($user_strategy['transaction_fee']));
 			
 			if ($transaction_id) {
-				$game->update_option_scores();
+				$game->update_option_votes();
 				
 				$q = "SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';";
 				$r = $app->run_query($q);

@@ -414,10 +414,10 @@ function input_amount_sums() {
 	for (var i=0; i<vote_inputs.length; i++) {
 		amount_sum += vote_inputs[i].amount;
 		if (Games[0].payout_weight == "coin_block") {
-			vote_sum += Math.floor(Games[0].block_id_to_taper_factor(Games[0].last_block_id+1)*(1 + Games[0].last_block_id - vote_inputs[i].create_block_id)*vote_inputs[i].amount);
+			vote_sum += Math.floor(Games[0].block_id_to_effectiveness_factor(Games[0].last_block_id+1)*(1 + Games[0].last_block_id - vote_inputs[i].create_block_id)*vote_inputs[i].amount);
 		}
 		else if (Games[0].payout_weight == "coin_round") {
-			vote_sum += Math.floor(Games[0].block_id_to_taper_factor(Games[0].last_block_id+1)*(Games[0].block_to_round(1+Games[0].last_block_id) - Games[0].block_to_round(vote_inputs[i].create_block_id))*vote_inputs[i].amount);
+			vote_sum += Math.floor(Games[0].block_id_to_effectiveness_factor(Games[0].last_block_id+1)*(Games[0].block_to_round(1+Games[0].last_block_id) - Games[0].block_to_round(vote_inputs[i].create_block_id))*vote_inputs[i].amount);
 		}
 	}
 	return [amount_sum, vote_sum];
@@ -436,9 +436,9 @@ function set_input_amount_sums() {
 }
 function render_selected_utxo(index_id) {
 	var score_qty = 0;
-	if (Games[0].payout_weight == "coin") score_qty = Math.floor(Games[0].block_id_to_taper_factor(Games[0].last_block_id+1)*vote_inputs[index_id].amount);
-	else if (Games[0].payout_weight == "coin_round") score_qty = Math.floor(Games[0].block_id_to_taper_factor(Games[0].last_block_id+1)*(Games[0].block_to_round(1+Games[0].last_block_id) - Games[0].block_to_round(vote_inputs[index_id].create_block_id))*vote_inputs[index_id].amount);
-	else score_qty = Math.floor(Games[0].block_id_to_taper_factor(Games[0].last_block_id+1)*(1 + Games[0].last_block_id - vote_inputs[index_id].create_block_id)*vote_inputs[index_id].amount);
+	if (Games[0].payout_weight == "coin") score_qty = Math.floor(Games[0].block_id_to_effectiveness_factor(Games[0].last_block_id+1)*vote_inputs[index_id].amount);
+	else if (Games[0].payout_weight == "coin_round") score_qty = Math.floor(Games[0].block_id_to_effectiveness_factor(Games[0].last_block_id+1)*(Games[0].block_to_round(1+Games[0].last_block_id) - Games[0].block_to_round(vote_inputs[index_id].create_block_id))*vote_inputs[index_id].amount);
+	else score_qty = Math.floor(Games[0].block_id_to_effectiveness_factor(Games[0].last_block_id+1)*(1 + Games[0].last_block_id - vote_inputs[index_id].create_block_id)*vote_inputs[index_id].amount);
 	var render_text = format_coins(score_qty/Math.pow(10,8))+' ';
 	if (Games[0].payout_weight == "coin") {
 		if (render_text == '1') render_text += Games[0].coin_name;
@@ -547,7 +547,7 @@ function refresh_output_amounts() {
 	if (vote_options.length > 0) {
 		var input_sums = input_amount_sums();
 		var coin_sum = input_sums[0]-Games[0].fee_amount;
-		var score_sum = input_sums[1];
+		var sum_votes = input_sums[1];
 		
 		var slider_sum = 0;
 		for (var i=0; i<vote_options.length; i++) {
@@ -561,7 +561,7 @@ function refresh_output_amounts() {
 		for (var i=0; i<vote_options.length; i++) {
 			var output_coins = Math.floor(coins_per_slider_val*vote_options[i].slider_val);
 			var output_score;
-			if (coin_sum > 0) output_score = output_coins*(score_sum/coin_sum);
+			if (coin_sum > 0) output_score = output_coins*(sum_votes/coin_sum);
 			else output_score = 0;
 			
 			if (i == vote_options.length - 1) output_coins = coin_sum - output_coins_sum;
@@ -601,7 +601,7 @@ function show_planned_votes() {
 }
 
 // OBJECT: GameForm
-var game_form_vars = "giveaway_status,giveaway_amount,maturity,max_voting_fraction,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_date,start_time,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap,option_group_id,payout_taper_function".split(",");
+var game_form_vars = "giveaway_status,giveaway_amount,maturity,max_voting_fraction,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_date,start_time,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap,option_group_id,vote_effectiveness_function".split(",");
 function switch_to_game(game_id, action) {
 	var fetch_link_text = $('#fetch_game_link_'+game_id).html();
 	var switch_link_text = $('#switch_game_btn').html();
@@ -795,9 +795,9 @@ function refresh_mature_io_btns() {
 	for (var i=0; i<mature_ios.length; i++) {
 		var select_btn_text = "";
 		var votes;
-		if (Games[0].payout_weight == 'coin') votes = Math.floor(Games[0].block_id_to_taper_factor(Games[0].last_block_id+1)*mature_ios[i].amount);
-		else if (Games[0].payout_weight == 'coin_round') votes = Math.floor(Games[0].block_id_to_taper_factor(Games[0].last_block_id+1)*(Games[0].block_to_round(1+Games[0].last_block_id) - Games[0].block_to_round(mature_ios[i].create_block_id))*mature_ios[i].amount);
-		else votes = Math.floor(Games[0].block_id_to_taper_factor(Games[0].last_block_id+1)*(1 + Games[0].last_block_id - mature_ios[i].create_block_id)*mature_ios[i].amount);
+		if (Games[0].payout_weight == 'coin') votes = Math.floor(Games[0].block_id_to_effectiveness_factor(Games[0].last_block_id+1)*mature_ios[i].amount);
+		else if (Games[0].payout_weight == 'coin_round') votes = Math.floor(Games[0].block_id_to_effectiveness_factor(Games[0].last_block_id+1)*(Games[0].block_to_round(1+Games[0].last_block_id) - Games[0].block_to_round(mature_ios[i].create_block_id))*mature_ios[i].amount);
+		else votes = Math.floor(Games[0].block_id_to_effectiveness_factor(Games[0].last_block_id+1)*(1 + Games[0].last_block_id - mature_ios[i].create_block_id)*mature_ios[i].amount);
 		select_btn_text += 'Add '+format_coins(votes/Math.pow(10,8));
 		select_btn_text += ' votes';
 		if (Games[0].payout_weight != 'coin') {
@@ -1094,7 +1094,7 @@ var io_id2input_index = {};
 var mature_ios = new Array();
 
 // OBJECT: Game
-var Game = function(game_id, last_block_id, last_transaction_id, my_last_transaction_id, mature_io_ids_csv, payout_weight, game_round_length, min_bet_round, fee_amount, game_url_identifier, coin_name, coin_name_plural, num_voting_options, payout_taper_function, refresh_page) {
+var Game = function(game_id, last_block_id, last_transaction_id, my_last_transaction_id, mature_io_ids_csv, payout_weight, game_round_length, min_bet_round, fee_amount, game_url_identifier, coin_name, coin_name_plural, num_voting_options, vote_effectiveness_function, refresh_page) {
 	Game.numInstances = (Game.numInstances || 0) + 1;
 	
 	this.instance_id = Game.numInstances-1;
@@ -1111,7 +1111,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 	this.coin_name = coin_name;
 	this.coin_name_plural = coin_name_plural;
 	this.num_voting_options = num_voting_options;
-	this.payout_taper_function = payout_taper_function;
+	this.vote_effectiveness_function = vote_effectiveness_function;
 	this.refresh_page = refresh_page;
 
 	this.refresh_in_progress = false;
@@ -1136,8 +1136,8 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 			this.option_has_votingaddr[votingAddrOptions[i]] = true;
 		}
 	};
-	this.block_id_to_taper_factor = function(block_id) {
-		return this.round_index_to_taper_factor(this.block_id_to_round_index(block_id));
+	this.block_id_to_effectiveness_factor = function(block_id) {
+		return this.round_index_to_effectiveness_factor(this.block_id_to_round_index(block_id));
 	};
 	this.block_id_to_round_index = function(block_id) {
 		return ((block_id-1) % this.game_round_length)+1;
@@ -1298,8 +1298,8 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 	this.block_to_round = function(block_id) {
 		return Math.ceil(block_id/this.game_round_length);
 	};
-	this.round_index_to_taper_factor = function(round_index) {
-		if (this.payout_taper_function == "linear_decrease") {
+	this.round_index_to_effectiveness_factor = function(round_index) {
+		if (this.vote_effectiveness_function == "linear_decrease") {
 			return Math.floor(Math.pow(10,8)*(this.game_round_length-round_index)/(this.game_round_length-1))/Math.pow(10,8);
 		}
 		else return 1;
