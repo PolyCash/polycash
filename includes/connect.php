@@ -27,13 +27,13 @@ $dbh->query("SET sql_mode='';");
 
 header('Content-Type: text/html; charset=UTF-8');
 
-include("classes/Api.php");
-include("classes/App.php");
-include("classes/JsonRPCClient.php");
-include("classes/Game.php");
-include("classes/Match.php");
-if ($GLOBALS['pageview_tracking_enabled']) include("classes/PageviewController.php");
-include("classes/User.php");
+include(realpath(dirname(dirname(__FILE__)))."/classes/Api.php");
+include(realpath(dirname(dirname(__FILE__)))."/classes/App.php");
+include(realpath(dirname(dirname(__FILE__)))."/classes/JsonRPCClient.php");
+include(realpath(dirname(dirname(__FILE__)))."/classes/Game.php");
+include(realpath(dirname(dirname(__FILE__)))."/classes/Match.php");
+if ($GLOBALS['pageview_tracking_enabled']) include(realpath(dirname(dirname(__FILE__)))."/classes/PageviewController.php");
+include(realpath(dirname(dirname(__FILE__)))."/classes/User.php");
 
 $app = new App($dbh);
 if ($GLOBALS['pageview_tracking_enabled']) $pageview_controller = new PageviewController($app);
