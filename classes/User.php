@@ -60,17 +60,17 @@ class User {
 			$sum_votes = 0;
 			$details_html = "";
 			
-			$option_scores = $game->option_score_in_round($round['winning_option_id'], $round['round_id']);
+			$option_votes = $game->option_votes_in_round($round['winning_option_id'], $round['round_id']);
 			
 			$html .= '<div class="row" style="font-size: 13px;">';
 			$html .= '<div class="col-sm-2">Round&nbsp;#'.$round['round_id'].'</div>';
 			$html .= '<div class="col-sm-3">';
 			if ($round['real_winner_name'] != "") {
-				$html .= $round['real_winner_name']." won with ".$this->app->format_bignum($round['winning_score']/pow(10,8))." votes";
-				if ($round['derived_winner_name'] != "" && $round['derived_winner_name'] != $round['real_winner_name']) $html .= " (Should have been ".$round['derived_winner_name']." with ".$this->app->format_bignum($round['derived_winning_score']/pow(10,8))." votes)";
+				$html .= $round['real_winner_name']." won with ".$this->app->format_bignum($round['winning_votes']/pow(10,8))." votes";
+				if ($round['derived_winner_name'] != "" && $round['derived_winner_name'] != $round['real_winner_name']) $html .= " (Should have been ".$round['derived_winner_name']." with ".$this->app->format_bignum($round['derived_winning_votes']/pow(10,8))." votes)";
 			}
 			else {
-				if ($round['derived_winner_name'] != "") $html .= $round['derived_winner_name']." won with ".$this->app->format_bignum($round['derived_winning_score']/pow(10,8))." votes";
+				if ($round['derived_winner_name'] != "") $html .= $round['derived_winner_name']." won with ".$this->app->format_bignum($round['derived_winning_votes']/pow(10,8))." votes";
 				else $html .= "No winner";
 			}
 			$html .= '</div>';
@@ -98,7 +98,7 @@ class User {
 			else {
 				if (empty($my_votes[$round['winning_option_id']])) $win_amt_temp = 0;
 				else $win_amt_temp = $this->app->pos_reward_in_round($game->db_game, $round['round_id'])*$my_votes[$round['winning_option_id']]['votes'];
-				if ($option_scores['sum'] > 0) $win_amt = $win_amt_temp/$option_scores['sum'];
+				if ($option_votes['sum'] > 0) $win_amt = $win_amt_temp/$option_votes['sum'];
 				else $win_amt = 0;
 				$payout_amt = ($win_amt - $my_votes_in_round['fee_amount'])/pow(10,8);
 			}

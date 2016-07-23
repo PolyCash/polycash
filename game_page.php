@@ -259,7 +259,7 @@ if ($game->db_game['invite_currency'] > 0) {
 			<li>Players can vote on these <?php echo $game->db_game['num_voting_options']." ".$game->db_game['option_name_plural']." every ".$app->format_seconds($seconds_per_round); ?> by submitting a voting transaction.</li>
 			<?php
 			$block_within_round = $last_block_id%$game->db_game['round_length']+1;
-			$sum_votess = $game->total_score_in_round($current_round, true);
+			$sum_votes = $game->total_votes_in_round($current_round, true);
 			*/
 			$round_stats = $game->round_voting_stats_all($current_round);
 			$option_id2rank = $round_stats[3];
@@ -294,7 +294,7 @@ if ($game->db_game['invite_currency'] > 0) {
 
 	<div class="paragraph">
 		<div id="game0_vote_popups"><?php
-		echo $game->initialize_vote_option_details($option_id2rank, $sum_votess['sum'], empty($thisuser)? false : $thisuser->db_user['user_id'], 0);
+		echo $game->initialize_vote_option_details($option_id2rank, $sum_votes['sum'], empty($thisuser)? false : $thisuser->db_user['user_id'], 0);
 		?></div>
 		
 		<?php

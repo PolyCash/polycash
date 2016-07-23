@@ -29,6 +29,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				$game->add_round_from_rpc($round_id);
 			}
 			else {
+				echo "add round #".$round_id."<br/>\n";
 				$game->add_round_from_db($round_id, $round_id*$game->db_game['round_length'], true);
 			}
 			echo "Added cached round #".$round_id." to ".$game->db_game['name']."<br/>\n";

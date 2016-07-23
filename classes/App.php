@@ -609,7 +609,7 @@ class App {
 			$mining_block_id = $featured_game->last_block_id()+1;
 			$current_round_id = $featured_game->block_to_round($mining_block_id);
 
-			$sum_votess = $featured_game->total_score_in_round($current_round_id, true);
+			$sum_votes = $featured_game->total_votes_in_round($current_round_id, true);
 			$round_stats = $featured_game->round_voting_stats_all($current_round_id);
 			$option_id2rank = $round_stats[3];
 			?>
@@ -645,7 +645,7 @@ class App {
 			echo ' <a href="/explorer/'.$featured_game->db_game['url_identifier'].'/rounds/" class="btn btn-primary">Blockchain Explorer</a>';
 			echo '<br/><br/></div>';
 			
-			echo $featured_game->initialize_vote_option_details($option_id2rank, $sum_votess['sum'], false, $counter);
+			echo $featured_game->initialize_vote_option_details($option_id2rank, $sum_votes['sum'], false, $counter);
 			
 			if ($counter%(12/$cell_width) == 1) echo '</div><div class="row">';
 			$counter++;
@@ -740,7 +740,6 @@ class App {
 		if (is_resource($main_process)) $process_count++;
 		else $html .= "Failed to start the main process.<br/>\n";
 		sleep(0.1);
-		echo $cmd."<br/>\n";
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_check_payments.php" key='.$key_string;
 		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
@@ -922,20 +921,28 @@ class App {
 	}
 	
 	public function coins_created_in_round(&$db_game, $round_id) {
-		$thisround_coins = $this->ideal_coins_in_existence_after_round($db_game, $round_id);
-		$prevround_coins = $this->ideal_coins_in_existence_after_round($db_game, $round_id-1);
-		if (is_nan($thisround_coins) || is_nan($prevround_coins) || is_infinite($thisround_coins) || is_infinite($prevround_coins)) return 0;
-		else return $thisround_coins - $prevround_coins;
+		if ($db_game['inflation'] == "exponential") {
+			$game = new Game($this, $db_game['game_id']);
+			$coi_block = ($round_id-1)*$game->db_game['round_length'];
+			$coins_in_existence = $game->coins_in_existence($coi_block);
+			return $coins_in_existence*$game->db_game['exponential_inflation_rate'];
+		}
+		else {
+			$thisround_coins = $this->ideal_coins_in_existence_after_round($db_game, $round_id);
+			$prevround_coins = $this->ideal_coins_in_existence_after_round($db_game, $round_id-1);
+			if (is_nan($thisround_coins) || is_nan($prevround_coins) || is_infinite($thisround_coins) || is_infinite($prevround_coins)) return 0;
+			else return $thisround_coins - $prevround_coins;
+		}
 	}
 
 	public function pow_reward_in_round(&$db_game, $round_id) {
 		if ($db_game['inflation'] == "linear") return $db_game['pow_reward'];
-		else if ($db_game['inflation'] == "fixed_exponential") {
+		else if ($db_game['inflation'] == "fixed_exponential" || $db_game['inflation'] == "exponential") {
 			$round_coins_created = $this->coins_created_in_round($db_game, $round_id);
 			$round_pow_coins = floor($db_game['exponential_inflation_minershare']*$round_coins_created);
 			return floor($round_pow_coins/$db_game['round_length']);
 		}
-		//else die("exponential inflation not implemented in pow_reward_in_round()");
+		else return 0;
 	}
 
 	public function pos_reward_in_round(&$db_game, $round_id) {
@@ -959,17 +966,16 @@ class App {
 				$q = "SELECT SUM(".$game->db_game['payout_weight']."_score), SUM(unconfirmed_".$game->db_game['payout_weight']."_score) FROM game_voting_options WHERE game_id='".$game->db_game['game_id']."';";
 				$r = $this->run_query($q);
 				$r = $r->fetch();
-				$votes = $r['SUM('.$game->db_game['payout_weight'].'_score)']+$r['SUM(unconfirmed_'.$game->db_game['payout_weight'].'_score)'];
+				$score = $r['SUM('.$game->db_game['payout_weight'].'_score)']+$r['SUM(unconfirmed_'.$game->db_game['payout_weight'].'_score)'];
 			}
 			else {
-				$q = "SELECT sum_votes FROM cached_rounds WHERE game_id='".$game->db_game['game_id']."' AND round_id='".$round_id."';";
-				echo 'q: '.$q.'<br/>';
+				$q = "SELECT SUM(".$game->db_game['payout_weight']."_score) FROM cached_round_options WHERE game_id='".$game->db_game['game_id']."' AND round_id='".$round_id."';";
 				$r = $this->run_query($q);
 				$r = $r->fetch();
-				$votes = $r['sum_votes'];
+				$score = $r["SUM(".$game->db_game['payout_weight']."_score)"];
 			}
 			
-			return $votes/$this->votes_per_coin($db_game);
+			return $score/$this->votes_per_coin($db_game);
 		}
 	}
 	

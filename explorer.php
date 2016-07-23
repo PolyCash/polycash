@@ -251,11 +251,11 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					if ($round_status == "current") {
 						$rankings = $game->round_voting_stats_all($current_round);
 						$round_sum_votes = $rankings[0];
-						$max_score = $rankings[1];
+						$max_votes = $rankings[1];
 						$stats_all = $rankings[2];
 						$option_id_to_rank = $rankings[3];
-						$confirmed_score = $rankings[4];
-						$unconfirmed_score = $rankings[5];
+						$confirmed_votes = $rankings[4];
+						$unconfirmed_votes = $rankings[5];
 						
 						echo "<h1>Round #".$current_round." is currently running</h1>\n";
 					}
@@ -263,7 +263,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 						if ($round['winning_option_id'] > 0) echo "<h1>".$round['name']." wins round #".$round['round_id']."</h1>\n";
 						else echo "<h1>Round #".$round['round_id'].": No winner</h1>\n";
 						
-						$max_score = floor($round['sum_votes']*$game->db_game['max_voting_fraction']);
+						$max_votes = floor($round['sum_votes']*$game->db_game['max_voting_fraction']);
 						$round_sum_votes = $round['sum_votes'];
 					}
 					
@@ -280,7 +280,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					<?php
 					if ($thisuser) {
 						$my_votes = false;
-						echo $game->user_winnings_in_round_description($thisuser->db_user['user_id'], $this_round, $round_status, $round['winning_option_id'], $round['winning_score'], $round['name'], $my_votes)."<br/>";
+						echo $game->user_winnings_in_round_description($thisuser->db_user['user_id'], $this_round, $round_status, $round['winning_option_id'], $round['winning_votes'], $round['name'], $my_votes)."<br/>";
 					}
 					
 					if ($round['payout_transaction_id'] > 0) {
@@ -340,32 +340,32 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 						
 						if (!$round || $ranked_option) {
 							if ($round) {
-								$option_scores = $game->option_score_in_round($ranked_option['option_id'], $round['round_id']);
-								$option_score = $option_scores['sum'];
+								$option_votes = $game->option_votes_in_round($ranked_option['option_id'], $round['round_id']);
+								$option_votes = $option_votes['sum'];
 							}
 							else {
 								$ranked_option = $stats_all[$rank-1];
-								$option_score = $ranked_option['votes']+$ranked_option['unconfirmed_votes'];
+								$option_votes = $ranked_option['votes']+$ranked_option['unconfirmed_votes'];
 							}
 							echo '<div class="row';
-							if ($option_score > $max_score) echo ' redtext';
-							else if (!$winner_displayed && $option_score > 0) { echo ' greentext'; $winner_displayed = TRUE; }
+							if ($option_votes > $max_votes) echo ' redtext';
+							else if (!$winner_displayed && $option_votes > 0) { echo ' greentext'; $winner_displayed = TRUE; }
 							echo '">';
 							echo '<div class="col-md-3">'.$rank.'. '.$ranked_option['name'].'</div>';
-							echo '<div class="col-md-1" style="text-align: center;">'.($round_sum_votes>0? round(100*$option_score/$round_sum_votes, 2) : 0).'%</div>';
-							echo '<div class="col-md-3" style="text-align: center;">'.$app->format_bignum($option_score/pow(10,8)).' votes</div>';
+							echo '<div class="col-md-1" style="text-align: center;">'.($round_sum_votes>0? round(100*$option_votes/$round_sum_votes, 2) : 0).'%</div>';
+							echo '<div class="col-md-3" style="text-align: center;">'.$app->format_bignum($option_votes/pow(10,8)).' votes</div>';
 							if ($thisuser) {
 								echo '<div class="col-md-3" style="text-align: center;">';
 								
-								if (!empty($my_votes[$ranked_option['option_id']]['votes'])) $score_qty = $my_votes[$ranked_option['option_id']]['votes'];
-								else $score_qty = 0;
+								if (!empty($my_votes[$ranked_option['option_id']]['votes'])) $vote_qty = $my_votes[$ranked_option['option_id']]['votes'];
+								else $vote_qty = 0;
 								
-								$score_disp = $app->format_bignum($score_qty/pow(10,8));
-								echo $score_disp." ";
+								$vote_disp = $app->format_bignum($vote_qty/pow(10,8));
+								echo $vote_disp." ";
 								echo " vote";
-								if ($score_disp != '1') echo "s";
+								if ($vote_disp != '1') echo "s";
 								
-								echo ' ('.($option_score>0? round(100*$score_qty/$option_score, 3) : 0).'%)</div>';
+								echo ' ('.($option_votes>0? round(100*$vote_qty/$option_votes, 3) : 0).'%)</div>';
 							}
 							echo '</div>'."\n";
 						}

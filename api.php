@@ -71,7 +71,7 @@ if ($uri_parts[1] == "api") {
 				$output_game['unconfirmed_votes'] = $unconfirmed_votes;
 				$output_game['block_within_round'] = $game->block_id_to_round_index($last_block_id+1);
 				
-				$game_scores = false;
+				$game_votes = false;
 				
 				$qq = "SELECT * FROM game_voting_options WHERE game_id='".$game->db_game['game_id']."';";
 				$rr = $app->run_query($qq);
@@ -84,10 +84,10 @@ if ($uri_parts[1] == "api") {
 					$api_stat['confirmed_votes'] = $app->friendly_intval($stat[$game->db_game['payout_weight'].'_score']);
 					$api_stat['unconfirmed_votes'] = $app->friendly_intval($stat['unconfirmed_'.$game->db_game['payout_weight'].'_score']);
 					
-					$game_scores[$option['option_id']] = $api_stat;
+					$game_votes[$option['option_id']] = $api_stat;
 				}
 				
-				$api_output = array('status_code'=>1, 'status_message'=>"Successful", 'game'=>$output_game, 'game_scores'=>$game_scores, 'user_info'=>$api_user_info);
+				$api_output = array('status_code'=>1, 'status_message'=>"Successful", 'game'=>$output_game, 'game_votes'=>$game_votes, 'user_info'=>$api_user_info);
 			}
 			else {
 				$api_output = array('status_code'=>0, 'status_message'=>'Error, URL not recognized');
@@ -144,7 +144,7 @@ if ($uri_parts[1] == "api") {
       "unconfirmed_votes":0,
       "block_within_round":30
    },
-   "game_scores":[
+   "game_votes":[
       {
          "option_id":0,
          "name":"China",
@@ -288,7 +288,7 @@ if ($uri_parts[1] == "api") {
       "unconfirmed_votes":0,
       "block_within_round":6
    },
-   "game_scores":[
+   "game_votes":[
       {
          "option_id":0,
          "name":"China",

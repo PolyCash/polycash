@@ -37,32 +37,32 @@ class Game {
 			return $this->app->run_query($q);
 		}
 		else {
-			$q = "SELECT gvo.*, i.*, SUM(i.votes) AS votes FROM transaction_ios i JOIN game_voting_options gvo ON i.option_id=gvo.option_id LEFT JOIN images im ON gvo.image_id=im.image_id WHERE i.game_id='".$this->db_game['game_id']."' AND i.create_round_id=".$round_id." GROUP BY i.option_id ORDER BY SUM(i.votes) DESC, i.option_id ASC;";
+			$q = "SELECT gvo.*, i.*, SUM(i.votes) AS votes, SUM(i.amount) AS coin_score, SUM(i.coin_blocks_destroyed) AS coin_block_score, SUM(i.coin_rounds_destroyed) AS coin_round_score FROM transaction_ios i JOIN game_voting_options gvo ON i.option_id=gvo.option_id LEFT JOIN images im ON gvo.image_id=im.image_id WHERE i.game_id='".$this->db_game['game_id']."' AND i.create_round_id=".$round_id." GROUP BY i.option_id ORDER BY SUM(i.votes) DESC, i.option_id ASC;";
 			return $this->app->run_query($q);
 		}
 	}
 
-	public function total_score_in_round($round_id, $include_unconfirmed) {
+	public function total_votes_in_round($round_id, $include_unconfirmed) {
 		$sum = 0;
 		
 		$base_q = "SELECT SUM(votes) FROM transaction_ios WHERE game_id='".$this->db_game['game_id']."' AND option_id > 0 AND amount > 0";
 		$confirmed_q = $base_q." AND create_round_id=".$round_id.";";
 		$confirmed_r = $this->app->run_query($confirmed_q);
-		$confirmed_score = $confirmed_r->fetch(PDO::FETCH_NUM);
-		$confirmed_score = $confirmed_score[0];
-		if ($confirmed_score > 0) {} else $confirmed_score = 0;
+		$confirmed_votes = $confirmed_r->fetch(PDO::FETCH_NUM);
+		$confirmed_votes = $confirmed_votes[0];
+		if ($confirmed_votes > 0) {} else $confirmed_votes = 0;
 		
-		$sum += $confirmed_score;
-		$returnvals['confirmed'] = $confirmed_score;
+		$sum += $confirmed_votes;
+		$returnvals['confirmed'] = $confirmed_votes;
 		
 		if ($include_unconfirmed) {
 			$q = "SELECT SUM(unconfirmed_votes) FROM game_voting_options WHERE game_id='".$this->db_game['game_id']."';";
 			$r = $this->app->run_query($q);
 			$sums = $r->fetch(PDO::FETCH_NUM);
 			
-			$unconfirmed_score = $sums[0];
-			$sum += $unconfirmed_score;
-			$returnvals['unconfirmed'] = $unconfirmed_score;
+			$unconfirmed_votes = $sums[0];
+			$sum += $unconfirmed_votes;
+			$returnvals['unconfirmed'] = $unconfirmed_votes;
 		}
 		else $returnvals['unconfirmed'] = 0;
 		
@@ -104,13 +104,13 @@ class Game {
 		if ($voting_round == $current_round) $include_unconfirmed = true;
 		else $include_unconfirmed = false;
 		
-		$sum_votess = $this->total_score_in_round($voting_round, $include_unconfirmed);
-		$output_arr[0] = $sum_votess['sum'];
-		$output_arr[1] = floor($sum_votess['sum']*$this->db_game['max_voting_fraction']);
+		$sum_votes = $this->total_votes_in_round($voting_round, $include_unconfirmed);
+		$output_arr[0] = $sum_votes['sum'];
+		$output_arr[1] = floor($sum_votes['sum']*$this->db_game['max_voting_fraction']);
 		$output_arr[2] = $stats_all;
 		$output_arr[3] = $option_id_to_rank;
-		$output_arr[4] = $sum_votess['confirmed'];
-		$output_arr[5] = $sum_votess['unconfirmed'];
+		$output_arr[4] = $sum_votes['confirmed'];
+		$output_arr[5] = $sum_votes['unconfirmed'];
 		
 		return $output_arr;
 	}
@@ -210,7 +210,7 @@ class Game {
 				if ($score > 0) $average_effectiveness = $votes/$score;
 				else $average_effectiveness = 1;
 				
-				$html .= "Votes were cast at an average effectiveness of ".round(100*$average_effectiveness, 2)."%";
+				$html .= "So far votes have been cast at an average effectiveness of ".round(100*$average_effectiveness, 2)."%";
 				if ($this->db_game['inflation'] == "exponential") {
 					$html .= " (".$this->app->format_bignum($this->app->votes_per_coin($this->db_game)*$average_effectiveness)." votes per coin)";
 				}
@@ -219,12 +219,12 @@ class Game {
 		}
 		
 		for ($i=0; $i<count($round_stats); $i++) {
-			$option_score = $round_stats[$i]['votes'] + $round_stats[$i]['unconfirmed_votes'];
+			$option_votes = $round_stats[$i]['votes'] + $round_stats[$i]['unconfirmed_votes'];
 			
-			if (!$winner_option_id && $option_score <= $max_sum_votes && $option_score > 0) $winner_option_id = $round_stats[$i]['option_id'];
+			if (!$winner_option_id && $option_votes <= $max_sum_votes && $option_votes > 0) $winner_option_id = $round_stats[$i]['option_id'];
 			
 			if ($sum_votes > 0) {
-				$pct_votes = 100*(floor(1000*$option_score/$sum_votes)/1000);
+				$pct_votes = 100*(floor(1000*$option_votes/$sum_votes)/1000);
 			}
 			else $pct_votes = 0;
 			
@@ -235,7 +235,7 @@ class Game {
 			$holder_width = $box_diam;
 			
 			$show_boundbox = false;
-			if ($i == 0 || $option_score > $max_sum_votes) {
+			if ($i == 0 || $option_votes > $max_sum_votes) {
 				$show_boundbox = true;
 				$boundbox_sq_px = $this->db_game['max_voting_fraction']*100*$sq_px_per_pct_point;
 				$boundbox_diam = round(sqrt($boundbox_sq_px));
@@ -245,7 +245,7 @@ class Game {
 			$html .= '
 			<div class="vote_option_box_container">
 				<div class="vote_option_label';
-				if ($option_score > $max_sum_votes) $html .=  " redtext";
+				if ($option_votes > $max_sum_votes) $html .=  " redtext";
 				else if ($winner_option_id == $round_stats[$i]['option_id']) $html .=  " greentext";
 				$html .= '"';
 				if ($clickable) $html .= ' style="cursor: pointer;" onclick="Games['.$game_instance_id.'].option_selected('.$i.'); Games['.$game_instance_id.'].start_vote('.$round_stats[$i]['option_id'].');"';
@@ -261,7 +261,7 @@ class Game {
 					if ($holder_width != $box_diam) $html .= 'left: '.(($holder_width-$box_diam)/2).'px; top: '.(($holder_width-$box_diam)/2).'px;';
 					if ($round_stats[$i]['image_id'] > 0) $html .= 'background-image: url(\''.$this->app->image_url($round_stats[$i]).'\');';
 					if ($clickable) $html .= 'cursor: pointer;';
-					if ($option_score > $max_sum_votes) $html .= 'opacity: 0.5; z-index: 1;';
+					if ($option_votes > $max_sum_votes) $html .= 'opacity: 0.5; z-index: 1;';
 					else $html .= 'z-index: 3;';
 					$html .= '" id="game'.$game_instance_id.'_vote_option_'.$i.'"';
 					if ($clickable) $html .= ' onmouseover="Games['.$game_instance_id.'].option_selected('.$i.');" onclick="Games['.$game_instance_id.'].option_selected('.$i.'); Games['.$game_instance_id.'].start_vote('.$round_stats[$i]['option_id'].');"';
@@ -316,17 +316,15 @@ class Game {
 		$transaction_id = $this->app->last_insert_id();
 		
 		// Loop through the correctly voted UTXOs
-		$q = "SELECT * FROM transaction_ios i JOIN users u ON i.user_id=u.user_id WHERE i.game_id='".$this->db_game['game_id']."' AND i.create_block_id > ".(($round_id-1)*$this->db_game['round_length'])." AND i.create_round_id=".$round_id." AND i.option_id=".$winning_option.";";
+		$q = "SELECT * FROM transaction_ios i JOIN users u ON i.user_id=u.user_id WHERE i.game_id='".$this->db_game['game_id']."' AND i.create_round_id=".$round_id." AND i.create_block_id != ".$block_id." AND i.option_id=".$winning_option.";";
 		$r = $this->app->run_query($q);
 		$total_paid = 0;
 		$out_index = 0;
 		
 		$round_pos_reward = $this->app->pos_reward_in_round($this->db_game, $round_id);
-		echo 'looping through '.$r->rowCount().' correct votes, round POS reward: '.$round_pos_reward.'.<br/>';
 		
 		while ($input = $r->fetch()) {
 			$payout_amount = floor($round_pos_reward*$input[$score_field]/$winning_votes);
-			echo $input['io_id'].' amt: '.$payout_amount.'<br/>';
 			$total_paid += $payout_amount;
 			
 			$qq = "INSERT INTO transaction_ios SET spend_status='unspent', out_index='".$out_index."', instantly_mature=0, game_id='".$this->db_game['game_id']."', user_id='".$input['user_id']."', address_id='".$input['address_id']."'";
@@ -711,7 +709,7 @@ class Game {
 		}
 	}
 	
-	public function option_score_in_round($option_id, $round_id) {
+	public function option_votes_in_round($option_id, $round_id) {
 		if ($this->db_game['payout_weight'] == "coin") $score_field = "amount";
 		else $score_field = $this->db_game['payout_weight']."s_destroyed";
 		
@@ -792,8 +790,8 @@ class Game {
 		while ($my_vote = $r->fetch()) {
 			$color = "green";
 			$num_votes = $my_vote['SUM(io.'.$score_field.'*t.effectiveness_factor)'];
-			$option_scores = $this->option_score_in_round($my_vote['option_id'], $round_id);
-			$expected_payout = floor($this->app->pos_reward_in_round($this->db_game, $round_id)*($num_votes/$option_scores['sum'])-$my_vote['fee_amount'])/pow(10,8);
+			$option_votes = $this->option_votes_in_round($my_vote['option_id'], $round_id);
+			$expected_payout = floor($this->app->pos_reward_in_round($this->db_game, $round_id)*($num_votes/$option_votes['sum'])-$my_vote['fee_amount'])/pow(10,8);
 			if ($expected_payout < 0) $expected_payout = 0;
 			
 			$confirmed_html .= '<div class="row">';
@@ -816,7 +814,7 @@ class Game {
 		
 		while ($my_vote = $r->fetch()) {
 			$color = "yellow";
-			$option_scores = $this->option_score_in_round($my_vote['option_id'], $round_id);
+			$option_votes = $this->option_votes_in_round($my_vote['option_id'], $round_id);
 			
 			if ($this->db_game['payout_weight'] == "coin_block") {
 				$transaction_cbd = $my_vote['ref_coin_blocks_destroyed'] + ((1+$last_block_id)-$my_vote['ref_block_id'])*$my_vote['transaction_amount'];
@@ -831,7 +829,7 @@ class Game {
 			}
 			
 			$num_votes = floor($num_votes*$this->block_id_to_effectiveness_factor($last_block_id+1));
-			$expected_payout = floor($this->app->pos_reward_in_round($this->db_game, $round_id)*($num_votes/$option_scores['sum'])-$my_vote['fee_amount'])/pow(10,8);
+			$expected_payout = floor($this->app->pos_reward_in_round($this->db_game, $round_id)*($num_votes/$option_votes['sum'])-$my_vote['fee_amount'])/pow(10,8);
 			if ($expected_payout < 0) $expected_payout = 0;
 			
 			$unconfirmed_html .= '<div class="row">';
@@ -1775,8 +1773,8 @@ class Game {
 		if ($derived_winning_option_id) $q .= ", derived_winning_option_id='".$derived_winning_option_id."', derived_winning_votes='".$derived_winning_votes."'";
 		
 		if ($winning_option_id) $q .= ", winning_option_id='".$winning_option_id."'";
-		$option_scores = $this->option_score_in_round($winning_option_id, $round_id);
-		$q .= ", winning_votes='".$option_scores['sum']."'";
+		$option_votes = $this->option_votes_in_round($winning_option_id, $round_id);
+		$q .= ", winning_votes='".$option_votes['sum']."'";
 		
 		$q .= ", sum_votes='".$sum_votes."', time_created='".time()."'";
 		if ($update_insert == "update") $q .= " WHERE internal_round_id='".$existing_round['internal_round_id']."'";
@@ -1787,11 +1785,11 @@ class Game {
 		$this->app->run_query("DELETE FROM cached_round_options WHERE round_id='".$round_id."' AND game_id='".$this->db_game['game_id']."';");
 		
 		for ($i=0; $i<count($rankings); $i++) {
-			$qq = "INSERT INTO cached_round_options SET internal_round_id='".$internal_round_id."', round_id='".$round_id."', game_id='".$this->db_game['game_id']."', option_id='".$rankings[$i]['option_id']."', rank='".($i+1)."', score='".$rankings[$i]['votes']."';";
+			$qq = "INSERT INTO cached_round_options SET internal_round_id='".$internal_round_id."', round_id='".$round_id."', game_id='".$this->db_game['game_id']."', option_id='".$rankings[$i]['option_id']."', rank='".($i+1)."', coin_score='".$rankings[$i]['coin_score']."', coin_block_score='".$rankings[$i]['coin_block_score']."', coin_round_score='".$rankings[$i]['coin_round_score']."', votes='".$rankings[$i]['votes']."';";
 			$rr = $this->app->run_query($qq);
 		}
 	}
-
+	
 	public function create_or_fetch_address($address, $check_existing, $rpc, $delete_optionless, $claimable) {
 		if ($check_existing) {
 			$q = "SELECT * FROM addresses WHERE game_id='".$this->db_game['game_id']."' AND address='".$address."';";
@@ -2466,7 +2464,7 @@ class Game {
 			echo "Loading unconfirmed transactions...\n";
 			$this->load_unconfirmed_transactions($coin_rpc);
 			
-			echo "Updating option scores...\n";
+			echo "Updating option votes...\n";
 			$this->update_option_votes();
 			
 			echo "Done syncing!\n";
@@ -2632,11 +2630,11 @@ class Game {
 		$this->app->run_query("UPDATE transaction_ios SET spend_round_id=NULL, coin_blocks_created=0, coin_rounds_created=0, votes=0, spend_transaction_id=NULL, spend_count=NULL, spend_status='unspent', payout_io_id=NULL WHERE game_id='".$this->db_game['game_id']."' AND spend_block_id >= ".$block_height.";");
 		
 		$this->app->run_query("DELETE FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id >= ".$block_height.";");
-
+		
 		$round_id = $this->block_to_round($block_height);
 		$this->app->run_query("DELETE FROM cached_rounds WHERE game_id='".$this->db_game['game_id']."' AND round_id >= ".$round_id.";");
 		$this->app->run_query("DELETE FROM cached_round_options WHERE game_id='".$this->db_game['game_id']."' AND round_id >= ".$round_id.";");
-
+		
 		$this->app->run_query("UPDATE strategy_round_allocations sra JOIN user_strategies us ON us.strategy_id=sra.strategy_id SET sra.applied=0 WHERE us.game_id='".$this->db_game['game_id']."' AND sra.round_id >= ".$round_id.";");
 		
 		$this->update_option_votes();
@@ -2677,9 +2675,9 @@ class Game {
 	public function coins_in_existence($block_id) {
 		$last_block_id = $this->last_block_id();
 		
-		if ($last_block_id == 0 || ($last_block_id != $this->db_game['coins_in_existence_block'] || ($block && $last_block_id != $block_id))) {
+		if ($last_block_id == 0 || ($last_block_id != $this->db_game['coins_in_existence_block'] || ($block_id !== false && $last_block_id != $block_id))) {
 			$q = "SELECT SUM(amount) FROM transactions WHERE block_id IS NOT NULL AND game_id='".$this->db_game['game_id']."' AND transaction_desc IN ('giveaway','votebase','coinbase')";
-			if ($block_id) $q .= " AND block_id <= ".$block_id;
+			if ($block_id !== false) $q .= " AND block_id <= ".$block_id;
 			$q .= ";";
 			$r = $this->app->run_query($q);
 			$coins = $r->fetch(PDO::FETCH_NUM);
@@ -2731,18 +2729,16 @@ class Game {
 		$round_voting_stats = $round_voting_stats_all[2];
 		
 		$winning_option = FALSE;
-		$winning_votesum = 0;
 		$winning_votes = 0;
 		for ($rank=0; $rank<$this->db_game['num_voting_options']; $rank++) {
 			$option_id = $round_voting_stats[$rank]['option_id'];
 			$option_rank2db_id[$rank] = $option_id;
-			$option_scores = $this->option_score_in_round($option_id, $round_id);
+			$option_votes = $this->option_votes_in_round($option_id, $round_id);
 			
-			if ($option_scores['sum'] > $max_sum_votes) {}
-			else if (!$winning_option && $option_scores['sum'] > 0) {
+			if ($option_votes['sum'] > $max_sum_votes) {}
+			else if (!$winning_option && $option_votes['sum'] > 0) {
 				$winning_option = $option_id;
-				$winning_votesum = $option_scores['sum'];
-				$winning_votes = $option_scores['sum'];
+				$winning_votes = $option_votes['sum'];
 			}
 		}
 		
@@ -2758,14 +2754,7 @@ class Game {
 			$q = "UPDATE game_voting_options SET last_win_round=".$round_id." WHERE game_id='".$this->db_game['game_id']."' AND option_id='".$winning_option."';";
 			$r = $this->app->run_query($q);
 			
-			$log_text .= $round_voting_stats[$option_id2rank[$winning_option]]['name']." wins with ".($winning_votesum/(pow(10, 8)))." coins voted.<br/>";
-			
-			if ($add_payout_transaction) {
-				$payout_response = $this->new_payout_transaction($round_id, $last_block_id, $winning_option, $winning_votesum);
-				$payout_transaction_id = $payout_response[0];
-				$log_text .= "Payout response: ".$payout_response[1];
-				$log_text .= "<br/>\n";
-			}
+			$log_text .= $round_voting_stats[$option_id2rank[$winning_option]]['name']." wins with ".($winning_votes/(pow(10, 8)))." votes.<br/>";
 		}
 		else $log_text .= "No winner<br/>";
 		
@@ -2775,15 +2764,25 @@ class Game {
 		}
 		
 		$q = "INSERT INTO cached_rounds SET game_id='".$this->db_game['game_id']."', round_id='".$round_id."', payout_block_id='".$last_block_id."'";
-		if ($payout_transaction_id) $q .= ", payout_transaction_id='".$payout_transaction_id."'";
 		if ($winning_option) $q .= ", winning_option_id='".$winning_option."', derived_winning_option_id='".$winning_option."'";
 		$q .= ", winning_votes='".$winning_votes."', derived_winning_votes='".$winning_votes."', sum_votes='".$sum_votes."', time_created='".time()."';";
 		$r = $this->app->run_query($q);
 		$internal_round_id = $this->app->last_insert_id();
 		
 		for ($position=0; $position<$this->db_game['num_voting_options']; $position++) {
-			$qq = "INSERT INTO cached_round_options SET internal_round_id='".$internal_round_id."', round_id='".$round_id."', game_id='".$this->db_game['game_id']."', option_id='".$option_rank2db_id[$position]."', rank='".($position+1)."', score='".$round_voting_stats[$position]['votes']."';";
+			$qq = "INSERT INTO cached_round_options SET internal_round_id='".$internal_round_id."', round_id='".$round_id."', game_id='".$this->db_game['game_id']."', option_id='".$option_rank2db_id[$position]."', rank='".($position+1)."', coin_score='".$round_voting_stats[$position]['coin_score']."', coin_block_score='".$round_voting_stats[$position]['coin_block_score']."', coin_round_score='".$round_voting_stats[$position]['coin_round_score']."', votes='".$round_voting_stats[$position]['votes']."';";
 			$rr = $this->app->run_query($qq);
+		}
+		
+		if ($winning_option && $add_payout_transaction) {
+			$payout_response = $this->new_payout_transaction($round_id, $last_block_id, $winning_option, $winning_votes);
+			$payout_transaction_id = $payout_response[0];
+			
+			$q = "UPDATE cached_rounds SET payout_transaction_id='".$payout_transaction_id."' WHERE internal_round_id='".$internal_round_id."';";
+			$r = $this->app->run_query($q);
+			
+			$log_text .= "Payout response: ".$payout_response[1];
+			$log_text .= "<br/>\n";
 		}
 		
 		if ($this->db_game['send_round_notifications'] == 1) {
@@ -2811,13 +2810,13 @@ class Game {
 		for ($rank=0; $rank<$this->db_game['num_voting_options']; $rank++) {
 			$option_id = $round_voting_stats[$rank]['option_id'];
 			$option_rank2db_id[$rank] = $option_id;
-			$option_scores = $this->option_score_in_round($option_id, $round_id);
+			$option_votes = $this->option_votes_in_round($option_id, $round_id);
 			
-			if ($option_scores['sum'] > $max_sum_votes) {}
-			else if (!$winning_option && $option_scores['sum'] > 0) {
+			if ($option_votes['sum'] > $max_sum_votes) {}
+			else if (!$winning_option && $option_votes['sum'] > 0) {
 				$winning_option = $option_id;
-				$winning_votesum = $option_scores['sum'];
-				$winning_votes = $option_scores['sum'];
+				$winning_votesum = $option_votes['sum'];
+				$winning_votes = $option_votes['sum'];
 			}
 		}
 		$db_winning_option = false;

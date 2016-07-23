@@ -54,7 +54,7 @@ if ($_REQUEST['key'] == $client_access_key) {
 			
 			$this->server_result = FALSE;
 			$this->game = FALSE;
-			$this->game_scores = FALSE;
+			$this->game_votes = FALSE;
 			$this->user_info = FALSE;
 			
 			$this->error_code = FALSE;
@@ -90,7 +90,7 @@ if ($_REQUEST['key'] == $client_access_key) {
 				// Store the result of the API call
 				$this->server_result = json_decode($fetch_result);
 				$this->game = $this->server_result->game;
-				$this->game_scores = $this->server_result->game_scores;
+				$this->game_votes = $this->server_result->game_votes;
 				$this->user_info = $this->server_result->user_info;
 				
 				if (!$this->game) {
@@ -101,9 +101,9 @@ if ($_REQUEST['key'] == $client_access_key) {
 				}
 				else {
 					// Define the rank2option_id map so that we can reference nations by rank in setOutputs()
-					foreach ($this->game_scores as $game_score) {
-						$this->rank2option_id[$game_score->rank] = $game_score->option_id;
-						$this->recommendations[$game_score->option_id] = new VotingRecommendation($game_score->option_id, $game_score->name);
+					foreach ($this->game_votes as $game_votes) {
+						$this->rank2option_id[$game_votes->rank] = $game_votes->option_id;
+						$this->recommendations[$game_votes->option_id] = new VotingRecommendation($game_votes->option_id, $game_votes->name);
 					}
 					$this->setname2option_id();
 				}
