@@ -15,9 +15,9 @@ if ($thisuser) {
 
 			if ($perm_to_invite) {
 				if ($action == "manage") {
-					$q = "SELECT * FROM invitations i LEFT JOIN users u ON i.used_user_id=u.user_id LEFT JOIN async_email_deliveries d ON i.sent_email_id=d.delivery_id WHERE i.game_id='".$game->db_game['game_id']."' AND i.inviter_id='".$thisuser->db_user['user_id']."' ORDER BY invitation_id ASC;";
+					$q = "SELECT * FROM game_invitations i LEFT JOIN users u ON i.used_user_id=u.user_id LEFT JOIN async_email_deliveries d ON i.sent_email_id=d.delivery_id WHERE i.game_id='".$game->db_game['game_id']."' AND i.inviter_id='".$thisuser->db_user['user_id']."' ORDER BY invitation_id ASC;";
 					$r = $app->run_query($q);
-					echo 'You\'ve generated '.$r->rowCount().' invitations for this game.<br/>';
+					echo 'You\'ve generated '.$r->rowCount().' game_invitations for this game.<br/>';
 					while ($invitation = $r->fetch()) {
 						echo '<div class="row">';
 						echo '<div class="col-sm-6">';
@@ -50,7 +50,7 @@ if ($thisuser) {
 					$send_to = urldecode($_REQUEST['send_to']);
 					$invitation_id = intval($_REQUEST['invitation_id']);
 					
-					$q = "SELECT * FROM invitations WHERE invitation_id='".$invitation_id."' AND inviter_id='".$thisuser->db_user['user_id']."';";
+					$q = "SELECT * FROM game_invitations WHERE invitation_id='".$invitation_id."' AND inviter_id='".$thisuser->db_user['user_id']."';";
 					$r = $app->run_query($q);
 					
 					if ($r->rowCount() > 0) {
@@ -97,9 +97,9 @@ if ($thisuser) {
 					$app->output_message(1, "An invitation has been generated.", false);
 				}
 			}
-			else $app->output_message(2, "Error: you don't have permission to generate invitations for this game.", false);
+			else $app->output_message(2, "Error: you don't have permission to generate game_invitations for this game.", false);
 		}
-		else $app->output_message(2, "Error: you don't have permission to generate invitations for this game.", false);
+		else $app->output_message(2, "Error: you don't have permission to generate game_invitations for this game.", false);
 	}
 	else $app->output_message(2, "Error: you specified an invalid action.", false);
 }

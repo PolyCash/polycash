@@ -104,8 +104,8 @@ if ($thisuser) {
 			}
 		}
 		else if (!$user_game && ($requested_game['giveaway_status'] == "invite_free" || $requested_game['giveaway_status'] == "invite_pay")) {
-			if ($requested_game['public_unclaimed_invitations'] == 1) {
-				$q = "SELECT * FROM invitations WHERE game_id='".$requested_game['game_id']."' AND used=0 AND used_user_id IS NULL ORDER BY invitation_id DESC LIMIT 1;";
+			if ($requested_game['public_unclaimed_game_invitations'] == 1) {
+				$q = "SELECT * FROM game_invitations WHERE game_id='".$requested_game['game_id']."' AND used=0 AND used_user_id IS NULL ORDER BY invitation_id DESC LIMIT 1;";
 				$r = $app->run_query($q);
 				if ($r->rowCount() > 0) {
 					$invitation = $r->fetch();
@@ -141,10 +141,10 @@ if ($thisuser) {
 				$invite_currency = false;
 				$q = "SELECT * FROM currencies WHERE currency_id='".$requested_game['invite_currency']."';";
 				$r = $app->run_query($q);
-
+				
 				if ($r->rowCount() > 0) {
 					$invite_currency = $r->fetch();
-
+					
 					$invoice = $app->new_currency_invoice($invite_currency['currency_id'], $requested_game['invite_cost'], $thisuser->db_user['user_id'], $requested_game['game_id']);
 					?>
 					<script type="text/javascript">
@@ -178,7 +178,7 @@ if ($thisuser) {
 							<?php
 							if ($thisuser->db_user['user_id'] == $requested_game['creator_id'] && $requested_game['game_status'] == "editable") {
 								$primary_game = new Game($app, $app->get_site_constant('primary_game_id'));
-
+								
 								echo "You created this game, you can edit it <a href=\"/wallet/".$primary_game->db_game['url_identifier']."\">here</a>.<br/>\n";
 							}
 
@@ -362,7 +362,7 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 		$option_pct_sum = 0;
 		$option_pct_error = FALSE;
 		
-		$qq = "SELECT * FROM game_voting_options WHERE game_id='".$game->db_game['game_id']."';";
+		$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."';";
 		$rr = $app->run_query($qq);
 		while ($voting_option = $rr->fetch()) {
 			$option_pct = intval($_REQUEST['option_pct_'.$voting_option['option_id']]);
@@ -373,7 +373,7 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 			$qq = "DELETE FROM user_strategy_options WHERE strategy_id='".$user_strategy['strategy_id']."';";
 			$rr = $app->run_query($qq);
 			
-			$qq = "SELECT * FROM game_voting_options WHERE game_id='".$game->db_game['game_id']."';";
+			$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."';";
 			$rr = $app->run_query($qq);
 			
 			while ($voting_option = $rr->fetch()) {
@@ -457,7 +457,7 @@ if ($thisuser && $game) {
 		if ($game->db_game['giveaway_status'] == "invite_free" || $game->db_game['giveaway_status'] == "public_free") {
 			$qq = "SELECT * FROM game_giveaways WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."' AND type='initial_purchase';";
 			$rr = $app->run_query($qq);
-		
+			
 			if ($rr->rowCount() == 0) {
 				$giveaway = $game->new_game_giveaway($thisuser->db_user['user_id'], 'initial_purchase', false);
 			}
@@ -480,22 +480,28 @@ if ($thisuser && $game) {
 			die("Error: you're not in this game.");
 		}
 		
-		$round_stats = $game->round_voting_stats_all($current_round);
-		$total_vote_sum = $round_stats[0];
-		$max_vote_sum = $round_stats[1];
-		$option_id2rank = $round_stats[3];
-		$round_stats = $round_stats[2];
-
 		$my_last_transaction_id = $thisuser->my_last_transaction_id($game->db_game['game_id']);
 		?>
 		<script type="text/javascript">
 		//<![CDATA[
 		var current_tab = 0;
-		var Games = new Array();
-		Games.push(new Game(<?php
+		var initial_notification_pref = "<?php echo $user_game['notification_preference']; ?>";
+		var initial_notification_email = "<?php echo $thisuser->db_user['notification_email']; ?>";
+		var started_checking_notification_settings = false;
+		var initial_alias_pref = "<?php echo $thisuser->db_user['alias_preference']; ?>";
+		var initial_alias = "<?php echo $thisuser->db_user['alias']; ?>";
+		var started_checking_alias_settings = false;
+		var performance_history_sections = 1;
+		var performance_history_start_round = <?php echo max(1, $current_round-10); ?>;
+		var performance_history_loading = false;
+		
+		var user_logged_in = true;
+		
+		var games = new Array();
+		games.push(new Game(<?php
 			echo $game->db_game['game_id'];
-			echo ', '.$last_block_id;
-			echo ', '.$game->last_transaction_id().', ';
+			echo ', false';
+			echo ', false, ';
 			if ($my_last_transaction_id) echo $my_last_transaction_id;
 			else echo 'false';
 			echo ', "'.$game->mature_io_ids_csv($thisuser->db_user['user_id']).'"';
@@ -508,57 +514,17 @@ if ($thisuser && $game) {
 			echo ', "'.$game->db_game['url_identifier'].'"';
 			echo ', "'.$game->db_game['coin_name'].'"';
 			echo ', "'.$game->db_game['coin_name_plural'].'"';
-			echo ', '.$game->db_game['num_voting_options'];
-			echo ', "'.$game->db_game['vote_effectiveness_function'].'"';
-			echo ', "wallet"';
+			echo ', "wallet", "'.$game->event_ids().'"';
 		?>));
 		
-		var initial_notification_pref = "<?php echo $thisuser->db_user['notification_preference']; ?>";
-		var initial_notification_email = "<?php echo $thisuser->db_user['notification_email']; ?>";
-		var started_checking_notification_settings = false;
-		var initial_alias_pref = "<?php echo $thisuser->db_user['alias_preference']; ?>";
-		var initial_alias = "<?php echo $thisuser->db_user['alias']; ?>";
-		var started_checking_alias_settings = false;
-		var performance_history_sections = 1;
-		var performance_history_start_round = <?php echo max(1, $current_round-10); ?>;
-		var performance_history_loading = false;
-		
-		var user_logged_in = true;
-		
-		var optionData = new Array();
-		var votingAddrOptions = new Array();
 		<?php
-		$q = "SELECT * FROM game_voting_options WHERE game_id='".$game->db_game['game_id']."' ORDER BY option_id ASC;";
-		$r = $app->run_query($q);
-		while ($option = $r->fetch()) {
-			echo "optionData.push(new Array(".$option['option_id'].", '".$option['name']."'));\n";
-			$votingaddr_id = $thisuser->user_address_id($game->db_game['game_id'], $option['option_id']);
-			if ($votingaddr_id !== false) {
-				echo "votingAddrOptions.push(".$option['option_id'].");\n";
-			}
-		}
-		?>
-		Games[0].setVotingOptions(optionData);
-		Games[0].setVotingAddresses(votingAddrOptions);
-		Games[0].option_selected(0);
-		
-		<?php if ($game->db_game['losable_bets_enabled'] == 1) { ?>
+		if ($game->db_game['losable_bets_enabled'] == 1) { ?>
 		google.load("visualization", "1", {packages:["corechart"]});
 		<?php } ?>
 		
 		$(document).ready(function() {
-			render_tx_fee();
-			load_plan_option_events();
-			notification_pref_changed();
-			alias_pref_changed();
-			reload_compose_vote();
-			
-			$('.datepicker').datepicker();
-
 			loop_event();
 			compose_vote_loop();
-			Games[0].game_loop_event();
-			
 			<?php
 			if ($game->db_game['losable_bets_enabled'] == 1) { ?>
 				bet_loop();
@@ -577,15 +543,6 @@ if ($thisuser && $game) {
 			?>
 		});
 		
-		$(document).keypress(function (e) {
-			if (e.which == 13) {
-				var selected_option_db_id = $('#game0_rank2option_id_'+selected_option_id).val();
-				
-				if ($('#game0_vote_amount_'+selected_option_db_id).is(":focus")) {
-					Games[0].confirm_vote(selected_option_db_id);
-				}
-			}
-		});
 		//]]>
 		</script>
 		
@@ -624,10 +581,18 @@ if ($thisuser && $game) {
 		<div style="display: none;" id="vote_details_general">
 			<?php echo $app->vote_details_general($mature_balance); ?>
 		</div>
-		
-		<div id="game0_vote_popups"><?php
-		echo $game->initialize_vote_option_details($option_id2rank, $total_vote_sum, $thisuser->db_user['user_id'], 0);
-		?></div>
+		<?php
+		for ($i=0; $i<count($game->current_events); $i++) {
+			$round_stats = $game->current_events[$i]->round_voting_stats_all($current_round);
+			$sum_votes = $round_stats[0];
+			$option_id2rank = $round_stats[3];
+			?>
+			<div id="game0_event<?php echo $i; ?>_vote_popups"><?php
+			echo $game->current_events[$i]->initialize_vote_option_details($option_id2rank, $sum_votes, $thisuser->db_user['user_id'], 0, $i);
+			?></div>
+			<?php
+		}
+		?>
 		
 		<div class="row">
 			<div class="col-xs-2 tabcell" id="tabcell0" onclick="tab_clicked(0);">Play&nbsp;Now</div>
@@ -653,23 +618,38 @@ if ($thisuser && $game) {
 					<?php
 				}
 				?>
-				<div id="game0_current_round_table">
-					<?php
-					echo $game->current_round_table($current_round, $thisuser, true, true, 0);
-					?>
-				</div>
+				<div id="game0_events"></div>
 				
-				<div class="row">
-					<div class="col-md-6">
-						<h2>My Votes</h2>
-						<div id="game0_my_current_votes">
+				<script type="text/javascript" id="game0_new_event_js">
+				<?php
+				echo $game->new_event_js(0, false);
+				?>
+				</script>
+				<?php
+				/*
+				for ($i=0; $i<count($game->current_events); $i++) {
+					?>
+					<div id="game0_event<?php echo $i; ?>">
+						<div id="game0_event<?php echo $i; ?>_current_round_table">
 							<?php
-							echo $game->my_votes_table($current_round, $thisuser);
+							echo $game->current_events[$i]->current_round_table($current_round, $thisuser, true, true, 0, $i);
 							?>
 						</div>
+						<div class="row">
+							<div class="col-md-6">
+								<h2>My Votes</h2>
+								<div id="game0_event<?php echo $i; ?>_my_current_votes">
+									<?php
+									echo $game->current_events[$i]->my_votes_table($current_round, $thisuser);
+									?>
+								</div>
+							</div>
+						</div>
 					</div>
-				</div>
-				
+					<?php
+				}
+				*/
+				?>
 				<div id="vote_popups_disabled"<?php if ($block_within_round != $game->db_game['round_length']) echo ' style="display: none;"'; ?>>
 					The final block of the round is being mined. Voting is currently disabled.
 				</div>
@@ -685,37 +665,13 @@ if ($thisuser && $game) {
 						</div>
 						<div class="col-md-6 bordered_cell" id="compose_vote_outputs">
 							<b>Outputs:</b><div id="display_tx_fee"></div><br/>
-							<select class="form-control" id="select_add_output" onchange="select_add_output_changed();">
-								<option value="">Please select <?php echo $app->prepend_a_or_an($game->db_game['option_name']); ?>...</option>
-								<?php
-								$q = "SELECT * FROM game_voting_options WHERE game_id='".$game->db_game['game_id']."' ORDER BY option_id ASC;";
-								$r = $app->run_query($q);
-								while ($voting_option = $r->fetch()) {
-									echo '<option value="'.$voting_option['option_id'].'">'.$voting_option['name']."</option>\n";
-								}
-								?>
-							</select>
+							<select class="form-control" id="select_add_output" onchange="select_add_output_changed();"></select>
 						</div>
 					</div>
 					<div class="redtext" id="compose_vote_errors" style="margin-top: 5px;"></div>
 					<div class="greentext" id="compose_vote_success" style="margin-top: 5px;"></div>
 					<button class="btn btn-primary" id="confirm_compose_vote_btn" style="margin-top: 5px; margin-left: 5px;" onclick="confirm_compose_vote();">Submit Voting Transaction</button>
 				</div>
-				
-				<?php
-				if (FALSE && $game->db_game['game_type'] == "simulation" && $thisuser->db_user['user_id'] == $game->db_game['creator_id']) {
-					if ($game->db_game['block_timing'] == "user_controlled") $toggle_text = "Switch to automatic block timing";
-					else $toggle_text = "Switch to user-controlled block timing";
-					?>
-					<div style="margin-top: 10px; overflow: hidden;">
-						<button class="btn btn-primary" onclick="toggle_block_timing();" id="toggle_timing_btn"><?php echo $toggle_text; ?></button>
-						<?php if ($game->db_game['block_timing'] == "user_controlled") { ?>
-						<button style="float: right;" class="btn btn-success" onclick="next_block();" id="next_block_btn">Next Block</button>
-						<?php } ?>
-					</div>
-					<?php
-				}
-				?>
 			</div>
 			
 			<div class="tabcontent" style="display: none;" id="tabcontent1">
@@ -809,7 +765,7 @@ if ($thisuser && $game) {
 								<a href="" onclick="by_option_reset_pct(); return false;">Set all to zero</a> <div style="margin-left: 15px; display: inline-block;" id="option_pct_subtotal">&nbsp;</div>
 							</label><br/>
 							<?php
-							$q = "SELECT * FROM game_voting_options WHERE game_id='".$game->db_game['game_id']."' ORDER BY option_id ASC;";
+							$q = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."' ORDER BY option_id ASC;";
 							$r = $app->run_query($q);
 							$option_i = 0;
 							while ($option = $r->fetch()) {
@@ -984,7 +940,7 @@ if ($thisuser && $game) {
 						<select class="form-control" id="withdraw_remainder_address_id">
 							<option value="random">Random</option>
 							<?php
-							$q = "SELECT * FROM addresses a LEFT JOIN game_voting_options vo ON vo.option_id=a.option_id WHERE vo.game_id='".$game->db_game['game_id']."' AND a.user_id='".$thisuser->db_user['user_id']."' GROUP BY a.option_id ORDER BY vo.option_id IS NULL ASC, vo.option_id ASC;";
+							$q = "SELECT * FROM addresses a LEFT JOIN options op ON op.option_id=a.option_id WHERE a.game_id='".$game->db_game['game_id']."' AND a.user_id='".$thisuser->db_user['user_id']."' GROUP BY a.option_id ORDER BY op.option_id IS NULL ASC, op.option_id ASC;";
 							$r = $app->run_query($q);
 							while ($address = $r->fetch()) {
 								if ($address['name'] == "") $address['name'] = "None";
@@ -1003,7 +959,7 @@ if ($thisuser && $game) {
 				
 				<h1>Deposit</h1>
 				<?php
-				$q = "SELECT * FROM addresses a LEFT JOIN game_voting_options gvo ON gvo.option_id=a.option_id WHERE a.game_id='".$game->db_game['game_id']."' AND a.user_id='".$thisuser->db_user['user_id']."' ORDER BY a.option_id IS NULL DESC, a.option_id ASC;";
+				$q = "SELECT * FROM addresses a LEFT JOIN options gvo ON gvo.option_id=a.option_id WHERE a.game_id='".$game->db_game['game_id']."' AND a.user_id='".$thisuser->db_user['user_id']."' ORDER BY a.option_id IS NULL DESC, a.option_id ASC;";
 				$r = $app->run_query($q);
 				?>
 				<b>You have <?php echo $r->rowCount(); ?> addresses.</b><br/>
@@ -1053,7 +1009,7 @@ if ($thisuser && $game) {
 				
 				if ($new_game_perm) { ?>
 					<br/>
-					<button class="btn btn-primary" onclick="switch_to_game(0, 'new'); return false;">Start a new Private Game</button>
+					<button class="btn btn-primary" onclick="switch_to_game(0, 'new'); return false;">Start a new Private Event</button>
 					<?php
 				}
 				?>
@@ -1214,7 +1170,7 @@ if ($thisuser && $game) {
 						var plan_option_row_sums = new Array();
 						var round_id2row_id = new Array();
 						
-						$(document).ready(function() {
+						/*$(document).ready(function() {
 							initialize_plan_options(<?php echo $plan_start_round; ?>, <?php echo $plan_stop_round; ?>);
 							<?php
 							$q = "SELECT * FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND round_id >= ".$plan_start_round." AND round_id <= ".$plan_stop_round.";";
@@ -1223,7 +1179,7 @@ if ($thisuser && $game) {
 								echo "load_plan_option(".$allocation['round_id'].", option_id2option_index[".$allocation['option_id']."], ".$allocation['points'].");\n";
 							}
 							?>
-						});
+						});*/
 						</script>
 					</div>
 				</div>
@@ -1247,26 +1203,10 @@ if ($thisuser && $game) {
 						<form onsubmit="save_game();">
 							<div class="row">
 								<div class="col-sm-6 form-control-static">
-									Game title:
+									Event title:
 								</div>
 								<div class="col-sm-6">
 									<input class="form-control" type="text" id="game_form_name" />
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">
-									Voting options:
-								</div>
-								<div class="col-sm-6">
-									<select class="form-control" id="game_form_option_group_id">
-									<?php
-									$q = "SELECT og.*, COUNT(*) FROM voting_option_groups og JOIN voting_options o ON og.option_group_id=o.option_group_id GROUP BY og.option_group_id ORDER BY og.option_name ASC;";
-									$r = $app->run_query($q);
-									while ($option_group = $r->fetch()) {
-										echo '<option value="'.$option_group['option_group_id'].'">'.$option_group['description'].' ('.$option_group['COUNT(*)'].")</option>\n";
-									}
-									?>
-									</select>
 								</div>
 							</div>
 							<div class="row">
@@ -1295,21 +1235,21 @@ if ($thisuser && $game) {
 							</div>
 							<div class="row">
 								<div class="col-sm-6 form-control-static">
-									Game status:
+									Event status:
 								</div>
 								<div class="col-sm-6">
 									<div id="game_form_game_status" class="form-control-static"></div>
 									
-									<button id="start_game_btn" class="btn btn-info" style="display: none;" onclick="switch_to_game(editing_game_id, 'running'); return false;">Start Game</button>
-									<button id="pause_game_btn" class="btn btn-info" style="display: none;" onclick="switch_to_game(editing_game_id, 'paused'); return false;">Pause Game</button>
+									<button id="start_game_btn" class="btn btn-info" style="display: none;" onclick="switch_to_game(editing_game_id, 'running'); return false;">Start Event</button>
+									<button id="pause_game_btn" class="btn btn-info" style="display: none;" onclick="switch_to_game(editing_game_id, 'paused'); return false;">Pause Event</button>
 
-									<button id="delete_game_btn" class="btn btn-danger" style="display: none;" onclick="switch_to_game(editing_game_id, 'delete'); return false;">Delete Game</button>
-									<button id="reset_game_btn" class="btn btn-warning" style="display: none;" onclick="switch_to_game(editing_game_id, 'reset'); return false;">Reset Game</button>
+									<button id="delete_game_btn" class="btn btn-danger" style="display: none;" onclick="switch_to_game(editing_game_id, 'delete'); return false;">Delete Event</button>
+									<button id="reset_game_btn" class="btn btn-warning" style="display: none;" onclick="switch_to_game(editing_game_id, 'reset'); return false;">Reset Event</button>
 								</div>
 							</div>
 							<div class="row">
 								<div class="col-sm-6 form-control-static">
-									Game ends?
+									Event ends?
 								</div>
 								<div class="col-sm-6">
 									<select class="form-control" id="game_form_has_final_round" onchange="game_form_final_round_changed();">
@@ -1408,15 +1348,6 @@ if ($thisuser && $game) {
 								</div>
 							</div>
 							<div class="row">
-								<div class="col-sm-6 form-control-static">Vote effectiveness function:</div>
-								<div class="col-sm-6">
-									<select class="form-control" id="game_form_vote_effectiveness_function">
-										<option value="constant">Votes count equally throughout the round</option>
-										<option value="linear_decrease">Votes decrease from 100% to 0% through the round</option>
-									</select>
-								</div>
-							</div>
-							<div class="row">
 								<div class="col-sm-6 form-control-static">Transaction lock time:</div>
 								<div class="col-sm-3">
 									<input class="form-control" style="text-align: right;" type="text" id="game_form_maturity" />
@@ -1455,16 +1386,6 @@ if ($thisuser && $game) {
 									</div>
 								</div>
 							</div>
-							<?php /*<div class="row">
-								<div class="col-sm-6 form-control-static">Number of players:</div>
-								<div class="col-sm-6">
-									<select class="form-control" id="game_form_num_players_status">
-										<option value="unlimited">Unlimited</option>
-										<option value="capped">Capped at some number</option>
-										<option value="exactly">Exactly some number</option>
-									</select>
-								</div>
-							</div> */ ?>
 							<div class="row">
 								<div class="col-sm-6 form-control-static">Coins given out per invitation:</div>
 								<div class="col-sm-3">
@@ -1482,7 +1403,7 @@ if ($thisuser && $game) {
 										<option value="unlimited">Unlimited buy-ins</option>
 										<option value="per_user_cap">Limit buy-ins per user</option>
 										<option value="game_cap">Buy-in cap for the whole game</option>
-										<option value="game_and_user_cap">Game-wide cap &amp; user cap</option>
+										<option value="game_and_user_cap">Event-wide cap &amp; user cap</option>
 									</select>
 								</div>
 							</div>
@@ -1499,7 +1420,7 @@ if ($thisuser && $game) {
 							</div>
 							<div id="game_form_game_buyin_cap_disp">
 								<div class="row">
-									<div class="col-sm-6 form-control-static">Game-wide buy-in cap:</div>
+									<div class="col-sm-6 form-control-static">Event-wide buy-in cap:</div>
 									<div class="col-sm-3">
 										<input class="form-control" style="text-align: right;" type="text" id="game_form_game_buyin_cap" />
 									</div>
@@ -1558,15 +1479,6 @@ if ($thisuser && $game) {
 									</div>
 								</div>
 							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">Winning percentage limit:</div>
-								<div class="col-sm-3">
-									<input class="form-control" style="text-align: right;" type="text" id="game_form_max_voting_fraction" />
-								</div>
-								<div class="col-sm-3 form-control-static">
-									%
-								</div>
-							</div>
 							
 							<div style="height: 10px;"></div>
 							<button style="float: right;" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
@@ -1575,7 +1487,7 @@ if ($thisuser && $game) {
 							
 							<button id="publish_game_btn" type="button" class="btn btn-primary" onclick="save_game('publish');">Save &amp; Publish</button>
 							
-							<button id="invitations_game_btn" type="button" class="btn btn-info" data-dismiss="modal" onclick="manage_game_invitations(editing_game_id);">Invite People</button>
+							<button id="game_invitations_game_btn" type="button" class="btn btn-info" data-dismiss="modal" onclick="manage_game_invitations(editing_game_id);">Invite People</button>
 						</form>
 					</div>
 				</div>

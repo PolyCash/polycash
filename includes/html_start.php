@@ -1,3 +1,6 @@
+<?php
+if (empty($nav_tab_selected)) $nav_tab_selected = "";
+?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
@@ -56,16 +59,16 @@
 					}
 					?>><a href="/wallet/<?php
 					if ($nav_tab_selected == "wallet") {}
-					else if ($game) echo $game->db_game['url_identifier']."/";
-					else {
+					else if (!empty($game)) echo $game->db_game['url_identifier']."/";
+					else if ((int) $app->get_site_constant('primary_game_id') > 0) {
 						$primary_game = new Game($app, $app->get_site_constant('primary_game_id'));
 						echo $primary_game->db_game['url_identifier']."/";
 					}
-					?>"><?php if ($thisuser) echo "Wallet"; else echo "Log In"; ?></a></li>
-					<?php if ($game) { ?><li<?php if ($nav_tab_selected == "game_homepage") echo ' class="active"'; ?>><a href="/<?php echo $game->db_game['url_identifier']; ?>/">About</a></li><?php } ?>
-					<li<?php if ($nav_tab_selected == "explorer") echo ' class="active"'; ?>><a href="/explorer/<?php if ($game) echo $game->db_game['url_identifier']."/"; ?>">Explorer</a></li>
+					?>"><?php if (!empty($thisuser)) echo "Wallet"; else echo "Log In"; ?></a></li>
+					<?php if (!empty($game)) { ?><li<?php if ($nav_tab_selected == "event_homepage") echo ' class="active"'; ?>><a href="/<?php echo $game->db_game['url_identifier']; ?>/">About</a></li><?php } ?>
+					<li<?php if ($nav_tab_selected == "explorer") echo ' class="active"'; ?>><a href="/explorer/<?php if (!empty($game)) echo $game->db_game['url_identifier']."/"; ?>">Explorer</a></li>
 					<?php
-					if ($thisuser || (isset($_REQUEST['action']) && $_REQUEST['action'] == "logout")) { ?>
+					if (!empty($thisuser) || (isset($_REQUEST['action']) && $_REQUEST['action'] == "logout")) { ?>
 						<li<?php if ($nav_tab_selected == "wallet" && $_REQUEST['action'] == "logout") echo ' class="active"'; ?>><a href="/wallet/?action=logout">Log Out</a></li>
 						<?php
 					}

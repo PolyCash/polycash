@@ -3,7 +3,7 @@ include('includes/connect.php');
 include('includes/get_session.php');
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
-$pagetitle = "EmpireCoin - Coin games";
+$pagetitle = "EmpireCoin - Coin event_types";
 $nav_tab_selected = "wallet";
 include('includes/html_start.php');
 ?>
@@ -72,7 +72,7 @@ include('includes/html_start.php');
 								echo match_body($match, $my_membership, $thisuser);
 							}
 							else {
-								echo "Error, there are too many players in this game.";
+								echo "Error, there are too many players in this event.";
 							}
 							?>
 						</div>
@@ -81,7 +81,7 @@ include('includes/html_start.php');
 				}
 				else {
 					if ($match['num_joined'] < $match['num_players']) {
-						echo "This is a ".$match['num_players']."-player game, but only ".$match['num_joined']." player";
+						echo "This is a ".$match['num_players']."-player event, but only ".$match['num_joined']." player";
 						if ($match['num_joined'] == 1) echo " has";
 						else echo "s have";
 						echo " joined so far.<br/>\n";
@@ -90,7 +90,7 @@ include('includes/html_start.php');
 						<?php
 					}
 					else {
-						echo "This game is already full.<br/>\n";
+						echo "This event is already full.<br/>\n";
 					}
 				}
 			}
@@ -102,9 +102,9 @@ include('includes/html_start.php');
 			
 			if ($my_matches_r->rowCount() > 0) {
 				echo "<ul>";
-				echo "<h1>My Games</h1>\n";
+				echo "<h1>My event_types</h1>\n";
 				while ($my_match = $my_matches_r->fetch()) {
-					echo "<li><a href=\"/games/?match_id=".$my_match['match_id']."\">#".$my_match['match_id'].", ".$my_match['name']." (".$my_match['num_joined']."/".$my_match['num_players']." players)</a></li>\n";
+					echo "<li><a href=\"/event_types/?match_id=".$my_match['match_id']."\">#".$my_match['match_id'].", ".$my_match['name']." (".$my_match['num_joined']."/".$my_match['num_players']." players)</a></li>\n";
 				}
 				echo "</ul>\n";
 			}
@@ -113,13 +113,13 @@ include('includes/html_start.php');
 			$joinable_r = $app->run_query($joinable_q);
 			if ($joinable_r->rowCount() > 0) {
 				echo "<ul>";
-				echo "<h1>Open Games</h1>";
+				echo "<h1>Open event_types</h1>";
 				while ($joinable_match = $joinable_r->fetch()) {
 					echo "<li><a href=\"\" onclick=\"join_match(".$joinable_match['match_id']."); return false;\">#".$joinable_match['match_id'].", ".$joinable_match['name']." (".$joinable_match['num_joined']."/".$joinable_match['num_players']." players)</a></li>\n";
 				}
 				echo "</ul>";
 			}
-			else echo "There are no games available to join right now.<br/>\n";
+			else echo "There are no event_types available to join right now.<br/>\n";
 			
 			?>
 			<br/>
@@ -129,7 +129,7 @@ include('includes/html_start.php');
 				<div class="modal-dialog">
 					<div class="modal-content">
 						<div class="modal-body">
-							Please select the a game type:<br/>
+							Please select the a event type:<br/>
 							<select id="new_match_type" class="form-control" required="required">
 							<?php
 							$q = "SELECT * FROM match_types ORDER BY name ASC;";
@@ -151,7 +151,7 @@ include('includes/html_start.php');
 		}
 	}
 	else {
-		$redirect_url = get_redirect_url("/games/");
+		$redirect_url = get_redirect_url("/event_types/");
 		$redirect_id = $redirect_url['redirect_url_id'];
 		include("includes/html_login.php");
 	}

@@ -20,8 +20,8 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
 		register_shutdown_function("script_shutdown");
 		
-		$real_games = array();
-		$real_game_q = "SELECT * FROM games WHERE game_type='real' AND game_status='running';";
+		$real_game_types = array();
+		$real_game_q = "SELECT * FROM game_types WHERE game_type='real' AND game_status='running';";
 		$real_game_r = $GLOBALS['app']->run_query($real_game_q);
 
 		while ($real_game = $real_game_r->fetch()) {
@@ -29,8 +29,8 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 			$coin_rpc = new jsonRPCClient('http://'.$real_game['rpc_username'].':'.$real_game['rpc_password'].'@127.0.0.1:'.$real_game['rpc_port'].'/');
 			$real_game_obj->load_all_block_headers($coin_rpc, TRUE);
 			$real_game_obj->load_all_blocks($coin_rpc, TRUE);
-			//$real_games[$real_game_i]->load_all_block_headers($coin_rpc, FALSE);
-			//$real_games[$real_game_i]->load_all_blocks($coin_rpc, FALSE);
+			//$real_game_types[$real_game_i]->load_all_block_headers($coin_rpc, FALSE);
+			//$real_game_types[$real_game_i]->load_all_blocks($coin_rpc, FALSE);
 		}
 	}
 	else echo "Block loading script is already running, skip...\n";

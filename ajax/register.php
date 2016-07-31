@@ -1,12 +1,13 @@
 <?php
 include("../includes/connect.php");
 include("../includes/get_session.php");
+if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
 if ($thisuser) {
 	$app->output_message(2, "You're already logged in.", false);
 }
 else {
-	$alias = $app->make_alphanumeric(strip_tags($_REQUEST['alias']));
+	$alias = $app->normalize_username($_REQUEST['alias']);
 	$password = strip_tags($_REQUEST['password']);
 	$email = strip_tags($_REQUEST['email']);
 	
@@ -27,7 +28,8 @@ else {
 		$r = $app->run_query($q);
 		$user_id = $app->last_insert_id();
 		
-		$bitcoin_address = $_REQUEST['bitcoin_address'];
+		$bitcoin_address = "";
+		if (!empty($_REQUEST['bitcoin_address'])) $bitcoin_address = $_REQUEST['bitcoin_address'];
 		
 		if (!empty($bitcoin_address)) {
 			$qq = "INSERT INTO external_addresses SET user_id='".$user_id."', currency_id=2, address=".$app->quote_escape($bitcoin_address).", time_created='".time()."';";
@@ -54,7 +56,7 @@ else {
 		}
 		
 		// Send an email if the username includes
-		if ($GLOBALS['outbound_email_enabled'] && strpos($notification_email, '@')) {
+		if ($GLOBALS['outbound_email_enabled'] && !empty($notification_email) && strpos($notification_email, '@')) {
 			$email_message = "<p>A new ".$GLOBALS['site_name_short']." web wallet has been created for <b>".$alias."</b>.</p>";
 			$email_message .= "<p>Thanks for signing up!</p>";
 			$email_message .= "<p>To log in any time please visit ".$GLOBALS['base_url']."/wallet/</p>";
@@ -63,14 +65,14 @@ else {
 			$email_id = $app->mail_async($email, $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], "New account created", $email_message, "", "");
 		}
 		
-		if ($primary_game['giveaway_status'] == "public_free") {
-			$q = "SELECT * FROM games WHERE game_id='".$app->get_site_constant('primary_game_id')."';";
-			$r = $app->run_query($q);
+		$q = "SELECT * FROM games WHERE game_id='".$app->get_site_constant('primary_game_id')."';";
+		$r = $app->run_query($q);
+		
+		if ($r->rowCount() == 1) {
+			$db_primary_game = $r->fetch();
+			$primary_game = new Game($app, $db_primary_game['game_id']);
 			
-			if ($r->rowCount() == 1) {
-				$db_primary_game = $r->fetch();
-				$primary_game = new Game($app, $db_primary_game['game_id']);
-				
+			if ($primary_game->db_game['giveaway_status'] == "public_free") {
 				$thisuser->ensure_user_in_game($primary_game->db_game['game_id']);
 				$giveaway = $primary_game->new_game_giveaway($user_id, 'initial_purchase', false);
 			}
@@ -93,14 +95,9 @@ else {
 					die();
 				}
 			}
-			
-			$redir_game = $app->fetch_game_from_url();
-			if ($redir_game) {
-				$header_loc = "/wallet/".$redir_game['url_identifier']."/";
+			else {
+				$app->output_message(1, "/wallet/", false);
 			}
-			else $header_loc = "/wallet/";
-			
-			$app->output_message(1, $header_loc, false);
 		}
 		die();
 	}

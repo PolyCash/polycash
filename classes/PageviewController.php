@@ -143,18 +143,20 @@ class PageviewController {
 			$cookie_identifier = $r->fetch();
 		}
 		
-		$domain = $_SERVER['HTTP_REFERER'];
-		if (substr($domain, 0, 8) == "https://") $domain = substr($domain, 8, strlen($domain)-8);
-		if (substr($domain, 0, 7) == "http://") $domain = substr($domain, 7, strlen($domain)-7);
-		if (substr($domain, 0, 4) == "www.") $domain = substr($domain, 4, strlen($domain)-4);
-		$domain = str_replace("?", "/", $domain);
-		$domain = explode("/", $domain);
-		$domain = $domain[0];
-		$domain = explode(".", $domain);
-		$domain = $domain[count($domain)-2].".".$domain[count($domain)-1];
-		
 		$refer_url = "";
-		if ($_SERVER['HTTP_REFERER'] != "") $refer_url = $_SERVER['HTTP_REFERER'];
+		if (!empty($_SERVER['HTTP_REFERER'])) {
+			$domain = $_SERVER['HTTP_REFERER'];
+			if (substr($domain, 0, 8) == "https://") $domain = substr($domain, 8, strlen($domain)-8);
+			if (substr($domain, 0, 7) == "http://") $domain = substr($domain, 7, strlen($domain)-7);
+			if (substr($domain, 0, 4) == "www.") $domain = substr($domain, 4, strlen($domain)-4);
+			$domain = str_replace("?", "/", $domain);
+			$domain = explode("/", $domain);
+			$domain = $domain[0];
+			$domain = explode(".", $domain);
+			$domain = $domain[count($domain)-2].".".$domain[count($domain)-1];
+			
+			$refer_url = $_SERVER['HTTP_REFERER'];
+		}
 		
 		$q = "SELECT * FROM browserstrings WHERE viewer_id='".$cookie_identifier['viewer_id']."' AND browser_string=".$this->app->quote_escape($_SERVER['HTTP_USER_AGENT']).";";
 		$r = $this->app->run_query($q);
@@ -206,7 +208,7 @@ class PageviewController {
 		$result[0] = $pageview_id;
 		$result[1] = $cookie_identifier['viewer_id'];
 		
-		return $result;
+		return $result[1];
 	}
 	function viewer2user_byIP($user_id) {
 		$q = "SELECT * FROM pageviews P, viewer_identifiers V WHERE P.ip_id > 0 AND P.ip_id=V.identifier_id AND V.type='ip' AND P.ip_processed=0";

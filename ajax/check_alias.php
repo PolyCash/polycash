@@ -1,12 +1,13 @@
 <?php
 include("../includes/connect.php");
 include("../includes/get_session.php");
+if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
 if ($thisuser) {
 	$app->output_message(2, "You're already logged in.", false);
 }
 else {
-	$alias = $app->make_alphanumeric(strip_tags($_REQUEST['alias']), "$-()/!.,:;#@");
+	$alias = $app->normalize_username($_REQUEST['alias']);
 	
 	$q = "SELECT * FROM users WHERE username=".$app->quote_escape($alias).";";
 	$r = $app->run_query($q);
@@ -17,7 +18,7 @@ else {
 	else if ($r->rowCount() == 1) {
 		$matched_user = $r->fetch();
 		
-		if ($GLOBALS['login_by_email_enabled'] && $matched_user['login_method'] == "email") {
+		if (!empty($GLOBALS['login_by_email_enabled']) && $matched_user['login_method'] == "email") {
 			$app->output_message(4, "We have sent a login link to your inbox. Please open that email to log in.", false);
 		}
 		else {

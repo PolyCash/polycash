@@ -2,15 +2,19 @@
 include("../includes/connect.php");
 include("../includes/get_session.php");
 
-if ($thisuser || $_REQUEST['refresh_page'] == "game") {
-	$game_loop_index = intval($_REQUEST['game_loop_index']);
-	
+if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	$instance_id = (int) $_REQUEST['instance_id'];
+	$game_event_index = (int) $_REQUEST['game_event_index'];
+	$event_loop_index = (int) $_REQUEST['event_loop_index'];
+	$event_id = (int) $_REQUEST['event_id'];
+	$event_ids = $_REQUEST['event_ids'];
 	
 	if (!$game) {
 		$game_id = intval($_REQUEST['game_id']);
 		$game = new Game($app, $game_id);
 	}
+	
+	$event = new Event($game, false, $event_id);
 	
 	if ($thisuser) $thisuser->set_user_active();
 	
@@ -35,7 +39,7 @@ if ($thisuser || $_REQUEST['refresh_page'] == "game") {
 	}
 	
 	$output = false;
-	$output['game_loop_index'] = $game_loop_index;
+	$output['event_loop_index'] = $event_loop_index;
 	
 	$output['min_bet_round'] = $bet_round_range[0];
 	$output['game_status_explanation'] = $game->game_status_explanation();
@@ -45,18 +49,19 @@ if ($thisuser || $_REQUEST['refresh_page'] == "game") {
 	}
 	
 	if ($last_block_id != $_REQUEST['last_block_id']) {
-		$performance_history_sections = intval($_REQUEST['performance_history_sections']);
+		//$performance_history_sections = intval($_REQUEST['performance_history_sections']);
 		$output['new_block'] = 1;
 		$output['last_block_id'] = $last_block_id;
 		
 		$client_round = $game->block_to_round(intval($_REQUEST['last_block_id'])+1);
 		
-		if ($_REQUEST['refresh_page'] == "wallet" && $current_round != $client_round) {
+		/*if ($_REQUEST['refresh_page'] == "wallet" && $current_round != $client_round) {
 			$output['new_performance_history'] = 1;
 			$output['performance_history'] = $thisuser->performance_history($game, $current_round-(10*$performance_history_sections), $current_round-1);
 			$output['performance_history_start_round'] = $current_round-(10*$performance_history_sections);
 		}
-		else $output['new_performance_history'] = 0;
+		else */
+		$output['new_performance_history'] = 0;
 	}
 	else $output['new_block'] = 0;
 	
@@ -83,21 +88,21 @@ if ($thisuser || $_REQUEST['refresh_page'] == "game") {
 	if ($last_block_id != $_REQUEST['last_block_id'] || $last_transaction_id != $_REQUEST['last_transaction_id']) {
 		if ($_REQUEST['refresh_page'] == "wallet") $show_intro_text = true;
 		else $show_intro_text = false;
-		$output['current_round_table'] = $game->current_round_table($current_round, $thisuser, $show_intro_text, true, $instance_id);
+		$output['current_round_table'] = $event->current_round_table($current_round, $thisuser, $show_intro_text, true, $instance_id, $game_event_index);
 		
-		$output['wallet_text_stats'] = $thisuser->wallet_text_stats($game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance);
-		$output['my_current_votes'] = $game->my_votes_table($current_round, $thisuser);
+		if ($thisuser) $output['wallet_text_stats'] = $thisuser->wallet_text_stats($game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance);
+		if ($thisuser) $output['my_current_votes'] = $event->my_votes_table($current_round, $thisuser);
 		$output['account_value'] = $game->account_value_html($account_value);
 		$output['vote_details_general'] = $app->vote_details_general($mature_balance);
 		
-		$round_stats = $game->round_voting_stats_all($current_round);
+		$round_stats = $event->round_voting_stats_all($current_round);
 		$total_vote_sum = $round_stats[0];
 		$option_id2rank = $round_stats[3];
 		$round_stats = $round_stats[2];
 		
 		$stats_output = false;
-		for ($option_id=0; $option_id<$game->db_game['num_voting_options']; $option_id++) {
-			$option = $round_stats[$option_id2rank[$option_id]];
+		for ($option_id=0; $option_id<count($round_stats); $option_id++) {
+			$option = $round_stats[$option_id];
 			if (!$option['last_win_round']) $losing_streak = false;
 			else $losing_streak = $current_round - $option['last_win_round'] - 1;
 			$stats_output[$option_id] = $app->vote_option_details($option, $option_id2rank[$option['option_id']]+1, $option[$game->db_game['payout_weight'].'_score'], $option['unconfirmed_'.$game->db_game['payout_weight'].'_score'], $total_vote_sum, $losing_streak);
@@ -105,14 +110,22 @@ if ($thisuser || $_REQUEST['refresh_page'] == "game") {
 		$output['vote_option_details'] = $stats_output;
 	}
 	
+	if ($game->event_ids() != $event_ids) {
+		$output['new_event_ids'] = 1;
+		$js = $game->new_event_js($instance_id, $thisuser);
+		$output['new_event_js'] = $js;
+		$output['event_ids'] = $game->event_ids();
+	}
+	else $output['new_event_ids'] = 0;
+	
 	if ($thisuser) {
 		$q = "SELECT * FROM addresses WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."' AND option_id > 0 GROUP BY option_id;";
 		$r = $app->run_query($q);
 		$votingaddr_count = $r->rowCount();
 	}
 	else $votingaddr_count = 0;
-
-	if (intval($_REQUEST['votingaddr_count']) != $votingaddr_count) {
+	
+	if ($thisuser && intval($_REQUEST['votingaddr_count']) != $votingaddr_count) {
 		$output['new_votingaddresses'] = 1;
 		
 		$option_has_votingaddr = [];

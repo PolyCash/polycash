@@ -106,7 +106,7 @@ if ($thisuser && $game) {
 	
 	for ($i=0; $i<count($option_ids); $i++) {
 		$option_id = intval($option_ids[$i]);
-		$q = "SELECT * FROM game_voting_options WHERE option_id='".$option_id."' AND game_id='".$game->db_game['game_id']."';";
+		$q = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE op.option_id='".$option_id."' AND e.game_id='".$game->db_game['game_id']."';";
 		$r = $app->run_query($q);
 		if ($r->rowCount() == 1) {
 			$option_ids[$i] = $option_id;

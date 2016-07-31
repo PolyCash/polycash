@@ -14,10 +14,10 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$game = new Game($app, $game_id);
 	
 	if ($game) {
-		$q = "DELETE FROM cached_rounds WHERE game_id='".$game->db_game['game_id']."';";
+		$q = "DELETE FROM game_outcomes WHERE game_id='".$game->db_game['game_id']."';";
 		$r = $app->run_query($q);
 		
-		$app->run_query("DELETE FROM cached_round_options WHERE game_id='".$game->db_game['game_id']."';");
+		$app->run_query("DELETE FROM game_outcome_options WHERE game_id='".$game->db_game['game_id']."';");
 		
 		$last_block_id = $game->last_block_id();
 		$current_round = $game->block_to_round($last_block_id+1);

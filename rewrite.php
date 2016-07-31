@@ -8,7 +8,7 @@ if ($uri_parts[1] == "reset_password") {
 else if ($uri_parts[1] == "wallet") {
 	include("wallet.php");
 }
-else if ($uri_parts[1] == "games") {
+else if ($uri_parts[1] == "event_types") {
 	include("matches.php");
 }
 else if ($uri_parts[1] == "api") {
@@ -20,28 +20,19 @@ else if ($uri_parts[1] == "explorer") {
 else {
 	include("includes/connect.php");
 	include("includes/get_session.php");
-
-	$q = "SELECT * FROM game_types t JOIN game_type_variations v ON t.game_type_id=v.game_type_id JOIN voting_option_groups og ON t.option_group_id=og.option_group_id WHERE v.url_identifier=".$app->quote_escape($uri_parts[1]).";";
+	
+	$q = "SELECT * FROM games WHERE url_identifier=".$app->quote_escape($uri_parts[1]).";";
 	$r = $app->run_query($q);
 	
 	if ($r->rowCount() == 1) {
-		$game_variation = $r->fetch();
-		include("variation_page.php");
-	}
-	else {
-		$q = "SELECT * FROM games WHERE url_identifier=".$app->quote_escape($uri_parts[1]).";";
-		$r = $app->run_query($q);
+		$db_game = $r->fetch();
 		
-		if ($r->rowCount() == 1) {
-			$db_game = $r->fetch();
-			
-			if (in_array($db_game['game_status'], array("running","published","completed"))) {
-				$game = new Game($app, $db_game['game_id']);
-				include("game_page.php");
-			}
-			else echo "404 - Page not found";
+		if (in_array($db_game['game_status'], array("running","published","completed"))) {
+			$game = new Game($app, $db_game['game_id']);
+			include("game_page.php");
 		}
 		else echo "404 - Page not found";
 	}
+	else echo "404 - Page not found";
 }
 ?>

@@ -21,39 +21,37 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
 		register_shutdown_function("script_shutdown");
 		
-		$real_games = array();
+		$app->generate_games();
+		
+		$real_game_types = array();
 		$coin_rpcs = array();
 		$game_id2real_game_i = array();
 
-		$q = "SELECT * FROM games WHERE game_type='real';";
+		$q = "SELECT * FROM game_types WHERE game_type='real';";
 		$r = $GLOBALS['app']->run_query($q);
 		$real_game_i = 0;
 
 		while ($db_real_game = $r->fetch()) {
 			$game_id2real_game_i[$db_real_game['game_id']] = $real_game_i;
-			$real_games[$real_game_i] = new Game($app, $db_real_game['game_id']);
+			$real_game_types[$real_game_i] = new Game($app, $db_real_game['game_id']);
 			$coin_rpcs[$real_game_i] = new jsonRPCClient('http://'.$db_real_game['rpc_username'].':'.$db_real_game['rpc_password'].'@127.0.0.1:'.$db_real_game['rpc_port'].'/');
 			$real_game_i++;
 		}
 
-		for ($real_game_i=0; $real_game_i<count($real_games); $real_game_i++) {
-			if ($real_games[$real_game_i]->db_game['game_status'] == "running" && $real_games[$real_game_i]->db_game['always_generate_coins'] == 1) {
-				$q = "SELECT * FROM blocks WHERE game_id='".$real_games[$real_game_i]->db_game['game_id']."' ORDER BY block_id DESC LIMIT 1;";
+		for ($real_game_i=0; $real_game_i<count($real_game_types); $real_game_i++) {
+			if ($real_game_types[$real_game_i]->db_game['game_status'] == "running" && $real_game_types[$real_game_i]->db_game['always_generate_coins'] == 1) {
+				$q = "SELECT * FROM blocks WHERE game_id='".$real_game_types[$real_game_i]->db_game['game_id']."' ORDER BY block_id DESC LIMIT 1;";
 				$r = $app->run_query($q);
 
 				if ($r->rowCount() > 0) {
 					$lastblock = $r->fetch();
-	
-					if ($lastblock['time_created'] < time()-$real_games[$real_game_i]->db_game['restart_generation_seconds']) {
-						$coin_rpcs[$real_game_i]->setgenerate(false);
-						$coin_rpcs[$real_game_i]->setgenerate(true);
-						echo "Started generating coins for ".$real_games[$real_game_i]->db_game['name']."...<br/>\n";
-					}
+					
+					$coin_rpcs[$real_game_i]->setgenerate(false);
+					$coin_rpcs[$real_game_i]->setgenerate(true);
+					echo "Started generating coins for ".$real_game_types[$real_game_i]->db_game['name']."...<br/>\n";
 				}
 			}
 		}
-		
-		$app->generate_open_games();
 
 		$q = "SELECT * FROM games WHERE game_status='published' AND start_condition='players_joined' AND start_condition_players > 0;";
 		$r = $app->run_query($q);
@@ -88,42 +86,42 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 			}
 		}
 
-		$running_games = array();
+		$running_game_types = array();
 		$q = "SELECT * FROM games WHERE game_status='running';";
 		$r = $GLOBALS['app']->run_query($q);
 		while ($running_game = $r->fetch()) {
-			$running_games[count($running_games)] = new Game($app, $running_game['game_id']);
+			$running_game_types[count($running_game_types)] = new Game($app, $running_game['game_id']);
 			echo "Including game: ".$running_game['name']."<br/>\n";
 		}
 		
 		$app->delete_unconfirmable_transactions();
 		
-		if (count($running_games) > 0) {
+		if (count($running_game_types) > 0) {
 			try {
 				$loop_target_time = max(1, $app->get_site_constant("loop_target_time"));
 				do {
 					$loop_start_time = microtime(true);
 
-					for ($running_game_i=0; $running_game_i<count($running_games); $running_game_i++) {
-						echo "\n\n".$running_games[$running_game_i]->db_game['name']."<br/>\n";
-						if ($running_games[$running_game_i]->db_game['sync_coind_by_cron'] == 1 && $running_games[$running_game_i]->db_game['game_type'] == "real") {
-							$real_game_i = $game_id2real_game_i[$running_games[$running_game_i]->db_game['game_id']];
-							echo $running_games[$running_game_i]->sync_coind($coin_rpcs[$real_game_i]);
+					for ($running_game_i=0; $running_game_i<count($running_game_types); $running_game_i++) {
+						echo "\n\n".$running_game_types[$running_game_i]->db_game['name']."<br/>\n";
+						if ($running_game_types[$running_game_i]->db_game['sync_coind_by_cron'] == 1 && $running_game_types[$running_game_i]->db_game['game_type'] == "real") {
+							$real_game_i = $game_id2real_game_i[$running_game_types[$running_game_i]->db_game['game_id']];
+							echo $running_game_types[$running_game_i]->sync_coind($coin_rpcs[$real_game_i]);
 						}
-						if ($running_games[$running_game_i]->db_game['game_type'] == "simulation") {
-							$remaining_prob = round($loop_target_time/$running_games[$running_game_i]->db_game['seconds_per_block'], 4);
+						if ($running_game_types[$running_game_i]->db_game['game_type'] == "simulation") {
+							$remaining_prob = round($loop_target_time/$running_game_types[$running_game_i]->db_game['seconds_per_block'], 4);
 							$thisgame_loop_start_time = microtime(true);
 							do {
-								$last_block_id = $running_games[$running_game_i]->last_block_id();
+								$last_block_id = $running_game_types[$running_game_i]->last_block_id();
 								
 								$block_prob = min(1, $remaining_prob);
 								$remaining_prob = $remaining_prob-$block_prob;
 								$rand_num = rand(0, pow(10,4))/pow(10,4);
 								if (!empty($_REQUEST['force_new_block'])) $rand_num = 0;
 								
-								echo $running_games[$running_game_i]->db_game['name']." (".$rand_num." vs ".$block_prob."): ";
+								echo $running_game_types[$running_game_i]->db_game['name']." (".$rand_num." vs ".$block_prob."): ";
 								if ($rand_num <= $block_prob) {
-									echo $running_games[$running_game_i]->new_block();
+									echo $running_game_types[$running_game_i]->new_block();
 								}
 								else {
 									echo "No block<br/>\n";
@@ -132,7 +130,7 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 							while ($remaining_prob > 0 && microtime(true)-$thisgame_loop_start_time < 60);
 						}
 					
-						echo $running_games[$running_game_i]->apply_user_strategies();
+						echo $running_game_types[$running_game_i]->apply_user_strategies();
 					}
 					$loop_stop_time = microtime(true);
 					$loop_time = $loop_stop_time-$loop_start_time;

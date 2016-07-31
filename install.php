@@ -34,45 +34,6 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			
 			$app->update_schema();
 			
-			$q = "SELECT * FROM games WHERE url_identifier='empirecoin-launch';";
-			$r = $app->run_query($q);
-			
-			if ($r->rowCount() == 0) {
-				$address_id = $app->new_invoice_address();
-				
-				$q = "INSERT INTO games SET invoice_address_id='".$address_id."', option_group_id=1, featured=1, invite_currency=1, url_identifier='empirecoin-launch', game_status='published', giveaway_status='public_free', giveaway_amount=100000000000, pow_reward=2500000000, pos_reward=75000000000, game_type='simulation', block_timing='realistic', payout_weight='coin_round', seconds_per_block=120, name='EmpireCoin Launch', num_voting_options=16, maturity=1, round_length=10, max_voting_fraction=0.25, option_name='empire', option_name_plural='empires', buyin_policy='none';";
-				$r = $app->run_query($q);
-				$primary_game_id = $app->last_insert_id();
-				
-				$primary_game = new Game($app, $primary_game_id);
-				
-				$primary_game->ensure_game_options();
-				
-				$primary_game->start_game();
-			}
-
-			$q = "SELECT * FROM games WHERE url_identifier='empirecoin-testnet';";
-			$r = $app->run_query($q);
-			
-			if ($r->rowCount() == 0) {
-				$address_id = $app->new_invoice_address();
-				
-				$q = "INSERT INTO games SET invoice_address_id='".$address_id."', option_group_id=1, featured=1, invite_currency=1, url_identifier='empirecoin-testnet', start_condition='fixed_time', game_status='running', giveaway_status='public_free', giveaway_amount=0, pow_reward=2500000000, pos_reward=75000000000, game_type='real', rpc_port=23345, rpc_username='', rpc_password='', block_timing='realistic', payout_weight='coin', seconds_per_block=120, name='EmpireCoin Testnet', num_voting_options=16, maturity=9, round_length=10, max_voting_fraction=0.25, option_name='empire', option_name_plural='empires', buyin_policy='none', always_generate_coins=0, sync_coind_by_cron=1;";
-				$r = $app->run_query($q);
-				
-				$testnet_game_id = $app->last_insert_id();
-				
-				$testnet_game = new Game($app, $testnet_game_id);
-				
-				$testnet_game->ensure_game_options();
-				
-				$app->set_site_constant('primary_game_id', $testnet_game_id);
-			}
-			else {
-				$db_testnet_game = $r->fetch();
-				$testnet_game = new Game($app, $db_testnet_game['game_id']);
-			}
-			
 			$q = "SELECT * FROM currency_prices WHERE currency_id=1 AND reference_currency_id=1;";
 			$r = $app->run_query($q);
 			if ($r->rowCount() == 0) {
@@ -80,10 +41,10 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				$r = $app->run_query($q);
 			}
 			
-			$app->set_site_constant("game_loop_seconds", 2);
+			$app->set_site_constant("event_loop_seconds", 2);
 			$app->set_site_constant("reference_currency_id", 1);
 			
-			if ($_REQUEST['action'] == "save_rpc_params") {
+			if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "save_rpc_params") {
 				$game_id = (int) $_REQUEST['game_id'];
 				$q = "SELECT * FROM games WHERE game_type='real' AND rpc_username='' AND rpc_password='' AND game_id=".$app->quote_escape($game_id).";";
 				$r = $app->run_query($q);
@@ -110,7 +71,9 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 <pre>
 * * * * * root <?php echo $app->php_binary_location(); ?> <?php echo realpath(dirname(__FILE__))."/cron/minutely.php key=".$GLOBALS['cron_key_string']; ?>
 </pre>
-				If you can't use cron, open <a target="_blank" href="cron/minutely.php?key=<?php echo $GLOBALS['cron_key_string']; ?>">cron/minutely.php?key=<?php echo $GLOBALS['cron_key_string']; ?></a> in your browser any time you want to sync empirecoin web. Or run this command:
+				If you can't use cron, please run this app in a new tab or run the command below.<br/>
+				<a class="btn btn-success" target="_blank" href="cron/minutely.php?key=<?php echo $GLOBALS['cron_key_string']; ?>">Start process in a new tab</a>
+				<br/>
 				<pre>
 <?php echo $app->php_binary_location(); ?> <?php echo realpath(dirname(__FILE__))."/scripts/main.php key=".$GLOBALS['cron_key_string']; ?>
 				</pre>
@@ -157,7 +120,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				}
 				else { ?>
 					You have not yet specified an RSA keypair for accepting Bitcoin payments.<br/>
-					To allow private games to accept Bitcoin payments, please generate an RSA key pair.<br/>
+					To allow private event_types to accept Bitcoin payments, please generate an RSA key pair.<br/>
 					<button class="btn btn-primary" onclick="generate_keypair();">Generate RSA Keypair</button>
 					<br/>
 					<div id="keypair_details" style="display: none; border: 1px solid #aaa; padding: 10px; margin-top: 10px;">
@@ -170,7 +133,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 						<br/>
 						Add your public key into includes/config.php like this:<br/>
 						<pre id="pub_key_config_line"></pre>
-						But replace 'myname@myemailprovider.com' with an email address.  This email address will not be shown to anyone but will receive an email prompting you to enter your private key whenever a game that you administer finishes.<br/>
+						But replace 'myname@myemailprovider.com' with an email address.  This email address will not be shown to anyone but will receive an email prompting you to enter your private key whenever a event that you administer finishes.<br/>
 						<br/>
 						After saving your public key in includes/config.php, save your private key somewhere safe. Your public key can be derived from your private key. Next <a href="" onclick="window.location=window.location;">click here</a> to reload this page.<br/>
 						<br/>
@@ -195,7 +158,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 							print_r($getinfo);
 							echo "</pre>";
 							
-							echo "To reset and synchronize this game, run <a target=\"_blank\" href=\"/scripts/sync_coind_initial.php?key=".$GLOBALS['cron_key_string']."&game_id=".$rpc_game['game_id']."\">scripts/sync_coind_initial.php?game_id=".$rpc_game['game_id']."</a>\n";
+							echo "To reset and synchronize this game, run <a target=\"_blank\" href=\"/scripts/sync_coind_initial.php?key=".$GLOBALS['cron_key_string']."&game_id=".$rpc_game['game_id']."\">scripts/sync_coind_initial.php?event_id=".$rpc_event['event_id']."</a>\n";
 							echo "<br/><br/>\n";
 						}
 						catch (Exception $e) {

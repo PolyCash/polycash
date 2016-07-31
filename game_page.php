@@ -3,8 +3,8 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->in
 
 if (!isset($_REQUEST['action'])) $_REQUEST['action'] = "";
 
-$pagetitle = $game->db_game['name']." - Play now and win coins in this blockchain voting game.";
-$nav_tab_selected = "game_homepage";
+$pagetitle = $game->db_game['name'];
+$nav_tab_selected = "game_page";
 include('includes/html_start.php');
 
 $last_block_id = $game->last_block_id();
@@ -34,15 +34,13 @@ if ($game->db_game['invite_currency'] > 0) {
 ?>
 <div class="container" style="max-width: 1000px; padding-top: 10px;">
 	<div class="paragraph">
-		<a href="/">&larr; All <?php echo $GLOBALS['coin_brand_name']; ?> Games</a>
+		<a href="/">&larr; All <?php echo $GLOBALS['coin_brand_name']; ?> games</a>
 	</div>
 	<div class="paragraph">
 		<h1 style="margin-bottom: 2px;"><?php echo $game->db_game['name']; ?></h1>
 		<div class="row">
 			<div class="col-md-6">
-				<h4><?php echo $game->db_game['variation_name']; ?></h4>
 				<?php
-				
 				$blocks_per_hour = 3600/$game->db_game['seconds_per_block'];
 				$seconds_per_round = $game->db_game['seconds_per_block']*$game->db_game['round_length'];
 				$round_reward = ($app->coins_created_in_round($game->db_game, $current_round))/pow(10,8);
@@ -61,7 +59,6 @@ if ($game->db_game['invite_currency'] > 0) {
 						$coins_per_hour = $round_reward*$rounds_per_hour;
 						echo "Rounds take about ".$app->format_seconds($seconds_per_round)." and ";
 						echo $app->format_bignum($round_reward)." ".$game->db_game['coin_name_plural']." are created and given out at the end of each round. ";
-						//echo number_format($coins_per_hour)." ".$game->db_game['coin_name_plural']." are generated every hour. ";
 					}
 					else {
 						echo "Rounds take about ".$app->format_seconds($seconds_per_round)." each";
@@ -75,7 +72,7 @@ if ($game->db_game['invite_currency'] > 0) {
 							echo "This game started ".$app->format_seconds(time()-strtotime($game->db_game['start_datetime']))." ago with ".$game->db_game['start_condition_players']." players. ";
 						}
 						else {
-							echo "This games starts when ".$game->db_game['start_condition_players']." players have joined. So far ".$num_players;
+							echo "This game starts when ".$game->db_game['start_condition_players']." players have joined. So far ".$num_players;
 							if ($num_players == 1) echo " has ";
 							else echo " have ";
 							echo "joined.<br/>\n";
@@ -100,10 +97,6 @@ if ($game->db_game['invite_currency'] > 0) {
 						else echo "The";
 						echo " exchange rate is ".$app->format_bignum($exchange_rate)." ".$game->db_game['coin_name_plural']." per ".$invite_currency['short_name'].". ";
 					}
-					/*echo $app->format_bignum($miner_pct);
-					?>% of the currency is given to proof of work miners for securing the network and the remaining <?php
-					echo $app->format_bignum(100-$miner_pct);
-					?>% is given out to the players for winning votes.<?php*/
 					?>
 				</div>
 				<?php
@@ -162,7 +155,6 @@ if ($game->db_game['invite_currency'] > 0) {
 				</div>
 			</div>
 			<div class="col-md-6">
-				<h4><?php echo $game->db_game['type_name']; ?></h4>
 				<div style="border: 1px solid #ccc; padding: 10px;">
 					<?php echo $app->game_info_table($game->db_game); ?>
 				</div>
@@ -239,64 +231,55 @@ if ($game->db_game['invite_currency'] > 0) {
 		</div>
 		
 		<?php
-		if ($thisuser) { ?>
+		/*if ($thisuser) { ?>
 			<div class="row">
 				<div class="col-md-6">
 					<div id="game0_my_current_votes">
 						<?php
-						echo $game->my_votes_table($current_round, $thisuser);
+						echo $event->my_votes_table($current_round, $thisuser);
 						?>
 					</div>
 				</div>
 			</div>
 			<?php
-		}
+		}*/
 		?>
 	</div>
 	<div class="paragraph">
 		<?php /*
 		<ol class="rules_list">
-			<li>Players can vote on these <?php echo $game->db_game['num_voting_options']." ".$game->db_game['option_name_plural']." every ".$app->format_seconds($seconds_per_round); ?> by submitting a voting transaction.</li>
-			<?php
-			$block_within_round = $last_block_id%$game->db_game['round_length']+1;
-			$sum_votes = $game->total_votes_in_round($current_round, true);
-			*/
-			$round_stats = $game->round_voting_stats_all($current_round);
-			$option_id2rank = $round_stats[3];
-			?>
-			<div id="game0_current_round_table" style="margin-bottom: 10px;">
-				<?php
-				echo $game->current_round_table($current_round, $thisuser, true, true, 0);
-				?>
-			</div>
-			<?php /*
-			<li>Voting transactions are only counted if they are confirmed in a voting block. All blocks are voting blocks except for the final block of each round.</li>
-			<li>Blocks are mined approximately every <?php echo $app->format_seconds($game->db_game['seconds_per_block']); ?> by the SHA256 algorithm. 
-			<?php if ($game->db_game['inflation'] == "linear") { ?>Miners receive <?php echo $app->format_bignum($game->db_game['pow_reward']/pow(10,8))." ".$game->db_game['coin_name_plural']; ?> per block.<?php } ?></li>
-			<li>Blocks are grouped into voting rounds.  Blocks 1 through <?php echo $game->db_game['round_length']; ?> make up the first round, and every subsequent <?php echo $game->db_game['round_length']; ?> blocks are grouped into a round.</li>
-			<li>A voting round will have a winning <?php echo $game->db_game['option_name']; ?> if at least one <?php echo $game->db_game['option_name']; ?> receives votes but is not disqualified.</li>
-			<li>Any <?php echo $game->db_game['option_name']; ?> with more than <?php echo $app->format_bignum(100*$game->db_game['max_voting_fraction']); ?>% of the votes is disqualified from winning the round.</li>
-			<li>The eligible <?php echo $game->db_game['option_name']; ?> with the most votes wins the round.</li>
-			<li>In case of a tie, the <?php echo $game->db_game['option_name']; ?> with the lowest ID number wins.</li>
-			<li>When a round ends <?php
-			if ($game->db_game['inflation'] == "linear") {
-				echo $app->format_bignum($game->db_game['pos_reward']/pow(10,8))." ".$game->db_game['coin_name_plural']." are divided up";
-			}
-			else echo $app->format_bignum(100*$game->db_game['exponential_inflation_rate']).'% is added to the currency supply';
-			?> and given to the winning voters in proportion to their votes.</li>
+		<li>Players can vote on these <?php echo $event->db_event['num_voting_options']." ".$event->db_event['option_name_plural']." every ".$app->format_seconds($seconds_per_round); ?> by submitting a voting transaction.</li>
+		<?php
+		$block_within_round = $last_block_id%$event->db_event['round_length']+1;
+		$sum_votes = $event->total_votes_in_round($current_round, true);
+		*/
+		/*
+		<li>Voting transactions are only counted if they are confirmed in a voting block. All blocks are voting blocks except for the final block of each round.</li>
+		<li>Blocks are mined approximately every <?php echo $app->format_seconds($event->db_event['seconds_per_block']); ?> by the SHA256 algorithm. 
+		<?php if ($event->db_event['inflation'] == "linear") { ?>Miners receive <?php echo $app->format_bignum($event->db_event['pow_reward']/pow(10,8))." ".$event->db_event['coin_name_plural']; ?> per block.<?php } ?></li>
+		<li>Blocks are grouped into voting rounds.  Blocks 1 through <?php echo $event->db_event['round_length']; ?> make up the first round, and every subsequent <?php echo $event->db_event['round_length']; ?> blocks are grouped into a round.</li>
+		<li>A voting round will have a winning <?php echo $event->db_event['option_name']; ?> if at least one <?php echo $event->db_event['option_name']; ?> receives votes but is not disqualified.</li>
+		<li>Any <?php echo $event->db_event['option_name']; ?> with more than <?php echo $app->format_bignum(100*$event->db_event['max_voting_fraction']); ?>% of the votes is disqualified from winning the round.</li>
+		<li>The eligible <?php echo $event->db_event['option_name']; ?> with the most votes wins the round.</li>
+		<li>In case of a tie, the <?php echo $event->db_event['option_name']; ?> with the lowest ID number wins.</li>
+		<li>When a round ends <?php
+		if ($event->db_event['inflation'] == "linear") {
+			echo $app->format_bignum($event->db_event['pos_reward']/pow(10,8))." ".$event->db_event['coin_name_plural']." are divided up";
+		}
+		else echo $app->format_bignum(100*$event->db_event['exponential_inflation_rate']).'% is added to the currency supply';
+		?> and given to the winning voters in proportion to their votes.</li>
 		</ol>
-		*/ ?>
+		*/
+		?>
 	</div>
+	
+	<div id="game0_events"></div>
 
 	<div class="paragraph text-center">
 		<?php echo $GLOBALS['site_name'].", ".date("Y"); ?>
 	</div>
 
 	<div class="paragraph">
-		<div id="game0_vote_popups"><?php
-		echo $game->initialize_vote_option_details($option_id2rank, $sum_votes['sum'], empty($thisuser)? false : $thisuser->db_user['user_id'], 0);
-		?></div>
-		
 		<?php
 		if ($thisuser) {
 			$account_value = $thisuser->account_coin_value($game);
@@ -313,14 +296,14 @@ if ($game->db_game['invite_currency'] > 0) {
 
 <script type="text/javascript">
 //<![CDATA[
-var Games = new Array();
-Games.push(new Game(<?php
+var games = new Array();
+games.push(new Game(<?php
 	if ($thisuser) $my_last_transaction_id = $thisuser->my_last_transaction_id($game->db_game['game_id']);
 	else $my_last_transaction_id = false;
 	
 	echo $game->db_game['game_id'];
-	echo ', '.$last_block_id;
-	echo ', '.$game->last_transaction_id().', ';
+	echo ', false';
+	echo ', false, ';
 	if ($my_last_transaction_id) echo $my_last_transaction_id;
 	else echo 'false';
 	echo ', "';
@@ -334,11 +317,11 @@ Games.push(new Game(<?php
 	echo ', "'.$game->db_game['url_identifier'].'"';
 	echo ', "'.$game->db_game['coin_name'].'"';
 	echo ', "'.$game->db_game['coin_name_plural'].'"';
-	echo ', '.$game->db_game['num_voting_options'];
-	echo ', "'.$game->db_game['vote_effectiveness_function'].'"';
-	echo ', "game"';
+	echo ', "game", "'.$game->event_ids().'"';
 ?>));
-
+<?php
+echo $game->new_event_js(0, false);
+?>
 var user_logged_in = <?php if (empty($thisuser)) echo 'false'; else echo 'true'; ?>;
 
 var homeCarousel;
@@ -346,8 +329,6 @@ var homeCarousel;
 $(document).ready(function() {
 	homeCarousel = new ImageCarousel('home_carousel');
 	homeCarousel.initialize();
-	Games[0].option_selected(0);
-	Games[0].game_loop_event();
 });
 
 $(".navbar-toggle").click(function(event) {

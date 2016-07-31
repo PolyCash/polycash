@@ -12,7 +12,7 @@ if ($thisuser && $game) {
 	
 	$outcomes = array();
 	
-	$q = "SELECT SUM(i.amount), n.* FROM transaction_ios i JOIN addresses a ON i.address_id=a.address_id LEFT JOIN game_voting_options gvo ON a.bet_option_id=gvo.option_id WHERE i.game_id='".$game->db_game['game_id']."' AND a.bet_round_id = ".$round_id." AND i.create_block_id <= ".$game->round_to_last_betting_block($round_id)." GROUP BY a.bet_option_id ORDER BY SUM(i.amount) DESC;";
+	$q = "SELECT SUM(i.amount), n.* FROM transaction_ios i JOIN addresses a ON i.address_id=a.address_id LEFT JOIN options gvo ON a.bet_option_id=gvo.option_id WHERE i.game_id='".$game->db_game['game_id']."' AND a.bet_round_id = ".$round_id." AND i.create_block_id <= ".$game->round_to_last_betting_block($round_id)." GROUP BY a.bet_option_id ORDER BY SUM(i.amount) DESC;";
 	$r = $app->run_query($q);
 	
 	while ($bet_outcome = $r->fetch()) {
@@ -43,7 +43,7 @@ if ($thisuser && $game) {
 		if ($disp_count == 9) $html .= "</div><div class=\"col-md-6\">";
 	}
 	
-	$q = "SELECT * FROM game_voting_options";
+	$q = "SELECT * FROM options";
 	if ($nation_id_csv != "") $q .= " WHERE option_id NOT IN (".$option_id_csv.")";
 	$q .= ";";
 	$r = $app->run_query($q);

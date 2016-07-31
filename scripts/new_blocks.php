@@ -2,7 +2,12 @@
 $host_not_required = TRUE;
 include(realpath(dirname(__FILE__))."/../includes/connect.php");
 
-if ($argv) $_REQUEST['key'] = $argv[1];
+if (!empty($argv)) {
+	$cmd_vars = $app->argv_to_array($argv);
+	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
+	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
+	if (!empty($cmd_vars['game_id'])) $_REQUEST['game_id'] = $cmd_vars['game_id'];
+}
 
 if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$game_id = intval($_REQUEST['game_id']);
@@ -16,7 +21,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 
 			for ($i=0; $i<$quantity; $i++) {
 				echo $game->new_block();
-				if ($_REQUEST['apply_user_strategies'] == "1") echo $game->apply_user_strategies();
+				if (!empty($_REQUEST['apply_user_strategies'])) echo $game->apply_user_strategies();
 			}
 			echo "Done!<br/>\n";
 		}

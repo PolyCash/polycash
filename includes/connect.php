@@ -22,6 +22,7 @@ if ($GLOBALS['base_url'] && (!isset($host_not_required) || !$host_not_required))
 }
 
 date_default_timezone_set($GLOBALS['default_timezone']);
+if (empty($skip_select_db)) $skip_select_db = false;
 $dbh = new_db_conn($skip_select_db);
 $dbh->query("SET sql_mode='';");
 
@@ -31,7 +32,7 @@ include(realpath(dirname(dirname(__FILE__)))."/classes/Api.php");
 include(realpath(dirname(dirname(__FILE__)))."/classes/App.php");
 include(realpath(dirname(dirname(__FILE__)))."/classes/JsonRPCClient.php");
 include(realpath(dirname(dirname(__FILE__)))."/classes/Game.php");
-include(realpath(dirname(dirname(__FILE__)))."/classes/Match.php");
+include(realpath(dirname(dirname(__FILE__)))."/classes/Event.php");
 if ($GLOBALS['pageview_tracking_enabled']) include(realpath(dirname(dirname(__FILE__)))."/classes/PageviewController.php");
 include(realpath(dirname(dirname(__FILE__)))."/classes/User.php");
 

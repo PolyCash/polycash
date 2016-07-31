@@ -2,7 +2,12 @@
 $host_not_required = TRUE;
 include(realpath(dirname(__FILE__))."/../includes/connect.php");
 
-if ($argv) $_REQUEST['key'] = $argv[1];
+if (!empty($argv)) {
+	$cmd_vars = $app->argv_to_array($argv);
+	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
+	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
+	$_REQUEST['game_id'] = $cmd_vars['game_id'];
+}
 
 if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$q = "SELECT * FROM games";
@@ -12,27 +17,27 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$r = $app->run_query($q);
 
 	while ($db_game = $r->fetch()) {
-		$mandatory_game = new Game($app, $db_game['game_id']);
-		$mandatory_game->ensure_game_options();
+		$game = new Game($app, $db_game['game_id']);
+		//$game->ensure_options();
 		
-		if ($mandatory_game->db_game['creator_id'] > 0) {}
+		/*if ($game->db_game['creator_id'] > 0) {}
 		else {
 			$qq = "SELECT * FROM users;";
 			$rr = $app->run_query($qq);
 			
 			while ($db_user = $rr->fetch()) {
 				$user = new User($app, $db_user['user_id']);
-				$user->ensure_user_in_game($mandatory_game->db_game['game_id']);
+				$user->ensure_user_in_game($game->db_game['game_id']);
 				$invitation = false;
-				$success = $mandatory_game->try_capture_giveaway($user, $invitation);
+				$success = $game->try_capture_giveaway($user, $invitation);
 			}
-		}
+		}*/
 		
-		$mandatory_game->update_option_votes();
+		$game->update_option_votes();
 		
-		echo $mandatory_game->db_game['name']."<br/>\n";
+		echo $game->db_game['name']."<br/>\n";
 		
-		$qq = "SELECT s.voting_strategy, COUNT(*) FROM user_strategies s JOIN user_games ug ON s.strategy_id=ug.strategy_id JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$mandatory_game->db_game['game_id']."' GROUP BY s.voting_strategy;";
+		$qq = "SELECT s.voting_strategy, COUNT(*) FROM user_strategies s JOIN user_games ug ON s.strategy_id=ug.strategy_id JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$game->db_game['game_id']."' GROUP BY s.voting_strategy;";
 		$rr = $app->run_query($qq);
 		
 		while ($strategy_count = $rr->fetch()) {

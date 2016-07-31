@@ -8,7 +8,7 @@ if ($thisuser && $game) {
 		if ($game->db_game['block_timing'] == "user_controlled") $toggle_value = "realistic";
 		else $toggle_value = "user_controlled";
 		
-		$q = "UPDATE games SET block_timing='".$toggle_value."' WHERE game_id='".$game->db_game['game_id']."';";
+		$q = "UPDATE game_types SET block_timing='".$toggle_value."' WHERE game_id='".$game->db_game['game_id']."';";
 		$r = $app->run_query($q);
 		
 		echo "1";

@@ -43,7 +43,7 @@ class User {
 		$r = $this->app->run_query($q);
 		$sum = $r->fetch();
 		$votes = $sum[$game->db_game['payout_weight']."s"];
-		$votes = floor($game->block_id_to_effectiveness_factor($last_block_id+1)*$votes);
+		//$votes = floor($game->block_id_to_effectiveness_factor($last_block_id+1)*$votes);
 		if ($votes > 0) return $votes;
 		else return 0;
 	}
@@ -51,53 +51,54 @@ class User {
 	public function performance_history($game, $from_round_id, $to_round_id) {
 		$html = "";
 		
-		$q = "SELECT r.*, real_winner.name AS real_winner_name, derived_winner.name AS derived_winner_name FROM cached_rounds r LEFT JOIN game_voting_options real_winner ON r.winning_option_id=real_winner.option_id LEFT JOIN game_voting_options derived_winner ON r.derived_winning_option_id=derived_winner.option_id WHERE r.game_id='".$game->db_game['game_id']."' AND r.round_id >= ".$from_round_id." AND r.round_id <= ".$to_round_id." ORDER BY r.round_id DESC;";
+		$q = "SELECT r.*, real_winner.name AS real_winner_name, derived_winner.name AS derived_winner_name FROM event_outcomes r JOIN events e ON r.event_id=e.event_id LEFT JOIN options real_winner ON r.winning_option_id=real_winner.option_id LEFT JOIN options derived_winner ON r.derived_winning_option_id=derived_winner.option_id WHERE e.game_id='".$game->db_game['game_id']."' AND r.round_id >= ".$from_round_id." AND r.round_id <= ".$to_round_id." ORDER BY r.round_id DESC;";
 		$r = $this->app->run_query($q);
 		
-		while ($round = $r->fetch()) {
-			$first_voting_block_id = ($round['round_id']-1)*$game->db_game['round_length']+1;
+		while ($event_outcome = $r->fetch()) {
+			$event = new Event($game, false, $event_outcome['event_id']);
+			$first_voting_block_id = ($event_outcome['round_id']-1)*$game->db_game['round_length']+1;
 			$last_voting_block_id = $first_voting_block_id + $game->db_game['round_length']-1;
 			$sum_votes = 0;
 			$details_html = "";
 			
-			$option_votes = $game->option_votes_in_round($round['winning_option_id'], $round['round_id']);
+			$option_votes = $event->option_votes_in_round($event_outcome['winning_option_id'], $event_outcome['round_id']);
 			
 			$html .= '<div class="row" style="font-size: 13px;">';
-			$html .= '<div class="col-sm-2">Round&nbsp;#'.$round['round_id'].'</div>';
+			$html .= '<div class="col-sm-2">Round&nbsp;#'.$event_outcome['round_id'].'</div>';
 			$html .= '<div class="col-sm-3">';
-			if ($round['real_winner_name'] != "") {
-				$html .= $round['real_winner_name']." won with ".$this->app->format_bignum($round['winning_votes']/pow(10,8))." votes";
-				if ($round['derived_winner_name'] != "" && $round['derived_winner_name'] != $round['real_winner_name']) $html .= " (Should have been ".$round['derived_winner_name']." with ".$this->app->format_bignum($round['derived_winning_votes']/pow(10,8))." votes)";
+			if ($event_outcome['real_winner_name'] != "") {
+				$html .= $event_outcome['real_winner_name']." won with ".$this->app->format_bignum($event_outcome['winning_votes']/pow(10,8))." votes";
+				if ($event_outcome['derived_winner_name'] != "" && $event_outcome['derived_winner_name'] != $event_outcome['real_winner_name']) $html .= " (Should have been ".$event_outcome['derived_winner_name']." with ".$this->app->format_bignum($event_outcome['derived_winning_votes']/pow(10,8))." votes)";
 			}
 			else {
-				if ($round['derived_winner_name'] != "") $html .= $round['derived_winner_name']." won with ".$this->app->format_bignum($round['derived_winning_votes']/pow(10,8))." votes";
+				if ($event_outcome['derived_winner_name'] != "") $html .= $event_outcome['derived_winner_name']." won with ".$this->app->format_bignum($event_outcome['derived_winning_votes']/pow(10,8))." votes";
 				else $html .= "No winner";
 			}
 			$html .= '</div>';
 			
-			$my_votes_in_round = $game->my_votes_in_round($round['round_id'], $this->db_user['user_id']);
+			$my_votes_in_round = $event->my_votes_in_round($event_outcome['round_id'], $this->db_user['user_id'], false);
 			$my_votes = $my_votes_in_round[0];
 			$coins_voted = $my_votes_in_round[1];
 			
-			if (!empty($my_votes[$round['winning_option_id']])) {
-				if ($game->db_game['payout_weight'] == "coin") $win_text = "You correctly voted ".$this->app->format_bignum($my_votes[$round['winning_option_id']]['coins']/pow(10,8))." coins.";
-				else $win_text = "You correctly cast ".$this->app->format_bignum($my_votes[$round['winning_option_id']][$game->db_game['payout_weight'].'s']/pow(10,8))." votes.";
+			if (!empty($my_votes[$event_outcome['winning_option_id']])) {
+				if ($game->db_game['payout_weight'] == "coin") $win_text = "You correctly voted ".$this->app->format_bignum($my_votes[$event_outcome['winning_option_id']]['coins']/pow(10,8))." coins.";
+				else $win_text = "You correctly cast ".$this->app->format_bignum($my_votes[$event_outcome['winning_option_id']][$game->db_game['payout_weight'].'s']/pow(10,8))." votes.";
 			}
 			else if ($coins_voted > 0) $win_text = "You didn't vote for the winning ".$game->db_game['option_name'].".";
 			else $win_text = "You didn't cast any votes.";
 			
 			$html .= '<div class="col-sm-5">';
 			$html .= $win_text;
-			$html .= ' <a href="/explorer/'.$game->db_game['url_identifier'].'/rounds/'.$round['round_id'].'" target="_blank">Details</a>';
+			$html .= ' <a href="/explorer/'.$game->db_game['url_identifier'].'/events/'.$event_outcome['event_id'].'" target="_blank">Details</a>';
 			$html .= '</div>';
 			
-			if (empty($round['winning_option_id'])) {
+			if (empty($event_outcome['winning_option_id'])) {
 				$win_amt = 0;
 				$payout_amt = 0;
 			}
 			else {
-				if (empty($my_votes[$round['winning_option_id']])) $win_amt_temp = 0;
-				else $win_amt_temp = $this->app->pos_reward_in_round($game->db_game, $round['round_id'])*$my_votes[$round['winning_option_id']]['votes'];
+				if (empty($my_votes[$event_outcome['winning_option_id']])) $win_amt_temp = 0;
+				else $win_amt_temp = $event->event_pos_reward_in_round($event_outcome['round_id'])*$my_votes[$event_outcome['winning_option_id']]['votes'];
 				if ($option_votes['sum'] > 0) $win_amt = $win_amt_temp/$option_votes['sum'];
 				else $win_amt = 0;
 				$payout_amt = ($win_amt - $my_votes_in_round['fee_amount'])/pow(10,8);
@@ -155,10 +156,10 @@ class User {
 		$html .= "</div>\n";
 		$html .= "Last block completed: #".$last_block_id.", currently mining #".($last_block_id+1)."<br/>\n";
 		$html .= "Current votes count towards block ".$block_within_round."/".$game->db_game['round_length']." in round #".$current_round.".<br/>\n";
-		if ($game->db_game['vote_effectiveness_function'] != "constant") $html .= "Votes are ".round(100*$game->round_index_to_effectiveness_factor($block_within_round),1)."% effective right now.<br/>\n";
+		//if ($game->db_game['vote_effectiveness_function'] != "constant") $html .= "Votes are ".round(100*$game->round_index_to_effectiveness_factor($block_within_round),1)."% effective right now.<br/>\n";
 		
 		if ($immature_balance > 0) {
-			$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id LEFT JOIN game_voting_options gvo ON i.option_id=gvo.option_id WHERE i.game_id='".$game->db_game['game_id']."' AND i.user_id='".$this->db_user['user_id']."' AND (i.create_block_id > ".($game->last_block_id() - $game->db_game['maturity'])." OR i.create_block_id IS NULL) ORDER BY i.io_id ASC;";
+			$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id LEFT JOIN options gvo ON i.option_id=gvo.option_id WHERE i.game_id='".$game->db_game['game_id']."' AND i.user_id='".$this->db_user['user_id']."' AND (i.create_block_id > ".($game->last_block_id() - $game->db_game['maturity'])." OR i.create_block_id IS NULL) ORDER BY i.io_id ASC;";
 			$r = $this->app->run_query($q);
 			
 			$html .= '<div class="lockedfunds_details" id="lockedfunds_details">';
@@ -336,13 +337,13 @@ class User {
 	}
 	
 	public function new_game_permission() {
-		$games_created_by_user = $this->count_user_games_created();
+		$game_types_created_by_user = $this->count_user_games_created();
 		if ((string)$GLOBALS['new_games_per_user'] == "unlimited") return true;
-		else if ($games_created_by_user < $this->db_user['authorized_games']) return true;
+		else if ($game_types_created_by_user < $this->db_user['authorized_games']) return true;
 		else return false;
 	}
 
-	public function user_buyin_limit($game) {
+	public function user_buyin_limit(&$game) {
 		$q = "SELECT COUNT(*), SUM(pay_amount), SUM(settle_amount) FROM game_buyins WHERE user_id='".$this->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."' AND status IN ('confirmed','settled');";
 		$r = $this->app->run_query($q);
 		$buyin_stats = $r->fetch();
@@ -375,9 +376,9 @@ class User {
 		
 		return $returnvals;
 	}
-
-	public function generate_user_addresses($game) {
-		$q = "SELECT * FROM game_voting_options gvo WHERE game_id='".$game->db_game['game_id']."' AND NOT EXISTS(SELECT * FROM addresses a WHERE a.user_id='".$this->db_user['user_id']."' AND a.game_id='".$game->db_game['game_id']."' AND a.option_id=gvo.option_id) ORDER BY gvo.option_id ASC;";
+	
+	public function generate_user_addresses(&$game) {
+		$q = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."' AND NOT EXISTS(SELECT * FROM addresses a WHERE a.user_id='".$this->db_user['user_id']."' AND a.game_id='".$game->db_game['game_id']."' AND a.option_id=op.option_id) ORDER BY op.option_id ASC;";
 		$r = $this->app->run_query($q);
 		
 		// Try to give the user voting addresses for all options in this game
@@ -443,7 +444,7 @@ class User {
 			$q = "DELETE FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND round_id >= ".$from_round." AND round_id <= ".$to_round.";";
 			$r = $this->app->run_query($q);
 			
-			$q = "SELECT * FROM game_voting_options WHERE game_id='".$user_strategy['game_id']."';";
+			$q = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$user_strategy['game_id']."';";
 			$r = $this->app->run_query($q);
 			while ($gvo = $r->fetch()) {
 				for ($round_id=$from_round; $round_id<=$to_round; $round_id++) {

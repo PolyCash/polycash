@@ -40,7 +40,7 @@ if ($thisuser) {
 			$new_game_perm = $thisuser->new_game_permission();
 			
 			if ($new_game_perm) {
-				$q = "SELECT MAX(creator_game_index) FROM games WHERE creator_id='".$thisuser->db_user['user_id']."';";
+				$q = "SELECT MAX(creator_game_index) FROM game_types WHERE creator_id='".$thisuser->db_user['user_id']."';";
 				$r = $app->run_query($q);
 				if ($r->rowCount() > 0) {
 					$game_index = $r->fetch(PDO::FETCH_NUM);
@@ -61,7 +61,7 @@ if ($thisuser) {
 				$game->db_game['name'] = $game_name;
 				$game->db_game['url_identifier'] = $url_identifier;
 				
-				$game->ensure_game_options();
+				$game->ensure_options();
 				
 				if ($game->db_game['giveaway_status'] == "public_free") {
 					$game->ensure_user_in_game($thisuser);
@@ -82,7 +82,7 @@ if ($thisuser) {
 			$game = new Game($app, $game_id);
 		}
 		
-		$q = "SELECT creator_id, game_id, game_status, block_timing, giveaway_status, giveaway_amount, maturity, max_voting_fraction, name, payout_weight, round_length, seconds_per_block, pos_reward, pow_reward, inflation, exponential_inflation_rate, exponential_inflation_minershare, final_round, invite_cost, invite_currency, coin_name, coin_name_plural, coin_abbreviation, start_condition, start_datetime, start_condition_players, buyin_policy, per_user_buyin_cap, game_buyin_cap, option_group_id, vote_effectiveness_function FROM games WHERE game_id='".$game->db_game['game_id']."';";
+		$q = "SELECT creator_id, game_id, game_status, block_timing, giveaway_status, giveaway_amount, maturity, name, payout_weight, round_length, seconds_per_block, pos_reward, pow_reward, inflation, exponential_inflation_rate, exponential_inflation_minershare, final_round, invite_cost, invite_currency, coin_name, coin_name_plural, coin_abbreviation, start_condition, start_datetime, start_condition_players, buyin_policy, per_user_buyin_cap, game_buyin_cap FROM games WHERE game_id='".$game->db_game['game_id']."';";
 		$r = $app->run_query($q);
 		
 		if ($r->rowCount() == 1) {
@@ -111,7 +111,7 @@ if ($thisuser) {
 	}
 	else $app->output_message(3, "Bad URL", false);
 	/*else if ($action == "reset" || $action == "delete") {
-		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
+		$q = "SELECT * FROM game_types WHERE game_id='".$game_id."';";
 		$r = $app->run_query($q);
 		
 		if ($r->rowCount() == 1) {
@@ -123,7 +123,7 @@ if ($thisuser) {
 					$output_obj['redirect_url'] = '/wallet/'.$game->db_game['url_identifier'];
 					
 					if ($action == "delete") {
-						$q = "SELECT * FROM games WHERE game_id='".$app->get_site_constant('primary_game_id')."';";
+						$q = "SELECT * FROM game_types WHERE game_id='".$app->get_site_constant('primary_game_id')."';";
 						$r = $app->run_query($q);
 						$primary_game = $r->fetch();
 						

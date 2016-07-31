@@ -3,7 +3,7 @@ include("includes/connect.php");
 include("includes/get_session.php");
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
-$pagetitle = $GLOBALS['coin_brand_name']." - Vote for your empire in the first decentralized blockchain voting game.";
+$pagetitle = $GLOBALS['coin_brand_name']." - Prediction markets & blockchain gaming platform.";
 $nav_tab_selected = "home";
 include('includes/html_start.php');
 ?>
@@ -19,7 +19,7 @@ include('includes/html_start.php');
 		</div>
 		<div class="col-sm-10">
 			<div class="paragraph">
-				Welcome to <?php echo $GLOBALS['coin_brand_name']; ?>, the first gamified cryptocurrency!  The EmpireCoin currency hasn't launched yet, but you can try the EmpireCoin platform right now for free by mining on our testnet or joining one of our private games.  In <?php echo $GLOBALS['coin_brand_name']; ?> games the in-game currency inflates rapidly and players compete to win coins by strategically casting votes.  One empire wins in each round and the reward is split among everyone who voted correctly.  <?php echo $GLOBALS['coin_brand_name']; ?> supports a wide variety of game types.  Battle against a single opponent in a quick two player game, set up a daily fantasy sports game with your friends or join a massive battle with thousands of other players.  Free games are available so that you can try <?php echo $GLOBALS['coin_brand_name']; ?> without any risk, but most games are played with real money.  You can buy in with bitcoins or dollars and then sell out at any time. Start building your empire today in this massively multiplayer online game of chance.
+				Welcome to <?php echo $GLOBALS['coin_brand_name']; ?>, the first gamified cryptocurrency!  The EmpireCoin currency hasn't launched yet, but you can try the EmpireCoin platform right now for free by mining on our testnet or joining one of our private event_types.  In <?php echo $GLOBALS['coin_brand_name']; ?> event_types the in-event currency inflates rapidly and players compete to win coins by strategically casting votes.  One empire wins in each round and the reward is split among everyone who voted correctly.  <?php echo $GLOBALS['coin_brand_name']; ?> supports a wide variety of event types.  Battle against a single opponent in a quick two player event, set up a daily fantasy sports event with your friends or join a massive battle with thousands of other players.  Free event_types are available so that you can try <?php echo $GLOBALS['coin_brand_name']; ?> without any risk, but most event_types are played with real money.  You can buy in with bitcoins or dollars and then sell out at any time. Start building your empire today in this massively multiplayer online event of chance.
 				<?php
 				$whitepaper_fname = "EmpirecoinWhitepaper.pdf";
 				if (is_file($whitepaper_fname)) {
@@ -31,79 +31,19 @@ include('includes/html_start.php');
 	</div>
 	
 	<script type="text/javascript">
-	var Games = new Array();
+	var games = new Array();
 	</script>
 	<?php
 	$app->display_featured_games();
 	?>
 	
 	<div class="paragraph">
-		<a href="" onclick="$('#variation_games').toggle('fast'); return false;">See more games</a>
-	</div>
-	
-	<div id="variation_games" class="paragraph" style="display: none;">
-		<?php
-		$player_variation_q = "SELECT COUNT(*), t.start_condition_players FROM game_types t JOIN game_type_variations tv ON t.game_type_id=tv.game_type_id JOIN games g ON tv.variation_id=g.variation_id WHERE g.game_status='published' GROUP BY t.start_condition_players ORDER BY t.start_condition_players ASC;";
-		$player_variation_r = $app->run_query($player_variation_q);
-		
-		while ($player_variation = $player_variation_r->fetch()) {
-			$game_q = "SELECT *, tv.url_identifier AS url_identifier, c.symbol AS symbol, c.short_name AS currency_short_name FROM game_types t JOIN game_type_variations tv ON t.game_type_id=tv.game_type_id JOIN games g ON tv.variation_id=g.variation_id LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.game_status='published' AND g.giveaway_status IN ('public_free','public_pay') AND t.start_condition_players='".$player_variation['start_condition_players']."' ORDER BY g.invite_cost ASC;";
-			$game_r = $app->run_query($game_q);
-			
-			echo '<h2>Join a '.$player_variation['start_condition_players'].' player game</h2>';
-			echo '<div class="bordered_table">';
-			while ($db_game = $game_r->fetch()) {
-				$variation_game = new Game($app, $db_game['game_id']);
-				echo '<div class="row bordered_row">';
-				
-				echo '<div class="col-sm-3"><a title="'.$variation_game->game_description().'" href="/'.$db_game['url_identifier'].'/">'.ucfirst($variation_game->db_game['type_name'])."</a></div>";
-				
-				$invite_disp = $app->format_bignum($variation_game->db_game['invite_cost']);
-				echo '<div class="col-sm-4">';
-				
-				if ($variation_game->db_game['giveaway_status'] == 'public_free') {
-					$receive_disp = $app->format_bignum($variation_game->db_game['giveaway_amount']/pow(10,8));
-					echo 'Start with '.$receive_disp.' ';
-					if ($receive_disp == '1') echo $variation_game->db_game['coin_name'];
-					else echo $variation_game->db_game['coin_name_plural'];
-					echo ' for free';
-				}
-				else {
-					echo 'Buy in at '.$db_game['symbol'].$invite_disp." ".$db_game['short_name'];
-					if ($invite_disp != '1') echo 's';
-					echo " for ";
-					$receive_disp = $app->format_bignum($variation_game->db_game['giveaway_amount']/pow(10,8));
-					echo $receive_disp.' ';
-					if ($receive_disp == '1') echo $variation_game->db_game['coin_name'];
-					else echo $variation_game->db_game['coin_name_plural'];
-				}
-				echo "</div>";
-				
-				$players = $variation_game->paid_players_in_game();
-				echo '<div class="col-sm-2">'.$players."/".$variation_game->db_game['start_condition_players']." players</div>";
-				
-				echo '<div class="col-sm-3">';
-				if ($variation_game->db_game['final_round'] > 0) {
-					$final_inflation_pct = $app->game_final_inflation_pct($variation_game->db_game);
-					$game_seconds = $variation_game->db_game['final_round']*$variation_game->db_game['round_length']*$variation_game->db_game['seconds_per_block'];
-					echo number_format($final_inflation_pct)."% inflation in ".$app->format_seconds($game_seconds);
-				}
-				echo '</div>';
-				
-				echo "</div>\n";
-			}
-			echo "</div>\n";
-		}
-		?>
-	</div>
-
-	<div class="paragraph">
 		<h2>Strategy &amp; Gameplay</h2>
 		The winning empire for an <?php echo $GLOBALS['coin_brand_name']; ?> voting round is determined entirely by the votes of the players.  Therefore, winning in <?php echo $GLOBALS['coin_brand_name']; ?> is all about colluding with other players and organizing against competing factions.  Players can form voting pools and vote together to influence the winning empire.
 	</div>
 	<div class="paragraph">
 		<h2>Voting Pools</h2>
-		<?php echo $GLOBALS['coin_brand_name']; ?>'s unique gameplay encourages stakeholders to cooperate and vote together against the other teams.  Groups can create voting pools by coding up an API endpoint which incorporates their custom voting logic.  You can assign your voting decisions to a voting pool by entering it's URL into your web wallet.
+		<?php echo $GLOBALS['coin_brand_name']; ?>'s unique eventplay encourages stakeholders to cooperate and vote together against the other teams.  Groups can create voting pools by coding up an API endpoint which incorporates their custom voting logic.  You can assign your voting decisions to a voting pool by entering it's URL into your web wallet.
 	</div>
 	<div class="paragraph">
 		<h2><?php echo $GLOBALS['coin_brand_name']; ?> API</h2>
@@ -111,7 +51,7 @@ include('includes/html_start.php');
 	</div>
 	<div class="paragraph">
 		<h2>Create Your Own Coin</h2>
-		Using the <?php echo $GLOBALS['coin_brand_name']; ?> platform, anyone can create an escrow-backed blockchain game, running on top of the bitcoin blockchain or a centralized game server.  To create your own coin game, select the parameters for your game, send out invitations and then launch your game.  Games can be free or paid.  For paid games, each player must contribute bitcoins to an escrow address.  Games end after a certain number of rounds and then the escrowed bitcoins are paid back to the players in proportion to their final in-game balances. 
+		Using the <?php echo $GLOBALS['coin_brand_name']; ?> platform, anyone can create an escrow-backed blockchain event, running on top of the bitcoin blockchain or a centralized event server.  To create your own coin event, select the parameters for your event, send out game_invitations and then launch your event.  event_types can be free or paid.  For paid event_types, each player must contribute bitcoins to an escrow address.  event_types end after a certain number of rounds and then the escrowed bitcoins are paid back to the players in proportion to their final in-event balances. 
 	</div>
 	<div class="paragraph">
 		<h2>Get Involved</h2>

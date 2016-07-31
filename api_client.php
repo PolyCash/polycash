@@ -15,8 +15,8 @@ $server_access_key = $GLOBALS['default_server_api_access_key'];
 $server_host = "http://empirecoin.org";
 $client_access_key = $GLOBALS['cron_key_string'];
 
-$game_id = intval($_REQUEST['game_id']);
-if (!$game_id) die("Please provide a valid game_id");
+$event_id = intval($_REQUEST['event_id']);
+if (!$event_id) die("Please provide a valid event_id");
 
 if ($_REQUEST['key'] == $client_access_key) {
 	// Many VotingRecommendations can be sent at once; each consists of an empire and a number of votes.
@@ -47,14 +47,14 @@ if ($_REQUEST['key'] == $client_access_key) {
 		public $input_utxo_ids;
 		
 		// Initialize variables and define the Empires aka "Voting Options"
-		public function __construct($game_id, $server_host, $server_access_key) {
-			$this->game_id = $game_id;
+		public function __construct($event_id, $server_host, $server_access_key) {
+			$this->event_id = $event_id;
 			$this->server_host = $server_host;
 			$this->server_access_key = $server_access_key;
 			
 			$this->server_result = FALSE;
-			$this->game = FALSE;
-			$this->game_votes = FALSE;
+			$this->event = FALSE;
+			$this->event_votes = FALSE;
 			$this->user_info = FALSE;
 			
 			$this->error_code = FALSE;
@@ -79,7 +79,7 @@ if ($_REQUEST['key'] == $client_access_key) {
 		// If a valid EmpireCoin.org api_access_code has been specified, 
 		// information about the corresponding user account will also be returned
 		public function getCurrentStatus() {
-			$fetch_url = $this->server_host."/api/".$this->game_id."/status/";
+			$fetch_url = $this->server_host."/api/".$this->event_id."/status/";
 			if ($this->server_access_key && $this->server_access_key != "") {
 				$fetch_url .= "?api_access_code=".$this->server_access_key;
 			}
@@ -89,21 +89,21 @@ if ($_REQUEST['key'] == $client_access_key) {
 			if ($fetch_result) {
 				// Store the result of the API call
 				$this->server_result = json_decode($fetch_result);
-				$this->game = $this->server_result->game;
-				$this->game_votes = $this->server_result->game_votes;
+				$this->event = $this->server_result->event;
+				$this->event_votes = $this->server_result->event_votes;
 				$this->user_info = $this->server_result->user_info;
 				
-				if (!$this->game) {
+				if (!$this->event) {
 					$this->error_code = 2;
-					$this->error_message = "Error: the server didn't return a valid game.";
+					$this->error_message = "Error: the server didn't return a valid event.";
 					$this->outputJSON();
 					die();
 				}
 				else {
 					// Define the rank2option_id map so that we can reference nations by rank in setOutputs()
-					foreach ($this->game_votes as $game_votes) {
-						$this->rank2option_id[$game_votes->rank] = $game_votes->option_id;
-						$this->recommendations[$game_votes->option_id] = new VotingRecommendation($game_votes->option_id, $game_votes->name);
+					foreach ($this->event_votes as $event_votes) {
+						$this->rank2option_id[$event_votes->rank] = $event_votes->option_id;
+						$this->recommendations[$event_votes->option_id] = new VotingRecommendation($event_votes->option_id, $event_votes->name);
 					}
 					$this->setname2option_id();
 				}
@@ -169,7 +169,7 @@ if ($_REQUEST['key'] == $client_access_key) {
 			if ($this->total_vote_amount) {
 				if ($this->server_result) {
 					// Only cast votes late in the round
-					if ($this->game->block_within_round >= 2) {
+					if ($this->event->block_within_round >= 2) {
 						if ($this->user_info) { // Recommendations specified in coins
 							if ($this->user_info->votes_available >= $this->user_info->mature_balance) {
 								$coins_out = 0;
@@ -202,7 +202,7 @@ if ($_REQUEST['key'] == $client_access_key) {
 		}
 	}
 	
-	$recommendations = new VotingRecommendations($game_id, $server_host, $server_access_key);
+	$recommendations = new VotingRecommendations($event_id, $server_host, $server_access_key);
 	$recommendations->getCurrentStatus();
 	$recommendations->setInputs();
 	$recommendations->setOutputs();

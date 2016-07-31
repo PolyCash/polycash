@@ -48,7 +48,7 @@ if ($thisuser && $game) {
 		while ($allocation = $r->fetch()) {
 			$js .= "load_plan_option(".$allocation['round_id'].", option_id2option_index[".$allocation['option_id']."], ".$allocation['points'].");\n";
 		}
-		$js .= "load_plan_option_events();\n";
+		$js .= "load_plan_option_game_types();\n";
 		$js .= "});\n";
 		$js .= "</script>\n";
 		

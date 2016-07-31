@@ -3,17 +3,11 @@ if (!empty($redirect_id)) {}
 else if (!empty($_REQUEST['redirect_id']) > 0) $redirect_id = intval($_REQUEST['redirect_id']);
 else $redirect_id = FALSE;
 
-$url_game = false;
-$login_url_parts = explode("/", rtrim(ltrim($_SERVER['REQUEST_URI'], "/"), "/"));
-if ($login_url_parts[0] == "wallet" && count($login_url_parts) > 1) {
-	$q = "SELECT * FROM games WHERE url_identifier='".$login_url_parts[1]."';";
-	$r = $app->run_query($q);
-	if ($r->rowCount() == 1) {
-		$url_game = $r->fetch();
-		if (empty($redirect_id)) {
-			$redirect_url = $app->get_redirect_url("/wallet/".$url_game['url_identifier']);
-			$redirect_id = $redirect_url['redirect_url_id'];
-		}
+if (empty($redirect_id)) {
+	$redir_game = $app->fetch_game_from_url();
+	if ($redir_game) {
+		$redirect_url = $app->get_redirect_url("/wallet/".$redir_game['url_identifier']."/");
+		$redirect_id = $redirect_url['redirect_url_id'];
 	}
 }
 ?>
@@ -50,7 +44,7 @@ function register() {
 	var alias = $('#alias').val();
 	var password = $('#registration_options_password').val();
 	var email = $('#registration_options_email').val();
-	$.get("/ajax/register.php?alias="+encodeURIComponent(alias)+"&password="+encodeURIComponent(password)+"&email="+encodeURIComponent(email)+"&redirect_id="+parseInt($('#redirect_id').val()), function(result) {
+	$.get("/ajax/register.php?alias="+encodeURIComponent(alias)+"&password="+encodeURIComponent(password)+"&email="+encodeURIComponent(email)+"&redirect_id="+parseInt($('#redirect_id').val()+"&invite_key="+$('#invite_key').val()), function(result) {
 		var result_obj = JSON.parse(result);
 		if (result_obj['status_code'] == 2) {
 			window.location = '/wallet/';
@@ -99,7 +93,7 @@ function login() {
 </script>
 <br/>
 <input type="hidden" id="redirect_id" value="<?php if ($redirect_id) echo $redirect_id; ?>" />
-<input type="hidden" name="invite_key" value="<?php if (!empty($_REQUEST['invite_key'])) echo $app->make_alphanumeric(strip_tags($_REQUEST['invite_key'])); ?>" />
+<input type="hidden" name="invite_key" value="<?php if (!empty($_REQUEST['invite_key'])) echo $app->make_alphanumeric(strip_tags($_REQUEST['invite_key']), ""); ?>" />
 <form id="alias_form" action="/" method="get" onsubmit="check_alias(); return false;">
 	<div class="row">
 		<div class="col-md-8 col-md-push-2">
@@ -135,7 +129,7 @@ function login() {
 					<option value="email">Email me a link whenever I want to sign in</option>
 				</select>
 			</div>
-			<div id="registration_options_step2"<?php if ($GLOBALS['login_by_email_enabled']) { ?> style="display: none;"<?php } ?>>
+			<div id="registration_options_step2"<?php if (!empty($GLOBALS['login_by_email_enabled'])) { ?> style="display: none;"<?php } ?>>
 				<div class="col-md-8 col-md-push-2">
 					<input id="registration_options_email" type="email" class="form-control" placeholder="Enter your email address" />
 				</div>

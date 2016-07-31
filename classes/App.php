@@ -49,13 +49,138 @@ class App {
 
 		return $string;
 	}
-
+	
+	public function normalize_username($username) {
+		return $this->make_alphanumeric(strip_tags($username), "$-()/!.,:;#@");
+	}
+	
 	public function recaptcha_check_answer($recaptcha_privatekey, $ip_address, $g_recaptcha_response) {
 		$response = json_decode(file_get_contents("https://www.google.com/recaptcha/api/siteverify?secret=".$recaptcha_privatekey."&response=".$g_recaptcha_response."&remoteip=".$ip_address), true);
 		if ($response['success'] == false) return false;
 		else return true;
 	}
-
+	
+	public function generate_games() {
+		$q = "SELECT * FROM game_types ORDER BY game_type_id ASC;";
+		$r = $this->run_query($q);
+		while ($game_type = $r->fetch(PDO::FETCH_ASSOC)) {
+			$this->generate_games_by_type($game_type);
+		}
+	}
+	
+	public function generate_games_by_type($game_type) {
+		$q = "SELECT * FROM games WHERE game_type_id='".$game_type['game_type_id']."' AND game_status IN('editable','published','running');";
+		$r = $this->run_query($q);
+		$num_running_games = $r->rowCount();
+		$needed_games = $game_type['target_open_games'] - $num_running_games;
+		for ($i=0; $i<$needed_games; $i++) {
+			$this->generate_game_by_type($game_type);
+		}
+	}
+	
+	public function option_index_to_voting_chars($option_index, $options_in_game) {
+		$voting_chars = "0123456789abcdefghijklmnopqrstuvwxyz";
+		$modulus = strlen($voting_chars);
+		$length = ceil(log($options_in_game, strlen($voting_chars)));
+		$chars = "";
+		$current_num = $option_index;
+		for ($i=0; $i<$length; $i++) {
+			$remainder = $current_num%$modulus;
+			$current_num = floor($current_num/$modulus);
+			$chars .= $voting_chars[$remainder];
+		}
+		return strrev($chars);
+	}
+	
+	public function generate_game_by_type($game_type) {
+		$skip_game_type_vars = explode(",", "event_rule,event_entity_type_id,option_group_id,events_per_round,url_identifier,target_open_games,default_vote_effectiveness_function,default_max_voting_fraction");
+		$url_identifier = $this->game_url_identifier($game_type['name']);
+		$q = "INSERT INTO games SET url_identifier=".$this->quote_escape($url_identifier).", ";
+		foreach ($game_type AS $var => $val) {
+			if (!in_array($var, $skip_game_type_vars)) {
+				if (!empty($val)) $q .= $var.'='.$this->quote_escape($val).', ';
+			}
+		}
+		$q = substr($q, 0, strlen($q)-2).";";
+		$r = $this->run_query($q);
+		$game_id = $this->last_insert_id();
+		
+		if ($game_type['event_rule'] == "entity_type_option_group") {
+			$q = "SELECT * FROM entity_types WHERE entity_type_id='".$game_type['event_entity_type_id']."';";
+			$r = $this->run_query($q);
+			
+			if ($r->rowCount() == 1) {
+				$entity_type = $r->fetch();
+				
+				$q = "SELECT * FROM option_groups WHERE group_id='".$game_type['option_group_id']."';";
+				$r = $this->run_query($q);
+				$option_group = $r->fetch();
+				
+				$q = "SELECT * FROM entities e JOIN option_group_memberships mem ON e.entity_id=mem.entity_id WHERE mem.option_group_id='".$game_type['option_group_id']."' ORDER BY e.entity_id ASC;";
+				$r = $this->run_query($q);
+				$db_option_entities = array();
+				while ($option_entity = $r->fetch()) {
+					$db_option_entities[count($db_option_entities)] = $option_entity;
+				}
+				
+				$event_i = 0;
+				$option_i = 0;
+				$max_voting_chars = 0;
+				
+				$q = "SELECT * FROM entities WHERE entity_type_id='".$entity_type['entity_type_id']."' ORDER BY entity_id ASC;";
+				$r = $this->run_query($q);
+				
+				$options_in_game = $r->rowCount()*count($db_option_entities);
+				while ($event_entity = $r->fetch()) {
+					if (count($db_option_entities) == 2 && !empty($db_option_entities[0]['last_name'])) {
+						$event_type_name = $db_option_entities[0]['last_name']." vs ".$db_option_entities[1]['last_name']." in ".$event_entity['entity_name'];
+						$event_type_identifier = strtolower($db_option_entities[0]['last_name']."-".$db_option_entities[1]['last_name']."-".$event_entity['entity_name']);
+						$qq = "SELECT * FROM event_types WHERE url_identifier=".$this->quote_escape($event_type_identifier).";";
+						$rr = $this->run_query($qq);
+						if ($rr->rowCount() > 0) {
+							$event_type = $rr->fetch();
+						}
+						else {
+							$qq = "INSERT INTO event_types SET option_group_id='".$game_type['option_group_id']."', name='".$event_type_name."', url_identifier=".$this->quote_escape($event_type_identifier).", num_voting_options='".count($db_option_entities)."', vote_effectiveness_function='".$game_type['default_vote_effectiveness_function']."', max_voting_fraction='".$game_type['default_max_voting_fraction']."';";
+							$rr = $this->run_query($qq);
+							$event_type_id = $this->last_insert_id();
+							
+							$qq = "SELECT * FROM event_types WHERE event_type_id='".$event_type_id."';";
+							$event_type = $this->run_query($qq)->fetch();
+						}
+						
+						$qq = "SELECT * FROM events WHERE game_id='".$game_id."' AND event_type_id='".$event_type['event_type_id']."';";
+						$rr = $this->run_query($qq);
+						if ($rr->rowCount() > 0) {
+							$option_i += count($db_option_entities);
+						}
+						else {
+							$starting_round = floor($event_i/$game_type['events_per_round'])+1;
+							$event_starting_block = ($starting_round-1)*$game_type['round_length']+1;
+							$event_final_block = $starting_round*$game_type['round_length'];
+							
+							$qq = "INSERT INTO events SET game_id='".$game_id."', event_type_id='".$event_type['event_type_id']."', event_starting_block='".$event_starting_block."', event_final_block='".$event_final_block."', event_name=".$this->quote_escape($event_type_name).", option_name=".$this->quote_escape($option_group['option_name']).", option_name_plural=".$this->quote_escape($option_group['option_name_plural']).";";
+							$rr = $this->run_query($qq);
+							$event_id = $this->last_insert_id();
+							
+							for ($i=0; $i<count($db_option_entities); $i++) {
+								$voting_character = $this->option_index_to_voting_chars($option_i, $options_in_game);
+								if (strlen($voting_character) > $max_voting_chars) $max_voting_chars = strlen($voting_character);
+								$qq = "INSERT INTO options SET event_id='".$event_id."', entity_id='".$db_option_entities[$i]['entity_id']."', membership_id='".$db_option_entities[$i]['membership_id']."', image_id='".$db_option_entities[$i]['default_image_id']."', name='".$db_option_entities[$i]['entity_name']." wins ".$event_entity['entity_name']."', voting_character='".$voting_character."';";
+								$rr = $this->run_query($qq);
+								$option_i++;
+							}
+						}
+						$event_i++;
+					}
+				}
+				
+				$q = "UPDATE games SET game_status='published', max_voting_chars='".$max_voting_chars."' WHERE game_id='".$game_id."';";
+				$r = $this->run_query($q);
+			}
+		}
+	}
+	
 	public function get_redirect_url($url) {
 		$q = "SELECT * FROM redirect_urls WHERE url=".$this->quote_escape($url).";";
 		$r = $this->run_query($q);
@@ -79,7 +204,7 @@ class App {
 		$r = $this->run_query($q);
 		$delivery_id = $this->last_insert_id();
 		
-		$command = $this->php_binary_location()." ".realpath(dirname(dirname(dirname(__FILE__))))."/scripts/async_email_deliver.php ".$delivery_id." > /dev/null 2>/dev/null &";
+		$command = $this->php_binary_location()." ".realpath(dirname(dirname(__FILE__)))."/scripts/async_email_deliver.php ".$delivery_id." > /dev/null 2>/dev/null &";
 		exec($command);
 		
 		/*$curl_url = $GLOBALS['base_url']."/scripts/async_email_deliver.php?delivery_id=".$delivery_id;
@@ -195,19 +320,19 @@ class App {
 		}
 		echo json_encode($dump_object);
 	}
-
+	
 	public function try_apply_invite_key($user_id, $invite_key, &$invite_game) {
 		$reload_page = false;
 		$invite_key = $this->quote_escape($invite_key);
 		
-		$q = "SELECT * FROM invitations WHERE invitation_key=".$invite_key.";";
+		$q = "SELECT * FROM game_invitations WHERE invitation_key=".$invite_key.";";
 		$r = $this->run_query($q);
 		
 		if ($r->rowCount() == 1) {
 			$invitation = $r->fetch();
 			
 			if ($invitation['used'] == 0 && $invitation['used_user_id'] == "" && $invitation['used_time'] == 0) {
-				$qq = "UPDATE invitations SET used_user_id='".$user_id."', used_time='".time()."', used=1";
+				$qq = "UPDATE game_invitations SET used_user_id='".$user_id."', used_time='".time()."', used=1";
 				if ($GLOBALS['pageview_tracking_enabled']) $q .= ", used_ip='".$_SERVER['REMOTE_ADDR']."'";
 				$qq .= " WHERE invitation_id='".$invitation['invitation_id']."';";
 				$rr = $this->run_query($qq);
@@ -218,7 +343,7 @@ class App {
 				}
 				$user = new User($this, $user_id);
 				$user->ensure_user_in_game($invitation['game_id']);
-
+				
 				$invite_game = new Game($this, $invitation['game_id']);
 				
 				return true;
@@ -281,7 +406,7 @@ class App {
 			if ($append_index > 0) $append = "(".$append_index.")";
 			else $append = "";
 			$url_identifier = $this->make_alphanumeric(str_replace(" ", "-", strtolower($game_name.$append)), "-().:;");
-			$q = "SELECT * FROM games WHERE url_identifier='".$url_identifier."';";
+			$q = "SELECT * FROM games WHERE url_identifier=".$this->quote_escape($url_identifier).";";
 			$r = $this->run_query($q);
 			if ($r->rowCount() == 0) $keeplooping = false;
 			else $append_index++;
@@ -294,48 +419,6 @@ class App {
 		$firstletter = strtolower($word[0]);
 		if (strpos('aeiou', $firstletter)) return "an ".$word;
 		else return "a ".$word;
-	}
-
-	public function generate_open_games() {
-		$q = "SELECT * FROM game_types t JOIN game_type_variations v ON t.game_type_id=v.game_type_id JOIN voting_option_groups vog ON vog.option_group_id=t.option_group_id WHERE v.target_open_games > 0;";
-		$r = $this->run_query($q);
-		while ($game_variation = $r->fetch()) {
-			$this->generate_open_games_by_variation($game_variation);
-		}
-	}
-	
-	public function generate_open_games_by_variation(&$game_variation) {
-		$game_vars = explode(",", "game_type,option_group_id,giveaway_status,giveaway_amount,maturity,max_voting_fraction,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,type_name,variation_name,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_condition_players,option_name,option_name_plural,vote_effectiveness_function");
-		
-		$qq = "SELECT COUNT(*) FROM games WHERE variation_id='".$game_variation['variation_id']."' AND game_status='published';";
-		$rr = $this->run_query($qq);
-		$variation_count = $rr->fetch(PDO::FETCH_NUM);
-		$variation_count = (int) $variation_count[0];
-		
-		$needed = $game_variation['target_open_games']-$variation_count;
-		
-		if ($needed > 0) {
-			for ($newgame_i=0; $newgame_i<$needed; $newgame_i++) {
-				$address_id = $this->new_invoice_address();
-				
-				$qq = "INSERT INTO games SET invoice_address_id='".$address_id."', game_status='published', variation_id='".$game_variation['variation_id']."', ";
-				for ($gamevar_i=0; $gamevar_i<count($game_vars); $gamevar_i++) {
-					$qq .= $game_vars[$gamevar_i]."='".$game_variation[$game_vars[$gamevar_i]]."', ";
-				}
-				$qq = substr($qq, 0, strlen($qq)-2).";";
-				$rr = $this->run_query($qq);
-				$game_id = $this->last_insert_id();
-				
-				$game = new Game($this, $game_id);
-				
-				$game->ensure_game_options();
-				
-				$game_name = ucfirst($game->db_game['start_condition_players']."-player battle #".$game_id);
-				
-				$qq = "UPDATE games SET name='".$game_name."', url_identifier='".$this->game_url_identifier($game_name)."' WHERE game_id='".$game_id."';";
-				$rr = $this->run_query($qq);
-			}
-		}
 	}
 	
 	public function friendly_intval($val) {
@@ -356,8 +439,8 @@ class App {
 		else return false;
 	}
 	
-	public function process_join_requests($variation_id) {
-		$q = "SELECT * FROM game_type_variations WHERE variation_id='".$variation_id."';";
+	/*public function process_join_requests($variation_id) {
+		$q = "SELECT * FROM event_type_variations WHERE variation_id='".$variation_id."';";
 		$r = $this->run_query($q);
 		
 		if ($r->rowCount() == 1) {
@@ -376,15 +459,15 @@ class App {
 						
 						$join_user = new User($this, $join_request['user_id']);
 						
-						$qq = "SELECT * FROM games WHERE variation_id='".$variation['variation_id']."' AND game_status='published' ORDER BY game_id ASC LIMIT 1;";
+						$qq = "SELECT * FROM event_types WHERE variation_id='".$variation['variation_id']."' AND event_status='published' ORDER BY event_id ASC LIMIT 1;";
 						$rr = $this->run_query($qq);
 						
 						if ($rr->rowCount() == 1) {
-							$db_join_game = $rr->fetch();
+							$db_join_event = $rr->fetch();
 							
-							$join_user->ensure_user_in_game($db_join_game['game_id']);
+							$join_user->ensure_user_in_game($db_join_event['event_id']);
 							
-							$this->run_query("UPDATE game_join_requests SET request_status='complete', game_id='".$db_join_game['game_id']."' WHERE join_request_id='".$join_request['join_request_id']."';");
+							$this->run_query("UPDATE game_join_requests SET request_status='complete', event_id='".$db_join_event['event_id']."' WHERE join_request_id='".$join_request['join_request_id']."';");
 						}
 					}
 					else $keeplooping = false;
@@ -401,7 +484,7 @@ class App {
 			return $r->fetch();
 		}
 		else return false;
-	}
+	}*/
 	
 	public function latest_currency_price($currency_id) {
 		$q = "SELECT * FROM currency_prices WHERE currency_id='".$currency_id."' AND reference_currency_id='".$this->get_site_constant('reference_currency_id')."' ORDER BY price_id DESC LIMIT 1;";
@@ -608,16 +691,12 @@ class App {
 			$featured_game = new Game($this, $db_game['game_id']);
 			$mining_block_id = $featured_game->last_block_id()+1;
 			$current_round_id = $featured_game->block_to_round($mining_block_id);
-
-			$sum_votes = $featured_game->total_votes_in_round($current_round_id, true);
-			$round_stats = $featured_game->round_voting_stats_all($current_round_id);
-			$option_id2rank = $round_stats[3];
 			?>
 			<script type="text/javascript">
-			Games.push(new Game(<?php
+			games.push(new Game(<?php
 				echo $db_game['game_id'];
-				echo ', '.($mining_block_id-1);
-				echo ', '.$featured_game->last_transaction_id().', ';
+				echo ', false';
+				echo ', false'.', ';
 				echo 'false';
 				echo ', ""';
 				echo ', "'.$db_game['payout_weight'].'"';
@@ -629,31 +708,29 @@ class App {
 				echo ', "'.$db_game['url_identifier'].'"';
 				echo ', "'.$db_game['coin_name'].'"';
 				echo ', "'.$db_game['coin_name_plural'].'"';
-				echo ', '.$db_game['num_voting_options'];
-				echo ', "'.$db_game['vote_effectiveness_function'].'"';
-				echo ', "home"';
+				echo ', "home", "'.$featured_game->event_ids().'"';
 			?>));
-			Games[<?php echo $counter; ?>].game_loop_event();
 			</script>
 			<?php
-			echo '<div class="col-md-'.$cell_width.'"><h3 style="display: inline-block" title="'.$featured_game->game_description().'">'.$featured_game->db_game['name'].'</h3>';
+			echo '<div class="col-md-'.$cell_width.'">';
+			echo '<h3 style="display: inline-block" title="'.$featured_game->game_description().'">'.$featured_game->db_game['name'].'</h3>';
 			if ($featured_game->db_game['short_description'] != "") echo "<br/>".$featured_game->db_game['short_description'];
-			echo '<div id="game'.$counter.'_current_round_table">';
-			echo $featured_game->current_round_table($current_round_id, false, false, true, $counter);
-			echo '</div>';
+			
+			echo '<div id="game'.$counter.'_events"></div>';
+			echo '<script type="text/javascript" id="game'.$counter.'_new_event_js">'.$featured_game->new_event_js($counter, false).'</script>';
+			
 			echo '<a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-success">Play Now</a>';
 			echo ' <a href="/explorer/'.$featured_game->db_game['url_identifier'].'/rounds/" class="btn btn-primary">Blockchain Explorer</a>';
-			echo '<br/><br/></div>';
-			
-			echo $featured_game->initialize_vote_option_details($option_id2rank, $sum_votes['sum'], false, $counter);
+			echo '<br/><br/>';
 			
 			if ($counter%(12/$cell_width) == 1) echo '</div><div class="row">';
 			$counter++;
+			echo '</div>';
 		}
 		echo '</div>';
 		echo '</div>';
 	}
-
+	
 	public function refresh_utxo_user_ids($only_unspent_utxos) {
 		$update_user_id_q = "UPDATE transaction_ios io JOIN addresses a ON io.address_id=a.address_id SET io.user_id=a.user_id";
 		if ($only_unspent_utxos) $update_user_id_q .= " WHERE io.spend_status='unspent'";
@@ -664,7 +741,7 @@ class App {
 		$this->run_query("INSERT INTO log_messages SET message=".$this->quote_escape($message).";");
 	}
 	public function update_schema() {
-		$migrations_path = realpath(dirname(__FILE__)."/../../sql");
+		$migrations_path = realpath(dirname(__FILE__)."/../sql");
 		
 		$migration_id = ((int)$this->get_site_constant("last_migration_id"))+1;
 		$keep_looping = true;
@@ -847,10 +924,6 @@ class App {
 		else $html .= "Game does not end";
 		$html .= "</div></div>\n";
 		
-		$html .= '<div class="row"><div class="col-sm-5">'.ucfirst($db_game['option_name_plural']).'</div><div class="col-sm-7">'.$db_game['num_voting_options']." </div></div>\n";
-		
-		$html .= '<div class="row"><div class="col-sm-5">'.ucfirst($db_game['option_name']).' voting cap:</div><div class="col-sm-7">'.(100*$db_game['max_voting_fraction'])."%</div></div>\n";
-		
 		$html .= '<div class="row"><div class="col-sm-5">Cost to join:</div><div class="col-sm-7">';
 		if ($db_game['giveaway_status'] == "invite_pay" || $db_game['giveaway_status'] == "public_pay") $html .= $this->format_bignum($db_game['invite_cost'])." ".$invite_currency['short_name']."s";
 		else $html .= "Free";
@@ -952,7 +1025,7 @@ class App {
 				$round_coins_created = $this->coins_created_in_round($db_game, $round_id);
 			}
 			else {
-				$game = new game($this, $db_game['game_id']);
+				$game = new Game($this, $db_game['game_id']);
 				$round_coins_created = $game->coins_in_existence(false)*$db_game['exponential_inflation_rate'];
 			}
 			return floor((1-$db_game['exponential_inflation_minershare'])*$round_coins_created);
@@ -963,13 +1036,13 @@ class App {
 			$current_round = $game->block_to_round($mining_block_id);
 			
 			if ($round_id == $current_round) {
-				$q = "SELECT SUM(".$game->db_game['payout_weight']."_score), SUM(unconfirmed_".$game->db_game['payout_weight']."_score) FROM game_voting_options WHERE game_id='".$game->db_game['game_id']."';";
+				$q = "SELECT SUM(".$game->db_game['payout_weight']."_score), SUM(unconfirmed_".$game->db_game['payout_weight']."_score) FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."';";
 				$r = $this->run_query($q);
 				$r = $r->fetch();
 				$score = $r['SUM('.$game->db_game['payout_weight'].'_score)']+$r['SUM(unconfirmed_'.$game->db_game['payout_weight'].'_score)'];
 			}
 			else {
-				$q = "SELECT SUM(".$game->db_game['payout_weight']."_score) FROM cached_round_options WHERE game_id='".$game->db_game['game_id']."' AND round_id='".$round_id."';";
+				$q = "SELECT SUM(".$game->db_game['payout_weight']."_score) FROM event_outcome_options eoo JOIN events e ON eoo.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."' AND round_id='".$round_id."';";
 				$r = $this->run_query($q);
 				$r = $r->fetch();
 				$score = $r["SUM(".$game->db_game['payout_weight']."_score)"];

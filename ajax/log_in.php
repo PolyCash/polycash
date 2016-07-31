@@ -1,6 +1,7 @@
 <?php
 include("../includes/connect.php");
 include("../includes/get_session.php");
+if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
 if ($thisuser) {
 	$app->output_message(2, "You're already logged in.", false);

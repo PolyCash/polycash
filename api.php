@@ -23,7 +23,7 @@ if ($uri_parts[1] == "api") {
 			for ($i=0; $i<count($intval_vars); $i++) {
 				$game->db_game[$intval_vars[$i]] = intval($game->db_game[$intval_vars[$i]]);
 			}
-			$game->db_game['max_voting_fraction'] = floatval($game->db_game['max_voting_fraction']);
+			//$game->db_game['max_voting_fraction'] = floatval($game->db_event['max_voting_fraction']);
 			
 			if ($uri_parts[3] == "status") {
 				$api_user = FALSE;
@@ -73,7 +73,7 @@ if ($uri_parts[1] == "api") {
 				
 				$game_votes = false;
 				
-				$qq = "SELECT * FROM game_voting_options WHERE game_id='".$game->db_game['game_id']."';";
+				$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."';";
 				$rr = $app->run_query($qq);
 				while ($option = $rr->fetch()) {
 					$stat = $ranked_stats[$option_id_to_rank[$option['option_id']]];
