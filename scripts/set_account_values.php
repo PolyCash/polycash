@@ -5,7 +5,7 @@ include(realpath(dirname(__FILE__))."/../includes/connect.php");
 if ($argv) $_REQUEST['key'] = $argv[1];
 
 if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
-	$q = "SELECT * FROM game_types WHERE creator_id IS NULL;";
+	$q = "SELECT * FROM games;";
 	$r = $app->run_query($q);
 
 	while ($db_game = $r->fetch()) {

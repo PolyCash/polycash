@@ -17,7 +17,7 @@ if ($thisuser) {
 			$invitation = false;
 			$game->generate_invitation($thisuser->db_user['user_id'], $invitation, false);
 		}
-		echo "$quantity game_invitations have been generated.";
+		echo "$quantity invitations have been generated.";
 	}
 }
 ?>

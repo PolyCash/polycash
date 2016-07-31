@@ -959,7 +959,7 @@ if ($thisuser && $game) {
 				
 				<h1>Deposit</h1>
 				<?php
-				$q = "SELECT * FROM addresses a LEFT JOIN options gvo ON gvo.option_id=a.option_id WHERE a.game_id='".$game->db_game['game_id']."' AND a.user_id='".$thisuser->db_user['user_id']."' ORDER BY a.option_id IS NULL DESC, a.option_id ASC;";
+				$q = "SELECT * FROM addresses a LEFT JOIN options op ON op.option_id=a.option_id WHERE a.game_id='".$game->db_game['game_id']."' AND a.user_id='".$thisuser->db_user['user_id']."' ORDER BY a.option_id IS NULL DESC, a.option_id ASC;";
 				$r = $app->run_query($q);
 				?>
 				<b>You have <?php echo $r->rowCount(); ?> addresses.</b><br/>
@@ -1203,7 +1203,7 @@ if ($thisuser && $game) {
 						<form onsubmit="save_game();">
 							<div class="row">
 								<div class="col-sm-6 form-control-static">
-									Event title:
+									Game title:
 								</div>
 								<div class="col-sm-6">
 									<input class="form-control" type="text" id="game_form_name" />
@@ -1235,21 +1235,21 @@ if ($thisuser && $game) {
 							</div>
 							<div class="row">
 								<div class="col-sm-6 form-control-static">
-									Event status:
+									Game status:
 								</div>
 								<div class="col-sm-6">
 									<div id="game_form_game_status" class="form-control-static"></div>
 									
-									<button id="start_game_btn" class="btn btn-info" style="display: none;" onclick="switch_to_game(editing_game_id, 'running'); return false;">Start Event</button>
-									<button id="pause_game_btn" class="btn btn-info" style="display: none;" onclick="switch_to_game(editing_game_id, 'paused'); return false;">Pause Event</button>
+									<button id="start_game_btn" class="btn btn-info" style="display: none;" onclick="switch_to_game(editing_game_id, 'running'); return false;">Start Game</button>
+									<button id="pause_game_btn" class="btn btn-info" style="display: none;" onclick="switch_to_game(editing_game_id, 'paused'); return false;">Pause Game</button>
 
-									<button id="delete_game_btn" class="btn btn-danger" style="display: none;" onclick="switch_to_game(editing_game_id, 'delete'); return false;">Delete Event</button>
-									<button id="reset_game_btn" class="btn btn-warning" style="display: none;" onclick="switch_to_game(editing_game_id, 'reset'); return false;">Reset Event</button>
+									<button id="delete_game_btn" class="btn btn-danger" style="display: none;" onclick="switch_to_game(editing_game_id, 'delete'); return false;">Delete Game</button>
+									<button id="reset_game_btn" class="btn btn-warning" style="display: none;" onclick="switch_to_game(editing_game_id, 'reset'); return false;">Reset Game</button>
 								</div>
 							</div>
 							<div class="row">
 								<div class="col-sm-6 form-control-static">
-									Event ends?
+									Game ends?
 								</div>
 								<div class="col-sm-6">
 									<select class="form-control" id="game_form_has_final_round" onchange="game_form_final_round_changed();">
@@ -1403,7 +1403,7 @@ if ($thisuser && $game) {
 										<option value="unlimited">Unlimited buy-ins</option>
 										<option value="per_user_cap">Limit buy-ins per user</option>
 										<option value="game_cap">Buy-in cap for the whole game</option>
-										<option value="game_and_user_cap">Event-wide cap &amp; user cap</option>
+										<option value="game_and_user_cap">Game-wide cap &amp; user cap</option>
 									</select>
 								</div>
 							</div>
@@ -1420,7 +1420,7 @@ if ($thisuser && $game) {
 							</div>
 							<div id="game_form_game_buyin_cap_disp">
 								<div class="row">
-									<div class="col-sm-6 form-control-static">Event-wide buy-in cap:</div>
+									<div class="col-sm-6 form-control-static">Game-wide buy-in cap:</div>
 									<div class="col-sm-3">
 										<input class="form-control" style="text-align: right;" type="text" id="game_form_game_buyin_cap" />
 									</div>

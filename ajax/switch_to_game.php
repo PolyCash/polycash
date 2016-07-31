@@ -40,7 +40,7 @@ if ($thisuser) {
 			$new_game_perm = $thisuser->new_game_permission();
 			
 			if ($new_game_perm) {
-				$q = "SELECT MAX(creator_game_index) FROM game_types WHERE creator_id='".$thisuser->db_user['user_id']."';";
+				$q = "SELECT MAX(creator_game_index) FROM games WHERE creator_id='".$thisuser->db_user['user_id']."';";
 				$r = $app->run_query($q);
 				if ($r->rowCount() > 0) {
 					$game_index = $r->fetch(PDO::FETCH_NUM);

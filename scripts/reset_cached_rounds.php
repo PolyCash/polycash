@@ -14,10 +14,8 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$game = new Game($app, $game_id);
 	
 	if ($game) {
-		$q = "DELETE FROM game_outcomes WHERE game_id='".$game->db_game['game_id']."';";
+		$q = "DELETE eo.*, eeo.* FROM event_outcomes eo JOIN events e ON eo.event_id=e.event_id LEFT JOIN event_outcome_options eoo ON eo.outcome_id=eoo.outcome_id WHERE e.game_id='".$game->db_game['game_id']."';";
 		$r = $app->run_query($q);
-		
-		$app->run_query("DELETE FROM game_outcome_options WHERE game_id='".$game->db_game['game_id']."';");
 		
 		$last_block_id = $game->last_block_id();
 		$current_round = $game->block_to_round($last_block_id+1);

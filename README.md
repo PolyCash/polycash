@@ -1,6 +1,6 @@
-Empirecoin Web can act as front end web wallet for the decentralized EmpireCoin currency. It can also run as a standalone program for hosting centralized EmpireCoin private event_types.
+Empirecoin Web can act as front end web wallet for the decentralized EmpireCoin currency. It can also run as a standalone program for hosting centralized EmpireCoin private games.
 
-To use Empirecoin Web as a wallet for the Empirecoin currency, first install empirecoind and ensure that RPC calls can be made.  If you are only using Empirecoin Web to host private event_types, you don't need to install empirecoind.
+To use Empirecoin Web as a wallet for the Empirecoin currency, first install empirecoind and ensure that RPC calls can be made.  If you are only using Empirecoin Web to host private games, you don't need to install empirecoind.
 
 To get started, first please install and secure Apache, MySQL and PHP.  Then create a new file: includes/config.php and paste the following code into this file.  You can also find an example config file in includes/example_config.php
 
@@ -78,7 +78,7 @@ Next, point your browser to http://localhost/install.php?key=<cron_key_string> w
 
 Follow the instructions on install.php to configure your server for accepting Bitcoin payments and resolving any other potential issues.
 
-After completing this step, visit the home page in your browser, log in and create an account.  After logging in you can try creating a private via the "My event_types" tab.
+After completing this step, visit the home page in your browser, log in and create an account.  After logging in you can try creating a private via the "My Games" tab.
 
 If the home page doesn't load, it's possible that mod_rewrite needs to be enabled.  To enable mod_rewrite, edit your httpd.conf and make sure this line is uncommented:
 

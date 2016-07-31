@@ -2,7 +2,7 @@
 $host_not_required = TRUE;
 include(realpath(dirname(__FILE__))."/../includes/connect.php");
 
-$game_q = "SELECT * FROM game_types;";
+$game_q = "SELECT * FROM games;";
 $game_r = $app->run_query($game_q);
 
 while ($db_game = $game_r->fetch()) {
