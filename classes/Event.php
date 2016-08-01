@@ -151,7 +151,7 @@ class Event {
 		
 		$winner_option_id = FALSE;
 		
-		$html = '<div id="game'.$game_instance_id.'_event'.$game_event_index.'_round_table">';
+		$html = '<div id="game'.$game_instance_id.'_event'.$game_event_index.'_round_table" class="round_table">';
 		
 		$max_circle_diam = 120;
 		$sq_px_per_pct_point = pow($max_circle_diam, 2)/100;
@@ -172,8 +172,10 @@ class Event {
 				$fees_paid = $my_votes['fee_amount'];
 
 				if (empty($my_votes[0])) {
-					$my_winning_votes = 0;
-					$html .= "You didn't cast any votes for ".$winner['name'].".<br/>\n";
+					if (!empty($winner['name'])) {
+						$my_winning_votes = 0;
+						$html .= "You didn't cast any votes for ".$winner['name'].".<br/>\n";
+					}
 				}
 				else {
 					$my_winning_votes = $my_votes[0][$winner['option_id']]["votes"];

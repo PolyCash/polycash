@@ -416,7 +416,6 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 						echo "<h1>Block #".$block['block_id']."</h1>";
 						echo "<h3>".$game->db_game['name']."</h3>";
 						echo "This block contains $num_trans transactions totaling ".number_format($block_sum/pow(10,8), 2)." coins.<br/><br/>\n";
-						//echo "This is block ".$block_index." of <a href=\"/explorer/".$game->db_game['url_identifier']."/rounds/".$round_id."\">round #".$round_id."</a><br/><br/>\n";
 					}
 					else {
 						$q = "SELECT COUNT(*), SUM(amount) FROM transactions WHERE game_id='".$game->db_game['game_id']."' AND block_id IS NULL;";// AND amount > 0;";
@@ -435,8 +434,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 						if ($num_trans == 1) echo " is";
 						else echo "s are";
 						echo " awaiting confirmation with a sum of ".number_format($block_sum/pow(10,8), 2)." coins.<br/>\n";
-						echo "Block #".$expected_block_id." is currently being mined.  It will be block $expected_block_index of ";
-						echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/rounds/".$expected_round_id."\">round #".$expected_round_id."</a><br/><br/>\n";
+						echo "Block #".$expected_block_id." is currently being mined.<br/>\n";
 					}
 					
 					echo '<div style="border-bottom: 1px solid #bbb;">';
@@ -512,8 +510,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					}
 					else {
 						$desc = "Confirmed in ";
-						if ($block_index != 0) $desc .= "the <a href=\"/explorer/".$game->db_game['url_identifier']."/blocks/".$transaction_io['block_id']."\">".date("jS", strtotime("1/".$block_index."/2015"))." block</a> of ";
-						$desc .= "<a href=\"/explorer/".$game->db_game['url_identifier']."/rounds/".$round_id."\">round ".$round_id."</a>";
+						if ($block_index != 0) $desc .= "<a href=\"/explorer/".$game->db_game['url_identifier']."/blocks/".$transaction_io['block_id']."\">block ".$block_index."</a>";
 					}
 					echo $game->render_transaction($transaction_io, $address['address_id'], $desc);
 				}
@@ -552,7 +549,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				if ($transaction['block_id'] > 0) {
 					$block_index = $game->block_id_to_round_index($transaction['block_id']);
 					$round_id = $game->block_to_round($transaction['block_id']);
-					$label_txt = "Confirmed in the <a href=\"/explorer/".$game->db_game['url_identifier']."/blocks/".$transaction['block_id']."\">".date("jS", strtotime("1/".$block_index."/2015"))." block</a> of <a href=\"/explorer/".$game->db_game['url_identifier']."/rounds/".$round_id."\">round ".$round_id."</a>";
+					$label_txt = "Confirmed in the <a href=\"/explorer/".$game->db_game['url_identifier']."/blocks/".$transaction['block_id']."\">block ".$block_index."</a>";
 				}
 				else {
 					$block_index = false;

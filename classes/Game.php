@@ -1160,22 +1160,41 @@ class Game {
 	}
 	
 	public function plan_options_html($from_round, $to_round) {
-		$html = "";
+		$html = "
+		<script type='text/javascript'>
+		var plan_option_max_points = 5;
+		var plan_option_increment = 1;
+		var plan_rounds = new Array();
+		var round_id2plan_round_id = {};
+		</script>\n";
+		$round_i = 0;
 		for ($round=$from_round; $round<=$to_round; $round++) {
-			$q = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."' ORDER BY option_id ASC;";
-			$r = $this->app->run_query($q);
+			$js = "var temp_plan_round = new plan_round(".$round.");\n";
+			$js .= "round_id2plan_round_id[".$round."] = ".$round_i.";\n";
+			$block_id = ($round-1)*$this->db_game['round_length']+1;
+			$events = $this->events_by_block($block_id);
 			$html .= '<div class="plan_row">#'.$round.": ";
-			$option_index = 0;
-			while ($game_option = $r->fetch()) {
-				$html .= '<div class="plan_option" id="plan_option_'.$round.'_'.$option_index.'" onclick="plan_option_clicked('.$round.', '.$option_index.');">';
-				$html .= '<div class="plan_option_label" id="plan_option_label_'.$round.'_'.$option_index.'">'.$game_option['name']."</div>";
-				$html .= '<div class="plan_option_amount" id="plan_option_amount_'.$round.'_'.$option_index.'"></div>';
-				$html .= '<input type="hidden" id="plan_option_input_'.$round.'_'.$option_index.'" name="poi_'.$round.'_'.$game_option['option_id'].'" value="" />';
-				$html .= '</div>';
-				$option_index++;
+			for ($event_i=0; $event_i<count($events); $event_i++) {
+				$js .= "temp_plan_round.event_ids.push(".$events[$event_i]->db_event['event_id'].");\n";
+				$q = "SELECT * FROM options WHERE event_id='".$events[$event_i]->db_event['event_id']."' ORDER BY option_id ASC;";
+				$r = $this->app->run_query($q);
+				$option_index = 0;
+				while ($game_option = $r->fetch()) {
+					$html .= '<div class="plan_option" id="plan_option_'.$round.'_'.$events[$event_i]->db_event['event_id'].'_'.$game_option['option_id'].'" onclick="plan_option_clicked('.$round.', '.$events[$event_i]->db_event['event_id'].', '.$game_option['option_id'].');">';
+					$html .= '<div class="plan_option_label" id="plan_option_label_'.$round.'_'.$events[$event_i]->db_event['event_id'].'_'.$game_option['option_id'].'">'.$game_option['name']."</div>";
+					$html .= '<div class="plan_option_amount" id="plan_option_amount_'.$round.'_'.$events[$event_i]->db_event['event_id'].'_'.$game_option['option_id'].'"></div>';
+					$html .= '<input type="hidden" id="plan_option_input_'.$round.'_'.$events[$event_i]->db_event['event_id'].'_'.$game_option['option_id'].'" name="poi_'.$round.'_'.$game_option['option_id'].'" value="" />';
+					$html .= '</div>';
+					$option_index++;
+				}
 			}
-			$html .= "</div>\n";
+			$js .= "plan_rounds.push(temp_plan_round);\n";
+			$js .= "set_plan_round_sum(".$round_i.");\n";
+			$js .= "render_plan_round(".$round_i.");\n";
+			$html .= "</div>\n<script type='text/javascript'>".$js."</script>\n";
+			$round_i++;
 		}
+		$html .= '<script type="text/javascript">set_plan_rightclicks();</script>'."\n";
 		return $html;
 	}
 	
@@ -1999,6 +2018,16 @@ class Game {
 		}
 	}
 	
+	public function events_by_block($block_id) {
+		$events = array();
+		$q = "SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id WHERE ev.game_id='".$this->db_game['game_id']."' AND ev.event_starting_block<=".$block_id." AND ev.event_final_block>=".$block_id." ORDER BY ev.event_id ASC;";
+		$r = $this->app->run_query($q);
+		while ($db_event = $r->fetch()) {
+			$events[count($events)] = new Event($this, $db_event, false);
+		}
+		return $events;
+	}
+	
 	public function event_ids() {
 		$event_ids = "";
 		for ($i=0; $i<count($this->current_events); $i++) {
@@ -2018,12 +2047,12 @@ class Game {
 		
 		$js = "console.log('loading new events!');\n";
 		$js .= "for (var i=0; i<games[".$game_index."].events.length; i++) {\n";
-		$js .= "games[".$game_index."].events[i].deleted = true;\n";
-		$js .= "$('#game".$game_index."_event'+i).remove();\n";
+		$js .= "\tgames[".$game_index."].events[i].deleted = true;\n";
+		$js .= "\t$('#game".$game_index."_event'+i).remove();\n";
 		$js .= "}\n";
 		$js .= "games[".$game_index."].events.length = 0;\n";
-		$js .= "var event_html = '';\n";
 		$js .= "games[".$game_index."].events = new Array();\n";
+		$js .= "var event_html = '';\n";
 		
 		for ($i=0; $i<count($this->current_events); $i++) {
 			$event = $this->current_events[$i];
@@ -2031,35 +2060,31 @@ class Game {
 			$sum_votes = $round_stats[0];
 			$option_id2rank = $round_stats[3];
 			$js .= '
-			var optionData = new Array();
-			var votingAddrOptions = new Array();
-			games['.$game_index.'].events['.$i.'] = new Event(games['.$game_index.'], '.$event->db_event['event_id'].', '.$event->db_event['num_voting_options'].', "'.$event->db_event['vote_effectiveness_function'].'", "wallet");'."\n";
+			games['.$game_index.'].events['.$i.'] = new Event(games['.$game_index.'], '.$i.', '.$event->db_event['event_id'].', '.$event->db_event['num_voting_options'].', "'.$event->db_event['vote_effectiveness_function'].'");'."\n";
 			
 			$option_q = "SELECT * FROM options WHERE event_id='".$event->db_event['event_id']."' ORDER BY option_id ASC;";
 			$option_r = $this->app->run_query($option_q);
-			//$js .= 'event_html += "<div id=\'game'.$game_index.'_event'.$i.'_vote_popups\'>';
 			while ($option = $option_r->fetch()) {
 				$js .= 'event_html += "<div class=\'modal fade\' id=\'game'.$game_index.'_event'.$i.'_vote_confirm_'.$option['option_id'].'\'></div>";';
 			}
-			//$js .= '</div>";';
 			
 			$option_r = $this->app->run_query($option_q);
 			
+			$j=0;
 			while ($option = $option_r->fetch()) {
-				$js .= "optionData.push(new Array(".$option['option_id'].", '".$option['name']."'));\n";
-				if ($user) {
+				$js .= "games[".$game_index."].events[".$i."].options.push(new option(games[".$game_index."].events[".$i."], ".$j.", ".$option['option_id'].", '".$option['name']."', 0));\n";
+				/*if ($user) {
 					$votingaddr_id = $user->user_address_id($this->db_game['game_id'], $option['option_id']);
 					if ($votingaddr_id !== false) {
 						$js .= "votingAddrOptions.push(".$option['option_id'].");\n";
 					}
-				}
+				}*/
+				$j++;
 			}
 			$js .= '
-			games['.$game_index.'].events['.$i.'].setVotingOptions(optionData);
 			games['.$game_index.'].events['.$i.'].option_selected(0);
 			console.log("adding game, event '.$i.' into DOM...");'."\n";
 			if ($i == 0) $js .= 'event_html += "<div class=\'row\'>";';
-			//else if ($i%2 == 1)
 			$js .= 'event_html += "<div class=\'col-sm-6\'>";';
 			$js .= 'event_html += "<div id=\'game'.$game_index.'_event'.$i.'\' class=\'game_event_box\'><div id=\'game'.$game_index.'_event'.$i.'_current_round_table\'></div><div id=\'game'.$game_index.'_event'.$i.'_my_current_votes\'></div></div>";'."\n";
 			$js .= 'event_html += "</div>";';
@@ -2068,9 +2093,6 @@ class Game {
 				if ($i < count($this->current_events)-1) $js .= '<div class=\'row\'>';
 				$js .= '";'."\n";
 			}
-			
-			//$js .= '$("#game'.$game_index.'_events").append(event_html);
-			//games['.$game_index.'].events['.$i.'].event_loop_event();'."\n";
 		}
 		$js .= '$("#game'.$game_index.'_events").html(event_html);'."\n";
 		$js .= 'for (var i=0; i<games['.$game_index.'].events.length; i++) {'."\n";

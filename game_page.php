@@ -151,7 +151,7 @@ if ($game->db_game['invite_currency'] > 0) {
 				</div>*/ ?>
 				<div class="paragraph">
 					<a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/" class="btn btn-success">Play Now</a>
-					<a href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/rounds/" class="btn btn-primary">Blockchain Explorer</a>
+					<a href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/events/" class="btn btn-primary">Blockchain Explorer</a>
 				</div>
 			</div>
 			<div class="col-md-6">

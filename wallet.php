@@ -517,6 +517,37 @@ if ($thisuser && $game) {
 			echo ', "wallet", "'.$game->event_ids().'"';
 		?>));
 		
+		function load_all_events(game) {
+			console.log("Loading all events...");
+			<?php
+			$q = "SELECT * FROM events e JOIN event_types t ON e.event_type_id=t.event_type_id WHERE e.game_id='".$game->db_game['game_id']."' ORDER BY e.event_id ASC;";
+			$r = $app->run_query($q);
+			$i=0;
+			while ($db_event = $r->fetch()) {
+				echo "game.all_events.push(new Event(game, ".$i.", ".$db_event['event_id'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'"));';
+				echo "game.all_events_db_id_to_index[".$db_event['event_id']."] = ".$i.";\n";
+				
+				$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY option_id ASC;";
+				$option_r = $app->run_query($option_q);
+				$j=0;
+				while ($option = $option_r->fetch()) {
+					$qq = "SELECT * FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND option_id='".$option['option_id']."';";
+					$rr = $app->run_query($qq);
+					if ($rr->rowCount() > 0) {
+						$sra = $rr->fetch();
+						$points = $sra['points'];
+					}
+					else $points = 0;
+					
+					echo "game.all_events[".$i."].options.push(new option(game.all_events[".$i."], ".$j.", ".$option['option_id'].", '".$option['name']."', ".$points."));\n";
+					$j++;
+				}
+				$i++;
+			}
+			?>
+		}
+		load_all_events(games[0]);
+		
 		<?php
 		if ($game->db_game['losable_bets_enabled'] == 1) { ?>
 		google.load("visualization", "1", {packages:["corechart"]});
@@ -739,7 +770,7 @@ if ($thisuser && $game) {
 							Your API access code is <?php echo $thisuser->db_user['api_access_code']; ?> <a href="/api/about/">API documentation</a><br/>
 						</div>
 					</div>
-					
+					<?php /*
 					<div class="row bordered_row">
 						<div class="col-md-2">
 							<input type="radio" id="voting_strategy_by_option" name="voting_strategy" value="by_option"<?php if ($user_strategy['voting_strategy'] == "by_option") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_option">&nbsp;Vote&nbsp;by&nbsp;option</label>
@@ -799,6 +830,7 @@ if ($thisuser && $game) {
 							?>
 						</div>
 					</div>
+					*/ ?>
 					<div class="row bordered_row">
 						<div class="col-md-2">
 							<input type="radio" id="voting_strategy_by_plan" name="voting_strategy" value="by_plan"<?php if ($user_strategy['voting_strategy'] == "by_plan") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_plan">&nbsp;Plan&nbsp;my&nbsp;votes</label>
@@ -1146,26 +1178,7 @@ if ($thisuser && $game) {
 						<div id="plan_rows_js"></div>
 						
 						<input type="hidden" id="from_round" name="from_round" value="<?php echo $plan_start_round; ?>" />
-						<input type="hidden" id="to_round" name="to_round" value="<?php echo ($plan_stop_round); ?>" />
-						
-						<script type="text/javascript">
-						var plan_option_max_points = 5;
-						var plan_option_increment = 1;
-						var plan_options = new Array();
-						var plan_option_row_sums = new Array();
-						var round_id2row_id = new Array();
-						
-						/*$(document).ready(function() {
-							initialize_plan_options(<?php echo $plan_start_round; ?>, <?php echo $plan_stop_round; ?>);
-							<?php
-							$q = "SELECT * FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND round_id >= ".$plan_start_round." AND round_id <= ".$plan_stop_round.";";
-							$r = $app->run_query($q);
-							while ($allocation = $r->fetch()) {
-								echo "load_plan_option(".$allocation['round_id'].", option_id2option_index[".$allocation['option_id']."], ".$allocation['points'].");\n";
-							}
-							?>
-						});*/
-						</script>
+						<input type="hidden" id="to_round" name="to_round" value="<?php echo $plan_stop_round; ?>" />
 					</div>
 				</div>
 			</div>

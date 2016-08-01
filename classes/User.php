@@ -441,18 +441,18 @@ class User {
 	
 	public function save_plan_allocations($user_strategy, $from_round, $to_round) {
 		if ($from_round > 0 && $to_round > 0 && $to_round >= $from_round) {
+			$game = new Game($this->app, $user_strategy['game_id']);
 			$q = "DELETE FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND round_id >= ".$from_round." AND round_id <= ".$to_round.";";
 			$r = $this->app->run_query($q);
 			
 			$q = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$user_strategy['game_id']."';";
 			$r = $this->app->run_query($q);
-			while ($gvo = $r->fetch()) {
-				for ($round_id=$from_round; $round_id<=$to_round; $round_id++) {
-					$points = intval($_REQUEST['poi_'.$round_id.'_'.$gvo['option_id']]);
-					if ($points > 0) {
-						$qq = "INSERT INTO strategy_round_allocations SET strategy_id='".$user_strategy['strategy_id']."', round_id='".$round_id."', option_id='".$gvo['option_id']."', points='".$points."';";
-						$rr = $this->app->run_query($qq);
-					}
+			while ($op = $r->fetch()) {
+				$round_id = $game->block_to_round($op['event_starting_block']);
+				$points = intval($_REQUEST['poi_'.$op['option_id']]);
+				if ($points > 0) {
+					$qq = "INSERT INTO strategy_round_allocations SET strategy_id='".$user_strategy['strategy_id']."', round_id='".$round_id."', option_id='".$op['option_id']."', points='".$points."';";
+					$rr = $this->app->run_query($qq);
 				}
 			}
 		}

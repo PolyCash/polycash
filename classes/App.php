@@ -720,7 +720,7 @@ class App {
 			echo '<script type="text/javascript" id="game'.$counter.'_new_event_js">'.$featured_game->new_event_js($counter, false).'</script>';
 			
 			echo '<br/><a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-success">Play Now</a>';
-			echo ' <a href="/explorer/'.$featured_game->db_game['url_identifier'].'/rounds/" class="btn btn-primary">Blockchain Explorer</a>';
+			echo ' <a href="/explorer/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-primary">Blockchain Explorer</a>';
 			echo '</center><br/>';
 			
 			if ($counter%(12/$cell_width) == 1) echo '</div><div class="row">';
