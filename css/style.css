@@ -346,3 +346,12 @@ footer {
 	padding-left: 0 ! important;
 	padding-right: 0 ! important;
 }
+.game_event_box {
+	border: 1px solid rgba(0,0,0,0.2);
+	margin: 5px 0px;
+	border-radius: 6px;
+	padding: 0px 10px;
+}
+.game_events {
+	margin-bottom: 15px;
+}

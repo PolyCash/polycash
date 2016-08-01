@@ -2009,22 +2009,43 @@ class Game {
 	}
 	
 	public function new_event_js($game_index, $user) {
+		$last_block_id = $this->last_block_id();
+		$mining_block_id = $last_block_id+1;
+		$current_round = $this->block_to_round($mining_block_id);
+		
+		$user_id = false;
+		if ($user) $user_id = $user->db_user['user_id'];
+		
 		$js = "console.log('loading new events!');\n";
 		$js .= "for (var i=0; i<games[".$game_index."].events.length; i++) {\n";
+		$js .= "games[".$game_index."].events[i].deleted = true;\n";
 		$js .= "$('#game".$game_index."_event'+i).remove();\n";
 		$js .= "}\n";
+		$js .= "games[".$game_index."].events.length = 0;\n";
+		$js .= "var event_html = '';\n";
 		$js .= "games[".$game_index."].events = new Array();\n";
+		
 		for ($i=0; $i<count($this->current_events); $i++) {
 			$event = $this->current_events[$i];
+			$round_stats = $event->round_voting_stats_all($current_round);
+			$sum_votes = $round_stats[0];
+			$option_id2rank = $round_stats[3];
 			$js .= '
 			var optionData = new Array();
 			var votingAddrOptions = new Array();
-			games['.$game_index.'].events.push(new Event(games['.$game_index.'], '.$event->db_event['event_id'].', '.$event->db_event['num_voting_options'].', "'.$event->db_event['vote_effectiveness_function'].'", "wallet"));'."\n";
+			games['.$game_index.'].events['.$i.'] = new Event(games['.$game_index.'], '.$event->db_event['event_id'].', '.$event->db_event['num_voting_options'].', "'.$event->db_event['vote_effectiveness_function'].'", "wallet");'."\n";
 			
-			$q = "SELECT * FROM options WHERE event_id='".$event->db_event['event_id']."' ORDER BY option_id ASC;";
-			$r = $this->app->run_query($q);
+			$option_q = "SELECT * FROM options WHERE event_id='".$event->db_event['event_id']."' ORDER BY option_id ASC;";
+			$option_r = $this->app->run_query($option_q);
+			//$js .= 'event_html += "<div id=\'game'.$game_index.'_event'.$i.'_vote_popups\'>';
+			while ($option = $option_r->fetch()) {
+				$js .= 'event_html += "<div class=\'modal fade\' id=\'game'.$game_index.'_event'.$i.'_vote_confirm_'.$option['option_id'].'\'></div>";';
+			}
+			//$js .= '</div>";';
 			
-			while ($option = $r->fetch()) {
+			$option_r = $this->app->run_query($option_q);
+			
+			while ($option = $option_r->fetch()) {
 				$js .= "optionData.push(new Array(".$option['option_id'].", '".$option['name']."'));\n";
 				if ($user) {
 					$votingaddr_id = $user->user_address_id($this->db_game['game_id'], $option['option_id']);
@@ -2036,10 +2057,25 @@ class Game {
 			$js .= '
 			games['.$game_index.'].events['.$i.'].setVotingOptions(optionData);
 			games['.$game_index.'].events['.$i.'].option_selected(0);
-			console.log("adding game, event '.$i.' into DOM...");
-			$("#game'.$game_index.'_events").append("<div id=\'game'.$game_index.'_event'.$i.'\'><div id=\'game'.$game_index.'_event'.$i.'_current_round_table\'></div><div class=\'row\'><div class=\'col-md-6\'><div id=\'game'.$game_index.'_event'.$i.'_my_current_votes\'></div></div></div></div>");
-			games['.$game_index.'].events['.$i.'].event_loop_event();'."\n";
+			console.log("adding game, event '.$i.' into DOM...");'."\n";
+			if ($i == 0) $js .= 'event_html += "<div class=\'row\'>";';
+			//else if ($i%2 == 1)
+			$js .= 'event_html += "<div class=\'col-sm-6\'>";';
+			$js .= 'event_html += "<div id=\'game'.$game_index.'_event'.$i.'\' class=\'game_event_box\'><div id=\'game'.$game_index.'_event'.$i.'_current_round_table\'></div><div id=\'game'.$game_index.'_event'.$i.'_my_current_votes\'></div></div>";'."\n";
+			$js .= 'event_html += "</div>";';
+			if ($i%2 == 1 || $i == count($this->current_events)-1) {
+				$js .= 'event_html += "</div>';
+				if ($i < count($this->current_events)-1) $js .= '<div class=\'row\'>';
+				$js .= '";'."\n";
+			}
+			
+			//$js .= '$("#game'.$game_index.'_events").append(event_html);
+			//games['.$game_index.'].events['.$i.'].event_loop_event();'."\n";
 		}
+		$js .= '$("#game'.$game_index.'_events").html(event_html);'."\n";
+		$js .= 'for (var i=0; i<games['.$game_index.'].events.length; i++) {'."\n";
+		$js .= 'games['.$game_index.'].events[i].event_loop_event();'."\n";
+		$js .= "}\n";
 		$js .= '
 		games['.$game_index.'].setVotingAddresses();
 		$(document).ready(function() {

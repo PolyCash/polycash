@@ -86,8 +86,8 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	else $output['new_mature_ios'] = 0;
 	
 	if ($last_block_id != $_REQUEST['last_block_id'] || $last_transaction_id != $_REQUEST['last_transaction_id']) {
-		if ($_REQUEST['refresh_page'] == "wallet") $show_intro_text = true;
-		else $show_intro_text = false;
+		//if ($_REQUEST['refresh_page'] == "wallet") $show_intro_text = true;
+		$show_intro_text = false;
 		$output['current_round_table'] = $event->current_round_table($current_round, $thisuser, $show_intro_text, true, $instance_id, $game_event_index);
 		
 		if ($thisuser) $output['wallet_text_stats'] = $thisuser->wallet_text_stats($game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance);
@@ -105,7 +105,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 			$option = $round_stats[$option_id];
 			if (!$option['last_win_round']) $losing_streak = false;
 			else $losing_streak = $current_round - $option['last_win_round'] - 1;
-			$stats_output[$option_id] = $app->vote_option_details($option, $option_id2rank[$option['option_id']]+1, $option[$game->db_game['payout_weight'].'_score'], $option['unconfirmed_'.$game->db_game['payout_weight'].'_score'], $total_vote_sum, $losing_streak);
+			$stats_output[$option['option_id']] = '<div class=\'modal-dialog\'><div class=\'modal-content\'><div class=\'modal-header\'><h2 class=\'modal-title\'>Vote for '.$option['name'].'</h2></div><div class=\'modal-body\'><div id=\'game'.$instance_id.'_event'.$game_event_index.'_vote_option_details_'.$option['option_id'].'\'></div><div id=\'game'.$instance_id.'_event'.$game_event_index.'_vote_details_'.$option['option_id'].'\'>'.$app->vote_option_details($option, $option_id+1, $option[$game->db_game['payout_weight'].'_score'], $option['unconfirmed_'.$game->db_game['payout_weight'].'_score'], $total_vote_sum, 0).'</div><div class=\'redtext\' id=\'game'.$instance_id.'_event'.$game_event_index.'_vote_error_'.$option['option_id'].'\'></div></div><div class=\'modal-footer\'><button class=\'btn btn-primary\' id=\'game'.$instance_id.'_event'.$game_event_index.'_vote_confirm_btn_'.$option['option_id'].'\' onclick=\'games['.$instance_id.'].add_option_to_vote('.$option['option_id'].', \''.$option['name'].'\');\'>Add '.$option['name'].' to my vote</button><button type=\'button\' class=\'btn btn-default\' data-dismiss=\'modal\'>Close</button></div></div></div>';
 		}
 		$output['vote_option_details'] = $stats_output;
 	}

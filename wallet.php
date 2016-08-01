@@ -578,21 +578,6 @@ if ($thisuser && $game) {
 			?>
 		</div>
 		<br/>
-		<div style="display: none;" id="vote_details_general">
-			<?php echo $app->vote_details_general($mature_balance); ?>
-		</div>
-		<?php
-		for ($i=0; $i<count($game->current_events); $i++) {
-			$round_stats = $game->current_events[$i]->round_voting_stats_all($current_round);
-			$sum_votes = $round_stats[0];
-			$option_id2rank = $round_stats[3];
-			?>
-			<div id="game0_event<?php echo $i; ?>_vote_popups"><?php
-			echo $game->current_events[$i]->initialize_vote_option_details($option_id2rank, $sum_votes, $thisuser->db_user['user_id'], 0, $i);
-			?></div>
-			<?php
-		}
-		?>
 		
 		<div class="row">
 			<div class="col-xs-2 tabcell" id="tabcell0" onclick="tab_clicked(0);">Play&nbsp;Now</div>
@@ -618,7 +603,7 @@ if ($thisuser && $game) {
 					<?php
 				}
 				?>
-				<div id="game0_events"></div>
+				<div id="game0_events" class="game_events"></div>
 				
 				<script type="text/javascript" id="game0_new_event_js">
 				<?php

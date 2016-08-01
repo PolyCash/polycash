@@ -64,10 +64,10 @@ class User {
 			$option_votes = $event->option_votes_in_round($event_outcome['winning_option_id'], $event_outcome['round_id']);
 			
 			$html .= '<div class="row" style="font-size: 13px;">';
-			$html .= '<div class="col-sm-2">Round&nbsp;#'.$event_outcome['round_id'].'</div>';
-			$html .= '<div class="col-sm-3">';
+			$html .= '<div class="col-sm-3">'.$event->db_event['event_name'].'</div>';
+			$html .= '<div class="col-sm-4">';
 			if ($event_outcome['real_winner_name'] != "") {
-				$html .= $event_outcome['real_winner_name']." won with ".$this->app->format_bignum($event_outcome['winning_votes']/pow(10,8))." votes";
+				$html .= $event_outcome['real_winner_name']." with ".$this->app->format_bignum($event_outcome['winning_votes']/pow(10,8))." votes";
 				if ($event_outcome['derived_winner_name'] != "" && $event_outcome['derived_winner_name'] != $event_outcome['real_winner_name']) $html .= " (Should have been ".$event_outcome['derived_winner_name']." with ".$this->app->format_bignum($event_outcome['derived_winning_votes']/pow(10,8))." votes)";
 			}
 			else {
@@ -87,7 +87,7 @@ class User {
 			else if ($coins_voted > 0) $win_text = "You didn't vote for the winning ".$game->db_game['option_name'].".";
 			else $win_text = "You didn't cast any votes.";
 			
-			$html .= '<div class="col-sm-5">';
+			$html .= '<div class="col-sm-3">';
 			$html .= $win_text;
 			$html .= ' <a href="/explorer/'.$game->db_game['url_identifier'].'/events/'.$event_outcome['event_id'].'" target="_blank">Details</a>';
 			$html .= '</div>';

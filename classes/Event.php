@@ -153,18 +153,19 @@ class Event {
 		
 		$html = '<div id="game'.$game_instance_id.'_event'.$game_event_index.'_round_table">';
 		
-		$max_circle_diam = 200;
+		$max_circle_diam = 120;
 		$sq_px_per_pct_point = pow($max_circle_diam, 2)/100;
 		$min_px_diam = 30;
 		
-		if ($show_intro_text) {
-			if ($block_within_round != $this->game->db_game['round_length']) $html .= "<h2>".$this->db_event['event_name']."</h2>\n";
-			else {
-				$winner = $this->get_round_winner($round_stats_all);
-				if ($winner) $html .= "<h1>".$winner['name']."</h1>";
-				else $html .= "<h1>No winner in ".$this->db_event['event_name']."</h1>";
-			}
-			
+		if ($block_within_round != $this->game->db_game['round_length']) $html .= "<h2>".$this->db_event['event_name']."</h2>\n";
+		else {
+			$winner = $this->get_round_winner($round_stats_all);
+			if ($winner) $html .= "<h1>".$winner['name']."</h1>";
+			else $html .= "<h1>No winner in ".$this->db_event['event_name']."</h1>";
+		}
+		
+		if (TRUE || $show_intro_text) {
+			$detail_html = "";
 			if ($block_within_round == $this->game->db_game['round_length']) {
 				$html .= $this->game->app->format_bignum($sum_votes/pow(10,8)).' votes were cast in this round.<br/>';
 				$my_votes = $this->my_votes_in_round($current_round, $user->db_user['user_id'], false);
@@ -182,17 +183,27 @@ class Event {
 				}
 			}
 			else {
-				$html .= $this->game->app->format_bignum($confirmed_sum_votes/pow(10,8)).' confirmed and '.$this->game->app->format_bignum($unconfirmed_sum_votes/pow(10,8)).' unconfirmed votes have been cast so far. Current votes count towards block '.$block_within_round.'/'.$this->game->db_game['round_length'].' in round #'.$current_round.'<br/>';
-				$seconds_left = round(($this->game->db_game['round_length'] - $last_block_id%$this->game->db_game['round_length'] - 1)*$this->game->db_game['seconds_per_block']);
-				$minutes_left = round($seconds_left/60);
+				$html .= 'Mining block '.$block_within_round.'/'.$this->game->db_game['round_length'].'. ';
+				
+				$detail_html .= '<div class="row"><div class="col-sm-6 boldtext">Cap:</div><div class="col-sm-6">';
+				$detail_html .= ($this->db_event['max_voting_fraction']*100).'%';
+				$detail_html .= '</div></div>';
+				
+				$detail_html .= '<div class="row"><div class="col-sm-6 boldtext">Confirmed Votes:</div><div class="col-sm-6">'.$this->game->app->format_bignum($confirmed_sum_votes/pow(10,8)).' votes</div></div>';
+				
+				$detail_html .= '<div class="row"><div class="col-sm-6 boldtext">Unconfirmed Votes:</div><div class="col-sm-6">'.$this->game->app->format_bignum($unconfirmed_sum_votes/pow(10,8)).' votes</div></div>';
+				
+				$detail_html .= '<div class="row"><div class="col-sm-6 boldtext">Total Payout:</div><div class="col-sm-6">';
 				$payout_disp = $this->game->app->format_bignum($this->event_pos_reward_in_round($current_round)/pow(10,8));
-				$html .= $payout_disp.' ';
-				if ($payout_disp == '1') $html .= $this->game->db_game['coin_name'];
-				else $html .= $this->game->db_game['coin_name_plural'];
-				$html .= ' will be given to the winners in approximately ';
-				if ($minutes_left > 1) $html .= $minutes_left." minutes";
-				else $html .= $seconds_left." seconds";
-				$html .= '. Max voting percentage is '.($this->db_event['max_voting_fraction']*100).'%.<br/>';
+				$detail_html .= $payout_disp.' ';
+				if ($payout_disp == '1') $detail_html .= $this->game->db_game['coin_name'];
+				else $detail_html .= $this->game->db_game['coin_name_plural'];
+				$detail_html .= '</div></div>';
+				
+				$seconds_left = round(($this->game->db_game['round_length'] - $last_block_id%$this->game->db_game['round_length'] - 1)*$this->game->db_game['seconds_per_block']);
+				$detail_html .= '<div class="row"><div class="col-sm-6 boldtext">Time Left:</div><div class="col-sm-6">';
+				$detail_html .= $this->game->app->format_seconds($seconds_left);
+				$detail_html .= '</div></div>';
 			}
 			
 			if ($this->db_event['vote_effectiveness_function'] != "constant") {
@@ -204,12 +215,16 @@ class Event {
 				if ($score > 0) $average_effectiveness = $votes/$score;
 				else $average_effectiveness = 1;
 				
-				$html .= "Votes are ".round(100*$this->block_id_to_effectiveness_factor($last_block_id+1))."% effective right now.<br/>\n";
-				$html .= "Votes have been cast at an average effectiveness of ".round(100*$average_effectiveness, 2)."%";
+				if ($this->block_id_to_effectiveness_factor($last_block_id+1) > 0) $html .= "Votes are ".round(100*$this->block_id_to_effectiveness_factor($last_block_id+1))."% effective right now. \n";
+				$detail_html .= '<div class="row"><div class="col-sm-6 boldtext">Average Effectiveness:</div><div class="col-sm-6">'.round(100*$average_effectiveness, 2)."%";
 				if ($this->game->db_game['inflation'] == "exponential") {
-					$html .= " (".$this->game->app->format_bignum($this->game->app->votes_per_coin($this->game->db_game)*$average_effectiveness)." votes per coin)";
+					$detail_html .= " (".$this->game->app->format_bignum($this->game->app->votes_per_coin($this->game->db_game)*$average_effectiveness)." votes per coin)";
 				}
-				$html .= ".<br/>\n";
+				$detail_html .= "</div></div>\n";
+			}
+			if ($detail_html != "") {
+				$html .= " <a href=\"\" onclick=\"games[".$game_instance_id."].events[".$game_event_index."].toggle_details(); return false;\">Details</a><br/>";
+				$html .= "<div style=\"display: none;\" id=\"game".$game_instance_id."_event".$game_event_index."_details\">".$detail_html."</div>";
 			}
 		}
 		
@@ -243,11 +258,11 @@ class Event {
 				if ($option_votes > $max_sum_votes) $html .=  " redtext";
 				else if ($winner_option_id == $round_stats[$i]['option_id']) $html .=  " greentext";
 				$html .= '"';
-				if ($clickable) $html .= ' style="cursor: pointer;" onclick="games['.$game_instance_id.'].option_selected('.$i.'); games['.$game_instance_id.'].start_vote('.$round_stats[$i]['option_id'].');"';
+				if ($clickable) $html .= ' style="cursor: pointer;" onclick="games['.$game_instance_id.'].events['.$game_event_index.'].option_selected('.$i.'); games['.$game_instance_id.'].events['.$game_event_index.'].start_vote('.$round_stats[$i]['option_id'].');"';
 				$html .= '>'.$round_stats[$i]['name'].' ('.$pct_votes.'%)</div>
 				<div class="stage vote_option_box_holder" style="height: '.$holder_width.'px; width: '.$holder_width.'px;">';
 				if ($show_boundbox) {
-					$html .= '<div class="vote_option_boundbox" style="height: '.$boundbox_diam.'px; width: '.$boundbox_diam.'px;';
+					$html .= '<div onclick="games['.$game_instance_id.'].events['.$game_event_index.'].option_selected('.$i.'); games['.$game_instance_id.'].events['.$game_event_index.'].start_vote('.$round_stats[$i]['option_id'].');" class="vote_option_boundbox" style="cursor: pointer; height: '.$boundbox_diam.'px; width: '.$boundbox_diam.'px;';
 					if ($holder_width != $boundbox_diam) $html .= 'left: '.(($holder_width-$boundbox_diam)/2).'px; top: '.(($holder_width-$boundbox_diam)/2).'px;';
 					$html .= '"></div>';
 				}
@@ -448,7 +463,8 @@ class Event {
 			$color = "green";
 			$num_votes = $my_vote['SUM(io.'.$score_field.'*io.effectiveness_factor)'];
 			$option_votes = $this->option_votes_in_round($my_vote['option_id'], $round_id);
-			$expected_payout = floor($this->event_pos_reward_in_round($round_id)*($num_votes/$option_votes['sum'])-$my_vote['fee_amount'])/pow(10,8);
+			if ($option_votes['sum'] > 0) $expected_payout = floor($this->event_pos_reward_in_round($round_id)*($num_votes/$option_votes['sum'])-$my_vote['fee_amount'])/pow(10,8);
+			else $expected_payout = 0;
 			if ($expected_payout < 0) $expected_payout = 0;
 			
 			$confirmed_html .= '<div class="row">';
@@ -486,7 +502,8 @@ class Event {
 			}
 			
 			$num_votes = floor($num_votes*$this->block_id_to_effectiveness_factor($last_block_id+1));
-			$expected_payout = floor($this->event_pos_reward_in_round($round_id)*($num_votes/$option_votes['sum'])-$my_vote['fee_amount'])/pow(10,8);
+			if ($option_votes['sum'] > 0) $expected_payout = floor($this->event_pos_reward_in_round($round_id)*($num_votes/$option_votes['sum'])-$my_vote['fee_amount'])/pow(10,8);
+			else $expected_payout = 0;
 			if ($expected_payout < 0) $expected_payout = 0;
 			
 			$unconfirmed_html .= '<div class="row">';
@@ -515,7 +532,6 @@ class Event {
 				'.$unconfirmed_html.$confirmed_html.'
 			</div>';
 		}
-		else $html .= "You haven't voted yet in this round.";
 		
 		return $html;
 	}

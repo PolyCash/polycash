@@ -166,7 +166,7 @@ class App {
 							for ($i=0; $i<count($db_option_entities); $i++) {
 								$voting_character = $this->option_index_to_voting_chars($option_i, $options_in_game);
 								if (strlen($voting_character) > $max_voting_chars) $max_voting_chars = strlen($voting_character);
-								$qq = "INSERT INTO options SET event_id='".$event_id."', entity_id='".$db_option_entities[$i]['entity_id']."', membership_id='".$db_option_entities[$i]['membership_id']."', image_id='".$db_option_entities[$i]['default_image_id']."', name='".$db_option_entities[$i]['entity_name']." wins ".$event_entity['entity_name']."', voting_character='".$voting_character."';";
+								$qq = "INSERT INTO options SET event_id='".$event_id."', entity_id='".$db_option_entities[$i]['entity_id']."', membership_id='".$db_option_entities[$i]['membership_id']."', image_id='".$db_option_entities[$i]['default_image_id']."', name='".$db_option_entities[$i]['last_name']." wins ".$event_entity['entity_name']."', voting_character='".$voting_character."';";
 								$rr = $this->run_query($qq);
 								$option_i++;
 							}
@@ -644,8 +644,8 @@ class App {
 		<div class="row">
 			<div class="col-xs-4">Unconfirmed Votes:</div>
 			<div class="col-xs-8">'.$this->format_bignum($unconfirmed_votes/pow(10,8)).' votes ('.(empty($sum_votes)? 0 : (ceil(100*100*$unconfirmed_votes/$sum_votes)/100)).'%)</div>
-		</div>
-		<div class="row">
+		</div>';
+		/*<div class="row">
 			<div class="col-xs-4">Last&nbsp;win:</div>
 			<div class="col-xs-8">';
 		if ($losing_streak === 0) $html .= "Last&nbsp;round";
@@ -653,7 +653,7 @@ class App {
 		else $html .= "Never";
 		$html .= '
 			</div>
-		</div>';
+		</div>';*/
 		return $html;
 	}
 	
@@ -713,15 +713,15 @@ class App {
 			</script>
 			<?php
 			echo '<div class="col-md-'.$cell_width.'">';
-			echo '<h3 style="display: inline-block" title="'.$featured_game->game_description().'">'.$featured_game->db_game['name'].'</h3>';
+			echo '<center><h1 style="display: inline-block" title="'.$featured_game->game_description().'">'.$featured_game->db_game['name'].'</h1>';
 			if ($featured_game->db_game['short_description'] != "") echo "<br/>".$featured_game->db_game['short_description'];
 			
 			echo '<div id="game'.$counter.'_events"></div>';
 			echo '<script type="text/javascript" id="game'.$counter.'_new_event_js">'.$featured_game->new_event_js($counter, false).'</script>';
 			
-			echo '<a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-success">Play Now</a>';
+			echo '<br/><a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-success">Play Now</a>';
 			echo ' <a href="/explorer/'.$featured_game->db_game['url_identifier'].'/rounds/" class="btn btn-primary">Blockchain Explorer</a>';
-			echo '<br/><br/>';
+			echo '</center><br/>';
 			
 			if ($counter%(12/$cell_width) == 1) echo '</div><div class="row">';
 			$counter++;
