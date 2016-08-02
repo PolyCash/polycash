@@ -332,11 +332,11 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 		}
 	}
 	else {
-		if (in_array($voting_strategy, array('manual', 'by_rank', 'by_option', 'api', 'by_plan'))) {
-			for ($i=1; $i<=$game->db_game['num_voting_options']; $i++) {
+		if (in_array($voting_strategy, array('manual', 'api', 'by_plan'))) {
+			/*for ($i=1; $i<=$game->db_game['num_voting_options']; $i++) {
 				if ($_REQUEST['by_rank_'.$i] == "1") $by_rank_csv .= $i.",";
 			}
-			if ($by_rank_csv != "") $by_rank_csv = substr($by_rank_csv, 0, strlen($by_rank_csv)-1);
+			if ($by_rank_csv != "") $by_rank_csv = substr($by_rank_csv, 0, strlen($by_rank_csv)-1);*/
 			
 			$q = "UPDATE user_strategies SET voting_strategy='".$voting_strategy."'";
 			if ($aggregate_threshold >= 0 && $aggregate_threshold <= 100) {
@@ -349,9 +349,7 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 			if ($min_votesum_pct < 0) $min_votesum_pct = 0;
 			if ($max_votesum_pct < $min_votesum_pct) $max_votesum_pct = $min_votesum_pct;
 			
-			$min_coins_available = round($_REQUEST['min_coins_available'], 3);
-			
-			$q .= ", min_coins_available='".$min_coins_available."', max_votesum_pct='".$max_votesum_pct."', min_votesum_pct='".$min_votesum_pct."', by_rank_ranks='".$by_rank_csv."', api_url=".$api_url;
+			$q .= ", max_votesum_pct='".$max_votesum_pct."', min_votesum_pct='".$min_votesum_pct."', api_url=".$api_url;
 			$q .= " WHERE strategy_id='".$user_strategy['strategy_id']."';";
 			$r = $app->run_query($q);
 			
@@ -362,7 +360,7 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 		$option_pct_sum = 0;
 		$option_pct_error = FALSE;
 		
-		$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."';";
+		/*$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."';";
 		$rr = $app->run_query($qq);
 		while ($voting_option = $rr->fetch()) {
 			$option_pct = intval($_REQUEST['option_pct_'.$voting_option['option_id']]);
@@ -389,11 +387,11 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 				$error_code = 2;
 				$message = "Error: the percentages that you entered did not add up to 100, your changes were discarded.";
 			}
-		}
+		}*/
 		
-		$from_round = intval($_REQUEST['from_round']);
+		/*$from_round = intval($_REQUEST['from_round']);
 		$to_round = intval($_REQUEST['to_round']);
-		$thisuser->save_plan_allocations($user_strategy, $from_round, $to_round);
+		$thisuser->save_plan_allocations($user_strategy, $from_round, $to_round);*/
 		
 		for ($block=1; $block<$game->db_game['round_length']; $block++) {
 			$strategy_block = false;
@@ -531,24 +529,19 @@ if ($thisuser && $game) {
 				$option_r = $app->run_query($option_q);
 				$j=0;
 				while ($option = $option_r->fetch()) {
-					$qq = "SELECT * FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND option_id='".$option['option_id']."';";
-					$rr = $app->run_query($qq);
-					if ($rr->rowCount() > 0) {
-						$sra = $rr->fetch();
-						$points = $sra['points'];
-					}
-					else $points = 0;
-					
-					echo "game.all_events[".$i."].options.push(new option(game.all_events[".$i."], ".$j.", ".$option['option_id'].", '".$option['name']."', ".$points."));\n";
+					echo "game.all_events[".$i."].options.push(new option(game.all_events[".$i."], ".$j.", ".$option['option_id'].", '".$option['name']."', 0));\n";
 					$j++;
 				}
 				$i++;
 			}
 			?>
 		}
+		
 		load_all_events(games[0]);
 		
 		<?php
+		echo $game->load_all_event_points_js(0, $user_strategy);
+		
 		if ($game->db_game['losable_bets_enabled'] == 1) { ?>
 		google.load("visualization", "1", {packages:["corechart"]});
 		<?php } ?>
@@ -1168,7 +1161,7 @@ if ($thisuser && $game) {
 						<br/>
 						<div id="plan_rows" style="margin: 10px 0px; max-height: 450px; overflow-y: scroll; border: 1px solid #bbb; padding: 0px 10px;">
 							<?php
-							echo $game->plan_options_html($plan_start_round, $plan_stop_round);
+							echo $game->plan_options_html($plan_start_round, $plan_stop_round, $user_strategy);
 							?>
 						</div>
 						

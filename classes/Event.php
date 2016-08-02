@@ -11,7 +11,7 @@ class Event {
 			$this->db_event = $db_event;
 		}
 		else {
-			$q = "SELECT ev.*, et.* FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id WHERE ev.event_id='".$event_id."';";
+			$q = "SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities en ON et.entity_id=en.entity_id WHERE ev.event_id='".$event_id."';";
 			$r = $this->game->app->run_query($q);
 			$this->db_event = $r->fetch() or die("Error, could not load event #".$event_id);
 		}
@@ -171,6 +171,12 @@ class Event {
 				$my_votes = $this->my_votes_in_round($current_round, $user->db_user['user_id'], false);
 				$fees_paid = $my_votes['fee_amount'];
 
+				if (!empty($winner) && $this->game->db_game['game_winning_rule'] == "event_points") {
+					$q = "SELECT * FROM entities WHERE entity_id='".$winner['entity_id']."';";
+					$r = $this->game->app->run_query($q);
+					$entity = $r->fetch();
+					$html .= $entity['entity_name']." won ".$this->db_event[$this->game->db_game['game_winning_field']]." electoral votes<br/>\n";
+				}
 				if (empty($my_votes[0])) {
 					if (!empty($winner['name'])) {
 						$my_winning_votes = 0;
@@ -190,6 +196,11 @@ class Event {
 				$detail_html .= '<div class="row"><div class="col-sm-6 boldtext">Cap:</div><div class="col-sm-6">';
 				$detail_html .= ($this->db_event['max_voting_fraction']*100).'%';
 				$detail_html .= '</div></div>';
+				
+				if ($this->game->db_game['game_winning_rule'] == "event_points") {
+					$field_disp = ucwords(str_replace("_", " ", $this->game->db_game['game_winning_field']));
+					$detail_html .= '<div class="row"><div class="col-sm-6 boldtext">'.$field_disp.'</div><div class="col-sm-6">'.$this->db_event[$this->game->db_game['game_winning_field']].'</div></div>';
+				}
 				
 				$detail_html .= '<div class="row"><div class="col-sm-6 boldtext">Confirmed Votes:</div><div class="col-sm-6">'.$this->game->app->format_bignum($confirmed_sum_votes/pow(10,8)).' votes</div></div>';
 				
@@ -226,7 +237,7 @@ class Event {
 			}
 			if ($detail_html != "") {
 				$html .= " <a href=\"\" onclick=\"games[".$game_instance_id."].events[".$game_event_index."].toggle_details(); return false;\">Details</a><br/>";
-				$html .= "<div style=\"display: none;\" id=\"game".$game_instance_id."_event".$game_event_index."_details\">".$detail_html."</div>";
+				$html .= "<div id=\"game".$game_instance_id."_event".$game_event_index."_details\">".$detail_html."</div>";
 			}
 		}
 		

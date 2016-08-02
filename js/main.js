@@ -1043,9 +1043,15 @@ function refresh_plan_allocations() {
 		$('#to_round').val(to_round);
 		var json_obj = JSON.parse(result);
 		$('#plan_rows').html(json_obj['html']);
-		initialize_plan_options(from_round, to_round);
-		$('#plan_rows_js').html(json_obj['js']);
+		set_plan_round_sums();
+		render_plan_rounds();
+		console.log("done refreshing plans...");
 	});
+}
+function render_plan_rounds() {
+	for (var i=0; i<plan_rounds.length; i++) {
+		render_plan_round(i);
+	}
 }
 function initiate_buyin() {
 	$.get("/ajax/buyin.php?game_id="+games[0].game_id, function(result) {
@@ -1092,7 +1098,7 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 	this.selected_option_id = false;
 	this.votingaddr_count = 0;
 	this.deleted = false;
-	this.details_shown = false;
+	this.details_shown = true;
 
 	this.options = new Array();
 	this.option_id2option_index = {};

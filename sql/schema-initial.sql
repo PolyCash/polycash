@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS `addresses` (
   KEY `option_id` (`option_id`),
   KEY `bet_option_id` (`bet_option_id`),
   KEY `game_id` (`game_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS `async_email_deliveries` (
   `successful` tinyint(1) NOT NULL DEFAULT '0',
   `sendgrid_response` text NOT NULL,
   PRIMARY KEY (`delivery_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS `blocks` (
   KEY `miner_user_id` (`miner_user_id`),
   KEY `block_id` (`block_id`),
   KEY `game_id` (`game_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -89,19 +89,7 @@ CREATE TABLE IF NOT EXISTS `browsers` (
   `name` varchar(255) COLLATE latin1_german2_ci NOT NULL DEFAULT '',
   `display_name` varchar(255) COLLATE latin1_german2_ci NOT NULL DEFAULT '',
   PRIMARY KEY (`browser_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
-
---
--- Dumping data for table `browsers`
---
-
-INSERT INTO `browsers` (`browser_id`, `name`, `display_name`) VALUES
-(1, 'mozilla_firefox', 'Firefox'),
-(2, 'unknown', 'Unknown'),
-(3, 'internet_explorer', 'IE'),
-(4, 'apple_safari', 'Safari'),
-(5, 'google_chrome', 'Chrome'),
-(6, 'opera', 'Opera');
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -121,7 +109,7 @@ CREATE TABLE IF NOT EXISTS `browserstrings` (
   PRIMARY KEY (`browserstring_id`),
   KEY `v1` (`viewer_id`),
   KEY `b1` (`browser_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -139,7 +127,7 @@ CREATE TABLE IF NOT EXISTS `currencies` (
   PRIMARY KEY (`currency_id`),
   KEY `oracle_url_id` (`oracle_url_id`),
   KEY `abbreviation` (`abbreviation`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=8 ;
 
 --
 -- Dumping data for table `currencies`
@@ -149,10 +137,10 @@ INSERT INTO `currencies` (`currency_id`, `oracle_url_id`, `name`, `short_name`, 
 (1, NULL, 'US Dollar', 'dollar', 'USD', '$'),
 (2, 2, 'Bitcoin', 'bitcoin', 'BTC', '&#3647;'),
 (3, NULL, 'EmpireCoin', 'empirecoin', 'EMP', 'E'),
-(4, 1, 'Euro', 'euro', 'EUR', 'â‚¬'),
-(5, 1, 'Renminbi', 'renminbi', 'CNY', 'Â¥'),
-(6, 1, 'Pound sterling', 'pound', 'GBP', 'Â£'),
-(7, 1, 'Japanese yen', 'yen', 'JPY', 'Â¥');
+(4, 1, 'Euro', 'euro', 'EUR', '€'),
+(5, 1, 'Renminbi', 'renminbi', 'CNY', '¥'),
+(6, 1, 'Pound sterling', 'pound', 'GBP', '£'),
+(7, 1, 'Japanese yen', 'yen', 'JPY', '¥');
 
 -- --------------------------------------------------------
 
@@ -182,7 +170,7 @@ CREATE TABLE IF NOT EXISTS `currency_invoices` (
   PRIMARY KEY (`invoice_id`),
   KEY `game_id` (`game_id`),
   KEY `user_id` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -199,7 +187,7 @@ CREATE TABLE IF NOT EXISTS `currency_prices` (
   PRIMARY KEY (`price_id`),
   KEY `currency_id` (`currency_id`),
   KEY `reference_currency_id` (`reference_currency_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -214,76 +202,77 @@ CREATE TABLE IF NOT EXISTS `entities` (
   `entity_name` varchar(255) NOT NULL DEFAULT '',
   `first_name` varchar(50) NOT NULL DEFAULT '',
   `last_name` varchar(50) NOT NULL DEFAULT '',
+  `electoral_votes` int(11) NOT NULL DEFAULT '0',
   PRIMARY KEY (`entity_id`),
   KEY `entity_type_id` (`entity_type_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=65 ;
 
 --
 -- Dumping data for table `entities`
 --
 
-INSERT INTO `entities` (`entity_id`, `entity_type_id`, `default_image_id`, `entity_name`, `first_name`, `last_name`) VALUES
-(1, 1, 17, 'Bernie Sanders', 'Bernie', 'Sanders'),
-(2, 1, 18, 'Donald Trump', 'Donald', 'Trump'),
-(3, 1, 19, 'Hillary Clinton', 'Hillary', 'Clinton'),
-(5, 2, NULL, 'Alabama', '', ''),
-(6, 2, NULL, 'Alaska', '', ''),
-(7, 2, NULL, 'Arizona', '', ''),
-(8, 2, NULL, 'Arkansas', '', ''),
-(9, 2, NULL, 'California', '', ''),
-(10, 2, NULL, 'Colorado', '', ''),
-(11, 2, NULL, 'Connecticut', '', ''),
-(12, 2, NULL, 'Delaware', '', ''),
-(13, 2, NULL, 'Florida', '', ''),
-(14, 2, NULL, 'Georgia', '', ''),
-(15, 2, NULL, 'Hawaii', '', ''),
-(16, 2, NULL, 'Idaho', '', ''),
-(17, 2, NULL, 'Illinois', '', ''),
-(18, 2, NULL, 'Indiana', '', ''),
-(19, 2, NULL, 'Iowa', '', ''),
-(20, 2, NULL, 'Kansas', '', ''),
-(21, 2, NULL, 'Kentucky', '', ''),
-(22, 2, NULL, 'Louisiana', '', ''),
-(23, 2, NULL, 'Maine', '', ''),
-(24, 2, NULL, 'Maryland', '', ''),
-(25, 2, NULL, 'Massachusetts', '', ''),
-(26, 2, NULL, 'Michigan', '', ''),
-(27, 2, NULL, 'Minnesota', '', ''),
-(28, 2, NULL, 'Mississippi', '', ''),
-(29, 2, NULL, 'Missouri', '', ''),
-(30, 2, NULL, 'Montana', '', ''),
-(31, 2, NULL, 'Nebraska', '', ''),
-(32, 2, NULL, 'Nevada', '', ''),
-(33, 2, NULL, 'New Hampshire', '', ''),
-(34, 2, NULL, 'New Jersey', '', ''),
-(35, 2, NULL, 'New Mexico', '', ''),
-(36, 2, NULL, 'New York', '', ''),
-(37, 2, NULL, 'North Carolina', '', ''),
-(38, 2, NULL, 'North Dakota', '', ''),
-(39, 2, NULL, 'Ohio', '', ''),
-(40, 2, NULL, 'Oklahoma', '', ''),
-(41, 2, NULL, 'Oregon', '', ''),
-(42, 2, NULL, 'Pennsylvania', '', ''),
-(43, 2, NULL, 'Rhode Island', '', ''),
-(44, 2, NULL, 'South Carolina', '', ''),
-(45, 2, NULL, 'South Dakota', '', ''),
-(46, 2, NULL, 'Tennessee', '', ''),
-(47, 2, NULL, 'Texas', '', ''),
-(48, 2, NULL, 'Utah', '', ''),
-(49, 2, NULL, 'Vermont', '', ''),
-(50, 2, NULL, 'Virginia', '', ''),
-(51, 2, NULL, 'Washington', '', ''),
-(52, 2, NULL, 'West Virginia', '', ''),
-(53, 2, NULL, 'Wisconsin', '', ''),
-(54, 2, NULL, 'Wyoming', '', ''),
-(57, 3, NULL, 'Black', '', ''),
-(58, 3, 31, 'Blue', '', ''),
-(59, 3, NULL, 'Green', '', ''),
-(60, 3, NULL, 'Orange', '', ''),
-(61, 3, NULL, 'Purple', '', ''),
-(62, 3, 32, 'Red', '', ''),
-(63, 3, NULL, 'White', '', ''),
-(64, 3, NULL, 'Yellow', '', '');
+INSERT INTO `entities` (`entity_id`, `entity_type_id`, `default_image_id`, `entity_name`, `first_name`, `last_name`, `electoral_votes`) VALUES
+(1, 1, 17, 'Bernie Sanders', 'Bernie', 'Sanders', 0),
+(2, 1, 18, 'Donald Trump', 'Donald', 'Trump', 0),
+(3, 1, 19, 'Hillary Clinton', 'Hillary', 'Clinton', 0),
+(5, 2, NULL, 'Alabama', '', '', 9),
+(6, 2, NULL, 'Alaska', '', '', 3),
+(7, 2, NULL, 'Arizona', '', '', 11),
+(8, 2, NULL, 'Arkansas', '', '', 6),
+(9, 2, NULL, 'California', '', '', 55),
+(10, 2, NULL, 'Colorado', '', '', 9),
+(11, 2, NULL, 'Connecticut', '', '', 7),
+(12, 2, NULL, 'Delaware', '', '', 3),
+(13, 2, NULL, 'Florida', '', '', 29),
+(14, 2, NULL, 'Georgia', '', '', 16),
+(15, 2, NULL, 'Hawaii', '', '', 4),
+(16, 2, NULL, 'Idaho', '', '', 4),
+(17, 2, NULL, 'Illinois', '', '', 20),
+(18, 2, NULL, 'Indiana', '', '', 11),
+(19, 2, NULL, 'Iowa', '', '', 6),
+(20, 2, NULL, 'Kansas', '', '', 6),
+(21, 2, NULL, 'Kentucky', '', '', 8),
+(22, 2, NULL, 'Louisiana', '', '', 8),
+(23, 2, NULL, 'Maine', '', '', 4),
+(24, 2, NULL, 'Maryland', '', '', 10),
+(25, 2, NULL, 'Massachusetts', '', '', 11),
+(26, 2, NULL, 'Michigan', '', '', 16),
+(27, 2, NULL, 'Minnesota', '', '', 10),
+(28, 2, NULL, 'Mississippi', '', '', 6),
+(29, 2, NULL, 'Missouri', '', '', 10),
+(30, 2, NULL, 'Montana', '', '', 3),
+(31, 2, NULL, 'Nebraska', '', '', 5),
+(32, 2, NULL, 'Nevada', '', '', 6),
+(33, 2, NULL, 'New Hampshire', '', '', 4),
+(34, 2, NULL, 'New Jersey', '', '', 14),
+(35, 2, NULL, 'New Mexico', '', '', 5),
+(36, 2, NULL, 'New York', '', '', 29),
+(37, 2, NULL, 'North Carolina', '', '', 15),
+(38, 2, NULL, 'North Dakota', '', '', 3),
+(39, 2, NULL, 'Ohio', '', '', 18),
+(40, 2, NULL, 'Oklahoma', '', '', 7),
+(41, 2, NULL, 'Oregon', '', '', 7),
+(42, 2, NULL, 'Pennsylvania', '', '', 20),
+(43, 2, NULL, 'Rhode Island', '', '', 4),
+(44, 2, NULL, 'South Carolina', '', '', 9),
+(45, 2, NULL, 'South Dakota', '', '', 3),
+(46, 2, NULL, 'Tennessee', '', '', 11),
+(47, 2, NULL, 'Texas', '', '', 38),
+(48, 2, NULL, 'Utah', '', '', 6),
+(49, 2, NULL, 'Vermont', '', '', 3),
+(50, 2, NULL, 'Virginia', '', '', 13),
+(51, 2, NULL, 'Washington', '', '', 12),
+(52, 2, NULL, 'West Virginia', '', '', 5),
+(53, 2, NULL, 'Wisconsin', '', '', 10),
+(54, 2, NULL, 'Wyoming', '', '', 3),
+(57, 3, NULL, 'Black', '', '', 0),
+(58, 3, 31, 'Blue', '', '', 0),
+(59, 3, NULL, 'Green', '', '', 0),
+(60, 3, NULL, 'Orange', '', '', 0),
+(61, 3, NULL, 'Purple', '', '', 0),
+(62, 3, 32, 'Red', '', '', 0),
+(63, 3, NULL, 'White', '', '', 0),
+(64, 3, NULL, 'Yellow', '', '', 0);
 
 -- --------------------------------------------------------
 
@@ -295,7 +284,7 @@ CREATE TABLE IF NOT EXISTS `entity_types` (
   `entity_type_id` int(11) NOT NULL AUTO_INCREMENT,
   `entity_name` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`entity_type_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=4 ;
 
 --
 -- Dumping data for table `entity_types`
@@ -326,7 +315,7 @@ CREATE TABLE IF NOT EXISTS `events` (
   PRIMARY KEY (`event_id`),
   KEY `game_id` (`game_id`),
   KEY `event_type_id` (`event_type_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -354,7 +343,7 @@ CREATE TABLE IF NOT EXISTS `event_outcomes` (
   KEY `payout_block_id` (`payout_block_id`),
   KEY `winning_option_id` (`winning_option_id`),
   KEY `derived_winning_option_id` (`derived_winning_option_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -377,7 +366,7 @@ CREATE TABLE IF NOT EXISTS `event_outcome_options` (
   KEY `round_id` (`round_id`,`event_id`),
   KEY `option_id` (`option_id`),
   KEY `outcome_id` (`outcome_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -387,6 +376,7 @@ CREATE TABLE IF NOT EXISTS `event_outcome_options` (
 
 CREATE TABLE IF NOT EXISTS `event_types` (
   `event_type_id` int(11) NOT NULL AUTO_INCREMENT,
+  `entity_id` int(11) DEFAULT NULL,
   `option_group_id` int(11) DEFAULT NULL,
   `url_identifier` varchar(100) DEFAULT NULL,
   `vote_effectiveness_function` enum('constant','linear_decrease') NOT NULL DEFAULT 'constant',
@@ -397,7 +387,7 @@ CREATE TABLE IF NOT EXISTS `event_types` (
   PRIMARY KEY (`event_type_id`),
   KEY `option_group_id` (`option_group_id`),
   KEY `url_identifier` (`url_identifier`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -412,7 +402,7 @@ CREATE TABLE IF NOT EXISTS `external_addresses` (
   `address` varchar(100) DEFAULT '',
   `time_created` int(20) NOT NULL DEFAULT '0',
   PRIMARY KEY (`address_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -426,46 +416,48 @@ CREATE TABLE IF NOT EXISTS `games` (
   `currency_id` int(11) DEFAULT NULL,
   `creator_id` int(11) DEFAULT NULL,
   `invoice_address_id` int(11) DEFAULT NULL,
-  `max_voting_chars` varchar(100) NOT NULL DEFAULT '',
   `creator_game_index` int(11) DEFAULT NULL,
+  `max_voting_chars` varchar(100) NOT NULL DEFAULT '',
   `url_identifier` varchar(100) DEFAULT NULL,
+  `name` varchar(100) NOT NULL DEFAULT '',
+  `short_description` text NOT NULL,
   `game_type` enum('real','simulation') NOT NULL DEFAULT 'real',
+  `game_winning_rule` enum('none','event_points') NOT NULL DEFAULT 'none',
+  `game_winning_field` varchar(50) NOT NULL DEFAULT '',
   `game_status` enum('editable','published','running','completed') NOT NULL DEFAULT 'editable',
-  `rpc_port` int(11) DEFAULT NULL,
-  `rpc_username` varchar(255) DEFAULT NULL,
-  `rpc_password` varchar(255) DEFAULT NULL,
   `featured` tinyint(1) NOT NULL DEFAULT '0',
   `featured_score` float NOT NULL DEFAULT '0',
-  `losable_bets_enabled` tinyint(1) NOT NULL DEFAULT '0',
-  `block_timing` enum('realistic','user_controlled') NOT NULL DEFAULT 'realistic',
   `inflation` enum('linear','exponential','fixed_exponential') NOT NULL DEFAULT 'linear',
-  `exponential_inflation_minershare` decimal(9,8) NOT NULL DEFAULT '0.00000000',
-  `initial_coins` bigint(20) NOT NULL DEFAULT '0',
-  `game_starting_block` int(11) NOT NULL DEFAULT '0',
-  `final_round` int(11) DEFAULT NULL,
   `exponential_inflation_rate` decimal(9,8) NOT NULL DEFAULT '0.00000000',
+  `exponential_inflation_minershare` decimal(9,8) NOT NULL DEFAULT '0.00000000',
+  `pos_reward` bigint(20) NOT NULL DEFAULT '0',
+  `pow_reward` bigint(20) NOT NULL DEFAULT '0',
+  `round_length` int(10) NOT NULL DEFAULT '10',
+  `seconds_per_block` int(11) NOT NULL DEFAULT '0',
+  `maturity` int(10) NOT NULL DEFAULT '0',
   `payout_weight` enum('coin','coin_block','coin_round') NOT NULL DEFAULT 'coin_block',
+  `final_round` int(11) DEFAULT NULL,
+  `block_timing` enum('realistic','user_controlled') NOT NULL DEFAULT 'realistic',
+  `losable_bets_enabled` tinyint(1) NOT NULL DEFAULT '0',
+  `initial_coins` bigint(20) NOT NULL DEFAULT '0',
+  `coin_name` varchar(100) NOT NULL DEFAULT 'coin',
+  `coin_name_plural` varchar(100) NOT NULL DEFAULT 'coins',
+  `coin_abbreviation` varchar(10) NOT NULL DEFAULT '',
   `buyin_policy` enum('unlimited','per_user_cap','game_cap','game_and_user_cap','none') NOT NULL DEFAULT 'none',
   `per_user_buyin_cap` decimal(16,8) NOT NULL DEFAULT '0.00000000',
   `game_buyin_cap` decimal(16,8) NOT NULL DEFAULT '0.00000000',
-  `seconds_per_block` int(11) NOT NULL DEFAULT '0',
+  `rpc_port` int(11) DEFAULT NULL,
+  `rpc_username` varchar(255) DEFAULT NULL,
+  `rpc_password` varchar(255) DEFAULT NULL,
+  `game_starting_block` int(11) NOT NULL DEFAULT '0',
   `start_condition` enum('fixed_time','players_joined') NOT NULL DEFAULT 'players_joined',
+  `start_condition_players` int(11) DEFAULT NULL,
   `start_datetime` datetime DEFAULT NULL,
+  `start_time` int(20) DEFAULT NULL,
   `completion_datetime` datetime DEFAULT NULL,
   `payout_reminder_datetime` datetime DEFAULT NULL,
   `payout_complete` tinyint(1) NOT NULL DEFAULT '0',
   `payout_tx_hash` varchar(255) NOT NULL DEFAULT '',
-  `start_condition_players` int(11) DEFAULT NULL,
-  `start_time` int(20) DEFAULT NULL,
-  `name` varchar(100) NOT NULL DEFAULT '',
-  `short_description` text NOT NULL,
-  `coin_name` varchar(100) NOT NULL DEFAULT 'coin',
-  `coin_name_plural` varchar(100) NOT NULL DEFAULT 'coins',
-  `coin_abbreviation` varchar(10) NOT NULL DEFAULT '',
-  `round_length` int(10) NOT NULL DEFAULT '10',
-  `maturity` int(10) NOT NULL DEFAULT '0',
-  `pow_reward` bigint(20) NOT NULL DEFAULT '0',
-  `pos_reward` bigint(20) NOT NULL DEFAULT '0',
   `giveaway_status` enum('public_free','invite_free','invite_pay','public_pay') NOT NULL DEFAULT 'invite_pay',
   `giveaway_amount` bigint(16) NOT NULL DEFAULT '0',
   `public_unclaimed_invitations` tinyint(1) NOT NULL DEFAULT '0',
@@ -484,7 +476,7 @@ CREATE TABLE IF NOT EXISTS `games` (
   KEY `game_status` (`game_status`),
   KEY `payout_weight` (`payout_weight`),
   KEY `game_type_id` (`game_type_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -516,7 +508,7 @@ CREATE TABLE IF NOT EXISTS `game_buyins` (
   KEY `giveaway_id` (`giveaway_id`),
   KEY `status` (`status`),
   KEY `game_id` (`game_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -536,7 +528,7 @@ CREATE TABLE IF NOT EXISTS `game_giveaways` (
   UNIQUE KEY `transaction_id` (`transaction_id`),
   KEY `game_id` (`game_id`),
   KEY `user_id` (`user_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -561,7 +553,7 @@ CREATE TABLE IF NOT EXISTS `game_invitations` (
   KEY `inviter_id` (`inviter_id`),
   KEY `used` (`used`),
   KEY `game_id` (`game_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -579,7 +571,7 @@ CREATE TABLE IF NOT EXISTS `game_join_requests` (
   KEY `user_id` (`user_id`),
   KEY `request_status` (`request_status`),
   KEY `game_id` (`game_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -592,38 +584,40 @@ CREATE TABLE IF NOT EXISTS `game_types` (
   `event_rule` enum('entity_type_option_group') DEFAULT NULL,
   `event_entity_type_id` int(11) DEFAULT NULL,
   `option_group_id` int(11) DEFAULT NULL,
-  `events_per_round` int(11) NOT NULL DEFAULT '0',
-  `featured` tinyint(1) NOT NULL DEFAULT '0',
-  `url_identifier` varchar(255) NOT NULL DEFAULT '',
-  `target_open_games` int(11) NOT NULL DEFAULT '0',
   `currency_id` int(11) DEFAULT NULL,
+  `events_per_round` int(11) NOT NULL DEFAULT '0',
+  `target_open_games` int(11) NOT NULL DEFAULT '0',
+  `featured` tinyint(1) NOT NULL DEFAULT '0',
   `game_type` enum('real','simulation') NOT NULL DEFAULT 'real',
-  `rpc_port` int(11) DEFAULT NULL,
-  `rpc_username` varchar(255) DEFAULT NULL,
-  `rpc_password` varchar(255) DEFAULT NULL,
-  `losable_bets_enabled` tinyint(1) NOT NULL DEFAULT '0',
-  `block_timing` enum('realistic','user_controlled') NOT NULL DEFAULT 'realistic',
-  `inflation` enum('linear','exponential','fixed_exponential') NOT NULL DEFAULT 'linear',
-  `exponential_inflation_minershare` decimal(9,8) NOT NULL DEFAULT '0.00000000',
-  `game_starting_block` int(11) DEFAULT NULL,
-  `final_round` int(11) DEFAULT NULL,
-  `exponential_inflation_rate` decimal(9,8) NOT NULL DEFAULT '0.00000000',
-  `payout_weight` enum('coin','coin_block','coin_round') NOT NULL DEFAULT 'coin_block',
-  `buyin_policy` enum('unlimited','per_user_cap','game_cap','game_and_user_cap','none') NOT NULL DEFAULT 'none',
-  `per_user_buyin_cap` decimal(16,8) NOT NULL DEFAULT '0.00000000',
-  `game_buyin_cap` decimal(16,8) NOT NULL DEFAULT '0.00000000',
-  `seconds_per_block` int(11) NOT NULL DEFAULT '0',
-  `start_condition` enum('fixed_time','players_joined') NOT NULL DEFAULT 'players_joined',
-  `start_condition_players` int(11) DEFAULT NULL,
+  `game_winning_rule` enum('none','event_points') NOT NULL DEFAULT 'none',
+  `game_winning_field` varchar(50) NOT NULL DEFAULT '',
+  `url_identifier` varchar(255) NOT NULL DEFAULT '',
   `name` varchar(100) NOT NULL DEFAULT '',
   `short_description` text NOT NULL,
+  `inflation` enum('linear','exponential','fixed_exponential') NOT NULL DEFAULT 'linear',
+  `exponential_inflation_rate` decimal(9,8) NOT NULL DEFAULT '0.00000000',
+  `exponential_inflation_minershare` decimal(9,8) NOT NULL DEFAULT '0.00000000',
+  `pos_reward` bigint(20) NOT NULL DEFAULT '0',
+  `pow_reward` bigint(20) NOT NULL DEFAULT '0',
+  `round_length` int(10) NOT NULL DEFAULT '10',
+  `seconds_per_block` int(11) NOT NULL DEFAULT '0',
+  `maturity` int(10) NOT NULL DEFAULT '8',
+  `payout_weight` enum('coin','coin_block','coin_round') NOT NULL DEFAULT 'coin_block',
+  `game_starting_block` int(11) DEFAULT NULL,
+  `final_round` int(11) DEFAULT NULL,
   `coin_name` varchar(100) NOT NULL DEFAULT 'coin',
   `coin_name_plural` varchar(100) NOT NULL DEFAULT 'coins',
   `coin_abbreviation` varchar(10) NOT NULL DEFAULT '',
-  `round_length` int(10) NOT NULL DEFAULT '10',
-  `maturity` int(10) NOT NULL DEFAULT '8',
-  `pow_reward` bigint(20) NOT NULL DEFAULT '0',
-  `pos_reward` bigint(20) NOT NULL DEFAULT '0',
+  `start_condition` enum('fixed_time','players_joined') NOT NULL DEFAULT 'players_joined',
+  `start_condition_players` int(11) DEFAULT NULL,
+  `block_timing` enum('realistic','user_controlled') NOT NULL DEFAULT 'realistic',
+  `losable_bets_enabled` tinyint(1) NOT NULL DEFAULT '0',
+  `buyin_policy` enum('unlimited','per_user_cap','game_cap','game_and_user_cap','none') NOT NULL DEFAULT 'none',
+  `per_user_buyin_cap` decimal(16,8) NOT NULL DEFAULT '0.00000000',
+  `game_buyin_cap` decimal(16,8) NOT NULL DEFAULT '0.00000000',
+  `rpc_port` int(11) DEFAULT NULL,
+  `rpc_username` varchar(255) DEFAULT NULL,
+  `rpc_password` varchar(255) DEFAULT NULL,
   `giveaway_status` enum('public_free','invite_free','invite_pay','public_pay') NOT NULL DEFAULT 'invite_pay',
   `giveaway_amount` bigint(16) NOT NULL DEFAULT '0',
   `public_unclaimed_invitations` tinyint(1) NOT NULL DEFAULT '0',
@@ -637,14 +631,14 @@ CREATE TABLE IF NOT EXISTS `game_types` (
   `default_vote_effectiveness_function` enum('constant','linear_decrease') DEFAULT NULL,
   `default_max_voting_fraction` decimal(9,8) NOT NULL DEFAULT '0.00000000',
   PRIMARY KEY (`game_type_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=2 ;
 
 --
 -- Dumping data for table `game_types`
 --
 
-INSERT INTO `game_types` (`game_type_id`, `event_rule`, `event_entity_type_id`, `option_group_id`, `events_per_round`, `featured`, `url_identifier`, `target_open_games`, `currency_id`, `game_type`, `rpc_port`, `rpc_username`, `rpc_password`, `losable_bets_enabled`, `block_timing`, `inflation`, `exponential_inflation_minershare`, `game_starting_block`, `final_round`, `exponential_inflation_rate`, `payout_weight`, `buyin_policy`, `per_user_buyin_cap`, `game_buyin_cap`, `seconds_per_block`, `start_condition`, `start_condition_players`, `name`, `short_description`, `coin_name`, `coin_name_plural`, `coin_abbreviation`, `round_length`, `maturity`, `pow_reward`, `pos_reward`, `giveaway_status`, `giveaway_amount`, `public_unclaimed_invitations`, `invite_cost`, `invite_currency`, `invitation_link`, `always_generate_coins`, `min_unallocated_addresses`, `sync_coind_by_cron`, `send_round_notifications`, `default_vote_effectiveness_function`, `default_max_voting_fraction`) VALUES
-(1, 'entity_type_option_group', 2, 1, 2, 1, 'mock-election-2016', 1, NULL, 'simulation', NULL, NULL, NULL, 0, 'realistic', 'exponential', '0.00500000', 0, 25, '0.10000000', 'coin_round', 'none', '0.00000000', '0.00000000', 30, 'players_joined', 2, 'Mock Election 2016', '', 'votecoin', 'votecoins', 'VTC', 20, 0, 0, 0, 'public_free', 50000000000, 0, '0.00000000', 1, '', 0, 2, 0, 1, 'linear_decrease', '0.70000000');
+INSERT INTO `game_types` (`game_type_id`, `event_rule`, `event_entity_type_id`, `option_group_id`, `currency_id`, `events_per_round`, `target_open_games`, `featured`, `game_type`, `game_winning_rule`, `game_winning_field`, `url_identifier`, `name`, `short_description`, `inflation`, `exponential_inflation_rate`, `exponential_inflation_minershare`, `pos_reward`, `pow_reward`, `round_length`, `seconds_per_block`, `maturity`, `payout_weight`, `game_starting_block`, `final_round`, `coin_name`, `coin_name_plural`, `coin_abbreviation`, `start_condition`, `start_condition_players`, `block_timing`, `losable_bets_enabled`, `buyin_policy`, `per_user_buyin_cap`, `game_buyin_cap`, `rpc_port`, `rpc_username`, `rpc_password`, `giveaway_status`, `giveaway_amount`, `public_unclaimed_invitations`, `invite_cost`, `invite_currency`, `invitation_link`, `always_generate_coins`, `min_unallocated_addresses`, `sync_coind_by_cron`, `send_round_notifications`, `default_vote_effectiveness_function`, `default_max_voting_fraction`) VALUES
+(1, 'entity_type_option_group', 2, 1, NULL, 2, 1, 1, 'simulation', 'event_points', 'electoral_votes', 'mock-election-2016', 'Mock Election 2016', 'Win votecoins by predicting the winner in each of the 50 states. In this game, two state elections are held simultaneously every hour.  The candidate with the most electoral votes wins the game. This game repeats daily. Join now for free and receive 500 votecoins.', 'exponential', '0.10000000', '0.00500000', 0, 0, 20, 10, 0, 'coin_round', 0, 25, 'votecoin', 'votecoins', 'VTC', 'players_joined', 2, 'realistic', 0, 'none', '0.00000000', '0.00000000', NULL, NULL, NULL, 'public_free', 50000000000, 0, '0.00000000', 1, '', 0, 2, 0, 1, 'linear_decrease', '0.70000000');
 
 -- --------------------------------------------------------
 
@@ -658,7 +652,7 @@ CREATE TABLE IF NOT EXISTS `images` (
   `extension` varchar(10) NOT NULL DEFAULT '',
   PRIMARY KEY (`image_id`),
   KEY `access_key` (`access_key`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=33 ;
 
 --
 -- Dumping data for table `images`
@@ -711,7 +705,7 @@ CREATE TABLE IF NOT EXISTS `invoice_addresses` (
   `priv_enc` varchar(300) NOT NULL DEFAULT '',
   PRIMARY KEY (`invoice_address_id`),
   KEY `currency_id` (`currency_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -724,7 +718,7 @@ CREATE TABLE IF NOT EXISTS `log_messages` (
   `message` varchar(255) NOT NULL DEFAULT '',
   `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`message_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -738,7 +732,7 @@ CREATE TABLE IF NOT EXISTS `newsletter_subscribers` (
   `time_created` int(11) NOT NULL DEFAULT '0',
   PRIMARY KEY (`subscriber_id`),
   UNIQUE KEY `email_address` (`email_address`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -767,7 +761,7 @@ CREATE TABLE IF NOT EXISTS `options` (
   KEY `voting_option_id` (`entity_id`),
   KEY `image_id` (`image_id`),
   KEY `event_id` (`event_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -781,7 +775,7 @@ CREATE TABLE IF NOT EXISTS `option_groups` (
   `option_name_plural` varchar(100) NOT NULL DEFAULT '',
   `description` varchar(100) NOT NULL DEFAULT '',
   PRIMARY KEY (`group_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=4 ;
 
 --
 -- Dumping data for table `option_groups`
@@ -805,7 +799,7 @@ CREATE TABLE IF NOT EXISTS `option_group_memberships` (
   PRIMARY KEY (`membership_id`),
   KEY `option_group_id` (`option_group_id`),
   KEY `entity_id` (`entity_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=8 ;
 
 --
 -- Dumping data for table `option_group_memberships`
@@ -831,7 +825,7 @@ CREATE TABLE IF NOT EXISTS `oracle_urls` (
   `format_id` int(11) DEFAULT NULL,
   `url` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`oracle_url_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=3 ;
 
 --
 -- Dumping data for table `oracle_urls`
@@ -864,7 +858,7 @@ CREATE TABLE IF NOT EXISTS `pageviews` (
   KEY `ip_id` (`ip_id`),
   KEY `cookie_id` (`cookie_id`),
   KEY `pv_page_id` (`pv_page_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -877,7 +871,7 @@ CREATE TABLE IF NOT EXISTS `page_urls` (
   `url` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`page_url_id`),
   UNIQUE KEY `url` (`url`) USING BTREE
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -891,7 +885,14 @@ CREATE TABLE IF NOT EXISTS `redirect_urls` (
   `time_created` int(20) NOT NULL DEFAULT '0',
   PRIMARY KEY (`redirect_url_id`),
   UNIQUE KEY `url` (`url`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=2 ;
+
+--
+-- Dumping data for table `redirect_urls`
+--
+
+INSERT INTO `redirect_urls` (`redirect_url_id`, `url`, `time_created`) VALUES
+(1, '/wallet/mock-election-2016/', 1470064913);
 
 -- --------------------------------------------------------
 
@@ -905,7 +906,7 @@ CREATE TABLE IF NOT EXISTS `site_constants` (
   `constant_value` varchar(100) NOT NULL DEFAULT '',
   PRIMARY KEY (`constant_id`),
   UNIQUE KEY `constant_name` (`constant_name`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -926,7 +927,7 @@ CREATE TABLE IF NOT EXISTS `strategy_round_allocations` (
   KEY `round_id` (`round_id`),
   KEY `option_id` (`option_id`),
   KEY `strategy_id_3` (`strategy_id`,`round_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -961,7 +962,7 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   KEY `event_id` (`game_id`),
   KEY `transaction_desc` (`transaction_desc`,`game_id`),
   KEY `round_id` (`round_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -1010,7 +1011,7 @@ CREATE TABLE IF NOT EXISTS `transaction_ios` (
   KEY `option_id` (`option_id`),
   KEY `create_round_id` (`create_round_id`),
   KEY `spend_round_id` (`spend_round_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -1043,7 +1044,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   UNIQUE KEY `username` (`username`),
   UNIQUE KEY `api_access_code` (`api_access_code`),
   KEY `password` (`password`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -1066,7 +1067,7 @@ CREATE TABLE IF NOT EXISTS `user_games` (
   PRIMARY KEY (`user_game_id`),
   UNIQUE KEY `user_id` (`user_id`,`game_id`),
   KEY `strategy_id` (`strategy_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -1085,7 +1086,7 @@ CREATE TABLE IF NOT EXISTS `user_messages` (
   PRIMARY KEY (`message_id`),
   KEY `from_user_id` (`from_user_id`),
   KEY `to_user_id` (`to_user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -1107,7 +1108,7 @@ CREATE TABLE IF NOT EXISTS `user_resettokens` (
   `firstclick_viewer_id` int(20) NOT NULL DEFAULT '0',
   `completed` int(2) NOT NULL DEFAULT '0',
   PRIMARY KEY (`token_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -1125,7 +1126,7 @@ CREATE TABLE IF NOT EXISTS `user_sessions` (
   `expire_time` int(12) NOT NULL DEFAULT '0',
   `ip_address` varchar(30) COLLATE latin1_german2_ci NOT NULL DEFAULT '',
   PRIMARY KEY (`session_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -1139,14 +1140,14 @@ CREATE TABLE IF NOT EXISTS `user_strategies` (
   `game_id` int(11) DEFAULT NULL,
   `transaction_fee` bigint(20) NOT NULL DEFAULT '100000',
   `voting_strategy` enum('manual','by_rank','by_option','by_plan','api','') NOT NULL DEFAULT 'manual',
-  `aggregate_threshold` int(11) NOT NULL DEFAULT '50',
+  `aggregate_threshold` int(11) NOT NULL DEFAULT '0',
   `by_rank_ranks` varchar(100) NOT NULL DEFAULT '',
   `api_url` varchar(255) NOT NULL DEFAULT '',
   `min_votesum_pct` int(11) NOT NULL DEFAULT '0',
   `max_votesum_pct` int(11) NOT NULL DEFAULT '100',
   `min_coins_available` decimal(10,8) NOT NULL DEFAULT '0.00000000',
   PRIMARY KEY (`strategy_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -1162,7 +1163,7 @@ CREATE TABLE IF NOT EXISTS `user_strategy_blocks` (
   UNIQUE KEY `strategy_id` (`strategy_id`,`block_within_round`),
   KEY `strategy_id_2` (`strategy_id`),
   KEY `block_within_round` (`block_within_round`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -1178,7 +1179,7 @@ CREATE TABLE IF NOT EXISTS `user_strategy_options` (
   PRIMARY KEY (`strategy_option_id`),
   UNIQUE KEY `strategy_id_2` (`strategy_id`,`option_id`),
   KEY `strategy_id` (`strategy_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -1191,7 +1192,14 @@ CREATE TABLE IF NOT EXISTS `viewers` (
   `account_id` int(20) NOT NULL DEFAULT '0',
   `time_created` int(20) NOT NULL DEFAULT '0',
   PRIMARY KEY (`viewer_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=2 ;
+
+--
+-- Dumping data for table `viewers`
+--
+
+INSERT INTO `viewers` (`viewer_id`, `account_id`, `time_created`) VALUES
+(1, 0, 1470064899);
 
 -- --------------------------------------------------------
 
@@ -1205,7 +1213,7 @@ CREATE TABLE IF NOT EXISTS `viewer_connections` (
   `from_id` int(20) NOT NULL DEFAULT '0',
   `to_id` int(20) NOT NULL DEFAULT '0',
   PRIMARY KEY (`connection_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -1219,7 +1227,7 @@ CREATE TABLE IF NOT EXISTS `viewer_identifiers` (
   `type` enum('ip','cookie') NOT NULL DEFAULT 'ip',
   `identifier` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`identifier_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;

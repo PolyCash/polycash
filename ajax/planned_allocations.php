@@ -38,22 +38,9 @@ if ($thisuser && $game) {
 		$to_round = intval($_REQUEST['to_round']);
 		if ($game->db_game['final_round'] > 0 && $to_round > $game->db_game['final_round']) $to_round = $game->db_game['final_round'];
 		
-		$html = $game->plan_options_html($from_round, $to_round);
-		
-		$js .= '<script type="text/javascript">';
-		$js .= "$(document).ready(function() {\n";
-		
-		$q = "SELECT * FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND round_id >= ".$from_round." AND round_id <= ".$to_round.";";
-		$r = $app->run_query($q);
-		while ($allocation = $r->fetch()) {
-			$js .= "load_plan_option(".$allocation['round_id'].", option_id2option_index[".$allocation['option_id']."], ".$allocation['points'].");\n";
-		}
-		$js .= "load_plan_option_games();\n";
-		$js .= "});\n";
-		$js .= "</script>\n";
+		$html = $game->plan_options_html($from_round, $to_round, $user_strategy);
 		
 		$output_obj['html'] = $html;
-		$output_obj['js'] = $js;
 		
 		echo json_encode($output_obj);
 	}

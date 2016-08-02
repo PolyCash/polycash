@@ -19,7 +19,7 @@ include('includes/html_start.php');
 		</div>
 		<div class="col-sm-10">
 			<div class="paragraph">
-				Welcome to <?php echo $GLOBALS['coin_brand_name']; ?>, the first gamified cryptocurrency!  The EmpireCoin currency hasn't launched yet, but you can try the EmpireCoin platform right now for free by mining on our testnet or joining one of our private event_types.  In <?php echo $GLOBALS['coin_brand_name']; ?> event_types the in-event currency inflates rapidly and players compete to win coins by strategically casting votes.  One empire wins in each round and the reward is split among everyone who voted correctly.  <?php echo $GLOBALS['coin_brand_name']; ?> supports a wide variety of event types.  Battle against a single opponent in a quick two player event, set up a daily fantasy sports event with your friends or join a massive battle with thousands of other players.  Free event_types are available so that you can try <?php echo $GLOBALS['coin_brand_name']; ?> without any risk, but most event_types are played with real money.  You can buy in with bitcoins or dollars and then sell out at any time. Start building your empire today in this massively multiplayer online event of chance.
+				Welcome to <?php echo $GLOBALS['coin_brand_name']; ?>, an open source prediction market & blockchain gaming platform. In <?php echo $GLOBALS['coin_brand_name']; ?> games the in-game currency inflates rapidly and players compete to win coins by strategically casting votes.  <?php echo $GLOBALS['coin_brand_name']; ?> supports a wide variety of game types.  Battle against a single opponent in a quick two player game, set up a daily fantasy sports game with your friends or join a distributed game and play against thousands of other players in real time.  Free games are available so that you can try <?php echo $GLOBALS['coin_brand_name']; ?> without any risk, but most games are played with real money.  You can buy in with bitcoins or dollars and then sell out at any time. Start building your empire today in this massively multiplayer online game of chance.
 				<?php
 				$whitepaper_fname = "EmpirecoinWhitepaper.pdf";
 				if (is_file($whitepaper_fname)) {
@@ -38,30 +38,35 @@ include('includes/html_start.php');
 	?>
 	
 	<div class="paragraph">
-		<h2>Strategy &amp; Gameplay</h2>
-		The winning empire for an <?php echo $GLOBALS['coin_brand_name']; ?> voting round is determined entirely by the votes of the players.  Therefore, winning in <?php echo $GLOBALS['coin_brand_name']; ?> is all about colluding with other players and organizing against competing factions.  Players can form voting pools and vote together to influence the winning empire.
-	</div>
-	<div class="paragraph">
-		<h2>Voting Pools</h2>
-		<?php echo $GLOBALS['coin_brand_name']; ?>'s unique eventplay encourages stakeholders to cooperate and vote together against the other teams.  Groups can create voting pools by coding up an API endpoint which incorporates their custom voting logic.  You can assign your voting decisions to a voting pool by entering it's URL into your web wallet.
-	</div>
-	<div class="paragraph">
-		<h2><?php echo $GLOBALS['coin_brand_name']; ?> API</h2>
-		<?php echo $GLOBALS['coin_brand_name']; ?> makes it easy to set up an algorithmic voting strategy.  After signing in, choose from one of several automated voting strategies and then tweak parameters to optimize your strategy.  Or if you're a programmer, select the "Vote by API" option, download our example strategy script and then start writing code to fully customize your voting strategy.  To start coding your strategy, please read more about the <a href="/api/about/"><?php echo $GLOBALS['coin_brand_name']; ?> API</a>.
-	</div>
-	<div class="paragraph">
 		<h2>Create Your Own Coin</h2>
-		Using the <?php echo $GLOBALS['coin_brand_name']; ?> platform, anyone can create an escrow-backed blockchain event, running on top of the bitcoin blockchain or a centralized event server.  To create your own coin event, select the parameters for your event, send out game_invitations and then launch your event.  event_types can be free or paid.  For paid event_types, each player must contribute bitcoins to an escrow address.  event_types end after a certain number of rounds and then the escrowed bitcoins are paid back to the players in proportion to their final in-event balances. 
+		Using the <?php echo $GLOBALS['coin_brand_name']; ?> platform, anyone can create an escrow-backed blockchain game, running on top of the bitcoin blockchain or a centralized game server.  To create your own coin game, select the parameters for your game, send out game_invitations and then launch your game.  Games can be free or paid.  For paid games, each player must contribute bitcoins to an escrow address.  Games end after a certain number of rounds and then the escrowed bitcoins are paid back to the players in proportion to their final in-game balances. 
 	</div>
 	<div class="paragraph">
 		<h2>Get Involved</h2>
 		Are you a developer?  We'd love some help testing, fixing bugs and building new features.  To get started, please visit our Github page, build the EmpireCoin daemon from source and then start mining on our testnet.  To avoid compile errors, please use Ubuntu.<br/>
 		<a target="_blank" href="https://github.com/TeamEmpireCoin/EmpireCoin">https://github.com/TeamEmpireCoin/EmpireCoin</a>
 	</div>
-	<?php /*<div class="paragraph">
-		<h2>Proof of Burn Betting</h2>
-		In addition to <?php echo $GLOBALS['coin_brand_name']; ?>'s gamified inflation, the <?php echo $GLOBALS['coin_brand_name']; ?> protocol also enables decentralized betting through a unique proof-of-burn protocol.  By sending coins to an address like "china_wins_round_777", anyone can place a bet against other bettors.  If correct, new coins will be created and sent to the winner.
-	</div>*/ ?>
+	
+	<center><a href="" onclick="$('#homepage_more_info').toggle('fast'); return false;">Continue reading about <?php echo $GLOBALS['coin_brand_name']; ?></a></center>
+	
+	<div style="display: none;" id="homepage_more_info">
+		<div class="paragraph">
+			<h2>Strategy &amp; Gameplay</h2>
+			The winning empire for an <?php echo $GLOBALS['coin_brand_name']; ?> voting round is determined entirely by the votes of the players.  Therefore, winning in <?php echo $GLOBALS['coin_brand_name']; ?> is all about colluding with other players and organizing against competing factions.  Players can form voting pools and vote together to influence the winning empire.
+		</div>
+		<div class="paragraph">
+			<h2>Voting Pools</h2>
+			<?php echo $GLOBALS['coin_brand_name']; ?>'s unique gameplay encourages stakeholders to cooperate and vote together against the other teams.  Groups can create voting pools by coding up an API endpoint which incorporates their custom voting logic.  You can assign your voting decisions to a voting pool by entering it's URL into your web wallet.
+		</div>
+		<div class="paragraph">
+			<h2><?php echo $GLOBALS['coin_brand_name']; ?> API</h2>
+			<?php echo $GLOBALS['coin_brand_name']; ?> makes it easy to set up an algorithmic voting strategy.  After signing in, choose from one of several automated voting strategies and then tweak parameters to optimize your strategy.  Or if you're a programmer, select the "Vote by API" option, download our example strategy script and then start writing code to fully customize your voting strategy.  To start coding your strategy, please read more about the <a href="/api/about/"><?php echo $GLOBALS['coin_brand_name']; ?> API</a>.
+		</div>
+		<?php /*<div class="paragraph">
+			<h2>Proof of Burn Betting</h2>
+			In addition to <?php echo $GLOBALS['coin_brand_name']; ?>'s gamified inflation, the <?php echo $GLOBALS['coin_brand_name']; ?> protocol also enables decentralized betting through a unique proof-of-burn protocol.  By sending coins to an address like "china_wins_round_777", anyone can place a bet against other bettors.  If correct, new coins will be created and sent to the winner.
+		</div>*/ ?>
+	</div>
 </div>
 <div class="navbar navbar-default" style="margin-top: 10px; margin-bottom: 0px; color: #fff;">
 	<div class="container" style="max-width: 1000px;">

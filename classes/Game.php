@@ -578,7 +578,7 @@ class Game {
 						$pct_free = 100*$mature_balance/$user_coin_value;
 						
 						if ($pct_free >= $db_user['aggregate_threshold']) {
-							$round_stats = $this->round_voting_stats_all($current_round_id);
+							/*$round_stats = $this->round_voting_stats_all($current_round_id);
 							$sum_votes = $round_stats[0];
 							$ranked_stats = $round_stats[2];
 							$option_id2rank = $round_stats[3];
@@ -617,9 +617,9 @@ class Game {
 									}
 								}
 							}
-							
+							*/
 							if ($db_user['voting_strategy'] == "by_rank") {
-								$divide_into = count($by_rank_ranks)-$num_options_skipped;
+								/*$divide_into = count($by_rank_ranks)-$num_options_skipped;
 								
 								$coins_each = floor(($free_balance-$db_user['transaction_fee'])/$divide_into);
 								$remainder_coins = ($free_balance-$db_user['transaction_fee']) - count($by_rank_ranks)*$coins_each;
@@ -646,10 +646,10 @@ class Game {
 								$transaction_id = $this->create_transaction($option_ids, $amounts, $strategy_user->db_user['user_id'], $strategy_user->db_user['user_id'], false, 'transaction', false, false, false, $db_user['transaction_fee']);
 								
 								if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
-								else $log_text .= "Failed to add transaction.<br/>\n";
+								else $log_text .= "Failed to add transaction.<br/>\n";*/
 							}
 							else if ($db_user['voting_strategy'] == "by_option") {
-								$log_text .= "Dividing by option for ".$strategy_user->db_user['username']." (".(($free_balance-$db_user['transaction_fee'])/pow(10,8))." coins)<br/>\n";
+								/*$log_text .= "Dividing by option for ".$strategy_user->db_user['username']." (".(($free_balance-$db_user['transaction_fee'])/pow(10,8))." coins)<br/>\n";
 								
 								$mult_factor = 1;
 								if ($skipped_pct_points > 0) {
@@ -683,7 +683,7 @@ class Game {
 									
 									if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
 									else $log_text .= "Failed to add transaction.<br/>\n";
-								}
+								}*/
 							}
 							else { // by_plan
 								$log_text .= "Dividing by plan for ".$strategy_user->db_user['username']."<br/>\n";
@@ -706,7 +706,7 @@ class Game {
 									
 									for ($i=0; $i<count($allocations); $i++) {
 										$option_ids[$i] = $allocations[$i]['option_id'];
-										$amount = intval(floor(($free_balance-$db_user['transaction_fee'])*$allocations[$i]['points']/$point_sum));
+										$amount = floor(($free_balance-$db_user['transaction_fee'])*$allocations[$i]['points']/$point_sum);
 										$amounts[$i] = $amount;
 										$amount_sum += $amount;
 									}
@@ -905,7 +905,7 @@ class Game {
 			if ($current_round == 1) $show_initial = true;
 		}
 		
-		$q = "SELECT eo.*, e.*, real_winner.name AS real_winner_name, derived_winner.name AS derived_winner_name FROM event_outcomes eo JOIN events e ON eo.event_id=e.event_id LEFT JOIN options real_winner ON eo.winning_option_id=real_winner.option_id LEFT JOIN options derived_winner ON eo.derived_winning_option_id=derived_winner.option_id WHERE e.game_id='".$this->db_game['game_id']."' AND eo.round_id <= ".$max_round_id." ORDER BY eo.event_id DESC, eo.round_id DESC LIMIT ".$limit.";";
+		$q = "SELECT eo.*, e.*, real_winner.name AS real_winner_name, derived_winner.name AS derived_winner_name FROM event_outcomes eo JOIN events e ON eo.event_id=e.event_id LEFT JOIN options real_winner ON eo.winning_option_id=real_winner.option_id LEFT JOIN options derived_winner ON eo.derived_winning_option_id=derived_winner.option_id WHERE e.game_id='".$this->db_game['game_id']."' AND eo.round_id <= ".$max_round_id." GROUP BY e.event_id ORDER BY eo.event_id DESC, eo.round_id DESC LIMIT ".$limit.";";
 		$r = $this->app->run_query($q);
 		
 		$last_round_shown = 0;
@@ -1159,17 +1159,19 @@ class Game {
 		}
 	}
 	
-	public function plan_options_html($from_round, $to_round) {
+	public function plan_options_html($from_round, $to_round, $user_strategy) {
 		$html = "
 		<script type='text/javascript'>
 		var plan_option_max_points = 5;
 		var plan_option_increment = 1;
 		var plan_rounds = new Array();
 		var round_id2plan_round_id = {};
+		console.log('Running plan_options_html');
 		</script>\n";
+		$js = "";
 		$round_i = 0;
 		for ($round=$from_round; $round<=$to_round; $round++) {
-			$js = "var temp_plan_round = new plan_round(".$round.");\n";
+			$js .= "var temp_plan_round = new plan_round(".$round.");\n";
 			$js .= "round_id2plan_round_id[".$round."] = ".$round_i.";\n";
 			$block_id = ($round-1)*$this->db_game['round_length']+1;
 			$events = $this->events_by_block($block_id);
@@ -1189,12 +1191,10 @@ class Game {
 				}
 			}
 			$js .= "plan_rounds.push(temp_plan_round);\n";
-			$js .= "set_plan_round_sum(".$round_i.");\n";
-			$js .= "render_plan_round(".$round_i.");\n";
-			$html .= "</div>\n<script type='text/javascript'>".$js."</script>\n";
+			$html .= "</div>\n";
 			$round_i++;
 		}
-		$html .= '<script type="text/javascript">set_plan_rightclicks();</script>'."\n";
+		$html .= '<script type="text/javascript">'.$js."\n".$this->load_all_event_points_js(0, $user_strategy)."\nset_plan_rightclicks();\nset_plan_round_sums();\nrender_plan_rounds();\n</script>\n";
 		return $html;
 	}
 	
@@ -1321,7 +1321,18 @@ class Game {
 			else $html .= "This game starts in ".$this->app->format_seconds(strtotime($this->db_game['start_datetime'])-time())." at ".$this->db_game['start_datetime'];
 		}
 		else if ($this->db_game['game_status'] == "completed") $html .= "This game is over.";
-
+		
+		if ($this->db_game['game_winning_rule'] == "event_points") {
+			$q = "SELECT * FROM events ev JOIN options o ON ev.event_id=o.event_id JOIN entities en ON o.entity_id=en.entity_id WHERE ev.game_id='".$this->db_game['game_id']."' GROUP BY en.entity_id ORDER BY en.entity_id ASC;";
+			$r = $this->app->run_query($q);
+			while ($entity = $r->fetch()) {
+				$qq = "SELECT COUNT(*), SUM(en.".$this->db_game['game_winning_field'].") points FROM event_outcomes eo JOIN options op ON eo.winning_option_id=op.option_id JOIN events ev ON eo.event_id=ev.event_id JOIN event_types et ON ev.event_type_id=et.event_type_id JOIN entities en ON et.entity_id=en.entity_id WHERE ev.game_id='".$this->db_game['game_id']."' AND op.entity_id='".$entity['entity_id']."';";
+				$rr = $this->app->run_query($qq);
+				$info = $rr->fetch();
+				$info['points'] = (int) $info['points'];
+				$html .= "<div class=\"row\"><div class=\"col-sm-3\">".$entity['entity_name']."</div><div class=\"col-sm-3\">".$info["points"]." electoral votes</div></div>\n";
+			}
+		}
 		return $html;
 	}
 	
@@ -1440,27 +1451,31 @@ class Game {
 		$q = "DELETE FROM strategy_round_allocations WHERE strategy_id='".$strategy['strategy_id']."' AND round_id >= ".$from_round." AND round_id <= ".$to_round.";";
 		$r = $this->app->run_query($q);
 		
-		$db_voting_options = array();
-		$q = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."';";
-		$r = $this->app->run_query($q);
-		$num_voting_options = $r->rowCount();
-		while ($db_voting_options[count($db_voting_options)] = $r->fetch()) {}
-		
 		for ($round_id=$from_round; $round_id<=$to_round; $round_id++) {
+			$block_id = ($round_id-1)*$this->db_game['round_length']+1;
+			$events = $this->events_by_block($block_id);
+			$option_list = array();
+			for ($e=0; $e<count($events); $e++) {
+				$qq = "SELECT * FROM options WHERE event_id='".$events[$e]->db_event['event_id']."' ORDER BY option_id ASC;";
+				$rr = $this->app->run_query($qq);
+				while ($option = $rr->fetch()) {
+					$option_list[count($option_list)] = $option;
+				}
+			}
 			$used_option_ids = false;
 			for ($i=0; $i<count($weight_map); $i++) {
-				$option_index = rand(0,$num_voting_options-1);
-				if (empty($used_option_ids[$option_index])) {
+				$option_index = rand(0, count($option_list)-1);
+				if (empty($used_option_ids[$option_list[$option_index]['option_id']])) {
 					$points = round($weight_map[$i]*rand(1, 5));
-				
-					$qq = "INSERT INTO strategy_round_allocations SET strategy_id='".$strategy['strategy_id']."', round_id='".$round_id."', option_id='".$db_voting_options[$option_index]['option_id']."', points='".$points."';";
+					
+					$qq = "INSERT INTO strategy_round_allocations SET strategy_id='".$strategy['strategy_id']."', round_id='".$round_id."', option_id='".$option_list[$option_index]['option_id']."', points='".$points."';";
 					$rr = $this->app->run_query($qq);
-					$used_option_ids[$option_index] = true;
+					$used_option_ids[$option_list[$option_index]['option_id']] = true;
 				}
 			}
 		}
 	}
-
+	
 	public function coind_add_block(&$coin_rpc, $block_hash, $block_height, $headers_only) {
 		$start_time = microtime(true);
 		$html = "";
@@ -2011,7 +2026,7 @@ class Game {
 	public function load_current_events() {
 		$this->current_events = array();
 		$mining_block_id = $this->last_block_id()+1;
-		$q = "SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id WHERE ev.game_id='".$this->db_game['game_id']."' AND ev.event_starting_block<=".$mining_block_id." AND ev.event_final_block>=".$mining_block_id." ORDER BY ev.event_id ASC;";
+		$q = "SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities en ON et.entity_id=en.entity_id WHERE ev.game_id='".$this->db_game['game_id']."' AND ev.event_starting_block<=".$mining_block_id." AND ev.event_final_block>=".$mining_block_id." ORDER BY ev.event_id ASC;";
 		$r = $this->app->run_query($q);
 		while ($db_event = $r->fetch()) {
 			$this->current_events[count($this->current_events)] = new Event($this, $db_event, false);
@@ -2020,7 +2035,7 @@ class Game {
 	
 	public function events_by_block($block_id) {
 		$events = array();
-		$q = "SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id WHERE ev.game_id='".$this->db_game['game_id']."' AND ev.event_starting_block<=".$block_id." AND ev.event_final_block>=".$block_id." ORDER BY ev.event_id ASC;";
+		$q = "SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities en ON et.entity_id=en.entity_id WHERE ev.game_id='".$this->db_game['game_id']."' AND ev.event_starting_block<=".$block_id." AND ev.event_final_block>=".$block_id." ORDER BY ev.event_id ASC;";
 		$r = $this->app->run_query($q);
 		while ($db_event = $r->fetch()) {
 			$events[count($events)] = new Event($this, $db_event, false);
@@ -2315,6 +2330,31 @@ class Game {
 		$html .= '<script type="text/javascript">'.$js."</script>\n";
 		
 		return $html;
+	}
+	public function load_all_event_points_js($game_index, $user_strategy) {
+		$js = "";
+		$q = "SELECT * FROM events e JOIN event_types t ON e.event_type_id=t.event_type_id WHERE e.game_id='".$this->db_game['game_id']."' ORDER BY e.event_id ASC;";
+		$r = $this->app->run_query($q);
+		$i=0;
+		while ($db_event = $r->fetch()) {
+			$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY option_id ASC;";
+			$option_r = $this->app->run_query($option_q);
+			$j=0;
+			while ($option = $option_r->fetch()) {
+				$qq = "SELECT * FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND option_id='".$option['option_id']."';";
+				$rr = $this->app->run_query($qq);
+				if ($rr->rowCount() > 0) {
+					$sra = $rr->fetch();
+					$points = $sra['points'];
+				}
+				else $points = 0;
+				
+				$js .= "games[".$game_index."].all_events[".$i."].options[".$j."].points = ".$points.";\n";
+				$j++;
+			}
+			$i++;
+		}
+		return $js;
 	}
 }
 ?>

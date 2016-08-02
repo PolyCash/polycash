@@ -141,7 +141,7 @@ class App {
 							$event_type = $rr->fetch();
 						}
 						else {
-							$qq = "INSERT INTO event_types SET option_group_id='".$game_type['option_group_id']."', name='".$event_type_name."', url_identifier=".$this->quote_escape($event_type_identifier).", num_voting_options='".count($db_option_entities)."', vote_effectiveness_function='".$game_type['default_vote_effectiveness_function']."', max_voting_fraction='".$game_type['default_max_voting_fraction']."';";
+							$qq = "INSERT INTO event_types SET option_group_id='".$game_type['option_group_id']."', entity_id='".$event_entity['entity_id']."', name='".$event_type_name."', url_identifier=".$this->quote_escape($event_type_identifier).", num_voting_options='".count($db_option_entities)."', vote_effectiveness_function='".$game_type['default_vote_effectiveness_function']."', max_voting_fraction='".$game_type['default_max_voting_fraction']."';";
 							$rr = $this->run_query($qq);
 							$event_type_id = $this->last_insert_id();
 							
@@ -714,7 +714,7 @@ class App {
 			<?php
 			echo '<div class="col-md-'.$cell_width.'">';
 			echo '<center><h1 style="display: inline-block" title="'.$featured_game->game_description().'">'.$featured_game->db_game['name'].'</h1>';
-			if ($featured_game->db_game['short_description'] != "") echo "<br/>".$featured_game->db_game['short_description'];
+			if ($featured_game->db_game['short_description'] != "") echo "<p>".$featured_game->db_game['short_description']."</p>";
 			
 			echo '<div id="game'.$counter.'_events"></div>';
 			echo '<script type="text/javascript" id="game'.$counter.'_new_event_js">'.$featured_game->new_event_js($counter, false).'</script>';

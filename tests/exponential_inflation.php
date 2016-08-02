@@ -2,7 +2,7 @@
 include("../includes/connect.php");
 
 $event_id = intval($_REQUEST['event_id']);
-$event = new Event($app, $event_id);
+$event = new Event($app, false, $event_id);
 
 echo "Initial coins in ".$event->db_event['name'].": ".$event->db_event['initial_coins']/pow(10,8).", inflation is ".(100*$event->db_event['exponential_inflation_rate'])."% ";
 echo "(".(100*$event->db_event['exponential_inflation_rate']*(1-$event->db_event['exponential_inflation_minershare']))."% to stakeholders)<br/>\n";
