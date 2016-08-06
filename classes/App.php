@@ -93,7 +93,7 @@ class App {
 	}
 	
 	public function generate_game_by_type($game_type) {
-		$skip_game_type_vars = explode(",", "event_rule,event_entity_type_id,option_group_id,events_per_round,url_identifier,target_open_games,default_vote_effectiveness_function,default_max_voting_fraction,event_type_name");
+		$skip_game_type_vars = explode(",", "event_rule,event_entity_type_id,option_group_id,events_per_round,url_identifier,target_open_games,default_vote_effectiveness_function,default_max_voting_fraction,event_type_name,default_option_max_width");
 		$url_identifier = $this->game_url_identifier($game_type['name']);
 		$q = "INSERT INTO games SET url_identifier=".$this->quote_escape($url_identifier).", ";
 		foreach ($game_type AS $var => $val) {
