@@ -153,8 +153,8 @@ class Event {
 		
 		$html = '<div id="game'.$game_instance_id.'_event'.$game_event_index.'_round_table" class="round_table">';
 		
-		$max_circle_diam = 120;
-		$sq_px_per_pct_point = pow($max_circle_diam, 2)/100;
+		$option_max_width = $this->db_event['option_max_width'];
+		$sq_px_per_pct_point = pow($option_max_width, 2)/100;
 		$min_px_diam = 30;
 		
 		if ($block_within_round != $this->game->db_game['round_length']) $html .= "<h2>".$this->db_event['event_name']."</h2>\n";
