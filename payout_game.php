@@ -76,7 +76,8 @@ if ($thisuser) {
 						$coins_in_existence = $payout_game_obj->coins_in_existence(false);
 						
 						while ($temp_user_game = $rr->fetch()) {
-							$payout_frac = account_coin_value($payout_game, $temp_user_game)/$coins_in_existence;
+							$temp_user = new User($app, $temp_user_game['user_id']);
+							$payout_frac = $temp_user->account_coin_value($payout_game_obj)/$coins_in_existence;
 							$payout_amt = floor($payout_frac*($total-$fee_satoshis));
 							
 							if ($temp_user_game['bitcoin_address_id'] > 0) {
@@ -92,7 +93,7 @@ if ($thisuser) {
 						$profit_satoshis = $total - $fee_satoshis - $output_sum;
 						if ($profit_satoshis > 0) {
 							if (!$GLOBALS['profit_btc_address']) {
-								output_message(6, 'You made a profit but no BTC profit address was specified. Please set $GLOBALS[\'profit_btc_address\'] to a BTC address in your includes/config.php');
+								$app->output_message(6, 'You made a profit but no BTC profit address was specified. Please set $GLOBALS[\'profit_btc_address\'] to a BTC address in your includes/config.php');
 								die();
 							}
 							else {
@@ -102,17 +103,22 @@ if ($thisuser) {
 						
 						try {
 							$raw_transaction = $coin_rpc->createrawtransaction($raw_txin, $raw_txout);
-							$signed_raw_transaction = $coin_rpc->signrawtransaction($raw_transaction, $sign_arr1);
+							try {
+								$signed_raw_transaction = $coin_rpc->signrawtransaction($raw_transaction, $sign_arr1);
 							
-							if ($signed_raw_transaction['complete'] == 1) {
-								output_message(1, "Great, the transaction has been created and signed: ".$signed_raw_transaction['hex']);
+								if ($signed_raw_transaction['complete'] == 1) {
+									$app->output_message(1, "Great, the transaction has been created and signed: ".$signed_raw_transaction['hex']);
+								}
+								else {
+									$app->output_message(2, $raw_transaction);
+								}
 							}
-							else {
-								output_message(2, $raw_transaction);
+							catch (Exception $e) {
+								$app->output_message(8, $raw_transaction);
 							}
 						}
 						catch (Exception $e) {
-							output_message(3, $e);
+							$app->output_message(3, $e);
 						}
 					}
 				}
@@ -289,7 +295,6 @@ if ($thisuser) {
 							<?php
 						}
 						catch (Exception $e) {
-var_dump($e);
 							echo "Failed to connect to Bitcoin by RPC. Please connect to bitcoin and then reload this page.<br/>\n";
 							echo "Or sweep all bitcoins from these deposit addresses, then manually send bitcoins to players' addresses.<br/>\n";
 							echo $addr_html."<br/>\n";
