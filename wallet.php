@@ -617,7 +617,7 @@ if ($thisuser && $game) {
 		<div class="row">
 			<div id="tabcontent0" class="tabcontent">
 				<?php
-				$game_status_explanation = $game->game_status_explanation();
+				$game_status_explanation = $game->game_status_explanation($thisuser);
 				?>
 				<div id="game_status_explanation"<?php if ($game_status_explanation == "") echo ' style="display: none;"'; ?>><?php if ($game_status_explanation != "") echo $game_status_explanation; ?></div>
 

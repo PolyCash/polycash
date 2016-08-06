@@ -42,7 +42,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	$output['event_loop_index'] = $event_loop_index;
 	
 	$output['min_bet_round'] = $bet_round_range[0];
-	$output['game_status_explanation'] = $game->game_status_explanation();
+	$output['game_status_explanation'] = $game->game_status_explanation($thisuser);
 	
 	if ($bet_round_range[0] != $_REQUEST['min_bet_round']) {
 		$output['select_bet_round'] = $game->select_bet_round($current_round);

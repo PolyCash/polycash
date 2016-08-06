@@ -6,12 +6,15 @@ class Game {
 	
 	public function __construct(&$app, $game_id) {
 		$this->app = $app;
-		
-		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
-		$r = $this->app->run_query($q);
-		$this->db_game = $r->fetch() or die("Error, could not load game #".$game_id);
-		
+		$this->game_id = $game_id;
+		$this->update_db_game();
 		$this->load_current_events();
+	}
+	
+	public function update_db_game() {
+		$q = "SELECT * FROM games WHERE game_id='".$this->game_id."';";
+		$r = $this->app->run_query($q);
+		$this->db_game = $r->fetch() or die("Error, could not load game #".$this->game_id);
 	}
 	
 	public function current_block() {
@@ -85,7 +88,7 @@ class Game {
 		else if ($utxo_balance == $amount || (!$io_ids && $amount <= $mature_balance)) $amount_ok = true;
 		else $amount_ok = false;
 		
-		if ($amount_ok && (count($option_ids) == count($amounts) || ($type == "bet" && count($amounts) == count($address_ids)))) {
+		if ($amount_ok && (count($option_ids) == count($amounts) || ($option_ids === false && count($amounts) == count($address_ids)))) {
 			// For real games, don't insert a tx record, it will come in via walletnotify
 			if ($this->db_game['game_type'] != "real") {
 				$q = "INSERT INTO transactions SET game_id='".$this->db_game['game_id']."', fee_amount='".$transaction_fee."', has_all_inputs=1, has_all_outputs=1";
@@ -180,7 +183,7 @@ class Game {
 							if ($instantly_mature == 1) $q .= "unspent";
 							else $q .= "unconfirmed";
 							$q .= "', out_index='".$out_index."', ";
-							if ($to_user_id) $q .= "user_id='".$to_user_id."', ";
+							if (!empty($address['user_id'])) $q .= "user_id='".$address['user_id']."', ";
 							$q .= "address_id='".$address_id."', ";
 							if ($address['option_id'] > 0) {
 								$q .= "option_id='".$address['option_id']."', event_id='".$address['event_id']."', ";
@@ -426,14 +429,74 @@ class Game {
 		}
 		
 		$this->update_option_votes();
+		$this->check_set_game_over();
 		
 		return $log_text;
 	}
 	
-	public function set_game_completed() {
-		$q = "UPDATE games SET game_status='completed', completion_datetime=NOW() WHERE game_id='".$this->game->db_game['game_id']."';";
+	public function check_set_game_over() {
+		if ($this->db_game['final_round'] > 0) {
+			$this->update_db_game();
+			if ($this->db_game['game_status'] != "completed") {
+				$last_block_id = $this->last_block_id();
+				$mining_block_id = $last_block_id+1;
+				$current_round = $this->block_to_round($mining_block_id);
+				if ($current_round > $this->db_game['final_round']) {
+					$this->set_game_over();
+				}
+			}
+		}
+	}
+	
+	public function set_game_over() {		
+		$q = "UPDATE games SET game_status='completed', completion_datetime=NOW() WHERE game_id='".$this->db_game['game_id']."';";
 		$r = $this->app->run_query($q);
 		$this->db_game['game_status'] = "completed";
+		
+		if ($this->db_game['game_winning_rule'] == "event_points") {
+			$entity_score_info = $this->entity_score_info();
+			
+			if (!empty($entity_score_info['winning_entity_id'])) {
+				$coins_in_existence = $this->coins_in_existence(false);
+				$payout_amount = floor(((float)$coins_in_existence)*$this->db_game['game_winning_inflation']);
+				if ($payout_amount > 0) {
+					$game_votes_q = "SELECT SUM(io.votes) FROM options o JOIN addresses a ON o.option_id=a.option_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN entities e ON o.entity_id=e.entity_id WHERE io.game_id='".$this->db_game['game_id']."';";
+					$game_votes_r = $this->app->run_query($game_votes_q);
+					$game_votes_total = $game_votes_r->fetch()['SUM(io.votes)'];
+					
+					$winner_votes_q = "SELECT SUM(io.votes) FROM options o JOIN addresses a ON o.option_id=a.option_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN entities e ON o.entity_id=e.entity_id WHERE io.game_id='".$this->db_game['game_id']."' AND e.entity_id='".$entity_score_info['winning_entity_id']."';";
+					$winner_votes_r = $this->app->run_query($winner_votes_q);
+					$winner_votes_total = $winner_votes_r->fetch()['SUM(io.votes)'];
+					
+					echo "payout ".$this->app->format_bignum($payout_amount/pow(10,8))." coins to ".$entity_score_info['entities'][$entity_score_info['winning_entity_id']]['entity_name']." (".$this->app->format_bignum($winner_votes_total/pow(10,8))." total votes)<br/>\n";
+					
+					$payout_io_q = "SELECT * FROM options o JOIN addresses a ON o.option_id=a.option_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN entities e ON o.entity_id=e.entity_id WHERE io.game_id='".$this->db_game['game_id']."' AND e.entity_id='".$entity_score_info['winning_entity_id']."';";
+					$amounts = array();
+					$address_ids = array();
+					$payout_io_r = $this->app->run_query($payout_io_q);
+					
+					while ($payout_io = $payout_io_r->fetch()) {
+						$payout_frac = round(pow(10,8)*$payout_io['votes']/$winner_votes_total)/pow(10,8);
+						$payout_io_amount = floor($payout_frac*$payout_amount);
+						
+						if ($payout_io_amount > 0) {
+							$vout = count($amounts);
+							$amounts[$vout] = $payout_io_amount;
+							$address_ids[$vout] = $payout_io['address_id'];
+							echo "pay ".$this->app->format_bignum($payout_io_amount/pow(10,8))." to ".$payout_io['address']."<br/>\n";
+						}
+					}
+					$last_block_id = $this->last_block_id();
+					$transaction_id = $this->create_transaction(false, $amounts, false, false, false, "votebase", false, $address_ids, false, 0);
+					$q = "UPDATE transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id SET t.block_id='".$last_block_id."', t.round_id='".$this->block_to_round($last_block_id)."', io.spend_status='unspent', io.create_block_id='".$last_block_id."', io.create_round_id='".$this->block_to_round($last_block_id)."' WHERE t.transaction_id='".$transaction_id."';";
+					$r = $this->app->run_query($q);
+					$this->refresh_coins_in_existence();
+
+					$q = "UPDATE games SET game_winning_transaction_id='".$transaction_id."', winning_entity_id='".$entity_score_info['winning_entity_id']."' WHERE game_id='".$this->db_game['game_id']."';";
+					$r = $this->app->run_query($q);
+				}
+			}
+		}
 	}
 	
 	public function apply_user_strategies() {
@@ -1314,7 +1377,65 @@ class Game {
 		return $email_id;
 	}
 	
-	public function game_status_explanation() {
+	public function entity_score_info($user) {
+		$return_obj = false;
+		
+		if ($user) {
+			$qq = "SELECT SUM(io.votes), COUNT(*) FROM options o JOIN addresses a ON o.option_id=a.option_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN entities e ON o.entity_id=e.entity_id WHERE io.game_id='".$this->db_game['game_id']."' AND a.user_id='".$user->db_user['user_id']."';";
+			$rr = $this->app->run_query($qq);
+			$user_entity_votes_total = $rr->fetch();
+			$return_obj['user_entity_votes_total'] = $user_entity_votes_total['SUM(io.votes)'];
+		}
+		
+		$return_rows = false;
+		$q = "SELECT * FROM events ev JOIN options o ON ev.event_id=o.event_id JOIN entities en ON o.entity_id=en.entity_id WHERE ev.game_id='".$this->db_game['game_id']."' GROUP BY en.entity_id ORDER BY en.entity_id ASC;";
+		$r = $this->app->run_query($q);
+		
+		while ($entity = $r->fetch()) {
+			$qq = "SELECT COUNT(*), SUM(en.".$this->db_game['game_winning_field'].") points FROM event_outcomes eo JOIN options op ON eo.winning_option_id=op.option_id JOIN events ev ON eo.event_id=ev.event_id JOIN event_types et ON ev.event_type_id=et.event_type_id JOIN entities en ON et.entity_id=en.entity_id WHERE ev.game_id='".$this->db_game['game_id']."' AND op.entity_id='".$entity['entity_id']."';";
+			$rr = $this->app->run_query($qq);
+			$info = $rr->fetch();
+			
+			$return_rows[$entity['entity_id']]['points'] = (int) $info['points'];
+			$return_rows[$entity['entity_id']]['entity_name'] = $entity['entity_name'];
+			
+			$entity_my_pct = false;
+			if ($user) {
+				$qq = "SELECT SUM(io.votes), COUNT(*) FROM options o JOIN addresses a ON o.option_id=a.option_id JOIN transaction_ios io ON a.address_id=io.address_id WHERE io.game_id='".$this->db_game['game_id']."' AND a.user_id='".$user->db_user['user_id']."' AND o.entity_id='".$entity['entity_id']."';";
+				$rr = $this->app->run_query($qq);
+				$user_entity_votes = $rr->fetch();
+				
+				$return_rows[$entity['entity_id']]['my_votes'] = $user_entity_votes['SUM(io.votes)'];
+				if ($return_obj['user_entity_votes_total'] > 0) $return_rows[$entity['entity_id']]['my_pct'] = 100*$user_entity_votes['SUM(io.votes)']/$return_obj['user_entity_votes_total'];
+				else $return_rows[$entity['entity_id']]['my_pct'] = 0;
+			}
+		}
+		$returnvals['entities'] = $return_rows;
+
+		if ($this->db_game['game_winning_rule'] == "event_points") {
+			$max_points = 0;
+			$winning_entity_ids = array();
+			foreach ($return_rows as $entity_id => $entity_info) {
+				if ($entity_info['points'] > 0) {
+					if ($entity_info['points'] == $max_points) {
+						$winning_entity_ids[count($winning_entity_ids)] = $entity_id;
+					}
+					else if ($entity_info['points'] > $max_points) {
+						$winning_entity_ids = array($entity_id);
+						$max_points = $entity_info['points'];
+					}
+				}
+			}
+			if (count($winning_entity_ids) == 1) {
+				$returnvals['winning_entity_id'] = $winning_entity_ids[0];
+				$returnvals['winning_entity_points'] = $max_points;
+			}
+		}
+		
+		return $returnvals;
+	}
+	
+	public function game_status_explanation($user) {
 		$html = "";
 		if ($this->db_game['game_status'] == "editable") $html .= "The game creator hasn't yet published this game; it's parameters can still be changed.";
 		else if ($this->db_game['game_status'] == "published") {
@@ -1330,15 +1451,30 @@ class Game {
 		else if ($this->db_game['game_status'] == "completed") $html .= "This game is over.";
 		
 		if ($this->db_game['game_winning_rule'] == "event_points") {
-			$q = "SELECT * FROM events ev JOIN options o ON ev.event_id=o.event_id JOIN entities en ON o.entity_id=en.entity_id WHERE ev.game_id='".$this->db_game['game_id']."' GROUP BY en.entity_id ORDER BY en.entity_id ASC;";
-			$r = $this->app->run_query($q);
-			while ($entity = $r->fetch()) {
-				$qq = "SELECT COUNT(*), SUM(en.".$this->db_game['game_winning_field'].") points FROM event_outcomes eo JOIN options op ON eo.winning_option_id=op.option_id JOIN events ev ON eo.event_id=ev.event_id JOIN event_types et ON ev.event_type_id=et.event_type_id JOIN entities en ON et.entity_id=en.entity_id WHERE ev.game_id='".$this->db_game['game_id']."' AND op.entity_id='".$entity['entity_id']."';";
-				$rr = $this->app->run_query($qq);
-				$info = $rr->fetch();
-				$info['points'] = (int) $info['points'];
-				$html .= "<div class=\"row\"><div class=\"col-sm-3\">".$entity['entity_name']."</div><div class=\"col-sm-3\">".$info["points"]." electoral votes</div></div>\n";
+			$entity_score_info = $this->entity_score_info($user);
+			if (!empty($entity_score_info['winning_entity_id'])) {
+				$html .= "<h3>".$entity_score_info['entities'][$entity_score_info['winning_entity_id']]['entity_name']." ";
+				if ($this->db_game['game_status'] == "completed") $html .= "wins";
+				else $html .= "is winning";
+				$html .= " with ".$entity_score_info['entities'][$entity_score_info['winning_entity_id']]['points']." electoral votes</h3>";
 			}
+			else $html .= "<h3>Current Scores</h3>";
+			
+			if ($user && !empty($this->db_game['game_winning_transaction_id'])) {
+				$q = "SELECT SUM(amount) FROM addresses a JOIN transaction_ios io ON a.address_id=io.address_id WHERE a.user_id='".$user->db_user['user_id']."' AND io.create_transaction_id='".$this->db_game['game_winning_transaction_id']."';";
+				$r = $this->app->run_query($q);
+				$game_winning_amount = $r->fetch()['SUM(amount)'];
+				$html .= "You won <font class=\"greentext\">".$this->app->format_bignum($game_winning_amount/pow(10,8))."</font> ".$this->db_game['coin_name_plural']." in the end-of-game payout.<br/>\n";
+			}
+			
+			foreach ($entity_score_info['entities'] as $entity_id => $entity_info) {
+				$html .= "<div class=\"row\"><div class=\"col-sm-3\">".$entity_info['entity_name']."</div><div class=\"col-sm-3\">".$entity_info['points']." electoral votes</div>";
+				if ($user) {
+					$html .= "<div class=\"col-sm-3\">".$this->app->format_bignum($entity_info['my_pct'])."% of my votes</div>";
+				}
+				$html .= "</div>\n";
+			}
+			$html .= "<br/>\n";
 		}
 		return $html;
 	}
@@ -1922,6 +2058,13 @@ class Game {
 		return $returnvals;
 	}
 
+	public function refresh_coins_in_existence() {
+		$last_block_id = $this->last_block_id();
+		$q = "UPDATE games SET coins_in_existence_block=0 WHERE game_id='".$this->db_game['game_id']."';";
+		$r = $this->app->run_query($q);
+		$coi = $this->coins_in_existence($last_block_id);
+	}
+	
 	public function coins_in_existence($block_id) {
 		$last_block_id = $this->last_block_id();
 		

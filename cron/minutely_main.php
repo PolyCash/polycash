@@ -112,19 +112,22 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 							$remaining_prob = round($loop_target_time/$running_games[$running_game_i]->db_game['seconds_per_block'], 4);
 							$thisgame_loop_start_time = microtime(true);
 							do {
-								$last_block_id = $running_games[$running_game_i]->last_block_id();
+								$running_games[$running_game_i]->update_db_game();
+								if ($running_games[$running_game_i]->db_game['game_status'] == "running") {
+									$last_block_id = $running_games[$running_game_i]->last_block_id();
 								
-								$block_prob = min(1, $remaining_prob);
-								$remaining_prob = $remaining_prob-$block_prob;
-								$rand_num = rand(0, pow(10,4))/pow(10,4);
-								if (!empty($_REQUEST['force_new_block'])) $rand_num = 0;
+									$block_prob = min(1, $remaining_prob);
+									$remaining_prob = $remaining_prob-$block_prob;
+									$rand_num = rand(0, pow(10,4))/pow(10,4);
+									if (!empty($_REQUEST['force_new_block'])) $rand_num = 0;
 								
-								echo $running_games[$running_game_i]->db_game['name']." (".$rand_num." vs ".$block_prob."): ";
-								if ($rand_num <= $block_prob) {
-									echo $running_games[$running_game_i]->new_block();
-								}
-								else {
-									echo "No block<br/>\n";
+									echo $running_games[$running_game_i]->db_game['name']." (".$rand_num." vs ".$block_prob."): ";
+									if ($rand_num <= $block_prob) {
+										echo $running_games[$running_game_i]->new_block();
+									}
+									else {
+										echo "No block<br/>\n";
+									}
 								}
 							}
 							while ($remaining_prob > 0 && microtime(true)-$thisgame_loop_start_time < 60);
