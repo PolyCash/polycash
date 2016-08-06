@@ -164,7 +164,7 @@ class App {
 						$event_starting_block = ($starting_round-1)*$game_type['round_length']+1;
 						$event_final_block = $starting_round*$game_type['round_length'];
 						
-						$qq = "INSERT INTO events SET game_id='".$game_id."', event_type_id='".$event_type['event_type_id']."', event_starting_block='".$event_starting_block."', event_final_block='".$event_final_block."', event_name=".$this->quote_escape($event_type_name).", option_name=".$this->quote_escape($option_group['option_name']).", option_name_plural=".$this->quote_escape($option_group['option_name_plural']).";";
+						$qq = "INSERT INTO events SET game_id='".$game_id."', event_type_id='".$event_type['event_type_id']."', event_starting_block='".$event_starting_block."', event_final_block='".$event_final_block."', event_name=".$this->quote_escape($event_type_name).", option_name=".$this->quote_escape($option_group['option_name']).", option_name_plural=".$this->quote_escape($option_group['option_name_plural']).", option_max_width='".$game_type['default_option_max_width']."';";
 						$rr = $this->run_query($qq);
 						$event_id = $this->last_insert_id();
 						

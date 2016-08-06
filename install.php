@@ -115,33 +115,44 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				}
 				</script>
 				<?php
-				if ($GLOBALS['rsa_pub_key'] != "") { ?>
+				if (!empty($GLOBALS['rsa_pub_key']) && !empty($GLOBALS['bitcoin_port']) && !empty($GLOBALS['bitcoin_rpc_user']) && !empty($GLOBALS['bitcoin_rpc_password'])) { ?>
 					Great, it looks like you've already configured an RSA key for accepting Bitcoin payments.
 					<br/>
 					<?php
 				}
-				else { ?>
-					You have not yet specified an RSA keypair for accepting Bitcoin payments.<br/>
-					To allow private event_types to accept Bitcoin payments, please generate an RSA key pair.<br/>
-					<button class="btn btn-primary" onclick="generate_keypair();">Generate RSA Keypair</button>
-					<br/>
-					<div id="keypair_details" style="display: none; border: 1px solid #aaa; padding: 10px; margin-top: 10px;">
-						<b>A new RSA keypair has just been generated.</b><br/>
+				else {
+					if (empty($GLOBALS['rsa_pub_key'])) { ?>
+						You have not yet specified an RSA keypair for accepting Bitcoin payments.<br/>
+						To allow private event_types to accept Bitcoin payments, please generate an RSA key pair.<br/>
+						<button class="btn btn-primary" onclick="generate_keypair();">Generate RSA Keypair</button>
 						<br/>
-						This is your <font class="greentext">public key</font>. Copy and save your public key into includes/config.php.
-						<input type="text" id="pub_key_disp" class="form-control" /><br/>
-						This is your <font class="redtext">private key</font>. Save it somewhere safe.
-						<input type="text" id="priv_key_disp" class="form-control" />
-						<br/>
-						Add your public key into includes/config.php like this:<br/>
-						<pre id="pub_key_config_line"></pre>
-						But replace 'myname@myemailprovider.com' with an email address.  This email address will not be shown to anyone but will receive an email prompting you to enter your private key whenever a event that you administer finishes.<br/>
-						<br/>
-						After saving your public key in includes/config.php, save your private key somewhere safe. Your public key can be derived from your private key. Next <a href="" onclick="window.location=window.location;">click here</a> to reload this page.<br/>
-						<br/>
-						If you lose or leak your private key, all escrowed bitcoins on this site will be irrevocably lost.<br/>
+						<div id="keypair_details" style="display: none; border: 1px solid #aaa; padding: 10px; margin-top: 10px;">
+							<b>A new RSA keypair has just been generated.</b><br/>
+							<br/>
+							This is your <font class="greentext">public key</font>. Copy and save your public key into includes/config.php.
+							<input type="text" id="pub_key_disp" class="form-control" /><br/>
+							This is your <font class="redtext">private key</font>. Save it somewhere safe.
+							<input type="text" id="priv_key_disp" class="form-control" />
+							<br/>
+							Add your public key into includes/config.php like this:<br/>
+							<pre id="pub_key_config_line"></pre>
+							But replace 'myname@myemailprovider.com' with an email address.  This email address will not be shown to anyone but will receive an email prompting you to enter your private key whenever a event that you administer finishes.<br/>
+							<br/>
+							After saving your public key in includes/config.php, save your private key somewhere safe. Your public key can be derived from your private key. Next <a href="" onclick="window.location=window.location;">click here</a> to reload this page.<br/>
+							<br/>
+							If you lose or leak your private key, all escrowed bitcoins on this site will be irrevocably lost.<br/>
 						
-					</div>
+						</div>
+						<br/>
+						<?php
+					}
+					?>
+					Then enter your Bitcoin RPC credentials by adding the following lines to your includes/config.php:
+<pre>
+$GLOBALS['bitcoin_port'] = 8332;
+$GLOBALS['bitcoin_rpc_user'] = ""; // RPC username here
+$GLOBALS['bitcoin_rpc_password'] = ""; // RPC password here
+</pre>
 					<?php
 				}
 				?>
