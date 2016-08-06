@@ -786,7 +786,7 @@ class Game {
 			
 			for ($i=0; $i<count($invite_user_ids); $i++) {
 				$invitation = false;
-				$this->generate_invitation($this->db_event['creator_id'], $invitation, $invite_user_ids[$i]);
+				$this->generate_invitation($this->db_game['creator_id'], $invitation, $invite_user_ids[$i]);
 				$invite_event = false;
 				$this->app->try_apply_invite_key($invite_user_ids[$i], $invitation['invitation_key'], $invite_event);
 			}
@@ -1100,7 +1100,9 @@ class Game {
 	}
 	
 	public function generate_invitation($inviter_id, &$invitation, $user_id) {
-		$q = "INSERT INTO game_invitations SET game_id='".$this->db_game['game_id']."', inviter_id=".$inviter_id.", invitation_key='".strtolower($this->app->random_string(32))."', time_created='".time()."'";
+		$q = "INSERT INTO game_invitations SET game_id='".$this->db_game['game_id']."'";
+		if ($inviter_id > 0) $q .= ", inviter_id=".$inviter_id;
+		$q .= ", invitation_key='".strtolower($this->app->random_string(32))."', time_created='".time()."'";
 		if ($user_id) $q .= ", used_user_id='".$user_id."'";
 		$q .= ";";
 		$r = $this->app->run_query($q);
@@ -1276,22 +1278,27 @@ class Game {
 			$subject .= ". Join by paying ".$this->app->format_bignum($this->db_game['invite_cost'])." ".$invite_currency['short_name']."s for ".$this->app->format_bignum($this->db_game['giveaway_amount']/pow(10,8))." ".$this->db_game['coin_name_plural'].".";
 		}
 		else {
-			$subject .= ". Get ".$this->app->format_bignum($this->db_game['giveaway_amount']/pow(10,8))." ".$this->db_game['coin_name_plural']." for free by accepting this invitation.";
+			$subject .= ". Join now & get ".$this->app->format_bignum($this->db_game['giveaway_amount']/pow(10,8))." ".$this->db_game['coin_name_plural']." for free.";
 		}
 		
 		$message = "<p>";
-		if ($this->db_game['inflation'] == "exponential") {}
-		else if ($this->db_game['inflation'] == "linear") $message .= $this->db_game['name']." is a cryptocurrency which generates ".$coins_per_hour." ".$this->db_game['coin_name_plural']." per hour. ";
-		else $message .= $this->db_game['name']." is a cryptocurrency with ".($this->db_game['exponential_inflation_rate']*100)."% inflation every ".$this->app->format_seconds($seconds_per_round).". ";
-		$message .= $miner_pct."% is given to miners for securing the network and the remaining ".(100-$miner_pct)."% is given to players for casting winning votes. ";
-		if ($this->db_game['final_round'] > 0) {
-			$game_total_seconds = $seconds_per_round*$this->db_game['final_round'];
-			$message .= "Once this game starts, it will last for ".$this->app->format_seconds($game_total_seconds)." (".$this->db_game['final_round']." rounds). ";
-			$message .= "At the end, all ".$invite_currency['short_name']."s that have been paid in will be divided up and given out to all players in proportion to players' final balances.";
+		if ($this->db_game['short_description'] != "") {
+			$message .= "<p>".$this->db_game['short_description']."</p>";
+		}
+		else {
+			if ($this->db_game['inflation'] == "exponential") {}
+			else if ($this->db_game['inflation'] == "linear") $message .= $this->db_game['name']." is a cryptocurrency which generates ".$coins_per_hour." ".$this->db_game['coin_name_plural']." per hour. ";
+			else $message .= $this->db_game['name']." is a cryptocurrency with ".($this->db_game['exponential_inflation_rate']*100)."% inflation every ".$this->app->format_seconds($seconds_per_round).". ";
+			$message .= $miner_pct."% is given to miners for securing the network and the remaining ".(100-$miner_pct)."% is given to players for casting winning votes. ";
+			if ($this->db_game['final_round'] > 0) {
+				$game_total_seconds = $seconds_per_round*$this->db_game['final_round'];
+				$message .= "Once this game starts, it will last for ".$this->app->format_seconds($game_total_seconds)." (".$this->db_game['final_round']." rounds). ";
+				$message .= "At the end, all ".$invite_currency['short_name']."s that have been paid in will be divided up and given out to all players in proportion to players' final balances.";
+			}
+			$message .= "Team up with other players and cast your votes strategically to win coins and destroy your competitors. ";
 		}
 		$message .= "</p>";
 		
-		$message .= "<p>Team up with other players and cast your votes strategically to win coins and destroy your competitors.</p>";
 		$table = str_replace('<div class="row"><div class="col-sm-5">', '<tr><td>', $this->app->game_info_table($this->db_game));
 		$table = str_replace('</div><div class="col-sm-7">', '</td><td>', $table);
 		$table = str_replace('</div></div>', '</td></tr>', $table);
