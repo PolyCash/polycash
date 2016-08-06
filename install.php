@@ -79,8 +79,10 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				</pre>
 				
 				<h2>Configure Apache for symlinked URLs</h1>
-				Please run "a2enmod rewrite"<br/>
-				Then make sure the line "AllowOverride All" is included in your apache configuration file (/etc/apache2/apache2.conf or /etc/httpd/httpd.conf or /etc/httpd/conf/httpd.conf)<br/>
+				Please run this command:<br/>
+				<pre>a2enmod rewrite</pre>
+				
+				Then enter "AllowOverride All" in your apache configuration file (/etc/apache2/apache2.conf or /etc/httpd/httpd.conf or /etc/httpd/conf/httpd.conf)<br/>
 				Example:
 <pre>
 &lt;Directory <?php echo realpath(dirname(__FILE__)); ?>&gt;
