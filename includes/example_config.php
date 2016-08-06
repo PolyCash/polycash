@@ -35,7 +35,7 @@ $GLOBALS['new_games_per_user'] = "unlimited";
 $GLOBALS['coin_brand_name'] = "EmpireCoin";
 $GLOBALS['site_name_short'] = "EmpireCoin";
 $GLOBALS['site_name'] = "EmpireCoin.org";
-$GLOBALS['site_domain'] = "localhost";  // Enter localhost or your public IP/domain here
+$GLOBALS['site_domain'] = $_SERVER['SERVER_ADDR']; // Enter your domain name, IP or "localhost" here
 $GLOBALS['base_url'] = "http://".$GLOBALS['site_domain'];
 
 $GLOBALS['default_timezone'] = 'America/Chicago';
