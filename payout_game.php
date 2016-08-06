@@ -6,14 +6,14 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->in
 if ($thisuser) {
 	if ($GLOBALS['rsa_keyholder_email'] != "" && $GLOBALS['rsa_pub_key'] != "") {
 		if ($thisuser->db_user['username'] == $GLOBALS['rsa_keyholder_email']) {
-			$event_id = intval($_REQUEST['event_id']);
+			$game_id = intval($_REQUEST['game_id']);
 			$fee_satoshis = 5000;
 			
-			$q = "SELECT * FROM event_types WHERE event_id='".$event_id."';";
+			$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
 			$r = $app->run_query($q);
 
 			if ($r->rowCount() > 0) {
-				$payout_event = $r->fetch();
+				$payout_game = $r->fetch();
 				
 				if ($_REQUEST['action'] == "generate_payout") {
 					$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['bitcoin_rpc_user'].':'.$GLOBALS['bitcoin_rpc_password'].'@127.0.0.1:'.$GLOBALS['bitcoin_port'].'/');
@@ -62,29 +62,30 @@ if ($thisuser) {
 						output_message(4, "Error, expected inputs to sum to ".$input_sum." but they summed to ".($total/pow(10,8)));
 					}
 					else {
-						$q = "SELECT * FROM currencies WHERE currency_id='".$payout_event['invite_currency']."';";
+						$q = "SELECT * FROM currencies WHERE currency_id='".$payout_game['invite_currency']."';";
 						$r = $app->run_query($q);
 						if ($r->rowCount() > 0) {
 							$payout_currency = $r->fetch();
 						}
 						
-						$qq = "SELECT *, ug.bitcoin_address_id AS bitcoin_address_id, u.user_id AS user_id FROM users u JOIN user_games ug ON u.user_id=ug.user_id LEFT JOIN external_addresses ea ON ug.bitcoin_address_id=ea.address_id WHERE ug.event_id='".$payout_event['event_id']."' AND ug.payment_required=0;";
+						$qq = "SELECT *, ug.bitcoin_address_id AS bitcoin_address_id, u.user_id AS user_id FROM users u JOIN user_games ug ON u.user_id=ug.user_id LEFT JOIN external_addresses ea ON ug.bitcoin_address_id=ea.address_id WHERE ug.game_id='".$payout_game['game_id']."' AND ug.payment_required=0;";
 						$rr = $app->run_query($qq);
 						
 						$output_sum = 0;
-						$payout_event_obj = new Event($app, $payout_event['event_id']);
-						$coins_in_existence = $payout_event_obj->coins_in_existence(false);
+						$payout_game_obj = new game($app, $payout_game['game_id']);
+						$coins_in_existence = $payout_game_obj->coins_in_existence(false);
 						
-						while ($temp_user_event = $rr->fetch()) {
-							$payout_frac = account_coin_value($payout_event, $temp_user_event)/$coins_in_existence;
+						while ($temp_user_game = $rr->fetch()) {
+							$temp_user = new User($app, $temp_user_game['user_id']);
+							$payout_frac = $temp_user->account_coin_value($payout_game_obj)/$coins_in_existence;
 							$payout_amt = floor($payout_frac*($total-$fee_satoshis));
 							
-							if ($temp_user_event['bitcoin_address_id'] > 0) {
-								$raw_txout[$temp_user_event['address']] = $payout_amt/pow(10,8);
+							if ($temp_user_game['bitcoin_address_id'] > 0) {
+								$raw_txout[$temp_user_game['address']] = $payout_amt/pow(10,8);
 								$output_sum += $payout_amt;
 							}
 							else {
-								output_message(5, "User #".$temp_user_event['user_id']." doesn't have a valid BTC address, cancelling the transaction...");
+								output_message(5, "User #".$temp_user_game['user_id']." doesn't have a valid BTC address, cancelling the transaction...");
 								die();
 							}
 						}
@@ -92,7 +93,7 @@ if ($thisuser) {
 						$profit_satoshis = $total - $fee_satoshis - $output_sum;
 						if ($profit_satoshis > 0) {
 							if (!$GLOBALS['profit_btc_address']) {
-								output_message(6, 'You made a profit but no BTC profit address was specified. Please set $GLOBALS[\'profit_btc_address\'] to a BTC address in your includes/config.php');
+								$app->output_message(6, 'You made a profit but no BTC profit address was specified. Please set $GLOBALS[\'profit_btc_address\'] to a BTC address in your includes/config.php');
 								die();
 							}
 							else {
@@ -102,17 +103,22 @@ if ($thisuser) {
 						
 						try {
 							$raw_transaction = $coin_rpc->createrawtransaction($raw_txin, $raw_txout);
-							$signed_raw_transaction = $coin_rpc->signrawtransaction($raw_transaction, $sign_arr1);
+							try {
+								$signed_raw_transaction = $coin_rpc->signrawtransaction($raw_transaction, $sign_arr1);
 							
-							if ($signed_raw_transaction['complete'] == 1) {
-								output_message(1, "Great, the transaction has been created and signed: ".$signed_raw_transaction['hex']);
+								if ($signed_raw_transaction['complete'] == 1) {
+									$app->output_message(1, "Great, the transaction has been created and signed: ".$signed_raw_transaction['hex']);
+								}
+								else {
+									$app->output_message(2, $raw_transaction);
+								}
 							}
-							else {
-								output_message(2, $raw_transaction);
+							catch (Exception $e) {
+								$app->output_message(8, $raw_transaction);
 							}
 						}
 						catch (Exception $e) {
-							output_message(3, $e);
+							$app->output_message(3, $e);
 						}
 					}
 				}
@@ -124,12 +130,12 @@ if ($thisuser) {
 					include('includes/html_start.php');
 					echo '<div class="container" style="max-width: 1000px; padding: 10px;">';
 					
-					if ($payout_event['payout_tx_hash'] == "") {
-						$q = "UPDATE event_types SET payout_complete=1, payout_tx_hash=".$app->quote_escape($tx_hash)." WHERE event_id='".$payout_event['event_id']."';";
+					if ($payout_game['payout_tx_hash'] == "") {
+						$q = "UPDATE game_types SET payout_complete=1, payout_tx_hash=".$app->quote_escape($tx_hash)." WHERE game_id='".$payout_game['game_id']."';";
 						$r = $app->run_query($q);
 						echo "Great, the tx hash has been saved!";
 					}
-					else echo "Error, a payout tx hash has already been set for this event.";
+					else echo "Error, a payout tx hash has already been set for this game.";
 					
 					echo '</div>';
 					include('includes/html_stop.php');
@@ -140,8 +146,8 @@ if ($thisuser) {
 					$include_crypto_js = true;
 					include('includes/html_start.php');
 					echo '<div class="container" style="max-width: 1000px; padding: 10px;">';
-					if ($payout_event['event_status'] != "completed") {
-						echo "This event isn't complete, it has '".$payout_event['event_status']."' status.";
+					if ($payout_game['game_status'] != "completed") {
+						echo "This game isn't complete, it has '".$payout_game['game_status']."' status.";
 					}
 					else {
 						?>
@@ -175,7 +181,7 @@ if ($thisuser) {
 						}
 
 						function load_addresses() {<?php
-							$q = "SELECT * FROM currency_invoices i JOIN invoice_addresses a ON i.invoice_address_id=a.invoice_address_id JOIN users u ON i.user_id=u.user_id JOIN currencies pc ON i.pay_currency_id=pc.currency_id WHERE i.event_id='".$payout_event['event_id']."' AND i.status='confirmed';";
+							$q = "SELECT * FROM currency_invoices i JOIN invoice_addresses a ON i.invoice_address_id=a.invoice_address_id JOIN users u ON i.user_id=u.user_id JOIN currencies pc ON i.pay_currency_id=pc.currency_id WHERE i.game_id='".$payout_game['game_id']."' AND i.status='confirmed';";
 							$r = $app->run_query($q);
 							
 							$addr_html = "";
@@ -187,7 +193,7 @@ if ($thisuser) {
 								$input_sum += $invoice['pay_amount'];
 							}
 							
-							$q = "SELECT * FROM game_buyins gb JOIN invoice_addresses a ON gb.invoice_address_id=a.invoice_address_id JOIN users u ON gb.user_id=u.user_id JOIN currencies pc ON gb.pay_currency_id=pc.currency_id WHERE gb.event_id='".$payout_event['event_id']."' AND gb.status='confirmed';";
+							$q = "SELECT * FROM game_buyins gb JOIN invoice_addresses a ON gb.invoice_address_id=a.invoice_address_id JOIN users u ON gb.user_id=u.user_id JOIN currencies pc ON gb.pay_currency_id=pc.currency_id WHERE gb.game_id='".$payout_game['game_id']."' AND gb.status='confirmed';";
 							$r = $app->run_query($q);
 							
 							while ($buyin = $r->fetch()) {
@@ -225,7 +231,7 @@ if ($thisuser) {
 								
 								if (loop) {
 									var postvars = {};
-									postvars['event_id'] = '<?php echo $payout_event['event_id']; ?>';
+									postvars['game_id'] = '<?php echo $payout_game['game_id']; ?>';
 									postvars['input_sum'] = '<?php echo $input_sum; ?>';
 									postvars['action'] = 'generate_payout';
 									if (addr_csv != "") addr_csv = addr_csv.substr(0, addr_csv.length-1);
@@ -238,7 +244,7 @@ if ($thisuser) {
 									
 									$.ajax({
 										type: "POST",
-										url: "/payout_event.php",
+										url: "/payout_game.php",
 										data: postvars,
 										success: function(result) {
 											var result_json = JSON.parse(result);
@@ -253,7 +259,7 @@ if ($thisuser) {
 						}
 						
 						function submit_tx_hash() {
-							window.location = '/payout_event.php?event_id=<?php echo $payout_event['event_id']; ?>&action=submit_tx_hash&tx_hash='+$('#tx_hash').val();
+							window.location = '/payout_game.php?game_id=<?php echo $payout_game['game_id']; ?>&action=submit_tx_hash&tx_hash='+$('#tx_hash').val();
 						}
 						
 						$(document).ready(function() {
@@ -261,7 +267,7 @@ if ($thisuser) {
 						});
 						</script>
 						<?php
-						echo "<h2>".$payout_event['name']." - Generate payout transaction</h2>";
+						echo "<h2>".$payout_game['name']." - Generate payout transaction</h2>";
 						
 						try {
 							$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['bitcoin_rpc_user'].':'.$GLOBALS['bitcoin_rpc_password'].'@127.0.0.1:'.$GLOBALS['bitcoin_port'].'/');
@@ -293,25 +299,25 @@ if ($thisuser) {
 							echo "Or sweep all bitcoins from these deposit addresses, then manually send bitcoins to players' addresses.<br/>\n";
 							echo $addr_html."<br/>\n";
 							
-							$qq = "SELECT *, ug.bitcoin_address_id AS bitcoin_address_id, u.user_id AS user_id FROM users u JOIN user_games ug ON u.user_id=ug.user_id LEFT JOIN external_addresses ea ON ug.bitcoin_address_id=ea.address_id WHERE ug.event_id='".$payout_event['event_id']."' AND ug.payment_required=0 ORDER BY ug.account_value DESC;";
+							$qq = "SELECT *, ug.bitcoin_address_id AS bitcoin_address_id, u.user_id AS user_id FROM users u JOIN user_games ug ON u.user_id=ug.user_id LEFT JOIN external_addresses ea ON ug.bitcoin_address_id=ea.address_id WHERE ug.game_id='".$payout_game['game_id']."' AND ug.payment_required=0 ORDER BY ug.account_value DESC;";
 							$rr = $app->run_query($qq);
 							
 							$output_sum = 0;
-							$payout_event_obj = new Event($app, $payout_event['event_id']);
-							$coins_in_existence = $payout_event_obj->coins_in_existence(false);
+							$payout_game_obj = new game($app, $payout_game['game_id']);
+							$coins_in_existence = $payout_game_obj->coins_in_existence(false);
 							
-							while ($temp_user_event = $rr->fetch()) {
-								$temp_user = new User($app, $temp_user_event['user_id']);
-								$payout_frac = $temp_user->account_coin_value($payout_event_obj)/$coins_in_existence;
+							while ($temp_user_game = $rr->fetch()) {
+								$temp_user = new User($app, $temp_user_game['user_id']);
+								$payout_frac = $temp_user->account_coin_value($payout_game_obj)/$coins_in_existence;
 								$payout_amt = floor($payout_frac*(pow(10,8)*$input_sum - $fee_satoshis))/pow(10,8);
 								
 								if ($payout_amt > 0) {
-									if ($temp_user_event['bitcoin_address_id'] > 0) {
-										echo $temp_user_event['username']." has an end-of-event balance of ".$app->format_bignum($temp_user->account_coin_value($payout_event_obj)/pow(10,8))." coins. Pay ".$app->format_bignum($payout_amt)." BTC to ".$temp_user_event['address']."<br/>\n";
+									if ($temp_user_game['bitcoin_address_id'] > 0) {
+										echo $temp_user_game['username']." has an end-of-game balance of ".$app->format_bignum($temp_user->account_coin_value($payout_game_obj)/pow(10,8))." coins. Pay ".$app->format_bignum($payout_amt)." BTC to ".$temp_user_game['address']."<br/>\n";
 										$output_sum += $payout_amt;
 									}
 									else {
-										echo $temp_user_event['username']." doesn't have a valid BTC address, cancelling the transaction...<br/>\n";
+										echo $temp_user_game['username']." doesn't have a valid BTC address, cancelling the transaction...<br/>\n";
 									}
 								}
 							}
@@ -329,7 +335,7 @@ if ($thisuser) {
 				$pagetitle = "";
 				include('includes/html_start.php');
 				echo '<div class="container" style="max-width: 1000px; padding: 10px;">';
-				echo "Error: a valid event_id was not specified in the URL.";
+				echo "Error: a valid game_id was not specified in the URL.";
 				echo '</div>';
 				include('includes/html_stop.php');
 				die();
