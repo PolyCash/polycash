@@ -2468,7 +2468,9 @@ class Game {
 			$utxos[count($utxos)] = $utxo;
 			$input_buttons_html .= '<div ';
 			
-			$input_buttons_html .= 'id="select_utxo_'.$utxo['io_id'].'" class="btn btn-default select_utxo" onclick="add_utxo_to_vote(\''.$utxo['io_id'].'\', '.$utxo['amount'].', '.$utxo['create_block_id'].');">';
+			$input_buttons_html .= 'id="select_utxo_'.$utxo['io_id'].'" class="btn btn-default select_utxo';
+			if ($this->db_game['logo_image_id'] > 0) $input_buttons_html .= ' select_utxo_image';
+			$input_buttons_html .= '" onclick="add_utxo_to_vote(\''.$utxo['io_id'].'\', '.$utxo['amount'].', '.$utxo['create_block_id'].');">';
 			$input_buttons_html .= '</div>'."\n";
 			
 			$js .= "mature_ios.push(new mature_io(mature_ios.length, ".$utxo['io_id'].", ".$utxo['amount'].", ".$utxo['create_block_id']."));\n";
@@ -2481,6 +2483,7 @@ class Game {
 		
 		return $html;
 	}
+	
 	public function load_all_event_points_js($game_index, $user_strategy) {
 		$js = "";
 		$q = "SELECT * FROM events e JOIN event_types t ON e.event_type_id=t.event_type_id WHERE e.game_id='".$this->db_game['game_id']."' ORDER BY e.event_id ASC;";
@@ -2505,6 +2508,18 @@ class Game {
 			$i++;
 		}
 		return $js;
+	}
+	
+	public function logo_image_url() {
+		if ($this->db_game['logo_image_id'] > 0) {
+			$db_image = $this->app->run_query("SELECT * FROM images WHERE image_id='".$this->db_game['logo_image_id']."';")->fetch();
+			return $this->app->image_url($db_image);
+		}
+		else return "";
+	}
+	
+	public function vote_effectiveness_function() {
+		return $this->current_events[0]->db_event['vote_effectiveness_function'];
 	}
 }
 ?>

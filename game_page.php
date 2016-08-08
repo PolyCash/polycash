@@ -317,7 +317,7 @@ games.push(new Game(<?php
 	echo ', "'.$game->db_game['url_identifier'].'"';
 	echo ', "'.$game->db_game['coin_name'].'"';
 	echo ', "'.$game->db_game['coin_name_plural'].'"';
-	echo ', "game", "'.$game->event_ids().'"';
+	echo ', "game", "'.$game->event_ids().'", "'.$game->logo_image_url().'", "'.$game->vote_effectiveness_function().'"';
 ?>));
 <?php
 echo $game->new_event_js(0, false);

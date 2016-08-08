@@ -93,9 +93,9 @@ class App {
 	}
 	
 	public function generate_game_by_type($game_type) {
-		$skip_game_type_vars = explode(",", "event_rule,event_entity_type_id,option_group_id,events_per_round,url_identifier,target_open_games,default_vote_effectiveness_function,default_max_voting_fraction,event_type_name,default_option_max_width,default_game_winning_inflation");
+		$skip_game_type_vars = explode(",", "event_rule,event_entity_type_id,option_group_id,events_per_round,url_identifier,target_open_games,default_vote_effectiveness_function,default_max_voting_fraction,event_type_name,default_option_max_width,default_game_winning_inflation,default_logo_image_id");
 		$url_identifier = $this->game_url_identifier($game_type['name']);
-		$q = "INSERT INTO games SET url_identifier=".$this->quote_escape($url_identifier).", game_winning_inflation='".$game_type['default_game_winning_inflation']."', ";
+		$q = "INSERT INTO games SET url_identifier=".$this->quote_escape($url_identifier).", game_winning_inflation='".$game_type['default_game_winning_inflation']."', logo_image_id='".$game_type['default_logo_image_id']."', ";
 		foreach ($game_type AS $var => $val) {
 			if (!in_array($var, $skip_game_type_vars)) {
 				if (!empty($val)) $q .= $var.'='.$this->quote_escape($val).', ';
@@ -712,7 +712,7 @@ class App {
 				echo ', "'.$db_game['url_identifier'].'"';
 				echo ', "'.$db_game['coin_name'].'"';
 				echo ', "'.$db_game['coin_name_plural'].'"';
-				echo ', "home", "'.$featured_game->event_ids().'"';
+				echo ', "home", "'.$featured_game->event_ids().'", "'.$featured_game->logo_image_url().'", "'.$featured_game->vote_effectiveness_function().'"';
 			?>));
 			</script>
 			<?php

@@ -356,3 +356,11 @@ footer {
 .game_events {
 	margin-bottom: 15px;
 }
+.select_utxo_image {
+	border-radius: 50%;
+	background-repeat: no-repeat;
+	background-size: cover;
+	background-position: center center;
+	padding: 0px;
+	border: 0px;
+}

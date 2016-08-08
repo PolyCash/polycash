@@ -512,7 +512,7 @@ if ($thisuser && $game) {
 			echo ', "'.$game->db_game['url_identifier'].'"';
 			echo ', "'.$game->db_game['coin_name'].'"';
 			echo ', "'.$game->db_game['coin_name_plural'].'"';
-			echo ', "wallet", "'.$game->event_ids().'"';
+			echo ', "wallet", "'.$game->event_ids().'", "'.$game->logo_image_url().'", "'.$game->vote_effectiveness_function().'"';
 		?>));
 		
 		function load_all_events(game) {
