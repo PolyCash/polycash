@@ -1480,14 +1480,15 @@ class Game {
 				$html .= "<div class=\"row\"><div class=\"col-sm-3\">".$entity_info['entity_name']."</div><div class=\"col-sm-3\">".$entity_info['points']." electoral votes</div>";
 				if ($user) {
 					$coins_in_existence = $this->coins_in_existence(false);
-					$add_coins = floor($coins_in_existence*(1+$this->db_game['game_winning_inflation']));
+					$add_coins = floor($coins_in_existence*$this->db_game['game_winning_inflation']);
 					$new_coins_in_existence = $coins_in_existence + $add_coins;
 					$account_value = $user->account_coin_value($this);
 					$account_pct = $account_value/$coins_in_existence;
 					$payout_amount = floor($add_coins*($entity_info['my_votes']/$entity_info['entity_votes']));
 					$new_account_value = $account_value+$payout_amount;
 					$new_account_pct = $new_account_value/$new_coins_in_existence;
-					$change_frac = $new_account_pct/$account_pct-1;
+					if ($account_pct > 0) $change_frac = $new_account_pct/$account_pct-1;
+					else $change_frac = 0;
 					$html .= "<div class=\"col-sm-3\">".$this->app->format_bignum($entity_info['my_pct'])."% of my votes</div>";
 					$html .= "<div class=\"col-sm-3";
 					if ($change_frac >= 0) $html .= " greentext";
