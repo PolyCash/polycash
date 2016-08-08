@@ -1385,6 +1385,10 @@ class Game {
 			$rr = $this->app->run_query($qq);
 			$user_entity_votes_total = $rr->fetch();
 			$return_obj['user_entity_votes_total'] = $user_entity_votes_total['SUM(io.votes)'];
+
+			$qq = "SELECT SUM(io.votes) FROM options o JOIN addresses a ON o.option_id=a.option_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN entities e ON o.entity_id=e.entity_id WHERE io.game_id='".$this->db_game['game_id']."';";
+			$rr = $this->app->run_query($qq);
+			$return_obj['entity_votes_total'] = $rr->fetch()['SUM(io.votes)'];
 		}
 		
 		$return_rows = false;
@@ -1406,8 +1410,13 @@ class Game {
 				$user_entity_votes = $rr->fetch();
 				
 				$return_rows[$entity['entity_id']]['my_votes'] = $user_entity_votes['SUM(io.votes)'];
-				if ($return_obj['user_entity_votes_total'] > 0) $return_rows[$entity['entity_id']]['my_pct'] = 100*$user_entity_votes['SUM(io.votes)']/$return_obj['user_entity_votes_total'];
-				else $return_rows[$entity['entity_id']]['my_pct'] = 0;
+				if ($return_obj['user_entity_votes_total'] > 0) $my_pct = 100*$user_entity_votes['SUM(io.votes)']/$return_obj['user_entity_votes_total'];
+				else $my_pct = 0;
+				$return_rows[$entity['entity_id']]['my_pct'] = $my_pct;
+				
+				$entity_votes_q = "SELECT SUM(io.votes), COUNT(*) FROM options o JOIN addresses a ON o.option_id=a.option_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN entities e ON o.entity_id=e.entity_id WHERE io.game_id='".$this->db_game['game_id']."' AND o.entity_id='".$entity['entity_id']."';";
+				$entity_votes_r = $this->app->run_query($entity_votes_q);
+				$return_rows[$entity['entity_id']]['entity_votes'] = $entity_votes_r->fetch()['SUM(io.votes)'];
 			}
 		}
 		$returnvals['entities'] = $return_rows;
@@ -1470,7 +1479,27 @@ class Game {
 			foreach ($entity_score_info['entities'] as $entity_id => $entity_info) {
 				$html .= "<div class=\"row\"><div class=\"col-sm-3\">".$entity_info['entity_name']."</div><div class=\"col-sm-3\">".$entity_info['points']." electoral votes</div>";
 				if ($user) {
+					$coins_in_existence = $this->coins_in_existence(false);
+					$add_coins = floor($coins_in_existence*(1+$this->db_game['game_winning_inflation']));
+					$new_coins_in_existence = $coins_in_existence + $add_coins;
+					$account_value = $user->account_coin_value($this);
+					$account_pct = $account_value/$coins_in_existence;
+					$payout_amount = floor($add_coins*($entity_info['my_votes']/$entity_info['entity_votes']));
+					$new_account_value = $account_value+$payout_amount;
+					$new_account_pct = $new_account_value/$new_coins_in_existence;
+					$change_frac = $new_account_pct/$account_pct-1;
 					$html .= "<div class=\"col-sm-3\">".$this->app->format_bignum($entity_info['my_pct'])."% of my votes</div>";
+					$html .= "<div class=\"col-sm-3";
+					if ($change_frac >= 0) $html .= " greentext";
+					else $html .= " redtext";
+					$html .= "\">";
+					if ($change_frac >= 0) {
+						$html .= "+".$this->app->format_bignum(100*$change_frac)."%";
+					}
+					else {
+						$html .= "-".$this->app->format_bignum((-1)*100*$change_frac)."%";
+					}
+					$html .= "</div>";
 				}
 				$html .= "</div>\n";
 			}
