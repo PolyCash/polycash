@@ -232,13 +232,13 @@ function vote_on_block_all_changed() {
 		$('#vote_on_block_'+i).prop("checked", set_checked);
 	}
 }
-function by_option_reset_pct() {
+function by_entity_reset_pct() {
 	for (var option_id=1; option_id<=games[0].num_voting_options; option_id++) {
 		$('#option_pct_'+option_id).val("0");
 	}
 }
 function loop_event() {
-	var option_pct_sum = 0;
+	/*var option_pct_sum = 0;
 	for (var i=0; i<games[0].num_voting_options; i++) {
 		var temp_pct = parseInt($('#option_pct_'+i).val());
 		if (temp_pct && !$('#option_pct_'+i).is(":focus") && temp_pct != $('#option_pct_'+i).val()) {
@@ -251,7 +251,7 @@ function loop_event() {
 	}
 	else {
 		$('#option_pct_subtotal').html("<font class='redtext'>"+option_pct_sum+"/100 allocated</font>");
-	}
+	}*/
 	
 	setTimeout("loop_event();", 1000);
 }

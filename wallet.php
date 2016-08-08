@@ -332,7 +332,7 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 		}
 	}
 	else {
-		if (in_array($voting_strategy, array('manual', 'api', 'by_plan'))) {
+		if (in_array($voting_strategy, array('manual', 'api', 'by_plan', 'by_entity'))) {
 			/*for ($i=1; $i<=$game->db_game['num_voting_options']; $i++) {
 				if ($_REQUEST['by_rank_'.$i] == "1") $by_rank_csv .= $i.",";
 			}
@@ -360,38 +360,34 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 		$option_pct_sum = 0;
 		$option_pct_error = FALSE;
 		
-		/*$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."';";
+		$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id JOIN entities en ON op.entity_id=en.entity_id WHERE e.game_id='".$game->db_game['game_id']."' GROUP BY en.entity_id ORDER BY en.entity_id ASC;";
 		$rr = $app->run_query($qq);
-		while ($voting_option = $rr->fetch()) {
-			$option_pct = intval($_REQUEST['option_pct_'.$voting_option['option_id']]);
-			$option_pct_sum += $option_pct;
+		while ($entity = $rr->fetch()) {
+			$entity_pct = intval($_REQUEST['entity_pct_'.$entity['entity_id']]);
+			$entity_pct_sum += $entity_pct;
 		}
 		
-		if ($option_pct_sum == 100) {
-			$qq = "DELETE FROM user_strategy_options WHERE strategy_id='".$user_strategy['strategy_id']."';";
+		if ($entity_pct_sum == 100) {
+			$qq = "DELETE FROM user_strategy_entities WHERE strategy_id='".$user_strategy['strategy_id']."';";
 			$rr = $app->run_query($qq);
 			
-			$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."';";
+			$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id JOIN entities en ON op.entity_id=en.entity_id WHERE e.game_id='".$game->db_game['game_id']."' GROUP BY en.entity_id ORDER BY en.entity_id ASC;";
 			$rr = $app->run_query($qq);
 			
-			while ($voting_option = $rr->fetch()) {
-				$option_pct = intval($_REQUEST['option_pct_'.$voting_option['option_id']]);
-				if ($option_pct > 0) {
-					$qqq = "INSERT INTO user_strategy_options SET strategy_id='".$user_strategy['strategy_id']."', option_id='".$voting_option['option_id']."', pct_points='".$option_pct."';";
+			while ($entity = $rr->fetch()) {
+				$entity_pct = intval($_REQUEST['entity_pct_'.$entity['entity_id']]);
+				if ($entity_pct > 0) {
+					$qqq = "INSERT INTO user_strategy_entities SET strategy_id='".$user_strategy['strategy_id']."', entity_id='".$entity['entity_id']."', pct_points='".$entity_pct."';";
 					$rrr = $app->run_query($qqq);
 				}
 			}
 		}
 		else {
-			if ($voting_strategy == "by_option") {
+			if ($voting_strategy == "by_entity") {
 				$error_code = 2;
 				$message = "Error: the percentages that you entered did not add up to 100, your changes were discarded.";
 			}
-		}*/
-		
-		/*$from_round = intval($_REQUEST['from_round']);
-		$to_round = intval($_REQUEST['to_round']);
-		$thisuser->save_plan_allocations($user_strategy, $from_round, $to_round);*/
+		}
 		
 		for ($block=1; $block<$game->db_game['round_length']; $block++) {
 			$strategy_block = false;
@@ -763,42 +759,42 @@ if ($thisuser && $game) {
 							Your API access code is <?php echo $thisuser->db_user['api_access_code']; ?> <a href="/api/about/">API documentation</a><br/>
 						</div>
 					</div>
-					<?php /*
+					
 					<div class="row bordered_row">
 						<div class="col-md-2">
-							<input type="radio" id="voting_strategy_by_option" name="voting_strategy" value="by_option"<?php if ($user_strategy['voting_strategy'] == "by_option") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_option">&nbsp;Vote&nbsp;by&nbsp;option</label>
+							<input type="radio" id="voting_strategy_by_entity" name="voting_strategy" value="by_entity"<?php if ($user_strategy['voting_strategy'] == "by_entity") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_entity">&nbsp;Vote&nbsp;by&nbsp;option</label>
 						</div>
 						<div class="col-md-10">
-							<label class="plainlabel" for="voting_strategy_by_option"> 
+							<label class="plainlabel" for="voting_strategy_by_entity"> 
 								Vote for these options every time. The percentages you enter below must add up to 100.<br/>
-								<a href="" onclick="by_option_reset_pct(); return false;">Set all to zero</a> <div style="margin-left: 15px; display: inline-block;" id="option_pct_subtotal">&nbsp;</div>
+								<?php /*<a href="" onclick="by_entity_reset_pct(); return false;">Set all to zero</a> <div style="margin-left: 15px; display: inline-block;" id="entity_pct_subtotal">&nbsp;</div>*/ ?>
 							</label><br/>
 							<?php
-							$q = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."' ORDER BY option_id ASC;";
+							$q = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id JOIN entities en ON op.entity_id=en.entity_id WHERE e.game_id='".$game->db_game['game_id']."' GROUP BY en.entity_id ORDER BY en.entity_id ASC;";
 							$r = $app->run_query($q);
-							$option_i = 0;
-							while ($option = $r->fetch()) {
-								$qq = "SELECT * FROM user_strategy_options WHERE strategy_id='".$user_strategy['strategy_id']."' AND option_id='".$option['option_id']."';";
+							$entity_i = 0;
+							while ($entity = $r->fetch()) {
+								$qq = "SELECT * FROM user_strategy_entities WHERE strategy_id='".$user_strategy['strategy_id']."' AND entity_id='".$entity['entity_id']."';";
 								$rr = $app->run_query($qq);
 								if ($rr->rowCount() > 0) {
 									$pct_points = $rr->fetch()['pct_points'];
 								}
 								else $pct_points = "";
 								
-								if ($option_i%4 == 0) echo '<div class="row">';
+								if ($entity_i%4 == 0) echo '<div class="row">';
 								echo '<div class="col-md-3">';
-								echo '<input type="tel" size="4" name="option_pct_'.$option['option_id'].'" id="option_pct_'.$option_i.'" placeholder="0" value="'.$pct_points.'" />';
-								echo '<label class="plainlabel" for="option_pct_'.$option_i.'">% ';
-								echo $option['name']."</label>";
+								echo '<input type="tel" size="4" name="entity_pct_'.$entity['entity_id'].'" id="entity_pct_'.$entity_i.'" placeholder="0" value="'.$pct_points.'" />';
+								echo '<label class="plainlabel" for="entity_pct_'.$entity_i.'">% ';
+								echo $entity['entity_name']."</label>";
 								echo '</div>';
-								if ($option_i%4 == 3) echo "</div>\n";
-								$option_i++;
+								if ($entity_i%4 == 3) echo "</div>\n";
+								$entity_i++;
 							}
-							if ($option_i%4 != 0) echo "</div>\n";
+							if ($entity_i%4 != 0) echo "</div>\n";
 							?>
 						</div>
 					</div>
-					
+					<?php /*
 					<div class="row bordered_row">
 						<div class="col-md-2">
 							<input type="radio" id="voting_strategy_by_rank" name="voting_strategy" value="by_rank"<?php if ($user_strategy['voting_strategy'] == "by_rank") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_rank">&nbsp;Vote&nbsp;by&nbsp;rank</label>

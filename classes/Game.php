@@ -512,7 +512,7 @@ class Game {
 			$q = "SELECT * FROM users u JOIN user_games g ON u.user_id=g.user_id JOIN user_strategies s ON g.strategy_id=s.strategy_id";
 			$q .= " JOIN user_strategy_blocks usb ON s.strategy_id=usb.strategy_id";
 			$q .= " WHERE g.game_id='".$this->db_game['game_id']."' AND usb.block_within_round='".$block_of_round."'";
-			$q .= " AND (s.voting_strategy='by_rank' OR s.voting_strategy='by_option' OR s.voting_strategy='api' OR s.voting_strategy='by_plan')";
+			$q .= " AND (s.voting_strategy='by_rank' OR s.voting_strategy='by_entity' OR s.voting_strategy='api' OR s.voting_strategy='by_plan')";
 			$q .= " ORDER BY RAND();";
 			$r = $this->app->run_query($q);
 			
@@ -641,36 +641,29 @@ class Game {
 						$pct_free = 100*$mature_balance/$user_coin_value;
 						
 						if ($pct_free >= $db_user['aggregate_threshold']) {
-							/*$round_stats = $this->round_voting_stats_all($current_round_id);
-							$sum_votes = $round_stats[0];
-							$ranked_stats = $round_stats[2];
-							$option_id2rank = $round_stats[3];
-							
 							$option_pct_sum = 0;
 							$skipped_pct_points = 0;
 							$skipped_options = "";
 							$num_options_skipped = 0;
-							
-							if ($db_user['voting_strategy'] == "by_rank") $by_rank_ranks = explode(",", $db_user['by_rank_ranks']);
-							
-							$strategy_option_points = false;
-							$qq = "SELECT * FROM user_strategy_options WHERE strategy_id='".$db_user['strategy_id']."';";
+							$strategy_entity_points = false;
+
+							$qq = "SELECT * FROM user_strategy_entities WHERE strategy_id='".$db_user['strategy_id']."';";
 							$rr = $this->app->run_query($qq);
-							while ($strategy_option = $rr->fetch()) {
-								$strategy_option_points[$strategy_option['option_id']] = intval($strategy_option['pct_points']);
+							while ($strategy_entity = $rr->fetch()) {
+								$strategy_entity_points[$strategy_entity['entity_id']] = intval($strategy_entity['pct_points']);
 							}
 							
-							$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."';";
+							$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id JOIN entities en ON op.entity_id=en.entity_id WHERE e.game_id='".$this->db_game['game_id']."' GROUP BY en.entity_id ORDER BY en.entity_id ASC;";
 							$rr = $this->app->run_query($qq);
-							while ($voting_option = $rr->fetch()) {
-								if ($db_user['voting_strategy'] == "by_option") {
-									$by_option_pct_points = 0;
-									if (empty($strategy_option_points[$voting_option['option_id']])) $by_option_pct_points = 0;
-									else $by_option_pct_points = $strategy_option_points[$voting_option['option_id']];
-									$option_pct_sum += $by_option_pct_points;
+							while ($entity = $rr->fetch()) {
+								if ($db_user['voting_strategy'] == "by_entity") {
+									$by_entity_pct_points = 0;
+									if (empty($strategy_entity_points[$entity['entity_id']])) $by_entity_pct_points = 0;
+									else $by_entity_pct_points = $strategy_entity_points[$entity['entity_id']];
+									$entity_pct_sum += $by_entity_pct_points;
 								}
 								
-								if ($sum_votes > 0) {
+								/*if ($sum_votes > 0) {
 									$pct_of_votes = 100*$ranked_stats[$option_id2rank[$voting_option['option_id']]]['votes']/$sum_votes;
 									if ($pct_of_votes >= $db_user['min_votesum_pct'] && $pct_of_votes <= $db_user['max_votesum_pct']) {}
 									else {
@@ -678,8 +671,15 @@ class Game {
 										if ($db_user == "by_option") $skipped_pct_points += $by_option_pct_points;
 										else if (in_array($option_id2rank[$voting_option['option_id']], $by_rank_ranks)) $num_options_skipped++;
 									}
-								}
+								}*/
 							}
+
+							/*$round_stats = $this->round_voting_stats_all($current_round_id);
+							$sum_votes = $round_stats[0];
+							$ranked_stats = $round_stats[2];
+							$option_id2rank = $round_stats[3];
+							
+							if ($db_user['voting_strategy'] == "by_rank") $by_rank_ranks = explode(",", $db_user['by_rank_ranks']);
 							*/
 							if ($db_user['voting_strategy'] == "by_rank") {
 								/*$divide_into = count($by_rank_ranks)-$num_options_skipped;
@@ -711,42 +711,42 @@ class Game {
 								if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
 								else $log_text .= "Failed to add transaction.<br/>\n";*/
 							}
-							else if ($db_user['voting_strategy'] == "by_option") {
-								/*$log_text .= "Dividing by option for ".$strategy_user->db_user['username']." (".(($free_balance-$db_user['transaction_fee'])/pow(10,8))." coins)<br/>\n";
+							else if ($db_user['voting_strategy'] == "by_entity") {
+								$log_text .= "Dividing by entity for ".$strategy_user->db_user['username']." (".(($free_balance-$db_user['transaction_fee'])/pow(10,8))." coins)<br/>\n";
 								
 								$mult_factor = 1;
 								if ($skipped_pct_points > 0) {
-									$mult_factor = floor(pow(10,6)*$option_pct_sum/($option_pct_sum-$skipped_pct_points))/pow(10,6);
+									$mult_factor = floor(pow(10,6)*$entity_pct_sum/($entity_pct_sum-$skipped_pct_points))/pow(10,6);
 								}
 								
-								if ($option_pct_sum == 100) {
+								if ($entity_pct_sum == 100) {
 									$option_ids = array();
 									$amounts = array();
 									$amount_sum = 0;
 									
-									$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."';";
-									$rr = $this->app->run_query($qq);
-									while ($voting_option = $rr->fetch()) {
-										$by_option_pct_points = 0;
-										if (!empty($strategy_option_points[$voting_option['option_id']])) $by_option_pct_points = $strategy_option_points[$voting_option['option_id']];
-										if (empty($skipped_options[$voting_option['option_id']]) && $by_option_pct_points > 0) {
-											$effective_frac = floor(pow(10,4)*$by_option_pct_points*$mult_factor)/pow(10,6);
-											$coin_amount = floor($effective_frac*($free_balance-$db_user['transaction_fee']));
-											
-											$log_text .= "Vote ".$by_option_pct_points."% (".round($coin_amount/pow(10,8), 3)." coins) for ".$ranked_stats[$option_id2rank[$voting_option['option_id']]]['name']."<br/>\n";
-											
-											$option_ids[count($option_ids)] = $voting_option['option_id'];
-											$amounts[count($amounts)] = $coin_amount;
-											$amount_sum += $coin_amount;
+									for ($i=0; $i<count($this->current_events); $i++) {
+										$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id JOIN entities en ON op.entity_id=en.entity_id WHERE e.game_id='".$this->db_game['game_id']."' AND e.event_id='".$this->current_events[$i]->db_event['event_id']."' GROUP BY en.entity_id ORDER BY en.entity_id;";
+										$rr = $this->app->run_query($qq);
+										while ($entity = $rr->fetch()) {
+											$by_entity_pct_points = 0;
+											if (!empty($strategy_entity_points[$entity['entity_id']])) $by_entity_pct_points = $strategy_entity_points[$entity['entity_id']];
+											if (empty($skipped_entities[$entity['entity_id']]) && $by_entity_pct_points > 0) {
+												$effective_frac = floor((1/count($this->current_events))*pow(10,4)*$by_entity_pct_points*$mult_factor)/pow(10,6);
+												$coin_amount = floor($effective_frac*($free_balance-$db_user['transaction_fee']));
+												
+												$log_text .= "Vote ".$by_entity_pct_points."% (".round($coin_amount/pow(10,8), 3)." coins) for ".$entity['entity_name']."<br/>\n";
+												
+												$option_ids[count($option_ids)] = $entity['option_id'];
+												$amounts[count($amounts)] = $coin_amount;
+												$amount_sum += $coin_amount;
+											}
 										}
 									}
 									if ($amount_sum < ($free_balance-$db_user['transaction_fee'])) $amounts[count($amounts)-1] += ($free_balance-$db_user['transaction_fee']) - $amount_sum;
-									
 									$transaction_id = $this->create_transaction($option_ids, $amounts, $strategy_user->db_user['user_id'], $strategy_user->db_user['user_id'], false, 'transaction', false, false, false, $db_user['transaction_fee']);
-									
 									if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
 									else $log_text .= "Failed to add transaction.<br/>\n";
-								}*/
+								}
 							}
 							else { // by_plan
 								$log_text .= "Dividing by plan for ".$strategy_user->db_user['username']."<br/>\n";
