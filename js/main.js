@@ -123,11 +123,7 @@ var round_sections_shown = 1;
 function openChatWindow(userId) {
 	if (typeof userId2ChatWindowId[userId] === 'undefined' || userId2ChatWindowId[userId] === false) {
 		var chatWindowId = chatWindows.length;
-		console.log('add chat window '+chatWindowId);
 		newChatWindow(chatWindowId, userId);
-	}
-	else {
-		console.log('already exists');
 	}
 }
 function newChatWindow(chatWindowId, userId) {
@@ -141,7 +137,6 @@ function newChatWindow(chatWindowId, userId) {
 	$('#chatWindowWriter'+chatWindowId).focus();
 }
 function closeChatWindow(chatWindowId) {
-	console.log('setting userId2ChatWindowId['+chatWindows[chatWindowId].toUserId+'] = false');
 	userId2ChatWindowId[chatWindows[chatWindowId].toUserId] = false;
 	for (var i=chatWindowId+1; i<chatWindows.length; i++) {
 		userId2ChatWindowId[chatWindows[i].toUserId] = i-1;
@@ -450,7 +445,6 @@ function render_option_bet(bet_index, option_id) {
 }
 function add_utxo_to_vote(io_id, amount, create_block_id) {
 	var index_id = vote_inputs.length;
-	console.log('adding utxo #'+index_id+', io_id: '+io_id+" ("+format_coins(amount/Math.pow(10,8))+" coins)");
 
 	var already_in = false;
 	for (var i=0; i<vote_inputs.length; i++) {
@@ -470,11 +464,9 @@ function add_utxo_to_vote(io_id, amount, create_block_id) {
 			var effectiveness_factor = games[0].block_id_to_effectiveness_factor(games[0].last_block_id+1);
 			var votes = games[0].votes_from_io(amount, create_block_id);
 			var height = Math.round(games[0].utxo_max_height*votes*Math.sqrt(effectiveness_factor)/games[0].utxo_max_effective_votes);
-			console.log("Math.round("+games[0].utxo_max_height+"*"+votes+"*"+Math.sqrt(effectiveness_factor)+"/"+games[0].utxo_max_effective_votes+") = "+height+"px");
 			$('#selected_utxo_'+index_id).css("height", height+"px");
 			$('#selected_utxo_'+index_id).css("width", height+"px");
 			$('#selected_utxo_'+index_id).css("background-image", "url('"+games[0].logo_image_url+"')");
-			console.log('height: '+$('#selected_utxo_'+index_id).css("height"));
 		}
 		io_id2input_index[io_id] = index_id;
 		refresh_compose_vote();
@@ -516,7 +508,7 @@ function load_option_bet_slider(bet_index) {
 	});
 }
 function remove_utxo_from_vote(index_id) {
-	console.log('removing utxo #'+index_id+', io_id: '+vote_inputs[index_id].io_id+" ("+format_coins(vote_inputs[index_id].amount/Math.pow(10,8))+" coins)");
+	var effectiveness_factor = games[0].block_id_to_effectiveness_factor(games[0].last_block_id+1);
 	$('#select_utxo_'+vote_inputs[index_id].io_id).show('fast');
 	io_id2input_index[vote_inputs[index_id].io_id] = false;
 	
@@ -526,12 +518,6 @@ function remove_utxo_from_vote(index_id) {
 		io_id2input_index[vote_inputs[i].io_id] = i;
 		
 		$('#selected_utxo_'+i).html(render_selected_utxo(i));
-		if (games[0].logo_image_url != "") {
-			var votes = games[0].votes_from_io(vote_inputs[i].amount, vote_inputs[i].create_block_id);
-			var height = Math.round(games[0].utxo_max_height*votes/games[0].utxo_max_effective_votes);
-			$('#selected_utxo_'+i).css("height", height+"px");
-			$('#selected_utxo_'+i).css("width", height+"px");
-		}
 	}
 	$('#selected_utxo_'+(vote_inputs.length-1)).remove();
 	vote_inputs.length = vote_inputs.length-1;
@@ -570,7 +556,6 @@ function refresh_all_inputs() {
 		my_effective_votes += votes;
 	}
 
-	console.log('refresh_all_inputs:'+effectiveness_factor);
 	for (var i=0; i<vote_inputs.length; i++) {
 		var votes = games[0].votes_from_io(vote_inputs[i].amount, vote_inputs[i].create_block_id);
 		var height = Math.round(Math.sqrt(effectiveness_factor)*games[0].utxo_max_height*votes/games[0].utxo_max_effective_votes);
@@ -655,8 +640,6 @@ function switch_to_game(game_id, action) {
 		var json_result = JSON.parse(result);
 		
 		if (action == "fetch" || action == "new") {
-			console.log(json_result);
-
 			if (action == "new") {
 				editing_game_id = json_result['game_id'];
 			}
@@ -834,7 +817,6 @@ function save_game(action) {
 	});
 }
 function refresh_mature_io_btns() {
-	console.log("refresh_mature_io_btns():"+effectiveness_factor);
 	var effectiveness_factor = games[0].block_id_to_effectiveness_factor(games[0].last_block_id+1);
 	for (var i=0; i<mature_ios.length; i++) {
 		var select_btn_text = "";
@@ -1110,7 +1092,6 @@ function refresh_plan_allocations() {
 		$('#plan_rows').html(json_obj['html']);
 		set_plan_round_sums();
 		render_plan_rounds();
-		console.log("done refreshing plans...");
 	});
 }
 function render_plan_rounds() {
@@ -1279,7 +1260,6 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 									refresh_mature_io_btns();
 									
 									/*if (parseInt(json_result['new_votingaddresses']) == 1) {
-										console.log("new voting addresses!");
 										_this.option_has_votingaddr = json_result['option_has_votingaddr'];
 										_this.votingaddr_count = parseInt(json_result['votingaddr_count']);
 									}*/
@@ -1328,7 +1308,6 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 									
 									for (var option_i=0; option_i<_this.num_voting_options; option_i++) {
 										var option_id = _this.options[option_i].option_id;
-										console.log("setting popups, option("+option_i+","+option_id+")");
 										$('#game'+_this.game.instance_id+'_event'+_this.game_event_index+'_vote_confirm_'+option_id).html(vote_option_details[option_id]);
 									}
 									
@@ -1392,7 +1371,6 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 	this.option_has_votingaddr = [];
 	this.sel_game_event_index = false;
 	this.all_events_db_id_to_index = {};
-	this.max_available_votes = 0;
 	this.my_effective_votes = 0;
 	this.utxo_max_effective_votes = 0;
 	this.utxo_max_height = 150;
@@ -1405,7 +1383,6 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 	};
 	this.round_index_to_effectiveness_factor = function(round_index) {
 		if (this.vote_effectiveness_function == "linear_decrease") {
-			console.log("("+this.game_round_length+"-"+round_index+")/("+this.game_round_length+"-1)");
 			return Math.floor(Math.pow(10,8)*(this.game_round_length-round_index)/(this.game_round_length-1))/Math.pow(10,8);
 		}
 		else return 1;
