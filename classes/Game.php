@@ -1484,7 +1484,8 @@ class Game {
 					$new_coins_in_existence = $coins_in_existence + $add_coins;
 					$account_value = $user->account_coin_value($this);
 					$account_pct = $account_value/$coins_in_existence;
-					$payout_amount = floor($add_coins*($entity_info['my_votes']/$entity_info['entity_votes']));
+					if ($entity_info['entity_votes'] > 0) $payout_amount = floor($add_coins*($entity_info['my_votes']/$entity_info['entity_votes']));
+					else $payout_amount = 0;
 					$new_account_value = $account_value+$payout_amount;
 					$new_account_pct = $new_account_value/$new_coins_in_existence;
 					if ($account_pct > 0) $change_frac = $new_account_pct/$account_pct-1;
