@@ -27,7 +27,7 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		$coin_rpcs = array();
 		$game_id2real_game_i = array();
 
-		$q = "SELECT * FROM game_types WHERE game_type='real';";
+		$q = "SELECT * FROM games WHERE game_type='real';";
 		$r = $GLOBALS['app']->run_query($q);
 		$real_game_i = 0;
 
