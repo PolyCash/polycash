@@ -14,7 +14,7 @@ include('includes/html_start.php');
 		<div class="col-md-6">
 			<h2>EmpireCoin Web</h2>
 			<p>
-			EmpireCoin Web is a front-end wallet for the EmpireCoin protocol.  You can also use EmpireCoin Web to create and run custom EmpireCoin games.  To get started, please install PHP, MySQL and Apache on your computer.  If you're on Windows you can get PHP, MySQL and Apache by installing WAMP or XAMPP. Then, open your web directory and download our latest source code from Github.
+			EmpireCoin Web is a front-end wallet for the EmpireCoin protocol.  You can also use EmpireCoin Web to create and run custom EmpireCoin games.  To get started, please install PHP, MySQL and Apache on your computer.  If you're on Windows you can get PHP, MySQL and Apache by installing <a target="_blank" href="http://www.wampserver.com/en/">WAMP</a> or <a target="_blank" href="https://www.apachefriends.org/download.html">XAMPP</a>. Then, open your web directory and download our latest source code from Github.
 			</p>
 			<a target="_blank" class="btn btn-success" href="https://github.com/TeamEmpireCoin/empirecoin-web">Download EmpireCoin Web</a>
 		</div>
