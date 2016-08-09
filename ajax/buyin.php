@@ -16,12 +16,12 @@ if ($thisuser && $game) {
 		
 		$btc_currency = $app->get_currency_by_abbreviation('btc');
 		
-		if ($_REQUEST['action'] == "submit") {
+		if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "submit") {
 			$btc_amount = floatval($_REQUEST['btc_amount']);
 			
 			$q = "INSERT INTO game_buyins SET status='unpaid', pay_currency_id='".$btc_currency['currency_id']."', settle_currency_id='".$invite_currency['currency_id']."', invoice_address_id='".$user_game['buyin_invoice_address_id']."', user_id='".$thisuser->db_user['user_id']."', game_id='".$game->db_game['game_id']."', pay_amount='".$btc_amount."', time_created='".time()."', expire_time='".(time()+$GLOBALS['invoice_expiration_seconds'])."';";
 			$r = $app->run_query($q);
-			$app->output_message(1, "Great! ".ucfirst($game->db_game['coin_name_plural'])." will be credited to your account as soon as your BTC payment is confirmed.");
+			$app->output_message(1, "Great! ".ucfirst($game->db_game['coin_name_plural'])." will be credited to your account as soon as your BTC payment is confirmed.", false);
 		}
 		else {
 			?>

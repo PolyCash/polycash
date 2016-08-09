@@ -613,16 +613,15 @@ if ($thisuser && $game) {
 		<div class="row">
 			<div id="tabcontent0" class="tabcontent">
 				<?php
-				$game_status_explanation = $game->game_status_explanation($thisuser);
-				?>
-				<div id="game_status_explanation"<?php if ($game_status_explanation == "") echo ' style="display: none;"'; ?>><?php if ($game_status_explanation != "") echo $game_status_explanation; ?></div>
-
-				<?php
 				if ($game->db_game['buyin_policy'] != "none") { ?>
 					<button style="float: right;" class="btn btn-success" onclick="initiate_buyin();">Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
 					<?php
 				}
+				
+				$game_status_explanation = $game->game_status_explanation($thisuser);
 				?>
+				<div id="game_status_explanation"<?php if ($game_status_explanation == "") echo ' style="display: none;"'; ?>><?php if ($game_status_explanation != "") echo $game_status_explanation; ?></div>
+				
 				<div id="game0_events" class="game_events"></div>
 				
 				<script type="text/javascript" id="game0_new_event_js">

@@ -317,7 +317,7 @@ class App {
 	}
 
 	public function output_message($status_code, $message, $dump_object) {
-		if (!$dump_object) $dump_object = array("status_code"=>$status_code, "message"=>$message);
+		if (empty($dump_object)) $dump_object = array("status_code"=>$status_code, "message"=>$message);
 		else {
 			$dump_object['status_code'] = $status_code;
 			$dump_object['message'] = $message;
