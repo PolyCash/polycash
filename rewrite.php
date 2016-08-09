@@ -17,6 +17,9 @@ else if ($uri_parts[1] == "api") {
 else if ($uri_parts[1] == "explorer") {
 	include("explorer.php");
 }
+else if ($uri_parts[1] == "download") {
+	include("download.php");
+}
 else {
 	include("includes/connect.php");
 	include("includes/get_session.php");

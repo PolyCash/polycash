@@ -43,8 +43,7 @@ include('includes/html_start.php');
 	</div>
 	<div class="paragraph">
 		<h2>Get Involved</h2>
-		Are you a developer?  We'd love some help testing, fixing bugs and building new features.  To get started, please visit our Github page, build the EmpireCoin daemon from source and then start mining on our testnet.  To avoid compile errors, please use Ubuntu.<br/>
-		<a target="_blank" href="https://github.com/TeamEmpireCoin/EmpireCoin">https://github.com/TeamEmpireCoin/EmpireCoin</a>
+		Are you a developer?  We'd love some help testing, fixing bugs and building new features.  For more information, please <a href="/download/">download <?php echo $GLOBALS['coin_brand_name']; ?></a>.
 	</div>
 	
 	<center><a href="" onclick="$('#homepage_more_info').toggle('fast'); return false;">Continue reading about <?php echo $GLOBALS['coin_brand_name']; ?></a></center>
