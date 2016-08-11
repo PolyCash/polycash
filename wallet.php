@@ -62,10 +62,10 @@ if ($thisuser) {
 		
 		if ($user_game && $user_game['payment_required'] == 0) {
 			if ($_REQUEST['action'] == "save_address") {
-				$bitcoin_address = $_REQUEST['bitcoin_address'];
+				$bitcoin_address = strip_tags($_REQUEST['bitcoin_address']);
 				
 				if ($bitcoin_address != "") {
-					$qq = "INSERT INTO external_addresses SET user_id='".$thisuser->db_user['user_id']."', currency_id=2, address='".$bitcoin_address."', time_created='".time()."';";
+					$qq = "INSERT INTO external_addresses SET user_id='".$thisuser->db_user['user_id']."', currency_id=2, address=".$app->quote_escape($bitcoin_address).", time_created='".time()."';";
 					$rr = $app->run_query($qq);
 					$address_id = $app->last_insert_id();
 					

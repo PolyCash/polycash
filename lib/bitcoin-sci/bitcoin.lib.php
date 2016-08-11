@@ -13,9 +13,9 @@
 require_once(dirname(__FILE__).'/ecc-lib/auto_load.php');
 require_once(dirname(__FILE__).'/Crypt/Random.php');
 
-/*if (!extension_loaded('bcmath')) {
-  die("ERROR: BC Math is not installed!");
-}*/
+if (!extension_loaded('bcmath')) {
+  die("Failed to load the 'bitcoin-sci' library. Please try 'yum install php-bcmath' or 'apt-get install php-bcmath'. Then restart your web server.");
+}
 
 class bitcoin {
 

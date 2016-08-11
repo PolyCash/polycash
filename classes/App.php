@@ -19,11 +19,16 @@ class App {
 	}
 	
 	public function run_query($query) {
-		if ($GLOBALS['show_query_errors'] == TRUE) $result = $this->dbh->query($query) or die("Error in query: ".$query.", ".$this->dbh->errorInfo()[2]);
+		if ($GLOBALS['show_query_errors'] == TRUE) $result = $this->dbh->query($query) or $this->log_then_die("Error in query: ".$query.", ".$this->dbh->errorInfo()[2]);
 		else $result = $this->dbh->query($query) or die("Error in query");
 		return $result;
 	}
-
+	
+	public function log_then_die($message) {
+		$this->log($message);
+		die($message);
+	}
+	
 	public function utf8_clean($str) {
 		return iconv('UTF-8', 'UTF-8//IGNORE', $str);
 	}
