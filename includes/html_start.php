@@ -20,8 +20,10 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 	<script type="text/javascript" src="/js/jquery.nouislider.js"></script>
 	<script type="text/javascript" src="/js/sha256.js"></script>
 	<script type="text/javascript" src="/js/main.js"></script>
-
 	<?php
+	if ($nav_tab_selected == "home" && $GLOBALS['site_domain'] != $_SERVER['HTTP_HOST']) {
+		echo '<link rel="canonical" href="http://empirecoin.org">'."\n";
+	}
 	if (!empty($include_crypto_js)) { ?>
 	<script type="text/javascript" src="/js/base64.lib.js" ></script>
 	<script type="text/javascript" src="/js/rsa/prng4.js"></script>

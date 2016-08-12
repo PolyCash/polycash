@@ -2,7 +2,13 @@
 $host_not_required = TRUE;
 include(realpath(dirname(__FILE__))."/../includes/connect.php");
 
-if ($argv) $_REQUEST['key'] = $argv[1];
+if (!empty($argv)) {
+	$cmd_vars = $app->argv_to_array($argv);
+	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
+	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
+	if (!empty($cmd_vars['coins'])) $_REQUEST['coins'] = $cmd_vars['coins'];
+	if (!empty($cmd_vars['to'])) $_REQUEST['to'] = $cmd_vars['to'];
+}
 
 if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$user_id = false;

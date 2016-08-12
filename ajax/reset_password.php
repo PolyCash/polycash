@@ -12,7 +12,7 @@ if ($GLOBALS['outbound_email_enabled']) {
 		$q = "SELECT * FROM users WHERE notification_email=".$app->quote_escape($email).";";
 		$r = $app->run_query($q);
 		
-		if ($r->rowCount() == 1) {
+		if (TRUE || $r->rowCount() == 1) {
 			$user = $r->fetch();
 			
 			$token_key = $app->random_string(32);

@@ -12,10 +12,10 @@ $thisuser = FALSE;
 $game = FALSE;
 
 if (strlen($session_key) > 0) {
-	$q = "SELECT * FROM user_sessions WHERE session_key='".$session_key."' AND expire_time > '".time()."' AND logout_time=0;";
+	$q = "SELECT * FROM user_sessions WHERE session_key=".$app->quote_escape($session_key)." AND expire_time > '".time()."' AND logout_time=0;";
 	$r = $app->run_query($q);
 	
-	if ($r->rowCount() > 0) {
+	if ($r->rowCount() == 1) {
 		$session = $r->fetch();
 		
 		$thisuser = new User($app, $session['user_id']);
@@ -35,6 +35,13 @@ if (strlen($session_key) > 0) {
 			}
 		}
 		else $thisuser = false;
+	}
+	else {
+		while ($session = $r->fetch()) {
+			$qq = "UPDATE user_sessions SET logout_time='".time()."' WHERE session_id='".$session['session_id']."';";
+			$rr = $app->run_query($qq);
+		}
+		$session = false;
 	}
 }
 ?>

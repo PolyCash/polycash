@@ -46,12 +46,19 @@ class App {
 
 	public function random_string($length) {
 		$characters = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-		$string ="";
-
-		for ($p = 0; $p < $length; $p++) {
-			$string .= $characters[mt_rand(0, strlen($characters)-1)];
+		$bits_per_char = ceil(log(strlen($characters), 2));
+		$hex_chars_per_char = ceil($bits_per_char/4);
+		$hex_chars_needed = $length*$hex_chars_per_char;
+		$rand_data = bin2hex(openssl_random_pseudo_bytes(ceil($hex_chars_needed/2), $crypto_strong));
+		if(!$crypto_strong) $this->log_then_die("An insecure random string of length ".$length." was generated.");
+		
+		$string = "";
+		for ($i=0; $i<$length; $i++) {
+			$hex_chars = substr($rand_data, $i*$hex_chars_per_char, $hex_chars_per_char);
+			$rand_num = hexdec($hex_chars);
+			$rand_index = $rand_num%strlen($characters);
+			$string .= $characters[$rand_index];
 		}
-
 		return $string;
 	}
 	
