@@ -62,7 +62,7 @@ if ($thisuser) {
 		
 		if ($user_game && $user_game['payment_required'] == 0) {
 			if ($_REQUEST['action'] == "save_address") {
-				$bitcoin_address = strip_tags($_REQUEST['bitcoin_address']);
+				$bitcoin_address = $app->strong_strip_tags($_REQUEST['bitcoin_address']);
 				
 				if ($bitcoin_address != "") {
 					$qq = "INSERT INTO external_addresses SET user_id='".$thisuser->db_user['user_id']."', currency_id=2, address=".$app->quote_escape($bitcoin_address).", time_created='".time()."';";
@@ -295,7 +295,7 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 	$voting_strategy = $_REQUEST['voting_strategy'];
 	$voting_strategy_id = intval($_REQUEST['voting_strategy_id']);
 	$aggregate_threshold = intval($_REQUEST['aggregate_threshold']);
-	$api_url = $app->quote_escape(strip_tags($_REQUEST['api_url']));
+	$api_url = $app->quote_escape($app->strong_strip_tags($_REQUEST['api_url']));
 	$by_rank_csv = "";
 	
 	if ($voting_strategy_id > 0) {

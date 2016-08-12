@@ -66,6 +66,10 @@ class App {
 		return $this->make_alphanumeric(strip_tags($username), "$-()/!.,:;#@");
 	}
 	
+	public function strong_strip_tags($string) {
+		return htmlspecialchars(strip_tags($string));
+	}
+	
 	public function recaptcha_check_answer($recaptcha_privatekey, $ip_address, $g_recaptcha_response) {
 		$response = json_decode(file_get_contents("https://www.google.com/recaptcha/api/siteverify?secret=".$recaptcha_privatekey."&response=".$g_recaptcha_response."&remoteip=".$ip_address), true);
 		if ($response['success'] == false) return false;

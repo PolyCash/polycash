@@ -38,7 +38,7 @@ if ($thisuser) {
 					if (in_array($game_var, array('pos_reward','pow_reward','giveaway_amount'))) $game_val = (int) $game_val*pow(10,8);
 					else if (in_array($game_var, array("max_voting_fraction", "exponential_inflation_minershare", "exponential_inflation_rate"))) $game_val = intval($game_val)/100;
 					else if (in_array($game_var, array('maturity', 'round_length', 'seconds_per_block', 'final_round','invite_currency'))) $game_val = intval($game_val);
-					else $game_val = $app->quote_escape($game_val);
+					else $game_val = $app->quote_escape($app->strong_strip_tags($game_val));
 					
 					$q .= $game_var."=".$game_val.", ";
 				}
@@ -46,12 +46,12 @@ if ($thisuser) {
 				$q = substr($q, 0, strlen($q)-2)." WHERE game_id='".$game->db_game['game_id']."';";
 				$r = $app->run_query($q);
 				
-				$game_name = $app->make_alphanumeric($_REQUEST['name'], "$ -()/!.,:;#");
+				$game_name = $app->strong_strip_tags($app->make_alphanumeric($_REQUEST['name'], "$ -()/!.,:;#"));
 				
 				$url_error = false;
 
 				if ($game_name != $game->db_game['name']) {
-					$q = "SELECT * FROM games WHERE name=".$app->quote_escape($_REQUEST['name'])." AND game_id != '".$game->db_game['game_id']."';";
+					$q = "SELECT * FROM games WHERE name=".$app->quote_escape($game_name)." AND game_id != '".$game->db_game['game_id']."';";
 					$r = $app->run_query($q);
 					
 					if ($r->rowCount() > 0) {

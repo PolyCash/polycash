@@ -17,10 +17,10 @@ if ($thisuser) {
 			$preference = $_REQUEST['preference'];
 			if ($preference != "email") $preference = "none";
 			
-			$q = "UPDATE user_games SET notification_preference='".$preference."' WHERE user_game_id='".$user_game['user_game_id']."';";
+			$q = "UPDATE user_games SET notification_preference=".$app->quote_escape($preference)." WHERE user_game_id='".$user_game['user_game_id']."';";
 			$r = $app->run_query($q);
 			
-			$email = $_REQUEST['email'];
+			$email = $app->normalize_username($_REQUEST['email']);
 			if ($email != "" && $email != $thisuser->db_user['notification_email']) {
 				$app->run_query("UPDATE users SET notification_email=".$app->quote_escape(strip_tags($email))." WHERE user_id='".$thisuser->db_user['user_id']."';");
 			}

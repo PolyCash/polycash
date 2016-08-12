@@ -7,8 +7,8 @@ if ($thisuser) {
 	$app->output_message(2, "You're already logged in.", false);
 }
 else {
-	$alias = $app->make_alphanumeric(strip_tags($_REQUEST['alias']), "$-()/!.,:;#@");
-	$password = strip_tags($_REQUEST['password']);
+	$alias = $app->normalize_username($_REQUEST['alias']);
+	$password = $app->strong_strip_tags($_REQUEST['password']);
 	
 	$q = "SELECT * FROM users WHERE username=".$app->quote_escape($alias)." AND password=".$app->quote_escape($password).";";
 	$r = $app->run_query($q);

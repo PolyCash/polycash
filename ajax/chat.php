@@ -14,10 +14,10 @@ if ($thisuser && $game) {
 			$action = $_REQUEST['action'];
 			
 			if ($action == "send") {
-				$message = $app->quote_escape(strip_tags($app->utf8_clean(urldecode($_REQUEST['message']))));
+				$message = $app->strong_strip_tags($_REQUEST['message']);
 				
 				if ($message != "") {
-					$q = "INSERT INTO user_messages SET game_id='".$game->db_game['game_id']."', from_user_id='".$thisuser->db_user['user_id']."', to_user_id='".$to_user->db_user['user_id']."', message=".$message.", send_time='".time()."';";
+					$q = "INSERT INTO user_messages SET game_id='".$game->db_game['game_id']."', from_user_id='".$thisuser->db_user['user_id']."', to_user_id='".$to_user->db_user['user_id']."', message=".$app->quote_escape($message).", send_time='".time()."';";
 					$r = $app->run_query($q);
 				}
 			}

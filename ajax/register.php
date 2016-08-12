@@ -9,10 +9,10 @@ if ($thisuser) {
 else {
 	$alias = $app->normalize_username($_REQUEST['alias']);
 	if (strlen($alias) >= 6) {
-		$password = strip_tags($_REQUEST['password']);
+		$password = $app->strong_strip_tags($_REQUEST['password']);
 		
 		if (strlen($password) >= 6) {
-			$email = strip_tags($_REQUEST['email']);
+			$email = $app->normalize_username($_REQUEST['email']);
 			
 			$q = "SELECT * FROM users WHERE username=".$app->quote_escape($alias).";";
 			$r = $app->run_query($q);
@@ -32,7 +32,7 @@ else {
 				$user_id = $app->last_insert_id();
 				
 				$bitcoin_address = "";
-				if (!empty($_REQUEST['bitcoin_address'])) $bitcoin_address = $_REQUEST['bitcoin_address'];
+				if (!empty($_REQUEST['bitcoin_address'])) $bitcoin_address = $app->strong_strip_tags($_REQUEST['bitcoin_address']);
 				
 				if (!empty($bitcoin_address)) {
 					$qq = "INSERT INTO external_addresses SET user_id='".$user_id."', currency_id=2, address=".$app->quote_escape($bitcoin_address).", time_created='".time()."';";

@@ -93,7 +93,7 @@ function login() {
 </script>
 <br/>
 <input type="hidden" id="redirect_id" value="<?php if ($redirect_id) echo $redirect_id; ?>" />
-<input type="hidden" name="invite_key" value="<?php if (!empty($_REQUEST['invite_key'])) echo $app->make_alphanumeric(strip_tags($_REQUEST['invite_key']), ""); ?>" />
+<input type="hidden" name="invite_key" value="<?php if (!empty($_REQUEST['invite_key'])) echo $app->strong_strip_tags($app->make_alphanumeric($_REQUEST['invite_key'], "")); ?>" />
 <form id="alias_form" action="/" method="get" onsubmit="check_alias(); return false;">
 	<div class="row">
 		<div class="col-md-8 col-md-push-2">
