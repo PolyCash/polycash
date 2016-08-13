@@ -7,21 +7,29 @@ if ($thisuser) {
 	$app->output_message(2, "You're already logged in.", false);
 }
 else {
+	$noinfo_message = "Incorrect username or password, please try again.";
 	$alias = $app->normalize_username($_REQUEST['alias']);
 	$password = $app->strong_strip_tags($_REQUEST['password']);
 	
-	$q = "SELECT * FROM users WHERE username=".$app->quote_escape($alias)." AND password=".$app->quote_escape($password).";";
+	$q = "SELECT * FROM users WHERE username=".$app->quote_escape($alias).";";
 	$r = $app->run_query($q);
 	
 	if ($r->rowCount() == 0) {
-		$message = "Incorrect username or password, please try again.";
+		$message = $noinfo_message;
 		$error_code = 2;
 	}
 	else if ($r->rowCount() == 1) {
 		$db_thisuser = $r->fetch();
-		$thisuser = new User($app, $db_thisuser['user_id']);
-		$message = "You have been logged in, redirecting...";
-		$error_code = 1;
+		
+		if ($db_thisuser['password'] == $app->normalize_password($password, $db_thisuser['salt'])) {
+			$thisuser = new User($app, $db_thisuser['user_id']);
+			$message = "You have been logged in, redirecting...";
+			$error_code = 1;
+		}
+		else {
+			$message = $noinfo_message;
+			$error_code = 2;
+		}
 	}
 	else {
 		$message = "System error, a duplicate user account was found.";

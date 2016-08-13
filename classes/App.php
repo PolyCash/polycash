@@ -66,6 +66,10 @@ class App {
 		return $this->make_alphanumeric(strip_tags($username), "$-()/!.,:;#@");
 	}
 	
+	public function normalize_password($password, $salt) {
+		return hash("sha256", $salt.$password);
+	}
+	
 	public function strong_strip_tags($string) {
 		return htmlspecialchars(strip_tags($string));
 	}

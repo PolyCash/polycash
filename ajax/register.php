@@ -19,8 +19,9 @@ else {
 			
 			if ($r->rowCount() == 0) {
 				$verify_code = $app->random_string(32);
+				$salt = $app->random_string(16);
 				
-				$q = "INSERT INTO users SET username=".$app->quote_escape($alias).", notification_email=".$app->quote_escape($email).", api_access_code=".$app->quote_escape($app->random_string(32)).", password=".$app->quote_escape($password);
+				$q = "INSERT INTO users SET username=".$app->quote_escape($alias).", notification_email=".$app->quote_escape($email).", api_access_code=".$app->quote_escape($app->random_string(32)).", password=".$app->quote_escape($app->normalize_password($password, $salt)).", salt=".$app->quote_escape($salt);
 				if ($GLOBALS['pageview_tracking_enabled']) {
 					$q .= ", ip_address=".$app->quote_escape($_SERVER['REMOTE_ADDR']);
 				}
