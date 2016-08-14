@@ -11,7 +11,7 @@ include("includes/html_start.php");
 <div class="container" style="max-width: 1000px; padding-top: 15px;">
 	<?php
 	if ($GLOBALS['outbound_email_enabled']) {
-		if ($_REQUEST['do'] == "reset") {
+		if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "reset") {
 			$token_id = intval($_REQUEST['tid']);
 			
 			$q = "SELECT * FROM user_resettokens WHERE token_id='".$token_id."';";
@@ -33,7 +33,7 @@ include("includes/html_start.php");
 					Please enter a new password for your user account:<br/>
 					<form action="/reset_password/" method="post" onsubmit="$('#reset_password').val(Sha256.hash($('#reset_password').val())); $('#reset_password_confirm').val(Sha256.hash($('#reset_password_confirm').val()));">
 						<input type="hidden" name="tid" value="<?php echo $reset_token['token_id']; ?>" />
-						<input type="hidden" name="do" value="reset_confirm" />
+						<input type="hidden" name="action" value="reset_confirm" />
 						<input type="hidden" name="token2" value="<?php echo $reset_token['token2_key']; ?>" />
 						<div class="row">
 							<div class="col-md-4 form-control-static">
@@ -68,10 +68,10 @@ include("includes/html_start.php");
 				}
 			}
 		}
-		else if ($_REQUEST['do'] == "reset_confirm") {
+		else if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "reset_confirm") {
 			$token_id = intval($_REQUEST['tid']);
 			
-			$q = "SELECT * FROM user_resettokens WHERE token_id='".$token_id."';";
+			$q = "SELECT * FROM user_resettokens WHERE token_id=".$token_id.";";
 			$r = $app->run_query($q);
 			if ($r->rowCount() == 1) {
 				$reset_token = $r->fetch();
@@ -85,13 +85,19 @@ include("includes/html_start.php");
 					$password_confirm = $_REQUEST['password_confirm'];
 					
 					if ($password == $password_confirm) {
-						$q = "UPDATE users SET password=".$app->quote_escape($password)." WHERE user_id='".$reset_token['user_id']."';";
-						$r = $app->run_query($q);
+						$reset_user_r = $app->run_query("SELECT * FROM users WHERE user_id=".$reset_token['user_id'].";");
 						
-						$reset_success = true;
-						
-						$q = "UPDATE user_resettokens SET completed=2 WHERE token_id='".$reset_token['token_id']."';";
-						$r = $app->run_query($q);
+						if ($reset_user_r->rowCount() == 1) {
+							$db_reset_user = $reset_user_r->fetch();
+							
+							$q = "UPDATE users SET password=".$app->quote_escape($app->normalize_password($password, $reset_user['salt']))." WHERE user_id=".$db_reset_user['user_id'].";";
+							$r = $app->run_query($q);
+							
+							$reset_success = true;
+							
+							$q = "UPDATE user_resettokens SET completed=2 WHERE token_id=".$reset_token['token_id'].";";
+							$r = $app->run_query($q);
+						}
 					}
 					
 					if ($reset_success) {

@@ -6,7 +6,7 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->in
 if ($GLOBALS['outbound_email_enabled']) {
 	$success_msg = "A password reset link has been sent to that email address, please open your inbox and click the link to reset your password.";
 
-	$email = urldecode($_REQUEST['email']);
+	$email = $app->normalize_username($_REQUEST['email']);
 	
 	if ($email != "") {
 		$q = "SELECT * FROM users WHERE notification_email=".$app->quote_escape($email).";";
@@ -17,8 +17,8 @@ if ($GLOBALS['outbound_email_enabled']) {
 			
 			$token_key = $app->random_string(32);
 			
-			$q = "INSERT INTO user_resettokens SET user_id='".$user['user_id']."', token_key='".$token_key."', token2_key='".$app->random_string(32)."', create_time='".time()."', expire_time='".(time()+3600*36)."'";
-			if ($GLOBALS['pageview_tracking_enabled']) $q .= ", request_viewer_id='".$viewer_id."', requester_ip='".$_SERVER['REMOTE_ADDR']."'";
+			$q = "INSERT INTO user_resettokens SET user_id='".$user['user_id']."', token_key=".$app->quote_escape($token_key).", token2_key=".$app->quote_escape($app->random_string(32)).", create_time='".time()."', expire_time='".(time()+3600*36)."'";
+			if ($GLOBALS['pageview_tracking_enabled']) $q .= ", request_viewer_id='".$viewer_id."', requester_ip=".$app->quote_escape($_SERVER['REMOTE_ADDR']);
 			$q .= ";";
 			$r = $app->run_query($q);
 			$token_id = $app->last_insert_id();
