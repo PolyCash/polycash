@@ -187,7 +187,7 @@ if ($game->db_game['invite_currency'] > 0) {
 							$btc_sum = 0;
 							$settle_sum = 0;
 							
-							$q = "SELECT * FROM currency_invoices ci JOIN invoice_addresses ia ON ci.invoice_address_id=ia.invoice_address_id JOIN currencies c ON ci.settle_currency_id=c.currency_id WHERE ci.game_id='".$game->db_game['game_id']."' AND ci.status='confirmed';";
+							$q = "SELECT * FROM currency_invoices ci JOIN invoice_addresses ia ON ci.invoice_address_id=ia.invoice_address_id JOIN currencies c ON ci.settle_currency_id=c.currency_id WHERE ci.game_id=".$game->db_game['game_id']." AND ci.status='confirmed' AND ci.settle_amount > 0;";
 							$r = $app->run_query($q);
 							
 							while ($currency_invoice = $r->fetch()) {
@@ -200,7 +200,7 @@ if ($game->db_game['invite_currency'] > 0) {
 								$settle_sum += $currency_invoice['settle_amount'];
 							}
 							
-							$q = "SELECT * FROM game_buyins gb JOIN invoice_addresses ia ON gb.invoice_address_id=ia.invoice_address_id JOIN currencies c ON gb.settle_currency_id=c.currency_id WHERE gb.game_id='".$game->db_game['game_id']."' AND gb.status='confirmed';";
+							$q = "SELECT * FROM game_buyins gb JOIN invoice_addresses ia ON gb.invoice_address_id=ia.invoice_address_id JOIN currencies c ON gb.settle_currency_id=c.currency_id WHERE gb.game_id='".$game->db_game['game_id']."' AND gb.status='confirmed' AND gb.settle_amount > 0;";
 							$r = $app->run_query($q);
 							
 							while ($buyin = $r->fetch()) {

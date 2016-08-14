@@ -11,10 +11,13 @@ include("includes/html_start.php");
 <div class="container" style="max-width: 1000px; padding-top: 15px;">
 	<?php
 	if ($GLOBALS['outbound_email_enabled']) {
+		$noinfo_message = "Sorry but that password reset link has expired. Please <a href=\"/reset_password/\">click here</a> to reset your password.";
+		
 		if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "reset") {
 			$token_id = intval($_REQUEST['tid']);
+			$token_key = $_REQUEST['reset_key'];
 			
-			$q = "SELECT * FROM user_resettokens WHERE token_id='".$token_id."';";
+			$q = "SELECT * FROM user_resettokens WHERE token_id=".$token_id." AND token_key=".$app->quote_escape($token_key).";";
 			$r = $app->run_query($q);
 			
 			if ($r->rowCount() == 1) {
@@ -26,7 +29,7 @@ include("includes/html_start.php");
 					$user = $r->fetch();
 					
 					$q = "UPDATE user_resettokens SET firstclick_time='".time()."'";
-					if ($GLOBALS['pageview_tracking_enabled']) $q .= ", firstclick_ip='".$_SERVER['REMOTE_ADDR']."'";
+					if ($GLOBALS['pageview_tracking_enabled']) $q .= ", firstclick_ip=".$app->quote_escape($_SERVER['REMOTE_ADDR']);
 					$q .= ", firstclick_viewer_id='".$viewer_id."' WHERE token_id='".$reset_token['token_id']."';";
 					$r = $app->run_query($q);
 					?>
@@ -64,9 +67,10 @@ include("includes/html_start.php");
 					<?php
 				}
 				else {
-					echo "Sorry but that password reset link has expired. Please <a href=\"/reset_password/\">click here</a> to reset your password.";
+					echo $noinfo_message;
 				}
 			}
+			else echo $noinfo_message;
 		}
 		else if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "reset_confirm") {
 			$token_id = intval($_REQUEST['tid']);
@@ -90,7 +94,7 @@ include("includes/html_start.php");
 						if ($reset_user_r->rowCount() == 1) {
 							$db_reset_user = $reset_user_r->fetch();
 							
-							$q = "UPDATE users SET password=".$app->quote_escape($app->normalize_password($password, $reset_user['salt']))." WHERE user_id=".$db_reset_user['user_id'].";";
+							$q = "UPDATE users SET password=".$app->quote_escape($app->normalize_password($password, $db_reset_user['salt']))." WHERE user_id=".$db_reset_user['user_id'].";";
 							$r = $app->run_query($q);
 							
 							$reset_success = true;
@@ -111,7 +115,7 @@ include("includes/html_start.php");
 					}
 				}
 				else {
-					echo "Sorry but that password reset link has expired. Please <a href=\"/reset_password/\">click here</a> to reset your password.";
+					echo $noinfo_message;
 				}
 			}
 		}

@@ -86,7 +86,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				Example:
 <pre>
 &lt;Directory <?php echo realpath(dirname(__FILE__)); ?>&gt;
-	Options Indexes FollowSymLinks
+	Options FollowSymLinks
 	AllowOverride All
 	Require all granted
 &lt;/Directory&gt;
@@ -159,6 +159,20 @@ $GLOBALS['bitcoin_rpc_password'] = ""; // RPC password here
 				
 				<h2>Connect to bitcoind/empirecoind</h2>
 				<?php
+				if (!empty($GLOBALS['bitcoin_rpc_user'])) {
+					try {
+						$bitcoin_rpc = new jsonRPCClient('http://'.$GLOBALS['bitcoin_rpc_user'].':'.$GLOBALS['bitcoin_rpc_password'].'@127.0.0.1:'.$GLOBALS['bitcoin_port'].'/');
+						$getinfo = $bitcoin_rpc->getinfo();
+						echo " <font class=\"greentext\">Connected to Bitcoin on port ".$GLOBALS['bitcoin_port']."</font></b><br/>\n";
+						echo "<pre>getinfo()\n";
+						print_r($getinfo);
+						echo "</pre>";
+					}
+					catch (Exception $e) {
+						echo "Error, failed to connect to Bitcoin by RPC. Check your parameters in includes/config.php<br/>\n";
+					}
+				}
+				
 				$rpc_games_r = $app->run_query("SELECT * FROM games WHERE game_type='real' AND game_status='running';");
 				while ($rpc_game = $rpc_games_r->fetch()) {
 					if ($rpc_game['rpc_username'] != "" && $rpc_game['rpc_password'] != "") {

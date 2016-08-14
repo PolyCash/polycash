@@ -23,7 +23,7 @@ if ($GLOBALS['outbound_email_enabled']) {
 			$r = $app->run_query($q);
 			$token_id = $app->last_insert_id();
 			
-			$reset_link = $GLOBALS['base_url']."/reset_password/?do=reset&tid=".$token_id."&reset_key=".$token_key;
+			$reset_link = $GLOBALS['base_url']."/reset_password/?action=reset&tid=".$token_id."&reset_key=".$token_key;
 			
 			$subject = $GLOBALS['site_name']." - Please reset your password";
 			$message = "<p>Someone requested a password reset for your ".$GLOBALS['site_name']." web wallet.  If you did not request a password reset, please delete this email.</p>";
