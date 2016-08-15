@@ -365,7 +365,11 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					<div class="transaction_table">
 					<?php
 					for ($i=$from_block_id; $i<=$to_block_id; $i++) {
-						echo "Block #".$i."<br/>\n";
+						echo "Block #".$i;
+						if ($event->db_event['vote_effectiveness_function'] != "constant") {
+							echo ", vote effectiveness: ".$event->block_id_to_effectiveness_factor($i);
+						}
+						echo "<br/>\n";
 						$q = "SELECT * FROM transactions WHERE game_id='".$game->db_game['game_id']."' AND block_id='".$i."' AND amount > 0 ORDER BY transaction_id ASC;";
 						$r = $app->run_query($q);
 						while ($transaction = $r->fetch()) {

@@ -900,34 +900,41 @@ class Game {
 			$input_sum = 0;
 			while ($input = $rr->fetch()) {
 				$amount_disp = $this->app->format_bignum($input['amount']/pow(10,8));
-				$html .= $amount_disp."&nbsp;";
-				if ($amount_disp == '1') $html .= $this->db_game['coin_name'];
-				else $html .= $this->db_game['coin_name_plural'];
-				$html .= "&nbsp; ";
 				$html .= '<a class="display_address" style="';
 				if ($input['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
 				$html .= '" href="/explorer/'.$this->db_game['url_identifier'].'/addresses/'.$input['address'].'">'.$input['address'].'</a>';
 				if ($input['name'] != "") $html .= "&nbsp;&nbsp;(".$input['name'].")";
 				$html .= "<br/>\n";
+				$html .= $amount_disp." ";
+				if ($amount_disp == '1') $html .= $this->db_game['coin_name'];
+				else $html .= $this->db_game['coin_name_plural'];
+				if ($transaction['block_id'] > 0) {
+					if ($this->db_game['payout_weight'] == "coin") $votes = $input['amount'];
+					else $votes = $input[$this->db_game['payout_weight'].'s_created'];
+					$html .= ", ".$this->app->format_bignum($votes/pow(10,8))." votes";
+				}
+				$html .= "<br/>\n";
 				$input_sum += $input['amount'];
 			}
 		}
 		$html .= '</div><div class="col-md-6">';
-		$qq = "SELECT i.*, gvo.*, a.*, p.amount AS payout_amount FROM transaction_ios i LEFT JOIN transaction_ios p ON i.payout_io_id=p.io_id, addresses a LEFT JOIN options gvo ON a.option_id=gvo.option_id WHERE i.create_transaction_id='".$transaction['transaction_id']."' AND i.address_id=a.address_id ORDER BY i.out_index ASC;";
+		$qq = "SELECT i.*, gvo.*, a.*, i.votes AS votes, p.amount AS payout_amount FROM transaction_ios i LEFT JOIN transaction_ios p ON i.payout_io_id=p.io_id, addresses a LEFT JOIN options gvo ON a.option_id=gvo.option_id WHERE i.create_transaction_id='".$transaction['transaction_id']."' AND i.address_id=a.address_id ORDER BY i.out_index ASC;";
 		$rr = $this->app->run_query($qq);
 		$output_sum = 0;
 		while ($output = $rr->fetch()) {
 			$html .= '<a class="display_address" style="';
 			if ($output['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
-			$html .= '" href="/explorer/'.$this->db_game['url_identifier'].'/addresses/'.$output['address'].'">'.$output['address'].'</a>&nbsp; ';
+			$html .= '" href="/explorer/'.$this->db_game['url_identifier'].'/addresses/'.$output['address'].'">'.$output['address']."</a><br/>\n";
 			
 			$amount_disp = $this->app->format_bignum($output['amount']/pow(10,8));
-			$html .= $amount_disp."&nbsp;";
+			$html .= $amount_disp." ";
 			if ($amount_disp == '1') $html .= $this->db_game['coin_name'];
 			else $html .= $this->db_game['coin_name_plural'];
-			$html .= '&nbsp; ';
 			
-			if ($output['name'] != "") $html .= "&nbsp;&nbsp;".$output['name'];
+			if ($output['votes'] > 0) {
+				$html .= ", ".$this->app->format_bignum($output['votes']/pow(10,8))." votes for";
+			}
+			if ($output['name'] != "") $html .= " ".$output['name'];
 			if ($output['payout_amount'] > 0) $html .= '&nbsp;&nbsp;<font class="greentext">+'.$this->app->format_bignum($output['payout_amount']/pow(10,8)).'</font>';
 			$html .= "<br/>\n";
 			$output_sum += $output['amount'];
@@ -1127,29 +1134,37 @@ class Game {
 		else return false;
 	}
 	
-	public function new_game_giveaway($user_id, $type, $amount) {
+	public function new_game_giveaway($user_id, $type, $target_amount) {
 		if ($type != "buyin") {
 			$type = "initial_purchase";
-			$amount = $this->db_game['giveaway_amount'];
+			$target_amount = $this->db_game['giveaway_amount'];
 		}
 		
 		$transaction_id = false;
-		if ($amount > 0) {
+		if ($target_amount > 0) {
 			$addr_id = $this->new_nonuser_address();
+			$num_utxos = 5;
+			$first_denom = 4;
+			$actual_amount = 0;
 			
 			$addr_ids = array();
 			$amounts = array();
 			$option_ids = array();
 			
-			for ($i=0; $i<5; $i++) {
-				$amounts[$i] = floor($amount/5);
+			$frac_sum = 0;
+			for ($i=0; $i<$num_utxos; $i++) {
+				$frac_sum += 1/($first_denom+$i);
+			}
+			for ($i=0; $i<$num_utxos; $i++) {
+				$amounts[$i] = floor($target_amount*(1/($first_denom+$i))/$frac_sum);
 				$addr_ids[$i] = $addr_id;
 				$option_ids[$i] = false;
+				$actual_amount += $amounts[$i];
 			}
 			$transaction_id = $this->create_transaction($option_ids, $amounts, false, false, 0, 'giveaway', false, $addr_ids, false, 0);
 		}
 		
-		$q = "INSERT INTO game_giveaways SET type='".$type."', game_id='".$this->db_game['game_id']."'";
+		$q = "INSERT INTO game_giveaways SET type='".$type."', game_id='".$this->db_game['game_id']."', amount='".$actual_amount."'";
 		if ($transaction_id > 0) $q .= ", transaction_id='".$transaction_id."'";
 		if ($user_id) $q .= ", user_id='".$user_id."', status='claimed'";
 		$q .= ";";
@@ -2481,7 +2496,7 @@ class Game {
 	
 	public function select_input_buttons($user_id) {
 		$js = "mature_ios.length = 0;\n";
-		$html = "";
+		$html = "<p>Click on the coins below to compose your voting transaction.</p>\n";
 		$input_buttons_html = "";
 		
 		$last_block_id = $this->last_block_id();

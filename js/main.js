@@ -549,7 +549,6 @@ function refresh_all_inputs() {
 
 	for (var i=0; i<mature_ios.length; i++) {
 		var votes = games[0].votes_from_io(mature_ios[i].amount, mature_ios[i].create_block_id);
-
 		if (votes > utxo_max_effective_votes) {
 			utxo_max_effective_votes = votes;
 		}
@@ -1395,7 +1394,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 		var votes;
 		if (this.payout_weight == "coin") votes = Math.floor(amount);
 		else if (this.payout_weight == "coin_round") votes = (this.block_to_round(1+this.last_block_id) - this.block_to_round(create_block))*amount;
-		else votes = (1 + this.last_block_id - this.create_block)*amount;
+		else votes = (1+this.last_block_id - create_block)*amount;
 		return votes;
 	};
 	this.add_option_to_vote = function(option_id, name) {

@@ -319,7 +319,7 @@ class Event {
 		$event_pos_reward = $this->event_pos_reward_in_round($round_id);
 		
 		while ($input = $r->fetch()) {
-			$payout_amount = floor($event_pos_reward*$input[$score_field]/$winning_votes);
+			$payout_amount = floor($event_pos_reward*$input['votes']/$winning_votes);
 			$total_paid += $payout_amount;
 			
 			$qq = "INSERT INTO transaction_ios SET spend_status='unspent', out_index='".$out_index."', instantly_mature=0, game_id='".$this->game->db_game['game_id']."', event_id='".$this->db_event['event_id']."', user_id='".$input['user_id']."', address_id='".$input['address_id']."'";
@@ -756,8 +756,7 @@ class Event {
 		$coins_voted = $returnvals[1];
 		
 		if (!empty($my_votes[$winning_option_id])) {
-			$payout_amt = (floor(100*$this->event_pos_reward_in_round($round_id)/pow(10,8)*$my_votes[$winning_option_id]['votes']/$winning_votes)/100);
-			
+			$payout_amt = $this->event_pos_reward_in_round($round_id)/pow(10,8)*$my_votes[$winning_option_id]['votes']/$winning_votes;
 			$payout_disp = $this->game->app->format_bignum($payout_amt);
 			$txt .= "You won <font class=\"greentext\">+".$payout_disp." ";
 			if ($payout_disp == '1') $txt .= $this->game->db_game['coin_name'];

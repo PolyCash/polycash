@@ -588,8 +588,8 @@ if ($thisuser && $game) {
 		include("includes/wallet_status.php");
 		
 		if ($game->db_game['inflation'] == "exponential") {
-			echo '<div class="row"><div class="col-sm-2">Exchange Rate:</div><div style="text-align: right;" class="col-sm-3"><font class="greentext">';
-			echo $app->format_bignum($app->votes_per_coin($game->db_game)).'</font> votes per coin</div></div>';
+			echo '<div class="row"><div class="col-sm-2">Vote&nbsp;conversion&nbsp;rate:</div><div style="text-align: right;" class="col-sm-3"><font class="greentext">';
+			echo $app->format_bignum($app->votes_per_coin($game->db_game)).'</font> votes &rarr; <font class="greentext">1</font> '.$game->db_game['coin_name'].'</div></div>';
 		}
 		?>
 		<div id="wallet_text_stats">
@@ -629,31 +629,6 @@ if ($thisuser && $game) {
 				echo $game->new_event_js(0, false);
 				?>
 				</script>
-				<?php
-				/*
-				for ($i=0; $i<count($game->current_events); $i++) {
-					?>
-					<div id="game0_event<?php echo $i; ?>">
-						<div id="game0_event<?php echo $i; ?>_current_round_table">
-							<?php
-							echo $game->current_events[$i]->current_round_table($current_round, $thisuser, true, true, 0, $i);
-							?>
-						</div>
-						<div class="row">
-							<div class="col-md-6">
-								<h2>My Votes</h2>
-								<div id="game0_event<?php echo $i; ?>_my_current_votes">
-									<?php
-									echo $game->current_events[$i]->my_votes_table($current_round, $thisuser);
-									?>
-								</div>
-							</div>
-						</div>
-					</div>
-					<?php
-				}
-				*/
-				?>
 				<div id="vote_popups_disabled"<?php if ($block_within_round != $game->db_game['round_length']) echo ' style="display: none;"'; ?>>
 					The final block of the round is being mined. Voting is currently disabled.
 				</div>
