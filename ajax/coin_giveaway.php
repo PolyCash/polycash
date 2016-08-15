@@ -15,10 +15,8 @@ if ($thisuser && $game) {
 		
 		$user_strategy = $game->fetch_user_strategy($user_game);
 		
-		if ($user_strategy['voting_strategy'] == "by_plan") {
-			$qq = "UPDATE user_games SET show_planned_votes=1 WHERE user_game_id='".$user_game['user_game_id']."';";
-			$rr = $app->run_query($qq);
-		}
+		$qq = "UPDATE user_games SET show_planned_votes=1 WHERE user_game_id='".$user_game['user_game_id']."';";
+		$rr = $app->run_query($qq);
 		
 		if ($success) echo "1";
 		else echo "0";

@@ -1075,6 +1075,7 @@ function save_plan_allocations() {
 		data: postvars,
 		success: function(result) {
 			$('#save_plan_btn').html("Save");
+			$("input[name=voting_strategy][value='by_plan']").prop("checked",true);
 		}
 	});
 }

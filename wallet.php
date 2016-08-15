@@ -357,8 +357,8 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 			$r = $app->run_query($q);
 		}
 		
-		$option_pct_sum = 0;
-		$option_pct_error = FALSE;
+		$entity_pct_sum = 0;
+		$entity_pct_error = FALSE;
 		
 		$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id JOIN entities en ON op.entity_id=en.entity_id WHERE e.game_id='".$game->db_game['game_id']."' GROUP BY en.entity_id ORDER BY en.entity_id ASC;";
 		$rr = $app->run_query($qq);
@@ -1118,10 +1118,10 @@ if ($thisuser && $game) {
 								echo ". ";
 							}
 							?>
-							These new <?php echo $game->db_game['coin_name_plural']; ?> are split up and given to everyone who voted for the winner.
+							After each round, a winner is declared and new <?php echo $game->db_game['coin_name_plural']; ?> are created and given to everyone who voted for the winner.
 						</p>
 						<p>
-							To make sure you don't miss out on votes, a random voting strategy has been applied to your account.  You are currently on a planned voting strategy but several other strategy types are available.  You can change your voting strategy at any time by clicking on the "Strategy" tab.  Please click below to check the random votes that you have been assigned.<br/>
+							To do well in this game, be sure to vote in each round. Click below to set your voting strategy. You can change your voting strategy at any time by clicking on the "Strategy" tab.<br/>
 						</p>
 						<p>
 							<button class="btn btn-primary" onclick="$('#intro_message').modal('hide'); show_planned_votes();">Continue</button>
@@ -1132,12 +1132,15 @@ if ($thisuser && $game) {
 		</div>
 		
 		<div style="display: none;" class="modal fade" id="planned_votes">
-			<div class="modal-dialog modal-lg">
+			<div class="modal-dialog" style="width: 80%; max-width: 1000px;">
 				<div class="modal-content">
 					<div class="modal-header">
 						<h4 class="modal-title">My Planned Votes</h4>
 					</div>
 					<div class="modal-body">
+						<p>
+							Set your planned votes by clicking on the options below.  You can vote on more than one option in each round. Keep clicking on an option to increase its votes.  Or right click to remove all votes from an option.  Your planned votes are confidential and cannot be seen by other players.
+						</p>
 						<?php
 						if ($game->db_game['final_round'] > 0) {
 							$plan_start_round = 1;

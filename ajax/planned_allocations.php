@@ -50,6 +50,10 @@ if ($thisuser && $game) {
 		$game->scramble_plan_allocations($user_strategy, array(0=>1, 1=>0.5), $from_round, $to_round);
 		$app->output_message(1, "Scrambled it!", false);
 	}
+	
+	if ($action == "save" || $action == "scramble") {
+		$app->run_query("UPDATE user_strategies SET voting_strategy='by_plan' WHERE strategy_id=".$user_strategy['strategy_id'].";");
+	}
 }
 else $app->output_message(2, "Please log in", false);
 ?>
