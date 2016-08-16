@@ -5,9 +5,6 @@ To use Empirecoin Web as a wallet for the Empirecoin currency, first install emp
 To get started, first please install and secure Apache, MySQL and PHP.  Then create a new file: includes/config.php and paste the following code into this file.  You can also find an example config file in includes/example_config.php
 
 ```
-#!php
-
-<?php
 <?php
 $GLOBALS['mysql_server'] = "localhost";
 $GLOBALS['mysql_user'] = "root"; // Enter your mysql username here
@@ -45,6 +42,7 @@ $GLOBALS['site_name_short'] = "EmpireCoin";
 $GLOBALS['site_name'] = "EmpireCoin.org";
 $GLOBALS['site_domain'] = $_SERVER['SERVER_ADDR']; // Enter your domain name, IP or "localhost" here
 $GLOBALS['base_url'] = "http://".$GLOBALS['site_domain'];
+$GLOBALS['homepage_fname'] = "default.php";
 
 $GLOBALS['default_timezone'] = 'America/Chicago';
 
@@ -55,9 +53,6 @@ $GLOBALS['profit_btc_address'] = "";
 $GLOBALS['api_proxy_url'] = "";
 
 $GLOBALS['default_server_api_access_key'] = false;
-?>
-?>
-
 ```
 
 Enter the username, password and database name for your MySQL database into your includes/config.php.

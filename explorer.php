@@ -582,14 +582,16 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				echo "<br/>\n";
 			}
 			else if ($explore_mode == "games") {
-				?>
-				<h3><?php echo $GLOBALS['coin_brand_name']; ?> - Please choose a game</h3>
-				<?php
-				$q = "SELECT * FROM games WHERE game_status IN ('running','published') AND creator_id IS NULL;";
+				$q = "SELECT * FROM games WHERE game_status IN ('running','published','completed') AND featured=1 ORDER BY game_status ASC;";
 				$r = $app->run_query($q);
 				$game_id_csv = "";
+				$section = "";
 				while ($db_game = $r->fetch()) {
-					echo '<a href="/explorer/'.$db_game['url_identifier'].'">'.$db_game['name']."</a><br/>\n";
+					if ($db_game['game_status'] == "completed") $this_section = "completed";
+					else $this_section = "running";
+					if ($section != $this_section) echo "<h2>".ucwords($this_section)." Games</h2>\n";
+					$section = $this_section;
+					echo '<a href="/explorer/'.$db_game['url_identifier'].'/events/">'.$db_game['name']."</a><br/>\n";
 					$game_id_csv .= $db_game['game_id'].",";
 				}
 				if ($game_id_csv != "") $game_id_csv = substr($game_id_csv, 0, strlen($game_id_csv)-1);
