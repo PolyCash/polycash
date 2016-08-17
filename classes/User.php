@@ -383,28 +383,13 @@ class User {
 		
 		// Try to give the user voting addresses for all options in this game
 		while ($option = $r->fetch()) {
-			if ($game->db_game['game_type'] == "real") {
-				$qq = "SELECT * FROM addresses WHERE option_id='".$option['option_id']."' AND game_id='".$game->db_game['game_id']."' AND is_mine=1 AND user_id IS NULL;";
-				$rr = $this->app->run_query($qq);
+			$qq = "SELECT * FROM addresses WHERE option_id='".$option['option_id']."' AND game_id='".$game->db_game['game_id']."' AND is_mine=1 AND user_id IS NULL;";
+			$rr = $this->app->run_query($qq);
+			
+			if ($rr->rowCount() > 0) {
+				$address = $rr->fetch();
 				
-				if ($rr->rowCount() > 0) {
-					$address = $rr->fetch();
-					
-					$qq = "UPDATE addresses SET user_id='".$this->db_user['user_id']."' WHERE address_id='".$address['address_id']."';";
-					$rr = $this->app->run_query($qq);
-				}
-			}
-			else {
-				$new_address = "E";
-				$rand1 = rand(0, 1);
-				$rand2 = rand(0, 1);
-				if ($rand1 == 0) $new_address .= "e";
-				else $new_address .= "E";
-				if ($rand2 == 0) $new_address .= strtoupper($option['voting_character']);
-				else $new_address .= $option['voting_character'];
-				$new_address .= $this->app->random_string(31);
-				
-				$qq = "INSERT INTO addresses SET game_id='".$game->db_game['game_id']."', option_id='".$option['option_id']."', user_id='".$this->db_user['user_id']."', address='".$new_address."', time_created='".time()."';";
+				$qq = "UPDATE addresses SET user_id='".$this->db_user['user_id']."' WHERE address_id='".$address['address_id']."';";
 				$rr = $this->app->run_query($qq);
 			}
 		}
@@ -414,22 +399,13 @@ class User {
 		$r = $this->app->run_query($q);
 		
 		if ($r->rowCount() == 0) {
-			if ($game->db_game['game_type'] == "real") {
-				$q = "SELECT * FROM addresses WHERE option_id IS NULL AND game_id='".$game->db_game['game_id']."' AND is_mine=1 AND user_id IS NULL;";
-				$r = $this->app->run_query($q);
-				if ($r->rowCount() > 0) {
-					$address = $r->fetch();
-					
-					$q = "UPDATE addresses SET user_id='".$game->db_game['game_id']."' WHERE address_id='".$address['address_id']."';";
-					$r = $this->app->run_query($q);
-				}
-			}
-			else {
-				$new_address = "Ex";
-				$new_address .= $this->app->random_string(32);
+			$q = "SELECT * FROM addresses WHERE option_id IS NULL AND game_id='".$game->db_game['game_id']."' AND is_mine=1 AND user_id IS NULL;";
+			$r = $this->app->run_query($q);
+			if ($r->rowCount() > 0) {
+				$address = $r->fetch();
 				
-				$qq = "INSERT INTO addresses SET game_id='".$game->db_game['game_id']."', user_id='".$this->db_user['user_id']."', address='".$new_address."', time_created='".time()."';";
-				$rr = $this->app->run_query($qq);
+				$q = "UPDATE addresses SET user_id='".$game->db_game['game_id']."' WHERE address_id='".$address['address_id']."';";
+				$r = $this->app->run_query($q);
 			}
 		}
 	}

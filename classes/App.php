@@ -698,7 +698,7 @@ class App {
 		$q = "INSERT INTO invoice_addresses SET currency_id=1, pub_key='".$keySet['pubAdd']."', priv_enc='".$encWIF."';";
 		$r = $this->run_query($q);
 		$address_id = $this->last_insert_id();
-		
+
 		return $address_id;
 	}
 	
@@ -1091,6 +1091,24 @@ class App {
 			return $votes_per_coin;
 		}
 		else return 0;
+	}
+	
+	public function fetch_invoice_address_by_id($invoice_address_id) {
+		$q = "SELECT * FROM invoice_addresses WHERE invoice_address_id='".$invoice_address_id."';";
+		$r = $this->run_query($q);
+		return $r->fetch();
+	}
+	
+	public function fetch_currency_by_id($currency_id) {
+		$q = "SELECT * FROM currencies WHERE currency_id='".$currency_id."';";
+		$r = $this->run_query($q);
+		return $r->fetch();
+	}
+	
+	public function fetch_external_address_by_id($external_address_id) {
+		$q = "SELECT * FROM external_addresses WHERE address_id='".$external_address_id."';";
+		$r = $this->run_query($q);
+		return $r->fetch();
 	}
 }
 ?>

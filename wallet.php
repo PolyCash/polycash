@@ -65,7 +65,8 @@ if ($thisuser) {
 				$bitcoin_address = $app->strong_strip_tags($_REQUEST['bitcoin_address']);
 				
 				if ($bitcoin_address != "") {
-					$qq = "INSERT INTO external_addresses SET user_id='".$thisuser->db_user['user_id']."', currency_id=2, address=".$app->quote_escape($bitcoin_address).", time_created='".time()."';";
+					$btc_currency = $app->get_currency_by_abbreviation('btc');
+					$qq = "INSERT INTO external_addresses SET user_id='".$thisuser->db_user['user_id']."', currency_id=".$btc_currency['currency_id'].", address=".$app->quote_escape($bitcoin_address).", time_created='".time()."';";
 					$rr = $app->run_query($qq);
 					$address_id = $app->last_insert_id();
 					
@@ -138,13 +139,9 @@ if ($thisuser) {
 			?>
 			<div class="container" style="max-width: 1000px; padding-top: 10px;">
 				<?php
-				$invite_currency = false;
-				$q = "SELECT * FROM currencies WHERE currency_id='".$requested_game['invite_currency']."';";
-				$r = $app->run_query($q);
+				$invite_currency = $app->fetch_currency_by_id($requested_game['invite_currency']);
 				
-				if ($r->rowCount() > 0) {
-					$invite_currency = $r->fetch();
-					
+				if ($invite_currency) {
 					$invoice = $app->new_currency_invoice($invite_currency['currency_id'], $requested_game['invite_cost'], $thisuser->db_user['user_id'], $requested_game['game_id']);
 					?>
 					<script type="text/javascript">
@@ -187,17 +184,9 @@ if ($thisuser) {
 								$r = $app->run_query($q);
 								$invoice_exchange_rate = $app->historical_currency_conversion_rate($invoice['settle_price_id'], $invoice['pay_price_id']);
 
-								$q = "SELECT * FROM currencies WHERE currency_id='".$invoice['pay_currency_id']."';";
-								$r = $app->run_query($q);
-								$pay_currency = $r->fetch();
-
-								$q = "SELECT * FROM currencies WHERE currency_id='".$invoice['settle_currency_id']."';";
-								$r = $app->run_query($q);
-								$settle_currency = $r->fetch();
-
-								$q = "SELECT * FROM invoice_addresses WHERE invoice_address_id='".$invoice['invoice_address_id']."';";
-								$r = $app->run_query($q);
-								$invoice_address = $r->fetch();
+								$pay_currency = $app->fetch_currency_by_id($invoice['pay_currency_id']);
+								$settle_currency = $app->fetch_currency_by_id($invoice['settle_currency_id']);
+								$invoice_address = $app->fetch_invoice_address_by_id($invoice['invoice_address_id']);
 
 								$coins_per_currency = ($requested_game['giveaway_amount']/pow(10,8))/$requested_game['invite_cost'];
 								echo "This game has an initial exchange rate of ".$app->format_bignum($coins_per_currency)." ".$requested_game['coin_name_plural']." per ".$invite_currency['short_name'].". ";
@@ -662,9 +651,7 @@ if ($thisuser && $game) {
 			<div id="tabcontent2" style="display: none;" class="tabcontent">
 				<?php
 				if ($user_game['bitcoin_address_id'] > 0) {
-					$qq = "SELECT * FROM external_addresses WHERE address_id='".$user_game['bitcoin_address_id']."';";
-					$rr = $app->run_query($qq);
-					$payout_address = $rr->fetch();
+					$payout_address = $app->fetch_external_address_by_id($user_game['bitcoin_address_id']);
 					echo "Payout address: ".$payout_address['address'];
 				}
 				else {
@@ -937,7 +924,7 @@ if ($thisuser && $game) {
 					</div>
 				</div>
 				
-				<h1>Deposit</h1>
+				<h1>Deposit <?php echo $game->db_game['coin_name_plural']; ?></h1>
 				<?php
 				$q = "SELECT * FROM addresses a LEFT JOIN options op ON op.option_id=a.option_id WHERE a.game_id='".$game->db_game['game_id']."' AND a.user_id='".$thisuser->db_user['user_id']."' ORDER BY a.option_id IS NULL DESC, a.option_id ASC;";
 				$r = $app->run_query($q);

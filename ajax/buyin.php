@@ -104,17 +104,13 @@ if ($thisuser && $game) {
 						
 						if ($game->db_game['buyin_policy'] == "unlimited" || $user_buyin_limit['user_buyin_limit'] > 0) {
 							if ($user_game['buyin_invoice_address_id'] > 0) {
-								$q = "SELECT * FROM invoice_addresses WHERE invoice_address_id='".$user_game['buyin_invoice_address_id']."';";
-								$r = $app->run_query($q);
-								$invoice_address = $r->fetch();
+								$invoice_address = $app->fetch_invoice_address_by_id($user_game['buyin_invoice_address_id']);
 							}
 							else {
 								$invoice_address_id = $app->new_invoice_address();
+								$invoice_address = $app->fetch_invoice_address_by_id($invoice_address_id);
 								$q = "UPDATE user_games SET buyin_invoice_address_id='".$invoice_address_id."' WHERE user_game_id='".$user_game['user_game_id']."';";
 								$r = $app->run_query($q);
-								$q = "SELECT * FROM invoice_addresses WHERE invoice_address_id='".$invoice_address_id."';";
-								$r = $app->run_query($q);
-								$invoice_address = $r->fetch();
 							}
 							?>
 							</div><div class="paragraph">

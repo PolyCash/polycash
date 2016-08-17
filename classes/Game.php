@@ -43,15 +43,81 @@ class Game {
 	}
 	
 	public function new_nonuser_address() {
-		$new_address = "E";
-		$rand1 = rand(0, 1);
-		if ($rand1 == 0) $new_address .= "e";
-		else $new_address .= "E";
-		$new_address .= "x".$this->app->random_string(31);
+		$db_address = $this->new_invoice_address(false, false);
+		return $db_address['address_id'];
+	}
+	
+	public function new_invoice_address($required_option_id, $delete_optionless) {
+		$loop = true;
+		do {
+			$keySet = bitcoin::getNewKeySet();
+			if (empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
+				die("<p>Error generating game address. Please try again.</p>");
+			}
+			
+			$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
+			$addr_option_id = $this->addr_text_to_option_id($keySet['pubAdd']);
+			
+			if ($delete_optionless && !$addr_option_id) {}
+			else {
+				$q = "INSERT INTO invoice_addresses SET currency_id=1, pub_key='".$keySet['pubAdd']."', priv_enc='".$encWIF."';";
+				$r = $this->app->run_query($q);
+				$db_address = $this->create_or_fetch_address($keySet['pubAdd'], false, false, false, false, true);
+			}
+			if (!$required_option_id || $required_option_id == $addr_option_id) {
+				$loop = false;
+			}
+		}
+		while ($loop);
 		
-		$qq = "INSERT INTO addresses SET game_id='".$this->db_game['game_id']."', option_id=NULL, user_id=NULL, address='".$new_address."', time_created='".time()."';";
-		$rr = $this->app->run_query($qq);
-		return $this->app->last_insert_id();
+		return $db_address;
+	}
+	
+	public function create_or_fetch_address($address, $check_existing, $rpc, $delete_optionless, $claimable, $force_is_mine) {
+		if ($check_existing) {
+			$q = "SELECT * FROM addresses WHERE game_id='".$this->db_game['game_id']."' AND address='".$address."';";
+			$r = $this->app->run_query($q);
+			if ($r->rowCount() > 0) {
+				return $r->fetch();
+			}
+		}
+		$address_option_id = $this->addr_text_to_option_id($address);
+		
+		if ($address_option_id > 0 || !$delete_optionless) {
+			$q = "INSERT INTO addresses SET game_id='".$this->db_game['game_id']."', address='".$address."'";
+			if ($address_option_id > 0) $q .= ", option_id='".$address_option_id."'";
+			$q .= ", time_created='".time()."';";
+			$r = $this->app->run_query($q);
+			$output_address_id = $this->app->last_insert_id();
+			
+			if ($rpc || $force_is_mine) {
+				if ($force_is_mine) $is_mine=1;
+				else {
+					$validate_address = $rpc->validateaddress($address);
+					
+					if ($validate_address['ismine']) $is_mine = 1;
+					else $is_mine = 0;
+				}
+				
+				$q = "UPDATE addresses SET is_mine=".$is_mine;
+				if ($is_mine == 1 && !empty($GLOBALS['default_coin_winner']) && $claimable) {
+					$qq = "SELECT * FROM users WHERE username=".$this->app->quote_escape($GLOBALS['default_coin_winner']).";";
+					$rr = $this->app->run_query($qq);
+					if ($rr->rowCount() > 0) {
+						$coin_winner = $rr->fetch();
+						$q .= ", user_id='".$coin_winner['user_id']."'";
+					}
+				}
+				$q .= " WHERE address_id='".$output_address_id."';";
+				$r = $this->app->run_query($q);
+			}
+			
+			$q = "SELECT * FROM addresses WHERE address_id='".$output_address_id."';";
+			$r = $this->app->run_query($q);
+			
+			return $r->fetch();
+		}
+		else return false;
 	}
 	
 	public function create_transaction($option_ids, $amounts, $from_user_id, $to_user_id, $block_id, $type, $io_ids, $address_ids, $remainder_address_id, $transaction_fee) {
@@ -419,7 +485,7 @@ class Game {
 			}
 		}
 		
-		$mined_address = $this->create_or_fetch_address("Ex".$this->app->random_string(32), true, false, false, true);
+		$mined_address = $this->new_invoice_address(false, false);
 		$mined_transaction_id = $this->create_transaction(array(false), array($this->app->pow_reward_in_round($this->db_game, $justmined_round)+$fee_sum), false, false, $last_block_id, "coinbase", false, array($mined_address['address_id']), false, 0);
 		
 		// Run payouts
@@ -1090,50 +1156,6 @@ class Game {
 		*/
 	}
 	
-	public function create_or_fetch_address($address, $check_existing, $rpc, $delete_optionless, $claimable) {
-		if ($check_existing) {
-			$q = "SELECT * FROM addresses WHERE game_id='".$this->db_game['game_id']."' AND address='".$address."';";
-			$r = $this->app->run_query($q);
-			if ($r->rowCount() > 0) {
-				return $r->fetch();
-			}
-		}
-		$address_option_id = $this->addr_text_to_option_id($address);
-		
-		if ($address_option_id > 0 || !$delete_optionless) {
-			$q = "INSERT INTO addresses SET game_id='".$this->db_game['game_id']."', address='".$address."'";
-			if ($address_option_id > 0) $q .= ", option_id='".$address_option_id."'";
-			$q .= ", time_created='".time()."';";
-			$r = $this->app->run_query($q);
-			$output_address_id = $this->app->last_insert_id();
-			
-			if ($rpc) {
-				$validate_address = $rpc->validateaddress($address);
-				
-				if ($validate_address['ismine']) $is_mine = 1;
-				else $is_mine = 0;
-				
-				$q = "UPDATE addresses SET is_mine=".$is_mine;
-				if ($is_mine == 1 && $GLOBALS['default_coin_winner'] && $claimable) {
-					$qq = "SELECT * FROM users WHERE username=".$this->app->quote_escape($GLOBALS['default_coin_winner']).";";
-					$rr = $this->app->run_query($qq);
-					if ($rr->rowCount() > 0) {
-						$coin_winner = $rr->fetch();
-						$q .= ", user_id='".$coin_winner['user_id']."'";
-					}
-				}
-				$q .= " WHERE address_id='".$output_address_id."';";
-				$r = $this->app->run_query($q);
-			}
-			
-			$q = "SELECT * FROM addresses WHERE address_id='".$output_address_id."';";
-			$r = $this->app->run_query($q);
-			
-			return $r->fetch();
-		}
-		else return false;
-	}
-	
 	public function new_game_giveaway($user_id, $type, $target_amount) {
 		if ($type != "buyin") {
 			$type = "initial_purchase";
@@ -1143,38 +1165,43 @@ class Game {
 		$transaction_id = false;
 		if ($target_amount > 0) {
 			$addr_id = $this->new_nonuser_address();
-			$num_utxos = 5;
-			$first_denom = 4;
-			$actual_amount = 0;
-			
-			$addr_ids = array();
-			$amounts = array();
-			$option_ids = array();
-			
-			$frac_sum = 0;
-			for ($i=0; $i<$num_utxos; $i++) {
-				$frac_sum += 1/($first_denom+$i);
+			if ($addr_id) {
+				$num_utxos = 5;
+				$first_denom = 4;
+				$actual_amount = 0;
+				
+				$addr_ids = array();
+				$amounts = array();
+				$option_ids = array();
+				
+				$frac_sum = 0;
+				for ($i=0; $i<$num_utxos; $i++) {
+					$frac_sum += 1/($first_denom+$i);
+				}
+				for ($i=0; $i<$num_utxos; $i++) {
+					$amounts[$i] = floor($target_amount*(1/($first_denom+$i))/$frac_sum);
+					$addr_ids[$i] = $addr_id;
+					$option_ids[$i] = false;
+					$actual_amount += $amounts[$i];
+				}
+				$transaction_id = $this->create_transaction($option_ids, $amounts, false, false, 0, 'giveaway', false, $addr_ids, false, 0);
 			}
-			for ($i=0; $i<$num_utxos; $i++) {
-				$amounts[$i] = floor($target_amount*(1/($first_denom+$i))/$frac_sum);
-				$addr_ids[$i] = $addr_id;
-				$option_ids[$i] = false;
-				$actual_amount += $amounts[$i];
-			}
-			$transaction_id = $this->create_transaction($option_ids, $amounts, false, false, 0, 'giveaway', false, $addr_ids, false, 0);
 		}
 		
-		$q = "INSERT INTO game_giveaways SET type='".$type."', game_id='".$this->db_game['game_id']."', amount='".$actual_amount."'";
-		if ($transaction_id > 0) $q .= ", transaction_id='".$transaction_id."'";
-		if ($user_id) $q .= ", user_id='".$user_id."', status='claimed'";
-		$q .= ";";
-		$r = $this->app->run_query($q);
-		$giveaway_id = $this->app->last_insert_id();
-		
-		$q = "SELECT * FROM game_giveaways WHERE giveaway_id='".$giveaway_id."';";
-		$r = $this->app->run_query($q);
-		
-		return $r->fetch();
+		if ($transaction_id) {
+			$q = "INSERT INTO game_giveaways SET type='".$type."', game_id='".$this->db_game['game_id']."', amount='".$actual_amount."'";
+			if ($transaction_id > 0) $q .= ", transaction_id='".$transaction_id."'";
+			if ($user_id) $q .= ", user_id='".$user_id."', status='claimed'";
+			$q .= ";";
+			$r = $this->app->run_query($q);
+			$giveaway_id = $this->app->last_insert_id();
+			
+			$q = "SELECT * FROM game_giveaways WHERE giveaway_id='".$giveaway_id."';";
+			$r = $this->app->run_query($q);
+			
+			return $r->fetch();
+		}
+		else return false;
 	}
 	
 	public function generate_invitation($inviter_id, &$invitation, $user_id) {
@@ -1819,7 +1846,7 @@ class Game {
 			for ($j=0; $j<count($outputs); $j++) {
 				$address_text = $outputs[$j]["scriptPubKey"]["addresses"][0];
 				
-				$output_address = $this->create_or_fetch_address($address_text, true, $coin_rpc, false, true);
+				$output_address = $this->create_or_fetch_address($address_text, true, $coin_rpc, false, true, false);
 				
 				$q = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, game_id='".$this->db_game['game_id']."', out_index='".$j."'";
 				if ($output_address['user_id'] > 0) $q .= ", user_id='".$output_address['user_id']."'";
@@ -2081,7 +2108,7 @@ class Game {
 		$tx_hash = $rpc_block->json_obj['tx'][0];
 		$genesis_transactions = new transaction($tx_hash, "", false, 0);
 		
-		$output_address = $this->create_or_fetch_address("genesis_address", true, false, false, false);
+		$output_address = $this->create_or_fetch_address("genesis_address", true, false, false, false, false);
 		
 		$this->app->run_query("DELETE t.*, io.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.tx_hash='".$tx_hash."' AND t.game_id='".$this->db_game['game_id']."';");
 		

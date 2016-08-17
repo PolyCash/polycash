@@ -1,6 +1,6 @@
 <?php
 $host_not_required = TRUE;
-include(realpath(dirname(__FILE__))."/../includes/connect.php");
+include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
 $script_start_time = microtime(true);
 
