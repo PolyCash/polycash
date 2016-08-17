@@ -2594,5 +2594,57 @@ class Game {
 	public function vote_effectiveness_function() {
 		return $this->current_events[0]->db_event['vote_effectiveness_function'];
 	}
+	
+	public function generate_voting_addresses(&$coin_rpc) {
+		$q = "SELECT * FROM options op JOIN events ev ON op.event_id=ev.event_id WHERE ev.game_id='".$this->db_game['game_id']."' ORDER BY op.option_id ASC;";
+		$r = $this->app->run_query($q);
+		
+		while ($option = $r->fetch()) {
+			$qq = "SELECT * FROM addresses WHERE game_id='".$this->db_game['game_id']."' AND option_id='".$option['option_id']."' AND user_id IS NULL AND is_mine=1;";
+			$rr = $this->app->run_query($qq);
+			$num_addr = $rr->rowCount();
+			
+			if ($num_addr < $this->db_game['min_unallocated_addresses']) {
+				echo "Generate ".($this->db_game['min_unallocated_addresses']-$num_addr)." unallocated ".$option['name']." addresses in ".$this->db_game['name'];
+				if ($coin_rpc) echo " by RPC";
+				else echo " by bitcoin-sci";
+				echo "<br/>\n";
+				
+				if ($coin_rpc) {
+					$try_by_sci = false;
+					try {
+						for ($i=0; $i<($this->db_game['min_unallocated_addresses']-$num_addr); $i++) {
+							$new_addr_str = $coin_rpc->getnewvotingaddress($option['name']);
+							$new_addr_db = $this->create_or_fetch_address($new_addr_str, false, $coin_rpc, true, false, false);
+						}
+					}
+					catch (Exception $e) {
+						try {
+							$new_voting_addr_count = 0;
+							do {
+								$temp_address = $coin_rpc->getnewaddress();
+								$new_addr_db = $this->create_or_fetch_address($temp_address, false, $coin_rpc, true, false, false);
+								if ($new_addr_db['option_id'] == $option['option_id']) $new_voting_addr_count++;
+							}
+							while ($new_voting_addr_count < ($this->db_game['min_unallocated_addresses']-$num_addr));
+						}
+						catch (Exception $e) {
+							$try_by_sci = true;
+						}
+					}
+				}
+				else $try_by_sci = true;
+				
+				if ($try_by_sci) {
+					$new_voting_addr_count = 0;
+					do {
+						$db_address = $this->new_invoice_address($option['option_id'], true);
+						$new_voting_addr_count++;
+					}
+					while ($new_voting_addr_count < ($this->db_game['min_unallocated_addresses']-$num_addr));
+				}
+			}
+		}
+	}
 }
 ?>

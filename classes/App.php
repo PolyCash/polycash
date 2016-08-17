@@ -99,7 +99,7 @@ class App {
 	}
 	
 	public function option_index_to_voting_chars($option_index, $options_in_game) {
-		$voting_chars = "0123456789abcdefghijklmnopqrstuvwxyz";
+		$voting_chars = "123456789abcdefghjkmnpqrstuvwxyz";
 		$modulus = strlen($voting_chars);
 		$length = ceil(log($options_in_game, strlen($voting_chars)));
 		$chars = "";

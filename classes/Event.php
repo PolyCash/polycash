@@ -594,14 +594,14 @@ class Event {
 	}
 	
 	public function ensure_options() {
-		$qq = "SELECT * FROM option_group_memberships mem JOIN entities ent ON mem.entity_id=ent.entity_id WHERE mem.option_group_id='".$this->db_event['option_group_id']."' AND NOT EXISTS (SELECT * FROM options op WHERE op.event_id='".$this->db_event['event_id']."' AND op.entity_id=mem.entity_id);";
+		/*$qq = "SELECT * FROM option_group_memberships mem JOIN entities ent ON mem.entity_id=ent.entity_id WHERE mem.option_group_id='".$this->db_event['option_group_id']."' AND NOT EXISTS (SELECT * FROM options op WHERE op.event_id='".$this->db_event['event_id']."' AND op.entity_id=mem.entity_id);";
 		$rr = $this->game->app->run_query($qq);
 		while ($required_membership = $rr->fetch()) {
 			$qqq = "INSERT INTO options SET event_id='".$this->db_event['event_id']."', entity_id='".$required_membership['entity_id']."', membership_id='".$required_membership['membership_id']."'";
 			if ($required_membership['default_image_id'] > 0) $qqq .= ", image_id='".$required_membership['default_image_id']."'";
 			$qqq .= ", name='".$required_membership['name']."', voting_character='".$required_membership['voting_character']."';";
 			$rrr = $this->game->app->run_query($qqq);
-		}
+		}*/
 	}
 	
 	public function delete_options() {
