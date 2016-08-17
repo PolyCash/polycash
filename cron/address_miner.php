@@ -1,6 +1,7 @@
 <?php
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
+include(realpath(dirname(dirname(__FILE__)))."/includes/handle_script_shutdown.php");
 $script_start_time = microtime(true);
 
 if (!empty($argv)) {

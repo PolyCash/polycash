@@ -514,7 +514,11 @@ if ($thisuser && $game) {
 				$option_r = $app->run_query($option_q);
 				$j=0;
 				while ($option = $option_r->fetch()) {
-					echo "game.all_events[".$i."].options.push(new option(game.all_events[".$i."], ".$j.", ".$option['option_id'].", '".$option['name']."', 0));\n";
+					$has_votingaddr = "false";
+					$votingaddr_id = $thisuser->user_address_id($game->db_game['game_id'], $option['option_id']);
+					if ($votingaddr_id !== false) $has_votingaddr = "true";
+					
+					echo "game.all_events[".$i."].options.push(new option(game.all_events[".$i."], ".$j.", ".$option['option_id'].", '".$option['name']."', 0, $has_votingaddr));\n";
 					$j++;
 				}
 				$i++;
@@ -615,7 +619,7 @@ if ($thisuser && $game) {
 				
 				<script type="text/javascript" id="game0_new_event_js">
 				<?php
-				echo $game->new_event_js(0, false);
+				echo $game->new_event_js(0, $thisuser);
 				?>
 				</script>
 				<div id="vote_popups_disabled"<?php if ($block_within_round != $game->db_game['round_length']) echo ' style="display: none;"'; ?>>

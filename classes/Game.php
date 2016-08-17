@@ -268,7 +268,10 @@ class Game {
 								
 								$q .= "coin_blocks_destroyed='".$output_cbd."', coin_rounds_destroyed='".$output_crd."', ";
 								
-								if ($this->db_game['payout_weight'] == "coin") $votes = floor($amounts[$out_index]/$input_sum);
+								if ($this->db_game['payout_weight'] == "coin") {
+									if ($input_sum > 0) $votes = floor($amounts[$out_index]/$input_sum);
+									else $votes = 0;
+								}
 								else if ($this->db_game['payout_weight'] == "coin_block") $votes = $output_cbd;
 								else if ($this->db_game['payout_weight'] == "coin_round") $votes = $output_crd;
 								else $votes = 0;
@@ -707,7 +710,7 @@ class Game {
 						$pct_free = 100*$mature_balance/$user_coin_value;
 						
 						if ($pct_free >= $db_user['aggregate_threshold']) {
-							$option_pct_sum = 0;
+							$entity_pct_sum = 0;
 							$skipped_pct_points = 0;
 							$skipped_options = "";
 							$num_options_skipped = 0;
@@ -1525,11 +1528,13 @@ class Game {
 					$add_coins = floor($coins_in_existence*$this->db_game['game_winning_inflation']);
 					$new_coins_in_existence = $coins_in_existence + $add_coins;
 					$account_value = $user->account_coin_value($this);
-					$account_pct = $account_value/$coins_in_existence;
+					if ($coins_in_existence > 0) $account_pct = $account_value/$coins_in_existence;
+					else $account_pct = 0;
 					if ($entity_info['entity_votes'] > 0) $payout_amount = floor($add_coins*($entity_info['my_votes']/$entity_info['entity_votes']));
 					else $payout_amount = 0;
 					$new_account_value = $account_value+$payout_amount;
-					$new_account_pct = $new_account_value/$new_coins_in_existence;
+					if ($new_coins_in_existence > 0) $new_account_pct = $new_account_value/$new_coins_in_existence;
+					else $new_account_pct = 0;
 					if ($account_pct > 0) $change_frac = $new_account_pct/$account_pct-1;
 					else $change_frac = 0;
 					$html .= "<div class=\"col-sm-3\">".$this->app->format_bignum($entity_info['my_pct'])."% of my votes</div>";
@@ -2292,6 +2297,9 @@ class Game {
 		$js .= "games[".$game_index."].events = new Array();\n";
 		$js .= "var event_html = '';\n";
 		
+		$event_bootstrap_cols = 6;
+		if (count($this->current_events) == 1) $event_bootstrap_cols = 12;
+		
 		for ($i=0; $i<count($this->current_events); $i++) {
 			$event = $this->current_events[$i];
 			$round_stats = $event->round_voting_stats_all($current_round);
@@ -2310,20 +2318,19 @@ class Game {
 			
 			$j=0;
 			while ($option = $option_r->fetch()) {
-				$js .= "games[".$game_index."].events[".$i."].options.push(new option(games[".$game_index."].events[".$i."], ".$j.", ".$option['option_id'].", '".$option['name']."', 0));\n";
-				/*if ($user) {
+				$has_votingaddr = "false";
+				if ($user) {
 					$votingaddr_id = $user->user_address_id($this->db_game['game_id'], $option['option_id']);
-					if ($votingaddr_id !== false) {
-						$js .= "votingAddrOptions.push(".$option['option_id'].");\n";
-					}
-				}*/
+					if ($votingaddr_id !== false) $has_votingaddr = "true";
+				}
+				$js .= "games[".$game_index."].events[".$i."].options.push(new option(games[".$game_index."].events[".$i."], ".$j.", ".$option['option_id'].", '".$option['name']."', 0, $has_votingaddr));\n";
 				$j++;
 			}
 			$js .= '
 			games['.$game_index.'].events['.$i.'].option_selected(0);
 			console.log("adding game, event '.$i.' into DOM...");'."\n";
 			if ($i == 0) $js .= 'event_html += "<div class=\'row\'>";';
-			$js .= 'event_html += "<div class=\'col-sm-6\'>";';
+			$js .= 'event_html += "<div class=\'col-sm-'.$event_bootstrap_cols.'\'>";';
 			$js .= 'event_html += "<div id=\'game'.$game_index.'_event'.$i.'\' class=\'game_event_box\'><div id=\'game'.$game_index.'_event'.$i.'_current_round_table\'></div><div id=\'game'.$game_index.'_event'.$i.'_my_current_votes\'></div></div>";'."\n";
 			$js .= 'event_html += "</div>";';
 			if ($i%2 == 1 || $i == count($this->current_events)-1) {
@@ -2337,7 +2344,6 @@ class Game {
 		$js .= 'games['.$game_index.'].events[i].event_loop_event();'."\n";
 		$js .= "}\n";
 		$js .= '
-		games['.$game_index.'].setVotingAddresses();
 		$(document).ready(function() {
 			render_tx_fee();
 			//load_plan_option_games();

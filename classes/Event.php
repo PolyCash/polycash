@@ -653,23 +653,26 @@ class Event {
 	}
 	
 	public function event_pos_reward_in_round($round_id) {
-		$mining_block_id = $this->game->last_block_id()+1;
-		$current_round = $this->game->block_to_round($mining_block_id);
-		
-		if ($round_id == $current_round) {
-			$q = "SELECT SUM(".$this->game->db_game['payout_weight']."_score), SUM(unconfirmed_".$this->game->db_game['payout_weight']."_score) FROM options WHERE event_id='".$this->db_event['event_id']."';";
-			$r = $this->game->app->run_query($q);
-			$r = $r->fetch();
-			$score = $r['SUM('.$this->game->db_game['payout_weight'].'_score)']+$r['SUM(unconfirmed_'.$this->game->db_game['payout_weight'].'_score)'];
-		}
+		if ($this->game->db_game['inflation'] == "linear") return $this->game->db_game['pos_reward'];
 		else {
-			$q = "SELECT SUM(".$this->game->db_game['payout_weight']."_score) FROM event_outcome_options WHERE event_id='".$this->db_event['event_id']."' AND round_id='".$round_id."';";
-			$r = $this->game->app->run_query($q);
-			$r = $r->fetch();
-			$score = $r["SUM(".$this->game->db_game['payout_weight']."_score)"];
+			$mining_block_id = $this->game->last_block_id()+1;
+			$current_round = $this->game->block_to_round($mining_block_id);
+			
+			if ($round_id == $current_round) {
+				$q = "SELECT SUM(".$this->game->db_game['payout_weight']."_score), SUM(unconfirmed_".$this->game->db_game['payout_weight']."_score) FROM options WHERE event_id='".$this->db_event['event_id']."';";
+				$r = $this->game->app->run_query($q);
+				$r = $r->fetch();
+				$score = $r['SUM('.$this->game->db_game['payout_weight'].'_score)']+$r['SUM(unconfirmed_'.$this->game->db_game['payout_weight'].'_score)'];
+			}
+			else {
+				$q = "SELECT SUM(".$this->game->db_game['payout_weight']."_score) FROM event_outcome_options WHERE event_id='".$this->db_event['event_id']."' AND round_id='".$round_id."';";
+				$r = $this->game->app->run_query($q);
+				$r = $r->fetch();
+				$score = $r["SUM(".$this->game->db_game['payout_weight']."_score)"];
+			}
+			
+			return $score/$this->game->app->votes_per_coin($this->game->db_game);
 		}
-		
-		return $score/$this->game->app->votes_per_coin($this->game->db_game);
 	}
 	
 	public function set_outcome_from_db($round_id, $last_block_id, $add_payout_transaction) {

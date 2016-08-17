@@ -31,6 +31,7 @@ if ($game->db_game['invite_currency'] > 0) {
 	}
 	else $exchange_rate = 0;
 }
+else $exchange_rate = 0;
 ?>
 <div class="container" style="max-width: 1000px; padding-top: 10px;">
 	<div class="paragraph">

@@ -42,7 +42,7 @@ var chatWindow = function(chatWindowId, toUserId) {
 	
 	this.initialize = function() {};
 };
-var option = function(event, option_index, option_id, name, points) {
+var option = function(event, option_index, option_id, name, points, has_votingaddr) {
 	this.event = event;
 	this.option_index = option_index;
 	this.option_id = option_id;
@@ -51,6 +51,8 @@ var option = function(event, option_index, option_id, name, points) {
 	this.bet_index = false;
 	this.points = points;
 	this.event.option_id2option_index[option_id] = option_index;
+	this.has_votingaddr = has_votingaddr;
+	this.event.game.option_has_votingaddr[option_id] = has_votingaddr;
 	
 	option_id2option_index[option_id] = option_index;
 	option_index2option_id[option_index] = option_id;
@@ -1403,6 +1405,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 		}
 		else {
 			var index_id = vote_options.length;
+			
 			if (games[0].option_has_votingaddr[option_id]) {
 				vote_options.push(new vote_option(index_id, name, option_id));
 				$('#compose_vote_outputs').append('<div id="compose_vote_output_'+index_id+'" class="select_utxo">'+render_option_output(index_id, name)+'</div>');
@@ -1416,13 +1419,6 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 			}
 			else {
 				alert("You can't vote for this candidate yet, you don't have a voting address for it.");
-			}
-		}
-	};
-	this.setVotingAddresses = function(votingAddrOptions) {
-		for (var i=0; i<this.events.length; i++) {
-			for (var j=0; j<this.events[i].options.length; j++) {
-				this.option_has_votingaddr[this.events[i].options[j].option_id] = true;
 			}
 		}
 	};
@@ -1616,7 +1612,9 @@ function set_select_add_output() {
 	var optionsAsString = "<option value=''>Please select...</option>";
 	for (var i=0; i<games[0].events.length; i++) {
 		for (var j=0; j<games[0].events[i].options.length; j++) {
-			optionsAsString += "<option value='"+games[0].events[i].options[j].option_id+"'>"+games[0].events[i].options[j].name+"</option>";
+			if (games[0].events[i].options[j].has_votingaddr) {
+				optionsAsString += "<option value='"+games[0].events[i].options[j].option_id+"'>"+games[0].events[i].options[j].name+"</option>";
+			}
 		}
 	}
 	$("#select_add_output").find('option').remove().end().append($(optionsAsString));
