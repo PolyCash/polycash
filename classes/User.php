@@ -198,9 +198,13 @@ class User {
 		return $html;
 	}
 	
-	public function user_address_id($game_id, $option_index) {
+	public function user_address_id($game_id, $option_index, $option_id) {
 		$q = "SELECT * FROM addresses WHERE game_id='".$game_id."' AND user_id='".$this->db_user['user_id']."'";
 		if ($option_index) $q .= " AND option_index='".$option_index."'";
+		else if ($option_id) {
+			$db_option = $this->app->run_query("SELECT * FROM options WHERE option_id='".$option_id."';")->fetch();
+			$q .= " AND option_index='".$db_option['option_index']."'";
+		}
 		else $q .= " AND option_index IS NULL";
 		$q .= ";";
 		$r = $this->app->run_query($q);

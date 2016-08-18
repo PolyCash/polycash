@@ -239,7 +239,7 @@ class Game {
 						if (count($address_ids) == count($amounts)) $address_id = $address_ids[$out_index];
 						else $address_id = $address_ids[0];
 					}
-					else $address_id = $to_user->user_address_id($this->db_game['game_id'], $option_ids[$out_index]);
+					else $address_id = $to_user->user_address_id($this->db_game['game_id'], false, $option_ids[$out_index]);
 					
 					if ($address_id) {
 						$q = "SELECT * FROM addresses WHERE address_id='".$address_id."';";
@@ -1216,7 +1216,7 @@ class Game {
 				$event_option_offset = $option_index-$sum_options;
 				$first_option_q = "SELECT * FROM options WHERE event_id='".$this->current_events[$i]->db_event['event_id']."' ORDER BY option_id ASC LIMIT 1;";
 				$first_option = $this->app->run_query($first_option_q)->fetch();
-				return $first_option['option_id']-1+$event_option_offset;
+				return $first_option['option_id']+$event_option_offset;
 			}
 			$sum_options += $thisevent_options;
 		}
@@ -2444,7 +2444,7 @@ class Game {
 			while ($option = $option_r->fetch()) {
 				$has_votingaddr = "false";
 				if ($user) {
-					$votingaddr_id = $user->user_address_id($this->db_game['game_id'], $option['option_index']);
+					$votingaddr_id = $user->user_address_id($this->db_game['game_id'], $option['option_index'], false);
 					if ($votingaddr_id !== false) $has_votingaddr = "true";
 				}
 				$js .= "games[".$game_index."].events[".$i."].options.push(new option(games[".$game_index."].events[".$i."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", '".$option['name']."', 0, $has_votingaddr));\n";

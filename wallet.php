@@ -515,7 +515,7 @@ if ($thisuser && $game) {
 				$j=0;
 				while ($option = $option_r->fetch()) {
 					$has_votingaddr = "false";
-					$votingaddr_id = $thisuser->user_address_id($game->db_game['game_id'], $option['option_index']);
+					$votingaddr_id = $thisuser->user_address_id($game->db_game['game_id'], $option['option_index'], false);
 					if ($votingaddr_id !== false) $has_votingaddr = "true";
 					
 					echo "game.all_events[".$i."].options.push(new option(game.all_events[".$i."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", '".$option['name']."', 0, $has_votingaddr));\n";

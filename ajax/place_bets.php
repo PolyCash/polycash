@@ -65,7 +65,7 @@ if ($thisuser && $game) {
 					$amount_sum += $amounts[$i];
 				}
 				
-				$remainder_address_id = $thisuser->user_address_id($game->db_game['game_id'], $max_option_id);
+				$remainder_address_id = $thisuser->user_address_id($game->db_game['game_id'], false, $max_option_id);
 				
 				if ($amount_sum > 0) {
 					$last_block_id = $game->last_block_id();
