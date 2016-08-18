@@ -198,10 +198,10 @@ class User {
 		return $html;
 	}
 	
-	public function user_address_id($game_id, $option_id) {
+	public function user_address_id($game_id, $option_index) {
 		$q = "SELECT * FROM addresses WHERE game_id='".$game_id."' AND user_id='".$this->db_user['user_id']."'";
-		if ($option_id) $q .= " AND option_id='".$option_id."'";
-		else $q .= " AND option_id IS NULL";
+		if ($option_index) $q .= " AND option_index='".$option_index."'";
+		else $q .= " AND option_index IS NULL";
 		$q .= ";";
 		$r = $this->app->run_query($q);
 		
@@ -378,12 +378,11 @@ class User {
 	}
 	
 	public function generate_user_addresses(&$game) {
-		$q = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."' AND NOT EXISTS(SELECT * FROM addresses a WHERE a.user_id='".$this->db_user['user_id']."' AND a.game_id='".$game->db_game['game_id']."' AND a.option_id=op.option_id) ORDER BY op.option_id ASC;";
-		$r = $this->app->run_query($q);
+		$option_index_range = $game->option_index_range();
 		
 		// Try to give the user voting addresses for all options in this game
-		while ($option = $r->fetch()) {
-			$qq = "SELECT * FROM addresses WHERE option_id='".$option['option_id']."' AND game_id='".$game->db_game['game_id']."' AND is_mine=1 AND user_id IS NULL;";
+		for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
+			$qq = "SELECT * FROM addresses WHERE option_index='".$option_index."' AND game_id='".$game->db_game['game_id']."' AND is_mine=1 AND user_id IS NULL;";
 			$rr = $this->app->run_query($qq);
 			
 			if ($rr->rowCount() > 0) {
@@ -395,11 +394,11 @@ class User {
 		}
 		
 		// Make sure the user has a non-voting address
-		$q = "SELECT * FROM addresses WHERE option_id IS NULL AND game_id='".$game->db_game['game_id']."' AND user_id='".$this->db_user['user_id']."';";
+		$q = "SELECT * FROM addresses WHERE option_index IS NULL AND game_id='".$game->db_game['game_id']."' AND user_id='".$this->db_user['user_id']."';";
 		$r = $this->app->run_query($q);
 		
 		if ($r->rowCount() == 0) {
-			$q = "SELECT * FROM addresses WHERE option_id IS NULL AND game_id='".$game->db_game['game_id']."' AND is_mine=1 AND user_id IS NULL;";
+			$q = "SELECT * FROM addresses WHERE option_index IS NULL AND game_id='".$game->db_game['game_id']."' AND is_mine=1 AND user_id IS NULL;";
 			$r = $this->app->run_query($q);
 			if ($r->rowCount() > 0) {
 				$address = $r->fetch();

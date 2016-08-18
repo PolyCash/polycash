@@ -119,18 +119,18 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	else $output['new_event_ids'] = 0;
 	
 	if ($thisuser) {
-		$q = "SELECT * FROM addresses WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."' AND option_id > 0 GROUP BY option_id;";
+		$q = "SELECT * FROM addresses WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."' AND option_index IS NOT NULL GROUP BY option_index;";
 		$r = $app->run_query($q);
 		$votingaddr_count = $r->rowCount();
 	}
 	else $votingaddr_count = 0;
 	
-	if ($thisuser && intval($_REQUEST['votingaddr_count']) != $votingaddr_count) {
+	/*if ($thisuser && intval($_REQUEST['votingaddr_count']) != $votingaddr_count) {
 		$output['new_votingaddresses'] = 1;
 		
 		$option_has_votingaddr = [];
 		$votingaddr_count = 0;
-		$q = "SELECT option_id FROM addresses WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."' AND option_id > 0 GROUP BY option_id ORDER BY option_id ASC;";
+		$q = "SELECT option_id FROM addresses WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."' AND option_index IS NOT NULL GROUP BY option_index ORDER BY option_index ASC;";
 		$r = $app->run_query($q);
 		while ($option_id = $r->fetch(PDO::FETCH_NUM)) {
 			$option_has_votingaddr[$option_id[0]] = true;
@@ -139,7 +139,8 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		$output['option_has_votingaddr'] = $option_has_votingaddr;
 		$output['votingaddr_count'] = $votingaddr_count;
 	}
-	else $output['new_votingaddresses'] = 0;
+	else*/
+	$output['new_votingaddresses'] = 0;
 	
 	if ($thisuser) {
 		$q = "SELECT * FROM user_messages WHERE game_id='".$game->db_game['game_id']."' AND to_user_id='".$thisuser->db_user['user_id']."' AND seen=0 GROUP BY from_user_id;";

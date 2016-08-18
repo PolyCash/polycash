@@ -88,20 +88,6 @@ class App {
 		}
 	}
 	
-	public function option_index_to_voting_chars($option_index, $options_in_game) {
-		$voting_chars = "123456789abcdefghjkmnpqrstuvwxyz";
-		$modulus = strlen($voting_chars);
-		$length = ceil(log($options_in_game, strlen($voting_chars)));
-		$chars = "";
-		$current_num = $option_index;
-		for ($i=0; $i<$length; $i++) {
-			$remainder = $current_num%$modulus;
-			$current_num = floor($current_num/$modulus);
-			$chars .= $voting_chars[$remainder];
-		}
-		return strrev($chars);
-	}
-	
 	public function generate_games_by_type($game_type) {
 		$q = "SELECT * FROM games WHERE game_type_id='".$game_type['game_type_id']."' AND game_status IN('editable','published','running');";
 		$r = $this->run_query($q);
@@ -129,6 +115,7 @@ class App {
 		$q = substr($q, 0, strlen($q)-2).";";
 		$r = $this->run_query($q);
 		$game_id = $this->last_insert_id();
+		$game = new Game($this, $game_id);
 		
 		if ($game_type['event_rule'] == "entity_type_option_group" || $game_type['event_rule'] == "single_event_series") {
 			if ($game_type['event_rule'] == "entity_type_option_group") {
@@ -153,8 +140,7 @@ class App {
 			}
 			
 			$event_i = 0;
-			$option_i = 0;
-			$max_voting_chars = 0;
+			$round_option_i = 0;
 			
 			if ($game_type['event_rule'] == "entity_type_option_group") {
 				$q = "SELECT * FROM entities WHERE entity_type_id='".$entity_type['entity_type_id']."' ORDER BY entity_id ASC;";
@@ -162,26 +148,24 @@ class App {
 				
 				$options_in_game = $r->rowCount()*count($db_option_entities);
 				while ($event_entity = $r->fetch()) {
-					$event_type = $this->add_event_type($game_id, $db_option_entities, $event_entity, $game_type, $event_i);
-					$this->add_event_by_event_type($game_id, $event_type, $db_option_entities, $game_type, $option_group, $option_i, $options_in_game, $event_i, $max_voting_chars);
+					$event_type = $this->add_event_type($game, $db_option_entities, $event_entity, $game_type, $event_i);
+					$this->add_event_by_event_type($game, $event_type, $db_option_entities, $game_type, $option_group, $round_option_i, $options_in_game, $event_i, $event_type['name']);
 					$event_i++;
 				}
 			}
 			else {
 				$options_in_game = $game_type['final_round']*count($db_option_entities);
+				$event_type = $this->add_event_type($game, $db_option_entities, false, $game_type, false);
 				for ($i=0; $i<$game_type['final_round']; $i++) {
-					$event_type = $this->add_event_type($game_id, $db_option_entities, false, $game_type, $event_i);
-					$this->add_event_by_event_type($game_id, $event_type, $db_option_entities, $game_type, $option_group, $option_i, $options_in_game, $event_i, $max_voting_chars);
+					$event_name = $event_type['name']." - Round #".($i+1);
+					$this->add_event_by_event_type($game, $event_type, $db_option_entities, $game_type, $option_group, $round_option_i, $options_in_game, $event_i, $event_name);
 					$event_i++;
 				}
 			}
-			
-			$q = "UPDATE games SET game_status='published', max_voting_chars='".$max_voting_chars."' WHERE game_id='".$game_id."';";
-			$r = $this->run_query($q);
 		}
 	}
 	
-	public function add_event_type($game_id, $db_option_entities, $event_entity, $game_type, $event_i) {
+	public function add_event_type(&$game, $db_option_entities, $event_entity, $game_type, $event_i) {
 		if ($event_entity) {
 			if (count($db_option_entities) == 2 && !empty($db_option_entities[0]['last_name'])) {
 				$event_type_name = $db_option_entities[0]['last_name']." vs ".$db_option_entities[1]['last_name']." in ".$event_entity['entity_name'];
@@ -193,8 +177,10 @@ class App {
 			}
 		}
 		else {
-			$event_type_name = $game_type['event_type_name']." - Round #".($event_i+1);
-			$event_type_identifier = str_replace(" ", "-", strtolower($game_type['event_type_name']))."-round-".($event_i+1);
+			$event_type_name = $game_type['event_type_name'];
+			if (!empty($event_i)) $event_type_name .= " - Round #".($event_i+1);
+			$event_type_identifier = str_replace(" ", "-", strtolower($game_type['event_type_name']));
+			if (!empty($event_i)) $event_type_identifier .= "-round-".($event_i+1);
 		}
 		$qq = "SELECT * FROM event_types WHERE url_identifier=".$this->quote_escape($event_type_identifier).";";
 		$rr = $this->run_query($qq);
@@ -202,7 +188,7 @@ class App {
 			$event_type = $rr->fetch();
 		}
 		else {
-			$qq = "INSERT INTO event_types SET game_id='".$game_id."', option_group_id='".$game_type['option_group_id']."'";
+			$qq = "INSERT INTO event_types SET game_id='".$game->db_game['game_id']."', option_group_id='".$game_type['option_group_id']."'";
 			if ($event_entity) $qq .= ", entity_id='".$event_entity['entity_id']."'";
 			$qq .= ", name='".$event_type_name."', url_identifier=".$this->quote_escape($event_type_identifier).", num_voting_options='".count($db_option_entities)."', vote_effectiveness_function='".$game_type['default_vote_effectiveness_function']."', max_voting_fraction='".$game_type['default_max_voting_fraction']."';";
 			$rr = $this->run_query($qq);
@@ -214,30 +200,26 @@ class App {
 		return $event_type;
 	}
 	
-	public function add_event_by_event_type($game_id, &$event_type, &$db_option_entities, &$game_type, &$option_group, &$option_i, $options_in_game, &$event_i, &$max_voting_chars) {
-		$qq = "SELECT * FROM events WHERE game_id='".$game_id."' AND event_type_id='".$event_type['event_type_id']."';";
+	public function add_event_by_event_type(&$game, &$event_type, &$db_option_entities, &$game_type, &$option_group, &$round_option_i, $options_in_game, &$event_i, $event_name) {
+		$qq = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_type_id='".$event_type['event_type_id']."';";
 		$rr = $this->run_query($qq);
-		if ($rr->rowCount() > 0) {
-			$option_i += count($db_option_entities);
-		}
-		else {
-			$starting_round = floor($event_i/$game_type['events_per_round'])+1;
-			$event_starting_block = ($starting_round-1)*$game_type['round_length']+1;
-			$event_final_block = $starting_round*$game_type['round_length'];
-			
-			$qq = "INSERT INTO events SET game_id='".$game_id."', event_type_id='".$event_type['event_type_id']."', event_starting_block='".$event_starting_block."', event_final_block='".$event_final_block."', event_name=".$this->quote_escape($event_type['name']).", option_name=".$this->quote_escape($option_group['option_name']).", option_name_plural=".$this->quote_escape($option_group['option_name_plural']).", option_max_width='".$game_type['default_option_max_width']."';";
+		
+		if ($event_i%$game_type['events_per_round'] == 0) $round_option_i = 0;
+		$starting_round = floor($event_i/$game_type['events_per_round'])+1;
+		$event_starting_block = ($starting_round-1)*$game_type['round_length']+1;
+		$event_final_block = $starting_round*$game_type['round_length'];
+		
+		$qq = "INSERT INTO events SET game_id='".$game->db_game['game_id']."', event_type_id='".$event_type['event_type_id']."', event_starting_block='".$event_starting_block."', event_final_block='".$event_final_block."', event_name=".$this->quote_escape($event_name).", option_name=".$this->quote_escape($option_group['option_name']).", option_name_plural=".$this->quote_escape($option_group['option_name_plural']).", option_max_width='".$game_type['default_option_max_width']."';";
+		$rr = $this->run_query($qq);
+		$event_id = $this->last_insert_id();
+		
+		for ($i=0; $i<count($db_option_entities); $i++) {
+			if (!empty($event_entity)) $option_name = $db_option_entities[$i]['last_name']." wins ".$event_entity['entity_name'];
+			else $option_name = $db_option_entities[$i]['entity_name'];
+			$vote_identifier = $game->option_index_to_vote_identifier($round_option_i);
+			$qq = "INSERT INTO options SET event_id='".$event_id."', entity_id='".$db_option_entities[$i]['entity_id']."', membership_id='".$db_option_entities[$i]['membership_id']."', image_id='".$db_option_entities[$i]['default_image_id']."', name='".$option_name."', vote_identifier='".$vote_identifier."', option_index='".$round_option_i."';";
 			$rr = $this->run_query($qq);
-			$event_id = $this->last_insert_id();
-			
-			for ($i=0; $i<count($db_option_entities); $i++) {
-				if (!empty($event_entity)) $option_name = $db_option_entities[$i]['last_name']." wins ".$event_entity['entity_name'];
-				else $option_name = $db_option_entities[$i]['entity_name'];
-				$voting_character = $this->option_index_to_voting_chars($option_i, $options_in_game);
-				if (strlen($voting_character) > $max_voting_chars) $max_voting_chars = strlen($voting_character);
-				$qq = "INSERT INTO options SET event_id='".$event_id."', entity_id='".$db_option_entities[$i]['entity_id']."', membership_id='".$db_option_entities[$i]['membership_id']."', image_id='".$db_option_entities[$i]['default_image_id']."', name='".$option_name."', voting_character='".$voting_character."';";
-				$rr = $this->run_query($qq);
-				$option_i++;
-			}
+			$round_option_i++;
 		}
 	}
 	

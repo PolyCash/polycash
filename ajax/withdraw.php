@@ -23,7 +23,7 @@ if ($thisuser && $game) {
 		$remainder_address_id = $_REQUEST['remainder_address_id'];
 		
 		if ($remainder_address_id == "random") {
-			$q = "SELECT * FROM addresses WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."' AND option_id > 0 AND is_mine=1 ORDER BY RAND() LIMIT 1;";
+			$q = "SELECT * FROM addresses WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."' AND option_index IS NOT NULL AND is_mine=1 ORDER BY RAND() LIMIT 1;";
 			$r = $app->run_query($q);
 			$remainder_address = $r->fetch();
 			$remainder_address_id = $remainder_address['address_id'];

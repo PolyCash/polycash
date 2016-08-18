@@ -47,7 +47,7 @@ class Game {
 		return $db_address['address_id'];
 	}
 	
-	public function new_invoice_address($required_option_id, $delete_optionless) {
+	public function new_invoice_address($required_option_index, $delete_optionless) {
 		$loop = true;
 		do {
 			$keySet = bitcoin::getNewKeySet();
@@ -56,15 +56,16 @@ class Game {
 			}
 			
 			$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
-			$addr_option_id = $this->addr_text_to_option_id($keySet['pubAdd']);
+			$vote_identifier = $this->addr_text_to_vote_identifier($keySet['pubAdd']);
+			$option_index = $this->vote_identifier_to_option_index($vote_identifier);
 			
-			if ($delete_optionless && !$addr_option_id) {}
+			if ($delete_optionless && !$option_index) {}
 			else {
 				$q = "INSERT INTO invoice_addresses SET currency_id=1, pub_key='".$keySet['pubAdd']."', priv_enc='".$encWIF."';";
 				$r = $this->app->run_query($q);
 				$db_address = $this->create_or_fetch_address($keySet['pubAdd'], false, false, false, false, true);
 			}
-			if (!$required_option_id || $required_option_id == $addr_option_id) {
+			if (!$required_option_index || $required_option_index == $option_index) {
 				$loop = false;
 			}
 		}
@@ -81,11 +82,12 @@ class Game {
 				return $r->fetch();
 			}
 		}
-		$address_option_id = $this->addr_text_to_option_id($address);
+		$vote_identifier = $this->addr_text_to_vote_identifier($address);
+		$option_index = $this->vote_identifier_to_option_index($vote_identifier);
 		
-		if ($address_option_id > 0 || !$delete_optionless) {
+		if ($option_index > 0 || !$delete_optionless) {
 			$q = "INSERT INTO addresses SET game_id='".$this->db_game['game_id']."', address='".$address."'";
-			if ($address_option_id > 0) $q .= ", option_id='".$address_option_id."'";
+			if ($option_index > 0) $q .= ", option_index='".$option_index."'";
 			$q .= ", time_created='".time()."';";
 			$r = $this->app->run_query($q);
 			$output_address_id = $this->app->last_insert_id();
@@ -240,7 +242,7 @@ class Game {
 					else $address_id = $to_user->user_address_id($this->db_game['game_id'], $option_ids[$out_index]);
 					
 					if ($address_id) {
-						$q = "SELECT * FROM addresses a LEFT JOIN options o ON a.option_id=o.option_id WHERE a.address_id='".$address_id."';";
+						$q = "SELECT * FROM addresses WHERE address_id='".$address_id."';";
 						$r = $this->app->run_query($q);
 						$address = $r->fetch();
 						
@@ -251,10 +253,12 @@ class Game {
 							$q .= "', out_index='".$out_index."', ";
 							if (!empty($address['user_id'])) $q .= "user_id='".$address['user_id']."', ";
 							$q .= "address_id='".$address_id."', ";
-							if ($address['option_id'] > 0) {
-								$q .= "option_id='".$address['option_id']."', event_id='".$address['event_id']."', ";
+							if ($address['option_index'] > 0) {
+								$option_id = $this->option_index_to_current_option_id($address['option_index']);
+								$db_option = $this->app->run_query("SELECT * FROM options WHERE option_id='".$option_id."';")->fetch();
+								$q .= "option_index='".$address['option_index']."', option_id='".$option_id."', event_id='".$db_option['event_id']."', ";
 								if ($block_id !== false) {
-									$event = new Event($this, false, $address['event_id']);
+									$event = new Event($this, false, $db_option['event_id']);
 									$effectiveness_factor = $event->block_id_to_effectiveness_factor($block_id);
 								}
 							}
@@ -316,7 +320,9 @@ class Game {
 							$q .= "coin_blocks_destroyed='".$overshoot_cbd."', coin_rounds_destroyed='".$overshoot_crd."', ";
 						}
 						$q .= "user_id='".$from_user_id."', address_id='".$overshoot_return_addr_id."', ";
-						if ($overshoot_address['option_id'] > 0) $q .= "option_id='".$overshoot_address['option_id']."', ";
+						if ($overshoot_address['option_index'] > 0) {
+							$q .= "option_index='".$overshoot_address['option_index']."', option_id='".$this->option_index_to_current_option_id($overshoot_address['option_index'])."', ";
+						}
 						$q .= "create_transaction_id='".$transaction_id."', ";
 						if ($block_id !== false) {
 							$q .= "create_block_id='".$block_id."', create_round_id='".$this->block_to_round($block_id)."', ";
@@ -384,26 +390,26 @@ class Game {
 			
 			if ($this->db_game['payout_weight'] == "coin") {
 				$q = "UPDATE options op INNER JOIN (
-					SELECT option_id, SUM(amount) sum_amount, SUM(amount)*".$effectiveness_factor." sum_votes FROM transaction_ios 
+					SELECT option_index, SUM(amount) sum_amount, SUM(amount)*".$effectiveness_factor." sum_votes FROM transaction_ios 
 					WHERE game_id='".$this->db_game['game_id']."' AND create_block_id IS NULL AND amount > 0
-					GROUP BY option_id
-				) i ON op.option_id=i.option_id SET op.unconfirmed_coin_score=i.sum_amount, op.unconfirmed_votes=i.sum_votes WHERE op.event_id='".$this->current_events[$i]->db_event['event_id']."';";
+					GROUP BY option_index
+				) i ON op.option_index=i.option_index SET op.unconfirmed_coin_score=i.sum_amount, op.unconfirmed_votes=i.sum_votes WHERE op.event_id='".$this->current_events[$i]->db_event['event_id']."';";
 				$r = $this->app->run_query($q);
 			}
 			else if ($this->db_game['payout_weight'] == "coin_block") {
 				$q = "UPDATE options op INNER JOIN (
-					SELECT io.option_id, SUM((t.ref_coin_blocks_destroyed+(".($last_block_id+1)."-t.ref_block_id)*t.amount)*io.amount/t.amount) sum_cbd, SUM((t.ref_coin_blocks_destroyed+(".($last_block_id+1)."-t.ref_block_id)*t.amount)*io.amount/t.amount)*".$effectiveness_factor." sum_votes FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id
+					SELECT io.option_index, SUM((t.ref_coin_blocks_destroyed+(".($last_block_id+1)."-t.ref_block_id)*t.amount)*io.amount/t.amount) sum_cbd, SUM((t.ref_coin_blocks_destroyed+(".($last_block_id+1)."-t.ref_block_id)*t.amount)*io.amount/t.amount)*".$effectiveness_factor." sum_votes FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id
 					WHERE t.game_id='".$this->db_game['game_id']."' AND io.create_block_id IS NULL AND io.amount > 0 AND t.block_id IS NULL
-					GROUP BY io.option_id
-				) i ON op.option_id=i.option_id SET op.unconfirmed_coin_block_score=i.sum_cbd, op.unconfirmed_votes=i.sum_votes WHERE op.event_id='".$this->current_events[$i]->db_event['event_id']."';";
+					GROUP BY io.option_index
+				) i ON op.option_index=i.option_index SET op.unconfirmed_coin_block_score=i.sum_cbd, op.unconfirmed_votes=i.sum_votes WHERE op.event_id='".$this->current_events[$i]->db_event['event_id']."';";
 				$r = $this->app->run_query($q);
 			}
 			else {
 				$q = "UPDATE options op INNER JOIN (
-					SELECT io.option_id, SUM((t.ref_coin_rounds_destroyed+(".$round_id."-t.ref_round_id)*t.amount)*io.amount/t.amount) sum_crd, SUM((t.ref_coin_rounds_destroyed+(".$round_id."-t.ref_round_id)*t.amount)*io.amount/t.amount)*".$effectiveness_factor." sum_votes FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id
+					SELECT io.option_index, SUM((t.ref_coin_rounds_destroyed+(".$round_id."-t.ref_round_id)*t.amount)*io.amount/t.amount) sum_crd, SUM((t.ref_coin_rounds_destroyed+(".$round_id."-t.ref_round_id)*t.amount)*io.amount/t.amount)*".$effectiveness_factor." sum_votes FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id
 					WHERE t.game_id='".$this->db_game['game_id']."' AND io.create_block_id IS NULL AND io.amount > 0 AND t.block_id IS NULL
-					GROUP BY io.option_id
-				) i ON op.option_id=i.option_id SET op.unconfirmed_coin_round_score=i.sum_crd, op.unconfirmed_votes=i.sum_votes WHERE op.event_id='".$this->current_events[$i]->db_event['event_id']."';";
+					GROUP BY io.option_index
+				) i ON op.option_index=i.option_index SET op.unconfirmed_coin_round_score=i.sum_crd, op.unconfirmed_votes=i.sum_votes WHERE op.event_id='".$this->current_events[$i]->db_event['event_id']."';";
 				$r = $this->app->run_query($q);
 			}
 		}
@@ -460,7 +466,7 @@ class Game {
 				$cbd_per_coin_out = floor(pow(10,8)*$total_coin_blocks_created/$voted_coins_out)/pow(10,8);
 				$crd_per_coin_out = floor(pow(10,8)*$total_coin_rounds_created/$voted_coins_out)/pow(10,8);
 				
-				$qq = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN options op ON a.option_id=op.option_id WHERE io.create_transaction_id='".$unconfirmed_tx['transaction_id']."';";
+				$qq = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN options op ON a.option_index=op.option_index WHERE io.create_transaction_id='".$unconfirmed_tx['transaction_id']."';";
 				$rr = $this->app->run_query($qq);
 				
 				while ($output_utxo = $rr->fetch()) {
@@ -964,7 +970,7 @@ class Game {
 			$html .= "Miner found a block.";
 		}
 		else {
-			$qq = "SELECT * FROM transaction_ios i JOIN addresses a ON i.address_id=a.address_id LEFT JOIN options gvo ON a.option_id=gvo.option_id WHERE i.spend_transaction_id='".$transaction['transaction_id']."' ORDER BY i.amount DESC;";
+			$qq = "SELECT * FROM transaction_ios i JOIN addresses a ON i.address_id=a.address_id WHERE i.spend_transaction_id='".$transaction['transaction_id']."' ORDER BY i.amount DESC;";
 			$rr = $this->app->run_query($qq);
 			$input_sum = 0;
 			while ($input = $rr->fetch()) {
@@ -987,7 +993,7 @@ class Game {
 			}
 		}
 		$html .= '</div><div class="col-md-6">';
-		$qq = "SELECT i.*, gvo.*, a.*, i.votes AS votes, p.amount AS payout_amount FROM transaction_ios i LEFT JOIN transaction_ios p ON i.payout_io_id=p.io_id, addresses a LEFT JOIN options gvo ON a.option_id=gvo.option_id WHERE i.create_transaction_id='".$transaction['transaction_id']."' AND i.address_id=a.address_id ORDER BY i.out_index ASC;";
+		$qq = "SELECT i.*, a.*, i.votes AS votes, p.amount AS payout_amount FROM transaction_ios i LEFT JOIN transaction_ios p ON i.payout_io_id=p.io_id, addresses a WHERE i.create_transaction_id='".$transaction['transaction_id']."' AND i.address_id=a.address_id ORDER BY i.out_index ASC;";
 		$rr = $this->app->run_query($qq);
 		$output_sum = 0;
 		while ($output = $rr->fetch()) {
@@ -1083,18 +1089,136 @@ class Game {
 		
 		return $returnvals;
 	}
-
-	public function addr_text_to_option_id($addr_text) {
-		$option_id = false;
-		for ($len=1; $len<=$this->db_game['max_voting_chars']; $len++) {
-			$rel_text = strtolower(substr($addr_text, 1, $len));
-			$q = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."' AND op.voting_character='".$rel_text."';";
-			$r = $this->app->run_query($q);
-			
-			if ($r->rowCount() > 0) {
-				$option = $r->fetch();
-				return $option['option_id'];
+	
+	public function voting_character_definitions() {
+		$voting_characters = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+		$firstchar_divisions = array(26,16,8,4,2,1);
+		$range_max = -1;
+		for ($i=0; $i<count($firstchar_divisions); $i++) {
+			$num_this_length = $firstchar_divisions[$i]*pow(strlen($voting_characters), $i);
+			$length_to_range[$i+1] = array($range_max+1, $range_max+$num_this_length);
+			$range_max = $range_max+$num_this_length;
+		}
+		$returnvals['voting_characters'] = $voting_characters;
+		$returnvals['firstchar_divisions'] = $firstchar_divisions;
+		$returnvals['length_to_range'] = $length_to_range;
+		return $returnvals;
+	}
+	
+	public function option_index_to_vote_identifier($option_index) {
+		$defs = $this->voting_character_definitions();
+		$firstchar_divisions = $defs['firstchar_divisions'];
+		$voting_characters = $defs['voting_characters'];
+		$length_to_range = $defs['length_to_range'];
+		$firstchar_offset = 0;
+		
+		foreach ($length_to_range as $length => $range) {
+			if ($option_index >= $range[0] && $option_index <= $range[1]) {
+				$num_firstchars = $firstchar_divisions[$length-1];
+				$index_within_range = $option_index-$range[0];
+				$chars = "";
+				$current_num = $index_within_range;
+				$modulus = strlen($voting_characters);
+				for ($i=0; $i<$length-1; $i++) {
+					$remainder = $current_num%$modulus;
+					$current_num = floor($current_num/$modulus);
+					$chars .= $voting_characters[$remainder];
+				}
+				$firstchar_index = $firstchar_offset+$current_num;
+				$chars .= $voting_characters[$firstchar_index];
 			}
+			$firstchar_offset += $firstchar_divisions[$length-1];
+		}
+		
+		return strrev($chars);
+	}
+
+	public function addr_text_to_vote_identifier($addr_text) {
+		$defs = $this->voting_character_definitions();
+		$firstchar_divisions = $defs['firstchar_divisions'];
+		$voting_characters = $defs['voting_characters'];
+		$length_to_range = $defs['length_to_range'];
+		
+		$firstchar = $addr_text[1];
+		$firstchar_index = strpos($voting_characters, $firstchar);
+		$firstchar_offset = 0;
+		
+		foreach ($length_to_range as $length => $range) {
+			$firstchar_begin_index = $firstchar_offset;
+			$firstchar_end_index = $firstchar_begin_index+$firstchar_divisions[$length-1]-1;
+			if ($firstchar_index >= $firstchar_begin_index && $firstchar_index <= $firstchar_end_index) {
+				return substr($addr_text, 1, $length);
+			}
+			$firstchar_offset = $firstchar_end_index+1;
+		}
+		return substr($addr_text, 1, 1);
+	}
+	
+	public function vote_identifier_to_option_index($vote_identifier) {
+		$defs = $this->voting_character_definitions();
+		$firstchar_divisions = $defs['firstchar_divisions'];
+		$voting_characters = $defs['voting_characters'];
+		$length_to_range = $defs['length_to_range'];
+		
+		$firstchar = $vote_identifier[0];
+		$firstchar_index = strpos($voting_characters, $firstchar);
+		$firstchar_offset = 0;
+		
+		$range = $length_to_range[strlen($vote_identifier)];
+		if ($range) {
+			if (strlen($vote_identifier) == 1) {
+				$firstchar_range_offset = 0;
+				$firstchar_char_offset = 0;
+			}
+			else {
+				$firstchar_range_offset = $length_to_range[strlen($vote_identifier)-1][1]+1;
+				$firstchar_char_offset = 0;
+				for ($i=0; $i<strlen($vote_identifier)-1; $i++) {
+					$firstchar_char_offset += $firstchar_divisions[$i];
+				}
+			}
+			$firstchar_index_within_range = $firstchar_index-$firstchar_char_offset;
+			$option_id = $firstchar_range_offset+$firstchar_index_within_range*pow(strlen($voting_characters), strlen($vote_identifier)-1);
+			
+			for ($i=1; $i<strlen($vote_identifier); $i++) {
+				$char = $vote_identifier[$i];
+				$char_id = strpos($voting_characters, $char);
+				$option_id += $char_id*pow(strlen($voting_characters), strlen($vote_identifier)-$i-1);
+			}
+			return $option_id;
+		}
+		else return false;
+	}
+	
+	public function addr_text_to_option_id($addr_text) {
+		$vote_identifier = $this->addr_text_to_vote_identifier($addr_text);
+		if (!empty($vote_identifier)) {
+			$q = "SELECT * FROM options o JOIN events e ON o.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."' AND o.vote_identifier=".$this->app->quote_escape($vote_identifier).";";
+			$r = $this->app->run_query($q);
+			if ($r->rowCount() == 1) return $r->fetch()['option_id'];
+			else return false;
+		}
+		else return false;
+	}
+	
+	public function option_index_range() {
+		$range_row = $this->app->run_query("SELECT MAX(o.option_index), MIN(o.option_index) FROM options o JOIN events e ON o.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."';")->fetch();
+		$min = (int) $range_row['MIN(o.option_index)'];
+		$max = (int) $range_row['MAX(o.option_index)'];
+		return array($min, $max);
+	}
+	
+	public function option_index_to_current_option_id($option_index) {
+		$sum_options = 0;
+		for ($i=0; $i<count($this->current_events); $i++) {
+			$thisevent_options = (int) $this->app->run_query("SELECT COUNT(*) FROM options WHERE event_id='".$this->current_events[$i]->db_event['event_id']."';")->fetch()['COUNT(*)'];
+			if ($option_index >= $sum_options && $option_index < $sum_options+$thisevent_options) {
+				$event_option_offset = $option_index-$sum_options;
+				$first_option_q = "SELECT * FROM options WHERE event_id='".$this->current_events[$i]->db_event['event_id']."' ORDER BY option_id ASC LIMIT 1;";
+				$first_option = $this->app->run_query($first_option_q)->fetch();
+				return $first_option['option_id']-1+$event_option_offset;
+			}
+			$sum_options += $thisevent_options;
 		}
 		return false;
 	}
@@ -2320,10 +2444,10 @@ class Game {
 			while ($option = $option_r->fetch()) {
 				$has_votingaddr = "false";
 				if ($user) {
-					$votingaddr_id = $user->user_address_id($this->db_game['game_id'], $option['option_id']);
+					$votingaddr_id = $user->user_address_id($this->db_game['game_id'], $option['option_index']);
 					if ($votingaddr_id !== false) $has_votingaddr = "true";
 				}
-				$js .= "games[".$game_index."].events[".$i."].options.push(new option(games[".$game_index."].events[".$i."], ".$j.", ".$option['option_id'].", '".$option['name']."', 0, $has_votingaddr));\n";
+				$js .= "games[".$game_index."].events[".$i."].options.push(new option(games[".$game_index."].events[".$i."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", '".$option['name']."', 0, $has_votingaddr));\n";
 				$j++;
 			}
 			$js .= '
@@ -2602,49 +2726,48 @@ class Game {
 	}
 	
 	public function generate_voting_addresses(&$coin_rpc) {
-		$q = "SELECT * FROM options op JOIN events ev ON op.event_id=ev.event_id WHERE ev.game_id='".$this->db_game['game_id']."' ORDER BY op.option_id ASC;";
-		$r = $this->app->run_query($q);
+		$option_index_range = $this->option_index_range();
 		
-		while ($option = $r->fetch()) {
-			$qq = "SELECT * FROM addresses WHERE game_id='".$this->db_game['game_id']."' AND option_id='".$option['option_id']."' AND user_id IS NULL AND is_mine=1;";
+		for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
+			$qq = "SELECT * FROM addresses WHERE game_id='".$this->db_game['game_id']."' AND option_index='".$option_id."' AND user_id IS NULL AND is_mine=1;";
 			$rr = $this->app->run_query($qq);
 			$num_addr = $rr->rowCount();
 			
 			if ($num_addr < $this->db_game['min_unallocated_addresses']) {
-				echo "Generate ".($this->db_game['min_unallocated_addresses']-$num_addr)." unallocated ".$option['name']." addresses in ".$this->db_game['name'];
+				echo "Generate ".($this->db_game['min_unallocated_addresses']-$num_addr)." unallocated #".$option_index." addresses in ".$this->db_game['name'];
 				if ($coin_rpc) echo " by RPC";
 				else echo " by bitcoin-sci";
 				echo "<br/>\n";
 				
 				if ($coin_rpc) {
 					$try_by_sci = false;
-					try {
+					/*try {
 						for ($i=0; $i<($this->db_game['min_unallocated_addresses']-$num_addr); $i++) {
 							$new_addr_str = $coin_rpc->getnewvotingaddress($option['name']);
 							$new_addr_db = $this->create_or_fetch_address($new_addr_str, false, $coin_rpc, true, false, false);
 						}
 					}
-					catch (Exception $e) {
-						try {
-							$new_voting_addr_count = 0;
-							do {
-								$temp_address = $coin_rpc->getnewaddress();
-								$new_addr_db = $this->create_or_fetch_address($temp_address, false, $coin_rpc, true, false, false);
-								if ($new_addr_db['option_id'] == $option['option_id']) $new_voting_addr_count++;
-							}
-							while ($new_voting_addr_count < ($this->db_game['min_unallocated_addresses']-$num_addr));
+					catch (Exception $e) {*/
+					try {
+						$new_voting_addr_count = 0;
+						do {
+							$temp_address = $coin_rpc->getnewaddress();
+							$new_addr_db = $this->create_or_fetch_address($temp_address, false, $coin_rpc, true, false, false);
+							if ($new_addr_db['option_index'] == $option_index) $new_voting_addr_count++;
 						}
-						catch (Exception $e) {
-							$try_by_sci = true;
-						}
+						while ($new_voting_addr_count < ($this->db_game['min_unallocated_addresses']-$num_addr));
 					}
+					catch (Exception $e) {
+						$try_by_sci = true;
+					}
+					//}
 				}
 				else $try_by_sci = true;
 				
 				if ($try_by_sci) {
 					$new_voting_addr_count = 0;
 					do {
-						$db_address = $this->new_invoice_address($option['option_id'], true);
+						$db_address = $this->new_invoice_address($option['option_index'], true);
 						$new_voting_addr_count++;
 					}
 					while ($new_voting_addr_count < ($this->db_game['min_unallocated_addresses']-$num_addr));

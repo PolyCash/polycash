@@ -77,7 +77,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		$my_addr_count = $r->fetch(PDO::FETCH_NUM);
 		$my_addr_count = $my_addr_count[0];
 		
-		$q = "SELECT COUNT(*) FROM addresses WHERE game_id='".$game->db_game['game_id']."' AND is_mine=1 AND option_id > 0;";
+		$q = "SELECT COUNT(*) FROM addresses WHERE game_id='".$game->db_game['game_id']."' AND is_mine=1 AND option_index IS NOT NULL;";
 		$r = $app->run_query($q);
 		$voting_addr_count = $r->fetch(PDO::FETCH_NUM);
 		$voting_addr_count = $voting_addr_count[0];

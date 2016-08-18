@@ -515,10 +515,10 @@ if ($thisuser && $game) {
 				$j=0;
 				while ($option = $option_r->fetch()) {
 					$has_votingaddr = "false";
-					$votingaddr_id = $thisuser->user_address_id($game->db_game['game_id'], $option['option_id']);
+					$votingaddr_id = $thisuser->user_address_id($game->db_game['game_id'], $option['option_index']);
 					if ($votingaddr_id !== false) $has_votingaddr = "true";
 					
-					echo "game.all_events[".$i."].options.push(new option(game.all_events[".$i."], ".$j.", ".$option['option_id'].", '".$option['name']."', 0, $has_votingaddr));\n";
+					echo "game.all_events[".$i."].options.push(new option(game.all_events[".$i."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", '".$option['name']."', 0, $has_votingaddr));\n";
 					$j++;
 				}
 				$i++;
@@ -911,11 +911,13 @@ if ($thisuser && $game) {
 						<select class="form-control" id="withdraw_remainder_address_id">
 							<option value="random">Random</option>
 							<?php
-							$q = "SELECT * FROM addresses a LEFT JOIN options op ON op.option_id=a.option_id WHERE a.game_id='".$game->db_game['game_id']."' AND a.user_id='".$thisuser->db_user['user_id']."' GROUP BY a.option_id ORDER BY op.option_id IS NULL ASC, op.option_id ASC;";
+							$q = "SELECT * FROM addresses WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."' GROUP BY option_index ORDER BY option_index IS NULL ASC, option_index ASC;";
 							$r = $app->run_query($q);
 							while ($address = $r->fetch()) {
-								if ($address['name'] == "") $address['name'] = "None";
-								echo "<option value=\"".$address['address_id']."\">".$address['name']."</option>\n";
+								echo "<option value=\"".$address['address_id']."\">";
+								if ($address['option_index'] == "") echo "None";
+								else echo "Voting option #".$address['option_index'];
+								echo "</option>\n";
 							}
 							?>
 						</select>
@@ -930,7 +932,7 @@ if ($thisuser && $game) {
 				
 				<h1>Deposit <?php echo $game->db_game['coin_name_plural']; ?></h1>
 				<?php
-				$q = "SELECT * FROM addresses a LEFT JOIN options op ON op.option_id=a.option_id WHERE a.game_id='".$game->db_game['game_id']."' AND a.user_id='".$thisuser->db_user['user_id']."' ORDER BY a.option_id IS NULL DESC, a.option_id ASC;";
+				$q = "SELECT * FROM addresses WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."' ORDER BY option_index IS NULL DESC, option_index ASC;";
 				$r = $app->run_query($q);
 				?>
 				<b>You have <?php echo $r->rowCount(); ?> addresses.</b><br/>
@@ -940,7 +942,7 @@ if ($thisuser && $game) {
 					<div class="row">
 						<div class="col-sm-3">
 							<?php
-							if ($address['option_id'] > 0) echo $address['name'];
+							if ($address['option_index'] > 0) echo "Voting option #".$address['option_index'];
 							else echo "Default Address";
 							?>
 						</div>

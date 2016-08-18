@@ -1,0 +1,10 @@
+ALTER TABLE `games` DROP `max_voting_chars`;
+ALTER TABLE `addresses` DROP `option_id`;
+ALTER TABLE `addresses` ADD `vote_identifier` VARCHAR(20) NOT NULL DEFAULT '' AFTER `is_mine`;
+ALTER TABLE `addresses` ADD INDEX (`vote_identifier`);
+ALTER TABLE `addresses` ADD `option_index` INT NULL DEFAULT NULL AFTER `vote_identifier`;
+ALTER TABLE `addresses` ADD INDEX (`option_index`);
+ALTER TABLE `options` CHANGE `voting_character` `vote_identifier` VARCHAR(20) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL DEFAULT '';
+ALTER TABLE `options` ADD `option_index` INT NULL DEFAULT NULL AFTER `vote_identifier`;
+ALTER TABLE `transaction_ios` ADD `option_index` INT NULL DEFAULT NULL AFTER `option_id`;
+ALTER TABLE `transaction_ios` ADD INDEX (`option_index`);

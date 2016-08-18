@@ -42,10 +42,11 @@ var chatWindow = function(chatWindowId, toUserId) {
 	
 	this.initialize = function() {};
 };
-var option = function(event, option_index, option_id, name, points, has_votingaddr) {
+var option = function(event, option_index, option_id, db_option_index, name, points, has_votingaddr) {
 	this.event = event;
 	this.option_index = option_index;
 	this.option_id = option_id;
+	this.db_option_index = db_option_index;
 	this.name = name;
 	this.existing_bet_sum = 0;
 	this.bet_index = false;
