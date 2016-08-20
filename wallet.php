@@ -942,7 +942,7 @@ if ($thisuser && $game) {
 					<div class="row">
 						<div class="col-sm-3">
 							<?php
-							if ($address['option_index'] > 0) echo "Voting option #".$address['option_index'];
+							if ($address['option_index'] != "") echo "Voting option #".$address['option_index'];
 							else echo "Default Address";
 							?>
 						</div>

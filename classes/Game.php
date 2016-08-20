@@ -59,13 +59,13 @@ class Game {
 			$vote_identifier = $this->addr_text_to_vote_identifier($keySet['pubAdd']);
 			$option_index = $this->vote_identifier_to_option_index($vote_identifier);
 			
-			if ($delete_optionless && !$option_index) {}
+			if ($delete_optionless && $option_index === false) {}
 			else {
 				$q = "INSERT INTO invoice_addresses SET currency_id=1, pub_key='".$keySet['pubAdd']."', priv_enc='".$encWIF."';";
 				$r = $this->app->run_query($q);
 				$db_address = $this->create_or_fetch_address($keySet['pubAdd'], false, false, false, false, true);
 			}
-			if (!$required_option_index || $required_option_index == $option_index) {
+			if ($required_option_index === false || $required_option_index == $option_index) {
 				$loop = false;
 			}
 		}
@@ -85,9 +85,9 @@ class Game {
 		$vote_identifier = $this->addr_text_to_vote_identifier($address);
 		$option_index = $this->vote_identifier_to_option_index($vote_identifier);
 		
-		if ($option_index > 0 || !$delete_optionless) {
-			$q = "INSERT INTO addresses SET game_id='".$this->db_game['game_id']."', address='".$address."'";
-			if ($option_index > 0) $q .= ", option_index='".$option_index."'";
+		if ($option_index !== false || !$delete_optionless) {
+			$q = "INSERT INTO addresses SET game_id='".$this->db_game['game_id']."', address=".$this->app->quote_escape($address);
+			if ($option_index !== false) $q .= ", vote_identifier=".$this->app->quote_escape($vote_identifier).", option_index='".$option_index."'";
 			$q .= ", time_created='".time()."';";
 			$r = $this->app->run_query($q);
 			$output_address_id = $this->app->last_insert_id();
@@ -253,14 +253,17 @@ class Game {
 							$q .= "', out_index='".$out_index."', ";
 							if (!empty($address['user_id'])) $q .= "user_id='".$address['user_id']."', ";
 							$q .= "address_id='".$address_id."', ";
-							if ($address['option_index'] > 0) {
+							if ($address['option_index'] != "") {
 								$option_id = $this->option_index_to_current_option_id($address['option_index']);
-								$db_option = $this->app->run_query("SELECT * FROM options WHERE option_id='".$option_id."';")->fetch();
-								$q .= "option_index='".$address['option_index']."', option_id='".$option_id."', event_id='".$db_option['event_id']."', ";
-								if ($block_id !== false) {
-									$event = new Event($this, false, $db_option['event_id']);
-									$effectiveness_factor = $event->block_id_to_effectiveness_factor($block_id);
+								if ($option_id) {
+									$db_option = $this->app->run_query("SELECT * FROM options WHERE option_id='".$option_id."';")->fetch();
+									$q .= "option_index='".$address['option_index']."', option_id='".$option_id."', event_id='".$db_option['event_id']."', ";
+									if ($block_id !== false) {
+										$event = new Event($this, false, $db_option['event_id']);
+										$effectiveness_factor = $event->block_id_to_effectiveness_factor($block_id);
+									}
 								}
+								else $effectiveness_factor = 0;
 							}
 							else $effectiveness_factor = 0;
 							if ($block_id !== false) {
@@ -1009,7 +1012,7 @@ class Game {
 			if ($output['votes'] > 0) {
 				$html .= ", ".$this->app->format_bignum($output['votes']/pow(10,8))." votes for";
 			}
-			if ($output['name'] != "") $html .= " ".$output['name'];
+			if (!empty($output['name'])) $html .= " ".$output['name'];
 			if ($output['payout_amount'] > 0) $html .= '&nbsp;&nbsp;<font class="greentext">+'.$this->app->format_bignum($output['payout_amount']/pow(10,8)).'</font>';
 			$html .= "<br/>\n";
 			$output_sum += $output['amount'];
@@ -1139,7 +1142,7 @@ class Game {
 		$voting_characters = $defs['voting_characters'];
 		$length_to_range = $defs['length_to_range'];
 		
-		$firstchar = $addr_text[1];
+		$firstchar = $addr_text[2];
 		$firstchar_index = strpos($voting_characters, $firstchar);
 		$firstchar_offset = 0;
 		
@@ -1147,11 +1150,11 @@ class Game {
 			$firstchar_begin_index = $firstchar_offset;
 			$firstchar_end_index = $firstchar_begin_index+$firstchar_divisions[$length-1]-1;
 			if ($firstchar_index >= $firstchar_begin_index && $firstchar_index <= $firstchar_end_index) {
-				return substr($addr_text, 1, $length);
+				return substr($addr_text, 2, $length);
 			}
 			$firstchar_offset = $firstchar_end_index+1;
 		}
-		return substr($addr_text, 1, 1);
+		return substr($addr_text, 2, 1);
 	}
 	
 	public function vote_identifier_to_option_index($vote_identifier) {
@@ -2729,7 +2732,7 @@ class Game {
 		$option_index_range = $this->option_index_range();
 		
 		for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
-			$qq = "SELECT * FROM addresses WHERE game_id='".$this->db_game['game_id']."' AND option_index='".$option_id."' AND user_id IS NULL AND is_mine=1;";
+			$qq = "SELECT * FROM addresses WHERE game_id='".$this->db_game['game_id']."' AND option_index='".$option_index."' AND user_id IS NULL AND is_mine=1;";
 			$rr = $this->app->run_query($qq);
 			$num_addr = $rr->rowCount();
 			
@@ -2767,7 +2770,7 @@ class Game {
 				if ($try_by_sci) {
 					$new_voting_addr_count = 0;
 					do {
-						$db_address = $this->new_invoice_address($option['option_index'], true);
+						$db_address = $this->new_invoice_address($option_index, true);
 						$new_voting_addr_count++;
 					}
 					while ($new_voting_addr_count < ($this->db_game['min_unallocated_addresses']-$num_addr));

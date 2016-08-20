@@ -106,7 +106,7 @@ class App {
 		$series_index = (int) $series_index_r->fetch()['MAX(game_series_index)'] + 1;
 		
 		$url_identifier = $this->game_url_identifier($game_type['name'].$series_index);
-		$q = "INSERT INTO games SET game_series_index=".$series_index.", name=".$this->quote_escape($game_type['name'].$series_index).", url_identifier=".$this->quote_escape($url_identifier).", game_winning_inflation='".$game_type['default_game_winning_inflation']."', logo_image_id='".$game_type['default_logo_image_id']."', ";
+		$q = "INSERT INTO games SET game_status='published', game_series_index=".$series_index.", name=".$this->quote_escape($game_type['name'].$series_index).", url_identifier=".$this->quote_escape($url_identifier).", game_winning_inflation='".$game_type['default_game_winning_inflation']."', logo_image_id='".$game_type['default_logo_image_id']."', ";
 		foreach ($game_type AS $var => $val) {
 			if (!in_array($var, $skip_game_type_vars)) {
 				if (!empty($val)) $q .= $var.'='.$this->quote_escape($val).', ';
@@ -347,7 +347,7 @@ class App {
 	}
 
 	public function transaction_voted_coins_out($transaction_id) {
-		$qq = "SELECT SUM(amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$transaction_id."' AND a.option_id > 0;";
+		$qq = "SELECT SUM(amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$transaction_id."' AND a.option_index > 0;";
 		$rr = $this->run_query($qq);
 		$voted_coins_out = $rr->fetch(PDO::FETCH_NUM);
 		if ($voted_coins_out[0] > 0) return $voted_coins_out[0];

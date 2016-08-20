@@ -200,7 +200,7 @@ class User {
 	
 	public function user_address_id($game_id, $option_index, $option_id) {
 		$q = "SELECT * FROM addresses WHERE game_id='".$game_id."' AND user_id='".$this->db_user['user_id']."'";
-		if ($option_index) $q .= " AND option_index='".$option_index."'";
+		if ($option_index !== false) $q .= " AND option_index='".$option_index."'";
 		else if ($option_id) {
 			$db_option = $this->app->run_query("SELECT * FROM options WHERE option_id='".$option_id."';")->fetch();
 			$q .= " AND option_index='".$db_option['option_index']."'";
@@ -386,14 +386,19 @@ class User {
 		
 		// Try to give the user voting addresses for all options in this game
 		for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
-			$qq = "SELECT * FROM addresses WHERE option_index='".$option_index."' AND game_id='".$game->db_game['game_id']."' AND is_mine=1 AND user_id IS NULL;";
+			$qq = "SELECT * FROM addresses WHERE option_index='".$option_index."' AND game_id='".$game->db_game['game_id']."' AND user_id='".$this->db_user['user_id']."';";
 			$rr = $this->app->run_query($qq);
 			
-			if ($rr->rowCount() > 0) {
-				$address = $rr->fetch();
-				
-				$qq = "UPDATE addresses SET user_id='".$this->db_user['user_id']."' WHERE address_id='".$address['address_id']."';";
+			if ($rr->rowCount() == 0) {
+				$qq = "SELECT * FROM addresses WHERE option_index='".$option_index."' AND game_id='".$game->db_game['game_id']."' AND is_mine=1 AND user_id IS NULL;";
 				$rr = $this->app->run_query($qq);
+				
+				if ($rr->rowCount() > 0) {
+					$address = $rr->fetch();
+					
+					$qq = "UPDATE addresses SET user_id='".$this->db_user['user_id']."' WHERE address_id='".$address['address_id']."';";
+					$rr = $this->app->run_query($qq);
+				}
 			}
 		}
 		
