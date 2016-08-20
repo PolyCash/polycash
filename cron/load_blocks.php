@@ -21,7 +21,7 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		register_shutdown_function("script_shutdown");
 		
 		$real_game_types = array();
-		$real_game_q = "SELECT * FROM games WHERE game_type='real' AND game_status='running';";
+		$real_game_q = "SELECT * FROM games WHERE game_type='real' AND game_status IN ('published','running');";
 		$real_game_r = $GLOBALS['app']->run_query($real_game_q);
 
 		while ($real_game = $real_game_r->fetch()) {

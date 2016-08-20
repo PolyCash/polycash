@@ -59,7 +59,8 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	}
 	
 	$game->insert_initial_blocks($coin_rpc);
-	
+	$last_block_id = $game->last_block_id();
+	$game->ensure_events_until_block($last_block_id+1);
 	echo "<br/>Finished inserting blocks at ".(microtime(true) - $start_time)." sec<br/>\n";
 	
 	echo "Syncing with daemon...<br/>\n";

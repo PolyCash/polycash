@@ -1,3 +1,8 @@
 ALTER TABLE `games` ADD `identifier_first_char` INT NOT NULL DEFAULT '2' AFTER `featured_score`, ADD `identifier_case_sensitive` BOOLEAN NOT NULL DEFAULT TRUE AFTER `identifier_first_char`;
 ALTER TABLE `game_types` ADD `identifier_first_char` INT NOT NULL DEFAULT '2' AFTER `featured`, ADD `identifier_case_sensitive` BOOLEAN NOT NULL DEFAULT TRUE AFTER `identifier_first_char`;
-UPDATE game_types SET identifier_first_char=1, identifier_case_sensitive=0 WHERE event_type_name='EmpireCoin Classic';
+UPDATE game_types SET game_type='real', rpc_port=23345, identifier_first_char=1, identifier_case_sensitive=0, giveaway_amount=0, final_round=NULL WHERE event_type_name='EmpireCoin Classic';
+ALTER TABLE `games` ADD `event_rule` ENUM('entity_type_option_group','single_event_series') NULL DEFAULT NULL AFTER `game_series_index`;
+ALTER TABLE `games` ADD `event_entity_type_id` INT NULL AFTER `event_rule`, ADD `option_group_id` INT NULL AFTER `event_entity_type_id`;
+ALTER TABLE `games` ADD `default_vote_effectiveness_function` ENUM('constant','linear_decrease') NULL DEFAULT 'constant' AFTER `send_round_notifications`, ADD `default_max_voting_fraction` DECIMAL(9,8) NOT NULL DEFAULT '1' AFTER `default_vote_effectiveness_function`, ADD `default_option_max_width` INT NOT NULL DEFAULT '200' AFTER `default_max_voting_fraction`;
+UPDATE games g JOIN game_types gt ON g.game_type_id=gt.game_type_id SET g.event_rule=gt.event_rule, g.option_group_id=gt.option_group_id, g.event_entity_type_id=gt.event_entity_type_id, g.default_vote_effectiveness_function=gt.default_vote_effectiveness_function, g.default_max_voting_fraction=gt.default_max_voting_fraction, g.default_option_max_width=gt.default_option_max_width;
+ALTER TABLE `games` ADD `events_per_round` INT NOT NULL DEFAULT 0 AFTER `option_group_id`, ADD `event_type_name` VARCHAR(50) NOT NULL DEFAULT '' AFTER `events_per_round`;

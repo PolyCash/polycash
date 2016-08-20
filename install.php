@@ -46,8 +46,9 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			
 			if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "save_rpc_params") {
 				$game_id = (int) $_REQUEST['game_id'];
-				$q = "SELECT * FROM games WHERE game_type='real' AND rpc_username='' AND rpc_password='' AND game_id=".$app->quote_escape($game_id).";";
+				$q = "SELECT * FROM games WHERE game_type='real' AND rpc_username IS NULL AND rpc_password IS NULL AND game_id=".$app->quote_escape($game_id).";";
 				$r = $app->run_query($q);
+				
 				if ($r->rowCount() == 1) {
 					$temp_rpc_game = $r->fetch();
 					$rpc_username = $_REQUEST['rpc_username'];
@@ -155,6 +156,8 @@ $GLOBALS['bitcoin_rpc_password'] = ""; // RPC password here
 </pre>
 					<?php
 				}
+				
+				$app->generate_games();
 				?>
 				
 				<h2>Connect to bitcoind/empirecoind</h2>
@@ -185,7 +188,8 @@ $GLOBALS['bitcoin_rpc_password'] = ""; // RPC password here
 							print_r($getinfo);
 							echo "</pre>";
 							
-							echo "To reset and synchronize this game, run <a target=\"_blank\" href=\"/scripts/sync_coind_initial.php?key=".$GLOBALS['cron_key_string']."&game_id=".$rpc_game['game_id']."\">scripts/sync_coind_initial.php?event_id=".$rpc_event['event_id']."</a>\n";
+							echo "Next, please reset and synchronize this game.<br/>\n";
+							echo "<a class=\"btn btn-primary\" target=\"_blank\" href=\"/scripts/sync_coind_initial.php?key=".$GLOBALS['cron_key_string']."&game_id=".$rpc_game['game_id']."\">Reset & synchronize ".$rpc_game['name']."</a>\n";
 							echo "<br/><br/>\n";
 						}
 						catch (Exception $e) {
