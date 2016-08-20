@@ -1094,8 +1094,14 @@ class Game {
 	}
 	
 	public function voting_character_definitions() {
-		$voting_characters = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-		$firstchar_divisions = array(26,16,8,4,2,1);
+		if ($this->db_game['identifier_case_sensitive'] == 1) {
+			$voting_characters = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+			$firstchar_divisions = array(26,16,8,4,2,1);
+		}
+		else {
+			$voting_characters = "123456789abcdefghijklmnopqrstuvwxyz";
+			$firstchar_divisions = array(19,8,4,2,1);
+		}
 		$range_max = -1;
 		for ($i=0; $i<count($firstchar_divisions); $i++) {
 			$num_this_length = $firstchar_divisions[$i]*pow(strlen($voting_characters), $i);
@@ -1142,7 +1148,9 @@ class Game {
 		$voting_characters = $defs['voting_characters'];
 		$length_to_range = $defs['length_to_range'];
 		
-		$firstchar = $addr_text[2];
+		if ($this->db_game['identifier_case_sensitive'] == 0) $addr_text = strtolower($addr_text);
+		
+		$firstchar = $addr_text[$this->db_game['identifier_first_char']];
 		$firstchar_index = strpos($voting_characters, $firstchar);
 		$firstchar_offset = 0;
 		
@@ -1150,11 +1158,11 @@ class Game {
 			$firstchar_begin_index = $firstchar_offset;
 			$firstchar_end_index = $firstchar_begin_index+$firstchar_divisions[$length-1]-1;
 			if ($firstchar_index >= $firstchar_begin_index && $firstchar_index <= $firstchar_end_index) {
-				return substr($addr_text, 2, $length);
+				return substr($addr_text, $this->db_game['identifier_first_char'], $length);
 			}
 			$firstchar_offset = $firstchar_end_index+1;
 		}
-		return substr($addr_text, 2, 1);
+		return substr($addr_text, $this->db_game['identifier_first_char'], 1);
 	}
 	
 	public function vote_identifier_to_option_index($vote_identifier) {

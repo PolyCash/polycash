@@ -173,7 +173,7 @@ $GLOBALS['bitcoin_rpc_password'] = ""; // RPC password here
 					}
 				}
 				
-				$rpc_games_r = $app->run_query("SELECT * FROM games WHERE game_type='real' AND game_status='running';");
+				$rpc_games_r = $app->run_query("SELECT * FROM games WHERE game_type='real' AND game_status IN ('published','running');");
 				while ($rpc_game = $rpc_games_r->fetch()) {
 					if ($rpc_game['rpc_username'] != "" && $rpc_game['rpc_password'] != "") {
 						echo "<b>Connecting RPC client to ".$rpc_game['name']."...";
