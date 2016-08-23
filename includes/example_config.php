@@ -1,8 +1,8 @@
 <?php
 $GLOBALS['mysql_server'] = "localhost";
-$GLOBALS['mysql_user'] = "root"; // Enter your mysql username here
-$GLOBALS['mysql_password'] = "Yex7ddWAznKenmjEk"; // Enter your mysql password here
-$GLOBALS['mysql_database'] = "empirecoin2";
+$GLOBALS['mysql_user'] = ""; // Enter your mysql username here
+$GLOBALS['mysql_password'] = ""; // Enter your mysql password here
+$GLOBALS['mysql_database'] = ""; // Enter your mysql database name here
 
 $GLOBALS['signup_captcha_required'] = false;
 $GLOBALS['recaptcha_publickey'] = "";
@@ -13,14 +13,14 @@ $GLOBALS['sendgrid_user'] = "";
 $GLOBALS['sendgrid_pass'] = "";
 
 $GLOBALS['show_query_errors'] = true;
-$GLOBALS['cron_key_string'] = "r980ljf879eeF"; // Enter a random string / password here
+$GLOBALS['cron_key_string'] = ""; // Enter a random string / password here
 
 $GLOBALS['bitcoin_port'] = 8332;
 $GLOBALS['bitcoin_rpc_user'] = "bitcoinrpc";
 $GLOBALS['bitcoin_rpc_password'] = ""; // Enter your bitcoin RPC password here
 
 // To give mined coins to a user by default, enter his/her username here
-$GLOBALS['default_coin_winner'] = 'joey.rich';
+$GLOBALS['default_coin_winner'] = "";
 
 $GLOBALS['pageview_tracking_enabled'] = false;
 

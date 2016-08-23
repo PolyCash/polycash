@@ -22,9 +22,13 @@ if ($GLOBALS['base_url'] && (!isset($host_not_required) || !$host_not_required))
 
 date_default_timezone_set($GLOBALS['default_timezone']);
 if (empty($skip_select_db)) $skip_select_db = false;
-$dbh = new_db_conn($skip_select_db);
-$dbh->query("SET sql_mode='';");
-
+try {
+	$dbh = new_db_conn($skip_select_db);
+	$dbh->query("SET sql_mode='';");
+}
+catch (Exception $e) {
+	die("Error, connection to MySQL failed. Check your mysql parameters in includes/config.php");
+}
 header('Content-Type: text/html; charset=UTF-8');
 
 include(realpath(dirname(dirname(__FILE__)))."/classes/Api.php");
