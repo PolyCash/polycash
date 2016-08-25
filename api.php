@@ -19,7 +19,7 @@ if ($uri_parts[1] == "api") {
 			$last_block_id = $game->last_block_id();
 			$current_round = $game->block_to_round($last_block_id+1);
 			
-			$intval_vars = array('game_id','round_length','seconds_per_block','maturity', 'last_block_id');
+			$intval_vars = array('game_id','round_length','seconds_per_block','maturity');
 			for ($i=0; $i<count($intval_vars); $i++) {
 				$game->db_game[$intval_vars[$i]] = intval($game->db_game[$intval_vars[$i]]);
 			}
@@ -56,13 +56,6 @@ if ($uri_parts[1] == "api") {
 						$api_user_info['my_utxos'] = $mature_utxos;
 					}
 				}
-				/*$round_stats = $game->round_voting_stats_all($current_round);
-				$total_vote_sum = $round_stats[0];
-				$max_vote_sum = $round_stats[1];
-				$ranked_stats = $round_stats[2];
-				$option_id_to_rank = $round_stats[3];
-				$confirmed_votes = $round_stats[4];
-				$unconfirmed_votes = $round_stats[5];*/
 				
 				$output_game['game_id'] = $game->db_game['game_id'];
 				$output_game['name'] = $game->db_game['name'];
@@ -70,11 +63,37 @@ if ($uri_parts[1] == "api") {
 				$output_game['current_round'] = $current_round;
 				$output_game['block_within_round'] = $game->block_id_to_round_index($last_block_id+1);
 				
-				$current_event_ids = array();
-				for ($i=0; $i<count($game->current_events); $i++) {	
-					array_push($current_event_ids, (int) $game->current_events[$i]->db_event['event_id']);
+				$event_vars = array('event_id','event_type_id','event_name','event_starting_block','event_final_block','option_name','option_name_plural');
+				$current_events = array();
+				for ($i=0; $i<count($game->current_events); $i++) {
+					for ($j=0; $j<count($event_vars); $j++) {
+						$api_event[$event_vars[$j]] = $game->current_events[$i]->db_event[$event_vars[$j]];
+					}
+					$api_event['options'] = array();
+					
+					$event_stats = $game->current_events[$i]->round_voting_stats_all($current_round);
+					$total_vote_sum = $event_stats[0];
+					$max_vote_sum = $event_stats[1];
+					$ranked_stats = $event_stats[2];
+					$option_id_to_rank = $event_stats[3];
+					$confirmed_votes = $event_stats[4];
+					$unconfirmed_votes = $event_stats[5];
+					
+					$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.event_id=".$game->current_events[$i]->db_event['event_id'].";";
+					$rr = $app->run_query($qq);
+					while ($option = $rr->fetch()) {
+						$stat = $ranked_stats[$option_id_to_rank[$option['option_id']]];
+						$api_stat = false;
+						$api_stat['option_id'] = (int) $option['option_id'];
+						$api_stat['name'] = $stat['name'];
+						$api_stat['rank'] = $option_id_to_rank[$option['option_id']]+1;
+						$api_stat['confirmed_votes'] = $app->friendly_intval($stat[$game->db_game['payout_weight'].'_score']);
+						$api_stat['unconfirmed_votes'] = $app->friendly_intval($stat['unconfirmed_'.$game->db_game['payout_weight'].'_score']);
+						array_push($api_event['options'], $api_stat);
+					}
+					array_push($current_events, $api_event);
 				}
-				$output_game['current_event_ids'] = $current_event_ids;
+				$output_game['current_events'] = $current_events;
 				/*$game_votes = false;
 				
 				$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id=".$game->db_game['game_id'].";";
@@ -110,6 +129,12 @@ if ($uri_parts[1] == "api") {
 		$pagetitle = $GLOBALS['coin_brand_name']." API Documentation";
 		$nav_tab_selected = "home";
 		include('includes/html_start.php');
+		
+		$game_id = $app->get_site_constant('primary_game_id');
+		if (empty($game_id)) {
+			$game_id = $app->run_query("SELECT * FROM games WHERE featured=1 ORDER BY game_id ASC LIMIT 1;")->fetch()['game_id'];
+		}
+		$api_game = new Game($app, $game_id);
 		?>
 		<div class="container" style="max-width: 1000px;">
 			<h1><?php echo $GLOBALS['coin_brand_name']; ?> API Documentation</h1>
@@ -122,406 +147,20 @@ if ($uri_parts[1] == "api") {
 				<br/><br/>
 			</p>
 			<p>
-				<a target="_blank" href="/api/<?php echo$app->get_site_constant('primary_game_id'); ?>/status/">/api/<?php echo$app->get_site_constant('primary_game_id'); ?>/status/</a> &nbsp;&nbsp;&nbsp; <a href="" onclick="$('#api_status_example').toggle('fast'); return false;">See Example</a><br/>
+				<b><a target="_blank" href="/api/<?php echo $api_game->db_game['game_id']; ?>/status/">/api/<?php echo $api_game->db_game['game_id']; ?>/status/</a></b> &nbsp;&nbsp;&nbsp; <a href="" onclick="$('#api_status_example').toggle('fast'); return false;">See Example</a><br/>
 				Yields information about current status of the blockchain.
-				<br/><br/>
+				<br/>
 			</p>
 <pre id="api_status_example" style="display: none;">
-{
-   "status_code":1,
-   "status_message":"Successful",
-   "game":{
-      "game_id":46,
-      "maturity":5,
-      "pos_reward":750000000000,
-      "pow_reward":2500000000,
-      "round_length":100,
-      "game_type":"simulation",
-      "payout_weight":"coin_block",
-      "seconds_per_block":12,
-      "name":"<?php echo $GLOBALS['coin_brand_name']; ?> Live",
-      "num_voting_options":16,
-      "max_voting_fraction":0.25,
-      "last_block_id":7629,
-      "current_round":77,
-      "confirmed_votes":1339142421477498,
-      "unconfirmed_votes":0,
-      "block_within_round":30
-   },
-   "game_votes":[
-      {
-         "option_id":0,
-         "name":"China",
-         "rank":2,
-         "confirmed_votes":343264178109758,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":1,
-         "name":"USA",
-         "rank":1,
-         "confirmed_votes":348585570317453,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":2,
-         "name":"India",
-         "rank":4,
-         "confirmed_votes":284247986344929,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":3,
-         "name":"Brazil",
-         "rank":3,
-         "confirmed_votes":333874393690120,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":4,
-         "name":"Indonesia",
-         "rank":5,
-         "confirmed_votes":29170293015238,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":5,
-         "name":"Japan",
-         "rank":6,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":6,
-         "name":"Russia",
-         "rank":7,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":7,
-         "name":"Germany",
-         "rank":8,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":8,
-         "name":"Mexico",
-         "rank":9,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":9,
-         "name":"Nigeria",
-         "rank":10,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":10,
-         "name":"France",
-         "rank":11,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":11,
-         "name":"UK",
-         "rank":12,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":12,
-         "name":"Pakistan",
-         "rank":13,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":13,
-         "name":"Italy",
-         "rank":14,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":14,
-         "name":"Turkey",
-         "rank":15,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":15,
-         "name":"Iran",
-         "rank":16,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      }
-   ],
-   "user_info":false
-}
+
 </pre>
 			<p>
-				/api/status/?api_access_code=ACCESS_CODE_GOES_HERE &nbsp;&nbsp;&nbsp; <a href="" onclick="$('#api_status_user_example').toggle('fast'); return false;">See Example</a><br/>
+				<b>/api/<?php echo $api_game->db_game['game_id']; ?>/status/?api_access_code=&lt;ACCESS_CODE&gt;</b> &nbsp;&nbsp;&nbsp; <a href="" onclick="$('#api_status_user_example').toggle('fast'); return false;">See Example</a><br/>
 				Supply your API access code to get relevant info on your user account in addition to general blockchain information.
-				<br/><br/>
+				<br/>
 			</p>
 <pre id="api_status_user_example" style="display: none;">
-{
-   "status_code":1,
-   "status_message":"Successful",
-   "game":{
-      "game_id":30,
-      "maturity":1,
-      "pos_reward":100000000000,
-      "pow_reward":2000000000,
-      "round_length":50,
-      "game_type":"simulation",
-      "payout_weight":"coin_block",
-      "seconds_per_block":6,
-      "name":"<?php echo $GLOBALS['coin_brand_name']; ?> Testnet",
-      "num_voting_options":16,
-      "max_voting_fraction":0.25,
-      "last_block_id":"8905",
-      "current_round":179,
-      "confirmed_votes":0,
-      "unconfirmed_votes":0,
-      "block_within_round":6
-   },
-   "game_votes":[
-      {
-         "option_id":0,
-         "name":"China",
-         "rank":1,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":1,
-         "name":"USA",
-         "rank":2,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":2,
-         "name":"India",
-         "rank":3,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":3,
-         "name":"Brazil",
-         "rank":4,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":4,
-         "name":"Indonesia",
-         "rank":5,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":5,
-         "name":"Japan",
-         "rank":6,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":6,
-         "name":"Russia",
-         "rank":7,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":7,
-         "name":"Germany",
-         "rank":8,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":8,
-         "name":"Mexico",
-         "rank":9,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":9,
-         "name":"Nigeria",
-         "rank":10,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":10,
-         "name":"France",
-         "rank":11,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":11,
-         "name":"UK",
-         "rank":12,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":12,
-         "name":"Pakistan",
-         "rank":13,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":13,
-         "name":"Italy",
-         "rank":14,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":14,
-         "name":"Turkey",
-         "rank":15,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      },
-      {
-         "option_id":15,
-         "name":"Iran",
-         "rank":16,
-         "confirmed_votes":0,
-         "unconfirmed_votes":0
-      }
-   ],
-   "user_info":{
-      "username":"freecoins",
-      "balance":1219439580239,
-      "mature_balance":1219439580239,
-      "immature_balance":0,
-      "votes_available":116797665503784,
-      "my_utxos":[
-         {
-            "utxo_id":198973,
-            "coins":373146560080,
-            "create_block_id":8804
-         },
-         {
-            "utxo_id":198974,
-            "coins":373146560080,
-            "create_block_id":8804
-         },
-         {
-            "utxo_id":198991,
-            "coins":215033553248,
-            "create_block_id":8812
-         },
-         {
-            "utxo_id":198992,
-            "coins":158112906832,
-            "create_block_id":8812
-         },
-         {
-            "utxo_id":199059,
-            "coins":34950683332,
-            "create_block_id":8850
-         },
-         {
-            "utxo_id":199060,
-            "coins":65049316667,
-            "create_block_id":8850
-         }
-      ]
-   }
-}
-</pre>
-			<p>
-			API clients must return JSON formatted recommendations. 
-			Any errors in your API response will result in your voting recommendations being ignored.<br/>
-			Here's an example of a valid API response:
-			</p>
-<pre>
-{
-   "input_utxo_ids":[
-      166193,
-      166194,
-      166195,
-      166196,
-      166197
-   ],
-   "recommendation_unit":"coin",
-   "recommendations":[
-      {
-         "option_id":0,
-         "name":"China",
-         "recommended_amount":80000000000
-      },
-      {
-         "option_id":1,
-         "name":"USA",
-         "recommended_amount":60000000000
-      },
-      {
-         "option_id":2,
-         "name":"India",
-         "recommended_amount":40000000000
-      },
-      {
-         "option_id":3,
-         "name":"Brazil",
-         "recommended_amount":20000000000
-      }
-   ]
-}
-</pre>
-			<p>
-				Recommendations can also be denominated in percentage points rather than satoshis:
-			</p>
-<pre>
-{
-   "input_utxo_ids":[
-      166193,
-      166194,
-      166195,
-      166196,
-      166197
-   ],
-   "recommendation_unit":"coin",
-   "recommendations":[
-      {
-         "option_id":0,
-         "name":"China",
-         "recommended_amount":40
-      },
-      {
-         "option_id":1,
-         "name":"USA",
-         "recommended_amount":30
-      },
-      {
-         "option_id":2,
-         "name":"India",
-         "recommended_amount":20
-      },
-      {
-         "option_id":3,
-         "name":"Brazil",
-         "recommended_amount":10
-      }
-   ]
-}
+
 </pre>
 		</div>
 		<?php

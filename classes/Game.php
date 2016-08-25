@@ -1561,12 +1561,12 @@ class Game {
 		$return_obj = false;
 		
 		if ($user) {
-			$qq = "SELECT SUM(io.votes), COUNT(*) FROM options o JOIN addresses a ON o.option_id=a.option_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN entities e ON o.entity_id=e.entity_id WHERE io.game_id='".$this->db_game['game_id']."' AND a.user_id='".$user->db_user['user_id']."';";
+			$qq = "SELECT SUM(io.votes), COUNT(*) FROM options o JOIN  transaction_ios io ON o.option_id=io.option_id JOIN entities e ON o.entity_id=e.entity_id JOIN addresses a ON io.address_id=a.address_id WHERE io.game_id='".$this->db_game['game_id']."' AND a.user_id='".$user->db_user['user_id']."';";
 			$rr = $this->app->run_query($qq);
 			$user_entity_votes_total = $rr->fetch();
 			$return_obj['user_entity_votes_total'] = $user_entity_votes_total['SUM(io.votes)'];
 
-			$qq = "SELECT SUM(io.votes) FROM options o JOIN addresses a ON o.option_id=a.option_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN entities e ON o.entity_id=e.entity_id WHERE io.game_id='".$this->db_game['game_id']."';";
+			$qq = "SELECT SUM(io.votes) FROM options o JOIN transaction_ios io ON o.option_id=io.option_id JOIN entities e ON o.entity_id=e.entity_id WHERE io.game_id='".$this->db_game['game_id']."';";
 			$rr = $this->app->run_query($qq);
 			$return_obj['entity_votes_total'] = $rr->fetch()['SUM(io.votes)'];
 		}
@@ -1585,7 +1585,7 @@ class Game {
 			
 			$entity_my_pct = false;
 			if ($user) {
-				$qq = "SELECT SUM(io.votes), COUNT(*) FROM options o JOIN addresses a ON o.option_id=a.option_id JOIN transaction_ios io ON a.address_id=io.address_id WHERE io.game_id='".$this->db_game['game_id']."' AND a.user_id='".$user->db_user['user_id']."' AND o.entity_id='".$entity['entity_id']."';";
+				$qq = "SELECT SUM(io.votes), COUNT(*) FROM options o JOIN transaction_ios io ON o.option_id=io.option_id JOIN addresses a ON io.address_id=a.address_id WHERE io.game_id='".$this->db_game['game_id']."' AND a.user_id='".$user->db_user['user_id']."' AND o.entity_id='".$entity['entity_id']."';";
 				$rr = $this->app->run_query($qq);
 				$user_entity_votes = $rr->fetch();
 				
@@ -1594,7 +1594,7 @@ class Game {
 				else $my_pct = 0;
 				$return_rows[$entity['entity_id']]['my_pct'] = $my_pct;
 				
-				$entity_votes_q = "SELECT SUM(io.votes), COUNT(*) FROM options o JOIN addresses a ON o.option_id=a.option_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN entities e ON o.entity_id=e.entity_id WHERE io.game_id='".$this->db_game['game_id']."' AND o.entity_id='".$entity['entity_id']."';";
+				$entity_votes_q = "SELECT SUM(io.votes), COUNT(*) FROM options o JOIN transaction_ios io ON o.option_id=io.option_id JOIN entities e ON o.entity_id=e.entity_id WHERE io.game_id='".$this->db_game['game_id']."' AND o.entity_id='".$entity['entity_id']."';";
 				$entity_votes_r = $this->app->run_query($entity_votes_q);
 				$return_rows[$entity['entity_id']]['entity_votes'] = $entity_votes_r->fetch()['SUM(io.votes)'];
 			}
@@ -2826,7 +2826,7 @@ class Game {
 				
 				while ($event_entity = $r->fetch()) {
 					$event_type = $this->add_event_type($db_option_entities, $event_entity, $event_i);
-					$this->add_event_by_event_type($event_type, $db_option_entities, $option_group, $round_option_i, $event_i, $event_type['name']);
+					$this->add_event_by_event_type($event_type, $db_option_entities, $option_group, $round_option_i, $event_i, $event_type['name'], $event_entity);
 					$event_i++;
 				}
 			}
@@ -2835,7 +2835,7 @@ class Game {
 				$event_type = $this->add_event_type($db_option_entities, false, false);
 				for ($i=$start_round-1; $i<$round_id; $i++) {
 					$event_name = $event_type['name']." - Round #".($i-$start_round+2);
-					$this->add_event_by_event_type($event_type, $db_option_entities, $option_group, $round_option_i, $event_i, $event_name);
+					$this->add_event_by_event_type($event_type, $db_option_entities, $option_group, $round_option_i, $event_i, $event_name, false);
 					$event_i++;
 				}
 			}
@@ -2877,7 +2877,7 @@ class Game {
 		return $event_type;
 	}
 	
-	public function add_event_by_event_type(&$event_type, &$db_option_entities, &$option_group, &$round_option_i, &$event_i, $event_name) {
+	public function add_event_by_event_type(&$event_type, &$db_option_entities, &$option_group, &$round_option_i, &$event_i, $event_name, $event_entity) {
 		$qq = "SELECT * FROM events WHERE game_id='".$this->db_game['game_id']."' AND event_type_id='".$event_type['event_type_id']."';";
 		$rr = $this->app->run_query($qq);
 		
