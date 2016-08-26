@@ -127,7 +127,7 @@ if ($uri_parts[1] == "api") {
 		if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 		
 		$pagetitle = $GLOBALS['coin_brand_name']." API Documentation";
-		$nav_tab_selected = "home";
+		$nav_tab_selected = "api";
 		include('includes/html_start.php');
 		
 		$game_id = $app->get_site_constant('primary_game_id');
