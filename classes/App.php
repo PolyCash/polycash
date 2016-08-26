@@ -99,7 +99,7 @@ class App {
 	}
 	
 	public function generate_game_by_type($game_type) {
-		$skip_game_type_vars = explode(",", "name,url_identifier,target_open_games,default_vote_effectiveness_function,default_max_voting_fraction,default_game_winning_inflation,default_logo_image_id,identifier_case_sensitive");
+		$skip_game_type_vars = explode(",", "name,url_identifier,target_open_games,default_game_winning_inflation,default_logo_image_id,identifier_case_sensitive");
 		
 		$series_index_q = "SELECT MAX(game_series_index) FROM games WHERE game_type_id='".$game_type['game_type_id']."';";
 		$series_index_r = $this->run_query($series_index_q);
