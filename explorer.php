@@ -63,19 +63,20 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 			$explore_mode = "initial";
 		}
 		else {
-			$event_id = intval($event_id);
-			if ($event_id == 0) {
+			$event_index = intval($event_id)-1;
+			if ($event_index == -1) {
 				$mode_error = false;
 				$pagetitle = "Results - ".$game->db_game['name'];
 			}
 			else {
-				$q = "SELECT * FROM events WHERE event_id='".$event_id."' AND game_id='".$game->db_game['game_id']."';";
+				$q = "SELECT * FROM events WHERE event_index='".$event_index."' AND game_id='".$game->db_game['game_id']."';";
 				$r = $app->run_query($q);
 				
 				if ($r->rowCount() == 1) {
-					$event = new Event($game, false, $event_id);
+					$db_event = $r->fetch();
+					$event = new Event($game, false, $db_event['event_id']);
 					
-					$q = "SELECT o.*, op.*, t.amount FROM event_outcomes o JOIN events e ON o.event_id=e.event_id LEFT JOIN options op ON o.winning_option_id=op.option_id LEFT JOIN transactions t ON o.payout_transaction_id=t.transaction_id WHERE e.event_id=".$event_id.";";
+					$q = "SELECT o.*, op.*, t.amount FROM event_outcomes o JOIN events e ON o.event_id=e.event_id LEFT JOIN options op ON o.winning_option_id=op.option_id LEFT JOIN transactions t ON o.payout_transaction_id=t.transaction_id WHERE e.event_id=".$db_event['event_id'].";";
 					$r = $app->run_query($q);
 					
 					$pagetitle = "Results: ".$event->db_event['event_name'];

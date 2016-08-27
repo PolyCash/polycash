@@ -33,4 +33,5 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 	}
 	else echo "Block loading script is already running, skip...\n";
 }
+else echo "Please supply the correct key.\n";
 ?>

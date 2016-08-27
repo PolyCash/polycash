@@ -60,6 +60,10 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	
 	$game->insert_initial_blocks($coin_rpc);
 	$last_block_id = $game->last_block_id();
+	if ($last_block_id > $game->db_game['game_starting_block'] && $game->db_game['game_status'] == "published") {
+		$q = "UPDATE games SET game_status='running' WHERE game_id='".$game->db_game['game_id']."';";
+		$r = $app->run_query($q);
+	}
 	$game->ensure_events_until_block($last_block_id+1);
 	echo "<br/>Finished inserting blocks at ".(microtime(true) - $start_time)." sec<br/>\n";
 	
