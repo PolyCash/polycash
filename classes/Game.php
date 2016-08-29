@@ -891,6 +891,9 @@ class Game {
 		$q = "DELETE eoo.* FROM event_outcome_options eoo JOIN events e ON eoo.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."';";
 		$r = $this->app->run_query($q);
 		
+		$q = "DELETE e.*, o.* FROM events e LEFT JOIN options o ON e.event_id=o.event_id WHERE e.game_id='".$this->db_game['game_id']."';";
+		$r = $this->app->run_query($q);
+		
 		$invite_user_ids = array();
 		if ($delete_or_reset == "reset") {
 			$q = "SELECT * FROM game_invitations WHERE game_id='".$this->db_game['game_id']."' AND used_user_id > 0;";
@@ -2134,6 +2137,7 @@ class Game {
 				echo "Add block #$block_height (".$rpc_block['nextblockhash'].")\n";
 				$rpc_block = $coin_rpc->getblock($rpc_block['nextblockhash']);
 				$this->coind_add_block($coin_rpc, $rpc_block['hash'], $block_height, FALSE);
+				$this->ensure_events_until_block($block_height+1);
 			}
 		}
 		while ($keep_looping);

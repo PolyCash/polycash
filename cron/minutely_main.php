@@ -87,7 +87,7 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		}
 
 		$running_games = array();
-		$q = "SELECT * FROM games WHERE game_status='running';";
+		$q = "SELECT * FROM games WHERE game_status IN('published','running');";
 		$r = $GLOBALS['app']->run_query($q);
 		while ($running_game = $r->fetch()) {
 			$running_games[count($running_games)] = new Game($app, $running_game['game_id']);

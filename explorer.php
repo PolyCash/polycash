@@ -302,8 +302,8 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					?>
 					<br/>
 					<?php
-					if ($event->db_event['event_index'] > 1) echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/events/".($event->db_event['event_index']-1)."\" style=\"margin-right: 30px;\">&larr; Previous Event</a>";
-					echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/events/".($event->db_event['event_index']+1)."\">Next Event &rarr;</a>";
+					if ($event->db_event['event_index'] > 0) echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/events/".$event->db_event['event_index']."\" style=\"margin-right: 30px;\">&larr; Previous Event</a>";
+					echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/events/".($event->db_event['event_index']+2)."\">Next Event &rarr;</a>";
 					?>
 					<br/>
 					<a href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/events/">See all events</a><br/>
@@ -385,8 +385,8 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					
 					echo "<br/>\n";
 					
-					if ($event->db_event['event_index'] > 1) echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/events/".($event->db_event['event_index']-1)."\" style=\"margin-right: 30px;\">&larr; Previous Event</a>";
-					echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/events/".($event->db_event['event_index']+1)."\">Next Event &rarr;</a>";
+					if ($event->db_event['event_index'] > 0) echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/events/".$event->db_event['event_index']."\" style=\"margin-right: 30px;\">&larr; Previous Event</a>";
+					echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/events/".($event->db_event['event_index']+2)."\">Next Event &rarr;</a>";
 				}
 				else {
 					?>
