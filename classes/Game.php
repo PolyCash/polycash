@@ -1245,7 +1245,6 @@ class Game {
 		
 		for ($i=0; $i<count($events); $i++) {
 			$rankings = $events[$i]->round_voting_stats_all($round_id);
-			
 			$sum_votes = $rankings[0];
 			$max_winning_votes = $rankings[1];
 			$option_id_to_rank = $rankings[3];
@@ -1263,7 +1262,7 @@ class Game {
 			}
 			
 			$winning_option_id = false;
-			$q = "SELECT * FROM transactions t JOIN transaction_ios i ON i.create_transaction_id=t.transaction_id WHERE t.votebase_event_id='".$events[$i]->db_event['event_id']."' AND t.block_id='".$round_id*$events[$i]->db_event['round_length']."' AND t.transaction_desc='votebase' AND i.out_index=1;";
+			$q = "SELECT * FROM transactions t JOIN transaction_ios i ON i.create_transaction_id=t.transaction_id WHERE t.votebase_event_id='".$events[$i]->db_event['event_id']."' AND t.block_id='".$round_id*$this->db_game['round_length']."' AND t.transaction_desc='votebase' AND i.out_index=1;";
 			$r = $this->app->run_query($q);
 			if ($r->rowCount() == 1) {
 				$votebase_transaction = $r->fetch();
@@ -1292,12 +1291,12 @@ class Game {
 			if ($update_insert == "update") $q .= " WHERE outcome_id='".$existing_round['outcome_id']."'";
 			$q .= ";";
 			$r = $this->app->run_query($q);
-			$outcome_id = $this->app->last_insert_id();
+			if ($update_insert == "insert") $outcome_id = $this->app->last_insert_id();
+			else $outcome_id = $existing_round['outcome_id'];
 			
 			$this->app->run_query("DELETE FROM event_outcome_options WHERE round_id='".$round_id."' AND event_id='".$events[$i]->db_event['event_id']."';");
-			
-			for ($i=0; $i<count($rankings); $i++) {
-				$qq = "INSERT INTO event_outcome_options SET outcome_id='".$outcome_id."', round_id='".$round_id."', event_id='".$events[$i]->db_event['event_id']."', option_id='".$rankings[$i]['option_id']."', rank='".($i+1)."', coin_score='".$rankings[$i]['coin_score']."', coin_block_score='".$rankings[$i]['coin_block_score']."', coin_round_score='".$rankings[$i]['coin_round_score']."', votes='".$rankings[$i]['votes']."';";
+			for ($j=0; $j<count($rankings); $j++) {
+				$qq = "INSERT INTO event_outcome_options SET outcome_id='".$outcome_id."', round_id='".$round_id."', event_id='".$events[$i]->db_event['event_id']."', option_id='".$rankings[$j]['option_id']."', rank='".($j+1)."', coin_score='".$rankings[$j]['coin_score']."', coin_block_score='".$rankings[$j]['coin_block_score']."', coin_round_score='".$rankings[$j]['coin_round_score']."', votes='".$rankings[$j]['votes']."';";
 				$rr = $this->app->run_query($qq);
 			}
 		}

@@ -33,7 +33,7 @@ class Event {
 			return $this->game->app->run_query($q);
 		}
 		else {
-			$q = "SELECT op.*, i.*, SUM(i.votes) AS votes, SUM(i.amount) AS coin_score, SUM(i.coin_blocks_destroyed) AS coin_block_score, SUM(i.coin_rounds_destroyed) AS coin_round_score FROM transaction_ios i JOIN options op ON i.option_id=op.option_id LEFT JOIN images im ON op.image_id=im.image_id WHERE i.event_id='".$this->db_event['event_id']."' AND i.create_round_id=".$round_id." GROUP BY i.option_id ORDER BY SUM(i.votes) DESC, i.option_id ASC;";
+			$q = "SELECT op.*, i.*, SUM(i.votes) AS votes, SUM(i.amount) AS coin_score, SUM(i.coin_blocks_destroyed) AS coin_block_score, SUM(i.coin_rounds_destroyed) AS coin_round_score FROM transaction_ios i JOIN options op ON i.option_id=op.option_id LEFT JOIN images im ON op.image_id=im.image_id WHERE op.event_id='".$this->db_event['event_id']."' AND i.create_round_id=".$round_id." GROUP BY i.option_id ORDER BY SUM(i.votes) DESC, i.option_id ASC;";
 			return $this->game->app->run_query($q);
 		}
 	}

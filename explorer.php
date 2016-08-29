@@ -301,7 +301,11 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					}
 					?>
 					<br/>
-					
+					<?php
+					if ($event->db_event['event_index'] > 1) echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/events/".($event->db_event['event_index']-1)."\" style=\"margin-right: 30px;\">&larr; Previous Event</a>";
+					echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/events/".($event->db_event['event_index']+1)."\">Next Event &rarr;</a>";
+					?>
+					<br/>
 					<a href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/events/">See all events</a><br/>
 					
 					<h2>Rankings</h2>
@@ -366,7 +370,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					<div class="transaction_table">
 					<?php
 					for ($i=$from_block_id; $i<=$to_block_id; $i++) {
-						echo "Block #".$i;
+						echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/blocks/".$i."\">Block #".$i."</a>";
 						if ($event->db_event['vote_effectiveness_function'] != "constant") {
 							echo ", vote effectiveness: ".$event->block_id_to_effectiveness_factor($i);
 						}
@@ -380,6 +384,9 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					echo '</div>';
 					
 					echo "<br/>\n";
+					
+					if ($event->db_event['event_index'] > 1) echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/events/".($event->db_event['event_index']-1)."\" style=\"margin-right: 30px;\">&larr; Previous Event</a>";
+					echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/events/".($event->db_event['event_index']+1)."\">Next Event &rarr;</a>";
 				}
 				else {
 					?>
@@ -420,7 +427,13 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 						
 						echo "<h1>Block #".$block['block_id']."</h1>";
 						echo "<h3>".$game->db_game['name']."</h3>";
-						echo "This block contains $num_trans transactions totaling ".number_format($block_sum/pow(10,8), 2)." coins.<br/><br/>\n";
+						echo "This block contains $num_trans transactions totaling ".number_format($block_sum/pow(10,8), 2)." coins.<br/>";
+						$events = $game->events_by_block($block['block_id']);
+						echo "This block is referenced in ".count($events)." events<br/>\n";
+						for ($i=0; $i<count($events); $i++) {
+							echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/events/".$events[$i]->db_event['event_index']."\">".$events[$i]->db_event['event_name']."</a><br/>\n";
+						}
+						echo "<br/>\n";
 					}
 					else {
 						$q = "SELECT COUNT(*), SUM(amount) FROM transactions WHERE game_id='".$game->db_game['game_id']."' AND block_id IS NULL;";// AND amount > 0;";
