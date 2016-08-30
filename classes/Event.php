@@ -471,7 +471,6 @@ class Event {
 		
 		$q = "SELECT op.*, t.transaction_id, t.fee_amount, io.spend_status, SUM(io.amount*io.effectiveness_factor), SUM(io.coin_blocks_destroyed*io.effectiveness_factor), SUM(io.coin_rounds_destroyed*io.effectiveness_factor) FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN options op ON io.option_id=op.option_id WHERE io.event_id='".$this->db_event['event_id']."' AND io.create_round_id=".$round_id." AND io.user_id='".$user->db_user['user_id']."' AND t.round_id=io.create_round_id GROUP BY io.option_id ORDER BY SUM(io.amount) DESC;";
 		$r = $this->game->app->run_query($q);
-		
 		while ($my_vote = $r->fetch()) {
 			$color = "green";
 			$num_votes = $my_vote['SUM(io.'.$score_field.'*io.effectiveness_factor)'];

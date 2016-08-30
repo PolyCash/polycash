@@ -324,12 +324,20 @@ class Game {
 						}
 						$q .= "user_id='".$from_user_id."', address_id='".$overshoot_return_addr_id."', ";
 						if ($overshoot_address['option_index'] > 0) {
-							$q .= "option_index='".$overshoot_address['option_index']."', option_id='".$this->option_index_to_current_option_id($overshoot_address['option_index'])."', ";
+							$option_id = $this->option_index_to_current_option_id($overshoot_address['option_index']);
+							$db_option = $this->app->run_query("SELECT * FROM options WHERE option_id='".$option_id."';")->fetch();
+							$q .= "option_index='".$overshoot_address['option_index']."', option_id='".$option_id."', event_id='".$db_option['event_id']."', ";
+							if ($block_id !== false) {
+								$event = new Event($this, false, $db_option['event_id']);
+								$effectiveness_factor = $event->block_id_to_effectiveness_factor($block_id);
+								$q .= "effectiveness_factor='".$effectiveness_factor."', ";
+							}
 						}
 						$q .= "create_transaction_id='".$transaction_id."', ";
 						if ($block_id !== false) {
 							$q .= "create_block_id='".$block_id."', create_round_id='".$this->block_to_round($block_id)."', ";
 						}
+						
 						$q .= "amount='".$overshoot_amount."';";
 						$r = $this->app->run_query($q);
 						$created_input_ids[count($created_input_ids)] = $this->app->last_insert_id();
@@ -1223,7 +1231,7 @@ class Game {
 	}
 	
 	public function option_index_to_current_option_id($option_index) {
-		return $this->option_index_option_id_in_block($option_index, $this->last_block_id()+1);
+		return $this->option_index_to_option_id_in_block($option_index, $this->last_block_id()+1);
 	}
 	
 	public function option_index_to_option_id_in_block($option_index, $block_id) {
@@ -1962,7 +1970,6 @@ class Game {
 			$q .= ", time_created='".time()."';";
 			$r = $this->app->run_query($q);
 			$db_transaction_id = $this->app->last_insert_id();
-			echo ". ";
 			
 			$spend_io_ids = array();
 			$input_sum = 0;
@@ -2022,9 +2029,10 @@ class Game {
 					if ($block_height) {
 						$option_id = $this->option_index_to_option_id_in_block($output_address['option_index'], $block_height);
 						if ($option_id) {
-							$q .= ", option_id='".$option_id."'";
 							$db_event = $this->app->run_query("SELECT ev.*, et.* FROM options op JOIN events ev ON op.event_id=ev.event_id JOIN event_types et ON ev.event_type_id=et.event_type_id WHERE op.option_id='".$option_id."';")->fetch();
 							$event = new Event($this, $db_event, false);
+							$effectiveness_factor = $event->block_id_to_effectiveness_factor($block_height);
+							$q .= ", option_id='".$option_id."', event_id='".$db_event['event_id']."', effectiveness_factor='".$effectiveness_factor."'";
 						}
 					}
 				}

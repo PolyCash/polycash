@@ -105,8 +105,12 @@ class App {
 		$series_index_r = $this->run_query($series_index_q);
 		$series_index = (int) $series_index_r->fetch()['MAX(game_series_index)'] + 1;
 		
-		$url_identifier = $this->game_url_identifier($game_type['name'].$series_index);
-		$q = "INSERT INTO games SET game_status='published', game_series_index=".$series_index.", name=".$this->quote_escape($game_type['name'].$series_index).", url_identifier=".$this->quote_escape($url_identifier).", identifier_case_sensitive='".$game_type['identifier_case_sensitive']."', game_winning_inflation='".$game_type['default_game_winning_inflation']."', logo_image_id='".$game_type['default_logo_image_id']."', ";
+		$game_name = $game_type['name'];
+		if ($game_type['event_rule'] == "entity_type_option_group") $game_name .= $series_index;
+		
+		$url_identifier = $this->game_url_identifier($game_name);
+		
+		$q = "INSERT INTO games SET game_status='published', game_series_index=".$series_index.", name=".$this->quote_escape($game_name).", url_identifier=".$this->quote_escape($url_identifier).", identifier_case_sensitive='".$this->quote_escape($game_type['identifier_case_sensitive'])."', game_winning_inflation='".$game_type['default_game_winning_inflation']."', logo_image_id='".$game_type['default_logo_image_id']."', ";
 		foreach ($game_type AS $var => $val) {
 			if (!in_array($var, $skip_game_type_vars)) {
 				if (!empty($val)) $q .= $var.'='.$this->quote_escape($val).', ';
