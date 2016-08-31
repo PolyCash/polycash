@@ -61,15 +61,8 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	}
 	else $output['new_my_transaction'] = 0;
 	
-	if ($output['new_my_transaction'] == 1 || $mature_io_ids_csv != $_REQUEST['mature_io_ids_csv'] || $output['new_block'] == 1) {
-		$output['select_input_buttons'] = $thisuser? $game->select_input_buttons($thisuser->db_user['user_id']) : "";
-		$output['mature_io_ids_csv'] = $mature_io_ids_csv;
-		$output['new_mature_ios'] = 1;
-	}
-	else $output['new_mature_ios'] = 0;
-	
-	if ($last_block_id !== $_REQUEST['last_block_id'] || $last_transaction_id !== $_REQUEST['last_transaction_id']) {
-		if ($last_block_id !== $_REQUEST['last_block_id']) {
+	if ($last_block_id !== $_REQUEST['last_block_id'] || $last_transaction_id != (int) $_REQUEST['last_transaction_id']) {
+		if ($last_block_id != (int) $_REQUEST['last_block_id']) {
 			//$performance_history_sections = intval($_REQUEST['performance_history_sections']);
 			$output['new_block'] = 1;
 			$output['last_block_id'] = $last_block_id;
@@ -109,6 +102,13 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		}
 		$output['vote_option_details'] = $stats_output;
 	}
+	
+	if ($output['new_my_transaction'] == 1 || $mature_io_ids_csv != $_REQUEST['mature_io_ids_csv'] || $output['new_block'] == 1) {
+		$output['select_input_buttons'] = $thisuser? $game->select_input_buttons($thisuser->db_user['user_id']) : "";
+		$output['mature_io_ids_csv'] = $mature_io_ids_csv;
+		$output['new_mature_ios'] = 1;
+	}
+	else $output['new_mature_ios'] = 0;
 	
 	if ($game->event_ids() != $event_ids) {
 		$output['new_event_ids'] = 1;

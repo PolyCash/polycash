@@ -936,7 +936,6 @@ function reload_compose_vote() {
 }
 function refresh_visible_inputs() {
 	var show_count = 0;
-	console.log(games[0].mature_io_ids_csv);
 	var mature_io_ids = games[0].mature_io_ids_csv.split(",");
 	for (var i=0; i<mature_io_ids.length; i++) {
 		if (typeof io_id2input_index[mature_io_ids[i]] == 'undefined' || io_id2input_index[mature_io_ids[i]] === false) {
@@ -1279,9 +1278,10 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 								if (parseInt(json_result['new_transaction']) == 1) {
 									_this.game.last_transaction_id = parseInt(json_result['last_transaction_id']);
 								}
-								if (parseInt(json_result['new_block']) == 1 || parseInt(json_result['new_transaction']) == 1) {
+								if (typeof json_result['current_round_table'] != "undefined") {
 									$('#game'+_this.game.instance_id+'_event'+_this.game_event_index+'_current_round_table').html(json_result['current_round_table']);
-									
+								}
+								if (parseInt(json_result['new_block']) == 1 || parseInt(json_result['new_transaction']) == 1) {
 									$('#account_value').html(json_result['account_value']);
 									$('#account_value').hide();
 									$('#account_value').fadeIn('medium');
