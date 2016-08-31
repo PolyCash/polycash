@@ -10,7 +10,7 @@ if ($uri_parts[1] == "api") {
 	if ($uri_parts[2] != "" && strval(intval($uri_parts[2])) === strval($uri_parts[2])) {
 		$game_id = intval($uri_parts[2]);
 		
-		$q = "SELECT game_id, maturity, pos_reward, pow_reward, round_length, game_type, payout_weight, seconds_per_block, name FROM games WHERE game_id=".$game_id.";";
+		$q = "SELECT game_id, maturity, pos_reward, pow_reward, round_length, p2p_mode, payout_weight, seconds_per_block, name FROM games WHERE game_id=".$game_id.";";
 		$r = $app->run_query($q);
 		
 		if ($r->rowCount() == 1) {

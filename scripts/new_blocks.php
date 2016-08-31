@@ -15,7 +15,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$game = new Game($app, $game_id);
 	
 	if ($game) {
-		if ($game->db_game['game_type'] == "simulation" && $game->db_game['game_status'] != "completed") {
+		if ($game->db_game['p2p_mode'] == "none" && $game->db_game['game_status'] != "completed") {
 			$quantity = intval($_REQUEST['quantity']);
 			if (!$quantity) $quantity = 1;
 

@@ -46,7 +46,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			
 			if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "save_rpc_params") {
 				$game_id = (int) $_REQUEST['game_id'];
-				$q = "SELECT * FROM games WHERE game_type='real' AND rpc_username IS NULL AND rpc_password IS NULL AND game_id=".$app->quote_escape($game_id).";";
+				$q = "SELECT * FROM games WHERE p2p_mode='rpc' AND rpc_username IS NULL AND rpc_password IS NULL AND game_id=".$app->quote_escape($game_id).";";
 				$r = $app->run_query($q);
 				
 				if ($r->rowCount() == 1) {
@@ -176,7 +176,7 @@ $GLOBALS['bitcoin_rpc_password'] = ""; // RPC password here
 					}
 				}
 				
-				$rpc_games_r = $app->run_query("SELECT * FROM games WHERE game_type='real' AND game_status IN ('published','running');");
+				$rpc_games_r = $app->run_query("SELECT * FROM games WHERE p2p_mode='rpc' AND game_status IN ('published','running');");
 				while ($rpc_game = $rpc_games_r->fetch()) {
 					if ($rpc_game['rpc_username'] != "" && $rpc_game['rpc_password'] != "") {
 						echo "<b>Connecting RPC client to ".$rpc_game['name']."...";

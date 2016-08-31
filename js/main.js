@@ -385,12 +385,6 @@ function attempt_withdrawal() {
 		});
 	}
 }
-function toggle_block_timing() {
-	$('#toggle_timing_btn').html("Loading...");
-	$.get("/ajax/toggle_block_timing.php?game_id="+games[0].game_id, function(result) {
-		window.location = window.location;
-	});
-}
 function input_amount_sums() {
 	var amount_sum = 0;
 	var vote_sum = 0;
@@ -630,7 +624,7 @@ function show_planned_votes() {
 }
 
 // OBJECT: GameForm
-var game_form_vars = "giveaway_status,giveaway_amount,maturity,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_date,start_time,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap,group_id".split(",");
+var game_form_vars = "event_rule,option_group_id,event_entity_type_id,events_per_round,event_type_name,giveaway_status,giveaway_amount,maturity,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_date,start_time,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap,group_id".split(",");
 function switch_to_game(game_id, action) {
 	var fetch_link_text = $('#fetch_game_link_'+game_id).html();
 	var switch_link_text = $('#switch_game_btn').html();
@@ -733,6 +727,7 @@ function switch_to_game(game_id, action) {
 			}
 
 			game_form_start_condition_changed();
+			game_form_event_rule_changed();
 		}
 		else if (action == "switch" || action == "delete" || action == "reset") {
 			if (action == "switch") $('#switch_game_btn').html(switch_link_text);
@@ -795,6 +790,11 @@ function game_form_buyin_policy_changed() {
 		$('#game_form_game_buyin_cap_disp').show();
 	}
 	else $('#game_form_game_buyin_cap_disp').hide();
+}
+function game_form_event_rule_changed() {
+	var event_rule = $('#game_form_event_rule').val();
+	if (event_rule == "entity_type_option_group") $('#game_form_event_rule_entity_type_option_group').show();
+	else $('#game_form_event_rule_entity_type_option_group').hide();
 }
 function save_game(action) {
 	var save_link_text = $('#save_game_btn').html();
@@ -936,6 +936,7 @@ function reload_compose_vote() {
 }
 function refresh_visible_inputs() {
 	var show_count = 0;
+	console.log(games[0].mature_io_ids_csv);
 	var mature_io_ids = games[0].mature_io_ids_csv.split(",");
 	for (var i=0; i<mature_io_ids.length; i++) {
 		if (typeof io_id2input_index[mature_io_ids[i]] == 'undefined' || io_id2input_index[mature_io_ids[i]] === false) {
@@ -1253,7 +1254,8 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 									}
 									
 									if (parseInt(json_result['new_mature_ios']) == 1 || parseInt(json_result['new_my_transaction']) == 1 || json_result['new_block'] == 1) {
-										_this.game.mature_io_ids_csv = json_result['mature_io_ids_csv'];
+										if (typeof json_result['mature_io_ids_csv'] == "undefined") _this.game.mature_io_ids_csv = "";
+										else _this.game.mature_io_ids_csv = json_result['mature_io_ids_csv'];
 										$('#select_input_buttons').html(json_result['select_input_buttons']);
 										console.log("refreshing transaction inputs: "+_this.game.mature_io_ids_csv);
 										reload_compose_vote();
@@ -1303,7 +1305,7 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 									
 									var vote_option_details = json_result['vote_option_details'];
 									
-									if (user_logged_in) {
+									if (typeof json_result['my_current_votes'] != "undefined") {
 										$('#game'+_this.game.instance_id+'_event'+_this.game_event_index+'_my_current_votes').html(json_result['my_current_votes']);
 										$('#game'+_this.game.instance_id+'_event'+_this.game_event_index+'_my_current_votes').hide();
 										$('#game'+_this.game.instance_id+'_event'+_this.game_event_index+'_my_current_votes').fadeIn('fast');

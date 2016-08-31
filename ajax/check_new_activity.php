@@ -48,23 +48,6 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		$output['select_bet_round'] = $game->select_bet_round($current_round);
 	}
 	
-	if ($last_block_id != $_REQUEST['last_block_id']) {
-		//$performance_history_sections = intval($_REQUEST['performance_history_sections']);
-		$output['new_block'] = 1;
-		$output['last_block_id'] = $last_block_id;
-		
-		$client_round = $game->block_to_round(intval($_REQUEST['last_block_id'])+1);
-		
-		/*if ($_REQUEST['refresh_page'] == "wallet" && $current_round != $client_round) {
-			$output['new_performance_history'] = 1;
-			$output['performance_history'] = $thisuser->performance_history($game, $current_round-(10*$performance_history_sections), $current_round-1);
-			$output['performance_history_start_round'] = $current_round-(10*$performance_history_sections);
-		}
-		else */
-		$output['new_performance_history'] = 0;
-	}
-	else $output['new_block'] = 0;
-	
 	if ($last_transaction_id != $_REQUEST['last_transaction_id']) {
 		$output['new_transaction'] = 1;
 		$output['last_transaction_id'] = $last_transaction_id;
@@ -85,7 +68,24 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	}
 	else $output['new_mature_ios'] = 0;
 	
-	if ($last_block_id != $_REQUEST['last_block_id'] || $last_transaction_id != $_REQUEST['last_transaction_id']) {
+	if ($last_block_id !== $_REQUEST['last_block_id'] || $last_transaction_id !== $_REQUEST['last_transaction_id']) {
+		if ($last_block_id !== $_REQUEST['last_block_id']) {
+			//$performance_history_sections = intval($_REQUEST['performance_history_sections']);
+			$output['new_block'] = 1;
+			$output['last_block_id'] = $last_block_id;
+			
+			/*$client_round = $game->block_to_round(intval($_REQUEST['last_block_id'])+1);
+			
+			if ($_REQUEST['refresh_page'] == "wallet" && $current_round != $client_round) {
+				$output['new_performance_history'] = 1;
+				$output['performance_history'] = $thisuser->performance_history($game, $current_round-(10*$performance_history_sections), $current_round-1);
+				$output['performance_history_start_round'] = $current_round-(10*$performance_history_sections);
+			}
+			else */
+			$output['new_performance_history'] = 0;
+		}
+		else $output['new_block'] = 0;
+		
 		//if ($_REQUEST['refresh_page'] == "wallet") $show_intro_text = true;
 		$show_intro_text = false;
 		$output['current_round_table'] = $event->current_round_table($current_round, $thisuser, $show_intro_text, true, $instance_id, $game_event_index);

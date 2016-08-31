@@ -36,7 +36,7 @@ if ($thisuser && $game) {
 			if ($amount+$fee <= $mature_balance) {
 				$address_ok = false;
 				
-				if ($game->db_game['game_type'] == "real") {
+				if ($game->db_game['p2p_mode'] == "rpc") {
 					$coin_rpc = new jsonRPCClient('http://'.$game->db_game['rpc_username'].':'.$game->db_game['rpc_password'].'@127.0.0.1:'.$game->db_game['rpc_port'].'/');
 					$validate_address = $coin_rpc->validateaddress($address_text);
 					$address_ok = $validate_address['isvalid'];

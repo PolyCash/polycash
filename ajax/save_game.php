@@ -22,7 +22,7 @@ if ($thisuser) {
 			$game_info['url_identifier'] = $game->db_game['url_identifier'];
 
 			if ($game->db_game['game_status'] == "editable") {
-				$game_form_vars = explode(",", "giveaway_status,giveaway_amount,maturity,max_voting_fraction,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap,vote_effectiveness_function");
+				$game_form_vars = explode(",", "event_rule,option_group_id,event_entity_type_id,events_per_round,event_type_name,giveaway_status,giveaway_amount,maturity,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap");
 				
 				if ($_REQUEST['inflation'] == "exponential") $_REQUEST['payout_weight'] = "coin_round";
 				
@@ -36,7 +36,7 @@ if ($thisuser) {
 					$game_val = $_REQUEST[$game_form_vars[$i]];
 					
 					if (in_array($game_var, array('pos_reward','pow_reward','giveaway_amount'))) $game_val = (int) $game_val*pow(10,8);
-					else if (in_array($game_var, array("max_voting_fraction", "exponential_inflation_minershare", "exponential_inflation_rate"))) $game_val = intval($game_val)/100;
+					else if (in_array($game_var, array("exponential_inflation_minershare", "exponential_inflation_rate"))) $game_val = intval($game_val)/100;
 					else if (in_array($game_var, array('maturity', 'round_length', 'seconds_per_block', 'final_round','invite_currency'))) $game_val = intval($game_val);
 					else $game_val = $app->quote_escape($app->strong_strip_tags($game_val));
 					
@@ -66,25 +66,6 @@ if ($thisuser) {
 					}
 				}
 				
-				/*$group_id = intval($_REQUEST['group_id']);
-				
-				if ($group_id != $game->db_game['group_id']) {
-					$qq = "SELECT * FROM option_groups WHERE group_id='".$group_id."';";
-					$rr = $app->run_query($qq);
-					$option_group = $rr->fetch();
-					$game->db_game['group_id'] = $option_group['group_id'];
-					
-					$qq = "UPDATE game_types SET group_id='".$option_group['group_id']."', option_name='".$option_group['option_name']."', option_name_plural='".$option_group['option_name_plural']."' WHERE game_id='".$game->db_game['game_id']."';";
-					$rr = $app->run_query($qq);
-					
-					$game->db_game['group_id'] = $option_group['group_id'];
-					$game->db_game['option_name'] = $option_group['option_name'];
-					$game->db_game['option_name_plural'] = $option_group['option_name_plural'];
-					
-					$game->delete_options();
-					$game->ensure_options();
-				}*/
-
 				if ($url_error) {
 					$app->output_message(2, $error_message, false);
 				}
@@ -96,6 +77,8 @@ if ($thisuser) {
 						if ($game->db_game['start_condition'] == "players_joined") $q .= ", initial_coins='".($game->db_game['start_condition_players']*$game->db_game['giveaway_amount'])."'";
 						$q .= " WHERE game_id='".$game->db_game['game_id']."';";
 						$r = $app->run_query($q);
+						
+						$game->ensure_events_until_block(1);
 						
 						$app->output_message(1, "Great, your changes have been saved.", $game_info);
 					}

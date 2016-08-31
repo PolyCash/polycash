@@ -157,10 +157,10 @@ class Game {
 		else $amount_ok = false;
 		
 		if ($amount_ok && (count($option_ids) == count($amounts) || ($option_ids === false && count($amounts) == count($address_ids)))) {
-			// For real games, don't insert a tx record, it will come in via walletnotify
-			if ($this->db_game['game_type'] != "real") {
+			// For rpc games, don't insert a tx record, it will come in via walletnotify
+			if ($this->db_game['p2p_mode'] != "rpc") {
 				$q = "INSERT INTO transactions SET game_id='".$this->db_game['game_id']."', fee_amount='".$transaction_fee."', has_all_inputs=1, has_all_outputs=1";
-				if ($this->db_game['game_type'] == "simulation") $q .= ", tx_hash='".$this->app->random_string(64)."'";
+				if ($this->db_game['p2p_mode'] == "none") $q .= ", tx_hash='".$this->app->random_string(64)."'";
 				$q .= ", transaction_desc='".$type."', amount=".$amount;
 				if ($from_user_id) $q .= ", from_user_id='".$from_user_id."'";
 				if ($to_user_id) $q .= ", to_user_id='".$to_user_id."'";
@@ -198,7 +198,7 @@ class Game {
 				
 				while ($transaction_input = $r->fetch()) {
 					if ($input_sum < $amount) {
-						if ($this->db_game['game_type'] != "real") {
+						if ($this->db_game['p2p_mode'] == "none") {
 							$qq = "UPDATE transaction_ios SET spend_count=spend_count+1, spend_transaction_id='".$transaction_id."', spend_transaction_ids=CONCAT(spend_transaction_ids, CONCAT('".$transaction_id."', ','))";
 							if ($block_id !== false) $qq .= ", spend_status='spent', spend_block_id='".$block_id."', spend_round_id='".$this->block_to_round($block_id)."'";
 							$qq .= " WHERE io_id='".$transaction_input['io_id']."';";
@@ -246,7 +246,7 @@ class Game {
 						$r = $this->app->run_query($q);
 						$address = $r->fetch();
 						
-						if ($this->db_game['game_type'] != "real") {
+						if ($this->db_game['p2p_mode'] == "none") {
 							$q = "INSERT INTO transaction_ios SET spend_status='";
 							if ($instantly_mature == 1) $q .= "unspent";
 							else $q .= "unconfirmed";
@@ -315,7 +315,7 @@ class Game {
 					$r = $this->app->run_query($q);
 					$overshoot_address = $r->fetch();
 					
-					if ($this->db_game['game_type'] != "real") {
+					if ($this->db_game['p2p_mode'] == "none") {
 						$q = "INSERT INTO transaction_ios SET out_index='".$out_index."', spend_status='unconfirmed', game_id='".$this->db_game['game_id']."', ";
 						if ($block_id !== false) {
 							$overshoot_cbd = floor($coin_blocks_destroyed*($overshoot_amount/$input_sum));
@@ -348,7 +348,7 @@ class Game {
 				
 				$rpc_error = false;
 				
-				if ($this->db_game['game_type'] == "real") {
+				if ($this->db_game['p2p_mode'] == "rpc") {
 					$coin_rpc = new jsonRPCClient('http://'.$this->db_game['rpc_username'].':'.$this->db_game['rpc_password'].'@127.0.0.1:'.$this->db_game['rpc_port'].'/');
 					try {
 						$raw_transaction = $coin_rpc->createrawtransaction($raw_txin, $raw_txout);
@@ -427,7 +427,7 @@ class Game {
 	}
 	
 	public function new_block() {
-		// This public function only runs for games with game_type='simulation'
+		// This public function only runs for games with p2p_mode='none'
 		$log_text = "";
 		$last_block_id = $this->last_block_id();
 		
@@ -914,13 +914,13 @@ class Game {
 		$q = "DELETE FROM game_invitations WHERE game_id='".$this->db_game['game_id']."';";
 		$r = $this->app->run_query($q);
 		
-		if ($this->db_game['game_type'] == "simulation") {
+		if ($this->db_game['p2p_mode'] == "none") {
 			$q = "DELETE FROM addresses WHERE game_id='".$this->db_game['game_id']."';";
 			$r = $this->app->run_query($q);
 		}
 		
 		if ($delete_or_reset == "reset") {
-			if ($this->db_game['game_type'] == "simulation") {
+			if ($this->db_game['p2p_mode'] == "none") {
 				$q = "UPDATE games SET game_status='published' WHERE game_id='".$this->db_game['game_id']."';";
 				$r = $this->app->run_query($q);
 			}
@@ -1382,7 +1382,7 @@ class Game {
 	}
 	
 	public function check_giveaway_available($user, &$giveaway) {
-		if ($this->db_game['game_type'] == "simulation") {
+		if ($this->db_game['p2p_mode'] == "none") {
 			$q = "SELECT * FROM game_giveaways g JOIN transactions t ON g.transaction_id=t.transaction_id WHERE g.status='claimed' AND g.game_id='".$this->db_game['game_id']."' AND g.user_id='".$user->db_user['user_id']."';";
 			$r = $this->app->run_query($q);
 

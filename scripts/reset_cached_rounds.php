@@ -23,7 +23,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		$start_round = max(1, $game->block_to_round($game->db_game['game_starting_block']));
 		
 		for ($round_id=$start_round; $round_id<=$current_round-1; $round_id++) {
-			if ($game->db_game['game_type'] == "real") {
+			if ($game->db_game['p2p_mode'] == "rpc") {
 				$game->add_round_from_rpc($round_id);
 			}
 			else {

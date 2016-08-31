@@ -341,9 +341,9 @@ class User {
 	}
 	
 	public function new_game_permission() {
-		$game_types_created_by_user = $this->count_user_games_created();
+		$games_created_by_user = $this->count_user_games_created();
 		if ((string)$GLOBALS['new_games_per_user'] == "unlimited") return true;
-		else if ($game_types_created_by_user < $this->db_user['authorized_games']) return true;
+		else if ($games_created_by_user < $this->db_user['authorized_games']) return true;
 		else return false;
 	}
 

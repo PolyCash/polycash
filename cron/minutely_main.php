@@ -23,24 +23,24 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		
 		$app->generate_games();
 		
-		$real_game_types = array();
+		$real_games = array();
 		$coin_rpcs = array();
 		$game_id2real_game_i = array();
 
-		$q = "SELECT * FROM games WHERE game_type='real';";
+		$q = "SELECT * FROM games WHERE p2p_mode='rpc';";
 		$r = $GLOBALS['app']->run_query($q);
 		$real_game_i = 0;
 
 		while ($db_real_game = $r->fetch()) {
 			$game_id2real_game_i[$db_real_game['game_id']] = $real_game_i;
-			$real_game_types[$real_game_i] = new Game($app, $db_real_game['game_id']);
+			$real_games[$real_game_i] = new Game($app, $db_real_game['game_id']);
 			$coin_rpcs[$real_game_i] = new jsonRPCClient('http://'.$db_real_game['rpc_username'].':'.$db_real_game['rpc_password'].'@127.0.0.1:'.$db_real_game['rpc_port'].'/');
 			$real_game_i++;
 		}
 
-		for ($real_game_i=0; $real_game_i<count($real_game_types); $real_game_i++) {
-			if ($real_game_types[$real_game_i]->db_game['game_status'] == "running" && $real_game_types[$real_game_i]->db_game['always_generate_coins'] == 1) {
-				$q = "SELECT * FROM blocks WHERE game_id='".$real_game_types[$real_game_i]->db_game['game_id']."' ORDER BY block_id DESC LIMIT 1;";
+		for ($real_game_i=0; $real_game_i<count($real_games); $real_game_i++) {
+			if ($real_games[$real_game_i]->db_game['game_status'] == "running" && $real_games[$real_game_i]->db_game['always_generate_coins'] == 1) {
+				$q = "SELECT * FROM blocks WHERE game_id='".$real_games[$real_game_i]->db_game['game_id']."' ORDER BY block_id DESC LIMIT 1;";
 				$r = $app->run_query($q);
 
 				if ($r->rowCount() > 0) {
@@ -48,7 +48,7 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 					
 					$coin_rpcs[$real_game_i]->setgenerate(false);
 					$coin_rpcs[$real_game_i]->setgenerate(true);
-					echo "Started generating coins for ".$real_game_types[$real_game_i]->db_game['name']."...<br/>\n";
+					echo "Started generating coins for ".$real_games[$real_game_i]->db_game['name']."...<br/>\n";
 				}
 			}
 		}
@@ -104,11 +104,11 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 
 					for ($running_game_i=0; $running_game_i<count($running_games); $running_game_i++) {
 						echo "\n\n".$running_games[$running_game_i]->db_game['name']."<br/>\n";
-						if ($running_games[$running_game_i]->db_game['sync_coind_by_cron'] == 1 && $running_games[$running_game_i]->db_game['game_type'] == "real") {
+						if ($running_games[$running_game_i]->db_game['sync_coind_by_cron'] == 1 && $running_games[$running_game_i]->db_game['p2p_mode'] == "rpc") {
 							$real_game_i = $game_id2real_game_i[$running_games[$running_game_i]->db_game['game_id']];
 							echo $running_games[$running_game_i]->sync_coind($coin_rpcs[$real_game_i]);
 						}
-						if ($running_games[$running_game_i]->db_game['game_type'] == "simulation") {
+						if ($running_games[$running_game_i]->db_game['p2p_mode'] == "none") {
 							$remaining_prob = round($loop_target_time/$running_games[$running_game_i]->db_game['seconds_per_block'], 4);
 							$thisgame_loop_start_time = microtime(true);
 							do {

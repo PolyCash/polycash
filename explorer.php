@@ -14,7 +14,7 @@ if ($game_r->rowCount() == 1) {
 	$db_game = $game_r->fetch();
 	$game = new Game($app, $db_game['game_id']);
 	
-	if ($game->db_game['game_type'] == "real") {
+	if ($game->db_game['p2p_mode'] == "rpc") {
 		$coin_rpc = new jsonRPCClient('http://'.$game->db_game['rpc_username'].':'.$game->db_game['rpc_password'].'@127.0.0.1:'.$game->db_game['rpc_port'].'/');
 	}
 	
@@ -486,7 +486,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					<pre id="block_info" style="display: none;"><?php
 					print_r($block);
 					
-					if ($game->db_game['game_type'] == "real") {
+					if ($game->db_game['p2p_mode'] == "rpc") {
 						$rpc_block = $coin_rpc->getblock($block['block_hash']);
 						if ($rpc_block) echo print_r($rpc_block);
 					}
@@ -550,7 +550,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				$rpc_transaction = false;
 				$rpc_raw_transaction = false;
 				
-				if ($game->db_game['game_type'] == "real") {
+				if ($game->db_game['p2p_mode'] == "rpc") {
 					try {
 						$rpc_transaction = $coin_rpc->gettransaction($transaction['tx_hash']);
 					}

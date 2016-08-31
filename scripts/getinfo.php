@@ -19,7 +19,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		echo $e;
 	}
 	
-	$real_game_r = $app->run_query("SELECT * FROM games WHERE game_type='real';");
+	$real_game_r = $app->run_query("SELECT * FROM games WHERE p2p_mode='rpc';");
 
 	while ($db_real_game = $real_game_r->fetch()) {
 		echo $db_real_game['name'].":<br/>\n";

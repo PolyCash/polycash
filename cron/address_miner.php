@@ -19,10 +19,6 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
 		register_shutdown_function("script_shutdown");
 		
-		$real_game_types = array();
-		$coin_rpcs = array();
-		$game_id2real_game_i = array();
-		
 		$q = "SELECT * FROM games WHERE min_unallocated_addresses > 0 AND game_status IN ('published','running');";
 		$r = $app->run_query($q);
 		echo "Looping through ".$r->rowCount()." games.<br/>\n";

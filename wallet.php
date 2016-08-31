@@ -1436,6 +1436,57 @@ if ($thisuser && $game) {
 									</div>
 								</div>
 							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">Event rule:</div>
+								<div class="col-sm-6">
+									<select id="game_form_event_rule" class="form-control" onchange="game_form_event_rule_changed();">
+										<option value="single_event_series">Single, repeating event</option>
+										<option value="entity_type_option_group">One event for each item in a group</option>
+									</select>
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">Voting options:</div>
+								<div class="col-sm-6">
+									<select id="game_form_option_group_id" class="form-control">
+										<?php
+										$q = "SELECT * FROM option_groups ORDER BY description ASC;";
+										$r = $app->run_query($q);
+										while ($option_group = $r->fetch()) {
+											echo '<option value="'.$option_group['group_id'].'">'.$option_group['description']."</option>\n";
+										}
+										?>
+									</select>
+								</div>
+							</div>
+							<div id="game_form_event_rule_entity_type_option_group">
+								<div class="row">
+									<div class="col-sm-6 form-control-static">Events per round:</div>
+									<div class="col-sm-6">
+										<input class="form-control" type="text" id="game_form_events_per_round" style="text-align: right" />
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-sm-6 form-control-static">One event for each of these:</div>
+									<div class="col-sm-6">
+										<select id="game_form_event_entity_type_id" class="form-control">
+											<?php
+											$q = "SELECT * FROM entity_types ORDER BY entity_name ASC;";
+											$r = $app->run_query($q);
+											while ($entity_type = $r->fetch()) {
+												echo '<option value="'.$entity_type['entity_type_id'].'">'.$entity_type['entity_name']."</option>\n";
+											}
+											?>
+										</select>
+									</div>
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">Each event is called:</div>
+								<div class="col-sm-6">
+									<input class="form-control" type="text" id="game_form_event_type_name" />
+								</div>
+							</div>
 							
 							<div style="height: 10px;"></div>
 							<button style="float: right;" type="button" class="btn btn-default" data-dismiss="modal">Close</button>

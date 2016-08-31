@@ -20,10 +20,9 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
 		register_shutdown_function("script_shutdown");
 		
-		$real_game_types = array();
-		$real_game_q = "SELECT * FROM games WHERE game_type='real' AND game_status IN ('published','running');";
+		$real_game_q = "SELECT * FROM games WHERE p2p_mode='rpc' AND game_status IN ('published','running');";
 		$real_game_r = $GLOBALS['app']->run_query($real_game_q);
-
+		
 		while ($real_game = $real_game_r->fetch()) {
 			$real_game_obj = new Game($app, $real_game['game_id']);
 			$coin_rpc = new jsonRPCClient('http://'.$real_game['rpc_username'].':'.$real_game['rpc_password'].'@127.0.0.1:'.$real_game['rpc_port'].'/');
