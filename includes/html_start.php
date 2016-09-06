@@ -67,7 +67,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 						echo $primary_game->db_game['url_identifier']."/";
 					}
 					?>"><?php if (!empty($thisuser)) echo "Wallet"; else echo "Log In"; ?></a></li>
-					<?php if (!empty($game)) { ?><li<?php if ($nav_tab_selected == "event_homepage") echo ' class="active"'; ?>><a href="/<?php echo $game->db_game['url_identifier']; ?>/">About</a></li><?php } ?>
+					<?php if (!empty($game)) { ?><li<?php if ($nav_tab_selected == "game_page") echo ' class="active"'; ?>><a href="/<?php echo $game->db_game['url_identifier']; ?>/">About</a></li><?php } ?>
 					<li<?php if ($nav_tab_selected == "explorer") echo ' class="active"'; ?>><a href="/explorer/<?php if (!empty($game)) echo $game->db_game['url_identifier']."/"; ?>">Explorer</a></li>
 					<li<?php if ($nav_tab_selected == "api") echo ' class="active"'; ?>><a href="/api/">API</a></li>
 					<li<?php if ($nav_tab_selected == "download") echo ' class="active"'; ?>><a href="/download/">Download</a></li>

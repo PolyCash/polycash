@@ -877,6 +877,22 @@ if ($thisuser && $game) {
 					?>
 				</div>
 				
+				<h1>Deposit</h1>
+				<?php
+				if ($game->db_game['buyin_policy'] != "none") { ?>
+					<p>
+					You can buy more <?php echo $game->db_game['coin_name_plural']; ?> by sending Bitcoins to your deposit address.  Once your Bitcoin payment is confirmed, <?php echo $game->db_game['coin_name_plural']; ?> will be added to your account based on the BTC / <?php echo $game->db_game['coin_abbreviation']; ?> exchange rate at the time of confirmation.
+					</p>
+					<p>
+					<button class="btn btn-success" onclick="initiate_buyin();">Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
+					</p>
+					<?php
+				}
+				else {
+					echo "<p>You cannot buy directly in to this game. Instead, please purchase ".$game->db_game['coin_name_plural']." on an exchange and then send them to one of your addresses listed below.</p>\n";
+				}
+				?>
+				
 				<h1>Withdraw</h1>
 				To withdraw coins please enter <?php echo $app->prepend_a_or_an($game->db_game['name']); ?> address below.<br/>
 				<div class="row">
@@ -930,7 +946,7 @@ if ($thisuser && $game) {
 					</div>
 				</div>
 				
-				<h1>Deposit <?php echo $game->db_game['coin_name_plural']; ?></h1>
+				<h1>My <?php echo $game->db_game['name']; ?> addresses</h1>
 				<?php
 				$q = "SELECT * FROM addresses WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."' ORDER BY option_index IS NULL DESC, option_index ASC;";
 				$r = $app->run_query($q);
@@ -982,7 +998,7 @@ if ($thisuser && $game) {
 				
 				if ($new_game_perm) { ?>
 					<br/>
-					<button class="btn btn-primary" onclick="switch_to_game(0, 'new'); return false;">Start a new Private Event</button>
+					<button class="btn btn-primary" onclick="switch_to_game(0, 'new'); return false;">Create a new Game</button>
 					<?php
 				}
 				?>
@@ -1143,13 +1159,6 @@ if ($thisuser && $game) {
 			</div>
 		</div>
 		
-		<div style="display: none;" class="modal fade" id="buyin_modal">
-			<div class="modal-dialog">
-				<div class="modal-content" id="buyin_modal_content">
-				</div>
-			</div>
-		</div>
-		
 		<div style="display: none;" class="modal fade" id="game_form">
 			<div class="modal-dialog">
 				<div class="modal-content">
@@ -1164,6 +1173,28 @@ if ($thisuser && $game) {
 								</div>
 								<div class="col-sm-6">
 									<input class="form-control" type="text" id="game_form_name" />
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">
+									P2P mode:
+								</div>
+								<div class="col-sm-6">
+									<select class="form-control" id="game_form_p2p_mode" onchange="game_form_p2p_mode_changed();">
+										<option value="">-- Please Select --</option>
+										<option value="rpc">Connect to daemon by RPC</option>
+										<option value="none">Do not connect to peers</option>
+									</select>
+								</div>
+							</div>
+							<div id="game_form_p2p_mode_rpc">
+								<div class="row">
+									<div class="col-sm-6 form-control-static">
+										RPC Parameters:
+									</div>
+									<div class="col-sm-6">
+										<button class="btn btn-warning" onclick="edit_game_rpc_parameters(); return false;">Edit RPC parameters</button>
+									</div>
 								</div>
 							</div>
 							<div class="row">
@@ -1498,6 +1529,55 @@ if ($thisuser && $game) {
 							<button id="game_invitations_game_btn" type="button" class="btn btn-info" data-dismiss="modal" onclick="manage_game_invitations(editing_game_id);">Invite People</button>
 						</form>
 					</div>
+				</div>
+			</div>
+		</div>
+		
+		<div style="display: none;" class="modal fade" id="game_form_rpc_parameters">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						RPC Parameters
+					</div>
+					<div class="modal-body">
+						<form onsubmit="save_game_rpc_parameters();">
+							<div class="row">
+								<div class="col-sm-6 form-control-static">
+									RPC username:
+								</div>
+								<div class="col-sm-6">
+									<input type="text" class="form-control" id="game_form_rpc_username" />
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">
+									RPC password:
+								</div>
+								<div class="col-sm-6">
+									<input type="text" class="form-control" id="game_form_rpc_password" />
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">
+									RPC port:
+								</div>
+								<div class="col-sm-6">
+									<input type="text" class="form-control" id="game_form_rpc_port" />
+								</div>
+							</div>
+							
+							<button style="float: right;" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+							
+							<button id="save_game_btn" type="button" class="btn btn-success" onclick="save_game_rpc_parameters();">Save Settings</button>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		<div style="display: none;" class="modal fade" id="buyin_modal">
+			<div class="modal-dialog">
+				<div class="modal-content" id="buyin_modal_content">
 				</div>
 			</div>
 		</div>

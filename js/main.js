@@ -624,7 +624,7 @@ function show_planned_votes() {
 }
 
 // OBJECT: GameForm
-var game_form_vars = "event_rule,option_group_id,event_entity_type_id,events_per_round,event_type_name,giveaway_status,giveaway_amount,maturity,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_date,start_time,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap,group_id".split(",");
+var game_form_vars = "event_rule,p2p_mode,option_group_id,event_entity_type_id,events_per_round,event_type_name,giveaway_status,giveaway_amount,maturity,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_date,start_time,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap,group_id".split(",");
 function switch_to_game(game_id, action) {
 	var fetch_link_text = $('#fetch_game_link_'+game_id).html();
 	var switch_link_text = $('#switch_game_btn').html();
@@ -728,6 +728,7 @@ function switch_to_game(game_id, action) {
 
 			game_form_start_condition_changed();
 			game_form_event_rule_changed();
+			game_form_p2p_mode_changed();
 		}
 		else if (action == "switch" || action == "delete" || action == "reset") {
 			if (action == "switch") $('#switch_game_btn').html(switch_link_text);
@@ -738,6 +739,12 @@ function switch_to_game(game_id, action) {
 			else alert(json_result['message']);
 		}
 	});
+}
+function edit_game_rpc_parameters() {
+	$('#game_form_rpc_parameters').modal('show');
+}
+function save_game_rpc_parameters() {
+	console.log("gothere");
 }
 function game_form_final_round_changed() {
 	var final_round = parseInt($('#game_form_has_final_round').val());
@@ -795,6 +802,11 @@ function game_form_event_rule_changed() {
 	var event_rule = $('#game_form_event_rule').val();
 	if (event_rule == "entity_type_option_group") $('#game_form_event_rule_entity_type_option_group').show();
 	else $('#game_form_event_rule_entity_type_option_group').hide();
+}
+function game_form_p2p_mode_changed() {
+	var p2p_mode = $('#game_form_p2p_mode').val();
+	if (p2p_mode == "rpc") $('#game_form_p2p_mode_rpc').show();
+	else $('#game_form_p2p_mode_rpc').hide();
 }
 function save_game(action) {
 	var save_link_text = $('#save_game_btn').html();
