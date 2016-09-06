@@ -4,7 +4,7 @@
 // Or visit /cron/minutely.php in your browser
 set_time_limit(0);
 $host_not_required = TRUE;
-include(realpath(dirname(__FILE__))."/../includes/connect.php");
+include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
 if (!empty($argv)) {
 	$cmd_vars = $app->argv_to_array($argv);
@@ -12,9 +12,13 @@ if (!empty($argv)) {
 	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
 }
 
-if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+$key = "";
+if (!empty($_REQUEST['key'])) $key = $_REQUEST['key'];
+
+if (empty($GLOBALS['cron_key_string']) || $key == $GLOBALS['cron_key_string']) {
 	do {
-		echo $app->start_regular_background_processes($_REQUEST['key']);
+		echo $app->start_regular_background_processes($key);
+		echo "Waiting 60 seconds...\n";
 		sleep(60);
 	}
 	while (true);

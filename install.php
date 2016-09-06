@@ -2,7 +2,7 @@
 $skip_select_db = TRUE;
 include("includes/connect.php");
 
-if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if (empty($_GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	if ($GLOBALS['mysql_database'] != "") {
 		if (!strpos($GLOBALS['mysql_database'], "'") && $GLOBALS['mysql_database'] === strip_tags($GLOBALS['mysql_database'])) {
 			$db_exists = false;
@@ -70,13 +70,13 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				<h2>Run Empirecoin Web</h1>
 				Make sure this line has been added to your /etc/crontab:<br/>
 <pre>
-* * * * * root <?php echo $app->php_binary_location(); ?> <?php echo realpath(dirname(__FILE__))."/cron/minutely.php key=".$GLOBALS['cron_key_string']; ?>
+* * * * * root <?php echo $app->php_binary_location(); ?> <?php echo str_replace("\\", "/", realpath(dirname(__FILE__)))."/cron/minutely.php key=".$GLOBALS['cron_key_string']; ?>
 </pre>
 				If you can't use cron, please run this app in a new tab or run the command below.<br/>
 				<a class="btn btn-success" target="_blank" href="cron/minutely.php?key=<?php echo $GLOBALS['cron_key_string']; ?>">Start process in a new tab</a>
 				<br/>
 				<pre>
-<?php echo $app->php_binary_location(); ?> <?php echo realpath(dirname(__FILE__))."/scripts/main.php key=".$GLOBALS['cron_key_string']; ?>
+<?php echo $app->php_binary_location(); ?> <?php echo str_replace("\\", "/", realpath(dirname(__FILE__))."/scripts/main.php key=".$GLOBALS['cron_key_string']); ?>
 				</pre>
 				
 				<h2>Configure Apache for symlinked URLs</h1>

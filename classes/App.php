@@ -727,14 +727,16 @@ class App {
 		if (!empty($GLOBALS['mysql_binary_location'])) return $GLOBALS['mysql_binary_location'];
 		else {
 			$var = $this->run_query("SHOW VARIABLES LIKE 'basedir';")->fetch();
-			if (PHP_OS == "WINNT") return $var['Value']."bin/mysql.exe";
-			else return $var['Value']."/bin/mysql";
+			$var_val = str_replace("\\", "/", $var['Value']);
+			if (!in_array($var_val[strlen($var_val)-1], array('/', '\\'))) $var_val .= "/";
+			if (PHP_OS == "WINNT") return $var_val."bin/mysql.exe";
+			else return $var_val."bin/mysql";
 		}
 	}
 	
 	public function php_binary_location() {
 		if (!empty($GLOBALS['php_binary_location'])) return $GLOBALS['php_binary_location'];
-		else if (PHP_OS == "WINNT") return dirname(ini_get('extension_dir'))."\php.exe";
+		else if (PHP_OS == "WINNT") return str_replace("\\", "/", dirname(ini_get('extension_dir')))."/php.exe";
 		else return PHP_BINDIR ."/php";
 	}
 	
@@ -786,7 +788,7 @@ class App {
 		if (is_resource($currency_prices_process)) $process_count++;
 		else $html .= "Failed to start a process for updating currency prices.<br/>\n";
 		
-		$html .= $process_count." background processes were successfully started.<br/>\n";
+		$html .= "Started ".$process_count." background processes.<br/>\n";
 		return $html;
 	}
 	
