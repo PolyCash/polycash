@@ -624,7 +624,7 @@ function show_planned_votes() {
 }
 
 // OBJECT: GameForm
-var game_form_vars = "event_rule,p2p_mode,option_group_id,event_entity_type_id,events_per_round,event_type_name,giveaway_status,giveaway_amount,maturity,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_date,start_time,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap,group_id,default_vote_effectiveness_function".split(",");
+var game_form_vars = "event_rule,p2p_mode,option_group_id,event_entity_type_id,events_per_round,event_type_name,giveaway_status,giveaway_amount,maturity,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_date,start_time,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap,group_id,default_vote_effectiveness_function,default_max_voting_fraction".split(",");
 function switch_to_game(game_id, action) {
 	var fetch_link_text = $('#fetch_game_link_'+game_id).html();
 	var switch_link_text = $('#switch_game_btn').html();
@@ -672,7 +672,7 @@ function switch_to_game(game_id, action) {
 				if (game_form_vars[i] == "pos_reward" || game_form_vars[i] == "pow_reward" || game_form_vars[i] == "giveaway_amount") {
 					json_result[game_form_vars[i]] = parseInt(json_result[game_form_vars[i]])/Math.pow(10,8);
 				}
-				else if (game_form_vars[i] == "exponential_inflation_minershare" || game_form_vars[i] == "exponential_inflation_rate") {
+				else if (game_form_vars[i] == "exponential_inflation_minershare" || game_form_vars[i] == "exponential_inflation_rate" || game_form_vars[i] == "default_max_voting_fraction") {
 					json_result[game_form_vars[i]] = Math.round(json_result[game_form_vars[i]]*100*Math.pow(10,8))/Math.pow(10,8);
 				}
 				else if (game_form_vars[i] == "per_user_buyin_cap" || game_form_vars[i] == "game_buyin_cap") {
