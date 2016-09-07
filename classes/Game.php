@@ -2781,7 +2781,7 @@ class Game {
 	}
 	
 	public function vote_effectiveness_function() {
-		return $this->current_events[0]->db_event['vote_effectiveness_function'];
+		return $this->db_game['default_vote_effectiveness_function'];
 	}
 	
 	public function generate_voting_addresses(&$coin_rpc) {

@@ -14,17 +14,20 @@ if ($thisuser) {
 		$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
 		$r = $app->run_query($q);
 		if ($r->rowCount() > 0) {
-			$game_info['user_in_game'] = 1;
+			$game_info['redirect_user'] = 1;
 		}
-		else $game_info['user_in_game'] = 0;
+		else $game_info['redirect_user'] = 0;
 		
 		if ($game->db_game['creator_id'] == $thisuser->db_user['user_id']) {
 			$game_info['url_identifier'] = $game->db_game['url_identifier'];
 
 			if ($game->db_game['game_status'] == "editable") {
-				$game_form_vars = explode(",", "event_rule,p2p_mode,option_group_id,event_entity_type_id,events_per_round,event_type_name,giveaway_status,giveaway_amount,maturity,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap");
+				if ($_REQUEST['giveaway_status'] == "public_free" || $_REQUEST['giveaway_status'] == "public_pay") $game_info['redirect_user'] = 1;
+				
+				$game_form_vars = explode(",", "event_rule,p2p_mode,option_group_id,event_entity_type_id,events_per_round,event_type_name,giveaway_status,giveaway_amount,maturity,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap,default_vote_effectiveness_function");
 				
 				if ($_REQUEST['inflation'] == "exponential") $_REQUEST['payout_weight'] = "coin_round";
+				if ($_REQUEST['event_rule'] == "single_event_series") $_REQUEST['events_per_round'] = 1;
 				
 				$q = "UPDATE games SET ";
 

@@ -187,6 +187,7 @@ class PageviewController {
 			$browserstring_id = $this->app->last_insert_id();
 		}
 		
+		if (strlen($_SERVER['REQUEST_URI']) > 255) $_SERVER['REQUEST_URI'] = substr($_SERVER['REQUEST_URI'], 0, 255);
 		$page_url = $this->app->quote_escape($_SERVER['REQUEST_URI']);
 		$q = "SELECT page_url_id FROM page_urls WHERE url=".$page_url.";";
 		$r = $this->app->run_query($q);
