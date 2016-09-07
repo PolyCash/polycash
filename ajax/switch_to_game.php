@@ -48,7 +48,7 @@ if ($thisuser) {
 				}
 				else $game_index = 1;
 				
-				$q = "INSERT INTO games SET creator_id='".$thisuser->db_user['user_id']."', maturity=0, round_length=60, seconds_per_block='6', block_timing='realistic', creator_game_index='".$game_index."', game_type='simulation', logo_image_id=34, pos_reward='".(6000*pow(10,8))."', pow_reward='".(200*pow(10,8))."', start_datetime='".date("Y-m-d g:\\0\\0a", time()+(2*60*60))."';";
+				$q = "INSERT INTO games SET creator_id='".$thisuser->db_user['user_id']."', maturity=0, round_length=60, seconds_per_block='6', block_timing='realistic', creator_game_index='".$game_index."', p2p_mode='none', logo_image_id=34, pos_reward='".(6000*pow(10,8))."', pow_reward='".(200*pow(10,8))."', start_datetime='".date("Y-m-d g:\\0\\0a", time()+(2*60*60))."';";
 				$r = $app->run_query($q);
 				$game_id = $app->last_insert_id();
 				
