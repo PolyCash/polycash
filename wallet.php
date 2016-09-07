@@ -1193,7 +1193,7 @@ if ($thisuser && $game) {
 										RPC Parameters:
 									</div>
 									<div class="col-sm-6">
-										<button class="btn btn-warning" onclick="edit_game_rpc_parameters(); return false;">Edit RPC parameters</button>
+										<button class="btn btn-warning" onclick="edit_game_rpc_parameters(); return false;" id="edit_rpc_btn">Edit RPC parameters</button>
 									</div>
 								</div>
 							</div>
@@ -1332,6 +1332,15 @@ if ($thisuser && $game) {
 										<option value="coin">Coins staked</option>
 										<option value="coin_block">Coins over time. 1 vote per block</option>
 										<option value="coin_round">Coins over time. 1 vote per round</option>
+									</select>
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">Vote effectiveness:</div>
+								<div class="col-sm-6">
+									<select class="form-control" id="game_form_default_vote_effectiveness_function">
+										<option value="constant">Votes count equally through the round</option>
+										<option value="linear_decrease">Linearly decreasing vote effectiveness</option>
 									</select>
 								</div>
 							</div>
@@ -1566,9 +1575,9 @@ if ($thisuser && $game) {
 								</div>
 							</div>
 							
-							<button style="float: right;" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+							<button style="float: right;" type="button" class="btn btn-default" onclick="cancel_edit_game_rpc_parameters();">Close</button>
 							
-							<button id="save_game_btn" type="button" class="btn btn-success" onclick="save_game_rpc_parameters();">Save Settings</button>
+							<button id="save_game_rpc_btn" type="button" class="btn btn-success" onclick="save_game_rpc_parameters();">Save Settings</button>
 						</form>
 					</div>
 				</div>
