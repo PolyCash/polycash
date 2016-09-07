@@ -1527,6 +1527,13 @@ if ($thisuser && $game) {
 									<input class="form-control" type="text" id="game_form_event_type_name" />
 								</div>
 							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">Voting cap:</div>
+								<div class="col-sm-3">
+									<input class="form-control" type="text" style="text-align: right;" id="game_form_default_max_voting_fraction" />
+								</div>
+								<div class="col-sm-3 form-control-static">%</div>
+							</div>
 							
 							<div style="height: 10px;"></div>
 							<button style="float: right;" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
