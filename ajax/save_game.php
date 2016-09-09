@@ -24,7 +24,7 @@ if ($thisuser) {
 			if ($game->db_game['game_status'] == "editable") {
 				if ($_REQUEST['giveaway_status'] == "public_free" || $_REQUEST['giveaway_status'] == "public_pay") $game_info['redirect_user'] = 1;
 				
-				$game_form_vars = explode(",", "event_rule,p2p_mode,option_group_id,event_entity_type_id,events_per_round,event_type_name,giveaway_status,giveaway_amount,maturity,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap,default_vote_effectiveness_function,default_max_voting_fraction");
+				$game_form_vars = explode(",", "event_rule,p2p_mode,option_group_id,event_entity_type_id,events_per_round,event_type_name,giveaway_status,giveaway_amount,maturity,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap,default_vote_effectiveness_function,default_max_voting_fraction,game_starting_block");
 				
 				if ($_REQUEST['inflation'] == "exponential") $_REQUEST['payout_weight'] = "coin_round";
 				if ($_REQUEST['event_rule'] == "single_event_series") $_REQUEST['events_per_round'] = 1;
