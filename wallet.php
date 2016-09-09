@@ -1534,6 +1534,12 @@ if ($thisuser && $game) {
 								</div>
 								<div class="col-sm-3 form-control-static">%</div>
 							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">Game starts on block:</div>
+								<div class="col-sm-6">
+									<input class="form-control" type="text" style="text-align: right;" id="game_form_game_starting_block" />
+								</div>
+							</div>
 							
 							<div style="height: 10px;"></div>
 							<button style="float: right;" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
