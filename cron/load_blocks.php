@@ -25,10 +25,14 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		
 		while ($real_game = $real_game_r->fetch()) {
 			$real_game_obj = new Game($app, $real_game['game_id']);
-			$coin_rpc = new jsonRPCClient('http://'.$real_game['rpc_username'].':'.$real_game['rpc_password'].'@127.0.0.1:'.$real_game['rpc_port'].'/');
-			$real_game_obj->load_new_blocks($coin_rpc);
-			$real_game_obj->load_all_block_headers($coin_rpc, TRUE);
-			$real_game_obj->load_all_blocks($coin_rpc, TRUE);
+			try {
+				$coin_rpc = new jsonRPCClient('http://'.$real_game['rpc_username'].':'.$real_game['rpc_password'].'@127.0.0.1:'.$real_game['rpc_port'].'/');
+				$real_game_obj->load_new_blocks($coin_rpc);
+				$real_game_obj->load_all_block_headers($coin_rpc, TRUE);
+				$real_game_obj->load_all_blocks($coin_rpc, TRUE);
+			} catch (Exception $e) {
+				echo "Error, skipped ".$real_game['name']." because RPC connection failed.<br/>\n";
+			}
 		}
 	}
 	else echo "Block loading script is already running, skip...\n";
