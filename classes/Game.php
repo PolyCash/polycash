@@ -291,7 +291,7 @@ class Game {
 							if ($block_id !== false) {
 								$q .= "create_block_id='".$block_id."', create_round_id='".$this->block_to_round($block_id)."', ";
 							}
-							$q .= "create_transaction_id='".$transaction_id."', amount='".$amounts[$out_index]."';";
+							$q .= "create_transaction_id='".$transaction_id."', colored_amount='".$amounts[$out_index]."', amount='".$amounts[$out_index]."';";
 							
 							$r = $this->app->run_query($q);
 							$created_input_ids[count($created_input_ids)] = $this->app->last_insert_id();
@@ -338,7 +338,7 @@ class Game {
 							$q .= "create_block_id='".$block_id."', create_round_id='".$this->block_to_round($block_id)."', ";
 						}
 						
-						$q .= "amount='".$overshoot_amount."';";
+						$q .= "colored_amount='".$overshoot_amount."', amount='".$overshoot_amount."';";
 						$r = $this->app->run_query($q);
 						$created_input_ids[count($created_input_ids)] = $this->app->last_insert_id();
 					}
@@ -1654,6 +1654,9 @@ class Game {
 					$html .= $num_players."/".$this->db_game['start_condition_players']." players have already joined, waiting for ".$players_needed." more players.";
 				}
 			}
+			else if ($this->db_game['start_condition'] == "fixed_block") {
+				$html .= "This game starts in ".($this->db_game['game_starting_block']-$this->last_block_id())." blocks.";
+			}
 			else $html .= "This game starts in ".$this->app->format_seconds(strtotime($this->db_game['start_datetime'])-time())." at ".$this->db_game['start_datetime'];
 		}
 		else if ($this->db_game['game_status'] == "completed") $html .= "This game is over.";
@@ -1748,6 +1751,9 @@ class Game {
 				$unix_starttime = strtotime($this->db_game['start_datetime']);
 				
 				$html .= "This game starts in ".$this->app->format_seconds($unix_starttime-time())." at ".date("M j, Y g:ia", $unix_starttime).". ";
+			}
+			else if ($this->db_game['start_condition'] == "fixed_block") {
+				$html .= "This game starts in ".($this->db_game['game_starting_block']-$this->last_block_id())." blocks.";
 			}
 			else {
 				$current_players = $this->paid_players_in_game();

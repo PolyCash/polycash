@@ -1262,6 +1262,7 @@ if ($thisuser && $game) {
 								</div>
 								<div class="col-sm-6">
 									<select class="form-control" id="game_form_start_condition" onchange="game_form_start_condition_changed();">
+										<option value="fixed_block">At a particular block</option>
 										<option value="fixed_time">At a particular time</option>
 										<option value="players_joined">When enough people join</option>
 									</select>

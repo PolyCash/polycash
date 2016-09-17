@@ -324,7 +324,7 @@ class Event {
 			
 			$qq = "INSERT INTO transaction_ios SET spend_status='unspent', out_index='".$out_index."', instantly_mature=0, game_id='".$this->game->db_game['game_id']."', event_id='".$this->db_event['event_id']."', user_id='".$input['user_id']."', address_id='".$input['address_id']."'";
 			if ($winning_option > 0) $qq .= ", option_id='".$winning_option."'";
-			$qq .= ", create_transaction_id='".$transaction_id."', amount='".$payout_amount."', create_block_id='".$block_id."', create_round_id='".$round_id."';";
+			$qq .= ", create_transaction_id='".$transaction_id."', colored_amount='".$payout_amount."', amount='".$payout_amount."', create_block_id='".$block_id."', create_round_id='".$round_id."';";
 			$rr = $this->game->app->run_query($qq);
 			$output_id = $this->game->app->last_insert_id();
 			
@@ -390,7 +390,7 @@ class Event {
 					if ($payback_address) {
 						$qq = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, event_id='".$this->db_event['event_id']."', user_id='".$payback_address['user_id']."', address_id='".$payback_address['address_id']."'";
 						if ($payback_address['option_id'] > 0) $qq .= ", option_id=".$payback_address['option_id'];
-						$qq .= ", create_transaction_id='".$transaction_id."', amount='".$win_amount."', create_block_id='".($mining_block_id-1)."', create_round_id='".$this->block_to_round($mining_block_id-1)."';";
+						$qq .= ", create_transaction_id='".$transaction_id."', colored_amount='".$colored_amount."', amount='".$win_amount."', create_block_id='".($mining_block_id-1)."', create_round_id='".$this->block_to_round($mining_block_id-1)."';";
 						$rr = $this->game->app->run_query($qq);
 						$output_id = $this->game->app->last_insert_id();
 						

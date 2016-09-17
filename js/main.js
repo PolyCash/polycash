@@ -838,8 +838,23 @@ function game_form_event_rule_changed() {
 }
 function game_form_p2p_mode_changed() {
 	var p2p_mode = $('#game_form_p2p_mode').val();
-	if (p2p_mode == "rpc") $('#game_form_p2p_mode_rpc').show();
-	else $('#game_form_p2p_mode_rpc').hide();
+	$('#game_form_start_condition').empty();
+	if (p2p_mode == "rpc") {
+		$('#game_form_p2p_mode_rpc').show();
+		$('#game_form_giveaway_status').val("public_free");
+		$('#game_form_giveaway_amount').val(0);
+		$('#game_form_giveaway_status').prop('disabled', true);
+		$('#game_form_giveaway_amount').prop('disabled', true);
+		$('#game_form_start_condition').append('<option value="fixed_block">At a particular block</option>');
+		game_form_giveaway_status_changed();
+	}
+	else {
+		$('#game_form_p2p_mode_rpc').hide();
+		$('#game_form_giveaway_status').prop('disabled', false);
+		$('#game_form_giveaway_amount').prop('disabled', false);
+		$('#game_form_start_condition').append('<option value="fixed_time">At a particular time</option>');
+		$('#game_form_start_condition').append('<option value="players_joined">When enough people join</option>');
+	}
 }
 function save_game(action) {
 	var save_link_text = $('#save_game_btn').html();
