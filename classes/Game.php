@@ -1645,21 +1645,34 @@ class Game {
 	
 	public function game_status_explanation($user) {
 		$html = "";
-		if ($this->db_game['game_status'] == "editable") $html .= "The game creator hasn't yet published this game; it's parameters can still be changed.";
+		if ($this->db_game['game_status'] == "editable") $html .= "The game creator hasn't yet published this game; it's parameters can still be changed. ";
 		else if ($this->db_game['game_status'] == "published") {
 			if ($this->db_game['start_condition'] == "players_joined") {
 				$num_players = $this->paid_players_in_game();
 				$players_needed = ($this->db_game['start_condition_players']-$num_players);
 				if ($players_needed > 0) {
-					$html .= $num_players."/".$this->db_game['start_condition_players']." players have already joined, waiting for ".$players_needed." more players.";
+					$html .= $num_players."/".$this->db_game['start_condition_players']." players have already joined, waiting for ".$players_needed." more players. ";
 				}
 			}
 			else if ($this->db_game['start_condition'] == "fixed_block") {
-				$html .= "This game starts in ".($this->db_game['game_starting_block']-$this->last_block_id())." blocks.";
+				$html .= "This game starts in ".($this->db_game['game_starting_block']-$this->last_block_id())." blocks. ";
 			}
 			else $html .= "This game starts in ".$this->app->format_seconds(strtotime($this->db_game['start_datetime'])-time())." at ".$this->db_game['start_datetime'];
 		}
-		else if ($this->db_game['game_status'] == "completed") $html .= "This game is over.";
+		else if ($this->db_game['game_status'] == "completed") $html .= "This game is over. ";
+		
+		if ($this->db_game['p2p_mode'] == "rpc") {
+			$q = "SELECT COUNT(*) FROM blocks WHERE game_id='".$this->db_game['game_id']."';";
+			$total_blocks = $this->app->run_query($q)->fetch()['COUNT(*)'];
+			$q = "SELECT COUNT(*) FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_hash IS NULL;";
+			$missingheader_blocks = $this->app->run_query($q)->fetch()['COUNT(*)'];
+			$q = "SELECT COUNT(*) FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND locally_saved=0 AND block_id >= ".$this->db_game['game_starting_block'].";";
+			$missing_blocks = $this->app->run_query($q)->fetch()['COUNT(*)'];
+			$required_blocks = $total_blocks-$this->db_game['game_starting_block'];
+			$headers_pct_complete = 100*($total_blocks-$missingheader_blocks)/$total_blocks;
+			$blocks_pct_complete = 100*($required_blocks-$missing_blocks)/$required_blocks;
+			$html .= "<br/>Block headers: ".round($headers_pct_complete,2)."% complete. Blocks: ".round($blocks_pct_complete, 2)."% complete. ";
+		}
 		
 		if ($this->db_game['game_winning_rule'] == "event_points") {
 			$entity_score_info = $this->entity_score_info($user);
@@ -1895,6 +1908,8 @@ class Game {
 				die("RPC failed to get block $block_hash");
 			}
 			
+			if ($this->db_game['game_status'] == "published" && $this->db_game['start_condition'] == "fixed_block" && $block_height >= $this->db_game['game_starting_block']) $this->start_game();
+			
 			$block_within_round = $this->block_id_to_round_index($block_height);
 			
 			echo $block_height." ";
@@ -1903,7 +1918,7 @@ class Game {
 			
 			for ($i=0; $i<count($lastblock_rpc['tx']); $i++) {
 				$tx_hash = $lastblock_rpc['tx'][$i];
-				
+				echo $i."/".count($lastblock_rpc['tx'])." ".$tx_hash." ";
 				$db_transaction = $this->add_transaction($coin_rpc, $tx_hash, $block_height, true);
 				if ($db_transaction['transaction_desc'] != "transaction") $coins_created += $db_transaction['amount'];
 			}
@@ -1928,6 +1943,8 @@ class Game {
 	}
 	
 	public function add_transaction(&$coin_rpc, $tx_hash, $block_height, $require_inputs) {
+		$start_time = microtime(true);
+		
 		$q = "SELECT * FROM transactions WHERE tx_hash='".$tx_hash."';";
 		$r = $this->app->run_query($q);
 		
@@ -1936,6 +1953,8 @@ class Game {
 			if ($unconfirmed_tx['game_id'] == $this->db_game['game_id']) {
 				$q = "DELETE t.*, io.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';";
 				$r = $this->app->run_query($q);
+				echo "del.".(microtime(true)-$start_time)." ";
+				$start_time = microtime(true);
 			}
 		}
 		
@@ -1951,6 +1970,8 @@ class Game {
 					$block_height = $rpc_block['height'];
 				}
 			}
+			echo "get.".(microtime(true)-$start_time)." ";
+			$start_time = microtime(true);
 			
 			$outputs = $transaction_rpc["vout"];
 			$inputs = $transaction_rpc["vin"];
@@ -1976,6 +1997,9 @@ class Game {
 			$q .= ", time_created='".time()."';";
 			$r = $this->app->run_query($q);
 			$db_transaction_id = $this->app->last_insert_id();
+			
+			echo "insert.".(microtime(true)-$start_time)." ";
+			$start_time = microtime(true);
 			
 			$spend_io_ids = array();
 			$input_sum = 0;
@@ -2019,6 +2043,8 @@ class Game {
 					}
 				}
 			}
+			echo "inputs.".(microtime(true)-$start_time)." ";
+			$start_time = microtime(true);
 			
 			for ($j=0; $j<count($outputs); $j++) {
 				$option_id = false;
@@ -2068,6 +2094,8 @@ class Game {
 					}
 				}
 			}
+			echo "outputs.".(microtime(true)-$start_time)." ";
+			$start_time = microtime(true);
 			
 			if (count($spend_io_ids) > 0) {
 				$q = "UPDATE transaction_ios SET spend_count=spend_count+1, spend_status='spent', spend_transaction_id='".$db_transaction_id."', spend_transaction_ids=CONCAT(spend_transaction_ids, CONCAT('".$db_transaction_id."', ',')), spend_block_id='".$block_height."' WHERE io_id IN (".implode(",", $spend_io_ids).");";
@@ -2081,6 +2109,7 @@ class Game {
 			if ($require_inputs || $transaction_type != "transaction") $q .= ", has_all_inputs=1";
 			$q .= " WHERE transaction_id='".$db_transaction_id."';";
 			$r = $this->app->run_query($q);
+			echo "done.".(microtime(true)-$start_time)." \n";
 			
 			$db_transaction = $this->app->run_query("SELECT * FROM transactions WHERE transaction_id='".$db_transaction_id."';")->fetch();
 			return $db_transaction;
@@ -2150,7 +2179,7 @@ class Game {
 			else {
 				echo "Add block #$block_height (".$rpc_block['nextblockhash'].")\n";
 				$rpc_block = $coin_rpc->getblock($rpc_block['nextblockhash']);
-				$this->coind_add_block($coin_rpc, $rpc_block['hash'], $block_height, FALSE);
+				$this->coind_add_block($coin_rpc, $rpc_block['hash'], $block_height, true);
 				$this->ensure_events_until_block($block_height+1);
 			}
 		}
@@ -2274,7 +2303,7 @@ class Game {
 		}
 	}
 	
-	function delete_blocks_from_height($block_height) {
+	public function delete_blocks_from_height($block_height) {
 		echo "deleting from block #".$block_height." and up.<br/>\n";
 		$this->app->run_query("DELETE FROM transactions WHERE game_id='".$this->db_game['game_id']."' AND block_id >= ".$block_height.";");
 		$this->app->run_query("DELETE FROM transactions WHERE game_id='".$this->db_game['game_id']."' AND block_id IS NULL;");
@@ -2949,6 +2978,107 @@ class Game {
 				$round_option_i++;
 			}
 		}
+	}
+	
+	public function sync_initial($from_block_id) {
+		$start_time = microtime(true);
+		$coin_rpc = new jsonRPCClient('http://'.$this->db_game['rpc_username'].':'.$this->db_game['rpc_password'].'@127.0.0.1:'.$this->db_game['rpc_port'].'/');
+		
+		$start_round_id = false;
+		
+		$blocks = array();
+		$transactions = array();
+		$block_height = 0;
+		
+		$keep_looping = true;
+		
+		$new_transaction_count = 0;
+		
+		if (!empty($from_block_id)) {
+			if (!empty($from_block_id)) {
+				$block_height = $from_block_id-1;
+			}
+			
+			$q = "SELECT * FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id='".$block_height."';";
+			$r = $this->app->run_query($q);
+			
+			if ($r->rowCount() == 1) {
+				$db_prev_block = $r->fetch();
+				$temp_block = $coin_rpc->getblock($db_prev_block['block_hash']);
+				$current_hash = $temp_block['nextblockhash'];
+				$this->delete_blocks_from_height($block_height+1);
+			}
+			else die("Error, that block was not found (".$r->rowCount().").");
+		}
+		else {
+			$this->delete_reset_game('reset');
+			
+			$returnvals = $this->add_genesis_block($coin_rpc);
+			$current_hash = $returnvals['nextblockhash'];
+		}
+		
+		$this->insert_initial_blocks($coin_rpc);
+		$last_block_id = $this->last_block_id();
+		
+		if ($last_block_id > $this->db_game['game_starting_block'] && $this->db_game['game_status'] == "published") {
+			$this->start_game();
+		}
+		
+		$this->ensure_events_until_block($last_block_id+1);
+		echo "<br/>Finished inserting blocks at ".(microtime(true) - $start_time)." sec<br/>\n";
+		
+		echo "Syncing with daemon...<br/>\n";
+		echo $this->sync_coind($coin_rpc);
+		
+		echo "Completed sync at ".(microtime(true)-$start_time)." sec<br/>\n";
+	}
+	
+	public function explorer_block_list($from_block_id, $to_block_id) {
+		$html = "";
+		$q = "SELECT * FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id >= ".$from_block_id." AND block_id <= ".$to_block_id." ORDER BY block_id DESC;";
+		$r = $this->app->run_query($q);
+		while ($block = $r->fetch()) {
+			list($num_trans, $block_sum) = $this->block_stats($block);
+			$html .= "<div class=\"row\">";
+			$html .= "<div class=\"col-sm-3\">";
+			$html .= "<a href=\"/explorer/".$this->db_game['url_identifier']."/blocks/".$block['block_id']."\">Block #".$block['block_id']."</a>";
+			if ($block['locally_saved'] == 0) $html .= "&nbsp;(Pending)";
+			$html .= "</div>";
+			$html .= "<div class=\"col-sm-2\" style=\"text-align: right;\">".number_format($num_trans)."&nbsp;transactions</div>\n";
+			$html .= "<div class=\"col-sm-2\" style=\"text-align: right;\">".$this->app->format_bignum($block_sum/pow(10,8))."&nbsp;".$this->db_game['coin_name_plural']."</div>\n";
+			$html .= "</div>\n";
+		}
+		return $html;
+	}
+	
+	public function block_next_prev_links($block) {
+		$html = "";
+		$prev_link_target = false;
+		if ($explore_mode == "unconfirmed") $prev_link_target = "blocks/".$this->last_block_id();
+		else if ($block['block_id'] > 1) $prev_link_target = "blocks/".($block['block_id']-1);
+		if ($prev_link_target) $html .= '<a href="/explorer/'.$this->db_game['url_identifier'].'/'.$prev_link_target.'" style="margin-right: 30px;">&larr; Previous Block</a>';
+		
+		$next_link_target = false;
+		if ($explore_mode == "unconfirmed") {}
+		else if ($block['block_id'] == $this->last_block_id()) $next_link_target = "transactions/unconfirmed";
+		else if ($block['block_id'] < $this->last_block_id()) $next_link_target = "blocks/".($block['block_id']+1);
+		if ($next_link_target) $html .= '<a href="/explorer/'.$this->db_game['url_identifier'].'/'.$next_link_target.'">Next Block &rarr;</a>';
+		
+		return $html;
+	}
+	
+	public function event_next_prev_links($event) {
+		$html = "";
+		if ($event->db_event['event_index'] > 0) $html .= "<a href=\"/explorer/".$this->db_game['url_identifier']."/events/".$event->db_event['event_index']."\" style=\"margin-right: 30px;\">&larr; Previous Event</a>";
+		$html .= "<a href=\"/explorer/".$this->db_game['url_identifier']."/events/".($event->db_event['event_index']+2)."\">Next Event &rarr;</a>";
+		return $html;
+	}
+	
+	public function block_stats($block) {
+		$q = "SELECT COUNT(*), SUM(amount) FROM transactions WHERE game_id='".$this->db_game['game_id']."' AND block_id='".$block['block_id']."' AND amount > 0;";
+		$r = $this->app->run_query($q);
+		$r = $r->fetch(PDO::FETCH_NUM);
+		return array($r[0], $r[1]);
 	}
 }
 ?>

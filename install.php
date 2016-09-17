@@ -166,13 +166,13 @@ $GLOBALS['bitcoin_rpc_password'] = ""; // RPC password here
 					try {
 						$bitcoin_rpc = new jsonRPCClient('http://'.$GLOBALS['bitcoin_rpc_user'].':'.$GLOBALS['bitcoin_rpc_password'].'@127.0.0.1:'.$GLOBALS['bitcoin_port'].'/');
 						$getinfo = $bitcoin_rpc->getinfo();
-						echo " <font class=\"greentext\">Connected to Bitcoin on port ".$GLOBALS['bitcoin_port']."</font></b><br/>\n";
+						echo " <b><font class=\"greentext\">Connected to Bitcoin on port ".$GLOBALS['bitcoin_port']."</font></b><br/>\n";
 						echo "<pre>getinfo()\n";
 						print_r($getinfo);
 						echo "</pre>";
 					}
 					catch (Exception $e) {
-						echo "Error, failed to connect to Bitcoin by RPC. Check your parameters in includes/config.php<br/>\n";
+						echo "<b><font class=\"redtext\">Error, failed to connect to Bitcoin by RPC. Check your parameters in includes/config.php</font></b><br/>\n";
 					}
 				}
 				

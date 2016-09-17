@@ -302,8 +302,8 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					?>
 					<br/>
 					<?php
-					if ($event->db_event['event_index'] > 0) echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/events/".$event->db_event['event_index']."\" style=\"margin-right: 30px;\">&larr; Previous Event</a>";
-					echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/events/".($event->db_event['event_index']+2)."\">Next Event &rarr;</a>";
+					$event_next_prev_links = $game->event_next_prev_links($event);
+					echo $event_next_prev_links;
 					?>
 					<br/>
 					<a href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/events/">See all events</a><br/>
@@ -384,9 +384,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					echo '</div>';
 					
 					echo "<br/>\n";
-					
-					if ($event->db_event['event_index'] > 0) echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/events/".$event->db_event['event_index']."\" style=\"margin-right: 30px;\">&larr; Previous Event</a>";
-					echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/events/".($event->db_event['event_index']+2)."\">Next Event &rarr;</a>";
+					echo $event_next_prev_links;
 				}
 				else {
 					?>
@@ -419,11 +417,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 						$round_id = $game->block_to_round($block['block_id']);
 						$block_index = $game->block_id_to_round_index($block['block_id']);
 						
-						$q = "SELECT COUNT(*), SUM(amount) FROM transactions WHERE game_id='".$game->db_game['game_id']."' AND block_id='".$block['block_id']."' AND amount > 0;";
-						$r = $app->run_query($q);
-						$r = $r->fetch(PDO::FETCH_NUM);
-						$num_trans = $r[0];
-						$block_sum = $r[1];
+						list($num_trans, $block_sum) = $game->block_stats($block);
 						
 						echo "<h1>Block #".$block['block_id']."</h1>";
 						echo "<h3>".$game->db_game['name']."</h3>";
@@ -455,7 +449,10 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 						echo "Block #".$expected_block_id." is currently being mined.<br/>\n";
 					}
 					
-					echo '<div style="border-bottom: 1px solid #bbb;">';
+					$next_prev_links = $game->block_next_prev_links($block);
+					echo $next_prev_links;
+					
+					echo '<div style="margin-top: 10px; border-bottom: 1px solid #bbb;">';
 					
 					$q = "SELECT * FROM transactions WHERE game_id='".$game->db_game['game_id']."' AND block_id";
 					if ($explore_mode == "unconfirmed") $q .= " IS NULL";
@@ -469,17 +466,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					echo '</div>';
 					echo "<br/>\n";
 					
-					$prev_link_target = false;
-					if ($explore_mode == "unconfirmed") $prev_link_target = "blocks/".$game->last_block_id();
-					else if ($block['block_id'] > 1) $prev_link_target = "blocks/".($block['block_id']-1);
-					if ($prev_link_target) echo '<a href="/explorer/'.$game->db_game['url_identifier'].'/'.$prev_link_target.'" style="margin-right: 30px;">&larr; Previous Block</a>';
-					
-					$next_link_target = false;
-					if ($explore_mode == "unconfirmed") {}
-					else if ($block['block_id'] == $game->last_block_id()) $next_link_target = "transactions/unconfirmed";
-					else if ($block['block_id'] < $game->last_block_id()) $next_link_target = "blocks/".($block['block_id']+1);
-					if ($next_link_target) echo '<a href="/explorer/'.$game->db_game['url_identifier'].'/'.$next_link_target.'">Next Block &rarr;</a>';
-					
+					echo $next_prev_links;
 					?>
 					<br/><br/>
 					<a href="" onclick="$('#block_info').toggle('fast'); return false;">See block details</a><br/>
@@ -496,16 +483,38 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					<?php
 				}
 				else {
-					$q = "SELECT * FROM blocks WHERE game_id='".$game->db_game['game_id']."' ORDER BY block_id ASC;";
-					$r = $app->run_query($q);
+					$blocks_per_section = 20;
+					$to_block_id = $game->last_block_id();
+					$from_block_id = $to_block_id-$blocks_per_section+1;
+					if ($from_block_id < 0) $from_block_id = 0;
+					?>
+					<script type="text/javascript">
+					var explorer_blocks_per_section = <?php echo $blocks_per_section; ?>;
+					var explorer_block_list_sections = 1;
+					var explorer_block_list_from_block = <?php echo $from_block_id; ?>;
 					
-					echo "<h1>EmpireCoin - List of Blocks</h1>\n";
-					echo "<h3>".$game->db_game['name']."</h3>";
-					echo "<ul>\n";
-					while ($block = $r->fetch()) {
-						echo "<li><a href=\"/explorer/".$game->db_game['url_identifier']."/blocks/".$block['block_id']."\">Block #".$block['block_id']."</a></li>\n";
+					function explorer_block_list_show_more() {
+						explorer_block_list_from_block = explorer_block_list_from_block-explorer_blocks_per_section;
+						explorer_block_list_sections++;
+						var section = explorer_block_list_sections;
+						$('#explorer_block_list').append('<div id="explorer_block_list_'+section+'">Loading...</div>');
+						
+						$.get("/ajax/explorer_block_list.php?game_id="+games[0].game_id+"&from_block="+explorer_block_list_from_block+"&blocks_per_section="+explorer_blocks_per_section, function(html) {
+							$('#explorer_block_list_'+section).html(html);
+							console.log(result);
+						});
 					}
-					echo "</ul>\n";
+					</script>
+					<?php
+					echo "<h1>".$game->db_game['name']." - Blocks</h1>";
+					
+					echo '<div id="explorer_block_list" style="margin-bottom: 15px;">';
+					echo '<div id="explorer_block_list_0">';
+					echo $game->explorer_block_list($from_block_id, $to_block_id);
+					echo '</div>';
+					echo '</div>';
+					
+					echo '<a href="" onclick="explorer_block_list_show_more(); return false;">Show More</a>';
 					
 					echo "<br/>\n";
 				}
