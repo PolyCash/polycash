@@ -10,6 +10,7 @@ $user_game = false;
 
 $game_q = "SELECT * FROM games WHERE url_identifier=".$app->quote_escape($game_identifier)." AND (game_status IN ('running','completed','published'));";
 $game_r = $app->run_query($game_q);
+
 if ($game_r->rowCount() == 1) {
 	$db_game = $game_r->fetch();
 	$game = new Game($app, $db_game['game_id']);
@@ -27,7 +28,7 @@ if ($game_r->rowCount() == 1) {
 		}
 	}
 	
-	if (!$user_game && $game->db_game['creator_id'] > 0) $game = false;
+	if ($game->db_game['p2p_mode'] == "none" && !$user_game && $game->db_game['creator_id'] > 0) $game = false;
 }
 
 if (rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer") $explore_mode = "games";
@@ -576,7 +577,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				if ($transaction['block_id'] > 0) {
 					$block_index = $game->block_id_to_round_index($transaction['block_id']);
 					$round_id = $game->block_to_round($transaction['block_id']);
-					$label_txt = "Confirmed in the <a href=\"/explorer/".$game->db_game['url_identifier']."/blocks/".$transaction['block_id']."\">block ".$block_index."</a>";
+					$label_txt = "Confirmed in <a href=\"/explorer/".$game->db_game['url_identifier']."/blocks/".$transaction['block_id']."\">block ".$block_index."</a> of round #".$round_id;
 				}
 				else {
 					$block_index = false;
