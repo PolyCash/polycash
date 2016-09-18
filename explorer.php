@@ -4,6 +4,7 @@ include('includes/get_session.php');
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
 $explore_mode = $uri_parts[3];
+if ($explore_mode == "tx") $explore_mode = "transactions";
 $game_identifier = $uri_parts[2];
 
 $user_game = false;
@@ -379,7 +380,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 						$q = "SELECT * FROM transactions WHERE game_id='".$game->db_game['game_id']."' AND block_id='".$i."' AND amount > 0 ORDER BY transaction_id ASC;";
 						$r = $app->run_query($q);
 						while ($transaction = $r->fetch()) {
-							echo $game->render_transaction($transaction, FALSE, "");
+							echo $game->render_transaction($transaction, FALSE);
 						}
 					}
 					echo '</div>';
@@ -422,7 +423,18 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 						
 						echo "<h1>Block #".$block['block_id']."</h1>";
 						echo "<h3>".$game->db_game['name']."</h3>";
-						echo "This block contains $num_trans transactions totaling ".number_format($block_sum/pow(10,8), 2)." coins.<br/>";
+						if (!empty($block['num_transactions']) && $num_trans != $block['num_transactions']) {
+							echo "Loaded ".number_format($num_trans)." / ".number_format($block['num_transactions'])." transactions (".number_format(100*$num_trans/$block['num_transactions'], 2)."%).<br/>\n";
+						}
+						echo "This block contains ".number_format($num_trans)." transactions totaling ".number_format($block_sum/pow(10,8), 2)." coins.<br/>";
+						if ($block['locally_saved'] == 1) {
+							echo $GLOBALS['coin_brand_name']." took ".number_format($block['load_time'], 2)." seconds to load this block.<br/>\n";
+						}
+						else {
+							$q = "SELECT SUM(load_time) FROM transactions WHERE game_id='".$game->db_game['game_id']."' AND block_id='".$block['block_id']."';";
+							$load_time = $app->run_query($q)->fetch()['SUM(load_time)'];
+							echo "Still loading... ".number_format($load_time, 2)." seconds elapsed.<br/>\n";
+						}
 						$events = $game->events_by_block($block['block_id']);
 						echo "This block is referenced in ".count($events)." events<br/>\n";
 						for ($i=0; $i<count($events); $i++) {
@@ -462,7 +474,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					$r = $app->run_query($q);
 					
 					while ($transaction = $r->fetch()) {
-						echo $game->render_transaction($transaction, FALSE, "");
+						echo $game->render_transaction($transaction, FALSE);
 					}
 					echo '</div>';
 					echo "<br/>\n";
@@ -484,7 +496,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					<?php
 				}
 				else {
-					$blocks_per_section = 20;
+					$blocks_per_section = 40;
 					$to_block_id = $game->last_block_id();
 					$from_block_id = $to_block_id-$blocks_per_section+1;
 					if ($from_block_id < 0) $from_block_id = 0;
@@ -521,7 +533,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				}
 			}
 			else if ($explore_mode == "addresses") {
-				echo "<h3>EmpireCoin Address: ".$address['address']."</h3>\n";
+				echo "<h3>".$game->db_game['name']." Address: ".$address['address']."</h3>\n";
 				
 				$q = "SELECT * FROM transactions t, transaction_ios i WHERE i.address_id='".$address['address_id']."' AND (t.transaction_id=i.create_transaction_id OR t.transaction_id=i.spend_transaction_id) GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;";
 				$r = $app->run_query($q);
@@ -531,16 +543,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				
 				echo '<div style="border-bottom: 1px solid #bbb;">';
 				while ($transaction_io = $r->fetch()) {
-					$block_index = $game->block_id_to_round_index($transaction_io['block_id']);
-					$round_id = $game->block_to_round($transaction_io['block_id']);
-					if ($transaction_io['block_id'] == "") {
-						$desc = "This transaction has not yet been confirmed.";
-					}
-					else {
-						$desc = "Confirmed in ";
-						if ($block_index != 0) $desc .= "<a href=\"/explorer/".$game->db_game['url_identifier']."/blocks/".$transaction_io['block_id']."\">block ".$block_index."</a>";
-					}
-					echo $game->render_transaction($transaction_io, $address['address_id'], $desc);
+					echo $game->render_transaction($transaction_io, $address['address_id']);
 				}
 				echo "</div>\n";
 				
@@ -552,7 +555,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 				
 				echo '<div style="border-bottom: 1px solid #bbb;">';
 				while ($transaction = $r->fetch()) {
-					echo $game->render_transaction($transaction, FALSE, "");
+					echo $game->render_transaction($transaction, FALSE);
 				}
 				echo '</div>';
 			}
@@ -573,21 +576,21 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					catch (Exception $e) {}
 				}
 				
-				echo "<h3>EmpireCoin Transaction: ".$transaction['tx_hash']."</h3>\n";
+				echo "<h3>".$game->db_game['name']." Transaction: ".$transaction['tx_hash']."</h3>\n";
 				if ($transaction['block_id'] > 0) {
 					$block_index = $game->block_id_to_round_index($transaction['block_id']);
 					$round_id = $game->block_to_round($transaction['block_id']);
-					$label_txt = "Confirmed in <a href=\"/explorer/".$game->db_game['url_identifier']."/blocks/".$transaction['block_id']."\">block ".$block_index."</a> of round #".$round_id;
 				}
 				else {
 					$block_index = false;
 					$round_id = false;
-					if ($transaction['transaction_desc'] != 'giveaway') {
-						$label_txt = "This transaction is <a href=\"/explorer/".$game->db_game['url_identifier']."/transactions/unconfirmed\">not yet confirmed</a>.";
-					}
 				}
-				echo '<div style="border-bottom: 1px solid #bbb;">';
-				echo $game->render_transaction($transaction, false, $label_txt);
+				echo "This transaction has ".(int) $transaction['num_inputs']." inputs and ".(int) $transaction['num_outputs']." outputs totalling ".$app->format_bignum($transaction['amount']/pow(10,8))." ".$game->db_game['coin_name_plural'].". ";
+				echo "Loaded in ".number_format($transaction['load_time'], 2)." seconds.";
+				echo "<br/>\n";
+				
+				echo '<div style="margin-top: 10px; border-bottom: 1px solid #bbb;">';
+				echo $game->render_transaction($transaction, false);
 				echo "</div>\n";
 				
 				if ($rpc_transaction || $rpc_raw_transaction) {

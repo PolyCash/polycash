@@ -81,7 +81,11 @@ if ($thisuser) {
 						$q .= " WHERE game_id='".$game->db_game['game_id']."';";
 						$r = $app->run_query($q);
 						
-						$game->ensure_events_until_block(1);
+						if ($game->db_game['p2p_mode'] == "rpc") {
+							$game->sync_initial(false);
+						}
+						
+						$game->ensure_events_until_block($game->last_block_id()+1);
 						
 						$app->output_message(1, "Great, your changes have been saved.", $game_info);
 					}

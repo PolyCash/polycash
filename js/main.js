@@ -109,7 +109,7 @@ function format_coins(amount) {
 	else return parseFloat((amount).toPrecision(5));
 }
 function explorer_search() {
-	window.location ='/explorer/'+game_url_identifier+'/transactions/'+$('#explorer_search').val();
+	window.location ='/explorer/'+games[0].game_url_identifier+'/transactions/'+$('#explorer_search').val();
 }
 
 // Initialize Variables

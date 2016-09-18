@@ -960,11 +960,18 @@ class Game {
 		$this->update_option_votes();
 	}
 	
-	public function render_transaction($transaction, $selected_address_id, $firstcell_text) {
+	public function render_transaction($transaction, $selected_address_id) {
 		$html = "";
 		$html .= '<div class="row bordered_row"><div class="col-md-6">';
+		if (!empty($transaction['block_id'])) {
+			if ($transaction['position_in_block'] == "") $html .= "Confirmed";
+			else $html .= "#".(int)$transaction['position_in_block'];
+			$html .= " in block <a href=\"/explorer/".$this->db_game['url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>, ";
+		}
+		$html .= (int)$transaction['num_inputs']." inputs, ".(int)$transaction['num_outputs']." outputs, ".$this->app->format_bignum($transaction['amount']/pow(10,8))." ".$this->db_game['coin_name_plural'];
+		if (empty($transaction['block_id'])) $html .= ", not yet confirmed";
+		$html .= "<br/>\n";
 		$html .= '<a href="/explorer/'.$this->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'" class="display_address" style="display: inline-block; max-width: 100%; overflow: hidden;">TX:&nbsp;'.$transaction['tx_hash'].'</a><br/>';
-		if ($firstcell_text != "") $html .= $firstcell_text."<br/>\n";
 		
 		if ($transaction['transaction_desc'] == "giveaway") {
 			$q = "SELECT * FROM game_giveaways WHERE transaction_id='".$transaction['transaction_id']."';";
@@ -1908,6 +1915,8 @@ class Game {
 				die("RPC failed to get block $block_hash");
 			}
 			
+			if ($db_block['num_transactions'] == "") $this->app->run_query("UPDATE blocks SET num_transactions=".count($lastblock_rpc['tx'])." WHERE internal_block_id=".$db_block['internal_block_id'].";");
+			
 			if ($this->db_game['game_status'] == "published" && $this->db_game['start_condition'] == "fixed_block" && $block_height >= $this->db_game['game_starting_block']) $this->start_game();
 			
 			$block_within_round = $this->block_id_to_round_index($block_height);
@@ -1916,12 +1925,13 @@ class Game {
 			
 			$coins_created = 0;
 			
+			$start_time = microtime(true);
 			$tx_error = false;
 			for ($i=0; $i<count($lastblock_rpc['tx']); $i++) {
 				$tx_hash = $lastblock_rpc['tx'][$i];
 				echo $i."/".count($lastblock_rpc['tx'])." ".$tx_hash." ";
 				$successful = true;
-				$db_transaction = $this->add_transaction($coin_rpc, $tx_hash, $block_height, true, $successful);
+				$db_transaction = $this->add_transaction($coin_rpc, $tx_hash, $block_height, true, $successful, $i);
 				if (!$successful) $tx_error = true;
 				echo "\n";
 				if ($db_transaction['transaction_desc'] != "transaction") $coins_created += $db_transaction['amount'];
@@ -1930,6 +1940,7 @@ class Game {
 			if (!$tx_error) {
 				$this->app->run_query("UPDATE blocks SET locally_saved=1 WHERE internal_block_id='".$db_block['internal_block_id']."';");
 			}
+			$this->app->run_query("UPDATE blocks SET load_time=load_time+".(microtime(true)-$start_time)." WHERE internal_block_id='".$db_block['internal_block_id']."';");
 			$this->app->run_query("UPDATE games SET coins_in_existence=coins_in_existence+".$coins_created.", coins_in_existence_block=".$block_height." WHERE game_id='".$this->db_game['game_id']."';");
 			
 			echo "Took ".(microtime(true)-$start_time)." sec to add block #".$block_height."<br/>\n";
@@ -1946,12 +1957,13 @@ class Game {
 		$require_inputs = true;
 		if ($this->db_game['payout_weight'] == "coin") $require_inputs = false;
 		$successful = true;
-		$this->add_transaction($coin_rpc, $tx_hash, false, $require_inputs, $successful);
+		$this->add_transaction($coin_rpc, $tx_hash, false, $require_inputs, $successful, false);
 	}
 	
-	public function add_transaction(&$coin_rpc, $tx_hash, $block_height, $require_inputs, &$successful) {
+	public function add_transaction(&$coin_rpc, $tx_hash, $block_height, $require_inputs, &$successful, $position_in_block) {
 		$successful = true;
 		$start_time = microtime(true);
+		$benchmark_time = $start_time;
 		
 		$q = "SELECT * FROM transactions WHERE game_id='".$this->db_game['game_id']."' AND tx_hash='".$tx_hash."';";
 		$r = $this->app->run_query($q);
@@ -1964,8 +1976,8 @@ class Game {
 				if ($unconfirmed_tx['game_id'] == $this->db_game['game_id']) {
 					$q = "DELETE t.*, io.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';";
 					$r = $this->app->run_query($q);
-					echo "del.".(microtime(true)-$start_time)." ";
-					$start_time = microtime(true);
+					echo "del.".(microtime(true)-$benchmark_time)." ";
+					$benchmark_time = microtime(true);
 				}
 			}
 		}
@@ -1983,8 +1995,8 @@ class Game {
 						$block_height = $rpc_block['height'];
 					}
 				}
-				echo "get.".(microtime(true)-$start_time)." ";
-				$start_time = microtime(true);
+				echo "get.".(microtime(true)-$benchmark_time)." ";
+				$benchmark_time = microtime(true);
 				
 				$outputs = $transaction_rpc["vout"];
 				$inputs = $transaction_rpc["vin"];
@@ -1995,7 +2007,8 @@ class Game {
 				}
 				else $transaction_type = "transaction";
 				
-				$q = "INSERT INTO transactions SET game_id='".$this->db_game['game_id']."', transaction_desc='".$transaction_type."', tx_hash='".$tx_hash."'";
+				$q = "INSERT INTO transactions SET game_id='".$this->db_game['game_id']."', transaction_desc='".$transaction_type."', tx_hash='".$tx_hash."', num_inputs='".count($inputs)."', num_outputs='".count($outputs)."'";
+				if ($position_in_block !== false) $q .= ", position_in_block='".$position_in_block."'";
 				if ($block_height) {
 					if ($transaction_type == "votebase") {
 						$vote_identifier = $this->addr_text_to_vote_identifier($outputs[1]["scriptPubKey"]["addresses"][0]);
@@ -2011,8 +2024,8 @@ class Game {
 				$r = $this->app->run_query($q);
 				$db_transaction_id = $this->app->last_insert_id();
 				
-				echo "insert.".(microtime(true)-$start_time)." ";
-				$start_time = microtime(true);
+				echo "insert.".(microtime(true)-$benchmark_time)." ";
+				$benchmark_time = microtime(true);
 				
 				$spend_io_ids = array();
 				$input_sum = 0;
@@ -2030,7 +2043,7 @@ class Game {
 						}
 						else {
 							$child_successful = true;
-							$new_tx = $this->add_transaction($coin_rpc, $inputs[$j]["txid"], false, false, $child_successful);
+							$new_tx = $this->add_transaction($coin_rpc, $inputs[$j]["txid"], false, false, $child_successful, false);
 							$r = $this->app->run_query($q);
 							
 							if ($r->rowCount() > 0) {
@@ -2038,7 +2051,7 @@ class Game {
 							}
 							else {
 								$successful = false;
-								$error_message = "Failed to create inputs for tx #".$db_transaction_id.", looked for tx_hash=".$inputs[$j]['txid'].", vout=".$inputs[$j]['vout'];
+								$error_message = "Failed to create inputs for tx #".$db_transaction_id.", created tx #".$new_tx['transaction_id']." then looked for tx_hash=".$inputs[$j]['txid'].", vout=".$inputs[$j]['vout'];
 								$this->app->log($error_message);
 							}
 						}
@@ -2059,8 +2072,8 @@ class Game {
 						}
 					}
 				}
-				echo "inputs.".(microtime(true)-$start_time)." ";
-				$start_time = microtime(true);
+				echo "inputs.".(microtime(true)-$benchmark_time)." ";
+				$benchmark_time = microtime(true);
 				
 				if ($successful) {
 					for ($j=0; $j<count($outputs); $j++) {
@@ -2111,8 +2124,8 @@ class Game {
 							}
 						}
 					}
-					echo "outputs.".(microtime(true)-$start_time)." ";
-					$start_time = microtime(true);
+					echo "outputs.".(microtime(true)-$benchmark_time)." ";
+					$benchmark_time = microtime(true);
 					
 					if (count($spend_io_ids) > 0) {
 						$q = "UPDATE transaction_ios SET spend_count=spend_count+1, spend_status='spent', spend_transaction_id='".$db_transaction_id."', spend_transaction_ids=CONCAT(spend_transaction_ids, CONCAT('".$db_transaction_id."', ',')), spend_block_id='".$block_height."' WHERE io_id IN (".implode(",", $spend_io_ids).");";
@@ -2122,17 +2135,17 @@ class Game {
 					$fee_amount = ($input_sum-$output_sum);
 					if ($transaction_type != "transaction" || !$require_inputs) $fee_amount = 0;
 					
-					$q = "UPDATE transactions SET amount='".$output_sum."', has_all_outputs=1, fee_amount='".$fee_amount."'";
+					$q = "UPDATE transactions SET load_time=load_time+".(microtime(true)-$start_time).", amount='".$output_sum."', has_all_outputs=1, fee_amount='".$fee_amount."'";
 					if ($require_inputs || $transaction_type != "transaction") $q .= ", has_all_inputs=1";
 					$q .= " WHERE transaction_id='".$db_transaction_id."';";
 					$r = $this->app->run_query($q);
-					echo "done.".(microtime(true)-$start_time);
+					echo "done.".(microtime(true)-$benchmark_time);
 					
 					$db_transaction = $this->app->run_query("SELECT * FROM transactions WHERE transaction_id='".$db_transaction_id."';")->fetch();
 					return $db_transaction;
 				}
 				else {
-					echo "done.".(microtime(true)-$start_time);
+					echo "done.".(microtime(true)-$benchmark_time);
 					return false;
 				}
 			}
@@ -3069,7 +3082,15 @@ class Game {
 			$html .= "<a href=\"/explorer/".$this->db_game['url_identifier']."/blocks/".$block['block_id']."\">Block #".$block['block_id']."</a>";
 			if ($block['locally_saved'] == 0) $html .= "&nbsp;(Pending)";
 			$html .= "</div>";
-			$html .= "<div class=\"col-sm-2\" style=\"text-align: right;\">".number_format($num_trans)."&nbsp;transactions</div>\n";
+			$html .= "<div class=\"col-sm-2";
+			$block_loading = false;
+			if ($block['num_transactions'] > 0 && $block['num_transactions'] != $num_trans) {
+				$block_loading = true;
+				$html .= " redtext";
+			}
+			$html .= "\" style=\"text-align: right;\">".number_format($num_trans);
+			if ($block_loading) $html .= "/".number_format($block['num_transactions']);
+			$html .= "&nbsp;transactions</div>\n";
 			$html .= "<div class=\"col-sm-2\" style=\"text-align: right;\">".$this->app->format_bignum($block_sum/pow(10,8))."&nbsp;".$this->db_game['coin_name_plural']."</div>\n";
 			$html .= "</div>\n";
 		}
