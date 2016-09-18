@@ -962,7 +962,8 @@ class Game {
 	
 	public function render_transaction($transaction, $selected_address_id) {
 		$html = "";
-		$html .= '<div class="row bordered_row"><div class="col-md-6">';
+		$html .= '<div class="row bordered_row"><div class="col-md-12">';
+		
 		if (!empty($transaction['block_id'])) {
 			if ($transaction['position_in_block'] == "") $html .= "Confirmed";
 			else $html .= "#".(int)$transaction['position_in_block'];
@@ -970,8 +971,9 @@ class Game {
 		}
 		$html .= (int)$transaction['num_inputs']." inputs, ".(int)$transaction['num_outputs']." outputs, ".$this->app->format_bignum($transaction['amount']/pow(10,8))." ".$this->db_game['coin_name_plural'];
 		if (empty($transaction['block_id'])) $html .= ", not yet confirmed";
-		$html .= "<br/>\n";
-		$html .= '<a href="/explorer/'.$this->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'" class="display_address" style="display: inline-block; max-width: 100%; overflow: hidden;">TX:&nbsp;'.$transaction['tx_hash'].'</a><br/>';
+		$html .= '. <a href="/explorer/'.$this->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'" class="display_address" style="max-width: 100%; overflow: hidden;">TX:&nbsp;'.$transaction['tx_hash'].'</a>';
+		
+		$html .= '</div><div class="col-md-6">';
 		
 		if ($transaction['transaction_desc'] == "giveaway") {
 			$q = "SELECT * FROM game_giveaways WHERE transaction_id='".$transaction['transaction_id']."';";
