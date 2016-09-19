@@ -1673,14 +1673,30 @@ class Game {
 		if ($this->db_game['p2p_mode'] == "rpc") {
 			$q = "SELECT COUNT(*) FROM blocks WHERE game_id='".$this->db_game['game_id']."';";
 			$total_blocks = $this->app->run_query($q)->fetch()['COUNT(*)'];
+			
 			$q = "SELECT COUNT(*) FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_hash IS NULL;";
 			$missingheader_blocks = $this->app->run_query($q)->fetch()['COUNT(*)'];
+			
 			$q = "SELECT COUNT(*) FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND locally_saved=0 AND block_id >= ".$this->db_game['game_starting_block'].";";
 			$missing_blocks = $this->app->run_query($q)->fetch()['COUNT(*)'];
+			
 			$required_blocks = $total_blocks-$this->db_game['game_starting_block'];
+			
+			$block_fraction = 0;
+			if ($missing_blocks > 0) {
+				$q = "SELECT MAX(block_id) FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND locally_saved=1;";
+				$loading_block_id = $this->app->run_query($q)->fetch()['MAX(block_id)']+1;
+				$loading_block = $this->app->run_query("SELECT * FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id='".$loading_block_id."';")->fetch();
+				list($loading_transactions, $loading_block_sum) = $this->block_stats($loading_block);
+				$block_fraction = $loading_transactions/$loading_block['num_transactions'];
+			}
 			$headers_pct_complete = 100*($total_blocks-$missingheader_blocks)/$total_blocks;
-			$blocks_pct_complete = 100*($required_blocks-$missing_blocks)/$required_blocks;
+			$blocks_pct_complete = 100*($required_blocks-($missing_blocks-$block_fraction))/$required_blocks;
+			
 			$html .= "<br/>Block headers: ".round($headers_pct_complete,2)."% complete. Blocks: ".round($blocks_pct_complete, 2)."% complete. ";
+			if ($missing_blocks > 0) {
+				$html .= "Loaded ".$loading_transactions."/".$loading_block['num_transactions']." in block <a href=\"/explorer/".$this->db_game['url_identifier']."/blocks/".$loading_block_id."\">#".$loading_block_id."</a>. ";
+			}
 		}
 		
 		if ($this->db_game['game_winning_rule'] == "event_points") {
