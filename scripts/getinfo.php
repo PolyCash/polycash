@@ -11,12 +11,15 @@ if (!empty($argv)) {
 if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	try {
 		$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['bitcoin_rpc_user'].':'.$GLOBALS['bitcoin_rpc_password'].'@127.0.0.1:'.$GLOBALS['bitcoin_port'].'/');
-		echo "<pre>getinfo()\n";
+		echo "Bitcoin<br/>\n<pre>";
+		echo "mempool: ".count($coin_rpc->getrawmempool())." transactions\n";
+		echo "getinfo()\n";
 		print_r($coin_rpc->getinfo());
 		echo "</pre><br/>\n";
 	}
 	catch (Exception $e) {
 		echo $e;
+		echo "</pre><br/>\n";
 	}
 	
 	$real_game_r = $app->run_query("SELECT * FROM games WHERE p2p_mode='rpc';");
@@ -26,12 +29,15 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		try {
 			$coin_rpc = new jsonRPCClient('http://'.$db_real_game['rpc_username'].':'.$db_real_game['rpc_password'].'@127.0.0.1:'.$db_real_game['rpc_port'].'/');
 			
-			echo "<pre>getinfo()\n";
+			echo "<pre>";
+			echo "mempool: ".count($coin_rpc->getrawmempool())." transactions\n";
+			echo "getinfo()\n";
 			print_r($coin_rpc->getinfo());
 			echo "</pre><br/>\n";
 		}
 		catch (Exception $e) {
 			echo $e;
+			echo "</pre><br/>\n";
 		}
 	}
 }

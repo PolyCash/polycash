@@ -13,6 +13,7 @@ if (!empty($argv)) {
 }
 
 if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+	echo "<pre>";
 	$main_loop_running = (int) $app->get_site_constant("main_loop_running");
 	
 	if ($main_loop_running == 0) {
@@ -34,21 +35,29 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		while ($db_real_game = $r->fetch()) {
 			$game_id2real_game_i[$db_real_game['game_id']] = $real_game_i;
 			$real_games[$real_game_i] = new Game($app, $db_real_game['game_id']);
-			$coin_rpcs[$real_game_i] = new jsonRPCClient('http://'.$db_real_game['rpc_username'].':'.$db_real_game['rpc_password'].'@127.0.0.1:'.$db_real_game['rpc_port'].'/');
+			try {
+				$coin_rpcs[$real_game_i] = new jsonRPCClient('http://'.$db_real_game['rpc_username'].':'.$db_real_game['rpc_password'].'@127.0.0.1:'.$db_real_game['rpc_port'].'/');
+				$coin_rpcs[$real_game_i]->getinfo();
+			}
+			catch (Exception $e) {
+				$coin_rpcs[$real_game_i] = false;
+			}
 			$real_game_i++;
 		}
-
+		
 		for ($real_game_i=0; $real_game_i<count($real_games); $real_game_i++) {
 			if ($real_games[$real_game_i]->db_game['game_status'] == "running" && $real_games[$real_game_i]->db_game['always_generate_coins'] == 1) {
-				$q = "SELECT * FROM blocks WHERE game_id='".$real_games[$real_game_i]->db_game['game_id']."' ORDER BY block_id DESC LIMIT 1;";
-				$r = $app->run_query($q);
+				if ($coin_rpcs[$real_game_i]) {
+					$q = "SELECT * FROM blocks WHERE game_id='".$real_games[$real_game_i]->db_game['game_id']."' ORDER BY block_id DESC LIMIT 1;";
+					$r = $app->run_query($q);
 
-				if ($r->rowCount() > 0) {
-					$lastblock = $r->fetch();
-					
-					$coin_rpcs[$real_game_i]->setgenerate(false);
-					$coin_rpcs[$real_game_i]->setgenerate(true);
-					echo "Started generating coins for ".$real_games[$real_game_i]->db_game['name']."...<br/>\n";
+					if ($r->rowCount() > 0) {
+						$lastblock = $r->fetch();
+						
+						$coin_rpcs[$real_game_i]->setgenerate(false);
+						$coin_rpcs[$real_game_i]->setgenerate(true);
+						echo "Started generating coins for ".$real_games[$real_game_i]->db_game['name']."...\n";
+					}
 				}
 			}
 		}
@@ -91,7 +100,7 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		$r = $GLOBALS['app']->run_query($q);
 		while ($running_game = $r->fetch()) {
 			$running_games[count($running_games)] = new Game($app, $running_game['game_id']);
-			echo "Including game: ".$running_game['name']."<br/>\n";
+			echo "Including game: ".$running_game['name']."\n";
 		}
 		
 		$app->delete_unconfirmable_transactions();
@@ -103,16 +112,24 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 					$loop_start_time = microtime(true);
 
 					for ($running_game_i=0; $running_game_i<count($running_games); $running_game_i++) {
-						echo "\n\n".$running_games[$running_game_i]->db_game['name']."<br/>\n";
+						echo "\n".$running_games[$running_game_i]->db_game['name']."\n";
 						if ($running_games[$running_game_i]->db_game['sync_coind_by_cron'] == 1 && $running_games[$running_game_i]->db_game['p2p_mode'] == "rpc") {
 							$real_game_i = $game_id2real_game_i[$running_games[$running_game_i]->db_game['game_id']];
-							echo $running_games[$running_game_i]->sync_coind($coin_rpcs[$real_game_i]);
+							if (!empty($coin_rpcs[$real_game_i])) {
+								echo "sync_coind() for ".$running_games[$running_game_i]->db_game['name']."\n";
+								echo $running_games[$running_game_i]->sync_coind($coin_rpcs[$real_game_i]);
+							}
 						}
 						if ($running_games[$running_game_i]->db_game['p2p_mode'] == "none") {
 							$remaining_prob = round($loop_target_time/$running_games[$running_game_i]->db_game['seconds_per_block'], 4);
 							$thisgame_loop_start_time = microtime(true);
 							do {
+								$benchmark_time = microtime(true);
+								echo "update_db_game() ...";
 								$running_games[$running_game_i]->update_db_game();
+								echo (microtime(true)-$benchmark_time)." sec\n";
+								$benchmark_time = microtime(true);
+								echo "Add blocks...";
 								if ($running_games[$running_game_i]->db_game['game_status'] == "running") {
 									$last_block_id = $running_games[$running_game_i]->last_block_id();
 								
@@ -126,20 +143,26 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 										echo $running_games[$running_game_i]->new_block();
 									}
 									else {
-										echo "No block<br/>\n";
+										echo "No block\n";
 									}
 								}
+								else $remaining_prob = 0;
+								
+								echo (microtime(true)-$benchmark_time)." sec\n";
+								$benchmark_time = microtime(true);
 							}
 							while ($remaining_prob > 0 && microtime(true)-$thisgame_loop_start_time < 60);
 						}
-					
+						echo "Apply user strategies...";
 						echo $running_games[$running_game_i]->apply_user_strategies();
+						echo (microtime(true)-$benchmark_time)." sec\n";
+						$benchmark_time = microtime(true);
 					}
 					$loop_stop_time = microtime(true);
 					$loop_time = $loop_stop_time-$loop_start_time;
 					$loop_target_time = max(1, $loop_time);
 					$sleep_usec = round(pow(10,6)*($loop_target_time - $loop_time));
-					echo "script run time: ".(microtime(true)-$script_start_time).", sleeping ".$sleep_usec/pow(10,6)." seconds.<br/>\n";
+					echo "script run time: ".(microtime(true)-$script_start_time).", sleeping ".$sleep_usec/pow(10,6)." seconds.\n";
 					usleep($sleep_usec);
 					$app->set_site_constant("loop_target_time", round($loop_target_time, 4));
 				}
@@ -155,10 +178,13 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		$sec_until_refresh = round($script_target_time-$runtime_sec);
 		if ($sec_until_refresh < 0) $sec_until_refresh = 0;
 
+		echo "</pre>";
 		if (empty($argv)) echo '<script type="text/javascript">setTimeout("window.location=window.location;", '.(1000*$sec_until_refresh).');</script>'."\n";
-		echo "Script ran for ".round($runtime_sec, 2)." seconds.<br/>\n";
+		echo "Script ran for ".round($runtime_sec, 2)." seconds.\n";
+		echo "<pre>";
 	}
 	else echo "Skipped starting the game loop; it's already running.\n";
+	echo "</pre>";
 }
 else echo "Error: incorrect key supplied in cron/minutely_main.php\n";
 ?>

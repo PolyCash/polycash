@@ -35,8 +35,6 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 				$real_game_obj->load_all_blocks($coin_rpc, TRUE);
 				echo "Loading all block headers...\n";
 				$real_game_obj->load_all_block_headers($coin_rpc, FALSE);
-				echo "Loading all blocks...\n";
-				$real_game_obj->load_all_blocks($coin_rpc, FALSE);
 			} catch (Exception $e) {
 				echo "Error, skipped ".$real_game['name']." because RPC connection failed.<br/>\n";
 			}

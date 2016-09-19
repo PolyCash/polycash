@@ -970,8 +970,15 @@ class Game {
 			$html .= " in block <a href=\"/explorer/".$this->db_game['url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>, ";
 		}
 		$html .= (int)$transaction['num_inputs']." inputs, ".(int)$transaction['num_outputs']." outputs, ".$this->app->format_bignum($transaction['amount']/pow(10,8))." ".$this->db_game['coin_name_plural'];
+		
+		$transaction_fee = $transaction['fee_amount'];
+		if ($transaction['transaction_desc'] != "coinbase" && $transaction['transaction_desc'] != "votebase") {
+			$fee_disp = $this->app->format_bignum($transaction_fee/pow(10,8));
+			$html .= ", ".$fee_disp;
+			$html .= " tx fee";
+		}
 		if (empty($transaction['block_id'])) $html .= ", not yet confirmed";
-		$html .= '. <a href="/explorer/'.$this->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'" class="display_address" style="max-width: 100%; overflow: hidden;">TX:&nbsp;'.$transaction['tx_hash'].'</a>';
+		$html .= '. <br/><a href="/explorer/'.$this->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'" class="display_address" style="max-width: 100%; overflow: hidden;">TX:&nbsp;'.$transaction['tx_hash'].'</a>';
 		
 		$html .= '</div><div class="col-md-6">';
 		
@@ -1036,13 +1043,6 @@ class Game {
 			if ($output['payout_amount'] > 0) $html .= '&nbsp;&nbsp;<font class="greentext">+'.$this->app->format_bignum($output['payout_amount']/pow(10,8)).'</font>';
 			$html .= "<br/>\n";
 			$output_sum += $output['amount'];
-		}
-		$transaction_fee = $transaction['fee_amount'];
-		if ($transaction['transaction_desc'] != "coinbase" && $transaction['transaction_desc'] != "votebase") {
-			$fee_disp = $this->app->format_bignum($transaction_fee/pow(10,8));
-			$html .= "Transaction fee: ".$fee_disp." ";
-			if ($fee_disp == '1') $html .= $this->db_game['coin_name'];
-			else $html .= $this->db_game['coin_name_plural'];
 		}
 		$html .= '</div></div>'."\n";
 		
@@ -1933,7 +1933,7 @@ class Game {
 				$tx_hash = $lastblock_rpc['tx'][$i];
 				echo $i."/".count($lastblock_rpc['tx'])." ".$tx_hash." ";
 				$successful = true;
-				$db_transaction = $this->add_transaction($coin_rpc, $tx_hash, $block_height, true, $successful, $i);
+				$db_transaction = $this->add_transaction($coin_rpc, $tx_hash, $block_height, true, $successful, $i, false);
 				if (!$successful) $tx_error = true;
 				echo "\n";
 				if ($db_transaction['transaction_desc'] != "transaction") $coins_created += $db_transaction['amount'];
@@ -1959,14 +1959,18 @@ class Game {
 		$require_inputs = true;
 		if ($this->db_game['payout_weight'] == "coin") $require_inputs = false;
 		$successful = true;
-		$this->add_transaction($coin_rpc, $tx_hash, false, $require_inputs, $successful, false);
+		$this->add_transaction($coin_rpc, $tx_hash, false, $require_inputs, $successful, false, false);
 	}
 	
-	public function add_transaction(&$coin_rpc, $tx_hash, $block_height, $require_inputs, &$successful, $position_in_block) {
+	public function add_transaction(&$coin_rpc, $tx_hash, $block_height, $require_inputs, &$successful, $position_in_block, $only_vout) {
 		$successful = true;
 		$start_time = microtime(true);
 		$benchmark_time = $start_time;
 		
+		if ($only_vout) {
+			$error_message = "Downloading vout #".$only_vout." in ".$tx_hash;
+			echo $error_message."\n";
+		}
 		$q = "SELECT * FROM transactions WHERE game_id='".$this->db_game['game_id']."' AND tx_hash='".$tx_hash."';";
 		$r = $this->app->run_query($q);
 		
@@ -2045,7 +2049,8 @@ class Game {
 						}
 						else {
 							$child_successful = true;
-							$new_tx = $this->add_transaction($coin_rpc, $inputs[$j]["txid"], false, false, $child_successful, false);
+							echo "\n -> $j ";
+							$new_tx = $this->add_transaction($coin_rpc, $inputs[$j]["txid"], false, false, $child_successful, false, $inputs[$j]["vout"]);
 							$r = $this->app->run_query($q);
 							
 							if ($r->rowCount() > 0) {
@@ -2055,6 +2060,7 @@ class Game {
 								$successful = false;
 								$error_message = "Failed to create inputs for tx #".$db_transaction_id.", created tx #".$new_tx['transaction_id']." then looked for tx_hash=".$inputs[$j]['txid'].", vout=".$inputs[$j]['vout'];
 								$this->app->log($error_message);
+								echo $error_message."\n";
 							}
 						}
 						if ($successful) {
@@ -2078,7 +2084,13 @@ class Game {
 				$benchmark_time = microtime(true);
 				
 				if ($successful) {
-					for ($j=0; $j<count($outputs); $j++) {
+					$from_vout = 0;
+					$to_vout = count($outputs)-1;
+					if ($only_vout) {
+						$from_vout = $only_vout;
+						$to_vout = $only_vout;
+					}
+					for ($j=$from_vout; $j<=$to_vout; $j++) {
 						$option_id = false;
 						$event = false;
 						$address_text = $outputs[$j]["scriptPubKey"]["addresses"][0];
@@ -2137,8 +2149,9 @@ class Game {
 					$fee_amount = ($input_sum-$output_sum);
 					if ($transaction_type != "transaction" || !$require_inputs) $fee_amount = 0;
 					
-					$q = "UPDATE transactions SET load_time=load_time+".(microtime(true)-$start_time).", amount='".$output_sum."', has_all_outputs=1, fee_amount='".$fee_amount."'";
-					if ($require_inputs || $transaction_type != "transaction") $q .= ", has_all_inputs=1";
+					$q = "UPDATE transactions SET load_time=load_time+".(microtime(true)-$start_time);
+					if (!$only_vout) $q .= ", has_all_outputs=1";
+					if ($require_inputs || $transaction_type != "transaction") $q .= ", has_all_inputs=1, amount='".$output_sum."', fee_amount='".$fee_amount."'";
 					$q .= " WHERE transaction_id='".$db_transaction_id."';";
 					$r = $this->app->run_query($q);
 					echo "done.".(microtime(true)-$benchmark_time);
@@ -2162,7 +2175,7 @@ class Game {
 	
 	public function sync_coind(&$coin_rpc) {
 		$html = "";
-		
+		echo "Running Game->sync_coind() for ".$this->db_game['name']."\n";
 		$last_block_id = $this->last_block_id();
 
 		$startblock_q = "SELECT * FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id='".$last_block_id."';";
@@ -3082,7 +3095,7 @@ class Game {
 			$html .= "<div class=\"row\">";
 			$html .= "<div class=\"col-sm-3\">";
 			$html .= "<a href=\"/explorer/".$this->db_game['url_identifier']."/blocks/".$block['block_id']."\">Block #".$block['block_id']."</a>";
-			if ($block['locally_saved'] == 0) $html .= "&nbsp;(Pending)";
+			if ($block['locally_saved'] == 0 && $block['block_id'] >= $this->db_game['game_starting_block']) $html .= "&nbsp;(Pending)";
 			$html .= "</div>";
 			$html .= "<div class=\"col-sm-2";
 			$block_loading = false;
