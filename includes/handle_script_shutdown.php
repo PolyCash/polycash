@@ -14,5 +14,6 @@ function script_shutdown(){
 	echo "script terminating...\n";
 	$GLOBALS['app']->set_site_constant($GLOBALS['shutdown_lock_name'], 0);
 	echo "set_site_constant(".$GLOBALS['shutdown_lock_name'].", 0);\n\n";
+	die();
 }
 ?>

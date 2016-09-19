@@ -34,8 +34,6 @@ if ($thisuser) {
 				$start_datetime = date("Y-m-d g:\\0\\0", strtotime($_REQUEST['start_date']." ".$_REQUEST['start_time'].":00"));
 				$q .= "start_datetime='".$start_datetime."', ";
 				
-				if ($_REQUEST['p2p_mode'] == "rpc") $q .= "sync_coind_by_cron=1, ";
-				
 				for ($i=0; $i<count($game_form_vars); $i++) {
 					$game_var = $game_form_vars[$i];
 					$game_val = $_REQUEST[$game_form_vars[$i]];

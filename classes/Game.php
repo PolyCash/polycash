@@ -2239,7 +2239,8 @@ class Game {
 		while ($keep_looping);
 	}
 	
-	public function load_all_block_headers(&$coin_rpc, $required_blocks_only) {
+	public function load_all_block_headers(&$coin_rpc, $required_blocks_only, $max_execution_time) {
+		$start_time = microtime(true);
 		$html = "";
 		
 		// Load headers for blocks with NULL block hash
@@ -2257,6 +2258,7 @@ class Game {
 				$this->coind_add_block($coin_rpc, $unknown_block_hash, $unknown_block['block_id'], TRUE);
 				
 				$html .= $unknown_block['block_id']." ";
+				if ((microtime(true)-$start_time) >= $max_execution_time) $keep_looping = false;
 			}
 			else $keep_looping = false;
 		}
@@ -2963,8 +2965,9 @@ class Game {
 			else {
 				$start_round = $this->block_to_round($this->db_game['game_starting_block']);
 				$event_type = $this->add_event_type($db_option_entities, false, false);
+				echo "looping from round #".($start_round-1)." to ".$round_id."<br/>\n";
 				for ($i=$start_round-1; $i<$round_id; $i++) {
-					$event_name = $event_type['name']." - Round #".($i-$start_round+2);
+					$event_name = $event_type['name']." #".($i-$start_round+2);
 					$this->add_event_by_event_type($event_type, $db_option_entities, $option_group, $round_option_i, $event_i, $event_name, false);
 					$event_i++;
 				}
@@ -3008,9 +3011,10 @@ class Game {
 	}
 	
 	public function add_event_by_event_type(&$event_type, &$db_option_entities, &$option_group, &$round_option_i, &$event_i, $event_name, $event_entity) {
+		$skip_blocks = ceil(($this->db_game['game_starting_block']-1)/$this->db_game['round_length'])*$this->db_game['round_length'];
 		$starting_round = floor($event_i/$this->db_game['events_per_round'])+1;
-		$event_starting_block = ($starting_round-1)*$this->db_game['round_length']+1;
-		$event_final_block = $starting_round*$this->db_game['round_length'];
+		$event_starting_block = $skip_blocks+($starting_round-1)*$this->db_game['round_length']+1;
+		$event_final_block = $skip_blocks+$starting_round*$this->db_game['round_length'];
 		
 		if ($event_i%$this->db_game['events_per_round'] == 0) $round_option_i = 0;
 		
@@ -3079,9 +3083,6 @@ class Game {
 		
 		$this->ensure_events_until_block($last_block_id+1);
 		echo "<br/>Finished inserting blocks at ".(microtime(true) - $start_time)." sec<br/>\n";
-		
-		echo "Syncing with daemon...<br/>\n";
-		echo $this->sync_coind($coin_rpc);
 		
 		echo "Completed sync at ".(microtime(true)-$start_time)." sec<br/>\n";
 	}

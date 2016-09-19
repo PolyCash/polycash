@@ -41,8 +41,9 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			}
 		}
 		
-		echo "Done generating addresses at ".round(microtime(true)-$script_start_time, 2)." seconds.<br/>\n";
+		echo "Done generating addresses at ".round(microtime(true)-$script_start_time, 2)." seconds.\n";
 	}
+	else echo "Address miner is already running.\n";
 }
 else echo "Error: incorrect key supplied in cron/address_miner.php\n";
 ?>

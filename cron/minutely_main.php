@@ -113,11 +113,14 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 
 					for ($running_game_i=0; $running_game_i<count($running_games); $running_game_i++) {
 						echo "\n".$running_games[$running_game_i]->db_game['name']."\n";
-						if ($running_games[$running_game_i]->db_game['sync_coind_by_cron'] == 1 && $running_games[$running_game_i]->db_game['p2p_mode'] == "rpc") {
+						if ($running_games[$running_game_i]->db_game['p2p_mode'] == "rpc") {
 							$real_game_i = $game_id2real_game_i[$running_games[$running_game_i]->db_game['game_id']];
 							if (!empty($coin_rpcs[$real_game_i])) {
-								echo "sync_coind() for ".$running_games[$running_game_i]->db_game['name']."\n";
-								echo $running_games[$running_game_i]->sync_coind($coin_rpcs[$real_game_i]);
+								$running_games[$running_game_i]->load_new_blocks($coin_rpcs[$real_game_i]);
+								if ($running_games[$running_game_i]->db_game['sync_coind_by_cron'] == 1) {
+									echo "sync_coind() for ".$running_games[$running_game_i]->db_game['name']."\n";
+									echo $running_games[$running_game_i]->sync_coind($coin_rpcs[$real_game_i]);
+								}
 							}
 						}
 						if ($running_games[$running_game_i]->db_game['p2p_mode'] == "none") {

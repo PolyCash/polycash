@@ -874,6 +874,8 @@ class App {
 		else $html .= "Game does not end";
 		$html .= "</div></div>\n";
 		
+		$html .= '<div class="row"><div class="col-sm-5">Starts on block:</div><div class="col-sm-7">'.$db_game['game_starting_block']."</div></div>\n";
+		
 		$html .= '<div class="row"><div class="col-sm-5">Cost to join:</div><div class="col-sm-7">';
 		if ($db_game['giveaway_status'] == "invite_pay" || $db_game['giveaway_status'] == "public_pay") $html .= $this->format_bignum($db_game['invite_cost'])." ".$invite_currency['short_name']."s";
 		else $html .= "Free";

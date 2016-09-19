@@ -65,12 +65,12 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 			$explore_mode = "initial";
 		}
 		else {
-			$event_index = intval($event_id)-1;
-			if ($event_index == -1) {
+			if ($event_id === "") {
 				$mode_error = false;
 				$pagetitle = "Results - ".$game->db_game['name'];
 			}
 			else {
+				$event_index = (int) $event_id-1;
 				$q = "SELECT * FROM events WHERE event_index='".$event_index."' AND game_id='".$game->db_game['game_id']."';";
 				$r = $app->run_query($q);
 				
@@ -78,7 +78,7 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					$db_event = $r->fetch();
 					$event = new Event($game, false, $db_event['event_id']);
 					
-					$q = "SELECT o.*, op.*, t.amount FROM event_outcomes o JOIN events e ON o.event_id=e.event_id LEFT JOIN options op ON o.winning_option_id=op.option_id LEFT JOIN transactions t ON o.payout_transaction_id=t.transaction_id WHERE e.event_id=".$db_event['event_id'].";";
+					$q = "SELECT e.event_starting_block, e.event_final_block, o.*, op.*, t.amount FROM event_outcomes o JOIN events e ON o.event_id=e.event_id LEFT JOIN options op ON o.winning_option_id=op.option_id LEFT JOIN transactions t ON o.payout_transaction_id=t.transaction_id WHERE e.event_id=".$db_event['event_id'].";";
 					$r = $app->run_query($q);
 					
 					$pagetitle = "Results: ".$event->db_event['event_name'];
@@ -292,8 +292,8 @@ if ($explore_mode == "games" || ($game && in_array($explore_mode, array('index',
 					else echo $game->db_game['coin_name_plural']." were";
 					echo " paid in fees during this round.<br/>\n";
 					
-					$from_block_id = (($this_round-1)*$game->db_game['round_length'])+1;
-					$to_block_id = ($this_round*$game->db_game['round_length']);
+					$from_block_id = $db_event['event_starting_block'];
+					$to_block_id = $db_event['event_final_block'];
 					
 					$q = "SELECT * FROM blocks WHERE game_id='".$game->db_game['game_id']."' AND block_id >= '".$from_block_id."' AND block_id <= ".$to_block_id." ORDER BY block_id ASC;";
 					$r = $app->run_query($q);
