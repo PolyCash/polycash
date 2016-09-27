@@ -19,7 +19,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	if (!empty($_REQUEST['block_id'])) $from_block_id = (int) $_REQUEST['block_id'];
 	else $from_block_id = false;
 	
-	$game->sync_initial($from_block_id);
+	echo $game->sync_initial($from_block_id);
 }
 else {
 	echo "Error: you supplied the wrong key for scripts/sync_coind_initial.php\n";

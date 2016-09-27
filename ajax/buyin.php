@@ -19,7 +19,7 @@ if ($thisuser && $game) {
 		if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "submit") {
 			$btc_amount = floatval($_REQUEST['btc_amount']);
 			
-			$q = "INSERT INTO game_buyins SET status='unpaid', pay_currency_id='".$btc_currency['currency_id']."', settle_currency_id='".$invite_currency['currency_id']."', invoice_address_id='".$user_game['buyin_invoice_address_id']."', user_id='".$thisuser->db_user['user_id']."', game_id='".$game->db_game['game_id']."', pay_amount='".$btc_amount."', time_created='".time()."', expire_time='".(time()+$GLOBALS['invoice_expiration_seconds'])."';";
+			$q = "INSERT INTO game_buyins SET status='unpaid', pay_currency_id='".$btc_currency['currency_id']."', settle_currency_id='".$invite_currency['currency_id']."', currency_address_id='".$user_game['buyin_currency_address_id']."', user_id='".$thisuser->db_user['user_id']."', game_id='".$game->db_game['game_id']."', pay_amount='".$btc_amount."', time_created='".time()."', expire_time='".(time()+$GLOBALS['invoice_expiration_seconds'])."';";
 			$r = $app->run_query($q);
 			$app->output_message(1, "Great! ".ucfirst($game->db_game['coin_name_plural'])." will be credited to your account as soon as your BTC payment is confirmed.", false);
 		}
@@ -103,13 +103,13 @@ if ($thisuser && $game) {
 						}
 						
 						if ($game->db_game['buyin_policy'] == "unlimited" || $user_buyin_limit['user_buyin_limit'] > 0) {
-							if ($user_game['buyin_invoice_address_id'] > 0) {
-								$invoice_address = $app->fetch_invoice_address_by_id($user_game['buyin_invoice_address_id']);
+							if ($user_game['buyin_currency_address_id'] > 0) {
+								$currency_address = $app->fetch_currency_address_by_id($user_game['buyin_currency_address_id']);
 							}
 							else {
-								$invoice_address_id = $app->new_invoice_address();
-								$invoice_address = $app->fetch_invoice_address_by_id($invoice_address_id);
-								$q = "UPDATE user_games SET buyin_invoice_address_id='".$invoice_address_id."' WHERE user_game_id='".$user_game['user_game_id']."';";
+								$currency_address_id = $app->new_currency_address(2, false);
+								$currency_address = $app->fetch_currency_address_by_id($currency_address_id);
+								$q = "UPDATE user_games SET buyin_currency_address_id='".$currency_address_id."' WHERE user_game_id='".$user_game['user_game_id']."';";
 								$r = $app->run_query($q);
 							}
 							?>
@@ -129,9 +129,9 @@ if ($thisuser && $game) {
 								<?php if ($invite_currency['currency_id'] != $btc_currency['currency_id']) { ?>
 								The <?php echo $invite_currency['short_name']; ?> / BTC exchange rate is <div id="btc_exchange_rate" style="display: inline-block;"></div> <?php echo $invite_currency['short_name']; ?>s / BTC right now. 
 								<?php } ?>
-								For <div id="buyin_amount_disp" style="display: inline-block;"></div> <?php echo $invite_currency['short_name']."s"; ?>, you'll receive approximately <div id="buyin_receive_amount_disp" style="display: inline-block;"></div> <?php echo $game->db_game['coin_name_plural']; ?>. Send <div id="buyin_send_amount_btc" style="display: inline-block;"></div> BTC to <a target="_blank" href="https://blockchain.info/address/<?php echo $invoice_address['pub_key']; ?>"><?php echo $invoice_address['pub_key']; ?></a>
+								For <div id="buyin_amount_disp" style="display: inline-block;"></div> <?php echo $invite_currency['short_name']."s"; ?>, you'll receive approximately <div id="buyin_receive_amount_disp" style="display: inline-block;"></div> <?php echo $game->db_game['coin_name_plural']; ?>. Send <div id="buyin_send_amount_btc" style="display: inline-block;"></div> BTC to <a target="_blank" href="https://blockchain.info/address/<?php echo $currency_address['pub_key']; ?>"><?php echo $currency_address['pub_key']; ?></a>
 								<br/>
-								<center><img style="margin: 10px;" src="/render_qr_code.php?data=<?php echo $invoice_address['pub_key']; ?>" /></center>
+								<center><img style="margin: 10px;" src="/render_qr_code.php?data=<?php echo $currency_address['pub_key']; ?>" /></center>
 								<br/>
 								After making the payment please confirm the amount that you sent:<br/>
 								<div class="row">

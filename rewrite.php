@@ -8,6 +8,9 @@ if ($uri_parts[1] == "reset_password") {
 else if ($uri_parts[1] == "wallet") {
 	include("wallet.php");
 }
+else if ($uri_parts[1] == "accounts") {
+	include("accounts.php");
+}
 else if ($uri_parts[1] == "event_types") {
 	include("matches.php");
 }

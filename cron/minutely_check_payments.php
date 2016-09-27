@@ -11,7 +11,7 @@ if (!empty($argv)) {
 }
 
 if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
-	$q = "SELECT * FROM currency_invoices i JOIN invoice_addresses a ON i.invoice_address_id=a.invoice_address_id WHERE i.status != 'confirmed' AND i.status != 'settled' AND (i.status='unconfirmed' OR i.expire_time >= ".time().");";
+	$q = "SELECT * FROM currency_invoices i JOIN currency_addresses a ON i.currency_address_id=a.currency_address_id WHERE i.status != 'confirmed' AND i.status != 'settled' AND (i.status='unconfirmed' OR i.expire_time >= ".time().");";
 	$r = $app->run_query($q);
 
 	echo "Checking ".$r->rowCount()." invoices.<br/>\n";
@@ -68,14 +68,14 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		}
 	}
 	
-	$q = "SELECT * FROM game_buyins gb JOIN invoice_addresses a ON gb.invoice_address_id=a.invoice_address_id WHERE gb.status IN ('unpaid','unconfirmed') AND (gb.expire_time >= ".time()." OR gb.status='unconfirmed');";
+	$q = "SELECT * FROM game_buyins gb JOIN currency_addresses a ON gb.currency_address_id=a.currency_address_id WHERE gb.status IN ('unpaid','unconfirmed') AND (gb.expire_time >= ".time()." OR gb.status='unconfirmed');";
 	$r = $app->run_query($q);
 	echo "Checking ".$r->rowCount()." buyins.<br/>\n";
 	
 	while ($buyin = $r->fetch()) {
 		$confirm_it = false;
 
-		$qq = "SELECT SUM(gb.unconfirmed_amount_paid) FROM game_buyins gb JOIN invoice_addresses a ON gb.invoice_address_id=a.invoice_address_id WHERE gb.buyin_id != '".$buyin['buyin_id']."' AND a.invoice_address_id='".$buyin['invoice_address_id']."' AND gb.status='confirmed';";
+		$qq = "SELECT SUM(gb.unconfirmed_amount_paid) FROM game_buyins gb JOIN currency_addresses a ON gb.currency_address_id=a.currency_address_id WHERE gb.buyin_id != '".$buyin['buyin_id']."' AND a.currency_address_id='".$buyin['currency_address_id']."' AND gb.status='confirmed';";
 		$rr = $app->run_query($qq);
 		$existing_bal = $rr->fetch(PDO::FETCH_NUM);
 		$existing_bal = floatval($existing_bal[0]);
@@ -124,7 +124,7 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				$success = $buyin_game->try_capture_giveaway($buyin_user, $invitation);
 				$qq = "UPDATE game_buyins SET settle_amount='".$invite_amount."', giveaway_id='".$giveaway['giveaway_id']."' WHERE buyin_id='".$buyin['buyin_id']."';";
 				$rr = $app->run_query($qq);
-				$qq = "UPDATE game_buyins SET status='unpaid' WHERE invoice_address_id='".$buyin['invoice_address_id']."' AND status='unconfirmed';";
+				$qq = "UPDATE game_buyins SET status='unpaid' WHERE currency_address_id='".$buyin['currency_address_id']."' AND status='unconfirmed';";
 				$rr = $app->run_query($qq);
 			}
 		}

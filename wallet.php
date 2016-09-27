@@ -186,7 +186,7 @@ if ($thisuser) {
 
 								$pay_currency = $app->fetch_currency_by_id($invoice['pay_currency_id']);
 								$settle_currency = $app->fetch_currency_by_id($invoice['settle_currency_id']);
-								$invoice_address = $app->fetch_invoice_address_by_id($invoice['invoice_address_id']);
+								$currency_address = $app->fetch_currency_address_by_id($invoice['currency_address_id']);
 
 								$coins_per_currency = ($requested_game['giveaway_amount']/pow(10,8))/$requested_game['invite_cost'];
 								echo "This game has an initial exchange rate of ".$app->format_bignum($coins_per_currency)." ".$requested_game['coin_name_plural']." per ".$invite_currency['short_name'].". ";
@@ -207,8 +207,8 @@ if ($thisuser) {
 								echo "<br/>";
 								if ($invite_currency['abbreviation'] == "btc") echo "To join, send ".$app->decimal_to_float($invoice['pay_amount'])." to ";
 								else echo "Make the ".$app->decimal_to_float($requested_game['invite_cost'])." ".$invite_currency['short_name']." payment in Bitcoins by sending ".$app->decimal_to_float($invoice['pay_amount'])." BTC to ";
-								echo "<a target=\"_blank\" href=\"https://blockchain.info/address/".$invoice_address['pub_key']."\">".$invoice_address['pub_key']."</a><br/>\n";
-								echo '<center><img style="margin: 10px;" src="/render_qr_code.php?data='.$invoice_address['pub_key'].'" /></center>';
+								echo "<a target=\"_blank\" href=\"https://blockchain.info/address/".$currency_address['pub_key']."\">".$currency_address['pub_key']."</a><br/>\n";
+								echo '<center><img style="margin: 10px;" src="/render_qr_code.php?data='.$currency_address['pub_key'].'" /></center>';
 								echo 'You will automatically be redirected when the Bitcoins are received.';
 							}
 							else {
@@ -670,7 +670,10 @@ if ($thisuser && $game) {
 					Pay fees on every transaction of:<br/>
 					<div class="row">
 						<div class="col-sm-4"><input class="form-control" name="transaction_fee" value="<?php echo $app->format_bignum($user_strategy['transaction_fee']/pow(10,8)); ?>" placeholder="0.001" /></div>
-						<div class="col-sm-4 form-control-static"><?php echo $game->db_game['coin_name_plural']; ?></div>
+						<div class="col-sm-4 form-control-static"><?php
+						if ($game->db_game['p2p_mode'] == "rpc") echo $game->db_game['short_name_plural'];
+						else echo $game->db_game['coin_name_plural'];
+						?></div>
 					</div>
 					<div class="row">
 						<div class="col-sm-3">
@@ -1196,6 +1199,23 @@ if ($thisuser && $game) {
 										<button class="btn btn-warning" onclick="edit_game_rpc_parameters(); return false;" id="edit_rpc_btn">Edit RPC parameters</button>
 									</div>
 								</div>
+								<div class="row">
+									<div class="col-sm-6 form-control-static">
+										Runs on Blockchain:
+									</div>
+									<div class="col-sm-6">
+										<select id="game_form_base_currency_id" class="form-control">
+											<option value="">-- Please Select --</option>
+											<?php
+											$q = "SELECT * FROM currencies WHERE has_blockchain=1 ORDER BY name ASC;";
+											$r = $app->run_query($q);
+											while ($currency = $r->fetch()) {
+												echo "<option value=\"".$currency['currency_id']."\">".$currency['name']."</option>\n";
+											}
+											?>
+										</select>
+									</div>
+								</div>
 							</div>
 							<div class="row">
 								<div class="col-sm-6 form-control-static">
@@ -1307,6 +1327,12 @@ if ($thisuser && $game) {
 								</div>
 							</div>
 							<div class="row">
+								<div class="col-sm-6 form-control-static">Game starts on block:</div>
+								<div class="col-sm-6">
+									<input class="form-control" type="text" style="text-align: right;" id="game_form_game_starting_block" />
+								</div>
+							</div>
+							<div class="row">
 								<div class="col-sm-6 form-control-static">
 									Blocks per round:
 								</div>
@@ -1324,6 +1350,18 @@ if ($thisuser && $game) {
 								</div>
 								<div class="col-sm-3 form-control-static">
 									seconds
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">Escrow address:</div>
+								<div class="col-sm-6">
+									<input class="form-control" type="text" id="game_form_escrow_address" />
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">Genesis transaction:</div>
+								<div class="col-sm-6">
+									<input class="form-control" type="text" id="game_form_genesis_tx_hash" />
 								</div>
 							</div>
 							<div class="row">
@@ -1534,12 +1572,6 @@ if ($thisuser && $game) {
 									<input class="form-control" type="text" style="text-align: right;" id="game_form_default_max_voting_fraction" />
 								</div>
 								<div class="col-sm-3 form-control-static">%</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">Game starts on block:</div>
-								<div class="col-sm-6">
-									<input class="form-control" type="text" style="text-align: right;" id="game_form_game_starting_block" />
-								</div>
 							</div>
 							
 							<div style="height: 10px;"></div>

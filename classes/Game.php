@@ -12,7 +12,7 @@ class Game {
 	}
 	
 	public function update_db_game() {
-		$q = "SELECT * FROM games WHERE game_id='".$this->game_id."';";
+		$q = "SELECT g.*, c.short_name, c.short_name_plural FROM games g LEFT JOIN currencies c ON g.base_currency_id=c.currency_id WHERE g.game_id='".$this->game_id."';";
 		$r = $this->app->run_query($q);
 		$this->db_game = $r->fetch() or die("Error, could not load game #".$this->game_id);
 	}
@@ -43,11 +43,11 @@ class Game {
 	}
 	
 	public function new_nonuser_address() {
-		$db_address = $this->new_invoice_address(false, false);
+		$db_address = $this->new_currency_address(false, false);
 		return $db_address['address_id'];
 	}
 	
-	public function new_invoice_address($required_option_index, $delete_optionless) {
+	public function new_currency_address($required_option_index, $delete_optionless) {
 		$loop = true;
 		do {
 			$keySet = bitcoin::getNewKeySet();
@@ -61,7 +61,7 @@ class Game {
 			
 			if ($delete_optionless && $option_index === false) {}
 			else {
-				$q = "INSERT INTO invoice_addresses SET currency_id=1, pub_key='".$keySet['pubAdd']."', priv_enc='".$encWIF."';";
+				$q = "INSERT INTO currency_addresses SET currency_id=2, pub_key='".$keySet['pubAdd']."', priv_enc='".$encWIF."';";
 				$r = $this->app->run_query($q);
 				$db_address = $this->create_or_fetch_address($keySet['pubAdd'], false, false, false, false, true);
 			}
@@ -505,7 +505,7 @@ class Game {
 			}
 		}
 		
-		$mined_address = $this->new_invoice_address(false, false);
+		$mined_address = $this->new_currency_address(false, false);
 		$mined_transaction_id = $this->create_transaction(array(false), array($this->app->pow_reward_in_round($this->db_game, $justmined_round)+$fee_sum), false, false, $last_block_id, "coinbase", false, array($mined_address['address_id']), false, 0);
 		
 		// Run payouts
@@ -2238,21 +2238,24 @@ class Game {
 		$last_block_id = $this->last_block_id();
 		$last_block = $this->app->run_query("SELECT * FROM blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id='".$last_block_id."';")->fetch();
 		$block_height = $last_block['block_id'];
-		$rpc_block = $coin_rpc->getblock($last_block['block_hash']);
-		$keep_looping = true;
-		do {
-			$block_height++;
-			if (empty($rpc_block['nextblockhash'])) {
-				$keep_looping = false;
+		
+		if ($last_block['block_hash'] != "") {
+			$rpc_block = $coin_rpc->getblock($last_block['block_hash']);
+			$keep_looping = true;
+			do {
+				$block_height++;
+				if (empty($rpc_block['nextblockhash'])) {
+					$keep_looping = false;
+				}
+				else {
+					echo "Add block #$block_height (".$rpc_block['nextblockhash'].")\n";
+					$rpc_block = $coin_rpc->getblock($rpc_block['nextblockhash']);
+					$this->coind_add_block($coin_rpc, $rpc_block['hash'], $block_height, true);
+					$this->ensure_events_until_block($block_height+1);
+				}
 			}
-			else {
-				echo "Add block #$block_height (".$rpc_block['nextblockhash'].")\n";
-				$rpc_block = $coin_rpc->getblock($rpc_block['nextblockhash']);
-				$this->coind_add_block($coin_rpc, $rpc_block['hash'], $block_height, true);
-				$this->ensure_events_until_block($block_height+1);
-			}
+			while ($keep_looping);
 		}
-		while ($keep_looping);
 	}
 	
 	public function load_all_block_headers(&$coin_rpc, $required_blocks_only, $max_execution_time) {
@@ -2350,7 +2353,7 @@ class Game {
 		
 		$getinfo = $coin_rpc->getinfo();
 		
-		echo "Inserting blocks ".($db_block_height+1)." to ".$getinfo['blocks']."<br/>\n";
+		$html = "Inserting blocks ".($db_block_height+1)." to ".$getinfo['blocks']."<br/>\n";
 		
 		$start_insert = "INSERT INTO blocks (game_id, block_id, time_created) VALUES ";
 		$modulo = 0;
@@ -2361,7 +2364,7 @@ class Game {
 				$this->app->run_query($q);
 				$modulo = 0;
 				$q = $start_insert;
-				echo ". ";
+				$html .= ". ";
 			}
 			else $modulo++;
 		
@@ -2370,8 +2373,9 @@ class Game {
 		if ($modulo > 0) {
 			$q = substr($q, 0, strlen($q)-2).";";
 			$this->app->run_query($q);
-			echo ". ";
+			$html .= ". ";
 		}
+		return $html;
 	}
 	
 	public function delete_blocks_from_height($block_height) {
@@ -2932,7 +2936,7 @@ class Game {
 				if ($try_by_sci) {
 					$new_voting_addr_count = 0;
 					do {
-						$db_address = $this->new_invoice_address($option_index, true);
+						$db_address = $this->new_currency_address($option_index, true);
 						$new_voting_addr_count++;
 					}
 					while ($new_voting_addr_count < ($this->db_game['min_unallocated_addresses']-$num_addr));
@@ -3054,6 +3058,7 @@ class Game {
 	}
 	
 	public function sync_initial($from_block_id) {
+		$html = "";
 		$start_time = microtime(true);
 		$coin_rpc = new jsonRPCClient('http://'.$this->db_game['rpc_username'].':'.$this->db_game['rpc_password'].'@127.0.0.1:'.$this->db_game['rpc_port'].'/');
 		
@@ -3090,17 +3095,19 @@ class Game {
 			$current_hash = $returnvals['nextblockhash'];
 		}
 		
-		$this->insert_initial_blocks($coin_rpc);
+		$html .= $this->insert_initial_blocks($coin_rpc);
 		$last_block_id = $this->last_block_id();
+		$this->set_block_hash_by_height($coin_rpc, $last_block_id);
 		
 		if ($last_block_id > $this->db_game['game_starting_block'] && $this->db_game['game_status'] == "published") {
 			$this->start_game();
 		}
 		
 		$this->ensure_events_until_block($last_block_id+1);
-		echo "<br/>Finished inserting blocks at ".(microtime(true) - $start_time)." sec<br/>\n";
+		$html .= "<br/>Finished inserting blocks at ".(microtime(true) - $start_time)." sec<br/>\n";
 		
-		echo "Completed sync at ".(microtime(true)-$start_time)." sec<br/>\n";
+		$html .= "Completed sync at ".(microtime(true)-$start_time)." sec<br/>\n";
+		return $html;
 	}
 	
 	public function explorer_block_list($from_block_id, $to_block_id) {
@@ -3157,6 +3164,12 @@ class Game {
 		$r = $this->app->run_query($q);
 		$r = $r->fetch(PDO::FETCH_NUM);
 		return array($r[0], $r[1]);
+	}
+	
+	public function set_block_hash_by_height(&$coin_rpc, $block_height) {
+		$block_hash = $coin_rpc->getblockhash((int) $block_height);
+		$q = "UPDATE blocks SET block_hash=".$this->app->quote_escape($block_hash)." WHERE game_id='".$this->db_game['game_id']."' AND block_id='".$block_height."';";
+		$r = $this->app->run_query($q);
 	}
 }
 ?>

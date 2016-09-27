@@ -552,12 +552,12 @@ class App {
 
 		$pay_amount = round(pow(10,8)*$settle_amount/$settle_curr_per_pay_curr)/pow(10,8);
 		
-		$invoice_address_id = $this->new_invoice_address();
-		$q = "UPDATE invoice_addresses SET currency_id='".$pay_currency['currency_id']."' WHERE invoice_address_id='".$invoice_address_id."';";
+		$currency_address_id = $this->new_currency_address();
+		$q = "UPDATE currency_addresses SET currency_id='".$pay_currency['currency_id']."' WHERE currency_address_id='".$currency_address_id."';";
 		$r = $this->run_query($q);
 		
 		$time = time();
-		$q = "INSERT INTO currency_invoices SET time_created='".$time."', invoice_address_id='".$invoice_address_id."', expire_time='".($time+$GLOBALS['invoice_expiration_seconds'])."', game_id='".$game_id."', user_id='".$user_id."', status='unpaid', invoice_key_string='".$this->random_string(32)."', settle_price_id='".$conversion['numerator_price_id']."', settle_currency_id='".$settle_currency['currency_id']."', settle_amount='".$settle_amount."', pay_price_id='".$conversion['denominator_price_id']."', pay_currency_id='".$pay_currency['currency_id']."', pay_amount='".$pay_amount."';";
+		$q = "INSERT INTO currency_invoices SET time_created='".$time."', currency_address_id='".$currency_address_id."', expire_time='".($time+$GLOBALS['invoice_expiration_seconds'])."', game_id='".$game_id."', user_id='".$user_id."', status='unpaid', invoice_key_string='".$this->random_string(32)."', settle_price_id='".$conversion['numerator_price_id']."', settle_currency_id='".$settle_currency['currency_id']."', settle_amount='".$settle_amount."', pay_price_id='".$conversion['denominator_price_id']."', pay_currency_id='".$pay_currency['currency_id']."', pay_amount='".$pay_amount."';";
 		$r = $this->run_query($q);
 		$invoice_id = $this->last_insert_id();
 
@@ -602,16 +602,18 @@ class App {
 		return $html;
 	}
 	
-	public function new_invoice_address() {
+	public function new_currency_address($currency_id, $account_id) {
 		$keySet = bitcoin::getNewKeySet();
 
-		if (empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
+		if (empty($GLOBALS['rsa_pub_key']) || empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
 			die("<p>There was an error generating the payment address. Please go back and try again.</p>");
 		}
 
 		$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
 
-		$q = "INSERT INTO invoice_addresses SET currency_id=1, pub_key='".$keySet['pubAdd']."', priv_enc='".$encWIF."';";
+		$q = "INSERT INTO currency_addresses SET currency_id=".$currency_id;
+		if ($account_id) $q .= ", account_id='".$account_id."'";
+		$q .= ", pub_key='".$keySet['pubAdd']."', priv_enc='".$encWIF."';";
 		$r = $this->run_query($q);
 		$address_id = $this->last_insert_id();
 
@@ -1013,8 +1015,8 @@ class App {
 		else return 0;
 	}
 	
-	public function fetch_invoice_address_by_id($invoice_address_id) {
-		$q = "SELECT * FROM invoice_addresses WHERE invoice_address_id='".$invoice_address_id."';";
+	public function fetch_currency_address_by_id($currency_address_id) {
+		$q = "SELECT * FROM currency_addresses WHERE currency_address_id='".$currency_address_id."';";
 		$r = $this->run_query($q);
 		return $r->fetch();
 	}
@@ -1029,6 +1031,71 @@ class App {
 		$q = "SELECT * FROM external_addresses WHERE address_id='".$external_address_id."';";
 		$r = $this->run_query($q);
 		return $r->fetch();
+	}
+	
+	public function reset_currency_address($currency_address) {
+		$q = "DELETE FROM currency_ios WHERE currency_address_id=".$currency_address['currency_address_id'].";";
+		$this->run_query($q);
+		
+		$url = "https://blockchain.info/address/".$currency_address['pub_key']."?format=json";
+		$response_obj = json_decode(file_get_contents($url));
+		
+		for ($i=0; $i<count($response_obj->txs); $i++) {
+			$tx = $response_obj->txs[$i];
+			$thisaddr_tx_outputs = array();
+			
+			$input_sum = 0;
+			for ($j=0; $j<count($tx->inputs); $j++) {
+				$input_sum += $tx->inputs[$j]->prev_out->value;
+			}
+			
+			$output_sum = 0;
+			for ($j=0; $j<count($tx->out); $j++) {
+				$output_sum += $tx->out[$j]->value;
+				if ($tx->out[$j]->addr == $currency_address['pub_key']) {
+					array_push($thisaddr_tx_outputs, $tx->out[$j]);
+				}
+			}
+			
+			$q = "SELECT * FROM currency_transactions WHERE tx_hash=".$this->quote_escape($tx->hash).";";
+			$r = $this->run_query($q);
+			
+			if ($r->rowCount() > 0) {
+				$currency_transaction = $r->fetch();
+				$transaction_id = $currency_transaction['transaction_id'];
+				$q = "UPDATE currency_transactions SET block_id=".$this->quote_escape($tx->block_height)." WHERE transaction_id='".$transaction_id."';";
+				$r = $this->run_query($q);
+			}
+			else {
+				$q = "INSERT INTO currency_transactions SET currency_id='".$currency_address['currency_id']."', block_id=".$this->quote_escape($tx->block_height).", tx_index=".$this->quote_escape($tx->tx_index).", tx_hash=".$this->quote_escape($tx->hash).", amount='".$output_sum."', fee_amount='".($input_sum-$output_sum)."';";
+				$this->run_query($q);
+				$transaction_id = $this->last_insert_id();
+			}
+			
+			for ($j=0; $j<count($thisaddr_tx_outputs); $j++) {
+				$q = "INSERT INTO currency_ios SET currency_address_id='".$currency_address['currency_address_id']."', amount=".$this->quote_escape($thisaddr_tx_outputs[$j]->value).", out_index=".$this->quote_escape($thisaddr_tx_outputs[$j]->n).", spend_status='";
+				if ($thisaddr_tx_outputs[$j]->spent) $q .= "spent";
+				else $q .= "unspent";
+				$q .= "', create_transaction_id='".$transaction_id."';";
+				$r = $this->run_query($q);
+			}
+		}
+		
+		for ($i=0; $i<count($response_obj->txs); $i++) {
+			$tx = $response_obj->txs[$i];
+			$q = "SELECT * FROM currency_transactions WHERE tx_hash=".$this->quote_escape($tx->hash).";";
+			$spend_transaction = $this->run_query($q)->fetch();
+			
+			for ($j=0; $j<count($tx->inputs); $j++) {
+				if ($tx->inputs[$j]->prev_out->addr == $currency_address['pub_key']) {
+					$q = "SELECT * FROM currency_transactions WHERE tx_index='".$tx->inputs[$j]->prev_out->tx_index."';";
+					$create_transaction = $this->run_query($q)->fetch();
+					
+					$q = "UPDATE currency_ios SET spend_transaction_id='".$spend_transaction['transaction_id']."' WHERE create_transaction_id='".$create_transaction['transaction_id']."' AND out_index='".$tx->inputs[$j]->prev_out->n."';";
+					$this->run_query($q);
+				}
+			}
+		}
 	}
 }
 ?>

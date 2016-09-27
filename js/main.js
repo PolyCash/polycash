@@ -624,7 +624,7 @@ function show_planned_votes() {
 }
 
 // OBJECT: GameForm
-var game_form_vars = "event_rule,p2p_mode,option_group_id,event_entity_type_id,events_per_round,event_type_name,giveaway_status,giveaway_amount,maturity,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_date,start_time,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap,group_id,default_vote_effectiveness_function,default_max_voting_fraction,game_starting_block".split(",");
+var game_form_vars = "event_rule,p2p_mode,option_group_id,event_entity_type_id,events_per_round,event_type_name,giveaway_status,giveaway_amount,maturity,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_date,start_time,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap,group_id,default_vote_effectiveness_function,default_max_voting_fraction,game_starting_block,escrow_address,genesis_tx_hash,base_currency_id".split(",");
 function switch_to_game(game_id, action) {
 	var fetch_link_text = $('#fetch_game_link_'+game_id).html();
 	var switch_link_text = $('#switch_game_btn').html();
@@ -687,7 +687,10 @@ function switch_to_game(game_id, action) {
 				if (json_result['my_game'] && json_result['game_status'] == "editable") $('#game_form_'+game_form_vars[i]).prop('disabled', false);
 				else $('#game_form_'+game_form_vars[i]).prop('disabled', true);
 			}
-
+			
+			if (json_result['my_game'] && json_result['game_status'] == "editable") $('#game_form_has_final_round').prop('disabled', false);
+			else $('#game_form_has_final_round').prop('disabled', true);
+			
 			$('#game_form_game_status').html(json_result['game_status']);
 
 			json_result['start_date']
@@ -850,11 +853,18 @@ function game_form_p2p_mode_changed() {
 	}
 	else {
 		$('#game_form_p2p_mode_rpc').hide();
-		$('#game_form_giveaway_status').prop('disabled', false);
-		$('#game_form_giveaway_amount').prop('disabled', false);
+		if ($('#game_form_name').prop('disabled') == false) {
+			$('#game_form_giveaway_status').prop('disabled', false);
+			$('#game_form_giveaway_amount').prop('disabled', false);
+		}
+		else {
+			$('#game_form_giveaway_status').prop('disabled', true);
+			$('#game_form_giveaway_amount').prop('disabled', true);
+		}
 		$('#game_form_start_condition').append('<option value="fixed_time">At a particular time</option>');
 		$('#game_form_start_condition').append('<option value="players_joined">When enough people join</option>');
 	}
+	game_form_start_condition_changed();
 }
 function save_game(action) {
 	var save_link_text = $('#save_game_btn').html();

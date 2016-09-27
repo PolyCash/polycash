@@ -51,7 +51,7 @@ class User {
 	public function performance_history($game, $from_round_id, $to_round_id) {
 		$html = "";
 		
-		$q = "SELECT r.*, real_winner.name AS real_winner_name, derived_winner.name AS derived_winner_name FROM event_outcomes r JOIN events e ON r.event_id=e.event_id LEFT JOIN options real_winner ON r.winning_option_id=real_winner.option_id LEFT JOIN options derived_winner ON r.derived_winning_option_id=derived_winner.option_id WHERE e.game_id='".$game->db_game['game_id']."' AND r.round_id >= ".$from_round_id." AND r.round_id <= ".$to_round_id." ORDER BY r.round_id DESC;";
+		$q = "SELECT e.event_index, r.*, real_winner.name AS real_winner_name, derived_winner.name AS derived_winner_name FROM event_outcomes r JOIN events e ON r.event_id=e.event_id LEFT JOIN options real_winner ON r.winning_option_id=real_winner.option_id LEFT JOIN options derived_winner ON r.derived_winning_option_id=derived_winner.option_id WHERE e.game_id='".$game->db_game['game_id']."' AND r.round_id >= ".$from_round_id." AND r.round_id <= ".$to_round_id." ORDER BY r.round_id DESC;";
 		$r = $this->app->run_query($q);
 		
 		while ($event_outcome = $r->fetch()) {
@@ -89,7 +89,7 @@ class User {
 			
 			$html .= '<div class="col-sm-3">';
 			$html .= $win_text;
-			$html .= ' <a href="/explorer/'.$game->db_game['url_identifier'].'/events/'.$event_outcome['event_id'].'" target="_blank">Details</a>';
+			$html .= ' <a href="/explorer/'.$game->db_game['url_identifier'].'/events/'.($event_outcome['event_index']+1).'" target="_blank">Details</a>';
 			$html .= '</div>';
 			
 			if (empty($event_outcome['winning_option_id'])) {
@@ -309,6 +309,8 @@ class User {
 			$this->app->try_apply_invite_key($this->db_user['user_id'], $_REQUEST['invite_key']);
 		}
 		
+		$this->ensure_currency_accounts();
+		
 		if (!empty($_REQUEST['redirect_id'])) {
 			$redirect_url_id = intval($_REQUEST['redirect_id']);
 			$q = "SELECT * FROM redirect_urls WHERE redirect_url_id=".$this->app->quote_escape($redirect_url_id).";";
@@ -439,6 +441,36 @@ class User {
 					$rr = $this->app->run_query($qq);
 				}
 			}
+		}
+	}
+	
+	public function ensure_currency_accounts() {
+		$q = "SELECT * FROM currencies WHERE currency_id=2;";
+		$r = $this->app->run_query($q);
+		
+		while ($currency = $r->fetch()) {
+			$qq = "SELECT * FROM currency_accounts WHERE user_id='".$this->db_user['user_id']."' AND currency_id='".$currency['currency_id']."';";
+			$rr = $this->app->run_query($qq);
+			
+			if ($rr->rowCount() == 0) {
+				$qq = "INSERT INTO currency_accounts SET user_id='".$this->db_user['user_id']."', currency_id='".$currency['currency_id']."', account_name='Primary ".$currency['name']." Account', time_created='".time()."';";
+				$rr = $this->app->run_query($qq);
+				$account_id = $this->app->last_insert_id();
+				
+				$currency_address_id = $this->app->new_currency_address($currency['currency_id'], $account_id);
+				
+				$qq = "UPDATE currency_accounts SET current_address_id='".$currency_address_id."' WHERE account_id='".$account_id."';";
+				$rr = $this->app->run_query($qq);
+			}
+		}
+	}
+	
+	public function refresh_currency_accounts() {
+		$q = "SELECT a.* FROM currency_accounts ca JOIN currency_addresses a ON ca.account_id=a.account_id WHERE ca.user_id='".$this->db_user['user_id']."';";
+		$r = $this->app->run_query($q);
+		
+		while ($currency_address = $r->fetch()) {
+			$this->app->reset_currency_address($currency_address);
 		}
 	}
 }
