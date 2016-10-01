@@ -19,3 +19,12 @@ ALTER TABLE `currency_addresses` CHANGE `invoice_address_id` `currency_address_i
 ALTER TABLE `currency_invoices` CHANGE `invoice_address_id` `currency_address_id` INT(11) NULL DEFAULT NULL;
 ALTER TABLE `currency_addresses` ADD `account_id` INT NULL DEFAULT NULL AFTER `currency_id`;
 ALTER TABLE `currency_accounts` ADD `current_address_id` INT NOT NULL AFTER `user_id`;
+ALTER TABLE `currency_invoices` DROP `settle_currency_id`, DROP `pay_price_id`, DROP `settle_price_id`, DROP `settle_amount`;
+ALTER TABLE `user_games` DROP `buyin_currency_address_id`;
+ALTER TABLE `currency_invoices` DROP `game_id`, DROP `user_id`;
+ALTER TABLE `currency_invoices` ADD `user_game_id` INT NULL DEFAULT NULL AFTER `invoice_id`;
+ALTER TABLE `user_games` ADD `current_invoice_id` INT NULL DEFAULT NULL AFTER `strategy_id`;
+ALTER TABLE `currency_invoices` ADD `invoice_type` ENUM('join_buyin','buyin','') NOT NULL DEFAULT '' AFTER `currency_address_id`;
+ALTER TABLE `game_giveaways` ADD `type` ENUM('join_buyin','buyin','') NOT NULL DEFAULT '' AFTER `transaction_id`;
+ALTER TABLE `game_giveaways` DROP `game_id`, DROP `user_id`;
+ALTER TABLE `game_giveaways` ADD `user_game_id` INT NULL DEFAULT NULL AFTER `giveaway_id`;

@@ -142,7 +142,15 @@ if ($thisuser) {
 				$invite_currency = $app->fetch_currency_by_id($requested_game['invite_currency']);
 				
 				if ($invite_currency) {
-					$invoice = $app->new_currency_invoice($invite_currency['currency_id'], $requested_game['invite_cost'], $thisuser->db_user['user_id'], $requested_game['game_id']);
+					if ($user_game['current_invoice_id'] > 0) {
+						$invoice = $app->fetch_currency_invoice_by_id($user_game['current_invoice_id']);
+					}
+					else {
+						$invoice = $app->new_currency_invoice($invite_currency, $requested_game['invite_cost'], $thisuser, $user_game, 'join_buyin');
+						
+						$q = "UPDATE user_games SET current_invoice_id='".$invoice['invoice_id']."' WHERE user_game_id='".$user_game['user_game_id']."';";
+						$r = $app->run_query($q);
+					}
 					?>
 					<script type="text/javascript">
 					var game_id = '<?php echo $requested_game['game_id']; ?>';
@@ -185,7 +193,6 @@ if ($thisuser) {
 								$invoice_exchange_rate = $app->historical_currency_conversion_rate($invoice['settle_price_id'], $invoice['pay_price_id']);
 
 								$pay_currency = $app->fetch_currency_by_id($invoice['pay_currency_id']);
-								$settle_currency = $app->fetch_currency_by_id($invoice['settle_currency_id']);
 								$currency_address = $app->fetch_currency_address_by_id($invoice['currency_address_id']);
 
 								$coins_per_currency = ($requested_game['giveaway_amount']/pow(10,8))/$requested_game['invite_cost'];
@@ -201,12 +208,9 @@ if ($thisuser) {
 								else echo $requested_game['coin_name_plural'];
 								echo ".<br/>\n";
 								
-								if ($pay_currency['currency_id'] != $settle_currency['currency_id']) {
-									echo "<br/>The exchange rate is currently ".$invoice_exchange_rate." ".$settle_currency['short_name']."s per ".$pay_currency['short_name'].". ";
-								}
-								echo "<br/>";
-								if ($invite_currency['abbreviation'] == "btc") echo "To join, send ".$app->decimal_to_float($invoice['pay_amount'])." to ";
-								else echo "Make the ".$app->decimal_to_float($requested_game['invite_cost'])." ".$invite_currency['short_name']." payment in Bitcoins by sending ".$app->decimal_to_float($invoice['pay_amount'])." BTC to ";
+								echo "<br/>\n";
+								
+								echo "To join, send ".$app->decimal_to_float($invoice['pay_amount'])." ".$pay_currency['abbreviation']." to ";
 								echo "<a target=\"_blank\" href=\"https://blockchain.info/address/".$currency_address['pub_key']."\">".$currency_address['pub_key']."</a><br/>\n";
 								echo '<center><img style="margin: 10px;" src="/render_qr_code.php?data='.$currency_address['pub_key'].'" /></center>';
 								echo 'You will automatically be redirected when the Bitcoins are received.';

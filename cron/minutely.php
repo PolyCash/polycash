@@ -1,7 +1,7 @@
 <?php
 $script_start_time = microtime(true);
 $host_not_required = true;
-include(realpath(dirname(__FILE__))."/../includes/connect.php");
+include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
 if (!empty($argv)) {
 	$cmd_vars = $app->argv_to_array($argv);

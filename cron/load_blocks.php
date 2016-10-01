@@ -1,8 +1,10 @@
 <?php
 set_time_limit(0);
 $host_not_required = TRUE;
-include(realpath(dirname(__FILE__))."/../includes/connect.php");
-include(realpath(dirname(__FILE__))."/../includes/handle_script_shutdown.php");
+include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
+if ($GLOBALS['process_lock_method'] == "db") {
+	include(realpath(dirname(dirname(__FILE__)))."/includes/handle_script_shutdown.php");
+}
 $script_start_time = microtime(true);
 
 if (!empty($argv)) {
@@ -12,13 +14,15 @@ if (!empty($argv)) {
 }
 
 if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
-	$loading_blocks = (int) $app->get_site_constant("loading_blocks");
+	$loading_blocks = $app->check_process_running("loading_blocks");
 	
-	if ($loading_blocks == 0) {
-		$GLOBALS['app'] = $app;
-		$GLOBALS['shutdown_lock_name'] = "loading_blocks";
-		$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
-		register_shutdown_function("script_shutdown");
+	if (!$loading_blocks) {
+		if ($GLOBALS['process_lock_method'] == "db") {
+			$GLOBALS['app'] = $app;
+			$GLOBALS['shutdown_lock_name'] = "loading_blocks";
+			$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
+			register_shutdown_function("script_shutdown");
+		}
 		
 		$real_game_q = "SELECT * FROM games WHERE p2p_mode='rpc' AND game_status IN ('published','running');";
 		$real_game_r = $GLOBALS['app']->run_query($real_game_q);

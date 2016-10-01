@@ -321,12 +321,14 @@ class User {
 			}
 		}
 	}
+	
 	public function user_in_game($game_id) {
 		$q = "SELECT * FROM user_games WHERE user_id='".$this->db_user['user_id']."' AND game_id='".$game_id."';";
 		$r = $this->app->run_query($q);
 		if ($r->rowCount() > 0) return true;
 		else return false;
 	}
+	
 	public function user_can_invite_game($db_game) {
 		if ($db_game['giveaway_status'] == "invite_free" || $db_game['giveaway_status'] == "invite_pay") {
 			if ($this->db_user['user_id'] == $db_game['creator_id']) return true;
@@ -335,6 +337,7 @@ class User {
 		else if ($db_game['giveaway_status'] == "public_pay" || $db_game['giveaway_status'] == "public_free") return true;
 		else return false;
 	}
+	
 	public function count_user_games_created() {
 		$q = "SELECT * FROM games WHERE creator_id='".$this->db_user['user_id']."';";
 		$r = $this->app->run_query($q);
@@ -472,6 +475,15 @@ class User {
 		while ($currency_address = $r->fetch()) {
 			$this->app->reset_currency_address($currency_address);
 		}
+	}
+	
+	public function fetch_currency_account($currency_id) {
+		$q = "SELECT * FROM currency_accounts WHERE currency_id='".$currency_id."' AND user_id='".$this->db_user['user_id']."' ORDER BY account_id DESC;";
+		$r = $this->app->run_query($q);
+		if ($r->rowCount() > 0) {
+			return $r->fetch();
+		}
+		else return false;
 	}
 }
 ?>

@@ -1,7 +1,9 @@
 <?php
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
-include(realpath(dirname(dirname(__FILE__)))."/includes/handle_script_shutdown.php");
+if ($GLOBALS['process_lock_method'] == "db") {
+	include(realpath(dirname(dirname(__FILE__)))."/includes/handle_script_shutdown.php");
+}
 
 $script_target_time = 59;
 $script_start_time = microtime(true);
@@ -14,13 +16,15 @@ if (!empty($argv)) {
 
 if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	echo "<pre>";
-	$main_loop_running = (int) $app->get_site_constant("main_loop_running");
+	$main_loop_running = $app->check_process_running("main_loop_running");
 	
-	if ($main_loop_running == 0) {
-		$GLOBALS['app'] = $app;
-		$GLOBALS['shutdown_lock_name'] = "main_loop_running";
-		$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
-		register_shutdown_function("script_shutdown");
+	if (!$main_loop_running) {
+		if ($GLOBALS['process_lock_method'] == "db") {
+			$GLOBALS['app'] = $app;
+			$GLOBALS['shutdown_lock_name'] = "main_loop_running";
+			$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
+			register_shutdown_function("script_shutdown");
+		}
 		
 		$app->generate_games();
 		

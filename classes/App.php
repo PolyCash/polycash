@@ -540,27 +540,16 @@ class App {
 		return round(pow(10,8)*$denominator_rate['price']/$numerator_rate['price'])/pow(10,8);
 	}
 	
-	public function new_currency_invoice($settle_currency_id, $settle_amount, $user_id, $game_id) {
-		$q = "SELECT * FROM currencies WHERE currency_id='".$settle_currency_id."';";
-		$r = $this->run_query($q);
-		$settle_currency = $r->fetch();
-
-		$pay_currency = $this->get_currency_by_abbreviation('btc');
-
-		$conversion = $this->currency_conversion_rate($settle_currency_id, $pay_currency['currency_id']);
-		$settle_curr_per_pay_curr = $conversion['conversion_rate'];
-
-		$pay_amount = round(pow(10,8)*$settle_amount/$settle_curr_per_pay_curr)/pow(10,8);
+	public function new_currency_invoice(&$pay_currency, $pay_amount, &$user, &$user_game, $invoice_type) {
+		$currency_account = $user->fetch_currency_account($pay_currency['currency_id']);
 		
-		$currency_address_id = $this->new_currency_address();
-		$q = "UPDATE currency_addresses SET currency_id='".$pay_currency['currency_id']."' WHERE currency_address_id='".$currency_address_id."';";
-		$r = $this->run_query($q);
+		$currency_address_id = $this->new_currency_address($pay_currency['currency_id'], $currency_account['account_id']);
 		
 		$time = time();
-		$q = "INSERT INTO currency_invoices SET time_created='".$time."', currency_address_id='".$currency_address_id."', expire_time='".($time+$GLOBALS['invoice_expiration_seconds'])."', game_id='".$game_id."', user_id='".$user_id."', status='unpaid', invoice_key_string='".$this->random_string(32)."', settle_price_id='".$conversion['numerator_price_id']."', settle_currency_id='".$settle_currency['currency_id']."', settle_amount='".$settle_amount."', pay_price_id='".$conversion['denominator_price_id']."', pay_currency_id='".$pay_currency['currency_id']."', pay_amount='".$pay_amount."';";
+		$q = "INSERT INTO currency_invoices SET time_created='".$time."', pay_currency_id='".$pay_currency['currency_id']."', currency_address_id='".$currency_address_id."', expire_time='".($time+$GLOBALS['invoice_expiration_seconds'])."', user_game_id='".$user_game['user_game_id']."', invoice_type='".$invoice_type."', status='unpaid', invoice_key_string='".$this->random_string(32)."', pay_amount='".$pay_amount."';";
 		$r = $this->run_query($q);
 		$invoice_id = $this->last_insert_id();
-
+		
 		$q = "SELECT * FROM currency_invoices WHERE invoice_id='".$invoice_id."';";
 		$r = $this->run_query($q);
 		return $r->fetch();
@@ -1096,6 +1085,40 @@ class App {
 				}
 			}
 		}
+	}
+	
+	public function fetch_currency_invoice_by_id($currency_invoice_id) {
+		$q = "SELECT * FROM currency_invoices WHERE invoice_id='".$currency_invoice_id."';";
+		$r = $this->run_query($q);
+		if ($r->rowCount() > 0) {
+			return $r->fetch();
+		}
+		else return false;
+	}
+	
+	public function currency_address_balance($currency_address) {
+		$balance_q = "SELECT SUM(amount) FROM currency_ios WHERE currency_address_id='".$currency_address['currency_address_id']."' AND spend_status='unspent';";
+		$balance_r = $this->run_query($balance_q);
+		$balance = $balance_r->fetch();
+		$unconfirmed_balance = (int) $balance['SUM(amount)'];
+		
+		$balance_q = "SELECT SUM(io.amount) FROM currency_ios io JOIN currency_transactions t ON io.create_transaction_id=t.transaction_id WHERE io.currency_address_id='".$currency_address['currency_address_id']."' AND io.spend_status='unspent' AND t.block_id > 0;";
+		$balance_r = $this->run_query($balance_q);
+		$balance = $balance_r->fetch();
+		$confirmed_balance = (int) $balance['SUM(io.amount)'];
+		
+		return array($unconfirmed_balance, $confirmed_balance);
+	}
+	
+	public function check_process_running($lock_name) {
+		if ($GLOBALS['process_lock_method'] == "db") $process_running = (int) $this->get_site_constant($lock_name);
+		else {
+			$cmd = "ps aux|grep ".realpath(dirname($_SERVER["SCRIPT_FILENAME"]))."/".basename($_SERVER["SCRIPT_FILENAME"])."|grep -v grep|wc -l";
+			$running = exec($cmd);
+			if ($running > 1) $process_running = true;
+			else $process_running = false;
+		}
+		return $process_running;
 	}
 }
 ?>

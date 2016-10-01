@@ -107,10 +107,17 @@ if ($thisuser && $game) {
 								$currency_address = $app->fetch_currency_address_by_id($user_game['buyin_currency_address_id']);
 							}
 							else {
-								$currency_address_id = $app->new_currency_address(2, false);
-								$currency_address = $app->fetch_currency_address_by_id($currency_address_id);
-								$q = "UPDATE user_games SET buyin_currency_address_id='".$currency_address_id."' WHERE user_game_id='".$user_game['user_game_id']."';";
-								$r = $app->run_query($q);
+								$currency_account = $thisuser->fetch_currency_account($btc_currency['currency_id']);
+								
+								if ($currency_account) {
+									$currency_address_id = $app->new_currency_address($btc_currency['currency_id'], $currency_account['account_id']);
+									$currency_address = $app->fetch_currency_address_by_id($currency_address_id);
+									$q = "UPDATE user_games SET buyin_currency_address_id='".$currency_address_id."' WHERE user_game_id='".$user_game['user_game_id']."';";
+									$r = $app->run_query($q);
+								}
+								else {
+									die("Failed to generate a deposit address.");
+								}
 							}
 							?>
 							</div><div class="paragraph">
@@ -133,7 +140,7 @@ if ($thisuser && $game) {
 								<br/>
 								<center><img style="margin: 10px;" src="/render_qr_code.php?data=<?php echo $currency_address['pub_key']; ?>" /></center>
 								<br/>
-								After making the payment please confirm the amount that you sent:<br/>
+								After making the payment please click below to request <?php echo $game->db_game['coin_name_plural']; ?>:<br/>
 								<div class="row">
 									<div class="col-sm-4">
 										<input type="text" class="form-control" id="buyin_btc_pay_amount" />
@@ -142,7 +149,7 @@ if ($thisuser && $game) {
 										BTC
 									</div>
 									<div class="col-sm-6">
-										<button class="btn btn-success" onclick="submit_buyin();">Confirm Payment</button>
+										<button class="btn btn-success" onclick="submit_buyin();">Request <?php echo ucwords($game->db_game['coin_name_plural']); ?></button>
 									</div>
 								</div>
 							</div>

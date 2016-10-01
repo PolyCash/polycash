@@ -1322,10 +1322,10 @@ class Game {
 		}
 	}
 	
-	public function new_game_giveaway($user_id, $type, $target_amount) {
+	public function new_game_giveaway(&$invoice, $target_amount, &$currency_address) {
+		/*$type = $invoice['invoice_type'];
 		if ($type != "buyin") {
-			$type = "initial_purchase";
-			$target_amount = $this->db_game['giveaway_amount'];
+			$type = "join_buyin";
 		}
 		
 		$transaction_id = false;
@@ -1350,14 +1350,15 @@ class Game {
 					$option_ids[$i] = false;
 					$actual_amount += $amounts[$i];
 				}
+				
 				$transaction_id = $this->create_transaction($option_ids, $amounts, false, false, 0, 'giveaway', false, $addr_ids, false, 0);
 			}
 		}
 		
 		if ($transaction_id) {
-			$q = "INSERT INTO game_giveaways SET type='".$type."', game_id='".$this->db_game['game_id']."', amount='".$actual_amount."'";
+			$q = "INSERT INTO game_giveaways SET type='".$type."', user_game_id='".$invoice['user_game_id']."', amount='".$actual_amount."'";
 			if ($transaction_id > 0) $q .= ", transaction_id='".$transaction_id."'";
-			if ($user_id) $q .= ", user_id='".$user_id."', status='claimed'";
+			if ($user_id) $q .= ", status='claimed'";
 			$q .= ";";
 			$r = $this->app->run_query($q);
 			$giveaway_id = $this->app->last_insert_id();
@@ -1367,7 +1368,8 @@ class Game {
 			
 			return $r->fetch();
 		}
-		else return false;
+		else return false;*/
+		return false;
 	}
 	
 	public function generate_invitation($inviter_id, &$invitation, $user_id) {
