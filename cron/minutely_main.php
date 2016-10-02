@@ -28,6 +28,7 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		
 		$app->generate_games();
 		
+		$blockchains = array();
 		$real_games = array();
 		$coin_rpcs = array();
 		$game_id2real_game_i = array();
@@ -38,7 +39,8 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 
 		while ($db_real_game = $r->fetch()) {
 			$game_id2real_game_i[$db_real_game['game_id']] = $real_game_i;
-			$real_games[$real_game_i] = new Game($app, $db_real_game['game_id']);
+			if (!$blockchains[$db_real_game['blockchain_id']]) $blockchains[$db_real_game['blockchain_id']] = new Blockchain($app, $db_real_game['blockchain_id']);
+			$real_games[$real_game_i] = new Game($blockchains[$db_real_game['blockchain_id']], $db_real_game['game_id']);
 			try {
 				$coin_rpcs[$real_game_i] = new jsonRPCClient('http://'.$db_real_game['rpc_username'].':'.$db_real_game['rpc_password'].'@127.0.0.1:'.$db_real_game['rpc_port'].'/');
 				$coin_rpcs[$real_game_i]->getinfo();
@@ -69,7 +71,8 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		$q = "SELECT * FROM games WHERE game_status='published' AND start_condition='players_joined' AND start_condition_players > 0;";
 		$r = $app->run_query($q);
 		while ($db_unstarted_game = $r->fetch()) {
-			$unstarted_game = new Game($app, $db_unstarted_game['game_id']);
+			if (!$blockchains[$db_unstarted_game['blockchain_id']]) $blockchains[$db_unstarted_game['blockchain_id']] = new Blockchain($app, $db_unstarted_game['blockchain_id']);
+			$unstarted_game = new Game($blockchains[$db_unstarted_game['blockchain_id']], $db_unstarted_game['game_id']);
 			$num_players = $unstarted_game->paid_players_in_game();
 			if ($num_players >= $unstarted_game->db_game['start_condition_players']) {
 				$unstarted_game->start_game();
@@ -80,7 +83,8 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		$r = $app->run_query($q);
 		while ($db_unstarted_game = $r->fetch()) {
 			if (time() >= strtotime($db_unstarted_game['start_datetime'])) {
-				$unstarted_game = new Game($app, $db_unstarted_game['game_id']);
+				if (!$blockchains[$db_unstarted_game['blockchain_id']]) $blockchains[$db_unstarted_game['blockchain_id']] = new Blockchain($app, $db_unstarted_game['blockchain_id']);
+				$unstarted_game = new Game($blockchains[$db_unstarted_game['blockchain_id']], $db_unstarted_game['game_id']);
 				$unstarted_game->start_game();
 			}
 		}
@@ -92,7 +96,7 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 			while ($completed_game = $r->fetch()) {
 				$qq = "UPDATE games SET payout_reminder_datetime=NOW() WHERE game_id='".$completed_game['game_id']."';";
 				$rr = $app->run_query($qq);
-	
+				
 				$subject = $completed_game['name']." has finished, please process payouts.";
 				$message = "This game finished ".$app->format_seconds($completed_game['sec_since_completion'])." ago. Please log in with your admin account and follow this link to complete the payout: ".$GLOBALS['base_url']."/payout_game.php?game_id=".$completed_game['game_id'];
 				$app->mail_async($GLOBALS['rsa_keyholder_email'], $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "");
@@ -103,7 +107,8 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		$q = "SELECT * FROM games WHERE game_status IN('published','running');";
 		$r = $GLOBALS['app']->run_query($q);
 		while ($running_game = $r->fetch()) {
-			$running_games[count($running_games)] = new Game($app, $running_game['game_id']);
+			if (!$blockchains[$running_game['blockchain_id']]) $blockchains[$running_game['blockchain_id']] = new Blockchain($app, $running_game['blockchain_id']);
+			$running_games[count($running_games)] = new Game($blockchains[$running_game['blockchain_id']], $running_game['game_id']);
 			echo "Including game: ".$running_game['name']."\n";
 		}
 		

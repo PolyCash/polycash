@@ -30,7 +30,8 @@ if (strlen($session_key) > 0) {
 				if ($r->rowCount() > 0) {
 					$db_game = $r->fetch();
 					
-					$game = new Game($app, $db_game['game_id']);
+					$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+					$game = new Game($blockchain, $db_game['game_id']);
 				}
 			}
 		}

@@ -80,25 +80,25 @@ class App {
 		else return true;
 	}
 	
-	public function generate_games() {
+	public function generate_games($default_blockchain_id) {
 		$q = "SELECT * FROM game_types ORDER BY game_type_id ASC;";
 		$r = $this->run_query($q);
 		while ($game_type = $r->fetch(PDO::FETCH_ASSOC)) {
-			$this->generate_games_by_type($game_type);
+			$this->generate_games_by_type($game_type, $default_blockchain_id);
 		}
 	}
 	
-	public function generate_games_by_type($game_type) {
+	public function generate_games_by_type($game_type, $default_blockchain_id) {
 		$q = "SELECT * FROM games WHERE game_type_id='".$game_type['game_type_id']."' AND game_status IN('editable','published','running');";
 		$r = $this->run_query($q);
 		$num_running_games = $r->rowCount();
 		$needed_games = $game_type['target_open_games'] - $num_running_games;
 		for ($i=0; $i<$needed_games; $i++) {
-			$this->generate_game_by_type($game_type);
+			$this->generate_game_by_type($game_type, $default_blockchain_id);
 		}
 	}
 	
-	public function generate_game_by_type($game_type) {
+	public function generate_game_by_type($game_type, $default_blockchain_id) {
 		$skip_game_type_vars = explode(",", "name,url_identifier,target_open_games,default_game_winning_inflation,default_logo_image_id,identifier_case_sensitive");
 		
 		$series_index_q = "SELECT MAX(game_series_index) FROM games WHERE game_type_id='".$game_type['game_type_id']."';";
@@ -110,7 +110,7 @@ class App {
 		
 		$url_identifier = $this->game_url_identifier($game_name);
 		
-		$q = "INSERT INTO games SET game_status='published', game_series_index=".$series_index.", name=".$this->quote_escape($game_name).", url_identifier=".$this->quote_escape($url_identifier).", identifier_case_sensitive=".$this->quote_escape($game_type['identifier_case_sensitive']).", game_winning_inflation=".$this->quote_escape($game_type['default_game_winning_inflation']).", logo_image_id=".$this->quote_escape($game_type['default_logo_image_id']).", ";
+		$q = "INSERT INTO games SET blockchain_id='".$default_blockchain_id."', game_status='published', game_series_index=".$series_index.", name=".$this->quote_escape($game_name).", url_identifier=".$this->quote_escape($url_identifier).", game_winning_inflation=".$this->quote_escape($game_type['default_game_winning_inflation']).", logo_image_id=".$this->quote_escape($game_type['default_logo_image_id']).", ";
 		foreach ($game_type AS $var => $val) {
 			if (!in_array($var, $skip_game_type_vars)) {
 				if (!empty($val)) $q .= $var.'='.$this->quote_escape($val).', ';
@@ -119,7 +119,9 @@ class App {
 		$q = substr($q, 0, strlen($q)-2).";";
 		$r = $this->run_query($q);
 		$game_id = $this->last_insert_id();
-		$game = new Game($this, $game_id);
+		
+		$blockchain = new Blockchain($this, $default_blockchain_id);
+		$game = new Game($blockchain, $game_id);
 		
 		if ($game->db_game['final_round'] > 0) $event_block = $game->db_game['final_round']*$game->db_game['round_length'];
 		else $event_block = $game->db_game['round_length'];
@@ -277,6 +279,8 @@ class App {
 			$invitation = $r->fetch();
 			
 			if ($invitation['used'] == 0 && $invitation['used_user_id'] == "" && $invitation['used_time'] == 0) {
+				$db_game = $this->run_query("SELECT * FROM games WHERE game_id='".$invitation['game_id']."';")->fetch();
+				
 				$qq = "UPDATE game_invitations SET used_user_id='".$user_id."', used_time='".time()."', used=1";
 				if ($GLOBALS['pageview_tracking_enabled']) $q .= ", used_ip='".$_SERVER['REMOTE_ADDR']."'";
 				$qq .= " WHERE invitation_id='".$invitation['invitation_id']."';";
@@ -289,7 +293,8 @@ class App {
 				$user = new User($this, $user_id);
 				$user->ensure_user_in_game($invitation['game_id']);
 				
-				$invite_game = new Game($this, $invitation['game_id']);
+				$blockchain = new Blockchain($this, $db_game['blockchain_id']);
+				$invite_game = new Game($blockchain, $invitation['game_id']);
 				
 				return true;
 			}
@@ -625,9 +630,10 @@ class App {
 			echo '<div class="row">';
 			
 			while ($db_game = $r->fetch()) {
-				$featured_game = new Game($this, $db_game['game_id']);
-				$mining_block_id = $featured_game->last_block_id()+1;
-				$current_round_id = $featured_game->block_to_round($mining_block_id);
+				$blockchain = new Blockchain($this, $db_game['blockchain_id']);
+				$featured_game = new Game($blockchain, $db_game['game_id']);
+				$mining_block_id = $blockchain->last_block_id()+1;
+				$current_round_id = $blockchain->block_to_round($mining_block_id);
 				?>
 				<script type="text/javascript">
 				games.push(new Game(<?php
@@ -791,7 +797,7 @@ class App {
 	}
 	
 	public function delete_unconfirmable_transactions() {
-		$start_time = microtime(true);
+		/*$start_time = microtime(true);
 		$unconfirmed_tx_r = $this->run_query("SELECT * FROM transactions WHERE block_id IS NULL ORDER BY game_id ASC;");
 		$game_id = false;
 		
@@ -811,6 +817,7 @@ class App {
 			}
 		}
 		echo "\nTook ".(microtime(true)-$start_time)." sec to delete unconfirmable transactions.\n\n";
+		*/
 	}
 	
 	public function game_admin_row(&$thisuser, $user_game, $selected_game_id) {
@@ -938,7 +945,8 @@ class App {
 	
 	public function coins_created_in_round(&$db_game, $round_id) {
 		if ($db_game['inflation'] == "exponential") {
-			$game = new Game($this, $db_game['game_id']);
+			$blockchain = new Blockchain($this, $db_game['blockchain_id']);
+			$game = new Game($blockchain, $db_game['game_id']);
 			$coi_block = ($round_id-1)*$game->db_game['round_length'];
 			$coins_in_existence = $game->coins_in_existence($coi_block);
 			return $coins_in_existence*$game->db_game['exponential_inflation_rate'];
@@ -968,14 +976,16 @@ class App {
 				$round_coins_created = $this->coins_created_in_round($db_game, $round_id);
 			}
 			else {
-				$game = new Game($this, $db_game['game_id']);
+				$blockchain = new Blockchain($this, $db_game['blockchain_id']);
+				$game = new Game($blockchain, $db_game['game_id']);
 				$round_coins_created = $game->coins_in_existence(false)*$db_game['exponential_inflation_rate'];
 			}
 			return floor((1-$db_game['exponential_inflation_minershare'])*$round_coins_created);
 		}
 		else {
-			$game = new Game($this, $db_game['game_id']);
-			$mining_block_id = $game->last_block_id()+1;
+			$blockchain = new Blockchain($this, $db_game['blockchain_id']);
+			$game = new Game($blockchain, $db_game['game_id']);
+			$mining_block_id = $blockchain->last_block_id()+1;
 			$current_round = $game->block_to_round($mining_block_id);
 			
 			if ($round_id == $current_round) {

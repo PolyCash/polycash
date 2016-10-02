@@ -23,12 +23,15 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			register_shutdown_function("script_shutdown");
 		}
 		
+		$blockchains = array();
+		
 		$q = "SELECT * FROM games WHERE min_unallocated_addresses > 0 AND game_status IN ('published','running');";
 		$r = $app->run_query($q);
 		echo "Looping through ".$r->rowCount()." games.<br/>\n";
 		
 		while ($db_game = $r->fetch()) {
-			$game = new Game($app, $db_game['game_id']);
+			if (!$blockchains[$db_game['blockchain_id']]) $blockchains[$db_game['blockchain_id']] = new Blockchain($app, $db_game['blockchain_id']);
+			$game = new Game($blockchains[$db_game['blockchain_id']], $db_game['game_id']);
 			
 			if ($game->db_game['min_unallocated_addresses'] > 0) {
 				if (!empty($game->db_game['rpc_username'])) {

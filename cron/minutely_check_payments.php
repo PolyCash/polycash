@@ -11,7 +11,9 @@ if (!empty($argv)) {
 }
 
 if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
-	$q = "SELECT * FROM user_games ug JOIN currency_invoices i ON ug.current_invoice_id=i.invoice_id JOIN currency_addresses a ON i.currency_address_id=a.currency_address_id WHERE i.status != 'confirmed' AND i.status != 'settled' AND (i.status='unconfirmed' OR i.expire_time >= ".time().");";
+	$blockchains = array();
+	
+	$q = "SELECT * FROM user_games ug JOIN currency_invoices i ON ug.current_invoice_id=i.invoice_id JOIN currency_addresses a ON i.currency_address_id=a.currency_address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status != 'confirmed' AND i.status != 'settled' AND (i.status='unconfirmed' OR i.expire_time >= ".time().");";
 	$r = $app->run_query($q);
 	
 	echo "Checking ".$r->rowCount()." invoices.<br/>\n";
@@ -37,7 +39,8 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		$rr = $app->run_query($qq);
 		
 		if ($confirm_it) {
-			$game = new Game($app, $invoice['game_id']);
+			if (!$blockchains[$invoice['blockchain_id']]) $blockchains[$invoice['blockchain_id']] = new Blockchain($app, $invoice['blockchain_id']);
+			$game = new Game($blockchains[$invoice['blockchain_id']], $invoice['game_id']);
 			
 			if ($game->db_game['giveaway_status'] == "public_pay" || $game->db_game['giveaway_status'] == "invite_pay") {
 				$invoice_user = new User($app, $invoice['user_id']);

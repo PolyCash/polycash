@@ -24,21 +24,24 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 			register_shutdown_function("script_shutdown");
 		}
 		
-		$real_game_q = "SELECT * FROM games WHERE p2p_mode='rpc' AND game_status IN ('published','running');";
-		$real_game_r = $GLOBALS['app']->run_query($real_game_q);
+		$blockchains = array();
 		
-		while ($real_game = $real_game_r->fetch()) {
-			$real_game_obj = new Game($app, $real_game['game_id']);
+		$blockchain_q = "SELECT * FROM blockchains;";
+		$blockchain_r = $GLOBALS['app']->run_query($blockchain_q);
+		
+		while ($db_blockchain = $blockchain_r->fetch()) {
+			$blockchain_i = count($blockchains);
+			$blockchains[$blockchain_i] = new Blockchain($app, $db_blockchain['blockchain_id']);
 			try {
-				$coin_rpc = new jsonRPCClient('http://'.$real_game['rpc_username'].':'.$real_game['rpc_password'].'@127.0.0.1:'.$real_game['rpc_port'].'/');
+				$coin_rpc = new jsonRPCClient('http://'.$db_blockchain['rpc_username'].':'.$db_blockchain['rpc_password'].'@127.0.0.1:'.$db_blockchain['rpc_port'].'/');
 				echo "Loading game block headers...\n";
-				$real_game_obj->load_new_blocks($coin_rpc);
+				$blockchains[$blockchain_i]->load_new_blocks($coin_rpc);
 				echo "Loading game blocks...\n";
-				$real_game_obj->load_all_blocks($coin_rpc, TRUE);
+				$blockchains[$blockchain_i]->load_all_blocks($coin_rpc, TRUE);
 				echo "Loading all block headers...\n";
-				$real_game_obj->load_all_block_headers($coin_rpc, FALSE, 90);
+				$blockchains[$blockchain_i]->load_all_block_headers($coin_rpc, FALSE, 90);
 			} catch (Exception $e) {
-				echo "Error, skipped ".$real_game['name']." because RPC connection failed.<br/>\n";
+				echo "Error, skipped ".$db_blockchain['blockchain_name']." because RPC connection failed.<br/>\n";
 			}
 		}
 	}

@@ -39,6 +39,7 @@ header('Content-Type: text/html; charset=UTF-8');
 include(realpath(dirname(dirname(__FILE__)))."/classes/Api.php");
 include(realpath(dirname(dirname(__FILE__)))."/classes/App.php");
 include(realpath(dirname(dirname(__FILE__)))."/classes/JsonRPCClient.php");
+include(realpath(dirname(dirname(__FILE__)))."/classes/Blockchain.php");
 include(realpath(dirname(dirname(__FILE__)))."/classes/Game.php");
 include(realpath(dirname(dirname(__FILE__)))."/classes/Event.php");
 if ($GLOBALS['pageview_tracking_enabled']) include(realpath(dirname(dirname(__FILE__)))."/classes/PageviewController.php");

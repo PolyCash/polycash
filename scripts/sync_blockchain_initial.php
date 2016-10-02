@@ -1,6 +1,6 @@
 <?php
 $host_not_required = TRUE;
-include(realpath(dirname(__FILE__))."/../includes/connect.php");
+include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
 if (!empty($argv)) {
 	$cmd_vars = $app->argv_to_array($argv);
@@ -11,15 +11,15 @@ if (!empty($argv)) {
 }
 
 if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
-	$game_id = $app->get_site_constant('primary_game_id');
-	if (!empty($_REQUEST['game_id'])) $game_id = intval($_REQUEST['game_id']);
+	if (empty($_REQUEST['blockchain_id'])) die("Please specify a blockchain_id.\n");
+	else $blockchain_id = (int) $_REQUEST['blockchain_id'];
 	
-	$game = new Game($app, $game_id);
+	$blockchain = new Blockchain($app, $blockchain_id);
 	
 	if (!empty($_REQUEST['block_id'])) $from_block_id = (int) $_REQUEST['block_id'];
 	else $from_block_id = false;
 	
-	echo $game->sync_initial($from_block_id);
+	echo $blockchain->sync_initial($from_block_id);
 }
 else {
 	echo "Error: you supplied the wrong key for scripts/sync_coind_initial.php\n";
