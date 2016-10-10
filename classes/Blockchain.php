@@ -252,12 +252,7 @@ class Blockchain {
 		
 		if ($db_block['locally_saved'] == 0 && !$headers_only) {
 			try {
-				if ($headers_only) {
-					$lastblock_rpc = $coin_rpc->getblockheader($block_hash);
-				}
-				else {
-					$lastblock_rpc = $coin_rpc->getblock($block_hash);
-				}
+				$lastblock_rpc = $coin_rpc->getblock($block_hash);
 			}
 			catch (Exception $e) {
 				var_dump($e);
@@ -336,7 +331,12 @@ class Blockchain {
 				else {
 					$transaction_rpc = $coin_rpc->getrawtransaction($tx_hash, 1);
 					if (!empty($transaction_rpc['blockhash'])) {
-						$rpc_block = $coin_rpc->getblockheader($transaction_rpc['blockhash']);
+						try {
+							$rpc_block = $coin_rpc->getblockheader($transaction_rpc['blockhash']);
+						}
+						catch (Exception $e) {
+							$rpc_block = $coin_rpc->getblock($transaction_rpc['blockhash']);
+						}
 						$block_height = $rpc_block['height'];
 					}
 				}
@@ -436,7 +436,7 @@ class Blockchain {
 						
 						$output_address = $this->create_or_fetch_address($address_text, true, $coin_rpc, false, true, false);
 						
-						$q = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, blockchain_id='".$this->db_blockchain['blockchain_id']."', out_index='".$j."'";
+						$q = "INSERT INTO transaction_ios SET spend_status='unspent', blockchain_id='".$this->db_blockchain['blockchain_id']."', out_index='".$j."'";
 						if ($output_address['user_id'] > 0) $q .= ", user_id='".$output_address['user_id']."'";
 						$q .= ", address_id='".$output_address['address_id']."'";
 						if ($output_address['option_index'] != "") {
@@ -750,7 +750,7 @@ class Blockchain {
 		$this->app->run_query($q);
 		$transaction_id = $this->app->last_insert_id();
 		
-		$q = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, blockchain_id='".$this->db_blockchain['blockchain_id']."', user_id=NULL, address_id='".$output_address['address_id']."'";
+		$q = "INSERT INTO transaction_ios SET spend_status='unspent', blockchain_id='".$this->db_blockchain['blockchain_id']."', user_id=NULL, address_id='".$output_address['address_id']."'";
 		$q .= ", create_transaction_id='".$transaction_id."', amount='".$this->db_blockchain['initial_pow_reward']."', create_block_id='0';";
 		$r = $this->app->run_query($q);
 		

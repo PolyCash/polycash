@@ -26,7 +26,7 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		
 		$blockchains = array();
 		
-		$blockchain_q = "SELECT * FROM blockchains;";
+		$blockchain_q = "SELECT * FROM blockchains WHERE online=1;";
 		$blockchain_r = $GLOBALS['app']->run_query($blockchain_q);
 		
 		while ($db_blockchain = $blockchain_r->fetch()) {

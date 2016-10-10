@@ -823,7 +823,7 @@ class Game {
 			if (!$giveaway_block_id) $giveaway_block_id = 0;
 			
 			while ($user_game = $r->fetch()) {
-				$temp_user = new User($this->app, $user_game['user_id']);
+				$temp_user = new User($this->blockchain->app, $user_game['user_id']);
 				$temp_user->generate_user_addresses($this);
 			}
 			
@@ -2499,7 +2499,7 @@ class Game {
 	}
 	
 	public function sync() {
-		$q = "SELECT * FROM game_blocks WHERE locally_saved=1 ORDER BY game_block_id DESC LIMIT 1;";
+		$q = "SELECT * FROM game_blocks WHERE locally_saved=1 AND game_id='".$this->db_game['game_id']."' ORDER BY game_block_id DESC LIMIT 1;";
 		$r = $this->blockchain->app->run_query($q);
 		if ($r->rowCount() > 0) {
 			$last_game_block = $r->fetch();
