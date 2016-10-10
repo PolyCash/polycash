@@ -22,10 +22,6 @@ $GLOBALS['sendgrid_pass'] = "";
 $GLOBALS['show_query_errors'] = true;
 $GLOBALS['cron_key_string'] = ""; // Enter a random string / password here
 
-$GLOBALS['bitcoin_port'] = 8332;
-$GLOBALS['bitcoin_rpc_user'] = "bitcoinrpc";
-$GLOBALS['bitcoin_rpc_password'] = ""; // Enter your bitcoin RPC password here
-
 // To give mined coins to a user by default, enter his/her username here
 $GLOBALS['default_coin_winner'] = 'your_username';
 

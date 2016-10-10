@@ -165,22 +165,14 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 						<br/>
 						<?php
 					}
-					?>
-					Then enter your Bitcoin RPC credentials by adding the following lines to your includes/config.php:
-<pre>
-$GLOBALS['bitcoin_port'] = 8332;
-$GLOBALS['bitcoin_rpc_user'] = ""; // RPC username here
-$GLOBALS['bitcoin_rpc_password'] = ""; // RPC password here
-</pre>
-					<?php
 				}
 				
 				$app->generate_games($bitcoin_blockchain_id);
 				?>
 				
-				<h2>Connect to bitcoind/empirecoind</h2>
+				<h2>Configure coin daemon connections</h2>
 				<?php
-				$blockchain_r = $app->run_query("SELECT * FROM blockchains;");
+				$blockchain_r = $app->run_query("SELECT * FROM blockchains ORDER BY blockchain_name ASC;");
 				while ($blockchain = $blockchain_r->fetch()) {
 					if ($blockchain['rpc_username'] != "" && $blockchain['rpc_password'] != "") {
 						echo "<b>Connecting RPC client to ".$blockchain['blockchain_name']."...";

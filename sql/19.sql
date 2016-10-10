@@ -88,7 +88,7 @@ ALTER TABLE `game_blocks`
 ALTER TABLE `games` DROP `p2p_mode`;
 ALTER TABLE `blockchains` ADD `p2p_mode` ENUM('none','rpc') NOT NULL DEFAULT 'none' AFTER `url_identifier`;
 ALTER TABLE `games` ADD `genesis_amount` BIGINT NULL DEFAULT NULL AFTER `genesis_tx_hash`;
-ALTER TABLE `empirecoin11`.`games` ADD INDEX (`blockchain_id`);
+ALTER TABLE `games` ADD INDEX (`blockchain_id`);
 ALTER TABLE `game_types` DROP `p2p_mode`;
 ALTER TABLE `games` CHANGE `game_starting_block` `game_starting_block` INT(11) NULL DEFAULT NULL;
 UPDATE game_types SET game_starting_block=NULL;
