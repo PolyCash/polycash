@@ -224,8 +224,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				var games = new Array();
 				games.push(new Game(<?php
 					echo $game->db_game['game_id'];
-					echo ', '.$game->last_block_id();
-					echo ', '.$game->last_transaction_id().', ';
+					echo ', '.$game->blockchain->last_block_id();
+					echo ', '.$game->blockchain->last_transaction_id().', ';
 					if ($my_last_transaction_id) echo $my_last_transaction_id;
 					else echo 'false';
 					echo ', "';
@@ -451,17 +451,23 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						if ($game) {
 							$round_id = $game->block_to_round($block['block_id']);
 							$block_index = $game->block_id_to_round_index($block['block_id']);
+							list($num_trans, $block_sum) = $game->block_stats($block);
 						}
-						list($num_trans, $block_sum) = $blockchain->block_stats($block);
+						else {
+							list($num_trans, $block_sum) = $blockchain->block_stats($block);
+						}
 						
 						echo "<h1>Block #".$block['block_id']."</h1>";
 						if ($game) echo "<h3>".$game->db_game['name']."</h3>";
 						else echo "<h3>".$blockchain->db_blockchain['blockchain_name']."</h3>";
 						
-						if (!empty($block['num_transactions']) && $num_trans != $block['num_transactions']) {
+						if (!$game && !empty($block['num_transactions']) && $num_trans != $block['num_transactions']) {
 							echo "Loaded ".number_format($num_trans)." / ".number_format($block['num_transactions'])." transactions (".number_format(100*$num_trans/$block['num_transactions'], 2)."%).<br/>\n";
 						}
-						echo "This block contains ".number_format($num_trans)." transactions totaling ".number_format($block_sum/pow(10,8), 2)." ".$blockchain->db_blockchain['coin_name_plural'].".<br/>\n";
+						echo "This block contains ".number_format($num_trans)." transactions totaling ".number_format($block_sum/pow(10,8), 2)." ";
+						if ($game) echo $game->db_game['coin_name_plural'];
+						else echo $blockchain->db_blockchain['coin_name_plural'];
+						echo ".<br/>\n";
 						
 						if ($block['locally_saved'] == 1) {
 							echo $GLOBALS['coin_brand_name']." took ".number_format($block['load_time'], 2)." seconds to load this block.<br/>\n";
@@ -510,10 +516,15 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					
 					echo '<div style="margin-top: 10px; border-bottom: 1px solid #bbb;">';
 					
-					$q = "SELECT * FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_id";
+					$q = "SELECT * FROM transactions t";
+					if ($game) $q .= " JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id";
+					$q .= " WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND t.block_id";
 					if ($explore_mode == "unconfirmed") $q .= " IS NULL";
 					else $q .= "='".$block['block_id']."'";
-					$q .= " AND amount > 0 ORDER BY transaction_id ASC;";
+					if ($game) $q .= " AND gio.game_id='".$game->db_game['game_id']."'";
+					$q .= " AND t.amount > 0";
+					if ($game) $q .= " GROUP BY t.transaction_id";
+					$q .= " ORDER BY transaction_id ASC;";
 					$r = $app->run_query($q);
 					
 					while ($transaction = $r->fetch()) {
@@ -581,7 +592,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						
 						echo '<div id="explorer_block_list" style="margin-bottom: 15px;">';
 						echo '<div id="explorer_block_list_0">';
-						echo $blockchain->explorer_block_list($from_block_id, $to_block_id);
+						$ref_game = false;
+						echo $blockchain->explorer_block_list($from_block_id, $to_block_id, $ref_game);
 						echo '</div>';
 						echo '</div>';
 						

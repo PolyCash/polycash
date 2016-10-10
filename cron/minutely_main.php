@@ -33,7 +33,7 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 		$coin_rpcs = array();
 		$game_id2real_game_i = array();
 
-		$q = "SELECT * FROM games WHERE p2p_mode='rpc';";
+		$q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.p2p_mode='rpc';";
 		$r = $GLOBALS['app']->run_query($q);
 		$real_game_i = 0;
 

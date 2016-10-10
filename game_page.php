@@ -7,7 +7,7 @@ $pagetitle = $game->db_game['name'];
 $nav_tab_selected = "game_page";
 include('includes/html_start.php');
 
-$last_block_id = $game->last_block_id();
+$last_block_id = $game->blockchain->last_block_id();
 $current_round = $game->block_to_round($last_block_id+1);
 
 $user_game = false;

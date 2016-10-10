@@ -782,6 +782,9 @@ class Blockchain {
 			$q = "UPDATE blockchains SET first_required_block='".$first_required_block."' WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';";
 			$this->app->run_query($q);
 			
+			$q = "UPDATE games SET game_starting_block='".$first_required_block."' WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';";
+			$this->app->run_query($q);
+			
 			$this->db_blockchain['first_required_block'] = $first_required_block;
 		}
 	}
@@ -944,15 +947,23 @@ class Blockchain {
 		return $html;
 	}
 	
-	public function explorer_block_list($from_block_id, $to_block_id) {
+	public function explorer_block_list($from_block_id, $to_block_id, &$game) {
 		$html = "";
-		$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id >= ".$from_block_id." AND block_id <= ".$to_block_id." ORDER BY block_id DESC;";
+		$q = "SELECT * FROM blocks b";
+		if ($game) $q .= " JOIN game_blocks gb ON b.internal_block_id=gb.internal_block_id";
+		$q .= " WHERE b.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND b.block_id >= ".$from_block_id." AND b.block_id <= ".$to_block_id;
+		if ($game) $q .= " AND gb.game_id=".$game->db_game['game_id'];
+		$q .= " ORDER BY b.block_id DESC;";
 		$r = $this->app->run_query($q);
 		while ($block = $r->fetch()) {
-			list($num_trans, $block_sum) = $this->block_stats($block);
+			if ($game) list($num_trans, $block_sum) = $game->block_stats($block);
+			else list($num_trans, $block_sum) = $this->block_stats($block);
 			$html .= "<div class=\"row\">";
 			$html .= "<div class=\"col-sm-3\">";
-			$html .= "<a href=\"/explorer/blockchains/".$this->db_blockchain['url_identifier']."/blocks/".$block['block_id']."\">Block #".$block['block_id']."</a>";
+			$html .= "<a href=\"/explorer/";
+			if ($game) $html .= "games/".$game->db_game['url_identifier'];
+			else $html .= "blockchains/".$this->db_blockchain['url_identifier'];
+			$html .= "/blocks/".$block['block_id']."\">Block #".$block['block_id']."</a>";
 			if ($block['locally_saved'] == 0 && $block['block_id'] >= $this->db_blockchain['first_required_block']) $html .= "&nbsp;(Pending)";
 			$html .= "</div>";
 			$html .= "<div class=\"col-sm-2";
@@ -964,7 +975,10 @@ class Blockchain {
 			$html .= "\" style=\"text-align: right;\">".number_format($num_trans);
 			if ($block_loading) $html .= "/".number_format($block['num_transactions']);
 			$html .= "&nbsp;transactions</div>\n";
-			$html .= "<div class=\"col-sm-2\" style=\"text-align: right;\">".$this->app->format_bignum($block_sum/pow(10,8))."&nbsp;".$this->db_blockchain['coin_name_plural']."</div>\n";
+			$html .= "<div class=\"col-sm-2\" style=\"text-align: right;\">".$this->app->format_bignum($block_sum/pow(10,8))."&nbsp;";
+			if ($game) $html .= $game->db_game['coin_name_plural'];
+			else $html .= $this->db_blockchain['coin_name_plural'];
+			$html .= "</div>\n";
 			$html .= "</div>\n";
 		}
 		return $html;

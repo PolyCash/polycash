@@ -48,7 +48,8 @@ if ($thisuser) {
 		
 		if ($r->rowCount() > 0) {
 			$user_game = $r->fetch();
-			$game = new Game($app, $user_game['game_id']);
+			$blockchain = new Blockchain($app, $requested_game['blockchain_id']);
+			$game = new Game($blockchain, $user_game['game_id']);
 		}
 		else if ($requested_game['giveaway_status'] == "public_free" || $requested_game['giveaway_status'] == "public_pay") {
 			$thisuser->ensure_user_in_game($requested_game['game_id']);
@@ -57,7 +58,8 @@ if ($thisuser) {
 			$r = $app->run_query($q);
 			$user_game = $r->fetch();
 			
-			$game = new Game($app, $user_game['game_id']);
+			$blockchain = new Blockchain($app, $requested_game['blockchain_id']);
+			$game = new Game($blockchain, $user_game['game_id']);
 		}
 		
 		if ($user_game && $user_game['payment_required'] == 0) {
@@ -182,9 +184,10 @@ if ($thisuser) {
 						<div class="col-md-7">
 							<?php
 							if ($thisuser->db_user['user_id'] == $requested_game['creator_id'] && $requested_game['game_status'] == "editable") {
-								$primary_game = new Game($app, $app->get_site_constant('primary_game_id'));
+								$blockchain = new Blockchain($app, $requested_game['blockchain_id']);
+								$requested_game_obj = new Game($blockchain, $requested_game['game_id']);
 								
-								echo "You created this game, you can edit it <a href=\"/wallet/".$primary_game->db_game['url_identifier']."\">here</a>.<br/>\n";
+								echo "You created this game, you can edit it <a href=\"/wallet/".$requested_game['url_identifier']."\">here</a>.<br/>\n";
 							}
 
 							if ($GLOBALS['rsa_pub_key'] != "" && $GLOBALS['rsa_keyholder_email'] != "") {
@@ -423,7 +426,7 @@ $initial_tab = 0;
 if ($thisuser && $game) {
 	$account_value = $thisuser->account_coin_value($game);
 	$immature_balance = $thisuser->immature_balance($game);
-	$last_block_id = $game->last_block_id();
+	$last_block_id = $game->blockchain->last_block_id();
 	$current_round = $game->block_to_round($last_block_id+1);
 	$block_within_round = $game->block_id_to_round_index($last_block_id+1);
 	$mature_balance = $thisuser->mature_balance($game);
@@ -446,7 +449,8 @@ if ($thisuser && $game) {
 			$rr = $app->run_query($qq);
 			
 			if ($rr->rowCount() == 0) {
-				$giveaway = $game->new_game_giveaway($thisuser->db_user['user_id'], 'initial_purchase', false);
+				$giveaway_address = false;
+				$giveaway = $game->new_game_giveaway($thisuser->db_user['user_id'], 'initial_purchase', $giveaway_address);
 			}
 		}
 	}
@@ -934,7 +938,7 @@ if ($thisuser && $game) {
 						<select class="form-control" id="withdraw_remainder_address_id">
 							<option value="random">Random</option>
 							<?php
-							$q = "SELECT * FROM addresses WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."' GROUP BY option_index ORDER BY option_index IS NULL ASC, option_index ASC;";
+							$q = "SELECT * FROM addresses a JOIN options o ON a.option_index=o.option_index JOIN events e ON o.event_id=e.event_id WHERE a.user_id='".$thisuser->db_user['user_id']."' AND e.game_id='".$game->db_game['game_id']."' GROUP BY option_index ORDER BY option_index ASC;";
 							$r = $app->run_query($q);
 							while ($address = $r->fetch()) {
 								echo "<option value=\"".$address['address_id']."\">";
@@ -955,7 +959,7 @@ if ($thisuser && $game) {
 				
 				<h1>My <?php echo $game->db_game['name']; ?> addresses</h1>
 				<?php
-				$q = "SELECT * FROM addresses WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."' ORDER BY option_index IS NULL DESC, option_index ASC;";
+				$q = "SELECT * FROM addresses a JOIN options o ON a.option_index=o.option_index JOIN events e ON o.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."' AND a.user_id='".$thisuser->db_user['user_id']."' ORDER BY option_index ASC;";
 				$r = $app->run_query($q);
 				?>
 				<b>You have <?php echo $r->rowCount(); ?> addresses.</b><br/>
@@ -973,7 +977,7 @@ if ($thisuser && $game) {
 							<a target="_blank" href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/addresses/<?php echo $address['address']; ?>">Explore</a>
 						</div>
 						<div class="col-sm-5">
-							<input type="text" style="border: 0px; background-color: none; width: 100%; font-family: consolas" onclick="$(this).select();" value="<?php echo $address['address']; ?>" />
+							<input type="text" class="address_cell" onclick="$(this).select();" value="<?php echo $address['address']; ?>" />
 						</div>
 					</div>
 					<?php

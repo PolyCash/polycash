@@ -370,3 +370,9 @@ footer {
 	margin: 5px 15px;
 	padding: 5px;
 }
+.address_cell {
+	border: 0px;
+	background-color: none;
+	width: 100%;
+	font-family: consolas;
+}

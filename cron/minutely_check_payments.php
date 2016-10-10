@@ -13,7 +13,7 @@ if (!empty($argv)) {
 if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$blockchains = array();
 	
-	$q = "SELECT * FROM user_games ug JOIN currency_invoices i ON ug.current_invoice_id=i.invoice_id JOIN currency_addresses a ON i.currency_address_id=a.currency_address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status != 'confirmed' AND i.status != 'settled' AND (i.status='unconfirmed' OR i.expire_time >= ".time().");";
+	/*$q = "SELECT * FROM user_games ug JOIN currency_invoices i ON ug.current_invoice_id=i.invoice_id JOIN currency_addresses a ON i.currency_address_id=a.currency_address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status != 'confirmed' AND i.status != 'settled' AND (i.status='unconfirmed' OR i.expire_time >= ".time().");";
 	$r = $app->run_query($q);
 	
 	echo "Checking ".$r->rowCount()." invoices.<br/>\n";
@@ -75,7 +75,7 @@ if ($_REQUEST['key'] != "" && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				}
 			}
 		}
-	}
+	}*/
 }
 else echo "Error: incorrect key supplied in cron/minutely_check_payments.php\n";
 ?>

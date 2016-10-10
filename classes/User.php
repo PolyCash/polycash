@@ -12,7 +12,7 @@ class User {
 	}
 	
 	public function account_coin_value($game) {
-		$q = "SELECT SUM(amount) FROM transaction_ios WHERE spend_status='unspent' AND game_id='".$game->db_game['game_id']."' AND user_id='".$this->db_user['user_id']."' AND create_block_id IS NOT NULL;";
+		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$game->db_game['game_id']."' AND io.spend_status='unspent' AND io.user_id='".$this->db_user['user_id']."' AND io.create_block_id IS NOT NULL;";
 		$r = $this->app->run_query($q);
 		$coins = $r->fetch(PDO::FETCH_NUM);
 		$coins = $coins[0];
@@ -21,7 +21,7 @@ class User {
 	}
 
 	public function immature_balance($game) {
-		$q = "SELECT SUM(amount) FROM transaction_ios WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$this->db_user['user_id']."' AND (create_block_id > ".($game->last_block_id() - $game->db_game['maturity'])." OR create_block_id IS NULL) AND instantly_mature = 0;";
+		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$game->db_game['game_id']."' AND io.user_id='".$this->db_user['user_id']."' AND (io.create_block_id > ".($game->blockchain->last_block_id() - $game->db_game['maturity'])." OR io.create_block_id IS NULL) AND gio.instantly_mature = 0;";
 		$r = $this->app->run_query($q);
 		$sum = $r->fetch(PDO::FETCH_NUM);
 		$sum = $sum[0];
@@ -30,7 +30,7 @@ class User {
 	}
 
 	public function mature_balance($game) {
-		$q = "SELECT SUM(amount) FROM transaction_ios WHERE spend_status='unspent' AND spend_transaction_id IS NULL AND game_id='".$game->db_game['game_id']."' AND user_id='".$this->db_user['user_id']."' AND (create_block_id <= ".($game->last_block_id() - $game->db_game['maturity'])." OR instantly_mature = 1);";
+		$q = "SELECT SUM(colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND gio.game_id='".$game->db_game['game_id']."' AND io.user_id='".$this->db_user['user_id']."' AND (io.create_block_id <= ".($game->blockchain->last_block_id() - $game->db_game['maturity'])." OR gio.instantly_mature = 1);";
 		$r = $this->app->run_query($q);
 		$sum = $r->fetch(PDO::FETCH_NUM);
 		$sum = $sum[0];
@@ -39,7 +39,7 @@ class User {
 	}
 
 	public function user_current_votes($game, $last_block_id, $current_round) {
-		$q = "SELECT ROUND(SUM(amount)) coins, ROUND(SUM(amount*(".($last_block_id+1)."-create_block_id))) coin_blocks, ROUND(SUM(amount*(".$current_round."-create_round_id))) coin_rounds FROM transaction_ios WHERE spend_status='unspent' AND spend_transaction_id IS NULL AND game_id='".$game->db_game['game_id']."' AND user_id='".$this->db_user['user_id']."' AND (create_block_id <= ".($game->last_block_id() - $game->db_game['maturity'])." OR instantly_mature = 1);";
+		$q = "SELECT ROUND(SUM(amount)) coins, ROUND(SUM(amount*(".($last_block_id+1)."-create_block_id))) coin_blocks, ROUND(SUM(amount*(".$current_round."-create_round_id))) coin_rounds FROM transaction_ios WHERE spend_status='unspent' AND spend_transaction_id IS NULL AND game_id='".$game->db_game['game_id']."' AND user_id='".$this->db_user['user_id']."' AND (create_block_id <= ".($game->blockchain->last_block_id() - $game->db_game['maturity'])." OR instantly_mature = 1);";
 		$r = $this->app->run_query($q);
 		$sum = $r->fetch();
 		$votes = $sum[$game->db_game['payout_weight']."s"];
@@ -125,19 +125,13 @@ class User {
 	
 	public function my_last_transaction_id($game_id) {
 		if ($game_id > 0) {
-			$start_q = "SELECT t.transaction_id FROM transactions t, addresses a, transaction_ios i WHERE a.address_id=i.address_id AND ";
-			$end_q = " AND a.user_id='".$this->db_user['user_id']."' AND i.game_id='".$game_id."' ORDER BY t.transaction_id DESC LIMIT 1;";
-			
-			$create_r = $this->app->run_query($start_q."i.create_transaction_id=t.transaction_id".$end_q);
-			$create_trans_id = $create_r->fetch(PDO::FETCH_NUM);
-			$create_trans_id = $create_trans_id[0];
-			
-			$spend_r = $this->app->run_query($start_q."i.spend_transaction_id=t.transaction_id".$end_q);
+			$spend_q = "SELECT io.spend_transaction_id FROM addresses a JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE";
+			$spend_q .= " a.user_id='".$this->db_user['user_id']."' AND gio.game_id='".$game_id."' ORDER BY io.spend_transaction_id DESC LIMIT 1;";
+			$spend_r = $this->app->run_query($spend_q);
 			$spend_trans_id = $spend_r->fetch(PDO::FETCH_NUM);
 			$spend_trans_id = $spend_trans_id[0];
 			
-			if ($create_trans_id > $spend_trans_id) return intval($create_trans_id);
-			else return intval($spend_trans_id);
+			return (int) $spend_trans_id;
 		}
 		else return 0;
 	}
@@ -199,7 +193,7 @@ class User {
 	}
 	
 	public function user_address_id($game_id, $option_index, $option_id) {
-		$q = "SELECT * FROM addresses WHERE game_id='".$game_id."' AND user_id='".$this->db_user['user_id']."'";
+		$q = "SELECT * FROM addresses WHERE user_id='".$this->db_user['user_id']."'";
 		if ($option_index !== false) $q .= " AND option_index='".$option_index."'";
 		else if ($option_id) {
 			$db_option = $this->app->run_query("SELECT * FROM options WHERE option_id='".$option_id."';")->fetch();
@@ -217,7 +211,9 @@ class User {
 	}
 
 	public function ensure_user_in_game($game_id) {
-		$game = new Game($this->app, $game_id);
+		$db_game = $this->app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
+		$blockchain = new Blockchain($this->app, $db_game['blockchain_id']);
+		$game = new Game($blockchain, $game_id);
 
 		$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$this->db_user['user_id']."' AND ug.game_id='".$game_id."';";
 		$r = $this->app->run_query($q);
@@ -391,11 +387,13 @@ class User {
 		
 		// Try to give the user voting addresses for all options in this game
 		for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
-			$qq = "SELECT * FROM addresses WHERE option_index='".$option_index."' AND game_id='".$game->db_game['game_id']."' AND user_id='".$this->db_user['user_id']."';";
+			// Check if user already has a voting address for this option_index
+			$qq = "SELECT * FROM addresses WHERE option_index='".$option_index."' AND user_id='".$this->db_user['user_id']."';";
 			$rr = $this->app->run_query($qq);
 			
 			if ($rr->rowCount() == 0) {
-				$qq = "SELECT * FROM addresses WHERE option_index='".$option_index."' AND game_id='".$game->db_game['game_id']."' AND is_mine=1 AND user_id IS NULL;";
+				// If not, check if there is an unallocated address available to give to the user
+				$qq = "SELECT * FROM addresses WHERE option_index='".$option_index."' AND is_mine=1 AND user_id IS NULL;";
 				$rr = $this->app->run_query($qq);
 				
 				if ($rr->rowCount() > 0) {
@@ -408,11 +406,11 @@ class User {
 		}
 		
 		// Make sure the user has a non-voting address
-		$q = "SELECT * FROM addresses WHERE option_index IS NULL AND game_id='".$game->db_game['game_id']."' AND user_id='".$this->db_user['user_id']."';";
+		$q = "SELECT * FROM addresses WHERE option_index IS NULL AND user_id='".$this->db_user['user_id']."';";
 		$r = $this->app->run_query($q);
 		
 		if ($r->rowCount() == 0) {
-			$q = "SELECT * FROM addresses WHERE option_index IS NULL AND game_id='".$game->db_game['game_id']."' AND is_mine=1 AND user_id IS NULL;";
+			$q = "SELECT * FROM addresses WHERE option_index IS NULL AND is_mine=1 AND user_id IS NULL;";
 			$r = $this->app->run_query($q);
 			if ($r->rowCount() > 0) {
 				$address = $r->fetch();

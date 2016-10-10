@@ -26,7 +26,7 @@ class App {
 	
 	public function log_then_die($message) {
 		$this->log($message);
-		die($message);
+		throw new Exception($message);
 	}
 	
 	public function utf8_clean($str) {
@@ -633,7 +633,7 @@ class App {
 				$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 				$featured_game = new Game($blockchain, $db_game['game_id']);
 				$mining_block_id = $blockchain->last_block_id()+1;
-				$current_round_id = $blockchain->block_to_round($mining_block_id);
+				$current_round_id = $featured_game->block_to_round($mining_block_id);
 				?>
 				<script type="text/javascript">
 				games.push(new Game(<?php
@@ -1123,9 +1123,9 @@ class App {
 	public function check_process_running($lock_name) {
 		if ($GLOBALS['process_lock_method'] == "db") $process_running = (int) $this->get_site_constant($lock_name);
 		else {
-			$cmd = "ps aux|grep ".realpath(dirname($_SERVER["SCRIPT_FILENAME"]))."/".basename($_SERVER["SCRIPT_FILENAME"])."|grep -v grep|wc -l";
+			$cmd = "ps aux|grep \"".realpath(dirname($_SERVER["SCRIPT_FILENAME"]))."/".basename($_SERVER["SCRIPT_FILENAME"])."\"|grep -v grep|wc";
 			$running = exec($cmd);
-			if ($running > 1) $process_running = true;
+			if ($running > 2) $process_running = true;
 			else $process_running = false;
 		}
 		return $process_running;

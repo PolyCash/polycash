@@ -34,7 +34,8 @@ else {
 		$db_game = $r->fetch();
 		
 		if (in_array($db_game['game_status'], array("running","published","completed"))) {
-			$game = new Game($app, $db_game['game_id']);
+			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+			$game = new Game($blockchain, $db_game['game_id']);
 			include("game_page.php");
 		}
 		else echo "404 - Page not found";

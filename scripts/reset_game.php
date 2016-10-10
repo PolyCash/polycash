@@ -10,9 +10,11 @@ if (!empty($argv)) {
 }
 
 if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
-	$game_id = intval($_REQUEST['game_id']);
+	$game_id = (int)$_REQUEST['game_id'];
+	$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
 	
-	$game = new Game($app, $game_id);
+	$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+	$game = new Game($blockchain, $db_game['game_id']);
 	
 	if ($game) {
 		$action = 'reset';
