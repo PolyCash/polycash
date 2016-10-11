@@ -57,7 +57,7 @@ if (rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer") $explore_mode = "explore
 else if ($game && rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer/games/".$game->db_game['url_identifier']) $explore_mode = "game_home";
 else if (!$game && $blockchain && rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']) $explore_mode = "blockchain_home";
 
-if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($explore_mode, array('blockchain_home','blocks','addresses','transactions'))) || ($game && in_array($explore_mode, array('game_home','events','blocks','addresses','transactions')))) {
+if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($explore_mode, array('blockchain_home','blocks','addresses','transactions','utxos'))) || ($game && in_array($explore_mode, array('game_home','events','blocks','addresses','transactions','utxos')))) {
 	if ($game) {
 		$last_block_id = $blockchain->last_block_id();
 		$current_round = $game->block_to_round($last_block_id+1);
@@ -83,7 +83,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 	}
 	if ($explore_mode == "events") {
 		$event_status = "";
-		$event_id = $uri_parts[4];
+		$event_id = $uri_parts[5];
 		
 		if ($event_id == '0') {
 			$mode_error = false;
@@ -194,6 +194,11 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 			}
 		}
 	}
+	if ($explore_mode == "utxos") {
+		if ($game) $pagetitle = $game->db_game['name']." - List of UTXOs";
+		else $pagetitle = $blockchain->db_blockchain['blockchain_name']." - List of UTXOs";
+		$mode_error = false;
+	}
 	
 	if ($mode_error) $pagetitle = $GLOBALS['coin_brand_name']." - Blockchain Explorer";
 	$nav_tab_selected = "explorer";
@@ -243,25 +248,45 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					echo ', "explorer", "'.$game->event_ids().'"';
 				?>));
 				</script>
-			
-				<div class="row">
-					<div class="col-sm-7 ">
-						<ul class="list-inline explorer_nav" id="explorer_nav">
-							<li><a<?php if ($explore_mode == 'blocks') echo ' class="selected"'; ?> href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/blocks/">Blocks</a></li>
-							<li><a<?php if ($explore_mode == 'events') echo ' class="selected"'; ?> href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/">Events</a></li>
-							<li><a<?php if ($explore_mode == 'unconfirmed') echo ' class="selected"'; ?> href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/transactions/unconfirmed/">Unconfirmed Transactions</a></li>
-							<?php if ($thisuser) { ?><li><a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">My Wallet</a></li><?php } ?>
-						</ul>
-					</div>
-					<div class="col-sm-4 row-no-padding">
-						<input type="text" class="form-control" placeholder="Search..." id="explorer_search" />
-					</div>
-					<div class="col-sm-1 row-no-padding">
-						<button class="btn btn-primary" onclick="explorer_search();">Go</button>
-					</div>
-				</div>
 				<?php
 			}
+			?>
+			<div class="row">
+				<div class="col-sm-7 ">
+					<ul class="list-inline explorer_nav" id="explorer_nav">
+						<li><a<?php if ($explore_mode == 'blocks') echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
+						if ($game) echo $game->db_game['url_identifier'];
+						else echo $blockchain->db_blockchain['url_identifier'];
+						?>/blocks/">Blocks</a></li>
+						<?php if ($game) { ?>
+						<li><a<?php if ($explore_mode == 'events') echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
+						if ($game) echo $game->db_game['url_identifier'];
+						else echo $blockchain->db_blockchain['url_identifier'];
+						?>/events/">Events</a></li>
+						<?php } ?>
+						<li><a<?php if ($explore_mode == 'utxos') echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
+						if ($game) echo $game->db_game['url_identifier'];
+						else echo $blockchain->db_blockchain['url_identifier'];
+						?>/utxos/">UTXOs</a></li>
+						<?php if ($game && $game->db_game['escrow_address'] != "") { ?>
+						<li><a<?php if ($explore_mode == 'addresses' && $address['address'] == $game->db_game['escrow_address']) echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php echo $game->db_game['url_identifier']; ?>/addresses/<?php echo $game->db_game['escrow_address']; ?>">Escrow</a></li>
+						<?php } ?>
+						<li><a<?php if ($explore_mode == 'unconfirmed') echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
+						if ($game) echo $game->db_game['url_identifier'];
+						else echo $blockchain->db_blockchain['url_identifier'];
+						?>/transactions/unconfirmed/">Unconfirmed Transactions</a></li>
+						<?php if ($thisuser && $game) { ?><li><a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">My Wallet</a></li><?php } ?>
+					</ul>
+				</div>
+				<div class="col-sm-4 row-no-padding">
+					<input type="text" class="form-control" placeholder="Search..." id="explorer_search" />
+				</div>
+				<div class="col-sm-1 row-no-padding">
+					<button class="btn btn-primary" onclick="explorer_search();">Go</button>
+				</div>
+			</div>
+			<?php
+			
 			if ($explore_mode == "events") {
 				if (!empty($db_event) || $event_status == "current") {
 					if ($event_status == "current") {
@@ -605,7 +630,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				}
 			}
 			else if ($explore_mode == "addresses") {
-				echo "<h3>".$blockchain->db_blockchain['blockchain_name']." Address: ".$address['address']."</h3>\n";
+				echo "<h3>";
+				if ($game) echo $game->db_game['name'];
+				else echo $blockchain->db_blockchain['blockchain_name'];
+				echo " Address: ".$address['address']."</h3>\n";
 				
 				$q = "SELECT * FROM transactions t, transaction_ios i WHERE i.address_id='".$address['address_id']."' AND (t.transaction_id=i.create_transaction_id OR t.transaction_id=i.spend_transaction_id) GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;";
 				$r = $app->run_query($q);
@@ -615,7 +643,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				
 				echo '<div style="border-bottom: 1px solid #bbb;">';
 				while ($transaction_io = $r->fetch()) {
-					echo $blockchain->render_transaction($transaction_io, $address['address_id']);
+					if ($game) echo $game->render_transaction($transaction_io, $address['address_id']);
+					else echo $blockchain->render_transaction($transaction_io, $address['address_id']);
 				}
 				echo "</div>\n";
 				
@@ -720,6 +749,30 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 			}
 			else if ($explore_mode == "game_home") {
 				echo 'game_home';
+			}
+			else if ($explore_mode == "utxos") {
+				if ($game) {
+					$mining_block_id = $game->blockchain->last_block_id()+1;
+					$mining_round = $game->block_to_round($mining_block_id);
+					
+					echo "<h1>UTXOs - ".$game->db_game['name']."</h1>\n";
+					
+					$utxo_q = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON a.address_id=io.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND io.spend_status IN ('unspent','unconfirmed');";
+					$utxo_r = $app->run_query($utxo_q);
+					
+					while ($utxo = $utxo_r->fetch()) {
+						if ($game->db_game['payout_weight'] == "coin") $votes = $utxo['colored_amount'];
+						else if ($game->db_game['payout_weight'] == "coin_block") $votes = $utxo['colored_amount']*($mining_block_id-$utxo['create_block_id']);
+						else if ($game->db_game['payout_weight'] == "coin_round") $votes = $utxo['colored_amount']*($mining_round-$utxo['create_round_id']);
+						else $votes = 0;
+						
+						echo '<div class="row">';
+						echo '<div class="col-sm-3">'.$app->format_bignum($utxo['colored_amount']/pow(10,8)).' '.$game->db_game['coin_name_plural'].'</div>';
+						echo '<div class="col-sm-2">'.$app->format_bignum($votes/pow(10,8)).' votes</div>';
+						echo '<div class="col-sm-4"><a href="/explorer/games/'.$game->db_game['url_identifier'].'/addresses/'.$utxo['address'].'">'.$utxo['address']."</a></div>\n";
+						echo '</div>';
+					}
+				}
 			}
 		}
 		

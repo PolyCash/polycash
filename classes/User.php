@@ -445,7 +445,7 @@ class User {
 	}
 	
 	public function ensure_currency_accounts() {
-		$q = "SELECT * FROM currencies WHERE currency_id=2;";
+		$q = "SELECT * FROM currencies WHERE blockchain_id IS NOT NULL;";
 		$r = $this->app->run_query($q);
 		
 		while ($currency = $r->fetch()) {

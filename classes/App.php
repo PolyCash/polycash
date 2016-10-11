@@ -682,9 +682,11 @@ class App {
 		$update_user_id_q .= ";";
 		$update_user_id_r = $this->run_query($update_user_id_q);
 	}
+	
 	public function log($message) {
 		$this->run_query("INSERT INTO log_messages SET message=".$this->quote_escape($message).";");
 	}
+	
 	public function update_schema() {
 		$migrations_path = realpath(dirname(__FILE__)."/../sql");
 		
@@ -704,6 +706,7 @@ class App {
 		}
 		while ($keep_looping);
 	}
+	
 	public function argv_to_array($argv) {
 		$arr = array();
 		$arg_i = 0;

@@ -996,5 +996,12 @@ class Blockchain {
 		$q = "UPDATE blocks SET block_hash=".$this->app->quote_escape($block_hash)." WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id='".$block_height."';";
 		$r = $this->app->run_query($q);
 	}
+	
+	public function address_balance_at_block($db_address, $block_id) {
+		$q = "SELECT SUM(amount) FROM transaction_ios WHERE address_id='".$db_address['address_id']."' AND create_block_id <= ".$block_id." AND ((spend_block_id IS NULL AND spend_status='unspent') OR spend_block_id>".$block_id.");";
+		$r = $this->app->run_query($q);
+		$balance = $r->fetch();
+		return (int)$balance['SUM(amount)'];
+	}
 }
 ?>
