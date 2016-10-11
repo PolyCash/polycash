@@ -20,8 +20,8 @@ if ($uri_parts[2] == "games") {
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$game = new Game($blockchain, $db_game['game_id']);
 		
-		if ($game->db_game['p2p_mode'] == "rpc") {
-			$coin_rpc = new jsonRPCClient('http://'.$game->db_game['rpc_username'].':'.$game->db_game['rpc_password'].'@127.0.0.1:'.$game->db_game['rpc_port'].'/');
+		if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
+			$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
 		}
 		
 		if ($thisuser) {
@@ -33,7 +33,7 @@ if ($uri_parts[2] == "games") {
 			}
 		}
 		
-		if ($game->db_game['p2p_mode'] == "none" && !$user_game && $game->db_game['creator_id'] > 0) $game = false;
+		if ($blockchain->db_blockchain['p2p_mode'] == "none" && !$user_game && $game->db_game['creator_id'] > 0) $game = false;
 	}
 }
 else if ($uri_parts[2] == "blockchains") {
@@ -528,7 +528,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					$r = $app->run_query($q);
 					
 					while ($transaction = $r->fetch()) {
-						echo $blockchain->render_transaction($transaction, FALSE);
+						if ($game) echo $game->render_transaction($transaction, FALSE);
+						else echo $blockchain->render_transaction($transaction, FALSE);
 					}
 					echo '</div>';
 					echo "<br/>\n";
@@ -634,7 +635,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				$rpc_transaction = false;
 				$rpc_raw_transaction = false;
 				
-				/*if ($game->db_game['p2p_mode'] == "rpc") {
+				if ($game->blockchain->db_blockchain['p2p_mode'] == "rpc") {
 					try {
 						$rpc_transaction = $coin_rpc->gettransaction($transaction['tx_hash']);
 					}
@@ -645,23 +646,24 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$rpc_raw_transaction = $coin_rpc->decoderawtransaction($rpc_raw_transaction);
 					}
 					catch (Exception $e) {}
-				}*/
+				}
 				
 				echo "<h3>".$blockchain->db_blockchain['blockchain_name']." Transaction: ".$transaction['tx_hash']."</h3>\n";
-				/*if ($transaction['block_id'] > 0) {
+				if ($game && $transaction['block_id'] > 0) {
 					$block_index = $game->block_id_to_round_index($transaction['block_id']);
 					$round_id = $game->block_to_round($transaction['block_id']);
 				}
 				else {
 					$block_index = false;
 					$round_id = false;
-				}*/
+				}
 				echo "This transaction has ".(int) $transaction['num_inputs']." inputs and ".(int) $transaction['num_outputs']." outputs totalling ".$app->format_bignum($transaction['amount']/pow(10,8))." ".$blockchain->db_blockchain['coin_name_plural'].". ";
 				echo "Loaded in ".number_format($transaction['load_time'], 2)." seconds.";
 				echo "<br/>\n";
 				
 				echo '<div style="margin-top: 10px; border-bottom: 1px solid #bbb;">';
-				echo $blockchain->render_transaction($transaction, false);
+				if ($game) echo $game->render_transaction($transaction, false);
+				else echo $blockchain->render_transaction($transaction, false);
 				echo "</div>\n";
 				
 				if ($rpc_transaction || $rpc_raw_transaction) {

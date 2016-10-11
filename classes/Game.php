@@ -851,95 +851,6 @@ class Game {
 		$this->update_option_votes();
 	}
 	
-	public function render_transaction($transaction, $selected_address_id) {
-		$html = "";
-		$html .= '<div class="row bordered_row"><div class="col-md-12">';
-		
-		if (!empty($transaction['block_id'])) {
-			if ($transaction['position_in_block'] == "") $html .= "Confirmed";
-			else $html .= "#".(int)$transaction['position_in_block'];
-			$html .= " in block <a href=\"/explorer/".$this->db_game['url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>, ";
-		}
-		$html .= (int)$transaction['num_inputs']." inputs, ".(int)$transaction['num_outputs']." outputs, ".$this->blockchain->app->format_bignum($transaction['amount']/pow(10,8))." ".$this->db_game['coin_name_plural'];
-		
-		$transaction_fee = $transaction['fee_amount'];
-		if ($transaction['transaction_desc'] != "coinbase" && $transaction['transaction_desc'] != "votebase") {
-			$fee_disp = $this->blockchain->app->format_bignum($transaction_fee/pow(10,8));
-			$html .= ", ".$fee_disp;
-			$html .= " tx fee";
-		}
-		if (empty($transaction['block_id'])) $html .= ", not yet confirmed";
-		$html .= '. <br/><a href="/explorer/'.$this->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'" class="display_address" style="max-width: 100%; overflow: hidden;">TX:&nbsp;'.$transaction['tx_hash'].'</a>';
-		
-		$html .= '</div><div class="col-md-6">';
-		
-		if ($transaction['transaction_desc'] == "giveaway") {
-			$q = "SELECT * FROM game_giveaways WHERE transaction_id='".$transaction['transaction_id']."';";
-			$r = $this->blockchain->app->run_query($q);
-			if ($r->rowCount() > 0) {
-				$giveaway = $r->fetch();
-				$html .= $this->blockchain->app->format_bignum($giveaway['amount']/pow(10,8))." ".$this->db_game['coin_name_plural']." were given to a player for joining.";
-			}
-		}
-		else if ($transaction['transaction_desc'] == "votebase") {
-			$payout_disp = round($transaction['amount']/pow(10,8), 2);
-			$html .= "Voting Payout&nbsp;&nbsp;".$payout_disp." ";
-			if ($payout_disp == '1') $html .= $this->db_game['coin_name'];
-			else $html .= $this->db_game['coin_name_plural'];
-		}
-		else if ($transaction['transaction_desc'] == "coinbase") {
-			$html .= "Miner found a block.";
-		}
-		else {
-			$qq = "SELECT * FROM transaction_ios i JOIN addresses a ON i.address_id=a.address_id LEFT JOIN options o ON i.option_id=o.option_id WHERE i.spend_transaction_id='".$transaction['transaction_id']."' ORDER BY i.amount DESC;";
-			$rr = $this->blockchain->app->run_query($qq);
-			$input_sum = 0;
-			while ($input = $rr->fetch()) {
-				$amount_disp = $this->blockchain->app->format_bignum($input['amount']/pow(10,8));
-				$html .= '<a class="display_address" style="';
-				if ($input['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
-				$html .= '" href="/explorer/'.$this->db_game['url_identifier'].'/addresses/'.$input['address'].'">'.$input['address'].'</a>';
-				if (!empty($input['name'])) $html .= "&nbsp;&nbsp;(".$input['name'].")";
-				$html .= "<br/>\n";
-				$html .= $amount_disp." ";
-				if ($amount_disp == '1') $html .= $this->db_game['coin_name'];
-				else $html .= $this->db_game['coin_name_plural'];
-				if ($transaction['block_id'] > 0) {
-					if ($this->db_game['payout_weight'] == "coin") $votes = $input['amount'];
-					else $votes = $input[$this->db_game['payout_weight'].'s_created'];
-					$html .= ", ".$this->blockchain->app->format_bignum($votes/pow(10,8))." votes";
-				}
-				$html .= "<br/>\n";
-				$input_sum += $input['amount'];
-			}
-		}
-		$html .= '</div><div class="col-md-6">';
-		$qq = "SELECT i.*, a.*, o.name, i.votes AS votes, p.amount AS payout_amount FROM transaction_ios i LEFT JOIN transaction_ios p ON i.payout_io_id=p.io_id JOIN addresses a ON i.address_id=a.address_id LEFT JOIN options o ON i.option_id=o.option_id WHERE i.create_transaction_id='".$transaction['transaction_id']."' ORDER BY i.out_index ASC;";
-		$rr = $this->blockchain->app->run_query($qq);
-		$output_sum = 0;
-		while ($output = $rr->fetch()) {
-			$html .= '<a class="display_address" style="';
-			if ($output['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
-			$html .= '" href="/explorer/'.$this->db_game['url_identifier'].'/addresses/'.$output['address'].'">'.$output['address']."</a><br/>\n";
-			
-			$amount_disp = $this->blockchain->app->format_bignum($output['amount']/pow(10,8));
-			$html .= $amount_disp." ";
-			if ($amount_disp == '1') $html .= $this->db_game['coin_name'];
-			else $html .= $this->db_game['coin_name_plural'];
-			
-			if ($output['votes'] > 0) {
-				$html .= ", ".$this->blockchain->app->format_bignum($output['votes']/pow(10,8))." votes for";
-				$html .= " ".$output['name'];
-			}
-			if ($output['payout_amount'] > 0) $html .= '&nbsp;&nbsp;<font class="greentext">+'.$this->blockchain->app->format_bignum($output['payout_amount']/pow(10,8)).'</font>';
-			$html .= "<br/>\n";
-			$output_sum += $output['amount'];
-		}
-		$html .= '</div></div>'."\n";
-		
-		return $html;
-	}
-	
 	public function rounds_complete_html($max_round_id, $limit) {
 		$html = "";
 		
@@ -2667,6 +2578,85 @@ class Game {
 				$rr = $this->blockchain->app->run_query($qq);
 			}
 		}
+	}
+	
+	public function render_transaction($transaction, $selected_address_id) {
+		$html = "";
+		$html .= '<div class="row bordered_row"><div class="col-md-12">';
+		
+		if (!empty($transaction['block_id'])) {
+			if ($transaction['position_in_block'] == "") $html .= "Confirmed";
+			else $html .= "#".(int)$transaction['position_in_block'];
+			$html .= " in block <a href=\"/explorer/games/".$this->db_game['url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>, ";
+		}
+		$html .= (int)$transaction['num_inputs']." inputs, ".(int)$transaction['num_outputs']." outputs";
+		
+		$transaction_fee = $transaction['fee_amount'];
+		if ($transaction['transaction_desc'] != "coinbase" && $transaction['transaction_desc'] != "votebase") {
+			$fee_disp = $this->blockchain->app->format_bignum($transaction_fee/pow(10,8));
+			$html .= ", ".$fee_disp." ".$this->blockchain->db_blockchain['coin_name'];
+			$html .= " tx fee";
+		}
+		if (empty($transaction['block_id'])) $html .= ", not yet confirmed";
+		$html .= '. <br/><a href="/explorer/games/'.$this->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'" class="display_address" style="max-width: 100%; overflow: hidden;">TX:&nbsp;'.$transaction['tx_hash'].'</a>';
+		
+		$html .= '</div><div class="col-md-6">';
+		
+		if ($transaction['transaction_desc'] == "giveaway") {
+			$q = "SELECT * FROM game_giveaways WHERE transaction_id='".$transaction['transaction_id']."';";
+			$r = $this->blockchain->app->run_query($q);
+			if ($r->rowCount() > 0) {
+				$giveaway = $r->fetch();
+				$html .= $this->blockchain->app->format_bignum($giveaway['amount']/pow(10,8))." coins were given to a player for joining.";
+			}
+		}
+		else if ($transaction['transaction_desc'] == "votebase") {
+			$payout_disp = round($transaction['amount']/pow(10,8), 2);
+			$html .= "Voting Payout&nbsp;&nbsp;".$payout_disp." ";
+			if ($payout_disp == '1') $html .= $this->db_game['coin_name'];
+			else $html .= $this->db_game['coin_name_plural'];
+		}
+		else if ($transaction['transaction_desc'] == "coinbase") {
+			$html .= "Miner found a block.";
+		}
+		else {
+			$qq = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.spend_transaction_id='".$transaction['transaction_id']."' ORDER BY io.amount DESC;";
+			$rr = $this->blockchain->app->run_query($qq);
+			$input_sum = 0;
+			while ($input = $rr->fetch()) {
+				$amount_disp = $this->blockchain->app->format_bignum($input['colored_amount']/pow(10,8));
+				$html .= '<a class="display_address" style="';
+				if ($input['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
+				$html .= '" href="/explorer/games/'.$this->db_game['url_identifier'].'/addresses/'.$input['address'].'">'.$input['address'].'</a>';
+				$html .= "<br/>\n";
+				$html .= $amount_disp." ";
+				if ($amount_disp == '1') $html .= $this->db_game['coin_name'];
+				else $html .= $this->db_game['coin_name_plural'];
+				
+				$html .= "<br/>\n";
+				$input_sum += $input['amount'];
+			}
+		}
+		$html .= '</div><div class="col-md-6">';
+		$qq = "SELECT gio.*, io.*, a.* FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.create_transaction_id='".$transaction['transaction_id']."' ORDER BY io.out_index ASC;";
+		$rr = $this->blockchain->app->run_query($qq);
+		$output_sum = 0;
+		while ($output = $rr->fetch()) {
+			$html .= '<a class="display_address" style="';
+			if ($output['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
+			$html .= '" href="/explorer/games/'.$this->db_game['url_identifier'].'/addresses/'.$output['address'].'">'.$output['address']."</a><br/>\n";
+			
+			$amount_disp = $this->blockchain->app->format_bignum($output['colored_amount']/pow(10,8));
+			$html .= $amount_disp." ";
+			if ($amount_disp == '1') $html .= $this->db_game['coin_name'];
+			else $html .= $this->db_game['coin_name_plural'];
+			
+			$html .= "<br/>\n";
+			$output_sum += $output['colored_amount'];
+		}
+		$html .= '</div></div>'."\n";
+		
+		return $html;
 	}
 	
 	public function explorer_block_list($from_block_id, $to_block_id) {
