@@ -1,6 +1,6 @@
 <?php
 $host_not_required = TRUE;
-include(realpath(dirname(__FILE__))."/../includes/connect.php");
+include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
 if (!empty($argv)) {
 	$cmd_vars = $app->argv_to_array($argv);
@@ -9,7 +9,7 @@ if (!empty($argv)) {
 	$_REQUEST['game_id'] = $cmd_vars['game_id'];
 }
 
-if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$game_id = $_REQUEST['game_id'];
 	$game = new Game($app, $game_id);
 	
@@ -69,7 +69,7 @@ if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 		for ($i=0; $i<count($more_addresses); $i++) {
 			$rpc_address = $more_addresses[$i];
 			
-			$game->create_or_fetch_address($rpc_address['address'], true, $coin_rpc, false, false, false);
+			$app->create_or_fetch_address($rpc_address['address'], true, $coin_rpc, false, false, false);
 		}
 		
 		$q = "SELECT COUNT(*) FROM addresses WHERE game_id='".$game->db_game['game_id']."' AND is_mine=1;";

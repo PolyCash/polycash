@@ -103,3 +103,7 @@ ALTER TABLE `games`
   DROP `rpc_port`,
   DROP `rpc_username`,
   DROP `rpc_password`;
+ALTER TABLE `game_types`
+  DROP `rpc_port`,
+  DROP `rpc_username`,
+  DROP `rpc_password`;

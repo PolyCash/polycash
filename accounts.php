@@ -3,10 +3,6 @@ include('includes/connect.php');
 include('includes/get_session.php');
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
-if ($thisuser) {
-	$thisuser->refresh_currency_accounts();
-}
-
 $pagetitle = "My Accounts";
 $nav_tab_selected = "accounts";
 include('includes/html_start.php');
@@ -24,7 +20,7 @@ include('includes/html_start.php');
 		</script>
 		<h1>My Accounts</h1>
 		<?php
-		$account_q = "SELECT * FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id JOIN currency_addresses a ON ca.current_address_id=a.currency_address_id WHERE ca.user_id='".$thisuser->db_user['user_id']."';";
+		$account_q = "SELECT * FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id JOIN blockchains b ON c.blockchain_id=b.blockchain_id JOIN addresses a ON ca.current_address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE ca.user_id='".$thisuser->db_user['user_id']."';";
 		$account_r = $app->run_query($account_q);
 		
 		echo "<p>You have ".$account_r->rowCount()." currency account";
@@ -35,7 +31,7 @@ include('includes/html_start.php');
 			echo '<div class="row">';
 			echo '<div class="col-sm-4">'.$account['account_name'].'</div>';
 			
-			$balance_q = "SELECT SUM(amount) FROM currency_ios io JOIN currency_addresses a ON io.currency_address_id=a.currency_address_id WHERE a.account_id='".$account['account_id']."' AND io.spend_status='unspent';";
+			$balance_q = "SELECT SUM(amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."' AND io.spend_status='unspent';";
 			$balance_r = $app->run_query($balance_q);
 			$balance = $balance_r->fetch();
 			$balance = (int) $balance['SUM(amount)'];
@@ -47,10 +43,10 @@ include('includes/html_start.php');
 			echo '<div class="col-sm-2"><a href="" onclick="toggle_account_details('.$account['account_id'].'); return false;">Deposit</a></div>';
 			echo '<div class="col-sm-2"><a href="" onclick="toggle_account_details('.$account['account_id'].'); return false;">Transactions';
 			
-			$transaction_in_q = "SELECT * FROM currency_transactions t JOIN currency_ios io ON t.transaction_id=io.create_transaction_id JOIN currency_addresses ca ON ca.currency_address_id=io.currency_address_id WHERE ca.account_id='".$account['account_id']."';";
+			$transaction_in_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."';";
 			$transaction_in_r = $app->run_query($transaction_in_q);
 			
-			$transaction_out_q = "SELECT * FROM currency_transactions t JOIN currency_ios io ON t.transaction_id=io.spend_transaction_id JOIN currency_addresses ca ON ca.currency_address_id=io.currency_address_id WHERE ca.account_id='".$account['account_id']."';";
+			$transaction_out_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."';";
 			$transaction_out_r = $app->run_query($transaction_out_q);
 			
 			echo ' ('.($transaction_in_r->rowCount()+$transaction_out_r->rowCount()).')';
@@ -68,11 +64,11 @@ include('includes/html_start.php');
 				echo '<div class="col-sm-4">';
 				echo $transaction['pub_key'];
 				echo '</div>';
-				echo '<div class="col-sm-2 greentext">';
+				echo '<div class="col-sm-2"><a class="greentext" target="_blank" href="/explorer/blockchains/'.$account['url_identifier'].'/transactions/'.$transaction['tx_hash'].'">';
 				echo "+".$app->format_bignum($transaction['amount']/pow(10,8))." ".$account['short_name_plural'];
-				echo '</div>';
+				echo '</a></div>';
 				echo '<div class="col-sm-3">';
-				if ($transaction['block_id'] > 0) echo "Confirmed in block #".$transaction['block_id'];
+				if ($transaction['block_id'] > 0) echo "Confirmed in block <a target=\"_blank\" href=\"/explorer/blockchains/".$account['url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>";
 				else echo "Not yet confirmed";
 				echo '</div>';
 				echo '</div>';
@@ -83,9 +79,9 @@ include('includes/html_start.php');
 				echo '<div class="col-sm-4">';
 				echo $transaction['pub_key'];
 				echo '</div>';
-				echo '<div class="col-sm-2 redtext">';
+				echo '<div class="col-sm-2"><a class="redtext" target="_blank" href="/explorer/blockchains/'.$account['url_identifier'].'/transactions/'.$transaction['tx_hash'].'">';
 				echo "-".$app->format_bignum($transaction['amount']/pow(10,8))." ".$account['short_name_plural'];
-				echo '</div>';
+				echo '</a></div>';
 				echo '<div class="col-sm-3">';
 				echo "Confirmed in block #".$transaction['block_id'];
 				echo '</div>';

@@ -14,7 +14,7 @@ if (!empty($argv)) {
 	if (!empty($cmd_vars['game_id'])) $_REQUEST['game_id'] = $cmd_vars['game_id'];
 }
 
-if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$loading_games = $app->check_process_running("loading_games");
 	
 	if (!$loading_games) {

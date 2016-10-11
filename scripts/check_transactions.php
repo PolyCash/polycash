@@ -4,7 +4,7 @@ include(realpath(dirname(__FILE__))."/../includes/connect.php");
 
 if ($argv) $_REQUEST['key'] = $argv[1];
 
-if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$game_id = intval($_REQUEST['game_id']);
 	$q = "SELECT * FROM games";
 	if ($game_id > 0) $q .= " WHERE game_id='".$game_id."'";

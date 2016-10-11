@@ -13,7 +13,7 @@ if (!empty($argv)) {
 	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
 }
 
-if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$loading_blocks = $app->check_process_running("loading_blocks");
 	
 	if (!$loading_blocks) {
@@ -38,8 +38,10 @@ if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string'])
 				$blockchains[$blockchain_i]->load_new_blocks($coin_rpc);
 				echo "Loading game blocks...\n";
 				$blockchains[$blockchain_i]->load_all_blocks($coin_rpc, TRUE);
-				echo "Loading all block headers...\n";
-				$blockchains[$blockchain_i]->load_all_block_headers($coin_rpc, FALSE, 90);
+				//echo "Loading all block headers...\n";
+				//$blockchains[$blockchain_i]->load_all_block_headers($coin_rpc, FALSE, 90);
+				echo "Loading unconfirmed transactions...\n";
+				$blockchains[$blockchain_i]->load_unconfirmed_transactions($coin_rpc, 30);
 			} catch (Exception $e) {
 				echo "Error, skipped ".$db_blockchain['blockchain_name']." because RPC connection failed.<br/>\n";
 			}

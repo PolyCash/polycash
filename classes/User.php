@@ -457,20 +457,11 @@ class User {
 				$rr = $this->app->run_query($qq);
 				$account_id = $this->app->last_insert_id();
 				
-				$currency_address_id = $this->app->new_currency_address($currency['currency_id'], $account_id);
+				$address_key = $this->app->new_address_key($currency['currency_id'], $account_id);
 				
-				$qq = "UPDATE currency_accounts SET current_address_id='".$currency_address_id."' WHERE account_id='".$account_id."';";
+				$qq = "UPDATE currency_accounts SET current_address_id='".$address_key['address_id']."' WHERE account_id='".$account_id."';";
 				$rr = $this->app->run_query($qq);
 			}
-		}
-	}
-	
-	public function refresh_currency_accounts() {
-		$q = "SELECT a.* FROM currency_accounts ca JOIN currency_addresses a ON ca.account_id=a.account_id WHERE ca.user_id='".$this->db_user['user_id']."';";
-		$r = $this->app->run_query($q);
-		
-		while ($currency_address = $r->fetch()) {
-			$this->app->reset_currency_address($currency_address);
 		}
 	}
 	

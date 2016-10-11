@@ -10,7 +10,7 @@ if (!empty($argv)) {
 	if (!empty($cmd_vars['block_id'])) $_REQUEST['block_id'] = $cmd_vars['block_id'];
 }
 
-if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	if (empty($_REQUEST['blockchain_id'])) die("Please specify a blockchain_id.\n");
 	else $blockchain_id = (int) $_REQUEST['blockchain_id'];
 	

@@ -110,9 +110,9 @@ if ($thisuser && $game) {
 								$currency_account = $thisuser->fetch_currency_account($btc_currency['currency_id']);
 								
 								if ($currency_account) {
-									$currency_address_id = $app->new_currency_address($btc_currency['currency_id'], $currency_account['account_id']);
-									$currency_address = $app->fetch_currency_address_by_id($currency_address_id);
-									$q = "UPDATE user_games SET buyin_currency_address_id='".$currency_address_id."' WHERE user_game_id='".$user_game['user_game_id']."';";
+									$address_key = $app->new_address_key($btc_currency['currency_id'], $currency_account['account_id']);
+									
+									$q = "UPDATE user_games SET buyin_address_id='".$address_key['address_id']."' WHERE user_game_id='".$user_game['user_game_id']."';";
 									$r = $app->run_query($q);
 								}
 								else {

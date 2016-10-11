@@ -404,7 +404,7 @@ class Game {
 			}
 		}
 		
-		$mined_address = $this->new_currency_address(false, false);
+		$mined_address = $this->blockchain->app->new_address_key(false, false);
 		$mined_transaction_id = $this->create_transaction(array(false), array($this->blockchain->app->pow_reward_in_round($this->db_game, $justmined_round)+$fee_sum), false, false, $last_block_id, "coinbase", false, array($mined_address['address_id']), false, 0);
 		
 		// Run payouts
@@ -916,7 +916,7 @@ class Game {
 	}
 	
 	public function addr_text_to_option_id($addr_text) {
-		$vote_identifier = $this->blockchain->addr_text_to_vote_identifier($addr_text);
+		$vote_identifier = $this->blockchain->app->addr_text_to_vote_identifier($addr_text);
 		if (!empty($vote_identifier)) {
 			$q = "SELECT * FROM options o JOIN events e ON o.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."' AND o.vote_identifier=".$this->blockchain->app->quote_escape($vote_identifier).";";
 			$r = $this->blockchain->app->run_query($q);
@@ -1138,7 +1138,7 @@ class Game {
 	
 	public function process_buyin_transaction($transaction) {
 		if (!empty($this->db_game['game_starting_block']) && !empty($this->db_game['escrow_address']) && $transaction['block_id'] >= $this->db_game['game_starting_block']) {
-			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
+			$escrow_address = $this->blockchain->app->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
 			
 			$qq = "SELECT * FROM transaction_ios WHERE create_transaction_id='".$transaction['transaction_id']."' AND address_id='".$escrow_address['address_id']."';";
 			$rr = $this->blockchain->app->run_query($qq);
@@ -1635,7 +1635,7 @@ class Game {
 				if ($position_in_block !== false) $q .= ", position_in_block='".$position_in_block."'";
 				if ($block_height) {
 					if ($transaction_type == "votebase") {
-						$vote_identifier = $this->addr_text_to_vote_identifier($outputs[1]["scriptPubKey"]["addresses"][0]);
+						$vote_identifier = $this->blockchain->app->addr_text_to_vote_identifier($outputs[1]["scriptPubKey"]["addresses"][0]);
 						$option_index = $this->vote_identifier_to_option_index($vote_identifier);
 						$option_id = $this->option_index_to_option_id_in_block($option_index, $block_height);
 						$votebase_option = $this->blockchain->app->run_query("SELECT * FROM options WHERE option_id='".$option_id."';")->fetch();
@@ -1713,7 +1713,7 @@ class Game {
 						$event = false;
 						$address_text = $outputs[$j]["scriptPubKey"]["addresses"][0];
 						
-						$output_address = $this->create_or_fetch_address($address_text, true, $coin_rpc, false, true, false);
+						$output_address = $this->blockchain->app->create_or_fetch_address($address_text, true, $coin_rpc, false, true, false);
 						
 						$q = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, game_id='".$this->db_game['game_id']."', out_index='".$j."'";
 						if ($output_address['user_id'] > 0) $q .= ", user_id='".$output_address['user_id']."'";
@@ -2278,7 +2278,7 @@ class Game {
 					/*try {
 						for ($i=0; $i<($this->db_game['min_unallocated_addresses']-$num_addr); $i++) {
 							$new_addr_str = $coin_rpc->getnewvotingaddress($option['name']);
-							$new_addr_db = $this->create_or_fetch_address($new_addr_str, false, $coin_rpc, true, false, false);
+							$new_addr_db = $this->blockchain->app->create_or_fetch_address($new_addr_str, false, $coin_rpc, true, false, false);
 						}
 					}
 					catch (Exception $e) {*/
@@ -2286,7 +2286,7 @@ class Game {
 						$new_voting_addr_count = 0;
 						do {
 							$temp_address = $coin_rpc->getnewaddress();
-							$new_addr_db = $this->create_or_fetch_address($temp_address, false, $coin_rpc, true, false, false);
+							$new_addr_db = $this->blockchain->app->create_or_fetch_address($temp_address, false, $coin_rpc, true, false, false);
 							if ($new_addr_db['option_index'] == $option_index) $new_voting_addr_count++;
 						}
 						while ($new_voting_addr_count < ($this->db_game['min_unallocated_addresses']-$num_addr));
@@ -2301,7 +2301,7 @@ class Game {
 				if ($try_by_sci) {
 					$new_voting_addr_count = 0;
 					do {
-						$db_address = $this->new_currency_address($option_index, true);
+						$db_address = $this->blockchain->app->new_address_key($option_index, true);
 						$new_voting_addr_count++;
 					}
 					while ($new_voting_addr_count < ($this->db_game['min_unallocated_addresses']-$num_addr));
@@ -2414,7 +2414,7 @@ class Game {
 			for ($i=0; $i<count($db_option_entities); $i++) {
 				if (!empty($event_entity)) $option_name = $db_option_entities[$i]['last_name']." wins ".$event_entity['entity_name'];
 				else $option_name = $db_option_entities[$i]['entity_name'];
-				$vote_identifier = $this->blockchain->option_index_to_vote_identifier($round_option_i);
+				$vote_identifier = $this->blockchain->app->option_index_to_vote_identifier($round_option_i);
 				$qq = "INSERT INTO options SET event_id='".$event_id."', entity_id='".$db_option_entities[$i]['entity_id']."', membership_id='".$db_option_entities[$i]['membership_id']."', image_id='".$db_option_entities[$i]['default_image_id']."', name=".$this->blockchain->app->quote_escape($option_name).", vote_identifier=".$this->blockchain->app->quote_escape($vote_identifier).", option_index='".$round_option_i."';";
 				$rr = $this->blockchain->app->run_query($qq);
 				$round_option_i++;
@@ -2470,7 +2470,7 @@ class Game {
 				$game_block = $this->blockchain->app->run_query($q)->fetch();
 			}
 			
-			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
+			$escrow_address = $this->blockchain->app->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
 			
 			$buyin_q = "SELECT * FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.create_block_id='".$block_height."' AND io.address_id='".$escrow_address['address_id']."' GROUP BY t.transaction_id;";
 			$buyin_r = $this->blockchain->app->run_query($buyin_q);

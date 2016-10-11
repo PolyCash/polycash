@@ -39,191 +39,8 @@ class Blockchain {
 	}
 	
 	public function new_nonuser_address() {
-		$db_address = $this->new_currency_address(false, false);
+		$address_key = $this->app->new_address_key(false, false);
 		return $db_address['address_id'];
-	}
-	
-	public function new_currency_address($required_option_index, $delete_optionless) {
-		$loop = true;
-		do {
-			$keySet = bitcoin::getNewKeySet();
-			if (empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
-				die("<p>Error generating game address. Please try again.</p>");
-			}
-			
-			$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
-			$vote_identifier = $this->addr_text_to_vote_identifier($keySet['pubAdd']);
-			$option_index = $this->vote_identifier_to_option_index($vote_identifier);
-			
-			if ($delete_optionless && $option_index === false) {}
-			else {
-				$q = "INSERT INTO currency_addresses SET currency_id=2, pub_key='".$keySet['pubAdd']."', priv_enc='".$encWIF."';";
-				$r = $this->app->run_query($q);
-				$db_address = $this->create_or_fetch_address($keySet['pubAdd'], false, false, false, false, true);
-			}
-			if ($required_option_index === false || $required_option_index == $option_index) {
-				$loop = false;
-			}
-		}
-		while ($loop);
-		
-		return $db_address;
-	}
-	
-	public function voting_character_definitions() {
-		if ($this->db_blockchain['identifier_case_sensitive'] == 1) {
-			$voting_characters = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-			$firstchar_divisions = array(26,16,8,4,2,1);
-		}
-		else {
-			$voting_characters = "123456789abcdefghijklmnopqrstuvwxyz";
-			$firstchar_divisions = array(19,8,4,2,1);
-		}
-		$range_max = -1;
-		for ($i=0; $i<count($firstchar_divisions); $i++) {
-			$num_this_length = $firstchar_divisions[$i]*pow(strlen($voting_characters), $i);
-			$length_to_range[$i+1] = array($range_max+1, $range_max+$num_this_length);
-			$range_max = $range_max+$num_this_length;
-		}
-		$returnvals['voting_characters'] = $voting_characters;
-		$returnvals['firstchar_divisions'] = $firstchar_divisions;
-		$returnvals['length_to_range'] = $length_to_range;
-		return $returnvals;
-	}
-	
-	public function vote_identifier_to_option_index($vote_identifier) {
-		$defs = $this->voting_character_definitions();
-		$firstchar_divisions = $defs['firstchar_divisions'];
-		$voting_characters = $defs['voting_characters'];
-		$length_to_range = $defs['length_to_range'];
-		
-		$firstchar = $vote_identifier[0];
-		$firstchar_index = strpos($voting_characters, $firstchar);
-		$firstchar_offset = 0;
-		
-		$range = $length_to_range[strlen($vote_identifier)];
-		if ($range) {
-			if (strlen($vote_identifier) == 1) {
-				$firstchar_range_offset = 0;
-				$firstchar_char_offset = 0;
-			}
-			else {
-				$firstchar_range_offset = $length_to_range[strlen($vote_identifier)-1][1]+1;
-				$firstchar_char_offset = 0;
-				for ($i=0; $i<strlen($vote_identifier)-1; $i++) {
-					$firstchar_char_offset += $firstchar_divisions[$i];
-				}
-			}
-			$firstchar_index_within_range = $firstchar_index-$firstchar_char_offset;
-			$option_id = $firstchar_range_offset+$firstchar_index_within_range*pow(strlen($voting_characters), strlen($vote_identifier)-1);
-			
-			for ($i=1; $i<strlen($vote_identifier); $i++) {
-				$char = $vote_identifier[$i];
-				$char_id = strpos($voting_characters, $char);
-				$option_id += $char_id*pow(strlen($voting_characters), strlen($vote_identifier)-$i-1);
-			}
-			return $option_id;
-		}
-		else return false;
-	}
-	
-	public function option_index_to_vote_identifier($option_index) {
-		$defs = $this->voting_character_definitions();
-		$firstchar_divisions = $defs['firstchar_divisions'];
-		$voting_characters = $defs['voting_characters'];
-		$length_to_range = $defs['length_to_range'];
-		$firstchar_offset = 0;
-		
-		foreach ($length_to_range as $length => $range) {
-			if ($option_index >= $range[0] && $option_index <= $range[1]) {
-				$num_firstchars = $firstchar_divisions[$length-1];
-				$index_within_range = $option_index-$range[0];
-				$chars = "";
-				$current_num = $index_within_range;
-				$modulus = strlen($voting_characters);
-				for ($i=0; $i<$length-1; $i++) {
-					$remainder = $current_num%$modulus;
-					$current_num = floor($current_num/$modulus);
-					$chars .= $voting_characters[$remainder];
-				}
-				$firstchar_index = $firstchar_offset+$current_num;
-				$chars .= $voting_characters[$firstchar_index];
-			}
-			$firstchar_offset += $firstchar_divisions[$length-1];
-		}
-		
-		return strrev($chars);
-	}
-
-	public function addr_text_to_vote_identifier($addr_text) {
-		$defs = $this->voting_character_definitions();
-		$firstchar_divisions = $defs['firstchar_divisions'];
-		$voting_characters = $defs['voting_characters'];
-		$length_to_range = $defs['length_to_range'];
-		
-		if ($this->db_blockchain['identifier_case_sensitive'] == 0) $addr_text = strtolower($addr_text);
-		
-		$firstchar = $addr_text[$this->db_blockchain['identifier_first_char']];
-		$firstchar_index = strpos($voting_characters, $firstchar);
-		$firstchar_offset = 0;
-		
-		foreach ($length_to_range as $length => $range) {
-			$firstchar_begin_index = $firstchar_offset;
-			$firstchar_end_index = $firstchar_begin_index+$firstchar_divisions[$length-1]-1;
-			if ($firstchar_index >= $firstchar_begin_index && $firstchar_index <= $firstchar_end_index) {
-				return substr($addr_text, $this->db_blockchain['identifier_first_char'], $length);
-			}
-			$firstchar_offset = $firstchar_end_index+1;
-		}
-		return substr($addr_text, $this->db_blockchain['identifier_first_char'], 1);
-	}
-	
-	public function create_or_fetch_address($address, $check_existing, $rpc, $delete_optionless, $claimable, $force_is_mine) {
-		if ($check_existing) {
-			$q = "SELECT * FROM addresses WHERE address=".$this->app->quote_escape($address).";";
-			$r = $this->app->run_query($q);
-			if ($r->rowCount() > 0) {
-				return $r->fetch();
-			}
-		}
-		$vote_identifier = $this->addr_text_to_vote_identifier($address);
-		$option_index = $this->vote_identifier_to_option_index($vote_identifier);
-		
-		if ($option_index !== false || !$delete_optionless) {
-			$q = "INSERT INTO addresses SET address=".$this->app->quote_escape($address).", time_created='".time()."'";
-			if ($option_index !== false) $q .= ", vote_identifier=".$this->app->quote_escape($vote_identifier).", option_index='".$option_index."'";
-			$q .= ";";
-			$r = $this->app->run_query($q);
-			$output_address_id = $this->app->last_insert_id();
-			
-			if ($rpc || $force_is_mine) {
-				if ($force_is_mine) $is_mine=1;
-				else {
-					$validate_address = $rpc->validateaddress($address);
-					
-					if ($validate_address['ismine']) $is_mine = 1;
-					else $is_mine = 0;
-				}
-				
-				$q = "UPDATE addresses SET is_mine=".$is_mine;
-				if ($is_mine == 1 && !empty($GLOBALS['default_coin_winner']) && $claimable) {
-					$qq = "SELECT * FROM users WHERE username=".$this->app->quote_escape($GLOBALS['default_coin_winner']).";";
-					$rr = $this->app->run_query($qq);
-					if ($rr->rowCount() > 0) {
-						$coin_winner = $rr->fetch();
-						$q .= ", user_id='".$coin_winner['user_id']."'";
-					}
-				}
-				$q .= " WHERE address_id='".$output_address_id."';";
-				$r = $this->app->run_query($q);
-			}
-			
-			$q = "SELECT * FROM addresses WHERE address_id='".$output_address_id."';";
-			$r = $this->app->run_query($q);
-			
-			return $r->fetch();
-		}
-		else return false;
 	}
 	
 	public function coind_add_block(&$coin_rpc, $block_hash, $block_height, $headers_only) {
@@ -434,7 +251,7 @@ class Blockchain {
 						$event = false;
 						$address_text = $outputs[$j]["scriptPubKey"]["addresses"][0];
 						
-						$output_address = $this->create_or_fetch_address($address_text, true, $coin_rpc, false, true, false);
+						$output_address = $this->app->create_or_fetch_address($address_text, true, $coin_rpc, false, true, false);
 						
 						$q = "INSERT INTO transaction_ios SET spend_status='unspent', blockchain_id='".$this->db_blockchain['blockchain_id']."', out_index='".$j."'";
 						if ($output_address['user_id'] > 0) $q .= ", user_id='".$output_address['user_id']."'";
@@ -672,12 +489,14 @@ class Blockchain {
 		}
 	}
 	
-	public function load_unconfirmed_transactions(&$coin_rpc) {
+	public function load_unconfirmed_transactions(&$coin_rpc, $max_execution_time) {
+		$start_time = microtime(true);
 		$unconfirmed_txs = $coin_rpc->getrawmempool();
 		echo "Looping through ".count($unconfirmed_txs)." unconfirmed transactions.<br/>\n";
 		for ($i=0; $i<count($unconfirmed_txs); $i++) {
 			$this->walletnotify($coin_rpc, $unconfirmed_txs[$i], TRUE);
 			if ($i%100 == 0) echo "$i ";
+			if ($max_execution_time && (microtime(true)-$start_time) > $max_execution_time) $i=count($unconfirmed_txs);
 		}
 		$this->app->set_site_constant('walletnotify', $unconfirmed_txs[count($unconfirmed_txs)-1]);
 	}
@@ -742,7 +561,7 @@ class Blockchain {
 		$tx_hash = $rpc_block->json_obj['tx'][0];
 		$genesis_transactions = new transaction($tx_hash, "", false, 0);
 		
-		$output_address = $this->create_or_fetch_address("genesis_address", true, false, false, false, false);
+		$output_address = $this->app->create_or_fetch_address("genesis_address", true, false, false, false, false);
 		
 		$this->app->run_query("DELETE t.*, io.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.tx_hash='".$tx_hash."' AND t.blockchain_id='".$this->db_blockchain['blockchain_id']."';");
 		
@@ -852,7 +671,7 @@ class Blockchain {
 		$r = $this->app->run_query($q);
 	}
 	
-	public function block_next_prev_links($block) {
+	public function block_next_prev_links($block, $explore_mode) {
 		$html = "";
 		$prev_link_target = false;
 		if ($explore_mode == "unconfirmed") $prev_link_target = "blocks/".$this->last_block_id();

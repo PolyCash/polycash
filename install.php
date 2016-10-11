@@ -34,6 +34,11 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			
 			$app->update_schema();
 			
+			if (!$db_exists) {
+				$app->set_site_constant('identifier_case_sensitive', $GLOBALS['identifier_case_sensitive']);
+				$app->set_site_constant('identifier_first_char', $GLOBALS['identifier_first_char']);
+			}
+			
 			$q = "SELECT * FROM blockchains WHERE url_identifier='bitcoin';";
 			$r = $app->run_query($q);
 			

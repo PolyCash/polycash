@@ -1,6 +1,6 @@
 <?php
 $host_not_required = TRUE;
-include(realpath(dirname(__FILE__))."/../includes/connect.php");
+include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
 if (!empty($argv)) {
 	$cmd_vars = $app->argv_to_array($argv);
@@ -9,7 +9,7 @@ if (!empty($argv)) {
 	$_REQUEST['game_id'] = $cmd_vars['game_id'];
 }
 
-if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$game_id = (int)$_REQUEST['game_id'];
 	$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
 	

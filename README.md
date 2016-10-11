@@ -22,6 +22,9 @@ $GLOBALS['sendgrid_pass'] = "";
 $GLOBALS['show_query_errors'] = true;
 $GLOBALS['cron_key_string'] = ""; // Enter a random string / password here
 
+$GLOBALS['identifier_case_sensitive'] = 1;
+$GLOBALS['identifier_first_char'] = 2;
+
 // To give mined coins to a user by default, enter his/her username here
 $GLOBALS['default_coin_winner'] = 'your_username';
 

@@ -9,7 +9,7 @@ if (!empty($argv)) {
 	$_REQUEST['game_id'] = $cmd_vars['game_id'];
 }
 
-if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$q = "SELECT * FROM games";
 	$game_id = intval($_REQUEST['game_id']);
 	if ($game_id) $q .= " WHERE game_id='".$game_id."'";

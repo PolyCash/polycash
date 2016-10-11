@@ -3,9 +3,12 @@ include('includes/connect.php');
 include('includes/get_session.php');
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
-$explore_mode = $uri_parts[4];
+if (empty($uri_parts[4])) $explore_mode = "";
+else $explore_mode = $uri_parts[4];
 if ($explore_mode == "tx") $explore_mode = "transactions";
-$game_identifier = $uri_parts[3];
+
+if (empty($uri_parts[3])) $game_identifier = "";
+else $game_identifier = $uri_parts[3];
 
 $game = false;
 $blockchain = false;
@@ -250,42 +253,45 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				</script>
 				<?php
 			}
-			?>
-			<div class="row">
-				<div class="col-sm-7 ">
-					<ul class="list-inline explorer_nav" id="explorer_nav">
-						<li><a<?php if ($explore_mode == 'blocks') echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
-						if ($game) echo $game->db_game['url_identifier'];
-						else echo $blockchain->db_blockchain['url_identifier'];
-						?>/blocks/">Blocks</a></li>
-						<?php if ($game) { ?>
-						<li><a<?php if ($explore_mode == 'events') echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
-						if ($game) echo $game->db_game['url_identifier'];
-						else echo $blockchain->db_blockchain['url_identifier'];
-						?>/events/">Events</a></li>
-						<?php } ?>
-						<li><a<?php if ($explore_mode == 'utxos') echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
-						if ($game) echo $game->db_game['url_identifier'];
-						else echo $blockchain->db_blockchain['url_identifier'];
-						?>/utxos/">UTXOs</a></li>
-						<?php if ($game && $game->db_game['escrow_address'] != "") { ?>
-						<li><a<?php if ($explore_mode == 'addresses' && $address['address'] == $game->db_game['escrow_address']) echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php echo $game->db_game['url_identifier']; ?>/addresses/<?php echo $game->db_game['escrow_address']; ?>">Escrow</a></li>
-						<?php } ?>
-						<li><a<?php if ($explore_mode == 'unconfirmed') echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
-						if ($game) echo $game->db_game['url_identifier'];
-						else echo $blockchain->db_blockchain['url_identifier'];
-						?>/transactions/unconfirmed/">Unconfirmed Transactions</a></li>
-						<?php if ($thisuser && $game) { ?><li><a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">My Wallet</a></li><?php } ?>
-					</ul>
+			
+			if ($blockchain || $game) {
+				?>
+				<div class="row">
+					<div class="col-sm-7 ">
+						<ul class="list-inline explorer_nav" id="explorer_nav">
+							<li><a<?php if ($explore_mode == 'blocks') echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
+							if ($game) echo $game->db_game['url_identifier'];
+							else echo $blockchain->db_blockchain['url_identifier'];
+							?>/blocks/">Blocks</a></li>
+							<?php if ($game) { ?>
+							<li><a<?php if ($explore_mode == 'events') echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
+							if ($game) echo $game->db_game['url_identifier'];
+							else echo $blockchain->db_blockchain['url_identifier'];
+							?>/events/">Events</a></li>
+							<?php } ?>
+							<li><a<?php if ($explore_mode == 'utxos') echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
+							if ($game) echo $game->db_game['url_identifier'];
+							else echo $blockchain->db_blockchain['url_identifier'];
+							?>/utxos/">UTXOs</a></li>
+							<?php if ($game && $game->db_game['escrow_address'] != "") { ?>
+							<li><a<?php if ($explore_mode == 'addresses' && $address['address'] == $game->db_game['escrow_address']) echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php echo $game->db_game['url_identifier']; ?>/addresses/<?php echo $game->db_game['escrow_address']; ?>">Escrow</a></li>
+							<?php } ?>
+							<li><a<?php if ($explore_mode == 'unconfirmed') echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
+							if ($game) echo $game->db_game['url_identifier'];
+							else echo $blockchain->db_blockchain['url_identifier'];
+							?>/transactions/unconfirmed/">Unconfirmed Transactions</a></li>
+							<?php if ($thisuser && $game) { ?><li><a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">My Wallet</a></li><?php } ?>
+						</ul>
+					</div>
+					<div class="col-sm-4 row-no-padding">
+						<input type="text" class="form-control" placeholder="Search..." id="explorer_search" />
+					</div>
+					<div class="col-sm-1 row-no-padding">
+						<button class="btn btn-primary" onclick="explorer_search();">Go</button>
+					</div>
 				</div>
-				<div class="col-sm-4 row-no-padding">
-					<input type="text" class="form-control" placeholder="Search..." id="explorer_search" />
-				</div>
-				<div class="col-sm-1 row-no-padding">
-					<button class="btn btn-primary" onclick="explorer_search();">Go</button>
-				</div>
-			</div>
-			<?php
+				<?php
+			}
 			
 			if ($explore_mode == "events") {
 				if (!empty($db_event) || $event_status == "current") {
@@ -482,9 +488,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							list($num_trans, $block_sum) = $blockchain->block_stats($block);
 						}
 						
-						echo "<h1>Block #".$block['block_id']."</h1>";
-						if ($game) echo "<h3>".$game->db_game['name']."</h3>";
-						else echo "<h3>".$blockchain->db_blockchain['blockchain_name']."</h3>";
+						if ($game) echo "<h1>".$game->db_game['name']." block #".$block['block_id']."</h1>";
+						else echo "<h1>".$blockchain->db_blockchain['blockchain_name']." block #".$block['block_id']."</h1>";
 						
 						if (!$game && !empty($block['num_transactions']) && $num_trans != $block['num_transactions']) {
 							echo "Loaded ".number_format($num_trans)." / ".number_format($block['num_transactions'])." transactions (".number_format(100*$num_trans/$block['num_transactions'], 2)."%).<br/>\n";
@@ -536,7 +541,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						echo "Block #".$expected_block_id." is currently being mined.<br/>\n";
 					}
 					
-					$next_prev_links = $blockchain->block_next_prev_links($block);
+					$next_prev_links = $blockchain->block_next_prev_links($block, $explore_mode);
 					echo $next_prev_links;
 					
 					echo '<div style="margin-top: 10px; border-bottom: 1px solid #bbb;">';
@@ -593,9 +598,12 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						var section = explorer_block_list_sections;
 						$('#explorer_block_list').append('<div id="explorer_block_list_'+section+'">Loading...</div>');
 						
-						$.get("/ajax/explorer_block_list.php?blockchain_id="+blockchain_id+"&game_id="+games[0].game_id+"&from_block="+explorer_block_list_from_block+"&blocks_per_section="+explorer_blocks_per_section, function(html) {
+						var block_list_url = "/ajax/explorer_block_list.php?blockchain_id="+blockchain_id;
+						<?php if ($game) echo 'block_list_url += "&game_id='.$game->db_game['game_id'].'";'."\n"; ?>
+						block_list_url += "&from_block="+explorer_block_list_from_block+"&blocks_per_section="+explorer_blocks_per_section;
+						
+						$.get(block_list_url, function(html) {
 							$('#explorer_block_list_'+section).html(html);
-							console.log(result);
 						});
 					}
 					</script>
@@ -664,7 +672,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				$rpc_transaction = false;
 				$rpc_raw_transaction = false;
 				
-				if ($game->blockchain->db_blockchain['p2p_mode'] == "rpc") {
+				if ($game && $game->blockchain->db_blockchain['p2p_mode'] == "rpc") {
 					try {
 						$rpc_transaction = $coin_rpc->gettransaction($transaction['tx_hash']);
 					}

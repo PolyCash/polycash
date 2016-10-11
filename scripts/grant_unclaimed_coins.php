@@ -10,7 +10,7 @@ if (!empty($argv)) {
 	if (!empty($cmd_vars['to'])) $_REQUEST['to'] = $cmd_vars['to'];
 }
 
-if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$user_id = false;
 	$username = false;
 	$to = $_REQUEST['to'];

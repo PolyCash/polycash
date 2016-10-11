@@ -151,7 +151,7 @@ class App {
 		$r = $this->run_query($q);
 		$delivery_id = $this->last_insert_id();
 		
-		$command = $this->php_binary_location()." ".realpath(dirname(dirname(__FILE__)))."/scripts/async_email_deliver.php ".$delivery_id." > /dev/null 2>/dev/null &";
+		$command = $this->php_binary_location()." ".realpath(dirname(dirname(__FILE__)))."/scripts/async_email_deliver.php key=".$GLOBALS['cron_key_string']." ".$delivery_id." > /dev/null 2>/dev/null &";
 		exec($command);
 		
 		/*$curl_url = $GLOBALS['base_url']."/scripts/async_email_deliver.php?delivery_id=".$delivery_id;
@@ -548,10 +548,10 @@ class App {
 	public function new_currency_invoice(&$pay_currency, $pay_amount, &$user, &$user_game, $invoice_type) {
 		$currency_account = $user->fetch_currency_account($pay_currency['currency_id']);
 		
-		$currency_address_id = $this->new_currency_address($pay_currency['currency_id'], $currency_account['account_id']);
+		$address_key = $this->new_address_key($pay_currency['currency_id'], $currency_account['account_id']);
 		
 		$time = time();
-		$q = "INSERT INTO currency_invoices SET time_created='".$time."', pay_currency_id='".$pay_currency['currency_id']."', currency_address_id='".$currency_address_id."', expire_time='".($time+$GLOBALS['invoice_expiration_seconds'])."', user_game_id='".$user_game['user_game_id']."', invoice_type='".$invoice_type."', status='unpaid', invoice_key_string='".$this->random_string(32)."', pay_amount='".$pay_amount."';";
+		$q = "INSERT INTO currency_invoices SET time_created='".$time."', pay_currency_id='".$pay_currency['currency_id']."', address_id='".$address_key['address_id']."', expire_time='".($time+$GLOBALS['invoice_expiration_seconds'])."', user_game_id='".$user_game['user_game_id']."', invoice_type='".$invoice_type."', status='unpaid', invoice_key_string='".$this->random_string(32)."', pay_amount='".$pay_amount."';";
 		$r = $this->run_query($q);
 		$invoice_id = $this->last_insert_id();
 		
@@ -596,22 +596,27 @@ class App {
 		return $html;
 	}
 	
-	public function new_currency_address($currency_id, $account_id) {
-		$keySet = bitcoin::getNewKeySet();
-
+	public function new_address_key($currency_id, $account_id) {
+		if ($currency_id == 8) $keySet = litecoin::getNewKeySet();
+		else $keySet = bitcoin::getNewKeySet();
+		
 		if (empty($GLOBALS['rsa_pub_key']) || empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
 			die("<p>There was an error generating the payment address. Please go back and try again.</p>");
 		}
-
+		
 		$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
-
-		$q = "INSERT INTO currency_addresses SET currency_id=".$currency_id;
+		
+		$db_address = $this->create_or_fetch_address($keySet['pubAdd'], true, false, false, false, true);
+		
+		$q = "INSERT INTO address_keys SET currency_id=".$currency_id.", address_id=".$db_address['address_id'];
 		if ($account_id) $q .= ", account_id='".$account_id."'";
 		$q .= ", pub_key='".$keySet['pubAdd']."', priv_enc='".$encWIF."';";
 		$r = $this->run_query($q);
-		$address_id = $this->last_insert_id();
-
-		return $address_id;
+		$address_key_id = $this->last_insert_id();
+		
+		$address_key = $this->run_query("SELECT * FROM address_keys WHERE address_key_id='".$address_key_id."';")->fetch();
+		
+		return $address_key;
 	}
 	
 	public function decimal_to_float($number) {
@@ -1035,71 +1040,6 @@ class App {
 		return $r->fetch();
 	}
 	
-	public function reset_currency_address($currency_address) {
-		$q = "DELETE FROM currency_ios WHERE currency_address_id=".$currency_address['currency_address_id'].";";
-		$this->run_query($q);
-		
-		$url = "https://blockchain.info/address/".$currency_address['pub_key']."?format=json";
-		$response_obj = json_decode(file_get_contents($url));
-		
-		for ($i=0; $i<count($response_obj->txs); $i++) {
-			$tx = $response_obj->txs[$i];
-			$thisaddr_tx_outputs = array();
-			
-			$input_sum = 0;
-			for ($j=0; $j<count($tx->inputs); $j++) {
-				$input_sum += $tx->inputs[$j]->prev_out->value;
-			}
-			
-			$output_sum = 0;
-			for ($j=0; $j<count($tx->out); $j++) {
-				$output_sum += $tx->out[$j]->value;
-				if ($tx->out[$j]->addr == $currency_address['pub_key']) {
-					array_push($thisaddr_tx_outputs, $tx->out[$j]);
-				}
-			}
-			
-			$q = "SELECT * FROM currency_transactions WHERE tx_hash=".$this->quote_escape($tx->hash).";";
-			$r = $this->run_query($q);
-			
-			if ($r->rowCount() > 0) {
-				$currency_transaction = $r->fetch();
-				$transaction_id = $currency_transaction['transaction_id'];
-				$q = "UPDATE currency_transactions SET block_id=".$this->quote_escape($tx->block_height)." WHERE transaction_id='".$transaction_id."';";
-				$r = $this->run_query($q);
-			}
-			else {
-				$q = "INSERT INTO currency_transactions SET currency_id='".$currency_address['currency_id']."', block_id=".$this->quote_escape($tx->block_height).", tx_index=".$this->quote_escape($tx->tx_index).", tx_hash=".$this->quote_escape($tx->hash).", amount='".$output_sum."', fee_amount='".($input_sum-$output_sum)."';";
-				$this->run_query($q);
-				$transaction_id = $this->last_insert_id();
-			}
-			
-			for ($j=0; $j<count($thisaddr_tx_outputs); $j++) {
-				$q = "INSERT INTO currency_ios SET currency_address_id='".$currency_address['currency_address_id']."', amount=".$this->quote_escape($thisaddr_tx_outputs[$j]->value).", out_index=".$this->quote_escape($thisaddr_tx_outputs[$j]->n).", spend_status='";
-				if ($thisaddr_tx_outputs[$j]->spent) $q .= "spent";
-				else $q .= "unspent";
-				$q .= "', create_transaction_id='".$transaction_id."';";
-				$r = $this->run_query($q);
-			}
-		}
-		
-		for ($i=0; $i<count($response_obj->txs); $i++) {
-			$tx = $response_obj->txs[$i];
-			$q = "SELECT * FROM currency_transactions WHERE tx_hash=".$this->quote_escape($tx->hash).";";
-			$spend_transaction = $this->run_query($q)->fetch();
-			
-			for ($j=0; $j<count($tx->inputs); $j++) {
-				if ($tx->inputs[$j]->prev_out->addr == $currency_address['pub_key']) {
-					$q = "SELECT * FROM currency_transactions WHERE tx_index='".$tx->inputs[$j]->prev_out->tx_index."';";
-					$create_transaction = $this->run_query($q)->fetch();
-					
-					$q = "UPDATE currency_ios SET spend_transaction_id='".$spend_transaction['transaction_id']."' WHERE create_transaction_id='".$create_transaction['transaction_id']."' AND out_index='".$tx->inputs[$j]->prev_out->n."';";
-					$this->run_query($q);
-				}
-			}
-		}
-	}
-	
 	public function fetch_currency_invoice_by_id($currency_invoice_id) {
 		$q = "SELECT * FROM currency_invoices WHERE invoice_id='".$currency_invoice_id."';";
 		$r = $this->run_query($q);
@@ -1107,20 +1047,6 @@ class App {
 			return $r->fetch();
 		}
 		else return false;
-	}
-	
-	public function currency_address_balance($currency_address) {
-		$balance_q = "SELECT SUM(amount) FROM currency_ios WHERE currency_address_id='".$currency_address['currency_address_id']."' AND spend_status='unspent';";
-		$balance_r = $this->run_query($balance_q);
-		$balance = $balance_r->fetch();
-		$unconfirmed_balance = (int) $balance['SUM(amount)'];
-		
-		$balance_q = "SELECT SUM(io.amount) FROM currency_ios io JOIN currency_transactions t ON io.create_transaction_id=t.transaction_id WHERE io.currency_address_id='".$currency_address['currency_address_id']."' AND io.spend_status='unspent' AND t.block_id > 0;";
-		$balance_r = $this->run_query($balance_q);
-		$balance = $balance_r->fetch();
-		$confirmed_balance = (int) $balance['SUM(io.amount)'];
-		
-		return array($unconfirmed_balance, $confirmed_balance);
 	}
 	
 	public function check_process_running($lock_name) {
@@ -1132,6 +1058,162 @@ class App {
 			else $process_running = false;
 		}
 		return $process_running;
+	}
+	
+	public function create_or_fetch_address($address, $check_existing, $rpc, $delete_optionless, $claimable, $force_is_mine) {
+		if ($check_existing) {
+			$q = "SELECT * FROM addresses WHERE address=".$this->quote_escape($address).";";
+			$r = $this->run_query($q);
+			if ($r->rowCount() > 0) {
+				return $r->fetch();
+			}
+		}
+		$vote_identifier = $this->addr_text_to_vote_identifier($address);
+		$option_index = $this->vote_identifier_to_option_index($vote_identifier);
+		
+		if ($option_index !== false || !$delete_optionless) {
+			$q = "INSERT INTO addresses SET address=".$this->quote_escape($address).", time_created='".time()."'";
+			if ($option_index !== false) $q .= ", vote_identifier=".$this->quote_escape($vote_identifier).", option_index='".$option_index."'";
+			$q .= ";";
+			$r = $this->run_query($q);
+			$output_address_id = $this->last_insert_id();
+			
+			if ($rpc || $force_is_mine) {
+				if ($force_is_mine) $is_mine=1;
+				else {
+					$validate_address = $rpc->validateaddress($address);
+					
+					if ($validate_address['ismine']) $is_mine = 1;
+					else $is_mine = 0;
+				}
+				
+				$q = "UPDATE addresses SET is_mine=".$is_mine;
+				if ($is_mine == 1 && !empty($GLOBALS['default_coin_winner']) && $claimable) {
+					$qq = "SELECT * FROM users WHERE username=".$this->quote_escape($GLOBALS['default_coin_winner']).";";
+					$rr = $this->run_query($qq);
+					if ($rr->rowCount() > 0) {
+						$coin_winner = $rr->fetch();
+						$q .= ", user_id='".$coin_winner['user_id']."'";
+					}
+				}
+				$q .= " WHERE address_id='".$output_address_id."';";
+				$r = $this->run_query($q);
+			}
+			
+			$q = "SELECT * FROM addresses WHERE address_id='".$output_address_id."';";
+			$r = $this->run_query($q);
+			
+			return $r->fetch();
+		}
+		else return false;
+	}
+	
+	public function voting_character_definitions() {
+		if ($this->get_site_constant('identifier_case_sensitive') == 1) {
+			$voting_characters = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+			$firstchar_divisions = array(26,16,8,4,2,1);
+		}
+		else {
+			$voting_characters = "123456789abcdefghijklmnopqrstuvwxyz";
+			$firstchar_divisions = array(19,8,4,2,1);
+		}
+		$range_max = -1;
+		for ($i=0; $i<count($firstchar_divisions); $i++) {
+			$num_this_length = $firstchar_divisions[$i]*pow(strlen($voting_characters), $i);
+			$length_to_range[$i+1] = array($range_max+1, $range_max+$num_this_length);
+			$range_max = $range_max+$num_this_length;
+		}
+		$returnvals['voting_characters'] = $voting_characters;
+		$returnvals['firstchar_divisions'] = $firstchar_divisions;
+		$returnvals['length_to_range'] = $length_to_range;
+		return $returnvals;
+	}
+	
+	public function vote_identifier_to_option_index($vote_identifier) {
+		$defs = $this->voting_character_definitions();
+		$firstchar_divisions = $defs['firstchar_divisions'];
+		$voting_characters = $defs['voting_characters'];
+		$length_to_range = $defs['length_to_range'];
+		
+		$firstchar = $vote_identifier[0];
+		$firstchar_index = strpos($voting_characters, $firstchar);
+		$firstchar_offset = 0;
+		
+		$range = $length_to_range[strlen($vote_identifier)];
+		if ($range) {
+			if (strlen($vote_identifier) == 1) {
+				$firstchar_range_offset = 0;
+				$firstchar_char_offset = 0;
+			}
+			else {
+				$firstchar_range_offset = $length_to_range[strlen($vote_identifier)-1][1]+1;
+				$firstchar_char_offset = 0;
+				for ($i=0; $i<strlen($vote_identifier)-1; $i++) {
+					$firstchar_char_offset += $firstchar_divisions[$i];
+				}
+			}
+			$firstchar_index_within_range = $firstchar_index-$firstchar_char_offset;
+			$option_id = $firstchar_range_offset+$firstchar_index_within_range*pow(strlen($voting_characters), strlen($vote_identifier)-1);
+			
+			for ($i=1; $i<strlen($vote_identifier); $i++) {
+				$char = $vote_identifier[$i];
+				$char_id = strpos($voting_characters, $char);
+				$option_id += $char_id*pow(strlen($voting_characters), strlen($vote_identifier)-$i-1);
+			}
+			return $option_id;
+		}
+		else return false;
+	}
+	
+	public function option_index_to_vote_identifier($option_index) {
+		$defs = $this->voting_character_definitions();
+		$firstchar_divisions = $defs['firstchar_divisions'];
+		$voting_characters = $defs['voting_characters'];
+		$length_to_range = $defs['length_to_range'];
+		$firstchar_offset = 0;
+		
+		foreach ($length_to_range as $length => $range) {
+			if ($option_index >= $range[0] && $option_index <= $range[1]) {
+				$num_firstchars = $firstchar_divisions[$length-1];
+				$index_within_range = $option_index-$range[0];
+				$chars = "";
+				$current_num = $index_within_range;
+				$modulus = strlen($voting_characters);
+				for ($i=0; $i<$length-1; $i++) {
+					$remainder = $current_num%$modulus;
+					$current_num = floor($current_num/$modulus);
+					$chars .= $voting_characters[$remainder];
+				}
+				$firstchar_index = $firstchar_offset+$current_num;
+				$chars .= $voting_characters[$firstchar_index];
+			}
+			$firstchar_offset += $firstchar_divisions[$length-1];
+		}
+		
+		return strrev($chars);
+	}
+
+	public function addr_text_to_vote_identifier($addr_text) {
+		$defs = $this->voting_character_definitions();
+		$firstchar_divisions = $defs['firstchar_divisions'];
+		$voting_characters = $defs['voting_characters'];
+		$length_to_range = $defs['length_to_range'];
+		
+		if ($this->get_site_constant('identifier_case_sensitive') == 0) $addr_text = strtolower($addr_text);
+		
+		$firstchar = $addr_text[$this->get_site_constant('identifier_first_char')];
+		$firstchar_index = strpos($voting_characters, $firstchar);
+		$firstchar_offset = 0;
+		
+		foreach ($length_to_range as $length => $range) {
+			$firstchar_begin_index = $firstchar_offset;
+			$firstchar_end_index = $firstchar_begin_index+$firstchar_divisions[$length-1]-1;
+			if ($firstchar_index >= $firstchar_begin_index && $firstchar_index <= $firstchar_end_index) {
+				return substr($addr_text, $this->get_site_constant('identifier_first_char'), $length);
+			}
+			$firstchar_offset = $firstchar_end_index+1;
+		}
+		return substr($addr_text, $this->get_site_constant('identifier_first_char'), 1);
 	}
 }
 ?>
