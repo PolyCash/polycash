@@ -173,8 +173,8 @@ class Blockchain {
 				if ($position_in_block !== false) $q .= ", position_in_block='".$position_in_block."'";
 				if ($block_height) {
 					if ($transaction_type == "votebase") {
-						$vote_identifier = $this->addr_text_to_vote_identifier($outputs[1]["scriptPubKey"]["addresses"][0]);
-						$option_index = $this->vote_identifier_to_option_index($vote_identifier);
+						$vote_identifier = $this->app->addr_text_to_vote_identifier($outputs[1]["scriptPubKey"]["addresses"][0]);
+						$option_index = $this->app->vote_identifier_to_option_index($vote_identifier);
 						//$option_id = $this->option_index_to_option_id_in_block($option_index, $block_height);
 						//$votebase_option = $this->app->run_query("SELECT * FROM options WHERE option_id='".$option_id."';")->fetch();
 						//if (!empty($votebase_option['event_id'])) $q .= ", votebase_event_id='".$votebase_option['event_id']."'";

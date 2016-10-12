@@ -11,13 +11,13 @@ if (!empty($argv)) {
 
 if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$q = "SELECT * FROM games";
-	$game_id = intval($_REQUEST['game_id']);
-	if ($game_id) $q .= " WHERE game_id='".$game_id."'";
+	if (!empty($_REQUEST['game_id'])) $q .= " WHERE game_id='".(int)$_REQUEST['game_id']."'";
 	$q .= ";";
 	$r = $app->run_query($q);
 
 	while ($db_game = $r->fetch()) {
-		$game = new Game($app, $db_game['game_id']);
+		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+		$game = new Game($blockchain, $db_game['game_id']);
 		//$game->ensure_options();
 		
 		/*if ($game->db_game['creator_id'] > 0) {}
@@ -43,6 +43,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		while ($strategy_count = $rr->fetch()) {
 			echo "&nbsp;&nbsp;".$strategy_count['COUNT(*)']."&nbsp;".$strategy_count['voting_strategy']."<br/>\n";
 		}
+		
+		$game->ensure_events_until_block($blockchain->last_block_id()+1);
 	}
 }
 else echo "Incorrect key.";

@@ -10,3 +10,4 @@ ALTER TABLE `user_games` CHANGE `buyin_currency_address_id` `buyin_address_id` I
 ALTER TABLE `blockchains`
   DROP `identifier_case_sensitive`,
   DROP `identifier_first_char`;
+UPDATE `game_types` SET buyin_policy='unlimited';

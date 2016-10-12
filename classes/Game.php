@@ -1530,7 +1530,7 @@ class Game {
 		$html .= "<h3>".$r->rowCount()." players</h3>\n";
 		
 		while ($temp_user_game = $r->fetch()) {
-			$temp_user = new User($this->app, $temp_user_game['user_id']);
+			$temp_user = new User($this->blockchain->app, $temp_user_game['user_id']);
 			$networth_disp = $this->blockchain->app->format_bignum($temp_user->account_coin_value($this)/pow(10,8));
 			
 			$html .= '<div class="row">';

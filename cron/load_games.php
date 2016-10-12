@@ -28,7 +28,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$blockchains = array();
 		
 		$real_game_q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.p2p_mode='rpc' AND g.game_status IN ('published','running')";
-		if ($_REQUEST['game_id'] > 0) $real_game_q .= " AND g.game_id='".(int)$_REQUEST['game_id']."'";
+		if (!empty($_REQUEST['game_id'])) $real_game_q .= " AND g.game_id='".(int)$_REQUEST['game_id']."'";
 		$real_game_q .= " AND b.online=1;";
 		$real_game_r = $app->run_query($real_game_q);
 		echo "Looping through ".$real_game_r->rowCount()." games.\n";

@@ -679,8 +679,7 @@ if ($thisuser && $game) {
 					<div class="row">
 						<div class="col-sm-4"><input class="form-control" name="transaction_fee" value="<?php echo $app->format_bignum($user_strategy['transaction_fee']/pow(10,8)); ?>" placeholder="0.001" /></div>
 						<div class="col-sm-4 form-control-static"><?php
-						if ($game->db_game['p2p_mode'] == "rpc") echo $game->db_game['short_name_plural'];
-						else echo $game->db_game['coin_name_plural'];
+						echo $game->blockchain->db_blockchain['coin_name_plural'];
 						?></div>
 					</div>
 					<div class="row">
@@ -938,7 +937,7 @@ if ($thisuser && $game) {
 						<select class="form-control" id="withdraw_remainder_address_id">
 							<option value="random">Random</option>
 							<?php
-							$q = "SELECT * FROM addresses a JOIN options o ON a.option_index=o.option_index JOIN events e ON o.event_id=e.event_id WHERE a.user_id='".$thisuser->db_user['user_id']."' AND e.game_id='".$game->db_game['game_id']."' GROUP BY option_index ORDER BY option_index ASC;";
+							$q = "SELECT * FROM addresses a JOIN options o ON a.option_index=o.option_index JOIN events e ON o.event_id=e.event_id WHERE a.user_id='".$thisuser->db_user['user_id']."' AND e.game_id='".$game->db_game['game_id']."' GROUP BY a.option_index ORDER BY a.option_index ASC;";
 							$r = $app->run_query($q);
 							while ($address = $r->fetch()) {
 								echo "<option value=\"".$address['address_id']."\">";
@@ -959,7 +958,7 @@ if ($thisuser && $game) {
 				
 				<h1>My <?php echo $game->db_game['name']; ?> addresses</h1>
 				<?php
-				$q = "SELECT * FROM addresses a JOIN options o ON a.option_index=o.option_index JOIN events e ON o.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."' AND a.user_id='".$thisuser->db_user['user_id']."' ORDER BY option_index ASC;";
+				$q = "SELECT * FROM addresses a JOIN options o ON a.option_index=o.option_index JOIN events e ON o.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."' AND a.user_id='".$thisuser->db_user['user_id']."' GROUP BY a.option_index ORDER BY a.option_index ASC;";
 				$r = $app->run_query($q);
 				?>
 				<b>You have <?php echo $r->rowCount(); ?> addresses.</b><br/>
@@ -1215,7 +1214,7 @@ if ($thisuser && $game) {
 										<select id="game_form_base_currency_id" class="form-control">
 											<option value="">-- Please Select --</option>
 											<?php
-											$q = "SELECT * FROM currencies WHERE has_blockchain=1 ORDER BY name ASC;";
+											$q = "SELECT * FROM currencies WHERE blockchain_id IS NOT NULL ORDER BY name ASC;";
 											$r = $app->run_query($q);
 											while ($currency = $r->fetch()) {
 												echo "<option value=\"".$currency['currency_id']."\">".$currency['name']."</option>\n";
