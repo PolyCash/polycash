@@ -30,13 +30,13 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		echo "Looping through ".$r->rowCount()." games.<br/>\n";
 		
 		while ($db_game = $r->fetch()) {
-			if (!$blockchains[$db_game['blockchain_id']]) $blockchains[$db_game['blockchain_id']] = new Blockchain($app, $db_game['blockchain_id']);
+			if (empty($blockchains[$db_game['blockchain_id']])) $blockchains[$db_game['blockchain_id']] = new Blockchain($app, $db_game['blockchain_id']);
 			$game = new Game($blockchains[$db_game['blockchain_id']], $db_game['game_id']);
 			
 			if ($game->db_game['min_unallocated_addresses'] > 0) {
-				if (!empty($game->db_game['rpc_username'])) {
+				if (!empty($blockchains[$db_game['blockchain_id']]->db_blockchain['rpc_username'])) {
 					try {
-						$coin_rpc = new jsonRPCClient('http://'.$game->db_game['rpc_username'].':'.$game->db_game['rpc_password'].'@127.0.0.1:'.$game->db_game['rpc_port'].'/');
+						$coin_rpc = new jsonRPCClient('http://'.$blockchains[$db_game['blockchain_id']]->db_blockchain['rpc_username'].':'.$blockchains[$db_game['blockchain_id']]->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchains[$db_game['blockchain_id']]->db_blockchain['rpc_port'].'/');
 					}
 					catch (Exception $e) {
 						$coin_rpc = false;

@@ -28,6 +28,12 @@ include('includes/html_start.php');
 		echo ".</p>\n";
 		
 		while ($account = $account_r->fetch()) {
+			if ($account['game_id'] > 0) {
+				$blockchain = new Blockchain($app, $account['blockchain_id']);
+				$account_game = new Game($blockchain, $account['game_id']);
+			}
+			else $account_game = false;
+			
 			echo '<div class="row">';
 			echo '<div class="col-sm-4">'.$account['account_name'].'</div>';
 			
@@ -40,13 +46,15 @@ include('includes/html_start.php');
 			echo $app->format_bignum($balance/pow(10,8)).' '.$account['short_name_plural'];
 			echo '</div>';
 			
-			echo '<div class="col-sm-2"><a href="" onclick="toggle_account_details('.$account['account_id'].'); return false;">Deposit</a></div>';
+			echo '<div class="col-sm-2">';
+			if ($account['game_id'] == "") echo '<a href="" onclick="toggle_account_details('.$account['account_id'].'); return false;">Deposit</a>';
+			echo '</div>';
 			echo '<div class="col-sm-2"><a href="" onclick="toggle_account_details('.$account['account_id'].'); return false;">Transactions';
 			
-			$transaction_in_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."';";
+			$transaction_in_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."' ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC;";
 			$transaction_in_r = $app->run_query($transaction_in_q);
 			
-			$transaction_out_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."';";
+			$transaction_out_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."' ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC;";
 			$transaction_out_r = $app->run_query($transaction_out_q);
 			
 			echo ' ('.($transaction_in_r->rowCount()+$transaction_out_r->rowCount()).')';
@@ -56,8 +64,14 @@ include('includes/html_start.php');
 			
 			echo '<div class="row" id="account_details_'.$account['account_id'].'" style="display: none;">';
 			echo "<div class=\"account_details\">";
-			echo "To deposit to ".$account['account_name'].", send ".$account['short_name_plural']." to: ".$account['pub_key']."<br/>\n";
-			echo '<img style="margin: 10px;" src="/render_qr_code.php?data='.$account['pub_key'].'" />';
+			if (empty($account['game_id'])) {
+				echo "To deposit to ".$account['account_name'].", send ".$account['short_name_plural']." to: ".$account['pub_key']."<br/>\n";
+				echo '<img style="margin: 10px;" src="/render_qr_code.php?data='.$account['pub_key'].'" />';
+			}
+			else {
+				echo "This account stores your colored ".$account['coin_name_plural']." for ".$account_game->db_game['name'].".<br/>\n";
+				echo "Do not deposit ".$account['coin_name_plural']." directly into this account.";
+			}
 			
 			while ($transaction = $transaction_in_r->fetch()) {
 				echo '<div class="row">';
@@ -69,7 +83,7 @@ include('includes/html_start.php');
 				echo '</a></div>';
 				echo '<div class="col-sm-3">';
 				if ($transaction['block_id'] > 0) echo "Confirmed in block <a target=\"_blank\" href=\"/explorer/blockchains/".$account['url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>";
-				else echo "Not yet confirmed";
+				else echo "<a target=\"_blank\" href=\"/explorer/blockchains/".$account['url_identifier']."/transactions/unconfirmed/\">Not yet confirmed</a>";
 				echo '</div>';
 				echo '</div>';
 			}
@@ -83,7 +97,8 @@ include('includes/html_start.php');
 				echo "-".$app->format_bignum($transaction['amount']/pow(10,8))." ".$account['short_name_plural'];
 				echo '</a></div>';
 				echo '<div class="col-sm-3">';
-				echo "Confirmed in block #".$transaction['block_id'];
+				if ($transaction['block_id'] > 0) echo "Confirmed in block <a target=\"_blank\" href=\"/explorer/blockchains/".$account['url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>";
+				else echo "<a target=\"_blank\" href=\"/explorer/blockchains/".$account['url_identifier']."/transactions/unconfirmed/\">Not yet confirmed</a>";
 				echo '</div>';
 				echo '</div>';
 			}

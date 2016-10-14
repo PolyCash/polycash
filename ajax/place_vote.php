@@ -69,14 +69,14 @@ if ($thisuser && $game) {
 			if ($rr->rowCount() == 1) {
 				$io = $rr->fetch();
 				
-				if ($io['user_id'] != $thisuser->db_user['user_id'] || $io['spend_status'] != "unspent" || $io['game_id'] != $game->db_game['game_id']) {
-					die($io['user_id'].' != '.$thisuser->db_user['user_id'].' || '.$io['spend_status'].' != "unspent" || '.$io['game_id'].' != '.$game->db_game['game_id']);
+				if ($io['user_id'] != $thisuser->db_user['user_id'] || $io['spend_status'] != "unspent" || $io['blockchain_id'] != $game->blockchain->db_blockchain['blockchain_id']) {
+					die($io['user_id'].' != '.$thisuser->db_user['user_id'].' || '.$io['spend_status'].' != "unspent" || '.$io['blockchain_id'].' != '.$game->blockchain->db_blockchain['blockchain_id']);
 					$api_output = $noinfo_fail_obj;
 					echo json_encode($api_output);
 					die();
 				}
 				else {
-					if ($io['create_block_id'] <= $game->last_block_id() - $game->db_game['maturity'] || $io['instantly_mature'] == 1) {
+					if ($io['create_block_id'] <= $game->blockchain->last_block_id() - $game->db_game['maturity'] || $io['instantly_mature'] == 1) {
 						$io_ids[$i] = $io_id;
 					}
 					else {
@@ -135,7 +135,7 @@ if ($thisuser && $game) {
 		}
 	}
 	
-	$last_block_id = $game->last_block_id();
+	$last_block_id = $game->blockchain->last_block_id();
 	
 	if (($last_block_id+1)%$game->db_game['round_length'] == 0) {
 		$api_output = (object)[

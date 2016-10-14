@@ -31,7 +31,7 @@ $GLOBALS['default_coin_winner'] = 'your_username';
 $GLOBALS['pageview_tracking_enabled'] = false;
 
 $GLOBALS['currency_price_refresh_seconds'] = 30;
-$GLOBALS['invoice_expiration_seconds'] = 60*10;
+$GLOBALS['invoice_expiration_seconds'] = 60*60*10;
 $GLOBALS['cron_interval_seconds'] = 5;
 
 $GLOBALS['new_games_per_user'] = "unlimited";

@@ -548,7 +548,7 @@ class App {
 	public function new_currency_invoice(&$pay_currency, $pay_amount, &$user, &$user_game, $invoice_type) {
 		$currency_account = $user->fetch_currency_account($pay_currency['currency_id']);
 		
-		$address_key = $this->new_address_key($pay_currency['currency_id'], $currency_account['account_id']);
+		$address_key = $this->new_address_key($pay_currency['currency_id'], $currency_account);
 		
 		$time = time();
 		$q = "INSERT INTO currency_invoices SET time_created='".$time."', pay_currency_id='".$pay_currency['currency_id']."', address_id='".$address_key['address_id']."', expire_time='".($time+$GLOBALS['invoice_expiration_seconds'])."', user_game_id='".$user_game['user_game_id']."', invoice_type='".$invoice_type."', status='unpaid', invoice_key_string='".$this->random_string(32)."', pay_amount='".$pay_amount."';";
@@ -596,27 +596,53 @@ class App {
 		return $html;
 	}
 	
-	public function new_address_key($currency_id, $account_id) {
-		if ($currency_id == 8) $keySet = litecoin::getNewKeySet();
-		else $keySet = bitcoin::getNewKeySet();
-		
-		if (empty($GLOBALS['rsa_pub_key']) || empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
-			die("<p>There was an error generating the payment address. Please go back and try again.</p>");
-		}
-		
-		$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
-		
-		$db_address = $this->create_or_fetch_address($keySet['pubAdd'], true, false, false, false, true);
-		
-		$q = "INSERT INTO address_keys SET currency_id=".$currency_id.", address_id=".$db_address['address_id'];
-		if ($account_id) $q .= ", account_id='".$account_id."'";
-		$q .= ", pub_key='".$keySet['pubAdd']."', priv_enc='".$encWIF."';";
+	public function new_address_key($currency_id, &$account) {
+		$q = "SELECT * FROM currencies WHERE currency_id='".$currency_id."';";
 		$r = $this->run_query($q);
-		$address_key_id = $this->last_insert_id();
+		$currency = $r->fetch();
 		
-		$address_key = $this->run_query("SELECT * FROM address_keys WHERE address_key_id='".$address_key_id."';")->fetch();
-		
-		return $address_key;
+		if ($currency['blockchain_id'] > 0) {
+			$blockchain = new Blockchain($this, $currency['blockchain_id']);
+			
+			try {
+				$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
+				
+				$address_text = $coin_rpc->getnewaddress();
+				$encWIF = "";
+				$save_method = "wallet.dat";
+			}
+			catch (Exception $e) {
+				if ($currency['short_name'] == "litecoin") $keySet = litecoin::getNewKeySet();
+				else $keySet = bitcoin::getNewKeySet();
+				
+				if (empty($GLOBALS['rsa_pub_key']) || empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
+					die("<p>There was an error generating the payment address. Please go back and try again.</p>");
+				}
+				
+				$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
+				$address_text = $keySet['pubAdd'];
+				$save_method = "db";
+			}
+			
+			$db_address = $this->create_or_fetch_address($address_text, true, false, false, false, true);
+			if ($account) {
+				$q = "UPDATE addresses SET user_id='".$account['user_id']."' WHERE address_id='".$db_address['address_id']."';";
+				$r = $this->run_query($q);
+				$q = "UPDATE transaction_ios SET user_id='".$account['user_id']."' WHERE address_id='".$db_address['address_id']."';";
+				$r = $this->run_query($q);
+			}
+			
+			$q = "INSERT INTO address_keys SET currency_id=".$currency_id.", address_id=".$db_address['address_id'].", save_method='".$save_method."'";
+			if ($account) $q .= ", account_id='".$account['account_id']."'";
+			$q .= ", pub_key='".$address_text."', priv_enc='".$encWIF."';";
+			$r = $this->run_query($q);
+			$address_key_id = $this->last_insert_id();
+			
+			$address_key = $this->run_query("SELECT * FROM address_keys WHERE address_key_id='".$address_key_id."';")->fetch();
+			
+			return $address_key;
+		}
+		else return false;
 	}
 	
 	public function decimal_to_float($number) {
@@ -783,12 +809,12 @@ class App {
 		else $html .= "Failed to start the main process.<br/>\n";
 		sleep(0.1);
 		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_check_payments.php" key='.$key_string;
+		/*$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_check_payments.php" key='.$key_string;
 		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
 		$payments_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($payments_process)) $process_count++;
 		else $html .= "Failed to start a process for processing payments.<br/>\n";
-		sleep(0.1);
+		sleep(0.1);*/
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/address_miner.php" key='.$key_string;
 		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
@@ -881,7 +907,18 @@ class App {
 		
 		if ($db_game['game_id'] > 0) { // This public function can also be called with a game variation
 			$html .= '<div class="row"><div class="col-sm-5">Game title:</div><div class="col-sm-7">'.$db_game['name']."</div></div>\n";
-			
+		}
+		
+		$html .= '<div class="row"><div class="col-sm-5">Blockchain:</div><div class="col-sm-7">';
+		if ($db_game['blockchain_id'] > 0) {
+			$q = "SELECT * FROM blockchains WHERE blockchain_id='".$db_game['blockchain_id']."';";
+			$db_blockchain = $this->run_query($q)->fetch();
+			$html .= '<a href="/explorer/blockchains/'.$db_blockchain['url_identifier'].'/blocks/">'.$db_blockchain['blockchain_name'].'</a>';
+		}
+		else $html .= "None";
+		$html .= "</div></div>\n";
+		
+		if ($db_game['game_id'] > 0) {
 			$html .= '<div class="row"><div class="col-sm-5">Game URL:</div><div class="col-sm-7"><a href="'.$db_game_url.'">'.$db_game_url."</a></div></div>\n";
 		}
 		
@@ -1218,6 +1255,12 @@ class App {
 			$firstchar_offset = $firstchar_end_index+1;
 		}
 		return substr($addr_text, $this->get_site_constant('identifier_first_char'), 1);
+	}
+	
+	public function fetch_account_by_id($account_id) {
+		$q = "SELECT * FROM currency_accounts WHERE account_id='".$account_id."';";
+		$r = $this->run_query($q);
+		return $r->fetch();
 	}
 }
 ?>

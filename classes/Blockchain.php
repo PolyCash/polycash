@@ -39,8 +39,16 @@ class Blockchain {
 	}
 	
 	public function new_nonuser_address() {
-		$address_key = $this->app->new_address_key(false, false);
+		$ref_account = false;
+		$address_key = $this->app->new_address_key(false, $ref_account);
 		return $db_address['address_id'];
+	}
+	
+	public function currency_id() {
+		$q = "SELECT * FROM currencies WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';";
+		$r = $this->app->run_query($q);
+		if ($r->rowCount() > 0) return $r->fetch()['currency_id'];
+		else return false;
 	}
 	
 	public function coind_add_block(&$coin_rpc, $block_hash, $block_height, $headers_only) {

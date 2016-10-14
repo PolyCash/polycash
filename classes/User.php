@@ -8,7 +8,9 @@ class User {
 		
 		$q = "SELECT * FROM users WHERE user_id='".$user_id."';";
 		$r = $this->app->run_query($q);
+		
 		if ($r->rowCount() == 1) $this->db_user = $r->fetch();
+		else throw new Exception("Failed to load user #".$user_id);
 	}
 	
 	public function account_coin_value($game) {
@@ -457,7 +459,9 @@ class User {
 				$rr = $this->app->run_query($qq);
 				$account_id = $this->app->last_insert_id();
 				
-				$address_key = $this->app->new_address_key($currency['currency_id'], $account_id);
+				$account = $this->app->fetch_account_by_id($account_id);
+				
+				$address_key = $this->app->new_address_key($currency['currency_id'], $account);
 				
 				$qq = "UPDATE currency_accounts SET current_address_id='".$address_key['address_id']."' WHERE account_id='".$account_id."';";
 				$rr = $this->app->run_query($qq);
@@ -472,6 +476,33 @@ class User {
 			return $r->fetch();
 		}
 		else return false;
+	}
+	
+	public function create_or_fetch_game_currency_account(&$game) {
+		$q = "SELECT * FROM currency_accounts WHERE user_id='".$this->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."' ORDER BY account_id ASC;";
+		$r = $this->app->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			return $r->fetch();
+		}
+		else {
+			$currency_id = $game->blockchain->currency_id();
+			
+			$qq = "INSERT INTO currency_accounts SET user_id='".$this->db_user['user_id']."', game_id='".$game->db_game['game_id']."', currency_id='".$currency_id."', account_name=".$this->app->quote_escape(ucwords($game->blockchain->db_blockchain['coin_name_plural'])." for ".$game->db_game['name']).", time_created='".time()."';";
+			$rr = $this->app->run_query($qq);
+			$account_id = $this->app->last_insert_id();
+			$account = $this->app->fetch_account_by_id($account_id);
+			
+			$address_key = $this->app->new_address_key($currency_id, $account);
+			
+			$qq = "UPDATE currency_accounts SET current_address_id='".$address_key['address_id']."' WHERE account_id='".$account_id."';";
+			echo "qq: $qq<br/>\n";
+			$rr = $this->app->run_query($qq);
+			
+			$qq = "SELECT * FROM currency_accounts WHERE account_id='".$account_id."';";
+			$rr = $this->app->run_query($qq);
+			return $rr->fetch();
+		}
 	}
 }
 ?>

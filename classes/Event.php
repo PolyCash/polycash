@@ -423,12 +423,12 @@ class Event {
 	}*/
 	
 	public function my_votes_in_round($round_id, $user_id, $include_unconfirmed) {
-		$q = "SELECT SUM(t_fees.fee_amount) FROM (SELECT t.fee_amount FROM transaction_ios io JOIN options op ON io.option_id=op.option_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE t.game_id='".$this->game->db_game['game_id']."' AND io.create_round_id = ".$round_id." AND io.user_id='".$user_id."' GROUP BY t.transaction_id) t_fees;";
+		$q = "SELECT SUM(t_fees.fee_amount) FROM (SELECT t.fee_amount FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN options op ON gio.option_id=op.option_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE gio.game_id='".$this->game->db_game['game_id']."' AND gio.create_round_id = ".$round_id." AND io.user_id='".$user_id."' GROUP BY t.transaction_id) t_fees;";
 		$r = $this->game->blockchain->app->run_query($q);
 		$fee_amount = $r->fetch(PDO::FETCH_NUM);
 		$fee_amount = $fee_amount[0];
 		
-		$q = "SELECT op.*, SUM(io.amount), SUM(io.coin_blocks_destroyed), SUM(io.coin_rounds_destroyed), SUM(io.votes) FROM transaction_ios io JOIN options op ON io.option_id=op.option_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.event_id='".$this->db_event['event_id']."' AND io.create_round_id=".$round_id." AND io.user_id='".$user_id."' GROUP BY io.option_id ORDER BY op.option_id ASC;";
+		$q = "SELECT op.*, SUM(io.amount), SUM(io.coin_blocks_destroyed), SUM(io.coin_rounds_destroyed), SUM(io.votes) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN options op ON gio.option_id=op.option_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE gio.event_id='".$this->db_event['event_id']."' AND gio.create_round_id=".$round_id." AND io.user_id='".$user_id."' GROUP BY gio.option_id ORDER BY op.option_id ASC;";
 		$r = $this->game->blockchain->app->run_query($q);
 		$coins_voted = 0;
 		$coin_blocks_voted = 0;
@@ -436,14 +436,14 @@ class Event {
 		$votes = 0;
 		$my_votes = array();
 		while ($votesum = $r->fetch()) {
-			$my_votes[$votesum['option_id']]['coins'] = $votesum['SUM(io.amount)'];
+			$my_votes[$votesum['option_id']]['coins'] = $votesum['SUM(gio.colored_amount)'];
 			$my_votes[$votesum['option_id']]['coin_blocks'] = $votesum['SUM(io.coin_blocks_destroyed)'];
-			$my_votes[$votesum['option_id']]['coin_rounds'] = $votesum['SUM(io.coin_rounds_destroyed)'];
-			$my_votes[$votesum['option_id']]['votes'] = $votesum['SUM(io.votes)'];
-			$coins_voted += $votesum['SUM(io.amount)'];
+			$my_votes[$votesum['option_id']]['coin_rounds'] = $votesum['SUM(gio.coin_rounds_destroyed)'];
+			$my_votes[$votesum['option_id']]['votes'] = $votesum['SUM(gio.votes)'];
+			$coins_voted += $votesum['SUM(gio.colored_amount)'];
 			$coin_blocks_voted += $votesum['SUM(io.coin_blocks_destroyed)'];
-			$coin_rounds_voted += $votesum['SUM(io.coin_rounds_destroyed)'];
-			$votes += $votesum['SUM(io.votes)'];
+			$coin_rounds_voted += $votesum['SUM(gio.coin_rounds_destroyed)'];
+			$votes += $votesum['SUM(gio.votes)'];
 		}
 		$returnvals[0] = $my_votes;
 		$returnvals[1] = $coins_voted;

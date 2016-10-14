@@ -1176,6 +1176,7 @@ function initiate_buyin() {
 	$.get("/ajax/buyin.php?game_id="+games[0].game_id, function(result) {
 		$('#buyin_modal_content').html(result);
 		$('#buyin_modal').modal('show');
+		setTimeout("$('#buyin_amount').focus();", 1000);
 	});
 }
 function scramble_strategy(strategy_id) {
