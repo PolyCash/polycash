@@ -916,6 +916,7 @@ function refresh_mature_io_btns() {
 	for (var i=0; i<vote_inputs.length; i++) {
 		$('#selected_utxo_'+i).html(render_selected_utxo(i));
 	}
+	console.log("Done with refresh_mature_io_btns()");
 }
 function compose_vote_loop() {
 	if (output_amounts_need_update) refresh_output_amounts();
@@ -1692,4 +1693,66 @@ function set_select_add_output() {
 		}
 	}
 	$("#select_add_output").find('option').remove().end().append($(optionsAsString));
+}
+
+var account_io_id = false;
+var account_io_amount = false;
+
+function account_start_spend_io(io_id, amount) {
+	account_io_id = io_id;
+	account_io_amount = amount;
+	$('#account_spend_buyin_total').html("(Total: "+format_coins(amount)+" coins)");
+	$('#account_spend_modal').modal('show');
+	console.log(io_id);
+}
+function account_spend_action_changed() {
+	var account_spend_action = $('#account_spend_action').val();
+	if (account_spend_action == "buyin") {
+		$('#account_spend_buyin').show('fast');
+		$('#account_spend_withdraw').hide();
+	}
+	else {
+		$('#account_spend_withdraw').show('fast');
+		$('#account_spend_buyin').hide();
+	}
+}
+function account_spend_buyin_address_choice_changed() {
+	var address_choice = $('#account_spend_buyin_address_choice').val();
+	if (address_choice == "new") {
+		$('#account_spend_buyin_address_existing').hide('fast');
+	}
+	else {
+		$('#account_spend_buyin_address_existing').show('fast');
+		$('#account_spend_buyin_address').focus();
+	}
+}
+function account_spend_refresh() {
+	console.log('account_spend_refresh()');
+	var buyin_amount = parseFloat($('#account_spend_buyin_amount').val());
+	if (buyin_amount > 0) {
+		var fee_amount = parseFloat($('#account_spend_buyin_fee').val());
+		var color_amount = account_io_amount - buyin_amount - fee_amount;
+		$('#account_spend_buyin_color_amount').html("Color "+format_coins(color_amount)+" coins");
+	}
+	setTimeout("account_spend_refresh();", 500);
+}
+function account_spend_buyin() {
+	var account_spend_action = $('#account_spend_action').val();
+	
+	if (account_spend_action == "buyin") {
+		var address_choice = $('#account_spend_buyin_address_choice').val();
+		var buyin_amount = parseFloat($('#account_spend_buyin_amount').val());
+		var fee_amount = parseFloat($('#account_spend_buyin_fee').val());
+		var game_id = $('#account_spend_game_id').val();
+		
+		var buyin_url = "/ajax/account_spend.php?action=buyin&io_id="+account_io_id+"&game_id="+game_id+"&buyin_amount="+buyin_amount+"&fee_amount="+fee_amount;
+		if (address_choice == "new") buyin_url += "&address=new";
+		else buyin_url += "&address="+$('#account_spend_buyin_address').val();
+		
+		$.get(buyin_url, function(result) {
+			var result_obj = JSON.parse(result);
+			alert(result_obj['message']);
+			if (result_obj['status_code'] == 1) window.location = window.location;
+		});
+	}
 }

@@ -34,14 +34,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			$blockchains[$blockchain_i] = new Blockchain($app, $db_blockchain['blockchain_id']);
 			try {
 				$coin_rpc = new jsonRPCClient('http://'.$db_blockchain['rpc_username'].':'.$db_blockchain['rpc_password'].'@127.0.0.1:'.$db_blockchain['rpc_port'].'/');
-				echo "Loading game block headers...\n";
-				$blockchains[$blockchain_i]->load_new_blocks($coin_rpc);
-				echo "Loading game blocks...\n";
-				$blockchains[$blockchain_i]->load_all_blocks($coin_rpc, TRUE);
-				//echo "Loading all block headers...\n";
-				//$blockchains[$blockchain_i]->load_all_block_headers($coin_rpc, FALSE, 90);
-				echo "Loading unconfirmed transactions...\n";
-				$blockchains[$blockchain_i]->load_unconfirmed_transactions($coin_rpc, 30);
+				
+				$blockchains[$blockchain_i]->sync_coind($coin_rpc);
 			} catch (Exception $e) {
 				echo "Error, skipped ".$db_blockchain['blockchain_name']." because RPC connection failed.<br/>\n";
 			}

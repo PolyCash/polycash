@@ -496,7 +496,6 @@ class User {
 			$address_key = $this->app->new_address_key($currency_id, $account);
 			
 			$qq = "UPDATE currency_accounts SET current_address_id='".$address_key['address_id']."' WHERE account_id='".$account_id."';";
-			echo "qq: $qq<br/>\n";
 			$rr = $this->app->run_query($qq);
 			
 			$qq = "SELECT * FROM currency_accounts WHERE account_id='".$account_id."';";

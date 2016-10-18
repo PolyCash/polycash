@@ -428,7 +428,7 @@ class Event {
 		$fee_amount = $r->fetch(PDO::FETCH_NUM);
 		$fee_amount = $fee_amount[0];
 		
-		$q = "SELECT op.*, SUM(io.amount), SUM(io.coin_blocks_destroyed), SUM(io.coin_rounds_destroyed), SUM(io.votes) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN options op ON gio.option_id=op.option_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE gio.event_id='".$this->db_event['event_id']."' AND gio.create_round_id=".$round_id." AND io.user_id='".$user_id."' GROUP BY gio.option_id ORDER BY op.option_id ASC;";
+		$q = "SELECT op.*, SUM(io.amount), SUM(io.coin_blocks_destroyed), SUM(gio.coin_rounds_destroyed), SUM(gio.votes) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN options op ON gio.option_id=op.option_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE gio.event_id='".$this->db_event['event_id']."' AND gio.create_round_id=".$round_id." AND io.user_id='".$user_id."' GROUP BY gio.option_id ORDER BY op.option_id ASC;";
 		$r = $this->game->blockchain->app->run_query($q);
 		$coins_voted = 0;
 		$coin_blocks_voted = 0;

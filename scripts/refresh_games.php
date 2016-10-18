@@ -45,6 +45,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		}
 		
 		$game->ensure_events_until_block($blockchain->last_block_id()+1);
+		echo "Ensured events until ".($blockchain->last_block_id()+1)."<br/>\n";
 	}
 }
 else echo "Incorrect key.";

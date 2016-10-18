@@ -511,6 +511,7 @@ if ($thisuser && $game) {
 		function load_all_events(game) {
 			console.log("Loading all events...");
 			<?php
+			/*
 			$q = "SELECT * FROM events e JOIN event_types t ON e.event_type_id=t.event_type_id WHERE e.game_id='".$game->db_game['game_id']."' ORDER BY e.event_id ASC;";
 			$r = $app->run_query($q);
 			$i=0;
@@ -530,7 +531,7 @@ if ($thisuser && $game) {
 					$j++;
 				}
 				$i++;
-			}
+			}*/
 			?>
 		}
 		
@@ -937,13 +938,19 @@ if ($thisuser && $game) {
 						<select class="form-control" id="withdraw_remainder_address_id">
 							<option value="random">Random</option>
 							<?php
-							$q = "SELECT * FROM addresses a JOIN options o ON a.option_index=o.option_index JOIN events e ON o.event_id=e.event_id WHERE a.user_id='".$thisuser->db_user['user_id']."' AND e.game_id='".$game->db_game['game_id']."' GROUP BY a.option_index ORDER BY a.option_index ASC;";
-							$r = $app->run_query($q);
-							while ($address = $r->fetch()) {
-								echo "<option value=\"".$address['address_id']."\">";
-								if ($address['option_index'] == "") echo "None";
-								else echo "Voting option #".$address['option_index'];
-								echo "</option>\n";
+							$option_index_range = $game->option_index_range();
+							
+							for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
+								$qq = "SELECT * FROM addresses WHERE option_index='".$option_index."' AND user_id='".$thisuser->db_user['user_id']."';";
+								$rr = $app->run_query($qq);
+								
+								if ($rr->rowCount() > 0) {
+									$address = $rr->fetch();
+									echo "<option value=\"".$address['address_id']."\">";
+									if ($address['option_index'] == "") echo "None";
+									else echo "Voting option #".$address['option_index'];
+									echo "</option>\n";
+								}
 							}
 							?>
 						</select>
@@ -958,28 +965,31 @@ if ($thisuser && $game) {
 				
 				<h1>My <?php echo $game->db_game['name']; ?> addresses</h1>
 				<?php
-				$q = "SELECT * FROM addresses a JOIN options o ON a.option_index=o.option_index JOIN events e ON o.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."' AND a.user_id='".$thisuser->db_user['user_id']."' GROUP BY a.option_index ORDER BY a.option_index ASC;";
-				$r = $app->run_query($q);
-				?>
-				<b>You have <?php echo $r->rowCount(); ?> addresses.</b><br/>
-				<?php
-				while ($address = $r->fetch()) {
-					?>
-					<div class="row">
-						<div class="col-sm-3">
-							<?php
-							if ($address['option_index'] != "") echo "Voting option #".$address['option_index'];
-							else echo "Default Address";
-							?>
+				$option_index_range = $game->option_index_range();
+				
+				for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
+					$qq = "SELECT * FROM addresses WHERE option_index='".$option_index."' AND user_id='".$thisuser->db_user['user_id']."';";
+					$rr = $app->run_query($qq);
+					
+					if ($rr->rowCount() > 0) {
+						$address = $rr->fetch();
+						?>
+						<div class="row">
+							<div class="col-sm-3">
+								<?php
+								if ($address['option_index'] != "") echo "Voting option #".$address['option_index'];
+								else echo "Default Address";
+								?>
+							</div>
+							<div class="col-sm-1">
+								<a target="_blank" href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/addresses/<?php echo $address['address']; ?>">Explore</a>
+							</div>
+							<div class="col-sm-5">
+								<input type="text" class="address_cell" onclick="$(this).select();" value="<?php echo $address['address']; ?>" />
+							</div>
 						</div>
-						<div class="col-sm-1">
-							<a target="_blank" href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/addresses/<?php echo $address['address']; ?>">Explore</a>
-						</div>
-						<div class="col-sm-5">
-							<input type="text" class="address_cell" onclick="$(this).select();" value="<?php echo $address['address']; ?>" />
-						</div>
-					</div>
-					<?php
+						<?php
+					}
 				}
 				?>
 			</div>

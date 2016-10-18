@@ -809,12 +809,12 @@ class App {
 		else $html .= "Failed to start the main process.<br/>\n";
 		sleep(0.1);
 		
-		/*$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_check_payments.php" key='.$key_string;
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_check_payments.php" key='.$key_string;
 		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
 		$payments_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($payments_process)) $process_count++;
 		else $html .= "Failed to start a process for processing payments.<br/>\n";
-		sleep(0.1);*/
+		sleep(0.1);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/address_miner.php" key='.$key_string;
 		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";

@@ -96,7 +96,7 @@ class Blockchain {
 				$tx_hash = $lastblock_rpc['tx'][$i];
 				echo $i."/".count($lastblock_rpc['tx'])." ".$tx_hash." ";
 				$successful = true;
-				$db_transaction = $this->add_transaction($coin_rpc, $tx_hash, $block_height, true, $successful, $i, false);
+				$db_transaction = $this->add_transaction($coin_rpc, $tx_hash, $block_height, true, $successful, $i, false, true);
 				if (!$successful) $tx_error = true;
 				echo "\n";
 				if ($db_transaction['transaction_desc'] != "transaction") $coins_created += $db_transaction['amount'];
@@ -121,14 +121,14 @@ class Blockchain {
 		return $html;
 	}
 	
-	public function add_transaction(&$coin_rpc, $tx_hash, $block_height, $require_inputs, &$successful, $position_in_block, $only_vout) {
+	public function add_transaction(&$coin_rpc, $tx_hash, $block_height, $require_inputs, &$successful, $position_in_block, $only_vout, $show_debug) {
 		$successful = true;
 		$start_time = microtime(true);
 		$benchmark_time = $start_time;
 		
 		if ($only_vout) {
 			$error_message = "Downloading vout #".$only_vout." in ".$tx_hash;
-			echo $error_message."\n";
+			if ($show_debug) echo $error_message."\n";
 		}
 		$q = "SELECT * FROM transactions WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND tx_hash='".$tx_hash."';";
 		$r = $this->app->run_query($q);
@@ -141,7 +141,7 @@ class Blockchain {
 				if ($unconfirmed_tx['blockchain_id'] == $this->db_blockchain['blockchain_id']) {
 					$q = "DELETE t.*, io.*, gio.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';";
 					$r = $this->app->run_query($q);
-					echo "del.".(microtime(true)-$benchmark_time)." ";
+					if ($show_debug) echo "del.".(microtime(true)-$benchmark_time)." ";
 					$benchmark_time = microtime(true);
 				}
 			}
@@ -165,7 +165,7 @@ class Blockchain {
 						$block_height = $rpc_block['height'];
 					}
 				}
-				echo "get.".(microtime(true)-$benchmark_time)." ";
+				if ($show_debug) echo "get.".(microtime(true)-$benchmark_time)." ";
 				$benchmark_time = microtime(true);
 				
 				$outputs = $transaction_rpc["vout"];
@@ -194,7 +194,7 @@ class Blockchain {
 				$r = $this->app->run_query($q);
 				$db_transaction_id = $this->app->last_insert_id();
 				
-				echo "insert.".(microtime(true)-$benchmark_time)." ";
+				if ($show_debug) echo "insert.".(microtime(true)-$benchmark_time)." ";
 				$benchmark_time = microtime(true);
 				
 				$spend_io_ids = array();
@@ -213,8 +213,8 @@ class Blockchain {
 						}
 						else {
 							$child_successful = true;
-							echo "\n -> $j ";
-							$new_tx = $this->add_transaction($coin_rpc, $inputs[$j]["txid"], false, false, $child_successful, false, $inputs[$j]["vout"]);
+							if ($show_debug) echo "\n -> $j ";
+							$new_tx = $this->add_transaction($coin_rpc, $inputs[$j]["txid"], false, false, $child_successful, false, $inputs[$j]["vout"], $show_debug);
 							$r = $this->app->run_query($q);
 							
 							if ($r->rowCount() > 0) {
@@ -244,7 +244,7 @@ class Blockchain {
 						}
 					}
 				}
-				echo "inputs.".(microtime(true)-$benchmark_time)." ";
+				if ($show_debug) echo "inputs.".(microtime(true)-$benchmark_time)." ";
 				$benchmark_time = microtime(true);
 				
 				if ($successful) {
@@ -302,7 +302,7 @@ class Blockchain {
 							}
 						}*/
 					}
-					echo "outputs.".(microtime(true)-$benchmark_time)." ";
+					if ($show_debug) echo "outputs.".(microtime(true)-$benchmark_time)." ";
 					$benchmark_time = microtime(true);
 					
 					if (count($spend_io_ids) > 0) {
@@ -318,13 +318,13 @@ class Blockchain {
 					if ($require_inputs || $transaction_type != "transaction") $q .= ", has_all_inputs=1, amount='".$output_sum."', fee_amount='".$fee_amount."'";
 					$q .= " WHERE transaction_id='".$db_transaction_id."';";
 					$r = $this->app->run_query($q);
-					echo "done.".(microtime(true)-$benchmark_time);
+					if ($show_debug) echo "done.".(microtime(true)-$benchmark_time);
 					
 					$db_transaction = $this->app->run_query("SELECT * FROM transactions WHERE transaction_id='".$db_transaction_id."';")->fetch();
 					return $db_transaction;
 				}
 				else {
-					echo "done.".(microtime(true)-$benchmark_time);
+					if ($show_debug) echo "done.".(microtime(true)-$benchmark_time);
 					return false;
 				}
 			}
@@ -343,7 +343,7 @@ class Blockchain {
 		
 		$require_inputs = true;
 		$successful = true;
-		$this->add_transaction($coin_rpc, $tx_hash, false, $require_inputs, $successful, false, false);
+		$this->add_transaction($coin_rpc, $tx_hash, false, $require_inputs, $successful, false, false, false);
 	}
 	
 	public function sync_coind(&$coin_rpc) {
@@ -379,11 +379,14 @@ class Blockchain {
 			echo "Loading new blocks...\n";
 			$this->load_new_blocks($coin_rpc);
 			
-			echo "Loading unconfirmed transactions...\n";
-			$this->load_unconfirmed_transactions($coin_rpc);
+			echo "Loading game blocks...\n";
+			$this->load_all_blocks($coin_rpc, TRUE);
 			
-			echo "Updating option votes...\n";
-			$this->update_option_votes();
+			echo "Loading unconfirmed transactions...\n";
+			$this->load_unconfirmed_transactions($coin_rpc, 30);
+			
+			//echo "Updating option votes...\n";
+			//$this->update_option_votes();
 			
 			echo "Done syncing!\n";
 		}
@@ -551,14 +554,12 @@ class Blockchain {
 		
 		$this->app->run_query("DELETE FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id >= ".$block_height.";");
 		
-		$round_id = $this->block_to_round($block_height);
-		$this->app->run_query("DELETE eo.* FROM event_outcomes eo JOIN events e ON eo.event_id=e.event_id JOIN games g ON eo.game_id=g.game_id WHERE g.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND eo.round_id >= ".$round_id.";");
-		$this->app->run_query("DELETE eoo.* FROM event_outcome_options eoo JOIN events e ON eoo.event_id=e.event_id JOIN games g ON eo.game_id=g.game_id WHERE g.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND eoo.round_id >= ".$round_id.";");
+		$this->app->run_query("DELETE eoo.* FROM event_outcome_options eoo JOIN event_outcomes eo ON eo.outcome_id=eoo.outcome_id JOIN events e ON eo.event_id=e.event_id JOIN games g ON e.game_id=g.game_id WHERE g.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND eo.payout_block_id >= ".$block_height.";");
+		$this->app->run_query("DELETE eo.* FROM event_outcomes eo JOIN events e ON eo.event_id=e.event_id JOIN games g ON eo.game_id=g.game_id WHERE g.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND eo.payout_block_id >= ".$block_height.";");
 		
-		$this->app->run_query("UPDATE strategy_round_allocations sra JOIN user_strategies us ON us.strategy_id=sra.strategy_id JOIN games g ON us.game_id=g.game_id SET sra.applied=0 WHERE g.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND sra.round_id >= ".$round_id.";");
+		//$this->app->run_query("UPDATE strategy_round_allocations sra JOIN user_strategies us ON us.strategy_id=sra.strategy_id JOIN games g ON us.game_id=g.game_id SET sra.applied=0 WHERE g.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND sra.round_id >= ".$round_id.";");
 		
-		$this->update_option_votes();
-		$coins_in_existence = $this->coins_in_existence(false);
+		//$coins_in_existence = $this->coins_in_existence(false);
 	}
 	
 	public function add_genesis_block(&$coin_rpc) {
