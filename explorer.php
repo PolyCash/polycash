@@ -177,7 +177,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 		if ($uri_parts[5] == "unconfirmed") {
 			$explore_mode = "unconfirmed";
 			$mode_error = false;
-			$pagetitle = $blockchain->db_blockchain['blockchain_name']." - Unconfirmed Transactions";
+			$pagetitle = "Unconfirmed Transactions";
+			if ($game) $pagetitle .= " - ".$game->db_game['name'];
+			else $pagetitle .= " - ".$blockchain->db_blockchain['blockchain_name'];
 		}
 		else {
 			if (strlen($uri_parts[5]) < 20) {
@@ -517,17 +519,29 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							$events = $game->events_by_block($block['block_id']);
 							echo "<p>This block is referenced in ".count($events)." events<br/>\n";
 							for ($i=0; $i<count($events); $i++) {
-								echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/events/".$events[$i]->db_event['event_index']."\">".$events[$i]->db_event['event_name']."</a><br/>\n";
+								echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".($events[$i]->db_event['event_index']+1)."\">".$events[$i]->db_event['event_name']."</a><br/>\n";
 							}
 							echo '</p>';
 						}
 					}
 					else {
-						$q = "SELECT COUNT(*), SUM(amount) FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_id IS NULL;";// AND amount > 0;";
-						$r = $app->run_query($q);
-						$r = $r->fetch(PDO::FETCH_NUM);
-						$num_trans = $r[0];
-						$block_sum = $r[1];
+						if ($game) {
+							$q = "SELECT SUM(gio.colored_amount) FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND t.block_id IS NULL;";
+							$r = $app->run_query($q);
+							$r = $r->fetch(PDO::FETCH_NUM);
+							$block_sum = $r[0];
+							
+							$q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND t.block_id IS NULL GROUP BY t.transaction_id;";
+							$r = $app->run_query($q);
+							$num_trans = $r->rowCount();
+						}
+						else {
+							$q = "SELECT COUNT(*), SUM(amount) FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_id IS NULL;";
+							$r = $app->run_query($q);
+							$r = $r->fetch(PDO::FETCH_NUM);
+							$num_trans = $r[0];
+							$block_sum = $r[1];
+						}
 						
 						$expected_block_id = $blockchain->last_block_id()+1;
 						if ($game) {
@@ -536,14 +550,19 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						}
 						echo "<h1>Unconfirmed Transactions</h1>\n";
 						if ($game) echo "<h3>".$game->db_game['name']."</h3>";
-						echo $num_trans." known transaction";
+						echo $num_trans." transaction";
 						if ($num_trans == 1) echo " is";
 						else echo "s are";
-						echo " awaiting confirmation with a sum of ".number_format($block_sum/pow(10,8), 2)." coins.<br/>\n";
+						echo " awaiting confirmation with a sum of ".number_format($block_sum/pow(10,8), 2)." ";
+						if ($game) echo $game->db_game['coin_name_plural'];
+						else echo $blockchain->db_blockchain['coin_name_plural'];
+						echo ".<br/>\n";
 						echo "Block #".$expected_block_id." is currently being mined.<br/>\n";
 					}
 					
-					$next_prev_links = $blockchain->block_next_prev_links($block, $explore_mode);
+					if ($game) $next_prev_links = $game->block_next_prev_links($block, $explore_mode);
+					else $next_prev_links = $blockchain->block_next_prev_links($block, $explore_mode);
+					
 					echo $next_prev_links;
 					
 					echo '<div style="margin-top: 10px; border-bottom: 1px solid #bbb;">';
@@ -649,7 +668,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				$r = $app->run_query($q);
 				
 				echo "This address has been used in ".$r->rowCount()." transactions.<br/>\n";
-				if ($address['is_mine'] == 1) echo "This is one of your addresses.<br/>\n";
+				if ($thisuser && $address['user_id'] == $thisuser->db_user['user_id']) echo "This is one of your addresses.<br/>\n";
 				echo ucwords($blockchain->db_blockchain['coin_name'])." balance: ".($blockchain->address_balance_at_block($address, false)/pow(10,8))." ".$blockchain->db_blockchain['coin_name_plural']."<br/>\n";
 				if ($game) echo ucwords($game->db_game['coin_name'])." balance: ".$app->format_bignum($game->address_balance_at_block($address, false)/pow(10,8))." ".$game->db_game['coin_name_plural']."<br/>\n";
 				

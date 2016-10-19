@@ -63,7 +63,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	}
 	else $output['new_my_transaction'] = 0;
 	
-	if (TRUE || $last_block_id !== $_REQUEST['last_block_id'] || $last_transaction_id != (int) $_REQUEST['last_transaction_id']) {
+	if ($last_block_id !== $_REQUEST['last_block_id'] || $last_transaction_id != (int) $_REQUEST['last_transaction_id']) {
 		if ($last_block_id != (int) $_REQUEST['last_block_id']) {
 			//$performance_history_sections = intval($_REQUEST['performance_history_sections']);
 			$output['new_block'] = 1;

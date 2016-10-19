@@ -66,7 +66,7 @@ class User {
 			
 			$html .= '<div class="row" style="font-size: 13px;">';
 			$html .= '<div class="col-sm-3">'.$event->db_event['event_name'].'</div>';
-			$html .= '<div class="col-sm-4">';
+			$html .= '<div class="col-sm-3">';
 			if ($event_outcome['real_winner_name'] != "") {
 				$html .= $event_outcome['real_winner_name']." with ".$this->app->format_bignum($event_outcome['winning_votes']/pow(10,8))." votes";
 				if ($event_outcome['derived_winner_name'] != "" && $event_outcome['derived_winner_name'] != $event_outcome['real_winner_name']) $html .= " (Should have been ".$event_outcome['derived_winner_name']." with ".$this->app->format_bignum($event_outcome['derived_winning_votes']/pow(10,8))." votes)";
@@ -102,14 +102,16 @@ class User {
 				else $win_amt_temp = $event->event_pos_reward_in_round($event_outcome['round_id'])*$my_votes[$event_outcome['winning_option_id']]['votes'];
 				if ($option_votes['sum'] > 0) $win_amt = $win_amt_temp/$option_votes['sum'];
 				else $win_amt = 0;
-				$payout_amt = ($win_amt - $my_votes_in_round['fee_amount'])/pow(10,8);
+				$payout_amt = $win_amt/pow(10,8);
 			}
 			
-			$html .= '<div class="col-sm-2">';
-			$html .= '<font title="'.$this->app->format_bignum($win_amt/pow(10,8)).' coins won, '.$this->app->format_bignum($my_votes_in_round['fee_amount']/pow(10,8)).' paid in fees" class="';
+			$fee_disp = $this->app->format_bignum($my_votes_in_round['fee_amount']/pow(10,8));
+			
+			$html .= '<div class="col-sm-3" title="Won '.$this->app->format_bignum($win_amt/pow(10,8)).' '.$game->db_game['coin_name_plural'].', paid '.$fee_disp.' '.$game->blockchain->db_blockchain['coin_name_plural'].' in fees">';
+			
+			$html .= '<font class="';
 			if ($payout_amt >= 0) $html .= 'greentext';
 			else $html .= 'redtext';
-			
 			$html .= '">';
 			if ($payout_amt >= 0) $html .= '+';
 			$payout_disp = $this->app->format_bignum($payout_amt);
@@ -117,6 +119,14 @@ class User {
 			if ($payout_disp == '1') $html .= $game->db_game['coin_name'];
 			else $html .= $game->db_game['coin_name_plural'];
 			$html .= '</font>';
+			
+			if ($my_votes_in_round['fee_amount'] > 0) {
+				$html .= ' <font class="redtext">-'.$fee_disp.' ';
+				if ($fee_disp == '1') $html .= $game->blockchain->db_blockchain['coin_name'];
+				else $html .= $game->blockchain->db_blockchain['coin_name_plural'];
+				$html .= '</font>';
+			}
+			
 			$html .= '</div>';
 			
 			$html .= "</div>\n";
@@ -149,7 +159,7 @@ class User {
 		$html .= '<div class="col-sm-3 text-right"><font class="redtext">'.$this->app->format_bignum($immature_balance/pow(10,8)).'</font> '.$game->db_game['coin_name_plural'].'</div>';
 		if ($immature_balance > 0) $html .= '<div class="col-sm-1"><a href="" onclick="$(\'#lockedfunds_details\').toggle(\'fast\'); return false;">Details</a></div>';
 		$html .= "</div>\n";
-		$html .= "Last block completed: <a href=\"/explorer/".$game->db_game['url_identifier']."/blocks/".$last_block_id."\">#".$last_block_id."</a>, currently mining #".($last_block_id+1)."<br/>\n";
+		$html .= "Last block completed: <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$last_block_id."\">#".$last_block_id."</a>, currently mining <a href=\"/explorer/games/".$game->db_game['url_identifier']."/transactions/unconfirmed\">#".($last_block_id+1)."</a><br/>\n";
 		$html .= "Current votes count towards block ".$block_within_round."/".$game->db_game['round_length']." in round #".$current_round.".<br/>\n";
 		//if ($game->db_game['vote_effectiveness_function'] != "constant") $html .= "Votes are ".round(100*$game->round_index_to_effectiveness_factor($block_within_round),1)."% effective right now.<br/>\n";
 		
@@ -186,7 +196,7 @@ class User {
 						$html .= "You voted for ".$next_transaction['name']." in round #".$game->block_to_round($next_transaction['create_block_id']).". ";
 					}
 				}
-				$html .= '(tx: <a target="_blank" href="/explorer/'.$game->db_game['url_identifier'].'/transactions/'.$next_transaction['tx_hash'].'">'.$next_transaction['transaction_id']."</a>)<br/>\n";
+				$html .= '(tx: <a target="_blank" href="/explorer/games/'.$game->db_game['url_identifier'].'/transactions/'.$next_transaction['tx_hash'].'">'.$next_transaction['transaction_id']."</a>)<br/>\n";
 			}
 			$html .= "</div>\n";
 		}
@@ -426,7 +436,6 @@ class User {
 				
 				$q = "UPDATE address_keys SET account_id='".$color_account['account_id']."' WHERE address_id='".$address['address_id']."';";
 				$r = $this->app->run_query($q);
-				echo "q: $q<br/>\n";
 			}
 		}
 	}

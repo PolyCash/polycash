@@ -302,7 +302,7 @@ class Blockchain {
 								if ($j == count($outputs)-1) $this_coin_blocks = $coin_blocks - $coin_block_sum;
 								
 								$qq = "INSERT INTO transaction_game_ios SET game_id='".$color_game->db_game['game_id']."', io_id='".$output_io_ids[$j]."', colored_amount='".$this_color_amount."', ref_block_id='".$ref_block_id."', ref_coin_blocks='".$this_coin_blocks."', ref_round_id='".$ref_round_id."', ref_coin_rounds='0'";
-								if ($output_io_indices[$j]) {
+								if ($output_io_indices[$j] !== false) {
 									$option_id = $color_game->option_index_to_option_id_in_block($output_io_indices[$j], $ref_block_id);
 									if ($option_id) {
 										$db_event = $this->app->run_query("SELECT ev.*, et.* FROM options op JOIN events ev ON op.event_id=ev.event_id JOIN event_types et ON ev.event_type_id=et.event_type_id WHERE op.option_id='".$option_id."';")->fetch();

@@ -303,49 +303,42 @@ class Event {
 	public function new_payout_transaction($round_id, $block_id, $winning_option, $winning_votes) {
 		$log_text = "";
 		
-		if ($this->game->db_game['payout_weight'] == "coin") $score_field = "amount";
+		if ($this->game->db_game['payout_weight'] == "coin") $score_field = "colored_amount";
 		else $score_field = $this->game->db_game['payout_weight']."s_destroyed";
 		
-		$q = "INSERT INTO transactions SET game_id='".$this->game->db_game['game_id']."', tx_hash='".$this->game->blockchain->app->random_string(64)."', transaction_desc='votebase', amount=0, block_id='".$block_id."', time_created='".time()."', has_all_inputs=1, has_all_outputs=1;";
-		$r = $this->game->blockchain->app->run_query($q);
-		$transaction_id = $this->game->blockchain->app->last_insert_id();
-		
 		// Loop through the correctly voted UTXOs
-		$q = "SELECT * FROM transaction_ios i JOIN users u ON i.user_id=u.user_id WHERE i.event_id='".$this->db_event['event_id']."' AND i.create_round_id=".$round_id." AND i.create_block_id != ".$block_id." AND i.option_id=".$winning_option.";";
+		$q = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id WHERE gio.event_id='".$this->db_event['event_id']."' AND gio.create_round_id=".$round_id." AND io.create_block_id != ".$block_id." AND gio.option_id=".$winning_option.";";
 		$r = $this->game->blockchain->app->run_query($q);
 		$total_paid = 0;
 		$out_index = 0;
 		
 		$event_pos_reward = $this->event_pos_reward_in_round($round_id);
 		
+		$this->game->blockchain->app->log($winning_option." wins, ".$r->rowCount()." correct votes, payout: ".$event_pos_reward/pow(10,8));
 		while ($input = $r->fetch()) {
 			$payout_amount = floor($event_pos_reward*$input['votes']/$winning_votes);
 			$total_paid += $payout_amount;
 			
-			$qq = "INSERT INTO transaction_ios SET spend_status='unspent', out_index='".$out_index."', instantly_mature=0, game_id='".$this->game->db_game['game_id']."', event_id='".$this->db_event['event_id']."', user_id='".$input['user_id']."', address_id='".$input['address_id']."'";
+			$qq = "INSERT INTO transaction_game_ios SET io_id='".$input['io_id']."', is_coinbase=1, instantly_mature=0, game_id='".$this->game->db_game['game_id']."', event_id='".$this->db_event['event_id']."'";
 			if ($winning_option > 0) $qq .= ", option_id='".$winning_option."'";
-			$qq .= ", create_transaction_id='".$transaction_id."', colored_amount='".$payout_amount."', amount='".$payout_amount."', create_block_id='".$block_id."', create_round_id='".$round_id."';";
+			$qq .= ", colored_amount='".$payout_amount."', create_round_id='".$round_id."';";
 			$rr = $this->game->blockchain->app->run_query($qq);
 			$output_id = $this->game->blockchain->app->last_insert_id();
 			
-			$qq = "UPDATE transaction_ios SET payout_io_id='".$output_id."' WHERE io_id='".$input['io_id']."';";
+			$this->game->blockchain->app->log($output_id." ".$qq);
+			
+			$qq = "UPDATE transaction_game_ios SET payout_game_io_id='".$output_id."' WHERE game_io_id='".$input['game_io_id']."';";
 			$rr = $this->game->blockchain->app->run_query($qq);
 			
 			$payout_disp = $payout_amount/(pow(10,8));
 			$log_text .= "Pay ".$payout_disp." ";
 			if ($payout_disp == '1') $log_text .= $this->game->db_game['coin_name'];
 			else $log_text .= $this->game->db_game['coin_name_plural'];
-			$log_text .= " to ".$input['username']."<br/>\n";
+			$log_text .= " to ".$input['address']."<br/>\n";
 			$out_index++;
 		}
 		
-		$q = "UPDATE transactions SET amount='".$total_paid."' WHERE transaction_id='".$transaction_id."';";
-		$r = $this->game->blockchain->app->run_query($q);
-		
-		$returnvals[0] = $transaction_id;
-		$returnvals[1] = $log_text;
-		
-		return $returnvals;
+		return $log_text;
 	}
 	
 	/*public function new_betbase_transaction($round_id, $mining_block_id, $winning_option) {
@@ -733,12 +726,8 @@ class Event {
 		
 		if ($winning_option && $add_payout_transaction) {
 			$payout_response = $this->new_payout_transaction($round_id, $last_block_id, $winning_option, $winning_votes);
-			$payout_transaction_id = $payout_response[0];
 			
-			$q = "UPDATE event_outcomes SET payout_transaction_id='".$payout_transaction_id."' WHERE outcome_id='".$outcome_id."';";
-			$r = $this->game->blockchain->app->run_query($q);
-			
-			$log_text .= "Payout response: ".$payout_response[1];
+			$log_text .= "Payout response: ".$payout_response;
 			$log_text .= "<br/>\n";
 		}
 		

@@ -1180,7 +1180,7 @@ class Game {
 					$colored_coins = floor($colored_coins_generated*$non_escrow_io['amount']/$non_escrowed_coins);
 					$sum_colored_coins += $colored_coins;
 					
-					$qqq = "INSERT INTO transaction_game_ios SET io_id='".$non_escrow_io['io_id']."', game_id='".$this->db_game['game_id']."', colored_amount='".$colored_coins."', create_round_id='".$create_round_id."', coin_blocks_destroyed=0, coin_rounds_destroyed=0;";
+					$qqq = "INSERT INTO transaction_game_ios SET io_id='".$non_escrow_io['io_id']."', game_id='".$this->db_game['game_id']."', is_coinbase=0, colored_amount='".$colored_coins."', create_round_id='".$create_round_id."', coin_blocks_destroyed=0, coin_rounds_destroyed=0;";
 					$rrr = $this->blockchain->app->run_query($qqq);
 				}
 			}
@@ -2467,6 +2467,8 @@ class Game {
 		for ($block_height=$load_block_height; $block_height<=$this->blockchain->last_block_id(); $block_height++) {
 			$this->add_block($block_height);
 		}
+		
+		$this->update_option_votes();
 	}
 	
 	public function add_block($block_height) {
@@ -2553,7 +2555,7 @@ class Game {
 						$cbd = floor($cbd_sum*$output_io['amount']/$output_sum);
 						$crd = floor($crd_sum*$output_io['amount']/$output_sum);
 						
-						$qqq = "INSERT INTO transaction_game_ios SET game_id='".$this->db_game['game_id']."', io_id='".$output_io['io_id']."', colored_amount='".$colored_amount."', coin_blocks_destroyed='".$cbd."', coin_rounds_destroyed='".$crd."', create_round_id='".$round_id."'";
+						$qqq = "INSERT INTO transaction_game_ios SET game_id='".$this->db_game['game_id']."', io_id='".$output_io['io_id']."', is_coinbase=0, colored_amount='".$colored_amount."', coin_blocks_destroyed='".$cbd."', coin_rounds_destroyed='".$crd."', create_round_id='".$round_id."'";
 						
 						if ($output_io['option_index'] != "") {
 							$option_id = $this->option_index_to_option_id_in_block($output_io['option_index'], $block_height);
@@ -2583,7 +2585,7 @@ class Game {
 				echo "Check outcomes for ".count($this->events_by_block($block_height))." events.\n";
 				$events = $this->events_by_block($block_height);
 				for ($i=0; $i<count($events); $i++) {
-					$events[$i]->set_outcome_from_db($this->block_to_round($block_height), $block_height, false);
+					$events[$i]->set_outcome_from_db($this->block_to_round($block_height), $block_height, true);
 				}
 			}
 			
@@ -2712,7 +2714,7 @@ class Game {
 			}
 		}
 		$html .= '</div><div class="col-md-6">';
-		$qq = "SELECT gio.*, io.*, a.*, op.name AS option_name FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id LEFT JOIN options op ON gio.option_id=op.option_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.create_transaction_id='".$transaction['transaction_id']."' ORDER BY io.out_index ASC;";
+		$qq = "SELECT gio.*, io.*, a.*, op.name AS option_name FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id LEFT JOIN options op ON gio.option_id=op.option_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.create_transaction_id='".$transaction['transaction_id']."' AND gio.is_coinbase=0 ORDER BY io.out_index ASC;";
 		$rr = $this->blockchain->app->run_query($qq);
 		$output_sum = 0;
 		while ($output = $rr->fetch()) {
@@ -2725,11 +2727,26 @@ class Game {
 			if ($amount_disp == '1') $html .= $this->db_game['coin_name'];
 			else $html .= $this->db_game['coin_name_plural'];
 			
-			if ($output['votes'] > 0) {
-				$html .= ", ".$this->blockchain->app->format_bignum($output['votes']/pow(10,8))." votes for";
-				$html .= " ".$output['option_name'];
+			if ($output['option_id'] > 0) {
+				$html .= ", ";
+				if ($transaction['block_id'] > 0) $expected_votes = $output['votes'];
+				else {
+					$ref_block_id = $this->blockchain->last_block_id()+1;
+					$temp_event = new Event($this, false, $output['event_id']);
+					if ($this->db_game['payout_weight'] == "coin") $expected_votes = $output['colored_amount'];
+					else if ($this->db_game['payout_weight'] == "coin_block") $expected_votes = $output['ref_coin_blocks']+($ref_block_id-$output['ref_block_id'])*$output['colored_amount'];
+					else $expected_votes = $output['ref_coin_rounds']+($this->block_to_round($ref_block_id)-$output['ref_round_id'])*$output['colored_amount'];
+					
+					$effectiveness_factor = $temp_event->block_id_to_effectiveness_factor();
+					$expected_votes = floor($expected_votes*$effectiveness_factor);
+				}
+				$html .= $this->blockchain->app->format_bignum($expected_votes/pow(10,8));
+				$html .= " votes for ".$output['option_name'];
 			}
-			//if ($output['payout_amount'] > 0) $html .= '&nbsp;&nbsp;<font class="greentext">+'.$this->blockchain->app->format_bignum($output['payout_amount']/pow(10,8)).'</font>';
+			if ($output['payout_game_io_id'] > 0) {
+				$payout_io = $this->blockchain->app->run_query("SELECT * FROM transaction_game_ios WHERE game_io_id='".$output['payout_game_io_id']."';")->fetch();
+				$html .= '&nbsp;&nbsp;<font class="greentext">+'.$this->blockchain->app->format_bignum($payout_io['colored_amount']/pow(10,8)).'</font>';
+			}
 			$html .= "<br/>\n";
 			$output_sum += $output['colored_amount'];
 		}
@@ -2759,6 +2776,22 @@ class Game {
 		$r = $this->blockchain->app->run_query($q);
 		$balance = $r->fetch();
 		return (int)$balance['SUM(gio.colored_amount)'];
+	}
+	
+	public function block_next_prev_links($block, $explore_mode) {
+		$html = "";
+		$prev_link_target = false;
+		if ($explore_mode == "unconfirmed") $prev_link_target = "blocks/".$this->blockchain->last_block_id();
+		else if ($block['block_id'] > 1) $prev_link_target = "blocks/".($block['block_id']-1);
+		if ($prev_link_target) $html .= '<a href="/explorer/games/'.$this->db_game['url_identifier'].'/'.$prev_link_target.'" style="margin-right: 30px;">&larr; Previous Block</a>';
+		
+		$next_link_target = false;
+		if ($explore_mode == "unconfirmed") {}
+		else if ($block['block_id'] == $this->blockchain->last_block_id()) $next_link_target = "transactions/unconfirmed";
+		else if ($block['block_id'] < $this->blockchain->last_block_id()) $next_link_target = "blocks/".($block['block_id']+1);
+		if ($next_link_target) $html .= '<a href="/explorer/games/'.$this->db_game['url_identifier'].'/'.$next_link_target.'">Next Block &rarr;</a>';
+		
+		return $html;
 	}
 }
 ?>
