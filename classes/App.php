@@ -124,7 +124,7 @@ class App {
 		$game = new Game($blockchain, $game_id);
 		
 		if ($game->db_game['final_round'] > 0) $event_block = $game->db_game['final_round']*$game->db_game['round_length'];
-		else $event_block = $game->db_game['round_length'];
+		else $event_block = $game->db_game['round_length']+1;
 		$game->ensure_events_until_block($event_block);
 	}
 	
@@ -624,7 +624,7 @@ class App {
 				$save_method = "db";
 			}
 			
-			$db_address = $this->create_or_fetch_address($address_text, true, false, false, false, true);
+			$db_address = $blockchain->create_or_fetch_address($address_text, true, false, false, false, true);
 			if ($account) {
 				$q = "UPDATE addresses SET user_id='".$account['user_id']."' WHERE address_id='".$db_address['address_id']."';";
 				$r = $this->run_query($q);
@@ -632,15 +632,15 @@ class App {
 				$r = $this->run_query($q);
 			}
 			
-			$q = "INSERT INTO address_keys SET currency_id=".$currency_id.", address_id=".$db_address['address_id'].", save_method='".$save_method."'";
-			if ($account) $q .= ", account_id='".$account['account_id']."'";
-			$q .= ", pub_key='".$address_text."', priv_enc='".$encWIF."';";
+			$q = "SELECT * FROM address_keys WHERE address_id='".$db_address['address_id']."';";
 			$r = $this->run_query($q);
-			$address_key_id = $this->last_insert_id();
 			
-			$address_key = $this->run_query("SELECT * FROM address_keys WHERE address_key_id='".$address_key_id."';")->fetch();
-			
-			return $address_key;
+			if ($r->rowCount() > 0) {
+				$address_key = $r->fetch();
+				
+				return $address_key;
+			}
+			else return false;
 		}
 		else return false;
 	}
@@ -793,13 +793,13 @@ class App {
 		else $html .= "Failed to start a process for loading blocks.<br/>\n";
 		sleep(0.1);
 		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_games.php" key='.$key_string;
+		/*$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_games.php" key='.$key_string;
 		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
 		echo "$cmd\n";
 		$block_loading_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($block_loading_process)) $process_count++;
 		else $html .= "Failed to start a process for loading blocks.<br/>\n";
-		sleep(0.1);
+		sleep(0.1);*/
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_main.php" key='.$key_string;
 		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
@@ -1099,54 +1099,6 @@ class App {
 			else $process_running = false;
 		}
 		return $process_running;
-	}
-	
-	public function create_or_fetch_address($address, $check_existing, $rpc, $delete_optionless, $claimable, $force_is_mine) {
-		if ($check_existing) {
-			$q = "SELECT * FROM addresses WHERE address=".$this->quote_escape($address).";";
-			$r = $this->run_query($q);
-			if ($r->rowCount() > 0) {
-				return $r->fetch();
-			}
-		}
-		$vote_identifier = $this->addr_text_to_vote_identifier($address);
-		$option_index = $this->vote_identifier_to_option_index($vote_identifier);
-		
-		if ($option_index !== false || !$delete_optionless) {
-			$q = "INSERT INTO addresses SET address=".$this->quote_escape($address).", time_created='".time()."'";
-			if ($option_index !== false) $q .= ", vote_identifier=".$this->quote_escape($vote_identifier).", option_index='".$option_index."'";
-			$q .= ";";
-			$r = $this->run_query($q);
-			$output_address_id = $this->last_insert_id();
-			
-			if ($rpc || $force_is_mine) {
-				if ($force_is_mine) $is_mine=1;
-				else {
-					$validate_address = $rpc->validateaddress($address);
-					
-					if ($validate_address['ismine']) $is_mine = 1;
-					else $is_mine = 0;
-				}
-				
-				$q = "UPDATE addresses SET is_mine=".$is_mine;
-				if ($is_mine == 1 && !empty($GLOBALS['default_coin_winner']) && $claimable) {
-					$qq = "SELECT * FROM users WHERE username=".$this->quote_escape($GLOBALS['default_coin_winner']).";";
-					$rr = $this->run_query($qq);
-					if ($rr->rowCount() > 0) {
-						$coin_winner = $rr->fetch();
-						$q .= ", user_id='".$coin_winner['user_id']."'";
-					}
-				}
-				$q .= " WHERE address_id='".$output_address_id."';";
-				$r = $this->run_query($q);
-			}
-			
-			$q = "SELECT * FROM addresses WHERE address_id='".$output_address_id."';";
-			$r = $this->run_query($q);
-			
-			return $r->fetch();
-		}
-		else return false;
 	}
 	
 	public function voting_character_definitions() {

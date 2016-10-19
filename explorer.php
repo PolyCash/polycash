@@ -344,7 +344,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						else echo $game->db_game['coin_name_plural']." were";
 						echo " paid out to the winners.<br/>\n";
 					}
-					$round_fee_q = "SELECT SUM(fee_amount) FROM transactions WHERE game_id='".$game->db_game['game_id']."' AND block_id > ".(($this_round-1)*$game->db_game['round_length'])." AND block_id < ".($this_round*$game->db_game['round_length']).";";
+					$round_fee_q = "SELECT SUM(fee_amount) FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_id > ".(($this_round-1)*$game->db_game['round_length'])." AND block_id < ".($this_round*$game->db_game['round_length']).";";
 					$round_fee_r = $app->run_query($round_fee_q);
 					$round_fees = $round_fee_r->fetch(PDO::FETCH_NUM);
 					$round_fees = intval($round_fees[0]);
@@ -358,11 +358,11 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					$from_block_id = $db_event['event_starting_block'];
 					$to_block_id = $db_event['event_final_block'];
 					
-					$q = "SELECT * FROM blocks WHERE game_id='".$game->db_game['game_id']."' AND block_id >= '".$from_block_id."' AND block_id <= ".$to_block_id." ORDER BY block_id ASC;";
+					$q = "SELECT * FROM game_blocks WHERE game_id='".$game->db_game['game_id']."' AND block_id >= '".$from_block_id."' AND block_id <= ".$to_block_id." ORDER BY block_id ASC;";
 					$r = $app->run_query($q);
 					echo "Blocks in this round: ";
 					while ($round_block = $r->fetch()) {
-						echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/blocks/".$round_block['block_id']."\">".$round_block['block_id']."</a> ";
+						echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$round_block['block_id']."\">".$round_block['block_id']."</a> ";
 					}
 					?>
 					<br/>
@@ -440,8 +440,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo ", vote effectiveness: ".$event->block_id_to_effectiveness_factor($i);
 						}
 						echo "<br/>\n";
-						$q = "SELECT * FROM transactions WHERE game_id='".$game->db_game['game_id']."' AND block_id='".$i."' AND amount > 0 ORDER BY transaction_id ASC;";
+						
+						$q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND t.block_id='".$i."' AND gio.game_id='".$game->db_game['game_id']."' AND t.amount > 0 GROUP BY t.transaction_id ORDER BY transaction_id ASC;";
 						$r = $app->run_query($q);
+						
 						while ($transaction = $r->fetch()) {
 							echo $game->render_transaction($transaction, FALSE);
 						}
@@ -648,6 +650,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				
 				echo "This address has been used in ".$r->rowCount()." transactions.<br/>\n";
 				if ($address['is_mine'] == 1) echo "This is one of your addresses.<br/>\n";
+				echo ucwords($blockchain->db_blockchain['coin_name'])." balance: ".($blockchain->address_balance_at_block($address, false)/pow(10,8))." ".$blockchain->db_blockchain['coin_name_plural']."<br/>\n";
+				if ($game) echo ucwords($game->db_game['coin_name'])." balance: ".$app->format_bignum($game->address_balance_at_block($address, false)/pow(10,8))." ".$game->db_game['coin_name_plural']."<br/>\n";
 				
 				echo '<div style="border-bottom: 1px solid #bbb;">';
 				while ($transaction_io = $r->fetch()) {

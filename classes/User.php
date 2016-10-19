@@ -90,7 +90,7 @@ class User {
 			
 			$html .= '<div class="col-sm-3">';
 			$html .= $win_text;
-			$html .= ' <a href="/explorer/'.$game->db_game['url_identifier'].'/events/'.($event_outcome['event_index']+1).'" target="_blank">Details</a>';
+			$html .= ' <a href="/explorer/games/'.$game->db_game['url_identifier'].'/events/'.($event_outcome['event_index']+1).'" target="_blank">Details</a>';
 			$html .= '</div>';
 			
 			if (empty($event_outcome['winning_option_id'])) {
@@ -154,7 +154,7 @@ class User {
 		//if ($game->db_game['vote_effectiveness_function'] != "constant") $html .= "Votes are ".round(100*$game->round_index_to_effectiveness_factor($block_within_round),1)."% effective right now.<br/>\n";
 		
 		if ($immature_balance > 0) {
-			$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id LEFT JOIN options gvo ON i.option_id=gvo.option_id WHERE i.game_id='".$game->db_game['game_id']."' AND i.user_id='".$this->db_user['user_id']."' AND (i.create_block_id > ".($game->last_block_id() - $game->db_game['maturity'])." OR i.create_block_id IS NULL) ORDER BY i.io_id ASC;";
+			$q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id LEFT JOIN options gvo ON gio.option_id=gvo.option_id WHERE io.blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND io.user_id='".$this->db_user['user_id']."' AND (io.create_block_id > ".($game->blockchain->last_block_id() - $game->db_game['maturity'])." OR io.create_block_id IS NULL) ORDER BY io.io_id ASC;";
 			$r = $this->app->run_query($q);
 			
 			$html .= '<div class="lockedfunds_details" id="lockedfunds_details">';
@@ -193,8 +193,8 @@ class User {
 		return $html;
 	}
 	
-	public function user_address_id($game_id, $option_index, $option_id) {
-		$q = "SELECT * FROM addresses WHERE user_id='".$this->db_user['user_id']."'";
+	public function user_address_id($game, $option_index, $option_id) {
+		$q = "SELECT * FROM addresses WHERE primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND user_id='".$this->db_user['user_id']."'";
 		if ($option_index !== false) $q .= " AND option_index='".$option_index."'";
 		else if ($option_id) {
 			$db_option = $this->app->run_query("SELECT * FROM options WHERE option_id='".$option_id."';")->fetch();
@@ -386,15 +386,17 @@ class User {
 	public function generate_user_addresses(&$game) {
 		$option_index_range = $game->option_index_range();
 		
+		$color_account = $this->create_or_fetch_game_currency_account($game);
+		
 		// Try to give the user voting addresses for all options in this game
 		for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
 			// Check if user already has a voting address for this option_index
-			$qq = "SELECT * FROM addresses WHERE option_index='".$option_index."' AND user_id='".$this->db_user['user_id']."';";
+			$qq = "SELECT * FROM addresses WHERE primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND option_index='".$option_index."' AND user_id='".$this->db_user['user_id']."';";
 			$rr = $this->app->run_query($qq);
 			
 			if ($rr->rowCount() == 0) {
 				// If not, check if there is an unallocated address available to give to the user
-				$qq = "SELECT * FROM addresses WHERE option_index='".$option_index."' AND is_mine=1 AND user_id IS NULL;";
+				$qq = "SELECT * FROM addresses WHERE primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND option_index='".$option_index."' AND is_mine=1 AND user_id IS NULL;";
 				$rr = $this->app->run_query($qq);
 				
 				if ($rr->rowCount() > 0) {
@@ -402,22 +404,29 @@ class User {
 					
 					$qq = "UPDATE addresses SET user_id='".$this->db_user['user_id']."' WHERE address_id='".$address['address_id']."';";
 					$rr = $this->app->run_query($qq);
+					
+					$qq = "UPDATE address_keys SET account_id='".$color_account['account_id']."' WHERE address_id='".$address['address_id']."';";
+					$rr = $this->app->run_query($qq);
 				}
 			}
 		}
 		
 		// Make sure the user has a non-voting address
-		$q = "SELECT * FROM addresses WHERE option_index IS NULL AND user_id='".$this->db_user['user_id']."';";
+		$q = "SELECT * FROM addresses WHERE primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND option_index IS NULL AND user_id='".$this->db_user['user_id']."';";
 		$r = $this->app->run_query($q);
 		
 		if ($r->rowCount() == 0) {
-			$q = "SELECT * FROM addresses WHERE option_index IS NULL AND is_mine=1 AND user_id IS NULL;";
+			$q = "SELECT * FROM addresses WHERE primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND option_index IS NULL AND is_mine=1 AND user_id IS NULL;";
 			$r = $this->app->run_query($q);
 			if ($r->rowCount() > 0) {
 				$address = $r->fetch();
 				
 				$q = "UPDATE addresses SET user_id='".$game->db_game['game_id']."' WHERE address_id='".$address['address_id']."';";
 				$r = $this->app->run_query($q);
+				
+				$q = "UPDATE address_keys SET account_id='".$color_account['account_id']."' WHERE address_id='".$address['address_id']."';";
+				$r = $this->app->run_query($q);
+				echo "q: $q<br/>\n";
 			}
 		}
 	}

@@ -524,7 +524,7 @@ if ($thisuser && $game) {
 				$j=0;
 				while ($option = $option_r->fetch()) {
 					$has_votingaddr = "false";
-					$votingaddr_id = $thisuser->user_address_id($game->db_game['game_id'], $option['option_index'], false);
+					$votingaddr_id = $thisuser->user_address_id($game, $option['option_index'], false);
 					if ($votingaddr_id !== false) $has_votingaddr = "true";
 					
 					echo "game.all_events[".$i."].options.push(new option(game.all_events[".$i."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", '".$option['name']."', 0, $has_votingaddr));\n";
@@ -637,6 +637,10 @@ if ($thisuser && $game) {
 				<div id="select_input_buttons"><?php
 					echo $game->select_input_buttons($thisuser->db_user['user_id']);
 				?></div>
+				
+				<div class="redtext" id="compose_vote_errors" style="margin-top: 5px;"></div>
+				<div class="greentext" id="compose_vote_success" style="margin-top: 5px;"></div>
+				
 				<div id="compose_vote" style="display: none;">
 					<h2>Vote Now</h2>
 					<div class="row bordered_row" style="border: 1px solid #bbb;">
@@ -649,8 +653,6 @@ if ($thisuser && $game) {
 							<select class="form-control" id="select_add_output" onchange="select_add_output_changed();"></select>
 						</div>
 					</div>
-					<div class="redtext" id="compose_vote_errors" style="margin-top: 5px;"></div>
-					<div class="greentext" id="compose_vote_success" style="margin-top: 5px;"></div>
 					<button class="btn btn-primary" id="confirm_compose_vote_btn" style="margin-top: 5px; margin-left: 5px;" onclick="confirm_compose_vote();">Submit Voting Transaction</button>
 				</div>
 			</div>
@@ -941,7 +943,7 @@ if ($thisuser && $game) {
 							$option_index_range = $game->option_index_range();
 							
 							for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
-								$qq = "SELECT * FROM addresses WHERE option_index='".$option_index."' AND user_id='".$thisuser->db_user['user_id']."';";
+								$qq = "SELECT * FROM addresses WHERE primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND option_index='".$option_index."' AND user_id='".$thisuser->db_user['user_id']."';";
 								$rr = $app->run_query($qq);
 								
 								if ($rr->rowCount() > 0) {
@@ -968,7 +970,7 @@ if ($thisuser && $game) {
 				$option_index_range = $game->option_index_range();
 				
 				for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
-					$qq = "SELECT * FROM addresses WHERE option_index='".$option_index."' AND user_id='".$thisuser->db_user['user_id']."';";
+					$qq = "SELECT * FROM addresses WHERE primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND option_index='".$option_index."' AND user_id='".$thisuser->db_user['user_id']."';";
 					$rr = $app->run_query($qq);
 					
 					if ($rr->rowCount() > 0) {
@@ -982,7 +984,7 @@ if ($thisuser && $game) {
 								?>
 							</div>
 							<div class="col-sm-1">
-								<a target="_blank" href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/addresses/<?php echo $address['address']; ?>">Explore</a>
+								<a target="_blank" href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/addresses/<?php echo $address['address']; ?>">Explore</a>
 							</div>
 							<div class="col-sm-5">
 								<input type="text" class="address_cell" onclick="$(this).select();" value="<?php echo $address['address']; ?>" />

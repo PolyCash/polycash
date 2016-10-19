@@ -22,7 +22,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		if (empty($blockchains[$invoice_address['blockchain_id']])) $blockchains[$invoice_address['blockchain_id']] = new Blockchain($app, $invoice_address['blockchain_id']);
 		$game = new Game($blockchains[$invoice_address['blockchain_id']], $invoice_address['game_id']);
 		
-		$address_balance = $game->blockchain->address_balance_at_block($invoice_address, $game->blockchain->last_block_id());
+		$address_balance = $game->blockchain->address_balance_at_block($invoice_address, false);
 		$address_balance = $address_balance/pow(10,8);
 		
 		$qq = "SELECT SUM(confirmed_amount_paid) FROM currency_invoices WHERE address_id='".$invoice_address['address_id']."' AND status IN('confirmed','settled','pending_refund','refunded');";
@@ -57,7 +57,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			if ($fee_amount > 0 && $buyin_amount > 0 && $color_amount > 0) {
 				$invoice_user = new User($app, $invoice_address['user_id']);
 				$invoice_user->ensure_user_in_game($game->db_game['game_id']);
-				$escrow_address = $app->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false);
+				$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false);
 				
 				$game_currency_account = $invoice_user->create_or_fetch_game_currency_account($game);
 				

@@ -956,7 +956,7 @@ function confirm_compose_vote() {
 						//games[0].refresh_if_needed();
 						$('#compose_vote_success').html(result_obj['message']);
 						$('#compose_vote_success').slideDown('slow');
-						setTimeout("$('#compose_vote_success').slideUp('fast');", 2500);
+						setTimeout("$('#compose_vote_success').slideUp('fast');", 4500);
 						
 						for (var i=0; i<vote_options.length; i++) {
 							$('#compose_vote_output_'+i).remove();
