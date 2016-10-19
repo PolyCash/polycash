@@ -109,7 +109,7 @@ function format_coins(amount) {
 	else return parseFloat((amount).toPrecision(5));
 }
 function explorer_search() {
-	window.location ='/explorer/'+game_url_identifier+'/transactions/'+$('#explorer_search').val();
+	window.location ='/explorer/'+games[0].game_url_identifier+'/transactions/'+$('#explorer_search').val();
 }
 
 // Initialize Variables
@@ -624,7 +624,7 @@ function show_planned_votes() {
 }
 
 // OBJECT: GameForm
-var game_form_vars = "event_rule,p2p_mode,option_group_id,event_entity_type_id,events_per_round,event_type_name,giveaway_status,giveaway_amount,maturity,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_date,start_time,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap,group_id,default_vote_effectiveness_function,default_max_voting_fraction,game_starting_block".split(",");
+var game_form_vars = "event_rule,p2p_mode,option_group_id,event_entity_type_id,events_per_round,event_type_name,giveaway_status,giveaway_amount,maturity,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_date,start_time,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap,group_id,default_vote_effectiveness_function,default_max_voting_fraction,game_starting_block,escrow_address,genesis_tx_hash,base_currency_id".split(",");
 function switch_to_game(game_id, action) {
 	var fetch_link_text = $('#fetch_game_link_'+game_id).html();
 	var switch_link_text = $('#switch_game_btn').html();
@@ -687,7 +687,10 @@ function switch_to_game(game_id, action) {
 				if (json_result['my_game'] && json_result['game_status'] == "editable") $('#game_form_'+game_form_vars[i]).prop('disabled', false);
 				else $('#game_form_'+game_form_vars[i]).prop('disabled', true);
 			}
-
+			
+			if (json_result['my_game'] && json_result['game_status'] == "editable") $('#game_form_has_final_round').prop('disabled', false);
+			else $('#game_form_has_final_round').prop('disabled', true);
+			
 			$('#game_form_game_status').html(json_result['game_status']);
 
 			json_result['start_date']
@@ -838,8 +841,30 @@ function game_form_event_rule_changed() {
 }
 function game_form_p2p_mode_changed() {
 	var p2p_mode = $('#game_form_p2p_mode').val();
-	if (p2p_mode == "rpc") $('#game_form_p2p_mode_rpc').show();
-	else $('#game_form_p2p_mode_rpc').hide();
+	$('#game_form_start_condition').empty();
+	if (p2p_mode == "rpc") {
+		$('#game_form_p2p_mode_rpc').show();
+		$('#game_form_giveaway_status').val("public_free");
+		$('#game_form_giveaway_amount').val(0);
+		$('#game_form_giveaway_status').prop('disabled', true);
+		$('#game_form_giveaway_amount').prop('disabled', true);
+		$('#game_form_start_condition').append('<option value="fixed_block">At a particular block</option>');
+		game_form_giveaway_status_changed();
+	}
+	else {
+		$('#game_form_p2p_mode_rpc').hide();
+		if ($('#game_form_name').prop('disabled') == false) {
+			$('#game_form_giveaway_status').prop('disabled', false);
+			$('#game_form_giveaway_amount').prop('disabled', false);
+		}
+		else {
+			$('#game_form_giveaway_status').prop('disabled', true);
+			$('#game_form_giveaway_amount').prop('disabled', true);
+		}
+		$('#game_form_start_condition').append('<option value="fixed_time">At a particular time</option>');
+		$('#game_form_start_condition').append('<option value="players_joined">When enough people join</option>');
+	}
+	game_form_start_condition_changed();
 }
 function save_game(action) {
 	var save_link_text = $('#save_game_btn').html();
@@ -891,6 +916,7 @@ function refresh_mature_io_btns() {
 	for (var i=0; i<vote_inputs.length; i++) {
 		$('#selected_utxo_'+i).html(render_selected_utxo(i));
 	}
+	console.log("Done with refresh_mature_io_btns()");
 }
 function compose_vote_loop() {
 	if (output_amounts_need_update) refresh_output_amounts();
@@ -930,7 +956,7 @@ function confirm_compose_vote() {
 						//games[0].refresh_if_needed();
 						$('#compose_vote_success').html(result_obj['message']);
 						$('#compose_vote_success').slideDown('slow');
-						setTimeout("$('#compose_vote_success').slideUp('fast');", 2500);
+						setTimeout("$('#compose_vote_success').slideUp('fast');", 4500);
 						
 						for (var i=0; i<vote_options.length; i++) {
 							$('#compose_vote_output_'+i).remove();
@@ -1151,6 +1177,7 @@ function initiate_buyin() {
 	$.get("/ajax/buyin.php?game_id="+games[0].game_id, function(result) {
 		$('#buyin_modal_content').html(result);
 		$('#buyin_modal').modal('show');
+		setTimeout("$('#buyin_amount').focus();", 1000);
 	});
 }
 function scramble_strategy(strategy_id) {
@@ -1666,4 +1693,66 @@ function set_select_add_output() {
 		}
 	}
 	$("#select_add_output").find('option').remove().end().append($(optionsAsString));
+}
+
+var account_io_id = false;
+var account_io_amount = false;
+
+function account_start_spend_io(io_id, amount) {
+	account_io_id = io_id;
+	account_io_amount = amount;
+	$('#account_spend_buyin_total').html("(Total: "+format_coins(amount)+" coins)");
+	$('#account_spend_modal').modal('show');
+	console.log(io_id);
+}
+function account_spend_action_changed() {
+	var account_spend_action = $('#account_spend_action').val();
+	if (account_spend_action == "buyin") {
+		$('#account_spend_buyin').show('fast');
+		$('#account_spend_withdraw').hide();
+	}
+	else {
+		$('#account_spend_withdraw').show('fast');
+		$('#account_spend_buyin').hide();
+	}
+}
+function account_spend_buyin_address_choice_changed() {
+	var address_choice = $('#account_spend_buyin_address_choice').val();
+	if (address_choice == "new") {
+		$('#account_spend_buyin_address_existing').hide('fast');
+	}
+	else {
+		$('#account_spend_buyin_address_existing').show('fast');
+		$('#account_spend_buyin_address').focus();
+	}
+}
+function account_spend_refresh() {
+	console.log('account_spend_refresh()');
+	var buyin_amount = parseFloat($('#account_spend_buyin_amount').val());
+	if (buyin_amount > 0) {
+		var fee_amount = parseFloat($('#account_spend_buyin_fee').val());
+		var color_amount = account_io_amount - buyin_amount - fee_amount;
+		$('#account_spend_buyin_color_amount').html("Color "+format_coins(color_amount)+" coins");
+	}
+	setTimeout("account_spend_refresh();", 500);
+}
+function account_spend_buyin() {
+	var account_spend_action = $('#account_spend_action').val();
+	
+	if (account_spend_action == "buyin") {
+		var address_choice = $('#account_spend_buyin_address_choice').val();
+		var buyin_amount = parseFloat($('#account_spend_buyin_amount').val());
+		var fee_amount = parseFloat($('#account_spend_buyin_fee').val());
+		var game_id = $('#account_spend_game_id').val();
+		
+		var buyin_url = "/ajax/account_spend.php?action=buyin&io_id="+account_io_id+"&game_id="+game_id+"&buyin_amount="+buyin_amount+"&fee_amount="+fee_amount;
+		if (address_choice == "new") buyin_url += "&address=new";
+		else buyin_url += "&address="+$('#account_spend_buyin_address').val();
+		
+		$.get(buyin_url, function(result) {
+			var result_obj = JSON.parse(result);
+			alert(result_obj['message']);
+			if (result_obj['status_code'] == 1) window.location = window.location;
+		});
+	}
 }

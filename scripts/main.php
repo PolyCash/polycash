@@ -12,12 +12,9 @@ if (!empty($argv)) {
 	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
 }
 
-$key = "";
-if (!empty($_REQUEST['key'])) $key = $_REQUEST['key'];
-
-if (empty($GLOBALS['cron_key_string']) || $key == $GLOBALS['cron_key_string']) {
+if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	do {
-		echo $app->start_regular_background_processes($key);
+		echo $app->start_regular_background_processes($_REQUEST['key']);
 		echo "Waiting 60 seconds...\n";
 		sleep(60);
 	}

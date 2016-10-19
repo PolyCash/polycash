@@ -2,7 +2,7 @@
 $skip_select_db = TRUE;
 include("includes/connect.php");
 
-if (empty($_GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	if ($GLOBALS['mysql_database'] != "") {
 		if (!strpos($GLOBALS['mysql_database'], "'") && $GLOBALS['mysql_database'] === strip_tags($GLOBALS['mysql_database'])) {
 			$db_exists = false;
@@ -34,8 +34,30 @@ if (empty($_GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_ke
 			
 			$app->update_schema();
 			
+			if (!$db_exists) {
+				$app->set_site_constant('identifier_case_sensitive', $GLOBALS['identifier_case_sensitive']);
+				$app->set_site_constant('identifier_first_char', $GLOBALS['identifier_first_char']);
+			}
+			
+			$q = "SELECT * FROM blockchains WHERE url_identifier='bitcoin';";
+			$r = $app->run_query($q);
+			
+			if ($r->rowCount() == 0) {
+				$q = "INSERT INTO blockchains SET p2p_mode='rpc', blockchain_name='Bitcoin', url_identifier='bitcoin', coin_name='bitcoin', coin_name_plural='bitcoins', default_rpc_port=8332, initial_pow_reward='".(50*pow(10,8))."', first_required_block=NULL;";
+				$r = $app->run_query($q);
+				$bitcoin_blockchain_id = $app->last_insert_id();
+				
+				$q = "UPDATE currencies SET blockchain_id='".$bitcoin_blockchain_id."' WHERE name='Bitcoin';";
+				$app->run_query($q);
+			}
+			else {
+				$bitcoin_blockchain = $r->fetch();
+				$bitcoin_blockchain_id = $bitcoin_blockchain['blockchain_id'];
+			}
+			
 			$q = "SELECT * FROM currency_prices WHERE currency_id=1 AND reference_currency_id=1;";
 			$r = $app->run_query($q);
+			
 			if ($r->rowCount() == 0) {
 				$q = "INSERT INTO currency_prices SET currency_id=1, reference_currency_id=1, price=1, time_added='".time()."';";
 				$r = $app->run_query($q);
@@ -44,18 +66,19 @@ if (empty($_GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_ke
 			$app->set_site_constant("event_loop_seconds", 2);
 			$app->set_site_constant("reference_currency_id", 1);
 			
-			if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "save_rpc_params") {
-				$game_id = (int) $_REQUEST['game_id'];
-				$q = "SELECT * FROM games WHERE p2p_mode='rpc' AND rpc_username IS NULL AND rpc_password IS NULL AND game_id=".$app->quote_escape($game_id).";";
+			if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "save_blockchain_params") {
+				$blockchain_id = (int) $_REQUEST['blockchain_id'];
+				$q = "SELECT * FROM blockchains WHERE blockchain_id=".$app->quote_escape($blockchain_id).";";
 				$r = $app->run_query($q);
 				
 				if ($r->rowCount() == 1) {
-					$temp_rpc_game = $r->fetch();
+					$temp_blockchain = $r->fetch();
 					$rpc_username = $_REQUEST['rpc_username'];
 					$rpc_password = $_REQUEST['rpc_password'];
-					$r = $app->run_query("UPDATE games SET rpc_username=".$app->quote_escape($rpc_username).", rpc_password=".$app->quote_escape($rpc_password)." WHERE game_id=".$temp_rpc_game['game_id'].";");
+					$rpc_port = (int) $_REQUEST['rpc_port'];
+					$r = $app->run_query("UPDATE blockchains SET rpc_username=".$app->quote_escape($rpc_username).", rpc_password=".$app->quote_escape($rpc_password).", rpc_port=".$app->quote_escape($rpc_port)." WHERE blockchain_id=".$temp_blockchain['blockchain_id'].";");
 				}
-				else die("Error, please manually save RPC parameters in the database ($q).");
+				else die("Error, please manually save RPC parameters in the database.");
 			}
 			
 			$pagetitle = $GLOBALS['site_name']." - Installing...";
@@ -147,65 +170,44 @@ if (empty($_GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_ke
 						<br/>
 						<?php
 					}
-					?>
-					Then enter your Bitcoin RPC credentials by adding the following lines to your includes/config.php:
-<pre>
-$GLOBALS['bitcoin_port'] = 8332;
-$GLOBALS['bitcoin_rpc_user'] = ""; // RPC username here
-$GLOBALS['bitcoin_rpc_password'] = ""; // RPC password here
-</pre>
-					<?php
 				}
 				
-				$app->generate_games();
+				$app->generate_games($bitcoin_blockchain_id);
 				?>
 				
-				<h2>Connect to bitcoind/empirecoind</h2>
+				<h2>Configure coin daemon connections</h2>
 				<?php
-				if (!empty($GLOBALS['bitcoin_rpc_user'])) {
-					try {
-						$bitcoin_rpc = new jsonRPCClient('http://'.$GLOBALS['bitcoin_rpc_user'].':'.$GLOBALS['bitcoin_rpc_password'].'@127.0.0.1:'.$GLOBALS['bitcoin_port'].'/');
-						$getinfo = $bitcoin_rpc->getinfo();
-						echo " <font class=\"greentext\">Connected to Bitcoin on port ".$GLOBALS['bitcoin_port']."</font></b><br/>\n";
-						echo "<pre>getinfo()\n";
-						print_r($getinfo);
-						echo "</pre>";
-					}
-					catch (Exception $e) {
-						echo "Error, failed to connect to Bitcoin by RPC. Check your parameters in includes/config.php<br/>\n";
-					}
-				}
-				
-				$rpc_games_r = $app->run_query("SELECT * FROM games WHERE p2p_mode='rpc' AND game_status IN ('published','running');");
-				while ($rpc_game = $rpc_games_r->fetch()) {
-					if ($rpc_game['rpc_username'] != "" && $rpc_game['rpc_password'] != "") {
-						echo "<b>Connecting RPC client to ".$rpc_game['name']."...";
+				$blockchain_r = $app->run_query("SELECT * FROM blockchains ORDER BY blockchain_name ASC;");
+				while ($blockchain = $blockchain_r->fetch()) {
+					if ($blockchain['rpc_username'] != "" && $blockchain['rpc_password'] != "") {
+						echo "<b>Connecting RPC client to ".$blockchain['blockchain_name']."...";
 						try {
-							$coin_rpc = new jsonRPCClient('http://'.$rpc_game['rpc_username'].':'.$rpc_game['rpc_password'].'@127.0.0.1:'.$rpc_game['rpc_port'].'/');
+							$coin_rpc = new jsonRPCClient('http://'.$blockchain['rpc_username'].':'.$blockchain['rpc_password'].'@127.0.0.1:'.$blockchain['rpc_port'].'/');
 							$getinfo = $coin_rpc->getinfo();
-							echo " <font class=\"greentext\">Connected on port ".$rpc_game['rpc_port']."</font></b><br/>\n";
+							echo " <font class=\"greentext\">Connected on port ".$blockchain['rpc_port']."</font></b><br/>\n";
 							echo "<pre>getinfo()\n";
 							print_r($getinfo);
 							echo "</pre>";
 							
 							echo "Next, please reset and synchronize this game.<br/>\n";
-							echo "<a class=\"btn btn-primary\" target=\"_blank\" href=\"/scripts/sync_coind_initial.php?key=".$GLOBALS['cron_key_string']."&game_id=".$rpc_game['game_id']."\">Reset & synchronize ".$rpc_game['name']."</a>\n";
+							echo "<a class=\"btn btn-primary\" target=\"_blank\" href=\"/scripts/sync_blockchain_initial.php?key=".$GLOBALS['cron_key_string']."&blockchain_id=".$blockchain['blockchain_id']."\">Reset & synchronize ".$blockchain['blockchain_name']."</a>\n";
 							echo "<br/><br/>\n";
 						}
 						catch (Exception $e) {
-							echo " <font class=\"redtext\">Failed to connect on port ".$rpc_game['rpc_port']."</font></b><br/>";
+							echo " <font class=\"redtext\">Failed to connect on port ".$blockchain['rpc_port']."</font></b><br/>";
 							echo "<pre>Make sure the coin daemon is running.</pre>\n";
 							echo "<br/>\n";
 						}
 					}
 					else { ?>
-						Please enter the RPC username and password for connecting to the <b><?php echo $rpc_game['name']; ?></b> daemon:<br/>
+						Please enter the RPC username and password for connecting to the <b><?php echo $blockchain['blockchain_name']; ?></b> daemon:<br/>
 						<form method="post" action="install.php">
 							<input type="hidden" name="key" value="<?php echo $GLOBALS['cron_key_string']; ?>" />
-							<input type="hidden" name="action" value="save_rpc_params" />
-							<input type="hidden" name="game_id" value="<?php echo $rpc_game['game_id']; ?>" />
+							<input type="hidden" name="action" value="save_blockchain_params" />
+							<input type="hidden" name="blockchain_id" value="<?php echo $blockchain['blockchain_id']; ?>" />
 							<input class="form-control" name="rpc_username" placeholder="RPC username" />
-							<input class="form-control" name="rpc_password" placeholder="RPC password" />
+							<input class="form-control" name="rpc_password" placeholder="RPC password" autocomplete="off" />
+							<input class="form-control" name="rpc_port" value="<?php echo $blockchain['default_rpc_port']; ?>" placeholder="RPC port" />
 							<input type="submit" class="btn btn-primary" value="Save" />
 						</form>
 						<br/>

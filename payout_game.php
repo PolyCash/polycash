@@ -34,7 +34,7 @@ if ($thisuser) {
 						$sign_arr2 = array();
 
 						for ($i=0; $i<count($addresses); $i++) {
-							$q = "SELECT * FROM invoice_addresses WHERE pub_key=".$app->quote_escape($addresses[$i]).";";
+							$q = "SELECT * FROM currency_addresses WHERE pub_key=".$app->quote_escape($addresses[$i]).";";
 							$r = $app->run_query($q);
 							if ($r->rowCount() == 1) {
 								$address = $r->fetch();
@@ -189,7 +189,7 @@ if ($thisuser) {
 							}
 
 							function load_addresses() {<?php
-								$q = "SELECT * FROM currency_invoices i JOIN invoice_addresses a ON i.invoice_address_id=a.invoice_address_id JOIN users u ON i.user_id=u.user_id JOIN currencies pc ON i.pay_currency_id=pc.currency_id WHERE i.game_id='".$payout_game['game_id']."' AND i.status='confirmed';";
+								$q = "SELECT * FROM currency_invoices i JOIN currency_addresses a ON i.currency_address_id=a.currency_address_id JOIN users u ON i.user_id=u.user_id JOIN currencies pc ON i.pay_currency_id=pc.currency_id WHERE i.game_id='".$payout_game['game_id']."' AND i.status='confirmed';";
 								$r = $app->run_query($q);
 								
 								$addr_html = "";
@@ -201,7 +201,7 @@ if ($thisuser) {
 									$input_sum += $invoice['pay_amount'];
 								}
 								
-								$q = "SELECT * FROM game_buyins gb JOIN invoice_addresses a ON gb.invoice_address_id=a.invoice_address_id JOIN users u ON gb.user_id=u.user_id JOIN currencies pc ON gb.pay_currency_id=pc.currency_id WHERE gb.game_id='".$payout_game['game_id']."' AND gb.status='confirmed';";
+								$q = "SELECT * FROM game_buyins gb JOIN currency_addresses a ON gb.currency_address_id=a.currency_address_id JOIN users u ON gb.user_id=u.user_id JOIN currencies pc ON gb.pay_currency_id=pc.currency_id WHERE gb.game_id='".$payout_game['game_id']."' AND gb.status='confirmed';";
 								$r = $app->run_query($q);
 								
 								while ($buyin = $r->fetch()) {

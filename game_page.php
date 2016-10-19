@@ -7,7 +7,7 @@ $pagetitle = $game->db_game['name'];
 $nav_tab_selected = "game_page";
 include('includes/html_start.php');
 
-$last_block_id = $game->last_block_id();
+$last_block_id = $game->blockchain->last_block_id();
 $current_round = $game->block_to_round($last_block_id+1);
 
 $user_game = false;
@@ -161,90 +161,6 @@ else $exchange_rate = 0;
 				</div>
 			</div>
 		</div>
-
-		<div class="paragraph">
-			<a href="" onclick="$('#escrow_details').modal('show'); return false;">See escrowed contributions</a>
-		</div>
-		<?php
-		if ($_REQUEST['action'] == "show_escrow") { ?>
-			<script type="text/javascript">
-			$(document).ready(function() {
-				$('#escrow_details').modal('show');
-			});
-			</script>
-			<?php
-		}
-		?>
-		<div style="display: none;" class="modal fade" id="escrow_details">
-			<div class="modal-dialog">
-				<div class="modal-content">
-					<div class="modal-header">
-						<h4 class="modal-title">Escrowed funds: &nbsp; <?php echo $game->db_game['name']; ?></h4>
-					</div>
-					<div class="modal-body">
-						<?php
-						if ($user_game) {
-							$escrow_html = "";
-							$btc_sum = 0;
-							$settle_sum = 0;
-							
-							$q = "SELECT * FROM currency_invoices ci JOIN invoice_addresses ia ON ci.invoice_address_id=ia.invoice_address_id JOIN currencies c ON ci.settle_currency_id=c.currency_id WHERE ci.game_id=".$game->db_game['game_id']." AND ci.status='confirmed' AND ci.settle_amount > 0;";
-							$r = $app->run_query($q);
-							
-							while ($currency_invoice = $r->fetch()) {
-								$escrow_html .= '<div class="row">';
-								$escrow_html .= '<div class="col-sm-3">'.$app->format_bignum($currency_invoice['settle_amount']).' '.$currency_invoice['short_name'].'s</div>';
-								$escrow_html .= '<div class="col-sm-3">'.$app->format_bignum($currency_invoice['unconfirmed_amount_paid']).' BTC</div>';
-								$escrow_html .= '<div class="col-sm-5"><a target="_blank" href="https://blockchain.info/address/'.$currency_invoice['pub_key'].'">'.$currency_invoice['pub_key'].'</a></div>';
-								$escrow_html .= '</div>';
-								$btc_sum += $currency_invoice['unconfirmed_amount_paid'];
-								$settle_sum += $currency_invoice['settle_amount'];
-							}
-							
-							$q = "SELECT * FROM game_buyins gb JOIN invoice_addresses ia ON gb.invoice_address_id=ia.invoice_address_id JOIN currencies c ON gb.settle_currency_id=c.currency_id WHERE gb.game_id='".$game->db_game['game_id']."' AND gb.status='confirmed' AND gb.settle_amount > 0;";
-							$r = $app->run_query($q);
-							
-							while ($buyin = $r->fetch()) {
-								$escrow_html .= '<div class="row">';
-								$escrow_html .= '<div class="col-sm-3">'.$app->format_bignum($buyin['settle_amount']).' '.$buyin['short_name'].'s</div>';
-								$escrow_html .= '<div class="col-sm-3">'.$app->format_bignum($buyin['unconfirmed_amount_paid']).' BTC</div>';
-								$escrow_html .= '<div class="col-sm-5"><a target="_blank" href="https://blockchain.info/address/'.$buyin['pub_key'].'">'.$buyin['pub_key'].'</a></div>';
-								$escrow_html .= '</div>';
-								$btc_sum += $buyin['unconfirmed_amount_paid'];
-								$settle_sum += $buyin['settle_amount'];
-							}
-							
-							if ($escrow_html == "") {
-								echo "No funds are currently in escrow for this game.";
-							}
-							else {
-								echo $escrow_html;
-								echo '<br/>In total, escrowed funds are worth '.$app->format_bignum($settle_sum)." ".$invite_currency['short_name']."s. ";
-							}
-						}
-						else {
-							echo "You need to join this game before you can see it's escrowed funds.";
-						}
-						?>
-					</div>
-				</div>
-			</div>
-		</div>
-		
-		<?php
-		/*if ($thisuser) { ?>
-			<div class="row">
-				<div class="col-md-6">
-					<div id="game0_my_current_votes">
-						<?php
-						echo $event->my_votes_table($current_round, $thisuser);
-						?>
-					</div>
-				</div>
-			</div>
-			<?php
-		}*/
-		?>
 	</div>
 	<div class="paragraph">
 		<?php /*

@@ -10,8 +10,10 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	$event_ids = $_REQUEST['event_ids'];
 	
 	if (!$game) {
-		$game_id = intval($_REQUEST['game_id']);
-		$game = new Game($app, $game_id);
+		$game_id = (int) $_REQUEST['game_id'];
+		$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
+		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+		$game = new Game($blockchain, $game_id);
 	}
 	
 	$event = new Event($game, false, $event_id);
@@ -19,8 +21,8 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	if ($thisuser) $thisuser->set_user_active();
 	
 	$bet_round_range = $game->bet_round_range();
-	$last_block_id = $game->last_block_id();
-	$last_transaction_id = $game->last_transaction_id();
+	$last_block_id = $game->blockchain->last_block_id();
+	$last_transaction_id = $game->blockchain->last_transaction_id();
 	$current_round = $game->block_to_round($last_block_id+1);
 	$block_within_round = $game->block_id_to_round_index($last_block_id+1);
 	if ($thisuser) {
@@ -103,7 +105,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		$output['vote_option_details'] = $stats_output;
 	}
 	
-	if ($output['new_my_transaction'] == 1 || $mature_io_ids_csv != $_REQUEST['mature_io_ids_csv'] || $output['new_block'] == 1) {
+	if ($output['new_my_transaction'] == 1 || $mature_io_ids_csv != $_REQUEST['mature_io_ids_csv'] || !empty($output['new_block'])) {
 		$output['select_input_buttons'] = $thisuser? $game->select_input_buttons($thisuser->db_user['user_id']) : "";
 		$output['mature_io_ids_csv'] = $mature_io_ids_csv;
 		$output['new_mature_ios'] = 1;
@@ -119,7 +121,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	else $output['new_event_ids'] = 0;
 	
 	if ($thisuser) {
-		$q = "SELECT * FROM addresses WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."' AND option_index IS NOT NULL GROUP BY option_index;";
+		$q = "SELECT * FROM addresses WHERE user_id='".$thisuser->db_user['user_id']."' AND option_index IS NOT NULL GROUP BY option_index;";
 		$r = $app->run_query($q);
 		$votingaddr_count = $r->rowCount();
 	}

@@ -8,7 +8,7 @@ if (!empty($argv)) {
 	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
 }
 
-if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$user_r = $app->run_query("SELECT * FROM users WHERE salt='';");
 	$num_users = $user_r->rowCount();
 	while ($db_user = $user_r->fetch()) {

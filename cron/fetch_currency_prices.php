@@ -10,7 +10,7 @@ if (!empty($argv)) {
 	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
 }
 
-if (!empty($_REQUEST['key']) && $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$btc_currency = $app->get_currency_by_abbreviation('btc');
 	$latest_btc_price = $app->latest_currency_price($btc_currency['currency_id']);
 	

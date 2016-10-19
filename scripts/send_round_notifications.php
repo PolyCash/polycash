@@ -10,7 +10,7 @@ if (!empty($argv)) {
 	$_REQUEST['round_id'] = $cmd_vars['round_id'];
 }
 
-if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$game_id = intval($_REQUEST['game_id']);
 	$round_id = intval($_REQUEST['round_id']);
 	$game = new Game($app, $game_id);

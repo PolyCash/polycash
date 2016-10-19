@@ -1,5 +1,5 @@
 <?php
-include(realpath(dirname(__FILE__))."/../includes/connect.php");
+include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
 if (!empty($argv)) {
 	$cmd_vars = $app->argv_to_array($argv);
@@ -8,7 +8,7 @@ if (!empty($argv)) {
 	$_REQUEST['game_id'] = $cmd_vars['game_id'];
 }
 
-if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$game_id = $app->get_site_constant('primary_game_id');
 	if ($_REQUEST['game_id'] > 0) $game_id = intval($_REQUEST['game_id']);
 	

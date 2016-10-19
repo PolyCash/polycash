@@ -1,0 +1,2 @@
+ALTER TABLE `games` CHANGE `start_condition` `start_condition` ENUM('fixed_block','fixed_time','players_joined') CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL DEFAULT 'players_joined';
+ALTER TABLE `transaction_ios` ADD `colored_amount` BIGINT NOT NULL DEFAULT '0' AFTER `amount`;

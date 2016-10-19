@@ -8,7 +8,7 @@ if (!empty($argv)) {
 	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
 }
 
-if ($_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$q = "SELECT * FROM games ORDER BY game_id ASC;";
 	$r = $app->run_query($q);
 	echo "looping through ".$r->rowCount()." games<br/>\n";

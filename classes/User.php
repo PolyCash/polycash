@@ -8,11 +8,13 @@ class User {
 		
 		$q = "SELECT * FROM users WHERE user_id='".$user_id."';";
 		$r = $this->app->run_query($q);
+		
 		if ($r->rowCount() == 1) $this->db_user = $r->fetch();
+		else throw new Exception("Failed to load user #".$user_id);
 	}
 	
 	public function account_coin_value($game) {
-		$q = "SELECT SUM(amount) FROM transaction_ios WHERE spend_status='unspent' AND game_id='".$game->db_game['game_id']."' AND user_id='".$this->db_user['user_id']."' AND create_block_id IS NOT NULL;";
+		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$game->db_game['game_id']."' AND io.spend_status='unspent' AND io.user_id='".$this->db_user['user_id']."' AND io.create_block_id IS NOT NULL;";
 		$r = $this->app->run_query($q);
 		$coins = $r->fetch(PDO::FETCH_NUM);
 		$coins = $coins[0];
@@ -21,7 +23,7 @@ class User {
 	}
 
 	public function immature_balance($game) {
-		$q = "SELECT SUM(amount) FROM transaction_ios WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$this->db_user['user_id']."' AND (create_block_id > ".($game->last_block_id() - $game->db_game['maturity'])." OR create_block_id IS NULL) AND instantly_mature = 0;";
+		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$game->db_game['game_id']."' AND io.user_id='".$this->db_user['user_id']."' AND (io.create_block_id > ".($game->blockchain->last_block_id() - $game->db_game['maturity'])." OR io.create_block_id IS NULL) AND gio.instantly_mature = 0;";
 		$r = $this->app->run_query($q);
 		$sum = $r->fetch(PDO::FETCH_NUM);
 		$sum = $sum[0];
@@ -30,7 +32,7 @@ class User {
 	}
 
 	public function mature_balance($game) {
-		$q = "SELECT SUM(amount) FROM transaction_ios WHERE spend_status='unspent' AND spend_transaction_id IS NULL AND game_id='".$game->db_game['game_id']."' AND user_id='".$this->db_user['user_id']."' AND (create_block_id <= ".($game->last_block_id() - $game->db_game['maturity'])." OR instantly_mature = 1);";
+		$q = "SELECT SUM(colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND gio.game_id='".$game->db_game['game_id']."' AND io.user_id='".$this->db_user['user_id']."' AND (io.create_block_id <= ".($game->blockchain->last_block_id() - $game->db_game['maturity'])." OR gio.instantly_mature = 1);";
 		$r = $this->app->run_query($q);
 		$sum = $r->fetch(PDO::FETCH_NUM);
 		$sum = $sum[0];
@@ -39,11 +41,10 @@ class User {
 	}
 
 	public function user_current_votes($game, $last_block_id, $current_round) {
-		$q = "SELECT ROUND(SUM(amount)) coins, ROUND(SUM(amount*(".($last_block_id+1)."-create_block_id))) coin_blocks, ROUND(SUM(amount*(".$current_round."-create_round_id))) coin_rounds FROM transaction_ios WHERE spend_status='unspent' AND spend_transaction_id IS NULL AND game_id='".$game->db_game['game_id']."' AND user_id='".$this->db_user['user_id']."' AND (create_block_id <= ".($game->last_block_id() - $game->db_game['maturity'])." OR instantly_mature = 1);";
+		$q = "SELECT ROUND(SUM(gio.colored_amount)) coins, ROUND(SUM(gio.colored_amount*(".($last_block_id+1)."-io.create_block_id))) coin_blocks, ROUND(SUM(gio.colored_amount*(".$current_round."-gio.create_round_id))) coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND gio.game_id='".$game->db_game['game_id']."' AND io.user_id='".$this->db_user['user_id']."' AND (io.create_block_id <= ".($game->blockchain->last_block_id() - $game->db_game['maturity'])." OR gio.instantly_mature = 1);";
 		$r = $this->app->run_query($q);
 		$sum = $r->fetch();
 		$votes = $sum[$game->db_game['payout_weight']."s"];
-		//$votes = floor($game->block_id_to_effectiveness_factor($last_block_id+1)*$votes);
 		if ($votes > 0) return $votes;
 		else return 0;
 	}
@@ -51,7 +52,7 @@ class User {
 	public function performance_history($game, $from_round_id, $to_round_id) {
 		$html = "";
 		
-		$q = "SELECT r.*, real_winner.name AS real_winner_name, derived_winner.name AS derived_winner_name FROM event_outcomes r JOIN events e ON r.event_id=e.event_id LEFT JOIN options real_winner ON r.winning_option_id=real_winner.option_id LEFT JOIN options derived_winner ON r.derived_winning_option_id=derived_winner.option_id WHERE e.game_id='".$game->db_game['game_id']."' AND r.round_id >= ".$from_round_id." AND r.round_id <= ".$to_round_id." ORDER BY r.round_id DESC;";
+		$q = "SELECT e.event_index, r.*, real_winner.name AS real_winner_name, derived_winner.name AS derived_winner_name FROM event_outcomes r JOIN events e ON r.event_id=e.event_id LEFT JOIN options real_winner ON r.winning_option_id=real_winner.option_id LEFT JOIN options derived_winner ON r.derived_winning_option_id=derived_winner.option_id WHERE e.game_id='".$game->db_game['game_id']."' AND r.round_id >= ".$from_round_id." AND r.round_id <= ".$to_round_id." ORDER BY r.round_id DESC;";
 		$r = $this->app->run_query($q);
 		
 		while ($event_outcome = $r->fetch()) {
@@ -65,7 +66,7 @@ class User {
 			
 			$html .= '<div class="row" style="font-size: 13px;">';
 			$html .= '<div class="col-sm-3">'.$event->db_event['event_name'].'</div>';
-			$html .= '<div class="col-sm-4">';
+			$html .= '<div class="col-sm-3">';
 			if ($event_outcome['real_winner_name'] != "") {
 				$html .= $event_outcome['real_winner_name']." with ".$this->app->format_bignum($event_outcome['winning_votes']/pow(10,8))." votes";
 				if ($event_outcome['derived_winner_name'] != "" && $event_outcome['derived_winner_name'] != $event_outcome['real_winner_name']) $html .= " (Should have been ".$event_outcome['derived_winner_name']." with ".$this->app->format_bignum($event_outcome['derived_winning_votes']/pow(10,8))." votes)";
@@ -89,7 +90,7 @@ class User {
 			
 			$html .= '<div class="col-sm-3">';
 			$html .= $win_text;
-			$html .= ' <a href="/explorer/'.$game->db_game['url_identifier'].'/events/'.$event_outcome['event_id'].'" target="_blank">Details</a>';
+			$html .= ' <a href="/explorer/games/'.$game->db_game['url_identifier'].'/events/'.($event_outcome['event_index']+1).'" target="_blank">Details</a>';
 			$html .= '</div>';
 			
 			if (empty($event_outcome['winning_option_id'])) {
@@ -101,14 +102,16 @@ class User {
 				else $win_amt_temp = $event->event_pos_reward_in_round($event_outcome['round_id'])*$my_votes[$event_outcome['winning_option_id']]['votes'];
 				if ($option_votes['sum'] > 0) $win_amt = $win_amt_temp/$option_votes['sum'];
 				else $win_amt = 0;
-				$payout_amt = ($win_amt - $my_votes_in_round['fee_amount'])/pow(10,8);
+				$payout_amt = $win_amt/pow(10,8);
 			}
 			
-			$html .= '<div class="col-sm-2">';
-			$html .= '<font title="'.$this->app->format_bignum($win_amt/pow(10,8)).' coins won, '.$this->app->format_bignum($my_votes_in_round['fee_amount']/pow(10,8)).' paid in fees" class="';
+			$fee_disp = $this->app->format_bignum($my_votes_in_round['fee_amount']/pow(10,8));
+			
+			$html .= '<div class="col-sm-3" title="Won '.$this->app->format_bignum($win_amt/pow(10,8)).' '.$game->db_game['coin_name_plural'].', paid '.$fee_disp.' '.$game->blockchain->db_blockchain['coin_name_plural'].' in fees">';
+			
+			$html .= '<font class="';
 			if ($payout_amt >= 0) $html .= 'greentext';
 			else $html .= 'redtext';
-			
 			$html .= '">';
 			if ($payout_amt >= 0) $html .= '+';
 			$payout_disp = $this->app->format_bignum($payout_amt);
@@ -116,6 +119,14 @@ class User {
 			if ($payout_disp == '1') $html .= $game->db_game['coin_name'];
 			else $html .= $game->db_game['coin_name_plural'];
 			$html .= '</font>';
+			
+			if ($my_votes_in_round['fee_amount'] > 0) {
+				$html .= ' <font class="redtext">-'.$fee_disp.' ';
+				if ($fee_disp == '1') $html .= $game->blockchain->db_blockchain['coin_name'];
+				else $html .= $game->blockchain->db_blockchain['coin_name_plural'];
+				$html .= '</font>';
+			}
+			
 			$html .= '</div>';
 			
 			$html .= "</div>\n";
@@ -125,19 +136,13 @@ class User {
 	
 	public function my_last_transaction_id($game_id) {
 		if ($game_id > 0) {
-			$start_q = "SELECT t.transaction_id FROM transactions t, addresses a, transaction_ios i WHERE a.address_id=i.address_id AND ";
-			$end_q = " AND a.user_id='".$this->db_user['user_id']."' AND i.game_id='".$game_id."' ORDER BY t.transaction_id DESC LIMIT 1;";
-			
-			$create_r = $this->app->run_query($start_q."i.create_transaction_id=t.transaction_id".$end_q);
-			$create_trans_id = $create_r->fetch(PDO::FETCH_NUM);
-			$create_trans_id = $create_trans_id[0];
-			
-			$spend_r = $this->app->run_query($start_q."i.spend_transaction_id=t.transaction_id".$end_q);
+			$spend_q = "SELECT io.spend_transaction_id FROM addresses a JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE";
+			$spend_q .= " a.user_id='".$this->db_user['user_id']."' AND gio.game_id='".$game_id."' ORDER BY io.spend_transaction_id DESC LIMIT 1;";
+			$spend_r = $this->app->run_query($spend_q);
 			$spend_trans_id = $spend_r->fetch(PDO::FETCH_NUM);
 			$spend_trans_id = $spend_trans_id[0];
 			
-			if ($create_trans_id > $spend_trans_id) return intval($create_trans_id);
-			else return intval($spend_trans_id);
+			return (int) $spend_trans_id;
 		}
 		else return 0;
 	}
@@ -154,12 +159,12 @@ class User {
 		$html .= '<div class="col-sm-3 text-right"><font class="redtext">'.$this->app->format_bignum($immature_balance/pow(10,8)).'</font> '.$game->db_game['coin_name_plural'].'</div>';
 		if ($immature_balance > 0) $html .= '<div class="col-sm-1"><a href="" onclick="$(\'#lockedfunds_details\').toggle(\'fast\'); return false;">Details</a></div>';
 		$html .= "</div>\n";
-		$html .= "Last block completed: #".$last_block_id.", currently mining #".($last_block_id+1)."<br/>\n";
+		$html .= "Last block completed: <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$last_block_id."\">#".$last_block_id."</a>, currently mining <a href=\"/explorer/games/".$game->db_game['url_identifier']."/transactions/unconfirmed\">#".($last_block_id+1)."</a><br/>\n";
 		$html .= "Current votes count towards block ".$block_within_round."/".$game->db_game['round_length']." in round #".$current_round.".<br/>\n";
 		//if ($game->db_game['vote_effectiveness_function'] != "constant") $html .= "Votes are ".round(100*$game->round_index_to_effectiveness_factor($block_within_round),1)."% effective right now.<br/>\n";
 		
 		if ($immature_balance > 0) {
-			$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id LEFT JOIN options gvo ON i.option_id=gvo.option_id WHERE i.game_id='".$game->db_game['game_id']."' AND i.user_id='".$this->db_user['user_id']."' AND (i.create_block_id > ".($game->last_block_id() - $game->db_game['maturity'])." OR i.create_block_id IS NULL) ORDER BY i.io_id ASC;";
+			$q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id LEFT JOIN options gvo ON gio.option_id=gvo.option_id WHERE io.blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND io.user_id='".$this->db_user['user_id']."' AND (io.create_block_id > ".($game->blockchain->last_block_id() - $game->db_game['maturity'])." OR io.create_block_id IS NULL) ORDER BY io.io_id ASC;";
 			$r = $this->app->run_query($q);
 			
 			$html .= '<div class="lockedfunds_details" id="lockedfunds_details">';
@@ -191,15 +196,15 @@ class User {
 						$html .= "You voted for ".$next_transaction['name']." in round #".$game->block_to_round($next_transaction['create_block_id']).". ";
 					}
 				}
-				$html .= '(tx: <a target="_blank" href="/explorer/'.$game->db_game['url_identifier'].'/transactions/'.$next_transaction['tx_hash'].'">'.$next_transaction['transaction_id']."</a>)<br/>\n";
+				$html .= '(tx: <a target="_blank" href="/explorer/games/'.$game->db_game['url_identifier'].'/transactions/'.$next_transaction['tx_hash'].'">'.$next_transaction['transaction_id']."</a>)<br/>\n";
 			}
 			$html .= "</div>\n";
 		}
 		return $html;
 	}
 	
-	public function user_address_id($game_id, $option_index, $option_id) {
-		$q = "SELECT * FROM addresses WHERE game_id='".$game_id."' AND user_id='".$this->db_user['user_id']."'";
+	public function user_address_id($game, $option_index, $option_id) {
+		$q = "SELECT * FROM addresses WHERE primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND user_id='".$this->db_user['user_id']."'";
 		if ($option_index !== false) $q .= " AND option_index='".$option_index."'";
 		else if ($option_id) {
 			$db_option = $this->app->run_query("SELECT * FROM options WHERE option_id='".$option_id."';")->fetch();
@@ -217,7 +222,9 @@ class User {
 	}
 
 	public function ensure_user_in_game($game_id) {
-		$game = new Game($this->app, $game_id);
+		$db_game = $this->app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
+		$blockchain = new Blockchain($this->app, $db_game['blockchain_id']);
+		$game = new Game($blockchain, $game_id);
 
 		$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$this->db_user['user_id']."' AND ug.game_id='".$game_id."';";
 		$r = $this->app->run_query($q);
@@ -309,6 +316,8 @@ class User {
 			$this->app->try_apply_invite_key($this->db_user['user_id'], $_REQUEST['invite_key']);
 		}
 		
+		$this->ensure_currency_accounts();
+		
 		if (!empty($_REQUEST['redirect_id'])) {
 			$redirect_url_id = intval($_REQUEST['redirect_id']);
 			$q = "SELECT * FROM redirect_urls WHERE redirect_url_id=".$this->app->quote_escape($redirect_url_id).";";
@@ -319,12 +328,14 @@ class User {
 			}
 		}
 	}
+	
 	public function user_in_game($game_id) {
 		$q = "SELECT * FROM user_games WHERE user_id='".$this->db_user['user_id']."' AND game_id='".$game_id."';";
 		$r = $this->app->run_query($q);
 		if ($r->rowCount() > 0) return true;
 		else return false;
 	}
+	
 	public function user_can_invite_game($db_game) {
 		if ($db_game['giveaway_status'] == "invite_free" || $db_game['giveaway_status'] == "invite_pay") {
 			if ($this->db_user['user_id'] == $db_game['creator_id']) return true;
@@ -333,6 +344,7 @@ class User {
 		else if ($db_game['giveaway_status'] == "public_pay" || $db_game['giveaway_status'] == "public_free") return true;
 		else return false;
 	}
+	
 	public function count_user_games_created() {
 		$q = "SELECT * FROM games WHERE creator_id='".$this->db_user['user_id']."';";
 		$r = $this->app->run_query($q);
@@ -384,13 +396,17 @@ class User {
 	public function generate_user_addresses(&$game) {
 		$option_index_range = $game->option_index_range();
 		
+		$color_account = $this->create_or_fetch_game_currency_account($game);
+		
 		// Try to give the user voting addresses for all options in this game
 		for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
-			$qq = "SELECT * FROM addresses WHERE option_index='".$option_index."' AND game_id='".$game->db_game['game_id']."' AND user_id='".$this->db_user['user_id']."';";
+			// Check if user already has a voting address for this option_index
+			$qq = "SELECT * FROM addresses WHERE primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND option_index='".$option_index."' AND user_id='".$this->db_user['user_id']."';";
 			$rr = $this->app->run_query($qq);
 			
 			if ($rr->rowCount() == 0) {
-				$qq = "SELECT * FROM addresses WHERE option_index='".$option_index."' AND game_id='".$game->db_game['game_id']."' AND is_mine=1 AND user_id IS NULL;";
+				// If not, check if there is an unallocated address available to give to the user
+				$qq = "SELECT * FROM addresses WHERE primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND option_index='".$option_index."' AND is_mine=1 AND user_id IS NULL;";
 				$rr = $this->app->run_query($qq);
 				
 				if ($rr->rowCount() > 0) {
@@ -398,21 +414,27 @@ class User {
 					
 					$qq = "UPDATE addresses SET user_id='".$this->db_user['user_id']."' WHERE address_id='".$address['address_id']."';";
 					$rr = $this->app->run_query($qq);
+					
+					$qq = "UPDATE address_keys SET account_id='".$color_account['account_id']."' WHERE address_id='".$address['address_id']."';";
+					$rr = $this->app->run_query($qq);
 				}
 			}
 		}
 		
 		// Make sure the user has a non-voting address
-		$q = "SELECT * FROM addresses WHERE option_index IS NULL AND game_id='".$game->db_game['game_id']."' AND user_id='".$this->db_user['user_id']."';";
+		$q = "SELECT * FROM addresses WHERE primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND option_index IS NULL AND user_id='".$this->db_user['user_id']."';";
 		$r = $this->app->run_query($q);
 		
 		if ($r->rowCount() == 0) {
-			$q = "SELECT * FROM addresses WHERE option_index IS NULL AND game_id='".$game->db_game['game_id']."' AND is_mine=1 AND user_id IS NULL;";
+			$q = "SELECT * FROM addresses WHERE primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND option_index IS NULL AND is_mine=1 AND user_id IS NULL;";
 			$r = $this->app->run_query($q);
 			if ($r->rowCount() > 0) {
 				$address = $r->fetch();
 				
 				$q = "UPDATE addresses SET user_id='".$game->db_game['game_id']."' WHERE address_id='".$address['address_id']."';";
+				$r = $this->app->run_query($q);
+				
+				$q = "UPDATE address_keys SET account_id='".$color_account['account_id']."' WHERE address_id='".$address['address_id']."';";
 				$r = $this->app->run_query($q);
 			}
 		}
@@ -439,6 +461,64 @@ class User {
 					$rr = $this->app->run_query($qq);
 				}
 			}
+		}
+	}
+	
+	public function ensure_currency_accounts() {
+		$q = "SELECT * FROM currencies WHERE blockchain_id IS NOT NULL;";
+		$r = $this->app->run_query($q);
+		
+		while ($currency = $r->fetch()) {
+			$qq = "SELECT * FROM currency_accounts WHERE user_id='".$this->db_user['user_id']."' AND currency_id='".$currency['currency_id']."';";
+			$rr = $this->app->run_query($qq);
+			
+			if ($rr->rowCount() == 0) {
+				$qq = "INSERT INTO currency_accounts SET user_id='".$this->db_user['user_id']."', currency_id='".$currency['currency_id']."', account_name='Primary ".$currency['name']." Account', time_created='".time()."';";
+				$rr = $this->app->run_query($qq);
+				$account_id = $this->app->last_insert_id();
+				
+				$account = $this->app->fetch_account_by_id($account_id);
+				
+				$address_key = $this->app->new_address_key($currency['currency_id'], $account);
+				
+				$qq = "UPDATE currency_accounts SET current_address_id='".$address_key['address_id']."' WHERE account_id='".$account_id."';";
+				$rr = $this->app->run_query($qq);
+			}
+		}
+	}
+	
+	public function fetch_currency_account($currency_id) {
+		$q = "SELECT * FROM currency_accounts WHERE currency_id='".$currency_id."' AND user_id='".$this->db_user['user_id']."' ORDER BY account_id DESC;";
+		$r = $this->app->run_query($q);
+		if ($r->rowCount() > 0) {
+			return $r->fetch();
+		}
+		else return false;
+	}
+	
+	public function create_or_fetch_game_currency_account(&$game) {
+		$q = "SELECT * FROM currency_accounts WHERE user_id='".$this->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."' ORDER BY account_id ASC;";
+		$r = $this->app->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			return $r->fetch();
+		}
+		else {
+			$currency_id = $game->blockchain->currency_id();
+			
+			$qq = "INSERT INTO currency_accounts SET user_id='".$this->db_user['user_id']."', game_id='".$game->db_game['game_id']."', currency_id='".$currency_id."', account_name=".$this->app->quote_escape(ucwords($game->blockchain->db_blockchain['coin_name_plural'])." for ".$game->db_game['name']).", time_created='".time()."';";
+			$rr = $this->app->run_query($qq);
+			$account_id = $this->app->last_insert_id();
+			$account = $this->app->fetch_account_by_id($account_id);
+			
+			$address_key = $this->app->new_address_key($currency_id, $account);
+			
+			$qq = "UPDATE currency_accounts SET current_address_id='".$address_key['address_id']."' WHERE account_id='".$account_id."';";
+			$rr = $this->app->run_query($qq);
+			
+			$qq = "SELECT * FROM currency_accounts WHERE account_id='".$account_id."';";
+			$rr = $this->app->run_query($qq);
+			return $rr->fetch();
 		}
 	}
 }

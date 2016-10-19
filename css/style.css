@@ -364,3 +364,15 @@ footer {
 	padding: 0px;
 	border: 0px;
 }
+.account_details {
+	border: 1px solid #aaa;
+	border-radius: 5px;
+	margin: 5px 15px;
+	padding: 5px;
+}
+.address_cell {
+	border: 0px;
+	background-color: none;
+	width: 100%;
+	font-family: consolas;
+}

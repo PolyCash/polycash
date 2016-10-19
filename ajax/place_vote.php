@@ -34,7 +34,7 @@ if ($thisuser && $game) {
 	$option_ids = explode(",", $option_ids_csv);
 	$int_option_ids = [];
 	for ($i=0; $i<count($option_ids); $i++) {
-		$int_option_ids[$i] = intval($option_ids[$i]);
+		$int_option_ids[$i] = (int) $option_ids[$i];
 	}
 	$option_ids = $int_option_ids;
 	
@@ -49,7 +49,7 @@ if ($thisuser && $game) {
 	}
 	
 	for ($i=0; $i<count($option_ids); $i++) {
-		$int_option_ids[$i] = intval($option_ids[$i]);
+		$int_option_ids[$i] = (int) $option_ids[$i];
 	}
 	
 	if (count($amounts) != count($option_ids)) {
@@ -61,22 +61,26 @@ if ($thisuser && $game) {
 		die();
 	}
 	
+	$io_mature_balance = 0;
+	
 	for ($i=0; $i<count($io_ids); $i++) {
-		$io_id = intval($io_ids[$i]);
+		$io_id = (int) $io_ids[$i];
+		
 		if ($io_id > 0) {
 			$qq = "SELECT * FROM transaction_ios WHERE io_id='".$io_id."';";
 			$rr = $app->run_query($qq);
+			
 			if ($rr->rowCount() == 1) {
 				$io = $rr->fetch();
 				
-				if ($io['user_id'] != $thisuser->db_user['user_id'] || $io['spend_status'] != "unspent" || $io['game_id'] != $game->db_game['game_id']) {
-					die($io['user_id'].' != '.$thisuser->db_user['user_id'].' || '.$io['spend_status'].' != "unspent" || '.$io['game_id'].' != '.$game->db_game['game_id']);
+				if ($io['user_id'] != $thisuser->db_user['user_id'] || $io['spend_status'] != "unspent" || $io['blockchain_id'] != $game->blockchain->db_blockchain['blockchain_id']) {
+					die($io['user_id'].' != '.$thisuser->db_user['user_id'].' || '.$io['spend_status'].' != "unspent" || '.$io['blockchain_id'].' != '.$game->blockchain->db_blockchain['blockchain_id']);
 					$api_output = $noinfo_fail_obj;
 					echo json_encode($api_output);
 					die();
 				}
 				else {
-					if ($io['create_block_id'] <= $game->last_block_id() - $game->db_game['maturity'] || $io['instantly_mature'] == 1) {
+					if ($io['create_block_id'] <= $game->blockchain->last_block_id() - $game->db_game['maturity'] || $io['instantly_mature'] == 1) {
 						$io_ids[$i] = $io_id;
 					}
 					else {
@@ -88,6 +92,8 @@ if ($thisuser && $game) {
 						die();
 					}
 				}
+				
+				$io_mature_balance += $io['amount'];
 			}
 			else {
 				$api_output = $noinfo_fail_obj;
@@ -105,7 +111,7 @@ if ($thisuser && $game) {
 	$amount_sum = 0;
 	
 	for ($i=0; $i<count($option_ids); $i++) {
-		$option_id = intval($option_ids[$i]);
+		$option_id = (int) $option_ids[$i];
 		$q = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE op.option_id='".$option_id."' AND e.game_id='".$game->db_game['game_id']."';";
 		$r = $app->run_query($q);
 		if ($r->rowCount() == 1) {
@@ -135,7 +141,16 @@ if ($thisuser && $game) {
 		}
 	}
 	
-	$last_block_id = $game->last_block_id();
+	$real_amounts = [];
+	$real_amount_sum = 0;
+	for ($i=0; $i<count($option_ids)-1; $i++) {
+		$real_amount = floor(($io_mature_balance-$user_strategy['transaction_fee'])*$amounts[$i]/$amount_sum);
+		$real_amounts[$i] = $real_amount;
+		$real_amount_sum += $real_amount;
+	}
+	$real_amounts[count($option_ids)-1] = $io_mature_balance - $user_strategy['transaction_fee'] - $real_amount_sum;
+	
+	$last_block_id = $game->blockchain->last_block_id();
 	
 	if (($last_block_id+1)%$game->db_game['round_length'] == 0) {
 		$api_output = (object)[
@@ -145,7 +160,7 @@ if ($thisuser && $game) {
 	}
 	else {
 		if ($amount_sum+$user_strategy['transaction_fee'] <= $mature_balance && $amount_sum > 0) {
-			$transaction_id = $game->create_transaction($option_ids, $amounts, $thisuser->db_user['user_id'], $thisuser->db_user['user_id'], false, 'transaction', $io_ids, false, false, intval($user_strategy['transaction_fee']));
+			$transaction_id = $game->create_transaction($option_ids, $real_amounts, $thisuser->db_user['user_id'], $thisuser->db_user['user_id'], false, 'transaction', $io_ids, false, false, (int) $user_strategy['transaction_fee']);
 			
 			if ($transaction_id) {
 				$game->update_option_votes();

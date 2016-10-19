@@ -6,6 +6,11 @@ else die("Please create the file includes/config.php");
 
 if (empty($GLOBALS['coin_brand_name'])) die('Please add this line to your includes/config.php: $GLOBALS[\'coin_brand_name\'] = \'EmpireCoin\';');
 
+if (empty($GLOBALS['process_lock_method'])) {
+	if (PHP_OS == "WINNT") $GLOBALS['process_lock_method'] = "db";
+	else $GLOBALS['process_lock_method'] = "grep";
+}
+
 include("global_functions.php");
 include(realpath(dirname(__FILE__))."/../lib/bitcoin-sci/common.lib.php");
 
@@ -34,6 +39,7 @@ header('Content-Type: text/html; charset=UTF-8');
 include(realpath(dirname(dirname(__FILE__)))."/classes/Api.php");
 include(realpath(dirname(dirname(__FILE__)))."/classes/App.php");
 include(realpath(dirname(dirname(__FILE__)))."/classes/JsonRPCClient.php");
+include(realpath(dirname(dirname(__FILE__)))."/classes/Blockchain.php");
 include(realpath(dirname(dirname(__FILE__)))."/classes/Game.php");
 include(realpath(dirname(dirname(__FILE__)))."/classes/Event.php");
 if ($GLOBALS['pageview_tracking_enabled']) include(realpath(dirname(dirname(__FILE__)))."/classes/PageviewController.php");
