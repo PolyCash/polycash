@@ -355,14 +355,19 @@ class App {
 		do {
 			if ($append_index > 0) $append = "(".$append_index.")";
 			else $append = "";
-			$url_identifier = $this->make_alphanumeric(str_replace(" ", "-", strtolower($game_name.$append)), "-().:;");
+			$url_identifier = $this->normalize_uri_part($game_name.$append);
 			$q = "SELECT * FROM games WHERE url_identifier=".$this->quote_escape($url_identifier).";";
 			$r = $this->run_query($q);
 			if ($r->rowCount() == 0) $keeplooping = false;
 			else $append_index++;
-		} while ($keeplooping);
+		}
+		while ($keeplooping);
 		
 		return $url_identifier;
+	}
+	
+	public function normalize_uri_part($uri_part) {
+		return $this->make_alphanumeric(str_replace(" ", "-", strtolower($uri_part)), "-().:;");
 	}
 	
 	public function prepend_a_or_an($word) {
@@ -694,7 +699,7 @@ class App {
 				echo '<script type="text/javascript" id="game'.$counter.'_new_event_js">'.$featured_game->new_event_js($counter, false).'</script>';
 				
 				echo '<br/><a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-success">Play Now</a>';
-				echo ' <a href="/explorer/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-primary">Blockchain Explorer</a>';
+				echo ' <a href="/explorer/games/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-primary">Blockchain Explorer</a>';
 				echo '</center><br/>';
 				
 				if ($counter%(12/$cell_width) == 1) echo '</div><div class="row">';
@@ -893,7 +898,6 @@ class App {
 		$blocks_per_hour = 3600/$db_game['seconds_per_block'];
 		$round_reward = ($db_game['pos_reward']+$db_game['pow_reward']*$db_game['round_length'])/pow(10,8);
 		$seconds_per_round = $db_game['seconds_per_block']*$db_game['round_length'];
-		$db_game_url = $GLOBALS['base_url']."/".$db_game['url_identifier'];
 		
 		$invite_currency = false;
 		if ($db_game['invite_currency'] > 0) {
@@ -916,7 +920,7 @@ class App {
 		$html .= "</div></div>\n";
 		
 		if ($db_game['game_id'] > 0) {
-			$html .= '<div class="row"><div class="col-sm-5">Game URL:</div><div class="col-sm-7"><a href="'.$db_game_url.'">'.$db_game_url."</a></div></div>\n";
+			$html .= '<div class="row"><div class="col-sm-5">Game definition:</div><div class="col-sm-7"><a target="_blank" href="'.$GLOBALS['base_url'].'/scripts/show_game_definition.php?game_id='.$db_game['game_id'].'">Click here</a></div></div>';
 		}
 		
 		$html .= '<div class="row"><div class="col-sm-5">Length of game:</div><div class="col-sm-7">';

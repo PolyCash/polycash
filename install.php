@@ -171,8 +171,6 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 						<?php
 					}
 				}
-				
-				$app->generate_games($bitcoin_blockchain_id);
 				?>
 				
 				<h2>Configure coin daemon connections</h2>

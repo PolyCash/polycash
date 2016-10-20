@@ -23,6 +23,9 @@ else if ($uri_parts[1] == "explorer") {
 else if ($uri_parts[1] == "download") {
 	include("download.php");
 }
+else if ($uri_parts[1] == "import") {
+	include("import_game.php");
+}
 else {
 	include("includes/connect.php");
 	include("includes/get_session.php");
