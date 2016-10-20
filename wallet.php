@@ -1199,41 +1199,19 @@ if ($thisuser && $game) {
 							</div>
 							<div class="row">
 								<div class="col-sm-6 form-control-static">
-									P2P mode:
+									Runs on Blockchain:
 								</div>
 								<div class="col-sm-6">
-									<select class="form-control" id="game_form_p2p_mode" onchange="game_form_p2p_mode_changed();">
+									<select id="game_form_blockchain_id" class="form-control">
 										<option value="">-- Please Select --</option>
-										<option value="rpc">Connect to daemon by RPC</option>
-										<option value="none">Do not connect to peers</option>
+										<?php
+										$q = "SELECT * FROM blockchains ORDER BY blockchain_name ASC;";
+										$r = $app->run_query($q);
+										while ($db_blockchain = $r->fetch()) {
+											echo "<option value=\"".$db_blockchain['blockchain_id']."\">".$db_blockchain['blockchain_name']."</option>\n";
+										}
+										?>
 									</select>
-								</div>
-							</div>
-							<div id="game_form_p2p_mode_rpc">
-								<div class="row">
-									<div class="col-sm-6 form-control-static">
-										RPC Parameters:
-									</div>
-									<div class="col-sm-6">
-										<button class="btn btn-warning" onclick="edit_game_rpc_parameters(); return false;" id="edit_rpc_btn">Edit RPC parameters</button>
-									</div>
-								</div>
-								<div class="row">
-									<div class="col-sm-6 form-control-static">
-										Runs on Blockchain:
-									</div>
-									<div class="col-sm-6">
-										<select id="game_form_base_currency_id" class="form-control">
-											<option value="">-- Please Select --</option>
-											<?php
-											$q = "SELECT * FROM currencies WHERE blockchain_id IS NOT NULL ORDER BY name ASC;";
-											$r = $app->run_query($q);
-											while ($currency = $r->fetch()) {
-												echo "<option value=\"".$currency['currency_id']."\">".$currency['name']."</option>\n";
-											}
-											?>
-										</select>
-									</div>
 								</div>
 							</div>
 							<div class="row">
@@ -1296,56 +1274,6 @@ if ($thisuser && $game) {
 								</div>
 							</div>
 							<div class="row">
-								<div class="col-sm-6 form-control-static">
-									Start the game:
-								</div>
-								<div class="col-sm-6">
-									<select class="form-control" id="game_form_start_condition" onchange="game_form_start_condition_changed();">
-										<option value="fixed_block">At a particular block</option>
-										<option value="fixed_time">At a particular time</option>
-										<option value="players_joined">When enough people join</option>
-									</select>
-								</div>
-							</div>
-							<div id="game_form_start_condition_fixed_time">
-								<div class="row">
-									<div class="col-sm-6 form-control-static">
-										When should the game start?
-									</div>
-									<div class="col-sm-3">
-										<input type="text" class="form-control datepicker" id="game_form_start_date" />
-									</div>
-									<div class="col-sm-3">
-										<select class="form-control" id="game_form_start_time">
-											<?php
-											for ($hour=0; $hour<=23; $hour++) {
-												$am_pm = "am";
-												if ($hour > 12) {
-													$am_pm = "pm";
-												}
-												if ($hour == 11) $am_pm = "noon";
-												else if ($hour == 23) $am_pm = "midnight";
-												echo '<option value="'.$hour.'">'.(($hour%12)+1).':00 '.$am_pm.'</option>'."\n";
-											}
-											?>
-										</select>
-									</div>
-								</div>
-							</div>
-							<div id="game_form_start_condition_players_joined">
-								<div class="row">
-									<div class="col-sm-6 form-control-static">
-										Start when how many players have joined?
-									</div>
-									<div class="col-sm-3">
-										<input type="text" class="form-control" id="game_form_start_condition_players" style="text-align: right;" />
-									</div>
-									<div class="col-sm-3 form-control-static">
-										players
-									</div>
-								</div>
-							</div>
-							<div class="row">
 								<div class="col-sm-6 form-control-static">Game starts on block:</div>
 								<div class="col-sm-6">
 									<input class="form-control" type="text" style="text-align: right;" id="game_form_game_starting_block" />
@@ -1363,15 +1291,6 @@ if ($thisuser && $game) {
 								</div>
 							</div>
 							<div class="row">
-								<div class="col-sm-6 form-control-static">Seconds per block:</div>
-								<div class="col-sm-3">
-									<input class="form-control" style="text-align: right;" type="text" id="game_form_seconds_per_block" />
-								</div>
-								<div class="col-sm-3 form-control-static">
-									seconds
-								</div>
-							</div>
-							<div class="row">
 								<div class="col-sm-6 form-control-static">Escrow address:</div>
 								<div class="col-sm-6">
 									<input class="form-control" type="text" id="game_form_escrow_address" />
@@ -1381,6 +1300,12 @@ if ($thisuser && $game) {
 								<div class="col-sm-6 form-control-static">Genesis transaction:</div>
 								<div class="col-sm-6">
 									<input class="form-control" type="text" id="game_form_genesis_tx_hash" />
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6 form-control-static">Coins created by genesis tx:</div>
+								<div class="col-sm-6">
+									<input class="form-control" type="text" id="game_form_genesis_amount" style="text-align: right;" />
 								</div>
 							</div>
 							<div class="row">
@@ -1412,65 +1337,13 @@ if ($thisuser && $game) {
 								</div>
 							</div>
 							<div class="row">
-								<div class="col-sm-6 form-control-static">Give out coins to each player?</div>
-								<div class="col-sm-6">
-									<select class="form-control" id="game_form_giveaway_status" onchange="game_form_giveaway_status_changed();">
-										<option value="public_free">Free coins for everyone</option>
-										<option value="invite_free">Free coins with invite</option>
-										<option value="public_pay">Pay to join, no invitation required</option>
-										<option value="invite_pay">Pay to accept an invitation</option>
-									</select>
-								</div>
-							</div>
-							<div id="game_form_giveaway_status_pay">
-								<div class="row">
-									<div class="col-sm-6 form-control-static">Cost per invitation:</div>
-									<div class="col-sm-3">
-										<input type="text" class="form-control" id="game_form_invite_cost" style="text-align: right" />
-									</div>
-									<div class="col-sm-3">
-										<select class="form-control" id="game_form_invite_currency">
-											<?php
-											$q = "SELECT * FROM currencies ORDER BY currency_id ASC;";
-											$r = $app->run_query($q);
-											while ($currency = $r->fetch()) {
-												echo '<option value="'.$currency['currency_id'].'">'.ucwords($currency['short_name']).'s</option>'."\n";
-											}
-											?>
-										</select>
-									</div>
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">Coins given out per invitation:</div>
-								<div class="col-sm-3">
-									<input class="form-control" style="text-align: right;" type="text" id="game_form_giveaway_amount" />
-								</div>
-								<div class="col-sm-3 form-control-static">
-									coins
-								</div>
-							</div>
-							<div class="row">
 								<div class="col-sm-6 form-control-static">Buy-in policy:</div>
 								<div class="col-sm-6">
 									<select class="form-control" id="game_form_buyin_policy" onchange="game_form_buyin_policy_changed();">
 										<option value="none">No additional buy-ins</option>
 										<option value="unlimited">Unlimited buy-ins</option>
-										<option value="per_user_cap">Limit buy-ins per user</option>
 										<option value="game_cap">Buy-in cap for the whole game</option>
-										<option value="game_and_user_cap">Game-wide cap &amp; user cap</option>
 									</select>
-								</div>
-							</div>
-							<div id="game_form_per_user_buyin_cap_disp">
-								<div class="row">
-									<div class="col-sm-6 form-control-static">Buy-in limit per user:</div>
-									<div class="col-sm-3">
-										<input class="form-control" style="text-align: right;" type="text" id="game_form_per_user_buyin_cap" />
-									</div>
-									<div class="col-sm-3 form-control-static">
-										invite currency units
-									</div>
 								</div>
 							</div>
 							<div id="game_form_game_buyin_cap_disp">
@@ -1504,30 +1377,12 @@ if ($thisuser && $game) {
 										%
 									</div>
 								</div>
-								<div class="row">
-									<div class="col-sm-6 form-control-static">Percentage given to miners</div>
-									<div class="col-sm-3">
-										<input class="form-control" style="text-align: right;" type="text" id="game_form_exponential_inflation_minershare" />
-									</div>
-									<div class="col-sm-3 form-control-static">
-										%
-									</div>
-								</div>
 							</div>
 							<div id="game_form_inflation_linear">
 								<div class="row">
 									<div class="col-sm-6 form-control-static">Voting payout reward:</div>
 									<div class="col-sm-3">
 										<input class="form-control" style="text-align: right;" type="text" id="game_form_pos_reward" />
-									</div>
-									<div class="col-sm-3 form-control-static">
-										coins
-									</div>
-								</div>
-								<div class="row">
-									<div class="col-sm-6 form-control-static">Reward for mining a block:</div>
-									<div class="col-sm-3">
-										<input class="form-control" style="text-align: right;" type="text" id="game_form_pow_reward" />
 									</div>
 									<div class="col-sm-3 form-control-static">
 										coins
@@ -1600,49 +1455,7 @@ if ($thisuser && $game) {
 							
 							<button id="publish_game_btn" type="button" class="btn btn-primary" onclick="save_game('publish');">Save &amp; Publish</button>
 							
-							<button id="game_invitations_game_btn" type="button" class="btn btn-info" data-dismiss="modal" onclick="manage_game_invitations(editing_game_id);">Invite People</button>
-						</form>
-					</div>
-				</div>
-			</div>
-		</div>
-		
-		<div style="display: none;" class="modal fade" id="game_form_rpc_parameters">
-			<div class="modal-dialog">
-				<div class="modal-content">
-					<div class="modal-header">
-						RPC Parameters
-					</div>
-					<div class="modal-body">
-						<form onsubmit="save_game_rpc_parameters();">
-							<div class="row">
-								<div class="col-sm-6 form-control-static">
-									RPC username:
-								</div>
-								<div class="col-sm-6">
-									<input type="text" class="form-control" id="game_form_rpc_username" />
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">
-									RPC password:
-								</div>
-								<div class="col-sm-6">
-									<input type="text" class="form-control" id="game_form_rpc_password" />
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">
-									RPC port:
-								</div>
-								<div class="col-sm-6">
-									<input type="text" class="form-control" id="game_form_rpc_port" />
-								</div>
-							</div>
-							
-							<button style="float: right;" type="button" class="btn btn-default" onclick="cancel_edit_game_rpc_parameters();">Close</button>
-							
-							<button id="save_game_rpc_btn" type="button" class="btn btn-success" onclick="save_game_rpc_parameters();">Save Settings</button>
+							<?php /*<button id="game_invitations_game_btn" type="button" class="btn btn-info" data-dismiss="modal" onclick="manage_game_invitations(editing_game_id);">Invite People</button> */ ?>
 						</form>
 					</div>
 				</div>

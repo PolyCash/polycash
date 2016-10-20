@@ -624,7 +624,7 @@ function show_planned_votes() {
 }
 
 // OBJECT: GameForm
-var game_form_vars = "event_rule,p2p_mode,option_group_id,event_entity_type_id,events_per_round,event_type_name,giveaway_status,giveaway_amount,maturity,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_date,start_time,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap,group_id,default_vote_effectiveness_function,default_max_voting_fraction,game_starting_block,escrow_address,genesis_tx_hash,base_currency_id".split(",");
+var game_form_vars = "blockchain_id,event_rule,option_group_id,event_entity_type_id,events_per_round,event_type_name,maturity,name,payout_weight,round_length,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,coin_name,coin_name_plural,coin_abbreviation,start_condition,buyin_policy,game_buyin_cap,default_vote_effectiveness_function,default_max_voting_fraction,game_starting_block,escrow_address,genesis_tx_hash,genesis_amount".split(",");
 function switch_to_game(game_id, action) {
 	var fetch_link_text = $('#fetch_game_link_'+game_id).html();
 	var switch_link_text = $('#switch_game_btn').html();
@@ -669,7 +669,7 @@ function switch_to_game(game_id, action) {
 			$('#game_form_name_disp').html("Settings: "+json_result['name_disp']);
 			
 			for (var i=0; i<game_form_vars.length; i++) {
-				if (game_form_vars[i] == "pos_reward" || game_form_vars[i] == "pow_reward" || game_form_vars[i] == "giveaway_amount") {
+				if (game_form_vars[i] == "pos_reward" || game_form_vars[i] == "pow_reward" || game_form_vars[i] == "giveaway_amount" || game_form_vars[i] == "genesis_amount") {
 					json_result[game_form_vars[i]] = parseInt(json_result[game_form_vars[i]])/Math.pow(10,8);
 				}
 				else if (game_form_vars[i] == "exponential_inflation_minershare" || game_form_vars[i] == "exponential_inflation_rate" || game_form_vars[i] == "default_max_voting_fraction") {
@@ -702,13 +702,8 @@ function switch_to_game(game_id, action) {
 				$('#game_form_inflation_exponential').hide();
 				$('#game_form_inflation_linear').show();
 			}
-
-			if (json_result['buyin_policy'] == "per_user_cap" || json_result['buyin_policy'] == "game_and_user_cap") {
-				$('#game_form_per_user_buyin_cap_disp').show();
-			}
-			else $('#game_form_per_user_buyin_cap_disp').hide();
 			
-			if (json_result['buyin_policy'] == "game_cap" || json_result['buyin_policy'] == "game_and_user_cap") {
+			if (json_result['buyin_policy'] == "game_cap") {
 				$('#game_form_game_buyin_cap_disp').show();
 			}
 			else $('#game_form_game_buyin_cap_disp').hide();
@@ -731,7 +726,6 @@ function switch_to_game(game_id, action) {
 
 			game_form_start_condition_changed();
 			game_form_event_rule_changed();
-			game_form_p2p_mode_changed();
 		}
 		else if (action == "switch" || action == "delete" || action == "reset") {
 			if (action == "switch") $('#switch_game_btn').html(switch_link_text);
@@ -741,45 +735,6 @@ function switch_to_game(game_id, action) {
 			}
 			else alert(json_result['message']);
 		}
-	});
-}
-function edit_game_rpc_parameters() {
-	$('#edit_rpc_btn').html("Loading...");
-	
-	$.get("/ajax/game_rpc_parameters.php?game_id="+editing_game_id, function(result) {
-		$('#edit_rpc_btn').html("Edit RPC Parameters");
-		var result_obj = JSON.parse(result);
-		
-		if (result_obj['status_code'] == "1") {
-			$('#game_form').modal('hide');
-			$('#game_form_rpc_parameters').modal('show');
-			
-			$('#game_form_rpc_username').val(result_obj['rpc_username']);
-			$('#game_form_rpc_password').val(result_obj['rpc_password']);
-			$('#game_form_rpc_port').val(result_obj['rpc_port']);
-		}
-		else alert(result_obj['message']);
-	});
-}
-function cancel_edit_game_rpc_parameters() {
-	$('#game_form_rpc_parameters').modal('hide');
-	setTimeout("$('#game_form').modal('show');", 400);
-}
-function save_game_rpc_parameters() {
-	var rpc_username = $('#game_form_rpc_username').val();
-	var rpc_password = $('#game_form_rpc_password').val();
-	var rpc_port = $('#game_form_rpc_port').val();
-	
-	$('#save_game_rpc_btn').html("Saving...");
-	
-	$.get("/ajax/game_rpc_parameters.php?action=save&game_id="+editing_game_id+"&rpc_username="+encodeURIComponent(rpc_username)+"&rpc_password="+encodeURIComponent(rpc_password)+"&rpc_port="+encodeURIComponent(rpc_port), function(result) {
-		$('#save_game_rpc_btn').html("Save Settings");
-		var result_obj = JSON.parse(result);
-		if (result_obj['status_code'] == "1") {
-			$('#game_form_rpc_parameters').modal('hide');
-			setTimeout("$('#game_form').modal('show');", 400);
-		}
-		else alert(result_obj['message']);
 	});
 }
 function game_form_final_round_changed() {
@@ -838,33 +793,6 @@ function game_form_event_rule_changed() {
 	var event_rule = $('#game_form_event_rule').val();
 	if (event_rule == "entity_type_option_group") $('#game_form_event_rule_entity_type_option_group').show();
 	else $('#game_form_event_rule_entity_type_option_group').hide();
-}
-function game_form_p2p_mode_changed() {
-	var p2p_mode = $('#game_form_p2p_mode').val();
-	$('#game_form_start_condition').empty();
-	if (p2p_mode == "rpc") {
-		$('#game_form_p2p_mode_rpc').show();
-		$('#game_form_giveaway_status').val("public_free");
-		$('#game_form_giveaway_amount').val(0);
-		$('#game_form_giveaway_status').prop('disabled', true);
-		$('#game_form_giveaway_amount').prop('disabled', true);
-		$('#game_form_start_condition').append('<option value="fixed_block">At a particular block</option>');
-		game_form_giveaway_status_changed();
-	}
-	else {
-		$('#game_form_p2p_mode_rpc').hide();
-		if ($('#game_form_name').prop('disabled') == false) {
-			$('#game_form_giveaway_status').prop('disabled', false);
-			$('#game_form_giveaway_amount').prop('disabled', false);
-		}
-		else {
-			$('#game_form_giveaway_status').prop('disabled', true);
-			$('#game_form_giveaway_amount').prop('disabled', true);
-		}
-		$('#game_form_start_condition').append('<option value="fixed_time">At a particular time</option>');
-		$('#game_form_start_condition').append('<option value="players_joined">When enough people join</option>');
-	}
-	game_form_start_condition_changed();
 }
 function save_game(action) {
 	var save_link_text = $('#save_game_btn').html();

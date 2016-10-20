@@ -326,7 +326,7 @@ class Game {
 			else {
 				$q = "UPDATE options op INNER JOIN (
 					SELECT option_id, SUM(ref_coin_rounds+(".$round_id."-ref_round_id)*colored_amount) sum_crd, SUM(ref_coin_rounds+(".$round_id."-ref_round_id)*colored_amount)*".$effectiveness_factor." sum_votes FROM transaction_game_ios
-					WHERE game_id='".$this->db_game['game_id']."' AND create_block_id IS NULL AND colored_amount > 0 
+					WHERE game_id='".$this->db_game['game_id']."' AND create_round_id IS NULL AND colored_amount > 0 
 					GROUP BY option_id
 				) i ON op.option_id=i.option_id SET op.unconfirmed_coin_round_score=i.sum_crd, op.unconfirmed_votes=i.sum_votes WHERE op.event_id='".$this->current_events[$i]->db_event['event_id']."';";
 				$r = $this->blockchain->app->run_query($q);
@@ -795,6 +795,9 @@ class Game {
 	
 	public function delete_reset_game($delete_or_reset) {
 		$q = "DELETE FROM game_blocks WHERE game_id='".$this->db_game['game_id']."';";
+		$r = $this->blockchain->app->run_query($q);
+		
+		$q = "SELECT * FROM game_blocks WHERE locally_saved=1 AND game_id='".$this->db_game['game_id']."' ORDER BY game_block_id DESC LIMIT 1;";
 		$r = $this->blockchain->app->run_query($q);
 		
 		$q = "DELETE FROM transaction_game_ios WHERE game_id='".$this->db_game['game_id']."';";
@@ -2045,7 +2048,7 @@ class Game {
 			$last_block_id = $this->blockchain->last_block_id();
 			$io_q = "SELECT io.io_id FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN addresses a ON io.address_id=a.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND a.user_id='".$user_id."' AND gio.game_id='".$this->db_game['game_id']."' AND (io.create_block_id <= ".($last_block_id-$this->db_game['maturity'])." OR gio.instantly_mature = 1)";
 			if ($this->db_game['payout_weight'] == "coin_round") {
-				$io_q .= " AND io.create_round_id < ".$this->block_to_round($last_block_id+1);
+				$io_q .= " AND gio.create_round_id < ".$this->block_to_round($last_block_id+1);
 			}
 			$io_q .= " ORDER BY io.io_id ASC;";
 			$io_r = $this->blockchain->app->run_query($io_q);
@@ -2204,7 +2207,7 @@ class Game {
 		$last_block_id = $this->blockchain->last_block_id();
 		
 		$output_q = "SELECT io.*, gio.* FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND a.user_id='".$user_id."' AND gio.game_id='".$this->db_game['game_id']."' AND (io.create_block_id <= ".($last_block_id-$this->db_game['maturity'])." OR gio.instantly_mature=1)";
-		if ($this->db_game['payout_weight'] == "coin_round") $output_q .= " AND io.create_round_id < ".$this->block_to_round($last_block_id+1);
+		if ($this->db_game['payout_weight'] == "coin_round") $output_q .= " AND gio.create_round_id < ".$this->block_to_round($last_block_id+1);
 		$output_q .= " ORDER BY io.io_id ASC;";
 		$output_r = $this->blockchain->app->run_query($output_q);
 		
@@ -2455,6 +2458,7 @@ class Game {
 	public function sync() {
 		$q = "SELECT * FROM game_blocks WHERE locally_saved=1 AND game_id='".$this->db_game['game_id']."' ORDER BY game_block_id DESC LIMIT 1;";
 		$r = $this->blockchain->app->run_query($q);
+		
 		if ($r->rowCount() > 0) {
 			$last_game_block = $r->fetch();
 			$load_block_height = $last_game_block['block_id']+1;

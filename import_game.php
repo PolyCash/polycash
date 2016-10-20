@@ -31,7 +31,7 @@ include('includes/html_start.php');
 					if ($r->rowCount() == 0) {
 						$verbatim_vars = $app->game_definition_verbatim_vars();
 						
-						$q = "INSERT INTO games SET blockchain_id='".$db_blockchain['blockchain_id']."', game_status='published', featured=1, seconds_per_block='".$db_blockchain['seconds_per_block']."', buyin_policy='unlimited', giveaway_status='public_free', invite_currency='".$blockchain->currency_id()."', logo_image_id=34";
+						$q = "INSERT INTO games SET blockchain_id='".$db_blockchain['blockchain_id']."', game_status='published', featured=1, seconds_per_block='".$db_blockchain['seconds_per_block']."', start_condition='fixed_block', buyin_policy='unlimited', giveaway_status='public_free', invite_currency='".$blockchain->currency_id()."', logo_image_id=34";
 						for ($i=0; $i<count($verbatim_vars); $i++) {
 							$var_type = $verbatim_vars[$i][0];
 							$var_name = $verbatim_vars[$i][1];

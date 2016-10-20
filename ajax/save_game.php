@@ -4,9 +4,11 @@ include("../includes/get_session.php");
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
 if ($thisuser) {
-	$game_id = intval($_REQUEST['game_id']);
+	$game_id = (int) $_REQUEST['game_id'];
 	
-	$game = new Game($app, $game_id);
+	$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
+	$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+	$game = new Game($blockchain, $game_id);
 	
 	if ($game) {
 		$game_info = false;
@@ -26,23 +28,23 @@ if ($thisuser) {
 				
 				$_REQUEST['invite_currency'] = $_REQUEST['base_currency_id'];
 				
-				$game_form_vars = explode(",", "event_rule,p2p_mode,option_group_id,event_entity_type_id,events_per_round,event_type_name,giveaway_status,giveaway_amount,maturity,name,payout_weight,round_length,seconds_per_block,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,invite_cost,invite_currency,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_condition_players,buyin_policy,per_user_buyin_cap,game_buyin_cap,default_vote_effectiveness_function,default_max_voting_fraction,game_starting_block,escrow_address,genesis_tx_hash,base_currency_id");
+				$game_form_vars = explode(",", "event_rule,option_group_id,event_entity_type_id,events_per_round,event_type_name,maturity,name,payout_weight,round_length,pos_reward,inflation,exponential_inflation_rate,final_round,coin_name,coin_name_plural,coin_abbreviation,start_condition,start_condition_players,buyin_policy,game_buyin_cap,default_vote_effectiveness_function,default_max_voting_fraction,game_starting_block,escrow_address,genesis_tx_hash,genesis_amount");
 				
 				if ($_REQUEST['inflation'] == "exponential") $_REQUEST['payout_weight'] = "coin_round";
 				if ($_REQUEST['event_rule'] == "single_event_series") $_REQUEST['events_per_round'] = 1;
 				
-				$q = "UPDATE games SET ";
-
-				$start_datetime = date("Y-m-d g:\\0\\0", strtotime($_REQUEST['start_date']." ".$_REQUEST['start_time'].":00"));
-				$q .= "start_datetime='".$start_datetime."', ";
+				$blockchain_id = (int) $_REQUEST['blockchain_id'];
+				$db_blockchain = $app->run_query("SELECT * FROM blockchains WHERE blockchain_id='".$blockchain_id."';")->fetch();
+				
+				$q = "UPDATE games SET blockchain_id='".$db_blockchain['blockchain_id']."', seconds_per_block='".$db_blockchain['seconds_per_block']."', ";
 				
 				for ($i=0; $i<count($game_form_vars); $i++) {
 					$game_var = $game_form_vars[$i];
 					$game_val = $_REQUEST[$game_form_vars[$i]];
 					
-					if (in_array($game_var, array('pos_reward','pow_reward','giveaway_amount'))) $game_val = (int) $game_val*pow(10,8);
-					else if (in_array($game_var, array("exponential_inflation_minershare", "exponential_inflation_rate", "default_max_voting_fraction"))) $game_val = intval($game_val)/100;
-					else if (in_array($game_var, array('maturity', 'round_length', 'seconds_per_block', 'final_round','invite_currency'))) $game_val = intval($game_val);
+					if (in_array($game_var, array('pos_reward', 'genesis_amount'))) $game_val = (int) $game_val*pow(10,8);
+					else if (in_array($game_var, array("exponential_inflation_rate", "default_max_voting_fraction"))) $game_val = intval($game_val)/100;
+					else if (in_array($game_var, array('maturity', 'round_length', 'final_round','blockchain_id'))) $game_val = intval($game_val);
 					else $game_val = $app->quote_escape($app->strong_strip_tags($game_val));
 					
 					$q .= $game_var."=".$game_val.", ";
@@ -78,16 +80,10 @@ if ($thisuser) {
 					$action = $_REQUEST['action'];
 					
 					if ($action == "publish") {
-						$q = "UPDATE games SET game_status='published'";
-						if ($game->db_game['start_condition'] == "players_joined") $q .= ", initial_coins='".($game->db_game['start_condition_players']*$game->db_game['giveaway_amount'])."'";
-						$q .= " WHERE game_id='".$game->db_game['game_id']."';";
+						$q = "UPDATE games SET game_status='published' WHERE game_id='".$game->db_game['game_id']."';";
 						$r = $app->run_query($q);
 						
-						if ($_REQUEST['p2p_mode'] == "rpc") {
-							$game->sync_initial(false);
-						}
-						
-						$game->ensure_events_until_block($game->last_block_id()+1);
+						$game->ensure_events_until_block($game->blockchain->last_block_id()+1);
 						
 						$app->output_message(1, "Great, your changes have been saved.", $game_info);
 					}
