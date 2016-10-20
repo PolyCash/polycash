@@ -513,14 +513,15 @@ class Game {
 			
 			$log_text .= "Applying user strategies for block #".$mining_block_id." of ".$this->db_game['name']." looping through ".$r->rowCount()." users.<br/>\n";
 			while ($db_user = $r->fetch()) {
-				$strategy_user = new User($this->app, $db_user['user_id']);
-				$user_coin_value = $strategy_user->account_coin_value($this);
-				$immature_balance = $strategy_user->immature_balance($this);
-				$mature_balance = $strategy_user->mature_balance($this);
+				$strategy_user = new User($this->blockchain->app, $db_user['user_id']);
+				
+				$user_balance = $this->blockchain->user_balance($strategy_user);
+				$mature_balance = $this->blockchain->user_mature_balance($strategy_user);
 				$free_balance = $mature_balance;
+				
 				$available_votes = $strategy_user->user_current_votes($this, $last_block_id, $current_round_id);
 				
-				$log_text .= $strategy_user->db_user['username'].": ".$this->blockchain->app->format_bignum($free_balance/pow(10,8))." coins (".$mature_balance.") ".$db_user['voting_strategy']."<br/>\n";
+				$log_text .= $strategy_user->db_user['username'].": ".$this->blockchain->app->format_bignum($free_balance/pow(10,8))." coins (".$free_balance.") ".$db_user['voting_strategy']."<br/>\n";
 				
 				if ($free_balance > 0 && $available_votes > 0) {
 					if ($db_user['voting_strategy'] == "api") {
@@ -582,7 +583,7 @@ class Game {
 							$amount_sum = 0;
 							$option_id_error = false;
 							
-							$log_text .= $strategy_user->db_user['username']." has ".$mature_balance/pow(10,8)." coins available, hitting url: ".$strategy_user->db_user['api_url']."<br/>\n";
+							$log_text .= $strategy_user->db_user['username']." has ".$free_balance/pow(10,8)." coins available, hitting url: ".$strategy_user->db_user['api_url']."<br/>\n";
 							
 							foreach ($api_obj->recommendations as $recommendation) {
 								if ($recommendation->recommended_amount && $recommendation->recommended_amount > 0 && friendly_intval($recommendation->recommended_amount) == $recommendation->recommended_amount) $amount_sum += $recommendation->recommended_amount;
@@ -595,7 +596,7 @@ class Game {
 							}
 							
 							if ($api_obj->recommendation_unit == "coin") {
-								if ($amount_sum <= $mature_balance) {}
+								if ($amount_sum <= $free_balance) {}
 								else $amount_error = true;
 							}
 							else {
@@ -615,7 +616,7 @@ class Game {
 								
 								foreach ($api_obj->recommendations as $recommendation) {
 									if ($api_obj->recommendation_unit == "coin") $vote_amount = $recommendation->recommended_amount;
-									else $vote_amount = floor($mature_balance*$recommendation->recommended_amount/100);
+									else $vote_amount = floor($free_balance*$recommendation->recommended_amount/100);
 									
 									$vote_option_id = $recommendation->option_id;
 									
@@ -633,7 +634,7 @@ class Game {
 						}
 					}
 					else {
-						$pct_free = 100*$mature_balance/$user_coin_value;
+						$pct_free = 100*$free_balance/$user_balance;
 						
 						if ($pct_free >= $db_user['aggregate_threshold']) {
 							$entity_pct_sum = 0;
@@ -1203,21 +1204,12 @@ class Game {
 		if ($coins_in_existence > 0) $html .= $this->blockchain->app->format_bignum(100*$account_value/$coins_in_existence)."%";
 		else $html .= "0%";
 		
-		$q = "SELECT * FROM currencies WHERE currency_id='".$this->db_game['invite_currency']."';";
-		$r = $this->blockchain->app->run_query($q);
-		if ($r->rowCount() > 0) {
-			$payout_currency = $r->fetch();
-			$coins_in_existence = $this->coins_in_existence(false);
-			if ($coins_in_existence > 0) $payout_currency_value = $this->pot_value()*$account_value/$coins_in_existence;
-			else $payout_currency_value = 0;
-			
-			$innate_currency_value = 0;
-			if ($this->db_game['currency_id'] > 0 && $this->db_game['invite_currency'] == $this->blockchain->app->get_site_constant("reference_currency_id")) {
-				$currency_price = $this->blockchain->app->latest_currency_price($this->db_game['currency_id']);
-				$innate_currency_value = ($account_value/pow(10,8))*$currency_price['price'];
-			}
-			$html .= "&nbsp;=&nbsp;<a href=\"/".$this->db_game['url_identifier']."/?action=show_escrow\">".$payout_currency['symbol'].$this->blockchain->app->format_bignum($innate_currency_value+$payout_currency_value)."</a>";
-		}
+		$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
+		$escrow_coins = $this->blockchain->address_balance_at_block($escrow_address, $this->blockchain->last_block_id());
+		
+		$innate_currency_value = floor(($account_value/$coins_in_existence)*$escrow_coins);
+		$html .= "&nbsp;=&nbsp;".$this->blockchain->app->format_bignum($innate_currency_value/pow(10,8))." ".$this->blockchain->db_blockchain['coin_name_plural'];
+		
 		$html .= ")</font>";
 		return $html;
 	}

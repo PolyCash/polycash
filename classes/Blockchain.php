@@ -910,5 +910,32 @@ class Blockchain {
 		}
 		else return false;
 	}
+	
+	public function user_balance($user) {
+		$q = "SELECT SUM(amount) FROM transaction_ios WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND spend_status='unspent' AND user_id='".$user->db_user['user_id']."' AND create_block_id IS NOT NULL;";
+		$r = $this->app->run_query($q);
+		$coins = $r->fetch(PDO::FETCH_NUM);
+		$coins = $coins[0];
+		if ($coins > 0) return $coins;
+		else return 0;
+	}
+
+	public function user_immature_balance($user) {
+		$q = "SELECT SUM(amount) FROM transaction_ios WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND user_id='".$user->db_user['user_id']."' AND (create_block_id > ".$this->last_block_id()." OR create_block_id IS NULL);";
+		$r = $this->app->run_query($q);
+		$sum = $r->fetch(PDO::FETCH_NUM);
+		$sum = $sum[0];
+		if ($sum > 0) return $sum;
+		else return 0;
+	}
+
+	public function user_mature_balance($user) {
+		$q = "SELECT SUM(amount) FROM transaction_ios WHERE spend_status='unspent' AND spend_transaction_id IS NULL AND blockchain_id='".$this->db_blockchain['blockchain_id']."' AND user_id='".$user->db_user['user_id']."' AND create_block_id <= ".$this->last_block_id().";";
+		$r = $this->app->run_query($q);
+		$sum = $r->fetch(PDO::FETCH_NUM);
+		$sum = $sum[0];
+		if ($sum > 0) return $sum;
+		else return 0;
+	}
 }
 ?>

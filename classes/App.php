@@ -1211,5 +1211,38 @@ class App {
 		$r = $this->run_query($q);
 		return $r->fetch();
 	}
+	
+	public function game_definition_verbatim_vars() {
+		return array(
+			array('string', 'url_identifier'),
+			array('string', 'name'),
+			array('string', 'event_type_name'),
+			array('string', 'short_description'),
+			array('string', 'event_rule'),
+			array('int', 'event_entity_type_id'),
+			array('int', 'option_group_id'),
+			array('int', 'events_per_round'),
+			array('string', 'inflation'),
+			array('float', 'exponential_inflation_rate'),
+			array('int', 'pos_reward'),
+			array('int', 'round_length'),
+			array('int', 'maturity'),
+			array('string', 'payout_weight'),
+			array('int', 'final_round'),
+			array('string', 'coin_name'),
+			array('string', 'coin_name_plural'),
+			array('string', 'coin_abbreviation'),
+			array('string', 'escrow_address'),
+			array('string', 'genesis_tx_hash'),
+			array('int', 'genesis_amount'),
+			array('int', 'game_starting_block'),
+			array('string', 'game_winning_rule'),
+			array('string', 'game_winning_field'),
+			array('float', 'game_winning_inflation'),
+			array('string', 'default_vote_effectiveness_function'),
+			array('float', 'default_max_voting_fraction'),
+			array('int', 'default_option_max_width')
+		);
+	}
 }
 ?>
