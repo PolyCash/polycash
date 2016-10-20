@@ -39,22 +39,6 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				$app->set_site_constant('identifier_first_char', $GLOBALS['identifier_first_char']);
 			}
 			
-			$q = "SELECT * FROM blockchains WHERE url_identifier='bitcoin';";
-			$r = $app->run_query($q);
-			
-			if ($r->rowCount() == 0) {
-				$q = "INSERT INTO blockchains SET p2p_mode='rpc', blockchain_name='Bitcoin', url_identifier='bitcoin', coin_name='bitcoin', coin_name_plural='bitcoins', default_rpc_port=8332, initial_pow_reward='".(50*pow(10,8))."', first_required_block=NULL;";
-				$r = $app->run_query($q);
-				$bitcoin_blockchain_id = $app->last_insert_id();
-				
-				$q = "UPDATE currencies SET blockchain_id='".$bitcoin_blockchain_id."' WHERE name='Bitcoin';";
-				$app->run_query($q);
-			}
-			else {
-				$bitcoin_blockchain = $r->fetch();
-				$bitcoin_blockchain_id = $bitcoin_blockchain['blockchain_id'];
-			}
-			
 			$q = "SELECT * FROM currency_prices WHERE currency_id=1 AND reference_currency_id=1;";
 			$r = $app->run_query($q);
 			

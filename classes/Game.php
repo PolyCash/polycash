@@ -1208,7 +1208,9 @@ class Game {
 		$escrow_coins = $this->blockchain->address_balance_at_block($escrow_address, $this->blockchain->last_block_id());
 		
 		$innate_currency_value = floor(($account_value/$coins_in_existence)*$escrow_coins);
-		$html .= "&nbsp;=&nbsp;".$this->blockchain->app->format_bignum($innate_currency_value/pow(10,8))." ".$this->blockchain->db_blockchain['coin_name_plural'];
+		if ($innate_currency_value > 0) {
+			$html .= "&nbsp;=&nbsp;".$this->blockchain->app->format_bignum($innate_currency_value/pow(10,8))." ".$this->blockchain->db_blockchain['coin_name_plural'];
+		}
 		
 		$html .= ")</font>";
 		return $html;
@@ -1358,32 +1360,39 @@ class Game {
 		else if ($this->db_game['game_status'] == "completed") $html .= "This game is over. ";
 		
 		if ($this->db_game['p2p_mode'] == "rpc") {
-			$q = "SELECT COUNT(*) FROM game_blocks WHERE game_id='".$this->db_game['game_id']."';";
-			$total_blocks = $this->blockchain->app->run_query($q)->fetch()['COUNT(*)'];
+			$total_blocks = $this->blockchain->last_block_id();
 			
-			$q = "SELECT COUNT(*) FROM game_blocks gb JOIN blocks b ON gb.internal_block_id=b.internal_block_id WHERE gb.game_id='".$this->db_game['game_id']."' AND b.block_hash IS NULL;";
+			$total_game_blocks = $total_blocks-$this->db_game['game_starting_block']+1;
+			
+			$q = "SELECT COUNT(*) FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND block_id >= ".$this->db_game['game_starting_block']." AND block_hash IS NULL;";
 			$missingheader_blocks = $this->blockchain->app->run_query($q)->fetch()['COUNT(*)'];
 			
-			$q = "SELECT COUNT(*) FROM game_blocks WHERE game_id='".$this->db_game['game_id']."' AND locally_saved=0 AND block_id >= ".$this->db_game['game_starting_block'].";";
+			$q = "SELECT COUNT(*) FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND block_id >= ".$this->db_game['game_starting_block']." AND locally_saved=0;";
 			$missing_blocks = $this->blockchain->app->run_query($q)->fetch()['COUNT(*)'];
 			
-			$required_blocks = $total_blocks-$this->db_game['game_starting_block'];
+			$q = "SELECT COUNT(*) FROM game_blocks WHERE game_id='".$this->db_game['game_id']."' AND locally_saved=1;";
+			$loaded_game_blocks = $this->blockchain->app->run_query($q)->fetch()['COUNT(*)'];
+			$missing_game_blocks = $total_game_blocks - $loaded_game_blocks;
 			
 			$block_fraction = 0;
 			if ($missing_blocks > 0) {
-				$q = "SELECT MAX(block_id) FROM game_blocks WHERE game_id='".$this->db_game['game_id']."' AND locally_saved=1;";
+				$q = "SELECT MAX(block_id) FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND locally_saved=1;";
 				$loading_block_id = $this->blockchain->app->run_query($q)->fetch()['MAX(block_id)']+1;
-				$loading_block = $this->blockchain->app->run_query("SELECT * FROM game_blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id='".$loading_block_id."';")->fetch();
-				list($loading_transactions, $loading_block_sum) = $this->block_stats($loading_block);
-				$block_fraction = $loading_transactions/$loading_block['num_transactions'];
+				$loading_block = $this->blockchain->app->run_query("SELECT * FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND block_id='".$loading_block_id."';")->fetch();
+				if ($loading_block) {
+					list($loading_transactions, $loading_block_sum) = $this->blockchain->block_stats($loading_block);
+					$block_fraction = $loading_transactions/$loading_block['num_transactions'];
+				}
 			}
-			$headers_pct_complete = 100*($total_blocks-$missingheader_blocks)/$total_blocks;
-			$blocks_pct_complete = 100*($required_blocks-($missing_blocks-$block_fraction))/$required_blocks;
-			
-			$html .= "<br/>Block headers: ".round($headers_pct_complete,2)."% complete. Blocks: ".round($blocks_pct_complete, 2)."% complete. ";
-			if ($missing_blocks > 0) {
+			$headers_pct_complete = 100*($total_game_blocks-$missingheader_blocks)/$total_game_blocks;
+			$blocks_pct_complete = 100*($total_game_blocks-($missing_blocks-$block_fraction))/$total_game_blocks;
+			if ($blocks_pct_complete != 100) $html .= "<br/>Loading blocks... ".round($blocks_pct_complete, 2)."% complete. ";
+			if ($loading_block > 0) {
 				$html .= "Loaded ".$loading_transactions."/".$loading_block['num_transactions']." in block <a href=\"/explorer/".$this->db_game['url_identifier']."/blocks/".$loading_block_id."\">#".$loading_block_id."</a>. ";
 			}
+			
+			$game_blocks_pct_complete = 100*($total_game_blocks-$missing_game_blocks)/$total_game_blocks;
+			if ($game_blocks_pct_complete != 100) $html .= "<br/>Loading game... ".round($game_blocks_pct_complete, 2)."% complete. ";
 		}
 		
 		if ($this->db_game['game_winning_rule'] == "event_points") {
