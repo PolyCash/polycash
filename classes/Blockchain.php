@@ -295,7 +295,7 @@ class Blockchain {
 							$qq = "SELECT SUM(colored_amount*(".$ref_round_id."-create_round_id)) AS ref_coin_round_sum FROM transaction_game_ios WHERE io_id IN (".implode(",", $spend_io_ids).");";
 							$rr = $this->app->run_query($qq);
 							$coin_rounds = $rr->fetch();
-							$coin_rounds = $rr['ref_coin_round_sum'];
+							$coin_rounds = $coin_rounds['ref_coin_round_sum'];
 							
 							$coin_round_sum = 0;
 							

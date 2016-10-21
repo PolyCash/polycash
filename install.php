@@ -35,6 +35,9 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			$app->update_schema();
 			
 			if (!$db_exists) {
+				if (!isset($GLOBALS['identifier_case_sensitive'])) $GLOBALS['identifier_case_sensitive'] = 1;
+				if (!isset($GLOBALS['identifier_first_char'])) $GLOBALS['identifier_first_char'] = 2;
+				
 				$app->set_site_constant('identifier_case_sensitive', $GLOBALS['identifier_case_sensitive']);
 				$app->set_site_constant('identifier_first_char', $GLOBALS['identifier_first_char']);
 			}

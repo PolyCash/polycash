@@ -140,7 +140,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 		if ($r->rowCount() == 1) {
 			$address = $r->fetch();
 			$mode_error = false;
-			$pagetitle = $blockchain->db_blockchain['blockchain_name']." Address: ".$address['address'];
+			if ($game) $pagetitle = $game->db_game['name'];
+			else $pagetitle = $blockchain->db_blockchain['blockchain_name'];
+			$pagetitle .= " Address: ".$address['address'];
 		}
 	}
 	if ($explore_mode == "blocks") {
@@ -153,13 +155,17 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 			$pagetitle = $blockchain->db_blockchain['blockchain_name']." - List of blocks";
 		}
 		else {
-			$block_id = intval($uri_parts[5]);
+			$block_id = (int) $uri_parts[5];
 			$q = "SELECT * FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_id='".$block_id."';";
 			$r = $app->run_query($q);
+			
 			if ($r->rowCount() == 1) {
 				$block = $r->fetch();
 				$mode_error = false;
-				$pagetitle = $blockchain->db_blockchain['blockchain_name']." Block #".$block['block_id'];
+				
+				if ($game) $pagetitle = $game->db_game['name'];
+				else $pagetitle = $blockchain->db_blockchain['blockchain_name'];
+				$pagetitle .= " Block #".$block['block_id'];
 			}
 			else {
 				$q = "SELECT * FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_hash=".$app->quote_escape($uri_parts[5]).";";
@@ -168,7 +174,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				if ($r->rowCount() == 1) {
 					$block = $r->fetch();
 					$mode_error = false;
-					$pagetitle = $game->db_game['name']." Block #".$block['block_id'];
+					if ($game) $pagetitle = $game->db_game['name'];
+					else $pagetitle = $blockchain->db_blockchain['blockchain_name'];
+					$pagetitle .= " Block #".$block['block_id'];
 				}
 			}
 		}
@@ -195,7 +203,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 			if ($r->rowCount() == 1) {
 				$transaction = $r->fetch();
 				$mode_error = false;
-				$pagetitle = $blockchain->db_blockchain['blockchain_name']." Transaction: ".$transaction['tx_hash'];
+				
+				if ($game) $pagetitle = $game->db_game['name'];
+				else $pagetitle = $blockchain->db_blockchain['blockchain_name'];
+				$pagetitle = " Transaction: ".$transaction['tx_hash'];
 			}
 		}
 	}

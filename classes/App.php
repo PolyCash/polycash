@@ -1200,7 +1200,10 @@ class App {
 		
 		if ($this->get_site_constant('identifier_case_sensitive') == 0) $addr_text = strtolower($addr_text);
 		
-		$firstchar = $addr_text[$this->get_site_constant('identifier_first_char')];
+		$firstchar_pos = $this->get_site_constant('identifier_first_char');
+		if (empty($firstchar_pos) || $firstchar_pos != (int) $firstchar_pos) die("Error: site constant 'identifier_first_char' must be defined.\n");
+		
+		$firstchar = $addr_text[$firstchar_pos];
 		$firstchar_index = strpos($voting_characters, $firstchar);
 		$firstchar_offset = 0;
 		
@@ -1208,11 +1211,11 @@ class App {
 			$firstchar_begin_index = $firstchar_offset;
 			$firstchar_end_index = $firstchar_begin_index+$firstchar_divisions[$length-1]-1;
 			if ($firstchar_index >= $firstchar_begin_index && $firstchar_index <= $firstchar_end_index) {
-				return substr($addr_text, $this->get_site_constant('identifier_first_char'), $length);
+				return substr($addr_text, $firstchar_pos, $length);
 			}
 			$firstchar_offset = $firstchar_end_index+1;
 		}
-		return substr($addr_text, $this->get_site_constant('identifier_first_char'), 1);
+		return substr($addr_text, $firstchar_pos, 1);
 	}
 	
 	public function fetch_account_by_id($account_id) {

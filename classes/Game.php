@@ -1377,6 +1377,8 @@ class Game {
 			$loaded_game_blocks = $this->blockchain->app->run_query($q)->fetch()['COUNT(*)'];
 			$missing_game_blocks = $total_game_blocks - $loaded_game_blocks;
 			
+			$loading_block = false;
+			
 			$block_fraction = 0;
 			if ($missing_blocks > 0) {
 				$q = "SELECT MAX(block_id) FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND locally_saved=1;";
@@ -1390,7 +1392,7 @@ class Game {
 			$headers_pct_complete = 100*($total_game_blocks-$missingheader_blocks)/$total_game_blocks;
 			$blocks_pct_complete = 100*($total_game_blocks-($missing_blocks-$block_fraction))/$total_game_blocks;
 			if ($blocks_pct_complete != 100) $html .= "<br/>Loading blocks... ".round($blocks_pct_complete, 2)."% complete. ";
-			if ($loading_block > 0) {
+			if ($loading_block) {
 				$html .= "Loaded ".$loading_transactions."/".$loading_block['num_transactions']." in block <a href=\"/explorer/".$this->db_game['url_identifier']."/blocks/".$loading_block_id."\">#".$loading_block_id."</a>. ";
 			}
 			
@@ -2273,10 +2275,14 @@ class Game {
 		return $this->db_game['default_vote_effectiveness_function'];
 	}
 	
-	public function generate_voting_addresses(&$coin_rpc) {
+	public function generate_voting_addresses(&$coin_rpc, $time_limit_seconds) {
 		$option_index_range = $this->option_index_range();
 		
+		if ($time_limit_seconds) $seconds_per_option = ceil($time_limit_seconds/($option_index_range[1] - $option_index_range[0]));
+		
 		for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
+			$loop_start_time = microtime(true);
+			
 			$qq = "SELECT * FROM addresses WHERE primary_blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND option_index='".$option_index."' AND user_id IS NULL AND is_mine=1;";
 			$rr = $this->blockchain->app->run_query($qq);
 			$num_addr = $rr->rowCount();
@@ -2289,26 +2295,20 @@ class Game {
 				
 				if ($coin_rpc) {
 					$try_by_sci = false;
-					/*try {
-						for ($i=0; $i<($this->db_game['min_unallocated_addresses']-$num_addr); $i++) {
-							$new_addr_str = $coin_rpc->getnewvotingaddress($option['name']);
-							$new_addr_db = $this->blockchain->create_or_fetch_address($new_addr_str, false, $coin_rpc, true, false, false);
-						}
-					}
-					catch (Exception $e) {*/
 					try {
 						$new_voting_addr_count = 0;
 						do {
 							$temp_address = $coin_rpc->getnewaddress();
 							$new_addr_db = $this->blockchain->create_or_fetch_address($temp_address, false, $coin_rpc, true, false, false);
-							if ($new_addr_db['option_index'] == $option_index) $new_voting_addr_count++;
+							if ($new_addr_db['option_index'] == $option_index) {
+								$new_voting_addr_count++;
+							}
 						}
-						while ($new_voting_addr_count < ($this->db_game['min_unallocated_addresses']-$num_addr));
+						while ($new_voting_addr_count < ($this->db_game['min_unallocated_addresses']-$num_addr) && (!$time_limit_seconds || microtime(true) <= $loop_start_time+$seconds_per_option));
 					}
 					catch (Exception $e) {
 						$try_by_sci = true;
 					}
-					//}
 				}
 				else $try_by_sci = true;
 				
@@ -2319,7 +2319,7 @@ class Game {
 						$db_address = $this->blockchain->app->new_address_key($this->blockchain->currency_id(), $ref_account);
 						$new_voting_addr_count++;
 					}
-					while ($new_voting_addr_count < ($this->db_game['min_unallocated_addresses']-$num_addr));
+					while ($new_voting_addr_count < ($this->db_game['min_unallocated_addresses']-$num_addr) && (!$time_limit_seconds || microtime(true) <= $loop_start_time+$seconds_per_option));
 				}
 			}
 		}
@@ -2742,7 +2742,7 @@ class Game {
 					else if ($this->db_game['payout_weight'] == "coin_block") $expected_votes = $output['ref_coin_blocks']+($ref_block_id-$output['ref_block_id'])*$output['colored_amount'];
 					else $expected_votes = $output['ref_coin_rounds']+($this->block_to_round($ref_block_id)-$output['ref_round_id'])*$output['colored_amount'];
 					
-					$effectiveness_factor = $temp_event->block_id_to_effectiveness_factor();
+					$effectiveness_factor = $temp_event->block_id_to_effectiveness_factor($ref_block_id);
 					$expected_votes = floor($expected_votes*$effectiveness_factor);
 				}
 				$html .= $this->blockchain->app->format_bignum($expected_votes/pow(10,8));
