@@ -282,6 +282,7 @@ class User {
 		}
 
 		$this->generate_user_addresses($game);
+		$color_account = $this->create_or_fetch_game_currency_account($game);
 	}
 
 	public function log_user_in(&$redirect_url, $viewer_id) {

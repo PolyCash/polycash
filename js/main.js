@@ -109,7 +109,17 @@ function format_coins(amount) {
 	else return parseFloat((amount).toPrecision(5));
 }
 function explorer_search() {
-	window.location ='/explorer/'+games[0].game_url_identifier+'/transactions/'+$('#explorer_search').val();
+	var search_term = $('#explorer_search').val();
+	var search_url = "/ajax/explorer_search.php?";
+	if (typeof games !== "undefined") search_url += "game_id="+games[0].game_id+"&";
+	if (typeof blockchain_id !== "undefined") search_url += "blockchain_id="+blockchain_id+"&";
+	search_url += "search_term="+search_term;
+	
+	$.get(search_url, function(result) {
+		var result_obj = JSON.parse(result);
+		if (result_obj['status_code'] == 1) window.location = result_obj['message'];
+		else alert(result_obj['message']);
+	});
 }
 
 // Initialize Variables

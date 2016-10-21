@@ -258,6 +258,12 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 			
 			if ($blockchain || $game) {
 				?>
+				<script type="text/javascript">
+				var blockchain_id = <?php
+				if ($blockchain) echo $blockchain->db_blockchain['blockchain_id'];
+				else echo $game->blockchain->db_blockchain['blockchain_id'];
+				?>;
+				</script>
 				<div class="row">
 					<div class="col-sm-7 ">
 						<ul class="list-inline explorer_nav" id="explorer_nav">
@@ -611,7 +617,6 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					var explorer_blocks_per_section = <?php echo $blocks_per_section; ?>;
 					var explorer_block_list_sections = 1;
 					var explorer_block_list_from_block = <?php echo $from_block_id; ?>;
-					var blockchain_id = <?php echo $blockchain->db_blockchain['blockchain_id']; ?>;
 					
 					function explorer_block_list_show_more() {
 						explorer_block_list_from_block = explorer_block_list_from_block-explorer_blocks_per_section;
