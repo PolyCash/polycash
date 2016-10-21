@@ -621,31 +621,36 @@ class App {
 				else $keySet = bitcoin::getNewKeySet();
 				
 				if (empty($GLOBALS['rsa_pub_key']) || empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
-					die("<p>There was an error generating the payment address. Please go back and try again.</p>");
+					$this->log('Error generating a payment address. Please visit /install.php and then set $GLOBALS["rsa_pub_key"] in includes/config.php');
+					$save_method = "skip";
+				}
+				else {
+					$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
+					$address_text = $keySet['pubAdd'];
+					$save_method = "db";
+				}
+			}
+			
+			if ($save_method == "skip") return false;
+			else {
+				$db_address = $blockchain->create_or_fetch_address($address_text, true, false, false, false, true);
+				if ($account) {
+					$q = "UPDATE addresses SET user_id='".$account['user_id']."' WHERE address_id='".$db_address['address_id']."';";
+					$r = $this->run_query($q);
+					$q = "UPDATE transaction_ios SET user_id='".$account['user_id']."' WHERE address_id='".$db_address['address_id']."';";
+					$r = $this->run_query($q);
 				}
 				
-				$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
-				$address_text = $keySet['pubAdd'];
-				$save_method = "db";
-			}
-			
-			$db_address = $blockchain->create_or_fetch_address($address_text, true, false, false, false, true);
-			if ($account) {
-				$q = "UPDATE addresses SET user_id='".$account['user_id']."' WHERE address_id='".$db_address['address_id']."';";
+				$q = "SELECT * FROM address_keys WHERE address_id='".$db_address['address_id']."';";
 				$r = $this->run_query($q);
-				$q = "UPDATE transaction_ios SET user_id='".$account['user_id']."' WHERE address_id='".$db_address['address_id']."';";
-				$r = $this->run_query($q);
-			}
-			
-			$q = "SELECT * FROM address_keys WHERE address_id='".$db_address['address_id']."';";
-			$r = $this->run_query($q);
-			
-			if ($r->rowCount() > 0) {
-				$address_key = $r->fetch();
 				
-				return $address_key;
+				if ($r->rowCount() > 0) {
+					$address_key = $r->fetch();
+					
+					return $address_key;
+				}
+				else return false;
 			}
-			else return false;
 		}
 		else return false;
 	}

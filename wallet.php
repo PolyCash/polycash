@@ -983,11 +983,20 @@ if ($thisuser && $game) {
 								else echo "Default Address";
 								?>
 							</div>
-							<div class="col-sm-1">
-								<a target="_blank" href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/addresses/<?php echo $address['address']; ?>">Explore</a>
-							</div>
-							<div class="col-sm-5">
+							<div class="col-sm-4">
 								<input type="text" class="address_cell" onclick="$(this).select();" value="<?php echo $address['address']; ?>" />
+							</div>
+							<div class="col-sm-2">
+								<?php
+								$color_bal = $game->address_balance_at_block($address, $game->blockchain->last_block_id());
+								echo '<a target="_blank" href="/explorer/games/'.$game->db_game['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($color_bal/pow(10,8))." ".$game->db_game['coin_name_plural'].'</a>';
+								?>
+							</div>
+							<div class="col-sm-2">
+								<?php
+								$chain_bal = $game->blockchain->address_balance_at_block($address, $game->blockchain->last_block_id());
+								echo '<a target="_blank" href="/explorer/blockchains/'.$game->blockchain->db_blockchain['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($chain_bal/pow(10,8))." ".$game->blockchain->db_blockchain['coin_name_plural'].'</a>';
+								?>
 							</div>
 						</div>
 						<?php
