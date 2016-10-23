@@ -331,6 +331,7 @@ class Blockchain {
 								
 								$color_amount_sum += $this_color_amount;
 								$coin_block_sum += $this_coin_blocks;
+								$coin_round_sum += $this_coin_rounds;
 							}
 						}
 					}

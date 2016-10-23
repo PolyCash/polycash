@@ -2366,13 +2366,12 @@ class Game {
 					
 					for ($i=$start_round; $i<$round_id; $i++) {
 						$round_first_event_i = $this->db_game['events_per_round']*($i-$this->block_to_round($this->db_game['game_starting_block']));
+						$offset = $round_first_event_i%$num_event_types;
+						$q = "SELECT * FROM entities WHERE entity_type_id='".$entity_type['entity_type_id']."' ORDER BY entity_id ASC LIMIT ".$this->db_game['events_per_round']." OFFSET ".$offset.";";
+						$r = $this->blockchain->app->run_query($q);
 						
 						for ($j=0; $j<$this->db_game['events_per_round']; $j++) {
 							$event_i = $round_first_event_i+$j;
-							if ($event_i%$num_event_types == 0) {
-								$q = "SELECT * FROM entities WHERE entity_type_id='".$entity_type['entity_type_id']."' ORDER BY entity_id ASC;";
-								$r = $this->blockchain->app->run_query($q);
-							}
 							$event_entity = $r->fetch();
 							$event_type = $this->add_event_type($db_option_entities, $event_entity, $event_i);
 							$this->add_event_by_event_type($event_type, $db_option_entities, $option_group, $round_option_i, $event_i, $event_type['name'], $event_entity);
