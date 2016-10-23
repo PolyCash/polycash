@@ -552,7 +552,6 @@ class App {
 	
 	public function new_currency_invoice(&$pay_currency, $pay_amount, &$user, &$user_game, $invoice_type) {
 		$currency_account = $user->fetch_currency_account($pay_currency['currency_id']);
-		
 		$address_key = $this->new_address_key($pay_currency['currency_id'], $currency_account);
 		
 		$time = time();
@@ -647,6 +646,10 @@ class App {
 				if ($r->rowCount() > 0) {
 					$address_key = $r->fetch();
 					
+					if ($account) {
+						$q = "UPDATE address_keys SET account_id='".$account['account_id']."' WHERE address_key_id='".$address_key['address_key_id']."';";
+						$r = $this->run_query($q);
+					}
 					return $address_key;
 				}
 				else return false;
