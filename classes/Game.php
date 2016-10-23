@@ -2364,7 +2364,7 @@ class Game {
 					$num_event_types = $r->fetch();
 					$num_event_types = (int) $num_event_types['COUNT(*)'];
 					
-					for ($i=$start_round; $i<$round_id; $i++) {
+					for ($i=$start_round; $i<=$round_id; $i++) {
 						$round_first_event_i = $this->db_game['events_per_round']*($i-$this->block_to_round($this->db_game['game_starting_block']));
 						$offset = $round_first_event_i%$num_event_types;
 						$q = "SELECT * FROM entities WHERE entity_type_id='".$entity_type['entity_type_id']."' ORDER BY entity_id ASC LIMIT ".$this->db_game['events_per_round']." OFFSET ".$offset.";";
@@ -2380,7 +2380,7 @@ class Game {
 				}
 				else {
 					$event_type = $this->add_event_type($db_option_entities, false, false);
-					for ($i=$start_round-1; $i<$round_id; $i++) {
+					for ($i=$start_round-1; $i<=$round_id; $i++) {
 						$event_i = $i-$this->block_to_round($this->db_game['game_starting_block']);
 						$event_name = $event_type['name']." #".($event_i+1);
 						$this->add_event_by_event_type($event_type, $db_option_entities, $option_group, $round_option_i, $event_i, $event_name, false);
@@ -2603,7 +2603,7 @@ class Game {
 				}
 			}
 			
-			$this->ensure_events_until_block($this->blockchain->last_block_id()+1+$this->db_game['round_length']);
+			$this->ensure_events_until_block($this->blockchain->last_block_id()+1);
 		}
 	}
 	

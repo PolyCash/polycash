@@ -448,7 +448,7 @@ class Blockchain {
 					
 					$associated_games = $this->associated_games();
 					for ($i=0; $i<count($associated_games); $i++) {
-						$associated_games[$i]->ensure_events_until_block($block_height+$associated_games[$i]->db_game['round_length']+1);
+						$associated_games[$i]->ensure_events_until_block($block_height+1);
 					}
 				}
 			}

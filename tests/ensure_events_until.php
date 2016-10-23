@@ -10,9 +10,11 @@ if (!empty($argv)) {
 }
 
 $game_id = (int) $_REQUEST['game_id'];
-$game = new Game($app, $game_id);
-
 $block_height = (int) $_REQUEST['block_height'];
+
+$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
+$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+$game = new Game($blockchain, $game_id);
 
 $game->ensure_events_until_block($block_height);
 echo $game->db_game['name']."->ensure_events_until($block_height);<br/>\nDone!\n";
