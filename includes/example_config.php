@@ -29,9 +29,9 @@ $GLOBALS['cron_interval_seconds'] = 5;
 
 $GLOBALS['new_games_per_user'] = "unlimited";
 
-$GLOBALS['coin_brand_name'] = "EmpireCoin";
-$GLOBALS['site_name_short'] = "EmpireCoin";
-$GLOBALS['site_name'] = "EmpireCoin.org";
+$GLOBALS['coin_brand_name'] = "CoinBlock";
+$GLOBALS['site_name_short'] = "CoinBlock";
+$GLOBALS['site_name'] = "CoinBlock.org";
 $GLOBALS['site_domain'] = $_SERVER['SERVER_ADDR']; // Enter your domain name, IP or "localhost" here
 $GLOBALS['base_url'] = "http://".$GLOBALS['site_domain'];
 $GLOBALS['homepage_fname'] = "default.php";
