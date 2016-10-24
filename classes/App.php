@@ -355,14 +355,19 @@ class App {
 		do {
 			if ($append_index > 0) $append = "(".$append_index.")";
 			else $append = "";
-			$url_identifier = $this->make_alphanumeric(str_replace(" ", "-", strtolower($game_name.$append)), "-().:;");
+			$url_identifier = $this->normalize_uri_part($game_name.$append);
 			$q = "SELECT * FROM games WHERE url_identifier=".$this->quote_escape($url_identifier).";";
 			$r = $this->run_query($q);
 			if ($r->rowCount() == 0) $keeplooping = false;
 			else $append_index++;
-		} while ($keeplooping);
+		}
+		while ($keeplooping);
 		
 		return $url_identifier;
+	}
+	
+	public function normalize_uri_part($uri_part) {
+		return $this->make_alphanumeric(str_replace(" ", "-", strtolower($uri_part)), "-().:;");
 	}
 	
 	public function prepend_a_or_an($word) {
@@ -547,7 +552,6 @@ class App {
 	
 	public function new_currency_invoice(&$pay_currency, $pay_amount, &$user, &$user_game, $invoice_type) {
 		$currency_account = $user->fetch_currency_account($pay_currency['currency_id']);
-		
 		$address_key = $this->new_address_key($pay_currency['currency_id'], $currency_account);
 		
 		$time = time();
@@ -616,31 +620,40 @@ class App {
 				else $keySet = bitcoin::getNewKeySet();
 				
 				if (empty($GLOBALS['rsa_pub_key']) || empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
-					die("<p>There was an error generating the payment address. Please go back and try again.</p>");
+					$this->log('Error generating a payment address. Please visit /install.php and then set $GLOBALS["rsa_pub_key"] in includes/config.php');
+					$save_method = "skip";
+				}
+				else {
+					$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
+					$address_text = $keySet['pubAdd'];
+					$save_method = "db";
+				}
+			}
+			
+			if ($save_method == "skip") return false;
+			else {
+				$db_address = $blockchain->create_or_fetch_address($address_text, true, false, false, false, true);
+				if ($account) {
+					$q = "UPDATE addresses SET user_id='".$account['user_id']."' WHERE address_id='".$db_address['address_id']."';";
+					$r = $this->run_query($q);
+					$q = "UPDATE transaction_ios SET user_id='".$account['user_id']."' WHERE address_id='".$db_address['address_id']."';";
+					$r = $this->run_query($q);
 				}
 				
-				$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
-				$address_text = $keySet['pubAdd'];
-				$save_method = "db";
-			}
-			
-			$db_address = $blockchain->create_or_fetch_address($address_text, true, false, false, false, true);
-			if ($account) {
-				$q = "UPDATE addresses SET user_id='".$account['user_id']."' WHERE address_id='".$db_address['address_id']."';";
+				$q = "SELECT * FROM address_keys WHERE address_id='".$db_address['address_id']."';";
 				$r = $this->run_query($q);
-				$q = "UPDATE transaction_ios SET user_id='".$account['user_id']."' WHERE address_id='".$db_address['address_id']."';";
-				$r = $this->run_query($q);
-			}
-			
-			$q = "SELECT * FROM address_keys WHERE address_id='".$db_address['address_id']."';";
-			$r = $this->run_query($q);
-			
-			if ($r->rowCount() > 0) {
-				$address_key = $r->fetch();
 				
-				return $address_key;
+				if ($r->rowCount() > 0) {
+					$address_key = $r->fetch();
+					
+					if ($account) {
+						$q = "UPDATE address_keys SET account_id='".$account['account_id']."' WHERE address_key_id='".$address_key['address_key_id']."';";
+						$r = $this->run_query($q);
+					}
+					return $address_key;
+				}
+				else return false;
 			}
-			else return false;
 		}
 		else return false;
 	}
@@ -694,7 +707,7 @@ class App {
 				echo '<script type="text/javascript" id="game'.$counter.'_new_event_js">'.$featured_game->new_event_js($counter, false).'</script>';
 				
 				echo '<br/><a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-success">Play Now</a>';
-				echo ' <a href="/explorer/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-primary">Blockchain Explorer</a>';
+				echo ' <a href="/explorer/games/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-primary">Blockchain Explorer</a>';
 				echo '</center><br/>';
 				
 				if ($counter%(12/$cell_width) == 1) echo '</div><div class="row">';
@@ -893,7 +906,6 @@ class App {
 		$blocks_per_hour = 3600/$db_game['seconds_per_block'];
 		$round_reward = ($db_game['pos_reward']+$db_game['pow_reward']*$db_game['round_length'])/pow(10,8);
 		$seconds_per_round = $db_game['seconds_per_block']*$db_game['round_length'];
-		$db_game_url = $GLOBALS['base_url']."/".$db_game['url_identifier'];
 		
 		$invite_currency = false;
 		if ($db_game['invite_currency'] > 0) {
@@ -916,7 +928,7 @@ class App {
 		$html .= "</div></div>\n";
 		
 		if ($db_game['game_id'] > 0) {
-			$html .= '<div class="row"><div class="col-sm-5">Game URL:</div><div class="col-sm-7"><a href="'.$db_game_url.'">'.$db_game_url."</a></div></div>\n";
+			$html .= '<div class="row"><div class="col-sm-5">Game definition:</div><div class="col-sm-7"><a target="_blank" href="'.$GLOBALS['base_url'].'/scripts/show_game_definition.php?game_id='.$db_game['game_id'].'">Click here</a></div></div>';
 		}
 		
 		$html .= '<div class="row"><div class="col-sm-5">Length of game:</div><div class="col-sm-7">';
@@ -1191,7 +1203,10 @@ class App {
 		
 		if ($this->get_site_constant('identifier_case_sensitive') == 0) $addr_text = strtolower($addr_text);
 		
-		$firstchar = $addr_text[$this->get_site_constant('identifier_first_char')];
+		$firstchar_pos = $this->get_site_constant('identifier_first_char');
+		if (empty($firstchar_pos) || $firstchar_pos != (int) $firstchar_pos) die("Error: site constant 'identifier_first_char' must be defined.\n");
+		
+		$firstchar = $addr_text[$firstchar_pos];
 		$firstchar_index = strpos($voting_characters, $firstchar);
 		$firstchar_offset = 0;
 		
@@ -1199,17 +1214,50 @@ class App {
 			$firstchar_begin_index = $firstchar_offset;
 			$firstchar_end_index = $firstchar_begin_index+$firstchar_divisions[$length-1]-1;
 			if ($firstchar_index >= $firstchar_begin_index && $firstchar_index <= $firstchar_end_index) {
-				return substr($addr_text, $this->get_site_constant('identifier_first_char'), $length);
+				return substr($addr_text, $firstchar_pos, $length);
 			}
 			$firstchar_offset = $firstchar_end_index+1;
 		}
-		return substr($addr_text, $this->get_site_constant('identifier_first_char'), 1);
+		return substr($addr_text, $firstchar_pos, 1);
 	}
 	
 	public function fetch_account_by_id($account_id) {
 		$q = "SELECT * FROM currency_accounts WHERE account_id='".$account_id."';";
 		$r = $this->run_query($q);
 		return $r->fetch();
+	}
+	
+	public function game_definition_verbatim_vars() {
+		return array(
+			array('string', 'url_identifier'),
+			array('string', 'name'),
+			array('string', 'event_type_name'),
+			array('string', 'short_description'),
+			array('string', 'event_rule'),
+			array('int', 'event_entity_type_id'),
+			array('int', 'option_group_id'),
+			array('int', 'events_per_round'),
+			array('string', 'inflation'),
+			array('float', 'exponential_inflation_rate'),
+			array('int', 'pos_reward'),
+			array('int', 'round_length'),
+			array('int', 'maturity'),
+			array('string', 'payout_weight'),
+			array('int', 'final_round'),
+			array('string', 'coin_name'),
+			array('string', 'coin_name_plural'),
+			array('string', 'coin_abbreviation'),
+			array('string', 'escrow_address'),
+			array('string', 'genesis_tx_hash'),
+			array('int', 'genesis_amount'),
+			array('int', 'game_starting_block'),
+			array('string', 'game_winning_rule'),
+			array('string', 'game_winning_field'),
+			array('float', 'game_winning_inflation'),
+			array('string', 'default_vote_effectiveness_function'),
+			array('float', 'default_max_voting_fraction'),
+			array('int', 'default_option_max_width')
+		);
 	}
 }
 ?>

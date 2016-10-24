@@ -48,11 +48,14 @@ if ($thisuser) {
 				}
 				else $game_index = 1;
 				
-				$q = "INSERT INTO games SET creator_id='".$thisuser->db_user['user_id']."', maturity=0, round_length=60, seconds_per_block='6', block_timing='realistic', creator_game_index='".$game_index."', p2p_mode='none', logo_image_id=34, inflation='exponential', pos_reward='".(6000*pow(10,8))."', pow_reward='".(200*pow(10,8))."', start_datetime='".date("Y-m-d g:\\0\\0a", time()+(2*60*60))."';";
+				$blockchain_id = 2;
+				$blockchain = new Blockchain($app, $blockchain_id);
+				
+				$q = "INSERT INTO games SET blockchain_id='".$blockchain->db_blockchain['blockchain_id']."', creator_id='".$thisuser->db_user['user_id']."', maturity=0, round_length=10, seconds_per_block='".$blockchain->db_blockchain['seconds_per_block']."', buyin_policy='unlimited', block_timing='realistic', creator_game_index='".$game_index."', logo_image_id=34, inflation='exponential', pos_reward='".(500*pow(10,8))."', pow_reward='0', start_datetime='".date("Y-m-d g:\\0\\0a", time()+(2*60*60))."';";
 				$r = $app->run_query($q);
 				$game_id = $app->last_insert_id();
 				
-				$game = new Game($app, $game_id);
+				$game = new Game($blockchain, $game_id);
 				$game_name = "Private Game #".$game_id;
 				$url_identifier = $app->game_url_identifier($game_name);
 				
@@ -65,10 +68,7 @@ if ($thisuser) {
 					$thisuser->ensure_user_in_game($game->db_game['game_id']);
 				}
 				
-				$q = "UPDATE users SET game_id='".$game->db_game['game_id']."' WHERE user_id='".$thisuser->db_user['user_id']."';";
-				$r = $app->run_query($q);
-				
-				$q = "UPDATE user_games ug, user_strategies s SET s.voting_strategy='manual' WHERE ug.strategy_id=s.strategy_id AND ug.user_id='".$thisuser->db_user['user_id']."' AND ug.game_id='".$game->db_game['game_id']."';";
+				$q = "UPDATE user_games ug JOIN user_strategies s ON ug.strategy_id=s.strategy_id SET s.voting_strategy='manual' WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND ug.game_id='".$game->db_game['game_id']."';";
 				$r = $app->run_query($q);
 			}
 			else {
@@ -77,14 +77,16 @@ if ($thisuser) {
 			}
 		}
 		else {
-			$game = new Game($app, $game_id);
+			$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
+			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+			$game = new Game($blockchain, $game_id);
 		}
 		
-		$q = "SELECT creator_id, game_id, p2p_mode, event_rule, option_group_id, event_entity_type_id, events_per_round, event_type_name, game_status, block_timing, giveaway_status, giveaway_amount, maturity, name, payout_weight, round_length, seconds_per_block, pos_reward, pow_reward, inflation, exponential_inflation_rate, exponential_inflation_minershare, final_round, invite_cost, invite_currency, coin_name, coin_name_plural, coin_abbreviation, start_condition, start_datetime, start_condition_players, buyin_policy, per_user_buyin_cap, game_buyin_cap, default_vote_effectiveness_function, default_max_voting_fraction, game_starting_block, escrow_address, genesis_tx_hash, base_currency_id FROM games WHERE game_id='".$game->db_game['game_id']."';";
+		$q = "SELECT game_id, blockchain_id, creator_id, event_rule, option_group_id, event_entity_type_id, events_per_round, event_type_name, game_status, block_timing, giveaway_status, giveaway_amount, maturity, name, payout_weight, round_length, seconds_per_block, pos_reward, pow_reward, inflation, exponential_inflation_rate, exponential_inflation_minershare, final_round, invite_cost, invite_currency, coin_name, coin_name_plural, coin_abbreviation, start_condition, start_datetime, buyin_policy, game_buyin_cap, default_vote_effectiveness_function, default_max_voting_fraction, game_starting_block, escrow_address, genesis_tx_hash, genesis_amount FROM games WHERE game_id='".$game->db_game['game_id']."';";
 		$r = $app->run_query($q);
 		
 		if ($r->rowCount() == 1) {
-			$switch_game = $r->fetch();
+			$switch_game = $r->fetch(PDO::FETCH_ASSOC);
 
 			$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$switch_game['game_id']."';";
 			$r = $app->run_query($q);

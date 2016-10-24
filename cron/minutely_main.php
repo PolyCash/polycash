@@ -26,8 +26,6 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			register_shutdown_function("script_shutdown");
 		}
 		
-		$app->generate_games();
-		
 		$blockchains = array();
 		$real_games = array();
 		$coin_rpcs = array();
@@ -122,16 +120,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 
 					for ($running_game_i=0; $running_game_i<count($running_games); $running_game_i++) {
 						echo "\n".$running_games[$running_game_i]->db_game['name']."\n";
-						if ($running_games[$running_game_i]->db_game['p2p_mode'] == "rpc") {
-							$real_game_i = $game_id2real_game_i[$running_games[$running_game_i]->db_game['game_id']];
-							if (!empty($coin_rpcs[$real_game_i])) {
-								$running_games[$running_game_i]->load_new_blocks($coin_rpcs[$real_game_i]);
-								if ($running_games[$running_game_i]->db_game['sync_coind_by_cron'] == 1) {
-									echo "sync_coind() for ".$running_games[$running_game_i]->db_game['name']."\n";
-									echo $running_games[$running_game_i]->sync_coind($coin_rpcs[$real_game_i]);
-								}
-							}
-						}
+						
 						if ($running_games[$running_game_i]->db_game['p2p_mode'] == "none") {
 							$remaining_prob = round($loop_target_time/$running_games[$running_game_i]->db_game['seconds_per_block'], 4);
 							$thisgame_loop_start_time = microtime(true);
@@ -170,6 +159,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 						echo (microtime(true)-$benchmark_time)." sec\n";
 						$benchmark_time = microtime(true);
 					}
+					
 					$loop_stop_time = microtime(true);
 					$loop_time = $loop_stop_time-$loop_start_time;
 					$loop_target_time = max(1, $loop_time);

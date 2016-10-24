@@ -1,0 +1,1 @@
+ALTER TABLE `games` DROP `base_currency_id`;

@@ -292,6 +292,15 @@ class Blockchain {
 							
 							$ref_round_id = $color_game->block_to_round($ref_block_id);
 							
+							$qq = "SELECT SUM(colored_amount*(".$ref_round_id."-create_round_id)) AS ref_coin_round_sum FROM transaction_game_ios WHERE io_id IN (".implode(",", $spend_io_ids).");";
+							$rr = $this->app->run_query($qq);
+							$coin_rounds = $rr->fetch();
+							$coin_rounds = $coin_rounds['ref_coin_round_sum'];
+							
+							$coin_round_sum = 0;
+							
+							$ref_round_id = $color_game->block_to_round($ref_block_id);
+							
 							$this->app->log("game #".$db_color_game['game_id'].", color sum: ".$color_amount/pow(10,8).", outputs: ".count($outputs));
 							
 							for ($j=0; $j<count($outputs); $j++) {
@@ -301,7 +310,10 @@ class Blockchain {
 								$this_coin_blocks = floor($coin_blocks*($outputs[$j]["value"]*pow(10,8))/$output_sum);
 								if ($j == count($outputs)-1) $this_coin_blocks = $coin_blocks - $coin_block_sum;
 								
-								$qq = "INSERT INTO transaction_game_ios SET game_id='".$color_game->db_game['game_id']."', io_id='".$output_io_ids[$j]."', colored_amount='".$this_color_amount."', ref_block_id='".$ref_block_id."', ref_coin_blocks='".$this_coin_blocks."', ref_round_id='".$ref_round_id."', ref_coin_rounds='0'";
+								$this_coin_rounds = floor($coin_rounds*($outputs[$j]["value"]*pow(10,8))/$output_sum);
+								if ($j == count($outputs)-1) $this_coin_rounds = $coin_rounds - $coin_round_sum;
+								
+								$qq = "INSERT INTO transaction_game_ios SET game_id='".$color_game->db_game['game_id']."', io_id='".$output_io_ids[$j]."', colored_amount='".$this_color_amount."', ref_block_id='".$ref_block_id."', ref_coin_blocks='".$this_coin_blocks."', ref_round_id='".$ref_round_id."', ref_coin_rounds='".$this_coin_rounds."'";
 								if ($output_io_indices[$j] !== false) {
 									$option_id = $color_game->option_index_to_option_id_in_block($output_io_indices[$j], $ref_block_id);
 									if ($option_id) {
@@ -319,6 +331,7 @@ class Blockchain {
 								
 								$color_amount_sum += $this_color_amount;
 								$coin_block_sum += $this_coin_blocks;
+								$coin_round_sum += $this_coin_rounds;
 							}
 						}
 					}
@@ -435,7 +448,7 @@ class Blockchain {
 					
 					$associated_games = $this->associated_games();
 					for ($i=0; $i<count($associated_games); $i++) {
-						$associated_games[$i]->ensure_events_until_block($block_height+$associated_games[$i]->db_game['round_length']+1);
+						$associated_games[$i]->ensure_events_until_block($block_height+1);
 					}
 				}
 			}
@@ -909,6 +922,33 @@ class Blockchain {
 			return $r->fetch();
 		}
 		else return false;
+	}
+	
+	public function user_balance($user) {
+		$q = "SELECT SUM(amount) FROM transaction_ios WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND spend_status='unspent' AND user_id='".$user->db_user['user_id']."' AND create_block_id IS NOT NULL;";
+		$r = $this->app->run_query($q);
+		$coins = $r->fetch(PDO::FETCH_NUM);
+		$coins = $coins[0];
+		if ($coins > 0) return $coins;
+		else return 0;
+	}
+
+	public function user_immature_balance($user) {
+		$q = "SELECT SUM(amount) FROM transaction_ios WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND user_id='".$user->db_user['user_id']."' AND (create_block_id > ".$this->last_block_id()." OR create_block_id IS NULL);";
+		$r = $this->app->run_query($q);
+		$sum = $r->fetch(PDO::FETCH_NUM);
+		$sum = $sum[0];
+		if ($sum > 0) return $sum;
+		else return 0;
+	}
+
+	public function user_mature_balance($user) {
+		$q = "SELECT SUM(amount) FROM transaction_ios WHERE spend_status='unspent' AND spend_transaction_id IS NULL AND blockchain_id='".$this->db_blockchain['blockchain_id']."' AND user_id='".$user->db_user['user_id']."' AND create_block_id <= ".$this->last_block_id().";";
+		$r = $this->app->run_query($q);
+		$sum = $r->fetch(PDO::FETCH_NUM);
+		$sum = $sum[0];
+		if ($sum > 0) return $sum;
+		else return 0;
 	}
 }
 ?>

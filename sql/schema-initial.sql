@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS `currencies` (
   PRIMARY KEY (`currency_id`),
   KEY `oracle_url_id` (`oracle_url_id`),
   KEY `abbreviation` (`abbreviation`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=8 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=6 ;
 
 --
 -- Dumping data for table `currencies`
@@ -135,12 +135,10 @@ CREATE TABLE IF NOT EXISTS `currencies` (
 
 INSERT INTO `currencies` (`currency_id`, `oracle_url_id`, `name`, `short_name`, `abbreviation`, `symbol`) VALUES
 (1, NULL, 'US Dollar', 'dollar', 'USD', '$'),
-(2, 2, 'Bitcoin', 'bitcoin', 'BTC', '&#3647;'),
-(3, NULL, 'EmpireCoin', 'empirecoin', 'EMP', 'E'),
-(4, 1, 'Euro', 'euro', 'EUR', '€'),
-(5, 1, 'Renminbi', 'renminbi', 'CNY', '¥'),
-(6, 1, 'Pound sterling', 'pound', 'GBP', '£'),
-(7, 1, 'Japanese yen', 'yen', 'JPY', '¥');
+(2, 1, 'Euro', 'euro', 'EUR', '&euro;'),
+(3, 1, 'Renminbi', 'renminbi', 'CNY', '&yen;'),
+(4, 1, 'Pound sterling', 'pound', 'GBP', '&pound;'),
+(5, 1, 'Japanese yen', 'yen', 'JPY', '&yen;');
 
 -- --------------------------------------------------------
 

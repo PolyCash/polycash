@@ -650,7 +650,7 @@ class Event {
 	public function event_pos_reward_in_round($round_id) {
 		if ($this->game->db_game['inflation'] == "linear") return $this->game->db_game['pos_reward'];
 		else {
-			$mining_block_id = $this->game->last_block_id()+1;
+			$mining_block_id = $this->game->blockchain->last_block_id()+1;
 			$current_round = $this->game->block_to_round($mining_block_id);
 			
 			if ($round_id == $current_round) {

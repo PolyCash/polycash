@@ -44,7 +44,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				}
 				else $coin_rpc = false;
 				
-				$game->generate_voting_addresses($coin_rpc);
+				$game->generate_voting_addresses($coin_rpc, false);
 			}
 		}
 		
