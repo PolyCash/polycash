@@ -1,6 +1,6 @@
 <?php
 // If you cannot configure cron to run /includes/minutely.php every minute,
-// run this script from the command line instead to keep empirecoin-web up to date.
+// run this script from the command line instead to keep this app up to date.
 // Or visit /cron/minutely.php in your browser
 set_time_limit(0);
 $host_not_required = TRUE;

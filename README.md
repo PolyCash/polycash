@@ -1,7 +1,3 @@
-Empirecoin Web can act as front end web wallet for the decentralized EmpireCoin currency. It can also run as a standalone program for hosting centralized EmpireCoin private games.
-
-To use Empirecoin Web as a wallet for the Empirecoin currency, first install empirecoind and ensure that RPC calls can be made.  If you are only using Empirecoin Web to host private games, you don't need to install empirecoind.
-
 To get started, first please install and secure Apache, MySQL and PHP.  Then create a new file: includes/config.php and paste the following code into this file.  You can also find an example config file in includes/example_config.php
 
 ```
@@ -9,7 +5,7 @@ To get started, first please install and secure Apache, MySQL and PHP.  Then cre
 $GLOBALS['mysql_server'] = "localhost";
 $GLOBALS['mysql_user'] = "root"; // Enter your mysql username here
 $GLOBALS['mysql_password'] = ""; // Enter your mysql password here
-$GLOBALS['mysql_database'] = "empirecoin";
+$GLOBALS['mysql_database'] = "coinblock";
 
 $GLOBALS['signup_captcha_required'] = false;
 $GLOBALS['recaptcha_publickey'] = "";
@@ -36,9 +32,9 @@ $GLOBALS['cron_interval_seconds'] = 5;
 
 $GLOBALS['new_games_per_user'] = "unlimited";
 
-$GLOBALS['coin_brand_name'] = "EmpireCoin";
-$GLOBALS['site_name_short'] = "EmpireCoin";
-$GLOBALS['site_name'] = "EmpireCoin.org";
+$GLOBALS['coin_brand_name'] = "CoinBlock";
+$GLOBALS['site_name_short'] = "CoinBlock";
+$GLOBALS['site_name'] = "CoinBlock.org";
 $GLOBALS['site_domain'] = $_SERVER['SERVER_ADDR']; // Enter your domain name, IP or "localhost" here
 $GLOBALS['base_url'] = "http://".$GLOBALS['site_domain'];
 $GLOBALS['homepage_fname'] = "default.php";
@@ -56,9 +52,9 @@ $GLOBALS['default_server_api_access_key'] = false;
 
 Enter the username, password and database name for your MySQL database into your includes/config.php.
 
-Next, configure cron to poll empirecoin every minute. This keeps empirecoin-web in sync with empirecoind. Add these lines to your /etc/crontab:
+Next, configure cron to poll coinblock every minute. This keeps coinblock in sync with your coin daemon. Add these lines to your /etc/crontab:
 ```
-* * * * * root /usr/bin/php /var/www/html/empirecoin-web/cron/minutely.php <CRON_KEY_STRING>
+* * * * * root /usr/bin/php /var/www/html/coinblock/cron/minutely.php <CRON_KEY_STRING>
 ```
 
 You can configure outbound emails by setting $GLOBALS['outbound_email_enabled'] = true, and then entering your sendgrid credentials in the following 2 parameters.
@@ -70,7 +66,7 @@ Also enter values for site_name_short, site_name, and site_domain.
 
 Next, use a password generator or otherwise generate a secure random string of at least 10 characters, and enter it into the config file as $GLOBALS['cron_key_string'].  Certain actions such as installing the application should only be accessible by the site administrator; this secret string protects all of these actions.
 
-Next, point your browser to http://localhost/install.php?key=<cron_key_string> where <cron_key_string> is the random string that you generated above.  If Apache, MySQL and PHP are all installed correctly, Empirecoin Web should automatically install.
+Next, point your browser to http://localhost/install.php?key=<cron_key_string> where <cron_key_string> is the random string that you generated above.  If Apache, MySQL and PHP are all installed correctly, CoinBlock should automatically install.
 
 Follow the instructions on install.php to configure your server for accepting Bitcoin payments and resolving any other potential issues.
 
