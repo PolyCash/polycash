@@ -894,7 +894,7 @@ if ($thisuser && $game) {
 				<?php
 				if ($game->db_game['buyin_policy'] != "none") { ?>
 					<p>
-					You can buy more <?php echo $game->db_game['coin_name_plural']; ?> by sending Bitcoins to your deposit address.  Once your Bitcoin payment is confirmed, <?php echo $game->db_game['coin_name_plural']; ?> will be added to your account based on the BTC / <?php echo $game->db_game['coin_abbreviation']; ?> exchange rate at the time of confirmation.
+					You can buy more <?php echo $game->db_game['coin_name_plural']; ?> by sending <?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?> to your deposit address.  Once your <?php echo $game->blockchain->db_blockchain['coin_name']; ?> payment is confirmed, <?php echo $game->db_game['coin_name_plural']; ?> will be added to your account based on the <?php echo $game->blockchain->db_blockchain['coin_name']; ?> / <?php echo $game->db_game['coin_name']; ?> exchange rate at the time of confirmation.
 					</p>
 					<p>
 					<button class="btn btn-success" onclick="initiate_buyin();">Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
@@ -915,6 +915,9 @@ if ($thisuser && $game) {
 					<div class="col-md-3">
 						<input class="form-control" type="tel" placeholder="0.000" id="withdraw_amount" style="text-align: right;" />
 					</div>
+					<div class="col-md-3 form-control-static">
+						<?php echo $game->db_game['coin_name_plural']; ?>
+					</div>
 				</div>
 				<div class="row">
 					<div class="col-md-3 form-control-static">
@@ -922,6 +925,9 @@ if ($thisuser && $game) {
 					</div>
 					<div class="col-md-3">
 						<input class="form-control" type="tel" value="<?php echo $user_strategy['transaction_fee']/pow(10,8); ?>" id="withdraw_fee" style="text-align: right;" />
+					</div>
+					<div class="col-md-3 form-control-static">
+						<?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?>
 					</div>
 				</div>
 				<div class="row">

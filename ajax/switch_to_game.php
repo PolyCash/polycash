@@ -51,7 +51,7 @@ if ($thisuser) {
 				$blockchain_id = 2;
 				$blockchain = new Blockchain($app, $blockchain_id);
 				
-				$q = "INSERT INTO games SET blockchain_id='".$blockchain->db_blockchain['blockchain_id']."', creator_id='".$thisuser->db_user['user_id']."', maturity=0, round_length=10, seconds_per_block='".$blockchain->db_blockchain['seconds_per_block']."', buyin_policy='unlimited', block_timing='realistic', creator_game_index='".$game_index."', logo_image_id=34, inflation='exponential', pos_reward='".(500*pow(10,8))."', pow_reward='0', start_datetime='".date("Y-m-d g:\\0\\0a", time()+(2*60*60))."';";
+				$q = "INSERT INTO games SET blockchain_id='".$blockchain->db_blockchain['blockchain_id']."', creator_id='".$thisuser->db_user['user_id']."', maturity=0, round_length=10, seconds_per_block='".$blockchain->db_blockchain['seconds_per_block']."', buyin_policy='unlimited', block_timing='realistic', creator_game_index='".$game_index."', logo_image_id=34, inflation='exponential', pos_reward='0', pow_reward='0', start_datetime='".date("Y-m-d g:\\0\\0a", time()+(2*60*60))."';";
 				$r = $app->run_query($q);
 				$game_id = $app->last_insert_id();
 				

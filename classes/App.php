@@ -930,7 +930,9 @@ class App {
 		$html .= "</div></div>\n";
 		
 		if ($db_game['game_id'] > 0) {
-			$html .= '<div class="row"><div class="col-sm-5">Game definition:</div><div class="col-sm-7"><a target="_blank" href="'.$GLOBALS['base_url'].'/scripts/show_game_definition.php?game_id='.$db_game['game_id'].'">Click here</a></div></div>';
+			$blockchain = new Blockchain($this, $db_game['blockchain_id']);
+			$game = new Game($blockchain, $db_game['game_id']);
+			$html .= '<div class="row"><div class="col-sm-5">Game definition:</div><div class="col-sm-7"><a target="_blank" href="'.$GLOBALS['base_url'].'/scripts/show_game_definition.php?game_id='.$db_game['game_id'].'" title="'.$this->game_definition_hash($game).'">'.$this->game_definition_hash_short($game).'</a></div></div>';
 		}
 		
 		$html .= '<div class="row"><div class="col-sm-5">Length of game:</div><div class="col-sm-7">';
@@ -982,6 +984,42 @@ class App {
 		}
 		
 		return $html;
+	}
+	
+	public function fetch_game_definition(&$game) {
+		$game_definition = array();
+		$game_definition['blockchain_identifier'] = $game->blockchain->db_blockchain['url_identifier'];
+		
+		$verbatim_vars = $this->game_definition_verbatim_vars();
+		
+		for ($i=0; $i<count($verbatim_vars); $i++) {
+			$var_type = $verbatim_vars[$i][0];
+			$var_name = $verbatim_vars[$i][1];
+			
+			if ($var_type == "int") {
+				if ($game->db_game[$var_name] == "0" || $game->db_game[$var_name] > 0) $var_val = (int) $game->db_game[$var_name];
+				else $var_val = null;
+			}
+			else if ($var_type == "float") $var_val = (float) $game->db_game[$var_name];
+			else $var_val = $game->db_game[$var_name];
+			
+			$game_definition[$var_name] = $var_val;
+		}
+		
+		return $game_definition;
+	}
+	
+	public function game_definition_hash(&$game) {
+		$game_def = $this->fetch_game_definition($game);
+		$game_def_str = json_encode($game_def, JSON_PRETTY_PRINT);
+		$game_def_hash = hash("sha256", $game_def_str);
+		return $game_def_hash;
+	}
+	
+	public function game_definition_hash_short(&$game) {
+		$game_def_hash = $this->game_definition_hash($game);
+		$short_hash = substr($game_def_hash, 0, 16);
+		return $short_hash;
 	}
 	
 	public function game_final_inflation_pct(&$db_game) {
@@ -1234,7 +1272,6 @@ class App {
 			array('string', 'url_identifier'),
 			array('string', 'name'),
 			array('string', 'event_type_name'),
-			array('string', 'short_description'),
 			array('string', 'event_rule'),
 			array('int', 'event_entity_type_id'),
 			array('int', 'option_group_id'),
