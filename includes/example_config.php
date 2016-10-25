@@ -35,6 +35,7 @@ $GLOBALS['site_name'] = "CoinBlock.org";
 $GLOBALS['site_domain'] = $_SERVER['SERVER_ADDR']; // Enter your domain name, IP or "localhost" here
 $GLOBALS['base_url'] = "http://".$GLOBALS['site_domain'];
 $GLOBALS['homepage_fname'] = "default.php";
+$GLOBALS['navbar_icon_path'] = "";
 
 $GLOBALS['default_timezone'] = 'America/Chicago';
 

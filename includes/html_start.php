@@ -52,7 +52,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 					<span class="icon-bar"></span>
 					<span class="icon-bar"></span>
 				</button>
-				<a class="navbar-brand" href="/"><img alt="<?php echo $GLOBALS['coin_brand_name']; ?> Logo" id="nav_logo" src="/images/logo/icon-35x35.png" /><?php echo $GLOBALS['coin_brand_name']; ?></a>
+				<a class="navbar-brand" href="/"><?php if (!empty($GLOBALS['navbar_icon_path'])) echo '<img alt="'.$GLOBALS['coin_brand_name'].' Logo" id="nav_logo" src="'.$GLOBALS['navbar_icon_path'].'" />'; ?><?php echo $GLOBALS['coin_brand_name']; ?></a>
 			</div>
 			<div id="navbar" class="navbar-collapse collapse">
 				<ul class="nav navbar-nav">
