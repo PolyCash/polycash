@@ -1434,17 +1434,19 @@ class Game {
 					if ($account_pct > 0) $change_frac = $new_account_pct/$account_pct-1;
 					else $change_frac = 0;
 					$html .= "<div class=\"col-sm-3\">".$this->blockchain->app->format_bignum($entity_info['my_pct'])."% of my votes</div>";
-					$html .= "<div class=\"col-sm-3";
-					if ($change_frac >= 0) $html .= " greentext";
-					else $html .= " redtext";
-					$html .= "\">";
-					if ($change_frac >= 0) {
-						$html .= "+".$this->blockchain->app->format_bignum(100*$change_frac)."%";
+					if ($this->db_game['game_winning_inflation'] > 0) {
+						$html .= "<div class=\"col-sm-3";
+						if ($change_frac >= 0) $html .= " greentext";
+						else $html .= " redtext";
+						$html .= "\">";
+						if ($change_frac >= 0) {
+							$html .= "+".$this->blockchain->app->format_bignum(100*$change_frac)."%";
+						}
+						else {
+							$html .= "-".$this->blockchain->app->format_bignum((-1)*100*$change_frac)."%";
+						}
+						$html .= "</div>";
 					}
-					else {
-						$html .= "-".$this->blockchain->app->format_bignum((-1)*100*$change_frac)."%";
-					}
-					$html .= "</div>";
 				}
 				$html .= "</div>\n";
 			}
