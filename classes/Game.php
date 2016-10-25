@@ -455,17 +455,17 @@ class Game {
 				$coins_in_existence = $this->coins_in_existence(false);
 				$payout_amount = floor(((float)$coins_in_existence)*$this->db_game['game_winning_inflation']);
 				if ($payout_amount > 0) {
-					$game_votes_q = "SELECT SUM(io.votes) FROM options o JOIN addresses a ON o.option_id=a.option_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN entities e ON o.entity_id=e.entity_id WHERE io.game_id='".$this->db_game['game_id']."';";
+					$game_votes_q = "SELECT SUM(gio.votes) FROM options o JOIN addresses a ON o.option_id=a.option_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN entities e ON o.entity_id=e.entity_id WHERE gio.game_id='".$this->db_game['game_id']."';";
 					$game_votes_r = $this->blockchain->app->run_query($game_votes_q);
 					$game_votes_total = $game_votes_r->fetch()['SUM(io.votes)'];
 					
-					$winner_votes_q = "SELECT SUM(io.votes) FROM options o JOIN addresses a ON o.option_id=a.option_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN entities e ON o.entity_id=e.entity_id WHERE io.game_id='".$this->db_game['game_id']."' AND e.entity_id='".$entity_score_info['winning_entity_id']."';";
+					$winner_votes_q = "SELECT SUM(gio.votes) FROM options o JOIN addresses a ON o.option_id=a.option_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN entities e ON o.entity_id=e.entity_id WHERE gio.game_id='".$this->db_game['game_id']."' AND e.entity_id='".$entity_score_info['winning_entity_id']."';";
 					$winner_votes_r = $this->blockchain->app->run_query($winner_votes_q);
 					$winner_votes_total = $winner_votes_r->fetch()['SUM(io.votes)'];
 					
 					echo "payout ".$this->blockchain->app->format_bignum($payout_amount/pow(10,8))." coins to ".$entity_score_info['entities'][$entity_score_info['winning_entity_id']]['entity_name']." (".$this->blockchain->app->format_bignum($winner_votes_total/pow(10,8))." total votes)<br/>\n";
 					
-					$payout_io_q = "SELECT * FROM options o JOIN addresses a ON o.option_id=a.option_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN entities e ON o.entity_id=e.entity_id WHERE io.game_id='".$this->db_game['game_id']."' AND e.entity_id='".$entity_score_info['winning_entity_id']."';";
+					$payout_io_q = "SELECT * FROM options o JOIN addresses a ON o.option_id=a.option_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN entities e ON o.entity_id=e.entity_id WHERE gio.game_id='".$this->db_game['game_id']."' AND e.entity_id='".$entity_score_info['winning_entity_id']."';";
 					$amounts = array();
 					$address_ids = array();
 					$payout_io_r = $this->blockchain->app->run_query($payout_io_q);
@@ -483,7 +483,7 @@ class Game {
 					}
 					$last_block_id = $this->blockchain->last_block_id();
 					$transaction_id = $this->create_transaction(false, $amounts, false, false, false, "votebase", false, $address_ids, false, 0);
-					$q = "UPDATE transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id SET t.block_id='".$last_block_id."', t.round_id='".$this->block_to_round($last_block_id)."', io.spend_status='unspent', io.create_block_id='".$last_block_id."', io.create_round_id='".$this->block_to_round($last_block_id)."' WHERE t.transaction_id='".$transaction_id."';";
+					$q = "UPDATE transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id SET t.block_id='".$last_block_id."', io.spend_status='unspent', io.create_block_id='".$last_block_id."', gio.create_round_id='".$this->block_to_round($last_block_id)."' WHERE t.transaction_id='".$transaction_id."';";
 					$r = $this->blockchain->app->run_query($q);
 					$this->refresh_coins_in_existence();
 
@@ -1281,14 +1281,14 @@ class Game {
 		$return_obj = false;
 		
 		if ($user) {
-			$qq = "SELECT SUM(io.votes), COUNT(*) FROM options o JOIN  transaction_ios io ON o.option_id=io.option_id JOIN entities e ON o.entity_id=e.entity_id JOIN addresses a ON io.address_id=a.address_id WHERE io.game_id='".$this->db_game['game_id']."' AND a.user_id='".$user->db_user['user_id']."';";
+			$qq = "SELECT SUM(gio.votes), COUNT(*) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN options o ON gio.option_id=o.option_id JOIN entities e ON o.entity_id=e.entity_id JOIN addresses a ON io.address_id=a.address_id WHERE gio.game_id='".$this->db_game['game_id']."' AND a.user_id='".$user->db_user['user_id']."';";
 			$rr = $this->blockchain->app->run_query($qq);
 			$user_entity_votes_total = $rr->fetch();
-			$return_obj['user_entity_votes_total'] = $user_entity_votes_total['SUM(io.votes)'];
+			$return_obj['user_entity_votes_total'] = $user_entity_votes_total['SUM(gio.votes)'];
 
-			$qq = "SELECT SUM(io.votes) FROM options o JOIN transaction_ios io ON o.option_id=io.option_id JOIN entities e ON o.entity_id=e.entity_id WHERE io.game_id='".$this->db_game['game_id']."';";
+			$qq = "SELECT SUM(gio.votes) FROM options o JOIN transaction_game_ios gio ON o.option_id=gio.option_id JOIN transaction_ios io ON gio.io_id=io.io_id JOIN entities e ON o.entity_id=e.entity_id WHERE gio.game_id='".$this->db_game['game_id']."';";
 			$rr = $this->blockchain->app->run_query($qq);
-			$return_obj['entity_votes_total'] = $rr->fetch()['SUM(io.votes)'];
+			$return_obj['entity_votes_total'] = $rr->fetch()['SUM(gio.votes)'];
 		}
 		
 		$return_rows = false;
@@ -1305,18 +1305,18 @@ class Game {
 			
 			$entity_my_pct = false;
 			if ($user) {
-				$qq = "SELECT SUM(io.votes), COUNT(*) FROM options o JOIN transaction_ios io ON o.option_id=io.option_id JOIN addresses a ON io.address_id=a.address_id WHERE io.game_id='".$this->db_game['game_id']."' AND a.user_id='".$user->db_user['user_id']."' AND o.entity_id='".$entity['entity_id']."';";
+				$qq = "SELECT SUM(gio.votes), COUNT(*) FROM options o JOIN transaction_game_ios gio ON o.option_id=gio.option_id JOIN transaction_ios io ON io.io_id=gio.io_id JOIN addresses a ON io.address_id=a.address_id WHERE gio.game_id='".$this->db_game['game_id']."' AND a.user_id='".$user->db_user['user_id']."' AND o.entity_id='".$entity['entity_id']."';";
 				$rr = $this->blockchain->app->run_query($qq);
 				$user_entity_votes = $rr->fetch();
 				
-				$return_rows[$entity['entity_id']]['my_votes'] = $user_entity_votes['SUM(io.votes)'];
-				if ($return_obj['user_entity_votes_total'] > 0) $my_pct = 100*$user_entity_votes['SUM(io.votes)']/$return_obj['user_entity_votes_total'];
+				$return_rows[$entity['entity_id']]['my_votes'] = $user_entity_votes['SUM(gio.votes)'];
+				if ($return_obj['user_entity_votes_total'] > 0) $my_pct = 100*$user_entity_votes['SUM(gio.votes)']/$return_obj['user_entity_votes_total'];
 				else $my_pct = 0;
 				$return_rows[$entity['entity_id']]['my_pct'] = $my_pct;
 				
-				$entity_votes_q = "SELECT SUM(io.votes), COUNT(*) FROM options o JOIN transaction_ios io ON o.option_id=io.option_id JOIN entities e ON o.entity_id=e.entity_id WHERE io.game_id='".$this->db_game['game_id']."' AND o.entity_id='".$entity['entity_id']."';";
+				$entity_votes_q = "SELECT SUM(gio.votes), COUNT(*) FROM options o JOIN transaction_game_ios gio ON o.option_id=gio.option_id JOIN transaction_ios io ON io.io_id=gio.io_id JOIN entities e ON o.entity_id=e.entity_id WHERE gio.game_id='".$this->db_game['game_id']."' AND o.entity_id='".$entity['entity_id']."';";
 				$entity_votes_r = $this->blockchain->app->run_query($entity_votes_q);
-				$return_rows[$entity['entity_id']]['entity_votes'] = $entity_votes_r->fetch()['SUM(io.votes)'];
+				$return_rows[$entity['entity_id']]['entity_votes'] = $entity_votes_r->fetch()['SUM(gio.votes)'];
 			}
 		}
 		$returnvals['entities'] = $return_rows;

@@ -715,9 +715,11 @@ class App {
 				echo '</div>';
 			}
 			echo '</div>';
-			echo '</div>';
 		}
-		else echo "No public games are running right now.<br/>\n";
+		else {
+			echo "No public games are running right now.<br/>\n";
+		}
+		echo '</div>';
 	}
 	
 	public function refresh_utxo_user_ids($only_unspent_utxos) {
