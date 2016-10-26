@@ -870,21 +870,23 @@ class Game {
 		$last_block_id = $this->blockchain->last_block_id();
 		$current_round = $this->block_to_round($last_block_id+1);
 		
-		for ($i=0; $i<count($this->current_events); $i++) {
-			$current_score_q = "SELECT SUM(votes) FROM options WHERE event_id='".$this->current_events[$i]->db_event['event_id']."';";
-			$current_score_r = $this->blockchain->app->run_query($current_score_q);
-			$current_score = $current_score_r->fetch(PDO::FETCH_NUM);
-			$current_score = $current_score[0];
-			if ($current_score > 0) {} else $current_score = 0;
-			
-			$html .= '<div class="row bordered_row">';
-			$html .= '<div class="col-sm-4"><a href="/explorer/games/'.$this->db_game['url_identifier'].'/events/'.($this->current_events[$i]->db_event['event_index']+1).'">'.$this->current_events[$i]->db_event['event_name'].'</a></div>';
-			$html .= '<div class="col-sm-5">Not yet decided';
-			$html .= '</div>';
-			$html .= '<div class="col-sm-3">'.$this->blockchain->app->format_bignum($current_score/pow(10,8)).' votes cast</div>';
-			$html .= '</div>'."\n";
-			
-			if ($current_round == 1) $show_initial = true;
+		if ($max_round_id >= $current_round) {
+			for ($i=0; $i<count($this->current_events); $i++) {
+				$current_score_q = "SELECT SUM(votes) FROM options WHERE event_id='".$this->current_events[$i]->db_event['event_id']."';";
+				$current_score_r = $this->blockchain->app->run_query($current_score_q);
+				$current_score = $current_score_r->fetch(PDO::FETCH_NUM);
+				$current_score = $current_score[0];
+				if ($current_score > 0) {} else $current_score = 0;
+				
+				$html .= '<div class="row bordered_row">';
+				$html .= '<div class="col-sm-4"><a href="/explorer/games/'.$this->db_game['url_identifier'].'/events/'.($this->current_events[$i]->db_event['event_index']+1).'">'.$this->current_events[$i]->db_event['event_name'].'</a></div>';
+				$html .= '<div class="col-sm-5">Not yet decided';
+				$html .= '</div>';
+				$html .= '<div class="col-sm-3">'.$this->blockchain->app->format_bignum($current_score/pow(10,8)).' votes cast</div>';
+				$html .= '</div>'."\n";
+				
+				if ($current_round == 1) $show_initial = true;
+			}
 		}
 		
 		$q = "SELECT eo.*, e.*, real_winner.name AS real_winner_name, derived_winner.name AS derived_winner_name FROM event_outcomes eo JOIN events e ON eo.event_id=e.event_id LEFT JOIN options real_winner ON eo.winning_option_id=real_winner.option_id LEFT JOIN options derived_winner ON eo.derived_winning_option_id=derived_winner.option_id WHERE e.game_id='".$this->db_game['game_id']."' AND eo.round_id <= ".$max_round_id." GROUP BY e.event_id ORDER BY eo.event_id DESC, eo.round_id DESC LIMIT ".$limit.";";

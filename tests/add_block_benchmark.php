@@ -1,4 +1,5 @@
 <?php
+$host_not_required = true;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
 if (!empty($argv)) {
