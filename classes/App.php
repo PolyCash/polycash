@@ -947,6 +947,11 @@ class App {
 		else $html .= "Free";
 		$html .= "</div></div>\n";
 		
+		$html .= '<div class="row"><div class="col-sm-5">Escrow address:</div><div class="col-sm-7" style="font-size: 11px;">';
+		if ($db_game['escrow_address'] == "") $html .= "None";
+		else $html .= '<a href="/explorer/games/'.$db_game['url_identifier'].'/addresses/'.$db_game['escrow_address'].'">'.$db_game['escrow_address'].'</a>';
+		$html .= "</div></div>\n";
+		
 		$html .= '<div class="row"><div class="col-sm-5">Additional buy-ins?</div><div class="col-sm-7">';
 		if ($db_game['buyin_policy'] == "unlimited") $html .= "Unlimited";
 		else if ($db_game['buyin_policy'] == "none") $html .= "Not allowed";

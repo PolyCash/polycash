@@ -14,7 +14,7 @@ class User {
 	}
 	
 	public function account_coin_value($game) {
-		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$game->db_game['game_id']."' AND io.spend_status='unspent' AND io.user_id='".$this->db_user['user_id']."' AND io.create_block_id IS NOT NULL;";
+		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$game->db_game['game_id']."' AND io.spend_status='unspent' AND io.user_id='".$this->db_user['user_id']."';";
 		$r = $this->app->run_query($q);
 		$coins = $r->fetch(PDO::FETCH_NUM);
 		$coins = $coins[0];
@@ -164,7 +164,7 @@ class User {
 		//if ($game->db_game['vote_effectiveness_function'] != "constant") $html .= "Votes are ".round(100*$game->round_index_to_effectiveness_factor($block_within_round),1)."% effective right now.<br/>\n";
 		
 		if ($immature_balance > 0) {
-			$q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id LEFT JOIN options gvo ON gio.option_id=gvo.option_id WHERE io.blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND io.user_id='".$this->db_user['user_id']."' AND (io.create_block_id > ".($game->blockchain->last_block_id() - $game->db_game['maturity'])." OR io.create_block_id IS NULL) ORDER BY io.io_id ASC;";
+			$q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id LEFT JOIN options gvo ON gio.option_id=gvo.option_id WHERE gio.game_id='".$game->db_game['game_id']."' AND io.user_id='".$this->db_user['user_id']."' AND (io.create_block_id > ".($game->blockchain->last_block_id() - $game->db_game['maturity'])." OR io.create_block_id IS NULL) ORDER BY io.io_id ASC;";
 			$r = $this->app->run_query($q);
 			
 			$html .= '<div class="lockedfunds_details" id="lockedfunds_details">';
@@ -174,10 +174,10 @@ class User {
 				$minutes_to_avail = round($seconds_to_avail/60);
 				
 				if ($next_transaction['transaction_desc'] == "votebase") $html .= "You won ";
-				$html .= '<font class="greentext">'.$this->app->format_bignum($next_transaction['amount']/(pow(10, 8)))."</font> ";
+				$html .= '<font class="greentext">'.$this->app->format_bignum($next_transaction['colored_amount']/(pow(10, 8)))."</font> ";
 				
 				if ($next_transaction['create_block_id'] == "") {
-					$html .= "coins were just ";
+					$html .= $game->db_game['coin_name_plural']." were just ";
 					if ($next_transaction['option_id'] > 0) {
 						$html .= "voted for ".$next_transaction['name'];
 					}
@@ -185,8 +185,8 @@ class User {
 					$html .= ". This transaction is not yet confirmed.";
 				}
 				else {
-					if ($next_transaction['transaction_desc'] == "votebase") $html .= "coins in block ".$next_transaction['create_block_id'].". Coins";
-					else $html .= "coins received in block #".$next_transaction['create_block_id'];
+					if ($next_transaction['transaction_desc'] == "votebase") $html .= $game->db_game['coin_name_plural']." in block ".$next_transaction['create_block_id'].". Coins";
+					else $html .= $game->db_game['coin_name_plural']." received in block #".$next_transaction['create_block_id'];
 					
 					$html .= " can be spent in block #".$avail_block.". (Approximately ";
 					if ($minutes_to_avail > 1) $html .= $minutes_to_avail." minutes";

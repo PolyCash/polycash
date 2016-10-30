@@ -199,7 +199,7 @@ class Event {
 				
 				if ($this->game->db_game['game_winning_rule'] == "event_points") {
 					$field_disp = ucwords(str_replace("_", " ", $this->game->db_game['game_winning_field']));
-					$detail_html .= '<div class="row"><div class="col-sm-6 boldtext">'.$field_disp.'</div><div class="col-sm-6">'.$this->db_event[$this->game->db_game['game_winning_field']].'</div></div>';
+					$detail_html .= '<div class="row"><div class="col-sm-6 boldtext">'.$field_disp.':</div><div class="col-sm-6">'.$this->db_event[$this->game->db_game['game_winning_field']].'</div></div>';
 				}
 				
 				$detail_html .= '<div class="row"><div class="col-sm-6 boldtext">Confirmed Votes:</div><div class="col-sm-6">'.$this->game->blockchain->app->format_bignum($confirmed_sum_votes/pow(10,8)).' votes</div></div>';
