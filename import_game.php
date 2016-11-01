@@ -8,7 +8,7 @@ include('includes/html_start.php');
 ?>
 <div class="container" style="max-width: 1000px; padding-top: 10px; padding-bottom: 10px; margin-bottom: 10px;">
 	<?php
-	if ($_REQUEST['action'] == "import_game_definition") {
+	if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "import_game_definition") {
 		if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 			$game_definition = $_REQUEST['game_definition'];
 			$game_def = json_decode($game_definition) or die("Error: the game definition you entered could not be imported.<br/>Please make sure to enter properly formatted JSON.<br/><a href=\"/import/\">Try again</a>");
@@ -32,7 +32,7 @@ include('includes/html_start.php');
 						if ($r->rowCount() == 0) {
 							$verbatim_vars = $app->game_definition_verbatim_vars();
 							
-							$q = "INSERT INTO games SET blockchain_id='".$db_blockchain['blockchain_id']."', game_status='published', featured=1, seconds_per_block='".$db_blockchain['seconds_per_block']."', start_condition='fixed_block', buyin_policy='unlimited', giveaway_status='public_free', invite_currency='".$blockchain->currency_id()."', logo_image_id=34";
+							$q = "INSERT INTO games SET blockchain_id='".$db_blockchain['blockchain_id']."', game_status='published', featured=1, seconds_per_block='".$db_blockchain['seconds_per_block']."', start_condition='fixed_block', giveaway_status='public_free', invite_currency='".$blockchain->currency_id()."', logo_image_id=34";
 							for ($i=0; $i<count($verbatim_vars); $i++) {
 								$var_type = $verbatim_vars[$i][0];
 								$var_name = $verbatim_vars[$i][1];

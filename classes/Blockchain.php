@@ -156,10 +156,10 @@ class Blockchain {
 				else {
 					$transaction_rpc = $coin_rpc->getrawtransaction($tx_hash, 1);
 					if (!empty($transaction_rpc['blockhash'])) {
-						try {
+						if ($this->db_blockchain['supports_getblockheader'] == 1) {
 							$rpc_block = $coin_rpc->getblockheader($transaction_rpc['blockhash']);
 						}
-						catch (Exception $e) {
+						else {
 							$rpc_block = $coin_rpc->getblock($transaction_rpc['blockhash']);
 						}
 						$block_height = $rpc_block['height'];

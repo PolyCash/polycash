@@ -1,0 +1,1 @@
+ALTER TABLE `blockchains` ADD `supports_getblockheader` TINYINT(1) NOT NULL DEFAULT '0' ;
