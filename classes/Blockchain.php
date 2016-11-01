@@ -245,6 +245,7 @@ class Blockchain {
 					
 					$output_io_ids = array();
 					$output_io_indices = array();
+					$output_io_address_ids = array();
 					
 					for ($j=$from_vout; $j<=$to_vout; $j++) {
 						$option_id = false;
@@ -270,6 +271,7 @@ class Blockchain {
 						$io_id = $this->app->last_insert_id();
 						
 						$output_io_ids[$j] = $io_id;
+						$output_io_address_ids[$j] = $output_address['address_id'];
 						
 						$output_sum += $outputs[$j]["value"]*pow(10,8);
 						
@@ -285,10 +287,13 @@ class Blockchain {
 						
 						while ($db_color_game = $r->fetch()) {
 							$color_game = new Game($this, $db_color_game['game_id']);
+							$escrow_address = $this->create_or_fetch_address($db_color_game['escrow_address'], true, false, false, false, false);
 							$color_amount = $db_color_game['colored_amount_sum'];
 							$coin_blocks = $db_color_game['ref_coin_block_sum'];
 							$color_amount_sum = 0;
 							$coin_block_sum = 0;
+							
+							$relevant_output_sum = $output_sum;
 							
 							$ref_round_id = $color_game->block_to_round($ref_block_id);
 							
@@ -304,34 +309,36 @@ class Blockchain {
 							$this->app->log("game #".$db_color_game['game_id'].", color sum: ".$color_amount/pow(10,8).", outputs: ".count($outputs));
 							
 							for ($j=0; $j<count($outputs); $j++) {
-								$this_color_amount = floor($color_amount*($outputs[$j]["value"]*pow(10,8))/$output_sum);
-								if ($j == count($outputs)-1) $this_color_amount = $color_amount - $color_amount_sum;
-								
-								$this_coin_blocks = floor($coin_blocks*($outputs[$j]["value"]*pow(10,8))/$output_sum);
-								if ($j == count($outputs)-1) $this_coin_blocks = $coin_blocks - $coin_block_sum;
-								
-								$this_coin_rounds = floor($coin_rounds*($outputs[$j]["value"]*pow(10,8))/$output_sum);
-								if ($j == count($outputs)-1) $this_coin_rounds = $coin_rounds - $coin_round_sum;
-								
-								$qq = "INSERT INTO transaction_game_ios SET game_id='".$color_game->db_game['game_id']."', io_id='".$output_io_ids[$j]."', colored_amount='".$this_color_amount."', ref_block_id='".$ref_block_id."', ref_coin_blocks='".$this_coin_blocks."', ref_round_id='".$ref_round_id."', ref_coin_rounds='".$this_coin_rounds."'";
-								if ($output_io_indices[$j] !== false) {
-									$option_id = $color_game->option_index_to_option_id_in_block($output_io_indices[$j], $ref_block_id);
-									if ($option_id) {
-										$db_event = $this->app->run_query("SELECT ev.*, et.* FROM options op JOIN events ev ON op.event_id=ev.event_id JOIN event_types et ON ev.event_type_id=et.event_type_id WHERE op.option_id='".$option_id."';")->fetch();
-										$event = new Event($color_game, $db_event, false);
-										$effectiveness_factor = $event->block_id_to_effectiveness_factor($this->last_block_id()+1);
-										$qq .= ", option_id='".$option_id."', event_id='".$db_event['event_id']."', effectiveness_factor='".$effectiveness_factor."'";
+								if ($output_io_address_ids[$j] != $escrow_address['address_id']) {
+									$this_color_amount = floor($color_amount*($outputs[$j]["value"]*pow(10,8))/$relevant_output_sum);
+									if ($j == count($outputs)-1) $this_color_amount = $color_amount - $color_amount_sum;
+									
+									$this_coin_blocks = floor($coin_blocks*($outputs[$j]["value"]*pow(10,8))/$relevant_output_sum);
+									if ($j == count($outputs)-1) $this_coin_blocks = $coin_blocks - $coin_block_sum;
+									
+									$this_coin_rounds = floor($coin_rounds*($outputs[$j]["value"]*pow(10,8))/$relevant_output_sum);
+									if ($j == count($outputs)-1) $this_coin_rounds = $coin_rounds - $coin_round_sum;
+									
+									$qq = "INSERT INTO transaction_game_ios SET game_id='".$color_game->db_game['game_id']."', io_id='".$output_io_ids[$j]."', colored_amount='".$this_color_amount."', ref_block_id='".$ref_block_id."', ref_coin_blocks='".$this_coin_blocks."', ref_round_id='".$ref_round_id."', ref_coin_rounds='".$this_coin_rounds."'";
+									if ($output_io_indices[$j] !== false) {
+										$option_id = $color_game->option_index_to_option_id_in_block($output_io_indices[$j], $ref_block_id);
+										if ($option_id) {
+											$db_event = $this->app->run_query("SELECT ev.*, et.* FROM options op JOIN events ev ON op.event_id=ev.event_id JOIN event_types et ON ev.event_type_id=et.event_type_id WHERE op.option_id='".$option_id."';")->fetch();
+											$event = new Event($color_game, $db_event, false);
+											$effectiveness_factor = $event->block_id_to_effectiveness_factor($this->last_block_id()+1);
+											$qq .= ", option_id='".$option_id."', event_id='".$db_event['event_id']."', effectiveness_factor='".$effectiveness_factor."'";
+										}
 									}
+									$qq .= ";";
+									$rr = $this->app->run_query($qq);
+									$gio_id = $this->app->last_insert_id();
+									
+									$this->app->log($gio_id." ".$qq);
+									
+									$color_amount_sum += $this_color_amount;
+									$coin_block_sum += $this_coin_blocks;
+									$coin_round_sum += $this_coin_rounds;
 								}
-								$qq .= ";";
-								$rr = $this->app->run_query($qq);
-								$gio_id = $this->app->last_insert_id();
-								
-								$this->app->log($gio_id." ".$qq);
-								
-								$color_amount_sum += $this_color_amount;
-								$coin_block_sum += $this_coin_blocks;
-								$coin_round_sum += $this_coin_rounds;
 							}
 						}
 					}
@@ -580,6 +587,7 @@ class Blockchain {
 	
 	public function delete_blocks_from_height($block_height) {
 		echo "deleting from block #".$block_height." and up.<br/>\n";
+		$this->app->run_query("DELETE s.* FROM game_sellouts s JOIN games g ON s.game_id=g.game_id WHERE g.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND s.block_id >= ".$block_height.";");
 		$this->app->run_query("DELETE FROM transactions WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id >= ".$block_height.";");
 		$this->app->run_query("DELETE FROM transactions WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id IS NULL;");
 		$this->app->run_query("DELETE io.*, gio.* FROM transaction_ios io LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE io.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND io.create_block_id >= ".$block_height.";");

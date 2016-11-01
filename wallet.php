@@ -79,7 +79,7 @@ if ($thisuser) {
 			}
 			
 			if ($user_game['bitcoin_address_id'] > 0) {}
-			else if ($requested_game['giveaway_status'] == "invite_pay" || $requested_game['giveaway_status'] == "public_pay" || $game->pot_value() > 0) {
+			else if ($requested_game['giveaway_status'] == "invite_pay" || $requested_game['giveaway_status'] == "public_pay" || $game->escrow_value(false) > 0) {
 				$pagetitle = "Join ".$requested_game['name'];
 				$nav_tab_selected = "wallet";
 				include('includes/html_start.php');

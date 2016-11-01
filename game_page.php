@@ -25,9 +25,9 @@ if ($game->db_game['invite_currency'] > 0) {
 	$btc_currency = $app->get_currency_by_abbreviation('btc');
 	
 	$coins_in_existence = $game->coins_in_existence(false);
-	$pot_value = $game->pot_value();
-	if ($pot_value > 0) {
-		$exchange_rate = ($coins_in_existence/pow(10,8))/$pot_value;
+	$escrow_value = $game->escrow_value(false);
+	if ($escrow_value > 0) {
+		$exchange_rate = ($coins_in_existence/pow(10,8))/$escrow_value;
 	}
 	else $exchange_rate = 0;
 }
@@ -94,7 +94,7 @@ else $exchange_rate = 0;
 					}
 					
 					if ($exchange_rate > 0) {
-						if ($game->pot_value() > 0) echo "Right now there's ".$invite_currency['symbol'].$app->format_bignum($game->pot_value())." in the pot and the";
+						if ($game->escrow_value(false) > 0) echo "Right now there's ".$invite_currency['symbol'].$app->format_bignum($game->escrow_value(false))." in the pot and the";
 						else echo "The";
 						echo " exchange rate is ".$app->format_bignum($exchange_rate)." ".$game->db_game['coin_name_plural']." per ".$invite_currency['short_name'].". ";
 					}

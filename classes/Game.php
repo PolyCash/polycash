@@ -91,11 +91,12 @@ class Game {
 			
 			if ($type == "giveaway" || $type == "votebase" || $type == "coinbase") {}
 			else {
-				$q = "SELECT *, io.address_id AS address_id, io.amount AS amount FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.spend_status='unspent' AND io.user_id='".$from_user_id."' AND io.blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND io.create_block_id <= ".($this->blockchain->last_block_id()-$this->db_game['maturity']);
+				$q = "SELECT *, io.address_id AS address_id, io.amount AS amount FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.spend_status='unspent'";
+				if ($from_user_id) $q .= " AND io.user_id='".$from_user_id."'";
+				$q .= " AND io.blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND io.create_block_id <= ".($this->blockchain->last_block_id()-$this->db_game['maturity']);
 				if ($io_ids) $q .= " AND io.io_id IN (".implode(",", $io_ids).")";
 				$q .= " ORDER BY io.amount ASC;";
 				$r = $this->blockchain->app->run_query($q);
-				
 				$coin_blocks_destroyed = 0;
 				$coin_rounds_destroyed = 0;
 				
@@ -800,6 +801,9 @@ class Game {
 		$q = "SELECT * FROM game_blocks WHERE locally_saved=1 AND game_id='".$this->db_game['game_id']."' ORDER BY game_block_id DESC LIMIT 1;";
 		$r = $this->blockchain->app->run_query($q);
 		
+		$q = "DELETE FROM game_sellouts WHERE game_id='".$this->db_game['game_id']."';";
+		$r = $this->blockchain->app->run_query($q);
+		
 		$q = "DELETE FROM transaction_game_ios WHERE game_id='".$this->db_game['game_id']."';";
 		$r = $this->blockchain->app->run_query($q);
 		
@@ -1168,10 +1172,10 @@ class Game {
 				
 				if ($transaction['tx_hash'] == $this->db_game['genesis_tx_hash']) $colored_coins_generated = $this->db_game['genesis_amount'];
 				else {
-					$escrow_balance = $this->blockchain->address_balance_at_block($escrow_address, $transaction['block_id']-1);
+					$escrow_value = $this->escrow_value($transaction['block_id']-1);
 					$coins_in_existence = $this->coins_in_existence($transaction['block_id']-1);
 					
-					$exchange_rate = $coins_in_existence/$escrow_balance;
+					$exchange_rate = $coins_in_existence/$escrow_value;
 					$colored_coins_generated = floor($exchange_rate*$escrowed_coins);
 				}
 				
@@ -1193,12 +1197,20 @@ class Game {
 		}
 	}
 	
-	public function pot_value() {
-		$value = $this->paid_players_in_game()*$this->db_game['invite_cost'];
-		$qq = "SELECT SUM(settle_amount) FROM game_buyins WHERE game_id='".$this->db_game['game_id']."';";
-		$rr = $this->blockchain->app->run_query($qq);
-		$amt = $rr->fetch(PDO::FETCH_NUM);
-		$value += $amt[0];
+	public function escrow_value($block_id) {
+		if (!$block_id) $block_id = $this->blockchain->last_block_id();
+		
+		$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
+		
+		$value = $this->blockchain->address_balance_at_block($escrow_address, $block_id);
+		
+		$q = "SELECT SUM(amount_out) FROM game_sellouts WHERE game_id='".$this->db_game['game_id']."' AND out_tx_hash IS NULL;";
+		$r = $this->blockchain->app->run_query($q);
+		$liabilities = $r->fetch();
+		$liabilities = (int)$liabilities['SUM(amount_out)'];
+		
+		$value = $value - $liabilities;
+		
 		return $value;
 	}
 	
@@ -1210,9 +1222,9 @@ class Game {
 		else $html .= "0%";
 		
 		$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
-		$escrow_coins = $this->blockchain->address_balance_at_block($escrow_address, $this->blockchain->last_block_id());
+		$escrow_value = $this->escrow_value(false);
+		$innate_currency_value = floor(($account_value/$coins_in_existence)*$escrow_value);
 		
-		$innate_currency_value = floor(($account_value/$coins_in_existence)*$escrow_coins);
 		if ($innate_currency_value > 0) {
 			$html .= "&nbsp;=&nbsp;".$this->blockchain->app->format_bignum($innate_currency_value/pow(10,8))." ".$this->blockchain->db_blockchain['coin_name_plural'];
 		}
@@ -2520,10 +2532,22 @@ class Game {
 			$buyin_r = $this->blockchain->app->run_query($buyin_q);
 			
 			while ($buyin_tx = $buyin_r->fetch()) {
+				// Check if buy-in transaction has already been created
 				$qq = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.create_transaction_id='".$buyin_tx['transaction_id']."';";
 				$rr = $this->blockchain->app->run_query($qq);
 				if ($rr->rowCount() == 0) {
-					$this->process_buyin_transaction($buyin_tx);
+					if ($this->db_game['sellout_policy'] == "off") {
+						$this->process_buyin_transaction($buyin_tx);
+					}
+					else {
+						// Check if any colored coins are being deposited to the escrow address
+						// If so, this is a sell-out rather than buy-in tx, so skip the buy-in
+						$qq = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.spend_transaction_id='".$buyin_tx['transaction_id']."';";
+						$rr = $this->blockchain->app->run_query($qq);
+						if ($rr->rowCount() == 0) {
+							$this->process_buyin_transaction($buyin_tx);
+						}
+					}
 				}
 			}
 			
@@ -2565,7 +2589,9 @@ class Game {
 						$output_sum += (int) $output_io['amount'];
 					}
 					
-					$qq = "SELECT io.*, a.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$db_transaction['transaction_id']."';";
+					$qq = "SELECT io.*, a.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$db_transaction['transaction_id']."'";
+					if ($this->db_game['sellout_policy'] == "on") $qq .= " AND a.address_id != '".$escrow_address['address_id']."'";
+					$qq .= ";";
 					$rr = $this->blockchain->app->run_query($qq);
 					
 					while ($output_io = $rr->fetch()) {
@@ -2595,6 +2621,8 @@ class Game {
 					}
 				}
 			}
+			
+			$this->process_sellouts_in_block($block_height);
 			
 			$q = "UPDATE game_blocks SET locally_saved=1 WHERE game_block_id='".$game_block['game_block_id']."';";
 			$r = $this->blockchain->app->run_query($q);
@@ -2810,6 +2838,118 @@ class Game {
 		if ($next_link_target) $html .= '<a href="/explorer/games/'.$this->db_game['url_identifier'].'/'.$next_link_target.'">Next Block &rarr;</a>';
 		
 		return $html;
+	}
+	
+	public function process_sellouts_in_block($block_id) {
+		if ($this->db_game['sellout_policy'] == "on") {
+			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
+			$escrow_balance = $this->blockchain->address_balance_at_block($escrow_address, $block_id);
+			$coins_in_existence = $this->coins_in_existence($block_id);
+			
+			// Identify sellout transactions paid into escrow & create records in game_sellouts table
+			$q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE io.blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND t.block_id = ".$block_id." AND io.address_id='".$escrow_address['address_id']."' GROUP BY t.transaction_id;";
+			$r = $this->blockchain->app->run_query($q);
+			
+			while ($transaction = $r->fetch()) {
+				$qq = "SELECT * FROM game_sellouts WHERE game_id='".$this->db_game['game_id']."' AND in_tx_hash=".$this->blockchain->app->quote_escape($transaction['tx_hash']).";";
+				$rr = $this->blockchain->app->run_query($qq);
+				
+				if ($rr->rowCount() == 0) {
+					$qq = "SELECT COUNT(*), SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE io.spend_transaction_id='".$transaction['transaction_id']."' AND gio.game_id='".$this->db_game['game_id']."';";
+					$rr = $this->blockchain->app->run_query($qq);
+					$stats_in = $rr->fetch();
+					
+					$qq = "SELECT COUNT(*), SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE io.create_transaction_id='".$transaction['transaction_id']."' AND gio.game_id='".$this->db_game['game_id']."';";
+					$rr = $this->blockchain->app->run_query($qq);
+					$stats_out = $rr->fetch();
+					
+					if ($stats_in['COUNT(*)'] > 0) {
+						$exchange_rate = round($coins_in_existence/$escrow_balance*pow(10,6))/pow(10,6);
+						$coloredcoins_destroyed = $stats_in['SUM(gio.colored_amount)'] - $stats_out['SUM(gio.colored_amount)'];
+						
+						$value_destroyed_coins = floor($coloredcoins_destroyed/$exchange_rate);
+						
+						$qq = "SELECT SUM(amount) FROM transaction_ios WHERE create_transaction_id='".$transaction['transaction_id']."' AND address_id='".$escrow_address['address_id']."';";
+						$rr = $this->blockchain->app->run_query($qq);
+						$coins_into_escrow = $rr->fetch();
+						$coins_into_escrow = $coins_into_escrow['SUM(amount)'];
+						
+						if ($this->blockchain->db_blockchain['url_identifier'] == "bitcoin") $fee_amount = 0.0005;
+						else $fee_amount = 0.001;
+						$fee_amount = $fee_amount*pow(10,8);
+						
+						$refund_amount = ($coins_into_escrow+$value_destroyed_coins) - $fee_amount;
+						
+						$qq = "SELECT SUM(amount) FROM transaction_ios WHERE spend_transaction_id='".$transaction['transaction_id']."';";
+						$rr = $this->blockchain->app->run_query($qq);
+						$in_io_sum = $rr->fetch();
+						$in_io_sum = (int)$in_io_sum['SUM(amount)'];
+						
+						$qq = "SELECT * FROM transaction_ios WHERE spend_transaction_id='".$transaction['transaction_id']."' ORDER BY out_index ASC;";
+						$rr = $this->blockchain->app->run_query($qq);
+						$num_in_ios = $rr->rowCount();
+						$in_io_i=0;
+						$refund_sum = 0;
+						$out_amounts = array();
+						while ($in_io = $rr->fetch()) {
+							$refund_amount = floor($refund_amount*$in_io['amount']/$in_io_sum);
+							if ($in_io_i == $num_in_ios-1) $refund_amount = $refund_amount - $refund_sum;
+							array_push($out_amounts, $refund_amount);
+							$refund_sum += $refund_amount;
+							$in_io_i++;
+						}
+						
+						$qq = "INSERT INTO game_sellouts SET game_id='".$this->db_game['game_id']."', block_id='".$block_id."', in_tx_hash=".$this->blockchain->app->quote_escape($transaction['tx_hash']).", color_amount_in='".$coloredcoins_destroyed."', exchange_rate='".$exchange_rate."', amount_in='".$coins_into_escrow."', amount_out='".($coins_into_escrow+$value_destroyed_coins)."', out_amounts='".implode(",", $out_amounts)."', fee_amount='".$fee_amount."';";
+						$rr = $this->blockchain->app->run_query($qq);
+					}
+				}
+			}
+			
+			// Identify refund transactions made out of escrow and update out_tx_hash in game_sellouts
+			$q = "SELECT * FROM game_sellouts WHERE game_id='".$this->db_game['game_id']."' AND out_tx_hash IS NULL;";
+			$r = $this->blockchain->app->run_query($q);
+			
+			while ($pending_sellout = $r->fetch()) {
+				$qq = "SELECT * FROM transactions WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND tx_hash=".$this->blockchain->app->quote_escape($pending_sellout['in_tx_hash']).";";
+				$rr = $this->blockchain->app->run_query($qq);
+				
+				if ($rr->rowCount() == 1) {
+					$in_transaction = $rr->fetch();
+					
+					$matching_tx_id = false;
+					$matching_tx_error = false;
+					
+					$expected_amounts = explode(",", $pending_sellout['out_amounts']);
+					$expected_addr_ids = array();
+					
+					$qq = "SELECT * FROM transaction_ios WHERE spend_transaction_id='".$in_transaction['transaction_id']."' ORDER BY out_index ASC;";
+					$rr = $this->blockchain->app->run_query($qq);
+					
+					for ($i=0; $i<count($expected_amounts); $i++) {
+						$in_io = $rr->fetch();
+						
+						$qqq = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE io.amount='".$expected_amounts[$i]."' AND io.address_id='".$in_io['address_id']."';";
+						$rrr = $this->blockchain->app->run_query($qqq);
+						
+						if ($rrr->rowCount() == 1) {
+							$matching_tx = $rrr->fetch();
+							if ($matching_tx_id == false || $matching_tx_id == $matching_tx['transaction_id']) {
+								$matching_tx_id = $matching_tx['transaction_id'];
+							}
+							else {
+								$matching_tx_error = true;
+							}
+						}
+						else $matching_tx_error = true;
+					}
+					
+					if ($matching_tx_id && !$matching_tx_error) {
+						$qq = "UPDATE game_sellouts SET out_tx_hash=".$this->blockchain->app->quote_escape($matching_tx['tx_hash'])." WHERE sellout_id='".$pending_sellout['sellout_id']."';";
+						$rr = $this->blockchain->app->run_query($qq);
+					}
+				}
+			}
+		}
 	}
 }
 ?>
