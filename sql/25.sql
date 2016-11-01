@@ -1,7 +1,8 @@
 CREATE TABLE `game_sellouts` (
   `sellout_id` int(11) NOT NULL,
   `game_id` int(11) DEFAULT NULL,
-  `block_id` int(11) DEFAULT NULL,
+  `in_block_id` int(11) DEFAULT NULL,
+  `out_block_id` int(11) DEFAULT NULL,
   `in_tx_hash` varchar(64) DEFAULT NULL,
   `out_tx_hash` varchar(64) DEFAULT NULL,
   `color_amount_in` bigint(20) NOT NULL DEFAULT '0',
@@ -15,7 +16,8 @@ CREATE TABLE `game_sellouts` (
 ALTER TABLE `game_sellouts`
   ADD PRIMARY KEY (`sellout_id`),
   ADD KEY `game_id` (`game_id`),
-  ADD KEY `block_id` (`block_id`),
+  ADD KEY `in_block_id` (`in_block_id`),
+  ADD KEY `out_block_id` (`out_block_id`),
   ADD KEY `in_tx_hash` (`in_tx_hash`),
   ADD KEY `out_tx_hash` (`out_tx_hash`);
 

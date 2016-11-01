@@ -1204,7 +1204,7 @@ class Game {
 		
 		$value = $this->blockchain->address_balance_at_block($escrow_address, $block_id);
 		
-		$q = "SELECT SUM(amount_out) FROM game_sellouts WHERE game_id='".$this->db_game['game_id']."' AND out_tx_hash IS NULL;";
+		$q = "SELECT SUM(amount_out) FROM game_sellouts WHERE game_id='".$this->db_game['game_id']."' AND (out_block_id IS NULL OR out_block_id > ".$block_id.");";
 		$r = $this->blockchain->app->run_query($q);
 		$liabilities = $r->fetch();
 		$liabilities = (int)$liabilities['SUM(amount_out)'];
@@ -2899,7 +2899,7 @@ class Game {
 							$in_io_i++;
 						}
 						
-						$qq = "INSERT INTO game_sellouts SET game_id='".$this->db_game['game_id']."', block_id='".$block_id."', in_tx_hash=".$this->blockchain->app->quote_escape($transaction['tx_hash']).", color_amount_in='".$coloredcoins_destroyed."', exchange_rate='".$exchange_rate."', amount_in='".$coins_into_escrow."', amount_out='".($coins_into_escrow+$value_destroyed_coins)."', out_amounts='".implode(",", $out_amounts)."', fee_amount='".$fee_amount."';";
+						$qq = "INSERT INTO game_sellouts SET game_id='".$this->db_game['game_id']."', in_block_id='".$block_id."', in_tx_hash=".$this->blockchain->app->quote_escape($transaction['tx_hash']).", color_amount_in='".$coloredcoins_destroyed."', exchange_rate='".$exchange_rate."', amount_in='".$coins_into_escrow."', amount_out='".($coins_into_escrow+$value_destroyed_coins)."', out_amounts='".implode(",", $out_amounts)."', fee_amount='".$fee_amount."';";
 						$rr = $this->blockchain->app->run_query($qq);
 					}
 				}
@@ -2949,6 +2949,9 @@ class Game {
 					}
 				}
 			}
+			
+			$qq = "UPDATE game_sellouts s JOIN transactions t ON s.out_tx_hash=t.tx_hash SET s.out_block_id=t.block_id WHERE s.game_id='".$this->db_game['game_id']."' AND t.blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."';";
+			$rr = $this->blockchain->app->run_query($qq);
 		}
 	}
 }
