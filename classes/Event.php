@@ -307,7 +307,7 @@ class Event {
 		else $score_field = $this->game->db_game['payout_weight']."s_destroyed";
 		
 		// Loop through the correctly voted UTXOs
-		$q = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id WHERE gio.event_id='".$this->db_event['event_id']."' AND gio.create_round_id=".$round_id." AND io.create_block_id != ".$block_id." AND gio.option_id=".$winning_option.";";
+		$q = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id WHERE gio.event_id='".$this->db_event['event_id']."' AND gio.create_round_id=".$round_id." AND gio.option_id=".$winning_option.";";
 		$r = $this->game->blockchain->app->run_query($q);
 		$total_paid = 0;
 		$out_index = 0;

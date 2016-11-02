@@ -81,12 +81,11 @@ else $exchange_rate = 0;
 					}
 					else {
 						if ($game->db_game['game_status'] == "running") {
-							echo "This game started ".$app->format_seconds(time()-strtotime($game->db_game['start_datetime']))." ago on ".date("M d Y", strtotime($game->db_game['start_datetime'])).". ";
+							echo "This game started at ".date("M j, Y g:ia", strtotime($game->db_game['start_datetime'])).". ";
 						}
 						else {
 							echo "This game starts in ".$app->format_seconds(strtotime($game->db_game['start_datetime'])-time())." on ".date("M d Y", strtotime($game->db_game['start_datetime'])).". ";
 						}
-						echo "So far, ".$game->paid_players_in_game()." have joined this game. ";
 					}
 					
 					if ($game->db_game['short_description'] != "") {

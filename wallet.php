@@ -64,21 +64,21 @@ if ($thisuser) {
 		
 		if ($user_game && $user_game['payment_required'] == 0) {
 			if ($_REQUEST['action'] == "save_address") {
-				$bitcoin_address = $app->strong_strip_tags($_REQUEST['bitcoin_address']);
+				$payout_address = $app->strong_strip_tags($_REQUEST['payout_address']);
 				
-				if ($bitcoin_address != "") {
-					$btc_currency = $app->get_currency_by_abbreviation('btc');
-					$qq = "INSERT INTO external_addresses SET user_id='".$thisuser->db_user['user_id']."', currency_id=".$btc_currency['currency_id'].", address=".$app->quote_escape($bitcoin_address).", time_created='".time()."';";
+				if ($payout_address != "") {
+					$base_currency = $app->fetch_currency_by_id($game->blockchain->currency_id());
+					$qq = "INSERT INTO external_addresses SET user_id='".$thisuser->db_user['user_id']."', currency_id=".$base_currency['currency_id'].", address=".$app->quote_escape($payout_address).", time_created='".time()."';";
 					$rr = $app->run_query($qq);
 					$address_id = $app->last_insert_id();
 					
-					$qq = "UPDATE user_games SET bitcoin_address_id='".$address_id."' WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
+					$qq = "UPDATE user_games SET payout_address_id='".$address_id."' WHERE user_game_id='".$user_game['user_game_id']."';";
 					$rr = $app->run_query($qq);
-					$user_game['bitcoin_address_id'] = $address_id;
+					$user_game['payout_address_id'] = $address_id;
 				}
 			}
 			
-			if ($user_game['bitcoin_address_id'] > 0) {}
+			if ($user_game['payout_address_id'] > 0) {}
 			else if ($requested_game['giveaway_status'] == "invite_pay" || $requested_game['giveaway_status'] == "public_pay" || $game->escrow_value(false) > 0) {
 				$pagetitle = "Join ".$requested_game['name'];
 				$nav_tab_selected = "wallet";
@@ -86,19 +86,19 @@ if ($thisuser) {
 				?>
 				<script type="text/javascript">
 				$(document).ready(function() {
-					$('#bitcoin_address').focus();
+					$('#payout_address').focus();
 				});
 				</script>
 				<div class="container" style="max-width: 1000px; padding-top: 10px;">
 					<form action="/wallet/<?php echo $requested_game['url_identifier']; ?>/" method="post">
 						<input type="hidden" name="action" value="save_address" />
-						This game is played for real money; please specify a Bitcoin address where your winnings should be sent:<br/>
+						Please specify a <?php echo $game->blockchain->db_blockchain['coin_name']; ?> address where your winnings should be sent:<br/>
 						<div class="row" style="margin-top: 10px;">
 							<div class="col-md-8">
-								<input class="form-control" id="bitcoin_address" name="bitcoin_address" />
+								<input class="form-control" id="payout_address" name="payout_address" />
 							</div>
 						</div>
-						<input type="submit" class="btn btn-primary" value="Save Address" />
+						<input type="submit" class="btn btn-primary" value="Save Address" style="margin-top: 10px;" />
 					</form>
 				</div>
 				<?php
@@ -665,8 +665,8 @@ if ($thisuser && $game) {
 			
 			<div id="tabcontent2" style="display: none;" class="tabcontent">
 				<?php
-				if ($user_game['bitcoin_address_id'] > 0) {
-					$payout_address = $app->fetch_external_address_by_id($user_game['bitcoin_address_id']);
+				if ($user_game['payout_address_id'] > 0) {
+					$payout_address = $app->fetch_external_address_by_id($user_game['payout_address_id']);
 					echo "Payout address: ".$payout_address['address'];
 				}
 				else {

@@ -62,6 +62,8 @@ if ($thisuser && $game) {
 					$('#buyin_receive_amount_disp').html(format_coins(amount_out));
 					$('#buyin_pay_amount').val(format_coins(amount_in/exchange_rate));
 					$('#exchange_rate').html(format_coins(exchange_rate));
+					
+					$.get("/ajax/buyin.php?action=submit&game_id=<?php echo $game->db_game['game_id']; ?>&invoice_id="+buyin_invoice_id+"&buyin_amount="+amount_in+"&color_amount="+color_amount, function(result) {});
 				}
 				function submit_buyin() {
 					var buyin_amount = $('#buyin_amount').val();

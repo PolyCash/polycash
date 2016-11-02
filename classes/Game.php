@@ -1407,7 +1407,7 @@ class Game {
 			$blocks_pct_complete = 100*($total_game_blocks-($missing_blocks-$block_fraction))/$total_game_blocks;
 			if ($blocks_pct_complete != 100) $html .= "<br/>Loading blocks... ".round($blocks_pct_complete, 2)."% complete. ";
 			if ($loading_block) {
-				$html .= "Loaded ".$loading_transactions."/".$loading_block['num_transactions']." in block <a href=\"/explorer/".$this->db_game['url_identifier']."/blocks/".$loading_block_id."\">#".$loading_block_id."</a>. ";
+				$html .= "Loaded ".$loading_transactions."/".$loading_block['num_transactions']." in block <a href=\"/explorer/games/".$this->db_game['url_identifier']."/blocks/".$loading_block_id."\">#".$loading_block_id."</a>. ";
 			}
 			
 			$game_blocks_pct_complete = 100*($total_game_blocks-$missing_game_blocks)/$total_game_blocks;

@@ -56,7 +56,7 @@ class Blockchain {
 		$html = "";
 		
 		$db_block = false;
-		$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id='".$block_height."';";
+		$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id='".$block_height."' ORDER BY internal_block_id ASC;";
 		$r = $this->app->run_query($q);
 		if ($r->rowCount() > 0) {
 			$db_block = $r->fetch();
@@ -71,7 +71,8 @@ class Blockchain {
 		}
 		
 		if ($db_block['block_hash'] == "") {
-			$this->app->run_query("UPDATE blocks SET block_hash='".$block_hash."' WHERE internal_block_id='".$db_block['internal_block_id']."';");
+			$q = "UPDATE blocks SET block_hash='".$block_hash."' WHERE internal_block_id='".$db_block['internal_block_id']."';";
+			$this->app->run_query($q);
 			$html .= $block_height." ";
 		}
 		
@@ -141,7 +142,6 @@ class Blockchain {
 				if ($unconfirmed_tx['blockchain_id'] == $this->db_blockchain['blockchain_id']) {
 					$q = "DELETE t.*, io.*, gio.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';";
 					$r = $this->app->run_query($q);
-					if ($show_debug) echo "del.".(microtime(true)-$benchmark_time)." ";
 					$benchmark_time = microtime(true);
 				}
 			}
@@ -165,7 +165,6 @@ class Blockchain {
 						$block_height = $rpc_block['height'];
 					}
 				}
-				if ($show_debug) echo "get.".(microtime(true)-$benchmark_time)." ";
 				$benchmark_time = microtime(true);
 				
 				$outputs = $transaction_rpc["vout"];
@@ -186,7 +185,6 @@ class Blockchain {
 				$r = $this->app->run_query($q);
 				$db_transaction_id = $this->app->last_insert_id();
 				
-				if ($show_debug) echo "insert.".(microtime(true)-$benchmark_time)." ";
 				$benchmark_time = microtime(true);
 				
 				$spend_io_ids = array();
@@ -232,7 +230,6 @@ class Blockchain {
 						}
 					}
 				}
-				if ($show_debug) echo "inputs.".(microtime(true)-$benchmark_time)." ";
 				$benchmark_time = microtime(true);
 				
 				if ($successful) {
@@ -343,7 +340,6 @@ class Blockchain {
 						}
 					}
 					
-					if ($show_debug) echo "outputs.".(microtime(true)-$benchmark_time)." ";
 					$benchmark_time = microtime(true);
 					
 					if (count($spend_io_ids) > 0) {
@@ -497,13 +493,14 @@ class Blockchain {
 		do {
 			$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND locally_saved=0";
 			if ($required_blocks_only && $this->db_blockchain['first_required_block'] > 0) $q .= " AND block_id >= ".$this->db_blockchain['first_required_block'];
-			$q .= " ORDER BY block_id ASC LIMIT 1;";
+			$q .= " ORDER BY block_id ASC, internal_block_id ASC LIMIT 1;";
 			$r = $this->app->run_query($q);
 			if ($r->rowCount() > 0) {
 				$unknown_block = $r->fetch();
 				
 				if ($unknown_block['block_hash'] == "") {
 					$unknown_block_hash = $coin_rpc->getblockhash((int)$unknown_block['block_id']);
+					$this->app->run_query("UPDATE blocks SET block_hash=".$this->app->quote_escape($unknown_block_hash)." WHERE internal_block_id='".$unknown_block['internal_block_id']."';");
 					$this->coind_add_block($coin_rpc, $unknown_block_hash, $unknown_block['block_id'], TRUE);
 					$unknown_block = $this->app->run_query("SELECT * FROM blocks WHERE internal_block_id='".$unknown_block['internal_block_id']."';")->fetch();
 				}
