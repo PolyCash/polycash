@@ -21,7 +21,7 @@ class Game {
 		return ceil($mining_block_id/$this->db_game['round_length']);
 	}
 	
-	public function create_transaction($option_ids, $amounts, $from_user_id, $to_user_id, $block_id, $type, $io_ids, $address_ids, $remainder_address_id, $transaction_fee) {
+	public function create_transaction($option_ids, $amounts, $user_game, $block_id, $type, $io_ids, $address_ids, $remainder_address_id, $transaction_fee) {
 		if (!$type || $type == "") $type = "transaction";
 		
 		$amount = $transaction_fee;
@@ -32,8 +32,8 @@ class Game {
 		if ($type == "giveaway") $instantly_mature = 1;
 		else $instantly_mature = 0;
 		
-		if ($from_user_id) {
-			$from_user = new User($this->blockchain->app, $from_user_id);
+		if ($user_game) {
+			$from_user = new User($this->blockchain->app, $user_game['user_id']);
 			$account_value = $from_user->account_coin_value($this);
 			$immature_balance = $from_user->immature_balance($this);
 			$mature_balance = $from_user->mature_balance($this);
@@ -44,8 +44,6 @@ class Game {
 			$immature_balance = 0;
 			$mature_balance = 0;
 		}
-		
-		if ($to_user_id) $to_user = new User($this->blockchain->app, $to_user_id);
 		
 		$utxo_balance = false;
 		if ($io_ids) {
@@ -70,15 +68,6 @@ class Game {
 				$q = "INSERT INTO transactions SET game_id='".$this->db_game['game_id']."', fee_amount='".$transaction_fee."', has_all_inputs=1, has_all_outputs=1";
 				if ($this->blockchain->db_blockchain['p2p_mode'] == "none") $q .= ", tx_hash='".$this->blockchain->app->random_string(64)."'";
 				$q .= ", transaction_desc='".$type."', amount=".$amount;
-				if ($from_user_id) $q .= ", from_user_id='".$from_user_id."'";
-				if ($to_user_id) $q .= ", to_user_id='".$to_user_id."'";
-				if ($type == "bet") {
-					$qq = "SELECT bet_round_id FROM addresses WHERE address_id='".$address_ids[0]."';";
-					$rr = $this->blockchain->app->run_query($qq);
-					$bet_round_id = $rr->fetch(PDO::FETCH_NUM);
-					$bet_round_id = $bet_round_id[0];
-					$q .= "bet_round_id='".$bet_round_id."', ";
-				}
 				if ($block_id !== false) $q .= ", block_id='".$block_id."', round_id='".$this->block_to_round($block_id)."'";
 				$q .= ", time_created='".time()."';";
 				$r = $this->blockchain->app->run_query($q);
@@ -91,9 +80,7 @@ class Game {
 			
 			if ($type == "giveaway" || $type == "votebase" || $type == "coinbase") {}
 			else {
-				$q = "SELECT *, io.address_id AS address_id, io.amount AS amount FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.spend_status='unspent'";
-				if ($from_user_id) $q .= " AND io.user_id='".$from_user_id."'";
-				$q .= " AND io.blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND io.create_block_id <= ".($this->blockchain->last_block_id()-$this->db_game['maturity']);
+				$q = "SELECT *, io.address_id AS address_id, io.amount AS amount FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.spend_status='unspent' AND io.blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND io.create_block_id <= ".($this->blockchain->last_block_id()-$this->db_game['maturity']);
 				if ($io_ids) $q .= " AND io.io_id IN (".implode(",", $io_ids).")";
 				$q .= " ORDER BY io.amount ASC;";
 				$r = $this->blockchain->app->run_query($q);
@@ -122,7 +109,6 @@ class Game {
 						
 						if ($block_id !== false) {
 							$coin_blocks_destroyed += ($block_id - $transaction_input['create_block_id'])*$transaction_input['amount'];
-							$coin_rounds_destroyed += ($this->block_to_round($block_id) - $transaction_input['create_round_id'])*$transaction_input['amount'];
 						}
 						
 						$affected_input_ids[count($affected_input_ids)] = $transaction_input['io_id'];
@@ -135,9 +121,6 @@ class Game {
 				}
 				
 				$overshoot_amount = $input_sum - $amount;
-				
-				//$qq = "UPDATE transactions SET ref_block_id='".$ref_block_id."', ref_coin_blocks_destroyed='".$ref_cbd."' WHERE transaction_id='".$transaction_id."';";
-				//$rr = $this->blockchain->app->run_query($qq);
 			}
 			
 			$output_error = false;
@@ -148,7 +131,7 @@ class Game {
 						if (count($address_ids) == count($amounts)) $address_id = $address_ids[$out_index];
 						else $address_id = $address_ids[0];
 					}
-					else $address_id = $to_user->user_address_id($this, false, $option_ids[$out_index]);
+					else $address_id = $from_user->user_address_id($this, false, $option_ids[$out_index], $user_game['account_id']);
 					
 					if ($address_id) {
 						$q = "SELECT * FROM addresses WHERE address_id='".$address_id."';";
@@ -416,7 +399,7 @@ class Game {
 		
 		$ref_account = false;
 		$mined_address = $this->blockchain->app->new_address_key(false, $ref_account);
-		$mined_transaction_id = $this->create_transaction(array(false), array($this->blockchain->app->pow_reward_in_round($this->db_game, $justmined_round)+$fee_sum), false, false, $last_block_id, "coinbase", false, array($mined_address['address_id']), false, 0);
+		$mined_transaction_id = $this->create_transaction(array(false), array($this->blockchain->app->pow_reward_in_round($this->db_game, $justmined_round)+$fee_sum), false, $last_block_id, "coinbase", false, array($mined_address['address_id']), false, 0);
 		
 		// Run payouts
 		if ($last_block_id%$this->db_game['round_length'] == 0) {
@@ -483,7 +466,7 @@ class Game {
 						}
 					}
 					$last_block_id = $this->blockchain->last_block_id();
-					$transaction_id = $this->create_transaction(false, $amounts, false, false, false, "votebase", false, $address_ids, false, 0);
+					$transaction_id = $this->create_transaction(false, $amounts, false, false, "votebase", false, $address_ids, false, 0);
 					$q = "UPDATE transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id SET t.block_id='".$last_block_id."', io.spend_status='unspent', io.create_block_id='".$last_block_id."', gio.create_round_id='".$this->block_to_round($last_block_id)."' WHERE t.transaction_id='".$transaction_id."';";
 					$r = $this->blockchain->app->run_query($q);
 					$this->refresh_coins_in_existence();
@@ -627,7 +610,7 @@ class Game {
 									$log_text .= "Vote ".$vote_amount." for ".$vote_option_id."<br/>\n";
 								}
 								
-								$transaction_id = $this->create_transaction($vote_option_ids, $vote_amounts, $strategy_user->db_user['user_id'], $strategy_user->db_user['user_id'], false, 'transaction', $input_io_ids, false, false, false);
+								$transaction_id = $this->create_transaction($vote_option_ids, $vote_amounts, $db_user, false, 'transaction', $input_io_ids, false, false, false);
 								
 								if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
 								else $log_text .= "Failed to add transaction.<br/>\n";
@@ -703,7 +686,7 @@ class Game {
 								}
 								if ($remainder_coins > 0) $amounts[count($amounts)-1] += $remainder_coins;
 								
-								$transaction_id = $this->create_transaction($option_ids, $amounts, $strategy_user->db_user['user_id'], $strategy_user->db_user['user_id'], false, 'transaction', false, false, false, $db_user['transaction_fee']);
+								$transaction_id = $this->create_transaction($option_ids, $amounts, $db_user, false, 'transaction', false, false, false, $db_user['transaction_fee']);
 								
 								if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
 								else $log_text .= "Failed to add transaction.<br/>\n";*/
@@ -740,7 +723,7 @@ class Game {
 										}
 									}
 									if ($amount_sum < ($free_balance-$db_user['transaction_fee'])) $amounts[count($amounts)-1] += ($free_balance-$db_user['transaction_fee']) - $amount_sum;
-									$transaction_id = $this->create_transaction($option_ids, $amounts, $strategy_user->db_user['user_id'], $strategy_user->db_user['user_id'], false, 'transaction', false, false, false, $db_user['transaction_fee']);
+									$transaction_id = $this->create_transaction($option_ids, $amounts, $db_user, false, 'transaction', false, false, false, $db_user['transaction_fee']);
 									if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
 									else $log_text .= "Failed to add transaction.<br/>\n";
 								}
@@ -772,7 +755,7 @@ class Game {
 									}
 									if ($amount_sum < ($free_balance-$db_user['transaction_fee'])) $amounts[count($amounts)-1] += ($free_balance-$db_user['transaction_fee']) - $amount_sum;
 									
-									$transaction_id = $this->create_transaction($option_ids, $amounts, $strategy_user->db_user['user_id'], $strategy_user->db_user['user_id'], false, 'transaction', false, false, false, $db_user['transaction_fee']);
+									$transaction_id = $this->create_transaction($option_ids, $amounts, $db_user, false, 'transaction', false, false, false, $db_user['transaction_fee']);
 									
 									if ($transaction_id) {
 										$log_text .= "Added transaction $transaction_id<br/>\n";
@@ -840,7 +823,7 @@ class Game {
 			
 			while ($user_game = $r->fetch()) {
 				$temp_user = new User($this->blockchain->app, $user_game['user_id']);
-				$temp_user->generate_user_addresses($this);
+				$temp_user->generate_user_addresses($this, $user_game);
 			}
 			
 			for ($i=0; $i<count($invite_user_ids); $i++) {
@@ -1000,7 +983,7 @@ class Game {
 					$actual_amount += $amounts[$i];
 				}
 				
-				$transaction_id = $this->create_transaction($option_ids, $amounts, false, false, 0, 'giveaway', false, $addr_ids, false, 0);
+				$transaction_id = $this->create_transaction($option_ids, $amounts, false, 0, 'giveaway', false, $addr_ids, false, 0);
 			}
 		}
 		
@@ -1358,7 +1341,7 @@ class Game {
 		return $returnvals;
 	}
 	
-	public function game_status_explanation($user) {
+	public function game_status_explanation(&$user, &$user_game) {
 		$html = "";
 		if ($this->db_game['game_status'] == "editable") $html .= "The game creator hasn't yet published this game; it's parameters can still be changed. ";
 		else if ($this->db_game['game_status'] == "published") {
@@ -1425,7 +1408,7 @@ class Game {
 			else $html .= "<h3>Current Scores</h3>";
 			
 			if ($user && !empty($this->db_game['game_winning_transaction_id'])) {
-				$q = "SELECT SUM(amount) FROM addresses a JOIN transaction_ios io ON a.address_id=io.address_id WHERE a.user_id='".$user->db_user['user_id']."' AND io.create_transaction_id='".$this->db_game['game_winning_transaction_id']."';";
+				$q = "SELECT SUM(amount) FROM addresses a JOIN address_keys k ON a.address_id=k.address_id JOIN transaction_ios io ON a.address_id=io.address_id WHERE k.account_id='".$user_game['account_id']."' AND io.create_transaction_id='".$this->db_game['game_winning_transaction_id']."';";
 				$r = $this->blockchain->app->run_query($q);
 				$game_winning_amount = $r->fetch()['SUM(amount)'];
 				$html .= "You won <font class=\"greentext\">".$this->blockchain->app->format_bignum($game_winning_amount/pow(10,8))."</font> ".$this->db_game['coin_name_plural']." in the end-of-game payout.<br/>\n";
@@ -1976,7 +1959,10 @@ class Game {
 		$current_round = $this->block_to_round($mining_block_id);
 		
 		$user_id = false;
-		if ($user) $user_id = $user->db_user['user_id'];
+		if ($user) {
+			$user_id = $user->db_user['user_id'];
+			$user_game = $user->ensure_user_in_game($this->db_game['game_id']);
+		}
 		
 		$js = "console.log('loading new events!');\n";
 		$js .= "for (var i=0; i<games[".$game_index."].events.length; i++) {\n";
@@ -2010,7 +1996,7 @@ class Game {
 			while ($option = $option_r->fetch()) {
 				$has_votingaddr = "false";
 				if ($user) {
-					$votingaddr_id = $user->user_address_id($this, $option['option_index'], false);
+					$votingaddr_id = $user->user_address_id($this, $option['option_index'], false, $user_game['account_id']);
 					if ($votingaddr_id !== false) $has_votingaddr = "true";
 				}
 				$js .= "games[".$game_index."].events[".$i."].options.push(new option(games[".$game_index."].events[".$i."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", '".$option['name']."', 0, $has_votingaddr));\n";
@@ -2060,23 +2046,20 @@ class Game {
 		return (($block_id-1)%$this->db_game['round_length'])+1;
 	}
 	
-	public function mature_io_ids_csv($user_id) {
-		if ($user_id > 0) {
-			$ids_csv = "";
-			$last_block_id = $this->blockchain->last_block_id();
-			$io_q = "SELECT io.io_id FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN addresses a ON io.address_id=a.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND a.user_id='".$user_id."' AND gio.game_id='".$this->db_game['game_id']."' AND (io.create_block_id <= ".($last_block_id-$this->db_game['maturity'])." OR gio.instantly_mature = 1)";
-			if ($this->db_game['payout_weight'] == "coin_round") {
-				$io_q .= " AND gio.create_round_id < ".$this->block_to_round($last_block_id+1);
-			}
-			$io_q .= " ORDER BY io.io_id ASC;";
-			$io_r = $this->blockchain->app->run_query($io_q);
-			while ($io = $io_r->fetch(PDO::FETCH_NUM)) {
-				$ids_csv .= $io[0].",";
-			}
-			if ($ids_csv != "") $ids_csv = substr($ids_csv, 0, strlen($ids_csv)-1);
-			return $ids_csv;
+	public function mature_io_ids_csv($user_game) {
+		$ids_csv = "";
+		$last_block_id = $this->blockchain->last_block_id();
+		$io_q = "SELECT io.io_id FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND k.account_id='".$user_game['account_id']."' AND gio.game_id='".$this->db_game['game_id']."' AND (io.create_block_id <= ".($last_block_id-$this->db_game['maturity'])." OR gio.instantly_mature = 1)";
+		if ($this->db_game['payout_weight'] == "coin_round") {
+			$io_q .= " AND gio.create_round_id < ".$this->block_to_round($last_block_id+1);
 		}
-		else return "";
+		$io_q .= " ORDER BY io.io_id ASC;";
+		$io_r = $this->blockchain->app->run_query($io_q);
+		while ($io = $io_r->fetch(PDO::FETCH_NUM)) {
+			$ids_csv .= $io[0].",";
+		}
+		if ($ids_csv != "") $ids_csv = substr($ids_csv, 0, strlen($ids_csv)-1);
+		return $ids_csv;
 	}
 	
 	public function bet_round_range() {
@@ -2134,7 +2117,7 @@ class Game {
 	}
 
 	public function get_bet_burn_address($round_id, $option_id) {
-		if ($this->db_game['losable_bets_enabled'] == 1) {
+		/*if ($this->db_game['losable_bets_enabled'] == 1) {
 			$burn_address_text = $this->burn_address_text($round_id, $option_id);
 			
 			$q = "SELECT * FROM addresses WHERE event_id='".$this->db_game['game_id']."' AND address='".$burn_address_text."';";
@@ -2156,7 +2139,8 @@ class Game {
 			}
 			return $burn_address;
 		}
-		else return false;
+		else */
+		return false;
 	}
 
 	public function my_bets($user) {
@@ -2217,14 +2201,14 @@ class Game {
 		return $r[0];
 	}
 	
-	public function select_input_buttons($user_id) {
+	public function select_input_buttons($user_game) {
 		$js = "mature_ios.length = 0;\n";
 		$html = "<p>Click on the coins below to compose your voting transaction.</p>\n";
 		$input_buttons_html = "";
 		
 		$last_block_id = $this->blockchain->last_block_id();
 		
-		$output_q = "SELECT io.*, gio.* FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND a.user_id='".$user_id."' AND gio.game_id='".$this->db_game['game_id']."' AND (io.create_block_id <= ".($last_block_id-$this->db_game['maturity'])." OR gio.instantly_mature=1)";
+		$output_q = "SELECT io.*, gio.* FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND k.account_id='".$user_game['account_id']."' AND gio.game_id='".$this->db_game['game_id']."' AND (io.create_block_id <= ".($last_block_id-$this->db_game['maturity'])." OR gio.instantly_mature=1)";
 		if ($this->db_game['payout_weight'] == "coin_round") $output_q .= " AND gio.create_round_id < ".$this->block_to_round($last_block_id+1);
 		$output_q .= " GROUP BY io.io_id ORDER BY io.io_id ASC;";
 		$output_r = $this->blockchain->app->run_query($output_q);

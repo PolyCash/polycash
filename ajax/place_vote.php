@@ -12,6 +12,7 @@ $noinfo_fail_obj = (object) [
 
 if ($thisuser && $game) {
 	$user_strategy = false;
+	$user_game = $thisuser->ensure_user_in_game($game->db_game['game_id']);
 	$success = $game->get_user_strategy($thisuser->db_user['user_id'], $user_strategy);
 	
 	if (!$success) {
@@ -160,7 +161,7 @@ if ($thisuser && $game) {
 	}
 	else {
 		if ($amount_sum+$user_strategy['transaction_fee'] <= $mature_balance && $amount_sum > 0) {
-			$transaction_id = $game->create_transaction($option_ids, $real_amounts, $thisuser->db_user['user_id'], $thisuser->db_user['user_id'], false, 'transaction', $io_ids, false, false, (int) $user_strategy['transaction_fee']);
+			$transaction_id = $game->create_transaction($option_ids, $real_amounts, $user_game, false, 'transaction', $io_ids, false, false, (int) $user_strategy['transaction_fee']);
 			
 			if ($transaction_id) {
 				$game->update_option_votes();

@@ -52,11 +52,7 @@ if ($thisuser) {
 			$game = new Game($blockchain, $user_game['game_id']);
 		}
 		else if ($requested_game['giveaway_status'] == "public_free" || $requested_game['giveaway_status'] == "public_pay") {
-			$thisuser->ensure_user_in_game($requested_game['game_id']);
-			
-			$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND g.game_id='".$requested_game['game_id']."';";
-			$r = $app->run_query($q);
-			$user_game = $r->fetch();
+			$user_game = $thisuser->ensure_user_in_game($requested_game['game_id']);
 			
 			$blockchain = new Blockchain($app, $requested_game['blockchain_id']);
 			$game = new Game($blockchain, $user_game['game_id']);
@@ -272,18 +268,12 @@ if ($thisuser) {
 	$r = $app->run_query($q);
 	if ($r->rowCount() > 0) {
 		$user_game = $r->fetch();
-		$thisuser->generate_user_addresses($game);
+		$thisuser->generate_user_addresses($game, $user_game);
 	}
 	else {
-		$thisuser->ensure_user_in_game($game->db_game['game_id']);
+		$user_game = $thisuser->ensure_user_in_game($game->db_game['game_id']);
 		
-		$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND ug.game_id='".$game->db_game['game_id']."';";
-		$r = $app->run_query($q);
-		
-		if ($r->rowCount() > 0) {
-			$user_game = $r->fetch();
-			$thisuser->generate_user_addresses($game);
-		}
+		$thisuser->generate_user_addresses($game, $user_game);
 	}
 }
 
@@ -495,7 +485,7 @@ if ($thisuser && $game) {
 			echo ', false, ';
 			if ($my_last_transaction_id) echo $my_last_transaction_id;
 			else echo 'false';
-			echo ', "'.$game->mature_io_ids_csv($thisuser->db_user['user_id']).'"';
+			echo ', "'.$game->mature_io_ids_csv($user_game).'"';
 			echo ', "'.$game->db_game['payout_weight'].'"';
 			echo ', '.$game->db_game['round_length'];
 			$bet_round_range = $game->bet_round_range();
@@ -524,7 +514,7 @@ if ($thisuser && $game) {
 				$j=0;
 				while ($option = $option_r->fetch()) {
 					$has_votingaddr = "false";
-					$votingaddr_id = $thisuser->user_address_id($game, $option['option_index'], false);
+					$votingaddr_id = $thisuser->user_address_id($game, $option['option_index'], false, $user_game['account_id']);
 					if ($votingaddr_id !== false) $has_votingaddr = "true";
 					
 					echo "game.all_events[".$i."].options.push(new option(game.all_events[".$i."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", '".$option['name']."', 0, $has_votingaddr));\n";
@@ -620,7 +610,7 @@ if ($thisuser && $game) {
 					<?php
 				}
 				
-				$game_status_explanation = $game->game_status_explanation($thisuser);
+				$game_status_explanation = $game->game_status_explanation($thisuser, $user_game);
 				?>
 				<div id="game_status_explanation"<?php if ($game_status_explanation == "") echo ' style="display: none;"'; ?>><?php if ($game_status_explanation != "") echo $game_status_explanation; ?></div>
 				
@@ -635,7 +625,7 @@ if ($thisuser && $game) {
 					The final block of the round is being mined. Voting is currently disabled.
 				</div>
 				<div id="select_input_buttons"><?php
-					echo $game->select_input_buttons($thisuser->db_user['user_id']);
+					echo $game->select_input_buttons($user_game);
 				?></div>
 				
 				<div class="redtext" id="compose_vote_errors" style="margin-top: 5px;"></div>
@@ -949,7 +939,7 @@ if ($thisuser && $game) {
 							$option_index_range = $game->option_index_range();
 							
 							for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
-								$qq = "SELECT * FROM addresses WHERE primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND option_index='".$option_index."' AND user_id='".$thisuser->db_user['user_id']."';";
+								$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND a.option_index='".$option_index."';";
 								$rr = $app->run_query($qq);
 								
 								if ($rr->rowCount() > 0) {
@@ -976,7 +966,7 @@ if ($thisuser && $game) {
 				$option_index_range = $game->option_index_range();
 				
 				for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
-					$qq = "SELECT * FROM addresses WHERE primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND option_index='".$option_index."' AND user_id='".$thisuser->db_user['user_id']."';";
+					$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND a.option_index='".$option_index."';";
 					$rr = $app->run_query($qq);
 					
 					if ($rr->rowCount() > 0) {

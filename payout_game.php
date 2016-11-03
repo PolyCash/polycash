@@ -74,7 +74,7 @@ if ($thisuser) {
 								$payout_currency = $r->fetch();
 							}
 							
-							$qq = "SELECT *, ea.address AS address, ug.bitcoin_address_id AS bitcoin_address_id, u.user_id AS user_id FROM users u JOIN user_games ug ON u.user_id=ug.user_id LEFT JOIN external_addresses ea ON ug.bitcoin_address_id=ea.address_id WHERE ug.game_id='".$payout_game['game_id']."' AND ug.payment_required=0;";
+							$qq = "SELECT *, ea.address AS address, ug.payout_address_id AS payout_address_id, u.user_id AS user_id FROM users u JOIN user_games ug ON u.user_id=ug.user_id LEFT JOIN external_addresses ea ON ug.payout_address_id=ea.address_id WHERE ug.game_id='".$payout_game['game_id']."' AND ug.payment_required=0;";
 							$rr = $app->run_query($qq);
 							
 							$output_sum = 0;
@@ -87,7 +87,7 @@ if ($thisuser) {
 								$payout_frac = $temp_user->account_coin_value($payout_game_obj)/$coins_in_existence;
 								$payout_amt = floor($payout_frac*($total-$fee_satoshis));
 								
-								if ($temp_user_game['bitcoin_address_id'] > 0 && strlen($temp_user_game['address']) >= 26) {
+								if ($temp_user_game['payout_address_id'] > 0 && strlen($temp_user_game['address']) >= 26) {
 									if (empty($raw_txout[$temp_user_game['address']])) $raw_txout[$temp_user_game['address']] = $payout_amt/pow(10,8);
 									else $raw_txout[$temp_user_game['address']] += $payout_amt/pow(10,8);
 									$output_sum += $payout_amt;
@@ -309,7 +309,7 @@ if ($thisuser) {
 								echo "Or sweep all bitcoins from these deposit addresses, then manually send bitcoins to players' addresses.<br/>\n";
 								echo $addr_html."<br/>\n";
 								
-								$qq = "SELECT *, ea.address AS address, ug.bitcoin_address_id AS bitcoin_address_id, u.user_id AS user_id FROM users u JOIN user_games ug ON u.user_id=ug.user_id LEFT JOIN external_addresses ea ON ug.bitcoin_address_id=ea.address_id WHERE ug.game_id='".$payout_game['game_id']."' AND ug.payment_required=0 ORDER BY ug.account_value DESC;";
+								$qq = "SELECT *, ea.address AS address, ug.payout_address_id AS payout_address_id, u.user_id AS user_id FROM users u JOIN user_games ug ON u.user_id=ug.user_id LEFT JOIN external_addresses ea ON ug.payout_address_id=ea.address_id WHERE ug.game_id='".$payout_game['game_id']."' AND ug.payment_required=0 ORDER BY ug.account_value DESC;";
 								$rr = $app->run_query($qq);
 								
 								$output_sum = 0;
@@ -322,7 +322,7 @@ if ($thisuser) {
 									$payout_amt = floor($payout_frac*(pow(10,8)*$input_sum - $fee_satoshis))/pow(10,8);
 									
 									if ($payout_amt > 0) {
-										if ($temp_user_game['bitcoin_address_id'] > 0 && strlen($temp_user_game['address']) >= 26) {
+										if ($temp_user_game['payout_address_id'] > 0 && strlen($temp_user_game['address']) >= 26) {
 											echo $temp_user_game['username']." has an end-of-game balance of ".$app->format_bignum($temp_user->account_coin_value($payout_game_obj)/pow(10,8))." coins. Pay ".$app->format_bignum($payout_amt)." BTC to ".$temp_user_game['address']."<br/>\n";
 											$output_sum += $payout_amt;
 										}

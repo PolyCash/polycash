@@ -7,6 +7,8 @@ $output_obj['result_code'] = 0;
 $output_obj['message'] = "";
 
 if ($thisuser && $game) {
+	$user_game = $thisuser->ensure_user_in_game($game->db_game['game_id']);
+	
 	$amount = floatval($_REQUEST['amount']);
 	$fee = floatval($_REQUEST['fee']);
 	$address_text = $_REQUEST['address'];
@@ -72,7 +74,7 @@ if ($thisuser && $game) {
 					if ($address_ok) {
 						$address = $r->fetch();
 						
-						$transaction_id = $game->create_transaction(false, array($io_amount, $remainder_amount), $thisuser->db_user['user_id'], $db_address['user_id'], false, 'transaction', array($spend_gio['io_id']), array($db_address['address_id'], $remainder_address_id), false, $fee);
+						$transaction_id = $game->create_transaction(false, array($io_amount, $remainder_amount), $user_game, false, 'transaction', array($spend_gio['io_id']), array($db_address['address_id'], $remainder_address_id), false, $fee);
 						
 						if ($transaction_id) {
 							$app->output_message(1, 'Great, your coins have been sent! <a target="_blank" href="/explorer/games/'.$game->db_game['url_identifier'].'/transactions/'.$transaction_id.'">View Transaction</a>');

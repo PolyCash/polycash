@@ -584,7 +584,7 @@ class Blockchain {
 	
 	public function delete_blocks_from_height($block_height) {
 		echo "deleting from block #".$block_height." and up.<br/>\n";
-		$this->app->run_query("DELETE s.* FROM game_sellouts s JOIN games g ON s.game_id=g.game_id WHERE g.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND s.block_id >= ".$block_height.";");
+		$this->app->run_query("DELETE s.* FROM game_sellouts s JOIN games g ON s.game_id=g.game_id WHERE g.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND s.in_block_id >= ".$block_height.";");
 		$this->app->run_query("DELETE FROM transactions WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id >= ".$block_height.";");
 		$this->app->run_query("DELETE FROM transactions WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id IS NULL;");
 		$this->app->run_query("DELETE io.*, gio.* FROM transaction_ios io LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE io.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND io.create_block_id >= ".$block_height.";");

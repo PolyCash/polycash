@@ -27,7 +27,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			
 			while ($db_user = $rr->fetch()) {
 				$user = new User($app, $db_user['user_id']);
-				$user->ensure_user_in_game($game->db_game['game_id']);
+				$user_game = $user->ensure_user_in_game($game->db_game['game_id']);
 				$invitation = false;
 				$success = $game->try_capture_giveaway($user, $invitation);
 			}

@@ -187,7 +187,7 @@ class Event {
 					$my_winning_votes = $my_votes[0][$winner['option_id']]["votes"];
 					$win_amount = floor($this->event_pos_reward_in_round($current_round)*$my_winning_votes/$winner['winning_votes'] - $fees_paid)/pow(10,8);
 					$html .= "You correctly cast ".$this->game->blockchain->app->format_bignum($my_winning_votes/pow(10,8))." votes";
-					$html .= ' and won <font class="greentext">+'.$this->game->blockchain->app->format_bignum($win_amount)."</font> coins.<br/>\n";
+					$html .= ' and won <font class="greentext">+'.$this->game->blockchain->app->format_bignum($win_amount)."</font> ".$this->game->db_game['coin_name_plural'].".<br/>\n";
 				}
 			}
 			else {
@@ -231,7 +231,7 @@ class Event {
 				if ($this->block_id_to_effectiveness_factor($last_block_id+1) > 0) $html .= "Votes are ".round(100*$this->block_id_to_effectiveness_factor($last_block_id+1))."% effective right now. \n";
 				$detail_html .= '<div class="row"><div class="col-sm-6 boldtext">Average Effectiveness:</div><div class="col-sm-6">'.round(100*$average_effectiveness, 2)."%";
 				if ($this->game->db_game['inflation'] == "exponential") {
-					$detail_html .= " (".$this->game->blockchain->app->format_bignum($this->game->blockchain->app->votes_per_coin($this->game->db_game)*$average_effectiveness)." votes per coin)";
+					$detail_html .= " (".$this->game->blockchain->app->format_bignum($this->game->blockchain->app->votes_per_coin($this->game->db_game)*$average_effectiveness)." votes per ".$this->game->db_game['coin_name'].")";
 				}
 				$detail_html .= "</div></div>\n";
 			}

@@ -72,8 +72,8 @@ include('includes/html_start.php');
 				echo '<img style="margin: 10px;" src="/render_qr_code.php?data='.$account['pub_key'].'" />';
 			}
 			else {
-				echo "This account stores your colored ".$account['coin_name_plural']." for ".$account_game->db_game['name'].".<br/>\n";
-				echo "Do not deposit ".$account['coin_name_plural']." directly into this account.";
+				echo "This account stores your colored ".$account_game->blockchain->db_blockchain['coin_name_plural']." for ".$account_game->db_game['name'].".<br/>\n";
+				echo "Do not deposit ".$account_game->blockchain->db_blockchain['coin_name_plural']." directly into this account.";
 			}
 			
 			while ($transaction = $transaction_in_r->fetch()) {
@@ -122,18 +122,18 @@ include('includes/html_start.php');
 		$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."';";
 		$r = $app->run_query($q);
 		
-		echo "<p>You have ".$account_r->rowCount()." colored coin account";
+		echo "<p>You have ".$r->rowCount()." colored coin account";
 		if ($account_r->rowCount() != 1) echo "s";
 		echo ".</p>\n";
 		
 		while ($user_game = $r->fetch()) {
-			if (!$blockchains[$user_game['blockchain_id']]) $blockchains[$user_game['blockchain_id']] = new Blockchain($app, $user_game['blockchain_id']);
+			if (empty($blockchains[$user_game['blockchain_id']])) $blockchains[$user_game['blockchain_id']] = new Blockchain($app, $user_game['blockchain_id']);
 			$coin_game = new Game($blockchains[$user_game['blockchain_id']], $user_game['game_id']);
 			echo '<div class="row">';
 			echo '<div class="col-sm-4"><a href="/wallet/'.$user_game['url_identifier'].'/">'.ucwords($user_game['coin_name_plural'])." for ".$user_game['name'].'</a></div>';
 			echo '<div class="col-sm-2 greentext" style="text-align: right">'.$app->format_bignum($thisuser->account_coin_value($coin_game)/pow(10,8)).' '.$user_game['coin_name_plural'].'</div>';
 			$exchange_rate = $coin_game->coins_in_existence(false)/$coin_game->escrow_value(false);
-			$cc_value = $thisuser->account_coin_value($coin_game)*$exchange_rate;
+			$cc_value = $thisuser->account_coin_value($coin_game)/$exchange_rate;
 			echo '<div class="col-sm-2 greentext" style="text-align: right">'.$app->format_bignum($cc_value/pow(10,8)).' '.$coin_game->blockchain->db_blockchain['coin_name_plural'].'</div>';
 			echo "</div>\n";
 		}

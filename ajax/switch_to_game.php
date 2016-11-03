@@ -24,7 +24,7 @@ if ($thisuser) {
 					$app->output_message(2, "That game doesn't exist or you don't have permission to join it.");
 				}
 				else {
-					$game->ensure_user_in_game($thisuser);
+					$user_game = $game->ensure_user_in_game($thisuser);
 					
 					$q = "UPDATE users SET game_id='".$game->db_game['game_id']."' WHERE user_id='".$thisuser->db_user['user_id']."';";
 					$r = $app->run_query($q);
@@ -65,7 +65,7 @@ if ($thisuser) {
 				$game->db_game['url_identifier'] = $url_identifier;
 				
 				if ($game->db_game['giveaway_status'] == "public_free") {
-					$thisuser->ensure_user_in_game($game->db_game['game_id']);
+					$user_game = $thisuser->ensure_user_in_game($game->db_game['game_id']);
 				}
 				
 				$q = "UPDATE user_games ug JOIN user_strategies s ON ug.strategy_id=s.strategy_id SET s.voting_strategy='manual' WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND ug.game_id='".$game->db_game['game_id']."';";

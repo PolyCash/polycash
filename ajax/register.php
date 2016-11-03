@@ -32,16 +32,6 @@ else {
 				$r = $app->run_query($q);
 				$user_id = $app->last_insert_id();
 				
-				$bitcoin_address = "";
-				if (!empty($_REQUEST['bitcoin_address'])) $bitcoin_address = $app->strong_strip_tags($_REQUEST['bitcoin_address']);
-				
-				if (!empty($bitcoin_address)) {
-					$qq = "INSERT INTO external_addresses SET user_id='".$user_id."', currency_id=2, address=".$app->quote_escape($bitcoin_address).", time_created='".time()."';";
-					$rr = $app->run_query($qq);
-					$address_id = $app->last_insert_id();
-					$app->run_query("UPDATE users SET bitcoin_address_id='".$address_id."' WHERE user_id=".$user_id.";");
-				}
-				
 				$thisuser = new User($app, $user_id);
 				
 				$session_key = session_id();
@@ -77,7 +67,7 @@ else {
 					$primary_game = new Game($app, $db_primary_game['game_id']);
 					
 					if ($primary_game->db_game['giveaway_status'] == "public_free") {
-						$thisuser->ensure_user_in_game($primary_game->db_game['game_id']);
+						$user_game = $thisuser->ensure_user_in_game($primary_game->db_game['game_id']);
 						$giveaway = $primary_game->new_game_giveaway($user_id, 'initial_purchase', false);
 					}
 				}

@@ -291,7 +291,7 @@ class App {
 					$rr = $this->run_query($qq);
 				}
 				$user = new User($this, $user_id);
-				$user->ensure_user_in_game($invitation['game_id']);
+				$user_game = $user->ensure_user_in_game($invitation['game_id']);
 				
 				$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 				$invite_game = new Game($blockchain, $invitation['game_id']);
@@ -420,7 +420,7 @@ class App {
 						if ($rr->rowCount() == 1) {
 							$db_join_event = $rr->fetch();
 							
-							$join_user->ensure_user_in_game($db_join_event['event_id']);
+							$user_game = $join_user->ensure_user_in_game($db_join_event['event_id']);
 							
 							$this->run_query("UPDATE game_join_requests SET request_status='complete', event_id='".$db_join_event['event_id']."' WHERE join_request_id='".$join_request['join_request_id']."';");
 						}

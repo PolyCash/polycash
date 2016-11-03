@@ -18,7 +18,10 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	
 	$event = new Event($game, false, $event_id);
 	
-	if ($thisuser) $thisuser->set_user_active();
+	if ($thisuser) {
+		$thisuser->set_user_active();
+		$user_game = $thisuser->ensure_user_in_game($game->db_game['game_id']);
+	}
 	
 	$bet_round_range = $game->bet_round_range();
 	$last_block_id = $game->blockchain->last_block_id();
@@ -30,7 +33,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		$account_value = $thisuser->account_coin_value($game);
 		$immature_balance = $thisuser->immature_balance($game);
 		$mature_balance = $thisuser->mature_balance($game);
-		$mature_io_ids_csv = $game->mature_io_ids_csv($thisuser->db_user['user_id']);
+		$mature_io_ids_csv = $game->mature_io_ids_csv($user_game);
 	}
 	else {
 		$my_last_transaction_id = false;
@@ -44,7 +47,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	$output['event_loop_index'] = $event_loop_index;
 	
 	$output['min_bet_round'] = $bet_round_range[0];
-	$output['game_status_explanation'] = $game->game_status_explanation($thisuser);
+	$output['game_status_explanation'] = $game->game_status_explanation($thisuser, $user_game);
 	
 	if ($bet_round_range[0] != $_REQUEST['min_bet_round']) {
 		$output['select_bet_round'] = $game->select_bet_round($current_round);
@@ -106,7 +109,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	}
 	
 	if ($output['new_my_transaction'] == 1 || $mature_io_ids_csv != $_REQUEST['mature_io_ids_csv'] || !empty($output['new_block'])) {
-		$output['select_input_buttons'] = $thisuser? $game->select_input_buttons($thisuser->db_user['user_id']) : "";
+		$output['select_input_buttons'] = $thisuser? $game->select_input_buttons($user_game) : "";
 		$output['mature_io_ids_csv'] = $mature_io_ids_csv;
 		$output['new_mature_ios'] = 1;
 	}

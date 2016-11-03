@@ -28,11 +28,11 @@ if ($thisuser) {
 				if ($fee_amount > 0 && $buyin_amount > 0 && $color_amount > 0) {
 					$address_text = $_REQUEST['address'];
 					
-					$thisuser->ensure_user_in_game($game->db_game['game_id']);
+					$user_game = $thisuser->ensure_user_in_game($game->db_game['game_id']);
 					$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false);
 					
 					if ($address_text == "new") {
-						$game_currency_account = $thisuser->create_or_fetch_game_currency_account($game);
+						$game_currency_account = $app->fetch_account_by_id($user_game['account_id']);
 						$color_address = $app->new_address_key($game->blockchain->currency_id(), $game_currency_account);
 					}
 					else {
@@ -40,7 +40,7 @@ if ($thisuser) {
 						$color_address = $game->blockchain->create_or_fetch_address($address_text, true, $coin_rpc, false, false, false);
 					}
 					
-					$transaction_id = $game->create_transaction(false, array($buyin_amount, $color_amount), $thisuser->db_user['user_id'], $thisuser->db_user['user_id'], false, 'transaction', array($io_id), array($escrow_address['address_id'], $color_address['address_id']), false, $fee_amount);
+					$transaction_id = $game->create_transaction(false, array($buyin_amount, $color_amount), $user_game, false, 'transaction', array($io_id), array($escrow_address['address_id'], $color_address['address_id']), false, $fee_amount);
 					
 					if ($transaction_id) {
 						$app->output_message(1, "Great, your transaction has been submitted (#".$transaction_id.")", false);

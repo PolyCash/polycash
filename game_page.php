@@ -222,9 +222,7 @@ games.push(new Game(<?php
 	echo ', false, ';
 	if ($my_last_transaction_id) echo $my_last_transaction_id;
 	else echo 'false';
-	echo ', "';
-	echo empty($thisuser)? 0 : $game->mature_io_ids_csv($thisuser->db_user['user_id']);
-	echo '", "'.$game->db_game['payout_weight'].'"';
+	echo ', "", "'.$game->db_game['payout_weight'].'"';
 	echo ', '.$game->db_game['round_length'];
 	$bet_round_range = $game->bet_round_range();
 	$min_bet_round = $bet_round_range[0];
