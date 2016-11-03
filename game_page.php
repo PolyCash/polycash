@@ -27,7 +27,7 @@ if ($game->db_game['invite_currency'] > 0) {
 	$coins_in_existence = $game->coins_in_existence(false);
 	$escrow_value = $game->escrow_value(false);
 	if ($escrow_value > 0) {
-		$exchange_rate = ($coins_in_existence/pow(10,8))/$escrow_value;
+		$exchange_rate = $coins_in_existence/$escrow_value;
 	}
 	else $exchange_rate = 0;
 }
@@ -93,7 +93,13 @@ else $exchange_rate = 0;
 					}
 					
 					if ($exchange_rate > 0) {
-						if ($game->escrow_value(false) > 0) echo "Right now there's ".$invite_currency['symbol'].$app->format_bignum($game->escrow_value(false))." in the pot and the";
+						if ($game->escrow_value(false) > 0) {
+							$escrow_amount_disp = $app->format_bignum($game->escrow_value(false)/pow(10,8));
+							echo "Right now there's ".$escrow_amount_disp." ";
+							if ($escrow_amount_disp == "1") echo $game->blockchain->db_blockchain['coin_name'];
+							else echo $game->blockchain->db_blockchain['coin_name_plural'];
+							echo " in escrow and the";
+						}
 						else echo "The";
 						echo " exchange rate is ".$app->format_bignum($exchange_rate)." ".$game->db_game['coin_name_plural']." per ".$invite_currency['short_name'].". ";
 					}

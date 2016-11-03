@@ -750,42 +750,48 @@ class App {
 		else $script_path_name = realpath(dirname(dirname(__FILE__)));
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_blocks.php" key='.$key_string;
-		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
 		$block_loading_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($block_loading_process)) $process_count++;
 		else $html .= "Failed to start a process for loading blocks.<br/>\n";
 		sleep(0.1);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_games.php" key='.$key_string;
-		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
 		$block_loading_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($block_loading_process)) $process_count++;
 		else $html .= "Failed to start a process for loading blocks.<br/>\n";
 		sleep(0.1);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_main.php" key='.$key_string;
-		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
 		$main_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($main_process)) $process_count++;
 		else $html .= "Failed to start the main process.<br/>\n";
 		sleep(0.1);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_check_payments.php" key='.$key_string;
-		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
 		$payments_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($payments_process)) $process_count++;
 		else $html .= "Failed to start a process for processing payments.<br/>\n";
 		sleep(0.1);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/address_miner.php" key='.$key_string;
-		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
 		$address_miner_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($address_miner_process)) $process_count++;
 		else $html .= "Failed to start a process for mining addresses.<br/>\n";
 		sleep(0.1);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/fetch_currency_prices.php" key='.$key_string;
-		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
 		$currency_prices_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($currency_prices_process)) $process_count++;
 		else $html .= "Failed to start a process for updating currency prices.<br/>\n";
@@ -896,20 +902,31 @@ class App {
 		else $html .= '<a href="/explorer/games/'.$db_game['url_identifier'].'/addresses/'.$db_game['escrow_address'].'">'.$db_game['escrow_address'].'</a>';
 		$html .= "</div></div>\n";
 		
+		$genesis_amount_disp = $this->format_bignum($db_game['genesis_amount']/pow(10,8));
 		$html .= '<div class="row"><div class="col-sm-5">Genesis transaction:</div><div class="col-sm-7">';
-		$html .= '<a href="/explorer/games/'.$db_game['url_identifier'].'/transactions/'.$db_game['genesis_tx_hash'].'">'.$this->format_bignum($db_game['genesis_amount']/pow(10,8)).' '.$db_game['coin_name'].'</a>';
+		$html .= '<a href="/explorer/games/'.$db_game['url_identifier'].'/transactions/'.$db_game['genesis_tx_hash'].'">';
+		$html .= $genesis_amount_disp.' ';
+		if ($genesis_amount_disp == "1") $html .= $db_game['coin_name'];
+		else $html .= $db_game['coin_name_plural'];
+		$html .= '</a>';
 		$html .= "</div></div>\n";
 		
 		if ($db_game['game_id'] > 0) {
 			$sample_block_id = $game->blockchain->last_block_id();
 			$game->refresh_coins_in_existence();
 			
+			$circulation_amount_disp = $this->format_bignum($game->coins_in_existence($sample_block_id)/pow(10,8));
 			$html .= '<div class="row"><div class="col-sm-5">'.ucwords($game->db_game['coin_name_plural']).' in circulation:</div><div class="col-sm-7">';
-			$html .= $this->format_bignum($game->coins_in_existence($sample_block_id)/pow(10,8)).' '.$db_game['coin_name_plural'];
+			$html .= $circulation_amount_disp.' ';
+			if ($circulation_amount_disp == "1") $html .= $db_game['coin_name'];
+			else $html .= $db_game['coin_name_plural'];
 			$html .= "</div></div>\n";
 			
+			$escrow_amount_disp = $this->format_bignum($game->escrow_value($sample_block_id)/pow(10,8));
 			$html .= '<div class="row"><div class="col-sm-5">'.ucwords($game->blockchain->db_blockchain['coin_name_plural']).' in escrow:</div><div class="col-sm-7">';
-			$html .= $this->format_bignum($game->escrow_value($sample_block_id)/pow(10,8)).' '.$game->blockchain->db_blockchain['coin_name_plural'];
+			$html .= $escrow_amount_disp.' ';
+			if ($escrow_amount_disp == "1") $html .= $game->blockchain->db_blockchain['coin_name'];
+			else $html .= $game->blockchain->db_blockchain['coin_name_plural'];
 			$html .= "</div></div>\n";
 			
 			$exchange_rate_disp = $this->format_bignum($game->coins_in_existence($sample_block_id)/$game->escrow_value($sample_block_id));
