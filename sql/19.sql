@@ -6,7 +6,8 @@ CREATE TABLE `blockchains` (
   `blockchain_name` varchar(100) NOT NULL DEFAULT '',
   `rpc_username` varchar(100) DEFAULT NULL,
   `rpc_password` varchar(100) DEFAULT NULL,
-  `rpc_port` int(11) DEFAULT NULL
+  `rpc_port` int(11) DEFAULT NULL,
+  `supports_getblockheader` TINYINT(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 ALTER TABLE `blockchains` ADD PRIMARY KEY (`blockchain_id`);
 ALTER TABLE `blockchains` MODIFY `blockchain_id` int(11) NOT NULL AUTO_INCREMENT;

@@ -366,40 +366,6 @@ class User {
 		else if ($games_created_by_user < $this->db_user['authorized_games']) return true;
 		else return false;
 	}
-
-	public function user_buyin_limit(&$game) {
-		$q = "SELECT COUNT(*), SUM(pay_amount), SUM(settle_amount) FROM game_buyins WHERE user_id='".$this->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."' AND status IN ('confirmed','settled');";
-		$r = $this->app->run_query($q);
-		$buyin_stats = $r->fetch();
-		$user_buyin_total = $buyin_stats['SUM(settle_amount)'];
-		
-		$q = "SELECT COUNT(*), SUM(pay_amount), SUM(settle_amount) FROM game_buyins WHERE game_id='".$game->db_game['game_id']."' AND status IN ('confirmed','settled');";
-		$r = $this->app->run_query($q);
-		$buyin_stats = $r->fetch();
-		$game_buyin_total = $buyin_stats['SUM(settle_amount)'];
-		
-		$returnvals['user_buyin_total'] = $user_buyin_total;
-		$returnvals['game_buyin_total'] = $game_buyin_total;
-		
-		if ($game->db_game['buyin_policy'] == "unlimited") {
-			$user_buyin_limit = false;
-		}
-		else if ($game->db_game['buyin_policy'] == "per_user_cap") {
-			$user_buyin_limit = max(0, $game->db_game['per_user_buyin_cap']-$user_buyin_total);
-		}
-		else if ($game->db_game['buyin_policy'] == "game_cap") {
-			$user_buyin_limit = max(0, $game->db_game['game_buyin_cap']-$game_buyin_total);
-		}
-		else if ($game->db_game['buyin_policy'] == "game_and_user_cap") {
-			$user_buyin_limit = max(0, $game->db_game['game_buyin_cap']-$game_buyin_total);
-			$user_buyin_limit = min($user_buyin_limit, $game->db_game['per_user_buyin_cap']-$user_buyin_total);
-		}
-		else die("Invalid buy-in policy.");
-		
-		$returnvals['user_buyin_limit'] = $user_buyin_limit;
-		
-		return $returnvals;
-	}
 	
 	public function generate_user_addresses(&$game, &$user_game) {
 		$option_index_range = $game->option_index_range();

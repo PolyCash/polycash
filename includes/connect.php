@@ -4,7 +4,7 @@ if (is_file(realpath(dirname(__FILE__))."/config.php")) {
 }
 else die("Please create the file includes/config.php");
 
-if (empty($GLOBALS['coin_brand_name'])) die('Please add this line to your includes/config.php: $GLOBALS[\'coin_brand_name\'] = \'EmpireCoin\';');
+if (empty($GLOBALS['coin_brand_name'])) die('Please add this line to your includes/config.php: $GLOBALS[\'coin_brand_name\'] = \'CoinBlock\';');
 
 if (empty($GLOBALS['process_lock_method'])) {
 	if (PHP_OS == "WINNT") $GLOBALS['process_lock_method'] = "db";
@@ -12,7 +12,7 @@ if (empty($GLOBALS['process_lock_method'])) {
 }
 
 include("global_functions.php");
-include(realpath(dirname(__FILE__))."/../lib/bitcoin-sci/common.lib.php");
+include(realpath(dirname(dirname(__FILE__)))."/lib/bitcoin-sci/common.lib.php");
 
 if ($GLOBALS['base_url'] && (!isset($host_not_required) || !$host_not_required)) {
 	$b_url = $_SERVER['HTTP_HOST'];

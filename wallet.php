@@ -433,18 +433,6 @@ if ($thisuser && $game) {
 		echo "</font>\n";
 	}
 	
-	if (!empty($game->db_game)) {
-		if ($game->db_game['giveaway_status'] == "invite_free" || $game->db_game['giveaway_status'] == "public_free") {
-			$qq = "SELECT * FROM game_giveaways WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."' AND type='initial_purchase';";
-			$rr = $app->run_query($qq);
-			
-			if ($rr->rowCount() == 0) {
-				$giveaway_address = false;
-				$giveaway = $game->new_game_giveaway($thisuser->db_user['user_id'], 'initial_purchase', $giveaway_address);
-			}
-		}
-	}
-	
 	if ($thisuser) {
 		$user_game = FALSE;
 		$user_strategy = FALSE;
@@ -865,21 +853,6 @@ if ($thisuser && $game) {
 				</center>
 			</div>
 			<div id="tabcontent4" style="display: none;" class="tabcontent">
-				<div id="giveaway_div">
-					<?php
-					$giveaway_avail_msg = 'You\'re eligible for a one time coin giveaway of '.number_format($game->db_game['giveaway_amount']/pow(10,8)).' '.$game->db_game['coin_name_plural'].'.<br/>';
-					$giveaway_avail_msg .= '<button class="btn btn-success" onclick="claim_coin_giveaway();" id="giveaway_btn">Claim '.number_format($game->db_game['giveaway_amount']/pow(10,8)).' '.$game->db_game['coin_name_plural'].'</button><br/><br/>';
-					
-					$available_giveaway = false;
-					$giveaway_available = $game->check_giveaway_available($thisuser, $available_giveaway);
-					
-					if ($giveaway_available) {
-						$initial_tab = 4;
-						echo $giveaway_avail_msg;
-					}
-					?>
-				</div>
-				
 				<h1>Deposit</h1>
 				<?php
 				if ($game->db_game['buyin_policy'] != "none") { ?>

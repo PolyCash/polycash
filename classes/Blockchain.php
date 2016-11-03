@@ -595,10 +595,6 @@ class Blockchain {
 		
 		$this->app->run_query("DELETE eoo.* FROM event_outcome_options eoo JOIN event_outcomes eo ON eo.outcome_id=eoo.outcome_id JOIN events e ON eo.event_id=e.event_id JOIN games g ON e.game_id=g.game_id WHERE g.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND eo.payout_block_id >= ".$block_height.";");
 		$this->app->run_query("DELETE eo.* FROM event_outcomes eo JOIN events e ON eo.event_id=e.event_id JOIN games g ON eo.game_id=g.game_id WHERE g.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND eo.payout_block_id >= ".$block_height.";");
-		
-		//$this->app->run_query("UPDATE strategy_round_allocations sra JOIN user_strategies us ON us.strategy_id=sra.strategy_id JOIN games g ON us.game_id=g.game_id SET sra.applied=0 WHERE g.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND sra.round_id >= ".$round_id.";");
-		
-		//$coins_in_existence = $this->coins_in_existence(false);
 	}
 	
 	public function add_genesis_block(&$coin_rpc) {
@@ -757,15 +753,7 @@ class Blockchain {
 		
 		$html .= '</div><div class="col-md-6">';
 		
-		if ($transaction['transaction_desc'] == "giveaway") {
-			$q = "SELECT * FROM game_giveaways WHERE transaction_id='".$transaction['transaction_id']."';";
-			$r = $this->app->run_query($q);
-			if ($r->rowCount() > 0) {
-				$giveaway = $r->fetch();
-				$html .= $this->app->format_bignum($giveaway['amount']/pow(10,8))." coins were given to a player for joining.";
-			}
-		}
-		else if ($transaction['transaction_desc'] == "votebase") {
+		if ($transaction['transaction_desc'] == "votebase") {
 			$payout_disp = round($transaction['amount']/pow(10,8), 2);
 			$html .= "Voting Payout&nbsp;&nbsp;".$payout_disp." ";
 			if ($payout_disp == '1') $html .= "coin";

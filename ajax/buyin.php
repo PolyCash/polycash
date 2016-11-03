@@ -89,86 +89,66 @@ if ($thisuser && $game) {
 						echo "Sorry, buy-ins are not allowed in this game.";
 					}
 					else {
-						$user_buyin_limit = $thisuser->user_buyin_limit($game);
-						
-						if ($user_buyin_limit['user_buyin_total'] > 0) {
-							echo "You've already made buy-ins totalling ".$app->format_bignum($user_buyin_limit['user_buyin_total'])." ".$game->blockchain->db_blockchain['coin_name_plural'].".<br/>\n";
-						}
-						else echo "You haven't made any buy-ins yet.<br/>\n";
-						
 						if ($game->db_game['buyin_policy'] == "unlimited") {
 							echo "You can buy in for as many coins as you want in this game. ";
-						}
-						else if ($game->db_game['buyin_policy'] == "per_user_cap") {
-							echo "This game allows each player to buy in for up to ".$app->format_bignum($game->db_game['per_user_buyin_cap'])." ".$game->blockchain->db_blockchain['coin_name_plural'].". ";
 						}
 						else if ($game->db_game['buyin_policy'] == "game_cap") {
 							echo "This game has a game-wide buy-in cap of ".$app->format_bignum($game->db_game['game_buyin_cap'])." ".$game->blockchain->db_blockchain['coin_name_plural'].". ";
 						}
-						else if ($game->db_game['buyin_policy'] == "game_and_user_cap") {
-							echo "This game has a total buy-in cap of ".$app->format_bignum($game->db_game['game_buyin_cap'])." ".$game->blockchain->db_blockchain['coin_name_plural'].". ";
-							echo "Until this limit is reached, each player can buy in for up to ".$app->format_bignum($game->db_game['per_user_buyin_cap'])." ".$game->blockchain->db_blockchain['coin_name_plural'].". ";
-						}
 						else die("Invalid buy-in policy.");
 						
-						if ($game->db_game['buyin_policy'] != "unlimited") {
-							echo "</div><div class=\"paragraph\">Your remaining buy-in limit is ".$app->format_bignum($user_buyin_limit['user_buyin_limit'])." ".$game->blockchain->db_blockchain['coin_name_plural'].". ";
-						}
+						$currency_account = $thisuser->fetch_currency_account($chain_currency['currency_id']);
 						
-						if ($game->db_game['buyin_policy'] == "unlimited" || $user_buyin_limit['user_buyin_limit'] > 0) {
-							$currency_account = $thisuser->fetch_currency_account($chain_currency['currency_id']);
-							
-							if ($currency_account) {
-								$invoice = $app->new_currency_invoice($chain_currency, false, $thisuser, $user_game, 'buyin');
-								$invoice_addr_q = "SELECT * FROM addresses WHERE address_id='".$invoice['address_id']."';";
-								$invoice_address = $app->run_query($invoice_addr_q)->fetch();
-							}
-							else {
-								die("Failed to generate a deposit address.");
-							}
-							?>
-							<script type="text/javascript">
-							var buyin_invoice_id = <?php echo $invoice['invoice_id']; ?>;
-							</script>
-							
-							</div><div class="paragraph">
-							<p>
-								How many <?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?> do you want to spend?
-							</p>
-							<p>
-								<div class="row">
-									<div class="col-sm-12">
-										<input type="text" class="form-control" id="buyin_amount">
-									</div>
-								</div>
-							</p>
-							<p>
-								How many <?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?> do you want to color?
-							</p>
-							<p>
-								<div class="row">
-									<div class="col-sm-12">
-										<input type="text" class="form-control" id="color_amount">
-									</div>
-								</div>
-							</p>
-							<button class="btn btn-primary" onclick="check_buyin_amount();">Check</button>
-							
-							<div style="display: none; margin: 10px 0px;" id="buyin_disp">
-								For <div id="buyin_amount_disp" style="display: inline-block;"></div> <?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?>, you'll receive approximately <div id="buyin_receive_amount_disp" style="display: inline-block;"></div> <?php echo $game->db_game['coin_name_plural']; ?>. Send <div id="buyin_send_amount" style="display: inline-block;"></div> <?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?> to <a target="_blank" href="/explorer/blockchains/<?php echo $game->blockchain->db_blockchain['url_identifier']; ?>/address/<?php echo $invoice_address['address']; ?>"><?php echo $invoice_address['address']; ?></a>
-								
-								<p>
-									<center><img style="margin: 10px;" src="/render_qr_code.php?data=<?php echo $invoice_address['address']; ?>" /></center>
-								</p>
-								<p>
-									After making the payment please click below to request <?php echo $game->db_game['coin_name_plural']; ?>:
-								</p>
-								<p>
-									<button class="btn btn-success" onclick="submit_buyin();">Request <?php echo ucwords($game->db_game['coin_name_plural']); ?></button>
-								</p>
-							</div>
-							<?php
+						if ($currency_account) {
+							$invoice = $app->new_currency_invoice($chain_currency, false, $thisuser, $user_game, 'buyin');
+							$invoice_addr_q = "SELECT * FROM addresses WHERE address_id='".$invoice['address_id']."';";
+							$invoice_address = $app->run_query($invoice_addr_q)->fetch();
 						}
+						else {
+							die("Failed to generate a deposit address.");
+						}
+						?>
+						<script type="text/javascript">
+						var buyin_invoice_id = <?php echo $invoice['invoice_id']; ?>;
+						</script>
+						
+						</div><div class="paragraph">
+						<p>
+							How many <?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?> do you want to spend?
+						</p>
+						<p>
+							<div class="row">
+								<div class="col-sm-12">
+									<input type="text" class="form-control" id="buyin_amount">
+								</div>
+							</div>
+						</p>
+						<p>
+							How many <?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?> do you want to color?
+						</p>
+						<p>
+							<div class="row">
+								<div class="col-sm-12">
+									<input type="text" class="form-control" id="color_amount">
+								</div>
+							</div>
+						</p>
+						<button class="btn btn-primary" onclick="check_buyin_amount();">Check</button>
+						
+						<div style="display: none; margin: 10px 0px;" id="buyin_disp">
+							For <div id="buyin_amount_disp" style="display: inline-block;"></div> <?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?>, you'll receive approximately <div id="buyin_receive_amount_disp" style="display: inline-block;"></div> <?php echo $game->db_game['coin_name_plural']; ?>. Send <div id="buyin_send_amount" style="display: inline-block;"></div> <?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?> to <a target="_blank" href="/explorer/blockchains/<?php echo $game->blockchain->db_blockchain['url_identifier']; ?>/address/<?php echo $invoice_address['address']; ?>"><?php echo $invoice_address['address']; ?></a>
+							
+							<p>
+								<center><img style="margin: 10px;" src="/render_qr_code.php?data=<?php echo $invoice_address['address']; ?>" /></center>
+							</p>
+							<p>
+								After making the payment please click below to request <?php echo $game->db_game['coin_name_plural']; ?>:
+							</p>
+							<p>
+								<button class="btn btn-success" onclick="submit_buyin();">Request <?php echo ucwords($game->db_game['coin_name_plural']); ?></button>
+							</p>
+						</div>
+						<?php
 					}
 					?>
 				</div>

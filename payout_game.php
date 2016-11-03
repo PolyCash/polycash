@@ -200,15 +200,6 @@ if ($thisuser) {
 									$addr_html .= $invoice['username']." paid ".$invoice['pay_amount']." ".$invoice['short_name']."s to <a href=\"https://blockchain.info/address/".$invoice['pub_key']."\">".$invoice['pub_key']."</a><br/>\n";
 									$input_sum += $invoice['pay_amount'];
 								}
-								
-								$q = "SELECT * FROM game_buyins gb JOIN currency_addresses a ON gb.currency_address_id=a.currency_address_id JOIN users u ON gb.user_id=u.user_id JOIN currencies pc ON gb.pay_currency_id=pc.currency_id WHERE gb.game_id='".$payout_game['game_id']."' AND gb.status='confirmed';";
-								$r = $app->run_query($q);
-								
-								while ($buyin = $r->fetch()) {
-									echo 'inputs.push(new input(inputs.length, "'.$buyin['pub_key'].'", "'.$buyin['priv_enc'].'"));'."\n";
-									$addr_html .= $buyin['username']." bought in for ".$buyin['unconfirmed_amount_paid']." ".$buyin['short_name']."s to <a href=\"https://blockchain.info/address/".$buyin['pub_key']."\">".$buyin['pub_key']."</a><br/>\n";
-									$input_sum += $buyin['unconfirmed_amount_paid'];
-								}
 								?>
 							}
 							

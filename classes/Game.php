@@ -29,8 +29,7 @@ class Game {
 			$amount += $amounts[$i];
 		}
 		
-		if ($type == "giveaway") $instantly_mature = 1;
-		else $instantly_mature = 0;
+		$instantly_mature = 0;
 		
 		if ($user_game) {
 			$from_user = new User($this->blockchain->app, $user_game['user_id']);
@@ -58,7 +57,7 @@ class Game {
 		$affected_input_ids = array();
 		$created_input_ids = array();
 		
-		if ($type == "giveaway" || $type == "votebase" || $type == "coinbase") $amount_ok = true;
+		if ($type == "votebase" || $type == "coinbase") $amount_ok = true;
 		else if ($utxo_balance == $amount || (!$io_ids && $amount <= $mature_balance)) $amount_ok = true;
 		else $amount_ok = false;
 		
@@ -78,7 +77,7 @@ class Game {
 			$overshoot_amount = 0;
 			$overshoot_return_addr_id = $remainder_address_id;
 			
-			if ($type == "giveaway" || $type == "votebase" || $type == "coinbase") {}
+			if ($type == "votebase" || $type == "coinbase") {}
 			else {
 				$q = "SELECT *, io.address_id AS address_id, io.amount AS amount FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.spend_status='unspent' AND io.blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND io.create_block_id <= ".($this->blockchain->last_block_id()-$this->db_game['maturity']);
 				if ($io_ids) $q .= " AND io.io_id IN (".implode(",", $io_ids).")";
@@ -815,9 +814,6 @@ class Game {
 			$q = "UPDATE games SET game_status='published', events_until_block=NULL, coins_in_existence=0, coins_in_existence_block=NULL WHERE game_id='".$this->db_game['game_id']."';";
 			$r = $this->blockchain->app->run_query($q);
 			
-			$giveaway_block_id = $this->blockchain->last_block_id();
-			if (!$giveaway_block_id) $giveaway_block_id = 0;
-			
 			$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.game_id='".$this->db_game['game_id']."';";
 			$r = $this->blockchain->app->run_query($q);
 			
@@ -831,13 +827,6 @@ class Game {
 				$this->generate_invitation($this->db_game['creator_id'], $invitation, $invite_user_ids[$i]);
 				$invite_event = false;
 				$this->blockchain->app->try_apply_invite_key($invite_user_ids[$i], $invitation['invitation_key'], $invite_event);
-			}
-			
-			$q = "SELECT * FROM game_giveaways WHERE game_id='".$this->db_game['game_id']."';";
-			$r = $this->blockchain->app->run_query($q);
-			while ($giveaway = $r->fetch()) {
-				$replacement_giveaway = $this->new_game_giveaway($giveaway['user_id'], $giveaway['type'], $giveaway['amount']);
-				$this->blockchain->app->run_query("DELETE FROM game_giveaways WHERE giveaway_id='".$giveaway['giveaway_id']."';");
 			}
 		}
 		else {
@@ -954,56 +943,6 @@ class Game {
 		return false;
 	}
 	
-	public function new_game_giveaway(&$invoice, $target_amount, &$currency_address) {
-		/*$type = $invoice['invoice_type'];
-		if ($type != "buyin") {
-			$type = "join_buyin";
-		}
-		
-		$transaction_id = false;
-		if ($target_amount > 0) {
-			$addr_id = $this->new_nonuser_address();
-			if ($addr_id) {
-				$num_utxos = 5;
-				$first_denom = 4;
-				$actual_amount = 0;
-				
-				$addr_ids = array();
-				$amounts = array();
-				$option_ids = array();
-				
-				$frac_sum = 0;
-				for ($i=0; $i<$num_utxos; $i++) {
-					$frac_sum += 1/($first_denom+$i);
-				}
-				for ($i=0; $i<$num_utxos; $i++) {
-					$amounts[$i] = floor($target_amount*(1/($first_denom+$i))/$frac_sum);
-					$addr_ids[$i] = $addr_id;
-					$option_ids[$i] = false;
-					$actual_amount += $amounts[$i];
-				}
-				
-				$transaction_id = $this->create_transaction($option_ids, $amounts, false, 0, 'giveaway', false, $addr_ids, false, 0);
-			}
-		}
-		
-		if ($transaction_id) {
-			$q = "INSERT INTO game_giveaways SET type='".$type."', user_game_id='".$invoice['user_game_id']."', amount='".$actual_amount."'";
-			if ($transaction_id > 0) $q .= ", transaction_id='".$transaction_id."'";
-			if ($user_id) $q .= ", status='claimed'";
-			$q .= ";";
-			$r = $this->blockchain->app->run_query($q);
-			$giveaway_id = $this->blockchain->app->last_insert_id();
-			
-			$q = "SELECT * FROM game_giveaways WHERE giveaway_id='".$giveaway_id."';";
-			$r = $this->blockchain->app->run_query($q);
-			
-			return $r->fetch();
-		}
-		else return false;*/
-		return false;
-	}
-	
 	public function generate_invitation($inviter_id, &$invitation, $user_id) {
 		$q = "INSERT INTO game_invitations SET game_id='".$this->db_game['game_id']."'";
 		if ($inviter_id > 0) $q .= ", inviter_id=".$inviter_id;
@@ -1013,46 +952,11 @@ class Game {
 		$r = $this->blockchain->app->run_query($q);
 		$invitation_id = $this->blockchain->app->last_insert_id();
 		
-		if ($this->db_game['giveaway_status'] == "invite_free") {
-			$giveaway = $this->new_game_giveaway($user_id, 'initial_purchase', false);
-			$q = "UPDATE game_invitations SET giveaway_id='".$giveaway['giveaway_id']."' WHERE invitation_id='".$invitation_id."';";
-			$r = $this->blockchain->app->run_query($q);
-		}
-		
 		$q = "SELECT * FROM game_invitations WHERE invitation_id='".$invitation_id."';";
 		$r = $this->blockchain->app->run_query($q);
 		$invitation = $r->fetch();
 	}
 	
-	public function check_giveaway_available($user, &$giveaway) {
-		if ($this->db_game['p2p_mode'] == "none") {
-			$q = "SELECT * FROM game_giveaways g JOIN transactions t ON g.transaction_id=t.transaction_id WHERE g.status='claimed' AND g.game_id='".$this->db_game['game_id']."' AND g.user_id='".$user->db_user['user_id']."';";
-			$r = $this->blockchain->app->run_query($q);
-
-			if ($r->rowCount() > 0) {
-				$giveaway = $r->fetch();
-				return true;
-			}
-			else return false;
-		}
-		else return false;
-	}
-
-	public function try_capture_giveaway($user, &$giveaway) {
-		$giveaway_available = $this->check_giveaway_available($user, $giveaway);
-
-		if ($giveaway_available) {
-			$q = "UPDATE addresses a JOIN transaction_ios io ON a.address_id=io.address_id SET a.user_id='".$user->db_user['user_id']."', io.user_id='".$user->db_user['user_id']."' WHERE io.create_transaction_id='".$giveaway['transaction_id']."';";
-			$r = $this->blockchain->app->run_query($q);
-			
-			$q = "UPDATE game_giveaways SET status='redeemed' WHERE giveaway_id='".$giveaway['giveaway_id']."';";
-			$r = $this->blockchain->app->run_query($q);
-
-			return true;
-		}
-		else return false;
-	}
-
 	public function get_user_strategy($user_id, &$user_strategy) {
 		$q = "SELECT * FROM user_strategies s JOIN user_games g ON s.strategy_id=g.strategy_id WHERE s.user_id='".$user_id."' AND g.game_id='".$this->db_game['game_id']."';";
 		$r = $this->blockchain->app->run_query($q);
@@ -1236,9 +1140,6 @@ class Game {
 		$subject = "You've been invited to join ".$this->db_game['name'];
 		if ($this->db_game['giveaway_status'] == "invite_pay" || $this->db_game['giveaway_status'] == "public_pay") {
 			$subject .= ". Join by paying ".$this->blockchain->app->format_bignum($this->db_game['invite_cost'])." ".$invite_currency['short_name']."s for ".$this->blockchain->app->format_bignum($this->db_game['giveaway_amount']/pow(10,8))." ".$this->db_game['coin_name_plural'].".";
-		}
-		else {
-			$subject .= ". Join now & get ".$this->blockchain->app->format_bignum($this->db_game['giveaway_amount']/pow(10,8))." ".$this->db_game['coin_name_plural']." for free.";
 		}
 		
 		$message = "<p>";
@@ -1461,26 +1362,6 @@ class Game {
 		$seconds_per_round = $this->db_game['seconds_per_block']*$this->db_game['round_length'];
 		$coins_per_block = $this->blockchain->app->format_bignum($this->db_game['pow_reward']/pow(10,8));
 		
-		$post_buyin_supply = $this->db_game['giveaway_amount']+$this->coins_in_existence(false);
-		if ($post_buyin_supply > 0) $receive_pct = (100*$this->db_game['giveaway_amount']/$post_buyin_supply);
-		else $receive_pct = 100;
-		
-		if ($this->db_game['giveaway_status'] == "invite_pay" || $this->db_game['giveaway_status'] == "public_pay") {
-			$invite_disp = $this->blockchain->app->format_bignum($this->db_game['invite_cost']);
-			$html .= "To join this game, buy ".$this->blockchain->app->format_bignum($this->db_game['giveaway_amount']/pow(10,8))." ".$this->db_game['coin_name_plural']." (".round($receive_pct, 2)."% of the coins) for ".$invite_disp." ".$this->db_game['currency_short_name'];
-			if ($invite_disp != '1') $html .= "s";
-			$html .= ". ";
-		}
-		else {
-			if ($this->db_game['giveaway_amount'] > 0) {
-				$coin_disp = $this->blockchain->app->format_bignum($this->db_game['giveaway_amount']/pow(10,8));
-				$html .= "Join this game and get ".$coin_disp." ";
-				if ($coin_disp == "1") $html .= $this->db_game['coin_name'];
-				else $html .= $this->db_game['coin_name_plural'];
-				$html .= " (".round($receive_pct, 2)."% of the coins) for free. ";
-			}
-		}
-
 		if ($this->db_game['game_status'] == "running") {
 			$html .= "This game started ".$this->blockchain->app->format_seconds(time()-$this->db_game['start_time'])." ago; ".$this->blockchain->app->format_bignum($this->coins_in_existence(false)/pow(10,8))." ".$this->db_game['coin_name_plural']."  are already in circulation. ";
 		}
@@ -2708,15 +2589,7 @@ class Game {
 		
 		$html .= '</div><div class="col-md-6">';
 		
-		if ($transaction['transaction_desc'] == "giveaway") {
-			$q = "SELECT * FROM game_giveaways WHERE transaction_id='".$transaction['transaction_id']."';";
-			$r = $this->blockchain->app->run_query($q);
-			if ($r->rowCount() > 0) {
-				$giveaway = $r->fetch();
-				$html .= $this->blockchain->app->format_bignum($giveaway['amount']/pow(10,8))." coins were given to a player for joining.";
-			}
-		}
-		else if ($transaction['transaction_desc'] == "votebase") {
+		if ($transaction['transaction_desc'] == "votebase") {
 			$payout_disp = round($transaction['amount']/pow(10,8), 2);
 			$html .= "Voting Payout&nbsp;&nbsp;".$payout_disp." ";
 			if ($payout_disp == '1') $html .= $this->db_game['coin_name'];

@@ -286,10 +286,6 @@ class App {
 				$qq .= " WHERE invitation_id='".$invitation['invitation_id']."';";
 				$rr = $this->run_query($qq);
 				
-				if ($invitation['giveaway_id'] > 0) {
-					$qq = "UPDATE game_giveaways SET user_id='".$user_id."', status='claimed' WHERE giveaway_id='".$invitation['giveaway_id']."';";
-					$rr = $this->run_query($qq);
-				}
 				$user = new User($this, $user_id);
 				$user_game = $user->ensure_user_in_game($invitation['game_id']);
 				
@@ -393,53 +389,6 @@ class App {
 		}
 		else return false;
 	}
-	
-	/*public function process_join_requests($variation_id) {
-		$q = "SELECT * FROM event_type_variations WHERE variation_id='".$variation_id."';";
-		$r = $this->run_query($q);
-		
-		if ($r->rowCount() == 1) {
-			$variation = $r->fetch();
-			
-			if (in_array($variation['giveaway_status'], array('public_free', 'public_pay'))) {
-				$keeplooping = true;
-				$last_request_id = 0;
-				do {
-					$q = "SELECT * FROM game_join_requests WHERE variation_id='".$variation['variation_id']."' AND request_status='outstanding' AND join_request_id > ".$last_request_id." ORDER BY join_request_id ASC LIMIT 1;";
-					$r = $this->run_query($q);
-					
-					if ($r->rowCount() > 0) {
-						$join_request = $r->fetch();
-						$last_request_id = $join_request['join_request_id'];
-						
-						$join_user = new User($this, $join_request['user_id']);
-						
-						$qq = "SELECT * FROM event_types WHERE variation_id='".$variation['variation_id']."' AND event_status='published' ORDER BY event_id ASC LIMIT 1;";
-						$rr = $this->run_query($qq);
-						
-						if ($rr->rowCount() == 1) {
-							$db_join_event = $rr->fetch();
-							
-							$user_game = $join_user->ensure_user_in_game($db_join_event['event_id']);
-							
-							$this->run_query("UPDATE game_join_requests SET request_status='complete', event_id='".$db_join_event['event_id']."' WHERE join_request_id='".$join_request['join_request_id']."';");
-						}
-					}
-					else $keeplooping = false;
-				}
-				while ($keeplooping);
-			}
-		}
-	}
-
-	public function bet_transaction_payback_address($transaction_id) {
-		$q = "SELECT * FROM transaction_ios i, transactions t, addresses a WHERE t.transaction_id='".$transaction_id."' AND i.spend_transaction_id=t.transaction_id AND i.address_id=a.address_id ORDER BY a.address ASC LIMIT 1;";
-		$r = $this->run_query($q);
-		if ($r->rowCount() == 1) {
-			return $r->fetch();
-		}
-		else return false;
-	}*/
 	
 	public function latest_currency_price($currency_id) {
 		$q = "SELECT * FROM currency_prices WHERE currency_id='".$currency_id."' AND reference_currency_id='".$this->get_site_constant('reference_currency_id')."' ORDER BY price_id DESC LIMIT 1;";
@@ -1054,7 +1003,7 @@ class App {
 			}
 			else {
 				if ($db_game['start_condition'] == "players_joined") {
-					$db_game['initial_coins'] = $db_game['start_condition_players']*$db_game['giveaway_amount'];
+					$db_game['initial_coins'] = $db_game['genesis_amount'];
 					$final_coins = $this->ideal_coins_in_existence_after_round($db_game, $db_game['final_round']);
 					$inflation_factor = $final_coins/$db_game['initial_coins'];
 				}
@@ -1067,9 +1016,8 @@ class App {
 	}
 	
 	public function ideal_coins_in_existence_after_round(&$db_game, $round_id) {
-		if ($db_game['inflation'] == "linear") return $db_game['initial_coins'] + $round_id*($db_game['pos_reward'] + $db_game['round_length']*$db_game['pow_reward']);
-		else if ($db_game['inflation'] == "fixed_exponential") return floor($db_game['initial_coins'] * pow(1 + $db_game['exponential_inflation_rate'], $round_id));
-		//else die("exponential inflation not implemented in global_functions.php");
+		if ($db_game['inflation'] == "linear") return $db_game['genesis_amount'] + $round_id*($db_game['pos_reward'] + $db_game['round_length']*$db_game['pow_reward']);
+		else if ($db_game['inflation'] == "fixed_exponential") return floor($db_game['genesis_amount'] * pow(1 + $db_game['exponential_inflation_rate'], $round_id));
 	}
 	
 	public function coins_created_in_round(&$db_game, $round_id) {

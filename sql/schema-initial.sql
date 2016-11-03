@@ -479,58 +479,6 @@ CREATE TABLE IF NOT EXISTS `games` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `game_buyins`
---
-
-CREATE TABLE IF NOT EXISTS `game_buyins` (
-  `buyin_id` int(11) NOT NULL AUTO_INCREMENT,
-  `game_id` int(11) DEFAULT NULL,
-  `user_id` int(11) DEFAULT NULL,
-  `pay_currency_id` int(11) DEFAULT NULL,
-  `settle_currency_id` int(11) DEFAULT NULL,
-  `invoice_address_id` int(11) DEFAULT NULL,
-  `giveaway_id` int(11) DEFAULT NULL,
-  `status` enum('unpaid','unconfirmed','confirmed','settled','pending_refund','refunded') NOT NULL DEFAULT 'unpaid',
-  `pay_amount` decimal(16,8) NOT NULL DEFAULT '0.00000000',
-  `settle_amount` decimal(16,8) NOT NULL DEFAULT '0.00000000',
-  `confirmed_amount_paid` decimal(16,8) NOT NULL DEFAULT '0.00000000',
-  `unconfirmed_amount_paid` decimal(16,8) NOT NULL DEFAULT '0.00000000',
-  `time_created` int(20) NOT NULL DEFAULT '0',
-  `time_confirmed` int(20) NOT NULL DEFAULT '0',
-  `expire_time` int(20) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`buyin_id`),
-  KEY `pay_currency_id` (`pay_currency_id`),
-  KEY `settle_currency_id` (`settle_currency_id`),
-  KEY `user_id` (`user_id`),
-  KEY `invoice_address_id` (`invoice_address_id`),
-  KEY `giveaway_id` (`giveaway_id`),
-  KEY `status` (`status`),
-  KEY `game_id` (`game_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `game_giveaways`
---
-
-CREATE TABLE IF NOT EXISTS `game_giveaways` (
-  `giveaway_id` int(11) NOT NULL AUTO_INCREMENT,
-  `game_id` int(11) DEFAULT NULL,
-  `user_id` int(11) DEFAULT NULL,
-  `transaction_id` int(11) DEFAULT NULL,
-  `status` enum('unclaimed','claimed','redeemed') NOT NULL DEFAULT 'unclaimed',
-  `type` enum('initial_purchase','buyin') NOT NULL DEFAULT 'initial_purchase',
-  `amount` bigint(20) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`giveaway_id`),
-  UNIQUE KEY `transaction_id` (`transaction_id`),
-  KEY `game_id` (`game_id`),
-  KEY `user_id` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `game_invitations`
 --
 
@@ -550,24 +498,6 @@ CREATE TABLE IF NOT EXISTS `game_invitations` (
   UNIQUE KEY `invitation_key` (`invitation_key`),
   KEY `inviter_id` (`inviter_id`),
   KEY `used` (`used`),
-  KEY `game_id` (`game_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `game_join_requests`
---
-
-CREATE TABLE IF NOT EXISTS `game_join_requests` (
-  `join_request_id` int(11) NOT NULL AUTO_INCREMENT,
-  `game_id` int(11) DEFAULT NULL,
-  `user_id` int(11) DEFAULT NULL,
-  `request_status` enum('outstanding','complete','canceled') NOT NULL DEFAULT 'outstanding',
-  `time_requested` int(20) NOT NULL,
-  PRIMARY KEY (`join_request_id`),
-  KEY `user_id` (`user_id`),
-  KEY `request_status` (`request_status`),
   KEY `game_id` (`game_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
@@ -689,21 +619,6 @@ INSERT INTO `images` (`image_id`, `access_key`, `extension`) VALUES
 (30, '', 'jpg'),
 (31, '', 'png'),
 (32, '', 'png');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `invoice_addresses`
---
-
-CREATE TABLE IF NOT EXISTS `invoice_addresses` (
-  `invoice_address_id` int(11) NOT NULL AUTO_INCREMENT,
-  `currency_id` int(11) DEFAULT NULL,
-  `pub_key` varchar(40) NOT NULL DEFAULT '',
-  `priv_enc` varchar(300) NOT NULL DEFAULT '',
-  PRIMARY KEY (`invoice_address_id`),
-  KEY `currency_id` (`currency_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
