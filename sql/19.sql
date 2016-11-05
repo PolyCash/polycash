@@ -6,7 +6,8 @@ CREATE TABLE `blockchains` (
   `blockchain_name` varchar(100) NOT NULL DEFAULT '',
   `rpc_username` varchar(100) DEFAULT NULL,
   `rpc_password` varchar(100) DEFAULT NULL,
-  `rpc_port` int(11) DEFAULT NULL
+  `rpc_port` int(11) DEFAULT NULL,
+  `supports_getblockheader` TINYINT(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 ALTER TABLE `blockchains` ADD PRIMARY KEY (`blockchain_id`);
 ALTER TABLE `blockchains` MODIFY `blockchain_id` int(11) NOT NULL AUTO_INCREMENT;
@@ -93,7 +94,7 @@ ALTER TABLE `game_types` DROP `p2p_mode`;
 ALTER TABLE `games` CHANGE `game_starting_block` `game_starting_block` INT(11) NULL DEFAULT NULL;
 UPDATE game_types SET game_starting_block=NULL;
 INSERT INTO `currencies` (`currency_id`, `oracle_url_id`, `blockchain_id`, `name`, `short_name`, `short_name_plural`, `abbreviation`, `symbol`) VALUES (NULL, NULL, NULL, 'Bitcoin', 'bitcoin', 'bitcoins', 'BTC', '&#3647;'), (NULL, NULL, NULL, 'Litecoin', 'litecoin', 'litecoins', 'LTC', 'L');
-INSERT INTO `blockchains` (`blockchain_id`, `blockchain_name`, `url_identifier`, `p2p_mode`, `coin_name`, `coin_name_plural`, `rpc_username`, `rpc_password`, `rpc_port`, `default_rpc_port`, `first_required_block`, `identifier_case_sensitive`, `identifier_first_char`, `initial_pow_reward`) VALUES (NULL, 'Bitcoin', 'bitcoin', 'rpc', 'bitcoin', 'bitcoins', NULL, NULL, NULL, '8332', NULL, '1', '2', '5000000000'), (NULL, 'Litecoin', 'litecoin', 'rpc', 'litecoin', 'litecoins', NULL, NULL, NULL, '9332', NULL, '1', '2', '5000000000');
+INSERT INTO `blockchains` (`blockchain_id`, `blockchain_name`, `url_identifier`, `p2p_mode`, `coin_name`, `coin_name_plural`, `rpc_username`, `rpc_password`, `rpc_port`, `default_rpc_port`, `first_required_block`, `identifier_case_sensitive`, `identifier_first_char`, `initial_pow_reward`, `supports_getblockheader`) VALUES (NULL, 'Bitcoin', 'bitcoin', 'rpc', 'bitcoin', 'bitcoins', NULL, NULL, NULL, '8332', NULL, '1', '2', '5000000000', '1'), (NULL, 'Litecoin', 'litecoin', 'rpc', 'litecoin', 'litecoins', NULL, NULL, NULL, '9332', NULL, '1', '2', '5000000000', '0');
 UPDATE `currencies` SET `blockchain_id` = 1 WHERE `currency_id` = 6;
 UPDATE `currencies` SET `blockchain_id` = 2 WHERE `currency_id` = 7;
 ALTER TABLE blocks DROP INDEX block_id_2;

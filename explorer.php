@@ -118,7 +118,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$event_status = "completed";
 					}
 					else {
-						$last_block_id = $game->last_block_id();
+						$last_block_id = $game->blockchain->last_block_id();
 						$current_round = $game->block_to_round($last_block_id+1);
 						$mode_error = false;
 						$event_status = "current";
@@ -249,10 +249,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					echo ', '.$game->blockchain->last_transaction_id().', ';
 					if ($my_last_transaction_id) echo $my_last_transaction_id;
 					else echo 'false';
-					echo ', "';
-					if (empty($thisuser)) echo "";
-					else echo $game->mature_io_ids_csv($thisuser->db_user['user_id']);
-					echo '", "'.$game->db_game['payout_weight'].'"';
+					echo ', "", "'.$game->db_game['payout_weight'].'"';
 					echo ', '.$game->db_game['round_length'];
 					$bet_round_range = $game->bet_round_range();
 					$min_bet_round = $bet_round_range[0];
@@ -315,7 +312,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 			if ($explore_mode == "events") {
 				if (!empty($db_event) || $event_status == "current") {
 					if ($event_status == "current") {
-						$last_block_id = $game->last_block_id();
+						$last_block_id = $game->blockchain->last_block_id();
 						$this_round = $game->block_to_round($last_block_id+1);
 						$current_round = $this_round;
 					}
@@ -356,23 +353,17 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						echo $event->user_winnings_description($thisuser->db_user['user_id'], $this_round, $event_status, $db_event['winning_option_id'], $db_event['winning_votes'], $db_event['name'], $my_votes)."<br/>";
 					}
 					
-					if (!empty($db_event) && $db_event['payout_transaction_id'] > 0) {
-						$payout_disp = $app->format_bignum($db_event['amount']/pow(10,8));
+					if (!empty($db_event)) {
+						$q = "SELECT SUM(colored_amount) FROM transaction_game_ios WHERE event_id='".$event->db_event['event_id']."' AND is_coinbase=1;";
+						$r = $app->run_query($q);
+						$payout_amount = $r->fetch();
+						$payout_amount = $payout_amount['SUM(colored_amount)'];
+						$payout_disp = $app->format_bignum($payout_amount/pow(10,8));
 						echo '<font class="greentext">'.$payout_disp."</font> ";
 						if ($payout_disp == '1') echo $game->db_game['coin_name']." was";
 						else echo $game->db_game['coin_name_plural']." were";
 						echo " paid out to the winners.<br/>\n";
 					}
-					$round_fee_q = "SELECT SUM(fee_amount) FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_id > ".(($this_round-1)*$game->db_game['round_length'])." AND block_id < ".($this_round*$game->db_game['round_length']).";";
-					$round_fee_r = $app->run_query($round_fee_q);
-					$round_fees = $round_fee_r->fetch(PDO::FETCH_NUM);
-					$round_fees = intval($round_fees[0]);
-					
-					$fee_disp = $app->format_bignum($round_fees/pow(10,8));
-					echo '<font class="redtext">'.$fee_disp."</font> ";
-					if ($fee_disp == '1') echo $game->db_game['coin_name']." was";
-					else echo $game->db_game['coin_name_plural']." were";
-					echo " paid in fees during this round.<br/>\n";
 					
 					$from_block_id = $db_event['event_starting_block'];
 					$to_block_id = $db_event['event_final_block'];
@@ -390,7 +381,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					echo $event_next_prev_links;
 					?>
 					<br/>
-					<a href="/explorer/<?php echo $game->db_game['url_identifier']; ?>/events/">See all events</a><br/>
+					<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/">See all events</a><br/>
 					
 					<h2>Rankings</h2>
 					
@@ -777,18 +768,6 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					if ($section != $this_section) echo "<h2>".ucwords($this_section)." Games (".$r->rowCount().")</h2>\n";
 					$section = $this_section;
 					echo '<a href="/explorer/games/'.$db_game['url_identifier'].'/events/">'.$db_game['name']."</a><br/>\n";
-					$game_id_csv .= $db_game['game_id'].",";
-				}
-				if ($game_id_csv != "") $game_id_csv = substr($game_id_csv, 0, strlen($game_id_csv)-1);
-				
-				if ($thisuser) {
-					$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id AND ug.user_id='".$thisuser->db_user['user_id']."'";
-					$q .= " AND g.game_id NOT IN (".$game_id_csv.")";
-					$q .= ";";
-					$r = $app->run_query($q);
-					while ($db_game = $r->fetch()) {
-						echo '<a href="/explorer/games/'.$db_game['url_identifier'].'/">'.$db_game['name']."</a><br/>\n";
-					}
 				}
 			}
 			else if ($explore_mode == "blockchain_home") {

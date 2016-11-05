@@ -25,9 +25,9 @@ if ($game->db_game['invite_currency'] > 0) {
 	$btc_currency = $app->get_currency_by_abbreviation('btc');
 	
 	$coins_in_existence = $game->coins_in_existence(false);
-	$pot_value = $game->pot_value();
-	if ($pot_value > 0) {
-		$exchange_rate = ($coins_in_existence/pow(10,8))/$pot_value;
+	$escrow_value = $game->escrow_value(false);
+	if ($escrow_value > 0) {
+		$exchange_rate = $coins_in_existence/$escrow_value;
 	}
 	else $exchange_rate = 0;
 }
@@ -81,12 +81,11 @@ else $exchange_rate = 0;
 					}
 					else {
 						if ($game->db_game['game_status'] == "running") {
-							echo "This game started ".$app->format_seconds(time()-strtotime($game->db_game['start_datetime']))." ago on ".date("M d Y", strtotime($game->db_game['start_datetime'])).". ";
+							echo "This game started at ".date("M j, Y g:ia", strtotime($game->db_game['start_datetime'])).". ";
 						}
 						else {
 							echo "This game starts in ".$app->format_seconds(strtotime($game->db_game['start_datetime'])-time())." on ".date("M d Y", strtotime($game->db_game['start_datetime'])).". ";
 						}
-						echo "So far, ".$game->paid_players_in_game()." have joined this game. ";
 					}
 					
 					if ($game->db_game['short_description'] != "") {
@@ -94,7 +93,13 @@ else $exchange_rate = 0;
 					}
 					
 					if ($exchange_rate > 0) {
-						if ($game->pot_value() > 0) echo "Right now there's ".$invite_currency['symbol'].$app->format_bignum($game->pot_value())." in the pot and the";
+						if ($game->escrow_value(false) > 0) {
+							$escrow_amount_disp = $app->format_bignum($game->escrow_value(false)/pow(10,8));
+							echo "Right now there's ".$escrow_amount_disp." ";
+							if ($escrow_amount_disp == "1") echo $game->blockchain->db_blockchain['coin_name'];
+							else echo $game->blockchain->db_blockchain['coin_name_plural'];
+							echo " in escrow and the";
+						}
 						else echo "The";
 						echo " exchange rate is ".$app->format_bignum($exchange_rate)." ".$game->db_game['coin_name_plural']." per ".$invite_currency['short_name'].". ";
 					}
@@ -223,9 +228,7 @@ games.push(new Game(<?php
 	echo ', false, ';
 	if ($my_last_transaction_id) echo $my_last_transaction_id;
 	else echo 'false';
-	echo ', "';
-	echo empty($thisuser)? 0 : $game->mature_io_ids_csv($thisuser->db_user['user_id']);
-	echo '", "'.$game->db_game['payout_weight'].'"';
+	echo ', "", "'.$game->db_game['payout_weight'].'"';
 	echo ', '.$game->db_game['round_length'];
 	$bet_round_range = $game->bet_round_range();
 	$min_bet_round = $bet_round_range[0];

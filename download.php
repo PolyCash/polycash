@@ -22,7 +22,7 @@ include('includes/html_start.php');
 			<p>
 			EmpireCoin is an experimental blockchain which implements one game based on the CoinBlock protocol.  EmpireCoin is based on the original Bitcoin source code.  To get started, please visit our Github page, build the EmpireCoin daemon from source and then start mining on our testnet. To avoid compile errors, please use Ubuntu.
 			</p>
-			<a target="_blank" class="btn btn-success" href="https://github.com/TeamEmpireCoin/EmpireCoin">Download EmpireCoin Core</a>
+			<a target="_blank" class="btn btn-success" href="https://github.com/TeamEmpireCoin/EmpireCoin">Download EmpireCoin</a>
 		</div>
 	</div>
 </div>

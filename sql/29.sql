@@ -1,0 +1,1 @@
+ALTER TABLE `games` ADD `protocol_version` FLOAT NULL DEFAULT NULL AFTER `option_group_id`;

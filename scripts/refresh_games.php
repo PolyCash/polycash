@@ -1,6 +1,6 @@
 <?php
 $host_not_required = TRUE;
-include(realpath(dirname(__FILE__))."/../includes/connect.php");
+include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
 if (!empty($argv)) {
 	$cmd_vars = $app->argv_to_array($argv);
@@ -27,7 +27,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			
 			while ($db_user = $rr->fetch()) {
 				$user = new User($app, $db_user['user_id']);
-				$user->ensure_user_in_game($game->db_game['game_id']);
+				$user_game = $user->ensure_user_in_game($game->db_game['game_id']);
 				$invitation = false;
 				$success = $game->try_capture_giveaway($user, $invitation);
 			}

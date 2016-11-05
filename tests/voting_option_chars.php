@@ -1,5 +1,6 @@
 <?php
-include("../includes/connect.php");
+$host_not_required = true;
+include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
 $pass_count = 0;
 $fail_count = 0;

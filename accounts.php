@@ -18,12 +18,12 @@ include('includes/html_start.php');
 			selected_account_id = account_id;
 		}
 		</script>
-		<h1>My Accounts</h1>
+		<h1>Coin Accounts</h1>
 		<?php
 		$account_q = "SELECT ca.*, c.*, b.url_identifier AS blockchain_url_identifier, k.pub_key FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id JOIN blockchains b ON c.blockchain_id=b.blockchain_id JOIN addresses a ON ca.current_address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE ca.user_id='".$thisuser->db_user['user_id']."';";
 		$account_r = $app->run_query($account_q);
 		
-		echo "<p>You have ".$account_r->rowCount()." currency account";
+		echo "<p>You have ".$account_r->rowCount()." coin account";
 		if ($account_r->rowCount() != 1) echo "s";
 		echo ".</p>\n";
 		
@@ -35,14 +35,17 @@ include('includes/html_start.php');
 			else $account_game = false;
 			
 			echo '<div class="row">';
-			echo '<div class="col-sm-4">'.$account['account_name'].'</div>';
+			echo '<div class="col-sm-4">';
+			if ($account['game_id'] > 0) echo ucwords($account_game->blockchain->db_blockchain['coin_name_plural'])." for ".$account_game->db_game['name'];
+			else echo $account['account_name'];
+			echo '</div>';
 			
 			$balance_q = "SELECT SUM(io.amount) FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."' AND io.spend_status='unspent';";
 			$balance_r = $app->run_query($balance_q);
 			$balance = $balance_r->fetch();
 			$balance = (int) $balance['SUM(io.amount)'];
 			
-			echo '<div class="col-sm-2 greentext">';
+			echo '<div class="col-sm-2 greentext" style="text-align: right">';
 			echo $app->format_bignum($balance/pow(10,8)).' '.$account['short_name_plural'];
 			echo '</div>';
 			
@@ -69,8 +72,8 @@ include('includes/html_start.php');
 				echo '<img style="margin: 10px;" src="/render_qr_code.php?data='.$account['pub_key'].'" />';
 			}
 			else {
-				echo "This account stores your colored ".$account['coin_name_plural']." for ".$account_game->db_game['name'].".<br/>\n";
-				echo "Do not deposit ".$account['coin_name_plural']." directly into this account.";
+				echo "This account stores your colored ".$account_game->blockchain->db_blockchain['coin_name_plural']." for ".$account_game->db_game['name'].".<br/>\n";
+				echo "Do not deposit ".$account_game->blockchain->db_blockchain['coin_name_plural']." directly into this account.";
 			}
 			
 			while ($transaction = $transaction_in_r->fetch()) {
@@ -109,6 +112,29 @@ include('includes/html_start.php');
 			}
 			
 			echo "</div>\n";
+			echo "</div>\n";
+		}
+		
+		$blockchains = array();
+		
+		echo '<h1>Colored Coin Accounts</h1>';
+		
+		$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."';";
+		$r = $app->run_query($q);
+		
+		echo "<p>You have ".$r->rowCount()." colored coin account";
+		if ($account_r->rowCount() != 1) echo "s";
+		echo ".</p>\n";
+		
+		while ($user_game = $r->fetch()) {
+			if (empty($blockchains[$user_game['blockchain_id']])) $blockchains[$user_game['blockchain_id']] = new Blockchain($app, $user_game['blockchain_id']);
+			$coin_game = new Game($blockchains[$user_game['blockchain_id']], $user_game['game_id']);
+			echo '<div class="row">';
+			echo '<div class="col-sm-4"><a href="/wallet/'.$user_game['url_identifier'].'/">'.ucwords($user_game['coin_name_plural'])." for ".$user_game['name'].'</a></div>';
+			echo '<div class="col-sm-2 greentext" style="text-align: right">'.$app->format_bignum($thisuser->account_coin_value($coin_game)/pow(10,8)).' '.$user_game['coin_name_plural'].'</div>';
+			$exchange_rate = $coin_game->coins_in_existence(false)/$coin_game->escrow_value(false);
+			$cc_value = $thisuser->account_coin_value($coin_game)/$exchange_rate;
+			echo '<div class="col-sm-2 greentext" style="text-align: right">'.$app->format_bignum($cc_value/pow(10,8)).' '.$coin_game->blockchain->db_blockchain['coin_name_plural'].'</div>';
 			echo "</div>\n";
 		}
 		?>

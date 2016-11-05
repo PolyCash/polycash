@@ -1,5 +1,6 @@
 <?php
-include("../includes/connect.php");
+$host_not_required = true;
+include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
 $event_id = intval($_REQUEST['event_id']);
 $event = new Event($app, false, $event_id);

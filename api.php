@@ -10,13 +10,14 @@ if ($uri_parts[1] == "api") {
 	if ($uri_parts[2] != "" && strval(intval($uri_parts[2])) === strval($uri_parts[2])) {
 		$game_id = intval($uri_parts[2]);
 		
-		$q = "SELECT game_id, maturity, pos_reward, pow_reward, round_length, p2p_mode, payout_weight, seconds_per_block, name FROM games WHERE game_id=".$game_id.";";
+		$q = "SELECT game_id, blockchain_id, maturity, pos_reward, pow_reward, round_length, payout_weight, seconds_per_block, name FROM games WHERE game_id=".$game_id.";";
 		$r = $app->run_query($q);
 		
 		if ($r->rowCount() == 1) {
 			$db_game = $r->fetch();
-			$game = new Game($app, $db_game['game_id']);
-			$last_block_id = $game->last_block_id();
+			$blockchain = new Blockchain($db_game['blockchain_id'], $app);
+			$game = new Game($blockchain, $db_game['game_id']);
+			$last_block_id = $game->blockchain->last_block_id();
 			$current_round = $game->block_to_round($last_block_id+1);
 			
 			$intval_vars = array('game_id','round_length','seconds_per_block','maturity');
@@ -134,7 +135,9 @@ if ($uri_parts[1] == "api") {
 		if (empty($game_id)) {
 			$game_id = $app->run_query("SELECT * FROM games WHERE featured=1 ORDER BY game_id ASC LIMIT 1;")->fetch()['game_id'];
 		}
-		$api_game = new Game($app, $game_id);
+		$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
+		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+		$api_game = new Game($blockchain, $game_id);
 		?>
 		<div class="container" style="max-width: 1000px;">
 			<h1><?php echo $GLOBALS['coin_brand_name']; ?> API Documentation</h1>

@@ -286,12 +286,8 @@ class App {
 				$qq .= " WHERE invitation_id='".$invitation['invitation_id']."';";
 				$rr = $this->run_query($qq);
 				
-				if ($invitation['giveaway_id'] > 0) {
-					$qq = "UPDATE game_giveaways SET user_id='".$user_id."', status='claimed' WHERE giveaway_id='".$invitation['giveaway_id']."';";
-					$rr = $this->run_query($qq);
-				}
 				$user = new User($this, $user_id);
-				$user->ensure_user_in_game($invitation['game_id']);
+				$user_game = $user->ensure_user_in_game($invitation['game_id']);
 				
 				$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 				$invite_game = new Game($blockchain, $invitation['game_id']);
@@ -393,53 +389,6 @@ class App {
 		}
 		else return false;
 	}
-	
-	/*public function process_join_requests($variation_id) {
-		$q = "SELECT * FROM event_type_variations WHERE variation_id='".$variation_id."';";
-		$r = $this->run_query($q);
-		
-		if ($r->rowCount() == 1) {
-			$variation = $r->fetch();
-			
-			if (in_array($variation['giveaway_status'], array('public_free', 'public_pay'))) {
-				$keeplooping = true;
-				$last_request_id = 0;
-				do {
-					$q = "SELECT * FROM game_join_requests WHERE variation_id='".$variation['variation_id']."' AND request_status='outstanding' AND join_request_id > ".$last_request_id." ORDER BY join_request_id ASC LIMIT 1;";
-					$r = $this->run_query($q);
-					
-					if ($r->rowCount() > 0) {
-						$join_request = $r->fetch();
-						$last_request_id = $join_request['join_request_id'];
-						
-						$join_user = new User($this, $join_request['user_id']);
-						
-						$qq = "SELECT * FROM event_types WHERE variation_id='".$variation['variation_id']."' AND event_status='published' ORDER BY event_id ASC LIMIT 1;";
-						$rr = $this->run_query($qq);
-						
-						if ($rr->rowCount() == 1) {
-							$db_join_event = $rr->fetch();
-							
-							$join_user->ensure_user_in_game($db_join_event['event_id']);
-							
-							$this->run_query("UPDATE game_join_requests SET request_status='complete', event_id='".$db_join_event['event_id']."' WHERE join_request_id='".$join_request['join_request_id']."';");
-						}
-					}
-					else $keeplooping = false;
-				}
-				while ($keeplooping);
-			}
-		}
-	}
-
-	public function bet_transaction_payback_address($transaction_id) {
-		$q = "SELECT * FROM transaction_ios i, transactions t, addresses a WHERE t.transaction_id='".$transaction_id."' AND i.spend_transaction_id=t.transaction_id AND i.address_id=a.address_id ORDER BY a.address ASC LIMIT 1;";
-		$r = $this->run_query($q);
-		if ($r->rowCount() == 1) {
-			return $r->fetch();
-		}
-		else return false;
-	}*/
 	
 	public function latest_currency_price($currency_id) {
 		$q = "SELECT * FROM currency_prices WHERE currency_id='".$currency_id."' AND reference_currency_id='".$this->get_site_constant('reference_currency_id')."' ORDER BY price_id DESC LIMIT 1;";
@@ -715,9 +664,11 @@ class App {
 				echo '</div>';
 			}
 			echo '</div>';
-			echo '</div>';
 		}
-		else echo "No public games are running right now.<br/>\n";
+		else {
+			echo "No public games are running right now.<br/>\n";
+		}
+		echo '</div>';
 	}
 	
 	public function refresh_utxo_user_ids($only_unspent_utxos) {
@@ -799,42 +750,48 @@ class App {
 		else $script_path_name = realpath(dirname(dirname(__FILE__)));
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_blocks.php" key='.$key_string;
-		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
 		$block_loading_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($block_loading_process)) $process_count++;
 		else $html .= "Failed to start a process for loading blocks.<br/>\n";
 		sleep(0.1);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_games.php" key='.$key_string;
-		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
 		$block_loading_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($block_loading_process)) $process_count++;
 		else $html .= "Failed to start a process for loading blocks.<br/>\n";
 		sleep(0.1);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_main.php" key='.$key_string;
-		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
 		$main_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($main_process)) $process_count++;
 		else $html .= "Failed to start the main process.<br/>\n";
 		sleep(0.1);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_check_payments.php" key='.$key_string;
-		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
 		$payments_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($payments_process)) $process_count++;
 		else $html .= "Failed to start a process for processing payments.<br/>\n";
 		sleep(0.1);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/address_miner.php" key='.$key_string;
-		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
 		$address_miner_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($address_miner_process)) $process_count++;
 		else $html .= "Failed to start a process for mining addresses.<br/>\n";
 		sleep(0.1);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/fetch_currency_prices.php" key='.$key_string;
-		if (PHP_OS != "WINNT") $cmd .= " 2>&1 >/dev/null";
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
 		$currency_prices_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($currency_prices_process)) $process_count++;
 		else $html .= "Failed to start a process for updating currency prices.<br/>\n";
@@ -928,7 +885,9 @@ class App {
 		$html .= "</div></div>\n";
 		
 		if ($db_game['game_id'] > 0) {
-			$html .= '<div class="row"><div class="col-sm-5">Game definition:</div><div class="col-sm-7"><a target="_blank" href="'.$GLOBALS['base_url'].'/scripts/show_game_definition.php?game_id='.$db_game['game_id'].'">Click here</a></div></div>';
+			$blockchain = new Blockchain($this, $db_game['blockchain_id']);
+			$game = new Game($blockchain, $db_game['game_id']);
+			$html .= '<div class="row"><div class="col-sm-5">Game definition:</div><div class="col-sm-7"><a target="_blank" href="'.$GLOBALS['base_url'].'/scripts/show_game_definition.php?game_id='.$db_game['game_id'].'" title="'.$this->game_definition_hash($game).'">'.$this->game_definition_hash_short($game).'</a></div></div>';
 		}
 		
 		$html .= '<div class="row"><div class="col-sm-5">Length of game:</div><div class="col-sm-7">';
@@ -938,12 +897,48 @@ class App {
 		
 		$html .= '<div class="row"><div class="col-sm-5">Starts on block:</div><div class="col-sm-7">'.$db_game['game_starting_block']."</div></div>\n";
 		
-		$html .= '<div class="row"><div class="col-sm-5">Cost to join:</div><div class="col-sm-7">';
-		if ($db_game['giveaway_status'] == "invite_pay" || $db_game['giveaway_status'] == "public_pay") $html .= $this->format_bignum($db_game['invite_cost'])." ".$invite_currency['short_name']."s";
-		else $html .= "Free";
+		$html .= '<div class="row"><div class="col-sm-5">Escrow address:</div><div class="col-sm-7" style="font-size: 11px;">';
+		if ($db_game['escrow_address'] == "") $html .= "None";
+		else $html .= '<a href="/explorer/games/'.$db_game['url_identifier'].'/addresses/'.$db_game['escrow_address'].'">'.$db_game['escrow_address'].'</a>';
 		$html .= "</div></div>\n";
 		
-		$html .= '<div class="row"><div class="col-sm-5">Additional buy-ins?</div><div class="col-sm-7">';
+		$genesis_amount_disp = $this->format_bignum($db_game['genesis_amount']/pow(10,8));
+		$html .= '<div class="row"><div class="col-sm-5">Genesis transaction:</div><div class="col-sm-7">';
+		$html .= '<a href="/explorer/games/'.$db_game['url_identifier'].'/transactions/'.$db_game['genesis_tx_hash'].'">';
+		$html .= $genesis_amount_disp.' ';
+		if ($genesis_amount_disp == "1") $html .= $db_game['coin_name'];
+		else $html .= $db_game['coin_name_plural'];
+		$html .= '</a>';
+		$html .= "</div></div>\n";
+		
+		if ($db_game['game_id'] > 0) {
+			$sample_block_id = $game->blockchain->last_block_id();
+			$game->refresh_coins_in_existence();
+			
+			$circulation_amount_disp = $this->format_bignum($game->coins_in_existence($sample_block_id)/pow(10,8));
+			$html .= '<div class="row"><div class="col-sm-5">'.ucwords($game->db_game['coin_name_plural']).' in circulation:</div><div class="col-sm-7">';
+			$html .= $circulation_amount_disp.' ';
+			if ($circulation_amount_disp == "1") $html .= $db_game['coin_name'];
+			else $html .= $db_game['coin_name_plural'];
+			$html .= "</div></div>\n";
+			
+			$escrow_amount_disp = $this->format_bignum($game->escrow_value($sample_block_id)/pow(10,8));
+			$html .= '<div class="row"><div class="col-sm-5">'.ucwords($game->blockchain->db_blockchain['coin_name_plural']).' in escrow:</div><div class="col-sm-7">';
+			$html .= $escrow_amount_disp.' ';
+			if ($escrow_amount_disp == "1") $html .= $game->blockchain->db_blockchain['coin_name'];
+			else $html .= $game->blockchain->db_blockchain['coin_name_plural'];
+			$html .= "</div></div>\n";
+			
+			$exchange_rate_disp = $this->format_bignum($game->coins_in_existence($sample_block_id)/$game->escrow_value($sample_block_id));
+			$html .= '<div class="row"><div class="col-sm-5">Current exchange rate:</div><div class="col-sm-7">';
+			$html .= $exchange_rate_disp.' ';
+			if ($exchange_rate_disp == "1") $html .= $db_game['coin_name'];
+			else $html .= $db_game['coin_name_plural'];
+			$html .= ' per '.$game->blockchain->db_blockchain['coin_name'];
+			$html .= "</div></div>\n";
+		}
+		
+		$html .= '<div class="row"><div class="col-sm-5">Buy-in policy:</div><div class="col-sm-7">';
 		if ($db_game['buyin_policy'] == "unlimited") $html .= "Unlimited";
 		else if ($db_game['buyin_policy'] == "none") $html .= "Not allowed";
 		else if ($db_game['buyin_policy'] == "per_user_cap") $html .= "Up to ".$this->format_bignum($db_game['per_user_buyin_cap'])." ".$invite_currency['short_name']."s per player";
@@ -954,12 +949,12 @@ class App {
 		$html .= '<div class="row"><div class="col-sm-5">Inflation:</div><div class="col-sm-7">';	
 		if ($db_game['inflation'] == "linear") $html .= "Linear (".$this->format_bignum($round_reward)." coins per round)";
 		else if ($db_game['inflation'] == "fixed_exponential") $html .= "Fixed Exponential (".(100*$db_game['exponential_inflation_rate'])."% per round)";
-		else $html .= "Exponential<br/>".$this->votes_per_coin($db_game)." votes per coin (".(100*$db_game['exponential_inflation_rate'])."% per round)";
+		else $html .= "Exponential<br/>".$this->votes_per_coin($db_game)." votes per ".$db_game['coin_name']." (".(100*$db_game['exponential_inflation_rate'])."% per round)";
 		$html .= "</div></div>\n";
 		
 		$total_inflation_pct = $this->game_final_inflation_pct($db_game);
 		if ($total_inflation_pct) {
-			$html .= '<div class="row"><div class="col-sm-5">Total inflation:</div><div class="col-sm-7">'.number_format($total_inflation_pct)."%</div></div>\n";
+			$html .= '<div class="row"><div class="col-sm-5">Potential inflation:</div><div class="col-sm-7">'.number_format($total_inflation_pct)."%</div></div>\n";
 		}
 		
 		$html .= '<div class="row"><div class="col-sm-5">Distribution:</div><div class="col-sm-7">';
@@ -982,6 +977,42 @@ class App {
 		return $html;
 	}
 	
+	public function fetch_game_definition(&$game) {
+		$game_definition = array();
+		$game_definition['blockchain_identifier'] = $game->blockchain->db_blockchain['url_identifier'];
+		
+		$verbatim_vars = $this->game_definition_verbatim_vars();
+		
+		for ($i=0; $i<count($verbatim_vars); $i++) {
+			$var_type = $verbatim_vars[$i][0];
+			$var_name = $verbatim_vars[$i][1];
+			
+			if ($var_type == "int") {
+				if ($game->db_game[$var_name] == "0" || $game->db_game[$var_name] > 0) $var_val = (int) $game->db_game[$var_name];
+				else $var_val = null;
+			}
+			else if ($var_type == "float") $var_val = (float) $game->db_game[$var_name];
+			else $var_val = $game->db_game[$var_name];
+			
+			$game_definition[$var_name] = $var_val;
+		}
+		
+		return $game_definition;
+	}
+	
+	public function game_definition_hash(&$game) {
+		$game_def = $this->fetch_game_definition($game);
+		$game_def_str = json_encode($game_def, JSON_PRETTY_PRINT);
+		$game_def_hash = hash("sha256", $game_def_str);
+		return $game_def_hash;
+	}
+	
+	public function game_definition_hash_short(&$game) {
+		$game_def_hash = $this->game_definition_hash($game);
+		$short_hash = substr($game_def_hash, 0, 16);
+		return $short_hash;
+	}
+	
 	public function game_final_inflation_pct(&$db_game) {
 		if ($db_game['final_round'] > 0) {
 			if ($db_game['inflation'] == "fixed_exponential" || $db_game['inflation'] == "exponential") {
@@ -989,7 +1020,7 @@ class App {
 			}
 			else {
 				if ($db_game['start_condition'] == "players_joined") {
-					$db_game['initial_coins'] = $db_game['start_condition_players']*$db_game['giveaway_amount'];
+					$db_game['initial_coins'] = $db_game['genesis_amount'];
 					$final_coins = $this->ideal_coins_in_existence_after_round($db_game, $db_game['final_round']);
 					$inflation_factor = $final_coins/$db_game['initial_coins'];
 				}
@@ -1002,9 +1033,8 @@ class App {
 	}
 	
 	public function ideal_coins_in_existence_after_round(&$db_game, $round_id) {
-		if ($db_game['inflation'] == "linear") return $db_game['initial_coins'] + $round_id*($db_game['pos_reward'] + $db_game['round_length']*$db_game['pow_reward']);
-		else if ($db_game['inflation'] == "fixed_exponential") return floor($db_game['initial_coins'] * pow(1 + $db_game['exponential_inflation_rate'], $round_id));
-		//else die("exponential inflation not implemented in global_functions.php");
+		if ($db_game['inflation'] == "linear") return $db_game['genesis_amount'] + $round_id*($db_game['pos_reward'] + $db_game['round_length']*$db_game['pow_reward']);
+		else if ($db_game['inflation'] == "fixed_exponential") return floor($db_game['genesis_amount'] * pow(1 + $db_game['exponential_inflation_rate'], $round_id));
 	}
 	
 	public function coins_created_in_round(&$db_game, $round_id) {
@@ -1229,10 +1259,10 @@ class App {
 	
 	public function game_definition_verbatim_vars() {
 		return array(
+			array('float', 'protocol_version'),
 			array('string', 'url_identifier'),
 			array('string', 'name'),
 			array('string', 'event_type_name'),
-			array('string', 'short_description'),
 			array('string', 'event_rule'),
 			array('int', 'event_entity_type_id'),
 			array('int', 'option_group_id'),
@@ -1244,6 +1274,10 @@ class App {
 			array('int', 'maturity'),
 			array('string', 'payout_weight'),
 			array('int', 'final_round'),
+			array('string', 'buyin_policy'),
+			array('float', 'game_buyin_cap'),
+			array('string', 'sellout_policy'),
+			array('int', 'sellout_confirmations'),
 			array('string', 'coin_name'),
 			array('string', 'coin_name_plural'),
 			array('string', 'coin_abbreviation'),

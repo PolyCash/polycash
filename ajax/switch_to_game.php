@@ -24,7 +24,7 @@ if ($thisuser) {
 					$app->output_message(2, "That game doesn't exist or you don't have permission to join it.");
 				}
 				else {
-					$game->ensure_user_in_game($thisuser);
+					$user_game = $game->ensure_user_in_game($thisuser);
 					
 					$q = "UPDATE users SET game_id='".$game->db_game['game_id']."' WHERE user_id='".$thisuser->db_user['user_id']."';";
 					$r = $app->run_query($q);
@@ -51,7 +51,7 @@ if ($thisuser) {
 				$blockchain_id = 2;
 				$blockchain = new Blockchain($app, $blockchain_id);
 				
-				$q = "INSERT INTO games SET blockchain_id='".$blockchain->db_blockchain['blockchain_id']."', creator_id='".$thisuser->db_user['user_id']."', maturity=0, round_length=10, seconds_per_block='".$blockchain->db_blockchain['seconds_per_block']."', buyin_policy='unlimited', block_timing='realistic', creator_game_index='".$game_index."', logo_image_id=34, inflation='exponential', pos_reward='".(500*pow(10,8))."', pow_reward='0', start_datetime='".date("Y-m-d g:\\0\\0a", time()+(2*60*60))."';";
+				$q = "INSERT INTO games SET blockchain_id='".$blockchain->db_blockchain['blockchain_id']."', creator_id='".$thisuser->db_user['user_id']."', maturity=0, round_length=10, seconds_per_block='".$blockchain->db_blockchain['seconds_per_block']."', buyin_policy='unlimited', block_timing='realistic', creator_game_index='".$game_index."', logo_image_id=34, inflation='exponential', pos_reward='0', pow_reward='0', start_datetime='".date("Y-m-d g:\\0\\0a", time()+(2*60*60))."';";
 				$r = $app->run_query($q);
 				$game_id = $app->last_insert_id();
 				
@@ -65,7 +65,7 @@ if ($thisuser) {
 				$game->db_game['url_identifier'] = $url_identifier;
 				
 				if ($game->db_game['giveaway_status'] == "public_free") {
-					$thisuser->ensure_user_in_game($game->db_game['game_id']);
+					$user_game = $thisuser->ensure_user_in_game($game->db_game['game_id']);
 				}
 				
 				$q = "UPDATE user_games ug JOIN user_strategies s ON ug.strategy_id=s.strategy_id SET s.voting_strategy='manual' WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND ug.game_id='".$game->db_game['game_id']."';";
