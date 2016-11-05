@@ -74,7 +74,7 @@ if ($thisuser) {
 				}
 			}
 			
-			if ($user_game['payout_address_id'] > 0) {}
+			/*if ($user_game['payout_address_id'] > 0) {}
 			else if ($requested_game['giveaway_status'] == "invite_pay" || $requested_game['giveaway_status'] == "public_pay" || $game->escrow_value(false) > 0) {
 				$pagetitle = "Join ".$requested_game['name'];
 				$nav_tab_selected = "wallet";
@@ -100,7 +100,7 @@ if ($thisuser) {
 				<?php
 				include('includes/html_stop.php');
 				die();
-			}
+			}*/
 		}
 		else if (!$user_game && ($requested_game['giveaway_status'] == "invite_free" || $requested_game['giveaway_status'] == "invite_pay")) {
 			if ($requested_game['public_unclaimed_game_invitations'] == 1) {

@@ -2248,7 +2248,9 @@ class Game {
 					for ($i=$start_round; $i<=$round_id; $i++) {
 						$round_first_event_i = $this->db_game['events_per_round']*($i-$this->block_to_round($this->db_game['game_starting_block']));
 						$offset = $round_first_event_i%$num_event_types;
-						$q = "SELECT * FROM entities WHERE entity_type_id='".$entity_type['entity_type_id']."' ORDER BY entity_id ASC LIMIT ".$this->db_game['events_per_round']." OFFSET ".$offset.";";
+						$q = "SELECT * FROM entities WHERE entity_type_id='".$entity_type['entity_type_id']."' ORDER BY entity_id ASC LIMIT ".$this->db_game['events_per_round'];
+						if ($offset > 0) $q .= " OFFSET ".$offset;
+						$q .= ";";
 						$r = $this->blockchain->app->run_query($q);
 						
 						for ($j=0; $j<$this->db_game['events_per_round']; $j++) {

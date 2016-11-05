@@ -1259,6 +1259,7 @@ class App {
 	
 	public function game_definition_verbatim_vars() {
 		return array(
+			array('float', 'protocol_version'),
 			array('string', 'url_identifier'),
 			array('string', 'name'),
 			array('string', 'event_type_name'),

@@ -768,18 +768,6 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					if ($section != $this_section) echo "<h2>".ucwords($this_section)." Games (".$r->rowCount().")</h2>\n";
 					$section = $this_section;
 					echo '<a href="/explorer/games/'.$db_game['url_identifier'].'/events/">'.$db_game['name']."</a><br/>\n";
-					$game_id_csv .= $db_game['game_id'].",";
-				}
-				if ($game_id_csv != "") $game_id_csv = substr($game_id_csv, 0, strlen($game_id_csv)-1);
-				
-				if ($thisuser) {
-					$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id AND ug.user_id='".$thisuser->db_user['user_id']."'";
-					$q .= " AND g.game_id NOT IN (".$game_id_csv.")";
-					$q .= ";";
-					$r = $app->run_query($q);
-					while ($db_game = $r->fetch()) {
-						echo '<a href="/explorer/games/'.$db_game['url_identifier'].'/">'.$db_game['name']."</a><br/>\n";
-					}
 				}
 			}
 			else if ($explore_mode == "blockchain_home") {
