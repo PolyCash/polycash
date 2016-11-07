@@ -2206,12 +2206,38 @@ class Game {
 		}
 	}
 	
+	public function all_pairs_points_to_index($num_options) {
+		$points_to_index = array();
+		$min_points = 1;
+		$max_points = $num_options*2-3;
+		$total_pairs = 0;
+		$midpoint_num_pairs = floor($num_options/2);
+		$midpoint_points = ceil($max_points/2);
+		
+		for ($points=$min_points; $points<=$max_points; $points++) {
+			$dist_from_midpoint = abs($midpoint_points - $points);
+			if ($num_options%2 == 0) $pairs_less_than_midpoint = ceil($dist_from_midpoint/2);
+			else $pairs_less_than_midpoint = floor($dist_from_midpoint/2);
+			$pairs_here = $midpoint_num_pairs - $pairs_less_than_midpoint;
+			$points_to_index[$points] = (int) $total_pairs;
+			$total_pairs += $pairs_here;
+		}
+		return $points_to_index;
+	}
+	
+	public function event_index_to_all_pairs_points($points_to_index, $event_index) {
+		for ($points=1; $points<count($points_to_index); $points++) {
+			if ($points_to_index[$points] <= $event_index && $points_to_index[$points+1] > $event_index) return $points;
+		}
+		return count($points_to_index);
+	}
+	
 	public function ensure_events_until_block($block_id) {
 		$round_id = $this->block_to_round($block_id);
 		$ensured_round = $this->block_to_round((int)$this->db_game['events_until_block']);
 		
 		if ($round_id > $ensured_round) {
-			if ($this->db_game['event_rule'] == "entity_type_option_group" || $this->db_game['event_rule'] == "single_event_series") {
+			if ($this->db_game['event_rule'] == "entity_type_option_group" || $this->db_game['event_rule'] == "single_event_series" || $this->db_game['event_rule'] == "all_pairs") {
 				if ($this->db_game['event_rule'] == "entity_type_option_group") {
 					$q = "SELECT * FROM entity_types WHERE entity_type_id='".$this->db_game['event_entity_type_id']."';";
 					$r = $this->blockchain->app->run_query($q);
@@ -2231,6 +2257,10 @@ class Game {
 				$db_option_entities = array();
 				while ($option_entity = $r->fetch()) {
 					$db_option_entities[count($db_option_entities)] = $option_entity;
+				}
+				
+				if ($this->db_game['event_rule'] == "all_pairs") {
+					$all_pairs_points_to_index = $this->all_pairs_points_to_index(count($db_option_entities));
 				}
 				
 				$event_i = 0;
@@ -2261,6 +2291,31 @@ class Game {
 						}
 					}
 				}
+				else if ($this->db_game['event_rule'] == "all_pairs") {
+					$max_points = count($db_option_entities)-1;
+					$num_pairs = (pow($max_points, 2) + $max_points)/2;
+					
+					for ($i=$start_round; $i<=$round_id; $i++) {
+						$round_first_event_i = $this->db_game['events_per_round']*($i-$this->block_to_round($this->db_game['game_starting_block']));
+						$offset = $round_first_event_i%$num_pairs;
+						
+						for ($j=0; $j<$this->db_game['events_per_round']; $j++) {
+							$event_i = $round_first_event_i+$j;
+							$event_ii = $event_i%$num_pairs;
+							$points = $this->event_index_to_all_pairs_points($all_pairs_points_to_index, $event_ii);
+							$this_points_start_index = $all_pairs_points_to_index[$points];
+							$index_within_points = $event_ii-$this_points_start_index;
+							if ($points <= $max_points) $first_entity_index = $index_within_points;
+							else $first_entity_index = $points - $max_points + $index_within_points;
+							$second_entity_index = $points - $first_entity_index;
+							
+							$option_entities[0] = $db_option_entities[$first_entity_index];
+							$option_entities[1] = $db_option_entities[$second_entity_index];
+							$event_type = $this->add_event_type($option_entities, false, $event_i);
+							$this->add_event_by_event_type($event_type, $option_entities, $option_group, $round_option_i, $event_i, $event_type['name'], false);
+						}
+					}
+				}
 				else {
 					$event_type = $this->add_event_type($db_option_entities, false, false);
 					for ($i=$start_round-1; $i<=$round_id; $i++) {
@@ -2279,21 +2334,25 @@ class Game {
 	}
 	
 	public function add_event_type($db_option_entities, $event_entity, $event_i) {
-		if ($event_entity) {
-			if (count($db_option_entities) == 2 && !empty($db_option_entities[0]['last_name'])) {
-				$event_type_name = $db_option_entities[0]['last_name']." vs ".$db_option_entities[1]['last_name']." in ".$event_entity['entity_name'];
-				$event_type_identifier = strtolower($db_option_entities[0]['last_name']."-".$db_option_entities[1]['last_name']."-".$event_entity['entity_name']);
-			}
-			else {
+		$head_to_head = count($db_option_entities) == 2 && !empty($db_option_entities[0]['last_name']);
+		
+		if ($head_to_head) {
+			$event_type_name = $db_option_entities[0]['last_name']." vs ".$db_option_entities[1]['last_name'];
+			if ($event_entity) $event_type_name .= " in ".$event_entity['entity_name'];
+			$event_type_identifier = strtolower($db_option_entities[0]['last_name']."-vs-".$db_option_entities[1]['last_name']);
+			if ($event_entity) $event_type_identifier .= "-".strtolower($event_entity['entity_name']);
+		}
+		else {
+			if ($event_entity) {
 				$event_type_name = $event_entity['entity_name']." ".ucwords($this->db_game['event_type_name']);
 				$event_type_identifier = strtolower($event_entity['entity_name']."-".$this->db_game['event_type_name']);
 			}
-		}
-		else {
-			$event_type_name = $this->db_game['event_type_name'];
-			if (!empty($event_i)) $event_type_name .= " - Round #".($event_i+1);
-			$event_type_identifier = str_replace(" ", "-", strtolower($this->db_game['event_type_name']));
-			if (!empty($event_i)) $event_type_identifier .= "-round-".($event_i+1);
+			else {
+				$event_type_name = $this->db_game['event_type_name'];
+				if (!empty($event_i)) $event_type_name .= " - Round #".($event_i+1);
+				$event_type_identifier = str_replace(" ", "-", strtolower($this->db_game['event_type_name']));
+				if (!empty($event_i)) $event_type_identifier .= "-round-".($event_i+1);
+			}
 		}
 		$qq = "SELECT * FROM event_types WHERE game_id='".$this->db_game['game_id']."' AND url_identifier=".$this->blockchain->app->quote_escape($event_type_identifier).";";
 		$rr = $this->blockchain->app->run_query($qq);
@@ -2302,6 +2361,7 @@ class Game {
 		}
 		else {
 			$qq = "INSERT INTO event_types SET game_id='".$this->db_game['game_id']."', option_group_id='".$this->db_game['option_group_id']."'";
+			if ($head_to_head) $qq .= ", primary_entity_id='".$db_option_entities[0]['entity_id']."', secondary_entity_id='".$db_option_entities[1]['entity_id']."'";
 			if ($event_entity) $qq .= ", entity_id='".$event_entity['entity_id']."'";
 			$qq .= ", name='".$event_type_name."', url_identifier=".$this->blockchain->app->quote_escape($event_type_identifier).", num_voting_options='".count($db_option_entities)."', vote_effectiveness_function='".$this->db_game['default_vote_effectiveness_function']."', max_voting_fraction='".$this->db_game['default_max_voting_fraction']."';";
 			$rr = $this->blockchain->app->run_query($qq);

@@ -10,13 +10,16 @@ if (!empty($argv)) {
 	$_REQUEST['block_height'] = $cmd_vars['block_height'];
 }
 
-$game_id = (int) $_REQUEST['game_id'];
-$block_height = (int) $_REQUEST['block_height'];
+if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+	$game_id = (int) $_REQUEST['game_id'];
+	$block_height = (int) $_REQUEST['block_height'];
 
-$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
-$blockchain = new Blockchain($app, $db_game['blockchain_id']);
-$game = new Game($blockchain, $game_id);
+	$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
+	$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+	$game = new Game($blockchain, $game_id);
 
-$game->ensure_events_until_block($block_height);
-echo $game->db_game['name']."->ensure_events_until($block_height);<br/>\nDone!\n";
+	$game->ensure_events_until_block($block_height);
+	echo $game->db_game['name']."->ensure_events_until($block_height);<br/>\nDone!\n";
+}
+else echo "Please supply the correct key.\n";
 ?>
