@@ -414,12 +414,12 @@ if ($_REQUEST['action'] == "signup" && $error_code == 1) { ?>
 
 $initial_tab = 0;
 if ($thisuser && $game) {
-	$account_value = $thisuser->account_coin_value($game);
-	$immature_balance = $thisuser->immature_balance($game);
+	$account_value = $thisuser->account_coin_value($game, $user_game);
+	$immature_balance = $thisuser->immature_balance($game, $user_game);
 	$last_block_id = $game->blockchain->last_block_id();
 	$current_round = $game->block_to_round($last_block_id+1);
 	$block_within_round = $game->block_id_to_round_index($last_block_id+1);
-	$mature_balance = $thisuser->mature_balance($game);
+	$mature_balance = $thisuser->mature_balance($game, $user_game);
 }
 ?>
 <div class="container" style="max-width: 1000px;">
@@ -450,6 +450,7 @@ if ($thisuser && $game) {
 		}
 		
 		$my_last_transaction_id = $thisuser->my_last_transaction_id($game->db_game['game_id']);
+		$performance_history_rounds_per_section = 10;
 		?>
 		<script type="text/javascript">
 		//<![CDATA[
@@ -461,7 +462,9 @@ if ($thisuser && $game) {
 		var initial_alias = "<?php echo $thisuser->db_user['alias']; ?>";
 		var started_checking_alias_settings = false;
 		var performance_history_sections = 1;
-		var performance_history_start_round = <?php echo max(1, $current_round-10); ?>;
+		var performance_history_rounds_per_section = <?php echo $performance_history_rounds_per_section; ?>;
+		var performance_history_from_round = <?php echo max(1, $current_round-$performance_history_rounds_per_section); ?>;
+		var performance_history_initial_load_round = <?php echo $current_round-1; ?>;
 		var performance_history_loading = false;
 		
 		var user_logged_in = true;
@@ -476,9 +479,6 @@ if ($thisuser && $game) {
 			echo ', "'.$game->mature_io_ids_csv($user_game).'"';
 			echo ', "'.$game->db_game['payout_weight'].'"';
 			echo ', '.$game->db_game['round_length'];
-			$bet_round_range = $game->bet_round_range();
-			$min_bet_round = $bet_round_range[0];
-			echo ', '.$min_bet_round;
 			echo ', '.$user_strategy['transaction_fee'];
 			echo ', "'.$game->db_game['url_identifier'].'"';
 			echo ', "'.$game->db_game['coin_name'].'"';
@@ -517,19 +517,12 @@ if ($thisuser && $game) {
 		
 		<?php
 		echo $game->load_all_event_points_js(0, $user_strategy);
-		
-		if ($game->db_game['losable_bets_enabled'] == 1) { ?>
-		google.load("visualization", "1", {packages:["corechart"]});
-		<?php } ?>
+		?>
 		
 		$(document).ready(function() {
 			loop_event();
 			compose_vote_loop();
 			<?php
-			if ($game->db_game['losable_bets_enabled'] == 1) { ?>
-				bet_loop();
-				<?php
-			}
 			if ($game->db_game['game_status'] == 'unstarted') { ?>
 				switch_to_game(<?php echo $game->db_game['game_id']; ?>, 'fetch');
 				<?php
@@ -574,16 +567,13 @@ if ($thisuser && $game) {
 		?>
 		<div id="wallet_text_stats">
 			<?php
-			echo $thisuser->wallet_text_stats($game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance);
+			echo $thisuser->wallet_text_stats($game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance, $user_game);
 			?>
 		</div>
 		<br/>
 		
 		<div class="row">
 			<div class="col-xs-2 tabcell" id="tabcell0" onclick="tab_clicked(0);">Play&nbsp;Now</div>
-			<?php if ($game->db_game['losable_bets_enabled'] == 1) { ?>
-			<div class="col-xs-2 tabcell" id="tabcell6" onclick="tab_clicked(6);">Gamble</div>
-			<?php } ?>
 			<div class="col-xs-2 tabcell" id="tabcell1" onclick="tab_clicked(1);">Players</div>
 			<div class="col-xs-2 tabcell" id="tabcell2" onclick="tab_clicked(2);">Strategy</div>
 			<div class="col-xs-2 tabcell" id="tabcell3" onclick="tab_clicked(3);">Results</div>
@@ -842,9 +832,11 @@ if ($thisuser && $game) {
 			</div>
 			<div id="tabcontent3" style="display: none;" class="tabcontent">
 				<div id="performance_history">
+					<div id="performance_history_new">
+					</div>
 					<div id="performance_history_0">
 						<?php
-						echo $thisuser->performance_history($game, max(1, $current_round-10), $current_round-1);
+						echo $thisuser->performance_history($game, max(1, $current_round-$performance_history_rounds_per_section), $current_round-1);
 						?>
 					</div>
 				</div>
@@ -1003,82 +995,6 @@ if ($thisuser && $game) {
 				}
 				?>
 			</div>
-			
-			<?php if ($game->db_game['losable_bets_enabled'] == 1) { ?>
-				<div class="tabcontent" style="display: none;" id="tabcontent6">
-					<div id="my_bets">
-						<?php
-						echo $game->my_bets($thisuser);
-						?>
-					</div>
-					<h2>Place a Bet</h1>
-					<p>
-					In the "Play Now" tab you can win coins for free from the coins inflation.  But winnings are small compared to the amount of coins you're staking.  In this tab, you can place traditional-style bets where you'll lose all of your money if you bet on the wrong empire, but you'll win a large amount if you're correct.  These bets are conducted through a decentralized protocol, which means there's no house taking an edge or charging a fee when you bet.
-					</p>
-					<p>
-					To place a bet, you'll burn your <?php echo $game->db_game['coin_name_plural']; ?> by sending them to an unredeemable address. Once the outcome of the voting round is determined, the <?php echo $game->db_game['name']; ?> protocol will check to see if you bet correctly and if so, new coins will be created and sent to your wallet.  These are pari-mutuel style bets in which your payout multiplier may continue changing until the betting period is over.  You can bet on the outcome of a round until the fifth block of the round.  Bets confirmed in the sixth block of a round or later are considered invalid and will be refunded back to the bettor, but with a 10% fee applied.  To place a bet, please select a round which you'd like to bet for and select one or more empires that you expect to win the round.
-					</p>
-					<div class="row">
-						<div class="col-md-3">
-							Select a round:
-						</div>
-						<div class="col-md-6">
-							<div id="select_bet_round">
-								<?php
-								echo $game->select_bet_round($current_round);
-								?>
-							</div>
-						</div>
-					</div>
-					<div class="row" id="bet_charts" style="display: none;">
-						<div class="col-md-4">
-							<div id="round_odds_chart" style="height: 320px;"></div>
-						</div>
-						<div class="col-md-8" id="round_odds_stats" style="min-height: 320px; padding-top: 8px;"></div>
-					</div>
-					<div class="row">
-						<div class="col-md-3">
-							Amount to bet:
-						</div>
-						<div class="col-md-6">
-							<input class="form-control" type="tel" placeholder="0.000" id="bet_amount" style="text-align: right;" />
-						</div>
-						<div class="col-md-2">
-							coins
-						</div>
-					</div>
-					<div class="row">
-						<div class="col-md-3">
-							Add an outcome:
-						</div>
-						<div class="col-md-6">
-							<select class="form-control" id="bet_option" onchange="add_bet_option();">
-								<option value="">-- Please Select --</option>
-								<option value="0">No winner</option>
-								<?php
-								$q = "SELECT * FROM options ORDER BY name ASC;";
-								$r = $app->run_query($q);
-								while ($option = $r->fetch()) {
-									echo "<option value=\"".$option['option_id']."\">".$option['name']." wins</option>\n";
-								}
-								?>
-							</select>
-						</div>
-						<div class="col-md-2">
-							<a href="" onclick="add_all_bet_options(); return false;">Add all</a>
-						</div>
-					</div>
-					<div class="row">
-						<div class="col-md-push-3 col-md-9" id="option_bet_disp"></div>
-					</div>
-					<div class="row">
-						<div class="col-md-push-3 col-md-6">
-							<button class="btn btn-primary" onclick="place_bet();" id="bet_confirm_btn">Place Bet</button>
-						</div>
-					</div>
-					<br/>
-				</div>
-			<?php } ?>
 		</div>
 		
 		<div style="display: none;" class="modal fade" id="intro_message">

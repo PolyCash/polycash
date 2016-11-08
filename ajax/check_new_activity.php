@@ -23,16 +23,15 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		$user_game = $thisuser->ensure_user_in_game($game->db_game['game_id']);
 	}
 	
-	$bet_round_range = $game->bet_round_range();
 	$last_block_id = $game->blockchain->last_block_id();
 	$last_transaction_id = $game->blockchain->last_transaction_id();
 	$current_round = $game->block_to_round($last_block_id+1);
 	$block_within_round = $game->block_id_to_round_index($last_block_id+1);
 	if ($thisuser) {
 		$my_last_transaction_id = $thisuser->my_last_transaction_id($game->db_game['game_id']);
-		$account_value = $thisuser->account_coin_value($game);
-		$immature_balance = $thisuser->immature_balance($game);
-		$mature_balance = $thisuser->mature_balance($game);
+		$account_value = $thisuser->account_coin_value($game, $user_game);
+		$immature_balance = $thisuser->immature_balance($game, $user_game);
+		$mature_balance = $thisuser->mature_balance($game, $user_game);
 		$mature_io_ids_csv = $game->mature_io_ids_csv($user_game);
 	}
 	else {
@@ -46,12 +45,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	$output = false;
 	$output['event_loop_index'] = $event_loop_index;
 	
-	$output['min_bet_round'] = $bet_round_range[0];
 	$output['game_status_explanation'] = $game->game_status_explanation($thisuser, $user_game);
-	
-	if ($bet_round_range[0] != $_REQUEST['min_bet_round']) {
-		$output['select_bet_round'] = $game->select_bet_round($current_round);
-	}
 	
 	if ($last_transaction_id != $_REQUEST['last_transaction_id']) {
 		$output['new_transaction'] = 1;
@@ -60,7 +54,6 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	else $output['new_transaction'] = 0;
 	
 	if ($my_last_transaction_id != $_REQUEST['my_last_transaction_id'] && $thisuser) {
-		$output['my_bets'] = $game->my_bets($thisuser);
 		$output['new_my_transaction'] = 1;
 		$output['my_last_transaction_id'] = $my_last_transaction_id;
 	}
@@ -68,19 +61,17 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	
 	if ($last_block_id !== $_REQUEST['last_block_id'] || $last_transaction_id != (int) $_REQUEST['last_transaction_id']) {
 		if ($last_block_id != (int) $_REQUEST['last_block_id']) {
-			//$performance_history_sections = intval($_REQUEST['performance_history_sections']);
 			$output['new_block'] = 1;
 			$output['last_block_id'] = $last_block_id;
 			
-			/*$client_round = $game->block_to_round(intval($_REQUEST['last_block_id'])+1);
+			$client_round = $game->block_to_round(intval($_REQUEST['last_block_id'])+1);
 			
 			if ($_REQUEST['refresh_page'] == "wallet" && $current_round != $client_round) {
+				$initial_load_round = (int)$_REQUEST['initial_load_round'];
 				$output['new_performance_history'] = 1;
-				$output['performance_history'] = $thisuser->performance_history($game, $current_round-(10*$performance_history_sections), $current_round-1);
-				$output['performance_history_start_round'] = $current_round-(10*$performance_history_sections);
+				$output['performance_history'] = $thisuser->performance_history($game, $initial_load_round+1, $current_round-1);
 			}
-			else */
-			$output['new_performance_history'] = 0;
+			else $output['new_performance_history'] = 0;
 		}
 		else $output['new_block'] = 0;
 		
@@ -88,7 +79,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		$show_intro_text = false;
 		$output['current_round_table'] = $event->current_round_table($current_round, $thisuser, $show_intro_text, true, $instance_id, $game_event_index);
 		
-		if ($thisuser) $output['wallet_text_stats'] = $thisuser->wallet_text_stats($game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance);
+		if ($thisuser) $output['wallet_text_stats'] = $thisuser->wallet_text_stats($game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance, $user_game);
 		if ($thisuser) $output['my_current_votes'] = $event->my_votes_table($current_round, $thisuser);
 		$output['account_value'] = $game->account_value_html($account_value);
 		$output['vote_details_general'] = $app->vote_details_general($mature_balance);

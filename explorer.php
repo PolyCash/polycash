@@ -223,7 +223,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 	if ($thisuser && $game) { ?>
 		<div class="container" style="max-width: 1000px; padding-top: 10px;">
 			<?php
-			$account_value = $thisuser->account_coin_value($game);
+			$account_value = $thisuser->account_coin_value($game, $user_game);
 			include("includes/wallet_status.php");
 			?>
 		</div>
@@ -251,9 +251,6 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					else echo 'false';
 					echo ', "", "'.$game->db_game['payout_weight'].'"';
 					echo ', '.$game->db_game['round_length'];
-					$bet_round_range = $game->bet_round_range();
-					$min_bet_round = $bet_round_range[0];
-					echo ', '.$min_bet_round;
 					echo ', 0';
 					echo ', "'.$game->db_game['url_identifier'].'"';
 					echo ', "'.$game->db_game['coin_name'].'"';

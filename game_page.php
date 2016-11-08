@@ -92,7 +92,7 @@ else $exchange_rate = 0;
 						echo $game->db_game['short_description']." ";
 					}
 					
-					if ($exchange_rate > 0) {
+					if ($exchange_rate > 0 && $game->db_game['buyin_policy'] != "none") {
 						if ($game->escrow_value(false) > 0) {
 							$escrow_amount_disp = $app->format_bignum($game->escrow_value(false)/pow(10,8));
 							echo "Right now there's ".$escrow_amount_disp." ";
@@ -204,9 +204,9 @@ else $exchange_rate = 0;
 	<div class="paragraph">
 		<?php
 		if ($thisuser) {
-			$account_value = $thisuser->account_coin_value($game);
-			$immature_balance = $thisuser->immature_balance($game);
-			$mature_balance = $thisuser->mature_balance($game);
+			$account_value = $thisuser->account_coin_value($game, $user_game);
+			$immature_balance = $thisuser->immature_balance($game, $user_game);
+			$mature_balance = $thisuser->mature_balance($game, $user_game);
 		}
 		else $mature_balance = 0;
 		?>
@@ -230,9 +230,6 @@ games.push(new Game(<?php
 	else echo 'false';
 	echo ', "", "'.$game->db_game['payout_weight'].'"';
 	echo ', '.$game->db_game['round_length'];
-	$bet_round_range = $game->bet_round_range();
-	$min_bet_round = $bet_round_range[0];
-	echo ', '.$min_bet_round;
 	echo ', 0';
 	echo ', "'.$game->db_game['url_identifier'].'"';
 	echo ', "'.$game->db_game['coin_name'].'"';

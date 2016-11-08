@@ -637,9 +637,6 @@ class App {
 					echo ', ""';
 					echo ', "'.$db_game['payout_weight'].'"';
 					echo ', '.$db_game['round_length'];
-					$bet_round_range = $featured_game->bet_round_range();
-					$min_bet_round = $bet_round_range[0];
-					echo ', '.$min_bet_round;
 					echo ', 0';
 					echo ', "'.$db_game['url_identifier'].'"';
 					echo ', "'.$db_game['coin_name'].'"';
@@ -922,20 +919,22 @@ class App {
 			else $html .= $db_game['coin_name_plural'];
 			$html .= "</div></div>\n";
 			
-			$escrow_amount_disp = $this->format_bignum($game->escrow_value($sample_block_id)/pow(10,8));
-			$html .= '<div class="row"><div class="col-sm-5">'.ucwords($game->blockchain->db_blockchain['coin_name_plural']).' in escrow:</div><div class="col-sm-7">';
-			$html .= $escrow_amount_disp.' ';
-			if ($escrow_amount_disp == "1") $html .= $game->blockchain->db_blockchain['coin_name'];
-			else $html .= $game->blockchain->db_blockchain['coin_name_plural'];
-			$html .= "</div></div>\n";
-			
-			$exchange_rate_disp = $this->format_bignum($game->coins_in_existence($sample_block_id)/$game->escrow_value($sample_block_id));
-			$html .= '<div class="row"><div class="col-sm-5">Current exchange rate:</div><div class="col-sm-7">';
-			$html .= $exchange_rate_disp.' ';
-			if ($exchange_rate_disp == "1") $html .= $db_game['coin_name'];
-			else $html .= $db_game['coin_name_plural'];
-			$html .= ' per '.$game->blockchain->db_blockchain['coin_name'];
-			$html .= "</div></div>\n";
+			if ($db_game['buyin_policy'] != "none") {
+				$escrow_amount_disp = $this->format_bignum($game->escrow_value($sample_block_id)/pow(10,8));
+				$html .= '<div class="row"><div class="col-sm-5">'.ucwords($game->blockchain->db_blockchain['coin_name_plural']).' in escrow:</div><div class="col-sm-7">';
+				$html .= $escrow_amount_disp.' ';
+				if ($escrow_amount_disp == "1") $html .= $game->blockchain->db_blockchain['coin_name'];
+				else $html .= $game->blockchain->db_blockchain['coin_name_plural'];
+				$html .= "</div></div>\n";
+				
+				$exchange_rate_disp = $this->format_bignum($game->coins_in_existence($sample_block_id)/$game->escrow_value($sample_block_id));
+				$html .= '<div class="row"><div class="col-sm-5">Current exchange rate:</div><div class="col-sm-7">';
+				$html .= $exchange_rate_disp.' ';
+				if ($exchange_rate_disp == "1") $html .= $db_game['coin_name'];
+				else $html .= $db_game['coin_name_plural'];
+				$html .= ' per '.$game->blockchain->db_blockchain['coin_name'];
+				$html .= "</div></div>\n";
+			}
 		}
 		
 		$html .= '<div class="row"><div class="col-sm-5">Buy-in policy:</div><div class="col-sm-7">';

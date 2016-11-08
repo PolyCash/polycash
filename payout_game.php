@@ -84,7 +84,7 @@ if ($thisuser) {
 							
 							while ($temp_user_game = $rr->fetch()) {
 								$temp_user = new User($app, $temp_user_game['user_id']);
-								$payout_frac = $temp_user->account_coin_value($payout_game_obj)/$coins_in_existence;
+								$payout_frac = $temp_user->account_coin_value($payout_game_obj, $temp_user_game)/$coins_in_existence;
 								$payout_amt = floor($payout_frac*($total-$fee_satoshis));
 								
 								if ($temp_user_game['payout_address_id'] > 0 && strlen($temp_user_game['address']) >= 26) {
@@ -309,12 +309,12 @@ if ($thisuser) {
 								
 								while ($temp_user_game = $rr->fetch()) {
 									$temp_user = new User($app, $temp_user_game['user_id']);
-									$payout_frac = $temp_user->account_coin_value($payout_game_obj)/$coins_in_existence;
+									$payout_frac = $temp_user->account_coin_value($payout_game_obj, $temp_user_game)/$coins_in_existence;
 									$payout_amt = floor($payout_frac*(pow(10,8)*$input_sum - $fee_satoshis))/pow(10,8);
 									
 									if ($payout_amt > 0) {
 										if ($temp_user_game['payout_address_id'] > 0 && strlen($temp_user_game['address']) >= 26) {
-											echo $temp_user_game['username']." has an end-of-game balance of ".$app->format_bignum($temp_user->account_coin_value($payout_game_obj)/pow(10,8))." coins. Pay ".$app->format_bignum($payout_amt)." BTC to ".$temp_user_game['address']."<br/>\n";
+											echo $temp_user_game['username']." has an end-of-game balance of ".$app->format_bignum($temp_user->account_coin_value($payout_game_obj, $temp_user_game)/pow(10,8))." coins. Pay ".$app->format_bignum($payout_amt)." BTC to ".$temp_user_game['address']."<br/>\n";
 											$output_sum += $payout_amt;
 										}
 										else {

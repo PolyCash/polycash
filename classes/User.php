@@ -13,8 +13,8 @@ class User {
 		else throw new Exception("Failed to load user #".$user_id);
 	}
 	
-	public function account_coin_value($game) {
-		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$game->db_game['game_id']."' AND io.spend_status='unspent' AND io.user_id='".$this->db_user['user_id']."';";
+	public function account_coin_value(&$game, &$user_game) {
+		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND io.spend_status='unspent' AND k.account_id='".$user_game['account_id']."';";
 		$r = $this->app->run_query($q);
 		$coins = $r->fetch(PDO::FETCH_NUM);
 		$coins = $coins[0];
@@ -22,8 +22,8 @@ class User {
 		else return 0;
 	}
 
-	public function immature_balance($game) {
-		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$game->db_game['game_id']."' AND io.user_id='".$this->db_user['user_id']."' AND (io.create_block_id > ".($game->blockchain->last_block_id() - $game->db_game['maturity'])." OR io.create_block_id IS NULL) AND gio.instantly_mature = 0;";
+	public function immature_balance(&$game, &$user_game) {
+		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND k.account_id='".$user_game['account_id']."' AND (io.create_block_id > ".($game->blockchain->last_block_id() - $game->db_game['maturity'])." OR io.create_block_id IS NULL) AND gio.instantly_mature = 0;";
 		$r = $this->app->run_query($q);
 		$sum = $r->fetch(PDO::FETCH_NUM);
 		$sum = $sum[0];
@@ -31,8 +31,8 @@ class User {
 		else return 0;
 	}
 
-	public function mature_balance($game) {
-		$q = "SELECT SUM(colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND gio.game_id='".$game->db_game['game_id']."' AND io.user_id='".$this->db_user['user_id']."' AND (io.create_block_id <= ".($game->blockchain->last_block_id() - $game->db_game['maturity'])." OR gio.instantly_mature = 1);";
+	public function mature_balance(&$game, &$user_game) {
+		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND gio.game_id='".$game->db_game['game_id']."' AND k.account_id='".$user_game['account_id']."' AND (io.create_block_id <= ".($game->blockchain->last_block_id() - $game->db_game['maturity'])." OR gio.instantly_mature = 1);";
 		$r = $this->app->run_query($q);
 		$sum = $r->fetch(PDO::FETCH_NUM);
 		$sum = $sum[0];
@@ -40,8 +40,8 @@ class User {
 		else return 0;
 	}
 
-	public function user_current_votes($game, $last_block_id, $current_round) {
-		$q = "SELECT ROUND(SUM(gio.colored_amount)) coins, ROUND(SUM(gio.colored_amount*(".($last_block_id+1)."-io.create_block_id))) coin_blocks, ROUND(SUM(gio.colored_amount*(".$current_round."-gio.create_round_id))) coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND gio.game_id='".$game->db_game['game_id']."' AND io.user_id='".$this->db_user['user_id']."' AND (io.create_block_id <= ".($game->blockchain->last_block_id() - $game->db_game['maturity'])." OR gio.instantly_mature = 1);";
+	public function user_current_votes(&$game, $last_block_id, $current_round, &$user_game) {
+		$q = "SELECT ROUND(SUM(gio.colored_amount)) coins, ROUND(SUM(gio.colored_amount*(".($last_block_id+1)."-io.create_block_id))) coin_blocks, ROUND(SUM(gio.colored_amount*(".$current_round."-gio.create_round_id))) coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND gio.game_id='".$game->db_game['game_id']."' AND k.account_id='".$user_game['account_id']."' AND (io.create_block_id <= ".($game->blockchain->last_block_id() - $game->db_game['maturity'])." OR gio.instantly_mature = 1);";
 		$r = $this->app->run_query($q);
 		$sum = $r->fetch();
 		$votes = $sum[$game->db_game['payout_weight']."s"];
@@ -147,13 +147,13 @@ class User {
 		else return 0;
 	}
 	
-	public function wallet_text_stats($game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance) {
+	public function wallet_text_stats(&$game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance, &$user_game) {
 		$html = '<div class="row"><div class="col-sm-2">Available&nbsp;funds:</div>';
 		$html .= '<div class="col-sm-3 text-right"><font class="greentext">';
 		$html .= $this->app->format_bignum($mature_balance/pow(10,8));
 		$html .= "</font> ".$game->db_game['coin_name_plural']."</div></div>\n";
 		if ($game->db_game['payout_weight'] != "coin") {
-			$html .= '<div class="row"><div class="col-sm-2">Votes:</div><div class="col-sm-3 text-right"><font class="greentext">'.$this->app->format_bignum($this->user_current_votes($game, $last_block_id, $current_round)/pow(10,8)).'</font> votes available</div></div>'."\n";
+			$html .= '<div class="row"><div class="col-sm-2">Votes:</div><div class="col-sm-3 text-right"><font class="greentext">'.$this->app->format_bignum($this->user_current_votes($game, $last_block_id, $current_round, $user_game)/pow(10,8)).'</font> votes available</div></div>'."\n";
 		}
 		$html .= '<div class="row"><div class="col-sm-2">Locked&nbsp;funds:</div>';
 		$html .= '<div class="col-sm-3 text-right"><font class="redtext">'.$this->app->format_bignum($immature_balance/pow(10,8)).'</font> '.$game->db_game['coin_name_plural'].'</div>';
