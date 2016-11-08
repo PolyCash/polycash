@@ -80,7 +80,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		$output['current_round_table'] = $event->current_round_table($current_round, $thisuser, $show_intro_text, true, $instance_id, $game_event_index);
 		
 		if ($thisuser) $output['wallet_text_stats'] = $thisuser->wallet_text_stats($game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance, $user_game);
-		if ($thisuser) $output['my_current_votes'] = $event->my_votes_table($current_round, $thisuser);
+		if ($thisuser) $output['my_current_votes'] = $event->my_votes_table($current_round, $user_game);
 		$output['account_value'] = $game->account_value_html($account_value);
 		$output['vote_details_general'] = $app->vote_details_general($mature_balance);
 		

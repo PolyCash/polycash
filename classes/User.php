@@ -160,7 +160,7 @@ class User {
 		if ($immature_balance > 0) $html .= '<div class="col-sm-1"><a href="" onclick="$(\'#lockedfunds_details\').toggle(\'fast\'); return false;">Details</a></div>';
 		$html .= "</div>\n";
 		$html .= "Last block completed: <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$last_block_id."\">#".$last_block_id."</a>, currently mining <a href=\"/explorer/games/".$game->db_game['url_identifier']."/transactions/unconfirmed\">#".($last_block_id+1)."</a><br/>\n";
-		$html .= "Current votes count towards block ".$block_within_round."/".$game->db_game['round_length']." in round #".$current_round.".<br/>\n";
+		$html .= "Current votes count towards block ".$block_within_round."/".$game->db_game['round_length']." in round #".$game->round_to_display_round($current_round).".<br/>\n";
 		//if ($game->db_game['vote_effectiveness_function'] != "constant") $html .= "Votes are ".round(100*$game->round_index_to_effectiveness_factor($block_within_round),1)."% effective right now.<br/>\n";
 		
 		if ($immature_balance > 0) {
@@ -417,17 +417,16 @@ class User {
 		$r = $this->app->run_query($q);
 	}
 	
-	public function save_plan_allocations($user_strategy, $from_round, $to_round) {
+	public function save_plan_allocations(&$game, $user_strategy, $from_round, $to_round) {
 		if ($from_round > 0 && $to_round > 0 && $to_round >= $from_round) {
-			$game = new Game($this->app, $user_strategy['game_id']);
 			$q = "DELETE FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND round_id >= ".$from_round." AND round_id <= ".$to_round.";";
 			$r = $this->app->run_query($q);
 			
-			$q = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$user_strategy['game_id']."';";
+			$q = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."';";
 			$r = $this->app->run_query($q);
 			while ($op = $r->fetch()) {
 				$round_id = $game->block_to_round($op['event_starting_block']);
-				$points = intval($_REQUEST['poi_'.$op['option_id']]);
+				$points = (int)$_REQUEST['poi_'.$op['option_id']];
 				if ($points > 0) {
 					$qq = "INSERT INTO strategy_round_allocations SET strategy_id='".$user_strategy['strategy_id']."', round_id='".$round_id."', option_id='".$op['option_id']."', points='".$points."';";
 					$rr = $this->app->run_query($qq);

@@ -26,17 +26,24 @@ if ($thisuser && $game) {
 	}
 	
 	if ($action == "save") {
-		$from_round = intval($_REQUEST['from_round']);
-		$to_round = intval($_REQUEST['to_round']);
+		$from_display_round = (int)$_REQUEST['from_round'];
+		$to_display_round = (int)$_REQUEST['to_round'];
 		
-		$thisuser->save_plan_allocations($user_strategy, $from_round, $to_round);
+		$from_round = $game->display_round_to_round($from_display_round);
+		$to_round = $game->display_round_to_round($to_display_round);
+		
+		$thisuser->save_plan_allocations($game, $user_strategy, $from_round, $to_round);
 		
 		$app->output_message(1, "", false);
 	}
 	else if ($action == "fetch") {
-		$from_round = intval($_REQUEST['from_round']);
-		$to_round = intval($_REQUEST['to_round']);
-		if ($game->db_game['final_round'] > 0 && $to_round > $game->db_game['final_round']) $to_round = $game->db_game['final_round'];
+		$from_display_round = (int)$_REQUEST['from_round'];
+		$to_display_round = (int)$_REQUEST['to_round'];
+		
+		if ($game->db_game['final_round'] > 0 && $to_display_round > $game->db_game['final_round']) $to_display_round = $game->db_game['final_round'];
+		
+		$from_round = $game->display_round_to_round($from_display_round);
+		$to_round = $game->display_round_to_round($to_display_round);
 		
 		$html = $game->plan_options_html($from_round, $to_round, $user_strategy);
 		
@@ -45,8 +52,12 @@ if ($thisuser && $game) {
 		echo json_encode($output_obj);
 	}
 	else if ($action == "scramble") {
-		$from_round = intval($_REQUEST['from_round']);
-		$to_round = intval($_REQUEST['to_round']);
+		$from_display_round = (int)$_REQUEST['from_round'];
+		$to_display_round = (int)$_REQUEST['to_round'];
+		
+		$from_round = $game->display_round_to_round($from_display_round);
+		$to_round = $game->display_round_to_round($to_display_round);
+		
 		$game->scramble_plan_allocations($user_strategy, array(0=>1, 1=>0.5), $from_round, $to_round);
 		$app->output_message(1, "Scrambled it!", false);
 	}

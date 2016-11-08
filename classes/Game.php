@@ -962,6 +962,8 @@ class Game {
 	}
 	
 	public function plan_options_html($from_round, $to_round, $user_strategy) {
+		$to_block_id = $to_round*$this->db_game['round_length']+1;
+		$this->ensure_events_until_block($to_block_id);
 		$html = "
 		<script type='text/javascript'>
 		var plan_option_max_points = 5;
@@ -977,7 +979,7 @@ class Game {
 			$js .= "round_id2plan_round_id[".$round."] = ".$round_i.";\n";
 			$block_id = ($round-1)*$this->db_game['round_length']+1;
 			$events = $this->events_by_block($block_id);
-			$html .= '<div class="plan_row">#'.$round.": ";
+			$html .= '<div class="plan_row">#'.$this->round_to_display_round($round).": ";
 			for ($event_i=0; $event_i<count($events); $event_i++) {
 				$js .= "temp_plan_round.event_ids.push(".$events[$event_i]->db_event['event_id'].");\n";
 				$q = "SELECT * FROM options WHERE event_id='".$events[$event_i]->db_event['event_id']."' ORDER BY option_id ASC;";
@@ -996,7 +998,7 @@ class Game {
 			$html .= "</div>\n";
 			$round_i++;
 		}
-		$html .= '<script type="text/javascript">'.$js."\n".$this->load_all_event_points_js(0, $user_strategy)."\nset_plan_rightclicks();\nset_plan_round_sums();\nrender_plan_rounds();\n</script>\n";
+		$html .= '<script type="text/javascript">'.$js."\n".$this->load_all_event_points_js(0, $user_strategy, $from_round, $to_round)."\nset_plan_rightclicks();\nset_plan_round_sums();\nrender_plan_rounds();\n</script>\n";
 		return $html;
 	}
 	
@@ -1768,9 +1770,11 @@ class Game {
 		return $html;
 	}
 	
-	public function load_all_event_points_js($game_index, $user_strategy) {
+	public function load_all_event_points_js($game_index, $user_strategy, $from_round_id, $to_round_id) {
 		$js = "";
-		/*$q = "SELECT * FROM events e JOIN event_types t ON e.event_type_id=t.event_type_id WHERE e.game_id='".$this->db_game['game_id']."' ORDER BY e.event_id ASC;";
+		$from_block_id = ($from_round_id-1)*$this->db_game['round_length']+1;
+		$to_block_id = ($to_round_id-1)*$this->db_game['round_length']+1;
+		$q = "SELECT * FROM events e JOIN event_types t ON e.event_type_id=t.event_type_id WHERE e.game_id='".$this->db_game['game_id']."' AND e.event_starting_block >= ".$from_block_id." AND e.event_starting_block <= ".$to_block_id." ORDER BY e.event_id ASC;";
 		$r = $this->blockchain->app->run_query($q);
 		$i=0;
 		while ($db_event = $r->fetch()) {
@@ -1786,11 +1790,11 @@ class Game {
 				}
 				else $points = 0;
 				
-				$js .= "games[".$game_index."].all_events[".$i."].options[".$j."].points = ".$points.";\n";
+				$js .= "games[".$game_index."].all_events[".$db_event['event_index']."].options[".$j."].points = ".$points.";\n";
 				$j++;
 			}
 			$i++;
-		}*/
+		}
 		return $js;
 	}
 	
@@ -2522,6 +2526,17 @@ class Game {
 			$qq = "UPDATE game_sellouts s JOIN transactions t ON s.out_tx_hash=t.tx_hash SET s.out_block_id=t.block_id WHERE s.game_id='".$this->db_game['game_id']."' AND t.blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."';";
 			$rr = $this->blockchain->app->run_query($qq);
 		}
+	}
+	
+	public function round_to_display_round($round_id) {
+		$game_starting_round = $this->block_to_round($this->db_game['game_starting_block']);
+		$diff_rounds = $round_id - $game_starting_round;
+		return $diff_rounds+1;
+	}
+	
+	public function display_round_to_round($display_round_id) {
+		$game_starting_round = $this->block_to_round($this->db_game['game_starting_block']);
+		return $game_starting_round+$display_round_id-1;
 	}
 }
 ?>

@@ -486,37 +486,44 @@ if ($thisuser && $game) {
 			echo ', "wallet", "'.$game->event_ids().'", "'.$game->logo_image_url().'", "'.$game->vote_effectiveness_function().'"';
 		?>));
 		
-		function load_all_events(game) {
-			console.log("Loading all events...");
-			<?php
-			/*
-			$q = "SELECT * FROM events e JOIN event_types t ON e.event_type_id=t.event_type_id WHERE e.game_id='".$game->db_game['game_id']."' ORDER BY e.event_id ASC;";
-			$r = $app->run_query($q);
-			$i=0;
-			while ($db_event = $r->fetch()) {
-				echo "game.all_events.push(new Event(game, ".$i.", ".$db_event['event_id'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'"));';
-				echo "game.all_events_db_id_to_index[".$db_event['event_id']."] = ".$i.";\n";
+		<?php
+		$load_event_rounds = 20;
+		
+		$plan_start_round = $current_round;
+		$plan_stop_round = $plan_start_round+$load_event_rounds-1;
+		
+		$from_block_id = ($plan_start_round-1)*$game->db_game['round_length']+1;
+		$to_block_id = ($plan_stop_round-1)*$game->db_game['round_length']+1;
+		
+		$game->ensure_events_until_block($to_block_id);
+		
+		$q = "SELECT * FROM events e JOIN event_types t ON e.event_type_id=t.event_type_id WHERE e.game_id='".$game->db_game['game_id']."' AND e.event_starting_block >= ".$from_block_id." AND e.event_starting_block <= ".$to_block_id." ORDER BY e.event_id ASC;";
+		$r = $app->run_query($q);
+		echo "//joeyqq: $q\n";
+		$initial_load_events = $r->rowCount();
+		$i=0;
+		while ($db_event = $r->fetch()) {
+			if ($i == 0) echo "games[0].all_events_start_index = ".$db_event['event_index'].";\n";
+			else if ($i == $initial_load_events-1) echo "games[0].all_events_stop_index = ".$db_event['event_index'].";\n";
+			
+			echo "games[0].all_events[".$db_event['event_index']."] = new Event(games[0], ".$db_event['event_index'].", ".$db_event['event_id'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'");';
+			echo "games[0].all_events_db_id_to_index[".$db_event['event_id']."] = ".$db_event['event_index'].";\n";
+			
+			$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY option_id ASC;";
+			$option_r = $app->run_query($option_q);
+			$j=0;
+			while ($option = $option_r->fetch()) {
+				$has_votingaddr = "false";
+				$votingaddr_id = $thisuser->user_address_id($game, $option['option_index'], false, $user_game['account_id']);
+				if ($votingaddr_id !== false) $has_votingaddr = "true";
 				
-				$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY option_id ASC;";
-				$option_r = $app->run_query($option_q);
-				$j=0;
-				while ($option = $option_r->fetch()) {
-					$has_votingaddr = "false";
-					$votingaddr_id = $thisuser->user_address_id($game, $option['option_index'], false, $user_game['account_id']);
-					if ($votingaddr_id !== false) $has_votingaddr = "true";
-					
-					echo "game.all_events[".$i."].options.push(new option(game.all_events[".$i."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", '".$option['name']."', 0, $has_votingaddr));\n";
-					$j++;
-				}
-				$i++;
-			}*/
-			?>
+				echo "games[0].all_events[".$db_event['event_index']."].options.push(new option(games[0].all_events[".$db_event['event_index']."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", '".$option['name']."', 0, $has_votingaddr));\n";
+				$j++;
+			}
+			$i++;
 		}
 		
-		load_all_events(games[0]);
-		
-		<?php
-		echo $game->load_all_event_points_js(0, $user_strategy);
+		echo $game->load_all_event_points_js(0, $user_strategy, $plan_start_round, $plan_stop_round);
 		?>
 		
 		$(document).ready(function() {
@@ -1041,23 +1048,13 @@ if ($thisuser && $game) {
 						<p>
 							Set your planned votes by clicking on the options below.  You can vote on more than one option in each round. Keep clicking on an option to increase its votes.  Or right click to remove all votes from an option.  Your planned votes are confidential and cannot be seen by other players.
 						</p>
-						<?php
-						if ($game->db_game['final_round'] > 0) {
-							$plan_start_round = 1;
-							$plan_stop_round = $game->db_game['final_round'];
-						}
-						else {
-							$plan_start_round = $current_round;
-							$plan_stop_round = $plan_start_round+10;
-						}
-						?>
 						
 						<button id="scramble_plan_btn" class="btn btn-warning" onclick="scramble_strategy(<?php echo $user_strategy['strategy_id']; ?>); return false;">Randomize my Votes</button>
 						
-						<font style="margin-left: 25px;">Load rounds: </font><input type="text" size="4" id="select_from_round" value="<?php echo $plan_start_round; ?>" /> to <input type="text" size="4" id="select_to_round" value="<?php echo $plan_stop_round; ?>" /> <button class="btn btn-default btn-sm" onclick="load_plan_rounds(); return false;">Go</button>
+						<font style="margin-left: 25px;">Load rounds: </font><input type="text" size="5" id="select_from_round" value="<?php echo $game->round_to_display_round($plan_start_round); ?>" /> to <input type="text" size="5" id="select_to_round" value="<?php echo $game->round_to_display_round($plan_stop_round); ?>" /> <button class="btn btn-default btn-sm" onclick="load_plan_rounds(); return false;">Go</button>
 						
 						<br/>
-						<div id="plan_rows" style="margin: 10px 0px; max-height: 450px; overflow-y: scroll; border: 1px solid #bbb; padding: 0px 10px;">
+						<div id="plan_rows" style="margin: 10px 0px; max-height: 350px; overflow-y: scroll; border: 1px solid #bbb; padding: 0px 10px;">
 							<?php
 							echo $game->plan_options_html($plan_start_round, $plan_stop_round, $user_strategy);
 							?>
@@ -1068,8 +1065,8 @@ if ($thisuser && $game) {
 						
 						<div id="plan_rows_js"></div>
 						
-						<input type="hidden" id="from_round" name="from_round" value="<?php echo $plan_start_round; ?>" />
-						<input type="hidden" id="to_round" name="to_round" value="<?php echo $plan_stop_round; ?>" />
+						<input type="hidden" id="from_round" name="from_round" value="<?php echo $game->round_to_display_round($plan_start_round); ?>" />
+						<input type="hidden" id="to_round" name="to_round" value="<?php echo $game->round_to_display_round($plan_stop_round); ?>" />
 					</div>
 				</div>
 			</div>

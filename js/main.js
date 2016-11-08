@@ -825,7 +825,6 @@ function refresh_mature_io_btns() {
 	for (var i=0; i<vote_inputs.length; i++) {
 		$('#selected_utxo_'+i).html(render_selected_utxo(i));
 	}
-	console.log("Done with refresh_mature_io_btns()");
 }
 function compose_vote_loop() {
 	if (output_amounts_need_update) refresh_output_amounts();
@@ -981,9 +980,13 @@ function set_plan_round_sums() {
 function set_plan_round_sum(round_index) {
 	var round_points = 0;
 	for (var e=0; e<plan_rounds[round_index].event_ids.length; e++) {
-		var all_events_index = games[0].all_events_db_id_to_index[plan_rounds[round_index].event_ids[e]];
-		for (var o=0; o<games[0].all_events[all_events_index].options.length; o++) {
-			round_points += games[0].all_events[all_events_index].options[o].points;
+		var event_id = plan_rounds[round_index].event_ids[e];
+		var event_index = games[0].all_events_db_id_to_index[event_id];
+		if (typeof games[0].all_events[event_index] !== "undefined") {
+			var event = games[0].all_events[event_index];
+			for (var o=0; o<event.options.length; o++) {
+				round_points += event.options[o].points;
+			}
 		}
 	}
 	plan_rounds[round_index].sum_points = round_points;
@@ -1001,21 +1004,24 @@ function render_plan_option(round_index, event_index, option_index, event_id, op
 	$('#plan_option_input_'+round_id+'_'+event_id+'_'+option_id).val(this_option.points);
 }
 function plan_option_clicked(round_id, event_id, option_id) {
-	var event = games[0].all_events[games[0].all_events_db_id_to_index[event_id]];
+	var event_index = games[0].all_events_db_id_to_index[event_id];
+	var event = games[0].all_events[event_index];
 	var option_index = event.option_id2option_index[option_id];
 	var new_points = (event.options[option_index].points+plan_option_increment)%(plan_option_max_points+1);
 	event.options[option_index].points = new_points;
-	
 	var round_index = round_id2plan_round_id[round_id];
 	set_plan_round_sums();
 	render_plan_round(round_index);
 }
 function render_plan_round(round_index) {
 	for (var i=0; i<plan_rounds[round_index].event_ids.length; i++) {
-		var event_index = games[0].all_events_db_id_to_index[plan_rounds[round_index].event_ids[i]];
-		var temp_event = games[0].all_events[event_index];
-		for (var option_i=0; option_i<temp_event.options.length; option_i++) {
-			render_plan_option(round_index, event_index, option_i, temp_event.event_id, temp_event.options[option_i].option_id);
+		var event_id = plan_rounds[round_index].event_ids[i];
+		var event_index = games[0].all_events_db_id_to_index[event_id];
+		if (typeof games[0].all_events[event_index] !== "undefined") {
+			var temp_event = games[0].all_events[event_index];
+			for (var option_i=0; option_i<temp_event.options.length; option_i++) {
+				render_plan_option(round_index, event_index, option_i, temp_event.event_id, temp_event.options[option_i].option_id);
+			}
 		}
 	}
 }
@@ -1041,7 +1047,7 @@ function set_plan_rightclicks() {
 function save_plan_allocations() {
 	var postvars = {game_id: games[0].game_id, action: "save", voting_strategy_id: parseInt($('#voting_strategy_id').val()), from_round: parseInt($('#from_round').val()), to_round: parseInt($('#to_round').val())};
 	
-	for (var i=0; i<games[0].all_events.length; i++) {
+	for (var i=games[0].all_events_start_index; i<=games[0].all_events_stop_index; i++) {
 		for (var o=0; o<games[0].all_events[i].options.length; o++) {
 			var points = games[0].all_events[i].options[o].points;
 			if (points > 0) {
@@ -1214,7 +1220,6 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 										if (typeof json_result['mature_io_ids_csv'] == "undefined") _this.game.mature_io_ids_csv = "";
 										else _this.game.mature_io_ids_csv = json_result['mature_io_ids_csv'];
 										$('#select_input_buttons').html(json_result['select_input_buttons']);
-										console.log("refreshing transaction inputs: "+_this.game.mature_io_ids_csv);
 										reload_compose_vote();
 									}
 									
@@ -1330,6 +1335,8 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 	this.vote_effectiveness_function = vote_effectiveness_function;
 	this.events = new Array();
 	this.all_events = new Array();
+	this.all_events_start_index = false;
+	this.all_events_stop_index = false;
 	this.option_has_votingaddr = [];
 	this.sel_game_event_index = false;
 	this.all_events_db_id_to_index = {};
@@ -1411,7 +1418,6 @@ function account_start_spend_io(io_id, amount) {
 	account_io_amount = amount;
 	$('#account_spend_buyin_total').html("(Total: "+format_coins(amount)+" coins)");
 	$('#account_spend_modal').modal('show');
-	console.log(io_id);
 }
 function account_spend_action_changed() {
 	var account_spend_action = $('#account_spend_action').val();
@@ -1435,7 +1441,6 @@ function account_spend_buyin_address_choice_changed() {
 	}
 }
 function account_spend_refresh() {
-	console.log('account_spend_refresh()');
 	var buyin_amount = parseFloat($('#account_spend_buyin_amount').val());
 	if (buyin_amount > 0) {
 		var fee_amount = parseFloat($('#account_spend_buyin_fee').val());
