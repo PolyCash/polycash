@@ -894,10 +894,12 @@ class App {
 		
 		$html .= '<div class="row"><div class="col-sm-5">Starts on block:</div><div class="col-sm-7">'.$db_game['game_starting_block']."</div></div>\n";
 		
-		$html .= '<div class="row"><div class="col-sm-5">Escrow address:</div><div class="col-sm-7" style="font-size: 11px;">';
-		if ($db_game['escrow_address'] == "") $html .= "None";
-		else $html .= '<a href="/explorer/games/'.$db_game['url_identifier'].'/addresses/'.$db_game['escrow_address'].'">'.$db_game['escrow_address'].'</a>';
-		$html .= "</div></div>\n";
+		if ($db_game['buyin_policy'] != "none") {
+			$html .= '<div class="row"><div class="col-sm-5">Escrow address:</div><div class="col-sm-7" style="font-size: 11px;">';
+			if ($db_game['escrow_address'] == "") $html .= "None";
+			else $html .= '<a href="/explorer/games/'.$db_game['url_identifier'].'/addresses/'.$db_game['escrow_address'].'">'.$db_game['escrow_address'].'</a>';
+			$html .= "</div></div>\n";
+		}
 		
 		$genesis_amount_disp = $this->format_bignum($db_game['genesis_amount']/pow(10,8));
 		$html .= '<div class="row"><div class="col-sm-5">Genesis transaction:</div><div class="col-sm-7">';

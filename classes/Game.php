@@ -1105,7 +1105,7 @@ class Game {
 		$escrow_value = $this->escrow_value(false);
 		$innate_currency_value = floor(($account_value/$coins_in_existence)*$escrow_value);
 		
-		if ($innate_currency_value > 0) {
+		if ($innate_currency_value > 0 && $this->db_game['buyin_policy'] != "none") {
 			$html .= "&nbsp;=&nbsp;".$this->blockchain->app->format_bignum($innate_currency_value/pow(10,8))." ".$this->blockchain->db_blockchain['coin_name_plural'];
 		}
 		
@@ -2109,24 +2109,26 @@ class Game {
 			
 			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
 			
-			$buyin_q = "SELECT * FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.create_block_id='".$block_height."' AND io.address_id='".$escrow_address['address_id']."' GROUP BY t.transaction_id;";
-			$buyin_r = $this->blockchain->app->run_query($buyin_q);
-			
-			while ($buyin_tx = $buyin_r->fetch()) {
-				// Check if buy-in transaction has already been created
-				$qq = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.create_transaction_id='".$buyin_tx['transaction_id']."';";
-				$rr = $this->blockchain->app->run_query($qq);
-				if ($rr->rowCount() == 0) {
-					if ($this->db_game['sellout_policy'] == "off") {
-						$this->process_buyin_transaction($buyin_tx);
-					}
-					else {
-						// Check if any colored coins are being deposited to the escrow address
-						// If so, this is a sell-out rather than buy-in tx, so skip the buy-in
-						$qq = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.spend_transaction_id='".$buyin_tx['transaction_id']."';";
-						$rr = $this->blockchain->app->run_query($qq);
-						if ($rr->rowCount() == 0) {
+			if ($this->db_game['buyin_policy'] != "none") {
+				$buyin_q = "SELECT * FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.create_block_id='".$block_height."' AND io.address_id='".$escrow_address['address_id']."' GROUP BY t.transaction_id;";
+				$buyin_r = $this->blockchain->app->run_query($buyin_q);
+				
+				while ($buyin_tx = $buyin_r->fetch()) {
+					// Check if buy-in transaction has already been created
+					$qq = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.create_transaction_id='".$buyin_tx['transaction_id']."';";
+					$rr = $this->blockchain->app->run_query($qq);
+					if ($rr->rowCount() == 0) {
+						if ($this->db_game['sellout_policy'] == "off") {
 							$this->process_buyin_transaction($buyin_tx);
+						}
+						else {
+							// Check if any colored coins are being deposited to the escrow address
+							// If so, this is a sell-out rather than buy-in tx, so skip the buy-in
+							$qq = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.spend_transaction_id='".$buyin_tx['transaction_id']."';";
+							$rr = $this->blockchain->app->run_query($qq);
+							if ($rr->rowCount() == 0) {
+								$this->process_buyin_transaction($buyin_tx);
+							}
 						}
 					}
 				}
@@ -2145,7 +2147,7 @@ class Game {
 					$crd_sum = 0;
 					$cbd_sum = 0;
 					
-					$qq = "SELECT * FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.spend_transaction_id='".$db_transaction['transaction_id']."';";
+					$qq = "SELECT * FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.spend_transaction_id='".$db_transaction['transaction_id']."' AND gio.game_id='".$this->db_game['game_id']."';";
 					$rr = $this->blockchain->app->run_query($qq);
 					
 					while ($input_io = $rr->fetch()) {
