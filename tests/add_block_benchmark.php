@@ -10,18 +10,21 @@ if (!empty($argv)) {
 	$_REQUEST['block_height'] = $cmd_vars['block_height'];
 }
 
-$game_id = (int) $_REQUEST['game_id'];
-$game = new Game($app, $game_id);
+if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+	$game_id = (int) $_REQUEST['game_id'];
+	$game = new Game($app, $game_id);
 
-$block_height = (int) $_REQUEST['block_height'];
+	$block_height = (int) $_REQUEST['block_height'];
 
-$game->delete_blocks_from_height($block_height);
-$coin_rpc = new jsonRPCClient('http://'.$game->db_game['rpc_username'].':'.$game->db_game['rpc_password'].'@127.0.0.1:'.$game->db_game['rpc_port'].'/');
-$block_hash = $coin_rpc->getblockhash($block_height);
+	$game->delete_blocks_from_height($block_height);
+	$coin_rpc = new jsonRPCClient('http://'.$game->db_game['rpc_username'].':'.$game->db_game['rpc_password'].'@127.0.0.1:'.$game->db_game['rpc_port'].'/');
+	$block_hash = $coin_rpc->getblockhash($block_height);
 
-$start_time = microtime(true);
-$game->coind_add_block($coin_rpc, $block_hash, $block_height, false);
-$message = "Took ".(microtime(true)-$start_time)." sec to add block #".$block_height."<br/>\n";
-$app->log($message);
-echo "<br/>".$message;
+	$start_time = microtime(true);
+	$game->coind_add_block($coin_rpc, $block_hash, $block_height, false);
+	$message = "Took ".(microtime(true)-$start_time)." sec to add block #".$block_height."<br/>\n";
+	$app->log($message);
+	echo "<br/>".$message."\n";
+}
+else echo "Please supply the correct key.\n";
 ?>

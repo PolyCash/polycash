@@ -19,10 +19,10 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		
 		while ($db_user = $rr->fetch()) {
 			$user = new User($app, $db_user['user_id']);
-			$account_value = $user->account_coin_value($game)/pow(10,8);
+			$account_value = $user->account_coin_value($game, $db_user)/pow(10,8);
 			$qqq = "UPDATE user_games SET account_value='".$account_value."' WHERE user_id='".$user->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
 			$rrr = $app->run_query($qqq);
-			echo $game['name']." &rarr; ".number_format($account_value).", ".$user->db_user['username']."<br/>\n";
+			echo $game['name']." &rarr; ".$app->format_bignum($account_value).", ".$user->db_user['username']."<br/>\n";
 		}
 	}
 }

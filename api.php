@@ -30,15 +30,15 @@ if ($uri_parts[1] == "api") {
 				$api_user_info = FALSE;
 				
 				if (!empty($_REQUEST['api_access_code'])) {
-					$q = "SELECT * FROM users WHERE api_access_code=".$app->quote_escape($_REQUEST['api_access_code']).";";
+					$q = "SELECT * FROM users u JOIN user_games ug ON u.user_id=ug.user_id WHERE ug.game_id='".$game->db_game['game_id']."' AND u.api_access_code=".$app->quote_escape($_REQUEST['api_access_code']).";";
 					$r = $app->run_query($q);
 					if ($r->rowCount() == 1) {
 						$db_api_user = $r->fetch();
 						$api_user = new User($app, $db_api_user['user_id']);
-						$account_value = $api_user->account_coin_value($game);
-						$immature_balance = $api_user->immature_balance($game);
-						$mature_balance = $api_user->mature_balance($game);
-						$votes_available = $api_user->user_current_votes($game, $last_block_id, $current_round);
+						$account_value = $api_user->account_coin_value($game, $db_api_user);
+						$immature_balance = $api_user->immature_balance($game, $db_api_user);
+						$mature_balance = $api_user->mature_balance($game, $db_api_user);
+						$votes_available = $api_user->user_current_votes($game, $last_block_id, $current_round, $db_api_user);
 						
 						$api_user_info['username'] = $api_user->db_user['username'];
 						$api_user_info['balance'] = $account_value;

@@ -131,10 +131,13 @@ include('includes/html_start.php');
 			$coin_game = new Game($blockchains[$user_game['blockchain_id']], $user_game['game_id']);
 			echo '<div class="row">';
 			echo '<div class="col-sm-4"><a href="/wallet/'.$user_game['url_identifier'].'/">'.ucwords($user_game['coin_name_plural'])." for ".$user_game['name'].'</a></div>';
-			echo '<div class="col-sm-2 greentext" style="text-align: right">'.$app->format_bignum($thisuser->account_coin_value($coin_game)/pow(10,8)).' '.$user_game['coin_name_plural'].'</div>';
-			$exchange_rate = $coin_game->coins_in_existence(false)/$coin_game->escrow_value(false);
-			$cc_value = $thisuser->account_coin_value($coin_game)/$exchange_rate;
-			echo '<div class="col-sm-2 greentext" style="text-align: right">'.$app->format_bignum($cc_value/pow(10,8)).' '.$coin_game->blockchain->db_blockchain['coin_name_plural'].'</div>';
+			echo '<div class="col-sm-2 greentext" style="text-align: right">'.$app->format_bignum($thisuser->account_coin_value($coin_game, $user_game)/pow(10,8)).' '.$user_game['coin_name_plural'].'</div>';
+			
+			if ($user_game['buyin_policy'] != "none") {
+				$exchange_rate = $coin_game->coins_in_existence(false)/$coin_game->escrow_value(false);
+				$cc_value = $thisuser->account_coin_value($coin_game, $user_game)/$exchange_rate;
+				echo '<div class="col-sm-2 greentext" style="text-align: right">'.$app->format_bignum($cc_value/pow(10,8)).' '.$coin_game->blockchain->db_blockchain['coin_name_plural'].'</div>';
+			}
 			echo "</div>\n";
 		}
 		?>

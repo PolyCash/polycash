@@ -11,16 +11,19 @@ if (!empty($argv)) {
 	$_REQUEST['to_block'] = $cmd_vars['to_block'];
 }
 
-$game_id = (int) $_REQUEST['game_id'];
-$from_block = (int) $_REQUEST['from_block'];
-$to_block = (int) $_REQUEST['to_block'];
+if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+	$game_id = (int) $_REQUEST['game_id'];
+	$from_block = (int) $_REQUEST['from_block'];
+	$to_block = (int) $_REQUEST['to_block'];
 
-$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
-$blockchain = new Blockchain($app, $db_game['blockchain_id']);
-$game = new Game($blockchain, $game_id);
+	$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
+	$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+	$game = new Game($blockchain, $game_id);
 
-for ($block=$from_block; $block<=$to_block; $block++) {
-	$coins_in_existence = $game->coins_in_existence($block);
-	echo $app->format_bignum($coins_in_existence/pow(10,8))." ".$game->db_game['coin_name_plural']." at block #".$block."<br/>\n";
+	for ($block=$from_block; $block<=$to_block; $block++) {
+		$coins_in_existence = $game->coins_in_existence($block);
+		echo $app->format_bignum($coins_in_existence/pow(10,8))." ".$game->db_game['coin_name_plural']." at block #".$block."<br/>\n";
+	}
 }
+else echo "Please supply the correct key.\n";
 ?>

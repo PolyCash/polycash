@@ -917,8 +917,8 @@ class Blockchain {
 		else return false;
 	}
 	
-	public function user_balance($user) {
-		$q = "SELECT SUM(amount) FROM transaction_ios WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND spend_status='unspent' AND user_id='".$user->db_user['user_id']."' AND create_block_id IS NOT NULL;";
+	public function user_balance(&$user_game) {
+		$q = "SELECT SUM(io.amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND io.spend_status='unspent' AND k.account_id='".$user_game['account_id']."' AND io.create_block_id IS NOT NULL;";
 		$r = $this->app->run_query($q);
 		$coins = $r->fetch(PDO::FETCH_NUM);
 		$coins = $coins[0];
@@ -926,8 +926,8 @@ class Blockchain {
 		else return 0;
 	}
 
-	public function user_immature_balance($user) {
-		$q = "SELECT SUM(amount) FROM transaction_ios WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND user_id='".$user->db_user['user_id']."' AND (create_block_id > ".$this->last_block_id()." OR create_block_id IS NULL);";
+	public function user_immature_balance(&$user_game) {
+		$q = "SELECT SUM(io.amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND k.account_id='".$user_game['account_id']."' AND (io.create_block_id > ".$this->last_block_id()." OR io.create_block_id IS NULL);";
 		$r = $this->app->run_query($q);
 		$sum = $r->fetch(PDO::FETCH_NUM);
 		$sum = $sum[0];
@@ -935,8 +935,8 @@ class Blockchain {
 		else return 0;
 	}
 
-	public function user_mature_balance($user) {
-		$q = "SELECT SUM(amount) FROM transaction_ios WHERE spend_status='unspent' AND spend_transaction_id IS NULL AND blockchain_id='".$this->db_blockchain['blockchain_id']."' AND user_id='".$user->db_user['user_id']."' AND create_block_id <= ".$this->last_block_id().";";
+	public function user_mature_balance(&$user_game) {
+		$q = "SELECT SUM(io.amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND io.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND k.account_id='".$user_game['account_id']."' AND io.create_block_id <= ".$this->last_block_id().";";
 		$r = $this->app->run_query($q);
 		$sum = $r->fetch(PDO::FETCH_NUM);
 		$sum = $sum[0];
