@@ -382,8 +382,6 @@ function attempt_withdrawal() {
 			else $('#withdraw_message').addClass("redtext");
 			
 			setTimeout("$('#withdraw_message').slideUp('fast');", 5000);
-			
-			games[0].refresh_if_needed();
 		});
 	}
 }

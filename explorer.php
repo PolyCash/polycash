@@ -287,7 +287,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							else echo $blockchain->db_blockchain['url_identifier'];
 							?>/utxos/">UTXOs</a></li>
 							<?php if ($game && $game->db_game['escrow_address'] != "") { ?>
-							<li><a<?php if ($explore_mode == 'addresses' && $address['address'] == $game->db_game['escrow_address']) echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php echo $game->db_game['url_identifier']; ?>/addresses/<?php echo $game->db_game['escrow_address']; ?>">Escrow</a></li>
+							<li><a<?php if ($explore_mode == 'addresses' && $address['address'] == $game->db_game['escrow_address']) echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php echo $game->db_game['url_identifier']; ?>/addresses/<?php echo $game->db_game['escrow_address']; ?>">Genesis</a></li>
 							<?php } ?>
 							<li><a<?php if ($explore_mode == 'unconfirmed') echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
 							if ($game) echo $game->db_game['url_identifier'];

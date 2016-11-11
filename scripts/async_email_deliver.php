@@ -6,6 +6,7 @@ if (!empty($argv)) {
 	$cmd_vars = $app->argv_to_array($argv);
 	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
 	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
+	if (!empty($cmd_vars['delivery_id'])) $_REQUEST['delivery_id'] = $cmd_vars['delivery_id'];
 }
 
 if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
@@ -21,14 +22,12 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			$r = $app->run_query($q);
 		}
 		else {
-			if ($_REQUEST['delivery_id'] > 0) {
-				$delivery_id = intval($_REQUEST['delivery_id']);
-			} else $delivery_id = intval($argv[1]);
+			$delivery_id = (int) $_REQUEST['delivery_id'];
 			
 			$q = "SELECT * FROM async_email_deliveries WHERE delivery_id='".$delivery_id."' AND time_delivered=0;";
 			$r = $app->run_query($q);
 		}
-
+		
 		if ($r->rowCount() == 1) {
 			$delivery = $r->fetch();
 			

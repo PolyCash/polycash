@@ -7,7 +7,7 @@ $output_obj['result_code'] = 0;
 $output_obj['message'] = "";
 
 if ($thisuser && $game) {
-	$user_game = $thisuser->ensure_user_in_game($game->db_game['game_id']);
+	$user_game = $thisuser->ensure_user_in_game($game);
 	
 	$amount = floatval($_REQUEST['amount']);
 	$fee = floatval($_REQUEST['fee']);
@@ -19,13 +19,13 @@ if ($thisuser && $game) {
 		$last_block_id = $game->blockchain->last_block_id();
 		$mining_block_id = $last_block_id+1;
 		
-		$blockchain_mature_balance = $game->blockchain->user_mature_balance($thisuser);
-		$game_mature_balance = $thisuser->mature_balance($game);
+		$blockchain_mature_balance = $game->blockchain->user_mature_balance($user_game);
+		$game_mature_balance = $thisuser->mature_balance($game, $user_game);
 		
 		$remainder_address_id = $_REQUEST['remainder_address_id'];
 		
 		if ($remainder_address_id == "random") {
-			$q = "SELECT * FROM addresses WHERE primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND user_id='".$thisuser->db_user['user_id']."' AND option_index IS NOT NULL AND is_mine=1 ORDER BY RAND() LIMIT 1;";
+			$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND k.account_id='".$user_game['account_id']."' AND a.option_index IS NOT NULL ORDER BY RAND() LIMIT 1;";
 			$r = $app->run_query($q);
 			$remainder_address = $r->fetch();
 			$remainder_address_id = $remainder_address['address_id'];
@@ -36,8 +36,8 @@ if ($thisuser && $game) {
 		$success = $game->get_user_strategy($thisuser->db_user['user_id'], $user_strategy);
 		
 		if ($success) {
-			if ($amount <= $game_mature_balance && $fee < $blockchain_mature_balance) {
-				$q = "SELECT SUM(gio.colored_amount), gio.io_id, io.amount FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND a.user_id='".$thisuser->db_user['user_id']."' AND io.amount > ".$fee." GROUP BY gio.io_id ORDER BY io.create_block_id DESC, SUM(gio.colored_amount) ASC;";
+			if ($fee < $blockchain_mature_balance) {
+				$q = "SELECT SUM(gio.colored_amount), gio.io_id, io.amount FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND gio.game_id='".$game->db_game['game_id']."' AND k.account_id='".$user_game['account_id']."' AND io.amount > ".$fee." GROUP BY gio.io_id ORDER BY io.create_block_id DESC, SUM(gio.colored_amount) ASC;";
 				$r = $app->run_query($q);
 				
 				$spend_gio = false;
@@ -49,7 +49,7 @@ if ($thisuser && $game) {
 				
 				if ($spend_gio) {
 					$coloredcoins_per_coin = $spend_gio['SUM(gio.colored_amount)']/($spend_gio['amount']-$fee);
-					$io_amount = round($amount/$coloredcoins_per_coin);
+					$io_amount = ceil($amount/$coloredcoins_per_coin);
 					$remainder_amount = $spend_gio['amount']-$fee-$io_amount;
 					
 					$address_ok = false;
