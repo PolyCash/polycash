@@ -151,7 +151,7 @@ class App {
 		$r = $this->run_query($q);
 		$delivery_id = $this->last_insert_id();
 		
-		$command = $this->php_binary_location()." ".realpath(dirname(dirname(__FILE__)))."/scripts/async_email_deliver.php key=".$GLOBALS['cron_key_string']." ".$delivery_id." > /dev/null 2>/dev/null &";
+		$command = $this->php_binary_location()." ".realpath(dirname(dirname(__FILE__)))."/scripts/async_email_deliver.php key=".$GLOBALS['cron_key_string']." delivery_id=".$delivery_id." > /dev/null 2>/dev/null &";
 		exec($command);
 		
 		/*$curl_url = $GLOBALS['base_url']."/scripts/async_email_deliver.php?delivery_id=".$delivery_id;
@@ -287,10 +287,10 @@ class App {
 				$rr = $this->run_query($qq);
 				
 				$user = new User($this, $user_id);
-				$user_game = $user->ensure_user_in_game($invitation['game_id']);
-				
 				$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 				$invite_game = new Game($blockchain, $invitation['game_id']);
+				
+				$user_game = $user->ensure_user_in_game($invite_game);
 				
 				return true;
 			}

@@ -52,10 +52,9 @@ if ($thisuser) {
 			$game = new Game($blockchain, $user_game['game_id']);
 		}
 		else if ($requested_game['giveaway_status'] == "public_free" || $requested_game['giveaway_status'] == "public_pay") {
-			$user_game = $thisuser->ensure_user_in_game($requested_game['game_id']);
-			
 			$blockchain = new Blockchain($app, $requested_game['blockchain_id']);
 			$game = new Game($blockchain, $user_game['game_id']);
+			$user_game = $thisuser->ensure_user_in_game($game);
 		}
 		
 		if ($user_game && $user_game['payment_required'] == 0) {
@@ -271,7 +270,7 @@ if ($thisuser) {
 		$thisuser->generate_user_addresses($game, $user_game);
 	}
 	else {
-		$user_game = $thisuser->ensure_user_in_game($game->db_game['game_id']);
+		$user_game = $thisuser->ensure_user_in_game($game);
 		
 		$thisuser->generate_user_addresses($game, $user_game);
 	}
@@ -937,6 +936,7 @@ if ($thisuser && $game) {
 				<?php
 				$option_index_range = $game->option_index_range();
 				
+				$addr_id_csv = "";
 				for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
 					$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND a.option_index='".$option_index."';";
 					$rr = $app->run_query($qq);
@@ -968,6 +968,44 @@ if ($thisuser && $game) {
 							</div>
 						</div>
 						<?php
+						$addr_id_csv .= $address['address_id'].",";
+					}
+				}
+				if ($addr_id_csv != "") {
+					$addr_id_csv = substr($addr_id_csv, 0, strlen($addr_id_csv)-1);
+					
+					$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND a.address_id NOT IN (".$addr_id_csv.") ORDER BY option_index ASC;";
+					$rr = $app->run_query($qq);
+					
+					if ($rr->rowCount() > 0) {
+						echo "<br/>\n";
+						while ($address = $rr->fetch()) {
+							?>
+							<div class="row">
+								<div class="col-sm-3">
+									<?php
+									if ($address['option_index'] != "") echo "Voting option #".$address['option_index'];
+									else echo "Default Address";
+									?>
+								</div>
+								<div class="col-sm-4">
+									<input type="text" class="address_cell" onclick="$(this).select();" value="<?php echo $address['address']; ?>" />
+								</div>
+								<div class="col-sm-2">
+									<?php
+									$color_bal = $game->address_balance_at_block($address, $game->blockchain->last_block_id());
+									echo '<a target="_blank" href="/explorer/games/'.$game->db_game['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($color_bal/pow(10,8))." ".$game->db_game['coin_name_plural'].'</a>';
+									?>
+								</div>
+								<div class="col-sm-2">
+									<?php
+									$chain_bal = $game->blockchain->address_balance_at_block($address, $game->blockchain->last_block_id());
+									echo '<a target="_blank" href="/explorer/blockchains/'.$game->blockchain->db_blockchain['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($chain_bal/pow(10,8))." ".$game->blockchain->db_blockchain['coin_name_plural'].'</a>';
+									?>
+								</div>
+							</div>
+							<?php
+						}
 					}
 				}
 				?>

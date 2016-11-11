@@ -8,7 +8,9 @@ if ($thisuser) {
 	
 	if (in_array($action, array('manage', 'generate', 'send'))) {
 		$game_id = intval($_REQUEST['game_id']);
-		$game = new Game($app, $game_id);
+		$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
+		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+		$game = new Game($blockchain, $game_id);
 		
 		if ($game) {
 			$perm_to_invite = $thisuser->user_can_invite_game($game->db_game);

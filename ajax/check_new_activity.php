@@ -20,7 +20,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	
 	if ($thisuser) {
 		$thisuser->set_user_active();
-		$user_game = $thisuser->ensure_user_in_game($game->db_game['game_id']);
+		$user_game = $thisuser->ensure_user_in_game($game);
 	}
 	
 	$last_block_id = $game->blockchain->last_block_id();

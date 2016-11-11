@@ -28,7 +28,7 @@ if ($thisuser) {
 				if ($fee_amount > 0 && $buyin_amount > 0 && $color_amount > 0) {
 					$address_text = $_REQUEST['address'];
 					
-					$user_game = $thisuser->ensure_user_in_game($game->db_game['game_id']);
+					$user_game = $thisuser->ensure_user_in_game($game);
 					$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false);
 					
 					if ($address_text == "new") {

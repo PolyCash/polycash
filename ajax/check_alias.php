@@ -9,7 +9,7 @@ if ($thisuser) {
 else {
 	$alias = $app->normalize_username($_REQUEST['alias']);
 	
-	if (strlen($alias) >= 6) {
+	if (strlen($alias) >= 4) {
 		$q = "SELECT * FROM users WHERE username=".$app->quote_escape($alias).";";
 		$r = $app->run_query($q);
 		

@@ -67,7 +67,7 @@ else {
 					$primary_game = new Game($app, $db_primary_game['game_id']);
 					
 					if ($primary_game->db_game['giveaway_status'] == "public_free") {
-						$user_game = $thisuser->ensure_user_in_game($primary_game->db_game['game_id']);
+						$user_game = $thisuser->ensure_user_in_game($primary_game);
 						$giveaway = $primary_game->new_game_giveaway($user_id, 'initial_purchase', false);
 					}
 				}

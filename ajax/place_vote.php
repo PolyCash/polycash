@@ -12,7 +12,7 @@ $noinfo_fail_obj = (object) [
 
 if ($thisuser && $game) {
 	$user_strategy = false;
-	$user_game = $thisuser->ensure_user_in_game($game->db_game['game_id']);
+	$user_game = $thisuser->ensure_user_in_game($game);
 	$success = $game->get_user_strategy($thisuser->db_user['user_id'], $user_strategy);
 	
 	if (!$success) {

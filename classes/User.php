@@ -221,16 +221,12 @@ class User {
 		else return false;
 	}
 
-	public function ensure_user_in_game($game_id) {
-		$db_game = $this->app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
-		$blockchain = new Blockchain($this->app, $db_game['blockchain_id']);
-		$game = new Game($blockchain, $game_id);
-
-		$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$this->db_user['user_id']."' AND ug.game_id='".$game_id."';";
+	public function ensure_user_in_game(&$game) {
+		$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$this->db_user['user_id']."' AND ug.game_id='".$game->db_game['game_id']."';";
 		$r = $this->app->run_query($q);
 		
 		if ($r->rowCount() == 0) {
-			$q = "INSERT INTO user_games SET user_id='".$this->db_user['user_id']."', game_id='".$game_id."'";
+			$q = "INSERT INTO user_games SET user_id='".$this->db_user['user_id']."', game_id='".$game->db_game['game_id']."'";
 			if (!empty($this->db_user['payout_address_id'])) $q .= ", payout_address_id='".$this->db_user['payout_address_id']."'";
 			if ($game->db_game['giveaway_status'] == "public_pay" || $game->db_game['giveaway_status'] == "invite_pay") $q .= ", payment_required=1";
 			if (strpos($this->db_user['notification_email'], '@')) $q .= ", notification_preference='email'";
@@ -263,7 +259,7 @@ class User {
 		
 		if ($user_game['strategy_id'] > 0) {}
 		else {
-			$q = "INSERT INTO user_strategies SET voting_strategy='manual', game_id='".$game_id."', user_id='".$user_game['user_id']."';";
+			$q = "INSERT INTO user_strategies SET voting_strategy='manual', game_id='".$game->db_game['game_id']."', user_id='".$user_game['user_id']."';";
 			$r = $this->app->run_query($q);
 			$strategy_id = $this->app->last_insert_id();
 			
