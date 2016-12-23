@@ -707,11 +707,6 @@ class Event {
 		}
 		else $log_text .= "No winner<br/>";
 		
-		//if ($this->game->db_game['losable_bets_enabled'] == 1) {
-		//	$betbase_response = $this->new_betbase_transaction($round_id, $last_block_id+1, $winning_option);
-		//	$log_text .= $betbase_response[1];
-		//}
-		
 		$q = "INSERT INTO event_outcomes SET event_id='".$this->db_event['event_id']."', round_id='".$round_id."', payout_block_id='".$last_block_id."'";
 		if ($winning_option) $q .= ", winning_option_id='".$winning_option."', derived_winning_option_id='".$winning_option."'";
 		$q .= ", winning_votes='".$winning_votes."', derived_winning_votes='".$winning_votes."', sum_votes='".$sum_votes."', time_created='".time()."';";

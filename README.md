@@ -80,3 +80,7 @@ If the home page doesn't load, it's possible that mod_rewrite needs to be enable
 
 LoadModule rewrite_module modules/mod_rewrite.so
 ```
+Or run this command:
+```
+a2enmod rewrite
+```
