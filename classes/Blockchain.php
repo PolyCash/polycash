@@ -51,6 +51,17 @@ class Blockchain {
 		else return false;
 	}
 	
+	public function private_add_block(&$game, $block_hash, $block_height) {
+		$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_id='".$block_height."', block_hash=".$this->app->quote_escape($block_hash).", locally_saved=1, time_created='".time()."';";
+		$r = $this->app->run_query($q);
+		$internal_block_id = $this->app->last_insert_id();
+
+		$coin_rpc = false;
+		$this->coind_add_block($coin_rpc, $block_hash, $block_height, false);
+		
+		$game->add_block($block_height);
+	}
+	
 	public function coind_add_block(&$coin_rpc, $block_hash, $block_height, $headers_only) {
 		$start_time = microtime(true);
 		$html = "";
@@ -62,7 +73,7 @@ class Blockchain {
 			$db_block = $r->fetch();
 		}
 		else {
-			$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_id='".$block_height."', time_created='".time()."', locally_saved=0";
+			$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_hash=".$this->app->quote_escape($block_hash).", block_id='".$block_height."', time_created='".time()."', locally_saved=0";
 			//$q .= ", effectiveness_factor='".$this->block_id_to_effectiveness_factor($block_height)."'";
 			$q .= ";";
 			$this->app->run_query($q);
@@ -76,7 +87,7 @@ class Blockchain {
 			$html .= $block_height." ";
 		}
 		
-		if ($db_block['locally_saved'] == 0 && !$headers_only) {
+		if ($coin_rpc && $db_block['locally_saved'] == 0 && !$headers_only) {
 			try {
 				$lastblock_rpc = $coin_rpc->getblock($block_hash);
 			}
@@ -108,18 +119,22 @@ class Blockchain {
 			}
 			$this->app->run_query("UPDATE blocks SET load_time=load_time+".(microtime(true)-$start_time)." WHERE internal_block_id='".$db_block['internal_block_id']."';");
 			
-			$q = "SELECT * FROM games WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND game_starting_block<='".$block_height."' AND game_status='published';";
-			$r = $this->app->run_query($q);
-			
-			if ($r->rowCount() > 0) {
-				$db_start_game = $r->fetch();
-				$start_game = new Game($this, $db_start_game['game_id']);
-				$start_game->start_game();
-			}
+			$this->try_start_games($block_height);
 			echo "Took ".(microtime(true)-$start_time)." sec to add block #".$block_height."<br/>\n";
 		}
 		
 		return $html;
+	}
+	
+	public function try_start_games($block_height) {
+		$q = "SELECT * FROM games WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND game_starting_block<='".$block_height."' AND game_status='published';";
+		$r = $this->app->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			$db_start_game = $r->fetch();
+			$start_game = new Game($this, $db_start_game['game_id']);
+			$start_game->start_game();
+		}
 	}
 	
 	public function add_transaction(&$coin_rpc, $tx_hash, $block_height, $require_inputs, &$successful, $position_in_block, $only_vout, $show_debug) {
@@ -384,8 +399,8 @@ class Blockchain {
 	}
 	
 	public function sync_coind(&$coin_rpc) {
-		$html = "";
-		echo "Running Blockchain->sync_coind() for ".$this->db_blockchain['blockchain_name']."\n";
+		$html = "Running Blockchain->sync_coind() for ".$this->db_blockchain['blockchain_name']."\n";
+		
 		$last_block_id = $this->last_block_id();
 		
 		$startblock_q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id='".$last_block_id."';";
@@ -397,7 +412,7 @@ class Blockchain {
 				$startblock_r = $this->app->run_query($startblock_q);
 			}
 			else {
-				die("sync_coind failed, block $last_block_id is missing.\n");
+				$this->app->log_then_die("sync_coind failed, block $last_block_id is missing.\n");
 			}
 		}
 		
@@ -410,22 +425,22 @@ class Blockchain {
 				$last_block = $this->app->run_query("SELECT * FROM blocks WHERE internal_block_id='".$last_block['internal_block_id']."';")->fetch();
 			}
 			
-			echo "Resolving potential fork on block #".$last_block['block_id']."<br/>\n";
+			$html .= "Resolving potential fork on block #".$last_block['block_id']."<br/>\n";
 			$this->resolve_potential_fork_on_block($coin_rpc, $last_block);
 			
-			echo "Loading new blocks...\n";
+			$html .= "Loading new blocks...\n";
 			$this->load_new_blocks($coin_rpc);
 			
-			echo "Loading game blocks...\n";
+			$html .= "Loading game blocks...\n";
 			$this->load_all_blocks($coin_rpc, TRUE);
 			
-			echo "Loading unconfirmed transactions...\n";
+			$html .= "Loading unconfirmed transactions...\n";
 			$this->load_unconfirmed_transactions($coin_rpc, 30);
 			
 			//echo "Updating option votes...\n";
 			//$this->update_option_votes();
 			
-			echo "Done syncing!\n";
+			$html .= "Done syncing!\n";
 		}
 		
 		return $html;
@@ -597,34 +612,89 @@ class Blockchain {
 		$this->app->run_query("DELETE eo.* FROM event_outcomes eo JOIN events e ON eo.event_id=e.event_id JOIN games g ON eo.game_id=g.game_id WHERE g.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND eo.payout_block_id >= ".$block_height.";");
 	}
 	
-	public function add_genesis_block(&$coin_rpc) {
+	public function add_genesis_block(&$input) {
 		$html = "";
-		$genesis_hash = $coin_rpc->getblockhash(0);
-		$html .= "genesis hash: ".$genesis_hash."<br/>\n";
-		$rpc_block = new block($coin_rpc->getblock($genesis_hash), 0, $genesis_hash);
-		$tx_hash = $rpc_block->json_obj['tx'][0];
-		$genesis_transactions = new transaction($tx_hash, "", false, 0);
 		
-		$output_address = $this->create_or_fetch_address("genesis_address", true, false, false, false, false);
+		if ($this->db_blockchain['p2p_mode'] == "none") {
+			$game = &$input;
+			$genesis_block_hash = $this->app->random_string(64);
+			$nextblock_hash = "";
+			$genesis_tx_hash = $this->app->random_string(64);
+		}
+		else {
+			$coin_rpc = &$input;
+			$genesis_block_hash = $coin_rpc->getblockhash(0);
+			$rpc_block = new block($coin_rpc->getblock($genesis_hash), 0, $genesis_hash);
+			$genesis_tx_hash = $rpc_block->json_obj['tx'][0];
+			
+			$nextblock_hash = $rpc_block->json_obj['nextblockhash'];
+		}
 		
-		$this->app->run_query("DELETE t.*, io.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.tx_hash='".$tx_hash."' AND t.blockchain_id='".$this->db_blockchain['blockchain_id']."';");
+		$this->app->run_query("DELETE t.*, io.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.tx_hash='".$genesis_tx_hash."' AND t.blockchain_id='".$this->db_blockchain['blockchain_id']."';");
 		
-		$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', amount='".$this->db_blockchain['initial_pow_reward']."', transaction_desc='coinbase', tx_hash='".$tx_hash."', block_id='0', time_created='".time()."', has_all_inputs=1, has_all_outputs=1;";
+		if ($game) $genesis_address = $this->app->random_string(34);
+		else $genesis_address = 'genesis_address';
+		
+		$output_address = $this->create_or_fetch_address($genesis_address, true, false, false, false, false);
+		$html .= "genesis hash: ".$genesis_block_hash."<br/>\n";
+		
+		$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', amount='".$this->db_blockchain['initial_pow_reward']."', transaction_desc='coinbase', tx_hash='".$genesis_tx_hash."', block_id='0', time_created='".time()."', num_inputs=0, num_outputs=1, has_all_inputs=1, has_all_outputs=1;";
 		$this->app->run_query($q);
 		$transaction_id = $this->app->last_insert_id();
 		
 		$q = "INSERT INTO transaction_ios SET spend_status='unspent', blockchain_id='".$this->db_blockchain['blockchain_id']."', user_id=NULL, address_id='".$output_address['address_id']."'";
 		$q .= ", create_transaction_id='".$transaction_id."', amount='".$this->db_blockchain['initial_pow_reward']."', create_block_id='0';";
 		$r = $this->app->run_query($q);
+		$genesis_io_id = $this->app->last_insert_id();
 		
-		$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_hash='".$genesis_hash."', block_id='0', time_created='".time()."', locally_saved=1;";
+		$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_hash='".$genesis_block_hash."', block_id='0', time_created='".time()."', locally_saved=1;";
 		$r = $this->app->run_query($q);
 		
 		$html .= "Added the genesis transaction!<br/>\n";
+		$this->app->log($html);
+		
+		if ($this->db_blockchain['p2p_mode'] == "none" && $game->db_game['creator_id'] > 0) {
+			$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$game->user_game['account_id']."' ORDER BY RAND() LIMIT 1;";
+			$r = $this->app->run_query($q);
+			
+			if ($r->rowCount() > 0) {
+				$db_user_address = $r->fetch();
+				
+				$game_genesis_tx_hash = $game->genesis_hash;
+				
+				$successful = false;
+				
+				$escrow_address = $this->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false);
+				
+				$escrow_amount = round(0.2*$this->db_blockchain['initial_pow_reward']);
+				$color_amount = $this->db_blockchain['initial_pow_reward'] - $escrow_amount;
+				
+				$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', amount='".$this->db_blockchain['initial_pow_reward']."', num_inputs=1, num_outputs=2, transaction_desc='transaction', tx_hash='".$game_genesis_tx_hash."', block_id='0', time_created='".time()."', has_all_inputs=1, has_all_outputs=1;";
+				$this->app->run_query($q);
+				$transaction2_id = $this->app->last_insert_id();
+				
+				$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->db_blockchain['blockchain_id']."', address_id='".$escrow_address['address_id']."', spend_status='unspent', out_index=0, create_transaction_id='".$transaction2_id."', amount=".$escrow_amount.", create_block_id=0";
+				if (!empty($escrow_address['user_id'])) $q .= ", user_id='".$escrow_address['user_id']."'";
+				if (!empty($escrow_address['option_index'])) $q .= ", option_index='".$escrow_address['option_index']."'";
+				$q .= ";";
+				$r = $this->app->run_query($q);
+				$escrow_io_id = $this->app->last_insert_id();
+				
+				$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->db_blockchain['blockchain_id']."', address_id='".$db_user_address['address_id']."', spend_status='unspent', out_index=1, create_transaction_id='".$transaction2_id."', amount=".$color_amount.", create_block_id=0";
+				if (!empty($db_user_address['user_id'])) $q .= ", user_id='".$db_user_address['user_id']."'";
+				if (!empty($db_user_address['option_index'])) $q .= ", option_index='".$db_user_address['option_index']."'";
+				$q .= ";";
+				$r = $this->app->run_query($q);
+				$color_io_id = $this->app->last_insert_id();
+				
+				$q = "UPDATE transaction_ios SET spend_status='spent', spend_transaction_id='".$transaction2_id."', spend_count=spend_count+1, spend_transaction_ids=CONCAT(spend_transaction_ids, CONCAT('".$transaction2_id."', ',')) WHERE io_id='".$genesis_io_id."';";
+				$r = $this->app->run_query($q);
+			}
+		}
 		
 		$returnvals['log_text'] = $html;
 		$returnvals['genesis_hash'] = $genesis_hash;
-		$returnvals['nextblockhash'] = $rpc_block->json_obj['nextblockhash'];
+		$returnvals['nextblockhash'] = $nextblock_hash;
 		return $returnvals;
 	}
 	
@@ -735,7 +805,7 @@ class Blockchain {
 		$html = "";
 		$html .= '<div class="row bordered_row"><div class="col-md-12">';
 		
-		if (!empty($transaction['block_id'])) {
+		if ($transaction['block_id'] !== "") {
 			if ($transaction['position_in_block'] == "") $html .= "Confirmed";
 			else $html .= "#".(int)$transaction['position_in_block'];
 			$html .= " in block <a href=\"/explorer/blockchains/".$this->db_blockchain['url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>, ";
@@ -748,7 +818,7 @@ class Blockchain {
 			$html .= ", ".$fee_disp;
 			$html .= " tx fee";
 		}
-		if (empty($transaction['block_id'])) $html .= ", not yet confirmed";
+		if ($transaction['block_id'] === "") $html .= ", not yet confirmed";
 		$html .= '. <br/><a href="/explorer/blockchains/'.$this->db_blockchain['url_identifier'].'/transactions/'.$transaction['tx_hash'].'" class="display_address" style="max-width: 100%; overflow: hidden;">TX:&nbsp;'.$transaction['tx_hash'].'</a>';
 		
 		$html .= '</div><div class="col-md-6">';
@@ -854,10 +924,10 @@ class Blockchain {
 	
 	public function address_balance_at_block($db_address, $block_id) {
 		if ($block_id) {
-			$q = "SELECT SUM(amount) FROM transaction_ios WHERE address_id='".$db_address['address_id']."' AND create_block_id <= ".$block_id." AND ((spend_block_id IS NULL AND spend_status='unspent') OR spend_block_id>".$block_id.");";
+			$q = "SELECT SUM(amount) FROM transaction_ios WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND address_id='".$db_address['address_id']."' AND create_block_id <= ".$block_id." AND ((spend_block_id IS NULL AND spend_status='unspent') OR spend_block_id>".$block_id.");";
 		}
 		else {
-			$q = "SELECT SUM(amount) FROM transaction_ios WHERE address_id='".$db_address['address_id']."' AND spend_block_id IS NULL AND spend_status='unspent';";
+			$q = "SELECT SUM(amount) FROM transaction_ios WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND address_id='".$db_address['address_id']."' AND spend_block_id IS NULL AND spend_status='unspent';";
 		}
 		$r = $this->app->run_query($q);
 		$balance = $r->fetch();
@@ -942,6 +1012,12 @@ class Blockchain {
 		$sum = $sum[0];
 		if ($sum > 0) return $sum;
 		else return 0;
+	}
+	
+	public function set_blockchain_creator(&$user) {
+		$q = "UPDATE blockchains SET creator_id='".$user->db_user['user_id']."' WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';";
+		$r = $this->app->run_query($q);
+		$this->db_blockchain['creator_id'] = $user->db_user['user_id'];
 	}
 }
 ?>

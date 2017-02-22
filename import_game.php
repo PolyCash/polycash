@@ -16,6 +16,18 @@ include('includes/html_start.php');
 			$error_message = "";
 			
 			if ($game_def->blockchain_identifier != "") {
+				if ($game_def->blockchain_identifier == "private") {
+					$chain_id = $app->random_string(6);
+					$url_identifier = "private-chain-".$chain_id;
+					$chain_pow_reward = 25*pow(10,8);
+					$q = "INSERT INTO blockchains SET online=1, p2p_mode='none', blockchain_name='Private Chain', url_identifier='".$url_identifier."', coin_name='chaincoin', coin_name_plural='chaincoins', seconds_per_block=30, first_required_block=1, initial_pow_reward=".$chain_pow_reward.";";
+					$r = $app->run_query($q);
+					$blockchain_id = $app->last_insert_id();
+					$new_blockchain = new Blockchain($app, $blockchain_id);
+					if ($thisuser) $new_blockchain->set_blockchain_creator($thisuser);
+					$game_def->blockchain_identifier = $url_identifier;
+				}
+				
 				$q = "SELECT * FROM blockchains WHERE url_identifier=".$app->quote_escape($game_def->blockchain_identifier).";";
 				$r = $app->run_query($q);
 				
@@ -32,7 +44,9 @@ include('includes/html_start.php');
 						if ($r->rowCount() == 0) {
 							$verbatim_vars = $app->game_definition_verbatim_vars();
 							
-							$q = "INSERT INTO games SET blockchain_id='".$db_blockchain['blockchain_id']."', game_status='published', featured=1, seconds_per_block='".$db_blockchain['seconds_per_block']."', start_condition='fixed_block', giveaway_status='public_free', invite_currency='".$blockchain->currency_id()."', logo_image_id=34";
+							$q = "INSERT INTO games SET ";
+							if ($thisuser) $q .= "creator_id='".$thisuser->db_user['user_id']."', ";
+							$q .= "blockchain_id='".$db_blockchain['blockchain_id']."', game_status='published', featured=1, seconds_per_block='".$db_blockchain['seconds_per_block']."', start_condition='fixed_block', giveaway_status='public_free', invite_currency='".$blockchain->currency_id()."', logo_image_id=34";
 							for ($i=0; $i<count($verbatim_vars); $i++) {
 								$var_type = $verbatim_vars[$i][0];
 								$var_name = $verbatim_vars[$i][1];
@@ -43,6 +57,28 @@ include('includes/html_start.php');
 							$new_game_id = $app->last_insert_id();
 							
 							$new_game = new Game($blockchain, $new_game_id);
+							
+							if ($new_game->db_game['p2p_mode'] == "none") {
+								if ($thisuser) $user_game = $thisuser->ensure_user_in_game($new_game);
+								
+								if (empty($new_game->db_game['genesis_tx_hash'])) {
+									$game_genesis_tx_hash = $app->random_string(64);
+									
+									$q = "UPDATE games SET genesis_tx_hash=".$app->quote_escape($game_genesis_tx_hash)." WHERE game_id='".$new_game->db_game['game_id']."';";
+									$r = $app->run_query($q);
+									$new_game->db_game['genesis_tx_hash'] = $game_genesis_tx_hash;
+								}
+								else $game_genesis_tx_hash = $new_game->db_game['genesis_tx_hash'];
+								
+								$new_game->genesis_hash = $game_genesis_tx_hash;
+								if ($thisuser) $new_game->user_game = $user_game;
+								
+								$blockchain->add_genesis_block($new_game);
+								
+								$block_hash = $app->random_string(64);
+								$blockchain->private_add_block($new_game, $block_hash, 1);
+							}
+							
 							echo "Your game definition was successfully imported!<br/>\n";
 							echo "Please be patient as it may take several minutes for this game to sync.<br/>\n";
 							echo "Next please <a href=\"/".$new_game->db_game['url_identifier']."/\">click here</a> to join the game.<br/>\n";

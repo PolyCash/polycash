@@ -3,6 +3,7 @@ class Game {
 	public $db_game;
 	public $blockchain;
 	public $current_events;
+	public $genesis_hash;
 	
 	public function __construct(&$blockchain, $game_id) {
 		$this->blockchain = $blockchain;
@@ -64,8 +65,8 @@ class Game {
 		if ($amount_ok && (count($option_ids) == count($amounts) || ($option_ids === false && count($amounts) == count($address_ids)))) {
 			// For rpc games, don't insert a tx record, it will come in via walletnotify
 			if ($this->blockchain->db_blockchain['p2p_mode'] != "rpc") {
-				$q = "INSERT INTO transactions SET game_id='".$this->db_game['game_id']."', fee_amount='".$transaction_fee."', has_all_inputs=1, has_all_outputs=1";
-				if ($this->blockchain->db_blockchain['p2p_mode'] == "none") $q .= ", tx_hash='".$this->blockchain->app->random_string(64)."'";
+				$q = "INSERT INTO transactions SET fee_amount='".$transaction_fee."', has_all_inputs=1, has_all_outputs=1";
+				$q .= ", tx_hash='".$this->blockchain->app->random_string(64)."'";
 				$q .= ", transaction_desc='".$type."', amount=".$amount;
 				if ($block_id !== false) $q .= ", block_id='".$block_id."', round_id='".$this->block_to_round($block_id)."'";
 				$q .= ", time_created='".time()."';";
@@ -143,19 +144,8 @@ class Game {
 							$q .= "', out_index='".$out_index."', ";
 							if (!empty($address['user_id'])) $q .= "user_id='".$address['user_id']."', ";
 							$q .= "address_id='".$address_id."', ";
-							if ($address['option_index'] != "") {
-								$option_id = $this->option_index_to_current_option_id($address['option_index']);
-								if ($option_id) {
-									$db_option = $this->blockchain->app->run_query("SELECT * FROM options WHERE option_id='".$option_id."';")->fetch();
-									$q .= "option_index='".$address['option_index']."', option_id='".$option_id."', event_id='".$db_option['event_id']."', ";
-									if ($block_id !== false) {
-										$event = new Event($this, false, $db_option['event_id']);
-										$effectiveness_factor = $event->block_id_to_effectiveness_factor($block_id);
-									}
-								}
-								else $effectiveness_factor = 0;
-							}
-							else $effectiveness_factor = 0;
+							$q .= "option_index='".$address['option_index']."', ";
+							
 							if ($block_id !== false) {
 								if ($input_sum == 0) $output_cbd = 0;
 								else $output_cbd = floor($coin_blocks_destroyed*($amounts[$out_index]/$input_sum));
@@ -177,11 +167,10 @@ class Game {
 								
 								$q .= "votes='".$votes."', ";
 							}
-							$q .= "instantly_mature='".$instantly_mature."', game_id='".$this->db_game['game_id']."', ";
 							if ($block_id !== false) {
 								$q .= "create_block_id='".$block_id."', create_round_id='".$this->block_to_round($block_id)."', ";
 							}
-							$q .= "create_transaction_id='".$transaction_id."', colored_amount='".$amounts[$out_index]."', amount='".$amounts[$out_index]."';";
+							$q .= "create_transaction_id='".$transaction_id."', amount='".$amounts[$out_index]."';";
 							
 							$r = $this->blockchain->app->run_query($q);
 							$created_input_ids[count($created_input_ids)] = $this->blockchain->app->last_insert_id();
@@ -1036,7 +1025,7 @@ class Game {
 	}
 	
 	public function process_buyin_transaction($transaction) {
-		if (!empty($this->db_game['game_starting_block']) && !empty($this->db_game['escrow_address']) && $transaction['block_id'] >= $this->db_game['game_starting_block']) {
+		if (!empty($this->db_game['game_starting_block']) && !empty($this->db_game['escrow_address']) && ($this->blockchain->db_blockchain['p2p_mode'] == "none" || $transaction['block_id'] >= $this->db_game['game_starting_block'])) {
 			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
 			
 			$qq = "SELECT * FROM transaction_ios WHERE create_transaction_id='".$transaction['transaction_id']."' AND address_id='".$escrow_address['address_id']."';";
@@ -1051,7 +1040,9 @@ class Game {
 				$rr = $this->blockchain->app->run_query($qq);
 				$non_escrowed_coins = (int) $rr->fetch()['SUM(amount)'];
 				
-				if ($transaction['tx_hash'] == $this->db_game['genesis_tx_hash']) $colored_coins_generated = $this->db_game['genesis_amount'];
+				if ($transaction['tx_hash'] == $this->db_game['genesis_tx_hash']) {
+					$colored_coins_generated = $this->db_game['genesis_amount'];
+				}
 				else {
 					$escrow_value = $this->escrow_value($transaction['block_id']-1);
 					$coins_in_existence = $this->coins_in_existence($transaction['block_id']-1);

@@ -386,6 +386,18 @@ class User {
 					$qq = "UPDATE address_keys SET account_id='".$user_game['account_id']."' WHERE address_id='".$address['address_id']."';";
 					$rr = $this->app->run_query($qq);
 				}
+				else if ($game->blockchain->db_blockchain['p2p_mode'] == "none") {
+					$vote_identifier = $this->app->option_index_to_vote_identifier($option_index);
+					$addr_text = "11".$identifier;
+					$addr_text .= $this->app->random_string(34-strlen($addr_text));
+					
+					$qq = "INSERT INTO addresses SET is_mine=1, user_id='".$this->db_user['user_id']."', primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."', option_index='".$option_index."', vote_identifier=".$this->app->quote_escape($vote_identifier).", address=".$this->app->quote_escape($addr_text).", time_created='".time()."';";
+					$rr = $this->app->run_query($qq);
+					$address_id = $this->app->last_insert_id();
+					
+					$qq = "INSERT INTO address_keys SET address_id='".$address_id."', account_id='".$user_game['account_id']."', save_method='fake', pub_key='".$addr_text."';";
+					$rr = $this->app->run_query($qq);
+				}
 			}
 		}
 		

@@ -162,7 +162,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				
 				<h2>Configure coin daemon connections</h2>
 				<?php
-				$blockchain_r = $app->run_query("SELECT * FROM blockchains ORDER BY blockchain_name ASC;");
+				$blockchain_r = $app->run_query("SELECT * FROM blockchains WHERE p2p_mode='rpc' ORDER BY blockchain_name ASC;");
 				while ($blockchain = $blockchain_r->fetch()) {
 					if ($blockchain['rpc_username'] != "" && $blockchain['rpc_password'] != "") {
 						echo "<b>Connecting RPC client to ".$blockchain['blockchain_name']."...";

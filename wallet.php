@@ -43,6 +43,12 @@ if ($thisuser) {
 	if ($r->rowCount() > 0) {
 		$requested_game = $r->fetch();
 		
+		$is_creator = false;
+		if ($requested_game['creator_id'] == $thisuser->db_user['user_id']) $is_creator = true;
+		
+		$allow_public = false;
+		if ($requested_game['giveaway_status'] == "public_free" || $requested_game['giveaway_status'] == "public_pay") $allow_public = true;
+		
 		$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND g.game_id='".$requested_game['game_id']."';";
 		$r = $app->run_query($q);
 		
@@ -51,9 +57,9 @@ if ($thisuser) {
 			$blockchain = new Blockchain($app, $requested_game['blockchain_id']);
 			$game = new Game($blockchain, $user_game['game_id']);
 		}
-		else if ($requested_game['giveaway_status'] == "public_free" || $requested_game['giveaway_status'] == "public_pay") {
+		else if ($is_creator || $allow_public) {
 			$blockchain = new Blockchain($app, $requested_game['blockchain_id']);
-			$game = new Game($blockchain, $user_game['game_id']);
+			$game = new Game($blockchain, $requested_game['game_id']);
 			$user_game = $thisuser->ensure_user_in_game($game);
 		}
 		
