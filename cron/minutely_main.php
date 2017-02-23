@@ -132,15 +132,16 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 								$benchmark_time = microtime(true);
 								echo "Add blocks...";
 								if ($running_games[$running_game_i]->db_game['game_status'] == "running") {
-									$last_block_id = $running_games[$running_game_i]->last_block_id();
-								
+									$last_block_id = $running_games[$running_game_i]->blockchain->last_block_id();
+									
 									$block_prob = min(1, $remaining_prob);
 									$remaining_prob = $remaining_prob-$block_prob;
 									$rand_num = rand(0, pow(10,4))/pow(10,4);
 									if (!empty($_REQUEST['force_new_block'])) $rand_num = 0;
-								
+									
 									echo $running_games[$running_game_i]->db_game['name']." (".$rand_num." vs ".$block_prob."): ";
 									if ($rand_num <= $block_prob) {
+										echo "FOUND A BLOCK!!\n";
 										echo $running_games[$running_game_i]->new_block();
 									}
 									else {

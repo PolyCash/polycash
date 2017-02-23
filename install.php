@@ -11,7 +11,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			while ($dbname = $r->fetch()) {
 				if ($dbname['Database'] == $GLOBALS['mysql_database']) $db_exists = true;
 			}
-
+			
 			if (!$db_exists) {
 				$r = $app->run_query("CREATE DATABASE ".$GLOBALS['mysql_database']);
 				$app->set_db($GLOBALS['mysql_database']);

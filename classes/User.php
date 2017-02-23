@@ -14,7 +14,7 @@ class User {
 	}
 	
 	public function account_coin_value(&$game, &$user_game) {
-		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND io.spend_status='unspent' AND k.account_id='".$user_game['account_id']."';";
+		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND (io.spend_status='unspent' || io.spend_status='unconfirmed') AND k.account_id='".$user_game['account_id']."';";
 		$r = $this->app->run_query($q);
 		$coins = $r->fetch(PDO::FETCH_NUM);
 		$coins = $coins[0];
@@ -85,7 +85,7 @@ class User {
 				if ($game->db_game['payout_weight'] == "coin") $win_text = "You correctly voted ".$this->app->format_bignum($my_votes[$event_outcome['winning_option_id']]['coins']/pow(10,8))." coins.";
 				else $win_text = "You correctly cast ".$this->app->format_bignum($my_votes[$event_outcome['winning_option_id']][$game->db_game['payout_weight'].'s']/pow(10,8))." votes.";
 			}
-			else if ($coins_voted > 0) $win_text = "You didn't vote for the winning ".$game->db_game['option_name'].".";
+			else if ($coins_voted > 0) $win_text = "You didn't vote for the winning ".$event->db_event['option_name'].".";
 			else $win_text = "You didn't cast any votes.";
 			
 			$html .= '<div class="col-sm-3">';
@@ -388,7 +388,7 @@ class User {
 				}
 				else if ($game->blockchain->db_blockchain['p2p_mode'] == "none") {
 					$vote_identifier = $this->app->option_index_to_vote_identifier($option_index);
-					$addr_text = "11".$identifier;
+					$addr_text = "11".$vote_identifier;
 					$addr_text .= $this->app->random_string(34-strlen($addr_text));
 					
 					$qq = "INSERT INTO addresses SET is_mine=1, user_id='".$this->db_user['user_id']."', primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."', option_index='".$option_index."', vote_identifier=".$this->app->quote_escape($vote_identifier).", address=".$this->app->quote_escape($addr_text).", time_created='".time()."';";
