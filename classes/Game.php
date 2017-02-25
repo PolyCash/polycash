@@ -66,7 +66,7 @@ class Game {
 			// For rpc games, don't insert a tx record, it will come in via walletnotify
 			if ($this->blockchain->db_blockchain['p2p_mode'] != "rpc") {
 				$new_tx_hash = $this->blockchain->app->random_string(64);
-				$q = "INSERT INTO transactions SET blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."', fee_amount='".$transaction_fee."', has_all_inputs=1, has_all_outputs=1";
+				$q = "INSERT INTO transactions SET blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."', fee_amount='".$transaction_fee."', has_all_inputs=1, has_all_outputs=1, num_inputs='".count($io_ids)."', num_outputs='".count($amounts)."'";
 				$q .= ", tx_hash='".$new_tx_hash."'";
 				$q .= ", transaction_desc='".$type."', amount=".$amount;
 				if ($block_id !== false) $q .= ", block_id='".$block_id."', round_id='".$this->block_to_round($block_id)."'";
@@ -312,7 +312,7 @@ class Game {
 	}
 	
 	public function new_block() {
-		// This public function only runs for games with p2p_mode='none'
+		// This function only runs for games with p2p_mode='none'
 		$log_text = "";
 		$last_block_id = $this->blockchain->last_block_id();
 		
@@ -349,7 +349,6 @@ class Game {
 				
 				while ($input_utxo = $rr->fetch()) {
 					$coin_blocks_created = ($created_block_id - $input_utxo['create_block_id'])*$input_utxo['amount'];
-					//$rrr = $this->blockchain->app->run_query($qqq);
 					$total_coin_blocks_created += $coin_blocks_created;
 				}
 				
@@ -380,12 +379,6 @@ class Game {
 		$mined_address = $this->blockchain->create_or_fetch_address($mined_address_str, false, false, false, false, true);
 		
 		$mined_transaction_id = $this->blockchain->create_transaction('coinbase', array($this->blockchain->db_blockchain['initial_pow_reward']), $created_block_id, false, array($mined_address['address_id']), 0);
-		
-		// Run payouts
-		//if ($created_block_id%$this->db_game['round_length'] == 0) {
-		//	$log_text .= "<br/>Running payout on voting round #".$justmined_round.", it's now round ".($justmined_round+1)."<br/>\n";
-		//	$log_text .= $this->add_round_from_db($justmined_round, $last_block_id, true);
-		//}
 		
 		$this->add_block($created_block_id);
 		
@@ -624,25 +617,8 @@ class Game {
 									else $by_entity_pct_points = $strategy_entity_points[$entity['entity_id']];
 									$entity_pct_sum += $by_entity_pct_points;
 								}
-								
-								/*if ($sum_votes > 0) {
-									$pct_of_votes = 100*$ranked_stats[$option_id2rank[$voting_option['option_id']]]['votes']/$sum_votes;
-									if ($pct_of_votes >= $db_user['min_votesum_pct'] && $pct_of_votes <= $db_user['max_votesum_pct']) {}
-									else {
-										$skipped_options[$voting_option['option_id']] = TRUE;
-										if ($db_user == "by_option") $skipped_pct_points += $by_option_pct_points;
-										else if (in_array($option_id2rank[$voting_option['option_id']], $by_rank_ranks)) $num_options_skipped++;
-									}
-								}*/
 							}
-
-							/*$round_stats = $this->round_voting_stats_all($current_round_id);
-							$sum_votes = $round_stats[0];
-							$ranked_stats = $round_stats[2];
-							$option_id2rank = $round_stats[3];
 							
-							if ($db_user['voting_strategy'] == "by_rank") $by_rank_ranks = explode(",", $db_user['by_rank_ranks']);
-							*/
 							if ($db_user['voting_strategy'] == "by_rank") {
 								/*$divide_into = count($by_rank_ranks)-$num_options_skipped;
 								
@@ -1680,7 +1656,6 @@ class Game {
 		$js .= '
 		$(document).ready(function() {
 			render_tx_fee();
-			//load_plan_option_games();
 			notification_pref_changed();
 			alias_pref_changed();
 			reload_compose_vote();

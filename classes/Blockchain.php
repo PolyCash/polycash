@@ -1089,8 +1089,11 @@ class Blockchain {
 		$created_input_ids = array();
 		
 		if (($type == "coinbase" || $utxo_balance == $amount) && count($amounts) == count($address_ids)) {
+			$num_inputs = 0;
+			if ($io_ids) $num_inputs = count($io_ids);
 			$new_tx_hash = $this->app->random_string(64);
-			$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', fee_amount='".$transaction_fee."', has_all_inputs=1, has_all_outputs=1";
+			
+			$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', fee_amount='".$transaction_fee."', has_all_inputs=1, has_all_outputs=1, num_inputs='".$num_inputs."', num_outputs='".count($amounts)."'";
 			$q .= ", tx_hash='".$new_tx_hash."'";
 			$q .= ", transaction_desc='".$type."', amount=".$amount;
 			if ($block_id !== false) $q .= ", block_id='".$block_id."'";
