@@ -80,6 +80,34 @@ include('includes/html_start.php');
 									$blockchain->private_add_block($new_game, $block_hash, 1);
 								}
 								
+								if ($new_game->db_game['event_rule'] == "game_definition") {
+									$game_defined_events = $game_def->events;
+									$game_event_params = $app->event_verbatim_vars();
+									
+									for ($i=0; $i<count($game_defined_events); $i++) {
+										$q = "INSERT INTO game_defined_events SET game_id='".$new_game->db_game['game_id']."', event_index='".$i."'";
+										for ($j=0; $j<count($game_event_params); $j++) {
+											$var_type = $game_event_params[$j][0];
+											$var_val = $game_defined_events[$i]->$game_event_params[$j][1];
+											
+											if (!empty($var_val)) {
+												$q .= ", ".$game_event_params[$j][1]."=".$app->quote_escape($var_val);
+											}
+										}
+										$q .= ";";
+										$r = $app->run_query($q);
+										
+										$possible_outcomes = $game_defined_events[$i]->possible_outcomes;
+										
+										for ($k=0; $k<count($game_defined_events[$i]->possible_outcomes); $k++) {
+											$q = "INSERT INTO game_defined_options SET game_id='".$new_game->db_game['game_id']."', event_index='".$i."', option_index='".$k."', name=".$app->quote_escape($possible_outcomes[$k]->title).";";
+											$r = $app->run_query($q);
+										}
+									}
+								}
+								
+								$new_game->check_set_game_definition();
+								
 								echo "Your game definition was successfully imported!<br/>\n";
 								echo "Please be patient as it may take several minutes for this game to sync.<br/>\n";
 								echo "Next please <a href=\"/".$new_game->db_game['url_identifier']."/\">click here</a> to join the game.<br/>\n";

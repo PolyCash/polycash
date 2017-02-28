@@ -1045,11 +1045,16 @@ function set_plan_rightclicks() {
 function save_plan_allocations() {
 	var postvars = {game_id: games[0].game_id, action: "save", voting_strategy_id: parseInt($('#voting_strategy_id').val()), from_round: parseInt($('#from_round').val()), to_round: parseInt($('#to_round').val())};
 	
-	for (var i=games[0].all_events_start_index; i<=games[0].all_events_stop_index; i++) {
-		for (var o=0; o<games[0].all_events[i].options.length; o++) {
-			var points = games[0].all_events[i].options[o].points;
-			if (points > 0) {
-				postvars['poi_'+games[0].all_events[i].options[o].option_id] = points;
+	console.log(games[0].all_events_start_index);
+	console.log(games[0].all_events_stop_index);
+	
+	if (games[0].all_events_start_index !== false && games[0].all_events_stop_index !== false) {
+		for (var i=games[0].all_events_start_index; i<=games[0].all_events_stop_index; i++) {
+			for (var o=0; o<games[0].all_events[i].options.length; o++) {
+				var points = games[0].all_events[i].options[o].points;
+				if (points > 0) {
+					postvars['poi_'+games[0].all_events[i].options[o].option_id] = points;
+				}
 			}
 		}
 	}

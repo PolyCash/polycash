@@ -523,7 +523,7 @@ class App {
 		return $html;*/
 	}
 
-	public function vote_option_details($option, $rank, $confirmed_votes, $unconfirmed_votes, $sum_votes, $losing_streak) {
+	public function vote_option_details($option, $rank, $confirmed_votes, $unconfirmed_votes, $sum_votes) {
 		$html = '
 		<div class="row">
 			<div class="col-xs-4">Current&nbsp;rank:</div>
@@ -537,15 +537,6 @@ class App {
 			<div class="col-xs-4">Unconfirmed Votes:</div>
 			<div class="col-xs-8">'.$this->format_bignum($unconfirmed_votes/pow(10,8)).' votes ('.(empty($sum_votes)? 0 : (ceil(100*100*$unconfirmed_votes/$sum_votes)/100)).'%)</div>
 		</div>';
-		/*<div class="row">
-			<div class="col-xs-4">Last&nbsp;win:</div>
-			<div class="col-xs-8">';
-		if ($losing_streak === 0) $html .= "Last&nbsp;round";
-		else if ($losing_streak) $html .= $losing_streak.'&nbsp;rounds&nbsp;ago';
-		else $html .= "Never";
-		$html .= '
-			</div>
-		</div>';*/
 		return $html;
 	}
 	
@@ -980,7 +971,8 @@ class App {
 	
 	public function fetch_game_definition(&$game) {
 		$game_definition = array();
-		$game_definition['blockchain_identifier'] = $game->blockchain->db_blockchain['url_identifier'];
+		if ($game->blockchain->db_blockchain['p2p_mode'] == "none") $game_definition['blockchain_identifier'] = "private";
+		else $game_definition['blockchain_identifier'] = $game->blockchain->db_blockchain['url_identifier'];
 		
 		$verbatim_vars = $this->game_definition_verbatim_vars();
 		
@@ -989,7 +981,7 @@ class App {
 			$var_name = $verbatim_vars[$i][1];
 			
 			if ($var_type == "int") {
-				if ($game->db_game[$var_name] == "0" || $game->db_game[$var_name] > 0) $var_val = (int) $game->db_game[$var_name];
+				if ($game->db_game[$var_name] == "0" || $game->db_game[$var_name] > 0) $var_val = round($game->db_game[$var_name]);
 				else $var_val = null;
 			}
 			else if ($var_type == "float") $var_val = (float) $game->db_game[$var_name];
@@ -998,6 +990,37 @@ class App {
 			$game_definition[$var_name] = $var_val;
 		}
 		
+		if ($game->db_game['event_rule'] == "game_definition") {
+			$event_verbatim_vars = $this->event_verbatim_vars();
+			$events_obj = array();
+			
+			$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' ORDER BY event_index ASC;";
+			$r = $this->run_query($q);
+			
+			$i=0;
+			while ($game_defined_event = $r->fetch()) {
+				$temp_event = array();
+				
+				for ($j=0; $j<count($event_verbatim_vars); $j++) {
+					$var_type = $event_verbatim_vars[$j][0];
+					$var_name = $event_verbatim_vars[$j][1];
+					$var_val = $game_defined_event[$var_name];
+					if ($var_type == "int" && $var_val != "") $var_val = (int) $var_val;
+					$temp_event[$var_name] = $var_val;
+				}
+				
+				$qq = "SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$i."' ORDER BY option_index ASC;";
+				$rr = $this->run_query($qq);
+				$j = 0;
+				while ($game_defined_option = $rr->fetch()) {
+					$temp_event['possible_outcomes'][$j] = array("title"=>$game_defined_option['name']);
+					$j++;
+				}
+				$events_obj[$i] = $temp_event;
+				$i++;
+			}
+			$game_definition['events'] = $events_obj;
+		}
 		return $game_definition;
 	}
 	
@@ -1258,6 +1281,18 @@ class App {
 		return $r->fetch();
 	}
 	
+	public function event_verbatim_vars() {
+		return array(
+			array('int', 'event_starting_block'),
+			array('int', 'event_final_block'),
+			array('int', 'event_payout_block'),
+			array('string', 'event_name'),
+			array('string', 'option_name'),
+			array('string', 'option_name_plural'),
+			array('int', 'outcome_index')
+		);
+	}
+	
 	public function game_definition_verbatim_vars() {
 		return array(
 			array('float', 'protocol_version'),
@@ -1291,7 +1326,8 @@ class App {
 			array('float', 'game_winning_inflation'),
 			array('string', 'default_vote_effectiveness_function'),
 			array('float', 'default_max_voting_fraction'),
-			array('int', 'default_option_max_width')
+			array('int', 'default_option_max_width'),
+			array('int', 'default_payout_block_delay')
 		);
 	}
 }

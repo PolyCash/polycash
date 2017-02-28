@@ -1498,10 +1498,10 @@ class Game {
 	}
 	
 	public function add_round_from_db($round_id, $last_block_id, $add_payout_transaction) {
-		$log_text = "";
-		for ($i=0; $i<count($this->current_events); $i++) {
-			$log_text .= $this->current_events[$i]->set_outcome_from_db($round_id, $last_block_id, $add_payout_transaction);
-		}
+		$log_text = "function disabled";
+		/*for ($i=0; $i<count($this->current_events); $i++) {
+			$log_text .= $this->current_events[$i]->set_outcome_from_db($last_block_id, $add_payout_transaction);
+		}*/
 		return $log_text;
 	}
 	
@@ -1563,6 +1563,7 @@ class Game {
 		$mining_block_id = $this->blockchain->last_block_id()+1;
 		$q = "SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities en ON et.entity_id=en.entity_id WHERE ev.game_id='".$this->db_game['game_id']."' AND ev.event_starting_block<=".$mining_block_id." AND ev.event_final_block>=".$mining_block_id." ORDER BY ev.event_id ASC;";
 		$r = $this->blockchain->app->run_query($q);
+		
 		while ($db_event = $r->fetch()) {
 			$this->current_events[count($this->current_events)] = new Event($this, $db_event, false);
 		}
@@ -1571,6 +1572,16 @@ class Game {
 	public function events_by_block($block_id) {
 		$events = array();
 		$q = "SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities en ON et.entity_id=en.entity_id WHERE ev.game_id='".$this->db_game['game_id']."' AND ev.event_starting_block<=".$block_id." AND ev.event_final_block>=".$block_id." ORDER BY ev.event_id ASC;";
+		$r = $this->blockchain->app->run_query($q);
+		while ($db_event = $r->fetch()) {
+			$events[count($events)] = new Event($this, $db_event, false);
+		}
+		return $events;
+	}
+	
+	public function events_by_payout_block($block_id) {
+		$events = array();
+		$q = "SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities en ON et.entity_id=en.entity_id WHERE ev.game_id='".$this->db_game['game_id']."' AND ev.event_payout_block=".$block_id." ORDER BY ev.event_index ASC;";
 		$r = $this->blockchain->app->run_query($q);
 		while ($db_event = $r->fetch()) {
 			$events[count($events)] = new Event($this, $db_event, false);
@@ -1747,6 +1758,10 @@ class Game {
 		$r = $this->blockchain->app->run_query($q);
 		$i=0;
 		while ($db_event = $r->fetch()) {
+			$js .= "if (typeof games[".$game_index."].all_events[".$db_event['event_index']."] == 'undefined') {";
+			$js .= "games[".$game_index."].all_events[".$db_event['event_index']."] = new Event(games[".$game_index."], ".$db_event['event_index'].", ".$db_event['event_id'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'");';
+			$js .= "}\n";
+			
 			$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY option_id ASC;";
 			$option_r = $this->blockchain->app->run_query($option_q);
 			$j=0;
@@ -1758,6 +1773,13 @@ class Game {
 					$points = $sra['points'];
 				}
 				else $points = 0;
+				
+				$has_votingaddr = "false";
+				
+				$js .= "if (typeof games[".$game_index."].all_events[".$db_event['event_index']."].options[".$j."] == 'undefined') {";
+				$js .= "games[".$game_index."].all_events[".$db_event['event_index']."].options[".$j."] = new option(games[".$game_index."].all_events[".$db_event['event_index']."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", '".$option['name']."', 0, $has_votingaddr);\n";
+				$js .= "games[".$game_index."].all_events_db_id_to_index[".$db_event['event_id']."] = ".$db_event['event_index'].";\n";
+				$js .= "}\n";
 				
 				$js .= "games[".$game_index."].all_events[".$db_event['event_index']."].options[".$j."].points = ".$points.";\n";
 				$j++;
@@ -1860,7 +1882,61 @@ class Game {
 		$ensured_round = $this->block_to_round((int)$this->db_game['events_until_block']);
 		
 		if ($round_id > $ensured_round) {
-			if ($this->db_game['event_rule'] == "entity_type_option_group" || $this->db_game['event_rule'] == "single_event_series" || $this->db_game['event_rule'] == "all_pairs") {
+			if ($this->db_game['event_rule'] == "game_definition") {
+				$q = "SELECT * FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."' AND event_starting_block <= ".$block_id." ORDER BY event_index ASC;";
+				$r = $this->blockchain->app->run_query($q);
+				
+				while ($game_defined_event = $r->fetch()) {
+					$qq = "SELECT *  FROM events WHERE game_id='".$this->db_game['game_id']."' AND event_index='".$game_defined_event['event_index']."';";
+					$rr = $this->blockchain->app->run_query($qq);
+					
+					if ($rr->rowCount() == 0) {
+						$events = $this->events_by_block($game_defined_event['event_starting_block']);
+						$option_offset = 0;
+						for ($i=0; $i<count($events); $i++) {
+							if ($events[$i]->db_event['event_index'] < $game_defined_event['event_index']) {
+								$qqq = "SELECT COUNT(*) FROM options WHERE event_id='".$events[$i]->db_event['event_id']."';";
+								$rrr = $this->blockchain->app->run_query($qqq);
+								$rrr = $rrr->fetch();
+								$offset_amount = $rrr['COUNT(*)'];
+								$option_offset += $offset_amount;
+							}
+						}
+						
+						$gdo_q = "SELECT * FROM game_defined_options WHERE game_id='".$this->db_game['game_id']."' AND event_index='".$game_defined_event['event_index']."' ORDER BY option_index ASC;";
+						$gdo_r = $this->blockchain->app->run_query($gdo_q);
+						
+						$etype_url_id = $this->blockchain->app->normalize_username($game_defined_event['event_name']);
+						
+						$qq = "SELECT * FROM event_types WHERE game_id='".$this->db_game['game_id']."' AND url_identifier=".$this->blockchain->app->quote_escape($etype_url_id).";";
+						$rr = $this->blockchain->app->run_query($qq);
+						
+						if ($rr->rowCount() == 0) {
+							$qq = "INSERT INTO event_types SET url_identifier=".$this->blockchain->app->quote_escape($etype_url_id).", name=".$this->blockchain->app->quote_escape($game_defined_event['event_name']).", event_winning_rule='game_definition', vote_effectiveness_function='".$this->db_game['default_vote_effectiveness_function']."', max_voting_fraction=".$this->db_game['default_max_voting_fraction'].", num_voting_options='".$gdo_r->rowCount()."', default_option_max_width=".$this->db_game['default_option_max_width'].";";
+							$rr = $this->blockchain->app->run_query($qq);
+							$event_type_id = $this->blockchain->app->last_insert_id();
+							
+							$qq = "SELECT * FROM event_types WHERE event_type_id='".$event_type_id."';";
+							$rr = $this->blockchain->app->run_query($qq);
+							$event_type = $rr->fetch();
+						}
+						else $event_type = $rr->fetch();
+						
+						$qq = "INSERT INTO events SET game_id='".$this->db_game['game_id']."', event_type_id='".$event_type['event_type_id']."', event_index='".$game_defined_event['event_index']."', event_starting_block='".$game_defined_event['event_starting_block']."', event_final_block='".$game_defined_event['event_final_block']."', event_payout_block='".$game_defined_event['event_payout_block']."', event_name=".$this->blockchain->app->quote_escape($game_defined_event['event_name']).", option_name=".$this->blockchain->app->quote_escape($game_defined_event['option_name']).", option_name_plural=".$this->blockchain->app->quote_escape($game_defined_event['option_name_plural']).", option_max_width=".$event_type['default_option_max_width'].";";
+						$rr = $this->blockchain->app->run_query($qq);
+						$event_id = $this->blockchain->app->last_insert_id();
+						
+						$option_i = 0;
+						while ($game_defined_option = $gdo_r->fetch()) {
+							$vote_identifier = $this->blockchain->app->option_index_to_vote_identifier($option_i + $option_offset);
+							$qqq = "INSERT INTO options SET event_id='".$event_id."', name=".$this->blockchain->app->quote_escape($game_defined_option['name']).", vote_identifier=".$this->blockchain->app->quote_escape($vote_identifier).", option_index='".($option_i + $option_offset)."';";
+							$rrr = $this->blockchain->app->run_query($qqq);
+							$option_i++;
+						}
+					}
+				}
+			}
+			else if ($this->db_game['event_rule'] == "entity_type_option_group" || $this->db_game['event_rule'] == "single_event_series" || $this->db_game['event_rule'] == "all_pairs") {
 				if ($this->db_game['event_rule'] == "entity_type_option_group") {
 					$q = "SELECT * FROM entity_types WHERE entity_type_id='".$this->db_game['event_entity_type_id']."';";
 					$r = $this->blockchain->app->run_query($q);
@@ -1983,7 +2059,7 @@ class Game {
 			$event_type = $rr->fetch();
 		}
 		else {
-			$qq = "INSERT INTO event_types SET game_id='".$this->db_game['game_id']."', option_group_id='".$this->db_game['option_group_id']."'";
+			$qq = "INSERT INTO event_types SET game_id='".$this->db_game['game_id']."', event_winning_rule='max_below_cap', option_group_id='".$this->db_game['option_group_id']."'";
 			if ($head_to_head) $qq .= ", primary_entity_id='".$db_option_entities[0]['entity_id']."', secondary_entity_id='".$db_option_entities[1]['entity_id']."'";
 			if ($event_entity) $qq .= ", entity_id='".$event_entity['entity_id']."'";
 			$qq .= ", name='".$event_type_name."', url_identifier=".$this->blockchain->app->quote_escape($event_type_identifier).", num_voting_options='".count($db_option_entities)."', vote_effectiveness_function='".$this->db_game['default_vote_effectiveness_function']."', max_voting_fraction='".$this->db_game['default_max_voting_fraction']."';";
@@ -2008,7 +2084,7 @@ class Game {
 		$rr = $this->blockchain->app->run_query($qq);
 		
 		if ($rr->rowCount() == 0) {
-			$qq = "INSERT INTO events SET game_id='".$this->db_game['game_id']."', event_index='".$event_i."', event_type_id='".$event_type['event_type_id']."', event_starting_block='".$event_starting_block."', event_final_block='".$event_final_block."', event_name=".$this->blockchain->app->quote_escape($event_name).", option_name=".$this->blockchain->app->quote_escape($option_group['option_name']).", option_name_plural=".$this->blockchain->app->quote_escape($option_group['option_name_plural']).", option_max_width='".$this->db_game['default_option_max_width']."';";
+			$qq = "INSERT INTO events SET game_id='".$this->db_game['game_id']."', event_index='".$event_i."', event_type_id='".$event_type['event_type_id']."', event_starting_block='".$event_starting_block."', event_final_block='".$event_final_block."', event_payout_block='".($this->db_game['default_payout_block_delay']+$event_final_block)."', event_name=".$this->blockchain->app->quote_escape($event_name).", option_name=".$this->blockchain->app->quote_escape($option_group['option_name']).", option_name_plural=".$this->blockchain->app->quote_escape($option_group['option_name_plural']).", option_max_width='".$this->db_game['default_option_max_width']."';";
 			$rr = $this->blockchain->app->run_query($qq);
 			$event_id = $this->blockchain->app->last_insert_id();
 			
@@ -2188,12 +2264,18 @@ class Game {
 			$q = "UPDATE game_blocks SET locally_saved=1 WHERE game_block_id='".$game_block['game_block_id']."';";
 			$r = $this->blockchain->app->run_query($q);
 			
-			if ($block_height%$this->db_game['round_length'] == 0) {
-				echo "Check outcomes for ".count($this->events_by_block($block_height))." events.\n";
-				$events = $this->events_by_block($block_height);
-				for ($i=0; $i<count($events); $i++) {
-					$events[$i]->set_outcome_from_db($this->block_to_round($block_height), $block_height, true);
+			$events = $this->events_by_block($block_height);
+			
+			for ($i=0; $i<count($events); $i++) {
+				if ($events[$i]->db_event['event_final_block'] == $block_height) {
+					echo $events[$i]->set_outcome_from_db($block_height, false);
 				}
+			}
+			
+			$payout_events = $this->events_by_payout_block($block_height);
+			
+			for ($i=0; $i<count($payout_events); $i++) {
+				$payout_events[$i]->set_outcome_from_db($block_height, true);
 			}
 			
 			$this->ensure_events_until_block($this->blockchain->last_block_id()+1);
@@ -2205,23 +2287,6 @@ class Game {
 		$events = $this->events_by_block($block_id);
 		
 		for ($i=0; $i<count($events); $i++) {
-			$rankings = $events[$i]->round_voting_stats_all($round_id);
-			$sum_votes = $rankings[0];
-			$max_winning_votes = $rankings[1];
-			$option_id_to_rank = $rankings[3];
-			$rankings = $rankings[2];
-			
-			$derived_winning_option_id = FALSE;
-			$derived_winning_votes = 0;
-			for ($rank=0; $rank<$events[$i]->db_event['num_voting_options']; $rank++) {
-				if ($rankings[$rank]['votes'] > $max_winning_votes) {}
-				else if (!$derived_winning_option_id && $rankings[$rank]['votes'] > 0) {
-					$derived_winning_option_id = $rankings[$rank]['option_id'];
-					$derived_winning_votes = $rankings[$rank]['votes'];
-					$rank = $events[$i]->db_event['num_voting_options'];
-				}
-			}
-			
 			$winning_option_id = false;
 			$q = "SELECT * FROM transactions t JOIN transaction_ios i ON i.create_transaction_id=t.transaction_id WHERE t.votebase_event_id='".$events[$i]->db_event['event_id']."' AND t.block_id='".$round_id*$this->db_game['round_length']."' AND t.transaction_desc='votebase' AND i.out_index=1;";
 			$r = $this->blockchain->app->run_query($q);
@@ -2229,6 +2294,14 @@ class Game {
 				$votebase_transaction = $r->fetch();
 				$winning_option_id = $votebase_transaction['option_id'];
 			}
+			
+			$round_voting_stats_all = false;
+			list($derived_winning_option_id, $derived_winning_votes) = $events[$i]->determine_winning_option($round_id, $round_voting_stats_all);
+			
+			$sum_votes = $round_voting_stats_all[0];
+			$max_winning_votes = $round_voting_stats_all[1];
+			$option_id_to_rank = $round_voting_stats_all[3];
+			$rankings = $round_voting_stats_all[2];
 			
 			$q = "SELECT * FROM event_outcomes WHERE event_id='".$events[$i]->db_event['event_id']."' AND round_id='".$round_id."';";
 			$r = $this->blockchain->app->run_query($q);
@@ -2243,10 +2316,11 @@ class Game {
 			$q .= "payout_block_id='".$events[$i]->db_event['event_final_block']."'";
 			
 			if ($derived_winning_option_id) $q .= ", derived_winning_option_id='".$derived_winning_option_id."', derived_winning_votes='".$derived_winning_votes."'";
+			else $q .= ", derived_winning_option_id=NULL, derived_winning_votes=0";
 			
 			if ($winning_option_id) $q .= ", winning_option_id='".$winning_option_id."'";
-			$option_votes = $events[$i]->option_votes_in_round($winning_option_id, $round_id);
-			$q .= ", winning_votes='".$option_votes['sum']."'";
+			else $q .= ", winning_option_id=NULL";
+			$q .= ", winning_votes='".$winning_votes."'";
 			
 			$q .= ", sum_votes='".$sum_votes."', time_created='".time()."'";
 			if ($update_insert == "update") $q .= " WHERE outcome_id='".$existing_round['outcome_id']."'";
@@ -2517,6 +2591,19 @@ class Game {
 	public function display_round_to_round($display_round_id) {
 		$game_starting_round = $this->block_to_round($this->db_game['game_starting_block']);
 		return $game_starting_round+$display_round_id-1;
+	}
+	
+	public function check_set_game_definition() {
+		$game_definition = $this->blockchain->app->fetch_game_definition($this);
+		$definition_hash = $this->blockchain->app->game_definition_hash($this);
+		
+		$q = "SELECT * FROM game_definitions WHERE definition_hash=".$this->blockchain->app->quote_escape($definition_hash).";";
+		$r = $this->blockchain->app->run_query($q);
+		
+		if ($r->rowCount() == 0) {
+			$q = "INSERT INTO game_definitions SET definition_hash=".$this->blockchain->app->quote_escape($definition_hash).", definition=".$this->blockchain->app->quote_escape(json_encode($game_definition, JSON_PRETTY_PRINT)).";";
+			$r = $this->blockchain->app->run_query($q);
+		}
 	}
 }
 ?>

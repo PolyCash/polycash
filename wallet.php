@@ -501,31 +501,33 @@ if ($thisuser && $game) {
 		$to_block_id = ($plan_stop_round-1)*$game->db_game['round_length']+1;
 		
 		$game->ensure_events_until_block($to_block_id);
+		$game->load_current_events();
 		
 		$q = "SELECT * FROM events e JOIN event_types t ON e.event_type_id=t.event_type_id WHERE e.game_id='".$game->db_game['game_id']."' AND e.event_starting_block >= ".$from_block_id." AND e.event_starting_block <= ".$to_block_id." ORDER BY e.event_id ASC;";
 		$r = $app->run_query($q);
-		echo "//joeyqq: $q\n";
 		$initial_load_events = $r->rowCount();
 		$i=0;
-		while ($db_event = $r->fetch()) {
-			if ($i == 0) echo "games[0].all_events_start_index = ".$db_event['event_index'].";\n";
-			else if ($i == $initial_load_events-1) echo "games[0].all_events_stop_index = ".$db_event['event_index'].";\n";
-			
-			echo "games[0].all_events[".$db_event['event_index']."] = new Event(games[0], ".$db_event['event_index'].", ".$db_event['event_id'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'");';
-			echo "games[0].all_events_db_id_to_index[".$db_event['event_id']."] = ".$db_event['event_index'].";\n";
-			
-			$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY option_id ASC;";
-			$option_r = $app->run_query($option_q);
-			$j=0;
-			while ($option = $option_r->fetch()) {
-				$has_votingaddr = "false";
-				$votingaddr_id = $thisuser->user_address_id($game, $option['option_index'], false, $user_game['account_id']);
-				if ($votingaddr_id !== false) $has_votingaddr = "true";
+		if ($initial_load_events > 0) {
+			while ($db_event = $r->fetch()) {
+				if ($i == 0) echo "games[0].all_events_start_index = ".$db_event['event_index'].";\n";
+				else if ($i == $initial_load_events-1) echo "games[0].all_events_stop_index = ".$db_event['event_index'].";\n";
 				
-				echo "games[0].all_events[".$db_event['event_index']."].options.push(new option(games[0].all_events[".$db_event['event_index']."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", '".$option['name']."', 0, $has_votingaddr));\n";
-				$j++;
+				echo "games[0].all_events[".$db_event['event_index']."] = new Event(games[0], ".$db_event['event_index'].", ".$db_event['event_id'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'");';
+				echo "games[0].all_events_db_id_to_index[".$db_event['event_id']."] = ".$db_event['event_index'].";\n";
+				
+				$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY option_id ASC;";
+				$option_r = $app->run_query($option_q);
+				$j=0;
+				while ($option = $option_r->fetch()) {
+					$has_votingaddr = "false";
+					$votingaddr_id = $thisuser->user_address_id($game, $option['option_index'], false, $user_game['account_id']);
+					if ($votingaddr_id !== false) $has_votingaddr = "true";
+					
+					echo "games[0].all_events[".$db_event['event_index']."].options.push(new option(games[0].all_events[".$db_event['event_index']."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", '".$option['name']."', 0, $has_votingaddr));\n";
+					$j++;
+				}
+				$i++;
 			}
-			$i++;
 		}
 		
 		echo $game->load_all_event_points_js(0, $user_strategy, $plan_start_round, $plan_stop_round);

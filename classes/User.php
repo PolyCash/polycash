@@ -52,6 +52,8 @@ class User {
 	public function performance_history($game, $from_round_id, $to_round_id) {
 		$html = "";
 		
+		$last_block_id = $game->blockchain->last_block_id();
+		
 		$q = "SELECT e.event_index, r.*, real_winner.name AS real_winner_name, derived_winner.name AS derived_winner_name FROM event_outcomes r JOIN events e ON r.event_id=e.event_id LEFT JOIN options real_winner ON r.winning_option_id=real_winner.option_id LEFT JOIN options derived_winner ON r.derived_winning_option_id=derived_winner.option_id WHERE e.game_id='".$game->db_game['game_id']."' AND r.round_id >= ".$from_round_id." AND r.round_id <= ".$to_round_id." ORDER BY r.round_id DESC;";
 		$r = $this->app->run_query($q);
 		
@@ -67,13 +69,18 @@ class User {
 			$html .= '<div class="row" style="font-size: 13px;">';
 			$html .= '<div class="col-sm-3">'.$event->db_event['event_name'].'</div>';
 			$html .= '<div class="col-sm-3">';
-			if ($event_outcome['real_winner_name'] != "") {
-				$html .= $event_outcome['real_winner_name']." with ".$this->app->format_bignum($event_outcome['winning_votes']/pow(10,8))." votes";
-				if ($event_outcome['derived_winner_name'] != "" && $event_outcome['derived_winner_name'] != $event_outcome['real_winner_name']) $html .= " (Should have been ".$event_outcome['derived_winner_name']." with ".$this->app->format_bignum($event_outcome['derived_winning_votes']/pow(10,8))." votes)";
+			if ($event->db_event['event_payout_block'] > $last_block_id) {
+				$html .= "Winner not yet determined.";
 			}
 			else {
-				if ($event_outcome['derived_winner_name'] != "") $html .= $event_outcome['derived_winner_name']." won with ".$this->app->format_bignum($event_outcome['derived_winning_votes']/pow(10,8))." votes";
-				else $html .= "No winner";
+				if ($event_outcome['real_winner_name'] != "") {
+					$html .= $event_outcome['real_winner_name']." with ".$this->app->format_bignum($event_outcome['winning_votes']/pow(10,8))." votes";
+					if ($event_outcome['derived_winner_name'] != "" && $event_outcome['derived_winner_name'] != $event_outcome['real_winner_name']) $html .= " (Should have been ".$event_outcome['derived_winner_name']." with ".$this->app->format_bignum($event_outcome['derived_winning_votes']/pow(10,8))." votes)";
+				}
+				else {
+					if ($event_outcome['derived_winner_name'] != "") $html .= $event_outcome['derived_winner_name']." won with ".$this->app->format_bignum($event_outcome['derived_winning_votes']/pow(10,8))." votes";
+					else $html .= "No winner";
+				}
 			}
 			$html .= '</div>';
 			
