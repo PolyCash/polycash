@@ -4,9 +4,7 @@ include("../includes/get_session.php");
 
 if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	$instance_id = (int) $_REQUEST['instance_id'];
-	$game_event_index = (int) $_REQUEST['game_event_index'];
-	$event_loop_index = (int) $_REQUEST['event_loop_index'];
-	$event_id = (int) $_REQUEST['event_id'];
+	$game_loop_index = (int) $_REQUEST['game_loop_index'];
 	$event_ids = $_REQUEST['event_ids'];
 	
 	if (!$game) {
@@ -15,8 +13,6 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$game = new Game($blockchain, $game_id);
 	}
-	
-	$event = new Event($game, false, $event_id);
 	
 	if ($thisuser) {
 		$thisuser->set_user_active();
@@ -43,7 +39,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	}
 	
 	$output = false;
-	$output['event_loop_index'] = $event_loop_index;
+	$output['game_loop_index'] = $game_loop_index;
 	
 	$output['game_status_explanation'] = $game->game_status_explanation($thisuser, $user_game);
 	
@@ -75,26 +71,34 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		}
 		else $output['new_block'] = 0;
 		
-		//if ($_REQUEST['refresh_page'] == "wallet") $show_intro_text = true;
 		$show_intro_text = false;
-		$output['current_round_table'] = $event->current_round_table($current_round, $thisuser, $show_intro_text, true, $instance_id, $game_event_index);
+		for ($game_event_index=0; $game_event_index<count($game->current_events); $game_event_index++) {
+			$output['current_round_table'][$game_event_index] = $game->current_events[$game_event_index]->current_round_table($current_round, $thisuser, $show_intro_text, true, $instance_id, $game_event_index);
+		}
 		
-		if ($thisuser) $output['wallet_text_stats'] = $thisuser->wallet_text_stats($game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance, $user_game);
-		if ($thisuser) $output['my_current_votes'] = $event->my_votes_table($current_round, $user_game);
+		if ($thisuser) {
+			$output['wallet_text_stats'] = $thisuser->wallet_text_stats($game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance, $user_game);
+			for ($game_event_index=0; $game_event_index<count($game->current_events); $game_event_index++) {
+				$output['my_current_votes'][$game_event_index] = $game->current_events[$game_event_index]->my_votes_table($current_round, $user_game);
+			}
+		}
+		
 		$output['account_value'] = $game->account_value_html($account_value);
 		$output['vote_details_general'] = $app->vote_details_general($mature_balance);
 		
-		$round_stats = $event->round_voting_stats_all($current_round);
-		$total_vote_sum = $round_stats[0];
-		$option_id2rank = $round_stats[3];
-		$round_stats = $round_stats[2];
-		
-		$stats_output = false;
-		for ($option_id=0; $option_id<count($round_stats); $option_id++) {
-			$option = $round_stats[$option_id];
-			$stats_output[$option['option_id']] = '<div class=\'modal-dialog\'><div class=\'modal-content\'><div class=\'modal-header\'><h2 class=\'modal-title\'>Vote for '.$option['name'].'</h2></div><div class=\'modal-body\'><div id=\'game'.$instance_id.'_event'.$game_event_index.'_vote_option_details_'.$option['option_id'].'\'></div><div id=\'game'.$instance_id.'_event'.$game_event_index.'_vote_details_'.$option['option_id'].'\'>'.$app->vote_option_details($option, $option_id+1, $option[$game->db_game['payout_weight'].'_score'], $option['unconfirmed_'.$game->db_game['payout_weight'].'_score'], $total_vote_sum).'</div><div class=\'redtext\' id=\'game'.$instance_id.'_event'.$game_event_index.'_vote_error_'.$option['option_id'].'\'></div></div><div class=\'modal-footer\'><button class=\'btn btn-primary\' id=\'game'.$instance_id.'_event'.$game_event_index.'_vote_confirm_btn_'.$option['option_id'].'\' onclick=\'games['.$instance_id.'].add_option_to_vote('.$option['option_id'].', "'.$option['name'].'");\'>Add '.$option['name'].' to my vote</button><button type=\'button\' class=\'btn btn-default\' data-dismiss=\'modal\'>Close</button></div></div></div>';
+		for ($game_event_index=0; $game_event_index<count($game->current_events); $game_event_index++) {
+			$round_stats = $game->current_events[$game_event_index]->round_voting_stats_all($current_round);
+			$total_vote_sum = $round_stats[0];
+			$option_id2rank = $round_stats[3];
+			$round_stats = $round_stats[2];
+			
+			$stats_output = false;
+			for ($option_id=0; $option_id<count($round_stats); $option_id++) {
+				$option = $round_stats[$option_id];
+				$stats_output[$option['option_id']] = '<div class=\'modal-dialog\'><div class=\'modal-content\'><div class=\'modal-header\'><h2 class=\'modal-title\'>Vote for '.$option['name'].'</h2></div><div class=\'modal-body\'><div id=\'game'.$instance_id.'_event'.$game_event_index.'_vote_option_details_'.$option['option_id'].'\'></div><div id=\'game'.$instance_id.'_event'.$game_event_index.'_vote_details_'.$option['option_id'].'\'>'.$app->vote_option_details($option, $option_id+1, $option[$game->db_game['payout_weight'].'_score'], $option['unconfirmed_'.$game->db_game['payout_weight'].'_score'], $total_vote_sum).'</div><div class=\'redtext\' id=\'game'.$instance_id.'_event'.$game_event_index.'_vote_error_'.$option['option_id'].'\'></div></div><div class=\'modal-footer\'><button class=\'btn btn-primary\' id=\'game'.$instance_id.'_event'.$game_event_index.'_vote_confirm_btn_'.$option['option_id'].'\' onclick=\'games['.$instance_id.'].add_option_to_vote('.$option['option_id'].', "'.$option['name'].'");\'>Add '.$option['name'].' to my vote</button><button type=\'button\' class=\'btn btn-default\' data-dismiss=\'modal\'>Close</button></div></div></div>';
+			}
+			$output['vote_option_details'][$game_event_index] = $stats_output;
 		}
-		$output['vote_option_details'] = $stats_output;
 	}
 	
 	if ($output['new_my_transaction'] == 1 || $mature_io_ids_csv != $_REQUEST['mature_io_ids_csv'] || !empty($output['new_block'])) {

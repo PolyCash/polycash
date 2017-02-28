@@ -859,7 +859,6 @@ function confirm_compose_vote() {
 					var result_obj = JSON.parse(result);
 					
 					if (result_obj['status_code'] == 0) {
-						//games[0].refresh_if_needed();
 						$('#compose_vote_success').html(result_obj['message']);
 						$('#compose_vote_success').slideDown('slow');
 						setTimeout("$('#compose_vote_success').slideUp('fast');", 4500);
@@ -1129,10 +1128,6 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 	this.num_voting_options = num_voting_options;
 	this.vote_effectiveness_function = vote_effectiveness_function;
 	
-	this.refresh_in_progress = false;
-	this.last_refresh_time = 0;
-	this.event_loop_index = 1;
-	this.last_event_loop_index_applied = -1;
 	this.selected_option_id = false;
 	this.votingaddr_count = 0;
 	this.deleted = false;
@@ -1167,135 +1162,6 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 			this.details_shown = true;
 		}
 	};
-	this.refresh_if_needed = function() {
-		if (!this.refresh_in_progress) {
-			this.last_refresh_time = new Date().getTime();
-			this.refresh_in_progress = true;
-			
-			var check_activity_url = "/ajax/check_new_activity.php?instance_id="+this.game.instance_id+"&game_event_index="+this.game_event_index+"&game_id="+this.game.game_id+"&event_id="+this.event_id+"&event_ids="+this.game.event_ids+"&refresh_page="+this.game.refresh_page+"&last_block_id="+this.game.last_block_id+"&last_transaction_id="+this.game.last_transaction_id+"&my_last_transaction_id="+this.game.my_last_transaction_id+"&mature_io_ids_csv="+this.game.mature_io_ids_csv+"&event_loop_index="+this.event_loop_index+"&votingaddr_count="+this.votingaddr_count;
-			if (this.game.refresh_page == "wallet") check_activity_url += "&initial_load_round="+performance_history_initial_load_round;
-			
-			var _this = this;
-			$.ajax({
-				url: check_activity_url,
-				success: function(result) {
-					if (_this.deleted == false) {
-						if (_this.game.refresh_page == "wallet" && result == "0") {
-							window.location = '/wallet/'+_this.game.game_url_identifier+'/?do=logout';
-						}
-						else {
-							_this.refresh_in_progress = false;
-							var json_result = $.parseJSON(result);
-							
-							if (json_result['event_loop_index'] > _this.last_event_loop_index_applied) {
-								if (json_result['new_block'] == "1") {
-									_this.game.last_block_id = parseInt(json_result['last_block_id']);
-									
-									if (_this.game.refresh_page == "wallet") {
-										if ((_this.game.last_block_id+1)%_this.game.game_round_length == 0) {
-											$('#'+_this.game.instance_id+'_event'+_this.game_event_index+'_vote_popups').slideUp('medium');
-											$('#'+_this.game.instance_id+'_event'+_this.game_event_index+'_vote_popups_disabled').show();
-										}
-										else {
-											$('#'+_this.game.instance_id+'_event'+_this.game_event_index+'_vote_popups').show('fast');
-											$('#'+_this.game.instance_id+'_event'+_this.game_event_index+'_vote_popups_disabled').hide('fast');
-										}
-										
-										if (parseInt(json_result['new_performance_history']) == 1) {
-											$('#performance_history_new').html(json_result['performance_history']);
-											
-											tab_clicked(3);
-										}
-									}
-								}
-								if (_this.game.refresh_page == "wallet") {
-									$('#game_status_explanation').html(json_result['game_status_explanation']);
-									if (json_result['game_status_explanation'] == '') $('#game_status_explanation').hide();
-									else $('#game_status_explanation').show();
-									
-									if (parseInt(json_result['new_event_ids']) == 1) {
-										$('#game'+_this.game.instance_id+'_new_event_js').append('<script type="text/javascript">'+json_result['new_event_js']+'</script>');
-										_this.game.event_ids = json_result['event_ids'];
-										set_select_add_output();
-									}
-									
-									if (parseInt(json_result['new_mature_ios']) == 1 || parseInt(json_result['new_my_transaction']) == 1 || json_result['new_block'] == 1) {
-										if (typeof json_result['mature_io_ids_csv'] == "undefined") _this.game.mature_io_ids_csv = "";
-										else _this.game.mature_io_ids_csv = json_result['mature_io_ids_csv'];
-										$('#select_input_buttons').html(json_result['select_input_buttons']);
-										reload_compose_vote();
-									}
-									
-									set_input_amount_sums();
-									refresh_mature_io_btns();
-									
-									/*if (parseInt(json_result['new_votingaddresses']) == 1) {
-										_this.option_has_votingaddr = json_result['option_has_votingaddr'];
-										_this.votingaddr_count = parseInt(json_result['votingaddr_count']);
-									}*/
-									
-									if (parseInt(json_result['new_messages']) == 1) {
-										var new_message_user_ids = json_result['new_message_user_ids'].split(",");
-										for (var i=0; i<new_message_user_ids.length; i++) {
-											openChatWindow(new_message_user_ids[i]);
-										}
-									}
-								}
-								if (parseInt(json_result['new_transaction']) == 1) {
-									_this.game.last_transaction_id = parseInt(json_result['last_transaction_id']);
-								}
-								if (typeof json_result['current_round_table'] != "undefined") {
-									$('#game'+_this.game.instance_id+'_event'+_this.game_event_index+'_current_round_table').html(json_result['current_round_table']);
-								}
-								if (parseInt(json_result['new_block']) == 1 || parseInt(json_result['new_transaction']) == 1) {
-									$('#account_value').html(json_result['account_value']);
-									$('#account_value').hide();
-									$('#account_value').fadeIn('medium');
-									
-									if (_this.game.refresh_page == "wallet") var lockedfunds_details_shown = $('#lockedfunds_details').is(":visible");
-									$('#wallet_text_stats').html(json_result['wallet_text_stats']);
-									if (_this.game.refresh_page == "wallet" && lockedfunds_details_shown) $('#lockedfunds_details').show();
-									
-									$('#game'+_this.game.instance_id+'_event'+_this.game_event_index+'_current_round_table').hide();
-									$('#game'+_this.game.instance_id+'_event'+_this.game_event_index+'_current_round_table').show();
-									
-									if (_this.details_shown) {
-										$('#game'+_this.game.instance_id+'_event'+_this.game_event_index+'_details').show();
-									}
-									else {
-										$('#game'+_this.game.instance_id+'_event'+_this.game_event_index+'_details').hide();
-									}
-									
-									$('#wallet_text_stats').hide();
-									$('#wallet_text_stats').fadeIn('fast');
-									
-									var vote_option_details = json_result['vote_option_details'];
-									
-									if (typeof json_result['my_current_votes'] != "undefined") {
-										$('#game'+_this.game.instance_id+'_event'+_this.game_event_index+'_my_current_votes').html(json_result['my_current_votes']);
-										$('#game'+_this.game.instance_id+'_event'+_this.game_event_index+'_my_current_votes').hide();
-										$('#game'+_this.game.instance_id+'_event'+_this.game_event_index+'_my_current_votes').fadeIn('fast');
-									}
-									
-									for (var option_i=0; option_i<_this.num_voting_options; option_i++) {
-										var option_id = _this.options[option_i].option_id;
-										$('#game'+_this.game.instance_id+'_event'+_this.game_event_index+'_vote_confirm_'+option_id).html(vote_option_details[option_id]);
-									}
-									
-									refresh_output_amounts();
-								}
-								_this.last_event_loop_index_applied = json_result['event_loop_index'];
-							}
-						}
-					}
-				},
-				error: function(XMLHttpRequest, textStatus, errorThrown) {
-					_this.refresh_in_progress = false;
-					console.log("Game loop web request failed.");
-				}
-			});
-		}
-	};
 	this.option_selected = function(option_id) {
 		if (this.selected_option_id !== false) this.option_deselected(this.selected_option_id);
 		$('#game'+this.game.instance_id+'_event'+this.game_event_index+'_vote_option_'+option_id).addClass('vote_option_box_sel');
@@ -1305,14 +1171,6 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 	this.option_deselected = function(option_id) {
 		$('#game'+this.game.instance_id+'_event'+this.game_event_index+'_vote_option_'+option_id).removeClass('vote_option_box_sel');
 		this.selected_option_id = false;
-	};
-	this.event_loop_event = function() {
-		if (this.deleted == false) {
-			this.refresh_if_needed();
-			this.event_loop_index++;
-			var _this = this;
-			setTimeout(function() {_this.event_loop_event()}, 2000);
-		}
 	};
 };
 
@@ -1346,6 +1204,11 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 	this.my_effective_votes = 0;
 	this.utxo_max_effective_votes = 0;
 	this.utxo_max_height = 150;
+	
+	this.game_loop_index = 1;
+	this.last_game_loop_index_applied = -1;
+	this.refresh_in_progress = false;
+	this.last_refresh_time = 0;
 	
 	this.block_id_to_round_index = function(block_id) {
 		return ((block_id-1) % this.game_round_length)+1;
@@ -1391,6 +1254,143 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 				alert("You can't vote for this candidate yet, you don't have a voting address for it.");
 			}
 		}
+	};
+	this.refresh_if_needed = function() {
+		if (true || !this.refresh_in_progress) {
+			this.last_refresh_time = new Date().getTime();
+			this.refresh_in_progress = true;
+			
+			var check_activity_url = "/ajax/check_new_activity.php?instance_id="+this.instance_id+"&game_id="+this.game_id+"&event_ids="+this.event_ids+"&refresh_page="+this.refresh_page+"&last_block_id="+this.last_block_id+"&last_transaction_id="+this.last_transaction_id+"&my_last_transaction_id="+this.my_last_transaction_id+"&mature_io_ids_csv="+this.mature_io_ids_csv+"&game_loop_index="+this.game_loop_index+"&votingaddr_count="+this.votingaddr_count;
+			if (this.refresh_page == "wallet") check_activity_url += "&initial_load_round="+performance_history_initial_load_round;
+			
+			var _this = this;
+			$.ajax({
+				url: check_activity_url,
+				success: function(result) {
+					if (_this.refresh_page == "wallet" && result == "0") {
+						window.location = '/wallet/'+_this.game_url_identifier+'/?do=logout';
+					}
+					else {
+						_this.refresh_in_progress = false;
+						var json_result = $.parseJSON(result);
+						
+						if (json_result['game_loop_index'] > _this.last_game_loop_index_applied) {
+							if (json_result['new_block'] == "1") {
+								_this.last_block_id = parseInt(json_result['last_block_id']);
+								
+								if (_this.refresh_page == "wallet") {
+									/*if ((_this.last_block_id+1)%_this.game_round_length == 0) {
+										$('#'+_this.instance_id+'_event'+_this.game_event_index+'_vote_popups').slideUp('medium');
+										$('#'+_this.instance_id+'_event'+_this.game_event_index+'_vote_popups_disabled').show();
+									}
+									else {
+										$('#'+_this.instance_id+'_event'+_this.game_event_index+'_vote_popups').show('fast');
+										$('#'+_this.instance_id+'_event'+_this.game_event_index+'_vote_popups_disabled').hide('fast');
+									}*/
+									
+									if (parseInt(json_result['new_performance_history']) == 1) {
+										$('#performance_history_new').html(json_result['performance_history']);
+										
+										tab_clicked(3);
+									}
+								}
+							}
+							if (_this.refresh_page == "wallet") {
+								$('#game_status_explanation').html(json_result['game_status_explanation']);
+								if (json_result['game_status_explanation'] == '') $('#game_status_explanation').hide();
+								else $('#game_status_explanation').show();
+								
+								if (parseInt(json_result['new_event_ids']) == 1) {
+									$('#game'+_this.instance_id+'_new_event_js').append('<script type="text/javascript">'+json_result['new_event_js']+'</script>');
+									_this.event_ids = json_result['event_ids'];
+									set_select_add_output();
+								}
+								
+								if (parseInt(json_result['new_mature_ios']) == 1 || parseInt(json_result['new_my_transaction']) == 1 || json_result['new_block'] == 1) {
+									if (typeof json_result['mature_io_ids_csv'] == "undefined") _this.mature_io_ids_csv = "";
+									else _this.mature_io_ids_csv = json_result['mature_io_ids_csv'];
+									$('#select_input_buttons').html(json_result['select_input_buttons']);
+									reload_compose_vote();
+								}
+								
+								set_input_amount_sums();
+								refresh_mature_io_btns();
+								
+								/*if (parseInt(json_result['new_votingaddresses']) == 1) {
+									_this.option_has_votingaddr = json_result['option_has_votingaddr'];
+									_this.votingaddr_count = parseInt(json_result['votingaddr_count']);
+								}*/
+								
+								if (parseInt(json_result['new_messages']) == 1) {
+									var new_message_user_ids = json_result['new_message_user_ids'].split(",");
+									for (var i=0; i<new_message_user_ids.length; i++) {
+										openChatWindow(new_message_user_ids[i]);
+									}
+								}
+							}
+							if (parseInt(json_result['new_transaction']) == 1) {
+								_this.last_transaction_id = parseInt(json_result['last_transaction_id']);
+							}
+							
+							if (parseInt(json_result['new_block']) == 1 || parseInt(json_result['new_transaction']) == 1) {
+								$('#account_value').html(json_result['account_value']);
+								$('#account_value').hide();
+								$('#account_value').fadeIn('medium');
+								
+								if (_this.refresh_page == "wallet") var lockedfunds_details_shown = $('#lockedfunds_details').is(":visible");
+								$('#wallet_text_stats').html(json_result['wallet_text_stats']);
+								if (_this.refresh_page == "wallet" && lockedfunds_details_shown) $('#lockedfunds_details').show();
+								
+								$('#wallet_text_stats').hide();
+								$('#wallet_text_stats').fadeIn('fast');
+								
+								var vote_option_details = json_result['vote_option_details'];
+								
+								console.log('refreshing '+vote_option_details.length+" events");
+								for (var game_event_index=0; game_event_index<vote_option_details.length; game_event_index++) {
+									$('#game'+_this.instance_id+'_event'+game_event_index+'_current_round_table').html(json_result['current_round_table'][game_event_index]);
+									
+									$('#game'+_this.instance_id+'_event'+game_event_index+'_current_round_table').hide();
+									$('#game'+_this.instance_id+'_event'+game_event_index+'_current_round_table').show();
+									
+									if (_this.events[game_event_index].details_shown) {
+										$('#game'+_this.instance_id+'_event'+game_event_index+'_details').show();
+									}
+									else {
+										$('#game'+_this.instance_id+'_event'+game_event_index+'_details').hide();
+									}
+									
+									if (typeof json_result['my_current_votes'][game_event_index] != "undefined") {
+										$('#game'+_this.instance_id+'_event'+game_event_index+'_my_current_votes').html(json_result['my_current_votes'][game_event_index]);
+										$('#game'+_this.instance_id+'_event'+game_event_index+'_my_current_votes').hide();
+										$('#game'+_this.instance_id+'_event'+game_event_index+'_my_current_votes').fadeIn('fast');
+									}
+									
+									for (var option_i=0; option_i<_this.events[game_event_index].num_voting_options; option_i++) {
+										var option_id = _this.events[game_event_index].options[option_i].option_id;
+										$('#game'+_this.instance_id+'_event'+game_event_index+'_vote_confirm_'+option_id).html(vote_option_details[game_event_index][option_id]);
+									}
+								}
+								
+								refresh_output_amounts();
+							}
+							_this.last_game_loop_index_applied = json_result['game_loop_index'];
+						}
+					}
+				},
+				error: function(XMLHttpRequest, textStatus, errorThrown) {
+					_this.refresh_in_progress = false;
+					console.log("Game loop web request failed.");
+				}
+			});
+		}
+	};
+	this.game_loop_event = function() {
+		this.refresh_if_needed();
+		this.game_loop_index++;
+		console.log(this.game_loop_index);
+		var _this = this;
+		setTimeout(function() {_this.game_loop_event()}, 2000);
 	};
 };
 

@@ -1661,9 +1661,7 @@ class Game {
 			}
 		}
 		$js .= '$("#game'.$game_index.'_events").html(event_html);'."\n";
-		$js .= 'for (var i=0; i<games['.$game_index.'].events.length; i++) {'."\n";
-		$js .= 'games['.$game_index.'].events[i].event_loop_event();'."\n";
-		$js .= "}\n";
+		$js .= 'games['.$game_index.'].game_loop_event();'."\n";
 		$js .= '
 		$(document).ready(function() {
 			render_tx_fee();
