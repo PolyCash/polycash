@@ -166,7 +166,7 @@ class Event {
 				}
 				else if ($winner) {
 					$my_winning_votes = $my_votes[0][$winner['option_id']]["votes"];
-					$win_amount = floor($this->event_pos_reward_in_round($current_round)*$my_winning_votes/$winner['winning_votes'] - $fees_paid)/pow(10,8);
+					$win_amount = floor($this->event_pos_reward_in_round($current_round)*$my_winning_votes/$winning_votes - $fees_paid)/pow(10,8);
 					$html .= "You correctly cast ".$this->game->blockchain->app->format_bignum($my_winning_votes/pow(10,8))." votes";
 					$html .= ' and won <font class="greentext">+'.$this->game->blockchain->app->format_bignum($win_amount)."</font> ".$this->game->db_game['coin_name_plural'].".<br/>\n";
 				}
@@ -743,7 +743,7 @@ class Event {
 			}
 		}
 		
-		$log_text .= $winning_option." !== false && ".$this_block_id." == ".$this->db_event['event_payout_block']." && ".$add_payout_transaction;
+		echo $winning_option." !== false && ".$this_block_id." == ".$this->db_event['event_payout_block']." && $add_payout_transaction<br/>\n";
 		
 		if ($winning_option !== false && $this_block_id == $this->db_event['event_payout_block'] && $add_payout_transaction) {
 			$payout_response = $this->new_payout_transaction($round_id, $this_block_id, $winning_option, $winning_votes);

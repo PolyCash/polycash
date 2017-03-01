@@ -491,6 +491,8 @@ if ($thisuser && $game) {
 			echo ', "wallet", "'.$game->event_ids().'", "'.$game->logo_image_url().'", "'.$game->vote_effectiveness_function().'"';
 		?>));
 		
+		games[0].game_loop_event();
+		
 		<?php
 		$load_event_rounds = 20;
 		

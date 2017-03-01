@@ -86,13 +86,15 @@ include('includes/html_start.php');
 									
 									for ($i=0; $i<count($game_defined_events); $i++) {
 										$q = "INSERT INTO game_defined_events SET game_id='".$new_game->db_game['game_id']."', event_index='".$i."'";
+										
 										for ($j=0; $j<count($game_event_params); $j++) {
 											$var_type = $game_event_params[$j][0];
-											$var_val = $game_defined_events[$i]->$game_event_params[$j][1];
+											$var_val = (string) $game_defined_events[$i]->$game_event_params[$j][1];
 											
-											if (!empty($var_val)) {
-												$q .= ", ".$game_event_params[$j][1]."=".$app->quote_escape($var_val);
-											}
+											if ($var_val === "" || strtolower($var_val) == "null") $escaped_var_val = "NULL";
+											else $escaped_var_val = $app->quote_escape($var_val);
+											
+											$q .= ", ".$game_event_params[$j][1]."=".$escaped_var_val;
 										}
 										$q .= ";";
 										$r = $app->run_query($q);

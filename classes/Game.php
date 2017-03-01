@@ -1661,7 +1661,6 @@ class Game {
 			}
 		}
 		$js .= '$("#game'.$game_index.'_events").html(event_html);'."\n";
-		$js .= 'games['.$game_index.'].game_loop_event();'."\n";
 		$js .= '
 		$(document).ready(function() {
 			render_tx_fee();
@@ -2273,7 +2272,7 @@ class Game {
 			$payout_events = $this->events_by_payout_block($block_height);
 			
 			for ($i=0; $i<count($payout_events); $i++) {
-				$payout_events[$i]->set_outcome_from_db($block_height, true);
+				echo $payout_events[$i]->set_outcome_from_db($block_height, true);
 			}
 			
 			$this->ensure_events_until_block($this->blockchain->last_block_id()+1);
