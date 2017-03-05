@@ -63,7 +63,7 @@ if ($thisuser && $game) {
 						}
 					}
 					else {
-						$q = "SELECT * FROM addresses a LEFT JOIN users u ON a.user_id=u.user_id WHERE a.address=".$app->quote_escape($address_text)." AND a.blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."';";
+						$q = "SELECT * FROM addresses WHERE address=".$app->quote_escape($address_text).";";
 						$r = $app->run_query($q);
 						if ($r->rowCount() == 1) {
 							$db_address = $r->fetch();
@@ -77,7 +77,7 @@ if ($thisuser && $game) {
 						$transaction_id = $game->create_transaction(false, array($io_amount, $remainder_amount), $user_game, false, 'transaction', array($spend_gio['io_id']), array($db_address['address_id'], $remainder_address_id), false, $fee);
 						
 						if ($transaction_id) {
-							$app->output_message(1, 'Great, your coins have been sent! <a target="_blank" href="/explorer/games/'.$game->db_game['url_identifier'].'/transactions/'.$transaction_id.'">View Transaction</a>');
+							$app->output_message(1, 'Great, your coins have been sent! <a target="_blank" href="/explorer/games/'.$game->db_game['url_identifier'].'/transactions/'.$transaction_id.'">View Transaction</a>', false);
 						}
 						else $app->output_message(8, "There was an error creating the transaction", false);
 					}

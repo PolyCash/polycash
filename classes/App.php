@@ -1285,52 +1285,106 @@ class App {
 	
 	public function event_verbatim_vars() {
 		return array(
-			array('int', 'event_starting_block'),
-			array('int', 'event_final_block'),
-			array('int', 'event_payout_block'),
-			array('string', 'event_name'),
-			array('string', 'option_name'),
-			array('string', 'option_name_plural'),
-			array('int', 'outcome_index')
+			array('int', 'event_starting_block', true),
+			array('int', 'event_final_block', true),
+			array('int', 'event_payout_block', true),
+			array('string', 'event_name', false),
+			array('string', 'option_name', false),
+			array('string', 'option_name_plural', false),
+			array('int', 'outcome_index', true)
 		);
 	}
 	
 	public function game_definition_verbatim_vars() {
 		return array(
-			array('float', 'protocol_version'),
-			array('string', 'url_identifier'),
-			array('string', 'name'),
-			array('string', 'event_type_name'),
-			array('string', 'event_rule'),
-			array('int', 'event_entity_type_id'),
-			array('int', 'option_group_id'),
-			array('int', 'events_per_round'),
-			array('string', 'inflation'),
-			array('float', 'exponential_inflation_rate'),
-			array('int', 'pos_reward'),
-			array('int', 'round_length'),
-			array('int', 'maturity'),
-			array('string', 'payout_weight'),
-			array('int', 'final_round'),
-			array('string', 'buyin_policy'),
-			array('float', 'game_buyin_cap'),
-			array('string', 'sellout_policy'),
-			array('int', 'sellout_confirmations'),
-			array('string', 'coin_name'),
-			array('string', 'coin_name_plural'),
-			array('string', 'coin_abbreviation'),
-			array('string', 'escrow_address'),
-			array('string', 'genesis_tx_hash'),
-			array('int', 'genesis_amount'),
-			array('int', 'game_starting_block'),
-			array('string', 'game_winning_rule'),
-			array('string', 'game_winning_field'),
-			array('float', 'game_winning_inflation'),
-			array('string', 'default_vote_effectiveness_function'),
-			array('float', 'default_max_voting_fraction'),
-			array('int', 'default_option_max_width'),
-			array('int', 'default_payout_block_delay')
+			array('float', 'protocol_version', true),
+			array('string', 'url_identifier', false),
+			array('string', 'name', false),
+			array('string', 'event_type_name', false),
+			array('string', 'event_rule', true),
+			array('int', 'event_entity_type_id', true),
+			array('int', 'option_group_id', true),
+			array('int', 'events_per_round', true),
+			array('string', 'inflation', true),
+			array('float', 'exponential_inflation_rate', true),
+			array('int', 'pos_reward', true),
+			array('int', 'round_length', true),
+			array('int', 'maturity', true),
+			array('string', 'payout_weight', true),
+			array('int', 'final_round', true),
+			array('string', 'buyin_policy', true),
+			array('float', 'game_buyin_cap', true),
+			array('string', 'sellout_policy', true),
+			array('int', 'sellout_confirmations', true),
+			array('string', 'coin_name', false),
+			array('string', 'coin_name_plural', false),
+			array('string', 'coin_abbreviation', false),
+			array('string', 'escrow_address', true),
+			array('string', 'genesis_tx_hash', true),
+			array('int', 'genesis_amount', true),
+			array('int', 'game_starting_block', true),
+			array('string', 'game_winning_rule', true),
+			array('string', 'game_winning_field', true),
+			array('float', 'game_winning_inflation', true),
+			array('string', 'default_vote_effectiveness_function', true),
+			array('float', 'default_max_voting_fraction', true),
+			array('int', 'default_option_max_width', false),
+			array('int', 'default_payout_block_delay', true)
 		);
+	}
+	
+	public function migrate_game_definitions($game, $initial_game_def_hash, $new_game_def_hash) {
+		$initial_game_def_r = $this->run_query("SELECT * FROM game_definitions WHERE definition_hash=".$this->quote_escape($initial_game_def_hash).";");
+		
+		if ($initial_game_def_r->rowCount() == 1) {
+			$initial_game_def = $initial_game_def_r->fetch();
+			$initial_game_obj = json_decode($initial_game_def['definition']);
+			
+			$new_game_def_r = $this->run_query("SELECT * FROM game_definitions WHERE definition_hash=".$this->quote_escape($new_game_def_hash).";");
+			
+			if ($new_game_def_r->rowCount() == 1) {
+				$new_game_def = $new_game_def_r->fetch();
+				$new_game_obj = json_decode($new_game_def['definition']);
+				
+				$min_starting_block = min($initial_game_obj->game_starting_block, $new_game_obj->game_starting_block);
+				
+				$verbatim_vars = $this->game_definition_verbatim_vars();
+				$reset_block = false;
+				
+				for ($i=0; $i<count($verbatim_vars); $i++) {
+					$var = $verbatim_vars[$i];
+					if ($var[2] == true) {
+						if ($initial_game_obj->$var[1] != $new_game_obj->$var[1]) {
+							if ($reset_block === false) $reset_block = $min_starting_block;
+							$reset_block = min($reset_block, $min_starting_block);
+							
+							$q = "UPDATE games SET ".$var[2]."=".$this->quote_escape($new_game_obj->$var[1])." WHERE game_id=".$game->db_game['game_id'].";";
+							$r = $app->run_query($q);
+						}
+					}
+				}
+				
+				$event_verbatim_vars = $this->event_verbatim_vars();
+				
+				$matched_events = min(count($initial_game_obj->events), count($new_game_obj->events));
+				
+				for ($i=0; $i<$matched_events; $i++) {
+					if ($new_game_obj->events[$i] != $initial_game_obj->events[$i]) {
+						if ($reset_block === false) $reset_block = $new_game_obj->events[$i]->event_starting_block;
+						$reset_block = min($reset_block, $new_game_obj->events[$i]->event_starting_block, $initial_game_obj->events[$i]->event_starting_block);
+						//if ($new_game_obj[''])
+					}
+				}
+				
+				$game->delete_reset_game('reset');
+				$game->update_db_game();
+				//$game->genesis_hash = $game->db_game['genesis_tx_hash'];
+				//$game->blockchain->add_genesis_block($game);
+				$game->ensure_events_until_block($game->blockchain->last_block_id()+1);
+				$game->load_current_events();
+				$game->sync();
+			}
+		}
 	}
 }
 ?>

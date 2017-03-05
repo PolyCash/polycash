@@ -49,12 +49,12 @@ class User {
 		else return 0;
 	}
 	
-	public function performance_history($game, $from_round_id, $to_round_id) {
+	public function performance_history(&$game, $from_round_id, $to_round_id) {
 		$html = "";
 		
 		$last_block_id = $game->blockchain->last_block_id();
 		
-		$q = "SELECT e.event_index, r.*, real_winner.name AS real_winner_name, derived_winner.name AS derived_winner_name FROM event_outcomes r JOIN events e ON r.event_id=e.event_id LEFT JOIN options real_winner ON r.winning_option_id=real_winner.option_id LEFT JOIN options derived_winner ON r.derived_winning_option_id=derived_winner.option_id WHERE e.game_id='".$game->db_game['game_id']."' AND r.round_id >= ".$from_round_id." AND r.round_id <= ".$to_round_id." ORDER BY r.round_id DESC;";
+		$q = "SELECT e.event_index, r.*, real_winner.name AS real_winner_name, derived_winner.name AS derived_winner_name FROM event_outcomes r JOIN events e ON r.event_id=e.event_id LEFT JOIN options real_winner ON r.winning_option_id=real_winner.option_id LEFT JOIN options derived_winner ON r.derived_winning_option_id=derived_winner.option_id WHERE e.game_id='".$game->db_game['game_id']."' AND r.round_id >= ".$from_round_id." AND r.round_id <= ".$to_round_id." ORDER BY e.event_index DESC;";
 		$r = $this->app->run_query($q);
 		
 		while ($event_outcome = $r->fetch()) {
@@ -70,18 +70,24 @@ class User {
 			$html .= '<div class="col-sm-3">'.$event->db_event['event_name'].'</div>';
 			$html .= '<div class="col-sm-3">';
 			if ($event->db_event['event_payout_block'] > $last_block_id) {
-				$html .= "Winner not yet determined.";
+				if (!empty($event_outcome['winning_option_id'])) {
+					$html .= $event_outcome['real_winner_name'].", Pending. ";
+				}
+				else {
+					$html .= "Winner not yet determined. ";
+				}
 			}
 			else {
 				if ($event_outcome['real_winner_name'] != "") {
-					$html .= $event_outcome['real_winner_name']." with ".$this->app->format_bignum($event_outcome['winning_votes']/pow(10,8))." votes";
-					if ($event_outcome['derived_winner_name'] != "" && $event_outcome['derived_winner_name'] != $event_outcome['real_winner_name']) $html .= " (Should have been ".$event_outcome['derived_winner_name']." with ".$this->app->format_bignum($event_outcome['derived_winning_votes']/pow(10,8))." votes)";
+					$html .= $event_outcome['real_winner_name']." with ".$this->app->format_bignum($event_outcome['winning_votes']/pow(10,8))." votes. ";
 				}
 				else {
-					if ($event_outcome['derived_winner_name'] != "") $html .= $event_outcome['derived_winner_name']." won with ".$this->app->format_bignum($event_outcome['derived_winning_votes']/pow(10,8))." votes";
-					else $html .= "No winner";
+					$html .= "No winner. ";
 				}
 			}
+			
+			$html .= "<br/><a href=\"\" onclick=\"set_event_outcome(".$game->db_game['game_id'].", ".$event->db_event['event_id']."); return false;\">Set outcome</a>";
+			
 			$html .= '</div>';
 			
 			$my_votes_in_round = $event->my_votes_in_round($event_outcome['round_id'], $this->db_user['user_id'], false);
@@ -100,7 +106,7 @@ class User {
 			$html .= ' <a href="/explorer/games/'.$game->db_game['url_identifier'].'/events/'.($event_outcome['event_index']+1).'" target="_blank">Details</a>';
 			$html .= '</div>';
 			
-			if (empty($event_outcome['winning_option_id'])) {
+			if ((string) $event_outcome['winning_option_id'] === "") {
 				$win_amt = 0;
 				$payout_amt = 0;
 			}
@@ -155,7 +161,40 @@ class User {
 	}
 	
 	public function wallet_text_stats(&$game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance, &$user_game) {
-		$html = '<div class="row"><div class="col-sm-2">Available&nbsp;funds:</div>';
+		$html = '<div class="row"><div class="col-sm-2">Pending&nbsp;winnings:</div><div class="col-sm-3 text-right">';
+		$payout_sum = 0;
+		
+		$q = "SELECT * FROM events e JOIN event_outcomes eo ON e.event_id=eo.event_id WHERE e.game_id='".$game->db_game['game_id']."' ORDER BY e.event_index ASC;";
+		$r = $this->app->run_query($q);
+		
+		while ($db_event = $r->fetch()) {
+			$event = new Event($game, false, $db_event['event_id']);
+			$my_votes_in_round = $event->my_votes_in_round($game->block_to_round($db_event['event_final_block']), $this->db_user['user_id'], false);
+			$my_votes_r = $my_votes_in_round[0];
+			$total_votes = $my_votes_in_round[4];
+			
+			if (empty($my_votes_r[$db_event['winning_option_id']])) $payout_est = 0;
+			else {
+				$my_votes = $my_votes_r[$db_event['winning_option_id']]['votes'];
+				
+				$total_votes = $event->option_votes_in_round($db_event['winning_option_id'], $game->block_to_round($db_event['event_final_block']));
+				$total_votes = $total_votes['sum'];
+				
+				if ($total_votes > 0 && $my_votes > 0) {
+					$my_pct = $my_votes/$total_votes;
+					$total_payout = $event->event_pos_reward_in_round($game->block_to_round($db_event['event_starting_block']));
+					$payout_est = $my_pct*$total_payout;
+				}
+				else $payout_est = 0;
+			}
+			
+			$payout_sum += $payout_est;
+		}
+		$html .= $this->app->format_bignum($payout_sum/pow(10,8));
+		
+		$html .= '</div></div>'."\n";
+		
+		$html .= '<div class="row"><div class="col-sm-2">Available&nbsp;funds:</div>';
 		$html .= '<div class="col-sm-3 text-right"><font class="greentext">';
 		$html .= $this->app->format_bignum($mature_balance/pow(10,8));
 		$html .= "</font> ".$game->db_game['coin_name_plural']."</div></div>\n";

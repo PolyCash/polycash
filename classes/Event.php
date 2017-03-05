@@ -678,8 +678,9 @@ class Event {
 			if ($gde_r->rowCount() > 0) {
 				$game_defined_event = $gde_r->fetch();
 				
-				if ($game_defined_event['outcome_index'] != "") {
-					$db_winning_option_r = $this->game->blockchain->app->run_query("SELECT * FROM options WHERE event_id='".$this->db_event['event_id']."' ORDER BY option_index ASC LIMIT 1 OFFSET ".$game_defined_event['outcome_index'].";");
+				if ((string) $game_defined_event['outcome_index'] !== "") {
+					$db_winning_option_q = "SELECT * FROM options WHERE event_id='".$this->db_event['event_id']."' AND option_index=".$game_defined_event['outcome_index'].";";
+					$db_winning_option_r = $this->game->blockchain->app->run_query($db_winning_option_q);
 					
 					if ($db_winning_option_r->rowCount() > 0) {
 						$db_winning_option = $db_winning_option_r->fetch();
@@ -744,8 +745,6 @@ class Event {
 				$rr = $this->game->blockchain->app->run_query($qq);
 			}
 		}
-		
-		echo $winning_option." !== false && ".$this_block_id." == ".$this->db_event['event_payout_block']." && $add_payout_transaction<br/>\n";
 		
 		if ($winning_option !== false && $this_block_id == $this->db_event['event_payout_block'] && $add_payout_transaction) {
 			$payout_response = $this->new_payout_transaction($round_id, $this_block_id, $winning_option, $winning_votes);

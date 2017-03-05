@@ -739,9 +739,6 @@ class Game {
 		$q = "DELETE FROM game_blocks WHERE game_id='".$this->db_game['game_id']."';";
 		$r = $this->blockchain->app->run_query($q);
 		
-		$q = "SELECT * FROM game_blocks WHERE locally_saved=1 AND game_id='".$this->db_game['game_id']."' ORDER BY game_block_id DESC LIMIT 1;";
-		$r = $this->blockchain->app->run_query($q);
-		
 		$q = "DELETE FROM game_sellouts WHERE game_id='".$this->db_game['game_id']."';";
 		$r = $this->blockchain->app->run_query($q);
 		
@@ -1073,7 +1070,10 @@ class Game {
 		
 		$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
 		$escrow_value = $this->escrow_value(false);
-		$innate_currency_value = floor(($account_value/$coins_in_existence)*$escrow_value);
+		if ($coins_in_existence > 0) {
+			$innate_currency_value = floor(($account_value/$coins_in_existence)*$escrow_value);
+		}
+		else $innate_currency_value = 0;
 		
 		if ($innate_currency_value > 0 && $this->db_game['buyin_policy'] != "none") {
 			$html .= "&nbsp;=&nbsp;".$this->blockchain->app->format_bignum($innate_currency_value/pow(10,8))." ".$this->blockchain->db_blockchain['coin_name_plural'];
@@ -2104,7 +2104,7 @@ class Game {
 	}
 	
 	public function sync() {
-		$q = "SELECT * FROM game_blocks WHERE locally_saved=1 AND game_id='".$this->db_game['game_id']."' ORDER BY game_block_id DESC LIMIT 1;";
+		$q = "SELECT * FROM game_blocks WHERE locally_saved=1 AND game_id='".$this->db_game['game_id']."' ORDER BY block_id DESC LIMIT 1;";
 		$r = $this->blockchain->app->run_query($q);
 		
 		if ($r->rowCount() > 0) {
@@ -2116,7 +2116,6 @@ class Game {
 			$load_block_height = $this->db_game['game_starting_block'];
 		}
 		
-		echo "Looping block #".$load_block_height." to ".$this->blockchain->last_block_id()."\n";
 		for ($block_height=$load_block_height; $block_height<=$this->blockchain->last_block_id(); $block_height++) {
 			$this->add_block($block_height);
 		}
@@ -2183,8 +2182,6 @@ class Game {
 				$r = $this->blockchain->app->run_query($q);
 				
 				if ($r->rowCount() > 0) {
-					echo $r->rowCount()." colored coin ios spent in block #".$block_height."\n";
-					
 					while ($db_transaction = $r->fetch()) {
 						$round_spent = $this->block_to_round($block_height);
 						$input_sum = 0;
@@ -2264,18 +2261,18 @@ class Game {
 			$events = $this->events_by_block($block_height);
 			
 			for ($i=0; $i<count($events); $i++) {
-				if ($events[$i]->db_event['event_final_block'] == $block_height) {
-					echo $events[$i]->set_outcome_from_db($block_height, false);
+				if ($block_height == $events[$i]->db_event['event_starting_block'] || $block_height == $events[$i]->db_event['event_final_block']) {
+					$events[$i]->set_outcome_from_db($block_height, false);
 				}
 			}
+			
+			$this->ensure_events_until_block($this->blockchain->last_block_id()+1);
 			
 			$payout_events = $this->events_by_payout_block($block_height);
 			
 			for ($i=0; $i<count($payout_events); $i++) {
-				echo $payout_events[$i]->set_outcome_from_db($block_height, true);
+				$payout_events[$i]->set_outcome_from_db($block_height, true);
 			}
-			
-			$this->ensure_events_until_block($this->blockchain->last_block_id()+1);
 		}
 	}
 	
@@ -2293,7 +2290,7 @@ class Game {
 			}
 			
 			$round_voting_stats_all = false;
-			list($derived_winning_option_id, $derived_winning_votes) = $events[$i]->determine_winning_option($round_id, $round_voting_stats_all);
+			list($derived_winning_option_id, $derived_winning_votes) = $events[$i]->determine_winning_option($this->block_to_round($events[$i]->db_event['event_final_block']), $round_voting_stats_all);
 			
 			$sum_votes = $round_voting_stats_all[0];
 			$max_winning_votes = $round_voting_stats_all[1];

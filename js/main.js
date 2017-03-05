@@ -1474,3 +1474,29 @@ function account_spend_buyin() {
 		});
 	}
 }
+
+var set_event_id = false;
+
+function set_event_outcome(game_id, event_id) {
+	var _event_id = event_id;
+	$.get("/ajax/set_event_outcome.php?action=fetch&event_id="+event_id, function(result) {
+		set_event_id = _event_id;
+		var result_obj = JSON.parse(result);
+		$('#set_event_outcome_modal').modal('show');
+		$('#set_event_outcome_modal_content').html(result_obj['html']);
+		console.log(result_obj);
+	});
+}
+
+function set_event_outcome_selected() {
+	var option_id = parseInt($('#set_event_outcome_option_id').val());
+	$('#set_event_outcome_option_id').attr('disabled', 'disabled');
+	
+	if (option_id > 0) {
+		$.get("/ajax/set_event_outcome.php?action=set&event_id="+set_event_id+"&option_id="+option_id, function(result) {
+			var result_obj = JSON.parse(result);
+			console.log(result_obj);
+			window.location = window.location;
+		});
+	}
+}

@@ -1402,6 +1402,13 @@ if ($thisuser && $game) {
 			</div>
 		</div>
 		
+		<div style="display: none;" class="modal fade" id="set_event_outcome_modal">
+			<div class="modal-dialog">
+				<div class="modal-content" id="set_event_outcome_modal_content">
+				</div>
+			</div>
+		</div>
+		
 		<div style="display: none;" class="modal fade" id="buyin_modal">
 			<div class="modal-dialog">
 				<div class="modal-content" id="buyin_modal_content">
