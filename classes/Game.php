@@ -2602,5 +2602,34 @@ class Game {
 			$r = $this->blockchain->app->run_query($q);
 		}
 	}
+	
+	public function trace_io_to_unspent_io_in_block(&$transaction_io, $block_id) {
+		$current_io = $transaction_io;
+		$keep_looping = true;
+		do {
+			if ($current_io['spend_transaction_id'] > 0) {
+				$db_transaction_r = $this->blockchain->app->run_query("SELECT * FROM transactions WHERE transaction_id='".$current_io['spend_transaction_id']."';");
+				if ($db_transaction_r->rowCount() > 0) {
+					$db_transaction = $db_transaction_r->fetch();
+					
+					if (!empty($db_transaction['block_id']) && $db_transaction['block_id'] <= $block_id) {
+						$next_io_q = "SELECT * FROM transaction_ios WHERE create_transaction_id='".$db_transaction['transaction_id']."' AND out_index=0;";
+						$next_io_r = $this->blockchain->app->run_query($next_io_q);
+						
+						if ($next_io_r->rowCount() > 0) {
+							$current_io = $next_io_r->fetch();
+						}
+						else $keep_looping = false;
+					}
+					else $keep_looping = false;
+				}
+				else $keep_looping = false;
+			}
+			else $keep_looping = false;
+		}
+		while ($keep_looping);
+		
+		return $current_io['io_id'];
+	}
 }
 ?>

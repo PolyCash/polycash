@@ -37,7 +37,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 
 		while ($db_real_game = $r->fetch()) {
 			$game_id2real_game_i[$db_real_game['game_id']] = $real_game_i;
-			if (!$blockchains[$db_real_game['blockchain_id']]) $blockchains[$db_real_game['blockchain_id']] = new Blockchain($app, $db_real_game['blockchain_id']);
+			if (empty($blockchains[$db_real_game['blockchain_id']])) $blockchains[$db_real_game['blockchain_id']] = new Blockchain($app, $db_real_game['blockchain_id']);
 			$real_games[$real_game_i] = new Game($blockchains[$db_real_game['blockchain_id']], $db_real_game['game_id']);
 			try {
 				$coin_rpcs[$real_game_i] = new jsonRPCClient('http://'.$db_real_game['rpc_username'].':'.$db_real_game['rpc_password'].'@127.0.0.1:'.$db_real_game['rpc_port'].'/');
@@ -105,7 +105,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$q = "SELECT * FROM games WHERE game_status IN('published','running');";
 		$r = $GLOBALS['app']->run_query($q);
 		while ($running_game = $r->fetch()) {
-			if (!$blockchains[$running_game['blockchain_id']]) $blockchains[$running_game['blockchain_id']] = new Blockchain($app, $running_game['blockchain_id']);
+			if (empty($blockchains[$running_game['blockchain_id']])) $blockchains[$running_game['blockchain_id']] = new Blockchain($app, $running_game['blockchain_id']);
 			$running_games[count($running_games)] = new Game($blockchains[$running_game['blockchain_id']], $running_game['game_id']);
 			echo "Including game: ".$running_game['name']."\n";
 		}

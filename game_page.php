@@ -236,6 +236,9 @@ games.push(new Game(<?php
 	echo ', "'.$game->db_game['coin_name_plural'].'"';
 	echo ', "game", "'.$game->event_ids().'", "'.$game->logo_image_url().'", "'.$game->vote_effectiveness_function().'"';
 ?>));
+
+games[0].game_loop_event();
+
 <?php
 echo $game->new_event_js(0, false);
 ?>

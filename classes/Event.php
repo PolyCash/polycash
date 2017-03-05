@@ -303,9 +303,11 @@ class Event {
 			$payout_amount = floor($event_pos_reward*$input['votes']/$winning_votes);
 			$total_paid += $payout_amount;
 			
-			$qq = "INSERT INTO transaction_game_ios SET io_id='".$input['io_id']."', is_coinbase=1, instantly_mature=0, game_id='".$this->game->db_game['game_id']."', event_id='".$this->db_event['event_id']."'";
-			if ($winning_option > 0) $qq .= ", option_id='".$winning_option."'";
-			$qq .= ", colored_amount='".$payout_amount."', create_round_id='".$this->game->block_to_round($this->db_event['event_payout_block'])."';";
+			$payout_io_id = $this->game->trace_io_to_unspent_io_in_block($input, $block_id);
+			
+			$qq = "INSERT INTO transaction_game_ios SET io_id='".$payout_io_id."', original_io_id='".$input['io_id']."', is_coinbase=1, instantly_mature=0, game_id='".$this->game->db_game['game_id']."', event_id='".$this->db_event['event_id']."'";
+			//if ($winning_option > 0) $qq .= ", option_id='".$winning_option."'";
+			$qq .= ", colored_amount='".$payout_amount."', create_round_id='".$this->game->block_to_round($block_id)."';";
 			$rr = $this->game->blockchain->app->run_query($qq);
 			$output_id = $this->game->blockchain->app->last_insert_id();
 			

@@ -605,7 +605,7 @@ class App {
 	
 	public function display_featured_games() {
 		echo '<div class="paragraph">';
-		$q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='published' OR g.game_status='running') ORDER BY g.featured_score DESC;";
+		$q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='published' OR g.game_status='running') ORDER BY g.featured_score DESC, g.game_id DESC;";
 		$r = $this->run_query($q);
 		if ($r->rowCount() > 0) {
 			$cell_width = 12;
@@ -634,6 +634,8 @@ class App {
 					echo ', "'.$db_game['coin_name_plural'].'"';
 					echo ', "home", "'.$featured_game->event_ids().'", "'.$featured_game->logo_image_url().'", "'.$featured_game->vote_effectiveness_function().'"';
 				?>));
+				
+				games[<?php echo $counter; ?>].game_loop_event();
 				</script>
 				<?php
 				echo '<div class="col-md-'.$cell_width.'">';

@@ -21,7 +21,7 @@ include('includes/html_start.php');
 						$chain_id = $app->random_string(6);
 						$url_identifier = "private-chain-".$chain_id;
 						$chain_pow_reward = 25*pow(10,8);
-						$q = "INSERT INTO blockchains SET online=1, p2p_mode='none', blockchain_name='Private Chain', url_identifier='".$url_identifier."', coin_name='chaincoin', coin_name_plural='chaincoins', seconds_per_block=10, first_required_block=1, initial_pow_reward=".$chain_pow_reward.";";
+						$q = "INSERT INTO blockchains SET online=1, p2p_mode='none', blockchain_name='Private Chain', url_identifier='".$url_identifier."', coin_name='chaincoin', coin_name_plural='chaincoins', seconds_per_block=30, first_required_block=1, initial_pow_reward=".$chain_pow_reward.";";
 						$r = $app->run_query($q);
 						$blockchain_id = $app->last_insert_id();
 						$new_blockchain = new Blockchain($app, $blockchain_id);
