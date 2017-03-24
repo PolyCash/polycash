@@ -392,8 +392,6 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					<?php if ($thisuser) { ?><div class="col-md-3" style="text-align: center;">Your Votes</div><?php } ?>
 					</div>
 					<?php
-					$winner_displayed = FALSE;
-					
 					if ($event) {
 						$q = "SELECT op.* FROM options op JOIN event_outcome_options eoo ON op.option_id=eoo.option_id WHERE op.event_id='".$event->db_event['event_id']."' ORDER BY eoo.rank ASC;";
 						$r = $app->run_query($q);
@@ -418,7 +416,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							}
 							echo '<div class="row';
 							if ($option_votes > $max_votes) echo ' redtext';
-							else if (!$winner_displayed && $option_votes > 0) { echo ' greentext'; $winner_displayed = TRUE; }
+							else if (!empty($db_event) && $db_event['winning_option_id'] == $ranked_option['option_id']) echo ' greentext';
 							echo '">';
 							echo '<div class="col-md-3">'.$rank.'. '.$ranked_option['name'].'</div>';
 							echo '<div class="col-md-1" style="text-align: center;">'.($round_sum_votes>0? round(100*$option_votes/$round_sum_votes, 2) : 0).'%</div>';
