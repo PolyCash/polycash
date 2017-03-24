@@ -234,7 +234,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 		<br/>
 		<?php
 		if ($mode_error) {
-			echo "Error, you've reached an invalid page.";
+			echo "1 Error, you've reached an invalid page.";
 		}
 		else {
 			if ($game) {
@@ -271,6 +271,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				</script>
 				<div class="row">
 					<div class="col-sm-7 ">
+						<?php
+						if ($game) echo "<a class='btn btn-sm btn-warning' href='/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/'>View Underlying Chain</a>\n";
+						?>
 						<ul class="list-inline explorer_nav" id="explorer_nav">
 							<li><a<?php if ($explore_mode == 'blocks') echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
 							if ($game) echo $game->db_game['url_identifier'];
@@ -389,8 +392,6 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					<?php if ($thisuser) { ?><div class="col-md-3" style="text-align: center;">Your Votes</div><?php } ?>
 					</div>
 					<?php
-					$winner_displayed = FALSE;
-					
 					if ($event) {
 						$q = "SELECT op.* FROM options op JOIN event_outcome_options eoo ON op.option_id=eoo.option_id WHERE op.event_id='".$event->db_event['event_id']."' ORDER BY eoo.rank ASC;";
 						$r = $app->run_query($q);
@@ -415,7 +416,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							}
 							echo '<div class="row';
 							if ($option_votes > $max_votes) echo ' redtext';
-							else if (!$winner_displayed && $option_votes > 0) { echo ' greentext'; $winner_displayed = TRUE; }
+							else if (!empty($db_event) && $db_event['winning_option_id'] == $ranked_option['option_id']) echo ' greentext';
 							echo '">';
 							echo '<div class="col-md-3">'.$rank.'. '.$ranked_option['name'].'</div>';
 							echo '<div class="col-md-1" style="text-align: center;">'.($round_sum_votes>0? round(100*$option_votes/$round_sum_votes, 2) : 0).'%</div>';
@@ -668,7 +669,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				else echo $blockchain->db_blockchain['blockchain_name'];
 				echo " Address: ".$address['address']."</h3>\n";
 				
-				$q = "SELECT * FROM transactions t, transaction_ios i WHERE i.address_id='".$address['address_id']."' AND (t.transaction_id=i.create_transaction_id OR t.transaction_id=i.spend_transaction_id) GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;";
+				$q = "SELECT * FROM transactions t, transaction_ios i WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND i.address_id='".$address['address_id']."' AND (t.transaction_id=i.create_transaction_id OR t.transaction_id=i.spend_transaction_id) GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;";
 				$r = $app->run_query($q);
 				
 				echo "This address has been used in ".$r->rowCount()." transactions.<br/>\n";
@@ -793,6 +794,17 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						echo '<div class="col-sm-3">'.$app->format_bignum($utxo['colored_amount']/pow(10,8)).' '.$game->db_game['coin_name_plural'].'</div>';
 						echo '<div class="col-sm-2">'.$app->format_bignum($votes/pow(10,8)).' votes</div>';
 						echo '<div class="col-sm-4"><a href="/explorer/games/'.$game->db_game['url_identifier'].'/addresses/'.$utxo['address'].'">'.$utxo['address']."</a></div>\n";
+						echo '</div>';
+					}
+				}
+				else {
+					$utxo_q = "SELECT * FROM transaction_ios io JOIN addresses a ON a.address_id=io.address_id WHERE io.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND io.spend_status IN ('unspent','unconfirmed') ORDER BY io.io_id DESC LIMIT 500;";
+					$utxo_r = $app->run_query($utxo_q);
+					
+					while ($utxo = $utxo_r->fetch()) {
+						echo '<div class="row">';
+						echo '<div class="col-sm-5">'.$app->format_bignum($utxo['amount']/pow(10,8)).' '.$blockchain->db_blockchain['coin_name_plural'].'</div>';
+						echo '<div class="col-sm-5"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$utxo['address'].'">'.$utxo['address']."</a></div>\n";
 						echo '</div>';
 					}
 				}

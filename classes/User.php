@@ -14,7 +14,7 @@ class User {
 	}
 	
 	public function account_coin_value(&$game, &$user_game) {
-		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND io.spend_status='unspent' AND k.account_id='".$user_game['account_id']."';";
+		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND (io.spend_status='unspent' || io.spend_status='unconfirmed') AND k.account_id='".$user_game['account_id']."';";
 		$r = $this->app->run_query($q);
 		$coins = $r->fetch(PDO::FETCH_NUM);
 		$coins = $coins[0];
@@ -49,10 +49,12 @@ class User {
 		else return 0;
 	}
 	
-	public function performance_history($game, $from_round_id, $to_round_id) {
+	public function performance_history(&$game, $from_round_id, $to_round_id) {
 		$html = "";
 		
-		$q = "SELECT e.event_index, r.*, real_winner.name AS real_winner_name, derived_winner.name AS derived_winner_name FROM event_outcomes r JOIN events e ON r.event_id=e.event_id LEFT JOIN options real_winner ON r.winning_option_id=real_winner.option_id LEFT JOIN options derived_winner ON r.derived_winning_option_id=derived_winner.option_id WHERE e.game_id='".$game->db_game['game_id']."' AND r.round_id >= ".$from_round_id." AND r.round_id <= ".$to_round_id." ORDER BY r.round_id DESC;";
+		$last_block_id = $game->blockchain->last_block_id();
+		
+		$q = "SELECT e.event_index, r.*, real_winner.name AS real_winner_name, derived_winner.name AS derived_winner_name FROM events e LEFT JOIN  event_outcomes r ON r.event_id=e.event_id LEFT JOIN options real_winner ON r.winning_option_id=real_winner.option_id LEFT JOIN options derived_winner ON r.derived_winning_option_id=derived_winner.option_id WHERE e.game_id='".$game->db_game['game_id']."' AND r.round_id >= ".$from_round_id." AND r.round_id <= ".$to_round_id." ORDER BY e.event_index DESC;";
 		$r = $this->app->run_query($q);
 		
 		while ($event_outcome = $r->fetch()) {
@@ -67,14 +69,25 @@ class User {
 			$html .= '<div class="row" style="font-size: 13px;">';
 			$html .= '<div class="col-sm-3">'.$event->db_event['event_name'].'</div>';
 			$html .= '<div class="col-sm-3">';
-			if ($event_outcome['real_winner_name'] != "") {
-				$html .= $event_outcome['real_winner_name']." with ".$this->app->format_bignum($event_outcome['winning_votes']/pow(10,8))." votes";
-				if ($event_outcome['derived_winner_name'] != "" && $event_outcome['derived_winner_name'] != $event_outcome['real_winner_name']) $html .= " (Should have been ".$event_outcome['derived_winner_name']." with ".$this->app->format_bignum($event_outcome['derived_winning_votes']/pow(10,8))." votes)";
+			if ($event->db_event['event_payout_block'] > $last_block_id) {
+				if (!empty($event_outcome['winning_option_id'])) {
+					$html .= $event_outcome['real_winner_name'].", Pending. ";
+				}
+				else {
+					$html .= "Winner not yet determined. ";
+				}
 			}
 			else {
-				if ($event_outcome['derived_winner_name'] != "") $html .= $event_outcome['derived_winner_name']." won with ".$this->app->format_bignum($event_outcome['derived_winning_votes']/pow(10,8))." votes";
-				else $html .= "No winner";
+				if ($event_outcome['real_winner_name'] != "") {
+					$html .= $event_outcome['real_winner_name']." with ".$this->app->format_bignum($event_outcome['winning_votes']/pow(10,8))." votes. ";
+				}
+				else {
+					$html .= "No winner. ";
+				}
 			}
+			
+			$html .= "<br/><a href=\"\" onclick=\"set_event_outcome(".$game->db_game['game_id'].", ".$event->db_event['event_id']."); return false;\">Set outcome</a>";
+			
 			$html .= '</div>';
 			
 			$my_votes_in_round = $event->my_votes_in_round($event_outcome['round_id'], $this->db_user['user_id'], false);
@@ -85,7 +98,7 @@ class User {
 				if ($game->db_game['payout_weight'] == "coin") $win_text = "You correctly voted ".$this->app->format_bignum($my_votes[$event_outcome['winning_option_id']]['coins']/pow(10,8))." coins.";
 				else $win_text = "You correctly cast ".$this->app->format_bignum($my_votes[$event_outcome['winning_option_id']][$game->db_game['payout_weight'].'s']/pow(10,8))." votes.";
 			}
-			else if ($coins_voted > 0) $win_text = "You didn't vote for the winning ".$game->db_game['option_name'].".";
+			else if ($coins_voted > 0) $win_text = "You didn't vote for the winning ".$event->db_event['option_name'].".";
 			else $win_text = "You didn't cast any votes.";
 			
 			$html .= '<div class="col-sm-3">';
@@ -93,7 +106,7 @@ class User {
 			$html .= ' <a href="/explorer/games/'.$game->db_game['url_identifier'].'/events/'.($event_outcome['event_index']+1).'" target="_blank">Details</a>';
 			$html .= '</div>';
 			
-			if (empty($event_outcome['winning_option_id'])) {
+			if ((string) $event_outcome['winning_option_id'] === "") {
 				$win_amt = 0;
 				$payout_amt = 0;
 			}
@@ -148,7 +161,40 @@ class User {
 	}
 	
 	public function wallet_text_stats(&$game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance, &$user_game) {
-		$html = '<div class="row"><div class="col-sm-2">Available&nbsp;funds:</div>';
+		$html = '<div class="row"><div class="col-sm-2">Pending&nbsp;winnings:</div><div class="col-sm-3 text-right">';
+		$payout_sum = 0;
+		
+		$q = "SELECT * FROM events e JOIN event_outcomes eo ON e.event_id=eo.event_id WHERE e.game_id='".$game->db_game['game_id']."' ORDER BY e.event_index ASC;";
+		$r = $this->app->run_query($q);
+		
+		while ($db_event = $r->fetch()) {
+			$event = new Event($game, false, $db_event['event_id']);
+			$my_votes_in_round = $event->my_votes_in_round($game->block_to_round($db_event['event_final_block']), $this->db_user['user_id'], false);
+			$my_votes_r = $my_votes_in_round[0];
+			$total_votes = $my_votes_in_round[4];
+			
+			if (empty($my_votes_r[$db_event['winning_option_id']])) $payout_est = 0;
+			else {
+				$my_votes = $my_votes_r[$db_event['winning_option_id']]['votes'];
+				
+				$total_votes = $event->option_votes_in_round($db_event['winning_option_id'], $game->block_to_round($db_event['event_final_block']));
+				$total_votes = $total_votes['sum'];
+				
+				if ($total_votes > 0 && $my_votes > 0) {
+					$my_pct = $my_votes/$total_votes;
+					$total_payout = $event->event_pos_reward_in_round($game->block_to_round($db_event['event_starting_block']));
+					$payout_est = $my_pct*$total_payout;
+				}
+				else $payout_est = 0;
+			}
+			
+			$payout_sum += $payout_est;
+		}
+		$html .= $this->app->format_bignum($payout_sum/pow(10,8));
+		
+		$html .= '</div></div>'."\n";
+		
+		$html .= '<div class="row"><div class="col-sm-2">Available&nbsp;funds:</div>';
 		$html .= '<div class="col-sm-3 text-right"><font class="greentext">';
 		$html .= $this->app->format_bignum($mature_balance/pow(10,8));
 		$html .= "</font> ".$game->db_game['coin_name_plural']."</div></div>\n";
@@ -384,6 +430,18 @@ class User {
 					$rr = $this->app->run_query($qq);
 					
 					$qq = "UPDATE address_keys SET account_id='".$user_game['account_id']."' WHERE address_id='".$address['address_id']."';";
+					$rr = $this->app->run_query($qq);
+				}
+				else if ($game->blockchain->db_blockchain['p2p_mode'] == "none") {
+					$vote_identifier = $this->app->option_index_to_vote_identifier($option_index);
+					$addr_text = "11".$vote_identifier;
+					$addr_text .= $this->app->random_string(34-strlen($addr_text));
+					
+					$qq = "INSERT INTO addresses SET is_mine=1, user_id='".$this->db_user['user_id']."', primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."', option_index='".$option_index."', vote_identifier=".$this->app->quote_escape($vote_identifier).", address=".$this->app->quote_escape($addr_text).", time_created='".time()."';";
+					$rr = $this->app->run_query($qq);
+					$address_id = $this->app->last_insert_id();
+					
+					$qq = "INSERT INTO address_keys SET address_id='".$address_id."', account_id='".$user_game['account_id']."', save_method='fake', pub_key='".$addr_text."';";
 					$rr = $this->app->run_query($qq);
 				}
 			}

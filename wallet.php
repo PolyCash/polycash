@@ -43,6 +43,12 @@ if ($thisuser) {
 	if ($r->rowCount() > 0) {
 		$requested_game = $r->fetch();
 		
+		$is_creator = false;
+		if ($requested_game['creator_id'] == $thisuser->db_user['user_id']) $is_creator = true;
+		
+		$allow_public = false;
+		if ($requested_game['giveaway_status'] == "public_free" || $requested_game['giveaway_status'] == "public_pay") $allow_public = true;
+		
 		$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND g.game_id='".$requested_game['game_id']."';";
 		$r = $app->run_query($q);
 		
@@ -51,9 +57,9 @@ if ($thisuser) {
 			$blockchain = new Blockchain($app, $requested_game['blockchain_id']);
 			$game = new Game($blockchain, $user_game['game_id']);
 		}
-		else if ($requested_game['giveaway_status'] == "public_free" || $requested_game['giveaway_status'] == "public_pay") {
+		else if ($is_creator || $allow_public) {
 			$blockchain = new Blockchain($app, $requested_game['blockchain_id']);
-			$game = new Game($blockchain, $user_game['game_id']);
+			$game = new Game($blockchain, $requested_game['game_id']);
 			$user_game = $thisuser->ensure_user_in_game($game);
 		}
 		
@@ -485,6 +491,8 @@ if ($thisuser && $game) {
 			echo ', "wallet", "'.$game->event_ids().'", "'.$game->logo_image_url().'", "'.$game->vote_effectiveness_function().'"';
 		?>));
 		
+		games[0].game_loop_event();
+		
 		<?php
 		$load_event_rounds = 20;
 		
@@ -495,31 +503,33 @@ if ($thisuser && $game) {
 		$to_block_id = ($plan_stop_round-1)*$game->db_game['round_length']+1;
 		
 		$game->ensure_events_until_block($to_block_id);
+		$game->load_current_events();
 		
 		$q = "SELECT * FROM events e JOIN event_types t ON e.event_type_id=t.event_type_id WHERE e.game_id='".$game->db_game['game_id']."' AND e.event_starting_block >= ".$from_block_id." AND e.event_starting_block <= ".$to_block_id." ORDER BY e.event_id ASC;";
 		$r = $app->run_query($q);
-		echo "//joeyqq: $q\n";
 		$initial_load_events = $r->rowCount();
 		$i=0;
-		while ($db_event = $r->fetch()) {
-			if ($i == 0) echo "games[0].all_events_start_index = ".$db_event['event_index'].";\n";
-			else if ($i == $initial_load_events-1) echo "games[0].all_events_stop_index = ".$db_event['event_index'].";\n";
-			
-			echo "games[0].all_events[".$db_event['event_index']."] = new Event(games[0], ".$db_event['event_index'].", ".$db_event['event_id'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'");';
-			echo "games[0].all_events_db_id_to_index[".$db_event['event_id']."] = ".$db_event['event_index'].";\n";
-			
-			$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY option_id ASC;";
-			$option_r = $app->run_query($option_q);
-			$j=0;
-			while ($option = $option_r->fetch()) {
-				$has_votingaddr = "false";
-				$votingaddr_id = $thisuser->user_address_id($game, $option['option_index'], false, $user_game['account_id']);
-				if ($votingaddr_id !== false) $has_votingaddr = "true";
+		if ($initial_load_events > 0) {
+			while ($db_event = $r->fetch()) {
+				if ($i == 0) echo "games[0].all_events_start_index = ".$db_event['event_index'].";\n";
+				else if ($i == $initial_load_events-1) echo "games[0].all_events_stop_index = ".$db_event['event_index'].";\n";
 				
-				echo "games[0].all_events[".$db_event['event_index']."].options.push(new option(games[0].all_events[".$db_event['event_index']."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", '".$option['name']."', 0, $has_votingaddr));\n";
-				$j++;
+				echo "games[0].all_events[".$db_event['event_index']."] = new Event(games[0], ".$db_event['event_index'].", ".$db_event['event_id'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'");';
+				echo "games[0].all_events_db_id_to_index[".$db_event['event_id']."] = ".$db_event['event_index'].";\n";
+				
+				$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY option_id ASC;";
+				$option_r = $app->run_query($option_q);
+				$j=0;
+				while ($option = $option_r->fetch()) {
+					$has_votingaddr = "false";
+					$votingaddr_id = $thisuser->user_address_id($game, $option['option_index'], false, $user_game['account_id']);
+					if ($votingaddr_id !== false) $has_votingaddr = "true";
+					
+					echo "games[0].all_events[".$db_event['event_index']."].options.push(new option(games[0].all_events[".$db_event['event_index']."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", '".$option['name']."', 0, $has_votingaddr));\n";
+					$j++;
+				}
+				$i++;
 			}
-			$i++;
 		}
 		
 		echo $game->load_all_event_points_js(0, $user_strategy, $plan_start_round, $plan_stop_round);
@@ -842,7 +852,7 @@ if ($thisuser && $game) {
 					</div>
 					<div id="performance_history_0">
 						<?php
-						echo $thisuser->performance_history($game, max(1, $current_round-$performance_history_rounds_per_section), $current_round-1);
+						echo $thisuser->performance_history($game, max(1, $current_round-$performance_history_rounds_per_section), $current_round);
 						?>
 					</div>
 				</div>
@@ -1388,6 +1398,13 @@ if ($thisuser && $game) {
 							<?php /*<button id="game_invitations_game_btn" type="button" class="btn btn-info" data-dismiss="modal" onclick="manage_game_invitations(editing_game_id);">Invite People</button> */ ?>
 						</form>
 					</div>
+				</div>
+			</div>
+		</div>
+		
+		<div style="display: none;" class="modal fade" id="set_event_outcome_modal">
+			<div class="modal-dialog">
+				<div class="modal-content" id="set_event_outcome_modal_content">
 				</div>
 			</div>
 		</div>
