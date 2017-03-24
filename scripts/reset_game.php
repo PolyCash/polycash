@@ -20,6 +20,12 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$action = 'reset';
 		if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "delete") $action = "delete";
 		$game->delete_reset_game($action);
+		
+		$game->update_db_game();
+		$game->ensure_events_until_block($game->blockchain->last_block_id()+1);
+		$game->load_current_events();
+		$game->sync();
+		echo "sync() ...<br/>\n";
 	}
 	
 	echo "Great, the game has been ".$action."!\n";

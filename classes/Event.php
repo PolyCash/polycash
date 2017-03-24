@@ -308,7 +308,6 @@ class Event {
 			$payout_io_id = $this->game->trace_io_to_unspent_io_in_block($input, $block_id);
 			
 			$qq = "INSERT INTO transaction_game_ios SET io_id='".$payout_io_id."', original_io_id='".$input['io_id']."', is_coinbase=1, instantly_mature=0, game_id='".$this->game->db_game['game_id']."', event_id='".$this->db_event['event_id']."'";
-			//if ($winning_option > 0) $qq .= ", option_id='".$winning_option."'";
 			$qq .= ", colored_amount='".$payout_amount."', create_round_id='".$this->game->block_to_round($block_id)."';";
 			$rr = $this->game->blockchain->app->run_query($qq);
 			$output_id = $this->game->blockchain->app->last_insert_id();
@@ -328,80 +327,6 @@ class Event {
 		
 		return $log_text;
 	}
-	
-	/*public function new_betbase_transaction($round_id, $mining_block_id, $winning_option) {
-		$log_text = "";
-		
-		$q = "INSERT INTO transactions SET event_id='".$this->db_event['event_id']."'";
-		if ($this->db_event['event_type'] == "simulation") $q .= ", tx_hash='".$this->game->blockchain->app->random_string(64)."'";
-		$q .= ", transaction_desc='betbase', block_id='".($mining_block_id-1)."', time_created='".time()."', has_all_inputs=1, has_all_outputs=1;";
-		$r = $this->game->blockchain->app->run_query($q);
-		$transaction_id = $this->game->blockchain->app->last_insert_id();
-		
-		$bet_mid_q = "transaction_ios i, addresses a WHERE i.event_id='".$this->db_event['event_id']."' AND i.address_id=a.address_id AND a.bet_round_id = ".$round_id." AND i.create_block_id <= ".$this->round_to_last_betting_block($round_id);
-		
-		$total_burned_q = "SELECT SUM(i.amount) FROM ".$bet_mid_q.";";
-		$total_burned_r = $this->game->blockchain->app->run_query($total_burned_q);
-		$total_burned = $total_burned_r->fetch(PDO::FETCH_NUM);
-		$total_burned = $total_burned[0];
-		
-		if ($total_burned > 0) {
-			$winners_burned_q = "SELECT SUM(i.amount) FROM ".$bet_mid_q;
-			if ($winning_option) $winners_burned_q .= " AND bet_option_id=".$winning_option.";";
-			else $winners_burned_q .= " AND bet_option_id IS NULL;";
-			$winners_burned_r = $this->game->blockchain->app->run_query($winners_burned_q);
-			$winners_burned = $winners_burned_r->fetch(PDO::FETCH_NUM);
-			$winners_burned = $winners_burned[0];
-			
-			$win_multiplier = 0;
-			if ($winners_burned > 0) $win_multiplier = floor(pow(10,8)*$total_burned/$winners_burned)/pow(10,8);
-			
-			$log_text .= $total_burned/pow(10,8)." coins should be paid to the winning bettors (x".$win_multiplier.").<br/>\n";
-			
-			if ($winners_burned > 0) {
-				$bet_winners_q = "SELECT * FROM ".$bet_mid_q." AND bet_option_id=".$winning_option.";";
-				$bet_winners_r = $this->game->blockchain->app->run_query($bet_winners_q);
-				
-				$betbase_sum = 0;
-				
-				while ($bet_winner = $bet_winners_r->fetch()) {
-					$win_amount = floor($bet_winner['amount']*$win_multiplier);
-					$payback_address = bet_transaction_payback_address($bet_winner['create_transaction_id']);
-					
-					if ($payback_address) {
-						$qq = "INSERT INTO transaction_ios SET spend_status='unspent', instantly_mature=0, event_id='".$this->db_event['event_id']."', user_id='".$payback_address['user_id']."', address_id='".$payback_address['address_id']."'";
-						if ($payback_address['option_id'] > 0) $qq .= ", option_id=".$payback_address['option_id'];
-						$qq .= ", create_transaction_id='".$transaction_id."', colored_amount='".$colored_amount."', amount='".$win_amount."', create_block_id='".($mining_block_id-1)."', create_round_id='".$this->block_to_round($mining_block_id-1)."';";
-						$rr = $this->game->blockchain->app->run_query($qq);
-						$output_id = $this->game->blockchain->app->last_insert_id();
-						
-						$qq = "UPDATE transaction_ios SET payout_io_id='".$output_id."' WHERE io_id='".$bet_winner['io_id']."';";
-						$rr = $this->game->blockchain->app->run_query($qq);
-						
-						$log_text .= "Pay ".$win_amount/(pow(10,8))." coins to ".$payback_address['address']." for winning the bet.<br/>\n";
-						
-						$betbase_sum += $win_amount;
-					}
-					else $log_text .= "No payback address was found for transaction #".$bet_winner['create_transaction_id']."<br/>\n";
-				}
-				
-				$q = "UPDATE transactions SET amount='".$betbase_sum."' WHERE transaction_id='".$transaction_id."';";
-				$r = $this->game->blockchain->app->run_query($q);
-			}
-			else $log_text .= "None of the bettors predicted this outcome!<br/>\n";
-		}
-		else {
-			$log_text .= "No one placed losable bets on this round.<br/>\n";
-			$q = "DELETE FROM transactions WHERE transaction_id='".$transaction_id."';";
-			$r = $this->game->blockchain->app->run_query($q);
-			$transaction_id = false;
-		}
-		
-		$returnvals[0] = $transaction_id;
-		$returnvals[1] = $log_text;
-		
-		return $returnvals;
-	}*/
 	
 	public function my_votes_in_round($round_id, $user_id, $include_unconfirmed) {
 		$q = "SELECT SUM(t_fees.fee_amount) FROM (SELECT t.fee_amount FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN options op ON gio.option_id=op.option_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE gio.game_id='".$this->game->db_game['game_id']."' AND gio.create_round_id = ".$round_id." AND io.user_id='".$user_id."' GROUP BY t.transaction_id) t_fees;";
@@ -707,7 +632,7 @@ class Event {
 		$option_id2rank = $round_voting_stats_all[3];
 		$round_voting_stats = $round_voting_stats_all[2];
 		
-		$log_text = "Total votes: ".($sum_votes/(pow(10, 8)))."<br/>\n";
+		$log_text = "Event ".$this->db_event['event_index'].", total votes: ".($sum_votes/(pow(10, 8)))."<br/>\n";
 		$log_text .= "Cutoff: ".($max_sum_votes/(pow(10, 8)))."<br/>\n";
 		
 		$q = "UPDATE options SET coin_score=0, unconfirmed_coin_score=0, coin_block_score=0, unconfirmed_coin_block_score=0, coin_round_score=0, unconfirmed_coin_round_score=0, votes=0, unconfirmed_votes=0 WHERE event_id='".$this->db_event['event_id']."';";
@@ -741,7 +666,7 @@ class Event {
 		$r = $this->game->blockchain->app->run_query($q);
 		$outcome_id = $this->game->blockchain->app->last_insert_id();
 		
-		if (!$event_outcome) {
+		if ($this_block_id == $this->db_event['event_final_block']) {
 			for ($position=0; $position<$this->db_event['num_voting_options']; $position++) {
 				$qq = "INSERT INTO event_outcome_options SET outcome_id='".$outcome_id."', round_id='".$round_id."', event_id='".$this->db_event['event_id']."', option_id='".$round_voting_stats[$position]['option_id']."', rank='".($position+1)."', coin_score='".$round_voting_stats[$position]['coin_score']."', coin_block_score='".$round_voting_stats[$position]['coin_block_score']."', coin_round_score='".$round_voting_stats[$position]['coin_round_score']."', votes='".$round_voting_stats[$position]['votes']."';";
 				$rr = $this->game->blockchain->app->run_query($qq);
@@ -760,7 +685,6 @@ class Event {
 		}
 		
 		$this->set_event_completed();
-		
 		return $log_text;
 	}
 	

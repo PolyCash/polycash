@@ -73,6 +73,9 @@ if ($thisuser) {
 				}
 			}
 		}
+		else $app->output_message(5, "Invalid game ID.", false);
 	}
+	else $app->output_message(4, "Invalid event ID.", false);
 }
+else $app->output_message(3, "Please log in.", false);
 ?>

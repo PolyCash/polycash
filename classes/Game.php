@@ -354,7 +354,10 @@ class Game {
 				
 				$voted_coins_out = $this->blockchain->app->transaction_voted_coins_out($unconfirmed_tx['transaction_id']);
 				
-				$cbd_per_coin_out = floor(pow(10,8)*$total_coin_blocks_created/$voted_coins_out)/pow(10,8);
+				if ($voted_coins_out > 0) {
+					$cbd_per_coin_out = floor(pow(10,8)*$total_coin_blocks_created/$voted_coins_out)/pow(10,8);
+				}
+				else $cbd_per_coin_out = 0;
 				
 				$qq = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$unconfirmed_tx['transaction_id']."';";
 				$rr = $this->blockchain->app->run_query($qq);
@@ -2364,6 +2367,7 @@ class Game {
 		$html .= '</div><div class="col-md-6">';
 		$qq = "SELECT gio.*, io.*, a.*, op.name AS option_name FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id LEFT JOIN options op ON gio.option_id=op.option_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.create_transaction_id='".$transaction['transaction_id']."' AND gio.is_coinbase=0 ORDER BY io.out_index ASC;";
 		$rr = $this->blockchain->app->run_query($qq);
+		
 		$output_sum = 0;
 		while ($output = $rr->fetch()) {
 			$html .= '<a class="display_address" style="';
