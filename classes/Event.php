@@ -49,6 +49,7 @@ class Event {
 		if ($confirmed_votes > 0) {} else $confirmed_votes = 0;
 		
 		$sum += $confirmed_votes;
+		
 		$returnvals['confirmed'] = $confirmed_votes;
 		
 		if ($include_unconfirmed) {
@@ -300,7 +301,8 @@ class Event {
 		
 		$this->game->blockchain->app->log($winning_option." wins, ".$r->rowCount()." correct votes, payout: ".$event_pos_reward/pow(10,8));
 		while ($input = $r->fetch()) {
-			$payout_amount = floor($event_pos_reward*$input['votes']/$winning_votes);
+			if ($winning_votes == 0) $payout_amount = 0;
+			else $payout_amount = floor($event_pos_reward*$input['votes']/$winning_votes);
 			$total_paid += $payout_amount;
 			
 			$payout_io_id = $this->game->trace_io_to_unspent_io_in_block($input, $block_id);
@@ -727,12 +729,12 @@ class Event {
 			$event_outcome = $r->fetch();
 			$q = "UPDATE event_outcomes SET ";
 		}
-		else $q = "INSERT INTO event_outcomes SET event_id='".$this->db_event['event_id']."', round_id='".$round_id."', payout_block_id='".$this->db_event['event_payout_block']."', sum_votes='".$sum_votes."', time_created='".time()."', ";
+		else $q = "INSERT INTO event_outcomes SET event_id='".$this->db_event['event_id']."', round_id='".$round_id."', payout_block_id='".$this->db_event['event_payout_block']."', time_created='".time()."', ";
 		
 		if ($winning_option === false) $q .= "winning_option_id=NULL, derived_winning_option_id=NULL";
 		else $q .= "winning_option_id='".$winning_option."', derived_winning_option_id='".$winning_option."'";
 		
-		$q .= ", winning_votes='".$winning_votes."', derived_winning_votes='".$winning_votes."'";
+		$q .= ", sum_votes='".$sum_votes."', winning_votes='".$winning_votes."', derived_winning_votes='".$winning_votes."'";
 		
 		if ($event_outcome) $q .= " WHERE outcome_id='".$event_outcome['outcome_id']."'";
 		

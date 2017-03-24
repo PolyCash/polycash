@@ -852,7 +852,7 @@ if ($thisuser && $game) {
 					</div>
 					<div id="performance_history_0">
 						<?php
-						echo $thisuser->performance_history($game, max(1, $current_round-$performance_history_rounds_per_section), $current_round-1);
+						echo $thisuser->performance_history($game, max(1, $current_round-$performance_history_rounds_per_section), $current_round);
 						?>
 					</div>
 				</div>

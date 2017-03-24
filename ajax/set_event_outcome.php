@@ -60,7 +60,7 @@ if ($thisuser) {
 						
 						$q = "UPDATE game_defined_events SET outcome_index=".$db_option['option_index']." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."';";
 						$r = $app->run_query($q);
-						//echo "q: $q<br/>\n";
+						
 						$game->check_set_game_definition();
 						
 						$new_game_def = $app->fetch_game_definition($game);
@@ -74,7 +74,5 @@ if ($thisuser) {
 			}
 		}
 	}
-}
-else {
 }
 ?>

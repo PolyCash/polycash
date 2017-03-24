@@ -54,7 +54,7 @@ class User {
 		
 		$last_block_id = $game->blockchain->last_block_id();
 		
-		$q = "SELECT e.event_index, r.*, real_winner.name AS real_winner_name, derived_winner.name AS derived_winner_name FROM event_outcomes r JOIN events e ON r.event_id=e.event_id LEFT JOIN options real_winner ON r.winning_option_id=real_winner.option_id LEFT JOIN options derived_winner ON r.derived_winning_option_id=derived_winner.option_id WHERE e.game_id='".$game->db_game['game_id']."' AND r.round_id >= ".$from_round_id." AND r.round_id <= ".$to_round_id." ORDER BY e.event_index DESC;";
+		$q = "SELECT e.event_index, r.*, real_winner.name AS real_winner_name, derived_winner.name AS derived_winner_name FROM events e LEFT JOIN  event_outcomes r ON r.event_id=e.event_id LEFT JOIN options real_winner ON r.winning_option_id=real_winner.option_id LEFT JOIN options derived_winner ON r.derived_winning_option_id=derived_winner.option_id WHERE e.game_id='".$game->db_game['game_id']."' AND r.round_id >= ".$from_round_id." AND r.round_id <= ".$to_round_id." ORDER BY e.event_index DESC;";
 		$r = $this->app->run_query($q);
 		
 		while ($event_outcome = $r->fetch()) {

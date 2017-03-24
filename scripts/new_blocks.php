@@ -28,7 +28,10 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 
 			for ($i=0; $i<$quantity; $i++) {
 				echo $game->new_block();
-				if (!empty($_REQUEST['apply_user_strategies'])) echo $game->apply_user_strategies();
+				if (!empty($_REQUEST['apply_user_strategies'])) {
+					$block_of_round = $game->block_id_to_round_index($game->blockchain->last_block_id()+1);
+					if ($_REQUEST['apply_user_strategies'] != 2 || $block_of_round == 1) echo $game->apply_user_strategies();
+				}
 			}
 			echo "Done!<br/>\n";
 		}
