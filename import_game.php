@@ -89,7 +89,7 @@ include('includes/html_start.php');
 										
 										for ($j=0; $j<count($game_event_params); $j++) {
 											$var_type = $game_event_params[$j][0];
-											$var_val = (string) $game_defined_events[$i]->$game_event_params[$j][1];
+											eval('$var_val = (string) $game_defined_events[$i]->'.$game_event_params[$j][1].';');
 											
 											if ($var_val === "" || strtolower($var_val) == "null") $escaped_var_val = "NULL";
 											else $escaped_var_val = $app->quote_escape($var_val);
