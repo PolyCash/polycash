@@ -738,6 +738,29 @@ class Game {
 		return $log_text;
 	}
 	
+	public function delete_from_block($block_height) {
+		$q = "DELETE FROM game_blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id >= ".$block_height.";";
+		$r = $this->blockchain->app->run_query($q);
+		
+		$q = "DELETE FROM game_sellouts WHERE game_id='".$this->db_game['game_id']."' AND in_block_id >= ".$block_height.";";
+		$r = $this->blockchain->app->run_query($q);
+		
+		$q = "DELETE gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.create_block_id >= ".$block_height.";";
+		$r = $this->blockchain->app->run_query($q);
+		
+		$q = "DELETE eo.* FROM event_outcomes eo JOIN events e ON eo.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."' AND e.event_final_block >= ".$block_height.";";
+		$r = $this->blockchain->app->run_query($q);
+		
+		$q = "DELETE eoo.* FROM event_outcome_options eoo JOIN events e ON eoo.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."' AND e.event_final_block >= ".$block_height.";";
+		$r = $this->blockchain->app->run_query($q);
+		
+		$q = "DELETE e.*, o.* FROM events e LEFT JOIN options o ON e.event_id=o.event_id WHERE e.game_id='".$this->db_game['game_id']."' AND e.event_final_block >= ".$block_height.";";
+		$r = $this->blockchain->app->run_query($q);
+		
+		$q = "UPDATE games SET events_until_block=NULL, coins_in_existence=0, coins_in_existence_block=NULL WHERE game_id='".$this->db_game['game_id']."';";
+		$r = $this->blockchain->app->run_query($q);
+	}
+	
 	public function delete_reset_game($delete_or_reset) {
 		$q = "DELETE FROM game_blocks WHERE game_id='".$this->db_game['game_id']."';";
 		$r = $this->blockchain->app->run_query($q);
@@ -814,7 +837,8 @@ class Game {
 			$html .= '<div class="col-sm-4"><a href="/explorer/games/'.$this->db_game['url_identifier'].'/events/'.($event_outcome['event_index']+1).'">'.$event_outcome['event_name'].'</a></div>';
 			$html .= '<div class="col-sm-5">';
 			if ($event_outcome['winning_option_id'] > 0) {
-				$html .= $event_outcome['real_winner_name']." wins with ".$this->blockchain->app->format_bignum($event_outcome['winning_votes']/pow(10,8))." votes (".round(100*$event_outcome['winning_votes']/$event_outcome['sum_votes'], 2)."%)";
+				$html .= $event_outcome['real_winner_name']." wins with ".$this->blockchain->app->format_bignum($event_outcome['winning_votes']/pow(10,8))." votes";
+				if ($event_outcome['sum_votes'] > 0) $html .= " (".round(100*$event_outcome['winning_votes']/$event_outcome['sum_votes'], 2)."%)";
 				if ($event_outcome['derived_winning_option_id'] != $event_outcome['winning_option_id']) {
 					$html .= ". Should have been ".$event_outcome['derived_winner_name']." with ".$this->blockchain->app->format_bignum($event_outcome['derived_winning_votes']/pow(10,8))." votes (".round(100*$event_outcome['derived_winning_votes']/$event_outcome['sum_votes'], 2)."%)";
 				}
@@ -1864,6 +1888,31 @@ class Game {
 		
 		if ($round_id > $ensured_round) {
 			if ($this->db_game['event_rule'] == "game_definition") {
+				if ($this->db_game['module'] == "CoinBattles") {
+					$q = "SELECT * FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."' ORDER BY event_index DESC LIMIT 1;";
+					$r = $this->blockchain->app->run_query($q);
+					
+					if ($r->rowCount() > 0) {
+						$db_last_gde = $r->fetch();
+						
+						$game_starting_round = $this->block_to_round($this->db_game['game_starting_block']);
+						
+						$CoinBattles = new CoinBattlesGameDefinition($this->blockchain->app);
+						$last_gde_round = $this->block_to_round($db_last_gde['event_final_block']);
+						
+						$event_verbatim_vars = $this->blockchain->app->event_verbatim_vars();
+						$events_from_round = $last_gde_round+1-$game_starting_round;
+						$events_to_round = $round_id+4-$game_starting_round;
+						$gdes_to_add = $CoinBattles->events_between_rounds($events_from_round, $events_to_round, $this->db_game['round_length'], $this->db_game['game_starting_block']);
+						
+						$i = 0;
+						for ($event_index=$db_last_gde['event_index']+1; $event_index<$db_last_gde['event_index']+1+count($gdes_to_add); $event_index++) {
+							$this->blockchain->app->check_set_gde($this, $event_index, $gdes_to_add[$i], $event_verbatim_vars);
+							$i++;
+						}
+					}
+				}
+				
 				$q = "SELECT * FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."' AND event_starting_block <= ".$block_id." ORDER BY event_index ASC;";
 				$r = $this->blockchain->app->run_query($q);
 				
@@ -2255,6 +2304,18 @@ class Game {
 			$payout_events = $this->events_by_payout_block($block_height);
 			
 			for ($i=0; $i<count($payout_events); $i++) {
+				if ($this->db_game['module'] == "CoinBattles") {
+					try {
+						$coin_rpc = new jsonRPCClient('http://'.$this->blockchain->db_blockchain['rpc_username'].':'.$this->blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->blockchain->db_blockchain['rpc_port'].'/');
+					}
+					catch (Exception $e) {
+						echo "Error, failed to load RPC connection for ".$this->blockchain->db_blockchain['blockchain_name'].".<br/>\n";
+					}
+					
+					$CoinBattles = new CoinBattlesGameDefinition($this->blockchain->app);
+					$CoinBattles->set_event_outcome($this, $coin_rpc, $payout_events[$i]->db_event);
+				}
+				
 				$payout_events[$i]->set_outcome_from_db($block_height, true);
 			}
 		}
@@ -2576,13 +2637,7 @@ class Game {
 		$game_definition = $this->blockchain->app->fetch_game_definition($this);
 		$definition_hash = $this->blockchain->app->game_definition_hash($this);
 		
-		$q = "SELECT * FROM game_definitions WHERE definition_hash=".$this->blockchain->app->quote_escape($definition_hash).";";
-		$r = $this->blockchain->app->run_query($q);
-		
-		if ($r->rowCount() == 0) {
-			$q = "INSERT INTO game_definitions SET definition_hash=".$this->blockchain->app->quote_escape($definition_hash).", definition=".$this->blockchain->app->quote_escape(json_encode($game_definition, JSON_PRETTY_PRINT)).";";
-			$r = $this->blockchain->app->run_query($q);
-		}
+		$this->blockchain->app->check_set_game_definition($definition_hash, $game_definition);
 	}
 	
 	public function trace_io_to_unspent_io_in_block(&$transaction_io, $block_id) {
