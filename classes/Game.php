@@ -1901,8 +1901,8 @@ class Game {
 						$last_gde_round = $this->block_to_round($db_last_gde['event_final_block']);
 						
 						$event_verbatim_vars = $this->blockchain->app->event_verbatim_vars();
-						$events_from_round = $last_gde_round+1-$game_starting_round;
-						$events_to_round = $round_id+4-$game_starting_round;
+						$events_from_round = $last_gde_round-$game_starting_round+1;
+						$events_to_round = $round_id-$game_starting_round+1;
 						$gdes_to_add = $CoinBattles->events_between_rounds($events_from_round, $events_to_round, $this->db_game['round_length'], $this->db_game['game_starting_block']);
 						
 						$i = 0;

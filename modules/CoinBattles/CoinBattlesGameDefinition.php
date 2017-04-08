@@ -3,19 +3,52 @@ class CoinBattlesGameDefinition {
 	public $app;
 	public $game_def;
 	public $events_per_round;
+	public $game_def_base_txt;
 	
 	public function __construct(&$app) {
 		$this->app = $app;
 		$this->events_per_round = array(0=>array('Bitcoin','Litecoin'), 1=>array('Bitcoin','Ethereum'));
+		$this->game_def_base_txt = '{
+			"blockchain_identifier": "litecoin",
+			"protocol_version": 0,
+			"url_identifier": "coin-battles",
+			"name": "Coin Battles",
+			"event_type_name": "battle",
+			"event_rule": "game_definition",
+			"event_entity_type_id": 0,
+			"option_group_id": 0,
+			"events_per_round": 0,
+			"inflation": "exponential",
+			"exponential_inflation_rate": 0.1,
+			"pos_reward": 0,
+			"round_length": 10,
+			"maturity": 0,
+			"payout_weight": "coin_round",
+			"final_round": null,
+			"buyin_policy": "none",
+			"game_buyin_cap": 0,
+			"sellout_policy": "on",
+			"sellout_confirmations": 0,
+			"coin_name": "coinblock",
+			"coin_name_plural": "coinblocks",
+			"coin_abbreviation": "CBL",
+			"escrow_address": "LbLXiznC4eiBtyho63vJdLdCzPCBESqCZW",
+			"genesis_tx_hash": "3e15f038c0ee2ca0b02261a87cc9481704366b2dd8286eb5d0d1505b99ffb686",
+			"genesis_amount": 10000000000,
+			"game_starting_block": 1173351,
+			"game_winning_rule": "none",
+			"game_winning_field": "",
+			"game_winning_inflation": 0,
+			"default_vote_effectiveness_function": "linear_decrease",
+			"default_max_voting_fraction": 1,
+			"default_option_max_width": 200,
+			"default_payout_block_delay": 0
+		}';
 		$this->load();
 	}
 	
 	public function load() {
-		$fname = dirname(__FILE__)."/gamedef_base.txt";
-		$fh = fopen($fname, 'r');
-		$gamedef_txt = fread($fh, filesize($fname));
-
-		$game_def = json_decode($gamedef_txt);
+		$game_def = json_decode($this->game_def_base_txt);
 
 		$blockchain_r = $this->app->run_query("SELECT * FROM blockchains WHERE url_identifier='".$game_def->blockchain_identifier."';");
 
