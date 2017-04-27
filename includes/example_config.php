@@ -46,4 +46,5 @@ $GLOBALS['profit_btc_address'] = "";
 $GLOBALS['api_proxy_url'] = "";
 
 $GLOBALS['default_server_api_access_key'] = false;
+$GLOBALS['cachebuster'] = 1001;
 ?>

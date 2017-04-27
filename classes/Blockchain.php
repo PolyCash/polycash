@@ -672,7 +672,7 @@ class Blockchain {
 		else {
 			$coin_rpc = &$input;
 			$genesis_block_hash = $coin_rpc->getblockhash(0);
-			$rpc_block = new block($coin_rpc->getblock($genesis_hash), 0, $genesis_hash);
+			$rpc_block = new block($coin_rpc->getblock($genesis_block_hash), 0, $genesis_block_hash);
 			$genesis_tx_hash = $rpc_block->json_obj['tx'][0];
 			
 			$nextblock_hash = $rpc_block->json_obj['nextblockhash'];
@@ -747,27 +747,25 @@ class Blockchain {
 	}
 	
 	public function set_first_required_block(&$coin_rpc) {
-		if ($this->db_blockchain['first_required_block'] == "") {
-			$first_required_block = false;
-			if ($coin_rpc) {
-				$info = $coin_rpc->getinfo();
-				$first_required_block = (int) $info['blocks'];
-			}
-			
-			$q = "SELECT MIN(game_starting_block) FROM games WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';";
-			$r = $this->app->run_query($q);
-			$min_starting_block = (int) $r->fetch()['MIN(game_starting_block)'];
-			
-			if ($min_starting_block > 0 && (!$first_required_block || $min_starting_block < $first_required_block)) $first_required_block = $min_starting_block;
-			
-			$q = "UPDATE blockchains SET first_required_block='".$first_required_block."' WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';";
-			$this->app->run_query($q);
-			
-			$q = "UPDATE games SET game_starting_block='".$first_required_block."' WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';";
-			$this->app->run_query($q);
-			
-			$this->db_blockchain['first_required_block'] = $first_required_block;
+		$first_required_block = false;
+		if ($coin_rpc) {
+			$info = $coin_rpc->getinfo();
+			$first_required_block = (int) $info['blocks'];
 		}
+		
+		$q = "SELECT MIN(game_starting_block) FROM games WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';";
+		$r = $this->app->run_query($q);
+		$min_starting_block = (int) $r->fetch()['MIN(game_starting_block)'];
+		
+		if ($min_starting_block > 0 && (!$first_required_block || $min_starting_block < $first_required_block)) $first_required_block = $min_starting_block;
+		
+		$q = "UPDATE blockchains SET first_required_block='".$first_required_block."' WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';";
+		$this->app->run_query($q);
+		
+		$q = "UPDATE games SET game_starting_block='".$first_required_block."' WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';";
+		$this->app->run_query($q);
+		
+		$this->db_blockchain['first_required_block'] = $first_required_block;
 	}
 	
 	public function sync_initial($from_block_id) {

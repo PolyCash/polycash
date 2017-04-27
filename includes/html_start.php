@@ -10,7 +10,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 	<title><?php if (!empty($pagetitle)) echo $pagetitle; ?></title>
 	
 	<link rel="stylesheet" type="text/css" href="/css/bootstrap.min.css" media="screen" />
-	<link rel="stylesheet" type="text/css" href="/css/style.css" />
+	<link rel="stylesheet" type="text/css" href="/css/style.css<?php if (!empty($GLOBALS['cachebuster'])) echo '?v='.$GLOBALS['cachebuster']; ?>" />
 	<link rel="stylesheet" type="text/css" href="/css/jquery.ui.css" />
 	<link rel="stylesheet" type="text/css" href="/css/jquery.nouislider.css" />
 	
@@ -19,7 +19,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 	<script type="text/javascript" src="/js/jquery.ui.js"></script>
 	<script type="text/javascript" src="/js/jquery.nouislider.js"></script>
 	<script type="text/javascript" src="/js/sha256.js"></script>
-	<script type="text/javascript" src="/js/main.js"></script>
+	<script type="text/javascript" src="/js/main.js<?php if (!empty($GLOBALS['cachebuster'])) echo '?v='.$GLOBALS['cachebuster']; ?>"></script>
 	<?php
 	if ($nav_tab_selected == "home" && $GLOBALS['site_domain'] != $_SERVER['HTTP_HOST']) {
 		echo '<link rel="canonical" href="http://coinblock.org">'."\n";
