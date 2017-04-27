@@ -29,7 +29,7 @@ class App {
 		throw new Exception($message);
 	}
 	
-	public function log_message(&$message) {
+	public function log_message($message) {
 		// Disabled so that errors still get thrown without functioning db
 		// $this->run_query("INSERT INTO log_messages SET message=".$this->quote_escape($message).";");
 	}

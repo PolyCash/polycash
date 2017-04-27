@@ -32,7 +32,7 @@ try {
 	$dbh->query("SET sql_mode='';");
 }
 catch (Exception $e) {
-	die("Error, connection to MySQL failed. Check your mysql parameters in includes/config.php");
+	die("Error, database connection failed. Make sure MySQL is running and check mysql parameters in includes/config.php");
 }
 header('Content-Type: text/html; charset=UTF-8');
 

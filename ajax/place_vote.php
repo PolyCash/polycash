@@ -74,7 +74,7 @@ if ($thisuser && $game) {
 			if ($rr->rowCount() == 1) {
 				$io = $rr->fetch();
 				
-				if ($io['user_id'] != $thisuser->db_user['user_id'] || $io['spend_status'] != "unspent" || $io['blockchain_id'] != $game->blockchain->db_blockchain['blockchain_id']) {
+				if ($io['spend_status'] != "unspent" || $io['blockchain_id'] != $game->blockchain->db_blockchain['blockchain_id']) {
 					die($io['user_id'].' != '.$thisuser->db_user['user_id'].' || '.$io['spend_status'].' != "unspent" || '.$io['blockchain_id'].' != '.$game->blockchain->db_blockchain['blockchain_id']);
 					$api_output = $noinfo_fail_obj;
 					echo json_encode($api_output);
