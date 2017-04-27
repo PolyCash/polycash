@@ -1250,17 +1250,23 @@ class Game {
 			
 			$block_fraction = 0;
 			if ($missing_blocks > 0) {
-				$q = "SELECT MAX(block_id) FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND locally_saved=1;";
-				$loading_block_id = $this->blockchain->app->run_query($q)->fetch()['MAX(block_id)']+1;
+				$q = "SELECT MAX(block_id), SUM(load_time) FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND locally_saved=1;";
+				$r = $this->blockchain->app->run_query($q)->fetch();
+				$sum_load_time = (float) $r['SUM(load_time)'];
+				$loading_block_id = (int) $r['MAX(block_id)']+1;
 				$loading_block = $this->blockchain->app->run_query("SELECT * FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND block_id='".$loading_block_id."';")->fetch();
 				if ($loading_block) {
 					list($loading_transactions, $loading_block_sum) = $this->blockchain->block_stats($loading_block);
 					$block_fraction = $loading_transactions/$loading_block['num_transactions'];
 				}
 			}
+			
 			$headers_pct_complete = 100*($total_game_blocks-$missingheader_blocks)/$total_game_blocks;
 			$blocks_pct_complete = 100*($total_game_blocks-($missing_blocks-$block_fraction))/$total_game_blocks;
-			if ($blocks_pct_complete != 100) $html .= "<br/>Loading blocks... ".round($blocks_pct_complete, 2)."% complete. ";
+			$total_load_time = $sum_load_time*(100/$blocks_pct_complete);
+			$est_time_remaining = ((100-$blocks_pct_complete)/100)*$total_load_time;
+			
+			if ($blocks_pct_complete != 100) $html .= "<br/>Loading blocks... ".round($blocks_pct_complete, 2)."% complete (".$this->blockchain->app->format_seconds($est_time_remaining)." left). ";
 			if ($loading_block) {
 				$html .= "Loaded ".$loading_transactions."/".$loading_block['num_transactions']." in block <a href=\"/explorer/games/".$this->db_game['url_identifier']."/blocks/".$loading_block_id."\">#".$loading_block_id."</a>. ";
 			}

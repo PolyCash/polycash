@@ -11,7 +11,7 @@ class App {
 	}
 	
 	public function set_db($db_name) {
-		$this->dbh->query("USE ".$db_name) or die("There was an error accessing the '".$db_name."' database.");
+		$this->dbh->query("USE ".$db_name) or $this->log_then_die("There was an error accessing the '".$db_name."' database.");
 	}
 	
 	public function last_insert_id() {
@@ -25,8 +25,13 @@ class App {
 	}
 	
 	public function log_then_die($message) {
-		$this->log($message);
+		$this->log_message($message);
 		throw new Exception($message);
+	}
+	
+	public function log_message($message) {
+		// Disabled so that errors still get thrown without functioning db
+		// $this->run_query("INSERT INTO log_messages SET message=".$this->quote_escape($message).";");
 	}
 	
 	public function utf8_clean($str) {
@@ -78,6 +83,132 @@ class App {
 		$response = json_decode(file_get_contents("https://www.google.com/recaptcha/api/siteverify?secret=".$recaptcha_privatekey."&response=".$g_recaptcha_response."&remoteip=".$ip_address), true);
 		if ($response['success'] == false) return false;
 		else return true;
+	}
+	
+	public function update_schema() {
+		$migrations_path = realpath(dirname(__FILE__)."/../sql");
+		
+		$keep_looping = true;
+		
+		try {
+			$migration_id = ((int)$this->get_site_constant("last_migration_id"))+1;
+		}
+		catch (Exception $e) {
+			$keep_looping = false;
+		}
+		
+		if ($keep_looping) {
+			while ($keep_looping) {
+				$fname = $migrations_path."/".$migration_id.".sql";
+				if (is_file($fname)) {
+					$cmd = $this->mysql_binary_location()." -u ".$GLOBALS['mysql_user']." -h ".$GLOBALS['mysql_server'];
+					if ($GLOBALS['mysql_password'] != "") $cmd .= " -p".$GLOBALS['mysql_password'];
+					$cmd .= " ".$GLOBALS['mysql_database']." < ".$fname;
+					exec($cmd);
+					$migration_id++;
+				}
+				else $keep_looping = false;
+			}
+			$this->set_site_constant("last_migration_id", $migration_id);
+		}
+	}
+	
+	public function argv_to_array($argv) {
+		$arr = array();
+		$arg_i = 0;
+		foreach ($argv as $arg) {
+			if ($arg_i > 0) {
+				$arg_parts = explode("=", $arg);
+				if(count($arg_parts) == 2)
+					$arr[$arg_parts[0]] = $arg_parts[1];
+				else
+					$arr[$arg_i-1] = $arg_parts[0];
+			}
+			$arg_i++;
+		}
+		return $arr;
+	}
+	
+	public function mysql_binary_location() {
+		if (!empty($GLOBALS['mysql_binary_location'])) return $GLOBALS['mysql_binary_location'];
+		else {
+			$var = $this->run_query("SHOW VARIABLES LIKE 'basedir';")->fetch();
+			$var_val = str_replace("\\", "/", $var['Value']);
+			if (!in_array($var_val[strlen($var_val)-1], array('/', '\\'))) $var_val .= "/";
+			if (PHP_OS == "WINNT") return $var_val."bin/mysql.exe";
+			else return $var_val."bin/mysql";
+		}
+	}
+	
+	public function php_binary_location() {
+		if (!empty($GLOBALS['php_binary_location'])) return $GLOBALS['php_binary_location'];
+		else if (PHP_OS == "WINNT") return str_replace("\\", "/", dirname(ini_get('extension_dir')))."/php.exe";
+		else return PHP_BINDIR ."/php";
+	}
+	
+	public function start_regular_background_processes($key_string) {
+		$html = "";
+		$process_count = 0;
+		
+		$pipe_config = array(
+			0 => array('pipe', 'r'),
+			1 => array('pipe', 'w'),
+			2 => array('pipe', 'w')
+		);
+		$pipes = array();
+		
+		if (PHP_OS == "WINNT") $script_path_name = dirname(dirname(__FILE__));
+		else $script_path_name = realpath(dirname(dirname(__FILE__)));
+		
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_blocks.php" key='.$key_string;
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
+		$block_loading_process = proc_open($cmd, $pipe_config, $pipes);
+		if (is_resource($block_loading_process)) $process_count++;
+		else $html .= "Failed to start a process for loading blocks.<br/>\n";
+		sleep(0.1);
+		
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_games.php" key='.$key_string;
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
+		$block_loading_process = proc_open($cmd, $pipe_config, $pipes);
+		if (is_resource($block_loading_process)) $process_count++;
+		else $html .= "Failed to start a process for loading blocks.<br/>\n";
+		sleep(0.1);
+		
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_main.php" key='.$key_string;
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
+		$main_process = proc_open($cmd, $pipe_config, $pipes);
+		if (is_resource($main_process)) $process_count++;
+		else $html .= "Failed to start the main process.<br/>\n";
+		sleep(0.1);
+		
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_check_payments.php" key='.$key_string;
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
+		$payments_process = proc_open($cmd, $pipe_config, $pipes);
+		if (is_resource($payments_process)) $process_count++;
+		else $html .= "Failed to start a process for processing payments.<br/>\n";
+		sleep(0.1);
+		
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/address_miner.php" key='.$key_string;
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
+		$address_miner_process = proc_open($cmd, $pipe_config, $pipes);
+		if (is_resource($address_miner_process)) $process_count++;
+		else $html .= "Failed to start a process for mining addresses.<br/>\n";
+		sleep(0.1);
+		
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/fetch_currency_prices.php" key='.$key_string;
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
+		$currency_prices_process = proc_open($cmd, $pipe_config, $pipes);
+		if (is_resource($currency_prices_process)) $process_count++;
+		else $html .= "Failed to start a process for updating currency prices.<br/>\n";
+		
+		$html .= "Started ".$process_count." background processes.<br/>\n";
+		return $html;
 	}
 	
 	public function generate_games($default_blockchain_id) {
@@ -176,16 +307,26 @@ class App {
 	}
 
 	public function set_site_constant($constant_name, $constant_value) {
-		$q = "SELECT * FROM site_constants WHERE constant_name='".$constant_name."';";
-		$r = $this->run_query($q);
-		if ($r->rowCount() > 0) {
-			$constant = $r->fetch();
-			$q = "UPDATE site_constants SET constant_value='".$constant_value."' WHERE constant_id='".$constant['constant_id']."';";
+		try {
+			$q = "SELECT * FROM site_constants WHERE constant_name='".$constant_name."';";
 			$r = $this->run_query($q);
+			$run_query = true;
 		}
-		else {
-			$q = "INSERT INTO site_constants SET constant_name='".$constant_name."', constant_value='".$constant_value."';";
-			$r = $this->run_query($q);
+		catch (Exception $e) {
+			// site_constants table does not exist yet.
+			$run_query = false;
+		}
+		
+		if ($run_query) {
+			if ($r->rowCount() > 0) {
+				$constant = $r->fetch();
+				$q = "UPDATE site_constants SET constant_value='".$constant_value."' WHERE constant_id='".$constant['constant_id']."';";
+				$r = $this->run_query($q);
+			}
+			else {
+				$q = "INSERT INTO site_constants SET constant_name='".$constant_name."', constant_value='".$constant_value."';";
+				$r = $this->run_query($q);
+			}
 		}
 	}
 	
@@ -666,128 +807,6 @@ class App {
 		if ($only_unspent_utxos) $update_user_id_q .= " WHERE io.spend_status='unspent'";
 		$update_user_id_q .= ";";
 		$update_user_id_r = $this->run_query($update_user_id_q);
-	}
-	
-	public function log($message) {
-		$this->run_query("INSERT INTO log_messages SET message=".$this->quote_escape($message).";");
-	}
-	
-	public function update_schema() {
-		$migrations_path = realpath(dirname(__FILE__)."/../sql");
-		
-		$migration_id = ((int)$this->get_site_constant("last_migration_id"))+1;
-		$keep_looping = true;
-		do {
-			$fname = $migrations_path."/".$migration_id.".sql";
-			if (is_file($fname)) {
-				$cmd = $this->mysql_binary_location()." -u ".$GLOBALS['mysql_user']." -h ".$GLOBALS['mysql_server'];
-				if ($GLOBALS['mysql_password'] != "") $cmd .= " -p".$GLOBALS['mysql_password'];
-				$cmd .= " ".$GLOBALS['mysql_database']." < ".$fname;
-				exec($cmd);
-				$this->set_site_constant("last_migration_id", $migration_id);
-				$migration_id++;
-			}
-			else $keep_looping = false;
-		}
-		while ($keep_looping);
-	}
-	
-	public function argv_to_array($argv) {
-		$arr = array();
-		$arg_i = 0;
-		foreach ($argv as $arg) {
-			if ($arg_i > 0) {
-				$arg_parts = explode("=", $arg);
-				if(count($arg_parts) == 2)
-					$arr[$arg_parts[0]] = $arg_parts[1];
-				else
-					$arr[$arg_i-1] = $arg_parts[0];
-			}
-			$arg_i++;
-		}
-		return $arr;
-	}
-	
-	public function mysql_binary_location() {
-		if (!empty($GLOBALS['mysql_binary_location'])) return $GLOBALS['mysql_binary_location'];
-		else {
-			$var = $this->run_query("SHOW VARIABLES LIKE 'basedir';")->fetch();
-			$var_val = str_replace("\\", "/", $var['Value']);
-			if (!in_array($var_val[strlen($var_val)-1], array('/', '\\'))) $var_val .= "/";
-			if (PHP_OS == "WINNT") return $var_val."bin/mysql.exe";
-			else return $var_val."bin/mysql";
-		}
-	}
-	
-	public function php_binary_location() {
-		if (!empty($GLOBALS['php_binary_location'])) return $GLOBALS['php_binary_location'];
-		else if (PHP_OS == "WINNT") return str_replace("\\", "/", dirname(ini_get('extension_dir')))."/php.exe";
-		else return PHP_BINDIR ."/php";
-	}
-	
-	public function start_regular_background_processes($key_string) {
-		$html = "";
-		$process_count = 0;
-		
-		$pipe_config = array(
-			0 => array('pipe', 'r'),
-			1 => array('pipe', 'w'),
-			2 => array('pipe', 'w')
-		);
-		$pipes = array();
-		
-		if (PHP_OS == "WINNT") $script_path_name = dirname(dirname(__FILE__));
-		else $script_path_name = realpath(dirname(dirname(__FILE__)));
-		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_blocks.php" key='.$key_string;
-		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
-		else $cmd .= " 2>&1 >/dev/null";
-		$block_loading_process = proc_open($cmd, $pipe_config, $pipes);
-		if (is_resource($block_loading_process)) $process_count++;
-		else $html .= "Failed to start a process for loading blocks.<br/>\n";
-		sleep(0.1);
-		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_games.php" key='.$key_string;
-		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
-		else $cmd .= " 2>&1 >/dev/null";
-		$block_loading_process = proc_open($cmd, $pipe_config, $pipes);
-		if (is_resource($block_loading_process)) $process_count++;
-		else $html .= "Failed to start a process for loading blocks.<br/>\n";
-		sleep(0.1);
-		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_main.php" key='.$key_string;
-		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
-		else $cmd .= " 2>&1 >/dev/null";
-		$main_process = proc_open($cmd, $pipe_config, $pipes);
-		if (is_resource($main_process)) $process_count++;
-		else $html .= "Failed to start the main process.<br/>\n";
-		sleep(0.1);
-		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_check_payments.php" key='.$key_string;
-		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
-		else $cmd .= " 2>&1 >/dev/null";
-		$payments_process = proc_open($cmd, $pipe_config, $pipes);
-		if (is_resource($payments_process)) $process_count++;
-		else $html .= "Failed to start a process for processing payments.<br/>\n";
-		sleep(0.1);
-		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/address_miner.php" key='.$key_string;
-		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
-		else $cmd .= " 2>&1 >/dev/null";
-		$address_miner_process = proc_open($cmd, $pipe_config, $pipes);
-		if (is_resource($address_miner_process)) $process_count++;
-		else $html .= "Failed to start a process for mining addresses.<br/>\n";
-		sleep(0.1);
-		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/fetch_currency_prices.php" key='.$key_string;
-		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
-		else $cmd .= " 2>&1 >/dev/null";
-		$currency_prices_process = proc_open($cmd, $pipe_config, $pipes);
-		if (is_resource($currency_prices_process)) $process_count++;
-		else $html .= "Failed to start a process for updating currency prices.<br/>\n";
-		
-		$html .= "Started ".$process_count." background processes.<br/>\n";
-		return $html;
 	}
 	
 	public function image_url(&$db_image) {
@@ -1496,6 +1515,8 @@ class App {
 				$db_blockchain = $r->fetch();
 				$blockchain = new Blockchain($this, $db_blockchain['blockchain_id']);
 				
+				$coin_rpc = false;
+				
 				$game_def->url_identifier = $this->normalize_uri_part($game_def->url_identifier);
 				
 				if ($game_def->url_identifier != "") {
@@ -1520,7 +1541,6 @@ class App {
 						
 						$new_game = new Game($blockchain, $new_game_id);
 						
-						$coin_rpc = false;
 						if ($new_game->db_game['p2p_mode'] == "none") {
 							if ($thisuser) $user_game = $thisuser->ensure_user_in_game($new_game);
 							
@@ -1544,12 +1564,16 @@ class App {
 						else {
 							try {
 								$coin_rpc = new jsonRPCClient('http://'.$db_blockchain['rpc_username'].':'.$db_blockchain['rpc_password'].'@127.0.0.1:'.$db_blockchain['rpc_port'].'/');
+								$test_rpc = $coin_rpc->getinfo();
 							} catch (Exception $e) {
 								echo "Error, skipped ".$db_blockchain['blockchain_name']." because RPC connection failed.<br/>\n";
+								die();
 							}
 						}
 						
-						$blockchain->set_first_required_block($coin_rpc);
+						if ($coin_rpc) {
+							$blockchain->set_first_required_block($coin_rpc);
+						}
 						
 						if ($new_game->db_game['event_rule'] == "game_definition") {
 							$game_defined_events = $game_def->events;

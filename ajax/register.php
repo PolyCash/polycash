@@ -59,19 +59,6 @@ else {
 					$email_id = $app->mail_async($email, $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], "New account created", $email_message, "", "");
 				}
 				
-				$q = "SELECT * FROM games WHERE game_id='".$app->get_site_constant('primary_game_id')."';";
-				$r = $app->run_query($q);
-				
-				if ($r->rowCount() == 1) {
-					$db_primary_game = $r->fetch();
-					$primary_game = new Game($app, $db_primary_game['game_id']);
-					
-					if ($primary_game->db_game['giveaway_status'] == "public_free") {
-						$user_game = $thisuser->ensure_user_in_game($primary_game);
-						$giveaway = $primary_game->new_game_giveaway($user_id, 'initial_purchase', false);
-					}
-				}
-				
 				$redirect_url = false;
 				
 				if ($GLOBALS['pageview_tracking_enabled']) $thisuser->log_user_in($redirect_url, $viewer_id);

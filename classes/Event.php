@@ -299,7 +299,7 @@ class Event {
 		
 		$event_pos_reward = $this->event_pos_reward_in_round($round_id);
 		
-		$this->game->blockchain->app->log($winning_option." wins, ".$r->rowCount()." correct votes, payout: ".$event_pos_reward/pow(10,8));
+		$this->game->blockchain->app->log_message($winning_option." wins, ".$r->rowCount()." correct votes, payout: ".$event_pos_reward/pow(10,8));
 		while ($input = $r->fetch()) {
 			if ($winning_votes == 0) $payout_amount = 0;
 			else $payout_amount = floor($event_pos_reward*$input['votes']/$winning_votes);
@@ -312,7 +312,7 @@ class Event {
 			$rr = $this->game->blockchain->app->run_query($qq);
 			$output_id = $this->game->blockchain->app->last_insert_id();
 			
-			$this->game->blockchain->app->log($output_id." ".$qq);
+			$this->game->blockchain->app->log_message($output_id." ".$qq);
 			
 			$qq = "UPDATE transaction_game_ios SET payout_game_io_id='".$output_id."' WHERE game_io_id='".$input['game_io_id']."';";
 			$rr = $this->game->blockchain->app->run_query($qq);

@@ -256,7 +256,7 @@ class Blockchain {
 								else {
 									$successful = false;
 									$error_message = "Failed to create inputs for tx #".$db_transaction_id.", created tx #".$new_tx['transaction_id']." then looked for tx_hash=".$inputs[$j]['txid'].", vout=".$inputs[$j]['vout'];
-									$this->app->log($error_message);
+									$this->app->log_message($error_message);
 									echo $error_message."\n";
 								}
 							}
@@ -366,7 +366,7 @@ class Blockchain {
 							
 							$ref_round_id = $color_game->block_to_round($ref_block_id);
 							
-							$this->app->log("game #".$db_color_game['game_id'].", color sum: ".$color_amount/pow(10,8).", outputs: ".count($outputs));
+							$this->app->log_message("game #".$db_color_game['game_id'].", color sum: ".$color_amount/pow(10,8).", outputs: ".count($outputs));
 							
 							for ($j=0; $j<count($outputs); $j++) {
 								if ($output_io_address_ids[$j] != $escrow_address['address_id']) {
@@ -393,7 +393,7 @@ class Blockchain {
 									$rr = $this->app->run_query($qq);
 									$gio_id = $this->app->last_insert_id();
 									
-									$this->app->log($gio_id." ".$qq);
+									$this->app->log_message($gio_id." ".$qq);
 									
 									$color_amount_sum += $this_color_amount;
 									$coin_block_sum += $this_coin_blocks;
@@ -431,7 +431,7 @@ class Blockchain {
 			catch (Exception $e) {
 				$successful = false;
 				var_dump($e);
-				$this->app->log($this->db_blockchain['blockchain_name'].": Failed to fetch transaction ".$tx_hash);
+				$this->app->log_message($this->db_blockchain['blockchain_name'].": Failed to fetch transaction ".$tx_hash);
 				return false;
 			}
 		}
@@ -580,7 +580,7 @@ class Blockchain {
 		$rpc_block = $coin_rpc->getblock($db_block['block_hash']);
 		
 		if ($rpc_block['confirmations'] < 0) {
-			$this->app->log("Detected a chain fork at block #".$db_block['block_id']);
+			$this->app->log_message("Detected a chain fork at block #".$db_block['block_id']);
 			
 			$delete_block_height = $db_block['block_id'];
 			$rpc_delete_block = $rpc_block;
@@ -595,7 +595,7 @@ class Blockchain {
 			}
 			while ($keep_looping);
 			
-			$this->app->log("Deleting blocks #".$delete_block_height." and above.");
+			$this->app->log_message("Deleting blocks #".$delete_block_height." and above.");
 			
 			$this->delete_blocks_from_height($delete_block_height);
 		}
@@ -699,7 +699,7 @@ class Blockchain {
 		$r = $this->app->run_query($q);
 		
 		$html .= "Added the genesis transaction!<br/>\n";
-		$this->app->log($html);
+		$this->app->log_message($html);
 		
 		if ($this->db_blockchain['p2p_mode'] == "none" && $game->db_game['creator_id'] > 0) {
 			$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$game->user_game['account_id']."' ORDER BY RAND() LIMIT 1;";
