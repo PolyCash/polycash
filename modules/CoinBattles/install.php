@@ -31,11 +31,10 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		else {
 			try {
 				$rpc_conn_string = 'http://'.$new_game->blockchain->db_blockchain['rpc_username'].':'.$new_game->blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$new_game->blockchain->db_blockchain['rpc_port'].'/';
-				die($rpc_conn_string);
 				$coin_rpc = new jsonRPCClient($rpc_conn_string);
 			}
 			catch (Exception $e) {
-				$app->log_then_die("Error, failed to load RPC connection for ".$new_game->blockchain->db_blockchain['blockchain_name'].".\n");
+				die("Error, failed to load RPC connection for ".$new_game->blockchain->db_blockchain['blockchain_name'].".\n");
 			}
 			
 			$new_game->delete_reset_game('reset');

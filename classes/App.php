@@ -97,17 +97,19 @@ class App {
 			$keep_looping = false;
 		}
 		
-		while ($keep_looping) {
-			$fname = $migrations_path."/".$migration_id.".sql";
-			if (is_file($fname)) {
-				$cmd = $this->mysql_binary_location()." -u ".$GLOBALS['mysql_user']." -h ".$GLOBALS['mysql_server'];
-				if ($GLOBALS['mysql_password'] != "") $cmd .= " -p".$GLOBALS['mysql_password'];
-				$cmd .= " ".$GLOBALS['mysql_database']." < ".$fname;
-				exec($cmd);
-				$this->set_site_constant("last_migration_id", $migration_id);
-				$migration_id++;
+		if ($keep_looping) {
+			while ($keep_looping) {
+				$fname = $migrations_path."/".$migration_id.".sql";
+				if (is_file($fname)) {
+					$cmd = $this->mysql_binary_location()." -u ".$GLOBALS['mysql_user']." -h ".$GLOBALS['mysql_server'];
+					if ($GLOBALS['mysql_password'] != "") $cmd .= " -p".$GLOBALS['mysql_password'];
+					$cmd .= " ".$GLOBALS['mysql_database']." < ".$fname;
+					exec($cmd);
+					$migration_id++;
+				}
+				else $keep_looping = false;
 			}
-			else $keep_looping = false;
+			$this->set_site_constant("last_migration_id", $migration_id);
 		}
 	}
 	
