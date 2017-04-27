@@ -8,9 +8,12 @@ if (!empty($argv)) {
 	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
 	if (!empty($cmd_vars['coins'])) $_REQUEST['coins'] = $cmd_vars['coins'];
 	if (!empty($cmd_vars['to'])) $_REQUEST['to'] = $cmd_vars['to'];
+	if (!empty($cmd_vars['game_id'])) $_REQUEST['game_id'] = $cmd_vars['game_id'];
 }
 
 if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+	$game_id = $_REQUEST['game_id'];
+	
 	$user_id = false;
 	$username = false;
 	$to = $_REQUEST['to'];
@@ -20,7 +23,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	$coins_to_grant = floatval($_REQUEST['coins']);
 	$coins_granted = 0;
 	
-	$unclaimed_coins_q = "SELECT SUM(amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.game_id=".$app->get_site_constant('primary_game_id')." AND io.spend_status='unspent' AND io.user_id IS NULL AND a.user_id IS NULL AND a.is_mine=1;";
+	$unclaimed_coins_q = "SELECT SUM(amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.game_id=".$game_id." AND io.spend_status='unspent' AND io.user_id IS NULL AND a.user_id IS NULL AND a.is_mine=1;";
 	$unclaimed_coins_r = $app->run_query($unclaimed_coins_q);
 	$unclaimed_coins = $unclaimed_coins_r->fetch(PDO::FETCH_NUM);
 	$unclaimed_coins = $unclaimed_coins[0]/pow(10,8);
@@ -34,7 +37,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		if ($user_r->rowCount() > 0) {
 			$user = $user_r->fetch();
 			
-			$unclaimed_output_q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.game_id=".$app->get_site_constant('primary_game_id')." AND io.spend_status='unspent' AND io.user_id IS NULL AND a.user_id IS NULL AND a.is_mine=1;";
+			$unclaimed_output_q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.game_id=".$game_id." AND io.spend_status='unspent' AND io.user_id IS NULL AND a.user_id IS NULL AND a.is_mine=1;";
 			$unclaimed_output_r = $app->run_query($unclaimed_output_q);
 			echo "Looping through ".$unclaimed_output_r->rowCount()." unclaimed outputs.<br/>\n";
 			while ($utxo = $unclaimed_output_r->fetch()) {

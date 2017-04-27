@@ -199,8 +199,17 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 						<?php
 					}
 				}
-				?>
 				
+				$module_q = "SELECT * FROM modules ORDER BY module_id ASC;";
+				$module_r = $app->run_query($module_q);
+				
+				echo "<h2>Available Modules (".$module_r->rowCount().")</h2>\n";
+				
+				while ($db_module = $module_r->fetch()) {
+					echo "<div class='row'><div class='col-sm-4'>".$db_module['module_name']."</div><div class='col-sm-4'><a href='/modules/".$db_module['module_name']."/install.php?key=".$GLOBALS['cron_key_string']."'>Install</a></div></div>\n";
+				}
+				?>
+				<br/>
 				<a class="btn btn-success" href="/">Check if installation was successful</a>
 				<br/><br/>
 			</div>

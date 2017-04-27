@@ -131,7 +131,6 @@ if ($uri_parts[1] == "api") {
 		$nav_tab_selected = "api";
 		include('includes/html_start.php');
 		
-		$game_id = $app->get_site_constant('primary_game_id');
 		if (empty($game_id)) {
 			$game_id = $app->run_query("SELECT * FROM games WHERE featured=1 ORDER BY game_id ASC LIMIT 1;")->fetch()['game_id'];
 		}

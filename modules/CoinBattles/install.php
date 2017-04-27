@@ -13,7 +13,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 
 	$q = "SELECT * FROM games WHERE module=".$app->quote_escape($module['module_name']).";";
 	$r = $app->run_query($q);
-
+	
 	if ($r->rowCount() > 0) {
 		$db_game = $r->fetch();
 		echo "Found existing game, skipping...<br/>\n";
@@ -30,10 +30,12 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		if ($error_message) echo $error_message."<br/>\n";
 		else {
 			try {
-				$coin_rpc = new jsonRPCClient('http://'.$new_game->blockchain->db_blockchain['rpc_username'].':'.$new_game->blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$new_game->blockchain->db_blockchain['rpc_port'].'/');
+				$rpc_conn_string = 'http://'.$new_game->blockchain->db_blockchain['rpc_username'].':'.$new_game->blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$new_game->blockchain->db_blockchain['rpc_port'].'/';
+				die($rpc_conn_string);
+				$coin_rpc = new jsonRPCClient($rpc_conn_string);
 			}
 			catch (Exception $e) {
-				echo "Error, failed to load RPC connection for ".$new_game->blockchain->db_blockchain['blockchain_name'].".<br/>\n";
+				$app->log_then_die("Error, failed to load RPC connection for ".$new_game->blockchain->db_blockchain['blockchain_name'].".\n");
 			}
 			
 			$new_game->delete_reset_game('reset');

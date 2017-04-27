@@ -13,3 +13,5 @@ ALTER TABLE `modules`
   MODIFY `module_id` int(11) NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `blocks` ADD INDEX (`blockchain_id`, `locally_saved`);
+
+INSERT INTO modules SET module_name='CoinBattles';

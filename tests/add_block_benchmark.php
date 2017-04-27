@@ -23,7 +23,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	$start_time = microtime(true);
 	$game->coind_add_block($coin_rpc, $block_hash, $block_height, false);
 	$message = "Took ".(microtime(true)-$start_time)." sec to add block #".$block_height."<br/>\n";
-	$app->log($message);
+	$app->log_message($message);
 	echo "<br/>".$message."\n";
 }
 else echo "Please supply the correct key.\n";

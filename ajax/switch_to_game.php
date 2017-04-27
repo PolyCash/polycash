@@ -122,17 +122,6 @@ if ($thisuser) {
 				if ($success) {
 					$output_obj['redirect_url'] = '/wallet/'.$game->db_game['url_identifier'];
 					
-					if ($action == "delete") {
-						$q = "SELECT * FROM game_types WHERE game_id='".$app->get_site_constant('primary_game_id')."';";
-						$r = $app->run_query($q);
-						$primary_game = $r->fetch();
-						
-						$q = "UPDATE users SET game_id='".$primary_game['game_id']."' WHERE user_id='".$thisuser->db_user['user_id']."';";
-						$r = $app->run_query($q);
-						
-						$output_obj['redirect_url'] = '/wallet/'.$primary_game['url_identifier'];
-					}
-					
 					output_message(1, "", $output_obj);
 				}
 				else output_message(2, "Error, the game couldn't be reset.", false);

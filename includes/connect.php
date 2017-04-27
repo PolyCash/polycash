@@ -46,11 +46,19 @@ if ($GLOBALS['pageview_tracking_enabled']) include(realpath(dirname(dirname(__FI
 include(realpath(dirname(dirname(__FILE__)))."/classes/User.php");
 
 $app = new App($dbh);
-if ($GLOBALS['pageview_tracking_enabled']) $pageview_controller = new PageviewController($app);
-
-$module_q = "SELECT * FROM modules ORDER BY module_id ASC;";
-$module_r = $app->run_query($module_q);
-while ($module = $module_r->fetch()) {
-	include(realpath(dirname(dirname(__FILE__)))."/modules/".$module['module_name']."/".$module['module_name']."GameDefinition.php");	
+try {
+	$app->set_db($GLOBALS['mysql_database']);
 }
+catch (Exception $e) {}
+
+try {
+	$module_q = "SELECT * FROM modules ORDER BY module_id ASC;";
+	$module_r = $app->run_query($module_q);
+	while ($module = $module_r->fetch()) {
+		include(realpath(dirname(dirname(__FILE__)))."/modules/".$module['module_name']."/".$module['module_name']."GameDefinition.php");	
+	}
+}
+catch(Exception $ee) {}
+
+if ($GLOBALS['pageview_tracking_enabled']) $pageview_controller = new PageviewController($app);
 ?>

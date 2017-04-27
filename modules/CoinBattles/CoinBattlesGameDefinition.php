@@ -60,10 +60,15 @@ class CoinBattlesGameDefinition {
 			}
 			catch (Exception $e) {
 				echo "Error, failed to load RPC connection for ".$db_blockchain['blockchain_name'].".<br/>\n";
+				die();
 			}
 			
 			$chain_starting_block = $game_def->game_starting_block;
-			$chain_last_block = $coin_rpc->getblockcount();
+			try {
+				$chain_last_block = (int) $coin_rpc->getblockcount();
+			}
+			catch (Exception $e) {}
+			
 			$chain_events_until_block = $chain_last_block + $game_def->round_length;
 
 			$defined_rounds = ceil(($chain_events_until_block - $chain_starting_block)/$game_def->round_length);
