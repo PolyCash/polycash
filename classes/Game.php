@@ -1894,7 +1894,7 @@ class Game {
 		
 		if ($round_id > $ensured_round) {
 			if ($this->db_game['event_rule'] == "game_definition") {
-				if ($this->db_game['module'] == "CoinBattles") {
+				if (!empty($this->db_game['module'])) {
 					$q = "SELECT * FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."' ORDER BY event_index DESC LIMIT 1;";
 					$r = $this->blockchain->app->run_query($q);
 					
@@ -1903,13 +1903,13 @@ class Game {
 						
 						$game_starting_round = $this->block_to_round($this->db_game['game_starting_block']);
 						
-						$CoinBattles = new CoinBattlesGameDefinition($this->blockchain->app);
+						eval('$module = new '.$this->db_game['module'].'GameDefinition($this->blockchain->app);');
 						$last_gde_round = $this->block_to_round($db_last_gde['event_final_block']);
 						
 						$event_verbatim_vars = $this->blockchain->app->event_verbatim_vars();
 						$events_from_round = $last_gde_round-$game_starting_round+1;
 						$events_to_round = $round_id-$game_starting_round+1;
-						$gdes_to_add = $CoinBattles->events_between_rounds($events_from_round, $events_to_round, $this->db_game['round_length'], $this->db_game['game_starting_block']);
+						$gdes_to_add = $module->events_between_rounds($events_from_round, $events_to_round, $this->db_game['round_length'], $this->db_game['game_starting_block']);
 						
 						$i = 0;
 						for ($event_index=$db_last_gde['event_index']+1; $event_index<$db_last_gde['event_index']+1+count($gdes_to_add); $event_index++) {
@@ -2310,7 +2310,7 @@ class Game {
 			$payout_events = $this->events_by_payout_block($block_height);
 			
 			for ($i=0; $i<count($payout_events); $i++) {
-				if ($this->db_game['module'] == "CoinBattles") {
+				if (!empty($this->db_game['module'])) {
 					try {
 						$coin_rpc = new jsonRPCClient('http://'.$this->blockchain->db_blockchain['rpc_username'].':'.$this->blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->blockchain->db_blockchain['rpc_port'].'/');
 					}
@@ -2318,8 +2318,8 @@ class Game {
 						echo "Error, failed to load RPC connection for ".$this->blockchain->db_blockchain['blockchain_name'].".<br/>\n";
 					}
 					
-					$CoinBattles = new CoinBattlesGameDefinition($this->blockchain->app);
-					$CoinBattles->set_event_outcome($this, $coin_rpc, $payout_events[$i]->db_event);
+					eval('$module = new '.$this->db_game['module'].'GameDefinition($this->blockchain->app);');
+					$module->set_event_outcome($this, $coin_rpc, $payout_events[$i]->db_event);
 				}
 				
 				$payout_events[$i]->set_outcome_from_db($block_height, true);
