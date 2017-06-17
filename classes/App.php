@@ -1620,5 +1620,56 @@ class App {
 		
 		return false;
 	}
+	
+	public function check_set_option_group($description, $singular_form, $plural_form) {
+		$group_q = "SELECT * FROM option_groups WHERE description=".$this->quote_escape($description).";";
+		$group_r = $this->run_query($group_q);
+		
+		if ($group_r->rowCount() > 0) {
+			return $group_r->fetch();
+		}
+		else {
+			$group_q = "INSERT INTO option_groups SET description=".$this->quote_escape($description).", option_name=".$this->quote_escape($singular_form).", option_name_plural=".$this->quote_escape($plural_form).";";
+			$group_r = $this->run_query($group_q);
+			$group_id = $this->last_insert_id();
+			$group_q = "SELECT * FROM option_groups WHERE group_id=".$group_id.";";
+			return $this->run_query($group_q)->fetch();
+		}
+	}
+	
+	public function check_set_entity($entity_type_id, $name) {
+		$q = "SELECT * FROM entities WHERE ";
+		if ($entity_type_id) $q .= "entity_type_id='".$entity_type_id."' AND ";
+		$q .= "entity_name=".$this->quote_escape($name).";";
+		$r = $this->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			return $r->fetch();
+		}
+		else {
+			$q = "INSERT INTO entities SET entity_name=".$this->quote_escape($name);
+			if ($entity_type_id) $q .= ", entity_type_id='".$entity_type_id."'";
+			$q .= ";";
+			$r = $this->run_query($q);
+			$entity_id = $this->last_insert_id();
+			$q = "SELECT * FROM entities WHERE entity_id=".$entity_id.";";
+			return $this->run_query($q)->fetch();
+		}
+	}
+	
+	public function check_set_entity_type($name) {
+		$q = "SELECT * FROM entity_types WHERE entity_name=".$this->quote_escape($name).";";
+		$r = $this->run_query($q);
+		if ($r->rowCount() > 0) {
+			return $r->fetch();
+		}
+		else {
+			$q = "INSERT INTO entity_types SET entity_type_id='".$entity_type_id."', entity_name=".$this->quote_escape($name).";";
+			$r = $this->run_query($q);
+			$entity_type_id = $this->last_insert_id();
+			$q = "SELECT * FROM entity_types WHERE entity_type_id=".$entity_type_id.";";
+			return $this->run_query($q)->fetch();
+		}
+	}
 }
 ?>

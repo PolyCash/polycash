@@ -482,8 +482,8 @@ class Blockchain {
 			$html .= "Loading game blocks...\n";
 			$this->load_all_blocks($coin_rpc, TRUE);
 			
-			$html .= "Loading unconfirmed transactions...\n";
-			$this->load_unconfirmed_transactions($coin_rpc, 30);
+			//$html .= "Loading unconfirmed transactions...\n";
+			//$this->load_unconfirmed_transactions($coin_rpc, 30);
 			
 			//echo "Updating option votes...\n";
 			//$this->update_option_votes();
@@ -762,7 +762,7 @@ class Blockchain {
 		$q = "UPDATE blockchains SET first_required_block='".$first_required_block."' WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';";
 		$this->app->run_query($q);
 		
-		$q = "UPDATE games SET game_starting_block='".$first_required_block."' WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';";
+		$q = "UPDATE games SET game_starting_block='".$first_required_block."' WHERE game_starting_block IS NULL AND blockchain_id='".$this->db_blockchain['blockchain_id']."';";
 		$this->app->run_query($q);
 		
 		$this->db_blockchain['first_required_block'] = $first_required_block;
