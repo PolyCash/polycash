@@ -437,6 +437,31 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo '</div>'."\n";
 						}
 					}
+					
+					if ($event->db_event['option_block_rule'] == "football_match") {
+						echo "<br/><h2>Match Summary</h2>\n";
+						
+						$q = "SELECT * FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id='".$event->db_event['event_id']."' AND ob.score > 0 ORDER BY ob.option_block_id ASC;";
+						$r = $app->run_query($q);
+						$scores_by_entity_id = array();
+						$entities_by_id = array();
+						
+						while ($option_block = $r->fetch()) {
+							if (empty($scores_by_entity_id[$option_block['entity_id']])) {
+								$scores_by_entity_id[$option_block['entity_id']] = $option_block['score'];
+								$entities_by_id[$option_block['entity_id']] = $option_block;
+							}
+							else $scores_by_entity_id[$option_block['entity_id']] += $option_block['score'];
+							
+							echo $option_block['entity_name']." scored in block #".$option_block['block_height']."<br/>\n";
+						}
+						
+						echo "<br/><b>Final Score:</b><br/>\n";
+						$winning_entity_id = false;
+						foreach ($scores_by_entity_id as $entity_id => $score) {
+							echo $entities_by_id[$entity_id]['entity_name'].": ".$score."<br/>\n";
+						}
+					}
 					?>
 					<br/>
 					<h2>Transactions</h2>

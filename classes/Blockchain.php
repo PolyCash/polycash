@@ -159,14 +159,14 @@ class Blockchain {
 				$db_transaction_id = $unconfirmed_tx['transaction_id'];
 			}
 			else {
-				if ($unconfirmed_tx['block_id'] > 0 && $unconfirmed_tx['has_all_outputs'] == 1 && (!$require_inputs || $unconfirmed_tx['has_all_inputs'] == 1)) $add_transaction = false;
-				else {
+				/*if ($unconfirmed_tx['input_skip_count']==0 && $unconfirmed_tx['block_id'] > 0 && $unconfirmed_tx['has_all_outputs'] == 1 && (!$require_inputs || $unconfirmed_tx['has_all_inputs'] == 1)) $add_transaction = false;
+				else {*/
 					if ($unconfirmed_tx['blockchain_id'] == $this->db_blockchain['blockchain_id']) {
 						$q = "DELETE t.*, io.*, gio.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';";
 						$r = $this->app->run_query($q);
 						$benchmark_time = microtime(true);
 					}
-				}
+				//}
 			}
 		}
 		
@@ -482,9 +482,10 @@ class Blockchain {
 			$html .= "Loading game blocks...\n";
 			$this->load_all_blocks($coin_rpc, TRUE);
 			
-			//$html .= "Loading unconfirmed transactions...\n";
-			//$this->load_unconfirmed_transactions($coin_rpc, 30);
-			
+			if (!empty($GLOBALS['load_unconfirmed_transactions'])) {
+				$html .= "Loading unconfirmed transactions...\n";
+				$this->load_unconfirmed_transactions($coin_rpc, 30);
+			}
 			//echo "Updating option votes...\n";
 			//$this->update_option_votes();
 			
