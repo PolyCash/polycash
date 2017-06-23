@@ -827,14 +827,12 @@ class Game {
 		$this->update_option_votes();
 	}
 	
-	public function rounds_complete_html($max_round_id, $limit) {
+	public function event_outcomes_html($from_event_index, $to_event_index) {
 		$html = "";
 		
 		$show_initial = false;
-		$last_block_id = $this->blockchain->last_block_id();
-		$current_round = $this->block_to_round($last_block_id+1);
 		
-		$q = "SELECT eo.*, e.*, real_winner.name AS real_winner_name, derived_winner.name AS derived_winner_name FROM event_outcomes eo JOIN events e ON eo.event_id=e.event_id LEFT JOIN options real_winner ON eo.winning_option_id=real_winner.option_id LEFT JOIN options derived_winner ON eo.derived_winning_option_id=derived_winner.option_id WHERE e.game_id='".$this->db_game['game_id']."' AND eo.round_id <= ".$max_round_id." GROUP BY e.event_id ORDER BY eo.event_id DESC, eo.round_id DESC LIMIT ".$limit.";";
+		$q = "SELECT eo.*, e.*, real_winner.name AS real_winner_name, derived_winner.name AS derived_winner_name FROM event_outcomes eo JOIN events e ON eo.event_id=e.event_id LEFT JOIN options real_winner ON eo.winning_option_id=real_winner.option_id LEFT JOIN options derived_winner ON eo.derived_winning_option_id=derived_winner.option_id WHERE e.game_id='".$this->db_game['game_id']."' AND e.event_index <= ".$to_event_index." AND e.event_index >= ".$from_event_index." ORDER BY e.event_index DESC;";
 		$r = $this->blockchain->app->run_query($q);
 		
 		$last_round_shown = 0;
@@ -1266,6 +1264,7 @@ class Game {
 					$block_fraction = $loading_transactions/$loading_block['num_transactions'];
 				}
 			}
+			else $sum_load_time = 0;
 			
 			$headers_pct_complete = 100*($total_game_blocks-$missingheader_blocks)/$total_game_blocks;
 			$blocks_pct_complete = 100*($total_game_blocks-($missing_blocks-$block_fraction))/$total_game_blocks;
@@ -2322,9 +2321,9 @@ class Game {
 			for ($i=0; $i<count($events); $i++) {
 				$events[$i]->process_option_blocks($game_block);
 				
-				//if ($block_height == $events[$i]->db_event['event_starting_block'] || $block_height == $events[$i]->db_event['event_final_block']) {
-				//	$events[$i]->set_outcome_from_db($block_height, false);
-				//}
+				if ($block_height == $events[$i]->db_event['event_starting_block'] || $block_height == $events[$i]->db_event['event_final_block']) {
+					$events[$i]->set_outcome_from_db($block_height, false);
+				}
 			}
 			
 			$this->ensure_events_until_block($this->blockchain->last_block_id()+1);

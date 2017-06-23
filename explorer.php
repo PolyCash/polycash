@@ -489,22 +489,29 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				else {
 					?>
 					<h1><?php echo $game->db_game['name']; ?> Results</h1>
-					<div style="border-bottom: 1px solid #bbb; margin-bottom: 5px;" id="rounds_complete">
-						<div id="rounds_complete_0">
+					<div style="border-bottom: 1px solid #bbb; margin-bottom: 5px;" id="render_event_outcomes">
+						<div id="event_outcomes_0">
 							<?php
-							$rounds_complete = $game->rounds_complete_html($current_round, 20);
-							$last_round_shown = $rounds_complete[0];
-							echo $rounds_complete[1];
+							$q = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block<=".$game->blockchain->last_block_id()." ORDER BY event_index DESC LIMIT 1;";
+							$r = $app->run_query($q);
+							
+							if ($r->rowCount() > 0) {
+								$db_event = $r->fetch();
+								$to_event_index = $db_event['event_index'];
+								$from_event_index = max(0, $to_event_index-20);
+								$event_outcomes = $game->event_outcomes_html($from_event_index, $to_event_index);
+								echo $event_outcomes[1];
+							}
 							?>
 						</div>
 					</div>
 					<center>
-						<a href="" onclick="show_more_rounds_complete(); return false;" id="show_more_link">Show More</a>
+						<a href="" onclick="show_more_event_outcomes(); return false;" id="show_more_link">Show More</a>
 					</center>
 					
 					<script type="text/javascript">
 					$(document).ready(function() {
-						last_round_shown = <?php echo $last_round_shown; ?>;
+						last_event_index_shown = <?php echo $from_event_index; ?>;
 					});
 					</script>
 					<?php

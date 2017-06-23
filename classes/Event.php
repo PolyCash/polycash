@@ -704,7 +704,6 @@ class Event {
 		}
 		
 		$this->set_event_completed();
-		echo $log_text;
 		return $log_text;
 	}
 	

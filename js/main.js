@@ -122,8 +122,8 @@ var option_id2option_index = {};
 var option_index2option_id = {};
 
 // OBJECT: Wallet
-var last_round_shown;
-var round_sections_shown = 1;
+var last_event_index_shown;
+var event_outcome_sections_shown = 1;
 
 function openChatWindow(userId) {
 	if (typeof userId2ChatWindowId[userId] === 'undefined' || userId2ChatWindowId[userId] === false) {
@@ -923,15 +923,22 @@ function refresh_visible_inputs() {
 		}
 	}
 }
-function show_more_rounds_complete() {
+function show_more_event_outcomes() {
 	if ($('#show_more_link').html() == "Show More") {
+		var to_event_index = (last_event_index_shown-1);
+		var from_event_index = to_event_index - 19;
+		
+		if (to_event_index < -1) to_event_index = -1;
+		if (from_event_index < -1) from_event_index = -1;
+		
 		$('#show_more_link').html("Loading...");
-		$.get("/ajax/show_rounds_complete.php?game_id="+games[0].game_id+"&from_round_id="+(last_round_shown-1), function(result) {
+		last_event_index_shown = from_event_index;
+		
+		$.get("/ajax/show_event_outcomes.php?game_id="+games[0].game_id+"&from_event_index="+from_event_index+"&to_event_index="+to_event_index, function(result) {
 			$('#show_more_link').html("Show More");
 			var json_result = JSON.parse(result);
-			if (parseInt(json_result[0]) > 0) last_round_shown = parseInt(json_result[0]);
-			$('#rounds_complete').append('<div id="rounds_complete_'+round_sections_shown+'">'+json_result[1]+'</div>');
-			round_sections_shown++;
+			$('#render_event_outcomes').append('<div id="event_outcomes_'+event_outcome_sections_shown+'">'+json_result[1]+'</div>');
+			event_outcome_sections_shown++;
 		});
 	}
 }
