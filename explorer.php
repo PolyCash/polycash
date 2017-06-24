@@ -271,9 +271,6 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				</script>
 				<div class="row">
 					<div class="col-sm-7 ">
-						<?php
-						if ($game) echo "<a class='btn btn-sm btn-warning' href='/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/'>View Underlying Chain</a>\n";
-						?>
 						<ul class="list-inline explorer_nav" id="explorer_nav">
 							<li><a<?php if ($explore_mode == 'blocks') echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
 							if ($game) echo $game->db_game['url_identifier'];
@@ -307,6 +304,17 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					</div>
 				</div>
 				<?php
+				if ($game) {
+					echo "<a class='btn btn-sm btn-warning' href='/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/";
+					if (in_array($explore_mode, array('blocks','addresses','transactions'))) {
+						echo $explore_mode."/";
+						if ($explore_mode == "blocks") echo $block['block_id'];
+						else if ($explore_mode == "addresses") echo $address['address'];
+						else if ($explore_mode == "transactions") echo $transaction['tx_hash'];
+						echo "/";
+					}
+					echo "'>View on ".$game->blockchain->db_blockchain['blockchain_name']."</a>\n";
+				}
 			}
 			
 			if ($explore_mode == "events") {
@@ -830,8 +838,15 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					}
 				}
 				else {
-					$utxo_q = "SELECT * FROM transaction_ios io JOIN addresses a ON a.address_id=io.address_id WHERE io.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND io.spend_status IN ('unspent','unconfirmed') ORDER BY io.io_id DESC LIMIT 500;";
+					$utxo_count_q = "SELECT COUNT(*) FROM transaction_ios WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND spend_status='unspent';";
+					$utxo_count_r = $app->run_query($utxo_count_q);
+					$utxo_count = $utxo_count_r->fetch();
+					
+					$utxo_q = "SELECT * FROM transaction_ios io JOIN addresses a ON a.address_id=io.address_id WHERE io.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND io.spend_status IN ('unspent','unconfirmed') ORDER BY io.amount DESC LIMIT 500;";
 					$utxo_r = $app->run_query($utxo_q);
+					
+					echo "<h1>Showing the ".$utxo_r->rowCount()." largest ".$blockchain->db_blockchain['blockchain_name']." UTXOs</h1>";
+					echo "<p>".$blockchain->db_blockchain['blockchain_name']." currently has ".number_format($utxo_count['COUNT(*)'])." confirmed, unspent transaction outputs.</p>\n";
 					
 					while ($utxo = $utxo_r->fetch()) {
 						echo '<div class="row">';

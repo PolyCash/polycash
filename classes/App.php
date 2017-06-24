@@ -206,6 +206,14 @@ class App {
 		$currency_prices_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($currency_prices_process)) $process_count++;
 		else $html .= "Failed to start a process for updating currency prices.<br/>\n";
+		sleep(0.1);
+		
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_cached_urls.php" key='.$key_string;
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
+		$cached_url_process = proc_open($cmd, $pipe_config, $pipes);
+		if (is_resource($cached_url_process)) $process_count++;
+		else $html .= "Failed to start a process for loading cached urls.<br/>\n";
 		
 		$html .= "Started ".$process_count." background processes.<br/>\n";
 		return $html;
@@ -1435,7 +1443,7 @@ class App {
 			$q = "UPDATE game_defined_events SET ";
 		}
 		else {
-			$q = "INSERT INTO game_defined_events SET game_id='".$game->db_game['game_id']."', event_index='".$event_index."'";
+			$q = "INSERT INTO game_defined_events SET game_id='".$game->db_game['game_id']."', event_index='".$event_index."', ";
 		}
 		
 		for ($j=0; $j<count($event_verbatim_vars); $j++) {
@@ -1445,8 +1453,10 @@ class App {
 			if ($var_val === "" || strtolower($var_val) == "null") $escaped_var_val = "NULL";
 			else $escaped_var_val = $this->quote_escape($var_val);
 			
-			$q .= ", ".$event_verbatim_vars[$j][1]."=".$escaped_var_val;
+			$q .= $event_verbatim_vars[$j][1]."=".$escaped_var_val.", ";
 		}
+		$q = substr($q, 0, strlen($q)-2);
+		
 		if ($db_gde) {
 			$q .= " WHERE game_defined_event_id='".$db_gde['game_defined_event_id']."'";
 		}
@@ -1606,12 +1616,14 @@ class App {
 							
 							for ($j=0; $j<count($game_event_params); $j++) {
 								$var_type = $game_event_params[$j][0];
-								eval('$var_val = (string) $game_defined_events[$i]->'.$game_event_params[$j][1].';');
-								
-								if ($var_val === "" || strtolower($var_val) == "null") $escaped_var_val = "NULL";
-								else $escaped_var_val = $this->quote_escape($var_val);
-								
-								$q .= ", ".$game_event_params[$j][1]."=".$escaped_var_val;
+								if ($game_event_params[$j][1] != "option_block_rule") {
+									eval('$var_val = (string) $game_defined_events[$i]->'.$game_event_params[$j][1].';');
+									
+									if ($var_val === "" || strtolower($var_val) == "null") $escaped_var_val = "NULL";
+									else $escaped_var_val = $this->quote_escape($var_val);
+									
+									$q .= ", ".$game_event_params[$j][1]."=".$escaped_var_val;
+								}
 							}
 							$q .= ";";
 							$r = $this->run_query($q);
@@ -1628,8 +1640,6 @@ class App {
 					}
 					
 					$new_game->check_set_game_definition();
-					
-					$new_game->ensure_events_until_block($new_game->blockchain->last_block_id()+1);
 					
 					$error_message = false;
 					return $new_game;
@@ -1692,6 +1702,43 @@ class App {
 			$q = "SELECT * FROM entity_types WHERE entity_type_id=".$entity_type_id.";";
 			return $this->run_query($q)->fetch();
 		}
+	}
+	
+	public function async_fetch_url($url, $require_now) {
+		$q = "SELECT * FROM cached_urls WHERE url=".$this->quote_escape($url).";";
+		$r = $this->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			$cached_url = $r->fetch();
+			
+			if ($require_now && empty($cached_url['time_fetched'])) {
+				$start_load_time = microtime(true);
+				$http_response = file_get_contents($cached_url['url']) or die("Failed to fetch url: $url");
+				$q = "UPDATE cached_urls SET cached_result=".$this->quote_escape($http_response).", time_fetched='".time()."', load_time='".(microtime(true)-$start_load_time)."' WHERE cached_url_id='".$cached_url['cached_url_id']."';";
+				$r = $this->run_query($q);
+				
+				$q = "SELECT * FROM cached_urls WHERE cached_url_id=".$cached_url['cached_url_id'].";";
+				$r = $this->run_query($q);
+				$cached_url = $r->fetch();
+			}
+		}
+		else {
+			$q = "INSERT INTO cached_urls SET url=".$this->quote_escape($url).", time_created='".time()."'";
+			if ($require_now) {
+				$start_load_time = microtime(true);
+				$http_response = file_get_contents($url) or die("Failed to fetch url: $url");
+				$q .= ", time_fetched='".time()."', cached_result=".$this->quote_escape($http_response).", load_time='".(microtime(true)-$start_load_time)."'";
+			}
+			$q .= ";";
+			$r = $this->run_query($q);
+			$cached_url_id = $this->last_insert_id();
+			
+			$q = "SELECT * FROM cached_urls WHERE cached_url_id=".$cached_url_id.";";
+			$r = $this->run_query($q);
+			$cached_url = $r->fetch();
+		}
+		
+		return $cached_url;
 	}
 }
 ?>

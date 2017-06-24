@@ -622,11 +622,9 @@ class Event {
 					$event_option_offset_q = "SELECT * FROM options o JOIN events e ON o.event_id=e.event_id WHERE e.game_id='".$this->game->db_game['game_id']."' AND e.event_starting_block='".$this->db_event['event_starting_block']."' AND e.event_index < ".$this->db_event['event_index'].";";
 					$event_option_offset_r = $this->game->blockchain->app->run_query($event_option_offset_q);
 					$event_option_offset = $event_option_offset_r->rowCount();
-					echo "$event_option_offset_q<br/>\n";
 					
 					$db_winning_option_q = "SELECT * FROM options WHERE event_id='".$this->db_event['event_id']."' AND option_index=".($event_option_offset+$game_defined_event['outcome_index']).";";
 					$db_winning_option_r = $this->game->blockchain->app->run_query($db_winning_option_q);
-					echo "$db_winning_option_q<br/>\n";
 					
 					if ($db_winning_option_r->rowCount() > 0) {
 						$db_winning_option = $db_winning_option_r->fetch();

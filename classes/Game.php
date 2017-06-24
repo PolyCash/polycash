@@ -2345,7 +2345,7 @@ class Game {
 				
 				$payout_events[$i]->set_outcome_from_db($block_height, true);
 				
-				if (!empty($this->db_game['module'])) {
+				if (!empty($this->db_game['module']) && method_exists($module, "event_index_to_next_index")) {
 					$event_index = $module->event_index_to_next_event_index($this, $payout_events[$i]->db_event['event_index']);
 					$this->blockchain->app->log_message("setting labels for event_index $event_index because of event ".$payout_events[$i]->db_event['event_index']);
 					$this->set_event_labels_by_gde($event_index);
