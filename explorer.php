@@ -306,7 +306,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				<?php
 				if ($game) {
 					echo "<a class='btn btn-sm btn-warning' href='/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/";
-					if (in_array($explore_mode, array('blocks','addresses','transactions'))) {
+					if (in_array($explore_mode, array('blocks','addresses','transactions','utxos'))) {
 						echo $explore_mode."/";
 						if ($explore_mode == "blocks") echo $block['block_id'];
 						else if ($explore_mode == "addresses") echo $address['address'];

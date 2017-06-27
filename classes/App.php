@@ -1616,14 +1616,12 @@ class App {
 							
 							for ($j=0; $j<count($game_event_params); $j++) {
 								$var_type = $game_event_params[$j][0];
-								if ($game_event_params[$j][1] != "option_block_rule") {
-									eval('$var_val = (string) $game_defined_events[$i]->'.$game_event_params[$j][1].';');
-									
-									if ($var_val === "" || strtolower($var_val) == "null") $escaped_var_val = "NULL";
-									else $escaped_var_val = $this->quote_escape($var_val);
-									
-									$q .= ", ".$game_event_params[$j][1]."=".$escaped_var_val;
-								}
+								eval('$var_val = (string) $game_defined_events[$i]->'.$game_event_params[$j][1].';');
+								
+								if ($var_val === "" || strtolower($var_val) == "null") $escaped_var_val = "NULL";
+								else $escaped_var_val = $this->quote_escape($var_val);
+								
+								$q .= ", ".$game_event_params[$j][1]."=".$escaped_var_val;
 							}
 							$q .= ";";
 							$r = $this->run_query($q);
