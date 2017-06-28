@@ -376,3 +376,7 @@ footer {
 	width: 100%;
 	font-family: consolas;
 }
+.planned_votes_event {
+	margin: 8px 10px;
+	display: inline-block;
+}

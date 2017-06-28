@@ -37,7 +37,7 @@ CREATE TABLE `game_definitions` (
 ALTER TABLE `game_defined_events`
   ADD PRIMARY KEY (`game_defined_event_id`),
   ADD KEY `game_id` (`game_id`),
-  ADD KEY `event_index` (`event_index`);
+	ADD UNIQUE (`game_id`, `event_index`);
 
 ALTER TABLE `game_defined_options`
   ADD PRIMARY KEY (`game_defined_option_id`),

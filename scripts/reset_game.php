@@ -22,10 +22,13 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$game->delete_reset_game($action);
 		
 		$game->update_db_game();
-		$game->ensure_events_until_block($game->blockchain->last_block_id()+1);
+		$until_block = $game->blockchain->last_block_id()+1;
+		if (!empty($game->db_game['final_round'])) {
+			$until_block = $game->db_game['game_starting_block'] + $game->db_game['round_length']*$game->db_game['final_round'];
+			echo "until block: $until_block<br/>\n";
+		}
+		$game->ensure_events_until_block($until_block);
 		$game->load_current_events();
-		$game->sync();
-		echo "sync() ...<br/>\n";
 	}
 	
 	echo "Great, the game has been ".$action."!\n";

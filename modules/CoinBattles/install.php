@@ -1,4 +1,5 @@
 <?php
+ini_set('memory_limit', '512M');
 include(dirname(dirname(dirname(__FILE__)))."/includes/connect.php");
 include_once(dirname(__FILE__)."/CoinBattlesGameDefinition.php");
 
@@ -16,6 +17,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	
 	if ($r->rowCount() > 0) {
 		$db_game = $r->fetch();
+		
 		echo "Found existing game, skipping...<br/>\n";
 	}
 	else {
@@ -25,7 +27,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$new_game_def_txt = $app->game_def_to_text($game_def->game_def);
 		
 		$error_message = false;
-		$new_game = $app->create_game_from_definition($new_game_def_txt, $thisuser, "CoinBattles", $error_message);
+		$new_game = $app->create_game_from_definition($new_game_def_txt, $thisuser, "CoinBattles", $error_message, false);
 		
 		if ($error_message) echo $error_message."<br/>\n";
 		else {
@@ -40,10 +42,10 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			$new_game->delete_reset_game('reset');
 			
 			$new_game->update_db_game();
-			$new_game->ensure_events_until_block($new_game->blockchain->last_block_id()+1);
-			$new_game->load_current_events();
-			$new_game->sync();
+			$game_def->add_oracle_urls($new_game, $coin_rpc);
+			echo "Done adding oracle URLS<br/>\n";
 		}
+		echo "Next please <a href=\"/scripts/reset_game.php?key=".$GLOBALS['cron_key_string']."&game_id=".$new_game->db_game['game_id']."\">reset this game</a><br/>\n";
 	}
 	
 	echo "Done!!<br/>\n";

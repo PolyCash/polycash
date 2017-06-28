@@ -30,8 +30,8 @@ class App {
 	}
 	
 	public function log_message($message) {
-		// Disabled so that errors still get thrown without functioning db
-		// $this->run_query("INSERT INTO log_messages SET message=".$this->quote_escape($message).";");
+		// Disable so that errors still get thrown without functioning db
+		$this->run_query("INSERT INTO log_messages SET message=".$this->quote_escape($message).";");
 	}
 	
 	public function utf8_clean($str) {
@@ -206,6 +206,14 @@ class App {
 		$currency_prices_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($currency_prices_process)) $process_count++;
 		else $html .= "Failed to start a process for updating currency prices.<br/>\n";
+		sleep(0.1);
+		
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_cached_urls.php" key='.$key_string;
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
+		$cached_url_process = proc_open($cmd, $pipe_config, $pipes);
+		if (is_resource($cached_url_process)) $process_count++;
+		else $html .= "Failed to start a process for loading cached urls.<br/>\n";
 		
 		$html .= "Started ".$process_count." background processes.<br/>\n";
 		return $html;
@@ -1270,7 +1278,7 @@ class App {
 					$chars .= $voting_characters[$remainder];
 				}
 				$firstchar_index = $firstchar_offset+$current_num;
-				$chars .= $voting_characters[$firstchar_index];
+				$chars .= $voting_characters[(int)$firstchar_index];
 			}
 			$firstchar_offset += $firstchar_divisions[$length-1];
 		}
@@ -1316,6 +1324,7 @@ class App {
 			array('int', 'event_final_block', true),
 			array('int', 'event_payout_block', true),
 			array('string', 'event_name', false),
+			array('string', 'option_block_rule', false),
 			array('string', 'option_name', false),
 			array('string', 'option_name_plural', false),
 			array('int', 'outcome_index', true)
@@ -1434,7 +1443,7 @@ class App {
 			$q = "UPDATE game_defined_events SET ";
 		}
 		else {
-			$q = "INSERT INTO game_defined_events SET game_id='".$game->db_game['game_id']."', event_index='".$event_index."'";
+			$q = "INSERT INTO game_defined_events SET game_id='".$game->db_game['game_id']."', event_index='".$event_index."', ";
 		}
 		
 		for ($j=0; $j<count($event_verbatim_vars); $j++) {
@@ -1444,8 +1453,10 @@ class App {
 			if ($var_val === "" || strtolower($var_val) == "null") $escaped_var_val = "NULL";
 			else $escaped_var_val = $this->quote_escape($var_val);
 			
-			$q .= ", ".$event_verbatim_vars[$j][1]."=".$escaped_var_val;
+			$q .= $event_verbatim_vars[$j][1]."=".$escaped_var_val.", ";
 		}
+		$q = substr($q, 0, strlen($q)-2);
+		
 		if ($db_gde) {
 			$q .= " WHERE game_defined_event_id='".$db_gde['game_defined_event_id']."'";
 		}
@@ -1457,7 +1468,9 @@ class App {
 		$this->run_query("DELETE FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$event_index."';");
 		
 		for ($k=0; $k<count($possible_outcomes); $k++) {
-			$q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index='".$event_index."', option_index='".$k."', name=".$this->quote_escape($possible_outcomes[$k]['title']).";";
+			$q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index='".$event_index."', option_index='".$k."', name=".$this->quote_escape($possible_outcomes[$k]['title']);
+			if (!empty($possible_outcomes[$k]['entity_id'])) $q .= ", entity_id='".$possible_outcomes[$k]['entity_id']."'";
+			$q .= ";";
 			$r = $this->run_query($q);
 		}
 	}
@@ -1490,7 +1503,7 @@ class App {
 		return $module;
 	}
 	
-	public function create_game_from_definition(&$game_definition, &$thisuser, $module, &$error_message) {
+	public function create_game_from_definition(&$game_definition, &$thisuser, $module, &$error_message, $db_game) {
 		$game_def = json_decode($game_definition) or die("Error: the game definition you entered could not be imported.<br/>Please make sure to enter properly formatted JSON.<br/><a href=\"/import/\">Try again</a>");
 		
 		$error_message = "";
@@ -1520,12 +1533,24 @@ class App {
 				$game_def->url_identifier = $this->normalize_uri_part($game_def->url_identifier);
 				
 				if ($game_def->url_identifier != "") {
+					$verbatim_vars = $this->game_definition_verbatim_vars();
+					
 					$q = "SELECT * FROM games WHERE url_identifier=".$this->quote_escape($game_def->url_identifier).";";
 					$r = $this->run_query($q);
 					
-					if ($r->rowCount() == 0) {
-						$verbatim_vars = $this->game_definition_verbatim_vars();
+					if (!empty($db_game)) {
+						$q = "UPDATE games SET seconds_per_block='".$db_blockchain['seconds_per_block']."'";
+						for ($i=0; $i<count($verbatim_vars); $i++) {
+							$var_type = $verbatim_vars[$i][0];
+							$var_name = $verbatim_vars[$i][1];
+							$q .= ", ".$var_name."=".$this->quote_escape($game_def->$var_name);
+						}
+						$q .= " WHERE game_id='".$db_game['game_id']."';";
+						$r = $this->run_query($q);
 						
+						$new_game = new Game($blockchain, $db_game['game_id']);
+					}
+					else if ($r->rowCount() == 0) {
 						$q = "INSERT INTO games SET ";
 						if ($module) $q .= "module=".$this->quote_escape($module).", ";
 						if ($thisuser) $q .= "creator_id='".$thisuser->db_user['user_id']."', ";
@@ -1570,47 +1595,52 @@ class App {
 								die();
 							}
 						}
+					}
+					
+					if ($coin_rpc) {
+						$blockchain->set_first_required_block($coin_rpc);
+					}
+					
+					if ($new_game->db_game['event_rule'] == "game_definition") {
+						$q = "DELETE FROM game_defined_events WHERE game_id='".$new_game->db_game['game_id']."';";
+						$r = $this->run_query($q);
 						
-						if ($coin_rpc) {
-							$blockchain->set_first_required_block($coin_rpc);
-						}
+						$q = "DELETE FROM game_defined_options WHERE game_id='".$new_game->db_game['game_id']."';";
+						$r = $this->run_query($q);
 						
-						if ($new_game->db_game['event_rule'] == "game_definition") {
-							$game_defined_events = $game_def->events;
-							$game_event_params = $this->event_verbatim_vars();
+						$game_defined_events = $game_def->events;
+						$game_event_params = $this->event_verbatim_vars();
+						
+						for ($i=0; $i<count($game_defined_events); $i++) {
+							$q = "INSERT INTO game_defined_events SET game_id='".$new_game->db_game['game_id']."', event_index='".$i."'";
 							
-							for ($i=0; $i<count($game_defined_events); $i++) {
-								$q = "INSERT INTO game_defined_events SET game_id='".$new_game->db_game['game_id']."', event_index='".$i."'";
+							for ($j=0; $j<count($game_event_params); $j++) {
+								$var_type = $game_event_params[$j][0];
+								eval('$var_val = (string) $game_defined_events[$i]->'.$game_event_params[$j][1].';');
 								
-								for ($j=0; $j<count($game_event_params); $j++) {
-									$var_type = $game_event_params[$j][0];
-									eval('$var_val = (string) $game_defined_events[$i]->'.$game_event_params[$j][1].';');
-									
-									if ($var_val === "" || strtolower($var_val) == "null") $escaped_var_val = "NULL";
-									else $escaped_var_val = $this->quote_escape($var_val);
-									
-									$q .= ", ".$game_event_params[$j][1]."=".$escaped_var_val;
-								}
+								if ($var_val === "" || strtolower($var_val) == "null") $escaped_var_val = "NULL";
+								else $escaped_var_val = $this->quote_escape($var_val);
+								
+								$q .= ", ".$game_event_params[$j][1]."=".$escaped_var_val;
+							}
+							$q .= ";";
+							$r = $this->run_query($q);
+							
+							$possible_outcomes = $game_defined_events[$i]->possible_outcomes;
+							
+							for ($k=0; $k<count($game_defined_events[$i]->possible_outcomes); $k++) {
+								$q = "INSERT INTO game_defined_options SET game_id='".$new_game->db_game['game_id']."', event_index='".$i."', option_index='".$k."', name=".$this->quote_escape($possible_outcomes[$k]->title);
+								if (!empty($possible_outcomes[$k]->entity_id)) $q .= ", entity_id=".$possible_outcomes[$k]->entity_id;
 								$q .= ";";
 								$r = $this->run_query($q);
-								
-								$possible_outcomes = $game_defined_events[$i]->possible_outcomes;
-								
-								for ($k=0; $k<count($game_defined_events[$i]->possible_outcomes); $k++) {
-									$q = "INSERT INTO game_defined_options SET game_id='".$new_game->db_game['game_id']."', event_index='".$i."', option_index='".$k."', name=".$this->quote_escape($possible_outcomes[$k]->title).";";
-									$r = $this->run_query($q);
-								}
 							}
 						}
-						
-						$new_game->check_set_game_definition();
-						
-						$new_game->ensure_events_until_block($new_game->blockchain->last_block_id()+1);
-						
-						$error_message = false;
-						return $new_game;
 					}
-					else $error_message = "Error, a game already exists with that URL identifier.";
+					
+					$new_game->check_set_game_definition();
+					
+					$error_message = false;
+					return $new_game;
 				}
 				else $error_message = "Error, invalid game URL identifier.";
 			}
@@ -1619,6 +1649,94 @@ class App {
 		else $error_message = "Error, failed to identify the right blockchain.";
 		
 		return false;
+	}
+	
+	public function check_set_option_group($description, $singular_form, $plural_form) {
+		$group_q = "SELECT * FROM option_groups WHERE description=".$this->quote_escape($description).";";
+		$group_r = $this->run_query($group_q);
+		
+		if ($group_r->rowCount() > 0) {
+			return $group_r->fetch();
+		}
+		else {
+			$group_q = "INSERT INTO option_groups SET description=".$this->quote_escape($description).", option_name=".$this->quote_escape($singular_form).", option_name_plural=".$this->quote_escape($plural_form).";";
+			$group_r = $this->run_query($group_q);
+			$group_id = $this->last_insert_id();
+			$group_q = "SELECT * FROM option_groups WHERE group_id=".$group_id.";";
+			return $this->run_query($group_q)->fetch();
+		}
+	}
+	
+	public function check_set_entity($entity_type_id, $name) {
+		$q = "SELECT * FROM entities WHERE ";
+		if ($entity_type_id) $q .= "entity_type_id='".$entity_type_id."' AND ";
+		$q .= "entity_name=".$this->quote_escape($name).";";
+		$r = $this->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			return $r->fetch();
+		}
+		else {
+			$q = "INSERT INTO entities SET entity_name=".$this->quote_escape($name);
+			if ($entity_type_id) $q .= ", entity_type_id='".$entity_type_id."'";
+			$q .= ";";
+			$r = $this->run_query($q);
+			$entity_id = $this->last_insert_id();
+			$q = "SELECT * FROM entities WHERE entity_id=".$entity_id.";";
+			return $this->run_query($q)->fetch();
+		}
+	}
+	
+	public function check_set_entity_type($name) {
+		$q = "SELECT * FROM entity_types WHERE entity_name=".$this->quote_escape($name).";";
+		$r = $this->run_query($q);
+		if ($r->rowCount() > 0) {
+			return $r->fetch();
+		}
+		else {
+			$q = "INSERT INTO entity_types SET entity_type_id='".$entity_type_id."', entity_name=".$this->quote_escape($name).";";
+			$r = $this->run_query($q);
+			$entity_type_id = $this->last_insert_id();
+			$q = "SELECT * FROM entity_types WHERE entity_type_id=".$entity_type_id.";";
+			return $this->run_query($q)->fetch();
+		}
+	}
+	
+	public function async_fetch_url($url, $require_now) {
+		$q = "SELECT * FROM cached_urls WHERE url=".$this->quote_escape($url).";";
+		$r = $this->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			$cached_url = $r->fetch();
+			
+			if ($require_now && empty($cached_url['time_fetched'])) {
+				$start_load_time = microtime(true);
+				$http_response = file_get_contents($cached_url['url']) or die("Failed to fetch url: $url");
+				$q = "UPDATE cached_urls SET cached_result=".$this->quote_escape($http_response).", time_fetched='".time()."', load_time='".(microtime(true)-$start_load_time)."' WHERE cached_url_id='".$cached_url['cached_url_id']."';";
+				$r = $this->run_query($q);
+				
+				$q = "SELECT * FROM cached_urls WHERE cached_url_id=".$cached_url['cached_url_id'].";";
+				$r = $this->run_query($q);
+				$cached_url = $r->fetch();
+			}
+		}
+		else {
+			$q = "INSERT INTO cached_urls SET url=".$this->quote_escape($url).", time_created='".time()."'";
+			if ($require_now) {
+				$start_load_time = microtime(true);
+				$http_response = file_get_contents($url) or die("Failed to fetch url: $url");
+				$q .= ", time_fetched='".time()."', cached_result=".$this->quote_escape($http_response).", load_time='".(microtime(true)-$start_load_time)."'";
+			}
+			$q .= ";";
+			$r = $this->run_query($q);
+			$cached_url_id = $this->last_insert_id();
+			
+			$q = "SELECT * FROM cached_urls WHERE cached_url_id=".$cached_url_id.";";
+			$r = $this->run_query($q);
+			$cached_url = $r->fetch();
+		}
+		
+		return $cached_url;
 	}
 }
 ?>

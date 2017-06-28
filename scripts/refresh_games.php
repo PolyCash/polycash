@@ -33,7 +33,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			}
 		}*/
 		
-		$game->update_option_votes();
+		/*$game->update_option_votes();
 		
 		echo $game->db_game['name']."<br/>\n";
 		
@@ -43,7 +43,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		while ($strategy_count = $rr->fetch()) {
 			echo "&nbsp;&nbsp;".$strategy_count['COUNT(*)']."&nbsp;".$strategy_count['voting_strategy']."<br/>\n";
 		}
-		
+		*/
 		$ensure_block = $blockchain->last_block_id()+$game->db_game['round_length']+1;
 		$game->ensure_events_until_block($ensure_block);
 		echo "Ensured events until ".$ensure_block."<br/>\n";
