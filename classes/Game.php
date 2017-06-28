@@ -956,12 +956,13 @@ class Game {
 			$js .= "round_id2plan_round_id[".$round."] = ".$round_i.";\n";
 			$block_id = ($round-1)*$this->db_game['round_length']+1;
 			$events = $this->events_by_block($block_id);
-			$html .= '<div class="plan_row">#'.$this->round_to_display_round($round).": ";
+			$html .= '<div class="plan_row"><b>Round #'.$this->round_to_display_round($round)."</b><br/>\n";
 			for ($event_i=0; $event_i<count($events); $event_i++) {
 				$js .= "temp_plan_round.event_ids.push(".$events[$event_i]->db_event['event_id'].");\n";
 				$q = "SELECT * FROM options WHERE event_id='".$events[$event_i]->db_event['event_id']."' ORDER BY option_id ASC;";
 				$r = $this->blockchain->app->run_query($q);
 				$option_index = 0;
+				$html .= '<div class="planned_votes_event">'.$events[$event_i]->db_event['event_name'].'<br/>';
 				while ($game_option = $r->fetch()) {
 					$html .= '<div class="plan_option" id="plan_option_'.$round.'_'.$events[$event_i]->db_event['event_id'].'_'.$game_option['option_id'].'" onclick="plan_option_clicked('.$round.', '.$events[$event_i]->db_event['event_id'].', '.$game_option['option_id'].');">';
 					$html .= '<div class="plan_option_label" id="plan_option_label_'.$round.'_'.$events[$event_i]->db_event['event_id'].'_'.$game_option['option_id'].'">'.$game_option['name']."</div>";
@@ -970,6 +971,7 @@ class Game {
 					$html .= '</div>';
 					$option_index++;
 				}
+				$html .= "</div>\n";
 			}
 			$js .= "plan_rounds.push(temp_plan_round);\n";
 			$html .= "</div>\n";
@@ -2346,7 +2348,7 @@ class Game {
 				$payout_events[$i]->set_outcome_from_db($block_height, true);
 				
 				if (!empty($this->db_game['module']) && method_exists($module, "event_index_to_next_event_index")) {
-					$event_index = $module->event_index_to_next_event_index($this, $payout_events[$i]->db_event['event_index']);
+					$event_index = $module->event_index_to_next_event_index($payout_events[$i]->db_event['event_index']);
 					$this->set_event_labels_by_gde($event_index);
 				}
 			}
