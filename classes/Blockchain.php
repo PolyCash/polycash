@@ -30,6 +30,17 @@ class Blockchain {
 		else return 0;
 	}
 	
+	public function last_complete_block_id() {
+		$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND locally_saved=1 ORDER BY block_id DESC LIMIT 1;";
+		$r = $this->app->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			$block = $r->fetch();
+			return $block['block_id'];
+		}
+		else return 0;
+	}
+	
 	public function last_transaction_id() {
 		$q = "SELECT transaction_id FROM transactions WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' ORDER BY transaction_id DESC LIMIT 1;";
 		$r = $this->app->run_query($q);
@@ -159,14 +170,14 @@ class Blockchain {
 				$db_transaction_id = $unconfirmed_tx['transaction_id'];
 			}
 			else {
-				if ($unconfirmed_tx['block_id'] > 0 && $unconfirmed_tx['has_all_outputs'] == 1 && (!$require_inputs || $unconfirmed_tx['has_all_inputs'] == 1)) $add_transaction = false;
-				else {
+				/*if ($unconfirmed_tx['input_skip_count']==0 && $unconfirmed_tx['block_id'] > 0 && $unconfirmed_tx['has_all_outputs'] == 1 && (!$require_inputs || $unconfirmed_tx['has_all_inputs'] == 1)) $add_transaction = false;
+				else {*/
 					if ($unconfirmed_tx['blockchain_id'] == $this->db_blockchain['blockchain_id']) {
 						$q = "DELETE t.*, io.*, gio.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';";
 						$r = $this->app->run_query($q);
 						$benchmark_time = microtime(true);
 					}
-				}
+				//}
 			}
 		}
 		
@@ -482,9 +493,10 @@ class Blockchain {
 			$html .= "Loading game blocks...\n";
 			$this->load_all_blocks($coin_rpc, TRUE);
 			
-			$html .= "Loading unconfirmed transactions...\n";
-			$this->load_unconfirmed_transactions($coin_rpc, 30);
-			
+			if (!empty($GLOBALS['load_unconfirmed_transactions'])) {
+				$html .= "Loading unconfirmed transactions...\n";
+				$this->load_unconfirmed_transactions($coin_rpc, 30);
+			}
 			//echo "Updating option votes...\n";
 			//$this->update_option_votes();
 			
@@ -511,11 +523,6 @@ class Blockchain {
 					echo "Add block #$block_height (".$rpc_block['nextblockhash'].")\n";
 					$rpc_block = $coin_rpc->getblock($rpc_block['nextblockhash']);
 					$this->coind_add_block($coin_rpc, $rpc_block['hash'], $block_height, true);
-					
-					$associated_games = $this->associated_games();
-					for ($i=0; $i<count($associated_games); $i++) {
-						$associated_games[$i]->ensure_events_until_block($block_height+1);
-					}
 				}
 			}
 			while ($keep_looping);
@@ -762,7 +769,7 @@ class Blockchain {
 		$q = "UPDATE blockchains SET first_required_block='".$first_required_block."' WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';";
 		$this->app->run_query($q);
 		
-		$q = "UPDATE games SET game_starting_block='".$first_required_block."' WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';";
+		$q = "UPDATE games SET game_starting_block='".$first_required_block."' WHERE game_starting_block IS NULL AND blockchain_id='".$this->db_blockchain['blockchain_id']."';";
 		$this->app->run_query($q);
 		
 		$this->db_blockchain['first_required_block'] = $first_required_block;
