@@ -940,7 +940,6 @@ class Game {
 	
 	public function plan_options_html($from_round, $to_round, $user_strategy) {
 		$to_block_id = $to_round*$this->db_game['round_length']+1;
-		$this->ensure_events_until_block($to_block_id);
 		$html = "
 		<script type='text/javascript'>
 		var plan_option_max_points = 5;
@@ -1913,7 +1912,7 @@ class Game {
 						$db_last_gde = $r->fetch();
 						
 						$init_event_index = $db_last_gde['event_index'];
-						$from_round = $this->block_to_round($db_last_gde['event_starting_block'])+2-$game_starting_round;
+						$from_round = $this->block_to_round($db_last_gde['event_starting_block'])+1-$game_starting_round;
 					}
 					else {
 						$init_event_index = -1;
@@ -1985,7 +1984,13 @@ class Game {
 						while ($game_defined_option = $gdo_r->fetch()) {
 							$vote_identifier = $this->blockchain->app->option_index_to_vote_identifier($option_i + $option_offset);
 							$qqq = "INSERT INTO options SET event_id='".$event_id."', name=".$this->blockchain->app->quote_escape($game_defined_option['name']).", vote_identifier=".$this->blockchain->app->quote_escape($vote_identifier).", option_index='".($option_i + $option_offset)."'";
-							if (!empty($game_defined_option['entity_id'])) $qqq .= ", entity_id='".$game_defined_option['entity_id']."'";
+							
+							if (!empty($game_defined_option['entity_id'])) {
+								$qqq .= ", entity_id='".$game_defined_option['entity_id']."'";
+								
+								$entity = $this->blockchain->app->run_query("SELECT * FROM entities WHERE entity_id='".$game_defined_option['entity_id']."';")->fetch();
+								if (!empty($entity['default_image_id'])) $qqq .= ", image_id='".$entity['default_image_id']."'";
+							}
 							$qqq .= ";";
 							$rrr = $this->blockchain->app->run_query($qqq);
 							$option_i++;

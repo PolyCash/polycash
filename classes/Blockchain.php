@@ -512,11 +512,6 @@ class Blockchain {
 					echo "Add block #$block_height (".$rpc_block['nextblockhash'].")\n";
 					$rpc_block = $coin_rpc->getblock($rpc_block['nextblockhash']);
 					$this->coind_add_block($coin_rpc, $rpc_block['hash'], $block_height, true);
-					
-					$associated_games = $this->associated_games();
-					for ($i=0; $i<count($associated_games); $i++) {
-						$associated_games[$i]->ensure_events_until_block($block_height+1);
-					}
 				}
 			}
 			while ($keep_looping);
