@@ -146,16 +146,14 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 		}
 	}
 	if ($explore_mode == "blocks") {
-		if ($game && rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer/".$uri_parts[2]."/".$game->db_game['url_identifier']."/blocks") {
+		$block_id_str = $uri_parts[5];
+		if (empty($block_id_str) || strpos($block_id_str, '?') !== false) {
 			$mode_error = false;
-			$pagetitle = $game->db_game['name']." - List of blocks";
-		}
-		else if (rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer/".$uri_parts[2]."/".$blockchain->db_blockchain['url_identifier']."/blocks") {
-			$mode_error = false;
-			$pagetitle = $blockchain->db_blockchain['blockchain_name']." - List of blocks";
+			if ($game) $pagetitle = $game->db_game['name']." - List of blocks";
+			else $pagetitle = $blockchain->db_blockchain['blockchain_name']." - List of blocks";
 		}
 		else {
-			$block_id = (int) $uri_parts[5];
+			$block_id = (int) $block_id_str;
 			$q = "SELECT * FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_id='".$block_id."';";
 			$r = $app->run_query($q);
 			
@@ -649,7 +647,12 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				}
 				else {
 					$blocks_per_section = 40;
-					$to_block_id = $blockchain->last_block_id();
+					$last_block_id = $blockchain->last_block_id();
+					$complete_block_id = $blockchain->last_complete_block_id();
+					
+					if ($_REQUEST['block_filter'] == "complete") $to_block_id = $complete_block_id;
+					else $to_block_id = $last_block_id;
+					
 					$from_block_id = $to_block_id-$blocks_per_section+1;
 					if ($from_block_id < 0) $from_block_id = 0;
 					?>
@@ -675,7 +678,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					</script>
 					<?php
 					if ($game) {
-						echo "<h1>".$game->db_game['name']." - Blocks</h1>";
+						echo "<h1>".$game->db_game['name']." Blocks</h1>";
 						
 						echo '<div id="explorer_block_list" style="margin-bottom: 15px;">';
 						echo '<div id="explorer_block_list_0">';
@@ -688,18 +691,48 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						echo "<br/>\n";
 					}
 					else {
-						echo "<h1>".$blockchain->db_blockchain['blockchain_name']." - Blocks</h1>";
+						echo "<h1>".$blockchain->db_blockchain['blockchain_name']." Blocks</h1>";
 						
-						echo '<div id="explorer_block_list" style="margin-bottom: 15px;">';
-						echo '<div id="explorer_block_list_0">';
-						$ref_game = false;
-						echo $blockchain->explorer_block_list($from_block_id, $to_block_id, $ref_game);
-						echo '</div>';
-						echo '</div>';
+						$associated_games = $blockchain->associated_games();
+						if (count($associated_games) > 0) {
+							echo "<p>".count($associated_games)." games are currently running on this blockchain.<br/>\n";
+							for ($i=0; $i<count($associated_games); $i++) {
+								echo "<a href=\"/explorer/games/".$associated_games[$i]->db_game['url_identifier']."/events/\">".$associated_games[$i]->db_game['name']."</a><br/>\n";
+							}
+							echo "</p>\n";
+						}
 						
-						echo '<a href="" onclick="explorer_block_list_show_more(); return false;">Show More</a>';
-						
-						echo "<br/>\n";
+						$pending_blocks = $last_block_id - $complete_block_id;
+						if ($pending_blocks > 0) {
+							$loadtime_q = "SELECT COUNT(*), SUM(load_time) FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND locally_saved=1;";
+							$loadtime_r = $app->run_query($loadtime_q);
+							$loadtime = $loadtime_r->fetch();
+							$avg_loadtime = $loadtime['SUM(load_time)']/$loadtime['COUNT(*)'];
+							$sec_left = round($avg_loadtime*$pending_blocks);
+							echo "<p>".number_format($pending_blocks)." blocks haven't loaded yet (".$app->format_seconds($sec_left)." left)</p>\n";
+						}
+						?>
+						<div class="row">
+							<div class="col-sm-6">
+								<p>
+									<select class="form-control" name="block_filter" onchange="window.location='/<?php echo $uri_parts[1]."/".$uri_parts[2]."/".$uri_parts[3]."/".$uri_parts[4]; ?>/?block_filter='+$(this).val();">
+										<option value="">All blocks</option>
+										<option <?php if ($_REQUEST['block_filter'] == "complete") echo 'selected="selected" '; ?>value="complete">Fully loaded blocks only</option>
+									</select>
+								</p>
+							</div>
+						</div>
+						<div id="explorer_block_list" style="margin-bottom: 15px;">
+							<div id="explorer_block_list_0">
+								<?php
+								$ref_game = false;
+								echo $blockchain->explorer_block_list($from_block_id, $to_block_id, $ref_game);
+								?>
+							</div>
+						</div>
+						<a href="" onclick="explorer_block_list_show_more(); return false;">Show More</a>
+						<br/>
+						<?php
 					}
 				}
 			}

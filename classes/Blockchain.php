@@ -30,6 +30,17 @@ class Blockchain {
 		else return 0;
 	}
 	
+	public function last_complete_block_id() {
+		$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND locally_saved=1 ORDER BY block_id DESC LIMIT 1;";
+		$r = $this->app->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			$block = $r->fetch();
+			return $block['block_id'];
+		}
+		else return 0;
+	}
+	
 	public function last_transaction_id() {
 		$q = "SELECT transaction_id FROM transactions WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' ORDER BY transaction_id DESC LIMIT 1;";
 		$r = $this->app->run_query($q);
