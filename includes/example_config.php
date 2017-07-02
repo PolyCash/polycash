@@ -21,6 +21,9 @@ $GLOBALS['identifier_first_char'] = 2;
 // To give mined coins to a user by default, enter his/her username here
 $GLOBALS['default_coin_winner'] = "";
 
+// Prevent anyone from changing outcomes of past events, which would trigger game reloading
+$GLOBALS['prevent_changes_to_history'] = true;
+
 $GLOBALS['pageview_tracking_enabled'] = false;
 
 $GLOBALS['currency_price_refresh_seconds'] = 30;

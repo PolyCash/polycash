@@ -1286,19 +1286,8 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 								_this.last_block_id = parseInt(json_result['last_block_id']);
 								
 								if (_this.refresh_page == "wallet") {
-									/*if ((_this.last_block_id+1)%_this.game_round_length == 0) {
-										$('#'+_this.instance_id+'_event'+_this.game_event_index+'_vote_popups').slideUp('medium');
-										$('#'+_this.instance_id+'_event'+_this.game_event_index+'_vote_popups_disabled').show();
-									}
-									else {
-										$('#'+_this.instance_id+'_event'+_this.game_event_index+'_vote_popups').show('fast');
-										$('#'+_this.instance_id+'_event'+_this.game_event_index+'_vote_popups_disabled').hide('fast');
-									}*/
-									
 									if (parseInt(json_result['new_performance_history']) == 1) {
 										$('#performance_history_new').html(json_result['performance_history']);
-										
-										if (_this.game_loop_index > 2) tab_clicked(3);
 									}
 								}
 							}

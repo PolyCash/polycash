@@ -121,13 +121,6 @@ class SingleEliminationGameDefinition {
 			}
 			catch (Exception $e) {}
 			
-			$chain_events_until_block = $chain_last_block + $game_def->round_length;
-
-			$defined_rounds = ceil(($chain_events_until_block - $chain_starting_block)/$game_def->round_length);
-			if (!empty($game_def->final_round) && $defined_rounds > $game_def->final_round) $defined_rounds = $game_def->final_round;
-			
-			$game_def->events = $this->events_between_rounds(1, $defined_rounds, $game_def->round_length, $chain_starting_block);
-			
 			$this->game_def = $game_def;
 		}
 		else echo "No blockchain found matching that identifier.";
@@ -234,11 +227,9 @@ class SingleEliminationGameDefinition {
 	public function set_event_outcome(&$game, &$coin_rpc, $db_event) {
 		$q = "SELECT *, SUM(ob.score) AS score FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id='".$db_event['event_id']."' GROUP BY o.option_id ORDER BY SUM(ob.score) DESC, o.option_index ASC;";
 		$r = $this->app->run_query($q);
-		echo $db_event['event_name']." won by: ";
 		
 		if ($r->rowCount() > 0) {
 			$winning_option = $r->fetch();
-			echo $winning_option['name']."<br/>\n";
 			$gde_option_index = $winning_option['option_index']%2;
 			$msg = "event #".$db_event['event_index']." won by ".$winning_option['name']." (entity ".$winning_option['entity_id'].")";
 			$this->app->log_message($msg);
@@ -255,7 +246,6 @@ class SingleEliminationGameDefinition {
 					$pos_in_next_event = $db_event['event_index']%2;
 					$q = "SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$next_event_index."' ORDER BY game_defined_option_id ASC LIMIT 1";
 					if ($pos_in_next_event > 0) $q .= " OFFSET ".$pos_in_next_event;
-					echo "q: $q<br/>\n";
 					$q .= ";";
 					$r = $this->app->run_query($q);
 					
@@ -265,7 +255,6 @@ class SingleEliminationGameDefinition {
 						$q = "UPDATE game_defined_options SET entity_id='".$winning_option['entity_id']."', name=".$this->app->quote_escape($winning_option['entity_name']." wins")." WHERE game_defined_option_id='".$gdo['game_defined_option_id']."';";
 						$r = $this->app->run_query($q);
 						$this->app->log_message($q);
-						echo "$q<br/>\n";
 					}
 				}
 				
@@ -275,7 +264,6 @@ class SingleEliminationGameDefinition {
 				
 				$q = "UPDATE game_defined_events SET event_name=".$this->app->quote_escape($event_name)." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$next_event_index."';";
 				$r = $this->app->run_query($q);
-				echo "$q<br/>\n\n";
 			}
 		}
 	}
@@ -294,7 +282,6 @@ class SingleEliminationGameDefinition {
 			$thisround_event_i = ($event_index - $tournament_index*$events_per_tournament) % $thisround_events;
 			$next_event_i = floor($thisround_event_i/2);
 			$next_event_index = $thisround_offset + $next_event_i;
-			echo "round: $round, $thisround_events events, offset: $thisround_offset, thisround_event_i: $thisround_event_i<br/>\n";
 			return $next_event_index;
 		}
 	}

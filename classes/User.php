@@ -86,7 +86,7 @@ class User {
 				}
 			}
 			
-			$html .= "<br/><a href=\"\" onclick=\"set_event_outcome(".$game->db_game['game_id'].", ".$event->db_event['event_id']."); return false;\">Set outcome</a>";
+			if (empty($GLOBALS['prevent_changes_to_history'])) $html .= "<br/><a href=\"\" onclick=\"set_event_outcome(".$game->db_game['game_id'].", ".$event->db_event['event_id']."); return false;\">Set outcome</a>";
 			
 			$html .= '</div>';
 			

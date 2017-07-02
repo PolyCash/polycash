@@ -285,7 +285,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							else echo $blockchain->db_blockchain['url_identifier'];
 							?>/utxos/">UTXOs</a></li>
 							<?php if ($game && $game->db_game['escrow_address'] != "") { ?>
-							<li><a<?php if ($explore_mode == 'addresses' && $address['address'] == $game->db_game['escrow_address']) echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php echo $game->db_game['url_identifier']; ?>/addresses/<?php echo $game->db_game['escrow_address']; ?>">Genesis</a></li>
+							<li><a<?php if ($explore_mode == 'addresses' && $address['address'] == $game->db_game['escrow_address']) echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php echo $game->db_game['url_identifier']; ?>/transactions/<?php echo $game->db_game['genesis_tx_hash']; ?>">Genesis</a></li>
 							<?php } ?>
 							<li><a<?php if ($explore_mode == 'unconfirmed') echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
 							if ($game) echo $game->db_game['url_identifier'];
@@ -303,7 +303,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				</div>
 				<?php
 				if ($game) {
-					echo "<a class='btn btn-sm btn-warning' href='/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/";
+					echo "<a class='btn btn-sm btn-primary' href='/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/";
 					if (in_array($explore_mode, array('blocks','addresses','transactions','utxos'))) {
 						echo $explore_mode."/";
 						if ($explore_mode == "blocks") echo $block['block_id'];
@@ -312,13 +312,16 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						echo "/";
 					}
 					echo "'>View on ".$game->blockchain->db_blockchain['blockchain_name']."</a>\n";
+					?>
+					<a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/" class="btn btn-sm btn-success">Play Now</a>
+					<?php
 				}
 			}
 			
 			if ($explore_mode == "events") {
 				if (!empty($db_event) || $event_status == "current") {
 					if ($event_status == "current") {
-						$last_block_id = $game->blockchain->last_block_id();
+						$last_block_id = $game->last_block_id();
 						$this_round = $game->block_to_round($last_block_id+1);
 						$current_round = $this_round;
 					}
@@ -498,7 +501,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					<div style="border-bottom: 1px solid #bbb; margin-bottom: 5px;" id="render_event_outcomes">
 						<div id="event_outcomes_0">
 							<?php
-							$q = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block<=".$game->blockchain->last_block_id()." ORDER BY event_index DESC LIMIT 1;";
+							$q = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block<=".$game->last_block_id()." ORDER BY event_index DESC LIMIT 1;";
 							$r = $app->run_query($q);
 							
 							if ($r->rowCount() > 0) {
@@ -648,7 +651,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				else {
 					$blocks_per_section = 40;
 					$last_block_id = $blockchain->last_block_id();
+					if ($game) $last_block_id = $game->last_block_id();
 					$complete_block_id = $blockchain->last_complete_block_id();
+					if ($game) $complete_block_id = $last_block_id;
 					
 					if ($_REQUEST['block_filter'] == "complete") $to_block_id = $complete_block_id+1;
 					else $to_block_id = $last_block_id;
@@ -891,13 +896,6 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					}
 				}
 			}
-		}
-		
-		if ($game) { ?>
-			<br/>
-			<a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/" class="btn btn-default">Join this game</a>
-			<br/>
-			<?php
 		}
 		?>
 		<br/>

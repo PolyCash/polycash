@@ -781,7 +781,7 @@ class Event {
 				if ($rand_prob <= $score_prob) $score = 1;
 				else $score = 0;
 				
-				$qq = "INSERT INTO option_blocks SET rand_bytes='".$rand_bytes."', rand_prob=".$rand_prob.", score_prob='".$score_prob."', score=".$score.", option_id='".$db_option['option_id']."', block_height='".$game_block['block_id']."';";
+				$qq = "INSERT INTO option_blocks SET rand_bytes='".$rand_bytes."', rand_prob=".$rand_prob.", score=".$score.", option_id='".$db_option['option_id']."', block_height='".$game_block['block_id']."';";
 				$rr = $this->game->blockchain->app->run_query($qq);
 				
 				$rand_i++;

@@ -421,7 +421,7 @@ $initial_tab = 0;
 if ($thisuser && $game) {
 	$account_value = $thisuser->account_coin_value($game, $user_game);
 	$immature_balance = $thisuser->immature_balance($game, $user_game);
-	$last_block_id = $game->blockchain->last_block_id();
+	$last_block_id = $game->last_block_id();
 	$current_round = $game->block_to_round($last_block_id+1);
 	$block_within_round = $game->block_id_to_round_index($last_block_id+1);
 	$mature_balance = $thisuser->mature_balance($game, $user_game);

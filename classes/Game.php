@@ -1460,6 +1460,17 @@ class Game {
 		}
 	}
 	
+	public function last_block_id() {
+		$q = "SELECT * FROM game_blocks WHERE game_id='".$this->db_game['game_id']."' ORDER BY block_id DESC LIMIT 1;";
+		$r = $this->blockchain->app->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			$game_block = $r->fetch();
+			return (int) $game_block['block_id'];
+		}
+		else return 0;
+	}
+	
 	public function refresh_coins_in_existence() {
 		$last_block_id = $this->blockchain->last_block_id();
 		$q = "UPDATE games SET coins_in_existence_block=0 WHERE game_id='".$this->db_game['game_id']."';";
