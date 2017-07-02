@@ -695,7 +695,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						
 						$associated_games = $blockchain->associated_games();
 						if (count($associated_games) > 0) {
-							echo "<p>".count($associated_games)." games are currently running on this blockchain.<br/>\n";
+							echo "<p>Last block completed was <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$complete_block_id."\">#".$complete_block_id."</a><br/>\n";
+							echo count($associated_games)." games are currently running on this blockchain.<br/>\n";
+							
 							for ($i=0; $i<count($associated_games); $i++) {
 								echo "<a href=\"/explorer/games/".$associated_games[$i]->db_game['url_identifier']."/events/\">".$associated_games[$i]->db_game['name']."</a><br/>\n";
 							}

@@ -8,6 +8,14 @@ class Blockchain {
 		$r = $this->app->run_query("SELECT * FROM blockchains WHERE blockchain_id='".$blockchain_id."';");
 		if ($r->rowCount() == 1) $this->db_blockchain = $r->fetch();
 		else die("Failed to load blockchain #".$blockchain_id);
+		
+		if (empty($this->db_blockchain['first_required_block'])) {
+			try {
+				$coin_rpc = new jsonRPCClient('http://'.$this->db_blockchain['rpc_username'].':'.$this->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->db_blockchain['rpc_port'].'/');
+				$this->set_first_required_block($coin_rpc);
+			}
+			catch (Exception $e) {}
+		}
 	}
 	
 	public function associated_games() {
@@ -460,7 +468,7 @@ class Blockchain {
 	public function sync_coind(&$coin_rpc) {
 		$html = "Running Blockchain->sync_coind() for ".$this->db_blockchain['blockchain_name']."\n";
 		
-		$last_block_id = $this->last_block_id();
+		$last_block_id = $this->last_complete_block_id();
 		
 		$startblock_q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id='".$last_block_id."';";
 		$startblock_r = $this->app->run_query($startblock_q);
@@ -760,7 +768,7 @@ class Blockchain {
 			$first_required_block = (int) $info['blocks'];
 		}
 		
-		$q = "SELECT MIN(game_starting_block) FROM games WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';";
+		$q = "SELECT MIN(game_starting_block) FROM games WHERE game_status='running' AND blockchain_id='".$this->db_blockchain['blockchain_id']."';";
 		$r = $this->app->run_query($q);
 		$min_starting_block = (int) $r->fetch()['MIN(game_starting_block)'];
 		

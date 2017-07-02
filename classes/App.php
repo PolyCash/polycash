@@ -1193,9 +1193,15 @@ class App {
 	public function check_process_running($lock_name) {
 		if ($GLOBALS['process_lock_method'] == "db") $process_running = (int) $this->get_site_constant($lock_name);
 		else {
-			$cmd = "ps aux|grep \"".realpath(dirname($_SERVER["SCRIPT_FILENAME"]))."/".basename($_SERVER["SCRIPT_FILENAME"])."\"|grep -v grep|wc";
-			$running = exec($cmd);
-			if ($running > 2) $process_running = true;
+			$cmd = "ps aux|grep \"".realpath(dirname($_SERVER["SCRIPT_FILENAME"]))."/".basename($_SERVER["SCRIPT_FILENAME"])."\"|wc";
+			$running = trim(exec($cmd));
+			$num_running = max(0, (int) substr($running, 0, strpos($running, " ")) - 3);
+			
+			$cmd = "ps aux|grep \"".basename($_SERVER["SCRIPT_FILENAME"])."\"|wc";
+			$running = trim(exec($cmd));
+			$num_running += max(0, (int) substr($running, 0, strpos($running, " ")) - 3);
+			
+			if ($num_running > 0) $process_running = true;
 			else $process_running = false;
 		}
 		return $process_running;
