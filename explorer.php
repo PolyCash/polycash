@@ -650,7 +650,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					$last_block_id = $blockchain->last_block_id();
 					$complete_block_id = $blockchain->last_complete_block_id();
 					
-					if ($_REQUEST['block_filter'] == "complete") $to_block_id = $complete_block_id;
+					if ($_REQUEST['block_filter'] == "complete") $to_block_id = $complete_block_id+1;
 					else $to_block_id = $last_block_id;
 					
 					$from_block_id = $to_block_id-$blocks_per_section+1;
