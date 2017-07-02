@@ -23,6 +23,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
 			register_shutdown_function("script_shutdown");
 		}
+		$app->log_message("running load_blocks.php");
 		
 		$blockchains = array();
 		
@@ -41,7 +42,10 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			}
 		}
 	}
-	else echo "Block loading script is already running, skip...\n";
+	else {
+		$app->log_message("NOT running load_blocks.php");
+		echo "Block loading script is already running, skip...\n";
+	}
 }
 else echo "Please supply the correct key.\n";
 ?>

@@ -655,7 +655,11 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					$complete_block_id = $blockchain->last_complete_block_id();
 					if ($game) $complete_block_id = $last_block_id;
 					
-					if ($_REQUEST['block_filter'] == "complete") $to_block_id = $complete_block_id+1;
+					$filter_complete = false;
+					if ($_REQUEST['block_filter'] == "complete") {
+						$to_block_id = $complete_block_id+1;
+						$filter_complete = true;
+					}
 					else $to_block_id = $last_block_id;
 					
 					$from_block_id = $to_block_id-$blocks_per_section+1;
@@ -665,6 +669,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					var explorer_blocks_per_section = <?php echo $blocks_per_section; ?>;
 					var explorer_block_list_sections = 1;
 					var explorer_block_list_from_block = <?php echo $from_block_id; ?>;
+					var filter_complete = <?php if ($filter_complete) echo "1"; else echo "0"; ?>;
 					
 					function explorer_block_list_show_more() {
 						explorer_block_list_from_block = explorer_block_list_from_block-explorer_blocks_per_section;
@@ -674,7 +679,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						
 						var block_list_url = "/ajax/explorer_block_list.php?blockchain_id="+blockchain_id;
 						<?php if ($game) echo 'block_list_url += "&game_id='.$game->db_game['game_id'].'";'."\n"; ?>
-						block_list_url += "&from_block="+explorer_block_list_from_block+"&blocks_per_section="+explorer_blocks_per_section;
+						block_list_url += "&from_block="+explorer_block_list_from_block+"&blocks_per_section="+explorer_blocks_per_section+"&filter_complete="+filter_complete;
 						
 						$.get(block_list_url, function(html) {
 							$('#explorer_block_list_'+section).html(html);
@@ -687,7 +692,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						
 						echo '<div id="explorer_block_list" style="margin-bottom: 15px;">';
 						echo '<div id="explorer_block_list_0">';
-						echo $game->explorer_block_list($from_block_id, $to_block_id);
+						echo $game->explorer_block_list($from_block_id, $to_block_id, false);
 						echo '</div>';
 						echo '</div>';
 						
@@ -709,7 +714,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo "</p>\n";
 						}
 						
-						$pending_blocks = $last_block_id - $complete_block_id;
+						$pending_blocks_q = "SELECT COUNT(*) FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND locally_saved=0 AND block_id > ".$blockchain->db_blockchain['first_required_block'].";";
+						$pending_blocks = $app->run_query($pending_blocks_q)->fetch();
+						$pending_blocks = $pending_blocks['COUNT(*)'];
+						
 						if ($pending_blocks > 0) {
 							$loadtime_q = "SELECT COUNT(*), SUM(load_time) FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND locally_saved=1;";
 							$loadtime_r = $app->run_query($loadtime_q);
@@ -724,7 +732,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								<p>
 									<select class="form-control" name="block_filter" onchange="window.location='/<?php echo $uri_parts[1]."/".$uri_parts[2]."/".$uri_parts[3]."/".$uri_parts[4]; ?>/?block_filter='+$(this).val();">
 										<option value="">All blocks</option>
-										<option <?php if ($_REQUEST['block_filter'] == "complete") echo 'selected="selected" '; ?>value="complete">Fully loaded blocks only</option>
+										<option <?php if ($filter_complete) echo 'selected="selected" '; ?>value="complete">Fully loaded blocks only</option>
 									</select>
 								</p>
 							</div>
@@ -733,7 +741,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							<div id="explorer_block_list_0">
 								<?php
 								$ref_game = false;
-								echo $blockchain->explorer_block_list($from_block_id, $to_block_id, $ref_game);
+								echo $blockchain->explorer_block_list($from_block_id, $to_block_id, $ref_game, $filter_complete);
 								?>
 							</div>
 						</div>

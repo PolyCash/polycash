@@ -2339,9 +2339,9 @@ class Game {
 			for ($i=0; $i<count($events); $i++) {
 				$events[$i]->process_option_blocks($game_block);
 				
-				if ($block_height == $events[$i]->db_event['event_starting_block'] || $block_height == $events[$i]->db_event['event_final_block']) {
+				/*if ($block_height == $events[$i]->db_event['event_starting_block'] || $block_height == $events[$i]->db_event['event_final_block']) {
 					$events[$i]->set_outcome_from_db($block_height, false);
-				}
+				}*/
 			}
 			
 			$this->ensure_events_until_block($this->blockchain->last_block_id()+1);
@@ -2559,7 +2559,7 @@ class Game {
 	}
 	
 	public function explorer_block_list($from_block_id, $to_block_id) {
-		return $this->blockchain->explorer_block_list($from_block_id, $to_block_id, $this);
+		return $this->blockchain->explorer_block_list($from_block_id, $to_block_id, $this, false);
 	}
 	
 	public function block_stats($block) {
