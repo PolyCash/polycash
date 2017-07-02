@@ -4,6 +4,7 @@ class App {
 	
 	public function __construct($dbh) {
 		$this->dbh = $dbh;
+		$this->has_db = false;
 	}
 	
 	public function quote_escape($string) {
@@ -12,6 +13,7 @@ class App {
 	
 	public function set_db($db_name) {
 		$this->dbh->query("USE ".$db_name) or $this->log_then_die("There was an error accessing the '".$db_name."' database.");
+		$this->has_db = true;
 	}
 	
 	public function last_insert_id() {
@@ -30,8 +32,9 @@ class App {
 	}
 	
 	public function log_message($message) {
-		// Disable so that errors still get thrown without functioning db
-		$this->run_query("INSERT INTO log_messages SET message=".$this->quote_escape($message).";");
+		if ($this->has_db) {
+			$this->run_query("INSERT INTO log_messages SET message=".$this->quote_escape($message).";");
+		}
 	}
 	
 	public function utf8_clean($str) {
