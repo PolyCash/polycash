@@ -1,1 +1,1 @@
-ALTER TABLE `option_blocks` ADD `rand_bytes` VARCHAR(10) NULL DEFAULT NULL AFTER `score`, ADD `rand_prob` FLOAT NULL DEFAULT NULL AFTER `rand_bytes`;
+ALTER TABLE `option_blocks` ADD `rand_bytes` VARCHAR(10) NULL DEFAULT NULL AFTER `score`;
