@@ -270,6 +270,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				<div class="row">
 					<div class="col-sm-7 ">
 						<ul class="list-inline explorer_nav" id="explorer_nav">
+							<?php if ($thisuser && $game) { ?><li><a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">My Wallet</a></li><?php } ?>
 							<li><a<?php if ($explore_mode == 'blocks') echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
 							if ($game) echo $game->db_game['url_identifier'];
 							else echo $blockchain->db_blockchain['url_identifier'];
@@ -284,14 +285,16 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							if ($game) echo $game->db_game['url_identifier'];
 							else echo $blockchain->db_blockchain['url_identifier'];
 							?>/utxos/">UTXOs</a></li>
-							<?php if ($game && $game->db_game['escrow_address'] != "") { ?>
-							<li><a<?php if ($explore_mode == 'addresses' && $address['address'] == $game->db_game['escrow_address']) echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php echo $game->db_game['url_identifier']; ?>/transactions/<?php echo $game->db_game['genesis_tx_hash']; ?>">Genesis</a></li>
-							<?php } ?>
 							<li><a<?php if ($explore_mode == 'unconfirmed') echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
 							if ($game) echo $game->db_game['url_identifier'];
 							else echo $blockchain->db_blockchain['url_identifier'];
-							?>/transactions/unconfirmed/">Unconfirmed Transactions</a></li>
-							<?php if ($thisuser && $game) { ?><li><a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">My Wallet</a></li><?php } ?>
+							?>/transactions/unconfirmed/">Unconfirmed TXNs</a></li>
+							<?php if ($game && $game->db_game['escrow_address'] != "") { ?>
+							<li><a<?php if (($explore_mode == 'addresses' && $address['address'] == $game->db_game['escrow_address']) || ($explore_mode == "transactions" && $transaction['tx_hash'] == $game->db_game['genesis_tx_hash'])) echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php echo $game->db_game['url_identifier']; ?>/transactions/<?php echo $game->db_game['genesis_tx_hash']; ?>">Genesis</a></li>
+							<?php } ?>
+							<?php if ($game) { ?>
+							<li><a href="<?php echo $GLOBALS['base_url']; ?>/scripts/show_game_definition.php?game_id=<?php echo $game->db_game['game_id']; ?>" title="<?php echo $app->game_definition_hash($game); ?>">Game Definition</a>
+							<?php } ?>
 						</ul>
 					</div>
 					<div class="col-sm-4 row-no-padding">
@@ -344,6 +347,23 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						
 						$max_votes = floor($event->event_outcome['sum_votes']*$event->db_event['max_voting_fraction']);
 						$round_sum_votes = $event->event_outcome['sum_votes'];
+						
+						if (!empty($game->db_game['module'])) {
+							eval('$module = new '.$game->db_game['module'].'GameDefinition($app);');
+							
+							if (method_exists($module, "event_index_to_next_event_index")) {
+								$next_event_index = $module->event_index_to_next_event_index($event->db_event['event_index']);
+								
+								if ($next_event_index) {
+									$next_event_r = $app->run_query("SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$next_event_index."';");
+									
+									if ($next_event_r->rowCount() > 0) {
+										$db_next_event = $next_event_r->fetch();
+										echo "<p>The winner has advanced to <a href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".$db_next_event['event_index']."\">".$db_next_event['event_name']."</a></p>\n";
+									}
+								}
+							}
+						}
 					}
 					
 					echo "<h3>".$event->db_event['event_name']."</h3>";

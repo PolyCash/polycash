@@ -54,7 +54,7 @@ class User {
 		
 		$last_block_id = $game->blockchain->last_block_id();
 		
-		$q = "SELECT e.event_index, r.*, real_winner.name AS real_winner_name, derived_winner.name AS derived_winner_name FROM events e LEFT JOIN  event_outcomes r ON r.event_id=e.event_id LEFT JOIN options real_winner ON r.winning_option_id=real_winner.option_id LEFT JOIN options derived_winner ON r.derived_winning_option_id=derived_winner.option_id WHERE e.game_id='".$game->db_game['game_id']."' AND r.round_id >= ".$from_round_id." AND r.round_id <= ".$to_round_id." ORDER BY e.event_index DESC;";
+		$q = "SELECT e.event_index, r.*, winner.name AS winner_name FROM events e LEFT JOIN  event_outcomes r ON r.event_id=e.event_id LEFT JOIN options winner ON r.winning_option_id=winner.option_id WHERE e.game_id='".$game->db_game['game_id']."' AND r.round_id >= ".$from_round_id." AND r.round_id <= ".$to_round_id." ORDER BY e.event_index DESC;";
 		$r = $this->app->run_query($q);
 		
 		while ($event_outcome = $r->fetch()) {
@@ -71,15 +71,30 @@ class User {
 			$html .= '<div class="col-sm-3">';
 			if ($event->db_event['event_payout_block'] > $last_block_id) {
 				if (!empty($event_outcome['winning_option_id'])) {
-					$html .= $event_outcome['real_winner_name'].", Pending. ";
+					$html .= $event_outcome['winner_name'].", Pending. ";
 				}
 				else {
 					$html .= "Winner not yet determined. ";
 				}
 			}
 			else {
-				if ($event_outcome['real_winner_name'] != "") {
-					$html .= $event_outcome['real_winner_name']." with ".$this->app->format_bignum($event_outcome['winning_votes']/pow(10,8))." votes. ";
+				if ($event_outcome['winner_name'] != "") {
+					$html .= $event_outcome['winner_name'];
+					
+					if (!empty($event->db_event['option_block_rule'])) {
+						$qq = "SELECT * FROM event_outcome_options WHERE outcome_id='".$event_outcome['outcome_id']."' ORDER BY option_id=".$event_outcome['winning_option_id']." DESC, option_id ASC;";
+						$rr = $this->app->run_query($qq);
+						$score_label = "";
+						
+						while ($outcome_option = $rr->fetch()) {
+							if (empty($score_label)) $score_label = $outcome_option['option_block_score']."-";
+							else $score_label .= $outcome_option['option_block_score'];
+						}
+						$html .= " ".$score_label;
+					}
+					else {
+						$html .= " with ".$this->app->format_bignum($event_outcome['winning_votes']/pow(10,8))." votes. ";
+					}
 				}
 				else {
 					$html .= "No winner. ";

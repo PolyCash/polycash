@@ -685,7 +685,11 @@ class Event {
 		
 		if (($this_block_id == $this->db_event['event_payout_block'] && $add_payout_transaction) || ($this_block_id == $this->db_event['event_final_block'] && $this->db_event['event_final_block'] != $this->db_event['event_payout_block'])) {
 			for ($position=0; $position<$this->db_event['num_voting_options']; $position++) {
-				$qq = "INSERT INTO event_outcome_options SET outcome_id='".$outcome_id."', round_id='".$round_id."', event_id='".$this->db_event['event_id']."', option_id='".$round_voting_stats[$position]['option_id']."', rank='".($position+1)."', coin_score='".$round_voting_stats[$position]['coin_score']."', coin_block_score='".$round_voting_stats[$position]['coin_block_score']."', coin_round_score='".$round_voting_stats[$position]['coin_round_score']."', votes='".$round_voting_stats[$position]['votes']."';";
+				$qq = "SELECT SUM(score) FROM option_blocks WHERE option_id='".$round_voting_stats[$position]['option_id']."';";
+				$rr = $this->game->blockchain->app->run_query($qq);
+				$option_block_score = $rr->fetch();
+				$option_block_score = $option_block_score['SUM(score)'];
+				$qq = "INSERT INTO event_outcome_options SET outcome_id='".$outcome_id."', round_id='".$round_id."', event_id='".$this->db_event['event_id']."', option_id='".$round_voting_stats[$position]['option_id']."', option_block_score='".$option_block_score."', rank='".($position+1)."', coin_score='".$round_voting_stats[$position]['coin_score']."', coin_block_score='".$round_voting_stats[$position]['coin_block_score']."', coin_round_score='".$round_voting_stats[$position]['coin_round_score']."', votes='".$round_voting_stats[$position]['votes']."';";
 				$rr = $this->game->blockchain->app->run_query($qq);
 			}
 		}

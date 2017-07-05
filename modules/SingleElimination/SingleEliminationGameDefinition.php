@@ -52,7 +52,7 @@ class SingleEliminationGameDefinition {
 			"option_group_id": 0,
 			"events_per_round": 0,
 			"inflation": "exponential",
-			"exponential_inflation_rate": 0.5,
+			"exponential_inflation_rate": 0.1,
 			"pos_reward": 0,
 			"round_length": 10,
 			"maturity": 0,
@@ -167,6 +167,19 @@ class SingleEliminationGameDefinition {
 	}
 	
 	public function generate_event_labels(&$possible_outcomes, $round, $this_round, $thisround_event_i, $entity_type_id, $event_index, &$game) {
+		$rounds_per_tournament = $this->get_rounds_per_tournament();
+		$tournament_index = floor(($round-1)/$rounds_per_tournament);
+		$events_this_round = $this->num_events_in_round($round, $rounds_per_tournament);
+		$round_of = $events_this_round*2;
+		
+		if ($tournament_index > 1000) throw new Exception("wtf?");
+		
+		$event_name = "T".$tournament_index."G".($event_index+1).". ";
+		if ($round_of == 2) $event_name .= "Finals: ";
+		else if ($round_of == 4) $event_name .= "Semifinals: ";
+		else if ($round_of == 8) $event_name .= "Quarterfinals: ";
+		else $event_name .= "Round of $round_of: ";
+		
 		if ($this_round == 1) {
 			$team_i = 1;
 			$team_indices = $this->event_index2teams[$thisround_event_i];
@@ -183,7 +196,7 @@ class SingleEliminationGameDefinition {
 				$team_i++;
 			}
 			
-			$event_name = "Game ".($event_index+1).": ".$this->teams[$team_indices[0]]['team_name']." vs. ".$this->teams[$team_indices[1]]['team_name'];
+			$event_name .= $this->teams[$team_indices[0]]['team_name']." vs. ".$this->teams[$team_indices[1]]['team_name'];
 		}
 		else {
 			if (empty($game)) $game_id = "";
@@ -193,7 +206,6 @@ class SingleEliminationGameDefinition {
 			$entities_r = $this->app->run_query($entities_q);
 			
 			if ($entities_r->rowCount() > 0) {
-				$event_name = "Game ".($event_index+1).": ";
 				while ($entity = $entities_r->fetch()) {
 					$event_name .= $entity['entity_name']." vs. ";
 					
@@ -207,7 +219,7 @@ class SingleEliminationGameDefinition {
 				$entity2 = $entity = $this->app->check_set_entity($entity_type_id, "Team 2");
 				array_push($possible_outcomes, array("title" => "Team 1 wins", "entity_id" => $entity1['entity_id']));
 				array_push($possible_outcomes, array("title" => "Team 2 wins", "entity_id" => $entity2['entity_id']));
-				$event_name = "Game ".($event_index+1).": Team 1 vs Team 2";
+				$event_name .= "Team 1 vs Team 2";
 			}
 		}
 		
@@ -217,7 +229,7 @@ class SingleEliminationGameDefinition {
 	public function rename_event(&$gde, &$game) {
 		$general_entity_type = $this->app->check_set_entity_type("general entity");
 		$possible_outcomes = array();
-		$round = ceil($gde['event_starting_block']/$this->game_def->round_length);
+		$round = 1+floor(($gde['event_starting_block']-$this->game_def->game_starting_block)/$this->game_def->round_length);
 		$this_round = ($round-1)%$this->get_rounds_per_tournament()+1;
 		$event_name = $this->generate_event_labels($possible_outcomes, $round, $this_round, false, $general_entity_type['entity_type_id'], $gde['event_index'], $game);
 		

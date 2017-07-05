@@ -54,6 +54,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		}
 		while (microtime(true) < $script_start_time + ($script_target_time-$loop_target_time));
 	}
+	echo "Game load script is already running...\n";
 }
 else echo "Please supply the correct key.\n";
 ?>
