@@ -172,9 +172,7 @@ class SingleEliminationGameDefinition {
 		$events_this_round = $this->num_events_in_round($round, $rounds_per_tournament);
 		$round_of = $events_this_round*2;
 		
-		if ($tournament_index > 1000) throw new Exception("wtf?");
-		
-		$event_name = "T".$tournament_index."G".($event_index+1).". ";
+		$event_name = "";
 		if ($round_of == 2) $event_name .= "Finals: ";
 		else if ($round_of == 4) $event_name .= "Semifinals: ";
 		else if ($round_of == 8) $event_name .= "Quarterfinals: ";
