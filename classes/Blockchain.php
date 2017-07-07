@@ -18,9 +18,12 @@ class Blockchain {
 		}
 	}
 	
-	public function associated_games() {
+	public function associated_games($filter_statuses) {
 		$associated_games = array();
-		$r = $this->app->run_query("SELECT * FROM games WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';");
+		$q = "SELECT * FROM games WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."'";
+		if (!empty($filter_statuses)) $q .= " AND game_status IN ('".implode("','", $filter_statuses)."')";
+		$q .= ";";
+		$r = $this->app->run_query($q);
 		while ($db_game = $r->fetch()) {
 			array_push($associated_games, new Game($this, $db_game['game_id']));
 		}
@@ -49,6 +52,17 @@ class Blockchain {
 		else return 0;
 	}
 	
+	public function most_recently_loaded_block() {
+		$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND locally_saved=1 AND time_loaded IS NOT NULL ORDER BY time_loaded DESC LIMIT 1;";
+		$r = $this->app->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			$db_block = $r->fetch();
+			return $db_block;
+		}
+		else return false;
+	}
+	
 	public function last_transaction_id() {
 		$q = "SELECT transaction_id FROM transactions WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' ORDER BY transaction_id DESC LIMIT 1;";
 		$r = $this->app->run_query($q);
@@ -71,7 +85,7 @@ class Blockchain {
 	}
 	
 	public function private_add_block(&$game, $block_hash, $block_height) {
-		$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_id='".$block_height."', block_hash=".$this->app->quote_escape($block_hash).", locally_saved=1, time_created='".time()."';";
+		$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_id='".$block_height."', block_hash=".$this->app->quote_escape($block_hash).", locally_saved=1, time_created='".time()."', time_loaded='".time()."';";
 		$r = $this->app->run_query($q);
 		$internal_block_id = $this->app->last_insert_id();
 
@@ -134,7 +148,7 @@ class Blockchain {
 			}
 			
 			if (!$tx_error) {
-				$this->app->run_query("UPDATE blocks SET locally_saved=1 WHERE internal_block_id='".$db_block['internal_block_id']."';");
+				$this->app->run_query("UPDATE blocks SET locally_saved=1, time_loaded='".time()."' WHERE internal_block_id='".$db_block['internal_block_id']."';");
 			}
 			$this->app->run_query("UPDATE blocks SET load_time=load_time+".(microtime(true)-$start_time)." WHERE internal_block_id='".$db_block['internal_block_id']."';");
 			
@@ -712,7 +726,7 @@ class Blockchain {
 		$r = $this->app->run_query($q);
 		$genesis_io_id = $this->app->last_insert_id();
 		
-		$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_hash='".$genesis_block_hash."', block_id='0', time_created='".time()."', locally_saved=1;";
+		$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_hash='".$genesis_block_hash."', block_id='0', time_created='".time()."', time_loaded='".time()."', locally_saved=1;";
 		$r = $this->app->run_query($q);
 		
 		$html .= "Added the genesis transaction!<br/>\n";
@@ -842,7 +856,7 @@ class Blockchain {
 	}
 	
 	public function reset_blockchain() {
-		$associated_games = $this->associated_games();
+		$associated_games = $this->associated_games(false);
 		for ($i=0; $i<count($associated_games); $i++) {
 			$associated_games[$i]->delete_reset_game('reset');
 		}

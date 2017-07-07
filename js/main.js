@@ -1357,7 +1357,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 											$('#game'+_this.instance_id+'_event'+game_event_index+'_details').hide();
 										}
 										
-										if (typeof json_result['my_current_votes'][game_event_index] != "undefined") {
+										if (typeof json_result['my_current_votes'] != "undefined" && typeof json_result['my_current_votes'][game_event_index] != "undefined") {
 											$('#game'+_this.instance_id+'_event'+game_event_index+'_my_current_votes').html(json_result['my_current_votes'][game_event_index]);
 											$('#game'+_this.instance_id+'_event'+game_event_index+'_my_current_votes').hide();
 											$('#game'+_this.instance_id+'_event'+game_event_index+'_my_current_votes').fadeIn('fast');

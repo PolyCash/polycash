@@ -316,7 +316,7 @@ class Game {
 		$log_text = "";
 		$last_block_id = $this->blockchain->last_block_id();
 		
-		$q = "INSERT INTO blocks SET blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."', block_id='".($last_block_id+1)."', block_hash='".$this->blockchain->app->random_string(64)."', time_created='".time()."', locally_saved=1;";
+		$q = "INSERT INTO blocks SET blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."', block_id='".($last_block_id+1)."', block_hash='".$this->blockchain->app->random_string(64)."', time_created='".time()."', time_loaded='".time()."', locally_saved=1;";
 		$r = $this->blockchain->app->run_query($q);
 		$internal_block_id = $this->blockchain->app->last_insert_id();
 		
@@ -2408,7 +2408,14 @@ class Game {
 					if ($rr->rowCount() > 0) {
 						$db_option = $rr->fetch();
 						
-						$qq = "UPDATE options SET entity_id='".$gdo['entity_id']."', name=".$this->blockchain->app->quote_escape($gdo['name'])." WHERE option_id='".$db_option['option_id']."';";
+						$db_entity = false;
+						$db_entity_q = "SELECT * FROM entities WHERE entity_id='".$gdo['entity_id']."';";
+						$db_entity_r = $this->blockchain->app->run_query($db_entity_q);
+						if ($db_entity_r->rowCount() > 0) $db_entity = $db_entity_r->fetch();
+						
+						$qq = "UPDATE options SET entity_id='".$gdo['entity_id']."'";
+						if ($db_entity && !empty($db_entity['default_image_id'])) $qq .= ", image_id='".$db_entity['default_image_id']."'";
+						$qq .= ", name=".$this->blockchain->app->quote_escape($gdo['name'])." WHERE option_id='".$db_option['option_id']."';";
 						$rr = $this->blockchain->app->run_query($qq);
 						$this->blockchain->app->log_message($qq);
 					}
