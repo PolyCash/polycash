@@ -110,7 +110,10 @@ class App {
 					exec($cmd);
 					$migration_id++;
 				}
-				else $keep_looping = false;
+				else {
+					$keep_looping = false;
+					$migration_id--;
+				}
 			}
 			$this->set_site_constant("last_migration_id", $migration_id);
 		}
