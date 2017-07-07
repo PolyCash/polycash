@@ -33,13 +33,16 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		while ($db_blockchain = $blockchain_r->fetch()) {
 			$blockchain_i = count($blockchains);
 			$blockchains[$blockchain_i] = new Blockchain($app, $db_blockchain['blockchain_id']);
+			$error = false;
 			try {
 				$coin_rpc = new jsonRPCClient('http://'.$db_blockchain['rpc_username'].':'.$db_blockchain['rpc_password'].'@127.0.0.1:'.$db_blockchain['rpc_port'].'/');
-				
-				$blockchains[$blockchain_i]->sync_coind($coin_rpc);
+				$coin_rpc->getinfo();
 			} catch (Exception $e) {
+				$error = true;
 				echo "Error, skipped ".$db_blockchain['blockchain_name']." because RPC connection failed.<br/>\n";
 			}
+			
+			if (!$error) $blockchains[$blockchain_i]->sync_coind($coin_rpc);
 		}
 	}
 	else {

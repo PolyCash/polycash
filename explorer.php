@@ -490,6 +490,25 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						foreach ($scores_by_entity_id as $entity_id => $score) {
 							echo $entities_by_id[$entity_id]['entity_name'].": ".$score."<br/>\n";
 						}
+						
+						$q = "SELECT *, SUM(ob.score) AS score FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id LEFT JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id='".$event->db_event['event_id']."' GROUP BY o.option_id ORDER BY o.option_index ASC;";
+						$r = $app->run_query($q);
+						
+						if ($r->rowCount() > 0) {
+							$first_option = $r->fetch();
+							$second_option = $r->fetch();
+							$winning_option = false;
+							
+							if ($first_option['score'] == $second_option['score']) {
+								list($winning_option, $pk_shootout_data) = $module->break_tie($game, $event->db_event, $first_option, $second_option);
+								
+								for ($i=0; $i<count($pk_shootout_data); $i++) {
+									echo "<br/><b>PK Shootout #".($i+1)."</b><br/>\n";
+									echo $first_option['entity_name'].": ".$pk_shootout_data[$i][0]."<br/>\n";
+									echo $second_option['entity_name'].": ".$pk_shootout_data[$i][1]."<br/>\n";
+								}
+							}
+						}
 					}
 					?>
 					<br/>

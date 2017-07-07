@@ -712,7 +712,7 @@ class App {
 				else $keySet = bitcoin::getNewKeySet();
 				
 				if (empty($GLOBALS['rsa_pub_key']) || empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
-					$this->log('Error generating a payment address. Please visit /install.php and then set $GLOBALS["rsa_pub_key"] in includes/config.php');
+					$this->log_message('Error generating a payment address. Please visit /install.php and then set $GLOBALS["rsa_pub_key"] in includes/config.php');
 					$save_method = "skip";
 				}
 				else {

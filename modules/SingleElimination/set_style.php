@@ -22,7 +22,7 @@ Costa Rica,68
 Croatia,69
 Ecuador,54
 England,55
-France,14
+France,11
 Germany,8
 Ghana,56
 Greece,57
@@ -33,8 +33,8 @@ Ivory Coast,60
 Japan,6
 Mexico,9
 Netherlands,61
-Nigeria,11
-Portugal,6
+Nigeria,10
+Portugal,66
 Russia,7
 South Korea,62
 Spain,63

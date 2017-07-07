@@ -757,14 +757,14 @@ class Event {
 		$num_current_events = count($events_by_block);
 		
 		if ($this->db_event['option_block_rule'] == "football_match") {
-			$rand_bytes_per_option = 2;
-			$rand_bytes_per_event = $rand_bytes_per_option*2;
+			$rand_chars_per_option = 2;
+			$rand_chars_per_event = $rand_chars_per_option*2;
 			$event_offset = $this->db_event['event_index'] - $events_by_block[0]->db_event['event_index'];
 			
-			$total_rand_bytes_needed = $rand_bytes_per_event*$num_current_events;
+			$total_rand_chars_needed = $rand_chars_per_event*$num_current_events;
 			$last_rand_hash = $random_data;
 			
-			while (strlen($random_data) < $total_rand_bytes_needed) {
+			while (strlen($random_data) < $total_rand_chars_needed) {
 				$last_rand_hash = hash("sha256", $last_rand_hash);
 				$random_data .= $last_rand_hash;
 			}
@@ -778,14 +778,14 @@ class Event {
 			
 			while ($db_option = $r->fetch()) {
 				$score_prob = min(1, $team_avg_goals_per_game/$event_blocks);
-				$rand_offset_start = $rand_bytes_per_event*$event_offset + ($rand_i*$rand_bytes_per_option);
-				$rand_bytes = substr($random_data, $rand_offset_start, $rand_bytes_per_option);
-				$rand_prob = hexdec($rand_bytes)/pow(2, 4*strlen($rand_bytes));
+				$rand_offset_start = $rand_chars_per_event*$event_offset + ($rand_i*$rand_chars_per_option);
+				$rand_chars = substr($random_data, $rand_offset_start, $rand_chars_per_option);
+				$rand_prob = hexdec($rand_chars)/pow(2, 4*strlen($rand_chars));
 				
 				if ($rand_prob <= $score_prob) $score = 1;
 				else $score = 0;
 				
-				$qq = "INSERT INTO option_blocks SET rand_bytes='".$rand_bytes."', rand_prob=".$rand_prob.", score=".$score.", option_id='".$db_option['option_id']."', block_height='".$game_block['block_id']."';";
+				$qq = "INSERT INTO option_blocks SET rand_chars='".$rand_chars."', rand_prob=".$rand_prob.", score=".$score.", option_id='".$db_option['option_id']."', block_height='".$game_block['block_id']."';";
 				$rr = $this->game->blockchain->app->run_query($qq);
 				
 				$rand_i++;
