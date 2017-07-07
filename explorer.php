@@ -23,6 +23,10 @@ if ($uri_parts[2] == "games") {
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$game = new Game($blockchain, $db_game['game_id']);
 		
+		if (!empty($game->db_game['module'])) {
+			eval('$module = new '.$game->db_game['module'].'GameDefinition($app);');
+		}
+		
 		if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
 			$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
 		}
@@ -342,15 +346,15 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						echo "<h1>".$event->db_event['event_name']." is currently running</h1>\n";
 					}
 					else {
-						if ($db_event['winning_option_id'] > 0) echo "<h1>".$db_event['name']."</h1>\n";
-						else echo "<h1>".$event->db_event['event_name'].": No winner</h1>\n";
+						echo "<h1>".$event->db_event['event_name']."</h1>";
+						
+						if ($db_event['winning_option_id'] > 0) echo "<h3>".$db_event['name']."</h3>\n";
+						else echo "<h3>".$event->db_event['event_name'].": No winner</h3>\n";
 						
 						$max_votes = floor($event->event_outcome['sum_votes']*$event->db_event['max_voting_fraction']);
 						$round_sum_votes = $event->event_outcome['sum_votes'];
 						
 						if (!empty($game->db_game['module'])) {
-							eval('$module = new '.$game->db_game['module'].'GameDefinition($app);');
-							
 							if (method_exists($module, "event_index_to_next_event_index")) {
 								$next_event_index = $module->event_index_to_next_event_index($event->db_event['event_index']);
 								
@@ -359,14 +363,26 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 									
 									if ($next_event_r->rowCount() > 0) {
 										$db_next_event = $next_event_r->fetch();
-										echo "<p>The winner has advanced to <a href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".$db_next_event['event_index']."\">".$db_next_event['event_name']."</a></p>\n";
+										echo "<p>The winner has advanced to <a href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".($db_next_event['event_index']+1)."\">".$db_next_event['event_name']."</a></p>\n";
 									}
 								}
 							}
+							
+							$q = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND next_event_index=".$event->db_event['event_index']." ORDER BY event_index ASC;";
+							$r = $app->run_query($q);
+							
+							if ($r->rowCount() > 0) {
+								echo "<p>".$r->rowCount()." ";
+								if ($r->rowCount() == 1) echo $game->db_game['event_type_name'];
+								else echo $game->db_game['event_type_name_plural'];
+								echo " contributed to this ".$game->db_game['event_type_name'].".<br/>\n";
+								while ($precursor_event = $r->fetch()) {
+									echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".($precursor_event['event_index']+1)."\">".$precursor_event['event_name']."</a><br/>\n";
+								}
+								echo "</p>";
+							}
 						}
 					}
-					
-					echo "<h3>".$event->db_event['event_name']."</h3>";
 					?>
 					<div class="row">
 						<div class="col-md-6">
@@ -500,12 +516,16 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							$winning_option = false;
 							
 							if ($first_option['score'] == $second_option['score']) {
-								list($winning_option, $pk_shootout_data) = $module->break_tie($game, $event->db_event, $first_option, $second_option);
+								$tiebreaker = $module->break_tie($game, $db_event, $first_option, $second_option);
 								
-								for ($i=0; $i<count($pk_shootout_data); $i++) {
-									echo "<br/><b>PK Shootout #".($i+1)."</b><br/>\n";
-									echo $first_option['entity_name'].": ".$pk_shootout_data[$i][0]."<br/>\n";
-									echo $second_option['entity_name'].": ".$pk_shootout_data[$i][1]."<br/>\n";
+								if ($tiebreaker) {
+									list($winning_option, $pk_shootout_data) = $tiebreaker;
+									
+									for ($i=0; $i<count($pk_shootout_data); $i++) {
+										echo "<br/><b>PK Shootout #".($i+1)."</b><br/>\n";
+										echo $first_option['entity_name'].": ".$pk_shootout_data[$i][0]."<br/>\n";
+										echo $second_option['entity_name'].": ".$pk_shootout_data[$i][1]."<br/>\n";
+									}
 								}
 							}
 						}

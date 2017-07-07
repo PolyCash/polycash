@@ -14,6 +14,7 @@ class CoinBattlesGameDefinition {
 			"url_identifier": "coin-battles",
 			"name": "Coin Battles",
 			"event_type_name": "battle",
+			"event_type_name_plural": "battles",
 			"event_rule": "game_definition",
 			"event_entity_type_id": 0,
 			"option_group_id": 0,

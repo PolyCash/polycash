@@ -1992,7 +1992,7 @@ class Game {
 						}
 						else $event_type = $rr->fetch();
 						
-						$qq = "INSERT INTO events SET game_id='".$this->db_game['game_id']."', event_type_id='".$event_type['event_type_id']."', event_index='".$game_defined_event['event_index']."', event_starting_block='".$game_defined_event['event_starting_block']."', event_final_block='".$game_defined_event['event_final_block']."', event_payout_block='".$game_defined_event['event_payout_block']."', event_name=".$this->blockchain->app->quote_escape($game_defined_event['event_name']).", option_name=".$this->blockchain->app->quote_escape($game_defined_event['option_name']).", option_name_plural=".$this->blockchain->app->quote_escape($game_defined_event['option_name_plural']).", option_max_width=".$event_type['default_option_max_width'];
+						$qq = "INSERT INTO events SET game_id='".$this->db_game['game_id']."', event_type_id='".$event_type['event_type_id']."', event_index='".$game_defined_event['event_index']."', next_event_index='".$game_defined_event['next_event_index']."', event_starting_block='".$game_defined_event['event_starting_block']."', event_final_block='".$game_defined_event['event_final_block']."', event_payout_block='".$game_defined_event['event_payout_block']."', event_name=".$this->blockchain->app->quote_escape($game_defined_event['event_name']).", option_name=".$this->blockchain->app->quote_escape($game_defined_event['option_name']).", option_name_plural=".$this->blockchain->app->quote_escape($game_defined_event['option_name_plural']).", option_max_width=".$event_type['default_option_max_width'];
 						if (!empty($game_defined_event['option_block_rule'])) $qq .= ", option_block_rule='".$game_defined_event['option_block_rule']."'";
 						$qq .= ";";
 						$rr = $this->blockchain->app->run_query($qq);
@@ -2336,7 +2336,7 @@ class Game {
 			}
 			while ($keep_looping);
 			
-			$this->process_sellouts_in_block($block_height);
+			if ($this->db_game['buyin_policy'] != "none") $this->process_sellouts_in_block($block_height);
 			
 			$q = "UPDATE game_blocks SET locally_saved=1 WHERE game_block_id='".$game_block['game_block_id']."';";
 			$r = $this->blockchain->app->run_query($q);
@@ -2344,7 +2344,7 @@ class Game {
 			$events = $this->events_by_block($block_height);
 			
 			for ($i=0; $i<count($events); $i++) {
-				$events[$i]->process_option_blocks($game_block);
+				$events[$i]->process_option_blocks($game_block, count($events), $events[0]->db_event['event_index']);
 				
 				/*if ($block_height == $events[$i]->db_event['event_starting_block'] || $block_height == $events[$i]->db_event['event_final_block']) {
 					$events[$i]->set_outcome_from_db($block_height, false);
@@ -2355,24 +2355,27 @@ class Game {
 			
 			$payout_events = $this->events_by_payout_block($block_height);
 			
-			for ($i=0; $i<count($payout_events); $i++) {
-				if (!empty($this->db_game['module'])) {
-					try {
-						$coin_rpc = new jsonRPCClient('http://'.$this->blockchain->db_blockchain['rpc_username'].':'.$this->blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->blockchain->db_blockchain['rpc_port'].'/');
-					}
-					catch (Exception $e) {
-						echo "Error, failed to load RPC connection for ".$this->blockchain->db_blockchain['blockchain_name'].".<br/>\n";
+			if (count($payout_events) > 0) {
+				eval('$module = new '.$this->db_game['module'].'GameDefinition($this->blockchain->app);');
+				
+				for ($i=0; $i<count($payout_events); $i++) {
+					if (!empty($this->db_game['module'])) {
+						try {
+							$coin_rpc = new jsonRPCClient('http://'.$this->blockchain->db_blockchain['rpc_username'].':'.$this->blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->blockchain->db_blockchain['rpc_port'].'/');
+						}
+						catch (Exception $e) {
+							echo "Error, failed to load RPC connection for ".$this->blockchain->db_blockchain['blockchain_name'].".<br/>\n";
+						}
+						
+						$module->set_event_outcome($this, $coin_rpc, $payout_events[$i]->db_event);
 					}
 					
-					eval('$module = new '.$this->db_game['module'].'GameDefinition($this->blockchain->app);');
-					$module->set_event_outcome($this, $coin_rpc, $payout_events[$i]->db_event);
-				}
-				
-				$payout_events[$i]->set_outcome_from_db($block_height, true);
-				
-				if (!empty($this->db_game['module']) && method_exists($module, "event_index_to_next_event_index")) {
-					$event_index = $module->event_index_to_next_event_index($payout_events[$i]->db_event['event_index']);
-					$this->set_event_labels_by_gde($event_index);
+					$payout_events[$i]->set_outcome_from_db($block_height, true);
+					
+					if (!empty($this->db_game['module']) && method_exists($module, "event_index_to_next_event_index")) {
+						$event_index = $module->event_index_to_next_event_index($payout_events[$i]->db_event['event_index']);
+						$this->set_event_labels_by_gde($event_index);
+					}
 				}
 			}
 		}

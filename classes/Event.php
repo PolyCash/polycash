@@ -745,23 +745,20 @@ class Event {
 		return $txt;
 	}
 	
-	public function process_option_blocks(&$game_block) {
-		$q = "DELETE ob.* FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id WHERE o.event_id='".$this->db_event['event_id']."' AND ob.block_height='".$game_block['block_id']."';";
-		$r = $this->game->blockchain->app->run_query($q);
+	public function process_option_blocks(&$game_block, $events_in_round, $round_first_event_index) {
+		//$q = "DELETE ob.* FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id WHERE o.event_id='".$this->db_event['event_id']."' AND ob.block_height='".$game_block['block_id']."';";
+		//$r = $this->game->blockchain->app->run_query($q);
 		
 		$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->game->db_game['blockchain_id']."' AND block_id='".$game_block['block_id']."';";
 		$block = $this->game->blockchain->app->run_query($q)->fetch();
 		$random_data = hash("sha256", $block['block_hash']);
 		
-		$events_by_block = $this->game->events_by_block($game_block['block_id']);
-		$num_current_events = count($events_by_block);
-		
 		if ($this->db_event['option_block_rule'] == "football_match") {
 			$rand_chars_per_option = 2;
 			$rand_chars_per_event = $rand_chars_per_option*2;
-			$event_offset = $this->db_event['event_index'] - $events_by_block[0]->db_event['event_index'];
+			$event_offset = $this->db_event['event_index'] - $round_first_event_index;
 			
-			$total_rand_chars_needed = $rand_chars_per_event*$num_current_events;
+			$total_rand_chars_needed = $rand_chars_per_event*$events_in_round;
 			$last_rand_hash = $random_data;
 			
 			while (strlen($random_data) < $total_rand_chars_needed) {

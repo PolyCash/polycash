@@ -46,7 +46,8 @@ class SingleEliminationGameDefinition {
 			"protocol_version": 0,
 			"url_identifier": "single-elimination",
 			"name": "Virtual Cup 2017",
-			"event_type_name": "game",
+			"event_type_name": "match",
+			"event_type_name_plural": "matches",
 			"event_rule": "game_definition",
 			"event_entity_type_id": 0,
 			"option_group_id": 0,
@@ -147,6 +148,8 @@ class SingleEliminationGameDefinition {
 				$event_name = $this->generate_event_labels($possible_outcomes, $round, $this_round, $thisround_event_i, $general_entity_type['entity_type_id'], $event_index, $game);
 				
 				$event = array(
+					"event_index" => $event_index,
+					"next_event_index" => $this->event_index_to_next_event_index($event_index),
 					"event_starting_block" => $chain_starting_block+($round-1)*$round_length,
 					"event_final_block" => $chain_starting_block+$round*$round_length-1,
 					"event_payout_block" => $chain_starting_block+$round*$round_length-1,
@@ -237,59 +240,64 @@ class SingleEliminationGameDefinition {
 	public function break_tie(&$game, &$db_event, &$first_option, &$second_option) {
 		$final_block_q = "SELECT * FROM blocks WHERE blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND block_id='".$db_event['event_final_block']."';";
 		$final_block_r = $this->app->run_query($final_block_q);
-		$final_block = $final_block_r->fetch();
 		
-		$random_data = hash("sha256", $final_block['block_hash']);
-		
-		$events_by_block = $game->events_by_block($final_block['block_id']);
-		$events_in_round = count($events_by_block);
-		
-		$rand_chars_per_event = 3;
-		$event_offset = $db_event['event_index'] - $events_by_block[0]->db_event['event_index'];
-		
-		$total_rand_chars_needed = $rand_chars_per_event*$events_in_round;
-		$last_rand_hash = $random_data;
-		
-		while (strlen($random_data) < $total_rand_chars_needed) {
-			$last_rand_hash = hash("sha256", $last_rand_hash);
-			$random_data .= $last_rand_hash;
+		if ($final_block_r->rowCount() > 0) {
+			$final_block = $final_block_r->fetch();
+			$random_data = hash("sha256", $final_block['block_hash']);
+			
+			$events_by_block = $game->events_by_block($final_block['block_id']);
+			$events_in_round = count($events_by_block);
+			
+			$rand_chars_per_event = 3;
+			$event_offset = $db_event['event_index'] - $events_by_block[0]->db_event['event_index'];
+			
+			$total_rand_chars_needed = $rand_chars_per_event*$events_in_round;
+			$last_rand_hash = $random_data;
+			
+			while (strlen($random_data) < $total_rand_chars_needed) {
+				$last_rand_hash = hash("sha256", $last_rand_hash);
+				$random_data .= $last_rand_hash;
+			}
+			
+			$rand_offset_start = $rand_chars_per_event*$event_offset;
+			$rand_chars = substr($random_data, $rand_offset_start, $rand_chars_per_event);
+			
+			$pk_shootouts = array();
+			$winning_option = false;
+			
+			do {
+				$rand_binary = str_pad(base_convert($rand_chars, 16, 2), $rand_chars_per_event*4, "0", STR_PAD_LEFT);
+				
+				if (strlen($rand_chars) != $rand_chars_per_event || strlen($rand_binary) < 4*$rand_chars_per_event-1) throw new Exception("randh: $rand_chars, randb: $rand_binary");
+				
+				$team1_pk_score = 0;
+				$team2_pk_score = 0;
+				
+				for ($i=0; $i<5; $i++) {
+					$scored = $rand_binary[$i];
+					$team1_pk_score += $scored;
+				}
+				for ($i=5; $i<10; $i++) {
+					$scored = $rand_binary[$i];
+					$team2_pk_score += $scored;
+				}
+				
+				array_push($pk_shootouts, array($team1_pk_score, $team2_pk_score));
+				
+				if ($team1_pk_score == $team2_pk_score) {
+					$rand_chars = hash("sha256", $rand_chars);
+					$rand_chars = substr($rand_chars, 0, $rand_chars_per_event);
+				}
+				else {
+					if ($team1_pk_score > $team2_pk_score) $winning_option = $first_option;
+					else $winning_option = $second_option;
+				}
+			}
+			while ($winning_option === false);
+			
+			return array($winning_option, $pk_shootouts);
 		}
-		
-		$rand_offset_start = $rand_chars_per_event*$event_offset;
-		$rand_chars = substr($random_data, $rand_offset_start, $rand_chars_per_event);
-		
-		$pk_shootouts = array();
-		$winning_option = false;
-		
-		do {
-			$rand_binary = base_convert($rand_chars, 16, 2);
-			
-			$team1_pk_score = 0;
-			$team2_pk_score = 0;
-			
-			for ($i=0; $i<5; $i++) {
-				$scored = $rand_binary[$i];
-				$team1_pk_score += $scored;
-			}
-			for ($i=5; $i<10; $i++) {
-				$scored = $rand_binary[$i];
-				$team2_pk_score += $scored;
-			}
-			
-			array_push($pk_shootouts, array($team1_pk_score, $team2_pk_score));
-			
-			if ($team1_pk_score == $team2_pk_score) {
-				$rand_chars = hash("sha256", $rand_chars);
-				$rand_chars = substr($rand_chars, 0, $rand_chars_per_event);
-			}
-			else {
-				if ($team1_pk_score > $team2_pk_score) $winning_option = $first_option;
-				else $winning_option = $second_option;
-			}
-		}
-		while ($winning_option === false);
-		
-		return array($winning_option, $pk_shootouts);
+		else return false;
 	}
 	
 	public function set_event_outcome(&$game, &$coin_rpc, $db_event) {

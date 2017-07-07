@@ -1335,6 +1335,8 @@ class App {
 	
 	public function event_verbatim_vars() {
 		return array(
+			array('int', 'event_index', true),
+			array('int', 'next_event_index', true),
 			array('int', 'event_starting_block', true),
 			array('int', 'event_final_block', true),
 			array('int', 'event_payout_block', true),
@@ -1352,6 +1354,7 @@ class App {
 			array('string', 'url_identifier', false),
 			array('string', 'name', false),
 			array('string', 'event_type_name', false),
+			array('string', 'event_type_name_plural', false),
 			array('string', 'event_rule', true),
 			array('int', 'event_entity_type_id', true),
 			array('int', 'option_group_id', true),
@@ -1458,7 +1461,7 @@ class App {
 			$q = "UPDATE game_defined_events SET ";
 		}
 		else {
-			$q = "INSERT INTO game_defined_events SET game_id='".$game->db_game['game_id']."', event_index='".$event_index."', ";
+			$q = "INSERT INTO game_defined_events SET game_id='".$game->db_game['game_id']."', ";
 		}
 		
 		for ($j=0; $j<count($event_verbatim_vars); $j++) {
@@ -1627,7 +1630,7 @@ class App {
 						$game_event_params = $this->event_verbatim_vars();
 						
 						for ($i=0; $i<count($game_defined_events); $i++) {
-							$q = "INSERT INTO game_defined_events SET game_id='".$new_game->db_game['game_id']."', event_index='".$i."'";
+							$q = "INSERT INTO game_defined_events SET game_id='".$new_game->db_game['game_id']."'";
 							
 							for ($j=0; $j<count($game_event_params); $j++) {
 								$var_type = $game_event_params[$j][0];
