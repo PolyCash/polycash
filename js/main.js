@@ -210,7 +210,7 @@ function claim_coin_giveaway() {
 	var giveaway_btn_txt = $('#giveaway_btn').html();
 	$('#giveaway_btn').html("Loading...");
 	
-	$.get("/ajax/coin_giveaway.php?game_id="+games[0].game_id+"&do=claim", function(result) {
+	$.get("/ajax/coin_giveaway.php?game_id="+games[0].game_id+"&action=claim", function(result) {
 		$('#giveaway_btn').html(giveaway_btn_txt);
 		
 		if (result == "1") {
@@ -1127,19 +1127,20 @@ var io_id2input_index = {};
 var mature_ios = new Array();
 
 // OBJECT: Event
-var Event = function(game, game_event_index, event_id, num_voting_options, vote_effectiveness_function) {
+var Event = function(game, game_event_index, event_id, num_voting_options, vote_effectiveness_function, option_block_rule) {
 	this.game = game;
 	this.game_event_index = game_event_index;
 	this.event_id = event_id;
 	
 	this.num_voting_options = num_voting_options;
 	this.vote_effectiveness_function = vote_effectiveness_function;
+	this.option_block_rule = option_block_rule;
 	
 	this.selected_option_id = false;
 	this.votingaddr_count = 0;
 	this.deleted = false;
 	this.details_shown = true;
-
+	
 	this.options = new Array();
 	this.option_id2option_index = {};
 	
@@ -1179,10 +1180,32 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 		$('#game'+this.game.instance_id+'_event'+this.game_event_index+'_vote_option_'+option_id).removeClass('vote_option_box_sel');
 		this.selected_option_id = false;
 	};
+	this.refresh_time_estimate = function() {
+		if (this.deleted == false) {
+			var block_in_round = this.game.block_id_to_round_index(this.game.last_block_id+1)-1;
+			
+			if (this.option_block_rule == "football_match") {
+				var event_sim_time_sec = 90*60;
+				var block_sim_time_sec = Math.round(event_sim_time_sec/this.game.game_round_length);
+				var sec_into_game = block_in_round*block_sim_time_sec;
+				
+				var sec_since_block_loaded = (new Date().getTime() - this.game.time_last_block_loaded)/1000;
+				var expected_sec_this_block = sec_since_block_loaded + this.game.seconds_per_block;
+				var sim_sec_into_block = Math.round((sec_since_block_loaded/expected_sec_this_block)*block_sim_time_sec);
+				sec_into_game += sim_sec_into_block;
+				
+				var min_disp = Math.floor(sec_into_game/60);
+				var sec_disp = leftpad(sec_into_game - min_disp*60, 2, "0");
+				$('#game'+this.game.instance_id+'_event'+this.game_event_index+'_timer').html(min_disp+":"+sec_disp);
+			}
+			var _this = this;
+			setTimeout(function() {_this.refresh_time_estimate();}, 1000);
+		}
+	};
 };
 
 // OBJECT: Game
-var Game = function(game_id, last_block_id, last_transaction_id, my_last_transaction_id, mature_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function) {
+var Game = function(game_id, last_block_id, last_transaction_id, my_last_transaction_id, mature_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, seconds_per_block) {
 	Game.numInstances = (Game.numInstances || 0) + 1;
 	
 	this.instance_id = Game.numInstances-1;
@@ -1201,6 +1224,8 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 	this.event_ids = event_ids;
 	this.logo_image_url = logo_image_url;
 	this.vote_effectiveness_function = vote_effectiveness_function;
+	this.seconds_per_block = parseInt(seconds_per_block);
+	
 	this.events = new Array();
 	this.all_events = new Array();
 	this.all_events_start_index = false;
@@ -1211,6 +1236,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 	this.my_effective_votes = 0;
 	this.utxo_max_effective_votes = 0;
 	this.utxo_max_height = 150;
+	this.time_last_block_loaded = new Date().getTime();
 	
 	this.game_loop_index = 1;
 	this.last_game_loop_index_applied = -1;
@@ -1263,7 +1289,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 		}
 	};
 	this.refresh_if_needed = function() {
-		if (true || !this.refresh_in_progress) {
+		if (!this.refresh_in_progress) {
 			this.last_refresh_time = new Date().getTime();
 			this.refresh_in_progress = true;
 			
@@ -1275,7 +1301,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 				url: check_activity_url,
 				success: function(result) {
 					if (_this.refresh_page == "wallet" && result == "0") {
-						window.location = '/wallet/'+_this.game_url_identifier+'/?do=logout';
+						window.location = '/wallet/'+_this.game_url_identifier+'/?action=logout';
 					}
 					else {
 						_this.refresh_in_progress = false;
@@ -1284,6 +1310,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 						if (json_result['game_loop_index'] > _this.last_game_loop_index_applied) {
 							if (json_result['new_block'] == "1") {
 								_this.last_block_id = parseInt(json_result['last_block_id']);
+								_this.time_last_block_loaded = new Date().getTime();
 								
 								if (_this.refresh_page == "wallet") {
 									if (parseInt(json_result['new_performance_history']) == 1) {
@@ -1495,4 +1522,10 @@ function set_event_outcome_selected() {
 			window.location = window.location;
 		});
 	}
+}
+
+function leftpad(num, size, pad_char) {
+	var s = num+"";
+	while (s.length < size) s = pad_char + s;
+	return s;
 }

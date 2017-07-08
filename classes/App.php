@@ -787,7 +787,10 @@ class App {
 					echo ', "'.$db_game['url_identifier'].'"';
 					echo ', "'.$db_game['coin_name'].'"';
 					echo ', "'.$db_game['coin_name_plural'].'"';
-					echo ', "home", "'.$featured_game->event_ids().'", "'.$featured_game->logo_image_url().'", "'.$featured_game->vote_effectiveness_function().'"';
+					echo ', "home", "'.$featured_game->event_ids().'"';
+					echo ', "'.$featured_game->logo_image_url().'"';
+					echo ', "'.$featured_game->vote_effectiveness_function().'"';
+					echo ', "'.$featured_game->blockchain->db_blockchain['seconds_per_block'].'"';
 				?>));
 				
 				games[<?php echo $counter; ?>].game_loop_event();
@@ -800,8 +803,9 @@ class App {
 				echo '<div id="game'.$counter.'_events"></div>';
 				echo '<script type="text/javascript" id="game'.$counter.'_new_event_js">'.$featured_game->new_event_js($counter, false).'</script>';
 				
-				echo '<br/><a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-success">Play Now</a>';
-				echo ' <a href="/explorer/games/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-primary">Blockchain Explorer</a>';
+				echo '<br/><a href="/wallet/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-success">Play Now</a>';
+				echo ' <a href="/explorer/games/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-primary">'.ucwords($featured_game->db_game['event_type_name']).' Results</a>';
+				echo ' <a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-warning">About '.$featured_game->db_game['name'].'</a>';
 				echo '</center><br/>';
 				
 				if ($counter%(12/$cell_width) == 1) echo '</div><div class="row">';

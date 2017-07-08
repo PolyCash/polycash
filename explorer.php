@@ -334,6 +334,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					}
 					else $this_round = $db_event['round_id'];
 					
+					echo "<h1>".$event->db_event['event_name']."</h1>\n";
+					
 					if ($event_status == "current") {
 						$rankings = $event->round_voting_stats_all($current_round);
 						$round_sum_votes = $rankings[0];
@@ -342,12 +344,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$option_id_to_rank = $rankings[3];
 						$confirmed_votes = $rankings[4];
 						$unconfirmed_votes = $rankings[5];
-						
-						echo "<h1>".$event->db_event['event_name']." is currently running</h1>\n";
 					}
 					else {
-						echo "<h1>".$event->db_event['event_name']."</h1>";
-						
 						if ($db_event['winning_option_id'] > 0) echo "<h3>".$db_event['name']."</h3>\n";
 						else echo "<h3>".$event->db_event['event_name'].": No winner</h3>\n";
 						
@@ -491,20 +489,25 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$scores_by_entity_id = array();
 						$entities_by_id = array();
 						
-						while ($option_block = $r->fetch()) {
-							if (empty($scores_by_entity_id[$option_block['entity_id']])) {
-								$scores_by_entity_id[$option_block['entity_id']] = $option_block['score'];
-								$entities_by_id[$option_block['entity_id']] = $option_block;
+						if ($r->rowCount() > 0) {
+							while ($option_block = $r->fetch()) {
+								if (empty($scores_by_entity_id[$option_block['entity_id']])) {
+									$scores_by_entity_id[$option_block['entity_id']] = $option_block['score'];
+									$entities_by_id[$option_block['entity_id']] = $option_block;
+								}
+								else $scores_by_entity_id[$option_block['entity_id']] += $option_block['score'];
+								
+								echo $option_block['entity_name']." scored in block #".$option_block['block_height']."<br/>\n";
 							}
-							else $scores_by_entity_id[$option_block['entity_id']] += $option_block['score'];
-							
-							echo $option_block['entity_name']." scored in block #".$option_block['block_height']."<br/>\n";
 						}
+						else echo "No one has scored.<br/>\n";
 						
-						echo "<br/><b>Final Score:</b><br/>\n";
-						$winning_entity_id = false;
-						foreach ($scores_by_entity_id as $entity_id => $score) {
-							echo $entities_by_id[$entity_id]['entity_name'].": ".$score."<br/>\n";
+						if (!empty($scores_by_entity_id)) {
+							echo "<br/><b>Final Score:</b><br/>\n";
+							$winning_entity_id = false;
+							foreach ($scores_by_entity_id as $entity_id => $score) {
+								echo $entities_by_id[$entity_id]['entity_name'].": ".$score."<br/>\n";
+							}
 						}
 						
 						$q = "SELECT *, SUM(ob.score) AS score FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id LEFT JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id='".$event->db_event['event_id']."' GROUP BY o.option_id ORDER BY o.option_index ASC;";

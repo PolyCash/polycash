@@ -1228,6 +1228,8 @@ class Game {
 	}
 	
 	public function game_status_explanation(&$user, &$user_game) {
+		$last_block_id = $this->blockchain->last_block_id();
+		
 		$html = "";
 		if ($this->db_game['game_status'] == "editable") $html .= "The game creator hasn't yet published this game; it's parameters can still be changed. ";
 		else if ($this->db_game['game_status'] == "published") {
@@ -1245,8 +1247,11 @@ class Game {
 		}
 		else if ($this->db_game['game_status'] == "completed") $html .= "This game is over. ";
 		
+		$nextblock_effectiveness = $this->current_events[0]->block_id_to_effectiveness_factor($last_block_id+1);
+		$html .= "<p>Votes are ".round(100*$nextblock_effectiveness)."% effective right now.</p>\n";
+		
 		if ($this->db_game['p2p_mode'] == "rpc") {
-			$total_blocks = $this->blockchain->last_block_id();
+			$total_blocks = $last_block_id;
 			
 			$total_game_blocks = $total_blocks-$this->db_game['game_starting_block']+1;
 			
@@ -1666,8 +1671,16 @@ class Game {
 			$round_stats = $event->round_voting_stats_all($current_round);
 			$sum_votes = $round_stats[0];
 			$option_id2rank = $round_stats[3];
+			
+			if ($event->db_event['display_mode'] == "default") {
+				$holder_class = "game_event_box";
+			}
+			else {
+				$holder_class = "game_event_slim";
+			}
+			
 			$js .= '
-			games['.$game_index.'].events['.$i.'] = new Event(games['.$game_index.'], '.$i.', '.$event->db_event['event_id'].', '.$event->db_event['num_voting_options'].', "'.$event->db_event['vote_effectiveness_function'].'");'."\n";
+			games['.$game_index.'].events['.$i.'] = new Event(games['.$game_index.'], '.$i.', '.$event->db_event['event_id'].', '.$event->db_event['num_voting_options'].', "'.$event->db_event['vote_effectiveness_function'].'", "'.$event->db_event['option_block_rule'].'");'."\n";
 			
 			$option_q = "SELECT * FROM options WHERE event_id='".$event->db_event['event_id']."' ORDER BY option_id ASC;";
 			$option_r = $this->blockchain->app->run_query($option_q);
@@ -1689,10 +1702,12 @@ class Game {
 			}
 			$js .= '
 			games['.$game_index.'].events['.$i.'].option_selected(0);
+			games['.$game_index.'].events['.$i.'].refresh_time_estimate();
 			console.log("adding game, event '.$i.' into DOM...");'."\n";
+			
 			if ($i == 0) $js .= 'event_html += "<div class=\'row\'>";';
 			$js .= 'event_html += "<div class=\'col-sm-'.$event_bootstrap_cols.'\'>";';
-			$js .= 'event_html += "<div id=\'game'.$game_index.'_event'.$i.'\' class=\'game_event_box\'><div id=\'game'.$game_index.'_event'.$i.'_current_round_table\'></div><div id=\'game'.$game_index.'_event'.$i.'_my_current_votes\'></div></div>";'."\n";
+			$js .= 'event_html += "<div id=\'game'.$game_index.'_event'.$i.'\' class=\''.$holder_class.'\'><div id=\'game'.$game_index.'_event'.$i.'_current_round_table\'></div><div id=\'game'.$game_index.'_event'.$i.'_my_current_votes\'>Loading...</div></div>";'."\n";
 			$js .= 'event_html += "</div>";';
 			if ($i%2 == 1 || $i == count($this->current_events)-1) {
 				$js .= 'event_html += "</div>';
@@ -1796,7 +1811,7 @@ class Game {
 		$i=0;
 		while ($db_event = $r->fetch()) {
 			$js .= "if (typeof games[".$game_index."].all_events[".$db_event['event_index']."] == 'undefined') {";
-			$js .= "games[".$game_index."].all_events[".$db_event['event_index']."] = new Event(games[".$game_index."], ".$db_event['event_index'].", ".$db_event['event_id'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'");';
+			$js .= "games[".$game_index."].all_events[".$db_event['event_index']."] = new Event(games[".$game_index."], ".$db_event['event_index'].", ".$db_event['event_id'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'", "'.$db_event['option_block_rule'].'");';
 			$js .= "}\n";
 			
 			$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY option_id ASC;";

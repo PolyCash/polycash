@@ -488,7 +488,10 @@ if ($thisuser && $game) {
 			echo ', "'.$game->db_game['url_identifier'].'"';
 			echo ', "'.$game->db_game['coin_name'].'"';
 			echo ', "'.$game->db_game['coin_name_plural'].'"';
-			echo ', "wallet", "'.$game->event_ids().'", "'.$game->logo_image_url().'", "'.$game->vote_effectiveness_function().'"';
+			echo ', "wallet", "'.$game->event_ids().'"';
+			echo ', "'.$game->logo_image_url().'"';
+			echo ', "'.$game->vote_effectiveness_function().'"';
+			echo ', "'.$game->blockchain->db_blockchain['seconds_per_block'].'"';
 		?>));
 		
 		games[0].game_loop_event();
