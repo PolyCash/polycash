@@ -1745,11 +1745,11 @@ class Game {
 	public function mature_io_ids_csv($user_game) {
 		$ids_csv = "";
 		$last_block_id = $this->blockchain->last_block_id();
-		$io_q = "SELECT io.io_id FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND k.account_id='".$user_game['account_id']."' AND gio.game_id='".$this->db_game['game_id']."' AND (io.create_block_id <= ".($last_block_id-$this->db_game['maturity'])." OR gio.instantly_mature = 1)";
+		$io_q = "SELECT gio.game_io_id FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND k.account_id='".$user_game['account_id']."' AND gio.game_id='".$this->db_game['game_id']."' AND (io.create_block_id <= ".($last_block_id-$this->db_game['maturity'])." OR gio.instantly_mature = 1)";
 		if ($this->db_game['payout_weight'] == "coin_round") {
 			$io_q .= " AND gio.create_round_id < ".$this->block_to_round($last_block_id+1);
 		}
-		$io_q .= " ORDER BY io.io_id ASC;";
+		$io_q .= " ORDER BY io.io_id ASC, gio.game_io_id ASC;";
 		$io_r = $this->blockchain->app->run_query($io_q);
 		while ($io = $io_r->fetch(PDO::FETCH_NUM)) {
 			$ids_csv .= $io[0].",";
@@ -1775,23 +1775,25 @@ class Game {
 		
 		$output_q = "SELECT io.*, gio.* FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND k.account_id='".$user_game['account_id']."' AND gio.game_id='".$this->db_game['game_id']."' AND (io.create_block_id <= ".($last_block_id-$this->db_game['maturity'])." OR gio.instantly_mature=1)";
 		if ($this->db_game['payout_weight'] == "coin_round") $output_q .= " AND gio.create_round_id < ".$this->block_to_round($last_block_id+1);
-		$output_q .= " GROUP BY io.io_id ORDER BY io.io_id ASC;";
+		$output_q .= " ORDER BY io.io_id ASC, gio.game_io_id ASC;";
 		$output_r = $this->blockchain->app->run_query($output_q);
 		
 		$utxos = array();
 		
+		$mature_io_index = 0;
 		while ($utxo = $output_r->fetch()) {
 			if (intval($utxo['create_block_id']) > 0) {} else $utxo['create_block_id'] = 0;
 			
 			$utxos[count($utxos)] = $utxo;
 			$input_buttons_html .= '<div ';
 			
-			$input_buttons_html .= 'id="select_utxo_'.$utxo['io_id'].'" class="btn btn-primary btn-sm select_utxo';
+			$input_buttons_html .= 'id="select_utxo_'.$utxo['game_io_id'].'" class="btn btn-primary btn-sm select_utxo';
 			if ($this->db_game['logo_image_id'] > 0) $input_buttons_html .= ' select_utxo_image';
-			$input_buttons_html .= '" onclick="add_utxo_to_vote(\''.$utxo['io_id'].'\', '.$utxo['colored_amount'].', '.$utxo['create_block_id'].');">';
+			$input_buttons_html .= '" onclick="add_utxo_to_vote('.$mature_io_index.', true);">';
 			$input_buttons_html .= '</div>'."\n";
 			
-			$js .= "mature_ios.push(new mature_io(mature_ios.length, ".$utxo['io_id'].", ".$utxo['colored_amount'].", ".$utxo['create_block_id']."));\n";
+			$js .= "mature_ios.push(new mature_io(mature_ios.length, ".$utxo['game_io_id'].", ".$utxo['colored_amount'].", ".$utxo['create_block_id'].", ".$utxo['io_id']."));\n";
+			$mature_io_index++;
 		}
 		$js .= "refresh_mature_io_btns();\n";
 		
