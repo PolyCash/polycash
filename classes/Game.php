@@ -1786,7 +1786,7 @@ class Game {
 			$utxos[count($utxos)] = $utxo;
 			$input_buttons_html .= '<div ';
 			
-			$input_buttons_html .= 'id="select_utxo_'.$utxo['io_id'].'" class="btn btn-default select_utxo';
+			$input_buttons_html .= 'id="select_utxo_'.$utxo['io_id'].'" class="btn btn-primary btn-sm select_utxo';
 			if ($this->db_game['logo_image_id'] > 0) $input_buttons_html .= ' select_utxo_image';
 			$input_buttons_html .= '" onclick="add_utxo_to_vote(\''.$utxo['io_id'].'\', '.$utxo['colored_amount'].', '.$utxo['create_block_id'].');">';
 			$input_buttons_html .= '</div>'."\n";

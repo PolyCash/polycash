@@ -1,2 +1,2 @@
-ALTER TABLE `events` ADD `display_mode` ENUM('default','slim') NOT NULL DEFAULT 'default' AFTER `option_max_width`;
+ALTER TABLE `events` ADD `display_mode` ENUM('default','slim') NOT NULL DEFAULT 'slim' AFTER `option_max_width`;
 ALTER TABLE `options` ADD `option_block_score` INT NOT NULL DEFAULT '0' AFTER `unconfirmed_votes`;

@@ -492,6 +492,8 @@ if ($thisuser && $game) {
 			echo ', "'.$game->logo_image_url().'"';
 			echo ', "'.$game->vote_effectiveness_function().'"';
 			echo ', "'.$game->blockchain->db_blockchain['seconds_per_block'].'"';
+			echo ', "'.$game->db_game['inflation'].'"';
+			echo ', "'.$game->db_game['exponential_inflation_rate'].'"';
 		?>));
 		
 		games[0].game_loop_event();
@@ -579,10 +581,10 @@ if ($thisuser && $game) {
 		<?php
 		include("includes/wallet_status.php");
 		
-		if ($game->db_game['inflation'] == "exponential") {
+		/*if ($game->db_game['inflation'] == "exponential") {
 			echo '<div class="row"><div class="col-sm-2">Vote&nbsp;conversion&nbsp;rate:</div><div style="text-align: right;" class="col-sm-3"><font class="greentext">';
 			echo $app->format_bignum($app->votes_per_coin($game->db_game)).'</font> votes &rarr; <font class="greentext">1</font> '.$game->db_game['coin_name'].'</div></div>';
-		}
+		}*/
 		?>
 		<div id="wallet_text_stats">
 			<?php
@@ -632,7 +634,7 @@ if ($thisuser && $game) {
 					<h2>Vote Now</h2>
 					<div class="row bordered_row" style="border: 1px solid #bbb;">
 						<div class="col-md-6 bordered_cell" id="compose_vote_inputs">
-							<b>Inputs:</b><div style="display: inline-block; margin-left: 20px;" id="input_amount_sum"></div><div style="display: inline-block; margin-left: 20px;" id="input_vote_sum"></div><br/>
+							<b>Inputs:</b><div style="display: none; margin-left: 20px;" id="input_amount_sum"></div><div style="display: inline-block; margin-left: 20px;" id="input_vote_sum"></div><br/>
 							<div id="compose_input_start_msg">Add inputs by clicking on the votes above.</div>
 						</div>
 						<div class="col-md-6 bordered_cell" id="compose_vote_outputs">
@@ -640,7 +642,7 @@ if ($thisuser && $game) {
 							<select class="form-control" id="select_add_output" onchange="select_add_output_changed();"></select>
 						</div>
 					</div>
-					<button class="btn btn-primary" id="confirm_compose_vote_btn" style="margin-top: 5px; margin-left: 5px;" onclick="confirm_compose_vote();">Submit Voting Transaction</button>
+					<button class="btn btn-success" id="confirm_compose_vote_btn" style="margin-top: 5px; margin-left: 5px;" onclick="confirm_compose_vote();">Confirm & Stake</button>
 				</div>
 			</div>
 			

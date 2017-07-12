@@ -791,6 +791,8 @@ class App {
 					echo ', "'.$featured_game->logo_image_url().'"';
 					echo ', "'.$featured_game->vote_effectiveness_function().'"';
 					echo ', "'.$featured_game->blockchain->db_blockchain['seconds_per_block'].'"';
+					echo ', "'.$featured_game->db_game['inflation'].'"';
+					echo ', "'.$featured_game->db_game['exponential_inflation_rate'].'"';
 				?>));
 				
 				games[<?php echo $counter; ?>].game_loop_event();

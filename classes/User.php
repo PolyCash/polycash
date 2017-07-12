@@ -176,7 +176,7 @@ class User {
 	}
 	
 	public function wallet_text_stats(&$game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance, &$user_game) {
-		$html = '<div class="row"><div class="col-sm-2">Pending&nbsp;winnings:</div><div class="col-sm-3 text-right">';
+		/*$html = '<div class="row"><div class="col-sm-2">Pending&nbsp;winnings:</div><div class="col-sm-3 text-right">';
 		$payout_sum = 0;
 		
 		$q = "SELECT * FROM events e JOIN event_outcomes eo ON e.event_id=eo.event_id WHERE e.game_id='".$game->db_game['game_id']."' ORDER BY e.event_index ASC;";
@@ -207,19 +207,31 @@ class User {
 		}
 		$html .= $this->app->format_bignum($payout_sum/pow(10,8));
 		
-		$html .= '</div></div>'."\n";
+		$html .= '</div></div>'."\n";*/
 		
-		$html .= '<div class="row"><div class="col-sm-2">Available&nbsp;funds:</div>';
+		$html = '<div class="row"><div class="col-sm-2">Available&nbsp;funds:</div>';
 		$html .= '<div class="col-sm-3 text-right"><font class="greentext">';
 		$html .= $this->app->format_bignum($mature_balance/pow(10,8));
 		$html .= "</font> ".$game->db_game['coin_name_plural']."</div></div>\n";
-		if ($game->db_game['payout_weight'] != "coin") {
-			$html .= '<div class="row"><div class="col-sm-2">Votes:</div><div class="col-sm-3 text-right"><font class="greentext">'.$this->app->format_bignum($this->user_current_votes($game, $last_block_id, $current_round, $user_game)/pow(10,8)).'</font> votes available</div></div>'."\n";
-		}
+		
 		$html .= '<div class="row"><div class="col-sm-2">Locked&nbsp;funds:</div>';
 		$html .= '<div class="col-sm-3 text-right"><font class="redtext">'.$this->app->format_bignum($immature_balance/pow(10,8)).'</font> '.$game->db_game['coin_name_plural'].'</div>';
 		if ($immature_balance > 0) $html .= '<div class="col-sm-1"><a href="" onclick="$(\'#lockedfunds_details\').toggle(\'fast\'); return false;">Details</a></div>';
 		$html .= "</div>\n";
+		
+		if ($game->db_game['payout_weight'] != "coin") {
+			$user_votes = $this->user_current_votes($game, $last_block_id, $current_round, $user_game);
+			
+			if ($game->db_game['inflation'] == "exponential") {
+				$votes_per_coin = $game->blockchain->app->votes_per_coin($game->db_game);
+				$votes_value = $user_votes/$votes_per_coin;
+				$html .= '<div class="row"><div class="col-sm-2">Unrealized gain:</div><div class="col-sm-3 text-right"><font class="greentext">'.$this->app->format_bignum($votes_value/pow(10,8)).'</font> '.$game->db_game['coin_name_plural'].'</div></div>'."\n";
+			}
+			else {
+				$html .= '<div class="row"><div class="col-sm-2">Votes:</div><div class="col-sm-3 text-right"><font class="greentext">'.$this->app->format_bignum($user_votes/pow(10,8)).'</font> votes available</div></div>'."\n";
+			}
+		}
+		
 		$html .= "Last block completed: <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$last_block_id."\">#".$last_block_id."</a>, currently mining <a href=\"/explorer/games/".$game->db_game['url_identifier']."/transactions/unconfirmed\">#".($last_block_id+1)."</a><br/>\n";
 		$html .= "Current votes count towards block ".$block_within_round."/".$game->db_game['round_length']." in round #".$game->round_to_display_round($current_round).".<br/>\n";
 		//if ($game->db_game['vote_effectiveness_function'] != "constant") $html .= "Votes are ".round(100*$game->round_index_to_effectiveness_factor($block_within_round),1)."% effective right now.<br/>\n";
