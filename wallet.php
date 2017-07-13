@@ -469,7 +469,7 @@ if ($thisuser && $game) {
 		var performance_history_sections = 1;
 		var performance_history_rounds_per_section = <?php echo $performance_history_rounds_per_section; ?>;
 		var performance_history_from_round = <?php echo max(1, $current_round-$performance_history_rounds_per_section); ?>;
-		var performance_history_initial_load_round = <?php echo $current_round-1; ?>;
+		var performance_history_initial_load_round = <?php echo $current_round; ?>;
 		var performance_history_loading = false;
 		
 		var user_logged_in = true;

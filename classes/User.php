@@ -51,20 +51,24 @@ class User {
 	
 	public function performance_history(&$game, $from_round_id, $to_round_id) {
 		$html = "";
+		$to_block_id = $to_round_id*$game->db_game['round_length'];
+		$from_block_id = $from_round_id*$game->db_game['round_length'];
 		
 		$last_block_id = $game->blockchain->last_block_id();
 		
-		$q = "SELECT e.event_index, r.*, winner.name AS winner_name FROM events e LEFT JOIN  event_outcomes r ON r.event_id=e.event_id LEFT JOIN options winner ON r.winning_option_id=winner.option_id WHERE e.game_id='".$game->db_game['game_id']."' AND r.round_id >= ".$from_round_id." AND r.round_id <= ".$to_round_id." ORDER BY e.event_index DESC;";
+		$q = "SELECT e.*, r.*, e.event_id AS event_id, winner.name AS winner_name FROM events e LEFT JOIN event_outcomes r ON r.event_id=e.event_id LEFT JOIN options winner ON r.winning_option_id=winner.option_id WHERE e.game_id='".$game->db_game['game_id']."' AND e.event_final_block >= ".$from_block_id." AND e.event_final_block <= ".$to_block_id." ORDER BY e.event_index DESC;";
 		$r = $this->app->run_query($q);
 		
 		while ($event_outcome = $r->fetch()) {
 			$event = new Event($game, false, $event_outcome['event_id']);
-			$first_voting_block_id = ($event_outcome['round_id']-1)*$game->db_game['round_length']+1;
-			$last_voting_block_id = $first_voting_block_id + $game->db_game['round_length']-1;
+			$event_round = $game->block_to_round($event_outcome['event_final_block']);
 			$sum_votes = 0;
 			$details_html = "";
 			
-			$option_votes = $event->option_votes_in_round($event_outcome['winning_option_id'], $event_outcome['round_id']);
+			if (!empty($event_outcome['winning_option_id'])) {
+				$option_votes = $event->option_votes_in_round($event_outcome['winning_option_id'], $event_round);
+			}
+			else $option_votes = 0;
 			
 			$html .= '<div class="row" style="font-size: 13px;">';
 			$html .= '<div class="col-sm-3">'.$event->db_event['event_name'].'</div>';
@@ -105,7 +109,7 @@ class User {
 			
 			$html .= '</div>';
 			
-			$my_votes_in_round = $event->my_votes_in_round($event_outcome['round_id'], $this->db_user['user_id'], false);
+			$my_votes_in_round = $event->my_votes_in_round($event_round, $this->db_user['user_id'], false);
 			$my_votes = $my_votes_in_round[0];
 			$coins_voted = $my_votes_in_round[1];
 			

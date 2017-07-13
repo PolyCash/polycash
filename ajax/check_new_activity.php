@@ -60,12 +60,10 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 			$output['new_block'] = 1;
 			$output['last_block_id'] = $last_block_id;
 			
-			$client_round = $game->block_to_round(intval($_REQUEST['last_block_id'])+1);
-			
-			if ($_REQUEST['refresh_page'] == "wallet" && $current_round != $client_round) {
+			if ($_REQUEST['refresh_page'] == "wallet" && $current_round != $_REQUEST['initial_load_round']) {
 				$initial_load_round = (int)$_REQUEST['initial_load_round'];
 				$output['new_performance_history'] = 1;
-				$output['performance_history'] = $thisuser->performance_history($game, $initial_load_round+1, $current_round-1);
+				$output['performance_history'] = $thisuser->performance_history($game, $initial_load_round+1, $current_round);
 			}
 			else $output['new_performance_history'] = 0;
 		}
