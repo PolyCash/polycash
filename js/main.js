@@ -474,7 +474,7 @@ function add_utxo_to_vote(mature_io_index, add_matching_utxo_ios) {
 		var focus_select_output = false;
 		if (index_id == 0) focus_select_output = true;
 		vote_inputs.push(new vote_input(index_id, mature_io.game_io_id, mature_io.amount, mature_io.create_block_id, mature_io.io_id));
-		$('#select_utxo_'+mature_io.game_io_id).hide();
+		$('#select_utxo_'+mature_io.game_io_id).hide('fast');
 		var select_btn_html = '<div id="selected_utxo_'+index_id+'" onclick="remove_utxo_from_vote('+index_id+', true);" class="select_utxo';
 		if (games[0].logo_image_url != "") select_btn_html += ' select_utxo_image';
 		select_btn_html += ' btn btn-primary btn-sm">'+render_selected_utxo(index_id)+'</div>';
@@ -540,10 +540,13 @@ function remove_utxo_from_vote(index_id, remove_matching_utxo_ios) {
 	refresh_output_amounts();
 	
 	if (remove_matching_utxo_ios) {
-		for (var i=0; i<vote_inputs.length; i++) {
-			if (vote_inputs[i].io_id == io_id) {
-				remove_utxo_from_vote(i, false);
-			}
+		setTimeout("remove_utxo_from_vote_by_io_id("+io_id+");", 200);
+	}
+}
+function remove_utxo_from_vote_by_io_id(io_id) {
+	for (var i=0; i<vote_inputs.length; i++) {
+		if (vote_inputs[i].io_id == io_id) {
+			remove_utxo_from_vote(i, false);
 		}
 	}
 }

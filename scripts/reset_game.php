@@ -28,8 +28,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			$until_block = $game->db_game['game_starting_block'] + $game->db_game['round_length']*$game->db_game['final_round'];
 			echo "until block: $until_block<br/>\n";
 		}
-		$game->ensure_events_until_block($until_block);
-		$game->load_current_events();
+		//$game->ensure_events_until_block($until_block);
+		//$game->load_current_events();
 	}
 	
 	echo "Great, the game has been ".$action."!\n";

@@ -401,3 +401,6 @@ footer {
 	display: inline-block;
 	float: right;
 }
+.connected_utxo {
+	margin-left: -10px ! important;
+}

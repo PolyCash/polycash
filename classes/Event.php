@@ -162,12 +162,6 @@ class Event {
 			$option_ids = array();
 			$scores = array();
 			
-			for ($i=0; $i<count($round_stats); $i++) {
-				$sorted_option_ids[$i] = $round_stats[$i]['option_id'];
-				$scores[$i] = $round_stats[$i]['option_block_score'];
-			}
-			array_multisort($scores, SORT_DESC, $sorted_option_ids);
-			
 			if ($display_mode == "default") {
 				$score_disp .= '<div class="event_score_box">';
 				$score_disp .= "Current Scores:<br/>\n";
@@ -177,21 +171,26 @@ class Event {
 				$score_disp .= "</div>\n";
 			}
 			else {
+				$qq = "SELECT *, SUM(ob.score) AS option_block_score FROM options o LEFT JOIN option_blocks ob ON o.option_id=ob.option_id LEFT JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id='".$this->db_event['event_id']."' GROUP BY o.option_id ORDER BY o.option_index ASC;";
+				$rr = $this->game->blockchain->app->run_query($qq);
+				
+				$score_disp = "";
 				$first_option = false;
 				$second_option = false;
 				
-				for ($i=0; $i<count($round_stats); $i++) {
-					$option_id = $sorted_option_ids[$i];
-					$option = $round_stats[$option_id_to_rank[$option_id]];
+				while ($option = $rr->fetch()) {
+					$score_disp .= ((int)$option['option_block_score'])."-";
 					if (empty($first_option)) $first_option = $option;
-					else if  (empty($second_option)) $second_option = $option;
-					$score_disp .= $option['option_block_score']."-";
+					else if (empty($second_option)) $second_option = $option;
 				}
 				$score_disp = substr($score_disp, 0, strlen($score_disp)-1);
+				$score_disp .= " &nbsp; ";
 				
-				if ($first_option['option_block_score'] == $second_option['option_block_score']) $score_disp = "Tied: ".$score_disp;
-				else if ($first_option['option_block_score'] > $second_option['option_block_score']) $score_disp = $first_option['entity_name']." is winning ".$score_disp;
-				else if ($second_option['option_block_score'] > $first_option['option_block_score']) $score_disp = $second_option['entity_name']." is winning ".$score_disp;
+				if ($first_option['option_block_score'] == $second_option['option_block_score']) $score_disp .= "Tied";
+				else {
+					if ($first_option['option_block_score'] > $second_option['option_block_score']) $score_disp .= $first_option['entity_name']." is winning";
+					else $score_disp .= $second_option['entity_name']." is winning";
+				}
 			}
 		}
 		
@@ -476,14 +475,18 @@ class Event {
 			$q .= " ORDER BY t.transaction_id DESC;";
 		}
 		$r = $this->game->blockchain->app->run_query($q);
+		
+		$event_payout = $this->event_pos_reward_in_round($round_id);
+		
 		while ($my_vote = $r->fetch()) {
 			$color = "green";
 			$num_votes = $my_vote[$this->game->db_game['payout_weight'].'s_destroyed'];
 			$effective_votes = $my_vote['votes'];
 			$option_votes = $this->option_votes_in_round($my_vote['option_id'], $round_id);
-			if ($option_votes['sum'] > 0) $expected_payout = floor($this->event_pos_reward_in_round($round_id)*($effective_votes/$option_votes['sum']))/pow(10,8);
+			if ($option_votes['sum'] > 0) {
+				$expected_payout = floor($event_payout*($effective_votes/$option_votes['sum']))/pow(10,8);
+			}
 			else $expected_payout = 0;
-			if ($expected_payout < 0) $expected_payout = 0;
 			
 			$confirmed_html .= '<div class="row">';
 			$confirmed_html .= '<div class="col-sm-4 '.$color.'text">'.$my_vote['name'].'</div>';
@@ -513,6 +516,9 @@ class Event {
 		$q = "SELECT gio.*, gvo.option_id, gvo.name, t.transaction_id, t.tx_hash, t.fee_amount, t.amount AS transaction_amount FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN options gvo ON gio.option_id=gvo.option_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.event_id='".$this->db_event['event_id']."' AND io.create_block_id IS NULL AND t.block_id IS NULL AND k.account_id='".$user_game['account_id']."' ORDER BY gio.colored_amount DESC;";
 		$r = $this->game->blockchain->app->run_query($q);
 		
+		$event_payout = $this->event_pos_reward_in_round($round_id);
+		$current_effectiveness_factor = $this->block_id_to_effectiveness_factor($last_block_id+1);
+		
 		while ($my_vote = $r->fetch()) {
 			$color = "yellow";
 			$option_votes = $this->option_votes_in_round($my_vote['option_id'], $round_id);
@@ -527,8 +533,8 @@ class Event {
 				$num_votes = $my_vote['colored_amount'];
 			}
 			
-			$effective_votes = floor($num_votes*$this->block_id_to_effectiveness_factor($last_block_id+1));
-			if ($option_votes['sum'] > 0) $expected_payout = floor($this->event_pos_reward_in_round($round_id)*($effective_votes/$option_votes['sum']))/pow(10,8);
+			$effective_votes = floor($num_votes*$current_effectiveness_factor);
+			if ($option_votes['sum'] > 0) $expected_payout = floor($event_payout*($effective_votes/$option_votes['sum']))/pow(10,8);
 			else $expected_payout = 0;
 			if ($expected_payout < 0) $expected_payout = 0;
 			
@@ -654,23 +660,29 @@ class Event {
 		if ($current_round_id == $round_id) {
 			$q = "SELECT coin_score, unconfirmed_coin_score, coin_block_score, unconfirmed_coin_block_score, coin_round_score, unconfirmed_coin_round_score, votes, unconfirmed_votes FROM options WHERE option_id='".$option_id."' AND event_id='".$this->db_event['event_id']."';";
 			$r = $this->game->blockchain->app->run_query($q);
-			$sums = $r->fetch();
-			$confirmed_score = $sums['votes'];
-			$unconfirmed_score = $sums['unconfirmed_votes'];
+			$result = $r->fetch();
+			
+			$confirmed_votes = $result['votes'];
+			$unconfirmed_votes = $result['unconfirmed_votes'];
+			$confirmed_score = $result[$score_field."_score"];
+			$unconfirmed_score = $result["unconfirmed_".$score_field."_score"];
 		}
 		else {
 			$q = "SELECT SUM(".$score_field."), SUM(votes) FROM transaction_game_ios WHERE event_id='".$this->db_event['event_id']."' AND ";
 			$q .= "create_round_id=".$round_id." AND option_id='".$option_id."';";
 			$r = $this->game->blockchain->app->run_query($q);
-			$confirmed_score = $r->fetch(PDO::FETCH_NUM);
-			$confirmed_score = $confirmed_score[1];
+			$result = $r->fetch();
+			
+			$confirmed_votes = $result["SUM(votes)"];
+			$unconfirmed_votes = 0;
+			$confirmed_score = $result["SUM(".$score_field.")"];
 			$unconfirmed_score = 0;
 		}
 		
-		if (!$confirmed_score) $confirmed_score = 0;
-		if (!$unconfirmed_score) $unconfirmed_score = 0;
+		if (!$confirmed_votes) $confirmed_votes = 0;
+		if (!$unconfirmed_votes) $unconfirmed_votes = 0;
 		
-		return array('confirmed'=>$confirmed_score, 'unconfirmed'=>$unconfirmed_score, 'sum'=>$confirmed_score+$unconfirmed_score);
+		return array('confirmed'=>$confirmed_votes, 'unconfirmed'=>$unconfirmed_votes, 'sum'=>$confirmed_votes+$unconfirmed_votes, 'confirmed_score'=>$confirmed_score, 'unconfirmed_score'=>$unconfirmed_score, 'score_sum'=>$confirmed_score+$unconfirmed_score);
 	}
 	
 	public function event_pos_reward_in_round($round_id) {

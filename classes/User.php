@@ -83,10 +83,8 @@ class User {
 			}
 			else {
 				if ($event_outcome['winner_name'] != "") {
-					$html .= $event_outcome['winner_name'];
-					
 					if (!empty($event->db_event['option_block_rule'])) {
-						$qq = "SELECT * FROM event_outcome_options WHERE outcome_id='".$event_outcome['outcome_id']."' ORDER BY option_id=".$event_outcome['winning_option_id']." DESC, option_id ASC;";
+						$qq = "SELECT * FROM event_outcome_options WHERE outcome_id='".$event_outcome['outcome_id']."' ORDER BY option_id ASC;";
 						$rr = $this->app->run_query($qq);
 						$score_label = "";
 						
@@ -94,9 +92,11 @@ class User {
 							if (empty($score_label)) $score_label = $outcome_option['option_block_score']."-";
 							else $score_label .= $outcome_option['option_block_score'];
 						}
-						$html .= " ".$score_label;
+						$html .= $score_label;
+						$html .= " &nbsp;&nbsp; ".$event_outcome['winner_name'];
 					}
 					else {
+						$html .= $event_outcome['winner_name'];
 						$html .= " with ".$this->app->format_bignum($event_outcome['winning_votes']/pow(10,8))." votes. ";
 					}
 				}
