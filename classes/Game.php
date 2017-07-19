@@ -15,7 +15,9 @@ class Game {
 	public function update_db_game() {
 		$q = "SELECT g.*, b.p2p_mode, b.coin_name AS base_coin_name, b.coin_name_plural AS base_coin_name_plural FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE g.game_id='".$this->game_id."';";
 		$r = $this->blockchain->app->run_query($q);
-		$this->db_game = $r->fetch() or die("Error, could not load game #".$this->game_id);
+		
+		if ($r->rowCount() > 0) $this->db_game = $r->fetch();
+		else throw new Exception("Error, could not load game #".$this->game_id);
 	}
 	
 	public function block_to_round($mining_block_id) {

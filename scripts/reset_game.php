@@ -30,6 +30,10 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		}
 		//$game->ensure_events_until_block($until_block);
 		//$game->load_current_events();
+		
+		if ($game->blockchain->db_blockchain['only_game_id'] == $game->db_game['game_id']) {
+			$game->start_game();
+		}
 	}
 	else echo "Failed to load game #".$game_id."<br/>\n";
 	

@@ -1535,7 +1535,9 @@ class App {
 		
 		$error_message = "";
 		
-		if ($game_def->blockchain_identifier != "") {
+		if (!empty($game_def->blockchain_identifier)) {
+			$new_private_blockchain = false;
+			
 			if ($game_def->blockchain_identifier == "private") {
 				$chain_id = $this->random_string(6);
 				$url_identifier = "private-chain-".$chain_id;
@@ -1546,6 +1548,7 @@ class App {
 				$new_blockchain = new Blockchain($this, $blockchain_id);
 				if ($thisuser) $new_blockchain->set_blockchain_creator($thisuser);
 				$game_def->blockchain_identifier = $url_identifier;
+				$new_private_blockchain = true;
 			}
 			
 			$q = "SELECT * FROM blockchains WHERE url_identifier=".$this->quote_escape($game_def->blockchain_identifier).";";
@@ -1559,13 +1562,15 @@ class App {
 				
 				$game_def->url_identifier = $this->normalize_uri_part($game_def->url_identifier);
 				
-				if ($game_def->url_identifier != "") {
+				if (!empty($game_def->url_identifier)) {
 					$verbatim_vars = $this->game_definition_verbatim_vars();
 					
 					$q = "SELECT * FROM games WHERE url_identifier=".$this->quote_escape($game_def->url_identifier).";";
 					$r = $this->run_query($q);
 					
-					if (!empty($db_game)) {
+					if ($r->rowCount() > 0) {
+						$db_game = $r->fetch();
+						
 						$q = "UPDATE games SET seconds_per_block='".$db_blockchain['seconds_per_block']."'";
 						for ($i=0; $i<count($verbatim_vars); $i++) {
 							$var_type = $verbatim_vars[$i][0];
@@ -1590,6 +1595,9 @@ class App {
 						$q .= ";";
 						$r = $this->run_query($q);
 						$new_game_id = $this->last_insert_id();
+						
+						$q = "UPDATE blockchains SET only_game_id='".$new_game_id."' WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."';";
+						$r = $this->run_query($q);
 						
 						$new_game = new Game($blockchain, $new_game_id);
 						
@@ -1635,7 +1643,9 @@ class App {
 						$q = "DELETE FROM game_defined_options WHERE game_id='".$new_game->db_game['game_id']."';";
 						$r = $this->run_query($q);
 						
-						$game_defined_events = $game_def->events;
+						if (!empty($game_def->events)) $game_defined_events = $game_def->events;
+						else $game_defined_events = array();
+						
 						$game_event_params = $this->event_verbatim_vars();
 						
 						for ($i=0; $i<count($game_defined_events); $i++) {
@@ -1671,9 +1681,15 @@ class App {
 				}
 				else $error_message = "Error, invalid game URL identifier.";
 			}
-			else $error_message = "Error, failed to identify the right blockchain.";
+			else {
+				if ($new_private_blockchain) {
+					$q = "DELETE FROM blockchains WHERE blockchain_id='".$new_blockchain->db_blockchain['blockchain_id']."';";
+					$r = $this->run_query($q);
+				}
+				$error_message = "Error, failed to identify the right blockchain.";
+			}
 		}
-		else $error_message = "Error, failed to identify the right blockchain.";
+		else $error_message = "Error, blockchain url identifier was empty.";
 		
 		return false;
 	}
@@ -1721,7 +1737,7 @@ class App {
 			return $r->fetch();
 		}
 		else {
-			$q = "INSERT INTO entity_types SET entity_type_id='".$entity_type_id."', entity_name=".$this->quote_escape($name).";";
+			$q = "INSERT INTO entity_types SET entity_name=".$this->quote_escape($name).";";
 			$r = $this->run_query($q);
 			$entity_type_id = $this->last_insert_id();
 			$q = "SELECT * FROM entity_types WHERE entity_type_id=".$entity_type_id.";";

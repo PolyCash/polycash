@@ -117,7 +117,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				$loop_target_time = $app->get_site_constant("loop_target_time");
 				do {
 					$loop_start_time = microtime(true);
-
+					
 					for ($running_game_i=0; $running_game_i<count($running_games); $running_game_i++) {
 						echo "\n".$running_games[$running_game_i]->db_game['name']."\n";
 						
@@ -130,7 +130,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 								$running_games[$running_game_i]->update_db_game();
 								echo (microtime(true)-$benchmark_time)." sec\n";
 								$benchmark_time = microtime(true);
-								echo "Add blocks...";
+								
 								if ($running_games[$running_game_i]->db_game['game_status'] == "running") {
 									$last_block_id = $running_games[$running_game_i]->blockchain->last_block_id();
 									

@@ -701,7 +701,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					<pre id="block_info" style="display: none;"><?php
 					print_r($block);
 					
-					if ($coin_rpc) {
+					if (!empty($coin_rpc)) {
 						$rpc_block = $coin_rpc->getblock($block['block_hash']);
 						if ($rpc_block) echo print_r($rpc_block);
 					}
@@ -718,7 +718,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					if ($game) $complete_block_id = $last_block_id;
 					
 					$filter_complete = false;
-					if ($_REQUEST['block_filter'] == "complete") {
+					if (!empty($_REQUEST['block_filter']) && $_REQUEST['block_filter'] == "complete") {
 						$to_block_id = $complete_block_id+1;
 						$filter_complete = true;
 					}

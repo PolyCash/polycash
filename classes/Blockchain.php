@@ -10,11 +10,17 @@ class Blockchain {
 		else die("Failed to load blockchain #".$blockchain_id);
 		
 		if (empty($this->db_blockchain['first_required_block'])) {
-			try {
-				$coin_rpc = new jsonRPCClient('http://'.$this->db_blockchain['rpc_username'].':'.$this->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->db_blockchain['rpc_port'].'/');
+			if ($this->db_blockchain['p2p_mode'] == "rpc") {
+				try {
+					$coin_rpc = new jsonRPCClient('http://'.$this->db_blockchain['rpc_username'].':'.$this->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->db_blockchain['rpc_port'].'/');
+					$this->set_first_required_block($coin_rpc);
+				}
+				catch (Exception $e) {}
+			}
+			else {
+				$coin_rpc = false;
 				$this->set_first_required_block($coin_rpc);
 			}
-			catch (Exception $e) {}
 		}
 	}
 	
@@ -798,6 +804,8 @@ class Blockchain {
 		$r = $this->app->run_query($q);
 		$min_starting_block = (int) $r->fetch()['MIN(game_starting_block)'];
 		if ($min_starting_block > 0 && (!$first_required_block || $min_starting_block < $first_required_block)) $first_required_block = $min_starting_block;
+		
+		if (!$coin_rpc && !$first_required_block) $first_required_block = 0;
 		
 		$q = "UPDATE blockchains SET first_required_block='".$first_required_block."' WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';";
 		$this->app->run_query($q);
