@@ -1446,6 +1446,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 									var vote_option_details = json_result['vote_option_details'];
 									
 									console.log('refreshing '+vote_option_details.length+" events");
+									
 									for (var game_event_index=0; game_event_index<vote_option_details.length; game_event_index++) {
 										$('#game'+_this.instance_id+'_event'+game_event_index+'_current_round_table').html(json_result['current_round_table'][game_event_index]);
 										

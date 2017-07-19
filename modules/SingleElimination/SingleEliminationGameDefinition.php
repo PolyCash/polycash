@@ -53,7 +53,7 @@ class SingleEliminationGameDefinition {
 			"option_group_id": 0,
 			"events_per_round": 0,
 			"inflation": "exponential",
-			"exponential_inflation_rate": 0.01,
+			"exponential_inflation_rate": 0.001,
 			"pos_reward": 0,
 			"round_length": 10,
 			"maturity": 0,

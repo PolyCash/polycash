@@ -984,7 +984,7 @@ class Game {
 	}
 	
 	public function start_game() {
-		if ($this->db_game['genesis_tx_hash'] != "") {
+		if (!empty($this->db_game['genesis_tx_hash'])) {
 			$qq = "SELECT * FROM transactions WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND tx_hash=".$this->blockchain->app->quote_escape($this->db_game['genesis_tx_hash']).";";
 			$rr = $this->blockchain->app->run_query($qq);
 			
@@ -1234,7 +1234,9 @@ class Game {
 		}
 		else if ($this->db_game['game_status'] == "completed") $html .= "This game is over. ";
 		
-		$nextblock_effectiveness = $this->current_events[0]->block_id_to_effectiveness_factor($last_block_id+1);
+		if (empty($this->current_events[0])) $nextblock_effectiveness = 0;
+		else $nextblock_effectiveness = $this->current_events[0]->block_id_to_effectiveness_factor($last_block_id+1);
+		
 		$html .= "<p>Votes are ".round(100*$nextblock_effectiveness)."% effective right now.</p>\n";
 		
 		if ($this->db_game['p2p_mode'] == "rpc") {
@@ -1694,7 +1696,7 @@ class Game {
 			
 			if ($i == 0) $js .= 'event_html += "<div class=\'row\'>";';
 			$js .= 'event_html += "<div class=\'col-sm-'.$event_bootstrap_cols.'\'>";';
-			$js .= 'event_html += "<div id=\'game'.$game_index.'_event'.$i.'\' class=\''.$holder_class.'\'><div id=\'game'.$game_index.'_event'.$i.'_current_round_table\'></div><div id=\'game'.$game_index.'_event'.$i.'_my_current_votes\'>Loading...</div></div>";'."\n";
+			$js .= 'event_html += "<div id=\'game'.$game_index.'_event'.$i.'\' class=\''.$holder_class.'\'><div id=\'game'.$game_index.'_event'.$i.'_current_round_table\'></div><div id=\'game'.$game_index.'_event'.$i.'_my_current_votes\'></div></div>";'."\n";
 			$js .= 'event_html += "</div>";';
 			if ($i%2 == 1 || $i == count($this->current_events)-1) {
 				$js .= 'event_html += "</div>';

@@ -953,8 +953,16 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						
 						echo '<div class="row">';
 						echo '<div class="col-sm-3">'.$app->format_bignum($utxo['colored_amount']/pow(10,8)).' '.$game->db_game['coin_name_plural'].'</div>';
-						echo '<div class="col-sm-2">'.$app->format_bignum($votes/pow(10,8)).' votes</div>';
-						echo '<div class="col-sm-4"><a href="/explorer/games/'.$game->db_game['url_identifier'].'/addresses/'.$utxo['address'].'">'.$utxo['address']."</a></div>\n";
+						echo '<div class="col-sm-3 greentext text-right">';
+						
+						if ($game->db_game['inflation'] == "exponential") {
+							$coin_equiv = $votes/$app->votes_per_coin($game->db_game);
+							echo "+".$app->format_bignum($coin_equiv/pow(10,8)).' '.$game->db_game['coin_abbreviation'];
+						}
+						else echo $app->format_bignum($votes).' votes';
+						
+						echo '</div>';
+						echo '<div class="col-sm-3"><a href="/explorer/games/'.$game->db_game['url_identifier'].'/addresses/'.$utxo['address'].'">'.$utxo['address']."</a></div>\n";
 						echo '</div>';
 					}
 				}

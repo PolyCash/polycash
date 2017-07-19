@@ -8,7 +8,7 @@ if ($thisuser) {
 }
 else {
 	$alias = $app->normalize_username($_REQUEST['alias']);
-	if (strlen($alias) >= 6) {
+	if (strlen($alias) >= 4) {
 		$password = $app->strong_strip_tags($_REQUEST['password']);
 		
 		if (strlen($password) >= 6) {
@@ -77,7 +77,7 @@ else {
 						}
 					}
 					else {
-						$app->output_message(1, "/wallet/", false);
+						$app->output_message(1, "/accounts/", false);
 					}
 				}
 				die();
@@ -91,7 +91,7 @@ else {
 		}
 	}
 	else {
-		$app->output_message(6, "Error: the alias that you entered is too short. Aliases must be at least 6 characters.", false);
+		$app->output_message(6, "Error: the alias that you entered is too short. Aliases must be at least 4 characters.", false);
 	}
 }
 ?>

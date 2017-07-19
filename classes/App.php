@@ -1581,7 +1581,7 @@ class App {
 						$q = "INSERT INTO games SET ";
 						if ($module) $q .= "module=".$this->quote_escape($module).", ";
 						if ($thisuser) $q .= "creator_id='".$thisuser->db_user['user_id']."', ";
-						$q .= "blockchain_id='".$db_blockchain['blockchain_id']."', game_status='published', featured=1, seconds_per_block='".$db_blockchain['seconds_per_block']."', start_condition='fixed_block', giveaway_status='public_free', invite_currency='".$blockchain->currency_id()."', logo_image_id=34";
+						$q .= "blockchain_id='".$db_blockchain['blockchain_id']."', game_status='published', featured=1, seconds_per_block='".$db_blockchain['seconds_per_block']."', start_condition='fixed_block', giveaway_status='public_free', invite_currency='".$blockchain->currency_id()."'";
 						for ($i=0; $i<count($verbatim_vars); $i++) {
 							$var_type = $verbatim_vars[$i][0];
 							$var_name = $verbatim_vars[$i][1];

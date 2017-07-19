@@ -31,6 +31,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		//$game->ensure_events_until_block($until_block);
 		//$game->load_current_events();
 	}
+	else echo "Failed to load game #".$game_id."<br/>\n";
 	
 	echo "Great, the game has been ".$action."!\n";
 }
