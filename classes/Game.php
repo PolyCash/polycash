@@ -1095,11 +1095,11 @@ class Game {
 	}
 	
 	public function send_invitation_email($to_email, &$invitation) {
-		$blocks_per_hour = 3600/$this->db_game['seconds_per_block'];
+		$blocks_per_hour = 3600/$this->blockchain->db_blockchain['seconds_per_block'];
 		$round_reward = ($this->db_game['pos_reward']+$this->db_game['pow_reward']*$this->db_game['round_length'])/pow(10,8);
-		$rounds_per_hour = 3600/($this->db_game['seconds_per_block']*$this->db_game['round_length']);
+		$rounds_per_hour = 3600/($this->blockchain->db_blockchain['seconds_per_block']*$this->db_game['round_length']);
 		$coins_per_hour = $round_reward*$rounds_per_hour;
-		$seconds_per_round = $this->db_game['seconds_per_block']*$this->db_game['round_length'];
+		$seconds_per_round = $this->blockchain->db_blockchain['seconds_per_block']*$this->db_game['round_length'];
 		
 		if ($this->db_game['inflation'] == "linear") $miner_pct = 100*($this->db_game['pow_reward']*$this->db_game['round_length'])/($round_reward*pow(10,8));
 		else $miner_pct = 100*$this->db_game['exponential_inflation_minershare'];
@@ -1343,11 +1343,11 @@ class Game {
 	
 	public function game_description() {
 		$html = "";
-		$blocks_per_hour = 3600/$this->db_game['seconds_per_block'];
+		$blocks_per_hour = 3600/$this->blockchain->db_blockchain['seconds_per_block'];
 		$round_reward = ($this->db_game['pos_reward']+$this->db_game['pow_reward']*$this->db_game['round_length'])/pow(10,8);
-		$rounds_per_hour = 3600/($this->db_game['seconds_per_block']*$this->db_game['round_length']);
+		$rounds_per_hour = 3600/($this->blockchain->db_blockchain['seconds_per_block']*$this->db_game['round_length']);
 		$coins_per_hour = $round_reward*$rounds_per_hour;
-		$seconds_per_round = $this->db_game['seconds_per_block']*$this->db_game['round_length'];
+		$seconds_per_round = $this->blockchain->db_blockchain['seconds_per_block']*$this->db_game['round_length'];
 		$coins_per_block = $this->blockchain->app->format_bignum($this->db_game['pow_reward']/pow(10,8));
 		
 		if ($this->db_game['game_status'] == "running") {
@@ -1395,7 +1395,7 @@ class Game {
 		else if ($this->db_game['inflation'] == "fixed_exponential") $html .= "This currency grows by ".(100*$this->db_game['exponential_inflation_rate'])."% per round. ".(100 - 100*$this->db_game['exponential_inflation_minershare'])."% is given to voters and ".(100*$this->db_game['exponential_inflation_minershare'])."% is given to miners every ".$this->blockchain->app->format_seconds($seconds_per_round).". ";
 		else {} // exponential
 		
-		$html .= "Each round consists of ".$this->db_game['round_length'].", ".str_replace(" ", "-", rtrim($this->blockchain->app->format_seconds($this->db_game['seconds_per_block']), 's'))." blocks. ";
+		$html .= "Each round consists of ".$this->db_game['round_length'].", ".str_replace(" ", "-", rtrim($this->blockchain->app->format_seconds($this->blockchain->db_blockchain['seconds_per_block']), 's'))." blocks. ";
 		if ($this->db_game['maturity'] > 0) {
 			$html .= ucwords($this->db_game['coin_name_plural'])." are locked for ";
 			$html .= $this->db_game['maturity']." block";

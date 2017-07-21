@@ -703,26 +703,32 @@ class App {
 		if ($currency['blockchain_id'] > 0) {
 			$blockchain = new Blockchain($this, $currency['blockchain_id']);
 			
-			try {
-				$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
-				
-				$address_text = $coin_rpc->getnewaddress();
-				$encWIF = "";
-				$save_method = "wallet.dat";
+			if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
+				try {
+					$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
+					
+					$address_text = $coin_rpc->getnewaddress();
+					$encWIF = "";
+					$save_method = "wallet.dat";
+				}
+				catch (Exception $e) {
+					if ($currency['short_name'] == "litecoin") $keySet = litecoin::getNewKeySet();
+					else $keySet = bitcoin::getNewKeySet();
+					
+					if (empty($GLOBALS['rsa_pub_key']) || empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
+						$this->log_message('Error generating a payment address. Please visit /install.php and then set $GLOBALS["rsa_pub_key"] in includes/config.php');
+						$save_method = "skip";
+					}
+					else {
+						$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
+						$address_text = $keySet['pubAdd'];
+						$save_method = "db";
+					}
+				}
 			}
-			catch (Exception $e) {
-				if ($currency['short_name'] == "litecoin") $keySet = litecoin::getNewKeySet();
-				else $keySet = bitcoin::getNewKeySet();
-				
-				if (empty($GLOBALS['rsa_pub_key']) || empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
-					$this->log_message('Error generating a payment address. Please visit /install.php and then set $GLOBALS["rsa_pub_key"] in includes/config.php');
-					$save_method = "skip";
-				}
-				else {
-					$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
-					$address_text = $keySet['pubAdd'];
-					$save_method = "db";
-				}
+			else {
+				$address_text = $this->random_string(34);
+				$save_method = "fake";
 			}
 			
 			if ($save_method == "skip") return false;
@@ -1539,16 +1545,22 @@ class App {
 			$new_private_blockchain = false;
 			
 			if ($game_def->blockchain_identifier == "private") {
+				$new_private_blockchain = true;
 				$chain_id = $this->random_string(6);
 				$url_identifier = "private-chain-".$chain_id;
 				$chain_pow_reward = 25*pow(10,8);
-				$q = "INSERT INTO blockchains SET online=1, p2p_mode='none', blockchain_name='Private Chain', url_identifier='".$url_identifier."', coin_name='chaincoin', coin_name_plural='chaincoins', seconds_per_block=10, initial_pow_reward=".$chain_pow_reward.";";
+				
+				$q = "INSERT INTO blockchains SET online=1, p2p_mode='none', blockchain_name='Private Chain ".$chain_id."', url_identifier='".$url_identifier."', coin_name='chaincoin', coin_name_plural='chaincoins', seconds_per_block=30, initial_pow_reward=".$chain_pow_reward.";";
 				$r = $this->run_query($q);
 				$blockchain_id = $this->last_insert_id();
+				
+				$q = "INSERT INTO currencies SET blockchain_id='".$blockchain_id."', name='Chaincoin ".$chain_id."', short_name='chaincoin', short_name_plural='chaincoins', abbreviation='CH', symbol='CH';";
+				$r = $this->run_query($q);
+				
 				$new_blockchain = new Blockchain($this, $blockchain_id);
 				if ($thisuser) $new_blockchain->set_blockchain_creator($thisuser);
+				
 				$game_def->blockchain_identifier = $url_identifier;
-				$new_private_blockchain = true;
 			}
 			
 			$q = "SELECT * FROM blockchains WHERE url_identifier=".$this->quote_escape($game_def->blockchain_identifier).";";
@@ -1571,12 +1583,13 @@ class App {
 					if ($r->rowCount() > 0) {
 						$db_game = $r->fetch();
 						
-						$q = "UPDATE games SET seconds_per_block='".$db_blockchain['seconds_per_block']."'";
+						$q = "UPDATE games SET ";
 						for ($i=0; $i<count($verbatim_vars); $i++) {
 							$var_type = $verbatim_vars[$i][0];
 							$var_name = $verbatim_vars[$i][1];
-							$q .= ", ".$var_name."=".$this->quote_escape($game_def->$var_name);
+							$q .= $var_name."=".$this->quote_escape($game_def->$var_name).", ";
 						}
+						$q = substr($q, 0, strlen($q)-2);
 						$q .= " WHERE game_id='".$db_game['game_id']."';";
 						$r = $this->run_query($q);
 						
@@ -1586,7 +1599,7 @@ class App {
 						$q = "INSERT INTO games SET ";
 						if ($module) $q .= "module=".$this->quote_escape($module).", ";
 						if ($thisuser) $q .= "creator_id='".$thisuser->db_user['user_id']."', ";
-						$q .= "blockchain_id='".$db_blockchain['blockchain_id']."', game_status='published', featured=1, seconds_per_block='".$db_blockchain['seconds_per_block']."', start_condition='fixed_block', giveaway_status='public_free', invite_currency='".$blockchain->currency_id()."'";
+						$q .= "blockchain_id='".$db_blockchain['blockchain_id']."', game_status='published', featured=1, start_condition='fixed_block', giveaway_status='public_free', invite_currency='".$blockchain->currency_id()."'";
 						for ($i=0; $i<count($verbatim_vars); $i++) {
 							$var_type = $verbatim_vars[$i][0];
 							$var_name = $verbatim_vars[$i][1];

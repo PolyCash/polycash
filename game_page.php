@@ -42,8 +42,8 @@ else $exchange_rate = 0;
 		<div class="row">
 			<div class="col-md-6">
 				<?php
-				$blocks_per_hour = 3600/$game->db_game['seconds_per_block'];
-				$seconds_per_round = $game->db_game['seconds_per_block']*$game->db_game['round_length'];
+				$blocks_per_hour = 3600/$game->blockchain->db_blockchain['seconds_per_block'];
+				$seconds_per_round = $game->blockchain->db_blockchain['seconds_per_block']*$game->db_game['round_length'];
 				$round_reward = ($app->coins_created_in_round($game->db_game, $current_round))/pow(10,8);
 
 				if ($game->db_game['inflation'] == "linear") {
@@ -56,7 +56,7 @@ else $exchange_rate = 0;
 					if ($game->db_game['final_round'] > 0) echo "This game runs for ".$game->db_game['final_round']." rounds (approximately ".$app->format_seconds($seconds_per_round*$game->db_game['final_round'])."). ";
 					
 					if ($game->db_game['inflation'] == "linear") {
-						$rounds_per_hour = 3600/($game->db_game['seconds_per_block']*$game->db_game['round_length']);
+						$rounds_per_hour = 3600/($game->blockchain->db_blockchain['seconds_per_block']*$game->db_game['round_length']);
 						$coins_per_hour = $round_reward*$rounds_per_hour;
 						echo "Rounds take about ".$app->format_seconds($seconds_per_round)." and ";
 						echo $app->format_bignum($round_reward)." ".$game->db_game['coin_name_plural']." are created and given out at the end of each round. ";
@@ -166,33 +166,6 @@ else $exchange_rate = 0;
 				</div>
 			</div>
 		</div>
-	</div>
-	<div class="paragraph">
-		<?php /*
-		<ol class="rules_list">
-		<li>Players can vote on these <?php echo $event->db_event['num_voting_options']." ".$event->db_event['option_name_plural']." every ".$app->format_seconds($seconds_per_round); ?> by submitting a voting transaction.</li>
-		<?php
-		$block_within_round = $last_block_id%$event->db_event['round_length']+1;
-		$sum_votes = $event->total_votes_in_round($current_round, true);
-		*/
-		/*
-		<li>Voting transactions are only counted if they are confirmed in a voting block. All blocks are voting blocks except for the final block of each round.</li>
-		<li>Blocks are mined approximately every <?php echo $app->format_seconds($event->db_event['seconds_per_block']); ?> by the SHA256 algorithm. 
-		<?php if ($event->db_event['inflation'] == "linear") { ?>Miners receive <?php echo $app->format_bignum($event->db_event['pow_reward']/pow(10,8))." ".$event->db_event['coin_name_plural']; ?> per block.<?php } ?></li>
-		<li>Blocks are grouped into voting rounds.  Blocks 1 through <?php echo $event->db_event['round_length']; ?> make up the first round, and every subsequent <?php echo $event->db_event['round_length']; ?> blocks are grouped into a round.</li>
-		<li>A voting round will have a winning <?php echo $event->db_event['option_name']; ?> if at least one <?php echo $event->db_event['option_name']; ?> receives votes but is not disqualified.</li>
-		<li>Any <?php echo $event->db_event['option_name']; ?> with more than <?php echo $app->format_bignum(100*$event->db_event['max_voting_fraction']); ?>% of the votes is disqualified from winning the round.</li>
-		<li>The eligible <?php echo $event->db_event['option_name']; ?> with the most votes wins the round.</li>
-		<li>In case of a tie, the <?php echo $event->db_event['option_name']; ?> with the lowest ID number wins.</li>
-		<li>When a round ends <?php
-		if ($event->db_event['inflation'] == "linear") {
-			echo $app->format_bignum($event->db_event['pos_reward']/pow(10,8))." ".$event->db_event['coin_name_plural']." are divided up";
-		}
-		else echo $app->format_bignum(100*$event->db_event['exponential_inflation_rate']).'% is added to the currency supply';
-		?> and given to the winning voters in proportion to their votes.</li>
-		</ol>
-		*/
-		?>
 	</div>
 	
 	<div id="game0_events"></div>

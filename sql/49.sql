@@ -1,0 +1,1 @@
+ALTER TABLE `games` DROP `seconds_per_block`;

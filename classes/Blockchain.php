@@ -1029,7 +1029,7 @@ class Blockchain {
 		}
 		$r = $this->app->run_query($q);
 		$balance = $r->fetch();
-		return (int)$balance['SUM(amount)'];
+		return $balance['SUM(amount)'];
 	}
 	
 	public function create_or_fetch_address($address, $check_existing, $rpc, $delete_optionless, $claimable, $force_is_mine) {

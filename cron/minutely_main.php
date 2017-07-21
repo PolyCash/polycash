@@ -122,7 +122,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 						echo "\n".$running_games[$running_game_i]->db_game['name']."\n";
 						
 						if ($running_games[$running_game_i]->db_game['p2p_mode'] == "none") {
-							$remaining_prob = round($loop_target_time/$running_games[$running_game_i]->db_game['seconds_per_block'], 4);
+							$remaining_prob = round($loop_target_time/$running_games[$running_game_i]->blockchain->db_blockchain['seconds_per_block'], 4);
 							$thisgame_loop_start_time = microtime(true);
 							do {
 								$benchmark_time = microtime(true);

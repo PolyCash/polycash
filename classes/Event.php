@@ -266,7 +266,7 @@ class Event {
 				else $detail_html .= $this->game->db_game['coin_name_plural'];
 				$detail_html .= '</div></div>';
 				
-				$seconds_left = round(($this->game->db_game['round_length'] - $last_block_id%$this->game->db_game['round_length'] - 1)*$this->game->db_game['seconds_per_block']);
+				$seconds_left = round(($this->game->db_game['round_length'] - $last_block_id%$this->game->db_game['round_length'] - 1)*$this->game->blockchain->db_blockchain['seconds_per_block']);
 				$detail_html .= '<div class="row"><div class="col-sm-6 boldtext">Time Left:</div><div class="col-sm-6">';
 				$detail_html .= $this->game->blockchain->app->format_seconds($seconds_left);
 				$detail_html .= '</div></div>';

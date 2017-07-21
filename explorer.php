@@ -391,7 +391,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						</div>
 					</div>
 					<?php
-					if ($thisuser && !empty($db_event)) {
+					if ($thisuser && !empty($db_event) && !empty($db_event['winning_option_id'])) {
 						$my_votes = false;
 						echo $event->user_winnings_description($thisuser->db_user['user_id'], $this_round, $event_status, $db_event['winning_option_id'], $db_event['winning_votes'], $db_event['name'], $my_votes)."<br/>";
 					}
@@ -519,7 +519,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							$winning_option = false;
 							
 							if ($first_option['score'] == $second_option['score']) {
-								$tiebreaker = $module->break_tie($game, $db_event, $first_option, $second_option);
+								$tiebreaker = $module->break_tie($game, $event->db_event, $first_option, $second_option);
 								
 								if ($tiebreaker) {
 									list($winning_option, $pk_shootout_data) = $tiebreaker;
@@ -539,7 +539,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					<div class="transaction_table">
 					<?php
 					for ($i=$from_block_id; $i<=$to_block_id; $i++) {
-						echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/blocks/".$i."\">Block #".$i."</a>";
+						echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$i."\">Block #".$i."</a>";
 						if ($event->db_event['vote_effectiveness_function'] != "constant") {
 							echo ", vote effectiveness: ".$event->block_id_to_effectiveness_factor($i);
 						}
