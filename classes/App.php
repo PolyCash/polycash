@@ -1617,9 +1617,6 @@ class App {
 							if ($thisuser) $new_game->user_game = $user_game;
 							
 							$blockchain->add_genesis_block($new_game);
-							
-							$block_hash = $this->random_string(64);
-							$blockchain->private_add_block($new_game, $block_hash, 1);
 						}
 						else {
 							try {
@@ -1780,6 +1777,39 @@ class App {
 		}
 		
 		return $cached_url;
+	}
+	
+	public function permission_to_claim_address($game, $db_address, $thisuser) {
+		if ($game && $game->db_game['game_id'] == $game->blockchain->db_blockchain['only_game_id'] && $db_address['address'] == "genesis_receiver_address" && empty($db_address['user_id'])) return true;
+		else return false;
+	}
+	
+	public function give_address_to_user($game, $db_address, $user) {
+		if ($this->permission_to_claim_address($game, $db_address, $user)) {
+			$user_game = $user->ensure_user_in_game($game);
+			
+			if ($user_game) {
+				$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id='".$db_address['address_id']."';";
+				$r = $this->run_query($q);
+				
+				if ($r->rowCount() == 1) {
+					$address_key = $r->fetch();
+					
+					$q = "UPDATE address_keys SET account_id='".$user_game['account_id']."' WHERE address_key_id='".$address_key['address_key_id']."';";
+					$r = $this->run_query($q);
+				}
+				else {
+					$q = "INSERT INTO address_keys SET address_id='".$db_address['address_id']."', account_id='".$user_game['account_id']."', save_method='fake', pub_key=".$this->quote_escape($db_address['address']).";";
+					$r = $this->run_query($q);
+				}
+				$q = "UPDATE addresses SET user_id='".$user->db_user['user_id']."' WHERE address_id='".$db_address['address_id']."';";
+				$r = $this->run_query($q);
+				
+				return true;
+			}
+			else return false;
+		}
+		else return false;
 	}
 }
 ?>

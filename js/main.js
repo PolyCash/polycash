@@ -1605,3 +1605,14 @@ function leftpad(num, size, pad_char) {
 	while (s.length < size) s = pad_char + s;
 	return s;
 }
+
+function try_claim_address(game_id, address_id) {
+	$.get("/ajax/try_claim_address.php?game_id="+game_id+"&address_id="+address_id, function(result) {
+		var result_obj = JSON.parse(result);
+		console.log(result_obj);
+		
+		if (result_obj['status_code'] == 1) window.location = window.location;
+		else if (result_obj['status_code'] == 2) window.location = '/wallet/?redirect_id='+result_obj['message'];
+		else alert(result_obj['message']);
+	});
+}

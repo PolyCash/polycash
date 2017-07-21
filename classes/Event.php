@@ -651,9 +651,6 @@ class Event {
 	}
 	
 	public function option_votes_in_round($option_id, $round_id) {
-		if ($this->game->db_game['payout_weight'] == "coin") $score_field = "colored_amount";
-		else $score_field = $this->game->db_game['payout_weight']."s_destroyed";
-		
 		$mining_block_id = $this->game->blockchain->last_block_id()+1;
 		$current_round_id = $this->game->block_to_round($mining_block_id);
 		
@@ -664,18 +661,18 @@ class Event {
 			
 			$confirmed_votes = $result['votes'];
 			$unconfirmed_votes = $result['unconfirmed_votes'];
-			$confirmed_score = $result[$score_field."_score"];
-			$unconfirmed_score = $result["unconfirmed_".$score_field."_score"];
+			$confirmed_score = $result[$this->game->db_game['payout_weight']."_score"];
+			$unconfirmed_score = $result["unconfirmed_".$this->game->db_game['payout_weight']."_score"];
 		}
 		else {
-			$q = "SELECT SUM(".$score_field."), SUM(votes) FROM transaction_game_ios WHERE event_id='".$this->db_event['event_id']."' AND ";
+			$q = "SELECT SUM(".$this->game->db_game['payout_weight']."s_destroyed) AS sum_score, SUM(votes) AS sum_votes FROM transaction_game_ios WHERE event_id='".$this->db_event['event_id']."' AND ";
 			$q .= "create_round_id=".$round_id." AND option_id='".$option_id."';";
 			$r = $this->game->blockchain->app->run_query($q);
 			$result = $r->fetch();
 			
-			$confirmed_votes = $result["SUM(votes)"];
+			$confirmed_votes = $result["sum_votes"];
 			$unconfirmed_votes = 0;
-			$confirmed_score = $result["SUM(".$score_field.")"];
+			$confirmed_score = $result["sum_score"];
 			$unconfirmed_score = 0;
 		}
 		

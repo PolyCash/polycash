@@ -133,6 +133,7 @@ and (max-device-width : 480px) {
 .tabcontent {
 	border: 1px solid #999;
 	margin-top: -1px;
+	margin-bottom: 35px;
 	padding: 8px;
 }
 .greentext {

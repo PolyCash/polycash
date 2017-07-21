@@ -715,7 +715,7 @@ class Blockchain {
 			$nextblock_hash = $rpc_block->json_obj['nextblockhash'];
 		}
 		
-		$this->app->run_query("DELETE t.*, io.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.tx_hash='".$genesis_tx_hash."' AND t.blockchain_id='".$this->db_blockchain['blockchain_id']."';");
+		$this->app->run_query("DELETE t.*, io.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.tx_hash=".$this->app->quote_escape($genesis_tx_hash)." AND t.blockchain_id='".$this->db_blockchain['blockchain_id']."';");
 		
 		if ($game) $genesis_address = $this->app->random_string(34);
 		else $genesis_address = 'genesis_address';
@@ -738,43 +738,46 @@ class Blockchain {
 		$html .= "Added the genesis transaction!<br/>\n";
 		$this->app->log_message($html);
 		
-		if ($this->db_blockchain['p2p_mode'] == "none" && $game->db_game['creator_id'] > 0) {
-			$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$game->user_game['account_id']."' ORDER BY RAND() LIMIT 1;";
-			$r = $this->app->run_query($q);
-			
-			if ($r->rowCount() > 0) {
-				$db_user_address = $r->fetch();
-				
-				$game_genesis_tx_hash = $game->genesis_hash;
-				
-				$successful = false;
-				
-				$escrow_address = $this->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false);
-				
-				$escrow_amount = round(0.2*$this->db_blockchain['initial_pow_reward']);
-				$color_amount = $this->db_blockchain['initial_pow_reward'] - $escrow_amount;
-				
-				$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', amount='".$this->db_blockchain['initial_pow_reward']."', num_inputs=1, num_outputs=2, transaction_desc='transaction', tx_hash='".$game_genesis_tx_hash."', block_id='0', time_created='".time()."', has_all_inputs=1, has_all_outputs=1;";
-				$this->app->run_query($q);
-				$transaction2_id = $this->app->last_insert_id();
-				
-				$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->db_blockchain['blockchain_id']."', address_id='".$escrow_address['address_id']."', spend_status='unspent', out_index=0, create_transaction_id='".$transaction2_id."', amount=".$escrow_amount.", create_block_id=0";
-				if (!empty($escrow_address['user_id'])) $q .= ", user_id='".$escrow_address['user_id']."'";
-				if (!empty($escrow_address['option_index'])) $q .= ", option_index='".$escrow_address['option_index']."'";
-				$q .= ";";
-				$r = $this->app->run_query($q);
-				$escrow_io_id = $this->app->last_insert_id();
-				
-				$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->db_blockchain['blockchain_id']."', address_id='".$db_user_address['address_id']."', spend_status='unspent', out_index=1, create_transaction_id='".$transaction2_id."', amount=".$color_amount.", create_block_id=0";
-				if (!empty($db_user_address['user_id'])) $q .= ", user_id='".$db_user_address['user_id']."'";
-				if (!empty($db_user_address['option_index'])) $q .= ", option_index='".$db_user_address['option_index']."'";
-				$q .= ";";
-				$r = $this->app->run_query($q);
-				$color_io_id = $this->app->last_insert_id();
-				
-				$q = "UPDATE transaction_ios SET spend_status='spent', spend_transaction_id='".$transaction2_id."', spend_count=spend_count+1, spend_transaction_ids=CONCAT(spend_transaction_ids, CONCAT('".$transaction2_id."', ',')) WHERE io_id='".$genesis_io_id."';";
+		if ($this->db_blockchain['p2p_mode'] == "none") {
+			if (!empty($game->user_game['account_id'])) {
+				$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$game->user_game['account_id']."' ORDER BY RAND() LIMIT 1;";
 				$r = $this->app->run_query($q);
 			}
+			if (!empty($game->user_game['account_id']) && $r->rowCount() > 0) {
+				$db_user_address = $r->fetch();
+			}
+			else {
+				$db_user_address = $this->create_or_fetch_address("genesis_receiver_address", true, false, false, false, false);
+			}
+			$game_genesis_tx_hash = $game->genesis_hash;
+			
+			$successful = false;
+			
+			$escrow_address = $this->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false);
+			
+			$escrow_amount = round(0.5*$this->db_blockchain['initial_pow_reward']);
+			$color_amount = $this->db_blockchain['initial_pow_reward'] - $escrow_amount;
+			
+			$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', amount='".$this->db_blockchain['initial_pow_reward']."', num_inputs=1, num_outputs=2, transaction_desc='transaction', tx_hash='".$game_genesis_tx_hash."', block_id='0', time_created='".time()."', has_all_inputs=1, has_all_outputs=1;";
+			$this->app->run_query($q);
+			$transaction2_id = $this->app->last_insert_id();
+			
+			$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->db_blockchain['blockchain_id']."', address_id='".$escrow_address['address_id']."', spend_status='unspent', out_index=0, create_transaction_id='".$transaction2_id."', amount=".$escrow_amount.", create_block_id=0";
+			if (!empty($escrow_address['user_id'])) $q .= ", user_id='".$escrow_address['user_id']."'";
+			if (!empty($escrow_address['option_index'])) $q .= ", option_index='".$escrow_address['option_index']."'";
+			$q .= ";";
+			$r = $this->app->run_query($q);
+			$escrow_io_id = $this->app->last_insert_id();
+			
+			$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->db_blockchain['blockchain_id']."', address_id='".$db_user_address['address_id']."', spend_status='unspent', out_index=1, create_transaction_id='".$transaction2_id."', amount=".$color_amount.", create_block_id=0";
+			if (!empty($db_user_address['user_id'])) $q .= ", user_id='".$db_user_address['user_id']."'";
+			if (!empty($db_user_address['option_index'])) $q .= ", option_index='".$db_user_address['option_index']."'";
+			$q .= ";";
+			$r = $this->app->run_query($q);
+			$color_io_id = $this->app->last_insert_id();
+			
+			$q = "UPDATE transaction_ios SET spend_status='spent', spend_transaction_id='".$transaction2_id."', spend_count=spend_count+1, spend_transaction_ids=CONCAT(spend_transaction_ids, CONCAT('".$transaction2_id."', ',')) WHERE io_id='".$genesis_io_id."';";
+			$r = $this->app->run_query($q);
 		}
 		
 		$returnvals['log_text'] = $html;

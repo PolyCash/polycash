@@ -124,7 +124,6 @@ class SingleEliminationGameDefinition {
 				catch (Exception $e) {}
 			}
 		}
-		else echo "No blockchain found matching that identifier.";
 		
 		$this->game_def = $game_def;
 	}
