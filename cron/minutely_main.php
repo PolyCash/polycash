@@ -31,6 +31,31 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$coin_rpcs = array();
 		$game_id2real_game_i = array();
 
+		// If block hashing hasn't run for a long time on private blockchain, add some blocks
+		$q = "SELECT * FROM blockchains WHERE p2p_mode='none' AND last_hash_time IS NOT NULL AND (".time()."-last_hash_time) > (seconds_per_block*2);";
+		$r = $GLOBALS['app']->run_query($q);
+		$log_text = "";
+		
+		while ($db_blockchain = $r->fetch()) {
+			if (empty($blockchains[$db_blockchain['blockchain_id']])) $blockchains[$db_blockchain['blockchain_id']] = new Blockchain($app, $db_blockchain['blockchain_id']);
+			
+			$seconds_to_add = time()-$db_blockchain['last_hash_time'];
+			$blocks_to_add = round($seconds_to_add/$db_blockchain['seconds_per_block']);
+			echo "adding $blocks_to_add\n";
+			
+			$associated_games = $blockchains[$db_blockchain['blockchain_id']]->associated_games(false);
+			
+			for ($i=0; $i<$blocks_to_add; $i++) {
+				$created_block_id = $blockchains[$db_blockchain['blockchain_id']]->new_block($log_text);
+				for ($j=0; $j<count($associated_games); $j++) {
+					$log_text .= $associated_games[$j]->add_block($created_block_id);
+				}
+				$sim_hash_time = $db_blockchain['last_hash_time']+round(($i/$blocks_to_add)*$seconds_to_add);
+				$blockchains[$db_blockchain['blockchain_id']]->set_last_hash_time($sim_hash_time);
+			}
+		}
+		
+		// Initial load of all non-private blockchains
 		$q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.p2p_mode='rpc';";
 		$r = $GLOBALS['app']->run_query($q);
 		$real_game_i = 0;
@@ -154,6 +179,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 								$benchmark_time = microtime(true);
 							}
 							while ($remaining_prob > 0 && microtime(true)-$thisgame_loop_start_time < 60);
+							
+							$running_games[$running_game_i]->blockchain->set_last_hash_time(time());
 						}
 						echo "Apply user strategies...";
 						echo $running_games[$running_game_i]->apply_user_strategies();

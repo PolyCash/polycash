@@ -162,7 +162,10 @@ else $exchange_rate = 0;
 			</div>
 			<div class="col-md-6">
 				<div style="border: 1px solid #ccc; padding: 10px;">
-					<?php echo $app->game_info_table($game->db_game); ?>
+					<?php
+					$game->db_game['seconds_per_block'] = $game->blockchain->db_blockchain['seconds_per_block'];
+					echo $app->game_info_table($game->db_game);
+					?>
 				</div>
 			</div>
 		</div>

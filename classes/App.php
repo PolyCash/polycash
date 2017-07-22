@@ -488,7 +488,7 @@ class App {
 			$remainder_sec = $seconds-$minutes*60;
 			$str = "";
 			if ($minutes != 1) $str .= $minutes." minutes";
-			else return $str .= $minutes." minute";
+			else $str .= $minutes." minute";
 			if ($remainder_sec > 0) $str .= " and ".$remainder_sec." seconds";
 			return $str;
 		}

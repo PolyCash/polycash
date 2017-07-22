@@ -302,82 +302,12 @@ class Game {
 	}
 	
 	public function new_block() {
-		// This function only runs for games with p2p_mode='none'
+		// This function only runs for private games
 		$log_text = "";
-		$last_block_id = $this->blockchain->last_block_id();
-		
-		$q = "INSERT INTO blocks SET blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."', block_id='".($last_block_id+1)."', block_hash='".$this->blockchain->app->random_string(64)."', time_created='".time()."', time_loaded='".time()."', locally_saved=1;";
-		$r = $this->blockchain->app->run_query($q);
-		$internal_block_id = $this->blockchain->app->last_insert_id();
-		
-		$q = "SELECT * FROM blocks WHERE internal_block_id='".$internal_block_id."';";
-		$r = $this->blockchain->app->run_query($q);
-		$block = $r->fetch();
-		$created_block_id = $block['block_id'];
-		$mining_block_id = $created_block_id+1;
-		
-		$justmined_round = $this->block_to_round($created_block_id);
-		
-		$log_text .= "Created block $created_block_id<br/>\n";
-		
-		// Include all unconfirmed TXs in the just-mined block
-		$q = "SELECT * FROM transactions WHERE transaction_desc='transaction' AND blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND block_id IS NULL;";
-		$r = $this->blockchain->app->run_query($q);
-		$fee_sum = 0;
-		
-		while ($unconfirmed_tx = $r->fetch()) {
-			$coins_in = $this->blockchain->app->transaction_coins_in($unconfirmed_tx['transaction_id']);
-			$coins_out = $this->blockchain->app->transaction_coins_out($unconfirmed_tx['transaction_id']);
-			
-			if ($coins_in > 0 && $coins_in >= $coins_out) {
-				$fee_amount = $coins_in - $coins_out;
-				
-				$qq = "SELECT * FROM transaction_ios WHERE spend_transaction_id='".$unconfirmed_tx['transaction_id']."';";
-				$rr = $this->blockchain->app->run_query($qq);
-				
-				$total_coin_blocks_created = 0;
-				
-				while ($input_utxo = $rr->fetch()) {
-					$coin_blocks_created = ($created_block_id - $input_utxo['create_block_id'])*$input_utxo['amount'];
-					$total_coin_blocks_created += $coin_blocks_created;
-				}
-				
-				$voted_coins_out = $this->blockchain->app->transaction_voted_coins_out($unconfirmed_tx['transaction_id']);
-				
-				if ($voted_coins_out > 0) {
-					$cbd_per_coin_out = floor(pow(10,8)*$total_coin_blocks_created/$voted_coins_out)/pow(10,8);
-				}
-				else $cbd_per_coin_out = 0;
-				
-				$qq = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$unconfirmed_tx['transaction_id']."';";
-				$rr = $this->blockchain->app->run_query($qq);
-				
-				while ($output_utxo = $rr->fetch()) {
-					$coin_blocks_destroyed = floor($cbd_per_coin_out*$output_utxo['amount']);
-					
-					$qqq = "UPDATE transaction_ios SET coin_blocks_destroyed='".$coin_blocks_destroyed."', create_block_id='".$created_block_id."' WHERE io_id='".$output_utxo['io_id']."';";
-					$rrr = $this->blockchain->app->run_query($qqq);
-				}
-				
-				$qq = "UPDATE transactions t JOIN transaction_ios o ON t.transaction_id=o.create_transaction_id JOIN transaction_ios i ON t.transaction_id=i.spend_transaction_id SET t.block_id='".$created_block_id."', o.spend_status='unspent', o.create_block_id='".$created_block_id."', i.spend_status='spent', i.spend_block_id='".$created_block_id."' WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';";
-				$rr = $this->blockchain->app->run_query($qq);
-				
-				$fee_sum += $fee_amount;
-			}
-		}
-		
-		$coin_rpc = false;
-		$ref_account = false;
-		$mined_address_str = $this->blockchain->app->random_string(34);
-		$mined_address = $this->blockchain->create_or_fetch_address($mined_address_str, false, false, false, false, true);
-		
-		$mined_transaction_id = $this->blockchain->create_transaction('coinbase', array($this->blockchain->db_blockchain['initial_pow_reward']), $created_block_id, false, array($mined_address['address_id']), 0);
-		
+		$created_block_id = $this->blockchain->new_block($log_text);
 		$this->add_block($created_block_id);
-		
 		$this->update_option_votes();
 		$this->check_set_game_over();
-		
 		return $log_text;
 	}
 	
@@ -1235,6 +1165,13 @@ class Game {
 			else $html .= "This game starts in ".$this->blockchain->app->format_seconds(strtotime($this->db_game['start_datetime'])-time())." at ".$this->db_game['start_datetime'];
 		}
 		else if ($this->db_game['game_status'] == "completed") $html .= "This game is over. ";
+		
+		if ($this->blockchain->db_blockchain['p2p_mode'] == "none") {
+			$seconds_to_add = max(0, time()-$this->blockchain->db_blockchain['last_hash_time']);
+			if ($seconds_to_add > 2*$this->blockchain->db_blockchain['seconds_per_block']) {
+				$html .= "<p>Mining new blocks... ".$this->blockchain->app->format_seconds($seconds_to_add)." left</p>\n";
+			}
+		}
 		
 		if (empty($this->current_events[0])) $nextblock_effectiveness = 0;
 		else $nextblock_effectiveness = $this->current_events[0]->block_id_to_effectiveness_factor($last_block_id+1);
