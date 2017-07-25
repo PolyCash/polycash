@@ -3,39 +3,30 @@ include("../includes/connect.php");
 include("../includes/get_session.php");
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
-$game_id = (int) $_REQUEST['game_id'];
+$blockchain_id = (int) $_REQUEST['blockchain_id'];
 $address_id = (int) $_REQUEST['address_id'];
 $permission_to_claim_address = false;
 
-$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
+$blockchain = new Blockchain($app, $blockchain_id);
+
+$q = "SELECT * FROM addresses WHERE address_id='".$address_id."' AND primary_blockchain_id='".$blockchain->db_blockchain['blockchain_id']."';";
 $r = $app->run_query($q);
 
 if ($r->rowCount() > 0) {
-	$db_game = $r->fetch();
+	$db_address = $r->fetch();
+	$permission_to_claim_address = $app->permission_to_claim_address($blockchain, $db_address, $thisuser);
 	
-	$blockchain = new Blockchain($app, $db_game['blockchain_id']);
-	$game = new Game($blockchain, $db_game['game_id']);
-	
-	$q = "SELECT * FROM addresses WHERE address_id='".$address_id."';";
-	$r = $app->run_query($q);
-	
-	if ($r->rowCount() > 0) {
-		$db_address = $r->fetch();
-		$permission_to_claim_address = $app->permission_to_claim_address($game, $db_address, $thisuser);
-		
-		if ($permission_to_claim_address) {
-			if ($thisuser) {
-				$app->give_address_to_user($game, $db_address, $thisuser);
-				$app->output_message(1, "successful!", false);
-			}
-			else {
-				$redirect_url = $app->get_redirect_url("/explorer/games/".$game->db_game['url_identifier']."/addresses/".$db_address['address']."/?action=claim");
-				$app->output_message(2, $redirect_url['redirect_url_id'], false);
-			}
+	if ($permission_to_claim_address) {
+		if ($thisuser) {
+			$app->give_address_to_user($blockchain, $db_address, $thisuser);
+			$app->output_message(1, "successful!", false);
 		}
-		else $app->output_message(3, "Permission denied.", false);
+		else {
+			$redirect_url = $app->get_redirect_url("/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/addresses/".$db_address['address']."/?action=claim");
+			$app->output_message(2, $redirect_url['redirect_url_id'], false);
+		}
 	}
-	else $app->output_message(4, "Invalid address ID.", false);
+	else $app->output_message(3, "Permission denied.", false);
 }
-else $app->output_message(5, "Invalid game ID.", false);
+else $app->output_message(4, "Invalid address ID.", false);
 ?>

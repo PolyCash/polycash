@@ -580,7 +580,7 @@ class Event {
 	
 	public function initialize_vote_option_details($option_id2rank, $sum_votes, $user_id, $game_instance_id, $game_event_index) {
 		$html = "";
-		$option_q = "SELECT * FROM options WHERE event_id='".$this->db_event['event_id']."' ORDER BY option_id ASC;";
+		$option_q = "SELECT * FROM options WHERE event_id='".$this->db_event['event_id']."' ORDER BY event_option_index ASC;";
 		$option_r = $this->game->blockchain->app->run_query($option_q);
 		
 		$last_block_id = $this->game->last_block_id();
@@ -604,7 +604,7 @@ class Event {
 							<div class="redtext" id="game'.$game_instance_id.'_event'.$game_event_index.'_vote_error_'.$option['option_id'].'"></div>
 						</div>
 						<div class="modal-footer">
-							<button class="btn btn-primary" id="game'.$game_instance_id.'_event'.$game_event_index.'_vote_confirm_btn_'.$option['option_id'].'" onclick="games['.$game_instance_id.'].add_option_to_vote('.$option['option_id'].', \''.$option['name'].'\');">Add '.$option['name'].' to my vote</button>
+							<button class="btn btn-primary" id="game'.$game_instance_id.'_event'.$game_event_index.'_vote_confirm_btn_'.$option['option_id'].'" onclick="games['.$game_instance_id.'].add_option_to_vote('.$game_event_index.', '.$option['option_id'].', \''.$option['name'].'\');">Add '.$option['name'].' to my vote</button>
 							<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
 						</div>
 					</div>

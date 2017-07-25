@@ -793,6 +793,8 @@ class App {
 					echo ', "'.$db_game['url_identifier'].'"';
 					echo ', "'.$db_game['coin_name'].'"';
 					echo ', "'.$db_game['coin_name_plural'].'"';
+					echo ', "'.$blockchain->db_blockchain['coin_name'].'"';
+					echo ', "'.$blockchain->db_blockchain['coin_name_plural'].'"';
 					echo ', "home", "'.$featured_game->event_ids().'"';
 					echo ', "'.$featured_game->logo_image_url().'"';
 					echo ', "'.$featured_game->vote_effectiveness_function().'"';
@@ -988,7 +990,7 @@ class App {
 		$html .= '<div class="row"><div class="col-sm-5">Inflation:</div><div class="col-sm-7">';	
 		if ($db_game['inflation'] == "linear") $html .= "Linear (".$this->format_bignum($round_reward)." coins per round)";
 		else if ($db_game['inflation'] == "fixed_exponential") $html .= "Fixed Exponential (".(100*$db_game['exponential_inflation_rate'])."% per round)";
-		else $html .= "Exponential<br/>".$this->votes_per_coin($db_game)." votes per ".$db_game['coin_name']." (".(100*$db_game['exponential_inflation_rate'])."% per round)";
+		else $html .= "Exponential<br/>".$this->format_bignum($this->votes_per_coin($db_game))." votes per ".$db_game['coin_name']." (".(100*$db_game['exponential_inflation_rate'])."% per round)";
 		$html .= "</div></div>\n";
 		
 		$total_inflation_pct = $this->game_final_inflation_pct($db_game);
@@ -1792,13 +1794,14 @@ class App {
 		return $cached_url;
 	}
 	
-	public function permission_to_claim_address($game, $db_address, $thisuser) {
-		if ($game && $game->db_game['game_id'] == $game->blockchain->db_blockchain['only_game_id'] && $db_address['address'] == "genesis_receiver_address" && empty($db_address['user_id'])) return true;
+	public function permission_to_claim_address($blockchain, $db_address, $thisuser) {
+		if (!empty($blockchain->db_blockchain['only_game_id']) && $db_address['address'] == "genesis_receiver_address" && empty($db_address['user_id'])) return true;
 		else return false;
 	}
 	
-	public function give_address_to_user($game, $db_address, $user) {
-		if ($this->permission_to_claim_address($game, $db_address, $user)) {
+	public function give_address_to_user($blockchain, $db_address, $user) {
+		if ($this->permission_to_claim_address($blockchain, $db_address, $user)) {
+			$game = new Game($blockchain, $blockchain->db_blockchain['only_game_id']);
 			$user_game = $user->ensure_user_in_game($game);
 			
 			if ($user_game) {

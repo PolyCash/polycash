@@ -49,8 +49,14 @@ var option = function(event, option_index, option_id, db_option_index, name, poi
 	this.db_option_index = db_option_index;
 	this.name = name;
 	this.points = points;
-	this.event.option_id2option_index[option_id] = option_index;
 	this.has_votingaddr = has_votingaddr;
+	
+	this.votes = 0;
+	this.unconfirmed_votes = 0;
+	this.score = 0;
+	this.unconfirmed_score = 0;
+	
+	this.event.option_id2option_index[option_id] = option_index;
 	this.event.game.option_has_votingaddr[option_id] = has_votingaddr;
 	
 	option_id2option_index[option_id] = option_index;
@@ -70,10 +76,11 @@ var vote_input = function(input_index, game_io_id, amount, create_block_id, io_i
 	this.amount = amount;
 	this.create_block_id = create_block_id;
 };
-var vote_option = function(option_index, name, option_id) {
+var vote_option = function(option_index, name, option_id, event_index) {
 	this.option_index = option_index;
 	this.name = name;
 	this.option_id = option_id;
+	this.event_index = event_index;
 	this.slider_val = 50;
 	this.amount = 0;
 };
@@ -595,6 +602,8 @@ function finish_refresh_output_amounts() {
 		var input_sums = input_amount_sums();
 		var coin_sum = input_sums[0]-games[0].fee_amount;
 		var sum_votes = input_sums[1];
+		var effectiveness_factor = games[0].block_id_to_effectiveness_factor(games[0].last_block_id+1);
+		console.log(effectiveness_factor);
 		
 		var slider_sum = 0;
 		for (var i=0; i<vote_options.length; i++) {
@@ -610,6 +619,7 @@ function finish_refresh_output_amounts() {
 			var output_score;
 			if (coin_sum > 0) output_score = output_coins*(sum_votes/coin_sum);
 			else output_score = 0;
+			var output_effective_score = Math.round(output_score*effectiveness_factor);
 			
 			if (i == vote_options.length - 1) output_coins = coin_sum - output_coins_sum;
 			
@@ -619,6 +629,8 @@ function finish_refresh_output_amounts() {
 			
 			if (games[0].inflation == "exponential") {
 				output_val = Math.round(output_score/games[0].votes_per_coin);
+				var this_event = games[0].events[vote_options[i].event_index];
+				var this_option = this_event.options[this_event.option_id2option_index[vote_options[i].option_id]];
 			}
 			var output_val_disp = format_coins(output_val/Math.pow(10,8));
 			
@@ -643,9 +655,18 @@ function select_add_output_changed() {
 	var option_id = $('#select_add_output').val();
 	
 	if (option_id != "") {
-		var option_name = $('#select_add_output option:selected').text();
-		games[0].add_option_to_vote(option_id, option_name);
-		$('#select_add_output').val("");
+		var event_index = false;
+		for (var i=0; i<games[0].events.length; i++) {
+			if (games[0].events[i].db_id2option_index(option_id) !== false) {
+				event_index = i;
+				event_option_index = games[0].events[i].db_id2option_index(option_id);
+			}
+		}
+		if (event_index !== false) {
+			var this_option = games[0].events[event_index].options[event_option_index];
+			games[0].add_option_to_vote(event_index, option_id, this_option.name);
+			$('#select_add_output').val("");
+		}
 	}
 }
 function show_intro_message() {
@@ -1010,7 +1031,7 @@ function show_more_event_outcomes() {
 	}
 }
 function render_tx_fee() {
-	$('#display_tx_fee').html("TX fee: "+format_coins(games[0].fee_amount/Math.pow(10,8))+" coins");
+	$('#display_tx_fee').html("TX fee: "+format_coins(games[0].fee_amount/Math.pow(10,8))+" "+games[0].chain_coin_name_plural);
 }
 function manage_game_invitations(this_game_id) {
 	$.get("/ajax/game_invitations.php?action=manage&game_id="+this_game_id, function(result) {
@@ -1203,6 +1224,11 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 	this.vote_effectiveness_function = vote_effectiveness_function;
 	this.option_block_rule = option_block_rule;
 	
+	this.sum_votes = 0;
+	this.sum_unconfirmed_votes = 0;
+	this.sum_score = 0;
+	this.sum_unconfirmed_score = 0;
+	
 	this.selected_option_id = false;
 	this.votingaddr_count = 0;
 	this.deleted = false;
@@ -1272,7 +1298,7 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 };
 
 // OBJECT: Game
-var Game = function(game_id, last_block_id, last_transaction_id, my_last_transaction_id, mature_game_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, seconds_per_block, inflation, exponential_inflation_rate) {
+var Game = function(game_id, last_block_id, last_transaction_id, my_last_transaction_id, mature_game_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, chain_coin_name, chain_coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, seconds_per_block, inflation, exponential_inflation_rate) {
 	Game.numInstances = (Game.numInstances || 0) + 1;
 	
 	this.instance_id = Game.numInstances-1;
@@ -1287,6 +1313,8 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 	this.game_url_identifier = game_url_identifier;
 	this.coin_name = coin_name;
 	this.coin_name_plural = coin_name_plural;
+	this.chain_coin_name = chain_coin_name;
+	this.chain_coin_name_plural = chain_coin_name_plural;
 	this.refresh_page = refresh_page;
 	this.event_ids = event_ids;
 	this.logo_image_url = logo_image_url;
@@ -1340,7 +1368,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 		else votes = (1+this.last_block_id - create_block)*amount;
 		return votes;
 	};
-	this.add_option_to_vote = function(option_id, name) {
+	this.add_option_to_vote = function(event_index, option_id, name) {
 		if (this.refresh_page != "wallet") {
 			alert("To cast votes, first log in to your wallet.");
 		}
@@ -1348,7 +1376,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 			var index_id = vote_options.length;
 			
 			if (games[0].option_has_votingaddr[option_id]) {
-				vote_options.push(new vote_option(index_id, name, option_id));
+				vote_options.push(new vote_option(index_id, name, option_id, event_index));
 				$('#compose_vote_outputs').append('<div id="compose_vote_output_'+index_id+'" class="select_utxo">'+render_option_output(index_id, name)+'</div>');
 				
 				load_option_slider(index_id);
@@ -1473,6 +1501,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 									}
 								}
 								
+								$('#game'+_this.instance_id+'_new_event_js').append('<script type="text/javascript">'+json_result['set_options_js']+'</script>');
 								refresh_output_amounts();
 							}
 							_this.last_game_loop_index_applied = json_result['game_loop_index'];
@@ -1606,8 +1635,8 @@ function leftpad(num, size, pad_char) {
 	return s;
 }
 
-function try_claim_address(game_id, address_id) {
-	$.get("/ajax/try_claim_address.php?game_id="+game_id+"&address_id="+address_id, function(result) {
+function try_claim_address(blockchain_id, address_id) {
+	$.get("/ajax/try_claim_address.php?blockchain_id="+blockchain_id+"&address_id="+address_id, function(result) {
 		var result_obj = JSON.parse(result);
 		console.log(result_obj);
 		

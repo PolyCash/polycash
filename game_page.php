@@ -210,6 +210,8 @@ games.push(new Game(<?php
 	echo ', "'.$game->db_game['url_identifier'].'"';
 	echo ', "'.$game->db_game['coin_name'].'"';
 	echo ', "'.$game->db_game['coin_name_plural'].'"';
+	echo ', "'.$game->blockchain->db_blockchain['coin_name'].'"';
+	echo ', "'.$game->blockchain->db_blockchain['coin_name_plural'].'"';
 	echo ', "game", "'.$game->event_ids().'"';
 	echo ', "'.$game->logo_image_url().'"';
 	echo ', "'.$game->vote_effectiveness_function().'"';
