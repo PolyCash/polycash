@@ -53,8 +53,10 @@ var option = function(event, option_index, option_id, db_option_index, name, poi
 	
 	this.votes = 0;
 	this.unconfirmed_votes = 0;
+	this.hypothetical_votes = 0;
 	this.score = 0;
 	this.unconfirmed_score = 0;
+	this.hypothetical_score = 0;
 	
 	this.event.option_id2option_index[option_id] = option_index;
 	this.event.game.option_has_votingaddr[option_id] = has_votingaddr;
@@ -613,13 +615,41 @@ function finish_refresh_output_amounts() {
 		if (slider_sum > 0) coins_per_slider_val = Math.floor(coin_sum/slider_sum);
 		else coins_per_slider_val = 0;
 		
+		for (var i=0; i<games[0].events.length; i++) {
+			games[0].events[i].hypothetical_votes = 0;
+			games[0].events[i].hypothetical_score = 0;
+			
+			for (var j=0; j<games[0].events[i].options.length; j++) {
+				games[0].events[i].options[j].hypothetical_votes = 0;
+				games[0].events[i].options[j].hypothetical_score = 0;
+			}
+		}
+		
 		var output_coins_sum = 0;
 		for (var i=0; i<vote_options.length; i++) {
 			var output_coins = Math.floor(coins_per_slider_val*vote_options[i].slider_val);
 			var output_score;
 			if (coin_sum > 0) output_score = output_coins*(sum_votes/coin_sum);
 			else output_score = 0;
-			var output_effective_score = Math.round(output_score*effectiveness_factor);
+			var effective_votes = Math.round(output_score*effectiveness_factor);
+			
+			if (i == vote_options.length - 1) output_coins = coin_sum - output_coins_sum;
+			
+			var this_event = games[0].events[vote_options[i].event_index];
+			this_event.hypothetical_votes += effective_votes;
+			this_event.hypothetical_score += output_score;
+			
+			this_event.options[this_event.option_id2option_index[vote_options[i].option_id]].hypothetical_votes += effective_votes;
+			this_event.options[this_event.option_id2option_index[vote_options[i].option_id]].hypothetical_score += output_score;
+		}
+		
+		output_coins_sum = 0;
+		for (var i=0; i<vote_options.length; i++) {
+			var output_coins = Math.floor(coins_per_slider_val*vote_options[i].slider_val);
+			var output_score;
+			if (coin_sum > 0) output_score = output_coins*(sum_votes/coin_sum);
+			else output_score = 0;
+			var effective_votes = Math.round(output_score*effectiveness_factor);
 			
 			if (i == vote_options.length - 1) output_coins = coin_sum - output_coins_sum;
 			
@@ -627,18 +657,24 @@ function finish_refresh_output_amounts() {
 			if (games[0].payout_weight == "coin") output_val = output_coins;
 			else output_val = output_score;
 			
+			var output_val_disp;
 			if (games[0].inflation == "exponential") {
 				output_val = Math.round(output_score/games[0].votes_per_coin);
 				var this_event = games[0].events[vote_options[i].event_index];
 				var this_option = this_event.options[this_event.option_id2option_index[vote_options[i].option_id]];
+				var event_total_score = this_event.sum_unconfirmed_score + this_event.sum_score + this_event.hypothetical_score;
+				var event_total_payout = event_total_score/games[0].votes_per_coin;
+				
+				var event_total_votes = this_event.sum_votes + this_event.sum_unconfirmed_votes + this_event.hypothetical_votes;
+				var expected_payout = Math.floor(event_total_payout*(effective_votes/(this_option.hypothetical_votes + this_option.votes + this_option.unconfirmed_votes)))/Math.pow(10,8);
+				console.log("my payout: "+event_total_payout+"*("+effective_votes+"/("+this_option.hypothetical_votes+" + "+this_option.votes+" + "+this_option.unconfirmed_votes+") = "+expected_payout);
+				var payout_factor = expected_payout/(output_score/Math.pow(10,8)/games[0].votes_per_coin);
+				console.log(expected_payout+"/("+effective_votes+"/"+games[0].votes_per_coin);
+				output_val_disp = format_coins(output_val/Math.pow(10,8));
+				output_val_disp += " &rarr; "+format_coins(expected_payout);
+				output_val_disp += " "+games[0].coin_name_plural+" (x"+format_coins(payout_factor)+")";
 			}
-			var output_val_disp = format_coins(output_val/Math.pow(10,8));
-			
-			if (games[0].inflation == "exponential" || games[0].payout_weight == "coin") {
-				if (output_val_disp == '1') output_val_disp += " "+games[0].coin_name;
-				else output_val_disp += " "+games[0].coin_name_plural;
-			}
-			else output_val_disp += " votes";
+			else output_val_disp = format_coins(output_val/Math.pow(10,8))+games[0].coin_name_plural;
 			
 			$('#output_amount_disp_'+i).html(output_val_disp);
 			
@@ -1228,6 +1264,8 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 	this.sum_unconfirmed_votes = 0;
 	this.sum_score = 0;
 	this.sum_unconfirmed_score = 0;
+	this.hypothetical_score = 0;
+	this.hypothetical_votes = 0;
 	
 	this.selected_option_id = false;
 	this.votingaddr_count = 0;

@@ -1,4 +1,5 @@
 <?php
+ini_set('memory_limit', '1024M');
 $skip_select_db = TRUE;
 include("includes/connect.php");
 
@@ -24,7 +25,6 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			else {
 				$app->set_db($GLOBALS['mysql_database']);
 			}
-			
 			$result = $app->run_query("SHOW TABLES;");
 			$table_exists = $result->rowCount() > 0;
 			if (!$table_exists) {
