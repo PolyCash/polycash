@@ -1879,7 +1879,6 @@ class Game {
 			if ($this->db_game['event_rule'] == "game_definition") {
 				if (!empty($this->db_game['module'])) {
 					eval('$module = new '.$this->db_game['module'].'GameDefinition($this->blockchain->app);');
-					
 					$game_starting_round = $this->block_to_round($this->db_game['game_starting_block']);
 					
 					$q = "SELECT * FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."' ORDER BY event_index DESC LIMIT 1;";
@@ -2316,7 +2315,7 @@ class Game {
 				eval('$module = new '.$this->db_game['module'].'GameDefinition($this->blockchain->app);');
 				
 				for ($i=0; $i<count($payout_events); $i++) {
-					if (!empty($this->db_game['module'])) {
+					if (!empty($this->db_game['module']) && !empty($this->blockchain->db_blockchain['only_game_id'])) {
 						try {
 							$coin_rpc = new jsonRPCClient('http://'.$this->blockchain->db_blockchain['rpc_username'].':'.$this->blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->blockchain->db_blockchain['rpc_port'].'/');
 						}

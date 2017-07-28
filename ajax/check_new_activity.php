@@ -110,10 +110,10 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 				$set_options_js .= $option_identifier.".unconfirmed_score = ".$option['unconfirmed_'.$game->db_game['payout_weight'].'_score'].";\n";
 				$set_options_js .= "console.log(".$option_identifier.");\n";
 				
-				$sum_votes = $option['votes'];
-				$sum_unconfirmed_votes = $option['unconfirmed_votes'];
-				$sum_score = $option[$game->db_game['payout_weight'].'_score'];
-				$sum_unconfirmed_score = $option['unconfirmed_'.$game->db_game['payout_weight'].'_score'];
+				$sum_votes += $option['votes'];
+				$sum_unconfirmed_votes += $option['unconfirmed_votes'];
+				$sum_score += $option[$game->db_game['payout_weight'].'_score'];
+				$sum_unconfirmed_score += $option['unconfirmed_'.$game->db_game['payout_weight'].'_score'];
 			}
 			$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_votes = $sum_votes;\n";
 			$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_unconfirmed_votes = $sum_unconfirmed_votes;\n";

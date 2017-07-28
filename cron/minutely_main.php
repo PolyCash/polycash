@@ -48,7 +48,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			for ($i=0; $i<$blocks_to_add; $i++) {
 				$created_block_id = $blockchains[$db_blockchain['blockchain_id']]->new_block($log_text);
 				for ($j=0; $j<count($associated_games); $j++) {
-					$log_text .= $associated_games[$j]->add_block($created_block_id);
+					$this_log_text = $associated_games[$j]->add_block($created_block_id);
+					$log_text .= $this_log_text;
 				}
 				$sim_hash_time = $db_blockchain['last_hash_time']+round(($i/$blocks_to_add)*$seconds_to_add);
 				$blockchains[$db_blockchain['blockchain_id']]->set_last_hash_time($sim_hash_time);

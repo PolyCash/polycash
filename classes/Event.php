@@ -861,7 +861,6 @@ class Event {
 	public function process_option_blocks(&$game_block, $events_in_round, $round_first_event_index) {
 		//$q = "DELETE ob.* FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id WHERE o.event_id='".$this->db_event['event_id']."' AND ob.block_height='".$game_block['block_id']."';";
 		//$r = $this->game->blockchain->app->run_query($q);
-		
 		$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->game->db_game['blockchain_id']."' AND block_id='".$game_block['block_id']."';";
 		$block = $this->game->blockchain->app->run_query($q)->fetch();
 		$random_data = hash("sha256", $block['block_hash']);
