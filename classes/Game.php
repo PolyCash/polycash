@@ -2471,7 +2471,7 @@ class Game {
 			$html .= "Miner found a block.";
 		}
 		else {
-			$qq = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.spend_transaction_id='".$transaction['transaction_id']."' ORDER BY io.amount DESC;";
+			$qq = "SELECT *, gio.colored_amount AS colored_amount FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.spend_transaction_id='".$transaction['transaction_id']."' ORDER BY io.amount DESC;";
 			$rr = $this->blockchain->app->run_query($qq);
 			$input_sum = 0;
 			while ($input = $rr->fetch()) {
