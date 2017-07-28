@@ -1514,27 +1514,29 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 									console.log('refreshing '+vote_option_details.length+" events");
 									
 									for (var game_event_index=0; game_event_index<vote_option_details.length; game_event_index++) {
-										$('#game'+_this.instance_id+'_event'+game_event_index+'_current_round_table').html(json_result['current_round_table'][game_event_index]);
-										
-										$('#game'+_this.instance_id+'_event'+game_event_index+'_current_round_table').hide();
-										$('#game'+_this.instance_id+'_event'+game_event_index+'_current_round_table').show();
-										
-										if (_this.events[game_event_index].details_shown) {
-											$('#game'+_this.instance_id+'_event'+game_event_index+'_details').show();
-										}
-										else {
-											$('#game'+_this.instance_id+'_event'+game_event_index+'_details').hide();
-										}
-										
-										if (typeof json_result['my_current_votes'] != "undefined" && typeof json_result['my_current_votes'][game_event_index] != "undefined") {
-											$('#game'+_this.instance_id+'_event'+game_event_index+'_my_current_votes').html(json_result['my_current_votes'][game_event_index]);
-											$('#game'+_this.instance_id+'_event'+game_event_index+'_my_current_votes').hide();
-											$('#game'+_this.instance_id+'_event'+game_event_index+'_my_current_votes').fadeIn('fast');
-										}
-										
-										for (var option_i=0; option_i<_this.events[game_event_index].num_voting_options; option_i++) {
-											var option_id = _this.events[game_event_index].options[option_i].option_id;
-											$('#game'+_this.instance_id+'_event'+game_event_index+'_vote_confirm_'+option_id).html(vote_option_details[game_event_index][option_id]);
+										if (typeof _this.events[game_event_index] != "undefined") {
+											$('#game'+_this.instance_id+'_event'+game_event_index+'_current_round_table').html(json_result['current_round_table'][game_event_index]);
+											
+											$('#game'+_this.instance_id+'_event'+game_event_index+'_current_round_table').hide();
+											$('#game'+_this.instance_id+'_event'+game_event_index+'_current_round_table').show();
+											
+											if (_this.events[game_event_index].details_shown) {
+												$('#game'+_this.instance_id+'_event'+game_event_index+'_details').show();
+											}
+											else {
+												$('#game'+_this.instance_id+'_event'+game_event_index+'_details').hide();
+											}
+											
+											if (typeof json_result['my_current_votes'] != "undefined" && typeof json_result['my_current_votes'][game_event_index] != "undefined") {
+												$('#game'+_this.instance_id+'_event'+game_event_index+'_my_current_votes').html(json_result['my_current_votes'][game_event_index]);
+												$('#game'+_this.instance_id+'_event'+game_event_index+'_my_current_votes').hide();
+												$('#game'+_this.instance_id+'_event'+game_event_index+'_my_current_votes').fadeIn('fast');
+											}
+											
+											for (var option_i=0; option_i<_this.events[game_event_index].num_voting_options; option_i++) {
+												var option_id = _this.events[game_event_index].options[option_i].option_id;
+												$('#game'+_this.instance_id+'_event'+game_event_index+'_vote_confirm_'+option_id).html(vote_option_details[game_event_index][option_id]);
+											}
 										}
 									}
 								}
