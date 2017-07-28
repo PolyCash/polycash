@@ -43,7 +43,7 @@ include('includes/html_start.php');
 			$balance_q = "SELECT SUM(io.amount) FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."' AND io.spend_status='unspent';";
 			$balance_r = $app->run_query($balance_q);
 			$balance = $balance_r->fetch();
-			$balance = (int) $balance['SUM(io.amount)'];
+			$balance = $balance['SUM(io.amount)'];
 			
 			echo '<div class="col-sm-2 greentext" style="text-align: right">';
 			echo $app->format_bignum($balance/pow(10,8)).' '.$account['short_name_plural'];

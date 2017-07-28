@@ -64,6 +64,10 @@ body {
 	display: inline-block;
 	margin: 10px 10px;
 }
+.game_event_slim>div>div .vote_option_box_container {
+	margin: 0px ! important;
+	margin-right: 10px ! important;
+}
 .vote_option_label {
 	display: block;
 	font-size: 14px;
@@ -129,6 +133,7 @@ and (max-device-width : 480px) {
 .tabcontent {
 	border: 1px solid #999;
 	margin-top: -1px;
+	margin-bottom: 35px;
 	padding: 8px;
 }
 .greentext {
@@ -353,6 +358,12 @@ footer {
 	border-radius: 6px;
 	padding: 0px 10px;
 }
+.game_event_slim {
+	padding: 0px 6px;
+	margin: 0px;
+	margin-bottom: -1px;
+	border: 1px solid #aaa;
+}
 .game_events {
 	margin-bottom: 15px;
 }
@@ -379,4 +390,18 @@ footer {
 .planned_votes_event {
 	margin: 8px 10px;
 	display: inline-block;
+}
+.event_score_box {
+	border: 1px solid rgba(0,0,0,0.3);
+	padding: 5px;
+	margin: 5px 0px;
+	border-radius: 5px;
+}
+.event_timer_slim {
+	margin-left: 5px;
+	display: inline-block;
+	float: right;
+}
+.connected_utxo {
+	margin-left: -10px ! important;
 }

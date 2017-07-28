@@ -58,7 +58,7 @@ else {
 			if ($redir_game) {
 				$header_loc = "/wallet/".$redir_game['url_identifier']."/";
 			}
-			else $header_loc = "/wallet/";
+			else $header_loc = "/accounts/";
 			
 			$app->output_message($error_code, $header_loc, false);
 		}

@@ -1,0 +1,1 @@
+ALTER TABLE `option_blocks` ADD `rand_bytes` VARCHAR(10) NULL DEFAULT NULL AFTER `score`;

@@ -46,13 +46,14 @@ class SingleEliminationGameDefinition {
 			"protocol_version": 0,
 			"url_identifier": "single-elimination",
 			"name": "Virtual Cup 2017",
-			"event_type_name": "game",
+			"event_type_name": "match",
+			"event_type_name_plural": "matches",
 			"event_rule": "game_definition",
 			"event_entity_type_id": 0,
 			"option_group_id": 0,
 			"events_per_round": 0,
 			"inflation": "exponential",
-			"exponential_inflation_rate": 0.5,
+			"exponential_inflation_rate": 0.001,
 			"pos_reward": 0,
 			"round_length": 10,
 			"maturity": 0,
@@ -102,35 +103,7 @@ class SingleEliminationGameDefinition {
 		}
 		$this->event_index2teams = $event_index2teams;
 		
-		$blockchain_r = $this->app->run_query("SELECT * FROM blockchains WHERE url_identifier='".$game_def->blockchain_identifier."';");
-
-		if ($blockchain_r->rowCount() > 0) {
-			$db_blockchain = $blockchain_r->fetch();
-			
-			try {
-				$coin_rpc = new jsonRPCClient('http://'.$db_blockchain['rpc_username'].':'.$db_blockchain['rpc_password'].'@127.0.0.1:'.$db_blockchain['rpc_port'].'/');
-			}
-			catch (Exception $e) {
-				echo "Error, failed to load RPC connection for ".$db_blockchain['blockchain_name'].".<br/>\n";
-				die();
-			}
-			
-			$chain_starting_block = $game_def->game_starting_block;
-			try {
-				$chain_last_block = (int) $coin_rpc->getblockcount();
-			}
-			catch (Exception $e) {}
-			
-			$chain_events_until_block = $chain_last_block + $game_def->round_length;
-
-			$defined_rounds = ceil(($chain_events_until_block - $chain_starting_block)/$game_def->round_length);
-			if (!empty($game_def->final_round) && $defined_rounds > $game_def->final_round) $defined_rounds = $game_def->final_round;
-			
-			$game_def->events = $this->events_between_rounds(1, $defined_rounds, $game_def->round_length, $chain_starting_block);
-			
-			$this->game_def = $game_def;
-		}
-		else echo "No blockchain found matching that identifier.";
+		$this->game_def = $game_def;
 	}
 	
 	public function events_between_rounds($from_round, $to_round, $round_length, $chain_starting_block) {
@@ -154,6 +127,8 @@ class SingleEliminationGameDefinition {
 				$event_name = $this->generate_event_labels($possible_outcomes, $round, $this_round, $thisround_event_i, $general_entity_type['entity_type_id'], $event_index, $game);
 				
 				$event = array(
+					"event_index" => $event_index,
+					"next_event_index" => $this->event_index_to_next_event_index($event_index),
 					"event_starting_block" => $chain_starting_block+($round-1)*$round_length,
 					"event_final_block" => $chain_starting_block+$round*$round_length-1,
 					"event_payout_block" => $chain_starting_block+$round*$round_length-1,
@@ -174,6 +149,17 @@ class SingleEliminationGameDefinition {
 	}
 	
 	public function generate_event_labels(&$possible_outcomes, $round, $this_round, $thisround_event_i, $entity_type_id, $event_index, &$game) {
+		$rounds_per_tournament = $this->get_rounds_per_tournament();
+		$tournament_index = floor(($round-1)/$rounds_per_tournament);
+		$events_this_round = $this->num_events_in_round($round, $rounds_per_tournament);
+		$round_of = $events_this_round*2;
+		
+		$event_name = "";
+		if ($round_of == 2) $event_name .= "Finals: ";
+		else if ($round_of == 4) $event_name .= "Semifinals: ";
+		else if ($round_of == 8) $event_name .= "Quarterfinals: ";
+		else $event_name .= "Round of $round_of: ";
+		
 		if ($this_round == 1) {
 			$team_i = 1;
 			$team_indices = $this->event_index2teams[$thisround_event_i];
@@ -190,7 +176,7 @@ class SingleEliminationGameDefinition {
 				$team_i++;
 			}
 			
-			$event_name = "Game ".($event_index+1).": ".$this->teams[$team_indices[0]]['team_name']." vs. ".$this->teams[$team_indices[1]]['team_name'];
+			$event_name .= $this->teams[$team_indices[0]]['team_name']." vs. ".$this->teams[$team_indices[1]]['team_name'];
 		}
 		else {
 			if (empty($game)) $game_id = "";
@@ -200,7 +186,6 @@ class SingleEliminationGameDefinition {
 			$entities_r = $this->app->run_query($entities_q);
 			
 			if ($entities_r->rowCount() > 0) {
-				$event_name = "Game ".($event_index+1).": ";
 				while ($entity = $entities_r->fetch()) {
 					$event_name .= $entity['entity_name']." vs. ";
 					
@@ -214,7 +199,7 @@ class SingleEliminationGameDefinition {
 				$entity2 = $entity = $this->app->check_set_entity($entity_type_id, "Team 2");
 				array_push($possible_outcomes, array("title" => "Team 1 wins", "entity_id" => $entity1['entity_id']));
 				array_push($possible_outcomes, array("title" => "Team 2 wins", "entity_id" => $entity2['entity_id']));
-				$event_name = "Game ".($event_index+1).": Team 1 vs Team 2";
+				$event_name .= "Team 1 vs Team 2";
 			}
 		}
 		
@@ -224,21 +209,92 @@ class SingleEliminationGameDefinition {
 	public function rename_event(&$gde, &$game) {
 		$general_entity_type = $this->app->check_set_entity_type("general entity");
 		$possible_outcomes = array();
-		$round = ceil($gde['event_starting_block']/$this->game_def->round_length);
+		$round = 1+floor(($gde['event_starting_block']-$this->game_def->game_starting_block)/$this->game_def->round_length);
 		$this_round = ($round-1)%$this->get_rounds_per_tournament()+1;
 		$event_name = $this->generate_event_labels($possible_outcomes, $round, $this_round, false, $general_entity_type['entity_type_id'], $gde['event_index'], $game);
 		
 		return array($possible_outcomes, $event_name);
 	}
 	
+	public function break_tie(&$game, &$db_event, &$first_option, &$second_option) {
+		$final_block_q = "SELECT * FROM blocks WHERE blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND block_id='".$db_event['event_final_block']."';";
+		$final_block_r = $this->app->run_query($final_block_q);
+		
+		if ($final_block_r->rowCount() > 0) {
+			$final_block = $final_block_r->fetch();
+			$random_data = hash("sha256", $final_block['block_hash']);
+			
+			$events_by_block = $game->events_by_block($final_block['block_id']);
+			$events_in_round = count($events_by_block);
+			
+			$rand_chars_per_event = 3;
+			$event_offset = $db_event['event_index'] - $events_by_block[0]->db_event['event_index'];
+			
+			$total_rand_chars_needed = $rand_chars_per_event*$events_in_round;
+			$last_rand_hash = $random_data;
+			
+			while (strlen($random_data) < $total_rand_chars_needed) {
+				$last_rand_hash = hash("sha256", $last_rand_hash);
+				$random_data .= $last_rand_hash;
+			}
+			
+			$rand_offset_start = $rand_chars_per_event*$event_offset;
+			$rand_chars = substr($random_data, $rand_offset_start, $rand_chars_per_event);
+			
+			$pk_shootouts = array();
+			$winning_option = false;
+			
+			do {
+				$rand_binary = str_pad(base_convert($rand_chars, 16, 2), $rand_chars_per_event*4, "0", STR_PAD_LEFT);
+				
+				if (strlen($rand_chars) != $rand_chars_per_event || strlen($rand_binary) < 4*$rand_chars_per_event-1) throw new Exception("randh: $rand_chars, randb: $rand_binary");
+				
+				$team1_pk_score = 0;
+				$team2_pk_score = 0;
+				
+				for ($i=0; $i<5; $i++) {
+					$scored = $rand_binary[$i];
+					$team1_pk_score += $scored;
+				}
+				for ($i=5; $i<10; $i++) {
+					$scored = $rand_binary[$i];
+					$team2_pk_score += $scored;
+				}
+				
+				array_push($pk_shootouts, array($team1_pk_score, $team2_pk_score));
+				
+				if ($team1_pk_score == $team2_pk_score) {
+					$rand_chars = hash("sha256", $rand_chars);
+					$rand_chars = substr($rand_chars, 0, $rand_chars_per_event);
+				}
+				else {
+					if ($team1_pk_score > $team2_pk_score) $winning_option = $first_option;
+					else $winning_option = $second_option;
+				}
+			}
+			while ($winning_option === false);
+			
+			return array($winning_option, $pk_shootouts);
+		}
+		else return false;
+	}
+	
 	public function set_event_outcome(&$game, &$coin_rpc, $db_event) {
-		$q = "SELECT *, SUM(ob.score) AS score FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id='".$db_event['event_id']."' GROUP BY o.option_id ORDER BY SUM(ob.score) DESC, o.option_index ASC;";
+		$q = "SELECT *, SUM(ob.score) AS score FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id LEFT JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id='".$db_event['event_id']."' GROUP BY o.option_id ORDER BY o.option_index ASC;";
 		$r = $this->app->run_query($q);
-		echo $db_event['event_name']." won by: ";
 		
 		if ($r->rowCount() > 0) {
-			$winning_option = $r->fetch();
-			echo $winning_option['name']."<br/>\n";
+			$first_option = $r->fetch();
+			$second_option = $r->fetch();
+			$winning_option = false;
+			
+			if ($first_option['score'] != $second_option['score']) {
+				if ($first_option['score'] > $second_option['score']) $winning_option = $first_option;
+				else $winning_option = $second_option;
+			}
+			else {
+				list($winning_option, $pk_shootout_data) = $this->break_tie($game, $db_event, $first_option, $second_option);
+			}
 			$gde_option_index = $winning_option['option_index']%2;
 			$msg = "event #".$db_event['event_index']." won by ".$winning_option['name']." (entity ".$winning_option['entity_id'].")";
 			$this->app->log_message($msg);
@@ -255,7 +311,6 @@ class SingleEliminationGameDefinition {
 					$pos_in_next_event = $db_event['event_index']%2;
 					$q = "SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$next_event_index."' ORDER BY game_defined_option_id ASC LIMIT 1";
 					if ($pos_in_next_event > 0) $q .= " OFFSET ".$pos_in_next_event;
-					echo "q: $q<br/>\n";
 					$q .= ";";
 					$r = $this->app->run_query($q);
 					
@@ -265,7 +320,6 @@ class SingleEliminationGameDefinition {
 						$q = "UPDATE game_defined_options SET entity_id='".$winning_option['entity_id']."', name=".$this->app->quote_escape($winning_option['entity_name']." wins")." WHERE game_defined_option_id='".$gdo['game_defined_option_id']."';";
 						$r = $this->app->run_query($q);
 						$this->app->log_message($q);
-						echo "$q<br/>\n";
 					}
 				}
 				
@@ -275,7 +329,6 @@ class SingleEliminationGameDefinition {
 				
 				$q = "UPDATE game_defined_events SET event_name=".$this->app->quote_escape($event_name)." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$next_event_index."';";
 				$r = $this->app->run_query($q);
-				echo "$q<br/>\n\n";
 			}
 		}
 	}
@@ -294,7 +347,6 @@ class SingleEliminationGameDefinition {
 			$thisround_event_i = ($event_index - $tournament_index*$events_per_tournament) % $thisround_events;
 			$next_event_i = floor($thisround_event_i/2);
 			$next_event_index = $thisround_offset + $next_event_i;
-			echo "round: $round, $thisround_events events, offset: $thisround_offset, thisround_event_i: $thisround_event_i<br/>\n";
 			return $next_event_index;
 		}
 	}

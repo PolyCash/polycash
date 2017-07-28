@@ -4,6 +4,7 @@ class App {
 	
 	public function __construct($dbh) {
 		$this->dbh = $dbh;
+		$this->has_db = false;
 	}
 	
 	public function quote_escape($string) {
@@ -12,6 +13,7 @@ class App {
 	
 	public function set_db($db_name) {
 		$this->dbh->query("USE ".$db_name) or $this->log_then_die("There was an error accessing the '".$db_name."' database.");
+		$this->has_db = true;
 	}
 	
 	public function last_insert_id() {
@@ -30,8 +32,9 @@ class App {
 	}
 	
 	public function log_message($message) {
-		// Disable so that errors still get thrown without functioning db
-		$this->run_query("INSERT INTO log_messages SET message=".$this->quote_escape($message).";");
+		if ($this->has_db) {
+			$this->run_query("INSERT INTO log_messages SET message=".$this->quote_escape($message).";");
+		}
 	}
 	
 	public function utf8_clean($str) {
@@ -107,7 +110,10 @@ class App {
 					exec($cmd);
 					$migration_id++;
 				}
-				else $keep_looping = false;
+				else {
+					$keep_looping = false;
+					$migration_id--;
+				}
 			}
 			$this->set_site_constant("last_migration_id", $migration_id);
 		}
@@ -482,7 +488,7 @@ class App {
 			$remainder_sec = $seconds-$minutes*60;
 			$str = "";
 			if ($minutes != 1) $str .= $minutes." minutes";
-			else return $str .= $minutes." minute";
+			else $str .= $minutes." minute";
 			if ($remainder_sec > 0) $str .= " and ".$remainder_sec." seconds";
 			return $str;
 		}
@@ -697,26 +703,32 @@ class App {
 		if ($currency['blockchain_id'] > 0) {
 			$blockchain = new Blockchain($this, $currency['blockchain_id']);
 			
-			try {
-				$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
-				
-				$address_text = $coin_rpc->getnewaddress();
-				$encWIF = "";
-				$save_method = "wallet.dat";
+			if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
+				try {
+					$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
+					
+					$address_text = $coin_rpc->getnewaddress();
+					$encWIF = "";
+					$save_method = "wallet.dat";
+				}
+				catch (Exception $e) {
+					if ($currency['short_name'] == "litecoin") $keySet = litecoin::getNewKeySet();
+					else $keySet = bitcoin::getNewKeySet();
+					
+					if (empty($GLOBALS['rsa_pub_key']) || empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
+						$this->log_message('Error generating a payment address. Please visit /install.php and then set $GLOBALS["rsa_pub_key"] in includes/config.php');
+						$save_method = "skip";
+					}
+					else {
+						$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
+						$address_text = $keySet['pubAdd'];
+						$save_method = "db";
+					}
+				}
 			}
-			catch (Exception $e) {
-				if ($currency['short_name'] == "litecoin") $keySet = litecoin::getNewKeySet();
-				else $keySet = bitcoin::getNewKeySet();
-				
-				if (empty($GLOBALS['rsa_pub_key']) || empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
-					$this->log('Error generating a payment address. Please visit /install.php and then set $GLOBALS["rsa_pub_key"] in includes/config.php');
-					$save_method = "skip";
-				}
-				else {
-					$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
-					$address_text = $keySet['pubAdd'];
-					$save_method = "db";
-				}
+			else {
+				$address_text = $this->random_string(34);
+				$save_method = "fake";
 			}
 			
 			if ($save_method == "skip") return false;
@@ -781,7 +793,14 @@ class App {
 					echo ', "'.$db_game['url_identifier'].'"';
 					echo ', "'.$db_game['coin_name'].'"';
 					echo ', "'.$db_game['coin_name_plural'].'"';
-					echo ', "home", "'.$featured_game->event_ids().'", "'.$featured_game->logo_image_url().'", "'.$featured_game->vote_effectiveness_function().'"';
+					echo ', "'.$blockchain->db_blockchain['coin_name'].'"';
+					echo ', "'.$blockchain->db_blockchain['coin_name_plural'].'"';
+					echo ', "home", "'.$featured_game->event_ids().'"';
+					echo ', "'.$featured_game->logo_image_url().'"';
+					echo ', "'.$featured_game->vote_effectiveness_function().'"';
+					echo ', "'.$featured_game->blockchain->db_blockchain['seconds_per_block'].'"';
+					echo ', "'.$featured_game->db_game['inflation'].'"';
+					echo ', "'.$featured_game->db_game['exponential_inflation_rate'].'"';
 				?>));
 				
 				games[<?php echo $counter; ?>].game_loop_event();
@@ -794,8 +813,9 @@ class App {
 				echo '<div id="game'.$counter.'_events"></div>';
 				echo '<script type="text/javascript" id="game'.$counter.'_new_event_js">'.$featured_game->new_event_js($counter, false).'</script>';
 				
-				echo '<br/><a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-success">Play Now</a>';
-				echo ' <a href="/explorer/games/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-primary">Blockchain Explorer</a>';
+				echo '<br/><a href="/wallet/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-success">Play Now</a>';
+				echo ' <a href="/explorer/games/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-primary">'.ucwords($featured_game->db_game['event_type_name']).' Results</a>';
+				echo ' <a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-warning">About '.$featured_game->db_game['name'].'</a>';
 				echo '</center><br/>';
 				
 				if ($counter%(12/$cell_width) == 1) echo '</div><div class="row">';
@@ -970,7 +990,7 @@ class App {
 		$html .= '<div class="row"><div class="col-sm-5">Inflation:</div><div class="col-sm-7">';	
 		if ($db_game['inflation'] == "linear") $html .= "Linear (".$this->format_bignum($round_reward)." coins per round)";
 		else if ($db_game['inflation'] == "fixed_exponential") $html .= "Fixed Exponential (".(100*$db_game['exponential_inflation_rate'])."% per round)";
-		else $html .= "Exponential<br/>".$this->votes_per_coin($db_game)." votes per ".$db_game['coin_name']." (".(100*$db_game['exponential_inflation_rate'])."% per round)";
+		else $html .= "Exponential<br/>".$this->format_bignum($this->votes_per_coin($db_game))." votes per ".$db_game['coin_name']." (".(100*$db_game['exponential_inflation_rate'])."% per round)";
 		$html .= "</div></div>\n";
 		
 		$total_inflation_pct = $this->game_final_inflation_pct($db_game);
@@ -1193,9 +1213,21 @@ class App {
 	public function check_process_running($lock_name) {
 		if ($GLOBALS['process_lock_method'] == "db") $process_running = (int) $this->get_site_constant($lock_name);
 		else {
-			$cmd = "ps aux|grep \"".realpath(dirname($_SERVER["SCRIPT_FILENAME"]))."/".basename($_SERVER["SCRIPT_FILENAME"])."\"|grep -v grep|wc";
-			$running = exec($cmd);
-			if ($running > 2) $process_running = true;
+			$cmd = "ps aux|grep \"".realpath(dirname($_SERVER["SCRIPT_FILENAME"]))."/".basename($_SERVER["SCRIPT_FILENAME"])."\"|grep -v grep|wc -l";
+			$running = (int) (trim(exec($cmd))-1);
+			if ($running < 0) $running = 0;
+			else if ($running > 1) $running = 1;
+			$num_running = $running;
+			$this->log_message("$num_running $cmd");
+			
+			$cmd = "ps aux|grep \"".basename($_SERVER["SCRIPT_FILENAME"])."\"|grep -v grep|wc -l";
+			$running = (int) (trim(exec($cmd))-1);
+			if ($running < 0) $running = 0;
+			else if ($running > 1) $running = 1;
+			$num_running += $running;
+			$this->log_message("$num_running $cmd");
+			
+			if ($num_running > 0) $process_running = true;
 			else $process_running = false;
 		}
 		return $process_running;
@@ -1320,6 +1352,8 @@ class App {
 	
 	public function event_verbatim_vars() {
 		return array(
+			array('int', 'event_index', true),
+			array('int', 'next_event_index', true),
 			array('int', 'event_starting_block', true),
 			array('int', 'event_final_block', true),
 			array('int', 'event_payout_block', true),
@@ -1337,6 +1371,7 @@ class App {
 			array('string', 'url_identifier', false),
 			array('string', 'name', false),
 			array('string', 'event_type_name', false),
+			array('string', 'event_type_name_plural', false),
 			array('string', 'event_rule', true),
 			array('int', 'event_entity_type_id', true),
 			array('int', 'option_group_id', true),
@@ -1443,7 +1478,7 @@ class App {
 			$q = "UPDATE game_defined_events SET ";
 		}
 		else {
-			$q = "INSERT INTO game_defined_events SET game_id='".$game->db_game['game_id']."', event_index='".$event_index."', ";
+			$q = "INSERT INTO game_defined_events SET game_id='".$game->db_game['game_id']."', ";
 		}
 		
 		for ($j=0; $j<count($event_verbatim_vars); $j++) {
@@ -1508,16 +1543,25 @@ class App {
 		
 		$error_message = "";
 		
-		if ($game_def->blockchain_identifier != "") {
+		if (!empty($game_def->blockchain_identifier)) {
+			$new_private_blockchain = false;
+			
 			if ($game_def->blockchain_identifier == "private") {
+				$new_private_blockchain = true;
 				$chain_id = $this->random_string(6);
 				$url_identifier = "private-chain-".$chain_id;
 				$chain_pow_reward = 25*pow(10,8);
-				$q = "INSERT INTO blockchains SET online=1, p2p_mode='none', blockchain_name='Private Chain', url_identifier='".$url_identifier."', coin_name='chaincoin', coin_name_plural='chaincoins', seconds_per_block=10, initial_pow_reward=".$chain_pow_reward.";";
+				
+				$q = "INSERT INTO blockchains SET online=1, p2p_mode='none', blockchain_name='Private Chain ".$chain_id."', url_identifier='".$url_identifier."', coin_name='chaincoin', coin_name_plural='chaincoins', seconds_per_block=30, initial_pow_reward=".$chain_pow_reward.";";
 				$r = $this->run_query($q);
 				$blockchain_id = $this->last_insert_id();
+				
+				$q = "INSERT INTO currencies SET blockchain_id='".$blockchain_id."', name='Chaincoin ".$chain_id."', short_name='chaincoin', short_name_plural='chaincoins', abbreviation='CH', symbol='CH';";
+				$r = $this->run_query($q);
+				
 				$new_blockchain = new Blockchain($this, $blockchain_id);
 				if ($thisuser) $new_blockchain->set_blockchain_creator($thisuser);
+				
 				$game_def->blockchain_identifier = $url_identifier;
 			}
 			
@@ -1532,19 +1576,22 @@ class App {
 				
 				$game_def->url_identifier = $this->normalize_uri_part($game_def->url_identifier);
 				
-				if ($game_def->url_identifier != "") {
+				if (!empty($game_def->url_identifier)) {
 					$verbatim_vars = $this->game_definition_verbatim_vars();
 					
 					$q = "SELECT * FROM games WHERE url_identifier=".$this->quote_escape($game_def->url_identifier).";";
 					$r = $this->run_query($q);
 					
-					if (!empty($db_game)) {
-						$q = "UPDATE games SET seconds_per_block='".$db_blockchain['seconds_per_block']."'";
+					if ($r->rowCount() > 0) {
+						$db_game = $r->fetch();
+						
+						$q = "UPDATE games SET ";
 						for ($i=0; $i<count($verbatim_vars); $i++) {
 							$var_type = $verbatim_vars[$i][0];
 							$var_name = $verbatim_vars[$i][1];
-							$q .= ", ".$var_name."=".$this->quote_escape($game_def->$var_name);
+							$q .= $var_name."=".$this->quote_escape($game_def->$var_name).", ";
 						}
+						$q = substr($q, 0, strlen($q)-2);
 						$q .= " WHERE game_id='".$db_game['game_id']."';";
 						$r = $this->run_query($q);
 						
@@ -1554,7 +1601,7 @@ class App {
 						$q = "INSERT INTO games SET ";
 						if ($module) $q .= "module=".$this->quote_escape($module).", ";
 						if ($thisuser) $q .= "creator_id='".$thisuser->db_user['user_id']."', ";
-						$q .= "blockchain_id='".$db_blockchain['blockchain_id']."', game_status='published', featured=1, seconds_per_block='".$db_blockchain['seconds_per_block']."', start_condition='fixed_block', giveaway_status='public_free', invite_currency='".$blockchain->currency_id()."', logo_image_id=34";
+						$q .= "blockchain_id='".$db_blockchain['blockchain_id']."', game_status='published', featured=1, start_condition='fixed_block', giveaway_status='public_free', invite_currency='".$blockchain->currency_id()."'";
 						for ($i=0; $i<count($verbatim_vars); $i++) {
 							$var_type = $verbatim_vars[$i][0];
 							$var_name = $verbatim_vars[$i][1];
@@ -1563,6 +1610,9 @@ class App {
 						$q .= ";";
 						$r = $this->run_query($q);
 						$new_game_id = $this->last_insert_id();
+						
+						$q = "UPDATE blockchains SET only_game_id='".$new_game_id."' WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."';";
+						$r = $this->run_query($q);
 						
 						$new_game = new Game($blockchain, $new_game_id);
 						
@@ -1582,9 +1632,6 @@ class App {
 							if ($thisuser) $new_game->user_game = $user_game;
 							
 							$blockchain->add_genesis_block($new_game);
-							
-							$block_hash = $this->random_string(64);
-							$blockchain->private_add_block($new_game, $block_hash, 1);
 						}
 						else {
 							try {
@@ -1608,11 +1655,13 @@ class App {
 						$q = "DELETE FROM game_defined_options WHERE game_id='".$new_game->db_game['game_id']."';";
 						$r = $this->run_query($q);
 						
-						$game_defined_events = $game_def->events;
+						if (!empty($game_def->events)) $game_defined_events = $game_def->events;
+						else $game_defined_events = array();
+						
 						$game_event_params = $this->event_verbatim_vars();
 						
 						for ($i=0; $i<count($game_defined_events); $i++) {
-							$q = "INSERT INTO game_defined_events SET game_id='".$new_game->db_game['game_id']."', event_index='".$i."'";
+							$q = "INSERT INTO game_defined_events SET game_id='".$new_game->db_game['game_id']."'";
 							
 							for ($j=0; $j<count($game_event_params); $j++) {
 								$var_type = $game_event_params[$j][0];
@@ -1644,9 +1693,15 @@ class App {
 				}
 				else $error_message = "Error, invalid game URL identifier.";
 			}
-			else $error_message = "Error, failed to identify the right blockchain.";
+			else {
+				if ($new_private_blockchain) {
+					$q = "DELETE FROM blockchains WHERE blockchain_id='".$new_blockchain->db_blockchain['blockchain_id']."';";
+					$r = $this->run_query($q);
+				}
+				$error_message = "Error, failed to identify the right blockchain.";
+			}
 		}
-		else $error_message = "Error, failed to identify the right blockchain.";
+		else $error_message = "Error, blockchain url identifier was empty.";
 		
 		return false;
 	}
@@ -1694,7 +1749,7 @@ class App {
 			return $r->fetch();
 		}
 		else {
-			$q = "INSERT INTO entity_types SET entity_type_id='".$entity_type_id."', entity_name=".$this->quote_escape($name).";";
+			$q = "INSERT INTO entity_types SET entity_name=".$this->quote_escape($name).";";
 			$r = $this->run_query($q);
 			$entity_type_id = $this->last_insert_id();
 			$q = "SELECT * FROM entity_types WHERE entity_type_id=".$entity_type_id.";";
@@ -1737,6 +1792,40 @@ class App {
 		}
 		
 		return $cached_url;
+	}
+	
+	public function permission_to_claim_address($blockchain, $db_address, $thisuser) {
+		if (!empty($blockchain->db_blockchain['only_game_id']) && $db_address['address'] == "genesis_receiver_address" && empty($db_address['user_id'])) return true;
+		else return false;
+	}
+	
+	public function give_address_to_user($blockchain, $db_address, $user) {
+		if ($this->permission_to_claim_address($blockchain, $db_address, $user)) {
+			$game = new Game($blockchain, $blockchain->db_blockchain['only_game_id']);
+			$user_game = $user->ensure_user_in_game($game);
+			
+			if ($user_game) {
+				$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id='".$db_address['address_id']."';";
+				$r = $this->run_query($q);
+				
+				if ($r->rowCount() == 1) {
+					$address_key = $r->fetch();
+					
+					$q = "UPDATE address_keys SET account_id='".$user_game['account_id']."' WHERE address_key_id='".$address_key['address_key_id']."';";
+					$r = $this->run_query($q);
+				}
+				else {
+					$q = "INSERT INTO address_keys SET address_id='".$db_address['address_id']."', account_id='".$user_game['account_id']."', save_method='fake', pub_key=".$this->quote_escape($db_address['address']).";";
+					$r = $this->run_query($q);
+				}
+				$q = "UPDATE addresses SET user_id='".$user->db_user['user_id']."' WHERE address_id='".$db_address['address_id']."';";
+				$r = $this->run_query($q);
+				
+				return true;
+			}
+			else return false;
+		}
+		else return false;
 	}
 }
 ?>

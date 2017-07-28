@@ -36,7 +36,7 @@ if ($thisuser) {
 				$blockchain_id = (int) $_REQUEST['blockchain_id'];
 				$db_blockchain = $app->run_query("SELECT * FROM blockchains WHERE blockchain_id='".$blockchain_id."';")->fetch();
 				
-				$q = "UPDATE games SET blockchain_id='".$db_blockchain['blockchain_id']."', seconds_per_block='".$db_blockchain['seconds_per_block']."', ";
+				$q = "UPDATE games SET blockchain_id='".$db_blockchain['blockchain_id']."', ";
 				
 				for ($i=0; $i<count($game_form_vars); $i++) {
 					$game_var = $game_form_vars[$i];

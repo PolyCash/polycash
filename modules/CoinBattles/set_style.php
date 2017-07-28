@@ -1,6 +1,5 @@
 <?php
 include(dirname(dirname(dirname(__FILE__)))."/includes/connect.php");
-include_once(dirname(__FILE__)."/SingleEliminationGameDefinition.php");
 
 if (!empty($argv)) {
 	$cmd_vars = $app->argv_to_array($argv);
@@ -9,38 +8,14 @@ if (!empty($argv)) {
 }
 
 if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
-	$txt = "Algeria,47
-Argentina,48
-Australia,49
-Belgium,50
-Bosnia and Herzegovina,51
-Brazil,4
-Cameroon,52
-Chile,53
-Colombia,67
-Costa Rica,68
-Croatia,69
-Ecuador,54
-England,55
-France,11
-Germany,8
-Ghana,56
-Greece,57
-Honduras,58
-Iran,16
-Italy,59
-Ivory Coast,60
-Japan,6
-Mexico,9
-Netherlands,61
-Nigeria,10
-Portugal,66
-Russia,7
-South Korea,62
-Spain,63
-Switzerland,64
-United States,30
-Uruguay,65";
+	$txt = "Bitcoin,35
+Litecoin,73
+Ethereum,70
+Ethereum Classic,71
+Dash,72
+Monero,74
+NEM,75
+Ripple,76";
 	$lines = explode("\n", $txt);
 	
 	$general_entity_type = $app->check_set_entity_type("general entity");

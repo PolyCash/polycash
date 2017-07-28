@@ -24,7 +24,7 @@ function check_alias() {
 			$('#registration_options_message').html(result_obj['message']);
 			login_method_changed();
 		}
-		else if (result_obj['status_code'] == 5) { // login by password
+		else if (result_obj['status_code'] == 5) {
 			$('#alias_form').hide();
 			$('#login_password').show();
 			
@@ -35,8 +35,6 @@ function check_alias() {
 			<?php } ?>
 		}
 		else alert(result_obj['message']);
-		/*else if (result_obj['status_code'] == 6) { // login by email
-		}*/
 	});
 }
 function register() {
@@ -44,7 +42,10 @@ function register() {
 	var alias = $('#alias').val();
 	var password = $('#registration_options_password').val();
 	var email = $('#registration_options_email').val();
+	$('#register_btn').val("Loading...");
+	
 	$.get("/ajax/register.php?alias="+encodeURIComponent(alias)+"&password="+encodeURIComponent(password)+"&email="+encodeURIComponent(email)+"&redirect_id="+parseInt($('#redirect_id').val()+"&invite_key="+$('#invite_key').val()), function(result) {
+		$('#register_btn').val("Sign Up");
 		var result_obj = JSON.parse(result);
 		if (result_obj['status_code'] == 2) {
 			window.location = '/wallet/';
@@ -97,13 +98,13 @@ function login() {
 <form id="alias_form" action="/" method="get" onsubmit="check_alias(); return false;">
 	<div class="row">
 		<div class="col-md-8 col-md-push-2">
-			<h3>You must be logged in to view this page.</h3>
-			Please create an account. The alias you enter here is public and may be shown to other players.
+			<h3>To continue, please register for a user account.</h3>
+			Please sign up or log in by entering your public username.
 		</div>
 	</div>
 	<div class="row" style="padding-top: 10px;">
 		<div class="col-md-8 col-md-push-2">
-			<input id="alias" class="form-control" placeholder="Please enter your username / alias." />
+			<input id="alias" class="form-control" placeholder="Enter your username / alias." />
 			<script type="text/javascript">
 			$('#alias').focus();
 			</script>
@@ -137,7 +138,7 @@ function login() {
 					<input id="registration_options_password" type="password" class="form-control" placeholder="Enter your password" />
 				</div>
 				<div class="col-md-8 col-md-push-2">
-					<input type="submit" class="btn btn-success" value="Sign Up" />
+					<input type="submit" class="btn btn-success" value="Sign Up" id="register_btn" />
 				</div>
 			</div>
 		</div>

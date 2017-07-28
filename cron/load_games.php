@@ -33,7 +33,9 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		do {
 			$loop_start_time = microtime(true);
 			
-			$real_game_q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.p2p_mode='rpc' AND g.game_status IN ('published','running')";
+			$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
+			
+			$real_game_q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE g.game_status IN ('published','running')";
 			if (!empty($_REQUEST['game_id'])) $real_game_q .= " AND g.game_id='".(int)$_REQUEST['game_id']."'";
 			$real_game_q .= " AND b.online=1;";
 			$real_game_r = $app->run_query($real_game_q);
@@ -54,6 +56,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		}
 		while (microtime(true) < $script_start_time + ($script_target_time-$loop_target_time));
 	}
+	echo "Game load script is already running...\n";
 }
 else echo "Please supply the correct key.\n";
 ?>

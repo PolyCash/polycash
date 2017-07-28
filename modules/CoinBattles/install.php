@@ -40,6 +40,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			}
 			
 			$new_game->delete_reset_game('reset');
+			$new_game->blockchain->unset_first_required_block();
 			
 			$new_game->update_db_game();
 			$game_def->add_oracle_urls($new_game, $coin_rpc);

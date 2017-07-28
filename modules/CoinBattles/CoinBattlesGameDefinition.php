@@ -14,6 +14,7 @@ class CoinBattlesGameDefinition {
 			"url_identifier": "coin-battles",
 			"name": "Coin Battles",
 			"event_type_name": "battle",
+			"event_type_name_plural": "battles",
 			"event_rule": "game_definition",
 			"event_entity_type_id": 0,
 			"option_group_id": 0,
@@ -81,13 +82,15 @@ class CoinBattlesGameDefinition {
 	}
 	
 	public function events_between_rounds($from_round, $to_round, $round_length, $chain_starting_block) {
+		$general_entity_type = $this->app->check_set_entity_type("general entity");
 		$events = array();
 		
 		for ($round = $from_round; $round<=$to_round; $round++) {
 			$possible_outcomes = array();
 			
 			foreach ($this->events_per_round as $currency_code => $currency_name) {
-				array_push($possible_outcomes, array("title" => $currency_name." wins"));
+				$entity = $this->app->check_set_entity($general_entity_type['entity_type_id'], $currency_name);
+				array_push($possible_outcomes, array("title" => $currency_name." wins", "entity_id" => $entity['entity_id']));
 			}
 			
 			$event = array(

@@ -421,7 +421,7 @@ $initial_tab = 0;
 if ($thisuser && $game) {
 	$account_value = $thisuser->account_coin_value($game, $user_game);
 	$immature_balance = $thisuser->immature_balance($game, $user_game);
-	$last_block_id = $game->blockchain->last_block_id();
+	$last_block_id = $game->last_block_id();
 	$current_round = $game->block_to_round($last_block_id+1);
 	$block_within_round = $game->block_id_to_round_index($last_block_id+1);
 	$mature_balance = $thisuser->mature_balance($game, $user_game);
@@ -469,7 +469,7 @@ if ($thisuser && $game) {
 		var performance_history_sections = 1;
 		var performance_history_rounds_per_section = <?php echo $performance_history_rounds_per_section; ?>;
 		var performance_history_from_round = <?php echo max(1, $current_round-$performance_history_rounds_per_section); ?>;
-		var performance_history_initial_load_round = <?php echo $current_round-1; ?>;
+		var performance_history_initial_load_round = <?php echo $current_round; ?>;
 		var performance_history_loading = false;
 		
 		var user_logged_in = true;
@@ -488,7 +488,14 @@ if ($thisuser && $game) {
 			echo ', "'.$game->db_game['url_identifier'].'"';
 			echo ', "'.$game->db_game['coin_name'].'"';
 			echo ', "'.$game->db_game['coin_name_plural'].'"';
-			echo ', "wallet", "'.$game->event_ids().'", "'.$game->logo_image_url().'", "'.$game->vote_effectiveness_function().'"';
+			echo ', "'.$game->blockchain->db_blockchain['coin_name'].'"';
+			echo ', "'.$game->blockchain->db_blockchain['coin_name_plural'].'"';
+			echo ', "wallet", "'.$game->event_ids().'"';
+			echo ', "'.$game->logo_image_url().'"';
+			echo ', "'.$game->vote_effectiveness_function().'"';
+			echo ', "'.$game->blockchain->db_blockchain['seconds_per_block'].'"';
+			echo ', "'.$game->db_game['inflation'].'"';
+			echo ', "'.$game->db_game['exponential_inflation_rate'].'"';
 		?>));
 		
 		games[0].game_loop_event();
@@ -517,7 +524,7 @@ if ($thisuser && $game) {
 				echo "games[0].all_events[".$db_event['event_index']."] = new Event(games[0], ".$db_event['event_index'].", ".$db_event['event_id'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'");'."\n";
 				echo "games[0].all_events_db_id_to_index[".$db_event['event_id']."] = ".$db_event['event_index'].";\n";
 				
-				$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY option_id ASC;";
+				$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY event_option_index ASC;";
 				$option_r = $app->run_query($option_q);
 				$j=0;
 				while ($option = $option_r->fetch()) {
@@ -576,10 +583,10 @@ if ($thisuser && $game) {
 		<?php
 		include("includes/wallet_status.php");
 		
-		if ($game->db_game['inflation'] == "exponential") {
+		/*if ($game->db_game['inflation'] == "exponential") {
 			echo '<div class="row"><div class="col-sm-2">Vote&nbsp;conversion&nbsp;rate:</div><div style="text-align: right;" class="col-sm-3"><font class="greentext">';
 			echo $app->format_bignum($app->votes_per_coin($game->db_game)).'</font> votes &rarr; <font class="greentext">1</font> '.$game->db_game['coin_name'].'</div></div>';
-		}
+		}*/
 		?>
 		<div id="wallet_text_stats">
 			<?php
@@ -629,7 +636,7 @@ if ($thisuser && $game) {
 					<h2>Vote Now</h2>
 					<div class="row bordered_row" style="border: 1px solid #bbb;">
 						<div class="col-md-6 bordered_cell" id="compose_vote_inputs">
-							<b>Inputs:</b><div style="display: inline-block; margin-left: 20px;" id="input_amount_sum"></div><div style="display: inline-block; margin-left: 20px;" id="input_vote_sum"></div><br/>
+							<b>Inputs:</b><div style="display: none; margin-left: 20px;" id="input_amount_sum"></div><div style="display: inline-block; margin-left: 20px;" id="input_vote_sum"></div><br/>
 							<div id="compose_input_start_msg">Add inputs by clicking on the votes above.</div>
 						</div>
 						<div class="col-md-6 bordered_cell" id="compose_vote_outputs">
@@ -637,7 +644,7 @@ if ($thisuser && $game) {
 							<select class="form-control" id="select_add_output" onchange="select_add_output_changed();"></select>
 						</div>
 					</div>
-					<button class="btn btn-primary" id="confirm_compose_vote_btn" style="margin-top: 5px; margin-left: 5px;" onclick="confirm_compose_vote();">Submit Voting Transaction</button>
+					<button class="btn btn-success" id="confirm_compose_vote_btn" style="margin-top: 5px; margin-left: 5px;" onclick="confirm_compose_vote();">Confirm & Stake</button>
 				</div>
 			</div>
 			
@@ -847,6 +854,7 @@ if ($thisuser && $game) {
 				*/ ?>
 			</div>
 			<div id="tabcontent3" style="display: none;" class="tabcontent">
+				<p>Results for all events are shown below.  Did you want to <a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">see results for your bets only</a>?</p>
 				<div id="performance_history">
 					<div id="performance_history_new">
 					</div>

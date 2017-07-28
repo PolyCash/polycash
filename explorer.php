@@ -23,6 +23,10 @@ if ($uri_parts[2] == "games") {
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$game = new Game($blockchain, $db_game['game_id']);
 		
+		if (!empty($game->db_game['module'])) {
+			eval('$module = new '.$game->db_game['module'].'GameDefinition($app);');
+		}
+		
 		if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
 			$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
 		}
@@ -60,7 +64,7 @@ if (rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer") $explore_mode = "explore
 else if ($game && rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer/games/".$game->db_game['url_identifier']) $explore_mode = "game_home";
 else if (!$game && $blockchain && rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']) $explore_mode = "blockchain_home";
 
-if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($explore_mode, array('blockchain_home','blocks','addresses','transactions','utxos'))) || ($game && in_array($explore_mode, array('game_home','events','blocks','addresses','transactions','utxos')))) {
+if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($explore_mode, array('blockchain_home','blocks','addresses','transactions','utxos'))) || ($game && in_array($explore_mode, array('game_home','events','blocks','addresses','transactions','utxos','my_bets')))) {
 	if ($game) {
 		$last_block_id = $blockchain->last_block_id();
 		$current_round = $game->block_to_round($last_block_id+1);
@@ -83,6 +87,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 	if ($explore_mode == "blockchain_home") {
 		$mode_error = false;
 		$pagetitle = $blockchain->db_blockchain['blockchain_name']." Block Explorer";
+	}
+	if ($explore_mode == "my_bets") {
+		$mode_error = false;
+		$pagetitle = "My bets in ".$game->db_game['name'];
 	}
 	if ($explore_mode == "events") {
 		$event_status = "";
@@ -146,16 +154,14 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 		}
 	}
 	if ($explore_mode == "blocks") {
-		if ($game && rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer/".$uri_parts[2]."/".$game->db_game['url_identifier']."/blocks") {
+		$block_id_str = $uri_parts[5];
+		if ($block_id_str !== "0" && (empty($block_id_str) || strpos($block_id_str, '?') !== false)) {
 			$mode_error = false;
-			$pagetitle = $game->db_game['name']." - List of blocks";
-		}
-		else if (rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer/".$uri_parts[2]."/".$blockchain->db_blockchain['url_identifier']."/blocks") {
-			$mode_error = false;
-			$pagetitle = $blockchain->db_blockchain['blockchain_name']." - List of blocks";
+			if ($game) $pagetitle = $game->db_game['name']." - List of blocks";
+			else $pagetitle = $blockchain->db_blockchain['blockchain_name']." - List of blocks";
 		}
 		else {
-			$block_id = (int) $uri_parts[5];
+			$block_id = (int) $block_id_str;
 			$q = "SELECT * FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_id='".$block_id."';";
 			$r = $app->run_query($q);
 			
@@ -272,6 +278,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				<div class="row">
 					<div class="col-sm-7 ">
 						<ul class="list-inline explorer_nav" id="explorer_nav">
+							<?php if ($game) { ?><li><a<?php if ($explore_mode == 'my_bets') echo ' class="selected"'; ?> href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">My Bets</a></li><?php } ?>
 							<li><a<?php if ($explore_mode == 'blocks') echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
 							if ($game) echo $game->db_game['url_identifier'];
 							else echo $blockchain->db_blockchain['url_identifier'];
@@ -286,14 +293,16 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							if ($game) echo $game->db_game['url_identifier'];
 							else echo $blockchain->db_blockchain['url_identifier'];
 							?>/utxos/">UTXOs</a></li>
-							<?php if ($game && $game->db_game['escrow_address'] != "") { ?>
-							<li><a<?php if ($explore_mode == 'addresses' && $address['address'] == $game->db_game['escrow_address']) echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php echo $game->db_game['url_identifier']; ?>/addresses/<?php echo $game->db_game['escrow_address']; ?>">Genesis</a></li>
-							<?php } ?>
 							<li><a<?php if ($explore_mode == 'unconfirmed') echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
 							if ($game) echo $game->db_game['url_identifier'];
 							else echo $blockchain->db_blockchain['url_identifier'];
-							?>/transactions/unconfirmed/">Unconfirmed Transactions</a></li>
-							<?php if ($thisuser && $game) { ?><li><a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">My Wallet</a></li><?php } ?>
+							?>/transactions/unconfirmed/">Unconfirmed TXNs</a></li>
+							<?php if ($game && $game->db_game['escrow_address'] != "") { ?>
+							<li><a<?php if (($explore_mode == 'addresses' && $address['address'] == $game->db_game['escrow_address']) || ($explore_mode == "transactions" && $transaction['tx_hash'] == $game->db_game['genesis_tx_hash'])) echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php echo $game->db_game['url_identifier']; ?>/transactions/<?php echo $game->db_game['genesis_tx_hash']; ?>">Genesis</a></li>
+							<?php } ?>
+							<?php if ($game) { ?>
+							<li><a href="<?php echo $GLOBALS['base_url']; ?>/scripts/show_game_definition.php?game_id=<?php echo $game->db_game['game_id']; ?>" title="<?php echo $app->game_definition_hash($game); ?>">Game Definition</a>
+							<?php } ?>
 						</ul>
 					</div>
 					<div class="col-sm-4 row-no-padding">
@@ -305,7 +314,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				</div>
 				<?php
 				if ($game) {
-					echo "<a class='btn btn-sm btn-warning' href='/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/";
+					echo "<a class='btn btn-sm btn-primary' href='/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/";
 					if (in_array($explore_mode, array('blocks','addresses','transactions','utxos'))) {
 						echo $explore_mode."/";
 						if ($explore_mode == "blocks") echo $block['block_id'];
@@ -314,17 +323,22 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						echo "/";
 					}
 					echo "'>View on ".$game->blockchain->db_blockchain['blockchain_name']."</a>\n";
+					?>
+					<a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/" class="btn btn-sm btn-success">Play Now</a>
+					<?php
 				}
 			}
 			
 			if ($explore_mode == "events") {
 				if (!empty($db_event) || $event_status == "current") {
 					if ($event_status == "current") {
-						$last_block_id = $game->blockchain->last_block_id();
+						$last_block_id = $game->last_block_id();
 						$this_round = $game->block_to_round($last_block_id+1);
 						$current_round = $this_round;
 					}
 					else $this_round = $db_event['round_id'];
+					
+					echo "<h1>".$event->db_event['event_name']."</h1>\n";
 					
 					if ($event_status == "current") {
 						$rankings = $event->round_voting_stats_all($current_round);
@@ -334,18 +348,43 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$option_id_to_rank = $rankings[3];
 						$confirmed_votes = $rankings[4];
 						$unconfirmed_votes = $rankings[5];
-						
-						echo "<h1>".$event->db_event['event_name']." is currently running</h1>\n";
 					}
 					else {
-						if ($db_event['winning_option_id'] > 0) echo "<h1>".$db_event['name']."</h1>\n";
-						else echo "<h1>".$event->db_event['event_name'].": No winner</h1>\n";
+						if ($db_event['winning_option_id'] > 0) echo "<h3>".$db_event['name']."</h3>\n";
+						else echo "<h3>".$event->db_event['event_name'].": No winner</h3>\n";
 						
 						$max_votes = floor($event->event_outcome['sum_votes']*$event->db_event['max_voting_fraction']);
 						$round_sum_votes = $event->event_outcome['sum_votes'];
+						
+						if (!empty($game->db_game['module'])) {
+							if (method_exists($module, "event_index_to_next_event_index")) {
+								$next_event_index = $module->event_index_to_next_event_index($event->db_event['event_index']);
+								
+								if ($next_event_index) {
+									$next_event_r = $app->run_query("SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$next_event_index."';");
+									
+									if ($next_event_r->rowCount() > 0) {
+										$db_next_event = $next_event_r->fetch();
+										echo "<p>The winner has advanced to <a href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".($db_next_event['event_index']+1)."\">".$db_next_event['event_name']."</a></p>\n";
+									}
+								}
+							}
+							
+							$q = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND next_event_index=".$event->db_event['event_index']." ORDER BY event_index ASC;";
+							$r = $app->run_query($q);
+							
+							if ($r->rowCount() > 0) {
+								echo "<p>".$r->rowCount()." ";
+								if ($r->rowCount() == 1) echo $game->db_game['event_type_name'];
+								else echo $game->db_game['event_type_name_plural'];
+								echo " contributed to this ".$game->db_game['event_type_name'].".<br/>\n";
+								while ($precursor_event = $r->fetch()) {
+									echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".($precursor_event['event_index']+1)."\">".$precursor_event['event_name']."</a><br/>\n";
+								}
+								echo "</p>";
+							}
+						}
 					}
-					
-					echo "<h3>".$event->db_event['event_name']."</h3>";
 					?>
 					<div class="row">
 						<div class="col-md-6">
@@ -356,7 +395,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						</div>
 					</div>
 					<?php
-					if ($thisuser && !empty($db_event)) {
+					if ($thisuser && !empty($db_event) && !empty($db_event['winning_option_id'])) {
 						$my_votes = false;
 						echo $event->user_winnings_description($thisuser->db_user['user_id'], $this_round, $event_status, $db_event['winning_option_id'], $db_event['winning_votes'], $db_event['name'], $my_votes)."<br/>";
 					}
@@ -454,20 +493,48 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$scores_by_entity_id = array();
 						$entities_by_id = array();
 						
-						while ($option_block = $r->fetch()) {
-							if (empty($scores_by_entity_id[$option_block['entity_id']])) {
-								$scores_by_entity_id[$option_block['entity_id']] = $option_block['score'];
-								$entities_by_id[$option_block['entity_id']] = $option_block;
+						if ($r->rowCount() > 0) {
+							while ($option_block = $r->fetch()) {
+								if (empty($scores_by_entity_id[$option_block['entity_id']])) {
+									$scores_by_entity_id[$option_block['entity_id']] = $option_block['score'];
+									$entities_by_id[$option_block['entity_id']] = $option_block;
+								}
+								else $scores_by_entity_id[$option_block['entity_id']] += $option_block['score'];
+								
+								echo $option_block['entity_name']." scored in block #".$option_block['block_height']."<br/>\n";
 							}
-							else $scores_by_entity_id[$option_block['entity_id']] += $option_block['score'];
-							
-							echo $option_block['entity_name']." scored in block #".$option_block['block_height']."<br/>\n";
+						}
+						else echo "No one has scored.<br/>\n";
+						
+						if (!empty($scores_by_entity_id)) {
+							echo "<br/><b>Final Score:</b><br/>\n";
+							$winning_entity_id = false;
+							foreach ($scores_by_entity_id as $entity_id => $score) {
+								echo $entities_by_id[$entity_id]['entity_name'].": ".$score."<br/>\n";
+							}
 						}
 						
-						echo "<br/><b>Final Score:</b><br/>\n";
-						$winning_entity_id = false;
-						foreach ($scores_by_entity_id as $entity_id => $score) {
-							echo $entities_by_id[$entity_id]['entity_name'].": ".$score."<br/>\n";
+						$q = "SELECT *, SUM(ob.score) AS score FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id LEFT JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id='".$event->db_event['event_id']."' GROUP BY o.option_id ORDER BY o.option_index ASC;";
+						$r = $app->run_query($q);
+						
+						if ($r->rowCount() > 0) {
+							$first_option = $r->fetch();
+							$second_option = $r->fetch();
+							$winning_option = false;
+							
+							if ($first_option['score'] == $second_option['score']) {
+								$tiebreaker = $module->break_tie($game, $event->db_event, $first_option, $second_option);
+								
+								if ($tiebreaker) {
+									list($winning_option, $pk_shootout_data) = $tiebreaker;
+									
+									for ($i=0; $i<count($pk_shootout_data); $i++) {
+										echo "<br/><b>PK Shootout #".($i+1)."</b><br/>\n";
+										echo $first_option['entity_name'].": ".$pk_shootout_data[$i][0]."<br/>\n";
+										echo $second_option['entity_name'].": ".$pk_shootout_data[$i][1]."<br/>\n";
+									}
+								}
+							}
 						}
 					}
 					?>
@@ -476,7 +543,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					<div class="transaction_table">
 					<?php
 					for ($i=$from_block_id; $i<=$to_block_id; $i++) {
-						echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/blocks/".$i."\">Block #".$i."</a>";
+						echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$i."\">Block #".$i."</a>";
 						if ($event->db_event['vote_effectiveness_function'] != "constant") {
 							echo ", vote effectiveness: ".$event->block_id_to_effectiveness_factor($i);
 						}
@@ -500,7 +567,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					<div style="border-bottom: 1px solid #bbb; margin-bottom: 5px;" id="render_event_outcomes">
 						<div id="event_outcomes_0">
 							<?php
-							$q = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block<=".$game->blockchain->last_block_id()." ORDER BY event_index DESC LIMIT 1;";
+							$q = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block<=".$game->last_block_id()." ORDER BY event_index DESC LIMIT 1;";
 							$r = $app->run_query($q);
 							
 							if ($r->rowCount() > 0) {
@@ -638,7 +705,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					<pre id="block_info" style="display: none;"><?php
 					print_r($block);
 					
-					if ($coin_rpc) {
+					if (!empty($coin_rpc)) {
 						$rpc_block = $coin_rpc->getblock($block['block_hash']);
 						if ($rpc_block) echo print_r($rpc_block);
 					}
@@ -649,7 +716,18 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				}
 				else {
 					$blocks_per_section = 40;
-					$to_block_id = $blockchain->last_block_id();
+					$last_block_id = $blockchain->last_block_id();
+					if ($game) $last_block_id = $game->last_block_id();
+					$complete_block_id = $blockchain->last_complete_block_id();
+					if ($game) $complete_block_id = $last_block_id;
+					
+					$filter_complete = false;
+					if (!empty($_REQUEST['block_filter']) && $_REQUEST['block_filter'] == "complete") {
+						$to_block_id = $complete_block_id+1;
+						$filter_complete = true;
+					}
+					else $to_block_id = $last_block_id;
+					
 					$from_block_id = $to_block_id-$blocks_per_section+1;
 					if ($from_block_id < 0) $from_block_id = 0;
 					?>
@@ -657,6 +735,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					var explorer_blocks_per_section = <?php echo $blocks_per_section; ?>;
 					var explorer_block_list_sections = 1;
 					var explorer_block_list_from_block = <?php echo $from_block_id; ?>;
+					var filter_complete = <?php if ($filter_complete) echo "1"; else echo "0"; ?>;
 					
 					function explorer_block_list_show_more() {
 						explorer_block_list_from_block = explorer_block_list_from_block-explorer_blocks_per_section;
@@ -666,7 +745,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						
 						var block_list_url = "/ajax/explorer_block_list.php?blockchain_id="+blockchain_id;
 						<?php if ($game) echo 'block_list_url += "&game_id='.$game->db_game['game_id'].'";'."\n"; ?>
-						block_list_url += "&from_block="+explorer_block_list_from_block+"&blocks_per_section="+explorer_blocks_per_section;
+						block_list_url += "&from_block="+explorer_block_list_from_block+"&blocks_per_section="+explorer_blocks_per_section+"&filter_complete="+filter_complete;
 						
 						$.get(block_list_url, function(html) {
 							$('#explorer_block_list_'+section).html(html);
@@ -675,11 +754,11 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					</script>
 					<?php
 					if ($game) {
-						echo "<h1>".$game->db_game['name']." - Blocks</h1>";
+						echo "<h1>".$game->db_game['name']." Blocks</h1>";
 						
 						echo '<div id="explorer_block_list" style="margin-bottom: 15px;">';
 						echo '<div id="explorer_block_list_0">';
-						echo $game->explorer_block_list($from_block_id, $to_block_id);
+						echo $game->explorer_block_list($from_block_id, $to_block_id, false);
 						echo '</div>';
 						echo '</div>';
 						
@@ -688,18 +767,64 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						echo "<br/>\n";
 					}
 					else {
-						echo "<h1>".$blockchain->db_blockchain['blockchain_name']." - Blocks</h1>";
+						$recent_block = $blockchain->most_recently_loaded_block();
 						
-						echo '<div id="explorer_block_list" style="margin-bottom: 15px;">';
-						echo '<div id="explorer_block_list_0">';
-						$ref_game = false;
-						echo $blockchain->explorer_block_list($from_block_id, $to_block_id, $ref_game);
-						echo '</div>';
-						echo '</div>';
+						echo "<h1>".$blockchain->db_blockchain['blockchain_name']." Blocks</h1>";
 						
-						echo '<a href="" onclick="explorer_block_list_show_more(); return false;">Show More</a>';
+						echo "<p>".$blockchain->db_blockchain['blockchain_name']." is synced up to block <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$complete_block_id."\">#".$complete_block_id."</a></p>\n";
 						
-						echo "<br/>\n";
+						if (!empty($recent_block)) {
+							echo "<p>Last block loaded was <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$recent_block['block_id']."\">#".$recent_block['block_id']."</a> (loaded ".$app->format_seconds(time()-$recent_block['time_loaded'])." ago)</p>\n";
+						}
+						
+						$pending_blocks_q = "SELECT COUNT(*) FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND locally_saved=0 AND block_id > ".$blockchain->db_blockchain['first_required_block'].";";
+						$pending_blocks = $app->run_query($pending_blocks_q)->fetch();
+						$pending_blocks = $pending_blocks['COUNT(*)'];
+						
+						if ($pending_blocks > 0) {
+							$loadtime_q = "SELECT COUNT(*), SUM(load_time) FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND locally_saved=1;";
+							$loadtime_r = $app->run_query($loadtime_q);
+							$loadtime = $loadtime_r->fetch();
+							$avg_loadtime = $loadtime['SUM(load_time)']/$loadtime['COUNT(*)'];
+							$sec_left = round($avg_loadtime*$pending_blocks);
+							echo "<p>".number_format($pending_blocks)." blocks haven't loaded yet (".$app->format_seconds($sec_left)." left)</p>\n";
+						}
+						
+						$associated_games = $blockchain->associated_games(array("running"));
+						if (count($associated_games) > 0) {
+							echo "<p>";
+							echo count($associated_games)." game";
+							if (count($associated_games) == 1) echo " is";
+							else echo "s are";
+							echo " currently running on this blockchain.<br/>\n";
+							
+							for ($i=0; $i<count($associated_games); $i++) {
+								echo "<a href=\"/explorer/games/".$associated_games[$i]->db_game['url_identifier']."/events/\">".$associated_games[$i]->db_game['name']."</a><br/>\n";
+							}
+							echo "</p>\n";
+						}
+						?>
+						<div class="row">
+							<div class="col-sm-6">
+								<p>
+									<select class="form-control" name="block_filter" onchange="window.location='/<?php echo $uri_parts[1]."/".$uri_parts[2]."/".$uri_parts[3]."/".$uri_parts[4]; ?>/?block_filter='+$(this).val();">
+										<option value="">All blocks</option>
+										<option <?php if ($filter_complete) echo 'selected="selected" '; ?>value="complete">Fully loaded blocks only</option>
+									</select>
+								</p>
+							</div>
+						</div>
+						<div id="explorer_block_list" style="margin-bottom: 15px;">
+							<div id="explorer_block_list_0">
+								<?php
+								$ref_game = false;
+								echo $blockchain->explorer_block_list($from_block_id, $to_block_id, $ref_game, $filter_complete);
+								?>
+							</div>
+						</div>
+						<a href="" onclick="explorer_block_list_show_more(); return false;">Show More</a>
+						<br/>
+						<?php
 					}
 				}
 			}
@@ -717,14 +842,34 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				echo ucwords($blockchain->db_blockchain['coin_name'])." balance: ".($blockchain->address_balance_at_block($address, false)/pow(10,8))." ".$blockchain->db_blockchain['coin_name_plural']."<br/>\n";
 				if ($game) echo ucwords($game->db_game['coin_name'])." balance: ".$app->format_bignum($game->address_balance_at_block($address, false)/pow(10,8))." ".$game->db_game['coin_name_plural']."<br/>\n";
 				
-				echo '<div style="border-bottom: 1px solid #bbb;">';
-				while ($transaction_io = $r->fetch()) {
-					if ($game) echo $game->render_transaction($transaction_io, $address['address_id']);
-					else echo $blockchain->render_transaction($transaction_io, $address['address_id']);
-				}
-				echo "</div>\n";
+				?>
+				<div style="border-bottom: 1px solid #bbb;">
+					<?php
+					while ($transaction_io = $r->fetch()) {
+						if ($game) echo $game->render_transaction($transaction_io, $address['address_id']);
+						else echo $blockchain->render_transaction($transaction_io, $address['address_id']);
+					}
+					?>
+				</div>
 				
-				echo "<br/>\n";
+				<br/>
+				<?php
+				$permission_to_claim_address = $app->permission_to_claim_address($blockchain, $address, $thisuser);
+				
+				if ($permission_to_claim_address) {
+					if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "claim") {
+						?>
+						<script type="text/javascript">
+						$(document).ready(function() {
+							try_claim_address(<?php echo $blockchain->db_blockchain['blockchain_id'].", ".$address['address_id']; ?>);
+						});
+						</script>
+						<?php
+					}
+					?>
+					<button class="btn btn-success btn-sm" onclick="try_claim_address(<?php echo $blockchain->db_blockchain['blockchain_id'].", ".$address['address_id']; ?>);">Claim this address</button>
+					<?php
+				}
 			}
 			else if ($explore_mode == "initial") {
 				$q = "SELECT * FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_id=0 AND amount > 0 ORDER BY transaction_id ASC;";
@@ -832,8 +977,16 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						
 						echo '<div class="row">';
 						echo '<div class="col-sm-3">'.$app->format_bignum($utxo['colored_amount']/pow(10,8)).' '.$game->db_game['coin_name_plural'].'</div>';
-						echo '<div class="col-sm-2">'.$app->format_bignum($votes/pow(10,8)).' votes</div>';
-						echo '<div class="col-sm-4"><a href="/explorer/games/'.$game->db_game['url_identifier'].'/addresses/'.$utxo['address'].'">'.$utxo['address']."</a></div>\n";
+						echo '<div class="col-sm-3 greentext text-right">';
+						
+						if ($game->db_game['inflation'] == "exponential") {
+							$coin_equiv = $votes/$app->votes_per_coin($game->db_game);
+							echo "+".$app->format_bignum($coin_equiv/pow(10,8)).' '.$game->db_game['coin_abbreviation'];
+						}
+						else echo $app->format_bignum($votes).' votes';
+						
+						echo '</div>';
+						echo '<div class="col-sm-3"><a href="/explorer/games/'.$game->db_game['url_identifier'].'/addresses/'.$utxo['address'].'">'.$utxo['address']."</a></div>\n";
 						echo '</div>';
 					}
 				}
@@ -856,13 +1009,76 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					}
 				}
 			}
-		}
-		
-		if ($game) { ?>
-			<br/>
-			<a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/" class="btn btn-default">Join this game</a>
-			<br/>
-			<?php
+			else if (!empty($game) && $explore_mode == "my_bets") {
+				if (empty($thisuser)) echo "<br/><br/>\n<p>You must be logged in to view this page. <a href=\"/wallet/".$game->db_game['url_identifier']."/\">Log in</a></p>\n";
+				else {
+					$votes_per_coin = $app->votes_per_coin($game->db_game);
+					
+					$q = "SELECT gio.*, e.entity_name, eo.winning_option_id, eo.sum_score, eo.sum_votes, o.name AS option_name, gio.votes AS votes, ev.event_index, eoo.votes AS option_votes, gio2.colored_amount AS payout_amount FROM addresses a JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN entities e ON o.entity_id=e.entity_id JOIN events ev ON o.event_id=ev.event_id JOIN event_outcomes eo ON ev.event_id=eo.event_id JOIN event_outcome_options eoo ON eoo.outcome_id=eo.outcome_id AND eoo.option_id=o.option_id LEFT JOIN transaction_game_ios gio2 ON gio.payout_game_io_id=gio2.game_io_id WHERE gio.game_id=".$game->db_game['game_id']." AND a.user_id=".$thisuser->db_user['user_id']." ORDER BY gio.game_io_id DESC;";
+					$r = $app->run_query($q);
+					
+					echo "<br/><br/>\n<p>You have ".$r->rowCount()." resolved bets for this game.</p>";
+					?>
+					<div class="row">
+						<div class="col-sm-2 boldtext">Stake</div>
+						<div class="col-sm-2 boldtext">Payout</div>
+						<div class="col-sm-1 text-center boldtext">Odds</div>
+						<div class="col-sm-2 boldtext">Effectiveness Factor</div>
+						<div class="col-sm-2 boldtext">Entity</div>
+						<div class="col-sm-3 boldtext">Outcome</div>
+					</div>
+					<?php
+					while ($bet = $r->fetch()) {
+						$expected_payout = ($bet['sum_score']/$votes_per_coin/pow(10,8))*($bet['votes']/$bet['option_votes']);
+						$my_stake = $bet[$game->db_game['payout_weight']."s_destroyed"]/pow(10,8)/$app->votes_per_coin($game->db_game);
+						$payout_multiplier = $expected_payout/$my_stake;
+						
+						echo '<div class="row">';
+						
+						echo '<div class="col-sm-2 text-right">';
+						if ($game->db_game['inflation'] == "exponential") {
+							echo $app->format_bignum($my_stake)." ".$game->db_game['coin_abbreviation'];
+						}
+						else {
+							echo $app->format_bignum($bet['votes']/pow(10,8))." votes";
+						}
+						echo "</div>\n";
+						
+						echo "<div class=\"col-sm-2 text-right\">";
+						echo $app->format_bignum($expected_payout)." ".$game->db_game['coin_abbreviation'];
+						echo "</div>\n";
+						
+						echo "<div class=\"col-sm-1 text-center\">x".$app->format_bignum($payout_multiplier)."</div>\n";
+						
+						echo "<div class=\"col-sm-2\">";
+						echo round($bet['effectiveness_factor']*100, 2)."%";
+						echo "</div>\n";
+						
+						echo "<div class=\"col-sm-2\"><a target=\"_blank\" href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".($bet['event_index']+1)."\">".$bet['entity_name']."</a></div>\n";
+						
+						$outcome_txt = "";
+						if ($bet['winning_option_id'] == $bet['option_id']) {
+							$outcome_txt = "Won";
+							$delta = $expected_payout - $my_stake;
+						}
+						else {
+							$outcome_txt = "Lost";
+							$delta = (-1)*$my_stake;
+						}
+						echo "<div class=\"col-sm-3";
+						if ($delta >= 0) echo " greentext";
+						else echo " redtext";
+						echo "\">";
+						echo $outcome_txt." &nbsp;&nbsp; ";
+						if ($delta >= 0) echo "+";
+						else echo "-";
+						echo $app->format_bignum(abs($delta));
+						echo " ".$game->db_game['coin_abbreviation']."</div>\n";
+						
+						echo "</div>\n";
+					}
+				}
+			}
 		}
 		?>
 		<br/>
