@@ -854,6 +854,7 @@ if ($thisuser && $game) {
 				*/ ?>
 			</div>
 			<div id="tabcontent3" style="display: none;" class="tabcontent">
+				<p>Results for all events are shown below.  Did you want to <a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">see results for your bets only</a>?</p>
 				<div id="performance_history">
 					<div id="performance_history_new">
 					</div>

@@ -706,6 +706,9 @@ class Game {
 		$q = "DELETE e.*, o.* FROM events e LEFT JOIN options o ON e.event_id=o.event_id WHERE e.game_id='".$this->db_game['game_id']."';";
 		$r = $this->blockchain->app->run_query($q);
 		
+		$q = "UPDATE games SET loaded_until_block=0 WHERE game_id='".$this->db_game['game_id']."';";
+		$r = $this->blockchain->app->run_query($q);
+		
 		$invite_user_ids = array();
 		if ($delete_or_reset == "reset") {
 			$q = "SELECT * FROM game_invitations WHERE game_id='".$this->db_game['game_id']."' AND used_user_id > 0;";
@@ -763,7 +766,7 @@ class Game {
 			
 			if ($event_outcome['winning_option_id'] > 0) {
 				if (!empty($event_outcome['option_block_rule'])) {
-					$qq = "SELECT * FROM event_outcome_options eo JOIN events e ON eo.event_id=e.event_id WHERE eo.outcome_id='".$event_outcome['outcome_id']."' ORDER BY e.event_option_index ASC;";
+					$qq = "SELECT * FROM event_outcome_options eo JOIN events e ON eo.event_id=e.event_id WHERE eo.outcome_id='".$event_outcome['outcome_id']."' ORDER BY e.event_index ASC;";
 					$rr = $this->blockchain->app->run_query($qq);
 					$score_label = "";
 					while ($outcome_option = $rr->fetch()) {
@@ -2143,20 +2146,13 @@ class Game {
 	}
 	
 	public function sync() {
-		$q = "SELECT * FROM game_blocks WHERE locally_saved=1 AND game_id='".$this->db_game['game_id']."' ORDER BY block_id DESC LIMIT 1;";
-		$r = $this->blockchain->app->run_query($q);
+		$load_block_height = $this->db_game['loaded_until_block']+1;
+		$to_block_height = $this->blockchain->last_block_id();
 		
-		if ($r->rowCount() > 0) {
-			$last_game_block = $r->fetch();
-			$load_block_height = $last_game_block['block_id']+1;
-		}
-		else {
-			$last_game_block = false;
-			$load_block_height = $this->db_game['game_starting_block'];
-		}
-		
-		for ($block_height=$load_block_height; $block_height<=$this->blockchain->last_block_id(); $block_height++) {
+		for ($block_height=$load_block_height; $block_height<=$to_block_height; $block_height++) {
 			$this->add_block($block_height);
+			$q = "UPDATE games SET loaded_until_block=".$load_block_height." WHERE game_id='".$this->db_game['game_id']."';";
+			$r = $this->blockchain->app->run_query($q);
 		}
 		
 		$this->update_option_votes();

@@ -688,20 +688,27 @@ class Event {
 			$mining_block_id = $this->game->blockchain->last_block_id()+1;
 			$current_round = $this->game->block_to_round($mining_block_id);
 			
-			if ($round_id == $current_round) {
-				$q = "SELECT SUM(".$this->game->db_game['payout_weight']."_score), SUM(unconfirmed_".$this->game->db_game['payout_weight']."_score) FROM options WHERE event_id='".$this->db_event['event_id']."';";
-				$r = $this->game->blockchain->app->run_query($q);
-				$r = $r->fetch();
-				$score = $r['SUM('.$this->game->db_game['payout_weight'].'_score)']+$r['SUM(unconfirmed_'.$this->game->db_game['payout_weight'].'_score)'];
-			}
-			else {
-				$q = "SELECT SUM(".$this->game->db_game['payout_weight']."_score) FROM event_outcome_options WHERE event_id='".$this->db_event['event_id']."' AND round_id='".$round_id."';";
-				$r = $this->game->blockchain->app->run_query($q);
-				$r = $r->fetch();
-				$score = $r["SUM(".$this->game->db_game['payout_weight']."_score)"];
-			}
+			if ($round_id == $current_round) $use_cached = false;
+			else $use_cached = true;
+			
+			$score = $this->event_total_score($use_cached);
 			
 			return $score/$this->game->blockchain->app->votes_per_coin($this->game->db_game);
+		}
+	}
+	
+	public function event_total_score($use_cached) {
+		if (!$use_cached) {
+			$q = "SELECT SUM(".$this->game->db_game['payout_weight']."_score), SUM(unconfirmed_".$this->game->db_game['payout_weight']."_score) FROM options WHERE event_id='".$this->db_event['event_id']."';";
+			$r = $this->game->blockchain->app->run_query($q);
+			$r = $r->fetch();
+			return $r['SUM('.$this->game->db_game['payout_weight'].'_score)']+$r['SUM(unconfirmed_'.$this->game->db_game['payout_weight'].'_score)'];
+		}
+		else {
+			$q = "SELECT SUM(".$this->game->db_game['payout_weight']."_score) FROM event_outcome_options WHERE event_id='".$this->db_event['event_id']."';";
+			$r = $this->game->blockchain->app->run_query($q);
+			$r = $r->fetch();
+			return $r["SUM(".$this->game->db_game['payout_weight']."_score)"];
 		}
 	}
 	
@@ -806,6 +813,10 @@ class Event {
 				$rr = $this->game->blockchain->app->run_query($qq);
 			}
 		}
+		
+		$event_score = $this->event_total_score(true);
+		$q = "UPDATE event_outcomes SET sum_score='".$event_score."' WHERE outcome_id='".$outcome_id."';";
+		$r = $this->game->blockchain->app->run_query($q);
 		
 		if ($winning_option !== false && $this_block_id == $this->db_event['event_payout_block'] && $add_payout_transaction) {
 			$payout_response = $this->new_payout_transaction($round_id, $this_block_id, $winning_option, $winning_votes);
