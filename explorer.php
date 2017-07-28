@@ -64,7 +64,7 @@ if (rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer") $explore_mode = "explore
 else if ($game && rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer/games/".$game->db_game['url_identifier']) $explore_mode = "game_home";
 else if (!$game && $blockchain && rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']) $explore_mode = "blockchain_home";
 
-if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($explore_mode, array('blockchain_home','blocks','addresses','transactions','utxos'))) || ($game && in_array($explore_mode, array('game_home','events','blocks','addresses','transactions','utxos')))) {
+if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($explore_mode, array('blockchain_home','blocks','addresses','transactions','utxos'))) || ($game && in_array($explore_mode, array('game_home','events','blocks','addresses','transactions','utxos','my_bets')))) {
 	if ($game) {
 		$last_block_id = $blockchain->last_block_id();
 		$current_round = $game->block_to_round($last_block_id+1);
@@ -87,6 +87,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 	if ($explore_mode == "blockchain_home") {
 		$mode_error = false;
 		$pagetitle = $blockchain->db_blockchain['blockchain_name']." Block Explorer";
+	}
+	if ($explore_mode == "my_bets") {
+		$mode_error = false;
+		$pagetitle = "My bets in ".$game->db_game['name'];
 	}
 	if ($explore_mode == "events") {
 		$event_status = "";
@@ -274,7 +278,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				<div class="row">
 					<div class="col-sm-7 ">
 						<ul class="list-inline explorer_nav" id="explorer_nav">
-							<?php if ($thisuser && $game) { ?><li><a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">My Wallet</a></li><?php } ?>
+							<?php if ($game) { ?><li><a<?php if ($explore_mode == 'my_bets') echo ' class="selected"'; ?> href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">My Bets</a></li><?php } ?>
 							<li><a<?php if ($explore_mode == 'blocks') echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
 							if ($game) echo $game->db_game['url_identifier'];
 							else echo $blockchain->db_blockchain['url_identifier'];
@@ -1002,6 +1006,76 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						echo '<div class="col-sm-5">'.$app->format_bignum($utxo['amount']/pow(10,8)).' '.$blockchain->db_blockchain['coin_name_plural'].'</div>';
 						echo '<div class="col-sm-5"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$utxo['address'].'">'.$utxo['address']."</a></div>\n";
 						echo '</div>';
+					}
+				}
+			}
+			else if (!empty($game) && $explore_mode == "my_bets") {
+				if (empty($thisuser)) echo "<br/><br/>\n<p>You must be logged in to view this page. <a href=\"/wallet/".$game->db_game['url_identifier']."/\">Log in</a></p>\n";
+				else {
+					$votes_per_coin = $app->votes_per_coin($game->db_game);
+					
+					$q = "SELECT gio.*, e.entity_name, eo.winning_option_id, eo.sum_score, eo.sum_votes, o.name AS option_name, gio.votes AS votes, ev.event_index, eoo.votes AS option_votes, gio2.colored_amount AS payout_amount FROM addresses a JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN entities e ON o.entity_id=e.entity_id JOIN events ev ON o.event_id=ev.event_id JOIN event_outcomes eo ON ev.event_id=eo.event_id JOIN event_outcome_options eoo ON eoo.outcome_id=eo.outcome_id AND eoo.option_id=o.option_id LEFT JOIN transaction_game_ios gio2 ON gio.payout_game_io_id=gio2.game_io_id WHERE gio.game_id=".$game->db_game['game_id']." AND a.user_id=".$thisuser->db_user['user_id']." ORDER BY gio.game_io_id DESC;";
+					$r = $app->run_query($q);
+					
+					echo "<br/><br/>\n<p>You have ".$r->rowCount()." resolved bets for this game.</p>";
+					?>
+					<div class="row">
+						<div class="col-sm-2 boldtext">Stake</div>
+						<div class="col-sm-2 boldtext">Payout</div>
+						<div class="col-sm-1 text-center boldtext">Odds</div>
+						<div class="col-sm-2 boldtext">Effectiveness Factor</div>
+						<div class="col-sm-2 boldtext">Entity</div>
+						<div class="col-sm-3 boldtext">Outcome</div>
+					</div>
+					<?php
+					while ($bet = $r->fetch()) {
+						$expected_payout = ($bet['sum_score']/$votes_per_coin/pow(10,8))*($bet['votes']/$bet['option_votes']);
+						$my_stake = $bet[$game->db_game['payout_weight']."s_destroyed"]/pow(10,8)/$app->votes_per_coin($game->db_game);
+						$payout_multiplier = $expected_payout/$my_stake;
+						
+						echo '<div class="row">';
+						
+						echo '<div class="col-sm-2 text-right">';
+						if ($game->db_game['inflation'] == "exponential") {
+							echo $app->format_bignum($my_stake)." ".$game->db_game['coin_abbreviation'];
+						}
+						else {
+							echo $app->format_bignum($bet['votes']/pow(10,8))." votes";
+						}
+						echo "</div>\n";
+						
+						echo "<div class=\"col-sm-2 text-right\">";
+						echo $app->format_bignum($expected_payout)." ".$game->db_game['coin_abbreviation'];
+						echo "</div>\n";
+						
+						echo "<div class=\"col-sm-1 text-center\">x".$app->format_bignum($payout_multiplier)."</div>\n";
+						
+						echo "<div class=\"col-sm-2\">";
+						echo round($bet['effectiveness_factor']*100, 2)."%";
+						echo "</div>\n";
+						
+						echo "<div class=\"col-sm-2\"><a target=\"_blank\" href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".($bet['event_index']+1)."\">".$bet['entity_name']."</a></div>\n";
+						
+						$outcome_txt = "";
+						if ($bet['winning_option_id'] == $bet['option_id']) {
+							$outcome_txt = "Won";
+							$delta = $expected_payout - $my_stake;
+						}
+						else {
+							$outcome_txt = "Lost";
+							$delta = (-1)*$my_stake;
+						}
+						echo "<div class=\"col-sm-3";
+						if ($delta >= 0) echo " greentext";
+						else echo " redtext";
+						echo "\">";
+						echo $outcome_txt." &nbsp;&nbsp; ";
+						if ($delta >= 0) echo "+";
+						else echo "-";
+						echo $app->format_bignum(abs($delta));
+						echo " ".$game->db_game['coin_abbreviation']."</div>\n";
+						
+						echo "</div>\n";
 					}
 				}
 			}
