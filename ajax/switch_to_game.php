@@ -51,7 +51,7 @@ if ($thisuser) {
 				$blockchain_id = 2;
 				$blockchain = new Blockchain($app, $blockchain_id);
 				
-				$q = "INSERT INTO games SET blockchain_id='".$blockchain->db_blockchain['blockchain_id']."', creator_id='".$thisuser->db_user['user_id']."', maturity=0, round_length=10, seconds_per_block='".$blockchain->db_blockchain['seconds_per_block']."', buyin_policy='unlimited', block_timing='realistic', creator_game_index='".$game_index."', logo_image_id=34, inflation='exponential', pos_reward='0', pow_reward='0', start_datetime='".date("Y-m-d g:\\0\\0a", time()+(2*60*60))."';";
+				$q = "INSERT INTO games SET blockchain_id='".$blockchain->db_blockchain['blockchain_id']."', creator_id='".$thisuser->db_user['user_id']."', maturity=0, round_length=10, buyin_policy='unlimited', block_timing='realistic', creator_game_index='".$game_index."', logo_image_id=34, inflation='exponential', pos_reward='0', pow_reward='0', start_datetime='".date("Y-m-d g:\\0\\0a", time()+(2*60*60))."';";
 				$r = $app->run_query($q);
 				$game_id = $app->last_insert_id();
 				
@@ -82,7 +82,7 @@ if ($thisuser) {
 			$game = new Game($blockchain, $game_id);
 		}
 		
-		$q = "SELECT game_id, blockchain_id, creator_id, event_rule, option_group_id, event_entity_type_id, events_per_round, event_type_name, game_status, block_timing, giveaway_status, giveaway_amount, maturity, name, payout_weight, round_length, seconds_per_block, pos_reward, pow_reward, inflation, exponential_inflation_rate, exponential_inflation_minershare, final_round, invite_cost, invite_currency, coin_name, coin_name_plural, coin_abbreviation, start_condition, start_datetime, buyin_policy, game_buyin_cap, default_vote_effectiveness_function, default_max_voting_fraction, game_starting_block, escrow_address, genesis_tx_hash, genesis_amount FROM games WHERE game_id='".$game->db_game['game_id']."';";
+		$q = "SELECT game_id, blockchain_id, creator_id, event_rule, option_group_id, event_entity_type_id, events_per_round, event_type_name, game_status, block_timing, giveaway_status, giveaway_amount, maturity, name, payout_weight, round_length, pos_reward, pow_reward, inflation, exponential_inflation_rate, exponential_inflation_minershare, final_round, invite_cost, invite_currency, coin_name, coin_name_plural, coin_abbreviation, start_condition, start_datetime, buyin_policy, game_buyin_cap, default_vote_effectiveness_function, default_max_voting_fraction, game_starting_block, escrow_address, genesis_tx_hash, genesis_amount FROM games WHERE game_id='".$game->db_game['game_id']."';";
 		$r = $app->run_query($q);
 		
 		if ($r->rowCount() == 1) {

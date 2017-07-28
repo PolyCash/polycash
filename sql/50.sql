@@ -1,0 +1,1 @@
+ALTER TABLE `options` ADD `event_option_index` INT NULL DEFAULT NULL AFTER `option_index`;

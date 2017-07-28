@@ -266,7 +266,7 @@ class Event {
 				else $detail_html .= $this->game->db_game['coin_name_plural'];
 				$detail_html .= '</div></div>';
 				
-				$seconds_left = round(($this->game->db_game['round_length'] - $last_block_id%$this->game->db_game['round_length'] - 1)*$this->game->db_game['seconds_per_block']);
+				$seconds_left = round(($this->game->db_game['round_length'] - $last_block_id%$this->game->db_game['round_length'] - 1)*$this->game->blockchain->db_blockchain['seconds_per_block']);
 				$detail_html .= '<div class="row"><div class="col-sm-6 boldtext">Time Left:</div><div class="col-sm-6">';
 				$detail_html .= $this->game->blockchain->app->format_seconds($seconds_left);
 				$detail_html .= '</div></div>';
@@ -580,7 +580,7 @@ class Event {
 	
 	public function initialize_vote_option_details($option_id2rank, $sum_votes, $user_id, $game_instance_id, $game_event_index) {
 		$html = "";
-		$option_q = "SELECT * FROM options WHERE event_id='".$this->db_event['event_id']."' ORDER BY option_id ASC;";
+		$option_q = "SELECT * FROM options WHERE event_id='".$this->db_event['event_id']."' ORDER BY event_option_index ASC;";
 		$option_r = $this->game->blockchain->app->run_query($option_q);
 		
 		$last_block_id = $this->game->last_block_id();
@@ -604,7 +604,7 @@ class Event {
 							<div class="redtext" id="game'.$game_instance_id.'_event'.$game_event_index.'_vote_error_'.$option['option_id'].'"></div>
 						</div>
 						<div class="modal-footer">
-							<button class="btn btn-primary" id="game'.$game_instance_id.'_event'.$game_event_index.'_vote_confirm_btn_'.$option['option_id'].'" onclick="games['.$game_instance_id.'].add_option_to_vote('.$option['option_id'].', \''.$option['name'].'\');">Add '.$option['name'].' to my vote</button>
+							<button class="btn btn-primary" id="game'.$game_instance_id.'_event'.$game_event_index.'_vote_confirm_btn_'.$option['option_id'].'" onclick="games['.$game_instance_id.'].add_option_to_vote('.$game_event_index.', '.$option['option_id'].', \''.$option['name'].'\');">Add '.$option['name'].' to my vote</button>
 							<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
 						</div>
 					</div>
@@ -651,9 +651,6 @@ class Event {
 	}
 	
 	public function option_votes_in_round($option_id, $round_id) {
-		if ($this->game->db_game['payout_weight'] == "coin") $score_field = "colored_amount";
-		else $score_field = $this->game->db_game['payout_weight']."s_destroyed";
-		
 		$mining_block_id = $this->game->blockchain->last_block_id()+1;
 		$current_round_id = $this->game->block_to_round($mining_block_id);
 		
@@ -664,18 +661,18 @@ class Event {
 			
 			$confirmed_votes = $result['votes'];
 			$unconfirmed_votes = $result['unconfirmed_votes'];
-			$confirmed_score = $result[$score_field."_score"];
-			$unconfirmed_score = $result["unconfirmed_".$score_field."_score"];
+			$confirmed_score = $result[$this->game->db_game['payout_weight']."_score"];
+			$unconfirmed_score = $result["unconfirmed_".$this->game->db_game['payout_weight']."_score"];
 		}
 		else {
-			$q = "SELECT SUM(".$score_field."), SUM(votes) FROM transaction_game_ios WHERE event_id='".$this->db_event['event_id']."' AND ";
+			$q = "SELECT SUM(".$this->game->db_game['payout_weight']."s_destroyed) AS sum_score, SUM(votes) AS sum_votes FROM transaction_game_ios WHERE event_id='".$this->db_event['event_id']."' AND ";
 			$q .= "create_round_id=".$round_id." AND option_id='".$option_id."';";
 			$r = $this->game->blockchain->app->run_query($q);
 			$result = $r->fetch();
 			
-			$confirmed_votes = $result["SUM(votes)"];
+			$confirmed_votes = $result["sum_votes"];
 			$unconfirmed_votes = 0;
-			$confirmed_score = $result["SUM(".$score_field.")"];
+			$confirmed_score = $result["sum_score"];
 			$unconfirmed_score = 0;
 		}
 		
@@ -864,7 +861,6 @@ class Event {
 	public function process_option_blocks(&$game_block, $events_in_round, $round_first_event_index) {
 		//$q = "DELETE ob.* FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id WHERE o.event_id='".$this->db_event['event_id']."' AND ob.block_height='".$game_block['block_id']."';";
 		//$r = $this->game->blockchain->app->run_query($q);
-		
 		$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->game->db_game['blockchain_id']."' AND block_id='".$game_block['block_id']."';";
 		$block = $this->game->blockchain->app->run_query($q)->fetch();
 		$random_data = hash("sha256", $block['block_hash']);

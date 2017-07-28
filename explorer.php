@@ -151,7 +151,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 	}
 	if ($explore_mode == "blocks") {
 		$block_id_str = $uri_parts[5];
-		if (empty($block_id_str) || strpos($block_id_str, '?') !== false) {
+		if ($block_id_str !== "0" && (empty($block_id_str) || strpos($block_id_str, '?') !== false)) {
 			$mode_error = false;
 			if ($game) $pagetitle = $game->db_game['name']." - List of blocks";
 			else $pagetitle = $blockchain->db_blockchain['blockchain_name']." - List of blocks";
@@ -391,7 +391,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						</div>
 					</div>
 					<?php
-					if ($thisuser && !empty($db_event)) {
+					if ($thisuser && !empty($db_event) && !empty($db_event['winning_option_id'])) {
 						$my_votes = false;
 						echo $event->user_winnings_description($thisuser->db_user['user_id'], $this_round, $event_status, $db_event['winning_option_id'], $db_event['winning_votes'], $db_event['name'], $my_votes)."<br/>";
 					}
@@ -519,7 +519,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							$winning_option = false;
 							
 							if ($first_option['score'] == $second_option['score']) {
-								$tiebreaker = $module->break_tie($game, $db_event, $first_option, $second_option);
+								$tiebreaker = $module->break_tie($game, $event->db_event, $first_option, $second_option);
 								
 								if ($tiebreaker) {
 									list($winning_option, $pk_shootout_data) = $tiebreaker;
@@ -539,7 +539,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					<div class="transaction_table">
 					<?php
 					for ($i=$from_block_id; $i<=$to_block_id; $i++) {
-						echo "<a href=\"/explorer/".$game->db_game['url_identifier']."/blocks/".$i."\">Block #".$i."</a>";
+						echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$i."\">Block #".$i."</a>";
 						if ($event->db_event['vote_effectiveness_function'] != "constant") {
 							echo ", vote effectiveness: ".$event->block_id_to_effectiveness_factor($i);
 						}
@@ -701,7 +701,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					<pre id="block_info" style="display: none;"><?php
 					print_r($block);
 					
-					if ($coin_rpc) {
+					if (!empty($coin_rpc)) {
 						$rpc_block = $coin_rpc->getblock($block['block_hash']);
 						if ($rpc_block) echo print_r($rpc_block);
 					}
@@ -718,7 +718,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					if ($game) $complete_block_id = $last_block_id;
 					
 					$filter_complete = false;
-					if ($_REQUEST['block_filter'] == "complete") {
+					if (!empty($_REQUEST['block_filter']) && $_REQUEST['block_filter'] == "complete") {
 						$to_block_id = $complete_block_id+1;
 						$filter_complete = true;
 					}
@@ -838,14 +838,34 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				echo ucwords($blockchain->db_blockchain['coin_name'])." balance: ".($blockchain->address_balance_at_block($address, false)/pow(10,8))." ".$blockchain->db_blockchain['coin_name_plural']."<br/>\n";
 				if ($game) echo ucwords($game->db_game['coin_name'])." balance: ".$app->format_bignum($game->address_balance_at_block($address, false)/pow(10,8))." ".$game->db_game['coin_name_plural']."<br/>\n";
 				
-				echo '<div style="border-bottom: 1px solid #bbb;">';
-				while ($transaction_io = $r->fetch()) {
-					if ($game) echo $game->render_transaction($transaction_io, $address['address_id']);
-					else echo $blockchain->render_transaction($transaction_io, $address['address_id']);
-				}
-				echo "</div>\n";
+				?>
+				<div style="border-bottom: 1px solid #bbb;">
+					<?php
+					while ($transaction_io = $r->fetch()) {
+						if ($game) echo $game->render_transaction($transaction_io, $address['address_id']);
+						else echo $blockchain->render_transaction($transaction_io, $address['address_id']);
+					}
+					?>
+				</div>
 				
-				echo "<br/>\n";
+				<br/>
+				<?php
+				$permission_to_claim_address = $app->permission_to_claim_address($blockchain, $address, $thisuser);
+				
+				if ($permission_to_claim_address) {
+					if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "claim") {
+						?>
+						<script type="text/javascript">
+						$(document).ready(function() {
+							try_claim_address(<?php echo $blockchain->db_blockchain['blockchain_id'].", ".$address['address_id']; ?>);
+						});
+						</script>
+						<?php
+					}
+					?>
+					<button class="btn btn-success btn-sm" onclick="try_claim_address(<?php echo $blockchain->db_blockchain['blockchain_id'].", ".$address['address_id']; ?>);">Claim this address</button>
+					<?php
+				}
 			}
 			else if ($explore_mode == "initial") {
 				$q = "SELECT * FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_id=0 AND amount > 0 ORDER BY transaction_id ASC;";

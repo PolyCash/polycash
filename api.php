@@ -10,7 +10,7 @@ if ($uri_parts[1] == "api") {
 	if ($uri_parts[2] != "" && strval(intval($uri_parts[2])) === strval($uri_parts[2])) {
 		$game_id = intval($uri_parts[2]);
 		
-		$q = "SELECT game_id, blockchain_id, maturity, pos_reward, pow_reward, round_length, payout_weight, seconds_per_block, name FROM games WHERE game_id=".$game_id.";";
+		$q = "SELECT game_id, blockchain_id, maturity, pos_reward, pow_reward, round_length, payout_weight, name FROM games WHERE game_id=".$game_id.";";
 		$r = $app->run_query($q);
 		
 		if ($r->rowCount() == 1) {
@@ -20,7 +20,7 @@ if ($uri_parts[1] == "api") {
 			$last_block_id = $game->blockchain->last_block_id();
 			$current_round = $game->block_to_round($last_block_id+1);
 			
-			$intval_vars = array('game_id','round_length','seconds_per_block','maturity');
+			$intval_vars = array('game_id','round_length','maturity');
 			for ($i=0; $i<count($intval_vars); $i++) {
 				$game->db_game[$intval_vars[$i]] = intval($game->db_game[$intval_vars[$i]]);
 			}

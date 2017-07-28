@@ -103,28 +103,7 @@ class SingleEliminationGameDefinition {
 		}
 		$this->event_index2teams = $event_index2teams;
 		
-		$blockchain_r = $this->app->run_query("SELECT * FROM blockchains WHERE url_identifier='".$game_def->blockchain_identifier."';");
-
-		if ($blockchain_r->rowCount() > 0) {
-			$db_blockchain = $blockchain_r->fetch();
-			
-			try {
-				$coin_rpc = new jsonRPCClient('http://'.$db_blockchain['rpc_username'].':'.$db_blockchain['rpc_password'].'@127.0.0.1:'.$db_blockchain['rpc_port'].'/');
-			}
-			catch (Exception $e) {
-				echo "Error, failed to load RPC connection for ".$db_blockchain['blockchain_name'].".<br/>\n";
-				die();
-			}
-			
-			$chain_starting_block = $game_def->game_starting_block;
-			try {
-				$chain_last_block = (int) $coin_rpc->getblockcount();
-			}
-			catch (Exception $e) {}
-			
-			$this->game_def = $game_def;
-		}
-		else echo "No blockchain found matching that identifier.";
+		$this->game_def = $game_def;
 	}
 	
 	public function events_between_rounds($from_round, $to_round, $round_length, $chain_starting_block) {

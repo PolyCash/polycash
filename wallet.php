@@ -488,6 +488,8 @@ if ($thisuser && $game) {
 			echo ', "'.$game->db_game['url_identifier'].'"';
 			echo ', "'.$game->db_game['coin_name'].'"';
 			echo ', "'.$game->db_game['coin_name_plural'].'"';
+			echo ', "'.$game->blockchain->db_blockchain['coin_name'].'"';
+			echo ', "'.$game->blockchain->db_blockchain['coin_name_plural'].'"';
 			echo ', "wallet", "'.$game->event_ids().'"';
 			echo ', "'.$game->logo_image_url().'"';
 			echo ', "'.$game->vote_effectiveness_function().'"';
@@ -522,7 +524,7 @@ if ($thisuser && $game) {
 				echo "games[0].all_events[".$db_event['event_index']."] = new Event(games[0], ".$db_event['event_index'].", ".$db_event['event_id'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'");'."\n";
 				echo "games[0].all_events_db_id_to_index[".$db_event['event_id']."] = ".$db_event['event_index'].";\n";
 				
-				$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY option_id ASC;";
+				$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY event_option_index ASC;";
 				$option_r = $app->run_query($option_q);
 				$j=0;
 				while ($option = $option_r->fetch()) {

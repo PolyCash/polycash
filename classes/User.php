@@ -247,7 +247,7 @@ class User {
 			$html .= '<div class="lockedfunds_details" id="lockedfunds_details">';
 			while ($next_transaction = $r->fetch()) {
 				$avail_block = $game->db_game['maturity'] + $next_transaction['create_block_id'] + 1;
-				$seconds_to_avail = round(($avail_block - $last_block_id - 1)*$game->db_game['seconds_per_block']);
+				$seconds_to_avail = round(($avail_block - $last_block_id - 1)*$game->blockchain->db_blockchain['seconds_per_block']);
 				$minutes_to_avail = round($seconds_to_avail/60);
 				
 				if ($next_transaction['transaction_desc'] == "votebase") $html .= "You won ";
