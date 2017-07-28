@@ -42,7 +42,10 @@ function register() {
 	var alias = $('#alias').val();
 	var password = $('#registration_options_password').val();
 	var email = $('#registration_options_email').val();
+	$('#register_btn').val("Loading...");
+	
 	$.get("/ajax/register.php?alias="+encodeURIComponent(alias)+"&password="+encodeURIComponent(password)+"&email="+encodeURIComponent(email)+"&redirect_id="+parseInt($('#redirect_id').val()+"&invite_key="+$('#invite_key').val()), function(result) {
+		$('#register_btn').val("Sign Up");
 		var result_obj = JSON.parse(result);
 		if (result_obj['status_code'] == 2) {
 			window.location = '/wallet/';
@@ -135,7 +138,7 @@ function login() {
 					<input id="registration_options_password" type="password" class="form-control" placeholder="Enter your password" />
 				</div>
 				<div class="col-md-8 col-md-push-2">
-					<input type="submit" class="btn btn-success" value="Sign Up" />
+					<input type="submit" class="btn btn-success" value="Sign Up" id="register_btn" />
 				</div>
 			</div>
 		</div>
