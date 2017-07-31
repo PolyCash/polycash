@@ -25,6 +25,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
 			register_shutdown_function("script_shutdown");
 		}
+		$app->set_site_constant("last_script_run_time", time());
 		
 		$blockchains = array();
 		$real_games = array();
