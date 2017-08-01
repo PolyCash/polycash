@@ -365,7 +365,7 @@ class App {
 		else if ($number > pow(10, 6)) {
 			return $sign.($number/pow(10, 6))."M";
 		}
-		else if ($number > pow(10, 4)) {
+		else if ($number > pow(10, 5)) {
 			return $sign.($number/pow(10, 3))."k";
 		}
 		else return $sign.rtrim(rtrim(number_format(sprintf('%.8F', $number), 8), '0'), ".");
@@ -1460,7 +1460,7 @@ class App {
 					$game->update_db_game();
 					$game->ensure_events_until_block($game->blockchain->last_block_id()+1);
 					$game->load_current_events();
-					$game->sync();
+					$game->sync(false);
 				}
 			}
 			else echo "No match for ".$new_game_def_hash."<br/>\n";

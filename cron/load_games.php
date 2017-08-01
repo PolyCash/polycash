@@ -45,7 +45,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			while ($db_real_game = $real_game_r->fetch()) {
 				if (empty($blockchains[$db_real_game['blockchain_id']])) $blockchains[$db_real_game['blockchain_id']] = new Blockchain($app, $db_real_game['blockchain_id']);
 				$real_game = new Game($blockchains[$db_real_game['blockchain_id']], $db_real_game['game_id']);
-				$real_game->sync();
+				$real_game->sync(false);
 			}
 			
 			$loop_stop_time = microtime(true);

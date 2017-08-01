@@ -27,10 +27,6 @@ if ($uri_parts[2] == "games") {
 			eval('$module = new '.$game->db_game['module'].'GameDefinition($app);');
 		}
 		
-		if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
-			$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
-		}
-		
 		if ($thisuser) {
 			$qq = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
 			$rr = $app->run_query($qq);
@@ -58,6 +54,10 @@ else if ($uri_parts[2] == "blockchains") {
 			die();
 		}
 	}
+}
+
+if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
+	$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
 }
 
 if (rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer") $explore_mode = "explorer_home";

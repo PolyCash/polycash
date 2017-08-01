@@ -146,7 +146,10 @@ class Blockchain {
 				echo $i."/".count($lastblock_rpc['tx'])." ".$tx_hash." ";
 				$successful = true;
 				$db_transaction = $this->add_transaction($coin_rpc, $tx_hash, $block_height, true, $successful, $i, false, true);
-				if (!$successful) $tx_error = true;
+				if (!$successful) {
+					$tx_error = true;
+					$i = count($lastblock_rpc['tx']);
+				}
 				echo "\n";
 				if ($db_transaction['transaction_desc'] != "transaction") $coins_created += $db_transaction['amount'];
 			}
