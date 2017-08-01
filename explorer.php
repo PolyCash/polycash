@@ -567,7 +567,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					<div style="border-bottom: 1px solid #bbb; margin-bottom: 5px;" id="render_event_outcomes">
 						<div id="event_outcomes_0">
 							<?php
-							$q = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block<=".$game->last_block_id()." ORDER BY event_index DESC LIMIT 1;";
+							$events_to_block_id = $game->db_game['events_until_block'];
+							if ($events_to_block_id > $game->blockchain->last_block_id()) $events_to_block_id = $game->blockchain->last_block_id();
+							
+							$q = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block<=".$events_to_block_id." ORDER BY event_index DESC LIMIT 1;";
 							$r = $app->run_query($q);
 							
 							if ($r->rowCount() > 0) {
@@ -948,7 +951,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				while ($db_game = $r->fetch()) {
 					if ($db_game['game_status'] == "completed") $this_section = "completed";
 					else $this_section = "running";
-					if ($section != $this_section) echo "<h2>".ucwords($this_section)." Games (".$r->rowCount().")</h2>\n";
+					if ($section != $this_section) echo "<h2>".ucwords($this_section)." Games</h2>\n";
 					$section = $this_section;
 					echo '<a href="/explorer/games/'.$db_game['url_identifier'].'/events/">'.$db_game['name']."</a><br/>\n";
 				}

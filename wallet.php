@@ -509,7 +509,6 @@ if ($thisuser && $game) {
 		$from_block_id = ($plan_start_round-1)*$game->db_game['round_length']+1;
 		$to_block_id = ($plan_stop_round-1)*$game->db_game['round_length']+1;
 		
-		$game->ensure_events_until_block($to_block_id);
 		$game->load_current_events();
 		
 		$q = "SELECT * FROM events e JOIN event_types t ON e.event_type_id=t.event_type_id WHERE e.game_id='".$game->db_game['game_id']."' AND e.event_starting_block >= ".$from_block_id." AND e.event_starting_block <= ".$to_block_id." ORDER BY e.event_id ASC;";
