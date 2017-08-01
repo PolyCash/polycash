@@ -668,6 +668,9 @@ class Game {
 		$q = "DELETE gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.create_block_id >= ".$block_height.";";
 		$r = $this->blockchain->app->run_query($q);
 		
+		$q = "UPDATE transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id SET gio.spend_round_id=NULL WHERE gio.game_id='".$this->db_game['game_id']."' AND io.create_block_id < ".$block_height." AND io.spend_block_id >= ".$block_height.";";
+		$r = $this->blockchain->app->run_query($q);
+		
 		$q = "DELETE ob.* FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id JOIN events e ON o.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."' AND ob.block_height >= ".$block_height.";";
 		$r = $this->blockchain->app->run_query($q);
 		
@@ -706,7 +709,7 @@ class Game {
 		$q = "DELETE e.*, o.* FROM events e LEFT JOIN options o ON e.event_id=o.event_id WHERE e.game_id='".$this->db_game['game_id']."';";
 		$r = $this->blockchain->app->run_query($q);
 		
-		$q = "UPDATE games SET loaded_until_block=0 WHERE game_id='".$this->db_game['game_id']."';";
+		$q = "UPDATE games SET loaded_until_block=NULL WHERE game_id='".$this->db_game['game_id']."';";
 		$r = $this->blockchain->app->run_query($q);
 		
 		$invite_user_ids = array();
@@ -2261,12 +2264,12 @@ class Game {
 				
 				if ($game_block['locally_saved'] == 1) $skip = true;
 				else {
-					$msg = "Updating existing game block\n";
+					$msg = "Updating existing game block #".$block_height."\n";
 					$log_text .= $msg;
 				}
 			}
 			else {
-				$msg = "Creating new game block\n";
+				$msg = "Creating new game block #".$block_height."\n";
 				$log_text .= $msg;
 				
 				$q = "INSERT INTO game_blocks SET internal_block_id='".$db_block['internal_block_id']."', game_id='".$this->db_game['game_id']."', block_id='".$block_height."', locally_saved=0, num_transactions=0;";
@@ -2305,8 +2308,6 @@ class Game {
 					}
 				}
 				
-				$msg = "checkpoint 1: ".(microtime(true)-$start_time)."\n";
-				$log_text .= $msg;
 				$keep_looping = true;
 				
 				do {
@@ -2387,19 +2388,13 @@ class Game {
 				
 				if ($this->db_game['buyin_policy'] != "none") $this->process_sellouts_in_block($block_height);
 				
-				$msg = "checkpoint 2: ".(microtime(true)-$start_time)."\n";
-				$log_text .= $msg;
 				$events = $this->events_by_block($block_height);
-				$msg = "checkpoint 3: ".(microtime(true)-$start_time)."\n";
-				$log_text .= $msg;
 				
 				for ($i=0; $i<count($events); $i++) {
 					$events[$i]->process_option_blocks($game_block, count($events), $events[0]->db_event['event_index']);
 				}
 				
 				$made_changes = $this->ensure_events_until_block($this->blockchain->last_block_id()+1);
-				$msg = "checkpoint 4: ".(microtime(true)-$start_time)."\n";
-				$log_text .= $msg;
 				
 				// Time for initial event loading should not count towards block load time
 				if ($made_changes) $start_time = microtime(true);
@@ -2410,18 +2405,21 @@ class Game {
 					eval('$module = new '.$this->db_game['module'].'GameDefinition($this->blockchain->app);');
 					
 					for ($i=0; $i<count($payout_events); $i++) {
-						if (!empty($this->db_game['module']) && !empty($this->blockchain->db_blockchain['only_game_id'])) {
-							try {
-								$coin_rpc = new jsonRPCClient('http://'.$this->blockchain->db_blockchain['rpc_username'].':'.$this->blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->blockchain->db_blockchain['rpc_port'].'/');
+						if (!empty($this->db_game['module'])) {
+							if ($this->blockchain->db_blockchain['p2p_mode'] == "rpc") {
+								try {
+									$coin_rpc = new jsonRPCClient('http://'.$this->blockchain->db_blockchain['rpc_username'].':'.$this->blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->blockchain->db_blockchain['rpc_port'].'/');
+								}
+								catch (Exception $e) {
+									echo "Error, failed to load RPC connection for ".$this->blockchain->db_blockchain['blockchain_name'].".<br/>\n";
+								}
 							}
-							catch (Exception $e) {
-								echo "Error, failed to load RPC connection for ".$this->blockchain->db_blockchain['blockchain_name'].".<br/>\n";
-							}
+							else $coin_rpc = false;
 							
 							$module->set_event_outcome($this, $coin_rpc, $payout_events[$i]->db_event);
 						}
 						
-						$payout_events[$i]->set_outcome_from_db($block_height, true);
+						$log_text .= $payout_events[$i]->set_outcome_from_db($block_height, true);
 						
 						if (!empty($this->db_game['module']) && method_exists($module, "event_index_to_next_event_index")) {
 							$event_index = $module->event_index_to_next_event_index($payout_events[$i]->db_event['event_index']);
@@ -2432,9 +2430,6 @@ class Game {
 				
 				$q = "UPDATE game_blocks SET locally_saved=1, time_loaded='".time()."', load_time=load_time+".(microtime(true)-$start_time)." WHERE game_block_id='".$game_block['game_block_id']."';";
 				$r = $this->blockchain->app->run_query($q);
-				
-				$msg = "checkpoint 5: ".(microtime(true)-$start_time)."\n";
-				$log_text .= $msg;
 			}
 			else {
 				$msg = "Skipping game block ".$block_height.", it already exists\n";

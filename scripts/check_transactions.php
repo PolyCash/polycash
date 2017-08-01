@@ -15,7 +15,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$game = new Game($blockchain, $db_game['game_id']);
 		
-		$qq = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$game->db_game['game_id']."' AND t.transaction_desc='transaction' GROUP BY t.transaction_id ORDER BY t.block_id ASC;";
+		$qq = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$game->db_game['game_id']."' AND t.transaction_desc='transaction' AND io.spend_block_id<=".$game->last_block_id()." GROUP BY t.transaction_id ORDER BY t.block_id ASC;";
 		$rr = $app->run_query($qq);
 		
 		$error_count = 0;
