@@ -2220,10 +2220,27 @@ class Game {
 		$this->db_game['events_until_block'] = $ref_block_id;
 	}
 	
-	public function sync($show_debug) {
-		if (empty($this->db_game['loaded_until_block'])) $load_block_height = $this->db_game['game_starting_block'];
-		else $load_block_height = $this->db_game['loaded_until_block']+1;
+	public function set_loaded_until_block() {
+		$q = "SELECT * FROM blocks b WHERE b.block_id > ".$this->db_game['game_starting_block']." AND NOT EXISTS (SELECT * FROM game_blocks gb WHERE  gb.internal_block_id=b.internal_block_id AND gb.game_id=".$this->db_game['game_id'].") ORDER BY b.block_id ASC LIMIT 1;";
+		$r = $this->blockchain->app->run_query($q);
 		
+		if ($r->rowCount() > 0) {
+			$load_block = $r->fetch();
+			$loaded_until_block = $load_block['block_id']-1;
+		}
+		else {
+			$loaded_until_block = $this->db_game['game_starting_block']-1;
+		}
+		
+		$q = "UPDATE games SET loaded_until_block='".$loaded_until_block."' WHERE game_id='".$this->db_game['game_id']."';";
+		$r = $this->blockchain->app->run_query($q);
+		$this->db_game['loaded_until_block'] = $loaded_until_block;
+	}
+	
+	public function sync($show_debug) {
+		if (empty($this->db_game['loaded_until_block'])) $this->set_loaded_until_block();
+		
+		$load_block_height = $this->db_game['loaded_until_block']+1;
 		$to_block_height = $this->blockchain->last_block_id();
 		
 		if (empty($this->db_game['events_until_block'])) $this->set_events_until_block();
@@ -2264,8 +2281,8 @@ class Game {
 				
 				if ($game_block['locally_saved'] == 1) $skip = true;
 				else {
-					$msg = "Updating existing game block #".$block_height."\n";
-					$log_text .= $msg;
+					$GLOBALS['shutdown_lock_name'] = "";
+					die("Conflicting block loading scripts are running.. aborting this thread.");
 				}
 			}
 			else {
