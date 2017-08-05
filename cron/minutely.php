@@ -3,6 +3,8 @@ $script_start_time = microtime(true);
 $host_not_required = true;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
+$app->log_message("minutely.php is running");
+
 if (!empty($argv)) {
 	$cmd_vars = $app->argv_to_array($argv);
 	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
@@ -11,7 +13,7 @@ if (!empty($argv)) {
 
 if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$last_script_run_time = (int) $app->get_site_constant("last_script_run_time");
-	if ($last_script_run_time < time()-120 && $GLOBALS['process_lock_method'] == "db") {
+	if ($last_script_run_time < time()-(60*5) && $GLOBALS['process_lock_method'] == "db") {
 		$app->set_site_constant("loading_blocks", 0);
 		$app->set_site_constant("loading_games", 0);
 		$app->set_site_constant("main_loop_running", 0);

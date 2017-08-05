@@ -1,0 +1,1 @@
+ALTER TABLE `game_blocks` ADD `load_time` FLOAT NOT NULL DEFAULT '0' AFTER `num_transactions`, ADD `time_loaded` INT NULL DEFAULT NULL AFTER `load_time`;
