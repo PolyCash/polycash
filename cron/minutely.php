@@ -3,6 +3,8 @@ $script_start_time = microtime(true);
 $host_not_required = true;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
+$app->log_message("minutely.php is running");
+
 if (!empty($argv)) {
 	$cmd_vars = $app->argv_to_array($argv);
 	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];

@@ -19,7 +19,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		$user_game = $thisuser->ensure_user_in_game($game);
 	}
 	
-	$last_block_id = $game->blockchain->last_block_id();
+	$last_block_id = $game->last_block_id();
 	$last_transaction_id = $game->blockchain->last_transaction_id();
 	$current_round = $game->block_to_round($last_block_id+1);
 	$block_within_round = $game->block_id_to_round_index($last_block_id+1);
