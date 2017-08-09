@@ -19,10 +19,16 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		$user_game = $thisuser->ensure_user_in_game($game);
 	}
 	
+	$blockchain_last_block_id = $game->blockchain->last_block_id();
+	$blockchain_current_round = $game->block_to_round($blockchain_last_block_id+1);
+	$blockchain_block_within_round = $game->block_id_to_round_index($blockchain_last_block_id+1);
+	
 	$last_block_id = $game->last_block_id();
-	$last_transaction_id = $game->blockchain->last_transaction_id();
 	$current_round = $game->block_to_round($last_block_id+1);
 	$block_within_round = $game->block_id_to_round_index($last_block_id+1);
+	
+	$last_transaction_id = $game->blockchain->last_transaction_id();
+	
 	if ($thisuser) {
 		$my_last_transaction_id = $thisuser->my_last_transaction_id($game->db_game['game_id']);
 		$account_value = $thisuser->account_coin_value($game, $user_game);
@@ -75,7 +81,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		}
 		
 		if ($thisuser) {
-			$output['wallet_text_stats'] = $thisuser->wallet_text_stats($game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance, $user_game);
+			$output['wallet_text_stats'] = $thisuser->wallet_text_stats($game, $blockchain_current_round, $blockchain_last_block_id, $blockchain_block_within_round, $mature_balance, $immature_balance, $user_game);
 			for ($game_event_index=0; $game_event_index<count($game->current_events); $game_event_index++) {
 				$output['my_current_votes'][$game_event_index] = $game->current_events[$game_event_index]->my_votes_table($current_round, $user_game);
 			}

@@ -98,7 +98,7 @@ class Blockchain {
 		$coin_rpc = false;
 		$this->coind_add_block($coin_rpc, $block_hash, $block_height, false);
 		
-		$game->add_block($block_height);
+		list($successful, $log_text) = $game->add_block($block_height);
 	}
 	
 	public function coind_add_block(&$coin_rpc, $block_hash, $block_height, $headers_only) {
