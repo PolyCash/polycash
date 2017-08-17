@@ -1267,7 +1267,7 @@ class Game {
 			$r = $this->blockchain->app->run_query($q);
 			$data = $r->fetch();
 			
-			$html .= "<p>".$this->blockchain->app->format_bignum($last_block_loaded - $this->db_game['game_starting_block'])."/".$this->blockchain->app->format_bignum($total_game_blocks)." blocks loaded (".round($game_blocks_pct_complete, 2)."% complete";
+			$html .= "<p>".$this->blockchain->app->format_bignum($last_block_loaded - $this->db_game['game_starting_block'])."/".$this->blockchain->app->format_bignum($total_game_blocks)." game blocks loaded (".round($game_blocks_pct_complete, 2)."% complete";
 			//$html .= $this->blockchain->app->format_bignum($missing_game_blocks)." remaining... ";
 			
 			if ($data['COUNT(*)'] > 0) {
@@ -2256,6 +2256,7 @@ class Game {
 				$q = "UPDATE games SET loaded_until_block=".$block_height." WHERE game_id='".$this->db_game['game_id']."' AND loaded_until_block < ".$block_height.";";
 				$r = $this->blockchain->app->run_query($q);
 			}
+			else $block_height = $to_block_height+1;
 		}
 		
 		$this->update_option_votes();

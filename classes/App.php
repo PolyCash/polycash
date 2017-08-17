@@ -1611,8 +1611,10 @@ class App {
 						$r = $this->run_query($q);
 						$new_game_id = $this->last_insert_id();
 						
-						$q = "UPDATE blockchains SET only_game_id='".$new_game_id."' WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."';";
-						$r = $this->run_query($q);
+						if ($blockchain->db_blockchain['p2p_mode'] != "rpc") {
+							$q = "UPDATE blockchains SET only_game_id='".$new_game_id."' WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."';";
+							$r = $this->run_query($q);
+						}
 						
 						$new_game = new Game($blockchain, $new_game_id);
 						

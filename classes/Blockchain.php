@@ -718,7 +718,7 @@ class Blockchain {
 		
 		$this->app->run_query("DELETE t.*, io.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.tx_hash=".$this->app->quote_escape($genesis_tx_hash)." AND t.blockchain_id='".$this->db_blockchain['blockchain_id']."';");
 		
-		if ($game) $genesis_address = $this->app->random_string(34);
+		if (!empty($game)) $genesis_address = $this->app->random_string(34);
 		else $genesis_address = 'genesis_address';
 		
 		$output_address = $this->create_or_fetch_address($genesis_address, true, false, false, false, false);
