@@ -7,7 +7,7 @@ $output_obj['result_code'] = 0;
 $output_obj['message'] = "";
 
 if ($thisuser && $game) {
-	$user_game = $thisuser->ensure_user_in_game($game);
+	$user_game = $thisuser->ensure_user_in_game($game, false);
 	
 	$amount = floatval($_REQUEST['amount']);
 	$fee = floatval($_REQUEST['fee']);
@@ -33,7 +33,7 @@ if ($thisuser && $game) {
 		else $remainder_address_id = intval($remainder_address_id);
 		
 		$user_strategy = false;
-		$success = $game->get_user_strategy($thisuser->db_user['user_id'], $user_strategy);
+		$success = $game->get_user_strategy($user_game);
 		
 		if ($success) {
 			if ($fee < $blockchain_mature_balance) {

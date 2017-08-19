@@ -298,11 +298,11 @@ class User {
 		else return false;
 	}
 
-	public function ensure_user_in_game(&$game) {
-		$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$this->db_user['user_id']."' AND ug.game_id='".$game->db_game['game_id']."';";
+	public function ensure_user_in_game(&$game, $force_new) {
+		$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$this->db_user['user_id']."' AND ug.game_id='".$game->db_game['game_id']."' ORDER BY selected DESC;";
 		$r = $this->app->run_query($q);
 		
-		if ($r->rowCount() == 0) {
+		if ($force_new || $r->rowCount() == 0) {
 			$q = "INSERT INTO user_games SET user_id='".$this->db_user['user_id']."', game_id='".$game->db_game['game_id']."'";
 			if (!empty($this->db_user['payout_address_id'])) $q .= ", payout_address_id='".$this->db_user['payout_address_id']."'";
 			if ($game->db_game['giveaway_status'] == "public_pay" || $game->db_game['giveaway_status'] == "invite_pay") $q .= ", payment_required=1";
@@ -550,6 +550,14 @@ class User {
 			return $r->fetch();
 		}
 		else return false;
+	}
+	
+	public function set_selected_user_game(&$game, $user_game_id) {
+		$q = "UPDATE user_games SET selected=1 WHERE user_game_id='".$user_game_id."';";
+		$r = $this->app->run_query($q);
+		
+		$q = "UPDATE user_games SET selected=0 WHERE user_id='".$this->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."' AND user_game_id != ".$user_game_id.";";
+		$r = $this->app->run_query($q);
 	}
 }
 ?>

@@ -445,7 +445,7 @@ class App {
 				$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 				$invite_game = new Game($blockchain, $invitation['game_id']);
 				
-				$user_game = $user->ensure_user_in_game($invite_game);
+				$user_game = $user->ensure_user_in_game($invite_game, false);
 				
 				return true;
 			}
@@ -1619,7 +1619,7 @@ class App {
 						$new_game = new Game($blockchain, $new_game_id);
 						
 						if ($new_game->db_game['p2p_mode'] == "none") {
-							if ($thisuser) $user_game = $thisuser->ensure_user_in_game($new_game);
+							if ($thisuser) $user_game = $thisuser->ensure_user_in_game($new_game, false);
 							
 							if (empty($new_game->db_game['genesis_tx_hash'])) {
 								$game_genesis_tx_hash = $this->random_string(64);
@@ -1804,7 +1804,7 @@ class App {
 	public function give_address_to_user($blockchain, $db_address, $user) {
 		if ($this->permission_to_claim_address($blockchain, $db_address, $user)) {
 			$game = new Game($blockchain, $blockchain->db_blockchain['only_game_id']);
-			$user_game = $user->ensure_user_in_game($game);
+			$user_game = $user->ensure_user_in_game($game, false);
 			
 			if ($user_game) {
 				$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id='".$db_address['address_id']."';";

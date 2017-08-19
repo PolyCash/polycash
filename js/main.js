@@ -1685,3 +1685,7 @@ function try_claim_address(blockchain_id, address_id) {
 		else alert(result_obj['message']);
 	});
 }
+function change_user_game() {
+	var user_game_id = $('#select_user_game').val();
+	window.location = '/wallet/'+games[0].game_url_identifier+'/?action=change_user_game&user_game_id='+user_game_id;
+}

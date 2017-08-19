@@ -20,7 +20,7 @@ if (empty($GLOBALS['prevent_changes_to_history'])) {
 				$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 				$game = new Game($blockchain, $db_game['game_id']);
 				
-				$user_game = $thisuser->ensure_user_in_game($game);
+				$user_game = $thisuser->ensure_user_in_game($game, false);
 				
 				if ($_REQUEST['action'] == "fetch") {
 					$html = '<div class="modal-header"><h4 class="modal-title">';

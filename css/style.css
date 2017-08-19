@@ -405,3 +405,10 @@ footer {
 .connected_utxo {
 	margin-left: -10px ! important;
 }
+#game_status_explanation {
+	display: inline-block;
+}
+#change_user_game {
+	display: inline-block;
+	float: right;
+}

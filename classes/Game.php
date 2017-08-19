@@ -859,9 +859,10 @@ class Game {
 		$invitation = $r->fetch();
 	}
 	
-	public function get_user_strategy($user_id, &$user_strategy) {
-		$q = "SELECT * FROM user_strategies s JOIN user_games g ON s.strategy_id=g.strategy_id WHERE s.user_id='".$user_id."' AND g.game_id='".$this->db_game['game_id']."';";
+	public function get_user_strategy($user_game) {
+		$q = "SELECT * FROM user_strategies WHERE strategy_id='".$user_game['strategy_id']."';";
 		$r = $this->blockchain->app->run_query($q);
+		
 		if ($r->rowCount() == 1) {
 			$user_strategy = $r->fetch();
 			return true;
@@ -1634,7 +1635,7 @@ class Game {
 		$user_id = false;
 		if ($user) {
 			$user_id = $user->db_user['user_id'];
-			$user_game = $user->ensure_user_in_game($this);
+			$user_game = $user->ensure_user_in_game($this, false);
 		}
 		
 		$js = "console.log('loading new events!');\n";
