@@ -7,126 +7,7 @@ $uri = $_SERVER['REQUEST_URI'];
 $uri_parts = explode("/", $uri);
 
 if ($uri_parts[1] == "api") {
-	if ($uri_parts[2] != "" && strval(intval($uri_parts[2])) === strval($uri_parts[2])) {
-		$game_id = intval($uri_parts[2]);
-		
-		$q = "SELECT game_id, blockchain_id, maturity, pos_reward, pow_reward, round_length, payout_weight, name FROM games WHERE game_id=".$game_id.";";
-		$r = $app->run_query($q);
-		
-		if ($r->rowCount() == 1) {
-			$db_game = $r->fetch();
-			$blockchain = new Blockchain($db_game['blockchain_id'], $app);
-			$game = new Game($blockchain, $db_game['game_id']);
-			$last_block_id = $game->blockchain->last_block_id();
-			$current_round = $game->block_to_round($last_block_id+1);
-			
-			$intval_vars = array('game_id','round_length','maturity');
-			for ($i=0; $i<count($intval_vars); $i++) {
-				$game->db_game[$intval_vars[$i]] = intval($game->db_game[$intval_vars[$i]]);
-			}
-			
-			if (empty($uri_parts[3]) || $uri_parts[3] == "status") {
-				$api_user = FALSE;
-				$api_user_info = FALSE;
-				
-				if (!empty($_REQUEST['api_access_code'])) {
-					$q = "SELECT * FROM users u JOIN user_games ug ON u.user_id=ug.user_id WHERE ug.game_id='".$game->db_game['game_id']."' AND u.api_access_code=".$app->quote_escape($_REQUEST['api_access_code']).";";
-					$r = $app->run_query($q);
-					if ($r->rowCount() == 1) {
-						$db_api_user = $r->fetch();
-						$api_user = new User($app, $db_api_user['user_id']);
-						$account_value = $api_user->account_coin_value($game, $db_api_user);
-						$immature_balance = $api_user->immature_balance($game, $db_api_user);
-						$mature_balance = $api_user->mature_balance($game, $db_api_user);
-						$votes_available = $api_user->user_current_votes($game, $last_block_id, $current_round, $db_api_user);
-						
-						$api_user_info['username'] = $api_user->db_user['username'];
-						$api_user_info['balance'] = $account_value;
-						$api_user_info['mature_balance'] = $mature_balance;
-						$api_user_info['immature_balance'] = $immature_balance;
-						$api_user_info['votes_available'] = $votes_available;
-						
-						$mature_utxos = array();
-						$mature_utxo_q = "SELECT * FROM transaction_ios i JOIN addresses a ON i.address_id=a.address_id WHERE i.spend_status='unspent' AND i.spend_transaction_id IS NULL AND a.user_id=".$api_user->db_user['user_id']." AND i.game_id=".$game->db_game['game_id']." AND (i.create_block_id <= ".($last_block_id-$game->db_game['maturity'])." OR i.instantly_mature = 1) ORDER BY i.io_id ASC;";
-						$mature_utxo_r = $app->run_query($mature_utxo_q);
-						$utxo_i = 0;
-						while ($utxo = $mature_utxo_r->fetch()) {
-							$mature_utxos[$utxo_i] = array('utxo_id'=>intval($utxo['io_id']), 'coins'=>$utxo['amount'], 'create_block_id'=>intval($utxo['create_block_id']));
-							$utxo_i++;
-						}
-						$api_user_info['my_utxos'] = $mature_utxos;
-					}
-				}
-				
-				$output_game['game_id'] = $game->db_game['game_id'];
-				$output_game['name'] = $game->db_game['name'];
-				$output_game['last_block_id'] = $last_block_id;
-				$output_game['current_round'] = $current_round;
-				$output_game['block_within_round'] = $game->block_id_to_round_index($last_block_id+1);
-				
-				$event_vars = array('event_id','event_type_id','event_name','event_starting_block','event_final_block','option_name','option_name_plural');
-				$current_events = array();
-				for ($i=0; $i<count($game->current_events); $i++) {
-					for ($j=0; $j<count($event_vars); $j++) {
-						$api_event[$event_vars[$j]] = $game->current_events[$i]->db_event[$event_vars[$j]];
-					}
-					$api_event['options'] = array();
-					
-					$event_stats = $game->current_events[$i]->round_voting_stats_all($current_round);
-					$total_vote_sum = $event_stats[0];
-					$max_vote_sum = $event_stats[1];
-					$ranked_stats = $event_stats[2];
-					$option_id_to_rank = $event_stats[3];
-					$confirmed_votes = $event_stats[4];
-					$unconfirmed_votes = $event_stats[5];
-					
-					$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.event_id=".$game->current_events[$i]->db_event['event_id'].";";
-					$rr = $app->run_query($qq);
-					while ($option = $rr->fetch()) {
-						$stat = $ranked_stats[$option_id_to_rank[$option['option_id']]];
-						$api_stat = false;
-						$api_stat['option_id'] = (int) $option['option_id'];
-						$api_stat['name'] = $stat['name'];
-						$api_stat['rank'] = $option_id_to_rank[$option['option_id']]+1;
-						$api_stat['confirmed_votes'] = $app->friendly_intval($stat[$game->db_game['payout_weight'].'_score']);
-						$api_stat['unconfirmed_votes'] = $app->friendly_intval($stat['unconfirmed_'.$game->db_game['payout_weight'].'_score']);
-						array_push($api_event['options'], $api_stat);
-					}
-					array_push($current_events, $api_event);
-				}
-				$output_game['current_events'] = $current_events;
-				/*$game_votes = false;
-				
-				$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id=".$game->db_game['game_id'].";";
-				$rr = $app->run_query($qq);
-				while ($option = $rr->fetch()) {
-					$stat = $ranked_stats[$option_id_to_rank[$option['option_id']]];
-					$api_stat = false;
-					$api_stat['option_id'] = (int) $option['option_id'];
-					$api_stat['name'] = $stat['name'];
-					$api_stat['rank'] = $option_id_to_rank[$option['option_id']]+1;
-					$api_stat['confirmed_votes'] = $app->friendly_intval($stat[$game->db_game['payout_weight'].'_score']);
-					$api_stat['unconfirmed_votes'] = $app->friendly_intval($stat['unconfirmed_'.$game->db_game['payout_weight'].'_score']);
-					
-					$game_votes[$option['option_id']] = $api_stat;
-				}*/
-				
-				$api_output = array('status_code'=>1, 'status_message'=>"Successful", 'game'=>$output_game, 'user_info'=>$api_user_info);
-			}
-			else {
-				$api_output = array('status_code'=>0, 'status_message'=>'Error, URL not recognized');
-			}
-		}
-		else {
-			$api_output = array('status_code'=>0, 'status_message'=>'Error: Invalid game ID');
-		}
-		echo json_encode($api_output);
-	}
-	else if ($uri_parts[2] == "about") {
-		require_once('includes/connect.php');
-		require_once('includes/get_session.php');
-		if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
-		
+	if ($uri_parts[2] == "about") {
 		$pagetitle = $GLOBALS['coin_brand_name']." API Documentation";
 		$nav_tab_selected = "api";
 		include('includes/html_start.php');
@@ -149,7 +30,7 @@ if ($uri_parts[1] == "api") {
 				<br/><br/>
 			</p>
 			<p>
-				<b><a target="_blank" href="/api/<?php echo $api_game->db_game['game_id']; ?>/status/">/api/<?php echo $api_game->db_game['game_id']; ?>/status/</a></b> &nbsp;&nbsp;&nbsp; <a href="" onclick="$('#api_status_example').toggle('fast'); return false;">See Example</a><br/>
+				<b><a target="_blank" href="/api/<?php echo $api_game->db_game['url_identifier']; ?>/status/">/api/<?php echo $api_game->db_game['url_identifier']; ?>/status/</a></b><br/>
 				Yields information about current status of the blockchain.
 				<br/>
 			</p>
@@ -157,7 +38,7 @@ if ($uri_parts[1] == "api") {
 
 </pre>
 			<p>
-				<b>/api/<?php echo $api_game->db_game['game_id']; ?>/status/?api_access_code=&lt;ACCESS_CODE&gt;</b> &nbsp;&nbsp;&nbsp; <a href="" onclick="$('#api_status_user_example').toggle('fast'); return false;">See Example</a><br/>
+				<b>/api/<?php echo $api_game->db_game['url_identifier']; ?>/status/?api_access_code=&lt;ACCESS_CODE&gt;</b><br/>
 				Supply your API access code to get relevant info on your user account in addition to general blockchain information.
 				<br/>
 			</p>
@@ -186,6 +67,127 @@ if ($uri_parts[1] == "api") {
 		header('Content-Length: '.strlen($raw));
 		header('Last-Modified: '.gmdate('D, d M Y H:i:s').' GMT');
 		echo $raw;
+	}
+	else if (!empty($uri_parts[2])) {
+		$game_identifier = $uri_parts[2];
+		
+		$q = "SELECT game_id, blockchain_id, maturity, pos_reward, pow_reward, round_length, payout_weight, name FROM games WHERE url_identifier=".$app->quote_escape($game_identifier).";";
+		$r = $app->run_query($q);
+		
+		if ($r->rowCount() == 1) {
+			$db_game = $r->fetch();
+			
+			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+			$game = new Game($blockchain, $db_game['game_id']);
+			$last_block_id = $game->blockchain->last_block_id();
+			$current_round = $game->block_to_round($last_block_id+1);
+			
+			$intval_vars = array('game_id','round_length','maturity');
+			for ($i=0; $i<count($intval_vars); $i++) {
+				$game->db_game[$intval_vars[$i]] = intval($game->db_game[$intval_vars[$i]]);
+			}
+			
+			if (empty($uri_parts[3]) || $uri_parts[3] == "status") {
+				$api_user = FALSE;
+				$api_user_info = FALSE;
+				
+				if (!empty($_REQUEST['api_access_code'])) {
+					$q = "SELECT * FROM users u JOIN user_games ug ON u.user_id=ug.user_id WHERE ug.game_id='".$game->db_game['game_id']."' AND ug.api_access_code=".$app->quote_escape($_REQUEST['api_access_code']).";";
+					$r = $app->run_query($q);
+					
+					if ($r->rowCount() == 1) {
+						$user_game = $r->fetch();
+						
+						$api_user = new User($app, $user_game['user_id']);
+						$account_value = $api_user->account_coin_value($game, $user_game);
+						$immature_balance = $api_user->immature_balance($game, $user_game);
+						$mature_balance = $api_user->mature_balance($game, $user_game);
+						$votes_available = $api_user->user_current_votes($game, $last_block_id, $current_round, $user_game);
+						
+						$api_user_info['username'] = $api_user->db_user['username'];
+						$api_user_info['account_id'] = intval($user_game['account_id']);
+						$api_user_info['balance'] = $account_value;
+						$api_user_info['mature_balance'] = $mature_balance;
+						$api_user_info['immature_balance'] = $immature_balance;
+						$api_user_info['votes_available'] = $votes_available;
+						
+						$mature_utxos = array();
+						$mature_utxo_q = "SELECT io.*, ak.pub_key AS address FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN address_keys ak ON io.address_id=ak.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND ak.account_id=".$user_game['account_id']." AND gio.game_id=".$game->db_game['game_id']." AND (io.create_block_id <= ".($last_block_id-$game->db_game['maturity'])." OR gio.instantly_mature = 1) GROUP BY io.io_id ORDER BY io.io_id ASC;";
+						$mature_utxo_r = $app->run_query($mature_utxo_q);
+						
+						$utxo_i = 0;
+						
+						while ($utxo = $mature_utxo_r->fetch()) {
+							$game_io_q = "SELECT * FROM transaction_game_ios WHERE game_id='".$game->db_game['game_id']."' AND io_id='".$utxo['io_id']."'";
+							if ($utxo['create_block_id'] > $last_block_id-$game->db_game['maturity']) $game_io_q .= " AND instantly_mature = 1";
+							$game_io_q .= " ORDER BY game_io_id ASC;";
+							$game_io_r = $app->run_query($game_io_q);
+							
+							$mature_utxo = array('io_id'=>intval($utxo['io_id']), 'coins'=>$utxo['amount'], 'create_block_id'=>intval($utxo['create_block_id']), 'address'=>$utxo['address']);
+							$game_utxos = array();
+							
+							while ($game_io = $game_io_r->fetch()) {
+								array_push($game_utxos, array('game_io_id'=>intval($game_io['game_io_id']), 'coins'=>$game_io['colored_amount'], 'is_coinbase'=>intval($game_io['is_coinbase'])));
+							}
+							$mature_utxo['game_utxos'] = $game_utxos;
+							$mature_utxos[$utxo_i] = $mature_utxo;
+							
+							$utxo_i++;
+						}
+						$api_user_info['my_utxos'] = $mature_utxos;
+					}
+				}
+				
+				$output_game['game_id'] = $game->db_game['game_id'];
+				$output_game['name'] = $game->db_game['name'];
+				$output_game['last_block_id'] = intval($last_block_id);
+				$output_game['current_round'] = $current_round;
+				$output_game['block_within_round'] = $game->block_id_to_round_index($last_block_id+1);
+				
+				$event_vars = array('event_id','event_type_id','event_name','event_starting_block','event_final_block','option_name','option_name_plural');
+				$current_events = array();
+				for ($i=0; $i<count($game->current_events); $i++) {
+					for ($j=0; $j<count($event_vars); $j++) {
+						$api_event[$event_vars[$j]] = $game->current_events[$i]->db_event[$event_vars[$j]];
+						if (in_array($event_vars[$j], array('event_id', 'event_type_id', 'event_starting_block', 'event_final_block'))) $api_event[$event_vars[$j]] = (int) $api_event[$event_vars[$j]];
+					}
+					$api_event['options'] = array();
+					
+					$event_stats = $game->current_events[$i]->round_voting_stats_all($current_round);
+					$total_vote_sum = $event_stats[0];
+					$max_vote_sum = $event_stats[1];
+					$ranked_stats = $event_stats[2];
+					$option_id_to_rank = $event_stats[3];
+					$confirmed_votes = $event_stats[4];
+					$unconfirmed_votes = $event_stats[5];
+					
+					$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.event_id=".$game->current_events[$i]->db_event['event_id'].";";
+					$rr = $app->run_query($qq);
+					while ($option = $rr->fetch()) {
+						$stat = $ranked_stats[$option_id_to_rank[$option['option_id']]];
+						$api_stat = false;
+						$api_stat['option_id'] = (int) $option['option_id'];
+						$api_stat['option_index'] = (int) $option['option_index'];
+						$api_stat['name'] = $stat['name'];
+						$api_stat['rank'] = $option_id_to_rank[$option['option_id']]+1;
+						$api_stat['confirmed_votes'] = $app->friendly_intval($stat[$game->db_game['payout_weight'].'_score']);
+						$api_stat['unconfirmed_votes'] = $app->friendly_intval($stat['unconfirmed_'.$game->db_game['payout_weight'].'_score']);
+						array_push($api_event['options'], $api_stat);
+					}
+					array_push($current_events, $api_event);
+				}
+				$output_game['current_events'] = $current_events;
+				
+				$api_output = array('status_code'=>1, 'status_message'=>"Successful", 'game'=>$output_game, 'user_info'=>$api_user_info);
+			}
+			else {
+				$api_output = array('status_code'=>0, 'status_message'=>'Error, URL not recognized');
+			}
+		}
+		else {
+			$api_output = array('status_code'=>0, 'status_message'=>'Error: Invalid game ID');
+		}
+		echo json_encode($api_output, JSON_PRETTY_PRINT);
 	}
 	else if ($uri == "/api/") {
 		header("Location: /api/about");

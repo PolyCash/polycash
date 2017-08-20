@@ -407,8 +407,8 @@ class Game {
 				
 				if ($free_balance > 0 && $available_votes > 0) {
 					if ($db_user['voting_strategy'] == "api") {
-						if ($GLOBALS['api_proxy_url']) $api_client_url = $GLOBALS['api_proxy_url'].urlencode($strategy_user->db_user['api_url']);
-						else $api_client_url = $strategy_user->db_user['api_url'];
+						if ($GLOBALS['api_proxy_url']) $api_client_url = $GLOBALS['api_proxy_url'].urlencode($db_user['api_url']);
+						else $api_client_url = $db_user['api_url'];
 						
 						$api_result = file_get_contents($api_client_url);
 						$api_obj = json_decode($api_result);
@@ -423,11 +423,11 @@ class Game {
 										if (!$input_error) {
 											$utxo_id = intval($api_obj->input_utxo_ids[$i]);
 											if (strval($utxo_id) === strval($api_obj->input_utxo_ids[$i])) {
-												$utxo_q = "SELECT *, io.user_id AS io_user_id, a.user_id AS address_user_id FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.io_id='".$utxo_id."' AND io.game_id='".$this->db_game['game_id']."';";
+												$utxo_q = "SELECT *, ca.user_id AS account_user_id, a.user_id AS address_user_id FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id WHERE gio.game_io_id='".$utxo_id."';";
 												$utxo_r = $this->blockchain->app->run_query($utxo_q);
 												if ($utxo_r->rowCount() == 1) {
 													$utxo = $utxo_r->fetch();
-													if ($utxo['io_user_id'] == $strategy_user->db_user['user_id'] && $utxo['address_user_id'] == $strategy_user->db_user['user_id']) {
+													if ($utxo['account_user_id'] == $strategy_user->db_user['user_id'] && $utxo['address_user_id'] == $strategy_user->db_user['user_id']) {
 														if (!$utxo['spend_transaction_id'] && $utxo['spend_status'] == "unspent" && $utxo['create_block_id'] !== "") {
 															$input_io_ids[count($input_io_ids)] = $utxo['io_id'];
 														}
@@ -465,15 +465,19 @@ class Game {
 							$amount_sum = 0;
 							$option_id_error = false;
 							
-							$log_text .= $strategy_user->db_user['username']." has ".$free_balance/pow(10,8)." coins available, hitting url: ".$strategy_user->db_user['api_url']."<br/>\n";
+							$log_text .= $strategy_user->db_user['username']." has ".$free_balance/pow(10,8)." coins available, hitting url: ".$db_user['api_url']."<br/>\n";
 							
 							foreach ($api_obj->recommendations as $recommendation) {
-								if ($recommendation->recommended_amount && $recommendation->recommended_amount > 0 && friendly_intval($recommendation->recommended_amount) == $recommendation->recommended_amount) $amount_sum += $recommendation->recommended_amount;
+								if ($recommendation->recommended_amount && $recommendation->recommended_amount > 0 && $this->blockchain->app->friendly_intval($recommendation->recommended_amount) == $recommendation->recommended_amount) $amount_sum += $recommendation->recommended_amount;
 								else $amount_error = true;
 								
-								$qq = "SELECT * FROM options WHERE option_id='".$recommendation->option_id."' AND game_id='".$this->db_game['game_id']."';";
+								$qq = "SELECT * FROM options op JOIN events ev ON op.event_id=ev.event_id WHERE op.option_index='".$recommendation->option_index."' AND ev.game_id='".$this->db_game['game_id']."' AND ev.event_starting_block <= ".$mining_block_id." AND ev.event_final_block >= ".$mining_block_id.";";
 								$rr = $this->blockchain->app->run_query($qq);
-								if ($rr->rowCount() == 1) {}
+								
+								if ($rr->rowCount() == 1) {
+									$db_option = $rr->fetch();
+									$recommendation->option_id = $db_option['option_id'];
+								}
 								else $option_id_error = true;
 							}
 							

@@ -771,7 +771,8 @@ if ($thisuser && $game) {
 							<label class="plainlabel" for="voting_strategy_api">
 								Hit a custom URL whenever I have <?php echo $game->db_game['coin_name_plural']; ?> available to determine my votes: <input type="text" size="40" placeholder="http://" name="api_url" id="api_url" value="<?php echo $user_strategy['api_url']; ?>" />
 							</label><br/>
-							Your API access code is <?php echo $thisuser->db_user['api_access_code']; ?> <a href="/api/about/">API documentation</a><br/>
+							Your API access code is <?php echo $user_game['api_access_code']; ?><br/>
+							<a href="/api/about/">API documentation</a><br/>
 						</div>
 					</div>
 					
