@@ -163,6 +163,7 @@ if ($uri_parts[1] == "api") {
 					
 					$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.event_id=".$game->current_events[$i]->db_event['event_id'].";";
 					$rr = $app->run_query($qq);
+					
 					while ($option = $rr->fetch()) {
 						$stat = $ranked_stats[$option_id_to_rank[$option['option_id']]];
 						$api_stat = false;
@@ -172,6 +173,9 @@ if ($uri_parts[1] == "api") {
 						$api_stat['rank'] = $option_id_to_rank[$option['option_id']]+1;
 						$api_stat['confirmed_votes'] = $app->friendly_intval($stat[$game->db_game['payout_weight'].'_score']);
 						$api_stat['unconfirmed_votes'] = $app->friendly_intval($stat['unconfirmed_'.$game->db_game['payout_weight'].'_score']);
+						
+						if (!empty($game->current_events[$i]->db_event['option_block_rule'])) $api_stat['option_block_score'] = (int) $option['option_block_score'];
+						
 						array_push($api_event['options'], $api_stat);
 					}
 					array_push($current_events, $api_event);

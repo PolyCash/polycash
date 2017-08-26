@@ -1090,7 +1090,7 @@ if ($thisuser && $game) {
 				
 				$q = "SELECT * FROM games g LEFT JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."'";
 				if ($game_id_csv != "") $q .= " AND g.game_id NOT IN (".$game_id_csv.")";
-				$q .= " ORDER BY g.game_id ASC;";
+				$q .= " GROUP BY g.game_id ORDER BY g.game_id ASC;";
 				$r = $app->run_query($q);
 				while ($user_game = $r->fetch()) {
 					echo $app->game_admin_row($thisuser, $user_game, $game->db_game['game_id']);

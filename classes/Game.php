@@ -423,11 +423,11 @@ class Game {
 										if (!$input_error) {
 											$utxo_id = intval($api_obj->input_utxo_ids[$i]);
 											if (strval($utxo_id) === strval($api_obj->input_utxo_ids[$i])) {
-												$utxo_q = "SELECT *, ca.user_id AS account_user_id, a.user_id AS address_user_id FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id WHERE gio.game_io_id='".$utxo_id."';";
+												$utxo_q = "SELECT *, ca.user_id AS account_user_id FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id WHERE gio.game_io_id='".$utxo_id."';";
 												$utxo_r = $this->blockchain->app->run_query($utxo_q);
 												if ($utxo_r->rowCount() == 1) {
 													$utxo = $utxo_r->fetch();
-													if ($utxo['account_user_id'] == $strategy_user->db_user['user_id'] && $utxo['address_user_id'] == $strategy_user->db_user['user_id']) {
+													if ($utxo['account_user_id'] == $strategy_user->db_user['user_id']) {
 														if (!$utxo['spend_transaction_id'] && $utxo['spend_status'] == "unspent" && $utxo['create_block_id'] !== "") {
 															$input_io_ids[count($input_io_ids)] = $utxo['io_id'];
 														}
@@ -512,7 +512,7 @@ class Game {
 									$log_text .= "Vote ".$vote_amount." for ".$vote_option_id."<br/>\n";
 								}
 								
-								$transaction_id = $this->create_transaction($vote_option_ids, $vote_amounts, $db_user, false, 'transaction', $input_io_ids, false, false, false);
+								$transaction_id = $this->create_transaction($vote_option_ids, $vote_amounts, $db_user, false, 'transaction', $input_io_ids, false, false, $api_obj->recommended_fee);
 								
 								if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
 								else $log_text .= "Failed to add transaction.<br/>\n";
@@ -1406,14 +1406,12 @@ class Game {
 	public function render_game_players() {
 		$html = "";
 		
-		$q = "SELECT * FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$this->db_game['game_id']."' AND ug.payment_required=0 ORDER BY ug.account_value DESC, u.username ASC;";
+		$q = "SELECT *, SUM(ug.account_value) AS account_value_sum FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$this->db_game['game_id']."' AND ug.payment_required=0 GROUP BY ug.user_id ORDER BY account_value_sum DESC, u.username ASC;";
 		$r = $this->blockchain->app->run_query($q);
 		$html .= "<h3>".$r->rowCount()." players</h3>\n";
 		
 		while ($temp_user_game = $r->fetch()) {
-			$temp_user = new User($this->blockchain->app, $temp_user_game['user_id']);
-			$account_coin_value = $temp_user->account_coin_value($this, $temp_user_game);
-			$networth_disp = $this->blockchain->app->format_bignum($account_coin_value/pow(10,8));
+			$networth_disp = $this->blockchain->app->format_bignum($temp_user_game['account_value_sum']);
 			
 			$html .= '<div class="row">';
 			$html .= '<div class="col-sm-4"><a href="" onclick="openChatWindow('.$temp_user_game['user_id'].'); return false;">'.$temp_user_game['username'].'</a></div>';
@@ -1424,8 +1422,6 @@ class Game {
 			$html .= '</div>';
 			
 			$html .= '</div>';
-			$qq = "UPDATE user_games SET account_value='".($account_coin_value/pow(10,8))."' WHERE user_game_id='".$temp_user_game['user_game_id']."';";
-			$this->blockchain->app->run_query($qq);
 		}
 		
 		return $html;
