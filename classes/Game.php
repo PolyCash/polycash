@@ -141,7 +141,7 @@ class Game {
 						$address = $r->fetch();
 						
 						if ($this->blockchain->db_blockchain['p2p_mode'] == "none") {
-							$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."', spend_status='";
+							$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."', script_type='pubkeyhash', spend_status='";
 							if ($instantly_mature == 1) $q .= "unspent";
 							else $q .= "unconfirmed";
 							$q .= "', out_index='".$out_index."', ";
@@ -186,7 +186,7 @@ class Game {
 					$overshoot_address = $r->fetch();
 					
 					if ($this->blockchain->db_blockchain['p2p_mode'] == "none") {
-						$q = "INSERT INTO transaction_ios SET out_index='".$out_index."', spend_status='unconfirmed', game_id='".$this->db_game['game_id']."', ";
+						$q = "INSERT INTO transaction_ios SET out_index='".$out_index."', spend_status='unconfirmed', game_id='".$this->db_game['game_id']."', script_type='pubkeyhash', ";
 						if ($block_id !== false) {
 							$overshoot_cbd = floor($coin_blocks_destroyed*($overshoot_amount/$input_sum));
 							$overshoot_crd = floor($coin_rounds_destroyed*($overshoot_amount/$input_sum));

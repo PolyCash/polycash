@@ -358,7 +358,7 @@ class Blockchain {
 								
 								$output_address = $this->create_or_fetch_address($address_text, true, $coin_rpc, false, true, false);
 								
-								$q = "INSERT INTO transaction_ios SET spend_status='unspent', blockchain_id='".$this->db_blockchain['blockchain_id']."', out_index='".$j."'";
+								$q = "INSERT INTO transaction_ios SET spend_status='unspent', blockchain_id='".$this->db_blockchain['blockchain_id']."', script_type='".$outputs[$j]["scriptPubKey"]["type"]."', out_index='".$j."'";
 								if ($output_address['user_id'] > 0) $q .= ", user_id='".$output_address['user_id']."'";
 								$q .= ", address_id='".$output_address['address_id']."'";
 								
@@ -1204,7 +1204,7 @@ class Blockchain {
 							$spend_status = "unconfirmed";
 							if ($type == "coinbase") $spend_status = "unspent";
 							
-							$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->db_blockchain['blockchain_id']."', spend_status='".$spend_status."', out_index='".$out_index."', ";
+							$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->db_blockchain['blockchain_id']."', spend_status='".$spend_status."', out_index='".$out_index."', script_type='pubkeyhash', ";
 							if (!empty($address['user_id'])) $q .= "user_id='".$address['user_id']."', ";
 							$q .= "address_id='".$address_id."', ";
 							$q .= "option_index='".$address['option_index']."', ";
