@@ -262,7 +262,7 @@ footer {
 .chatWindow {
 	position: absolute;
 	right: 0px;
-	top: -250px;
+	top: -280px;
 	float: right;
 	width: 220px;
 	height: 250px;
@@ -411,4 +411,27 @@ footer {
 #change_user_game {
 	display: inline-block;
 	float: right;
+}
+.status_footer {
+	height: 30px;
+	margin-top: -30px;
+	background-color: rgba(0,0,0,0);
+}
+.status_footer_right {
+	display: inline-block;
+	float: right;
+	background-color: #fff;
+	border: 1px solid #888;
+	opacity: 0.9;
+	line-height: 30px;
+	padding: 0px 5px;
+}
+.status_footer_img {
+	height: 20px;
+	width: 20px;
+	margin-right: 5px;
+}
+.status_footer_section {
+	padding: 0px 8px;
+	display: inline-block;
 }

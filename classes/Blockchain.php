@@ -149,6 +149,7 @@ class Blockchain {
 				if (!$successful) {
 					$tx_error = true;
 					$i = count($lastblock_rpc['tx']);
+					echo "failed to add tx ".$tx_hash."<br/>\n";
 				}
 				echo "\n";
 				if ($db_transaction['transaction_desc'] != "transaction") $coins_created += $db_transaction['amount'];
@@ -1016,7 +1017,7 @@ class Blockchain {
 	}
 	
 	public function block_stats($block) {
-		$q = "SELECT COUNT(*), SUM(amount) FROM transactions WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id='".$block['block_id']."' AND amount > 0;";
+		$q = "SELECT COUNT(*), SUM(amount) FROM transactions WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id='".$block['block_id']."' AND (amount > 0 OR num_inputs = 0);";
 		$r = $this->app->run_query($q);
 		$r = $r->fetch(PDO::FETCH_NUM);
 		return array($r[0], $r[1]);
