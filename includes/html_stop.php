@@ -22,11 +22,19 @@
 			$r = $app->run_query($q);
 			
 			while ($db_blockchain = $r->fetch()) {
+				$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
+				$recent_block = $blockchain->most_recently_loaded_block();
+				
+				if (!empty($db_blockchain['rpc_last_time_connected'])) $blockchain_last_active = $db_blockchain['rpc_last_time_connected'];
+				else $blockchain_last_active = false;
+				
+				if (!empty($recent_block['time_loaded']) && $recent_block['time_loaded'] > $blockchain_last_active) $blockchain_last_active = $recent_block['time_loaded'];
+				
 				echo '<div class="status_footer_section">';
 				echo '<a href="/explorer/blockchains/'.$db_blockchain['url_identifier'].'/blocks/">';
 				echo '<img class="status_footer_img" src="/images/custom/'.$db_blockchain['default_image_id'].'.'.$db_blockchain['extension'].'" />';
 				
-				if ($db_blockchain['rpc_last_time_connected'] > time()-(60*2)) {
+				if ($blockchain_last_active > time()-(60*2)) {
 					echo '<font class="greentext">Online</font>';
 				}
 				else {

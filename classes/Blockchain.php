@@ -354,6 +354,7 @@ class Blockchain {
 								
 								if (!empty($outputs[$j]["scriptPubKey"]["addresses"])) $address_text = $outputs[$j]["scriptPubKey"]["addresses"][0];
 								else $address_text = $outputs[$j]["scriptPubKey"]["hex"];
+								if (strlen($address_text) > 50) $address_text = substr($address_text, 0, 50);
 								
 								$output_address = $this->create_or_fetch_address($address_text, true, $coin_rpc, false, true, false);
 								
