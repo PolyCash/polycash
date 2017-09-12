@@ -48,12 +48,12 @@ class Blockchain {
 	}
 	
 	public function last_complete_block_id() {
-		$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND locally_saved=1 ORDER BY block_id DESC LIMIT 1;";
+		$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id >= ".$this->db_blockchain['first_required_block']." AND locally_saved=0 ORDER BY block_id ASC LIMIT 1;";
 		$r = $this->app->run_query($q);
 		
 		if ($r->rowCount() > 0) {
 			$block = $r->fetch();
-			return $block['block_id'];
+			return $block['block_id']-1;
 		}
 		else return 0;
 	}
@@ -182,11 +182,6 @@ class Blockchain {
 		$successful = true;
 		$start_time = microtime(true);
 		$benchmark_time = $start_time;
-		
-		if ($only_vout) {
-			$error_message = "Downloading vout #".$only_vout." in ".$tx_hash;
-			if ($show_debug) echo $error_message."\n";
-		}
 		
 		$add_transaction = true;
 		
@@ -354,12 +349,15 @@ class Blockchain {
 							$option_id = false;
 							$event = false;
 							
-							if (!empty($outputs[$j]["scriptPubKey"]) && !empty($outputs[$j]["scriptPubKey"]["addresses"])) {
-								$address_text = $outputs[$j]["scriptPubKey"]["addresses"][0];
+							if (!empty($outputs[$j]["scriptPubKey"]) && (!empty($outputs[$j]["scriptPubKey"]["addresses"]) || !empty($outputs[$j]["scriptPubKey"]["hex"]))) {
+								$script_type = $outputs[$j]["scriptPubKey"]["type"];
+								
+								if (!empty($outputs[$j]["scriptPubKey"]["addresses"])) $address_text = $outputs[$j]["scriptPubKey"]["addresses"][0];
+								else $address_text = $outputs[$j]["scriptPubKey"]["hex"];
 								
 								$output_address = $this->create_or_fetch_address($address_text, true, $coin_rpc, false, true, false);
 								
-								$q = "INSERT INTO transaction_ios SET spend_status='unspent', blockchain_id='".$this->db_blockchain['blockchain_id']."', script_type='".$outputs[$j]["scriptPubKey"]["type"]."', out_index='".$j."'";
+								$q = "INSERT INTO transaction_ios SET spend_status='unspent', blockchain_id='".$this->db_blockchain['blockchain_id']."', script_type='".$script_type."', out_index='".$j."'";
 								if ($output_address['user_id'] > 0) $q .= ", user_id='".$output_address['user_id']."'";
 								$q .= ", address_id='".$output_address['address_id']."'";
 								
@@ -494,7 +492,6 @@ class Blockchain {
 		$html = "Running Blockchain->sync_coind() for ".$this->db_blockchain['blockchain_name']."\n";
 		
 		$last_block_id = $this->last_complete_block_id();
-		
 		$startblock_q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id='".$last_block_id."';";
 		$startblock_r = $this->app->run_query($startblock_q);
 		
@@ -510,13 +507,13 @@ class Blockchain {
 		
 		if ($startblock_r->rowCount() == 1) {
 			$last_block = $startblock_r->fetch();
+			
 			if ($last_block['block_hash'] == "") {
 				$last_block_hash = $coin_rpc->getblockhash((int) $last_block['block_id']);
 				$this->coind_add_block($coin_rpc, $last_block_hash, $last_block['block_id'], TRUE);
 				$this->update_option_votes();
 				$last_block = $this->app->run_query("SELECT * FROM blocks WHERE internal_block_id='".$last_block['internal_block_id']."';")->fetch();
 			}
-			
 			$html .= "Resolving potential fork on block #".$last_block['block_id']."<br/>\n";
 			$this->resolve_potential_fork_on_block($coin_rpc, $last_block);
 			
