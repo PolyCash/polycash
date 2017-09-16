@@ -55,7 +55,16 @@ class Blockchain {
 			$block = $r->fetch();
 			return $block['block_id']-1;
 		}
-		else return 0;
+		else {
+			$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id >= ".$this->db_blockchain['first_required_block']." AND locally_saved=1 ORDER BY block_id DESC LIMIT 1;";
+			$r = $this->app->run_query($q);
+			
+			if ($r->rowCount() > 0) {
+				$block = $r->fetch();
+				return $block['block_id'];
+			}
+			else return 0;
+		}
 	}
 	
 	public function most_recently_loaded_block() {

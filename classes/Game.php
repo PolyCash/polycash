@@ -2287,6 +2287,10 @@ class Game {
 				$game_block = $r->fetch();
 				
 				if ($game_block['locally_saved'] != 1) {
+					if ($game_block['time_created'] < time()-30) {
+						$q = "DELETE FROM game_blocks WHERE game_block_id='".$game_block['game_block_id']."';";
+						$r = $this->blockchain->app->run_query($q);
+					}
 					$GLOBALS['shutdown_lock_name'] = "";
 					die("Conflicting block loading scripts are running.. aborting this thread.");
 				}
@@ -2295,7 +2299,7 @@ class Game {
 				$msg = "Creating new game block #".$block_height."\n";
 				$log_text .= $msg;
 				
-				$q = "INSERT INTO game_blocks SET internal_block_id='".$db_block['internal_block_id']."', game_id='".$this->db_game['game_id']."', block_id='".$block_height."', locally_saved=0, num_transactions=0;";
+				$q = "INSERT INTO game_blocks SET internal_block_id='".$db_block['internal_block_id']."', game_id='".$this->db_game['game_id']."', block_id='".$block_height."', locally_saved=0, num_transactions=0, time_created='".time()."';";
 				$r = $this->blockchain->app->run_query($q);
 				$game_block_id = $this->blockchain->app->last_insert_id();
 				
