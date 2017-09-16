@@ -56,7 +56,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			echo "fee: ".$app->format_bignum($fee_amount/pow(10,8)).", buyin: ".$app->format_bignum($buyin_amount/pow(10,8)).", color: ".$app->format_bignum($color_amount/pow(10,8))."<br/>\n";
 			if ($fee_amount > 0 && $buyin_amount > 0 && $color_amount > 0) {
 				$invoice_user = new User($app, $invoice_address['user_id']);
-				$user_game = $invoice_user->ensure_user_in_game($game);
+				$user_game = $invoice_user->ensure_user_in_game($game, false);
 				$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false);
 				
 				$game_currency_account = $app->fetch_account_by_id($user_game['account_id']);

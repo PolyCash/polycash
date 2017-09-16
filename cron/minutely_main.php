@@ -68,10 +68,15 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			$real_games[$real_game_i] = new Game($blockchains[$db_real_game['blockchain_id']], $db_real_game['game_id']);
 			try {
 				$coin_rpcs[$real_game_i] = new jsonRPCClient('http://'.$db_real_game['rpc_username'].':'.$db_real_game['rpc_password'].'@127.0.0.1:'.$db_real_game['rpc_port'].'/');
-				$coin_rpcs[$real_game_i]->getinfo();
+				$getinfo = $coin_rpcs[$real_game_i]->getinfo();
 			}
 			catch (Exception $e) {
 				$coin_rpcs[$real_game_i] = false;
+			}
+			
+			if ($coin_rpcs[$real_game_i]) {
+				$qq = "UPDATE blockchains SET rpc_last_time_connected='".time()."', block_height='".$getinfo['blocks']."' WHERE blockchain_id='".$db_real_game['blockchain_id']."';";
+				$rr = $app->run_query($qq);
 			}
 			$real_game_i++;
 		}

@@ -43,24 +43,48 @@ if ($thisuser) {
 	if ($r->rowCount() > 0) {
 		$requested_game = $r->fetch();
 		
+		$blockchain = new Blockchain($app, $requested_game['blockchain_id']);
+		$game = new Game($blockchain, $requested_game['game_id']);
+		
+		if ($_REQUEST['action'] == "change_user_game") {
+			$user_game_id = $_REQUEST['user_game_id'];
+			
+			if ($user_game_id == "new") {
+				$select_user_game = $thisuser->ensure_user_in_game($game, true);
+				$thisuser->set_selected_user_game($game, $select_user_game['user_game_id']);
+			}
+			else {
+				$user_game_id = (int) $user_game_id;
+				
+				$q = "SELECT * FROM user_games WHERE user_game_id='".$user_game_id."';";
+				$r = $app->run_query($q);
+				
+				if ($r->rowCount() > 0) {
+					$select_user_game = $r->fetch();
+					
+					if ($select_user_game['user_id'] == $thisuser->db_user['user_id']) {
+						$thisuser->set_selected_user_game($game, $select_user_game['user_game_id']);
+					}
+				}
+			}
+			header("Location: /wallet/".$game->db_game['url_identifier']."/");
+			die();
+		}
+		
 		$is_creator = false;
 		if ($requested_game['creator_id'] == $thisuser->db_user['user_id']) $is_creator = true;
 		
 		$allow_public = false;
 		if ($requested_game['giveaway_status'] == "public_free" || $requested_game['giveaway_status'] == "public_pay") $allow_public = true;
 		
-		$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND g.game_id='".$requested_game['game_id']."';";
+		$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND g.game_id='".$requested_game['game_id']."' ORDER BY ug.selected DESC;";
 		$r = $app->run_query($q);
 		
 		if ($r->rowCount() > 0) {
 			$user_game = $r->fetch();
-			$blockchain = new Blockchain($app, $requested_game['blockchain_id']);
-			$game = new Game($blockchain, $user_game['game_id']);
 		}
 		else if ($is_creator || $allow_public) {
-			$blockchain = new Blockchain($app, $requested_game['blockchain_id']);
-			$game = new Game($blockchain, $requested_game['game_id']);
-			$user_game = $thisuser->ensure_user_in_game($game);
+			$user_game = $thisuser->ensure_user_in_game($game, true);
 		}
 		
 		if ($user_game && $user_game['payment_required'] == 0) {
@@ -250,7 +274,7 @@ if ($thisuser) {
 		?>
 		<div class="container" style="max-width: 1000px;"><br/>
 			<?php
-			$q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser->db_user['user_id']."' AND (g.creator_id='".$thisuser->db_user['user_id']."' OR g.game_status IN ('running','completed','published'));";
+			$q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser->db_user['user_id']."' AND (g.creator_id='".$thisuser->db_user['user_id']."' OR g.game_status IN ('running','completed','published')) GROUP BY ug.game_id;";
 			$r = $app->run_query($q);
 			
 			if ($r->rowCount() > 0) {
@@ -269,14 +293,15 @@ if ($thisuser) {
 		die();
 	}
 
-	$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND ug.game_id='".$game->db_game['game_id']."';";
+	$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND ug.game_id='".$game->db_game['game_id']."' ORDER BY ug.selected DESC;";
 	$r = $app->run_query($q);
+	
 	if ($r->rowCount() > 0) {
 		$user_game = $r->fetch();
 		$thisuser->generate_user_addresses($game, $user_game);
 	}
 	else {
-		$user_game = $thisuser->ensure_user_in_game($game);
+		$user_game = $thisuser->ensure_user_in_game($game, true);
 		
 		$thisuser->generate_user_addresses($game, $user_game);
 	}
@@ -447,10 +472,10 @@ if ($thisuser && $game) {
 		$user_game = FALSE;
 		$user_strategy = FALSE;
 		
-		$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
+		$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."' ORDER BY selected DESC;";
 		$r = $app->run_query($q);
 		
-		if ($r->rowCount() == 1) {
+		if ($r->rowCount() > 0) {
 			$user_game = $r->fetch();
 			
 			$user_strategy = $game->fetch_user_strategy($user_game);
@@ -617,7 +642,24 @@ if ($thisuser && $game) {
 				
 				$game_status_explanation = $game->game_status_explanation($thisuser, $user_game);
 				?>
-				<div id="game_status_explanation"<?php if ($game_status_explanation == "") echo ' style="display: none;"'; ?>><?php if ($game_status_explanation != "") echo $game_status_explanation; ?></div>
+				<div style="display: block; overflow: hidden;">
+					<div id="game_status_explanation"<?php if ($game_status_explanation == "") echo ' style="display: none;"'; ?>><?php if ($game_status_explanation != "") echo $game_status_explanation; ?></div>
+					
+					<div id="change_user_game">
+						<select id="select_user_game" class="form-control" onchange="change_user_game();">
+							<?php
+							$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
+							$r = $app->run_query($q);
+							while ($db_user_game = $r->fetch()) {
+								echo "<option ";
+								if ($db_user_game['user_game_id'] == $user_game['user_game_id']) echo "selected=\"selected\" ";
+								echo "value=\"".$db_user_game['user_game_id']."\">Account #".$db_user_game['account_id']." &nbsp;&nbsp; ".$app->format_bignum($db_user_game['account_value'])." ".$game->db_game['coin_abbreviation']."</option>\n";
+							}
+							?>
+							<option value="new">Create a new account</option>
+						</select>
+					</div>
+				</div>
 				
 				<div id="game0_events" class="game_events"></div>
 				
@@ -729,7 +771,8 @@ if ($thisuser && $game) {
 							<label class="plainlabel" for="voting_strategy_api">
 								Hit a custom URL whenever I have <?php echo $game->db_game['coin_name_plural']; ?> available to determine my votes: <input type="text" size="40" placeholder="http://" name="api_url" id="api_url" value="<?php echo $user_strategy['api_url']; ?>" />
 							</label><br/>
-							Your API access code is <?php echo $thisuser->db_user['api_access_code']; ?> <a href="/api/about/">API documentation</a><br/>
+							Your API access code is <?php echo $user_game['api_access_code']; ?><br/>
+							<a href="/api/about/">API documentation</a><br/>
 						</div>
 					</div>
 					
@@ -1047,7 +1090,7 @@ if ($thisuser && $game) {
 				
 				$q = "SELECT * FROM games g LEFT JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."'";
 				if ($game_id_csv != "") $q .= " AND g.game_id NOT IN (".$game_id_csv.")";
-				$q .= " ORDER BY g.game_id ASC;";
+				$q .= " GROUP BY g.game_id ORDER BY g.game_id ASC;";
 				$r = $app->run_query($q);
 				while ($user_game = $r->fetch()) {
 					echo $app->game_admin_row($thisuser, $user_game, $game->db_game['game_id']);

@@ -2,24 +2,22 @@
 include("includes/config.php");
 ini_set('display_errors', 'Off');
 /*
-EmpireCoin Voting Recommendations API Client
-To use custom logic for voting your empirecoins, install this PHP script on a webserver
-Then enter it's URL into your EmpireCoin user account under the Voting Strategies -> Vote by API section.
+To use custom logic, install this PHP script on a webserver
+Then enter it's URL into your user account under the Strategy tab.
 To keep your recommendations private, it's recommended that you set a secure $client_access_key below.
 Then your API url will be something like:
-http://mywebserver.com/EmpirecoinAPIClient.php?key=$GLOBALS['cron_key_string']
+http://mywebserver.com/APIClient.php?key=$GLOBALS['cron_key_string']
 */
 
 // Log into your web wallet -> Settings to find your server access key, then enter it below
 $server_access_key = $GLOBALS['default_server_api_access_key'];
-$server_host = "http://empirecoin.org";
+$server_host = "http://chainbets.com";
 $client_access_key = $GLOBALS['cron_key_string'];
 
 $event_id = intval($_REQUEST['event_id']);
 if (!$event_id) die("Please provide a valid event_id");
 
 if ($_REQUEST['key'] == $client_access_key) {
-	// Many VotingRecommendations can be sent at once; each consists of an empire and a number of votes.
 	class VotingRecommendation {
 		public $option_id;
 		public $name;
@@ -39,14 +37,12 @@ if ($_REQUEST['key'] == $client_access_key) {
 		public $error_message;
 		public $total_vote_amount;
 		public $server_result;
-		public $name2option_id;
 		public $rank2option_id;
 		public $recommendation_unit;
 		public $server_host;
 		public $server_access_key;
 		public $input_utxo_ids;
 		
-		// Initialize variables and define the Empires aka "Voting Options"
 		public function __construct($event_id, $server_host, $server_access_key) {
 			$this->event_id = $event_id;
 			$this->server_host = $server_host;
@@ -60,7 +56,6 @@ if ($_REQUEST['key'] == $client_access_key) {
 			$this->error_code = FALSE;
 			$this->error_message = "";
 			$this->total_vote_amount = FALSE;
-			$this->name2option_id = FALSE;
 			$this->rank2option_id = FALSE;
 			$this->recommendation_unit = FALSE;
 			$this->input_utxo_ids = array();
@@ -68,16 +63,7 @@ if ($_REQUEST['key'] == $client_access_key) {
 			$this->recommendations = array();
 		}
 		
-		// Define a map from empire names to empire IDs so that we can reference empires by name
-		public function setname2option_id() {
-			for ($option_id=0; $option_id<count($this->recommendations); $option_id++) {
-				$this->name2option_id[$this->recommendations[$option_id]->name] = $option_id;
-			}
-		}
-		
-		// Fetch information about the current status of the EmpireCoin blockchain
-		// If a valid EmpireCoin.org api_access_code has been specified, 
-		// information about the corresponding user account will also be returned
+		// Fetch information about the current status of the game
 		public function getCurrentStatus() {
 			$fetch_url = $this->server_host."/api/".$this->event_id."/status/";
 			if ($this->server_access_key && $this->server_access_key != "") {

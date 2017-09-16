@@ -691,7 +691,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					if ($game) $q .= " AND gio.game_id='".$game->db_game['game_id']."'";
 					$q .= " AND t.amount > 0";
 					if ($game) $q .= " GROUP BY t.transaction_id";
-					$q .= " ORDER BY transaction_id ASC;";
+					$q .= " ORDER BY position_in_block ASC;";
 					$r = $app->run_query($q);
 					
 					while ($transaction = $r->fetch()) {
@@ -888,7 +888,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				$rpc_transaction = false;
 				$rpc_raw_transaction = false;
 				
-				if ($game && $game->blockchain->db_blockchain['p2p_mode'] == "rpc") {
+				if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
 					try {
 						$rpc_transaction = $coin_rpc->gettransaction($transaction['tx_hash']);
 					}

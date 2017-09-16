@@ -18,6 +18,8 @@ $GLOBALS['sendgrid_pass'] = "";
 $GLOBALS['show_query_errors'] = true;
 $GLOBALS['cron_key_string'] = ""; // Enter a random string / password here
 
+$GLOBALS['process_lock_method'] = "db";
+
 $GLOBALS['identifier_case_sensitive'] = 1;
 $GLOBALS['identifier_first_char'] = 2;
 

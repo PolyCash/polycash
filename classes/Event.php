@@ -890,7 +890,7 @@ class Event {
 			}
 			
 			$event_blocks = $this->db_event['event_final_block'] - $this->db_event['event_starting_block'] + 1;
-			$team_avg_goals_per_game = 3;
+			$team_avg_goals_per_game = 1.35;
 			
 			$rand_i = 0;
 			$q = "SELECT * FROM options WHERE event_id='".$this->db_event['event_id']."' ORDER BY option_index ASC;";

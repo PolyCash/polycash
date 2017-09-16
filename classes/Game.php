@@ -141,7 +141,7 @@ class Game {
 						$address = $r->fetch();
 						
 						if ($this->blockchain->db_blockchain['p2p_mode'] == "none") {
-							$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."', spend_status='";
+							$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."', script_type='pubkeyhash', spend_status='";
 							if ($instantly_mature == 1) $q .= "unspent";
 							else $q .= "unconfirmed";
 							$q .= "', out_index='".$out_index."', ";
@@ -186,7 +186,7 @@ class Game {
 					$overshoot_address = $r->fetch();
 					
 					if ($this->blockchain->db_blockchain['p2p_mode'] == "none") {
-						$q = "INSERT INTO transaction_ios SET out_index='".$out_index."', spend_status='unconfirmed', game_id='".$this->db_game['game_id']."', ";
+						$q = "INSERT INTO transaction_ios SET out_index='".$out_index."', spend_status='unconfirmed', game_id='".$this->db_game['game_id']."', script_type='pubkeyhash', ";
 						if ($block_id !== false) {
 							$overshoot_cbd = floor($coin_blocks_destroyed*($overshoot_amount/$input_sum));
 							$overshoot_crd = floor($coin_rounds_destroyed*($overshoot_amount/$input_sum));
@@ -407,8 +407,8 @@ class Game {
 				
 				if ($free_balance > 0 && $available_votes > 0) {
 					if ($db_user['voting_strategy'] == "api") {
-						if ($GLOBALS['api_proxy_url']) $api_client_url = $GLOBALS['api_proxy_url'].urlencode($strategy_user->db_user['api_url']);
-						else $api_client_url = $strategy_user->db_user['api_url'];
+						if ($GLOBALS['api_proxy_url']) $api_client_url = $GLOBALS['api_proxy_url'].urlencode($db_user['api_url']);
+						else $api_client_url = $db_user['api_url'];
 						
 						$api_result = file_get_contents($api_client_url);
 						$api_obj = json_decode($api_result);
@@ -423,11 +423,11 @@ class Game {
 										if (!$input_error) {
 											$utxo_id = intval($api_obj->input_utxo_ids[$i]);
 											if (strval($utxo_id) === strval($api_obj->input_utxo_ids[$i])) {
-												$utxo_q = "SELECT *, io.user_id AS io_user_id, a.user_id AS address_user_id FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.io_id='".$utxo_id."' AND io.game_id='".$this->db_game['game_id']."';";
+												$utxo_q = "SELECT *, ca.user_id AS account_user_id FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id WHERE gio.game_io_id='".$utxo_id."';";
 												$utxo_r = $this->blockchain->app->run_query($utxo_q);
 												if ($utxo_r->rowCount() == 1) {
 													$utxo = $utxo_r->fetch();
-													if ($utxo['io_user_id'] == $strategy_user->db_user['user_id'] && $utxo['address_user_id'] == $strategy_user->db_user['user_id']) {
+													if ($utxo['account_user_id'] == $strategy_user->db_user['user_id']) {
 														if (!$utxo['spend_transaction_id'] && $utxo['spend_status'] == "unspent" && $utxo['create_block_id'] !== "") {
 															$input_io_ids[count($input_io_ids)] = $utxo['io_id'];
 														}
@@ -465,15 +465,19 @@ class Game {
 							$amount_sum = 0;
 							$option_id_error = false;
 							
-							$log_text .= $strategy_user->db_user['username']." has ".$free_balance/pow(10,8)." coins available, hitting url: ".$strategy_user->db_user['api_url']."<br/>\n";
+							$log_text .= $strategy_user->db_user['username']." has ".$free_balance/pow(10,8)." coins available, hitting url: ".$db_user['api_url']."<br/>\n";
 							
 							foreach ($api_obj->recommendations as $recommendation) {
-								if ($recommendation->recommended_amount && $recommendation->recommended_amount > 0 && friendly_intval($recommendation->recommended_amount) == $recommendation->recommended_amount) $amount_sum += $recommendation->recommended_amount;
+								if ($recommendation->recommended_amount && $recommendation->recommended_amount > 0 && $this->blockchain->app->friendly_intval($recommendation->recommended_amount) == $recommendation->recommended_amount) $amount_sum += $recommendation->recommended_amount;
 								else $amount_error = true;
 								
-								$qq = "SELECT * FROM options WHERE option_id='".$recommendation->option_id."' AND game_id='".$this->db_game['game_id']."';";
+								$qq = "SELECT * FROM options op JOIN events ev ON op.event_id=ev.event_id WHERE op.option_index='".$recommendation->option_index."' AND ev.game_id='".$this->db_game['game_id']."' AND ev.event_starting_block <= ".$mining_block_id." AND ev.event_final_block >= ".$mining_block_id.";";
 								$rr = $this->blockchain->app->run_query($qq);
-								if ($rr->rowCount() == 1) {}
+								
+								if ($rr->rowCount() == 1) {
+									$db_option = $rr->fetch();
+									$recommendation->option_id = $db_option['option_id'];
+								}
 								else $option_id_error = true;
 							}
 							
@@ -508,7 +512,7 @@ class Game {
 									$log_text .= "Vote ".$vote_amount." for ".$vote_option_id."<br/>\n";
 								}
 								
-								$transaction_id = $this->create_transaction($vote_option_ids, $vote_amounts, $db_user, false, 'transaction', $input_io_ids, false, false, false);
+								$transaction_id = $this->create_transaction($vote_option_ids, $vote_amounts, $db_user, false, 'transaction', $input_io_ids, false, false, $api_obj->recommended_fee);
 								
 								if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
 								else $log_text .= "Failed to add transaction.<br/>\n";
@@ -859,9 +863,10 @@ class Game {
 		$invitation = $r->fetch();
 	}
 	
-	public function get_user_strategy($user_id, &$user_strategy) {
-		$q = "SELECT * FROM user_strategies s JOIN user_games g ON s.strategy_id=g.strategy_id WHERE s.user_id='".$user_id."' AND g.game_id='".$this->db_game['game_id']."';";
+	public function get_user_strategy($user_game) {
+		$q = "SELECT * FROM user_strategies WHERE strategy_id='".$user_game['strategy_id']."';";
 		$r = $this->blockchain->app->run_query($q);
+		
 		if ($r->rowCount() == 1) {
 			$user_strategy = $r->fetch();
 			return true;
@@ -1267,7 +1272,7 @@ class Game {
 			$r = $this->blockchain->app->run_query($q);
 			$data = $r->fetch();
 			
-			$html .= "<p>".$this->blockchain->app->format_bignum($last_block_loaded - $this->db_game['game_starting_block'])."/".$this->blockchain->app->format_bignum($total_game_blocks)." blocks loaded (".round($game_blocks_pct_complete, 2)."% complete";
+			$html .= "<p>".$this->blockchain->app->format_bignum($last_block_loaded - $this->db_game['game_starting_block'])."/".$this->blockchain->app->format_bignum($total_game_blocks)." game blocks loaded (".round($game_blocks_pct_complete, 2)."% complete";
 			//$html .= $this->blockchain->app->format_bignum($missing_game_blocks)." remaining... ";
 			
 			if ($data['COUNT(*)'] > 0) {
@@ -1401,14 +1406,12 @@ class Game {
 	public function render_game_players() {
 		$html = "";
 		
-		$q = "SELECT * FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$this->db_game['game_id']."' AND ug.payment_required=0 ORDER BY ug.account_value DESC, u.username ASC;";
+		$q = "SELECT *, SUM(ug.account_value) AS account_value_sum FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$this->db_game['game_id']."' AND ug.payment_required=0 GROUP BY ug.user_id ORDER BY account_value_sum DESC, u.username ASC;";
 		$r = $this->blockchain->app->run_query($q);
 		$html .= "<h3>".$r->rowCount()." players</h3>\n";
 		
 		while ($temp_user_game = $r->fetch()) {
-			$temp_user = new User($this->blockchain->app, $temp_user_game['user_id']);
-			$account_coin_value = $temp_user->account_coin_value($this, $temp_user_game);
-			$networth_disp = $this->blockchain->app->format_bignum($account_coin_value/pow(10,8));
+			$networth_disp = $this->blockchain->app->format_bignum($temp_user_game['account_value_sum']);
 			
 			$html .= '<div class="row">';
 			$html .= '<div class="col-sm-4"><a href="" onclick="openChatWindow('.$temp_user_game['user_id'].'); return false;">'.$temp_user_game['username'].'</a></div>';
@@ -1419,8 +1422,6 @@ class Game {
 			$html .= '</div>';
 			
 			$html .= '</div>';
-			$qq = "UPDATE user_games SET account_value='".($account_coin_value/pow(10,8))."' WHERE user_game_id='".$temp_user_game['user_game_id']."';";
-			$this->blockchain->app->run_query($qq);
 		}
 		
 		return $html;
@@ -1634,7 +1635,7 @@ class Game {
 		$user_id = false;
 		if ($user) {
 			$user_id = $user->db_user['user_id'];
-			$user_game = $user->ensure_user_in_game($this);
+			$user_game = $user->ensure_user_in_game($this, false);
 		}
 		
 		$js = "console.log('loading new events!');\n";
@@ -2256,6 +2257,7 @@ class Game {
 				$q = "UPDATE games SET loaded_until_block=".$block_height." WHERE game_id='".$this->db_game['game_id']."' AND loaded_until_block < ".$block_height.";";
 				$r = $this->blockchain->app->run_query($q);
 			}
+			else $block_height = $to_block_height+1;
 		}
 		
 		$this->update_option_votes();
@@ -2285,6 +2287,10 @@ class Game {
 				$game_block = $r->fetch();
 				
 				if ($game_block['locally_saved'] != 1) {
+					if ($game_block['time_created'] < time()-30) {
+						$q = "DELETE FROM game_blocks WHERE game_block_id='".$game_block['game_block_id']."';";
+						$r = $this->blockchain->app->run_query($q);
+					}
 					$GLOBALS['shutdown_lock_name'] = "";
 					die("Conflicting block loading scripts are running.. aborting this thread.");
 				}
@@ -2293,7 +2299,7 @@ class Game {
 				$msg = "Creating new game block #".$block_height."\n";
 				$log_text .= $msg;
 				
-				$q = "INSERT INTO game_blocks SET internal_block_id='".$db_block['internal_block_id']."', game_id='".$this->db_game['game_id']."', block_id='".$block_height."', locally_saved=0, num_transactions=0;";
+				$q = "INSERT INTO game_blocks SET internal_block_id='".$db_block['internal_block_id']."', game_id='".$this->db_game['game_id']."', block_id='".$block_height."', locally_saved=0, num_transactions=0, time_created='".time()."';";
 				$r = $this->blockchain->app->run_query($q);
 				$game_block_id = $this->blockchain->app->last_insert_id();
 				
