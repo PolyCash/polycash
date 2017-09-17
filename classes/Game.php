@@ -24,7 +24,7 @@ class Game {
 		return ceil($mining_block_id/$this->db_game['round_length']);
 	}
 	
-	public function create_transaction($option_ids, $amounts, $user_game, $block_id, $type, $io_ids, $address_ids, $remainder_address_id, $transaction_fee) {
+	public function create_transaction($option_ids, $amounts, $user_game, $block_id, $type, $io_ids, $address_ids, $remainder_address_id, $transaction_fee, &$error_message) {
 		if (!$type || $type == "") $type = "transaction";
 		
 		$amount = $transaction_fee;
@@ -174,6 +174,7 @@ class Game {
 			}
 			
 			if ($output_error) {
+				$error_message = "Transaction failed: an invalid output was specified.";
 				$this->blockchain->app->cancel_transaction($transaction_id, $affected_input_ids, false);
 				return false;
 			}
@@ -225,14 +226,6 @@ class Game {
 						$signed_raw_transaction = $coin_rpc->signrawtransaction($raw_transaction);
 						$decoded_transaction = $coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
 						$tx_hash = $decoded_transaction['txid'];
-						$verified_tx_hash = $coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
-						
-						$this->blockchain->walletnotify($coin_rpc, $verified_tx_hash, FALSE);
-						$this->update_option_votes();
-						
-						$db_transaction = $this->blockchain->app->run_query("SELECT * FROM transactions WHERE tx_hash=".$this->blockchain->app->quote_escape($tx_hash).";")->fetch();
-						
-						return $db_transaction['transaction_id'];
 					}
 					catch (Exception $e) {
 						echo "raw_transaction:".$raw_transaction."<br/>\n";
@@ -243,6 +236,31 @@ class Game {
 						var_dump($decoded_transaction);
 						echo "<br/><br/>\n\n";
 						var_dump($e);
+					}
+					
+					if (!empty($tx_hash)) {
+						try {
+							$verified_tx_hash = $coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
+						}
+						catch (Exception $e) {
+							$rpc_error = true;
+						}
+						
+						if (!$rpc_error) {
+							$this->blockchain->walletnotify($coin_rpc, $verified_tx_hash, FALSE);
+							$this->update_option_votes();
+							
+							$db_transaction = $this->blockchain->app->run_query("SELECT * FROM transactions WHERE tx_hash=".$this->blockchain->app->quote_escape($tx_hash).";")->fetch();
+							
+							return $db_transaction['transaction_id'];
+						}
+						else {
+							$error_message = "RPC called failed: sendrawtransaction ".$signed_raw_transaction['hex'].".";
+							return false;
+						}
+					}
+					else {
+						$error_message = "Failed to sign the transaction.";
 						return false;
 					}
 				}
@@ -254,7 +272,10 @@ class Game {
 				}
 			}
 		}
-		else return false;
+		else {
+			$error_message = "Transaction failed: there was a problem with the amounts or addresses.";
+			return false;
+		}
 	}
 	
 	public function update_option_votes() {
@@ -364,7 +385,8 @@ class Game {
 						}
 					}
 					$last_block_id = $this->blockchain->last_block_id();
-					$transaction_id = $this->create_transaction(false, $amounts, false, false, "votebase", false, $address_ids, false, 0);
+					$error_message = false;
+					$transaction_id = $this->create_transaction(false, $amounts, false, false, "votebase", false, $address_ids, false, 0, $error_message);
 					$q = "UPDATE transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id SET t.block_id='".$last_block_id."', io.spend_status='unspent', io.create_block_id='".$last_block_id."', gio.create_round_id='".$this->block_to_round($last_block_id)."' WHERE t.transaction_id='".$transaction_id."';";
 					$r = $this->blockchain->app->run_query($q);
 					$this->refresh_coins_in_existence();
@@ -512,10 +534,11 @@ class Game {
 									$log_text .= "Vote ".$vote_amount." for ".$vote_option_id."<br/>\n";
 								}
 								
-								$transaction_id = $this->create_transaction($vote_option_ids, $vote_amounts, $db_user, false, 'transaction', $input_io_ids, false, false, $api_obj->recommended_fee);
+								$error_message = false;
+								$transaction_id = $this->create_transaction($vote_option_ids, $vote_amounts, $db_user, false, 'transaction', $input_io_ids, false, false, $api_obj->recommended_fee, $error_message);
 								
 								if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
-								else $log_text .= "Failed to add transaction.<br/>\n";
+								else $log_text .= $error_message."<br/>\n";
 							}
 						}
 					}
@@ -571,10 +594,11 @@ class Game {
 								}
 								if ($remainder_coins > 0) $amounts[count($amounts)-1] += $remainder_coins;
 								
-								$transaction_id = $this->create_transaction($option_ids, $amounts, $db_user, false, 'transaction', false, false, false, $db_user['transaction_fee']);
+								$error_message = false;
+								$transaction_id = $this->create_transaction($option_ids, $amounts, $db_user, false, 'transaction', false, false, false, $db_user['transaction_fee'], $error_message);
 								
 								if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
-								else $log_text .= "Failed to add transaction.<br/>\n";*/
+								else $log_text .= $error_message."<br/>\n";*/
 							}
 							else if ($db_user['voting_strategy'] == "by_entity") {
 								$log_text .= "Dividing by entity for ".$strategy_user->db_user['username']." (".(($free_balance-$db_user['transaction_fee'])/pow(10,8))." coins)<br/>\n";
@@ -608,9 +632,11 @@ class Game {
 										}
 									}
 									if ($amount_sum < ($free_balance-$db_user['transaction_fee'])) $amounts[count($amounts)-1] += ($free_balance-$db_user['transaction_fee']) - $amount_sum;
-									$transaction_id = $this->create_transaction($option_ids, $amounts, $db_user, false, 'transaction', false, false, false, $db_user['transaction_fee']);
+									
+									$error_message = false;
+									$transaction_id = $this->create_transaction($option_ids, $amounts, $db_user, false, 'transaction', false, false, false, $db_user['transaction_fee'], $error_message);
 									if ($transaction_id) $log_text .= "Added transaction $transaction_id<br/>\n";
-									else $log_text .= "Failed to add transaction.<br/>\n";
+									else $log_text .= $error_message."<br/>\n";
 								}
 							}
 							else { // by_plan
@@ -640,7 +666,8 @@ class Game {
 									}
 									if ($amount_sum < ($free_balance-$db_user['transaction_fee'])) $amounts[count($amounts)-1] += ($free_balance-$db_user['transaction_fee']) - $amount_sum;
 									
-									$transaction_id = $this->create_transaction($option_ids, $amounts, $db_user, false, 'transaction', false, false, false, $db_user['transaction_fee']);
+									$error_message = false;
+									$transaction_id = $this->create_transaction($option_ids, $amounts, $db_user, false, 'transaction', false, false, false, $db_user['transaction_fee'], $error_message);
 									
 									if ($transaction_id) {
 										$log_text .= "Added transaction $transaction_id<br/>\n";
@@ -650,7 +677,7 @@ class Game {
 											$rr = $this->blockchain->app->run_query($qq);
 										}
 									}
-									else $log_text .= "Failed to add transaction.<br/>\n";
+									else $log_text .= $error_message."<br/>\n";
 								}
 							}
 						}
@@ -926,7 +953,7 @@ class Game {
 		return intval($num_players[0]);
 	}
 	
-	public function start_game() {
+	public function try_process_genesis_transaction() {
 		if (!empty($this->db_game['genesis_tx_hash'])) {
 			$qq = "SELECT * FROM transactions WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND tx_hash=".$this->blockchain->app->quote_escape($this->db_game['genesis_tx_hash']).";";
 			$rr = $this->blockchain->app->run_query($qq);
@@ -937,6 +964,10 @@ class Game {
 				$this->process_buyin_transaction($genesis_transaction);
 			}
 		}
+	}
+	
+	public function start_game() {
+		$this->try_process_genesis_transaction();
 		
 		$game_start_time = time();
 		
@@ -2880,6 +2911,21 @@ class Game {
 		$coins_in = $rr->fetch(PDO::FETCH_NUM);
 		if ($coins_in[0] > 0) return $coins_in[0];
 		else return 0;
+	}
+	
+	public function check_set_faucet_account() {
+		$q = "SELECT * FROM currency_accounts WHERE is_faucet=1 AND game_id='".$this->db_game['game_id']."' ORDER BY account_id DESC;";
+		$r = $this->blockchain->app->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			return $r->fetch();
+		}
+		else {
+			$q = "INSERT INTO currency_accounts SET is_faucet=1, currency_id='".$this->blockchain->currency_id()."', game_id='".$this->db_game['game_id']."', account_name=".$this->blockchain->app->quote_escape($this->db_game['name'].' Faucet').', time_created='.time().';';
+			$r = $this->blockchain->app->run_query($q);
+			
+			return $this->check_set_faucet_account();
+		}
 	}
 }
 ?>

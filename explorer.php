@@ -56,7 +56,7 @@ else if ($uri_parts[2] == "blockchains") {
 	}
 }
 
-if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
+if (!empty($blockchain) && $blockchain->db_blockchain['p2p_mode'] == "rpc") {
 	$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
 }
 
@@ -214,6 +214,24 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				else $pagetitle = $blockchain->db_blockchain['blockchain_name'];
 				$pagetitle = " Transaction: ".$transaction['tx_hash'];
 			}
+			else if ($r->rowCount() == 0) {
+				if ($coin_rpc && !empty($blockchain) && !empty($tx_hash)) {
+					$successful = false;
+					$blockchain->add_transaction($coin_rpc, $tx_hash, false, true, $successful, false, false, false);
+					
+					$q = "SELECT * FROM transactions WHERE tx_hash=".$app->quote_escape($tx_hash).";";
+					$r = $app->run_query($q);
+					
+					if ($r->rowCount() == 1) {
+						$transaction = $r->fetch();
+						$mode_error = false;
+						
+						if ($game) $pagetitle = $game->db_game['name'];
+						else $pagetitle = $blockchain->db_blockchain['blockchain_name'];
+						$pagetitle = " Transaction: ".$transaction['tx_hash'];
+					}
+				}
+			}
 		}
 	}
 	if ($explore_mode == "utxos") {
@@ -300,7 +318,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							<?php if ($game && $game->db_game['escrow_address'] != "") { ?>
 							<li><a<?php if (($explore_mode == 'addresses' && $address['address'] == $game->db_game['escrow_address']) || ($explore_mode == "transactions" && $transaction['tx_hash'] == $game->db_game['genesis_tx_hash'])) echo ' class="selected"'; ?> href="/explorer/<?php echo $uri_parts[2]; ?>/<?php echo $game->db_game['url_identifier']; ?>/transactions/<?php echo $game->db_game['genesis_tx_hash']; ?>">Genesis</a></li>
 							<?php } ?>
-							<?php if ($game) { ?>
+							<?php if (FALSE && $game) { ?>
 							<li><a href="<?php echo $GLOBALS['base_url']; ?>/scripts/show_game_definition.php?game_id=<?php echo $game->db_game['game_id']; ?>" title="<?php echo $app->game_definition_hash($game); ?>">Game Definition</a>
 							<?php } ?>
 						</ul>
@@ -626,6 +644,17 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							$q = "SELECT SUM(load_time) FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_id='".$block['block_id']."';";
 							$load_time = $app->run_query($q)->fetch()['SUM(load_time)'];
 							echo "Still loading... ".number_format($load_time, 2)." seconds elapsed.<br/>\n";
+						}
+						
+						if (empty($game)) {
+							$associated_games = $blockchain->associated_games(array("running"));
+							if (count($associated_games) > 0) {
+								echo "<p>";
+								for ($i=0; $i<count($associated_games); $i++) {
+									echo "See block #".$block['block_id']." on <a href=\"/explorer/games/".$associated_games[$i]->db_game['url_identifier']."/blocks/".$block['block_id']."\">".$associated_games[$i]->db_game['name']."</a><br/>\n";
+								}
+								echo "</p>\n";
+							}
 						}
 						
 						if ($game) echo '<p><a href="/explorer/games/'.$game->db_game['url_identifier'].'/blocks/">&larr; All Blocks</a></p>';

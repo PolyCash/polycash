@@ -985,7 +985,7 @@ function confirm_compose_vote() {
 					if (result_obj['status_code'] == 0) {
 						$('#compose_vote_success').html(result_obj['message']);
 						$('#compose_vote_success').slideDown('slow');
-						setTimeout("$('#compose_vote_success').slideUp('fast');", 4500);
+						setTimeout("$('#compose_vote_success').slideUp('fast');", 5000);
 						
 						for (var i=0; i<vote_options.length; i++) {
 							$('#compose_vote_output_'+i).remove();
@@ -1000,7 +1000,7 @@ function confirm_compose_vote() {
 					else {
 						$('#compose_vote_errors').html(result_obj['message']);
 						$('#compose_vote_errors').slideDown('slow');
-						setTimeout("$('#compose_vote_errors').slideUp('fast');", 2500);
+						setTimeout("$('#compose_vote_errors').slideUp('fast');", 10000);
 					}
 				});
 			}
@@ -1585,23 +1585,23 @@ function set_select_add_output() {
 
 var account_io_id = false;
 var account_io_amount = false;
+var selected_account_action = false;
 
-function account_start_spend_io(io_id, amount) {
+function account_start_spend_io(game_id, io_id, amount) {
 	account_io_id = io_id;
 	account_io_amount = amount;
 	$('#account_spend_buyin_total').html("(Total: "+format_coins(amount)+" coins)");
 	$('#account_spend_modal').modal('show');
+	$('#account_io_id').val(account_io_id);
+	$('#donate_game_id').val(game_id);
 }
 function account_spend_action_changed() {
 	var account_spend_action = $('#account_spend_action').val();
-	if (account_spend_action == "buyin") {
-		$('#account_spend_buyin').show('fast');
-		$('#account_spend_withdraw').hide();
-	}
-	else {
-		$('#account_spend_withdraw').show('fast');
-		$('#account_spend_buyin').hide();
-	}
+	
+	if (selected_account_action !== false) $('#account_spend_'+selected_account_action).hide();
+	
+	$('#account_spend_'+account_spend_action).show('fast');
+	selected_account_action = account_spend_action;
 }
 function account_spend_buyin_address_choice_changed() {
 	var address_choice = $('#account_spend_buyin_address_choice').val();

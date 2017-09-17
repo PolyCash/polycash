@@ -1144,7 +1144,7 @@ class Blockchain {
 		
 		if ($type != "coinbase") {
 			$q = "SELECT SUM(amount) FROM transaction_ios WHERE io_id IN (".implode(",", $io_ids).");";
-			$r = $this->blockchain->app->run_query($q);
+			$r = $this->app->run_query($q);
 			$utxo_balance = $r->fetch(PDO::FETCH_NUM);
 			$utxo_balance = $utxo_balance[0];
 		}
@@ -1157,15 +1157,16 @@ class Blockchain {
 		if (($type == "coinbase" || $utxo_balance == $amount) && count($amounts) == count($address_ids)) {
 			$num_inputs = 0;
 			if ($io_ids) $num_inputs = count($io_ids);
-			$new_tx_hash = $this->app->random_string(64);
 			
-			$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', fee_amount='".$transaction_fee."', has_all_inputs=1, has_all_outputs=1, num_inputs='".$num_inputs."', num_outputs='".count($amounts)."'";
-			$q .= ", tx_hash='".$new_tx_hash."'";
-			$q .= ", transaction_desc='".$type."', amount=".$amount;
-			if ($block_id !== false) $q .= ", block_id='".$block_id."'";
-			$q .= ", time_created='".time()."';";
-			$r = $this->app->run_query($q);
-			$transaction_id = $this->app->last_insert_id();
+			if ($this->db_blockchain['p2p_mode'] != "p2p") {
+				$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', fee_amount='".$transaction_fee."', has_all_inputs=1, has_all_outputs=1, num_inputs='".$num_inputs."', num_outputs='".count($amounts)."'";
+				if (!empty($new_tx_hash)) $q .= ", tx_hash='".$new_tx_hash."'";
+				$q .= ", transaction_desc='".$type."', amount=".$amount;
+				if ($block_id !== false) $q .= ", block_id='".$block_id."'";
+				$q .= ", time_created='".time()."';";
+				$r = $this->app->run_query($q);
+				$transaction_id = $this->app->last_insert_id();
+			}
 			
 			$input_sum = 0;
 			$coin_blocks_destroyed = 0;
@@ -1180,10 +1181,12 @@ class Blockchain {
 				
 				while ($transaction_input = $r->fetch()) {
 					if ($input_sum < $amount) {
-						$qq = "UPDATE transaction_ios SET spend_count=spend_count+1, spend_transaction_id='".$transaction_id."', spend_transaction_ids=CONCAT(spend_transaction_ids, CONCAT('".$transaction_id."', ','))";
-						if ($block_id !== false) $qq .= ", spend_status='spent', spend_block_id='".$block_id."'";
-						$qq .= " WHERE io_id='".$transaction_input['io_id']."';";
-						$rr = $this->app->run_query($qq);
+						if ($this->db_blockchain['p2p_mode'] != "p2p") {
+							$qq = "UPDATE transaction_ios SET spend_count=spend_count+1, spend_transaction_id='".$transaction_id."', spend_transaction_ids=CONCAT(spend_transaction_ids, CONCAT('".$transaction_id."', ','))";
+							if ($block_id !== false) $qq .= ", spend_status='spent', spend_block_id='".$block_id."'";
+							$qq .= " WHERE io_id='".$transaction_input['io_id']."';";
+							$rr = $this->app->run_query($qq);
+						}
 						
 						$input_sum += $transaction_input['amount'];
 						$ref_cbd += ($ref_block_id-$transaction_input['create_block_id'])*$transaction_input['amount'];
@@ -1193,6 +1196,11 @@ class Blockchain {
 						}
 						
 						$affected_input_ids[count($affected_input_ids)] = $transaction_input['io_id'];
+						
+						$raw_txin[count($raw_txin)] = array(
+							"txid"=>$transaction_input['tx_hash'],
+							"vout"=>intval($transaction_input['out_index'])
+						);
 					}
 				}
 			}
@@ -1234,6 +1242,9 @@ class Blockchain {
 							$r = $this->app->run_query($q);
 							$created_input_ids[count($created_input_ids)] = $this->app->last_insert_id();
 						}
+						else if ($this->db_blockchain['p2p_mode'] == "p2p") {
+							$raw_txout[$address['address']] = $amounts[$out_index]/pow(10,8);
+						}
 					}
 					else $output_error = true;
 				}
@@ -1248,7 +1259,36 @@ class Blockchain {
 				if ($type != "coinbase") {
 					$successful = false;
 					$coin_rpc = false;
-					$this->add_transaction($coin_rpc, $new_tx_hash, $block_id, true, $successful, 0, false, false);
+					if ($this->db_blockchain['p2p_mode'] == "rpc") {
+						$coin_rpc = new jsonRPCClient('http://'.$this->db_blockchain['rpc_username'].':'.$this->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->db_blockchain['rpc_port'].'/');
+						
+						try {
+							$raw_transaction = $coin_rpc->createrawtransaction($raw_txin, $raw_txout);
+							$signed_raw_transaction = $coin_rpc->signrawtransaction($raw_transaction);
+							$decoded_transaction = $coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
+							$tx_hash = $decoded_transaction['txid'];
+							$verified_tx_hash = $coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
+							
+							$this->walletnotify($coin_rpc, $verified_tx_hash, FALSE);
+							$this->update_option_votes();
+							
+							$db_transaction = $this->app->run_query("SELECT * FROM transactions WHERE tx_hash=".$this->blockchain->app->quote_escape($tx_hash).";")->fetch();
+							
+							return $db_transaction['transaction_id'];
+						}
+						catch (Exception $e) {
+							echo "raw_transaction:".$raw_transaction."<br/>\n";
+							var_dump($raw_txin);
+							echo "<br/><br/>\n\n";
+							var_dump($raw_txout);
+							echo "<br/><br/>\n\n";
+							var_dump($decoded_transaction);
+							echo "<br/><br/>\n\n";
+							var_dump($e);
+							return false;
+						}
+						$this->add_transaction($coin_rpc, $tx_hash, $block_id, true, $successful, 0, false, false);
+					}
 				}
 				return $transaction_id;
 			}

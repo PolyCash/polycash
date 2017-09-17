@@ -40,13 +40,14 @@ if ($thisuser) {
 						$color_address = $game->blockchain->create_or_fetch_address($address_text, true, $coin_rpc, false, false, false);
 					}
 					
-					$transaction_id = $game->create_transaction(false, array($buyin_amount, $color_amount), $user_game, false, 'transaction', array($io_id), array($escrow_address['address_id'], $color_address['address_id']), false, $fee_amount);
+					$error_message = false;
+					$transaction_id = $game->create_transaction(false, array($buyin_amount, $color_amount), $user_game, false, 'transaction', array($io_id), array($escrow_address['address_id'], $color_address['address_id']), false, $fee_amount, $error_message);
 					
 					if ($transaction_id) {
 						$app->output_message(1, "Great, your transaction has been submitted (#".$transaction_id.")", false);
 					}
 					else {
-						$app->output_message(7, "Failed to create the transaction.", false);
+						$app->output_message(7, $error_message, false);
 					}
 				}
 				else $app->output_message(6, "Error, one of the amounts you entered is invalid ($fee_amount > 0 && $buyin_amount > 0 && $color_amount > 0).", false);
