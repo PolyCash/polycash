@@ -1320,7 +1320,10 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 				var block_sim_time_sec = Math.round(event_sim_time_sec/this.game.game_round_length);
 				var sec_into_game = block_in_round*block_sim_time_sec;
 				
-				var sec_since_block_loaded = ((new Date().getTime())/1000 - this.game.time_last_block_loaded);
+				var sec_since_block_loaded;
+				if (this.game.time_last_block_loaded > 0) sec_since_block_loaded = ((new Date().getTime())/1000 - this.game.time_last_block_loaded);
+				else sec_since_block_loaded = 0;
+				
 				var expected_sec_this_block = sec_since_block_loaded + this.game.seconds_per_block;
 				var sim_sec_into_block = Math.round((sec_since_block_loaded/expected_sec_this_block)*block_sim_time_sec);
 				sec_into_game += sim_sec_into_block;

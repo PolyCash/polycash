@@ -718,9 +718,9 @@ class Blockchain {
 		
 		if ($this->db_blockchain['p2p_mode'] == "none") {
 			$game = &$input;
-			$genesis_block_hash = $this->app->random_string(64);
+			$genesis_block_hash = $this->app->random_hex_string(64);
 			$nextblock_hash = "";
-			$genesis_tx_hash = $this->app->random_string(64);
+			$genesis_tx_hash = $this->app->random_hex_string(64);
 		}
 		else {
 			$coin_rpc = &$input;
@@ -1166,7 +1166,7 @@ class Blockchain {
 			if ($io_ids) $num_inputs = count($io_ids);
 			
 			if ($this->db_blockchain['p2p_mode'] != "p2p") {
-				$new_tx_hash = $this->app->random_string(32);
+				$new_tx_hash = $this->app->random_hex_string(32);
 				$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', fee_amount='".$transaction_fee."', has_all_inputs=1, has_all_outputs=1, num_inputs='".$num_inputs."', num_outputs='".count($amounts)."'";
 				$q .= ", tx_hash='".$new_tx_hash."'";
 				$q .= ", transaction_desc='".$type."', amount=".$amount;
@@ -1308,7 +1308,7 @@ class Blockchain {
 		// This function only runs for private blockchains (p2p_mode="none")
 		$last_block_id = $this->last_block_id();
 		
-		$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_id='".($last_block_id+1)."', block_hash='".$this->app->random_string(64)."', time_created='".time()."', time_loaded='".time()."', time_mined='".time()."', locally_saved=1;";
+		$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_id='".($last_block_id+1)."', block_hash='".$this->app->random_hex_string(64)."', time_created='".time()."', time_loaded='".time()."', time_mined='".time()."', locally_saved=1;";
 		$r = $this->app->run_query($q);
 		$internal_block_id = $this->app->last_insert_id();
 		

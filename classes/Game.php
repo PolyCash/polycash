@@ -1279,8 +1279,14 @@ class Game {
 		}
 		else $sum_load_time = 0;
 		
-		$headers_pct_complete = 100*($total_game_blocks-$missingheader_blocks)/$total_game_blocks;
-		$blocks_pct_complete = 100*($total_game_blocks-($missing_blocks-$block_fraction))/$total_game_blocks;
+		if ($total_game_blocks == 0) {
+			$headers_pct_complete = 100;
+			$blocks_pct_complete = 100;
+		}
+		else {
+			$headers_pct_complete = 100*($total_game_blocks-$missingheader_blocks)/$total_game_blocks;
+			$blocks_pct_complete = 100*($total_game_blocks-($missing_blocks-$block_fraction))/$total_game_blocks;
+		}
 		$total_load_time = $sum_load_time*(100/$blocks_pct_complete);
 		$est_time_remaining = ((100-$blocks_pct_complete)/100)*$total_load_time;
 		
@@ -1297,7 +1303,9 @@ class Game {
 			$html .= "<p>Loading events.. <a target=\"_blank\" href=\"/explorer/games/".$this->db_game['url_identifier']."/events/\">".round(100*$events_pct_complete, 2)."% complete</a>.</p>\n";
 		}
 		
-		$game_blocks_pct_complete = 100*($total_game_blocks-$missing_game_blocks)/$total_game_blocks;
+		if ($total_game_blocks == 0) $game_blocks_pct_complete = 100;
+		else $game_blocks_pct_complete = 100*($total_game_blocks-$missing_game_blocks)/$total_game_blocks;
+		
 		if ($missing_game_blocks > 0) {
 			$q = "SELECT COUNT(*), SUM(load_time) FROM game_blocks WHERE game_id='".$this->db_game['game_id']."' AND load_time > 0;";
 			$r = $this->blockchain->app->run_query($q);

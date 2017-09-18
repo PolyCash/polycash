@@ -70,6 +70,24 @@ class App {
 		return $string;
 	}
 	
+	public function random_hex_string($length) {
+		$characters = "0123456789abcdef";
+		$bits_per_char = ceil(log(strlen($characters), 2));
+		$hex_chars_per_char = ceil($bits_per_char/4);
+		$hex_chars_needed = $length*$hex_chars_per_char;
+		$rand_data = bin2hex(openssl_random_pseudo_bytes(ceil($hex_chars_needed/2), $crypto_strong));
+		if(!$crypto_strong) $this->log_then_die("An insecure random string of length ".$length." was generated.");
+		
+		$string = "";
+		for ($i=0; $i<$length; $i++) {
+			$hex_chars = substr($rand_data, $i*$hex_chars_per_char, $hex_chars_per_char);
+			$rand_num = hexdec($hex_chars);
+			$rand_index = $rand_num%strlen($characters);
+			$string .= $characters[$rand_index];
+		}
+		return $string;
+	}
+	
 	public function normalize_username($username) {
 		return $this->make_alphanumeric(strip_tags($username), "$-()/!.,:;#@");
 	}
@@ -1625,7 +1643,7 @@ class App {
 							if ($thisuser) $user_game = $thisuser->ensure_user_in_game($new_game, false);
 							
 							if (empty($new_game->db_game['genesis_tx_hash'])) {
-								$game_genesis_tx_hash = $this->random_string(64);
+								$game_genesis_tx_hash = $this->random_hex_string(64);
 								
 								$q = "UPDATE games SET genesis_tx_hash=".$this->quote_escape($game_genesis_tx_hash)." WHERE game_id='".$new_game->db_game['game_id']."';";
 								$r = $this->run_query($q);

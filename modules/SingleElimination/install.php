@@ -40,6 +40,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$new_game = $app->create_game_from_definition($new_game_def_txt, $thisuser, "SingleElimination", $error_message, $db_game);
 		$new_game->blockchain->unset_first_required_block();
 		$new_game->start_game();
+		$new_game->ensure_events_until_block($new_game->db_game['game_starting_block']);
 		
 		if ($error_message) echo $error_message."<br/>\n";
 		?>
