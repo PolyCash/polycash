@@ -451,6 +451,7 @@ if ($thisuser && $game) {
 	$blockchain_last_block_id = $game->blockchain->last_block_id();
 	$blockchain_current_round = $game->block_to_round($blockchain_last_block_id+1);
 	$blockchain_block_within_round = $game->block_id_to_round_index($blockchain_last_block_id+1);
+	$blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_block_id);
 	
 	$last_block_id = $game->last_block_id();
 	$current_round = $game->block_to_round($last_block_id+1);
@@ -526,6 +527,7 @@ if ($thisuser && $game) {
 			echo ', "'.$game->blockchain->db_blockchain['seconds_per_block'].'"';
 			echo ', "'.$game->db_game['inflation'].'"';
 			echo ', "'.$game->db_game['exponential_inflation_rate'].'"';
+			echo ', "'.$blockchain_last_block['time_mined'].'"';
 		?>));
 		
 		games[0].game_loop_event();

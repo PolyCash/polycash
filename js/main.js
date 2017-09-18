@@ -1320,7 +1320,7 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 				var block_sim_time_sec = Math.round(event_sim_time_sec/this.game.game_round_length);
 				var sec_into_game = block_in_round*block_sim_time_sec;
 				
-				var sec_since_block_loaded = (new Date().getTime() - this.game.time_last_block_loaded)/1000;
+				var sec_since_block_loaded = ((new Date().getTime())/1000 - this.game.time_last_block_loaded);
 				var expected_sec_this_block = sec_since_block_loaded + this.game.seconds_per_block;
 				var sim_sec_into_block = Math.round((sec_since_block_loaded/expected_sec_this_block)*block_sim_time_sec);
 				sec_into_game += sim_sec_into_block;
@@ -1336,7 +1336,7 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 };
 
 // OBJECT: Game
-var Game = function(game_id, last_block_id, last_transaction_id, my_last_transaction_id, mature_game_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, chain_coin_name, chain_coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, seconds_per_block, inflation, exponential_inflation_rate) {
+var Game = function(game_id, last_block_id, last_transaction_id, my_last_transaction_id, mature_game_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, chain_coin_name, chain_coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, seconds_per_block, inflation, exponential_inflation_rate, time_last_block_loaded) {
 	Game.numInstances = (Game.numInstances || 0) + 1;
 	
 	this.instance_id = Game.numInstances-1;
@@ -1371,7 +1371,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 	this.my_effective_votes = 0;
 	this.utxo_max_effective_votes = 0;
 	this.utxo_max_height = 150;
-	this.time_last_block_loaded = new Date().getTime();
+	this.time_last_block_loaded = parseInt(time_last_block_loaded);
 	
 	this.votes_per_coin = 0;
 	if (inflation == "exponential") {
@@ -1451,7 +1451,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 						if (json_result['game_loop_index'] > _this.last_game_loop_index_applied) {
 							if (json_result['new_block'] == "1") {
 								_this.last_block_id = parseInt(json_result['last_block_id']);
-								_this.time_last_block_loaded = new Date().getTime();
+								_this.time_last_block_loaded = parseInt(json_result['time_last_block_loaded']);
 								
 								if (_this.refresh_page == "wallet") {
 									if (parseInt(json_result['new_performance_history']) == 1) {

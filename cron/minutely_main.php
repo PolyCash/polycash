@@ -175,6 +175,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 									if ($rand_num <= $block_prob) {
 										echo "FOUND A BLOCK!!\n";
 										echo $running_games[$running_game_i]->new_block();
+										list($successful, $this_log_text) = $running_games[$running_game_i]->add_block($last_block_id+1);
 									}
 									else {
 										echo "No block\n";

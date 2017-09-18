@@ -1991,7 +1991,9 @@ class Game {
 				$option_offset = 0;
 				$last_used_starting_block = false;
 				
-				$q = "SELECT * FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."' AND event_starting_block <= ".$block_id." AND event_starting_block > ".$this->db_game['events_until_block']." ORDER BY event_index ASC;";
+				$q = "SELECT * FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."' AND event_starting_block <= ".$block_id;
+				if ($this->db_game['events_until_block'] > $block_id) $q .= " AND event_starting_block > ".$this->db_game['events_until_block'];
+				$q .= " ORDER BY event_index ASC;";
 				$r = $this->blockchain->app->run_query($q);
 				
 				while ($game_defined_event = $r->fetch()) {

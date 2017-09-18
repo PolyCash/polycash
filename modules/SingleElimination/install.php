@@ -14,9 +14,9 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	
 	if (empty($public_private)) {
 		?>
-		<p><a href="/modules/SingleElimination/install.php?public_private=public">Install</a></p>
-		<p><a href="/modules/SingleElimination/install.php?public_private=private">Install private game</a></p>
-		<p><a href="/modules/SingleElimination/set_style.php">Run styling script</a></p>
+		<p><a href="/modules/SingleElimination/install.php?public_private=public&key=<?php echo $GLOBALS['cron_key_string']; ?>">Install</a></p>
+		<p><a href="/modules/SingleElimination/install.php?public_private=private&key=<?php echo $GLOBALS['cron_key_string']; ?>">Install private game</a></p>
+		<p><a href="/modules/SingleElimination/set_style.php&key=<?php echo $GLOBALS['cron_key_string']; ?>">Run styling script</a></p>
 		<?php
 	}
 	else {
@@ -39,12 +39,13 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$error_message = false;
 		$new_game = $app->create_game_from_definition($new_game_def_txt, $thisuser, "SingleElimination", $error_message, $db_game);
 		$new_game->blockchain->unset_first_required_block();
+		$new_game->start_game();
 		
 		if ($error_message) echo $error_message."<br/>\n";
-		echo "Next please <a href=\"/scripts/reset_game.php?key=".$GLOBALS['cron_key_string']."&game_id=".$new_game->db_game['game_id']."\">reset this game</a><br/>\n";
-		echo "To apply styles to this game, <a href=\"/modules/SingleElimination/set_style.php\">run the styling script</a><br/>\n";
-		
-		echo "Done!!<br/>\n";
+		?>
+		To apply styles to this game, <a href="/modules/SingleElimination/set_style.php?key=<?php echo $GLOBALS['cron_key_string']; ?>">run the styling script</a><br/>
+		Done!!<br/>
+		<?php
 	}
 }
 else echo "Please supply the correct key.<br/>\n";

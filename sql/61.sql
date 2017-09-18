@@ -1,0 +1,1 @@
+ALTER TABLE `blocks` ADD `time_mined` INT NULL DEFAULT NULL AFTER `time_loaded`;

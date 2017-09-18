@@ -116,8 +116,8 @@ class SingleEliminationGameDefinition {
 		for ($round=$from_round; $round<=$to_round; $round++) {
 			$meta_round = floor(($round-1)/$rounds_per_tournament);
 			$this_round = ($round-1)%$rounds_per_tournament+1;
-			$rounds_left = $rounds_per_tournament - $this_round;
-			$num_events = pow(2, $rounds_left);
+			$rounds_left = $rounds_per_tournament - ($this_round+1);
+			$num_events = $this->num_events_in_round($round, $rounds_per_tournament);
 			$prevround_offset = $this->round_to_prevround_offset($round, false);
 			$event_index = $prevround_offset;
 			
@@ -209,7 +209,7 @@ class SingleEliminationGameDefinition {
 	public function rename_event(&$gde, &$game) {
 		$general_entity_type = $this->app->check_set_entity_type("general entity");
 		$possible_outcomes = array();
-		$round = 1+floor(($gde['event_starting_block']-$this->game_def->game_starting_block)/$this->game_def->round_length);
+		$round = 1+floor(($gde['event_starting_block']-$game->db_game['game_starting_block'])/$this->game_def->round_length);
 		$this_round = ($round-1)%$this->get_rounds_per_tournament()+1;
 		$event_name = $this->generate_event_labels($possible_outcomes, $round, $this_round, false, $general_entity_type['entity_type_id'], $gde['event_index'], $game);
 		
@@ -375,8 +375,9 @@ class SingleEliminationGameDefinition {
 	
 	public function num_events_in_round($round, $rounds_per_tournament) {
 		if (empty($rounds_per_tournament)) $rounds_per_tournament = $this->get_rounds_per_tournament();
-		$this_round = ($round-1)%$rounds_per_tournament + 1;
-		return pow(2, $rounds_per_tournament-$this_round);
+		$this_round = ($round-1)%$rounds_per_tournament+1;
+		$rounds_left = $rounds_per_tournament - $this_round;
+		return pow(2, $rounds_left);
 	}
 	
 	public function event_index_to_round($event_index, $rounds_per_tournament) {

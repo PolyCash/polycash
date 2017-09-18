@@ -777,7 +777,9 @@ class App {
 			while ($db_game = $r->fetch()) {
 				$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 				$featured_game = new Game($blockchain, $db_game['game_id']);
-				$mining_block_id = $blockchain->last_block_id()+1;
+				$last_block_id = $blockchain->last_block_id();
+				$mining_block_id = $last_block_id+1;
+				$db_last_block = $blockchain->fetch_block_by_id($last_block_id);
 				$current_round_id = $featured_game->block_to_round($mining_block_id);
 				?>
 				<script type="text/javascript">
@@ -801,6 +803,7 @@ class App {
 					echo ', "'.$featured_game->blockchain->db_blockchain['seconds_per_block'].'"';
 					echo ', "'.$featured_game->db_game['inflation'].'"';
 					echo ', "'.$featured_game->db_game['exponential_inflation_rate'].'"';
+					echo ', "'.$db_last_block['time_mined'].'"';
 				?>));
 				
 				games[<?php echo $counter; ?>].game_loop_event();
