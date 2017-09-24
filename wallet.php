@@ -405,7 +405,7 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 			}
 		}
 		
-		for ($block=1; $block<$game->db_game['round_length']; $block++) {
+		for ($block=1; $block<=$game->db_game['round_length']; $block++) {
 			$strategy_block = false;
 			$q = "SELECT * FROM user_strategy_blocks WHERE strategy_id='".$user_strategy['strategy_id']."' AND block_within_round='".$block."';";
 			$r = $app->run_query($q);
@@ -866,7 +866,7 @@ if ($thisuser && $game) {
 							</div>
 							<div class="row">
 								<?php
-								for ($block=1; $block<$game->db_game['round_length']; $block++) {
+								for ($block=1; $block<=$game->db_game['round_length']; $block++) {
 									echo '<div class="col-md-2">';
 									echo '<input type="checkbox" name="vote_on_block_'.$block.'" id="vote_on_block_'.$block.'" value="1"';
 									
