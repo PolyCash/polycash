@@ -68,7 +68,7 @@ class SingleEliminationGameDefinition {
 			"coin_abbreviation": "FAN",
 			"escrow_address": "LeZ5YYWjg6hxgFzSfZJ26bsLHSexAuiEY5",
 			"genesis_tx_hash": "b76eae23187f49238b93e80fe502cc58c8bbddf093fcbe73f543aa7b4bbb1e25",
-			"genesis_amount": 100000000000,
+			"genesis_amount": 100000000000000,
 			"game_starting_block": 1278841,
 			"game_winning_rule": "none",
 			"game_winning_field": "",

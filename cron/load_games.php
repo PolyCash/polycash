@@ -20,13 +20,14 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	$loading_games = $app->check_process_running("loading_games");
 	
 	if (!$loading_games) {
+		$print_debug = false;
+		
 		if ($GLOBALS['process_lock_method'] == "db") {
 			$GLOBALS['app'] = $app;
 			$GLOBALS['shutdown_lock_name'] = "loading_games";
 			$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
 			register_shutdown_function("script_shutdown");
 		}
-		$app->set_site_constant("last_script_run_time", time());
 		
 		$blockchains = array();
 		
@@ -40,19 +41,19 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			if (!empty($_REQUEST['game_id'])) $real_game_q .= " AND g.game_id='".(int)$_REQUEST['game_id']."'";
 			$real_game_q .= " AND b.online=1;";
 			$real_game_r = $app->run_query($real_game_q);
-			echo "Looping through ".$real_game_r->rowCount()." games.\n";
+			if ($print_debug) echo "Looping through ".$real_game_r->rowCount()." games.\n";
 			
 			while ($db_real_game = $real_game_r->fetch()) {
 				if (empty($blockchains[$db_real_game['blockchain_id']])) $blockchains[$db_real_game['blockchain_id']] = new Blockchain($app, $db_real_game['blockchain_id']);
 				$real_game = new Game($blockchains[$db_real_game['blockchain_id']], $db_real_game['game_id']);
-				$real_game->sync(true);
+				$real_game->sync($print_debug);
 			}
 			
 			$loop_stop_time = microtime(true);
 			$loop_time = $loop_stop_time-$loop_start_time;
 			$loop_target_time = max(1, $loop_time);
 			$sleep_usec = round(pow(10,6)*($loop_target_time - $loop_time));
-			echo "script run time: ".(microtime(true)-$script_start_time).", sleeping ".$sleep_usec/pow(10,6)." seconds.\n";
+			if ($print_debug) echo "script run time: ".(microtime(true)-$script_start_time).", sleeping ".$sleep_usec/pow(10,6)." seconds.\n";
 			usleep($sleep_usec);
 		}
 		while (microtime(true) < $script_start_time + ($script_target_time-$loop_target_time));

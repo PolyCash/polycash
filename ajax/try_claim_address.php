@@ -9,7 +9,7 @@ $permission_to_claim_address = false;
 
 $blockchain = new Blockchain($app, $blockchain_id);
 
-$q = "SELECT * FROM addresses WHERE address_id='".$address_id."' AND primary_blockchain_id='".$blockchain->db_blockchain['blockchain_id']."';";
+$q = "SELECT * FROM addresses WHERE address_id='".$address_id."';";
 $r = $app->run_query($q);
 
 if ($r->rowCount() > 0) {

@@ -24,7 +24,6 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			register_shutdown_function("script_shutdown");
 		}
 		$app->log_message("running load_blocks.php");
-		$app->set_site_constant("last_script_run_time", time());
 		
 		$blockchains = array();
 		

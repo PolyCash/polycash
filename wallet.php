@@ -642,6 +642,11 @@ if ($thisuser && $game) {
 					<?php
 				}
 				
+				$faucet_io = $game->check_faucet($user_game);
+				if ($faucet_io) {
+					echo '<p><button id="faucet_btn" class="btn btn-success" onclick="claim_from_faucet();">Claim '.$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,8)).' '.$game->db_game['coin_name_plural'].'</button></p>'."\n";
+				}
+				
 				$game_status_explanation = $game->game_status_explanation($thisuser, $user_game);
 				?>
 				<div style="display: block; overflow: hidden;">

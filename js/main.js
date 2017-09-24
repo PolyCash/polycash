@@ -217,19 +217,20 @@ function refresh_players() {
 		$('#tabcontent1').html(result);
 	});
 }
-function claim_coin_giveaway() {
-	var giveaway_btn_txt = $('#giveaway_btn').html();
-	$('#giveaway_btn').html("Loading...");
+function claim_from_faucet() {
+	var faucet_btn_txt = $('#faucet_btn').html();
+	$('#faucet_btn').html("Loading...");
 	
-	$.get("/ajax/coin_giveaway.php?game_id="+games[0].game_id+"&action=claim", function(result) {
-		$('#giveaway_btn').html(giveaway_btn_txt);
+	$.get("/ajax/faucet.php?game_id="+games[0].game_id+"&action=claim", function(result) {
+		$('#faucet_btn').html(faucet_btn_txt);
+		var result_obj = JSON.parse(result);
 		
-		if (result == "1") {
+		if (result_obj['status_code'] == "1") {
 			alert("Great, coins have been added to your account!");
 			window.location = '/wallet/'+games[0].game_url_identifier+'/';
 			return false;
 		}
-		else alert("Your free coins have already been claimed.");
+		else alert(result_obj['message']);
 		
 		games[0].refresh_if_needed();
 	});
@@ -1605,6 +1606,13 @@ function account_spend_action_changed() {
 	
 	$('#account_spend_'+account_spend_action).show('fast');
 	selected_account_action = account_spend_action;
+	
+	if (account_spend_action == "join_tx") {
+		$.get("/ajax/account_spend.php?io_id="+account_io_id+"&action=start_join_tx", function(result) {
+			var result_obj = JSON.parse(result);
+			$('#account_spend_join_tx').html(result_obj['html']);
+		});
+	}
 }
 function account_spend_buyin_address_choice_changed() {
 	var address_choice = $('#account_spend_buyin_address_choice').val();
@@ -1691,4 +1699,11 @@ function try_claim_address(blockchain_id, address_id) {
 function change_user_game() {
 	var user_game_id = $('#select_user_game').val();
 	window.location = '/wallet/'+games[0].game_url_identifier+'/?action=change_user_game&user_game_id='+user_game_id;
+}
+function finish_join_tx() {
+	$.get("/ajax/account_spend.php?action=finish_join_tx&io_id="+account_io_id+"&join_io_id="+$('#join_tx_io_id').val(), function(result) {
+		var result_obj = JSON.parse(result);
+		alert(result_obj['message']);
+		if (result_obj['status_code'] == 13) window.location = window.location;
+	});
 }

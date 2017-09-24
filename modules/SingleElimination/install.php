@@ -33,6 +33,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		if ($public_private == "private") {
 			$game_def->game_def->blockchain_identifier = "private";
 			$game_def->game_def->game_starting_block = 1;
+			$game_def->game_def->round_length = 20;
 		}
 		$new_game_def_txt = $app->game_def_to_text($game_def->game_def);
 		

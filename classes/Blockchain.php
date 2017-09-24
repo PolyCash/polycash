@@ -55,7 +55,9 @@ class Blockchain {
 	}
 	
 	public function last_complete_block_id() {
-		$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id >= ".$this->db_blockchain['first_required_block']." AND locally_saved=0 ORDER BY block_id ASC LIMIT 1;";
+		$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."'";
+		if (!empty($this->db_blockchain['first_required_block'])) $q .= " AND block_id >= ".$this->db_blockchain['first_required_block'];
+		$q .= " AND locally_saved=0 ORDER BY block_id ASC LIMIT 1;";
 		$r = $this->app->run_query($q);
 		
 		if ($r->rowCount() > 0) {
@@ -63,7 +65,9 @@ class Blockchain {
 			return $block['block_id']-1;
 		}
 		else {
-			$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id >= ".$this->db_blockchain['first_required_block']." AND locally_saved=1 ORDER BY block_id DESC LIMIT 1;";
+			$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."'";
+			if (!empty($this->db_blockchain['first_required_block'])) $q .= " AND block_id >= ".$this->db_blockchain['first_required_block'];
+			$q .= " AND locally_saved=1 ORDER BY block_id DESC LIMIT 1;";
 			$r = $this->app->run_query($q);
 			
 			if ($r->rowCount() > 0) {
@@ -748,7 +752,7 @@ class Blockchain {
 		$r = $this->app->run_query($q);
 		$genesis_io_id = $this->app->last_insert_id();
 		
-		$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_hash='".$genesis_block_hash."', block_id='0', time_created='".time()."', time_loaded='".time()."', locally_saved=1;";
+		$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_hash='".$genesis_block_hash."', block_id='0', time_created='".time()."', time_loaded='".time()."', num_transactions=1, locally_saved=1;";
 		$r = $this->app->run_query($q);
 		
 		$html .= "Added the genesis transaction!<br/>\n";
@@ -1146,7 +1150,6 @@ class Blockchain {
 		for ($i=0; $i<count($amounts); $i++) {
 			$amount += $amounts[$i];
 		}
-		
 		$utxo_balance = 0;
 		
 		if ($type != "coinbase") {
@@ -1166,9 +1169,9 @@ class Blockchain {
 			if ($io_ids) $num_inputs = count($io_ids);
 			
 			if ($this->db_blockchain['p2p_mode'] != "p2p") {
-				$new_tx_hash = $this->app->random_hex_string(32);
+				$tx_hash = $this->app->random_hex_string(32);
 				$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', fee_amount='".$transaction_fee."', has_all_inputs=1, has_all_outputs=1, num_inputs='".$num_inputs."', num_outputs='".count($amounts)."'";
-				$q .= ", tx_hash='".$new_tx_hash."'";
+				$q .= ", tx_hash='".$tx_hash."'";
 				$q .= ", transaction_desc='".$type."', amount=".$amount;
 				if ($block_id !== false) $q .= ", block_id='".$block_id."'";
 				$q .= ", time_created='".time()."';";
@@ -1217,7 +1220,7 @@ class Blockchain {
 			$out_index = 0;
 			for ($out_index=0; $out_index<count($amounts); $out_index++) {
 				if (!$output_error) {
-					$address_id = $address_ids[0];
+					$address_id = $address_ids[$out_index];
 					
 					if ($address_id) {
 						$q = "SELECT * FROM addresses WHERE address_id='".$address_id."';";
@@ -1295,8 +1298,8 @@ class Blockchain {
 							var_dump($e);
 							return false;
 						}
-						$this->add_transaction($coin_rpc, $tx_hash, $block_id, true, $successful, 0, false, false);
 					}
+					$this->add_transaction($coin_rpc, $tx_hash, $block_id, true, $successful, false, false, false);
 				}
 				return $transaction_id;
 			}
@@ -1324,6 +1327,7 @@ class Blockchain {
 		$q = "SELECT * FROM transactions WHERE transaction_desc='transaction' AND blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id IS NULL;";
 		$r = $this->app->run_query($q);
 		$fee_sum = 0;
+		$num_transactions = $r->rowCount();
 		
 		while ($unconfirmed_tx = $r->fetch()) {
 			$coins_in = $this->app->transaction_coins_in($unconfirmed_tx['transaction_id']);
@@ -1372,6 +1376,10 @@ class Blockchain {
 		$mined_address = $this->create_or_fetch_address($mined_address_str, false, false, false, false, true);
 		
 		$mined_transaction_id = $this->create_transaction('coinbase', array($this->db_blockchain['initial_pow_reward']), $created_block_id, false, array($mined_address['address_id']), 0);
+		$num_transactions++;
+		
+		$q = "UPDATE blocks SET num_transactions=".$num_transactions." WHERE internal_block_id='".$internal_block_id."';";
+		$r = $this->app->run_query($q);
 		
 		return $created_block_id;
 	}
@@ -1381,6 +1389,30 @@ class Blockchain {
 			$q = "UPDATE blockchains SET last_hash_time='".$time."' WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';";
 			$r = $this->app->run_query($q);
 		}
+	}
+	
+	public function games_by_transaction($db_transaction) {
+		$q = "SELECT g.* FROM games g JOIN transaction_game_ios gio ON g.game_id=gio.game_id JOIN transaction_ios io ON gio.io_id=io.io_id WHERE (io.create_transaction_id=".$db_transaction['transaction_id']." OR io.spend_transaction_id=".$db_transaction['transaction_id'].") GROUP BY g.game_id ORDER BY g.game_id ASC;";
+		$r = $this->app->run_query($q);
+		
+		$db_games = array();
+		
+		while ($db_game = $r->fetch()) {
+			array_push($db_games, $db_game);
+		}
+		return $db_games;
+	}
+	
+	public function games_by_address($db_address) {
+		$q = "SELECT g.* FROM games g JOIN transaction_game_ios gio ON g.game_id=gio.game_id JOIN transaction_ios io ON gio.io_id=io.io_id JOIN transactions t ON io.create_transaction_id WHERE io.address_id=".$db_address['address_id']." AND t.blockchain_id='".$this->db_blockchain['blockchain_id']."' GROUP BY g.game_id ORDER BY g.game_id ASC;";
+		$r = $this->app->run_query($q);
+		
+		$db_games = array();
+		
+		while ($db_game = $r->fetch()) {
+			array_push($db_games, $db_game);
+		}
+		return $db_games;
 	}
 }
 ?>

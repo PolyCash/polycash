@@ -198,11 +198,11 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 		else {
 			if (strlen($uri_parts[5]) < 20) {
 				$tx_id = intval($uri_parts[5]);
-				$q = "SELECT * FROM transactions WHERE transaction_id='".$tx_id."';";
+				$q = "SELECT * FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND transaction_id='".$tx_id."';";
 			}
 			else {
 				$tx_hash = $uri_parts[5];
-				$q = "SELECT * FROM transactions WHERE tx_hash=".$app->quote_escape($tx_hash).";";
+				$q = "SELECT * FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND tx_hash=".$app->quote_escape($tx_hash).";";
 			}
 			$r = $app->run_query($q);
 			
@@ -866,6 +866,17 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				else echo $blockchain->db_blockchain['blockchain_name'];
 				echo " Address: ".$address['address']."</h3>\n";
 				
+				if (empty($game)) {
+					$address_associated_games = $blockchain->games_by_address($address);
+					echo "<p>This address is associated with ".count($address_associated_games)." games<br/>\n";
+					
+					for ($i=0; $i<count($address_associated_games); $i++) {
+						$db_game = $address_associated_games[$i];
+						echo '<a href="/explorer/games/'.$db_game['url_identifier'].'/addresses/'.$address['address'].'/">'.$db_game['name']."</a><br/>\n";
+					}
+					echo "</p>\n";
+				}
+				
 				$q = "SELECT * FROM transactions t, transaction_ios i WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND i.address_id='".$address['address_id']."' AND (t.transaction_id=i.create_transaction_id OR t.transaction_id=i.spend_transaction_id) GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;";
 				$r = $app->run_query($q);
 				
@@ -916,6 +927,16 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 			else if ($explore_mode == "transactions") {
 				$rpc_transaction = false;
 				$rpc_raw_transaction = false;
+				
+				if (empty($game)) {
+					$tx_associated_games = $blockchain->games_by_transaction($transaction);
+					echo "<h3>This transaction is associated with ".count($tx_associated_games)." games</h3>\n";
+					
+					for ($i=0; $i<count($tx_associated_games); $i++) {
+						$db_game = $tx_associated_games[$i];
+						echo '<a href="/explorer/games/'.$db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'/">'.$db_game['name']."</a><br/>\n";
+					}
+				}
 				
 				if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
 					try {

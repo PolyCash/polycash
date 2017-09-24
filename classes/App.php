@@ -181,6 +181,13 @@ class App {
 		);
 		$pipes = array();
 		
+		$last_script_run_time = (int) $this->get_site_constant("last_script_run_time");
+		if ($last_script_run_time < time()-(60*5) && $GLOBALS['process_lock_method'] == "db") {
+			$this->set_site_constant("loading_blocks", 0);
+			$this->set_site_constant("loading_games", 0);
+			$this->set_site_constant("main_loop_running", 0);
+		}
+		
 		if (PHP_OS == "WINNT") $script_path_name = dirname(dirname(__FILE__));
 		else $script_path_name = realpath(dirname(dirname(__FILE__)));
 		

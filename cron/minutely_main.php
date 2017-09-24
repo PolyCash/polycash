@@ -5,17 +5,22 @@ if ($GLOBALS['process_lock_method'] == "db") {
 	include(realpath(dirname(dirname(__FILE__)))."/includes/handle_script_shutdown.php");
 }
 
-$script_target_time = 59;
+$script_target_time = 58;
 $script_start_time = microtime(true);
 
 if (!empty($argv)) {
 	$cmd_vars = $app->argv_to_array($argv);
 	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
 	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
+	if (!empty($cmd_vars['print_debug'])) $_REQUEST['print_debug'] = $cmd_vars['print_debug'];
 }
 
 if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
-	echo "<pre>";
+	$print_debug = false;
+	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
+	
+	if ($print_debug) echo "<pre>";
+	
 	$main_loop_running = $app->check_process_running("main_loop_running");
 	
 	if (!$main_loop_running) {
@@ -25,7 +30,6 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
 			register_shutdown_function("script_shutdown");
 		}
-		$app->set_site_constant("last_script_run_time", time());
 		
 		$blockchains = array();
 		$real_games = array();
@@ -33,7 +37,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$game_id2real_game_i = array();
 
 		// If block hashing hasn't run for a long time on private blockchain, add some blocks
-		$q = "SELECT * FROM blockchains WHERE p2p_mode='none' AND last_hash_time IS NOT NULL AND (".time()."-last_hash_time) > (seconds_per_block*2);";
+		$q = "SELECT * FROM blockchains WHERE online=1 AND p2p_mode='none' AND last_hash_time IS NOT NULL AND (".time()."-last_hash_time) > (seconds_per_block*2);";
 		$r = $GLOBALS['app']->run_query($q);
 		$log_text = "";
 		
@@ -42,7 +46,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			
 			$seconds_to_add = time()-$db_blockchain['last_hash_time'];
 			$blocks_to_add = round($seconds_to_add/$db_blockchain['seconds_per_block']);
-			echo "adding $blocks_to_add\n";
+			if ($print_debug) echo "adding $blocks_to_add\n";
 			
 			$associated_games = $blockchains[$db_blockchain['blockchain_id']]->associated_games(false);
 			
@@ -92,7 +96,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 						
 						$coin_rpcs[$real_game_i]->setgenerate(false);
 						$coin_rpcs[$real_game_i]->setgenerate(true);
-						echo "Started generating coins for ".$real_games[$real_game_i]->db_game['name']."...\n";
+						if ($print_debug) echo "Started generating coins for ".$real_games[$real_game_i]->db_game['name']."...\n";
 					}
 				}
 			}
@@ -139,7 +143,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		while ($running_game = $r->fetch()) {
 			if (empty($blockchains[$running_game['blockchain_id']])) $blockchains[$running_game['blockchain_id']] = new Blockchain($app, $running_game['blockchain_id']);
 			$running_games[count($running_games)] = new Game($blockchains[$running_game['blockchain_id']], $running_game['game_id']);
-			echo "Including game: ".$running_game['name']."\n";
+			if ($print_debug) echo "Including game: ".$running_game['name']."\n";
 		}
 		
 		$app->delete_unconfirmable_transactions();
@@ -151,16 +155,16 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 					$loop_start_time = microtime(true);
 					
 					for ($running_game_i=0; $running_game_i<count($running_games); $running_game_i++) {
-						echo "\n".$running_games[$running_game_i]->db_game['name']."\n";
+						if ($print_debug) echo "\n".$running_games[$running_game_i]->db_game['name']."\n";
 						
 						if ($running_games[$running_game_i]->db_game['p2p_mode'] == "none") {
 							$remaining_prob = round($loop_target_time/$running_games[$running_game_i]->blockchain->db_blockchain['seconds_per_block'], 4);
 							$thisgame_loop_start_time = microtime(true);
 							do {
 								$benchmark_time = microtime(true);
-								echo "update_db_game() ...";
+								if ($print_debug) echo "update_db_game() ...";
 								$running_games[$running_game_i]->update_db_game();
-								echo (microtime(true)-$benchmark_time)." sec\n";
+								if ($print_debug) echo (microtime(true)-$benchmark_time)." sec\n";
 								$benchmark_time = microtime(true);
 								
 								if ($running_games[$running_game_i]->db_game['game_status'] == "running") {
@@ -171,28 +175,33 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 									$rand_num = rand(0, pow(10,4))/pow(10,4);
 									if (!empty($_REQUEST['force_new_block'])) $rand_num = 0;
 									
-									echo $running_games[$running_game_i]->db_game['name']." (".$rand_num." vs ".$block_prob."): ";
+									if ($print_debug) echo $running_games[$running_game_i]->db_game['name']." (".$rand_num." vs ".$block_prob."): ";
 									if ($rand_num <= $block_prob) {
-										echo "FOUND A BLOCK!!\n";
-										echo $running_games[$running_game_i]->new_block();
-										list($successful, $this_log_text) = $running_games[$running_game_i]->add_block($last_block_id+1);
+										if ($print_debug) echo "FOUND A BLOCK!!\n";
+										$txt = $running_games[$running_game_i]->new_block();
+										if ($print_debug) echo $txt;
+										list($successful, $this_log_text) = $running_games[$running_game_i]->sync($print_debug);
 									}
 									else {
-										echo "No block\n";
+										if ($print_debug) echo "No block\n";
 									}
 								}
 								else $remaining_prob = 0;
 								
-								echo (microtime(true)-$benchmark_time)." sec\n";
+								if ($print_debug) echo (microtime(true)-$benchmark_time)." sec\n";
 								$benchmark_time = microtime(true);
 							}
 							while ($remaining_prob > 0 && microtime(true)-$thisgame_loop_start_time < 60);
 							
 							$running_games[$running_game_i]->blockchain->set_last_hash_time(time());
 						}
-						echo "Apply user strategies...";
-						echo $running_games[$running_game_i]->apply_user_strategies();
-						echo (microtime(true)-$benchmark_time)." sec\n";
+						if ($print_debug) echo "Apply user strategies...";
+						$txt = $running_games[$running_game_i]->apply_user_strategies();
+						
+						if ($print_debug) {
+							echo $txt;
+							echo (microtime(true)-$benchmark_time)." sec\n";
+						}
 						$benchmark_time = microtime(true);
 					}
 					
@@ -200,7 +209,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 					$loop_time = $loop_stop_time-$loop_start_time;
 					$loop_target_time = max(1, $loop_time);
 					$sleep_usec = round(pow(10,6)*($loop_target_time - $loop_time));
-					echo "script run time: ".(microtime(true)-$script_start_time).", sleeping ".$sleep_usec/pow(10,6)." seconds.\n";
+					if ($print_debug) echo "script run time: ".(microtime(true)-$script_start_time).", sleeping ".$sleep_usec/pow(10,6)." seconds.\n";
 					usleep($sleep_usec);
 					$app->set_site_constant("loop_target_time", round($loop_target_time, 4));
 				}
@@ -216,13 +225,14 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$sec_until_refresh = round($script_target_time-$runtime_sec);
 		if ($sec_until_refresh < 0) $sec_until_refresh = 0;
 
-		echo "</pre>";
+		if ($print_debug) echo "</pre>";
 		if (empty($argv)) echo '<script type="text/javascript">setTimeout("window.location=window.location;", '.(1000*$sec_until_refresh).');</script>'."\n";
-		echo "Script ran for ".round($runtime_sec, 2)." seconds.\n";
-		echo "<pre>";
+		if ($print_debug) echo "Script ran for ".round($runtime_sec, 2)." seconds.\n";
+		
+		if ($GLOBALS['process_lock_method'] == "db") $app->set_site_constant($GLOBALS['shutdown_lock_name'], 0);
 	}
-	else echo "Skipped starting the game loop; it's already running.\n";
-	echo "</pre>";
+	else echo "Skipped starting the game loop; it's already running (started ".$app->format_seconds(time()-$app->get_site_constant("last_script_run_time"))." ago).\n";
+	if ($print_debug) echo "</pre>";
 }
 else echo "Error: incorrect key supplied in cron/minutely_main.php\n";
 ?>

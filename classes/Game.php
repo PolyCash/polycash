@@ -406,7 +406,6 @@ class Game {
 		$current_round_id = $this->block_to_round($mining_block_id);
 		$block_of_round = $this->block_id_to_round_index($mining_block_id);
 		
-		echo 'applying user strategies, block of round = '.$block_of_round.', round length: '.$this->db_game['round_length']."<br/>\n";
 		if ($block_of_round != $this->db_game['round_length']) {
 			$q = "SELECT * FROM users u JOIN user_games g ON u.user_id=g.user_id JOIN user_strategies s ON g.strategy_id=s.strategy_id";
 			$q .= " JOIN user_strategy_blocks usb ON s.strategy_id=usb.strategy_id";
@@ -430,7 +429,7 @@ class Game {
 				if ($free_balance > 0 && $available_votes > 0) {
 					if ($db_user['voting_strategy'] == "api") {
 						if ($GLOBALS['api_proxy_url']) $api_client_url = $GLOBALS['api_proxy_url'].urlencode($db_user['api_url']);
-						else $api_client_url = $db_user['api_url'];
+						else $api_client_url = str_replace('&amp;', '&', $db_user['api_url']);
 						
 						$api_result = file_get_contents($api_client_url);
 						$api_obj = json_decode($api_result);
@@ -2936,6 +2935,22 @@ class Game {
 			
 			return $this->check_set_faucet_account();
 		}
+	}
+	
+	public function check_faucet($user_game) {
+		if ($user_game['faucet_claims'] == 0) {
+			$faucet_account = $this->check_set_faucet_account();
+			
+			$q = "SELECT *, SUM(gio.colored_amount) AS colored_amount_sum FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.spend_status='unspent' AND k.account_id='".$faucet_account['account_id']."' GROUP BY io.io_id ORDER BY colored_amount_sum DESC;";
+			$r = $this->blockchain->app->run_query($q);
+			
+			if ($r->rowCount() > 0) {
+				$faucet_io = $r->fetch();
+				return $faucet_io;
+			}
+			else return false;
+		}
+		else return false;
 	}
 }
 ?>
