@@ -216,6 +216,7 @@ games.push(new Game(<?php
 	echo ', "game", "'.$game->event_ids().'"';
 	echo ', "'.$game->logo_image_url().'"';
 	echo ', "'.$game->vote_effectiveness_function().'"';
+	echo ', "'.$game->effectiveness_param1().'"';
 	echo ', "'.$game->blockchain->db_blockchain['seconds_per_block'].'"';
 	echo ', "'.$game->db_game['inflation'].'"';
 	echo ', "'.$game->db_game['exponential_inflation_rate'].'"';

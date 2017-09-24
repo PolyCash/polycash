@@ -825,6 +825,7 @@ class App {
 					echo ', "home", "'.$featured_game->event_ids().'"';
 					echo ', "'.$featured_game->logo_image_url().'"';
 					echo ', "'.$featured_game->vote_effectiveness_function().'"';
+					echo ', "'.$featured_game->effectiveness_param1().'"';
 					echo ', "'.$featured_game->blockchain->db_blockchain['seconds_per_block'].'"';
 					echo ', "'.$featured_game->db_game['inflation'].'"';
 					echo ', "'.$featured_game->db_game['exponential_inflation_rate'].'"';
@@ -1426,6 +1427,7 @@ class App {
 			array('string', 'game_winning_field', true),
 			array('float', 'game_winning_inflation', true),
 			array('string', 'default_vote_effectiveness_function', true),
+			array('string', 'default_effectiveness_param1', true),
 			array('float', 'default_max_voting_fraction', true),
 			array('int', 'default_option_max_width', false),
 			array('int', 'default_payout_block_delay', true)

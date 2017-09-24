@@ -714,7 +714,7 @@ function show_planned_votes() {
 }
 
 // OBJECT: GameForm
-var game_form_vars = "blockchain_id,event_rule,option_group_id,event_entity_type_id,events_per_round,event_type_name,maturity,name,payout_weight,round_length,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,coin_name,coin_name_plural,coin_abbreviation,start_condition,buyin_policy,game_buyin_cap,default_vote_effectiveness_function,default_max_voting_fraction,game_starting_block,escrow_address,genesis_tx_hash,genesis_amount".split(",");
+var game_form_vars = "blockchain_id,event_rule,option_group_id,event_entity_type_id,events_per_round,event_type_name,maturity,name,payout_weight,round_length,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,coin_name,coin_name_plural,coin_abbreviation,start_condition,buyin_policy,game_buyin_cap,default_vote_effectiveness_function,default_effectiveness_param1,default_max_voting_fraction,game_starting_block,escrow_address,genesis_tx_hash,genesis_amount".split(",");
 function switch_to_game(game_id, action) {
 	var fetch_link_text = $('#fetch_game_link_'+game_id).html();
 	var switch_link_text = $('#switch_game_btn').html();
@@ -1252,13 +1252,14 @@ var game_io_id2input_index = {};
 var mature_ios = new Array();
 
 // OBJECT: Event
-var Event = function(game, game_event_index, event_id, num_voting_options, vote_effectiveness_function, option_block_rule) {
+var Event = function(game, game_event_index, event_id, num_voting_options, vote_effectiveness_function, effectiveness_param1, option_block_rule) {
 	this.game = game;
 	this.game_event_index = game_event_index;
 	this.event_id = event_id;
 	
 	this.num_voting_options = num_voting_options;
 	this.vote_effectiveness_function = vote_effectiveness_function;
+	this.effectiveness_param1 = effectiveness_param1;
 	this.option_block_rule = option_block_rule;
 	
 	this.sum_votes = 0;
@@ -1340,7 +1341,7 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 };
 
 // OBJECT: Game
-var Game = function(game_id, last_block_id, last_transaction_id, my_last_transaction_id, mature_game_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, chain_coin_name, chain_coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, seconds_per_block, inflation, exponential_inflation_rate, time_last_block_loaded) {
+var Game = function(game_id, last_block_id, last_transaction_id, my_last_transaction_id, mature_game_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, chain_coin_name, chain_coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, effectiveness_param1, seconds_per_block, inflation, exponential_inflation_rate, time_last_block_loaded) {
 	Game.numInstances = (Game.numInstances || 0) + 1;
 	
 	this.instance_id = Game.numInstances-1;
@@ -1361,6 +1362,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 	this.event_ids = event_ids;
 	this.logo_image_url = logo_image_url;
 	this.vote_effectiveness_function = vote_effectiveness_function;
+	this.effectiveness_param1 = effectiveness_param1;
 	this.seconds_per_block = parseInt(seconds_per_block);
 	this.inflation = inflation;
 	this.exponential_inflation_rate = parseFloat(exponential_inflation_rate);
@@ -1396,7 +1398,10 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 	};
 	this.round_index_to_effectiveness_factor = function(round_index) {
 		if (this.vote_effectiveness_function == "linear_decrease") {
-			return Math.floor(Math.pow(10,8)*(this.game_round_length-round_index)/(this.game_round_length-1))/Math.pow(10,8);
+			var slope = -1*this.effectiveness_param1;
+			var frac_complete = Math.floor(Math.pow(10,8)*(round_index/this.game_round_length))/Math.pow(10,8);
+			var effectiveness = Math.floor(Math.pow(10,8)*frac_complete*slope)/Math.pow(10,8) + 1;
+			return effectiveness;
 		}
 		else return 1;
 	};

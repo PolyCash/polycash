@@ -633,13 +633,12 @@ class Event {
 		$rr = $this->game->blockchain->app->run_query($qq);
 	}
 	
-	public function round_to_last_betting_block($round_id) {
-		return ($round_id-1)*$this->db_event['round_length']+5;
-	}
-	
 	public function round_index_to_effectiveness_factor($round_index) {
 		if ($this->db_event['vote_effectiveness_function'] == "linear_decrease") {
-			return floor(pow(10,8)*($this->game->db_game['round_length']-$round_index)/($this->game->db_game['round_length']-1))/pow(10,8);
+			$slope = -1*$this->db_event['effectiveness_param1'];
+			$frac_complete = floor(pow(10,8)*$round_index/$this->game->db_game['round_length'])/pow(10,8);
+			$effectiveness = floor(pow(10,8)*$frac_complete*$slope)/pow(10,8) + 1;
+			return $effectiveness;
 		}
 		else return 1;
 	}

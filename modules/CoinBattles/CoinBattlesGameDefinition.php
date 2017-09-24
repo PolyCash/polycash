@@ -41,6 +41,7 @@ class CoinBattlesGameDefinition {
 			"game_winning_field": "",
 			"game_winning_inflation": 0,
 			"default_vote_effectiveness_function": "linear_decrease",
+			"default_effectiveness_param1": 0.5,
 			"default_max_voting_fraction": 1,
 			"default_option_max_width": 200,
 			"default_payout_block_delay": 0

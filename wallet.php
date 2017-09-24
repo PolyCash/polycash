@@ -524,6 +524,7 @@ if ($thisuser && $game) {
 			echo ', "wallet", "'.$game->event_ids().'"';
 			echo ', "'.$game->logo_image_url().'"';
 			echo ', "'.$game->vote_effectiveness_function().'"';
+			echo ', "'.$game->effectiveness_param1().'"';
 			echo ', "'.$game->blockchain->db_blockchain['seconds_per_block'].'"';
 			echo ', "'.$game->db_game['inflation'].'"';
 			echo ', "'.$game->db_game['exponential_inflation_rate'].'"';
@@ -552,7 +553,7 @@ if ($thisuser && $game) {
 				if ($i == 0) echo "games[0].all_events_start_index = ".$db_event['event_index'].";\n";
 				else if ($i == $initial_load_events-1) echo "games[0].all_events_stop_index = ".$db_event['event_index'].";\n";
 				
-				echo "games[0].all_events[".$db_event['event_index']."] = new Event(games[0], ".$db_event['event_index'].", ".$db_event['event_id'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'");'."\n";
+				echo "games[0].all_events[".$db_event['event_index']."] = new Event(games[0], ".$db_event['event_index'].", ".$db_event['event_id'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'", "'.$db_event['effectiveness_param1'].'");'."\n";
 				echo "games[0].all_events_db_id_to_index[".$db_event['event_id']."] = ".$db_event['event_index'].";\n";
 				
 				$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY event_option_index ASC;";

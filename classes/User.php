@@ -485,6 +485,7 @@ class User {
 		if ($r->rowCount() == 0) {
 			$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND a.option_index IS NULL AND a.is_mine=1 AND k.account_id IS NULL;";
 			$r = $this->app->run_query($q);
+			
 			if ($r->rowCount() > 0) {
 				$address = $r->fetch();
 				
