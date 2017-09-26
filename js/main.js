@@ -217,19 +217,20 @@ function refresh_players() {
 		$('#tabcontent1').html(result);
 	});
 }
-function claim_coin_giveaway() {
-	var giveaway_btn_txt = $('#giveaway_btn').html();
-	$('#giveaway_btn').html("Loading...");
+function claim_from_faucet() {
+	var faucet_btn_txt = $('#faucet_btn').html();
+	$('#faucet_btn').html("Loading...");
 	
-	$.get("/ajax/coin_giveaway.php?game_id="+games[0].game_id+"&action=claim", function(result) {
-		$('#giveaway_btn').html(giveaway_btn_txt);
+	$.get("/ajax/faucet.php?game_id="+games[0].game_id+"&action=claim", function(result) {
+		$('#faucet_btn').html(faucet_btn_txt);
+		var result_obj = JSON.parse(result);
 		
-		if (result == "1") {
+		if (result_obj['status_code'] == "1") {
 			alert("Great, coins have been added to your account!");
 			window.location = '/wallet/'+games[0].game_url_identifier+'/';
 			return false;
 		}
-		else alert("Your free coins have already been claimed.");
+		else alert(result_obj['message']);
 		
 		games[0].refresh_if_needed();
 	});
@@ -713,7 +714,7 @@ function show_planned_votes() {
 }
 
 // OBJECT: GameForm
-var game_form_vars = "blockchain_id,event_rule,option_group_id,event_entity_type_id,events_per_round,event_type_name,maturity,name,payout_weight,round_length,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,coin_name,coin_name_plural,coin_abbreviation,start_condition,buyin_policy,game_buyin_cap,default_vote_effectiveness_function,default_max_voting_fraction,game_starting_block,escrow_address,genesis_tx_hash,genesis_amount".split(",");
+var game_form_vars = "blockchain_id,event_rule,option_group_id,event_entity_type_id,events_per_round,event_type_name,maturity,name,payout_weight,round_length,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,coin_name,coin_name_plural,coin_abbreviation,start_condition,buyin_policy,game_buyin_cap,default_vote_effectiveness_function,default_effectiveness_param1,default_max_voting_fraction,game_starting_block,escrow_address,genesis_tx_hash,genesis_amount".split(",");
 function switch_to_game(game_id, action) {
 	var fetch_link_text = $('#fetch_game_link_'+game_id).html();
 	var switch_link_text = $('#switch_game_btn').html();
@@ -985,7 +986,7 @@ function confirm_compose_vote() {
 					if (result_obj['status_code'] == 0) {
 						$('#compose_vote_success').html(result_obj['message']);
 						$('#compose_vote_success').slideDown('slow');
-						setTimeout("$('#compose_vote_success').slideUp('fast');", 4500);
+						setTimeout("$('#compose_vote_success').slideUp('fast');", 5000);
 						
 						for (var i=0; i<vote_options.length; i++) {
 							$('#compose_vote_output_'+i).remove();
@@ -1000,7 +1001,7 @@ function confirm_compose_vote() {
 					else {
 						$('#compose_vote_errors').html(result_obj['message']);
 						$('#compose_vote_errors').slideDown('slow');
-						setTimeout("$('#compose_vote_errors').slideUp('fast');", 2500);
+						setTimeout("$('#compose_vote_errors').slideUp('fast');", 10000);
 					}
 				});
 			}
@@ -1251,13 +1252,14 @@ var game_io_id2input_index = {};
 var mature_ios = new Array();
 
 // OBJECT: Event
-var Event = function(game, game_event_index, event_id, num_voting_options, vote_effectiveness_function, option_block_rule) {
+var Event = function(game, game_event_index, event_id, num_voting_options, vote_effectiveness_function, effectiveness_param1, option_block_rule) {
 	this.game = game;
 	this.game_event_index = game_event_index;
 	this.event_id = event_id;
 	
 	this.num_voting_options = num_voting_options;
 	this.vote_effectiveness_function = vote_effectiveness_function;
+	this.effectiveness_param1 = effectiveness_param1;
 	this.option_block_rule = option_block_rule;
 	
 	this.sum_votes = 0;
@@ -1320,7 +1322,10 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 				var block_sim_time_sec = Math.round(event_sim_time_sec/this.game.game_round_length);
 				var sec_into_game = block_in_round*block_sim_time_sec;
 				
-				var sec_since_block_loaded = (new Date().getTime() - this.game.time_last_block_loaded)/1000;
+				var sec_since_block_loaded;
+				if (this.game.time_last_block_loaded > 0) sec_since_block_loaded = ((new Date().getTime())/1000 - this.game.time_last_block_loaded);
+				else sec_since_block_loaded = 0;
+				
 				var expected_sec_this_block = sec_since_block_loaded + this.game.seconds_per_block;
 				var sim_sec_into_block = Math.round((sec_since_block_loaded/expected_sec_this_block)*block_sim_time_sec);
 				sec_into_game += sim_sec_into_block;
@@ -1336,7 +1341,7 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 };
 
 // OBJECT: Game
-var Game = function(game_id, last_block_id, last_transaction_id, my_last_transaction_id, mature_game_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, chain_coin_name, chain_coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, seconds_per_block, inflation, exponential_inflation_rate) {
+var Game = function(game_id, last_block_id, last_transaction_id, my_last_transaction_id, mature_game_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, chain_coin_name, chain_coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, effectiveness_param1, seconds_per_block, inflation, exponential_inflation_rate, time_last_block_loaded) {
 	Game.numInstances = (Game.numInstances || 0) + 1;
 	
 	this.instance_id = Game.numInstances-1;
@@ -1357,6 +1362,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 	this.event_ids = event_ids;
 	this.logo_image_url = logo_image_url;
 	this.vote_effectiveness_function = vote_effectiveness_function;
+	this.effectiveness_param1 = effectiveness_param1;
 	this.seconds_per_block = parseInt(seconds_per_block);
 	this.inflation = inflation;
 	this.exponential_inflation_rate = parseFloat(exponential_inflation_rate);
@@ -1371,7 +1377,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 	this.my_effective_votes = 0;
 	this.utxo_max_effective_votes = 0;
 	this.utxo_max_height = 150;
-	this.time_last_block_loaded = new Date().getTime();
+	this.time_last_block_loaded = parseInt(time_last_block_loaded);
 	
 	this.votes_per_coin = 0;
 	if (inflation == "exponential") {
@@ -1392,7 +1398,10 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 	};
 	this.round_index_to_effectiveness_factor = function(round_index) {
 		if (this.vote_effectiveness_function == "linear_decrease") {
-			return Math.floor(Math.pow(10,8)*(this.game_round_length-round_index)/(this.game_round_length-1))/Math.pow(10,8);
+			var slope = -1*this.effectiveness_param1;
+			var frac_complete = Math.floor(Math.pow(10,8)*(round_index/this.game_round_length))/Math.pow(10,8);
+			var effectiveness = Math.floor(Math.pow(10,8)*frac_complete*slope)/Math.pow(10,8) + 1;
+			return effectiveness;
 		}
 		else return 1;
 	};
@@ -1451,7 +1460,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, my_last_transac
 						if (json_result['game_loop_index'] > _this.last_game_loop_index_applied) {
 							if (json_result['new_block'] == "1") {
 								_this.last_block_id = parseInt(json_result['last_block_id']);
-								_this.time_last_block_loaded = new Date().getTime();
+								_this.time_last_block_loaded = parseInt(json_result['time_last_block_loaded']);
 								
 								if (_this.refresh_page == "wallet") {
 									if (parseInt(json_result['new_performance_history']) == 1) {
@@ -1585,22 +1594,29 @@ function set_select_add_output() {
 
 var account_io_id = false;
 var account_io_amount = false;
+var selected_account_action = false;
 
-function account_start_spend_io(io_id, amount) {
+function account_start_spend_io(game_id, io_id, amount) {
 	account_io_id = io_id;
 	account_io_amount = amount;
 	$('#account_spend_buyin_total').html("(Total: "+format_coins(amount)+" coins)");
 	$('#account_spend_modal').modal('show');
+	$('#account_io_id').val(account_io_id);
+	$('#donate_game_id').val(game_id);
 }
 function account_spend_action_changed() {
 	var account_spend_action = $('#account_spend_action').val();
-	if (account_spend_action == "buyin") {
-		$('#account_spend_buyin').show('fast');
-		$('#account_spend_withdraw').hide();
-	}
-	else {
-		$('#account_spend_withdraw').show('fast');
-		$('#account_spend_buyin').hide();
+	
+	if (selected_account_action !== false) $('#account_spend_'+selected_account_action).hide();
+	
+	$('#account_spend_'+account_spend_action).show('fast');
+	selected_account_action = account_spend_action;
+	
+	if (account_spend_action == "join_tx") {
+		$.get("/ajax/account_spend.php?io_id="+account_io_id+"&action=start_join_tx", function(result) {
+			var result_obj = JSON.parse(result);
+			$('#account_spend_join_tx').html(result_obj['html']);
+		});
 	}
 }
 function account_spend_buyin_address_choice_changed() {
@@ -1675,8 +1691,8 @@ function leftpad(num, size, pad_char) {
 	return s;
 }
 
-function try_claim_address(blockchain_id, address_id) {
-	$.get("/ajax/try_claim_address.php?blockchain_id="+blockchain_id+"&address_id="+address_id, function(result) {
+function try_claim_address(game_id, address_id) {
+	$.get("/ajax/try_claim_address.php?game_id="+game_id+"&address_id="+address_id, function(result) {
 		var result_obj = JSON.parse(result);
 		console.log(result_obj);
 		
@@ -1688,4 +1704,11 @@ function try_claim_address(blockchain_id, address_id) {
 function change_user_game() {
 	var user_game_id = $('#select_user_game').val();
 	window.location = '/wallet/'+games[0].game_url_identifier+'/?action=change_user_game&user_game_id='+user_game_id;
+}
+function finish_join_tx() {
+	$.get("/ajax/account_spend.php?action=finish_join_tx&io_id="+account_io_id+"&join_io_id="+$('#join_tx_io_id').val(), function(result) {
+		var result_obj = JSON.parse(result);
+		alert(result_obj['message']);
+		if (result_obj['status_code'] == 13) window.location = window.location;
+	});
 }

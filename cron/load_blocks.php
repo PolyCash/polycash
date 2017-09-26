@@ -24,7 +24,6 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			register_shutdown_function("script_shutdown");
 		}
 		$app->log_message("running load_blocks.php");
-		$app->set_site_constant("last_script_run_time", time());
 		
 		$blockchains = array();
 		
@@ -43,7 +42,10 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				echo "Error, skipped ".$db_blockchain['blockchain_name']." because RPC connection failed.<br/>\n";
 			}
 			
-			if (!$error) $blockchains[$blockchain_i]->sync_coind($coin_rpc);
+			if (!$error) {
+				echo "Syncing ".$blockchains[$blockchain_i]->db_blockchain['blockchain_name']."\n";
+				$blockchains[$blockchain_i]->sync_coind($coin_rpc);
+			}
 		}
 	}
 	else {

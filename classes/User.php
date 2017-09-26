@@ -303,7 +303,7 @@ class User {
 		$r = $this->app->run_query($q);
 		
 		if ($force_new || $r->rowCount() == 0) {
-			$q = "INSERT INTO user_games SET user_id='".$this->db_user['user_id']."', game_id='".$game->db_game['game_id']."'";
+			$q = "INSERT INTO user_games SET user_id='".$this->db_user['user_id']."', game_id='".$game->db_game['game_id']."', api_access_code=".$this->app->quote_escape($this->app->random_string(32));
 			if (!empty($this->db_user['payout_address_id'])) $q .= ", payout_address_id='".$this->db_user['payout_address_id']."'";
 			if ($game->db_game['giveaway_status'] == "public_pay" || $game->db_game['giveaway_status'] == "invite_pay") $q .= ", payment_required=1";
 			if (strpos($this->db_user['notification_email'], '@')) $q .= ", notification_preference='email'";
@@ -336,7 +336,12 @@ class User {
 		
 		if ($user_game['strategy_id'] > 0) {}
 		else {
-			$q = "INSERT INTO user_strategies SET voting_strategy='manual', game_id='".$game->db_game['game_id']."', user_id='".$user_game['user_id']."';";
+			if ($game->blockchain->db_blockchain['p2p_mode'] == "none") $tx_fee=100;
+			else $tx_fee=0.001*pow(10,8);
+			
+			$q = "INSERT INTO user_strategies SET voting_strategy='manual', game_id='".$game->db_game['game_id']."', user_id='".$user_game['user_id']."'";
+			$q .= ", transaction_fee=".$tx_fee;
+			$q .= ";";
 			$r = $this->app->run_query($q);
 			$strategy_id = $this->app->last_insert_id();
 			
@@ -451,7 +456,7 @@ class User {
 			
 			if ($rr->rowCount() == 0) {
 				// If not, check if there is an unallocated address available to give to the user
-				$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND a.option_index='".$option_index."' AND a.is_mine=1 AND k.account_id IS NULL;";
+				$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND a.option_index='".$option_index."' AND a.is_mine=1 AND k.account_id IS NULL AND NOT EXISTS (SELECT * FROM transaction_ios io WHERE io.address_id=a.address_id);";
 				$rr = $this->app->run_query($qq);
 				
 				if ($rr->rowCount() > 0) {
@@ -485,6 +490,7 @@ class User {
 		if ($r->rowCount() == 0) {
 			$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND a.option_index IS NULL AND a.is_mine=1 AND k.account_id IS NULL;";
 			$r = $this->app->run_query($q);
+			
 			if ($r->rowCount() > 0) {
 				$address = $r->fetch();
 				

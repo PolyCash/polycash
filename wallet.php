@@ -405,7 +405,7 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 			}
 		}
 		
-		for ($block=1; $block<$game->db_game['round_length']; $block++) {
+		for ($block=1; $block<=$game->db_game['round_length']; $block++) {
 			$strategy_block = false;
 			$q = "SELECT * FROM user_strategy_blocks WHERE strategy_id='".$user_strategy['strategy_id']."' AND block_within_round='".$block."';";
 			$r = $app->run_query($q);
@@ -451,6 +451,7 @@ if ($thisuser && $game) {
 	$blockchain_last_block_id = $game->blockchain->last_block_id();
 	$blockchain_current_round = $game->block_to_round($blockchain_last_block_id+1);
 	$blockchain_block_within_round = $game->block_id_to_round_index($blockchain_last_block_id+1);
+	$blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_block_id);
 	
 	$last_block_id = $game->last_block_id();
 	$current_round = $game->block_to_round($last_block_id+1);
@@ -523,9 +524,11 @@ if ($thisuser && $game) {
 			echo ', "wallet", "'.$game->event_ids().'"';
 			echo ', "'.$game->logo_image_url().'"';
 			echo ', "'.$game->vote_effectiveness_function().'"';
+			echo ', "'.$game->effectiveness_param1().'"';
 			echo ', "'.$game->blockchain->db_blockchain['seconds_per_block'].'"';
 			echo ', "'.$game->db_game['inflation'].'"';
 			echo ', "'.$game->db_game['exponential_inflation_rate'].'"';
+			echo ', "'.$blockchain_last_block['time_mined'].'"';
 		?>));
 		
 		games[0].game_loop_event();
@@ -550,7 +553,7 @@ if ($thisuser && $game) {
 				if ($i == 0) echo "games[0].all_events_start_index = ".$db_event['event_index'].";\n";
 				else if ($i == $initial_load_events-1) echo "games[0].all_events_stop_index = ".$db_event['event_index'].";\n";
 				
-				echo "games[0].all_events[".$db_event['event_index']."] = new Event(games[0], ".$db_event['event_index'].", ".$db_event['event_id'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'");'."\n";
+				echo "games[0].all_events[".$db_event['event_index']."] = new Event(games[0], ".$db_event['event_index'].", ".$db_event['event_id'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'", "'.$db_event['effectiveness_param1'].'");'."\n";
 				echo "games[0].all_events_db_id_to_index[".$db_event['event_id']."] = ".$db_event['event_index'].";\n";
 				
 				$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY event_option_index ASC;";
@@ -638,6 +641,11 @@ if ($thisuser && $game) {
 				if ($game->db_game['buyin_policy'] != "none") { ?>
 					<button style="float: right;" class="btn btn-success" onclick="initiate_buyin();">Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
 					<?php
+				}
+				
+				$faucet_io = $game->check_faucet($user_game);
+				if ($faucet_io) {
+					echo '<p><button id="faucet_btn" class="btn btn-success" onclick="claim_from_faucet();">Claim '.$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,8)).' '.$game->db_game['coin_name_plural'].'</button></p>'."\n";
 				}
 				
 				$game_status_explanation = $game->game_status_explanation($thisuser, $user_game);
@@ -858,7 +866,7 @@ if ($thisuser && $game) {
 							</div>
 							<div class="row">
 								<?php
-								for ($block=1; $block<$game->db_game['round_length']; $block++) {
+								for ($block=1; $block<=$game->db_game['round_length']; $block++) {
 									echo '<div class="col-md-2">';
 									echo '<input type="checkbox" name="vote_on_block_'.$block.'" id="vote_on_block_'.$block.'" value="1"';
 									

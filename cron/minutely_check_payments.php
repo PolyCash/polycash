@@ -70,7 +70,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				
 				$address_ids = array($escrow_address['address_id'], $game_currency_account['current_address_id']);
 				
-				$transaction_id = $game->create_transaction(false, array($buyin_amount, $color_amount), $user_game, false, 'transaction', $io_ids, $address_ids, false, $fee_amount);
+				$error_message = false;
+				$transaction_id = $game->create_transaction(false, array($buyin_amount, $color_amount), $user_game, false, 'transaction', $io_ids, $address_ids, false, $fee_amount, $error_message);
 				
 				echo "created tx #".$transaction_id;
 				
@@ -138,7 +139,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 							array_push($address_ids, $escrow_address['address_id']);
 						}
 						
-						$transaction_id = $this_game->create_transaction(false, $amounts, false, false, 'transaction', $io_ids, $address_ids, false, $unprocessed_sellout['fee_amount']);
+						$error_message = false;
+						$transaction_id = $this_game->create_transaction(false, $amounts, false, false, 'transaction', $io_ids, $address_ids, false, $unprocessed_sellout['fee_amount'], $error_message);
 						
 						if ($transaction_id) {
 							$db_transaction = $app->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();

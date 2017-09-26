@@ -89,7 +89,6 @@ body {
 	border: 1px solid black;
 	margin: 0;
 	border-radius: 50%;
-	z-index: 2;
 }
 .vote_option_box_holder {
 	position: relative;
