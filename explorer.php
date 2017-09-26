@@ -897,21 +897,23 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				
 				<br/>
 				<?php
-				$permission_to_claim_address = $app->permission_to_claim_address($blockchain, $address, $thisuser);
-				
-				if ($permission_to_claim_address) {
-					if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "claim") {
+				if ($game) {
+					$permission_to_claim_address = $app->permission_to_claim_address($game, $thisuser, $address);
+					
+					if ($permission_to_claim_address) {
+						if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "claim") {
+							?>
+							<script type="text/javascript">
+							$(document).ready(function() {
+								try_claim_address(<?php echo $game->db_game['game_id'].", ".$address['address_id']; ?>);
+							});
+							</script>
+							<?php
+						}
 						?>
-						<script type="text/javascript">
-						$(document).ready(function() {
-							try_claim_address(<?php echo $blockchain->db_blockchain['blockchain_id'].", ".$address['address_id']; ?>);
-						});
-						</script>
+						<button class="btn btn-success btn-sm" onclick="try_claim_address(<?php echo $game->db_game['game_id'].", ".$address['address_id']; ?>);">Claim this address</button>
 						<?php
 					}
-					?>
-					<button class="btn btn-success btn-sm" onclick="try_claim_address(<?php echo $blockchain->db_blockchain['blockchain_id'].", ".$address['address_id']; ?>);">Claim this address</button>
-					<?php
 				}
 			}
 			else if ($explore_mode == "initial") {

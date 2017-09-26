@@ -1691,8 +1691,8 @@ function leftpad(num, size, pad_char) {
 	return s;
 }
 
-function try_claim_address(blockchain_id, address_id) {
-	$.get("/ajax/try_claim_address.php?blockchain_id="+blockchain_id+"&address_id="+address_id, function(result) {
+function try_claim_address(game_id, address_id) {
+	$.get("/ajax/try_claim_address.php?game_id="+game_id+"&address_id="+address_id, function(result) {
 		var result_obj = JSON.parse(result);
 		console.log(result_obj);
 		

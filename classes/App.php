@@ -1826,36 +1826,32 @@ class App {
 		return $cached_url;
 	}
 	
-	public function permission_to_claim_address($blockchain, $db_address, $thisuser) {
-		if (!empty($blockchain->db_blockchain['only_game_id']) && $db_address['address'] == "genesis_receiver_address" && empty($db_address['user_id'])) return true;
+	public function permission_to_claim_address($game, $thisuser, $db_address) {
+		if (!empty($game->blockchain->db_blockchain['only_game_id']) && $db_address['address'] == $game->blockchain->db_blockchain["genesis_address"] && empty($db_address['user_id'])) return true;
 		else return false;
 	}
 	
-	public function give_address_to_user($blockchain, $db_address, $user) {
-		if ($this->permission_to_claim_address($blockchain, $db_address, $user)) {
-			$game = new Game($blockchain, $blockchain->db_blockchain['only_game_id']);
-			$user_game = $user->ensure_user_in_game($game, false);
+	public function give_address_to_user(&$game, &$user, $db_address) {
+		$user_game = $user->ensure_user_in_game($game, false);
+		
+		if ($user_game) {
+			$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id='".$db_address['address_id']."';";
+			$r = $this->run_query($q);
 			
-			if ($user_game) {
-				$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id='".$db_address['address_id']."';";
-				$r = $this->run_query($q);
+			if ($r->rowCount() == 1) {
+				$address_key = $r->fetch();
 				
-				if ($r->rowCount() == 1) {
-					$address_key = $r->fetch();
-					
-					$q = "UPDATE address_keys SET account_id='".$user_game['account_id']."' WHERE address_key_id='".$address_key['address_key_id']."';";
-					$r = $this->run_query($q);
-				}
-				else {
-					$q = "INSERT INTO address_keys SET address_id='".$db_address['address_id']."', account_id='".$user_game['account_id']."', save_method='fake', pub_key=".$this->quote_escape($db_address['address']).";";
-					$r = $this->run_query($q);
-				}
-				$q = "UPDATE addresses SET user_id='".$user->db_user['user_id']."' WHERE address_id='".$db_address['address_id']."';";
+				$q = "UPDATE address_keys SET account_id='".$user_game['account_id']."' WHERE address_key_id='".$address_key['address_key_id']."';";
 				$r = $this->run_query($q);
-				
-				return true;
 			}
-			else return false;
+			else {
+				$q = "INSERT INTO address_keys SET address_id='".$db_address['address_id']."', account_id='".$user_game['account_id']."', save_method='fake', pub_key=".$this->quote_escape($db_address['address']).";";
+				$r = $this->run_query($q);
+			}
+			$q = "UPDATE addresses SET user_id='".$user->db_user['user_id']."' WHERE address_id='".$db_address['address_id']."';";
+			$r = $this->run_query($q);
+			
+			return true;
 		}
 		else return false;
 	}

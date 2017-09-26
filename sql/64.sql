@@ -1,0 +1,1 @@
+ALTER TABLE `blockchains` ADD `genesis_address` VARCHAR(50) NULL DEFAULT NULL AFTER `block_height`;

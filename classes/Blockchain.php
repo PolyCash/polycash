@@ -532,7 +532,6 @@ class Blockchain {
 			if ($last_block['block_hash'] == "") {
 				$last_block_hash = $coin_rpc->getblockhash((int) $last_block['block_id']);
 				$this->coind_add_block($coin_rpc, $last_block_hash, $last_block['block_id'], TRUE);
-				$this->update_option_votes();
 				$last_block = $this->app->run_query("SELECT * FROM blocks WHERE internal_block_id='".$last_block['internal_block_id']."';")->fetch();
 			}
 			$html .= "Resolving potential fork on block #".$last_block['block_id']."<br/>\n";
@@ -548,8 +547,6 @@ class Blockchain {
 				$html .= "Loading unconfirmed transactions...\n";
 				$this->load_unconfirmed_transactions($coin_rpc, 30);
 			}
-			//echo "Updating option votes...\n";
-			//$this->update_option_votes();
 			
 			$html .= "Done syncing!\n";
 		}
@@ -737,8 +734,17 @@ class Blockchain {
 		
 		$this->app->run_query("DELETE t.*, io.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.tx_hash=".$this->app->quote_escape($genesis_tx_hash)." AND t.blockchain_id='".$this->db_blockchain['blockchain_id']."';");
 		
-		if (!empty($game)) $genesis_address = $this->app->random_string(34);
-		else $genesis_address = 'genesis_address';
+		if (!empty($this->db_blockchain['genesis_address'])) {
+			$genesis_address = $this->db_blockchain['genesis_address'];
+		}
+		else {
+			$genesis_address = $this->app->random_string(34);
+			
+			$q = "UPDATE blockchains SET genesis_address=".$this->app->quote_escape($genesis_address)." WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';";
+			$r = $this->app->run_query($q);
+			
+			$this->db_blockchain['genesis_address'] = $genesis_address;
+		}
 		
 		$output_address = $this->create_or_fetch_address($genesis_address, true, false, false, false, false);
 		$html .= "genesis hash: ".$genesis_block_hash."<br/>\n";
@@ -767,7 +773,7 @@ class Blockchain {
 				$db_user_address = $r->fetch();
 			}
 			else {
-				$db_user_address = $this->create_or_fetch_address("genesis_receiver_address", true, false, false, false, false);
+				$db_user_address = $this->create_or_fetch_address($genesis_address, true, false, false, false, false);
 			}
 			$game_genesis_tx_hash = $game->genesis_hash;
 			
@@ -1281,7 +1287,6 @@ class Blockchain {
 							$verified_tx_hash = $coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
 							
 							$this->walletnotify($coin_rpc, $verified_tx_hash, FALSE);
-							$this->update_option_votes();
 							
 							$db_transaction = $this->app->run_query("SELECT * FROM transactions WHERE tx_hash=".$this->blockchain->app->quote_escape($tx_hash).";")->fetch();
 							
@@ -1327,7 +1332,7 @@ class Blockchain {
 		$q = "SELECT * FROM transactions WHERE transaction_desc='transaction' AND blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id IS NULL;";
 		$r = $this->app->run_query($q);
 		$fee_sum = 0;
-		$num_transactions = $r->rowCount();
+		$num_transactions = 0;
 		
 		while ($unconfirmed_tx = $r->fetch()) {
 			$coins_in = $this->app->transaction_coins_in($unconfirmed_tx['transaction_id']);
@@ -1367,6 +1372,7 @@ class Blockchain {
 				$rr = $this->app->run_query($qq);
 				
 				$fee_sum += $fee_amount;
+				$num_transactions++;
 			}
 		}
 		

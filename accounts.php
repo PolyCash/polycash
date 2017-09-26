@@ -207,11 +207,11 @@ include('includes/html_start.php');
 				echo "+".$app->format_bignum($transaction['amount']/pow(10,8))."&nbsp;".$account['short_name_plural'];
 				echo '</a></div>';
 				echo '<div class="col-sm-3">';
-				if ($transaction['block_id'] !== "") echo "Confirmed in block <a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>";
-				else echo "<a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/transactions/unconfirmed/\">Not yet confirmed</a>";
-				echo '</div>';
+				if ($transaction['block_id'] == "") echo "<a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/transactions/unconfirmed/\">Not yet confirmed</a>";
+				else echo "Confirmed in block <a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>";
+				echo "</div>\n";
 				echo '<div class="col-sm-3">'.ucwords($transaction['spend_status']);
-				if ($transaction['spend_status'] == "unspent" && $transaction['block_id'] !== "") {
+				if ($transaction['spend_status'] != "spent" && $transaction['block_id'] !== "") {
 					echo "&nbsp;&nbsp;<a href=\"\" onclick=\"account_start_spend_io(";
 					if ($account_game) echo $account_game->db_game['game_id'];
 					else echo 'false';
@@ -219,7 +219,7 @@ include('includes/html_start.php');
 					echo ', '.$transaction['io_id'].", ".($transaction['amount']/pow(10,8))."); return false;\">Spend</a>";
 				}
 				echo '</div>';
-				echo '</div>';
+				echo "</div>\n";
 			}
 			
 			while ($transaction = $transaction_out_r->fetch()) {
@@ -231,8 +231,8 @@ include('includes/html_start.php');
 				echo "-".$app->format_bignum($transaction['amount']/pow(10,8))."&nbsp;".$account['short_name_plural'];
 				echo '</a></div>';
 				echo '<div class="col-sm-3">';
-				if ($transaction['block_id'] > 0) echo "Confirmed in block <a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>";
-				else echo "<a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/transactions/unconfirmed/\">Not yet confirmed</a>";
+				if ($transaction['block_id'] == "") echo "<a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/transactions/unconfirmed/\">Not yet confirmed</a>";
+				else echo "Confirmed in block <a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>";
 				echo '</div>';
 				echo '</div>';
 			}

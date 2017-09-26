@@ -282,6 +282,8 @@ class Game {
 		$last_block_id = $this->blockchain->last_block_id();
 		$round_id = $this->block_to_round($last_block_id+1);
 		
+		$this->blockchain->app->dbh->beginTransaction();
+		
 		for ($i=0; $i<count($this->current_events); $i++) {
 			$effectiveness_factor = $this->current_events[$i]->block_id_to_effectiveness_factor($last_block_id+1);
 			
@@ -320,6 +322,8 @@ class Game {
 				$r = $this->blockchain->app->run_query($q);
 			}
 		}
+		
+		$this->blockchain->app->dbh->commit();
 	}
 	
 	public function new_block() {
@@ -681,8 +685,9 @@ class Game {
 					}
 				}
 			}
-			$this->update_option_votes();
 		}
+		$this->update_option_votes();
+		
 		return $log_text;
 	}
 	

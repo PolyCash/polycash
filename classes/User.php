@@ -336,7 +336,12 @@ class User {
 		
 		if ($user_game['strategy_id'] > 0) {}
 		else {
-			$q = "INSERT INTO user_strategies SET voting_strategy='manual', game_id='".$game->db_game['game_id']."', user_id='".$user_game['user_id']."';";
+			if ($game->blockchain->db_blockchain['p2p_mode'] == "none") $tx_fee=100;
+			else $tx_fee=0.001*pow(10,8);
+			
+			$q = "INSERT INTO user_strategies SET voting_strategy='manual', game_id='".$game->db_game['game_id']."', user_id='".$user_game['user_id']."'";
+			$q .= ", transaction_fee=".$tx_fee;
+			$q .= ";";
 			$r = $this->app->run_query($q);
 			$strategy_id = $this->app->last_insert_id();
 			

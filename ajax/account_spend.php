@@ -71,13 +71,13 @@ if ($thisuser) {
 			if ($r->rowCount() > 0) {
 				$key_account = $r->fetch();
 				
-				if ($db_io['spend_status'] == "unspent") {
+				if (in_array($db_io['spend_status'], array("unconfirmed", "unspent"))) {
 					if ($key_account['game_id'] > 0) {
 						$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$key_account['game_id']."';")->fetch();
 						$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 						
 						if ($action == "start_join_tx") {
-							$q = "SELECT *, SUM(gio.colored_amount) AS colored_amount_sum FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$key_account['account_id']."' AND gio.game_id='".$key_account['game_id']."' AND io.spend_status='unspent' AND io.io_id != ".$db_io['io_id']." GROUP BY io.io_id ORDER BY colored_amount_sum DESC;";
+							$q = "SELECT *, SUM(gio.colored_amount) AS colored_amount_sum FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$key_account['account_id']."' AND gio.game_id='".$key_account['game_id']."' AND (io.spend_status='unspent' OR io.spend_status='unconfirmed') AND io.io_id != ".$db_io['io_id']." GROUP BY io.io_id ORDER BY colored_amount_sum DESC;";
 							$r = $app->run_query($q);
 							
 							$html = '<form action="/accounts/" method="get" onsubmit="finish_join_tx(); return false;">';
