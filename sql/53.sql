@@ -1,0 +1,1 @@
+ALTER TABLE `events` ADD `num_options` INT NULL DEFAULT NULL AFTER `option_name_plural`;

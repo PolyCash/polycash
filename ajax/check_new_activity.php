@@ -16,13 +16,19 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	
 	if ($thisuser) {
 		$thisuser->set_user_active();
-		$user_game = $thisuser->ensure_user_in_game($game);
+		$user_game = $thisuser->ensure_user_in_game($game, false);
 	}
 	
-	$last_block_id = $game->blockchain->last_block_id();
-	$last_transaction_id = $game->blockchain->last_transaction_id();
+	$blockchain_last_block_id = $game->blockchain->last_block_id();
+	$blockchain_current_round = $game->block_to_round($blockchain_last_block_id+1);
+	$blockchain_block_within_round = $game->block_id_to_round_index($blockchain_last_block_id+1);
+	
+	$last_block_id = $game->last_block_id();
 	$current_round = $game->block_to_round($last_block_id+1);
 	$block_within_round = $game->block_id_to_round_index($last_block_id+1);
+	
+	$last_transaction_id = $game->blockchain->last_transaction_id();
+	
 	if ($thisuser) {
 		$my_last_transaction_id = $thisuser->my_last_transaction_id($game->db_game['game_id']);
 		$account_value = $thisuser->account_coin_value($game, $user_game);
@@ -59,6 +65,8 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		if ($last_block_id != (int) $_REQUEST['last_block_id']) {
 			$output['new_block'] = 1;
 			$output['last_block_id'] = $last_block_id;
+			$db_last_block = $blockchain->fetch_block_by_id($last_block_id);
+			$output['time_last_block_loaded'] = $db_last_block['time_mined'];
 			
 			if ($_REQUEST['refresh_page'] == "wallet" && $current_round != $_REQUEST['initial_load_round']) {
 				$initial_load_round = (int)$_REQUEST['initial_load_round'];
@@ -75,7 +83,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		}
 		
 		if ($thisuser) {
-			$output['wallet_text_stats'] = $thisuser->wallet_text_stats($game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance, $user_game);
+			$output['wallet_text_stats'] = $thisuser->wallet_text_stats($game, $blockchain_current_round, $blockchain_last_block_id, $blockchain_block_within_round, $mature_balance, $immature_balance, $user_game);
 			for ($game_event_index=0; $game_event_index<count($game->current_events); $game_event_index++) {
 				$output['my_current_votes'][$game_event_index] = $game->current_events[$game_event_index]->my_votes_table($current_round, $user_game);
 			}

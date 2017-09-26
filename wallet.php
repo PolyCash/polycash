@@ -43,24 +43,48 @@ if ($thisuser) {
 	if ($r->rowCount() > 0) {
 		$requested_game = $r->fetch();
 		
+		$blockchain = new Blockchain($app, $requested_game['blockchain_id']);
+		$game = new Game($blockchain, $requested_game['game_id']);
+		
+		if ($_REQUEST['action'] == "change_user_game") {
+			$user_game_id = $_REQUEST['user_game_id'];
+			
+			if ($user_game_id == "new") {
+				$select_user_game = $thisuser->ensure_user_in_game($game, true);
+				$thisuser->set_selected_user_game($game, $select_user_game['user_game_id']);
+			}
+			else {
+				$user_game_id = (int) $user_game_id;
+				
+				$q = "SELECT * FROM user_games WHERE user_game_id='".$user_game_id."';";
+				$r = $app->run_query($q);
+				
+				if ($r->rowCount() > 0) {
+					$select_user_game = $r->fetch();
+					
+					if ($select_user_game['user_id'] == $thisuser->db_user['user_id']) {
+						$thisuser->set_selected_user_game($game, $select_user_game['user_game_id']);
+					}
+				}
+			}
+			header("Location: /wallet/".$game->db_game['url_identifier']."/");
+			die();
+		}
+		
 		$is_creator = false;
 		if ($requested_game['creator_id'] == $thisuser->db_user['user_id']) $is_creator = true;
 		
 		$allow_public = false;
 		if ($requested_game['giveaway_status'] == "public_free" || $requested_game['giveaway_status'] == "public_pay") $allow_public = true;
 		
-		$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND g.game_id='".$requested_game['game_id']."';";
+		$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND g.game_id='".$requested_game['game_id']."' ORDER BY ug.selected DESC;";
 		$r = $app->run_query($q);
 		
 		if ($r->rowCount() > 0) {
 			$user_game = $r->fetch();
-			$blockchain = new Blockchain($app, $requested_game['blockchain_id']);
-			$game = new Game($blockchain, $user_game['game_id']);
 		}
 		else if ($is_creator || $allow_public) {
-			$blockchain = new Blockchain($app, $requested_game['blockchain_id']);
-			$game = new Game($blockchain, $requested_game['game_id']);
-			$user_game = $thisuser->ensure_user_in_game($game);
+			$user_game = $thisuser->ensure_user_in_game($game, true);
 		}
 		
 		if ($user_game && $user_game['payment_required'] == 0) {
@@ -250,7 +274,7 @@ if ($thisuser) {
 		?>
 		<div class="container" style="max-width: 1000px;"><br/>
 			<?php
-			$q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser->db_user['user_id']."' AND (g.creator_id='".$thisuser->db_user['user_id']."' OR g.game_status IN ('running','completed','published'));";
+			$q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser->db_user['user_id']."' AND (g.creator_id='".$thisuser->db_user['user_id']."' OR g.game_status IN ('running','completed','published')) GROUP BY ug.game_id;";
 			$r = $app->run_query($q);
 			
 			if ($r->rowCount() > 0) {
@@ -269,14 +293,15 @@ if ($thisuser) {
 		die();
 	}
 
-	$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND ug.game_id='".$game->db_game['game_id']."';";
+	$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND ug.game_id='".$game->db_game['game_id']."' ORDER BY ug.selected DESC;";
 	$r = $app->run_query($q);
+	
 	if ($r->rowCount() > 0) {
 		$user_game = $r->fetch();
 		$thisuser->generate_user_addresses($game, $user_game);
 	}
 	else {
-		$user_game = $thisuser->ensure_user_in_game($game);
+		$user_game = $thisuser->ensure_user_in_game($game, true);
 		
 		$thisuser->generate_user_addresses($game, $user_game);
 	}
@@ -380,7 +405,7 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 			}
 		}
 		
-		for ($block=1; $block<$game->db_game['round_length']; $block++) {
+		for ($block=1; $block<=$game->db_game['round_length']; $block++) {
 			$strategy_block = false;
 			$q = "SELECT * FROM user_strategy_blocks WHERE strategy_id='".$user_strategy['strategy_id']."' AND block_within_round='".$block."';";
 			$r = $app->run_query($q);
@@ -421,10 +446,16 @@ $initial_tab = 0;
 if ($thisuser && $game) {
 	$account_value = $thisuser->account_coin_value($game, $user_game);
 	$immature_balance = $thisuser->immature_balance($game, $user_game);
+	$mature_balance = $thisuser->mature_balance($game, $user_game);
+	
+	$blockchain_last_block_id = $game->blockchain->last_block_id();
+	$blockchain_current_round = $game->block_to_round($blockchain_last_block_id+1);
+	$blockchain_block_within_round = $game->block_id_to_round_index($blockchain_last_block_id+1);
+	$blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_block_id);
+	
 	$last_block_id = $game->last_block_id();
 	$current_round = $game->block_to_round($last_block_id+1);
 	$block_within_round = $game->block_id_to_round_index($last_block_id+1);
-	$mature_balance = $thisuser->mature_balance($game, $user_game);
 }
 ?>
 <div class="container" style="max-width: 1000px;">
@@ -442,10 +473,10 @@ if ($thisuser && $game) {
 		$user_game = FALSE;
 		$user_strategy = FALSE;
 		
-		$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
+		$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."' ORDER BY selected DESC;";
 		$r = $app->run_query($q);
 		
-		if ($r->rowCount() == 1) {
+		if ($r->rowCount() > 0) {
 			$user_game = $r->fetch();
 			
 			$user_strategy = $game->fetch_user_strategy($user_game);
@@ -468,8 +499,8 @@ if ($thisuser && $game) {
 		var started_checking_alias_settings = false;
 		var performance_history_sections = 1;
 		var performance_history_rounds_per_section = <?php echo $performance_history_rounds_per_section; ?>;
-		var performance_history_from_round = <?php echo max(1, $current_round-$performance_history_rounds_per_section); ?>;
-		var performance_history_initial_load_round = <?php echo $current_round; ?>;
+		var performance_history_from_round = <?php echo max(1, $current_round-$performance_history_rounds_per_section-1); ?>;
+		var performance_history_initial_load_round = <?php echo $current_round-1; ?>;
 		var performance_history_loading = false;
 		
 		var user_logged_in = true;
@@ -493,9 +524,11 @@ if ($thisuser && $game) {
 			echo ', "wallet", "'.$game->event_ids().'"';
 			echo ', "'.$game->logo_image_url().'"';
 			echo ', "'.$game->vote_effectiveness_function().'"';
+			echo ', "'.$game->effectiveness_param1().'"';
 			echo ', "'.$game->blockchain->db_blockchain['seconds_per_block'].'"';
 			echo ', "'.$game->db_game['inflation'].'"';
 			echo ', "'.$game->db_game['exponential_inflation_rate'].'"';
+			echo ', "'.$blockchain_last_block['time_mined'].'"';
 		?>));
 		
 		games[0].game_loop_event();
@@ -509,7 +542,6 @@ if ($thisuser && $game) {
 		$from_block_id = ($plan_start_round-1)*$game->db_game['round_length']+1;
 		$to_block_id = ($plan_stop_round-1)*$game->db_game['round_length']+1;
 		
-		$game->ensure_events_until_block($to_block_id);
 		$game->load_current_events();
 		
 		$q = "SELECT * FROM events e JOIN event_types t ON e.event_type_id=t.event_type_id WHERE e.game_id='".$game->db_game['game_id']."' AND e.event_starting_block >= ".$from_block_id." AND e.event_starting_block <= ".$to_block_id." ORDER BY e.event_id ASC;";
@@ -521,7 +553,7 @@ if ($thisuser && $game) {
 				if ($i == 0) echo "games[0].all_events_start_index = ".$db_event['event_index'].";\n";
 				else if ($i == $initial_load_events-1) echo "games[0].all_events_stop_index = ".$db_event['event_index'].";\n";
 				
-				echo "games[0].all_events[".$db_event['event_index']."] = new Event(games[0], ".$db_event['event_index'].", ".$db_event['event_id'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'");'."\n";
+				echo "games[0].all_events[".$db_event['event_index']."] = new Event(games[0], ".$db_event['event_index'].", ".$db_event['event_id'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'", "'.$db_event['effectiveness_param1'].'");'."\n";
 				echo "games[0].all_events_db_id_to_index[".$db_event['event_id']."] = ".$db_event['event_index'].";\n";
 				
 				$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY event_option_index ASC;";
@@ -590,7 +622,7 @@ if ($thisuser && $game) {
 		?>
 		<div id="wallet_text_stats">
 			<?php
-			echo $thisuser->wallet_text_stats($game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance, $user_game);
+			echo $thisuser->wallet_text_stats($game, $blockchain_current_round, $blockchain_last_block_id, $blockchain_block_within_round, $mature_balance, $immature_balance, $user_game);
 			?>
 		</div>
 		<br/>
@@ -611,9 +643,31 @@ if ($thisuser && $game) {
 					<?php
 				}
 				
+				$faucet_io = $game->check_faucet($user_game);
+				if ($faucet_io) {
+					echo '<p><button id="faucet_btn" class="btn btn-success" onclick="claim_from_faucet();">Claim '.$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,8)).' '.$game->db_game['coin_name_plural'].'</button></p>'."\n";
+				}
+				
 				$game_status_explanation = $game->game_status_explanation($thisuser, $user_game);
 				?>
-				<div id="game_status_explanation"<?php if ($game_status_explanation == "") echo ' style="display: none;"'; ?>><?php if ($game_status_explanation != "") echo $game_status_explanation; ?></div>
+				<div style="display: block; overflow: hidden;">
+					<div id="game_status_explanation"<?php if ($game_status_explanation == "") echo ' style="display: none;"'; ?>><?php if ($game_status_explanation != "") echo $game_status_explanation; ?></div>
+					
+					<div id="change_user_game">
+						<select id="select_user_game" class="form-control" onchange="change_user_game();">
+							<?php
+							$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
+							$r = $app->run_query($q);
+							while ($db_user_game = $r->fetch()) {
+								echo "<option ";
+								if ($db_user_game['user_game_id'] == $user_game['user_game_id']) echo "selected=\"selected\" ";
+								echo "value=\"".$db_user_game['user_game_id']."\">Account #".$db_user_game['account_id']." &nbsp;&nbsp; ".$app->format_bignum($db_user_game['account_value'])." ".$game->db_game['coin_abbreviation']."</option>\n";
+							}
+							?>
+							<option value="new">Create a new account</option>
+						</select>
+					</div>
+				</div>
 				
 				<div id="game0_events" class="game_events"></div>
 				
@@ -725,7 +779,8 @@ if ($thisuser && $game) {
 							<label class="plainlabel" for="voting_strategy_api">
 								Hit a custom URL whenever I have <?php echo $game->db_game['coin_name_plural']; ?> available to determine my votes: <input type="text" size="40" placeholder="http://" name="api_url" id="api_url" value="<?php echo $user_strategy['api_url']; ?>" />
 							</label><br/>
-							Your API access code is <?php echo $thisuser->db_user['api_access_code']; ?> <a href="/api/about/">API documentation</a><br/>
+							Your API access code is <?php echo $user_game['api_access_code']; ?><br/>
+							<a href="/api/about/">API documentation</a><br/>
 						</div>
 					</div>
 					
@@ -811,7 +866,7 @@ if ($thisuser && $game) {
 							</div>
 							<div class="row">
 								<?php
-								for ($block=1; $block<$game->db_game['round_length']; $block++) {
+								for ($block=1; $block<=$game->db_game['round_length']; $block++) {
 									echo '<div class="col-md-2">';
 									echo '<input type="checkbox" name="vote_on_block_'.$block.'" id="vote_on_block_'.$block.'" value="1"';
 									
@@ -860,7 +915,7 @@ if ($thisuser && $game) {
 					</div>
 					<div id="performance_history_0">
 						<?php
-						echo $thisuser->performance_history($game, max(1, $current_round-$performance_history_rounds_per_section), $current_round);
+						echo $thisuser->performance_history($game, max(1, $current_round-$performance_history_rounds_per_section-1), $current_round-1);
 						?>
 					</div>
 				</div>
@@ -1043,7 +1098,7 @@ if ($thisuser && $game) {
 				
 				$q = "SELECT * FROM games g LEFT JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."'";
 				if ($game_id_csv != "") $q .= " AND g.game_id NOT IN (".$game_id_csv.")";
-				$q .= " ORDER BY g.game_id ASC;";
+				$q .= " GROUP BY g.game_id ORDER BY g.game_id ASC;";
 				$r = $app->run_query($q);
 				while ($user_game = $r->fetch()) {
 					echo $app->game_admin_row($thisuser, $user_game, $game->db_game['game_id']);

@@ -60,4 +60,5 @@ Uruguay,65";
 		echo "q: $q<br/><br/>\n";
 	}
 }
+else echo "Please supply the correct key.\n";
 ?>

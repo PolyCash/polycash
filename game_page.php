@@ -8,6 +8,7 @@ $nav_tab_selected = "game_page";
 include('includes/html_start.php');
 
 $last_block_id = $game->blockchain->last_block_id();
+$blockchain_last_block = $game->blockchain->fetch_block_by_id($last_block_id);
 $current_round = $game->block_to_round($last_block_id+1);
 
 $user_game = false;
@@ -215,9 +216,11 @@ games.push(new Game(<?php
 	echo ', "game", "'.$game->event_ids().'"';
 	echo ', "'.$game->logo_image_url().'"';
 	echo ', "'.$game->vote_effectiveness_function().'"';
+	echo ', "'.$game->effectiveness_param1().'"';
 	echo ', "'.$game->blockchain->db_blockchain['seconds_per_block'].'"';
 	echo ', "'.$game->db_game['inflation'].'"';
 	echo ', "'.$game->db_game['exponential_inflation_rate'].'"';
+	echo ', "'.$blockchain_last_block['time_mined'].'"';
 ?>));
 
 games[0].game_loop_event();

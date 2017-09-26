@@ -1,0 +1,1 @@
+ALTER TABLE `game_blocks` ADD `time_created` INT NULL DEFAULT NULL AFTER `load_time`;

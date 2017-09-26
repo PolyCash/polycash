@@ -70,6 +70,24 @@ class App {
 		return $string;
 	}
 	
+	public function random_hex_string($length) {
+		$characters = "0123456789abcdef";
+		$bits_per_char = ceil(log(strlen($characters), 2));
+		$hex_chars_per_char = ceil($bits_per_char/4);
+		$hex_chars_needed = $length*$hex_chars_per_char;
+		$rand_data = bin2hex(openssl_random_pseudo_bytes(ceil($hex_chars_needed/2), $crypto_strong));
+		if(!$crypto_strong) $this->log_then_die("An insecure random string of length ".$length." was generated.");
+		
+		$string = "";
+		for ($i=0; $i<$length; $i++) {
+			$hex_chars = substr($rand_data, $i*$hex_chars_per_char, $hex_chars_per_char);
+			$rand_num = hexdec($hex_chars);
+			$rand_index = $rand_num%strlen($characters);
+			$string .= $characters[$rand_index];
+		}
+		return $string;
+	}
+	
 	public function normalize_username($username) {
 		return $this->make_alphanumeric(strip_tags($username), "$-()/!.,:;#@");
 	}
@@ -162,6 +180,13 @@ class App {
 			2 => array('pipe', 'w')
 		);
 		$pipes = array();
+		
+		$last_script_run_time = (int) $this->get_site_constant("last_script_run_time");
+		if ($last_script_run_time < time()-(60*5) && $GLOBALS['process_lock_method'] == "db") {
+			$this->set_site_constant("loading_blocks", 0);
+			$this->set_site_constant("loading_games", 0);
+			$this->set_site_constant("main_loop_running", 0);
+		}
 		
 		if (PHP_OS == "WINNT") $script_path_name = dirname(dirname(__FILE__));
 		else $script_path_name = realpath(dirname(dirname(__FILE__)));
@@ -365,7 +390,7 @@ class App {
 		else if ($number > pow(10, 6)) {
 			return $sign.($number/pow(10, 6))."M";
 		}
-		else if ($number > pow(10, 4)) {
+		else if ($number > pow(10, 5)) {
 			return $sign.($number/pow(10, 3))."k";
 		}
 		else return $sign.rtrim(rtrim(number_format(sprintf('%.8F', $number), 8), '0'), ".");
@@ -445,7 +470,7 @@ class App {
 				$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 				$invite_game = new Game($blockchain, $invitation['game_id']);
 				
-				$user_game = $user->ensure_user_in_game($invite_game);
+				$user_game = $user->ensure_user_in_game($invite_game, false);
 				
 				return true;
 			}
@@ -777,7 +802,9 @@ class App {
 			while ($db_game = $r->fetch()) {
 				$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 				$featured_game = new Game($blockchain, $db_game['game_id']);
-				$mining_block_id = $blockchain->last_block_id()+1;
+				$last_block_id = $blockchain->last_block_id();
+				$mining_block_id = $last_block_id+1;
+				$db_last_block = $blockchain->fetch_block_by_id($last_block_id);
 				$current_round_id = $featured_game->block_to_round($mining_block_id);
 				?>
 				<script type="text/javascript">
@@ -798,9 +825,11 @@ class App {
 					echo ', "home", "'.$featured_game->event_ids().'"';
 					echo ', "'.$featured_game->logo_image_url().'"';
 					echo ', "'.$featured_game->vote_effectiveness_function().'"';
+					echo ', "'.$featured_game->effectiveness_param1().'"';
 					echo ', "'.$featured_game->blockchain->db_blockchain['seconds_per_block'].'"';
 					echo ', "'.$featured_game->db_game['inflation'].'"';
 					echo ', "'.$featured_game->db_game['exponential_inflation_rate'].'"';
+					echo ', "'.$db_last_block['time_mined'].'"';
 				?>));
 				
 				games[<?php echo $counter; ?>].game_loop_event();
@@ -1398,6 +1427,7 @@ class App {
 			array('string', 'game_winning_field', true),
 			array('float', 'game_winning_inflation', true),
 			array('string', 'default_vote_effectiveness_function', true),
+			array('string', 'default_effectiveness_param1', true),
 			array('float', 'default_max_voting_fraction', true),
 			array('int', 'default_option_max_width', false),
 			array('int', 'default_payout_block_delay', true)
@@ -1460,7 +1490,7 @@ class App {
 					$game->update_db_game();
 					$game->ensure_events_until_block($game->blockchain->last_block_id()+1);
 					$game->load_current_events();
-					$game->sync();
+					$game->sync(false);
 				}
 			}
 			else echo "No match for ".$new_game_def_hash."<br/>\n";
@@ -1611,16 +1641,18 @@ class App {
 						$r = $this->run_query($q);
 						$new_game_id = $this->last_insert_id();
 						
-						$q = "UPDATE blockchains SET only_game_id='".$new_game_id."' WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."';";
-						$r = $this->run_query($q);
+						if ($blockchain->db_blockchain['p2p_mode'] != "rpc") {
+							$q = "UPDATE blockchains SET only_game_id='".$new_game_id."' WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."';";
+							$r = $this->run_query($q);
+						}
 						
 						$new_game = new Game($blockchain, $new_game_id);
 						
 						if ($new_game->db_game['p2p_mode'] == "none") {
-							if ($thisuser) $user_game = $thisuser->ensure_user_in_game($new_game);
+							if ($thisuser) $user_game = $thisuser->ensure_user_in_game($new_game, false);
 							
 							if (empty($new_game->db_game['genesis_tx_hash'])) {
-								$game_genesis_tx_hash = $this->random_string(64);
+								$game_genesis_tx_hash = $this->random_hex_string(64);
 								
 								$q = "UPDATE games SET genesis_tx_hash=".$this->quote_escape($game_genesis_tx_hash)." WHERE game_id='".$new_game->db_game['game_id']."';";
 								$r = $this->run_query($q);
@@ -1794,36 +1826,32 @@ class App {
 		return $cached_url;
 	}
 	
-	public function permission_to_claim_address($blockchain, $db_address, $thisuser) {
-		if (!empty($blockchain->db_blockchain['only_game_id']) && $db_address['address'] == "genesis_receiver_address" && empty($db_address['user_id'])) return true;
+	public function permission_to_claim_address($game, $thisuser, $db_address) {
+		if (!empty($game->blockchain->db_blockchain['only_game_id']) && $db_address['address'] == $game->blockchain->db_blockchain["genesis_address"] && empty($db_address['user_id'])) return true;
 		else return false;
 	}
 	
-	public function give_address_to_user($blockchain, $db_address, $user) {
-		if ($this->permission_to_claim_address($blockchain, $db_address, $user)) {
-			$game = new Game($blockchain, $blockchain->db_blockchain['only_game_id']);
-			$user_game = $user->ensure_user_in_game($game);
+	public function give_address_to_user(&$game, &$user, $db_address) {
+		$user_game = $user->ensure_user_in_game($game, false);
+		
+		if ($user_game) {
+			$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id='".$db_address['address_id']."';";
+			$r = $this->run_query($q);
 			
-			if ($user_game) {
-				$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id='".$db_address['address_id']."';";
-				$r = $this->run_query($q);
+			if ($r->rowCount() == 1) {
+				$address_key = $r->fetch();
 				
-				if ($r->rowCount() == 1) {
-					$address_key = $r->fetch();
-					
-					$q = "UPDATE address_keys SET account_id='".$user_game['account_id']."' WHERE address_key_id='".$address_key['address_key_id']."';";
-					$r = $this->run_query($q);
-				}
-				else {
-					$q = "INSERT INTO address_keys SET address_id='".$db_address['address_id']."', account_id='".$user_game['account_id']."', save_method='fake', pub_key=".$this->quote_escape($db_address['address']).";";
-					$r = $this->run_query($q);
-				}
-				$q = "UPDATE addresses SET user_id='".$user->db_user['user_id']."' WHERE address_id='".$db_address['address_id']."';";
+				$q = "UPDATE address_keys SET account_id='".$user_game['account_id']."' WHERE address_key_id='".$address_key['address_key_id']."';";
 				$r = $this->run_query($q);
-				
-				return true;
 			}
-			else return false;
+			else {
+				$q = "INSERT INTO address_keys SET address_id='".$db_address['address_id']."', account_id='".$user_game['account_id']."', save_method='fake', pub_key=".$this->quote_escape($db_address['address']).";";
+				$r = $this->run_query($q);
+			}
+			$q = "UPDATE addresses SET user_id='".$user->db_user['user_id']."' WHERE address_id='".$db_address['address_id']."';";
+			$r = $this->run_query($q);
+			
+			return true;
 		}
 		else return false;
 	}

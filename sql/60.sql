@@ -1,0 +1,1 @@
+ALTER TABLE `currency_accounts` ADD `is_faucet` TINYINT(1) NOT NULL DEFAULT '0' AFTER `current_address_id`;

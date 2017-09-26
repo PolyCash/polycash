@@ -66,14 +66,15 @@ class SingleEliminationGameDefinition {
 			"coin_name": "fantasycoin",
 			"coin_name_plural": "fantasycoins",
 			"coin_abbreviation": "FAN",
-			"escrow_address": "LKwkXcmQmSQxP9fb6jBdjaP4P3LFukBqp9",
-			"genesis_tx_hash": "850d08370a3c33f812045c0c62652ac7cc348f1325793d510989b6984266ee9b",
-			"genesis_amount": 100000000000,
-			"game_starting_block": 1230051,
+			"escrow_address": "LeZ5YYWjg6hxgFzSfZJ26bsLHSexAuiEY5",
+			"genesis_tx_hash": "b76eae23187f49238b93e80fe502cc58c8bbddf093fcbe73f543aa7b4bbb1e25",
+			"genesis_amount": 100000000000000,
+			"game_starting_block": 1278841,
 			"game_winning_rule": "none",
 			"game_winning_field": "",
 			"game_winning_inflation": 0,
 			"default_vote_effectiveness_function": "linear_decrease",
+			"default_effectiveness_param1": 0.5,
 			"default_max_voting_fraction": 1,
 			"default_option_max_width": 200,
 			"default_payout_block_delay": 0
@@ -116,8 +117,8 @@ class SingleEliminationGameDefinition {
 		for ($round=$from_round; $round<=$to_round; $round++) {
 			$meta_round = floor(($round-1)/$rounds_per_tournament);
 			$this_round = ($round-1)%$rounds_per_tournament+1;
-			$rounds_left = $rounds_per_tournament - $this_round;
-			$num_events = pow(2, $rounds_left);
+			$rounds_left = $rounds_per_tournament - ($this_round+1);
+			$num_events = $this->num_events_in_round($round, $rounds_per_tournament);
 			$prevround_offset = $this->round_to_prevround_offset($round, false);
 			$event_index = $prevround_offset;
 			
@@ -209,7 +210,7 @@ class SingleEliminationGameDefinition {
 	public function rename_event(&$gde, &$game) {
 		$general_entity_type = $this->app->check_set_entity_type("general entity");
 		$possible_outcomes = array();
-		$round = 1+floor(($gde['event_starting_block']-$this->game_def->game_starting_block)/$this->game_def->round_length);
+		$round = 1+floor(($gde['event_starting_block']-$game->db_game['game_starting_block'])/$this->game_def->round_length);
 		$this_round = ($round-1)%$this->get_rounds_per_tournament()+1;
 		$event_name = $this->generate_event_labels($possible_outcomes, $round, $this_round, false, $general_entity_type['entity_type_id'], $gde['event_index'], $game);
 		
@@ -375,8 +376,9 @@ class SingleEliminationGameDefinition {
 	
 	public function num_events_in_round($round, $rounds_per_tournament) {
 		if (empty($rounds_per_tournament)) $rounds_per_tournament = $this->get_rounds_per_tournament();
-		$this_round = ($round-1)%$rounds_per_tournament + 1;
-		return pow(2, $rounds_per_tournament-$this_round);
+		$this_round = ($round-1)%$rounds_per_tournament+1;
+		$rounds_left = $rounds_per_tournament - $this_round;
+		return pow(2, $rounds_left);
 	}
 	
 	public function event_index_to_round($event_index, $rounds_per_tournament) {

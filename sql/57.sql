@@ -1,0 +1,1 @@
+ALTER TABLE `transaction_ios` ADD `script_type` VARCHAR(100) NULL DEFAULT NULL AFTER `spend_transaction_id`;

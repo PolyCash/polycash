@@ -12,8 +12,8 @@ $noinfo_fail_obj = (object) [
 
 if ($thisuser && $game) {
 	$user_strategy = false;
-	$user_game = $thisuser->ensure_user_in_game($game);
-	$success = $game->get_user_strategy($thisuser->db_user['user_id'], $user_strategy);
+	$user_game = $thisuser->ensure_user_in_game($game, false);
+	$success = $game->get_user_strategy($user_game);
 	
 	if (!$success) {
 		$api_output = (object)[
@@ -161,7 +161,8 @@ if ($thisuser && $game) {
 	}
 	else {
 		if ($amount_sum+$user_strategy['transaction_fee'] <= $mature_balance && $amount_sum > 0) {
-			$transaction_id = $game->create_transaction($option_ids, $real_amounts, $user_game, false, 'transaction', $io_ids, false, false, (int) $user_strategy['transaction_fee']);
+			$error_message = false;
+			$transaction_id = $game->create_transaction($option_ids, $real_amounts, $user_game, false, 'transaction', $io_ids, false, false, (int) $user_strategy['transaction_fee'], $error_message);
 			
 			if ($transaction_id) {
 				$game->update_option_votes();
@@ -178,7 +179,7 @@ if ($thisuser && $game) {
 			else {
 				$api_output = (object)[
 					'status_code' => 7,
-					'message' => "Error, the transaction was canceled."
+					'message' => $error_message
 				];
 			}
 		}

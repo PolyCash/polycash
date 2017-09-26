@@ -56,7 +56,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			echo "fee: ".$app->format_bignum($fee_amount/pow(10,8)).", buyin: ".$app->format_bignum($buyin_amount/pow(10,8)).", color: ".$app->format_bignum($color_amount/pow(10,8))."<br/>\n";
 			if ($fee_amount > 0 && $buyin_amount > 0 && $color_amount > 0) {
 				$invoice_user = new User($app, $invoice_address['user_id']);
-				$user_game = $invoice_user->ensure_user_in_game($game);
+				$user_game = $invoice_user->ensure_user_in_game($game, false);
 				$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false);
 				
 				$game_currency_account = $app->fetch_account_by_id($user_game['account_id']);
@@ -70,7 +70,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				
 				$address_ids = array($escrow_address['address_id'], $game_currency_account['current_address_id']);
 				
-				$transaction_id = $game->create_transaction(false, array($buyin_amount, $color_amount), $user_game, false, 'transaction', $io_ids, $address_ids, false, $fee_amount);
+				$error_message = false;
+				$transaction_id = $game->create_transaction(false, array($buyin_amount, $color_amount), $user_game, false, 'transaction', $io_ids, $address_ids, false, $fee_amount, $error_message);
 				
 				echo "created tx #".$transaction_id;
 				
@@ -138,7 +139,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 							array_push($address_ids, $escrow_address['address_id']);
 						}
 						
-						$transaction_id = $this_game->create_transaction(false, $amounts, false, false, 'transaction', $io_ids, $address_ids, false, $unprocessed_sellout['fee_amount']);
+						$error_message = false;
+						$transaction_id = $this_game->create_transaction(false, $amounts, false, false, 'transaction', $io_ids, $address_ids, false, $unprocessed_sellout['fee_amount'], $error_message);
 						
 						if ($transaction_id) {
 							$db_transaction = $app->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();

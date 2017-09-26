@@ -1,0 +1,1 @@
+ALTER TABLE `cached_urls` ADD INDEX (`time_fetched`);

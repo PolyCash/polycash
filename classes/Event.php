@@ -355,8 +355,6 @@ class Event {
 					if ($holder_width != $box_diam) $html .= 'left: '.(($holder_width-$box_diam)/2).'px; top: '.(($holder_width-$box_diam)/2).'px;';
 					if ($round_stats[$i]['image_id'] > 0) $html .= 'background-image: url(\''.$this->game->blockchain->app->image_url($round_stats[$i]).'\');';
 					if ($clickable) $html .= 'cursor: pointer;';
-					if ($option_votes > $max_sum_votes) $html .= 'opacity: 0.5; z-index: 1;';
-					else $html .= 'z-index: 3;';
 					$html .= '" id="game'.$game_instance_id.'_event'.$game_event_index.'_vote_option_'.$i.'"';
 					if ($clickable) $html .= ' onmouseover="games['.$game_instance_id.'].events['.$game_event_index.'].option_selected('.$i.');" onclick="games['.$game_instance_id.'].events['.$game_event_index.'].option_selected('.$i.'); games['.$game_instance_id.'].events['.$game_event_index.'].start_vote('.$round_stats[$i]['option_id'].');"';
 					$html .= '>
@@ -635,13 +633,12 @@ class Event {
 		$rr = $this->game->blockchain->app->run_query($qq);
 	}
 	
-	public function round_to_last_betting_block($round_id) {
-		return ($round_id-1)*$this->db_event['round_length']+5;
-	}
-	
 	public function round_index_to_effectiveness_factor($round_index) {
 		if ($this->db_event['vote_effectiveness_function'] == "linear_decrease") {
-			return floor(pow(10,8)*($this->game->db_game['round_length']-$round_index)/($this->game->db_game['round_length']-1))/pow(10,8);
+			$slope = -1*$this->db_event['effectiveness_param1'];
+			$frac_complete = floor(pow(10,8)*$round_index/$this->game->db_game['round_length'])/pow(10,8);
+			$effectiveness = floor(pow(10,8)*$frac_complete*$slope)/pow(10,8) + 1;
+			return $effectiveness;
 		}
 		else return 1;
 	}
@@ -870,8 +867,9 @@ class Event {
 	}
 	
 	public function process_option_blocks(&$game_block, $events_in_round, $round_first_event_index) {
-		//$q = "DELETE ob.* FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id WHERE o.event_id='".$this->db_event['event_id']."' AND ob.block_height='".$game_block['block_id']."';";
-		//$r = $this->game->blockchain->app->run_query($q);
+		$q = "DELETE ob.* FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id WHERE o.event_id='".$this->db_event['event_id']."' AND ob.block_height='".$game_block['block_id']."';";
+		$r = $this->game->blockchain->app->run_query($q);
+		
 		$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->game->db_game['blockchain_id']."' AND block_id='".$game_block['block_id']."';";
 		$block = $this->game->blockchain->app->run_query($q)->fetch();
 		$random_data = hash("sha256", $block['block_hash']);
@@ -890,7 +888,7 @@ class Event {
 			}
 			
 			$event_blocks = $this->db_event['event_final_block'] - $this->db_event['event_starting_block'] + 1;
-			$team_avg_goals_per_game = 3;
+			$team_avg_goals_per_game = 1.35;
 			
 			$rand_i = 0;
 			$q = "SELECT * FROM options WHERE event_id='".$this->db_event['event_id']."' ORDER BY option_index ASC;";
