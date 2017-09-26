@@ -5,7 +5,7 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->in
 
 if ($thisuser) {
 	$action = $_REQUEST['action'];
-	$game_id = (int) $_REQUEST['game_id'];
+	if (!empty($_REQUEST['game_id'])) $game_id = (int) $_REQUEST['game_id'];
 	$io_id = (int) $_REQUEST['io_id'];
 	
 	if ($action == "buyin") {

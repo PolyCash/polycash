@@ -196,7 +196,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 			else $pagetitle .= " - ".$blockchain->db_blockchain['blockchain_name'];
 		}
 		else {
-			if (strlen($uri_parts[5]) < 20) {
+			if (strlen($uri_parts[5]) < 15) {
 				$tx_id = intval($uri_parts[5]);
 				$q = "SELECT * FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND transaction_id='".$tx_id."';";
 			}
@@ -215,7 +215,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				$pagetitle = " Transaction: ".$transaction['tx_hash'];
 			}
 			else if ($r->rowCount() == 0) {
-				if ($coin_rpc && !empty($blockchain) && !empty($tx_hash)) {
+				if (!empty($coin_rpc) && !empty($blockchain) && !empty($tx_hash)) {
 					$successful = false;
 					$blockchain->add_transaction($coin_rpc, $tx_hash, false, true, $successful, false, false, false);
 					

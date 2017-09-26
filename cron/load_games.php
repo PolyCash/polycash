@@ -14,6 +14,7 @@ if (!empty($argv)) {
 	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
 	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
 	if (!empty($cmd_vars['game_id'])) $_REQUEST['game_id'] = $cmd_vars['game_id'];
+	if (!empty($cmd_vars['print_debug'])) $_REQUEST['print_debug'] = $cmd_vars['print_debug'];
 }
 
 if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
@@ -21,6 +22,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	
 	if (!$loading_games) {
 		$print_debug = false;
+		if (!empty($_REQUEST['print_debug'])) $print_debug = true;
 		
 		if ($GLOBALS['process_lock_method'] == "db") {
 			$GLOBALS['app'] = $app;

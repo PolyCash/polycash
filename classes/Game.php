@@ -2390,7 +2390,6 @@ class Game {
 				if ($r->rowCount() > 0) {
 					while ($db_transaction = $r->fetch()) {
 						$round_spent = $this->block_to_round($block_height);
-						$input_sum = 0;
 						$input_colored_sum = 0;
 						$crd_sum = 0;
 						$cbd_sum = 0;
@@ -2401,7 +2400,6 @@ class Game {
 						while ($input_io = $rr->fetch()) {
 							$round_created = $this->block_to_round($input_io['create_block_id']);
 							
-							$input_sum += $input_io['amount'];
 							$input_colored_sum += $input_io['colored_amount'];
 							$colored_coin_blocks = $input_io['colored_amount']*($block_height - $input_io['create_block_id']);
 							$colored_coin_rounds = $input_io['colored_amount']*($round_id - $input_io['create_round_id']);
@@ -2417,7 +2415,7 @@ class Game {
 						
 						$output_sum = 0;
 						while ($output_io = $rr->fetch()) {
-							$output_sum += (int) $output_io['amount'];
+							$output_sum += $output_io['amount'];
 						}
 						
 						$qq = "DELETE gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.create_transaction_id='".$db_transaction['transaction_id']."';";

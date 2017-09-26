@@ -490,9 +490,13 @@ class Event {
 			$confirmed_html .= '<div class="col-sm-4 '.$color.'text">'.$my_vote['name'].'</div>';
 			$confirmed_html .= '<div class="col-sm-3 '.$color.'text">';
 			$confirmed_html .= '<a target="_blank" href="/explorer/games/'.$this->game->db_game['url_identifier'].'/transactions/'.$my_vote['tx_hash'].'">';
+			
 			if ($this->game->db_game['inflation'] == "exponential") {
 				$coin_stake = $num_votes/$votes_per_coin;
-				$odds = round($expected_payout*pow(10,8)/$coin_stake, 2);
+				
+				if ($coin_stake > 0) $odds = round($expected_payout*pow(10,8)/$coin_stake, 2);
+				else $odds = 0;
+				
 				$confirmed_html .= $this->game->blockchain->app->format_bignum($coin_stake/pow(10,8), 2)." (x".$odds.")";
 			}
 			else {

@@ -244,8 +244,7 @@ class Blockchain {
 					
 					while ($spend_io = $r->fetch()) {
 						$spend_io_ids[count($spend_io_ids)] = $spend_io['io_id'];
-						
-						$input_sum += (int) $spend_io['amount'];
+						$input_sum += $spend_io['amount'];
 						
 						if ($block_height) {
 							$this_io_cbd = ($block_height - $spend_io['block_id'])*$spend_io['amount'];
@@ -481,6 +480,7 @@ class Blockchain {
 					if ($require_inputs || $transaction_type != "transaction") $q .= ", has_all_inputs=1, amount='".$output_sum."', fee_amount='".$fee_amount."'";
 					$q .= " WHERE transaction_id='".$db_transaction_id."';";
 					$r = $this->app->run_query($q);
+					
 					if ($show_debug) echo "done.".(microtime(true)-$benchmark_time);
 					
 					$db_transaction = $this->app->run_query("SELECT * FROM transactions WHERE transaction_id='".$db_transaction_id."';")->fetch();
@@ -935,7 +935,7 @@ class Blockchain {
 		$html = "";
 		$html .= '<div class="row bordered_row"><div class="col-md-12">';
 		
-		if ($transaction['block_id'] !== "") {
+		if ($transaction['block_id'] != "") {
 			if ($transaction['position_in_block'] == "") $html .= "Confirmed";
 			else $html .= "#".(int)$transaction['position_in_block'];
 			$html .= " in block <a href=\"/explorer/blockchains/".$this->db_blockchain['url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>, ";
@@ -948,7 +948,7 @@ class Blockchain {
 			$html .= ", ".$fee_disp;
 			$html .= " tx fee";
 		}
-		if ($transaction['block_id'] === "") $html .= ", not yet confirmed";
+		if ($transaction['block_id'] == "") $html .= ", not yet confirmed";
 		$html .= '. <br/><a href="/explorer/blockchains/'.$this->db_blockchain['url_identifier'].'/transactions/'.$transaction['tx_hash'].'" class="display_address" style="max-width: 100%; overflow: hidden;">TX:&nbsp;'.$transaction['tx_hash'].'</a>';
 		
 		$html .= '</div><div class="col-md-6">';
@@ -1201,6 +1201,7 @@ class Blockchain {
 						if ($this->db_blockchain['p2p_mode'] != "p2p") {
 							$qq = "UPDATE transaction_ios SET spend_count=spend_count+1, spend_transaction_id='".$transaction_id."', spend_transaction_ids=CONCAT(spend_transaction_ids, CONCAT('".$transaction_id."', ','))";
 							if ($block_id !== false) $qq .= ", spend_status='spent', spend_block_id='".$block_id."'";
+							else $qq .= ", spend_status='unconfirmed'";
 							$qq .= " WHERE io_id='".$transaction_input['io_id']."';";
 							$rr = $this->app->run_query($qq);
 						}

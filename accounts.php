@@ -3,7 +3,7 @@ include('includes/connect.php');
 include('includes/get_session.php');
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
-if ($thisuser && $_REQUEST['action'] == "donate_to_faucet") {
+if ($thisuser && !empty($_REQUEST['action']) && $_REQUEST['action'] == "donate_to_faucet") {
 	$io_id = (int) $_REQUEST['account_io_id'];
 	$amount_each = (float) $_REQUEST['donate_amount_each'];
 	$satoshis_each = pow(10,8)*$amount_each;
