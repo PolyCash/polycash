@@ -137,13 +137,28 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			}
 		}
 
+		// Load all running games
 		$running_games = array();
 		$q = "SELECT * FROM games WHERE game_status IN('published','running');";
 		$r = $GLOBALS['app']->run_query($q);
+		
 		while ($running_game = $r->fetch()) {
+			$game_i = count($running_games);
 			if (empty($blockchains[$running_game['blockchain_id']])) $blockchains[$running_game['blockchain_id']] = new Blockchain($app, $running_game['blockchain_id']);
-			$running_games[count($running_games)] = new Game($blockchains[$running_game['blockchain_id']], $running_game['game_id']);
+			$running_games[$game_i] = new Game($blockchains[$running_game['blockchain_id']], $running_game['game_id']);
 			if ($print_debug) echo "Including game: ".$running_game['name']."\n";
+			
+			// Update user account values
+			$qq = "SELECT * FROM users u JOIN user_games ug ON u.user_id=ug.user_id WHERE ug.game_id='".$running_game['game_id']."' ORDER BY u.user_id ASC;";
+			$rr = $app->run_query($qq);
+			
+			while ($db_user = $rr->fetch()) {
+				$user = new User($app, $db_user['user_id']);
+				$account_value = $user->account_coin_value($running_games[$game_i], $db_user)/pow(10,8);
+				
+				$qqq = "UPDATE user_games SET account_value='".$account_value."' WHERE user_game_id='".$db_user['user_game_id']."';";
+				$rrr = $app->run_query($qqq);
+			}
 		}
 		
 		$app->delete_unconfirmable_transactions();
