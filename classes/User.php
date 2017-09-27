@@ -14,11 +14,13 @@ class User {
 	}
 	
 	public function account_coin_value(&$game, &$user_game) {
-		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND (io.spend_status='unspent' || io.spend_status='unconfirmed') AND k.account_id='".$user_game['account_id']."';";
+		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND (io.spend_status='unspent' || io.spend_status='unconfirmed') AND k.account_id='".$user_game['account_id']."' GROUP BY io.io_id;";
 		$r = $this->app->run_query($q);
-		$coins = $r->fetch(PDO::FETCH_NUM);
-		$coins = $coins[0];
-		if ($coins > 0) return $coins;
+		$sum = 0;
+		while ($coins = $r->fetch(PDO::FETCH_NUM)) {
+			$sum += $coins[0];
+		}
+		if ($sum > 0) return $sum;
 		else return 0;
 	}
 

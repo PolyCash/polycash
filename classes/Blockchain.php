@@ -7,8 +7,9 @@ class Blockchain {
 		$this->app = $app;
 		$r = $this->app->run_query("SELECT * FROM blockchains WHERE blockchain_id='".$blockchain_id."';");
 		if ($r->rowCount() == 1) $this->db_blockchain = $r->fetch();
-		else die("Failed to load blockchain #".$blockchain_id);
-		
+		else {
+			throw new Exception("Failed to load blockchain #".$blockchain_id);
+		}
 		if (empty($this->db_blockchain['first_required_block'])) {
 			if ($this->db_blockchain['p2p_mode'] == "rpc") {
 				try {

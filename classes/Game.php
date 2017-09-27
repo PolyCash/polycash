@@ -83,12 +83,13 @@ class Game {
 			
 			if ($type == "votebase" || $type == "coinbase") {}
 			else {
-				$q = "SELECT *, io.address_id AS address_id, io.amount AS amount FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.spend_status IN ('unspent','unconfirmed') AND io.blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."'";
+				$q = "SELECT *, io.address_id AS address_id, io.amount AS amount FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.spend_status IN ('unspent','unconfirmed') AND io.blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."'";
 				if ($this->db_game['maturity'] > 0) $q .= " AND io.create_block_id <= ".($this->blockchain->last_block_id()-$this->db_game['maturity']);
 				if ($io_ids) $q .= " AND io.io_id IN (".implode(",", $io_ids).")";
-				else $q .= " AND io.io_id IN (".$this->mature_io_ids_csv($user_game).")";
-				$q .= " ORDER BY io.amount ASC;";
+				else $q .= " AND gio.game_io_id IN (".$this->mature_io_ids_csv($user_game).")";
+				$q .= " GROUP BY io.io_id ORDER BY io.amount ASC;";
 				$r = $this->blockchain->app->run_query($q);
+				
 				$coin_blocks_destroyed = 0;
 				$coin_rounds_destroyed = 0;
 				
@@ -2476,7 +2477,7 @@ class Game {
 				eval('$module = new '.$this->db_game['module'].'GameDefinition($this->blockchain->app);');
 				
 				for ($i=0; $i<count($payout_events); $i++) {
-					if (!empty($this->db_game['module'])) {
+					if ($payout_events[$i]->db_event['event_winning_rule'] == "game_definition") {
 						if ($this->blockchain->db_blockchain['p2p_mode'] == "rpc") {
 							try {
 								$coin_rpc = new jsonRPCClient('http://'.$this->blockchain->db_blockchain['rpc_username'].':'.$this->blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->blockchain->db_blockchain['rpc_port'].'/');
@@ -2492,7 +2493,7 @@ class Game {
 					
 					$log_text .= $payout_events[$i]->set_outcome_from_db($block_height, true);
 					
-					if (!empty($this->db_game['module']) && method_exists($module, "event_index_to_next_event_index")) {
+					if ($payout_events[$i]->db_event['event_winning_rule'] == "game_definition" && method_exists($module, "event_index_to_next_event_index")) {
 						$event_index = $module->event_index_to_next_event_index($payout_events[$i]->db_event['event_index']);
 						$this->set_event_labels_by_gde($event_index);
 					}

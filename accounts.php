@@ -48,6 +48,7 @@ if ($thisuser && !empty($_REQUEST['action']) && $_REQUEST['action'] == "donate_t
 					
 					if ($game_ios[0]['spend_status'] == "unspent") {
 						$address_ids = array();
+						$address_key_ids = array();
 						$addresses_needed = $quantity;
 						$loop_count = 0;
 						do {
@@ -61,12 +62,25 @@ if ($thisuser && !empty($_REQUEST['action']) && $_REQUEST['action'] == "donate_t
 									$update_addr_q = "UPDATE addresses SET user_id='".$thisuser->db_user['user_id']."' WHERE address_id='".$db_address['address_id']."';";
 									$update_addr_r = $app->run_query($update_addr_q);
 									
-									$addr_key_q = "INSERT INTO address_keys SET address_id='".$db_address['address_id']."', account_id='".$faucet_account['account_id']."', save_method='wallet.dat', pub_key=".$app->quote_escape($db_address['address']).";";
+									$addr_key_q = "SELECT * FROM address_keys WHERE address_id='".$db_address['address_id']."';";
 									$addr_key_r = $app->run_query($addr_key_q);
+									
+									if ($addr_key_r->rowCount() > 0) {
+										$addr_key = $addr_key_r->fetch();
+										$addr_key_q = "UPDATE address_keys SET account_id='".$faucet_account['account_id']."' WHERE address_key_id='".$addr_key['address_key_id']."';";
+										$addr_key_r = $app->run_query($addr_key_q);
+										$address_key_id = $addr_key['address_key_id'];
+									}
+									else {
+										$addr_key_q = "INSERT INTO address_keys SET address_id='".$db_address['address_id']."', account_id='".$faucet_account['account_id']."', save_method='wallet.dat', pub_key=".$app->quote_escape($db_address['address']).";";
+										$addr_key_r = $app->run_query($addr_key_q);
+										$address_key_id = $app->last_insert_id();
+									}
 									
 									$addresses_needed--;
 									
 									array_push($address_ids, $db_address['address_id']);
+									array_push($address_key_ids, $address_key_id);
 								}
 								else echo "Error, ".$address['address_id']." is already owned by someone.<br/>\n";
 							}
@@ -74,7 +88,16 @@ if ($thisuser && !empty($_REQUEST['action']) && $_REQUEST['action'] == "donate_t
 						}
 						while ($addresses_needed > 0 && $loop_count < $quantity*2);
 						
-						if ($addresses_needed > 0) die("Not enough free addresses (still need $addresses_needed/$quantity).");
+						if ($addresses_needed > 0) {
+							if (count($address_ids) > 0) {
+								$q = "UPDATE addresses SET user_id=NULL WHERE address_id IN (".implode(",", $address_ids).");";
+								$r = $app->run_query($q);
+								
+								$q = "UPDATE address_keys SET account_id=NULL WHERE address_key_id IN (".implode(",", $address_key_ids).");";
+								$r = $app->run_query($q);
+							}
+							die("Not enough free addresses (still need $addresses_needed/$quantity).");
+						}
 						
 						$account_q = "SELECT ca.* FROM currency_accounts ca JOIN games g ON g.game_id=ca.game_id JOIN address_keys k ON k.account_id=ca.account_id WHERE ca.user_id='".$thisuser->db_user['user_id']."' AND k.address_id='".$game_ios[0]['address_id']."';";
 						$account_r = $app->run_query($account_q);
