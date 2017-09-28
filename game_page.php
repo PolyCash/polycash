@@ -157,7 +157,14 @@ else $exchange_rate = 0;
 					In this game you can win <?php echo $game->db_game['coin_name_plural']; ?> by casting your votes correctly.  Votes build up over time based on the number of <?php echo $game->db_game['coin_name_plural']; ?> that you hold.  When you vote for <?php echo $app->prepend_a_or_an($game->db_game['option_name']); ?>, your votes are used up but your <?php echo $game->db_game['coin_name_plural']; ?> are retained. By collaborating with your teammates against competing groups, you can make money by accumulating <?php echo $game->db_game['coin_name_plural']; ?> faster than the other players.  Through the <?php echo $GLOBALS['coin_brand_name']; ?> API you can code up a custom strategy which makes smart, real-time decisions about how to cast your votes.
 				</div>*/ ?>
 				<div class="paragraph">
-					<a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/" class="btn btn-success">Play Now</a>
+					<a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/" class="btn btn-success">
+					<?php
+					$faucet_io = $game->check_faucet(false);
+					
+					if ($faucet_io) echo 'Join now & receive '.$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,8)).' '.$game->db_game['coin_name_plural'];
+					else echo 'Play Now';
+					?>
+					</a>
 					<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/" class="btn btn-primary">Blockchain Explorer</a>
 				</div>
 			</div>
