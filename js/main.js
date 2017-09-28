@@ -245,7 +245,7 @@ function rank_check_all_changed() {
 function vote_on_block_all_changed() {
 	var set_checked = false;
 	if ($('#vote_on_block_all').is(":checked")) set_checked = true;
-	for (var i=1; i<games[0].game_round_length; i++) {
+	for (var i=1; i<=games[0].game_round_length; i++) {
 		$('#vote_on_block_'+i).prop("checked", set_checked);
 	}
 }
