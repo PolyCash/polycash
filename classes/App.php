@@ -842,7 +842,12 @@ class App {
 				echo '<div id="game'.$counter.'_events"></div>';
 				echo '<script type="text/javascript" id="game'.$counter.'_new_event_js">'.$featured_game->new_event_js($counter, false).'</script>';
 				
-				echo '<br/><a href="/wallet/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-success">Play Now</a>';
+				$faucet_io = $featured_game->check_faucet(false);
+				
+				echo '<br/><a href="/wallet/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-success">';
+				if ($faucet_io) echo 'Join now & receive '.$this->format_bignum($faucet_io['colored_amount_sum']/pow(10,8)).' '.$featured_game->db_game['coin_name_plural'];
+				else echo 'Play Now';
+				echo '</a>';
 				echo ' <a href="/explorer/games/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-primary">'.ucwords($featured_game->db_game['event_type_name']).' Results</a>';
 				echo ' <a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-warning">About '.$featured_game->db_game['name'].'</a>';
 				echo '</center><br/>';

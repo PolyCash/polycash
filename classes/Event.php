@@ -137,7 +137,7 @@ class Event {
 		if ($display_mode == "slim") $option_max_width = min(100, $option_max_width);
 		
 		$sq_px_per_pct_point = pow($option_max_width, 2)/100;
-		$min_px_diam = 30;
+		$min_px_diam = 20;
 		
 		$round_stats_all = false;
 		$winner = false;

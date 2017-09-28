@@ -351,7 +351,7 @@ class User {
 			$r = $this->app->run_query($q);
 			$strategy = $r->fetch();
 			
-			for ($block=1; $block<$game->db_game['round_length']; $block++) {
+			for ($block=1; $block<=$game->db_game['round_length']; $block++) {
 				$q = "INSERT INTO user_strategy_blocks SET strategy_id='".$strategy_id."', block_within_round='".$block."';";
 				$r = $this->app->run_query($q);
 			}
