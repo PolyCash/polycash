@@ -195,7 +195,12 @@ class Event {
 		}
 		
 		if ($display_mode == "slim") {
-			$html .= '<p><div class="event_timer_slim" id="game'.$game_instance_id.'_event'.$game_event_index.'_timer"></div>';
+			if ($this->db_event['option_block_rule'] == "football_match") $html .= '<p><div class="event_timer_slim" id="game'.$game_instance_id.'_event'.$game_event_index.'_timer"></div>';
+			else {
+				$blocks_left = $this->game->db_game['round_length'] - $block_within_round;
+				$sec_left = $this->game->blockchain->db_blockchain['seconds_per_block']*$blocks_left;
+				$html .= '<p><div class="event_timer_slim">'.$blocks_left.' blocks left ('.$this->game->blockchain->app->format_seconds($sec_left).')</div></p>';
+			}
 			$html .= "<strong><a style=\"color: #000; text-decoration: underline;\" target=\"_blank\" href=\"/explorer/games/".$this->game->db_game['url_identifier']."/events/".($this->db_event['event_index']+1)."\">".$this->db_event['event_name']."</a></strong> ";
 			$html .= " &nbsp;&nbsp; ";
 			$html .= $score_disp;
