@@ -702,7 +702,7 @@ class Game {
 		$q = "DELETE gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.create_block_id >= ".$block_height.";";
 		$r = $this->blockchain->app->run_query($q);
 		
-		$q = "UPDATE transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id SET gio.spend_round_id=NULL WHERE gio.game_id='".$this->db_game['game_id']."' AND io.create_block_id < ".$block_height." AND io.spend_block_id >= ".$block_height.";";
+		$q = "UPDATE transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id SET gio.spend_round_id=NULL WHERE gio.game_id='".$this->db_game['game_id']."' AND gio.spend_round_id >= ".$this->block_to_round($block_height).";";
 		$r = $this->blockchain->app->run_query($q);
 		
 		$q = "DELETE ob.* FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id JOIN events e ON o.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."' AND ob.block_height >= ".$block_height.";";
@@ -2296,6 +2296,8 @@ class Game {
 		
 		if ($show_debug) echo "Loading blocks ".$load_block_height." to ".$to_block_height."\n";
 		
+		$made_changes = $this->ensure_events_until_block($to_block_height+1);
+		
 		for ($block_height=$load_block_height; $block_height<=$to_block_height; $block_height++) {
 			list($successful, $log_text) = $this->add_block($block_height);
 			
@@ -2466,10 +2468,7 @@ class Game {
 				$events[$i]->process_option_blocks($game_block, count($events), $events[0]->db_event['event_index']);
 			}
 			
-			$made_changes = $this->ensure_events_until_block($this->blockchain->last_block_id()+1);
-			
-			// Time for initial event loading should not count towards block load time
-			if ($made_changes) $start_time = microtime(true);
+			$made_changes = $this->ensure_events_until_block($block_height+1);
 			
 			$payout_events = $this->events_by_payout_block($block_height);
 			

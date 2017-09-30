@@ -1,3 +1,6 @@
+html, body {
+	overflow-x: hidden;
+}
 body {
   padding-top: 50px;
 }
@@ -36,7 +39,7 @@ body {
 	top: 100px;
 	height: 100px;
 	line-height: 100px;
-	font-size: 70px;
+	font-size: 60px;
 	text-shadow: 0px 0px 8px rgba(0, 0, 0, 1);
 }
 .carouselText h2 {

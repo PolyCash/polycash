@@ -1068,12 +1068,16 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				if (empty($thisuser)) echo "<br/><br/>\n<p>You must be logged in to view this page. <a href=\"/wallet/".$game->db_game['url_identifier']."/\">Log in</a></p>\n";
 				else {
 					$votes_per_coin = $app->votes_per_coin($game->db_game);
+					$net_delta = 0;
+					$net_stake = 0;
+					$num_wins = 0;
+					$num_losses = 0;
 					
 					$q = "SELECT gio.*, e.entity_name, eo.winning_option_id, eo.sum_score, eo.sum_votes, o.name AS option_name, gio.votes AS votes, ev.event_index, eoo.votes AS option_votes, gio2.colored_amount AS payout_amount FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN entities e ON o.entity_id=e.entity_id JOIN events ev ON o.event_id=ev.event_id JOIN event_outcomes eo ON ev.event_id=eo.event_id JOIN event_outcome_options eoo ON eoo.outcome_id=eo.outcome_id AND eoo.option_id=o.option_id LEFT JOIN transaction_game_ios gio2 ON gio.payout_game_io_id=gio2.game_io_id WHERE gio.game_id=".$game->db_game['game_id']." AND ug.user_id=".$thisuser->db_user['user_id']." ORDER BY gio.game_io_id DESC;";
 					$r = $app->run_query($q);
+					$num_bets = $r->rowCount();
 					
-					echo "<br/><br/>\n<p>You have ".$r->rowCount()." resolved bets for this game.</p>";
-					?>
+					$bet_table_html = '
 					<div class="row">
 						<div class="col-sm-2 boldtext">Stake</div>
 						<div class="col-sm-2 boldtext">Payout</div>
@@ -1081,57 +1085,79 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						<div class="col-sm-2 boldtext">Effectiveness Factor</div>
 						<div class="col-sm-2 boldtext">Entity</div>
 						<div class="col-sm-3 boldtext">Outcome</div>
-					</div>
-					<?php
+					</div>';
+					
 					while ($bet = $r->fetch()) {
 						$expected_payout = ($bet['sum_score']/$votes_per_coin/pow(10,8))*($bet['votes']/$bet['option_votes']);
 						$my_stake = $bet[$game->db_game['payout_weight']."s_destroyed"]/pow(10,8)/$app->votes_per_coin($game->db_game);
 						$payout_multiplier = $expected_payout/$my_stake;
 						
-						echo '<div class="row">';
+						$net_stake += $my_stake;
 						
-						echo '<div class="col-sm-2 text-right">';
+						$bet_table_html .= '<div class="row">';
+						
+						$bet_table_html .= '<div class="col-sm-2 text-right">';
 						if ($game->db_game['inflation'] == "exponential") {
-							echo $app->format_bignum($my_stake)." ".$game->db_game['coin_abbreviation'];
+							$bet_table_html .= $app->format_bignum($my_stake)." ".$game->db_game['coin_abbreviation'];
 						}
 						else {
-							echo $app->format_bignum($bet['votes']/pow(10,8))." votes";
+							$bet_table_html .= $app->format_bignum($bet['votes']/pow(10,8))." votes";
 						}
-						echo "</div>\n";
+						$bet_table_html .= "</div>\n";
 						
-						echo "<div class=\"col-sm-2 text-right\">";
-						echo $app->format_bignum($expected_payout)." ".$game->db_game['coin_abbreviation'];
-						echo "</div>\n";
+						$bet_table_html .= "<div class=\"col-sm-2 text-right\">";
+						$bet_table_html .= $app->format_bignum($expected_payout)." ".$game->db_game['coin_abbreviation'];
+						$bet_table_html .= "</div>\n";
 						
-						echo "<div class=\"col-sm-1 text-center\">x".$app->format_bignum($payout_multiplier)."</div>\n";
+						$bet_table_html .= "<div class=\"col-sm-1 text-center\">x".$app->format_bignum($payout_multiplier)."</div>\n";
 						
-						echo "<div class=\"col-sm-2\">";
-						echo round($bet['effectiveness_factor']*100, 2)."%";
-						echo "</div>\n";
+						$bet_table_html .= "<div class=\"col-sm-2\">";
+						$bet_table_html .= round($bet['effectiveness_factor']*100, 2)."%";
+						$bet_table_html .= "</div>\n";
 						
-						echo "<div class=\"col-sm-2\"><a target=\"_blank\" href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".($bet['event_index']+1)."\">".$bet['entity_name']."</a></div>\n";
+						$bet_table_html .= "<div class=\"col-sm-2\"><a target=\"_blank\" href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".($bet['event_index']+1)."\">".$bet['entity_name']."</a></div>\n";
 						
 						$outcome_txt = "";
 						if ($bet['winning_option_id'] == $bet['option_id']) {
 							$outcome_txt = "Won";
 							$delta = $expected_payout - $my_stake;
+							$num_wins++;
 						}
 						else {
 							$outcome_txt = "Lost";
 							$delta = (-1)*$my_stake;
+							$num_losses++;
 						}
-						echo "<div class=\"col-sm-3";
-						if ($delta >= 0) echo " greentext";
-						else echo " redtext";
-						echo "\">";
-						echo $outcome_txt." &nbsp;&nbsp; ";
-						if ($delta >= 0) echo "+";
-						else echo "-";
-						echo $app->format_bignum(abs($delta));
-						echo " ".$game->db_game['coin_abbreviation']."</div>\n";
+						$net_delta += $delta;
 						
-						echo "</div>\n";
+						$bet_table_html .= "<div class=\"col-sm-3";
+						if ($delta >= 0) $bet_table_html .= " greentext";
+						else $bet_table_html .= " redtext";
+						$bet_table_html .= "\">";
+						$bet_table_html .= $outcome_txt." &nbsp;&nbsp; ";
+						if ($delta >= 0) $bet_table_html .= "+";
+						else $bet_table_html .= "-";
+						$bet_table_html .= $app->format_bignum(abs($delta));
+						$bet_table_html .= " ".$game->db_game['coin_abbreviation']."</div>\n";
+						
+						$bet_table_html .= "</div>\n";
 					}
+					
+					$win_rate = $num_wins/($num_wins+$num_losses);
+					
+					echo "<br/><br/>\n";
+					echo "You have ".$num_bets." resolved bets for this game totalling <font class=\"greentext\">".$app->format_bignum($net_stake)."</font> ".$game->db_game['coin_name_plural']."<br/>\n";
+					echo "You won ".round($win_rate*100, 1)."% of your bets for a net ";
+					if ($net_delta >= 0) echo "gain";
+					else echo "loss";
+					echo " of <font class=\"";
+					if ($net_delta >= 0) echo "greentext";
+					else echo "redtext";
+					echo "\">".$app->format_bignum(abs($net_delta))."</font> ".$game->db_game['coin_name_plural']."<br/>\n";
+					
+					echo "<br/>\n";
+					echo $bet_table_html;
+					echo "<br/>\n";
 				}
 			}
 		}

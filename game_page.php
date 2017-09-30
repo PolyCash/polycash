@@ -90,7 +90,7 @@ else $exchange_rate = 0;
 					}
 					
 					if ($game->db_game['short_description'] != "") {
-						echo $game->db_game['short_description']." ";
+						echo '</div><div class="paragraph">'.$game->db_game['short_description']." ";
 					}
 					
 					if ($exchange_rate > 0 && $game->db_game['buyin_policy'] != "none") {

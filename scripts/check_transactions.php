@@ -61,7 +61,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		echo $error_count." errors.<br/>\n";
 		
 		if ($first_error_block) {
-			$reset_block = min($first_error_block-1, $last_block_id+1);
+			$reset_block = min($first_error_block, $last_block_id+1);
 			
 			echo "First error was on block #".$first_error_block.", please <a href=\"/scripts/reset_game.php?game_id=".$game->db_game['game_id']."&key=".$GLOBALS['cron_key_string']."&block_id=".$reset_block."\">reset the game from block ".$reset_block."</a><br/>\n";
 		}
