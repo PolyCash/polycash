@@ -53,48 +53,6 @@ class EmpirecoinClassicGameDefinition {
 		$this->game_def = $game_def;
 	}
 	
-	public function events_between_rounds($from_round, $to_round, $round_length, $chain_starting_block) {
-		/*if (!empty($this->game_def->final_round) && $to_round > $this->game_def->final_round) $to_round = $this->game_def->final_round;
-		
-		$rounds_per_tournament = $this->get_rounds_per_tournament();
-		$events = array();
-		$general_entity_type = $this->app->check_set_entity_type("general entity");
-		
-		for ($round=$from_round; $round<=$to_round; $round++) {
-			$meta_round = floor(($round-1)/$rounds_per_tournament);
-			$this_round = ($round-1)%$rounds_per_tournament+1;
-			$rounds_left = $rounds_per_tournament - ($this_round+1);
-			$num_events = $this->num_events_in_round($round, $rounds_per_tournament);
-			$prevround_offset = $this->round_to_prevround_offset($round, false);
-			$event_index = $prevround_offset;
-			
-			for ($thisround_event_i=0; $thisround_event_i<$num_events; $thisround_event_i++) {
-				$possible_outcomes = array();
-				$game = false;
-				$event_name = $this->generate_event_labels($possible_outcomes, $round, $this_round, $thisround_event_i, $general_entity_type['entity_type_id'], $event_index, $game);
-				
-				$event = array(
-					"event_index" => $event_index,
-					"next_event_index" => $this->event_index_to_next_event_index($event_index),
-					"event_starting_block" => $chain_starting_block+($round-1)*$round_length,
-					"event_final_block" => $chain_starting_block+$round*$round_length-1,
-					"event_payout_block" => $chain_starting_block+$round*$round_length-1,
-					"option_block_rule" => "football_match",
-					"event_name" => $event_name,
-					"option_name" => "outcome",
-					"option_name_plural" => "outcomes",
-					"outcome_index" => null,
-					"possible_outcomes" => $possible_outcomes
-				);
-				
-				array_push($events, $event);
-				$event_index++;
-			}
-		}
-		
-		return $events;*/
-	}
-	
 	public function num_events_in_round($round, $rounds_per_tournament) {
 		return 1;
 	}
