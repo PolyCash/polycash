@@ -172,6 +172,7 @@ include('includes/html_start.php');
 			if ($account['game_id'] > 0) {
 				$blockchain = new Blockchain($app, $account['blockchain_id']);
 				$account_game = new Game($blockchain, $account['game_id']);
+				$account_value = $thisuser->account_coin_value($account_game, $account);
 			}
 			else $account_game = false;
 			
@@ -187,12 +188,18 @@ include('includes/html_start.php');
 			$balance = $balance['SUM(io.amount)'];
 			
 			echo '<div class="col-sm-2 greentext" style="text-align: right">';
+			if ($account['game_id'] > 0) echo $app->format_bignum($account_value/pow(10,8)).' '.$account_game->db_game['coin_name_plural'];
+			else echo "&nbsp;";
+			echo '</div>';
+			
+			echo '<div class="col-sm-2 greentext" style="text-align: right">';
 			echo $app->format_bignum($balance/pow(10,8)).' '.$account['short_name_plural'];
 			echo '</div>';
 			
 			echo '<div class="col-sm-2">';
 			if ($account['game_id'] == "") echo '<a href="" onclick="toggle_account_details('.$account['account_id'].'); return false;">Deposit</a>';
 			echo '</div>';
+			
 			echo '<div class="col-sm-2"><a href="" onclick="toggle_account_details('.$account['account_id'].'); return false;">Transactions';
 			
 			$transaction_in_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."'";
@@ -222,18 +229,33 @@ include('includes/html_start.php');
 			}
 			
 			while ($transaction = $transaction_in_r->fetch()) {
+				if ($account_game) {
+					$colored_coin_q = "SELECT SUM(colored_amount) FROM transaction_game_ios WHERE io_id='".$transaction['io_id']."';";
+					$colored_coin_r = $app->run_query($colored_coin_q);
+					$colored_coin_amount = $colored_coin_r->fetch();
+					$colored_coin_amount = $colored_coin_amount['SUM(colored_amount)'];
+				}
+				
 				echo '<div class="row">';
 				echo '<div class="col-sm-4">';
 				echo $transaction['pub_key'];
 				echo '</div>';
+				
+				if ($account_game) {
+					echo '<div class="col-sm-2" style="text-align: right;"><a class="greentext" target="_blank" href="/explorer/games/'.$account_game->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'">';
+					echo "+".$app->format_bignum($colored_coin_amount/pow(10,8))."&nbsp;".$account_game->db_game['coin_name_plural'];
+					echo '</a></div>';
+				}
 				echo '<div class="col-sm-2" style="text-align: right;"><a class="greentext" target="_blank" href="/explorer/blockchains/'.$account['blockchain_url_identifier'].'/transactions/'.$transaction['tx_hash'].'">';
 				echo "+".$app->format_bignum($transaction['amount']/pow(10,8))."&nbsp;".$account['short_name_plural'];
 				echo '</a></div>';
-				echo '<div class="col-sm-3">';
+				
+				echo '<div class="col-sm-2">';
 				if ($transaction['block_id'] == "") echo "<a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/transactions/unconfirmed/\">Not yet confirmed</a>";
-				else echo "Confirmed in block <a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>";
+				else echo "Confirmed in <a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>";
 				echo "</div>\n";
-				echo '<div class="col-sm-3">'.ucwords($transaction['spend_status']);
+				
+				echo '<div class="col-sm-2">'.ucwords($transaction['spend_status']);
 				if ($transaction['spend_status'] != "spent" && $transaction['block_id'] !== "") {
 					echo "&nbsp;&nbsp;<a href=\"\" onclick=\"account_start_spend_io(";
 					if ($account_game) echo $account_game->db_game['game_id'];
@@ -242,21 +264,37 @@ include('includes/html_start.php');
 					echo ', '.$transaction['io_id'].", ".($transaction['amount']/pow(10,8))."); return false;\">Spend</a>";
 				}
 				echo '</div>';
+				
 				echo "</div>\n";
 			}
 			
 			while ($transaction = $transaction_out_r->fetch()) {
+				if ($account_game) {
+					$colored_coin_q = "SELECT SUM(colored_amount) FROM transaction_game_ios WHERE io_id='".$transaction['io_id']."';";
+					$colored_coin_r = $app->run_query($colored_coin_q);
+					$colored_coin_amount = $colored_coin_r->fetch();
+					$colored_coin_amount = $colored_coin_amount['SUM(colored_amount)'];
+				}
 				echo '<div class="row">';
 				echo '<div class="col-sm-4">';
 				echo $transaction['pub_key'];
 				echo '</div>';
+				
+				if ($account_game) {
+					echo '<div class="col-sm-2" style="text-align: right;"><a class="redtext" target="_blank" href="/explorer/games/'.$account_game->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'">';
+					echo "-".$app->format_bignum($colored_coin_amount/pow(10,8))."&nbsp;".$account_game->db_game['coin_name_plural'];
+					echo '</a></div>';
+				}
+				
 				echo '<div class="col-sm-2" style="text-align: right;"><a class="redtext" target="_blank" href="/explorer/blockchains/'.$account['blockchain_url_identifier'].'/transactions/'.$transaction['tx_hash'].'">';
 				echo "-".$app->format_bignum($transaction['amount']/pow(10,8))."&nbsp;".$account['short_name_plural'];
 				echo '</a></div>';
-				echo '<div class="col-sm-3">';
+				
+				echo '<div class="col-sm-2">';
 				if ($transaction['block_id'] == "") echo "<a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/transactions/unconfirmed/\">Not yet confirmed</a>";
-				else echo "Confirmed in block <a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>";
+				else echo "Confirmed in <a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>";
 				echo '</div>';
+				
 				echo '</div>';
 			}
 			
