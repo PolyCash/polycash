@@ -404,7 +404,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							<div class="col-md-6">
 								<div class="row">
 									<div class="col-sm-4">Total votes cast:</div>
-									<div class="col-sm-8"><?php echo $app->format_bignum($round_sum_votes/pow(10,8)); ?> votes</div>
+									<div class="col-sm-8"><?php echo $app->format_bignum($round_sum_votes/pow(10,$game->db_game['decimal_places'])); ?> votes</div>
 								</div>
 							</div>
 						</div>
@@ -419,7 +419,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							$r = $app->run_query($q);
 							$payout_amount = $r->fetch();
 							$payout_amount = $payout_amount['SUM(colored_amount)'];
-							$payout_disp = $app->format_bignum($payout_amount/pow(10,8));
+							$payout_disp = $app->format_bignum($payout_amount/pow(10,$game->db_game['decimal_places']));
 							echo '<font class="greentext">'.$payout_disp."</font> ";
 							if ($payout_disp == '1') echo $game->db_game['coin_name']." was";
 							else echo $game->db_game['coin_name_plural']." were";
@@ -481,14 +481,14 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								echo '">';
 								echo '<div class="col-md-3">'.$rank.'. '.$ranked_option['name'].'</div>';
 								echo '<div class="col-md-1" style="text-align: center;">'.($round_sum_votes>0? round(100*$option_votes/$round_sum_votes, 2) : 0).'%</div>';
-								echo '<div class="col-md-3" style="text-align: center;">'.$app->format_bignum($option_votes/pow(10,8)).' votes</div>';
+								echo '<div class="col-md-3" style="text-align: center;">'.$app->format_bignum($option_votes/pow(10,$game->db_game['decimal_places'])).' votes</div>';
 								if ($thisuser) {
 									echo '<div class="col-md-3" style="text-align: center;">';
 									
 									if (!empty($my_votes[$ranked_option['option_id']]['votes'])) $vote_qty = $my_votes[$ranked_option['option_id']]['votes'];
 									else $vote_qty = 0;
 									
-									$vote_disp = $app->format_bignum($vote_qty/pow(10,8));
+									$vote_disp = $app->format_bignum($vote_qty/pow(10,$game->db_game['decimal_places']));
 									echo $vote_disp." ";
 									echo " vote";
 									if ($vote_disp != '1') echo "s";
@@ -622,9 +622,11 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								$round_id = $game->block_to_round($block['block_id']);
 								$block_index = $game->block_id_to_round_index($block['block_id']);
 								list($num_trans, $block_sum) = $game->block_stats($block);
+								$block_sum_disp = $block_sum/$game->db_game['decimal_places'];
 							}
 							else {
 								list($num_trans, $block_sum) = $blockchain->block_stats($block);
+								$block_sum_disp = $block_sum/$blockchain->db_blockchain['decimal_places'];
 							}
 							
 							echo '<div class="panel-heading"><div class="panel-title">';
@@ -637,7 +639,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							if (!$game && !empty($block['num_transactions']) && $num_trans != $block['num_transactions']) {
 								echo "Loaded ".number_format($num_trans)." / ".number_format($block['num_transactions'])." transactions (".number_format(100*$num_trans/$block['num_transactions'], 2)."%).<br/>\n";
 							}
-							echo "This block contains ".number_format($num_trans)." transactions totaling ".number_format($block_sum/pow(10,8), 2)." ";
+							echo "This block contains ".number_format($num_trans)." transactions totaling ".number_format($block_sum_disp, 2)." ";
 							if ($game) echo $game->db_game['coin_name_plural'];
 							else echo $blockchain->db_blockchain['coin_name_plural'];
 							echo ".<br/>\n";
@@ -709,7 +711,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo $num_trans." transaction";
 							if ($num_trans == 1) echo " is";
 							else echo "s are";
-							echo " awaiting confirmation with a sum of ".number_format($block_sum/pow(10,8), 2)." ";
+							echo " awaiting confirmation with a sum of ".number_format($block_sum_disp, 2)." ";
 							if ($game) echo $game->db_game['coin_name_plural'];
 							else echo $blockchain->db_blockchain['coin_name_plural'];
 							echo ".<br/>\n";
@@ -905,8 +907,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					
 					echo "This address has been used in ".$r->rowCount()." transactions.<br/>\n";
 					if ($thisuser && $address['user_id'] == $thisuser->db_user['user_id']) echo "This is one of your addresses.<br/>\n";
-					echo ucwords($blockchain->db_blockchain['coin_name'])." balance: ".($blockchain->address_balance_at_block($address, false)/pow(10,8))." ".$blockchain->db_blockchain['coin_name_plural']."<br/>\n";
-					if ($game) echo ucwords($game->db_game['coin_name'])." balance: ".$app->format_bignum($game->address_balance_at_block($address, false)/pow(10,8))." ".$game->db_game['coin_name_plural']."<br/>\n";
+					echo ucwords($blockchain->db_blockchain['coin_name'])." balance: ".($blockchain->address_balance_at_block($address, false)/pow(10,$blockchain->db_blockchain['decimal_places']))." ".$blockchain->db_blockchain['coin_name_plural']."<br/>\n";
+					if ($game) echo ucwords($game->db_game['coin_name'])." balance: ".$app->format_bignum($game->address_balance_at_block($address, false)/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']."<br/>\n";
 					
 					?>
 					<div style="border-bottom: 1px solid #bbb;">
@@ -993,7 +995,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$block_index = false;
 						$round_id = false;
 					}
-					echo "This transaction has ".(int) $transaction['num_inputs']." inputs and ".(int) $transaction['num_outputs']." outputs totalling ".$app->format_bignum($transaction['amount']/pow(10,8))." ".$blockchain->db_blockchain['coin_name_plural'].". ";
+					echo "This transaction has ".(int) $transaction['num_inputs']." inputs and ".(int) $transaction['num_outputs']." outputs totalling ".$app->format_bignum($transaction['amount']/pow(10,$blockchain->db_blockchain['decimal_places']))." ".$blockchain->db_blockchain['coin_name_plural'].". ";
 					echo "Loaded in ".number_format($transaction['load_time'], 2)." seconds.";
 					echo "<br/>\n";
 					
@@ -1071,12 +1073,12 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							else $votes = 0;
 							
 							echo '<div class="row">';
-							echo '<div class="col-sm-3">'.$app->format_bignum($utxo['colored_amount']/pow(10,8)).' '.$game->db_game['coin_name_plural'].'</div>';
+							echo '<div class="col-sm-3">'.$app->format_bignum($utxo['colored_amount']/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].'</div>';
 							echo '<div class="col-sm-3 greentext text-right">';
 							
 							if ($game->db_game['inflation'] == "exponential") {
 								$coin_equiv = $votes/$app->votes_per_coin($game->db_game);
-								echo "+".$app->format_bignum($coin_equiv/pow(10,8)).' '.$game->db_game['coin_abbreviation'];
+								echo "+".$app->format_bignum($coin_equiv/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_abbreviation'];
 							}
 							else echo $app->format_bignum($votes).' votes';
 							
@@ -1103,7 +1105,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						
 						while ($utxo = $utxo_r->fetch()) {
 							echo '<div class="row">';
-							echo '<div class="col-sm-5">'.$app->format_bignum($utxo['amount']/pow(10,8)).' '.$blockchain->db_blockchain['coin_name_plural'].'</div>';
+							echo '<div class="col-sm-5">'.$app->format_bignum($utxo['amount']/pow(10,$blockchain->db_blockchain['decimal_places'])).' '.$blockchain->db_blockchain['coin_name_plural'].'</div>';
 							echo '<div class="col-sm-5"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$utxo['address'].'">'.$utxo['address']."</a></div>\n";
 							echo '</div>';
 						}
@@ -1134,8 +1136,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						</div>';
 						
 						while ($bet = $r->fetch()) {
-							$expected_payout = ($bet['sum_score']/$votes_per_coin/pow(10,8))*($bet['votes']/$bet['option_votes']);
-							$my_stake = $bet[$game->db_game['payout_weight']."s_destroyed"]/pow(10,8)/$app->votes_per_coin($game->db_game);
+							$expected_payout = ($bet['sum_score']/$votes_per_coin/pow(10,$game->db_game['decimal_places']))*($bet['votes']/$bet['option_votes']);
+							$my_stake = $bet[$game->db_game['payout_weight']."s_destroyed"]/pow(10,$game->db_game['decimal_places'])/$app->votes_per_coin($game->db_game);
 							
 							if ($my_stake > 0) $payout_multiplier = $expected_payout/$my_stake;
 							else $payout_multiplier = 0;
@@ -1149,7 +1151,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								$bet_table_html .= $app->format_bignum($my_stake)." ".$game->db_game['coin_abbreviation'];
 							}
 							else {
-								$bet_table_html .= $app->format_bignum($bet['votes']/pow(10,8))." votes";
+								$bet_table_html .= $app->format_bignum($bet['votes']/pow(10,$game->db_game['decimal_places']))." votes";
 							}
 							$bet_table_html .= "</div>\n";
 							

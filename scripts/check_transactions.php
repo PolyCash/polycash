@@ -53,7 +53,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			$coins_out = $game->transaction_coins_out($transaction['transaction_id'], true);
 			if (($coins_in == 0 || $coins_out == 0) || $coins_in < $coins_out || $coins_out-$coins_in > 0.5) {
 				if (!$first_error_block) $first_error_block = $transaction['block_id'];
-				echo 'Block '.$transaction['block_id'].' <a href="/explorer/games/'.$game->db_game['url_identifier'].'/transactions/'.$transaction['transaction_id'].'">TX '.$transaction['transaction_id'].'</a> has '.$app->format_bignum($coins_in/pow(10,8)).' coins in and '.$app->format_bignum($coins_out/pow(10,8)).' coins out.<br/>';
+				echo 'Block '.$transaction['block_id'].' <a href="/explorer/games/'.$game->db_game['url_identifier'].'/transactions/'.$transaction['transaction_id'].'">TX '.$transaction['transaction_id'].'</a> has '.$app->format_bignum($coins_in/pow(10,$game->db_game['decimal_places'])).' coins in and '.$app->format_bignum($coins_out/pow(10,$game->db_game['decimal_places'])).' coins out.<br/>';
 				$error_count++;
 			}
 		}

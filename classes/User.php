@@ -99,7 +99,7 @@ class User {
 					}
 					else {
 						$html .= $event_outcome['winner_name'];
-						$html .= " with ".$this->app->format_bignum($event_outcome['winning_votes']/pow(10,8))." votes. ";
+						$html .= " with ".$this->app->format_bignum($event_outcome['winning_votes']/pow(10,$game->db_game['decimal_places']))." votes. ";
 					}
 				}
 				else {
@@ -116,8 +116,8 @@ class User {
 			$coins_voted = $my_votes_in_round[1];
 			
 			if (!empty($my_votes[$event_outcome['winning_option_id']])) {
-				if ($game->db_game['payout_weight'] == "coin") $win_text = "You correctly voted ".$this->app->format_bignum($my_votes[$event_outcome['winning_option_id']]['coins']/pow(10,8))." coins.";
-				else $win_text = "You correctly cast ".$this->app->format_bignum($my_votes[$event_outcome['winning_option_id']][$game->db_game['payout_weight'].'s']/pow(10,8))." votes.";
+				if ($game->db_game['payout_weight'] == "coin") $win_text = "You correctly voted ".$this->app->format_bignum($my_votes[$event_outcome['winning_option_id']]['coins']/pow(10,$game->db_game['decimal_places']))." coins.";
+				else $win_text = "You correctly cast ".$this->app->format_bignum($my_votes[$event_outcome['winning_option_id']][$game->db_game['payout_weight'].'s']/pow(10,$game->db_game['decimal_places']))." votes.";
 			}
 			else if ($coins_voted > 0) $win_text = "You didn't vote for the winning ".$event->db_event['option_name'].".";
 			else $win_text = "You didn't cast any votes.";
@@ -136,12 +136,12 @@ class User {
 				else $win_amt_temp = $event->event_pos_reward_in_round($event_outcome['round_id'])*$my_votes[$event_outcome['winning_option_id']]['votes'];
 				if ($option_votes['sum'] > 0) $win_amt = $win_amt_temp/$option_votes['sum'];
 				else $win_amt = 0;
-				$payout_amt = $win_amt/pow(10,8);
+				$payout_amt = $win_amt/pow(10,$game->db_game['decimal_places']);
 			}
 			
-			$fee_disp = $this->app->format_bignum($my_votes_in_round['fee_amount']/pow(10,8));
+			$fee_disp = $this->app->format_bignum($my_votes_in_round['fee_amount']/pow(10,$game->blockchain->db_blockchain['decimal_places']));
 			
-			$html .= '<div class="col-sm-3" title="Won '.$this->app->format_bignum($win_amt/pow(10,8)).' '.$game->db_game['coin_name_plural'].', paid '.$fee_disp.' '.$game->blockchain->db_blockchain['coin_name_plural'].' in fees">';
+			$html .= '<div class="col-sm-3" title="Won '.$this->app->format_bignum($win_amt/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].', paid '.$fee_disp.' '.$game->blockchain->db_blockchain['coin_name_plural'].' in fees">';
 			
 			$html .= '<font class="';
 			if ($payout_amt >= 0) $html .= 'greentext';
@@ -211,17 +211,17 @@ class User {
 			
 			$payout_sum += $payout_est;
 		}
-		$html .= $this->app->format_bignum($payout_sum/pow(10,8));
+		$html .= $this->app->format_bignum($payout_sum/pow(10,$game->db_game['decimal_places']));
 		
 		$html .= '</div></div>'."\n";*/
 		
 		$html = '<div class="row"><div class="col-sm-2">Available&nbsp;funds:</div>';
 		$html .= '<div class="col-sm-3 text-right"><font class="greentext">';
-		$html .= $this->app->format_bignum($mature_balance/pow(10,8));
+		$html .= $this->app->format_bignum($mature_balance/pow(10,$game->db_game['decimal_places']));
 		$html .= "</font> ".$game->db_game['coin_name_plural']."</div></div>\n";
 		
 		$html .= '<div class="row"><div class="col-sm-2">Locked&nbsp;funds:</div>';
-		$html .= '<div class="col-sm-3 text-right"><font class="redtext">'.$this->app->format_bignum($immature_balance/pow(10,8)).'</font> '.$game->db_game['coin_name_plural'].'</div>';
+		$html .= '<div class="col-sm-3 text-right"><font class="redtext">'.$this->app->format_bignum($immature_balance/pow(10,$game->db_game['decimal_places'])).'</font> '.$game->db_game['coin_name_plural'].'</div>';
 		if ($immature_balance > 0) $html .= '<div class="col-sm-1"><a href="" onclick="$(\'#lockedfunds_details\').toggle(\'fast\'); return false;">Details</a></div>';
 		$html .= "</div>\n";
 		
@@ -231,10 +231,10 @@ class User {
 			if ($game->db_game['inflation'] == "exponential") {
 				$votes_per_coin = $game->blockchain->app->votes_per_coin($game->db_game);
 				$votes_value = $user_votes/$votes_per_coin;
-				$html .= '<div class="row"><div class="col-sm-2">Unrealized gain:</div><div class="col-sm-3 text-right"><font class="greentext">'.$this->app->format_bignum($votes_value/pow(10,8)).'</font> '.$game->db_game['coin_name_plural'].'</div></div>'."\n";
+				$html .= '<div class="row"><div class="col-sm-2">Unrealized gain:</div><div class="col-sm-3 text-right"><font class="greentext">'.$this->app->format_bignum($votes_value/pow(10,$game->db_game['decimal_places'])).'</font> '.$game->db_game['coin_name_plural'].'</div></div>'."\n";
 			}
 			else {
-				$html .= '<div class="row"><div class="col-sm-2">Votes:</div><div class="col-sm-3 text-right"><font class="greentext">'.$this->app->format_bignum($user_votes/pow(10,8)).'</font> votes available</div></div>'."\n";
+				$html .= '<div class="row"><div class="col-sm-2">Votes:</div><div class="col-sm-3 text-right"><font class="greentext">'.$this->app->format_bignum($user_votes/pow(10,$game->db_game['decimal_places'])).'</font> votes available</div></div>'."\n";
 			}
 		}
 		
@@ -253,7 +253,7 @@ class User {
 				$minutes_to_avail = round($seconds_to_avail/60);
 				
 				if ($next_transaction['transaction_desc'] == "votebase") $html .= "You won ";
-				$html .= '<font class="greentext">'.$this->app->format_bignum($next_transaction['colored_amount']/(pow(10, 8)))."</font> ";
+				$html .= '<font class="greentext">'.$this->app->format_bignum($next_transaction['colored_amount']/(pow(10,$game->db_game['decimal_places'])))."</font> ";
 				
 				if ($next_transaction['create_block_id'] == "") {
 					$html .= $game->db_game['coin_name_plural']." were just ";
@@ -338,8 +338,8 @@ class User {
 		
 		if ($user_game['strategy_id'] > 0) {}
 		else {
-			if ($game->blockchain->db_blockchain['p2p_mode'] == "none") $tx_fee=100;
-			else $tx_fee=0.001*pow(10,8);
+			if ($game->blockchain->db_blockchain['p2p_mode'] == "none") $tx_fee=0.00001*pow(10,$game->blockchain->db_blockchain['decimal_places']);
+			else $tx_fee=0.001*pow(10,$game->blockchain->db_blockchain['decimal_places']);
 			
 			$q = "INSERT INTO user_strategies SET voting_strategy='manual', game_id='".$game->db_game['game_id']."', user_id='".$user_game['user_id']."'";
 			$q .= ", transaction_fee=".$tx_fee;

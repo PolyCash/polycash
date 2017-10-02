@@ -223,14 +223,14 @@ if ($thisuser) {
 								$pay_currency = $app->fetch_currency_by_id($invoice['pay_currency_id']);
 								$currency_address = $app->fetch_currency_address_by_id($invoice['currency_address_id']);
 
-								$coins_per_currency = ($requested_game['giveaway_amount']/pow(10,8))/$requested_game['invite_cost'];
+								$coins_per_currency = ($requested_game['giveaway_amount']/pow(10,$requested_game['decimal_places']))/$requested_game['invite_cost'];
 								echo "This game has an initial exchange rate of ".$app->format_bignum($coins_per_currency)." ".$requested_game['coin_name_plural']." per ".$invite_currency['short_name'].". ";
 								
 								$buyin_disp = $app->format_bignum($requested_game['invite_cost']);
 								echo "To join this game, you need to make a payment of ".$buyin_disp." ".$invite_currency['short_name'];
 								if ($buyin_disp != '1') echo "s";
 								
-								$receive_disp = $app->format_bignum($requested_game['giveaway_amount']/pow(10,8));
+								$receive_disp = $app->format_bignum($requested_game['giveaway_amount']/pow(10,$requested_game['decimal_places']));
 								echo " in exchange for ".$receive_disp." ";
 								if ($receive_disp == '1') echo $requested_game['coin_name'];
 								else echo $requested_game['coin_name_plural'];
@@ -350,19 +350,13 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 	}
 	if ($_REQUEST['action'] == "save_voting_strategy_fees") {
 		$transaction_fee = floatval($_REQUEST['transaction_fee']);
-		if ($transaction_fee == floor($transaction_fee*pow(10,8))/pow(10,8)) {
-			$transaction_fee = $transaction_fee*pow(10,8);
-			$q = "UPDATE user_strategies SET transaction_fee='".$transaction_fee."' WHERE strategy_id='".$user_strategy['strategy_id']."';";
-			$r = $app->run_query($q);
-			$user_strategy['transaction_fee'] = $transaction_fee;
-			
-			$error_code = 1;
-			$message = "Great, your transaction fee has been updated!";
-		}
-		else {
-			$error_code = 2;
-			$message = "Error: that fee amount is invalid, your changes were not saved.";
-		}
+		
+		$q = "UPDATE user_strategies SET transaction_fee='".$transaction_fee."' WHERE strategy_id='".$user_strategy['strategy_id']."';";
+		$r = $app->run_query($q);
+		$user_strategy['transaction_fee'] = $transaction_fee;
+		
+		$error_code = 1;
+		$message = "Great, your transaction fee has been updated!";
 	}
 	else {
 		if (in_array($voting_strategy, array('manual', 'api', 'by_plan', 'by_entity'))) {
@@ -548,6 +542,7 @@ if ($thisuser && $game) {
 			echo ', "'.$game->db_game['inflation'].'"';
 			echo ', "'.$game->db_game['exponential_inflation_rate'].'"';
 			echo ', "'.$blockchain_last_block['time_mined'].'"';
+			echo ', "'.$game->db_game['decimal_places'].'"';
 		?>));
 		
 		games[0].game_loop_event();
@@ -666,7 +661,7 @@ if ($thisuser && $game) {
 					
 					$faucet_io = $game->check_faucet($user_game);
 					if ($faucet_io) {
-						echo '<p><button id="faucet_btn" class="btn btn-success" onclick="claim_from_faucet();">Claim '.$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,8)).' '.$game->db_game['coin_name_plural'].'</button></p>'."\n";
+						echo '<p><button id="faucet_btn" class="btn btn-success" onclick="claim_from_faucet();">Claim '.$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].'</button></p>'."\n";
 					}
 					
 					$game_status_explanation = $game->game_status_explanation($thisuser, $user_game);
@@ -697,9 +692,6 @@ if ($thisuser && $game) {
 					echo $game->new_event_js(0, $thisuser);
 					?>
 					</script>
-					<div id="vote_popups_disabled"<?php if ($block_within_round != $game->db_game['round_length']) echo ' style="display: none;"'; ?>>
-						The final block of the round is being mined. Voting is currently disabled.
-					</div>
 					<div id="select_input_buttons"><?php
 						echo $game->select_input_buttons($user_game);
 					?></div>
@@ -760,7 +752,7 @@ if ($thisuser && $game) {
 						<input type="hidden" name="voting_strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
 						Pay fees on every transaction of:<br/>
 						<div class="row">
-							<div class="col-sm-4"><input class="form-control" name="transaction_fee" value="<?php echo $app->format_bignum($user_strategy['transaction_fee']/pow(10,8)); ?>" placeholder="0.001" /></div>
+							<div class="col-sm-4"><input class="form-control" name="transaction_fee" value="<?php echo $app->format_bignum($user_strategy['transaction_fee']); ?>" placeholder="0.001" /></div>
 							<div class="col-sm-4 form-control-static"><?php
 							echo $game->blockchain->db_blockchain['coin_name_plural'];
 							?></div>
@@ -1007,7 +999,7 @@ if ($thisuser && $game) {
 							Fee:
 						</div>
 						<div class="col-md-3">
-							<input class="form-control" type="tel" value="<?php echo $user_strategy['transaction_fee']/pow(10,8); ?>" id="withdraw_fee" style="text-align: right;" />
+							<input class="form-control" type="tel" value="<?php echo $app->format_bignum($user_strategy['transaction_fee']); ?>" id="withdraw_fee" style="text-align: right;" />
 						</div>
 						<div class="col-md-3 form-control-static">
 							<?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?>
@@ -1079,13 +1071,13 @@ if ($thisuser && $game) {
 								<div class="col-sm-2">
 									<?php
 									$color_bal = $game->address_balance_at_block($address, $game->blockchain->last_block_id());
-									echo '<a target="_blank" href="/explorer/games/'.$game->db_game['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($color_bal/pow(10,8))." ".$game->db_game['coin_name_plural'].'</a>';
+									echo '<a target="_blank" href="/explorer/games/'.$game->db_game['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($color_bal/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural'].'</a>';
 									?>
 								</div>
 								<div class="col-sm-2">
 									<?php
 									$chain_bal = $game->blockchain->address_balance_at_block($address, $game->blockchain->last_block_id());
-									echo '<a target="_blank" href="/explorer/blockchains/'.$game->blockchain->db_blockchain['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($chain_bal/pow(10,8))." ".$game->blockchain->db_blockchain['coin_name_plural'].'</a>';
+									echo '<a target="_blank" href="/explorer/blockchains/'.$game->blockchain->db_blockchain['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($chain_bal/pow(10,$game->blockchain->db_blockchain['decimal_places']))." ".$game->blockchain->db_blockchain['coin_name_plural'].'</a>';
 									?>
 								</div>
 							</div>
@@ -1116,13 +1108,13 @@ if ($thisuser && $game) {
 									<div class="col-sm-2">
 										<?php
 										$color_bal = $game->address_balance_at_block($address, $game->blockchain->last_block_id());
-										echo '<a target="_blank" href="/explorer/games/'.$game->db_game['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($color_bal/pow(10,8))." ".$game->db_game['coin_name_plural'].'</a>';
+										echo '<a target="_blank" href="/explorer/games/'.$game->db_game['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($color_bal/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural'].'</a>';
 										?>
 									</div>
 									<div class="col-sm-2">
 										<?php
 										$chain_bal = $game->blockchain->address_balance_at_block($address, $game->blockchain->last_block_id());
-										echo '<a target="_blank" href="/explorer/blockchains/'.$game->blockchain->db_blockchain['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($chain_bal/pow(10,8))." ".$game->blockchain->db_blockchain['coin_name_plural'].'</a>';
+										echo '<a target="_blank" href="/explorer/blockchains/'.$game->blockchain->db_blockchain['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($chain_bal/pow(10,$game->blockchain->db_blockchain['decimal_places']))." ".$game->blockchain->db_blockchain['coin_name_plural'].'</a>';
 										?>
 									</div>
 								</div>
@@ -1186,7 +1178,7 @@ if ($thisuser && $game) {
 										At the end of each round, the supply of <?php echo $game->db_game['coin_name_plural']; ?> 
 										<?php
 										if ($game->db_game['inflation'] == "fixed_exponential") echo 'inflates by '.(100*$game->db_game['exponential_inflation_rate']).'%';
-										else echo 'increases by '.$app->format_bignum($game->db_game['pos_reward']/pow(10,8));
+										else echo 'increases by '.$app->format_bignum($game->db_game['pos_reward']/pow(10,$game->db_game['decimal_places']));
 										echo ". ";
 									}
 									?>

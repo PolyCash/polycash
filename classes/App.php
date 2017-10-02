@@ -711,11 +711,11 @@ class App {
 		</div>
 		<div class="row">
 			<div class="col-xs-4">Confirmed Votes:</div>
-			<div class="col-xs-8">'.$this->format_bignum($confirmed_votes/pow(10,8)).' votes ('.(empty($sum_votes)? 0 : (ceil(100*100*$confirmed_votes/$sum_votes)/100)).'%)</div>
+			<div class="col-xs-8">'.$this->format_bignum($confirmed_votes).' votes ('.(empty($sum_votes)? 0 : (ceil(100*100*$confirmed_votes/$sum_votes)/100)).'%)</div>
 		</div>
 		<div class="row">
 			<div class="col-xs-4">Unconfirmed Votes:</div>
-			<div class="col-xs-8">'.$this->format_bignum($unconfirmed_votes/pow(10,8)).' votes ('.(empty($sum_votes)? 0 : (ceil(100*100*$unconfirmed_votes/$sum_votes)/100)).'%)</div>
+			<div class="col-xs-8">'.$this->format_bignum($unconfirmed_votes).' votes ('.(empty($sum_votes)? 0 : (ceil(100*100*$unconfirmed_votes/$sum_votes)/100)).'%)</div>
 		</div>';
 		return $html;
 	}
@@ -830,6 +830,7 @@ class App {
 					echo ', "'.$featured_game->db_game['inflation'].'"';
 					echo ', "'.$featured_game->db_game['exponential_inflation_rate'].'"';
 					echo ', "'.$db_last_block['time_mined'].'"';
+					echo ', "'.$featured_game->db_game['decimal_places'].'"';
 				?>));
 				
 				games[<?php echo $counter; ?>].game_loop_event();
@@ -845,7 +846,7 @@ class App {
 				$faucet_io = $featured_game->check_faucet(false);
 				
 				echo '<br/><a href="/wallet/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-success">';
-				if ($faucet_io) echo 'Join now & receive '.$this->format_bignum($faucet_io['colored_amount_sum']/pow(10,8)).' '.$featured_game->db_game['coin_name_plural'];
+				if ($faucet_io) echo 'Join now & receive '.$this->format_bignum($faucet_io['colored_amount_sum']/pow(10,$featured_game->db_game['decimal_places'])).' '.$featured_game->db_game['coin_name_plural'];
 				else echo 'Play Now';
 				echo '</a>';
 				echo ' <a href="/explorer/games/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-primary">'.ucwords($featured_game->db_game['event_type_name']).' Results</a>';
@@ -932,7 +933,7 @@ class App {
 		$html = "";
 		
 		$blocks_per_hour = 3600/$db_game['seconds_per_block'];
-		$round_reward = ($db_game['pos_reward']+$db_game['pow_reward']*$db_game['round_length'])/pow(10,8);
+		$round_reward = ($db_game['pos_reward']+$db_game['pow_reward']*$db_game['round_length'])/pow(10,$db_game['decimal_places']);
 		$seconds_per_round = $db_game['seconds_per_block']*$db_game['round_length'];
 		
 		$invite_currency = false;
@@ -975,7 +976,7 @@ class App {
 			$html .= "</div></div>\n";
 		}
 		
-		$genesis_amount_disp = $this->format_bignum($db_game['genesis_amount']/pow(10,8));
+		$genesis_amount_disp = $this->format_bignum($db_game['genesis_amount']/pow(10,$db_game['decimal_places']));
 		$html .= '<div class="row"><div class="col-sm-5">Genesis transaction:</div><div class="col-sm-7">';
 		$html .= '<a href="/explorer/games/'.$db_game['url_identifier'].'/transactions/'.$db_game['genesis_tx_hash'].'">';
 		$html .= $genesis_amount_disp.' ';
@@ -988,7 +989,7 @@ class App {
 			$sample_block_id = $game->blockchain->last_block_id();
 			$game->refresh_coins_in_existence();
 			
-			$circulation_amount_disp = $this->format_bignum($game->coins_in_existence($sample_block_id)/pow(10,8));
+			$circulation_amount_disp = $this->format_bignum($game->coins_in_existence($sample_block_id)/pow(10,$db_game['decimal_places']));
 			$html .= '<div class="row"><div class="col-sm-5">'.ucwords($game->db_game['coin_name_plural']).' in circulation:</div><div class="col-sm-7">';
 			$html .= $circulation_amount_disp.' ';
 			if ($circulation_amount_disp == "1") $html .= $db_game['coin_name'];
@@ -996,7 +997,7 @@ class App {
 			$html .= "</div></div>\n";
 			
 			if ($db_game['buyin_policy'] != "none") {
-				$escrow_amount_disp = $this->format_bignum($game->escrow_value($sample_block_id)/pow(10,8));
+				$escrow_amount_disp = $this->format_bignum($game->escrow_value($sample_block_id)/pow(10,$db_game['decimal_places']));
 				$html .= '<div class="row"><div class="col-sm-5">'.ucwords($game->blockchain->db_blockchain['coin_name_plural']).' in escrow:</div><div class="col-sm-7">';
 				$html .= $escrow_amount_disp.' ';
 				if ($escrow_amount_disp == "1") $html .= $game->blockchain->db_blockchain['coin_name'];
@@ -1033,7 +1034,7 @@ class App {
 		}
 		
 		$html .= '<div class="row"><div class="col-sm-5">Distribution:</div><div class="col-sm-7">';
-		if ($db_game['inflation'] == "linear") $html .= $this->format_bignum($db_game['pos_reward']/pow(10,8))." to voters, ".$this->format_bignum($db_game['pow_reward']*$db_game['round_length']/pow(10,8))." to miners";
+		if ($db_game['inflation'] == "linear") $html .= $this->format_bignum($db_game['pos_reward']/pow(10,$db_game['decimal_places']))." to voters, ".$this->format_bignum($db_game['pow_reward']*$db_game['round_length']/pow(10,$db_game['decimal_places']))." to miners";
 		else $html .= (100 - 100*$db_game['exponential_inflation_minershare'])."% to voters, ".(100*$db_game['exponential_inflation_minershare'])."% to miners";
 		$html .= "</div></div>\n";
 		
@@ -1584,10 +1585,11 @@ class App {
 			if ($game_def->blockchain_identifier == "private") {
 				$new_private_blockchain = true;
 				$chain_id = $this->random_string(6);
+				$decimal_places = 8;
 				$url_identifier = "private-chain-".$chain_id;
-				$chain_pow_reward = 25*pow(10,8);
+				$chain_pow_reward = 25*pow(10,$decimal_places);
 				
-				$q = "INSERT INTO blockchains SET online=1, p2p_mode='none', blockchain_name='Private Chain ".$chain_id."', url_identifier='".$url_identifier."', coin_name='chaincoin', coin_name_plural='chaincoins', seconds_per_block=30, initial_pow_reward=".$chain_pow_reward.";";
+				$q = "INSERT INTO blockchains SET online=1, p2p_mode='none', blockchain_name='Private Chain ".$chain_id."', url_identifier='".$url_identifier."', coin_name='chaincoin', coin_name_plural='chaincoins', seconds_per_block=30, decimal_places=".$decimal_places.", initial_pow_reward=".$chain_pow_reward.";";
 				$r = $this->run_query($q);
 				$blockchain_id = $this->last_insert_id();
 				

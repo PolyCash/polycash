@@ -154,7 +154,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			
 			while ($db_user = $rr->fetch()) {
 				$user = new User($app, $db_user['user_id']);
-				$account_value = $user->account_coin_value($running_games[$game_i], $db_user)/pow(10,8);
+				$account_value = $user->account_coin_value($running_games[$game_i], $db_user)/pow(10,$running_games[$game_i]->db_game['decimal_places']);
 				
 				$qqq = "UPDATE user_games SET account_value='".$account_value."' WHERE user_game_id='".$db_user['user_game_id']."';";
 				$rrr = $app->run_query($qqq);

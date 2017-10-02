@@ -104,7 +104,7 @@ function login() {
 		<form id="alias_form" action="/" method="get" onsubmit="check_alias(); return false;">
 			<div class="row">
 				<div class="col-md-8">
-					Please sign up or log in by entering your public username.
+					Please sign up or log in by entering a username.
 				</div>
 			</div>
 			<div class="row" style="padding-top: 10px;">

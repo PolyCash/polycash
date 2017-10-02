@@ -29,7 +29,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	$unclaimed_coins_q = "SELECT SUM(io.amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.blockchain_id=".$blockchain->db_blockchain['blockchain_id']." AND io.spend_status='unspent' AND a.user_id IS NULL AND a.is_mine=1;";
 	$unclaimed_coins_r = $app->run_query($unclaimed_coins_q);
 	$unclaimed_coins = $unclaimed_coins_r->fetch(PDO::FETCH_NUM);
-	$unclaimed_coins = $unclaimed_coins[0]/pow(10,8);
+	$unclaimed_coins = $unclaimed_coins[0]/pow(10,$blockchain->db_blockchain['decimal_places']);
 	echo "There are ".$unclaimed_coins." unclaimed coins on this wallet.<br/>\n";
 	
 	if ($coins_to_grant > 0 && $coins_to_grant <= $unclaimed_coins) {
@@ -51,7 +51,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				$success = $app->give_address_to_user($game, $user, $utxo);
 				
 				if ($success) {
-					$coins_granted += $utxo['amount']/pow(10,8);
+					$coins_granted += $utxo['amount']/pow(10,$blockchain->db_blockchain['decimal_places']);
 					if ($coins_granted >= $coins_to_grant) $keeplooping = false;
 				}
 			}

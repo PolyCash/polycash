@@ -22,7 +22,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 
 	for ($block=$from_block; $block<=$to_block; $block++) {
 		$coins_in_existence = $game->coins_in_existence($block);
-		echo $app->format_bignum($coins_in_existence/pow(10,8))." ".$game->db_game['coin_name_plural']." at block #".$block."<br/>\n";
+		echo $app->format_bignum($coins_in_existence/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." at block #".$block."<br/>\n";
 	}
 }
 else echo "Please supply the correct key.\n";

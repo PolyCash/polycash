@@ -153,42 +153,34 @@ if ($thisuser && $game) {
 	
 	$last_block_id = $game->blockchain->last_block_id();
 	
-	if (($last_block_id+1)%$game->db_game['round_length'] == 0) {
-		$api_output = (object)[
-			'status_code' => 6,
-			'message' => "The final block of the round is being mined, so you can't vote right now."
-		];
-	}
-	else {
-		if ($amount_sum+$user_strategy['transaction_fee'] <= $mature_balance && $amount_sum > 0) {
-			$error_message = false;
-			$transaction_id = $game->create_transaction($option_ids, $real_amounts, $user_game, false, 'transaction', $io_ids, false, false, (int) $user_strategy['transaction_fee'], $error_message);
+	if ($amount_sum+$user_strategy['transaction_fee'] <= $mature_balance && $amount_sum > 0) {
+		$error_message = false;
+		$transaction_id = $game->create_transaction($option_ids, $real_amounts, $user_game, false, 'transaction', $io_ids, false, false, (int) $user_strategy['transaction_fee'], $error_message);
+		
+		if ($transaction_id) {
+			$game->update_option_votes();
 			
-			if ($transaction_id) {
-				$game->update_option_votes();
-				
-				$q = "SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';";
-				$r = $app->run_query($q);
-				$transaction = $r->fetch();
-				
-				$api_output = (object)[
-					'status_code' => 0,
-					'message' => "Your voting transaction has been submitted! <a href=\"/explorer/games/".$game->db_game['url_identifier']."/transactions/".$transaction['tx_hash']."\">Details</a>"
-				];
-			}
-			else {
-				$api_output = (object)[
-					'status_code' => 7,
-					'message' => $error_message
-				];
-			}
+			$q = "SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';";
+			$r = $app->run_query($q);
+			$transaction = $r->fetch();
+			
+			$api_output = (object)[
+				'status_code' => 0,
+				'message' => "Your voting transaction has been submitted! <a href=\"/explorer/games/".$game->db_game['url_identifier']."/transactions/".$transaction['tx_hash']."\">Details</a>"
+			];
 		}
 		else {
 			$api_output = (object)[
-				'status_code' => 8,
-				'message' => "You don't have that many coins available to vote right now."
+				'status_code' => 7,
+				'message' => $error_message
 			];
 		}
+	}
+	else {
+		$api_output = (object)[
+			'status_code' => 8,
+			'message' => "You don't have that many coins available to vote right now."
+		];
 	}
 }
 else {

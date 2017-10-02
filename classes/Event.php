@@ -209,7 +209,7 @@ class Event {
 			if ($this->game->db_game['inflation'] == "exponential") {
 				$confirmed_coins = $confirmed_score/$votes_per_coin;
 				$unconfirmed_coins = $this->event_pos_reward_in_round($current_round) - $confirmed_coins;
-				$html .= "<p>".$this->game->blockchain->app->format_bignum($confirmed_coins/pow(10,8))." ".$this->game->db_game['coin_name_plural']." in confirmed bets, ".$this->game->blockchain->app->format_bignum($unconfirmed_coins/pow(10,8))." unconfirmed</p>\n";
+				$html .= "<p>".$this->game->blockchain->app->format_bignum($confirmed_coins/pow(10,$this->game->db_game['decimal_places']))." ".$this->game->db_game['coin_name_plural']." in confirmed bets, ".$this->game->blockchain->app->format_bignum($unconfirmed_coins/pow(10,$this->game->db_game['decimal_places']))." unconfirmed</p>\n";
 			}
 		}
 		else {
@@ -223,7 +223,7 @@ class Event {
 				$detail_html = "";
 				
 				if ($block_within_round == $this->game->db_game['round_length']) {
-					$html .= $this->game->blockchain->app->format_bignum($sum_votes/pow(10,8)).' votes were cast in this round.<br/>';
+					$html .= $this->game->blockchain->app->format_bignum($sum_votes/pow(10,$this->game->db_game['decimal_places'])).' votes were cast in this round.<br/>';
 					$my_votes = $this->my_votes_in_round($current_round, $user->db_user['user_id'], false);
 					$fees_paid = $my_votes['fee_amount'];
 
@@ -241,8 +241,8 @@ class Event {
 					}
 					else if ($winner) {
 						$my_winning_votes = $my_votes[0][$winner['option_id']]["votes"];
-						$win_amount = floor($this->event_pos_reward_in_round($current_round)*$my_winning_votes/$winning_votes - $fees_paid)/pow(10,8);
-						$html .= "You correctly cast ".$this->game->blockchain->app->format_bignum($my_winning_votes/pow(10,8))." votes";
+						$win_amount = floor($this->event_pos_reward_in_round($current_round)*$my_winning_votes/$winning_votes - $fees_paid)/pow(10,$this->game->db_game['decimal_places']);
+						$html .= "You correctly cast ".$this->game->blockchain->app->format_bignum($my_winning_votes/pow(10,$this->game->db_game['decimal_places']))." votes";
 						$html .= ' and won <font class="greentext">+'.$this->game->blockchain->app->format_bignum($win_amount)."</font> ".$this->game->db_game['coin_name_plural'].".<br/>\n";
 					}
 				}
@@ -260,12 +260,12 @@ class Event {
 					$detail_html .= '<div class="row"><div class="col-sm-6 boldtext">'.$field_disp.':</div><div class="col-sm-6">'.$this->db_event[$this->game->db_game['game_winning_field']].'</div></div>';
 				}
 				
-				$detail_html .= '<div class="row"><div class="col-sm-6 boldtext">Confirmed Votes:</div><div class="col-sm-6">'.$this->game->blockchain->app->format_bignum($confirmed_sum_votes/pow(10,8)).' votes</div></div>';
+				$detail_html .= '<div class="row"><div class="col-sm-6 boldtext">Confirmed Votes:</div><div class="col-sm-6">'.$this->game->blockchain->app->format_bignum($confirmed_sum_votes/pow(10,$this->game->db_game['decimal_places'])).' votes</div></div>';
 				
-				$detail_html .= '<div class="row"><div class="col-sm-6 boldtext">Unconfirmed Votes:</div><div class="col-sm-6">'.$this->game->blockchain->app->format_bignum($unconfirmed_sum_votes/pow(10,8)).' votes</div></div>';
+				$detail_html .= '<div class="row"><div class="col-sm-6 boldtext">Unconfirmed Votes:</div><div class="col-sm-6">'.$this->game->blockchain->app->format_bignum($unconfirmed_sum_votes/pow(10,$this->game->db_game['decimal_places'])).' votes</div></div>';
 				
 				$detail_html .= '<div class="row"><div class="col-sm-6 boldtext">Total Payout:</div><div class="col-sm-6">';
-				$payout_disp = $this->game->blockchain->app->format_bignum($this->event_pos_reward_in_round($current_round)/pow(10,8));
+				$payout_disp = $this->game->blockchain->app->format_bignum($this->event_pos_reward_in_round($current_round)/pow(10,$this->game->db_game['decimal_places']));
 				$detail_html .= $payout_disp.' ';
 				if ($payout_disp == '1') $detail_html .= $this->game->db_game['coin_name'];
 				else $detail_html .= $this->game->db_game['coin_name_plural'];
@@ -407,7 +407,7 @@ class Event {
 			$qq = "UPDATE transaction_game_ios SET payout_game_io_id='".$output_id."' WHERE game_io_id='".$input['game_io_id']."';";
 			$rr = $this->game->blockchain->app->run_query($qq);
 			
-			$payout_disp = $payout_amount/(pow(10,8));
+			$payout_disp = $payout_amount/(pow(10,$this->game->db_game['decimal_places']));
 			$log_text .= "Pay ".$payout_disp." ";
 			if ($payout_disp == '1') $log_text .= $this->game->db_game['coin_name'];
 			else $log_text .= $this->game->db_game['coin_name_plural'];
@@ -488,7 +488,7 @@ class Event {
 			$effective_votes = $my_vote['votes'];
 			$option_votes = $this->option_votes_in_round($my_vote['option_id'], $round_id);
 			if ($option_votes['sum'] > 0) {
-				$expected_payout = floor($event_payout*($effective_votes/$option_votes['sum']))/pow(10,8);
+				$expected_payout = floor($event_payout*($effective_votes/$option_votes['sum']))/pow(10,$this->game->db_game['decimal_places']);
 			}
 			else $expected_payout = 0;
 			
@@ -500,13 +500,13 @@ class Event {
 			if ($this->game->db_game['inflation'] == "exponential") {
 				$coin_stake = $num_votes/$votes_per_coin;
 				
-				if ($coin_stake > 0) $odds = round($expected_payout*pow(10,8)/$coin_stake, 2);
+				if ($coin_stake > 0) $odds = round($expected_payout*pow(10,$this->game->db_game['decimal_places'])/$coin_stake, 2);
 				else $odds = 0;
 				
-				$confirmed_html .= $this->game->blockchain->app->format_bignum($coin_stake/pow(10,8), 2)." (x".$odds.")";
+				$confirmed_html .= $this->game->blockchain->app->format_bignum($coin_stake/pow(10,$this->game->db_game['decimal_places']), 2)." (x".$odds.")";
 			}
 			else {
-				$confirmed_html .=  $this->game->blockchain->app->format_bignum($num_votes/pow(10,8), 2).' votes';
+				$confirmed_html .=  $this->game->blockchain->app->format_bignum($num_votes/pow(10,$this->game->db_game['decimal_places']), 2).' votes';
 			}
 			$confirmed_html .= '</a></div>';
 			
@@ -542,7 +542,7 @@ class Event {
 			}
 			
 			$effective_votes = floor($num_votes*$current_effectiveness_factor);
-			if ($option_votes['sum'] > 0) $expected_payout = floor($event_payout*($effective_votes/$option_votes['sum']))/pow(10,8);
+			if ($option_votes['sum'] > 0) $expected_payout = floor($event_payout*($effective_votes/$option_votes['sum']))/pow(10,$this->game->db_game['decimal_places']);
 			else $expected_payout = 0;
 			if ($expected_payout < 0) $expected_payout = 0;
 			
@@ -552,11 +552,11 @@ class Event {
 			$unconfirmed_html .= '<a target="_blank" href="/explorer/games/'.$this->game->db_game['url_identifier'].'/transactions/'.$my_vote['tx_hash'].'">';
 			if ($this->game->db_game['inflation'] == "exponential") {
 				$coin_stake = $num_votes/$votes_per_coin;
-				$odds = round($expected_payout*pow(10,8)/$coin_stake, 2);
-				$unconfirmed_html .= $this->game->blockchain->app->format_bignum($coin_stake/pow(10,8), 2)." (x".$odds.")";
+				$odds = round($expected_payout*pow(10,$this->game->db_game['decimal_places'])/$coin_stake, 2);
+				$unconfirmed_html .= $this->game->blockchain->app->format_bignum($coin_stake/pow(10,$this->game->db_game['decimal_places']), 2)." (x".$odds.")";
 			}
 			else {
-				$unconfirmed_html .=  $this->game->blockchain->app->format_bignum($effective_votes/pow(10,8), 2).' votes';
+				$unconfirmed_html .=  $this->game->blockchain->app->format_bignum($effective_votes/pow(10,$this->game->db_game['decimal_places']), 2).' votes';
 			}
 			$unconfirmed_html .= '</a></div>';
 			
@@ -850,13 +850,13 @@ class Event {
 		$coins_voted = $returnvals[1];
 		
 		if (!empty($my_votes[$winning_option_id])) {
-			$payout_amt = $this->event_pos_reward_in_round($round_id)/pow(10,8)*$my_votes[$winning_option_id]['votes']/$winning_votes;
+			$payout_amt = $this->event_pos_reward_in_round($round_id)/pow(10,$this->game->db_game['decimal_places'])*$my_votes[$winning_option_id]['votes']/$winning_votes;
 			$payout_disp = $this->game->blockchain->app->format_bignum($payout_amt);
 			$txt .= "You won <font class=\"greentext\">+".$payout_disp." ";
 			if ($payout_disp == '1') $txt .= $this->game->db_game['coin_name'];
 			else $txt .= $this->game->db_game['coin_name_plural'];
 			
-			$vote_disp = $this->game->blockchain->app->format_bignum($my_votes[$winning_option_id]['votes']/pow(10,8));
+			$vote_disp = $this->game->blockchain->app->format_bignum($my_votes[$winning_option_id]['votes']/pow(10,$this->game->db_game['decimal_places']));
 			$txt .= "</font> in ".$this->db_event['event_name']." by casting ".$vote_disp." vote";
 			if ($vote_disp != "1") $txt .= "s";
 			

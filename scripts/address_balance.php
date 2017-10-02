@@ -20,7 +20,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$confirmed_bal = $blockchain->address_balance_at_block($db_address, $blockchain->last_block_id());
 		$unconfirmed_bal = $blockchain->address_balance_at_block($db_address, false);
 		
-		echo "Confirmed balance: ".$app->format_bignum($confirmed_bal/pow(10,8)).", unconfirmed: ".$app->format_bignum($unconfirmed_bal/pow(10,8))."\n";
+		echo "Confirmed balance: ".$app->format_bignum($confirmed_bal/pow(10,$blockchain->db_blockchain['decimal_places'])).", unconfirmed: ".$app->format_bignum($unconfirmed_bal/pow(10,$blockchain->db_blockchain['decimal_places']))."\n";
 	}
 	else echo "Could not find that address.\n";
 }

@@ -96,6 +96,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 			if (!empty($game)) { ?>
 				<ul class="sidebar-menu" data-widget="tree">
 					<li class="header"><?php echo $game->db_game['name']; ?></li>
+					<li<?php if ($nav_tab_selected == "game_page") echo ' class="active"'; ?>><a href="/<?php echo $game->db_game['url_identifier']; ?>/"><i class="fa fa-question-circle"></i> About</a></li>
 					<li id="tabcell0"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="tab_clicked(0); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=0"'; ?>><i class="fa fa-play"></i> Play Now</a></li>
 					<li id="tabcell1"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="tab_clicked(1); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=1"'; ?>><i class="fa fa-users"></i> Players</a></li>
 					<li id="tabcell2"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="tab_clicked(2); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=2"'; ?>><i class="fa fa-cogs"></i> Settings</a></li>

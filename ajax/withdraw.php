@@ -14,8 +14,8 @@ if ($thisuser && $game) {
 	$address_text = $_REQUEST['address'];
 	
 	if ($amount > 0 && $fee >= 0) {
-		$amount = $amount*pow(10,8);
-		$fee = $fee*pow(10,8);
+		$amount = $amount*pow(10,$game->db_game['decimal_places']);
+		$fee = $fee*pow(10,$game->db_game['decimal_places']);
 		$last_block_id = $game->blockchain->last_block_id();
 		$mining_block_id = $last_block_id+1;
 		

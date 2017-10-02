@@ -9,14 +9,14 @@ if ($thisuser) {
 	$io_id = (int) $_REQUEST['io_id'];
 	
 	if ($action == "buyin") {
-		$buyin_amount = (int) ($_REQUEST['buyin_amount']*pow(10,8));
-		$fee_amount = (int) ($_REQUEST['fee_amount']*pow(10,8));
-		
 		$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
 		
 		if ($db_game) {
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
+			
+			$buyin_amount = (int) ($_REQUEST['buyin_amount']*pow(10,$blockchain->db_blockchain['decimal_places']));
+			$fee_amount = (int) ($_REQUEST['fee_amount']*pow(10,$blockchain->db_blockchain['decimal_places']));
 			
 			$db_currency = $app->run_query("SELECT * FROM currencies WHERE currency_id='".$game->blockchain->currency_id()."';")->fetch();
 			
@@ -84,7 +84,7 @@ if ($thisuser) {
 							$html .= '<select id="join_tx_io_id" name="join_tx_io_id" class="form-control">'."\n";
 							$html .= '<option value="">-- Please Select --</option>'."\n";
 							while ($db_io = $r->fetch()) {
-								$html .= '<option value="'.$db_io['io_id'].'">'.$app->format_bignum($db_io['colored_amount_sum']/pow(10,8)).' '.$db_game['coin_abbreviation'].' ('.$app->format_bignum($db_io['amount']/pow(10,8)).' '.$blockchain->db_blockchain['coin_name_plural'].') '.$db_io['address'].'</option>'."\n";
+								$html .= '<option value="'.$db_io['io_id'].'">'.$app->format_bignum($db_io['colored_amount_sum']/pow(10,$db_game['decimal_places'])).' '.$db_game['coin_abbreviation'].' ('.$app->format_bignum($db_io['amount']/pow(10,$blockchain->db_blockchain['decimal_places'])).' '.$blockchain->db_blockchain['coin_name_plural'].') '.$db_io['address'].'</option>'."\n";
 							}
 							$html .= "</select>\n";
 							$html .= '<button class="btn btn-primary">Join UTXOs</button>'."\n";
@@ -109,7 +109,7 @@ if ($thisuser) {
 								if ($r->rowCount() > 0) {
 									$join_key_account = $r->fetch();
 									
-									$fee_amount = 0.001*pow(10,8);
+									$fee_amount = 0.001*pow(10,$blockchain->db_blockchain['decimal_places']);
 									$amount = $db_io['amount']+$join_db_io['amount']-$fee_amount;
 									
 									$transaction_id = $blockchain->create_transaction('transaction', array($amount), false, array($db_io['io_id'], $join_db_io['io_id']), array($join_db_io['address_id']), $fee_amount);

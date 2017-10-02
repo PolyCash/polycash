@@ -168,7 +168,7 @@ class Game {
 							$created_input_ids[count($created_input_ids)] = $this->blockchain->app->last_insert_id();
 						}
 						
-						$raw_txout[$address['address']] = $amounts[$out_index]/pow(10,8);
+						$raw_txout[$address['address']] = $amounts[$out_index]/pow(10,$this->blockchain->db_blockchain['decimal_places']);
 					}
 					else $output_error = true;
 				}
@@ -215,7 +215,7 @@ class Game {
 						$created_input_ids[count($created_input_ids)] = $this->blockchain->app->last_insert_id();
 					}
 					
-					$raw_txout[$overshoot_address['address']] = $overshoot_amount/pow(10,8);
+					$raw_txout[$overshoot_address['address']] = $overshoot_amount/pow(10,$this->blockchain->db_blockchain['decimal_places']);
 				}
 				
 				$rpc_error = false;
@@ -371,7 +371,7 @@ class Game {
 					$winner_votes_r = $this->blockchain->app->run_query($winner_votes_q);
 					$winner_votes_total = $winner_votes_r->fetch()['SUM(io.votes)'];
 					
-					echo "payout ".$this->blockchain->app->format_bignum($payout_amount/pow(10,8))." coins to ".$entity_score_info['entities'][$entity_score_info['winning_entity_id']]['entity_name']." (".$this->blockchain->app->format_bignum($winner_votes_total/pow(10,8))." total votes)<br/>\n";
+					echo "payout ".$this->blockchain->app->format_bignum($payout_amount/pow(10,$this->db_game['decimal_places']))." coins to ".$entity_score_info['entities'][$entity_score_info['winning_entity_id']]['entity_name']." (".$this->blockchain->app->format_bignum($winner_votes_total/pow(10,$this->db_game['decimal_places']))." total votes)<br/>\n";
 					
 					$payout_io_q = "SELECT * FROM options o JOIN addresses a ON o.option_id=a.option_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN entities e ON o.entity_id=e.entity_id WHERE gio.game_id='".$this->db_game['game_id']."' AND e.entity_id='".$entity_score_info['winning_entity_id']."';";
 					$amounts = array();
@@ -379,14 +379,14 @@ class Game {
 					$payout_io_r = $this->blockchain->app->run_query($payout_io_q);
 					
 					while ($payout_io = $payout_io_r->fetch()) {
-						$payout_frac = round(pow(10,8)*$payout_io['votes']/$winner_votes_total)/pow(10,8);
+						$payout_frac = round(pow(10,$this->db_game['decimal_places'])*$payout_io['votes']/$winner_votes_total)/pow(10,$this->db_game['decimal_places']);
 						$payout_io_amount = floor($payout_frac*$payout_amount);
 						
 						if ($payout_io_amount > 0) {
 							$vout = count($amounts);
 							$amounts[$vout] = $payout_io_amount;
 							$address_ids[$vout] = $payout_io['address_id'];
-							echo "pay ".$this->blockchain->app->format_bignum($payout_io_amount/pow(10,8))." to ".$payout_io['address']."<br/>\n";
+							echo "pay ".$this->blockchain->app->format_bignum($payout_io_amount/pow(10,$this->db_game['decimal_places']))." to ".$payout_io['address']."<br/>\n";
 						}
 					}
 					$last_block_id = $this->blockchain->last_block_id();
@@ -428,7 +428,7 @@ class Game {
 			
 			$available_votes = $strategy_user->user_current_votes($this, $last_block_id, $current_round_id, $db_user);
 			
-			$log_text .= $strategy_user->db_user['username'].": ".$this->blockchain->app->format_bignum($free_balance/pow(10,8))." coins (".$free_balance.") ".$db_user['voting_strategy']."<br/>\n";
+			$log_text .= $strategy_user->db_user['username'].": ".$this->blockchain->app->format_bignum($free_balance/pow(10,$this->db_game['decimal_places']))." coins (".$free_balance.") ".$db_user['voting_strategy']."<br/>\n";
 			
 			if ($free_balance > 0 && $available_votes > 0) {
 				if ($db_user['voting_strategy'] == "api") {
@@ -490,7 +490,7 @@ class Game {
 						$amount_sum = 0;
 						$option_id_error = false;
 						
-						$log_text .= $strategy_user->db_user['username']." has ".$free_balance/pow(10,8)." coins available, hitting url: ".$db_user['api_url']."<br/>\n";
+						$log_text .= $strategy_user->db_user['username']." has ".$free_balance/pow(10,$this->db_game['decimal_places'])." coins available, hitting url: ".$db_user['api_url']."<br/>\n";
 						
 						foreach ($api_obj->recommendations as $recommendation) {
 							if ($recommendation->recommended_amount && $recommendation->recommended_amount > 0 && $this->blockchain->app->friendly_intval($recommendation->recommended_amount) == $recommendation->recommended_amount) $amount_sum += $recommendation->recommended_amount;
@@ -589,7 +589,7 @@ class Game {
 							while ($voting_option = $rr->fetch()) {
 								$rank = $option_id2rank[$voting_option['option_id']]+1;
 								if (in_array($rank, $by_rank_ranks) && empty($skipped_options[$ranked_stats[$rank-1]['option_id']])) {
-									$log_text .= "Vote ".round($coins_each/pow(10,8), 3)." coins for ".$ranked_stats[$rank-1]['name'].", ranked ".$rank."<br/>\n";
+									$log_text .= "Vote ".round($coins_each/pow(10,$this->db_game['decimal_places']), 3)." coins for ".$ranked_stats[$rank-1]['name'].", ranked ".$rank."<br/>\n";
 									
 									$option_ids[count($option_ids)] = $ranked_stats[$rank-1]['option_id'];
 									$amounts[count($amounts)] = $coins_each;
@@ -604,7 +604,7 @@ class Game {
 							else $log_text .= $error_message."<br/>\n";*/
 						}
 						else if ($db_user['voting_strategy'] == "by_entity") {
-							$log_text .= "Dividing by entity for ".$strategy_user->db_user['username']." (".(($free_balance-$db_user['transaction_fee'])/pow(10,8))." coins)<br/>\n";
+							$log_text .= "Dividing by entity for ".$strategy_user->db_user['username']." (".(($free_balance-$db_user['transaction_fee'])/pow(10,$this->db_game['decimal_places']))." coins)<br/>\n";
 							
 							$mult_factor = 1;
 							if ($skipped_pct_points > 0) {
@@ -626,7 +626,7 @@ class Game {
 											$effective_frac = floor((1/count($this->current_events))*pow(10,4)*$by_entity_pct_points*$mult_factor)/pow(10,6);
 											$coin_amount = floor($effective_frac*($free_balance-$db_user['transaction_fee']));
 											
-											$log_text .= "Vote ".$by_entity_pct_points."% (".($coin_amount/pow(10,8))." coins) for ".$entity['entity_name']."<br/>\n";
+											$log_text .= "Vote ".$by_entity_pct_points."% (".($coin_amount/pow(10,$this->db_game['decimal_places']))." coins) for ".$entity['entity_name']."<br/>\n";
 											
 											$option_ids[count($option_ids)] = $entity['option_id'];
 											$amounts[count($amounts)] = $coin_amount;
@@ -813,7 +813,7 @@ class Game {
 					$html .= " ".$score_label;
 				}
 				else {
-					$html .= " (".$this->blockchain->app->format_bignum($event_outcome['winning_votes']/pow(10,8))." votes";
+					$html .= " (".$this->blockchain->app->format_bignum($event_outcome['winning_votes']/pow(10,$this->db_game['decimal_places']))." votes";
 					if ($event_outcome['sum_votes'] > 0) $html .= ", ".round(100*$event_outcome['winning_votes']/$event_outcome['sum_votes'], 2)."%";
 					$html .= ")";
 				}
@@ -822,7 +822,7 @@ class Game {
 			else $html .= "No winner";
 			
 			$html .= "</div>";
-			$html .= '<div class="col-sm-3">'.$this->blockchain->app->format_bignum($event_outcome['sum_votes']/pow(10,8)).' votes cast</div>';
+			$html .= '<div class="col-sm-3">'.$this->blockchain->app->format_bignum($event_outcome['sum_votes']/pow(10,$this->db_game['decimal_places'])).' votes cast</div>';
 			$html .= "</div>\n";
 			$last_round_shown = $event_outcome['round_id'];
 			if ($event_outcome['round_id'] == 1) $show_initial = true;
@@ -1064,7 +1064,7 @@ class Game {
 	}
 	
 	public function account_value_html($account_value) {
-		$html = '<font class="greentext">'.$this->blockchain->app->format_bignum($account_value/pow(10,8), 2).'</font> '.$this->db_game['coin_name_plural'];
+		$html = '<font class="greentext">'.$this->blockchain->app->format_bignum($account_value/pow(10,$this->db_game['decimal_places']), 2).'</font> '.$this->db_game['coin_name_plural'];
 		$html .= ' <font style="font-size: 12px;">(';
 		$coins_in_existence = $this->coins_in_existence(false);
 		if ($coins_in_existence > 0) $html .= $this->blockchain->app->format_bignum(100*$account_value/$coins_in_existence)."%";
@@ -1078,7 +1078,7 @@ class Game {
 		else $innate_currency_value = 0;
 		
 		if ($innate_currency_value > 0 && $this->db_game['buyin_policy'] != "none") {
-			$html .= "&nbsp;=&nbsp;".$this->blockchain->app->format_bignum($innate_currency_value/pow(10,8))." ".$this->blockchain->db_blockchain['coin_name_plural'];
+			$html .= "&nbsp;=&nbsp;".$this->blockchain->app->format_bignum($innate_currency_value/pow(10,$this->blockchain->db_blockchain['decimal_places']))." ".$this->blockchain->db_blockchain['coin_name_plural'];
 		}
 		
 		$html .= ")</font>";
@@ -1087,12 +1087,12 @@ class Game {
 	
 	public function send_invitation_email($to_email, &$invitation) {
 		$blocks_per_hour = 3600/$this->blockchain->db_blockchain['seconds_per_block'];
-		$round_reward = ($this->db_game['pos_reward']+$this->db_game['pow_reward']*$this->db_game['round_length'])/pow(10,8);
+		$round_reward = ($this->db_game['pos_reward']+$this->db_game['pow_reward']*$this->db_game['round_length'])/pow(10,$this->db_game['decimal_places']);
 		$rounds_per_hour = 3600/($this->blockchain->db_blockchain['seconds_per_block']*$this->db_game['round_length']);
 		$coins_per_hour = $round_reward*$rounds_per_hour;
 		$seconds_per_round = $this->blockchain->db_blockchain['seconds_per_block']*$this->db_game['round_length'];
 		
-		if ($this->db_game['inflation'] == "linear") $miner_pct = 100*($this->db_game['pow_reward']*$this->db_game['round_length'])/($round_reward*pow(10,8));
+		if ($this->db_game['inflation'] == "linear") $miner_pct = 100*($this->db_game['pow_reward']*$this->db_game['round_length'])/($round_reward*pow(10,$this->db_game['decimal_places']));
 		else $miner_pct = 100*$this->db_game['exponential_inflation_minershare'];
 		
 		$invite_currency = false;
@@ -1104,7 +1104,7 @@ class Game {
 		
 		$subject = "You've been invited to join ".$this->db_game['name'];
 		if ($this->db_game['giveaway_status'] == "invite_pay" || $this->db_game['giveaway_status'] == "public_pay") {
-			$subject .= ". Join by paying ".$this->blockchain->app->format_bignum($this->db_game['invite_cost'])." ".$invite_currency['short_name']."s for ".$this->blockchain->app->format_bignum($this->db_game['giveaway_amount']/pow(10,8))." ".$this->db_game['coin_name_plural'].".";
+			$subject .= ". Join by paying ".$this->blockchain->app->format_bignum($this->db_game['invite_cost'])." ".$invite_currency['short_name']."s for ".$this->blockchain->app->format_bignum($this->db_game['giveaway_amount']/pow(10,$this->db_game['decimal_places']))." ".$this->db_game['coin_name_plural'].".";
 		}
 		
 		$message = "<p>";
@@ -1339,7 +1339,7 @@ class Game {
 				$q = "SELECT SUM(amount) FROM addresses a JOIN address_keys k ON a.address_id=k.address_id JOIN transaction_ios io ON a.address_id=io.address_id WHERE k.account_id='".$user_game['account_id']."' AND io.create_transaction_id='".$this->db_game['game_winning_transaction_id']."';";
 				$r = $this->blockchain->app->run_query($q);
 				$game_winning_amount = $r->fetch()['SUM(amount)'];
-				$html .= "You won <font class=\"greentext\">".$this->blockchain->app->format_bignum($game_winning_amount/pow(10,8))."</font> ".$this->db_game['coin_name_plural']." in the end-of-game payout.<br/>\n";
+				$html .= "You won <font class=\"greentext\">".$this->blockchain->app->format_bignum($game_winning_amount/pow(10,$this->db_game['decimal_places']))."</font> ".$this->db_game['coin_name_plural']." in the end-of-game payout.<br/>\n";
 			}
 			
 			foreach ($entity_score_info['entities'] as $entity_id => $entity_info) {
@@ -1383,14 +1383,14 @@ class Game {
 	public function game_description() {
 		$html = "";
 		$blocks_per_hour = 3600/$this->blockchain->db_blockchain['seconds_per_block'];
-		$round_reward = ($this->db_game['pos_reward']+$this->db_game['pow_reward']*$this->db_game['round_length'])/pow(10,8);
+		$round_reward = ($this->db_game['pos_reward']+$this->db_game['pow_reward']*$this->db_game['round_length'])/pow(10,$this->db_game['decimal_places']);
 		$rounds_per_hour = 3600/($this->blockchain->db_blockchain['seconds_per_block']*$this->db_game['round_length']);
 		$coins_per_hour = $round_reward*$rounds_per_hour;
 		$seconds_per_round = $this->blockchain->db_blockchain['seconds_per_block']*$this->db_game['round_length'];
-		$coins_per_block = $this->blockchain->app->format_bignum($this->db_game['pow_reward']/pow(10,8));
+		$coins_per_block = $this->blockchain->app->format_bignum($this->db_game['pow_reward']/pow(10,$this->db_game['decimal_places']));
 		
 		if ($this->db_game['game_status'] == "running") {
-			$html .= "This game started ".$this->blockchain->app->format_seconds(time()-$this->db_game['start_time'])." ago; ".$this->blockchain->app->format_bignum($this->coins_in_existence(false)/pow(10,8))." ".$this->db_game['coin_name_plural']."  are already in circulation. ";
+			$html .= "This game started ".$this->blockchain->app->format_seconds(time()-$this->db_game['start_time'])." ago; ".$this->blockchain->app->format_bignum($this->coins_in_existence(false)/pow(10,$this->db_game['decimal_places']))." ".$this->db_game['coin_name_plural']."  are already in circulation. ";
 		}
 		else {
 			if ($this->db_game['start_condition'] == "fixed_time") {
@@ -1426,7 +1426,7 @@ class Game {
 		if ($this->db_game['inflation'] == "linear") {
 			$html .= "This coin has linear inflation: ".$this->blockchain->app->format_bignum($round_reward)." ".$this->db_game['coin_name_plural']." are minted approximately every ".$this->blockchain->app->format_seconds($seconds_per_round);
 			$html .= " (".$this->blockchain->app->format_bignum($coins_per_hour)." coins per hour)";
-			$html .= ". In each round, ".$this->blockchain->app->format_bignum($this->db_game['pos_reward']/pow(10,8))." ".$this->db_game['coin_name_plural']." are given to voters and ".$this->blockchain->app->format_bignum($this->db_game['pow_reward']*$this->db_game['round_length']/pow(10,8))." ".$this->db_game['coin_name_plural']." are given to miners";
+			$html .= ". In each round, ".$this->blockchain->app->format_bignum($this->db_game['pos_reward']/pow(10,$this->db_game['decimal_places']))." ".$this->db_game['coin_name_plural']." are given to voters and ".$this->blockchain->app->format_bignum($this->db_game['pow_reward']*$this->db_game['round_length']/pow(10,$this->db_game['decimal_places']))." ".$this->db_game['coin_name_plural']." are given to miners";
 			$html .= " (".$coins_per_block." coin";
 			if ($coins_per_block != 1) $html .= "s";
 			$html .= " per block). ";
@@ -2626,7 +2626,7 @@ class Game {
 		
 		$transaction_fee = $transaction['fee_amount'];
 		if ($transaction['transaction_desc'] != "coinbase" && $transaction['transaction_desc'] != "votebase") {
-			$fee_disp = $this->blockchain->app->format_bignum($transaction_fee/pow(10,8));
+			$fee_disp = $this->blockchain->app->format_bignum($transaction_fee/pow(10,$this->blockchain->db_blockchain['decimal_places']));
 			$html .= ", ".$fee_disp." ".$this->blockchain->db_blockchain['coin_name'];
 			$html .= " tx fee";
 		}
@@ -2636,7 +2636,7 @@ class Game {
 		$html .= '</div><div class="col-md-6">';
 		
 		if ($transaction['transaction_desc'] == "votebase") {
-			$payout_disp = round($transaction['amount']/pow(10,8), 2);
+			$payout_disp = round($transaction['amount']/pow(10,$this->db_game['decimal_places']), 2);
 			$html .= "Voting Payout&nbsp;&nbsp;".$payout_disp." ";
 			if ($payout_disp == '1') $html .= $this->db_game['coin_name'];
 			else $html .= $this->db_game['coin_name_plural'];
@@ -2649,7 +2649,7 @@ class Game {
 			$rr = $this->blockchain->app->run_query($qq);
 			$input_sum = 0;
 			while ($input = $rr->fetch()) {
-				$amount_disp = $this->blockchain->app->format_bignum($input['colored_amount']/pow(10,8));
+				$amount_disp = $this->blockchain->app->format_bignum($input['colored_amount']/pow(10,$this->db_game['decimal_places']));
 				$html .= '<a class="display_address" style="';
 				if ($input['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
 				$html .= '" href="/explorer/games/'.$this->db_game['url_identifier'].'/addresses/'.$input['address'].'">'.$input['address'].'</a>';
@@ -2672,7 +2672,7 @@ class Game {
 			if ($output['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
 			$html .= '" href="/explorer/games/'.$this->db_game['url_identifier'].'/addresses/'.$output['address'].'">'.$output['address']."</a><br/>\n";
 			
-			$amount_disp = $this->blockchain->app->format_bignum($output['colored_amount']/pow(10,8));
+			$amount_disp = $this->blockchain->app->format_bignum($output['colored_amount']/pow(10,$this->db_game['decimal_places']));
 			$html .= $amount_disp." ";
 			if ($amount_disp == '1') $html .= $this->db_game['coin_name'];
 			else $html .= $this->db_game['coin_name_plural'];
@@ -2693,12 +2693,12 @@ class Game {
 					$effectiveness_factor = $temp_event->block_id_to_effectiveness_factor($ref_block_id);
 					$effective_votes = floor($expected_votes*$effectiveness_factor);
 				}
-				$html .= $this->blockchain->app->format_bignum($effective_votes/pow(10,8));
-				$html .= " votes (".$this->blockchain->app->format_bignum($expected_votes/pow(10,8)).") for ".$output['option_name'];
+				$html .= $this->blockchain->app->format_bignum($effective_votes/pow(10,$this->db_game['decimal_places']));
+				$html .= " votes (".$this->blockchain->app->format_bignum($expected_votes/pow(10,$this->db_game['decimal_places'])).") for ".$output['option_name'];
 			}
 			if ($output['payout_game_io_id'] > 0) {
 				$payout_io = $this->blockchain->app->run_query("SELECT * FROM transaction_game_ios WHERE game_io_id='".$output['payout_game_io_id']."';")->fetch();
-				$html .= '&nbsp;&nbsp;<font class="greentext">+'.$this->blockchain->app->format_bignum($payout_io['colored_amount']/pow(10,8)).'</font>';
+				$html .= '&nbsp;&nbsp;<font class="greentext">+'.$this->blockchain->app->format_bignum($payout_io['colored_amount']/pow(10,$this->db_game['decimal_places'])).'</font>';
 			}
 			$html .= "<br/>\n";
 			$output_sum += $output['colored_amount'];
@@ -2783,7 +2783,7 @@ class Game {
 						
 						if ($this->blockchain->db_blockchain['url_identifier'] == "bitcoin") $fee_amount = 0.0005;
 						else $fee_amount = 0.001;
-						$fee_amount = $fee_amount*pow(10,8);
+						$fee_amount = $fee_amount*pow(10,$this->blockchain->db_blockchain['decimal_places']);
 						
 						$refund_amount = ($coins_into_escrow+$value_destroyed_coins) - $fee_amount;
 						

@@ -77,8 +77,8 @@ if ($thisuser && $game) {
 				</script>
 				<?php
 				echo '<div class="paragraph">';
-				echo "Right now, there are ".$app->format_bignum($coins_in_existence/pow(10,8))." ".$game->db_game['coin_name_plural']." in circulation";
-				echo " and ".$app->format_bignum($escrow_value/pow(10,8))." ".$game->blockchain->db_blockchain['coin_name_plural']." in escrow. ";
+				echo "Right now, there are ".$app->format_bignum($coins_in_existence/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." in circulation";
+				echo " and ".$app->format_bignum($escrow_value/pow(10,$game->db_game['decimal_places']))." ".$game->blockchain->db_blockchain['coin_name_plural']." in escrow. ";
 				echo "The exchange rate is currently ".$app->format_bignum($exchange_rate)." ".$game->db_game['coin_name_plural']." per ".$game->blockchain->db_blockchain['coin_name'].". ";
 				echo '</div>';
 				?>

@@ -314,7 +314,7 @@ if ($thisuser) {
 									
 									if ($payout_amt > 0) {
 										if ($temp_user_game['payout_address_id'] > 0 && strlen($temp_user_game['address']) >= 26) {
-											echo $temp_user_game['username']." has an end-of-game balance of ".$app->format_bignum($temp_user->account_coin_value($payout_game_obj, $temp_user_game)/pow(10,8))." coins. Pay ".$app->format_bignum($payout_amt)." BTC to ".$temp_user_game['address']."<br/>\n";
+											echo $temp_user_game['username']." has an end-of-game balance of ".$app->format_bignum($temp_user->account_coin_value($payout_game_obj, $temp_user_game)/pow(10,$payout_game['decimal_places']))." coins. Pay ".$app->format_bignum($payout_amt)." BTC to ".$temp_user_game['address']."<br/>\n";
 											$output_sum += $payout_amt;
 										}
 										else {

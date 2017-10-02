@@ -6,10 +6,8 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->in
 if ($thisuser && !empty($_REQUEST['action']) && $_REQUEST['action'] == "donate_to_faucet") {
 	$io_id = (int) $_REQUEST['account_io_id'];
 	$amount_each = (float) $_REQUEST['donate_amount_each'];
-	$satoshis_each = pow(10,8)*$amount_each;
 	$quantity = (int) $_REQUEST['donate_quantity'];
 	$game_id = (int) $_REQUEST['donate_game_id'];
-	$fee_amount = 0.001*pow(10,8);
 	
 	$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
 	$r = $app->run_query($q);
@@ -18,6 +16,9 @@ if ($thisuser && !empty($_REQUEST['action']) && $_REQUEST['action'] == "donate_t
 		$db_game = $r->fetch();
 		$donate_blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$donate_game = new Game($donate_blockchain, $db_game['game_id']);
+		
+		$satoshis_each = pow(10,$db_game['decimal_places'])*$amount_each;
+		$fee_amount = 0.001*pow(10,$db_game['decimal_places']);
 		
 		if ($quantity > 0 && $satoshis_each > 0) {
 			$total_cost_satoshis = $quantity*$satoshis_each;
@@ -127,7 +128,7 @@ if ($thisuser && !empty($_REQUEST['action']) && $_REQUEST['action'] == "donate_t
 								else echo "Error: failed to create the transaction.<br/>\n";
 							}
 							else {
-								echo "UTXO is only ".$app->format_bignum($colored_coin_sum/pow(10,8))." ".$donate_game->db_game['coin_name_plural']." but you tried to spend ".$app->format_bignum($total_cost_satoshis/pow(10,8))."<br/>\n";
+								echo "UTXO is only ".$app->format_bignum($colored_coin_sum/pow(10,$donate_game->db_game['decimal_places']))." ".$donate_game->db_game['coin_name_plural']." but you tried to spend ".$app->format_bignum($total_cost_satoshis/pow(10,$donate_game->db_game['decimal_places']))."<br/>\n";
 							}
 						}
 						else echo "You don't own this UTXO.<br/>\n";
@@ -174,8 +175,9 @@ include('includes/html_start.php');
 				echo ".</p>\n";
 				
 				while ($account = $account_r->fetch()) {
+					$blockchain = new Blockchain($app, $account['blockchain_id']);
+					
 					if ($account['game_id'] > 0) {
-						$blockchain = new Blockchain($app, $account['blockchain_id']);
 						$account_game = new Game($blockchain, $account['game_id']);
 						$account_value = $thisuser->account_coin_value($account_game, $account);
 					}
@@ -193,16 +195,16 @@ include('includes/html_start.php');
 					$balance = $balance['SUM(io.amount)'];
 					
 					echo '<div class="col-sm-2 greentext" style="text-align: right">';
-					if ($account['game_id'] > 0) echo $app->format_bignum($account_value/pow(10,8)).' '.$account_game->db_game['coin_name_plural'];
+					if ($account['game_id'] > 0) echo $app->format_bignum($account_value/pow(10,$account_game->db_game['decimal_places'])).' '.$account_game->db_game['coin_name_plural'];
 					else echo "&nbsp;";
 					echo '</div>';
 					
 					echo '<div class="col-sm-2 greentext" style="text-align: right">';
-					echo $app->format_bignum($balance/pow(10,8)).' '.$account['short_name_plural'];
+					echo $app->format_bignum($balance/pow(10,$blockchain->db_blockchain['decimal_places'])).' '.$account['short_name_plural'];
 					echo '</div>';
 					
 					echo '<div class="col-sm-2">';
-					if ($account['game_id'] == "") echo '<a href="" onclick="toggle_account_details('.$account['account_id'].'); return false;">Deposit</a>';
+					if (empty($account['game_id'])) echo '<a href="" onclick="toggle_account_details('.$account['account_id'].'); return false;">Deposit</a>';
 					echo '</div>';
 					
 					echo '<div class="col-sm-2"><a href="" onclick="toggle_account_details('.$account['account_id'].'); return false;">Transactions';
@@ -248,11 +250,11 @@ include('includes/html_start.php');
 						
 						if ($account_game) {
 							echo '<div class="col-sm-2" style="text-align: right;"><a class="greentext" target="_blank" href="/explorer/games/'.$account_game->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'">';
-							echo "+".$app->format_bignum($colored_coin_amount/pow(10,8))."&nbsp;".$account_game->db_game['coin_name_plural'];
+							echo "+".$app->format_bignum($colored_coin_amount/pow(10,$account_game->db_game['decimal_places']))."&nbsp;".$account_game->db_game['coin_name_plural'];
 							echo '</a></div>';
 						}
 						echo '<div class="col-sm-2" style="text-align: right;"><a class="greentext" target="_blank" href="/explorer/blockchains/'.$account['blockchain_url_identifier'].'/transactions/'.$transaction['tx_hash'].'">';
-						echo "+".$app->format_bignum($transaction['amount']/pow(10,8))."&nbsp;".$account['short_name_plural'];
+						echo "+".$app->format_bignum($transaction['amount']/pow(10,$blockchain->db_blockchain['decimal_places']))."&nbsp;".$account['short_name_plural'];
 						echo '</a></div>';
 						
 						echo '<div class="col-sm-2">';
@@ -266,7 +268,7 @@ include('includes/html_start.php');
 							if ($account_game) echo $account_game->db_game['game_id'];
 							else echo 'false';
 							
-							echo ', '.$transaction['io_id'].", ".($transaction['amount']/pow(10,8))."); return false;\">Spend</a>";
+							echo ', '.$transaction['io_id'].", ".($transaction['amount']/pow(10,$blockchain->db_blockchain['decimal_places']))."); return false;\">Spend</a>";
 						}
 						echo '</div>';
 						
@@ -287,12 +289,12 @@ include('includes/html_start.php');
 						
 						if ($account_game) {
 							echo '<div class="col-sm-2" style="text-align: right;"><a class="redtext" target="_blank" href="/explorer/games/'.$account_game->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'">';
-							echo "-".$app->format_bignum($colored_coin_amount/pow(10,8))."&nbsp;".$account_game->db_game['coin_name_plural'];
+							echo "-".$app->format_bignum($colored_coin_amount/pow(10,$account_game->db_game['decimal_places']))."&nbsp;".$account_game->db_game['coin_name_plural'];
 							echo '</a></div>';
 						}
 						
 						echo '<div class="col-sm-2" style="text-align: right;"><a class="redtext" target="_blank" href="/explorer/blockchains/'.$account['blockchain_url_identifier'].'/transactions/'.$transaction['tx_hash'].'">';
-						echo "-".$app->format_bignum($transaction['amount']/pow(10,8))."&nbsp;".$account['short_name_plural'];
+						echo "-".$app->format_bignum($transaction['amount']/pow(10,$blockchain->db_blockchain['decimal_places']))."&nbsp;".$account['short_name_plural'];
 						echo '</a></div>';
 						
 						echo '<div class="col-sm-2">';
@@ -330,12 +332,12 @@ include('includes/html_start.php');
 					$coin_game = new Game($blockchains[$user_game['blockchain_id']], $user_game['game_id']);
 					echo '<div class="row">';
 					echo '<div class="col-sm-4"><a href="/wallet/'.$user_game['url_identifier'].'/">'.ucwords($user_game['coin_name_plural'])." for ".$user_game['name'].'</a></div>';
-					echo '<div class="col-sm-2 greentext" style="text-align: right">'.$app->format_bignum($thisuser->account_coin_value($coin_game, $user_game)/pow(10,8)).' '.$user_game['coin_name_plural'].'</div>';
+					echo '<div class="col-sm-2 greentext" style="text-align: right">'.$app->format_bignum($thisuser->account_coin_value($coin_game, $user_game)/pow(10,$coin_game->db_game['decimal_places'])).' '.$user_game['coin_name_plural'].'</div>';
 					
 					if ($user_game['buyin_policy'] != "none") {
 						$exchange_rate = $coin_game->coins_in_existence(false)/$coin_game->escrow_value(false);
 						$cc_value = $thisuser->account_coin_value($coin_game, $user_game)/$exchange_rate;
-						echo '<div class="col-sm-2 greentext" style="text-align: right">'.$app->format_bignum($cc_value/pow(10,8)).' '.$coin_game->blockchain->db_blockchain['coin_name_plural'].'</div>';
+						echo '<div class="col-sm-2 greentext" style="text-align: right">'.$app->format_bignum($cc_value/pow(10,$coin_game->blockchain->db_blockchain['coin_name_plural'])).' '.$coin_game->blockchain->db_blockchain['coin_name_plural'].'</div>';
 					}
 					echo "</div>\n";
 				}
