@@ -149,7 +149,7 @@ function login() {
 				</div>
 			</form>
 		</div>
-		<div style="display: none; padding-top: 20px;" id="login_password">
+		<div style="display: none;" id="login_password">
 			<form id="login_form" action="/" method="get" onsubmit="login(); return false;">
 				<div class="row">
 					<div class="col-md-8">
