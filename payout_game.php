@@ -153,7 +153,7 @@ if ($thisuser) {
 						$pagetitle = "";
 						$include_crypto_js = true;
 						include('includes/html_start.php');
-						echo '<div class="container" style="max-width: 1000px; padding: 10px;">';
+						echo '<div class="container-fluid">';
 						if ($payout_game['game_status'] != "completed") {
 							echo "This game isn't complete, it has '".$payout_game['game_status']."' status.";
 						}

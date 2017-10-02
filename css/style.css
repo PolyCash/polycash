@@ -1,9 +1,6 @@
 html, body {
 	overflow-x: hidden;
 }
-body {
-  padding-top: 50px;
-}
 .top_banner {
 	text-align: center;
 	height: 400px;
@@ -147,12 +144,6 @@ and (max-device-width : 480px) {
 .tabcell_sel {
 	border-bottom: 1px solid #fff;
 	background-color: #fff;
-}
-.tabcontent {
-	border: 1px solid #999;
-	margin-top: -1px;
-	margin-bottom: 35px;
-	padding: 8px;
 }
 .greentext {
 	color: #0a0;
@@ -381,6 +372,7 @@ footer {
 	margin: 0px;
 	margin-bottom: -1px;
 	border: 1px solid #aaa;
+	background-color: #fff;
 }
 .game_events {
 	margin-bottom: 15px;

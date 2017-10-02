@@ -1,7 +1,4 @@
 <div style="overflow: hidden;">
-	<font style="float: right;">
-		Logged in as <?php echo $thisuser->db_user['username']; ?>. <a href="/wallet/<?php if ($game) echo $game->db_game['url_identifier']."/"; ?>?action=logout">Log Out</a>
-	</font>
 	<?php
 	if ($game) { ?>
 	<div class="row">

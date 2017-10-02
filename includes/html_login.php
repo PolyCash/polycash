@@ -92,18 +92,18 @@ function login() {
 	});
 }
 </script>
-<br/>
+
 <input type="hidden" id="redirect_id" value="<?php if ($redirect_id) echo $redirect_id; ?>" />
 <input type="hidden" name="invite_key" value="<?php if (!empty($_REQUEST['invite_key'])) echo $app->strong_strip_tags($app->make_alphanumeric($_REQUEST['invite_key'], "")); ?>" />
 <form id="alias_form" action="/" method="get" onsubmit="check_alias(); return false;">
 	<div class="row">
-		<div class="col-md-8 col-md-push-2">
+		<div class="col-md-8">
 			<h3>To continue, please register for a user account.</h3>
 			Please sign up or log in by entering your public username.
 		</div>
 	</div>
 	<div class="row" style="padding-top: 10px;">
-		<div class="col-md-8 col-md-push-2">
+		<div class="col-md-8">
 			<input id="alias" class="form-control" placeholder="Enter your username / alias." />
 			<script type="text/javascript">
 			$('#alias').focus();
@@ -111,7 +111,7 @@ function login() {
 		</div>
 	</div>
 	<div class="row" style="padding-top: 10px;">
-		<div class="col-md-8 col-md-push-2">
+		<div class="col-md-8">
 			<button id="check_alias_btn" class="btn btn-success">Continue</button>
 		</div>
 	</div>
@@ -119,10 +119,10 @@ function login() {
 <div style="display: none;" id="registration_options">
 	<form id="registration_form" action="/" method="get" onsubmit="register(); return false;">
 		<div class="row">
-			<div id="registration_options_step1" class="col-md-8 col-md-push-2">
+			<div id="registration_options_step1" class="col-md-8">
 				<div id="registration_options_message" style="margin-bottom: 10px;" class="greentext"></div>
 			</div>
-			<div id="registration_options_step1" class="col-md-8 col-md-push-2"<?php if (empty($GLOBALS['login_by_email_enabled'])) { ?> style="display: none;"<?php } ?>>
+			<div id="registration_options_step1" class="col-md-8"<?php if (empty($GLOBALS['login_by_email_enabled'])) { ?> style="display: none;"<?php } ?>>
 				How would you like to log in?<br/>
 				<select style="margin-top: 10px;" id="login_method" class="form-control" onchange="login_method_changed();">
 					<option value="">-- Please Select --</option>
@@ -144,10 +144,10 @@ function login() {
 		</div>
 	</form>
 </div>
-<div style="display: none;" id="login_password">
+<div style="display: none; padding-top: 20px;" id="login_password">
 	<form id="login_form" action="/" method="get" onsubmit="login(); return false;">
 		<div class="row">
-			<div class="col-md-8 col-md-push-2">
+			<div class="col-md-8">
 				Please enter your password:<br/>
 				<input id="login_password_password" style="margin-top: 10px;" type="password" required="required" class="form-control" />
 				<input id="login_btn" type="submit" style="margin-top: 10px;" class="btn btn-success" value="Log In" />

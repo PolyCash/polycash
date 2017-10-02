@@ -1381,7 +1381,7 @@ class Blockchain {
 		$coin_rpc = false;
 		$ref_account = false;
 		$mined_address_str = $this->app->random_string(34);
-		$mined_address = $this->create_or_fetch_address($mined_address_str, false, false, false, false, true);
+		$mined_address = $this->create_or_fetch_address($mined_address_str, false, false, false, true, true);
 		
 		$mined_transaction_id = $this->create_transaction('coinbase', array($this->db_blockchain['initial_pow_reward']), $created_block_id, false, array($mined_address['address_id']), 0);
 		$num_transactions++;

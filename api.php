@@ -19,32 +19,34 @@ if ($uri_parts[1] == "api") {
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$api_game = new Game($blockchain, $game_id);
 		?>
-		<div class="container" style="max-width: 1000px;">
-			<h1><?php echo $GLOBALS['coin_brand_name']; ?> API Documentation</h1>
-			<p>
-				<?php echo $GLOBALS['coin_brand_name']; ?> web wallets provide several strategies for automating your <?php echo $GLOBALS['coin_brand_name']; ?> voting behavior.  However, some users may wish to use custom logic in their voting strategies. The <?php echo $GLOBALS['coin_brand_name']; ?> API allows this functionality through a standardized format for sharing <?php echo $GLOBALS['coin_brand_name']; ?> voting recommendations. Using the <?php echo $GLOBALS['coin_brand_name']; ?> API can be as simple as finding a public recommendations URL and plugging it into your <?php echo $GLOBALS['coin_brand_name']; ?> user account.  Or you can set up your own voting recommendations client using the information below.
-			</p>
-			<p>
-				To get started, please download this example API client written in PHP.<br/>
-				<a class="btn btn-success" href="/api/download-client-example/">Download example API client</a>
-				<br/><br/>
-			</p>
-			<p>
-				<b><a target="_blank" href="/api/<?php echo $api_game->db_game['url_identifier']; ?>/status/">/api/<?php echo $api_game->db_game['url_identifier']; ?>/status/</a></b><br/>
-				Yields information about current status of the blockchain.
-				<br/>
-			</p>
-<pre id="api_status_example" style="display: none;">
-
-</pre>
-			<p>
-				<b>/api/<?php echo $api_game->db_game['url_identifier']; ?>/status/?api_access_code=&lt;ACCESS_CODE&gt;</b><br/>
-				Supply your API access code to get relevant info on your user account in addition to general blockchain information.
-				<br/>
-			</p>
-<pre id="api_status_user_example" style="display: none;">
-
-</pre>
+		<div class="container-fluid">
+			<div class="panel panel-default" style="margin-top: 15px;">
+				<div class="panel-heading">
+					<div class="panel-title"><?php echo $GLOBALS['coin_brand_name']; ?> API Documentation</div>
+				</div>
+				<div class="panel-body">
+					<p>
+						<?php echo $GLOBALS['coin_brand_name']; ?> web wallets provide several strategies for automating your <?php echo $GLOBALS['coin_brand_name']; ?> voting behavior.  However, some users may wish to use custom logic in their voting strategies. The <?php echo $GLOBALS['coin_brand_name']; ?> API allows this functionality through a standardized format for sharing <?php echo $GLOBALS['coin_brand_name']; ?> voting recommendations. Using the <?php echo $GLOBALS['coin_brand_name']; ?> API can be as simple as finding a public recommendations URL and plugging it into your <?php echo $GLOBALS['coin_brand_name']; ?> user account.  Or you can set up your own voting recommendations client using the information below.
+					</p>
+					<p>
+						To get started, please download this example API client written in PHP.<br/>
+						<a class="btn btn-success" href="/api/download-client-example/">Download example API client</a>
+						<br/><br/>
+					</p>
+					<p>
+						<b><a target="_blank" href="/api/<?php echo $api_game->db_game['url_identifier']; ?>/status/">/api/<?php echo $api_game->db_game['url_identifier']; ?>/status/</a></b><br/>
+						Yields information about current status of the blockchain.
+						<br/>
+					</p>
+					<pre id="api_status_example" style="display: none;"></pre>
+					<p>
+						<b>/api/<?php echo $api_game->db_game['url_identifier']; ?>/status/?api_access_code=&lt;ACCESS_CODE&gt;</b><br/>
+						Supply your API access code to get relevant info on your user account in addition to general blockchain information.
+						<br/>
+					</p>
+					<pre id="api_status_user_example" style="display: none;"></pre>
+				</div>
+			</div>
 		</div>
 		<?php
 		include('includes/html_stop.php');

@@ -1450,7 +1450,7 @@ class Game {
 		
 		$q = "SELECT *, SUM(ug.account_value) AS account_value_sum FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$this->db_game['game_id']."' AND ug.payment_required=0 GROUP BY ug.user_id ORDER BY account_value_sum DESC, u.username ASC;";
 		$r = $this->blockchain->app->run_query($q);
-		$html .= "<h3>".$r->rowCount()." players</h3>\n";
+		$html .= "<b>".$r->rowCount()." players</b><br/>\n";
 		
 		while ($temp_user_game = $r->fetch()) {
 			$networth_disp = $this->blockchain->app->format_bignum($temp_user_game['account_value_sum']);

@@ -34,10 +34,7 @@ if ($game->db_game['invite_currency'] > 0) {
 }
 else $exchange_rate = 0;
 ?>
-<div class="container" style="max-width: 1000px; padding-top: 10px;">
-	<div class="paragraph">
-		<a href="/">&larr; All <?php echo $GLOBALS['coin_brand_name']; ?> games</a>
-	</div>
+<div class="container-fluid">
 	<div class="paragraph">
 		<h1 style="margin-bottom: 2px;"><?php echo $game->db_game['name']; ?></h1>
 		<div class="row">

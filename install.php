@@ -72,7 +72,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			$include_crypto_js = TRUE;
 			include("includes/html_start.php");
 			?>
-			<div class="container" style="max-width: 1000px; padding: 10px;">
+			<div class="container-fluid">
 				<h2>Install the MySQL database</h1>
 				Great, the database was installed.<br/>
 				If there was an error installing the database please use mysql to delete the database, then try again.<br/>

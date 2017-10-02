@@ -198,11 +198,11 @@ $(window).keydown(function(e){
 });
 function tab_clicked(index_id) {
 	if (current_tab !== false) {
-		$('#tabcell'+current_tab).removeClass("tabcell_sel");
+		$('#tabcell'+current_tab).removeClass("active");
 		$('#tabcontent'+current_tab).hide();
 	}
 	
-	$('#tabcell'+index_id).addClass("tabcell_sel");
+	$('#tabcell'+index_id).addClass("active");
 	$('#tabcontent'+index_id).show();
 	
 	current_tab = index_id;

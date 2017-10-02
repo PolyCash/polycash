@@ -8,7 +8,7 @@ $pagetitle = $GLOBALS['site_name']." - Reset your password";
 include("includes/html_start.php");
 
 ?>
-<div class="container" style="max-width: 1000px; padding-top: 15px;">
+<div class="container-fluid">
 	<?php
 	if ($GLOBALS['outbound_email_enabled']) {
 		$noinfo_message = "Sorry but that password reset link has expired. Please <a href=\"/reset_password/\">click here</a> to reset your password.";

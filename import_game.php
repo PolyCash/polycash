@@ -6,7 +6,7 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->in
 $pagetitle = "Import Game Definition - ".$GLOBALS['coin_brand_name'];
 include('includes/html_start.php');
 ?>
-<div class="container" style="max-width: 1000px; padding-top: 10px; padding-bottom: 10px; margin-bottom: 10px;">
+<div class="container-fluid">
 	<?php
 	if ($thisuser) {
 		if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "import_game_definition") {
