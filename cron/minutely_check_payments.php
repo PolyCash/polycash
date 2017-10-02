@@ -8,15 +8,19 @@ if (!empty($argv)) {
 	$cmd_vars = $app->argv_to_array($argv);
 	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
 	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
+	if (!empty($cmd_vars['print_debug'])) $_REQUEST['print_debug'] = $cmd_vars['print_debug'];
 }
 
 if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+	$print_debug = false;
+	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
+	
 	$blockchains = array();
 	
 	$q = "SELECT *, ug.user_id AS user_id FROM user_games ug JOIN currency_invoices i ON ug.user_game_id=i.user_game_id JOIN addresses a ON i.address_id=a.address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status IN ('unpaid','unconfirmed') AND (i.status='unconfirmed' OR i.expire_time >= ".time().") GROUP BY a.address_id;";
 	$r = $app->run_query($q);
 	
-	echo "Checking ".$r->rowCount()." addresses.<br/>\n";
+	if ($print_debug) echo "Checking ".$r->rowCount()." addresses.<br/>\n";
 	
 	while ($invoice_address = $r->fetch()) {
 		if (empty($blockchains[$invoice_address['blockchain_id']])) $blockchains[$invoice_address['blockchain_id']] = new Blockchain($app, $invoice_address['blockchain_id']);
@@ -31,7 +35,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		
 		$amount_paid = $address_balance-$preexisting_balance;
 		
-		echo $invoice_address['address']." &rarr; ".$address_balance.", paid: ".$amount_paid."<br/>\n";
+		if ($print_debug) echo $invoice_address['address']." &rarr; ".$address_balance.", paid: ".$amount_paid."<br/>\n";
 		
 		if ($amount_paid > 0) {
 			$amount_paid = (int)($amount_paid*pow(10,$game->blockchain->db_blockchain['decimal_places']));
@@ -73,16 +77,16 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				$error_message = false;
 				$transaction_id = $game->create_transaction(false, array($buyin_amount, $color_amount), $user_game, false, 'transaction', $io_ids, $address_ids, false, $fee_amount, $error_message);
 				
-				echo "created tx #".$transaction_id;
+				if ($print_debug) echo "created tx #".$transaction_id;
 				
 				if ($transaction_id) {
 					$qq = "UPDATE currency_invoices SET confirmed_amount_paid='".$amount_paid/pow(10,$game->blockchain->db_blockchain['decimal_places'])."', unconfirmed_amount_paid='".$amount_paid/pow(10,$game->blockchain->db_blockchain['decimal_places'])."', status='confirmed' WHERE invoice_id='".$invoice_address['invoice_id']."';";
 					$rr = $app->run_query($qq);
 				}
 			}
-			else echo "fee: ".$app->format_bignum($fee_amount/pow(10,$game->blockchain->db_blockchain['decimal_places'])).", buyin: ".$app->format_bignum($buyin_amount/pow(10,$game->blockchain->db_blockchain['decimal_places'])).", color: ".$app->format_bignum($color_amount/pow(10,$game->blockchain->db_blockchain['decimal_places']))."<br/>\n";
+			else if ($print_debug) echo "fee: ".$app->format_bignum($fee_amount/pow(10,$game->blockchain->db_blockchain['decimal_places'])).", buyin: ".$app->format_bignum($buyin_amount/pow(10,$game->blockchain->db_blockchain['decimal_places'])).", color: ".$app->format_bignum($color_amount/pow(10,$game->blockchain->db_blockchain['decimal_places']))."<br/>\n";
 		}
-		else echo "amount paid: ".$amount_paid."<br/>\n";
+		else if ($print_debug) echo "amount paid: ".$amount_paid."<br/>\n";
 	}
 	
 	// Broadcast sellout refund transactions for games where this node owns the escrow address
@@ -109,7 +113,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 					
 					$refund_amount = $unprocessed_sellout['amount_out'] - $unprocessed_sellout['fee_amount'];
 					
-					echo "process sellout ".$unprocessed_sellout['in_tx_hash']."<br/>\n";
+					if ($print_debug) echo "process sellout ".$unprocessed_sellout['in_tx_hash']."<br/>\n";
 					
 					$input_sum = 0;
 					$io_ids = array();
@@ -146,10 +150,10 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 							$db_transaction = $app->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
 							$qqq = "UPDATE game_sellouts SET out_tx_hash=".$app->quote_escape($db_transaction['tx_hash'])." WHERE sellout_id='".$unprocessed_sellout['sellout_id']."';";
 							$rrr = $app->run_query($qqq);
-							echo "Created sellout refund transaction ".$db_transaction['tx_hash']."<br/>\n";
+							if ($print_debug) echo "Created sellout refund transaction ".$db_transaction['tx_hash']."<br/>\n";
 						}
 						else {
-							echo "Failed to add transaction for sellout #".$unprocessed_sellout['sellout_id']."<br/>\n";
+							if ($print_debug) echo "Failed to add transaction for sellout #".$unprocessed_sellout['sellout_id']."<br/>\n";
 						}
 					}
 				}

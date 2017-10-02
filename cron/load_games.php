@@ -2,9 +2,7 @@
 set_time_limit(0);
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
-if ($GLOBALS['process_lock_method'] == "db") {
-	include(realpath(dirname(dirname(__FILE__)))."/includes/handle_script_shutdown.php");
-}
+include(realpath(dirname(dirname(__FILE__)))."/includes/handle_script_shutdown.php");
 
 $script_target_time = 59;
 $script_start_time = microtime(true);
@@ -18,18 +16,16 @@ if (!empty($argv)) {
 }
 
 if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+	$print_debug = false;
+	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
+	
 	$loading_games = $app->check_process_running("loading_games");
 	
 	if (!$loading_games) {
-		$print_debug = false;
-		if (!empty($_REQUEST['print_debug'])) $print_debug = true;
-		
-		if ($GLOBALS['process_lock_method'] == "db") {
-			$GLOBALS['app'] = $app;
-			$GLOBALS['shutdown_lock_name'] = "loading_games";
-			$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
-			register_shutdown_function("script_shutdown");
-		}
+		$GLOBALS['app'] = $app;
+		$GLOBALS['shutdown_lock_name'] = "loading_games";
+		$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
+		register_shutdown_function("script_shutdown");
 		
 		$blockchains = array();
 		

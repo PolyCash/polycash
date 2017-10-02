@@ -1,9 +1,7 @@
 <?php
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
-if ($GLOBALS['process_lock_method'] == "db") {
-	include(realpath(dirname(dirname(__FILE__)))."/includes/handle_script_shutdown.php");
-}
+include(realpath(dirname(dirname(__FILE__)))."/includes/handle_script_shutdown.php");
 
 $script_target_time = 58;
 $script_start_time = microtime(true);
@@ -24,12 +22,10 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	$main_loop_running = $app->check_process_running("main_loop_running");
 	
 	if (!$main_loop_running) {
-		if ($GLOBALS['process_lock_method'] == "db") {
-			$GLOBALS['app'] = $app;
-			$GLOBALS['shutdown_lock_name'] = "main_loop_running";
-			$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
-			register_shutdown_function("script_shutdown");
-		}
+		$GLOBALS['shutdown_lock_name'] = "main_loop_running";
+		$GLOBALS['app'] = $app;
+		$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
+		register_shutdown_function("script_shutdown");
 		
 		$blockchains = array();
 		$real_games = array();
@@ -37,27 +33,29 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$game_id2real_game_i = array();
 
 		// If block hashing hasn't run for a long time on private blockchain, add some blocks
-		$q = "SELECT * FROM blockchains WHERE online=1 AND p2p_mode='none' AND last_hash_time IS NOT NULL AND (".time()."-last_hash_time) > (seconds_per_block*2);";
-		$r = $GLOBALS['app']->run_query($q);
-		$log_text = "";
-		
-		while ($db_blockchain = $r->fetch()) {
-			if (empty($blockchains[$db_blockchain['blockchain_id']])) $blockchains[$db_blockchain['blockchain_id']] = new Blockchain($app, $db_blockchain['blockchain_id']);
+		if (!empty($GLOBALS['mine_private_blocks_when_offline'])) {
+			$q = "SELECT * FROM blockchains WHERE online=1 AND p2p_mode='none' AND last_hash_time IS NOT NULL AND (".time()."-last_hash_time) > (seconds_per_block*2);";
+			$r = $GLOBALS['app']->run_query($q);
+			$log_text = "";
 			
-			$seconds_to_add = time()-$db_blockchain['last_hash_time'];
-			$blocks_to_add = round($seconds_to_add/$db_blockchain['seconds_per_block']);
-			if ($print_debug) echo "adding $blocks_to_add\n";
-			
-			$associated_games = $blockchains[$db_blockchain['blockchain_id']]->associated_games(false);
-			
-			for ($i=0; $i<$blocks_to_add; $i++) {
-				$created_block_id = $blockchains[$db_blockchain['blockchain_id']]->new_block($log_text);
-				for ($j=0; $j<count($associated_games); $j++) {
-					list($successful, $this_log_text) = $associated_games[$j]->add_block($created_block_id);
-					$log_text .= $this_log_text;
+			while ($db_blockchain = $r->fetch()) {
+				if (empty($blockchains[$db_blockchain['blockchain_id']])) $blockchains[$db_blockchain['blockchain_id']] = new Blockchain($app, $db_blockchain['blockchain_id']);
+				
+				$seconds_to_add = time()-$db_blockchain['last_hash_time'];
+				$blocks_to_add = round($seconds_to_add/$db_blockchain['seconds_per_block']);
+				if ($print_debug) echo "adding $blocks_to_add\n";
+				
+				$associated_games = $blockchains[$db_blockchain['blockchain_id']]->associated_games(false);
+				
+				for ($i=0; $i<$blocks_to_add; $i++) {
+					$created_block_id = $blockchains[$db_blockchain['blockchain_id']]->new_block($log_text);
+					for ($j=0; $j<count($associated_games); $j++) {
+						list($successful, $this_log_text) = $associated_games[$j]->add_block($created_block_id);
+						$log_text .= $this_log_text;
+					}
+					$sim_hash_time = $db_blockchain['last_hash_time']+round(($i/$blocks_to_add)*$seconds_to_add);
+					$blockchains[$db_blockchain['blockchain_id']]->set_last_hash_time($sim_hash_time);
 				}
-				$sim_hash_time = $db_blockchain['last_hash_time']+round(($i/$blocks_to_add)*$seconds_to_add);
-				$blockchains[$db_blockchain['blockchain_id']]->set_last_hash_time($sim_hash_time);
 			}
 		}
 		
@@ -240,11 +238,10 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$sec_until_refresh = round($script_target_time-$runtime_sec);
 		if ($sec_until_refresh < 0) $sec_until_refresh = 0;
 
-		if ($print_debug) echo "</pre>";
-		if (empty($argv)) echo '<script type="text/javascript">setTimeout("window.location=window.location;", '.(1000*$sec_until_refresh).');</script>'."\n";
-		if ($print_debug) echo "Script ran for ".round($runtime_sec, 2)." seconds.\n";
-		
-		if ($GLOBALS['process_lock_method'] == "db") $app->set_site_constant($GLOBALS['shutdown_lock_name'], 0);
+		if ($print_debug) {
+			echo "</pre>";
+			echo "Script ran for ".round($runtime_sec, 2)." seconds.\n";
+		}
 	}
 	else echo "Skipped starting the game loop; it's already running (started ".$app->format_seconds(time()-$app->get_site_constant("last_script_run_time"))." ago).\n";
 	if ($print_debug) echo "</pre>";

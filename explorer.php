@@ -703,7 +703,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							
 							echo '<div class="panel-heading"><div class="panel-title">';
 							if ($game) echo $game->db_game['name'];
-							else echo $blockchain->db_blockchain['name'];
+							else echo $blockchain->db_blockchain['blockchain_name'];
 							echo ': Unconfirmed Transactions</div></div>'."\n";
 							
 							echo '<div class="panel-body">';
