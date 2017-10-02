@@ -737,14 +737,14 @@ class App {
 					$save_method = "wallet.dat";
 				}
 				catch (Exception $e) {
-					if ($currency['short_name'] == "litecoin") $keySet = litecoin::getNewKeySet();
-					else $keySet = bitcoin::getNewKeySet();
-					
 					if (empty($GLOBALS['rsa_pub_key']) || empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
 						$this->log_message('Error generating a payment address. Please visit /install.php and then set $GLOBALS["rsa_pub_key"] in includes/config.php');
 						$save_method = "skip";
 					}
 					else {
+						if ($currency['short_name'] == "litecoin") $keySet = litecoin::getNewKeySet();
+						else $keySet = bitcoin::getNewKeySet();
+						
 						$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
 						$address_text = $keySet['pubAdd'];
 						$save_method = "db";

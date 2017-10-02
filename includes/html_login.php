@@ -136,13 +136,13 @@ function login() {
 						</select>
 					</div>
 					<div id="registration_options_step2"<?php if (!empty($GLOBALS['login_by_email_enabled'])) { ?> style="display: none;"<?php } ?>>
-						<div class="col-md-8 col-md-push-2">
+						<div class="col-md-8">
 							<input id="registration_options_email" type="email" class="form-control" placeholder="Enter your email address" />
 						</div>
-						<div class="col-md-8 col-md-push-2">
+						<div class="col-md-8">
 							<input id="registration_options_password" type="password" class="form-control" placeholder="Enter your password" />
 						</div>
-						<div class="col-md-8 col-md-push-2">
+						<div class="col-md-8">
 							<input type="submit" class="btn btn-success" value="Sign Up" id="register_btn" />
 						</div>
 					</div>
