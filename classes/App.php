@@ -729,25 +729,27 @@ class App {
 			$blockchain = new Blockchain($this, $currency['blockchain_id']);
 			
 			if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
-				try {
-					$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
-					
-					$address_text = $coin_rpc->getnewaddress();
-					$encWIF = "";
-					$save_method = "wallet.dat";
-				}
-				catch (Exception $e) {
-					if (empty($GLOBALS['rsa_pub_key']) || empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
-						$this->log_message('Error generating a payment address. Please visit /install.php and then set $GLOBALS["rsa_pub_key"] in includes/config.php');
-						$save_method = "skip";
-					}
-					else {
-						if ($currency['short_name'] == "litecoin") $keySet = litecoin::getNewKeySet();
-						else $keySet = bitcoin::getNewKeySet();
+				if (empty($blockchain->db_blockchain['rpc_username']) || empty($blockchain->db_blockchain['rpc_password'])) $skip = true;
+				else {
+					try {
+						$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
 						
-						$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
-						$address_text = $keySet['pubAdd'];
-						$save_method = "db";
+						$address_text = $coin_rpc->getnewaddress();
+						$encWIF = "";
+						$save_method = "wallet.dat";
+					}
+					catch (Exception $e) {
+						if (empty($GLOBALS['rsa_pub_key']) || empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
+							$this->log_message('Error generating a payment address. Please visit /install.php and then set $GLOBALS["rsa_pub_key"] in includes/config.php');
+							$save_method = "skip";
+						}
+						else {
+							if ($currency['short_name'] == "litecoin") $keySet = litecoin::getNewKeySet();
+							else $keySet = bitcoin::getNewKeySet();
+							$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
+							$address_text = $keySet['pubAdd'];
+							$save_method = "db";
+						}
 					}
 				}
 			}

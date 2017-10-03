@@ -529,7 +529,7 @@ class User {
 	}
 	
 	public function ensure_currency_accounts() {
-		$q = "SELECT * FROM currencies WHERE blockchain_id IS NOT NULL;";
+		$q = "SELECT * FROM currencies c JOIN blockchains b ON c.blockchain_id=b.blockchain_id WHERE b.online=1;";
 		$r = $this->app->run_query($q);
 		
 		while ($currency = $r->fetch()) {
@@ -545,8 +545,10 @@ class User {
 				
 				$address_key = $this->app->new_address_key($currency['currency_id'], $account);
 				
-				$qq = "UPDATE currency_accounts SET current_address_id='".$address_key['address_id']."' WHERE account_id='".$account_id."';";
-				$rr = $this->app->run_query($qq);
+				if ($address_key) {
+					$qq = "UPDATE currency_accounts SET current_address_id='".$address_key['address_id']."' WHERE account_id='".$account_id."';";
+					$rr = $this->app->run_query($qq);
+				}
 			}
 		}
 	}
