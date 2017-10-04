@@ -22,7 +22,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	if (!$loading_blocks) {
 		$GLOBALS['app'] = $app;
 		$GLOBALS['shutdown_lock_name'] = "loading_blocks";
-		$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
+		$app->set_site_constant($GLOBALS['shutdown_lock_name'], getmypid());
 		register_shutdown_function("script_shutdown");
 		
 		$blockchains = array();

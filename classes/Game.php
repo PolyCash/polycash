@@ -2336,14 +2336,14 @@ class Game {
 			if ($r->rowCount() > 0) {
 				$game_block = $r->fetch();
 				
-				if ($game_block['locally_saved'] != 1) {
+				/*if ($game_block['locally_saved'] != 1) {
 					if ($game_block['time_created'] < time()-30) {
 						$q = "DELETE FROM game_blocks WHERE game_block_id='".$game_block['game_block_id']."';";
 						$r = $this->blockchain->app->run_query($q);
 					}
 					$GLOBALS['shutdown_lock_name'] = "";
 					die("Conflicting block loading scripts are running.. aborting this thread.");
-				}
+				}*/
 			}
 			else {
 				$msg = "Creating new game block #".$block_height."\n";

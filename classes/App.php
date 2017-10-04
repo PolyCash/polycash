@@ -182,11 +182,6 @@ class App {
 		$pipes = array();
 		
 		$last_script_run_time = (int) $this->get_site_constant("last_script_run_time");
-		if ($last_script_run_time < time()-(60*5) && $GLOBALS['process_lock_method'] == "db") {
-			$this->set_site_constant("loading_blocks", 0);
-			$this->set_site_constant("loading_games", 0);
-			$this->set_site_constant("main_loop_running", 0);
-		}
 		
 		if (PHP_OS == "WINNT") $script_path_name = dirname(dirname(__FILE__));
 		else $script_path_name = realpath(dirname(dirname(__FILE__)));
@@ -1248,7 +1243,20 @@ class App {
 	}
 	
 	public function check_process_running($lock_name) {
-		if ($GLOBALS['process_lock_method'] == "db") $process_running = (int) $this->get_site_constant($lock_name);
+		if ($GLOBALS['process_lock_method'] == "db") {
+			$process_running = (int) $this->get_site_constant($lock_name);
+			
+			if ($process_running > 0) {
+				$cmd = "ps -p ".$process_running."|wc -l";
+				$cmd_result_lines = (int) exec($cmd);
+				if ($cmd_result_lines > 1) return $process_running;
+				else {
+					$this->set_site_constant($lock_name, 0);
+					return 0;
+				}
+			}
+			else return 0;
+		}
 		else {
 			$cmd = "ps aux|grep \"".realpath(dirname($_SERVER["SCRIPT_FILENAME"]))."/".basename($_SERVER["SCRIPT_FILENAME"])."\"|grep -v grep|wc -l";
 			$running = (int) (trim(exec($cmd))-1);
@@ -1264,10 +1272,9 @@ class App {
 			$num_running += $running;
 			$this->log_message("$num_running $cmd");
 			
-			if ($num_running > 0) $process_running = true;
-			else $process_running = false;
+			if ($num_running > 0) return 1;
+			else return 0;
 		}
-		return $process_running;
 	}
 	
 	public function voting_character_definitions() {

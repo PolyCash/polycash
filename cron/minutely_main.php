@@ -17,14 +17,12 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	$print_debug = false;
 	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
 	
-	if ($print_debug) echo "<pre>";
-	
 	$main_loop_running = $app->check_process_running("main_loop_running");
 	
 	if (!$main_loop_running) {
 		$GLOBALS['shutdown_lock_name'] = "main_loop_running";
 		$GLOBALS['app'] = $app;
-		$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
+		$app->set_site_constant($GLOBALS['shutdown_lock_name'], getmypid());
 		register_shutdown_function("script_shutdown");
 		
 		$blockchains = array();
@@ -243,8 +241,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			echo "Script ran for ".round($runtime_sec, 2)." seconds.\n";
 		}
 	}
-	else echo "Skipped starting the game loop; it's already running (started ".$app->format_seconds(time()-$app->get_site_constant("last_script_run_time"))." ago).\n";
-	if ($print_debug) echo "</pre>";
+	else echo "Skipped starting the game loop; it's already running.\n";
 }
 else echo "Error: incorrect key supplied in cron/minutely_main.php\n";
 ?>
