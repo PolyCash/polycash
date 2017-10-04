@@ -86,7 +86,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 			<ul class="sidebar-menu" data-widget="tree">
 				<li class="header">Navigation</li>
 				<li<?php if ($nav_tab_selected == "home") echo ' class="active"'; ?>><a href="/"><i class="fa fa-home"></i> <span>Home</span></a></li>
-				<li<?php if ($nav_tab_selected == "wallet") echo ' class="active"'; ?>><a href="/wallet/"><i class="fa fa-cubes"></i> <span>My Games</span></a></li>
+				<li<?php if ($nav_tab_selected == "wallet" && empty($game)) echo ' class="active"'; ?>><a href="/wallet/"><i class="fa fa-cubes"></i> <span>My Games</span></a></li>
 				<li<?php if ($nav_tab_selected == "accounts") echo ' class="active"'; ?>><a href="/accounts/"><i class="fa fa-user-circle"></i> <span>My Accounts</span></a></li>
 				<li<?php if ($nav_tab_selected == "download") echo ' class="active"'; ?>><a href="/download/"><i class="fa fa-download"></i> <span>Download</span></a></li>
 				<li<?php if ($nav_tab_selected == "explorer") echo ' class="active"'; ?>><a href="/explorer/<?php if (!empty($game)) echo "games/".$game->db_game['url_identifier']."/blocks/"; ?>"><i class="fa fa-cube"></i> <span>Blockchain Explorer</span></a></li>
