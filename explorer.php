@@ -682,6 +682,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								$r = $app->run_query($q);
 								$r = $r->fetch(PDO::FETCH_NUM);
 								$block_sum = $r[0];
+								$block_sum_disp = $block_sum/pow(10,$game->db_game['decimal_places']);
 								
 								$q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND t.block_id IS NULL GROUP BY t.transaction_id;";
 								$r = $app->run_query($q);
@@ -693,6 +694,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								$r = $r->fetch(PDO::FETCH_NUM);
 								$num_trans = $r[0];
 								$block_sum = $r[1];
+								$block_sum_disp = $block_sum/pow(10,$blockchain->db_blockchain['decimal_places']);
 							}
 							
 							$expected_block_id = $blockchain->last_block_id()+1;

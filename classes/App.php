@@ -724,7 +724,7 @@ class App {
 			$blockchain = new Blockchain($this, $currency['blockchain_id']);
 			
 			if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
-				if (empty($blockchain->db_blockchain['rpc_username']) || empty($blockchain->db_blockchain['rpc_password'])) $skip = true;
+				if (empty($blockchain->db_blockchain['rpc_username']) || empty($blockchain->db_blockchain['rpc_password'])) $save_method = "skip";
 				else {
 					try {
 						$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
@@ -1654,14 +1654,14 @@ class App {
 						$r = $this->run_query($q);
 						$new_game_id = $this->last_insert_id();
 						
-						if ($blockchain->db_blockchain['p2p_mode'] != "rpc") {
+						if ($new_private_blockchain) {
 							$q = "UPDATE blockchains SET only_game_id='".$new_game_id."' WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."';";
 							$r = $this->run_query($q);
 						}
 						
 						$new_game = new Game($blockchain, $new_game_id);
 						
-						if ($new_game->db_game['p2p_mode'] == "none") {
+						if ($blockchain->db_blockchain['p2p_mode'] == "none") {
 							if ($thisuser) $user_game = $thisuser->ensure_user_in_game($new_game, false);
 							
 							if (empty($new_game->db_game['genesis_tx_hash'])) {
@@ -1676,7 +1676,9 @@ class App {
 							$new_game->genesis_hash = $game_genesis_tx_hash;
 							if ($thisuser) $new_game->user_game = $user_game;
 							
-							$blockchain->add_genesis_block($new_game);
+							if ($blockchain->last_block_id() === false) {
+								$blockchain->add_genesis_block($new_game);
+							}
 						}
 						else {
 							try {
@@ -1839,7 +1841,7 @@ class App {
 		return $cached_url;
 	}
 	
-	public function permission_to_claim_address($game, $thisuser, $db_address) {
+	public function permission_to_claim_address(&$game, &$thisuser, &$db_address) {
 		if (!empty($game->blockchain->db_blockchain['only_game_id']) && $db_address['address'] == $game->blockchain->db_blockchain["genesis_address"] && empty($db_address['user_id'])) return true;
 		else return false;
 	}
@@ -1867,6 +1869,16 @@ class App {
 			return true;
 		}
 		else return false;
+	}
+	
+	public function blockchain_ensure_currencies() {
+		$q = "SELECT b.* FROM blockchains b WHERE NOT EXISTS (SELECT * FROM currencies c WHERE b.blockchain_id=c.blockchain_id);";
+		$r = $this->run_query($q);
+		
+		while ($db_blockchain = $r->fetch()) {
+			$qq = "INSERT INTO currencies SET blockchain_id='".$db_blockchain['blockchain_id']."', name=".$this->quote_escape($db_blockchain['blockchain_name']).", short_name=".$this->quote_escape($db_blockchain['coin_name']).", short_name_plural=".$this->quote_escape($db_blockchain['coin_name_plural']).", abbreviation=".$this->quote_escape($db_blockchain['coin_name_plural']).";";
+			$rr = $this->run_query($qq);
+		}
 	}
 }
 ?>

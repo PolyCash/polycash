@@ -68,6 +68,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				else die("Error, please manually save RPC parameters in the database.");
 			}
 			
+			$app->blockchain_ensure_currencies();
+			
 			$pagetitle = $GLOBALS['site_name']." - Installing...";
 			$include_crypto_js = TRUE;
 			include("includes/html_start.php");

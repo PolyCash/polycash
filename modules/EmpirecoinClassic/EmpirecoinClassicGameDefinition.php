@@ -8,7 +8,7 @@ class EmpirecoinClassicGameDefinition {
 		$this->app = $app;
 
 		$this->game_def_base_txt = '{
-			"blockchain_identifier": "litecoin",
+			"blockchain_identifier": "stakechain",
 			"protocol_version": 0,
 			"url_identifier": "empirecoin-classic",
 			"name": "Empirecoin Classic",

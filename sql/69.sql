@@ -1,0 +1,1 @@
+INSERT INTO blockchains SET blockchain_name='StakeChain', url_identifier='stakechain', online=1, p2p_mode='none', coin_name='stake', coin_name_plural='stakes', seconds_per_block=30, decimal_places=8, initial_pow_reward=10000000000;

@@ -8,7 +8,7 @@ class ElectionSimGameDefinition {
 		$this->app = $app;
 
 		$this->game_def_base_txt = '{
-			"blockchain_identifier": "litecoin",
+			"blockchain_identifier": "stakechain",
 			"protocol_version": 0,
 			"url_identifier": "virtual-election",
 			"name": "Virtual Election 2017",

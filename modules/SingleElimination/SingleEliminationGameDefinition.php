@@ -42,7 +42,7 @@ class SingleEliminationGameDefinition {
 15,Uruguay";
 
 		$this->game_def_base_txt = '{
-			"blockchain_identifier": "litecoin",
+			"blockchain_identifier": "stakechain",
 			"protocol_version": 0,
 			"url_identifier": "single-elimination",
 			"name": "Virtual Cup 2017",

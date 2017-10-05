@@ -20,7 +20,7 @@
 			?>
 		</div>
 		<?php
-		$q = "SELECT * FROM blockchains b JOIN images i ON b.default_image_id=i.image_id WHERE b.p2p_mode='rpc';";
+		$q = "SELECT * FROM blockchains b JOIN images i ON b.default_image_id=i.image_id WHERE b.online=1;";
 		$r = $app->run_query($q);
 		
 		while ($db_blockchain = $r->fetch()) {

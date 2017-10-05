@@ -1011,11 +1011,11 @@ class Game {
 			if ($rr->rowCount() > 0) {
 				$qq = "SELECT SUM(amount) FROM transaction_ios WHERE create_transaction_id='".$transaction['transaction_id']."' AND address_id = '".$escrow_address['address_id']."';";
 				$rr = $this->blockchain->app->run_query($qq);
-				$escrowed_coins = (int) $rr->fetch()['SUM(amount)'];
+				$escrowed_coins = $rr->fetch()['SUM(amount)'];
 				
 				$qq = "SELECT SUM(amount) FROM transaction_ios WHERE create_transaction_id='".$transaction['transaction_id']."' AND address_id != '".$escrow_address['address_id']."';";
 				$rr = $this->blockchain->app->run_query($qq);
-				$non_escrowed_coins = (int) $rr->fetch()['SUM(amount)'];
+				$non_escrowed_coins = $rr->fetch()['SUM(amount)'];
 				
 				if ($transaction['tx_hash'] == $this->db_game['genesis_tx_hash']) {
 					$colored_coins_generated = $this->db_game['genesis_amount'];
@@ -2956,6 +2956,44 @@ class Game {
 			else return false;
 		}
 		else return false;
+	}
+	
+	public function add_genesis_transaction() {
+		if ($this->blockchain->db_blockchain['p2p_mode'] == "none") {
+			$fee_amount = 0.001*pow(10, $this->blockchain->db_blockchain['decimal_places']);
+			
+			$q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id WHERE io.spend_status='unspent' AND a.user_id IS NULL AND a.is_mine=1 AND t.transaction_desc='coinbase' AND t.blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND io.amount > ".$fee_amount.";";
+			$r = $this->blockchain->app->run_query($q);
+			
+			if ($r->rowCount() > 0) {
+				$genesis_input = $r->fetch();
+				
+				$genesis_address_text = $this->blockchain->app->random_string(34);
+				$genesis_address = $this->blockchain->create_or_fetch_address($genesis_address_text, true, false, false, true, true);
+				$genesis_tx_hash = $this->db_game['genesis_tx_hash'];
+				
+				$successful = false;
+				$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
+				
+				$escrow_amount = round(0.5*$genesis_input['amount']);
+				$color_amount = $genesis_input['amount'] - $escrow_amount - $fee_amount;
+				
+				$transaction_id = $this->blockchain->create_transaction("transaction", array($escrow_amount, $color_amount), false, array($genesis_input['io_id']), array($escrow_address['address_id'], $genesis_address['address_id']), $fee_amount);
+				
+				if ($transaction_id) {
+					$db_transaction = $this->blockchain->app->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
+					
+					$q = "UPDATE games SET genesis_tx_hash=".$this->blockchain->app->quote_escape($db_transaction['tx_hash'])." WHERE game_id='".$this->db_game['game_id']."';";
+					$r = $this->blockchain->app->run_query($q);
+					
+					$this->db_game['genesis_tx_hash'] = $db_transaction['tx_hash'];
+				}
+				
+				return $transaction_id;
+			}
+			else {echo "q: $q<br/>\n"; return -1;}
+		}
+		else return -2;
 	}
 }
 ?>

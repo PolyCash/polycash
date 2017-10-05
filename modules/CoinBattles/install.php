@@ -48,8 +48,10 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		}
 		echo "Next please <a href=\"/scripts/reset_game.php?key=".$GLOBALS['cron_key_string']."&game_id=".$new_game->db_game['game_id']."\">reset this game</a><br/>\n";
 	}
-	
-	echo "Done!!<br/>\n";
+	?>
+	Done!!<br/>
+	<a href="/">Check installation</a>
+	<?php
 }
 else echo "Please supply the correct key.<br/>\n";
 ?>
