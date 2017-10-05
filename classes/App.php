@@ -894,7 +894,7 @@ class App {
 				$delete_count++;
 			}
 		}
-		echo "\nTook ".(microtime(true)-$start_time)." sec to delete $delete_count unconfirmable transactions.\n\n";
+		return "Took ".(microtime(true)-$start_time)." sec to delete $delete_count unconfirmable transactions.";
 	}
 	
 	public function game_admin_row(&$thisuser, $user_game, $selected_game_id) {

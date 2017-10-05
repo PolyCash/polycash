@@ -157,7 +157,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			}
 		}
 		
-		$app->delete_unconfirmable_transactions();
+		$unconf_message = $app->delete_unconfirmable_transactions();
+		if ($print_debug) echo $unconf_message."\n";
 		
 		if (count($running_games) > 0) {
 			try {
