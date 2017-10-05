@@ -29,6 +29,9 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$real_games = array();
 		$coin_rpcs = array();
 		$game_id2real_game_i = array();
+		$game_id2private_game_i = array();
+		$private_blockchain_ids = array();
+		$public_blockchain_ids = array();
 
 		// If block hashing hasn't run for a long time on private blockchain, add some blocks
 		if (!empty($GLOBALS['mine_private_blocks_when_offline'])) {
@@ -57,49 +60,48 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			}
 		}
 		
-		// Initial load of all non-private blockchains
-		$q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.p2p_mode='rpc';";
+		// Initial load of all online games & blockchains
+		$q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.online=1;";
 		$r = $GLOBALS['app']->run_query($q);
 		$real_game_i = 0;
+		$private_game_i = 0;
 
-		while ($db_real_game = $r->fetch()) {
-			$game_id2real_game_i[$db_real_game['game_id']] = $real_game_i;
-			if (empty($blockchains[$db_real_game['blockchain_id']])) $blockchains[$db_real_game['blockchain_id']] = new Blockchain($app, $db_real_game['blockchain_id']);
-			$real_games[$real_game_i] = new Game($blockchains[$db_real_game['blockchain_id']], $db_real_game['game_id']);
-			try {
-				$coin_rpcs[$real_game_i] = new jsonRPCClient('http://'.$db_real_game['rpc_username'].':'.$db_real_game['rpc_password'].'@127.0.0.1:'.$db_real_game['rpc_port'].'/');
-				$getinfo = $coin_rpcs[$real_game_i]->getinfo();
-			}
-			catch (Exception $e) {
-				$coin_rpcs[$real_game_i] = false;
+		while ($db_game = $r->fetch()) {
+			if (empty($blockchains[$db_game['blockchain_id']])) {
+				$blockchains[$db_game['blockchain_id']] = new Blockchain($app, $db_game['blockchain_id']);
+				
+				if ($db_game['p2p_mode'] == "rpc") array_push($public_blockchain_ids, $db_game['blockchain_id']);
+				else array_push($private_blockchain_ids, $db_game['blockchain_id']);
 			}
 			
-			if ($coin_rpcs[$real_game_i]) {
-				$qq = "UPDATE blockchains SET rpc_last_time_connected='".time()."', block_height='".$getinfo['blocks']."' WHERE blockchain_id='".$db_real_game['blockchain_id']."';";
-				$rr = $app->run_query($qq);
-			}
-			$real_game_i++;
-		}
-		
-		for ($real_game_i=0; $real_game_i<count($real_games); $real_game_i++) {
-			if ($real_games[$real_game_i]->db_game['game_status'] == "running" && $real_games[$real_game_i]->db_game['always_generate_coins'] == 1) {
-				if ($coin_rpcs[$real_game_i]) {
-					$q = "SELECT * FROM blocks WHERE game_id='".$real_games[$real_game_i]->db_game['game_id']."' ORDER BY block_id DESC LIMIT 1;";
-					$r = $app->run_query($q);
-
-					if ($r->rowCount() > 0) {
-						$lastblock = $r->fetch();
-						
-						$coin_rpcs[$real_game_i]->setgenerate(false);
-						$coin_rpcs[$real_game_i]->setgenerate(true);
-						if ($print_debug) echo "Started generating coins for ".$real_games[$real_game_i]->db_game['name']."...\n";
-					}
+			if ($db_game['p2p_mode'] == "rpc") {
+				$game_id2real_game_i[$db_game['game_id']] = $real_game_i;
+				$real_games[$real_game_i] = new Game($blockchains[$db_game['blockchain_id']], $db_game['game_id']);
+				
+				try {
+					$coin_rpcs[$real_game_i] = new jsonRPCClient('http://'.$db_game['rpc_username'].':'.$db_game['rpc_password'].'@127.0.0.1:'.$db_game['rpc_port'].'/');
+					$getinfo = $coin_rpcs[$real_game_i]->getinfo();
 				}
+				catch (Exception $e) {
+					$coin_rpcs[$real_game_i] = false;
+				}
+				
+				if ($coin_rpcs[$real_game_i]) {
+					$qq = "UPDATE blockchains SET rpc_last_time_connected='".time()."', block_height='".$getinfo['blocks']."' WHERE blockchain_id='".$db_game['blockchain_id']."';";
+					$rr = $app->run_query($qq);
+				}
+				$real_game_i++;
+			}
+			else {
+				$game_id2private_game_i[$db_game['game_id']] = $private_game_i;
+				$private_games[$private_game_i] = new Game($blockchains[$db_game['blockchain_id']], $db_game['game_id']);
+				$private_game_i++;
 			}
 		}
 
-		$q = "SELECT * FROM games WHERE game_status='published' AND start_condition='players_joined' AND start_condition_players > 0;";
+		$q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE g.game_status='published' AND g.start_condition='players_joined' AND g.start_condition_players > 0 AND b.online=1;";
 		$r = $app->run_query($q);
+		
 		while ($db_unstarted_game = $r->fetch()) {
 			if (!$blockchains[$db_unstarted_game['blockchain_id']]) $blockchains[$db_unstarted_game['blockchain_id']] = new Blockchain($app, $db_unstarted_game['blockchain_id']);
 			$unstarted_game = new Game($blockchains[$db_unstarted_game['blockchain_id']], $db_unstarted_game['game_id']);
@@ -109,8 +111,9 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			}
 		}
 
-		$q = "SELECT * FROM games WHERE game_status='published' AND start_condition='fixed_time' AND start_datetime <= NOW() AND start_datetime IS NOT NULL;";
+		$q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.online=1 AND g.game_status='published' AND g.start_condition='fixed_time' AND g.start_datetime <= NOW() AND g.start_datetime IS NOT NULL;";
 		$r = $app->run_query($q);
+		
 		while ($db_unstarted_game = $r->fetch()) {
 			if (time() >= strtotime($db_unstarted_game['start_datetime'])) {
 				if (!$blockchains[$db_unstarted_game['blockchain_id']]) $blockchains[$db_unstarted_game['blockchain_id']] = new Blockchain($app, $db_unstarted_game['blockchain_id']);
@@ -135,7 +138,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 
 		// Load all running games
 		$running_games = array();
-		$q = "SELECT * FROM games WHERE game_status IN('published','running');";
+		$q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.online=1 AND g.game_status IN('published','running');";
 		$r = $GLOBALS['app']->run_query($q);
 		
 		while ($running_game = $r->fetch()) {
@@ -160,53 +163,50 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$unconf_message = $app->delete_unconfirmable_transactions();
 		if ($print_debug) echo $unconf_message."\n";
 		
-		if (count($running_games) > 0) {
+		if (count($running_games) > 0 || count($private_blockchain_ids) > 0) {
 			try {
 				$loop_target_time = $app->get_site_constant("loop_target_time");
 				do {
 					$loop_start_time = microtime(true);
 					
+					for ($private_blockchain_i=0; $private_blockchain_i<count($private_blockchain_ids); $private_blockchain_i++) {
+						$blockchain_id = $private_blockchain_ids[$private_blockchain_i];
+						
+						$remaining_prob = round($loop_target_time/$blockchains[$blockchain_id]->db_blockchain['seconds_per_block'], 4);
+						
+						do {
+							$benchmark_time = microtime(true);
+							
+							$last_block_id = $blockchains[$blockchain_id]->last_block_id();
+							
+							$block_prob = min(1, $remaining_prob);
+							$remaining_prob = $remaining_prob-$block_prob;
+							$rand_num = rand(0, pow(10,4))/pow(10,4);
+							if (!empty($_REQUEST['force_new_block'])) $rand_num = 0;
+							
+							if ($print_debug) echo $blockchains[$blockchain_id]->db_blockchain['blockchain_name']." (".$rand_num." vs ".$block_prob."): ";
+							
+							if ($rand_num <= $block_prob) {
+								if ($print_debug) echo "FOUND A BLOCK!!\n";
+								$txt = "";
+								$blockchain[$blockchain_id]->new_block($txt);
+								if ($print_debug) echo $txt."\n";
+							}
+							else {
+								if ($print_debug) echo "No block\n";
+							}
+							
+							if ($print_debug) echo (microtime(true)-$benchmark_time)." sec\n";
+							$benchmark_time = microtime(true);
+						}
+						while ($remaining_prob > 0);
+						
+						$blockchains[$blockchain_id]->set_last_hash_time(time());
+					}
+					
 					for ($running_game_i=0; $running_game_i<count($running_games); $running_game_i++) {
 						if ($print_debug) echo "\n".$running_games[$running_game_i]->db_game['name']."\n";
 						
-						if ($running_games[$running_game_i]->db_game['p2p_mode'] == "none") {
-							$remaining_prob = round($loop_target_time/$running_games[$running_game_i]->blockchain->db_blockchain['seconds_per_block'], 4);
-							$thisgame_loop_start_time = microtime(true);
-							do {
-								$benchmark_time = microtime(true);
-								if ($print_debug) echo "update_db_game() ...";
-								$running_games[$running_game_i]->update_db_game();
-								if ($print_debug) echo (microtime(true)-$benchmark_time)." sec\n";
-								$benchmark_time = microtime(true);
-								
-								if ($running_games[$running_game_i]->db_game['game_status'] == "running") {
-									$last_block_id = $running_games[$running_game_i]->blockchain->last_block_id();
-									
-									$block_prob = min(1, $remaining_prob);
-									$remaining_prob = $remaining_prob-$block_prob;
-									$rand_num = rand(0, pow(10,4))/pow(10,4);
-									if (!empty($_REQUEST['force_new_block'])) $rand_num = 0;
-									
-									if ($print_debug) echo $running_games[$running_game_i]->db_game['name']." (".$rand_num." vs ".$block_prob."): ";
-									if ($rand_num <= $block_prob) {
-										if ($print_debug) echo "FOUND A BLOCK!!\n";
-										$txt = $running_games[$running_game_i]->new_block();
-										if ($print_debug) echo $txt;
-										list($successful, $this_log_text) = $running_games[$running_game_i]->sync($print_debug);
-									}
-									else {
-										if ($print_debug) echo "No block\n";
-									}
-								}
-								else $remaining_prob = 0;
-								
-								if ($print_debug) echo (microtime(true)-$benchmark_time)." sec\n";
-								$benchmark_time = microtime(true);
-							}
-							while ($remaining_prob > 0 && microtime(true)-$thisgame_loop_start_time < 60);
-							
-							$running_games[$running_game_i]->blockchain->set_last_hash_time(time());
-						}
 						if ($print_debug) echo "Apply user strategies...";
 						$txt = $running_games[$running_game_i]->apply_user_strategies();
 						
