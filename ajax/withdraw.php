@@ -14,8 +14,8 @@ if ($thisuser && $game) {
 	$address_text = $_REQUEST['address'];
 	
 	if ($amount > 0 && $fee >= 0) {
-		$amount = $amount*pow(10,8);
-		$fee = $fee*pow(10,8);
+		$amount = $amount*pow(10,$game->db_game['decimal_places']);
+		$fee = $fee*pow(10,$game->db_game['decimal_places']);
 		$last_block_id = $game->blockchain->last_block_id();
 		$mining_block_id = $last_block_id+1;
 		
@@ -59,7 +59,7 @@ if ($thisuser && $game) {
 						$validate_address = $coin_rpc->validateaddress($address_text);
 						$address_ok = $validate_address['isvalid'];
 						if ($address_ok) {
-							$db_address = $game->blockchain->create_or_fetch_address($address_text, TRUE, $coin_rpc, FALSE, FALSE, FALSE);
+							$db_address = $game->blockchain->create_or_fetch_address($address_text, TRUE, $coin_rpc, FALSE, FALSE, FALSE, FALSE);
 						}
 					}
 					else {

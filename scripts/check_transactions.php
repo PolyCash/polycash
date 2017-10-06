@@ -23,6 +23,29 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$last_block_id = $game->last_block_id();
 		
 		echo "Last game block loaded was #".$last_block_id."<br/>\n";
+		
+		$qqq = "SELECT * FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND transaction_desc='transaction' AND block_id IS NULL;";
+		$rrr = $app->run_query($qqq);
+		
+		echo "Checking ".$rrr->rowCount()." unconfirmed transactions in ".$blockchain->db_blockchain['blockchain_name']."<br/>\n";
+		
+		while ($transaction = $rrr->fetch()) {
+			$coins_in = $app->transaction_coins_in($transaction['transaction_id']);
+			$coins_out = $app->transaction_coins_out($transaction['transaction_id']);
+			
+			if ($coins_in != $coins_out) {
+				echo "TX ".$transaction['tx_hash']." has ".$coins_in." coins in, ".$coins_out." coins out.<br/>\n";
+				
+				if ($coins_in == 0) {
+					echo "Deleting ".$transaction['tx_hash']." ...<br/>\n";
+					$qqqq = "DELETE FROM transaction_ios WHERE create_transaction_id='".$transaction['transaction_id']."';";
+					$rrrr = $app->run_query($qqqq);
+					$qqqq = "DELETE FROM transactions WHERE transaction_id='".$transaction['transaction_id']."';";
+					$rrrr = $app->run_query($qqqq);
+				}
+			}
+		}
+		
 		echo "Checking ".$rr->rowCount()." transactions for ".$game->db_game['name']."<br/>\n";
 		
 		while ($transaction = $rr->fetch()) {
@@ -30,7 +53,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			$coins_out = $game->transaction_coins_out($transaction['transaction_id'], true);
 			if (($coins_in == 0 || $coins_out == 0) || $coins_in < $coins_out || $coins_out-$coins_in > 0.5) {
 				if (!$first_error_block) $first_error_block = $transaction['block_id'];
-				echo 'Block '.$transaction['block_id'].' <a href="/explorer/games/'.$game->db_game['url_identifier'].'/transactions/'.$transaction['transaction_id'].'">TX '.$transaction['transaction_id'].'</a> has '.$app->format_bignum($coins_in/pow(10,8)).' coins in and '.$app->format_bignum($coins_out/pow(10,8)).' coins out.<br/>';
+				echo 'Block '.$transaction['block_id'].' <a href="/explorer/games/'.$game->db_game['url_identifier'].'/transactions/'.$transaction['transaction_id'].'">TX '.$transaction['transaction_id'].'</a> has '.($coins_in/pow(10,$game->db_game['decimal_places'])).' coins in and '.($coins_out/pow(10,$game->db_game['decimal_places'])).' coins out.<br/>';
 				$error_count++;
 			}
 		}
@@ -38,7 +61,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		echo $error_count." errors.<br/>\n";
 		
 		if ($first_error_block) {
-			$reset_block = min($first_error_block-1, $last_block_id+1);
+			$reset_block = min($first_error_block, $last_block_id+1);
 			
 			echo "First error was on block #".$first_error_block.", please <a href=\"/scripts/reset_game.php?game_id=".$game->db_game['game_id']."&key=".$GLOBALS['cron_key_string']."&block_id=".$reset_block."\">reset the game from block ".$reset_block."</a><br/>\n";
 		}

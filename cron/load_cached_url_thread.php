@@ -11,9 +11,13 @@ if (!empty($argv)) {
 	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
 	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
 	if (!empty($cmd_vars['process_index'])) $_REQUEST['process_index'] = $cmd_vars['process_index'];
+	if (!empty($cmd_vars['print_debug'])) $_REQUEST['print_debug'] = $cmd_vars['print_debug'];
 }
 
 if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+	$print_debug = false;
+	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
+	
 	$process_index = $_REQUEST['process_index'];
 	
 	$app->log_message("running cached url thread $process_index at ".time());

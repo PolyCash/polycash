@@ -2,9 +2,7 @@
 set_time_limit(0);
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
-if ($GLOBALS['process_lock_method'] == "db") {
-	include(realpath(dirname(dirname(__FILE__)))."/includes/handle_script_shutdown.php");
-}
+include(realpath(dirname(dirname(__FILE__)))."/includes/handle_script_shutdown.php");
 
 $script_target_time = 59;
 $script_start_time = microtime(true);
@@ -14,20 +12,20 @@ if (!empty($argv)) {
 	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
 	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
 	if (!empty($cmd_vars['game_id'])) $_REQUEST['game_id'] = $cmd_vars['game_id'];
+	if (!empty($cmd_vars['print_debug'])) $_REQUEST['print_debug'] = $cmd_vars['print_debug'];
 }
 
 if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+	$print_debug = false;
+	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
+	
 	$loading_games = $app->check_process_running("loading_games");
 	
 	if (!$loading_games) {
-		$print_debug = false;
-		
-		if ($GLOBALS['process_lock_method'] == "db") {
-			$GLOBALS['app'] = $app;
-			$GLOBALS['shutdown_lock_name'] = "loading_games";
-			$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
-			register_shutdown_function("script_shutdown");
-		}
+		$GLOBALS['app'] = $app;
+		$GLOBALS['shutdown_lock_name'] = "loading_games";
+		$app->set_site_constant($GLOBALS['shutdown_lock_name'], getmypid());
+		register_shutdown_function("script_shutdown");
 		
 		$blockchains = array();
 		
@@ -35,7 +33,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		do {
 			$loop_start_time = microtime(true);
 			
-			$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
+			if ($GLOBALS['process_lock_method'] == "db") $app->set_site_constant($GLOBALS['shutdown_lock_name'], getmypid());
 			
 			$real_game_q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE g.game_status IN ('published','running')";
 			if (!empty($_REQUEST['game_id'])) $real_game_q .= " AND g.game_id='".(int)$_REQUEST['game_id']."'";
@@ -58,7 +56,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		}
 		while (microtime(true) < $script_start_time + ($script_target_time-$loop_target_time));
 	}
-	echo "Game load script is already running...\n";
+	else echo "Game load script is already running...\n";
 }
 else echo "Please supply the correct key.\n";
 ?>

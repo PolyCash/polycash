@@ -34,10 +34,7 @@ if ($game->db_game['invite_currency'] > 0) {
 }
 else $exchange_rate = 0;
 ?>
-<div class="container" style="max-width: 1000px; padding-top: 10px;">
-	<div class="paragraph">
-		<a href="/">&larr; All <?php echo $GLOBALS['coin_brand_name']; ?> games</a>
-	</div>
+<div class="container-fluid">
 	<div class="paragraph">
 		<h1 style="margin-bottom: 2px;"><?php echo $game->db_game['name']; ?></h1>
 		<div class="row">
@@ -45,10 +42,10 @@ else $exchange_rate = 0;
 				<?php
 				$blocks_per_hour = 3600/$game->blockchain->db_blockchain['seconds_per_block'];
 				$seconds_per_round = $game->blockchain->db_blockchain['seconds_per_block']*$game->db_game['round_length'];
-				$round_reward = ($app->coins_created_in_round($game->db_game, $current_round))/pow(10,8);
+				$round_reward = ($app->coins_created_in_round($game->db_game, $current_round))/pow(10,$game->db_game['decimal_places']);
 
 				if ($game->db_game['inflation'] == "linear") {
-					$miner_pct = 100*($game->db_game['pow_reward']*$game->db_game['round_length'])/($round_reward*pow(10,8));
+					$miner_pct = 100*($game->db_game['pow_reward']*$game->db_game['round_length'])/($round_reward*pow(10,$game->db_game['decimal_places']));
 				}
 				else $miner_pct = 100*$game->db_game['exponential_inflation_minershare'];
 				?>
@@ -90,12 +87,12 @@ else $exchange_rate = 0;
 					}
 					
 					if ($game->db_game['short_description'] != "") {
-						echo $game->db_game['short_description']." ";
+						echo '</div><div class="paragraph">'.$game->db_game['short_description']." ";
 					}
 					
 					if ($exchange_rate > 0 && $game->db_game['buyin_policy'] != "none") {
 						if ($game->escrow_value(false) > 0) {
-							$escrow_amount_disp = $app->format_bignum($game->escrow_value(false)/pow(10,8));
+							$escrow_amount_disp = $app->format_bignum($game->escrow_value(false)/pow(10,$game->db_game['decimal_places']));
 							echo "Right now there's ".$escrow_amount_disp." ";
 							if ($escrow_amount_disp == "1") echo $game->blockchain->db_blockchain['coin_name'];
 							else echo $game->blockchain->db_blockchain['coin_name_plural'];
@@ -114,7 +111,7 @@ else $exchange_rate = 0;
 						$invite_currency = $r->fetch();
 						echo '<div class="paragraph">';
 						
-						$receive_disp = $app->format_bignum($game->db_game['giveaway_amount']/pow(10,8));
+						$receive_disp = $app->format_bignum($game->db_game['giveaway_amount']/pow(10,$game->db_game['decimal_places']));
 						if ($game->db_game['giveaway_status'] == "invite_pay" || $game->db_game['giveaway_status'] == "invite_free") echo "You need an invitation to join this game. After receiving an invitation you can join";
 						else echo 'You can join this game';
 						echo ' by buying '.$receive_disp.' ';
@@ -128,7 +125,7 @@ else $exchange_rate = 0;
 						echo ". ";
 
 						/*if ($game->db_game['game_status'] == "running") {
-							echo "This game started ".$app->format_seconds(time()-$game->db_game['start_time'])." ago; ".$app->format_bignum($game->coins_in_existence(false)/pow(10,8))." ".$game->db_game['coin_name_plural']."  are already in circulation. ";
+							echo "This game started ".$app->format_seconds(time()-$game->db_game['start_time'])." ago; ".$app->format_bignum($game->coins_in_existence(false)/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']."  are already in circulation. ";
 						}
 						else {
 							if ($game->db_game['start_condition'] == "fixed_time") {
@@ -157,12 +154,19 @@ else $exchange_rate = 0;
 					In this game you can win <?php echo $game->db_game['coin_name_plural']; ?> by casting your votes correctly.  Votes build up over time based on the number of <?php echo $game->db_game['coin_name_plural']; ?> that you hold.  When you vote for <?php echo $app->prepend_a_or_an($game->db_game['option_name']); ?>, your votes are used up but your <?php echo $game->db_game['coin_name_plural']; ?> are retained. By collaborating with your teammates against competing groups, you can make money by accumulating <?php echo $game->db_game['coin_name_plural']; ?> faster than the other players.  Through the <?php echo $GLOBALS['coin_brand_name']; ?> API you can code up a custom strategy which makes smart, real-time decisions about how to cast your votes.
 				</div>*/ ?>
 				<div class="paragraph">
-					<a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/" class="btn btn-success">Play Now</a>
+					<a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/" class="btn btn-success">
+					<?php
+					$faucet_io = $game->check_faucet(false);
+					
+					if ($faucet_io) echo 'Join now & receive '.$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'];
+					else echo 'Play Now';
+					?>
+					</a>
 					<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/" class="btn btn-primary">Blockchain Explorer</a>
 				</div>
 			</div>
 			<div class="col-md-6">
-				<div style="border: 1px solid #ccc; padding: 10px;">
+				<div style="border: 1px solid #ccc; padding: 10px; background-color: #fff;">
 					<?php
 					$game->db_game['seconds_per_block'] = $game->blockchain->db_blockchain['seconds_per_block'];
 					echo $app->game_info_table($game->db_game);
@@ -221,6 +225,7 @@ games.push(new Game(<?php
 	echo ', "'.$game->db_game['inflation'].'"';
 	echo ', "'.$game->db_game['exponential_inflation_rate'].'"';
 	echo ', "'.$blockchain_last_block['time_mined'].'"';
+	echo ', "'.$game->db_game['decimal_places'].'"';
 ?>));
 
 games[0].game_loop_event();

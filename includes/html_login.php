@@ -92,66 +92,73 @@ function login() {
 	});
 }
 </script>
-<br/>
+
 <input type="hidden" id="redirect_id" value="<?php if ($redirect_id) echo $redirect_id; ?>" />
 <input type="hidden" name="invite_key" value="<?php if (!empty($_REQUEST['invite_key'])) echo $app->strong_strip_tags($app->make_alphanumeric($_REQUEST['invite_key'], "")); ?>" />
-<form id="alias_form" action="/" method="get" onsubmit="check_alias(); return false;">
-	<div class="row">
-		<div class="col-md-8 col-md-push-2">
-			<h3>To continue, please register for a user account.</h3>
-			Please sign up or log in by entering your public username.
-		</div>
+
+<div class="panel panel-default" style="margin-top: 15px;">
+	<div class="panel-heading">
+		<div class="panel-title">To continue, please register for a user account.</div>
 	</div>
-	<div class="row" style="padding-top: 10px;">
-		<div class="col-md-8 col-md-push-2">
-			<input id="alias" class="form-control" placeholder="Enter your username / alias." />
-			<script type="text/javascript">
-			$('#alias').focus();
-			</script>
-		</div>
-	</div>
-	<div class="row" style="padding-top: 10px;">
-		<div class="col-md-8 col-md-push-2">
-			<button id="check_alias_btn" class="btn btn-success">Continue</button>
-		</div>
-	</div>
-</form>
-<div style="display: none;" id="registration_options">
-	<form id="registration_form" action="/" method="get" onsubmit="register(); return false;">
-		<div class="row">
-			<div id="registration_options_step1" class="col-md-8 col-md-push-2">
-				<div id="registration_options_message" style="margin-bottom: 10px;" class="greentext"></div>
-			</div>
-			<div id="registration_options_step1" class="col-md-8 col-md-push-2"<?php if (empty($GLOBALS['login_by_email_enabled'])) { ?> style="display: none;"<?php } ?>>
-				How would you like to log in?<br/>
-				<select style="margin-top: 10px;" id="login_method" class="form-control" onchange="login_method_changed();">
-					<option value="">-- Please Select --</option>
-					<option value="password">I'll create a secure password</option>
-					<option value="email">Email me a link whenever I want to sign in</option>
-				</select>
-			</div>
-			<div id="registration_options_step2"<?php if (!empty($GLOBALS['login_by_email_enabled'])) { ?> style="display: none;"<?php } ?>>
-				<div class="col-md-8 col-md-push-2">
-					<input id="registration_options_email" type="email" class="form-control" placeholder="Enter your email address" />
-				</div>
-				<div class="col-md-8 col-md-push-2">
-					<input id="registration_options_password" type="password" class="form-control" placeholder="Enter your password" />
-				</div>
-				<div class="col-md-8 col-md-push-2">
-					<input type="submit" class="btn btn-success" value="Sign Up" id="register_btn" />
+	<div class="panel-body">
+		<form id="alias_form" action="/" method="get" onsubmit="check_alias(); return false;">
+			<div class="row">
+				<div class="col-md-8">
+					Please sign up or log in by entering a username.
 				</div>
 			</div>
-		</div>
-	</form>
-</div>
-<div style="display: none;" id="login_password">
-	<form id="login_form" action="/" method="get" onsubmit="login(); return false;">
-		<div class="row">
-			<div class="col-md-8 col-md-push-2">
-				Please enter your password:<br/>
-				<input id="login_password_password" style="margin-top: 10px;" type="password" required="required" class="form-control" />
-				<input id="login_btn" type="submit" style="margin-top: 10px;" class="btn btn-success" value="Log In" />
+			<div class="row" style="padding-top: 10px;">
+				<div class="col-md-8">
+					<input id="alias" class="form-control" placeholder="Enter your username / alias." />
+					<script type="text/javascript">
+					$('#alias').focus();
+					</script>
+				</div>
 			</div>
+			<div class="row" style="padding-top: 10px;">
+				<div class="col-md-8">
+					<button id="check_alias_btn" class="btn btn-success">Continue</button>
+				</div>
+			</div>
+		</form>
+		<div style="display: none;" id="registration_options">
+			<form id="registration_form" action="/" method="get" onsubmit="register(); return false;">
+				<div class="row">
+					<div id="registration_options_step1" class="col-md-8">
+						<div id="registration_options_message" style="margin-bottom: 10px;" class="greentext"></div>
+					</div>
+					<div id="registration_options_step1" class="col-md-8"<?php if (empty($GLOBALS['login_by_email_enabled'])) { ?> style="display: none;"<?php } ?>>
+						How would you like to log in?<br/>
+						<select style="margin-top: 10px;" id="login_method" class="form-control" onchange="login_method_changed();">
+							<option value="">-- Please Select --</option>
+							<option value="password">I'll create a secure password</option>
+							<option value="email">Email me a link whenever I want to sign in</option>
+						</select>
+					</div>
+					<div id="registration_options_step2"<?php if (!empty($GLOBALS['login_by_email_enabled'])) { ?> style="display: none;"<?php } ?>>
+						<div class="col-md-8">
+							<input id="registration_options_email" type="email" class="form-control" placeholder="Enter your email address" />
+						</div>
+						<div class="col-md-8">
+							<input id="registration_options_password" type="password" class="form-control" placeholder="Enter your password" />
+						</div>
+						<div class="col-md-8">
+							<input type="submit" class="btn btn-success" value="Sign Up" id="register_btn" />
+						</div>
+					</div>
+				</div>
+			</form>
 		</div>
-	</form>
+		<div style="display: none;" id="login_password">
+			<form id="login_form" action="/" method="get" onsubmit="login(); return false;">
+				<div class="row">
+					<div class="col-md-8">
+						Please enter your password:<br/>
+						<input id="login_password_password" style="margin-top: 10px;" type="password" required="required" class="form-control" />
+						<input id="login_btn" type="submit" style="margin-top: 10px;" class="btn btn-success" value="Log In" />
+					</div>
+				</div>
+			</form>
+		</div>
+	</div>
 </div>

@@ -11,11 +11,8 @@ if (PHP_OS != "WINNT") {
 }
 
 function script_shutdown(){
-	echo "script terminating...\n";
-	
 	if (!empty($GLOBALS['shutdown_lock_name'])) {
 		$GLOBALS['app']->set_site_constant($GLOBALS['shutdown_lock_name'], 0);
-		echo "set_site_constant(".$GLOBALS['shutdown_lock_name'].", 0);\n\n";
 	}
 	die();
 }

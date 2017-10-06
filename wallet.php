@@ -114,7 +114,7 @@ if ($thisuser) {
 					$('#payout_address').focus();
 				});
 				</script>
-				<div class="container" style="max-width: 1000px; padding-top: 10px;">
+				<div class="container-fluid">
 					<form action="/wallet/<?php echo $requested_game['url_identifier']; ?>/" method="post">
 						<input type="hidden" name="action" value="save_address" />
 						Please specify a <?php echo $game->blockchain->db_blockchain['coin_name']; ?> address where your winnings should be sent:<br/>
@@ -147,7 +147,7 @@ if ($thisuser) {
 			$nav_tab_selected = "wallet";
 			include('includes/html_start.php');
 			?>
-			<div class="container" style="max-width: 1000px; padding-top: 10px;">
+			<div class="container-fluid">
 				You need an invitation to join this game.
 				<?php
 				if ($requested_game['invitation_link'] != "") {
@@ -164,7 +164,7 @@ if ($thisuser) {
 			$nav_tab_selected = "wallet";
 			include('includes/html_start.php');
 			?>
-			<div class="container" style="max-width: 1000px; padding-top: 10px;">
+			<div class="container-fluid">
 				<?php
 				$invite_currency = $app->fetch_currency_by_id($requested_game['invite_currency']);
 				
@@ -223,14 +223,14 @@ if ($thisuser) {
 								$pay_currency = $app->fetch_currency_by_id($invoice['pay_currency_id']);
 								$currency_address = $app->fetch_currency_address_by_id($invoice['currency_address_id']);
 
-								$coins_per_currency = ($requested_game['giveaway_amount']/pow(10,8))/$requested_game['invite_cost'];
+								$coins_per_currency = ($requested_game['giveaway_amount']/pow(10,$requested_game['decimal_places']))/$requested_game['invite_cost'];
 								echo "This game has an initial exchange rate of ".$app->format_bignum($coins_per_currency)." ".$requested_game['coin_name_plural']." per ".$invite_currency['short_name'].". ";
 								
 								$buyin_disp = $app->format_bignum($requested_game['invite_cost']);
 								echo "To join this game, you need to make a payment of ".$buyin_disp." ".$invite_currency['short_name'];
 								if ($buyin_disp != '1') echo "s";
 								
-								$receive_disp = $app->format_bignum($requested_game['giveaway_amount']/pow(10,8));
+								$receive_disp = $app->format_bignum($requested_game['giveaway_amount']/pow(10,$requested_game['decimal_places']));
 								echo " in exchange for ".$receive_disp." ";
 								if ($receive_disp == '1') echo $requested_game['coin_name'];
 								else echo $requested_game['coin_name_plural'];
@@ -272,21 +272,38 @@ if ($thisuser) {
 		$nav_tab_selected = "wallet";
 		include('includes/html_start.php');
 		?>
-		<div class="container" style="max-width: 1000px;"><br/>
-			<?php
-			$q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser->db_user['user_id']."' AND (g.creator_id='".$thisuser->db_user['user_id']."' OR g.game_status IN ('running','completed','published')) GROUP BY ug.game_id;";
-			$r = $app->run_query($q);
-			
-			if ($r->rowCount() > 0) {
-				echo "Please select a game.<br/>\n";
-				while ($user_game = $r->fetch()) {
-					echo "<a href=\"/wallet/".$user_game['url_identifier']."/\">".$user_game['name']."</a><br/>\n";
+		<div class="container-fluid">
+			<div class="panel panel-default" style="margin-top: 15px;">
+				<?php
+				$q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser->db_user['user_id']."' AND (g.creator_id='".$thisuser->db_user['user_id']."' OR g.game_status IN ('running','completed','published')) GROUP BY ug.game_id;";
+				$r = $app->run_query($q);
+				
+				if ($r->rowCount() > 0) {
+					?>
+					<div class="panel-heading">
+						<div class="panel-title">Please select a game:</div>
+					</div>
+					<div class="panel-body">
+						<?php
+						while ($user_game = $r->fetch()) {
+							echo "<a href=\"/wallet/".$user_game['url_identifier']."/\">".$user_game['name']."</a><br/>\n";
+						}
+						?>
+					</div>
+					<?php
 				}
-			}
-			else {
-				echo "You haven't joined any games yet.  <a href=\"/\">Click here</a> to see a list of available games.<br/>\n";
-			}
-			?>
+				else {
+					?>
+					<div class="panel-heading">
+						<div class="panel-title">Please select a game.</div>
+					</div>
+					<div class="panel-body">
+						You haven't joined any games yet.  <a href="/">Click here</a> to see a list of available games.
+					</div>
+					<?php
+				}
+				?>
+			</div>
 		</div>
 		<?php
 		include('includes/html_stop.php');
@@ -333,19 +350,13 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 	}
 	if ($_REQUEST['action'] == "save_voting_strategy_fees") {
 		$transaction_fee = floatval($_REQUEST['transaction_fee']);
-		if ($transaction_fee == floor($transaction_fee*pow(10,8))/pow(10,8)) {
-			$transaction_fee = $transaction_fee*pow(10,8);
-			$q = "UPDATE user_strategies SET transaction_fee='".$transaction_fee."' WHERE strategy_id='".$user_strategy['strategy_id']."';";
-			$r = $app->run_query($q);
-			$user_strategy['transaction_fee'] = $transaction_fee;
-			
-			$error_code = 1;
-			$message = "Great, your transaction fee has been updated!";
-		}
-		else {
-			$error_code = 2;
-			$message = "Error: that fee amount is invalid, your changes were not saved.";
-		}
+		
+		$q = "UPDATE user_strategies SET transaction_fee='".$transaction_fee."' WHERE strategy_id='".$user_strategy['strategy_id']."';";
+		$r = $app->run_query($q);
+		$user_strategy['transaction_fee'] = $transaction_fee;
+		
+		$error_code = 1;
+		$message = "Great, your transaction fee has been updated!";
 	}
 	else {
 		if (in_array($voting_strategy, array('manual', 'api', 'by_plan', 'by_entity'))) {
@@ -443,6 +454,8 @@ if ($_REQUEST['action'] == "signup" && $error_code == 1) { ?>
 }
 
 $initial_tab = 0;
+if (!empty($_REQUEST['initial_tab'])) $initial_tab = (int) $_REQUEST['initial_tab'];
+
 if ($thisuser && $game) {
 	$account_value = $thisuser->account_coin_value($game, $user_game);
 	$immature_balance = $thisuser->immature_balance($game, $user_game);
@@ -458,7 +471,7 @@ if ($thisuser && $game) {
 	$block_within_round = $game->block_id_to_round_index($last_block_id+1);
 }
 ?>
-<div class="container" style="max-width: 1000px;">
+<div class="container-fluid">
 	<?php
 	if ($message != "") {
 		echo '<font style="display: block; margin: 10px 0px;" class="';
@@ -529,6 +542,7 @@ if ($thisuser && $game) {
 			echo ', "'.$game->db_game['inflation'].'"';
 			echo ', "'.$game->db_game['exponential_inflation_rate'].'"';
 			echo ', "'.$blockchain_last_block['time_mined'].'"';
+			echo ', "'.$game->db_game['decimal_places'].'"';
 		?>));
 		
 		games[0].game_loop_event();
@@ -594,465 +608,455 @@ if ($thisuser && $game) {
 		//]]>
 		</script>
 		
-		<h1><?php
-		echo $game->db_game['name'];
-		if ($game->db_game['game_status'] == "paused" || $game->db_game['game_status'] == "unstarted") echo " (Paused)";
-		else if ($game->db_game['game_status'] == "completed") echo " (Completed)";
-		?></h1>
-		
-		<div style="display: none;" class="modal fade" id="game_invitations">
-			<div class="modal-dialog">
-				<div class="modal-content">
-					<div class="modal-header">
-						<h4 class="modal-title">Game Invitations</h4>
-					</div>
-					<div class="modal-body" id="game_invitations_inner">
-					</div>
-				</div>
-			</div>
-		</div>
-		
-		<?php
-		include("includes/wallet_status.php");
-		
-		/*if ($game->db_game['inflation'] == "exponential") {
-			echo '<div class="row"><div class="col-sm-2">Vote&nbsp;conversion&nbsp;rate:</div><div style="text-align: right;" class="col-sm-3"><font class="greentext">';
-			echo $app->format_bignum($app->votes_per_coin($game->db_game)).'</font> votes &rarr; <font class="greentext">1</font> '.$game->db_game['coin_name'].'</div></div>';
-		}*/
-		?>
-		<div id="wallet_text_stats">
-			<?php
-			echo $thisuser->wallet_text_stats($game, $blockchain_current_round, $blockchain_last_block_id, $blockchain_block_within_round, $mature_balance, $immature_balance, $user_game);
-			?>
-		</div>
-		<br/>
-		
-		<div class="row">
-			<div class="col-xs-2 tabcell" id="tabcell0" onclick="tab_clicked(0);">Play&nbsp;Now</div>
-			<div class="col-xs-2 tabcell" id="tabcell1" onclick="tab_clicked(1);">Players</div>
-			<div class="col-xs-2 tabcell" id="tabcell2" onclick="tab_clicked(2);">Strategy</div>
-			<div class="col-xs-2 tabcell" id="tabcell3" onclick="tab_clicked(3);">Results</div>
-			<div class="col-xs-2 tabcell" id="tabcell4" onclick="tab_clicked(4);">Deposit&nbsp;or&nbsp;Withdraw</div>
-			<div class="col-xs-2 tabcell" id="tabcell5" onclick="tab_clicked(5);">My&nbsp;Games</div>
-		</div>
-		<div class="row">
-			<div id="tabcontent0" class="tabcontent">
-				<?php
-				if ($game->db_game['buyin_policy'] != "none") { ?>
-					<button style="float: right;" class="btn btn-success" onclick="initiate_buyin();">Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
+		<div class="panel panel-default" style="margin-top: 15px;">
+			<div class="panel-heading">
+				<div class="panel-title">
 					<?php
-				}
-				
-				$faucet_io = $game->check_faucet($user_game);
-				if ($faucet_io) {
-					echo '<p><button id="faucet_btn" class="btn btn-success" onclick="claim_from_faucet();">Claim '.$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,8)).' '.$game->db_game['coin_name_plural'].'</button></p>'."\n";
-				}
-				
-				$game_status_explanation = $game->game_status_explanation($thisuser, $user_game);
-				?>
-				<div style="display: block; overflow: hidden;">
-					<div id="game_status_explanation"<?php if ($game_status_explanation == "") echo ' style="display: none;"'; ?>><?php if ($game_status_explanation != "") echo $game_status_explanation; ?></div>
-					
-					<div id="change_user_game">
-						<select id="select_user_game" class="form-control" onchange="change_user_game();">
-							<?php
-							$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
-							$r = $app->run_query($q);
-							while ($db_user_game = $r->fetch()) {
-								echo "<option ";
-								if ($db_user_game['user_game_id'] == $user_game['user_game_id']) echo "selected=\"selected\" ";
-								echo "value=\"".$db_user_game['user_game_id']."\">Account #".$db_user_game['account_id']." &nbsp;&nbsp; ".$app->format_bignum($db_user_game['account_value'])." ".$game->db_game['coin_abbreviation']."</option>\n";
-							}
-							?>
-							<option value="new">Create a new account</option>
-						</select>
-					</div>
-				</div>
-				
-				<div id="game0_events" class="game_events"></div>
-				
-				<script type="text/javascript" id="game0_new_event_js">
-				<?php
-				echo $game->new_event_js(0, $thisuser);
-				?>
-				</script>
-				<div id="vote_popups_disabled"<?php if ($block_within_round != $game->db_game['round_length']) echo ' style="display: none;"'; ?>>
-					The final block of the round is being mined. Voting is currently disabled.
-				</div>
-				<div id="select_input_buttons"><?php
-					echo $game->select_input_buttons($user_game);
-				?></div>
-				
-				<div class="redtext" id="compose_vote_errors" style="margin-top: 5px;"></div>
-				<div class="greentext" id="compose_vote_success" style="margin-top: 5px;"></div>
-				
-				<div id="compose_vote" style="display: none;">
-					<h2>Vote Now</h2>
-					<div class="row bordered_row" style="border: 1px solid #bbb;">
-						<div class="col-md-6 bordered_cell" id="compose_vote_inputs">
-							<b>Inputs:</b><div style="display: none; margin-left: 20px;" id="input_amount_sum"></div><div style="display: inline-block; margin-left: 20px;" id="input_vote_sum"></div><br/>
-							<div id="compose_input_start_msg">Add inputs by clicking on the votes above.</div>
-						</div>
-						<div class="col-md-6 bordered_cell" id="compose_vote_outputs">
-							<b>Outputs:</b><div id="display_tx_fee"></div><br/>
-							<select class="form-control" id="select_add_output" onchange="select_add_output_changed();"></select>
-						</div>
-					</div>
-					<button class="btn btn-success" id="confirm_compose_vote_btn" style="margin-top: 5px; margin-left: 5px;" onclick="confirm_compose_vote();">Confirm & Stake</button>
+					echo $game->db_game['name'];
+					if ($game->db_game['game_status'] == "paused" || $game->db_game['game_status'] == "unstarted") echo " (Paused)";
+					else if ($game->db_game['game_status'] == "completed") echo " (Completed)";
+					?>
 				</div>
 			</div>
-			
-			<div class="tabcontent" style="display: none;" id="tabcontent1">
-				<?php
-				echo $game->render_game_players();
-				?>
-			</div>
-			
-			<div id="tabcontent2" style="display: none;" class="tabcontent">
-				<?php
-				if ($user_game['payout_address_id'] > 0) {
-					$payout_address = $app->fetch_external_address_by_id($user_game['payout_address_id']);
-					echo "Payout address: ".$payout_address['address'];
-				}
-				else {
-					echo "You haven't specified a payout address for this game.";
-				}
-				?>
-				<br/>
-				<h2>Transaction Fees</h2>
-				<form method="post" action="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">
-					<input type="hidden" name="action" value="save_voting_strategy_fees" />
-					<input type="hidden" name="voting_strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
-					Pay fees on every transaction of:<br/>
-					<div class="row">
-						<div class="col-sm-4"><input class="form-control" name="transaction_fee" value="<?php echo $app->format_bignum($user_strategy['transaction_fee']/pow(10,8)); ?>" placeholder="0.001" /></div>
-						<div class="col-sm-4 form-control-static"><?php
-						echo $game->blockchain->db_blockchain['coin_name_plural'];
-						?></div>
-					</div>
-					<div class="row">
-						<div class="col-sm-3">
-							<input class="btn btn-primary" type="submit" value="Save" />
-						</div>
-					</div>
-				</form>
-				<br/>
-				
-				<h2>Notifications</h2>
-				Would you like to receive notifications whenever a new round begins?<br/>
-				<div class="row">
-					<div class="col-sm-6">
-						<select class="form-control" id="notification_preference" name="notification_preference" onfocus="notification_focused();" onchange="notification_pref_changed();">
-							<option <?php if ($user_game['notification_preference'] == "none") echo 'selected="selected" '; ?>value="none">No, don't notify me</option>
-							<option <?php if ($user_game['notification_preference'] == "email") echo 'selected="selected" '; ?>value="email">Yes, email me whenever a new round starts</option>
-						</select>
-					</div>
-					<div class="col-sm-6">
-						<input style="display: none;" class="form-control" type="text" name="notification_email" id="notification_email" onfocus="notification_focused();" placeholder="Enter your email address" value="<?php echo $thisuser->db_user['notification_email']; ?>" />
-					</div>
-				</div>
-				<button style="display: none;" id="notification_save_btn" class="btn btn-primary" onclick="save_notification_preferences();">Save Notification Settings</button>
-				<br/>
-				
-				<h2>Choose your voting strategy</h2>
-				Please set up a voting strategy so that your votes can be cast even when you're not online to vote.<br/><br/>
-				<form method="post" action="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">
-					<input type="hidden" name="action" value="save_voting_strategy" />
-					<input type="hidden" id="voting_strategy_id" name="voting_strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
-					
-					<div class="row bordered_row">
-						<div class="col-md-2">
-							<input type="radio" id="voting_strategy_manual" name="voting_strategy" value="manual"<?php if ($user_strategy['voting_strategy'] == "manual") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_manual">&nbsp;No&nbsp;auto-strategy</label>
-						</div>
-						<div class="col-md-10">
-							<label class="plainlabel" for="voting_strategy_manual"> 
-								I'll log in and vote in each round.
-							</label>
-						</div>
-					</div>
-					
-					<div class="row bordered_row">
-						<div class="col-md-2">
-							<input type="radio" id="voting_strategy_api" name="voting_strategy" value="api"<?php if ($user_strategy['voting_strategy'] == "api") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_api">&nbsp;Vote&nbsp;by&nbsp;API</label>
-						</div>
-						<div class="col-md-10">
-							<label class="plainlabel" for="voting_strategy_api">
-								Hit a custom URL whenever I have <?php echo $game->db_game['coin_name_plural']; ?> available to determine my votes: <input type="text" size="40" placeholder="http://" name="api_url" id="api_url" value="<?php echo $user_strategy['api_url']; ?>" />
-							</label><br/>
-							Your API access code is <?php echo $user_game['api_access_code']; ?><br/>
-							<a href="/api/about/">API documentation</a><br/>
-						</div>
-					</div>
-					
-					<div class="row bordered_row">
-						<div class="col-md-2">
-							<input type="radio" id="voting_strategy_by_entity" name="voting_strategy" value="by_entity"<?php if ($user_strategy['voting_strategy'] == "by_entity") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_entity">&nbsp;Vote&nbsp;by&nbsp;option</label>
-						</div>
-						<div class="col-md-10">
-							<label class="plainlabel" for="voting_strategy_by_entity"> 
-								Vote for these options every time. The percentages you enter below must add up to 100.<br/>
-								<?php /*<a href="" onclick="by_entity_reset_pct(); return false;">Set all to zero</a> <div style="margin-left: 15px; display: inline-block;" id="entity_pct_subtotal">&nbsp;</div>*/ ?>
-							</label><br/>
-							<?php
-							$q = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id JOIN entities en ON op.entity_id=en.entity_id WHERE e.game_id='".$game->db_game['game_id']."' GROUP BY en.entity_id ORDER BY en.entity_id ASC;";
-							$r = $app->run_query($q);
-							$entity_i = 0;
-							while ($entity = $r->fetch()) {
-								$qq = "SELECT * FROM user_strategy_entities WHERE strategy_id='".$user_strategy['strategy_id']."' AND entity_id='".$entity['entity_id']."';";
-								$rr = $app->run_query($qq);
-								if ($rr->rowCount() > 0) {
-									$pct_points = $rr->fetch()['pct_points'];
-								}
-								else $pct_points = "";
-								
-								if ($entity_i%4 == 0) echo '<div class="row">';
-								echo '<div class="col-md-3">';
-								echo '<input type="tel" size="4" name="entity_pct_'.$entity['entity_id'].'" id="entity_pct_'.$entity_i.'" placeholder="0" value="'.$pct_points.'" />';
-								echo '<label class="plainlabel" for="entity_pct_'.$entity_i.'">% ';
-								echo $entity['entity_name']."</label>";
-								echo '</div>';
-								if ($entity_i%4 == 3) echo "</div>\n";
-								$entity_i++;
-							}
-							if ($entity_i%4 != 0) echo "</div>\n";
-							?>
-						</div>
-					</div>
-					<?php /*
-					<div class="row bordered_row">
-						<div class="col-md-2">
-							<input type="radio" id="voting_strategy_by_rank" name="voting_strategy" value="by_rank"<?php if ($user_strategy['voting_strategy'] == "by_rank") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_rank">&nbsp;Vote&nbsp;by&nbsp;rank</label>
-						</div>
-						<div class="col-md-10">
-							<label class="plainlabel" for="voting_strategy_by_rank">
-								Split up my free balance and vote it across options ranked:
-							</label><br/>
-							<input type="checkbox" id="rank_check_all" onchange="rank_check_all_changed();" /><label class="plainlabel" for="rank_check_all"> All</label><br/>
-							<?php
-							$by_rank_ranks = explode(",", $user_strategy['by_rank_ranks']);
-							
-							for ($rank=1; $rank<=$game->db_game['num_voting_options']; $rank++) {
-								if ($rank%4 == 1) echo '<div class="row">';
-								echo '<div class="col-md-3">';
-								echo '<input type="checkbox" name="by_rank_'.$rank.'" id="by_rank_'.$rank.'" value="1"';
-								if (in_array($rank, $by_rank_ranks)) echo ' checked="checked"';
-								echo '><label class="plainlabel" for="by_rank_'.$rank.'"> '.$app->to_ranktext($rank)."</label>";
-								echo '</div>';
-								if ($rank%4 == 0 || $rank == $game->db_game['num_voting_options']) echo "</div>\n";
-							}
-							?>
-						</div>
-					</div>
-					*/ ?>
-					<div class="row bordered_row">
-						<div class="col-md-2">
-							<input type="radio" id="voting_strategy_by_plan" name="voting_strategy" value="by_plan"<?php if ($user_strategy['voting_strategy'] == "by_plan") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_plan">&nbsp;Plan&nbsp;my&nbsp;votes</label>
-						</div>
-						<div class="col-md-10">
-							<button class="btn btn-success" onclick="show_planned_votes(); return false;">Edit my planned votes</button>
-						</div>
-					</div>
-					<div class="row bordered_row">
-						<div class="col-md-12">
-							<br/><br/>
-							<b>Settings</b><br/>
-							These settings apply to "Plan my votes" and "Vote by rank" options above.<br/>
-							Wait until <input size="4" type="text" name="aggregate_threshold" id="aggregate_threshold" value="<?php echo $user_strategy['aggregate_threshold']; ?>" />% of my coins are available to vote. <br/>
-							Only vote in these blocks of the round:<br/>
-							<div class="row">
-								<div class="col-md-2">
-									<input type="checkbox" id="vote_on_block_all" onchange="vote_on_block_all_changed();" /><label class="plainlabel" for="vote_on_block_all">&nbsp;&nbsp;All</label>
-								</div>
+			<div class="panel-body">
+				<div style="display: none;" class="modal fade" id="game_invitations">
+					<div class="modal-dialog">
+						<div class="modal-content">
+							<div class="modal-header">
+								<h4 class="modal-title">Game Invitations</h4>
 							</div>
-							<div class="row">
+							<div class="modal-body" id="game_invitations_inner">
+							</div>
+						</div>
+					</div>
+				</div>
+				
+				<?php
+				include("includes/wallet_status.php");
+				
+				/*if ($game->db_game['inflation'] == "exponential") {
+					echo '<div class="row"><div class="col-sm-2">Vote&nbsp;conversion&nbsp;rate:</div><div style="text-align: right;" class="col-sm-3"><font class="greentext">';
+					echo $app->format_bignum($app->votes_per_coin($game->db_game)).'</font> votes &rarr; <font class="greentext">1</font> '.$game->db_game['coin_name'].'</div></div>';
+				}*/
+				?>
+				<div id="wallet_text_stats">
+					<?php
+					echo $thisuser->wallet_text_stats($game, $blockchain_current_round, $blockchain_last_block_id, $blockchain_block_within_round, $mature_balance, $immature_balance, $user_game);
+					?>
+				</div>
+			</div>
+		</div>
+		
+		<div id="tabcontent0" class="tabcontent">
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					<div class="panel-title">Play Now</div>
+				</div>
+				<div class="panel-body">
+					<?php
+					if ($game->db_game['buyin_policy'] != "none") { ?>
+						<button style="float: right;" class="btn btn-success" onclick="initiate_buyin();">Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
+						<?php
+					}
+					
+					$faucet_io = $game->check_faucet($user_game);
+					if ($faucet_io) {
+						echo '<p><button id="faucet_btn" class="btn btn-success" onclick="claim_from_faucet();">Claim '.$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].'</button></p>'."\n";
+					}
+					
+					$game_status_explanation = $game->game_status_explanation($thisuser, $user_game);
+					?>
+					<div style="display: block; overflow: hidden;">
+						<div id="game_status_explanation"<?php if ($game_status_explanation == "") echo ' style="display: none;"'; ?>><?php if ($game_status_explanation != "") echo $game_status_explanation; ?></div>
+						
+						<div id="change_user_game">
+							<select id="select_user_game" class="form-control" onchange="change_user_game();">
 								<?php
-								for ($block=1; $block<=$game->db_game['round_length']; $block++) {
-									echo '<div class="col-md-2">';
-									echo '<input type="checkbox" name="vote_on_block_'.$block.'" id="vote_on_block_'.$block.'" value="1"';
-									
-									$strategy_block_q = "SELECT * FROM user_strategy_blocks WHERE strategy_id='".$user_strategy['strategy_id']."' AND block_within_round='".$block."';";
-									$strategy_block_r = $app->run_query($strategy_block_q);
-									if ($strategy_block_r->rowCount() > 0) echo ' checked="checked"';
-									
-									echo '><label class="plainlabel" for="vote_on_block_'.$block.'">&nbsp;&nbsp;';
-									echo $block."</label>";
-									echo '</div>';
-									if ($block%6 == 0) echo '</div><div class="row">';
+								$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
+								$r = $app->run_query($q);
+								while ($db_user_game = $r->fetch()) {
+									echo "<option ";
+									if ($db_user_game['user_game_id'] == $user_game['user_game_id']) echo "selected=\"selected\" ";
+									echo "value=\"".$db_user_game['user_game_id']."\">Account #".$db_user_game['account_id']." &nbsp;&nbsp; ".$app->format_bignum($db_user_game['account_value'])." ".$game->db_game['coin_abbreviation']."</option>\n";
 								}
 								?>
-							</div>
-							Only vote for options which have between <input type="tel" size="4" value="<?php echo $user_strategy['min_votesum_pct']; ?>" name="min_votesum_pct" id="min_votesum_pct" />% and <input type="tel" size="4" value="<?php echo $user_strategy['max_votesum_pct']; ?>" name="max_votesum_pct" id="max_votesum_pct" />% of the current votes.<br/>
-							<?php /*
-							Maintain <input type="tel" size="6" id="min_coins_available" name="min_coins_available" value="<?php echo round($user_strategy['min_coins_available'], 2); ?>" /> EMP available at all times.  This number of coins will be reserved and won't be voted. */ ?>
+								<option value="new">Create a new account</option>
+							</select>
 						</div>
 					</div>
-					<br/>
-					<input class="btn btn-primary" type="submit" value="Save Voting Strategy" />
-				</form>
-				<br/>
-				<?php /*
-				<h2>Privacy Settings</h2>
-				You can make your gameplay public by choosing an alias below.<br/>
-				<div class="row">
-					<div class="col-sm-6">
-						<select class="form-control" id="alias_preference" name="alias_preference" onfocus="alias_focused();" onchange="alias_pref_changed();">
-							<option <?php if ($thisuser->db_user['alias_preference'] == "private") echo 'selected="selected" '; ?>value="private">Keep my identity private</option>
-							<option <?php if ($thisuser->db_user['alias_preference'] == "public") echo 'selected="selected" '; ?>value="public">Let me choose a public alias</option>
-						</select>
-					</div>
-					<div class="col-sm-6">
-						<input style="display: none;" class="form-control" type="text" name="alias" id="alias" onfocus="alias_focused();" placeholder="Please enter an alias" value="<?php echo $thisuser->db_user['alias']; ?>" />
-					</div>
-				</div>
-				<button style="display: none;" id="alias_save_btn" class="btn btn-primary" onclick="save_alias_preferences();">Save Privacy Settings</button>
-				<br/>
-				*/ ?>
-			</div>
-			<div id="tabcontent3" style="display: none;" class="tabcontent">
-				<p>Results for all events are shown below.  Did you want to <a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">see results for your bets only</a>?</p>
-				<div id="performance_history">
-					<div id="performance_history_new">
-					</div>
-					<div id="performance_history_0">
-						<?php
-						echo $thisuser->performance_history($game, max(1, $current_round-$performance_history_rounds_per_section-1), $current_round-1);
-						?>
-					</div>
-				</div>
-				<center>
-					<a href="" onclick="show_more_performance_history(); return false;">Show More</a>
-				</center>
-			</div>
-			<div id="tabcontent4" style="display: none;" class="tabcontent">
-				<h1>Deposit</h1>
-				<?php
-				if ($game->db_game['buyin_policy'] != "none") { ?>
-					<p>
-					You can buy more <?php echo $game->db_game['coin_name_plural']; ?> by sending <?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?> to your deposit address.  Once your <?php echo $game->blockchain->db_blockchain['coin_name']; ?> payment is confirmed, <?php echo $game->db_game['coin_name_plural']; ?> will be added to your account based on the <?php echo $game->blockchain->db_blockchain['coin_name']; ?> / <?php echo $game->db_game['coin_name']; ?> exchange rate at the time of confirmation.
-					</p>
-					<p>
-					<button class="btn btn-success" onclick="initiate_buyin();">Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
-					</p>
-					<?php
-				}
-				else {
-					echo "<p>You cannot buy directly in to this game. Instead, please purchase ".$game->db_game['coin_name_plural']." on an exchange and then send them to one of your addresses listed below.</p>\n";
-				}
-				?>
-				
-				<h1>Withdraw</h1>
-				To withdraw coins please enter <?php echo $app->prepend_a_or_an($game->db_game['name']); ?> address below.<br/>
-				<div class="row">
-					<div class="col-md-3 form-control-static">
-						Amount:
-					</div>
-					<div class="col-md-3">
-						<input class="form-control" type="tel" placeholder="0.000" id="withdraw_amount" style="text-align: right;" />
-					</div>
-					<div class="col-md-3 form-control-static">
-						<?php echo $game->db_game['coin_name_plural']; ?>
-					</div>
-				</div>
-				<div class="row">
-					<div class="col-md-3 form-control-static">
-						Fee:
-					</div>
-					<div class="col-md-3">
-						<input class="form-control" type="tel" value="<?php echo $user_strategy['transaction_fee']/pow(10,8); ?>" id="withdraw_fee" style="text-align: right;" />
-					</div>
-					<div class="col-md-3 form-control-static">
-						<?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?>
-					</div>
-				</div>
-				<div class="row">
-					<div class="col-md-3 form-control-static">
-						Address:
-					</div>
-					<div class="col-md-5">
-						<input class="form-control" type="text" id="withdraw_address" />
-					</div>
-				</div>
-				<div class="row">
-					<div class="col-md-3 form-control-static">
-						Vote remainder towards:
-					</div>
-					<div class="col-md-5">
-						<select class="form-control" id="withdraw_remainder_address_id">
-							<option value="random">Random</option>
-							<?php
-							$option_index_range = $game->option_index_range();
-							
-							for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
-								$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND a.option_index='".$option_index."';";
-								$rr = $app->run_query($qq);
-								
-								if ($rr->rowCount() > 0) {
-									$address = $rr->fetch();
-									echo "<option value=\"".$address['address_id']."\">";
-									if ($address['option_index'] == "") echo "None";
-									else echo "Voting option #".$address['option_index'];
-									echo "</option>\n";
-								}
-							}
-							?>
-						</select>
-					</div>
-				</div>
-				<div class="row">
-					<div class="col-md-push-3 col-md-5">
-						<button class="btn btn-success" id="withdraw_btn" onclick="attempt_withdrawal();">Withdraw</button>
-						<div id="withdraw_message" style="display: none; margin-top: 15px;"></div>
-					</div>
-				</div>
-				
-				<h1>My <?php echo $game->db_game['name']; ?> addresses</h1>
-				<?php
-				$option_index_range = $game->option_index_range();
-				
-				$addr_id_csv = "";
-				for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
-					$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND a.option_index='".$option_index."';";
-					$rr = $app->run_query($qq);
 					
-					if ($rr->rowCount() > 0) {
-						$address = $rr->fetch();
-						?>
+					<div id="game0_events" class="game_events"></div>
+					
+					<script type="text/javascript" id="game0_new_event_js">
+					<?php
+					echo $game->new_event_js(0, $thisuser);
+					?>
+					</script>
+					<div id="select_input_buttons"><?php
+						echo $game->select_input_buttons($user_game);
+					?></div>
+					
+					<div class="redtext" id="compose_vote_errors" style="margin-top: 5px;"></div>
+					<div class="greentext" id="compose_vote_success" style="margin-top: 5px;"></div>
+					
+					<div id="compose_vote" style="display: none;">
+						<h2>Vote Now</h2>
+						<div class="row bordered_row" style="border: 1px solid #bbb;">
+							<div class="col-md-6 bordered_cell" id="compose_vote_inputs">
+								<b>Inputs:</b><div style="display: none; margin-left: 20px;" id="input_amount_sum"></div><div style="display: inline-block; margin-left: 20px;" id="input_vote_sum"></div><br/>
+								<div id="compose_input_start_msg">Add inputs by clicking on the votes above.</div>
+							</div>
+							<div class="col-md-6 bordered_cell" id="compose_vote_outputs">
+								<b>Outputs:</b><div id="display_tx_fee"></div><br/>
+								<select class="form-control" id="select_add_output" onchange="select_add_output_changed();"></select>
+							</div>
+						</div>
+						<button class="btn btn-success" id="confirm_compose_vote_btn" style="margin-top: 5px; margin-left: 5px;" onclick="confirm_compose_vote();">Confirm & Stake</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		<div class="tabcontent" style="display: none;" id="tabcontent1">
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					<div class="panel-title">Play Now</div>
+				</div>
+				<div class="panel-body">
+					<?php
+					echo $game->render_game_players();
+					?>
+				</div>
+			</div>
+		</div>
+		
+		<div id="tabcontent2" style="display: none;" class="tabcontent">
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					<div class="panel-title">Settings</div>
+				</div>
+				<div class="panel-body">
+					<?php
+					if ($user_game['payout_address_id'] > 0) {
+						$payout_address = $app->fetch_external_address_by_id($user_game['payout_address_id']);
+						echo "Payout address: ".$payout_address['address'];
+					}
+					else {
+						echo "You haven't specified a payout address for this game.";
+					}
+					?>
+					<br/>
+					<h3>Transaction Fees</h3>
+					<form method="post" action="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">
+						<input type="hidden" name="action" value="save_voting_strategy_fees" />
+						<input type="hidden" name="voting_strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
+						Pay fees on every transaction of:<br/>
+						<div class="row">
+							<div class="col-sm-4"><input class="form-control" name="transaction_fee" value="<?php echo $app->format_bignum($user_strategy['transaction_fee']); ?>" placeholder="0.001" /></div>
+							<div class="col-sm-4 form-control-static"><?php
+							echo $game->blockchain->db_blockchain['coin_name_plural'];
+							?></div>
+						</div>
 						<div class="row">
 							<div class="col-sm-3">
-								<?php
-								if ($address['option_index'] != "") echo "Voting option #".$address['option_index'];
-								else echo "Default Address";
-								?>
+								<input class="btn btn-primary" type="submit" value="Save" />
 							</div>
-							<div class="col-sm-4">
-								<input type="text" class="address_cell" onclick="$(this).select();" value="<?php echo $address['address']; ?>" />
+						</div>
+					</form>
+					<br/>
+					
+					<h3>Notifications</h3>
+					Would you like to receive notifications whenever a new round begins?<br/>
+					<div class="row">
+						<div class="col-sm-6">
+							<select class="form-control" id="notification_preference" name="notification_preference" onfocus="notification_focused();" onchange="notification_pref_changed();">
+								<option <?php if ($user_game['notification_preference'] == "none") echo 'selected="selected" '; ?>value="none">No, don't notify me</option>
+								<option <?php if ($user_game['notification_preference'] == "email") echo 'selected="selected" '; ?>value="email">Yes, email me whenever a new round starts</option>
+							</select>
+						</div>
+						<div class="col-sm-6">
+							<input style="display: none;" class="form-control" type="text" name="notification_email" id="notification_email" onfocus="notification_focused();" placeholder="Enter your email address" value="<?php echo $thisuser->db_user['notification_email']; ?>" />
+						</div>
+					</div>
+					<button style="display: none;" id="notification_save_btn" class="btn btn-primary" onclick="save_notification_preferences();">Save Notification Settings</button>
+					<br/>
+					
+					<h2>Choose your voting strategy</h2>
+					Please set up a voting strategy so that your votes can be cast even when you're not online to vote.<br/><br/>
+					<form method="post" action="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">
+						<input type="hidden" name="action" value="save_voting_strategy" />
+						<input type="hidden" id="voting_strategy_id" name="voting_strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
+						
+						<div class="row bordered_row">
+							<div class="col-md-2">
+								<input type="radio" id="voting_strategy_manual" name="voting_strategy" value="manual"<?php if ($user_strategy['voting_strategy'] == "manual") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_manual">&nbsp;No&nbsp;auto-strategy</label>
 							</div>
-							<div class="col-sm-2">
-								<?php
-								$color_bal = $game->address_balance_at_block($address, $game->blockchain->last_block_id());
-								echo '<a target="_blank" href="/explorer/games/'.$game->db_game['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($color_bal/pow(10,8))." ".$game->db_game['coin_name_plural'].'</a>';
-								?>
+							<div class="col-md-10">
+								<label class="plainlabel" for="voting_strategy_manual"> 
+									I'll log in and vote in each round.
+								</label>
 							</div>
-							<div class="col-sm-2">
+						</div>
+						
+						<div class="row bordered_row">
+							<div class="col-md-2">
+								<input type="radio" id="voting_strategy_api" name="voting_strategy" value="api"<?php if ($user_strategy['voting_strategy'] == "api") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_api">&nbsp;Vote&nbsp;by&nbsp;API</label>
+							</div>
+							<div class="col-md-10">
+								<label class="plainlabel" for="voting_strategy_api">
+									Hit a custom URL whenever I have <?php echo $game->db_game['coin_name_plural']; ?> available to determine my votes: <input type="text" size="40" placeholder="http://" name="api_url" id="api_url" value="<?php echo $user_strategy['api_url']; ?>" />
+								</label><br/>
+								Your API access code is <?php echo $user_game['api_access_code']; ?><br/>
+								<a href="/api/about/">API documentation</a><br/>
+							</div>
+						</div>
+						
+						<div class="row bordered_row">
+							<div class="col-md-2">
+								<input type="radio" id="voting_strategy_by_entity" name="voting_strategy" value="by_entity"<?php if ($user_strategy['voting_strategy'] == "by_entity") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_entity">&nbsp;Vote&nbsp;by&nbsp;option</label>
+							</div>
+							<div class="col-md-10">
+								<label class="plainlabel" for="voting_strategy_by_entity"> 
+									Vote for these options every time. The percentages you enter below must add up to 100.<br/>
+									<?php /*<a href="" onclick="by_entity_reset_pct(); return false;">Set all to zero</a> <div style="margin-left: 15px; display: inline-block;" id="entity_pct_subtotal">&nbsp;</div>*/ ?>
+								</label><br/>
 								<?php
-								$chain_bal = $game->blockchain->address_balance_at_block($address, $game->blockchain->last_block_id());
-								echo '<a target="_blank" href="/explorer/blockchains/'.$game->blockchain->db_blockchain['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($chain_bal/pow(10,8))." ".$game->blockchain->db_blockchain['coin_name_plural'].'</a>';
+								$q = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id JOIN entities en ON op.entity_id=en.entity_id WHERE e.game_id='".$game->db_game['game_id']."' GROUP BY en.entity_id ORDER BY en.entity_id ASC;";
+								$r = $app->run_query($q);
+								$entity_i = 0;
+								while ($entity = $r->fetch()) {
+									$qq = "SELECT * FROM user_strategy_entities WHERE strategy_id='".$user_strategy['strategy_id']."' AND entity_id='".$entity['entity_id']."';";
+									$rr = $app->run_query($qq);
+									if ($rr->rowCount() > 0) {
+										$pct_points = $rr->fetch()['pct_points'];
+									}
+									else $pct_points = "";
+									
+									if ($entity_i%4 == 0) echo '<div class="row">';
+									echo '<div class="col-md-3">';
+									echo '<input type="tel" size="4" name="entity_pct_'.$entity['entity_id'].'" id="entity_pct_'.$entity_i.'" placeholder="0" value="'.$pct_points.'" />';
+									echo '<label class="plainlabel" for="entity_pct_'.$entity_i.'">% ';
+									echo $entity['entity_name']."</label>";
+									echo '</div>';
+									if ($entity_i%4 == 3) echo "</div>\n";
+									$entity_i++;
+								}
+								if ($entity_i%4 != 0) echo "</div>\n";
 								?>
 							</div>
 						</div>
+						<?php /*
+						<div class="row bordered_row">
+							<div class="col-md-2">
+								<input type="radio" id="voting_strategy_by_rank" name="voting_strategy" value="by_rank"<?php if ($user_strategy['voting_strategy'] == "by_rank") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_rank">&nbsp;Vote&nbsp;by&nbsp;rank</label>
+							</div>
+							<div class="col-md-10">
+								<label class="plainlabel" for="voting_strategy_by_rank">
+									Split up my free balance and vote it across options ranked:
+								</label><br/>
+								<input type="checkbox" id="rank_check_all" onchange="rank_check_all_changed();" /><label class="plainlabel" for="rank_check_all"> All</label><br/>
+								<?php
+								$by_rank_ranks = explode(",", $user_strategy['by_rank_ranks']);
+								
+								for ($rank=1; $rank<=$game->db_game['num_voting_options']; $rank++) {
+									if ($rank%4 == 1) echo '<div class="row">';
+									echo '<div class="col-md-3">';
+									echo '<input type="checkbox" name="by_rank_'.$rank.'" id="by_rank_'.$rank.'" value="1"';
+									if (in_array($rank, $by_rank_ranks)) echo ' checked="checked"';
+									echo '><label class="plainlabel" for="by_rank_'.$rank.'"> '.$app->to_ranktext($rank)."</label>";
+									echo '</div>';
+									if ($rank%4 == 0 || $rank == $game->db_game['num_voting_options']) echo "</div>\n";
+								}
+								?>
+							</div>
+						</div>
+						*/ ?>
+						<div class="row bordered_row">
+							<div class="col-md-2">
+								<input type="radio" id="voting_strategy_by_plan" name="voting_strategy" value="by_plan"<?php if ($user_strategy['voting_strategy'] == "by_plan") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_plan">&nbsp;Plan&nbsp;my&nbsp;votes</label>
+							</div>
+							<div class="col-md-10">
+								<button class="btn btn-success" onclick="show_planned_votes(); return false;">Edit my planned votes</button>
+							</div>
+						</div>
+						<div class="row bordered_row">
+							<div class="col-md-12">
+								<br/><br/>
+								<b>Settings</b><br/>
+								These settings apply to "Plan my votes" and "Vote by rank" options above.<br/>
+								Wait until <input size="4" type="text" name="aggregate_threshold" id="aggregate_threshold" value="<?php echo $user_strategy['aggregate_threshold']; ?>" />% of my coins are available to vote. <br/>
+								Only vote in these blocks of the round:<br/>
+								<div class="row">
+									<div class="col-md-2">
+										<input type="checkbox" id="vote_on_block_all" onchange="vote_on_block_all_changed();" /><label class="plainlabel" for="vote_on_block_all">&nbsp;&nbsp;All</label>
+									</div>
+								</div>
+								<div class="row">
+									<?php
+									for ($block=1; $block<=$game->db_game['round_length']; $block++) {
+										echo '<div class="col-md-2">';
+										echo '<input type="checkbox" name="vote_on_block_'.$block.'" id="vote_on_block_'.$block.'" value="1"';
+										
+										$strategy_block_q = "SELECT * FROM user_strategy_blocks WHERE strategy_id='".$user_strategy['strategy_id']."' AND block_within_round='".$block."';";
+										$strategy_block_r = $app->run_query($strategy_block_q);
+										if ($strategy_block_r->rowCount() > 0) echo ' checked="checked"';
+										
+										echo '><label class="plainlabel" for="vote_on_block_'.$block.'">&nbsp;&nbsp;';
+										echo $block."</label>";
+										echo '</div>';
+										if ($block%6 == 0) echo '</div><div class="row">';
+									}
+									?>
+								</div>
+								Only vote for options which have between <input type="tel" size="4" value="<?php echo $user_strategy['min_votesum_pct']; ?>" name="min_votesum_pct" id="min_votesum_pct" />% and <input type="tel" size="4" value="<?php echo $user_strategy['max_votesum_pct']; ?>" name="max_votesum_pct" id="max_votesum_pct" />% of the current votes.<br/>
+								<?php /*
+								Maintain <input type="tel" size="6" id="min_coins_available" name="min_coins_available" value="<?php echo round($user_strategy['min_coins_available'], 2); ?>" /> EMP available at all times.  This number of coins will be reserved and won't be voted. */ ?>
+							</div>
+						</div>
+						<br/>
+						<input class="btn btn-primary" type="submit" value="Save Voting Strategy" />
+					</form>
+					<br/>
+					<?php /*
+					<h2>Privacy Settings</h2>
+					You can make your gameplay public by choosing an alias below.<br/>
+					<div class="row">
+						<div class="col-sm-6">
+							<select class="form-control" id="alias_preference" name="alias_preference" onfocus="alias_focused();" onchange="alias_pref_changed();">
+								<option <?php if ($thisuser->db_user['alias_preference'] == "private") echo 'selected="selected" '; ?>value="private">Keep my identity private</option>
+								<option <?php if ($thisuser->db_user['alias_preference'] == "public") echo 'selected="selected" '; ?>value="public">Let me choose a public alias</option>
+							</select>
+						</div>
+						<div class="col-sm-6">
+							<input style="display: none;" class="form-control" type="text" name="alias" id="alias" onfocus="alias_focused();" placeholder="Please enter an alias" value="<?php echo $thisuser->db_user['alias']; ?>" />
+						</div>
+					</div>
+					<button style="display: none;" id="alias_save_btn" class="btn btn-primary" onclick="save_alias_preferences();">Save Privacy Settings</button>
+					<br/>
+					*/ ?>
+				</div>
+			</div>
+		</div>
+		<div id="tabcontent3" style="display: none;" class="tabcontent">
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					<div class="panel-title">Results</div>
+				</div>
+				<div class="panel-body">
+					<p>Results for all events are shown below.  Did you want to <a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">see results for your bets only</a>?</p>
+					<div id="performance_history">
+						<div id="performance_history_new">
+						</div>
+						<div id="performance_history_0">
+							<?php
+							echo $thisuser->performance_history($game, max(1, $current_round-$performance_history_rounds_per_section-1), $current_round-1);
+							?>
+						</div>
+					</div>
+					<center>
+						<a href="" onclick="show_more_performance_history(); return false;">Show More</a>
+					</center>
+				</div>
+			</div>
+		</div>
+		<div id="tabcontent4" style="display: none;" class="tabcontent">
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					<div class="panel-title">Deposit or Withdraw</div>
+				</div>
+				<div class="panel-body">
+					<h3>Deposit</h3>
+					<?php
+					if ($game->db_game['buyin_policy'] != "none") { ?>
+						<p>
+						You can buy more <?php echo $game->db_game['coin_name_plural']; ?> by sending <?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?> to your deposit address.  Once your <?php echo $game->blockchain->db_blockchain['coin_name']; ?> payment is confirmed, <?php echo $game->db_game['coin_name_plural']; ?> will be added to your account based on the <?php echo $game->blockchain->db_blockchain['coin_name']; ?> / <?php echo $game->db_game['coin_name']; ?> exchange rate at the time of confirmation.
+						</p>
+						<p>
+						<button class="btn btn-success" onclick="initiate_buyin();">Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
+						</p>
 						<?php
-						$addr_id_csv .= $address['address_id'].",";
 					}
-				}
-				if ($addr_id_csv != "") {
-					$addr_id_csv = substr($addr_id_csv, 0, strlen($addr_id_csv)-1);
+					else {
+						echo "<p>You cannot buy directly in to this game. Instead, please purchase ".$game->db_game['coin_name_plural']." on an exchange and then send them to one of your addresses listed below.</p>\n";
+					}
+					?>
 					
-					$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND a.address_id NOT IN (".$addr_id_csv.") ORDER BY option_index ASC;";
-					$rr = $app->run_query($qq);
+					<h3>Withdraw</h3>
+					To withdraw coins please enter <?php echo $app->prepend_a_or_an($game->db_game['name']); ?> address below.<br/>
+					<div class="row">
+						<div class="col-md-3 form-control-static">
+							Amount:
+						</div>
+						<div class="col-md-3">
+							<input class="form-control" type="tel" placeholder="0.000" id="withdraw_amount" style="text-align: right;" />
+						</div>
+						<div class="col-md-3 form-control-static">
+							<?php echo $game->db_game['coin_name_plural']; ?>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-3 form-control-static">
+							Fee:
+						</div>
+						<div class="col-md-3">
+							<input class="form-control" type="tel" value="<?php echo $app->format_bignum($user_strategy['transaction_fee']); ?>" id="withdraw_fee" style="text-align: right;" />
+						</div>
+						<div class="col-md-3 form-control-static">
+							<?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-3 form-control-static">
+							Address:
+						</div>
+						<div class="col-md-5">
+							<input class="form-control" type="text" id="withdraw_address" />
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-3 form-control-static">
+							Vote remainder towards:
+						</div>
+						<div class="col-md-5">
+							<select class="form-control" id="withdraw_remainder_address_id">
+								<option value="random">Random</option>
+								<?php
+								$option_index_range = $game->option_index_range();
+								
+								for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
+									$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND a.option_index='".$option_index."';";
+									$rr = $app->run_query($qq);
+									
+									if ($rr->rowCount() > 0) {
+										$address = $rr->fetch();
+										echo "<option value=\"".$address['address_id']."\">";
+										if ($address['option_index'] == "") echo "None";
+										else echo "Voting option #".$address['option_index'];
+										echo "</option>\n";
+									}
+								}
+								?>
+							</select>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-push-3 col-md-5">
+							<button class="btn btn-success" id="withdraw_btn" onclick="attempt_withdrawal();">Withdraw</button>
+							<div id="withdraw_message" style="display: none; margin-top: 15px;"></div>
+						</div>
+					</div>
 					
-					if ($rr->rowCount() > 0) {
-						echo "<br/>\n";
-						while ($address = $rr->fetch()) {
+					<h3>My <?php echo $game->db_game['name']; ?> addresses</h3>
+					<?php
+					$option_index_range = $game->option_index_range();
+					
+					$addr_id_csv = "";
+					for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
+						$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND a.option_index='".$option_index."';";
+						$rr = $app->run_query($qq);
+						
+						if ($rr->rowCount() > 0) {
+							$address = $rr->fetch();
 							?>
 							<div class="row">
 								<div class="col-sm-3">
@@ -1067,83 +1071,127 @@ if ($thisuser && $game) {
 								<div class="col-sm-2">
 									<?php
 									$color_bal = $game->address_balance_at_block($address, $game->blockchain->last_block_id());
-									echo '<a target="_blank" href="/explorer/games/'.$game->db_game['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($color_bal/pow(10,8))." ".$game->db_game['coin_name_plural'].'</a>';
+									echo '<a target="_blank" href="/explorer/games/'.$game->db_game['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($color_bal/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural'].'</a>';
 									?>
 								</div>
 								<div class="col-sm-2">
 									<?php
 									$chain_bal = $game->blockchain->address_balance_at_block($address, $game->blockchain->last_block_id());
-									echo '<a target="_blank" href="/explorer/blockchains/'.$game->blockchain->db_blockchain['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($chain_bal/pow(10,8))." ".$game->blockchain->db_blockchain['coin_name_plural'].'</a>';
+									echo '<a target="_blank" href="/explorer/blockchains/'.$game->blockchain->db_blockchain['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($chain_bal/pow(10,$game->blockchain->db_blockchain['decimal_places']))." ".$game->blockchain->db_blockchain['coin_name_plural'].'</a>';
 									?>
 								</div>
 							</div>
 							<?php
+							$addr_id_csv .= $address['address_id'].",";
 						}
 					}
-				}
-				?>
-			</div>
-			
-			<div class="tabcontent" style="display: none;" id="tabcontent5">
-				<h4>My Games</h4>
-				<?php
-				$game_id_csv = "";
-				$q = "SELECT * FROM games WHERE creator_id='".$thisuser->db_user['user_id']."' ORDER BY game_id ASC;";
-				$r = $app->run_query($q);
-				while ($user_game = $r->fetch()) {
-					$game_id_csv .= $user_game['game_id'].",";
-					echo $app->game_admin_row($thisuser, $user_game, $game->db_game['game_id']);
-				}
-				if ($game_id_csv != "") $game_id_csv = substr($game_id_csv, 0, strlen($game_id_csv)-1);
-				
-				$q = "SELECT * FROM games g LEFT JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."'";
-				if ($game_id_csv != "") $q .= " AND g.game_id NOT IN (".$game_id_csv.")";
-				$q .= " GROUP BY g.game_id ORDER BY g.game_id ASC;";
-				$r = $app->run_query($q);
-				while ($user_game = $r->fetch()) {
-					echo $app->game_admin_row($thisuser, $user_game, $game->db_game['game_id']);
-				}
-				
-				$new_game_perm = $thisuser->new_game_permission();
-				
-				if ($new_game_perm) { ?>
-					<br/>
-					<button class="btn btn-primary" onclick="switch_to_game(0, 'new'); return false;">Create a new Game</button>
-					<?php
-				}
-				?>
+					if ($addr_id_csv != "") {
+						$addr_id_csv = substr($addr_id_csv, 0, strlen($addr_id_csv)-1);
+						
+						$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND a.address_id NOT IN (".$addr_id_csv.") ORDER BY option_index ASC;";
+						$rr = $app->run_query($qq);
+						
+						if ($rr->rowCount() > 0) {
+							echo "<br/>\n";
+							while ($address = $rr->fetch()) {
+								?>
+								<div class="row">
+									<div class="col-sm-3">
+										<?php
+										if ($address['option_index'] != "") echo "Voting option #".$address['option_index'];
+										else echo "Default Address";
+										?>
+									</div>
+									<div class="col-sm-4">
+										<input type="text" class="address_cell" onclick="$(this).select();" value="<?php echo $address['address']; ?>" />
+									</div>
+									<div class="col-sm-2">
+										<?php
+										$color_bal = $game->address_balance_at_block($address, $game->blockchain->last_block_id());
+										echo '<a target="_blank" href="/explorer/games/'.$game->db_game['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($color_bal/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural'].'</a>';
+										?>
+									</div>
+									<div class="col-sm-2">
+										<?php
+										$chain_bal = $game->blockchain->address_balance_at_block($address, $game->blockchain->last_block_id());
+										echo '<a target="_blank" href="/explorer/blockchains/'.$game->blockchain->db_blockchain['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($chain_bal/pow(10,$game->blockchain->db_blockchain['decimal_places']))." ".$game->blockchain->db_blockchain['coin_name_plural'].'</a>';
+										?>
+									</div>
+								</div>
+								<?php
+							}
+						}
+					}
+					?>
+				</div>
 			</div>
 		</div>
 		
-		<div style="display: none;" class="modal fade" id="intro_message">
-			<div class="modal-dialog">
-				<div class="modal-content">
-					<div class="modal-header">
-						<h4 class="modal-title">New message from <?php echo $GLOBALS['site_name']; ?></h4>
-					</div>
-					<div class="modal-body">
-						<p>
-							Hi <?php echo $thisuser->db_user['username']; ?>, thanks for joining <?php echo $game->db_game['name']; ?>! 
-							<?php if ($game->db_game['final_round'] > 0) echo 'This game lasts for '.$game->db_game['final_round'].' voting rounds.  ';
-							if ($game->db_game['inflation'] == "exponential") {
-							}
-							else {
-								?>
-								At the end of each round, the supply of <?php echo $game->db_game['coin_name_plural']; ?> 
-								<?php
-								if ($game->db_game['inflation'] == "fixed_exponential") echo 'inflates by '.(100*$game->db_game['exponential_inflation_rate']).'%';
-								else echo 'increases by '.$app->format_bignum($game->db_game['pos_reward']/pow(10,8));
-								echo ". ";
-							}
-							?>
-							After each round, a winner is declared and new <?php echo $game->db_game['coin_name_plural']; ?> are created and given to everyone who voted for the winner.
-						</p>
-						<p>
-							To do well in this game, be sure to vote in each round. Click below to set your voting strategy. You can change your voting strategy at any time by clicking on the "Strategy" tab.<br/>
-						</p>
-						<p>
-							<button class="btn btn-primary" onclick="$('#intro_message').modal('hide'); show_planned_votes();">Continue</button>
-						</p>
+		<div class="tabcontent" style="display: none;" id="tabcontent5">
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					<div class="panel-title">My Games</div>
+				</div>
+				<div class="panel-body">
+					<?php
+					$game_id_csv = "";
+					$q = "SELECT * FROM games WHERE creator_id='".$thisuser->db_user['user_id']."' ORDER BY game_id ASC;";
+					$r = $app->run_query($q);
+					while ($user_game = $r->fetch()) {
+						$game_id_csv .= $user_game['game_id'].",";
+						echo $app->game_admin_row($thisuser, $user_game, $game->db_game['game_id']);
+					}
+					if ($game_id_csv != "") $game_id_csv = substr($game_id_csv, 0, strlen($game_id_csv)-1);
+					
+					$q = "SELECT * FROM games g LEFT JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."'";
+					if ($game_id_csv != "") $q .= " AND g.game_id NOT IN (".$game_id_csv.")";
+					$q .= " GROUP BY g.game_id ORDER BY g.game_id ASC;";
+					$r = $app->run_query($q);
+					while ($user_game = $r->fetch()) {
+						echo $app->game_admin_row($thisuser, $user_game, $game->db_game['game_id']);
+					}
+					
+					$new_game_perm = $thisuser->new_game_permission();
+					
+					if ($new_game_perm) { ?>
+						<br/>
+						<button class="btn btn-primary" onclick="switch_to_game(0, 'new'); return false;">Create a new Game</button>
+						<?php
+					}
+					?>
+				</div>
+				
+				<div style="display: none;" class="modal fade" id="intro_message">
+					<div class="modal-dialog">
+						<div class="modal-content">
+							<div class="modal-header">
+								<h4 class="modal-title">New message from <?php echo $GLOBALS['site_name']; ?></h4>
+							</div>
+							<div class="modal-body">
+								<p>
+									Hi <?php echo $thisuser->db_user['username']; ?>, thanks for joining <?php echo $game->db_game['name']; ?>! 
+									<?php if ($game->db_game['final_round'] > 0) echo 'This game lasts for '.$game->db_game['final_round'].' voting rounds.  ';
+									if ($game->db_game['inflation'] == "exponential") {
+									}
+									else {
+										?>
+										At the end of each round, the supply of <?php echo $game->db_game['coin_name_plural']; ?> 
+										<?php
+										if ($game->db_game['inflation'] == "fixed_exponential") echo 'inflates by '.(100*$game->db_game['exponential_inflation_rate']).'%';
+										else echo 'increases by '.$app->format_bignum($game->db_game['pos_reward']/pow(10,$game->db_game['decimal_places']));
+										echo ". ";
+									}
+									?>
+									After each round, a winner is declared and new <?php echo $game->db_game['coin_name_plural']; ?> are created and given to everyone who voted for the winner.
+								</p>
+								<p>
+									To do well in this game, be sure to vote in each round. Click below to set your voting strategy. You can change your voting strategy at any time by clicking on the "Strategy" tab.<br/>
+								</p>
+								<p>
+									<button class="btn btn-primary" onclick="$('#intro_message').modal('hide'); show_planned_votes();">Continue</button>
+								</p>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -1489,6 +1537,11 @@ if ($thisuser && $game) {
 		<?php
 	}
 	else {
+		if (!empty($_REQUEST['redirect_id'])) $redirect_id = (int) $_REQUEST['redirect_id'];
+		else {
+			$redirect_url = $app->get_redirect_url("/wallet/");
+			$redirect_id = $redirect_url['redirect_url_id'];
+		}
 		include("includes/html_login.php");
 	}
 	?>

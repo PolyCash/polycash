@@ -68,16 +68,18 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				else die("Error, please manually save RPC parameters in the database.");
 			}
 			
+			$app->blockchain_ensure_currencies();
+			
 			$pagetitle = $GLOBALS['site_name']." - Installing...";
 			$include_crypto_js = TRUE;
 			include("includes/html_start.php");
 			?>
-			<div class="container" style="max-width: 1000px; padding: 10px;">
+			<div class="container-fluid">
 				<h2>Install the MySQL database</h1>
 				Great, the database was installed.<br/>
 				If there was an error installing the database please use mysql to delete the database, then try again.<br/>
 				
-				<h2>Run Empirecoin Web</h1>
+				<h2>Run StakeMoney</h1>
 				Make sure this line has been added to your /etc/crontab:<br/>
 <pre>
 * * * * * root <?php echo $app->php_binary_location(); ?> <?php echo str_replace("\\", "/", realpath(dirname(__FILE__)))."/cron/minutely.php key=".$GLOBALS['cron_key_string']; ?>

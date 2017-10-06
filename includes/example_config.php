@@ -32,12 +32,13 @@ $GLOBALS['currency_price_refresh_seconds'] = 30;
 $GLOBALS['invoice_expiration_seconds'] = 60*60*10;
 $GLOBALS['cron_interval_seconds'] = 5;
 $GLOBALS['load_unconfirmed_transactions'] = true;
+$GLOBALS['mine_private_blocks_when_offline'] = false;
 
 $GLOBALS['new_games_per_user'] = "unlimited";
 
-$GLOBALS['coin_brand_name'] = "CoinBlock";
-$GLOBALS['site_name_short'] = "CoinBlock";
-$GLOBALS['site_name'] = "CoinBlock.org";
+$GLOBALS['coin_brand_name'] = "StakeMoney";
+$GLOBALS['site_name_short'] = "Stake.Money";
+$GLOBALS['site_name'] = "Stake.Money";
 $GLOBALS['site_domain'] = $_SERVER['SERVER_ADDR']; // Enter your domain name, IP or "localhost" here
 $GLOBALS['base_url'] = "http://".$GLOBALS['site_domain'];
 $GLOBALS['homepage_fname'] = "default.php";

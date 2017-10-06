@@ -26,23 +26,35 @@ else if ($uri_parts[1] == "download") {
 else if ($uri_parts[1] == "import") {
 	include("import_game.php");
 }
+else if ($uri_parts[1] == "directory") {
+	include("directory.php");
+}
 else {
 	include("includes/connect.php");
 	include("includes/get_session.php");
 	
-	$q = "SELECT * FROM games WHERE url_identifier=".$app->quote_escape($uri_parts[1]).";";
+	$q = "SELECT * FROM categories WHERE category_level=0 AND url_identifier=".$app->quote_escape($uri_parts[1]).";";
 	$r = $app->run_query($q);
 	
 	if ($r->rowCount() == 1) {
-		$db_game = $r->fetch();
+		$selected_category = $r->fetch();
+		include("directory.php");
+	}
+	else {
+		$q = "SELECT * FROM games WHERE url_identifier=".$app->quote_escape($uri_parts[1]).";";
+		$r = $app->run_query($q);
 		
-		if (in_array($db_game['game_status'], array("running","published","completed"))) {
-			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
-			$game = new Game($blockchain, $db_game['game_id']);
-			include("game_page.php");
+		if ($r->rowCount() == 1) {
+			$db_game = $r->fetch();
+			
+			if (in_array($db_game['game_status'], array("running","published","completed"))) {
+				$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+				$game = new Game($blockchain, $db_game['game_id']);
+				include("game_page.php");
+			}
+			else echo "404 - Page not found";
 		}
 		else echo "404 - Page not found";
 	}
-	else echo "404 - Page not found";
 }
 ?>

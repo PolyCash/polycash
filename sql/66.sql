@@ -1,0 +1,1 @@
+INSERT INTO `modules` (`module_id`, `module_name`) VALUES (NULL, 'EmpirecoinClassic');
