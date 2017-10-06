@@ -498,7 +498,6 @@ if ($thisuser && $game) {
 			die("Error: you're not in this game.");
 		}
 		
-		$my_last_transaction_id = $thisuser->my_last_transaction_id($game->db_game['game_id']);
 		$performance_history_rounds_per_section = 10;
 		?>
 		<script type="text/javascript">
@@ -522,9 +521,7 @@ if ($thisuser && $game) {
 		games.push(new Game(<?php
 			echo $game->db_game['game_id'];
 			echo ', false';
-			echo ', false, ';
-			if ($my_last_transaction_id) echo $my_last_transaction_id;
-			else echo 'false';
+			echo ', false';
 			echo ', "'.$game->mature_io_ids_csv($user_game).'"';
 			echo ', "'.$game->db_game['payout_weight'].'"';
 			echo ', '.$game->db_game['round_length'];

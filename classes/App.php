@@ -811,8 +811,7 @@ class App {
 				games.push(new Game(<?php
 					echo $db_game['game_id'];
 					echo ', false';
-					echo ', false'.', ';
-					echo 'false';
+					echo ', false';
 					echo ', ""';
 					echo ', "'.$db_game['payout_weight'].'"';
 					echo ', '.$db_game['round_length'];

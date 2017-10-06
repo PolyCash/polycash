@@ -251,17 +251,13 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 		}
 		else {
 			if ($game) {
-				if (empty($thisuser)) $my_last_transaction_id = false;
-				else $my_last_transaction_id = $thisuser->my_last_transaction_id($game->db_game['game_id']);
 				?>
 				<script type="text/javascript">
 				var games = new Array();
 				games.push(new Game(<?php
 					echo $game->db_game['game_id'];
 					echo ', '.$game->blockchain->last_block_id();
-					echo ', '.$game->blockchain->last_transaction_id().', ';
-					if ($my_last_transaction_id) echo $my_last_transaction_id;
-					else echo 'false';
+					echo ', '.$game->blockchain->last_transaction_id();
 					echo ', "", "'.$game->db_game['payout_weight'].'"';
 					echo ', '.$game->db_game['round_length'];
 					echo ', 0';
@@ -913,20 +909,40 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						echo "</p>\n";
 					}
 					
-					$q = "SELECT * FROM transactions t, transaction_ios i WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND i.address_id='".$address['address_id']."' AND (t.transaction_id=i.create_transaction_id OR t.transaction_id=i.spend_transaction_id) GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;";
+					$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.spend_transaction_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND i.address_id='".$address['address_id']."' GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;";
 					$r = $app->run_query($q);
 					
-					echo "This address has been used in ".$r->rowCount()." transactions.<br/>\n";
+					$transaction_ids = array();
+					$transaction_ios = array();
+					while ($transaction_io = $r->fetch()) {
+						array_push($transaction_ids, $transaction_io['transaction_id']);
+						array_push($transaction_ios, $transaction_io);
+					}
+					
+					$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND i.address_id='".$address['address_id']."' GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;";
+					$r = $app->run_query($q);
+					
+					while ($transaction_io = $r->fetch()) {
+						if (!in_array($transaction_ids, $transaction_io['transaction_id'])) {
+							array_push($transaction_ids, $transaction_io['transaction_id']);
+							array_push($transaction_ios, $transaction_io);
+						}
+					}
+					
+					echo "This address has been used in ".count($transaction_ios)." transactions.<br/>\n";
+					
 					if ($thisuser && $address['user_id'] == $thisuser->db_user['user_id']) echo "This is one of your addresses.<br/>\n";
+					
 					echo ucwords($blockchain->db_blockchain['coin_name'])." balance: ".($blockchain->address_balance_at_block($address, false)/pow(10,$blockchain->db_blockchain['decimal_places']))." ".$blockchain->db_blockchain['coin_name_plural']."<br/>\n";
+					
 					if ($game) echo ucwords($game->db_game['coin_name'])." balance: ".$app->format_bignum($game->address_balance_at_block($address, false)/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']."<br/>\n";
 					
 					?>
 					<div style="border-bottom: 1px solid #bbb;">
 						<?php
-						while ($transaction_io = $r->fetch()) {
-							if ($game) echo $game->render_transaction($transaction_io, $address['address_id']);
-							else echo $blockchain->render_transaction($transaction_io, $address['address_id']);
+						for ($i=0; $i<count($transaction_ios); $i++) {
+							if ($game) echo $game->render_transaction($transaction_ios[$i], $address['address_id']);
+							else echo $blockchain->render_transaction($transaction_ios[$i], $address['address_id']);
 						}
 						?>
 					</div>

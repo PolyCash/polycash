@@ -188,7 +188,7 @@ class Game {
 					$overshoot_address = $r->fetch();
 					
 					if ($this->blockchain->db_blockchain['p2p_mode'] == "none") {
-						$q = "INSERT INTO transaction_ios SET out_index='".$out_index."', spend_status='unconfirmed', game_id='".$this->db_game['game_id']."', script_type='pubkeyhash', ";
+						$q = "INSERT INTO transaction_ios SET out_index='".$out_index."', spend_status='unconfirmed', blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."', script_type='pubkeyhash', ";
 						if ($block_id !== false) {
 							$overshoot_cbd = floor($coin_blocks_destroyed*($overshoot_amount/$input_sum));
 							$overshoot_crd = floor($coin_rounds_destroyed*($overshoot_amount/$input_sum));
@@ -853,10 +853,27 @@ class Game {
 	}
 	
 	public function option_index_range() {
-		$range_row = $this->blockchain->app->run_query("SELECT MAX(o.option_index), MIN(o.option_index) FROM options o JOIN events e ON o.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."';")->fetch();
-		$min = (int) $range_row['MIN(o.option_index)'];
-		$max = (int) $range_row['MAX(o.option_index)'];
-		return array($min, $max);
+		if (!empty($this->db_game['max_option_index']) && $this->db_game['min_option_index'] !== "") {
+			return array($this->db_game['min_option_index'], $this->db_game['max_option_index']);
+		}
+		else {
+			$range_r = $this->blockchain->app->run_query("SELECT MAX(o.option_index), MIN(o.option_index) FROM options o JOIN events e ON o.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."';");
+			
+			if ($range_r->rowCount() > 0) {
+				$range_row = $range_r->fetch();
+				
+				$min = (int) $range_row['MIN(o.option_index)'];
+				$max = (int) $range_row['MAX(o.option_index)'];
+				
+				$q = "UPDATE games SET max_option_index=".$max.", min_option_index=".$min." WHERE game_id='".$this->db_game['game_id']."';";
+				$this->blockchain->app->run_query($q);
+				$this->db_game['max_option_index'] = $max;
+				$this->db_game['min_option_index'] = $min;
+				
+				return array($min, $max);
+			}
+			else return array(false, false);
+		}
 	}
 	
 	public function option_index_to_current_option_id($option_index) {
