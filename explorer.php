@@ -623,10 +623,16 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								$block_index = $game->block_id_to_round_index($block['block_id']);
 								list($num_trans, $block_sum) = $game->block_stats($block);
 								$block_sum_disp = $block_sum/$game->db_game['decimal_places'];
+								
+								$game_block_r = $app->run_query("SELECT * FROM game_blocks WHERE game_id='".$game->db_game['game_id']."' AND block_id='".$block['block_id']."';");
+								if ($game_block_r->rowCount() > 0) $game_block = $game_block_r->fetch();
+								else $game_block = false;
 							}
 							else {
 								list($num_trans, $block_sum) = $blockchain->block_stats($block);
 								$block_sum_disp = $block_sum/$blockchain->db_blockchain['decimal_places'];
+								
+								$game_block = false;
 							}
 							
 							echo '<div class="panel-heading"><div class="panel-title">';
@@ -645,7 +651,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo ".<br/>\n";
 							
 							if ($block['locally_saved'] == 1) {
-								echo $GLOBALS['coin_brand_name']." took ".number_format($block['load_time'], 2)." seconds to load this block.<br/>\n";
+								$load_time = $block['load_time'];
+								if ($game_block) $load_time += $game_block['load_time'];
+								
+								echo $GLOBALS['coin_brand_name']." took ".number_format($load_time, 2)." seconds to load this block.<br/>\n";
 							}
 							else {
 								$q = "SELECT SUM(load_time) FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_id='".$block['block_id']."';";

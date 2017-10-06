@@ -29,7 +29,7 @@ if ($thisuser) {
 					$address_text = $_REQUEST['address'];
 					
 					$user_game = $thisuser->ensure_user_in_game($game, false);
-					$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false);
+					$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false, false);
 					
 					if ($address_text == "new") {
 						$game_currency_account = $app->fetch_account_by_id($user_game['account_id']);
@@ -37,7 +37,7 @@ if ($thisuser) {
 					}
 					else {
 						$coin_rpc = new jsonRPCClient('http://'.$game->blockchain->db_blockchain['rpc_username'].':'.$game->blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$game->blockchain->db_blockchain['rpc_port'].'/');
-						$color_address = $game->blockchain->create_or_fetch_address($address_text, true, $coin_rpc, false, false, false);
+						$color_address = $game->blockchain->create_or_fetch_address($address_text, true, $coin_rpc, false, false, false, false);
 					}
 					
 					$error_message = false;

@@ -1,5 +1,6 @@
 <?php
 include(dirname(dirname(dirname(__FILE__)))."/includes/connect.php");
+include(dirname(dirname(dirname(__FILE__)))."/includes/get_session.php");
 include_once(dirname(__FILE__)."/SingleEliminationGameDefinition.php");
 
 if (!empty($argv)) {
@@ -9,6 +10,12 @@ if (!empty($argv)) {
 }
 
 if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+	if (empty($argv) && empty($thisuser)) {
+		$redirect_url = $app->get_redirect_url($_SERVER['REQUEST_URI']);
+		header("Location: /wallet/?redirect_id=".$redirect_url['redirect_url_id']);
+		die();
+	}
+	
 	$public_private = "";
 	if (!empty($_REQUEST['public_private'])) $public_private = $_REQUEST['public_private'];
 	
@@ -23,18 +30,29 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$module = $app->check_set_module("SingleElimination");
 
 		$db_game = false;
-		
 		$q = "SELECT * FROM games WHERE module=".$app->quote_escape($module['module_name']).";";
 		$r = $app->run_query($q);
-		
 		if ($r->rowCount() > 0) $db_game = $r->fetch();
 		
 		$game_def = new SingleEliminationGameDefinition($app);
+		
+		$blockchain = false;
+		$db_blockchain = false;
+		$q = "SELECT * FROM blockchains WHERE url_identifier=".$app->quote_escape($game_def->game_def->blockchain_identifier).";";
+		$r = $app->run_query($q);
+		if ($r->rowCount() > 0) {
+			$db_blockchain = $r->fetch();
+			$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
+		}
+		
 		if ($public_private == "private") {
 			$game_def->game_def->blockchain_identifier = "private";
-			$game_def->game_def->game_starting_block = 1;
-			$game_def->game_def->round_length = 20;
 		}
+		if ($db_blockchain['p2p_mode'] == "none") {
+			$game_starting_block = $blockchain->last_block_id() - ($blockchain->last_block_id()%$game_def->game_def->round_length) + 1;
+			$game_def->game_def->game_starting_block = $game_starting_block;
+		}
+		
 		$new_game_def_txt = $app->game_def_to_text($game_def->game_def);
 		
 		$error_message = false;
@@ -42,9 +60,13 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		
 		if (!empty($new_game)) {
 			if ($new_game->blockchain->db_blockchain['p2p_mode'] == "none") {
+				if ($thisuser) {
+					$user_game = $thisuser->ensure_user_in_game($new_game, false);
+				}
 				$log_text = "";
 				$new_game->blockchain->new_block($log_text);
-				$transaction_id = $new_game->add_genesis_transaction();
+				$transaction_id = $new_game->add_genesis_transaction($user_game);
+				if ($transaction_id < 0) $error_message = "Failed to add genesis transaction (".$transaction_id.").";
 				$new_game->blockchain->new_block($log_text);
 			}
 			
@@ -52,7 +74,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			$new_game->start_game();
 			$new_game->ensure_events_until_block($new_game->db_game['game_starting_block']);
 		}
-		else $error_message = "Error: failed to create the game.";
+		else if (empty($error_message)) $error_message = "Error: failed to create the game.";
 		
 		if ($error_message) echo $error_message."<br/>\n";
 		?>

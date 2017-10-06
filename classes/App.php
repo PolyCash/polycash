@@ -755,7 +755,7 @@ class App {
 			
 			if ($save_method == "skip") return false;
 			else {
-				$db_address = $blockchain->create_or_fetch_address($address_text, true, false, false, false, true);
+				$db_address = $blockchain->create_or_fetch_address($address_text, true, false, false, false, true, false);
 				if ($account) {
 					$q = "UPDATE addresses SET user_id='".$account['user_id']."' WHERE address_id='".$db_address['address_id']."';";
 					$r = $this->run_query($q);
@@ -980,7 +980,7 @@ class App {
 		$html .= "</div></div>\n";
 		
 		if ($db_game['game_id'] > 0) {
-			$sample_block_id = $game->blockchain->last_block_id();
+			$sample_block_id = $game->blockchain->last_block_id()-1;
 			$game->refresh_coins_in_existence();
 			
 			$circulation_amount_disp = $this->format_bignum($game->coins_in_existence($sample_block_id)/pow(10,$db_game['decimal_places']));

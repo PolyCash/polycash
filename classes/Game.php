@@ -1003,7 +1003,7 @@ class Game {
 	
 	public function process_buyin_transaction($transaction) {
 		if (!empty($this->db_game['game_starting_block']) && !empty($this->db_game['escrow_address']) && ($this->blockchain->db_blockchain['p2p_mode'] == "none" || $transaction['block_id'] >= $this->db_game['game_starting_block'])) {
-			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
+			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false, false);
 			
 			$qq = "SELECT * FROM transaction_ios WHERE create_transaction_id='".$transaction['transaction_id']."' AND address_id='".$escrow_address['address_id']."';";
 			$rr = $this->blockchain->app->run_query($qq);
@@ -1049,7 +1049,7 @@ class Game {
 	public function escrow_value($block_id) {
 		if (!$block_id) $block_id = $this->blockchain->last_block_id();
 		
-		$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
+		$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false, false);
 		
 		$value = $this->blockchain->address_balance_at_block($escrow_address, $block_id);
 		
@@ -1070,7 +1070,7 @@ class Game {
 		if ($coins_in_existence > 0) $html .= $this->blockchain->app->format_bignum(100*$account_value/$coins_in_existence)."%";
 		else $html .= "0%";
 		
-		$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
+		$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false, false);
 		$escrow_value = $this->escrow_value(false);
 		if ($coins_in_existence > 0) {
 			$innate_currency_value = floor(($account_value/$coins_in_existence)*$escrow_value);
@@ -1912,7 +1912,7 @@ class Game {
 						$new_voting_addr_count = 0;
 						do {
 							$temp_address = $coin_rpc->getnewaddress();
-							$new_addr_db = $this->blockchain->create_or_fetch_address($temp_address, false, $coin_rpc, true, false, false);
+							$new_addr_db = $this->blockchain->create_or_fetch_address($temp_address, false, $coin_rpc, true, false, false, false);
 							if ($new_addr_db['option_index'] == $option_index) {
 								$new_voting_addr_count++;
 							}
@@ -2357,7 +2357,7 @@ class Game {
 				$game_block = $this->blockchain->app->run_query($q)->fetch();
 			}
 			
-			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
+			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false, false);
 			
 			if ($this->db_game['buyin_policy'] != "none") {
 				$buyin_q = "SELECT * FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.create_block_id='".$block_height."' AND io.address_id='".$escrow_address['address_id']."' GROUP BY t.transaction_id;";
@@ -2749,7 +2749,7 @@ class Game {
 	
 	public function process_sellouts_in_block($block_id) {
 		if ($this->db_game['sellout_policy'] == "on") {
-			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
+			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false, false);
 			$escrow_balance = $this->blockchain->address_balance_at_block($escrow_address, $block_id);
 			$coins_in_existence = $this->coins_in_existence($block_id);
 			
@@ -2958,7 +2958,7 @@ class Game {
 		else return false;
 	}
 	
-	public function add_genesis_transaction() {
+	public function add_genesis_transaction(&$user_game) {
 		if ($this->blockchain->db_blockchain['p2p_mode'] == "none") {
 			$fee_amount = 0.001*pow(10, $this->blockchain->db_blockchain['decimal_places']);
 			
@@ -2969,11 +2969,11 @@ class Game {
 				$genesis_input = $r->fetch();
 				
 				$genesis_address_text = $this->blockchain->app->random_string(34);
-				$genesis_address = $this->blockchain->create_or_fetch_address($genesis_address_text, true, false, false, true, true);
+				$genesis_address = $this->blockchain->create_or_fetch_address($genesis_address_text, true, false, false, true, true, $user_game['account_id']);
 				$genesis_tx_hash = $this->db_game['genesis_tx_hash'];
 				
 				$successful = false;
-				$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
+				$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false, false);
 				
 				$escrow_amount = round(0.5*$genesis_input['amount']);
 				$color_amount = $genesis_input['amount'] - $escrow_amount - $fee_amount;
@@ -2991,7 +2991,7 @@ class Game {
 				
 				return $transaction_id;
 			}
-			else {echo "q: $q<br/>\n"; return -1;}
+			else return -1;
 		}
 		else return -2;
 	}

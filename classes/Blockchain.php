@@ -349,7 +349,7 @@ class Blockchain {
 						while ($out_io = $r->fetch()) {
 							$outputs[$j] = array("value"=>$out_io['amount']/pow(10,$this->db_blockchain['decimal_places']));
 							
-							$output_address = $this->create_or_fetch_address($out_io['address'], true, false, false, true, false);
+							$output_address = $this->create_or_fetch_address($out_io['address'], true, false, false, true, false, false);
 							$output_io_indices[$j] = $output_address['option_index'];
 							
 							$output_io_ids[$j] = $out_io['io_id'];
@@ -378,7 +378,7 @@ class Blockchain {
 								else $address_text = $outputs[$j]["scriptPubKey"]["hex"];
 								if (strlen($address_text) > 50) $address_text = substr($address_text, 0, 50);
 								
-								$output_address = $this->create_or_fetch_address($address_text, true, $coin_rpc, false, true, false);
+								$output_address = $this->create_or_fetch_address($address_text, true, $coin_rpc, false, true, false, false);
 								
 								$q = "INSERT INTO transaction_ios SET spend_status='unspent', blockchain_id='".$this->db_blockchain['blockchain_id']."', script_type='".$script_type."', out_index='".$j."'";
 								if ($output_address['user_id'] > 0) $q .= ", user_id='".$output_address['user_id']."'";
@@ -412,7 +412,7 @@ class Blockchain {
 						
 						while ($db_color_game = $r->fetch()) {
 							$color_game = new Game($this, $db_color_game['game_id']);
-							$escrow_address = $this->create_or_fetch_address($color_game->db_game['escrow_address'], true, false, false, false, false);
+							$escrow_address = $this->create_or_fetch_address($color_game->db_game['escrow_address'], true, false, false, false, false, false);
 							$color_amount = $db_color_game['colored_amount_sum'];
 							$coin_blocks = $db_color_game['ref_coin_block_sum'];
 							$color_amount_sum = 0;
@@ -752,7 +752,7 @@ class Blockchain {
 		$force_is_mine = false;
 		if ($this->db_blockchain['p2p_mode'] == "none") $force_is_mine = true;
 		
-		$output_address = $this->create_or_fetch_address($genesis_address, true, false, false, false, $force_is_mine);
+		$output_address = $this->create_or_fetch_address($genesis_address, true, false, false, false, $force_is_mine, false);
 		$html .= "genesis hash: ".$genesis_block_hash."<br/>\n";
 		
 		$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', amount='".$this->db_blockchain['initial_pow_reward']."', transaction_desc='coinbase', tx_hash='".$genesis_tx_hash."', block_id='0', time_created='".time()."', num_inputs=0, num_outputs=1, has_all_inputs=1, has_all_outputs=1;";
@@ -1037,7 +1037,7 @@ class Blockchain {
 		return $balance['SUM(amount)'];
 	}
 	
-	public function create_or_fetch_address($address, $check_existing, $rpc, $delete_optionless, $claimable, $force_is_mine) {
+	public function create_or_fetch_address($address, $check_existing, $rpc, $delete_optionless, $claimable, $force_is_mine, $account_id) {
 		if ($check_existing) {
 			$q = "SELECT * FROM addresses WHERE address=".$this->app->quote_escape($address).";";
 			$r = $this->app->run_query($q);
@@ -1077,7 +1077,9 @@ class Blockchain {
 				$r = $this->app->run_query($q);
 				
 				if ($is_mine) {
-					$q = "INSERT INTO address_keys SET address_id='".$output_address_id."', currency_id='".$this->currency_id()."', save_method='wallet.dat', pub_key=".$this->app->quote_escape($address).";";
+					$q = "INSERT INTO address_keys SET address_id='".$output_address_id."'";
+					if (!empty($account_id)) $q .= ", account_id='".$account_id."'";
+					$q .= ", currency_id='".$this->currency_id()."', save_method='wallet.dat', pub_key=".$this->app->quote_escape($address).";";
 					$r = $this->app->run_query($q);
 				}
 			}
@@ -1352,7 +1354,7 @@ class Blockchain {
 		$coin_rpc = false;
 		$ref_account = false;
 		$mined_address_str = $this->app->random_string(34);
-		$mined_address = $this->create_or_fetch_address($mined_address_str, false, false, false, true, true);
+		$mined_address = $this->create_or_fetch_address($mined_address_str, false, false, false, false, true, false);
 		
 		$mined_transaction_id = $this->create_transaction('coinbase', array($this->db_blockchain['initial_pow_reward']), $created_block_id, false, array($mined_address['address_id']), 0);
 		$num_transactions++;

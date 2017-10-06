@@ -41,7 +41,7 @@ if ($thisuser && $game) {
 			<div class="modal-body">
 				<?php
 				$coins_in_existence = $game->coins_in_existence(false);
-				$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false);
+				$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false, false);
 				$escrow_value = $game->escrow_value(false);
 				
 				if ($escrow_value > 0) {
