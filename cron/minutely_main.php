@@ -184,12 +184,12 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 							$rand_num = rand(0, pow(10,4))/pow(10,4);
 							if (!empty($_REQUEST['force_new_block'])) $rand_num = 0;
 							
-							if ($print_debug) echo $blockchains[$blockchain_id]->db_blockchain['blockchain_name']." (".$rand_num." vs ".$block_prob."): ";
+							if ($print_debug) echo "\n".$blockchains[$blockchain_id]->db_blockchain['blockchain_name']." (".$rand_num." vs ".$block_prob."): ";
 							
 							if ($rand_num <= $block_prob) {
 								if ($print_debug) echo "FOUND A BLOCK!!\n";
 								$txt = "";
-								$blockchain[$blockchain_id]->new_block($txt);
+								$blockchains[$blockchain_id]->new_block($txt);
 								if ($print_debug) echo $txt."\n";
 							}
 							else {

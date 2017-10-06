@@ -1244,12 +1244,24 @@ class App {
 			$process_running = (int) $this->get_site_constant($lock_name);
 			
 			if ($process_running > 0) {
-				$cmd = "ps -p ".$process_running."|wc -l";
-				$cmd_result_lines = (int) exec($cmd);
-				if ($cmd_result_lines > 1) return $process_running;
+				if (PHP_OS == "WINNT") {
+					$pids = array_column(array_map('str_getcsv', explode("\n",trim(`tasklist /FO csv /NH`))), 1);
+					if (in_array($process_running, $pids)) {
+						return $process_running;
+					}
+					else {
+						$this->set_site_constant($lock_name, 0);
+						return 0;
+					}
+				}
 				else {
-					$this->set_site_constant($lock_name, 0);
-					return 0;
+					$cmd = "ps -p ".$process_running."|wc -l";
+					$cmd_result_lines = (int) exec($cmd);
+					if ($cmd_result_lines > 1) return $process_running;
+					else {
+						$this->set_site_constant($lock_name, 0);
+						return 0;
+					}
 				}
 			}
 			else return 0;
