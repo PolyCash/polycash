@@ -1537,10 +1537,10 @@ if ($thisuser && $game) {
 		<?php
 	}
 	else {
-		if (!empty($_REQUEST['redirect_id'])) $redirect_id = (int) $_REQUEST['redirect_id'];
+		if (!empty($_REQUEST['redirect_key'])) $redirect_key = $_REQUEST['redirect_key'];
 		else {
 			$redirect_url = $app->get_redirect_url("/wallet/");
-			$redirect_id = $redirect_url['redirect_url_id'];
+			$redirect_key = $redirect_url['redirect_key'];
 		}
 		include("includes/html_login.php");
 	}

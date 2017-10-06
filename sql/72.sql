@@ -1,0 +1,1 @@
+ALTER TABLE `redirect_urls` ADD `redirect_key` VARCHAR(50) NULL DEFAULT NULL AFTER `redirect_url_id`;

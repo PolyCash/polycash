@@ -1693,7 +1693,7 @@ function try_claim_address(game_id, address_id) {
 		console.log(result_obj);
 		
 		if (result_obj['status_code'] == 1) window.location = window.location;
-		else if (result_obj['status_code'] == 2) window.location = '/wallet/?redirect_id='+result_obj['message'];
+		else if (result_obj['status_code'] == 2) window.location = '/wallet/?redirect_key='+result_obj['message'];
 		else alert(result_obj['message']);
 	});
 }

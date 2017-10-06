@@ -454,7 +454,7 @@ include('includes/html_start.php');
 	}
 	else {
 		$redirect_url = $app->get_redirect_url("/accounts/");
-		$redirect_id = $redirect_url['redirect_url_id'];
+		$redirect_key = $redirect_url['redirect_key'];
 		include("includes/html_login.php");
 	}
 	?>

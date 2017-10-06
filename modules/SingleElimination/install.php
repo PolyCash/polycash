@@ -12,7 +12,7 @@ if (!empty($argv)) {
 if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	if (empty($argv) && empty($thisuser)) {
 		$redirect_url = $app->get_redirect_url($_SERVER['REQUEST_URI']);
-		header("Location: /wallet/?redirect_id=".$redirect_url['redirect_url_id']);
+		header("Location: /wallet/?redirect_key=".$redirect_url['redirect_key']);
 		die();
 	}
 	

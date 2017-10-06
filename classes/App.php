@@ -296,11 +296,14 @@ class App {
 	public function get_redirect_url($url) {
 		$q = "SELECT * FROM redirect_urls WHERE url=".$this->quote_escape($url).";";
 		$r = $this->run_query($q);
+		
 		if ($r->rowCount() > 0) {
 			$redirect_url = $r->fetch();
 		}
 		else {
-			$q = "INSERT INTO redirect_urls SET url=".$this->quote_escape($url).", time_created='".time()."';";
+			$redirect_key = $this->random_string(32);
+			
+			$q = "INSERT INTO redirect_urls SET redirect_key=".$this->quote_escape($redirect_key).", url=".$this->quote_escape($url).", time_created='".time()."';";
 			$r = $this->run_query($q);
 			$redirect_url_id = $this->last_insert_id();
 			

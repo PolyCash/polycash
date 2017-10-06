@@ -25,7 +25,7 @@ if ($r->rowCount() > 0) {
 		}
 		else {
 			$redirect_url = $app->get_redirect_url("/explorer/games/".$game->db_game['url_identifier']."/addresses/".$db_address['address']."/?action=claim");
-			$app->output_message(2, $redirect_url['redirect_url_id'], false);
+			$app->output_message(2, $redirect_url['redirect_key'], false);
 		}
 	}
 	else $app->output_message(3, "Permission denied.", false);

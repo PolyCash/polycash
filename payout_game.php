@@ -368,7 +368,7 @@ else {
 	include('includes/html_start.php');
 	echo '<div class="container" style="max-width: 1000px; padding: 10px;">';
 	$redirect_url = get_redirect_url($_SERVER['REQUEST_URI']);
-	$redirect_id = $redirect_url['redirect_url_id'];
+	$redirect_key = $redirect_url['redirect_key'];
 	include('includes/html_login.php');
 	echo '</div>';
 	include('includes/html_stop.php');
