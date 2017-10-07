@@ -30,14 +30,12 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	$last_transaction_id = $game->blockchain->last_transaction_id();
 	
 	if ($thisuser) {
-		$my_last_transaction_id = $thisuser->my_last_transaction_id($game->db_game['game_id']);
 		$account_value = $thisuser->account_coin_value($game, $user_game);
 		$immature_balance = $thisuser->immature_balance($game, $user_game);
 		$mature_balance = $thisuser->mature_balance($game, $user_game);
 		$mature_game_io_ids_csv = $game->mature_io_ids_csv($user_game);
 	}
 	else {
-		$my_last_transaction_id = false;
 		$account_value = 0;
 		$immature_balance = 0;
 		$mature_balance = 0;
@@ -54,12 +52,6 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		$output['last_transaction_id'] = $last_transaction_id;
 	}
 	else $output['new_transaction'] = 0;
-	
-	if ($my_last_transaction_id != $_REQUEST['my_last_transaction_id'] && $thisuser) {
-		$output['new_my_transaction'] = 1;
-		$output['my_last_transaction_id'] = $my_last_transaction_id;
-	}
-	else $output['new_my_transaction'] = 0;
 	
 	if ($last_block_id !== $_REQUEST['last_block_id'] || $last_transaction_id != (int) $_REQUEST['last_transaction_id']) {
 		if ($last_block_id != (int) $_REQUEST['last_block_id']) {
