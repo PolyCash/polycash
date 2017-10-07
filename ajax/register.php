@@ -34,6 +34,8 @@ else {
 				
 				$thisuser = new User($app, $user_id);
 				
+				if ($user_id == 1) $app->set_site_constant("admin_user_id", $user_id);
+				
 				$session_key = session_id();
 				$expire_time = time()+3600*24;
 				

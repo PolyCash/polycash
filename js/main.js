@@ -1653,6 +1653,15 @@ function account_spend_buyin() {
 		});
 	}
 }
+function account_spend_withdraw() {
+	var withdraw_address = $('#spend_withdraw_address').val();
+	var withdraw_amount = $('#spend_withdraw_amount').val();
+	$.get("/ajax/account_spend.php?action=withdraw&io_id="+account_io_id+"&address="+withdraw_address+"&amount="+withdraw_amount, function(result) {
+		var result_obj = JSON.parse(result);
+		alert(result_obj['message']);
+		if (result_obj['status_code'] == 1) window.location = window.location;
+	});
+}
 
 var set_event_id = false;
 
@@ -1706,4 +1715,38 @@ function finish_join_tx() {
 		alert(result_obj['message']);
 		if (result_obj['status_code'] == 13) window.location = window.location;
 	});
+}
+function create_account_step(step) {
+	var create_account_action = $('#create_account_action').val();
+	
+	if (step == 1) {
+		$('#create_account_blockchain_id').val("");
+		$('#create_account_submit').hide('fast');
+		$('#create_account_step3').hide('fast');
+		
+		if (create_account_action == "") {
+			$('#create_account_step2').hide('fast');
+		}
+		else {
+			$('#create_account_step2').show('fast');
+		}
+	}
+	else if (step == 2) {
+		$('#create_account_submit').show('fast');
+		
+		if (create_account_action == "by_rpc_account") {
+			$('#create_account_step3').show('fast');
+			$('#create_account_rpc_name').focus();
+		}
+		else if (create_account_action == "for_blockchain") {
+			create_account_step('submit');
+		}
+	}
+	else if (step == "submit") {
+		$.get("/ajax/create_account.php?action="+create_account_action+"&blockchain_id="+$('#create_account_blockchain_id').val()+"&account_name="+$('#create_account_rpc_name').val(), function(result) {
+			var result_obj = JSON.parse(result);
+			alert(result_obj['message']);
+			if (result_obj['status_code'] == 1) window.location = window.location;
+		});
+	}
 }

@@ -1234,7 +1234,7 @@ class Blockchain {
 							$r = $this->app->run_query($q);
 							$created_input_ids[count($created_input_ids)] = $this->app->last_insert_id();
 						}
-						else if ($this->db_blockchain['p2p_mode'] == "p2p") {
+						else if ($this->db_blockchain['p2p_mode'] == "rpc") {
 							$raw_txout[$address['address']] = $amounts[$out_index]/pow(10,$this->db_blockchain['decimal_places']);
 						}
 					}
@@ -1263,7 +1263,7 @@ class Blockchain {
 							
 							$this->walletnotify($coin_rpc, $verified_tx_hash, FALSE);
 							
-							$db_transaction = $this->app->run_query("SELECT * FROM transactions WHERE tx_hash=".$this->blockchain->app->quote_escape($tx_hash).";")->fetch();
+							$db_transaction = $this->app->run_query("SELECT * FROM transactions WHERE tx_hash=".$this->app->quote_escape($tx_hash).";")->fetch();
 							
 							return $db_transaction['transaction_id'];
 						}
