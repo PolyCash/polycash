@@ -125,7 +125,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		}
 	}
 	
-	if ($output['new_my_transaction'] == 1 || $mature_game_io_ids_csv != $_REQUEST['mature_game_io_ids_csv'] || !empty($output['new_block'])) {
+	if ($mature_game_io_ids_csv != $_REQUEST['mature_game_io_ids_csv'] || !empty($output['new_block'])) {
 		$output['select_input_buttons'] = $thisuser? $game->select_input_buttons($user_game) : "";
 		$output['mature_game_io_ids_csv'] = $mature_game_io_ids_csv;
 		$output['new_mature_ios'] = 1;

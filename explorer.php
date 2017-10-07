@@ -923,7 +923,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					$r = $app->run_query($q);
 					
 					while ($transaction_io = $r->fetch()) {
-						if (!in_array($transaction_ids, $transaction_io['transaction_id'])) {
+						if (!in_array($transaction_io['transaction_id'], $transaction_ids)) {
 							array_push($transaction_ids, $transaction_io['transaction_id']);
 							array_push($transaction_ios, $transaction_io);
 						}

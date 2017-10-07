@@ -15,7 +15,7 @@ if ($thisuser) {
 		$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
 		
 		if ($action == "by_rpc_account") {
-			if ($thisuser->db_user['user_id'] == $app->get_site_constant("admin_user_id")) {
+			if ($app->user_is_admin($thisuser)) {
 				if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
 					if (!empty($blockchain->db_blockchain['rpc_username']) && !empty($blockchain->db_blockchain['rpc_password'])) {
 						$error = false;

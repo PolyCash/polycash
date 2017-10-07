@@ -241,7 +241,7 @@ include('includes/html_start.php');
 					
 					while ($transaction = $transaction_in_r->fetch()) {
 						if ($account_game) {
-							$colored_coin_q = "SELECT SUM(colored_amount) FROM transaction_game_ios WHERE io_id='".$transaction['io_id']."';";
+							$colored_coin_q = "SELECT SUM(colored_amount) FROM transaction_game_ios WHERE game_id='".$account_game->db_game['game_id']."' AND io_id='".$transaction['io_id']."';";
 							$colored_coin_r = $app->run_query($colored_coin_q);
 							$colored_coin_amount = $colored_coin_r->fetch();
 							$colored_coin_amount = $colored_coin_amount['SUM(colored_amount)'];

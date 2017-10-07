@@ -1213,9 +1213,12 @@ class App {
 	
 	public function votes_per_coin($db_game) {
 		if ($db_game['inflation'] == "exponential") {
-			if ($db_game['payout_weight'] == "coin_round") $votes_per_coin = 1/$db_game['exponential_inflation_rate'];
-			else $votes_per_coin = $db_game['round_length']/$db_game['exponential_inflation_rate'];
-			return $votes_per_coin;
+			if ($db_game['exponential_inflation_rate'] == 0) return 0;
+			else {
+				if ($db_game['payout_weight'] == "coin_round") $votes_per_coin = 1/$db_game['exponential_inflation_rate'];
+				else $votes_per_coin = $db_game['round_length']/$db_game['exponential_inflation_rate'];
+				return $votes_per_coin;
+			}
 		}
 		else return 0;
 	}
@@ -1856,7 +1859,7 @@ class App {
 	}
 	
 	public function permission_to_claim_address(&$game, &$thisuser, &$db_address) {
-		if (!empty($game->blockchain->db_blockchain['only_game_id']) && $db_address['address'] == $game->blockchain->db_blockchain["genesis_address"] && empty($db_address['user_id'])) return true;
+		if (!empty($thisuser) && $this->user_is_admin($thisuser) && empty($db_address['user_id'])) return true;
 		else return false;
 	}
 	
@@ -1893,6 +1896,14 @@ class App {
 			$qq = "INSERT INTO currencies SET blockchain_id='".$db_blockchain['blockchain_id']."', name=".$this->quote_escape($db_blockchain['blockchain_name']).", short_name=".$this->quote_escape($db_blockchain['coin_name']).", short_name_plural=".$this->quote_escape($db_blockchain['coin_name_plural']).", abbreviation=".$this->quote_escape($db_blockchain['coin_name_plural']).";";
 			$rr = $this->run_query($qq);
 		}
+	}
+	
+	public function user_is_admin(&$user) {
+		if (!empty($user)) {
+			if ($user->db_user['user_id'] == $this->get_site_constant("admin_user_id")) return true;
+			else return false;
+		}
+		else return false;
 	}
 }
 ?>

@@ -230,7 +230,8 @@ class User {
 			
 			if ($game->db_game['inflation'] == "exponential") {
 				$votes_per_coin = $game->blockchain->app->votes_per_coin($game->db_game);
-				$votes_value = $user_votes/$votes_per_coin;
+				if ($votes_per_coin > 0) $votes_value = $user_votes/$votes_per_coin;
+				else $votes_value = 0;
 				$html .= '<div class="row"><div class="col-sm-2">Unrealized gain:</div><div class="col-sm-3 text-right"><font class="greentext">'.$this->app->format_bignum($votes_value/pow(10,$game->db_game['decimal_places'])).'</font> '.$game->db_game['coin_name_plural'].'</div></div>'."\n";
 			}
 			else {
@@ -338,8 +339,8 @@ class User {
 		
 		if ($user_game['strategy_id'] > 0) {}
 		else {
-			if ($game->blockchain->db_blockchain['p2p_mode'] == "none") $tx_fee=0.00001*pow(10,$game->blockchain->db_blockchain['decimal_places']);
-			else $tx_fee=0.001*pow(10,$game->blockchain->db_blockchain['decimal_places']);
+			if ($game->blockchain->db_blockchain['p2p_mode'] == "none") $tx_fee=0.00001;
+			else $tx_fee=0.001;
 			
 			$q = "INSERT INTO user_strategies SET voting_strategy='manual', game_id='".$game->db_game['game_id']."', user_id='".$user_game['user_id']."'";
 			$q .= ", transaction_fee=".$tx_fee;
