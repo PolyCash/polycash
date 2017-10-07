@@ -622,7 +622,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								$round_id = $game->block_to_round($block['block_id']);
 								$block_index = $game->block_id_to_round_index($block['block_id']);
 								list($num_trans, $block_sum) = $game->block_stats($block);
-								$block_sum_disp = $block_sum/$game->db_game['decimal_places'];
+								$block_sum_disp = $block_sum/pow(10,$game->db_game['decimal_places']);
 								
 								$game_block_r = $app->run_query("SELECT * FROM game_blocks WHERE game_id='".$game->db_game['game_id']."' AND block_id='".$block['block_id']."';");
 								if ($game_block_r->rowCount() > 0) $game_block = $game_block_r->fetch();
@@ -630,7 +630,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							}
 							else {
 								list($num_trans, $block_sum) = $blockchain->block_stats($block);
-								$block_sum_disp = $block_sum/$blockchain->db_blockchain['decimal_places'];
+								$block_sum_disp = $block_sum/pow(10,$blockchain->db_blockchain['decimal_places']);
 								
 								$game_block = false;
 							}

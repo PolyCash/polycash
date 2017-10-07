@@ -56,7 +56,7 @@ if ($thisuser) {
 		}
 		else $app->output_message(4, "Error, incorrect game_id", false);
 	}
-	else if ($action == "start_join_tx" || $action = "finish_join_tx") {
+	else if ($action == "start_join_tx" || $action == "finish_join_tx") {
 		$io_id = (int) $_REQUEST['io_id'];
 		
 		$q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.io_id='".$io_id."';";
@@ -130,6 +130,57 @@ if ($thisuser) {
 			else $app->output_message(8, "Error, invalid UTXO ID.", false);
 		}
 		else $app->output_message(8, "Error, invalid UTXO ID.", false);
+	}
+	else if ($action == "withdraw") {
+		$io_id = (int) $_REQUEST['io_id'];
+		
+		$q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.io_id='".$io_id."';";
+		$r = $app->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			$db_io = $r->fetch();
+			
+			$blockchain = new Blockchain($app, $db_io['blockchain_id']);
+			
+			$coin_rpc = false;
+			
+			if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
+				try {
+					$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
+					$info = $coin_rpc->getinfo();
+				}
+				catch (Exception $e) {
+					$app->output_message(8, "Error: RPC connection failed.", false);
+					die();
+				}
+			}
+			
+			$amount = (float) $_REQUEST['amount'];
+			$amount = $amount*pow(10, $blockchain->db_blockchain['decimal_places']);
+			$fee_amount = 0.001*pow(10, $blockchain->db_blockchain['decimal_places']);
+			
+			if ($db_io['amount'] >= $amount+$fee_amount) {
+				$remainder_amount = $db_io['amount']-$amount-$fee_amount;
+				
+				$address = strip_tags($_REQUEST['address']);
+				$db_address = $blockchain->create_or_fetch_address($address, true, $coin_rpc, false, false, false, false);
+				
+				$amounts = array($amount);
+				$address_ids = array($db_address['address_id']);
+				
+				if ($remainder_amount > 0) {
+					array_push($amounts, $remainder_amount);
+					array_push($address_ids, $db_io['address_id']);
+				}
+				
+				$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($db_io['io_id']), $address_ids, $fee_amount);
+				
+				if ($transaction_id) $app->output_message(1, "Transaction created successfully.", false);
+				else $app->output_message(6, "Error: failed to created transaction.", false);
+			}
+			else $app->output_message(5, "Error: not enough coins.", false);
+		}
+		else $app->output_message(4, "Error, invalid UTXO ID.", false);
 	}
 	else $app->output_message(3, "This action is not yet implemented.", false);
 }
