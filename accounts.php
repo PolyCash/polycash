@@ -53,6 +53,10 @@ if ($thisuser && !empty($_REQUEST['action']) && $_REQUEST['action'] == "donate_t
 						$addresses_needed = $quantity;
 						$loop_count = 0;
 						do {
+							if ($donate_blockchain->db_blockchain['p2p_mode'] == "none") {
+								$addr_text = $app->random_string(34);
+								$temp_address = $donate_blockchain->create_or_fetch_address($addr_text, false, false, false, false, true, false);
+							}
 							$addr_q = "SELECT * FROM addresses a WHERE a.primary_blockchain_id='".$donate_blockchain->db_blockchain['blockchain_id']."' AND a.is_mine=1 AND a.user_id IS NULL AND NOT EXISTS (SELECT * FROM transaction_ios io WHERE io.address_id=a.address_id) ORDER BY RAND() LIMIT 1;";
 							$addr_r = $app->run_query($addr_q);
 							
