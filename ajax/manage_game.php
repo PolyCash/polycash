@@ -109,7 +109,7 @@ if ($thisuser) {
 		}
 		else $app->output_message(2, "Access denied", false);
 	}
-	else if ($action == "load_gde") {
+	else if ($action == "load_gde" || $action == "save_gde" || $action == "manage_gdos" || $action == "add_new_gdo" || $action == "delete_gdo") {
 		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
 		$r = $app->run_query($q);
 		
@@ -118,244 +118,248 @@ if ($thisuser) {
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
 			
-			$gde_id = $_REQUEST['gde_id'];
-			$gde = false;
-			
-			if ($gde_id == "new") {
-				$q = "SELECT COUNT(*), MAX(event_index) FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."';";
-				$r = $app->run_query($q);
-				
-				if ($r->rowCount() > 0) {
-					$row = $r->fetch();
-					if ($row['COUNT(*)'] > 0) $new_event_index = $row['MAX(event_index)']+1;
-					else $new_event_index = 0;
-				}
-				else {
-					$new_event_index = 0;
-				}
-				$gde['event_index'] = $new_event_index;
-			}
-			else {
-				$gde_id = (int) $gde_id;
-				
-				$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND game_defined_event_id='".$gde_id."';";
-				$r = $app->run_query($q);
-				
-				if ($r->rowCount() > 0) {
-					$gde = $r->fetch(PDO::FETCH_ASSOC);
-				}
-			}
-			
-			$verbatim_vars = $app->event_verbatim_vars();
-			
-			$form_html = '<div class="modal-body">';
-			
-			for ($i=0; $i<count($verbatim_vars); $i++) {
-				$var_display_name = ucfirst(str_replace("_", " ", $verbatim_vars[$i][1]));
-				$form_html .= '<div class="form-group">'."\n";
-				$form_html .= '<label for="game_form_'.$verbatim_vars[$i][1].'">'.$var_display_name.':</label>'."\n";
-				$form_html .= '<input class="form-control" id="game_form_'.$verbatim_vars[$i][1].'"';
-				if (isset($gde[$verbatim_vars[$i][1]])) $form_html .= ' value="'.$gde[$verbatim_vars[$i][1]].'"';
-				$form_html .= ' />'."\n";
-				$form_html .= "</div>\n";
-			}
-			
-			$form_html .= "</div>\n";
-			$form_html .= '<div class="modal-footer">
-				<button type="button" class="btn btn-primary" onclick="save_gde(\''.$gde_id.'\');">Save changes</button>
-				<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-			</div>'."\n";
-			
-			$output_obj['html'] = $form_html;
-			
-			$app->output_message(1, "", $output_obj);
-		}
-	}
-	else if ($action == "save_gde") {
-		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
-		$r = $app->run_query($q);
-		
-		if ($r->rowCount() > 0) {
-			$db_game = $r->fetch();
-			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
-			$game = new Game($blockchain, $db_game['game_id']);
-			
-			$initial_game_def = $app->fetch_game_definition($game);
-			$initial_game_def_hash = $app->game_definition_hash($game);
-			$game->check_set_game_definition();
-			
-			$verbatim_vars = $app->event_verbatim_vars();
-			
-			$gde_id = $_REQUEST['gde_id'];
-			
-			if ($gde_id == "new") $q = "INSERT INTO game_defined_events SET game_id='".$game->db_game['game_id']."', ";
-			else {
-				$gde_id = (int) $gde_id;
-				$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND game_defined_event_id='".$gde_id."';";
-				$r = $app->run_query($q);
-				
-				if ($r->rowCount() > 0) {
-					$gde = $r->fetch();
-					$q = "UPDATE game_defined_events SET ";
-				}
-				else {
-					$app->output_message(2, "Failed to load that event.", false);
-					die();
-				}
-			}
-			
-			for ($i=0; $i<count($verbatim_vars); $i++) {
-				$q .= $verbatim_vars[$i][1]."=";
-				if (!isset($_REQUEST[$verbatim_vars[$i][1]]) || $_REQUEST[$verbatim_vars[$i][1]] === "") $q .= "NULL";
-				else $q .= $app->quote_escape($_REQUEST[$verbatim_vars[$i][1]]);
-				$q .= ", ";
-			}
-			$q = substr($q, 0, strlen($q)-2);
-			
-			if ($gde_id == "new") $q .= ";";
-			else $q .= " WHERE game_defined_event_id='".$gde['game_defined_event_id']."';";
-			
-			$r = $app->run_query($q);
-			
-			if ($gde_id == "new") {
-				$gde_id = $app->last_insert_id();
-			}
-			
-			$new_game_def = $app->fetch_game_definition($game);
-			$new_game_def_hash = $app->game_definition_hash($game);
-			$game->check_set_game_definition();
-			
-			$app->migrate_game_definitions($game, $initial_game_def_hash, $new_game_def_hash);
-			
-			$app->output_message(1, $gde_id, "");
-		}
-	}
-	else if ($action == "manage_gdos") {
-		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
-		$r = $app->run_query($q);
-		
-		if ($r->rowCount() > 0) {
-			$db_game = $r->fetch();
-			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
-			$game = new Game($blockchain, $db_game['game_id']);
-			
-			$gde_id = (int) $_REQUEST['gde_id'];
-			
-			$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND game_defined_event_id='".$gde_id."';";
-			$r = $app->run_query($q);
-			
-			if ($r->rowCount() > 0) {
-				$gde = $r->fetch();
-				
-				$html = '<div class="modal-body"><p><b>'.$gde['event_name'].':</b></p>'."\n";
-				
-				$q = "SELECT * FROM game_defined_options gdo LEFT JOIN entities e ON gdo.entity_id=e.entity_id LEFT JOIN entity_types et ON e.entity_type_id=et.entity_type_id WHERE gdo.game_id='".$game->db_game['game_id']."' AND gdo.event_index='".$gde['event_index']."' ORDER BY gdo.option_index ASC;";
-				$r = $app->run_query($q);
-				
-				while ($gdo = $r->fetch()) {
-					$html .= '<div class="row">';
-					$html .= '<div class="col-md-6">';
-					$html .= $gdo['option_index'].". ".$gdo['name'];
-					$html .= '</div>'."\n";
-					$html .= '<div class="col-md-3">';
-					$html .= ucfirst($gdo['entity_name']);
-					$html .= '</div>'."\n";
-					$html .= '</div>'."\n";
-				}
-				
-				$html .= '<p style="margin-top: 10px;"><a href="" onclick="$(\'#new_gdo_form\').toggle(\'fast\'); return false;">Add another option</a></p>'."\n";
-				
-				$html .= '<div id="new_gdo_form" style="display: none">';
-				
-				$html .= '<div class="form-group">';
-				$html .= '<label for="new_gdo_name">Name:</label>'."\n";
-				$html .= '<input type="text" class="form-control" id="new_gdo_name" value="" />'."\n";
-				$html .= "</div>\n";
-				
-				$html .= '<div class="form-group">';
-				$html .= '<label for="new_gdo_entity_type_id">Entity type:</label>'."\n";
-				$html .= '<select class="form-control" id="new_gdo_entity_type_id">'."\n";
-				
-				$q = "SELECT * FROM entity_types ORDER BY entity_name='general entity' DESC, entity_name ASC;";
-				$r = $app->run_query($q);
-				
-				while ($entity_type = $r->fetch()) {
-					$html .= '<option value="'.$entity_type['entity_type_id'].'">'.$entity_type['entity_name'].'</option>'."\n";
-				}
-				$html .= '</select>'."\n";
-				$html .= "</div>\n";
-				
-				$html .= '<button type="button" class="btn btn-primary" onclick="add_game_defined_option(\''.$gde_id.'\');">Add option</button>'."\n";
-				
-				$html .= "</div>\n";
-				
-				$html .= "</div>\n";
-				
-				$output_obj = array();
-				$output_obj['html'] = $html;
-				
-				$app->output_message(1, "", $output_obj);
-			}
-			else $app->output_message(5, "Invalid game defined event ID.", false);
-		}
-		else $app->output_message(4, "Invalid game ID.", false);
-	}
-	else if ($action == "add_new_gdo") {
-		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
-		$r = $app->run_query($q);
-		
-		if ($r->rowCount() > 0) {
-			$db_game = $r->fetch();
-			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
-			$game = new Game($blockchain, $db_game['game_id']);
-			
-			$gde_id = (int) $_REQUEST['gde_id'];
-			
-			$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND game_defined_event_id='".$gde_id."';";
-			$r = $app->run_query($q);
-			
-			if ($r->rowCount() > 0) {
-				$gde = $r->fetch();
-				
-				$name = $_REQUEST['name'];
-				$entity_type_id = (int) $_REQUEST['entity_type_id'];
-				
-				$q = "SELECT * FROM entity_types WHERE entity_type_id='".$entity_type_id."';";
-				$r = $app->run_query($q);
-				
-				if ($r->rowCount() > 0) {
-					$entity_type = $r->fetch();
+			if ($app->user_can_edit_game($thisuser, $game)) {
+				if ($action == "load_gde") {
+					$gde_id = $_REQUEST['gde_id'];
+					$gde = false;
 					
-					if (!empty($name)) {
-						$entity = $app->check_set_entity($entity_type['entity_type_id'], $name);
-						
-						$initial_game_def = $app->fetch_game_definition($game);
-						$initial_game_def_hash = $app->game_definition_hash($game);
-						$game->check_set_game_definition();
-						
-						$q = "SELECT COUNT(*), MAX(option_index) FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gde['event_index']."';";
+					if ($gde_id == "new") {
+						$q = "SELECT COUNT(*), MAX(event_index) FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."';";
 						$r = $app->run_query($q);
-						$info = $r->fetch();
-						if ($info['COUNT(*)'] > 0) $option_index = $info['COUNT(*)'];
-						else $option_index = 0;
 						
-						$q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index='".$gde['event_index']."', entity_id='".$entity['entity_id']."', name=".$app->quote_escape($name).", option_index='".$option_index."';";
-						$r = $app->run_query($q);
-						$gdo_id = $app->last_insert_id();
-						
-						$new_game_def = $app->fetch_game_definition($game);
-						$new_game_def_hash = $app->game_definition_hash($game);
-						$game->check_set_game_definition();
-						
-						$app->migrate_game_definitions($game, $initial_game_def_hash, $new_game_def_hash);
-						
-						$app->output_message(1, $gdo_id, false);
+						if ($r->rowCount() > 0) {
+							$row = $r->fetch();
+							if ($row['COUNT(*)'] > 0) $new_event_index = $row['MAX(event_index)']+1;
+							else $new_event_index = 0;
+						}
+						else {
+							$new_event_index = 0;
+						}
+						$gde['event_index'] = $new_event_index;
 					}
-					else $app->output_message(7, "Invalid name.", false);
+					else {
+						$gde_id = (int) $gde_id;
+						
+						$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND game_defined_event_id='".$gde_id."';";
+						$r = $app->run_query($q);
+						
+						if ($r->rowCount() > 0) {
+							$gde = $r->fetch(PDO::FETCH_ASSOC);
+						}
+					}
+					
+					$verbatim_vars = $app->event_verbatim_vars();
+					
+					$form_html = '<div class="modal-body">';
+					
+					for ($i=0; $i<count($verbatim_vars); $i++) {
+						$var_display_name = ucfirst(str_replace("_", " ", $verbatim_vars[$i][1]));
+						$form_html .= '<div class="form-group">'."\n";
+						$form_html .= '<label for="game_form_'.$verbatim_vars[$i][1].'">'.$var_display_name.':</label>'."\n";
+						$form_html .= '<input class="form-control" id="game_form_'.$verbatim_vars[$i][1].'"';
+						if (isset($gde[$verbatim_vars[$i][1]])) $form_html .= ' value="'.$gde[$verbatim_vars[$i][1]].'"';
+						$form_html .= ' />'."\n";
+						$form_html .= "</div>\n";
+					}
+					
+					$form_html .= "</div>\n";
+					$form_html .= '<div class="modal-footer">
+						<button type="button" class="btn btn-primary" onclick="save_gde(\''.$gde_id.'\');">Save changes</button>
+						<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+					</div>'."\n";
+					
+					$output_obj['html'] = $form_html;
+					
+					$app->output_message(1, "", $output_obj);
 				}
-				else $app->output_message(6, "Invalid entity type ID.", false);
+				else if ($action == "save_gde") {
+					$initial_game_def = $app->fetch_game_definition($game);
+					$initial_game_def_hash = $app->game_definition_hash($game);
+					$game->check_set_game_definition();
+					
+					$verbatim_vars = $app->event_verbatim_vars();
+					
+					$gde_id = $_REQUEST['gde_id'];
+					
+					if ($gde_id == "new") $q = "INSERT INTO game_defined_events SET game_id='".$game->db_game['game_id']."', ";
+					else {
+						$gde_id = (int) $gde_id;
+						$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND game_defined_event_id='".$gde_id."';";
+						$r = $app->run_query($q);
+						
+						if ($r->rowCount() > 0) {
+							$gde = $r->fetch();
+							$q = "UPDATE game_defined_events SET ";
+						}
+						else {
+							$app->output_message(8, "Failed to load that event.", false);
+							die();
+						}
+					}
+					
+					for ($i=0; $i<count($verbatim_vars); $i++) {
+						$q .= $verbatim_vars[$i][1]."=";
+						if (!isset($_REQUEST[$verbatim_vars[$i][1]]) || $_REQUEST[$verbatim_vars[$i][1]] === "") $q .= "NULL";
+						else $q .= $app->quote_escape($_REQUEST[$verbatim_vars[$i][1]]);
+						$q .= ", ";
+					}
+					$q = substr($q, 0, strlen($q)-2);
+					
+					if ($gde_id == "new") $q .= ";";
+					else $q .= " WHERE game_defined_event_id='".$gde['game_defined_event_id']."';";
+					
+					$r = $app->run_query($q);
+					
+					if ($gde_id == "new") {
+						$gde_id = $app->last_insert_id();
+					}
+					
+					$new_game_def = $app->fetch_game_definition($game);
+					$new_game_def_hash = $app->game_definition_hash($game);
+					$game->check_set_game_definition();
+					
+					$app->migrate_game_definitions($game, $initial_game_def_hash, $new_game_def_hash);
+					
+					$app->output_message(7, $gde_id, "");
+				}
+				else if ($action == "manage_gdos") {
+					$gde_id = (int) $_REQUEST['gde_id'];
+					
+					$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND game_defined_event_id='".$gde_id."';";
+					$r = $app->run_query($q);
+					
+					if ($r->rowCount() > 0) {
+						$gde = $r->fetch();
+						
+						$html = '<div class="modal-body"><p><b>'.$gde['event_name'].':</b></p>'."\n";
+						
+						$q = "SELECT * FROM game_defined_options gdo LEFT JOIN entities e ON gdo.entity_id=e.entity_id LEFT JOIN entity_types et ON e.entity_type_id=et.entity_type_id WHERE gdo.game_id='".$game->db_game['game_id']."' AND gdo.event_index='".$gde['event_index']."' ORDER BY gdo.option_index ASC;";
+						$r = $app->run_query($q);
+						
+						while ($gdo = $r->fetch()) {
+							$html .= '<div class="row">';
+							
+							$html .= '<div class="col-md-6">';
+							$html .= $gdo['option_index'].". ".$gdo['name'];
+							$html .= '</div>'."\n";
+							
+							$html .= '<div class="col-md-3">';
+							$html .= ucfirst($gdo['entity_name']);
+							$html .= '</div>'."\n";
+							
+							$html .= '<div class="col-md-1">';
+							$html .= '<i class="fa fa-times redtext" aria-hidden="true" style="cursor: pointer;" title="Delete this option" onclick="delete_game_defined_option('.$gde['game_defined_event_id'].', '.$gdo['game_defined_option_id'].');"></i>';
+							$html .= '</div>'."\n";
+							
+							$html .= '</div>'."\n";
+						}
+						
+						$html .= '<p style="margin-top: 10px;"><a href="" onclick="$(\'#new_gdo_form\').toggle(\'fast\'); return false;">Add another option</a></p>'."\n";
+						
+						$html .= '<div id="new_gdo_form" style="display: none">';
+						
+						$html .= '<div class="form-group">';
+						$html .= '<label for="new_gdo_name">Name:</label>'."\n";
+						$html .= '<input type="text" class="form-control" id="new_gdo_name" value="" />'."\n";
+						$html .= "</div>\n";
+						
+						$html .= '<div class="form-group">';
+						$html .= '<label for="new_gdo_entity_type_id">Entity type:</label>'."\n";
+						$html .= '<select class="form-control" id="new_gdo_entity_type_id">'."\n";
+						
+						$q = "SELECT * FROM entity_types ORDER BY entity_name='general entity' DESC, entity_name ASC;";
+						$r = $app->run_query($q);
+						
+						while ($entity_type = $r->fetch()) {
+							$html .= '<option value="'.$entity_type['entity_type_id'].'">'.$entity_type['entity_name'].'</option>'."\n";
+						}
+						$html .= '</select>'."\n";
+						$html .= "</div>\n";
+						
+						$html .= '<button type="button" class="btn btn-primary" onclick="add_game_defined_option(\''.$gde_id.'\');">Add option</button>'."\n";
+						
+						$html .= "</div>\n";
+						
+						$html .= "</div>\n";
+						
+						$output_obj = array();
+						$output_obj['html'] = $html;
+						
+						$app->output_message(1, "", $output_obj);
+					}
+					else $app->output_message(7, "Invalid game defined event ID.", false);
+				}
+				else if ($action == "add_new_gdo") {
+					$gde_id = (int) $_REQUEST['gde_id'];
+					
+					$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND game_defined_event_id='".$gde_id."';";
+					$r = $app->run_query($q);
+					
+					if ($r->rowCount() > 0) {
+						$gde = $r->fetch();
+						
+						$name = $_REQUEST['name'];
+						$entity_type_id = (int) $_REQUEST['entity_type_id'];
+						
+						$q = "SELECT * FROM entity_types WHERE entity_type_id='".$entity_type_id."';";
+						$r = $app->run_query($q);
+						
+						if ($r->rowCount() > 0) {
+							$entity_type = $r->fetch();
+							
+							if (!empty($name)) {
+								$entity = $app->check_set_entity($entity_type['entity_type_id'], $name);
+								
+								$initial_game_def = $app->fetch_game_definition($game);
+								$initial_game_def_hash = $app->game_definition_hash($game);
+								$game->check_set_game_definition();
+								
+								$q = "SELECT COUNT(*), MAX(option_index) FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gde['event_index']."';";
+								$r = $app->run_query($q);
+								$info = $r->fetch();
+								if ($info['COUNT(*)'] > 0) $option_index = $info['COUNT(*)'];
+								else $option_index = 0;
+								
+								$q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index='".$gde['event_index']."', entity_id='".$entity['entity_id']."', name=".$app->quote_escape($name).", option_index='".$option_index."';";
+								$r = $app->run_query($q);
+								$gdo_id = $app->last_insert_id();
+								
+								$new_game_def = $app->fetch_game_definition($game);
+								$new_game_def_hash = $app->game_definition_hash($game);
+								$game->check_set_game_definition();
+								
+								$app->migrate_game_definitions($game, $initial_game_def_hash, $new_game_def_hash);
+								
+								$app->output_message(1, $gdo_id, false);
+							}
+							else $app->output_message(9, "Invalid name.", false);
+						}
+						else $app->output_message(8, "Invalid entity type ID.", false);
+					}
+					else $app->output_message(7, "Invalid game defined event ID.", false);
+				}
+				else if ($action == "delete_gdo") {
+					$gdo_id = (int) $_REQUEST['gdo_id'];
+					
+					$q = "SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND game_defined_option_id='".$gdo_id."';";
+					$r = $app->run_query($q);
+					
+					if ($r->rowCount() > 0) {
+						$gdo = $r->fetch();
+						
+						$q = "DELETE FROM game_defined_options WHERE game_defined_option_id='".$gdo['game_defined_option_id']."';";
+						$r = $app->run_query($q);
+						
+						$q = "UPDATE game_defined_options SET option_index=option_index-1 WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gdo['event_index']."' AND option_index>".$gdo['option_index'].";";
+						$r = $app->run_query($q);
+						
+						$app->output_message(1, "Deleting...", false);
+					}
+					else $app->output_message(7, "Invalid game defined option ID.", false);
+				}
+				else $app->output_message(6, "Invalid action.", false);
 			}
-			else $app->output_message(5, "Invalid game defined event ID.", false);
+			else $app->output_message(5, "You don't have permission to perform this action.", false);
 		}
 		else $app->output_message(4, "Invalid game ID.", false);
 	}
