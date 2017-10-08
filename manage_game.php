@@ -20,12 +20,21 @@ else {
 			if (!empty($_REQUEST['next'])) $next_action = $_REQUEST['next'];
 			if (!empty($_REQUEST['last'])) $last_action = $_REQUEST['last'];
 			
+			if ($last_action == "description") {
+				$game_description = $_REQUEST['game_description'];
+				
+				$q = "UPDATE games SET short_description=".$app->quote_escape($game_description)." WHERE game_id='".$game->db_game['game_id']."';";
+				$r = $app->run_query($q);
+				
+				$game->db_game['short_description'] = $game_description;
+			}
+			
 			$nav_tab_selected = "manage_game";
 			$pagetitle = "Manage game: ".$game->db_game['name'];
 			include('includes/html_start.php');
 			
-			$actions = array("params", "events");
-			$action_labels = array("Game Parameters", "Manage Events");
+			$actions = array("params", "events", "description");
+			$action_labels = array("Game Parameters", "Manage Events", "Description");
 			?>
 			<script type="text/javascript">
 			var games = new Array();
@@ -302,6 +311,48 @@ else {
 						<?php
 					}
 					else echo "Events are determined automatically for this game. You cannot add events manually.";
+				}
+				else if ($next_action == "description") {
+					?>
+					<div class="panel panel-default">
+						<div class="panel-heading">
+							<div class="panel-title"><?php echo $game->db_game['name']; ?>: Description</div>
+						</div>
+						<div class="panel-body">
+							<form action="/manage/<?php echo $game->db_game['url_identifier']; ?>/" method="get" onsubmit="editor.post();">
+								<input type="hidden" name="last" value="description" />
+								<input type="hidden" name="next" value="description" />
+								<textarea name="game_description" id="game_description" cols="90" rows="14"><?php echo $game->db_game['short_description']; ?></textarea>
+								<input class="btn btn-primary" type="submit" value="Save Description" />
+							</form>
+						</div>
+					</div>
+					<script>
+					var editor;
+					$(document).ready(function() {
+						editor = new TINY.editor.edit('editor', {
+							id: 'game_description',
+							width: "100%",
+							height: 330,
+							cssclass: 'tinyeditor',
+							controlclass: 'tinyeditor-control',
+							rowclass: 'tinyeditor-header',
+							dividerclass: 'tinyeditor-divider',
+							controls: ['bold', 'italic', 'underline', 'strikethrough', '|', 'subscript', 'superscript', '|',
+								'orderedlist', 'unorderedlist', '|', 'outdent', 'indent', '|', 'leftalign',
+								'centeralign', 'rightalign', 'blockjustify', '|', 'unformat', '|', 'undo', 'redo', 'n',
+								'font', 'size', 'style', '|', 'image', 'hr', 'link', 'unlink', '|', 'print'],
+							footer: true,
+							fonts: ['Verdana','Arial','Georgia','Trebuchet MS'],
+							xhtml: true,
+							bodyid: 'editor',
+							footerclass: 'tinyeditor-footer',
+							toggle: {text: 'source', activetext: 'wysiwyg', cssclass: 'toggle'},
+							resize: {cssclass: 'resize'}
+						});
+					});
+					</script>
+					<?php
 				}
 				?>
 			</div>
