@@ -197,7 +197,7 @@ class Event {
 		if ($display_mode == "slim") {
 			if ($this->db_event['option_block_rule'] == "football_match") $html .= '<p><div class="event_timer_slim" id="game'.$game_instance_id.'_event'.$game_event_index.'_timer"></div>';
 			else {
-				$blocks_left = $this->game->db_game['round_length'] - $block_within_round;
+				$blocks_left = $this->db_event['event_final_block'] - $last_block_id;
 				$sec_left = $this->game->blockchain->db_blockchain['seconds_per_block']*$blocks_left;
 				$html .= '<p><div class="event_timer_slim">'.$blocks_left.' blocks left ('.$this->game->blockchain->app->format_seconds($sec_left).')</div></p>';
 			}
@@ -207,7 +207,8 @@ class Event {
 			$html .= "</p>\n";
 			
 			if ($this->game->db_game['inflation'] == "exponential") {
-				$confirmed_coins = $confirmed_score/$votes_per_coin;
+				if ($votes_per_coin > 0) $confirmed_coins = $confirmed_score/$votes_per_coin;
+				else $confirmed_coins = 0;
 				$unconfirmed_coins = $this->event_pos_reward_in_round($current_round) - $confirmed_coins;
 				$html .= "<p>".$this->game->blockchain->app->format_bignum($confirmed_coins/pow(10,$this->game->db_game['decimal_places']))." ".$this->game->db_game['coin_name_plural']." in confirmed bets, ".$this->game->blockchain->app->format_bignum($unconfirmed_coins/pow(10,$this->game->db_game['decimal_places']))." unconfirmed</p>\n";
 			}
@@ -693,15 +694,19 @@ class Event {
 	public function event_pos_reward_in_round($round_id) {
 		if ($this->game->db_game['inflation'] == "linear") return $this->game->db_game['pos_reward'];
 		else {
-			$mining_block_id = $this->game->blockchain->last_block_id()+1;
-			$current_round = $this->game->block_to_round($mining_block_id);
+			$votes_per_coin = $this->game->blockchain->app->votes_per_coin($this->game->db_game);
 			
-			if ($round_id == $current_round) $use_cached = false;
-			else $use_cached = true;
-			
-			$score = $this->event_total_score($use_cached);
-			
-			return $score/$this->game->blockchain->app->votes_per_coin($this->game->db_game);
+			if ($votes_per_coin == 0) return 0;
+			else {
+				$mining_block_id = $this->game->blockchain->last_block_id()+1;
+				$current_round = $this->game->block_to_round($mining_block_id);
+				
+				if ($round_id == $current_round) $use_cached = false;
+				else $use_cached = true;
+				
+				$score = $this->event_total_score($use_cached);
+				return $score/$votes_per_coin;
+			}
 		}
 	}
 	

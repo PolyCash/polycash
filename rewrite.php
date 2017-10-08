@@ -29,6 +29,9 @@ else if ($uri_parts[1] == "import") {
 else if ($uri_parts[1] == "directory") {
 	include("directory.php");
 }
+else if ($uri_parts[1] == "manage") {
+	include("manage_game.php");
+}
 else {
 	include("includes/connect.php");
 	include("includes/get_session.php");

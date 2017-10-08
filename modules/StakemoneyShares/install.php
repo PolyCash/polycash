@@ -45,6 +45,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		
 		if ($public_private == "private") {
 			$game_def->game_def->blockchain_identifier = "private";
+			$game_def->game_def->game_starting_block = 1;
 		}
 		if ($db_blockchain['p2p_mode'] == "none") {
 			$game_starting_block = $blockchain->last_block_id() - ($blockchain->last_block_id()%$game_def->game_def->round_length) + 1;

@@ -45,7 +45,7 @@ if ($thisuser) {
 					<br/>
 					<button style="float: right;" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
 					<button class="btn btn-success" onclick="generate_invitation(<?php echo $game->db_game['game_id']; ?>);">Generate an Invitation</button>
-					<button class="btn btn-primary" onclick="switch_to_game(<?php echo $game->db_game['game_id']; ?>, 'fetch');">Game Settings</button>
+					<button class="btn btn-primary" onclick="manage_game(<?php echo $game->db_game['game_id']; ?>, 'fetch');">Game Settings</button>
 					<?php
 				}
 				else if ($action == "send") {

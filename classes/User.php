@@ -402,7 +402,8 @@ class User {
 		$r = $this->app->run_query($q);
 		
 		if (!empty($_REQUEST['invite_key'])) {
-			$this->app->try_apply_invite_key($this->db_user['user_id'], $_REQUEST['invite_key']);
+			$invite_game = false;
+			$this->app->try_apply_invite_key($this->db_user['user_id'], $_REQUEST['invite_key'], $invite_game);
 		}
 		
 		$this->ensure_currency_accounts();

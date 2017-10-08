@@ -557,9 +557,11 @@ class App {
 	
 	public function fetch_game_from_url() {
 		$login_url_parts = explode("/", rtrim(ltrim($_SERVER['REQUEST_URI'], "/"), "/"));
-		if ($login_url_parts[0] == "wallet" && count($login_url_parts) > 1) {
+		
+		if (in_array($login_url_parts[0], array("wallet", "manage")) && count($login_url_parts) > 1) {
 			$q = "SELECT * FROM games WHERE url_identifier=".$this->quote_escape($login_url_parts[1]).";";
 			$r = $this->run_query($q);
+			
 			if ($r->rowCount() == 1) {
 				return $r->fetch();
 			}
@@ -911,7 +913,7 @@ class App {
 				<a target="_blank" href="/wallet/'.$user_game['url_identifier'].'/">'.$user_game['name'].'</a>
 			</div>
 			<div class="col-sm-3 game_cell">
-				<a id="fetch_game_link_'.$user_game['game_id'].'" href="" onclick="switch_to_game('.$user_game['game_id'].', \'fetch\'); return false;">Settings</a>
+				<a id="fetch_game_link_'.$user_game['game_id'].'" href="" onclick="manage_game('.$user_game['game_id'].', \'fetch\'); return false;">Settings</a>
 			</div>
 			<div class="col-sm-3 game_cell">';
 			$perm_to_invite = $thisuser->user_can_invite_game($user_game);
@@ -1901,6 +1903,14 @@ class App {
 	public function user_is_admin(&$user) {
 		if (!empty($user)) {
 			if ($user->db_user['user_id'] == $this->get_site_constant("admin_user_id")) return true;
+			else return false;
+		}
+		else return false;
+	}
+	
+	public function user_can_edit_game(&$user, &$game) {
+		if (!empty($user) && !empty($game->db_game['creator_id'])) {
+			if ($user->db_user['user_id'] == $game->db_game['creator_id']) return true;
 			else return false;
 		}
 		else return false;
