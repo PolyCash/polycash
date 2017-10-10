@@ -798,13 +798,6 @@ CREATE TABLE IF NOT EXISTS `redirect_urls` (
   UNIQUE KEY `url` (`url`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=2 ;
 
---
--- Dumping data for table `redirect_urls`
---
-
-INSERT INTO `redirect_urls` (`redirect_url_id`, `url`, `time_created`) VALUES
-(1, '/wallet/mock-election-2016/', 1470064913);
-
 -- --------------------------------------------------------
 
 --

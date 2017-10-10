@@ -34,6 +34,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 	<script type="text/javascript" src="/js/sha256.js"></script>
 	<script type="text/javascript" src="/js/main.js<?php if (!empty($GLOBALS['cachebuster'])) echo '?v='.$GLOBALS['cachebuster']; ?>"></script>
 	<script type="text/javascript" src="/js/adminlte.min.js"></script>
+	<script type="text/javascript" src="/js/tiny.editor.js"></script>
 	<?php
 	if (!empty($include_crypto_js)) { ?>
 	<script type="text/javascript" src="/js/base64.lib.js" ></script>
@@ -104,6 +105,9 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 					<li id="tabcell4"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="tab_clicked(4); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=4"'; ?>><i class="fa fa-exchange"></i> Deposit or Withdraw</a></li>
 					<li id="tabcell5"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="tab_clicked(5); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=5"'; ?>><i class="fa fa-envelope"></i> Invitations</a></li>
 					<li<?php if ($nav_tab_selected == "explorer") echo ' class="active"'; ?>><a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/"><i class="fa fa-cube"></i> Explorer</a></li>
+					<?php if ($app->user_can_edit_game($thisuser, $game)) { ?>
+					<li<?php if ($nav_tab_selected == "manage_game") echo ' class="active"'; ?>><a href="/manage/<?php echo $game->db_game['url_identifier']; ?>/"><i class="fa fa-edit"></i> Manage this Game</a></li>
+					<?php } ?>
 				</ul>
 				<?php
 			}

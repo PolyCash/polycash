@@ -20,7 +20,7 @@ if ($thisuser) {
 		}
 		else $game_info['redirect_user'] = 0;
 		
-		if ($game->db_game['creator_id'] == $thisuser->db_user['user_id']) {
+		if ($app->user_can_edit_game($thisuser, $game)) {
 			$game_info['url_identifier'] = $game->db_game['url_identifier'];
 
 			if ($game->db_game['game_status'] == "editable") {

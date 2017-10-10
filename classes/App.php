@@ -296,11 +296,14 @@ class App {
 	public function get_redirect_url($url) {
 		$q = "SELECT * FROM redirect_urls WHERE url=".$this->quote_escape($url).";";
 		$r = $this->run_query($q);
+		
 		if ($r->rowCount() > 0) {
 			$redirect_url = $r->fetch();
 		}
 		else {
-			$q = "INSERT INTO redirect_urls SET url=".$this->quote_escape($url).", time_created='".time()."';";
+			$redirect_key = $this->random_string(32);
+			
+			$q = "INSERT INTO redirect_urls SET redirect_key=".$this->quote_escape($redirect_key).", url=".$this->quote_escape($url).", time_created='".time()."';";
 			$r = $this->run_query($q);
 			$redirect_url_id = $this->last_insert_id();
 			
@@ -554,9 +557,11 @@ class App {
 	
 	public function fetch_game_from_url() {
 		$login_url_parts = explode("/", rtrim(ltrim($_SERVER['REQUEST_URI'], "/"), "/"));
-		if ($login_url_parts[0] == "wallet" && count($login_url_parts) > 1) {
+		
+		if (in_array($login_url_parts[0], array("wallet", "manage")) && count($login_url_parts) > 1) {
 			$q = "SELECT * FROM games WHERE url_identifier=".$this->quote_escape($login_url_parts[1]).";";
 			$r = $this->run_query($q);
+			
 			if ($r->rowCount() == 1) {
 				return $r->fetch();
 			}
@@ -808,8 +813,7 @@ class App {
 				games.push(new Game(<?php
 					echo $db_game['game_id'];
 					echo ', false';
-					echo ', false'.', ';
-					echo 'false';
+					echo ', false';
 					echo ', ""';
 					echo ', "'.$db_game['payout_weight'].'"';
 					echo ', '.$db_game['round_length'];
@@ -909,7 +913,7 @@ class App {
 				<a target="_blank" href="/wallet/'.$user_game['url_identifier'].'/">'.$user_game['name'].'</a>
 			</div>
 			<div class="col-sm-3 game_cell">
-				<a id="fetch_game_link_'.$user_game['game_id'].'" href="" onclick="switch_to_game('.$user_game['game_id'].', \'fetch\'); return false;">Settings</a>
+				<a id="fetch_game_link_'.$user_game['game_id'].'" href="" onclick="manage_game('.$user_game['game_id'].', \'fetch\'); return false;">Settings</a>
 			</div>
 			<div class="col-sm-3 game_cell">';
 			$perm_to_invite = $thisuser->user_can_invite_game($user_game);
@@ -1211,9 +1215,12 @@ class App {
 	
 	public function votes_per_coin($db_game) {
 		if ($db_game['inflation'] == "exponential") {
-			if ($db_game['payout_weight'] == "coin_round") $votes_per_coin = 1/$db_game['exponential_inflation_rate'];
-			else $votes_per_coin = $db_game['round_length']/$db_game['exponential_inflation_rate'];
-			return $votes_per_coin;
+			if ($db_game['exponential_inflation_rate'] == 0) return 0;
+			else {
+				if ($db_game['payout_weight'] == "coin_round") $votes_per_coin = 1/$db_game['exponential_inflation_rate'];
+				else $votes_per_coin = $db_game['round_length']/$db_game['exponential_inflation_rate'];
+				return $votes_per_coin;
+			}
 		}
 		else return 0;
 	}
@@ -1854,7 +1861,7 @@ class App {
 	}
 	
 	public function permission_to_claim_address(&$game, &$thisuser, &$db_address) {
-		if (!empty($game->blockchain->db_blockchain['only_game_id']) && $db_address['address'] == $game->blockchain->db_blockchain["genesis_address"] && empty($db_address['user_id'])) return true;
+		if (!empty($thisuser) && $this->user_is_admin($thisuser) && empty($db_address['user_id'])) return true;
 		else return false;
 	}
 	
@@ -1891,6 +1898,22 @@ class App {
 			$qq = "INSERT INTO currencies SET blockchain_id='".$db_blockchain['blockchain_id']."', name=".$this->quote_escape($db_blockchain['blockchain_name']).", short_name=".$this->quote_escape($db_blockchain['coin_name']).", short_name_plural=".$this->quote_escape($db_blockchain['coin_name_plural']).", abbreviation=".$this->quote_escape($db_blockchain['coin_name_plural']).";";
 			$rr = $this->run_query($qq);
 		}
+	}
+	
+	public function user_is_admin(&$user) {
+		if (!empty($user)) {
+			if ($user->db_user['user_id'] == $this->get_site_constant("admin_user_id")) return true;
+			else return false;
+		}
+		else return false;
+	}
+	
+	public function user_can_edit_game(&$user, &$game) {
+		if (!empty($user) && !empty($game->db_game['creator_id'])) {
+			if ($user->db_user['user_id'] == $game->db_game['creator_id']) return true;
+			else return false;
+		}
+		else return false;
 	}
 }
 ?>

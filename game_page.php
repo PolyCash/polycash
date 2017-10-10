@@ -201,14 +201,9 @@ else $exchange_rate = 0;
 //<![CDATA[
 var games = new Array();
 games.push(new Game(<?php
-	if ($thisuser) $my_last_transaction_id = $thisuser->my_last_transaction_id($game->db_game['game_id']);
-	else $my_last_transaction_id = false;
-	
 	echo $game->db_game['game_id'];
 	echo ', false';
-	echo ', false, ';
-	if ($my_last_transaction_id) echo $my_last_transaction_id;
-	else echo 'false';
+	echo ', false';
 	echo ', "", "'.$game->db_game['payout_weight'].'"';
 	echo ', '.$game->db_game['round_length'];
 	echo ', 0';

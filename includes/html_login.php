@@ -1,13 +1,13 @@
 <?php
-if (!empty($redirect_id)) {}
-else if (!empty($_REQUEST['redirect_id']) > 0) $redirect_id = intval($_REQUEST['redirect_id']);
-else $redirect_id = FALSE;
+if (!empty($redirect_key)) {}
+else if (!empty($_REQUEST['redirect_key'])) $redirect_key = strip_tags($_REQUEST['redirect_key']);
+else $redirect_key = FALSE;
 
-if (empty($redirect_id)) {
+if (empty($redirect_key)) {
 	$redir_game = $app->fetch_game_from_url();
 	if ($redir_game) {
 		$redirect_url = $app->get_redirect_url("/wallet/".$redir_game['url_identifier']."/");
-		$redirect_id = $redirect_url['redirect_url_id'];
+		$redirect_key = $redirect_url['redirect_key'];
 	}
 }
 ?>
@@ -44,7 +44,7 @@ function register() {
 	var email = $('#registration_options_email').val();
 	$('#register_btn').val("Loading...");
 	
-	$.get("/ajax/register.php?alias="+encodeURIComponent(alias)+"&password="+encodeURIComponent(password)+"&email="+encodeURIComponent(email)+"&redirect_id="+parseInt($('#redirect_id').val()+"&invite_key="+$('#invite_key').val()), function(result) {
+	$.get("/ajax/register.php?alias="+encodeURIComponent(alias)+"&password="+encodeURIComponent(password)+"&email="+encodeURIComponent(email)+"&redirect_key="+$('#redirect_key').val()+"&invite_key="+$('#invite_key').val(), function(result) {
 		$('#register_btn').val("Sign Up");
 		var result_obj = JSON.parse(result);
 		if (result_obj['status_code'] == 2) {
@@ -79,7 +79,7 @@ function login() {
 	var alias = $('#alias').val();
 	var password = $('#login_password_password').val();
 	$('#login_btn').val("Loading...");
-	$.get("/ajax/log_in.php?alias="+encodeURIComponent(alias)+"&password="+encodeURIComponent(password)+"&redirect_id="+parseInt($('#redirect_id').val()), function(result) {
+	$.get("/ajax/log_in.php?alias="+encodeURIComponent(alias)+"&password="+encodeURIComponent(password)+"&redirect_key="+$('#redirect_key').val(), function(result) {
 		$('#login_btn').val("Log In");
 		var result_obj = JSON.parse(result);
 		if (result_obj['status_code'] == 1) {
@@ -93,7 +93,7 @@ function login() {
 }
 </script>
 
-<input type="hidden" id="redirect_id" value="<?php if ($redirect_id) echo $redirect_id; ?>" />
+<input type="hidden" id="redirect_key" value="<?php if ($redirect_key) echo $redirect_key; ?>" />
 <input type="hidden" name="invite_key" value="<?php if (!empty($_REQUEST['invite_key'])) echo $app->strong_strip_tags($app->make_alphanumeric($_REQUEST['invite_key'], "")); ?>" />
 
 <div class="panel panel-default" style="margin-top: 15px;">

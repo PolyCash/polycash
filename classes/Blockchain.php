@@ -1234,7 +1234,7 @@ class Blockchain {
 							$r = $this->app->run_query($q);
 							$created_input_ids[count($created_input_ids)] = $this->app->last_insert_id();
 						}
-						else if ($this->db_blockchain['p2p_mode'] == "p2p") {
+						else if ($this->db_blockchain['p2p_mode'] == "rpc") {
 							$raw_txout[$address['address']] = $amounts[$out_index]/pow(10,$this->db_blockchain['decimal_places']);
 						}
 					}
@@ -1263,7 +1263,7 @@ class Blockchain {
 							
 							$this->walletnotify($coin_rpc, $verified_tx_hash, FALSE);
 							
-							$db_transaction = $this->app->run_query("SELECT * FROM transactions WHERE tx_hash=".$this->blockchain->app->quote_escape($tx_hash).";")->fetch();
+							$db_transaction = $this->app->run_query("SELECT * FROM transactions WHERE tx_hash=".$this->app->quote_escape($tx_hash).";")->fetch();
 							
 							return $db_transaction['transaction_id'];
 						}
@@ -1385,7 +1385,7 @@ class Blockchain {
 	}
 	
 	public function games_by_address($db_address) {
-		$q = "SELECT g.* FROM games g JOIN transaction_game_ios gio ON g.game_id=gio.game_id JOIN transaction_ios io ON gio.io_id=io.io_id JOIN transactions t ON io.create_transaction_id WHERE io.address_id=".$db_address['address_id']." AND t.blockchain_id='".$this->db_blockchain['blockchain_id']."' GROUP BY g.game_id ORDER BY g.game_id ASC;";
+		$q = "SELECT g.* FROM games g JOIN transaction_game_ios gio ON g.game_id=gio.game_id JOIN transaction_ios io ON gio.io_id=io.io_id WHERE io.address_id=".$db_address['address_id']." AND io.blockchain_id='".$this->db_blockchain['blockchain_id']."' GROUP BY g.game_id ORDER BY g.game_id ASC;";
 		$r = $this->app->run_query($q);
 		
 		$db_games = array();

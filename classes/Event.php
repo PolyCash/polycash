@@ -197,7 +197,7 @@ class Event {
 		if ($display_mode == "slim") {
 			if ($this->db_event['option_block_rule'] == "football_match") $html .= '<p><div class="event_timer_slim" id="game'.$game_instance_id.'_event'.$game_event_index.'_timer"></div>';
 			else {
-				$blocks_left = $this->game->db_game['round_length'] - $block_within_round;
+				$blocks_left = $this->db_event['event_final_block'] - $last_block_id;
 				$sec_left = $this->game->blockchain->db_blockchain['seconds_per_block']*$blocks_left;
 				$html .= '<p><div class="event_timer_slim">'.$blocks_left.' blocks left ('.$this->game->blockchain->app->format_seconds($sec_left).')</div></p>';
 			}
@@ -207,7 +207,8 @@ class Event {
 			$html .= "</p>\n";
 			
 			if ($this->game->db_game['inflation'] == "exponential") {
-				$confirmed_coins = $confirmed_score/$votes_per_coin;
+				if ($votes_per_coin > 0) $confirmed_coins = $confirmed_score/$votes_per_coin;
+				else $confirmed_coins = 0;
 				$unconfirmed_coins = $this->event_pos_reward_in_round($current_round) - $confirmed_coins;
 				$html .= "<p>".$this->game->blockchain->app->format_bignum($confirmed_coins/pow(10,$this->game->db_game['decimal_places']))." ".$this->game->db_game['coin_name_plural']." in confirmed bets, ".$this->game->blockchain->app->format_bignum($unconfirmed_coins/pow(10,$this->game->db_game['decimal_places']))." unconfirmed</p>\n";
 			}
@@ -419,10 +420,11 @@ class Event {
 	}
 	
 	public function my_votes_in_round($round_id, $user_id, $include_unconfirmed) {
-		$q = "SELECT SUM(t_fees.fee_amount) FROM (SELECT t.fee_amount FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN options op ON gio.option_id=op.option_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE gio.game_id='".$this->game->db_game['game_id']."' AND gio.create_round_id = ".$round_id." AND io.user_id='".$user_id."' GROUP BY t.transaction_id) t_fees;";
+		/*$q = "SELECT SUM(t_fees.fee_amount) FROM (SELECT t.fee_amount FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN options op ON gio.option_id=op.option_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE gio.game_id='".$this->game->db_game['game_id']."' AND gio.create_round_id = ".$round_id." AND io.user_id='".$user_id."' GROUP BY t.transaction_id) t_fees;";
 		$r = $this->game->blockchain->app->run_query($q);
 		$fee_amount = $r->fetch(PDO::FETCH_NUM);
-		$fee_amount = $fee_amount[0];
+		$fee_amount = $fee_amount[0];*/
+		$fee_amount = 0;
 		
 		$q = "SELECT op.*, SUM(gio.colored_amount), SUM(gio.coin_blocks_destroyed), SUM(gio.coin_rounds_destroyed), SUM(gio.votes) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN options op ON gio.option_id=op.option_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE gio.event_id='".$this->db_event['event_id']."' AND gio.create_round_id=".$round_id." AND io.user_id='".$user_id."' GROUP BY gio.option_id ORDER BY op.option_id ASC;";
 		$r = $this->game->blockchain->app->run_query($q);
@@ -692,15 +694,19 @@ class Event {
 	public function event_pos_reward_in_round($round_id) {
 		if ($this->game->db_game['inflation'] == "linear") return $this->game->db_game['pos_reward'];
 		else {
-			$mining_block_id = $this->game->blockchain->last_block_id()+1;
-			$current_round = $this->game->block_to_round($mining_block_id);
+			$votes_per_coin = $this->game->blockchain->app->votes_per_coin($this->game->db_game);
 			
-			if ($round_id == $current_round) $use_cached = false;
-			else $use_cached = true;
-			
-			$score = $this->event_total_score($use_cached);
-			
-			return $score/$this->game->blockchain->app->votes_per_coin($this->game->db_game);
+			if ($votes_per_coin == 0) return 0;
+			else {
+				$mining_block_id = $this->game->blockchain->last_block_id()+1;
+				$current_round = $this->game->block_to_round($mining_block_id);
+				
+				if ($round_id == $current_round) $use_cached = false;
+				else $use_cached = true;
+				
+				$score = $this->event_total_score($use_cached);
+				return $score/$votes_per_coin;
+			}
 		}
 	}
 	

@@ -53,6 +53,10 @@ if ($thisuser && !empty($_REQUEST['action']) && $_REQUEST['action'] == "donate_t
 						$addresses_needed = $quantity;
 						$loop_count = 0;
 						do {
+							if ($donate_blockchain->db_blockchain['p2p_mode'] == "none") {
+								$addr_text = $app->random_string(34);
+								$temp_address = $donate_blockchain->create_or_fetch_address($addr_text, false, false, false, false, true, false);
+							}
 							$addr_q = "SELECT * FROM addresses a WHERE a.primary_blockchain_id='".$donate_blockchain->db_blockchain['blockchain_id']."' AND a.is_mine=1 AND a.user_id IS NULL AND NOT EXISTS (SELECT * FROM transaction_ios io WHERE io.address_id=a.address_id) ORDER BY RAND() LIMIT 1;";
 							$addr_r = $app->run_query($addr_q);
 							
@@ -237,7 +241,7 @@ include('includes/html_start.php');
 					
 					while ($transaction = $transaction_in_r->fetch()) {
 						if ($account_game) {
-							$colored_coin_q = "SELECT SUM(colored_amount) FROM transaction_game_ios WHERE io_id='".$transaction['io_id']."';";
+							$colored_coin_q = "SELECT SUM(colored_amount) FROM transaction_game_ios WHERE game_id='".$account_game->db_game['game_id']."' AND io_id='".$transaction['io_id']."';";
 							$colored_coin_r = $app->run_query($colored_coin_q);
 							$colored_coin_amount = $colored_coin_r->fetch();
 							$colored_coin_amount = $colored_coin_amount['SUM(colored_amount)'];
@@ -309,6 +313,39 @@ include('includes/html_start.php');
 					echo "</div>\n";
 				}
 				?>
+				<p style="margin-top: 10px;">
+					<a href="" onclick="$('#create_account_dialog').toggle('fast'); return false;">Create a new account</a>
+				</p>
+				<div id="create_account_dialog" style="display: none;">
+					<div class="form-group">
+						<label for="create_account_action">Create a new account:</label>
+						<select class="form-control" id="create_account_action" onchange="create_account_step(1);">
+							<option value="">-- Please Select --</option>
+							<option value="for_blockchain">Create a new blockchain account</option>
+							<option value="by_rpc_account">Import an existing account by RPC</option>
+						</select>
+					</div>
+					<div class="form-group" id="create_account_step2" style="display: none;">
+						<label for="create_account_blockchain_id">Please select a blockchain:</label>
+						<select class="form-control" id="create_account_blockchain_id" onchange="create_account_step(2);">
+							<option value="">-- Please Select --</option>
+							<?php
+							$q = "SELECT * FROM blockchains ORDER BY blockchain_name ASC;";
+							$r = $app->run_query($q);
+							while ($db_blockchain = $r->fetch()) {
+								echo '<option value="'.$db_blockchain['blockchain_id'].'">'.$db_blockchain['blockchain_name'].'</option>'."\n";
+							}
+							?>
+						</select>
+					</div>
+					<div class="form-group" id="create_account_step3" style="display: none;">
+						<label for="create_account_rpc_name">Please enter the account name as used by the coin daemon:</label>
+						<input type="text" class="form-control" id="create_account_rpc_name" value="" />
+					</div>
+					<div class="form-group" id="create_account_submit" style="display: none;">
+						<button class="btn btn-primary" onclick="create_account_step('submit');">Create Account</button>
+					</div>
+				</div>
 			</div>
 		</div>
 		
@@ -349,17 +386,34 @@ include('includes/html_start.php');
 								<h4 class="modal-title" id="account_spend_modal_title">What do you want to do with these coins?</h4>
 							</div>
 							<div class="modal-body">
-								<select class="form-control" id="account_spend_action" onchange="account_spend_action_changed();">
-									<option value="">-- Please select --</option>
-									<option value="buyin">Buy in to a game</option>
-									<option value="withdraw">Withdraw my coins</option>
-									<option value="faucet">Donate to a faucet</option>
-									<option value="join_tx">Join with another UTXO</option>
-								</select>
-								<div id="account_spend_join_tx" style="display: none; padding-top: 20px;">
+								<div class="form-group">
+									<select class="form-control" id="account_spend_action" onchange="account_spend_action_changed();">
+										<option value="">-- Please select --</option>
+										<option value="withdraw">Spend</option>
+										<option value="buyin">Buy in to a game</option>
+										<option value="faucet">Donate to a faucet</option>
+										<option value="join_tx">Join with another UTXO</option>
+									</select>
+								</div>
+								<div id="account_spend_join_tx" style="display: none;">
 									Loading...
 								</div>
-								<div id="account_spend_faucet" style="display: none; padding-top: 20px;">
+								<div id="account_spend_withdraw" style="display: none;">
+									<form method="get" action="/ajax/account_spend.php" onsubmit="account_spend_withdraw(); return false;">
+										<div class="form-group">
+											<label for="spend_withdraw_address">Address:</label>
+											<input type="text" class="form-control" id="spend_withdraw_address" />
+										</div>
+										<div class="form-group">
+											<label for="spend_withdraw_address">Amount:</label>
+											<input type="text" class="form-control" id="spend_withdraw_amount" />
+										</div>
+										<div class="form-group">
+											<button class="btn btn-primary">Withdraw</button>
+										</div>
+									</form>
+								</div>
+								<div id="account_spend_faucet" style="display: none;">
 									<form action="/accounts/" method="get">
 										<input type="hidden" name="donate_game_id" id="donate_game_id" value="" />
 										<input type="hidden" name="account_io_id" id="account_io_id" value="" />
@@ -367,11 +421,11 @@ include('includes/html_start.php');
 										
 										<div class="form-group">
 											<label for="donate_amount_each">How many in-game coins should each person receive?</label>
-											<input class="form-control" name="donate_amount_each" />
+											<input type="text" class="form-control" name="donate_amount_each" />
 										</div>
 										<div class="form-group">
 											<label for="donate_quantity">How many faucet contributions do you want to make?</label>
-											<input class="form-control" name="donate_quantity" />
+											<input type="text" class="form-control" name="donate_quantity" />
 										</div>
 										<div class="form-group">
 											<button class="btn btn-primary">Donate to Faucet</button>
@@ -436,8 +490,6 @@ include('includes/html_start.php');
 									<br/>
 									<button class="btn btn-primary" onclick="account_spend_buyin();">Buy in</button>
 								</div>
-								<div id="account_spend_withdraw" style="display: none;">
-								</div>
 							</div>
 						</div>
 					</div>
@@ -454,7 +506,7 @@ include('includes/html_start.php');
 	}
 	else {
 		$redirect_url = $app->get_redirect_url("/accounts/");
-		$redirect_id = $redirect_url['redirect_url_id'];
+		$redirect_key = $redirect_url['redirect_key'];
 		include("includes/html_login.php");
 	}
 	?>

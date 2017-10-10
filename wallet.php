@@ -498,7 +498,6 @@ if ($thisuser && $game) {
 			die("Error: you're not in this game.");
 		}
 		
-		$my_last_transaction_id = $thisuser->my_last_transaction_id($game->db_game['game_id']);
 		$performance_history_rounds_per_section = 10;
 		?>
 		<script type="text/javascript">
@@ -522,9 +521,7 @@ if ($thisuser && $game) {
 		games.push(new Game(<?php
 			echo $game->db_game['game_id'];
 			echo ', false';
-			echo ', false, ';
-			if ($my_last_transaction_id) echo $my_last_transaction_id;
-			else echo 'false';
+			echo ', false';
 			echo ', "'.$game->mature_io_ids_csv($user_game).'"';
 			echo ', "'.$game->db_game['payout_weight'].'"';
 			echo ', '.$game->db_game['round_length'];
@@ -592,10 +589,6 @@ if ($thisuser && $game) {
 			loop_event();
 			compose_vote_loop();
 			<?php
-			if ($game->db_game['game_status'] == 'unstarted') { ?>
-				switch_to_game(<?php echo $game->db_game['game_id']; ?>, 'fetch');
-				<?php
-			}
 			if ($user_game['show_planned_votes'] == 1) { ?>
 				show_intro_message();
 				<?php
@@ -1155,7 +1148,7 @@ if ($thisuser && $game) {
 					
 					if ($new_game_perm) { ?>
 						<br/>
-						<button class="btn btn-primary" onclick="switch_to_game(0, 'new'); return false;">Create a new Game</button>
+						<button class="btn btn-primary" onclick="manage_game(0, 'new'); return false;">Create a new Game</button>
 						<?php
 					}
 					?>
@@ -1231,288 +1224,6 @@ if ($thisuser && $game) {
 			</div>
 		</div>
 		
-		<div style="display: none;" class="modal fade" id="game_form">
-			<div class="modal-dialog">
-				<div class="modal-content">
-					<div class="modal-header">
-						<h4 class="modal-title" id="game_form_name_disp"></h4>
-					</div>
-					<div class="modal-body">
-						<form onsubmit="save_game();">
-							<div class="row">
-								<div class="col-sm-6 form-control-static">
-									Game title:
-								</div>
-								<div class="col-sm-6">
-									<input class="form-control" type="text" id="game_form_name" />
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">
-									Runs on Blockchain:
-								</div>
-								<div class="col-sm-6">
-									<select id="game_form_blockchain_id" class="form-control">
-										<option value="">-- Please Select --</option>
-										<?php
-										$q = "SELECT * FROM blockchains ORDER BY blockchain_name ASC;";
-										$r = $app->run_query($q);
-										while ($db_blockchain = $r->fetch()) {
-											echo "<option value=\"".$db_blockchain['blockchain_id']."\">".$db_blockchain['blockchain_name']."</option>\n";
-										}
-										?>
-									</select>
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">
-									Each coin is called a(n):
-								</div>
-								<div class="col-sm-6">
-									<input class="form-control" type="text" id="game_form_coin_name" />
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">
-									Coins (plural) are called:
-								</div>
-								<div class="col-sm-6">
-									<input class="form-control" type="text" id="game_form_coin_name_plural" />
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">
-									Currency abbreviation:
-								</div>
-								<div class="col-sm-6">
-									<input class="form-control" type="text" id="game_form_coin_abbreviation" />
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">
-									Game status:
-								</div>
-								<div class="col-sm-6">
-									<div id="game_form_game_status" class="form-control-static"></div>
-									
-									<button id="start_game_btn" class="btn btn-info" style="display: none;" onclick="switch_to_game(editing_game_id, 'running'); return false;">Start Game</button>
-									<button id="pause_game_btn" class="btn btn-info" style="display: none;" onclick="switch_to_game(editing_game_id, 'paused'); return false;">Pause Game</button>
-
-									<button id="delete_game_btn" class="btn btn-danger" style="display: none;" onclick="switch_to_game(editing_game_id, 'delete'); return false;">Delete Game</button>
-									<button id="reset_game_btn" class="btn btn-warning" style="display: none;" onclick="switch_to_game(editing_game_id, 'reset'); return false;">Reset Game</button>
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">
-									Game ends?
-								</div>
-								<div class="col-sm-6">
-									<select class="form-control" id="game_form_has_final_round" onchange="game_form_final_round_changed();">
-										<option value="0">No</option>
-										<option value="1">Yes</option>
-									</select>
-								</div>
-							</div>
-							<div id="game_form_final_round_disp">
-								<div class="row">
-									<div class="col-sm-6 form-control-static">
-										Number of rounds in the game:
-									</div>
-									<div class="col-sm-6">
-										<input type="text" class="form-control" id="game_form_final_round" placeholder="0" />
-									</div>
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">Game starts on block:</div>
-								<div class="col-sm-6">
-									<input class="form-control" type="text" style="text-align: right;" id="game_form_game_starting_block" />
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">
-									Blocks per round:
-								</div>
-								<div class="col-sm-3">
-									<input class="form-control" style="text-align: right;" type="text" id="game_form_round_length" />
-								</div>
-								<div class="col-sm-3 form-control-static">
-									blocks
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">Escrow address:</div>
-								<div class="col-sm-6">
-									<input class="form-control" type="text" id="game_form_escrow_address" />
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">Genesis transaction:</div>
-								<div class="col-sm-6">
-									<input class="form-control" type="text" id="game_form_genesis_tx_hash" />
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">Coins created by genesis tx:</div>
-								<div class="col-sm-6">
-									<input class="form-control" type="text" id="game_form_genesis_amount" style="text-align: right;" />
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">Definition of a vote:</div>
-								<div class="col-sm-6">
-									<select class="form-control" id="game_form_payout_weight">
-										<option value="coin">Coins staked</option>
-										<option value="coin_block">Coins over time. 1 vote per block</option>
-										<option value="coin_round">Coins over time. 1 vote per round</option>
-									</select>
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">Vote effectiveness:</div>
-								<div class="col-sm-6">
-									<select class="form-control" id="game_form_default_vote_effectiveness_function">
-										<option value="constant">Votes count equally through the round</option>
-										<option value="linear_decrease">Linearly decreasing vote effectiveness</option>
-									</select>
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">Transaction lock time:</div>
-								<div class="col-sm-3">
-									<input class="form-control" style="text-align: right;" type="text" id="game_form_maturity" />
-								</div>
-								<div class="col-sm-3 form-control-static">
-									blocks
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">Buy-in policy:</div>
-								<div class="col-sm-6">
-									<select class="form-control" id="game_form_buyin_policy" onchange="game_form_buyin_policy_changed();">
-										<option value="none">No additional buy-ins</option>
-										<option value="unlimited">Unlimited buy-ins</option>
-										<option value="game_cap">Buy-in cap for the whole game</option>
-									</select>
-								</div>
-							</div>
-							<div id="game_form_game_buyin_cap_disp">
-								<div class="row">
-									<div class="col-sm-6 form-control-static">Game-wide buy-in cap:</div>
-									<div class="col-sm-3">
-										<input class="form-control" style="text-align: right;" type="text" id="game_form_game_buyin_cap" />
-									</div>
-									<div class="col-sm-3 form-control-static">
-										invite currency units
-									</div>
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">Inflation:</div>
-								<div class="col-sm-3">
-									<select id="game_form_inflation" class="form-control" onchange="game_form_inflation_changed();">
-										<option value="linear">Linear</option>
-										<option value="fixed_exponential">Fixed Exponential</option>
-										<option value="exponential">Exponential</option>
-									</select>
-								</div>
-							</div>
-							<div id="game_form_inflation_exponential">
-								<div class="row">
-									<div class="col-sm-6 form-control-static">Inflation per round:</div>
-									<div class="col-sm-3">
-										<input class="form-control" style="text-align: right;" type="text" id="game_form_exponential_inflation_rate" />
-									</div>
-									<div class="col-sm-3 form-control-static">
-										%
-									</div>
-								</div>
-							</div>
-							<div id="game_form_inflation_linear">
-								<div class="row">
-									<div class="col-sm-6 form-control-static">Voting payout reward:</div>
-									<div class="col-sm-3">
-										<input class="form-control" style="text-align: right;" type="text" id="game_form_pos_reward" />
-									</div>
-									<div class="col-sm-3 form-control-static">
-										coins
-									</div>
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">Event rule:</div>
-								<div class="col-sm-6">
-									<select id="game_form_event_rule" class="form-control" onchange="game_form_event_rule_changed();">
-										<option value="single_event_series">Single, repeating event</option>
-										<option value="entity_type_option_group">One event for each item in a group</option>
-										<option value="all_pairs">Head to head between all options</option>
-									</select>
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">Voting options:</div>
-								<div class="col-sm-6">
-									<select id="game_form_option_group_id" class="form-control">
-										<?php
-										$q = "SELECT * FROM option_groups ORDER BY description ASC;";
-										$r = $app->run_query($q);
-										while ($option_group = $r->fetch()) {
-											echo '<option value="'.$option_group['group_id'].'">'.$option_group['description']."</option>\n";
-										}
-										?>
-									</select>
-								</div>
-							</div>
-							<div id="game_form_event_rule_entity_type_option_group">
-								<div class="row">
-									<div class="col-sm-6 form-control-static">Events per round:</div>
-									<div class="col-sm-6">
-										<input class="form-control" type="text" id="game_form_events_per_round" style="text-align: right" />
-									</div>
-								</div>
-								<div class="row">
-									<div class="col-sm-6 form-control-static">One event for each of these:</div>
-									<div class="col-sm-6">
-										<select id="game_form_event_entity_type_id" class="form-control">
-											<?php
-											$q = "SELECT * FROM entity_types ORDER BY entity_name ASC;";
-											$r = $app->run_query($q);
-											while ($entity_type = $r->fetch()) {
-												echo '<option value="'.$entity_type['entity_type_id'].'">'.$entity_type['entity_name']."</option>\n";
-											}
-											?>
-										</select>
-									</div>
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">Each event is called:</div>
-								<div class="col-sm-6">
-									<input class="form-control" type="text" id="game_form_event_type_name" />
-								</div>
-							</div>
-							<div class="row">
-								<div class="col-sm-6 form-control-static">Voting cap:</div>
-								<div class="col-sm-3">
-									<input class="form-control" type="text" style="text-align: right;" id="game_form_default_max_voting_fraction" />
-								</div>
-								<div class="col-sm-3 form-control-static">%</div>
-							</div>
-							
-							<div style="height: 10px;"></div>
-							<button style="float: right;" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-							
-							<button id="save_game_btn" type="button" class="btn btn-success" onclick="save_game('save');">Save Settings</button>
-							
-							<button id="publish_game_btn" type="button" class="btn btn-primary" onclick="save_game('publish');">Save &amp; Publish</button>
-							
-							<?php /*<button id="game_invitations_game_btn" type="button" class="btn btn-info" data-dismiss="modal" onclick="manage_game_invitations(editing_game_id);">Invite People</button> */ ?>
-						</form>
-					</div>
-				</div>
-			</div>
-		</div>
-		
 		<div style="display: none;" class="modal fade" id="set_event_outcome_modal">
 			<div class="modal-dialog">
 				<div class="modal-content" id="set_event_outcome_modal_content">
@@ -1537,10 +1248,10 @@ if ($thisuser && $game) {
 		<?php
 	}
 	else {
-		if (!empty($_REQUEST['redirect_id'])) $redirect_id = (int) $_REQUEST['redirect_id'];
+		if (!empty($_REQUEST['redirect_key'])) $redirect_key = $_REQUEST['redirect_key'];
 		else {
 			$redirect_url = $app->get_redirect_url("/wallet/");
-			$redirect_id = $redirect_url['redirect_url_id'];
+			$redirect_key = $redirect_url['redirect_key'];
 		}
 		include("includes/html_login.php");
 	}
