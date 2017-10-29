@@ -34,6 +34,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 	<script type="text/javascript" src="/js/sha256.js"></script>
 	<script type="text/javascript" src="/js/main.js<?php if (!empty($GLOBALS['cachebuster'])) echo '?v='.$GLOBALS['cachebuster']; ?>"></script>
 	<script type="text/javascript" src="/js/adminlte.min.js"></script>
+	<script type="text/javascript" src="/js/tiny.editor.js"></script>
 	<?php
 	if (!empty($include_crypto_js)) { ?>
 	<script type="text/javascript" src="/js/base64.lib.js" ></script>

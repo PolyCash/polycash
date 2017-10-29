@@ -1785,8 +1785,15 @@ function add_game_defined_option(gde_id) {
 	var gdo_entity_type_id = $('#new_gdo_entity_type_id').val();
 	$.get("/ajax/manage_game.php?action=add_new_gdo&game_id="+games[0].game_id+"&gde_id="+gde_id+"&name="+encodeURIComponent(gdo_name)+"&entity_type_id="+gdo_entity_type_id, function(result) {
 		var result_obj = JSON.parse(result);
-		if (result_obj['status_code'] == 1) window.location = window.location;
+		if (result_obj['status_code'] == 1) manage_game_event_options(gde_id);
 		else alert(result_obj['message']);
 		console.log(result_obj);
+	});
+}
+function delete_game_defined_option(gde_id, gdo_id) {
+	$.get("/ajax/manage_game.php?action=delete_gdo&game_id="+games[0].game_id+"&gdo_id="+gdo_id, function(result) {
+		var result_obj = JSON.parse(result);
+		if (result_obj['status_code'] == 1) manage_game_event_options(gde_id);
+		else alert(result_obj['message']);
 	});
 }
