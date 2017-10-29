@@ -1759,25 +1759,6 @@ class Game {
 			}
 		}
 		$js .= '$("#game'.$game_index.'_events").html(event_html);'."\n";
-		$js .= '
-		$(document).ready(function() {
-			render_tx_fee();
-			notification_pref_changed();
-			alias_pref_changed();
-			reload_compose_vote();
-			set_select_add_output();
-			
-			$(".datepicker").datepicker();
-		});
-		$(document).keypress(function (e) {
-			if (e.which == 13) {
-				var selected_option_db_id = $("#game'.$game_index.'_rank2option_id_"+selected_option_id).val();
-				
-				if ($("#game'.$game_index.'_vote_amount_"+selected_option_db_id).is(":focus")) {
-					games['.$game_index.'].confirm_vote(selected_option_db_id);
-				}
-			}
-		});';
 		return $js;
 	}
 	

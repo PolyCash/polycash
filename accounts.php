@@ -497,6 +497,25 @@ include('includes/html_start.php');
 			</div>
 		</div>
 		
+		<?php if ($thisuser && $app->user_is_admin($thisuser)) { ?>
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				<div class="panel-title">Cards</div>
+			</div>
+			<div class="panel-body">
+				<b>Import Cards</b>
+				<div class="form-group">
+					<label for="from_card_id"></label>
+					<input type="text" class="form-control" name="from_card_id" />
+				</div>
+				<div class="form-group">
+					<label for="to_card_id"></label>
+					<input type="text" class="form-control" name="to_card_id" />
+				</div>
+			</div>
+		</div>
+		<?php } ?>
+		
 		<script type="text/javascript">
 		$(document).ready(function() {
 			account_spend_refresh();
