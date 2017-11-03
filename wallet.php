@@ -596,6 +596,13 @@ if ($thisuser && $game) {
 				$rr = $app->run_query($qq);
 			}
 			?>
+			render_tx_fee();
+			notification_pref_changed();
+			alias_pref_changed();
+			reload_compose_vote();
+			set_select_add_output();
+			
+			$(".datepicker").datepicker();
 		});
 		
 		//]]>
@@ -1250,7 +1257,7 @@ if ($thisuser && $game) {
 	else {
 		if (!empty($_REQUEST['redirect_key'])) $redirect_key = $_REQUEST['redirect_key'];
 		else {
-			$redirect_url = $app->get_redirect_url("/wallet/");
+			$redirect_url = $app->get_redirect_url($_SERVER['REQUEST_URI']);
 			$redirect_key = $redirect_url['redirect_key'];
 		}
 		include("includes/html_login.php");
