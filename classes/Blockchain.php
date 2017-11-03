@@ -242,7 +242,7 @@ class Blockchain {
 				if ($this->db_blockchain['p2p_mode'] == "none") {
 					$transaction_type = "transaction";
 					
-					$q = "SELECT * FROM transaction_ios WHERE spend_transaction_id='".$unconfirmed_tx['transaction_id']."';";
+					$q = "SELECT * FROM transaction_ios WHERE spend_transaction_id='".$db_transaction_id."';";
 					$r = $this->app->run_query($q);
 					
 					while ($spend_io = $r->fetch()) {

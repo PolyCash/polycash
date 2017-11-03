@@ -9,6 +9,7 @@ class StakemoneySharesGameDefinition {
 		$this->game_def_base_txt = '{
 			"blockchain_identifier": "litecoin",
 			"protocol_version": 0,
+			"category_id": 4,
 			"url_identifier": "stakemoney-shares",
 			"name": "Stakemoney Shares",
 			"event_type_name": "referendum",

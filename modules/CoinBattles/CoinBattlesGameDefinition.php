@@ -11,6 +11,7 @@ class CoinBattlesGameDefinition {
 		$this->game_def_base_txt = '{
 			"blockchain_identifier": "litecoin",
 			"protocol_version": 0,
+			"category_id": 4,
 			"url_identifier": "coin-battles",
 			"name": "Coin Battles",
 			"event_type_name": "battle",
@@ -26,7 +27,7 @@ class CoinBattlesGameDefinition {
 			"maturity": 0,
 			"payout_weight": "coin_round",
 			"final_round": null,
-			"buyin_policy": "none",
+			"buyin_policy": "unlimited",
 			"game_buyin_cap": 0,
 			"sellout_policy": "on",
 			"sellout_confirmations": 0,

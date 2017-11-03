@@ -535,10 +535,9 @@ class User {
 		$r = $this->app->run_query($q);
 		
 		while ($currency = $r->fetch()) {
-			$qq = "SELECT * FROM currency_accounts WHERE game_id IS NULL AND user_id='".$this->db_user['user_id']."' AND currency_id='".$currency['currency_id']."';";
-			$rr = $this->app->run_query($qq);
+			$user_blockchain_account = $this->app->user_blockchain_account($this->db_user['user_id'], $currency['currency_id']);
 			
-			if ($rr->rowCount() == 0) {
+			if (empty($user_blockchain_account)) {
 				$qq = "INSERT INTO currency_accounts SET user_id='".$this->db_user['user_id']."', currency_id='".$currency['currency_id']."', account_name='Primary ".$currency['name']." Account', time_created='".time()."';";
 				$rr = $this->app->run_query($qq);
 				$account_id = $this->app->last_insert_id();

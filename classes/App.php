@@ -791,9 +791,11 @@ class App {
 		else return rtrim(rtrim($number, '0'), '.');
 	}
 	
-	public function display_featured_games() {
+	public function display_games($category_id) {
 		echo '<div class="paragraph">';
-		$q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='published' OR g.game_status='running') ORDER BY g.featured_score DESC, g.game_id DESC;";
+		$q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='published' OR g.game_status='running')";
+		if (!empty($category_id)) $q .= " AND g.category_id=".$category_id;
+		$q .= " ORDER BY g.featured_score DESC, g.game_id DESC;";
 		$r = $this->run_query($q);
 		if ($r->rowCount() > 0) {
 			$cell_width = 12;
@@ -1429,6 +1431,7 @@ class App {
 		return array(
 			array('float', 'protocol_version', true),
 			array('string', 'url_identifier', false),
+			array('int', 'category_id', false),
 			array('string', 'name', false),
 			array('string', 'event_type_name', false),
 			array('string', 'event_type_name_plural', false),
@@ -1860,34 +1863,61 @@ class App {
 		return $cached_url;
 	}
 	
-	public function permission_to_claim_address(&$game, &$thisuser, &$db_address) {
+	public function permission_to_claim_address(&$thisuser, &$db_address) {
 		if (!empty($thisuser) && $this->user_is_admin($thisuser) && empty($db_address['user_id'])) return true;
 		else return false;
 	}
 	
 	public function give_address_to_user(&$game, &$user, $db_address) {
-		$user_game = $user->ensure_user_in_game($game, false);
-		
-		if ($user_game) {
-			$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id='".$db_address['address_id']."';";
-			$r = $this->run_query($q);
+		if ($game) {
+			$user_game = $user->ensure_user_in_game($game, false);
 			
-			if ($r->rowCount() == 1) {
-				$address_key = $r->fetch();
+			if ($user_game) {
+				$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id='".$db_address['address_id']."';";
+				$r = $this->run_query($q);
 				
-				$q = "UPDATE address_keys SET account_id='".$user_game['account_id']."' WHERE address_key_id='".$address_key['address_key_id']."';";
+				if ($r->rowCount() == 1) {
+					$address_key = $r->fetch();
+					
+					$q = "UPDATE address_keys SET account_id='".$user_game['account_id']."' WHERE address_key_id='".$address_key['address_key_id']."';";
+					$r = $this->run_query($q);
+				}
+				else {
+					$q = "INSERT INTO address_keys SET address_id='".$db_address['address_id']."', account_id='".$user_game['account_id']."', save_method='fake', pub_key=".$this->quote_escape($db_address['address']).";";
+					$r = $this->run_query($q);
+				}
+				$q = "UPDATE addresses SET user_id='".$user->db_user['user_id']."' WHERE address_id='".$db_address['address_id']."';";
 				$r = $this->run_query($q);
+				
+				return true;
 			}
-			else {
-				$q = "INSERT INTO address_keys SET address_id='".$db_address['address_id']."', account_id='".$user_game['account_id']."', save_method='fake', pub_key=".$this->quote_escape($db_address['address']).";";
-				$r = $this->run_query($q);
-			}
-			$q = "UPDATE addresses SET user_id='".$user->db_user['user_id']."' WHERE address_id='".$db_address['address_id']."';";
-			$r = $this->run_query($q);
-			
-			return true;
+			else return false;
 		}
-		else return false;
+		else {
+			$blockchain = new Blockchain($this, $db_address['primary_blockchain_id']);
+			$currency_id = $blockchain->currency_id();
+			
+			$account = $this->user_blockchain_account($user->db_user['user_id'], $currency_id);
+			
+			if ($account) {
+				$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id='".$db_address['address_id']."';";
+				$r = $this->run_query($q);
+				
+				if ($r->rowCount() == 1) {
+					$address_key = $r->fetch();
+					
+					$q = "UPDATE address_keys SET account_id='".$account['account_id']."' WHERE address_key_id='".$address_key['address_key_id']."';";
+					$r = $this->run_query($q);
+				}
+				else {
+					$q = "INSERT INTO address_keys SET address_id='".$db_address['address_id']."', account_id='".$account['account_id']."', save_method='fake', pub_key=".$this->quote_escape($db_address['address']).";";
+					$r = $this->run_query($q);
+				}
+				$q = "UPDATE addresses SET user_id='".$user->db_user['user_id']."' WHERE address_id='".$db_address['address_id']."';";
+				$r = $this->run_query($q);
+			}
+			else return false;
+		}
 	}
 	
 	public function blockchain_ensure_currencies() {
@@ -1914,6 +1944,18 @@ class App {
 			else return false;
 		}
 		else return false;
+	}
+	
+	public function user_blockchain_account($user_id, $currency_id) {
+		$qq = "SELECT * FROM currency_accounts WHERE game_id IS NULL AND user_id='".$user_id."' AND currency_id='".$currency_id."';";
+		$rr = $this->run_query($qq);
+		
+		if ($rr->rowCount() > 0) {
+			$currency_account = $rr->fetch();
+		}
+		else $currency_account = false;
+		
+		return $currency_account;
 	}
 }
 ?>

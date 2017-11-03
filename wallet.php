@@ -1257,7 +1257,10 @@ if ($thisuser && $game) {
 	else {
 		if (!empty($_REQUEST['redirect_key'])) $redirect_key = $_REQUEST['redirect_key'];
 		else {
-			$redirect_url = $app->get_redirect_url($_SERVER['REQUEST_URI']);
+			$uri = $_SERVER['REQUEST_URI'];
+			if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "logout") $uri = "/wallet/";
+			
+			$redirect_url = $app->get_redirect_url($uri);
 			$redirect_key = $redirect_url['redirect_key'];
 		}
 		include("includes/html_login.php");
