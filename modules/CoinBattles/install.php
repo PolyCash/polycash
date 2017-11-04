@@ -11,7 +11,9 @@ if (!empty($argv)) {
 
 if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$module = $app->check_set_module("CoinBattles");
-
+	?>
+	<p><a href="/modules/CoinBattles/set_style.php?key=<?php echo $GLOBALS['cron_key_string']; ?>">Run styling script</a></p>
+	<?php
 	$q = "SELECT * FROM games WHERE module=".$app->quote_escape($module['module_name']).";";
 	$r = $app->run_query($q);
 	

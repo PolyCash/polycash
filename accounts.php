@@ -215,12 +215,12 @@ include('includes/html_start.php');
 					
 					$transaction_in_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."'";
 					if ($account['game_id'] > 0) $transaction_in_q .= " AND t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."'";
-					$transaction_in_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC;";
+					$transaction_in_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC LIMIT 500;";
 					$transaction_in_r = $app->run_query($transaction_in_q);
 					
 					$transaction_out_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."'";
 					if ($account['game_id'] > 0) $transaction_out_q .= " AND t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."'";
-					$transaction_out_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC;";
+					$transaction_out_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC LIMIT 500;";
 					$transaction_out_r = $app->run_query($transaction_out_q);
 					
 					echo ' ('.($transaction_in_r->rowCount()+$transaction_out_r->rowCount()).')';
@@ -370,12 +370,6 @@ include('includes/html_start.php');
 					echo '<div class="row">';
 					echo '<div class="col-sm-4"><a href="/wallet/'.$user_game['url_identifier'].'/">'.ucwords($user_game['coin_name_plural'])." for ".$user_game['name'].'</a></div>';
 					echo '<div class="col-sm-2 greentext" style="text-align: right">'.$app->format_bignum($thisuser->account_coin_value($coin_game, $user_game)/pow(10,$coin_game->db_game['decimal_places'])).' '.$user_game['coin_name_plural'].'</div>';
-					
-					if ($user_game['buyin_policy'] != "none") {
-						$exchange_rate = $coin_game->coins_in_existence(false)/$coin_game->escrow_value(false);
-						$cc_value = $thisuser->account_coin_value($coin_game, $user_game)/$exchange_rate;
-						echo '<div class="col-sm-2 greentext" style="text-align: right">'.$app->format_bignum($cc_value/pow(10,$coin_game->blockchain->db_blockchain['coin_name_plural'])).' '.$coin_game->blockchain->db_blockchain['coin_name_plural'].'</div>';
-					}
 					echo "</div>\n";
 				}
 				?>

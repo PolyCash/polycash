@@ -9,7 +9,7 @@ class CoinBattlesGameDefinition {
 		$this->app = $app;
 		$this->events_per_round = array('BTC'=>'Bitcoin', 'DASH'=>'Dash', 'ETH'=>'Ethereum', 'ETC'=>'Ethereum Classic', 'LTC'=>'Litecoin', 'XMR'=>'Monero', 'XEM'=>'NEM', 'XRP'=>'Ripple');
 		$this->game_def_base_txt = '{
-			"blockchain_identifier": "litecoin",
+			"blockchain_identifier": "stakechain",
 			"protocol_version": 0,
 			"category_id": 4,
 			"url_identifier": "coin-battles",
@@ -23,21 +23,21 @@ class CoinBattlesGameDefinition {
 			"inflation": "exponential",
 			"exponential_inflation_rate": 0.001,
 			"pos_reward": 0,
-			"round_length": 20,
+			"round_length": 100,
 			"maturity": 0,
-			"payout_weight": "coin_round",
+			"payout_weight": "coin_block",
 			"final_round": null,
 			"buyin_policy": "unlimited",
 			"game_buyin_cap": 0,
 			"sellout_policy": "on",
 			"sellout_confirmations": 0,
-			"coin_name": "coinblock",
-			"coin_name_plural": "coinblocks",
-			"coin_abbreviation": "CBL",
-			"escrow_address": "LKahZLuDcT8Rnq7qQW8FdpDB59v5HZmTqi",
-			"genesis_tx_hash": "15fa21fc67701dfb87dd455c16600ac9abe4badaef6c46da378df63562a70d9b",
+			"coin_name": "battlecoin",
+			"coin_name_plural": "battlecoins",
+			"coin_abbreviation": "BTL",
+			"escrow_address": "MjtdAk3A5SpifhdV9ZYst62xnWjVYz8HNH",
+			"genesis_tx_hash": "8be0252751d660024d44ff5847d38cca",
 			"genesis_amount": 100000000000,
-			"game_starting_block": 1193501,
+			"game_starting_block": 64001,
 			"game_winning_rule": "none",
 			"game_winning_field": "",
 			"game_winning_inflation": 0,
@@ -57,20 +57,28 @@ class CoinBattlesGameDefinition {
 
 		if ($blockchain_r->rowCount() > 0) {
 			$db_blockchain = $blockchain_r->fetch();
+			$blockchain = new Blockchain($this->app, $db_blockchain['blockchain_id']);
 			
-			try {
-				$coin_rpc = new jsonRPCClient('http://'.$db_blockchain['rpc_username'].':'.$db_blockchain['rpc_password'].'@127.0.0.1:'.$db_blockchain['rpc_port'].'/');
+			if ($db_blockchain['p2p_mode'] == "rpc") {
+				try {
+					$coin_rpc = new jsonRPCClient('http://'.$db_blockchain['rpc_username'].':'.$db_blockchain['rpc_password'].'@127.0.0.1:'.$db_blockchain['rpc_port'].'/');
+				}
+				catch (Exception $e) {
+					echo "Error, failed to load RPC connection for ".$db_blockchain['blockchain_name'].".<br/>\n";
+					die();
+				}
+				
+				try {
+					$chain_last_block = (int) $coin_rpc->getblockcount();
+				}
+				catch (Exception $e) {}
 			}
-			catch (Exception $e) {
-				echo "Error, failed to load RPC connection for ".$db_blockchain['blockchain_name'].".<br/>\n";
-				die();
+			else {
+				$chain_last_block = $blockchain->last_block_id();
+				$coin_rpc = false;
 			}
 			
 			$chain_starting_block = $game_def->game_starting_block;
-			try {
-				$chain_last_block = (int) $coin_rpc->getblockcount();
-			}
-			catch (Exception $e) {}
 			
 			$chain_events_until_block = $chain_last_block + $game_def->round_length;
 
@@ -96,6 +104,7 @@ class CoinBattlesGameDefinition {
 			}
 			
 			$event = array(
+				"event_index" => $round-1,
 				"event_starting_block" => $chain_starting_block+$round*$round_length,
 				"event_final_block" => $chain_starting_block+($round+1)*$round_length-1,
 				"event_payout_block" => $chain_starting_block+($round+1)*$round_length-1,
@@ -143,14 +152,23 @@ class CoinBattlesGameDefinition {
 	}
 	
 	public function set_event_outcome(&$game, &$coin_rpc, $db_event) {
-		$start_block_hash = $coin_rpc->getblockhash((int)$db_event['event_starting_block']);
-		$final_block_hash = $coin_rpc->getblockhash((int)$db_event['event_final_block']);
-		
-		$start_block = $coin_rpc->getblock($start_block_hash);
-		$final_block = $coin_rpc->getblock($final_block_hash);
-		
-		$start_time = $start_block['time'];
-		$final_time = $final_block['time'];
+		if ($game->blockchain->db_blockchain['p2p_mode'] == "rpc") {
+			$start_block_hash = $coin_rpc->getblockhash((int)$db_event['event_starting_block']);
+			$final_block_hash = $coin_rpc->getblockhash((int)$db_event['event_final_block']);
+			
+			$start_block = $coin_rpc->getblock($start_block_hash);
+			$final_block = $coin_rpc->getblock($final_block_hash);
+			
+			$start_time = $start_block['time'];
+			$final_time = $final_block['time'];
+		}
+		else {
+			$start_block = $game->blockchain->fetch_block_by_id($db_event['event_starting_block']);
+			$final_block = $game->blockchain->fetch_block_by_id($db_event['event_final_block']);
+			
+			$start_time = $start_block['time_mined'];
+			$final_time = $final_block['time_mined'];
+		}
 		
 		echo "Event ".$db_event['event_index'].": ".$db_event['event_name']."<br/>\n";
 		
