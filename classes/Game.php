@@ -1978,23 +1978,23 @@ class Game {
 					if ($r->rowCount() > 0) {
 						$db_last_gde = $r->fetch();
 						
-						$init_event_index = $db_last_gde['event_index'];
-						$from_round = $this->block_to_round($db_last_gde['event_starting_block'])+2-$game_starting_round;
+						$init_event_index = $db_last_gde['event_index']+1;
+						$from_round = $this->block_to_round($db_last_gde['event_starting_block'])+1-$game_starting_round;
 					}
 					else {
-						$init_event_index = -1;
+						$init_event_index = 0;
 						$from_round = 1;
 					}
 					$event_verbatim_vars = $this->blockchain->app->event_verbatim_vars();
 					
 					$to_round = $round_id - $game_starting_round;
 					if (!empty($this->db_game['final_round'])) $to_round = $this->db_game['final_round'];
-					$gdes_to_add = $module->events_between_rounds($from_round, $to_round+1, $this->db_game['round_length'], $this->db_game['game_starting_block']);
-					$msg = "Adding ".count($gdes_to_add)." events for rounds (".$from_round." : ".($to_round+1).")";
+					$gdes_to_add = $module->events_between_rounds($from_round, $to_round, $this->db_game['round_length'], $this->db_game['game_starting_block']);
+					$msg = "Adding ".count($gdes_to_add)." events for rounds (".$from_round." : ".$to_round.")";
 					$this->blockchain->app->log_message($msg);
 					
 					$i = 0;
-					for ($event_index=$init_event_index+1; $event_index<$init_event_index+1+count($gdes_to_add); $event_index++) {
+					for ($event_index=$init_event_index; $event_index<$init_event_index+count($gdes_to_add); $event_index++) {
 						$this->blockchain->app->check_set_gde($this, $event_index, $gdes_to_add[$i], $event_verbatim_vars);
 						$i++;
 					}
