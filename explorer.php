@@ -438,7 +438,15 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						
 						<?php
 						if ($game->db_game['module'] == "CoinBattles") {
-							list($html, $js) = $game->module->currency_chart($game, $event->db_event['event_starting_block'], $event->db_event['event_final_block']);
+							if ($event_status == "current") {
+								$chart_starting_block = 1+$game->db_game['round_length']*($current_round-1);
+								$chart_final_block = false;
+							}
+							else {
+								$chart_starting_block = $event->db_event['event_starting_block'];
+								$chart_final_block = $event->db_event['event_final_block'];
+							}
+							list($html, $js) = $game->module->currency_chart($game, $chart_starting_block, $chart_final_block);
 							echo '<div style="margin: 20px 0px;" id="game0_chart_html">'.$html."</div>\n";
 							echo '<div id="game0_chart_js"><script type="text/javascript">'.$js.'</script></div>'."\n";
 						}

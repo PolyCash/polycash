@@ -12,10 +12,18 @@ if (!empty($argv)) {
 }
 
 if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
-	$game_id = (int) $_REQUEST['game_id'];
-	$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
-	$blockchain = new Blockchain($app, $db_game['blockchain_id']);
-	$game = new Game($blockchain, $db_game['game_id']);
+	if (!empty($_REQUEST['game_id'])) {
+		$game_id = (int) $_REQUEST['game_id'];
+		$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
+		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+		$game = new Game($blockchain, $db_game['game_id']);
+	}
+	else if (!empty($_REQUEST['blockchain_id'])) {
+		$blockchain_id = (int) $_REQUEST['blockchain_id'];
+		$db_blockchain = $app->run_query("SELECT * FROM blockchains WHERE blockchain_id='".$blockchain_id."';")->fetch();
+		$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
+		$game = false;
+	}
 	
 	$user_id = false;
 	$username = false;

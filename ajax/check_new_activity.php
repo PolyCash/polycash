@@ -54,10 +54,11 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	else $output['new_transaction'] = 0;
 	
 	if ($game->db_game['module'] == "CoinBattles") {
-		$event = $game->current_events[0];
-		list($html, $js) = $game->module->currency_chart($game, $event->db_event['event_starting_block'], false);
-		$output['chart_html'] = $html;
-		$output['chart_js'] = $js;
+		if (!empty($game->current_events[0])) {
+			list($html, $js) = $game->module->currency_chart($game, $game->current_events[0]->db_event['event_starting_block'], false);
+			$output['chart_html'] = $html;
+			$output['chart_js'] = $js;
+		}
 	}
 	
 	if ($last_block_id !== $_REQUEST['last_block_id'] || $last_transaction_id != (int) $_REQUEST['last_transaction_id']) {

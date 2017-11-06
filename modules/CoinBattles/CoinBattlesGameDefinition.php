@@ -24,7 +24,7 @@ class CoinBattlesGameDefinition {
 			"inflation": "exponential",
 			"exponential_inflation_rate": 0.001,
 			"pos_reward": 0,
-			"round_length": 100,
+			"round_length": 1000,
 			"maturity": 0,
 			"payout_weight": "coin_block",
 			"final_round": null,
@@ -290,6 +290,7 @@ class CoinBattlesGameDefinition {
 		$start_time = microtime(true);
 		
 		$from_block = $game->blockchain->fetch_block_by_id($from_block_id);
+		if (empty($from_block['time_mined'])) $from_block['time_mined'] = time();
 		
 		if (!empty($to_block_id)) {
 			$to_block = $game->blockchain->fetch_block_by_id($to_block_id);
