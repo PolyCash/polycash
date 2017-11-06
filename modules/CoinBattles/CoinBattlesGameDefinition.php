@@ -401,7 +401,7 @@ class CoinBattlesGameDefinition {
 		
 		$html .= '
 				</div>
-				<div class="col-md-3">
+				<div class="col-md-3" style="text-align: left;">
 					<br/><br/>
 					<b>Performances Rankings</b><br/>';
 		

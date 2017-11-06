@@ -49,7 +49,7 @@ include('includes/html_start.php');
 			echo "<br/>\n";
 		}
 		
-		$app->display_games($selected_category['category_id']);
+		$app->display_games($selected_category['category_id'], false);
 	}
 	else {
 		echo "<h2>Please select a category:</h2>\n";

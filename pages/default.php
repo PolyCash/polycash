@@ -7,7 +7,7 @@ include('includes/html_start.php');
 var games = new Array();
 </script>
 <?php
-$app->display_games(false);
+$app->display_games(false, false);
 ?>
 <a href="/import/">Add another game</a>
 <?php

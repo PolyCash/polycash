@@ -811,10 +811,11 @@ class App {
 		else return rtrim(rtrim($number, '0'), '.');
 	}
 	
-	public function display_games($category_id) {
+	public function display_games($category_id, $game_id) {
 		echo '<div class="paragraph">';
 		$q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='published' OR g.game_status='running')";
 		if (!empty($category_id)) $q .= " AND g.category_id=".$category_id;
+		if (!empty($game_id)) $q .= " AND g.game_id=".$game_id;
 		$q .= " ORDER BY g.featured_score DESC, g.game_id DESC;";
 		$r = $this->run_query($q);
 		if ($r->rowCount() > 0) {
