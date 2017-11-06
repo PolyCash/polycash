@@ -1500,6 +1500,12 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 								_this.last_transaction_id = parseInt(json_result['last_transaction_id']);
 							}
 							
+							if (typeof json_result['chart_html'] != "undefined") {
+								console.log("refreshing charts...");
+								$('#game'+_this.instance_id+'_chart_html').html(json_result['chart_html']);
+								$('#game'+_this.instance_id+'_chart_js').html('<script type="text/javascript">'+json_result['chart_js']+'</script>');
+							}
+							
 							if (parseInt(json_result['new_block']) == 1 || parseInt(json_result['new_transaction']) == 1) {
 								$('#account_value').html(json_result['account_value']);
 								$('#account_value').hide();

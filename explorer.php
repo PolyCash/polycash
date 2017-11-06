@@ -23,10 +23,6 @@ if ($uri_parts[2] == "games") {
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$game = new Game($blockchain, $db_game['game_id']);
 		
-		if (!empty($game->db_game['module'])) {
-			eval('$module = new '.$game->db_game['module'].'GameDefinition($app);');
-		}
-		
 		if ($thisuser) {
 			$qq = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
 			$rr = $app->run_query($qq);
@@ -367,8 +363,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							$round_sum_votes = $event->event_outcome['sum_votes'];
 							
 							if (!empty($game->db_game['module'])) {
-								if (method_exists($module, "event_index_to_next_event_index")) {
-									$next_event_index = $module->event_index_to_next_event_index($event->db_event['event_index']);
+								if (method_exists($game->module, "event_index_to_next_event_index")) {
+									$next_event_index = $game->module->event_index_to_next_event_index($event->db_event['event_index']);
 									
 									if ($next_event_index) {
 										$next_event_r = $app->run_query("SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$next_event_index."';");
@@ -439,6 +435,14 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						?>
 						<br/>
 						<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/">See all events</a><br/>
+						
+						<?php
+						if ($game->db_game['module'] == "CoinBattles") {
+							list($html, $js) = $game->module->currency_chart($game, $event->db_event['event_starting_block'], $event->db_event['event_final_block']);
+							echo '<div style="margin: 20px 0px;" id="game0_chart_html">'.$html."</div>\n";
+							echo '<div id="game0_chart_js"><script type="text/javascript">'.$js.'</script></div>'."\n";
+						}
+						?>
 						
 						<h2>Rankings</h2>
 						
@@ -533,7 +537,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								$winning_option = false;
 								
 								if ($first_option['score'] == $second_option['score']) {
-									$tiebreaker = $module->break_tie($game, $event->db_event, $first_option, $second_option);
+									$tiebreaker = $game->module->break_tie($game, $event->db_event, $first_option, $second_option);
 									
 									if ($tiebreaker) {
 										list($winning_option, $pk_shootout_data) = $tiebreaker;

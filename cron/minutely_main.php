@@ -210,6 +210,12 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 						if ($print_debug) echo "Apply user strategies...";
 						$txt = $running_games[$running_game_i]->apply_user_strategies();
 						
+						if (!empty($running_games[$running_game_i]->db_game['module'])) {
+							if (method_exists($running_games[$running_game_i]->module, "regular_actions")) {
+								$running_games[$running_game_i]->module->regular_actions();
+							}
+						}
+						
 						if ($print_debug) {
 							echo $txt;
 							echo (microtime(true)-$benchmark_time)." sec\n";

@@ -570,6 +570,26 @@ class App {
 		else return false;
 	}
 	
+	public function currency_price_at_time($currency_id, $ref_currency_id, $ref_time) {
+		$q = "SELECT * FROM currency_prices WHERE currency_id='".$currency_id."' AND reference_currency_id='".$ref_currency_id."' AND time_added <= ".$ref_time." ORDER BY time_added DESC LIMIT 1;";
+		$r = $this->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			return $r->fetch();
+		}
+		else return false;
+	}
+	
+	public function currency_price_after_time($currency_id, $ref_currency_id, $ref_time) {
+		$q = "SELECT * FROM currency_prices WHERE currency_id='".$currency_id."' AND reference_currency_id='".$ref_currency_id."' AND time_added >= ".$ref_time." ORDER BY time_added ASC LIMIT 1;";
+		$r = $this->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			return $r->fetch();
+		}
+		else return false;
+	}
+	
 	public function latest_currency_price($currency_id) {
 		$q = "SELECT * FROM currency_prices WHERE currency_id='".$currency_id."' AND reference_currency_id='".$this->get_site_constant('reference_currency_id')."' ORDER BY price_id DESC LIMIT 1;";
 		$r = $this->run_query($q);
@@ -842,6 +862,13 @@ class App {
 				echo '<div class="col-md-'.$cell_width.'">';
 				echo '<center><h1 style="display: inline-block" title="'.$featured_game->game_description().'">'.$featured_game->db_game['name'].'</h1>';
 				if ($featured_game->db_game['short_description'] != "") echo "<p>".$featured_game->db_game['short_description']."</p>";
+				
+				if ($featured_game->db_game['module'] == "CoinBattles") {
+					$event = $featured_game->current_events[0];
+					list($html, $js) = $featured_game->module->currency_chart($featured_game, $event->db_event['event_starting_block'], false);
+					echo '<div style="margin-bottom: 15px;" id="game'.$counter.'_chart_html">'.$html."</div>\n";
+					echo '<div id="game'.$counter.'_chart_js"><script type="text/javascript">'.$js.'</script></div>'."\n";
+				}
 				
 				echo '<div id="game'.$counter.'_events"></div>';
 				echo '<script type="text/javascript" id="game'.$counter.'_new_event_js">'.$featured_game->new_event_js($counter, false).'</script>';
@@ -1589,20 +1616,20 @@ class App {
 		$r = $this->run_query($q);
 		
 		if ($r->rowCount() > 0) {
-			$module = $r->fetch();
+			$db_module = $r->fetch();
 		}
 		else {
 			$q = "INSERT INTO modules SET module_name=".$this->quote_escape($module_name).";";
 			$r = $this->run_query($q);
 			$module_id = $this->last_insert_id();
 			
-			$module = $this->run_query("SELECT * FROM modules WHERE module_id=".$module_id.";")->fetch();
+			$db_module = $this->run_query("SELECT * FROM modules WHERE module_id=".$module_id.";")->fetch();
 		}
 		
-		return $module;
+		return $db_module;
 	}
 	
-	public function create_game_from_definition(&$game_definition, &$thisuser, $module, &$error_message, $db_game) {
+	public function create_game_from_definition(&$game_definition, &$thisuser, $module_name, &$error_message, $db_game) {
 		$game_def = json_decode($game_definition) or die("Error: the game definition you entered could not be imported.<br/>Please make sure to enter properly formatted JSON.<br/><a href=\"/import/\">Try again</a>");
 		
 		$error_message = "";
@@ -1664,7 +1691,7 @@ class App {
 					}
 					else if ($r->rowCount() == 0) {
 						$q = "INSERT INTO games SET ";
-						if ($module) $q .= "module=".$this->quote_escape($module).", ";
+						if ($module_name) $q .= "module=".$this->quote_escape($module_name).", ";
 						if ($thisuser) $q .= "creator_id='".$thisuser->db_user['user_id']."', ";
 						$q .= "blockchain_id='".$db_blockchain['blockchain_id']."', game_status='published', featured=1, start_condition='fixed_block', giveaway_status='public_free', invite_currency='".$blockchain->currency_id()."'";
 						for ($i=0; $i<count($verbatim_vars); $i++) {

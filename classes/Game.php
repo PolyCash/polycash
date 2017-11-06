@@ -10,6 +10,11 @@ class Game {
 		$this->game_id = $game_id;
 		$this->update_db_game();
 		$this->load_current_events();
+		
+		if (!empty($this->db_game['module'])) {
+			eval('$this->module = new '.$this->db_game['module'].'GameDefinition($this->blockchain->app);');
+			$this->module->load();
+		}
 	}
 	
 	public function update_db_game() {
@@ -1792,7 +1797,7 @@ class Game {
 	
 	public function select_input_buttons($user_game) {
 		$js = "mature_ios.length = 0;\n";
-		$html = "<p>Click on the coins below to compose your voting transaction.</p>\n";
+		$html = "<p>Click on your coins to start a staking transaction.</p>\n";
 		$input_buttons_html = "";
 		
 		$last_block_id = $this->blockchain->last_block_id();
@@ -1969,7 +1974,6 @@ class Game {
 		if ($round_id > $ensured_round) {
 			if ($this->db_game['event_rule'] == "game_definition") {
 				if (!empty($this->db_game['module'])) {
-					eval('$module = new '.$this->db_game['module'].'GameDefinition($this->blockchain->app);');
 					$game_starting_round = $this->block_to_round($this->db_game['game_starting_block']);
 					
 					$q = "SELECT * FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."' ORDER BY event_index DESC LIMIT 1;";
@@ -1989,7 +1993,7 @@ class Game {
 					
 					$to_round = $round_id - $game_starting_round;
 					if (!empty($this->db_game['final_round'])) $to_round = $this->db_game['final_round'];
-					$gdes_to_add = $module->events_between_rounds($from_round, $to_round, $this->db_game['round_length'], $this->db_game['game_starting_block']);
+					$gdes_to_add = $this->module->events_between_rounds($from_round, $to_round, $this->db_game['round_length'], $this->db_game['game_starting_block']);
 					$msg = "Adding ".count($gdes_to_add)." events for rounds (".$from_round." : ".$to_round.")";
 					$this->blockchain->app->log_message($msg);
 					
@@ -2471,8 +2475,6 @@ class Game {
 			$payout_events = $this->events_by_payout_block($block_height);
 			
 			if (count($payout_events) > 0) {
-				eval('$module = new '.$this->db_game['module'].'GameDefinition($this->blockchain->app);');
-				
 				for ($i=0; $i<count($payout_events); $i++) {
 					if ($payout_events[$i]->db_event['event_winning_rule'] == "game_definition") {
 						if ($this->blockchain->db_blockchain['p2p_mode'] == "rpc") {
@@ -2485,13 +2487,15 @@ class Game {
 						}
 						else $coin_rpc = false;
 						
-						$module->set_event_outcome($this, $coin_rpc, $payout_events[$i]->db_event);
+						if (!empty($this->db_game['module'])) {
+							$this->module->set_event_outcome($this, $coin_rpc, $payout_events[$i]->db_event);
+						}
 					}
 					
 					$log_text .= $payout_events[$i]->set_outcome_from_db($block_height, true);
 					
-					if ($payout_events[$i]->db_event['event_winning_rule'] == "game_definition" && method_exists($module, "event_index_to_next_event_index")) {
-						$event_index = $module->event_index_to_next_event_index($payout_events[$i]->db_event['event_index']);
+					if ($payout_events[$i]->db_event['event_winning_rule'] == "game_definition" && method_exists($this->module, "event_index_to_next_event_index")) {
+						$event_index = $this->module->event_index_to_next_event_index($payout_events[$i]->db_event['event_index']);
 						$this->set_event_labels_by_gde($event_index);
 					}
 				}
