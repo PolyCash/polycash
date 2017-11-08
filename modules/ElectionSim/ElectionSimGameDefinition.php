@@ -10,6 +10,7 @@ class ElectionSimGameDefinition {
 		$this->game_def_base_txt = '{
 			"blockchain_identifier": "stakechain",
 			"protocol_version": 0,
+			"category_id": 31,
 			"url_identifier": "virtual-election",
 			"name": "Virtual Election 2017",
 			"event_type_name": "election",
@@ -25,7 +26,7 @@ class ElectionSimGameDefinition {
 			"maturity": 0,
 			"payout_weight": "coin_block",
 			"final_round": false,
-			"buyin_policy": "none",
+			"buyin_policy": "unlimited",
 			"game_buyin_cap": 0,
 			"sellout_policy": "on",
 			"sellout_confirmations": 0,

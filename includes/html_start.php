@@ -35,6 +35,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 	<script type="text/javascript" src="/js/main.js<?php if (!empty($GLOBALS['cachebuster'])) echo '?v='.$GLOBALS['cachebuster']; ?>"></script>
 	<script type="text/javascript" src="/js/adminlte.min.js"></script>
 	<script type="text/javascript" src="/js/tiny.editor.js"></script>
+	<script type="text/javascript" src="/js/chart.js"></script>
 	<?php
 	if (!empty($include_crypto_js)) { ?>
 	<script type="text/javascript" src="/js/base64.lib.js" ></script>
@@ -87,6 +88,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 			<ul class="sidebar-menu" data-widget="tree">
 				<li class="header">Navigation</li>
 				<li<?php if ($nav_tab_selected == "home") echo ' class="active"'; ?>><a href="/"><i class="fa fa-home"></i> <span>Home</span></a></li>
+					<li<?php if ($nav_tab_selected == "directory" && empty($selected_category)) echo ' class="active"'; ?>><a href="/directory/"><i class="fa fa-sitemap"></i> <span>Browse Games</span></a></li>
 				<li<?php if ($nav_tab_selected == "wallet" && empty($game)) echo ' class="active"'; ?>><a href="/wallet/"><i class="fa fa-cubes"></i> <span>My Games</span></a></li>
 				<li<?php if ($nav_tab_selected == "accounts") echo ' class="active"'; ?>><a href="/accounts/"><i class="fa fa-user-circle"></i> <span>My Accounts</span></a></li>
 				<li<?php if ($nav_tab_selected == "download") echo ' class="active"'; ?>><a href="/download/"><i class="fa fa-download"></i> <span>Download</span></a></li>
@@ -115,7 +117,6 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 				?>
 				<ul class="sidebar-menu" data-widget="tree">
 					<li class="header">Categories</li>
-					<li<?php if ($nav_tab_selected == "directory" && empty($selected_category)) echo ' class="active"'; ?>><a href="/directory/"><i class="fa fa-sitemap"></i> <span>Browse All</span></a></li>
 					<?php
 					$q = "SELECT * FROM categories WHERE category_level=0 ORDER BY display_rank ASC;";
 					$r = $app->run_query($q);

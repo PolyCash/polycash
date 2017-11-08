@@ -159,10 +159,6 @@ include('includes/html_start.php');
 		?>
 		<script type="text/javascript">
 		var selected_account_id = false;
-		function toggle_account_details(account_id) {
-			$('#account_details_'+account_id).toggle('fast');
-			selected_account_id = account_id;
-		}
 		</script>
 		
 		<div class="panel panel-default" style="margin-top: 15px;">
@@ -208,19 +204,22 @@ include('includes/html_start.php');
 					echo '</div>';
 					
 					echo '<div class="col-sm-2">';
-					if (empty($account['game_id'])) echo '<a href="" onclick="toggle_account_details('.$account['account_id'].'); return false;">Deposit</a>';
+					if (empty($account['game_id'])) {
+						echo '<a href="" onclick="toggle_account_details('.$account['account_id'].'); return false;">Deposit</a>';
+						echo ' &nbsp;&nbsp; <a href="" onclick="withdraw_from_account('.$account['account_id'].', 1); return false;">Withdraw</a>';
+					}
 					echo '</div>';
 					
 					echo '<div class="col-sm-2"><a href="" onclick="toggle_account_details('.$account['account_id'].'); return false;">Transactions';
 					
 					$transaction_in_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."'";
 					if ($account['game_id'] > 0) $transaction_in_q .= " AND t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."'";
-					$transaction_in_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC;";
+					$transaction_in_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC LIMIT 500;";
 					$transaction_in_r = $app->run_query($transaction_in_q);
 					
 					$transaction_out_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."'";
 					if ($account['game_id'] > 0) $transaction_out_q .= " AND t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."'";
-					$transaction_out_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC;";
+					$transaction_out_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC LIMIT 500;";
 					$transaction_out_r = $app->run_query($transaction_out_q);
 					
 					echo ' ('.($transaction_in_r->rowCount()+$transaction_out_r->rowCount()).')';
@@ -316,6 +315,32 @@ include('includes/html_start.php');
 				<p style="margin-top: 10px;">
 					<a href="" onclick="$('#create_account_dialog').toggle('fast'); return false;">Create a new account</a>
 				</p>
+				<div id="withdraw_dialog" class="modal fade" style="display: none;">
+					<div class="modal-dialog">
+						<div class="modal-content">
+							<div class="modal-header">
+								<h4 class="modal-title">Withdraw Coins</h4>
+							</div>
+							<div class="modal-body">
+								<div class="form-group">
+									<label for="withdraw_amount">Amount:</label>
+									<input class="form-control" type="tel" placeholder="0.000" id="withdraw_amount" style="text-align: right;" />
+								</div>
+								<div class="form-group">
+									<label for="withdraw_fee">Fee:</label>
+									<input class="form-control" type="tel" placeholder="0.001" id="withdraw_fee" style="text-align: right;" />
+								</div>
+								<div class="form-group">
+									<label for="withdraw_address">Address:</label>
+									<input class="form-control" type="text" id="withdraw_address" />
+								</div>
+								<span class="greentext" style="display: none;" id="withdraw_message"></span>
+								
+								<button id="withdraw_btn" class="btn btn-success" onclick="withdraw_from_account(false, 2);">Withdraw</button>
+							</div>
+						</div>
+					</div>
+				</div>
 				<div id="create_account_dialog" style="display: none;">
 					<div class="form-group">
 						<label for="create_account_action">Create a new account:</label>
@@ -343,7 +368,7 @@ include('includes/html_start.php');
 						<input type="text" class="form-control" id="create_account_rpc_name" value="" />
 					</div>
 					<div class="form-group" id="create_account_submit" style="display: none;">
-						<button class="btn btn-primary" onclick="create_account_step('submit');">Create Account</button>
+						<button class="btn btn-primary" onclick="withdraw_from_account(false, 2);">Create Account</button>
 					</div>
 				</div>
 			</div>
@@ -370,12 +395,6 @@ include('includes/html_start.php');
 					echo '<div class="row">';
 					echo '<div class="col-sm-4"><a href="/wallet/'.$user_game['url_identifier'].'/">'.ucwords($user_game['coin_name_plural'])." for ".$user_game['name'].'</a></div>';
 					echo '<div class="col-sm-2 greentext" style="text-align: right">'.$app->format_bignum($thisuser->account_coin_value($coin_game, $user_game)/pow(10,$coin_game->db_game['decimal_places'])).' '.$user_game['coin_name_plural'].'</div>';
-					
-					if ($user_game['buyin_policy'] != "none") {
-						$exchange_rate = $coin_game->coins_in_existence(false)/$coin_game->escrow_value(false);
-						$cc_value = $thisuser->account_coin_value($coin_game, $user_game)/$exchange_rate;
-						echo '<div class="col-sm-2 greentext" style="text-align: right">'.$app->format_bignum($cc_value/pow(10,$coin_game->blockchain->db_blockchain['coin_name_plural'])).' '.$coin_game->blockchain->db_blockchain['coin_name_plural'].'</div>';
-					}
 					echo "</div>\n";
 				}
 				?>

@@ -242,7 +242,7 @@ class Blockchain {
 				if ($this->db_blockchain['p2p_mode'] == "none") {
 					$transaction_type = "transaction";
 					
-					$q = "SELECT * FROM transaction_ios WHERE spend_transaction_id='".$unconfirmed_tx['transaction_id']."';";
+					$q = "SELECT * FROM transaction_ios WHERE spend_transaction_id='".$db_transaction_id."';";
 					$r = $this->app->run_query($q);
 					
 					while ($spend_io = $r->fetch()) {
@@ -1092,13 +1092,17 @@ class Blockchain {
 		else return false;
 	}
 	
-	public function user_balance(&$user_game) {
-		$q = "SELECT SUM(io.amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND io.spend_status='unspent' AND k.account_id='".$user_game['account_id']."' AND io.create_block_id IS NOT NULL;";
+	public function account_balance($account_id) {
+		$q = "SELECT SUM(io.amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND io.spend_status='unspent' AND k.account_id='".$account_id."' AND io.create_block_id IS NOT NULL;";
 		$r = $this->app->run_query($q);
 		$coins = $r->fetch(PDO::FETCH_NUM);
 		$coins = $coins[0];
 		if ($coins > 0) return $coins;
 		else return 0;
+	}
+	
+	public function user_balance(&$user_game) {
+		return $this->account_balance($user_game['account_id']);
 	}
 
 	public function user_immature_balance(&$user_game) {

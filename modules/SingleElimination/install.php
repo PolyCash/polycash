@@ -23,7 +23,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		?>
 		<p><a href="/modules/SingleElimination/install.php?public_private=public&key=<?php echo $GLOBALS['cron_key_string']; ?>">Install</a></p>
 		<p><a href="/modules/SingleElimination/install.php?public_private=private&key=<?php echo $GLOBALS['cron_key_string']; ?>">Install private game</a></p>
-		<p><a href="/modules/SingleElimination/set_style.php&key=<?php echo $GLOBALS['cron_key_string']; ?>">Run styling script</a></p>
+		<p><a href="/modules/SingleElimination/set_style.php?key=<?php echo $GLOBALS['cron_key_string']; ?>">Run styling script</a></p>
 		<?php
 	}
 	else {

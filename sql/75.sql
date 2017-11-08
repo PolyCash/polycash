@@ -1,0 +1,1 @@
+ALTER TABLE `games` ADD `category_id` INT NULL DEFAULT NULL AFTER `logo_image_id`;

@@ -9,12 +9,14 @@ if (!empty($argv)) {
 
 if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$txt = "Bitcoin,35
+Bitcoin Cash,78
 Litecoin,73
 Ethereum,70
 Ethereum Classic,71
 Dash,72
 Monero,74
 NEM,75
+NEO,79
 Ripple,76";
 	$lines = explode("\n", $txt);
 	

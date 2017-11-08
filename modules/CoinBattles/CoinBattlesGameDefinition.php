@@ -7,10 +7,12 @@ class CoinBattlesGameDefinition {
 	
 	public function __construct(&$app) {
 		$this->app = $app;
-		$this->events_per_round = array('BTC'=>'Bitcoin', 'DASH'=>'Dash', 'ETH'=>'Ethereum', 'ETC'=>'Ethereum Classic', 'LTC'=>'Litecoin', 'XMR'=>'Monero', 'XEM'=>'NEM', 'XRP'=>'Ripple');
+		$this->currencies = false;
+		$this->events_per_round = array('BTC'=>'Bitcoin', 'BCH'=>'Bitcoin Cash', 'DASH'=>'Dash', 'ETH'=>'Ethereum', 'ETC'=>'Ethereum Classic', 'LTC'=>'Litecoin', 'XMR'=>'Monero', 'XEM'=>'NEM', 'XRP'=>'Ripple');
 		$this->game_def_base_txt = '{
-			"blockchain_identifier": "litecoin",
+			"blockchain_identifier": "stakechain",
 			"protocol_version": 0,
+			"category_id": 4,
 			"url_identifier": "coin-battles",
 			"name": "Coin Battles",
 			"event_type_name": "battle",
@@ -20,28 +22,28 @@ class CoinBattlesGameDefinition {
 			"option_group_id": 0,
 			"events_per_round": 1,
 			"inflation": "exponential",
-			"exponential_inflation_rate": 0.001,
+			"exponential_inflation_rate": 0.01,
 			"pos_reward": 0,
-			"round_length": 20,
+			"round_length": 1000,
 			"maturity": 0,
-			"payout_weight": "coin_round",
+			"payout_weight": "coin_block",
 			"final_round": null,
-			"buyin_policy": "none",
+			"buyin_policy": "unlimited",
 			"game_buyin_cap": 0,
 			"sellout_policy": "on",
 			"sellout_confirmations": 0,
-			"coin_name": "coinblock",
-			"coin_name_plural": "coinblocks",
-			"coin_abbreviation": "CBL",
-			"escrow_address": "LKahZLuDcT8Rnq7qQW8FdpDB59v5HZmTqi",
-			"genesis_tx_hash": "15fa21fc67701dfb87dd455c16600ac9abe4badaef6c46da378df63562a70d9b",
+			"coin_name": "battlecoin",
+			"coin_name_plural": "battlecoins",
+			"coin_abbreviation": "BTL",
+			"escrow_address": "MjtdAk3A5SpifhdV9ZYst62xnWjVYz8HNH",
+			"genesis_tx_hash": "8be0252751d660024d44ff5847d38cca",
 			"genesis_amount": 100000000000,
-			"game_starting_block": 1193501,
+			"game_starting_block": 64001,
 			"game_winning_rule": "none",
 			"game_winning_field": "",
 			"game_winning_inflation": 0,
 			"default_vote_effectiveness_function": "linear_decrease",
-			"default_effectiveness_param1": 0.5,
+			"default_effectiveness_param1": 0.9,
 			"default_max_voting_fraction": 1,
 			"default_option_max_width": 200,
 			"default_payout_block_delay": 0
@@ -56,20 +58,30 @@ class CoinBattlesGameDefinition {
 
 		if ($blockchain_r->rowCount() > 0) {
 			$db_blockchain = $blockchain_r->fetch();
+			$blockchain = new Blockchain($this->app, $db_blockchain['blockchain_id']);
 			
-			try {
-				$coin_rpc = new jsonRPCClient('http://'.$db_blockchain['rpc_username'].':'.$db_blockchain['rpc_password'].'@127.0.0.1:'.$db_blockchain['rpc_port'].'/');
+			if ($db_blockchain['p2p_mode'] == "rpc") {
+				try {
+					$coin_rpc = new jsonRPCClient('http://'.$db_blockchain['rpc_username'].':'.$db_blockchain['rpc_password'].'@127.0.0.1:'.$db_blockchain['rpc_port'].'/');
+				}
+				catch (Exception $e) {
+					echo "Error, failed to load RPC connection for ".$db_blockchain['blockchain_name'].".<br/>\n";
+					die();
+				}
+				
+				try {
+					$chain_last_block = (int) $coin_rpc->getblockcount();
+				}
+				catch (Exception $e) {}
 			}
-			catch (Exception $e) {
-				echo "Error, failed to load RPC connection for ".$db_blockchain['blockchain_name'].".<br/>\n";
-				die();
+			else {
+				$chain_last_block = $blockchain->last_block_id();
+				$coin_rpc = false;
 			}
+			
+			$this->load_currencies();
 			
 			$chain_starting_block = $game_def->game_starting_block;
-			try {
-				$chain_last_block = (int) $coin_rpc->getblockcount();
-			}
-			catch (Exception $e) {}
 			
 			$chain_events_until_block = $chain_last_block + $game_def->round_length;
 
@@ -95,6 +107,7 @@ class CoinBattlesGameDefinition {
 			}
 			
 			$event = array(
+				"event_index" => $round-1,
 				"event_starting_block" => $chain_starting_block+$round*$round_length,
 				"event_final_block" => $chain_starting_block+($round+1)*$round_length-1,
 				"event_payout_block" => $chain_starting_block+($round+1)*$round_length-1,
@@ -116,14 +129,23 @@ class CoinBattlesGameDefinition {
 		$r = $this->app->run_query($q);
 		
 		while ($gde = $r->fetch()) {
-			$start_block_hash = $coin_rpc->getblockhash((int)$gde['event_starting_block']);
-			$final_block_hash = $coin_rpc->getblockhash((int)$gde['event_final_block']);
-			
-			$start_block = $coin_rpc->getblock($start_block_hash);
-			$final_block = $coin_rpc->getblock($final_block_hash);
-			
-			$start_time = $start_block['time'];
-			$final_time = $final_block['time'];
+			if ($game->blockchain->db_blockchain['p2p_mode'] == "rpc") {
+				$start_block_hash = $coin_rpc->getblockhash((int)$gde['event_starting_block']);
+				$final_block_hash = $coin_rpc->getblockhash((int)$gde['event_final_block']);
+				
+				$start_block = $coin_rpc->getblock($start_block_hash);
+				$final_block = $coin_rpc->getblock($final_block_hash);
+				
+				$start_time = $start_block['time'];
+				$final_time = $final_block['time'];
+			}
+			else {
+				$start_block = $game->blockchain->fetch_block_by_id($gde['event_starting_block']);
+				$final_block = $game->blockchain->fetch_block_by_id($gde['event_final_block']);
+				
+				$start_time = $start_block['time_mined'];
+				$final_time = $final_block['time_mined'];
+			}
 			
 			echo "Event ".$gde['event_index'].": ".$gde['event_name']."<br/>\n";
 			
@@ -142,16 +164,27 @@ class CoinBattlesGameDefinition {
 	}
 	
 	public function set_event_outcome(&$game, &$coin_rpc, $db_event) {
-		$start_block_hash = $coin_rpc->getblockhash((int)$db_event['event_starting_block']);
-		$final_block_hash = $coin_rpc->getblockhash((int)$db_event['event_final_block']);
-		
-		$start_block = $coin_rpc->getblock($start_block_hash);
-		$final_block = $coin_rpc->getblock($final_block_hash);
-		
-		$start_time = $start_block['time'];
-		$final_time = $final_block['time'];
+		if ($game->blockchain->db_blockchain['p2p_mode'] == "rpc") {
+			$start_block_hash = $coin_rpc->getblockhash((int)$db_event['event_starting_block']);
+			$final_block_hash = $coin_rpc->getblockhash((int)$db_event['event_final_block']);
+			
+			$start_block = $coin_rpc->getblock($start_block_hash);
+			$final_block = $coin_rpc->getblock($final_block_hash);
+			
+			$start_time = $start_block['time'];
+			$final_time = $final_block['time'];
+		}
+		else {
+			$start_block = $game->blockchain->fetch_block_by_id($db_event['event_starting_block']);
+			$final_block = $game->blockchain->fetch_block_by_id($db_event['event_final_block']);
+			
+			$start_time = $start_block['time_mined'];
+			$final_time = $final_block['time_mined'];
+		}
 		
 		echo "Event ".$db_event['event_index'].": ".$db_event['event_name']."<br/>\n";
+		
+		$btc_currency = $this->app->get_currency_by_abbreviation("BTC");
 		
 		$performances = array();
 		$best_performance_index = false;
@@ -162,18 +195,38 @@ class CoinBattlesGameDefinition {
 			if ($loop_index > 0) {
 				$poloniex_url = "https://poloniex.com/public?command=returnTradeHistory&currencyPair=BTC_".$currency_code."&start=".$start_time."&end=".$final_time;
 				
+				$db_currency = $this->app->run_query("SELECT * FROM currencies WHERE name=".$this->app->quote_escape($currency_name).";")->fetch();
+				$currency_price = $this->app->currency_price_at_time($db_currency['currency_id'], $btc_currency['currency_id'], $start_time);
+				
+				if (!empty($currency_price['time_added'])) $last_price_time = $currency_price['time_added'];
+				else $last_price_time = 0;
+				
 				echo $poloniex_url."<br/>\n";
 				$poloniex_response = $this->app->async_fetch_url($poloniex_url, true);
-				$poloniex_trades = json_decode($poloniex_response['cached_result']);
+				$poloniex_trades = json_decode($poloniex_response['cached_result'], true);
 				
-				if (count($poloniex_trades) > 1) {
-					$start_trade = $poloniex_trades[0];
-					$final_trade = $poloniex_trades[count($poloniex_trades)-1];
+				for ($i=count($poloniex_trades)-1; $i>=0; $i--) {
+					$trade = $poloniex_trades[$i];
+					
+					if ($trade['type'] == "buy") {
+						$trade_date = new DateTime($trade['date'], new DateTimeZone('UTC'));
+						$trade_time = $trade_date->format('U');
+						
+						$q = "INSERT INTO currency_prices SET currency_id='".$db_currency['currency_id']."', reference_currency_id='".$btc_currency['currency_id']."', price='".$trade['rate']."', time_added='".$trade_time."';";
+						$r = $this->app->run_query($q);
+						
+						$last_price_time = $trade_time;
+					}
 				}
 				
-				$performance = round(pow(10,6)*$final_trade->rate/$start_trade->rate);
+				if (count($poloniex_trades) > 1) {
+					$start_price = $this->app->currency_price_after_time($db_currency['currency_id'], $btc_currency['currency_id'], $start_time);
+					$final_price = $this->app->currency_price_at_time($db_currency['currency_id'], $btc_currency['currency_id'], $final_time);
+				}
+				
+				$performance = round(pow(10,8)*$final_price['price']/$start_price['price']);
 			}
-			else $performance = pow(10,6);
+			else $performance = pow(10,8);
 			
 			array_push($performances, $performance);
 			
@@ -186,6 +239,227 @@ class CoinBattlesGameDefinition {
 		
 		$q = "UPDATE game_defined_events SET outcome_index=".$best_performance_index." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."';";
 		$r = $this->app->run_query($q);
+	}
+	
+	public function load_currencies() {
+		$events_per_round = $this->events_per_round;
+		$currencies = array();
+		
+		foreach ($events_per_round as $currency_code => $currency_name) {
+			$db_currency = $this->app->run_query("SELECT * FROM currencies WHERE name=".$this->app->quote_escape($currency_name).";")->fetch();
+			
+			array_push($currencies, $db_currency);
+		}
+		
+		$this->currencies = $currencies;
+	}
+	
+	public function regular_actions() {
+		$btc_currency = $this->app->get_currency_by_abbreviation("BTC");
+		$currency_price = $this->app->currency_price_at_time($this->currencies[1]['currency_id'], $btc_currency['currency_id'], time());
+		$initial_price_time = $currency_price['time_added'];
+		
+		for ($i=1; $i<count($this->currencies); $i++) {
+			$last_price_time = $initial_price_time;
+			
+			$poloniex_url = "https://poloniex.com/public?command=returnTradeHistory&currencyPair=BTC_".$this->currencies[$i]['abbreviation']."&start=".($last_price_time+1)."&end=".time();
+			$poloniex_response = $this->app->async_fetch_url($poloniex_url, true);
+			$poloniex_trades = json_decode($poloniex_response['cached_result'], true);
+			
+			for ($j=count($poloniex_trades)-1; $j>=0; $j--) {
+				$trade = $poloniex_trades[$j];
+				
+				if ($trade['type'] == "buy") {
+					$trade_date = new DateTime($trade['date'], new DateTimeZone('UTC'));
+					$trade_time = $trade_date->format('U');
+					
+					if ($last_price_time < $trade_time) {
+						$q = "INSERT INTO currency_prices SET currency_id='".$this->currencies[$i]['currency_id']."', reference_currency_id='".$btc_currency['currency_id']."', price='".$trade['rate']."', time_added='".$trade_time."';";
+						$r = $this->app->run_query($q);
+						$last_price_time = $trade_time;
+					}
+				}
+			}
+		}
+	}
+	
+	public function currency_chart(&$game, $from_block_id, $to_block_id) {
+		$html = "";
+		$js = "";
+		
+		$btc_currency = $this->app->get_currency_by_abbreviation("BTC");
+		
+		$start_time = microtime(true);
+		
+		$from_block = $game->blockchain->fetch_block_by_id($from_block_id);
+		if (empty($from_block['time_mined'])) $from_block['time_mined'] = time();
+		
+		if (!empty($to_block_id)) {
+			$to_block = $game->blockchain->fetch_block_by_id($to_block_id);
+			$to_time = $to_block['time_mined'];
+		}
+		else {
+			$to_block = false;
+			$to_time = time();
+		}
+		$seconds_elapsed = $to_time-$from_block['time_mined'];
+		
+		$max_vert_lines = 400;
+		$seconds_per_vert_line = max(5, round($seconds_elapsed/$max_vert_lines));
+		$time_first_vert_line = ceil($from_block['time_mined']/$seconds_per_vert_line)*$seconds_per_vert_line;
+
+		$x_labels = array();
+		$x_labels_txt = '[';
+		$last_label_time = $time_first_vert_line;
+		do {
+			$label_time_disp = date("g:ia", $last_label_time);
+			
+			$x_labels_txt .= '"'.$label_time_disp.'", ';
+			array_push($x_labels, $last_label_time);
+			$last_label_time = $last_label_time + $seconds_per_vert_line;
+		}
+		while ($last_label_time < $to_time);
+		
+		$x_labels_txt = substr($x_labels_txt, 0, strlen($x_labels_txt)-2).']';
+		
+		$min_min = 0;
+		$max_max = 0;
+		
+		for ($i=0; $i<count($this->currencies); $i++) {
+			$initial_price = $this->app->currency_price_after_time($this->currencies[$i]['currency_id'], $btc_currency['currency_id'], $from_block['time_mined']);
+			
+			if ($initial_price) {
+				$this->currencies[$i]['initial_price'] = $initial_price;
+				
+				$q = "SELECT MIN(price), MAX(price) FROM currency_prices WHERE currency_id='".$this->currencies[$i]['currency_id']."' AND reference_currency_id='".$btc_currency['currency_id']."' AND time_added >= ".$from_block['time_mined']." AND time_added <= ".$to_time.";";
+				$r = $this->app->run_query($q);
+				$minmax = $r->fetch();
+				
+				$min_price = $minmax['MIN(price)'];
+				$max_price = $minmax['MAX(price)'];
+				
+				$min_performance = round(pow(10,8)*$min_price/$initial_price['price']);
+				$max_performance = round(pow(10,8)*$max_price/$initial_price['price']);
+				
+				if ($min_performance < $min_min) $min_min = $min_performance;
+				if ($max_performance > $max_max) $max_max = $max_performance;
+			}
+			else $this->currencies[$i]['initial_price'] = false;
+		}
+		
+		$datasets_txt = "";
+		
+		$currencies[0]['final_performance'] = pow(10,8);
+		$performances[$currencies[0]['final_performance']] = 0;
+		
+		for ($i=0; $i<count($this->currencies); $i++) {
+			if ($i == 0 || !empty($this->currencies[$i]['initial_price'])) {
+				$data_txt = "";
+				$blue = round(255*$i/(count($this->currencies)-1));
+				
+				for ($j=0; $j<count($x_labels); $j++) {
+					if ($j == 0 || $i == 0) $performance = pow(10,8);
+					else {
+						$price = $this->app->currency_price_at_time($this->currencies[$i]['currency_id'], $btc_currency['currency_id'], $x_labels[$j]);
+						
+						$performance = round(pow(10,8)*$price['price']/$this->currencies[$i]['initial_price']['price']);
+					}
+					$data_txt .= round(($performance/pow(10,8) - 1)*100, 4).", ";
+				}
+				$data_txt = substr($data_txt, 0, strlen($data_txt)-2);
+				$datasets_txt .= "{
+					label: '".$this->currencies[$i]['name']."',
+					backgroundColor: 'rgba(255, ".$blue.", 0, 1)',
+					borderColor: 'rgba(255, ".$blue.", 0, 1)',
+					pointRadius: 0.5,
+					borderWidth: 1,
+					data: [".$data_txt."],
+					fill: false,
+				}, ";
+				
+				if ($i == 0) {
+					$final_price = 0;
+					$final_performance = pow(10,8);
+				}
+				else {
+					$final_price = $this->app->currency_price_at_time($this->currencies[$i]['currency_id'], $btc_currency['currency_id'], $to_time);
+					$final_performance = round(pow(10,8)*$final_price['price']/$this->currencies[$i]['initial_price']['price']);
+				}
+				$performances[$final_performance] = $i;
+			}
+		}
+		$datasets_txt = substr($datasets_txt, 0, strlen($datasets_txt)-2);
+		
+		krsort($performances);
+		
+		$html = '
+		<div class="container-fluid">
+			<div class="row">
+				<div class="col-md-8">
+					<h4 style="margin: 0px; padding: 0px;">Performance of top cryptocurrencies against Bitcoin - Poloniex Buy Trades</h4>
+					<canvas id="canvas"></canvas>';
+		
+		$stop_time = microtime(true);
+		$load_time = $stop_time - $start_time;
+		
+		$html .= '
+				</div>
+				<div class="col-md-3" style="text-align: left;">
+					<br/><br/>
+					<b>Performances Rankings</b><br/>';
+		
+		$i = 1;
+		foreach ($performances as $value => $index) {
+			$currency = $this->currencies[$index];
+			$html .= $i.". ".$currency['name'].'<div style="display: inline-block; float: right;">'.round(100*(($value/pow(10,8))-1), 2)."%</div><br/>\n";
+			$i++;
+		}
+		
+		$html .= '
+				</div>
+			</div>
+		</div>'."\n";
+
+		$js .= '
+		var config = {
+			type: "line",
+			data: {
+				labels: '.$x_labels_txt.',
+				datasets: ['.$datasets_txt.']
+			},
+			options: {
+				responsive: true,
+				title:{
+					display:true
+				},
+				animation: {
+					duration: 0,
+				},
+				tooltips: {
+					mode: "index",
+					intersect: false,
+				},
+				scales: {
+					xAxes: [{
+						display: true
+					}],
+					yAxes: [{
+						display: true
+					}]
+				},
+				elements: {
+					line: {
+						tension: 0
+					}
+				}
+			}
+		};';
+
+		$js .= '
+		var ctx = document.getElementById("canvas").getContext("2d");
+		window.myLine = new Chart(ctx, config);';
+		
+		return array($html, $js);
 	}
 }
 ?>

@@ -1500,6 +1500,12 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 								_this.last_transaction_id = parseInt(json_result['last_transaction_id']);
 							}
 							
+							if (typeof json_result['chart_html'] != "undefined") {
+								console.log("refreshing charts...");
+								$('#game'+_this.instance_id+'_chart_html').html(json_result['chart_html']);
+								$('#game'+_this.instance_id+'_chart_js').html('<script type="text/javascript">'+json_result['chart_js']+'</script>');
+							}
+							
 							if (parseInt(json_result['new_block']) == 1 || parseInt(json_result['new_transaction']) == 1) {
 								$('#account_value').html(json_result['account_value']);
 								$('#account_value').hide();
@@ -1695,8 +1701,8 @@ function leftpad(num, size, pad_char) {
 	return s;
 }
 
-function try_claim_address(game_id, address_id) {
-	$.get("/ajax/try_claim_address.php?game_id="+game_id+"&address_id="+address_id, function(result) {
+function try_claim_address(blockchain_id, game_id, address_id) {
+	$.get("/ajax/try_claim_address.php?blockchain_id="+blockchain_id+"&game_id="+game_id+"&address_id="+address_id, function(result) {
 		var result_obj = JSON.parse(result);
 		console.log(result_obj);
 		
@@ -1796,4 +1802,25 @@ function delete_game_defined_option(gde_id, gdo_id) {
 		if (result_obj['status_code'] == 1) manage_game_event_options(gde_id);
 		else alert(result_obj['message']);
 	});
+}
+function toggle_account_details(account_id) {
+	$('#account_details_'+account_id).toggle('fast');
+	selected_account_id = account_id;
+}
+function withdraw_from_account(account_id, step) {
+	if (step == 1) {
+		selected_account_id = account_id;
+		$('#withdraw_dialog').modal('show');
+	}
+	else if (step == 2) {
+		if ($('#withdraw_btn').html() == "Withdraw") {
+			$('#withdraw_btn').html("Loading...");
+			$.get("/ajax/account_spend.php?action=withdraw_from_account&account_id="+selected_account_id+"&amount="+$('#withdraw_amount').val()+"&fee="+$('#withdraw_fee').val()+"&address="+$('#withdraw_address').val(), function(result) {
+				$('#withdraw_btn').html("Withdraw");
+				$('#withdraw_message').html(result['message']);
+				$('#withdraw_message').show("fast");
+				console.log(result);
+			});
+		}
+	}
 }
