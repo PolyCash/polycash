@@ -159,10 +159,6 @@ include('includes/html_start.php');
 		?>
 		<script type="text/javascript">
 		var selected_account_id = false;
-		function toggle_account_details(account_id) {
-			$('#account_details_'+account_id).toggle('fast');
-			selected_account_id = account_id;
-		}
 		</script>
 		
 		<div class="panel panel-default" style="margin-top: 15px;">
@@ -208,7 +204,10 @@ include('includes/html_start.php');
 					echo '</div>';
 					
 					echo '<div class="col-sm-2">';
-					if (empty($account['game_id'])) echo '<a href="" onclick="toggle_account_details('.$account['account_id'].'); return false;">Deposit</a>';
+					if (empty($account['game_id'])) {
+						echo '<a href="" onclick="toggle_account_details('.$account['account_id'].'); return false;">Deposit</a>';
+						echo ' &nbsp;&nbsp; <a href="" onclick="withdraw_from_account('.$account['account_id'].', 1); return false;">Withdraw</a>';
+					}
 					echo '</div>';
 					
 					echo '<div class="col-sm-2"><a href="" onclick="toggle_account_details('.$account['account_id'].'); return false;">Transactions';
@@ -316,6 +315,32 @@ include('includes/html_start.php');
 				<p style="margin-top: 10px;">
 					<a href="" onclick="$('#create_account_dialog').toggle('fast'); return false;">Create a new account</a>
 				</p>
+				<div id="withdraw_dialog" class="modal fade" style="display: none;">
+					<div class="modal-dialog">
+						<div class="modal-content">
+							<div class="modal-header">
+								<h4 class="modal-title">Withdraw Coins</h4>
+							</div>
+							<div class="modal-body">
+								<div class="form-group">
+									<label for="withdraw_amount">Amount:</label>
+									<input class="form-control" type="tel" placeholder="0.000" id="withdraw_amount" style="text-align: right;" />
+								</div>
+								<div class="form-group">
+									<label for="withdraw_fee">Fee:</label>
+									<input class="form-control" type="tel" placeholder="0.001" id="withdraw_fee" style="text-align: right;" />
+								</div>
+								<div class="form-group">
+									<label for="withdraw_address">Address:</label>
+									<input class="form-control" type="text" id="withdraw_address" />
+								</div>
+								<span class="greentext" style="display: none;" id="withdraw_message"></span>
+								
+								<button id="withdraw_btn" class="btn btn-success" onclick="withdraw_from_account(false, 2);">Withdraw</button>
+							</div>
+						</div>
+					</div>
+				</div>
 				<div id="create_account_dialog" style="display: none;">
 					<div class="form-group">
 						<label for="create_account_action">Create a new account:</label>
@@ -343,7 +368,7 @@ include('includes/html_start.php');
 						<input type="text" class="form-control" id="create_account_rpc_name" value="" />
 					</div>
 					<div class="form-group" id="create_account_submit" style="display: none;">
-						<button class="btn btn-primary" onclick="create_account_step('submit');">Create Account</button>
+						<button class="btn btn-primary" onclick="withdraw_from_account(false, 2);">Create Account</button>
 					</div>
 				</div>
 			</div>

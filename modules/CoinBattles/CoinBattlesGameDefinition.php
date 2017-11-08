@@ -22,7 +22,7 @@ class CoinBattlesGameDefinition {
 			"option_group_id": 0,
 			"events_per_round": 1,
 			"inflation": "exponential",
-			"exponential_inflation_rate": 0.001,
+			"exponential_inflation_rate": 0.01,
 			"pos_reward": 0,
 			"round_length": 1000,
 			"maturity": 0,
@@ -257,9 +257,11 @@ class CoinBattlesGameDefinition {
 	public function regular_actions() {
 		$btc_currency = $this->app->get_currency_by_abbreviation("BTC");
 		$currency_price = $this->app->currency_price_at_time($this->currencies[1]['currency_id'], $btc_currency['currency_id'], time());
-		$last_price_time = $currency_price['time_added'];
+		$initial_price_time = $currency_price['time_added'];
 		
 		for ($i=1; $i<count($this->currencies); $i++) {
+			$last_price_time = $initial_price_time;
+			
 			$poloniex_url = "https://poloniex.com/public?command=returnTradeHistory&currencyPair=BTC_".$this->currencies[$i]['abbreviation']."&start=".($last_price_time+1)."&end=".time();
 			$poloniex_response = $this->app->async_fetch_url($poloniex_url, true);
 			$poloniex_trades = json_decode($poloniex_response['cached_result'], true);

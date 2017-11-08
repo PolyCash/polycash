@@ -1803,3 +1803,24 @@ function delete_game_defined_option(gde_id, gdo_id) {
 		else alert(result_obj['message']);
 	});
 }
+function toggle_account_details(account_id) {
+	$('#account_details_'+account_id).toggle('fast');
+	selected_account_id = account_id;
+}
+function withdraw_from_account(account_id, step) {
+	if (step == 1) {
+		selected_account_id = account_id;
+		$('#withdraw_dialog').modal('show');
+	}
+	else if (step == 2) {
+		if ($('#withdraw_btn').html() == "Withdraw") {
+			$('#withdraw_btn').html("Loading...");
+			$.get("/ajax/account_spend.php?action=withdraw_from_account&account_id="+selected_account_id+"&amount="+$('#withdraw_amount').val()+"&fee="+$('#withdraw_fee').val()+"&address="+$('#withdraw_address').val(), function(result) {
+				$('#withdraw_btn').html("Withdraw");
+				$('#withdraw_message').html(result['message']);
+				$('#withdraw_message').show("fast");
+				console.log(result);
+			});
+		}
+	}
+}
