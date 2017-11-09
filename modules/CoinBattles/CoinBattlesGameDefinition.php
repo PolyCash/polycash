@@ -357,15 +357,24 @@ class CoinBattlesGameDefinition {
 				$data_txt = "";
 				$blue = round(255*$i/(count($this->currencies)-1));
 				
-				for ($j=0; $j<count($x_labels); $j++) {
+				$q = "SELECT * FROM currency_prices WHERE currency_id='".$this->currencies[$i]['currency_id']."' AND reference_currency_id='".$btc_currency['currency_id']."' AND time_added >= ".$from_block['time_mined']." AND time_added <= ".$to_time." ORDER BY time_added ASC;";
+				$r = $this->app->run_query($q);
+				
+				$j = 0;
+				while (!empty($x_labels[$j]) && $db_price = $r->fetch()) {
+					$performance = false;
 					if ($j == 0 || $i == 0) $performance = pow(10,8);
 					else {
-						$price = $this->app->currency_price_at_time($this->currencies[$i]['currency_id'], $btc_currency['currency_id'], $x_labels[$j]);
-						
-						$performance = round(pow(10,8)*$price['price']/$this->currencies[$i]['initial_price']['price']);
+						if ($db_price['time_added'] >= $x_labels[$j]) {
+							$performance = round(pow(10,8)*$db_price['price']/$this->currencies[$i]['initial_price']['price']);
+						}
 					}
-					$data_txt .= round(($performance/pow(10,8) - 1)*100, 4).", ";
+					if ($performance) {
+						$data_txt .= round(($performance/pow(10,8) - 1)*100, 4).", ";
+						$j++;
+					}
 				}
+				
 				$data_txt = substr($data_txt, 0, strlen($data_txt)-2);
 				$datasets_txt .= "{
 					label: '".$this->currencies[$i]['name']."',
