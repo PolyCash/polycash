@@ -13,7 +13,6 @@ class Game {
 		
 		if (!empty($this->db_game['module'])) {
 			eval('$this->module = new '.$this->db_game['module'].'GameDefinition($this->blockchain->app);');
-			$this->module->load();
 		}
 	}
 	
@@ -1974,7 +1973,7 @@ class Game {
 		$round_id = $this->block_to_round($block_id);
 		$ensured_round = $this->block_to_round((int)$this->db_game['events_until_block']);
 		
-		if ($round_id > $ensured_round) {
+		if ($round_id > 0 && $round_id > $ensured_round) {
 			if ($this->db_game['event_rule'] == "game_definition") {
 				if (!empty($this->db_game['module'])) {
 					$game_starting_round = $this->block_to_round($this->db_game['game_starting_block']);
@@ -1985,11 +1984,9 @@ class Game {
 					if ($r->rowCount() > 0) {
 						$db_last_gde = $r->fetch();
 						
-						$init_event_index = $db_last_gde['event_index']+1;
 						$from_round = $this->block_to_round($db_last_gde['event_starting_block'])+1-$game_starting_round;
 					}
 					else {
-						$init_event_index = 0;
 						$from_round = 1;
 					}
 					$event_verbatim_vars = $this->blockchain->app->event_verbatim_vars();
@@ -2000,10 +1997,20 @@ class Game {
 					$msg = "Adding ".count($gdes_to_add)." events for rounds (".$from_round." : ".$to_round.")";
 					$this->blockchain->app->log_message($msg);
 					
-					$i = 0;
-					for ($event_index=$init_event_index; $event_index<$init_event_index+count($gdes_to_add); $event_index++) {
-						$this->blockchain->app->check_set_gde($this, $event_index, $gdes_to_add[$i], $event_verbatim_vars);
-						$i++;
+					if (count($gdes_to_add) > 0) {
+						$init_event_index = $gdes_to_add[0]['event_index'];
+						
+						$q = "DELETE FROM game_defined_options WHERE game_id=".$this->db_game['game_id']." AND event_index>=".$init_event_index.";";
+						$this->blockchain->app->run_query($q);
+						
+						$q = "DELETE FROM game_defined_events WHERE game_id=".$this->db_game['game_id']." AND event_index>=".$init_event_index.";";
+						$this->blockchain->app->run_query($q);
+						
+						$i = 0;
+						for ($event_index=$init_event_index; $event_index<$init_event_index+count($gdes_to_add); $event_index++) {
+							$this->blockchain->app->check_set_gde($this, $event_index, $gdes_to_add[$i], $event_verbatim_vars);
+							$i++;
+						}
 					}
 				}
 				
