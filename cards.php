@@ -188,14 +188,9 @@ if (!empty($_REQUEST['action'])) {
 						$front_coords = $app->position_by_pos($pos, 'front', $paper_width);
 						
 						$side = "front";
-						$fname = dirname(__FILE__)."/downloads/".$cardarr[$pos-1]['issuer_card_id']."_".$side.".".$extension;
-						$fh = fopen($fname, 'w');
 						$temp_render_url = "http://".$_SERVER['SERVER_NAME']."/lib/card-render/render".$side.".php?card_id=".$cardarr[$pos-1]['card_id']."&orient=".$orient."&res=".$res;
-						$png = file_get_contents($temp_render_url);
-						fwrite($fh, $png);
-						fclose($fh);
 						
-						$pdf->Image($fname, $front_coords[0], $front_coords[1], $card_print_width);
+						$pdf->Image($temp_render_url, $front_coords[0], $front_coords[1], $card_print_width, false, 'png');
 					}
 					$pdf->Line(0, 10.5, 0.25, 10.5);
 					$pdf->Line(8.25, 10.5, 8.5, 10.5);
@@ -222,13 +217,7 @@ if (!empty($_REQUEST['action'])) {
 					$side = "back";
 					$img_png_url = "http://".$_SERVER['SERVER_NAME']."/lib/card-render/render".$side.".php?card_id=".$cardarr[$pos-1]['issuer_card_id']."&orient=".$orient."&res=".$res;
 					
-					$fname = dirname(__FILE__)."/downloads/images/".$cardarr[$pos-1]['issuer_card_id']."_".$side.".png";
-					$fh = fopen($fname, 'w');
-					
-					$png = file_get_contents($img_png_url);
-					fwrite($fh, $png);
-					fclose($fh);
-					$pdf->Image($fname, $back_coords[0], $back_coords[1], $card_print_width);
+					$pdf->Image($img_png_url, $back_coords[0], $back_coords[1], $card_print_width, false, 'png');
 				}
 				$pdf->Line(0, 10.5, 0.25, 10.5);
 				$pdf->Line(8.25, 10.5, 8.5, 10.5);
@@ -239,14 +228,11 @@ if (!empty($_REQUEST['action'])) {
 				$pdf->Line(4.25, 10.75, 4.25, 11);
 			}
 			
-			$fname = "/downloads/".$from."to".$to."_all.pdf";
-			$pdf->Output(dirname(__FILE__).$fname, 'F');
-			
 			$q = "UPDATE card_printrequests SET print_status='printed' WHERE request_id='".$design['request_id']."';";
 			$r = $app->run_query($q);
 			
-			$error_message = "<p>Print-ready PDFs have been created!</p><p><a class=\"btn btn-primary\" href=\"".$fname."\">Download PDFs</a></p><br/>\n";
-			$error_class = "nostyle";
+			$pdf->Output();
+			die();
 		}
 		else {
 			$error_message = "Error, invalid denomination or number of cards.";

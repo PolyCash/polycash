@@ -26,13 +26,7 @@ if ($card_id > 0) {
 	$text_url = "http://".$_SERVER['SERVER_NAME']."/lib/card-render/rendertext.php?string=".$card['issuer_card_id'];
 	if (!empty($card['text_color'])) $text_url .= "&color=".$card['text_color'];
 	
-	$png = file_get_contents($text_url);
-	$text_fname = dirname(dirname(dirname(__FILE__)))."/downloads/images/".$card['issuer_card_id']."_text.png";
-	$fh = fopen($text_fname, 'w');
-	fwrite($fh, $png);
-	fclose($fh);
-
-	$text_im = imagecreatefrompng($text_fname);
+	$text_im = imagecreatefrompng($text_url);
 	
 	imagecopyresized($im, $text_im, 720, 1612, 0, 0, 260, 97, 260, 97);
 	
