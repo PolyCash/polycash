@@ -36,6 +36,8 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 	<script type="text/javascript" src="/js/adminlte.min.js"></script>
 	<script type="text/javascript" src="/js/tiny.editor.js"></script>
 	<script type="text/javascript" src="/js/chart.js"></script>
+	<script type="text/javascript" src="/js/maskedinput.js"></script>
+	<script type="text/javascript" src="/js/qrcam.js"></script>
 	<?php
 	if (!empty($include_crypto_js)) { ?>
 	<script type="text/javascript" src="/js/base64.lib.js" ></script>
@@ -91,12 +93,22 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 					<li<?php if ($nav_tab_selected == "directory" && empty($selected_category)) echo ' class="active"'; ?>><a href="/directory/"><i class="fa fa-sitemap"></i> <span>Browse Games</span></a></li>
 				<li<?php if ($nav_tab_selected == "wallet" && empty($game)) echo ' class="active"'; ?>><a href="/wallet/"><i class="fa fa-cubes"></i> <span>My Games</span></a></li>
 				<li<?php if ($nav_tab_selected == "accounts") echo ' class="active"'; ?>><a href="/accounts/"><i class="fa fa-user-circle"></i> <span>My Accounts</span></a></li>
+				<li<?php if ($nav_tab_selected == "cards") echo ' class="active"'; ?>><a href="/cards/"><i class="fa fa-id-card"></i> <span>My Cards</span></a></li>
 				<li<?php if ($nav_tab_selected == "download") echo ' class="active"'; ?>><a href="/download/"><i class="fa fa-download"></i> <span>Download</span></a></li>
 				<li<?php if ($nav_tab_selected == "explorer") echo ' class="active"'; ?>><a href="/explorer/<?php if (!empty($game)) echo "games/".$game->db_game['url_identifier']."/blocks/"; ?>"><i class="fa fa-cube"></i> <span>Blockchain Explorer</span></a></li>
 				<li<?php if ($nav_tab_selected == "api") echo ' class="active"'; ?>><a href="/api/"><i class="fa fa-code"></i> <span>API</span></a></li>
 			</ul>
 			<?php
-			if (!empty($game)) { ?>
+			if ($nav_tab_selected == "cards") { ?>
+				<ul class="sidebar-menu" data-widget="tree">
+					<li class="header">Cards</li>
+					<li<?php if ($nav_subtab_selected == "manage") echo ' class="active"'; ?>><a href="/cards/"><i class="fa fa-list"></i> Manage my cards</a></li>
+					<li<?php if ($nav_subtab_selected == "create") echo ' class="active"'; ?>><a href="/cards/?action=create"><i class="fa fa-plus-circle"></i> Create cards</a></li>
+					<li<?php if ($nav_subtab_selected == "redeem") echo ' class="active"'; ?>><a href="/redeem/"><i class="fa fa-money"></i> Redeem a card</a></li>
+				</ul>
+				<?php
+			}
+			else if (!empty($game)) { ?>
 				<ul class="sidebar-menu" data-widget="tree">
 					<li class="header"><?php echo $game->db_game['name']; ?></li>
 					<li<?php if ($nav_tab_selected == "game_page") echo ' class="active"'; ?>><a href="/<?php echo $game->db_game['url_identifier']; ?>/"><i class="fa fa-question-circle"></i> About</a></li>

@@ -11,6 +11,12 @@ else if ($uri_parts[1] == "wallet") {
 else if ($uri_parts[1] == "accounts") {
 	include("accounts.php");
 }
+else if ($uri_parts[1] == "cards") {
+	include("cards.php");
+}
+else if ($uri_parts[1] == "redeem" || $uri_parts[1] == "check") {
+	include("redeem_card.php");
+}
 else if ($uri_parts[1] == "event_types") {
 	include("matches.php");
 }

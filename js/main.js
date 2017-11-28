@@ -1824,3 +1824,236 @@ function withdraw_from_account(account_id, step) {
 		}
 	}
 }
+function cards_howmany_changed() {
+	var howmany = $('#cards_howmany').val();
+	if (howmany == "other") {
+		$('#cards_howmany_other').show();
+		$('#cards_howmany_other_val').focus();
+	}
+	else {
+		$('#cards_howmany_other').hide();
+	}
+}
+function fv_currency_id_changed() {
+	var fv_currency_id = $('#cards_fv_currency_id').val();
+	var currency_id = $('#cards_currency_id').val();
+	
+	$.get("/ajax/select_denominations_by_currencies.php?currency_id="+currency_id+"&fv_currency_id="+fv_currency_id, function(result) {
+		var result_obj = JSON.parse(result);
+		cost_per_coin = result_obj['cost_per_coin'];
+		coin_abbreviation = result_obj['coin_abbreviation'];
+		$('#cards_denomination_id').html(result_obj['html']);
+	});
+}
+function currency_id_changed() {
+	var currency_id = $('#cards_currency_id').val();
+	
+	$('#cards_denomination_id').html("");
+	
+	$.get("/ajax/select_fv_currency_by_currency.php?currency_id="+currency_id, function(result) {
+		$('#cards_fv_currency_id').html(result);
+	});
+}
+function set_fees() {
+	var temp_amt_str = "";
+	var fees_str = "";
+	
+	var currency_id = $('#cards_currency_id').val();
+	var fv_currency_id = $('#cards_fv_currency_id').val();
+	var denomination_id = $('#cards_denomination_id').val();
+	
+	var purity = parseInt($('#cards_purity').val());
+	if (currency_id == fv_currency_id) purity = 100;
+	var fee_rate = (-1)*((100-purity)/100);
+	
+	var per_card = card_printing_cost;
+	var howmany;
+	if ($('#cards_howmany').val() == "other") {
+		howmany = $('#cards_howmany_other_val').val();
+		if (howmany == parseInt(howmany)) {}
+		else {
+			alert("Please enter a valid number of cards.");
+			$('#cards_howmany_other_val').focus();
+		}
+	}
+	else howmany = parseInt($('#cards_howmany').val());
+	var print_fees = per_card*howmany;
+	
+	var subtotal = 0;
+	
+	fees_str += "<font class=\"greentext\">$"+card_printing_cost+"</font> per card &times; "+howmany+" cards = <font class=\"greentext\">$"+print_fees.toFixed(2)+"</font>";
+	temp_amt_str = print_fees.toFixed(2);
+	subtotal += parseFloat(temp_amt_str);
+	fees_str += "<br/>";
+	
+	var cards_value_fv = 0;
+	var cards_value_coin = 0;
+	var cards_value_btc = 0;
+	
+	var denom = parseFloat($("#cards_denomination_id option:selected").text());
+	
+	if (fv_currency_id == 1) {
+		cards_value_usd = Math.round(howmany*denom*100)/100;
+		//cards_value_coin = Math.round(cards_value_usd/cost_per_coin*100000)/100000;
+		cards_value_btc = Math.round(cards_value_usd/usd_per_btc*1000000)/1000000;
+		
+		var net_fee_rate = (100-purity)/100;
+		var fee_discount = (net_fee_rate*cards_value_usd).toFixed(2);
+		cards_value_usd = cards_value_usd - fee_discount;
+		
+		temp_amt_str = cards_value_usd.toFixed(2);
+		fees_str += "Load <font class=\"greentext\">$"+temp_amt_str+"</font><br/>\n";
+		fees_str += "Current rate: <font class=\"greentext\">$"+usd_per_btc+"</font> / BTC<br/>\n";
+	}
+	else {
+		cards_value_coin = howmany*denom;
+		cards_value_usd = Math.round(cards_value_coin*cost_per_coin*100)/100;
+		cards_value_btc = Math.round(cards_value_usd/usd_per_btc*1000000)/1000000;
+		
+		temp_amt_str = cards_value_usd.toFixed(2);
+		fees_str += "<font class=\"greentext\">$"+cost_per_coin+"</font> / "+coin_abbreviation+"<br/>\n";
+		fees_str += "Load "+cards_value_coin+" "+coin_abbreviation+" &rarr; <font class=\"greentext\">$"+cards_value_usd+"</font><br/>";
+		fees_str += "Current rate: <font class=\"greentext\">$"+usd_per_btc+"</font> / BTC<br/>\n";
+	}
+	
+	var subtotal = cards_value_usd + print_fees;
+	
+	fees_str += "Please pay: <font class=\"greentext\">$"+subtotal.toFixed(2)+"</font>";
+	
+	fees_str += " &rarr; <div class=\"coinsymbol\"></div>"+cards_value_btc+"</font> BTC";
+	
+	$('#payment_amount').val(cards_value_btc);
+	
+	$('#fees_disp').html(fees_str);
+	show_card_preview();
+}
+function show_card_preview() {
+	var denomination_id = $('#cards_denomination_id').val();
+	
+	var preview_url = "/ajax/card_preview.php?denomination_id="+denomination_id;
+	
+	preview_url += "&purity="+$('#cards_purity').val()+"&name="+$('#cards_name').val();
+	preview_url += "&title="+$('#cards_title').val()+"&email=";
+	preview_url += $('#cards_email').val()+"&pnum="+$('#cards_pnum').val();
+	
+	$('#cards_preview').show();
+	$('#cards_preview').html("Loading...");
+	
+	$.get(preview_url, function(result) {
+		$('#cards_preview').html(result);
+	});
+}
+function search_card_id() {
+	var issuer_id = $('#card_issuer_id').val();
+	var card_id = $('#card_id_search').val();
+	window.location = "/redeem/"+issuer_id+"/"+card_id;
+}
+function redeem_toggle() {
+	if ($('#enter_redeem_code').is(":visible")) {
+		$('#enter_redeem_code').hide();
+	}
+	else {
+		$('#enter_redeem_code').show();
+		$('#redeem_code').focus();
+	}
+}
+function check_show_confirm_button() {
+	var legit_length = 0;
+	var check_string = $('#redeem_code').val();
+	for (var i=0; i<check_string.length; i++) {
+		if (check_string[i] == "_" || check_string[i] == "-") {}
+		else legit_length++;
+	}
+	if (legit_length >= 16) $('#confirm_button').show();
+	else $('#confirm_button').hide();
+}
+function check_the_code() {
+	var url = "/ajax/check_code.php?card_id="+card_id+"&code="+$('#redeem_code').val().replace(/-/g, '');
+	$('#confirm_button').html("Checking...");
+	$('#messages').hide();
+	
+	$.get(url, function(result) {
+		$('#confirm_button').html("Redeem");
+		if (parseInt(result) == 1) {
+			$('#step1').hide();
+			$('#redeem_options').modal('show');
+			$('#messages').hide();
+		}
+		else {
+			$('#messages').html("Incorrect");
+			$('#messages').css("color", "#f00");
+			$('#messages').show();
+		}
+	});
+}
+function card_login(create_mode, login_card_id) {
+	$('#card_account_password').val(Sha256.hash($('#card_account_password').val()));
+	if (create_mode) $('#card_account_password2').val(Sha256.hash($('#card_account_password2').val()));
+	
+	var card_password = $('#card_account_password').val();
+	var card_password2;
+	if (create_mode) card_password2 = $('#card_account_password2').val();
+	
+	var successful = false;
+	
+	if (!create_mode || card_password == card_password2) {
+		var url = "/ajax/check_code.php?action=login&card_id="+login_card_id+"&password="+card_password+"&code="+$('#redeem_code').val().replace(/-/g, '');
+		
+		$.get(url, function(result) {
+			console.log(result);
+			
+			if (parseInt(result) == 1 || parseInt(result) == 2) {
+				$('#messages').html("Correct!");
+				$('#messages').css("color", "#090");
+				
+				setTimeout("window.location='/cards/';", 500);
+				successful = true;
+			}
+			else if (parseInt(result) == 5) {
+				alert("You need to enter a password");
+			}
+			else if (parseInt(result) == 6 || parseInt(result) == 3) {
+				alert("It looks like you entered the wrong 16-digit code or password");
+			}
+			else alert(result);
+		});
+	}
+	else alert("Error, the passwords that you entered do not match.");
+	
+	if (!successful) {
+		$('#card_account_password').val("");
+		if (create_mode) $('#card_account_password2').val("");
+	}
+}
+function open_card(card_id) {
+	if (card_id != selected_card) {
+		if (selected_card != -1) {
+			$('#card_block'+selected_card).hide('fast');
+			$('#card_btn'+selected_card).removeClass("card_small_sel");
+		}
+		selected_card = card_id;
+		$('#card_btn'+card_id).addClass("card_small_sel");
+		
+		setTimeout(function() {
+			$('#card_block'+card_id).show('medium');
+		}, 300);
+	}
+}
+function card_withdrawal(card_id) {
+	var address = $('#withdraw_address').val();
+	var name = $('#withdraw_name').val();
+	
+	var url = "/ajax/withdraw.php?action=card_withdrawal&address="+address+"&card_id="+card_id+"&name="+name;
+	$.get(url, function(result) {
+		if (result == "Beyonic request was successful!") {
+			alert('Great, your money has been sent!');
+			window.location = window.location;
+		}
+		else if (result == "2") {
+			alert("There was an error withdrawing.  It looks like our hot wallet is out of money right now.");
+		}
+		else {
+			alert("There was an error redeeming your card. The error code was: "+result);
+		}
+	});
+}

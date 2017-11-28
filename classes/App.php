@@ -88,6 +88,24 @@ class App {
 		return $string;
 	}
 	
+	public function random_number($length) {
+		$characters = "0123456789";
+		$bits_per_char = ceil(log(strlen($characters), 2));
+		$hex_chars_per_char = ceil($bits_per_char/4);
+		$hex_chars_needed = $length*$hex_chars_per_char;
+		$rand_data = bin2hex(openssl_random_pseudo_bytes(ceil($hex_chars_needed/2), $crypto_strong));
+		if(!$crypto_strong) $this->log_then_die("An insecure random string of length ".$length." was generated.");
+		
+		$string = "";
+		for ($i=0; $i<$length; $i++) {
+			$hex_chars = substr($rand_data, $i*$hex_chars_per_char, $hex_chars_per_char);
+			$rand_num = hexdec($hex_chars);
+			$rand_index = $rand_num%strlen($characters);
+			$string .= $characters[$rand_index];
+		}
+		return $string;
+	}
+	
 	public function normalize_username($username) {
 		return $this->make_alphanumeric(strip_tags($username), "$-()/!.,:;#@");
 	}
@@ -1984,6 +2002,349 @@ class App {
 		else $currency_account = false;
 		
 		return $currency_account;
+	}
+	
+	public function render_error_message(&$error_message, $error_class) {
+		if ($error_class == "nostyle") return $error_message;
+		else {
+			$html = '
+			<div class="alert alert-dismissible alert-success">
+				<button type="button" class="close" data-dismiss="alert">&times;</button>
+				'.$error_message.'
+			</div>';
+			
+			return $html;
+		}
+	}
+	
+	public function get_card_denominations($currency, $fv_currency_id) {
+		$denominations = array();
+		
+		$q = "SELECT * FROM card_currency_denominations WHERE currency_id='".$currency['currency_id']."' AND fv_currency_id='".$fv_currency_id."' ORDER BY denomination ASC;";
+		$r = $this->run_query($q);
+		
+		while ($denomination = $r->fetch()) {
+			array_push($denominations, $denomination);
+		}
+		
+		return $denominations;
+	}
+	
+	public function calculate_cards_cost($usd_per_btc, $denomination, $purity, $how_many) {
+		$error = FALSE;
+		$total_usd = 0;
+		
+		if ($purity == "unspecified") $purity = 100;
+		
+		if ($currency != "btc") $currency = "usd";
+		
+		if ($currency == "btc") $purity = 100;
+		
+		if ($purity != round($purity)) $error = TRUE;
+		
+		if ($how_many > 0 && $how_many <= 1000 && $how_many == round($how_many)) {}
+		else $error = TRUE;
+		
+		if ($purity >= 80 && $purity <= 100 && $purity == round($purity)) {}
+		else $error = TRUE;
+		
+		if ($error) return FALSE;
+		else {
+			$cards_facevalue_usd = $how_many*$denomination['denomination'];
+			if ($denomination['currency_id'] != 1) $cards_facevalue_usd = round($cards_facevalue_usd*$usd_per_btc, 2);
+			
+			$total_usd += $cards_facevalue_usd;
+			
+			$print_fees = round(0.25*$how_many, 2);
+			$total_usd += $print_fees;
+			
+			$builtin_discount = round($cards_facevalue_usd*((100-$purity)/100), 2);
+			$total_usd = $total_usd - $builtin_discount;
+			
+			return round($total_usd/$usd_per_btc, 5);
+		}
+	}
+	
+	public function position_by_pos($position, $side, $paper_width) {
+		$num_cols = 2;
+		if ($paper_width == "small") $num_cols = 1;
+		
+		$position = $position - 1; // use 0,1... ordering instead of 1,2...
+		
+		if ($paper_width == "small") {
+			$left_margin = 0.2;
+			$top_margin = 0.5;
+			
+			$card_w = 2;
+			$card_h = 3.5;
+		}
+		else {
+			$left_margin = 0.75;
+			$top_margin = 0.5;
+			
+			$card_w = 3.5;
+			$card_h = 2;
+		}
+		
+		if ($side == "front") {
+			if ($position % $num_cols == 0) $x = $left_margin;
+			else $x = $left_margin + $card_w;
+			
+			$row = floor($position/$num_cols);
+			$y = $top_margin + $row*$card_h;
+		}
+		else if ($side == "back") {
+			if ($position % $num_cols == 0 && $paper_width != "small") $x = $left_margin + $card_w;
+			else $x = $left_margin;
+			
+			$row = floor($position/$num_cols);
+			$y = $top_margin + $row*$card_h;
+		}
+		
+		$result[0] = $x;
+		$result[1] = $y;
+		return $result;
+	}
+	
+	public function try_create_card_account($card, $supplied_card_secret, $password) {
+		if ($card['secret'] == $supplied_card_secret && $card['status'] == "sold") {
+			$q = "INSERT INTO card_users SET card_id='".$card['card_id']."', password=".$this->quote_escape($password).", create_time='".time()."', create_ip=".$this->quote_escape($_SERVER['REMOTE_ADDR']).";";
+			$r = $this->run_query($q);
+			$card_user_id = $this->last_insert_id();
+			
+			$q = "UPDATE cards SET status='redeemed', card_user_id='".$card_user_id."', redeem_time='".time()."' WHERE card_id='".$card['card_id']."';";
+			$r = $this->run_query($q);
+			
+			$q = "INSERT INTO card_status_changes SET card_id='".$card['card_id']."', from_status='".$card['status']."', to_status='redeemed', change_time='".time()."';";
+			$r = $this->run_query($q);
+			$status_change_id = $this->last_insert_id();
+			
+			$fees = $this->get_card_fees($card);
+			
+			$q = "INSERT INTO card_withdrawals SET card_id='".$card['card_id']."', currency_id='".$card['fv_currency_id']."', card_user_id='".$card_user_id."', ip_address='".$_SERVER['REMOTE_ADDR']."', status_change_id='".$status_change_id."', withdraw_method='card_account', amount='".($card['amount']-$fees)."', withdraw_time='".time()."';";
+			$r = $this->run_query($q);
+			$withdrawal_id = $this->last_insert_id();
+			
+			$q = "INSERT INTO card_conversions SET card_id='".$card['card_id']."', reason='withdrawal', withdrawal_id='".$withdrawal_id."', time_created='".time()."', ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']).", currency1_id=".$card['fv_currency_id'].", currency1_delta=".($card['amount']-$fees).";";
+			$r = $this->run_query($q);
+			
+			$this->set_card_currency_balances($card);
+			
+			$session_key = session_id();
+			$expire_time = time()+3600*24;
+			
+			$q = "INSERT INTO card_sessions SET card_user_id='".$card_user_id."', session_key=".$this->quote_escape($session_key).", login_time='".time()."', expire_time='".$expire_time."', ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']).";";
+			$r = $this->run_query($q);
+			
+			$txt = "<p>Your account has been created! ";
+			$txt .= "Any time you want to access your money, please visit the link on your gift card.</p>\n";
+			
+			$txt .= "<a href=\"/cards/\" class=\"btn btn-default\">Go to My Account</a>";
+			
+			$success = TRUE;
+		}
+		else {
+			$success = FALSE;
+			$txt = "";
+		}
+		
+		$returnvals[0] = $success;
+		$returnvals[1] = $txt;
+		return $returnvals;
+	}
+	
+	public function get_card_currency_balance($card_id, $currency_id) {
+		$q = "SELECT * FROM card_currency_balances WHERE card_id='".$card_id."' AND currency_id='".$currency_id."';";
+		$r = $this->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			$balance = $r->fetch();
+			
+			return $balance['balance'];
+		}
+		else return 0;
+	}
+	
+	public function get_card_currency_balances($card_id) {
+		$q = "SELECT * FROM card_currency_balances b JOIN currencies c ON b.currency_id=c.currency_id WHERE b.card_id='".$card_id."' ORDER BY b.currency_id ASC;";
+		$r = $this->run_query($q);
+		
+		$balances = array();
+		
+		while ($balance = $r->fetch()) {
+			array_push($balances, $balance);
+		}
+		
+		return $balances;
+	}
+	
+	public function set_card_currency_balances($card) {
+		$balances_by_currency_id = array();
+		
+		$q = "SELECT * FROM card_conversions WHERE card_id='".$card['card_id']."';";
+		$r = $this->run_query($q);
+		
+		while ($conversion = $r->fetch()) {
+			if (!empty($conversion['currency1_id'])) {
+				if (empty($balances_by_currency_id[$conversion['currency1_id']])) $balances_by_currency_id[$conversion['currency1_id']] = 0;
+				$balances_by_currency_id[$conversion['currency1_id']] += $conversion['currency1_delta'];
+			}
+			if (!empty($conversion['currency2_id'])) {
+				if (empty($balances_by_currency_id[$conversion['currency2_id']])) $balances_by_currency_id[$conversion['currency2_id']] = 0;
+				$balances_by_currency_id[$conversion['currency2_id']] += $conversion['currency2_delta'];
+			}
+		}
+		
+		foreach ($balances_by_currency_id as $currency_id => $balance) {
+			$q = "SELECT * FROM card_currency_balances WHERE card_id='".$card['card_id']."' AND currency_id='".$currency_id."';";
+			$r = $this->run_query($q);
+			
+			if ($r->rowCount() > 0) {
+				$db_balance = $r->fetch();
+				$q = "UPDATE card_currency_balances SET balance='".$balance."' WHERE balance_id='".$db_balance['balance_id']."';";
+				$r = $this->run_query($q);
+			}
+			else {
+				$q = "INSERT INTO card_currency_balances SET card_id='".$card['card_id']."', currency_id='".$currency_id."', balance='".$balance."';";
+				$r = $this->run_query($q);
+			}
+		}
+	}
+	
+	public function calculate_cards_networth($my_cards) {
+		$networth = 0;
+		
+		$currency_prices = $this->fetch_currency_prices();
+		
+		foreach ($my_cards as $card) {
+			$balances = $this->get_card_currency_balances($card['card_id']);
+			
+			$networth += $this->calculate_card_networth($card, $balances, $currency_prices);
+		}
+		
+		return $networth;
+	}
+	
+	public function calculate_card_networth($card, $balances, $currency_prices) {
+		$value = 0;
+		
+		foreach ($balances as $balance) {
+			$value += $balance['balance']/$currency_prices[$balance['currency_id']]['price'];
+		}
+		
+		return $value;
+	}
+	
+	public function get_card_fees($card) {
+		return $card['amount']*(100-$card['purity'])/100;
+	}
+	
+	public function try_withdraw_mobilemoney($withdraw_type, $currency_id, $phone_number, $first_name, $last_name, $amount, &$my_cards) {
+		$beyonic = new Beyonic();
+		$beyonic->setApiKey($GLOBALS['beyonic_api_key']);
+		
+		$payment = new MobilePayment($this, false);
+		$payment->set_fields($my_cards[0]['card_group_id'], $currency_id, $withdraw_type, $amount, $phone_number, $first_name, $last_name);
+		$payment->create();
+		
+		$mobilemoney_error = false;
+		
+		try {
+			$beyonic_request = $beyonic->sendRequest('payments', 'POST', false, array(
+				'phonenumber' => $phone_number,
+				'payment_type' => "money",
+				'first_name' => $first_name,
+				'last_name' => $last_name,
+				'amount' => $amount,
+				'currency' => 'UGX',
+				'description' => $GLOBALS['site_name_short']
+			));
+		}
+		catch (Exception $e) {
+			$mobilemoney_error = true;
+			$error_message = "There was an error initiating the payment: ".$e->responseBody;
+		}
+		
+		if (!$mobilemoney_error) {
+			$q = "UPDATE mobile_payments SET beyonic_request_id='".$beyonic_request->id."' WHERE payment_id='".$payment->db_payment['payment_id']."';";
+			$r = $this->run_query($q);
+			
+			if ($withdraw_type == "group_withdrawal") {
+				$q = "INSERT INTO card_group_withdrawals SET card_group_id='".$my_cards[0]['card_group_id']."', original_card_group_id='".$my_cards[0]['card_group_id']."', currency_id='".$currency_id."', withdraw_method='mobilemoney', withdraw_time='".time()."', amount='".$amount."', ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']).";";
+				$r = $this->run_query($q);
+				$group_withdrawal_id = $this->last_insert_id();
+			}
+			else {
+				$q = "INSERT INTO card_status_changes SET card_id='".$my_cards[0]['card_id']."', from_status='".$my_cards[0]['status']."', to_status='redeemed', change_time='".time()."';";
+				$r = $this->run_query($q);
+				$status_change_id = $this->last_insert_id();
+				
+				$q = "UPDATE cards SET status='redeemed' WHERE card_id='".$my_cards[0]['card_id']."';";
+				$r = $this->run_query($q);
+				
+				$q = "INSERT INTO card_withdrawals SET withdraw_method='mobilemoney', card_id='".$my_cards[0]['card_id']."', currency_id='".$currency_id."', status_change_id='".$status_change_id."', withdraw_time='".time()."', amount='".$amount."', ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']).";";
+				$r = $this->run_query($q);
+				$withdrawal_id = $this->last_insert_id();
+			}
+			
+			$q = "INSERT INTO card_conversions SET card_id='".$my_cards[0]['card_id']."', reason='".$withdraw_type."'";
+			if ($withdraw_type == "group_withdrawal") $q .= ", group_withdrawal_id='".$group_withdrawal_id."'";
+			else $q .= ", withdrawal_id='".$withdrawal_id."'";
+			$q .= ", time_created='".time()."', ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']).", currency1_id=".$currency_id.", currency1_delta=".(-1*$amount).";";
+			$r = $this->run_query($q);
+			
+			$this->set_card_currency_balances($my_cards[0]);
+			
+			$error_message = "Beyonic request was successful!";
+		}
+		
+		return $error_message;
+	}
+	
+	public function get_issuer_by_server_name($server_name) {
+		$server_name = trim(strtolower(strip_tags($server_name)));
+		if (substr($server_name, 0, 7) == "http://") $server_name = substr($server_name, 7, strlen($server_name)-7);
+		if (substr($server_name, 0, 8) == "https://") $server_name = substr($server_name, 8, strlen($server_name)-8);
+		if (substr($server_name, 0, 4) == "www.") $server_name = substr($server_name, 4, strlen($server_name)-4);
+		
+		$q = "SELECT * FROM card_issuers WHERE issuer_identifier=".$this->quote_escape($server_name).";";
+		$r = $this->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			$card_issuer = $r->fetch();
+		}
+		else {
+			$q = "INSERT INTO card_issuers SET issuer_identifier=".$this->quote_escape($server_name).", issuer_name=".$this->quote_escape($server_name).", time_created='".time()."';";
+			$r = $this->run_query($q);
+			$issuer_id = $this->last_insert_id();
+			
+			$card_issuer = $this->run_query("SELECT * FROM card_issuers WHERE issuer_id=".$issuer_id.";")->fetch();
+		}
+		return $card_issuer;
+	}
+	
+	public function get_issuer_by_id($issuer_id) {
+		$q = "SELECT * FROM card_issuers WHERE issuer_id='".$issuer_id."';";
+		$r = $this->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			return $r->fetch();
+		}
+		else return false;
+	}
+	
+	public function change_card_status(&$db_card, $new_status) {
+		$q = "INSERT INTO card_status_changes SET card_id='".$db_card['card_id']."', from_status='".$db_card['status']."', to_status='".$new_status."', change_time='".time()."';";
+		$r = $this->run_query($q);
+		
+		$q = "UPDATE cards SET status='".$new_status."' WHERE card_id='".$db_card['card_id']."';";
+		$r = $this->run_query($q);
+		
+		$db_card['status'] = $new_status;
+	}
+	
+	public function card_secret_to_hash($secret) {
+		return hash("sha256", $secret);
 	}
 }
 ?>
