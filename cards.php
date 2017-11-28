@@ -59,14 +59,15 @@ if (!empty($_REQUEST['action'])) {
 		
 		if ($r->rowCount() == 1) {
 			$design = $r->fetch();
-			$denom_amount = floatval(str_replace(",", "", $design['denomination']));
 			
-			$paper_width = "";
-			if (!empty($_REQUEST['paper_width'])) $paper_width = $_REQUEST['paper_width'];
-			if (empty($paper_width)) $paper_width = "standard";
-			else if ($paper_width == "small") {}
-			
-			if ($design) {
+			if ($design['user_id'] == $thisuser->db_user['user_id']) {
+				$denom_amount = floatval(str_replace(",", "", $design['denomination']));
+				
+				$paper_width = "";
+				if (!empty($_REQUEST['paper_width'])) $paper_width = $_REQUEST['paper_width'];
+				if (empty($paper_width)) $paper_width = "standard";
+				else if ($paper_width == "small") {}
+				
 				if ($design['how_many'] > 0) { // && in_array($design['denomination'], $ok_denoms)
 					$q = "SELECT MAX(issuer_card_id), MAX(group_id) FROM cards c JOIN card_designs d ON c.design_id=d.design_id WHERE d.issuer_id='".$this_issuer['issuer_id']."';";
 					$r = $app->run_query($q);
@@ -102,6 +103,10 @@ if (!empty($_REQUEST['action'])) {
 					$error_class = "error";
 				}
 			}
+			else {
+				$error_message = "Error, you don't have permission to perform this action.";
+				$error_class = "error";
+			}
 		}
 	}
 	else if ($action == "print_design") {
@@ -113,67 +118,95 @@ if (!empty($_REQUEST['action'])) {
 		if ($r->rowCount() == 1) {
 			$design = $r->fetch();
 			
-			$paper_width = "";
-			if (!empty($_REQUEST['paper_width'])) $paper_width = $_REQUEST['paper_width'];
-			if (empty($paper_width)) $paper_width = "standard";
-			else if ($paper_width == "small") {}
-			
-			$card_group_id = $design['card_group_id'];
-			$q = "SELECT MIN(card_id) FROM cards WHERE design_id='".$design['design_id']."';";
-			$r = $app->run_query($q);
-			$min_card_id = $r->fetch();
-			$from = $min_card_id[0];
-			
-			if ($from > 0) {}
-			else die("Error, the cards haven't been created yet.");
-			
-			$to = $from + $design['how_many'] - 1;
-			
-			require_once(dirname(__FILE__).'/lib/card-render/fpdf.php');
-			
-			$perpage = 10;
-			
-			$numcards = $to-$from+1;
-			$numpages = ceil($numcards/$perpage);
-			
-			if ($paper_width == "small") {
-				$pdf = new FPDF('P','in',array(2.4,3.5*5+0.5));
-				$orient = "tall";
-				$card_print_width = 2;
-			}
-			else {
-				$pdf = new FPDF('P','in',array(8.5,11));
-				$orient = "fat";
-				$card_print_width = 3.5;
-			}
-			
-			$q = "SELECT * FROM cards WHERE card_id >= $from AND card_id <= $to;";
-			$r = $app->run_query($q);
-			$count = 0;
-			
-			$res = "";
-			if (!empty($_REQUEST['res'])) {
-				$res = $_REQUEST['res'];
-				if ($res != "low") $res = "high";
-			}
-			
-			if ($res == "low") $extension = "jpg";
-			else $extension = "png";
-			
-			for ($dubpage=1; $dubpage<=$numpages; $dubpage++) {
-				$numthispage = 10;
+			if ($design['user_id'] == $thisuser->db_user['user_id']) {
+				$paper_width = "";
+				if (!empty($_REQUEST['paper_width'])) $paper_width = $_REQUEST['paper_width'];
+				if (empty($paper_width)) $paper_width = "standard";
+				else if ($paper_width == "small") {}
 				
-				if ($count+$numthispage > $numcards) $numthispage = $numcards-$count;
+				$card_group_id = $design['card_group_id'];
+				$q = "SELECT MIN(card_id) FROM cards WHERE design_id='".$design['design_id']."';";
+				$r = $app->run_query($q);
+				$min_card_id = $r->fetch();
+				$from = $min_card_id[0];
 				
-				$cardarr = array();
+				if ($from > 0) {}
+				else die("Error, the cards haven't been created yet.");
 				
-				for ($pos=1; $pos <= $numthispage; $pos++) {
-					$cardarr[$pos-1] = $r->fetch();
-					
-					$count++;
+				$to = $from + $design['how_many'] - 1;
+				
+				require_once(dirname(__FILE__).'/lib/card-render/fpdf.php');
+				
+				$perpage = 10;
+				
+				$numcards = $to-$from+1;
+				$numpages = ceil($numcards/$perpage);
+				
+				if ($paper_width == "small") {
+					$pdf = new FPDF('P','in',array(2.4,3.5*5+0.5));
+					$orient = "tall";
+					$card_print_width = 2;
+				}
+				else {
+					$pdf = new FPDF('P','in',array(8.5,11));
+					$orient = "fat";
+					$card_print_width = 3.5;
 				}
 				
-				if ($paper_width != "small") {
+				$q = "SELECT * FROM cards WHERE card_id >= $from AND card_id <= $to;";
+				$r = $app->run_query($q);
+				$count = 0;
+				
+				$res = "";
+				if (!empty($_REQUEST['res'])) {
+					$res = $_REQUEST['res'];
+					if ($res != "low") $res = "high";
+				}
+				
+				if ($res == "low") $extension = "jpg";
+				else $extension = "png";
+				
+				for ($dubpage=1; $dubpage<=$numpages; $dubpage++) {
+					$numthispage = 10;
+					
+					if ($count+$numthispage > $numcards) $numthispage = $numcards-$count;
+					
+					$cardarr = array();
+					
+					for ($pos=1; $pos <= $numthispage; $pos++) {
+						$cardarr[$pos-1] = $r->fetch();
+						
+						$count++;
+					}
+					
+					if ($paper_width != "small") {
+						$pdf->AddPage();
+						
+						$pdf->Line(0, 0.5, 0.25, 0.5);
+						$pdf->Line(8.25, 0.5, 8.5, 0.5);
+						
+						$pdf->Line(0.75, 0, 0.75, 0.25);
+						$pdf->Line(7.75, 0, 7.75, 0.25);
+						
+						$pdf->Line(4.25, 0, 4.25, 0.25);
+						
+						for ($pos=1; $pos <= $numthispage; $pos++) {
+							$front_coords = $app->position_by_pos($pos, 'front', $paper_width);
+							
+							$side = "front";
+							$temp_render_url = "http://".$_SERVER['SERVER_NAME']."/lib/card-render/render".$side.".php?key=".$GLOBALS['cron_key_string']."&card_id=".$cardarr[$pos-1]['card_id']."&orient=".$orient."&res=".$res;
+							
+							$pdf->Image($temp_render_url, $front_coords[0], $front_coords[1], $card_print_width, false, 'png');
+						}
+						$pdf->Line(0, 10.5, 0.25, 10.5);
+						$pdf->Line(8.25, 10.5, 8.5, 10.5);
+						
+						$pdf->Line(0.75, 11, 0.75, 10.75);
+						$pdf->Line(7.75, 11, 7.75, 10.75);
+						
+						$pdf->Line(4.25, 10.75, 4.25, 11);
+					}
+					
 					$pdf->AddPage();
 					
 					$pdf->Line(0, 0.5, 0.25, 0.5);
@@ -185,12 +218,12 @@ if (!empty($_REQUEST['action'])) {
 					$pdf->Line(4.25, 0, 4.25, 0.25);
 					
 					for ($pos=1; $pos <= $numthispage; $pos++) {
-						$front_coords = $app->position_by_pos($pos, 'front', $paper_width);
+						$back_coords = $app->position_by_pos($pos, 'back', $paper_width);
 						
-						$side = "front";
-						$temp_render_url = "http://".$_SERVER['SERVER_NAME']."/lib/card-render/render".$side.".php?card_id=".$cardarr[$pos-1]['card_id']."&orient=".$orient."&res=".$res;
+						$side = "back";
+						$img_png_url = "http://".$_SERVER['SERVER_NAME']."/lib/card-render/render".$side.".php?key=".$GLOBALS['cron_key_string']."&card_id=".$cardarr[$pos-1]['issuer_card_id']."&orient=".$orient."&res=".$res;
 						
-						$pdf->Image($temp_render_url, $front_coords[0], $front_coords[1], $card_print_width, false, 'png');
+						$pdf->Image($img_png_url, $back_coords[0], $back_coords[1], $card_print_width, false, 'png');
 					}
 					$pdf->Line(0, 10.5, 0.25, 10.5);
 					$pdf->Line(8.25, 10.5, 8.5, 10.5);
@@ -201,41 +234,20 @@ if (!empty($_REQUEST['action'])) {
 					$pdf->Line(4.25, 10.75, 4.25, 11);
 				}
 				
-				$pdf->AddPage();
+				$q = "UPDATE card_printrequests SET print_status='printed' WHERE request_id='".$design['request_id']."';";
+				$r = $app->run_query($q);
 				
-				$pdf->Line(0, 0.5, 0.25, 0.5);
-				$pdf->Line(8.25, 0.5, 8.5, 0.5);
-				
-				$pdf->Line(0.75, 0, 0.75, 0.25);
-				$pdf->Line(7.75, 0, 7.75, 0.25);
-				
-				$pdf->Line(4.25, 0, 4.25, 0.25);
-				
-				for ($pos=1; $pos <= $numthispage; $pos++) {
-					$back_coords = $app->position_by_pos($pos, 'back', $paper_width);
-					
-					$side = "back";
-					$img_png_url = "http://".$_SERVER['SERVER_NAME']."/lib/card-render/render".$side.".php?card_id=".$cardarr[$pos-1]['issuer_card_id']."&orient=".$orient."&res=".$res;
-					
-					$pdf->Image($img_png_url, $back_coords[0], $back_coords[1], $card_print_width, false, 'png');
-				}
-				$pdf->Line(0, 10.5, 0.25, 10.5);
-				$pdf->Line(8.25, 10.5, 8.5, 10.5);
-				
-				$pdf->Line(0.75, 11, 0.75, 10.75);
-				$pdf->Line(7.75, 11, 7.75, 10.75);
-				
-				$pdf->Line(4.25, 10.75, 4.25, 11);
+				$pdf->Output();
+				die();
 			}
-			
-			$q = "UPDATE card_printrequests SET print_status='printed' WHERE request_id='".$design['request_id']."';";
-			$r = $app->run_query($q);
-			
-			$pdf->Output();
-			die();
+			else {
+				$error_message = "Error, you don't have permission to perform this action.";
+				$error_class = "error";
+			}
 		}
 		else {
 			$error_message = "Error, invalid denomination or number of cards.";
+			$error_class = "error";
 		}
 	}
 	else if ($action == "activate_cards") {
