@@ -502,6 +502,7 @@ footer {
 	text-align: center;
 	margin: 10px;
 	border: 1px solid #aaa;
+	cursor: pointer;
 }
 .card_block {
 	display: block;

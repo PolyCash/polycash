@@ -2106,9 +2106,11 @@ class App {
 		return $result;
 	}
 	
-	public function try_create_card_account($card, $supplied_card_secret, $password) {
-		if ($card['secret'] == $supplied_card_secret && $card['status'] == "sold") {
-			$q = "INSERT INTO card_users SET card_id='".$card['card_id']."', password=".$this->quote_escape($password).", create_time='".time()."', create_ip=".$this->quote_escape($_SERVER['REMOTE_ADDR']).";";
+	public function try_create_card_account($card, $supplied_secret_hash, $password) {
+		if ($card['secret_hash'] == $supplied_secret_hash && $card['status'] == "sold") {
+			$q = "INSERT INTO card_users SET card_id='".$card['card_id']."', password=".$this->quote_escape($password).", create_time='".time()."'";
+			if ($GLOBALS['pageview_tracking_enabled']) $q .= ", create_ip=".$this->quote_escape($_SERVER['REMOTE_ADDR']);
+			$q .= ";";
 			$r = $this->run_query($q);
 			$card_user_id = $this->last_insert_id();
 			
@@ -2121,11 +2123,15 @@ class App {
 			
 			$fees = $this->get_card_fees($card);
 			
-			$q = "INSERT INTO card_withdrawals SET card_id='".$card['card_id']."', currency_id='".$card['fv_currency_id']."', card_user_id='".$card_user_id."', ip_address='".$_SERVER['REMOTE_ADDR']."', status_change_id='".$status_change_id."', withdraw_method='card_account', amount='".($card['amount']-$fees)."', withdraw_time='".time()."';";
+			$q = "INSERT INTO card_withdrawals SET card_id='".$card['card_id']."', currency_id='".$card['fv_currency_id']."', card_user_id='".$card_user_id."'";
+			if ($GLOBALS['pageview_tracking_enabled']) $q .= ", ip_address='".$_SERVER['REMOTE_ADDR']."'";
+			$q .= ", status_change_id='".$status_change_id."', withdraw_method='card_account', amount='".($card['amount']-$fees)."', withdraw_time='".time()."';";
 			$r = $this->run_query($q);
 			$withdrawal_id = $this->last_insert_id();
 			
-			$q = "INSERT INTO card_conversions SET card_id='".$card['card_id']."', reason='withdrawal', withdrawal_id='".$withdrawal_id."', time_created='".time()."', ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']).", currency1_id=".$card['fv_currency_id'].", currency1_delta=".($card['amount']-$fees).";";
+			$q = "INSERT INTO card_conversions SET card_id='".$card['card_id']."', reason='withdrawal', withdrawal_id='".$withdrawal_id."', time_created='".time()."'";
+			if ($GLOBALS['pageview_tracking_enabled']) $q .= ", ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']);
+			$q .= ", currency1_id=".$card['fv_currency_id'].", currency1_delta=".($card['amount']-$fees).";";
 			$r = $this->run_query($q);
 			
 			$this->set_card_currency_balances($card);
@@ -2133,7 +2139,9 @@ class App {
 			$session_key = session_id();
 			$expire_time = time()+3600*24;
 			
-			$q = "INSERT INTO card_sessions SET card_user_id='".$card_user_id."', session_key=".$this->quote_escape($session_key).", login_time='".time()."', expire_time='".$expire_time."', ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']).";";
+			$q = "INSERT INTO card_sessions SET card_user_id='".$card_user_id."', session_key=".$this->quote_escape($session_key).", login_time='".time()."', expire_time='".$expire_time."'";
+			if ($GLOBALS['pageview_tracking_enabled']) $q .= ", ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']);
+			$q .= ";";
 			$r = $this->run_query($q);
 			
 			$txt = "<p>Your account has been created! ";
@@ -2345,6 +2353,63 @@ class App {
 	
 	public function card_secret_to_hash($secret) {
 		return hash("sha256", $secret);
+	}
+	
+	public function create_new_user($verify_code, $salt, $alias, $email, $password) {
+		$q = "INSERT INTO users SET username=".$this->quote_escape($alias).", notification_email=".$this->quote_escape($email).", password=".$this->quote_escape($this->normalize_password($password, $salt)).", salt=".$this->quote_escape($salt);
+		if ($GLOBALS['pageview_tracking_enabled']) {
+			$q .= ", ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']);
+		}
+		if ($GLOBALS['new_games_per_user'] != "unlimited" && $GLOBALS['new_games_per_user'] > 0) {
+			$q .= ", authorized_games=".$this->quote_escape($GLOBALS['new_games_per_user']);
+		}
+		$q .= ", time_created='".time()."', verify_code='".$verify_code."';";
+		$r = $this->run_query($q);
+		$user_id = $this->last_insert_id();
+		
+		$thisuser = new User($this, $user_id);
+		
+		if ($user_id == 1) $this->set_site_constant("admin_user_id", $user_id);
+		
+		$session_key = session_id();
+		$expire_time = time()+3600*24;
+		
+		if ($GLOBALS['pageview_tracking_enabled']) {
+			$q = "SELECT * FROM viewer_connections WHERE type='viewer2user' AND from_id='".$viewer_id."' AND to_id='".$thisuser->db_user['user_id']."';";
+			$r = $this->run_query($q);
+			if ($r->rowCount() == 0) {
+				$q = "INSERT INTO viewer_connections SET type='viewer2user', from_id='".$viewer_id."', to_id='".$thisuser->db_user['user_id']."';";
+				$r = $this->run_query($q);
+			}
+			
+			$q = "UPDATE users SET ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR'])." WHERE user_id='".$thisuser->db_user['user_id']."';";
+			$r = $this->run_query($q);
+		}
+		
+		// Send an email if the username includes
+		if ($GLOBALS['outbound_email_enabled'] && !empty($notification_email) && strpos($notification_email, '@')) {
+			$email_message = "<p>A new ".$GLOBALS['site_name_short']." web wallet has been created for <b>".$alias."</b>.</p>";
+			$email_message .= "<p>Thanks for signing up!</p>";
+			$email_message .= "<p>To log in any time please visit ".$GLOBALS['base_url']."/wallet/</p>";
+			$email_message .= "<p>This message was sent to you by ".$GLOBALS['base_url']."</p>";
+			
+			$email_id = $this->mail_async($email, $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], "New account created", $email_message, "", "");
+		}
+		
+		return $thisuser;
+	}
+	
+	public function fetch_currency_prices() {
+		$prices = array();
+		
+		$q = "SELECT * FROM currencies ORDER BY currency_id ASC;";
+		$r = $this->run_query($q);
+		
+		while ($db_currency = $r->fetch()) {
+			$prices[$db_currency['currency_id']] = $this->latest_currency_price($db_currency['currency_id']);
+		}
+		
+		return $prices;
 	}
 }
 ?>

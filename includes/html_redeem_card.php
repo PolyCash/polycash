@@ -15,7 +15,7 @@ $('#redeem_options').on('hidden.bs.modal', function () {
 			<?php
 			$option_i = 1;
 
-			if ($currency['blockchain_id'] > 0) {
+			if (FALSE && $currency['blockchain_id'] > 0) {
 				?>
 				<script type="text/javascript">
 				var v=null;
