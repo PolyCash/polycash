@@ -91,7 +91,7 @@ $('#redeem_options').on('hidden.bs.modal', function () {
 						<label for="card_account_password2">Please repeat your password to avoid making a mistake.</label>
 						<input class="form-control" id="card_account_password2" name="password2" type="password" />
 					</div>
-					<input type="submit" class="btn btn-success" value="Create an account" onclick="card_login(true, card_id); return false;" />
+					<input type="submit" class="btn btn-success" value="Create an account" onclick="card_login(true, card_id, issuer_id); return false;" />
 				</form>
 			</div>
 			<br/>

@@ -151,6 +151,7 @@ if ($thisuser && !empty($_REQUEST['action']) && $_REQUEST['action'] == "donate_t
 
 $pagetitle = "My Accounts";
 $nav_tab_selected = "accounts";
+$nav_subtab_selected = "";
 include('includes/html_start.php');
 ?>
 <div class="container-fluid">
@@ -189,10 +190,7 @@ include('includes/html_start.php');
 					else echo $account['account_name'];
 					echo '</div>';
 					
-					$balance_q = "SELECT SUM(io.amount) FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."' AND io.spend_status='unspent';";
-					$balance_r = $app->run_query($balance_q);
-					$balance = $balance_r->fetch();
-					$balance = $balance['SUM(io.amount)'];
+					$balance = $app->account_balance($account['account_id']);
 					
 					echo '<div class="col-sm-2 greentext" style="text-align: right">';
 					if ($account['game_id'] > 0) echo $app->format_bignum($account_value/pow(10,$account_game->db_game['decimal_places'])).' '.$account_game->db_game['coin_name_plural'];

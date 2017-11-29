@@ -66,7 +66,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			echo $coins_granted." ".$blockchain->db_blockchain['coin_name_plural']." have been granted to ".$user->db_user['username']."<br/>\n";
 		}
 		else {
-			echo "Please supply a valid user ID or email address in the \"to\" parameter. $q<br/>\n";
+			echo "Please supply a valid user ID or email address in the \"to\" parameter.<br/>\n";
 		}
 		
 		$app->refresh_utxo_user_ids(false);

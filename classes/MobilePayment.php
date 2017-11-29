@@ -7,7 +7,6 @@ class MobilePayment {
 		
 		$this->card_group_id = false;
 		$this->currency_id = false;
-		$this->payment_type = false;
 		$this->amount = false;
 		$this->phone_number = false;
 		$this->first_name = false;
@@ -24,10 +23,8 @@ class MobilePayment {
 		}
 	}
 	
-	public function set_fields($card_group_id, $currency_id, $payment_type, $amount, $phone_number, $first_name, $last_name) {
-		$this->card_group_id = $card_group_id;
+	public function set_fields($currency_id, $amount, $phone_number, $first_name, $last_name) {
 		$this->currency_id = $currency_id;
-		$this->payment_type = $payment_type;
 		$this->amount = $amount;
 		$this->phone_number = $phone_number;
 		$this->first_name = $first_name;
@@ -35,7 +32,7 @@ class MobilePayment {
 	}
 	
 	public function create() {
-		$q = "INSERT INTO mobile_payments SET card_group_id='".$this->card_group_id."', currency_id='".$this->currency_id."', payment_type='".$this->payment_type."', amount=".$this->app->quote_escape($this->amount).", payment_status='pending', time_created='".time()."', phone_number=".$this->app->quote_escape($this->phone_number).", first_name=".$this->app->quote_escape($this->first_name).", last_name=".$this->app->quote_escape($this->last_name).", payment_key='".$this->app->random_string(16)."';";
+		$q = "INSERT INTO mobile_payments SET currency_id='".$this->currency_id."', amount=".$this->app->quote_escape($this->amount).", payment_status='pending', time_created='".time()."', phone_number=".$this->app->quote_escape($this->phone_number).", first_name=".$this->app->quote_escape($this->first_name).", last_name=".$this->app->quote_escape($this->last_name).", payment_key='".$this->app->random_string(16)."';";
 		$r = $this->app->run_query($q);
 		
 		$this->payment_id = $this->app->last_insert_id();

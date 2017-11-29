@@ -34,6 +34,7 @@ include('includes/html_start.php');
 				?>
 				<script type="text/javascript">
 				var card_id = '<?php echo $card['card_id']; ?>';
+				var issuer_id = '<?php echo $card['issuer_id']; ?>';
 				
 				$(document).ready(function() {
 					update_page();
@@ -174,28 +175,23 @@ include('includes/html_start.php');
 								echo "This card hasn't been released yet.";
 							}
 							else if ($card['status'] == "redeemed") {
-								$q = "SELECT * FROM card_withdrawals WHERE card_id='".$card['card_id']."' ORDER BY withdrawal_id ASC LIMIT 1;";
-								$r = $app->run_query($q);
-								
-								if ($r->rowCount() == 1) {
-									$withdrawal = $r->fetch();
-									?>
-									<script type="text/javascript">
-									var card_id = '<?php echo $card['card_id']; ?>';
-									</script>
-									<br/>
-									<p>
-										To access money on this card, please log in.
-									</p>
-									<p>
-										<a class="btn btn-success" href="" onclick="$('#card_login').toggle('fast'); return false;">Log In</a>
-									</p>
-									<?php
-									$ask4nameid = FALSE;
-									$login_title = "If this is your card, please log in.";
-									$card_login_card_id = "'".$card['issuer_card_id']."'";
-									include('includes/html_card_login.php');
-								}
+								?>
+								<script type="text/javascript">
+								var card_id = '<?php echo $card['card_id']; ?>';
+								</script>
+								<br/>
+								<p>
+									To access the money on this card, please log in with it.
+								</p>
+								<p>
+									<a class="btn btn-success" href="" onclick="$('#card_login').toggle('fast'); return false;">Log In</a>
+								</p>
+								<?php
+								$ask4nameid = FALSE;
+								$login_title = "Please log in:";
+								$card_login_card_id = "'".$card['issuer_card_id']."'";
+								$card_login_issuer_id = $card['issuer_id'];
+								include('includes/html_card_login.php');
 							}
 							
 							if (!empty($thisuser) && !empty($printrequest) && $thisuser->db_user['user_id'] == $printrequest['user_id']) {

@@ -99,7 +99,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 				<li<?php if ($nav_tab_selected == "api") echo ' class="active"'; ?>><a href="/api/"><i class="fa fa-code"></i> <span>API</span></a></li>
 			</ul>
 			<?php
-			if ($nav_tab_selected == "cards") { ?>
+			if ($nav_tab_selected == "cards" || $nav_tab_selected == "accounts") { ?>
 				<ul class="sidebar-menu" data-widget="tree">
 					<li class="header">Cards</li>
 					<li id="section_link_cards"><a href="/cards/?start_section=cards"<?php if ($nav_subtab_selected == "cards") echo ' onclick="open_page_section(\'cards\'); return false;"'; ?>><i class="fa fa-book"></i> My Cards</a></li>

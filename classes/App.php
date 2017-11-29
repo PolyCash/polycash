@@ -1961,6 +1961,8 @@ class App {
 				}
 				$q = "UPDATE addresses SET user_id='".$user->db_user['user_id']."' WHERE address_id='".$db_address['address_id']."';";
 				$r = $this->run_query($q);
+				
+				return true;
 			}
 			else return false;
 		}
@@ -2106,35 +2108,27 @@ class App {
 		return $result;
 	}
 	
-	public function try_create_card_account($card, $supplied_secret_hash, $password) {
+	public function try_create_card_account($card, $thisuser, $supplied_secret_hash, $password) {
 		if ($card['secret_hash'] == $supplied_secret_hash && $card['status'] == "sold") {
+			if (empty($thisuser)) {
+				$alias = $this->random_string(16);
+				$password = $this->random_string(16);
+				$verify_code = $this->random_string(32);
+				$salt = $this->random_string(16);
+				
+				$thisuser = $this->create_new_user($verify_code, $salt, $alias, "", $password);
+			}
+			
 			$q = "INSERT INTO card_users SET card_id='".$card['card_id']."', password=".$this->quote_escape($password).", create_time='".time()."'";
 			if ($GLOBALS['pageview_tracking_enabled']) $q .= ", create_ip=".$this->quote_escape($_SERVER['REMOTE_ADDR']);
 			$q .= ";";
 			$r = $this->run_query($q);
 			$card_user_id = $this->last_insert_id();
 			
-			$q = "UPDATE cards SET status='redeemed', card_user_id='".$card_user_id."', redeem_time='".time()."' WHERE card_id='".$card['card_id']."';";
+			$q = "UPDATE cards SET user_id='".$thisuser->db_user['user_id']."', card_user_id='".$card_user_id."', claim_time='".time()."' WHERE card_id='".$card['card_id']."';";
 			$r = $this->run_query($q);
 			
-			$q = "INSERT INTO card_status_changes SET card_id='".$card['card_id']."', from_status='".$card['status']."', to_status='redeemed', change_time='".time()."';";
-			$r = $this->run_query($q);
-			$status_change_id = $this->last_insert_id();
-			
-			$fees = $this->get_card_fees($card);
-			
-			$q = "INSERT INTO card_withdrawals SET card_id='".$card['card_id']."', currency_id='".$card['fv_currency_id']."', card_user_id='".$card_user_id."'";
-			if ($GLOBALS['pageview_tracking_enabled']) $q .= ", ip_address='".$_SERVER['REMOTE_ADDR']."'";
-			$q .= ", status_change_id='".$status_change_id."', withdraw_method='card_account', amount='".($card['amount']-$fees)."', withdraw_time='".time()."';";
-			$r = $this->run_query($q);
-			$withdrawal_id = $this->last_insert_id();
-			
-			$q = "INSERT INTO card_conversions SET card_id='".$card['card_id']."', reason='withdrawal', withdrawal_id='".$withdrawal_id."', time_created='".time()."'";
-			if ($GLOBALS['pageview_tracking_enabled']) $q .= ", ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']);
-			$q .= ", currency1_id=".$card['fv_currency_id'].", currency1_delta=".($card['amount']-$fees).";";
-			$r = $this->run_query($q);
-			
-			$this->set_card_currency_balances($card);
+			$this->change_card_status($card, 'claimed');
 			
 			$session_key = session_id();
 			$expire_time = time()+3600*24;
@@ -2237,7 +2231,9 @@ class App {
 		$value = 0;
 		
 		foreach ($balances as $balance) {
-			$value += $balance['balance']/$currency_prices[$balance['currency_id']]['price'];
+			if (!empty($currency_prices[$balance['currency_id']])) {
+				$value += $balance['balance']/$currency_prices[$balance['currency_id']]['price'];
+			}
 		}
 		
 		return $value;
@@ -2247,12 +2243,12 @@ class App {
 		return $card['amount']*(100-$card['purity'])/100;
 	}
 	
-	public function try_withdraw_mobilemoney($withdraw_type, $currency_id, $phone_number, $first_name, $last_name, $amount, &$my_cards) {
+	public function try_withdraw_mobilemoney($currency_id, $phone_number, $first_name, $last_name, $amount, &$my_cards) {
 		$beyonic = new Beyonic();
 		$beyonic->setApiKey($GLOBALS['beyonic_api_key']);
 		
 		$payment = new MobilePayment($this, false);
-		$payment->set_fields($my_cards[0]['card_group_id'], $currency_id, $withdraw_type, $amount, $phone_number, $first_name, $last_name);
+		$payment->set_fields($my_cards[0]['card_group_id'], $currency_id, $amount, $phone_number, $first_name, $last_name);
 		$payment->create();
 		
 		$mobilemoney_error = false;
@@ -2277,27 +2273,19 @@ class App {
 			$q = "UPDATE mobile_payments SET beyonic_request_id='".$beyonic_request->id."' WHERE payment_id='".$payment->db_payment['payment_id']."';";
 			$r = $this->run_query($q);
 			
-			if ($withdraw_type == "group_withdrawal") {
-				$q = "INSERT INTO card_group_withdrawals SET card_group_id='".$my_cards[0]['card_group_id']."', original_card_group_id='".$my_cards[0]['card_group_id']."', currency_id='".$currency_id."', withdraw_method='mobilemoney', withdraw_time='".time()."', amount='".$amount."', ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']).";";
-				$r = $this->run_query($q);
-				$group_withdrawal_id = $this->last_insert_id();
-			}
-			else {
-				$q = "INSERT INTO card_status_changes SET card_id='".$my_cards[0]['card_id']."', from_status='".$my_cards[0]['status']."', to_status='redeemed', change_time='".time()."';";
-				$r = $this->run_query($q);
-				$status_change_id = $this->last_insert_id();
-				
-				$q = "UPDATE cards SET status='redeemed' WHERE card_id='".$my_cards[0]['card_id']."';";
-				$r = $this->run_query($q);
-				
-				$q = "INSERT INTO card_withdrawals SET withdraw_method='mobilemoney', card_id='".$my_cards[0]['card_id']."', currency_id='".$currency_id."', status_change_id='".$status_change_id."', withdraw_time='".time()."', amount='".$amount."', ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']).";";
-				$r = $this->run_query($q);
-				$withdrawal_id = $this->last_insert_id();
-			}
+			$q = "INSERT INTO card_status_changes SET card_id='".$my_cards[0]['card_id']."', from_status='".$my_cards[0]['status']."', to_status='redeemed', change_time='".time()."';";
+			$r = $this->run_query($q);
+			$status_change_id = $this->last_insert_id();
 			
-			$q = "INSERT INTO card_conversions SET card_id='".$my_cards[0]['card_id']."', reason='".$withdraw_type."'";
-			if ($withdraw_type == "group_withdrawal") $q .= ", group_withdrawal_id='".$group_withdrawal_id."'";
-			else $q .= ", withdrawal_id='".$withdrawal_id."'";
+			$q = "UPDATE cards SET status='redeemed' WHERE card_id='".$my_cards[0]['card_id']."';";
+			$r = $this->run_query($q);
+			
+			$q = "INSERT INTO card_withdrawals SET withdraw_method='mobilemoney', card_id='".$my_cards[0]['card_id']."', currency_id='".$currency_id."', status_change_id='".$status_change_id."', withdraw_time='".time()."', amount='".$amount."', ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']).";";
+			$r = $this->run_query($q);
+			$withdrawal_id = $this->last_insert_id();
+			
+			$q = "INSERT INTO card_conversions SET card_id='".$my_cards[0]['card_id']."'";
+			$q .= ", withdrawal_id='".$withdrawal_id."'";
 			$q .= ", time_created='".time()."', ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']).", currency1_id=".$currency_id.", currency1_delta=".(-1*$amount).";";
 			$r = $this->run_query($q);
 			
@@ -2410,6 +2398,13 @@ class App {
 		}
 		
 		return $prices;
+	}
+	
+	public function account_balance($account_id) {
+		$balance_q = "SELECT SUM(io.amount) FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account_id."' AND io.spend_status='unspent';";
+		$balance_r = $this->run_query($balance_q);
+		$balance = $balance_r->fetch();
+		return $balance['SUM(io.amount)'];
 	}
 }
 ?>

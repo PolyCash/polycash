@@ -1,6 +1,6 @@
 CREATE TABLE `cards` (
   `card_id` int(20) NOT NULL,
-  `name_id` varchar(100) COLLATE latin1_german2_ci NOT NULL,
+  `issuer_card_id` int(20) DEFAULT NULL,
   `group_id` int(20) NOT NULL,
   `design_id` int(20) DEFAULT NULL,
   `unlock_time` int(20) DEFAULT NULL,
@@ -69,23 +69,6 @@ CREATE TABLE `card_failedchecks` (
   `attempted_code` varchar(100) NOT NULL DEFAULT ''
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-CREATE TABLE `card_groups` (
-  `card_group_id` int(11) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
-
-CREATE TABLE `card_group_withdrawals` (
-  `group_withdrawal_id` int(11) NOT NULL,
-  `card_group_id` int(11) NOT NULL DEFAULT '0',
-  `original_card_group_id` int(20) NOT NULL DEFAULT '0',
-  `currency_id` int(11) DEFAULT NULL,
-  `withdraw_method` enum('blockchain','mobilemoney') COLLATE latin1_german2_ci NOT NULL DEFAULT 'blockchain',
-  `withdraw_time` int(20) NOT NULL DEFAULT '0',
-  `amount` double NOT NULL DEFAULT '0',
-  `address` varchar(100) COLLATE latin1_german2_ci NOT NULL DEFAULT '',
-  `tx_hash` varchar(100) COLLATE latin1_german2_ci NOT NULL DEFAULT '',
-  `ip_address` varchar(100) COLLATE latin1_german2_ci NOT NULL DEFAULT ''
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
-
 CREATE TABLE `card_printrequests` (
   `request_id` int(20) NOT NULL,
   `design_id` int(20) DEFAULT NULL,
@@ -144,7 +127,6 @@ CREATE TABLE `card_withdrawals` (
 
 CREATE TABLE `mobile_payments` (
   `payment_id` int(11) NOT NULL,
-  `card_group_id` int(11) DEFAULT NULL,
   `currency_id` int(11) DEFAULT NULL,
   `beyonic_request_id` int(11) DEFAULT NULL,
   `payment_type` enum('group_withdrawal','card_withdrawal','') NOT NULL DEFAULT '',
@@ -157,14 +139,71 @@ CREATE TABLE `mobile_payments` (
   `time_created` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
+ALTER TABLE `currencies` ADD `default_design_image_id` INT NULL DEFAULT NULL AFTER `blockchain_id`;
+UPDATE `currencies` SET `default_design_image_id` = '80' WHERE `currency_id` = 6;
+
+ALTER TABLE `card_printrequests` ADD `issuer_id` INT NULL DEFAULT NULL AFTER `card_group_id`;
+ALTER TABLE `card_designs` ADD `issuer_id` INT NULL DEFAULT NULL AFTER `image_id`;
+ALTER TABLE `cards` ADD `secret_hash` VARCHAR(100) NULL DEFAULT NULL AFTER `secret`;
+ALTER TABLE `card_designs` ADD `text_color` VARCHAR(100) NULL DEFAULT NULL AFTER `purity`;
+
+ALTER TABLE `images` ADD `px_from_left` INT NULL DEFAULT NULL AFTER `extension`, ADD `px_from_top` INT NULL DEFAULT NULL AFTER `px_from_left`, ADD `width` INT NULL DEFAULT NULL AFTER `px_from_top`, ADD `height` INT NULL DEFAULT NULL AFTER `width`;
+INSERT INTO `images` (`image_id`, `access_key`, `extension`, `px_from_left`, `px_from_top`, `width`, `height`) VALUES (80, '', 'png', -606, -360, 1410, 1410);
+
+ALTER TABLE `cards`
+  ADD PRIMARY KEY (`card_id`),
+  ADD KEY `issuer_card_id` (`issuer_card_id`),
+  ADD KEY `design_id` (`design_id`);
+
+ALTER TABLE `card_conversions`
+  ADD PRIMARY KEY (`conversion_id`),
+  ADD KEY `card_id` (`card_id`);
+
+ALTER TABLE `card_currency_balances`
+  ADD PRIMARY KEY (`balance_id`),
+  ADD KEY `card_id` (`card_id`),
+  ADD KEY `currency_id` (`currency_id`);
+
+ALTER TABLE `card_currency_denominations`
+  ADD PRIMARY KEY (`denomination_id`);
+
+ALTER TABLE `card_designs`
+  ADD PRIMARY KEY (`design_id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `image_id` (`image_id`);
+
+ALTER TABLE `card_failedchecks`
+  ADD PRIMARY KEY (`check_id`);
+
+ALTER TABLE `card_printrequests`
+  ADD PRIMARY KEY (`request_id`);
+
+ALTER TABLE `card_sessions`
+  ADD PRIMARY KEY (`session_id`),
+  ADD KEY `card_user_id` (`card_user_id`);
+
+ALTER TABLE `card_status_changes`
+  ADD PRIMARY KEY (`change_id`);
+
+ALTER TABLE `card_users`
+  ADD PRIMARY KEY (`card_user_id`);
+
+ALTER TABLE `card_withdrawals`
+  ADD PRIMARY KEY (`withdrawal_id`);
+
+ALTER TABLE `mobile_payments`
+  ADD PRIMARY KEY (`payment_id`),
+  ADD KEY `currency_id` (`currency_id`),
+  ADD KEY `payment_type` (`payment_type`),
+  ADD KEY `payment_status` (`payment_status`),
+  ADD KEY `beyonic_request_id` (`beyonic_request_id`);
+
 ALTER TABLE `cards` MODIFY `card_id` int(20) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `card_conversions` MODIFY `conversion_id` int(20) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `card_currency_balances` MODIFY `balance_id` int(11) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `card_currency_denominations` MODIFY `denomination_id` int(11) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `card_designs` MODIFY `design_id` int(11) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `card_failedchecks` MODIFY `check_id` int(20) NOT NULL AUTO_INCREMENT;
-ALTER TABLE `card_groups` MODIFY `card_group_id` int(11) NOT NULL AUTO_INCREMENT;
-ALTER TABLE `card_group_withdrawals` MODIFY `group_withdrawal_id` int(20) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `card_printrequests` MODIFY `request_id` int(20) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `card_sessions` MODIFY `session_id` int(22) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `card_status_changes` MODIFY `change_id` int(11) NOT NULL AUTO_INCREMENT;
@@ -191,72 +230,3 @@ INSERT INTO `card_currency_denominations` (`currency_id`, `fv_currency_id`, `den
 (16, 16, '10'),
 (16, 16, '50'),
 (16, 16, '20');
-
-INSERT INTO `images` (`image_id`, `access_key`, `extension`, `px_from_left`, `px_from_top`, `width`, `height`) VALUES (80, '', 'png', -606, -360, 1410, 1410);
-
-ALTER TABLE `currencies` ADD `default_design_image_id` INT NULL DEFAULT NULL AFTER `blockchain_id`;
-UPDATE `currencies` SET `default_design_image_id` = '80' WHERE `currency_id` = 6;
-
-ALTER TABLE `card_printrequests` ADD `issuer_id` INT NULL DEFAULT NULL AFTER `card_group_id`;
-ALTER TABLE `card_designs` ADD `issuer_id` INT NULL DEFAULT NULL AFTER `image_id`;
-ALTER TABLE `cards` CHANGE `name_id` `issuer_card_id` INT NULL DEFAULT NULL;
-ALTER TABLE `cards` ADD `secret_hash` VARCHAR(100) NULL DEFAULT NULL AFTER `secret`;
-ALTER TABLE `card_designs` ADD `text_color` VARCHAR(100) NULL DEFAULT NULL AFTER `purity`;
-
-ALTER TABLE `images` ADD `px_from_left` INT NULL DEFAULT NULL AFTER `extension`, ADD `px_from_top` INT NULL DEFAULT NULL AFTER `px_from_left`, ADD `width` INT NULL DEFAULT NULL AFTER `px_from_top`, ADD `height` INT NULL DEFAULT NULL AFTER `width`;
-
-ALTER TABLE `cards`
-  ADD PRIMARY KEY (`card_id`),
-  ADD UNIQUE KEY `name_id` (`name_id`),
-  ADD KEY `design_id` (`design_id`);
-
-ALTER TABLE `card_conversions`
-  ADD PRIMARY KEY (`conversion_id`),
-  ADD KEY `card_id` (`card_id`);
-
-ALTER TABLE `card_currency_balances`
-  ADD PRIMARY KEY (`balance_id`),
-  ADD KEY `card_id` (`card_id`),
-  ADD KEY `currency_id` (`currency_id`);
-
-ALTER TABLE `card_currency_denominations`
-  ADD PRIMARY KEY (`denomination_id`);
-
-ALTER TABLE `card_designs`
-  ADD PRIMARY KEY (`design_id`),
-  ADD KEY `user_id` (`user_id`),
-  ADD KEY `image_id` (`image_id`);
-
-ALTER TABLE `card_failedchecks`
-  ADD PRIMARY KEY (`check_id`);
-
-ALTER TABLE `card_groups`
-  ADD PRIMARY KEY (`card_group_id`);
-
-ALTER TABLE `card_group_withdrawals`
-  ADD PRIMARY KEY (`group_withdrawal_id`),
-  ADD KEY `card_group_id` (`card_group_id`);
-
-ALTER TABLE `card_printrequests`
-  ADD PRIMARY KEY (`request_id`);
-
-ALTER TABLE `card_sessions`
-  ADD PRIMARY KEY (`session_id`),
-  ADD KEY `card_user_id` (`card_user_id`);
-
-ALTER TABLE `card_status_changes`
-  ADD PRIMARY KEY (`change_id`);
-
-ALTER TABLE `card_users`
-  ADD PRIMARY KEY (`card_user_id`);
-
-ALTER TABLE `card_withdrawals`
-  ADD PRIMARY KEY (`withdrawal_id`);
-
-ALTER TABLE `mobile_payments`
-  ADD PRIMARY KEY (`payment_id`),
-  ADD KEY `card_group_id` (`card_group_id`),
-  ADD KEY `currency_id` (`currency_id`),
-  ADD KEY `payment_type` (`payment_type`),
-  ADD KEY `payment_status` (`payment_status`),
-  ADD KEY `beyonic_request_id` (`beyonic_request_id`);

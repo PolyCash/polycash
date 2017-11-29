@@ -1842,7 +1842,8 @@ function fv_currency_id_changed() {
 		var result_obj = JSON.parse(result);
 		cost_per_coin = result_obj['cost_per_coin'];
 		coin_abbreviation = result_obj['coin_abbreviation'];
-		$('#cards_denomination_id').html(result_obj['html']);
+		$('#cards_denomination_id').html(result_obj['denominations_html']);
+		$('#cards_account_id').html(result_obj['accounts_html']);
 	});
 }
 function currency_id_changed() {
@@ -1853,79 +1854,6 @@ function currency_id_changed() {
 	$.get("/ajax/select_fv_currency_by_currency.php?currency_id="+currency_id, function(result) {
 		$('#cards_fv_currency_id').html(result);
 	});
-}
-function set_fees() {
-	var temp_amt_str = "";
-	var fees_str = "";
-	
-	var currency_id = $('#cards_currency_id').val();
-	var fv_currency_id = $('#cards_fv_currency_id').val();
-	var denomination_id = $('#cards_denomination_id').val();
-	
-	var purity = parseInt($('#cards_purity').val());
-	if (currency_id == fv_currency_id) purity = 100;
-	var fee_rate = (-1)*((100-purity)/100);
-	
-	var per_card = card_printing_cost;
-	var howmany;
-	if ($('#cards_howmany').val() == "other") {
-		howmany = $('#cards_howmany_other_val').val();
-		if (howmany == parseInt(howmany)) {}
-		else {
-			alert("Please enter a valid number of cards.");
-			$('#cards_howmany_other_val').focus();
-		}
-	}
-	else howmany = parseInt($('#cards_howmany').val());
-	var print_fees = per_card*howmany;
-	
-	var subtotal = 0;
-	
-	fees_str += "<font class=\"greentext\">$"+card_printing_cost+"</font> per card &times; "+howmany+" cards = <font class=\"greentext\">$"+print_fees.toFixed(2)+"</font>";
-	temp_amt_str = print_fees.toFixed(2);
-	subtotal += parseFloat(temp_amt_str);
-	fees_str += "<br/>";
-	
-	var cards_value_fv = 0;
-	var cards_value_coin = 0;
-	var cards_value_btc = 0;
-	
-	var denom = parseFloat($("#cards_denomination_id option:selected").text());
-	
-	if (fv_currency_id == 1) {
-		cards_value_usd = Math.round(howmany*denom*100)/100;
-		//cards_value_coin = Math.round(cards_value_usd/cost_per_coin*100000)/100000;
-		cards_value_btc = Math.round(cards_value_usd/usd_per_btc*1000000)/1000000;
-		
-		var net_fee_rate = (100-purity)/100;
-		var fee_discount = (net_fee_rate*cards_value_usd).toFixed(2);
-		cards_value_usd = cards_value_usd - fee_discount;
-		
-		temp_amt_str = cards_value_usd.toFixed(2);
-		fees_str += "Load <font class=\"greentext\">$"+temp_amt_str+"</font><br/>\n";
-		fees_str += "Current rate: <font class=\"greentext\">$"+usd_per_btc+"</font> / BTC<br/>\n";
-	}
-	else {
-		cards_value_coin = howmany*denom;
-		cards_value_usd = Math.round(cards_value_coin*cost_per_coin*100)/100;
-		cards_value_btc = Math.round(cards_value_usd/usd_per_btc*1000000)/1000000;
-		
-		temp_amt_str = cards_value_usd.toFixed(2);
-		fees_str += "<font class=\"greentext\">$"+cost_per_coin+"</font> / "+coin_abbreviation+"<br/>\n";
-		fees_str += "Load "+cards_value_coin+" "+coin_abbreviation+" &rarr; <font class=\"greentext\">$"+cards_value_usd+"</font><br/>";
-		fees_str += "Current rate: <font class=\"greentext\">$"+usd_per_btc+"</font> / BTC<br/>\n";
-	}
-	
-	var subtotal = cards_value_usd + print_fees;
-	
-	fees_str += "Please pay: <font class=\"greentext\">$"+subtotal.toFixed(2)+"</font>";
-	
-	fees_str += " &rarr; <div class=\"coinsymbol\"></div>"+cards_value_btc+"</font> BTC";
-	
-	$('#payment_amount').val(cards_value_btc);
-	
-	$('#fees_disp').html(fees_str);
-	show_card_preview();
 }
 function show_card_preview() {
 	var denomination_id = $('#cards_denomination_id').val();
@@ -1986,7 +1914,7 @@ function check_the_code() {
 		}
 	});
 }
-function card_login(create_mode, login_card_id) {
+function card_login(create_mode, login_card_id, issuer_id) {
 	$('#card_account_password').val(Sha256.hash($('#card_account_password').val()));
 	if (create_mode) $('#card_account_password2').val(Sha256.hash($('#card_account_password2').val()));
 	
@@ -1997,7 +1925,7 @@ function card_login(create_mode, login_card_id) {
 	var successful = false;
 	
 	if (!create_mode || card_password == card_password2) {
-		var url = "/ajax/check_code.php?action=login&card_id="+login_card_id+"&password="+card_password+"&code="+$('#redeem_code').val().replace(/-/g, '');
+		var url = "/ajax/check_code.php?action=login&issuer_id="+issuer_id+"&card_id="+login_card_id+"&password="+card_password+"&code="+$('#redeem_code').val().replace(/-/g, '');
 		
 		$.get(url, function(result) {
 			console.log(result);

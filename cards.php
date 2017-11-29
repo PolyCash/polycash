@@ -28,92 +28,147 @@ if (!empty($_REQUEST['action'])) {
 		if ($r->rowCount() == 1) {
 			$denomination = $r->fetch();
 			
-			$db_currency = $app->run_query("SELECT * FROM currencies WHERE currency_id='".$denomination['currency_id']."';")->fetch();
-			
-			$how_many = intval($_REQUEST['cards_howmany']);
-			if ($_REQUEST['cards_howmany'] == "other") $how_many = intval($_REQUEST['cards_howmany_other_val']);
-			
-			$name = $_REQUEST['cards_name'];
-			$title = $_REQUEST['cards_title'];
-			$email = $_REQUEST['cards_email'];
-			$pnum = $_REQUEST['cards_pnum'];
-			$purity = $_REQUEST['cards_purity'];
-			
-			$payment_amount = $_REQUEST['cards_payment_amount'];
-			
-			$check_payment_amount = 0;//$app->calculate_cards_cost($btc_usd_price['price'], $denomination, $purity, $how_many);
-			
-			$q = "INSERT INTO card_designs SET issuer_id='".$this_issuer['issuer_id']."', image_id='".$db_currency['default_design_image_id']."', denomination_id=".$denomination['denomination_id'].", purity=".$app->quote_escape($purity).", display_name=".$app->quote_escape($name).", display_title=".$app->quote_escape($title).", display_email=".$app->quote_escape($email).", display_pnum=".$app->quote_escape($pnum).", time_created='".time()."', user_id='".$thisuser->db_user['user_id']."', redeem_url=".$app->quote_escape($GLOBALS['base_url']).";";
+			$cards_account_id = (int) $_REQUEST['cards_account_id'];
+			$q = "SELECT * FROM currency_accounts WHERE account_id='".$cards_account_id."';";
 			$r = $app->run_query($q);
-			$design_id = $app->last_insert_id();
 			
-			$q = "INSERT INTO card_printrequests SET issuer_id='".$this_issuer['issuer_id']."', secrets_present=1, design_id='".$design_id."', user_id='".$thisuser->db_user['user_id']."', how_many='".$how_many."', print_status='not-printed', pay_status='not-received', time_created='".time()."', lockedin_price='".$check_payment_amount."';";
-			$r = $app->run_query($q);
-			$request_id = $app->last_insert_id();
-			
-			$action = "approve_design";
-		}
-	}
-	
-	if ($action == "approve_design") {
-		if (empty($design_id)) $design_id = (int) $_REQUEST['design_id'];
-		
-		$q = "SELECT * FROM card_designs d JOIN card_printrequests r ON r.design_id=d.design_id JOIN users u ON d.user_id=u.user_id JOIN card_currency_denominations de ON de.denomination_id=d.denomination_id WHERE d.design_id='".$design_id."';";
-		$r = $app->run_query($q);
-		
-		if ($r->rowCount() == 1) {
-			$design = $r->fetch();
-			
-			if ($design['user_id'] == $thisuser->db_user['user_id']) {
-				$denom_amount = floatval(str_replace(",", "", $design['denomination']));
+			if ($r->rowCount() > 0) {
+				$currency_account = $r->fetch();
 				
-				$paper_width = "";
-				if (!empty($_REQUEST['paper_width'])) $paper_width = $_REQUEST['paper_width'];
-				if (empty($paper_width)) $paper_width = "standard";
-				else if ($paper_width == "small") {}
-				
-				if ($design['how_many'] > 0) { // && in_array($design['denomination'], $ok_denoms)
-					$q = "SELECT MAX(issuer_card_id), MAX(group_id) FROM cards c JOIN card_designs d ON c.design_id=d.design_id WHERE d.issuer_id='".$this_issuer['issuer_id']."';";
-					$r = $app->run_query($q);
-					$max_id = $r->fetch();
+				if ($currency_account['user_id'] == $thisuser->db_user['user_id']) {
+					$db_currency = $app->run_query("SELECT * FROM currencies WHERE currency_id='".$denomination['currency_id']."';")->fetch();
+					$fv_currency = $app->run_query("SELECT * FROM currencies WHERE currency_id='".$denomination['fv_currency_id']."';")->fetch();
 					
-					$card_group_id = $max_id[1]+1;
+					$fv_blockchain = new Blockchain($app, $fv_currency['blockchain_id']);
 					
-					$first_id = 1;
-					if ($max_id[0] > 0) $first_id = $max_id[0]+1;
+					$how_many = intval($_REQUEST['cards_howmany']);
+					if ($_REQUEST['cards_howmany'] == "other") $how_many = intval($_REQUEST['cards_howmany_other_val']);
 					
-					for ($i=0; $i<$design['how_many']; $i++) {
-						$card_id = $i+$first_id;
-						$secret = $app->random_number(16);
-						$secret_hash = $app->card_secret_to_hash($secret);
-						$qq = "INSERT INTO cards SET design_id='".$design['design_id']."', purity='".$design['purity']."', group_id='".$card_group_id."', secret='".$secret."', secret_hash=".$app->quote_escape($secret_hash).", issuer_card_id='".$card_id."', mint_time='".time()."', currency_id='".$design['currency_id']."', fv_currency_id='".$design['fv_currency_id']."', amount='".$denom_amount."', status='issued';";
-						$rr = $app->run_query($qq);
+					if ($how_many > 0) {
+						$cost = $how_many*$denomination['denomination']*pow(10, $fv_blockchain->db_blockchain['decimal_places']);
+						$fee = 0.001*pow(10, $fv_blockchain->db_blockchain['decimal_places']);
+						$account_balance = $app->account_balance($currency_account['account_id']);
+						
+						if ($cost+$fee <= $account_balance) {
+							$io_ids = array();
+							$input_sum = 0;
+							$first_address_id = false;
+							$keep_looping = true;
+							
+							$balance_q = "SELECT io.* FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$currency_account['account_id']."' AND io.spend_status='unspent';";
+							$balance_r = $app->run_query($balance_q);
+							
+							while ($keep_looping && $io = $balance_r->fetch()) {
+								array_push($io_ids, $io['io_id']);
+								
+								if (empty($first_address_id)) $first_address_id = $io['address_id'];
+								
+								$input_sum += $io['amount'];
+								if ($input_sum >= $cost+$fee) $keep_looping = false;
+							}
+							
+							$output_amounts = array();
+							$output_address_ids = array();
+							
+							for ($i=0; $i<$how_many; $i++) {
+								$address_key = $app->new_address_key($fv_currency['currency_id'], $currency_account);
+								array_push($output_amounts, $denomination['denomination']*pow(10, $fv_blockchain->db_blockchain['decimal_places']));
+								array_push($output_address_ids, $address_key['address_id']);
+							}
+							
+							if ($cost+$fee < $input_sum) {
+								array_push($output_amounts, $input_sum-$cost-$fee);
+								array_push($output_address_ids, $first_address_id);
+							}
+							
+							$error_message = false;
+							$transaction_id = $fv_blockchain->create_transaction("transaction", $output_amounts, false, $io_ids, $output_address_ids, $fee);
+							
+							if ($transaction_id) {
+								$db_transaction = $app->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
+								
+								$name = $_REQUEST['cards_name'];
+								$title = $_REQUEST['cards_title'];
+								$email = $_REQUEST['cards_email'];
+								$pnum = $_REQUEST['cards_pnum'];
+								$purity = $_REQUEST['cards_purity'];
+								
+								$q = "INSERT INTO card_designs SET issuer_id='".$this_issuer['issuer_id']."', image_id='".$db_currency['default_design_image_id']."', denomination_id=".$denomination['denomination_id'].", purity=".$app->quote_escape($purity).", display_name=".$app->quote_escape($name).", display_title=".$app->quote_escape($title).", display_email=".$app->quote_escape($email).", display_pnum=".$app->quote_escape($pnum).", time_created='".time()."', user_id='".$thisuser->db_user['user_id']."', redeem_url=".$app->quote_escape($GLOBALS['base_url']);
+								if (!empty($fv_currency['default_design_text_color'])) $q .= ", text_color=".$app->quote_escape($fv_currency['default_design_text_color']);
+								$q .= ";";
+								$r = $app->run_query($q);
+								$design_id = $app->last_insert_id();
+								
+								$q = "INSERT INTO card_printrequests SET issuer_id='".$this_issuer['issuer_id']."', secrets_present=1, design_id='".$design_id."', user_id='".$thisuser->db_user['user_id']."', how_many='".$how_many."', print_status='not-printed', pay_status='not-received', time_created='".time()."';";
+								$r = $app->run_query($q);
+								$request_id = $app->last_insert_id();
+								
+								$paper_width = "";
+								if (!empty($_REQUEST['paper_width'])) $paper_width = $_REQUEST['paper_width'];
+								if (empty($paper_width)) $paper_width = "standard";
+								else if ($paper_width == "small") {}
+								
+								$q = "SELECT MAX(issuer_card_id), MAX(group_id) FROM cards c JOIN card_designs d ON c.design_id=d.design_id WHERE d.issuer_id='".$this_issuer['issuer_id']."';";
+								$r = $app->run_query($q);
+								$max_id = $r->fetch();
+								
+								$card_group_id = $max_id[1]+1;
+								
+								$first_id = 1;
+								if ($max_id[0] > 0) $first_id = $max_id[0]+1;
+								
+								for ($i=0; $i<$how_many; $i++) {
+									$card_id = $i+$first_id;
+									$secret = $app->random_number(16);
+									$secret_hash = $app->card_secret_to_hash($secret);
+									$qq = "INSERT INTO cards SET design_id='".$design_id."', purity='".$purity."', group_id='".$card_group_id."', secret='".$secret."', secret_hash=".$app->quote_escape($secret_hash).", issuer_card_id='".$card_id."', mint_time='".time()."', currency_id='".$db_currency['currency_id']."', fv_currency_id='".$fv_currency['currency_id']."', amount='".$denomination['denomination']."', status='issued', io_tx_hash=".$app->quote_escape($db_transaction['tx_hash']).", io_out_index='".$i."';";
+									$rr = $app->run_query($qq);
+								}
+								
+								$q = "UPDATE card_printrequests SET card_group_id='".$card_group_id."' WHERE request_id='".$request_id."';";
+								$r = $app->run_query($q);
+								
+								$q = "UPDATE card_designs SET status='printed' WHERE design_id='".$design_id."';";
+								$r = $app->run_query($q);
+								
+								$error_message = $how_many." cards have been created, next please <a href=\"/cards/?action=print_design&design_id=".$design_id."\">download the PDFs</a> or <a href=\"/explorer/blockchains/".$fv_blockchain->db_blockchain['url_identifier']."/transactions/".$db_transaction['tx_hash']."\">view the transaction</a>.<br/>\n";
+								$error_class = "error";
+								
+								$action = "manage";
+								$nav_subtab_selected = "manage";
+							}
+							else {
+								$error_message = "Payment error: failed to create a transaction on the blockchain.";
+								$error_class = "error";
+							}
+						}
+						else {
+							$error_message = "Payment error: the account you selected cannot afford to generate these cards.";
+							$error_class = "error";
+						}
 					}
-					
-					$q = "UPDATE card_printrequests SET card_group_id='".$card_group_id."' WHERE request_id='".$design['request_id']."';";
-					$r = $app->run_query($q);
-					
-					$q = "UPDATE card_designs SET status='printed' WHERE design_id='".$design['design_id']."';";
-					$r = $app->run_query($q);
-					
-					$from = $first_id;
-					$to = $first_id + $design['how_many'] - 1;
-				
-					$error_message = $design['how_many']." cards have been created, next please <a href=\"/?action=print_design&design_id=".$design['design_id']."\">download the PDFs</a>.<br/>\n";
-					$error_class = "nostyle";
+					else {
+						$error_message = "Error: invalid quantity of cards.";
+						$error_class = "error";
+					}
 				}
 				else {
-					$error_message = "Error, invalid denomination or number of cards.";
+					$error_message = "Error: you don't have permission to perform this action.";
 					$error_class = "error";
 				}
 			}
 			else {
-				$error_message = "Error, you don't have permission to perform this action.";
+				$error_message = "Error: invalid account selected.";
 				$error_class = "error";
 			}
 		}
+		else {
+			$error_message = "Error: invalid denomination.";
+			$error_class = "error";
+		}
 	}
-	else if ($action == "print_design") {
+	
+	if ($action == "print_design") {
 		$design_id = (int) $_REQUEST['design_id'];
 		
 		$q = "SELECT * FROM card_designs d JOIN card_printrequests r ON r.design_id=d.design_id JOIN users u ON d.user_id=u.user_id WHERE d.design_id='".$design_id."';";
@@ -253,6 +308,9 @@ if (!empty($_REQUEST['action'])) {
 			$error_message = "Error, invalid denomination or number of cards.";
 			$error_class = "error";
 		}
+		
+		$action = "manage";
+		$nav_subtab_selected = "manage";
 	}
 	else if ($action == "activate_cards") {
 		$printrequest_id = (int) $_REQUEST['printrequest_id'];
@@ -281,6 +339,9 @@ if (!empty($_REQUEST['action'])) {
 				}
 			}
 		}
+		
+		$action = "manage";
+		$nav_subtab_selected = "manage";
 	}
 	else if ($action == "wipe_secrets") {
 		$printrequest_id = (int) $_REQUEST['printrequest_id'];
@@ -310,6 +371,9 @@ if (!empty($_REQUEST['action'])) {
 			$error_message = "Error: invalid print request ID.";
 			$error_class = "error";
 		}
+		
+		$action = "manage";
+		$nav_subtab_selected = "manage";
 	}
 	else if ($action == "change_card_status") {
 		$card_id = (int) $_REQUEST['card_id'];
@@ -369,7 +433,6 @@ include('includes/html_start.php');
 			$(document).ready(function() {
 				cards_howmany_changed();
 				fv_currency_id_changed();
-				set_fees();
 			});
 			</script>
 			
@@ -399,7 +462,15 @@ include('includes/html_start.php');
 						<div class="form-group">
 							<label for="cards_fv_currency_id">Which currency should the cards hold?</label>
 							
-							<select id="cards_fv_currency_id" class="form-control" name="cards_fv_currency_id" onchange="fv_currency_id_changed(); set_fees();">
+							<select id="cards_fv_currency_id" class="form-control" name="cards_fv_currency_id" onchange="fv_currency_id_changed();">
+								<option value="">-- Please Select --</option>
+							</select>
+						</div>
+						
+						<div class="form-group">
+							<label for="cards_account_id">Which account should pay for these cards?</label>
+							
+							<select id="cards_account_id" class="form-control" name="cards_account_id">
 								<option value="">-- Please Select --</option>
 							</select>
 						</div>
@@ -480,8 +551,6 @@ include('includes/html_start.php');
 						<div id="cards_preview" style="display: none; padding: 5px;">&nbsp;</div>
 						<br/>
 						
-						<div id="fees_disp"></div>
-						
 						<input class="btn btn-primary" type="submit" value="Save &amp; Continue" />
 					</form>
 				</div>
@@ -542,10 +611,12 @@ include('includes/html_start.php');
 			echo "</div></div>\n";
 		}
 		else {
+			if (empty($my_cards)) $my_cards = array();
 			$reference_currency = $app->get_reference_currency();
 			$btc_currency = $app->get_currency_by_abbreviation('btc');
 			$currency_prices = $app->fetch_currency_prices();
-			$networth = $app->calculate_cards_networth($my_cards);
+			if (empty($my_cards)) $networth = 0;
+			else $networth = $app->calculate_cards_networth($my_cards);
 			?>
 			<script type="text/javascript">
 			var selected_card = -1;
@@ -588,11 +659,12 @@ include('includes/html_start.php');
 					</div>
 					<div class="panel-body">
 						<?php
+						echo "You have ".count($my_cards)." card";
+						if (count($my_cards) != 1) echo "s";
+						echo " in this user account. ";
+						
 						if (count($my_cards) > 1) {
-							echo "You have ".(count($my_cards)-1)." other cards. ";
-							//<a href="" onclick="$('#display_hotcards').toggle('fast'); return false;">See my cards</a>
 							?>
-							
 							<div id="display_hotcards">
 								<?php
 								for ($i=0; $i<count($my_cards); $i++) {
@@ -617,100 +689,66 @@ include('includes/html_start.php');
 							*/
 						}
 						?>
-						<div class="card_group_holder"><?php
-							for ($i=0; $i<count($my_cards); $i++) {
-								$q = "SELECT * FROM card_withdrawals WHERE withdraw_method='card_account' AND card_id='".$my_cards[$i]['card_id']."' ORDER BY withdrawal_id ASC LIMIT 1;";
-								$r = $app->run_query($q);
-								$withdrawal = $r->fetch();
-								?>
-								<div class="card_block" id="card_block<?php echo $i; ?>" style="display: none;">
-									<?php
-									/*if ($my_cards[$i]['currency'] == "usd") {
-										echo 'You exchanged this <font style="color: #0a0; font-size: inherit;">$'.number_format($my_cards[$i]['amount'], 2).'</font>';
-										echo ' card for '.number_format($withdrawal['btc'], 5).' bitcoins on '.date("n/j/Y", $withdrawal['withdraw_time']).'.';
-									}
-									else {
-										echo "You redeemed this $".$my_cards[$i]['amount']." ".$my_cards[$i]['currency_abbrev']." card on ".date("n/j/Y", $withdrawal['withdraw_time']).'.';
-									}*/
+						<div><?php
+							if (!empty($my_cards)) {
+								for ($i=0; $i<count($my_cards); $i++) {
 									?>
-									<div style="display: block; overflow: hidden;">
-										<div class="row">
-											<div class="col-xs-4">Card ID</div><div class="col-xs-8">#<?php echo $my_cards[$i]['issuer_card_id']; ?></div>
-										</div>
-										<div class="row">
-											<div class="col-xs-4">Minted</div><div class="col-xs-8"><?php echo $app->format_seconds(time() - $my_cards[$i]['mint_time']); ?> ago</div>
-										</div>
-										<div class="row">
-											<div class="col-xs-4">Card denomination</div>
-											<div class="col-xs-8">
-												<?php
-												echo $app->format_bignum($my_cards[$i]['amount'])." ".$my_cards[$i]['abbreviation'];
-												?>
-											</div>
-										</div>
+									<div class="card_block" id="card_block<?php echo $i; ?>" style="display: none;">
 										<?php
-										if ($my_cards[$i]['purity'] != 100) { ?>
+										/*if ($my_cards[$i]['currency'] == "usd") {
+											echo 'You exchanged this <font style="color: #0a0; font-size: inherit;">$'.number_format($my_cards[$i]['amount'], 2).'</font>';
+											echo ' card for '.number_format($withdrawal['btc'], 5).' bitcoins on '.date("n/j/Y", $withdrawal['withdraw_time']).'.';
+										}
+										else {
+											echo "You redeemed this $".$my_cards[$i]['amount']." ".$my_cards[$i]['currency_abbrev']." card on ".date("n/j/Y", $withdrawal['withdraw_time']).'.';
+										}*/
+										?>
+										<div style="display: block; overflow: hidden;">
 											<div class="row">
-												<div class="col-xs-4">Fees</div>
-												<div class="col-xs-8" style="color: #<?php
-													$fees = $app->get_card_fees($my_cards[$i]);
-													if ($fees > 0) echo "f00"; else echo "0a0;";
-													?>"><?php echo $app->format_bignum($fees)." ".$my_cards[$i]['abbreviation']; ?>
+												<div class="col-xs-4">Card ID</div><div class="col-xs-8">#<?php echo $my_cards[$i]['issuer_card_id']; ?></div>
+											</div>
+											<div class="row">
+												<div class="col-xs-4">Minted</div><div class="col-xs-8"><?php echo $app->format_seconds(time() - $my_cards[$i]['mint_time']); ?> ago</div>
+											</div>
+											<div class="row">
+												<div class="col-xs-4">Card denomination</div>
+												<div class="col-xs-8">
+													<?php
+													echo $app->format_bignum($my_cards[$i]['amount'])." ".$my_cards[$i]['abbreviation'];
+													?>
 												</div>
 											</div>
-											<?php /*
-											<div class="col-xs-4">Exchanged at</div><div class="col-xs-8"><font style="color: #0a0; font-size: inherit;">$<?php echo number_format($withdrawal['usd_per_btc'], 2); ?></font> / BTC</div><br/>
-											
-											<div class="col-xs-4">Bitcoins purchased</div><div class="col-xs-8"><div class="bitsym"></div><?php echo number_format($withdrawal['btc'], 5); ?></div><br/>
 											<?php
-											*/
-										}
-										?>
-										<div class="row">
-											<div class="col-xs-4">You have</div>
-											<div class="col-xs-8">
+											if ($my_cards[$i]['purity'] != 100) { ?>
+												<div class="row">
+													<div class="col-xs-4">Fees</div>
+													<div class="col-xs-8" style="color: #<?php
+														$fees = $app->get_card_fees($my_cards[$i]);
+														if ($fees > 0) echo "f00"; else echo "0a0;";
+														?>"><?php echo $app->format_bignum($fees)." ".$my_cards[$i]['abbreviation']; ?>
+													</div>
+												</div>
+												<?php /*
+												<div class="col-xs-4">Exchanged at</div><div class="col-xs-8"><font style="color: #0a0; font-size: inherit;">$<?php echo number_format($withdrawal['usd_per_btc'], 2); ?></font> / BTC</div><br/>
+												
+												<div class="col-xs-4">Bitcoins purchased</div><div class="col-xs-8"><div class="bitsym"></div><?php echo number_format($withdrawal['btc'], 5); ?></div><br/>
 												<?php
-												$balances = $app->get_card_currency_balances($my_cards[$i]['card_id']);
-												foreach ($balances as $j => $balance) {
-													echo $app->format_bignum($balance['balance'])." ".$balance['abbreviation']." ";
-												}
+												*/
+											}
+											
+											$fv_currency = $app->fetch_currency_by_id($my_cards[$i]['fv_currency_id']);
+											
+											if ($my_cards[$i]['status'] == "claimed") {
 												?>
-											</div>
-										</div>
-										<div class="row">
-											<div class="col-xs-4">Initial Value</div>
-											<div class="col-xs-8">
+												<button class="btn btn-success" style="margin-top: 15px;">Claim <?php echo $app->format_bignum($my_cards[$i]['amount'])." ".$fv_currency['short_name_plural']; ?></button>
 												<?php
-												$conversion_rate = $app->currency_conversion_rate($reference_currency['currency_id'], $my_cards[$i]['fv_currency_id']);
-												$init_value = $my_cards[$i]['amount'] - $app->get_card_fees($my_cards[$i]);
-												$init_value_ref = round($init_value/$conversion_rate['conversion_rate'], 2);
-												echo $app->format_bignum($init_value_ref)." ".$reference_currency['abbreviation'];
-												?>
-											</div>
+											}
+											?>
+											<div id="messages" style="margin-top: 15px; display: block;"></div>
 										</div>
-										<div class="row">
-											<div class="col-xs-4">Current Value</div>
-											<div class="col-xs-8">
-												<?php
-												$this_val = round($app->calculate_card_networth($my_cards[$i], $balances, $currency_prices), 2);
-												echo $app->format_bignum($this_val)." ".$reference_currency['abbreviation'];
-												?>
-											</div>
-										</div>
-										<div class="row">
-											<div class="col-xs-4">Total Gain or Loss</div>
-											<div class="col-xs-8">
-												<?php
-												$this_prof = $this_val - $init_value_ref;
-												echo $app->format_bignum($this_prof)." ".$reference_currency['abbreviation'];
-												?>
-											</div>
-										</div>
-										
-										<div id="messages" style="margin-top: 15px; display: block;"></div>
 									</div>
-								</div>
-								<?php
+									<?php
+								}
 							}
 							?>
 						</div>
@@ -720,13 +758,14 @@ include('includes/html_start.php');
 			<div id="section_add_card" style="display: none;">
 				<div class="panel panel-info">
 					<div class="panel-heading">
-						<div class="panel-title">Log into a card to add it to this account</div>
+						<div class="panel-title">Log in to a card to add it to this account</div>
 					</div>
 					<div class="panel-body">
 						<?php
 						$ask4nameid = TRUE;
 						$login_title = "";
 						$card_login_card_id = "$('#issuer_card_id').val()";
+						$card_login_issuer_id = "$('#issuer_id').val()";
 						include(dirname(__FILE__)."/includes/html_card_login.php");
 						?>
 					</div>

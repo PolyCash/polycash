@@ -33,7 +33,7 @@ if ($r->rowCount() == 1) {
 				else {
 					$_SESSION['code'] = $code;
 					
-					$success = $app->try_create_card_account($card, $code_hash, $password);
+					$success = $app->try_create_card_account($card, $thisuser, $code_hash, $password);
 					if ($success[0]) {
 						//send_giftcard_redeemed_email($thisuser, $seller, $card, $btc_amount);
 						echo "1";
@@ -72,7 +72,6 @@ if ($r->rowCount() == 1) {
 						$expire_time = time()+3600*24;
 						
 						$query = "INSERT INTO card_sessions SET card_user_id=".$card_user['card_user_id'];
-						if (!empty($thisuser)) $query .= ", user_id='".$thisuser['user_id']."'";
 						$query .= ", session_key=".$app->quote_escape($session_key).", login_time='".time()."', expire_time='".$expire_time."'";
 						if ($GLOBALS['pageview_tracking_enabled']) $query .= ", ip_address=".$app->quote_escape($_SERVER['REMOTE_ADDR']);
 						$query .= ";";

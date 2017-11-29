@@ -791,6 +791,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							$filter_complete = true;
 						}
 						else $to_block_id = $last_block_id;
+						if ($to_block_id === false) $to_block_id = 0;
 						
 						$from_block_id = $to_block_id-$blocks_per_section+1;
 						if ($from_block_id < 0) $from_block_id = 0;

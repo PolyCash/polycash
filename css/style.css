@@ -487,11 +487,6 @@ footer {
 	font-weight: bold;
 	font-size: 28px;
 }
-.card_group_holder {
-	padding: 0px;
-	margin: 0px;
-	overflow: hidden;
-}
 .card_small {
 	display: inline-block;
 	width: 90px;
