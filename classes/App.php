@@ -2406,5 +2406,9 @@ class App {
 		$balance = $balance_r->fetch();
 		return $balance['SUM(io.amount)'];
 	}
+	
+	public function card_public_vars() {
+		return array('issuer_card_id', 'mint_time', 'amount', 'purity', 'status');
+	}
 }
 ?>
