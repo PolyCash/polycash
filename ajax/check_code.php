@@ -5,7 +5,7 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->in
 
 $card_id = (int) $_REQUEST['card_id'];
 
-$q = "SELECT c.* FROM cards c JOIN card_designs d ON c.design_id=d.design_id WHERE c.card_id=".$app->quote_escape($card_id).";";
+$q = "SELECT c.* FROM cards c LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.card_id=".$app->quote_escape($card_id).";";
 $r = $app->run_query($q);
 
 $code = $_REQUEST['code'];

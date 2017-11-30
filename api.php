@@ -87,7 +87,7 @@ if ($uri_parts[1] == "api") {
 		foreach ($card_public_vars as $var_name) {
 			$q .= "c.".$var_name.", ";
 		}
-		$q = substr($q, 0, strlen($q)-2)." FROM cards c JOIN card_designs d ON c.design_id=d.design_id WHERE d.issuer_id='".$this_issuer['issuer_id']."' AND ";
+		$q = substr($q, 0, strlen($q)-2)." FROM cards c LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.issuer_id='".$this_issuer['issuer_id']."' AND ";
 		if ($uri_parts[2] == "card") $q .= "c.issuer_card_id='".$card_id."'";
 		else $q .= "c.issuer_card_id >= ".$from_card_id." AND c.issuer_card_id <= ".$to_card_id;
 		$q .= ";";

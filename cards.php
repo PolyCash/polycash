@@ -410,6 +410,47 @@ if (!empty($_REQUEST['action'])) {
 			$error_class = "error";
 		}
 	}
+	else if ($action == "import_cards") {
+		$issuer_name = urldecode($_REQUEST['issuer_name']);
+		$from_card_id = (int) $_REQUEST['from_card_id'];
+		$to_card_id = (int) $_REQUEST['to_card_id'];
+		if ($issuer_name[strlen($issuer_name)-1] == "/") $issuer_name = substr($issuer_name, 0, strlen($issuer_name)-1);
+		
+		$issuer = $app->get_issuer_by_server_name($issuer_name);
+		
+		$remote_url = $issuer_name."/api/cards/".$from_card_id."-".$to_card_id;
+		$remote_response = json_decode(file_get_contents($remote_url));
+		echo $remote_url." ";
+		var_dump($remote_response); die();
+		
+		$card_public_vars = $app->card_public_vars();
+		
+		$add_count = 0;
+		
+		if (!empty($remote_response) && count($remote_response->cards) > 0) {
+			for ($i=0; $i<count($remote_response->cards); $i++) {
+				$q = "SELECT * FROM cards WHERE issuer_id='".$issuer['issuer_id']."' AND issuer_card_id='".$remote_response->cards[$i]['issuer_card_id']."';";
+				$r = $app->run_query($q);
+				
+				if ($r->rowCount() == 0) {
+					$q = "INSERT INTO cards SET issuer_id='".$issuer['issuer_id']."'";
+					for ($j=0; $j<count($card_public_vars); $j++) {
+						$q .= $card_public_vars[$j]."=".$app->quote_escape($remote_response->cards[$i][$card_public_vars[$j]]).", ";
+					}
+					$q = substr($q, 0, strlen($q)-2).";";
+					$r = $app->run_query($q);
+					
+					$add_count++;
+				}
+			}
+		}
+		
+		$error_message = $add_count." cards have been imported.";
+		$error_class = "error";
+		
+		$action = "manage";
+		$nav_subtab_selected = "manage";
+	}
 }
 
 include('includes/html_start.php');
@@ -609,6 +650,34 @@ include('includes/html_start.php');
 				echo "</div>\n";
 			}
 			echo "</div></div>\n";
+			?>
+			<div class="panel panel-info">
+				<div class="panel-heading">
+					<div class="panel-title">Import Cards</div>
+				</div>
+				<div class="panel-body">
+					<p>
+						To import cards from a remote card issuer, please enter the issuer's website URL and the range of card IDs that you wish to import.
+					</p>
+					<form action="/cards/" method="get">
+						<input type="hidden" name="action" value="import_cards" />
+						<div class="form-group">
+							<label for="issuer_name">From website:</label>
+							<input type="text" class="form-control" name="issuer_name" placeholder="http://" />
+						</div>
+						<div class="form-group">
+							<label for="from_card_id">From card ID:</label>
+							<input type="text" class="form-control" name="from_card_id" />
+						</div>
+						<div class="form-group">
+							<label for="to_card_id">To card ID:</label>
+							<input type="text" class="form-control" name="to_card_id" />
+						</div>
+						<input type="submit" class="btn btn-primary" value="Import Cards" />
+					</form>
+				</div>
+			</div>
+			<?php
 		}
 		else {
 			if (empty($my_cards)) $my_cards = array();

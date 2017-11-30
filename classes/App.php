@@ -2302,6 +2302,7 @@ class App {
 		if (substr($server_name, 0, 7) == "http://") $server_name = substr($server_name, 7, strlen($server_name)-7);
 		if (substr($server_name, 0, 8) == "https://") $server_name = substr($server_name, 8, strlen($server_name)-8);
 		if (substr($server_name, 0, 4) == "www.") $server_name = substr($server_name, 4, strlen($server_name)-4);
+		if ($server_name[strlen($server_name)-1] == "/") $server_name = substr($server_name, 0, strlen($server_name)-1);
 		
 		$q = "SELECT * FROM card_issuers WHERE issuer_identifier=".$this->quote_escape($server_name).";";
 		$r = $this->run_query($q);

@@ -17,7 +17,7 @@ include('includes/html_start.php');
 		else $card_id = (int) $uri_parts[3];
 		
 		if (!empty($card_id) && !empty($issuer_id)) {
-			$q = "SELECT c.*, d.issuer_id FROM cards c JOIN card_designs d ON c.design_id=d.design_id WHERE c.issuer_card_id=".$app->quote_escape($card_id)." AND d.issuer_id='".$issuer_id."';";
+			$q = "SELECT c.* FROM cards c LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.issuer_card_id=".$app->quote_escape($card_id)." AND c.issuer_id='".$issuer_id."';";
 			$r = $app->run_query($q);
 			
 			if ($r->rowCount() > 0) {
@@ -28,6 +28,7 @@ include('includes/html_start.php');
 				$printrequest_q = "SELECT * FROM card_printrequests pr JOIN card_designs d ON pr.design_id=d.design_id WHERE d.design_id='".$card['design_id']."';";
 				$printrequest_r = $app->run_query($printrequest_q);
 				if ($printrequest_r->rowCount() > 0) $printrequest = $printrequest_r->fetch();
+				else $printrequest = false;
 				
 				$currency = $app->run_query("SELECT * FROM currencies WHERE currency_id='".$card['currency_id']."';")->fetch();
 				$fv_currency = $app->run_query("SELECT * FROM currencies WHERE currency_id='".$card['fv_currency_id']."';")->fetch();

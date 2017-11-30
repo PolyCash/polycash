@@ -20,3 +20,7 @@ ALTER TABLE `card_issuers`
 ALTER TABLE `card_issuers`
   MODIFY `issuer_id` int(11) NOT NULL AUTO_INCREMENT;
 COMMIT;
+
+ALTER TABLE `cards` ADD `issuer_id` INT NULL DEFAULT NULL AFTER `design_id`;
+UPDATE cards c JOIN card_designs d ON c.design_id=d.design_id SET c.issuer_id=d.issuer_id;
+ALTER TABLE `card_designs` DROP `issuer_id`;
