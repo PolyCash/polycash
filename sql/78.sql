@@ -11,6 +11,7 @@ CREATE TABLE `card_issuers` (
   `issuer_id` int(11) NOT NULL,
   `issuer_identifier` varchar(100) DEFAULT NULL,
   `issuer_name` varchar(100) DEFAULT NULL,
+  `base_url` VARCHAR(255) NULL DEFAULT NULL,
   `time_created` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 

@@ -45,37 +45,27 @@ if (strlen($session_key) > 0) {
 		$session = false;
 	}
 	
-	$q = "SELECT * FROM card_sessions s JOIN card_users u ON s.card_user_id=u.card_user_id WHERE s.session_key=".$app->quote_escape($session_key);
+	$q = "SELECT * FROM cards c JOIN card_users u ON c.card_id=u.card_id JOIN card_sessions s ON s.card_user_id=u.card_user_id WHERE s.session_key=".$app->quote_escape($session_key);
 	if ($GLOBALS['pageview_tracking_enabled']) $q .= " AND s.ip_address=".$app->quote_escape($_SERVER['REMOTE_ADDR']);
-	$q .= " AND ".time()." < s.expire_time AND s.logout_time IS NULL GROUP BY s.card_user_id;";
+	$q .= " AND ".time()." < s.expire_time AND s.logout_time IS NULL GROUP BY c.card_id;";
 	$r = $app->run_query($q);
-	$distinct_cards = array();
 	
 	if ($r->rowCount() > 0) {
 		$j=0;
 		while($card_session = $r->fetch()) {
 			if ($j == 0) $this_card_session = $card_session;
-			$distinct_cards[$j] = $card_session['card_id'];
 			
 			// Make sure the user has a maximum of 1 active gift card session
 			if ($j > 0) {
 				$qq = "UPDATE card_sessions SET logout_time='".(time()-1)."' WHERE session_id='".$card_session['session_id']."';";
 				$rr = $app->run_query($qq);
 			}
-			$j++;
-		}
-		
-		$q = "SELECT c.*, u.*, curr.*, c.amount AS amount FROM cards c JOIN card_users u ON c.card_id=u.card_id JOIN currencies curr ON c.fv_currency_id=curr.currency_id WHERE c.card_id IN (".implode(",", $distinct_cards).")";
-		$q .= ";";
-		$r = $app->run_query($q);
-		$i = 0;
-		
-		while ($my_card = $r->fetch()) {
-			if (empty($thisuser)) {
-				$thisuser = new User($app, $my_card['user_id']);
+			
+			if (empty($thisuser) && !empty($card_session['user_id'])) {
+				$thisuser = new User($app, $card_session['user_id']);
 			}
-			$my_cards[$i] = $my_card;
-			$i++;
+			
+			$j++;
 		}
 	}
 }

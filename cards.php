@@ -10,7 +10,7 @@ $nav_subtab_selected = "cards";
 if (!empty($_REQUEST['action'])) {
 	$action = $_REQUEST['action'];
 	
-	$this_issuer = $app->get_issuer_by_server_name($GLOBALS['site_domain']);
+	$this_issuer = $app->get_issuer_by_server_name($GLOBALS['base_url']);
 	
 	if ($action == "create") {
 		$nav_subtab_selected = "create";
@@ -419,23 +419,24 @@ if (!empty($_REQUEST['action'])) {
 		$issuer = $app->get_issuer_by_server_name($issuer_name);
 		
 		$remote_url = $issuer_name."/api/cards/".$from_card_id."-".$to_card_id;
-		$remote_response = json_decode(file_get_contents($remote_url));
-		echo $remote_url." ";
-		var_dump($remote_response); die();
-		
+		$remote_response = get_object_vars(json_decode(file_get_contents($remote_url)));
 		$card_public_vars = $app->card_public_vars();
 		
 		$add_count = 0;
 		
-		if (!empty($remote_response) && count($remote_response->cards) > 0) {
-			for ($i=0; $i<count($remote_response->cards); $i++) {
-				$q = "SELECT * FROM cards WHERE issuer_id='".$issuer['issuer_id']."' AND issuer_card_id='".$remote_response->cards[$i]['issuer_card_id']."';";
+		if (!empty($remote_response) && count($remote_response['cards']) > 0) {
+			for ($i=0; $i<count($remote_response['cards']); $i++) {
+				$import_card = get_object_vars($remote_response['cards'][$i]);
+				$q = "SELECT * FROM cards WHERE issuer_id='".$issuer['issuer_id']."' AND issuer_card_id='".$import_card['issuer_card_id']."';";
 				$r = $app->run_query($q);
 				
 				if ($r->rowCount() == 0) {
-					$q = "INSERT INTO cards SET issuer_id='".$issuer['issuer_id']."'";
+					$fv_currency = $app->get_currency_by_abbreviation($import_card['currency_abbreviation']);
+					$currency = $app->get_currency_by_abbreviation($import_card['fv_currency_abbreviation']);
+					
+					$q = "INSERT INTO cards SET issuer_id='".$issuer['issuer_id']."', currency_id='".$currency['currency_id']."', fv_currency_id='".$fv_currency['currency_id']."', ";
 					for ($j=0; $j<count($card_public_vars); $j++) {
-						$q .= $card_public_vars[$j]."=".$app->quote_escape($remote_response->cards[$i][$card_public_vars[$j]]).", ";
+						$q .= $card_public_vars[$j]."=".$app->quote_escape($import_card[$card_public_vars[$j]]).", ";
 					}
 					$q = substr($q, 0, strlen($q)-2).";";
 					$r = $app->run_query($q);
@@ -451,6 +452,16 @@ if (!empty($_REQUEST['action'])) {
 		$action = "manage";
 		$nav_subtab_selected = "manage";
 	}
+}
+
+$q = "SELECT c.*, u.*, curr.*, c.amount AS amount FROM cards c JOIN card_users u ON c.card_id=u.card_id JOIN currencies curr ON c.fv_currency_id=curr.currency_id WHERE c.user_id='".$thisuser->db_user['user_id']."';";
+$r = $app->run_query($q);
+$i = 0;
+$my_cards = array();
+
+while ($my_card = $r->fetch()) {
+	$my_cards[$i] = $my_card;
+	$i++;
 }
 
 include('includes/html_start.php');
@@ -773,6 +784,12 @@ include('includes/html_start.php');
 										}*/
 										?>
 										<div style="display: block; overflow: hidden;">
+											<div class="row">
+												<div class="col-xs-4">Issuer</div><div class="col-xs-8"><?php
+												$issuer = $app->run_query("SELECT * FROM card_issuers WHERE issuer_id='".$my_cards[$i]['issuer_id']."';")->fetch();
+												echo $issuer['issuer_identifier'];
+												?></div>
+											</div>
 											<div class="row">
 												<div class="col-xs-4">Card ID</div><div class="col-xs-8">#<?php echo $my_cards[$i]['issuer_card_id']; ?></div>
 											</div>

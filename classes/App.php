@@ -2108,8 +2108,8 @@ class App {
 		return $result;
 	}
 	
-	public function try_create_card_account($card, $thisuser, $supplied_secret_hash, $password) {
-		if ($card['secret_hash'] == $supplied_secret_hash && $card['status'] == "sold") {
+	public function try_create_card_account($card, $thisuser, $password) {
+		if ($card['status'] == "sold") {
 			if (empty($thisuser)) {
 				$alias = $this->random_string(16);
 				$password = $this->random_string(16);
@@ -2299,6 +2299,7 @@ class App {
 	
 	public function get_issuer_by_server_name($server_name) {
 		$server_name = trim(strtolower(strip_tags($server_name)));
+		$initial_server_name = $server_name;
 		if (substr($server_name, 0, 7) == "http://") $server_name = substr($server_name, 7, strlen($server_name)-7);
 		if (substr($server_name, 0, 8) == "https://") $server_name = substr($server_name, 8, strlen($server_name)-8);
 		if (substr($server_name, 0, 4) == "www.") $server_name = substr($server_name, 4, strlen($server_name)-4);
@@ -2311,7 +2312,7 @@ class App {
 			$card_issuer = $r->fetch();
 		}
 		else {
-			$q = "INSERT INTO card_issuers SET issuer_identifier=".$this->quote_escape($server_name).", issuer_name=".$this->quote_escape($server_name).", time_created='".time()."';";
+			$q = "INSERT INTO card_issuers SET issuer_identifier=".$this->quote_escape($server_name).", issuer_name=".$this->quote_escape($server_name).", base_url=".$this->quote_escape($initial_server_name).", time_created='".time()."';";
 			$r = $this->run_query($q);
 			$issuer_id = $this->last_insert_id();
 			
