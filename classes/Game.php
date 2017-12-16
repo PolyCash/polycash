@@ -1799,7 +1799,7 @@ class Game {
 	
 	public function select_input_buttons($user_game) {
 		$js = "mature_ios.length = 0;\n";
-		$html = "<p>Click on your coins to start a staking transaction.</p>\n";
+		$html = "<p>Click on your coins to start a staking transaction. &nbsp;&nbsp; <a href=\"\" onclick=\"add_all_utxos_to_vote(); return false;\">Add all coins</a> &nbsp;&nbsp; <a href=\"\" onclick=\"remove_all_utxos_from_vote(); return false;\">Remove all coins</a></p>\n";
 		$input_buttons_html = "";
 		
 		$last_block_id = $this->blockchain->last_block_id();

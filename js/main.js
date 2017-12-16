@@ -515,6 +515,11 @@ function add_utxo_to_vote(mature_io_index, add_matching_utxo_ios) {
 		}
 	}
 }
+function add_all_utxos_to_vote() {
+	for (var i=0; i<mature_ios.length; i++) {
+		setTimeout("add_utxo_to_vote("+i+", false);", i*50);
+	}
+}
 function load_option_slider(index_id) {
 	$('#output_threshold_'+index_id).noUiSlider({
 		range: [0, 100]
@@ -530,6 +535,11 @@ function load_option_slider(index_id) {
 			output_amounts_need_update = true;
 	   }
 	});
+}
+function remove_all_utxos_from_vote() {
+	for (var i=0; i<vote_inputs.length; i++) {
+		setTimeout("remove_utxo_from_vote(0, false);", i*50);
+	}
 }
 function remove_utxo_from_vote(index_id, remove_matching_utxo_ios) {
 	var io_id = vote_inputs[index_id].io_id;

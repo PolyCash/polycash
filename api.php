@@ -71,38 +71,61 @@ if ($uri_parts[1] == "api") {
 		echo $raw;
 	}
 	else if ($uri_parts[2] == "card" || $uri_parts[2] == "cards") {
-		$this_issuer = $app->get_issuer_by_server_name($GLOBALS['site_domain']);
-		$card_public_vars = $app->card_public_vars();
-		
-		if ($uri_parts[2] == "card") {
+		if ($uri_parts[2] == "card" && !empty($uri_parts[4]) && !empty($uri_parts[5]) && $uri_parts[4] == "check") {
 			$card_id = (int) $uri_parts[3];
+			$supplied_secret = $uri_parts[5];
+			$supplied_secret_hash = $app->card_secret_to_hash($supplied_secret);
+			
+			$card_q = "SELECT * FROM cards WHERE card_id='".$card_id."';";
+			$card_r = $app->run_query($card_q);
+			
+			if ($card_r->rowCount() > 0) {
+				$card = $card_r->fetch();
+				if ($supplied_secret == $card['secret_hash'] || $supplied_secret_hash == $card['secret_hash']) {
+					$app->output_message(1, "Correct!");
+				}
+				else {
+					$app->output_message(2, "Incorrect");
+				}
+			}
+			else $app->output_message(3, "Invalid card ID");
+			
+			die();
 		}
 		else {
-			$card_range = explode("-", $uri_parts[3]);
-			$from_card_id = (int) $card_range[0];
-			$to_card_id = (int) $card_range[1];
-		}
-		
-		$q = "SELECT ";
-		foreach ($card_public_vars as $var_name) {
-			$q .= "c.".$var_name.", ";
-		}
-		$q = substr($q, 0, strlen($q)-2)." FROM cards c LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.issuer_id='".$this_issuer['issuer_id']."' AND ";
-		if ($uri_parts[2] == "card") $q .= "c.issuer_card_id='".$card_id."'";
-		else $q .= "c.issuer_card_id >= ".$from_card_id." AND c.issuer_card_id <= ".$to_card_id;
-		$q .= ";";
-		$r = $app->run_query($q);
-		
-		if ($r->rowCount() > 0) {
-			$cards = array();
-			while ($card = $r->fetch(PDO::FETCH_ASSOC)) {
-				array_push($cards, $card);
+			$this_issuer = $app->get_issuer_by_server_name($GLOBALS['base_url']);
+			$card_public_vars = $app->card_public_vars();
+			
+			if ($uri_parts[2] == "card") {
+				$card_id = (int) $uri_parts[3];
 			}
-			$api_output['status_code'] = 1;
-			$api_output['cards'] = $cards;
-			echo json_encode($api_output, JSON_PRETTY_PRINT);
+			else {
+				$card_range = explode("-", $uri_parts[3]);
+				$from_card_id = (int) $card_range[0];
+				$to_card_id = (int) $card_range[1];
+			}
+			
+			$q = "SELECT ";
+			foreach ($card_public_vars as $var_name) {
+				$q .= "c.".$var_name.", ";
+			}
+			$q .= "curr.abbreviation AS currency_abbreviation, fv_curr.abbreviation AS fv_currency_abbreviation FROM cards c JOIN currencies curr ON c.currency_id=curr.currency_id JOIN currencies fv_curr ON c.fv_currency_id=fv_curr.currency_id LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.issuer_id='".$this_issuer['issuer_id']."' AND ";
+			if ($uri_parts[2] == "card") $q .= "c.issuer_card_id='".$card_id."'";
+			else $q .= "c.issuer_card_id >= ".$from_card_id." AND c.issuer_card_id <= ".$to_card_id;
+			$q .= ";";
+			$r = $app->run_query($q);
+			
+			if ($r->rowCount() > 0) {
+				$cards = array();
+				while ($card = $r->fetch(PDO::FETCH_ASSOC)) {
+					array_push($cards, $card);
+				}
+				$api_output['status_code'] = 1;
+				$api_output['cards'] = $cards;
+				echo json_encode($api_output, JSON_PRETTY_PRINT);
+			}
+			else $app->output_message(0, "Error: card not found.");
 		}
-		else $app->output_message(0, "Error: card not found.");
 	}
 	else if (!empty($uri_parts[2])) {
 		$game_identifier = $uri_parts[2];
