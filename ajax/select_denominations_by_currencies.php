@@ -46,7 +46,7 @@ if ($thisuser) {
 
 	$output_obj['denominations_html'] = $denominations_html;
 	$output_obj['accounts_html'] = $accounts_html;
-	$output_obj['coin_abbreviation'] = $fv_currency['abbreviation'];
+	if (!empty($fv_currency)) $output_obj['coin_abbreviation'] = $fv_currency['abbreviation'];
 	echo json_encode($output_obj);
 }
 else {

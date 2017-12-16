@@ -34,7 +34,7 @@ include('includes/html_start.php');
 				$fv_currency = $app->run_query("SELECT * FROM currencies WHERE currency_id='".$card['fv_currency_id']."';")->fetch();
 				?>
 				<script type="text/javascript">
-				var card_id = '<?php echo $card['card_id']; ?>';
+				var card_id = '<?php echo $card['issuer_card_id']; ?>';
 				var issuer_id = '<?php echo $card['issuer_id']; ?>';
 				
 				$(document).ready(function() {

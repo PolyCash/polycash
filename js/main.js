@@ -1909,7 +1909,7 @@ function check_show_confirm_button() {
 	else $('#confirm_button').hide();
 }
 function check_the_code() {
-	var url = "/ajax/check_code.php?card_id="+card_id+"&code="+$('#redeem_code').val().replace(/-/g, '');
+	var url = "/ajax/check_code.php?issuer_id="+issuer_id+"&card_id="+card_id+"&code="+$('#redeem_code').val().replace(/-/g, '');
 	$('#confirm_button').html("Checking...");
 	$('#messages').hide();
 	

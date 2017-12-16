@@ -121,7 +121,7 @@ if (!empty($_REQUEST['action'])) {
 									$card_id = $i+$first_id;
 									$secret = $app->random_number(16);
 									$secret_hash = $app->card_secret_to_hash($secret);
-									$qq = "INSERT INTO cards SET design_id='".$design_id."', purity='".$purity."', group_id='".$card_group_id."', secret='".$secret."', secret_hash=".$app->quote_escape($secret_hash).", issuer_card_id='".$card_id."', mint_time='".time()."', currency_id='".$db_currency['currency_id']."', fv_currency_id='".$fv_currency['currency_id']."', amount='".$denomination['denomination']."', status='issued', io_tx_hash=".$app->quote_escape($db_transaction['tx_hash']).", io_out_index='".$i."';";
+									$qq = "INSERT INTO cards SET design_id='".$design_id."', issuer_id='".$this_issuer['issuer_id']."', purity='".$purity."', group_id='".$card_group_id."', secret='".$secret."', secret_hash=".$app->quote_escape($secret_hash).", issuer_card_id='".$card_id."', mint_time='".time()."', currency_id='".$db_currency['currency_id']."', fv_currency_id='".$fv_currency['currency_id']."', amount='".$denomination['denomination']."', status='issued', io_tx_hash=".$app->quote_escape($db_transaction['tx_hash']).", io_out_index='".$i."';";
 									$rr = $app->run_query($qq);
 								}
 								
