@@ -71,16 +71,19 @@ if ($uri_parts[1] == "api") {
 		echo $raw;
 	}
 	else if ($uri_parts[2] == "card" || $uri_parts[2] == "cards") {
+		$this_issuer = $app->get_issuer_by_server_name($GLOBALS['base_url']);
+		
 		if ($uri_parts[2] == "card" && !empty($uri_parts[4]) && !empty($uri_parts[5]) && $uri_parts[4] == "check") {
 			$card_id = (int) $uri_parts[3];
 			$supplied_secret = $uri_parts[5];
 			$supplied_secret_hash = $app->card_secret_to_hash($supplied_secret);
 			
-			$card_q = "SELECT * FROM cards WHERE card_id='".$card_id."';";
+			$card_q = "SELECT * FROM cards WHERE issuer_card_id='".$card_id."' AND issuer_id='".$this_issuer['issuer_id']."';";
 			$card_r = $app->run_query($card_q);
 			
 			if ($card_r->rowCount() > 0) {
 				$card = $card_r->fetch();
+				
 				if ($supplied_secret == $card['secret_hash'] || $supplied_secret_hash == $card['secret_hash']) {
 					$app->output_message(1, "Correct!");
 				}
@@ -93,7 +96,6 @@ if ($uri_parts[1] == "api") {
 			die();
 		}
 		else {
-			$this_issuer = $app->get_issuer_by_server_name($GLOBALS['base_url']);
 			$card_public_vars = $app->card_public_vars();
 			
 			if ($uri_parts[2] == "card") {
