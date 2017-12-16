@@ -472,7 +472,7 @@ function render_option_output(index_id, name) {
 	html += '<div><div id="output_threshold_'+index_id+'" class="noUiSlider"></div></div>';
 	return html;
 }
-function add_utxo_to_vote(mature_io_index, add_matching_utxo_ios) {
+function add_utxo_to_vote(mature_io_index, add_matching_utxo_ios, skip_refresh) {
 	var mature_io = mature_ios[mature_io_index];
 	var index_id = vote_inputs.length;
 
@@ -499,9 +499,11 @@ function add_utxo_to_vote(mature_io_index, add_matching_utxo_ios) {
 			//$('#selected_utxo_'+index_id).css("background-image", "url('"+games[0].logo_image_url+"')");
 		}
 		game_io_id2input_index[mature_io.game_io_id] = index_id;
-		refresh_compose_vote();
-		set_input_amount_sums();
-		refresh_output_amounts();
+		if (skip_refresh == false) {
+			refresh_compose_vote();
+			set_input_amount_sums();
+			refresh_output_amounts();
+		}
 		if (focus_select_output) setTimeout("$('#select_add_output').focus();", 600);
 	}
 	
@@ -509,7 +511,7 @@ function add_utxo_to_vote(mature_io_index, add_matching_utxo_ios) {
 		for (var i=0; i<mature_ios.length; i++) {
 			if (i != mature_io_index) {
 				if (mature_ios[i].io_id == mature_io.io_id) {
-					add_utxo_to_vote(i, false);
+					add_utxo_to_vote(i, false, skip_refresh);
 				}
 			}
 		}
@@ -517,8 +519,9 @@ function add_utxo_to_vote(mature_io_index, add_matching_utxo_ios) {
 }
 function add_all_utxos_to_vote() {
 	for (var i=0; i<mature_ios.length; i++) {
-		setTimeout("add_utxo_to_vote("+i+", false);", i*50);
+		setTimeout("add_utxo_to_vote("+i+", false, true);", i*50);
 	}
+	setTimeout("refresh_compose_vote(); set_input_amount_sums(); refresh_output_amounts();", mature_ios.length*50);
 }
 function load_option_slider(index_id) {
 	$('#output_threshold_'+index_id).noUiSlider({
@@ -1049,7 +1052,7 @@ function refresh_visible_inputs() {
 			show_count++;
 		}
 		else {
-			add_utxo_to_vote(i, false);
+			add_utxo_to_vote(i, false, true);
 		}
 	}
 }
@@ -1073,7 +1076,7 @@ function show_more_event_outcomes() {
 	}
 }
 function render_tx_fee() {
-	$('#display_tx_fee').html("TX fee: "+format_coins(games[0].fee_amount/Math.pow(10,games[0].decimal_places))+" "+games[0].chain_coin_name_plural);
+	$('#display_tx_fee').html("TX fee: "+format_coins(games[0].fee_amount)+" "+games[0].chain_coin_name_plural);
 }
 function manage_game_invitations(this_game_id) {
 	$.get("/ajax/game_invitations.php?action=manage&game_id="+this_game_id, function(result) {

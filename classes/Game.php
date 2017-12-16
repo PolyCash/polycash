@@ -1822,7 +1822,7 @@ class Game {
 			$input_buttons_html .= 'class="btn btn-primary btn-sm select_utxo';
 			if (!empty($prev_utxo) && $utxo['io_id'] == $prev_utxo['io_id']) $input_buttons_html .= ' connected_utxo';
 			if ($this->db_game['logo_image_id'] > 0) $input_buttons_html .= ' select_utxo_image';
-			$input_buttons_html .= '" onclick="add_utxo_to_vote('.$mature_io_index.', true);">';
+			$input_buttons_html .= '" onclick="add_utxo_to_vote('.$mature_io_index.', true, false);">';
 			$input_buttons_html .= '</div>'."\n";
 			
 			$js .= "mature_ios.push(new mature_io(mature_ios.length, ".$utxo['game_io_id'].", ".$utxo['colored_amount'].", ".$utxo['create_block_id'].", ".$utxo['io_id']."));\n";
