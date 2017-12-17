@@ -2417,20 +2417,19 @@ class App {
 		$db_currency = $this->run_query("SELECT * FROM currencies WHERE currency_id='".$card['currency_id']."';")->fetch();
 		$blockchain = new Blockchain($this, $db_currency['blockchain_id']);
 		
-		$tx_r = $this->run_query("SELECT * FROM transactions WHERE tx_hash=".$this->quote_escape($card['io_tx_hash']).";");
+		$tx_q = "SELECT * FROM transactions WHERE tx_hash=".$this->quote_escape($card['io_tx_hash']).";";
+		$tx_r = $this->run_query($tx_q);
 		
 		if ($tx_r->rowCount() == 1) {
 			$io_tx = $tx_r->fetch();
-			
 			$io_r = $this->run_query("SELECT * FROM transaction_ios WHERE create_transaction_id='".$io_tx['transaction_id']."' AND out_index='".$card['io_out_index']."';");
 			
 			if ($io_r->rowCount() > 0) {
 				$io = $io_r->fetch();
-				
 				$db_address = $blockchain->create_or_fetch_address($address, true, false, false, false, false, false);
 				
 				$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
-				$amounts = array($io['amount']-$fee);
+				$amounts = array($io['amount']-$fee_amount);
 				
 				$transaction = $blockchain->create_transaction("transaction", $amounts, false, array($io['io_id']), array($db_address['address_id']), $fee_amount);
 				
