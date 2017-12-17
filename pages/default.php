@@ -10,7 +10,9 @@ var games = new Array();
 	<?php
 	$app->display_games(false, false);
 	?>
-	<a href="/import/">Add another game</a>
+	<p><a href="/import/">Add another game</a></p>
+	
+	<p><a href="/redeem/">Redeem a card</a></p>
 </div>
 <?php
 include('includes/html_stop.php');

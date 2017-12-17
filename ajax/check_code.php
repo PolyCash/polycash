@@ -54,6 +54,10 @@ if ($r->rowCount() == 1) {
 					
 					$success = $app->try_create_card_account($card, $thisuser, $password);
 					if ($success[0]) {
+						if (empty($card['secret_hash'])) {
+							$app->run_query("UPDATE cards SET secret_hash=".$app->quote_escape($code_hash)." WHERE card_id='".$card['card_id']."';");
+							$card['secret_hash'] = $code_hash;
+						}
 						echo "1";
 					}
 					else echo "6";

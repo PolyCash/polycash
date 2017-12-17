@@ -454,16 +454,18 @@ if (!empty($_REQUEST['action'])) {
 	}
 }
 
-$q = "SELECT c.*, u.*, curr.*, c.amount AS amount FROM cards c JOIN card_users u ON c.card_id=u.card_id JOIN currencies curr ON c.fv_currency_id=curr.currency_id WHERE c.user_id='".$thisuser->db_user['user_id']."';";
-$r = $app->run_query($q);
-$i = 0;
 $my_cards = array();
 
-while ($my_card = $r->fetch()) {
-	$my_cards[$i] = $my_card;
-	$i++;
-}
+if (!empty($thisuser)) {
+	$q = "SELECT c.*, u.*, curr.*, c.amount AS amount FROM cards c JOIN card_users u ON c.card_id=u.card_id JOIN currencies curr ON c.fv_currency_id=curr.currency_id WHERE c.user_id='".$thisuser->db_user['user_id']."';";
+	$r = $app->run_query($q);
+	$i = 0;
 
+	while ($my_card = $r->fetch()) {
+		$my_cards[$i] = $my_card;
+		$i++;
+	}
+}
 include('includes/html_start.php');
 ?>
 <div class="container-fluid">
@@ -826,7 +828,7 @@ include('includes/html_start.php');
 											
 											if ($my_cards[$i]['status'] == "claimed") {
 												?>
-												<button class="btn btn-success" style="margin-top: 15px;">Claim <?php echo $app->format_bignum($my_cards[$i]['amount'])." ".$fv_currency['short_name_plural']; ?></button>
+												<button class="btn btn-success" style="margin-top: 15px;" onclick="card_id=<?php echo $my_cards[$i]['issuer_card_id']; ?>; issuer_id=<?php echo $my_cards[$i]['issuer_id']; ?>; $('#claim_dialog').modal('show');">Claim <?php echo $app->format_bignum($my_cards[$i]['amount'])." ".$fv_currency['short_name_plural']; ?></button>
 												<?php
 											}
 											?>
@@ -837,6 +839,28 @@ include('includes/html_start.php');
 								}
 							}
 							?>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div id="claim_dialog" class="modal fade" style="display: none;">
+				<div class="modal-dialog">
+					<div class="modal-content">
+						<div class="modal-header">
+							<h4 class="modal-title">Claim Coins</h4>
+						</div>
+						<div class="modal-body">
+							<div class="form-group">
+								<label for="claim_fee">Fee:</label>
+								<input class="form-control" type="tel" placeholder="0.001" value="0.001" id="claim_fee" style="text-align: right;" />
+							</div>
+							<div class="form-group">
+								<label for="claim_address">Address:</label>
+								<input class="form-control" type="text" id="claim_address" />
+							</div>
+							<span class="greentext" style="display: none;" id="claim_message"></span>
+							
+							<button id="claim_btn" class="btn btn-success" onclick="claim_from_card();">Send Coins</button>
 						</div>
 					</div>
 				</div>

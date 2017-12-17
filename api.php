@@ -95,6 +95,33 @@ if ($uri_parts[1] == "api") {
 			
 			die();
 		}
+		else if ($uri_parts[2] == "card" && !empty($uri_parts[4]) && $uri_parts[4] == "withdraw") {
+			$card_id = (int) $uri_parts[3];
+			
+			$supplied_secret = $_REQUEST['secret'];
+			$supplied_secret_hash = $app->card_secret_to_hash($supplied_secret);
+			$fee = $_REQUEST['fee'];
+			$address = $_REQUEST['address'];
+			
+			$card_q = "SELECT * FROM cards WHERE issuer_card_id='".$card_id."' AND issuer_id='".$this_issuer['issuer_id']."';";
+			$card_r = $app->run_query($card_q);
+			
+			if ($card_r->rowCount() > 0) {
+				$card = $card_r->fetch();
+				
+				if ($fee > 0 && $fee < $card['amount']) {
+					if ($supplied_secret == $card['secret_hash'] || $supplied_secret_hash == $card['secret_hash']) {
+						$transaction = $app->pay_out_card($card, $address, $fee);
+						var_dump($transaction);
+					}
+					else {
+						$app->output_message(5, "Error: wrong secret key.", false);
+					}
+				}
+				else $app->output_message(4, "Error: invalid fee amount.", false);
+			}
+			else $app->output_message(3, "Invalid card ID");
+		}
 		else {
 			$card_public_vars = $app->card_public_vars();
 			
