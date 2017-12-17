@@ -280,14 +280,23 @@ if ($thisuser) {
 						$remote_issuer = $app->run_query("SELECT * FROM card_issuers WHERE issuer_id='".$card['issuer_id']."';")->fetch();
 						
 						$remote_url = $remote_issuer['base_url']."/api/card/".$card['issuer_card_id']."/withdraw/?secret=".$card['secret_hash']."&fee=".$fee."&address=".$address;
-						$remote_response = get_object_vars(json_decode(file_get_contents($remote_url)));
-						var_dump($remote_response);
+						$remote_response_raw = file_get_contents($remote_url);
+						$remote_response = get_object_vars(json_decode($remote_response_raw));
+						
+						if ($remote_response['status_code'] == 1) {
+							$this->change_card_status($card, 'redeemed');
+							$app->output_message(1, $remote_response['message'], false);
+						}
+						else $app->output_message(7, $remote_response['message'], false);
 					}
 					else {
 						$transaction = $app->pay_out_card($card, $address, $fee);
+						
+						if ($transaction) $app->output_message(1, "Great, coins have been sent to your address.", false);
+						else $app->output_message(7, "Error: failed to create the transaction.", false);
 					}
 				}
-				else $app->output_message(5, "Error: invalid fee amount.", false);
+				else $app->output_message(6, "Error: invalid fee amount.", false);
 			}
 			else $app->output_message(5, "Error: you don't own this card.", false);
 		}

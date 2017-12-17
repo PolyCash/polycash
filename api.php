@@ -112,7 +112,11 @@ if ($uri_parts[1] == "api") {
 				if ($fee > 0 && $fee < $card['amount']) {
 					if ($supplied_secret == $card['secret_hash'] || $supplied_secret_hash == $card['secret_hash']) {
 						$transaction = $app->pay_out_card($card, $address, $fee);
-						var_dump($transaction);
+						
+						if ($transaction) {
+							$app->output_message(1, "Great! Coins have been sent to your address.", false);
+						}
+						else $app->output_message(6, "Error: failed to create a transaction.", false);
 					}
 					else {
 						$app->output_message(5, "Error: wrong secret key.", false);

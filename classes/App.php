@@ -2273,9 +2273,7 @@ class App {
 			$q = "UPDATE mobile_payments SET beyonic_request_id='".$beyonic_request->id."' WHERE payment_id='".$payment->db_payment['payment_id']."';";
 			$r = $this->run_query($q);
 			
-			$q = "INSERT INTO card_status_changes SET card_id='".$my_cards[0]['card_id']."', from_status='".$my_cards[0]['status']."', to_status='redeemed', change_time='".time()."';";
-			$r = $this->run_query($q);
-			$status_change_id = $this->last_insert_id();
+			$this->change_card_status($my_cards[0], 'redeemed');
 			
 			$q = "UPDATE cards SET status='redeemed' WHERE card_id='".$my_cards[0]['card_id']."';";
 			$r = $this->run_query($q);
@@ -2432,6 +2430,8 @@ class App {
 				$amounts = array($io['amount']-$fee_amount);
 				
 				$transaction = $blockchain->create_transaction("transaction", $amounts, false, array($io['io_id']), array($db_address['address_id']), $fee_amount);
+				
+				if ($transaction) $this->change_card_status($card, 'redeemed');
 				
 				return $transaction;
 			}
