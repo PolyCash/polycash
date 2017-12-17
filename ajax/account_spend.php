@@ -284,7 +284,7 @@ if ($thisuser) {
 						$remote_response = get_object_vars(json_decode($remote_response_raw));
 						
 						if ($remote_response['status_code'] == 1) {
-							$this->change_card_status($card, 'redeemed');
+							$app->change_card_status($card, 'redeemed');
 							$app->output_message(1, $remote_response['message'], false);
 						}
 						else $app->output_message(7, $remote_response['message'], false);

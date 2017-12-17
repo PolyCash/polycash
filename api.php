@@ -133,6 +133,7 @@ if ($uri_parts[1] == "api") {
 				$card_id = (int) $uri_parts[3];
 			}
 			else {
+				$uri_parts[3] = str_replace($uri_parts[3], ":", "-");
 				$card_range = explode("-", $uri_parts[3]);
 				$from_card_id = (int) $card_range[0];
 				$to_card_id = (int) $card_range[1];

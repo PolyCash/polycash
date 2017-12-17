@@ -2001,8 +2001,9 @@ function card_withdrawal(card_id) {
 function claim_from_card() {
 	$('#claim_btn').html("Loading...");
 	$.get("/ajax/account_spend.php?action=withdraw_from_card&card_id="+card_id+"&issuer_id="+issuer_id+"&fee="+$('#claim_fee').val()+"&address="+$('#claim_address').val(), function(result) {
+		var result_obj = JSON.parse(result);
 		$('#claim_btn').html("Withdraw");
-		$('#claim_message').html(result['message']);
+		$('#claim_message').html(result_obj['message']);
 		$('#claim_message').show("fast");
 		console.log(result);
 	});
