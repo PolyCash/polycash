@@ -2010,6 +2010,7 @@ function claim_card(claim_type) {
 		if (claim_type == "to_address") ajax_url += "&fee="+$('#claim_fee').val()+"&address="+$('#claim_address').val();
 		
 		$.get(ajax_url, function(result) {
+			$('#'+btn_id).html(btn_original_text);
 			var result_obj = JSON.parse(result);
 			
 			if (claim_type == "address") {
