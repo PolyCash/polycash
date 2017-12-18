@@ -338,7 +338,8 @@ include('includes/html_start.php');
 									<label for="withdraw_address">Address:</label>
 									<input class="form-control" type="text" id="withdraw_address" />
 								</div>
-								<span class="greentext" style="display: none;" id="withdraw_message"></span>
+								
+								<div class="greentext" style="display: none;" id="withdraw_message"></div>
 								
 								<button id="withdraw_btn" class="btn btn-success" onclick="withdraw_from_account(false, 2);">Withdraw</button>
 							</div>

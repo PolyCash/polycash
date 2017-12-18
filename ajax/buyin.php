@@ -136,7 +136,7 @@ if ($thisuser && $game) {
 						<button class="btn btn-primary" onclick="check_buyin_amount();">Check</button>
 						
 						<div style="display: none; margin: 10px 0px;" id="buyin_disp">
-							For <div id="buyin_amount_disp" style="display: inline-block;"></div> <?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?>, you'll receive approximately <div id="buyin_receive_amount_disp" style="display: inline-block;"></div> <?php echo $game->db_game['coin_name_plural']; ?>. Send <div id="buyin_send_amount" style="display: inline-block;"></div> <?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?> to <a target="_blank" href="/explorer/blockchains/<?php echo $game->blockchain->db_blockchain['url_identifier']; ?>/address/<?php echo $invoice_address['address']; ?>"><?php echo $invoice_address['address']; ?></a>
+							For <div id="buyin_amount_disp" style="display: inline-block;"></div> <?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?>, you'll receive approximately <div id="buyin_receive_amount_disp" style="display: inline-block;"></div> <?php echo $game->db_game['coin_name_plural']; ?>. Send <div id="buyin_send_amount" style="display: inline-block;"></div> <?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?> to <a target="_blank" href="/explorer/blockchains/<?php echo $game->blockchain->db_blockchain['url_identifier']; ?>/addresses/<?php echo $invoice_address['address']; ?>"><?php echo $invoice_address['address']; ?></a>
 							
 							<p>
 								<center><img style="margin: 10px;" src="/render_qr_code.php?data=<?php echo $invoice_address['address']; ?>" /></center>

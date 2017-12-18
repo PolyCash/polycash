@@ -19,23 +19,6 @@ if (strlen($session_key) > 0) {
 		$session = $r->fetch();
 		
 		$thisuser = new User($app, $session['user_id']);
-		
-		if ($thisuser->db_user) {
-			if (!empty($_REQUEST['game_id'])) {
-				$game_id = intval($_REQUEST['game_id']);
-				
-				$q = "SELECT g.* FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND g.game_id='".$game_id."';";
-				$r = $app->run_query($q);
-				
-				if ($r->rowCount() > 0) {
-					$db_game = $r->fetch();
-					
-					$blockchain = new Blockchain($app, $db_game['blockchain_id']);
-					$game = new Game($blockchain, $db_game['game_id']);
-				}
-			}
-		}
-		else $thisuser = false;
 	}
 	else {
 		while ($session = $r->fetch()) {
@@ -67,6 +50,20 @@ if (strlen($session_key) > 0) {
 			
 			$j++;
 		}
+	}
+}
+
+if ($thisuser && !empty($_REQUEST['game_id'])) {
+	$game_id = intval($_REQUEST['game_id']);
+	
+	$q = "SELECT g.* FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND g.game_id='".$game_id."';";
+	$r = $app->run_query($q);
+	
+	if ($r->rowCount() > 0) {
+		$db_game = $r->fetch();
+		
+		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+		$game = new Game($blockchain, $db_game['game_id']);
 	}
 }
 ?>
