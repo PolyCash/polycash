@@ -111,16 +111,14 @@ if ($uri_parts[1] == "api") {
 				
 				if ($fee > 0 && $fee < $card['amount']) {
 					if ($supplied_secret == $card['secret_hash'] || $supplied_secret_hash == $card['secret_hash']) {
-						$transaction = $app->pay_out_card($card, $address, $fee);
+						list($status_code, $message) = $app->pay_out_card($card, $address, $fee);
 						
-						if ($transaction) {
-							$app->output_message(1, "Great! Coins have been sent to your address.", false);
+						if ($status_code == 1) {
+							$app->output_message($status_code, $card['redemption_tx_hash'], false);
 						}
-						else $app->output_message(6, "Error: failed to create a transaction.", false);
+						else $app->output_message($status_code, $message, false);
 					}
-					else {
-						$app->output_message(5, "Error: wrong secret key.", false);
-					}
+					else $app->output_message(5, "Error: wrong secret key.", false);
 				}
 				else $app->output_message(4, "Error: invalid fee amount.", false);
 			}
@@ -133,7 +131,7 @@ if ($uri_parts[1] == "api") {
 				$card_id = (int) $uri_parts[3];
 			}
 			else {
-				$uri_parts[3] = str_replace($uri_parts[3], ":", "-");
+				$uri_parts[3] = str_replace(":", "-", $uri_parts[3]);
 				$card_range = explode("-", $uri_parts[3]);
 				$from_card_id = (int) $card_range[0];
 				$to_card_id = (int) $card_range[1];
