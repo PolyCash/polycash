@@ -3,7 +3,10 @@ include('includes/connect.php');
 include('includes/get_session.php');
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
-if ($thisuser && !empty($_REQUEST['action']) && $_REQUEST['action'] == "donate_to_faucet") {
+$action = "";
+if (!empty($_REQUEST['action'])) $action = $_REQUEST['action'];
+
+if ($thisuser && $action == "donate_to_faucet") {
 	$io_id = (int) $_REQUEST['account_io_id'];
 	$amount_each = (float) $_REQUEST['donate_amount_each'];
 	$quantity = (int) $_REQUEST['donate_quantity'];
@@ -225,7 +228,10 @@ include('includes/html_start.php');
 					echo '</a></div>';
 					echo "</div>\n";
 					
-					echo '<div class="row" id="account_details_'.$account['account_id'].'" style="display: none;">';
+					echo '<div class="row" id="account_details_'.$account['account_id'].'"';
+					if (in_array($action, array('prompt_game_buyin', 'view_account')) && $_REQUEST['account_id'] == $account['account_id']) {}
+					else echo ' style="display: none;"';
+					echo '>';
 					echo "<div class=\"account_details\">";
 					if (empty($account['game_id'])) {
 						echo "To deposit to ".$account['account_name'].", send ".$account['short_name_plural']." to: ".$account['pub_key']."<br/>\n";
@@ -517,6 +523,13 @@ include('includes/html_start.php');
 		<script type="text/javascript">
 		$(document).ready(function() {
 			account_spend_refresh();
+			<?php
+			if ($action == "prompt_game_buyin") {
+				echo "account_start_spend_io(false, ".((int) $_REQUEST['io_id']).", ".((float) $_REQUEST['amount']).");\n";
+				echo "$('#account_spend_action').val('buyin');\n";
+				echo "account_spend_action_changed();\n";
+			}
+			?>
 		});
 		</script>
 		<?php

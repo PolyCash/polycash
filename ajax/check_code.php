@@ -47,36 +47,36 @@ if ($r->rowCount() == 1) {
 			
 			if ($action == "login") { // Check if the card's valid and try create a gift card account
 				if ($password == "" || $password == hash("sha256", "")) {
-					echo "5";
+					$app->output_message(5, "Invalid password.", false);
 				}
 				else {
-					$_SESSION['code'] = $code;
-					
 					$success = $app->try_create_card_account($card, $thisuser, $password);
 					if ($success[0]) {
 						if (empty($card['secret_hash'])) {
 							$app->run_query("UPDATE cards SET secret_hash=".$app->quote_escape($code_hash)." WHERE card_id='".$card['card_id']."';");
 							$card['secret_hash'] = $code_hash;
 						}
-						echo "1";
+						
+						$message = "/cards/";
+						if ($card['default_game_id'] > 0) {
+							list($status_code, $message) = $app->redeem_card_to_account($thisuser, $card, "to_account");
+							
+							$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$card['default_game_id']."';")->fetch();
+							$message = "/wallet/".$db_game['url_identifier']."/";
+						}
+						
+						$app->output_message(1, $message, false);
 					}
-					else echo "6";
-					
-					$_SESSION['code'] = "";
+					else $app->output_message(6, "Failed to create card account.", false);
 				}
 			}
-			else { // Check if the card is valid, but user hasn't chosen what to do yet
-				$_SESSION['action'] = "redeem";
-				$_SESSION['card_id'] = $card['card_id'];
-				$_SESSION['code'] = $code;
-				echo "1";
-			}
+			else $app->output_message(4, "Correct!", false);
 		}
 		else {
 			$q = "INSERT INTO card_failedchecks SET card_id=".$app->quote_escape($card['card_id']).", ip_address=".$app->quote_escape($_SERVER['REMOTE_ADDR']).", check_time='".time()."', attempted_code=".$app->quote_escape($code).";";
 			$r = $app->run_query($q);
 			
-			echo "0";
+			$app->output_message(0, "Unspecified error", false);
 		}
 	}
 	else {
@@ -99,16 +99,16 @@ if ($r->rowCount() == 1) {
 						$query .= ";";
 						$result = $app->run_query($query);
 						
-						echo "2";
+						echo $app->output_message(2, "You were successfully logged in!", false);
 					}
-					else echo "3";
+					else $app->output_message(3, "Invalid card secret supplied", false);;
 				}
-				else echo "3";
+				else $app->output_message(3, "Invalid card secret supplied", false);
 			}
-			else echo "0";
+			else $app->output_message(0, "Unspecified error", false);
 		}
-		else echo "0";
+		else $app->output_message(0, "Unspecified error", false);
 	}
 }
-else echo "0";
+else $app->output_message(0, "Unspecified error", false);
 ?>

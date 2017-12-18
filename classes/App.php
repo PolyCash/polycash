@@ -2138,6 +2138,9 @@ class App {
 			$q .= ";";
 			$r = $this->run_query($q);
 			
+			$redirect_url = false;
+			$thisuser->log_user_in($redirect_url, false);
+			
 			$txt = "<p>Your account has been created! ";
 			$txt .= "Any time you want to access your money, please visit the link on your gift card.</p>\n";
 			
@@ -2438,6 +2441,74 @@ class App {
 			else return false;
 		}
 		else return false;
+	}
+	
+	public function redeem_card_to_account(&$thisuser, &$card, $claim_type) {
+		$message = "";
+		$status_code = false;
+		
+		$db_account = $this->user_blockchain_account($thisuser->db_user['user_id'], $card['fv_currency_id']);
+		
+		if ($db_account['current_address_id'] > 0) {
+			$address_r = $this->run_query("SELECT * FROM addresses WHERE address_id=".$db_account['current_address_id'].";");
+			
+			if ($address_r->rowCount() > 0) {
+				$db_address = $address_r->fetch();
+				
+				$db_currency = $this->run_query("SELECT * FROM currencies WHERE currency_id='".$db_account['currency_id']."';")->fetch();
+				
+				$blockchain = new Blockchain($this, $db_currency['blockchain_id']);
+				
+				$tx_q = "SELECT * FROM transactions WHERE tx_hash=".$this->quote_escape($card['io_tx_hash']).";";
+				$tx_r = $this->run_query($tx_q);
+				
+				if ($tx_r->rowCount() == 1) {
+					$io_tx = $tx_r->fetch();
+					$io_r = $this->run_query("SELECT * FROM transaction_ios WHERE create_transaction_id='".$io_tx['transaction_id']."' AND out_index='".$card['io_out_index']."';");
+					
+					if ($io_r->rowCount() > 0) {
+						$io = $io_r->fetch();
+						
+						$fee = 0.001;
+						$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
+						
+						$this_issuer = $this->get_issuer_by_server_name($GLOBALS['base_url']);
+						
+						$tx_successful = false;
+						
+						if ($card['issuer_id'] != $this_issuer['issuer_id']) {
+							$remote_issuer = $this->run_query("SELECT * FROM card_issuers WHERE issuer_id='".$card['issuer_id']."';")->fetch();
+							
+							$remote_url = $remote_issuer['base_url']."/api/card/".$card['issuer_card_id']."/withdraw/?secret=".$card['secret_hash']."&fee=".$fee."&address=".$db_address['address'];
+							$remote_response_raw = file_get_contents($remote_url);
+							$remote_response = get_object_vars(json_decode($remote_response_raw));
+							
+							if ($remote_response['status_code'] == 1) $tx_successful = true;
+						}
+						else {
+							$transaction = $blockchain->create_transaction("transaction", array($io['amount']-$fee_amount), false, array($io['io_id']), array($db_address['address_id']), $fee_amount);
+							
+							if ($transaction) $tx_successful = true;
+						}
+						
+						if ($tx_successful) {
+							if ($claim_type == "to_game") $message = "/accounts/?action=prompt_game_buyin&account_id=".$db_account['account_id']."&io_id=".$io['io_id']."&amount=".($io['amount']/pow(10,$blockchain->db_blockchain['decimal_places']));
+							else $message = "/accounts/?action=view_account&account_id=".$db_account['account_id'];
+							
+							$this->change_card_status($card, "redeemed");
+							$status_code = 1;
+						}
+						else {$status_code=11; $message="Error: failed to create the transaction.";}
+					}
+					else {$status_code=10; $message="Error: card payment UTXO not found.";}
+				}
+				else {$status_code=9; $message="Error: card payment transaction not found.";}
+			}
+			else {$status_code=8; $message="Error: address not found.";}
+		}
+		else {$status_code=7; $message="Error: this account does not have a valid address ID.";}
+		
+		return array($status_code, $message);
 	}
 }
 ?>

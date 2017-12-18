@@ -175,10 +175,11 @@ include('includes/html_start.php');
 							else if ($card['status'] == "issued" || $card['status'] == "printed") {
 								echo "This card hasn't been released yet.";
 							}
-							else if ($card['status'] == "redeemed") {
+							else if ($card['status'] == "redeemed" || $card['status'] == "claimed") {
 								?>
 								<script type="text/javascript">
-								var card_id = '<?php echo $card['card_id']; ?>';
+								var card_id = '<?php echo $card['issuer_card_id']; ?>';
+								var issuer_id = '<?php echo $card['issuer_id']; ?>';
 								</script>
 								<br/>
 								<p>

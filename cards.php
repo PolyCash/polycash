@@ -728,13 +728,7 @@ include('includes/html_start.php');
 			});
 			</script>
 			
-			<p style="margin-top: 15px;">
-				Your money is stored in this online account. 
-				If you're on mobile, <a target="_blank" href="/check/<?php echo $my_cards[0]['card_id']."/".$my_cards[0]['secret']; ?>?action=bookmark">bookmark this link</a> for your convenience.
-				<br/>
-				Account value: <font style="color: #0a0;">$<?php echo number_format($networth, 2); ?></font>
-			</p>
-			<div id="section_cards" style="display: none;">
+			<div id="section_cards" style="display: none; margin-top: 15px;">
 				<div class="panel panel-info">
 					<div class="panel-heading">
 						<div class="panel-title">My Cards</div>
@@ -800,9 +794,17 @@ include('includes/html_start.php');
 											</div>
 											<div class="row">
 												<div class="col-xs-4">Card denomination</div>
-												<div class="col-xs-8">
+												<div class="col-xs-8 greentext">
 													<?php
 													echo $app->format_bignum($my_cards[$i]['amount'])." ".$my_cards[$i]['abbreviation'];
+													?>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-xs-4">Status</div>
+												<div class="col-xs-8">
+													<?php
+													echo ucwords($my_cards[$i]['status']);
 													?>
 												</div>
 											</div>
@@ -828,7 +830,11 @@ include('includes/html_start.php');
 											
 											if ($my_cards[$i]['status'] == "claimed") {
 												?>
-												<button class="btn btn-success" style="margin-top: 15px;" onclick="card_id=<?php echo $my_cards[$i]['issuer_card_id']; ?>; issuer_id=<?php echo $my_cards[$i]['issuer_id']; ?>; $('#claim_dialog').modal('show');">Claim <?php echo $app->format_bignum($my_cards[$i]['amount'])." ".$fv_currency['short_name_plural']; ?></button>
+												<p style="margin-top: 15px;">
+													<button class="btn btn-success" onclick="card_id=<?php echo $my_cards[$i]['issuer_card_id']; ?>; issuer_id=<?php echo $my_cards[$i]['issuer_id']; ?>; $('#claim_dialog').modal('show');">Withdraw to Address</button>
+													<button id="claim_account_btn" class="btn btn-primary" onclick="card_id=<?php echo $my_cards[$i]['issuer_card_id']; ?>; issuer_id=<?php echo $my_cards[$i]['issuer_id']; ?>; claim_card('to_account');">Withdraw to Account</button>
+													<button id="claim_game_btn" class="btn btn-info" onclick="card_id=<?php echo $my_cards[$i]['issuer_card_id']; ?>; issuer_id=<?php echo $my_cards[$i]['issuer_id']; ?>; claim_card('to_game');">Buy in to Game</button>
+												</p>
 												<?php
 											}
 											?>
@@ -860,7 +866,7 @@ include('includes/html_start.php');
 							</div>
 							<span class="greentext" style="display: none;" id="claim_message"></span>
 							
-							<button id="claim_btn" class="btn btn-success" onclick="claim_from_card();">Send Coins</button>
+							<button id="claim_address_btn" class="btn btn-success" onclick="claim_card('to_address');">Send Coins</button>
 						</div>
 					</div>
 				</div>

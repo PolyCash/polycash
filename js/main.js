@@ -1914,8 +1914,10 @@ function check_the_code() {
 	$('#messages').hide();
 	
 	$.get(url, function(result) {
+		var result_obj = JSON.parse(result);
+		
 		$('#confirm_button').html("Redeem");
-		if (parseInt(result) == 1) {
+		if (result_obj['status_code'] == 1 || result_obj['status_code'] == 4) {
 			$('#step1').hide();
 			$('#redeem_options').modal('show');
 			$('#messages').hide();
@@ -1941,22 +1943,13 @@ function card_login(create_mode, login_card_id, issuer_id) {
 		var url = "/ajax/check_code.php?action=login&issuer_id="+issuer_id+"&card_id="+login_card_id+"&password="+card_password+"&code="+$('#redeem_code').val().replace(/-/g, '');
 		
 		$.get(url, function(result) {
-			console.log(result);
+			var result_obj = JSON.parse(result);
 			
-			if (parseInt(result) == 1 || parseInt(result) == 2) {
-				$('#messages').html("Correct!");
-				$('#messages').css("color", "#090");
-				
-				setTimeout("window.location='/cards/';", 500);
+			if (result_obj['status_code'] == 1 || result_obj['status_code'] == 2) {
+				window.location = result_obj['message'];
 				successful = true;
 			}
-			else if (parseInt(result) == 5) {
-				alert("You need to enter a password");
-			}
-			else if (parseInt(result) == 6 || parseInt(result) == 3) {
-				alert("It looks like you entered the wrong 16-digit code or password");
-			}
-			else alert(result);
+			else alert(result_obj['message']);
 		});
 	}
 	else alert("Error, the passwords that you entered do not match.");
@@ -1998,13 +1991,33 @@ function card_withdrawal(card_id) {
 		}
 	});
 }
-function claim_from_card() {
-	$('#claim_btn').html("Loading...");
-	$.get("/ajax/account_spend.php?action=withdraw_from_card&card_id="+card_id+"&issuer_id="+issuer_id+"&fee="+$('#claim_fee').val()+"&address="+$('#claim_address').val(), function(result) {
-		var result_obj = JSON.parse(result);
-		$('#claim_btn').html("Withdraw");
-		$('#claim_message').html(result_obj['message']);
-		$('#claim_message').show("fast");
-		console.log(result);
-	});
+function claim_card(claim_type) {
+	var btn_id = "";
+	var btn_original_text = "";
+	if (claim_type == "to_address") btn_id = 'claim_address_btn';
+	else if (claim_type == "to_game") btn_id = 'claim_game_btn';
+	else if (claim_type == "to_account") btn_id = 'claim_account_btn';
+	
+	if ($('#'+btn_id).html() != "Loading...") {
+		btn_original_text = $('#'+btn_id).html();
+		
+		$('#'+btn_id).html("Loading...");
+		
+		var ajax_url = "/ajax/account_spend.php?action=withdraw_from_card&claim_type="+claim_type+"&card_id="+card_id+"&issuer_id="+issuer_id;
+		if (claim_type == "to_address") ajax_url += "&fee="+$('#claim_fee').val()+"&address="+$('#claim_address').val();
+		
+		$.get(ajax_url, function(result) {
+			var result_obj = JSON.parse(result);
+			
+			if (claim_type == "address") {
+				$('#'+btn_id).html(btn_original_text);
+				$('#claim_message').html(result_obj['message']);
+				$('#claim_message').show("fast");
+			}
+			else {
+				if (result_obj['status_code'] == 1) window.location = result_obj['message'];
+				else alert(result_obj['message']);
+			}
+		});
+	}
 }
