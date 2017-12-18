@@ -1,0 +1,1 @@
+ALTER TABLE `cards` ADD `redemption_tx_hash` VARCHAR(64) NULL DEFAULT NULL AFTER `io_id`;

@@ -2459,50 +2459,61 @@ class App {
 				
 				$blockchain = new Blockchain($this, $db_currency['blockchain_id']);
 				
-				$tx_q = "SELECT * FROM transactions WHERE tx_hash=".$this->quote_escape($card['io_tx_hash']).";";
-				$tx_r = $this->run_query($tx_q);
+				$this_issuer = $this->get_issuer_by_server_name($GLOBALS['base_url']);
 				
-				if ($tx_r->rowCount() == 1) {
-					$io_tx = $tx_r->fetch();
-					$io_r = $this->run_query("SELECT * FROM transaction_ios WHERE create_transaction_id='".$io_tx['transaction_id']."' AND out_index='".$card['io_out_index']."';");
+				$fee = 0.001;
+				$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
+				
+				if ($claim_type == "to_game") $success_message = "/accounts/?action=prompt_game_buyin&account_id=".$db_account['account_id']."&amount=".($card['amount']-$fee);
+				else $success_message = "/accounts/?action=view_account&account_id=".$db_account['account_id'];
+				
+				if ($card['issuer_id'] != $this_issuer['issuer_id']) {
+					$remote_issuer = $this->run_query("SELECT * FROM card_issuers WHERE issuer_id='".$card['issuer_id']."';")->fetch();
 					
-					if ($io_r->rowCount() > 0) {
-						$io = $io_r->fetch();
+					$remote_url = $remote_issuer['base_url']."/api/card/".$card['issuer_card_id']."/withdraw/?secret=".$card['secret_hash']."&fee=".$fee."&address=".$db_address['address'];
+					$remote_response_raw = file_get_contents($remote_url);
+					$remote_response = get_object_vars(json_decode($remote_response_raw));
+					
+					if ($remote_response['status_code'] == 1) {
+						$status_code=1;
+						$message = $success_message;
+						$this->change_card_status($card, "redeemed");
 						
-						$fee = 0.001;
-						$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
+						$q = "UPDATE cards SET redemption_tx_hash=".$this->quote_escape($remote_response['message'])." WHERE card_id='".$card['card_id']."';";
+						$r = $this->run_query($q);
+						$card['redemption_tx_hash'] = $remote_response['message'];
+					}
+					else {$status_code=12; $message = $remote_response['message'];}
+				}
+				else {
+					$tx_q = "SELECT * FROM transactions WHERE tx_hash=".$this->quote_escape($card['io_tx_hash']).";";
+					$tx_r = $this->run_query($tx_q);
+					
+					if ($tx_r->rowCount() == 1) {
+						$io_tx = $tx_r->fetch();
+						$io_r = $this->run_query("SELECT * FROM transaction_ios WHERE create_transaction_id='".$io_tx['transaction_id']."' AND out_index='".$card['io_out_index']."';");
 						
-						$this_issuer = $this->get_issuer_by_server_name($GLOBALS['base_url']);
-						
-						$tx_successful = false;
-						
-						if ($card['issuer_id'] != $this_issuer['issuer_id']) {
-							$remote_issuer = $this->run_query("SELECT * FROM card_issuers WHERE issuer_id='".$card['issuer_id']."';")->fetch();
+						if ($io_r->rowCount() > 0) {
+							$io = $io_r->fetch();
+							$success_message .= "&io_id=".$io['io_id'];
 							
-							$remote_url = $remote_issuer['base_url']."/api/card/".$card['issuer_card_id']."/withdraw/?secret=".$card['secret_hash']."&fee=".$fee."&address=".$db_address['address'];
-							$remote_response_raw = file_get_contents($remote_url);
-							$remote_response = get_object_vars(json_decode($remote_response_raw));
-							
-							if ($remote_response['status_code'] == 1) $tx_successful = true;
-						}
-						else {
 							$transaction = $blockchain->create_transaction("transaction", array($io['amount']-$fee_amount), false, array($io['io_id']), array($db_address['address_id']), $fee_amount);
 							
-							if ($transaction) $tx_successful = true;
+							if ($transaction) {
+								$message = $success_message;
+								$this->change_card_status($card, "redeemed");
+								$status_code = 1;
+								
+								$q = "UPDATE cards SET redemption_tx_hash=".$this->quote_escape($transaction['tx_hash'])." WHERE card_id='".$card['card_id']."';";
+								$r = $this->run_query($q);
+								$card['redemption_tx_hash'] = $transaction['tx_hash'];
+							}
+							else {$status_code=11; $message="Error: failed to create the transaction.";}
 						}
-						
-						if ($tx_successful) {
-							if ($claim_type == "to_game") $message = "/accounts/?action=prompt_game_buyin&account_id=".$db_account['account_id']."&io_id=".$io['io_id']."&amount=".($io['amount']/pow(10,$blockchain->db_blockchain['decimal_places']));
-							else $message = "/accounts/?action=view_account&account_id=".$db_account['account_id'];
-							
-							$this->change_card_status($card, "redeemed");
-							$status_code = 1;
-						}
-						else {$status_code=11; $message="Error: failed to create the transaction.";}
+						else {$status_code=10; $message="Error: card payment UTXO not found.";}
 					}
-					else {$status_code=10; $message="Error: card payment UTXO not found.";}
+					else {$status_code=9; $message="Error: card payment transaction not found.";}
 				}
-				else {$status_code=9; $message="Error: card payment transaction not found.";}
 			}
 			else {$status_code=8; $message="Error: address not found.";}
 		}

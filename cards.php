@@ -745,9 +745,11 @@ include('includes/html_start.php');
 								<?php
 								for ($i=0; $i<count($my_cards); $i++) {
 									echo '<div class="card_small" id="card_btn'.$i.'" onclick="open_card('.$i.');">';
+									if ($my_cards[$i]['status'] == "claimed") echo "<b>";
 									echo $my_cards[$i]['issuer_card_id'];
 									echo "<br/>\n";
 									echo $app->format_bignum($my_cards[$i]['amount'])." ".$my_cards[$i]['abbreviation'];
+									if ($my_cards[$i]['status'] == "claimed") echo "</b>";
 									echo "</div>\n";
 								}
 								?>
