@@ -1887,7 +1887,9 @@ function show_card_preview() {
 function search_card_id() {
 	var issuer_id = $('#card_issuer_id').val();
 	var card_id = $('#card_id_search').val();
-	window.location = "/redeem/"+issuer_id+"/"+card_id;
+	var url = "/redeem/"+issuer_id+"/"+card_id;
+	if ($('#redirect_key').val() != "") url += "/?redirect_key="+$('#redirect_key').val();
+	window.location = url;
 }
 function redeem_toggle() {
 	if ($('#enter_redeem_code').is(":visible")) {
@@ -1941,6 +1943,7 @@ function card_login(create_mode, login_card_id, issuer_id) {
 	
 	if (!create_mode || card_password == card_password2) {
 		var url = "/ajax/check_code.php?action=login&issuer_id="+issuer_id+"&card_id="+login_card_id+"&password="+card_password+"&code="+$('#redeem_code').val().replace(/-/g, '');
+		if ($('#redirect_key').val() != "") url += "&redirect_key="+$('#redirect_key').val();
 		
 		$.get(url, function(result) {
 			var result_obj = JSON.parse(result);

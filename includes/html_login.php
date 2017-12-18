@@ -101,6 +101,7 @@ function login() {
 		<div class="panel-title">To continue, please register for a user account.</div>
 	</div>
 	<div class="panel-body">
+		<h3>Log in by username</h3>
 		<form id="alias_form" action="/" method="get" onsubmit="check_alias(); return false;">
 			<div class="row">
 				<div class="col-md-8">
@@ -160,5 +161,8 @@ function login() {
 				</div>
 			</form>
 		</div>
+		
+		<h3>Log in via card</h3>
+		<p>If you have previously used this site, but do not have a user account, you may be able to log in via your scratch off card. To log in via card, please follow <a href="/redeem/<?php if ($redirect_key) echo "?redirect_key=".$redirect_key; ?>">this link</a>.</p>
 	</div>
 </div>

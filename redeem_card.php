@@ -7,9 +7,13 @@ $pagetitle = "Redeem a Card";
 $nav_tab_selected = "cards";
 $nav_subtab_selected = "redeem";
 $card = false;
+
+if (!empty($_REQUEST['redirect_key'])) $redirect_key = $_REQUEST['redirect_key'];
+
 include('includes/html_start.php');
 ?>
 <div class="container-fluid">
+	<input type="hidden" id="redirect_key" value="<?php if ($redirect_key) echo $redirect_key; ?>" />
 	<?php
 	if ($uri_parts[1] == "redeem") {
 		$issuer_id = (int) $uri_parts[2];
@@ -47,6 +51,8 @@ include('includes/html_start.php');
 					setTimeout("update_page();", 1000);
 				}
 				</script>
+				
+				<input type="hidden" id="redirect_key" value="<?php if ($redirect_key) echo $redirect_key; ?>" />
 				
 				<div id="step1">
 					<div class="row">
@@ -246,9 +252,8 @@ include('includes/html_start.php');
 		?>
 		<div class="row">
 			<div class="col-sm-6 col-sm-push-3 text-center">
-				<h1>Redeem your gift card</h2>
+				<h1>Log in via card</h2>
 				<p>
-					Do you have a gift card to redeem?<br/>
 					Please enter card details below to find your card.
 				</p>
 				<form action="/redeem/" method="get" onsubmit="search_card_id(); return false;">

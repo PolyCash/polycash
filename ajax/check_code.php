@@ -6,17 +6,24 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->in
 $card_id = (int) $_REQUEST['card_id'];
 $issuer_id = (int) $_REQUEST['issuer_id'];
 
-$q = "SELECT c.* FROM cards c LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.issuer_id='".$issuer_id."' AND c.issuer_card_id='".$card_id."';";
-$r = $app->run_query($q);
-
 $code = $_REQUEST['code'];
 $code_hash = $app->card_secret_to_hash($code);
 
 $action = "";
 if (!empty($_REQUEST['action'])) $action = $_REQUEST['action'];
 
+$q = "SELECT c.* FROM cards c LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.issuer_id='".$issuer_id."' AND c.issuer_card_id='".$card_id."';";
+$r = $app->run_query($q);
+
 if ($r->rowCount() == 1) {
 	$card = $r->fetch();
+	
+	$redirect_url = false;
+	if (!empty($_REQUEST['redirect_key'])) {
+		$redirect_key = $_REQUEST['redirect_key'];
+		$redirect_r = $app->run_query("SELECT * FROM redirect_urls WHERE redirect_key=".$app->quote_escape($redirect_key).";");
+		if ($redirect_r->rowCount() > 0) $redirect_url = $redirect_r->fetch();
+	}
 	
 	$this_issuer = $app->get_issuer_by_server_name($GLOBALS['base_url']);
 	
@@ -65,6 +72,8 @@ if ($r->rowCount() == 1) {
 							$message = "/wallet/".$db_game['url_identifier']."/";
 						}
 						
+						if ($redirect_url) $message = $redirect_url['url'];
+						
 						$app->output_message(1, $message, false);
 					}
 					else $app->output_message(6, "Failed to create card account.", false);
@@ -81,7 +90,7 @@ if ($r->rowCount() == 1) {
 	}
 	else {
 		if ($action == "login") {
-			if ($card['status'] == "redeemed") {
+			if ($card['status'] == "redeemed" || $card['status'] == "claimed") {
 				$q = "SELECT * FROM card_users WHERE card_user_id='".$card['card_user_id']."';";
 				$r = $app->run_query($q);
 				$card_user = $r->fetch();
@@ -99,11 +108,14 @@ if ($r->rowCount() == 1) {
 						$query .= ";";
 						$result = $app->run_query($query);
 						
-						echo $app->output_message(2, "You were successfully logged in!", false);
+						$message = "/wallet/";
+						if ($redirect_url) $message = $redirect_url['url'];
+						
+						echo $app->output_message(2, $message, false);
 					}
 					else $app->output_message(3, "Invalid card secret supplied", false);;
 				}
-				else $app->output_message(3, "Invalid card secret supplied", false);
+				else $app->output_message(3, "Invalid password", false);
 			}
 			else $app->output_message(0, "Unspecified error", false);
 		}

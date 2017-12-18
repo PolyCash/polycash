@@ -2112,11 +2112,11 @@ class App {
 		if ($card['status'] == "sold") {
 			if (empty($thisuser)) {
 				$alias = $this->random_string(16);
-				$password = $this->random_string(16);
+				$user_password = $this->random_string(16);
 				$verify_code = $this->random_string(32);
 				$salt = $this->random_string(16);
 				
-				$thisuser = $this->create_new_user($verify_code, $salt, $alias, "", $password);
+				$thisuser = $this->create_new_user($verify_code, $salt, $alias, "", $user_password);
 			}
 			
 			$q = "INSERT INTO card_users SET card_id='".$card['card_id']."', password=".$this->quote_escape($password).", create_time='".time()."'";
