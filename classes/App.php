@@ -2437,6 +2437,8 @@ class App {
 				if ($transaction_id) {
 					$transaction = $this->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
 					
+					$this->run_query("UPDATE cards SET redemption_tx_hash=".$this->quote_escape($transaction['tx_hash'])." WHERE card_id='".$card['card_id']."';");
+					$card['redemption_tx_hash'] = $transaction['tx_hash'];
 					$this->change_card_status($card, 'redeemed');
 					
 					return $transaction;

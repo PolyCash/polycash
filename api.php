@@ -111,10 +111,10 @@ if ($uri_parts[1] == "api") {
 				
 				if ($fee > 0 && $fee < $card['amount']) {
 					if ($supplied_secret == $card['secret_hash'] || $supplied_secret_hash == $card['secret_hash']) {
-						list($status_code, $message) = $app->pay_out_card($card, $address, $fee);
+						$transaction = $app->pay_out_card($card, $address, $fee);
 						
-						if ($status_code == 1) {
-							$app->output_message($status_code, $card['redemption_tx_hash'], false);
+						if ($transaction) {
+							$app->output_message($status_code, $transaction['tx_hash'], false);
 						}
 						else $app->output_message($status_code, $message, false);
 					}
