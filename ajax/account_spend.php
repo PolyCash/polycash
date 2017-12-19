@@ -293,8 +293,9 @@ if ($thisuser) {
 						}
 						else {
 							$transaction = $app->pay_out_card($card, $address, $fee);
+							$db_blockchain = $app->run_query("SELECT * FROM blockchains WHERE blockchain_id='".$transaction['blockchain_id']."';")->fetch();
 							
-							if ($transaction) $app->output_message(1, "Great, coins have been sent to your address.", false);
+							if ($transaction) $app->output_message(1, "Great! Coins have been sent to <a href=\"/explorer/blockchains/".$db_blockchain['url_identifier']."/transactions/".$transaction['tx_hash']."\">your address</a>.", false);
 							else $app->output_message(7, "Error: failed to create the transaction.", false);
 						}
 					}
