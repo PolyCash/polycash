@@ -1998,8 +1998,8 @@ function claim_card(claim_type) {
 	var btn_id = "";
 	var btn_original_text = "";
 	if (claim_type == "to_address") btn_id = 'claim_address_btn';
-	else if (claim_type == "to_game") btn_id = 'claim_game_btn';
-	else if (claim_type == "to_account") btn_id = 'claim_account_btn';
+	else if (claim_type == "to_game") btn_id = 'claim_game_btn_'+card_id+'_'+issuer_id;
+	else if (claim_type == "to_account") btn_id = 'claim_account_btn_'+card_id+'_'+issuer_id;
 	
 	if ($('#'+btn_id).html() != "Loading...") {
 		btn_original_text = $('#'+btn_id).html();

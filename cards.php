@@ -834,8 +834,8 @@ include('includes/html_start.php');
 												?>
 												<p style="margin-top: 15px;">
 													<button class="btn btn-success" onclick="card_id=<?php echo $my_cards[$i]['issuer_card_id']; ?>; issuer_id=<?php echo $my_cards[$i]['issuer_id']; ?>; $('#claim_dialog').modal('show');">Withdraw to Address</button>
-													<button id="claim_account_btn" class="btn btn-primary" onclick="card_id=<?php echo $my_cards[$i]['issuer_card_id']; ?>; issuer_id=<?php echo $my_cards[$i]['issuer_id']; ?>; claim_card('to_account');">Withdraw to Account</button>
-													<button id="claim_game_btn" class="btn btn-info" onclick="card_id=<?php echo $my_cards[$i]['issuer_card_id']; ?>; issuer_id=<?php echo $my_cards[$i]['issuer_id']; ?>; claim_card('to_game');">Buy in to Game</button>
+													<button id="claim_account_btn_<?php echo $my_cards[$i]['issuer_card_id'].'_'.$my_cards[$i]['issuer_id']; ?>" class="btn btn-primary" onclick="card_id=<?php echo $my_cards[$i]['issuer_card_id']; ?>; issuer_id=<?php echo $my_cards[$i]['issuer_id']; ?>; claim_card('to_account');">Withdraw to Account</button>
+													<button id="claim_game_btn_<?php echo $my_cards[$i]['issuer_card_id'].'_'.$my_cards[$i]['issuer_id']; ?>" class="btn btn-info" onclick="card_id=<?php echo $my_cards[$i]['issuer_card_id']; ?>; issuer_id=<?php echo $my_cards[$i]['issuer_id']; ?>; claim_card('to_game');">Buy in to Game</button>
 												</p>
 												<?php
 											}
