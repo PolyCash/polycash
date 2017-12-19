@@ -114,9 +114,9 @@ if ($uri_parts[1] == "api") {
 						$transaction = $app->pay_out_card($card, $address, $fee);
 						
 						if ($transaction) {
-							$app->output_message($status_code, $transaction['tx_hash'], false);
+							$app->output_message(1, $transaction['tx_hash'], false);
 						}
-						else $app->output_message($status_code, $message, false);
+						else $app->output_message(6, $message, false);
 					}
 					else $app->output_message(5, "Error: wrong secret key.", false);
 				}
