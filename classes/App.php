@@ -2435,7 +2435,7 @@ class App {
 				$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($io['io_id']), array($db_address['address_id']), $fee_amount);
 				
 				if ($transaction_id) {
-					$transaction = $app->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
+					$transaction = $this->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
 					
 					$this->change_card_status($card, 'redeemed');
 					
