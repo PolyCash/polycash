@@ -159,6 +159,73 @@ if ($uri_parts[1] == "api") {
 			else $app->output_message(0, "Error: card not found.");
 		}
 	}
+	else if (count($uri_parts) >= 5 && ($uri_parts[2] == "block" || $uri_parts[2] == "blocks")) {
+		$blockchain_identifier = $uri_parts[3];
+		
+		if ($uri_parts[2] == "block") {
+			$block_height = (int) $uri_parts[4];
+		}
+		else {
+			$uri_parts[4] = str_replace(":", "-", $uri_parts[4]);
+			$block_range = explode("-", $uri_parts[4]);
+			$from_block_height = (int) $block_range[0];
+			$to_block_height = (int) $block_range[1];
+		}
+		
+		$blockchain_r = $app->run_query("SELECT * FROM blockchains WHERE url_identifier=".$app->quote_escape($blockchain_identifier).";");
+		
+		if ($blockchain_r->rowCount() > 0) {
+			$db_blockchain = $blockchain_r->fetch();
+			$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
+			
+			$block_q = "SELECT block_id, block_hash, num_transactions, time_created FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."'";
+			if ($uri_parts[2] == "block") $block_q .= " AND block_id='".$block_height."'";
+			else $block_q .= " AND block_id >= ".$from_block_height." AND block_id <= ".$to_block_height;
+			$block_q .= ";";
+			$block_r = $app->run_query($block_q);
+			
+			$blocks = array();
+			
+			while ($db_block = $block_r->fetch(PDO::FETCH_ASSOC)) {
+				$transactions = array();
+				
+				$tx_q = "SELECT transaction_id, block_id, transaction_desc, tx_hash, amount, fee_amount, time_created, position_in_block, num_inputs, num_outputs FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_id='".$db_block['block_id']."' ORDER BY position_in_block ASC;";
+				$tx_r = $app->run_query($tx_q);
+				
+				while ($tx = $tx_r->fetch(PDO::FETCH_ASSOC)) {
+					$inputs = array();
+					$outputs = array();
+					
+					$tx_in_q = "SELECT a.address, t.tx_hash, io.out_index, io.amount, io.spend_status, io.option_index FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.spend_transaction_id='".$tx['transaction_id']."';";
+					$tx_in_r = $app->run_query($tx_in_q);
+					
+					while ($input = $tx_in_r->fetch(PDO::FETCH_ASSOC)) {
+						array_push($inputs, $input);
+					}
+					
+					$tx_out_q = "SELECT io.option_index, io.spend_status, io.out_index, io.amount, a.address FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$tx['transaction_id']."';";
+					$tx_out_r = $app->run_query($tx_out_q);
+					
+					while ($output = $tx_out_r->fetch(PDO::FETCH_ASSOC)) {
+						array_push($outputs, $output);
+					}
+					
+					unset($tx['transaction_id']);
+					$tx['inputs'] = $inputs;
+					$tx['outputs'] = $outputs;
+					
+					array_push($transactions, $tx);
+				}
+				$db_block['transactions'] = $transactions;
+				
+				array_push($blocks, $db_block);
+			}
+			
+			$api_output['status_code'] = 1;
+			$api_output['blocks'] = $blocks;
+			echo json_encode($api_output, JSON_PRETTY_PRINT);
+		}
+	}
 	else if (!empty($uri_parts[2])) {
 		$game_identifier = $uri_parts[2];
 		
