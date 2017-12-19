@@ -56,7 +56,7 @@ if ($thisuser && $action == "donate_to_faucet") {
 						$addresses_needed = $quantity;
 						$loop_count = 0;
 						do {
-							if ($donate_blockchain->db_blockchain['p2p_mode'] == "none") {
+							if ($donate_blockchain->db_blockchain['p2p_mode'] != "rpc") {
 								$addr_text = $app->random_string(34);
 								$temp_address = $donate_blockchain->create_or_fetch_address($addr_text, false, false, false, false, true, false);
 							}

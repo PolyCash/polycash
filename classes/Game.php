@@ -102,7 +102,7 @@ class Game {
 				
 				while ($transaction_input = $r->fetch()) {
 					if ($input_sum < $amount) {
-						if ($this->blockchain->db_blockchain['p2p_mode'] == "none") {
+						if ($this->blockchain->db_blockchain['p2p_mode'] != "rpc") {
 							$qq = "UPDATE transaction_ios SET spend_count=spend_count+1, spend_transaction_id='".$transaction_id."', spend_transaction_ids=CONCAT(spend_transaction_ids, CONCAT('".$transaction_id."', ','))";
 							if ($block_id !== false) $qq .= ", spend_status='spent', spend_block_id='".$block_id."', spend_round_id='".$this->block_to_round($block_id)."'";
 							$qq .= " WHERE io_id='".$transaction_input['io_id']."';";
@@ -145,7 +145,7 @@ class Game {
 						$r = $this->blockchain->app->run_query($q);
 						$address = $r->fetch();
 						
-						if ($this->blockchain->db_blockchain['p2p_mode'] == "none") {
+						if ($this->blockchain->db_blockchain['p2p_mode'] != "rpc") {
 							$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."', script_type='pubkeyhash', spend_status='";
 							if ($instantly_mature == 1) $q .= "unspent";
 							else $q .= "unconfirmed";
@@ -191,7 +191,7 @@ class Game {
 					$r = $this->blockchain->app->run_query($q);
 					$overshoot_address = $r->fetch();
 					
-					if ($this->blockchain->db_blockchain['p2p_mode'] == "none") {
+					if ($this->blockchain->db_blockchain['p2p_mode'] != "rpc") {
 						$q = "INSERT INTO transaction_ios SET out_index='".$out_index."', spend_status='unconfirmed', blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."', script_type='pubkeyhash', ";
 						if ($block_id !== false) {
 							$overshoot_cbd = floor($coin_blocks_destroyed*($overshoot_amount/$input_sum));
@@ -1026,7 +1026,7 @@ class Game {
 	}
 	
 	public function process_buyin_transaction($transaction) {
-		if (!empty($this->db_game['game_starting_block']) && !empty($this->db_game['escrow_address']) && ($this->blockchain->db_blockchain['p2p_mode'] == "none" || $transaction['block_id'] >= $this->db_game['game_starting_block'])) {
+		if (!empty($this->db_game['game_starting_block']) && !empty($this->db_game['escrow_address']) && ($this->blockchain->db_blockchain['p2p_mode'] != "rpc" || $transaction['block_id'] >= $this->db_game['game_starting_block'])) {
 			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false, false);
 			
 			$qq = "SELECT * FROM transaction_ios WHERE create_transaction_id='".$transaction['transaction_id']."' AND address_id='".$escrow_address['address_id']."';";
@@ -1257,7 +1257,7 @@ class Game {
 		
 		$private_game_message = "";
 		
-		if ($this->blockchain->db_blockchain['p2p_mode'] == "none") {
+		if ($this->blockchain->db_blockchain['p2p_mode'] != "rpc") {
 			$seconds_to_add = max(0, time()-$this->blockchain->db_blockchain['last_hash_time']);
 			$link_show_cron = false;
 			
@@ -2973,7 +2973,7 @@ class Game {
 	}
 	
 	public function add_genesis_transaction(&$user_game) {
-		if ($this->blockchain->db_blockchain['p2p_mode'] == "none") {
+		if ($this->blockchain->db_blockchain['p2p_mode'] != "rpc") {
 			$fee_amount = 0.001*pow(10, $this->blockchain->db_blockchain['decimal_places']);
 			
 			$q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id WHERE io.spend_status='unspent' AND a.user_id IS NULL AND a.is_mine=1 AND t.transaction_desc='coinbase' AND t.blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND io.amount > ".$fee_amount.";";

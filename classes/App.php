@@ -1101,7 +1101,7 @@ class App {
 	
 	public function fetch_game_definition(&$game) {
 		$game_definition = array();
-		if ($game->blockchain->db_blockchain['p2p_mode'] == "none") $game_definition['blockchain_identifier'] = "private";
+		if ($game->blockchain->db_blockchain['p2p_mode'] != "rpc") $game_definition['blockchain_identifier'] = "private";
 		else $game_definition['blockchain_identifier'] = $game->blockchain->db_blockchain['url_identifier'];
 		
 		$verbatim_vars = $this->game_definition_verbatim_vars();
@@ -1729,7 +1729,7 @@ class App {
 						
 						$new_game = new Game($blockchain, $new_game_id);
 						
-						if ($blockchain->db_blockchain['p2p_mode'] == "none") {
+						if ($blockchain->db_blockchain['p2p_mode'] != "rpc") {
 							if ($thisuser) $user_game = $thisuser->ensure_user_in_game($new_game, false);
 							
 							if (empty($new_game->db_game['genesis_tx_hash'])) {
