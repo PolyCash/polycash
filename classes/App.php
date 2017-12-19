@@ -2432,11 +2432,15 @@ class App {
 				$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
 				$amounts = array($io['amount']-$fee_amount);
 				
-				$transaction = $blockchain->create_transaction("transaction", $amounts, false, array($io['io_id']), array($db_address['address_id']), $fee_amount);
+				$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($io['io_id']), array($db_address['address_id']), $fee_amount);
 				
-				if ($transaction) $this->change_card_status($card, 'redeemed');
-				
-				return $transaction;
+				if ($transaction_id) {
+					$transaction = $app->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
+					
+					$this->change_card_status($card, 'redeemed');
+					
+					return $transaction;
+				}
 			}
 			else return false;
 		}
