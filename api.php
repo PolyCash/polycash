@@ -178,7 +178,7 @@ if ($uri_parts[1] == "api") {
 			$db_blockchain = $blockchain_r->fetch();
 			$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
 			
-			$block_q = "SELECT block_id, block_hash, num_transactions, time_created FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."'";
+			$block_q = "SELECT block_id, block_hash, num_transactions, time_mined FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."'";
 			if ($uri_parts[2] == "block") $block_q .= " AND block_id='".$block_height."'";
 			else $block_q .= " AND block_id >= ".$from_block_height." AND block_id <= ".$to_block_height;
 			$block_q .= ";";
