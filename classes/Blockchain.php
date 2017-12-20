@@ -1588,7 +1588,9 @@ class Blockchain {
 	}
 	
 	public function add_transaction_from_web_api($block_height, &$tx) {
-		$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_id='".$block_height."', transaction_desc=".$this->app->quote_escape($tx['transaction_desc']).", tx_hash=".$this->app->quote_escape($tx['tx_hash']).", amount=".$this->app->quote_escape($tx['amount']).", fee_amount=".$this->app->quote_escape($tx['fee_amount']).", position_in_block='".((int)$tx['position_in_block'])."', num_inputs=".((int)$tx['num_inputs']).", num_outputs=".((int)$tx['num_outputs']).";";
+		$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."'";
+		if ($block_height !== false) $q .= ", block_id='".$block_height."'";
+		$q .= ", transaction_desc=".$this->app->quote_escape($tx['transaction_desc']).", tx_hash=".$this->app->quote_escape($tx['tx_hash']).", amount=".$this->app->quote_escape($tx['amount']).", fee_amount=".$this->app->quote_escape($tx['fee_amount']).", position_in_block='".((int)$tx['position_in_block'])."', num_inputs=".((int)$tx['num_inputs']).", num_outputs=".((int)$tx['num_outputs']).";";
 		$r = $this->app->run_query($q);
 		$transaction_id = $this->app->last_insert_id();
 		
