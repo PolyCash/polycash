@@ -657,7 +657,6 @@ class Blockchain {
 						$keep_looping = false;
 					}
 					else {
-						echo "Add block #$block_height (".$rpc_block['nextblockhash'].")\n";
 						$rpc_block = $coin_rpc->getblock($rpc_block['nextblockhash']);
 						$this->coind_add_block($coin_rpc, $rpc_block['hash'], $block_height, true);
 					}
@@ -756,7 +755,7 @@ class Blockchain {
 						$this->coind_add_block($coin_rpc, $unknown_block_hash, $unknown_block['block_id'], true);
 						$unknown_block = $this->app->run_query("SELECT * FROM blocks WHERE internal_block_id='".$unknown_block['internal_block_id']."';")->fetch();
 					}
-					echo $this->coind_add_block($coin_rpc, $unknown_block['block_hash'], $unknown_block['block_id'], false);
+					$this->coind_add_block($coin_rpc, $unknown_block['block_hash'], $unknown_block['block_id'], false);
 				}
 				else {
 					if ($loop_i >= count($ref_api_blocks)) {
@@ -767,7 +766,7 @@ class Blockchain {
 					if (empty($ref_api_blocks[$loop_i])) $keep_looping = false;
 					else {
 						$ref_api_blocks[$loop_i] = get_object_vars($ref_api_blocks[$loop_i]);
-						echo $this->web_api_add_block($unknown_block, $ref_api_blocks[$loop_i], false);
+						$this->web_api_add_block($unknown_block, $ref_api_blocks[$loop_i], false);
 					}
 				}
 			}
@@ -806,10 +805,9 @@ class Blockchain {
 	public function load_unconfirmed_transactions(&$coin_rpc, $max_execution_time) {
 		$start_time = microtime(true);
 		$unconfirmed_txs = $coin_rpc->getrawmempool();
-		echo "Looping through ".count($unconfirmed_txs)." unconfirmed transactions.<br/>\n";
+		
 		for ($i=0; $i<count($unconfirmed_txs); $i++) {
 			$this->walletnotify($coin_rpc, $unconfirmed_txs[$i], TRUE);
-			if ($i%100 == 0) echo "$i ";
 			if ($max_execution_time && (microtime(true)-$start_time) > $max_execution_time) $i=count($unconfirmed_txs);
 		}
 		$this->app->set_site_constant('walletnotify', $unconfirmed_txs[count($unconfirmed_txs)-1]);
@@ -856,7 +854,6 @@ class Blockchain {
 	}
 	
 	public function delete_blocks_from_height($block_height) {
-		echo "deleting from block #".$block_height." and up.<br/>\n";
 		$this->app->run_query("DELETE s.* FROM game_sellouts s JOIN games g ON s.game_id=g.game_id WHERE g.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND s.in_block_id >= ".$block_height.";");
 		$this->app->run_query("DELETE FROM transactions WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id >= ".$block_height.";");
 		$this->app->run_query("DELETE FROM transactions WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id IS NULL;");
@@ -1438,7 +1435,6 @@ class Blockchain {
 			}
 			
 			if ($output_error) {
-				echo "output error ";
 				//$this->blockchain->app->cancel_transaction($transaction_id, $affected_input_ids, false);
 				return false;
 			}
