@@ -332,7 +332,7 @@ class Blockchain {
 						$input_sum += $spend_io['amount'];
 						
 						if (!empty($block_height)) {
-							$this_io_cbd = ($block_height - $spend_io['block_id'])*$spend_io['amount'];
+							$this_io_cbd = ($block_height - $spend_io['create_block_id'])*$spend_io['amount'];
 							$coin_blocks_destroyed += $this_io_cbd;
 							$r = $this->app->run_query("UPDATE transaction_ios SET coin_blocks_created='".$this_io_cbd."' WHERE io_id='".$spend_io['io_id']."';");
 						}
