@@ -193,7 +193,7 @@ if ($uri_parts[1] == "api") {
 				$tx_r = $app->run_query($tx_q);
 				
 				while ($tx = $tx_r->fetch(PDO::FETCH_ASSOC)) {
-					list($inputs, $outputs) = $app->web_api_transaction_ios();
+					list($inputs, $outputs) = $app->web_api_transaction_ios($tx['transaction_id']);
 					
 					unset($tx['transaction_id']);
 					$tx['inputs'] = $inputs;

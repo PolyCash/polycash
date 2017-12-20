@@ -172,10 +172,6 @@ class Blockchain {
 					$successful = true;
 					$db_transaction = $this->add_transaction($coin_rpc, $tx_hash, $db_block['block_id'], true, $successful, $i, false, true);
 					
-					if (!$successful) {
-						$tx_error = true;
-						$i = count($api_block['transactions']);
-					}
 					if ($db_transaction['transaction_desc'] != "transaction") $coins_created += $db_transaction['amount'];
 				}
 			}
@@ -550,13 +546,13 @@ class Blockchain {
 					$q .= " WHERE transaction_id='".$db_transaction_id."';";
 					$r = $this->app->run_query($q);
 					
-					if ($show_debug) echo "done.".(microtime(true)-$benchmark_time);
+					if ($show_debug) echo ". ";
 					
 					$db_transaction = $this->app->run_query("SELECT * FROM transactions WHERE transaction_id='".$db_transaction_id."';")->fetch();
 					return $db_transaction;
 				}
 				else {
-					if ($show_debug) echo "done.".(microtime(true)-$benchmark_time);
+					if ($show_debug) echo ". ";
 					return false;
 				}
 			}
