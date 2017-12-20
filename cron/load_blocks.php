@@ -27,19 +27,23 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		
 		$blockchains = array();
 		
-		$blockchain_q = "SELECT * FROM blockchains WHERE online=1;";
+		$blockchain_q = "SELECT * FROM blockchains WHERE online=1 AND p2p_mode IN ('rpc','web_api');";
 		$blockchain_r = $GLOBALS['app']->run_query($blockchain_q);
 		
 		while ($db_blockchain = $blockchain_r->fetch()) {
 			$blockchain_i = count($blockchains);
 			$blockchains[$blockchain_i] = new Blockchain($app, $db_blockchain['blockchain_id']);
 			$error = false;
-			try {
-				$coin_rpc = new jsonRPCClient('http://'.$db_blockchain['rpc_username'].':'.$db_blockchain['rpc_password'].'@127.0.0.1:'.$db_blockchain['rpc_port'].'/');
-				$coin_rpc->getinfo();
-			} catch (Exception $e) {
-				$error = true;
-				if ($print_debug) echo "Error, skipped ".$db_blockchain['blockchain_name']." because RPC connection failed.<br/>\n";
+			
+			if ($db_blockchain['p2p_mode'] == "web_api") $coin_rpc = false;
+			else {
+				try {
+					$coin_rpc = new jsonRPCClient('http://'.$db_blockchain['rpc_username'].':'.$db_blockchain['rpc_password'].'@127.0.0.1:'.$db_blockchain['rpc_port'].'/');
+					$coin_rpc->getinfo();
+				} catch (Exception $e) {
+					$error = true;
+					if ($print_debug) echo "Error, skipped ".$db_blockchain['blockchain_name']." because RPC connection failed.<br/>\n";
+				}
 			}
 			
 			if (!$error) {

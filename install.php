@@ -166,41 +166,47 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				
 				<h2>Configure coin daemon connections</h2>
 				<?php
-				$blockchain_r = $app->run_query("SELECT * FROM blockchains WHERE p2p_mode='rpc' ORDER BY blockchain_name ASC;");
+				$blockchain_r = $app->run_query("SELECT * FROM blockchains WHERE p2p_mode IN('rpc','web_api') ORDER BY blockchain_name ASC;");
 				while ($blockchain = $blockchain_r->fetch()) {
-					if ($blockchain['rpc_username'] != "" && $blockchain['rpc_password'] != "") {
-						echo "<b>Connecting RPC client to ".$blockchain['blockchain_name']."...";
-						try {
-							$coin_rpc = new jsonRPCClient('http://'.$blockchain['rpc_username'].':'.$blockchain['rpc_password'].'@127.0.0.1:'.$blockchain['rpc_port'].'/');
-							$getinfo = $coin_rpc->getinfo();
-							echo " <font class=\"greentext\">Connected on port ".$blockchain['rpc_port']."</font></b><br/>\n";
-							echo "<pre>getinfo()\n";
-							print_r($getinfo);
-							echo "</pre>";
-							
-							echo "Next, please reset and synchronize this game.<br/>\n";
-							echo "<a class=\"btn btn-primary\" target=\"_blank\" href=\"/scripts/sync_blockchain_initial.php?key=".$GLOBALS['cron_key_string']."&blockchain_id=".$blockchain['blockchain_id']."\">Reset & synchronize ".$blockchain['blockchain_name']."</a>\n";
-							echo "<br/><br/>\n";
+					if ($blockchain['p2p_mode'] == "rpc") {
+						if ($blockchain['rpc_username'] != "" && $blockchain['rpc_password'] != "") {
+							echo "<b>Connecting RPC client to ".$blockchain['blockchain_name']."...";
+							try {
+								$coin_rpc = new jsonRPCClient('http://'.$blockchain['rpc_username'].':'.$blockchain['rpc_password'].'@127.0.0.1:'.$blockchain['rpc_port'].'/');
+								$getinfo = $coin_rpc->getinfo();
+								echo " <font class=\"greentext\">Connected on port ".$blockchain['rpc_port']."</font></b><br/>\n";
+								echo "<pre>getinfo()\n";
+								print_r($getinfo);
+								echo "</pre>";
+								
+								echo "Next, please reset and synchronize this game.<br/>\n";
+								echo "<a class=\"btn btn-primary\" target=\"_blank\" href=\"/scripts/sync_blockchain_initial.php?key=".$GLOBALS['cron_key_string']."&blockchain_id=".$blockchain['blockchain_id']."\">Reset & synchronize ".$blockchain['blockchain_name']."</a>\n";
+								echo "<br/><br/>\n";
+							}
+							catch (Exception $e) {
+								echo " <font class=\"redtext\">Failed to connect on port ".$blockchain['rpc_port']."</font></b><br/>";
+								echo "<pre>Make sure the coin daemon is running.</pre>\n";
+								echo "<br/>\n";
+							}
 						}
-						catch (Exception $e) {
-							echo " <font class=\"redtext\">Failed to connect on port ".$blockchain['rpc_port']."</font></b><br/>";
-							echo "<pre>Make sure the coin daemon is running.</pre>\n";
-							echo "<br/>\n";
+						else { ?>
+							Please enter the RPC username and password for connecting to the <b><?php echo $blockchain['blockchain_name']; ?></b> daemon:<br/>
+							<form method="post" action="install.php">
+								<input type="hidden" name="key" value="<?php echo $GLOBALS['cron_key_string']; ?>" />
+								<input type="hidden" name="action" value="save_blockchain_params" />
+								<input type="hidden" name="blockchain_id" value="<?php echo $blockchain['blockchain_id']; ?>" />
+								<input class="form-control" name="rpc_username" placeholder="RPC username" />
+								<input class="form-control" name="rpc_password" placeholder="RPC password" autocomplete="off" />
+								<input class="form-control" name="rpc_port" value="<?php echo $blockchain['default_rpc_port']; ?>" placeholder="RPC port" />
+								<input type="submit" class="btn btn-primary" value="Save" />
+							</form>
+							<br/>
+							<?php
 						}
 					}
-					else { ?>
-						Please enter the RPC username and password for connecting to the <b><?php echo $blockchain['blockchain_name']; ?></b> daemon:<br/>
-						<form method="post" action="install.php">
-							<input type="hidden" name="key" value="<?php echo $GLOBALS['cron_key_string']; ?>" />
-							<input type="hidden" name="action" value="save_blockchain_params" />
-							<input type="hidden" name="blockchain_id" value="<?php echo $blockchain['blockchain_id']; ?>" />
-							<input class="form-control" name="rpc_username" placeholder="RPC username" />
-							<input class="form-control" name="rpc_password" placeholder="RPC password" autocomplete="off" />
-							<input class="form-control" name="rpc_port" value="<?php echo $blockchain['default_rpc_port']; ?>" placeholder="RPC port" />
-							<input type="submit" class="btn btn-primary" value="Save" />
-						</form>
-						<br/>
-						<?php
+					else {
+						echo "<p><h3>".$blockchain['blockchain_name']."</h3>\n";
+						echo "<a target=\"_blank\" href=\"/scripts/sync_blockchain_initial.php?key=".$GLOBALS['cron_key_string']."&blockchain_id=".$blockchain['blockchain_id']."\">Reset & synchronize ".$blockchain['blockchain_name']."</a></p>\n";
 					}
 				}
 				
