@@ -219,7 +219,7 @@ if ($uri_parts[1] == "api") {
 			$db_blockchain = $blockchain_r->fetch();
 			$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
 			
-			if ($uri_parts[4] == "post" && $this->db_blockchain['p2p_mode'] != "rpc") {
+			if ($uri_parts[4] == "post" && $blockchain->db_blockchain['p2p_mode'] != "rpc") {
 				$data = $_REQUEST['data'];
 				$tx = get_object_vars(json_decode($data));
 				
