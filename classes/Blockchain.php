@@ -166,23 +166,7 @@ class Blockchain {
 				$r = $this->app->run_query($q);
 				
 				if ($r->rowCount() == 0) {
-					$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_id='".$db_block['block_id']."', transaction_desc=".$this->app->quote_escape($tx['transaction_desc']).", tx_hash=".$this->app->quote_escape($tx_hash).", amount=".$this->app->quote_escape($tx['amount']).", fee_amount=".$this->app->quote_escape($tx['fee_amount']).", position_in_block='".((int)$tx['position_in_block'])."', num_inputs=".((int)$tx['num_inputs']).", num_outputs=".((int)$tx['num_outputs']).";";
-					$r = $this->app->run_query($q);
-					$transaction_id = $this->app->last_insert_id();
-					
-					for ($j=0; $j<count($tx['inputs']); $j++) {
-						$tx_input = get_object_vars($tx['inputs'][$j]);
-						$q = "UPDATE transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id SET io.spend_transaction_id='".$transaction_id."' WHERE t.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND t.tx_hash=".$this->app->quote_escape($tx_input['tx_hash'])." AND io.out_index=".$this->app->quote_escape($tx_input['out_index']).";";
-						$r = $this->app->run_query($q);
-					}
-					
-					for ($j=0; $j<count($tx['outputs']); $j++) {
-						$tx_output = get_object_vars($tx['outputs'][$j]);
-						$db_address = $this->create_or_fetch_address($tx_output['address'], true, false, false, false, false, false);
-						
-						$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->db_blockchain['blockchain_id']."', out_index='".$j."', address_id='".$db_address['address_id']."', option_index=".$this->app->quote_escape($tx_output['option_index']).", create_block_id='".$db_block['block_id']."', create_transaction_id='".$transaction_id."', amount=".$this->app->quote_escape($tx_output['amount']).";";
-						$r = $this->app->run_query($q);
-					}
+					$transaction_id = $this->add_transaction_from_web_api($db_block['block_id'], $tx);
 					
 					$coin_rpc = false;
 					$successful = true;
@@ -867,24 +851,6 @@ class Blockchain {
 		$this->app->run_query("DELETE eo.* FROM event_outcomes eo JOIN events e ON eo.event_id=e.event_id JOIN games g ON eo.game_id=g.game_id WHERE g.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND eo.payout_block_id >= ".$block_height.";");
 	}
 	
-	public function web_api_fetch_block($block_height) {
-		$remote_url = $this->authoritative_issuer['base_url']."/api/block/".$this->db_blockchain['url_identifier']."/".$block_height;
-		$remote_response_raw = file_get_contents($remote_url);
-		return get_object_vars(json_decode($remote_response_raw));
-	}
-	
-	public function web_api_fetch_blocks($from_block_height, $to_block_height) {
-		$remote_url = $this->authoritative_issuer['base_url']."/api/blocks/".$this->db_blockchain['url_identifier']."/".$from_block_height.":".$to_block_height;
-		$remote_response_raw = file_get_contents($remote_url);
-		return get_object_vars(json_decode($remote_response_raw));
-	}
-	
-	public function web_api_fetch_blockchain() {
-		$remote_url = $this->authoritative_issuer['base_url']."/api/blockchain/".$this->db_blockchain['url_identifier']."/";
-		$remote_response_raw = file_get_contents($remote_url);
-		return get_object_vars(json_decode($remote_response_raw));
-	}
-	
 	public function add_genesis_block(&$input) {
 		$html = "";
 		
@@ -1471,6 +1437,10 @@ class Blockchain {
 						}
 					}
 					$this->add_transaction($coin_rpc, $tx_hash, $block_id, true, $successful, false, false, false);
+					
+					if ($this->db_blockchain['p2p_mode'] == "web_api") {
+						$this->web_api_push_transaction($transaction_id);
+					}
 				}
 				return $transaction_id;
 			}
@@ -1585,6 +1555,67 @@ class Blockchain {
 			array_push($db_games, $db_game);
 		}
 		return $db_games;
+	}
+	
+	public function web_api_fetch_block($block_height) {
+		$remote_url = $this->authoritative_issuer['base_url']."/api/block/".$this->db_blockchain['url_identifier']."/".$block_height;
+		$remote_response_raw = file_get_contents($remote_url);
+		return get_object_vars(json_decode($remote_response_raw));
+	}
+	
+	public function web_api_fetch_blocks($from_block_height, $to_block_height) {
+		$remote_url = $this->authoritative_issuer['base_url']."/api/blocks/".$this->db_blockchain['url_identifier']."/".$from_block_height.":".$to_block_height;
+		$remote_response_raw = file_get_contents($remote_url);
+		return get_object_vars(json_decode($remote_response_raw));
+	}
+	
+	public function web_api_fetch_blockchain() {
+		$remote_url = $this->authoritative_issuer['base_url']."/api/blockchain/".$this->db_blockchain['url_identifier']."/";
+		$remote_response_raw = file_get_contents($remote_url);
+		echo $remote_url."<br/>\n";
+		var_dump($remote_response_raw);
+		return get_object_vars(json_decode($remote_response_raw));
+	}
+	
+	public function web_api_push_transaction($transaction_id) {
+		$tx = $this->app->run_query("SELECT transaction_id, block_id, transaction_desc, tx_hash, amount, fee_amount, time_created, position_in_block, num_inputs, num_outputs FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch(PDO::FETCH_ASSOC);
+		
+		if ($tx) {
+			list($inputs, $outputs) = $this->app->web_api_transaction_ios($tx['transaction_id']);
+			
+			unset($tx['transaction_id']);
+			$tx['inputs'] = $inputs;
+			$tx['outputs'] = $outputs;
+			$data_txt = json_encode($tx, JSON_PRETTY_PRINT);
+			$data['data'] = $data_txt;
+			
+			$url = $this->authoritative_issuer['base_url']."/api/transactions/".$this->db_blockchain['url_identifier']."/post/";
+			
+			$remote_response = $this->app->curl_post_request($url, $data, false);
+			var_dump($remote_response); die();
+		}
+	}
+	
+	public function add_transaction_from_web_api($block_height, &$tx) {
+		$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_id='".$block_height."', transaction_desc=".$this->app->quote_escape($tx['transaction_desc']).", tx_hash=".$this->app->quote_escape($tx_hash).", amount=".$this->app->quote_escape($tx['amount']).", fee_amount=".$this->app->quote_escape($tx['fee_amount']).", position_in_block='".((int)$tx['position_in_block'])."', num_inputs=".((int)$tx['num_inputs']).", num_outputs=".((int)$tx['num_outputs']).";";
+		$r = $this->app->run_query($q);
+		$transaction_id = $this->app->last_insert_id();
+		
+		for ($j=0; $j<count($tx['inputs']); $j++) {
+			$tx_input = get_object_vars($tx['inputs'][$j]);
+			$q = "UPDATE transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id SET io.spend_transaction_id='".$transaction_id."' WHERE t.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND t.tx_hash=".$this->app->quote_escape($tx_input['tx_hash'])." AND io.out_index=".$this->app->quote_escape($tx_input['out_index']).";";
+			$r = $this->app->run_query($q);
+		}
+		
+		for ($j=0; $j<count($tx['outputs']); $j++) {
+			$tx_output = get_object_vars($tx['outputs'][$j]);
+			$db_address = $this->create_or_fetch_address($tx_output['address'], true, false, false, false, false, false);
+			
+			$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->db_blockchain['blockchain_id']."', out_index='".$j."', address_id='".$db_address['address_id']."', option_index=".$this->app->quote_escape($tx_output['option_index']).", create_block_id='".$block_height."', create_transaction_id='".$transaction_id."', amount=".$this->app->quote_escape($tx_output['amount']).";";
+			$r = $this->app->run_query($q);
+		}
+		
+		return $transaction_id;
 	}
 }
 ?>

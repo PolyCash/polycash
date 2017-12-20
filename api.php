@@ -193,22 +193,7 @@ if ($uri_parts[1] == "api") {
 				$tx_r = $app->run_query($tx_q);
 				
 				while ($tx = $tx_r->fetch(PDO::FETCH_ASSOC)) {
-					$inputs = array();
-					$outputs = array();
-					
-					$tx_in_q = "SELECT a.address, t.tx_hash, io.out_index, io.amount, io.spend_status, io.option_index FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.spend_transaction_id='".$tx['transaction_id']."';";
-					$tx_in_r = $app->run_query($tx_in_q);
-					
-					while ($input = $tx_in_r->fetch(PDO::FETCH_ASSOC)) {
-						array_push($inputs, $input);
-					}
-					
-					$tx_out_q = "SELECT io.option_index, io.spend_status, io.out_index, io.amount, a.address FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$tx['transaction_id']."';";
-					$tx_out_r = $app->run_query($tx_out_q);
-					
-					while ($output = $tx_out_r->fetch(PDO::FETCH_ASSOC)) {
-						array_push($outputs, $output);
-					}
+					list($inputs, $outputs) = $app->web_api_transaction_ios();
 					
 					unset($tx['transaction_id']);
 					$tx['inputs'] = $inputs;
@@ -225,6 +210,45 @@ if ($uri_parts[1] == "api") {
 			$api_output['blocks'] = $blocks;
 			echo json_encode($api_output, JSON_PRETTY_PRINT);
 		}
+	}
+	else if ($uri_parts[2] == "transactions") {
+		$url_identifier = $uri_parts[3];
+		$blockchain_r = $app->run_query("SELECT * FROM blockchains WHERE url_identifier=".$app->quote_escape($url_identifier).";");
+		
+		if ($blockchain_r->rowCount() > 0) {
+			$db_blockchain = $blockchain_r->fetch();
+			$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
+			
+			if ($uri_parts[4] == "post" && $this->db_blockchain['p2p_mode'] != "rpc") {
+				$data = $_REQUEST['data'];
+				$tx = get_object_vars(json_decode($data));
+				
+				$transaction_id = $blockchain->add_transaction_from_web_api(false, $tx);
+				
+				$coin_rpc = false;
+				$successful = true;
+				$db_transaction = $blockchain->add_transaction($coin_rpc, $tx['tx_hash'], false, true, $successful, $i, false, true);
+				
+				if ($db_transaction) $app->output_message(1, "Transaction successfully imported!", false);
+				else $app->output_message(4, "There was an error importing the transaction.", false);
+			}
+			else $app->output_message(3, "Invalid action specified.", false);
+		}
+		else $app->output_message(2, "Error: invalid blockchain identifier.", false);
+	}
+	else if ($uri_parts[2] == "blockchain") {
+		$url_identifier = $uri_parts[3];
+		$blockchain_r = $app->run_query("SELECT blockchain_id, blockchain_name, url_identifier, p2p_mode, coin_name, coin_name_plural, seconds_per_block, decimal_places, initial_pow_reward FROM blockchains WHERE url_identifier=".$app->quote_escape($url_identifier).";");
+		
+		if ($blockchain_r->rowCount() > 0) {
+			$db_blockchain = $blockchain_r->fetch(PDO::FETCH_ASSOC);
+			$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
+			$db_blockchain['last_block_id'] = $blockchain->last_block_id();
+			unset($db_blockchain['blockchain_id']);
+			
+			echo json_encode($db_blockchain, JSON_PRETTY_PRINT);
+		}
+		else $app->output_message(2, "Error: invalid blockchain identifier.", false);
 	}
 	else if (!empty($uri_parts[2])) {
 		$game_identifier = $uri_parts[2];

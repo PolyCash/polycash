@@ -2529,5 +2529,38 @@ class App {
 		
 		return array($status_code, $message);
 	}
+	
+	public function web_api_transaction_ios($transaction_id) {
+		$inputs = array();
+		$outputs = array();
+		
+		$tx_in_q = "SELECT a.address, t.tx_hash, io.out_index, io.amount, io.spend_status, io.option_index FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.spend_transaction_id='".$transaction_id."';";
+		$tx_in_r = $this->run_query($tx_in_q);
+		
+		while ($input = $tx_in_r->fetch(PDO::FETCH_ASSOC)) {
+			array_push($inputs, $input);
+		}
+		
+		$tx_out_q = "SELECT io.option_index, io.spend_status, io.out_index, io.amount, a.address FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$transaction_id."';";
+		$tx_out_r = $this->run_query($tx_out_q);
+		
+		while ($output = $tx_out_r->fetch(PDO::FETCH_ASSOC)) {
+			array_push($outputs, $output);
+		}
+		
+		return array($inputs, $outputs);
+	}
+	
+	function curl_post_request($url, $data, $headers) {
+		$ch = curl_init($url);
+		curl_setopt($ch, CURLOPT_HEADER, $headers);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_POST, true);
+
+		curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+		$contents = curl_exec($ch);
+		curl_close($ch);
+		return $contents;
+	}
 }
 ?>
