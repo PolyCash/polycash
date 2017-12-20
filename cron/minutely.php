@@ -9,10 +9,12 @@ if (!empty($argv)) {
 	$cmd_vars = $app->argv_to_array($argv);
 	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
 	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
+	if (!empty($cmd_vars['print_debug'])) $_REQUEST['print_debug'] = $cmd_vars['print_debug'];
 }
 
 if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
-	echo $app->start_regular_background_processes($_REQUEST['key']);
+	$msg = $app->start_regular_background_processes($_REQUEST['key']);
+	if (!empty($_REQUEST['print_debug'])) echo $msg;
 	
 	if (empty($argv)) {
 		$runtime_sec = microtime(true)-$script_start_time;

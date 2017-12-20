@@ -1584,7 +1584,6 @@ class Blockchain {
 			$url = $this->authoritative_issuer['base_url']."/api/transactions/".$this->db_blockchain['url_identifier']."/post/";
 			
 			$remote_response = $this->app->curl_post_request($url, $data, false);
-			var_dump($remote_response); die();
 		}
 	}
 	
