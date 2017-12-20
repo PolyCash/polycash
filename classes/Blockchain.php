@@ -649,8 +649,7 @@ class Blockchain {
 			}
 		}
 		else {
-			$api_blockchain = $this->web_api_fetch_blockchain();
-			$info = get_object_vars($api_blockchain['blockchain']);
+			$info = get_object_vars($this->web_api_fetch_blockchain());
 			$last_block_id = $this->last_block_id();
 			
 			if ($last_block_id < $info['last_block_id']) {
@@ -807,9 +806,8 @@ class Blockchain {
 			$block_height = $getinfo['blocks'];
 		}
 		else {
-			$info = $this->web_api_fetch_blockchain();
-			$info_blockchain = get_object_vars($info['blockchain']);
-			$block_height = $info_blockchain['last_block_id'];
+			$info = get_object_vars($this->web_api_fetch_blockchain());
+			$block_height = $info['last_block_id'];
 		}
 		
 		$html = "Inserting blocks ".($db_block_height+1)." to ".$block_height."<br/>\n";
@@ -1572,8 +1570,6 @@ class Blockchain {
 	public function web_api_fetch_blockchain() {
 		$remote_url = $this->authoritative_issuer['base_url']."/api/blockchain/".$this->db_blockchain['url_identifier']."/";
 		$remote_response_raw = file_get_contents($remote_url);
-		echo $remote_url."<br/>\n";
-		var_dump($remote_response_raw);
 		return get_object_vars(json_decode($remote_response_raw));
 	}
 	
