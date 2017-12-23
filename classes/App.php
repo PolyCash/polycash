@@ -1872,6 +1872,14 @@ class App {
 		}
 	}
 	
+	public function cached_url_info($url) {
+		$q = "SELECT * FROM cached_urls WHERE url=".$this->quote_escape($url).";";
+		$r = $this->run_query($q);
+		
+		if ($r->rowCount() > 0) return $r->fetch();
+		else return false;
+	}
+	
 	public function async_fetch_url($url, $require_now) {
 		$q = "SELECT * FROM cached_urls WHERE url=".$this->quote_escape($url).";";
 		$r = $this->run_query($q);

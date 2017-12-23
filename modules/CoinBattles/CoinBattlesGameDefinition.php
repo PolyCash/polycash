@@ -201,18 +201,41 @@ class CoinBattlesGameDefinition {
 				
 				$poloniex_response = $this->app->async_fetch_url($poloniex_url, true);
 				$poloniex_trades = json_decode($poloniex_response['cached_result'], true);
+				$cached_url = $this->app->cached_url_info($poloniex_url);
 				
-				for ($i=count($poloniex_trades)-1; $i>=0; $i--) {
-					$trade = $poloniex_trades[$i];
+				$cached_prices_q = "SELECT COUNT(*) FROM currency_prices WHERE cached_url_id='".$cached_url['cached_url_id']."';";
+				$cached_prices_r = $this->app->run_query($cached_prices_q);
+				$cached_prices = $cached_prices_r->fetch();
+				$num_cached_prices = $cached_prices['COUNT(*)'];
+				
+				if ($num_cached_prices == 0) {
+					$start_q = "INSERT INTO currency_prices (cached_url_id, currency_id, reference_currency_id, price, time_added) VALUES ";
+					$q = $start_q;
+					$modulo = 0;
 					
-					if ($trade['type'] == "buy") {
-						$trade_date = new DateTime($trade['date'], new DateTimeZone('UTC'));
-						$trade_time = $trade_date->format('U');
+					for ($i=count($poloniex_trades)-1; $i>=0; $i--) {
+						$trade = $poloniex_trades[$i];
 						
-						$q = "INSERT INTO currency_prices SET currency_id='".$db_currency['currency_id']."', reference_currency_id='".$btc_currency['currency_id']."', price='".$trade['rate']."', time_added='".$trade_time."';";
-						$r = $this->app->run_query($q);
-						
-						$last_price_time = $trade_time;
+						if ($trade['type'] == "buy") {
+							$trade_date = new DateTime($trade['date'], new DateTimeZone('UTC'));
+							$trade_time = $trade_date->format('U');
+							
+							if ($modulo == 1000) {
+								$q = substr($q, 0, strlen($q)-2).";";
+								$this->app->run_query($q);
+								$modulo = 0;
+								$q = $start_q;
+							}
+							else $modulo++;
+							
+							$q .= "('".$cached_url['cached_url_id']."', '".$db_currency['currency_id']."', '".$btc_currency['currency_id']."', '".$trade['rate']."', '".$trade_time."'), ";
+							
+							$last_price_time = $trade_time;
+						}
+					}
+					if ($modulo > 0) {
+						$q = substr($q, 0, strlen($q)-2).";";
+						$this->app->run_query($q);
 					}
 				}
 				
