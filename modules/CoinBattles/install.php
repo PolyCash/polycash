@@ -1,6 +1,7 @@
 <?php
 ini_set('memory_limit', '512M');
 include(dirname(dirname(dirname(__FILE__)))."/includes/connect.php");
+include(dirname(dirname(dirname(__FILE__)))."/includes/get_session.php");
 include_once(dirname(__FILE__)."/CoinBattlesGameDefinition.php");
 
 if (!empty($argv)) {
@@ -10,6 +11,12 @@ if (!empty($argv)) {
 }
 
 if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+	if (empty($argv) && empty($thisuser)) {
+		$redirect_url = $app->get_redirect_url($_SERVER['REQUEST_URI']);
+		header("Location: /wallet/?redirect_key=".$redirect_url['redirect_key']);
+		die();
+	}
+	
 	$module = $app->check_set_module("CoinBattles");
 	?>
 	<p><a href="/modules/CoinBattles/set_style.php?key=<?php echo $GLOBALS['cron_key_string']; ?>">Run styling script</a></p>

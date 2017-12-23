@@ -353,7 +353,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						}
 						else {
 							echo '<div class="panel-heading"><div class="panel-title">';
-							if ($db_event['winning_option_id'] > 0) echo $db_event['name'];
+							if ($event->db_event['winning_option_id'] > 0) echo $event->db_event['name'];
 							else echo $event->db_event['event_name'].": No winner";
 							echo '</div></div>'."\n";
 							
@@ -424,9 +424,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$q = "SELECT * FROM game_blocks WHERE game_id='".$game->db_game['game_id']."' AND block_id >= '".$from_block_id."' AND block_id <= ".$to_block_id." ORDER BY block_id ASC;";
 						$r = $app->run_query($q);
 						echo "Blocks in this round: ";
-						while ($round_block = $r->fetch()) {
-							echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$round_block['block_id']."\">".$round_block['block_id']."</a> ";
-						}
+						echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$from_block_id."\">".$from_block_id."</a> ... <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$to_block_id."\">".$to_block_id."</a>";
 						?>
 						<br/>
 						<?php
@@ -597,7 +595,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 									$events_to_block_id = $game->db_game['events_until_block'];
 									if ($events_to_block_id > $game->blockchain->last_block_id()) $events_to_block_id = $game->blockchain->last_block_id();
 									
-									$q = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block<=".$events_to_block_id." ORDER BY event_index DESC LIMIT 1;";
+									$q = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block<=".((int)$events_to_block_id)." ORDER BY event_index DESC LIMIT 1;";
 									$r = $app->run_query($q);
 									
 									if ($r->rowCount() > 0) {
@@ -922,7 +920,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						echo "</p>\n";
 					}
 					
-					$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.spend_transaction_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND i.address_id='".$address['address_id']."' GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;";
+					$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND i.address_id='".$address['address_id']."' GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;";
 					$r = $app->run_query($q);
 					
 					$transaction_ids = array();
@@ -932,7 +930,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						array_push($transaction_ios, $transaction_io);
 					}
 					
-					$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND i.address_id='".$address['address_id']."' GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;";
+					$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.spend_transaction_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND i.address_id='".$address['address_id']."' GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;";
 					$r = $app->run_query($q);
 					
 					while ($transaction_io = $r->fetch()) {

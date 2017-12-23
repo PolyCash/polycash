@@ -38,10 +38,10 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			
 			$game->start_game();
 		}
+		
+		echo "Great, the game has been ".$action."!\n";
 	}
 	else echo "Failed to load game #".$game_id."<br/>\n";
-	
-	echo "Great, the game has been ".$action."!\n";
 }
 else echo "Incorrect key.\n";
 ?>

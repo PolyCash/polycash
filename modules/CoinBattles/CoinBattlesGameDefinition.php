@@ -182,8 +182,6 @@ class CoinBattlesGameDefinition {
 			$final_time = $final_block['time_mined'];
 		}
 		
-		echo "Event ".$db_event['event_index'].": ".$db_event['event_name']."<br/>\n";
-		
 		$btc_currency = $this->app->get_currency_by_abbreviation("BTC");
 		
 		$performances = array();
@@ -201,7 +199,6 @@ class CoinBattlesGameDefinition {
 				if (!empty($currency_price['time_added'])) $last_price_time = $currency_price['time_added'];
 				else $last_price_time = 0;
 				
-				echo $poloniex_url."<br/>\n";
 				$poloniex_response = $this->app->async_fetch_url($poloniex_url, true);
 				$poloniex_trades = json_decode($poloniex_response['cached_result'], true);
 				
