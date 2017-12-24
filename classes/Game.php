@@ -1547,8 +1547,8 @@ class Game {
 		
 		if ($last_block_id == 0 || ($last_block_id != $this->db_game['coins_in_existence_block'] || ($block_id !== false && $last_block_id != $block_id))) {
 			$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id WHERE gio.game_id='".$this->db_game['game_id']."'";
-			if ($block_id !== false) $q .= " AND io.create_block_id <= ".$block_id." AND ((io.spend_block_id IS NULL AND io.spend_status='unspent') OR io.spend_block_id>".$block_id.")";
-			else $q .= " AND io.spend_status='unspent'";
+			if ($block_id !== false) $q .= " AND io.create_block_id <= ".$block_id." AND ((io.spend_block_id IS NULL AND io.spend_status IN ('unspent','unconfirmed')) OR io.spend_block_id>".$block_id.")";
+			else $q .= " AND io.spend_status IN ('unspent','unconfirmed')";
 			$q .= ";";
 			$r = $this->blockchain->app->run_query($q);
 			$coins = $r->fetch(PDO::FETCH_NUM);

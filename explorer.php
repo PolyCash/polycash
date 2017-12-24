@@ -743,14 +743,14 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						echo '<div style="margin-top: 10px; border-bottom: 1px solid #bbb;">';
 						
 						$q = "SELECT * FROM transactions t";
-						if ($game) $q .= " JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id";
+						if ($game) $q .= " JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id";
 						$q .= " WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND t.block_id";
 						if ($explore_mode == "unconfirmed") $q .= " IS NULL";
 						else $q .= "='".$block['block_id']."'";
 						if ($game) $q .= " AND gio.game_id='".$game->db_game['game_id']."'";
 						$q .= " AND t.amount > 0";
 						if ($game) $q .= " GROUP BY t.transaction_id";
-						$q .= " ORDER BY position_in_block ASC;";
+						$q .= " ORDER BY t.position_in_block ASC;";
 						$r = $app->run_query($q);
 						
 						while ($transaction = $r->fetch()) {
