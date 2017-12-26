@@ -35,12 +35,9 @@ if ($uri_parts[2] == "games") {
 }
 else if ($uri_parts[2] == "blockchains") {
 	$blockchain_identifier = $game_identifier;
-	$blockchain_q = "SELECT * FROM blockchains WHERE url_identifier='".$blockchain_identifier."';";
-	$blockchain_r = $app->run_query($blockchain_q);
+	$db_blockchain = $app->fetch_blockchain_by_identifier($blockchain_identifier);
 	
-	if ($blockchain_r->rowCount() > 0) {
-		$db_blockchain = $blockchain_r->fetch();
-		
+	if ($db_blockchain) {
 		$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
 		
 		if (rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer/blockchains/".$db_blockchain['url_identifier']) {

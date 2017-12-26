@@ -2,7 +2,6 @@
 set_time_limit(0);
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
-include(realpath(dirname(dirname(__FILE__)))."/includes/handle_script_shutdown.php");
 
 $script_start_time = microtime(true);
 
@@ -17,13 +16,11 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	$print_debug = false;
 	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
 	
-	$loading_blocks = $app->check_process_running("loading_blocks");
+	$process_lock_name = "loading_blocks";
+	$process_locked = $app->check_process_running($process_lock_name);
 	
-	if (!$loading_blocks) {
-		$GLOBALS['app'] = $app;
-		$GLOBALS['shutdown_lock_name'] = "loading_blocks";
-		$app->set_site_constant($GLOBALS['shutdown_lock_name'], getmypid());
-		register_shutdown_function("script_shutdown");
+	if (!$process_locked) {
+		$app->set_site_constant($process_lock_name, getmypid());
 		
 		$blockchains = array();
 		
@@ -48,7 +45,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			
 			if (!$error) {
 				if ($print_debug) echo "Syncing ".$blockchains[$blockchain_i]->db_blockchain['blockchain_name']."\n";
-				$blockchains[$blockchain_i]->sync_coind($coin_rpc);
+				$debug_html = $blockchains[$blockchain_i]->sync_coind($coin_rpc);
+				if ($print_debug) echo $debug_html;
 			}
 		}
 	}

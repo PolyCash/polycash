@@ -1676,11 +1676,9 @@ class App {
 				$game_def->blockchain_identifier = $url_identifier;
 			}
 			
-			$q = "SELECT * FROM blockchains WHERE url_identifier=".$this->quote_escape($game_def->blockchain_identifier).";";
-			$r = $this->run_query($q);
+			$db_blockchain = $app->fetch_blockchain_by_identifier($game_def->blockchain_identifier);
 			
-			if ($r->rowCount() == 1) {
-				$db_blockchain = $r->fetch();
+			if ($db_blockchain) {
 				$blockchain = new Blockchain($this, $db_blockchain['blockchain_id']);
 				
 				$coin_rpc = false;
@@ -2559,7 +2557,7 @@ class App {
 		return array($inputs, $outputs);
 	}
 	
-	function curl_post_request($url, $data, $headers) {
+	public function curl_post_request($url, $data, $headers) {
 		$ch = curl_init($url);
 		curl_setopt($ch, CURLOPT_HEADER, $headers);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -2569,6 +2567,13 @@ class App {
 		$contents = curl_exec($ch);
 		curl_close($ch);
 		return $contents;
+	}
+	
+	public function fetch_blockchain_by_identifier($blockchain_identifier) {
+		$q = "SELECT * FROM blockchains WHERE url_identifier=".$this->quote_escape($blockchain_identifier).";";
+		$r = $this->run_query($q);
+		if ($r->rowCount() == 1) return $r->fetch();
+		else return false;
 	}
 }
 ?>

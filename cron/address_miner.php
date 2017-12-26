@@ -1,7 +1,6 @@
 <?php
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
-include(realpath(dirname(dirname(__FILE__)))."/includes/handle_script_shutdown.php");
 
 $script_start_time = microtime(true);
 
@@ -12,13 +11,11 @@ if (!empty($argv)) {
 }
 
 if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
-	$address_miner_running = $app->check_process_running("address_miner_running");
+	$process_lock_name = "address_miner_running";
+	$process_locked = $app->check_process_running($process_lock_name);
 	
-	if (!$address_miner_running) {
-		$GLOBALS['app'] = $app;
-		$GLOBALS['shutdown_lock_name'] = "address_miner_running";
-		$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
-		register_shutdown_function("script_shutdown");
+	if (!$process_locked) {
+		$app->set_site_constant($process_lock_name, getmypid());
 		
 		$blockchains = array();
 		

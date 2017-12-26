@@ -35,11 +35,9 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$game_def = new StakemoneySharesGameDefinition($app);
 		
 		$blockchain = false;
-		$db_blockchain = false;
-		$q = "SELECT * FROM blockchains WHERE url_identifier=".$app->quote_escape($game_def->game_def->blockchain_identifier).";";
-		$r = $app->run_query($q);
-		if ($r->rowCount() > 0) {
-			$db_blockchain = $r->fetch();
+		$db_blockchain = $app->fetch_blockchain_by_identifier($game_def->game_def->blockchain_identifier);
+		
+		if ($db_blockchain) {
 			$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
 		}
 		
@@ -47,7 +45,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			$game_def->game_def->blockchain_identifier = "private";
 			$game_def->game_def->game_starting_block = 1;
 		}
-		if ($db_blockchain['p2p_mode'] == "none") {
+		if (!empty($db_blockchain) && $db_blockchain['p2p_mode'] == "none") {
 			$game_starting_block = $blockchain->last_block_id() - ($blockchain->last_block_id()%$game_def->game_def->round_length) + 1;
 			$game_def->game_def->game_starting_block = $game_starting_block;
 		}

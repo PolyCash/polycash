@@ -54,10 +54,9 @@ class CoinBattlesGameDefinition {
 	public function load() {
 		$game_def = json_decode($this->game_def_base_txt);
 
-		$blockchain_r = $this->app->run_query("SELECT * FROM blockchains WHERE url_identifier='".$game_def->blockchain_identifier."';");
+		$db_blockchain = $this->app->fetch_blockchain_by_identifier($game_def->blockchain_identifier);
 
-		if ($blockchain_r->rowCount() > 0) {
-			$db_blockchain = $blockchain_r->fetch();
+		if ($db_blockchain) {
 			$blockchain = new Blockchain($this->app, $db_blockchain['blockchain_id']);
 			
 			if ($db_blockchain['p2p_mode'] == "rpc") {

@@ -1,7 +1,6 @@
 <?php
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
-include(realpath(dirname(dirname(__FILE__)))."/includes/handle_script_shutdown.php");
 
 $script_target_time = 58;
 $script_start_time = microtime(true);
@@ -17,13 +16,11 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	$print_debug = false;
 	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
 	
-	$main_loop_running = $app->check_process_running("main_loop_running");
+	$process_lock_name = "main_loop_running";
+	$process_locked = $app->check_process_running($process_lock_name);
 	
-	if (!$main_loop_running) {
-		$GLOBALS['shutdown_lock_name'] = "main_loop_running";
-		$GLOBALS['app'] = $app;
-		$app->set_site_constant($GLOBALS['shutdown_lock_name'], getmypid());
-		register_shutdown_function("script_shutdown");
+	if (!$process_locked) {
+		$app->set_site_constant($process_lock_name, getmypid());
 		
 		$blockchains = array();
 		$real_games = array();

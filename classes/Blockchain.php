@@ -136,53 +136,56 @@ class Blockchain {
 			$api_block = get_object_vars($api_response['blocks'][0]);
 		}
 		
-		if (empty($db_block['internal_block_id'])) {
-			$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_hash=".$this->app->quote_escape($api_block['block_hash']).", block_id='".$db_block['block_id']."', time_created='".time()."', locally_saved=0;";
-			$r = $this->app->run_query($q);
-			$internal_block_id = $this->app->last_insert_id();
-			
-			$q = "SELECT * FROM blocks WHERE internal_block_id='".$internal_block_id."';";
-			$r = $this->app->run_query($q);
-			$db_block = $r->fetch();
-		}
-		
-		if (empty($db_block['block_hash'])) {
-			$q = "UPDATE blocks SET block_hash='".$api_block['block_hash']."' WHERE internal_block_id='".$db_block['internal_block_id']."';";
-			$this->app->run_query($q);
-		}
-		
-		if ($db_block['locally_saved'] == 0 && !$headers_only) {
-			if ($db_block['num_transactions'] == "") $this->app->run_query("UPDATE blocks SET time_mined='".$api_block['time_mined']."', num_transactions=".count($api_block['transactions'])." WHERE internal_block_id=".$db_block['internal_block_id'].";");
-			
-			$coins_created = 0;
-			
-			$tx_error = false;
-			
-			for ($i=0; $i<count($api_block['transactions']); $i++) {
-				$tx = get_object_vars($api_block['transactions'][$i]);
-				$tx_hash = $tx['tx_hash'];
-				
-				$q = "SELECT * FROM transactions WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND tx_hash=".$this->app->quote_escape($tx_hash).";";
+		if (!empty($api_block['block_hash'])) {
+			if (empty($db_block['internal_block_id'])) {
+				$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_hash=".$this->app->quote_escape($api_block['block_hash']).", block_id='".$db_block['block_id']."', time_created='".time()."', locally_saved=0;";
 				$r = $this->app->run_query($q);
+				$internal_block_id = $this->app->last_insert_id();
 				
-				if ($r->rowCount() == 0) {
-					$transaction_id = $this->add_transaction_from_web_api($db_block['block_id'], $tx);
+				$q = "SELECT * FROM blocks WHERE internal_block_id='".$internal_block_id."';";
+				$r = $this->app->run_query($q);
+				$db_block = $r->fetch();
+			}
+			
+			if (empty($db_block['block_hash'])) {
+				$q = "UPDATE blocks SET block_hash='".$api_block['block_hash']."' WHERE internal_block_id='".$db_block['internal_block_id']."';";
+				$this->app->run_query($q);
+			}
+			
+			if ($db_block['locally_saved'] == 0 && !$headers_only) {
+				if ($db_block['num_transactions'] == "") $this->app->run_query("UPDATE blocks SET time_mined='".$api_block['time_mined']."', num_transactions=".count($api_block['transactions'])." WHERE internal_block_id=".$db_block['internal_block_id'].";");
+				
+				$coins_created = 0;
+				
+				$tx_error = false;
+				
+				for ($i=0; $i<count($api_block['transactions']); $i++) {
+					$tx = get_object_vars($api_block['transactions'][$i]);
+					$tx_hash = $tx['tx_hash'];
 					
-					$coin_rpc = false;
-					$successful = true;
-					$db_transaction = $this->add_transaction($coin_rpc, $tx_hash, $db_block['block_id'], true, $successful, $i, false, true);
+					$q = "SELECT * FROM transactions WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND tx_hash=".$this->app->quote_escape($tx_hash).";";
+					$r = $this->app->run_query($q);
 					
-					if ($db_transaction['transaction_desc'] != "transaction") $coins_created += $db_transaction['amount'];
+					if ($r->rowCount() == 0) {
+						$transaction_id = $this->add_transaction_from_web_api($db_block['block_id'], $tx);
+						
+						$coin_rpc = false;
+						$successful = true;
+						$db_transaction = $this->add_transaction($coin_rpc, $tx_hash, $db_block['block_id'], true, $successful, $i, false, true);
+						
+						if ($db_transaction['transaction_desc'] != "transaction") $coins_created += $db_transaction['amount'];
+					}
 				}
+				
+				if (!$tx_error) {
+					$this->app->run_query("UPDATE blocks SET locally_saved=1, time_loaded='".time()."' WHERE internal_block_id='".$db_block['internal_block_id']."';");
+				}
+				$this->app->run_query("UPDATE blocks SET load_time=load_time+".(microtime(true)-$start_time)." WHERE internal_block_id='".$db_block['internal_block_id']."';");
+				
+				$html .= "Took ".(microtime(true)-$start_time)." sec to add block #".$db_block['block_id']."<br/>\n";
 			}
-			
-			if (!$tx_error) {
-				$this->app->run_query("UPDATE blocks SET locally_saved=1, time_loaded='".time()."' WHERE internal_block_id='".$db_block['internal_block_id']."';");
-			}
-			$this->app->run_query("UPDATE blocks SET load_time=load_time+".(microtime(true)-$start_time)." WHERE internal_block_id='".$db_block['internal_block_id']."';");
-			
-			$html .= "Took ".(microtime(true)-$start_time)." sec to add block #".$db_block['block_id']."<br/>\n";
 		}
+		
 		return $html;
 	}
 	
@@ -616,7 +619,7 @@ class Blockchain {
 				$this->load_unconfirmed_transactions($coin_rpc, 30);
 			}
 			
-			$html .= "Done syncing!\n";
+			$html .= "Done syncing ".$this->db_blockchain['blockchain_name']."\n";
 		}
 		
 		return $html;
@@ -700,60 +703,65 @@ class Blockchain {
 	}
 	
 	public function more_web_api_blocks() {
-		$q = "SELECT MIN(b.block_id), MAX(b.block_id) FROM (SELECT block_id FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND locally_saved=0 AND block_id >= ".$this->db_blockchain['first_required_block']." ORDER BY block_id ASC, internal_block_id ASC LIMIT 100) b;";
-		$r = $this->app->run_query($q);
-		$info = $r->fetch();
-		
-		$ref_api_blocks_r = $this->web_api_fetch_blocks($info['MIN(b.block_id)'], $info['MAX(b.block_id)']);
-		return $ref_api_blocks_r['blocks'];
+		if ($this->db_blockchain['first_required_block']) {
+			$q = "SELECT MIN(b.block_id), MAX(b.block_id) FROM (SELECT block_id FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND locally_saved=0 AND block_id >= ".$this->db_blockchain['first_required_block']." ORDER BY block_id ASC, internal_block_id ASC LIMIT 100) b;";
+			$r = $this->app->run_query($q);
+			$info = $r->fetch();
+			
+			$ref_api_blocks_r = $this->web_api_fetch_blocks($info['MIN(b.block_id)'], $info['MAX(b.block_id)']);
+			return $ref_api_blocks_r['blocks'];
+		}
+		else return array();
 	}
 	
 	public function load_all_blocks(&$coin_rpc, $required_blocks_only) {
-		// Fully load blocks where block headers were already loaded into the db
-		$keep_looping = true;
-		$loop_i = 0;
-		
-		if ($this->db_blockchain['p2p_mode'] == "web_api") {
-			$ref_api_blocks = $this->more_web_api_blocks();
-		}
-		else $ref_api_blocks = array();
-		
-		do {
-			$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND locally_saved=0";
-			$q .= " AND block_id >= ".$this->db_blockchain['first_required_block'];
-			$q .= " ORDER BY block_id ASC, internal_block_id ASC LIMIT 1;";
-			$r = $this->app->run_query($q);
+		if ($required_blocks_only && empty($this->db_blockchain['first_required_block'])) {}
+		else {
+			$keep_looping = true;
+			$loop_i = 0;
 			
-			if ($r->rowCount() > 0) {
-				$unknown_block = $r->fetch();
-				
-				if ($this->db_blockchain['p2p_mode'] == "rpc") {
-					if (empty($unknown_block['block_hash'])) {
-						$unknown_block_hash = $coin_rpc->getblockhash((int)$unknown_block['block_id']);
-						$this->app->run_query("UPDATE blocks SET block_hash=".$this->app->quote_escape($unknown_block_hash)." WHERE internal_block_id='".$unknown_block['internal_block_id']."';");
-						$this->coind_add_block($coin_rpc, $unknown_block_hash, $unknown_block['block_id'], true);
-						$unknown_block = $this->app->run_query("SELECT * FROM blocks WHERE internal_block_id='".$unknown_block['internal_block_id']."';")->fetch();
-					}
-					$this->coind_add_block($coin_rpc, $unknown_block['block_hash'], $unknown_block['block_id'], false);
-				}
-				else {
-					if ($loop_i >= count($ref_api_blocks)) {
-						$loop_i = 0;
-						$ref_api_blocks = $this->more_web_api_blocks();
-					}
-					
-					if (empty($ref_api_blocks[$loop_i])) $keep_looping = false;
-					else {
-						$ref_api_blocks[$loop_i] = get_object_vars($ref_api_blocks[$loop_i]);
-						$this->web_api_add_block($unknown_block, $ref_api_blocks[$loop_i], false);
-					}
-				}
+			if ($this->db_blockchain['p2p_mode'] == "web_api") {
+				$ref_api_blocks = $this->more_web_api_blocks();
 			}
-			else $keep_looping = false;
+			else $ref_api_blocks = array();
 			
-			$loop_i++;
+			do {
+				$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND locally_saved=0";
+				$q .= " AND block_id >= ".$this->db_blockchain['first_required_block'];
+				$q .= " ORDER BY block_id ASC, internal_block_id ASC LIMIT 1;";
+				$r = $this->app->run_query($q);
+				
+				if ($r->rowCount() > 0) {
+					$unknown_block = $r->fetch();
+					
+					if ($this->db_blockchain['p2p_mode'] == "rpc") {
+						if (empty($unknown_block['block_hash'])) {
+							$unknown_block_hash = $coin_rpc->getblockhash((int)$unknown_block['block_id']);
+							$this->app->run_query("UPDATE blocks SET block_hash=".$this->app->quote_escape($unknown_block_hash)." WHERE internal_block_id='".$unknown_block['internal_block_id']."';");
+							$this->coind_add_block($coin_rpc, $unknown_block_hash, $unknown_block['block_id'], true);
+							$unknown_block = $this->app->run_query("SELECT * FROM blocks WHERE internal_block_id='".$unknown_block['internal_block_id']."';")->fetch();
+						}
+						$this->coind_add_block($coin_rpc, $unknown_block['block_hash'], $unknown_block['block_id'], false);
+					}
+					else {
+						if ($loop_i >= count($ref_api_blocks)) {
+							$loop_i = 0;
+							$ref_api_blocks = $this->more_web_api_blocks();
+						}
+						
+						if (empty($ref_api_blocks[$loop_i])) $keep_looping = false;
+						else {
+							$ref_api_blocks[$loop_i] = get_object_vars($ref_api_blocks[$loop_i]);
+							$this->web_api_add_block($unknown_block, $ref_api_blocks[$loop_i], false);
+						}
+					}
+				}
+				else $keep_looping = false;
+				
+				$loop_i++;
+			}
+			while ($keep_looping);
 		}
-		while ($keep_looping);
 	}
 	
 	public function resolve_potential_fork_on_block(&$coin_rpc, &$db_block) {
@@ -947,15 +955,14 @@ class Blockchain {
 		$min_starting_block = (int) $r->fetch()['MIN(game_starting_block)'];
 		if ($min_starting_block > 0 && (!$first_required_block || $min_starting_block < $first_required_block)) $first_required_block = $min_starting_block;
 		
-		if (!$coin_rpc && !$first_required_block) $first_required_block = 0;
+		if ($first_required_block) $this->db_blockchain['first_required_block'] = $first_required_block;
+		else {
+			$this->db_blockchain['first_required_block'] = false;
+			$first_required_block = "NULL";
+		}
 		
-		$q = "UPDATE blockchains SET first_required_block='".$first_required_block."' WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';";
+		$q = "UPDATE blockchains SET first_required_block=".$first_required_block." WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';";
 		$this->app->run_query($q);
-		
-		$q = "UPDATE games SET game_starting_block='".$first_required_block."' WHERE game_starting_block IS NULL AND blockchain_id='".$this->db_blockchain['blockchain_id']."';";
-		$this->app->run_query($q);
-		
-		$this->db_blockchain['first_required_block'] = $first_required_block;
 	}
 	
 	public function sync_initial($from_block_id) {

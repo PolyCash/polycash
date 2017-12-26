@@ -2,7 +2,6 @@
 set_time_limit(0);
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
-include(realpath(dirname(dirname(__FILE__)))."/includes/handle_script_shutdown.php");
 
 $script_target_time = 59;
 $script_start_time = microtime(true);
@@ -18,13 +17,11 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	$print_debug = false;
 	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
 	
-	$loading_urls = $app->check_process_running("loading_urls");
+	$process_lock_name = "loading_urls";
+	$process_locked = $app->check_process_running($process_lock_name);
 	
-	if (!$loading_urls) {
-		$GLOBALS['app'] = $app;
-		$GLOBALS['shutdown_lock_name'] = "loading_urls";
-		$app->set_site_constant($GLOBALS['shutdown_lock_name'], 1);
-		register_shutdown_function("script_shutdown");
+	if (!$process_locked) {
+		$app->set_site_constant($process_lock_name, getmypid());
 		
 		$pipe_config = array(
 			0 => array('pipe', 'r'),

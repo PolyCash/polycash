@@ -172,10 +172,9 @@ if ($uri_parts[1] == "api") {
 			$to_block_height = (int) $block_range[1];
 		}
 		
-		$blockchain_r = $app->run_query("SELECT * FROM blockchains WHERE url_identifier=".$app->quote_escape($blockchain_identifier).";");
+		$db_blockchain = $app->fetch_blockchain_by_identifier($blockchain_identifier);
 		
-		if ($blockchain_r->rowCount() > 0) {
-			$db_blockchain = $blockchain_r->fetch();
+		if ($db_blockchain) {
 			$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
 			
 			$block_q = "SELECT block_id, block_hash, num_transactions, time_mined FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."'";
@@ -213,10 +212,9 @@ if ($uri_parts[1] == "api") {
 	}
 	else if ($uri_parts[2] == "transactions") {
 		$url_identifier = $uri_parts[3];
-		$blockchain_r = $app->run_query("SELECT * FROM blockchains WHERE url_identifier=".$app->quote_escape($url_identifier).";");
+		$db_blockchain = $app->fetch_blockchain_by_identifier($url_identifier);
 		
-		if ($blockchain_r->rowCount() > 0) {
-			$db_blockchain = $blockchain_r->fetch();
+		if ($db_blockchain) {
 			$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
 			
 			if ($uri_parts[4] == "post" && $blockchain->db_blockchain['p2p_mode'] != "rpc") {
