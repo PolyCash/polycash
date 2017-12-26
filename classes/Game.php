@@ -1257,7 +1257,7 @@ class Game {
 		
 		$private_game_message = "";
 		
-		if ($this->blockchain->db_blockchain['p2p_mode'] != "rpc") {
+		if ($this->blockchain->db_blockchain['p2p_mode'] == "none") {
 			$seconds_to_add = max(0, time()-$this->blockchain->db_blockchain['last_hash_time']);
 			$link_show_cron = false;
 			
