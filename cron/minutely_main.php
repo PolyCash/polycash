@@ -211,7 +211,12 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 						
 						if (!empty($running_games[$running_game_i]->db_game['module'])) {
 							if (method_exists($running_games[$running_game_i]->module, "regular_actions")) {
-								$running_games[$running_game_i]->module->regular_actions();
+								$game_last_block_id = $running_games[$running_game_i]->last_block_id();
+								$blockchain_last_block_id = $running_games[$running_game_i]->blockchain->last_block_id();
+								
+								if ($game_last_block_id == $blockchain_last_block_id) {
+									$running_games[$running_game_i]->module->regular_actions();
+								}
 							}
 						}
 						
