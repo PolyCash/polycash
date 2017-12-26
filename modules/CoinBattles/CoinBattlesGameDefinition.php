@@ -278,10 +278,15 @@ class CoinBattlesGameDefinition {
 		$currency_price = $this->app->currency_price_at_time($this->currencies[1]['currency_id'], $btc_currency['currency_id'], time());
 		$initial_price_time = $currency_price['time_added'];
 		
+		$start_q = "INSERT INTO currency_prices (cached_url_id, currency_id, reference_currency_id, price, time_added) VALUES ";
 		for ($i=1; $i<count($this->currencies); $i++) {
 			$last_price_time = $initial_price_time;
 			
+			$q = $start_q;
+			$modulo = 0;
+			
 			$poloniex_url = "https://poloniex.com/public?command=returnTradeHistory&currencyPair=BTC_".$this->currencies[$i]['abbreviation']."&start=".($last_price_time+1)."&end=".time();
+			$cached_url = $this->app->cached_url_info($poloniex_url);
 			$poloniex_response = $this->app->async_fetch_url($poloniex_url, true);
 			$poloniex_trades = json_decode($poloniex_response['cached_result'], true);
 			
@@ -293,11 +298,23 @@ class CoinBattlesGameDefinition {
 					$trade_time = $trade_date->format('U');
 					
 					if ($last_price_time < $trade_time) {
-						$q = "INSERT INTO currency_prices SET currency_id='".$this->currencies[$i]['currency_id']."', reference_currency_id='".$btc_currency['currency_id']."', price='".$trade['rate']."', time_added='".$trade_time."';";
-						$r = $this->app->run_query($q);
-						$last_price_time = $trade_time;
+						if ($modulo == 1000) {
+							$q = substr($q, 0, strlen($q)-2).";";
+							$this->app->run_query($q);
+							$modulo = 0;
+							$q = $start_q;
+						}
+						else $modulo++;
+						
+						$q .= "('".$cached_url['cached_url_id']."', '".$this->currencies[$i]['currency_id']."', '".$btc_currency['currency_id']."', '".$trade['rate']."', '".$trade_time."'), ";
+						$modulo++;
 					}
 				}
+			}
+			
+			if ($modulo > 0) {
+				$q = substr($q, 0, strlen($q)-2).";";
+				$this->app->run_query($q);
 			}
 		}
 	}
