@@ -1621,7 +1621,7 @@ class Blockchain {
 			$tx_output = get_object_vars($tx['outputs'][$j]);
 			$db_address = $this->create_or_fetch_address($tx_output['address'], true, false, false, false, false, false);
 			
-			$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->db_blockchain['blockchain_id']."', out_index='".$j."', address_id='".$db_address['address_id']."', option_index=".$this->app->quote_escape($tx_output['option_index']).", create_block_id='".$block_height."', create_transaction_id='".$transaction_id."', amount=".$this->app->quote_escape($tx_output['amount']).";";
+			$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->db_blockchain['blockchain_id']."', out_index='".$j."', address_id='".$db_address['address_id']."', option_index=".$this->app->quote_escape($tx_output['option_index']).", create_block_id='".$block_height."', create_transaction_id='".$transaction_id."', amount=".$this->app->quote_escape($tx_output['amount']).", spend_status='unspent';";
 			$r = $this->app->run_query($q);
 		}
 		
