@@ -6,10 +6,14 @@ include('includes/html_start.php');
 <script type="text/javascript">
 var games = new Array();
 </script>
-<?php
-$app->display_games(false, false);
-?>
-<a href="/import/">Add another game</a>
+<div class="container-fluid" style="padding-top: 10px;">
+	<?php
+	$app->display_games(false, false);
+	?>
+	<p><a href="/import/">Add another game</a></p>
+	
+	<p><a href="/redeem/">Redeem a card</a></p>
+</div>
 <?php
 include('includes/html_stop.php');
 ?>

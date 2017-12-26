@@ -84,6 +84,7 @@ class SingleEliminationGameDefinition {
 	}
 	
 	public function load() {
+		$this->teams = array();
 		$game_def = json_decode($this->game_def_base_txt);
 		$teams_txt = explode("\n", $this->teams_txt);
 		$i = 0;

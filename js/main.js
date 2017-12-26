@@ -472,7 +472,7 @@ function render_option_output(index_id, name) {
 	html += '<div><div id="output_threshold_'+index_id+'" class="noUiSlider"></div></div>';
 	return html;
 }
-function add_utxo_to_vote(mature_io_index, add_matching_utxo_ios) {
+function add_utxo_to_vote(mature_io_index, add_matching_utxo_ios, skip_refresh) {
 	var mature_io = mature_ios[mature_io_index];
 	var index_id = vote_inputs.length;
 
@@ -499,9 +499,11 @@ function add_utxo_to_vote(mature_io_index, add_matching_utxo_ios) {
 			//$('#selected_utxo_'+index_id).css("background-image", "url('"+games[0].logo_image_url+"')");
 		}
 		game_io_id2input_index[mature_io.game_io_id] = index_id;
-		refresh_compose_vote();
-		set_input_amount_sums();
-		refresh_output_amounts();
+		if (skip_refresh == false) {
+			refresh_compose_vote();
+			set_input_amount_sums();
+			refresh_output_amounts();
+		}
 		if (focus_select_output) setTimeout("$('#select_add_output').focus();", 600);
 	}
 	
@@ -509,11 +511,17 @@ function add_utxo_to_vote(mature_io_index, add_matching_utxo_ios) {
 		for (var i=0; i<mature_ios.length; i++) {
 			if (i != mature_io_index) {
 				if (mature_ios[i].io_id == mature_io.io_id) {
-					add_utxo_to_vote(i, false);
+					add_utxo_to_vote(i, false, skip_refresh);
 				}
 			}
 		}
 	}
+}
+function add_all_utxos_to_vote() {
+	for (var i=0; i<mature_ios.length; i++) {
+		setTimeout("add_utxo_to_vote("+i+", false, true);", i*50);
+	}
+	setTimeout("refresh_compose_vote(); set_input_amount_sums(); refresh_output_amounts();", mature_ios.length*50);
 }
 function load_option_slider(index_id) {
 	$('#output_threshold_'+index_id).noUiSlider({
@@ -530,6 +538,11 @@ function load_option_slider(index_id) {
 			output_amounts_need_update = true;
 	   }
 	});
+}
+function remove_all_utxos_from_vote() {
+	for (var i=0; i<vote_inputs.length; i++) {
+		setTimeout("remove_utxo_from_vote(0, false);", i*50);
+	}
 }
 function remove_utxo_from_vote(index_id, remove_matching_utxo_ios) {
 	var io_id = vote_inputs[index_id].io_id;
@@ -1039,7 +1052,7 @@ function refresh_visible_inputs() {
 			show_count++;
 		}
 		else {
-			add_utxo_to_vote(i, false);
+			add_utxo_to_vote(i, false, true);
 		}
 	}
 }
@@ -1063,7 +1076,7 @@ function show_more_event_outcomes() {
 	}
 }
 function render_tx_fee() {
-	$('#display_tx_fee').html("TX fee: "+format_coins(games[0].fee_amount/Math.pow(10,games[0].decimal_places))+" "+games[0].chain_coin_name_plural);
+	$('#display_tx_fee').html("TX fee: "+format_coins(games[0].fee_amount)+" "+games[0].chain_coin_name_plural);
 }
 function manage_game_invitations(this_game_id) {
 	$.get("/ajax/game_invitations.php?action=manage&game_id="+this_game_id, function(result) {
@@ -1822,5 +1835,193 @@ function withdraw_from_account(account_id, step) {
 				console.log(result);
 			});
 		}
+	}
+}
+function cards_howmany_changed() {
+	var howmany = $('#cards_howmany').val();
+	if (howmany == "other") {
+		$('#cards_howmany_other').show();
+		$('#cards_howmany_other_val').focus();
+	}
+	else {
+		$('#cards_howmany_other').hide();
+	}
+}
+function fv_currency_id_changed() {
+	var fv_currency_id = $('#cards_fv_currency_id').val();
+	var currency_id = $('#cards_currency_id').val();
+	
+	$.get("/ajax/select_denominations_by_currencies.php?currency_id="+currency_id+"&fv_currency_id="+fv_currency_id, function(result) {
+		var result_obj = JSON.parse(result);
+		cost_per_coin = result_obj['cost_per_coin'];
+		coin_abbreviation = result_obj['coin_abbreviation'];
+		$('#cards_denomination_id').html(result_obj['denominations_html']);
+		$('#cards_account_id').html(result_obj['accounts_html']);
+	});
+}
+function currency_id_changed() {
+	var currency_id = $('#cards_currency_id').val();
+	
+	$('#cards_denomination_id').html("");
+	
+	$.get("/ajax/select_fv_currency_by_currency.php?currency_id="+currency_id, function(result) {
+		$('#cards_fv_currency_id').html(result);
+	});
+}
+function show_card_preview() {
+	var denomination_id = $('#cards_denomination_id').val();
+	
+	var preview_url = "/ajax/card_preview.php?denomination_id="+denomination_id;
+	
+	preview_url += "&purity="+$('#cards_purity').val()+"&name="+$('#cards_name').val();
+	preview_url += "&title="+$('#cards_title').val()+"&email=";
+	preview_url += $('#cards_email').val()+"&pnum="+$('#cards_pnum').val();
+	
+	$('#cards_preview').show();
+	$('#cards_preview').html("Loading...");
+	
+	$.get(preview_url, function(result) {
+		$('#cards_preview').html(result);
+	});
+}
+function search_card_id() {
+	var issuer_id = $('#card_issuer_id').val();
+	var card_id = $('#card_id_search').val();
+	var url = "/redeem/"+issuer_id+"/"+card_id;
+	if ($('#redirect_key').val() != "") url += "/?redirect_key="+$('#redirect_key').val();
+	window.location = url;
+}
+function redeem_toggle() {
+	if ($('#enter_redeem_code').is(":visible")) {
+		$('#enter_redeem_code').hide();
+	}
+	else {
+		$('#enter_redeem_code').show();
+		$('#redeem_code').focus();
+	}
+}
+function check_show_confirm_button() {
+	var legit_length = 0;
+	var check_string = $('#redeem_code').val();
+	for (var i=0; i<check_string.length; i++) {
+		if (check_string[i] == "_" || check_string[i] == "-") {}
+		else legit_length++;
+	}
+	if (legit_length >= 16) $('#confirm_button').show();
+	else $('#confirm_button').hide();
+}
+function check_the_code() {
+	var url = "/ajax/check_code.php?issuer_id="+issuer_id+"&card_id="+card_id+"&code="+$('#redeem_code').val().replace(/-/g, '');
+	$('#confirm_button').html("Checking...");
+	$('#messages').hide();
+	
+	$.get(url, function(result) {
+		var result_obj = JSON.parse(result);
+		
+		$('#confirm_button').html("Redeem");
+		if (result_obj['status_code'] == 1 || result_obj['status_code'] == 4) {
+			$('#step1').hide();
+			$('#redeem_options').modal('show');
+			$('#messages').hide();
+		}
+		else {
+			$('#messages').html("Incorrect");
+			$('#messages').css("color", "#f00");
+			$('#messages').show();
+		}
+	});
+}
+function card_login(create_mode, login_card_id, issuer_id) {
+	$('#card_account_password').val(Sha256.hash($('#card_account_password').val()));
+	if (create_mode) $('#card_account_password2').val(Sha256.hash($('#card_account_password2').val()));
+	
+	var card_password = $('#card_account_password').val();
+	var card_password2;
+	if (create_mode) card_password2 = $('#card_account_password2').val();
+	
+	var successful = false;
+	
+	if (!create_mode || card_password == card_password2) {
+		var url = "/ajax/check_code.php?action=login&issuer_id="+issuer_id+"&card_id="+login_card_id+"&password="+card_password+"&code="+$('#redeem_code').val().replace(/-/g, '');
+		if ($('#redirect_key').val() != "") url += "&redirect_key="+$('#redirect_key').val();
+		
+		$.get(url, function(result) {
+			var result_obj = JSON.parse(result);
+			
+			if (result_obj['status_code'] == 1 || result_obj['status_code'] == 2) {
+				window.location = result_obj['message'];
+				successful = true;
+			}
+			else alert(result_obj['message']);
+		});
+	}
+	else alert("Error, the passwords that you entered do not match.");
+	
+	if (!successful) {
+		$('#card_account_password').val("");
+		if (create_mode) $('#card_account_password2').val("");
+	}
+}
+function open_card(card_id) {
+	if (card_id != selected_card) {
+		if (selected_card != -1) {
+			$('#card_block'+selected_card).hide('fast');
+			$('#card_btn'+selected_card).removeClass("card_small_sel");
+		}
+		selected_card = card_id;
+		$('#card_btn'+card_id).addClass("card_small_sel");
+		
+		setTimeout(function() {
+			$('#card_block'+card_id).show('medium');
+		}, 300);
+	}
+}
+function card_withdrawal(card_id) {
+	var address = $('#withdraw_address').val();
+	var name = $('#withdraw_name').val();
+	
+	var url = "/ajax/withdraw.php?action=card_withdrawal&address="+address+"&card_id="+card_id+"&name="+name;
+	$.get(url, function(result) {
+		if (result == "Beyonic request was successful!") {
+			alert('Great, your money has been sent!');
+			window.location = window.location;
+		}
+		else if (result == "2") {
+			alert("There was an error withdrawing.  It looks like our hot wallet is out of money right now.");
+		}
+		else {
+			alert("There was an error redeeming your card. The error code was: "+result);
+		}
+	});
+}
+function claim_card(claim_type) {
+	var btn_id = "";
+	var btn_original_text = "";
+	if (claim_type == "to_address") btn_id = 'claim_address_btn';
+	else if (claim_type == "to_game") btn_id = 'claim_game_btn_'+card_id+'_'+issuer_id;
+	else if (claim_type == "to_account") btn_id = 'claim_account_btn_'+card_id+'_'+issuer_id;
+	
+	if ($('#'+btn_id).html() != "Loading...") {
+		btn_original_text = $('#'+btn_id).html();
+		
+		$('#'+btn_id).html("Loading...");
+		
+		var ajax_url = "/ajax/account_spend.php?action=withdraw_from_card&claim_type="+claim_type+"&card_id="+card_id+"&issuer_id="+issuer_id;
+		if (claim_type == "to_address") ajax_url += "&fee="+$('#claim_fee').val()+"&address="+$('#claim_address').val();
+		
+		$.get(ajax_url, function(result) {
+			$('#'+btn_id).html(btn_original_text);
+			var result_obj = JSON.parse(result);
+			
+			if (claim_type == "address") {
+				$('#'+btn_id).html(btn_original_text);
+				$('#claim_message').html(result_obj['message']);
+				$('#claim_message').show("fast");
+			}
+			else {
+				if (result_obj['status_code'] == 1) window.location = result_obj['message'];
+				else alert(result_obj['message']);
+			}
+		});
 	}
 }

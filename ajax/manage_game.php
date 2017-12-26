@@ -370,7 +370,7 @@ if ($thisuser) {
 		
 		if ($r->rowCount() == 1) {
 			$this_game = $r->fetch();
-			if ($this_game['p2p_mode'] == "none" && $this_game['creator_id'] == $thisuser->db_user['user_id']) {
+			if ($this_game['p2p_mode'] != "rpc" && $this_game['creator_id'] == $thisuser->db_user['user_id']) {
 				$success = delete_reset_game($action, $game_id);
 				
 				if ($success) {

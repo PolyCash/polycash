@@ -339,7 +339,7 @@ class User {
 		
 		if ($user_game['strategy_id'] > 0) {}
 		else {
-			if ($game->blockchain->db_blockchain['p2p_mode'] == "none") $tx_fee=0.00001;
+			if ($game->blockchain->db_blockchain['p2p_mode'] != "rpc") $tx_fee=0.00001;
 			else $tx_fee=0.001;
 			
 			$q = "INSERT INTO user_strategies SET voting_strategy='manual', game_id='".$game->db_game['game_id']."', user_id='".$user_game['user_id']."'";
@@ -472,7 +472,7 @@ class User {
 					$qq = "UPDATE address_keys SET account_id='".$user_game['account_id']."' WHERE address_id='".$address['address_id']."';";
 					$rr = $this->app->run_query($qq);
 				}
-				else if ($game->blockchain->db_blockchain['p2p_mode'] == "none") {
+				else if ($game->blockchain->db_blockchain['p2p_mode'] != "rpc") {
 					$vote_identifier = $this->app->option_index_to_vote_identifier($option_index);
 					$addr_text = "11".$vote_identifier;
 					$addr_text .= $this->app->random_string(34-strlen($addr_text));

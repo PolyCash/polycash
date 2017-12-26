@@ -259,6 +259,59 @@ if ($thisuser) {
 		}
 		else $app->output_message(4, "Error, invalid UTXO ID.", false);
 	}
+	else if ($action == "withdraw_from_card") {
+		$card_id = (int) $_REQUEST['card_id'];
+		$issuer_id = (int) $_REQUEST['issuer_id'];
+		$claim_type = $_REQUEST['claim_type'];
+		
+		$q = "SELECT c.* FROM cards c LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.issuer_id='".$issuer_id."' AND c.issuer_card_id='".$card_id."';";
+		$r = $app->run_query($q);
+		
+		if ($r->rowCount() == 1) {
+			$card = $r->fetch();
+			
+			if ($card['user_id'] == $thisuser->db_user['user_id']) {
+				if ($claim_type == "to_address") {
+					$fee = (float) $_REQUEST['fee'];
+					$address = $_REQUEST['address'];
+					
+					if ($fee > 0 && $fee < $card['amount']) {
+						$this_issuer = $app->get_issuer_by_server_name($GLOBALS['base_url']);
+						
+						if ($card['issuer_id'] != $this_issuer['issuer_id']) {
+							$remote_issuer = $app->run_query("SELECT * FROM card_issuers WHERE issuer_id='".$card['issuer_id']."';")->fetch();
+							
+							$remote_url = $remote_issuer['base_url']."/api/card/".$card['issuer_card_id']."/withdraw/?secret=".$card['secret_hash']."&fee=".$fee."&address=".$address;
+							$remote_response_raw = file_get_contents($remote_url);
+							$remote_response = get_object_vars(json_decode($remote_response_raw));
+							
+							if ($remote_response['status_code'] == 1) {
+								$app->change_card_status($card, 'redeemed');
+								$app->output_message(1, $remote_response['message'], false);
+							}
+							else $app->output_message(7, $remote_response['message'], false);
+						}
+						else {
+							$transaction = $app->pay_out_card($card, $address, $fee);
+							$db_blockchain = $app->run_query("SELECT * FROM blockchains WHERE blockchain_id='".$transaction['blockchain_id']."';")->fetch();
+							
+							if ($transaction) $app->output_message(1, "Great! Coins have been sent to <a href=\"/explorer/blockchains/".$db_blockchain['url_identifier']."/transactions/".$transaction['tx_hash']."\">your address</a>.", false);
+							else $app->output_message(7, "Error: failed to create the transaction.", false);
+						}
+					}
+					else $app->output_message(6, "Error: invalid fee amount.", false);
+				}
+				else if ($claim_type == "to_account" || $claim_type == "to_game") {
+					list($status_code, $message) = $app->redeem_card_to_account($thisuser, $card, $claim_type);
+					
+					$app->output_message($status_code, $message, false);
+				}
+				else $app->output_message(6, "Error: invalid action.", false);
+			}
+			else $app->output_message(5, "Error: you don't own this card.", false);
+		}
+		else $app->output_message(4, "Error: invalid card or issuer ID.", false);
+	}
 	else $app->output_message(3, "This action is not yet implemented.", false);
 }
 else $app->output_message(2, "You must be logged in to complete this step.", false);

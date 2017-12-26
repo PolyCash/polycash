@@ -1,0 +1,1 @@
+ALTER TABLE `cards` ADD `default_game_id` INT NULL DEFAULT NULL AFTER `fv_currency_id`;

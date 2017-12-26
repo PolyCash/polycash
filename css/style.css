@@ -477,3 +477,40 @@ footer {
 .toggle:hover {background-color:#fff}
 .resize {float:right; height:32px; width:32px; background:url('/images/resize.gif') 15px 15px no-repeat; cursor:s-resize}
 #editor {cursor:text; margin:10px}
+
+.card_title_status {
+	display: block;
+	line-height: 40px;
+	padding: 5px;
+	padding-left: 0px;
+	color: #0b0;
+	font-weight: bold;
+	font-size: 28px;
+}
+.card_small {
+	display: inline-block;
+	width: 90px;
+	line-height: 20px;
+	padding: 0px;
+	padding-top: 8px;
+	padding-bottom: 8px;
+	text-align: center;
+	margin: 10px;
+	border: 1px solid #aaa;
+	cursor: pointer;
+}
+.card_block {
+	display: block;
+	margin: 0px;
+	margin-top: 5px;
+	padding: 10px;
+	padding-top: 6px;
+	left: 0px;
+	top: 0px;
+	border: 1px solid #999;
+	border-radius: 7px;
+}
+.card_small_sel {
+	background-color: #fff ! important;
+	border: 1px solid black;
+}

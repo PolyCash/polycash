@@ -182,8 +182,6 @@ class CoinBattlesGameDefinition {
 			$final_time = $final_block['time_mined'];
 		}
 		
-		echo "Event ".$db_event['event_index'].": ".$db_event['event_name']."<br/>\n";
-		
 		$btc_currency = $this->app->get_currency_by_abbreviation("BTC");
 		
 		$performances = array();
@@ -201,21 +199,43 @@ class CoinBattlesGameDefinition {
 				if (!empty($currency_price['time_added'])) $last_price_time = $currency_price['time_added'];
 				else $last_price_time = 0;
 				
-				echo $poloniex_url."<br/>\n";
 				$poloniex_response = $this->app->async_fetch_url($poloniex_url, true);
 				$poloniex_trades = json_decode($poloniex_response['cached_result'], true);
+				$cached_url = $this->app->cached_url_info($poloniex_url);
 				
-				for ($i=count($poloniex_trades)-1; $i>=0; $i--) {
-					$trade = $poloniex_trades[$i];
+				$cached_prices_q = "SELECT COUNT(*) FROM currency_prices WHERE cached_url_id='".$cached_url['cached_url_id']."';";
+				$cached_prices_r = $this->app->run_query($cached_prices_q);
+				$cached_prices = $cached_prices_r->fetch();
+				$num_cached_prices = $cached_prices['COUNT(*)'];
+				
+				if ($num_cached_prices == 0) {
+					$start_q = "INSERT INTO currency_prices (cached_url_id, currency_id, reference_currency_id, price, time_added) VALUES ";
+					$q = $start_q;
+					$modulo = 0;
 					
-					if ($trade['type'] == "buy") {
-						$trade_date = new DateTime($trade['date'], new DateTimeZone('UTC'));
-						$trade_time = $trade_date->format('U');
+					for ($i=count($poloniex_trades)-1; $i>=0; $i--) {
+						$trade = $poloniex_trades[$i];
 						
-						$q = "INSERT INTO currency_prices SET currency_id='".$db_currency['currency_id']."', reference_currency_id='".$btc_currency['currency_id']."', price='".$trade['rate']."', time_added='".$trade_time."';";
-						$r = $this->app->run_query($q);
-						
-						$last_price_time = $trade_time;
+						if ($trade['type'] == "buy") {
+							$trade_date = new DateTime($trade['date'], new DateTimeZone('UTC'));
+							$trade_time = $trade_date->format('U');
+							
+							if ($modulo == 1000) {
+								$q = substr($q, 0, strlen($q)-2).";";
+								$this->app->run_query($q);
+								$modulo = 0;
+								$q = $start_q;
+							}
+							else $modulo++;
+							
+							$q .= "('".$cached_url['cached_url_id']."', '".$db_currency['currency_id']."', '".$btc_currency['currency_id']."', '".$trade['rate']."', '".$trade_time."'), ";
+							
+							$last_price_time = $trade_time;
+						}
+					}
+					if ($modulo > 0) {
+						$q = substr($q, 0, strlen($q)-2).";";
+						$this->app->run_query($q);
 					}
 				}
 				
@@ -357,15 +377,24 @@ class CoinBattlesGameDefinition {
 				$data_txt = "";
 				$blue = round(255*$i/(count($this->currencies)-1));
 				
-				for ($j=0; $j<count($x_labels); $j++) {
+				$q = "SELECT * FROM currency_prices WHERE currency_id='".$this->currencies[$i]['currency_id']."' AND reference_currency_id='".$btc_currency['currency_id']."' AND time_added >= ".$from_block['time_mined']." AND time_added <= ".$to_time." ORDER BY time_added ASC;";
+				$r = $this->app->run_query($q);
+				
+				$j = 0;
+				while (!empty($x_labels[$j]) && $db_price = $r->fetch()) {
+					$performance = false;
 					if ($j == 0 || $i == 0) $performance = pow(10,8);
 					else {
-						$price = $this->app->currency_price_at_time($this->currencies[$i]['currency_id'], $btc_currency['currency_id'], $x_labels[$j]);
-						
-						$performance = round(pow(10,8)*$price['price']/$this->currencies[$i]['initial_price']['price']);
+						if ($db_price['time_added'] >= $x_labels[$j]) {
+							$performance = round(pow(10,8)*$db_price['price']/$this->currencies[$i]['initial_price']['price']);
+						}
 					}
-					$data_txt .= round(($performance/pow(10,8) - 1)*100, 4).", ";
+					if ($performance) {
+						$data_txt .= round(($performance/pow(10,8) - 1)*100, 4).", ";
+						$j++;
+					}
 				}
+				
 				$data_txt = substr($data_txt, 0, strlen($data_txt)-2);
 				$datasets_txt .= "{
 					label: '".$this->currencies[$i]['name']."',

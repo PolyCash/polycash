@@ -70,6 +70,186 @@ if ($uri_parts[1] == "api") {
 		header('Last-Modified: '.gmdate('D, d M Y H:i:s').' GMT');
 		echo $raw;
 	}
+	else if ($uri_parts[2] == "card" || $uri_parts[2] == "cards") {
+		$this_issuer = $app->get_issuer_by_server_name($GLOBALS['base_url']);
+		
+		if ($uri_parts[2] == "card" && !empty($uri_parts[4]) && !empty($uri_parts[5]) && $uri_parts[4] == "check") {
+			$card_id = (int) $uri_parts[3];
+			$supplied_secret = $uri_parts[5];
+			$supplied_secret_hash = $app->card_secret_to_hash($supplied_secret);
+			
+			$card_q = "SELECT * FROM cards WHERE issuer_card_id='".$card_id."' AND issuer_id='".$this_issuer['issuer_id']."';";
+			$card_r = $app->run_query($card_q);
+			
+			if ($card_r->rowCount() > 0) {
+				$card = $card_r->fetch();
+				
+				if ($supplied_secret == $card['secret_hash'] || $supplied_secret_hash == $card['secret_hash']) {
+					$app->output_message(1, "Correct!");
+				}
+				else {
+					$app->output_message(2, "Incorrect");
+				}
+			}
+			else $app->output_message(3, "Invalid card ID");
+			
+			die();
+		}
+		else if ($uri_parts[2] == "card" && !empty($uri_parts[4]) && $uri_parts[4] == "withdraw") {
+			$card_id = (int) $uri_parts[3];
+			
+			$supplied_secret = $_REQUEST['secret'];
+			$supplied_secret_hash = $app->card_secret_to_hash($supplied_secret);
+			$fee = $_REQUEST['fee'];
+			$address = $_REQUEST['address'];
+			
+			$card_q = "SELECT * FROM cards WHERE issuer_card_id='".$card_id."' AND issuer_id='".$this_issuer['issuer_id']."';";
+			$card_r = $app->run_query($card_q);
+			
+			if ($card_r->rowCount() > 0) {
+				$card = $card_r->fetch();
+				
+				if ($fee > 0 && $fee < $card['amount']) {
+					if ($supplied_secret == $card['secret_hash'] || $supplied_secret_hash == $card['secret_hash']) {
+						$transaction = $app->pay_out_card($card, $address, $fee);
+						
+						if ($transaction) {
+							$app->output_message(1, $transaction['tx_hash'], false);
+						}
+						else $app->output_message(6, $message, false);
+					}
+					else $app->output_message(5, "Error: wrong secret key.", false);
+				}
+				else $app->output_message(4, "Error: invalid fee amount.", false);
+			}
+			else $app->output_message(3, "Invalid card ID");
+		}
+		else {
+			$card_public_vars = $app->card_public_vars();
+			
+			if ($uri_parts[2] == "card") {
+				$card_id = (int) $uri_parts[3];
+			}
+			else {
+				$uri_parts[3] = str_replace(":", "-", $uri_parts[3]);
+				$card_range = explode("-", $uri_parts[3]);
+				$from_card_id = (int) $card_range[0];
+				$to_card_id = (int) $card_range[1];
+			}
+			
+			$q = "SELECT ";
+			foreach ($card_public_vars as $var_name) {
+				$q .= "c.".$var_name.", ";
+			}
+			$q .= "curr.abbreviation AS currency_abbreviation, fv_curr.abbreviation AS fv_currency_abbreviation FROM cards c JOIN currencies curr ON c.currency_id=curr.currency_id JOIN currencies fv_curr ON c.fv_currency_id=fv_curr.currency_id LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.issuer_id='".$this_issuer['issuer_id']."' AND ";
+			if ($uri_parts[2] == "card") $q .= "c.issuer_card_id='".$card_id."'";
+			else $q .= "c.issuer_card_id >= ".$from_card_id." AND c.issuer_card_id <= ".$to_card_id;
+			$q .= ";";
+			$r = $app->run_query($q);
+			
+			if ($r->rowCount() > 0) {
+				$cards = array();
+				while ($card = $r->fetch(PDO::FETCH_ASSOC)) {
+					array_push($cards, $card);
+				}
+				$api_output['status_code'] = 1;
+				$api_output['cards'] = $cards;
+				echo json_encode($api_output, JSON_PRETTY_PRINT);
+			}
+			else $app->output_message(0, "Error: card not found.");
+		}
+	}
+	else if (count($uri_parts) >= 5 && ($uri_parts[2] == "block" || $uri_parts[2] == "blocks")) {
+		$blockchain_identifier = $uri_parts[3];
+		
+		if ($uri_parts[2] == "block") {
+			$block_height = (int) $uri_parts[4];
+		}
+		else {
+			$uri_parts[4] = str_replace(":", "-", $uri_parts[4]);
+			$block_range = explode("-", $uri_parts[4]);
+			$from_block_height = (int) $block_range[0];
+			$to_block_height = (int) $block_range[1];
+		}
+		
+		$blockchain_r = $app->run_query("SELECT * FROM blockchains WHERE url_identifier=".$app->quote_escape($blockchain_identifier).";");
+		
+		if ($blockchain_r->rowCount() > 0) {
+			$db_blockchain = $blockchain_r->fetch();
+			$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
+			
+			$block_q = "SELECT block_id, block_hash, num_transactions, time_mined FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."'";
+			if ($uri_parts[2] == "block") $block_q .= " AND block_id='".$block_height."'";
+			else $block_q .= " AND block_id >= ".$from_block_height." AND block_id <= ".$to_block_height;
+			$block_q .= ";";
+			$block_r = $app->run_query($block_q);
+			
+			$blocks = array();
+			
+			while ($db_block = $block_r->fetch(PDO::FETCH_ASSOC)) {
+				$transactions = array();
+				
+				$tx_q = "SELECT transaction_id, block_id, transaction_desc, tx_hash, amount, fee_amount, time_created, position_in_block, num_inputs, num_outputs FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_id='".$db_block['block_id']."' ORDER BY position_in_block ASC;";
+				$tx_r = $app->run_query($tx_q);
+				
+				while ($tx = $tx_r->fetch(PDO::FETCH_ASSOC)) {
+					list($inputs, $outputs) = $app->web_api_transaction_ios($tx['transaction_id']);
+					
+					unset($tx['transaction_id']);
+					$tx['inputs'] = $inputs;
+					$tx['outputs'] = $outputs;
+					
+					array_push($transactions, $tx);
+				}
+				$db_block['transactions'] = $transactions;
+				
+				array_push($blocks, $db_block);
+			}
+			
+			$api_output['status_code'] = 1;
+			$api_output['blocks'] = $blocks;
+			echo json_encode($api_output, JSON_PRETTY_PRINT);
+		}
+	}
+	else if ($uri_parts[2] == "transactions") {
+		$url_identifier = $uri_parts[3];
+		$blockchain_r = $app->run_query("SELECT * FROM blockchains WHERE url_identifier=".$app->quote_escape($url_identifier).";");
+		
+		if ($blockchain_r->rowCount() > 0) {
+			$db_blockchain = $blockchain_r->fetch();
+			$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
+			
+			if ($uri_parts[4] == "post" && $blockchain->db_blockchain['p2p_mode'] != "rpc") {
+				$data = $_REQUEST['data'];
+				$tx = get_object_vars(json_decode($data));
+				
+				$transaction_id = $blockchain->add_transaction_from_web_api(false, $tx);
+				
+				$coin_rpc = false;
+				$successful = true;
+				$db_transaction = $blockchain->add_transaction($coin_rpc, $tx['tx_hash'], false, true, $successful, $i, false, true);
+				
+				if ($db_transaction) $app->output_message(1, "Transaction successfully imported!", false);
+				else $app->output_message(4, "There was an error importing the transaction.", false);
+			}
+			else $app->output_message(3, "Invalid action specified.", false);
+		}
+		else $app->output_message(2, "Error: invalid blockchain identifier.", false);
+	}
+	else if ($uri_parts[2] == "blockchain") {
+		$url_identifier = $uri_parts[3];
+		$blockchain_r = $app->run_query("SELECT blockchain_id, blockchain_name, url_identifier, p2p_mode, coin_name, coin_name_plural, seconds_per_block, decimal_places, initial_pow_reward FROM blockchains WHERE url_identifier=".$app->quote_escape($url_identifier).";");
+		
+		if ($blockchain_r->rowCount() > 0) {
+			$db_blockchain = $blockchain_r->fetch(PDO::FETCH_ASSOC);
+			$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
+			$db_blockchain['last_block_id'] = $blockchain->last_block_id();
+			unset($db_blockchain['blockchain_id']);
+			
+			echo json_encode($db_blockchain, JSON_PRETTY_PRINT);
+		}
+		else $app->output_message(2, "Error: invalid blockchain identifier.", false);
+	}
 	else if (!empty($uri_parts[2])) {
 		$game_identifier = $uri_parts[2];
 		

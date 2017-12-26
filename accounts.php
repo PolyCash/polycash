@@ -3,7 +3,10 @@ include('includes/connect.php');
 include('includes/get_session.php');
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
-if ($thisuser && !empty($_REQUEST['action']) && $_REQUEST['action'] == "donate_to_faucet") {
+$action = "";
+if (!empty($_REQUEST['action'])) $action = $_REQUEST['action'];
+
+if ($thisuser && $action == "donate_to_faucet") {
 	$io_id = (int) $_REQUEST['account_io_id'];
 	$amount_each = (float) $_REQUEST['donate_amount_each'];
 	$quantity = (int) $_REQUEST['donate_quantity'];
@@ -53,7 +56,7 @@ if ($thisuser && !empty($_REQUEST['action']) && $_REQUEST['action'] == "donate_t
 						$addresses_needed = $quantity;
 						$loop_count = 0;
 						do {
-							if ($donate_blockchain->db_blockchain['p2p_mode'] == "none") {
+							if ($donate_blockchain->db_blockchain['p2p_mode'] != "rpc") {
 								$addr_text = $app->random_string(34);
 								$temp_address = $donate_blockchain->create_or_fetch_address($addr_text, false, false, false, false, true, false);
 							}
@@ -151,6 +154,7 @@ if ($thisuser && !empty($_REQUEST['action']) && $_REQUEST['action'] == "donate_t
 
 $pagetitle = "My Accounts";
 $nav_tab_selected = "accounts";
+$nav_subtab_selected = "";
 include('includes/html_start.php');
 ?>
 <div class="container-fluid">
@@ -161,7 +165,7 @@ include('includes/html_start.php');
 		var selected_account_id = false;
 		</script>
 		
-		<div class="panel panel-default" style="margin-top: 15px;">
+		<div class="panel panel-info" style="margin-top: 15px;">
 			<div class="panel-heading">
 				<div class="panel-title">Coin Accounts</div>
 			</div>
@@ -189,10 +193,7 @@ include('includes/html_start.php');
 					else echo $account['account_name'];
 					echo '</div>';
 					
-					$balance_q = "SELECT SUM(io.amount) FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."' AND io.spend_status='unspent';";
-					$balance_r = $app->run_query($balance_q);
-					$balance = $balance_r->fetch();
-					$balance = $balance['SUM(io.amount)'];
+					$balance = $app->account_balance($account['account_id']);
 					
 					echo '<div class="col-sm-2 greentext" style="text-align: right">';
 					if ($account['game_id'] > 0) echo $app->format_bignum($account_value/pow(10,$account_game->db_game['decimal_places'])).' '.$account_game->db_game['coin_name_plural'];
@@ -227,7 +228,10 @@ include('includes/html_start.php');
 					echo '</a></div>';
 					echo "</div>\n";
 					
-					echo '<div class="row" id="account_details_'.$account['account_id'].'" style="display: none;">';
+					echo '<div class="row" id="account_details_'.$account['account_id'].'"';
+					if (in_array($action, array('prompt_game_buyin', 'view_account')) && $_REQUEST['account_id'] == $account['account_id']) {}
+					else echo ' style="display: none;"';
+					echo '>';
 					echo "<div class=\"account_details\">";
 					if (empty($account['game_id'])) {
 						echo "To deposit to ".$account['account_name'].", send ".$account['short_name_plural']." to: ".$account['pub_key']."<br/>\n";
@@ -334,7 +338,8 @@ include('includes/html_start.php');
 									<label for="withdraw_address">Address:</label>
 									<input class="form-control" type="text" id="withdraw_address" />
 								</div>
-								<span class="greentext" style="display: none;" id="withdraw_message"></span>
+								
+								<div class="greentext" style="display: none;" id="withdraw_message"></div>
 								
 								<button id="withdraw_btn" class="btn btn-success" onclick="withdraw_from_account(false, 2);">Withdraw</button>
 							</div>
@@ -374,7 +379,7 @@ include('includes/html_start.php');
 			</div>
 		</div>
 		
-		<div class="panel panel-default">
+		<div class="panel panel-info">
 			<div class="panel-heading">
 				<div class="panel-title">Colored Coin Accounts</div>
 			</div>
@@ -516,28 +521,16 @@ include('includes/html_start.php');
 			</div>
 		</div>
 		
-		<?php if ($thisuser && $app->user_is_admin($thisuser)) { ?>
-		<div class="panel panel-default">
-			<div class="panel-heading">
-				<div class="panel-title">Cards</div>
-			</div>
-			<div class="panel-body">
-				<b>Import Cards</b>
-				<div class="form-group">
-					<label for="from_card_id"></label>
-					<input type="text" class="form-control" name="from_card_id" />
-				</div>
-				<div class="form-group">
-					<label for="to_card_id"></label>
-					<input type="text" class="form-control" name="to_card_id" />
-				</div>
-			</div>
-		</div>
-		<?php } ?>
-		
 		<script type="text/javascript">
 		$(document).ready(function() {
 			account_spend_refresh();
+			<?php
+			if ($action == "prompt_game_buyin") {
+				echo "account_start_spend_io(false, ".((int) $_REQUEST['io_id']).", ".((float) $_REQUEST['amount']).");\n";
+				echo "$('#account_spend_action').val('buyin');\n";
+				echo "account_spend_action_changed();\n";
+			}
+			?>
 		});
 		</script>
 		<?php

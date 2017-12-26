@@ -13,7 +13,6 @@ class Game {
 		
 		if (!empty($this->db_game['module'])) {
 			eval('$this->module = new '.$this->db_game['module'].'GameDefinition($this->blockchain->app);');
-			$this->module->load();
 		}
 	}
 	
@@ -103,7 +102,7 @@ class Game {
 				
 				while ($transaction_input = $r->fetch()) {
 					if ($input_sum < $amount) {
-						if ($this->blockchain->db_blockchain['p2p_mode'] == "none") {
+						if ($this->blockchain->db_blockchain['p2p_mode'] != "rpc") {
 							$qq = "UPDATE transaction_ios SET spend_count=spend_count+1, spend_transaction_id='".$transaction_id."', spend_transaction_ids=CONCAT(spend_transaction_ids, CONCAT('".$transaction_id."', ','))";
 							if ($block_id !== false) $qq .= ", spend_status='spent', spend_block_id='".$block_id."', spend_round_id='".$this->block_to_round($block_id)."'";
 							$qq .= " WHERE io_id='".$transaction_input['io_id']."';";
@@ -146,7 +145,7 @@ class Game {
 						$r = $this->blockchain->app->run_query($q);
 						$address = $r->fetch();
 						
-						if ($this->blockchain->db_blockchain['p2p_mode'] == "none") {
+						if ($this->blockchain->db_blockchain['p2p_mode'] != "rpc") {
 							$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."', script_type='pubkeyhash', spend_status='";
 							if ($instantly_mature == 1) $q .= "unspent";
 							else $q .= "unconfirmed";
@@ -192,7 +191,7 @@ class Game {
 					$r = $this->blockchain->app->run_query($q);
 					$overshoot_address = $r->fetch();
 					
-					if ($this->blockchain->db_blockchain['p2p_mode'] == "none") {
+					if ($this->blockchain->db_blockchain['p2p_mode'] != "rpc") {
 						$q = "INSERT INTO transaction_ios SET out_index='".$out_index."', spend_status='unconfirmed', blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."', script_type='pubkeyhash', ";
 						if ($block_id !== false) {
 							$overshoot_cbd = floor($coin_blocks_destroyed*($overshoot_amount/$input_sum));
@@ -1027,7 +1026,7 @@ class Game {
 	}
 	
 	public function process_buyin_transaction($transaction) {
-		if (!empty($this->db_game['game_starting_block']) && !empty($this->db_game['escrow_address']) && ($this->blockchain->db_blockchain['p2p_mode'] == "none" || $transaction['block_id'] >= $this->db_game['game_starting_block'])) {
+		if (!empty($this->db_game['game_starting_block']) && !empty($this->db_game['escrow_address']) && ($this->blockchain->db_blockchain['p2p_mode'] != "rpc" || $transaction['block_id'] >= $this->db_game['game_starting_block'])) {
 			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false, false);
 			
 			$qq = "SELECT * FROM transaction_ios WHERE create_transaction_id='".$transaction['transaction_id']."' AND address_id='".$escrow_address['address_id']."';";
@@ -1258,7 +1257,7 @@ class Game {
 		
 		$private_game_message = "";
 		
-		if ($this->blockchain->db_blockchain['p2p_mode'] == "none") {
+		if ($this->blockchain->db_blockchain['p2p_mode'] != "rpc") {
 			$seconds_to_add = max(0, time()-$this->blockchain->db_blockchain['last_hash_time']);
 			$link_show_cron = false;
 			
@@ -1548,8 +1547,8 @@ class Game {
 		
 		if ($last_block_id == 0 || ($last_block_id != $this->db_game['coins_in_existence_block'] || ($block_id !== false && $last_block_id != $block_id))) {
 			$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id WHERE gio.game_id='".$this->db_game['game_id']."'";
-			if ($block_id !== false) $q .= " AND io.create_block_id <= ".$block_id." AND ((io.spend_block_id IS NULL AND io.spend_status='unspent') OR io.spend_block_id>".$block_id.")";
-			else $q .= " AND io.spend_status='unspent'";
+			if ($block_id !== false) $q .= " AND io.create_block_id <= ".$block_id." AND ((io.spend_block_id IS NULL AND io.spend_status IN ('unspent','unconfirmed')) OR io.spend_block_id>".$block_id.")";
+			else $q .= " AND io.spend_status IN ('unspent','unconfirmed')";
 			$q .= ";";
 			$r = $this->blockchain->app->run_query($q);
 			$coins = $r->fetch(PDO::FETCH_NUM);
@@ -1800,7 +1799,7 @@ class Game {
 	
 	public function select_input_buttons($user_game) {
 		$js = "mature_ios.length = 0;\n";
-		$html = "<p>Click on your coins to start a staking transaction.</p>\n";
+		$html = "<p>Click on your coins to start a staking transaction. &nbsp;&nbsp; <a href=\"\" onclick=\"add_all_utxos_to_vote(); return false;\">Add all coins</a> &nbsp;&nbsp; <a href=\"\" onclick=\"remove_all_utxos_from_vote(); return false;\">Remove all coins</a></p>\n";
 		$input_buttons_html = "";
 		
 		$last_block_id = $this->blockchain->last_block_id();
@@ -1823,7 +1822,7 @@ class Game {
 			$input_buttons_html .= 'class="btn btn-primary btn-sm select_utxo';
 			if (!empty($prev_utxo) && $utxo['io_id'] == $prev_utxo['io_id']) $input_buttons_html .= ' connected_utxo';
 			if ($this->db_game['logo_image_id'] > 0) $input_buttons_html .= ' select_utxo_image';
-			$input_buttons_html .= '" onclick="add_utxo_to_vote('.$mature_io_index.', true);">';
+			$input_buttons_html .= '" onclick="add_utxo_to_vote('.$mature_io_index.', true, false);">';
 			$input_buttons_html .= '</div>'."\n";
 			
 			$js .= "mature_ios.push(new mature_io(mature_ios.length, ".$utxo['game_io_id'].", ".$utxo['colored_amount'].", ".$utxo['create_block_id'].", ".$utxo['io_id']."));\n";
@@ -1974,7 +1973,7 @@ class Game {
 		$round_id = $this->block_to_round($block_id);
 		$ensured_round = $this->block_to_round((int)$this->db_game['events_until_block']);
 		
-		if ($round_id > $ensured_round) {
+		if ($round_id > 0 && $round_id > $ensured_round) {
 			if ($this->db_game['event_rule'] == "game_definition") {
 				if (!empty($this->db_game['module'])) {
 					$game_starting_round = $this->block_to_round($this->db_game['game_starting_block']);
@@ -1985,11 +1984,9 @@ class Game {
 					if ($r->rowCount() > 0) {
 						$db_last_gde = $r->fetch();
 						
-						$init_event_index = $db_last_gde['event_index']+1;
 						$from_round = $this->block_to_round($db_last_gde['event_starting_block'])+1-$game_starting_round;
 					}
 					else {
-						$init_event_index = 0;
 						$from_round = 1;
 					}
 					$event_verbatim_vars = $this->blockchain->app->event_verbatim_vars();
@@ -2000,10 +1997,20 @@ class Game {
 					$msg = "Adding ".count($gdes_to_add)." events for rounds (".$from_round." : ".$to_round.")";
 					$this->blockchain->app->log_message($msg);
 					
-					$i = 0;
-					for ($event_index=$init_event_index; $event_index<$init_event_index+count($gdes_to_add); $event_index++) {
-						$this->blockchain->app->check_set_gde($this, $event_index, $gdes_to_add[$i], $event_verbatim_vars);
-						$i++;
+					if (count($gdes_to_add) > 0) {
+						$init_event_index = $gdes_to_add[0]['event_index'];
+						
+						$q = "DELETE FROM game_defined_options WHERE game_id=".$this->db_game['game_id']." AND event_index>=".$init_event_index.";";
+						$this->blockchain->app->run_query($q);
+						
+						$q = "DELETE FROM game_defined_events WHERE game_id=".$this->db_game['game_id']." AND event_index>=".$init_event_index.";";
+						$this->blockchain->app->run_query($q);
+						
+						$i = 0;
+						for ($event_index=$init_event_index; $event_index<$init_event_index+count($gdes_to_add); $event_index++) {
+							$this->blockchain->app->check_set_gde($this, $event_index, $gdes_to_add[$i], $event_verbatim_vars);
+							$i++;
+						}
 					}
 				}
 				
@@ -2966,7 +2973,7 @@ class Game {
 	}
 	
 	public function add_genesis_transaction(&$user_game) {
-		if ($this->blockchain->db_blockchain['p2p_mode'] == "none") {
+		if ($this->blockchain->db_blockchain['p2p_mode'] != "rpc") {
 			$fee_amount = 0.001*pow(10, $this->blockchain->db_blockchain['decimal_places']);
 			
 			$q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id WHERE io.spend_status='unspent' AND a.user_id IS NULL AND a.is_mine=1 AND t.transaction_desc='coinbase' AND t.blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND io.amount > ".$fee_amount.";";

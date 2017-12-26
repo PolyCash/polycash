@@ -172,36 +172,38 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 					for ($private_blockchain_i=0; $private_blockchain_i<count($private_blockchain_ids); $private_blockchain_i++) {
 						$blockchain_id = $private_blockchain_ids[$private_blockchain_i];
 						
-						$remaining_prob = round($loop_target_time/$blockchains[$blockchain_id]->db_blockchain['seconds_per_block'], 4);
-						
-						do {
-							$benchmark_time = microtime(true);
+						if ($blockchains[$blockchain_id]->db_blockchain['p2p_mode'] == "none") {
+							$remaining_prob = round($loop_target_time/$blockchains[$blockchain_id]->db_blockchain['seconds_per_block'], 4);
 							
-							$last_block_id = $blockchains[$blockchain_id]->last_block_id();
-							
-							$block_prob = min(1, $remaining_prob);
-							$remaining_prob = $remaining_prob-$block_prob;
-							$rand_num = rand(0, pow(10,4))/pow(10,4);
-							if (!empty($_REQUEST['force_new_block'])) $rand_num = 0;
-							
-							if ($print_debug) echo "\n".$blockchains[$blockchain_id]->db_blockchain['blockchain_name']." (".$rand_num." vs ".$block_prob."): ";
-							
-							if ($rand_num <= $block_prob) {
-								if ($print_debug) echo "FOUND A BLOCK!!\n";
-								$txt = "";
-								$blockchains[$blockchain_id]->new_block($txt);
-								if ($print_debug) echo $txt."\n";
+							do {
+								$benchmark_time = microtime(true);
+								
+								$last_block_id = $blockchains[$blockchain_id]->last_block_id();
+								
+								$block_prob = min(1, $remaining_prob);
+								$remaining_prob = $remaining_prob-$block_prob;
+								$rand_num = rand(0, pow(10,4))/pow(10,4);
+								if (!empty($_REQUEST['force_new_block'])) $rand_num = 0;
+								
+								if ($print_debug) echo "\n".$blockchains[$blockchain_id]->db_blockchain['blockchain_name']." (".$rand_num." vs ".$block_prob."): ";
+								
+								if ($rand_num <= $block_prob) {
+									if ($print_debug) echo "FOUND A BLOCK!!\n";
+									$txt = "";
+									$blockchains[$blockchain_id]->new_block($txt);
+									if ($print_debug) echo $txt."\n";
+								}
+								else {
+									if ($print_debug) echo "No block\n";
+								}
+								
+								if ($print_debug) echo (microtime(true)-$benchmark_time)." sec\n";
+								$benchmark_time = microtime(true);
 							}
-							else {
-								if ($print_debug) echo "No block\n";
-							}
+							while ($remaining_prob > 0);
 							
-							if ($print_debug) echo (microtime(true)-$benchmark_time)." sec\n";
-							$benchmark_time = microtime(true);
+							$blockchains[$blockchain_id]->set_last_hash_time(time());
 						}
-						while ($remaining_prob > 0);
-						
-						$blockchains[$blockchain_id]->set_last_hash_time(time());
 					}
 					
 					for ($running_game_i=0; $running_game_i<count($running_games); $running_game_i++) {

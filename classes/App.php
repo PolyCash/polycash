@@ -88,6 +88,24 @@ class App {
 		return $string;
 	}
 	
+	public function random_number($length) {
+		$characters = "0123456789";
+		$bits_per_char = ceil(log(strlen($characters), 2));
+		$hex_chars_per_char = ceil($bits_per_char/4);
+		$hex_chars_needed = $length*$hex_chars_per_char;
+		$rand_data = bin2hex(openssl_random_pseudo_bytes(ceil($hex_chars_needed/2), $crypto_strong));
+		if(!$crypto_strong) $this->log_then_die("An insecure random string of length ".$length." was generated.");
+		
+		$string = "";
+		for ($i=0; $i<$length; $i++) {
+			$hex_chars = substr($rand_data, $i*$hex_chars_per_char, $hex_chars_per_char);
+			$rand_num = hexdec($hex_chars);
+			$rand_index = $rand_num%strlen($characters);
+			$string .= $characters[$rand_index];
+		}
+		return $string;
+	}
+	
 	public function normalize_username($username) {
 		return $this->make_alphanumeric(strip_tags($username), "$-()/!.,:;#@");
 	}
@@ -1083,7 +1101,7 @@ class App {
 	
 	public function fetch_game_definition(&$game) {
 		$game_definition = array();
-		if ($game->blockchain->db_blockchain['p2p_mode'] == "none") $game_definition['blockchain_identifier'] = "private";
+		if ($game->blockchain->db_blockchain['p2p_mode'] != "rpc") $game_definition['blockchain_identifier'] = "private";
 		else $game_definition['blockchain_identifier'] = $game->blockchain->db_blockchain['url_identifier'];
 		
 		$verbatim_vars = $this->game_definition_verbatim_vars();
@@ -1711,7 +1729,7 @@ class App {
 						
 						$new_game = new Game($blockchain, $new_game_id);
 						
-						if ($blockchain->db_blockchain['p2p_mode'] == "none") {
+						if ($blockchain->db_blockchain['p2p_mode'] != "rpc") {
 							if ($thisuser) $user_game = $thisuser->ensure_user_in_game($new_game, false);
 							
 							if (empty($new_game->db_game['genesis_tx_hash'])) {
@@ -1854,6 +1872,14 @@ class App {
 		}
 	}
 	
+	public function cached_url_info($url) {
+		$q = "SELECT * FROM cached_urls WHERE url=".$this->quote_escape($url).";";
+		$r = $this->run_query($q);
+		
+		if ($r->rowCount() > 0) return $r->fetch();
+		else return false;
+	}
+	
 	public function async_fetch_url($url, $require_now) {
 		$q = "SELECT * FROM cached_urls WHERE url=".$this->quote_escape($url).";";
 		$r = $this->run_query($q);
@@ -1943,6 +1969,8 @@ class App {
 				}
 				$q = "UPDATE addresses SET user_id='".$user->db_user['user_id']."' WHERE address_id='".$db_address['address_id']."';";
 				$r = $this->run_query($q);
+				
+				return true;
 			}
 			else return false;
 		}
@@ -1984,6 +2012,563 @@ class App {
 		else $currency_account = false;
 		
 		return $currency_account;
+	}
+	
+	public function render_error_message(&$error_message, $error_class) {
+		if ($error_class == "nostyle") return $error_message;
+		else {
+			$html = '
+			<div class="alert alert-dismissible alert-success">
+				<button type="button" class="close" data-dismiss="alert">&times;</button>
+				'.$error_message.'
+			</div>';
+			
+			return $html;
+		}
+	}
+	
+	public function get_card_denominations($currency, $fv_currency_id) {
+		$denominations = array();
+		
+		$q = "SELECT * FROM card_currency_denominations WHERE currency_id='".$currency['currency_id']."' AND fv_currency_id='".$fv_currency_id."' ORDER BY denomination ASC;";
+		$r = $this->run_query($q);
+		
+		while ($denomination = $r->fetch()) {
+			array_push($denominations, $denomination);
+		}
+		
+		return $denominations;
+	}
+	
+	public function calculate_cards_cost($usd_per_btc, $denomination, $purity, $how_many) {
+		$error = FALSE;
+		$total_usd = 0;
+		
+		if ($purity == "unspecified") $purity = 100;
+		
+		if ($currency != "btc") $currency = "usd";
+		
+		if ($currency == "btc") $purity = 100;
+		
+		if ($purity != round($purity)) $error = TRUE;
+		
+		if ($how_many > 0 && $how_many <= 1000 && $how_many == round($how_many)) {}
+		else $error = TRUE;
+		
+		if ($purity >= 80 && $purity <= 100 && $purity == round($purity)) {}
+		else $error = TRUE;
+		
+		if ($error) return FALSE;
+		else {
+			$cards_facevalue_usd = $how_many*$denomination['denomination'];
+			if ($denomination['currency_id'] != 1) $cards_facevalue_usd = round($cards_facevalue_usd*$usd_per_btc, 2);
+			
+			$total_usd += $cards_facevalue_usd;
+			
+			$print_fees = round(0.25*$how_many, 2);
+			$total_usd += $print_fees;
+			
+			$builtin_discount = round($cards_facevalue_usd*((100-$purity)/100), 2);
+			$total_usd = $total_usd - $builtin_discount;
+			
+			return round($total_usd/$usd_per_btc, 5);
+		}
+	}
+	
+	public function position_by_pos($position, $side, $paper_width) {
+		$num_cols = 2;
+		if ($paper_width == "small") $num_cols = 1;
+		
+		$position = $position - 1; // use 0,1... ordering instead of 1,2...
+		
+		if ($paper_width == "small") {
+			$left_margin = 0.2;
+			$top_margin = 0.5;
+			
+			$card_w = 2;
+			$card_h = 3.5;
+		}
+		else {
+			$left_margin = 0.75;
+			$top_margin = 0.5;
+			
+			$card_w = 3.5;
+			$card_h = 2;
+		}
+		
+		if ($side == "front") {
+			if ($position % $num_cols == 0) $x = $left_margin;
+			else $x = $left_margin + $card_w;
+			
+			$row = floor($position/$num_cols);
+			$y = $top_margin + $row*$card_h;
+		}
+		else if ($side == "back") {
+			if ($position % $num_cols == 0 && $paper_width != "small") $x = $left_margin + $card_w;
+			else $x = $left_margin;
+			
+			$row = floor($position/$num_cols);
+			$y = $top_margin + $row*$card_h;
+		}
+		
+		$result[0] = $x;
+		$result[1] = $y;
+		return $result;
+	}
+	
+	public function try_create_card_account($card, $thisuser, $password) {
+		if ($card['status'] == "sold") {
+			if (empty($thisuser)) {
+				$alias = $this->random_string(16);
+				$user_password = $this->random_string(16);
+				$verify_code = $this->random_string(32);
+				$salt = $this->random_string(16);
+				
+				$thisuser = $this->create_new_user($verify_code, $salt, $alias, "", $user_password);
+			}
+			
+			$q = "INSERT INTO card_users SET card_id='".$card['card_id']."', password=".$this->quote_escape($password).", create_time='".time()."'";
+			if ($GLOBALS['pageview_tracking_enabled']) $q .= ", create_ip=".$this->quote_escape($_SERVER['REMOTE_ADDR']);
+			$q .= ";";
+			$r = $this->run_query($q);
+			$card_user_id = $this->last_insert_id();
+			
+			$q = "UPDATE cards SET user_id='".$thisuser->db_user['user_id']."', card_user_id='".$card_user_id."', claim_time='".time()."' WHERE card_id='".$card['card_id']."';";
+			$r = $this->run_query($q);
+			
+			$this->change_card_status($card, 'claimed');
+			
+			$session_key = session_id();
+			$expire_time = time()+3600*24;
+			
+			$q = "INSERT INTO card_sessions SET card_user_id='".$card_user_id."', session_key=".$this->quote_escape($session_key).", login_time='".time()."', expire_time='".$expire_time."'";
+			if ($GLOBALS['pageview_tracking_enabled']) $q .= ", ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']);
+			$q .= ";";
+			$r = $this->run_query($q);
+			
+			$redirect_url = false;
+			$thisuser->log_user_in($redirect_url, false);
+			
+			$txt = "<p>Your account has been created! ";
+			$txt .= "Any time you want to access your money, please visit the link on your gift card.</p>\n";
+			
+			$txt .= "<a href=\"/cards/\" class=\"btn btn-default\">Go to My Account</a>";
+			
+			$success = TRUE;
+		}
+		else {
+			$success = FALSE;
+			$txt = "";
+		}
+		
+		$returnvals[0] = $success;
+		$returnvals[1] = $txt;
+		return $returnvals;
+	}
+	
+	public function get_card_currency_balance($card_id, $currency_id) {
+		$q = "SELECT * FROM card_currency_balances WHERE card_id='".$card_id."' AND currency_id='".$currency_id."';";
+		$r = $this->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			$balance = $r->fetch();
+			
+			return $balance['balance'];
+		}
+		else return 0;
+	}
+	
+	public function get_card_currency_balances($card_id) {
+		$q = "SELECT * FROM card_currency_balances b JOIN currencies c ON b.currency_id=c.currency_id WHERE b.card_id='".$card_id."' ORDER BY b.currency_id ASC;";
+		$r = $this->run_query($q);
+		
+		$balances = array();
+		
+		while ($balance = $r->fetch()) {
+			array_push($balances, $balance);
+		}
+		
+		return $balances;
+	}
+	
+	public function set_card_currency_balances($card) {
+		$balances_by_currency_id = array();
+		
+		$q = "SELECT * FROM card_conversions WHERE card_id='".$card['card_id']."';";
+		$r = $this->run_query($q);
+		
+		while ($conversion = $r->fetch()) {
+			if (!empty($conversion['currency1_id'])) {
+				if (empty($balances_by_currency_id[$conversion['currency1_id']])) $balances_by_currency_id[$conversion['currency1_id']] = 0;
+				$balances_by_currency_id[$conversion['currency1_id']] += $conversion['currency1_delta'];
+			}
+			if (!empty($conversion['currency2_id'])) {
+				if (empty($balances_by_currency_id[$conversion['currency2_id']])) $balances_by_currency_id[$conversion['currency2_id']] = 0;
+				$balances_by_currency_id[$conversion['currency2_id']] += $conversion['currency2_delta'];
+			}
+		}
+		
+		foreach ($balances_by_currency_id as $currency_id => $balance) {
+			$q = "SELECT * FROM card_currency_balances WHERE card_id='".$card['card_id']."' AND currency_id='".$currency_id."';";
+			$r = $this->run_query($q);
+			
+			if ($r->rowCount() > 0) {
+				$db_balance = $r->fetch();
+				$q = "UPDATE card_currency_balances SET balance='".$balance."' WHERE balance_id='".$db_balance['balance_id']."';";
+				$r = $this->run_query($q);
+			}
+			else {
+				$q = "INSERT INTO card_currency_balances SET card_id='".$card['card_id']."', currency_id='".$currency_id."', balance='".$balance."';";
+				$r = $this->run_query($q);
+			}
+		}
+	}
+	
+	public function calculate_cards_networth($my_cards) {
+		$networth = 0;
+		
+		$currency_prices = $this->fetch_currency_prices();
+		
+		foreach ($my_cards as $card) {
+			$balances = $this->get_card_currency_balances($card['card_id']);
+			
+			$networth += $this->calculate_card_networth($card, $balances, $currency_prices);
+		}
+		
+		return $networth;
+	}
+	
+	public function calculate_card_networth($card, $balances, $currency_prices) {
+		$value = 0;
+		
+		foreach ($balances as $balance) {
+			if (!empty($currency_prices[$balance['currency_id']])) {
+				$value += $balance['balance']/$currency_prices[$balance['currency_id']]['price'];
+			}
+		}
+		
+		return $value;
+	}
+	
+	public function get_card_fees($card) {
+		return $card['amount']*(100-$card['purity'])/100;
+	}
+	
+	public function try_withdraw_mobilemoney($currency_id, $phone_number, $first_name, $last_name, $amount, &$my_cards) {
+		$beyonic = new Beyonic();
+		$beyonic->setApiKey($GLOBALS['beyonic_api_key']);
+		
+		$payment = new MobilePayment($this, false);
+		$payment->set_fields($my_cards[0]['card_group_id'], $currency_id, $amount, $phone_number, $first_name, $last_name);
+		$payment->create();
+		
+		$mobilemoney_error = false;
+		
+		try {
+			$beyonic_request = $beyonic->sendRequest('payments', 'POST', false, array(
+				'phonenumber' => $phone_number,
+				'payment_type' => "money",
+				'first_name' => $first_name,
+				'last_name' => $last_name,
+				'amount' => $amount,
+				'currency' => 'UGX',
+				'description' => $GLOBALS['site_name_short']
+			));
+		}
+		catch (Exception $e) {
+			$mobilemoney_error = true;
+			$error_message = "There was an error initiating the payment: ".$e->responseBody;
+		}
+		
+		if (!$mobilemoney_error) {
+			$q = "UPDATE mobile_payments SET beyonic_request_id='".$beyonic_request->id."' WHERE payment_id='".$payment->db_payment['payment_id']."';";
+			$r = $this->run_query($q);
+			
+			$this->change_card_status($my_cards[0], 'redeemed');
+			
+			$q = "UPDATE cards SET status='redeemed' WHERE card_id='".$my_cards[0]['card_id']."';";
+			$r = $this->run_query($q);
+			
+			$q = "INSERT INTO card_withdrawals SET withdraw_method='mobilemoney', card_id='".$my_cards[0]['card_id']."', currency_id='".$currency_id."', status_change_id='".$status_change_id."', withdraw_time='".time()."', amount='".$amount."', ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']).";";
+			$r = $this->run_query($q);
+			$withdrawal_id = $this->last_insert_id();
+			
+			$q = "INSERT INTO card_conversions SET card_id='".$my_cards[0]['card_id']."'";
+			$q .= ", withdrawal_id='".$withdrawal_id."'";
+			$q .= ", time_created='".time()."', ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']).", currency1_id=".$currency_id.", currency1_delta=".(-1*$amount).";";
+			$r = $this->run_query($q);
+			
+			$this->set_card_currency_balances($my_cards[0]);
+			
+			$error_message = "Beyonic request was successful!";
+		}
+		
+		return $error_message;
+	}
+	
+	public function get_issuer_by_server_name($server_name) {
+		$server_name = trim(strtolower(strip_tags($server_name)));
+		$initial_server_name = $server_name;
+		if (substr($server_name, 0, 7) == "http://") $server_name = substr($server_name, 7, strlen($server_name)-7);
+		if (substr($server_name, 0, 8) == "https://") $server_name = substr($server_name, 8, strlen($server_name)-8);
+		if (substr($server_name, 0, 4) == "www.") $server_name = substr($server_name, 4, strlen($server_name)-4);
+		if ($server_name[strlen($server_name)-1] == "/") $server_name = substr($server_name, 0, strlen($server_name)-1);
+		
+		$q = "SELECT * FROM card_issuers WHERE issuer_identifier=".$this->quote_escape($server_name).";";
+		$r = $this->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			$card_issuer = $r->fetch();
+		}
+		else {
+			$q = "INSERT INTO card_issuers SET issuer_identifier=".$this->quote_escape($server_name).", issuer_name=".$this->quote_escape($server_name).", base_url=".$this->quote_escape($initial_server_name).", time_created='".time()."';";
+			$r = $this->run_query($q);
+			$issuer_id = $this->last_insert_id();
+			
+			$card_issuer = $this->run_query("SELECT * FROM card_issuers WHERE issuer_id=".$issuer_id.";")->fetch();
+		}
+		return $card_issuer;
+	}
+	
+	public function get_issuer_by_id($issuer_id) {
+		$q = "SELECT * FROM card_issuers WHERE issuer_id='".$issuer_id."';";
+		$r = $this->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			return $r->fetch();
+		}
+		else return false;
+	}
+	
+	public function change_card_status(&$db_card, $new_status) {
+		$q = "INSERT INTO card_status_changes SET card_id='".$db_card['card_id']."', from_status='".$db_card['status']."', to_status='".$new_status."', change_time='".time()."';";
+		$r = $this->run_query($q);
+		
+		$q = "UPDATE cards SET status='".$new_status."' WHERE card_id='".$db_card['card_id']."';";
+		$r = $this->run_query($q);
+		
+		$db_card['status'] = $new_status;
+	}
+	
+	public function card_secret_to_hash($secret) {
+		return hash("sha256", $secret);
+	}
+	
+	public function create_new_user($verify_code, $salt, $alias, $email, $password) {
+		$q = "INSERT INTO users SET username=".$this->quote_escape($alias).", notification_email=".$this->quote_escape($email).", password=".$this->quote_escape($this->normalize_password($password, $salt)).", salt=".$this->quote_escape($salt);
+		if ($GLOBALS['pageview_tracking_enabled']) {
+			$q .= ", ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']);
+		}
+		if ($GLOBALS['new_games_per_user'] != "unlimited" && $GLOBALS['new_games_per_user'] > 0) {
+			$q .= ", authorized_games=".$this->quote_escape($GLOBALS['new_games_per_user']);
+		}
+		$q .= ", time_created='".time()."', verify_code='".$verify_code."';";
+		$r = $this->run_query($q);
+		$user_id = $this->last_insert_id();
+		
+		$thisuser = new User($this, $user_id);
+		
+		if ($user_id == 1) $this->set_site_constant("admin_user_id", $user_id);
+		
+		$session_key = session_id();
+		$expire_time = time()+3600*24;
+		
+		if ($GLOBALS['pageview_tracking_enabled']) {
+			$q = "SELECT * FROM viewer_connections WHERE type='viewer2user' AND from_id='".$viewer_id."' AND to_id='".$thisuser->db_user['user_id']."';";
+			$r = $this->run_query($q);
+			if ($r->rowCount() == 0) {
+				$q = "INSERT INTO viewer_connections SET type='viewer2user', from_id='".$viewer_id."', to_id='".$thisuser->db_user['user_id']."';";
+				$r = $this->run_query($q);
+			}
+			
+			$q = "UPDATE users SET ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR'])." WHERE user_id='".$thisuser->db_user['user_id']."';";
+			$r = $this->run_query($q);
+		}
+		
+		// Send an email if the username includes
+		if ($GLOBALS['outbound_email_enabled'] && !empty($notification_email) && strpos($notification_email, '@')) {
+			$email_message = "<p>A new ".$GLOBALS['site_name_short']." web wallet has been created for <b>".$alias."</b>.</p>";
+			$email_message .= "<p>Thanks for signing up!</p>";
+			$email_message .= "<p>To log in any time please visit ".$GLOBALS['base_url']."/wallet/</p>";
+			$email_message .= "<p>This message was sent to you by ".$GLOBALS['base_url']."</p>";
+			
+			$email_id = $this->mail_async($email, $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], "New account created", $email_message, "", "");
+		}
+		
+		return $thisuser;
+	}
+	
+	public function fetch_currency_prices() {
+		$prices = array();
+		
+		$q = "SELECT * FROM currencies ORDER BY currency_id ASC;";
+		$r = $this->run_query($q);
+		
+		while ($db_currency = $r->fetch()) {
+			$prices[$db_currency['currency_id']] = $this->latest_currency_price($db_currency['currency_id']);
+		}
+		
+		return $prices;
+	}
+	
+	public function account_balance($account_id) {
+		$balance_q = "SELECT SUM(io.amount) FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account_id."' AND io.spend_status='unspent';";
+		$balance_r = $this->run_query($balance_q);
+		$balance = $balance_r->fetch();
+		return $balance['SUM(io.amount)'];
+	}
+	
+	public function card_public_vars() {
+		return array('issuer_card_id', 'mint_time', 'amount', 'purity', 'status');
+	}
+	
+	public function pay_out_card(&$card, $address, $fee) {
+		$db_currency = $this->run_query("SELECT * FROM currencies WHERE currency_id='".$card['currency_id']."';")->fetch();
+		$blockchain = new Blockchain($this, $db_currency['blockchain_id']);
+		
+		$tx_q = "SELECT * FROM transactions WHERE tx_hash=".$this->quote_escape($card['io_tx_hash']).";";
+		$tx_r = $this->run_query($tx_q);
+		
+		if ($tx_r->rowCount() == 1) {
+			$io_tx = $tx_r->fetch();
+			$io_r = $this->run_query("SELECT * FROM transaction_ios WHERE create_transaction_id='".$io_tx['transaction_id']."' AND out_index='".$card['io_out_index']."';");
+			
+			if ($io_r->rowCount() > 0) {
+				$io = $io_r->fetch();
+				$db_address = $blockchain->create_or_fetch_address($address, true, false, false, false, false, false);
+				
+				$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
+				$amounts = array($io['amount']-$fee_amount);
+				
+				$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($io['io_id']), array($db_address['address_id']), $fee_amount);
+				
+				if ($transaction_id) {
+					$transaction = $this->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
+					
+					$this->run_query("UPDATE cards SET redemption_tx_hash=".$this->quote_escape($transaction['tx_hash'])." WHERE card_id='".$card['card_id']."';");
+					$card['redemption_tx_hash'] = $transaction['tx_hash'];
+					$this->change_card_status($card, 'redeemed');
+					
+					return $transaction;
+				}
+			}
+			else return false;
+		}
+		else return false;
+	}
+	
+	public function redeem_card_to_account(&$thisuser, &$card, $claim_type) {
+		$message = "";
+		$status_code = false;
+		
+		$db_account = $this->user_blockchain_account($thisuser->db_user['user_id'], $card['fv_currency_id']);
+		
+		if ($db_account['current_address_id'] > 0) {
+			$address_r = $this->run_query("SELECT * FROM addresses WHERE address_id=".$db_account['current_address_id'].";");
+			
+			if ($address_r->rowCount() > 0) {
+				$db_address = $address_r->fetch();
+				
+				$db_currency = $this->run_query("SELECT * FROM currencies WHERE currency_id='".$db_account['currency_id']."';")->fetch();
+				
+				$blockchain = new Blockchain($this, $db_currency['blockchain_id']);
+				
+				$this_issuer = $this->get_issuer_by_server_name($GLOBALS['base_url']);
+				
+				$fee = 0.001;
+				$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
+				
+				if ($claim_type == "to_game") $success_message = "/accounts/?action=prompt_game_buyin&account_id=".$db_account['account_id']."&amount=".($card['amount']-$fee);
+				else $success_message = "/accounts/?action=view_account&account_id=".$db_account['account_id'];
+				
+				if ($card['issuer_id'] != $this_issuer['issuer_id']) {
+					$remote_issuer = $this->run_query("SELECT * FROM card_issuers WHERE issuer_id='".$card['issuer_id']."';")->fetch();
+					
+					$remote_url = $remote_issuer['base_url']."/api/card/".$card['issuer_card_id']."/withdraw/?secret=".$card['secret_hash']."&fee=".$fee."&address=".$db_address['address'];
+					$remote_response_raw = file_get_contents($remote_url);
+					$remote_response = get_object_vars(json_decode($remote_response_raw));
+					
+					if ($remote_response['status_code'] == 1) {
+						$status_code=1;
+						$message = $success_message;
+						$this->change_card_status($card, "redeemed");
+						
+						$q = "UPDATE cards SET redemption_tx_hash=".$this->quote_escape($remote_response['message'])." WHERE card_id='".$card['card_id']."';";
+						$r = $this->run_query($q);
+						$card['redemption_tx_hash'] = $remote_response['message'];
+					}
+					else {$status_code=12; $message = $remote_response['message'];}
+				}
+				else {
+					$tx_q = "SELECT * FROM transactions WHERE tx_hash=".$this->quote_escape($card['io_tx_hash']).";";
+					$tx_r = $this->run_query($tx_q);
+					
+					if ($tx_r->rowCount() == 1) {
+						$io_tx = $tx_r->fetch();
+						$io_r = $this->run_query("SELECT * FROM transaction_ios WHERE create_transaction_id='".$io_tx['transaction_id']."' AND out_index='".$card['io_out_index']."';");
+						
+						if ($io_r->rowCount() > 0) {
+							$io = $io_r->fetch();
+							$success_message .= "&io_id=".$io['io_id'];
+							
+							$transaction_id = $blockchain->create_transaction("transaction", array($io['amount']-$fee_amount), false, array($io['io_id']), array($db_address['address_id']), $fee_amount);
+							
+							if ($transaction_id) {
+								$transaction = $app->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
+								
+								$message = $success_message;
+								$this->change_card_status($card, "redeemed");
+								$status_code = 1;
+								
+								$q = "UPDATE cards SET redemption_tx_hash=".$this->quote_escape($transaction['tx_hash'])." WHERE card_id='".$card['card_id']."';";
+								$r = $this->run_query($q);
+								$card['redemption_tx_hash'] = $transaction['tx_hash'];
+							}
+							else {$status_code=11; $message="Error: failed to create the transaction.";}
+						}
+						else {$status_code=10; $message="Error: card payment UTXO not found.";}
+					}
+					else {$status_code=9; $message="Error: card payment transaction not found.";}
+				}
+			}
+			else {$status_code=8; $message="Error: address not found.";}
+		}
+		else {$status_code=7; $message="Error: this account does not have a valid address ID.";}
+		
+		return array($status_code, $message);
+	}
+	
+	public function web_api_transaction_ios($transaction_id) {
+		$inputs = array();
+		$outputs = array();
+		
+		$tx_in_q = "SELECT a.address, t.tx_hash, io.out_index, io.amount, io.spend_status, io.option_index FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.spend_transaction_id='".$transaction_id."';";
+		$tx_in_r = $this->run_query($tx_in_q);
+		
+		while ($input = $tx_in_r->fetch(PDO::FETCH_ASSOC)) {
+			array_push($inputs, $input);
+		}
+		
+		$tx_out_q = "SELECT io.option_index, io.spend_status, io.out_index, io.amount, a.address FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$transaction_id."';";
+		$tx_out_r = $this->run_query($tx_out_q);
+		
+		while ($output = $tx_out_r->fetch(PDO::FETCH_ASSOC)) {
+			array_push($outputs, $output);
+		}
+		
+		return array($inputs, $outputs);
+	}
+	
+	function curl_post_request($url, $data, $headers) {
+		$ch = curl_init($url);
+		curl_setopt($ch, CURLOPT_HEADER, $headers);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_POST, true);
+
+		curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+		$contents = curl_exec($ch);
+		curl_close($ch);
+		return $contents;
 	}
 }
 ?>
