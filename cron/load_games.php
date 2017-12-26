@@ -30,8 +30,6 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		do {
 			$loop_start_time = microtime(true);
 			
-			if ($GLOBALS['process_lock_method'] == "db") $app->set_site_constant($GLOBALS['shutdown_lock_name'], getmypid());
-			
 			$real_game_q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE g.game_status IN ('published','running')";
 			if (!empty($_REQUEST['game_id'])) $real_game_q .= " AND g.game_id='".(int)$_REQUEST['game_id']."'";
 			$real_game_q .= " AND b.online=1;";
