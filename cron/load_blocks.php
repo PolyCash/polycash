@@ -45,7 +45,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			
 			if (!$error) {
 				if ($print_debug) echo "Syncing ".$blockchains[$blockchain_i]->db_blockchain['blockchain_name']."\n";
-				$debug_html = $blockchains[$blockchain_i]->sync_coind($coin_rpc);
+				$debug_html = $blockchains[$blockchain_i]->sync_coind($coin_rpc, $print_debug);
 				if ($print_debug) echo $debug_html;
 			}
 		}

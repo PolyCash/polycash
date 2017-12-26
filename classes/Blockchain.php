@@ -116,18 +116,7 @@ class Blockchain {
 		else return false;
 	}
 	
-	public function private_add_block(&$game, $block_hash, $block_height) {
-		$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_id='".$block_height."', block_hash=".$this->app->quote_escape($block_hash).", locally_saved=1, time_created='".time()."', time_loaded='".time()."', time_mined='".time()."';";
-		$r = $this->app->run_query($q);
-		$internal_block_id = $this->app->last_insert_id();
-
-		$coin_rpc = false;
-		$this->coind_add_block($coin_rpc, $block_hash, $block_height, false);
-		
-		list($successful, $log_text) = $game->add_block($block_height);
-	}
-	
-	public function web_api_add_block(&$db_block, &$api_block, $headers_only) {
+	public function web_api_add_block(&$db_block, &$api_block, $headers_only, $print_debug) {
 		$start_time = microtime(true);
 		$html = "";
 		
@@ -171,7 +160,7 @@ class Blockchain {
 						
 						$coin_rpc = false;
 						$successful = true;
-						$db_transaction = $this->add_transaction($coin_rpc, $tx_hash, $db_block['block_id'], true, $successful, $i, false, true);
+						$db_transaction = $this->add_transaction($coin_rpc, $tx_hash, $db_block['block_id'], true, $successful, $i, false, $print_debug);
 						
 						if ($db_transaction['transaction_desc'] != "transaction") $coins_created += $db_transaction['amount'];
 					}
@@ -189,7 +178,7 @@ class Blockchain {
 		return $html;
 	}
 	
-	public function coind_add_block(&$coin_rpc, $block_hash, $block_height, $headers_only) {
+	public function coind_add_block(&$coin_rpc, $block_hash, $block_height, $headers_only, $print_debug) {
 		$start_time = microtime(true);
 		$html = "";
 		
@@ -233,7 +222,7 @@ class Blockchain {
 				$tx_hash = $lastblock_rpc['tx'][$i];
 				$html .= $i."/".count($lastblock_rpc['tx'])." ".$tx_hash." ";
 				$successful = true;
-				$db_transaction = $this->add_transaction($coin_rpc, $tx_hash, $block_height, true, $successful, $i, false, true);
+				$db_transaction = $this->add_transaction($coin_rpc, $tx_hash, $block_height, true, $successful, $i, false, $print_debug);
 				if (!$successful) {
 					$tx_error = true;
 					$i = count($lastblock_rpc['tx']);
@@ -577,8 +566,11 @@ class Blockchain {
 		$this->add_transaction($coin_rpc, $tx_hash, false, $require_inputs, $successful, false, false, false);
 	}
 	
-	public function sync_coind(&$coin_rpc) {
-		$html = "Running Blockchain->sync_coind() for ".$this->db_blockchain['blockchain_name']."\n";
+	public function sync_coind(&$coin_rpc, $print_debug) {
+		$html = "";
+		$txt = "Running Blockchain->sync_coind() for ".$this->db_blockchain['blockchain_name']."\n";
+		if ($print_debug) echo $txt;
+		else $html .= $txt;
 		
 		$last_block_id = $this->last_complete_block_id();
 		$startblock_q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id='".$last_block_id."';";
@@ -590,7 +582,10 @@ class Blockchain {
 				$startblock_r = $this->app->run_query($startblock_q);
 			}
 			else {
-				$this->app->log_then_die("sync_coind failed, block $last_block_id is missing.\n");
+				$txt = "sync_coind failed, block $last_block_id is missing.\n";
+				if ($print_debug) echo $txt;
+				else $html .= $txt;
+				$this->app->log_then_die($txt);
 			}
 		}
 		
@@ -599,33 +594,49 @@ class Blockchain {
 			
 			if ($this->db_blockchain['p2p_mode'] == "rpc" && $last_block['block_hash'] == "") {
 				$last_block_hash = $coin_rpc->getblockhash((int) $last_block['block_id']);
-				$this->coind_add_block($coin_rpc, $last_block_hash, $last_block['block_id'], TRUE);
+				$this->coind_add_block($coin_rpc, $last_block_hash, $last_block['block_id'], TRUE, $print_debug);
 				$last_block = $this->app->run_query("SELECT * FROM blocks WHERE internal_block_id='".$last_block['internal_block_id']."';")->fetch();
 			}
 			
 			if ($this->db_blockchain['p2p_mode'] == "rpc") {
-				$html .= "Resolving potential fork on block #".$last_block['block_id']."<br/>\n";
+				$txt = "Resolving potential fork on block #".$last_block['block_id']."\n";
+				if ($print_debug) echo $txt;
+				else $html .= $txt;
 				$this->resolve_potential_fork_on_block($coin_rpc, $last_block);
 			}
 			
-			$html .= "Loading new blocks...\n";
-			$this->load_new_blocks($coin_rpc);
+			$txt = "Loading new blocks...\n";
+			if ($print_debug) echo $txt;
+			else $html .= $txt;
+			$txt = $this->load_new_blocks($coin_rpc, $print_debug);
+			if ($print_debug) echo $txt;
+			else $html .= $txt;
 			
-			$html .= "Loading all blocks...\n";
-			$this->load_all_blocks($coin_rpc, TRUE);
+			$txt = "Loading all blocks...\n";
+			if ($print_debug) echo $txt;
+			else $html .= $txt;
+			$txt = $this->load_all_blocks($coin_rpc, TRUE, $print_debug);
+			if ($print_debug) echo $txt;
+			else $html .= $txt;
 			
 			if ($this->db_blockchain['p2p_mode'] == "rpc" && !empty($GLOBALS['load_unconfirmed_transactions'])) {
-				$html .= "Loading unconfirmed transactions...\n";
-				$this->load_unconfirmed_transactions($coin_rpc, 30);
+				$txt = "Loading unconfirmed transactions...\n";
+				if ($print_debug) echo $txt;
+				else $html .= $txt;
+				$txt = $this->load_unconfirmed_transactions($coin_rpc, 30);
+				if ($print_debug) echo $txt;
+				else $html .= $txt;
 			}
 			
-			$html .= "Done syncing ".$this->db_blockchain['blockchain_name']."\n";
+			$txt = "Done syncing ".$this->db_blockchain['blockchain_name']."\n";
+			if ($print_debug) echo $txt;
+			else $html .= $txt;
 		}
 		
 		return $html;
 	}
 	
-	public function load_new_blocks(&$coin_rpc) {
+	public function load_new_blocks(&$coin_rpc, $print_debug) {
 		$last_block_id = $this->last_block_id();
 		$last_block = $this->app->run_query("SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id='".$last_block_id."';")->fetch();
 		$block_height = $last_block['block_id'];
@@ -641,7 +652,7 @@ class Blockchain {
 					}
 					else {
 						$rpc_block = $coin_rpc->getblock($rpc_block['nextblockhash']);
-						$this->coind_add_block($coin_rpc, $rpc_block['hash'], $block_height, true);
+						$txt = $this->coind_add_block($coin_rpc, $rpc_block['hash'], $block_height, true, $print_debug);
 					}
 				}
 				while ($keep_looping);
@@ -674,7 +685,7 @@ class Blockchain {
 		}
 	}
 	
-	public function load_all_block_headers(&$coin_rpc, $required_blocks_only, $max_execution_time) {
+	public function load_all_block_headers(&$coin_rpc, $required_blocks_only, $max_execution_time, $print_debug) {
 		$start_time = microtime(true);
 		$html = "";
 		
@@ -690,7 +701,7 @@ class Blockchain {
 				$unknown_block = $r->fetch();
 				
 				$unknown_block_hash = $coin_rpc->getblockhash((int) $unknown_block['block_id']);
-				$this->coind_add_block($coin_rpc, $unknown_block_hash, $unknown_block['block_id'], TRUE);
+				$this->coind_add_block($coin_rpc, $unknown_block_hash, $unknown_block['block_id'], TRUE, $print_debug);
 				
 				$html .= $unknown_block['block_id']." ";
 				if ((microtime(true)-$start_time) >= $max_execution_time) $keep_looping = false;
@@ -714,7 +725,7 @@ class Blockchain {
 		else return array();
 	}
 	
-	public function load_all_blocks(&$coin_rpc, $required_blocks_only) {
+	public function load_all_blocks(&$coin_rpc, $required_blocks_only, $print_debug) {
 		if ($required_blocks_only && empty($this->db_blockchain['first_required_block'])) {}
 		else {
 			$keep_looping = true;
@@ -738,10 +749,10 @@ class Blockchain {
 						if (empty($unknown_block['block_hash'])) {
 							$unknown_block_hash = $coin_rpc->getblockhash((int)$unknown_block['block_id']);
 							$this->app->run_query("UPDATE blocks SET block_hash=".$this->app->quote_escape($unknown_block_hash)." WHERE internal_block_id='".$unknown_block['internal_block_id']."';");
-							$this->coind_add_block($coin_rpc, $unknown_block_hash, $unknown_block['block_id'], true);
+							$this->coind_add_block($coin_rpc, $unknown_block_hash, $unknown_block['block_id'], true, $print_debug);
 							$unknown_block = $this->app->run_query("SELECT * FROM blocks WHERE internal_block_id='".$unknown_block['internal_block_id']."';")->fetch();
 						}
-						$this->coind_add_block($coin_rpc, $unknown_block['block_hash'], $unknown_block['block_id'], false);
+						$this->coind_add_block($coin_rpc, $unknown_block['block_hash'], $unknown_block['block_id'], false, $print_debug);
 					}
 					else {
 						if ($loop_i >= count($ref_api_blocks)) {
@@ -752,7 +763,7 @@ class Blockchain {
 						if (empty($ref_api_blocks[$loop_i])) $keep_looping = false;
 						else {
 							$ref_api_blocks[$loop_i] = get_object_vars($ref_api_blocks[$loop_i]);
-							$this->web_api_add_block($unknown_block, $ref_api_blocks[$loop_i], false);
+							$this->web_api_add_block($unknown_block, $ref_api_blocks[$loop_i], false, $print_debug);
 						}
 					}
 				}
