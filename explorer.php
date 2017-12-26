@@ -31,8 +31,6 @@ if ($uri_parts[2] == "games") {
 				$user_game = $rr->fetch();
 			}
 		}
-		
-		if ($blockchain->db_blockchain['p2p_mode'] != "rpc" && !$user_game && $game->db_game['creator_id'] > 0) $game = false;
 	}
 }
 else if ($uri_parts[2] == "blockchains") {
