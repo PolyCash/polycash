@@ -730,6 +730,7 @@ class Blockchain {
 		else {
 			$keep_looping = true;
 			$loop_i = 0;
+			$load_at_once = 100;
 			
 			if ($this->db_blockchain['p2p_mode'] == "web_api") {
 				$ref_api_blocks = $this->more_web_api_blocks();
@@ -739,12 +740,12 @@ class Blockchain {
 			do {
 				$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND locally_saved=0";
 				$q .= " AND block_id >= ".$this->db_blockchain['first_required_block'];
-				$q .= " ORDER BY block_id ASC, internal_block_id ASC LIMIT 1;";
-				$r = $this->app->run_query($q);
+				$q .= " ORDER BY block_id ASC LIMIT ".$load_at_once.";";
+				$loadblocks_r = $this->app->run_query($q);
 				
-				if ($r->rowCount() > 0) {
-					$unknown_block = $r->fetch();
-					
+				if ($loadblocks_r->rowCount() < $load_at_once) $keep_looping = false;
+				
+				while ($unknown_block = $loadblocks_r->fetch()) {
 					if ($this->db_blockchain['p2p_mode'] == "rpc") {
 						if (empty($unknown_block['block_hash'])) {
 							$unknown_block_hash = $coin_rpc->getblockhash((int)$unknown_block['block_id']);
@@ -766,10 +767,8 @@ class Blockchain {
 							$this->web_api_add_block($unknown_block, $ref_api_blocks[$loop_i], false, $print_debug);
 						}
 					}
+					$loop_i++;
 				}
-				else $keep_looping = false;
-				
-				$loop_i++;
 			}
 			while ($keep_looping);
 		}
