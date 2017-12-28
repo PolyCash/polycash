@@ -33,7 +33,7 @@ if ($thisuser && $game) {
 		else $remainder_address_id = intval($remainder_address_id);
 		
 		$user_strategy = false;
-		$success = $game->get_user_strategy($user_game);
+		$success = $game->get_user_strategy($user_game, $user_strategy);
 		
 		if ($success) {
 			if ($fee < $blockchain_mature_balance) {

@@ -13,7 +13,7 @@ $noinfo_fail_obj = (object) [
 if ($thisuser && $game) {
 	$user_strategy = false;
 	$user_game = $thisuser->ensure_user_in_game($game, false);
-	$success = $game->get_user_strategy($user_game);
+	$success = $game->get_user_strategy($user_game, $user_strategy);
 	
 	if (!$success) {
 		$api_output = (object)[
@@ -142,20 +142,22 @@ if ($thisuser && $game) {
 		}
 	}
 	
+	$fee_amount = $user_strategy['transaction_fee']*pow(10, $game->blockchain->db_blockchain['decimal_places']);
+	
 	$real_amounts = [];
 	$real_amount_sum = 0;
 	for ($i=0; $i<count($option_ids)-1; $i++) {
-		$real_amount = floor(($io_mature_balance-$user_strategy['transaction_fee'])*$amounts[$i]/$amount_sum);
+		$real_amount = floor(($io_mature_balance-$fee_amount)*$amounts[$i]/$amount_sum);
 		$real_amounts[$i] = $real_amount;
 		$real_amount_sum += $real_amount;
 	}
-	$real_amounts[count($option_ids)-1] = $io_mature_balance - $user_strategy['transaction_fee'] - $real_amount_sum;
+	$real_amounts[count($option_ids)-1] = $io_mature_balance - $fee_amount - $real_amount_sum;
 	
 	$last_block_id = $game->blockchain->last_block_id();
 	
-	if ($amount_sum+$user_strategy['transaction_fee'] <= $mature_balance && $amount_sum > 0) {
+	if ($amount_sum+$fee_amount <= $mature_balance && $amount_sum > 0) {
 		$error_message = false;
-		$transaction_id = $game->create_transaction($option_ids, $real_amounts, $user_game, false, 'transaction', $io_ids, false, false, (int) $user_strategy['transaction_fee'], $error_message);
+		$transaction_id = $game->create_transaction($option_ids, $real_amounts, $user_game, false, 'transaction', $io_ids, false, false, $fee_amount, $error_message);
 		
 		if ($transaction_id) {
 			$game->update_option_votes();
