@@ -273,6 +273,10 @@ class Game {
 					$successful = false;
 					$coin_rpc = false;
 					$this->blockchain->add_transaction($coin_rpc, $new_tx_hash, $block_id, true, $successful, 0, false, false);
+					
+					if ($this->blockchain->db_blockchain['p2p_mode'] == "web_api") {
+						$this->blockchain->web_api_push_transaction($transaction_id);
+					}
 					return $transaction_id;
 				}
 			}

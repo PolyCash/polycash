@@ -11,7 +11,7 @@ $address_id = (int) $_REQUEST['address_id'];
 $permission_to_claim_address = false;
 
 $blockchain = new Blockchain($app, $blockchain_id);
-if ($game_id) $game = new Blockchain($blockchain, $game_id);
+if ($game_id) $game = new Game($blockchain, $game_id);
 else $game = false;
 
 $q = "SELECT * FROM addresses WHERE address_id='".$address_id."';";
