@@ -1676,7 +1676,7 @@ class App {
 				$game_def->blockchain_identifier = $url_identifier;
 			}
 			
-			$db_blockchain = $app->fetch_blockchain_by_identifier($game_def->blockchain_identifier);
+			$db_blockchain = $this->fetch_blockchain_by_identifier($game_def->blockchain_identifier);
 			
 			if ($db_blockchain) {
 				$blockchain = new Blockchain($this, $db_blockchain['blockchain_id']);
@@ -2512,7 +2512,7 @@ class App {
 							$transaction_id = $blockchain->create_transaction("transaction", array($io['amount']-$fee_amount), false, array($io['io_id']), array($db_address['address_id']), $fee_amount);
 							
 							if ($transaction_id) {
-								$transaction = $app->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
+								$transaction = $this->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
 								
 								$message = $success_message;
 								$this->change_card_status($card, "redeemed");
