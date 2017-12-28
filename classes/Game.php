@@ -921,7 +921,7 @@ class Game {
 		$invitation = $r->fetch();
 	}
 	
-	public function get_user_strategy($user_game) {
+	public function get_user_strategy(&$user_game, &$user_strategy) {
 		$q = "SELECT * FROM user_strategies WHERE strategy_id='".$user_game['strategy_id']."';";
 		$r = $this->blockchain->app->run_query($q);
 		

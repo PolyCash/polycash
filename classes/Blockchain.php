@@ -157,13 +157,13 @@ class Blockchain {
 					
 					if ($r->rowCount() == 0) {
 						$transaction_id = $this->add_transaction_from_web_api($db_block['block_id'], $tx);
-						
-						$coin_rpc = false;
-						$successful = true;
-						$db_transaction = $this->add_transaction($coin_rpc, $tx_hash, $db_block['block_id'], true, $successful, $i, false, $print_debug);
-						
-						if ($db_transaction['transaction_desc'] != "transaction") $coins_created += $db_transaction['amount'];
 					}
+					
+					$coin_rpc = false;
+					$successful = true;
+					$db_transaction = $this->add_transaction($coin_rpc, $tx_hash, $db_block['block_id'], true, $successful, $i, false, $print_debug);
+					
+					if ($db_transaction['transaction_desc'] != "transaction") $coins_created += $db_transaction['amount'];
 				}
 				
 				if (!$tx_error) {
@@ -470,7 +470,7 @@ class Blockchain {
 					if (count($spend_io_ids) > 0 && ($this->db_blockchain['p2p_mode'] != "rpc" || (!$only_vout && $require_inputs && !$block_height))) {
 						$ref_block_id = $this->last_block_id()+1;
 						
-						$q = "SELECT gio.game_id, SUM(gio.colored_amount) AS colored_amount_sum, SUM(gio.colored_amount*(".$ref_block_id."-io.create_block_id)) AS ref_coin_block_sum FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE io.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND io.io_id IN (".implode(",", $spend_io_ids).") AND io.create_block_id IS NOT NULL GROUP BY gio.game_id ORDER BY gio.game_id ASC;";
+						$q = "SELECT g.game_id, SUM(gio.colored_amount) AS colored_amount_sum, SUM(gio.colored_amount*(".$ref_block_id."-io.create_block_id)) AS ref_coin_block_sum FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN games g ON gio.game_id=g.game_id WHERE io.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND io.io_id IN (".implode(",", $spend_io_ids).") AND io.create_block_id IS NOT NULL GROUP BY gio.game_id ORDER BY g.game_id ASC;";
 						$r = $this->app->run_query($q);
 						
 						while ($db_color_game = $r->fetch()) {
