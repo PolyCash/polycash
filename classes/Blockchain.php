@@ -268,19 +268,17 @@ class Blockchain {
 		if ($r->rowCount() > 0) {
 			$unconfirmed_tx = $r->fetch();
 			
-			if ($this->db_blockchain['p2p_mode'] != "rpc") {
-				$db_transaction_id = $unconfirmed_tx['transaction_id'];
+			if ($this->db_blockchain['p2p_mode'] == "rpc") {
+				$q = "DELETE t.*, io.*, gio.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';";
+				$r = $this->app->run_query($q);
 			}
 			else {
-				/*if ($unconfirmed_tx['input_skip_count']==0 && $unconfirmed_tx['block_id'] > 0 && $unconfirmed_tx['has_all_outputs'] == 1 && (!$require_inputs || $unconfirmed_tx['has_all_inputs'] == 1)) $add_transaction = false;
-				else {*/
-					if ($unconfirmed_tx['blockchain_id'] == $this->db_blockchain['blockchain_id']) {
-						$q = "DELETE t.*, io.*, gio.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';";
-						$r = $this->app->run_query($q);
-						$benchmark_time = microtime(true);
-					}
-				//}
+				$q = "DELETE gio.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';";
+				$r = $this->app->run_query($q);
+				
+				$db_transaction_id = $unconfirmed_tx['transaction_id'];
 			}
+			$benchmark_time = microtime(true);
 		}
 		
 		if ($add_transaction) {
@@ -296,6 +294,11 @@ class Blockchain {
 				if ($this->db_blockchain['p2p_mode'] != "rpc") {
 					$transaction_type = "transaction";
 					
+					if (!empty($block_height) && empty($unconfirmed_tx['block_height'])) {
+						$q = "UPDATE transactions SET block_id='".$block_height."' WHERE transaction_id='".$unconfirmed_tx['transaction_id']."';";
+						$r = $this->app->run_query($q);
+					}
+					
 					$q = "SELECT * FROM transaction_ios WHERE spend_transaction_id='".$db_transaction_id."';";
 					$r = $this->app->run_query($q);
 					
@@ -306,7 +309,7 @@ class Blockchain {
 						if (!empty($block_height)) {
 							$this_io_cbd = ($block_height - $spend_io['create_block_id'])*$spend_io['amount'];
 							$coin_blocks_destroyed += $this_io_cbd;
-							$r = $this->app->run_query("UPDATE transaction_ios SET coin_blocks_created='".$this_io_cbd."' WHERE io_id='".$spend_io['io_id']."';");
+							$r = $this->app->run_query("UPDATE transaction_ios SET spend_block_id='".$block_height."', coin_blocks_created='".$this_io_cbd."' WHERE io_id='".$spend_io['io_id']."';");
 						}
 					}
 				}
@@ -339,9 +342,7 @@ class Blockchain {
 					
 					$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', transaction_desc='".$transaction_type."', tx_hash='".$tx_hash."', num_inputs='".count($inputs)."', num_outputs='".count($outputs)."'";
 					if ($position_in_block !== false) $q .= ", position_in_block='".$position_in_block."'";
-					if ($block_height) {
-						$q .= ", block_id='".$block_height."'";
-					}
+					if ($block_height) $q .= ", block_id='".$block_height."'";
 					$q .= ", time_created='".time()."';";
 					$r = $this->app->run_query($q);
 					$db_transaction_id = $this->app->last_insert_id();
@@ -396,6 +397,11 @@ class Blockchain {
 					if ($this->db_blockchain['p2p_mode'] != "rpc") {
 						$outputs = array();
 						
+						if ($block_height) {
+							$q = "UPDATE transaction_ios SET spend_status='unspent', create_block_id='".$block_height."' WHERE create_transaction_id='".$unconfirmed_tx['transaction_id']."';";
+							$r = $this->app->run_query($q);
+						}
+						
 						$q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$unconfirmed_tx['transaction_id']."' ORDER BY io.out_index ASC;";
 						$r = $this->app->run_query($q);
 						
@@ -434,7 +440,10 @@ class Blockchain {
 								
 								$output_address = $this->create_or_fetch_address($address_text, true, $coin_rpc, false, true, false, false);
 								
-								$q = "INSERT INTO transaction_ios SET spend_status='unspent', blockchain_id='".$this->db_blockchain['blockchain_id']."', script_type='".$script_type."', out_index='".$j."'";
+								$q = "INSERT INTO transaction_ios SET spend_status='";
+								if ($block_height) $q .= "unspent";
+								else $q .= "unconfirmed";
+								$q .= "', blockchain_id='".$this->db_blockchain['blockchain_id']."', script_type='".$script_type."', out_index='".$j."'";
 								if ($output_address['user_id'] > 0) $q .= ", user_id='".$output_address['user_id']."'";
 								$q .= ", address_id='".$output_address['address_id']."'";
 								
@@ -1462,6 +1471,7 @@ class Blockchain {
 	public function new_block(&$log_text) {
 		// This function only runs for private blockchains
 		$last_block_id = (int) $this->last_block_id();
+		$coin_rpc = false;
 		
 		$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_id='".($last_block_id+1)."', block_hash='".$this->app->random_hex_string(64)."', time_created='".time()."', time_loaded='".time()."', time_mined='".time()."', locally_saved=1;";
 		$r = $this->app->run_query($q);
@@ -1475,11 +1485,20 @@ class Blockchain {
 		
 		$log_text .= "Created block $created_block_id<br/>\n";
 		
+		$num_transactions = 0;
+		
+		$ref_account = false;
+		$mined_address_str = $this->app->random_string(34);
+		$mined_address = $this->create_or_fetch_address($mined_address_str, false, false, false, false, true, false);
+		
+		$mined_transaction_id = $this->create_transaction('coinbase', array($this->db_blockchain['initial_pow_reward']), $created_block_id, false, array($mined_address['address_id']), 0);
+		$num_transactions++;
+		
 		// Include all unconfirmed TXs in the just-mined block
 		$q = "SELECT * FROM transactions WHERE transaction_desc='transaction' AND blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id IS NULL;";
 		$r = $this->app->run_query($q);
 		$fee_sum = 0;
-		$num_transactions = 0;
+		$tx_error = false;
 		
 		while ($unconfirmed_tx = $r->fetch()) {
 			$coins_in = $this->app->transaction_coins_in($unconfirmed_tx['transaction_id']);
@@ -1488,51 +1507,27 @@ class Blockchain {
 			if ($coins_in > 0 && $coins_in >= $coins_out) {
 				$fee_amount = $coins_in - $coins_out;
 				
-				$qq = "SELECT * FROM transaction_ios WHERE spend_transaction_id='".$unconfirmed_tx['transaction_id']."';";
-				$rr = $this->app->run_query($qq);
-				
-				$total_coin_blocks_created = 0;
-				
-				while ($input_utxo = $rr->fetch()) {
-					$coin_blocks_created = ($created_block_id - $input_utxo['create_block_id'])*$input_utxo['amount'];
-					$total_coin_blocks_created += $coin_blocks_created;
+				$successful = true;
+				$db_transaction = $this->add_transaction($coin_rpc, $unconfirmed_tx['tx_hash'], $created_block_id, true, $successful, $num_transactions, false, false);
+				if (!$successful) {
+					$tx_error = true;
+					$log_text .= "failed to add tx ".$unconfirmed_tx['tx_hash']."<br/>\n";
 				}
-				
-				$voted_coins_out = $this->app->transaction_voted_coins_out($unconfirmed_tx['transaction_id']);
-				
-				if ($voted_coins_out > 0) {
-					$cbd_per_coin_out = floor(pow(10,8)*$total_coin_blocks_created/$voted_coins_out)/pow(10,8);
-				}
-				else $cbd_per_coin_out = 0;
-				
-				$qq = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$unconfirmed_tx['transaction_id']."';";
-				$rr = $this->app->run_query($qq);
-				
-				while ($output_utxo = $rr->fetch()) {
-					$coin_blocks_destroyed = floor($cbd_per_coin_out*$output_utxo['amount']);
-					
-					$qqq = "UPDATE transaction_ios SET coin_blocks_destroyed='".$coin_blocks_destroyed."', create_block_id='".$created_block_id."' WHERE io_id='".$output_utxo['io_id']."';";
-					$rrr = $this->app->run_query($qqq);
-				}
-				
-				$qq = "UPDATE transactions t JOIN transaction_ios o ON t.transaction_id=o.create_transaction_id JOIN transaction_ios i ON t.transaction_id=i.spend_transaction_id SET t.position_in_block='".$num_transactions."', t.block_id='".$created_block_id."', o.spend_status='unspent', o.create_block_id='".$created_block_id."', i.spend_status='spent', i.spend_block_id='".$created_block_id."' WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';";
-				$rr = $this->app->run_query($qq);
 				
 				$fee_sum += $fee_amount;
 				$num_transactions++;
 			}
+			else $tx_error = true;
 		}
-		
-		$coin_rpc = false;
-		$ref_account = false;
-		$mined_address_str = $this->app->random_string(34);
-		$mined_address = $this->create_or_fetch_address($mined_address_str, false, false, false, false, true, false);
-		
-		$mined_transaction_id = $this->create_transaction('coinbase', array($this->db_blockchain['initial_pow_reward']), $created_block_id, false, array($mined_address['address_id']), 0);
-		$num_transactions++;
 		
 		$q = "UPDATE blocks SET num_transactions=".$num_transactions." WHERE internal_block_id='".$internal_block_id."';";
 		$r = $this->app->run_query($q);
+		
+		$associated_games = $this->associated_games(false);
+		
+		for ($i=0; $i<count($associated_games); $i++) {
+			$associated_games[$i]->add_block($created_block_id);
+		}
 		
 		return $created_block_id;
 	}
