@@ -74,26 +74,6 @@ if ($thisuser && $game) {
 			if ($rr->rowCount() == 1) {
 				$io = $rr->fetch();
 				
-				if ($io['spend_status'] != "unspent" || $io['blockchain_id'] != $game->blockchain->db_blockchain['blockchain_id']) {
-					die($io['user_id'].' != '.$thisuser->db_user['user_id'].' || '.$io['spend_status'].' != "unspent" || '.$io['blockchain_id'].' != '.$game->blockchain->db_blockchain['blockchain_id']);
-					$api_output = $noinfo_fail_obj;
-					echo json_encode($api_output);
-					die();
-				}
-				else {
-					if ($io['create_block_id'] <= $game->blockchain->last_block_id() - $game->db_game['maturity'] || $io['instantly_mature'] == 1) {
-						$io_ids[$i] = $io_id;
-					}
-					else {
-						$api_output = (object)[
-							'status_code' => 3,
-							'message' => "One of the coin inputs you selected is not yet mature."
-						];
-						echo json_encode($api_output);
-						die();
-					}
-				}
-				
 				$io_mature_balance += $io['amount'];
 			}
 			else {
@@ -112,21 +92,6 @@ if ($thisuser && $game) {
 	$amount_sum = 0;
 	
 	for ($i=0; $i<count($option_ids); $i++) {
-		$option_id = (int) $option_ids[$i];
-		$q = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE op.option_id='".$option_id."' AND e.game_id='".$game->db_game['game_id']."';";
-		$r = $app->run_query($q);
-		if ($r->rowCount() == 1) {
-			$option_ids[$i] = $option_id;
-		}
-		else {
-			$api_output = (object)[
-				'status_code' => 4,
-				'message' => "Invalid option ID"
-			];
-			echo json_encode($api_output);
-			die();
-		}
-		
 		$amount = $amounts[$i];
 		if ($amount > 0) {
 			$amounts[$i] = $amount;
@@ -155,33 +120,25 @@ if ($thisuser && $game) {
 	
 	$last_block_id = $game->blockchain->last_block_id();
 	
-	if ($amount_sum+$fee_amount <= $mature_balance && $amount_sum > 0) {
-		$error_message = false;
-		$transaction_id = $game->create_transaction($option_ids, $real_amounts, $user_game, false, 'transaction', $io_ids, false, false, $fee_amount, $error_message);
+	$error_message = false;
+	$transaction_id = $game->create_transaction($option_ids, $real_amounts, $user_game, false, 'transaction', $io_ids, false, false, $fee_amount, $error_message);
+	
+	if ($transaction_id) {
+		$game->update_option_votes();
 		
-		if ($transaction_id) {
-			$game->update_option_votes();
-			
-			$q = "SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';";
-			$r = $app->run_query($q);
-			$transaction = $r->fetch();
-			
-			$api_output = (object)[
-				'status_code' => 0,
-				'message' => "Your voting transaction has been submitted! <a href=\"/explorer/games/".$game->db_game['url_identifier']."/transactions/".$transaction['tx_hash']."\">Details</a>"
-			];
-		}
-		else {
-			$api_output = (object)[
-				'status_code' => 7,
-				'message' => $error_message
-			];
-		}
+		$q = "SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';";
+		$r = $app->run_query($q);
+		$transaction = $r->fetch();
+		
+		$api_output = (object)[
+			'status_code' => 0,
+			'message' => "Your voting transaction has been submitted! <a href=\"/explorer/games/".$game->db_game['url_identifier']."/transactions/".$transaction['tx_hash']."\">Details</a>"
+		];
 	}
 	else {
 		$api_output = (object)[
-			'status_code' => 8,
-			'message' => "You don't have that many coins available to vote right now."
+			'status_code' => 7,
+			'message' => $error_message
 		];
 	}
 }

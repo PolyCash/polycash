@@ -1988,16 +1988,18 @@ class Game {
 					if ($r->rowCount() > 0) {
 						$db_last_gde = $r->fetch();
 						
-						$from_round = $this->block_to_round($db_last_gde['event_starting_block'])+1-$game_starting_round;
+						$from_round = 1+$this->block_to_round($db_last_gde['event_starting_block'])-($game_starting_round-1);
 					}
 					else {
 						$from_round = 1;
 					}
 					$event_verbatim_vars = $this->blockchain->app->event_verbatim_vars();
 					
-					$to_round = $round_id - $game_starting_round;
+					$to_round = $round_id - ($game_starting_round-1);
 					if (!empty($this->db_game['final_round'])) $to_round = $this->db_game['final_round'];
+					
 					$gdes_to_add = $this->module->events_between_rounds($from_round, $to_round, $this->db_game['round_length'], $this->db_game['game_starting_block']);
+					
 					$msg = "Adding ".count($gdes_to_add)." events for rounds (".$from_round." : ".$to_round.")";
 					$this->blockchain->app->log_message($msg);
 					
