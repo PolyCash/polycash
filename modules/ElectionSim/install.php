@@ -64,7 +64,6 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				$new_game->blockchain->new_block($log_text);
 				$transaction_id = $new_game->add_genesis_transaction($user_game);
 				if ($transaction_id < 0) $error_message = "Failed to add genesis transaction (".$transaction_id.").";
-				$new_game->blockchain->new_block($log_text);
 			}
 			$new_game->blockchain->unset_first_required_block();
 			$new_game->start_game();

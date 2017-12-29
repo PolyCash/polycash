@@ -875,7 +875,7 @@ class Blockchain {
 	public function add_genesis_block(&$input) {
 		$html = "";
 		
-		if ($this->db_blockchain['p2p_mode'] == "rpc") {
+		if ($this->db_blockchain['p2p_mode'] == "none") {
 			$game = &$input;
 			$genesis_block_hash = $this->app->random_hex_string(64);
 			$nextblock_hash = "";

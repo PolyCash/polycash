@@ -2977,7 +2977,7 @@ class Game {
 	}
 	
 	public function add_genesis_transaction(&$user_game) {
-		if ($this->blockchain->db_blockchain['p2p_mode'] != "rpc") {
+		if ($this->blockchain->db_blockchain['p2p_mode'] == "none") {
 			$fee_amount = 0.001*pow(10, $this->blockchain->db_blockchain['decimal_places']);
 			
 			$q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id WHERE io.spend_status='unspent' AND a.user_id IS NULL AND a.is_mine=1 AND t.transaction_desc='coinbase' AND t.blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND io.amount > ".$fee_amount.";";

@@ -24,39 +24,42 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	$q = "SELECT * FROM games WHERE module=".$app->quote_escape($module['module_name']).";";
 	$r = $app->run_query($q);
 	
-	if ($r->rowCount() > 0) {
-		$db_game = $r->fetch();
-		
-		echo "Found existing game, skipping...<br/>\n";
+	if ($r->rowCount() > 0) $db_game = $r->fetch();
+	else $db_game = false;
+	
+	$game_def = new CoinBattlesGameDefinition($app);
+	
+	$blockchain = false;
+	$db_blockchain = $app->fetch_blockchain_by_identifier($game_def->game_def->blockchain_identifier);
+	
+	if ($db_blockchain) {
+		$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
 	}
-	else {
-		echo "Creating new game...<br/>\n";
-		
-		$game_def = new CoinBattlesGameDefinition($app);
-		$new_game_def_txt = $app->game_def_to_text($game_def->game_def);
-		
-		$error_message = false;
-		$new_game = $app->create_game_from_definition($new_game_def_txt, $thisuser, "CoinBattles", $error_message, false);
-		
-		if ($error_message) echo $error_message."<br/>\n";
-		else {
-			try {
-				$rpc_conn_string = 'http://'.$new_game->blockchain->db_blockchain['rpc_username'].':'.$new_game->blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$new_game->blockchain->db_blockchain['rpc_port'].'/';
-				$coin_rpc = new jsonRPCClient($rpc_conn_string);
+	
+	$new_game_def_txt = $app->game_def_to_text($game_def->game_def);
+	
+	$error_message = false;
+	$new_game = $app->create_game_from_definition($new_game_def_txt, $thisuser, "CoinBattles", $error_message, $db_game);
+	
+	if (!empty($new_game)) {
+		if ($new_game->blockchain->db_blockchain['p2p_mode'] == "none") {
+			if ($thisuser) {
+				$user_game = $thisuser->ensure_user_in_game($new_game, false);
 			}
-			catch (Exception $e) {
-				die("Error, failed to load RPC connection for ".$new_game->blockchain->db_blockchain['blockchain_name'].".\n");
-			}
-			
-			$new_game->delete_reset_game('reset');
-			$new_game->blockchain->unset_first_required_block();
-			
-			$new_game->update_db_game();
-			$game_def->add_oracle_urls($new_game, $coin_rpc);
-			echo "Done adding oracle URLS<br/>\n";
+			$log_text = "";
+			$new_game->blockchain->new_block($log_text);
+			$transaction_id = $new_game->add_genesis_transaction($user_game);
+			if ($transaction_id < 0) $error_message = "Failed to add genesis transaction (".$transaction_id.").";
 		}
-		echo "Next please <a href=\"/scripts/reset_game.php?key=".$GLOBALS['cron_key_string']."&game_id=".$new_game->db_game['game_id']."\">reset this game</a><br/>\n";
+		$new_game->blockchain->unset_first_required_block();
+		$new_game->start_game();
+		$new_game->ensure_events_until_block($new_game->db_game['game_starting_block']);
 	}
+	else if (empty($error_message)) $error_message = "Error: failed to create the game.";
+	
+	if ($error_message) echo $error_message."<br/>\n";
+	
+	echo "Next please <a href=\"/scripts/reset_game.php?key=".$GLOBALS['cron_key_string']."&game_id=".$new_game->db_game['game_id']."\">reset this game</a><br/>\n";
 	?>
 	Done!!<br/>
 	<a href="/">Check installation</a>
