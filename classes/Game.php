@@ -2988,7 +2988,6 @@ class Game {
 				
 				$genesis_address_text = $this->blockchain->app->random_string(34);
 				$genesis_address = $this->blockchain->create_or_fetch_address($genesis_address_text, true, false, false, true, true, $user_game['account_id']);
-				$genesis_tx_hash = $this->db_game['genesis_tx_hash'];
 				
 				$successful = false;
 				$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false, false);
@@ -2998,14 +2997,8 @@ class Game {
 				
 				$transaction_id = $this->blockchain->create_transaction("transaction", array($escrow_amount, $color_amount), false, array($genesis_input['io_id']), array($escrow_address['address_id'], $genesis_address['address_id']), $fee_amount);
 				
-				if ($transaction_id) {
-					$db_transaction = $this->blockchain->app->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
-					
-					$q = "UPDATE games SET genesis_tx_hash=".$this->blockchain->app->quote_escape($db_transaction['tx_hash'])." WHERE game_id='".$this->db_game['game_id']."';";
-					$r = $this->blockchain->app->run_query($q);
-					
-					$this->db_game['genesis_tx_hash'] = $db_transaction['tx_hash'];
-				}
+				$q = "UPDATE transactions SET tx_hash=".$this->blockchain->app->quote_escape($this->db_game['genesis_tx_hash'])." WHERE transaction_id='".$transaction_id."';";
+				$r = $this->blockchain->app->run_query($q);
 				
 				return $transaction_id;
 			}
