@@ -273,19 +273,26 @@ class CoinBattlesGameDefinition {
 		$this->currencies = $currencies;
 	}
 	
-	public function regular_actions() {
+	public function regular_actions(&$game) {
 		$btc_currency = $this->app->get_currency_by_abbreviation("BTC");
-		$currency_price = $this->app->currency_price_at_time($this->currencies[1]['currency_id'], $btc_currency['currency_id'], time());
-		$initial_price_time = $currency_price['time_added'];
-		
 		$start_q = "INSERT INTO currency_prices (cached_url_id, currency_id, reference_currency_id, price, time_added) VALUES ";
+		
 		for ($i=1; $i<count($this->currencies); $i++) {
-			$last_price_time = $initial_price_time;
+			$currency_price = $this->app->currency_price_at_time($this->currencies[$i]['currency_id'], $btc_currency['currency_id'], time());
+			
+			if ($currency_price) $last_price_time = $currency_price['time_added'];
+			else {
+				$mining_block_id = $game->last_block_id()+1;
+				$this_round = $game->block_to_round($mining_block_id);
+				$round_firstblock = ($this_round-1)*$game->db_game['round_length']+1;
+				$start_block = $game->blockchain->fetch_block_by_id($round_firstblock);
+				$last_price_time = $start_block['time_mined'];
+			}
 			
 			$q = $start_q;
 			$modulo = 0;
 			
-			$poloniex_url = "https://poloniex.com/public?command=returnTradeHistory&currencyPair=BTC_".$this->currencies[$i]['abbreviation']."&start=".($last_price_time+1)."&end=".time();
+			$poloniex_url = "https://poloniex.com/public?command=returnTradeHistory&currencyPair=BTC_".$this->currencies[$i]['abbreviation']."&start=".$last_price_time."&end=".time();
 			$cached_url = $this->app->cached_url_info($poloniex_url);
 			$poloniex_response = $this->app->async_fetch_url($poloniex_url, true);
 			$poloniex_trades = json_decode($poloniex_response['cached_result'], true);

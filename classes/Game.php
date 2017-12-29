@@ -2310,7 +2310,7 @@ class Game {
 		if (empty($this->db_game['loaded_until_block'])) $this->set_loaded_until_block();
 		
 		$load_block_height = $this->db_game['loaded_until_block']+1;
-		$to_block_height = $this->blockchain->last_block_id();
+		$to_block_height = $this->blockchain->last_block_id() + $this->db_game['ensure_events_future_rounds']*$this->db_game['round_length'];
 		
 		if (empty($this->db_game['events_until_block'])) $this->set_events_until_block();
 		

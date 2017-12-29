@@ -2,7 +2,8 @@
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
-$script_target_time = 58;
+$script_target_time = 54;
+$min_loop_target_time = 5;
 $script_start_time = microtime(true);
 
 if (!empty($argv)) {
@@ -215,7 +216,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 								$blockchain_last_block_id = $running_games[$running_game_i]->blockchain->last_block_id();
 								
 								if ($game_last_block_id == $blockchain_last_block_id) {
-									$running_games[$running_game_i]->module->regular_actions();
+									$running_games[$running_game_i]->module->regular_actions($running_games[$running_game_i]);
 								}
 							}
 						}
@@ -229,7 +230,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 					
 					$loop_stop_time = microtime(true);
 					$loop_time = $loop_stop_time-$loop_start_time;
-					$loop_target_time = max(1, $loop_time);
+					$loop_target_time = max($min_loop_target_time, $loop_time);
 					$sleep_usec = round(pow(10,6)*($loop_target_time - $loop_time));
 					if ($print_debug) echo "script run time: ".(microtime(true)-$script_start_time).", sleeping ".$sleep_usec/pow(10,6)." seconds.\n";
 					usleep($sleep_usec);
