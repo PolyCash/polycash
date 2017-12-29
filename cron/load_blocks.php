@@ -3,6 +3,8 @@ set_time_limit(0);
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
+$script_target_time = 54;
+$min_loop_target_time = 5;
 $script_start_time = microtime(true);
 
 if (!empty($argv)) {
@@ -28,8 +30,6 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$blockchain_r = $GLOBALS['app']->run_query($blockchain_q);
 		
 		while ($db_blockchain = $blockchain_r->fetch()) {
-			$blockchain_i = count($blockchains);
-			$blockchains[$blockchain_i] = new Blockchain($app, $db_blockchain['blockchain_id']);
 			$error = false;
 			
 			if ($db_blockchain['p2p_mode'] == "web_api") $coin_rpc = false;
@@ -44,11 +44,28 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			}
 			
 			if (!$error) {
+				$blockchain_i = count($blockchains);
+				$blockchains[$blockchain_i] = new Blockchain($app, $db_blockchain['blockchain_id']);
+			}
+		}
+		
+		do {
+			$loop_start_time = microtime(true);
+			
+			for ($i=0; $i<count($blockchains); $i++) {
 				if ($print_debug) echo "Syncing ".$blockchains[$blockchain_i]->db_blockchain['blockchain_name']."\n";
 				$debug_html = $blockchains[$blockchain_i]->sync_coind($coin_rpc, $print_debug);
 				if ($print_debug) echo $debug_html;
 			}
+			
+			$loop_stop_time = microtime(true);
+			$loop_time = $loop_stop_time-$loop_start_time;
+			$loop_target_time = max($min_loop_target_time, $loop_time);
+			$sleep_usec = round(pow(10,6)*($loop_target_time - $loop_time));
+			if ($print_debug) echo "script run time: ".(microtime(true)-$script_start_time).", sleeping ".$sleep_usec/pow(10,6)." seconds.\n";
+			usleep($sleep_usec);
 		}
+		while (microtime(true) < $script_start_time + ($script_target_time-$loop_target_time));
 	}
 	else {
 		$app->log_message("NOT running load_blocks.php");
