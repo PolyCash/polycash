@@ -280,6 +280,7 @@ class Blockchain {
 			}
 			$benchmark_time = microtime(true);
 		}
+		else if ($this->db_blockchain['p2p_mode'] != "rpc") $add_transaction = false;
 		
 		if ($add_transaction) {
 			try {
@@ -292,7 +293,7 @@ class Blockchain {
 				$coin_rounds_destroyed = 0;
 				
 				if ($this->db_blockchain['p2p_mode'] != "rpc") {
-					$transaction_type = "transaction";
+					$transaction_type = $unconfirmed_tx['transaction_desc'];
 					
 					if ($block_height !== false && $unconfirmed_tx['block_id'] !== "") {
 						$q = "UPDATE transactions SET position_in_block='".$position_in_block."', block_id='".$block_height."' WHERE transaction_id='".$unconfirmed_tx['transaction_id']."';";
@@ -925,7 +926,7 @@ class Blockchain {
 		$output_address = $this->create_or_fetch_address($genesis_address, true, false, false, false, $force_is_mine, false);
 		$html .= "genesis hash: ".$genesis_block_hash."<br/>\n";
 		
-		$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', amount='".$this->db_blockchain['initial_pow_reward']."', transaction_desc='coinbase', tx_hash='".$genesis_tx_hash."', block_id='0', time_created='".time()."', num_inputs=0, num_outputs=1, has_all_inputs=1, has_all_outputs=1;";
+		$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', amount='".$this->db_blockchain['initial_pow_reward']."', transaction_desc='coinbase', tx_hash='".$genesis_tx_hash."', block_id='0', position_in_block=0, time_created='".time()."', num_inputs=0, num_outputs=1, has_all_inputs=1, has_all_outputs=1;";
 		$this->app->run_query($q);
 		$transaction_id = $this->app->last_insert_id();
 		
@@ -1602,7 +1603,7 @@ class Blockchain {
 	}
 	
 	public function add_transaction_from_web_api($block_height, &$tx) {
-		$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."'";
+		$q = "INSERT INTO transactions SET time_created='".time()."', blockchain_id='".$this->db_blockchain['blockchain_id']."'";
 		if ($block_height !== false) $q .= ", block_id='".$block_height."', position_in_block='".((int)$tx['position_in_block'])."'";
 		$q .= ", transaction_desc=".$this->app->quote_escape($tx['transaction_desc']).", tx_hash=".$this->app->quote_escape($tx['tx_hash']).", amount=".$this->app->quote_escape($tx['amount']).", fee_amount=".$this->app->quote_escape($tx['fee_amount']).", num_inputs=".((int)$tx['num_inputs']).", num_outputs=".((int)$tx['num_outputs']).";";
 		$r = $this->app->run_query($q);
