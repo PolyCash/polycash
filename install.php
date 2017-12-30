@@ -72,7 +72,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			
 			$db_stakechain = $app->fetch_blockchain_by_identifier('stakechain');
 			
-			if (empty($db_stakechain['authoritative_issuer_id'])) {
+			if ($db_stakechain['p2p_mode'] == "web_api" && empty($db_stakechain['authoritative_issuer_id'])) {
 				$authoritative_issuer = $app->get_issuer_by_server_name("https://stakemoney.com");
 				$app->run_query("UPDATE blockchains SET authoritative_issuer_id='".$authoritative_issuer['issuer_id']."' WHERE url_identifier='stakechain';");
 			}

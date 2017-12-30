@@ -295,7 +295,7 @@ class Blockchain {
 					$transaction_type = "transaction";
 					
 					if ($block_height !== false && $unconfirmed_tx['block_id'] !== "") {
-						$q = "UPDATE transactions SET block_id='".$block_height."' WHERE transaction_id='".$unconfirmed_tx['transaction_id']."';";
+						$q = "UPDATE transactions SET position_in_block='".$position_in_block."', block_id='".$block_height."' WHERE transaction_id='".$unconfirmed_tx['transaction_id']."';";
 						$r = $this->app->run_query($q);
 					}
 					
@@ -539,7 +539,7 @@ class Blockchain {
 					}
 					
 					$fee_amount = ($input_sum-$output_sum);
-					if ($transaction_type != "transaction" || !$require_inputs) $fee_amount = 0;
+					if ($transaction_type == "coinbase" || !$require_inputs) $fee_amount = 0;
 					
 					$q = "UPDATE transactions SET load_time=load_time+".(microtime(true)-$start_time);
 					if (!$only_vout) $q .= ", has_all_outputs=1";
@@ -1494,6 +1494,7 @@ class Blockchain {
 		
 		$mined_transaction_id = $this->create_transaction('coinbase', array($this->db_blockchain['initial_pow_reward']), $created_block_id, false, array($mined_address['address_id']), 0);
 		$num_transactions++;
+		$r = $this->app->run_query("UPDATE transactions SET position_in_block='0' WHERE transaction_id='".$mined_transaction_id."';");
 		
 		// Include all unconfirmed TXs in the just-mined block
 		$q = "SELECT * FROM transactions WHERE transaction_desc='transaction' AND blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id IS NULL;";
