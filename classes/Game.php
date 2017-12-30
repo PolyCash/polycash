@@ -984,22 +984,7 @@ class Game {
 		return intval($num_players[0]);
 	}
 	
-	public function try_process_genesis_transaction() {
-		if (!empty($this->db_game['genesis_tx_hash'])) {
-			$qq = "SELECT * FROM transactions WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND tx_hash=".$this->blockchain->app->quote_escape($this->db_game['genesis_tx_hash']).";";
-			$rr = $this->blockchain->app->run_query($qq);
-			
-			if ($rr->rowCount() == 1) {
-				$genesis_transaction = $rr->fetch();
-				
-				$this->process_buyin_transaction($genesis_transaction);
-			}
-		}
-	}
-	
 	public function start_game() {
-		$this->try_process_genesis_transaction();
-		
 		$game_start_time = time();
 		
 		if ($this->blockchain->db_blockchain['p2p_mode'] == "rpc") {

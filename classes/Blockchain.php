@@ -535,7 +535,9 @@ class Blockchain {
 					$benchmark_time = microtime(true);
 					
 					if (count($spend_io_ids) > 0) {
-						$q = "UPDATE transaction_ios SET spend_count=spend_count+1, spend_status='spent', spend_transaction_id='".$db_transaction_id."', spend_transaction_ids=CONCAT(spend_transaction_ids, CONCAT('".$db_transaction_id."', ',')), spend_block_id='".$block_height."' WHERE io_id IN (".implode(",", $spend_io_ids).");";
+						$q = "UPDATE transaction_ios SET spend_count=spend_count+1, spend_status='spent', spend_transaction_id='".$db_transaction_id."', spend_transaction_ids=CONCAT(spend_transaction_ids, CONCAT('".$db_transaction_id."', ','))";
+						if ($block_height !== false) $q .= ", spend_block_id='".$block_height."'";
+						$q .= " WHERE io_id IN (".implode(",", $spend_io_ids).");";
 						$r = $this->app->run_query($q);
 					}
 					
