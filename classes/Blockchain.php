@@ -294,7 +294,7 @@ class Blockchain {
 				if ($this->db_blockchain['p2p_mode'] != "rpc") {
 					$transaction_type = "transaction";
 					
-					if ($block_height !== false && $unconfirmed_tx['block_height'] !== "") {
+					if ($block_height !== false && $unconfirmed_tx['block_id'] !== "") {
 						$q = "UPDATE transactions SET block_id='".$block_height."' WHERE transaction_id='".$unconfirmed_tx['transaction_id']."';";
 						$r = $this->app->run_query($q);
 					}
@@ -467,7 +467,7 @@ class Blockchain {
 						}
 					}
 					
-					if (count($spend_io_ids) > 0 && ($this->db_blockchain['p2p_mode'] != "rpc" || (!$only_vout && $require_inputs && $block_height === false)) {
+					if (count($spend_io_ids) > 0 && ($this->db_blockchain['p2p_mode'] != "rpc" || (!$only_vout && $require_inputs && $block_height === false))) {
 						$ref_block_id = $this->last_block_id()+1;
 						
 						$q = "SELECT g.game_id, SUM(gio.colored_amount) AS colored_amount_sum, SUM(gio.colored_amount*(".$ref_block_id."-io.create_block_id)) AS ref_coin_block_sum FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN games g ON gio.game_id=g.game_id WHERE io.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND io.io_id IN (".implode(",", $spend_io_ids).") AND io.create_block_id IS NOT NULL GROUP BY gio.game_id ORDER BY g.game_id ASC;";
