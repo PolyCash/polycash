@@ -1,0 +1,1 @@
+ALTER TABLE `card_issuers` ADD `visible` TINYINT(1) NOT NULL DEFAULT '1' AFTER `issuer_id`;

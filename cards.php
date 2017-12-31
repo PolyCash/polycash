@@ -93,7 +93,7 @@ if (!empty($_REQUEST['action'])) {
 								$pnum = $_REQUEST['cards_pnum'];
 								$purity = $_REQUEST['cards_purity'];
 								
-								$q = "INSERT INTO card_designs SET issuer_id='".$this_issuer['issuer_id']."', image_id='".$db_currency['default_design_image_id']."', denomination_id=".$denomination['denomination_id'].", purity=".$app->quote_escape($purity).", display_name=".$app->quote_escape($name).", display_title=".$app->quote_escape($title).", display_email=".$app->quote_escape($email).", display_pnum=".$app->quote_escape($pnum).", time_created='".time()."', user_id='".$thisuser->db_user['user_id']."', redeem_url=".$app->quote_escape($GLOBALS['base_url']);
+								$q = "INSERT INTO card_designs SET image_id='".$db_currency['default_design_image_id']."', denomination_id=".$denomination['denomination_id'].", purity=".$app->quote_escape($purity).", display_name=".$app->quote_escape($name).", display_title=".$app->quote_escape($title).", display_email=".$app->quote_escape($email).", display_pnum=".$app->quote_escape($pnum).", time_created='".time()."', user_id='".$thisuser->db_user['user_id']."', redeem_url=".$app->quote_escape($GLOBALS['base_url']);
 								if (!empty($fv_currency['default_design_text_color'])) $q .= ", text_color=".$app->quote_escape($fv_currency['default_design_text_color']);
 								$q .= ";";
 								$r = $app->run_query($q);
@@ -108,7 +108,7 @@ if (!empty($_REQUEST['action'])) {
 								if (empty($paper_width)) $paper_width = "standard";
 								else if ($paper_width == "small") {}
 								
-								$q = "SELECT MAX(issuer_card_id), MAX(group_id) FROM cards c JOIN card_designs d ON c.design_id=d.design_id WHERE d.issuer_id='".$this_issuer['issuer_id']."';";
+								$q = "SELECT MAX(issuer_card_id), MAX(group_id) FROM cards WHERE issuer_id='".$this_issuer['issuer_id']."';";
 								$r = $app->run_query($q);
 								$max_id = $r->fetch();
 								
