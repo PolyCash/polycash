@@ -2618,9 +2618,8 @@ class Game {
 		}
 	}
 	
-	public function render_transaction($transaction, $selected_address_id) {
-		$html = "";
-		$html .= '<div class="row bordered_row"><div class="col-md-12">';
+	public function render_transaction($transaction, $selected_address_id, $selected_io_id) {
+		$html = '<div class="row bordered_row"><div class="col-md-12">';
 		
 		if (!empty($transaction['block_id'])) {
 			if ($transaction['position_in_block'] == "") $html .= "Confirmed";
@@ -2658,12 +2657,17 @@ class Game {
 				$html .= '<a class="display_address" style="';
 				if ($input['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
 				$html .= '" href="/explorer/games/'.$this->db_game['url_identifier'].'/addresses/'.$input['address'].'">'.$input['address'].'</a>';
+				
 				$html .= "<br/>\n";
+				if ($selected_io_id == $input['io_id']) $html .= "<b>";
+				else $html .= "<a href=\"/explorer/blockchains/".$this->blockchain->db_blockchain['url_identifier']."/utxo/".$input['io_id']."\">";
 				$html .= $amount_disp." ";
 				if ($amount_disp == '1') $html .= $this->db_game['coin_name'];
 				else $html .= $this->db_game['coin_name_plural'];
-				
+				if ($selected_io_id == $input['io_id']) $html .= "</b>";
+				else $html .= "</a>";
 				$html .= "<br/>\n";
+				
 				$input_sum += $input['amount'];
 			}
 		}
@@ -2677,10 +2681,14 @@ class Game {
 			if ($output['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
 			$html .= '" href="/explorer/games/'.$this->db_game['url_identifier'].'/addresses/'.$output['address'].'">'.$output['address']."</a><br/>\n";
 			
+			if ($selected_io_id == $output['io_id']) $html .= "<b>";
+			else $html .= "<a href=\"/explorer/blockchains/".$this->blockchain->db_blockchain['url_identifier']."/utxo/".$input['io_id']."\">";
 			$amount_disp = $this->blockchain->app->format_bignum($output['colored_amount']/pow(10,$this->db_game['decimal_places']));
 			$html .= $amount_disp." ";
 			if ($amount_disp == '1') $html .= $this->db_game['coin_name'];
 			else $html .= $this->db_game['coin_name_plural'];
+			if ($selected_io_id == $output['io_id']) $html .= "</b>";
+			else $html .= "</a>\n";
 			
 			if ($output['option_id'] > 0) {
 				$html .= ", ";

@@ -1073,7 +1073,7 @@ class Blockchain {
 		return $html;
 	}
 	
-	public function render_transaction($transaction, $selected_address_id) {
+	public function render_transaction($transaction, $selected_address_id, $selected_io_id) {
 		$html = "";
 		$html .= '<div class="row bordered_row"><div class="col-md-12">';
 		
@@ -1113,12 +1113,17 @@ class Blockchain {
 				$html .= '<a class="display_address" style="';
 				if ($input['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
 				$html .= '" href="/explorer/blockchains/'.$this->db_blockchain['url_identifier'].'/addresses/'.$input['address'].'">'.$input['address'].'</a>';
+				
 				$html .= "<br/>\n";
+				if ($input['io_id'] == $selected_io_id) $html .= "<b>";
+				else $html .= "<a href=\"/explorer/blockchains/".$this->db_blockchain['url_identifier']."/utxo/".$input['io_id']."\">";
 				$html .= $amount_disp." ";
 				if ($amount_disp == '1') $html .= $this->db_blockchain['coin_name'];
 				else $html .= $this->db_blockchain['coin_name_plural'];
-				
+				if ($input['io_id'] == $selected_io_id) $html .= "</b>";
+				else $html .= "</a>";
 				$html .= "<br/>\n";
+				
 				$input_sum += $input['amount'];
 			}
 		}
@@ -1131,12 +1136,16 @@ class Blockchain {
 			if ($output['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
 			$html .= '" href="/explorer/blockchains/'.$this->db_blockchain['url_identifier'].'/addresses/'.$output['address'].'">'.$output['address']."</a><br/>\n";
 			
+			if ($output['io_id'] == $selected_io_id) $html .= "<b>";
+			else $html .= "<a href=\"/explorer/blockchains/".$this->db_blockchain['url_identifier']."/utxo/".$output['io_id']."\">";
 			$amount_disp = $this->app->format_bignum($output['amount']/pow(10,$this->db_blockchain['decimal_places']));
 			$html .= $amount_disp." ";
 			if ($amount_disp == '1') $html .= $this->db_blockchain['coin_name'];
 			else $html .= $this->db_blockchain['coin_name_plural'];
-			
+			if ($output['io_id'] == $selected_io_id) $html .= "</b>";
+			else $html .= "</a>";
 			$html .= "<br/>\n";
+			
 			$output_sum += $output['amount'];
 		}
 		$html .= '</div></div>'."\n";
@@ -1546,6 +1555,18 @@ class Blockchain {
 	
 	public function games_by_transaction($db_transaction) {
 		$q = "SELECT g.* FROM games g JOIN transaction_game_ios gio ON g.game_id=gio.game_id JOIN transaction_ios io ON gio.io_id=io.io_id WHERE (io.create_transaction_id=".$db_transaction['transaction_id']." OR io.spend_transaction_id=".$db_transaction['transaction_id'].") GROUP BY g.game_id ORDER BY g.game_id ASC;";
+		$r = $this->app->run_query($q);
+		
+		$db_games = array();
+		
+		while ($db_game = $r->fetch()) {
+			array_push($db_games, $db_game);
+		}
+		return $db_games;
+	}
+	
+	public function games_by_io($io_id) {
+		$q = "SELECT g.* FROM games g JOIN transaction_game_ios gio ON g.game_id=gio.game_id WHERE gio.io_id='".$io_id."' GROUP BY g.game_id ORDER BY g.game_id ASC;";
 		$r = $this->app->run_query($q);
 		
 		$db_games = array();

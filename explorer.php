@@ -55,7 +55,7 @@ if (rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer") $explore_mode = "explore
 else if ($game && rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer/games/".$game->db_game['url_identifier']) $explore_mode = "game_home";
 else if (!$game && $blockchain && rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']) $explore_mode = "blockchain_home";
 
-if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($explore_mode, array('blockchain_home','blocks','addresses','transactions','utxos'))) || ($game && in_array($explore_mode, array('game_home','events','blocks','addresses','transactions','utxos','my_bets')))) {
+if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($explore_mode, array('blockchain_home','blocks','addresses','transactions','utxos','utxo'))) || ($game && in_array($explore_mode, array('game_home','events','blocks','addresses','transactions','utxos','utxo','my_bets')))) {
 	if ($game) {
 		$last_block_id = $blockchain->last_block_id();
 		$current_round = $game->block_to_round($last_block_id+1);
@@ -176,6 +176,22 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					$pagetitle .= " Block #".$block['block_id'];
 				}
 			}
+		}
+	}
+	if ($explore_mode == "utxo") {
+		$io_id = (int) $uri_parts[5];
+		
+		$io_q = "SELECT * FROM transaction_ios WHERE io_id='".$io_id."';";
+		$io_r = $app->run_query($io_q);
+		
+		if ($io_r->rowCount() > 0) {
+			$io = $io_r->fetch();
+			$mode_error = false;
+			$pagetitle = "UTXO #".$io['io_id']." - ".$blockchain->db_blockchain['blockchain_name']." Explorer";
+		}
+		else {
+			$io = false;
+			$mode_error = true;
 		}
 	}
 	if ($explore_mode == "transactions") {
@@ -568,7 +584,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							$r = $app->run_query($q);
 							
 							while ($transaction = $r->fetch()) {
-								echo $game->render_transaction($transaction, FALSE);
+								echo $game->render_transaction($transaction, false, false);
 							}
 						}
 						echo '</div>';
@@ -749,8 +765,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$r = $app->run_query($q);
 						
 						while ($transaction = $r->fetch()) {
-							if ($game) echo $game->render_transaction($transaction, FALSE);
-							else echo $blockchain->render_transaction($transaction, FALSE);
+							if ($game) echo $game->render_transaction($transaction, false, false);
+							else echo $blockchain->render_transaction($transaction, false, false);
 						}
 						echo '</div>';
 						echo "<br/>\n";
@@ -947,8 +963,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					<div style="border-bottom: 1px solid #bbb;">
 						<?php
 						for ($i=0; $i<count($transaction_ios); $i++) {
-							if ($game) echo $game->render_transaction($transaction_ios[$i], $address['address_id']);
-							else echo $blockchain->render_transaction($transaction_ios[$i], $address['address_id']);
+							if ($game) echo $game->render_transaction($transaction_ios[$i], $address['address_id'], false);
+							else echo $blockchain->render_transaction($transaction_ios[$i], $address['address_id'], false);
 						}
 						?>
 					</div>
@@ -992,7 +1008,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					echo '<div class="panel-body">'."\n";
 					echo '<div style="border-bottom: 1px solid #bbb;">'."\n";
 					while ($transaction = $r->fetch()) {
-						echo $blockchain->render_transaction($transaction, FALSE);
+						echo $blockchain->render_transaction($transaction, false, false);
 					}
 					echo '</div>'."\n";
 					echo '</div>'."\n";
@@ -1048,8 +1064,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					echo "<br/>\n";
 					
 					echo '<div style="margin-top: 10px; border-bottom: 1px solid #bbb;">';
-					if ($game) echo $game->render_transaction($transaction, false);
-					else echo $blockchain->render_transaction($transaction, false);
+					if ($game) echo $game->render_transaction($transaction, false, false);
+					else echo $blockchain->render_transaction($transaction, false, false);
 					echo "</div>\n";
 					
 					if ($rpc_transaction || $rpc_raw_transaction) {
@@ -1063,6 +1079,53 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						if ($rpc_raw_transaction) echo print_r($rpc_raw_transaction);
 						?></pre>
 						<?php
+					}
+					
+					echo "</div>\n";
+				}
+				else if ($explore_mode == "utxo") {
+					$create_q = "SELECT * FROM transactions WHERE transaction_id='".$io['create_transaction_id']."';";
+					$create_r = $app->run_query($create_q);
+					
+					if ($create_r->rowCount() > 0) $create_tx = $create_r->fetch();
+					else $create_tx = false;
+					
+					if (!empty($io['spend_transaction_id'])) {
+						$spend_q = "SELECT * FROM transactions WHERE transaction_id='".$io['spend_transaction_id']."';";
+						$spend_r = $app->run_query($spend_q);
+						
+						if ($spend_r->rowCount() > 0) $spend_tx = $spend_r->fetch();
+						else $spend_tx = false;
+					}
+					else $spend_tx = false;
+					
+					echo '<div class="panel-heading"><div class="panel-title">';
+					echo $blockchain->db_blockchain['blockchain_name']." UTXO #".$io['io_id'];
+					echo "</div></div>\n";
+					
+					echo '<div class="panel-body">';
+					
+					if ($create_tx || $spend_tx) {
+						if (empty($game)) {
+							$tx_associated_games = $blockchain->games_by_io($io['io_id']);
+							echo "<h3>This UTXO is associated with ".count($tx_associated_games)." games</h3>\n";
+							
+							for ($i=0; $i<count($tx_associated_games); $i++) {
+								$db_game = $tx_associated_games[$i];
+								echo '<a href="/explorer/games/'.$db_game['url_identifier'].'/utxo/'.$io['io_id'].'/">'.$db_game['name']."</a><br/>\n";
+							}
+						}
+						
+						echo '<div style="margin-top: 10px; border-bottom: 1px solid #bbb;">';
+						if ($create_tx) {
+							if ($game) echo $game->render_transaction($create_tx, false, $io['io_id']);
+							else echo $blockchain->render_transaction($create_tx, false, $io['io_id']);
+						}
+						if ($spend_tx) {
+							if ($game) echo $game->render_transaction($spend_tx, false, $io['io_id']);
+							else echo $blockchain->render_transaction($spend_tx, false, $io['io_id']);
+						}
+						echo "</div>\n";
 					}
 					
 					echo "</div>\n";
