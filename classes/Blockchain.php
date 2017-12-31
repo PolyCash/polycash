@@ -272,12 +272,8 @@ class Blockchain {
 				$q = "DELETE t.*, io.*, gio.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';";
 				$r = $this->app->run_query($q);
 			}
-			else {
-				$q = "DELETE gio.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';";
-				$r = $this->app->run_query($q);
-				
-				$db_transaction_id = $unconfirmed_tx['transaction_id'];
-			}
+			else $db_transaction_id = $unconfirmed_tx['transaction_id'];
+			
 			$benchmark_time = microtime(true);
 		}
 		else if ($this->db_blockchain['p2p_mode'] != "rpc") $add_transaction = false;
@@ -468,7 +464,7 @@ class Blockchain {
 						}
 					}
 					
-					if (count($spend_io_ids) > 0 && ($this->db_blockchain['p2p_mode'] != "rpc" || (!$only_vout && $require_inputs && $block_height === false))) {
+					if (count($spend_io_ids) > 0 && $block_height === false) {
 						$ref_block_id = $this->last_block_id()+1;
 						
 						$q = "SELECT g.game_id, SUM(gio.colored_amount) AS colored_amount_sum, SUM(gio.colored_amount*(".$ref_block_id."-io.create_block_id)) AS ref_coin_block_sum FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN games g ON gio.game_id=g.game_id WHERE io.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND io.io_id IN (".implode(",", $spend_io_ids).") AND io.create_block_id IS NOT NULL GROUP BY gio.game_id ORDER BY g.game_id ASC;";

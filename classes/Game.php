@@ -2682,7 +2682,7 @@ class Game {
 			$html .= '" href="/explorer/games/'.$this->db_game['url_identifier'].'/addresses/'.$output['address'].'">'.$output['address']."</a><br/>\n";
 			
 			if ($selected_io_id == $output['io_id']) $html .= "<b>";
-			else $html .= "<a href=\"/explorer/games/".$this->db_game['url_identifier']."/utxo/".$input['io_id']."\">";
+			else $html .= "<a href=\"/explorer/games/".$this->db_game['url_identifier']."/utxo/".$output['io_id']."\">";
 			$amount_disp = $this->blockchain->app->format_bignum($output['colored_amount']/pow(10,$this->db_game['decimal_places']));
 			$html .= $amount_disp." ";
 			if ($amount_disp == '1') $html .= $this->db_game['coin_name'];
