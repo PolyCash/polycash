@@ -2573,61 +2573,6 @@ class Game {
 		}
 	}
 	
-	public function add_round_from_rpc($round_id) {
-		$block_id = ($round_id-1)*$this->db_game['round_length']+1;
-		$events = $this->events_by_block($block_id);
-		
-		for ($i=0; $i<count($events); $i++) {
-			$winning_option_id = false;
-			$q = "SELECT * FROM transactions t JOIN transaction_ios i ON i.create_transaction_id=t.transaction_id WHERE t.votebase_event_id='".$events[$i]->db_event['event_id']."' AND t.block_id='".$round_id*$this->db_game['round_length']."' AND t.transaction_desc='votebase' AND i.out_index=1;";
-			$r = $this->blockchain->app->run_query($q);
-			if ($r->rowCount() == 1) {
-				$votebase_transaction = $r->fetch();
-				$winning_option_id = $votebase_transaction['option_id'];
-			}
-			
-			$round_voting_stats_all = false;
-			list($derived_winning_option_id, $derived_winning_votes) = $events[$i]->determine_winning_option($this->block_to_round($events[$i]->db_event['event_final_block']), $round_voting_stats_all);
-			
-			$sum_votes = $round_voting_stats_all[0];
-			$max_winning_votes = $round_voting_stats_all[1];
-			$option_id_to_rank = $round_voting_stats_all[3];
-			$rankings = $round_voting_stats_all[2];
-			
-			$q = "SELECT * FROM event_outcomes WHERE event_id='".$events[$i]->db_event['event_id']."' AND round_id='".$round_id."';";
-			$r = $this->blockchain->app->run_query($q);
-			if ($r->rowCount() > 0) {
-				$existing_round = $r->fetch();
-				$update_insert = "update";
-			}
-			else $update_insert = "insert";
-			
-			if ($update_insert == "update") $q = "UPDATE event_outcomes SET ";
-			else $q = "INSERT INTO event_outcomes SET event_id='".$events[$i]->db_event['event_id']."', round_id='".$round_id."', ";
-			$q .= "payout_block_id='".$events[$i]->db_event['event_final_block']."'";
-			
-			if ($derived_winning_option_id) $q .= ", derived_winning_option_id='".$derived_winning_option_id."', derived_winning_votes='".$derived_winning_votes."'";
-			else $q .= ", derived_winning_option_id=NULL, derived_winning_votes=0";
-			
-			if ($winning_option_id) $q .= ", winning_option_id='".$winning_option_id."'";
-			else $q .= ", winning_option_id=NULL";
-			$q .= ", winning_votes='".$winning_votes."'";
-			
-			$q .= ", sum_votes='".$sum_votes."', time_created='".time()."'";
-			if ($update_insert == "update") $q .= " WHERE outcome_id='".$existing_round['outcome_id']."'";
-			$q .= ";";
-			$r = $this->blockchain->app->run_query($q);
-			if ($update_insert == "insert") $outcome_id = $this->blockchain->app->last_insert_id();
-			else $outcome_id = $existing_round['outcome_id'];
-			
-			$this->blockchain->app->run_query("DELETE FROM event_outcome_options WHERE round_id='".$round_id."' AND event_id='".$events[$i]->db_event['event_id']."';");
-			for ($j=0; $j<count($rankings); $j++) {
-				$qq = "INSERT INTO event_outcome_options SET outcome_id='".$outcome_id."', round_id='".$round_id."', event_id='".$events[$i]->db_event['event_id']."', option_id='".$rankings[$j]['option_id']."', rank='".($j+1)."', coin_score='".$rankings[$j]['coin_score']."', coin_block_score='".$rankings[$j]['coin_block_score']."', coin_round_score='".$rankings[$j]['coin_round_score']."', votes='".$rankings[$j]['votes']."';";
-				$rr = $this->blockchain->app->run_query($qq);
-			}
-		}
-	}
-	
 	public function render_transaction($transaction, $selected_address_id, $selected_io_id) {
 		$html = '<div class="row bordered_row"><div class="col-md-12">';
 		
