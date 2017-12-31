@@ -325,11 +325,12 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				<?php
 				if ($game) {
 					echo "<a class='btn btn-sm btn-primary' href='/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/";
-					if (in_array($explore_mode, array('blocks','addresses','transactions','utxos'))) {
+					if (in_array($explore_mode, array('blocks','addresses','transactions','utxos','utxo'))) {
 						echo $explore_mode."/";
 						if ($explore_mode == "blocks") echo $block['block_id'];
 						else if ($explore_mode == "addresses") echo $address['address'];
 						else if ($explore_mode == "transactions") echo $transaction['tx_hash'];
+						else if ($explore_mode == "utxo") echo $io['io_id'];
 						echo "/";
 					}
 					echo "'>View on ".$game->blockchain->db_blockchain['blockchain_name']."</a>\n";
