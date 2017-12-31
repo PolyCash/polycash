@@ -310,7 +310,7 @@ class Blockchain {
 						if ($block_height !== false) {
 							$this_io_cbd = ($block_height - $spend_io['create_block_id'])*$spend_io['amount'];
 							$coin_blocks_destroyed += $this_io_cbd;
-							$r = $this->app->run_query("UPDATE transaction_ios SET spend_block_id='".$block_height."', coin_blocks_created='".$this_io_cbd."' WHERE io_id='".$spend_io['io_id']."';");
+							$this->app->run_query("UPDATE transaction_ios SET spend_block_id='".$block_height."', coin_blocks_created='".$this_io_cbd."' WHERE io_id='".$spend_io['io_id']."';");
 						}
 					}
 				}
