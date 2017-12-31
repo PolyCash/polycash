@@ -12,7 +12,7 @@
 		<select class="form-control" name="issuer_id" id="issuer_id">
 			<option value="">-- Please Select --</option>
 			<?php
-			$q = "SELECT * FROM card_issuers ORDER BY issuer_name ASC;";
+			$q = "SELECT * FROM card_issuers WHERE visible=1 ORDER BY issuer_name ASC;";
 			$r = $app->run_query($q);
 			while ($db_issuer = $r->fetch()) {
 				echo "<option value=\"".$db_issuer['issuer_id']."\">".$db_issuer['issuer_name']."</option>\n";
