@@ -2426,38 +2426,48 @@ class Game {
 							$output_sum += $output_io['amount'];
 						}
 						
-						$qq = "DELETE gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.create_transaction_id='".$db_transaction['transaction_id']."';";
-						$rr = $this->blockchain->app->run_query($qq);
-						
 						$qq = "SELECT io.*, a.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$db_transaction['transaction_id']."'";
 						if ($this->db_game['sellout_policy'] == "on") $qq .= " AND a.address_id != '".$escrow_address['address_id']."'";
 						$qq .= ";";
 						$rr = $this->blockchain->app->run_query($qq);
 						
-						while ($output_io = $rr->fetch()) {
-							$colored_amount = floor($input_colored_sum*$output_io['amount']/$output_sum);
-							$cbd = floor($cbd_sum*$output_io['amount']/$output_sum);
-							$crd = floor($crd_sum*$output_io['amount']/$output_sum);
+						if ($rr->rowCount() > 0) {
+							$insert_q = "INSERT INTO transaction_game_ios (game_id, io_id, is_coinbase, colored_amount, coin_blocks_destroyed, coin_rounds_destroyed, create_round_id, option_id, event_id, effectiveness_factor, votes) VALUES ";
 							
-							$qqq = "INSERT INTO transaction_game_ios SET game_id='".$this->db_game['game_id']."', io_id='".$output_io['io_id']."', is_coinbase=0, colored_amount='".$colored_amount."', coin_blocks_destroyed='".$cbd."', coin_rounds_destroyed='".$crd."', create_round_id='".$round_id."'";
-							
-							if ($output_io['option_index'] != "") {
-								$option_id = $this->option_index_to_option_id_in_block($output_io['option_index'], $block_height);
-								if ($option_id) {
-									$db_event = $this->blockchain->app->run_query("SELECT ev.*, et.* FROM options op JOIN events ev ON op.event_id=ev.event_id JOIN event_types et ON ev.event_type_id=et.event_type_id WHERE op.option_id='".$option_id."';")->fetch();
-									$event = new Event($this, $db_event, false);
-									$effectiveness_factor = $event->block_id_to_effectiveness_factor($block_height);
-									$qqq .= ", option_id='".$option_id."', event_id='".$db_event['event_id']."', effectiveness_factor='".$effectiveness_factor."'";
-									
-									if ($this->db_game['payout_weight'] == "coin_block") $votes = floor($effectiveness_factor*$cbd);
-									else if ($this->db_game['payout_weight'] == "coin_round") $votes = floor($effectiveness_factor*$crd);
-									else $votes = floor($effectiveness_factor*$colored_amount);
-									$qqq .= ", votes='".$votes."'";
+							while ($output_io = $rr->fetch()) {
+								$colored_amount = floor($input_colored_sum*$output_io['amount']/$output_sum);
+								$cbd = floor($cbd_sum*$output_io['amount']/$output_sum);
+								$crd = floor($crd_sum*$output_io['amount']/$output_sum);
+								
+								$insert_q .= "('".$this->db_game['game_id']."', '".$output_io['io_id']."', 0, '".$colored_amount."', '".$cbd."', '".$crd."', '".$round_id."', ";
+								
+								if ($output_io['option_index'] != "") {
+									$option_id = $this->option_index_to_option_id_in_block($output_io['option_index'], $block_height);
+									if ($option_id) {
+										$db_event = $this->blockchain->app->run_query("SELECT ev.*, et.* FROM options op JOIN events ev ON op.event_id=ev.event_id JOIN event_types et ON ev.event_type_id=et.event_type_id WHERE op.option_id='".$option_id."';")->fetch();
+										$event = new Event($this, $db_event, false);
+										$effectiveness_factor = $event->block_id_to_effectiveness_factor($block_height);
+										
+										if ($this->db_game['payout_weight'] == "coin_block") $votes = floor($effectiveness_factor*$cbd);
+										else if ($this->db_game['payout_weight'] == "coin_round") $votes = floor($effectiveness_factor*$crd);
+										else $votes = floor($effectiveness_factor*$colored_amount);
+										
+										$insert_q .= "'".$option_id."', '".$db_event['event_id']."', '".$effectiveness_factor."', '".$votes."'";
+									}
+									else $insert_q .= "null, null, null, null";
 								}
+								else $insert_q .= "null, null, null, null";
+								
+								$insert_q .= "), ";
 							}
 							
-							$qqq .= ";";
-							$rrr = $this->blockchain->app->run_query($qqq);
+							$insert_q = substr($insert_q, 0, strlen($insert_q)-2).";";
+							
+							$this->blockchain->app->dbh->beginTransaction();
+							$qq = "DELETE gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.create_transaction_id='".$db_transaction['transaction_id']."';";
+							$rr = $this->blockchain->app->run_query($qq);
+							$rr = $this->blockchain->app->run_query($insert_q);
+							$this->blockchain->app->dbh->commit();
 						}
 					}
 				}

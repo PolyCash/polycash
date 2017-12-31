@@ -488,10 +488,9 @@ class Blockchain {
 							$coin_rounds = $coin_rounds['ref_coin_round_sum'];
 							
 							$coin_round_sum = 0;
-							
 							$ref_round_id = $color_game->block_to_round($ref_block_id);
 							
-							$this->app->log_message("game #".$db_color_game['game_id'].", color sum: ".$color_amount/pow(10,$color_game->db_game['decimal_places']).", outputs: ".count($outputs));
+							$insert_q = "INSERT INTO transaction_game_ios (game_id, is_coinbase, io_id, colored_amount, ref_block_id, ref_coin_blocks, ref_round_id, ref_coin_rounds, option_id, event_id, effectiveness_factor) VALUES ";
 							
 							for ($j=0; $j<count($outputs); $j++) {
 								if ($output_io_address_ids[$j] != $escrow_address['address_id']) {
@@ -504,27 +503,31 @@ class Blockchain {
 									$this_coin_rounds = floor($coin_rounds*($outputs[$j]["value"]*pow(10,$color_game->db_game['decimal_places']))/$relevant_output_sum);
 									if ($j == count($outputs)-1) $this_coin_rounds = $coin_rounds - $coin_round_sum;
 									
-									$qq = "INSERT INTO transaction_game_ios SET game_id='".$color_game->db_game['game_id']."', io_id='".$output_io_ids[$j]."', colored_amount='".$this_color_amount."', ref_block_id='".$ref_block_id."', ref_coin_blocks='".$this_coin_blocks."', ref_round_id='".$ref_round_id."', ref_coin_rounds='".$this_coin_rounds."'";
+									$insert_q .= "('".$color_game->db_game['game_id']."', '0', '".$output_io_ids[$j]."', '".$this_color_amount."', '".$ref_block_id."', '".$this_coin_blocks."', '".$ref_round_id."', '".$this_coin_rounds."', ";
+									
 									if ($output_io_indices[$j] !== false) {
 										$option_id = $color_game->option_index_to_option_id_in_block($output_io_indices[$j], $ref_block_id);
 										if ($option_id) {
 											$db_event = $this->app->run_query("SELECT ev.*, et.* FROM options op JOIN events ev ON op.event_id=ev.event_id JOIN event_types et ON ev.event_type_id=et.event_type_id WHERE op.option_id='".$option_id."';")->fetch();
 											$event = new Event($color_game, $db_event, false);
 											$effectiveness_factor = $event->block_id_to_effectiveness_factor($this->last_block_id()+1);
-											$qq .= ", option_id='".$option_id."', event_id='".$db_event['event_id']."', effectiveness_factor='".$effectiveness_factor."'";
+											
+											$insert_q .= "'".$option_id."', '".$db_event['event_id']."', '".$effectiveness_factor."'";
 										}
+										else $insert_q .= "null, null, null";
 									}
-									$qq .= ";";
-									$rr = $this->app->run_query($qq);
-									$gio_id = $this->app->last_insert_id();
+									else $insert_q .= "null, null, null";
 									
-									$this->app->log_message($gio_id." ".$qq);
+									$insert_q .= "), ";
 									
 									$color_amount_sum += $this_color_amount;
 									$coin_block_sum += $this_coin_blocks;
 									$coin_round_sum += $this_coin_rounds;
 								}
 							}
+							
+							$insert_q = substr($insert_q, 0, strlen($insert_q)-2).";";
+							$this->app->run_query($insert_q);
 						}
 					}
 					

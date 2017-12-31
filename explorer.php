@@ -1058,7 +1058,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					echo "This transaction has ".(int) $transaction['num_inputs']." inputs and ".(int) $transaction['num_outputs']." outputs totalling ".$app->format_bignum($transaction['amount']/pow(10,$blockchain->db_blockchain['decimal_places']))." ".$blockchain->db_blockchain['coin_name_plural'].". ";
 					if ($game) {
 						$coins_in = $game->transaction_coins_in($transaction['transaction_id']);
-						$coins_out = $game->transaction_coins_in($transaction['transaction_id']);
+						$coins_out = $game->transaction_coins_out($transaction['transaction_id'], true);
 						echo $app->format_bignum($coins_in/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." in, ".$app->format_bignum($coins_out/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." out. ";
 					}
 					echo "Loaded in ".number_format($transaction['load_time'], 2)." seconds.";
