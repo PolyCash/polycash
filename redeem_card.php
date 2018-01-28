@@ -10,10 +10,13 @@ $card = false;
 
 if (!empty($_REQUEST['redirect_key'])) $redirect_key = $_REQUEST['redirect_key'];
 
+if (!empty($redirect_key)) $redirect_url = $app->check_fetch_redirect_url($redirect_key);
+else $redirect_url = false;
+
 include('includes/html_start.php');
 ?>
 <div class="container-fluid">
-	<input type="hidden" id="redirect_key" value="<?php if ($redirect_key) echo $redirect_key; ?>" />
+	<input type="hidden" id="redirect_key" value="<?php if ($redirect_url) echo $redirect_url['redirect_key']; ?>" />
 	<?php
 	if ($uri_parts[1] == "redeem") {
 		$issuer_id = (int) $uri_parts[2];
@@ -52,7 +55,7 @@ include('includes/html_start.php');
 				}
 				</script>
 				
-				<input type="hidden" id="redirect_key" value="<?php if ($redirect_key) echo $redirect_key; ?>" />
+				<input type="hidden" id="redirect_key" value="<?php if ($redirect_url) echo $redirect_url['redirect_key']; ?>" />
 				
 				<div id="step1">
 					<div class="row">
@@ -254,7 +257,8 @@ include('includes/html_start.php');
 			<div class="col-sm-6 col-sm-push-3 text-center">
 				<h1>Log in via card</h2>
 				<p>
-					Please enter card details below to find your card.
+					Please enter card details below to find your card.<br/>
+					Or <a href="/wallet/<?php if ($redirect_url) echo '?redirect_key='.$redirect_url['redirect_key']; ?>">log in with a user account</a>
 				</p>
 				<form action="/redeem/" method="get" onsubmit="search_card_id(); return false;">
 					<div class="form-group">

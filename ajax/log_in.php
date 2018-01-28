@@ -8,27 +8,37 @@ if ($thisuser) {
 }
 else {
 	$noinfo_message = "Incorrect username or password, please try again.";
-	$alias = $app->normalize_username($_REQUEST['alias']);
+	$username = $app->normalize_username($_REQUEST['username']);
 	$password = $app->strong_strip_tags($_REQUEST['password']);
+	if ($password == hash("sha256", "")) $password = "";
 	
-	$q = "SELECT * FROM users WHERE username=".$app->quote_escape($alias).";";
+	$q = "SELECT * FROM users WHERE username=".$app->quote_escape($username).";";
 	$r = $app->run_query($q);
 	
 	if ($r->rowCount() == 0) {
-		$message = $noinfo_message;
-		$error_code = 2;
+		$verify_code = $app->random_string(32);
+		$salt = $app->random_string(16);
+		
+		$thisuser = $app->create_new_user($verify_code, $salt, $username, "", $password);
+		
+		$successful = $app->send_login_link($db_thisuser, $username);
 	}
 	else if ($r->rowCount() == 1) {
 		$db_thisuser = $r->fetch();
 		
-		if ($db_thisuser['password'] == $app->normalize_password($password, $db_thisuser['salt'])) {
-			$thisuser = new User($app, $db_thisuser['user_id']);
-			$message = "You have been logged in, redirecting...";
-			$error_code = 1;
+		if ($db_thisuser['login_method'] == "password") {
+			if ($db_thisuser['password'] == $app->normalize_password($password, $db_thisuser['salt'])) {
+				$thisuser = new User($app, $db_thisuser['user_id']);
+				$message = "You have been logged in, redirecting...";
+				$error_code = 1;
+			}
+			else {
+				$message = $noinfo_message;
+				$error_code = 2;
+			}
 		}
 		else {
-			$message = $noinfo_message;
-			$error_code = 2;
+			$successful = $app->send_login_link($db_thisuser, $db_thisuser['username']);
 		}
 	}
 	else {
@@ -36,33 +46,6 @@ else {
 		$error_code = 2;
 	}
 	
-	if ($error_code == 1) {
-		$redirect_url = false;
-		
-		if ($GLOBALS['pageview_tracking_enabled']) $thisuser->log_user_in($redirect_url, $viewer_id);
-		else $thisuser->log_user_in($redirect_url, false);
-		
-		if (!empty($_REQUEST['invite_key'])) {
-			$invite_game = false;
-			$success = $app->try_apply_invite_key($thisuser->db_user['user_id'], $_REQUEST['invite_key'], $invite_game);
-			if ($success) {
-				$app->output_message($error_code, "/wallet/".$invite_game['url_identifier'], false);
-				die();
-			}
-		}
-		if ($redirect_url) {
-			$app->output_message($error_code, $redirect_url['url'], false);
-		}
-		else {
-			$redir_game = $app->fetch_game_from_url();
-			if ($redir_game) {
-				$header_loc = "/wallet/".$redir_game['url_identifier']."/";
-			}
-			else $header_loc = "/accounts/";
-			
-			$app->output_message($error_code, $header_loc, false);
-		}
-	}
-	else $app->output_message($error_code, $message, false);
+	$app->output_message($error_code, $message, false);
 }
 ?>

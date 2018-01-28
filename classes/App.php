@@ -332,6 +332,17 @@ class App {
 		return $redirect_url;
 	}
 
+	public function check_fetch_redirect_url($redirect_key) {
+		$q = "SELECT * FROM redirect_urls WHERE redirect_key=".$this->quote_escape($redirect_key).";";
+		$r = $this->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			$redirect_url = $r->fetch();
+			return $redirect_url;
+		}
+		else $redirect_url = false;
+	}
+	
 	public function mail_async($email, $from_name, $from, $subject, $message, $bcc, $cc) {
 		$q = "INSERT INTO async_email_deliveries SET to_email=".$this->quote_escape($email).", from_name=".$this->quote_escape($from_name).", from_email=".$this->quote_escape($from).", subject=".$this->quote_escape($subject).", message=".$this->quote_escape($message).", bcc=".$this->quote_escape($bcc).", cc=".$this->quote_escape($cc).", time_created='".time()."';";
 		$r = $this->run_query($q);
@@ -781,18 +792,19 @@ class App {
 							$this->log_message('Error generating a payment address. Please visit /install.php and then set $GLOBALS["rsa_pub_key"] in includes/config.php');
 							$save_method = "skip";
 						}
-						else {
-							if ($currency['short_name'] == "litecoin") $keySet = litecoin::getNewKeySet();
-							else $keySet = bitcoin::getNewKeySet();
+						else if ($currency['short_name'] == "bitcoin") {
+							$keygen = new bitcoin();
+							$keySet = $keygen->getNewKeySet();
 							$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
 							$address_text = $keySet['pubAdd'];
 							$save_method = "db";
 						}
+						else $save_method = "skip";
 					}
 				}
 			}
 			else {
-				$address_text = $this->random_string(34);
+				$address_text = $this->random_string(10);
 				$save_method = "fake";
 			}
 			

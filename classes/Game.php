@@ -1895,10 +1895,7 @@ class Game {
 			$num_addr = $rr->rowCount();
 			
 			if ($num_addr < $this->db_game['min_unallocated_addresses']) {
-				echo "Generate ".($this->db_game['min_unallocated_addresses']-$num_addr)." unallocated #".$option_index." addresses in ".$this->db_game['name'];
-				if ($coin_rpc) echo " by RPC";
-				else echo " by bitcoin-sci";
-				echo "<br/>\n";
+				$this->blockchain->app->log_message("Generate ".($this->db_game['min_unallocated_addresses']-$num_addr)." unallocated #".$option_index." addresses in ".$this->db_game['name']);
 				
 				if ($coin_rpc) {
 					$try_by_sci = false;

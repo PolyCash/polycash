@@ -375,11 +375,11 @@ class User {
 
 	public function log_user_in(&$redirect_url, $viewer_id) {
 		if ($GLOBALS['pageview_tracking_enabled']) {
-			$q = "SELECT * FROM viewer_connections WHERE type='viewer2user' AND from_id='".$viewer_id."' AND to_id='".$this->db_user['user_id']."';";
+			$q = "SELECT * FROM viewer_connections WHERE type='viewer2user' AND from_id=".$app->quote_escape($viewer_id)." AND to_id='".$this->db_user['user_id']."';";
 			$r = $this->app->run_query($q);
 			
 			if ($r->rowCount() == 0) {
-				$q = "INSERT INTO viewer_connections SET type='viewer2user', from_id='".$viewer_id."', to_id='".$this->db_user['user_id']."';";
+				$q = "INSERT INTO viewer_connections SET type='viewer2user', from_id=".$app->quote_escape($viewer_id).", to_id='".$this->db_user['user_id']."';";
 				$r = $this->app->run_query($q);
 			}
 		}
@@ -387,16 +387,16 @@ class User {
 		$session_key = session_id();
 		$expire_time = time()+3600*24;
 		
-		$q = "INSERT INTO user_sessions SET user_id='".$this->db_user['user_id']."', session_key='".$session_key."', login_time='".time()."', expire_time='".$expire_time."'";
+		$q = "INSERT INTO user_sessions SET user_id='".$this->db_user['user_id']."', session_key=".$app->quote_escape($session_key).", login_time='".time()."', expire_time='".$expire_time."'";
 		if ($GLOBALS['pageview_tracking_enabled']) {
-			$q .= ", ip_address='".$_SERVER['REMOTE_ADDR']."'";
+			$q .= ", ip_address=".$app->quote_escape($_SERVER['REMOTE_ADDR']);
 		}
 		$q .= ";";
 		$r = $this->app->run_query($q);
 		
 		$q = "UPDATE users SET logged_in=1";
 		if ($GLOBALS['pageview_tracking_enabled']) {
-			$q .= ", ip_address='".$_SERVER['REMOTE_ADDR']."'";
+			$q .= ", ip_address=".$app->quote_escape($_SERVER['REMOTE_ADDR']);
 		}
 		$q .= " WHERE user_id='".$this->db_user['user_id']."';";
 		$r = $this->app->run_query($q);
@@ -409,13 +409,7 @@ class User {
 		$this->ensure_currency_accounts();
 		
 		if (!empty($_REQUEST['redirect_key'])) {
-			$redirect_key = $_REQUEST['redirect_key'];
-			$q = "SELECT * FROM redirect_urls WHERE redirect_key=".$this->app->quote_escape($redirect_key).";";
-			$r = $this->app->run_query($q);
-			
-			if ($r->rowCount() == 1) {
-				$redirect_url = $r->fetch();
-			}
+			$redirect_url = $this->app->check_fetch_redirect_url($_REQUEST['redirect_key']);
 		}
 	}
 	
