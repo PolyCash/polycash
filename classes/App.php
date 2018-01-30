@@ -2366,13 +2366,12 @@ class App {
 	
 	public function create_new_user($verify_code, $salt, $alias, $email, $password) {
 		$q = "INSERT INTO users SET username=".$this->quote_escape($alias).", notification_email=".$this->quote_escape($email).", password=".$this->quote_escape($this->normalize_password($password, $salt)).", salt=".$this->quote_escape($salt);
-		if ($GLOBALS['pageview_tracking_enabled']) {
-			$q .= ", ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']);
-		}
-		if ($GLOBALS['new_games_per_user'] != "unlimited" && $GLOBALS['new_games_per_user'] > 0) {
-			$q .= ", authorized_games=".$this->quote_escape($GLOBALS['new_games_per_user']);
-		}
-		$q .= ", time_created='".time()."', verify_code='".$verify_code."';";
+		if ($GLOBALS['pageview_tracking_enabled']) $q .= ", ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']);
+		if ($GLOBALS['new_games_per_user'] != "unlimited" && $GLOBALS['new_games_per_user'] > 0) $q .= ", authorized_games=".$this->quote_escape($GLOBALS['new_games_per_user']);
+		$q .= ", login_method='";
+		if (empty($password)) $q .= "email";
+		else $q .= "password";
+		$q .= "', time_created='".time()."', verify_code='".$verify_code."';";
 		$r = $this->run_query($q);
 		$user_id = $this->last_insert_id();
 		
@@ -2586,6 +2585,27 @@ class App {
 		$r = $this->run_query($q);
 		if ($r->rowCount() == 1) return $r->fetch();
 		else return false;
+	}
+	
+	public function send_login_link(&$db_thisuser, &$redirect_url, $username) {
+		$access_key = $this->random_string(16);
+		
+		$login_url = $GLOBALS['base_url']."/wallet/?login_key=".$access_key;
+		if (!empty($redirect_url)) $login_url .= "&redirect_key=".$redirect_url['redirect_key'];
+		
+		$q = "INSERT INTO user_login_links SET access_key=".$this->quote_escape($access_key).", username=".$this->quote_escape($username);
+		if (!empty($db_thisuser['user_id'])) $q .= ", user_id='".$db_thisuser['user_id']."'";
+		$q .= ", time_created='".time()."';";
+		$r = $this->run_query($q);
+		
+		$subject = "Click here to log in to ".$GLOBALS['coin_brand_name'];
+		
+		$message = "<p>Someone just tried to log in to your ".$GLOBALS['coin_brand_name']." account with username: <b>".$username."</b></p>\n";
+		$message .= "<p>To complete the login, please follow <a href=\"".$login_url."\">this link</a>:</p>\n";
+		$message .= "<p><a href=\"".$login_url."\">".$login_url."</a></p>\n";
+		$message .= "<p>If you didn't try to sign in, please delete this email.</p>\n";
+		
+		$delivery_id = $this->mail_async($username, $GLOBALS['coin_brand_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, false, false);
 	}
 }
 ?>

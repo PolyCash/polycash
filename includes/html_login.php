@@ -9,6 +9,14 @@ else $redirect_url = false;
 <script type="text/javascript">
 var existing_account = false;
 
+function generate_credentials() {
+	$.get("/ajax/check_username.php?action=generate", function(result) {
+		var result_obj = JSON.parse(result);
+		$('#generate_display').html(result_obj['message']);
+		$('#login_password').val($('#generate_password').val());
+		$('#username').val($('#generate_username').val());
+	});
+}
 function check_username() {
 	var username = $('#username').val();
 	$('#check_username_btn').html("Loading...");
@@ -34,11 +42,14 @@ function login() {
 	$.get("/ajax/log_in.php?username="+encodeURIComponent(username)+"&password="+encodeURIComponent(password)+"&redirect_key="+$('#redirect_key').val(), function(result) {
 		$('#login_btn').val("Log In");
 		var result_obj = JSON.parse(result);
+		
 		if (result_obj['status_code'] == 1) {
 			window.location = result_obj['message'];
 		}
-		else {
+		else if (result_obj['status_code'] == 3) {
 			alert(result_obj['message']);
+		}
+		else {
 			window.location = window.location;
 		}
 	});
@@ -117,9 +128,16 @@ function toggle_to_panel(which_panel) {
 		<div class="panel-title">Please generate a username/password pair.</div>
 	</div>
 	<div class="panel-body">
-		<p><button class="btn btn-danger">Generate a Password</button></p>
-		<p>Or <a href="" onclick="toggle_to_panel('password'); return false;">enter my password</a></p>
-		<p>Or <a href="" onclick="toggle_to_panel('login'); return false;">enter my username</a></p>
+		<div class="row">
+			<div class="col-sm-6">
+				<p><button class="btn btn-danger" onclick="generate_credentials();">Generate a Password</button></p>
+				<p>Or <a href="" onclick="toggle_to_panel('password'); return false;">enter my password</a></p>
+				<p>Or <a href="" onclick="toggle_to_panel('login'); return false;">enter my username</a></p>
+			</div>
+			<div class="col-sm-6">
+				<div id="generate_display"></div>
+			</div>
+		</div>
 	</div>
 </div>
 

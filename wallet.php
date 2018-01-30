@@ -22,6 +22,71 @@ if ($_REQUEST['action'] == "logout" && $thisuser) {
 	$message = "You have been logged out. ";
 }
 
+if (empty($thisuser) && !empty($_REQUEST['login_key'])) {
+	$login_link_error = false;
+	
+	$login_link_q = "SELECT * FROM user_login_links WHERE access_key=".$app->quote_escape($_REQUEST['login_key']).";";
+	$login_link_r = $app->run_query($login_link_q);
+	
+	if ($login_link_r->rowCount() > 0) {
+		$login_link = $login_link_r->fetch();
+		
+		if (empty($login_link['time_clicked'])) {
+			if ($login_link['time_created'] > time()-(60*15)) {
+				if (empty($login_link['user_id'])) {
+					$q = "SELECT * FROM users WHERE username=".$app->quote_escape($login_link['username']);
+					$r = $app->run_query($q);
+					
+					if ($r->rowCount() == 0) {
+						$verify_code = $app->random_string(32);
+						$salt = $app->random_string(16);
+						
+						$thisuser = $app->create_new_user($verify_code, $salt, $login_link['username'], "", "");
+					}
+					else {
+						$login_link_error = true;
+						$message = "Error: you followed an invalid login link. Please try again.";
+					}
+				}
+				else {
+					$q = "SELECT * FROM users WHERE user_id='".$login_link['user_id']."';";
+					$r = $app->run_query($q);
+					
+					if ($r->rowCount() > 0) {
+						$db_user = $r->fetch();
+						$thisuser = new User($app, $db_user['user_id']);
+					}
+					else {
+						$login_link_error = true;
+						$message = "Error: invalid login link. Please try again.";
+					}
+				}
+				
+				if (!$login_link_error) {
+					$q = "UPDATE user_login_links SET time_clicked='".time()."' WHERE login_link_id='".$login_link['login_link_id']."';";
+					$r = $app->run_query($q);
+					
+					$redirect_url = false;
+					$thisuser->log_user_in($redirect_url, $viewer_id);
+					
+					if ($redirect_url) {
+						header("Location: ".$redirect_url['url']);
+						die();
+					}
+				}
+			}
+			else {
+				$login_link_error = true;
+				$message = "Error: this login link has already expired.";
+			}
+		}
+		else {
+			$login_link_error = true;
+			$message = "Error: this login link has already been used.";
+		}
+	}
+}
+
 $game = false;
 
 if ($thisuser) {
