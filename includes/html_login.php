@@ -60,8 +60,7 @@ function toggle_to_panel(which_panel) {
 	if (selected_panel) $('#'+selected_panel+'_panel').hide();
 	
 	if (which_panel == 'noemail') {
-		if (existing_account == 1) which_panel = 'password';
-		else which_panel = 'generate';
+		which_panel = 'generate';
 		
 		$('#login_panel').hide();
 	}
@@ -130,9 +129,11 @@ function toggle_to_panel(which_panel) {
 	<div class="panel-body">
 		<div class="row">
 			<div class="col-sm-6">
-				<p><button class="btn btn-danger" onclick="generate_credentials();">Generate a Password</button></p>
-				<p>Or <a href="" onclick="toggle_to_panel('password'); return false;">enter my password</a></p>
+				<p>
+					<button class="btn btn-danger" onclick="generate_credentials();">Generate a username &amp; password</button>
+				</p>
 				<p>Or <a href="" onclick="toggle_to_panel('login'); return false;">enter my username</a></p>
+				<p>Or <a href="" onclick="toggle_to_panel('password'); return false;">enter my password</a></p>
 			</div>
 			<div class="col-sm-6">
 				<div id="generate_display"></div>
