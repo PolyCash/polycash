@@ -443,7 +443,13 @@ class Game {
 					if ($GLOBALS['api_proxy_url']) $api_client_url = $GLOBALS['api_proxy_url'].urlencode($db_user['api_url']);
 					else $api_client_url = str_replace('&amp;', '&', $db_user['api_url']);
 					
-					$api_result = file_get_contents($api_client_url);
+					$arrContextOptions=array(
+						"ssl"=>array(
+							"verify_peer"=>false,
+							"verify_peer_name"=>false,
+						),
+					);
+					$api_result = file_get_contents($api_client_url, false, stream_context_create($arrContextOptions));
 					$api_obj = json_decode($api_result);
 					
 					if ($api_obj->recommendations && count($api_obj->recommendations) > 0 && in_array($api_obj->recommendation_unit, array('coin','percent'))) {

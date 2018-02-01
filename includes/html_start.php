@@ -116,9 +116,9 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 			if ($nav_tab_selected == "cards" || $nav_tab_selected == "accounts") { ?>
 				<ul class="sidebar-menu" data-widget="tree">
 					<li class="header">Cards</li>
-					<li id="section_link_cards"><a href="/cards/?start_section=cards"<?php if ($nav_subtab_selected == "cards") echo ' onclick="open_page_section(\'cards\'); return false;"'; ?>><i class="fa fa-book"></i> My Cards</a></li>
-					<li id="section_link_add_card"><a href="/cards/?start_section=add_card"<?php if ($nav_subtab_selected == "cards") echo ' onclick="open_page_section(\'add_card\'); return false;"'; ?>><i class="fa fa-chain"></i> Connect a Card</a></li>
-					<li id="section_link_withdraw_btc"><a href="/cards/?start_section=withdraw_btc"<?php if ($nav_subtab_selected == "cards") echo ' onclick="open_page_section(\'withdraw_btc\'); return false;"'; ?>><i class="fa fa-btc"></i> Withdraw Bitcoins</a></li>
+					<li id="section_link_cards"><a href="/cards/?start_section=cards"<?php if ($nav_subtab_selected == "cards") echo ' onclick="open_page_section(\'cards\'); return false;"'; ?>><i class="fa fa-address-book"></i> My Cards</a></li>
+					<li id="section_link_add_card"><a href="/cards/?start_section=add_card"<?php if ($nav_subtab_selected == "cards") echo ' onclick="open_page_section(\'add_card\'); return false;"'; ?>><i class="fa fa-link"></i> Connect a Card</a></li>
+					<li id="section_link_withdraw_btc"><a href="/cards/?start_section=withdraw_btc"<?php if ($nav_subtab_selected == "cards") echo ' onclick="open_page_section(\'withdraw_btc\'); return false;"'; ?>><i class="fa fa-exchange-alt"></i> Withdraw Bitcoins</a></li>
 					<li<?php if ($nav_subtab_selected == "manage") echo ' class="active"'; ?>><a href="/cards/?action=manage"><i class="fa fa-print"></i> Print cards</a></li>
 					<li<?php if ($nav_subtab_selected == "create") echo ' class="active"'; ?>><a href="/cards/?action=create"><i class="fa fa-plus-circle"></i> Create cards</a></li>
 					<?php if (empty($thisuser)) { ?><li<?php if ($nav_subtab_selected == "redeem") echo ' class="active"'; ?>><a href="/redeem/"><i class="fa fa-money"></i> Redeem a card</a></li><?php } ?>
