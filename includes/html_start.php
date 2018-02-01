@@ -11,17 +11,14 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 	
 	<title><?php if (!empty($pagetitle)) echo $pagetitle; ?></title>
 	
-	<link rel="stylesheet" type="text/css" href="/css/bootstrap.min.css" media="screen" />
-	<link rel="stylesheet" type="text/css" href="/css/font-awesome.min.css" media="screen" />
 	<link rel="stylesheet" type="text/css" href="/css/style.css<?php if (!empty($GLOBALS['cachebuster'])) echo '?v='.$GLOBALS['cachebuster']; ?>" />
 	<link rel="stylesheet" type="text/css" href="/css/AdminLTE.min.css">
 	<link rel="stylesheet" type="text/css" href="/css/skin-blue.min.css">
 	<link rel="stylesheet" type="text/css" href="/css/jquery.ui.css" />
 	<link rel="stylesheet" type="text/css" href="/css/jquery.nouislider.css" />
+	<link rel="stylesheet" type="text/css" href="/css/bootstrap.min.css" media="screen" />
+	<link rel="stylesheet" type="text/css" href="/css/fontawesome-all.min.css" media="screen" />
 	<?php
-	if ($nav_tab_selected == "home" && $GLOBALS['site_domain'] != $_SERVER['HTTP_HOST']) {
-		echo '<link rel="canonical" href="http://stake.money">'."\n";
-	}
 	if ($GLOBALS['signup_captcha_required']) { ?>
 	<script type="text/javascript" src="https://www.google.com/jsapi"></script>
 	<?php
@@ -57,14 +54,14 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 <div class="wrapper">
 	<header class="main-header">
 		<a href="/" class="logo">
-			<span class="logo-mini"><b>S</b>M</span>
-			<span class="logo-lg"><b>Stake</b>Money</span>
+			<span class="logo-mini"><b>P</b>C</span>
+			<span class="logo-lg"><b>Poly</b>Cash</span>
 		</a>
 
 		<!-- Header Navbar -->
 		<nav class="navbar navbar-static-top" role="navigation">
 			<!-- Sidebar toggle button-->
-			<a href="#" class="sidebar-toggle" data-toggle="push-menu" role="button">
+			<a href="#" class="sidebar-toggle fas fa-bars" data-toggle="push-menu" role="button">
 				<span class="sr-only">Toggle navigation</span>
 			</a>
 			<!-- Navbar Right Menu -->

@@ -22,7 +22,7 @@ if ($thisuser && $game) {
 				}
 			}
 			
-			$output_obj['username'] = $to_user->db_user['username'];
+			$output_obj['username'] = "Player".$to_user->db_user['user_id'];
 			$output_obj['content'] = "";
 
 			$q = "SELECT * FROM user_messages WHERE game_id=".$game->db_game['game_id']." AND ((from_user_id=".$thisuser->db_user['user_id']." AND to_user_id=".$to_user->db_user['user_id'].") OR (from_user_id=".$to_user->db_user['user_id']." AND to_user_id='".$thisuser->db_user['user_id']."'));";

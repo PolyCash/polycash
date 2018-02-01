@@ -1461,7 +1461,7 @@ class Game {
 	public function render_game_players() {
 		$html = "";
 		
-		$q = "SELECT *, SUM(ug.account_value) AS account_value_sum FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$this->db_game['game_id']."' AND ug.payment_required=0 GROUP BY ug.user_id ORDER BY account_value_sum DESC, u.username ASC;";
+		$q = "SELECT *, SUM(ug.account_value) AS account_value_sum FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$this->db_game['game_id']."' AND ug.payment_required=0 GROUP BY ug.user_id ORDER BY account_value_sum DESC, u.user_id ASC;";
 		$r = $this->blockchain->app->run_query($q);
 		$html .= "<b>".$r->rowCount()." players</b><br/>\n";
 		
@@ -1469,7 +1469,7 @@ class Game {
 			$networth_disp = $this->blockchain->app->format_bignum($temp_user_game['account_value_sum']);
 			
 			$html .= '<div class="row">';
-			$html .= '<div class="col-sm-4"><a href="" onclick="openChatWindow('.$temp_user_game['user_id'].'); return false;">'.$temp_user_game['username'].'</a></div>';
+			$html .= '<div class="col-sm-4"><a href="" onclick="openChatWindow('.$temp_user_game['user_id'].'); return false;">Player'.$temp_user_game['user_id'].'</a></div>';
 			
 			$html .= '<div class="col-sm-4">'.$networth_disp.' ';
 			if ($networth_disp == '1') $html .= $this->db_game['coin_name'];
