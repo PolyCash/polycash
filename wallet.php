@@ -752,9 +752,15 @@ if ($thisuser && $game) {
 					<?php
 					if ($game->db_game['module'] == "CoinBattles") {
 						$event = $game->current_events[0];
-						list($html, $js) = $game->module->currency_chart($game, $event->db_event['event_starting_block'], false);
-						echo '<div style="margin-bottom: 15px;" id="game0_chart_html">'.$html."</div>\n";
-						echo '<div id="game0_chart_js"><script type="text/javascript">'.$js.'</script></div>'."\n";
+						
+						if (empty($event)) {
+							echo "Chart canceled; there is no current event for this game.<br/>\n";
+						}
+						else {
+							list($html, $js) = $game->module->currency_chart($game, $event->db_event['event_starting_block'], false);
+							echo '<div style="margin-bottom: 15px;" id="game0_chart_html">'.$html."</div>\n";
+							echo '<div id="game0_chart_js"><script type="text/javascript">'.$js.'</script></div>'."\n";
+						}
 					}
 					?>
 					<div id="game0_events" class="game_events"></div>

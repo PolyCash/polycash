@@ -107,9 +107,9 @@ class CoinBattlesGameDefinition {
 			
 			$event = array(
 				"event_index" => $round-1,
-				"event_starting_block" => $chain_starting_block+$round*$round_length,
-				"event_final_block" => $chain_starting_block+($round+1)*$round_length-1,
-				"event_payout_block" => $chain_starting_block+($round+1)*$round_length-1,
+				"event_starting_block" => $chain_starting_block+($round-1)*$round_length,
+				"event_final_block" => $chain_starting_block+$round*$round_length-1,
+				"event_payout_block" => $chain_starting_block+$round*$round_length-1,
 				"event_name" => "Coin Battle #".$round,
 				"option_name" => "outcome",
 				"option_name_plural" => "outcomes",
@@ -329,6 +329,8 @@ class CoinBattlesGameDefinition {
 	public function currency_chart(&$game, $from_block_id, $to_block_id) {
 		$html = "";
 		$js = "";
+		
+		if ($from_block_id === NULL) return false;
 		
 		$btc_currency = $this->app->get_currency_by_abbreviation("BTC");
 		

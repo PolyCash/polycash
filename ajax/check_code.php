@@ -82,7 +82,9 @@ if ($r->rowCount() == 1) {
 			else $app->output_message(4, "Correct!", false);
 		}
 		else {
-			$q = "INSERT INTO card_failedchecks SET card_id=".$app->quote_escape($card['card_id']).", ip_address=".$app->quote_escape($_SERVER['REMOTE_ADDR']).", check_time='".time()."', attempted_code=".$app->quote_escape($code).";";
+			$q = "INSERT INTO card_failedchecks SET card_id=".$app->quote_escape($card['card_id']);
+			if ($GLOBALS['pageview_tracking_enabled']) $q .= ", ip_address=".$app->quote_escape($_SERVER['REMOTE_ADDR']);
+			$q .= ", check_time='".time()."', attempted_code=".$app->quote_escape($code).";";
 			$r = $app->run_query($q);
 			
 			$app->output_message(0, "Unspecified error", false);

@@ -784,7 +784,6 @@ class App {
 						$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
 						
 						$address_text = $coin_rpc->getnewaddress();
-						$encWIF = "";
 						$save_method = "wallet.dat";
 					}
 					catch (Exception $e) {
@@ -795,7 +794,6 @@ class App {
 						else if ($currency['short_name'] == "bitcoin") {
 							$keygen = new bitcoin();
 							$keySet = $keygen->getNewKeySet();
-							$encWIF = bin2hex(bitsci::rsa_encrypt($keySet['privWIF'], $GLOBALS['rsa_pub_key']));
 							$address_text = $keySet['pubAdd'];
 							$save_method = "db";
 						}
@@ -804,7 +802,7 @@ class App {
 				}
 			}
 			else {
-				$address_text = $this->random_string(10);
+				$address_text = $this->random_string(20);
 				$save_method = "fake";
 			}
 			
@@ -827,10 +825,22 @@ class App {
 					if ($account) {
 						$q = "UPDATE address_keys SET account_id='".$account['account_id']."' WHERE address_key_id='".$address_key['address_key_id']."';";
 						$r = $this->run_query($q);
+						
+						$address_key['account_id'] = $account['account_id'];
 					}
-					return $address_key;
 				}
-				else return false;
+				else {
+					$q = "INSERT INTO address_keys SET currency_id='".$blockchain->currency_id()."', address_id='".$db_address['address_id']."', save_method='".$save_method."', pub_key=".$this->quote_escape($address_text);
+					if (!empty($keySet['privWIF'])) $q .= ", priv_key=".$this->quote_escape($keySet['privWIF']);
+					if (!empty($account)) $q .= ", account_id='".$account['account_id']."'";
+					$q .= ";";
+					$r = $this->run_query($q);
+					$address_key_id = $this->last_insert_id();
+					
+					$address_key = $this->run_query("SELECT * FROM address_keys WHERE address_key_id='".$address_key_id."';")->fetch();
+				}
+				
+				return $address_key;
 			}
 		}
 		else return false;
