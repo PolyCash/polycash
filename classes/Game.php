@@ -2371,6 +2371,9 @@ class Game {
 				$buyin_q = "SELECT * FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.create_block_id='".$block_height."' AND io.address_id='".$escrow_address['address_id']."' GROUP BY t.transaction_id;";
 				$buyin_r = $this->blockchain->app->run_query($buyin_q);
 				
+				$msg = "Looping through ".$buyin_r->rowCount()." buyin transactions\n";
+				$log_text .= $msg;
+				
 				while ($buyin_tx = $buyin_r->fetch()) {
 					// Check if buy-in transaction has already been created
 					$qq = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.create_transaction_id='".$buyin_tx['transaction_id']."';";
@@ -2721,64 +2724,67 @@ class Game {
 	public function process_sellouts_in_block($block_id) {
 		if ($this->db_game['sellout_policy'] == "on") {
 			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false, false);
-			$escrow_balance = $this->blockchain->address_balance_at_block($escrow_address, $block_id);
-			$coins_in_existence = $this->coins_in_existence($block_id);
 			
 			// Identify sellout transactions paid into escrow & create records in game_sellouts table
 			$q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE io.blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND t.block_id = ".$block_id." AND io.address_id='".$escrow_address['address_id']."' GROUP BY t.transaction_id;";
 			$r = $this->blockchain->app->run_query($q);
 			
-			while ($transaction = $r->fetch()) {
-				$qq = "SELECT * FROM game_sellouts WHERE game_id='".$this->db_game['game_id']."' AND in_tx_hash=".$this->blockchain->app->quote_escape($transaction['tx_hash']).";";
-				$rr = $this->blockchain->app->run_query($qq);
+			if ($r->rowCount() > 0) {
+				$escrow_balance = $this->blockchain->address_balance_at_block($escrow_address, $block_id);
+				$coins_in_existence = $this->coins_in_existence($block_id);
 				
-				if ($rr->rowCount() == 0) {
-					$qq = "SELECT COUNT(*), SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE io.spend_transaction_id='".$transaction['transaction_id']."' AND gio.game_id='".$this->db_game['game_id']."';";
+				while ($transaction = $r->fetch()) {
+					$qq = "SELECT * FROM game_sellouts WHERE game_id='".$this->db_game['game_id']."' AND in_tx_hash=".$this->blockchain->app->quote_escape($transaction['tx_hash']).";";
 					$rr = $this->blockchain->app->run_query($qq);
-					$stats_in = $rr->fetch();
 					
-					$qq = "SELECT COUNT(*), SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE io.create_transaction_id='".$transaction['transaction_id']."' AND gio.game_id='".$this->db_game['game_id']."';";
-					$rr = $this->blockchain->app->run_query($qq);
-					$stats_out = $rr->fetch();
-					
-					if ($stats_in['COUNT(*)'] > 0) {
-						$exchange_rate = round($coins_in_existence/$escrow_balance*pow(10,6))/pow(10,6);
-						$coloredcoins_destroyed = $stats_in['SUM(gio.colored_amount)'] - $stats_out['SUM(gio.colored_amount)'];
-						
-						$value_destroyed_coins = floor($coloredcoins_destroyed/$exchange_rate);
-						
-						$qq = "SELECT SUM(amount) FROM transaction_ios WHERE create_transaction_id='".$transaction['transaction_id']."' AND address_id='".$escrow_address['address_id']."';";
+					if ($rr->rowCount() == 0) {
+						$qq = "SELECT COUNT(*), SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE io.spend_transaction_id='".$transaction['transaction_id']."' AND gio.game_id='".$this->db_game['game_id']."';";
 						$rr = $this->blockchain->app->run_query($qq);
-						$coins_into_escrow = $rr->fetch();
-						$coins_into_escrow = $coins_into_escrow['SUM(amount)'];
+						$stats_in = $rr->fetch();
 						
-						if ($this->blockchain->db_blockchain['url_identifier'] == "bitcoin") $fee_amount = 0.0005;
-						else $fee_amount = 0.001;
-						$fee_amount = $fee_amount*pow(10,$this->blockchain->db_blockchain['decimal_places']);
-						
-						$refund_amount = ($coins_into_escrow+$value_destroyed_coins) - $fee_amount;
-						
-						$qq = "SELECT SUM(amount) FROM transaction_ios WHERE spend_transaction_id='".$transaction['transaction_id']."';";
+						$qq = "SELECT COUNT(*), SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE io.create_transaction_id='".$transaction['transaction_id']."' AND gio.game_id='".$this->db_game['game_id']."';";
 						$rr = $this->blockchain->app->run_query($qq);
-						$in_io_sum = $rr->fetch();
-						$in_io_sum = (int)$in_io_sum['SUM(amount)'];
+						$stats_out = $rr->fetch();
 						
-						$qq = "SELECT * FROM transaction_ios WHERE spend_transaction_id='".$transaction['transaction_id']."' ORDER BY out_index ASC;";
-						$rr = $this->blockchain->app->run_query($qq);
-						$num_in_ios = $rr->rowCount();
-						$in_io_i=0;
-						$refund_sum = 0;
-						$out_amounts = array();
-						while ($in_io = $rr->fetch()) {
-							$refund_amount = floor($refund_amount*$in_io['amount']/$in_io_sum);
-							if ($in_io_i == $num_in_ios-1) $refund_amount = $refund_amount - $refund_sum;
-							array_push($out_amounts, $refund_amount);
-							$refund_sum += $refund_amount;
-							$in_io_i++;
+						if ($stats_in['COUNT(*)'] > 0) {
+							$exchange_rate = round($coins_in_existence/$escrow_balance*pow(10,6))/pow(10,6);
+							$coloredcoins_destroyed = $stats_in['SUM(gio.colored_amount)'] - $stats_out['SUM(gio.colored_amount)'];
+							
+							$value_destroyed_coins = floor($coloredcoins_destroyed/$exchange_rate);
+							
+							$qq = "SELECT SUM(amount) FROM transaction_ios WHERE create_transaction_id='".$transaction['transaction_id']."' AND address_id='".$escrow_address['address_id']."';";
+							$rr = $this->blockchain->app->run_query($qq);
+							$coins_into_escrow = $rr->fetch();
+							$coins_into_escrow = $coins_into_escrow['SUM(amount)'];
+							
+							if ($this->blockchain->db_blockchain['url_identifier'] == "bitcoin") $fee_amount = 0.0005;
+							else $fee_amount = 0.001;
+							$fee_amount = $fee_amount*pow(10,$this->blockchain->db_blockchain['decimal_places']);
+							
+							$refund_amount = ($coins_into_escrow+$value_destroyed_coins) - $fee_amount;
+							
+							$qq = "SELECT SUM(amount) FROM transaction_ios WHERE spend_transaction_id='".$transaction['transaction_id']."';";
+							$rr = $this->blockchain->app->run_query($qq);
+							$in_io_sum = $rr->fetch();
+							$in_io_sum = (int)$in_io_sum['SUM(amount)'];
+							
+							$qq = "SELECT * FROM transaction_ios WHERE spend_transaction_id='".$transaction['transaction_id']."' ORDER BY out_index ASC;";
+							$rr = $this->blockchain->app->run_query($qq);
+							$num_in_ios = $rr->rowCount();
+							$in_io_i=0;
+							$refund_sum = 0;
+							$out_amounts = array();
+							while ($in_io = $rr->fetch()) {
+								$refund_amount = floor($refund_amount*$in_io['amount']/$in_io_sum);
+								if ($in_io_i == $num_in_ios-1) $refund_amount = $refund_amount - $refund_sum;
+								array_push($out_amounts, $refund_amount);
+								$refund_sum += $refund_amount;
+								$in_io_i++;
+							}
+							
+							$qq = "INSERT INTO game_sellouts SET game_id='".$this->db_game['game_id']."', in_block_id='".$block_id."', in_tx_hash=".$this->blockchain->app->quote_escape($transaction['tx_hash']).", color_amount_in='".$coloredcoins_destroyed."', exchange_rate='".$exchange_rate."', amount_in='".$coins_into_escrow."', amount_out='".($coins_into_escrow+$value_destroyed_coins)."', out_amounts='".implode(",", $out_amounts)."', fee_amount='".$fee_amount."';";
+							$rr = $this->blockchain->app->run_query($qq);
 						}
-						
-						$qq = "INSERT INTO game_sellouts SET game_id='".$this->db_game['game_id']."', in_block_id='".$block_id."', in_tx_hash=".$this->blockchain->app->quote_escape($transaction['tx_hash']).", color_amount_in='".$coloredcoins_destroyed."', exchange_rate='".$exchange_rate."', amount_in='".$coins_into_escrow."', amount_out='".($coins_into_escrow+$value_destroyed_coins)."', out_amounts='".implode(",", $out_amounts)."', fee_amount='".$fee_amount."';";
-						$rr = $this->blockchain->app->run_query($qq);
 					}
 				}
 			}

@@ -28,7 +28,7 @@ class ElectionSimGameDefinition {
 			"final_round": false,
 			"buyin_policy": "unlimited",
 			"game_buyin_cap": 0,
-			"sellout_policy": "on",
+			"sellout_policy": "off",
 			"sellout_confirmations": 0,
 			"coin_name": "dollar",
 			"coin_name_plural": "dollars",
