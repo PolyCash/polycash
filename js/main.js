@@ -719,6 +719,18 @@ function select_add_output_changed() {
 		}
 	}
 }
+function add_all_options() {
+	for (var i=0; i<games[0].events.length; i++) {
+		for (var j=0; j<games[0].events[i].options.length; j++) {
+			var this_option = games[0].events[i].options[j];
+			var already_in = false;
+			for (k=0; k<vote_options.length; k++) {
+				if (vote_options[k].option_id == this_option.option_id) already_in = true;
+			}
+			if (!already_in) games[0].add_option_to_vote(i, this_option.option_id, this_option.name);
+		}
+	}
+}
 function show_intro_message() {
 	$('#intro_message').modal('show');
 }

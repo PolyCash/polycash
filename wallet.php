@@ -785,7 +785,9 @@ if ($thisuser && $game) {
 								<div id="compose_input_start_msg">Add inputs by clicking on the votes above.</div>
 							</div>
 							<div class="col-md-6 bordered_cell" id="compose_vote_outputs">
-								<b>Outputs:</b><div id="display_tx_fee"></div><br/>
+								<b>Outputs:</b>
+								<div id="display_tx_fee"></div>
+								&nbsp;&nbsp; <a href="" onclick="add_all_options(); return false;">Add all options</a><br/>
 								<select class="form-control" id="select_add_output" onchange="select_add_output_changed();"></select>
 							</div>
 						</div>
