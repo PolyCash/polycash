@@ -731,6 +731,12 @@ function add_all_options() {
 		}
 	}
 }
+function remove_all_outputs() {
+	for (var i=0; i<vote_options.length; i++) {
+		$('#compose_vote_output_'+i).remove();
+	}
+	vote_options.length = 0;
+}
 function show_intro_message() {
 	$('#intro_message').modal('show');
 }
@@ -1012,10 +1018,7 @@ function confirm_compose_vote() {
 					$('#compose_vote_success').slideDown('slow');
 					setTimeout("$('#compose_vote_success').slideUp('fast');", 5000);
 					
-					for (var i=0; i<vote_options.length; i++) {
-						$('#compose_vote_output_'+i).remove();
-					}
-					vote_options.length = 0;
+					remove_all_outputs();
 					
 					var num_inputs = vote_inputs.length;
 					for (var i=0; i<num_inputs; i++) {

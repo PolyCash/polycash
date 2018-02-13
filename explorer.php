@@ -333,9 +333,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						else if ($explore_mode == "utxo") echo $io['io_id'];
 						echo "/";
 					}
-					echo "'>View on ".$game->blockchain->db_blockchain['blockchain_name']."</a>\n";
+					echo "'><i class=\"fas fa-link\"></i> &nbsp; View on ".$game->blockchain->db_blockchain['blockchain_name']."</a>\n";
 					?>
-					<a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/" class="btn btn-sm btn-success">Play Now</a>
+					<a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; Play Now</a>
 					<?php
 				}
 			}

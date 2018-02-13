@@ -720,7 +720,7 @@ if ($thisuser && $game) {
 				<div class="panel-body">
 					<?php
 					if ($game->db_game['buyin_policy'] != "none") { ?>
-						<button style="float: right;" class="btn btn-success" onclick="initiate_buyin();">Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
+						<button style="float: right;" class="btn btn-success" onclick="initiate_buyin();"><i class="fas fa-shopping-cart"></i> &nbsp; Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
 						<?php
 					}
 					
@@ -787,11 +787,13 @@ if ($thisuser && $game) {
 							<div class="col-md-6 bordered_cell" id="compose_vote_outputs">
 								<b>Outputs:</b>
 								<div id="display_tx_fee"></div>
-								&nbsp;&nbsp; <a href="" onclick="add_all_options(); return false;">Add all options</a><br/>
-								<select class="form-control" id="select_add_output" onchange="select_add_output_changed();"></select>
+								&nbsp;&nbsp; <a href="" onclick="add_all_options(); return false;">Add all options</a>
+								&nbsp;&nbsp; <a href="" onclick="remove_all_outputs(); return false;">Remove all options</a>
+								
+								<select class="form-control" style="margin-top: 5px;" id="select_add_output" onchange="select_add_output_changed();"></select>
 							</div>
 						</div>
-						<button class="btn btn-success" id="confirm_compose_vote_btn" style="margin-top: 5px; margin-left: 5px;" onclick="confirm_compose_vote();">Confirm & Stake</button>
+						<button class="btn btn-success" id="confirm_compose_vote_btn" style="margin-top: 5px; margin-left: 5px;" onclick="confirm_compose_vote();"><i class="fas fa-check-circle"></i> &nbsp; Confirm & Stake</button>
 					</div>
 				</div>
 			</div>
@@ -839,7 +841,7 @@ if ($thisuser && $game) {
 						</div>
 						<div class="row">
 							<div class="col-sm-3">
-								<input class="btn btn-primary" type="submit" value="Save" />
+								<button class="btn btn-primary" type="submit">Save</button>
 							</div>
 						</div>
 					</form>
@@ -858,7 +860,7 @@ if ($thisuser && $game) {
 							<input style="display: none;" class="form-control" type="text" name="notification_email" id="notification_email" onfocus="notification_focused();" placeholder="Enter your email address" value="<?php echo $thisuser->db_user['notification_email']; ?>" />
 						</div>
 					</div>
-					<button style="display: none;" id="notification_save_btn" class="btn btn-primary" onclick="save_notification_preferences();">Save Notification Settings</button>
+					<button style="display: none;" id="notification_save_btn" class="btn btn-primary" onclick="save_notification_preferences();"><i class="fas fa-check-circle"></i> &nbsp; Save Notification Settings</button>
 					<br/>
 					
 					<h2>Choose your voting strategy</h2>
@@ -994,7 +996,7 @@ if ($thisuser && $game) {
 							</div>
 						</div>
 						<br/>
-						<input class="btn btn-primary" type="submit" value="Save Voting Strategy" />
+						<button class="btn btn-primary" type="submit">Save Voting Strategy</button>
 					</form>
 					<br/>
 					<?php /*
