@@ -2617,5 +2617,38 @@ class App {
 		
 		$delivery_id = $this->mail_async($username, $GLOBALS['coin_brand_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, false, false);
 	}
+	
+	public function first_snippet_between($string, $delim1, $delim2) {
+		$startpos = strpos($string, $delim1);
+		if ($startpos) {
+			$snippet = substr($string, $startpos+strlen($delim1), strlen($string)-$startpos-strlen($delim1));
+			$endpos = strpos($snippet, $delim2);
+			if ($endpos) {
+				$snippet = substr($snippet, 0, $endpos);
+				return $snippet;
+			}
+			else return false;
+		}
+		else return false;
+	}
+
+	public function guess_links_containing($needle, $haystack, $delimiter, $make_unique) {
+		$parts = explode($needle, $haystack);
+		$urls = "";
+		$u = 0;
+		for ($i=1; $i<count($parts); $i++) {
+			$first = substr($parts[$i-1], strrpos($parts[$i-1], $delimiter)+strlen($delimiter), strlen($parts[$i-1])-strrpos($parts[$i-1], $delimiter)-strlen($delimiter));
+			$rest = substr($parts[$i], 0, strpos($parts[$i], $delimiter));
+			if (strlen($rest) < 255) {
+				$url = trim($first.$needle.$rest);
+				
+				$urls[$u] = $url;
+				$u++;
+			}
+		}
+		
+		if ($make_unique) return array_values(array_unique($urls));
+		else return $urls;
+	}
 }
 ?>
