@@ -914,7 +914,10 @@ class App {
 				}
 				
 				echo '<div id="game'.$counter.'_events"></div>';
-				echo '<script type="text/javascript" id="game'.$counter.'_new_event_js">'.$featured_game->new_event_js($counter, false).'</script>';
+				echo '<script type="text/javascript" id="game'.$counter.'_new_event_js">';
+				echo $featured_game->new_event_js($counter, false);
+				echo "games[".$counter."].show_selected_event();\n";
+				echo '</script>';
 				
 				$faucet_io = $featured_game->check_faucet(false);
 				

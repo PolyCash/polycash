@@ -232,6 +232,8 @@ games[0].game_loop_event();
 <?php
 echo $game->new_event_js(0, false);
 ?>
+games[0].show_selected_event();
+
 var user_logged_in = <?php if (empty($thisuser)) echo 'false'; else echo 'true'; ?>;
 
 var homeCarousel;
