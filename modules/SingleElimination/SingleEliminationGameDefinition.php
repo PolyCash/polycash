@@ -282,8 +282,8 @@ class SingleEliminationGameDefinition {
 		else return false;
 	}
 	
-	public function set_event_outcome(&$game, &$coin_rpc, $db_event) {
-		$q = "SELECT *, SUM(ob.score) AS score FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id LEFT JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id='".$db_event['event_id']."' GROUP BY o.option_id ORDER BY o.option_index ASC;";
+	public function set_event_outcome(&$game, &$coin_rpc, $payout_event) {
+		$q = "SELECT *, SUM(ob.score) AS score FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id LEFT JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id='".$payout_event->db_event['event_id']."' GROUP BY o.option_id ORDER BY o.option_index ASC;";
 		$r = $this->app->run_query($q);
 		
 		if ($r->rowCount() > 0) {
@@ -296,22 +296,22 @@ class SingleEliminationGameDefinition {
 				else $winning_option = $second_option;
 			}
 			else {
-				list($winning_option, $pk_shootout_data) = $this->break_tie($game, $db_event, $first_option, $second_option);
+				list($winning_option, $pk_shootout_data) = $this->break_tie($game, $payout_event->db_event, $first_option, $second_option);
 			}
 			$gde_option_index = $winning_option['option_index']%2;
-			$msg = "event #".$db_event['event_index']." won by ".$winning_option['name']." (entity ".$winning_option['entity_id'].")";
+			$msg = "event #".$payout_event->db_event['event_index']." won by ".$winning_option['name']." (entity ".$winning_option['entity_id'].")";
 			$this->app->log_message($msg);
 			
-			$next_event_index = $this->event_index_to_next_event_index($db_event['event_index']);
+			$next_event_index = $this->event_index_to_next_event_index($payout_event->db_event['event_index']);
 			
-			$this->app->log_message("Update ".$next_event_index." based on ".$db_event['event_index']." (event_id=".$db_event['event_id'].")");
+			$this->app->log_message("Update ".$next_event_index." based on ".$payout_event->db_event['event_index']." (event_id=".$payout_event->db_event['event_id'].")");
 			
-			$q = "UPDATE game_defined_events SET outcome_index=".$gde_option_index." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."';";
+			$q = "UPDATE game_defined_events SET outcome_index=".$gde_option_index." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$payout_event->db_event['event_index']."';";
 			$r = $this->app->run_query($q);
 		
 			if ($next_event_index) {	
 				if (!empty($winning_option['entity_id'])) {
-					$pos_in_next_event = $db_event['event_index']%2;
+					$pos_in_next_event = $payout_event->db_event['event_index']%2;
 					$q = "SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$next_event_index."' ORDER BY game_defined_option_id ASC LIMIT 1";
 					if ($pos_in_next_event > 0) $q .= " OFFSET ".$pos_in_next_event;
 					$q .= ";";
@@ -334,6 +334,7 @@ class SingleEliminationGameDefinition {
 				$r = $this->app->run_query($q);
 			}
 		}
+		$payout_event->set_outcome_from_db($payout_event->db_event['event_payout_block'], true);
 	}
 	
 	public function event_index_to_next_event_index($event_index) {

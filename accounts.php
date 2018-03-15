@@ -9,6 +9,7 @@ if (!empty($_REQUEST['action'])) $action = $_REQUEST['action'];
 if ($thisuser && $action == "donate_to_faucet") {
 	$io_id = (int) $_REQUEST['account_io_id'];
 	$amount_each = (float) $_REQUEST['donate_amount_each'];
+	$utxos_each = (int) $_REQUEST['donate_utxos_each'];
 	$quantity = (int) $_REQUEST['donate_quantity'];
 	$game_id = (int) $_REQUEST['donate_game_id'];
 	
@@ -21,6 +22,8 @@ if ($thisuser && $action == "donate_to_faucet") {
 		$donate_game = new Game($donate_blockchain, $db_game['game_id']);
 		
 		$satoshis_each = pow(10,$db_game['decimal_places'])*$amount_each;
+		$satoshis_each_utxo = ceil($satoshis_each/$utxos_each);
+		$satoshis_each = $satoshis_each_utxo*$utxos_each;
 		$fee_amount = 0.001*pow(10,$db_game['decimal_places']);
 		
 		if ($quantity > 0 && $satoshis_each > 0) {
@@ -48,7 +51,7 @@ if ($thisuser && $action == "donate_to_faucet") {
 					
 					$coin_sum = $game_ios[0]['amount'];
 					$coins_per_chain_coin = (float) $colored_coin_sum/($coin_sum-$fee_amount);
-					$chain_coins_each = ceil($satoshis_each/$coins_per_chain_coin);
+					$chain_coins_each = ceil($satoshis_each_utxo/$coins_per_chain_coin);
 					
 					if ($game_ios[0]['spend_status'] == "unspent") {
 						$address_ids = array();
@@ -113,20 +116,24 @@ if ($thisuser && $action == "donate_to_faucet") {
 						if ($account_r->rowCount() > 0) {
 							$donate_account = $account_r->fetch();
 							
-							if ($total_cost_satoshis < $colored_coin_sum && $coin_sum > $chain_coins_each*$quantity - $fee_amount) {
-								$remainder_satoshis = $coin_sum - ($chain_coins_each*$quantity) - $fee_amount;
+							if ($total_cost_satoshis < $colored_coin_sum && $coin_sum > ($chain_coins_each*$quantity*$utxos_each) - $fee_amount) {
+								$remainder_satoshis = $coin_sum - ($chain_coins_each*$quantity*$utxos_each) - $fee_amount;
 								
+								$send_address_ids = array();
 								$amounts = array();
 								
 								for ($i=0; $i<$quantity; $i++) {
-									array_push($amounts, $chain_coins_each);
+									for ($j=0; $j<$utxos_each; $j++) {
+										array_push($amounts, $chain_coins_each);
+										array_push($send_address_ids, $address_ids[$i]);
+									}
 								}
 								if ($remainder_satoshis > 0) {
 									array_push($amounts, $remainder_satoshis);
-									array_push($address_ids, $game_ios[0]['address_id']);
+									array_push($send_address_ids, $game_ios[0]['address_id']);
 								}
 								
-								$transaction_id = $donate_game->blockchain->create_transaction('transaction', $amounts, false, array($game_ios[0]['io_id']), $address_ids, $fee_amount);
+								$transaction_id = $donate_game->blockchain->create_transaction('transaction', $amounts, false, array($game_ios[0]['io_id']), $send_address_ids, $fee_amount);
 								
 								if ($transaction_id) {
 									header("Location: /explorer/games/".$db_game['url_identifier']."/transactions/".$transaction_id."/");
@@ -446,6 +453,10 @@ include('includes/html_start.php');
 										<div class="form-group">
 											<label for="donate_amount_each">How many in-game coins should each person receive?</label>
 											<input type="text" class="form-control" name="donate_amount_each" />
+										</div>
+										<div class="form-group">
+											<label for="donate_amount_each">How many UTXOs should each person's coins be divided into?</label>
+											<input type="text" class="form-control" name="donate_utxos_each" />
 										</div>
 										<div class="form-group">
 											<label for="donate_quantity">How many faucet contributions do you want to make?</label>

@@ -221,6 +221,10 @@ games.push(new Game(<?php
 	echo ', "'.$game->db_game['exponential_inflation_rate'].'"';
 	echo ', "'.$blockchain_last_block['time_mined'].'"';
 	echo ', "'.$game->db_game['decimal_places'].'"';
+	echo ', "'.$game->db_game['view_mode'].'"';
+	echo ', ';
+	if ($user_game) echo $user_game['event_index'];
+	else echo "0";
 ?>));
 
 games[0].game_loop_event();

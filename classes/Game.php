@@ -1727,7 +1727,7 @@ class Game {
 			$js .= '
 			games['.$game_index.'].events['.$i.'] = new Event(games['.$game_index.'], '.$i.', '.$event->db_event['event_id'].', '.$event->db_event['num_voting_options'].', "'.$event->db_event['vote_effectiveness_function'].'", "'.$event->db_event['effectiveness_param1'].'", "'.$event->db_event['option_block_rule'].'");'."\n";
 			
-			$option_q = "SELECT * FROM options WHERE event_id='".$event->db_event['event_id']."' ORDER BY event_option_index ASC;";
+			$option_q = "SELECT * FROM options o LEFT JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id='".$event->db_event['event_id']."' ORDER BY o.event_option_index ASC;";
 			$option_r = $this->blockchain->app->run_query($option_q);
 			while ($option = $option_r->fetch()) {
 				$js .= 'event_html += "<div class=\'modal fade\' id=\'game'.$game_index.'_event'.$i.'_vote_confirm_'.$option['option_id'].'\'></div>";';
@@ -1742,22 +1742,26 @@ class Game {
 					$votingaddr_id = $user->user_address_id($this, $option['option_index'], false, $user_game['account_id']);
 					if ($votingaddr_id !== false) $has_votingaddr = "true";
 				}
-				$js .= "games[".$game_index."].events[".$i."].options.push(new option(games[".$game_index."].events[".$i."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", '".str_replace("'", "", $option['name'])."', 0, $has_votingaddr));\n";
+				$js .= "games[".$game_index."].events[".$i."].options.push(new option(games[".$game_index."].events[".$i."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", '".str_replace("'", "", $option['name'])."', 0, $has_votingaddr, ".$this->blockchain->app->quote_escape($option['image_url'])."));\n";
 				$j++;
 			}
 			$js .= '
 			games['.$game_index.'].events['.$i.'].option_selected(0);
-			games['.$game_index.'].events['.$i.'].refresh_time_estimate();
-			console.log("adding game, event '.$i.' into DOM...");'."\n";
+			games['.$game_index.'].events['.$i.'].refresh_time_estimate();'."\n";
 			
-			if ($i == 0) $js .= 'event_html += "<div class=\'row\'>";';
-			$js .= 'event_html += "<div class=\'col-sm-'.$event_bootstrap_cols.'\'>";';
-			$js .= 'event_html += "<div id=\'game'.$game_index.'_event'.$i.'\' class=\''.$holder_class.'\'><div id=\'game'.$game_index.'_event'.$i.'_current_round_table\'></div><div id=\'game'.$game_index.'_event'.$i.'_my_current_votes\'></div></div>";'."\n";
-			$js .= 'event_html += "</div>";';
-			if ($i%2 == 1 || $i == count($this->current_events)-1) {
-				$js .= 'event_html += "</div>';
-				if ($i < count($this->current_events)-1) $js .= '<div class=\'row\'>';
-				$js .= '";'."\n";
+			if ($this->db_game['view_mode'] == "simple") {
+				$js .= 'event_html += "<div id=\'game'.$game_index.'_event'.$i.'\' style=\'display: none;\'><div id=\'game'.$game_index.'_event'.$i.'_current_round_table\'></div><div id=\'game'.$game_index.'_event'.$i.'_my_current_votes\'></div><div id=\'game'.$game_index.'_event'.$i.'_event_nav\'></div></div>";'."\n";
+			}
+			else {
+				if ($i == 0) $js .= 'event_html += "<div class=\'row\'>";';
+				$js .= 'event_html += "<div class=\'col-sm-'.$event_bootstrap_cols.'\'>";';
+				$js .= 'event_html += "<div id=\'game'.$game_index.'_event'.$i.'\' class=\''.$holder_class.'\'><div id=\'game'.$game_index.'_event'.$i.'_current_round_table\'></div><div id=\'game'.$game_index.'_event'.$i.'_my_current_votes\'></div></div>";'."\n";
+				$js .= 'event_html += "</div>";';
+				if ($i%2 == 1 || $i == count($this->current_events)-1) {
+					$js .= 'event_html += "</div>';
+					if ($i < count($this->current_events)-1) $js .= '<div class=\'row\'>';
+					$js .= '";'."\n";
+				}
 			}
 		}
 		$js .= '$("#game'.$game_index.'_events").html(event_html);'."\n";
@@ -2043,7 +2047,7 @@ class Game {
 						$rr = $this->blockchain->app->run_query($qq);
 						
 						if ($rr->rowCount() == 0) {
-							$qq = "INSERT INTO event_types SET url_identifier=".$this->blockchain->app->quote_escape($etype_url_id).", name=".$this->blockchain->app->quote_escape($game_defined_event['event_name']).", event_winning_rule='game_definition', vote_effectiveness_function='".$this->db_game['default_vote_effectiveness_function']."', effectiveness_param1='".$this->db_game['default_effectiveness_param1']."', max_voting_fraction=".$this->db_game['default_max_voting_fraction'].", num_voting_options='".$gdo_r->rowCount()."', default_option_max_width=".$this->db_game['default_option_max_width'].";";
+							$qq = "INSERT INTO event_types SET url_identifier=".$this->blockchain->app->quote_escape($etype_url_id).", name=".$this->blockchain->app->quote_escape($game_defined_event['event_name']).", event_winning_rule='".$this->db_game['event_winning_rule']."', vote_effectiveness_function='".$this->db_game['default_vote_effectiveness_function']."', effectiveness_param1='".$this->db_game['default_effectiveness_param1']."', max_voting_fraction=".$this->db_game['default_max_voting_fraction'].", num_voting_options='".$gdo_r->rowCount()."', default_option_max_width=".$this->db_game['default_option_max_width'].";";
 							$rr = $this->blockchain->app->run_query($qq);
 							$event_type_id = $this->blockchain->app->last_insert_id();
 							
@@ -2495,7 +2499,7 @@ class Game {
 			
 			if (count($payout_events) > 0) {
 				for ($i=0; $i<count($payout_events); $i++) {
-					if ($payout_events[$i]->db_event['event_winning_rule'] == "game_definition") {
+					if (method_exists($this->module, "set_event_outcome")) {
 						if ($this->blockchain->db_blockchain['p2p_mode'] == "rpc") {
 							try {
 								$coin_rpc = new jsonRPCClient('http://'.$this->blockchain->db_blockchain['rpc_username'].':'.$this->blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->blockchain->db_blockchain['rpc_port'].'/');
@@ -2506,14 +2510,11 @@ class Game {
 						}
 						else $coin_rpc = false;
 						
-						if (!empty($this->db_game['module'])) {
-							$this->module->set_event_outcome($this, $coin_rpc, $payout_events[$i]->db_event);
-						}
+						$this->module->set_event_outcome($this, $coin_rpc, $payout_events[$i]);
 					}
+					else $log_text .= $payout_events[$i]->set_outcome_from_db($block_height, true);
 					
-					$log_text .= $payout_events[$i]->set_outcome_from_db($block_height, true);
-					
-					if ($payout_events[$i]->db_event['event_winning_rule'] == "game_definition" && method_exists($this->module, "event_index_to_next_event_index")) {
+					if (method_exists($this->module, "event_index_to_next_event_index")) {
 						$event_index = $this->module->event_index_to_next_event_index($payout_events[$i]->db_event['event_index']);
 						$this->set_event_labels_by_gde($event_index);
 					}
@@ -2923,7 +2924,7 @@ class Game {
 		if (empty($user_game) || $user_game['faucet_claims'] == 0) {
 			$faucet_account = $this->check_set_faucet_account();
 			
-			$q = "SELECT *, SUM(gio.colored_amount) AS colored_amount_sum FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.spend_status='unspent' AND k.account_id='".$faucet_account['account_id']."' GROUP BY io.io_id ORDER BY colored_amount_sum DESC;";
+			$q = "SELECT *, SUM(gio.colored_amount) AS colored_amount_sum FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.spend_status='unspent' AND k.account_id='".$faucet_account['account_id']."' GROUP BY a.address_id ORDER BY colored_amount_sum DESC;";
 			$r = $this->blockchain->app->run_query($q);
 			
 			if ($r->rowCount() > 0) {

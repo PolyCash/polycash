@@ -18,6 +18,7 @@ class CoinBattlesGameDefinition {
 			"event_type_name": "battle",
 			"event_type_name_plural": "battles",
 			"event_rule": "game_definition",
+			"event_winning_rule": "game_definition",
 			"event_entity_type_id": 0,
 			"option_group_id": 0,
 			"events_per_round": 1,
@@ -46,7 +47,8 @@ class CoinBattlesGameDefinition {
 			"default_effectiveness_param1": 0.9,
 			"default_max_voting_fraction": 1,
 			"default_option_max_width": 200,
-			"default_payout_block_delay": 0
+			"default_payout_block_delay": 0,
+			"view_mode": "default"
 		}';
 		$this->load();
 	}
@@ -162,10 +164,10 @@ class CoinBattlesGameDefinition {
 		}
 	}
 	
-	public function set_event_outcome(&$game, &$coin_rpc, $db_event) {
+	public function set_event_outcome(&$game, &$coin_rpc, $payout_event) {
 		if ($game->blockchain->db_blockchain['p2p_mode'] == "rpc") {
-			$start_block_hash = $coin_rpc->getblockhash((int)$db_event['event_starting_block']);
-			$final_block_hash = $coin_rpc->getblockhash((int)$db_event['event_final_block']);
+			$start_block_hash = $coin_rpc->getblockhash((int)$payout_event->db_event['event_starting_block']);
+			$final_block_hash = $coin_rpc->getblockhash((int)$payout_event->db_event['event_final_block']);
 			
 			$start_block = $coin_rpc->getblock($start_block_hash);
 			$final_block = $coin_rpc->getblock($final_block_hash);
@@ -256,8 +258,10 @@ class CoinBattlesGameDefinition {
 			$loop_index++;
 		}
 		
-		$q = "UPDATE game_defined_events SET outcome_index=".$best_performance_index." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."';";
+		$q = "UPDATE game_defined_events SET outcome_index=".$best_performance_index." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$payout_event->db_event['event_index']."';";
 		$r = $this->app->run_query($q);
+		
+		$payout_event->set_outcome_from_db($payout_event->db_event['event_payout_block'], true);
 	}
 	
 	public function load_currencies() {

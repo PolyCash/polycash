@@ -341,19 +341,30 @@ class Event {
 			}
 			
 			$html .= '
-			<div class="vote_option_box_container">
+			<div class="vote_option_box_container">';
+			
+			if ($this->game->db_game['view_mode'] == "simple") {
+				$onclick_html = 'if (!utxo_refresh_pending) {add_utxo_to_vote(0, true, false); games['.$game_instance_id.'].add_option_to_vote('.$game_event_index.', '.$round_stats[$i]['option_id'].', \''.$round_stats[$i]['name'].'\'); confirm_compose_vote(); setTimeout(\'games[0].show_next_event();\', 1200);}';
+				$html .= '<img id="option'.$round_stats[$i]['option_id'].'_image" src="" style="cursor: pointer; max-width: 400px; max-height: 400px; border: 1px solid black; margin-bottom: 5px;" onclick="'.$onclick_html.'" />';
+			}
+			else $onclick_html = 'games['.$game_instance_id.'].events['.$game_event_index.'].option_selected('.$i.'); games['.$game_instance_id.'].events['.$game_event_index.'].start_vote('.$round_stats[$i]['option_id'].');';
+			
+			$html .= '
 				<div class="vote_option_label';
 				if ($this->db_event['event_winning_rule'] == "max_below_cap") {
 					if ($option_votes > $max_sum_votes) $html .=  " redtext";
 					else if ($winning_option_id == $round_stats[$i]['option_id']) $html .=  " greentext";
 				}
 				$html .= '"';
-				if ($clickable) $html .= ' style="cursor: pointer;" onclick="games['.$game_instance_id.'].events['.$game_event_index.'].option_selected('.$i.'); games['.$game_instance_id.'].events['.$game_event_index.'].start_vote('.$round_stats[$i]['option_id'].');"';
+				if ($clickable) $html .= ' style="cursor: pointer;" onclick="'.$onclick_html.'"';
 				$html .= '>'.$round_stats[$i]['name'];
 				if (!empty($odds_disp)) $html .= ' &nbsp; '.$odds_disp;
 				$html .= ' &nbsp; ('.$pct_votes.'%)';
-				$html .= '</div>
-				
+				$html .= '
+				</div>';
+			if ($this->game->db_game['view_mode'] == "simple") {}
+			else {
+				$html .= '
 				<div class="stage vote_option_box_holder" style="height: '.$holder_width.'px; width: '.$holder_width.'px;">';
 				if ($show_boundbox) {
 					$html .= '<div onclick="games['.$game_instance_id.'].events['.$game_event_index.'].option_selected('.$i.'); games['.$game_instance_id.'].events['.$game_event_index.'].start_vote('.$round_stats[$i]['option_id'].');" class="vote_option_boundbox" style="cursor: pointer; height: '.$boundbox_diam.'px; width: '.$boundbox_diam.'px;';
@@ -372,7 +383,9 @@ class Event {
 						<input type="hidden" id="game'.$game_instance_id.'_event'.$game_event_index.'_option_id2rank_'.$round_stats[$i]['option_id'].'" value="'.$i.'" />
 						<input type="hidden" id="game'.$game_instance_id.'_event'.$game_event_index.'_rank2option_id_'.$i.'" value="'.$round_stats[$i]['option_id'].'" />
 					</div>
-				</div>
+				</div>';
+			}
+			$html .= '
 			</div>';
 		}
 		$html .= "</div>";
@@ -742,7 +755,7 @@ class Event {
 		if ($this->db_event['event_winning_rule'] == "max_below_cap") {
 			for ($rank=0; $rank<$this->db_event['num_voting_options']; $rank++) {
 				if ($rankings[$rank]['votes'] > $max_winning_votes) {}
-				else if (!$derived_winning_option_id && $rankings[$rank]['votes'] > 0) {
+				else if (!$derived_winning_option_id) {
 					$derived_winning_option_id = $rankings[$rank]['option_id'];
 					$derived_winning_votes = $rankings[$rank]['votes'];
 					$rank = $this->db_event['num_voting_options'];

@@ -861,7 +861,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								echo "<p>Last block loaded was <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$recent_block['block_id']."\">#".$recent_block['block_id']."</a> (loaded ".$app->format_seconds(time()-$recent_block['time_loaded'])." ago)</p>\n";
 							}
 							
-							$pending_blocks_q = "SELECT COUNT(*) FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND locally_saved=0 AND block_id > ".$blockchain->db_blockchain['first_required_block'].";";
+							$pending_blocks_q = "SELECT COUNT(*) FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND locally_saved=0";
+							if (!empty($blockchain->db_blockchain['first_required_block'])) $pending_blocks_q .= " AND block_id > ".$blockchain->db_blockchain['first_required_block'];
+							$pending_blocks_q .= ";";
 							$pending_blocks = $app->run_query($pending_blocks_q)->fetch();
 							$pending_blocks = $pending_blocks['COUNT(*)'];
 							

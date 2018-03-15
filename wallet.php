@@ -605,6 +605,8 @@ if ($thisuser && $game) {
 			echo ', "'.$game->db_game['exponential_inflation_rate'].'"';
 			echo ', "'.$blockchain_last_block['time_mined'].'"';
 			echo ', "'.$game->db_game['decimal_places'].'"';
+			echo ', "'.$game->db_game['view_mode'].'"';
+			echo ', '.$user_game['event_index'];
 		?>));
 		
 		games[0].game_loop_event();
@@ -709,6 +711,12 @@ if ($thisuser && $game) {
 					echo $thisuser->wallet_text_stats($game, $blockchain_current_round, $blockchain_last_block_id, $blockchain_block_within_round, $mature_balance, $immature_balance, $user_game);
 					?>
 				</div>
+				<?php
+				if ($game->db_game['buyin_policy'] != "none") { ?>
+					<button class="btn btn-success" style="margin-top: 8px;" onclick="initiate_buyin();"><i class="fas fa-shopping-cart"></i> &nbsp; Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
+					<?php
+				}
+				?>
 			</div>
 		</div>
 		
@@ -719,11 +727,6 @@ if ($thisuser && $game) {
 				</div>
 				<div class="panel-body">
 					<?php
-					if ($game->db_game['buyin_policy'] != "none") { ?>
-						<button style="float: right;" class="btn btn-success" onclick="initiate_buyin();"><i class="fas fa-shopping-cart"></i> &nbsp; Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
-						<?php
-					}
-					
 					$faucet_io = $game->check_faucet($user_game);
 					if ($faucet_io) {
 						echo '<p><button id="faucet_btn" class="btn btn-success" onclick="claim_from_faucet();">Claim '.$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].'</button></p>'."\n";
@@ -731,7 +734,7 @@ if ($thisuser && $game) {
 					
 					$game_status_explanation = $game->game_status_explanation($thisuser, $user_game);
 					?>
-					<div style="display: block; overflow: hidden;">
+					<div style="display: <?php if ($game->db_game['view_mode'] == "simple") echo "none"; else echo "block"; ?>; overflow: hidden;">
 						<div id="game_status_explanation"<?php if ($game_status_explanation == "") echo ' style="display: none;"'; ?>><?php if ($game_status_explanation != "") echo $game_status_explanation; ?></div>
 						
 						<div id="change_user_game">
@@ -769,6 +772,7 @@ if ($thisuser && $game) {
 					<?php
 					echo $game->new_event_js(0, $thisuser);
 					?>
+					games[0].show_selected_event();
 					</script>
 					<div id="select_input_buttons"><?php
 						echo $game->select_input_buttons($user_game);

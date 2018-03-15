@@ -895,6 +895,8 @@ class App {
 					echo ', "'.$featured_game->db_game['exponential_inflation_rate'].'"';
 					echo ', "'.$db_last_block['time_mined'].'"';
 					echo ', "'.$featured_game->db_game['decimal_places'].'"';
+					echo ', "'.$db_game['view_mode'].'"';
+					echo ', 0';
 				?>));
 				
 				games[<?php echo $counter; ?>].game_loop_event();
@@ -1504,6 +1506,7 @@ class App {
 			array('string', 'event_type_name', false),
 			array('string', 'event_type_name_plural', false),
 			array('string', 'event_rule', true),
+			array('string', 'event_winning_rule', true),
 			array('int', 'event_entity_type_id', true),
 			array('int', 'option_group_id', true),
 			array('int', 'events_per_round', true),
@@ -1532,7 +1535,8 @@ class App {
 			array('string', 'default_effectiveness_param1', true),
 			array('float', 'default_max_voting_fraction', true),
 			array('int', 'default_option_max_width', false),
-			array('int', 'default_payout_block_delay', true)
+			array('int', 'default_payout_block_delay', true),
+			array('string', 'view_mode', true)
 		);
 	}
 	

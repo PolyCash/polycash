@@ -116,7 +116,6 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 				$set_options_js .= $option_identifier.".unconfirmed_votes = ".$option['unconfirmed_votes'].";\n";
 				$set_options_js .= $option_identifier.".score = ".$option[$game->db_game['payout_weight'].'_score'].";\n";
 				$set_options_js .= $option_identifier.".unconfirmed_score = ".$option['unconfirmed_'.$game->db_game['payout_weight'].'_score'].";\n";
-				$set_options_js .= "console.log(".$option_identifier.");\n";
 				
 				$sum_votes += $option['votes'];
 				$sum_unconfirmed_votes += $option['unconfirmed_votes'];
