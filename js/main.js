@@ -979,10 +979,13 @@ function compose_vote_loop() {
 	output_amounts_need_update = false;
 	setTimeout("compose_vote_loop();", 400);
 }
+var transaction_in_progress = false;
+
 function confirm_compose_vote() {
 	if (vote_inputs.length > 0) {
 		if (vote_options.length > 0) {
-			utxo_refresh_pending = true;
+			transaction_in_progress = true;
+			utxo_spend_offset++;
 			$('#confirm_compose_vote_btn').html("Loading...");
 			
 			var place_vote_url = "/ajax/place_vote.php?game_id="+games[0].game_id+"&io_ids=";
@@ -1029,6 +1032,7 @@ function confirm_compose_vote() {
 					$('#compose_vote_errors').slideDown('slow');
 					setTimeout("$('#compose_vote_errors').slideUp('fast');", 10000);
 				}
+				transaction_in_progress = false;
 			});
 		}
 		else {
@@ -1272,7 +1276,7 @@ var vote_options = new Array();
 var output_amounts_need_update = false;
 var game_io_id2input_index = {};
 var mature_ios = new Array();
-var utxo_refresh_pending = false;
+var utxo_spend_offset = 0;
 
 // OBJECT: Event
 var Event = function(game, game_event_index, event_id, num_voting_options, vote_effectiveness_function, effectiveness_param1, option_block_rule) {
@@ -1559,7 +1563,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 									else _this.mature_game_io_ids_csv = json_result['mature_game_io_ids_csv'];
 									$('#select_input_buttons').html(json_result['select_input_buttons']);
 									reload_compose_vote();
-									utxo_refresh_pending = false;
+									utxo_spend_offset = 0;
 								}
 								
 								set_input_amount_sums();

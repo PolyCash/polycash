@@ -176,8 +176,8 @@ class CoinBattlesGameDefinition {
 			$final_time = $final_block['time'];
 		}
 		else {
-			$start_block = $game->blockchain->fetch_block_by_id($db_event['event_starting_block']);
-			$final_block = $game->blockchain->fetch_block_by_id($db_event['event_final_block']);
+			$start_block = $game->blockchain->fetch_block_by_id($payout_event->db_event['event_starting_block']);
+			$final_block = $game->blockchain->fetch_block_by_id($payout_event->db_event['event_final_block']);
 			
 			$start_time = $start_block['time_mined'];
 			$final_time = $final_block['time_mined'];

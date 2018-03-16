@@ -344,7 +344,7 @@ class Event {
 			<div class="vote_option_box_container">';
 			
 			if ($this->game->db_game['view_mode'] == "simple") {
-				$onclick_html = 'if (!utxo_refresh_pending) {add_utxo_to_vote(0, true, false); games['.$game_instance_id.'].add_option_to_vote('.$game_event_index.', '.$round_stats[$i]['option_id'].', \''.$round_stats[$i]['name'].'\'); confirm_compose_vote(); setTimeout(\'games[0].show_next_event();\', 1200);}';
+				$onclick_html = 'if (!transaction_in_progress) {add_utxo_to_vote(utxo_spend_offset, true, false); games['.$game_instance_id.'].add_option_to_vote('.$game_event_index.', '.$round_stats[$i]['option_id'].', \''.$round_stats[$i]['name'].'\'); confirm_compose_vote(); setTimeout(\'games[0].show_next_event();\', 1200);}';
 				$html .= '<img id="option'.$round_stats[$i]['option_id'].'_image" src="" style="cursor: pointer; max-width: 400px; max-height: 400px; border: 1px solid black; margin-bottom: 5px;" onclick="'.$onclick_html.'" />';
 			}
 			else $onclick_html = 'games['.$game_instance_id.'].events['.$game_event_index.'].option_selected('.$i.'); games['.$game_instance_id.'].events['.$game_event_index.'].start_vote('.$round_stats[$i]['option_id'].');';

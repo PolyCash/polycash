@@ -353,6 +353,11 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						else $this_round = $db_event['round_id'];
 						?>
 						<?php
+						echo '<div class="panel-heading"><div class="panel-title">';
+						echo $event->db_event['event_name'];
+						echo '</div></div>'."\n";
+						echo '<div class="panel-body">'."\n";
+						
 						if ($event_status == "current") {
 							$rankings = $event->round_voting_stats_all($current_round);
 							$round_sum_votes = $rankings[0];
@@ -361,47 +366,41 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							$option_id_to_rank = $rankings[3];
 							$confirmed_votes = $rankings[4];
 							$unconfirmed_votes = $rankings[5];
-							
-							echo '<div class="panel-body">'."\n";
 						}
 						else {
-							echo '<div class="panel-heading"><div class="panel-title">';
-							if ($event->db_event['winning_option_id'] > 0) echo $event->db_event['name'];
-							else echo $event->db_event['event_name'].": No winner";
-							echo '</div></div>'."\n";
-							
-							echo '<div class="panel-body">'."\n";
-							
 							$max_votes = floor($event->event_outcome['sum_votes']*$event->db_event['max_voting_fraction']);
 							$round_sum_votes = $event->event_outcome['sum_votes'];
-							
-							if (!empty($game->db_game['module'])) {
-								if (method_exists($game->module, "event_index_to_next_event_index")) {
-									$next_event_index = $game->module->event_index_to_next_event_index($event->db_event['event_index']);
+						}
+						
+						if (!empty($game->db_game['module'])) {
+							if (method_exists($game->module, "event_index_to_next_event_index")) {
+								$next_event_index = $game->module->event_index_to_next_event_index($event->db_event['event_index']);
+								
+								if ($next_event_index) {
+									$next_event_r = $app->run_query("SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$next_event_index."';");
 									
-									if ($next_event_index) {
-										$next_event_r = $app->run_query("SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$next_event_index."';");
-										
-										if ($next_event_r->rowCount() > 0) {
-											$db_next_event = $next_event_r->fetch();
-											echo "<p>The winner has advanced to <a href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".($db_next_event['event_index']+1)."\">".$db_next_event['event_name']."</a></p>\n";
-										}
+									if ($next_event_r->rowCount() > 0) {
+										$db_next_event = $next_event_r->fetch();
+										echo "<p>The winner ";
+										if ($event_status == "current") echo "will advance";
+										else echo "has advanced";
+										echo " to <a href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".($db_next_event['event_index']+1)."\">".$db_next_event['event_name']."</a></p>\n";
 									}
 								}
-								
-								$q = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND next_event_index=".$event->db_event['event_index']." ORDER BY event_index ASC;";
-								$r = $app->run_query($q);
-								
-								if ($r->rowCount() > 0) {
-									echo "<p>".$r->rowCount()." ";
-									if ($r->rowCount() == 1) echo $game->db_game['event_type_name'];
-									else echo $game->db_game['event_type_name_plural'];
-									echo " contributed to this ".$game->db_game['event_type_name'].".<br/>\n";
-									while ($precursor_event = $r->fetch()) {
-										echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".($precursor_event['event_index']+1)."\">".$precursor_event['event_name']."</a><br/>\n";
-									}
-									echo "</p>";
+							}
+							
+							$q = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND next_event_index=".$event->db_event['event_index']." ORDER BY event_index ASC;";
+							$r = $app->run_query($q);
+							
+							if ($r->rowCount() > 0) {
+								echo "<p>".$r->rowCount()." ";
+								if ($r->rowCount() == 1) echo $game->db_game['event_type_name'];
+								else echo $game->db_game['event_type_name_plural'];
+								echo " contributed to this ".$game->db_game['event_type_name'].".<br/>\n";
+								while ($precursor_event = $r->fetch()) {
+									echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".($precursor_event['event_index']+1)."\">".$precursor_event['event_name']."</a><br/>\n";
 								}
+								echo "</p>";
 							}
 						}
 						?>
@@ -473,7 +472,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						</div>
 						<?php
 						if ($event) {
-							$q = "SELECT op.* FROM options op JOIN event_outcome_options eoo ON op.option_id=eoo.option_id WHERE op.event_id='".$event->db_event['event_id']."' ORDER BY eoo.rank ASC;";
+							$q = "SELECT op.*, en.* FROM options op JOIN event_outcome_options eoo ON op.option_id=eoo.option_id LEFT JOIN entities en ON op.entity_id=en.entity_id WHERE op.event_id='".$event->db_event['event_id']."' ORDER BY eoo.rank ASC;";
 							$r = $app->run_query($q);
 						}
 						else $r = false;
@@ -485,6 +484,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							else {
 								$ranked_option = $r->fetch();
 							}
+							
 							if (empty($event) || $ranked_option) {
 								if (!empty($event)) {
 									$option_votes = $event->option_votes_in_round($ranked_option['option_id'], $this_round);
@@ -498,7 +498,24 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								if ($option_votes > $max_votes) echo ' redtext';
 								else if (!empty($db_event) && $db_event['winning_option_id'] == $ranked_option['option_id']) echo ' greentext';
 								echo '">';
-								echo '<div class="col-md-3">'.$rank.'. '.$ranked_option['name'].'</div>';
+								echo '<div class="col-md-3">';
+								
+								if (!empty($ranked_option['image_url'])) {
+									?>
+									<div style="display: none;" class="modal fade" id="option_image_modal<?php echo $ranked_option['option_id']; ?>">
+										<div class="modal-dialog">
+											<div class="modal-content">
+												<div class="modal-body">
+													<img src="<?php echo $ranked_option['image_url']; ?>" style="max-width: 100%;" />
+												</div>
+											</div>
+										</div>
+									</div>
+									<a href="" onclick="$('#option_image_modal<?php echo $ranked_option['option_id']; ?>').modal('toggle'); return false;"><i class="fas fa-image"></i></a> &nbsp; 
+									<?php
+								}
+								
+								echo $rank.'. '.$ranked_option['name'].'</div>';
 								echo '<div class="col-md-1" style="text-align: center;">'.($round_sum_votes>0? round(100*$option_votes/$round_sum_votes, 2) : 0).'%</div>';
 								echo '<div class="col-md-3" style="text-align: center;">'.$app->format_bignum($option_votes/pow(10,$game->db_game['decimal_places'])).' votes</div>';
 								if ($thisuser) {

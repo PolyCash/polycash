@@ -734,7 +734,7 @@ if ($thisuser && $game) {
 					
 					$game_status_explanation = $game->game_status_explanation($thisuser, $user_game);
 					?>
-					<div style="display: <?php if ($game->db_game['view_mode'] == "simple") echo "none"; else echo "block"; ?>; overflow: hidden;">
+					<div style="display: <?php if (false && $game->db_game['view_mode'] == "simple") echo "none"; else echo "block"; ?>; overflow: hidden;">
 						<div id="game_status_explanation"<?php if ($game_status_explanation == "") echo ' style="display: none;"'; ?>><?php if ($game_status_explanation != "") echo $game_status_explanation; ?></div>
 						
 						<div id="change_user_game">
