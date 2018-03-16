@@ -1470,14 +1470,14 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 	this.set_user_game_event_index = function() {
 		$.get("/ajax/set_user_game_event_index.php?game_id="+games[0].game_id+"&event_index="+this.selected_event_index, function(result) {});
 	};
-	this.show_selected_event = function() {
+	this.show_selected_event = function(skip_set_event_index) {
 		var event_nav_txt = "Viewing "+(this.selected_event_index+1)+" of "+this.events.length;
-		event_nav_txt += " &nbsp;&nbsp;&nbsp; <a href='' onclick='games[0].show_previous_event(); return false;'>Previous</a> &nbsp; <a href='' onclick='games[0].show_next_event(); return false;'>Next</a>";
+		event_nav_txt += " &nbsp;&nbsp;&nbsp; <a href='' onclick='games["+this.instance_id+"].show_previous_event(); return false;'>Previous</a> &nbsp; <a href='' onclick='games["+this.instance_id+"].show_next_event(); return false;'>Next</a> &nbsp;&nbsp;&nbsp; Jump to: <input id=\"jump_to_event_index_"+this.selected_event_index+"\" class=\"form-control input-sm\" style=\"width: 80px; display: inline-block;\" /><button class=\"btn btn-primary btn-sm\" onclick=\"games["+this.instance_id+"].hide_selected_event(); games["+this.instance_id+"].selected_event_index=parseInt($('#jump_to_event_index_"+this.selected_event_index+"').val())-1; games["+this.instance_id+"].show_selected_event(false);\">Go</button>";
 		
 		$('#game'+this.instance_id+'_event'+this.selected_event_index).fadeIn('fast');
 		$('#game'+this.instance_id+'_event'+this.selected_event_index+'_event_nav').html(event_nav_txt);
 		
-		this.set_user_game_event_index();
+		if (!skip_set_event_index) this.set_user_game_event_index();
 		
 		this.render_event_images(this.event_index_to_previous(this.selected_event_index));
 		this.render_event_images(this.selected_event_index);
@@ -1501,12 +1501,12 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 	this.show_previous_event = function() {
 		this.hide_selected_event();
 		this.selected_event_index = this.event_index_to_previous(this.selected_event_index);
-		this.show_selected_event();
+		this.show_selected_event(false);
 	};
 	this.show_next_event = function() {
 		this.hide_selected_event();
 		this.selected_event_index = this.event_index_to_next(this.selected_event_index);
-		this.show_selected_event();
+		this.show_selected_event(false);
 	};
 	this.hide_selected_event = function() {
 		$('#game'+this.instance_id+'_event'+this.selected_event_index).hide();
@@ -1554,7 +1554,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 									if (_this.view_mode == "simple") {
 										_this.hide_selected_event();
 										_this.selected_event_index = 0;
-										_this.show_selected_event();
+										_this.show_selected_event(false);
 									}
 								}
 								

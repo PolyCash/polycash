@@ -772,7 +772,7 @@ if ($thisuser && $game) {
 					<?php
 					echo $game->new_event_js(0, $thisuser);
 					?>
-					games[0].show_selected_event();
+					games[0].show_selected_event(false);
 					</script>
 					<div id="select_input_buttons"><?php
 						echo $game->select_input_buttons($user_game);
