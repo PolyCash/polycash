@@ -13,7 +13,7 @@
 <footer class="footer status_footer">
 	<div class="status_footer_right">
 		<div class="status_footer_section">
-			IP & pageview tracking is: 
+			Loaded in <?php echo round(microtime(true)-$pageload_start_time, 2); ?> sec. Pageview tracking is: 
 			<?php
 			if ($GLOBALS['pageview_tracking_enabled']) echo "<font class='redtext'>Enabled</font>";
 			else echo "<font class='greentext'>Disabled</font>";

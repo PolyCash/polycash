@@ -95,7 +95,6 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		$set_options_js = "";
 		
 		for ($game_event_index=0; $game_event_index<count($game->current_events); $game_event_index++) {
-			$set_options_js .= "//ok$game_event_index\n";
 			$round_stats = $game->current_events[$game_event_index]->round_voting_stats_all($current_round);
 			$total_vote_sum = $round_stats[0];
 			$option_id2rank = $round_stats[3];

@@ -1,5 +1,5 @@
 <?php
-class HotOrNotGameDefinition {
+class ImageTournamentGameDefinition {
 	public $app;
 	public $game_def;
 	public $game_def_base_txt;

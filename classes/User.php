@@ -14,18 +14,16 @@ class User {
 	}
 	
 	public function account_coin_value(&$game, &$user_game) {
-		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND (io.spend_status='unspent' || io.spend_status='unconfirmed') AND k.account_id='".$user_game['account_id']."' GROUP BY io.io_id;";
+		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE (io.spend_status='unspent' || io.spend_status='unconfirmed') AND k.account_id='".$user_game['account_id']."';";
 		$r = $this->app->run_query($q);
-		$sum = 0;
-		while ($coins = $r->fetch(PDO::FETCH_NUM)) {
-			$sum += $coins[0];
-		}
+		$sum = $r->fetch(PDO::FETCH_NUM);
+		$sum = $sum[0];
 		if ($sum > 0) return $sum;
 		else return 0;
 	}
 
 	public function immature_balance(&$game, &$user_game) {
-		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND k.account_id='".$user_game['account_id']."' AND (io.create_block_id > ".($game->blockchain->last_block_id() - $game->db_game['maturity'])." OR io.create_block_id IS NULL) AND gio.instantly_mature = 0;";
+		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND io.spend_status='unconfirmed';";
 		$r = $this->app->run_query($q);
 		$sum = $r->fetch(PDO::FETCH_NUM);
 		$sum = $sum[0];
@@ -34,7 +32,7 @@ class User {
 	}
 
 	public function mature_balance(&$game, &$user_game) {
-		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND gio.game_id='".$game->db_game['game_id']."' AND k.account_id='".$user_game['account_id']."' AND (io.create_block_id <= ".($game->blockchain->last_block_id() - $game->db_game['maturity'])." OR gio.instantly_mature = 1);";
+		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status='unspent' AND k.account_id='".$user_game['account_id']."';";
 		$r = $this->app->run_query($q);
 		$sum = $r->fetch(PDO::FETCH_NUM);
 		$sum = $sum[0];
@@ -43,7 +41,7 @@ class User {
 	}
 
 	public function user_current_votes(&$game, $last_block_id, $current_round, &$user_game) {
-		$q = "SELECT ROUND(SUM(gio.colored_amount)) coins, ROUND(SUM(gio.colored_amount*(".($last_block_id+1)."-io.create_block_id))) coin_blocks, ROUND(SUM(gio.colored_amount*(".$current_round."-gio.create_round_id))) coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND gio.game_id='".$game->db_game['game_id']."' AND k.account_id='".$user_game['account_id']."' AND (io.create_block_id <= ".($game->blockchain->last_block_id() - $game->db_game['maturity'])." OR gio.instantly_mature = 1);";
+		$q = "SELECT ROUND(SUM(gio.colored_amount)) coins, ROUND(SUM(gio.colored_amount*(".($last_block_id+1)."-io.create_block_id))) coin_blocks, ROUND(SUM(gio.colored_amount*(".$current_round."-gio.create_round_id))) coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status='unspent' AND k.account_id='".$user_game['account_id']."';";
 		$r = $this->app->run_query($q);
 		$sum = $r->fetch();
 		$votes = $sum[$game->db_game['payout_weight']."s"];
@@ -222,7 +220,6 @@ class User {
 		
 		$html .= '<div class="row"><div class="col-sm-2">Locked&nbsp;funds:</div>';
 		$html .= '<div class="col-sm-3 text-right"><font class="redtext">'.$this->app->format_bignum($immature_balance/pow(10,$game->db_game['decimal_places'])).'</font> '.$game->db_game['coin_name_plural'].'</div>';
-		if ($immature_balance > 0) $html .= '<div class="col-sm-1"><a href="" onclick="$(\'#lockedfunds_details\').toggle(\'fast\'); return false;">Details</a></div>';
 		$html .= "</div>\n";
 		
 		if ($game->db_game['payout_weight'] != "coin") {
@@ -241,45 +238,7 @@ class User {
 		
 		$html .= "Last block completed: <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$last_block_id."\">#".$last_block_id."</a>, currently mining <a href=\"/explorer/games/".$game->db_game['url_identifier']."/transactions/unconfirmed\">#".($last_block_id+1)."</a><br/>\n";
 		$html .= "Current votes count towards block ".$block_within_round."/".$game->db_game['round_length']." in round #".$game->round_to_display_round($current_round).".<br/>\n";
-		//if ($game->db_game['vote_effectiveness_function'] != "constant") $html .= "Votes are ".round(100*$game->round_index_to_effectiveness_factor($block_within_round),1)."% effective right now.<br/>\n";
 		
-		if ($immature_balance > 0) {
-			$q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id LEFT JOIN options gvo ON gio.option_id=gvo.option_id WHERE gio.game_id='".$game->db_game['game_id']."' AND io.user_id='".$this->db_user['user_id']."' AND (io.create_block_id > ".($game->blockchain->last_block_id() - $game->db_game['maturity'])." OR io.create_block_id IS NULL) ORDER BY io.io_id ASC;";
-			$r = $this->app->run_query($q);
-			
-			$html .= '<div class="lockedfunds_details" id="lockedfunds_details">';
-			while ($next_transaction = $r->fetch()) {
-				$avail_block = $game->db_game['maturity'] + $next_transaction['create_block_id'] + 1;
-				$seconds_to_avail = round(($avail_block - $last_block_id - 1)*$game->blockchain->db_blockchain['seconds_per_block']);
-				$minutes_to_avail = round($seconds_to_avail/60);
-				
-				if ($next_transaction['transaction_desc'] == "votebase") $html .= "You won ";
-				$html .= '<font class="greentext">'.$this->app->format_bignum($next_transaction['colored_amount']/(pow(10,$game->db_game['decimal_places'])))."</font> ";
-				
-				if ($next_transaction['create_block_id'] == "") {
-					$html .= $game->db_game['coin_name_plural']." were just ";
-					if ($next_transaction['option_id'] > 0) {
-						$html .= "voted for ".$next_transaction['name'];
-					}
-					else $html .= "spent";
-					$html .= ". This transaction is not yet confirmed.";
-				}
-				else {
-					if ($next_transaction['transaction_desc'] == "votebase") $html .= $game->db_game['coin_name_plural']." in block ".$next_transaction['create_block_id'].". Coins";
-					else $html .= $game->db_game['coin_name_plural']." received in block #".$next_transaction['create_block_id'];
-					
-					$html .= " can be spent in block #".$avail_block.". (Approximately ";
-					if ($minutes_to_avail > 1) $html .= $minutes_to_avail." minutes";
-					else $html .= $seconds_to_avail." seconds";
-					$html .= "). ";
-					if ($next_transaction['option_id'] > 0) {
-						$html .= "You voted for ".$next_transaction['name']." in round #".$game->block_to_round($next_transaction['create_block_id']).". ";
-					}
-				}
-				$html .= '(tx: <a target="_blank" href="/explorer/games/'.$game->db_game['url_identifier'].'/transactions/'.$next_transaction['tx_hash'].'">'.$next_transaction['transaction_id']."</a>)<br/>\n";
-			}
-			$html .= "</div>\n";
-		}
 		return $html;
 	}
 	

@@ -227,7 +227,6 @@ function claim_from_faucet() {
 		var result_obj = JSON.parse(result);
 		
 		if (result_obj['status_code'] == "1") {
-			alert("Great, coins have been added to your account!");
 			window.location = '/wallet/'+games[0].game_url_identifier+'/';
 			return false;
 		}
@@ -1471,6 +1470,9 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 		$.get("/ajax/set_user_game_event_index.php?game_id="+games[0].game_id+"&event_index="+this.selected_event_index, function(result) {});
 	};
 	this.show_selected_event = function(skip_set_event_index) {
+		if (this.selected_event_index > this.events.length-1) {
+			this.selected_event_index = 0;
+		}
 		var event_nav_txt = "Viewing "+(this.selected_event_index+1)+" of "+this.events.length;
 		event_nav_txt += " &nbsp;&nbsp;&nbsp; <a href='' onclick='games["+this.instance_id+"].show_previous_event(); return false;'>Previous</a> &nbsp; <a href='' onclick='games["+this.instance_id+"].show_next_event(); return false;'>Next</a> &nbsp;&nbsp;&nbsp; Jump to: <input id=\"jump_to_event_index_"+this.selected_event_index+"\" class=\"form-control input-sm\" style=\"width: 80px; display: inline-block;\" /><button class=\"btn btn-primary btn-sm\" onclick=\"games["+this.instance_id+"].hide_selected_event(); games["+this.instance_id+"].selected_event_index=parseInt($('#jump_to_event_index_"+this.selected_event_index+"').val())-1; games["+this.instance_id+"].show_selected_event(false);\">Go</button>";
 		
@@ -1596,10 +1598,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 								$('#account_value').hide();
 								$('#account_value').fadeIn('medium');
 								
-								if (_this.refresh_page == "wallet") var lockedfunds_details_shown = $('#lockedfunds_details').is(":visible");
 								$('#wallet_text_stats').html(json_result['wallet_text_stats']);
-								if (_this.refresh_page == "wallet" && lockedfunds_details_shown) $('#lockedfunds_details').show();
-								
 								$('#wallet_text_stats').hide();
 								$('#wallet_text_stats').fadeIn('fast');
 								
@@ -1655,7 +1654,6 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 	this.game_loop_event = function() {
 		this.refresh_if_needed();
 		this.game_loop_index++;
-		console.log(this.game_loop_index);
 		var _this = this;
 		setTimeout(function() {_this.game_loop_event()}, 2000);
 	};

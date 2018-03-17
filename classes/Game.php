@@ -1775,7 +1775,7 @@ class Game {
 	public function mature_io_ids_csv($user_game) {
 		$ids_csv = "";
 		$last_block_id = $this->blockchain->last_block_id();
-		$io_q = "SELECT gio.game_io_id FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND k.account_id='".$user_game['account_id']."' AND gio.game_id='".$this->db_game['game_id']."' AND (io.create_block_id <= ".($last_block_id-$this->db_game['maturity'])." OR gio.instantly_mature = 1)";
+		$io_q = "SELECT gio.game_io_id FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status='unspent' AND k.account_id='".$user_game['account_id']."'";
 		if ($this->db_game['payout_weight'] == "coin_round") {
 			$io_q .= " AND gio.create_round_id < ".$this->block_to_round($last_block_id+1);
 		}
@@ -1803,7 +1803,7 @@ class Game {
 		
 		$last_block_id = $this->blockchain->last_block_id();
 		
-		$output_q = "SELECT io.*, gio.* FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND k.account_id='".$user_game['account_id']."' AND gio.game_id='".$this->db_game['game_id']."' AND (io.create_block_id <= ".($last_block_id-$this->db_game['maturity'])." OR gio.instantly_mature=1)";
+		$output_q = "SELECT io.*, gio.* FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status='unspent' AND k.account_id='".$user_game['account_id']."'";
 		if ($this->db_game['payout_weight'] == "coin_round") $output_q .= " AND gio.create_round_id < ".$this->block_to_round($last_block_id+1);
 		$output_q .= " ORDER BY io.io_id ASC, gio.game_io_id ASC;";
 		$output_r = $this->blockchain->app->run_query($output_q);

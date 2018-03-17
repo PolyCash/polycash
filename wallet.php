@@ -782,7 +782,7 @@ if ($thisuser && $game) {
 					<div class="greentext" id="compose_vote_success" style="margin-top: 5px;"></div>
 					
 					<div id="compose_vote" style="display: none;">
-						<h2>Vote Now</h2>
+						<h3>Stake Now</h3>
 						<div class="row bordered_row" style="border: 1px solid #bbb;">
 							<div class="col-md-6 bordered_cell" id="compose_vote_inputs">
 								<b>Inputs:</b><div style="display: none; margin-left: 20px;" id="input_amount_sum"></div><div style="display: inline-block; margin-left: 20px;" id="input_vote_sum"></div><br/>
@@ -1152,19 +1152,7 @@ if ($thisuser && $game) {
 									?>
 								</div>
 								<div class="col-sm-4">
-									<input type="text" class="address_cell" onclick="$(this).select();" value="<?php echo $address['address']; ?>" />
-								</div>
-								<div class="col-sm-2">
-									<?php
-									$color_bal = $game->address_balance_at_block($address, $game->blockchain->last_block_id());
-									echo '<a target="_blank" href="/explorer/games/'.$game->db_game['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($color_bal/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural'].'</a>';
-									?>
-								</div>
-								<div class="col-sm-2">
-									<?php
-									$chain_bal = $game->blockchain->address_balance_at_block($address, $game->blockchain->last_block_id());
-									echo '<a target="_blank" href="/explorer/blockchains/'.$game->blockchain->db_blockchain['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($chain_bal/pow(10,$game->blockchain->db_blockchain['decimal_places']))." ".$game->blockchain->db_blockchain['coin_name_plural'].'</a>';
-									?>
+									<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/addresses/<?php echo $address['address']; ?>"><?php echo $address['address']; ?></a>
 								</div>
 							</div>
 							<?php
@@ -1189,19 +1177,7 @@ if ($thisuser && $game) {
 										?>
 									</div>
 									<div class="col-sm-4">
-										<input type="text" class="address_cell" onclick="$(this).select();" value="<?php echo $address['address']; ?>" />
-									</div>
-									<div class="col-sm-2">
-										<?php
-										$color_bal = $game->address_balance_at_block($address, $game->blockchain->last_block_id());
-										echo '<a target="_blank" href="/explorer/games/'.$game->db_game['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($color_bal/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural'].'</a>';
-										?>
-									</div>
-									<div class="col-sm-2">
-										<?php
-										$chain_bal = $game->blockchain->address_balance_at_block($address, $game->blockchain->last_block_id());
-										echo '<a target="_blank" href="/explorer/blockchains/'.$game->blockchain->db_blockchain['url_identifier'].'/addresses/'.$address['address'].'">'.$app->format_bignum($chain_bal/pow(10,$game->blockchain->db_blockchain['decimal_places']))." ".$game->blockchain->db_blockchain['coin_name_plural'].'</a>';
-										?>
+										<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/addresses/<?php echo $address['address']; ?>"><?php echo $address['address']; ?></a>
 									</div>
 								</div>
 								<?php

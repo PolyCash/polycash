@@ -1,4 +1,6 @@
 <?php
+$pageload_start_time = microtime(true);
+
 if (is_file(realpath(dirname(__FILE__))."/config.php")) {
 	include(realpath(dirname(__FILE__))."/config.php");
 }

@@ -2,7 +2,7 @@
 ini_set('memory_limit', '1024M');
 include(dirname(dirname(dirname(__FILE__)))."/includes/connect.php");
 include(dirname(dirname(dirname(__FILE__)))."/includes/get_session.php");
-include_once(dirname(__FILE__)."/HotOrNotGameDefinition.php");
+include_once(dirname(__FILE__)."/ImageTournamentGameDefinition.php");
 
 if (!empty($argv)) {
 	$cmd_vars = $app->argv_to_array($argv);
@@ -22,19 +22,19 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	
 	if (empty($public_private)) {
 		?>
-		<p><a href="/modules/HotOrNot/install.php?public_private=public&key=<?php echo $GLOBALS['cron_key_string']; ?>">Install</a></p>
-		<p><a href="/modules/HotOrNot/install.php?public_private=private&key=<?php echo $GLOBALS['cron_key_string']; ?>">Install private game</a></p>
+		<p><a href="/modules/ImageTournament/install.php?public_private=public&key=<?php echo $GLOBALS['cron_key_string']; ?>">Install</a></p>
+		<p><a href="/modules/ImageTournament/install.php?public_private=private&key=<?php echo $GLOBALS['cron_key_string']; ?>">Install private game</a></p>
 		<?php
 	}
 	else {
-		$module = $app->check_set_module("HotOrNot");
+		$module = $app->check_set_module("ImageTournament");
 
 		$db_game = false;
 		$q = "SELECT * FROM games WHERE module=".$app->quote_escape($module['module_name']).";";
 		$r = $app->run_query($q);
 		if ($r->rowCount() > 0) $db_game = $r->fetch();
 		
-		$game_def = new HotOrNotGameDefinition($app);
+		$game_def = new ImageTournamentGameDefinition($app);
 		
 		$blockchain = false;
 		$db_blockchain = $app->fetch_blockchain_by_identifier($game_def->game_def->blockchain_identifier);
@@ -54,7 +54,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$new_game_def_txt = $app->game_def_to_text($game_def->game_def);
 		
 		$error_message = false;
-		$new_game = $app->create_game_from_definition($new_game_def_txt, $thisuser, "HotOrNot", $error_message, $db_game);
+		$new_game = $app->create_game_from_definition($new_game_def_txt, $thisuser, "ImageTournament", $error_message, $db_game);
 		
 		if (!empty($new_game)) {
 			if ($new_game->blockchain->db_blockchain['p2p_mode'] == "none") {
