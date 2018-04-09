@@ -1676,6 +1676,7 @@ function set_select_add_output() {
 		}
 	}
 	$("#select_add_output").find('option').remove().end().append($(optionsAsString));
+	$("#principal_option_id").find('option').remove().end().append($(optionsAsString));
 }
 
 var account_io_id = false;
@@ -2096,4 +2097,27 @@ function claim_card(claim_type) {
 			}
 		});
 	}
+}
+var betting_mode = false;
+function toggle_betting_mode(to_betting_mode) {
+	if (betting_mode !== false) {
+		$('#betting_mode_'+betting_mode).hide();
+	}
+	$('#betting_mode_'+to_betting_mode).show();
+	betting_mode = to_betting_mode;
+	
+	$.get("/ajax/set_betting_mode.php?game_id="+games[0].game_id+"&mode="+to_betting_mode, function(result) {});
+}
+function submit_principal_bet() {
+	var principal_amount = $('#principal_amount').val();
+	var principal_option_id = $('#principal_option_id').val();
+	var principal_fee = $('#principal_fee').val();
+	
+	$('#principal_bet_btn').html("Loading...");
+	$.get("/ajax/principal_bet.php?game_id="+games[0].game_id+"&amount="+principal_amount+"&option_id="+principal_option_id+"&fee="+principal_fee, function(result) {
+		var result_obj = JSON.parse(result);
+		$('#principal_bet_btn').html('<i class="fas fa-check-circle"></i> &nbsp; Confirm Bet');
+		$('#principal_bet_message').html(result_obj['message']);
+		console.log(result);
+	});
 }

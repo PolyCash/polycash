@@ -51,17 +51,20 @@ if ($thisuser) {
 							
 							$amounts = array();
 							$address_ids = array();
+							$destroy_amounts = array();
 							
 							array_push($amounts, $amount);
 							array_push($address_ids, $db_address['address_id']);
+							array_push($destroy_amounts, 0);
 							
 							if ($amount+$fee < $amount_sum) {
 								array_push($amounts, $amount_sum-$amount-$fee);
 								array_push($address_ids, $first_address_id);
+								array_push($destroy_amounts, 0);
 							}
 							
 							$error_message = false;
-							$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $fee);
+							$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $destroy_amounts, $fee);
 							
 							if ($transaction_id) {
 								$app->output_message(1, 'Great, your coins have been sent! <a target="_blank" href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/transactions/'.$transaction_id.'">View Transaction</a>', false);
@@ -190,7 +193,7 @@ if ($thisuser) {
 								$fee_amount = 0.001*pow(10,$blockchain->db_blockchain['decimal_places']);
 								$amount = $db_io['amount']+$join_db_io['amount']-$fee_amount;
 								
-								$transaction_id = $blockchain->create_transaction('transaction', array($amount), false, array($db_io['io_id'], $join_db_io['io_id']), array($join_db_io['address_id']), $fee_amount);
+								$transaction_id = $blockchain->create_transaction('transaction', array($amount), false, array($db_io['io_id'], $join_db_io['io_id']), array($join_db_io['address_id']), array(0), $fee_amount);
 								
 								if ($transaction_id) {
 									$app->output_message(13, "Your transaction has been successfully created!", false);
@@ -244,13 +247,15 @@ if ($thisuser) {
 				
 				$amounts = array($amount);
 				$address_ids = array($db_address['address_id']);
+				$destroy_amounts = array(0);
 				
 				if ($remainder_amount > 0) {
 					array_push($amounts, $remainder_amount);
 					array_push($address_ids, $db_io['address_id']);
+					array_push($destroy_amounts, 0);
 				}
 				
-				$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($db_io['io_id']), $address_ids, $fee_amount);
+				$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($db_io['io_id']), $address_ids, $destroy_amounts, $fee_amount);
 				
 				if ($transaction_id) $app->output_message(1, "Transaction created successfully.", false);
 				else $app->output_message(6, "Error: failed to created transaction.", false);

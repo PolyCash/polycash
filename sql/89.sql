@@ -1,0 +1,11 @@
+ALTER TABLE `games` ADD `default_betting_mode` ENUM('principal','inflationary') NOT NULL DEFAULT 'inflationary' AFTER `default_payout_block_delay`;
+ALTER TABLE `user_games` ADD `betting_mode` ENUM('principal','inflationary') NOT NULL DEFAULT 'inflationary' AFTER `event_index`;
+ALTER TABLE `transactions` ADD `destroy_amount` BIGINT(20) NOT NULL DEFAULT '0' AFTER `amount`;
+ALTER TABLE `transaction_ios` ADD `destroy_amount` BIGINT(20) NOT NULL DEFAULT '0' AFTER `amount`;
+ALTER TABLE `transactions` ADD `OP_RETURN` VARCHAR(255) NOT NULL DEFAULT '' AFTER `tx_hash`;
+ALTER TABLE `transaction_game_ios` ADD `destroy_amount` BIGINT(20) NOT NULL DEFAULT '0' AFTER `colored_amount`;
+ALTER TABLE `options` ADD `destroy_score` BIGINT(20) NOT NULL DEFAULT '0' AFTER `coin_round_score`;
+ALTER TABLE `options` ADD `unconfirmed_destroy_score` BIGINT(20) NOT NULL DEFAULT '0' AFTER `unconfirmed_coin_round_score`;
+ALTER TABLE `event_outcome_options` ADD `destroy_score` BIGINT(20) NOT NULL DEFAULT '0' AFTER `coin_round_score`;
+ALTER TABLE `transaction_game_ios` ADD `effective_destroy_amount` BIGINT(20) NOT NULL DEFAULT '0' AFTER `votes`;
+ALTER TABLE `options` ADD `effective_destroy_score` BIGINT(20) NOT NULL DEFAULT '0' AFTER `unconfirmed_votes`, ADD `unconfirmed_effective_destroy_score` BIGINT(20) NOT NULL DEFAULT '0' AFTER `effective_destroy_score`;

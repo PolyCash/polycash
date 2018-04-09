@@ -65,6 +65,8 @@ class User {
 			$sum_votes = 0;
 			$details_html = "";
 			
+			list($inflationary_reward, $destroy_reward, $total_reward) = $event->event_rewards_in_round($event_outcome['round_id']);
+			
 			if (!empty($event_outcome['winning_option_id'])) {
 				$option_votes = $event->option_votes_in_round($event_outcome['winning_option_id'], $event_round);
 			}
@@ -131,7 +133,7 @@ class User {
 			}
 			else {
 				if (empty($my_votes[$event_outcome['winning_option_id']])) $win_amt_temp = 0;
-				else $win_amt_temp = $event->event_pos_reward_in_round($event_outcome['round_id'])*$my_votes[$event_outcome['winning_option_id']]['votes'];
+				else $win_amt_temp = $total_reward*$my_votes[$event_outcome['winning_option_id']]['votes'];
 				if ($option_votes['sum'] > 0) $win_amt = $win_amt_temp/$option_votes['sum'];
 				else $win_amt = 0;
 				$payout_amt = $win_amt/pow(10,$game->db_game['decimal_places']);

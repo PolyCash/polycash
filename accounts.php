@@ -121,19 +121,22 @@ if ($thisuser && $action == "donate_to_faucet") {
 								
 								$send_address_ids = array();
 								$amounts = array();
+								$destroy_amounts = array();
 								
 								for ($i=0; $i<$quantity; $i++) {
 									for ($j=0; $j<$utxos_each; $j++) {
 										array_push($amounts, $chain_coins_each);
 										array_push($send_address_ids, $address_ids[$i]);
+										array_push($destroy_amounts, 0);
 									}
 								}
 								if ($remainder_satoshis > 0) {
 									array_push($amounts, $remainder_satoshis);
 									array_push($send_address_ids, $game_ios[0]['address_id']);
+									array_push($destroy_amounts, 0);
 								}
 								
-								$transaction_id = $donate_game->blockchain->create_transaction('transaction', $amounts, false, array($game_ios[0]['io_id']), $send_address_ids, $fee_amount);
+								$transaction_id = $donate_game->blockchain->create_transaction('transaction', $amounts, false, array($game_ios[0]['io_id']), $send_address_ids, $destroy_amounts, $fee_amount);
 								
 								if ($transaction_id) {
 									header("Location: /explorer/games/".$db_game['url_identifier']."/transactions/".$transaction_id."/");
