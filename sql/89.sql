@@ -9,3 +9,7 @@ ALTER TABLE `options` ADD `unconfirmed_destroy_score` BIGINT(20) NOT NULL DEFAUL
 ALTER TABLE `event_outcome_options` ADD `destroy_score` BIGINT(20) NOT NULL DEFAULT '0' AFTER `coin_round_score`;
 ALTER TABLE `transaction_game_ios` ADD `effective_destroy_amount` BIGINT(20) NOT NULL DEFAULT '0' AFTER `votes`;
 ALTER TABLE `options` ADD `effective_destroy_score` BIGINT(20) NOT NULL DEFAULT '0' AFTER `unconfirmed_votes`, ADD `unconfirmed_effective_destroy_score` BIGINT(20) NOT NULL DEFAULT '0' AFTER `effective_destroy_score`;
+ALTER TABLE `event_outcome_options` ADD `effective_destroy_score` BIGINT(20) NOT NULL DEFAULT '0' AFTER `votes`;
+ALTER TABLE `event_outcomes` ADD `destroy_score` BIGINT(20) NOT NULL DEFAULT '0' AFTER `sum_score`;
+ALTER TABLE `event_outcomes` ADD `effective_destroy_score` BIGINT(20) NOT NULL DEFAULT '0' AFTER `sum_votes`;
+ALTER TABLE `event_outcomes` ADD `winning_effective_destroy_score` BIGINT(20) NOT NULL DEFAULT '0' AFTER `winning_votes`;

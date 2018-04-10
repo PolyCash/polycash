@@ -24,8 +24,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		
 		while ($db_event = $r->fetch()) {
 			$event = new Event($game, false, $db_event['event_id']);
-			$score = $event->event_total_score(true);
-			$qq = "UPDATE event_outcomes SET sum_score=".$score." WHERE outcome_id='".$db_event['outcome_id']."';";
+			list($inflationary_score, $destroy_reward) = $event->event_total_score(true);
+			$qq = "UPDATE event_outcomes SET sum_score=".$inflationary_score." WHERE outcome_id='".$db_event['outcome_id']."';";
 			$rr = $app->run_query($qq);
 			echo "$qq<br/>\n";
 		}
