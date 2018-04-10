@@ -807,6 +807,7 @@ class Game {
 	public function event_outcomes_html($from_event_index, $to_event_index) {
 		$html = "";
 		
+		$coins_per_vote = $this->blockchain->app->coins_per_vote($this->db_game);
 		$show_initial = false;
 		
 		$q = "SELECT eo.*, e.*, winner.name AS winner_name FROM events e LEFT JOIN event_outcomes eo ON eo.event_id=e.event_id LEFT JOIN options winner ON eo.winning_option_id=winner.option_id WHERE e.game_id='".$this->db_game['game_id']."' AND e.event_index <= ".$to_event_index." AND e.event_index >= ".$from_event_index." ORDER BY e.event_index DESC;";
@@ -814,6 +815,9 @@ class Game {
 		
 		$last_round_shown = 0;
 		while ($event_outcome = $r->fetch()) {
+			$event_total_bets = $event_outcome['sum_score']*$coins_per_vote + $event_outcome['destroy_score'];
+			$event_effective_bets = $event_outcome['sum_votes']*$coins_per_vote + $event_outcome['effective_destroy_score'];
+			
 			$html .= '<div class="row bordered_row">';
 			$html .= '<div class="col-sm-4"><a href="/explorer/games/'.$this->db_game['url_identifier'].'/events/'.($event_outcome['event_index']+1).'">'.$event_outcome['event_name'].'</a></div>';
 			$html .= '<div class="col-sm-5">';
@@ -830,16 +834,17 @@ class Game {
 					$html .= " ".$score_label;
 				}
 				else {
-					$html .= " (".$this->blockchain->app->format_bignum($event_outcome['winning_votes']/pow(10,$this->db_game['decimal_places']))." votes";
-					if ($event_outcome['sum_votes'] > 0) $html .= ", ".round(100*$event_outcome['winning_votes']/$event_outcome['sum_votes'], 2)."%";
-					$html .= ")";
+					$winning_effective_coins = $event_outcome['winning_votes']*$coins_per_vote + $event_outcome['winning_effective_destroy_score'];
+					$winner_pct = $winning_effective_coins/$event_effective_bets;
+					$winner_odds = $event_effective_bets/$winning_effective_coins;
+					$html .= round(100*$winner_pct, 2)."% &nbsp;&nbsp; x".round($winner_odds, 2);
 				}
 				$html .= " &nbsp;&nbsp; ".$event_outcome['winner_name'];
 			}
 			else $html .= "No winner";
 			
 			$html .= "</div>";
-			$html .= '<div class="col-sm-3">'.$this->blockchain->app->format_bignum($event_outcome['sum_votes']/pow(10,$this->db_game['decimal_places'])).' votes cast</div>';
+			$html .= '<div class="col-sm-3">'.$this->blockchain->app->format_bignum($event_total_bets/pow(10,$this->db_game['decimal_places'])).' '.$this->db_game['coin_name_plural'].' bet</div>';
 			$html .= "</div>\n";
 			$last_round_shown = $event_outcome['round_id'];
 			if ($event_outcome['round_id'] == 1) $show_initial = true;

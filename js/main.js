@@ -58,6 +58,10 @@ var option = function(event, option_index, option_id, db_option_index, name, poi
 	this.score = 0;
 	this.unconfirmed_score = 0;
 	this.hypothetical_score = 0;
+	this.destroy_score = 0;
+	this.unconfirmed_destroy_score = 0;
+	this.effective_destroy_score = 0;
+	this.unconfirmed_effective_destroy_score = 0;
 	
 	this.event.option_id2option_index[option_id] = option_index;
 	this.event.game.option_has_votingaddr[option_id] = has_votingaddr;
@@ -422,7 +426,7 @@ function set_input_amount_sums() {
 	if (games[0].payout_weight == 'coin') $('#input_amount_sum').show();
 	else {
 		if (games[0].inflation == "exponential") {
-			var coin_equiv = Math.round(amount_sums[1]/games[0].votes_per_coin);
+			var coin_equiv = Math.round(amount_sums[1]*games[0].coins_per_vote);
 			var coin_disp = format_coins(coin_equiv/Math.pow(10,games[0].decimal_places));
 			
 			var render_text = coin_disp+" ";
@@ -448,7 +452,7 @@ function render_selected_utxo(index_id) {
 		var render_text;
 		
 		if (games[0].inflation == "exponential") {
-			var coin_equiv = Math.round(score_qty/games[0].votes_per_coin);
+			var coin_equiv = Math.round(score_qty*games[0].coins_per_vote);
 			var coin_disp = format_coins(coin_equiv/Math.pow(10,games[0].decimal_places));
 			
 			render_text = coin_disp+" ";
@@ -616,7 +620,6 @@ function finish_refresh_output_amounts() {
 		var coin_sum = input_sums[0]-games[0].fee_amount;
 		var sum_votes = input_sums[1];
 		var effectiveness_factor = games[0].block_id_to_effectiveness_factor(games[0].last_block_id+1);
-		console.log(effectiveness_factor);
 		
 		var slider_sum = 0;
 		for (var i=0; i<vote_options.length; i++) {
@@ -661,8 +664,9 @@ function finish_refresh_output_amounts() {
 			if (coin_sum > 0) output_score = output_coins*(sum_votes/coin_sum);
 			else output_score = 0;
 			var effective_votes = Math.round(output_score*effectiveness_factor);
+			var effective_coins = effective_votes*games[0].coins_per_vote;
 			
-			if (i == vote_options.length - 1) output_coins = coin_sum - output_coins_sum;
+			if (i == vote_options.length-1) output_coins = coin_sum - output_coins_sum;
 			
 			var output_val = 0;
 			if (games[0].payout_weight == "coin") output_val = output_coins;
@@ -670,19 +674,24 @@ function finish_refresh_output_amounts() {
 			
 			var output_val_disp;
 			if (games[0].inflation == "exponential") {
-				output_val = Math.round(output_score/games[0].votes_per_coin);
+				output_val = Math.round(output_score*games[0].coins_per_vote);
 				var this_event = games[0].events[vote_options[i].event_index];
 				var this_option = this_event.options[this_event.option_id2option_index[vote_options[i].option_id]];
+				
 				var event_total_score = this_event.sum_unconfirmed_score + this_event.sum_score + this_event.hypothetical_score;
-				var event_total_payout = event_total_score/games[0].votes_per_coin;
+				var event_total_payout = event_total_score*games[0].coins_per_vote + this_event.sum_destroy_score + this_event.sum_unconfirmed_destroy_score;
 				
 				var event_total_votes = this_event.sum_votes + this_event.sum_unconfirmed_votes + this_event.hypothetical_votes;
-				var expected_payout = Math.floor(event_total_payout*(effective_votes/(this_option.hypothetical_votes + this_option.votes + this_option.unconfirmed_votes)))/Math.pow(10,games[0].decimal_places);
-				console.log("my payout: "+event_total_payout+"*("+effective_votes+"/("+this_option.hypothetical_votes+" + "+this_option.votes+" + "+this_option.unconfirmed_votes+") = "+expected_payout);
-				var payout_factor = expected_payout/(output_score/Math.pow(10,games[0].decimal_places)/games[0].votes_per_coin);
-				console.log(expected_payout+"/("+effective_votes+"/"+games[0].votes_per_coin);
+				var event_effective_coins = event_total_votes*games[0].coins_per_vote + this_event.sum_effective_destroy_score + this_event.sum_unconfirmed_effective_destroy_score;
+				
+				var option_total_votes = this_option.hypothetical_votes + this_option.votes + this_option.unconfirmed_votes;
+				var option_effective_coins = option_total_votes*games[0].coins_per_vote + this_option.effective_destroy_score + this_option.unconfirmed_effective_destroy_score;
+				
+				var expected_payout = Math.floor(event_total_payout*(effective_coins/option_effective_coins));
+				var payout_factor = expected_payout/output_val;
+				
 				output_val_disp = format_coins(output_val/Math.pow(10,games[0].decimal_places));
-				output_val_disp += " &rarr; "+format_coins(expected_payout);
+				output_val_disp += " &rarr; "+format_coins(expected_payout/Math.pow(10,games[0].decimal_places));
 				output_val_disp += " "+games[0].coin_name_plural+" (x"+format_coins(payout_factor)+")";
 			}
 			else output_val_disp = format_coins(output_val/Math.pow(10,games[0].decimal_places))+games[0].coin_name_plural;
@@ -942,7 +951,7 @@ function refresh_mature_io_btns() {
 		
 		if (games[0].logo_image_url == "") {
 			if (games[0].inflation == "exponential") {
-				var coin_equiv = Math.round(votes/games[0].votes_per_coin);
+				var coin_equiv = Math.round(votes*games[0].coins_per_vote);
 				var coin_disp = Math.max(0, format_coins(coin_equiv/Math.pow(10,games[0].decimal_places)));
 				
 				select_btn_text += "Stake "+coin_disp+" ";
@@ -1292,6 +1301,10 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 	this.sum_unconfirmed_votes = 0;
 	this.sum_score = 0;
 	this.sum_unconfirmed_score = 0;
+	this.sum_destroy_score = 0;
+	this.sum_unconfirmed_destroy_score = 0;
+	this.sum_effective_destroy_score = 0;
+	this.sum_unconfirmed_effective_destroy_score = 0;
 	this.hypothetical_score = 0;
 	this.hypothetical_votes = 0;
 	
@@ -1407,10 +1420,10 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 	this.utxo_max_height = 150;
 	this.time_last_block_loaded = parseInt(time_last_block_loaded);
 	
-	this.votes_per_coin = 0;
+	this.coins_per_vote = 0;
 	if (inflation == "exponential") {
-		if (payout_weight == "coin_round") this.votes_per_coin = 1/exponential_inflation_rate;
-		else this.votes_per_coin = game_round_length/exponential_inflation_rate;
+		if (payout_weight == "coin_round") this.coins_per_vote = exponential_inflation_rate;
+		else this.coins_per_vote = exponential_inflation_rate/game_round_length;
 	}
 	
 	this.game_loop_index = 1;
