@@ -563,6 +563,8 @@ if ($thisuser && $game) {
 			die("Error: you're not in this game.");
 		}
 		
+		$faucet_io = $game->check_faucet($user_game);
+		
 		$performance_history_rounds_per_section = 10;
 		?>
 		<script type="text/javascript">
@@ -651,16 +653,15 @@ if ($thisuser && $game) {
 		
 		echo $game->load_all_event_points_js(0, $user_strategy, $plan_start_round, $plan_stop_round);
 		?>
-		
 		$(document).ready(function() {
 			toggle_betting_mode('<?php echo $user_game['betting_mode']; ?>');
 			loop_event();
 			compose_vote_loop();
 			<?php
-			if ($user_game['show_planned_votes'] == 1) { ?>
+			if (!$faucet_io && $user_game['show_intro_message'] == 1) { ?>
 				show_intro_message();
 				<?php
-				$qq = "UPDATE user_games SET show_planned_votes=0 WHERE user_game_id='".$user_game['user_game_id']."';";
+				$qq = "UPDATE user_games SET show_intro_message=0 WHERE user_game_id='".$user_game['user_game_id']."';";
 				$rr = $app->run_query($qq);
 			}
 			?>
@@ -728,9 +729,8 @@ if ($thisuser && $game) {
 				</div>
 				<div class="panel-body">
 					<?php
-					$faucet_io = $game->check_faucet($user_game);
 					if ($faucet_io) {
-						echo '<p><button id="faucet_btn" class="btn btn-success" onclick="claim_from_faucet();">Claim '.$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].'</button></p>'."\n";
+						echo '<p><button id="faucet_btn" class="btn btn-success" onclick="claim_from_faucet();"><i class="fas fa-hand-paper"></i> &nbsp; Claim '.$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].'</button></p>'."\n";
 					}
 					
 					$game_status_explanation = $game->game_status_explanation($thisuser, $user_game);
@@ -913,15 +913,17 @@ if ($thisuser && $game) {
 					<button style="display: none;" id="notification_save_btn" class="btn btn-primary" onclick="save_notification_preferences();"><i class="fas fa-check-circle"></i> &nbsp; Save Notification Settings</button>
 					<br/>
 					
-					<h2>Choose your voting strategy</h2>
-					Please set up a voting strategy so that your votes can be cast even when you're not online to vote.<br/><br/>
+					<h2>Choose your strategy</h2>
+					<p>
+						Select a staking strategy and your coins will automatically be staked even when you're not online.
+					</p>
 					<form method="post" action="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">
 						<input type="hidden" name="action" value="save_voting_strategy" />
 						<input type="hidden" id="voting_strategy_id" name="voting_strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
 						
 						<div class="row bordered_row">
 							<div class="col-md-2">
-								<input type="radio" id="voting_strategy_manual" name="voting_strategy" value="manual"<?php if ($user_strategy['voting_strategy'] == "manual") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_manual">&nbsp;No&nbsp;auto-strategy</label>
+								<input type="radio" id="voting_strategy_manual" name="voting_strategy" value="manual"<?php if ($user_strategy['voting_strategy'] == "manual") echo ' checked="checked"'; ?>><label class="plainlabel" for="voting_strategy_manual">&nbsp;No&nbsp;auto-strategy</label>
 							</div>
 							<div class="col-md-10">
 								<label class="plainlabel" for="voting_strategy_manual"> 
@@ -932,7 +934,7 @@ if ($thisuser && $game) {
 						
 						<div class="row bordered_row">
 							<div class="col-md-2">
-								<input type="radio" id="voting_strategy_api" name="voting_strategy" value="api"<?php if ($user_strategy['voting_strategy'] == "api") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_api">&nbsp;Vote&nbsp;by&nbsp;API</label>
+								<input type="radio" id="voting_strategy_api" name="voting_strategy" value="api"<?php if ($user_strategy['voting_strategy'] == "api") echo ' checked="checked"'; ?>><label class="plainlabel" for="voting_strategy_api">&nbsp;Vote&nbsp;by&nbsp;API</label>
 							</div>
 							<div class="col-md-10">
 								<label class="plainlabel" for="voting_strategy_api">
@@ -945,7 +947,7 @@ if ($thisuser && $game) {
 						
 						<div class="row bordered_row">
 							<div class="col-md-2">
-								<input type="radio" id="voting_strategy_by_entity" name="voting_strategy" value="by_entity"<?php if ($user_strategy['voting_strategy'] == "by_entity") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_entity">&nbsp;Vote&nbsp;by&nbsp;option</label>
+								<input type="radio" id="voting_strategy_by_entity" name="voting_strategy" value="by_entity"<?php if ($user_strategy['voting_strategy'] == "by_entity") echo ' checked="checked"'; ?>><label class="plainlabel" for="voting_strategy_by_entity">&nbsp;Vote&nbsp;by&nbsp;option</label>
 							</div>
 							<div class="col-md-10">
 								<label class="plainlabel" for="voting_strategy_by_entity"> 
@@ -1005,12 +1007,22 @@ if ($thisuser && $game) {
 						*/ ?>
 						<div class="row bordered_row">
 							<div class="col-md-2">
-								<input type="radio" id="voting_strategy_by_plan" name="voting_strategy" value="by_plan"<?php if ($user_strategy['voting_strategy'] == "by_plan") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_plan">&nbsp;Plan&nbsp;my&nbsp;votes</label>
+								<input type="radio" id="voting_strategy_by_plan" name="voting_strategy" value="by_plan"<?php if ($user_strategy['voting_strategy'] == "by_plan") echo ' checked="checked"'; ?>><label class="plainlabel" for="voting_strategy_by_plan">&nbsp;Plan&nbsp;my&nbsp;votes</label>
 							</div>
 							<div class="col-md-10">
 								<button class="btn btn-success" onclick="show_planned_votes(); return false;">Edit my planned votes</button>
 							</div>
 						</div>
+						
+						<div class="row bordered_row">
+							<div class="col-md-2">
+								<input type="radio" id="voting_strategy_featured" name="voting_strategy" value="featured"<?php if ($user_strategy['voting_strategy'] == "featured") echo ' checked="checked"'; ?>><label class="plainlabel" for="voting_strategy_featured">&nbsp;Choose a strategy</label>
+							</div>
+							<div class="col-md-10">
+								<button class="btn btn-success" onclick="show_featured_strategies(); return false;">Choose a strategy</button>
+							</div>
+						</div>
+						
 						<div class="row bordered_row">
 							<div class="col-md-12">
 								<br/><br/>
@@ -1268,38 +1280,61 @@ if ($thisuser && $game) {
 					}
 					?>
 				</div>
-				
-				<div style="display: none;" class="modal fade" id="intro_message">
-					<div class="modal-dialog">
-						<div class="modal-content">
-							<div class="modal-header">
-								<h4 class="modal-title">New message from <?php echo $GLOBALS['site_name']; ?></h4>
-							</div>
-							<div class="modal-body">
-								<p>
-									Hi <?php echo $thisuser->db_user['username']; ?>, thanks for joining <?php echo $game->db_game['name']; ?>! 
-									<?php if ($game->db_game['final_round'] > 0) echo 'This game lasts for '.$game->db_game['final_round'].' voting rounds.  ';
-									if ($game->db_game['inflation'] == "exponential") {
-									}
-									else {
-										?>
-										At the end of each round, the supply of <?php echo $game->db_game['coin_name_plural']; ?> 
-										<?php
-										if ($game->db_game['inflation'] == "fixed_exponential") echo 'inflates by '.(100*$game->db_game['exponential_inflation_rate']).'%';
-										else echo 'increases by '.$app->format_bignum($game->db_game['pos_reward']/pow(10,$game->db_game['decimal_places']));
-										echo ". ";
-									}
-									?>
-									After each round, a winner is declared and new <?php echo $game->db_game['coin_name_plural']; ?> are created and given to everyone who voted for the winner.
-								</p>
-								<p>
-									To do well in this game, be sure to vote in each round. Click below to set your voting strategy. You can change your voting strategy at any time by clicking on the "Strategy" tab.<br/>
-								</p>
-								<p>
-									<button class="btn btn-primary" onclick="$('#intro_message').modal('hide'); show_planned_votes();">Continue</button>
-								</p>
-							</div>
-						</div>
+			</div>
+		</div>
+		
+		<div class="modal fade" id="intro_message">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h4 class="modal-title">New message from <?php echo $GLOBALS['site_name']; ?></h4>
+					</div>
+					<div class="modal-body">
+						<p>
+							Hi <?php echo $thisuser->db_user['username']; ?>, thanks for joining <?php echo $game->db_game['name']; ?>!
+						</p>
+						<p>
+							It's recommended that you select an auto strategy so that your account will gain value while you sleep. You can change your auto strategy at any time by logging in and clicking the "Settings" tab to the left.
+						</p>
+						<p>
+							<button class="btn btn-primary" onclick="$('#intro_message').modal('hide'); show_featured_strategies();">Choose an auto-strategy</button>
+						</p>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		<div style="display: none;" class="modal fade" id="featured_strategies">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h4 class="modal-title">Please select a staking strategy</h4>
+					</div>
+					<div class="modal-body">
+						<p>
+							Please select a strategy from the options below. 
+							An auto strategy stakes your coins for you so that your account gains value 24/7 without requiring you to do anything.
+						</p>
+						<p>
+							To write your own custom auto strategy, please see our <a href="/api/about">API documentation</a>.
+						</p>
+						<form method="get" onsubmit="save_featured_strategy(); return false;">
+							<?php
+							$q = "SELECT * FROM featured_strategies ORDER BY strategy_name ASC;";
+							$r = $app->run_query($q);
+							while ($featured_strategy = $r->fetch()) {
+								?>
+								<div class="row">
+									<div class="col-sm-12">
+										<input type="radio" name="featured_strategy_id" value="<?php echo $featured_strategy['featured_strategy_id']; ?>" id="featured_strategy_<?php echo $featured_strategy['featured_strategy_id']; ?>"<?php if ($user_strategy['featured_strategy_id'] == $featured_strategy['featured_strategy_id']) echo ' checked="checked"'; ?> /><label for="featured_strategy_<?php echo $featured_strategy['featured_strategy_id']; ?>">&nbsp; <?php echo $featured_strategy['strategy_name']; ?></label>
+									</div>
+								</div>
+								<?php
+							}
+							?>
+							<br/>
+							<button class="btn btn-success" id="featured_strategy_save_btn">Save</button>
+						</form>
 					</div>
 				</div>
 			</div>

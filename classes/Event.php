@@ -804,6 +804,7 @@ class Event {
 		
 		$derived_winning_option_id = FALSE;
 		$derived_winning_votes = 0;
+		$winning_effective_destroy_score = 0;
 		
 		if ($this->db_event['event_winning_rule'] == "max_below_cap") {
 			for ($rank=0; $rank<$this->db_event['num_voting_options']; $rank++) {

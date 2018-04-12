@@ -421,8 +421,9 @@ class Game {
 		
 		$q = "SELECT * FROM users u JOIN user_games g ON u.user_id=g.user_id JOIN user_strategies s ON g.strategy_id=s.strategy_id";
 		$q .= " JOIN user_strategy_blocks usb ON s.strategy_id=usb.strategy_id";
+		$q .= " LEFT JOIN featured_strategies fs ON s.featured_strategy_id=fs.featured_strategy_id";
 		$q .= " WHERE g.game_id='".$this->db_game['game_id']."' AND usb.block_within_round='".$block_of_round."'";
-		$q .= " AND (s.voting_strategy='by_rank' OR s.voting_strategy='by_entity' OR s.voting_strategy='api' OR s.voting_strategy='by_plan')";
+		$q .= " AND (s.voting_strategy IN ('by_rank', 'by_entity', 'api', 'by_plan', 'featured'))";
 		$q .= " ORDER BY RAND();";
 		$r = $this->blockchain->app->run_query($q);
 		
@@ -439,9 +440,17 @@ class Game {
 			$log_text .= $strategy_user->db_user['username'].": ".$this->blockchain->app->format_bignum($free_balance/pow(10,$this->db_game['decimal_places']))." coins (".$free_balance.") ".$db_user['voting_strategy']."<br/>\n";
 			
 			if ($free_balance > 0 && $available_votes > 0) {
-				if ($db_user['voting_strategy'] == "api") {
-					if ($GLOBALS['api_proxy_url']) $api_client_url = $GLOBALS['api_proxy_url'].urlencode($db_user['api_url']);
-					else $api_client_url = str_replace('&amp;', '&', $db_user['api_url']);
+				if ($db_user['voting_strategy'] == "api" || $db_user['voting_strategy'] == "featured") {
+					if ($db_user['voting_strategy'] == "api") $api_url = $db_user['api_url'];
+					else {
+						$api_url = $db_user['base_url'];
+						if (strpos($api_url, '?')) $api_url .= "&";
+						else $api_url .= "?";
+						$api_url .= "api_key=".$db_user['api_access_code'];
+					}
+					
+					if ($GLOBALS['api_proxy_url']) $api_client_url = $GLOBALS['api_proxy_url'].urlencode($api_url);
+					else $api_client_url = str_replace('&amp;', '&', $api_url);
 					
 					$arrContextOptions=array(
 						"ssl"=>array(
@@ -831,15 +840,22 @@ class Game {
 						if (empty($score_label)) $score_label = $outcome_option['option_block_score']."-";
 						else $score_label .= $outcome_option['option_block_score'];
 					}
-					$html .= " ".$score_label;
+					$html .= " ".$score_label." &nbsp;&nbsp; ";
 				}
-				else {
-					$winning_effective_coins = $event_outcome['winning_votes']*$coins_per_vote + $event_outcome['winning_effective_destroy_score'];
+				
+				$winning_effective_coins = $event_outcome['winning_votes']*$coins_per_vote + $event_outcome['winning_effective_destroy_score'];
+				
+				if ($event_effective_bets > 0) {
 					$winner_pct = $winning_effective_coins/$event_effective_bets;
-					$winner_odds = $event_effective_bets/$winning_effective_coins;
-					$html .= round(100*$winner_pct, 2)."% &nbsp;&nbsp; x".round($winner_odds, 2);
+					$html .= round(100*$winner_pct, 2)."% &nbsp;&nbsp; ";
 				}
-				$html .= " &nbsp;&nbsp; ".$event_outcome['winner_name'];
+				
+				if ($winning_effective_coins > 0) {
+					$winner_odds = $event_effective_bets/$winning_effective_coins;
+					$html .= "x".round($winner_odds, 2)." &nbsp;&nbsp; ";
+				}
+				
+				$html .= $event_outcome['winner_name'];
 			}
 			else $html .= "No winner";
 			
@@ -1338,7 +1354,9 @@ class Game {
 			$r = $this->blockchain->app->run_query($q);
 			$data = $r->fetch();
 			
-			$html .= "<p>".$this->blockchain->app->format_bignum($last_block_loaded - $this->db_game['game_starting_block'])."/".$this->blockchain->app->format_bignum($total_game_blocks)." game blocks loaded (".round($game_blocks_pct_complete, 2)."% complete";
+			$html .= "<p>Loading ".$this->blockchain->app->format_bignum($missing_game_blocks)." game block";
+			if ($missing_game_blocks != 1) $html .= "s";
+			$html .= " (".round($game_blocks_pct_complete, 2)."% complete";
 			//$html .= $this->blockchain->app->format_bignum($missing_game_blocks)." remaining... ";
 			
 			if ($data['COUNT(*)'] > 0) {
@@ -2038,7 +2056,7 @@ class Game {
 					
 					$event_start_time = microtime(true);
 					
-					$qq = "SELECT *  FROM events WHERE game_id='".$this->db_game['game_id']."' AND event_index='".$game_defined_event['event_index']."';";
+					$qq = "SELECT * FROM events WHERE game_id='".$this->db_game['game_id']."' AND event_index='".$game_defined_event['event_index']."';";
 					$rr = $this->blockchain->app->run_query($qq);
 					
 					if ($rr->rowCount() > 0) {
@@ -2525,7 +2543,7 @@ class Game {
 						}
 						else $coin_rpc = false;
 						
-						$this->module->set_event_outcome($this, $coin_rpc, $payout_events[$i]);
+						$log_text .= $this->module->set_event_outcome($this, $coin_rpc, $payout_events[$i]);
 					}
 					else $log_text .= $payout_events[$i]->set_outcome_from_db($block_height, true);
 					

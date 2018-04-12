@@ -28,7 +28,14 @@ function check_username() {
 		$('#login_message').html(result_obj['message']);
 		$('#login_message').show();
 		
-		if (result_obj['status_code'] == 3) toggle_to_panel('password');
+		if (result_obj['status_code'] == 3 || result_obj['status_code'] == 4) {
+			toggle_to_panel('password');
+			
+			if (result_obj['status_code'] == 4) {
+				$('#login_btn').html("Sign Up");
+			}
+			else $('#login_btn').html("Log In");
+		}
 		else if (result_obj['status_code'] == 1 || result_obj['status_code'] == 2) {
 			login();
 		}
@@ -93,13 +100,13 @@ function toggle_to_panel(which_panel) {
 
 <div class="panel panel-default" style="display: none;" id="login_panel">
 	<div class="panel-heading">
-		<div class="panel-title">Please enter your email address</div>
+		<div class="panel-title">Please enter your username or email address</div>
 	</div>
 	<div class="panel-body">
 		<form action="/" method="get" onsubmit="check_username(); return false;">
 			<div class="row">
 				<div class="col-md-8">
-					Please enter your email address. Your address will be kept private.
+					Please enter your username or email address. This will be kept private.
 				</div>
 			</div>
 			<div class="row" style="padding-top: 10px;">

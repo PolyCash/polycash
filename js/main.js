@@ -749,6 +749,9 @@ function show_intro_message() {
 function show_planned_votes() {
 	$('#planned_votes').modal('show');
 }
+function show_featured_strategies() {
+	$('#featured_strategies').modal('show');
+}
 
 // OBJECT: GameForm
 var game_form_vars = "blockchain_id,event_rule,option_group_id,event_entity_type_id,events_per_round,event_type_name,maturity,name,payout_weight,round_length,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,coin_name,coin_name_plural,coin_abbreviation,start_condition,buyin_policy,game_buyin_cap,default_vote_effectiveness_function,default_effectiveness_param1,default_max_voting_fraction,game_starting_block,escrow_address,genesis_tx_hash,genesis_amount".split(",");
@@ -1209,9 +1212,6 @@ function set_plan_rightclicks() {
 }
 function save_plan_allocations() {
 	var postvars = {game_id: games[0].game_id, action: "save", voting_strategy_id: parseInt($('#voting_strategy_id').val()), from_round: parseInt($('#from_round').val()), to_round: parseInt($('#to_round').val())};
-	
-	console.log(games[0].all_events_start_index);
-	console.log(games[0].all_events_stop_index);
 	
 	if (games[0].all_events_start_index !== false && games[0].all_events_stop_index !== false) {
 		for (var i=games[0].all_events_start_index; i<=games[0].all_events_stop_index; i++) {
@@ -2133,4 +2133,18 @@ function submit_principal_bet() {
 		$('#principal_bet_message').html(result_obj['message']);
 		console.log(result);
 	});
+}
+function save_featured_strategy() {
+	var featured_strategy_id = $("input[name='featured_strategy_id']:checked").val();
+	
+	if (featured_strategy_id) {
+		$('#featured_strategy_save_btn').html("Saving...");
+		
+		$.get("/ajax/set_featured_strategy.php?game_id="+games[0].game_id+"&featured_strategy_id="+featured_strategy_id, function(result) {
+			$('#featured_strategy_save_btn').html("Save");
+			var result_obj = JSON.parse(result);
+			console.log(result_obj);
+			$("input[name=voting_strategy][value='featured']").prop("checked",true);
+		});
+	}
 }

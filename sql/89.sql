@@ -13,3 +13,5 @@ ALTER TABLE `event_outcome_options` ADD `effective_destroy_score` BIGINT(20) NOT
 ALTER TABLE `event_outcomes` ADD `destroy_score` BIGINT(20) NOT NULL DEFAULT '0' AFTER `sum_score`;
 ALTER TABLE `event_outcomes` ADD `effective_destroy_score` BIGINT(20) NOT NULL DEFAULT '0' AFTER `sum_votes`;
 ALTER TABLE `event_outcomes` ADD `winning_effective_destroy_score` BIGINT(20) NOT NULL DEFAULT '0' AFTER `winning_votes`;
+ALTER TABLE `currencies` ADD `entity_id` INT NULL DEFAULT NULL AFTER `blockchain_id`;
+UPDATE `entities` e JOIN currencies c ON e.entity_name=c.name SET c.entity_id=e.entity_id;
