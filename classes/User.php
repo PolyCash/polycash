@@ -65,6 +65,8 @@ class User {
 			$sum_votes = 0;
 			$details_html = "";
 			
+			list($inflationary_reward, $destroy_reward, $total_reward) = $event->event_rewards_in_round($event_outcome['round_id']);
+			
 			if (!empty($event_outcome['winning_option_id'])) {
 				$option_votes = $event->option_votes_in_round($event_outcome['winning_option_id'], $event_round);
 			}
@@ -131,7 +133,7 @@ class User {
 			}
 			else {
 				if (empty($my_votes[$event_outcome['winning_option_id']])) $win_amt_temp = 0;
-				else $win_amt_temp = $event->event_pos_reward_in_round($event_outcome['round_id'])*$my_votes[$event_outcome['winning_option_id']]['votes'];
+				else $win_amt_temp = $total_reward*$my_votes[$event_outcome['winning_option_id']]['votes'];
 				if ($option_votes['sum'] > 0) $win_amt = $win_amt_temp/$option_votes['sum'];
 				else $win_amt = 0;
 				$payout_amt = $win_amt/pow(10,$game->db_game['decimal_places']);
@@ -265,7 +267,7 @@ class User {
 		$r = $this->app->run_query($q);
 		
 		if ($force_new || $r->rowCount() == 0) {
-			$q = "INSERT INTO user_games SET user_id='".$this->db_user['user_id']."', game_id='".$game->db_game['game_id']."', api_access_code=".$this->app->quote_escape($this->app->random_string(32));
+			$q = "INSERT INTO user_games SET user_id='".$this->db_user['user_id']."', game_id='".$game->db_game['game_id']."', api_access_code=".$this->app->quote_escape($this->app->random_string(32)).", show_intro_message=1";
 			if (!empty($this->db_user['payout_address_id'])) $q .= ", payout_address_id='".$this->db_user['payout_address_id']."'";
 			if ($game->db_game['giveaway_status'] == "public_pay" || $game->db_game['giveaway_status'] == "invite_pay") $q .= ", payment_required=1";
 			if (strpos($this->db_user['notification_email'], '@')) $q .= ", notification_preference='email'";

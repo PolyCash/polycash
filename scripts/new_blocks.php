@@ -9,6 +9,7 @@ if (!empty($argv)) {
 	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
 	
 	if (!empty($cmd_vars['game_id'])) $_REQUEST['game_id'] = $cmd_vars['game_id'];
+	if (!empty($cmd_vars['blockchain_id'])) $_REQUEST['blockchain_id'] = $cmd_vars['blockchain_id'];
 	if (!empty($cmd_vars['quantity'])) $_REQUEST['quantity'] = $cmd_vars['quantity'];
 	if (!empty($cmd_vars['apply_user_strategies'])) $_REQUEST['apply_user_strategies'] = $cmd_vars['apply_user_strategies'];
 }

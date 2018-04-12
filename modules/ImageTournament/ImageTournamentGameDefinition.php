@@ -184,16 +184,12 @@ class ImageTournamentGameDefinition {
 	}
 	
 	public function set_event_outcome(&$game, &$coin_rpc, $payout_event) {
-		$payout_event->set_outcome_from_db($payout_event->db_event['event_payout_block'], true);
+		$log_text = $payout_event->set_outcome_from_db($payout_event->db_event['event_payout_block'], true);
 		$winning_option = $this->app->run_query("SELECT o.*, en.* FROM event_outcomes eo JOIN options o ON eo.winning_option_id=o.option_id LEFT JOIN entities en ON o.entity_id=en.entity_id WHERE eo.event_id='".$payout_event->db_event['event_id']."';")->fetch();
 		
 		$gde_option_index = $winning_option['option_index']%2;
-		$msg = "event #".$payout_event->db_event['event_index']." won by ".$winning_option['name']." (entity ".$winning_option['entity_id'].")";
-		$this->app->log_message($msg);
 		
 		$next_event_index = $this->event_index_to_next_event_index($payout_event->db_event['event_index']);
-		
-		$this->app->log_message("Update ".$next_event_index." based on ".$payout_event->db_event['event_index']." (event_id=".$payout_event->db_event['event_id'].")");
 		
 		$q = "UPDATE game_defined_events SET outcome_index=".$gde_option_index." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$payout_event->db_event['event_index']."';";
 		$r = $this->app->run_query($q);
@@ -222,6 +218,7 @@ class ImageTournamentGameDefinition {
 			$q = "UPDATE game_defined_events SET event_name=".$this->app->quote_escape($event_name)." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$next_event_index."';";
 			$r = $this->app->run_query($q);
 		}
+		return $log_text;
 	}
 	
 	public function rename_event(&$gde, &$game) {

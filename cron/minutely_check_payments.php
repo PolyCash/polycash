@@ -72,7 +72,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				$address_ids = array($escrow_address['address_id'], $game_currency_account['current_address_id']);
 				
 				$error_message = false;
-				$transaction_id = $game->blockchain->create_transaction("transaction", array($buyin_amount, $color_amount), false, $io_ids, $address_ids, $fee_amount);
+				$transaction_id = $game->blockchain->create_transaction("transaction", array($buyin_amount, $color_amount), false, $io_ids, $address_ids, array(0, 0), $fee_amount);
 				
 				if ($print_debug) echo "created tx #".$transaction_id;
 				

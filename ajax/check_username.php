@@ -30,8 +30,14 @@ else {
 			$message = "";
 			
 			if ($r->rowCount() == 0) {
-				$message = "We just sent you a verification email. Please open your inbox and click the link to finish creating your account.";
-				$status_code = 1;
+				if (strpos($username, '@') === false) {
+					$message = "To sign up, please enter your password.";
+					$status_code = 4;
+				}
+				else {
+					$message = "We just sent you a verification email. Please open your inbox and click the link to finish creating your account.";
+					$status_code = 1;
+				}
 			}
 			else if ($r->rowCount() == 1) {
 				$matched_user = $r->fetch();

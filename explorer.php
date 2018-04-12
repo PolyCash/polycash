@@ -258,6 +258,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 			echo "1 Error, you've reached an invalid page.";
 		}
 		else {
+			$votes_per_coin = 0;
+			
 			if ($game) {
 				?>
 				<script type="text/javascript">
@@ -276,6 +278,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				?>));
 				</script>
 				<?php
+				
+				if ($game->db_game['inflation'] == "exponential") $votes_per_coin = $game->blockchain->app->votes_per_coin($game->db_game);
 			}
 			
 			if ($blockchain || $game) {
@@ -343,6 +347,11 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 			?>
 			<div class="panel panel-default" style="margin-top: 15px;">
 				<?php
+				if ($game) {
+					$coins_per_vote = $game->blockchain->app->coins_per_vote($game->db_game);
+				}
+				else $coins_per_vote = 0;
+				
 				if ($explore_mode == "events") {
 					if (!empty($db_event) || $event_status == "current") {
 						if ($event_status == "current") {
@@ -351,8 +360,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							$current_round = $this_round;
 						}
 						else $this_round = $db_event['round_id'];
-						?>
-						<?php
+						
 						echo '<div class="panel-heading"><div class="panel-title">';
 						echo $event->db_event['event_name'];
 						echo '</div></div>'."\n";
@@ -360,16 +368,21 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						
 						if ($event_status == "current") {
 							$rankings = $event->round_voting_stats_all($current_round);
-							$round_sum_votes = $rankings[0];
+							$round_sum_score = $rankings[0];
 							$max_votes = $rankings[1];
 							$stats_all = $rankings[2];
 							$option_id_to_rank = $rankings[3];
 							$confirmed_votes = $rankings[4];
 							$unconfirmed_votes = $rankings[5];
+							$destroy_score = $rankings[8];
+							
+							$total_bets = floor($round_sum_score*$coins_per_vote) + $destroy_score;
 						}
 						else {
 							$max_votes = floor($event->event_outcome['sum_votes']*$event->db_event['max_voting_fraction']);
-							$round_sum_votes = $event->event_outcome['sum_votes'];
+							$round_sum_score = $event->event_outcome['sum_score'];
+							
+							$total_bets = floor($round_sum_score*$coins_per_vote) + $event->event_outcome['destroy_score'];
 						}
 						
 						if (!empty($game->db_game['module'])) {
@@ -407,8 +420,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						<div class="row">
 							<div class="col-md-6">
 								<div class="row">
-									<div class="col-sm-4">Total votes cast:</div>
-									<div class="col-sm-8"><?php echo $app->format_bignum($round_sum_votes/pow(10,$game->db_game['decimal_places'])); ?> votes</div>
+									<div class="col-sm-4">Total bets:</div>
+									<div class="col-sm-8"><font class="greentext"><?php echo $app->format_bignum($total_bets/pow(10,$game->db_game['decimal_places']))."</font> ".$game->db_game['coin_name_plural']; ?></div>
 								</div>
 							</div>
 						</div>
@@ -467,8 +480,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						<div class="row" style="font-weight: bold;">
 						<div class="col-md-3"><?php echo ucwords($event->db_event['option_name']); ?></div>
 						<div class="col-md-1" style="text-align: center;">Percent</div>
-						<div class="col-md-3" style="text-align: center;">Votes</div>
-						<?php if ($thisuser) { ?><div class="col-md-3" style="text-align: center;">Your Votes</div><?php } ?>
+						<div class="col-md-3" style="text-align: center;">Bets</div>
 						</div>
 						<?php
 						if ($event) {
@@ -488,15 +500,15 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							if (empty($event) || $ranked_option) {
 								if (!empty($event)) {
 									$option_votes = $event->option_votes_in_round($ranked_option['option_id'], $this_round);
-									$option_votes = $option_votes['sum'];
+									$option_bets = $option_votes['score_sum']*$coins_per_vote + $option_votes['destroy_sum'];
 								}
 								else {
 									$ranked_option = $stats_all[$rank-1];
 									$option_votes = $ranked_option['votes']+$ranked_option['unconfirmed_votes'];
+									$option_bets = $option_votes*$coins_per_vote + $ranked_option['destroy_score'] + $ranked_option['unconfirmed_destroy_score'];
 								}
 								echo '<div class="row';
-								if ($option_votes > $max_votes) echo ' redtext';
-								else if (!empty($db_event) && $db_event['winning_option_id'] == $ranked_option['option_id']) echo ' greentext';
+								if (!empty($db_event) && $db_event['winning_option_id'] == $ranked_option['option_id']) echo ' greentext';
 								echo '">';
 								echo '<div class="col-md-3">';
 								
@@ -516,21 +528,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								}
 								
 								echo $rank.'. '.$ranked_option['name'].'</div>';
-								echo '<div class="col-md-1" style="text-align: center;">'.($round_sum_votes>0? round(100*$option_votes/$round_sum_votes, 2) : 0).'%</div>';
-								echo '<div class="col-md-3" style="text-align: center;">'.$app->format_bignum($option_votes/pow(10,$game->db_game['decimal_places'])).' votes</div>';
-								if ($thisuser) {
-									echo '<div class="col-md-3" style="text-align: center;">';
-									
-									if (!empty($my_votes[$ranked_option['option_id']]['votes'])) $vote_qty = $my_votes[$ranked_option['option_id']]['votes'];
-									else $vote_qty = 0;
-									
-									$vote_disp = $app->format_bignum($vote_qty/pow(10,$game->db_game['decimal_places']));
-									echo $vote_disp." ";
-									echo " vote";
-									if ($vote_disp != '1') echo "s";
-									
-									echo ' ('.($option_votes>0? round(100*$vote_qty/$option_votes, 3) : 0).'%)</div>';
-								}
+								echo '<div class="col-md-1" style="text-align: center;">'.round(100*$option_bets/$total_bets, 2).'%</div>';
+								echo '<div class="col-md-3" style="text-align: center;">'.$app->format_bignum($option_bets/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].'</div>';
 								echo '</div>'."\n";
 							}
 						}
@@ -603,7 +602,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							$r = $app->run_query($q);
 							
 							while ($transaction = $r->fetch()) {
-								echo $game->render_transaction($transaction, false, false);
+								echo $game->render_transaction($transaction, false, false, $votes_per_coin);
 							}
 						}
 						echo '</div>';
@@ -784,7 +783,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$r = $app->run_query($q);
 						
 						while ($transaction = $r->fetch()) {
-							if ($game) echo $game->render_transaction($transaction, false, false);
+							if ($game) echo $game->render_transaction($transaction, false, false, $votes_per_coin);
 							else echo $blockchain->render_transaction($transaction, false, false);
 						}
 						echo '</div>';
@@ -984,7 +983,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					<div style="border-bottom: 1px solid #bbb;">
 						<?php
 						for ($i=0; $i<count($transaction_ios); $i++) {
-							if ($game) echo $game->render_transaction($transaction_ios[$i], $address['address_id'], false);
+							if ($game) echo $game->render_transaction($transaction_ios[$i], $address['address_id'], false, $votes_per_coin);
 							else echo $blockchain->render_transaction($transaction_ios[$i], $address['address_id'], false);
 						}
 						?>
@@ -1085,7 +1084,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					echo "<br/>\n";
 					
 					echo '<div style="margin-top: 10px; border-bottom: 1px solid #bbb;">';
-					if ($game) echo $game->render_transaction($transaction, false, false);
+					if ($game) echo $game->render_transaction($transaction, false, false, $votes_per_coin);
 					else echo $blockchain->render_transaction($transaction, false, false);
 					echo "</div>\n";
 					
@@ -1139,11 +1138,11 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						
 						echo '<div style="margin-top: 10px; border-bottom: 1px solid #bbb;">';
 						if ($create_tx) {
-							if ($game) echo $game->render_transaction($create_tx, false, $io['io_id']);
+							if ($game) echo $game->render_transaction($create_tx, false, $io['io_id'], $votes_per_coin);
 							else echo $blockchain->render_transaction($create_tx, false, $io['io_id']);
 						}
 						if ($spend_tx) {
-							if ($game) echo $game->render_transaction($spend_tx, false, $io['io_id']);
+							if ($game) echo $game->render_transaction($spend_tx, false, $io['io_id'], $votes_per_coin);
 							else echo $blockchain->render_transaction($spend_tx, false, $io['io_id']);
 						}
 						echo "</div>\n";
@@ -1253,7 +1252,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$num_wins = 0;
 						$num_losses = 0;
 						
-						$q = "SELECT gio.*, e.entity_name, eo.winning_option_id, eo.sum_score, eo.sum_votes, o.name AS option_name, gio.votes AS votes, ev.event_index, eoo.votes AS option_votes, gio2.colored_amount AS payout_amount FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN entities e ON o.entity_id=e.entity_id JOIN events ev ON o.event_id=ev.event_id JOIN event_outcomes eo ON ev.event_id=eo.event_id JOIN event_outcome_options eoo ON eoo.outcome_id=eo.outcome_id AND eoo.option_id=o.option_id LEFT JOIN transaction_game_ios gio2 ON gio.payout_game_io_id=gio2.game_io_id WHERE gio.game_id=".$game->db_game['game_id']." AND ug.user_id=".$thisuser->db_user['user_id']." ORDER BY gio.game_io_id DESC;";
+						$q = "SELECT gio.*, io.spend_transaction_id, e.entity_name, eo.winning_option_id, eo.sum_score, eo.sum_votes, o.name AS option_name, gio.votes AS votes, ev.event_index, eoo.votes AS option_votes, gio2.colored_amount AS payout_amount FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN entities e ON o.entity_id=e.entity_id JOIN events ev ON o.event_id=ev.event_id JOIN event_outcomes eo ON ev.event_id=eo.event_id JOIN event_outcome_options eoo ON eoo.outcome_id=eo.outcome_id AND eoo.option_id=o.option_id LEFT JOIN transaction_game_ios gio2 ON gio.payout_game_io_id=gio2.game_io_id WHERE gio.game_id=".$game->db_game['game_id']." AND ug.user_id=".$thisuser->db_user['user_id']." ORDER BY gio.game_io_id DESC;";
 						$r = $app->run_query($q);
 						$num_bets = $r->rowCount();
 						
@@ -1279,13 +1278,14 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							$bet_table_html .= '<div class="row">';
 							
 							$bet_table_html .= '<div class="col-sm-2 text-right">';
+							$bet_table_html .= '<a href="/explorer/games/'.$game->db_game['url_identifier'].'/utxo/'.$bet['io_id'].'/">';
 							if ($game->db_game['inflation'] == "exponential") {
 								$bet_table_html .= $app->format_bignum($my_stake)." ".$game->db_game['coin_abbreviation'];
 							}
 							else {
 								$bet_table_html .= $app->format_bignum($bet['votes']/pow(10,$game->db_game['decimal_places']))." votes";
 							}
-							$bet_table_html .= "</div>\n";
+							$bet_table_html .= "</a></div>\n";
 							
 							$bet_table_html .= "<div class=\"col-sm-2 text-right\">";
 							$bet_table_html .= $app->format_bignum($expected_payout)." ".$game->db_game['coin_abbreviation'];

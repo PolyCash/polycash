@@ -261,6 +261,11 @@ if ($uri_parts[1] == "api") {
 			$game = new Game($blockchain, $db_game['game_id']);
 			$last_block_id = $game->blockchain->last_block_id();
 			$current_round = $game->block_to_round($last_block_id+1);
+			$coins_per_vote = $game->blockchain->app->coins_per_vote($game->db_game);
+			
+			if ($game->db_game['module'] == "CoinBattles") {
+				$btc_currency = $app->get_currency_by_abbreviation("BTC");
+			}
 			
 			$intval_vars = array('game_id','round_length','maturity');
 			for ($i=0; $i<count($intval_vars); $i++) {
@@ -323,6 +328,8 @@ if ($uri_parts[1] == "api") {
 				$output_game['last_block_id'] = intval($last_block_id);
 				$output_game['current_round'] = $current_round;
 				$output_game['block_within_round'] = $game->block_id_to_round_index($last_block_id+1);
+				$output_game['exponential_inflation_rate'] = (float) $game->db_game['exponential_inflation_rate'];
+				$output_game['payout_weight'] = $game->db_game['payout_weight'];
 				
 				$event_vars = array('event_id','event_type_id','event_name','event_starting_block','event_final_block','option_name','option_name_plural');
 				$current_events = array();
@@ -340,8 +347,12 @@ if ($uri_parts[1] == "api") {
 					$option_id_to_rank = $event_stats[3];
 					$confirmed_votes = $event_stats[4];
 					$unconfirmed_votes = $event_stats[5];
+					$effective_destroy_score = $event_stats[10];
+					$unconfirmed_effective_destroy_score = $event_stats[11];
 					
-					$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.event_id=".$game->current_events[$i]->db_event['event_id'].";";
+					$event_effective_coins = ($confirmed_votes+$unconfirmed_votes)*$coins_per_vote + $effective_destroy_score + $unconfirmed_effective_destroy_score;
+					
+					$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id LEFT JOIN currencies c ON op.entity_id=c.entity_id WHERE e.event_id=".$game->current_events[$i]->db_event['event_id'].";";
 					$rr = $app->run_query($qq);
 					
 					while ($option = $rr->fetch()) {
@@ -351,11 +362,28 @@ if ($uri_parts[1] == "api") {
 						$api_stat['option_index'] = (int) $option['option_index'];
 						$api_stat['name'] = $stat['name'];
 						$api_stat['rank'] = $option_id_to_rank[$option['option_id']]+1;
-						$api_stat['confirmed_votes'] = $app->friendly_intval($stat[$game->db_game['payout_weight'].'_score']);
-						$api_stat['unconfirmed_votes'] = $app->friendly_intval($stat['unconfirmed_'.$game->db_game['payout_weight'].'_score']);
+						$api_stat['confirmed_votes'] = $app->friendly_intval($stat['votes']);
+						$api_stat['unconfirmed_votes'] = $app->friendly_intval($stat['unconfirmed_votes']);
+						$api_stat['effective_destroy_score'] = $app->friendly_intval($stat['effective_destroy_score']);
+						$api_stat['unconfirmed_effective_destroy_score'] = $app->friendly_intval($stat['unconfirmed_effective_destroy_score']);
+						
+						$option_effective_coins = ($api_stat['confirmed_votes'] + $api_stat['unconfirmed_votes'])*$coins_per_vote + $api_stat['effective_destroy_score'] + $api_stat['unconfirmed_effective_destroy_score'];
+						if ($event_effective_coins == 0) $option_event_frac = 0;
+						else $option_event_frac = $option_effective_coins/$event_effective_coins;
+						$api_stat['fraction_of_votes'] = $option_event_frac;
 						
 						if (!empty($game->current_events[$i]->db_event['option_block_rule'])) $api_stat['option_block_score'] = (int) $option['option_block_score'];
 						
+						if ($game->db_game['module'] == "CoinBattles") {
+							if ($option['currency_id'] == $btc_currency['currency_id']) $final_performance = 0;
+							else {
+								$from_block = $game->blockchain->fetch_block_by_id($game->current_events[$i]->db_event['event_starting_block']);
+								$initial_price = $app->currency_price_after_time($option['currency_id'], $btc_currency['currency_id'], $from_block['time_mined']);
+								$final_price = $app->currency_price_at_time($option['currency_id'], $btc_currency['currency_id'], time());
+								$final_performance = round(pow(10,8)*$final_price['price']/$initial_price['price'])/pow(10,8) - 1;
+							}
+						}
+						$api_stat['price_performance'] = $final_performance;
 						array_push($api_event['options'], $api_stat);
 					}
 					array_push($current_events, $api_event);

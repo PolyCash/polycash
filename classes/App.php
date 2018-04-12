@@ -1300,6 +1300,15 @@ class App {
 		else return 0;
 	}
 	
+	public function coins_per_vote($db_game) {
+		if ($db_game['inflation'] == "exponential") {
+			if ($db_game['payout_weight'] == "coin_round") $coins_per_vote = $db_game['exponential_inflation_rate'];
+			else $coins_per_vote = $db_game['exponential_inflation_rate']/$db_game['round_length'];
+			return $coins_per_vote;
+		}
+		else return 0; // To-do
+	}
+	
 	public function fetch_currency_by_id($currency_id) {
 		$q = "SELECT * FROM currencies WHERE currency_id='".$currency_id."';";
 		$r = $this->run_query($q);
@@ -2466,7 +2475,7 @@ class App {
 				$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
 				$amounts = array($io['amount']-$fee_amount);
 				
-				$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($io['io_id']), array($db_address['address_id']), $fee_amount);
+				$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($io['io_id']), array($db_address['address_id']), array(0), $fee_amount);
 				
 				if ($transaction_id) {
 					$transaction = $this->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
@@ -2537,7 +2546,7 @@ class App {
 							$io = $io_r->fetch();
 							$success_message .= "&io_id=".$io['io_id'];
 							
-							$transaction_id = $blockchain->create_transaction("transaction", array($io['amount']-$fee_amount), false, array($io['io_id']), array($db_address['address_id']), $fee_amount);
+							$transaction_id = $blockchain->create_transaction("transaction", array($io['amount']-$fee_amount), false, array($io['io_id']), array($db_address['address_id']), array(0), $fee_amount);
 							
 							if ($transaction_id) {
 								$transaction = $this->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
