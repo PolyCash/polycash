@@ -802,16 +802,16 @@ class Event {
 		$rankings = $round_voting_stats_all[2];
 		$option_id_to_rank = $round_voting_stats_all[3];
 		
-		$derived_winning_option_id = FALSE;
-		$derived_winning_votes = 0;
+		$winning_option_id = FALSE;
+		$winning_votes = 0;
 		$winning_effective_destroy_score = 0;
 		
 		if ($this->db_event['event_winning_rule'] == "max_below_cap") {
 			for ($rank=0; $rank<$this->db_event['num_voting_options']; $rank++) {
 				if ($rankings[$rank]['votes'] > $max_winning_votes) {}
-				else if (!$derived_winning_option_id) {
-					$derived_winning_option_id = $rankings[$rank]['option_id'];
-					$derived_winning_votes = $rankings[$rank]['votes'];
+				else if (!$winning_option_id) {
+					$winning_option_id = $rankings[$rank]['option_id'];
+					$winning_votes = $rankings[$rank]['votes'];
 					$winning_effective_destroy_score = $rankings[$rank]['effective_destroy_score'];
 					$rank = $this->db_event['num_voting_options'];
 				}
@@ -833,16 +833,16 @@ class Event {
 					
 					if ($db_winning_option_r->rowCount() > 0) {
 						$db_winning_option = $db_winning_option_r->fetch();
-						$derived_winning_option_id = $db_winning_option['option_id'];
-						$rank_index = $option_id_to_rank[$derived_winning_option_id];
-						$derived_winning_votes = $rankings[$rank_index]['votes'];
+						$winning_option_id = $db_winning_option['option_id'];
+						$rank_index = $option_id_to_rank[$winning_option_id];
+						$winning_votes = $rankings[$rank_index]['votes'];
 						$winning_effective_destroy_score = $rankings[$rank_index]['effective_destroy_score'];
 					}
 				}
 			}
 		}
 		
-		return array($derived_winning_option_id, $derived_winning_votes, $winning_effective_destroy_score);
+		return array($winning_option_id, $winning_votes, $winning_effective_destroy_score);
 	}
 	
 	public function set_outcome_from_db($this_block_id, $add_payout_transaction) {
@@ -885,10 +885,10 @@ class Event {
 			}
 			else $q = "INSERT INTO event_outcomes SET event_id='".$this->db_event['event_id']."', round_id='".$round_id."', payout_block_id='".$this->db_event['event_payout_block']."', time_created='".time()."', ";
 			
-			if ($winning_option === false) $q .= "winning_option_id=NULL, derived_winning_option_id=NULL";
-			else $q .= "winning_option_id='".$winning_option."', derived_winning_option_id='".$winning_option."'";
+			if ($winning_option === false) $q .= "winning_option_id=NULL";
+			else $q .= "winning_option_id='".$winning_option."'";
 			
-			$q .= ", sum_votes='".$sum_votes."', winning_votes='".$winning_votes."', derived_winning_votes='".$winning_votes."', winning_effective_destroy_score='".$winning_effective_destroy_score."', destroy_score='".$event_destroy_score."', effective_destroy_score='".$event_effective_destroy_score."'";
+			$q .= ", sum_votes='".$sum_votes."', winning_votes='".$winning_votes."', winning_effective_destroy_score='".$winning_effective_destroy_score."', destroy_score='".$event_destroy_score."', effective_destroy_score='".$event_effective_destroy_score."'";
 			
 			if ($event_outcome) $q .= " WHERE outcome_id='".$event_outcome['outcome_id']."'";
 			

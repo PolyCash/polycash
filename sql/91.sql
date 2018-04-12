@@ -1,0 +1,1 @@
+ALTER TABLE `event_outcomes` DROP `derived_winning_option_id`, DROP `derived_winning_votes`;

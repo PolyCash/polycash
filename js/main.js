@@ -1814,6 +1814,10 @@ function change_user_game() {
 	var user_game_id = $('#select_user_game').val();
 	window.location = '/wallet/'+games[0].game_url_identifier+'/?action=change_user_game&user_game_id='+user_game_id;
 }
+function explorer_change_user_game() {
+	var user_game_id = $('#select_user_game').val();
+	window.location = '/explorer/games/'+games[0].game_url_identifier+'/my_bets/?user_game_id='+user_game_id;
+}
 function finish_join_tx() {
 	$.get("/ajax/account_spend.php?action=finish_join_tx&io_id="+account_io_id+"&join_io_id="+$('#join_tx_io_id').val(), function(result) {
 		var result_obj = JSON.parse(result);
