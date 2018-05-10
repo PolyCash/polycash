@@ -1618,59 +1618,6 @@ class Game {
 		return $log_text;
 	}
 	
-	public function send_round_notifications($round_id, &$round_voting_stats) {
-		/*if (empty($round_voting_stats)) $round_voting_stats = $this->round_voting_stats_all();
-		
-		$sum_votes = $round_voting_stats[0];
-		$max_sum_votes = $round_voting_stats[1];
-		$option_id2rank = $round_voting_stats[3];
-		$round_voting_stats = $round_voting_stats[2];
-		
-		$winning_option = FALSE;
-		$winning_votesum = 0;
-		$winning_votes = 0;
-		for ($rank=0; $rank<$this->db_event['num_voting_options']; $rank++) {
-			$option_id = $round_voting_stats[$rank]['option_id'];
-			$option_rank2db_id[$rank] = $option_id;
-			$option_votes = $this->option_votes_in_round($option_id, $round_id);
-			
-			if ($option_votes['sum'] > $max_sum_votes) {}
-			else if (!$winning_option && $option_votes['sum'] > 0) {
-				$winning_option = $option_id;
-				$winning_votesum = $option_votes['sum'];
-				$winning_votes = $option_votes['sum'];
-			}
-		}
-		$db_winning_option = false;
-		if ($winning_option) {
-			$db_winning_option = $this->blockchain->app->run_query("SELECT * FROM options WHERE option_id='".$winning_option."';")->fetch();
-		}
-		
-		$q = "SELECT * FROM users u JOIN user_games ug ON u.user_id=ug.user_id WHERE ug.event_id='".$this->db_event['event_id']."' AND ug.notification_preference='email' AND u.notification_email LIKE '%@%';";
-		$r = $this->blockchain->app->run_query($q);
-		echo "Sending notifications to ".$r->rowCount()." players.<br/>\n";
-		while ($user_event = $r->fetch()) {
-			$returnvals = $this->my_votes_in_round($round_id, $user_event['user_id'], false);
-			$my_votes = $returnvals[0];
-			$coins_voted = $returnvals[1];
-			
-			$subject = $this->db_event['name'].": ";
-			if ($winning_option) $subject .= $db_winning_option['name']." wins round #".$round_id;
-			else $subject .= "No winner in round #".$round_id;
-			
-			$my_votes = false;
-			$message = "<p>".$this->user_winnings_in_round_description($user_event['user_id'], $round_id, $round_status, $winning_option, $winning_votes, $db_winning_option['name'], $my_votes)."</p>";
-			
-			if ($this->db_event['final_round'] > 0 && $round_id >= $this->db_event['final_round']) {}
-			else $message .= "<p>Round #".($round_id+1)." has just started. <a href=\"".$GLOBALS['base_url']."/wallet/".$this->db_event['url_identifier']."\">Log in</a> now and vote to make sure you don't miss out.</p>";
-			
-			$message .= "<p>To stop receiving these notifications, please <a href=\"".$GLOBALS['base_url']."/wallet/".$this->db_event['url_identifier']."\">log in</a>, then click \"Strategy\" and then edit your notification settings.</p>";
-			
-			$delivery_id = $this->blockchain->app->mail_async($user_event['notification_email'], $GLOBALS['site_name'], "noreply@".$GLOBALS['site_domain'], $subject, $message, "", "");
-			echo "sent one to ".$user_event['notification_email']." (".$delivery_id.")<br/>\n";
-		}*/
-	}
-	
 	public function load_current_events() {
 		$this->current_events = array();
 		$mining_block_id = $this->blockchain->last_block_id()+1;

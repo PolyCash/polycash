@@ -13,6 +13,10 @@ if (!empty($argv)) {
 }
 
 if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+	if (date("g:ia") == "7:30am") {
+		include(dirname(dirname(__FILE__))."/scripts/send_performance_notifications.php");
+	}
+	
 	$msg = $app->start_regular_background_processes($_REQUEST['key']);
 	if (!empty($_REQUEST['print_debug'])) echo $msg;
 	

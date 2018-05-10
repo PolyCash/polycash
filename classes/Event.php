@@ -887,10 +887,6 @@ class Event {
 				$log_text .= "<br/>\n";
 			}
 			
-			if ($this->game->db_game['send_round_notifications'] == 1) {
-				$this->game->send_round_notifications($round_id, $round_voting_stats_all);
-			}
-			
 			$this->set_event_completed();
 		}
 		$this->game->blockchain->app->dbh->commit();
