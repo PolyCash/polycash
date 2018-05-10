@@ -652,11 +652,19 @@ if ($thisuser && $game) {
 			loop_event();
 			compose_vote_loop();
 			<?php
-			if (!$faucet_io && $user_game['show_intro_message'] == 1) { ?>
-				show_intro_message();
-				<?php
-				$qq = "UPDATE user_games SET show_intro_message=0 WHERE user_game_id='".$user_game['user_game_id']."';";
-				$rr = $app->run_query($qq);
+			if (!$faucet_io) {
+				if ($user_game['show_intro_message'] == 1) { ?>
+					show_intro_message();
+					<?php
+					$qq = "UPDATE user_games SET show_intro_message=0 WHERE user_game_id='".$user_game['user_game_id']."';";
+					$rr = $app->run_query($qq);
+				}
+				if ($user_game['prompt_notification_preference'] == 1) { ?>
+					$('#notification_modal').modal('show');
+					<?php
+					$qq = "UPDATE user_games SET prompt_notification_preference=0 WHERE user_game_id='".$user_game['user_game_id']."';";
+					$rr = $app->run_query($qq);
+				}
 			}
 			?>
 			render_tx_fee();

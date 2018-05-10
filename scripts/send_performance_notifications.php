@@ -27,7 +27,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			array_push($events, $db_event);
 		}
 		
-		$account_q = "SELECT * FROM users u JOIN user_games ug ON u.user_id=ug.user_id LEFT JOIN user_strategies us ON ug.strategy_id=us.strategy_id LEFT JOIN featured_strategies fs ON us.featured_strategy_id=fs.featured_strategy_id WHERE ug.game_id='".$game->db_game['game_id']."' ORDER BY ug.user_id ASC;";
+		$account_q = "SELECT * FROM users u JOIN user_games ug ON u.user_id=ug.user_id LEFT JOIN user_strategies us ON ug.strategy_id=us.strategy_id LEFT JOIN featured_strategies fs ON us.featured_strategy_id=fs.featured_strategy_id WHERE ug.game_id='".$game->db_game['game_id']."' AND ug.notification_preference='email' AND u.notification_email LIKE '%@%' ORDER BY ug.user_id ASC;";
 		$account_r = $app->run_query($account_q);
 		
 		while ($db_account = $account_r->fetch()) {

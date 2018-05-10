@@ -18,7 +18,7 @@ if ($thisuser) {
 			$r = $app->run_query($q);
 			
 			$email = $app->normalize_username($_REQUEST['email']);
-			if ($email != "" && $email != $thisuser->db_user['notification_email']) {
+			if ($email != $thisuser->db_user['notification_email']) {
 				$app->run_query("UPDATE users SET notification_email=".$app->quote_escape($email)." WHERE user_id='".$thisuser->db_user['user_id']."';");
 			}
 			echo "Your notification settings have been saved.";
