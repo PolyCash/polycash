@@ -117,7 +117,7 @@ function toggle_to_panel(which_panel) {
 			<div class="row" style="padding-top: 10px;">
 				<div class="col-md-8">
 					<p>
-						<button id="check_alias_btn" class="btn btn-success">Continue</button>
+						<button id="check_username_btn" class="btn btn-success">Continue</button>
 						&nbsp;&nbsp; Or &nbsp;&nbsp; <a href="" onclick="toggle_to_panel('noemail'); return false;">I prefer not to share my email address</a>
 					</p>
 					<p>

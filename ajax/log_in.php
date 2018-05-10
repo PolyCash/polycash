@@ -33,7 +33,7 @@ else {
 			$verify_code = $app->random_string(32);
 			$salt = $app->random_string(16);
 			
-			$thisuser = $app->create_new_user($verify_code, $salt, $username, "", $password);
+			$thisuser = $app->create_new_user($verify_code, $salt, $username, $password);
 			
 			$thisuser->log_user_in($redirect_url, $viewer_id);
 			

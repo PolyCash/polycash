@@ -65,7 +65,7 @@ class User {
 			$sum_votes = 0;
 			$details_html = "";
 			
-			list($inflationary_reward, $destroy_reward, $total_reward) = $event->event_rewards_in_round($event_outcome['round_id']);
+			list($inflationary_reward, $destroy_reward, $total_reward) = $event->event_rewards();
 			
 			if (!empty($event_outcome['winning_option_id'])) {
 				$option_votes = $event->option_votes_in_round($event_outcome['winning_option_id'], $event_round);

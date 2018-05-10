@@ -1,4 +1,5 @@
 <?php
+$host_not_required = true;
 include(dirname(dirname(dirname(__FILE__)))."/includes/connect.php");
 
 if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
@@ -28,7 +29,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$text_url = "http://".$_SERVER['SERVER_NAME']."/lib/card-render/rendertext.php?string=".$card['issuer_card_id'];
 		if (!empty($card['text_color'])) $text_url .= "&color=".$card['text_color'];
 		
-		$text_im = imagecreatefrompng($text_url);
+		$text_im = imagecreatefrompng($text_url) or die('failed to load: '.$text_url);
 		
 		imagecopyresized($im, $text_im, 720, 1612, 0, 0, 260, 97, 260, 97);
 		

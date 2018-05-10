@@ -61,13 +61,9 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 		<!-- Header Navbar -->
 		<nav class="navbar navbar-static-top" role="navigation">
 			<!-- Sidebar toggle button-->
-			<ul class="nav navbar-nav">
-				<li>
-					<a href="#" class="fa fa-bars" data-toggle="push-menu" role="button">
-						<span class="sr-only">Toggle navigation</span>
-					</a>
-				</li>
-			</ul>
+			<a href="#" class="fa fa-bars" data-toggle="push-menu" role="button" style="padding: 15px; line-height: 20px; color: #fff; text-decoration: none;">
+				<span class="sr-only">Toggle navigation</span>
+			</a>
 			<!-- Navbar Right Menu -->
 			<div class="navbar-custom-menu">
 				<ul class="nav navbar-nav">

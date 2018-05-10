@@ -340,7 +340,7 @@ if ($uri_parts[1] == "api") {
 					}
 					$api_event['options'] = array();
 					
-					$event_stats = $game->current_events[$i]->round_voting_stats_all($current_round);
+					$event_stats = $game->current_events[$i]->round_voting_stats_all();
 					$total_vote_sum = $event_stats[0];
 					$max_vote_sum = $event_stats[1];
 					$ranked_stats = $event_stats[2];

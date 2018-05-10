@@ -2155,12 +2155,12 @@ class App {
 	public function try_create_card_account($card, $thisuser, $password) {
 		if ($card['status'] == "sold") {
 			if (empty($thisuser)) {
-				$alias = $this->random_string(16);
+				$username = $this->random_string(16);
 				$user_password = $this->random_string(16);
 				$verify_code = $this->random_string(32);
 				$salt = $this->random_string(16);
 				
-				$thisuser = $this->create_new_user($verify_code, $salt, $alias, "", $user_password);
+				$thisuser = $this->create_new_user($verify_code, $salt, $username, $user_password);
 			}
 			
 			$q = "INSERT INTO card_users SET card_id='".$card['card_id']."', password=".$this->quote_escape($password).", create_time='".time()."'";
@@ -2390,8 +2390,10 @@ class App {
 		return hash("sha256", $secret);
 	}
 	
-	public function create_new_user($verify_code, $salt, $alias, $email, $password) {
-		$q = "INSERT INTO users SET username=".$this->quote_escape($alias).", notification_email=".$this->quote_escape($email).", password=".$this->quote_escape($this->normalize_password($password, $salt)).", salt=".$this->quote_escape($salt);
+	public function create_new_user($verify_code, $salt, $username, $password) {
+		$q = "INSERT INTO users SET username=".$this->quote_escape($username);
+		$q .= ", password=".$this->quote_escape($this->normalize_password($password, $salt)).", salt=".$this->quote_escape($salt);
+		if (strpos($username, '@') !== false) $q .= ", notification_email=".$this->quote_escape($username);
 		if ($GLOBALS['pageview_tracking_enabled']) $q .= ", ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']);
 		if ($GLOBALS['new_games_per_user'] != "unlimited" && $GLOBALS['new_games_per_user'] > 0) $q .= ", authorized_games=".$this->quote_escape($GLOBALS['new_games_per_user']);
 		$q .= ", login_method='";
@@ -2422,7 +2424,7 @@ class App {
 		
 		// Send an email if the username includes
 		if ($GLOBALS['outbound_email_enabled'] && !empty($notification_email) && strpos($notification_email, '@')) {
-			$email_message = "<p>A new ".$GLOBALS['site_name_short']." web wallet has been created for <b>".$alias."</b>.</p>";
+			$email_message = "<p>A new ".$GLOBALS['site_name_short']." web wallet has been created for <b>".$username."</b>.</p>";
 			$email_message .= "<p>Thanks for signing up!</p>";
 			$email_message .= "<p>To log in any time please visit ".$GLOBALS['base_url']."/wallet/</p>";
 			$email_message .= "<p>This message was sent to you by ".$GLOBALS['base_url']."</p>";

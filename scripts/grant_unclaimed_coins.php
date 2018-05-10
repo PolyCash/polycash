@@ -1,4 +1,5 @@
 <?php
+ini_set('memory_limit', '1024M');
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 

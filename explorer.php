@@ -367,7 +367,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						echo '<div class="panel-body">'."\n";
 						
 						if ($event_status == "current") {
-							$rankings = $event->round_voting_stats_all($current_round);
+							$rankings = $event->round_voting_stats_all();
 							$sum_votes = $rankings[0];
 							$max_votes = $rankings[1];
 							$stats_all = $rankings[2];
@@ -481,8 +481,11 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo '<div style="margin: 20px 0px;" id="game0_chart_html">'.$html."</div>\n";
 							echo '<div id="game0_chart_js"><script type="text/javascript">'.$js.'</script></div>'."\n";
 						}
-						?>
 						
+						$round_table_html = $event->current_round_table($thisuser, false, false, 0, 0);
+						echo $round_table_html;
+						/*
+						?>
 						<h2>Rankings</h2>
 						
 						<div class="row" style="font-weight: bold;">
@@ -537,6 +540,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								echo '</div>'."\n";
 							}
 						}
+						*/
 						
 						if ($event->db_event['option_block_rule'] == "football_match") {
 							echo "<br/><h2>Match Summary</h2>\n";
@@ -1249,13 +1253,15 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				}
 				else if (!empty($game) && $explore_mode == "my_bets") {
 					if (!empty($_REQUEST['user_game_id'])) {
-						$q = "SELECT * FROM user_games WHERE user_game_id='".((int)$_REQUEST['user_game_id'])."';";
+						$q = "SELECT * FROM user_games WHERE user_game_id='".((int)$_REQUEST['user_game_id'])."' AND user_id='".$thisuser->db_user['user_id']."';";
 						$r = $app->run_query($q);
-						$user_game = $r->fetch();
+						if ($r->rowCount() > 0) $user_game = $r->fetch();
+						else $user_game = false;
 					}
 					else $user_game = $thisuser->ensure_user_in_game($game, false);
 					
 					if (empty($thisuser)) echo "<br/><br/>\n<p>You must be logged in to view this page. <a href=\"/wallet/".$game->db_game['url_identifier']."/\">Log in</a></p>\n";
+					else if (!$user_game) echo "<br/><br/>\n<p>Invalid user game selected.</p>\n";
 					else {
 						$votes_per_coin = $app->votes_per_coin($game->db_game);
 						$net_delta = 0;

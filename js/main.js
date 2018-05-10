@@ -295,68 +295,18 @@ function notification_pref_changed() {
 		$('#notification_email').hide();
 	}
 }
-function notification_focused() {
-	if (!started_checking_notification_settings) {
-		check_notification_settings();
-		started_checking_notification_settings = true;
-	}
-}
-function check_notification_settings() {
-	if ($('#notification_preference').val() != initial_notification_pref || $('#notification_email').val() != initial_notification_email) {
-		$('#notification_save_btn').show();
-	}
-	else {
-		$('#notification_save_btn').hide();
-	}
-	setTimeout("check_notification_settings();", 800);
-}
 function save_notification_preferences() {
-	if ($('#notification_save_btn').html() == "Save Notification Settings") {
+	var btn_text = '<i class="fas fa-check-circle"></i> &nbsp; Save Notification Settings';
+	
+	if ($('#notification_save_btn').html() == btn_text) {
 		var notification_pref = $('#notification_preference').val();
 		var notification_email = $('#notification_email').val();
 		$('#notification_save_btn').html("Saving...");
+		
 		$.get("/ajax/set_notification_preference.php?game_id="+games[0].game_id+"&preference="+encodeURIComponent(notification_pref)+"&email="+encodeURIComponent(notification_email), function(result) {
-			$('#notification_save_btn').html("Save Notification Settings");
+			$('#notification_save_btn').html(btn_text);
 			initial_notification_pref = notification_pref;
 			initial_notification_email = notification_email;
-			alert(result);
-		});
-	}
-}
-function alias_pref_changed() {
-	var alias_pref = $('#alias_preference').val();
-	if (alias_pref == "public") {
-		$('#alias').show('fast');
-		$('#alias').focus();
-	}
-	else {
-		$('#alias').hide();
-	}
-}
-function alias_focused() {
-	if (!started_checking_alias_settings) {
-		check_alias_settings();
-		started_checking_alias_settings = true;
-	}
-}
-function check_alias_settings() {
-	if ($('#alias_preference').val() != initial_alias_pref || $('#alias').val() != initial_alias) {
-		$('#alias_save_btn').show();
-	}
-	else {
-		$('#alias_save_btn').hide();
-	}
-	setTimeout("check_alias_settings();", 800);
-}
-function save_alias_preferences() {
-	if ($('#alias_save_btn').html() == "Save Privacy Settings") {
-		var alias_pref = $('#alias_preference').val();
-		var alias = $('#alias').val();
-		$('#notification_save_btn').html("Saving...");
-		$.get("/ajax/set_alias_preference.php?game_id="+games[0].game_id+"&preference="+encodeURIComponent(alias_pref)+"&alias="+encodeURIComponent(alias), function(result) {
-			$('#notification_save_btn').html("Save Privacy Settings");
-			initial_alias_pref = alias_pref;
-			initial_alias = alias;
 			alert(result);
 		});
 	}
@@ -751,6 +701,11 @@ function show_planned_votes() {
 }
 function show_featured_strategies() {
 	$('#featured_strategies').modal('show');
+	$('#featured_strategies_inner').html("Loading...");
+	
+	$.get("/ajax/featured_strategies.php?game_id="+games[0].game_id, function(result_html) {
+		$('#featured_strategies_inner').html(result_html);
+	});
 }
 
 // OBJECT: GameForm

@@ -79,7 +79,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		
 		$show_intro_text = false;
 		for ($game_event_index=0; $game_event_index<count($game->current_events); $game_event_index++) {
-			$output['current_round_table'][$game_event_index] = $game->current_events[$game_event_index]->current_round_table($current_round, $thisuser, $show_intro_text, true, $instance_id, $game_event_index);
+			$output['current_round_table'][$game_event_index] = $game->current_events[$game_event_index]->current_round_table($thisuser, $show_intro_text, true, $instance_id, $game_event_index);
 		}
 		
 		if ($thisuser) {
@@ -95,7 +95,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		$set_options_js = "";
 		
 		for ($game_event_index=0; $game_event_index<count($game->current_events); $game_event_index++) {
-			$round_stats = $game->current_events[$game_event_index]->round_voting_stats_all($current_round);
+			$round_stats = $game->current_events[$game_event_index]->round_voting_stats_all();
 			$total_vote_sum = $round_stats[0];
 			$option_id2rank = $round_stats[3];
 			$round_stats = $round_stats[2];

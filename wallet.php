@@ -41,7 +41,7 @@ if (empty($thisuser) && !empty($_REQUEST['login_key'])) {
 						$verify_code = $app->random_string(32);
 						$salt = $app->random_string(16);
 						
-						$thisuser = $app->create_new_user($verify_code, $salt, $login_link['username'], "", "");
+						$thisuser = $app->create_new_user($verify_code, $salt, $login_link['username'], "");
 					}
 					else {
 						$login_link_error = true;
@@ -570,12 +570,6 @@ if ($thisuser && $game) {
 		<script type="text/javascript">
 		//<![CDATA[
 		var current_tab = 0;
-		var initial_notification_pref = "<?php echo $user_game['notification_preference']; ?>";
-		var initial_notification_email = "<?php echo $thisuser->db_user['notification_email']; ?>";
-		var started_checking_notification_settings = false;
-		var initial_alias_pref = "<?php echo $thisuser->db_user['alias_preference']; ?>";
-		var initial_alias = "<?php echo $thisuser->db_user['alias']; ?>";
-		var started_checking_alias_settings = false;
 		var performance_history_sections = 1;
 		var performance_history_rounds_per_section = <?php echo $performance_history_rounds_per_section; ?>;
 		var performance_history_from_round = <?php echo max(1, $current_round-$performance_history_rounds_per_section-1); ?>;
@@ -666,8 +660,6 @@ if ($thisuser && $game) {
 			}
 			?>
 			render_tx_fee();
-			notification_pref_changed();
-			alias_pref_changed();
 			reload_compose_vote();
 			set_select_add_output();
 			
@@ -898,19 +890,7 @@ if ($thisuser && $game) {
 					<br/>
 					
 					<h3>Notifications</h3>
-					Would you like to receive notifications whenever a new round begins?<br/>
-					<div class="row">
-						<div class="col-sm-6">
-							<select class="form-control" id="notification_preference" name="notification_preference" onfocus="notification_focused();" onchange="notification_pref_changed();">
-								<option <?php if ($user_game['notification_preference'] == "none") echo 'selected="selected" '; ?>value="none">No, don't notify me</option>
-								<option <?php if ($user_game['notification_preference'] == "email") echo 'selected="selected" '; ?>value="email">Yes, email me whenever a new round starts</option>
-							</select>
-						</div>
-						<div class="col-sm-6">
-							<input style="display: none;" class="form-control" type="text" name="notification_email" id="notification_email" onfocus="notification_focused();" placeholder="Enter your email address" value="<?php echo $thisuser->db_user['notification_email']; ?>" />
-						</div>
-					</div>
-					<button style="display: none;" id="notification_save_btn" class="btn btn-primary" onclick="save_notification_preferences();"><i class="fas fa-check-circle"></i> &nbsp; Save Notification Settings</button>
+					<button class="btn btn-success" onclick="$('#notification_modal').modal('show');">Notification Settings</button>
 					<br/>
 					
 					<h2>Choose your strategy</h2>
@@ -1027,31 +1007,35 @@ if ($thisuser && $game) {
 							<div class="col-md-12">
 								<br/><br/>
 								<b>Settings</b><br/>
-								These settings apply to "Plan my votes" and "Vote by rank" options above.<br/>
+								These settings apply to "Plan my votes" and "Vote by option" options above.<br/>
 								Wait until <input size="4" type="text" name="aggregate_threshold" id="aggregate_threshold" value="<?php echo $user_strategy['aggregate_threshold']; ?>" />% of my coins are available to vote. <br/>
 								Only vote in these blocks of the round:<br/>
-								<div class="row">
-									<div class="col-md-2">
-										<input type="checkbox" id="vote_on_block_all" onchange="vote_on_block_all_changed();" /><label class="plainlabel" for="vote_on_block_all">&nbsp;&nbsp;All</label>
+								
+								<div style="border: 1px solid #bbb; padding: 10px; margin: 10px 0px; max-height: 200px; overflow-x: hidden; overflow-y: scroll;">
+									<div class="row">
+										<div class="col-md-2">
+											<input type="checkbox" id="vote_on_block_all" onchange="vote_on_block_all_changed();" /><label class="plainlabel" for="vote_on_block_all">&nbsp;&nbsp;All</label>
+										</div>
+									</div>
+									<div class="row">
+										<?php
+										for ($block=1; $block<=$game->db_game['round_length']; $block++) {
+											echo '<div class="col-md-2">';
+											echo '<input type="checkbox" name="vote_on_block_'.$block.'" id="vote_on_block_'.$block.'" value="1"';
+											
+											$strategy_block_q = "SELECT * FROM user_strategy_blocks WHERE strategy_id='".$user_strategy['strategy_id']."' AND block_within_round='".$block."';";
+											$strategy_block_r = $app->run_query($strategy_block_q);
+											if ($strategy_block_r->rowCount() > 0) echo ' checked="checked"';
+											
+											echo '><label class="plainlabel" for="vote_on_block_'.$block.'">&nbsp;&nbsp;';
+											echo $block."</label>";
+											echo '</div>';
+											if ($block%6 == 0) echo '</div><div class="row">';
+										}
+										?>
 									</div>
 								</div>
-								<div class="row">
-									<?php
-									for ($block=1; $block<=$game->db_game['round_length']; $block++) {
-										echo '<div class="col-md-2">';
-										echo '<input type="checkbox" name="vote_on_block_'.$block.'" id="vote_on_block_'.$block.'" value="1"';
-										
-										$strategy_block_q = "SELECT * FROM user_strategy_blocks WHERE strategy_id='".$user_strategy['strategy_id']."' AND block_within_round='".$block."';";
-										$strategy_block_r = $app->run_query($strategy_block_q);
-										if ($strategy_block_r->rowCount() > 0) echo ' checked="checked"';
-										
-										echo '><label class="plainlabel" for="vote_on_block_'.$block.'">&nbsp;&nbsp;';
-										echo $block."</label>";
-										echo '</div>';
-										if ($block%6 == 0) echo '</div><div class="row">';
-									}
-									?>
-								</div>
+								
 								Only vote for options which have between <input type="tel" size="4" value="<?php echo $user_strategy['min_votesum_pct']; ?>" name="min_votesum_pct" id="min_votesum_pct" />% and <input type="tel" size="4" value="<?php echo $user_strategy['max_votesum_pct']; ?>" name="max_votesum_pct" id="max_votesum_pct" />% of the current votes.<br/>
 								<?php /*
 								Maintain <input type="tel" size="6" id="min_coins_available" name="min_coins_available" value="<?php echo round($user_strategy['min_coins_available'], 2); ?>" /> EMP available at all times.  This number of coins will be reserved and won't be voted. */ ?>
@@ -1061,23 +1045,6 @@ if ($thisuser && $game) {
 						<button class="btn btn-primary" type="submit">Save Voting Strategy</button>
 					</form>
 					<br/>
-					<?php /*
-					<h2>Privacy Settings</h2>
-					You can make your gameplay public by choosing an alias below.<br/>
-					<div class="row">
-						<div class="col-sm-6">
-							<select class="form-control" id="alias_preference" name="alias_preference" onfocus="alias_focused();" onchange="alias_pref_changed();">
-								<option <?php if ($thisuser->db_user['alias_preference'] == "private") echo 'selected="selected" '; ?>value="private">Keep my identity private</option>
-								<option <?php if ($thisuser->db_user['alias_preference'] == "public") echo 'selected="selected" '; ?>value="public">Let me choose a public alias</option>
-							</select>
-						</div>
-						<div class="col-sm-6">
-							<input style="display: none;" class="form-control" type="text" name="alias" id="alias" onfocus="alias_focused();" placeholder="Please enter an alias" value="<?php echo $thisuser->db_user['alias']; ?>" />
-						</div>
-					</div>
-					<button style="display: none;" id="alias_save_btn" class="btn btn-primary" onclick="save_alias_preferences();">Save Privacy Settings</button>
-					<br/>
-					*/ ?>
 				</div>
 			</div>
 		</div>
@@ -1257,9 +1224,9 @@ if ($thisuser && $game) {
 					$game_id_csv = "";
 					$q = "SELECT * FROM games WHERE creator_id='".$thisuser->db_user['user_id']."' ORDER BY game_id ASC;";
 					$r = $app->run_query($q);
-					while ($user_game = $r->fetch()) {
-						$game_id_csv .= $user_game['game_id'].",";
-						echo $app->game_admin_row($thisuser, $user_game, $game->db_game['game_id']);
+					while ($db_user_game = $r->fetch()) {
+						$game_id_csv .= $db_user_game['game_id'].",";
+						echo $app->game_admin_row($thisuser, $db_user_game, $game->db_game['game_id']);
 					}
 					if ($game_id_csv != "") $game_id_csv = substr($game_id_csv, 0, strlen($game_id_csv)-1);
 					
@@ -1267,8 +1234,8 @@ if ($thisuser && $game) {
 					if ($game_id_csv != "") $q .= " AND g.game_id NOT IN (".$game_id_csv.")";
 					$q .= " GROUP BY g.game_id ORDER BY g.game_id ASC;";
 					$r = $app->run_query($q);
-					while ($user_game = $r->fetch()) {
-						echo $app->game_admin_row($thisuser, $user_game, $game->db_game['game_id']);
+					while ($db_user_game = $r->fetch()) {
+						echo $app->game_admin_row($thisuser, $db_user_game, $game->db_game['game_id']);
 					}
 					
 					$new_game_perm = $thisuser->new_game_permission();
@@ -1304,38 +1271,37 @@ if ($thisuser && $game) {
 			</div>
 		</div>
 		
+		<div class="modal fade" id="notification_modal">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h4 class="modal-title">Notification Settings</h4>
+					</div>
+					<div class="modal-body">
+						<div class="form-group">
+							<label for="notification_preference">Would you like to receive notifications about the performance of your accounts?</label>
+							<select class="form-control" id="notification_preference" name="notification_preference" onchange="notification_pref_changed();">
+								<option <?php if ($user_game['notification_preference'] == "none") echo 'selected="selected" '; ?>value="none">No, don't notify me</option>
+								<option <?php if ($user_game['notification_preference'] == "email") echo 'selected="selected" '; ?>value="email">Yes, send me email notifications</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<input <?php if ($user_game['notification_preference'] == "none") echo 'style="display: none;" '; ?>class="form-control" type="text" name="notification_email" id="notification_email" placeholder="Enter your email address" value="<?php echo $thisuser->db_user['notification_email']; ?>" />
+						</div>
+						
+						<button id="notification_save_btn" class="btn btn-primary" onclick="save_notification_preferences();"><i class="fas fa-check-circle"></i> &nbsp; Save Notification Settings</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		
 		<div style="display: none;" class="modal fade" id="featured_strategies">
 			<div class="modal-dialog">
 				<div class="modal-content">
 					<div class="modal-header">
 						<h4 class="modal-title">Please select a staking strategy</h4>
 					</div>
-					<div class="modal-body">
-						<p>
-							Please select a strategy from the options below. 
-							An auto strategy stakes your coins for you so that your account gains value 24/7 without requiring you to do anything.
-						</p>
-						<p>
-							To write your own custom auto strategy, please see our <a href="/api/about">API documentation</a>.
-						</p>
-						<form method="get" onsubmit="save_featured_strategy(); return false;">
-							<?php
-							$q = "SELECT * FROM featured_strategies ORDER BY strategy_name ASC;";
-							$r = $app->run_query($q);
-							while ($featured_strategy = $r->fetch()) {
-								?>
-								<div class="row">
-									<div class="col-sm-12">
-										<input type="radio" name="featured_strategy_id" value="<?php echo $featured_strategy['featured_strategy_id']; ?>" id="featured_strategy_<?php echo $featured_strategy['featured_strategy_id']; ?>"<?php if ($user_strategy['featured_strategy_id'] == $featured_strategy['featured_strategy_id']) echo ' checked="checked"'; ?> /><label for="featured_strategy_<?php echo $featured_strategy['featured_strategy_id']; ?>">&nbsp; <?php echo $featured_strategy['strategy_name']; ?></label>
-									</div>
-								</div>
-								<?php
-							}
-							?>
-							<br/>
-							<button class="btn btn-success" id="featured_strategy_save_btn">Save</button>
-						</form>
-					</div>
+					<div class="modal-body" id="featured_strategies_inner"></div>
 				</div>
 			</div>
 		</div>

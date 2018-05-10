@@ -1619,7 +1619,7 @@ class Game {
 	}
 	
 	public function send_round_notifications($round_id, &$round_voting_stats) {
-		/*if (empty($round_voting_stats)) $round_voting_stats = $this->round_voting_stats_all($round_id);
+		/*if (empty($round_voting_stats)) $round_voting_stats = $this->round_voting_stats_all();
 		
 		$sum_votes = $round_voting_stats[0];
 		$max_sum_votes = $round_voting_stats[1];
@@ -1736,7 +1736,7 @@ class Game {
 		
 		for ($i=0; $i<count($this->current_events); $i++) {
 			$event = $this->current_events[$i];
-			$round_stats = $event->round_voting_stats_all($current_round);
+			$round_stats = $event->round_voting_stats_all();
 			$sum_votes = $round_stats[0];
 			$option_id2rank = $round_stats[3];
 			
@@ -2737,6 +2737,15 @@ class Game {
 		else {
 			$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.address_id='".$db_address['address_id']."' AND io.spend_block_id IS NULL AND io.spend_status='unspent';";
 		}
+		$r = $this->blockchain->app->run_query($q);
+		$balance = $r->fetch();
+		return $balance['SUM(gio.colored_amount)'];
+	}
+	
+	public function account_balance_at_block($account_id, $block_id, $include_coinbase) {
+		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.game_id='".$this->db_game['game_id']."' AND k.account_id='".$account_id."' AND io.create_block_id <= ".$block_id." AND ((io.spend_block_id IS NULL AND io.spend_status='unspent') OR io.spend_block_id>".$block_id.")";
+		if (!$include_coinbase) $q .= " AND gio.is_coinbase=0";
+		$q .= ";";
 		$r = $this->blockchain->app->run_query($q);
 		$balance = $r->fetch();
 		return $balance['SUM(gio.colored_amount)'];

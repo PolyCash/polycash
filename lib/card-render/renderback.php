@@ -1,4 +1,5 @@
 <?php
+$host_not_required = true;
 include(dirname(dirname(dirname(__FILE__)))."/includes/connect.php");
 include(dirname(dirname(__FILE__))."/phpqrcode/qrlib.php");
 
@@ -30,13 +31,13 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			$base_img_fname = "back_".$card['amount'].".png";
 		}
 		
-		$qr_url = $GLOBALS['base_url']."/render_qr_code.php?data=".$card['issuer_card_id'];
+		$qr_url = "http://".$_SERVER['SERVER_NAME']."/render_qr_code.php?data=".urlencode($GLOBALS['base_url']."/redeem/".$card['issuer_id']."/".$card['issuer_card_id']);
 		
 		if (empty($card['secret'])) die("Failed to render: the card secret is not present.");
 		else {
 			header("Content-type: image/png");
 			$im = imagecreatefrompng($base_img_fname) or die("failed");
-			$im_qr = imagecreatefrompng($qr_url);
+			$im_qr = imagecreatefrompng($qr_url) or die("failed to load: ".$qr_url);
 			$black = imagecolorallocate($im, 0, 0, 0);
 			
 			$ss = $card['secret'];
@@ -107,7 +108,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				imagettftext($im, 27, 0, 315, 605, $black, $mainfont, "Use your phone to scan the QR code above, or visit ".$card_design['redeem_url']);
 				imagettftext($im, 27, 0, 462, 659, $black, $mainfont, "Then scratch off the strip below to get your ".$fv_currency['short_name_plural'].".");
 				
-				imagecopyresized($im, $im_qr, 290, 100, 0, 0, 440, 440, 132, 132);
+				imagecopyresized($im, $im_qr, 290, 100, 0, 0, 440, 440, 174, 174);
 				
 				imagettftext($im, 44, 0, 530, 805, $black, $mainfont, $secret_formatted);
 			}
