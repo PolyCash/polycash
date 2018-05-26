@@ -343,8 +343,10 @@ class App {
 		else $redirect_url = false;
 	}
 	
-	public function mail_async($email, $from_name, $from, $subject, $message, $bcc, $cc) {
-		$q = "INSERT INTO async_email_deliveries SET to_email=".$this->quote_escape($email).", from_name=".$this->quote_escape($from_name).", from_email=".$this->quote_escape($from).", subject=".$this->quote_escape($subject).", message=".$this->quote_escape($message).", bcc=".$this->quote_escape($bcc).", cc=".$this->quote_escape($cc).", time_created='".time()."';";
+	public function mail_async($email, $from_name, $from, $subject, $message, $bcc, $cc, $delivery_key) {
+		if (empty($delivery_key)) $delivery_key = $this->random_string(16);
+		
+		$q = "INSERT INTO async_email_deliveries SET to_email=".$this->quote_escape($email).", from_name=".$this->quote_escape($from_name).", from_email=".$this->quote_escape($from).", subject=".$this->quote_escape($subject).", message=".$this->quote_escape($message).", bcc=".$this->quote_escape($bcc).", cc=".$this->quote_escape($cc).", delivery_key=".$this->quote_escape($delivery_key).", time_created='".time()."';";
 		$r = $this->run_query($q);
 		$delivery_id = $this->last_insert_id();
 		
@@ -2429,7 +2431,7 @@ class App {
 			$email_message .= "<p>To log in any time please visit ".$GLOBALS['base_url']."/wallet/</p>";
 			$email_message .= "<p>This message was sent to you by ".$GLOBALS['base_url']."</p>";
 			
-			$email_id = $this->mail_async($email, $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], "New account created", $email_message, "", "");
+			$email_id = $this->mail_async($email, $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], "New account created", $email_message, "", "", "");
 		}
 		
 		return $thisuser;
@@ -2633,7 +2635,7 @@ class App {
 		$message .= "<p><a href=\"".$login_url."\">".$login_url."</a></p>\n";
 		$message .= "<p>If you didn't try to sign in, please delete this email.</p>\n";
 		
-		$delivery_id = $this->mail_async($username, $GLOBALS['coin_brand_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, false, false);
+		$delivery_id = $this->mail_async($username, $GLOBALS['coin_brand_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "", "");
 	}
 	
 	public function first_snippet_between($string, $delim1, $delim2) {

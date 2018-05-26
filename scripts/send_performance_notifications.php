@@ -62,10 +62,12 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	}
 	
 	foreach ($html_by_email as $email=>$html) {
-		$message_html = "<p>Your ".$GLOBALS['site_name_short']." accounts have changed in value over the past 24 hours. ";
-		$message_html .= "Performances of your accounts are shown below. For more information, please <a href=\"".$GLOBALS['base_url']."/accounts/\">log in to your account</a>.</p>\n".$html;
+		$delivery_key = $app->random_string(16);
 		
-		$app->mail_async($email, $GLOBALS['site_name_short'], "no-reply@".$GLOBALS['site_domain'], "Daily performances of your ".$GLOBALS['site_name_short']." accounts", $message_html, "", "");
+		$message_html = "<p>Your ".$GLOBALS['site_name_short']." accounts have changed in value over the past 24 hours. ";
+		$message_html .= "Performances of your accounts are shown below. For more information, please <a href=\"".$GLOBALS['base_url']."/accounts/\">log in to your account</a>.</p><p>To stop receiving these notifications please <a href=\"".$GLOBALS['base_url']."/wallet/?action=unsubscribe&delivery_key=".$delivery_key."\">click here to unsubscribe</a>.\n".$html;
+		
+		$app->mail_async($email, $GLOBALS['site_name_short'], "no-reply@".$GLOBALS['site_domain'], "Daily performances of your ".$GLOBALS['site_name_short']." accounts", $message_html, "", "", $delivery_key);
 	}
 }
 else echo "Incorrect key.";

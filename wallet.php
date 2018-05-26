@@ -9,6 +9,27 @@ $message = "";
 
 if (!isset($_REQUEST['action'])) $_REQUEST['action'] = "";
 
+if ($_REQUEST['action'] == "unsubscribe") {
+	include('includes/html_start.php');
+	
+	$delivery_key = $_REQUEST['delivery_key'];
+	
+	$q = "SELECT * FROM async_email_deliveries WHERE delivery_key=".$app->quote_escape($delivery_key).";";
+	$r = $app->run_query($q);
+	
+	if ($r->rowCount() == 1) {
+		$delivery = $r->fetch();
+		
+		$q = "UPDATE users u JOIN user_games ug ON u.user_id=ug.user_id SET ug.notification_preference='none' WHERE u.notification_email=".$app->quote_escape($delivery['to_email']).";";
+		$r = $app->run_query($q);
+	}
+	
+	echo "<br/><p>&nbsp;&nbsp; You've been unsubscribed. You'll no longer receive email notifications about your accounts.</p>\n";
+	
+	include('includes/html_stop.php');
+	die();
+}
+
 if ($_REQUEST['action'] == "logout" && $thisuser) {
 	$q = "UPDATE user_sessions SET logout_time='".time()."' WHERE session_id='".$session['session_id']."';";
 	$r = $app->run_query($q);

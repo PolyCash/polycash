@@ -31,7 +31,7 @@ if ($GLOBALS['outbound_email_enabled']) {
 			$message .= "<p><a href=\"".$reset_link."\">".$reset_link."</a></p>";
 			$message .= "<p>Sent by <a href=\"".$GLOBALS['base_url']."\">".$GLOBALS['site_name_short']."</a></p>";
 			
-			$res = $app->mail_async($user['notification_email'], $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "");
+			$res = $app->mail_async($user['notification_email'], $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "", "");
 			
 			echo $success_msg;
 		}

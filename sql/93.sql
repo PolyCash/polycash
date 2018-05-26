@@ -1,0 +1,1 @@
+ALTER TABLE `async_email_deliveries` ADD `delivery_key` VARCHAR(16) NULL DEFAULT NULL AFTER `bcc`;
