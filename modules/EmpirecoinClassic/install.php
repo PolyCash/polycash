@@ -1,4 +1,5 @@
 <?php
+ini_set('memory_limit', '2048M');
 include(dirname(dirname(dirname(__FILE__)))."/includes/connect.php");
 include(dirname(dirname(dirname(__FILE__)))."/includes/get_session.php");
 include_once(dirname(__FILE__)."/EmpirecoinClassicGameDefinition.php");
