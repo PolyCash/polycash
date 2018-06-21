@@ -709,7 +709,55 @@ function show_featured_strategies() {
 }
 
 // OBJECT: GameForm
-var game_form_vars = "blockchain_id,event_rule,option_group_id,event_entity_type_id,events_per_round,event_type_name,maturity,name,payout_weight,round_length,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,coin_name,coin_name_plural,coin_abbreviation,start_condition,buyin_policy,game_buyin_cap,default_vote_effectiveness_function,default_effectiveness_param1,default_max_voting_fraction,game_starting_block,escrow_address,genesis_tx_hash,genesis_amount".split(",");
+var game_form_vars = "blockchain_id,event_rule,option_group_id,event_entity_type_id,events_per_round,event_type_name,maturity,name,payout_weight,round_length,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,coin_name,coin_name_plural,coin_abbreviation,start_condition,buyin_policy,game_buyin_cap,default_vote_effectiveness_function,default_effectiveness_param1,default_max_voting_fraction,game_starting_block,escrow_address,genesis_tx_hash,genesis_amount,default_betting_mode".split(",");
+
+function create_new_game() {
+	$('#new_game_save_btn').html("Loading...");
+	
+	var url_string = "/ajax/manage_game.php?action=new&name="+$('#new_game_name').val()+"&blockchain_id="+$('#new_game_blockchain_id').val();
+
+	var genesis_type = $('#new_game_genesis_type').val();
+	url_string += "&genesis_type="+genesis_type;
+	if (genesis_type == "existing") url_string += "&genesis_tx_hash="+$('#new_game_genesis_tx_hash').val();
+	else url_string += "&genesis_io_id="+$('#new_game_genesis_io_id').val();
+	
+	$.get(url_string, function(result) {
+		$('#new_game_save_btn').html("Save &amp; Continue");
+		var json_result = JSON.parse(result);
+		window.location = '/manage/'+json_result['message'];
+	});
+}
+
+function new_game_genesis_type_changed() {
+	var type = $('#new_game_genesis_type').val();
+	var blockchain_id = $('#new_game_blockchain_id').val();
+	
+	$.get("/ajax/select_accounts_by_blockchain.php?blockchain_id="+blockchain_id, function(result) {
+		var json_result = JSON.parse(result);
+		
+		$('#new_game_genesis_account_id').html(json_result['html']);
+	});
+	
+	if (type == "existing") {
+		$('#new_game_genesis_tx_hash_holder').show('fast');
+		$('#new_game_existing_genesis').hide();
+	}
+	else {
+		$('#new_game_genesis_tx_hash_holder').hide();
+		$('#new_game_existing_genesis').show('fast');
+	}
+}
+
+function new_game_genesis_account_changed() {
+	var account_id = $('#new_game_genesis_account_id').val();
+	
+	$.get("/ajax/select_io_by_account.php?account_id="+account_id, function(result) {
+		var json_result = JSON.parse(result);
+		
+		$('#new_game_genesis_io_id').html(json_result['html']);
+	});
+}
+
 function manage_game(game_id, action) {
 	var fetch_link_text = $('#fetch_game_link_'+game_id).html();
 	var switch_link_text = $('#switch_game_btn').html();
@@ -720,14 +768,9 @@ function manage_game(game_id, action) {
 	$.get("/ajax/manage_game.php?game_id="+game_id+"&action="+action, function(result) {
 		var json_result = JSON.parse(result);
 		
-		if (action == "fetch" || action == "new") {
-			if (action == "new") {
-				editing_game_id = json_result['game_id'];
-			}
-			else {
-				editing_game_id = game_id;
-				$('#fetch_game_link_'+game_id).html(fetch_link_text);
-			}
+		if (action == "fetch") {
+			editing_game_id = game_id;
+			$('#fetch_game_link_'+game_id).html(fetch_link_text);
 			
 			$('#game_form_has_final_round').prop('disabled', true);
 			if (json_result['game_status'] == "editable") $('#game_form_has_final_round').prop('disabled', false);

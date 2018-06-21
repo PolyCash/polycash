@@ -301,7 +301,7 @@ class Game {
 			
 			$q = "UPDATE options op INNER JOIN (
 				SELECT option_id, SUM(colored_amount) sum_amount, SUM(coin_blocks_destroyed) sum_cbd, SUM(coin_rounds_destroyed) sum_crd, SUM(votes) sum_votes, SUM(destroy_amount) sum_destroyed, SUM(effective_destroy_amount) sum_effective_destroyed FROM transaction_game_ios 
-				WHERE game_id='".$this->db_game['game_id']."' AND create_round_id=".$round_id." AND colored_amount > 0
+				WHERE game_id='".$this->db_game['game_id']."' AND create_round_id IS NOT NULL AND colored_amount > 0
 				GROUP BY option_id
 			) i ON op.option_id=i.option_id SET op.coin_score=i.sum_amount, op.coin_block_score=i.sum_cbd, op.coin_round_score=i.sum_crd, op.votes=i.sum_votes, op.destroy_score=i.sum_destroyed, op.effective_destroy_score=i.sum_effective_destroyed WHERE op.event_id='".$this->current_events[$i]->db_event['event_id']."';";
 			$r = $this->blockchain->app->run_query($q);
@@ -2345,29 +2345,27 @@ class Game {
 			
 			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false, false);
 			
-			if ($this->db_game['buyin_policy'] != "none") {
-				$buyin_q = "SELECT * FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.create_block_id='".$block_height."' AND io.address_id='".$escrow_address['address_id']."' GROUP BY t.transaction_id;";
-				$buyin_r = $this->blockchain->app->run_query($buyin_q);
-				
-				$msg = "Looping through ".$buyin_r->rowCount()." buyin transactions\n";
-				$log_text .= $msg;
-				
-				while ($buyin_tx = $buyin_r->fetch()) {
-					// Check if buy-in transaction has already been created
-					$qq = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.create_transaction_id='".$buyin_tx['transaction_id']."';";
-					$rr = $this->blockchain->app->run_query($qq);
-					if ($rr->rowCount() == 0) {
-						if ($this->db_game['sellout_policy'] == "off") {
+			$buyin_q = "SELECT * FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.create_block_id='".$block_height."' AND io.address_id='".$escrow_address['address_id']."' GROUP BY t.transaction_id;";
+			$buyin_r = $this->blockchain->app->run_query($buyin_q);
+			
+			$msg = "Looping through ".$buyin_r->rowCount()." buyin transactions\n";
+			$log_text .= $msg;
+			
+			while ($buyin_tx = $buyin_r->fetch()) {
+				// Check if buy-in transaction has already been created
+				$qq = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.create_transaction_id='".$buyin_tx['transaction_id']."';";
+				$rr = $this->blockchain->app->run_query($qq);
+				if ($rr->rowCount() == 0) {
+					if ($this->db_game['sellout_policy'] == "off") {
+						$this->process_buyin_transaction($buyin_tx);
+					}
+					else {
+						// Check if any colored coins are being deposited to the escrow address
+						// If so, this is a sell-out rather than buy-in tx, so skip the buy-in
+						$qq = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.spend_transaction_id='".$buyin_tx['transaction_id']."';";
+						$rr = $this->blockchain->app->run_query($qq);
+						if ($rr->rowCount() == 0) {
 							$this->process_buyin_transaction($buyin_tx);
-						}
-						else {
-							// Check if any colored coins are being deposited to the escrow address
-							// If so, this is a sell-out rather than buy-in tx, so skip the buy-in
-							$qq = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.spend_transaction_id='".$buyin_tx['transaction_id']."';";
-							$rr = $this->blockchain->app->run_query($qq);
-							if ($rr->rowCount() == 0) {
-								$this->process_buyin_transaction($buyin_tx);
-							}
 						}
 					}
 				}
@@ -2563,10 +2561,13 @@ class Game {
 	public function render_transaction($transaction, $selected_address_id, $selected_io_id, $votes_per_coin) {
 		$html = '<div class="row bordered_row"><div class="col-md-12">';
 		
-		$temp_event = $this->current_events[0];
-		if ((string) $transaction['block_id'] !== "") $ref_block_id = $transaction['block_id'];
-		else $ref_block_id = $this->blockchain->last_block_id()+1;
-		$effectiveness_factor = $temp_event->block_id_to_effectiveness_factor($ref_block_id);
+		if (count($this->current_events) > 0) {
+			$temp_event = $this->current_events[0];
+			if ((string) $transaction['block_id'] !== "") $ref_block_id = $transaction['block_id'];
+			else $ref_block_id = $this->blockchain->last_block_id()+1;
+			$effectiveness_factor = $temp_event->block_id_to_effectiveness_factor($ref_block_id);
+		}
+		else $effectiveness_factor = 1;
 		
 		if ((string) $transaction['block_id'] !== "") {
 			if ($transaction['position_in_block'] == "") $html .= "Confirmed";

@@ -35,54 +35,101 @@ if ($thisuser) {
 		}
 		else $app->output_message(2, "That game doesn't exist or you don't have permission to join it.");
 	}
-	else if ($action == "fetch" || $action == "new") {
-		if ($action == "new") {
-			$new_game_perm = $thisuser->new_game_permission();
+	else if ($action == "new") {
+		$new_game_perm = $thisuser->new_game_permission();
+		
+		if ($new_game_perm) {
+			$q = "SELECT MAX(creator_game_index) FROM games WHERE creator_id='".$thisuser->db_user['user_id']."';";
+			$r = $app->run_query($q);
+			if ($r->rowCount() > 0) {
+				$game_index = $r->fetch(PDO::FETCH_NUM);
+				$game_index = $game_index[0]+1;
+			}
+			else $game_index = 1;
 			
-			if ($new_game_perm) {
-				$q = "SELECT MAX(creator_game_index) FROM games WHERE creator_id='".$thisuser->db_user['user_id']."';";
-				$r = $app->run_query($q);
-				if ($r->rowCount() > 0) {
-					$game_index = $r->fetch(PDO::FETCH_NUM);
-					$game_index = $game_index[0]+1;
+			$blockchain_id = (int) $_REQUEST['blockchain_id'];
+			$blockchain = new Blockchain($app, $blockchain_id);
+			
+			$q = "INSERT INTO games SET blockchain_id='".$blockchain->db_blockchain['blockchain_id']."', creator_id='".$thisuser->db_user['user_id']."', maturity=0, round_length=1, buyin_policy='none', block_timing='realistic', creator_game_index='".$game_index."', inflation='exponential', pos_reward='0', pow_reward='0', event_rule='game_definition', game_starting_block='".$blockchain->last_block_id()."', default_betting_mode='principal';";
+			$r = $app->run_query($q);
+			$game_id = $app->last_insert_id();
+			
+			$game = new Game($blockchain, $game_id);
+			$game_name = $_REQUEST['name'];
+			$url_identifier = $app->game_url_identifier($game_name);
+			
+			$user_game = $thisuser->ensure_user_in_game($game, false);
+			
+			$genesis_tx_hash = "";
+			$escrow_address = "";
+			
+			if ($_REQUEST['genesis_type'] == "existing") {
+				$genesis_tx_hash = $_REQUEST['genesis_tx_hash'];
+				
+				$genesis_first_address_r = $app->run_query("SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id WHERE t.tx_hash=".$app->quote_escape($genesis_tx_hash)." AND io.out_index=0;");
+				if ($genesis_first_address_r->rowCount() == 1) {
+					$genesis_first_address = $genesis_first_address_r->fetch();
+					$escrow_address = $genesis_first_address['address'];
 				}
-				else $game_index = 1;
-				
-				$blockchain_id = 2;
-				$blockchain = new Blockchain($app, $blockchain_id);
-				
-				$q = "INSERT INTO games SET blockchain_id='".$blockchain->db_blockchain['blockchain_id']."', creator_id='".$thisuser->db_user['user_id']."', maturity=0, round_length=10, buyin_policy='unlimited', block_timing='realistic', creator_game_index='".$game_index."', logo_image_id=34, inflation='exponential', pos_reward='0', pow_reward='0', start_datetime='".date("Y-m-d g:\\0\\0a", time()+(2*60*60))."';";
-				$r = $app->run_query($q);
-				$game_id = $app->last_insert_id();
-				
-				$game = new Game($blockchain, $game_id);
-				$game_name = "Private Game #".$game_id;
-				$url_identifier = $app->game_url_identifier($game_name);
-				
-				$q = "UPDATE games SET name='".$game_name."', url_identifier='".$url_identifier."' WHERE game_id='".$game->db_game['game_id']."';";
-				$r = $app->run_query($q);
-				$game->db_game['name'] = $game_name;
-				$game->db_game['url_identifier'] = $url_identifier;
-				
-				if ($game->db_game['giveaway_status'] == "public_free") {
-					$user_game = $thisuser->ensure_user_in_game($game, false);
-				}
-				
-				$q = "UPDATE user_games ug JOIN user_strategies s ON ug.strategy_id=s.strategy_id SET s.voting_strategy='manual' WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND ug.game_id='".$game->db_game['game_id']."';";
-				$r = $app->run_query($q);
 			}
 			else {
-				$app->output_message(2, "You don't have permission to create a new game.");
-				die();
+				$io_id = (int) $_REQUEST['genesis_io_id'];
+				
+				$io_q = "SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id JOIN currency_accounts ca ON k.account_id=ca.account_id WHERE io.io_id='".$io_id."' AND ca.user_id='".$thisuser->db_user['user_id']."';";
+				$io_r = $app->run_query($io_q);
+				
+				if ($io_r->rowCount() > 0) {
+					$io = $io_r->fetch();
+					
+					$user_strategy = $app->run_query("SELECT * FROM user_strategies WHERE strategy_id='".$user_game['strategy_id']."';")->fetch();
+					
+					$account_name = "Escrow account for ".$game_name;
+					
+					$genesis_account_q = "INSERT INTO currency_accounts SET currency_id='".$blockchain->currency_id()."', user_id='".$thisuser->db_user['user_id']."', account_name=".$app->quote_escape($account_name).", time_created='".time()."';";
+					$genesis_account_r = $app->run_query($genesis_account_q);
+					$account_id = $app->last_insert_id();
+					$genesis_account = $app->run_query("SELECT * FROM currency_accounts WHERE account_id='".$account_id."';")->fetch();
+					
+					$db_genesis_address = $app->new_address_key($blockchain->currency_id(), $genesis_account);
+					$escrow_address = $db_genesis_address['pub_key'];
+					
+					$address_q = "SELECT * FROM address_keys WHERE account_id='".$user_game['account_id']."';";
+					$address_r = $app->run_query($address_q);
+					$my_address = $address_r->fetch();
+					
+					$genesis_amount = ceil($io['amount']/2);
+					$fee_amount = $user_strategy['transaction_fee']*pow(10, $game->db_game['decimal_places']);
+					$genesis_remainder = $io['amount']-$genesis_amount-$fee_amount;
+					
+					$transaction_id = $blockchain->create_transaction('transaction', array($genesis_amount, $genesis_remainder), false, array($io['io_id']), array($db_genesis_address['address_id'], $my_address['address_id']), array(), $fee_amount);
+					
+					$transaction = $app->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
+					$genesis_tx_hash = $transaction['tx_hash'];
+				}
+				else {
+					$app->output_message(2, "Error, you don't have permission to spend those coins.", false);
+					die();
+				}
 			}
+			
+			$q = "UPDATE games SET escrow_address=".$app->quote_escape($escrow_address).", genesis_tx_hash=".$app->quote_escape($genesis_tx_hash).", name=".$app->quote_escape($game_name).", url_identifier=".$app->quote_escape($url_identifier)." WHERE game_id='".$game->db_game['game_id']."';";
+			$r = $app->run_query($q);
+			$game->db_game['name'] = $game_name;
+			$game->db_game['url_identifier'] = $url_identifier;
+			
+			$app->output_message(1, $url_identifier, false);
 		}
 		else {
-			$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
-			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
-			$game = new Game($blockchain, $game_id);
+			$app->output_message(2, "You don't have permission to create a new game.", false);
+			die();
 		}
+	}
+	else if ($action == "fetch") {
+		$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
+		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+		$game = new Game($blockchain, $game_id);
 		
-		$q = "SELECT game_id, blockchain_id, creator_id, event_rule, option_group_id, event_entity_type_id, events_per_round, event_type_name, game_status, block_timing, giveaway_status, giveaway_amount, maturity, name, payout_weight, round_length, pos_reward, pow_reward, inflation, exponential_inflation_rate, exponential_inflation_minershare, final_round, invite_cost, invite_currency, coin_name, coin_name_plural, coin_abbreviation, start_condition, start_datetime, buyin_policy, game_buyin_cap, default_vote_effectiveness_function, default_effectiveness_param1, default_max_voting_fraction, game_starting_block, escrow_address, genesis_tx_hash, genesis_amount FROM games WHERE game_id='".$game->db_game['game_id']."';";
+		$q = "SELECT game_id, blockchain_id, creator_id, event_rule, option_group_id, event_entity_type_id, events_per_round, event_type_name, game_status, block_timing, giveaway_status, giveaway_amount, maturity, name, payout_weight, round_length, pos_reward, pow_reward, inflation, exponential_inflation_rate, exponential_inflation_minershare, final_round, invite_cost, invite_currency, coin_name, coin_name_plural, coin_abbreviation, start_condition, start_datetime, buyin_policy, game_buyin_cap, default_vote_effectiveness_function, default_effectiveness_param1, default_max_voting_fraction, game_starting_block, escrow_address, genesis_tx_hash, genesis_amount, default_betting_mode FROM games WHERE game_id='".$game->db_game['game_id']."';";
 		$r = $app->run_query($q);
 		
 		if ($r->rowCount() == 1) {

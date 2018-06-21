@@ -320,6 +320,8 @@ class User {
 			
 			$q = "UPDATE user_games SET strategy_id='".$strategy_id."' WHERE user_game_id='".$user_game['user_game_id']."';";
 			$r = $this->app->run_query($q);
+			
+			$user_game['strategy_id'] = $strategy_id;
 		}
 		
 		if ($game->db_game['game_status'] == "published" && $game->db_game['start_condition'] == "num_players") {

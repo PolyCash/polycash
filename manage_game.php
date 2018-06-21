@@ -6,7 +6,82 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->in
 $db_game = $app->fetch_game_from_url();
 
 if (empty($db_game)) {
-	echo "404 - Page not found";
+	$nav_tab_selected = "manage_game";
+	$pagetitle = "Create a new game?";
+	include('includes/html_start.php');
+	?>
+	<div class="container-fluid">
+		<div class="panel panel-info" style="margin-top: 15px;">
+			<div class="panel-heading">
+				<div class="panel-title">Would you like to create a new game?</div>
+			</div>
+			<div class="panel-body">
+				<?php
+				$new_game_perm = $thisuser->new_game_permission();
+				
+				if ($new_game_perm) {
+					?>
+					<form action="/ajax/manage_game.php" onsubmit="create_new_game(); return false;">
+						<div class="form-group">
+							<label for="new_game_name">Please enter a title for the game:</label>
+							<input class="form-control" id="new_game_name" />
+						</div>
+						<div class="form-group">
+							<label for="new_game_blockchain_id">Which blockchain should the game run on?</label>
+							<select id="new_game_blockchain_id" class="form-control">
+								<option value="">-- Please Select --</option>
+								<?php
+								$q = "SELECT * FROM blockchains ORDER BY blockchain_name ASC;";
+								$r = $app->run_query($q);
+								while ($db_blockchain = $r->fetch()) {
+									echo "<option value=\"".$db_blockchain['blockchain_id']."\">".$db_blockchain['blockchain_name']."</option>\n";
+								}
+								?>
+							</select>
+						</div>
+						<div class="form-group">
+							<label for="new_game_genesis_tx_type">
+								Do you want to use an existing transaction as the genesis for this game, or create a new genesis transaction?
+							</label>
+							<select id="new_game_genesis_type" class="form-control" onchange="new_game_genesis_type_changed();">
+								<option value="">-- Please Select --</option>
+								<option value="existing">Use an existing transaction</option>
+								<option value="new">Create a new transaction</option>
+							</select>
+						</div>
+						<div class="form-group" id="new_game_genesis_tx_hash_holder" style="display: none;">
+							<label for="new_game_genesis_tx_hash">
+								Please enter the genesis transaction ID:
+							</label>
+							<input type="text" class="form-control" id="new_game_genesis_tx_hash" />
+						</div>
+						<div id="new_game_existing_genesis" style="display: none;">
+							<div class="form-group">
+								<label for="new_game_genesis_account_id">Please select an account to pay for the new transaction:</label>
+								<select id="new_game_genesis_account_id" class="form-control" onchange="new_game_genesis_account_changed();"></select>
+							</div>
+							<div class="form-group">
+								<label for="new_game_genesis_io_id">Please select coins for your new genesis transaction:</label>
+								<select id="new_game_genesis_io_id" class="form-control"></select>
+							</div>
+						</div>
+						<div class="form-group">
+							<button id="new_game_save_btn" class="btn btn-primary">Save &amp; Continue</button>
+						</div>
+					</form>
+					<?php
+				}
+				else {
+					?>
+					Sorry, you don't have permission to create a new game.
+					<?php
+				}
+				?>
+			</div>
+		</div>
+	</div>
+	<?php
+	include('includes/html_stop.php');
 }
 else {
 	if ($thisuser) {
@@ -85,7 +160,7 @@ else {
 					?>
 					<div class="row">
 						<div class="col-md-6">
-							<div class="panel panel-default">
+							<div class="panel panel-info">
 								<div class="panel-heading">
 									<div class="panel-title">Manage game parameters: <?php echo $game->db_game['name']; ?></div>
 								</div>
@@ -254,6 +329,14 @@ else {
 											</div>
 										</div>
 										<div class="form-group">
+											<label for="game_form_default_betting_mode">Default betting mode:</label>
+											<select class="form-control" id="game_form_default_betting_mode">
+												<option value="">-- Please Select --</option>
+												<option value="inflationary">Inflationary Betting</option>
+												<option value="principal">Principal Betting</option>
+											</select>
+										</div>
+										<div class="form-group">
 											<label for="game_form_event_type_name">Each event is called:</label>
 											<input class="form-control" type="text" id="game_form_event_type_name" />
 										</div>
@@ -277,7 +360,7 @@ else {
 				else if ($next_action == "events") {
 					if ($game->db_game['event_rule'] == "game_definition") {
 						?>
-						<div class="panel panel-default">
+						<div class="panel panel-info">
 							<div class="panel-heading">
 								<div class="panel-title"><?php echo $game->db_game['name']; ?>: Manage Events</div>
 							</div>
@@ -314,7 +397,7 @@ else {
 				}
 				else if ($next_action == "description") {
 					?>
-					<div class="panel panel-default">
+					<div class="panel panel-info">
 						<div class="panel-heading">
 							<div class="panel-title"><?php echo $game->db_game['name']; ?>: Description</div>
 						</div>
