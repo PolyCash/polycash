@@ -83,7 +83,7 @@ if ($thisuser) {
 						$q = "UPDATE games SET game_status='published' WHERE game_id='".$game->db_game['game_id']."';";
 						$r = $app->run_query($q);
 						
-						$game->ensure_events_until_block($game->blockchain->last_block_id()+1);
+						$debug_text = $game->ensure_events_until_block($game->blockchain->last_block_id()+1);
 						
 						$app->output_message(1, "Great, your changes have been saved.", $game_info);
 					}

@@ -1553,7 +1553,7 @@ class Blockchain {
 		$q = "UPDATE blocks SET num_transactions=".$num_transactions." WHERE internal_block_id='".$internal_block_id."';";
 		$r = $this->app->run_query($q);
 		
-		$associated_games = $this->associated_games(false);
+		$associated_games = $this->associated_games(array('running'));
 		
 		for ($i=0; $i<count($associated_games); $i++) {
 			$associated_games[$i]->add_block($created_block_id);

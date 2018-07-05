@@ -585,17 +585,10 @@ if ($thisuser && $game) {
 		}
 		
 		$faucet_io = $game->check_faucet($user_game);
-		
-		$performance_history_rounds_per_section = 10;
 		?>
 		<script type="text/javascript">
 		//<![CDATA[
 		var current_tab = 0;
-		var performance_history_sections = 1;
-		var performance_history_rounds_per_section = <?php echo $performance_history_rounds_per_section; ?>;
-		var performance_history_from_round = <?php echo max(1, $current_round-$performance_history_rounds_per_section-1); ?>;
-		var performance_history_initial_load_round = <?php echo $current_round-1; ?>;
-		var performance_history_loading = false;
 		
 		var user_logged_in = true;
 		
@@ -1084,19 +1077,36 @@ if ($thisuser && $game) {
 				</div>
 				<div class="panel-body">
 					<p>Results for all events are shown below.  Did you want to <a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">see results for your bets only</a>?</p>
-					<div id="performance_history">
-						<div id="performance_history_new">
-						</div>
-						<div id="performance_history_0">
+					
+					<div style="border-bottom: 1px solid #bbb; margin-bottom: 5px;" id="render_event_outcomes">
+						<div id="event_outcomes_0">
 							<?php
-							echo $thisuser->performance_history($game, max(1, $current_round-$performance_history_rounds_per_section-1), $current_round-1);
+							$events_to_block_id = $game->db_game['events_until_block'];
+							if ($events_to_block_id > $game->blockchain->last_block_id()) $events_to_block_id = $game->blockchain->last_block_id();
+							
+							$q = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block<=".((int)$events_to_block_id)." ORDER BY event_index DESC LIMIT 1;";
+							$r = $app->run_query($q);
+							
+							if ($r->rowCount() > 0) {
+								$db_event = $r->fetch();
+								$to_event_index = $db_event['event_index'];
+								$from_event_index = max(0, $to_event_index-20);
+								$event_outcomes = $game->event_outcomes_html($from_event_index, $to_event_index, $thisuser);
+								echo $event_outcomes[1];
+							}
 							?>
 						</div>
 					</div>
 					<center>
-						<a href="" onclick="show_more_performance_history(); return false;">Show More</a>
+						<a href="" onclick="show_more_event_outcomes(); return false;" id="show_more_link">Show More</a>
 					</center>
 				</div>
+				
+				<script type="text/javascript">
+				$(document).ready(function() {
+					last_event_index_shown = <?php echo $from_event_index; ?>;
+				});
+				</script>
 			</div>
 		</div>
 		<div id="tabcontent4" style="display: none;" class="tabcontent">

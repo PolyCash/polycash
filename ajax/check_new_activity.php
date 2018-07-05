@@ -67,13 +67,6 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 			$output['last_block_id'] = $last_block_id;
 			$db_last_block = $blockchain->fetch_block_by_id($last_block_id);
 			$output['time_last_block_loaded'] = $db_last_block['time_mined'];
-			
-			if ($_REQUEST['refresh_page'] == "wallet" && $current_round != $_REQUEST['initial_load_round']) {
-				$initial_load_round = (int)$_REQUEST['initial_load_round'];
-				$output['new_performance_history'] = 1;
-				$output['performance_history'] = $thisuser->performance_history($game, $initial_load_round+1, $current_round);
-			}
-			else $output['new_performance_history'] = 0;
 		}
 		else $output['new_block'] = 0;
 		

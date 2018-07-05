@@ -308,7 +308,8 @@ class App {
 		
 		if ($game->db_game['final_round'] > 0) $event_block = $game->db_game['final_round']*$game->db_game['round_length'];
 		else $event_block = $game->db_game['round_length']+1;
-		$game->ensure_events_until_block($event_block);
+		
+		$debug_text = $game->ensure_events_until_block($event_block);
 	}
 	
 	public function get_redirect_url($url) {
@@ -1130,8 +1131,7 @@ class App {
 	
 	public function fetch_game_definition(&$game) {
 		$game_definition = array();
-		if ($game->blockchain->db_blockchain['p2p_mode'] != "rpc") $game_definition['blockchain_identifier'] = "private";
-		else $game_definition['blockchain_identifier'] = $game->blockchain->db_blockchain['url_identifier'];
+		$game_definition['blockchain_identifier'] = $game->blockchain->db_blockchain['url_identifier'];
 		
 		$verbatim_vars = $this->game_definition_verbatim_vars();
 		
@@ -1503,6 +1503,9 @@ class App {
 			array('int', 'event_starting_block', true),
 			array('int', 'event_final_block', true),
 			array('int', 'event_payout_block', true),
+			array('string', 'event_starting_time', true),
+			array('string', 'event_final_time', true),
+			array('string', 'event_payout_offset_time', true),
 			array('string', 'event_name', false),
 			array('string', 'option_block_rule', false),
 			array('string', 'option_name', false),
@@ -1555,19 +1558,20 @@ class App {
 	}
 	
 	public function migrate_game_definitions($game, $initial_game_def_hash, $new_game_def_hash) {
+		$log_message = "";
 		$initial_game_def_r = $this->run_query("SELECT * FROM game_definitions WHERE definition_hash=".$this->quote_escape($initial_game_def_hash).";");
 		
 		if ($initial_game_def_r->rowCount() == 1) {
 			$initial_game_def = $initial_game_def_r->fetch();
-			$initial_game_obj = json_decode($initial_game_def['definition']);
+			$initial_game_obj = get_object_vars(json_decode($initial_game_def['definition']));
 			
 			$new_game_def_r = $this->run_query("SELECT * FROM game_definitions WHERE definition_hash=".$this->quote_escape($new_game_def_hash).";");
 			
 			if ($new_game_def_r->rowCount() == 1) {
 				$new_game_def = $new_game_def_r->fetch();
-				$new_game_obj = json_decode($new_game_def['definition']);
+				$new_game_obj = get_object_vars(json_decode($new_game_def['definition']));
 				
-				$min_starting_block = min($initial_game_obj->game_starting_block, $new_game_obj->game_starting_block);
+				$min_starting_block = min($initial_game_obj['game_starting_block'], $new_game_obj['game_starting_block']);
 				
 				$verbatim_vars = $this->game_definition_verbatim_vars();
 				$reset_block = false;
@@ -1575,47 +1579,54 @@ class App {
 				for ($i=0; $i<count($verbatim_vars); $i++) {
 					$var = $verbatim_vars[$i];
 					if ($var[2] == true) {
-						if ($initial_game_obj->$var[1] != $new_game_obj->$var[1]) {
+						if ($initial_game_obj[$var[1]] != $new_game_obj[$var[1]]) {
 							if ($reset_block === false) $reset_block = $min_starting_block;
 							$reset_block = min($reset_block, $min_starting_block);
 							
-							$q = "UPDATE games SET ".$var[2]."=".$this->quote_escape($new_game_obj->$var[1])." WHERE game_id=".$game->db_game['game_id'].";";
+							$q = "UPDATE games SET ".$var[2]."=".$this->quote_escape($new_game_obj[$var[1]])." WHERE game_id=".$game->db_game['game_id'].";";
 							$r = $this->run_query($q);
+							
+							$log_message .= "setting ".$var[2]." -> ".$new_game_obj[$var[1]]."\n";
 						}
 					}
 				}
 				
 				$event_verbatim_vars = $this->event_verbatim_vars();
 				
-				$matched_events = min(count($initial_game_obj->events), count($new_game_obj->events));
-				$new_events = count($new_game_obj->events);
+				$matched_events = min(count($initial_game_obj['events']), count($new_game_obj['events']));
+				$new_events = count($new_game_obj['events']);
 				
 				for ($i=0; $i<$matched_events; $i++) {
-					if ($new_game_obj->events[$i] != $initial_game_obj->events[$i]) {
-						if ($reset_block === false) $reset_block = $new_game_obj->events[$i]->event_starting_block;
-						$reset_block = min($reset_block, $new_game_obj->events[$i]->event_starting_block, $initial_game_obj->events[$i]->event_starting_block);
+					if ($new_game_obj['events'][$i] != $initial_game_obj['events'][$i]) {
+						$log_message .= "difference on event #".$i."\n";
+						if ($reset_block === false) $reset_block = $new_game_obj['events'][$i]->event_starting_block;
+						$reset_block = min($reset_block, $new_game_obj['events'][$i]->event_starting_block, $initial_game_obj['events'][$i]->event_starting_block);
 					}
 				}
 				
 				if ($new_events > $matched_events) {
-					if ($reset_block === false) $reset_block = $new_game_obj->events[$matched_events]->db_event['event_starting_block'];
+					if ($reset_block === false) $reset_block = $new_game_obj['events'][$matched_events]->event_starting_block;
 					
 					for ($i=$matched_events; $i<$new_events; $i++) {
-						$this->check_set_gde($game, $i, $new_game_obj->events[$i], $event_verbatim_vars);
+						$this->check_set_gde($game, $i, get_object_vars($new_game_obj['events'][$i]), $event_verbatim_vars);
 					}
 				}
 				
 				if ($reset_block) {
+					$log_message .= "Resetting from ".$reset_block."\n";
 					$game->delete_from_block($reset_block);
 					$game->update_db_game();
-					$game->ensure_events_until_block($game->blockchain->last_block_id()+1);
+					/*$debug_text = $game->ensure_events_until_block($game->blockchain->last_block_id()+1);
 					$game->load_current_events();
-					$game->sync(false);
+					$game->sync(false);*/
 				}
+				else $log_message .= "Failed to determine a reset block.\n";
 			}
-			else echo "No match for ".$new_game_def_hash."<br/>\n";
+			else $log_message .= "No match for ".$new_game_def_hash."\n";
 		}
-		else echo "No match for ".$initial_game_def_hash."<br/>\n";
+		else $log_message .= "No match for ".$initial_game_def_hash."\n";
+		
+		return $log_message;
 	}
 	
 	public function check_set_gde(&$game, $event_index, $gde, $event_verbatim_vars) {

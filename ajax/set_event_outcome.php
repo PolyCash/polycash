@@ -3,23 +3,23 @@ include("../includes/connect.php");
 include("../includes/get_session.php");
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
-if (empty($GLOBALS['prevent_changes_to_history'])) {
-	if ($thisuser) {
-		$event_id = (int) $_REQUEST['event_id'];
+if ($thisuser) {
+	$event_id = (int) $_REQUEST['event_id'];
 
-		$db_event_r = $app->run_query("SELECT * FROM events WHERE event_id='".$event_id."';");
+	$db_event_r = $app->run_query("SELECT * FROM events WHERE event_id='".$event_id."';");
 
-		if ($db_event_r->rowCount() > 0) {
-			$db_event = $db_event_r->fetch();
+	if ($db_event_r->rowCount() > 0) {
+		$db_event = $db_event_r->fetch();
+		
+		$db_game_r = $app->run_query("SELECT * FROM games WHERE game_id='".$db_event['game_id']."';");
+		
+		if ($db_game_r->rowCount() > 0) {
+			$db_game = $db_game_r->fetch();
 			
-			$db_game_r = $app->run_query("SELECT * FROM games WHERE game_id='".$db_event['game_id']."';");
+			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+			$game = new Game($blockchain, $db_game['game_id']);
 			
-			if ($db_game_r->rowCount() > 0) {
-				$db_game = $db_game_r->fetch();
-				
-				$blockchain = new Blockchain($app, $db_game['blockchain_id']);
-				$game = new Game($blockchain, $db_game['game_id']);
-				
+			if (empty($GLOBALS['prevent_changes_to_history']) || $game->db_game['creator_id'] == $thisuser->db_user['user_id']) {
 				$user_game = $thisuser->ensure_user_in_game($game, false);
 				
 				if ($_REQUEST['action'] == "fetch") {
@@ -67,18 +67,18 @@ if (empty($GLOBALS['prevent_changes_to_history'])) {
 							$new_game_def = $app->fetch_game_definition($game);
 							$new_game_def_hash = $app->game_definition_hash($game);
 							
-							$app->migrate_game_definitions($game, $initial_game_def_hash, $new_game_def_hash);
+							$log_message = $app->migrate_game_definitions($game, $initial_game_def_hash, $new_game_def_hash);
 							
-							$app->output_message(2, "setting game def from ".$initial_game_def_hash." to ".$new_game_def_hash, false);
+							$app->output_message(2, $log_message, false);
 						}
 					}
 				}
 			}
-			else $app->output_message(5, "Invalid game ID.", false);
+			else $app->output_message(6, "You don't have permission to set the outcome for this event.", false);
 		}
-		else $app->output_message(4, "Invalid event ID.", false);
+		else $app->output_message(5, "Invalid game ID.", false);
 	}
-	else $app->output_message(3, "Please log in.", false);
+	else $app->output_message(4, "Invalid event ID.", false);
 }
-else $app->output_message(6, "Changes to history are prohibited on this server.", false);
+else $app->output_message(3, "Please log in.", false);
 ?>

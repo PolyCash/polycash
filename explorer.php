@@ -366,7 +366,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						echo '</div></div>'."\n";
 						echo '<div class="panel-body">'."\n";
 						
-						if ($event_status == "current") {
+						//if ($event_status == "current") {
 							$rankings = $event->round_voting_stats_all();
 							$sum_votes = $rankings[0];
 							$max_votes = $rankings[1];
@@ -385,13 +385,13 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							
 							$total_bets = floor($sum_score*$coins_per_vote) + $destroy_score;
 							$total_effective_bets = floor($sum_votes*$coins_per_vote) + $effective_destroy_score + $unconfirmed_effective_destroy_score;
-						}
+						/*}
 						else {
 							$max_votes = floor($event->event_outcome['sum_votes']*$event->db_event['max_voting_fraction']);
 							
 							$total_bets = floor($event->event_outcome['sum_score']*$coins_per_vote) + $event->event_outcome['destroy_score'];
 							$total_effective_bets = floor($event->event_outcome['sum_votes']*$coins_per_vote) + $event->event_outcome['effective_destroy_score'];
-						}
+						}*/
 						
 						if (!empty($game->db_game['module'])) {
 							if (method_exists($game->module, "event_index_to_next_event_index")) {
@@ -600,17 +600,19 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						<div class="transaction_table">
 						<?php
 						for ($i=$from_block_id; $i<=$to_block_id; $i++) {
-							echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$i."\">Block #".$i."</a>";
-							if ($event->db_event['vote_effectiveness_function'] != "constant") {
-								echo ", vote effectiveness: ".$event->block_id_to_effectiveness_factor($i);
-							}
-							echo "<br/>\n";
-							
 							$q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND t.block_id='".$i."' AND gio.game_id='".$game->db_game['game_id']."' AND t.amount > 0 GROUP BY t.transaction_id ORDER BY transaction_id ASC;";
 							$r = $app->run_query($q);
 							
-							while ($transaction = $r->fetch()) {
-								echo $game->render_transaction($transaction, false, false, $votes_per_coin);
+							if ($r->rowCount() > 0) {
+								echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$i."\">Block #".$i."</a>";
+								if ($event->db_event['vote_effectiveness_function'] != "constant") {
+									echo ", vote effectiveness: ".$event->block_id_to_effectiveness_factor($i);
+								}
+								echo "<br/>\n";
+								
+								while ($transaction = $r->fetch()) {
+									echo $game->render_transaction($transaction, false, false, $votes_per_coin);
+								}
 							}
 						}
 						echo '</div>';
@@ -639,7 +641,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 										$db_event = $r->fetch();
 										$to_event_index = $db_event['event_index'];
 										$from_event_index = max(0, $to_event_index-20);
-										$event_outcomes = $game->event_outcomes_html($from_event_index, $to_event_index);
+										$event_outcomes = $game->event_outcomes_html($from_event_index, $to_event_index, $thisuser);
 										echo $event_outcomes[1];
 									}
 									?>
@@ -684,6 +686,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo '</div></div>'."\n";
 							
 							echo '<div class="panel-body">';
+							echo "Mined at ".date("Y-m-d g:ia", $block['time_mined'])." (".$app->format_seconds(time()-$block['time_mined'])." ago)<br/>\n";
 							
 							if (!$game && !empty($block['num_transactions']) && $num_trans != $block['num_transactions']) {
 								echo "Loaded ".number_format($num_trans)." / ".number_format($block['num_transactions'])." transactions (".number_format(100*$num_trans/$block['num_transactions'], 2)."%).<br/>\n";

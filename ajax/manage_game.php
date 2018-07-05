@@ -50,7 +50,7 @@ if ($thisuser) {
 			$blockchain_id = (int) $_REQUEST['blockchain_id'];
 			$blockchain = new Blockchain($app, $blockchain_id);
 			
-			$q = "INSERT INTO games SET blockchain_id='".$blockchain->db_blockchain['blockchain_id']."', creator_id='".$thisuser->db_user['user_id']."', maturity=0, round_length=1, buyin_policy='none', block_timing='realistic', creator_game_index='".$game_index."', inflation='exponential', pos_reward='0', pow_reward='0', event_rule='game_definition', game_starting_block='".$blockchain->last_block_id()."', default_betting_mode='principal';";
+			$q = "INSERT INTO games SET blockchain_id='".$blockchain->db_blockchain['blockchain_id']."', creator_id='".$thisuser->db_user['user_id']."', maturity=0, round_length=1, buyin_policy='none', block_timing='realistic', creator_game_index='".$game_index."', inflation='exponential', pos_reward='0', pow_reward='0', event_rule='game_definition', event_winning_rule='game_definition', game_starting_block='".$blockchain->last_block_id()."', default_betting_mode='principal';";
 			$r = $app->run_query($q);
 			$game_id = $app->last_insert_id();
 			
@@ -197,25 +197,13 @@ if ($thisuser) {
 					
 					$verbatim_vars = $app->event_verbatim_vars();
 					
-					$form_html = '<div class="modal-body">';
+					$form_data = array();
 					
 					for ($i=0; $i<count($verbatim_vars); $i++) {
-						$var_display_name = ucfirst(str_replace("_", " ", $verbatim_vars[$i][1]));
-						$form_html .= '<div class="form-group">'."\n";
-						$form_html .= '<label for="game_form_'.$verbatim_vars[$i][1].'">'.$var_display_name.':</label>'."\n";
-						$form_html .= '<input class="form-control" id="game_form_'.$verbatim_vars[$i][1].'"';
-						if (isset($gde[$verbatim_vars[$i][1]])) $form_html .= ' value="'.$gde[$verbatim_vars[$i][1]].'"';
-						$form_html .= ' />'."\n";
-						$form_html .= "</div>\n";
+						if (isset($gde[$verbatim_vars[$i][1]])) $form_data[$verbatim_vars[$i][1]] = $gde[$verbatim_vars[$i][1]];
 					}
 					
-					$form_html .= "</div>\n";
-					$form_html .= '<div class="modal-footer">
-						<button type="button" class="btn btn-primary" onclick="save_gde(\''.$gde_id.'\');">Save changes</button>
-						<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-					</div>'."\n";
-					
-					$output_obj['html'] = $form_html;
+					$output_obj['form_data'] = $form_data;
 					
 					$app->output_message(1, "", $output_obj);
 				}
@@ -245,16 +233,20 @@ if ($thisuser) {
 					}
 					
 					for ($i=0; $i<count($verbatim_vars); $i++) {
-						$q .= $verbatim_vars[$i][1]."=";
-						if (!isset($_REQUEST[$verbatim_vars[$i][1]]) || $_REQUEST[$verbatim_vars[$i][1]] === "") $q .= "NULL";
-						else $q .= $app->quote_escape($_REQUEST[$verbatim_vars[$i][1]]);
+						$var = $verbatim_vars[$i][1];
+						$val = $_REQUEST[$var];
+						if (isset($val) && $val !== "" && in_array($var, array('event_starting_time', 'event_final_time'))) {
+							$val = date("Y-m-d g:ia", strtotime($val));
+						}
+						$q .= $var."=";
+						if (!isset($val) || $val === "") $q .= "NULL";
+						else $q .= $app->quote_escape($val);
 						$q .= ", ";
 					}
 					$q = substr($q, 0, strlen($q)-2);
 					
 					if ($gde_id == "new") $q .= ";";
 					else $q .= " WHERE game_defined_event_id='".$gde['game_defined_event_id']."';";
-					
 					$r = $app->run_query($q);
 					
 					if ($gde_id == "new") {
@@ -265,9 +257,9 @@ if ($thisuser) {
 					$new_game_def_hash = $app->game_definition_hash($game);
 					$game->check_set_game_definition();
 					
-					$app->migrate_game_definitions($game, $initial_game_def_hash, $new_game_def_hash);
+					$log_message = $app->migrate_game_definitions($game, $initial_game_def_hash, $new_game_def_hash);
 					
-					$app->output_message(7, $gde_id, "");
+					$app->output_message(7, $log_message, "");
 				}
 				else if ($action == "manage_gdos") {
 					$gde_id = (int) $_REQUEST['gde_id'];
@@ -375,9 +367,9 @@ if ($thisuser) {
 								$new_game_def_hash = $app->game_definition_hash($game);
 								$game->check_set_game_definition();
 								
-								$app->migrate_game_definitions($game, $initial_game_def_hash, $new_game_def_hash);
+								$log_message = $app->migrate_game_definitions($game, $initial_game_def_hash, $new_game_def_hash);
 								
-								$app->output_message(1, $gdo_id, false);
+								$app->output_message(1, $log_message, false);
 							}
 							else $app->output_message(9, "Invalid name.", false);
 						}

@@ -10,7 +10,7 @@ $from_event_index = (int) $_REQUEST['from_event_index'];
 $to_event_index = (int) $_REQUEST['to_event_index'];
 
 if ($from_event_index <= $to_event_index) {
-	$event_outcomes_html = $game->event_outcomes_html($from_event_index, $to_event_index);
+	$event_outcomes_html = $game->event_outcomes_html($from_event_index, $to_event_index, $thisuser);
 	echo json_encode($event_outcomes_html);
 }
 else {

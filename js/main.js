@@ -311,20 +311,6 @@ function save_notification_preferences() {
 		});
 	}
 }
-function show_more_performance_history() {
-	if (!performance_history_loading) {
-		performance_history_loading = true;
-		performance_history_from_round -= performance_history_rounds_per_section;
-		$('#performance_history').append('<div id="performance_history_'+performance_history_sections+'"></div>');
-		$('#performance_history_'+performance_history_sections).html("Loading...");
-		
-		$.get("/ajax/performance_history.php?game_id="+games[0].game_id+"&from_round_id="+performance_history_from_round+"&to_round_id="+(performance_history_from_round+performance_history_rounds_per_section-1), function(result) {
-			$('#performance_history_'+performance_history_sections).html(result);
-			performance_history_sections++;
-			performance_history_loading = false;
-		});
-	}
-}
 function attempt_withdrawal() {
 	if ($('#withdraw_btn').html() == "Withdraw") {
 		var amount = $('#withdraw_amount').val();
@@ -1530,7 +1516,6 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 			this.refresh_in_progress = true;
 			
 			var check_activity_url = "/ajax/check_new_activity.php?instance_id="+this.instance_id+"&game_id="+this.game_id+"&event_ids="+this.event_ids+"&refresh_page="+this.refresh_page+"&last_block_id="+this.last_block_id+"&last_transaction_id="+this.last_transaction_id+"&mature_game_io_ids_csv="+this.mature_game_io_ids_csv+"&game_loop_index="+this.game_loop_index+"&votingaddr_count="+this.votingaddr_count;
-			if (this.refresh_page == "wallet") check_activity_url += "&initial_load_round="+performance_history_initial_load_round;
 			
 			var _this = this;
 			$.ajax({
@@ -1681,9 +1666,7 @@ function set_select_add_output() {
 	var optionsAsString = "<option value=''>Please select...</option>";
 	for (var i=0; i<games[0].events.length; i++) {
 		for (var j=0; j<games[0].events[i].options.length; j++) {
-			if (games[0].events[i].options[j].has_votingaddr) {
-				optionsAsString += "<option value='"+games[0].events[i].options[j].option_id+"'>"+games[0].events[i].options[j].name+"</option>";
-			}
+			optionsAsString += "<option value='"+games[0].events[i].options[j].option_id+"'>"+games[0].events[i].options[j].name+"</option>";
 		}
 	}
 	$("#select_add_output").find('option').remove().end().append($(optionsAsString));
@@ -1858,20 +1841,46 @@ function create_account_step(step) {
 	}
 }
 
-var event_verbatim_vars = new Array('event_index', 'next_event_index', 'event_starting_block', 'event_final_block', 'event_payout_block', 'event_name', 'option_block_rule', 'option_name', 'option_name_plural', 'outcome_index');
+var event_verbatim_vars = new Array('event_index', 'next_event_index', 'event_starting_block', 'event_final_block', 'event_payout_block', 'event_starting_time', 'event_final_time', 'event_payout_offset_time', 'event_name', 'option_block_rule', 'option_name', 'option_name_plural', 'outcome_index');
+
+function clear_event_form() {
+	for (form_i in event_verbatim_vars) {
+		$('#event_form_'+event_verbatim_vars[form_i]).val("");
+	}
+}
 
 function manage_game_load_event(gde_id) {
+	clear_event_form();
+	
 	$.get("/ajax/manage_game.php?action=load_gde&game_id="+games[0].game_id+"&gde_id="+gde_id, function(result) {
 		var result_obj = JSON.parse(result);
 		$('#event_modal').modal('show');
-		$('#event_modal_content').html(result_obj['html']);
+		
+		var form_data = result_obj['form_data'];
+		
+		for (var form_key in form_data) {
+			$('#event_form_'+form_key).val(form_data[form_key]);
+		}
+		
+		if (form_data['event_starting_time'] || !form_data['event_starting_time'] && !form_data['event_starting_time']) {
+			$('#event_form_event_times').show();
+			$('#event_form_event_blocks').hide();
+		}
+		else {
+			$('#event_form_event_times').hide();
+			$('#event_form_event_blocks').show();
+		}
+		
+		$('#event_form_save_btn').click(function() {
+			save_gde(gde_id);
+		});
 	});
 }
 function save_gde(gde_id) {
 	var save_url = "/ajax/manage_game.php?action=save_gde&game_id="+games[0].game_id+"&gde_id="+gde_id;
 	
 	for (var i=0; i<event_verbatim_vars.length; i++) {
-		save_url += "&"+event_verbatim_vars[i]+"="+$('#game_form_'+event_verbatim_vars[i]).val();
+		save_url += "&"+event_verbatim_vars[i]+"="+$('#event_form_'+event_verbatim_vars[i]).val();
 	}
 	
 	$.get(save_url, function(result) {

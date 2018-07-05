@@ -18,8 +18,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 	$game = new Game($blockchain, $game_id);
 
-	$game->ensure_events_until_block($block_height);
-	echo $game->db_game['name']."->ensure_events_until($block_height);<br/>\nDone!\n";
+	$debug_text = $game->ensure_events_until_block($block_height);
+	echo $game->db_game['name']."->ensure_events_until($block_height);\n$debug_text\nDone!\n";
 }
 else echo "Please supply the correct key.\n";
 ?>

@@ -45,7 +45,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		}
 		*/
 		$ensure_block = $blockchain->last_block_id()+($game->db_game['round_length']*50);
-		$game->ensure_events_until_block($ensure_block);
+		$debug_text = $game->ensure_events_until_block($ensure_block);
+		echo $debug_text."\n";
 		$game->update_option_votes();
 		echo "Ensured events until ".$ensure_block."<br/>\n";
 	}

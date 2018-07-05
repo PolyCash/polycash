@@ -59,7 +59,10 @@ if ($thisuser && $game) {
 			}
 			else $app->output_message(5, "You don't have enough coins to place this bet.", false);
 		}
-		else $app->output_message(4, "Error, no address found for this option.", false);
+		else {
+			$thisuser->generate_user_addresses($game, $user_game);
+			$app->output_message(4, "Error, no address found for this option. Please try again.", false);
+		}
 	}
 	else $app->output_message(3, "Error, invalid option ID.", false);
 }
