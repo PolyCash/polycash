@@ -19,7 +19,7 @@ if ($thisuser) {
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
 			
-			if (empty($GLOBALS['prevent_changes_to_history']) || $game->db_game['creator_id'] == $thisuser->db_user['user_id']) {
+			if ($app->user_can_edit_game($thisuser, $game)) {
 				$user_game = $thisuser->ensure_user_in_game($game, false);
 				
 				if ($_REQUEST['action'] == "fetch") {
@@ -56,23 +56,20 @@ if ($thisuser) {
 						$db_option = $db_option_r->fetch();
 						
 						if ($db_option['event_id'] == $db_event['event_id']) {
-							$initial_game_def = $app->fetch_game_definition($game);
-							$initial_game_def_hash = $app->game_definition_hash($game);
+							$game->check_set_game_definition("defined");
 							
 							$q = "UPDATE game_defined_events SET outcome_index=".$db_option['option_index']." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."';";
 							$r = $app->run_query($q);
 							
-							$game->check_set_game_definition();
+							$game->check_set_game_definition("defined");
 							
-							$new_game_def = $app->fetch_game_definition($game);
-							$new_game_def_hash = $app->game_definition_hash($game);
-							
-							$log_message = $app->migrate_game_definitions($game, $initial_game_def_hash, $new_game_def_hash);
-							
-							$app->output_message(2, $log_message, false);
+							$app->output_message(2, "Changed the game definition.", false);
 						}
+						else $app->output_message(9, "Option event ID does not match.", false);
 					}
+					else $app->output_message(8, "Failed to find option by ID.", false);
 				}
+				else $app->output_message(7, "Please specify an action.", false);
 			}
 			else $app->output_message(6, "You don't have permission to set the outcome for this event.", false);
 		}

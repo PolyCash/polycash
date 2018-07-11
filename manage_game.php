@@ -502,7 +502,9 @@ else {
 					<?php
 				}
 				else if ($next_action == "game_definition") {
-					$game_definition = $app->fetch_game_definition($game);
+					$game_def = $app->fetch_game_definition($game, "defined");
+					$game_def_str = $app->game_def_to_text($game_def);
+					$game_def_hash = $app->game_def_to_hash($game_def_str);
 					?>
 					<div class="panel panel-info">
 						<div class="panel-heading">
@@ -511,10 +513,10 @@ else {
 						<div class="panel-body">
 							<div class="row">
 								<div class="col-sm-2"><label class="form-control-static" for="game_definition_hash">Definition hash:</label></div>
-								<div class="col-sm-10"><input type="text" class="form-control" id="game_definition_hash" value="<?php echo $app->game_definition_hash($game); ?>" /></div>
+								<div class="col-sm-10"><input type="text" class="form-control" id="game_definition_hash" value="<?php echo $game_def_hash; ?>" /></div>
 							</div>
 							
-							<textarea id="game_definition" style="width: 100%; min-height: 400px; background-color: #f5f5f5; border: 1px solid #cccccc; margin-top: 10px;"><?php echo json_encode($game_definition, JSON_PRETTY_PRINT); ?></textarea>
+							<textarea id="game_definition" style="width: 100%; min-height: 400px; background-color: #f5f5f5; border: 1px solid #cccccc; margin-top: 10px;"><?php echo $game_def_str; ?></textarea>
 						</div>
 					</div>
 					<script type="text/javascript">

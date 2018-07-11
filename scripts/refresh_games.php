@@ -18,6 +18,10 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	while ($db_game = $r->fetch()) {
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$game = new Game($blockchain, $db_game['game_id']);
+		
+		$game->check_set_game_definition("defined");
+		$game->check_set_game_definition("actual");
+		
 		//$game->ensure_options();
 		
 		/*if ($game->db_game['creator_id'] > 0) {}

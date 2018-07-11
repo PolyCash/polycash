@@ -13,13 +13,42 @@
 <footer class="footer status_footer">
 	<div class="status_footer_right">
 		<div class="status_footer_section">
-			Loaded in <?php echo round(microtime(true)-$pageload_start_time, 2); ?> sec. Pageview tracking is: 
+			Loaded in <?php echo round(microtime(true)-$pageload_start_time, 2); ?> sec.
+		</div>
+		<div class="status_footer_section">
+			Tracking is: 
 			<?php
 			if ($GLOBALS['pageview_tracking_enabled']) echo "<font class='redtext'>Enabled</font>";
 			else echo "<font class='greentext'>Disabled</font>";
 			?>
 		</div>
 		<?php
+		if ($game) { ?>
+			<div class="status_footer_section">
+			<?php
+			$game_def = $app->fetch_game_definition($game, "defined");
+			$game_def_str = $app->game_def_to_text($game_def);
+			$game_def_hash = $app->game_def_to_hash($game_def_str);
+			$game_def_hash_3 = substr($game_def_hash, 0, 3);
+			
+			$actual_game_def = $app->fetch_game_definition($game, "actual");
+			$actual_game_def_str = $app->game_def_to_text($actual_game_def);
+			$actual_game_def_hash = $app->game_def_to_hash($actual_game_def_str);
+			$actual_game_def_hash_3 = substr($actual_game_def_hash, 0, 3);
+			
+			echo '<a href="/'.$game->db_game['url_identifier'].'/">'.$game->db_game['name']."</a>\n";
+			
+			if ($game_def_hash != $actual_game_def_hash) {
+				echo "<font style=\"font-size: 75%;\">";
+				echo " &nbsp;&nbsp; Pending $actual_game_def_hash_3 &rarr; $game_def_hash_3";
+				echo " &nbsp;&nbsp; <a href=\"\" onclick=\"apply_game_definition(".$game->db_game['game_id']."); return false;\">Apply Changes</a>";
+				echo "</font>\n";
+			}
+			?>
+			</div>
+		<?php
+		}
+		
 		$q = "SELECT * FROM blockchains b JOIN images i ON b.default_image_id=i.image_id WHERE b.online=1;";
 		$r = $app->run_query($q);
 		

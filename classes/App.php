@@ -1035,7 +1035,12 @@ class App {
 		if ($db_game['game_id'] > 0) {
 			$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
-			$html .= '<div class="row"><div class="col-sm-5">Game definition:</div><div class="col-sm-7"><a target="_blank" href="'.$GLOBALS['base_url'].'/scripts/show_game_definition.php?game_id='.$db_game['game_id'].'" title="'.$this->game_definition_hash($game).'">'.$this->game_definition_hash_short($game).'</a></div></div>';
+			
+			$game_def = $this->fetch_game_definition($game, "actual");
+			$game_def_str = $this->game_def_to_text($game_def);
+			$game_def_hash = $this->game_def_to_hash($game_def_str);
+			
+			$html .= '<div class="row"><div class="col-sm-5">Game definition:</div><div class="col-sm-7"><a href="/explorer/games/'.$game->db_game['url_identifier'].'/definition/?definition_mode=actual">'.$this->shorten_game_def_hash($game_def_hash).'</a></div></div>';
 		}
 		
 		$html .= '<div class="row"><div class="col-sm-5">Length of game:</div><div class="col-sm-7">';
@@ -1129,7 +1134,8 @@ class App {
 		return $html;
 	}
 	
-	public function fetch_game_definition(&$game) {
+	public function fetch_game_definition(&$game, $definition_mode) {
+		// $definition_mode is "defined" or "actual"
 		$game_definition = array();
 		$game_definition['blockchain_identifier'] = $game->blockchain->db_blockchain['url_identifier'];
 		
@@ -1153,26 +1159,41 @@ class App {
 			$event_verbatim_vars = $this->event_verbatim_vars();
 			$events_obj = array();
 			
-			$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' ORDER BY event_index ASC;";
+			if ($definition_mode == "defined") {
+				$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' ORDER BY event_index ASC;";
+			}
+			else {
+				$q = "SELECT e.*, o.*, e.event_id AS event_id FROM events e LEFT JOIN event_outcomes eo ON e.event_id=eo.event_id LEFT JOIN options o ON eo.winning_option_id=o.option_id WHERE e.game_id='".$game->db_game['game_id']."' ORDER BY e.event_index ASC;";
+			}
 			$r = $this->run_query($q);
 			
 			$i=0;
-			while ($game_defined_event = $r->fetch()) {
+			while ($db_event = $r->fetch()) {
 				$temp_event = array();
 				
 				for ($j=0; $j<count($event_verbatim_vars); $j++) {
 					$var_type = $event_verbatim_vars[$j][0];
 					$var_name = $event_verbatim_vars[$j][1];
-					$var_val = $game_defined_event[$var_name];
+					
+					if ($var_name == "outcome_index" && $definition_mode == "actual") {
+						$var_val = $db_event['event_option_index'];
+					}
+					else $var_val = $db_event[$var_name];
+					
 					if ($var_type == "int" && $var_val != "") $var_val = (int) $var_val;
 					$temp_event[$var_name] = $var_val;
 				}
 				
-				$qq = "SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$i."' ORDER BY option_index ASC;";
+				if ($definition_mode == "defined") {
+					$qq = "SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."' ORDER BY option_index ASC;";
+				}
+				else {
+					$qq = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY event_option_index ASC;";
+				}
 				$rr = $this->run_query($qq);
 				$j = 0;
-				while ($game_defined_option = $rr->fetch()) {
-					$temp_event['possible_outcomes'][$j] = array("title"=>$game_defined_option['name']);
+				while ($option = $rr->fetch()) {
+					$temp_event['possible_outcomes'][$j] = array("title"=>$option['name']);
 					$j++;
 				}
 				$events_obj[$i] = $temp_event;
@@ -1184,19 +1205,17 @@ class App {
 	}
 	
 	public function game_definition_hash(&$game) {
-		$game_def = $this->fetch_game_definition($game);
+		$game_def = $this->fetch_game_definition($game, "defined");
 		$game_def_str = $this->game_def_to_text($game_def);
 		$game_def_hash = $this->game_def_to_hash($game_def_str);
 		return $game_def_hash;
 	}
 	
-	public function game_definition_hash_short(&$game) {
-		$game_def_hash = $this->game_definition_hash($game);
-		$short_hash = substr($game_def_hash, 0, 16);
-		return $short_hash;
+	public function shorten_game_def_hash($hash) {
+		return substr($hash, 0, 16);
 	}
 	
-	public function game_def_to_hash($game_def_str) {
+	public function game_def_to_hash(&$game_def_str) {
 		return hash("sha256", $game_def_str);
 	}
 	
@@ -1598,9 +1617,10 @@ class App {
 				
 				for ($i=0; $i<$matched_events; $i++) {
 					if ($new_game_obj['events'][$i] != $initial_game_obj['events'][$i]) {
-						$log_message .= "difference on event #".$i."\n";
-						if ($reset_block === false) $reset_block = $new_game_obj['events'][$i]->event_starting_block;
-						$reset_block = min($reset_block, $new_game_obj['events'][$i]->event_starting_block, $initial_game_obj['events'][$i]->event_starting_block);
+						if ($initial_game_obj['events'][$i]->event_starting_block && ($reset_block === false || $initial_game_obj['events'][$i]->event_starting_block < $reset_block)) $reset_block = $initial_game_obj['events'][$i]->event_starting_block;
+						if ($new_game_obj['events'][$i]->event_starting_block && ($reset_block === false || $new_game_obj['events'][$i]->event_starting_block < $reset_block)) $reset_block = $new_game_obj['events'][$i]->event_starting_block;
+						
+						$log_message .= "difference on event #".$i.", reset block: ".$reset_block."\n";
 					}
 				}
 				
@@ -1608,7 +1628,8 @@ class App {
 					if ($reset_block === false) $reset_block = $new_game_obj['events'][$matched_events]->event_starting_block;
 					
 					for ($i=$matched_events; $i<$new_events; $i++) {
-						$this->check_set_gde($game, $i, get_object_vars($new_game_obj['events'][$i]), $event_verbatim_vars);
+						$gde = get_object_vars($new_game_obj['events'][$i]);
+						$this->check_set_gde($game, $gde, $event_verbatim_vars);
 					}
 				}
 				
@@ -1629,10 +1650,10 @@ class App {
 		return $log_message;
 	}
 	
-	public function check_set_gde(&$game, $event_index, $gde, $event_verbatim_vars) {
+	public function check_set_gde(&$game, &$gde, &$event_verbatim_vars) {
 		$db_gde = false;
 		
-		$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$event_index."';";
+		$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gde['event_index']."';";
 		$r = $this->run_query($q);
 		if ($r->rowCount() > 0) {
 			$db_gde = $r->fetch();
@@ -1659,24 +1680,24 @@ class App {
 		$q .= ";";
 		$r = $this->run_query($q);
 		
-		$possible_outcomes = $gde['possible_outcomes'];
+		$this->run_query("DELETE FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gde['event_index']."';");
 		
-		$this->run_query("DELETE FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$event_index."';");
-		
-		for ($k=0; $k<count($possible_outcomes); $k++) {
-			$q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index='".$event_index."', option_index='".$k."', name=".$this->quote_escape($possible_outcomes[$k]['title']);
-			if (!empty($possible_outcomes[$k]['entity_id'])) $q .= ", entity_id='".$possible_outcomes[$k]['entity_id']."'";
+		for ($k=0; $k<count($gde['possible_outcomes']); $k++) {
+			$possible_outcome = get_object_vars($gde['possible_outcomes'][$k]);
+			
+			$q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index='".$gde['event_index']."', option_index='".$k."', name=".$this->quote_escape($possible_outcome['title']);
+			if (!empty($possible_outcome['entity_id'])) $q .= ", entity_id='".$possible_outcome['entity_id']."'";
 			$q .= ";";
 			$r = $this->run_query($q);
 		}
 	}
 	
-	public function check_set_game_definition($definition_hash, $game_definition) {
-		$q = "SELECT * FROM game_definitions WHERE definition_hash=".$this->quote_escape($definition_hash).";";
+	public function check_set_game_definition($game_def_hash, $game_def_str) {
+		$q = "SELECT * FROM game_definitions WHERE definition_hash=".$this->quote_escape($game_def_hash).";";
 		$r = $this->run_query($q);
 		
 		if ($r->rowCount() == 0) {
-			$q = "INSERT INTO game_definitions SET definition_hash=".$this->quote_escape($definition_hash).", definition=".$this->quote_escape(json_encode($game_definition, JSON_PRETTY_PRINT)).";";
+			$q = "INSERT INTO game_definitions SET definition_hash=".$this->quote_escape($game_def_hash).", definition=".$this->quote_escape($game_def_str).";";
 			$r = $this->run_query($q);
 		}
 	}
@@ -1850,7 +1871,7 @@ class App {
 						}
 					}
 					
-					$new_game->check_set_game_definition();
+					$new_game->check_set_game_definition("defined");
 					
 					$error_message = false;
 					return $new_game;

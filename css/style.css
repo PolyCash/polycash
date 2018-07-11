@@ -353,7 +353,7 @@ footer {
 .modal-lg {
 	width: 1000px;
 }
-.explorer_nav li a.selected {
+a.selected {
 	font-weight: bold;
 	color: #000 ! important;
 }

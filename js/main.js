@@ -2159,3 +2159,11 @@ function save_featured_strategy() {
 		});
 	}
 }
+function apply_game_definition(game_id) {
+	var apply_url = "/ajax/apply_game_definition.php?game_id="+game_id;
+	
+	$.get(apply_url, function(result) {
+		var result_obj = JSON.parse(result);
+		console.log(result_obj);
+	});
+}

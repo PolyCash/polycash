@@ -208,9 +208,7 @@ if ($thisuser) {
 					$app->output_message(1, "", $output_obj);
 				}
 				else if ($action == "save_gde") {
-					$initial_game_def = $app->fetch_game_definition($game);
-					$initial_game_def_hash = $app->game_definition_hash($game);
-					$game->check_set_game_definition();
+					$game->check_set_game_definition("defined");
 					
 					$verbatim_vars = $app->event_verbatim_vars();
 					
@@ -236,7 +234,7 @@ if ($thisuser) {
 						$var = $verbatim_vars[$i][1];
 						$val = $_REQUEST[$var];
 						if (isset($val) && $val !== "" && in_array($var, array('event_starting_time', 'event_final_time'))) {
-							$val = date("Y-m-d g:ia", strtotime($val));
+							$val = date("Y-m-d G:i:s", strtotime($val));
 						}
 						$q .= $var."=";
 						if (!isset($val) || $val === "") $q .= "NULL";
@@ -253,13 +251,9 @@ if ($thisuser) {
 						$gde_id = $app->last_insert_id();
 					}
 					
-					$new_game_def = $app->fetch_game_definition($game);
-					$new_game_def_hash = $app->game_definition_hash($game);
-					$game->check_set_game_definition();
+					$game->check_set_game_definition("defined");
 					
-					$log_message = $app->migrate_game_definitions($game, $initial_game_def_hash, $new_game_def_hash);
-					
-					$app->output_message(7, $log_message, "");
+					$app->output_message(7, "Changed the game definition.", false);
 				}
 				else if ($action == "manage_gdos") {
 					$gde_id = (int) $_REQUEST['gde_id'];
@@ -349,9 +343,7 @@ if ($thisuser) {
 							if (!empty($name)) {
 								$entity = $app->check_set_entity($entity_type['entity_type_id'], $name);
 								
-								$initial_game_def = $app->fetch_game_definition($game);
-								$initial_game_def_hash = $app->game_definition_hash($game);
-								$game->check_set_game_definition();
+								$game->check_set_game_definition("defined");
 								
 								$q = "SELECT COUNT(*), MAX(option_index) FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gde['event_index']."';";
 								$r = $app->run_query($q);
@@ -363,13 +355,9 @@ if ($thisuser) {
 								$r = $app->run_query($q);
 								$gdo_id = $app->last_insert_id();
 								
-								$new_game_def = $app->fetch_game_definition($game);
-								$new_game_def_hash = $app->game_definition_hash($game);
-								$game->check_set_game_definition();
+								$game->check_set_game_definition("defined");
 								
-								$log_message = $app->migrate_game_definitions($game, $initial_game_def_hash, $new_game_def_hash);
-								
-								$app->output_message(1, $log_message, false);
+								$app->output_message(1, "Changed the game definition.", false);
 							}
 							else $app->output_message(9, "Invalid name.", false);
 						}
