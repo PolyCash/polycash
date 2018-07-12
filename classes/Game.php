@@ -947,19 +947,14 @@ class Game {
 	}
 	
 	public function option_index_to_option_id_in_block($option_index, $block_id) {
-		$events = $this->events_by_block($block_id);
-		$sum_options = 0;
-		for ($i=0; $i<count($events); $i++) {
-			$thisevent_options = (int) $this->blockchain->app->run_query("SELECT COUNT(*) FROM options WHERE event_id='".$events[$i]->db_event['event_id']."';")->fetch()['COUNT(*)'];
-			if ($option_index >= $sum_options && $option_index < $sum_options+$thisevent_options) {
-				$event_option_offset = $option_index-$sum_options;
-				$first_option_q = "SELECT * FROM options WHERE event_id='".$events[$i]->db_event['event_id']."' ORDER BY event_option_index ASC LIMIT 1;";
-				$first_option = $this->blockchain->app->run_query($first_option_q)->fetch();
-				return $first_option['option_id']+$event_option_offset;
-			}
-			$sum_options += $thisevent_options;
+		$first_option_q = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."' AND op.option_index='".$option_index."' AND e.event_starting_block<=".$block_id." AND e.event_final_block>=".$block_id.";";
+		$first_option_r = $this->blockchain->app->run_query($first_option_q);
+		
+		if ($first_option_r->rowCount() > 0) {
+			$first_option = $first_option_r->fetch();
+			return $first_option['option_id'];
 		}
-		return false;
+		else return false;
 	}
 	
 	public function generate_invitation($inviter_id, &$invitation, $user_id) {

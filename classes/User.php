@@ -151,7 +151,7 @@ class User {
 			$q = "INSERT INTO user_games SET user_id='".$this->db_user['user_id']."', game_id='".$game->db_game['game_id']."', api_access_code=".$this->app->quote_escape($this->app->random_string(32)).", show_intro_message=1";
 			if (!empty($this->db_user['payout_address_id'])) $q .= ", payout_address_id='".$this->db_user['payout_address_id']."'";
 			if ($game->db_game['giveaway_status'] == "public_pay" || $game->db_game['giveaway_status'] == "invite_pay") $q .= ", payment_required=1";
-			$q .= ", notification_preference='email', prompt_notification_preference=1";
+			$q .= ", notification_preference='email', prompt_notification_preference=1, betting_mode='principal'";
 			$q .= ";";
 			$r = $this->app->run_query($q);
 			$user_game_id = $this->app->last_insert_id();
