@@ -1059,14 +1059,14 @@ class Game {
 		
 		$this->db_game['seconds_per_block'] = $this->blockchain->db_blockchain['seconds_per_block'];
 		
-		$qq = "SELECT * FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$this->db_game['game_id']."' AND u.notification_email LIKE '%@%';";
+		/*$qq = "SELECT * FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$this->db_game['game_id']."' AND u.notification_email LIKE '%@%';";
 		$rr = $this->blockchain->app->run_query($qq);
 		while ($player = $rr->fetch()) {
 			$subject = $GLOBALS['coin_brand_name']." game \"".$this->db_game['name']."\" has started.";
 			$message = $this->db_game['name']." has started. If haven't already entered your votes, please log in now and start playing.<br/>\n";
 			$message .= $this->blockchain->app->game_info_table($this->db_game);
 			$email_id = $this->blockchain->app->mail_async($player['notification_email'], $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "", "");
-		}
+		}*/
 	}
 	
 	public function process_buyin_transaction($transaction) {
@@ -2596,7 +2596,7 @@ class Game {
 		}
 	}
 	
-	public function render_transaction($transaction, $selected_address_id, $selected_io_id, $votes_per_coin) {
+	public function render_transaction($transaction, $selected_address_id, $selected_io_id, $coins_per_vote) {
 		$html = '<div class="row bordered_row"><div class="col-md-12">';
 		
 		if (count($this->current_events) > 0) {
@@ -2663,7 +2663,7 @@ class Game {
 				else if ($this->db_game['payout_weight'] == "coin_block") $expected_votes = ($ref_block_id-$input['create_block_id'])*$input['colored_amount'];
 				else $expected_votes = ($this->block_to_round($ref_block_id)-$this->block_to_round($input['create_block_id']))*$input['colored_amount'];
 				
-				$html .= " &nbsp;&nbsp; <font class='greentext'>+".$this->blockchain->app->format_bignum(($expected_votes/$votes_per_coin)/pow(10,$this->db_game['decimal_places']))."</font>";
+				$html .= " &nbsp;&nbsp; <font class='greentext'>+".$this->blockchain->app->format_bignum(($expected_votes*$coins_per_vote)/pow(10,$this->db_game['decimal_places']))."</font>";
 				
 				$html .= "<br/>\n";
 				
@@ -2685,7 +2685,9 @@ class Game {
 			}
 			$html .= '<a class="display_address" style="';
 			if ($output['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
-			$html .= '" href="/explorer/games/'.$this->db_game['url_identifier'].'/addresses/'.$output['address'].'">'.$output['address']."</a><br/>\n";
+			$html .= '" href="/explorer/games/'.$this->db_game['url_identifier'].'/addresses/'.$output['address'].'">'.$output['address']."</a>";
+			if (!empty($output['option_id'])) $html .= " (".$output['option_name'].")";
+			$html .= "<br/>\n";
 			
 			if ($selected_io_id == $output['io_id']) $html .= "<b>";
 			else $html .= "<a href=\"/explorer/games/".$this->db_game['url_identifier']."/utxo/".$output['io_id']."\">";

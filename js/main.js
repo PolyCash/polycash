@@ -2164,6 +2164,7 @@ function apply_game_definition(game_id) {
 	
 	$.get(apply_url, function(result) {
 		var result_obj = JSON.parse(result);
+		alert(result_obj['message']);
 		console.log(result_obj);
 	});
 }

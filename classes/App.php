@@ -1616,7 +1616,7 @@ class App {
 				$new_events = count($new_game_obj['events']);
 				
 				for ($i=0; $i<$matched_events; $i++) {
-					if ($new_game_obj['events'][$i] != $initial_game_obj['events'][$i]) {
+					if ($this->game_def_to_text($new_game_obj['events'][$i]) != $this->game_def_to_text($initial_game_obj['events'][$i])) {
 						if ($initial_game_obj['events'][$i]->event_starting_block && ($reset_block === false || $initial_game_obj['events'][$i]->event_starting_block < $reset_block)) $reset_block = $initial_game_obj['events'][$i]->event_starting_block;
 						if ($new_game_obj['events'][$i]->event_starting_block && ($reset_block === false || $new_game_obj['events'][$i]->event_starting_block < $reset_block)) $reset_block = $new_game_obj['events'][$i]->event_starting_block;
 						
@@ -1680,13 +1680,24 @@ class App {
 		$q .= ";";
 		$r = $this->run_query($q);
 		
-		$this->run_query("DELETE FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gde['event_index']."';");
+		$this->run_query("DELETE FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gde['event_index']."' AND option_index > ".count($gde['possible_outcomes']).";");
+		
+		$existing_gdo_r = $this->run_query("SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gde['event_index']."' ORDER BY option_index ASC;");
 		
 		for ($k=0; $k<count($gde['possible_outcomes']); $k++) {
+			if ($existing_gdo_r->rowCount() > 0) $existing_gdo = $existing_gdo_r->fetch();
+			else $existing_gdo = false;
+			
 			$possible_outcome = get_object_vars($gde['possible_outcomes'][$k]);
 			
-			$q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index='".$gde['event_index']."', option_index='".$k."', name=".$this->quote_escape($possible_outcome['title']);
+			if ($existing_gdo) $q = "UPDATE game_defined_options SET ";
+			else $q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index='".$gde['event_index']."', option_index='".$k."', ";
+			
+			$q .= "name=".$this->quote_escape($possible_outcome['title']);
 			if (!empty($possible_outcome['entity_id'])) $q .= ", entity_id='".$possible_outcome['entity_id']."'";
+			
+			if ($existing_gdo) $q .= " WHERE game_defined_option_id='".$existing_gdo['game_defined_option_id']."'";
+			
 			$q .= ";";
 			$r = $this->run_query($q);
 		}

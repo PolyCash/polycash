@@ -262,7 +262,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 			echo "1 Error, you've reached an invalid page.";
 		}
 		else {
-			$votes_per_coin = 0;
+			$coins_per_vote = 0;
 			
 			if ($game) {
 				?>
@@ -283,7 +283,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				</script>
 				<?php
 				
-				if ($game->db_game['inflation'] == "exponential") $votes_per_coin = $game->blockchain->app->votes_per_coin($game->db_game);
+				if ($game->db_game['inflation'] == "exponential") $coins_per_vote = $game->blockchain->app->coins_per_vote($game->db_game);
 			}
 			
 			if ($blockchain || $game) {
@@ -428,6 +428,14 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								echo "</p>";
 							}
 						}
+						
+						if (empty($db_event['winning_option_id'])) {
+							echo "<b>No Winner</b><br/>\n";
+						}
+						else {
+							$winner_option = $app->run_query("SELECT * FROM options WHERE option_id='".$db_event['winning_option_id']."';")->fetch();
+							echo "<b>Winner: ".$winner_option['name']."</b><br/>\n";
+						}
 						?>
 						<div class="row">
 							<div class="col-md-6">
@@ -440,7 +448,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						<?php
 						if ($thisuser && !empty($db_event) && !empty($db_event['winning_option_id'])) {
 							$my_votes = false;
-							echo $event->user_winnings_description($thisuser->db_user['user_id'], $this_round, $event_status, $db_event['winning_option_id'], $db_event['winning_votes'], $db_event['name'], $my_votes)."<br/>";
+							$user_winnings_description = $event->user_winnings_description($thisuser->db_user['user_id'], $this_round, $event_status, $db_event['winning_option_id'], $db_event['winning_votes'], $db_event['name'], $my_votes);
+							if (!empty($user_winnings_description)) echo $user_winnings_description."<br/>\n";
 						}
 						
 						if (!empty($db_event)) {
@@ -470,6 +479,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						?>
 						<br/>
 						<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/">See all events</a><br/>
+						<br/>
 						
 						<?php
 						if ($game->db_game['module'] == "CoinBattles") {
@@ -604,7 +614,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						<div class="transaction_table">
 						<?php
 						for ($i=$from_block_id; $i<=$to_block_id; $i++) {
-							$q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND t.block_id='".$i."' AND gio.game_id='".$game->db_game['game_id']."' AND t.amount > 0 GROUP BY t.transaction_id ORDER BY transaction_id ASC;";
+							$q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND t.block_id='".$i."'";
+							if ($event) $q .= " AND gio.event_id='".$event->db_event['event_id']."'";
+							else $q .= " AND gio.game_id='".$game->db_game['game_id']."'";
+							$q .= " AND t.amount > 0 GROUP BY t.transaction_id ORDER BY transaction_id ASC;";
 							$r = $app->run_query($q);
 							
 							if ($r->rowCount() > 0) {
@@ -615,7 +628,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								echo "<br/>\n";
 								
 								while ($transaction = $r->fetch()) {
-									echo $game->render_transaction($transaction, false, false, $votes_per_coin);
+									echo $game->render_transaction($transaction, false, false, $coins_per_vote);
 								}
 							}
 						}
@@ -805,7 +818,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$r = $app->run_query($q);
 						
 						while ($transaction = $r->fetch()) {
-							if ($game) echo $game->render_transaction($transaction, false, false, $votes_per_coin);
+							if ($game) echo $game->render_transaction($transaction, false, false, $coins_per_vote);
 							else echo $blockchain->render_transaction($transaction, false, false);
 						}
 						echo '</div>';
@@ -1005,7 +1018,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					<div style="border-bottom: 1px solid #bbb;">
 						<?php
 						for ($i=0; $i<count($transaction_ios); $i++) {
-							if ($game) echo $game->render_transaction($transaction_ios[$i], $address['address_id'], false, $votes_per_coin);
+							if ($game) echo $game->render_transaction($transaction_ios[$i], $address['address_id'], false, $coins_per_vote);
 							else echo $blockchain->render_transaction($transaction_ios[$i], $address['address_id'], false);
 						}
 						?>
@@ -1106,7 +1119,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					echo "<br/>\n";
 					
 					echo '<div style="margin-top: 10px; border-bottom: 1px solid #bbb;">';
-					if ($game) echo $game->render_transaction($transaction, false, false, $votes_per_coin);
+					if ($game) echo $game->render_transaction($transaction, false, false, $coins_per_vote);
 					else echo $blockchain->render_transaction($transaction, false, false);
 					echo "</div>\n";
 					
@@ -1160,11 +1173,11 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						
 						echo '<div style="margin-top: 10px; border-bottom: 1px solid #bbb;">';
 						if ($create_tx) {
-							if ($game) echo $game->render_transaction($create_tx, false, $io['io_id'], $votes_per_coin);
+							if ($game) echo $game->render_transaction($create_tx, false, $io['io_id'], $coins_per_vote);
 							else echo $blockchain->render_transaction($create_tx, false, $io['io_id']);
 						}
 						if ($spend_tx) {
-							if ($game) echo $game->render_transaction($spend_tx, false, $io['io_id'], $votes_per_coin);
+							if ($game) echo $game->render_transaction($spend_tx, false, $io['io_id'], $coins_per_vote);
 							else echo $blockchain->render_transaction($spend_tx, false, $io['io_id']);
 						}
 						echo "</div>\n";
@@ -1230,7 +1243,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo '<div class="col-sm-3 greentext text-right">';
 							
 							if ($game->db_game['inflation'] == "exponential") {
-								$coin_equiv = $votes/$app->votes_per_coin($game->db_game);
+								$coin_equiv = $votes*$coins_per_vote;
 								echo "+".$app->format_bignum($coin_equiv/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_abbreviation'];
 							}
 							else echo $app->format_bignum($votes).' votes';
@@ -1277,7 +1290,6 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					if (empty($thisuser)) echo "<br/><br/>\n<p>You must be logged in to view this page. <a href=\"/wallet/".$game->db_game['url_identifier']."/\">Log in</a></p>\n";
 					else if (!$user_game) echo "<br/><br/>\n<p>Invalid user game selected.</p>\n";
 					else {
-						$votes_per_coin = $app->votes_per_coin($game->db_game);
 						$net_delta = 0;
 						$net_stake = 0;
 						$num_wins = 0;
@@ -1298,8 +1310,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						</div>';
 						
 						while ($bet = $r->fetch()) {
-							$expected_payout = ($bet['sum_score']/$votes_per_coin/pow(10,$game->db_game['decimal_places']))*($bet['votes']/$bet['option_votes']);
-							$my_stake = $bet[$game->db_game['payout_weight']."s_destroyed"]/pow(10,$game->db_game['decimal_places'])/$app->votes_per_coin($game->db_game);
+							$expected_payout = ($bet['sum_score']*$coins_per_vote/pow(10,$game->db_game['decimal_places']))*($bet['votes']/$bet['option_votes']);
+							$my_stake = $bet[$game->db_game['payout_weight']."s_destroyed"]/pow(10,$game->db_game['decimal_places'])*$coins_per_vote;
 							
 							if ($my_stake > 0) $payout_multiplier = $expected_payout/$my_stake;
 							else $payout_multiplier = 0;
