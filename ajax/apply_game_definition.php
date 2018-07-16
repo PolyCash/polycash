@@ -14,9 +14,11 @@ if ($thisuser) {
 		
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$game = new Game($blockchain, $db_game['game_id']);
-		$game->check_set_game_definition("actual");
 		
 		if ($app->user_can_edit_game($thisuser, $game)) {
+			$game->check_set_game_definition("defined");
+			$game->check_set_game_definition("actual");
+			
 			$game_def = $app->fetch_game_definition($game, "defined");
 			$game_def_str = $app->game_def_to_text($game_def);
 			$game_def_hash = $app->game_def_to_hash($game_def_str);

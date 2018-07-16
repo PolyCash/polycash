@@ -1363,8 +1363,10 @@ class Game {
 		
 		if (empty($this->db_game['events_until_block'])) $this->set_events_until_block();
 		
-		if ($this->db_game['events_until_block'] < $last_block_id) {
-			$events_missing_blocks = $total_game_blocks - ($last_block_id - $this->db_game['events_until_block']);
+		$max_event_starting_block = $this->max_event_starting_block();
+		
+		if ($this->db_game['events_until_block'] < $max_event_starting_block) {
+			$events_missing_blocks = $total_game_blocks - ($max_event_starting_block - $this->db_game['events_until_block']);
 			$events_pct_complete = ($this->db_game['events_until_block']-$this->db_game['game_starting_block'])/$total_game_blocks;
 			$html .= "<p>Loading events.. <a target=\"_blank\" href=\"/explorer/games/".$this->db_game['url_identifier']."/events/\">".round(100*$events_pct_complete, 2)."% complete</a>.</p>\n";
 		}
@@ -3061,6 +3063,13 @@ class Game {
 				$r = $this->blockchain->app->run_query($q);
 			}
 		}
+	}
+	
+	public function max_event_starting_block() {
+		$q = "SELECT MAX(event_starting_block) FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."';";
+		$r = $this->blockchain->app->run_query($q);
+		$rr = $r->fetch();
+		return $rr['MAX(event_starting_block)'];
 	}
 }
 ?>

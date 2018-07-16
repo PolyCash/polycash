@@ -1295,7 +1295,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$num_wins = 0;
 						$num_losses = 0;
 						
-						$q = "SELECT gio.*, io.spend_transaction_id, e.entity_name, eo.winning_option_id, eo.sum_score, eo.sum_votes, o.name AS option_name, gio.votes AS votes, ev.event_index, eoo.votes AS option_votes, gio2.colored_amount AS payout_amount FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN entities e ON o.entity_id=e.entity_id JOIN events ev ON o.event_id=ev.event_id JOIN event_outcomes eo ON ev.event_id=eo.event_id JOIN event_outcome_options eoo ON eoo.outcome_id=eo.outcome_id AND eoo.option_id=o.option_id LEFT JOIN transaction_game_ios gio2 ON gio.payout_game_io_id=gio2.game_io_id WHERE gio.game_id=".$game->db_game['game_id']." AND ug.user_game_id=".$user_game['user_game_id']." ORDER BY gio.game_io_id DESC;";
+						$q = "SELECT gio.*, io.spend_transaction_id, e.entity_name, eo.winning_option_id, eo.sum_score, eo.sum_votes, eoo.effective_destroy_score AS option_effective_destroy_score, eo.destroy_score AS outcome_destroy_score, o.name AS option_name, gio.votes AS votes, ev.event_index, eoo.votes AS option_votes, gio2.colored_amount AS payout_amount FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN entities e ON o.entity_id=e.entity_id JOIN events ev ON o.event_id=ev.event_id JOIN event_outcomes eo ON ev.event_id=eo.event_id JOIN event_outcome_options eoo ON eoo.outcome_id=eo.outcome_id AND eoo.option_id=o.option_id LEFT JOIN transaction_game_ios gio2 ON gio.payout_game_io_id=gio2.game_io_id WHERE gio.game_id=".$game->db_game['game_id']." AND ug.user_game_id=".$user_game['user_game_id']." ORDER BY ev.event_index DESC, gio.game_io_id DESC;";
 						$r = $app->run_query($q);
 						$num_bets = $r->rowCount();
 						
@@ -1310,8 +1310,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						</div>';
 						
 						while ($bet = $r->fetch()) {
-							$expected_payout = ($bet['sum_score']*$coins_per_vote/pow(10,$game->db_game['decimal_places']))*($bet['votes']/$bet['option_votes']);
-							$my_stake = $bet[$game->db_game['payout_weight']."s_destroyed"]/pow(10,$game->db_game['decimal_places'])*$coins_per_vote;
+							$expected_payout = ($bet['effective_destroy_amount']*$bet['outcome_destroy_score']/$bet['option_effective_destroy_score'] + ($bet['sum_score']*$coins_per_vote*$bet['votes']/$bet['option_votes']))/pow(10,$game->db_game['decimal_places']);
+							$my_stake = ($bet['destroy_amount'] + $bet[$game->db_game['payout_weight']."s_destroyed"]*$coins_per_vote)/pow(10,$game->db_game['decimal_places']);
 							
 							if ($my_stake > 0) $payout_multiplier = $expected_payout/$my_stake;
 							else $payout_multiplier = 0;
