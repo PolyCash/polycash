@@ -188,7 +188,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 		if ($io_r->rowCount() > 0) {
 			$io = $io_r->fetch();
 			$mode_error = false;
-			$pagetitle = "UTXO #".$io['io_id']." - ".$blockchain->db_blockchain['blockchain_name']." Explorer";
+			$pagetitle = "UTXO #".$io['io_id'];
+			if ($game) $pagetitle .= " - ".$game->db_game['name']." Explorer";
+			else $pagetitle .= " - ".$blockchain->db_blockchain['blockchain_name']." Explorer";
 		}
 		else {
 			$io = false;
@@ -243,8 +245,27 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 		}
 	}
 	else if ($explore_mode == "utxos") {
-		if ($game) $pagetitle = $game->db_game['name']." - List of UTXOs";
-		else $pagetitle = $blockchain->db_blockchain['blockchain_name']." - List of UTXOs";
+		$account = false;
+		
+		if (!empty($_REQUEST['account_id'])) {
+			$account_id = (int) $_REQUEST['account_id'];
+			$account_q = "SELECT * FROM currency_accounts WHERE account_id='".$account_id."';";
+			$account_r = $app->run_query($account_q);
+			
+			if ($account_r->rowCount() > 0) {
+				$db_account = $account_r->fetch();
+				
+				if ($thisuser && $thisuser->db_user['user_id'] == $db_account['user_id']) $account = $db_account;
+				else echo '<font class="redtext">Error: invalid account ID.</font><br/>';
+			}
+		}
+		
+		if ($game) $pagetitle = $game->db_game['name'];
+		else $pagetitle = $blockchain->db_blockchain['blockchain_name'];
+		
+		if ($account) $pagetitle .= " - UTXOs in ".$account['account_name'];
+		else $pagetitle .= " - List of UTXOs";
+		
 		$mode_error = false;
 	}
 	else if ($explore_mode == "definition") {
@@ -340,7 +361,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						else if ($explore_mode == "addresses") echo $address['address'];
 						else if ($explore_mode == "transactions") echo $transaction['tx_hash'];
 						else if ($explore_mode == "utxo") echo $io['io_id'];
-						echo "/";
+						else if ($explore_mode == "utxos") {
+							if ($account) echo "?account_id=".$account['account_id'];
+						}
+						if ($explore_mode != "utxos") echo "/";
 					}
 					echo "'><i class=\"fas fa-link\"></i> &nbsp; View on ".$game->blockchain->db_blockchain['blockchain_name']."</a>\n";
 					?>
@@ -469,7 +493,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						
 						$q = "SELECT * FROM game_blocks WHERE game_id='".$game->db_game['game_id']."' AND block_id >= '".$from_block_id."' AND block_id <= ".$to_block_id." ORDER BY block_id ASC;";
 						$r = $app->run_query($q);
-						echo "Blocks in this round: ";
+						echo "Blocks in this event: ";
 						echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$from_block_id."\">".$from_block_id."</a> ... <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$to_block_id."\">".$to_block_id."</a>";
 						?>
 						<br/>
@@ -613,11 +637,28 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						<h2>Transactions</h2>
 						<div class="transaction_table">
 						<?php
+						if ($event) {
+							$q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND t.block_id IS NULL AND gio.event_id='".$event->db_event['event_id']."' GROUP BY t.transaction_id ORDER BY transaction_id ASC;";
+							$r = $app->run_query($q);
+							
+							if ($r->rowCount() > 0) {
+								echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/transactions/unconfirmed\">Unconfirmed</a>";
+								if ($event->db_event['vote_effectiveness_function'] != "constant") {
+									echo ", vote effectiveness: ".$event->block_id_to_effectiveness_factor($last_block_id+1);
+								}
+								echo "<br/>\n";
+								
+								while ($transaction = $r->fetch()) {
+									echo $game->render_transaction($transaction, false, false, $coins_per_vote);
+								}
+							}
+						}
+						
 						for ($i=$from_block_id; $i<=$to_block_id; $i++) {
 							$q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND t.block_id='".$i."'";
 							if ($event) $q .= " AND gio.event_id='".$event->db_event['event_id']."'";
 							else $q .= " AND gio.game_id='".$game->db_game['game_id']."'";
-							$q .= " AND t.amount > 0 GROUP BY t.transaction_id ORDER BY transaction_id ASC;";
+							$q .= " GROUP BY t.transaction_id ORDER BY transaction_id ASC;";
 							$r = $app->run_query($q);
 							
 							if ($r->rowCount() > 0) {
@@ -975,15 +1016,30 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					
 					echo '<div class="panel-body">';
 					
+					if ($thisuser) {
+						$account_q = "SELECT * FROM currency_accounts a JOIN address_keys k ON a.account_id=k.account_id WHERE k.address_id='".$address['address_id']."' AND a.user_id='".$thisuser->db_user['user_id']."';";
+						$account_r = $app->run_query($account_q);
+						
+						if ($account_r->rowCount() > 0) {
+							$account = $account_r->fetch();
+							
+							echo '<p>This address is in your account <a href="/explorer/';
+							if ($game) echo 'games/'.$game->db_game['url_identifier'];
+							else echo 'blockchains/'.$blockchain->db_blockchain['url_identifier'];
+							echo '/utxos/?account_id='.$account['account_id'].'">'.$account['account_name'].'</a></p>';
+						}
+					}
+					
 					if (empty($game)) {
 						$address_associated_games = $blockchain->games_by_address($address);
-						echo "<p>This address is associated with ".count($address_associated_games)." games<br/>\n";
+						echo "<p>This address is associated with ".count($address_associated_games)." game";
+						if (count($address_associated_games) != 1) echo "s";
+						echo "</p>\n";
 						
 						for ($i=0; $i<count($address_associated_games); $i++) {
 							$db_game = $address_associated_games[$i];
-							echo '<a href="/explorer/games/'.$db_game['url_identifier'].'/addresses/'.$address['address'].'/">'.$db_game['name']."</a><br/>\n";
+							echo '<p><a href="/explorer/games/'.$db_game['url_identifier'].'/addresses/'.$address['address'].'/">'.$db_game['name']."</a></p>\n";
 						}
-						echo "</p>\n";
 					}
 					
 					$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND i.address_id='".$address['address_id']."' GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;";
@@ -1006,13 +1062,11 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						}
 					}
 					
-					echo "This address has been used in ".count($transaction_ios)." transactions.<br/>\n";
+					echo "<p>This address has been used in ".count($transaction_ios)." transactions.</p>\n";
 					
-					if ($thisuser && $address['user_id'] == $thisuser->db_user['user_id']) echo "This is one of your addresses.<br/>\n";
+					echo "<p>".ucwords($blockchain->db_blockchain['coin_name'])." balance: ".($blockchain->address_balance_at_block($address, false)/pow(10,$blockchain->db_blockchain['decimal_places']))." ".$blockchain->db_blockchain['coin_name_plural']."</p>\n";
 					
-					echo ucwords($blockchain->db_blockchain['coin_name'])." balance: ".($blockchain->address_balance_at_block($address, false)/pow(10,$blockchain->db_blockchain['decimal_places']))." ".$blockchain->db_blockchain['coin_name_plural']."<br/>\n";
-					
-					if ($game) echo ucwords($game->db_game['coin_name'])." balance: ".$app->format_bignum($game->address_balance_at_block($address, false)/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']."<br/>\n";
+					if ($game) echo "<p>".ucwords($game->db_game['coin_name'])." balance: ".$app->format_bignum($game->address_balance_at_block($address, false)/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']."</p>\n";
 					
 					?>
 					<div style="border-bottom: 1px solid #bbb;">
@@ -1093,11 +1147,13 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					
 					if (empty($game)) {
 						$tx_associated_games = $blockchain->games_by_transaction($transaction);
-						echo "<h3>This transaction is associated with ".count($tx_associated_games)." games</h3>\n";
+						echo "<p>This transaction is associated with ".count($tx_associated_games)." game";
+						if (count($tx_associated_games) != 1) echo "s";
+						echo "</p>\n";
 						
 						for ($i=0; $i<count($tx_associated_games); $i++) {
 							$db_game = $tx_associated_games[$i];
-							echo '<a href="/explorer/games/'.$db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'/">'.$db_game['name']."</a><br/>\n";
+							echo '<p><a href="/explorer/games/'.$db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'/">'.$db_game['name']."</a></p>\n";
 						}
 					}
 					
@@ -1155,19 +1211,35 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					else $spend_tx = false;
 					
 					echo '<div class="panel-heading"><div class="panel-title">';
-					echo $blockchain->db_blockchain['blockchain_name']." UTXO #".$io['io_id'];
+					echo $pagetitle;
 					echo "</div></div>\n";
 					
 					echo '<div class="panel-body">';
 					
+					if ($thisuser) {
+						$account_q = "SELECT * FROM currency_accounts a JOIN address_keys k ON a.account_id=k.account_id WHERE k.address_id='".$io['address_id']."' AND a.user_id='".$thisuser->db_user['user_id']."';";
+						$account_r = $app->run_query($account_q);
+						
+						if ($account_r->rowCount() > 0) {
+							$account = $account_r->fetch();
+							
+							echo '<p>This UTXO is in your account <a href="/explorer/';
+							if ($game) echo 'games/'.$game->db_game['url_identifier'];
+							else echo 'blockchains/'.$blockchain->db_blockchain['url_identifier'];
+							echo '/utxos/?account_id='.$account['account_id'].'">'.$account['account_name'].'</a></p>';
+						}
+					}
+					
 					if ($create_tx || $spend_tx) {
 						if (empty($game)) {
 							$tx_associated_games = $blockchain->games_by_io($io['io_id']);
-							echo "<h3>This UTXO is associated with ".count($tx_associated_games)." games</h3>\n";
+							echo "<p>This UTXO is associated with ".count($tx_associated_games)." game";
+							if (count($tx_associated_games) != 1) echo "s";
+							echo "</p>\n";
 							
 							for ($i=0; $i<count($tx_associated_games); $i++) {
 								$db_game = $tx_associated_games[$i];
-								echo '<a href="/explorer/games/'.$db_game['url_identifier'].'/utxo/'.$io['io_id'].'/">'.$db_game['name']."</a><br/>\n";
+								echo '<p><a href="/explorer/games/'.$db_game['url_identifier'].'/utxo/'.$io['io_id'].'/">'.$db_game['name']."</a></p>\n";
 							}
 						}
 						
@@ -1224,12 +1296,18 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$mining_round = $game->block_to_round($mining_block_id);
 						
 						echo '<div class="panel-heading"><div class="panel-title">';
-						echo "UTXOs - ".$game->db_game['name'];
+						if ($account) echo "UTXOs in account: ".$account['account_name'];
+						else echo "UTXOs in ".$game->db_game['name'];
 						echo "</div></div>\n";
 						
 						echo '<div class="panel-body">';
 						
-						$utxo_q = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON a.address_id=io.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND io.spend_status IN ('unspent','unconfirmed') ORDER BY gio.colored_amount DESC;";
+						if ($account) {
+							$utxo_q = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account['account_id']."' ORDER BY gio.colored_amount DESC;";
+						}
+						else {
+							$utxo_q = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON a.address_id=io.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND io.spend_status IN ('unspent','unconfirmed') ORDER BY gio.colored_amount DESC;";
+						}
 						$utxo_r = $app->run_query($utxo_q);
 						
 						while ($utxo = $utxo_r->fetch()) {
@@ -1239,7 +1317,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							else $votes = 0;
 							
 							echo '<div class="row">';
-							echo '<div class="col-sm-3">'.$app->format_bignum($utxo['colored_amount']/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].'</div>';
+							echo '<div class="col-sm-3"><a href="/explorer/games/'.$game->db_game['url_identifier'].'/utxo/'.$utxo['io_id'].'/">'.$app->format_bignum($utxo['colored_amount']/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].'</a></div>';
 							echo '<div class="col-sm-3 greentext text-right">';
 							
 							if ($game->db_game['inflation'] == "exponential") {
@@ -1249,30 +1327,46 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							else echo $app->format_bignum($votes).' votes';
 							
 							echo '</div>';
+							
+							echo '<div class="col-sm-3">'.$utxo['spend_status']."</div>\n";
+							
 							echo '<div class="col-sm-3"><a href="/explorer/games/'.$game->db_game['url_identifier'].'/addresses/'.$utxo['address'].'">'.$utxo['address']."</a></div>\n";
 							echo '</div>';
 						}
 					}
 					else {
-						$utxo_count_q = "SELECT COUNT(*) FROM transaction_ios WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND spend_status='unspent';";
-						$utxo_count_r = $app->run_query($utxo_count_q);
-						$utxo_count = $utxo_count_r->fetch();
-						
-						$utxo_q = "SELECT * FROM transaction_ios io JOIN addresses a ON a.address_id=io.address_id WHERE io.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND io.spend_status IN ('unspent','unconfirmed') ORDER BY io.amount DESC LIMIT 500;";
-						$utxo_r = $app->run_query($utxo_q);
-						
-						echo '<div class="panel-heading"><div class="panel-title">';
-						echo "Showing the ".$utxo_r->rowCount()." largest ".$blockchain->db_blockchain['blockchain_name']." UTXOs";
-						echo "</div></div>\n";
-						
-						echo '<div class="panel-body">';
-						
-						echo "<p>".$blockchain->db_blockchain['blockchain_name']." currently has ".number_format($utxo_count['COUNT(*)'])." confirmed, unspent transaction outputs.</p>\n";
+						if ($account) {
+							$utxo_q = "SELECT * FROM transaction_ios io JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account['account_id']."' ORDER BY io.amount DESC;";
+							$utxo_r = $app->run_query($utxo_q);
+							
+							echo '<div class="panel-heading"><div class="panel-title">';
+							echo "Showing all ".$utxo_r->rowCount()." UTXOs for ".$account['account_name'];
+							echo "</div></div>\n";
+							
+							echo '<div class="panel-body">';
+						}
+						else {
+							$utxo_count_q = "SELECT COUNT(*) FROM transaction_ios WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND spend_status='unspent';";
+							$utxo_count_r = $app->run_query($utxo_count_q);
+							$utxo_count = $utxo_count_r->fetch();
+							
+							$utxo_q = "SELECT * FROM transaction_ios io JOIN addresses a ON a.address_id=io.address_id WHERE io.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND io.spend_status IN ('unspent','unconfirmed') ORDER BY io.amount DESC LIMIT 500;";
+							$utxo_r = $app->run_query($utxo_q);
+							
+							echo '<div class="panel-heading"><div class="panel-title">';
+							echo "Showing the ".$utxo_r->rowCount()." largest ".$blockchain->db_blockchain['blockchain_name']." UTXOs";
+							echo "</div></div>\n";
+							
+							echo '<div class="panel-body">';
+							
+							echo "<p>".$blockchain->db_blockchain['blockchain_name']." currently has ".number_format($utxo_count['COUNT(*)'])." confirmed, unspent transaction outputs.</p>\n";
+						}
 						
 						while ($utxo = $utxo_r->fetch()) {
 							echo '<div class="row">';
-							echo '<div class="col-sm-5">'.$app->format_bignum($utxo['amount']/pow(10,$blockchain->db_blockchain['decimal_places'])).' '.$blockchain->db_blockchain['coin_name_plural'].'</div>';
-							echo '<div class="col-sm-5"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$utxo['address'].'">'.$utxo['address']."</a></div>\n";
+							echo '<div class="col-sm-3"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/utxo/'.$utxo['io_id'].'">'.$app->format_bignum($utxo['amount']/pow(10,$blockchain->db_blockchain['decimal_places'])).' '.$blockchain->db_blockchain['coin_name_plural'].'</a></div>';
+							echo '<div class="col-sm-3">'.$utxo['spend_status']."</div>\n";
+							echo '<div class="col-sm-3"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$utxo['address'].'">'.$utxo['address']."</a></div>\n";
 							echo '</div>';
 						}
 					}

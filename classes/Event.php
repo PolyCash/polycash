@@ -217,11 +217,24 @@ class Event {
 		if ($display_mode == "slim") {
 			if ($this->db_event['option_block_rule'] == "football_match") $html .= '<p><div class="event_timer_slim" id="game'.$game_instance_id.'_event'.$game_event_index.'_timer"></div>';
 			else {
-				$blocks_left = $this->db_event['event_final_block'] - $max_block_id;
-				if ($blocks_left > 0) {
-					$sec_left = $this->game->blockchain->db_blockchain['seconds_per_block']*$blocks_left;
-					$html .= '<p><div class="event_timer_slim">'.$this->game->blockchain->app->format_bignum($blocks_left).' blocks left ('.$this->game->blockchain->app->format_seconds($sec_left).')</div></p>';
+				$html .= '<p><div class="event_timer_slim">';
+				
+				if (!empty($this->db_event['event_final_time'])) {
+					$sec_left = strtotime($this->db_event['event_final_time'])-time();
+					$html .= date("Y-m-d G:i:s", strtotime($this->db_event['event_final_time']));
+					$html .= "<br/>";
+					if ($sec_left > 0) $html .= $this->game->blockchain->app->format_seconds($sec_left)." left";
+					else $html .= '<font class="redtext">Expired '.$this->game->blockchain->app->format_seconds(-1*$sec_left).' ago</font>';
 				}
+				else {
+					$blocks_left = $this->db_event['event_final_block'] - $max_block_id;
+					if ($blocks_left > 0) {
+						$sec_left = $this->game->blockchain->db_blockchain['seconds_per_block']*$blocks_left;
+						$html .= $this->game->blockchain->app->format_bignum($blocks_left).' blocks left<br/>';
+						$html .= $this->game->blockchain->app->format_seconds($sec_left);
+					}
+				}
+				$html .= '</div></p>';
 			}
 			$html .= "<strong><a style=\"color: #000; text-decoration: underline;\" target=\"_blank\" href=\"/explorer/games/".$this->game->db_game['url_identifier']."/events/".($this->db_event['event_index']+1)."\">".$this->db_event['event_name']."</a></strong> ";
 			$html .= " &nbsp;&nbsp; ";
@@ -308,7 +321,7 @@ class Event {
 			
 			if ($this->db_event['event_winning_rule'] == "max_below_cap" && !$winning_option_id && $option_votes <= $max_sum_votes && $option_votes > 0) $winning_option_id = $round_stats[$i]['option_id'];
 			
-			if ($option_votes > 0) {
+			if ($option_effective_coins > 0) {
 				$pct_votes = 100*(floor(1000*$option_effective_coins/$event_effective_coins)/1000);
 				$odds = $event_effective_coins/$option_effective_coins;
 				$odds_disp = "x".round($odds, 2);
@@ -505,7 +518,7 @@ class Event {
 				if ($coin_stake > 0) $odds = round($expected_payout/$coin_stake, 2);
 				else $odds = 0;
 				
-				$confirmed_html .= $this->game->blockchain->app->format_bignum($coin_stake/pow(10,$this->game->db_game['decimal_places']), 2)." (x".$odds.")";
+				$confirmed_html .= $this->game->blockchain->app->format_bignum($coin_stake/pow(10,$this->game->db_game['decimal_places']), 2)."&nbsp;(x".$odds.")";
 			}
 			else {
 				$confirmed_html .=  $this->game->blockchain->app->format_bignum($num_votes/pow(10,$this->game->db_game['decimal_places']), 2).' votes';

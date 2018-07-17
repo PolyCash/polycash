@@ -82,7 +82,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 			}
 		}
 		
-		$output['account_value'] = $game->account_value_html($account_value);
+		$output['account_value'] = $game->account_value_html($account_value, $user_game['account_id']);
 		$output['vote_details_general'] = $app->vote_details_general($mature_balance);
 		
 		$set_options_js = "";

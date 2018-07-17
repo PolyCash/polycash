@@ -1,0 +1,1 @@
+ALTER TABLE `game_defined_events` ADD `espn_event_uid` VARCHAR(64) NULL DEFAULT NULL AFTER `outcome_index`;

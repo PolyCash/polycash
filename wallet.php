@@ -713,10 +713,15 @@ if ($thisuser && $game) {
 						</div>
 					</div>
 				</div>
-				
+				<div style="overflow: hidden;">
+					<div class="row">
+						<div class="col-sm-2">Account&nbsp;value:</div>
+						<div class="col-sm-3" style="text-align: right;" id="account_value"><?php
+						echo $game->account_value_html($account_value, $user_game['account_id']);
+						?></div>
+					</div>
+				</div>
 				<?php
-				include("includes/wallet_status.php");
-				
 				/*if ($game->db_game['inflation'] == "exponential") {
 					echo '<div class="row"><div class="col-sm-2">Vote&nbsp;conversion&nbsp;rate:</div><div style="text-align: right;" class="col-sm-3"><font class="greentext">';
 					echo $app->format_bignum($app->votes_per_coin($game->db_game)).'</font> votes &rarr; <font class="greentext">1</font> '.$game->db_game['coin_name'].'</div></div>';

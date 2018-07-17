@@ -1126,8 +1126,8 @@ class Game {
 		return $value;
 	}
 	
-	public function account_value_html($account_value) {
-		$html = '<font class="greentext">'.$this->blockchain->app->format_bignum($account_value/pow(10,$this->db_game['decimal_places']), 2).'</font> '.$this->db_game['coin_name_plural'];
+	public function account_value_html($account_value, $account_id) {
+		$html = '<font class="greentext"><a href="/explorer/games/'.$this->db_game['url_identifier'].'/utxos/?account_id='.$account_id.'">'.$this->blockchain->app->format_bignum($account_value/pow(10,$this->db_game['decimal_places']), 2).'</a></font> '.$this->db_game['coin_name_plural'];
 		$html .= ' <font style="font-size: 12px;">(';
 		$coins_in_existence = $this->coins_in_existence(false);
 		if ($coins_in_existence > 0) $html .= $this->blockchain->app->format_bignum(100*$account_value/$coins_in_existence)."%";

@@ -26,17 +26,20 @@ if ($thisuser && $game) {
 			$last_block_id = $game->blockchain->last_block_id();
 			$mining_block_id = $last_block_id+1;
 			
-			$q = "SELECT *, SUM(gio.colored_amount) AS coins, SUM(gio.colored_amount)*(".$mining_block_id."-io.create_block_id) AS coin_blocks FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status='unspent' AND k.account_id='".$user_game['account_id']."' GROUP BY gio.io_id ORDER BY coin_blocks ASC;";
+			$q = "SELECT *, SUM(gio.colored_amount) AS coins, SUM(gio.colored_amount)*(".$mining_block_id."-io.create_block_id) AS coin_blocks FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$user_game['account_id']."' GROUP BY gio.io_id ORDER BY coin_blocks ASC;";
 			$r = $app->run_query($q);
 			
 			$io_amount_sum = 0;
 			$game_amount_sum = 0;
 			$io_ids = array();
+			$keep_looping = true;
 			
-			while ($game_amount_sum <= $amount_total && $io = $r->fetch()) {
+			while ($keep_looping && $io = $r->fetch()) {
 				$game_amount_sum += $io['coins'];
 				$io_amount_sum += $io['amount'];
 				array_push($io_ids, $io['io_id']);
+				
+				if ($game_amount_sum >= $amount_total && $io_amount_sum >= $fee_total) $keep_looping = false;
 			}
 			
 			if ($game_amount_sum >= $amount_total) {
@@ -55,7 +58,7 @@ if ($thisuser && $game) {
 						$app->output_message(7, "Error: failed to create the transaction.", false);
 					}
 				}
-				else $app->output_message(6, "You don't have enough coins to afford the transaction fee for this bet.", false);
+				else $app->output_message(6, "Not enough ".$game->blockchain->db_blockchain['coin_name_plural'].": ".$app->format_bignum($io_amount_sum/pow(10, $game->blockchain->db_blockchain['decimal_places']))." available.", false);
 			}
 			else $app->output_message(5, "You don't have enough coins to place this bet.", false);
 		}

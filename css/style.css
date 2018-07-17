@@ -411,6 +411,7 @@ a.selected {
 	margin-left: 5px;
 	display: inline-block;
 	float: right;
+	text-align: right;
 }
 .connected_utxo {
 	margin-left: -10px ! important;
