@@ -33,20 +33,6 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 					
 					$qq = "UPDATE blocks SET locally_saved=0 WHERE internal_block_id='".$temp_block['internal_block_id']."';";
 					$rr = $app->run_query($qq);
-					
-					/*$qq = "SELECT * FROM games WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."';";
-					$rr = $app->run_query($qq);
-					
-					while ($db_game = $rr->fetch()) {
-						$game = new Game($blockchain, $db_game['game_id']);
-						
-						echo "Resetting game '".$game->db_game['name']."' from block #".$temp_block['block_id']."<br/>\n";
-						$game->delete_from_block($temp_block['block_id']);
-						$game->update_db_game();
-						$debug_text = $game->ensure_events_until_block($game->blockchain->last_block_id()+1);
-						$game->load_current_events();
-						$game->sync(false);
-					}*/
 				}
 				else echo $temp_block['block_id']." ";
 			}

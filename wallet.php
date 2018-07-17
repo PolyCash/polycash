@@ -585,6 +585,10 @@ if ($thisuser && $game) {
 		}
 		
 		$faucet_io = $game->check_faucet($user_game);
+		
+		$filter_arr['date'] = "2018-07-17";
+		$event_ids = "";
+		$new_event_js = $game->new_event_js(0, $thisuser, $filter_arr, $event_ids);
 		?>
 		<script type="text/javascript">
 		//<![CDATA[
@@ -606,7 +610,7 @@ if ($thisuser && $game) {
 			echo ', "'.$game->db_game['coin_name_plural'].'"';
 			echo ', "'.$game->blockchain->db_blockchain['coin_name'].'"';
 			echo ', "'.$game->blockchain->db_blockchain['coin_name_plural'].'"';
-			echo ', "wallet", "'.$game->event_ids().'"';
+			echo ', "wallet", "'.$event_ids.'"';
 			echo ', "'.$game->logo_image_url().'"';
 			echo ', "'.$game->vote_effectiveness_function().'"';
 			echo ', "'.$game->effectiveness_param1().'"';
@@ -617,6 +621,7 @@ if ($thisuser && $game) {
 			echo ', "'.$game->db_game['decimal_places'].'"';
 			echo ', "'.$game->db_game['view_mode'].'"';
 			echo ', '.$user_game['event_index'];
+			echo ', false';
 		?>));
 		
 		games[0].game_loop_event();
@@ -629,8 +634,6 @@ if ($thisuser && $game) {
 		
 		$from_block_id = ($plan_start_round-1)*$game->db_game['round_length']+1;
 		$to_block_id = ($plan_stop_round-1)*$game->db_game['round_length']+1;
-		
-		$game->load_current_events();
 		
 		$q = "SELECT * FROM events e JOIN event_types t ON e.event_type_id=t.event_type_id WHERE e.game_id='".$game->db_game['game_id']."' AND e.event_starting_block >= ".$from_block_id." AND e.event_starting_block <= ".$to_block_id." ORDER BY e.event_id ASC;";
 		$r = $app->run_query($q);
@@ -744,21 +747,11 @@ if ($thisuser && $game) {
 		<div id="tabcontent0" class="tabcontent">
 			<div class="panel panel-default">
 				<div class="panel-heading">
-					<div class="panel-title">Play Now</div>
-				</div>
-				<div class="panel-body">
-					<?php
-					if ($faucet_io) {
-						echo '<p><button id="faucet_btn" class="btn btn-success" onclick="claim_from_faucet();"><i class="fas fa-hand-paper"></i> &nbsp; Claim '.$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].'</button></p>'."\n";
-					}
-					
-					$game_status_explanation = $game->game_status_explanation($thisuser, $user_game);
-					?>
-					<div style="display: <?php if (false && $game->db_game['view_mode'] == "simple") echo "none"; else echo "block"; ?>; overflow: hidden;">
-						<div id="game_status_explanation"<?php if ($game_status_explanation == "") echo ' style="display: none;"'; ?>><?php if ($game_status_explanation != "") echo $game_status_explanation; ?></div>
+					<div class="panel-title">
+						Play Now
 						
 						<div id="change_user_game">
-							<select id="select_user_game" class="form-control" onchange="change_user_game();">
+							<select id="select_user_game" class="form-control input-sm" onchange="change_user_game();">
 								<?php
 								$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
 								$r = $app->run_query($q);
@@ -772,8 +765,21 @@ if ($thisuser && $game) {
 							</select>
 						</div>
 					</div>
+				</div>
+				<div class="panel-body">
+					<?php
+					if ($faucet_io) {
+						echo '<p><button id="faucet_btn" class="btn btn-success" onclick="claim_from_faucet();"><i class="fas fa-hand-paper"></i> &nbsp; Claim '.$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].'</button></p>'."\n";
+					}
+					
+					$game_status_explanation = $game->game_status_explanation($thisuser, $user_game);
+					?>
+					<div style="display: <?php if (false && $game->db_game['view_mode'] == "simple") echo "none"; else echo "block"; ?>; overflow: hidden;">
+						<div id="game_status_explanation"<?php if ($game_status_explanation == "") echo ' style="display: none;"'; ?>><?php if ($game_status_explanation != "") echo $game_status_explanation; ?></div>
+					</div>
 					<?php
 					if ($game->db_game['module'] == "CoinBattles") {
+						$game->load_current_events();
 						$event = $game->current_events[0];
 						
 						if (empty($event)) {
@@ -786,12 +792,20 @@ if ($thisuser && $game) {
 						}
 					}
 					?>
+					<div style="overflow: auto; margin-bottom: 10px;">
+						<div style="float: right;">
+							<?php
+							echo $game->event_filter_html();
+							?>
+						</div>
+					</div>
 					<div id="game0_events" class="game_events"></div>
 					
-					<script type="text/javascript" id="game0_new_event_js">
+					<script type="text/javascript">
 					<?php
-					echo $game->new_event_js(0, $thisuser);
+					echo $new_event_js;
 					?>
+					load_new_event_js();
 					games[0].show_selected_event(false);
 					</script>
 					

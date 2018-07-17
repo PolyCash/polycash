@@ -874,6 +874,11 @@ class App {
 				$mining_block_id = $last_block_id+1;
 				$db_last_block = $blockchain->fetch_block_by_id($last_block_id);
 				$current_round_id = $featured_game->block_to_round($mining_block_id);
+				
+				$filter_arr = false;
+				$user = false;
+				$event_ids = "";
+				$new_event_js = $featured_game->new_event_js($counter, $user, $filter_arr, $event_ids);
 				?>
 				<script type="text/javascript">
 				games.push(new Game(<?php
@@ -889,7 +894,7 @@ class App {
 					echo ', "'.$db_game['coin_name_plural'].'"';
 					echo ', "'.$blockchain->db_blockchain['coin_name'].'"';
 					echo ', "'.$blockchain->db_blockchain['coin_name_plural'].'"';
-					echo ', "home", "'.$featured_game->event_ids().'"';
+					echo ', "home", "'.$event_ids.'"';
 					echo ', "'.$featured_game->logo_image_url().'"';
 					echo ', "'.$featured_game->vote_effectiveness_function().'"';
 					echo ', "'.$featured_game->effectiveness_param1().'"';
@@ -900,6 +905,7 @@ class App {
 					echo ', "'.$featured_game->db_game['decimal_places'].'"';
 					echo ', "'.$db_game['view_mode'].'"';
 					echo ', 0';
+					echo ', false';
 				?>));
 				
 				games[<?php echo $counter; ?>].game_loop_event();
@@ -910,6 +916,7 @@ class App {
 				if ($featured_game->db_game['short_description'] != "") echo "<p>".$featured_game->db_game['short_description']."</p>";
 				
 				if ($featured_game->db_game['module'] == "CoinBattles") {
+					$featured_game->load_current_events();
 					$event = $featured_game->current_events[0];
 					list($html, $js) = $featured_game->module->currency_chart($featured_game, $event->db_event['event_starting_block'], false);
 					echo '<div style="margin-bottom: 15px;" id="game'.$counter.'_chart_html">'.$html."</div>\n";
@@ -918,7 +925,7 @@ class App {
 				
 				echo '<div id="game'.$counter.'_events"></div>';
 				echo '<script type="text/javascript" id="game'.$counter.'_new_event_js">';
-				echo $featured_game->new_event_js($counter, false);
+				echo $new_event_js;
 				echo "games[".$counter."].show_selected_event(true);\n";
 				echo '</script>';
 				
@@ -1637,9 +1644,6 @@ class App {
 					$log_message .= "Resetting from ".$reset_block."\n";
 					$game->delete_from_block($reset_block);
 					$game->update_db_game();
-					/*$debug_text = $game->ensure_events_until_block($game->blockchain->last_block_id()+1);
-					$game->load_current_events();
-					$game->sync(false);*/
 				}
 				else $log_message .= "Failed to determine a reset block.\n";
 			}

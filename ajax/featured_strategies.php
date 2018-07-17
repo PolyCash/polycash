@@ -4,6 +4,7 @@ include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 include(realpath(dirname(dirname(__FILE__)))."/includes/get_session.php");
 
 if ($game) {
+	$game->load_current_events();
 	$user_game = $thisuser->ensure_user_in_game($game, false);
 	$user_strategy = $game->fetch_user_strategy($user_game);
 	?>

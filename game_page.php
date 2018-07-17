@@ -154,7 +154,7 @@ else $exchange_rate = 0;
 					In this game you can win <?php echo $game->db_game['coin_name_plural']; ?> by casting your votes correctly.  Votes build up over time based on the number of <?php echo $game->db_game['coin_name_plural']; ?> that you hold.  When you vote for <?php echo $app->prepend_a_or_an($game->db_game['option_name']); ?>, your votes are used up but your <?php echo $game->db_game['coin_name_plural']; ?> are retained. By collaborating with your teammates against competing groups, you can make money by accumulating <?php echo $game->db_game['coin_name_plural']; ?> faster than the other players.  Through the <?php echo $GLOBALS['coin_brand_name']; ?> API you can code up a custom strategy which makes smart, real-time decisions about how to cast your votes.
 				</div>*/ ?>
 				<div class="paragraph">
-					<a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/" class="btn btn-success"><i class="fas fa-play-circle"></i> &nbsp; 
+					<a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; 
 					<?php
 					$faucet_io = $game->check_faucet(false);
 					
@@ -162,7 +162,7 @@ else $exchange_rate = 0;
 					else echo 'Play Now';
 					?>
 					</a>
-					<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/" class="btn btn-primary"><i class="fas fa-database"></i> &nbsp; Blockchain Explorer</a>
+					<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/" class="btn btn-sm btn-primary"><i class="fas fa-database"></i> &nbsp; Blockchain Explorer</a>
 				</div>
 			</div>
 			<div class="col-md-6">
@@ -173,6 +173,14 @@ else $exchange_rate = 0;
 					?>
 				</div>
 			</div>
+		</div>
+	</div>
+	
+	<div style="overflow: auto; margin-bottom: 10px;">
+		<div style="float: right;">
+			<?php
+			echo $game->event_filter_html();
+			?>
 		</div>
 	</div>
 	
@@ -212,7 +220,7 @@ games.push(new Game(<?php
 	echo ', "'.$game->db_game['coin_name_plural'].'"';
 	echo ', "'.$game->blockchain->db_blockchain['coin_name'].'"';
 	echo ', "'.$game->blockchain->db_blockchain['coin_name_plural'].'"';
-	echo ', "game", "'.$game->event_ids().'"';
+	echo ', "game", "'.$event_ids.'"';
 	echo ', "'.$game->logo_image_url().'"';
 	echo ', "'.$game->vote_effectiveness_function().'"';
 	echo ', "'.$game->effectiveness_param1().'"';
@@ -225,12 +233,15 @@ games.push(new Game(<?php
 	echo ', ';
 	if ($user_game) echo $user_game['event_index'];
 	else echo "0";
+	echo ', false';
 ?>));
 
 games[0].game_loop_event();
 
 <?php
-echo $game->new_event_js(0, false);
+$filter_arr = false;
+$event_ids = "";
+echo $game->new_event_js(0, $thisuser, $filter_arr, $event_ids);
 ?>
 games[0].show_selected_event(false);
 

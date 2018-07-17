@@ -18,6 +18,7 @@ if ($uri_parts[1] == "api") {
 		$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$api_game = new Game($blockchain, $game_id);
+		$api_game->load_current_events();
 		?>
 		<div class="container-fluid">
 			<div class="panel panel-default" style="margin-top: 15px;">
@@ -259,6 +260,8 @@ if ($uri_parts[1] == "api") {
 			
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
+			$game->load_current_events();
+			
 			$last_block_id = $game->blockchain->last_block_id();
 			$current_round = $game->block_to_round($last_block_id+1);
 			$coins_per_vote = $game->blockchain->app->coins_per_vote($game->db_game);
@@ -380,7 +383,8 @@ if ($uri_parts[1] == "api") {
 								$from_block = $game->blockchain->fetch_block_by_id($game->current_events[$i]->db_event['event_starting_block']);
 								$initial_price = $app->currency_price_after_time($option['currency_id'], $btc_currency['currency_id'], $from_block['time_mined']);
 								$final_price = $app->currency_price_at_time($option['currency_id'], $btc_currency['currency_id'], time());
-								$final_performance = round(pow(10,8)*$final_price['price']/$initial_price['price'])/pow(10,8) - 1;
+								if ($initial_price['price'] > 0) $final_performance = round(pow(10,8)*$final_price['price']/$initial_price['price'])/pow(10,8) - 1;
+								else $final_performance = 0;
 							}
 						}
 						$api_stat['price_performance'] = $final_performance;

@@ -227,7 +227,8 @@ class SingleEliminationGameDefinition {
 			$final_block = $final_block_r->fetch();
 			$random_data = hash("sha256", $final_block['block_hash']);
 			
-			$events_by_block = $game->events_by_block($final_block['block_id']);
+			$filter_arr = false;
+			$events_by_block = $game->events_by_block($final_block['block_id'], $filter_arr);
 			$events_in_round = count($events_by_block);
 			
 			$rand_chars_per_event = 3;

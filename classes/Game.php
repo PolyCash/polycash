@@ -9,7 +9,6 @@ class Game {
 		$this->blockchain = $blockchain;
 		$this->game_id = $game_id;
 		$this->update_db_game();
-		$this->load_current_events();
 		
 		if (!empty($this->db_game['module'])) {
 			eval('$this->module = new '.$this->db_game['module'].'GameDefinition($this->blockchain->app);');
@@ -288,6 +287,8 @@ class Game {
 	}
 	
 	public function update_option_votes() {
+		$this->load_current_events();
+		
 		$last_block_id = $this->blockchain->last_block_id();
 		$round_id = $this->block_to_round($last_block_id+1);
 		
@@ -377,6 +378,8 @@ class Game {
 	}
 	
 	public function apply_user_strategies() {
+		$this->load_current_events();
+		
 		$log_text = "";
 		$last_block_id = $this->blockchain->last_block_id();
 		$mining_block_id = $last_block_id+1;
@@ -997,12 +1000,17 @@ class Game {
 		</script>\n";
 		$js = "";
 		$round_i = 0;
+		
 		for ($round=$from_round; $round<=$to_round; $round++) {
 			$js .= "var temp_plan_round = new plan_round(".$round.");\n";
 			$js .= "round_id2plan_round_id[".$round."] = ".$round_i.";\n";
+			
 			$block_id = ($round-1)*$this->db_game['round_length']+1;
-			$events = $this->events_by_block($block_id);
+			$filter_arr = false;
+			$events = $this->events_by_block($block_id, $filter_arr);
+			
 			$html .= '<div class="plan_row"><b>Round #'.$this->round_to_display_round($round)."</b><br/>\n";
+			
 			for ($event_i=0; $event_i<count($events); $event_i++) {
 				$js .= "temp_plan_round.event_ids.push(".$events[$event_i]->db_event['event_id'].");\n";
 				$q = "SELECT * FROM options WHERE event_id='".$events[$event_i]->db_event['event_id']."' ORDER BY event_option_index ASC;";
@@ -1301,7 +1309,7 @@ class Game {
 			$link_show_cron = false;
 			
 			if (empty($this->blockchain->db_blockchain['last_hash_time'])) $link_show_cron = true;
-			else if ($seconds_to_add > 2*$this->blockchain->db_blockchain['seconds_per_block']) {
+			else if ($seconds_to_add > 10*$this->blockchain->db_blockchain['seconds_per_block']) {
 				$private_game_message = "Mining new blocks... ".$this->blockchain->app->format_seconds($seconds_to_add)." left. \n";
 				$link_show_cron = true;
 			}
@@ -1309,11 +1317,6 @@ class Game {
 			
 			if (!empty($private_game_message)) $html .= "<p>".$private_game_message."</p>\n";
 		}
-		
-		if (empty($this->current_events[0])) $nextblock_effectiveness = 0;
-		else $nextblock_effectiveness = $this->current_events[0]->block_id_to_effectiveness_factor($last_block_id+1);
-		
-		$html .= "<p>Votes are ".round(100*$nextblock_effectiveness)."% effective right now.</p>\n";
 		
 		$total_blocks = $last_block_id;
 		
@@ -1381,15 +1384,14 @@ class Game {
 			
 			$html .= "<p>Loading ".$this->blockchain->app->format_bignum($missing_game_blocks)." game block";
 			if ($missing_game_blocks != 1) $html .= "s";
-			$html .= " (".round($game_blocks_pct_complete, 2)."% complete";
-			//$html .= $this->blockchain->app->format_bignum($missing_game_blocks)." remaining... ";
 			
-			if ($data['COUNT(*)'] > 0) {
+			if ($data['COUNT(*)'] > 0 && $missing_game_blocks > 1) {
+				$html .= " (".round($game_blocks_pct_complete, 2)."% complete";
 				$avg_block_time = $data['SUM(load_time)']/$data['COUNT(*)'];
 				$seconds_left = $avg_block_time*$missing_game_blocks;
 				$html .= ".. ".$this->blockchain->app->format_seconds($seconds_left)." remaining";
+				$html .= ").</p>\n";
 			}
-			$html .= ").</p>\n";
 		}
 		
 		if ($this->db_game['game_winning_rule'] == "event_points") {
@@ -1523,6 +1525,7 @@ class Game {
 			$networth_disp = $this->blockchain->app->format_bignum($temp_user_game['account_value_sum']);
 			
 			$html .= '<div class="row">';
+			
 			$html .= '<div class="col-sm-4"><a href="" onclick="openChatWindow('.$temp_user_game['user_id'].'); return false;">Player'.$temp_user_game['user_id'].'</a></div>';
 			
 			$html .= '<div class="col-sm-4">'.$networth_disp.' ';
@@ -1544,8 +1547,10 @@ class Game {
 		
 		for ($round_id=$from_round; $round_id<=$to_round; $round_id++) {
 			$block_id = ($round_id-1)*$this->db_game['round_length']+1;
-			$events = $this->events_by_block($block_id);
+			$filter_arr = false;
+			$events = $this->events_by_block($block_id, $filter_arr);
 			$option_list = array();
+			
 			for ($e=0; $e<count($events); $e++) {
 				$qq = "SELECT * FROM options WHERE event_id='".$events[$e]->db_event['event_id']."' ORDER BY event_option_index ASC;";
 				$rr = $this->blockchain->app->run_query($qq);
@@ -1553,9 +1558,12 @@ class Game {
 					$option_list[count($option_list)] = $option;
 				}
 			}
+			
 			$used_option_ids = false;
+			
 			for ($i=0; $i<count($weight_map); $i++) {
 				$option_index = rand(0, count($option_list)-1);
+				
 				if (empty($used_option_ids[$option_list[$option_index]['option_id']])) {
 					$points = round($weight_map[$i]*rand(1, 5));
 					
@@ -1637,9 +1645,6 @@ class Game {
 	
 	public function add_round_from_db($round_id, $last_block_id, $add_payout_transaction) {
 		$log_text = "function disabled";
-		/*for ($i=0; $i<count($this->current_events); $i++) {
-			$log_text .= $this->current_events[$i]->set_outcome_from_db($last_block_id, $add_payout_transaction);
-		}*/
 		return $log_text;
 	}
 	
@@ -1654,9 +1659,11 @@ class Game {
 		}
 	}
 	
-	public function events_by_block($block_id) {
+	public function events_by_block($block_id, &$filter_arr) {
 		$events = array();
-		$q = "SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities en ON et.entity_id=en.entity_id WHERE ev.game_id='".$this->db_game['game_id']."' AND ev.event_starting_block<=".$block_id." AND ev.event_final_block>=".$block_id." ORDER BY ev.event_id ASC;";
+		$q = "SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities en ON et.entity_id=en.entity_id WHERE ev.game_id='".$this->db_game['game_id']."' AND ev.event_starting_block<=".$block_id." AND ev.event_final_block>=".$block_id;
+		if (!empty($filter_arr['date'])) $q .= " AND DATE(ev.event_final_time)='".$filter_arr['date']."'";
+		$q .= " ORDER BY ev.event_id ASC;";
 		$r = $this->blockchain->app->run_query($q);
 		while ($db_event = $r->fetch()) {
 			$events[count($events)] = new Event($this, $db_event, false);
@@ -1675,15 +1682,18 @@ class Game {
 	}
 	
 	public function event_ids() {
+		$this->load_current_events();
+		
 		$event_ids = "";
 		for ($i=0; $i<count($this->current_events); $i++) {
 			$event_ids .= $this->current_events[$i]->db_event['event_id'].",";
 		}
 		$event_ids = substr($event_ids, 0, strlen($event_ids)-1);
+		
 		return $event_ids;
 	}
 	
-	public function new_event_js($game_index, $user) {
+	public function new_event_js($game_index, &$user, &$filter_arr, &$event_ids) {
 		$last_block_id = $this->blockchain->last_block_id();
 		$mining_block_id = $last_block_id+1;
 		$current_round = $this->block_to_round($mining_block_id);
@@ -1694,7 +1704,7 @@ class Game {
 			$user_game = $user->ensure_user_in_game($this, false);
 		}
 		
-		$js = "console.log('loading new events!');\n";
+		$js = "function load_new_event_js() { console.log('loading new events!');\n";
 		$js .= "for (var i=0; i<games[".$game_index."].events.length; i++) {\n";
 		$js .= "\tgames[".$game_index."].events[i].deleted = true;\n";
 		$js .= "\t$('#game".$game_index."_event'+i).remove();\n";
@@ -1703,11 +1713,16 @@ class Game {
 		$js .= "games[".$game_index."].events = new Array();\n";
 		$js .= "var event_html = '';\n";
 		
-		$event_bootstrap_cols = 6;
-		if (count($this->current_events) == 1) $event_bootstrap_cols = 12;
+		$these_events = $this->events_by_block($last_block_id, $filter_arr);
+		$event_ids = "";
 		
-		for ($i=0; $i<count($this->current_events); $i++) {
-			$event = $this->current_events[$i];
+		$event_bootstrap_cols = 6;
+		if (count($these_events) == 1) $event_bootstrap_cols = 12;
+		
+		for ($i=0; $i<count($these_events); $i++) {
+			$event = $these_events[$i];
+			$event_ids .= $event->db_event['event_id'].",";
+			
 			$round_stats = $event->round_voting_stats_all();
 			$sum_votes = $round_stats[0];
 			$option_id2rank = $round_stats[3];
@@ -1752,14 +1767,16 @@ class Game {
 				$js .= 'event_html += "<div class=\'col-sm-'.$event_bootstrap_cols.'\'>";';
 				$js .= 'event_html += "<div id=\'game'.$game_index.'_event'.$i.'\' class=\''.$holder_class.'\'><div id=\'game'.$game_index.'_event'.$i.'_current_round_table\'></div><div id=\'game'.$game_index.'_event'.$i.'_my_current_votes\'></div></div>";'."\n";
 				$js .= 'event_html += "</div>";';
-				if ($i%2 == 1 || $i == count($this->current_events)-1) {
+				if ($i%2 == 1 || $i == count($these_events)-1) {
 					$js .= 'event_html += "</div>';
-					if ($i < count($this->current_events)-1) $js .= '<div class=\'row\'>';
+					if ($i < count($these_events)-1) $js .= '<div class=\'row\'>';
 					$js .= '";'."\n";
 				}
 			}
 		}
-		$js .= '$("#game'.$game_index.'_events").html(event_html);'."\n";
+		if ($event_ids != "") $event_ids = substr($event_ids, 0, strlen($event_ids)-1);
+
+		$js .= '$("#game'.$game_index.'_events").html(event_html); console.log("Done!");}'."\n";
 		return $js;
 	}
 	
@@ -2497,7 +2514,8 @@ class Game {
 			
 			if ($this->db_game['buyin_policy'] != "none") $this->process_sellouts_in_block($block_height);
 			
-			$events = $this->events_by_block($block_height);
+			$filter_arr = false;
+			$events = $this->events_by_block($block_height, $filter_arr);
 			
 			for ($i=0; $i<count($events); $i++) {
 				$events[$i]->process_option_blocks($game_block, count($events), $events[0]->db_event['event_index']);
@@ -2594,6 +2612,8 @@ class Game {
 	}
 	
 	public function render_transaction($transaction, $selected_address_id, $selected_io_id, $coins_per_vote) {
+		$this->load_current_events();
+		
 		$html = '<div class="row bordered_row"><div class="col-md-12">';
 		
 		if (count($this->current_events) > 0) {
@@ -3070,6 +3090,31 @@ class Game {
 		$r = $this->blockchain->app->run_query($q);
 		$rr = $r->fetch();
 		return $rr['MAX(event_starting_block)'];
+	}
+	
+	public function event_filter_html() {
+		$html = '
+		<form class="form-inline">
+			<div class="form-group">
+				<label for="filter_by_date">Date:</label> &nbsp;&nbsp; 
+				<select class="form-control input-sm" id="filter_by_date" onchange="filter_changed(\'date\');">
+					<option value="">Select a Date</option>';
+					
+					$ref_date = date("Y-m-d", time());
+					$ref_time = strtotime($ref_date);
+					$display_days = 5;
+					
+					for ($day_i=0; $day_i<$display_days; $day_i++) {
+						$this_time = strtotime($ref_date." +".$day_i." days");
+						$this_date = date("Y-m-d", $this_time);
+						$html .= '<option value="'.$this_date.'">'.date("M j, Y", $this_time).'</option>';
+					}
+					$html .= '
+				</select>
+			</div>
+		</form>';
+		
+		return $html;
 	}
 }
 ?>
