@@ -35,8 +35,6 @@ class Game {
 			$amount += $amounts[$i];
 		}
 		
-		$instantly_mature = 0;
-		
 		if ($user_game) {
 			$from_user = new User($this->blockchain->app, $user_game['user_id']);
 			$account_value = $from_user->account_coin_value($this, $user_game);
@@ -145,10 +143,7 @@ class Game {
 						$address = $r->fetch();
 						
 						if ($this->blockchain->db_blockchain['p2p_mode'] != "rpc") {
-							$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."', script_type='pubkeyhash', spend_status='";
-							if ($instantly_mature == 1) $q .= "unspent";
-							else $q .= "unconfirmed";
-							$q .= "', out_index='".$out_index."', ";
+							$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."', script_type='pubkeyhash', spend_status='unconfirmed', out_index='".$out_index."', ";
 							if (!empty($address['user_id'])) $q .= "user_id='".$address['user_id']."', ";
 							$q .= "address_id='".$address_id."', ";
 							$q .= "option_index='".$address['option_index']."', ";

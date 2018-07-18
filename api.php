@@ -300,14 +300,13 @@ if ($uri_parts[1] == "api") {
 						$api_user_info['votes_available'] = $votes_available;
 						
 						$mature_utxos = array();
-						$mature_utxo_q = "SELECT io.*, ak.pub_key AS address FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN address_keys ak ON io.address_id=ak.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND ak.account_id=".$user_game['account_id']." AND gio.game_id=".$game->db_game['game_id']." AND (io.create_block_id <= ".($last_block_id-$game->db_game['maturity'])." OR gio.instantly_mature = 1) GROUP BY io.io_id ORDER BY io.io_id ASC;";
+						$mature_utxo_q = "SELECT io.*, ak.pub_key AS address FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN address_keys ak ON io.address_id=ak.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND ak.account_id=".$user_game['account_id']." AND gio.game_id=".$game->db_game['game_id']." AND io.create_block_id <= ".($last_block_id-$game->db_game['maturity'])." GROUP BY io.io_id ORDER BY io.io_id ASC;";
 						$mature_utxo_r = $app->run_query($mature_utxo_q);
 						
 						$utxo_i = 0;
 						
 						while ($utxo = $mature_utxo_r->fetch()) {
 							$game_io_q = "SELECT * FROM transaction_game_ios WHERE game_id='".$game->db_game['game_id']."' AND io_id='".$utxo['io_id']."'";
-							if ($utxo['create_block_id'] > $last_block_id-$game->db_game['maturity']) $game_io_q .= " AND instantly_mature = 1";
 							$game_io_q .= " ORDER BY game_io_id ASC;";
 							$game_io_r = $app->run_query($game_io_q);
 							
