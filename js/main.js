@@ -1371,6 +1371,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 	this.last_block_id = last_block_id;
 	this.last_transaction_id = last_transaction_id;
 	this.mature_game_io_ids_csv = mature_game_io_ids_csv;
+	this.mature_game_io_ids_hash = Sha256.hash(mature_game_io_ids_csv);
 	this.payout_weight = payout_weight;
 	this.game_round_length = game_round_length;
 	this.fee_amount = fee_amount;
@@ -1381,6 +1382,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 	this.chain_coin_name_plural = chain_coin_name_plural;
 	this.refresh_page = refresh_page;
 	this.event_ids = event_ids;
+	this.event_ids_hash = Sha256.hash(event_ids);
 	this.logo_image_url = logo_image_url;
 	this.vote_effectiveness_function = vote_effectiveness_function;
 	this.effectiveness_param1 = effectiveness_param1;
@@ -1522,7 +1524,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 			this.last_refresh_time = new Date().getTime();
 			this.refresh_in_progress = true;
 			
-			var check_activity_url = "/ajax/check_new_activity.php?instance_id="+this.instance_id+"&game_id="+this.game_id+"&event_ids="+this.event_ids+"&refresh_page="+this.refresh_page+"&last_block_id="+this.last_block_id+"&last_transaction_id="+this.last_transaction_id+"&mature_game_io_ids_csv="+this.mature_game_io_ids_csv+"&game_loop_index="+this.game_loop_index;
+			var check_activity_url = "/ajax/check_new_activity.php?instance_id="+this.instance_id+"&game_id="+this.game_id+"&event_ids_hash="+this.event_ids_hash+"&refresh_page="+this.refresh_page+"&last_block_id="+this.last_block_id+"&last_transaction_id="+this.last_transaction_id+"&mature_game_io_ids_hash="+this.mature_game_io_ids_hash+"&game_loop_index="+this.game_loop_index;
 			if (this.filter_date) check_activity_url += "&filter_date="+this.filter_date;
 			
 			var _this = this;
@@ -1555,6 +1557,8 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 								load_new_event_js();
 								
 								_this.event_ids = json_result['event_ids'];
+								_this.event_ids_hash = Sha256.hash(json_result['event_ids']);
+								
 								set_select_add_output();
 								
 								if (_this.view_mode == "simple") {
@@ -1572,6 +1576,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 								if (parseInt(json_result['new_mature_ios']) == 1 || parseInt(json_result['new_transaction']) == 1 || json_result['new_block'] == 1) {
 									if (typeof json_result['mature_game_io_ids_csv'] == "undefined") _this.mature_game_io_ids_csv = "";
 									else _this.mature_game_io_ids_csv = json_result['mature_game_io_ids_csv'];
+									_this.mature_game_io_ids_hash = Sha256.hash(_this.mature_game_io_ids_csv);
 									$('#select_input_buttons').html(json_result['select_input_buttons']);
 									reload_compose_vote();
 									utxo_spend_offset = 0;

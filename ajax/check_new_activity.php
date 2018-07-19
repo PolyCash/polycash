@@ -5,7 +5,7 @@ include("../includes/get_session.php");
 if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	$instance_id = (int) $_REQUEST['instance_id'];
 	$game_loop_index = (int) $_REQUEST['game_loop_index'];
-	$event_ids = $_REQUEST['event_ids'];
+	$event_ids_hash = $_REQUEST['event_ids_hash'];
 	
 	if (!$game) {
 		$game_id = (int) $_REQUEST['game_id'];
@@ -40,6 +40,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		$mature_balance = 0;
 		$mature_game_io_ids_csv = "";
 	}
+	$mature_game_io_ids_hash = $app->game_def_to_hash($mature_game_io_ids_csv);
 	
 	$output = false;
 	$output['game_loop_index'] = $game_loop_index;
@@ -61,8 +62,9 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	}
 	$new_event_ids = "";
 	$js = $game->new_event_js($instance_id, $thisuser, $filter_arr, $new_event_ids);
+	$new_event_ids_hash = $app->game_def_to_hash($new_event_ids);
 	
-	if ($new_event_ids != $event_ids) {
+	if ($new_event_ids_hash != $event_ids_hash) {
 		$output['new_event_ids'] = 1;
 		$output['new_event_js'] = $js;
 		$output['event_ids'] = $new_event_ids;
@@ -149,7 +151,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		$output['set_options_js'] = $set_options_js;
 	}
 	
-	if ($mature_game_io_ids_csv != $_REQUEST['mature_game_io_ids_csv'] || !empty($output['new_block'])) {
+	if ($mature_game_io_ids_hash != $_REQUEST['mature_game_io_ids_hash'] || !empty($output['new_block'])) {
 		$output['select_input_buttons'] = $thisuser? $game->select_input_buttons($user_game) : "";
 		$output['mature_game_io_ids_csv'] = $mature_game_io_ids_csv;
 		$output['new_mature_ios'] = 1;
