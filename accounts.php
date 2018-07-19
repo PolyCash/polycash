@@ -193,7 +193,7 @@ include('includes/html_start.php');
 					
 					if ($account['game_id'] > 0) {
 						$account_game = new Game($blockchain, $account['game_id']);
-						$account_value = $thisuser->account_coin_value($account_game, $account);
+						$account_value = $account_game->account_balance($account['account_id']);
 					}
 					else $account_game = false;
 					
@@ -409,7 +409,7 @@ include('includes/html_start.php');
 					$coin_game = new Game($blockchains[$user_game['blockchain_id']], $user_game['game_id']);
 					echo '<div class="row">';
 					echo '<div class="col-sm-4"><a href="/wallet/'.$user_game['url_identifier'].'/">'.ucwords($user_game['coin_name_plural'])." for ".$user_game['name'].'</a></div>';
-					echo '<div class="col-sm-2 greentext" style="text-align: right">'.$app->format_bignum($thisuser->account_coin_value($coin_game, $user_game)/pow(10,$coin_game->db_game['decimal_places'])).' '.$user_game['coin_name_plural'].'</div>';
+					echo '<div class="col-sm-2 greentext" style="text-align: right">'.$app->format_bignum($coin_game->account_balance($user_game['account_id'])/pow(10,$coin_game->db_game['decimal_places'])).' '.$user_game['coin_name_plural'].'</div>';
 					echo "</div>\n";
 				}
 				?>

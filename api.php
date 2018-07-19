@@ -287,7 +287,7 @@ if ($uri_parts[1] == "api") {
 						$user_game = $r->fetch();
 						
 						$api_user = new User($app, $user_game['user_id']);
-						$account_value = $api_user->account_coin_value($game, $user_game);
+						$account_value = $game->account_balance($user_game['account_id']);
 						$immature_balance = $api_user->immature_balance($game, $user_game);
 						$mature_balance = $api_user->mature_balance($game, $user_game);
 						$votes_available = $api_user->user_current_votes($game, $last_block_id, $current_round, $user_game);

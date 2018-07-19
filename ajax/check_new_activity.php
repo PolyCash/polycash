@@ -29,7 +29,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 	$block_within_round = $game->block_id_to_round_index($last_block_id+1);
 	
 	if ($thisuser) {
-		$account_value = $thisuser->account_coin_value($game, $user_game);
+		$account_value = $game->account_balance($user_game['account_id']);
 		$immature_balance = $thisuser->immature_balance($game, $user_game);
 		$mature_balance = $thisuser->mature_balance($game, $user_game);
 		$mature_game_io_ids_csv = $game->mature_io_ids_csv($user_game);

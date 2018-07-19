@@ -37,7 +37,7 @@ class Game {
 		
 		if ($user_game) {
 			$from_user = new User($this->blockchain->app, $user_game['user_id']);
-			$account_value = $from_user->account_coin_value($this, $user_game);
+			$account_value = $this->account_balance($user_game['account_id']);
 			$immature_balance = $from_user->immature_balance($this, $user_game);
 			$mature_balance = $from_user->mature_balance($this, $user_game);
 		}
@@ -1412,7 +1412,7 @@ class Game {
 					$coins_in_existence = $this->coins_in_existence(false);
 					$add_coins = floor($coins_in_existence*$this->db_game['game_winning_inflation']);
 					$new_coins_in_existence = $coins_in_existence + $add_coins;
-					$account_value = $user->account_coin_value($this, $user_game);
+					$account_value = $this->account_balance($user_game['account_id']);
 					if ($coins_in_existence > 0) $account_pct = $account_value/$coins_in_existence;
 					else $account_pct = 0;
 					if ($entity_info['entity_votes'] > 0) $payout_amount = floor($add_coins*($entity_info['my_votes']/$entity_info['entity_votes']));
@@ -2743,6 +2743,15 @@ class Game {
 		$r = $this->blockchain->app->run_query($q);
 		$balance = $r->fetch();
 		return $balance['SUM(gio.colored_amount)'];
+	}
+	
+	public function account_balance($account_id) {
+		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE (io.spend_status='unspent' || io.spend_status='unconfirmed') AND k.account_id='".$account_id."';";
+		$r = $this->blockchain->app->run_query($q);
+		$sum = $r->fetch(PDO::FETCH_NUM);
+		$sum = $sum[0];
+		if ($sum > 0) return $sum;
+		else return 0;
 	}
 	
 	public function account_balance_at_block($account_id, $block_id, $include_coinbase) {

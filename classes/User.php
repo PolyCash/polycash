@@ -12,15 +12,6 @@ class User {
 		if ($r->rowCount() == 1) $this->db_user = $r->fetch();
 		else throw new Exception("Failed to load user #".$user_id);
 	}
-	
-	public function account_coin_value(&$game, &$user_game) {
-		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE (io.spend_status='unspent' || io.spend_status='unconfirmed') AND k.account_id='".$user_game['account_id']."';";
-		$r = $this->app->run_query($q);
-		$sum = $r->fetch(PDO::FETCH_NUM);
-		$sum = $sum[0];
-		if ($sum > 0) return $sum;
-		else return 0;
-	}
 
 	public function immature_balance(&$game, &$user_game) {
 		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND io.spend_status='unconfirmed';";

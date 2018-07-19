@@ -193,7 +193,7 @@ else $exchange_rate = 0;
 	<div class="paragraph">
 		<?php
 		if ($thisuser) {
-			$account_value = $thisuser->account_coin_value($game, $user_game);
+			$account_value = $game->account_balance($user_game['account_id']);
 			$immature_balance = $thisuser->immature_balance($game, $user_game);
 			$mature_balance = $thisuser->mature_balance($game, $user_game);
 		}
