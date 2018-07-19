@@ -987,7 +987,7 @@ class Event {
 		
 		$q = "UPDATE options op INNER JOIN (
 			SELECT option_id, SUM(colored_amount) sum_amount, SUM(coin_blocks_destroyed) sum_cbd, SUM(coin_rounds_destroyed) sum_crd, SUM(votes) sum_votes, SUM(destroy_amount) sum_destroyed, SUM(effective_destroy_amount) sum_effective_destroyed FROM transaction_game_ios 
-			WHERE game_id='".$this->game->db_game['game_id']."' AND create_round_id IS NOT NULL AND colored_amount > 0
+			WHERE event_id='".$this->db_event['event_id']."' AND create_round_id IS NOT NULL AND colored_amount > 0 AND event_id='".$this->db_event['event_id']."'
 			GROUP BY option_id
 		) i ON op.option_id=i.option_id SET op.coin_score=i.sum_amount, op.coin_block_score=i.sum_cbd, op.coin_round_score=i.sum_crd, op.votes=i.sum_votes, op.destroy_score=i.sum_destroyed, op.effective_destroy_score=i.sum_effective_destroyed WHERE op.event_id='".$this->db_event['event_id']."';";
 		$r = $this->game->blockchain->app->run_query($q);
@@ -995,7 +995,7 @@ class Event {
 		if ($this->game->db_game['payout_weight'] == "coin") {
 			$q = "UPDATE options op INNER JOIN (
 				SELECT option_id, SUM(colored_amount) sum_amount, SUM(colored_amount)*".$effectiveness_factor." sum_votes, SUM(destroy_amount) sum_destroyed FROM transaction_game_ios 
-				WHERE game_id='".$this->game->db_game['game_id']."' AND create_round_id IS NULL AND colored_amount > 0
+				WHERE event_id='".$this->db_event['event_id']."' AND create_round_id IS NULL AND colored_amount > 0 AND event_id='".$this->db_event['event_id']."'
 				GROUP BY option_id
 			) i ON op.option_id=i.option_id SET op.unconfirmed_coin_score=i.sum_amount, op.unconfirmed_votes=i.sum_votes, op.unconfirmed_destroy_score=i.sum_destroyed WHERE op.event_id='".$this->db_event['event_id']."';";
 			$r = $this->game->blockchain->app->run_query($q);
@@ -1003,7 +1003,7 @@ class Event {
 		else if ($this->game->db_game['payout_weight'] == "coin_block") {
 			$q = "UPDATE options op INNER JOIN (
 				SELECT option_id, SUM(ref_coin_blocks+(".($last_block_id+1)."-ref_block_id)*colored_amount) sum_cbd, SUM(ref_coin_blocks+(".($last_block_id+1)."-ref_block_id)*colored_amount)*".$effectiveness_factor." sum_votes, SUM(destroy_amount) sum_destroyed, SUM(destroy_amount)*".$effectiveness_factor." unconfirmed_sum_destroyed FROM transaction_game_ios 
-				WHERE game_id='".$this->game->db_game['game_id']."' AND create_round_id IS NULL AND colored_amount > 0 
+				WHERE event_id='".$this->db_event['event_id']."' AND create_round_id IS NULL AND colored_amount > 0 AND event_id='".$this->db_event['event_id']."'
 				GROUP BY option_id
 			) i ON op.option_id=i.option_id SET op.unconfirmed_coin_block_score=i.sum_cbd, op.unconfirmed_votes=i.sum_votes, op.unconfirmed_destroy_score=i.sum_destroyed, op.unconfirmed_effective_destroy_score=i.unconfirmed_sum_destroyed WHERE op.event_id='".$this->db_event['event_id']."';";
 			$r = $this->game->blockchain->app->run_query($q);
@@ -1011,7 +1011,7 @@ class Event {
 		else {
 			$q = "UPDATE options op INNER JOIN (
 				SELECT option_id, SUM(ref_coin_rounds+(".$round_id."-ref_round_id)*colored_amount) sum_crd, SUM(ref_coin_rounds+(".$round_id."-ref_round_id)*colored_amount)*".$effectiveness_factor." sum_votes, SUM(destroy_amount) sum_destroyed, SUM(destroy_amount)*".$effectiveness_factor." unconfirmed_sum_destroyed FROM transaction_game_ios
-				WHERE game_id='".$this->game->db_game['game_id']."' AND create_round_id IS NULL AND colored_amount > 0 
+				WHERE event_id='".$this->db_event['event_id']."' AND create_round_id IS NULL AND colored_amount > 0  AND event_id='".$this->db_event['event_id']."'
 				GROUP BY option_id
 			) i ON op.option_id=i.option_id SET op.unconfirmed_coin_round_score=i.sum_crd, op.unconfirmed_votes=i.sum_votes, op.unconfirmed_destroy_score=i.sum_destroyed, op.unconfirmed_effective_destroy_score=i.unconfirmed_sum_destroyed WHERE op.event_id='".$this->db_event['event_id']."';";
 			$r = $this->game->blockchain->app->run_query($q);

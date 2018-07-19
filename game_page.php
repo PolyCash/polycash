@@ -204,7 +204,11 @@ else $exchange_rate = 0;
 		</div>
 	</div>
 </div>
-
+<?php
+$filter_arr = false;
+$event_ids = "";
+$new_event_js = $game->new_event_js(0, $thisuser, $filter_arr, $event_ids);
+?>
 <script type="text/javascript">
 //<![CDATA[
 var games = new Array();
@@ -239,9 +243,7 @@ games.push(new Game(<?php
 games[0].game_loop_event();
 
 <?php
-$filter_arr = false;
-$event_ids = "";
-echo $game->new_event_js(0, $thisuser, $filter_arr, $event_ids);
+echo $new_event_js;
 ?>
 games[0].show_selected_event(false);
 

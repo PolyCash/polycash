@@ -1692,7 +1692,8 @@ class App {
 			if ($existing_gdo_r->rowCount() > 0) $existing_gdo = $existing_gdo_r->fetch();
 			else $existing_gdo = false;
 			
-			$possible_outcome = get_object_vars($gde['possible_outcomes'][$k]);
+			if (is_object($gde['possible_outcomes'][$k])) $possible_outcome = get_object_vars($gde['possible_outcomes'][$k]);
+			else $possible_outcome = $gde['possible_outcomes'][$k];
 			
 			if ($existing_gdo) $q = "UPDATE game_defined_options SET ";
 			else $q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index='".$gde['event_index']."', option_index='".$k."', ";

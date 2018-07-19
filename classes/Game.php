@@ -1699,7 +1699,7 @@ class Game {
 			$user_game = $user->ensure_user_in_game($this, false);
 		}
 		
-		$js = "function load_new_event_js() { console.log('loading new events!');\n";
+		$js = "console.log('loading new events!');\n";
 		$js .= "for (var i=0; i<games[".$game_index."].events.length; i++) {\n";
 		$js .= "\tgames[".$game_index."].events[i].deleted = true;\n";
 		$js .= "\t$('#game".$game_index."_event'+i).remove();\n";
@@ -1771,7 +1771,7 @@ class Game {
 		}
 		if ($event_ids != "") $event_ids = substr($event_ids, 0, strlen($event_ids)-1);
 
-		$js .= '$("#game'.$game_index.'_events").html(event_html); console.log("Done!");}'."\n";
+		$js .= '$("#game'.$game_index.'_events").html(event_html); console.log("Done!");'."\n";
 		return $js;
 	}
 	

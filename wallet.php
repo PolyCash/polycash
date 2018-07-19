@@ -586,7 +586,7 @@ if ($thisuser && $game) {
 		
 		$faucet_io = $game->check_faucet($user_game);
 		
-		$filter_arr['date'] = "2018-07-17";
+		$filter_arr['date'] = false;
 		$event_ids = "";
 		$new_event_js = $game->new_event_js(0, $thisuser, $filter_arr, $event_ids);
 		?>
@@ -805,7 +805,6 @@ if ($thisuser && $game) {
 					<?php
 					echo $new_event_js;
 					?>
-					load_new_event_js();
 					games[0].show_selected_event(false);
 					</script>
 					

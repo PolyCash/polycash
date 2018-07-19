@@ -1554,7 +1554,6 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 								eval(json_result['new_event_js']);
 								
 								console.log("applying new event IDs");
-								load_new_event_js();
 								
 								_this.event_ids = json_result['event_ids'];
 								_this.event_ids_hash = Sha256.hash(json_result['event_ids']);
