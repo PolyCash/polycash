@@ -1017,6 +1017,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					
 					echo '<div class="panel-body">';
 					
+					echo '<img style="margin: 10px;" src="/render_qr_code.php?data='.$address['address'].'" />';
+					
 					if ($thisuser) {
 						$account_q = "SELECT * FROM currency_accounts a JOIN address_keys k ON a.account_id=k.account_id WHERE k.address_id='".$address['address_id']."' AND a.user_id='".$thisuser->db_user['user_id']."';";
 						$account_r = $app->run_query($account_q);
@@ -1024,10 +1026,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						if ($account_r->rowCount() > 0) {
 							$account = $account_r->fetch();
 							
-							echo '<p>This address is in your account <a href="/explorer/';
-							if ($game) echo 'games/'.$game->db_game['url_identifier'];
-							else echo 'blockchains/'.$blockchain->db_blockchain['url_identifier'];
-							echo '/utxos/?account_id='.$account['account_id'].'">'.$account['account_name'].'</a></p>';
+							echo '<p>This address is in your account <a href="/accounts/?account_id='.$account['account_id'].'">'.$account['account_name'].'</a></p>';
 						}
 					}
 					
@@ -1304,6 +1303,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						echo '<div class="panel-body">';
 						
 						if ($account) {
+							echo '<p><a href="/accounts/?account_id='.$account['account_id'].'">Manage this Account</a></p>';
+							
 							$utxo_q = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account['account_id']."' ORDER BY gio.colored_amount DESC;";
 						}
 						else {
@@ -1345,6 +1346,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo "</div></div>\n";
 							
 							echo '<div class="panel-body">';
+							
+							echo '<p><a href="/accounts/?account_id='.$account['account_id'].'">Manage this Account</a></p>';
 						}
 						else {
 							$utxo_count_q = "SELECT COUNT(*) FROM transaction_ios WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND spend_status='unspent';";

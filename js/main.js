@@ -1853,6 +1853,16 @@ function clear_event_form() {
 	}
 }
 
+function manage_game_set_event_blocks(game_defined_event_id) {
+	var ajax_url = "/ajax/set_event_blocks.php?game_id="+games[0].game_id;
+	if (game_defined_event_id) ajax_url += "&game_defined_event_id="+game_defined_event_id;
+	
+	$.get(ajax_url, function(result) {
+		var result_obj = JSON.parse(result);
+		alert(result_obj['message']);
+	});
+}
+
 function manage_game_load_event(gde_id) {
 	clear_event_form();
 	

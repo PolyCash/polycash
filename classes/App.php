@@ -1162,52 +1162,51 @@ class App {
 			$game_definition[$var_name] = $var_val;
 		}
 		
-		if ($game->db_game['event_rule'] == "game_definition") {
-			$event_verbatim_vars = $this->event_verbatim_vars();
-			$events_obj = array();
+		$event_verbatim_vars = $this->event_verbatim_vars();
+		$events_obj = array();
+		
+		if ($definition_mode == "defined") {
+			$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' ORDER BY event_index ASC;";
+		}
+		else {
+			$q = "SELECT e.*, o.*, e.event_id AS event_id FROM events e LEFT JOIN event_outcomes eo ON e.event_id=eo.event_id LEFT JOIN options o ON eo.winning_option_id=o.option_id WHERE e.game_id='".$game->db_game['game_id']."' ORDER BY e.event_index ASC;";
+		}
+		$r = $this->run_query($q);
+		
+		$i=0;
+		while ($db_event = $r->fetch()) {
+			$temp_event = array();
+			
+			for ($j=0; $j<count($event_verbatim_vars); $j++) {
+				$var_type = $event_verbatim_vars[$j][0];
+				$var_name = $event_verbatim_vars[$j][1];
+				
+				if ($var_name == "outcome_index" && $definition_mode == "actual") {
+					$var_val = $db_event['event_option_index'];
+				}
+				else $var_val = $db_event[$var_name];
+				
+				if ($var_type == "int" && $var_val != "") $var_val = (int) $var_val;
+				$temp_event[$var_name] = $var_val;
+			}
 			
 			if ($definition_mode == "defined") {
-				$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' ORDER BY event_index ASC;";
+				$qq = "SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."' ORDER BY option_index ASC;";
 			}
 			else {
-				$q = "SELECT e.*, o.*, e.event_id AS event_id FROM events e LEFT JOIN event_outcomes eo ON e.event_id=eo.event_id LEFT JOIN options o ON eo.winning_option_id=o.option_id WHERE e.game_id='".$game->db_game['game_id']."' ORDER BY e.event_index ASC;";
+				$qq = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY event_option_index ASC;";
 			}
-			$r = $this->run_query($q);
-			
-			$i=0;
-			while ($db_event = $r->fetch()) {
-				$temp_event = array();
-				
-				for ($j=0; $j<count($event_verbatim_vars); $j++) {
-					$var_type = $event_verbatim_vars[$j][0];
-					$var_name = $event_verbatim_vars[$j][1];
-					
-					if ($var_name == "outcome_index" && $definition_mode == "actual") {
-						$var_val = $db_event['event_option_index'];
-					}
-					else $var_val = $db_event[$var_name];
-					
-					if ($var_type == "int" && $var_val != "") $var_val = (int) $var_val;
-					$temp_event[$var_name] = $var_val;
-				}
-				
-				if ($definition_mode == "defined") {
-					$qq = "SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."' ORDER BY option_index ASC;";
-				}
-				else {
-					$qq = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY event_option_index ASC;";
-				}
-				$rr = $this->run_query($qq);
-				$j = 0;
-				while ($option = $rr->fetch()) {
-					$temp_event['possible_outcomes'][$j] = array("title"=>$option['name']);
-					$j++;
-				}
-				$events_obj[$i] = $temp_event;
-				$i++;
+			$rr = $this->run_query($qq);
+			$j = 0;
+			while ($option = $rr->fetch()) {
+				$temp_event['possible_outcomes'][$j] = array("title"=>$option['name']);
+				$j++;
 			}
-			$game_definition['events'] = $events_obj;
+			$events_obj[$i] = $temp_event;
+			$i++;
 		}
+		$game_definition['events'] = $events_obj;
+		
 		return $game_definition;
 	}
 	
@@ -1406,7 +1405,7 @@ class App {
 	}
 	
 	public function voting_character_definitions() {
-		if ($this->get_site_constant('identifier_case_sensitive') == 1) {
+		if ($GLOBALS['identifier_case_sensitive'] == 1) {
 			$voting_characters = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 			$firstchar_divisions = array(26,16,8,4,2,1);
 		}
@@ -1496,9 +1495,9 @@ class App {
 		$voting_characters = $defs['voting_characters'];
 		$length_to_range = $defs['length_to_range'];
 		
-		if ($this->get_site_constant('identifier_case_sensitive') == 0) $addr_text = strtolower($addr_text);
+		if ($GLOBALS['identifier_case_sensitive'] == 0) $addr_text = strtolower($addr_text);
 		
-		$firstchar_pos = $this->get_site_constant('identifier_first_char');
+		$firstchar_pos = $GLOBALS['identifier_first_char'];
 		if (empty($firstchar_pos) || $firstchar_pos != (int) $firstchar_pos) die("Error: site constant 'identifier_first_char' must be defined.\n");
 		
 		$firstchar = $addr_text[$firstchar_pos];

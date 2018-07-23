@@ -292,7 +292,7 @@ class User {
 			
 			if ($rr->rowCount() == 0) {
 				// If not, check if there is an unallocated address available to give to the user
-				$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND a.option_index='".$option_index."' AND a.is_mine=1 AND k.account_id IS NULL AND NOT EXISTS (SELECT * FROM transaction_ios io WHERE io.address_id=a.address_id);";
+				$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND a.option_index='".$option_index."' AND a.is_mine=1 AND k.account_id IS NULL;";
 				$rr = $this->app->run_query($qq);
 				
 				if ($rr->rowCount() > 0) {

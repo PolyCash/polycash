@@ -1269,6 +1269,11 @@ class Blockchain {
 				}
 				$q .= " WHERE address_id='".$output_address_id."';";
 				$r = $this->app->run_query($q);
+				
+				if ($is_mine == 1) {
+					$q = "INSERT INTO address_keys SET address_id='".$output_address_id."', account_id=NULL, save_method='wallet.dat', pub_key=".$this->app->quote_escape($address).";";
+					$r = $this->app->run_query($q);
+				}
 			}
 			
 			$q = "SELECT * FROM addresses WHERE address_id='".$output_address_id."';";

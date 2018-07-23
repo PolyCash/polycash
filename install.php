@@ -34,13 +34,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			
 			$app->update_schema();
 			
-			if (!$db_exists) {
-				if (!isset($GLOBALS['identifier_case_sensitive'])) $GLOBALS['identifier_case_sensitive'] = 1;
-				if (!isset($GLOBALS['identifier_first_char'])) $GLOBALS['identifier_first_char'] = 2;
-				
-				$app->set_site_constant('identifier_case_sensitive', $GLOBALS['identifier_case_sensitive']);
-				$app->set_site_constant('identifier_first_char', $GLOBALS['identifier_first_char']);
-			}
+			if (!isset($GLOBALS['identifier_case_sensitive'])) die('Please set the variable $GLOBALS[\'identifier_case_sensitive\'] in your config file.');
+			if (!isset($GLOBALS['identifier_first_char'])) die('Please set the variable $GLOBALS[\'identifier_first_char\'] in your config file.');
 			
 			$q = "SELECT * FROM currency_prices WHERE currency_id=1 AND reference_currency_id=1;";
 			$r = $app->run_query($q);

@@ -176,8 +176,11 @@ include('includes/html_start.php');
 		<script type="text/javascript">
 		var selected_account_id = <?php echo $selected_account_id; ?>;
 		
-		function new_address(account_id) {
-			$.get("/ajax/new_address.php?account_id="+account_id, function(result) {
+		function manage_addresses(account_id, action, address_id) {
+			var ajax_url = "/ajax/manage_addresses.php?action="+action+"&account_id="+account_id;
+			if (address_id) ajax_url += "&address_id="+address_id;
+			
+			$.get(ajax_url, function(result) {
 				var result_obj = JSON.parse(result);
 				if (result_obj['status_code'] == 1) window.location = window.location;
 				else alert(result_obj['message']);
@@ -277,6 +280,7 @@ include('includes/html_start.php');
 						<li><a data-toggle="tab" href="#primary_address_'.$account['account_id'].'">Deposit Address</a></li>
 						<li><a data-toggle="tab" href="#transactions_'.$account['account_id'].'">Transactions</a></li>
 						<li><a data-toggle="tab" href="#addresses_'.$account['account_id'].'">Addresses</a></li>
+						<li><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/utxos/?account_id='.$account['account_id'].'">UTXOs</a></li>
 					</ul>';
 					
 					echo '
@@ -284,7 +288,8 @@ include('includes/html_start.php');
 						<div id="primary_address_'.$account['account_id'].'" class="tab-pane fade">';
 					
 					if (empty($account['game_id'])) {
-						echo "To deposit to ".$account['account_name'].", send ".$account['short_name_plural']." to: ".$account['pub_key']."<br/>\n";
+						echo "To deposit to ".$account['account_name'].", send ".$account['short_name_plural']." to:<br/>";
+						echo '<a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$account['pub_key'].'">'.$account['pub_key']."</a><br/>\n";
 						echo '<img style="margin: 10px;" src="/render_qr_code.php?data='.$account['pub_key'].'" />';
 					}
 					else {
@@ -307,9 +312,9 @@ include('includes/html_start.php');
 						}
 						
 						echo '<div class="row">';
-						echo '<div class="col-sm-4">';
+						echo '<div class="col-sm-4"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$transaction['pub_key'].'">';
 						echo $transaction['pub_key'];
-						echo '</div>';
+						echo '</a></div>';
 						
 						if ($account_game) {
 							echo '<div class="col-sm-2" style="text-align: right;"><a class="greentext" target="_blank" href="/explorer/games/'.$account_game->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'">';
@@ -376,12 +381,25 @@ include('includes/html_start.php');
 					echo "<p>This account has ".$addr_r->rowCount()." addresses.</p>";
 					
 					while ($address = $addr_r->fetch()) {
+						$address_balance = $blockchain->address_balance_at_block($address, false);
+						if ($account_game) $game_balance = $account_game->address_balance_at_block($address, false);
+						
 						echo '<div class="row">';
-						echo '<div class="col-sm-12">'.$address['address'].'</div>';
+						
+						echo '<div class="col-sm-2">'.$app->format_bignum($address_balance/pow(10, $blockchain->db_blockchain['decimal_places'])).' '.$blockchain->db_blockchain['coin_name_plural'].'</div>';
+						
+						if ($account_game) {
+							echo '<div class="col-sm-2">'.$app->format_bignum($game_balance/pow(10, $account_game->db_game['decimal_places'])).' '.$account_game->db_game['coin_name_plural'].'</div>';
+						}
+						
+						echo '<div class="col-sm-4"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$address['address'].'">'.$address['address'].'</a></div>';
+						
+						echo '<div class="col-sm-2"><a href="" onclick="manage_addresses('.$account['account_id'].', \'set_primary\', '.$address['address_id'].');">Set as Primary</a></div>';
+						
 						echo "</div>\n";
 					}
 					
-					echo '<br/><p><button class="btn btn-sm btn-primary" onclick="new_address('.$account['account_id'].');">New Address</button></p>';
+					echo '<br/><p><button class="btn btn-sm btn-primary" onclick="manage_addresses('.$account['account_id'].', \'new\', false);">New Address</button></p>';
 					echo '
 						</div>
 					</div>';

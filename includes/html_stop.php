@@ -26,26 +26,28 @@
 		if ($game) { ?>
 			<div class="status_footer_section">
 			<?php
-			$game_def = $app->fetch_game_definition($game, "defined");
-			$game_def_str = $app->game_def_to_text($game_def);
-			$game_def_hash = $app->game_def_to_hash($game_def_str);
-			$game_def_hash_3 = substr($game_def_hash, 0, 3);
-			
-			$actual_game_def = $app->fetch_game_definition($game, "actual");
-			$actual_game_def_str = $app->game_def_to_text($actual_game_def);
-			$actual_game_def_hash = $app->game_def_to_hash($actual_game_def_str);
-			$actual_game_def_hash_3 = substr($actual_game_def_hash, 0, 3);
-			
 			echo '<a href="/'.$game->db_game['url_identifier'].'/">'.$game->db_game['name']."</a>\n";
 			
-			if ($game_def_hash != $actual_game_def_hash) {
-				echo "<font style=\"font-size: 75%;\">";
-				echo " &nbsp;&nbsp; Pending ";
-				echo '<a href="/explorer/games/'.$game->db_game['url_identifier'].'/definition/?definition_mode=actual">'.$actual_game_def_hash_3."</a>";
-				echo " &rarr; ";
-				echo '<a href="/explorer/games/'.$game->db_game['url_identifier'].'/definition/?definition_mode=defined">'.$game_def_hash_3."</a>\n";
-				echo " &nbsp;&nbsp; <a href=\"\" onclick=\"apply_game_definition(".$game->db_game['game_id']."); return false;\">Apply Changes</a>";
-				echo "</font>\n";
+			if ($app->user_can_edit_game($thisuser, $game)) {
+				$game_def = $app->fetch_game_definition($game, "defined");
+				$game_def_str = $app->game_def_to_text($game_def);
+				$game_def_hash = $app->game_def_to_hash($game_def_str);
+				$game_def_hash_3 = substr($game_def_hash, 0, 3);
+				
+				$actual_game_def = $app->fetch_game_definition($game, "actual");
+				$actual_game_def_str = $app->game_def_to_text($actual_game_def);
+				$actual_game_def_hash = $app->game_def_to_hash($actual_game_def_str);
+				$actual_game_def_hash_3 = substr($actual_game_def_hash, 0, 3);
+				
+				if ($game_def_hash != $actual_game_def_hash) {
+					echo "<font style=\"font-size: 75%;\">";
+					echo " &nbsp;&nbsp; Pending ";
+					echo '<a href="/explorer/games/'.$game->db_game['url_identifier'].'/definition/?definition_mode=actual">'.$actual_game_def_hash_3."</a>";
+					echo " &rarr; ";
+					echo '<a href="/explorer/games/'.$game->db_game['url_identifier'].'/definition/?definition_mode=defined">'.$game_def_hash_3."</a>\n";
+					echo " &nbsp;&nbsp; <a href=\"\" onclick=\"apply_game_definition(".$game->db_game['game_id']."); return false;\">Apply Changes</a>";
+					echo "</font>\n";
+				}
 			}
 			?>
 			</div>

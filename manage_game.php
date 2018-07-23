@@ -358,106 +358,116 @@ else {
 					<?php
 				}
 				else if ($next_action == "events") {
-					if ($game->db_game['event_rule'] == "game_definition") {
-						?>
-						<div class="panel panel-info">
-							<div class="panel-heading">
-								<div class="panel-title"><?php echo $game->db_game['name']; ?>: Manage Events</div>
-							</div>
-							<div class="panel-body">
-								<p>
-									<a href="" onclick="manage_game_load_event('new'); return false;">Create a new Event</a>
-								</p>
-								<?php
-								$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' ORDER BY event_index DESC;";
-								$r = $app->run_query($q);
-								while ($gde = $r->fetch()) {
-									echo '<div class="row"><div class="col-md-2" style="text-align: center;"><a href="" onclick="manage_game_load_event('.$gde['game_defined_event_id'].'); return false;">Edit</a> &nbsp;&nbsp; <a href="" onclick="manage_game_event_options('.$gde['game_defined_event_id'].'); return false;">Edit Options</a></div><div class="col-md-6">'.$gde['event_index'].'. '.$gde['event_name'].'</a></div></div>'."\n";
-								}
+					?>
+					<div class="panel panel-info">
+						<div class="panel-heading">
+							<div class="panel-title"><?php echo $game->db_game['name']; ?>: Manage Events</div>
+						</div>
+						<div class="panel-body">
+							<p>
+								<button class="btn btn-sm btn-success" onclick="manage_game_load_event('new');">New Event</button>
+								<button class="btn btn-sm btn-primary" onclick="manage_game_set_event_blocks(false);">Set Event Blocks</button>
+							</p>
+							<?php
+							$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' ORDER BY event_index DESC;";
+							$r = $app->run_query($q);
+							while ($gde = $r->fetch()) {
 								?>
+								<div class="row">
+									<div class="col-md-4" style="text-align: center;">
+										<a href="" onclick="manage_game_load_event(<?php echo $gde['game_defined_event_id']; ?>); return false;">Edit</a> &nbsp;&nbsp; 
+										<a href="" onclick="manage_game_event_options(<?php echo $gde['game_defined_event_id']; ?>); return false;">Edit Options</a> &nbsp;&nbsp;
+										<a href="" onclick="manage_game_set_event_blocks(<?php echo $gde['game_defined_event_id']; ?>); return false;">Set Event Blocks</a>
+									</div>
+									<div class="col-md-6"><?php
+										echo $gde['event_index'].'. '.$gde['event_name'];
+										?>
+									</div>
+								</div>
+								<?php
+							}
+							?>
+						</div>
+					</div>
+					
+					<div style="display: none;" class="modal fade" id="event_modal">
+						<div class="modal-dialog">
+							<div class="modal-content" id="event_modal_content">
+							<div class="modal-body">
+								<div class="form-group">
+									<label for="event_form_event_index">Event index:</label>
+									<input class="form-control" id="event_form_event_index" />
+								</div>
+								<div class="form-group">
+									<label for="event_form_next_event_index">Next event index:</label>
+									<input class="form-control" id="event_form_next_event_index" />
+								</div>
+								<div id="event_form_event_blocks">
+									<p><a href="" onclick="$('#event_form_event_times').show(); $('#event_form_event_blocks').hide(); return false;">Specify times</a></p>
+									<div class="form-group">
+										<label for="event_form_event_starting_block">Event starting block:</label>
+										<input class="form-control" id="event_form_event_starting_block" />
+									</div>
+									<div class="form-group">
+										<label for="event_form_event_final_block">Event final block:</label>
+										<input class="form-control" id="event_form_event_final_block" />
+									</div>
+									<div class="form-group">
+										<label for="event_form_event_payout_block">Event payout block:</label>
+										<input class="form-control" id="event_form_event_payout_block" />
+									</div>
+								</div>
+								<div id="event_form_event_times">
+									<p><a href="" onclick="$('#event_form_event_blocks').show(); $('#event_form_event_times').hide(); return false;">Specify block numbers</a></p>
+									<div class="form-group">
+										<label for="event_form_event_starting_block">Event starting time:</label>
+										<input class="form-control" id="event_form_event_starting_time" />
+									</div>
+									<div class="form-group">
+										<label for="event_form_event_final_block">Event final time:</label>
+										<input class="form-control" id="event_form_event_final_time" />
+									</div>
+									<div class="form-group">
+										<label for="event_form_event_payout_block">Event payout offset time:</label>
+										<input class="form-control" id="event_form_event_payout_offset_time" />
+									</div>
+								</div>
+								<div class="form-group">
+									<label for="event_form_event_name">Event name:</label>
+									<input class="form-control" id="event_form_event_name" />
+								</div>
+								<div class="form-group">
+									<label for="event_form_option_block_rule">Option block rule:</label>
+									<input class="form-control" id="event_form_option_block_rule" />
+								</div>
+								<div class="form-group">
+									<label for="event_form_option_name">Option name:</label>
+									<input class="form-control" id="event_form_option_name" />
+								</div>
+								<div class="form-group">
+									<label for="event_form_option_name_plural">Option name plural:</label>
+									<input class="form-control" id="event_form_option_name_plural" />
+								</div>
+								<div class="form-group">
+									<label for="event_form_outcome_index">Outcome index:</label>
+									<input class="form-control" id="event_form_outcome_index" />
+								</div>
+							</div>
+							<div class="modal-footer">
+								<button type="button" class="btn btn-primary" id="event_form_save_btn">Save changes</button>
+								<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+							</div>
 							</div>
 						</div>
-						
-						<div style="display: none;" class="modal fade" id="event_modal">
-							<div class="modal-dialog">
-								<div class="modal-content" id="event_modal_content">
-								<div class="modal-body">
-									<div class="form-group">
-										<label for="event_form_event_index">Event index:</label>
-										<input class="form-control" id="event_form_event_index" />
-									</div>
-									<div class="form-group">
-										<label for="event_form_next_event_index">Next event index:</label>
-										<input class="form-control" id="event_form_next_event_index" />
-									</div>
-									<div id="event_form_event_blocks">
-										<p><a href="" onclick="$('#event_form_event_times').show(); $('#event_form_event_blocks').hide(); return false;">Specify times</a></p>
-										<div class="form-group">
-											<label for="event_form_event_starting_block">Event starting block:</label>
-											<input class="form-control" id="event_form_event_starting_block" />
-										</div>
-										<div class="form-group">
-											<label for="event_form_event_final_block">Event final block:</label>
-											<input class="form-control" id="event_form_event_final_block" />
-										</div>
-										<div class="form-group">
-											<label for="event_form_event_payout_block">Event payout block:</label>
-											<input class="form-control" id="event_form_event_payout_block" />
-										</div>
-									</div>
-									<div id="event_form_event_times">
-										<p><a href="" onclick="$('#event_form_event_blocks').show(); $('#event_form_event_times').hide(); return false;">Specify block numbers</a></p>
-										<div class="form-group">
-											<label for="event_form_event_starting_block">Event starting time:</label>
-											<input class="form-control" id="event_form_event_starting_time" />
-										</div>
-										<div class="form-group">
-											<label for="event_form_event_final_block">Event final time:</label>
-											<input class="form-control" id="event_form_event_final_time" />
-										</div>
-										<div class="form-group">
-											<label for="event_form_event_payout_block">Event payout offset time:</label>
-											<input class="form-control" id="event_form_event_payout_offset_time" />
-										</div>
-									</div>
-									<div class="form-group">
-										<label for="event_form_event_name">Event name:</label>
-										<input class="form-control" id="event_form_event_name" />
-									</div>
-									<div class="form-group">
-										<label for="event_form_option_block_rule">Option block rule:</label>
-										<input class="form-control" id="event_form_option_block_rule" />
-									</div>
-									<div class="form-group">
-										<label for="event_form_option_name">Option name:</label>
-										<input class="form-control" id="event_form_option_name" />
-									</div>
-									<div class="form-group">
-										<label for="event_form_option_name_plural">Option name plural:</label>
-										<input class="form-control" id="event_form_option_name_plural" />
-									</div>
-									<div class="form-group">
-										<label for="event_form_outcome_index">Outcome index:</label>
-										<input class="form-control" id="event_form_outcome_index" />
-									</div>
-								</div>
-								<div class="modal-footer">
-									<button type="button" class="btn btn-primary" id="event_form_save_btn">Save changes</button>
-									<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-								</div>
-								</div>
+					</div>
+					
+					<div style="display: none;" class="modal fade" id="options_modal">
+						<div class="modal-dialog">
+							<div class="modal-content" id="options_modal_content">
 							</div>
 						</div>
-						
-						<div style="display: none;" class="modal fade" id="options_modal">
-							<div class="modal-dialog">
-								<div class="modal-content" id="options_modal_content">
-								</div>
-							</div>
-						</div>
-						<?php
-					}
-					else echo "Events are determined automatically for this game. You cannot add events manually.";
+					</div>
+					<?php
 				}
 				else if ($next_action == "description") {
 					?>
@@ -508,7 +518,7 @@ else {
 					?>
 					<div class="panel panel-info">
 						<div class="panel-heading">
-							<div class="panel-title">Game definition for <?php echo $game->db_game['name']; ?></div>
+							<div class="panel-title">Game definition for <?php echo $game->db_game['name']." (#".$game->db_game['game_id'].")"; ?></div>
 						</div>
 						<div class="panel-body">
 							<div class="row">
@@ -517,6 +527,10 @@ else {
 							</div>
 							
 							<textarea id="game_definition" style="width: 100%; min-height: 400px; background-color: #f5f5f5; border: 1px solid #cccccc; margin-top: 10px;"><?php echo $game_def_str; ?></textarea>
+							
+							<p>
+								<button class="btn btn-sm btn-primary" onclick="manage_game_set_event_blocks(false);">Set Event Blocks</button>
+							</p>
 						</div>
 					</div>
 					<script type="text/javascript">

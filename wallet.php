@@ -395,19 +395,6 @@ if ($thisuser) {
 		include('includes/html_stop.php');
 		die();
 	}
-
-	$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND ug.game_id='".$game->db_game['game_id']."' ORDER BY ug.selected DESC;";
-	$r = $app->run_query($q);
-	
-	if ($r->rowCount() > 0) {
-		$user_game = $r->fetch();
-		$thisuser->generate_user_addresses($game, $user_game);
-	}
-	else {
-		$user_game = $thisuser->ensure_user_in_game($game, true);
-		
-		$thisuser->generate_user_addresses($game, $user_game);
-	}
 }
 
 if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['action'] == "save_voting_strategy_fees")) {
@@ -569,20 +556,7 @@ if ($thisuser && $game) {
 	}
 	
 	if ($thisuser) {
-		$user_game = FALSE;
-		$user_strategy = FALSE;
-		
-		$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."' ORDER BY selected DESC;";
-		$r = $app->run_query($q);
-		
-		if ($r->rowCount() > 0) {
-			$user_game = $r->fetch();
-			
-			$user_strategy = $game->fetch_user_strategy($user_game);
-		}
-		else {
-			die("Error: you're not in this game.");
-		}
+		$user_strategy = $game->fetch_user_strategy($user_game);
 		
 		$faucet_io = $game->check_faucet($user_game);
 		
@@ -1122,7 +1096,7 @@ if ($thisuser && $game) {
 				
 				<script type="text/javascript">
 				$(document).ready(function() {
-					last_event_index_shown = <?php echo $from_event_index; ?>;
+					last_event_index_shown = <?php if ((string) $from_event_index == "") echo "false"; else echo $from_event_index; ?>;
 				});
 				</script>
 			</div>
