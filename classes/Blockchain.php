@@ -1254,7 +1254,7 @@ class Blockchain {
 				else {
 					$validate_address = $rpc->validateaddress($address);
 					
-					if ($validate_address['ismine']) $is_mine = 1;
+					if (!empty($validate_address['ismine'])) $is_mine = 1;
 					else $is_mine = 0;
 				}
 				

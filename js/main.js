@@ -1835,15 +1835,12 @@ function create_account_step(step) {
 			$('#create_account_step3').show('fast');
 			$('#create_account_rpc_name').focus();
 		}
-		else if (create_account_action == "for_blockchain") {
-			create_account_step('submit');
-		}
 	}
 	else if (step == "submit") {
 		$.get("/ajax/create_account.php?action="+create_account_action+"&blockchain_id="+$('#create_account_blockchain_id').val()+"&account_name="+$('#create_account_rpc_name').val(), function(result) {
 			var result_obj = JSON.parse(result);
-			alert(result_obj['message']);
-			if (result_obj['status_code'] == 1) window.location = window.location;
+			if (result_obj['status_code'] == 1) window.location = result_obj['message'];
+			else alert(result_obj['message']);
 		});
 	}
 }

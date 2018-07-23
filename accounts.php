@@ -170,23 +170,49 @@ include('includes/html_start.php');
 <div class="container-fluid">
 	<?php
 	if ($thisuser) {
+		if (!empty($_REQUEST['account_id'])) $selected_account_id = (int) $_REQUEST['account_id'];
+		else $selected_account_id = false;
 		?>
 		<script type="text/javascript">
-		var selected_account_id = false;
+		var selected_account_id = <?php echo $selected_account_id; ?>;
+		
+		function new_address(account_id) {
+			$.get("/ajax/new_address.php?account_id="+account_id, function(result) {
+				var result_obj = JSON.parse(result);
+				if (result_obj['status_code'] == 1) window.location = window.location;
+				else alert(result_obj['message']);
+			});
+		}
 		</script>
 		
 		<div class="panel panel-info" style="margin-top: 15px;">
 			<div class="panel-heading">
-				<div class="panel-title">Coin Accounts</div>
-			</div>
-			<div class="panel-body">
 				<?php
-				$account_q = "SELECT ca.*, c.*, b.url_identifier AS blockchain_url_identifier, k.pub_key FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id JOIN blockchains b ON c.blockchain_id=b.blockchain_id LEFT JOIN addresses a ON ca.current_address_id=a.address_id LEFT JOIN address_keys k ON a.address_id=k.address_id WHERE ca.user_id='".$thisuser->db_user['user_id']."';";
+				$account_q = "SELECT ca.*, c.*, b.url_identifier AS blockchain_url_identifier, k.pub_key FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id JOIN blockchains b ON c.blockchain_id=b.blockchain_id LEFT JOIN addresses a ON ca.current_address_id=a.address_id LEFT JOIN address_keys k ON a.address_id=k.address_id WHERE ca.user_id='".$thisuser->db_user['user_id']."'";
+				if ($selected_account_id) $account_q .= " AND ca.account_id=".$selected_account_id;
+				$account_q .= ";";
 				$account_r = $app->run_query($account_q);
 				
-				echo "<p>You have ".$account_r->rowCount()." coin account";
-				if ($account_r->rowCount() != 1) echo "s";
-				echo ".</p>\n";
+				if ($selected_account_id) {
+					$selected_account = $account_r->fetch();
+					$account_r = $app->run_query($account_q);
+					echo '
+						<div class="panel-title">Account: '.$selected_account['account_name'].'</div>
+					</div>
+					<div class="panel-body">';
+					
+					echo '<p><a href="/accounts/">&larr; My Accounts</a></p>';
+				}
+				else {
+					echo '
+						<div class="panel-title">Coin Accounts</div>
+					</div>
+					<div class="panel-body">';
+					
+					echo "<p>You have ".$account_r->rowCount()." coin account";
+					if ($account_r->rowCount() != 1) echo "s";
+					echo ".</p>\n";
+				}
 				
 				while ($account = $account_r->fetch()) {
 					$blockchain = new Blockchain($app, $account['blockchain_id']);
@@ -199,8 +225,9 @@ include('includes/html_start.php');
 					
 					echo '<div class="row">';
 					echo '<div class="col-sm-4">';
-					if ($account['game_id'] > 0) echo ucwords($account_game->blockchain->db_blockchain['coin_name_plural'])." for ".$account_game->db_game['name'];
-					else echo $account['account_name'];
+					if (!$selected_account_id) echo '<a href="/accounts/?account_id='.$account['account_id'].'">';
+					echo $account['account_name'];
+					if (!$selected_account_id) echo '</a>';
 					echo '</div>';
 					
 					$balance = $app->account_balance($account['account_id']);
@@ -225,12 +252,12 @@ include('includes/html_start.php');
 					
 					$transaction_in_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."'";
 					if ($account['game_id'] > 0) $transaction_in_q .= " AND t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."'";
-					$transaction_in_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC LIMIT 100;";
+					$transaction_in_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC LIMIT 50;";
 					$transaction_in_r = $app->run_query($transaction_in_q);
 					
 					$transaction_out_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."'";
 					if ($account['game_id'] > 0) $transaction_out_q .= " AND t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."'";
-					$transaction_out_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC LIMIT 100;";
+					$transaction_out_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC LIMIT 50;";
 					$transaction_out_r = $app->run_query($transaction_out_q);
 					
 					echo ' ('.($transaction_in_r->rowCount()+$transaction_out_r->rowCount()).')';
@@ -239,10 +266,23 @@ include('includes/html_start.php');
 					echo "</div>\n";
 					
 					echo '<div class="row" id="account_details_'.$account['account_id'].'"';
-					if (in_array($action, array('prompt_game_buyin', 'view_account')) && $_REQUEST['account_id'] == $account['account_id']) {}
+					if ($selected_account_id == $account['account_id']) {}
 					else echo ' style="display: none;"';
 					echo '>';
+
 					echo "<div class=\"account_details\">";
+					
+					echo '
+					<ul class="nav nav-tabs">
+						<li><a data-toggle="tab" href="#primary_address_'.$account['account_id'].'">Deposit Address</a></li>
+						<li><a data-toggle="tab" href="#transactions_'.$account['account_id'].'">Transactions</a></li>
+						<li><a data-toggle="tab" href="#addresses_'.$account['account_id'].'">Addresses</a></li>
+					</ul>';
+					
+					echo '
+					<div class="tab-content">
+						<div id="primary_address_'.$account['account_id'].'" class="tab-pane fade">';
+					
 					if (empty($account['game_id'])) {
 						echo "To deposit to ".$account['account_name'].", send ".$account['short_name_plural']." to: ".$account['pub_key']."<br/>\n";
 						echo '<img style="margin: 10px;" src="/render_qr_code.php?data='.$account['pub_key'].'" />';
@@ -251,6 +291,12 @@ include('includes/html_start.php');
 						echo "This account stores your colored ".$account_game->blockchain->db_blockchain['coin_name_plural']." for ".$account_game->db_game['name'].".<br/>\n";
 						echo "Do not deposit ".$account_game->blockchain->db_blockchain['coin_name_plural']." directly into this account.";
 					}
+					
+					echo '
+						</div>
+						<div id="transactions_'.$account['account_id'].'" class="tab-pane fade">';
+					
+					echo "<p>Rendering ".($transaction_in_r->rowCount() + $transaction_out_r->rowCount())." transactions.</p>";
 					
 					while ($transaction = $transaction_in_r->fetch()) {
 						if ($account_game) {
@@ -322,6 +368,24 @@ include('includes/html_start.php');
 						echo '</div>';
 					}
 					
+					echo '
+						</div>
+						<div id="addresses_'.$account['account_id'].'" class="tab-pane fade">';
+					$addr_q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."';";
+					$addr_r = $app->run_query($addr_q);
+					echo "<p>This account has ".$addr_r->rowCount()." addresses.</p>";
+					
+					while ($address = $addr_r->fetch()) {
+						echo '<div class="row">';
+						echo '<div class="col-sm-12">'.$address['address'].'</div>';
+						echo "</div>\n";
+					}
+					
+					echo '<br/><p><button class="btn btn-sm btn-primary" onclick="new_address('.$account['account_id'].');">New Address</button></p>';
+					echo '
+						</div>
+					</div>';
+					
 					echo "</div>\n";
 					echo "</div>\n";
 				}
@@ -383,152 +447,126 @@ include('includes/html_start.php');
 						<input type="text" class="form-control" id="create_account_rpc_name" value="" />
 					</div>
 					<div class="form-group" id="create_account_submit" style="display: none;">
-						<button class="btn btn-primary" onclick="withdraw_from_account(false, 2);">Create Account</button>
+						<button class="btn btn-primary" onclick="create_account_step('submit');">Create Account</button>
 					</div>
 				</div>
 			</div>
 		</div>
 		
-		<div class="panel panel-info">
-			<div class="panel-heading">
-				<div class="panel-title">Colored Coin Accounts</div>
-			</div>
-			<div class="panel-body">
-				<?php
-				$blockchains = array();
-				
-				$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."';";
-				$r = $app->run_query($q);
-				
-				echo "<p>You have ".$r->rowCount()." colored coin account";
-				if ($account_r->rowCount() != 1) echo "s";
-				echo ".</p>\n";
-				
-				while ($user_game = $r->fetch()) {
-					if (empty($blockchains[$user_game['blockchain_id']])) $blockchains[$user_game['blockchain_id']] = new Blockchain($app, $user_game['blockchain_id']);
-					$coin_game = new Game($blockchains[$user_game['blockchain_id']], $user_game['game_id']);
-					echo '<div class="row">';
-					echo '<div class="col-sm-4"><a href="/wallet/'.$user_game['url_identifier'].'/">'.ucwords($user_game['coin_name_plural'])." for ".$user_game['name'].'</a></div>';
-					echo '<div class="col-sm-2 greentext" style="text-align: right">'.$app->format_bignum($coin_game->account_balance($user_game['account_id'])/pow(10,$coin_game->db_game['decimal_places'])).' '.$user_game['coin_name_plural'].'</div>';
-					echo "</div>\n";
-				}
-				?>
-				<div style="display: none;" class="modal fade" id="account_spend_modal">
-					<div class="modal-dialog">
-						<div class="modal-content">
-							<div class="modal-header">
-								<h4 class="modal-title" id="account_spend_modal_title">What do you want to do with these coins?</h4>
-							</div>
-							<div class="modal-body">
+		<div style="display: none;" class="modal fade" id="account_spend_modal">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h4 class="modal-title" id="account_spend_modal_title">What do you want to do with these coins?</h4>
+					</div>
+					<div class="modal-body">
+						<div class="form-group">
+							<select class="form-control" id="account_spend_action" onchange="account_spend_action_changed();">
+								<option value="">-- Please select --</option>
+								<option value="withdraw">Spend</option>
+								<option value="buyin">Buy in to a game</option>
+								<option value="faucet">Donate to a faucet</option>
+								<option value="join_tx">Join with another UTXO</option>
+							</select>
+						</div>
+						<div id="account_spend_join_tx" style="display: none;">
+							Loading...
+						</div>
+						<div id="account_spend_withdraw" style="display: none;">
+							<form method="get" action="/ajax/account_spend.php" onsubmit="account_spend_withdraw(); return false;">
 								<div class="form-group">
-									<select class="form-control" id="account_spend_action" onchange="account_spend_action_changed();">
-										<option value="">-- Please select --</option>
-										<option value="withdraw">Spend</option>
-										<option value="buyin">Buy in to a game</option>
-										<option value="faucet">Donate to a faucet</option>
-										<option value="join_tx">Join with another UTXO</option>
-									</select>
+									<label for="spend_withdraw_address">Address:</label>
+									<input type="text" class="form-control" id="spend_withdraw_address" />
 								</div>
-								<div id="account_spend_join_tx" style="display: none;">
-									Loading...
+								<div class="form-group">
+									<label for="spend_withdraw_address">Amount:</label>
+									<input type="text" class="form-control" id="spend_withdraw_amount" />
 								</div>
-								<div id="account_spend_withdraw" style="display: none;">
-									<form method="get" action="/ajax/account_spend.php" onsubmit="account_spend_withdraw(); return false;">
-										<div class="form-group">
-											<label for="spend_withdraw_address">Address:</label>
-											<input type="text" class="form-control" id="spend_withdraw_address" />
-										</div>
-										<div class="form-group">
-											<label for="spend_withdraw_address">Amount:</label>
-											<input type="text" class="form-control" id="spend_withdraw_amount" />
-										</div>
-										<div class="form-group">
-											<button class="btn btn-primary">Withdraw</button>
-										</div>
-									</form>
+								<div class="form-group">
+									<button class="btn btn-primary">Withdraw</button>
 								</div>
-								<div id="account_spend_faucet" style="display: none;">
-									<form action="/accounts/" method="get">
-										<input type="hidden" name="donate_game_id" id="donate_game_id" value="" />
-										<input type="hidden" name="account_io_id" id="account_io_id" value="" />
-										<input type="hidden" name="action" value="donate_to_faucet" />
-										
-										<div class="form-group">
-											<label for="donate_amount_each">How many in-game coins should each person receive?</label>
-											<input type="text" class="form-control" name="donate_amount_each" />
-										</div>
-										<div class="form-group">
-											<label for="donate_amount_each">How many UTXOs should each person's coins be divided into?</label>
-											<input type="text" class="form-control" name="donate_utxos_each" />
-										</div>
-										<div class="form-group">
-											<label for="donate_quantity">How many faucet contributions do you want to make?</label>
-											<input type="text" class="form-control" name="donate_quantity" />
-										</div>
-										<div class="form-group">
-											<button class="btn btn-primary">Donate to Faucet</button>
-										</div>
-									</form>
+							</form>
+						</div>
+						<div id="account_spend_faucet" style="display: none;">
+							<form action="/accounts/" method="get">
+								<input type="hidden" name="donate_game_id" id="donate_game_id" value="" />
+								<input type="hidden" name="account_io_id" id="account_io_id" value="" />
+								<input type="hidden" name="action" value="donate_to_faucet" />
+								
+								<div class="form-group">
+									<label for="donate_amount_each">How many in-game coins should each person receive?</label>
+									<input type="text" class="form-control" name="donate_amount_each" />
 								</div>
-								<div id="account_spend_buyin" style="display: none;">
-									<br/>
-									<p>
-										Which game do you want to buy in to?
-									</p>
-									<select class="form-control" id="account_spend_game_id">
-										<option value="">-- Please select --</option>
-										<?php
-										$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' GROUP BY g.game_id ORDER BY g.name ASC;";
-										$r = $app->run_query($q);
-										while ($db_game = $r->fetch()) {
-											echo "<option value=\"".$db_game['game_id']."\">".$db_game['name']."</option>\n";
-										}
-										?>
-									</select>
-									<br/>
-									<p>
-										How much do you want to buy in for? <span id="account_spend_buyin_total"></span>
-									</p>
-									<div class="row">
-										<div class="col-md-4">
-											<input class="form-control" style="text-align: right;" type="text" id="account_spend_buyin_amount" placeholder="0.00" />
-										</div>
-										<div class="col-md-4 form-control-static">
-											coins
-										</div>
-										<div class="col-md-4 form-control-static" id="account_spend_buyin_color_amount"></div>
-									</div>
-									<br/>
-									<p>
-										Transaction fee:
-									</p>
-									<div class="row">
-										<div class="col-md-4">
-											<input class="form-control" style="text-align: right;" type="text" id="account_spend_buyin_fee" value="0.001" />
-										</div>
-										<div class="col-md-4 form-control-static">
-											coins
-										</div>
-									</div>
-									<br/>
-									<p>
-										Which address should colored coins be sent to?
-									</p>
-									<select class="form-control" id="account_spend_buyin_address_choice" onchange="account_spend_buyin_address_choice_changed();">
-										<option value="new">Create a new address for me</option>
-										<option value="existing">Let me enter an address</option>
-									</select>
-									<div id="account_spend_buyin_address_existing" style="display: none;">
-										<br/>
-										<p>
-											Please enter the address where colored coins should be deposited:
-										</p>
-										<input class="form-control" id="account_spend_buyin_address" />
-									</div>
-									<br/>
-									<button class="btn btn-primary" onclick="account_spend_buyin();">Buy in</button>
+								<div class="form-group">
+									<label for="donate_amount_each">How many UTXOs should each person's coins be divided into?</label>
+									<input type="text" class="form-control" name="donate_utxos_each" />
+								</div>
+								<div class="form-group">
+									<label for="donate_quantity">How many faucet contributions do you want to make?</label>
+									<input type="text" class="form-control" name="donate_quantity" />
+								</div>
+								<div class="form-group">
+									<button class="btn btn-primary">Donate to Faucet</button>
+								</div>
+							</form>
+						</div>
+						<div id="account_spend_buyin" style="display: none;">
+							<br/>
+							<p>
+								Which game do you want to buy in to?
+							</p>
+							<select class="form-control" id="account_spend_game_id">
+								<option value="">-- Please select --</option>
+								<?php
+								$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' GROUP BY g.game_id ORDER BY g.name ASC;";
+								$r = $app->run_query($q);
+								while ($db_game = $r->fetch()) {
+									echo "<option value=\"".$db_game['game_id']."\">".$db_game['name']."</option>\n";
+								}
+								?>
+							</select>
+							<br/>
+							<p>
+								How much do you want to buy in for? <span id="account_spend_buyin_total"></span>
+							</p>
+							<div class="row">
+								<div class="col-md-4">
+									<input class="form-control" style="text-align: right;" type="text" id="account_spend_buyin_amount" placeholder="0.00" />
+								</div>
+								<div class="col-md-4 form-control-static">
+									coins
+								</div>
+								<div class="col-md-4 form-control-static" id="account_spend_buyin_color_amount"></div>
+							</div>
+							<br/>
+							<p>
+								Transaction fee:
+							</p>
+							<div class="row">
+								<div class="col-md-4">
+									<input class="form-control" style="text-align: right;" type="text" id="account_spend_buyin_fee" value="0.001" />
+								</div>
+								<div class="col-md-4 form-control-static">
+									coins
 								</div>
 							</div>
+							<br/>
+							<p>
+								Which address should colored coins be sent to?
+							</p>
+							<select class="form-control" id="account_spend_buyin_address_choice" onchange="account_spend_buyin_address_choice_changed();">
+								<option value="new">Create a new address for me</option>
+								<option value="existing">Let me enter an address</option>
+							</select>
+							<div id="account_spend_buyin_address_existing" style="display: none;">
+								<br/>
+								<p>
+									Please enter the address where colored coins should be deposited:
+								</p>
+								<input class="form-control" id="account_spend_buyin_address" />
+							</div>
+							<br/>
+							<button class="btn btn-primary" onclick="account_spend_buyin();">Buy in</button>
 						</div>
 					</div>
 				</div>
