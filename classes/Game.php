@@ -1335,12 +1335,12 @@ class Game {
 		
 		$block_fraction = 0;
 		if ($missing_blocks > 0) {
-			$loading_block_id = $this->blockchain->last_complete_block_id();
+			$loading_block_id = $this->blockchain->last_complete_block_id()+1;
 			
 			$sample_size = 10;
-			$time_q = "SELECT COUNT(*), SUM(load_time) FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' ORDER BY block_id DESC LIMIT ".$sample_size.";";
+			$time_q = "SELECT COUNT(*), SUM(load_time) FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND block_id > ".($loading_block_id-$sample_size).";";
 			$time_r = $this->blockchain->app->run_query($time_q);
-			$time_data = $time_r->fetch()
+			$time_data = $time_r->fetch();
 			$time_per_block = $time_data['SUM(load_time)']/$time_data['COUNT(*)'];
 			
 			$loading_block = $this->blockchain->app->run_query("SELECT * FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND block_id='".$loading_block_id."';")->fetch();
@@ -1361,7 +1361,7 @@ class Game {
 		}
 		$est_time_remaining = $missing_blocks*$time_per_block;
 		
-		if ($missing_blocks > 0) $html .= "<p>Loading blocks... ".round($blocks_pct_complete, 2)."% complete (".$this->blockchain->app->format_seconds($est_time_remaining)." left).</p>\n";
+		if ($missing_blocks > 0) $html .= "<p>Loading blocks.. ".round($blocks_pct_complete, 2)."% complete ($missing_blocks blocks remain.. ".$this->blockchain->app->format_seconds($est_time_remaining)." left).</p>\n";
 		if ($loading_block) {
 			$html .= "<p>Loaded ".$loading_transactions."/".$loading_block['num_transactions']." in block <a href=\"/explorer/games/".$this->db_game['url_identifier']."/blocks/".$loading_block_id."\">#".$loading_block_id."</a>.</p>\n";
 		}
@@ -1381,15 +1381,15 @@ class Game {
 		
 		if ($missing_game_blocks > 0) {
 			$sample_size = 10;
-			$time_q = "SELECT COUNT(*), SUM(load_time) FROM game_blocks WHERE game_id='".$this->db_game['game_id']."' ORDER BY block_id DESC LIMIT ".$sample_size.";";
+			$time_q = "SELECT COUNT(*), SUM(load_time) FROM game_blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id>".($last_block_loaded-$sample_size).";";
 			$time_r = $this->blockchain->app->run_query($time_q);
-			$time_data = $time_r->fetch()
+			$time_data = $time_r->fetch();
 			$time_per_block = $time_data['SUM(load_time)']/$time_data['COUNT(*)'];
 			
 			$html .= "<p>Loading ".$this->blockchain->app->format_bignum($missing_game_blocks)." game block";
 			if ($missing_game_blocks != 1) $html .= "s";
 			
-			if ($$missing_game_blocks > 1) {
+			if ($missing_game_blocks > 1) {
 				$html .= " (".round($game_blocks_pct_complete, 2)."% complete";
 				$seconds_left = $time_per_block*$missing_game_blocks;
 				$html .= ".. ".$this->blockchain->app->format_seconds($seconds_left)." remaining";
