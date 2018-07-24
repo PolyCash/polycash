@@ -17,6 +17,9 @@ else if ($uri_parts[1] == "wallet") {
 else if ($uri_parts[1] == "accounts") {
 	include("accounts.php");
 }
+else if ($uri_parts[1] == "profile") {
+	include("manage_profile.php");
+}
 else if ($uri_parts[1] == "cards") {
 	include("cards.php");
 }

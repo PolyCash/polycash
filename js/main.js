@@ -2189,3 +2189,20 @@ function filter_changed(which_filter) {
 		console.log("filter date: "+games[0].filter_date);
 	}
 }
+function change_password() {
+	$('#change_password_btn').html("Loading...");
+	
+	$('#change_password_existing').val(Sha256.hash($('#change_password_existing').val()));
+	$('#change_password_new').val(Sha256.hash($('#change_password_new').val()));
+	
+	$.get("/ajax/change_password.php?username="+$('#change_password_username').val()+"&existing="+$('#change_password_existing').val()+"&new="+$('#change_password_new').val(), function(result) {
+		var result_obj = JSON.parse(result);
+		
+		$('#change_password_btn').html("Change my Password");
+		$('#change_password_username').val("");
+		$('#change_password_existing').val("");
+		$('#change_password_new').val("");
+		
+		alert(result_obj['message']);
+	});
+}

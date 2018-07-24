@@ -72,8 +72,30 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 					?><li><a href="/accounts/">Log In</a></li>
 					<?php
 					}
-					if (!empty($thisuser) || (isset($_REQUEST['action']) && $_REQUEST['action'] == "logout")) { ?>
-						<li<?php if ($nav_tab_selected == "wallet" && $_REQUEST['action'] == "logout") echo ' class="active"'; ?>><a href="/wallet/?action=logout">Log Out</a></li>
+					if (!empty($thisuser)) { ?>
+						<li class="dropdown user user-menu">
+							<a href="/profile/" class="dropdown-toggle" data-toggle="dropdown">
+							  <span class="hidden-xs"><?php echo $thisuser->db_user['username']; ?></span>
+							</a>
+							<ul class="dropdown-menu">
+							  <!-- User image -->
+							  <li class="user-header">
+								<p>
+								  <?php echo $thisuser->db_user['username']; ?>
+								  <small>Joined <?php echo date("M, Y", $thisuser->db_user['time_created']); ?></small>
+								</p>
+							  </li>
+							  <!-- Menu Footer-->
+							  <li class="user-footer">
+								<div class="pull-left">
+								  <a href="/profile/" class="btn btn-sm btn-primary">Profile</a>
+								</div>
+								<div class="pull-right">
+								  <a href="/wallet/?action=logout" class="btn btn-sm btn-success">Sign out</a>
+								</div>
+							  </li>
+							</ul>
+						</li>
 						<?php
 					}
 					?>

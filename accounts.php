@@ -380,7 +380,7 @@ include('includes/html_start.php');
 					echo '
 						</div>
 						<div id="addresses_'.$account['account_id'].'" class="tab-pane fade">';
-					$addr_q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."' ORDER BY a.option_index ASC;";
+					$addr_q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."' ORDER BY a.option_index ASC LIMIT 50;";
 					$addr_r = $app->run_query($addr_q);
 					echo "<p>This account has ".$addr_r->rowCount()." addresses.</p>";
 					

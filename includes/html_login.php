@@ -53,11 +53,9 @@ function login() {
 		if (result_obj['status_code'] == 1) {
 			window.location = result_obj['message'];
 		}
-		else if (result_obj['status_code'] == 3) {
-			alert(result_obj['message']);
-		}
 		else {
-			window.location = window.location;
+			$('#login_password').val("");
+			alert(result_obj['message']);
 		}
 	});
 }
