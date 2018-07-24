@@ -1134,7 +1134,7 @@ class Game {
 	}
 	
 	public function account_value_html($account_value, $account_id) {
-		$html = '<font class="greentext"><a href="/explorer/games/'.$this->db_game['url_identifier'].'/utxos/?account_id='.$account_id.'">'.$this->blockchain->app->format_bignum($account_value/pow(10,$this->db_game['decimal_places']), 2).'</a></font> '.$this->db_game['coin_name_plural'];
+		$html = '<font class="greentext"><a href="/accounts/?account_id='.$account_id.'">'.$this->blockchain->app->format_bignum($account_value/pow(10,$this->db_game['decimal_places']), 2).'</a></font> '.$this->db_game['coin_name_plural'];
 		$html .= ' <font style="font-size: 12px;">(';
 		$coins_in_existence = $this->coins_in_existence(false);
 		if ($coins_in_existence > 0) $html .= $this->blockchain->app->format_bignum(100*$account_value/$coins_in_existence)."%";
@@ -1147,7 +1147,7 @@ class Game {
 		}
 		else $innate_currency_value = 0;
 		
-		if ($innate_currency_value > 0 && $this->db_game['buyin_policy'] != "none") {
+		if ($innate_currency_value > 0) {
 			$html .= "&nbsp;=&nbsp;".$this->blockchain->app->format_bignum($innate_currency_value/pow(10,$this->blockchain->db_blockchain['decimal_places']))." ".$this->blockchain->db_blockchain['coin_name_plural'];
 		}
 		
@@ -2680,6 +2680,8 @@ class Game {
 				
 				$html .= " &nbsp;&nbsp; <font class='greentext'>+".$this->blockchain->app->format_bignum(($expected_votes*$coins_per_vote)/pow(10,$this->db_game['decimal_places']))."</font>";
 				
+				$html .= " &nbsp; ".ucwords($input['spend_status']);
+				
 				$html .= "<br/>\n";
 				
 				$input_sum += $input['amount'];
@@ -2717,6 +2719,9 @@ class Game {
 				$payout_io = $this->blockchain->app->run_query("SELECT * FROM transaction_game_ios WHERE game_io_id='".$output['payout_game_io_id']."';")->fetch();
 				$html .= '&nbsp;&nbsp;<font class="greentext">+'.$this->blockchain->app->format_bignum($payout_io['colored_amount']/pow(10,$this->db_game['decimal_places'])).'</font>';
 			}
+			
+			$html .= " &nbsp; ".ucwords($output['spend_status']);
+			
 			$html .= "<br/>\n";
 			$output_sum += $output['colored_amount'];
 		}

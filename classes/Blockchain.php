@@ -1129,6 +1129,7 @@ class Blockchain {
 				else $html .= $this->db_blockchain['coin_name_plural'];
 				if ($input['io_id'] == $selected_io_id) $html .= "</b>";
 				else $html .= "</a>";
+				$html .= " &nbsp; ".ucwords($input['spend_status']);
 				$html .= "<br/>\n";
 				
 				$input_sum += $input['amount'];
@@ -1151,6 +1152,7 @@ class Blockchain {
 			else $html .= $this->db_blockchain['coin_name_plural'];
 			if ($output['io_id'] == $selected_io_id) $html .= "</b>";
 			else $html .= "</a>";
+			$html .= " &nbsp; ".ucwords($output['spend_status']);
 			$html .= "<br/>\n";
 			
 			$output_sum += $output['amount'];

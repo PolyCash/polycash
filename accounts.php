@@ -191,7 +191,7 @@ include('includes/html_start.php');
 		<div class="panel panel-info" style="margin-top: 15px;">
 			<div class="panel-heading">
 				<?php
-				$account_q = "SELECT ca.*, c.*, b.url_identifier AS blockchain_url_identifier, k.pub_key FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id JOIN blockchains b ON c.blockchain_id=b.blockchain_id LEFT JOIN addresses a ON ca.current_address_id=a.address_id LEFT JOIN address_keys k ON a.address_id=k.address_id WHERE ca.user_id='".$thisuser->db_user['user_id']."'";
+				$account_q = "SELECT ca.*, c.*, b.url_identifier AS blockchain_url_identifier, k.pub_key, ug.user_game_id FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id JOIN blockchains b ON c.blockchain_id=b.blockchain_id LEFT JOIN addresses a ON ca.current_address_id=a.address_id LEFT JOIN address_keys k ON a.address_id=k.address_id LEFT JOIN user_games ug ON ug.account_id=ca.account_id WHERE ca.user_id='".$thisuser->db_user['user_id']."'";
 				if ($selected_account_id) $account_q .= " AND ca.account_id=".$selected_account_id;
 				$account_q .= ";";
 				$account_r = $app->run_query($account_q);
@@ -226,7 +226,7 @@ include('includes/html_start.php');
 					}
 					else $account_game = false;
 					
-					if ($selected_account_id) {
+					if ($selected_account_id && !empty($account['user_game_id'])) {
 						echo '<p><a href="/wallet/'.$account_game->db_game['url_identifier'].'/?action=change_user_game&user_game_id='.$account['user_game_id'].'" class="btn btn-sm btn-success">Play Now</a></p>';
 					}
 					
@@ -380,7 +380,7 @@ include('includes/html_start.php');
 					echo '
 						</div>
 						<div id="addresses_'.$account['account_id'].'" class="tab-pane fade">';
-					$addr_q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."';";
+					$addr_q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."' ORDER BY a.option_index ASC;";
 					$addr_r = $app->run_query($addr_q);
 					echo "<p>This account has ".$addr_r->rowCount()." addresses.</p>";
 					
@@ -395,6 +395,8 @@ include('includes/html_start.php');
 						if ($account_game) {
 							echo '<div class="col-sm-2">'.$app->format_bignum($game_balance/pow(10, $account_game->db_game['decimal_places'])).' '.$account_game->db_game['coin_name_plural'].'</div>';
 						}
+						
+						echo '<div class="col-sm-2">'.$address['vote_identifier'].' (#'.$address['option_index'].')</div>';
 						
 						echo '<div class="col-sm-4"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$address['address'].'">'.$address['address'].'</a></div>';
 						

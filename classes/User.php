@@ -103,7 +103,7 @@ class User {
 				$votes_per_coin = $game->blockchain->app->votes_per_coin($game->db_game);
 				if ($votes_per_coin > 0) $votes_value = $user_votes/$votes_per_coin;
 				else $votes_value = 0;
-				$html .= '<div class="row"><div class="col-sm-2">Unrealized gain:</div><div class="col-sm-3 text-right"><font class="greentext">'.$this->app->format_bignum($votes_value/pow(10,$game->db_game['decimal_places'])).'</font> '.$game->db_game['coin_name_plural'].'</div></div>'."\n";
+				$html .= '<div class="row"><div class="col-sm-2">Unrealized gains:</div><div class="col-sm-3 text-right"><font class="greentext">'.$this->app->format_bignum($votes_value/pow(10,$game->db_game['decimal_places'])).'</font> '.$game->db_game['coin_name_plural'].'</div></div>'."\n";
 			}
 			else {
 				$html .= '<div class="row"><div class="col-sm-2">Votes:</div><div class="col-sm-3 text-right"><font class="greentext">'.$this->app->format_bignum($user_votes/pow(10,$game->db_game['decimal_places'])).'</font> votes available</div></div>'."\n";
