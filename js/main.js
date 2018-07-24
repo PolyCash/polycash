@@ -119,7 +119,7 @@ function format_coins(amount) {
 function explorer_search() {
 	var search_term = $('#explorer_search').val();
 	var search_url = "/ajax/explorer_search.php?";
-	if (typeof games !== "undefined") search_url += "game_id="+games[0].game_id+"&";
+	if (typeof games !== "undefined" && games.length > 0) search_url += "game_id="+games[0].game_id+"&";
 	if (typeof blockchain_id !== "undefined") search_url += "blockchain_id="+blockchain_id+"&";
 	search_url += "search_term="+search_term;
 	
@@ -1069,7 +1069,7 @@ function refresh_visible_inputs() {
 		}
 	}
 }
-function show_more_event_outcomes() {
+function show_more_event_outcomes(game_id) {
 	if ($('#show_more_link').html() == "Show More") {
 		var to_event_index = (last_event_index_shown-1);
 		var from_event_index = to_event_index - 19;
@@ -1080,7 +1080,7 @@ function show_more_event_outcomes() {
 		$('#show_more_link').html("Loading...");
 		last_event_index_shown = from_event_index;
 		
-		$.get("/ajax/show_event_outcomes.php?game_id="+games[0].game_id+"&from_event_index="+from_event_index+"&to_event_index="+to_event_index, function(result) {
+		$.get("/ajax/show_event_outcomes.php?game_id="+game_id+"&from_event_index="+from_event_index+"&to_event_index="+to_event_index, function(result) {
 			$('#show_more_link').html("Show More");
 			var json_result = JSON.parse(result);
 			$('#render_event_outcomes').append('<div id="event_outcomes_'+event_outcome_sections_shown+'">'+json_result[1]+'</div>');
@@ -1776,8 +1776,7 @@ function set_event_outcome_selected() {
 	if (option_id > 0) {
 		$.get("/ajax/set_event_outcome.php?action=set&event_id="+set_event_id+"&option_id="+option_id, function(result) {
 			var result_obj = JSON.parse(result);
-			console.log(result_obj);
-			window.location = window.location;
+			alert(result_obj['message']);
 		});
 	}
 }

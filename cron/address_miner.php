@@ -19,7 +19,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		
 		$blockchains = array();
 		
-		$q = "SELECT * FROM games WHERE min_unallocated_addresses > 0 AND game_status IN ('published','running');";
+		$q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE g.min_unallocated_addresses > 0 AND g.game_status IN ('published','running') AND b.p2p_mode='rpc';";
 		$r = $app->run_query($q);
 		echo "Looping through ".$r->rowCount()." games.<br/>\n";
 		
@@ -38,7 +38,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				}
 				else $coin_rpc = false;
 				
-				$game->generate_voting_addresses($coin_rpc, false);
+				echo $game->generate_voting_addresses($coin_rpc, 10);
 			}
 		}
 		

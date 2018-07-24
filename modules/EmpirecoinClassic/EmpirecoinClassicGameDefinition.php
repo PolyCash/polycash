@@ -61,5 +61,9 @@ class EmpirecoinClassicGameDefinition {
 	public function event_index_to_round($event_index, $rounds_per_tournament) {
 		return 1+$event_index;
 	}
+	
+	public function events_between_rounds($from_round_id, $to_round_id) {
+		return array();
+	}
 }
 ?>

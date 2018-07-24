@@ -284,43 +284,69 @@ class User {
 	public function generate_user_addresses(&$game, &$user_game) {
 		$option_index_range = $game->option_index_range();
 		
-		// Try to give the user voting addresses for all options in this game
-		for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
-			// Check if user already has a voting address for this option_index
-			$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND a.option_index='".$option_index."' AND k.account_id='".$user_game['account_id']."';";
-			$rr = $this->app->run_query($qq);
+		$this->app->dbh->beginTransaction();
+		$account_q = "SELECT * FROM currency_accounts WHERE account_id='".$user_game['account_id']."';";
+		$account_r = $this->app->run_query($account_q);
+		
+		if ($account_r->rowCount() > 0) {
+			$account = $account_r->fetch();
 			
-			if ($rr->rowCount() == 0) {
-				// If not, check if there is an unallocated address available to give to the user
-				$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND a.option_index='".$option_index."' AND a.is_mine=1 AND k.account_id IS NULL;";
+			$start_option_index = $account['has_option_indices_until']+1;
+			$has_option_indices_until = false;
+			
+			// Try to give the user voting addresses for all options in this game
+			for ($option_index=$start_option_index; $option_index<=$option_index_range[1]; $option_index++) {
+				// Check if user already has a voting address for this option_index
+				$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND a.option_index='".$option_index."' AND k.account_id='".$account['account_id']."';";
 				$rr = $this->app->run_query($qq);
 				
-				if ($rr->rowCount() > 0) {
-					$address = $rr->fetch();
-					
-					$qq = "UPDATE addresses SET user_id='".$this->db_user['user_id']."' WHERE address_id='".$address['address_id']."';";
-					$rr = $this->app->run_query($qq);
-					
-					$qq = "UPDATE address_keys SET account_id='".$user_game['account_id']."' WHERE address_id='".$address['address_id']."';";
-					$rr = $this->app->run_query($qq);
-				}
-				else if ($game->blockchain->db_blockchain['p2p_mode'] != "rpc") {
-					$vote_identifier = $this->app->option_index_to_vote_identifier($option_index);
-					$addr_text = "11".$vote_identifier;
-					$addr_text .= $this->app->random_string(34-strlen($addr_text));
-					
-					$qq = "INSERT INTO addresses SET is_mine=1, user_id='".$this->db_user['user_id']."', primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."', option_index='".$option_index."', vote_identifier=".$this->app->quote_escape($vote_identifier).", address=".$this->app->quote_escape($addr_text).", time_created='".time()."';";
-					$rr = $this->app->run_query($qq);
-					$address_id = $this->app->last_insert_id();
-					
-					$qq = "INSERT INTO address_keys SET address_id='".$address_id."', account_id='".$user_game['account_id']."', save_method='fake', pub_key='".$addr_text."';";
-					$rr = $this->app->run_query($qq);
+				if ($rr->rowCount() == 0) {
+					if ($game->blockchain->db_blockchain['p2p_mode'] != "rpc") {
+						$vote_identifier = $this->app->option_index_to_vote_identifier($option_index);
+						$addr_text = "11".$vote_identifier;
+						$addr_text .= $this->app->random_string(34-strlen($addr_text));
+						
+						$qq = "INSERT INTO addresses SET is_mine=1, user_id='".$this->db_user['user_id']."', primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."', option_index='".$option_index."', vote_identifier=".$this->app->quote_escape($vote_identifier).", address=".$this->app->quote_escape($addr_text).", time_created='".time()."';";
+						$rr = $this->app->run_query($qq);
+						$address_id = $this->app->last_insert_id();
+						
+						$qq = "INSERT INTO address_keys SET address_id='".$address_id."', account_id='".$account['account_id']."', save_method='fake', pub_key='".$addr_text."';";
+						$rr = $this->app->run_query($qq);
+						
+						$has_option_indices_until = $option_index;
+					}
+					else {
+						// If not, check if there is an unallocated address available to give to the user
+						$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND a.option_index='".$option_index."' AND k.account_id IS NULL;";
+						$rr = $this->app->run_query($qq);
+						
+						if ($rr->rowCount() > 0) {
+							$address = $rr->fetch();
+							
+							$qq = "UPDATE addresses SET user_id='".$this->db_user['user_id']."' WHERE address_id='".$address['address_id']."';";
+							$rr = $this->app->run_query($qq);
+							
+							$qq = "UPDATE address_keys SET account_id='".$account['account_id']."' WHERE address_id='".$address['address_id']."';";
+							$rr = $this->app->run_query($qq);
+							
+							$has_option_indices_until = $option_index;
+						}
+						else {
+							$option_index = $option_index_range[1]+1;
+						}
+					}
 				}
 			}
+			
+			if ($has_option_indices_until !== false) {
+				$qq = "UPDATE currency_accounts SET has_option_indices_until='".$has_option_indices_until."' WHERE account_id='".$user_game['account_id']."';";
+				$rr = $this->app->run_query($qq);
+			}
 		}
+		$this->app->dbh->commit();
 		
 		// Make sure the user has a non-voting address
-		$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND a.option_index IS NULL AND k.account_id='".$user_game['account_id']."';";
+		/*$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND a.option_index IS NULL AND k.account_id='".$user_game['account_id']."';";
 		$r = $this->app->run_query($q);
 		
 		if ($r->rowCount() == 0) {
@@ -336,7 +362,7 @@ class User {
 				$q = "UPDATE address_keys SET account_id='".$user_game['account_id']."' WHERE address_id='".$address['address_id']."';";
 				$r = $this->app->run_query($q);
 			}
-		}
+		}*/
 	}
 
 	public function set_user_active() {

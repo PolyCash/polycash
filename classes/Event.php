@@ -505,7 +505,8 @@ class Event {
 			$net_effective_coins = $effective_votes*$coins_per_vote + $my_vote['destroy_amount']*$my_vote['effectiveness_factor'];
 			$option_votes = $this->option_votes_in_round($my_vote['option_id'], $round_id);
 			$option_effective_coins = $option_votes['sum']*$coins_per_vote + $option_votes['effective_destroy_sum'];
-			$expected_payout = $total_reward*$net_effective_coins/$option_effective_coins;
+			if ($option_effective_coins > 0) $expected_payout = $total_reward*$net_effective_coins/$option_effective_coins;
+			else $expected_payout = 0;
 			
 			$confirmed_html .= '<div class="row">';
 			$confirmed_html .= '<div class="col-sm-4 '.$color.'text">'.$my_vote['name'].'</div>';

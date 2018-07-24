@@ -706,7 +706,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								</div>
 							</div>
 							<center>
-								<a href="" onclick="show_more_event_outcomes(); return false;" id="show_more_link">Show More</a>
+								<a href="" onclick="show_more_event_outcomes(<?php echo $game->db_game['game_id']; ?>); return false;" id="show_more_link">Show More</a>
 							</center>
 						</div>
 						

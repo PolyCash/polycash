@@ -6,7 +6,7 @@ if (is_file(realpath(dirname(__FILE__))."/config.php")) {
 }
 else die("Please create the file includes/config.php");
 
-if (!empty($GLOBALS['restrict_ip_address']) && !empty($_SERVER['REMOTE_ADDR'])) {
+if (empty($argv) && !empty($GLOBALS['restrict_ip_address'])) {
 	if ($_SERVER['REMOTE_ADDR'] != $GLOBALS['restrict_ip_address']) die("This website is closed for maintenance.\n");
 }
 

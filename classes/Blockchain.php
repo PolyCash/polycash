@@ -1243,12 +1243,6 @@ class Blockchain {
 		$option_index = $this->app->vote_identifier_to_option_index($vote_identifier);
 		
 		if ($option_index !== false || !$delete_optionless) {
-			$q = "INSERT INTO addresses SET primary_blockchain_id='".$this->db_blockchain['blockchain_id']."', address=".$this->app->quote_escape($address).", time_created='".time()."'";
-			if ($option_index !== false) $q .= ", vote_identifier=".$this->app->quote_escape($vote_identifier).", option_index='".$option_index."'";
-			$q .= ";";
-			$r = $this->app->run_query($q);
-			$output_address_id = $this->app->last_insert_id();
-			
 			if ($rpc || $force_is_mine) {
 				if ($force_is_mine) $is_mine=1;
 				else {
@@ -1257,23 +1251,17 @@ class Blockchain {
 					if (!empty($validate_address['ismine'])) $is_mine = 1;
 					else $is_mine = 0;
 				}
-				
-				$q = "UPDATE addresses SET is_mine=".$is_mine;
-				if ($is_mine == 1 && !empty($GLOBALS['default_coin_winner']) && $claimable) {
-					$qq = "SELECT * FROM users WHERE username=".$this->app->quote_escape($GLOBALS['default_coin_winner']).";";
-					$rr = $this->app->run_query($qq);
-					if ($rr->rowCount() > 0) {
-						$coin_winner = $rr->fetch();
-						$q .= ", user_id='".$coin_winner['user_id']."'";
-					}
-				}
-				$q .= " WHERE address_id='".$output_address_id."';";
+			}
+			
+			$q = "INSERT INTO addresses SET primary_blockchain_id='".$this->db_blockchain['blockchain_id']."', address=".$this->app->quote_escape($address).", time_created='".time()."', is_mine=".$is_mine;
+			if ($option_index !== false) $q .= ", vote_identifier=".$this->app->quote_escape($vote_identifier).", option_index='".$option_index."'";
+			$q .= ";";
+			$r = $this->app->run_query($q);
+			$output_address_id = $this->app->last_insert_id();
+			
+			if ($is_mine == 1) {
+				$q = "INSERT INTO address_keys SET address_id='".$output_address_id."', account_id=NULL, save_method='wallet.dat', pub_key=".$this->app->quote_escape($address).";";
 				$r = $this->app->run_query($q);
-				
-				if ($is_mine == 1) {
-					$q = "INSERT INTO address_keys SET address_id='".$output_address_id."', account_id=NULL, save_method='wallet.dat', pub_key=".$this->app->quote_escape($address).";";
-					$r = $this->app->run_query($q);
-				}
 			}
 			
 			$q = "SELECT * FROM addresses WHERE address_id='".$output_address_id."';";

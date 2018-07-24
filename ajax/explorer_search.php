@@ -23,30 +23,39 @@ if (!$game && !empty($_REQUEST['blockchain_id'])) {
 if ($blockchain) {
 	$search_term = $_REQUEST['search_term'];
 	
-	$q = "SELECT * FROM addresses WHERE primary_blockchain_id=".$blockchain->db_blockchain['blockchain_id']." AND address=".$app->quote_escape($search_term).";";
+	$q = "SELECT e.*, g.url_identifier AS game_url_identifier FROM events e JOIN games g ON e.game_id=g.game_id WHERE e.event_name=".$app->quote_escape($search_term).";";
 	$r = $app->run_query($q);
 	
 	if ($r->rowCount() > 0) {
-		$db_address = $r->fetch();
-		
-		if ($game) {
-			$app->output_message(1, "/explorer/games/".$game->db_game['url_identifier']."/addresses/".$db_address['address'], false);
-		}
-		else $app->output_message(1, "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/addresses/".$db_address['address'], false);
+		$db_event = $r->fetch();
+		$app->output_message(1, "/explorer/games/".$db_event['game_url_identifier']."/events/".$db_event['event_index'], false);
 	}
 	else {
-		$q = "SELECT * FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND tx_hash=".$app->quote_escape($search_term).";";
+		$q = "SELECT * FROM addresses WHERE primary_blockchain_id=".$blockchain->db_blockchain['blockchain_id']." AND address=".$app->quote_escape($search_term).";";
 		$r = $app->run_query($q);
 		
 		if ($r->rowCount() > 0) {
-			$db_transaction = $r->fetch();
+			$db_address = $r->fetch();
 			
 			if ($game) {
-				$app->output_message(1, "/explorer/games/".$game->db_game['url_identifier']."/transactions/".$db_transaction['tx_hash'], false);
+				$app->output_message(1, "/explorer/games/".$game->db_game['url_identifier']."/addresses/".$db_address['address'], false);
 			}
-			else $app->output_message(1, "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$db_transaction['tx_hash'], false);
+			else $app->output_message(1, "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/addresses/".$db_address['address'], false);
 		}
-		else $app->output_message(3, "No results were found.", false);
+		else {
+			$q = "SELECT * FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND tx_hash=".$app->quote_escape($search_term).";";
+			$r = $app->run_query($q);
+			
+			if ($r->rowCount() > 0) {
+				$db_transaction = $r->fetch();
+				
+				if ($game) {
+					$app->output_message(1, "/explorer/games/".$game->db_game['url_identifier']."/transactions/".$db_transaction['tx_hash'], false);
+				}
+				else $app->output_message(1, "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$db_transaction['tx_hash'], false);
+			}
+			else $app->output_message(3, "No results were found.", false);
+		}
 	}
 }
 else $app->output_message(2, "Please supply a valid blockchain ID.", false);

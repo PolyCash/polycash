@@ -163,15 +163,7 @@ if ($thisuser) {
 		$allow_public = false;
 		if ($requested_game['giveaway_status'] == "public_free" || $requested_game['giveaway_status'] == "public_pay") $allow_public = true;
 		
-		$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND g.game_id='".$requested_game['game_id']."' ORDER BY ug.selected DESC;";
-		$r = $app->run_query($q);
-		
-		if ($r->rowCount() > 0) {
-			$user_game = $r->fetch();
-		}
-		else if ($is_creator || $allow_public) {
-			$user_game = $thisuser->ensure_user_in_game($game, true);
-		}
+		$user_game = $thisuser->ensure_user_in_game($game, false);
 		
 		if ($user_game && $user_game['payment_required'] == 0) {
 			if ($_REQUEST['action'] == "save_address") {
@@ -1090,7 +1082,7 @@ if ($thisuser && $game) {
 						</div>
 					</div>
 					<center>
-						<a href="" onclick="show_more_event_outcomes(); return false;" id="show_more_link">Show More</a>
+						<a href="" onclick="show_more_event_outcomes(<?php echo $game->db_game['game_id']; ?>); return false;" id="show_more_link">Show More</a>
 					</center>
 				</div>
 				

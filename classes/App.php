@@ -1625,8 +1625,6 @@ class App {
 					if ($this->game_def_to_text($new_game_obj['events'][$i]) != $this->game_def_to_text($initial_game_obj['events'][$i])) {
 						if ($initial_game_obj['events'][$i]->event_starting_block && ($reset_block === false || $initial_game_obj['events'][$i]->event_starting_block < $reset_block)) $reset_block = $initial_game_obj['events'][$i]->event_starting_block;
 						if ($new_game_obj['events'][$i]->event_starting_block && ($reset_block === false || $new_game_obj['events'][$i]->event_starting_block < $reset_block)) $reset_block = $new_game_obj['events'][$i]->event_starting_block;
-						
-						$log_message .= "difference on event #".$i.", reset block: ".$reset_block."\n";
 					}
 				}
 				
