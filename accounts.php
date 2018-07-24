@@ -340,7 +340,7 @@ include('includes/html_start.php');
 							if ($account_game) echo $account_game->db_game['game_id'];
 							else echo 'false';
 							
-							echo ', '.$transaction['io_id'].", ".($transaction['amount']/pow(10,$blockchain->db_blockchain['decimal_places']))."); return false;\">Spend</a>";
+							echo ', '.$transaction['io_id'].", ".($transaction['amount']/pow(10,$blockchain->db_blockchain['decimal_places'])).", '".$blockchain->db_blockchain['coin_name_plural']."', '".$account_game->db_game['coin_name_plural']."'); return false;\">Spend</a>";
 						}
 						echo '</div>';
 						
@@ -503,8 +503,21 @@ include('includes/html_start.php');
 									<input type="text" class="form-control" id="spend_withdraw_address" />
 								</div>
 								<div class="form-group">
-									<label for="spend_withdraw_address">Amount:</label>
-									<input type="text" class="form-control" id="spend_withdraw_amount" />
+									<label for="spend_withdraw_amount">Amount:</label>
+									<div class="row">
+										<div class="col-sm-8"><input type="text" class="form-control" id="spend_withdraw_amount" style="text-align: right;" /></div>
+										<div class="col-sm-4">
+											<select class="form-control" id="spend_withdraw_coin_type">
+											</select>
+										</div>
+									</div>
+								</div>
+								<div class="form-group">
+									<label for="spend_withdraw_fee">Fee:</label>
+									<div class="row">
+										<div class="col-sm-8"><input type="text" class="form-control" id="spend_withdraw_fee" placeholder="0.001" style="text-align: right;" /></div>
+										<div class="col-sm-4 form-control-static" id="spend_withdraw_fee_label"></div>
+									</div>
 								</div>
 								<div class="form-group">
 									<button class="btn btn-primary">Withdraw</button>
@@ -602,7 +615,7 @@ include('includes/html_start.php');
 			account_spend_refresh();
 			<?php
 			if ($action == "prompt_game_buyin") {
-				echo "account_start_spend_io(false, ".((int) $_REQUEST['io_id']).", ".((float) $_REQUEST['amount']).");\n";
+				echo "account_start_spend_io(false, ".((int) $_REQUEST['io_id']).", ".((float) $_REQUEST['amount']).", '', '');\n";
 				echo "$('#account_spend_action').val('buyin');\n";
 				echo "account_spend_action_changed();\n";
 			}
