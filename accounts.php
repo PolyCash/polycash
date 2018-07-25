@@ -121,22 +121,19 @@ if ($thisuser && $action == "donate_to_faucet") {
 								
 								$send_address_ids = array();
 								$amounts = array();
-								$destroy_amounts = array();
 								
 								for ($i=0; $i<$quantity; $i++) {
 									for ($j=0; $j<$utxos_each; $j++) {
 										array_push($amounts, $chain_coins_each);
 										array_push($send_address_ids, $address_ids[$i]);
-										array_push($destroy_amounts, 0);
 									}
 								}
 								if ($remainder_satoshis > 0) {
 									array_push($amounts, $remainder_satoshis);
 									array_push($send_address_ids, $game_ios[0]['address_id']);
-									array_push($destroy_amounts, 0);
 								}
 								
-								$transaction_id = $donate_game->blockchain->create_transaction('transaction', $amounts, false, array($game_ios[0]['io_id']), $send_address_ids, $destroy_amounts, $fee_amount);
+								$transaction_id = $donate_game->blockchain->create_transaction('transaction', $amounts, false, array($game_ios[0]['io_id']), $send_address_ids, $fee_amount);
 								
 								if ($transaction_id) {
 									header("Location: /explorer/games/".$db_game['url_identifier']."/transactions/".$transaction_id."/");
@@ -331,7 +328,7 @@ include('includes/html_start.php');
 						
 						echo '<div class="col-sm-2">';
 						if ($transaction['block_id'] == "") echo "<a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/transactions/unconfirmed/\">Not yet confirmed</a>";
-						else echo "Confirmed in <a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>";
+						else echo "<a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/blocks/".$transaction['block_id']."\">Block&nbsp;#".$transaction['block_id']."</a>";
 						echo "</div>\n";
 						
 						echo '<div class="col-sm-2">'.ucwords($transaction['spend_status']);
@@ -340,7 +337,9 @@ include('includes/html_start.php');
 							if ($account_game) echo $account_game->db_game['game_id'];
 							else echo 'false';
 							
-							echo ', '.$transaction['io_id'].", ".($transaction['amount']/pow(10,$blockchain->db_blockchain['decimal_places'])).", '".$blockchain->db_blockchain['coin_name_plural']."', '".$account_game->db_game['coin_name_plural']."'); return false;\">Spend</a>";
+							echo ', '.$transaction['io_id'].", ".($transaction['amount']/pow(10,$blockchain->db_blockchain['decimal_places'])).", '".$blockchain->db_blockchain['coin_name_plural']."', '";
+							if ($account_game) echo $account_game->db_game['coin_name_plural'];
+							echo "'); return false;\">Spend</a>";
 						}
 						echo '</div>';
 						
@@ -355,9 +354,10 @@ include('includes/html_start.php');
 							$colored_coin_amount = $colored_coin_amount['SUM(colored_amount)'];
 						}
 						echo '<div class="row">';
-						echo '<div class="col-sm-4">';
+						
+						echo '<div class="col-sm-4"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$transaction['pub_key'].'">';
 						echo $transaction['pub_key'];
-						echo '</div>';
+						echo '</a></div>';
 						
 						if ($account_game) {
 							echo '<div class="col-sm-2" style="text-align: right;"><a class="redtext" target="_blank" href="/explorer/games/'.$account_game->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'">';
@@ -371,7 +371,7 @@ include('includes/html_start.php');
 						
 						echo '<div class="col-sm-2">';
 						if ($transaction['block_id'] == "") echo "<a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/transactions/unconfirmed/\">Not yet confirmed</a>";
-						else echo "Confirmed in <a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>";
+						else echo "<a target=\"_blank\" href=\"/explorer/blockchains/".$account['blockchain_url_identifier']."/blocks/".$transaction['block_id']."\">Block&nbsp;#".$transaction['block_id']."</a>";
 						echo '</div>';
 						
 						echo '</div>';

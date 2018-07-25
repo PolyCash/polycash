@@ -705,12 +705,16 @@ function create_new_game() {
 	var genesis_type = $('#new_game_genesis_type').val();
 	url_string += "&genesis_type="+genesis_type;
 	if (genesis_type == "existing") url_string += "&genesis_tx_hash="+$('#new_game_genesis_tx_hash').val();
-	else url_string += "&genesis_io_id="+$('#new_game_genesis_io_id').val();
+	else {
+		url_string += "&genesis_io_id="+$('#new_game_genesis_io_id').val();
+		url_string += "&escrow_amount="+$('#new_game_genesis_escrow_amount').val();
+	}
 	
 	$.get(url_string, function(result) {
 		$('#new_game_save_btn').html("Save &amp; Continue");
 		var json_result = JSON.parse(result);
-		window.location = '/manage/'+json_result['message'];
+		if (json_result['status_code'] == 1) window.location = '/manage/'+json_result['message'];
+		else alert(json_result['message']);
 	});
 }
 
@@ -1629,8 +1633,6 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 								
 								if (typeof json_result['my_current_votes'] != "undefined" && typeof json_result['my_current_votes'][game_event_index] != "undefined") {
 									$('#game'+_this.instance_id+'_event'+game_event_index+'_my_current_votes').html(json_result['my_current_votes'][game_event_index]);
-									$('#game'+_this.instance_id+'_event'+game_event_index+'_my_current_votes').hide();
-									$('#game'+_this.instance_id+'_event'+game_event_index+'_my_current_votes').fadeIn('fast');
 								}
 								
 								for (var option_i=0; option_i<_this.events[game_event_index].num_voting_options; option_i++) {
@@ -1755,7 +1757,7 @@ function account_spend_buyin() {
 function account_spend_withdraw() {
 	var withdraw_address = $('#spend_withdraw_address').val();
 	var withdraw_amount = $('#spend_withdraw_amount').val();
-	$.get("/ajax/account_spend.php?action=withdraw&io_id="+account_io_id+"&address="+withdraw_address+"&amount="+withdraw_amount+"&withdraw_type="+$("#spend_withdraw_coin_type").val(), function(result) {
+	$.get("/ajax/account_spend.php?action=withdraw&io_id="+account_io_id+"&address="+withdraw_address+"&amount="+withdraw_amount+"&fee="+$('#spend_withdraw_fee').val()+"&withdraw_type="+$("#spend_withdraw_coin_type").val(), function(result) {
 		var result_obj = JSON.parse(result);
 		alert(result_obj['message']);
 		if (result_obj['status_code'] == 1) window.location = window.location;

@@ -284,7 +284,6 @@ class Blockchain {
 				
 				$spend_io_ids = array();
 				$input_sum = 0;
-				$output_sum = 0;
 				$coin_blocks_destroyed = 0;
 				$coin_rounds_destroyed = 0;
 				
@@ -390,6 +389,10 @@ class Blockchain {
 					$output_io_ids = array();
 					$output_io_indices = array();
 					$output_io_address_ids = array();
+					$output_is_destroy = array();
+					$output_sum = 0;
+					$output_destroy_sum = 0;
+					$last_nondestroy_output_index = false;
 					
 					if ($this->db_blockchain['p2p_mode'] != "rpc") {
 						$outputs = array();
@@ -404,15 +407,20 @@ class Blockchain {
 						
 						$j=0;
 						while ($out_io = $r->fetch()) {
-							$outputs[$j] = array("value"=>$out_io['amount']/pow(10,$this->db_blockchain['decimal_places']), "destroy_amount"=>$out_io['destroy_amount']/pow(10,$this->db_blockchain['decimal_places']));
+							$outputs[$j] = array("value"=>$out_io['amount']/pow(10,$this->db_blockchain['decimal_places']));
 							
 							$output_address = $this->create_or_fetch_address($out_io['address'], true, false, false, true, false, false);
 							$output_io_indices[$j] = $output_address['option_index'];
 							
 							$output_io_ids[$j] = $out_io['io_id'];
 							$output_io_address_ids[$j] = $output_address['address_id'];
+							$output_is_destroy[$j] = $out_io['is_destroy_address'];
 							
-							$output_sum += $outputs[$j]["value"]*pow(10,$this->db_blockchain['decimal_places']);
+							$output_sum += $out_io['amount'];
+							if ($out_io['is_destroy_address'] == 1) {
+								$output_destroy_sum += $out_io['amount'];
+							}
+							else $last_nondestroy_output_index = $j;
 							$j++;
 						}
 					}
@@ -427,7 +435,6 @@ class Blockchain {
 						for ($j=$from_vout; $j<=$to_vout; $j++) {
 							$option_id = false;
 							$event = false;
-							$outputs[$j]['destroy_amount'] = 0;
 							
 							if (!empty($outputs[$j]["scriptPubKey"]) && (!empty($outputs[$j]["scriptPubKey"]["addresses"]) || !empty($outputs[$j]["scriptPubKey"]["hex"]))) {
 								$script_type = $outputs[$j]["scriptPubKey"]["type"];
@@ -459,8 +466,13 @@ class Blockchain {
 								
 								$output_io_ids[$j] = $io_id;
 								$output_io_address_ids[$j] = $output_address['address_id'];
+								$output_is_destroy[$j] = $output_address['is_destroy_address'];
 								
 								$output_sum += $outputs[$j]["value"]*pow(10,$this->db_blockchain['decimal_places']);
+								if ($output_address['is_destroy_address'] == 1) {
+									$output_destroy_sum += $outputs[$j]["value"]*pow(10,$this->db_blockchain['decimal_places']);
+								}
+								else $last_nondestroy_output_index = $j;
 							}
 						}
 					}
@@ -468,7 +480,7 @@ class Blockchain {
 					if (count($spend_io_ids) > 0 && $block_height === false) {
 						$ref_block_id = $this->last_block_id()+1;
 						
-						$q = "SELECT g.game_id, SUM(gio.colored_amount) AS colored_amount_sum, SUM(gio.colored_amount*(".$ref_block_id."-io.create_block_id)) AS ref_coin_block_sum FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN games g ON gio.game_id=g.game_id WHERE io.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND io.io_id IN (".implode(",", $spend_io_ids).") AND io.create_block_id IS NOT NULL GROUP BY gio.game_id ORDER BY g.game_id ASC;";
+						$q = "SELECT g.game_id, SUM(gio.colored_amount) AS colored_amount_sum, SUM(gio.colored_amount*(".$ref_block_id."-io.create_block_id)) AS ref_coin_block_sum FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN games g ON gio.game_id=g.game_id WHERE io.io_id IN (".implode(",", $spend_io_ids).") GROUP BY gio.game_id ORDER BY g.game_id ASC;";
 						$r = $this->app->run_query($q);
 						
 						while ($db_color_game = $r->fetch()) {
@@ -478,8 +490,6 @@ class Blockchain {
 							$coin_blocks = $db_color_game['ref_coin_block_sum'];
 							$color_amount_sum = 0;
 							$coin_block_sum = 0;
-							
-							$relevant_output_sum = $output_sum;
 							
 							$ref_round_id = $color_game->block_to_round($ref_block_id);
 							
@@ -491,25 +501,32 @@ class Blockchain {
 							$coin_round_sum = 0;
 							$ref_round_id = $color_game->block_to_round($ref_block_id);
 							
+							$destroy_color_amount = ceil($color_amount*$output_destroy_sum/$output_sum);
+							$nondestroy_color_amount = $color_amount-$destroy_color_amount;
+							
+							$destroy_sum = 0;
+							
 							$insert_q = "INSERT INTO transaction_game_ios (game_id, is_coinbase, io_id, colored_amount, destroy_amount, ref_block_id, ref_coin_blocks, ref_round_id, ref_coin_rounds, option_id, event_id, effectiveness_factor, effective_destroy_amount) VALUES ";
 							
 							for ($j=0; $j<count($outputs); $j++) {
-								if ($output_io_address_ids[$j] != $escrow_address['address_id']) {
-									$this_color_amount = floor($color_amount*($outputs[$j]["value"]*pow(10,$color_game->db_game['decimal_places']))/$relevant_output_sum);
-									if ($j == count($outputs)-1) $this_color_amount = $color_amount - $color_amount_sum;
+								$this_color_amount = floor($color_amount*($outputs[$j]["value"]*pow(10,$color_game->db_game['decimal_places']))/$output_sum);
+								if ($j == count($outputs)-1) $this_color_amount = $color_amount - $color_amount_sum;
+								
+								if ($output_is_destroy[$j] == 1) $this_destroy_amount = 0;
+								else {
+									if ($j == $last_nondestroy_output_index) $this_destroy_amount = $destroy_color_amount-$destroy_sum;
+									else $this_destroy_amount = floor($destroy_color_amount*$this_color_amount/$nondestroy_color_amount);
+								}
+								$destroy_sum += $this_destroy_amount;
+								
+								$this_coin_blocks = floor($coin_blocks*($outputs[$j]["value"]*pow(10,$color_game->db_game['decimal_places']))/$output_sum);
+								if ($j == count($outputs)-1) $this_coin_blocks = $coin_blocks - $coin_block_sum;
+								
+								$this_coin_rounds = floor($coin_rounds*($outputs[$j]["value"]*pow(10,$color_game->db_game['decimal_places']))/$output_sum);
+								if ($j == count($outputs)-1) $this_coin_rounds = $coin_rounds - $coin_round_sum;
 									
-									$destroy_frac = $outputs[$j]["destroy_amount"]/$outputs[$j]["value"];
-									$destroy_amount = floor($this_color_amount*$destroy_frac);
-									
-									$keep_amount = $this_color_amount-$destroy_amount;
-									
-									$this_coin_blocks = floor($coin_blocks*($outputs[$j]["value"]*pow(10,$color_game->db_game['decimal_places']))/$relevant_output_sum);
-									if ($j == count($outputs)-1) $this_coin_blocks = $coin_blocks - $coin_block_sum;
-									
-									$this_coin_rounds = floor($coin_rounds*($outputs[$j]["value"]*pow(10,$color_game->db_game['decimal_places']))/$relevant_output_sum);
-									if ($j == count($outputs)-1) $this_coin_rounds = $coin_rounds - $coin_round_sum;
-									
-									$insert_q .= "('".$color_game->db_game['game_id']."', '0', '".$output_io_ids[$j]."', '".$keep_amount."', '".$destroy_amount."', '".$ref_block_id."', '".$this_coin_blocks."', '".$ref_round_id."', '".$this_coin_rounds."', ";
+								if ($output_is_destroy[$j] == 0) {
+									$insert_q .= "('".$color_game->db_game['game_id']."', '0', '".$output_io_ids[$j]."', '".$this_color_amount."', '".$this_destroy_amount."', '".$ref_block_id."', '".$this_coin_blocks."', '".$ref_round_id."', '".$this_coin_rounds."', ";
 									
 									if ($output_io_indices[$j] !== false) {
 										$option_id = $color_game->option_index_to_option_id_in_block($output_io_indices[$j], $ref_block_id);
@@ -518,7 +535,7 @@ class Blockchain {
 											$event = new Event($color_game, $db_event, false);
 											$effectiveness_factor = $event->block_id_to_effectiveness_factor($this->last_block_id()+1);
 											
-											$effective_destroy_amount = floor($destroy_amount*$effectiveness_factor);
+											$effective_destroy_amount = floor($this_destroy_amount*$effectiveness_factor);
 											
 											$insert_q .= "'".$option_id."', '".$db_event['event_id']."', '".$effectiveness_factor."', '".$effective_destroy_amount."'";
 										}
@@ -527,11 +544,10 @@ class Blockchain {
 									else $insert_q .= "null, null, null, 0";
 									
 									$insert_q .= "), ";
-									
-									$color_amount_sum += $this_color_amount;
-									$coin_block_sum += $this_coin_blocks;
-									$coin_round_sum += $this_coin_rounds;
 								}
+								$color_amount_sum += $this_color_amount;
+								$coin_block_sum += $this_coin_blocks;
+								$coin_round_sum += $this_coin_rounds;
 							}
 							
 							$insert_q = substr($insert_q, 0, strlen($insert_q)-2).";";
@@ -1255,14 +1271,18 @@ class Blockchain {
 				}
 			}
 			
-			$q = "INSERT INTO addresses SET primary_blockchain_id='".$this->db_blockchain['blockchain_id']."', address=".$this->app->quote_escape($address).", time_created='".time()."', is_mine=".$is_mine;
-			if ($option_index !== false) $q .= ", vote_identifier=".$this->app->quote_escape($vote_identifier).", option_index='".$option_index."'";
-			$q .= ";";
+			if ($option_index == 0) $is_destroy_address=1;
+			else $is_destroy_address=0;
+			
+			$q = "INSERT INTO addresses SET primary_blockchain_id='".$this->db_blockchain['blockchain_id']."', address=".$this->app->quote_escape($address).", time_created='".time()."', is_mine=".$is_mine.", vote_identifier=".$this->app->quote_escape($vote_identifier).", option_index='".$option_index."', is_destroy_address=".$is_destroy_address.";";
 			$r = $this->app->run_query($q);
 			$output_address_id = $this->app->last_insert_id();
 			
 			if ($is_mine == 1) {
-				$q = "INSERT INTO address_keys SET address_id='".$output_address_id."', account_id=NULL, save_method='wallet.dat', pub_key=".$this->app->quote_escape($address).";";
+				if ($this->db_blockchain['p2p_mode'] == "rpc") $save_method = "wallet.dat";
+				else $save_method = "fake";
+				
+				$q = "INSERT INTO address_keys SET address_id='".$output_address_id."', account_id=NULL, save_method='".$save_method."', pub_key=".$this->app->quote_escape($address).";";
 				$r = $this->app->run_query($q);
 			}
 			
@@ -1311,26 +1331,12 @@ class Blockchain {
 		$this->db_blockchain['creator_id'] = $user->db_user['user_id'];
 	}
 	
-	public function create_transaction($type, $amounts, $block_id, $io_ids, $address_ids, $destroy_amounts, $transaction_fee) {
+	public function create_transaction($type, $amounts, $block_id, $io_ids, $address_ids, $transaction_fee) {
 		$amount = $transaction_fee;
-		$destroy_amount = 0;
 		for ($i=0; $i<count($amounts); $i++) {
 			$amount += $amounts[$i];
-			$destroy_amount += $destroy_amounts[$i];
 		}
 		$utxo_balance = 0;
-		
-		$op_return = "";
-		if ($destroy_amount > 0) {
-			// OP_RETURN is currently only implemented for non-RPC chains
-			if ($this->db_blockchain['p2p_mode'] == "rpc") return false;
-			
-			$op_return = "destroy(";
-			for ($i=0; $i<count($destroy_amounts); $i++) {
-				$op_return .= $destroy_amounts[$i].", ";
-			}
-			$op_return = substr($op_return, 0, strlen($op_return)-2).")";
-		}
 		
 		if ($type != "coinbase") {
 			$q = "SELECT SUM(amount) FROM transaction_ios WHERE io_id IN (".implode(",", $io_ids).");";
@@ -1352,8 +1358,7 @@ class Blockchain {
 				$tx_hash = $this->app->random_hex_string(32);
 				$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', fee_amount='".$transaction_fee."', has_all_inputs=1, has_all_outputs=1, num_inputs='".$num_inputs."', num_outputs='".count($amounts)."'";
 				$q .= ", tx_hash='".$tx_hash."'";
-				if (!empty($op_return)) $q .= ", OP_RETURN='".$op_return."'";
-				$q .= ", transaction_desc='".$type."', amount=".$amount.", destroy_amount=".$destroy_amount;
+				$q .= ", transaction_desc='".$type."', amount=".$amount;
 				if ($block_id !== false) $q .= ", block_id='".$block_id."'";
 				$q .= ", time_created='".time()."';";
 				$r = $this->app->run_query($q);
@@ -1373,13 +1378,11 @@ class Blockchain {
 				
 				while ($transaction_input = $r->fetch()) {
 					if ($input_sum < $amount) {
-						if ($this->db_blockchain['p2p_mode'] != "rpc") {
-							$qq = "UPDATE transaction_ios SET spend_count=spend_count+1, spend_transaction_id='".$transaction_id."', spend_transaction_ids=CONCAT(spend_transaction_ids, CONCAT('".$transaction_id."', ','))";
-							if ($block_id !== false) $qq .= ", spend_status='spent', spend_block_id='".$block_id."'";
-							else $qq .= ", spend_status='unconfirmed'";
-							$qq .= " WHERE io_id='".$transaction_input['io_id']."';";
-							$rr = $this->app->run_query($qq);
-						}
+						$qq = "UPDATE transaction_ios SET spend_count=spend_count+1, spend_transaction_id='".$transaction_id."', spend_transaction_ids=CONCAT(spend_transaction_ids, CONCAT('".$transaction_id."', ','))";
+						if ($block_id !== false) $qq .= ", spend_status='spent', spend_block_id='".$block_id."'";
+						else $qq .= ", spend_status='unconfirmed'";
+						$qq .= " WHERE io_id='".$transaction_input['io_id']."';";
+						$rr = $this->app->run_query($qq);
 						
 						$input_sum += $transaction_input['amount'];
 						$ref_cbd += ($ref_block_id-$transaction_input['create_block_id'])*$transaction_input['amount'];
@@ -1417,7 +1420,6 @@ class Blockchain {
 							if (!empty($address['user_id'])) $q .= "user_id='".$address['user_id']."', ";
 							$q .= "address_id='".$address_id."', ";
 							$q .= "option_index='".$address['option_index']."', ";
-							$q .= "destroy_amount='".$destroy_amounts[$out_index]."', ";
 							
 							if ($block_id !== false) {
 								if ($input_sum == 0) $output_cbd = 0;
@@ -1469,14 +1471,6 @@ class Blockchain {
 							return $db_transaction['transaction_id'];
 						}
 						catch (Exception $e) {
-							echo "raw_transaction:".$raw_transaction."<br/>\n";
-							var_dump($raw_txin);
-							echo "<br/><br/>\n\n";
-							var_dump($raw_txout);
-							echo "<br/><br/>\n\n";
-							var_dump($decoded_transaction);
-							echo "<br/><br/>\n\n";
-							var_dump($e);
 							return false;
 						}
 					}

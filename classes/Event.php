@@ -503,9 +503,11 @@ class Event {
 			$num_votes = $my_vote[$this->game->db_game['payout_weight'].'s_destroyed'];
 			$effective_votes = floor($num_votes*$my_vote['effectiveness_factor']);
 			$net_effective_coins = $effective_votes*$coins_per_vote + $my_vote['destroy_amount']*$my_vote['effectiveness_factor'];
-			$option_votes = $this->option_votes_in_round($my_vote['option_id'], $round_id);
+			$option_votes = $this->option_stats($my_vote['option_id']);
 			$option_effective_coins = $option_votes['sum']*$coins_per_vote + $option_votes['effective_destroy_sum'];
-			if ($option_effective_coins > 0) $expected_payout = $total_reward*$net_effective_coins/$option_effective_coins;
+			if ($option_effective_coins > 0) {
+				$expected_payout = $total_reward*$net_effective_coins/$option_effective_coins;
+			}
 			else $expected_payout = 0;
 			
 			$confirmed_html .= '<div class="row">';
@@ -557,7 +559,7 @@ class Event {
 			
 			$effective_votes = floor($num_votes*$current_effectiveness_factor);
 			$net_effective_coins = $effective_votes*$coins_per_vote + $my_vote['destroy_amount']*$my_vote['effectiveness_factor'];
-			$option_votes = $this->option_votes_in_round($my_vote['option_id'], $round_id);
+			$option_votes = $this->option_stats($my_vote['option_id']);
 			$option_effective_coins = $option_votes['sum']*$coins_per_vote + $option_votes['effective_destroy_sum'];
 			$expected_payout = $total_reward*$net_effective_coins/$option_effective_coins;
 			
@@ -673,39 +675,19 @@ class Event {
 		return $this->round_index_to_effectiveness_factor($this->game->block_id_to_round_index($block_id));
 	}
 	
-	public function option_votes_in_round($option_id, $round_id) {
-		$mining_block_id = $this->game->blockchain->last_block_id()+1;
-		$current_round_id = $this->game->block_to_round($mining_block_id);
+	public function option_stats($option_id) {
+		$q = "SELECT coin_score, unconfirmed_coin_score, coin_block_score, unconfirmed_coin_block_score, coin_round_score, unconfirmed_coin_round_score, votes, unconfirmed_votes, destroy_score, unconfirmed_destroy_score, effective_destroy_score, unconfirmed_effective_destroy_score FROM options WHERE option_id='".$option_id."';";
+		$r = $this->game->blockchain->app->run_query($q);
+		$result = $r->fetch();
 		
-		if ($current_round_id == $round_id) {
-			$q = "SELECT coin_score, unconfirmed_coin_score, coin_block_score, unconfirmed_coin_block_score, coin_round_score, unconfirmed_coin_round_score, votes, unconfirmed_votes, destroy_score, unconfirmed_destroy_score, effective_destroy_score, unconfirmed_effective_destroy_score FROM options WHERE option_id='".$option_id."' AND event_id='".$this->db_event['event_id']."';";
-			$r = $this->game->blockchain->app->run_query($q);
-			$result = $r->fetch();
-			
-			$confirmed_votes = $result['votes'];
-			$unconfirmed_votes = $result['unconfirmed_votes'];
-			$confirmed_score = $result[$this->game->db_game['payout_weight'].'_score'];
-			$unconfirmed_score = $result['unconfirmed_'.$this->game->db_game['payout_weight'].'_score'];
-			$confirmed_effective_destroy = $result["effective_destroy_score"];
-			$unconfirmed_effective_destroy = $result['unconfirmed_effective_destroy_score'];
-			$confirmed_destroy = $result['destroy_score'];
-			$unconfirmed_destroy = $result['unconfirmed_destroy_score'];
-		}
-		else {
-			$q = "SELECT SUM(".$this->game->db_game['payout_weight']."s_destroyed) AS sum_score, SUM(votes) AS sum_votes, SUM(effective_destroy_amount) AS sum_effective_destroy_amount, SUM(destroy_amount) AS sum_destroy_amount FROM transaction_game_ios WHERE event_id='".$this->db_event['event_id']."' AND ";
-			$q .= "create_round_id=".$round_id." AND option_id='".$option_id."';";
-			$r = $this->game->blockchain->app->run_query($q);
-			$result = $r->fetch();
-			
-			$confirmed_votes = $result['sum_votes'];
-			$unconfirmed_votes = 0;
-			$confirmed_score = $result['sum_score'];
-			$unconfirmed_score = 0;
-			$confirmed_effective_destroy = $result['sum_effective_destroy_amount'];
-			$unconfirmed_effective_destroy = 0;
-			$confirmed_destroy = $result['sum_destroy_amount'];
-			$unconfirmed_destroy = 0;
-		}
+		$confirmed_votes = $result['votes'];
+		$unconfirmed_votes = $result['unconfirmed_votes'];
+		$confirmed_score = $result[$this->game->db_game['payout_weight'].'_score'];
+		$unconfirmed_score = $result['unconfirmed_'.$this->game->db_game['payout_weight'].'_score'];
+		$confirmed_effective_destroy = $result["effective_destroy_score"];
+		$unconfirmed_effective_destroy = $result['unconfirmed_effective_destroy_score'];
+		$confirmed_destroy = $result['destroy_score'];
+		$unconfirmed_destroy = $result['unconfirmed_destroy_score'];
 		
 		if (!$confirmed_votes) $confirmed_votes = 0;
 		if (!$unconfirmed_votes) $unconfirmed_votes = 0;

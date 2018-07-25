@@ -7,7 +7,7 @@ $db_game = $app->fetch_game_from_url();
 
 if (empty($db_game)) {
 	$nav_tab_selected = "manage_game";
-	$pagetitle = "Create a new game?";
+	$pagetitle = "Create a new game";
 	include('includes/html_start.php');
 	?>
 	<div class="container-fluid">
@@ -63,6 +63,10 @@ if (empty($db_game)) {
 							<div class="form-group">
 								<label for="new_game_genesis_io_id">Please select coins for your new genesis transaction:</label>
 								<select id="new_game_genesis_io_id" class="form-control"></select>
+							</div>
+							<div class="form-group">
+								<label for="new_game_genesis_escrow_amount">For the UTXO you selected, how many coins should be deposited to escrow?</label>
+								<input type="text" id="new_game_genesis_escrow_amount" class="form-control" />
 							</div>
 						</div>
 						<div class="form-group">

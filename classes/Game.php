@@ -227,14 +227,8 @@ class Game {
 						$tx_hash = $decoded_transaction['txid'];
 					}
 					catch (Exception $e) {
-						echo "raw_transaction:".$raw_transaction."<br/>\n";
-						var_dump($raw_txin);
-						echo "<br/><br/>\n\n";
-						var_dump($raw_txout);
-						echo "<br/><br/>\n\n";
-						var_dump($decoded_transaction);
-						echo "<br/><br/>\n\n";
-						var_dump($e);
+						$error_message = "RPC call failed: createrawtransaction";
+						return false;
 					}
 					
 					if (!empty($tx_hash)) {
@@ -1100,7 +1094,7 @@ class Game {
 				
 				$sum_colored_coins = 0;
 				
-				$qq = "SELECT * FROM transaction_ios WHERE create_transaction_id='".$transaction['transaction_id']."' AND address_id != '".$escrow_address['address_id']."' ORDER BY out_index ASC;";
+				$qq = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$transaction['transaction_id']."' AND io.address_id != '".$escrow_address['address_id']."' AND a.is_destroy_address=0 ORDER BY io.out_index ASC;";
 				$rr = $this->blockchain->app->run_query($qq);
 				
 				$create_round_id = $this->block_to_round($transaction['block_id']);
@@ -1283,7 +1277,7 @@ class Game {
 		$last_block_id = $this->blockchain->last_block_id();
 		
 		$html = "";
-		if ($this->db_game['game_status'] == "editable") $html .= "The game creator hasn't yet published this game; it's parameters can still be changed. ";
+		if ($this->db_game['game_status'] == "editable") $html .= "The game creator hasn't yet published this game; its parameters can still be changed. ";
 		else if ($this->db_game['game_status'] == "published") {
 			if ($this->db_game['start_condition'] == "players_joined") {
 				$num_players = $this->paid_players_in_game();
@@ -1384,7 +1378,8 @@ class Game {
 			$time_q = "SELECT COUNT(*), SUM(load_time) FROM game_blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id>".($last_block_loaded-$sample_size).";";
 			$time_r = $this->blockchain->app->run_query($time_q);
 			$time_data = $time_r->fetch();
-			$time_per_block = $time_data['SUM(load_time)']/$time_data['COUNT(*)'];
+			if ($time_data['COUNT(*)'] > 0) $time_per_block = $time_data['SUM(load_time)']/$time_data['COUNT(*)'];
+			else $time_per_block = 0;
 			
 			$html .= "<p>Loading ".$this->blockchain->app->format_bignum($missing_game_blocks)." game block";
 			if ($missing_game_blocks != 1) $html .= "s";
@@ -1913,6 +1908,7 @@ class Game {
 	
 	public function generate_voting_addresses(&$coin_rpc, $time_limit_seconds) {
 		$log_text = "";
+		$start_time = microtime(true);
 		
 		$option_index_range = $this->option_index_range();
 		
@@ -1921,33 +1917,16 @@ class Game {
 		$ref_num_addr = $rr->rowCount();
 		
 		if ($ref_num_addr < $this->db_game['min_unallocated_addresses']) {
-			$log_text .= "Need ".($this->db_game['min_unallocated_addresses']-$ref_num_addr)." addresses for option index #".$option_index_range[1]." in ".$this->db_game['name'];
+			$log_text .= "Need ".($this->db_game['min_unallocated_addresses']-$ref_num_addr)." addresses for option index #".$option_index_range[1]." in ".$this->db_game['name']." (".$time_limit_seconds." seconds)\n";
 			
 			if ($coin_rpc) {
-				$try_by_sci = false;
-				try {
-					$new_voting_addr_count = 0;
-					do {
-						$temp_address = $coin_rpc->getnewaddress();
-						$new_addr_db = $this->blockchain->create_or_fetch_address($temp_address, false, $coin_rpc, false, false, true, false);
-					}
-					while (microtime(true) <= $time_limit_seconds);
-				}
-				catch (Exception $e) {
-					$try_by_sci = true;
-				}
-			}
-			else $try_by_sci = true;
-			
-			/*if ($try_by_sci) {
 				$new_voting_addr_count = 0;
 				do {
-					$ref_account = false;
-					$db_address = $this->blockchain->app->new_address_key($this->blockchain->currency_id(), $ref_account);
-					$new_voting_addr_count++;
+					$temp_address = $coin_rpc->getnewaddress();
+					$new_addr_db = $this->blockchain->create_or_fetch_address($temp_address, false, $coin_rpc, false, false, true, false);
 				}
-				while ($new_voting_addr_count < ($this->db_game['min_unallocated_addresses']-$num_addr) && (!$time_limit_seconds || microtime(true) <= $loop_start_time+$seconds_per_option));
-			}*/
+				while (microtime(true) <= $start_time+$time_limit_seconds);
+			}
 		}
 		return $log_text;
 	}
@@ -2025,7 +2004,7 @@ class Game {
 				}
 			}
 			
-			$option_offset = 0;
+			$option_offset = 1;
 			$last_used_starting_block = false;
 			
 			$q = "SELECT * FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."' AND event_starting_block <= ".$block_id;
@@ -2036,7 +2015,7 @@ class Game {
 			while ($game_defined_event = $r->fetch()) {
 				if (!$last_used_starting_block || $last_used_starting_block != $game_defined_event['event_starting_block']) {
 					$last_used_starting_block = $game_defined_event['event_starting_block'];
-					$option_offset = 0;
+					$option_offset = 1;
 				}
 				
 				$event_start_time = microtime(true);
@@ -2130,7 +2109,7 @@ class Game {
 				}
 				
 				$event_i = 0;
-				$round_option_i = 0;
+				$round_option_i = 1;
 				
 				if ($ensured_round > 0) $start_round = $ensured_round+1;
 				else $start_round = $this->block_to_round($this->db_game['game_starting_block']);
@@ -2436,6 +2415,7 @@ class Game {
 							$round_created = $this->block_to_round($input_io['create_block_id']);
 							
 							$input_colored_sum += $input_io['colored_amount'];
+							
 							$colored_coin_blocks = $input_io['colored_amount']*($block_height - $input_io['create_block_id']);
 							$colored_coin_rounds = $input_io['colored_amount']*($round_id - $input_io['create_round_id']);
 							$cbd_sum += $colored_coin_blocks;
@@ -2445,18 +2425,30 @@ class Game {
 							$rrr = $this->blockchain->app->run_query($qqq);
 						}
 						
-						$qq = "SELECT * FROM transaction_ios WHERE create_transaction_id='".$db_transaction['transaction_id']."';";
+						$qq = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$db_transaction['transaction_id']."';";
 						$rr = $this->blockchain->app->run_query($qq);
 						
 						$output_sum = 0;
+						$destroy_amount = 0;
+						
 						while ($output_io = $rr->fetch()) {
 							$output_sum += $output_io['amount'];
+							if ($output_io['is_destroy_address'] == 1) $destroy_amount += $output_io['amount'];
 						}
+						
+						$nondestroy_amount = $output_sum-$destroy_amount;
+						$destroy_colored_amount = ceil($input_colored_sum*$destroy_amount/$output_sum);
+						$nondestroy_colored_amount = $input_colored_sum-$destroy_colored_amount;
+						
+						$destroy_sum = 0;
 						
 						$qq = "SELECT io.*, a.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$db_transaction['transaction_id']."'";
 						if ($this->db_game['sellout_policy'] == "on") $qq .= " AND a.address_id != '".$escrow_address['address_id']."'";
-						$qq .= ";";
+						$qq .= " AND a.is_destroy_address=0;";
 						$rr = $this->blockchain->app->run_query($qq);
+						
+						$nondestroy_outputs = $rr->rowCount();
+						$output_i = 0;
 						
 						if ($rr->rowCount() > 0) {
 							$insert_q = "INSERT INTO transaction_game_ios (game_id, io_id, is_coinbase, colored_amount, destroy_amount, coin_blocks_destroyed, coin_rounds_destroyed, create_round_id, option_id, event_id, effectiveness_factor, votes, effective_destroy_amount) VALUES ";
@@ -2466,11 +2458,12 @@ class Game {
 								$cbd = floor($cbd_sum*$output_io['amount']/$output_sum);
 								$crd = floor($crd_sum*$output_io['amount']/$output_sum);
 								
-								$destroy_frac = $output_io["destroy_amount"]/$output_io["amount"];
-								$destroy_amount = floor($colored_amount*$destroy_frac);
-								$keep_amount = $colored_amount-$destroy_amount;
+								if ($output_i == $nondestroy_outputs-1) $this_destroy_amount = $destroy_colored_amount-$destroy_sum;
+								else $this_destroy_amount = floor($destroy_colored_amount*$colored_amount/$nondestroy_colored_amount);
 								
-								$insert_q .= "('".$this->db_game['game_id']."', '".$output_io['io_id']."', 0, '".$keep_amount."', '".$destroy_amount."', '".$cbd."', '".$crd."', '".$round_id."', ";
+								$destroy_sum += $this_destroy_amount;
+								
+								$insert_q .= "('".$this->db_game['game_id']."', '".$output_io['io_id']."', 0, '".$colored_amount."', '".$this_destroy_amount."', '".$cbd."', '".$crd."', '".$round_id."', ";
 								
 								if ($output_io['option_index'] != "") {
 									$option_id = $this->option_index_to_option_id_in_block($output_io['option_index'], $block_height);
@@ -2483,7 +2476,7 @@ class Game {
 										else if ($this->db_game['payout_weight'] == "coin_round") $votes = floor($effectiveness_factor*$crd);
 										else $votes = floor($effectiveness_factor*$colored_amount);
 										
-										$effective_destroy_amount = floor($destroy_amount*$effectiveness_factor);
+										$effective_destroy_amount = floor($this_destroy_amount*$effectiveness_factor);
 										
 										$insert_q .= "'".$option_id."', '".$db_event['event_id']."', '".$effectiveness_factor."', '".$votes."', '".$effective_destroy_amount."'";
 									}
@@ -2926,7 +2919,7 @@ class Game {
 					$db_transaction = $db_transaction_r->fetch();
 					
 					if (!empty($db_transaction['block_id']) && $db_transaction['block_id'] <= $block_id) {
-						$next_io_q = "SELECT * FROM transaction_ios WHERE create_transaction_id='".$db_transaction['transaction_id']."' AND out_index=0;";
+						$next_io_q = "SELECT * FROM transaction_ios WHERE create_transaction_id='".$db_transaction['transaction_id']."' AND is_destroy=0 ORDER BY out_index ASC LIMIT 1;";
 						$next_io_r = $this->blockchain->app->run_query($next_io_q);
 						
 						if ($next_io_r->rowCount() > 0) {
@@ -3076,7 +3069,7 @@ class Game {
 			
 			if ($block_r->rowCount() > 0) {
 				$db_start_block = $block_r->fetch();
-				$start_block = $db_start_block['block_id'];
+				$start_block = max($this->db_game['game_starting_block'], $db_start_block['block_id']);
 				
 				$sec_to_add = strtotime($gde['event_starting_time']) - $db_start_block['time_mined'];
 				$add_blocks = floor($sec_to_add/$this->blockchain->db_blockchain['seconds_per_block']);
@@ -3134,7 +3127,7 @@ class Game {
 		$last_block_id = $this->blockchain->last_block_id();
 		
 		$event_q = "SELECT * FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."' AND ((event_starting_block <= ".$last_block_id." AND event_final_block >= ".$last_block_id.") OR event_starting_time >= '".date("Y-m-d G:i:s", time()-24*3600)."')";
-		if ($filter_event_id) $event_q .= " AND game_event_id=".$filter_event_id;
+		if ($game_defined_event_id) $event_q .= " AND game_defined_event_id=".$game_defined_event_id;
 		$event_q .= ";";
 		$event_r = $this->blockchain->app->run_query($event_q);
 		

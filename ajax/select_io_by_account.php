@@ -11,6 +11,7 @@ if ($thisuser) {
 	
 	if ($r->rowCount() == 1) {
 		$account = $r->fetch();
+		$html = "";
 		
 		$q = "SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE k.account_id=".$account['account_id']." AND io.spend_status='unspent' ORDER BY io.amount DESC;";
 		$r = $app->run_query($q);
