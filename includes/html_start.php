@@ -164,6 +164,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 				<li<?php if ($nav_tab_selected == "download") echo ' class="active"'; ?>><a target="_blank" href="https://github.com/polycash/polycash"><i class="fa fa-download"></i> <span>Download</span></a></li>
 				<li<?php if ($nav_tab_selected == "explorer") echo ' class="active"'; ?>><a href="/explorer/<?php if (!empty($game)) echo "games/".$game->db_game['url_identifier']."/blocks/"; ?>"><i class="fa fa-cube"></i> <span>Blockchain Explorer</span></a></li>
 				<li<?php if ($nav_tab_selected == "api") echo ' class="active"'; ?>><a href="/api/"><i class="fa fa-code"></i> <span>API</span></a></li>
+				<li<?php if ($nav_tab_selected == "manage") echo ' class="active"'; ?>><a href="/manage/"><i class="fa fa-plus-circle"></i> <span>Create a New Game</span></a></li>
 			</ul>
 			<?php
 			if (empty($game) && $nav_tab_selected != "cards" && $nav_tab_selected != "accounts") {

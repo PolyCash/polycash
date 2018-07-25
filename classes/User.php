@@ -70,7 +70,7 @@ class User {
 			else {
 				$my_votes = $my_votes_r[$db_event['winning_option_id']]['votes'];
 				
-				$total_votes = $event->option_votes_in_round($db_event['winning_option_id'], $game->block_to_round($db_event['event_final_block']));
+				$total_votes = $event->option_stats($db_event['winning_option_id']);
 				$total_votes = $total_votes['sum'];
 				
 				if ($total_votes > 0 && $my_votes > 0) {
@@ -306,7 +306,10 @@ class User {
 						$addr_text = "11".$vote_identifier;
 						$addr_text .= $this->app->random_string(34-strlen($addr_text));
 						
-						$qq = "INSERT INTO addresses SET is_mine=1, user_id='".$this->db_user['user_id']."', primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."', option_index='".$option_index."', vote_identifier=".$this->app->quote_escape($vote_identifier).", address=".$this->app->quote_escape($addr_text).", time_created='".time()."';";
+						if ($option_index == 0) $is_destroy_address=1;
+						else $is_destroy_address=0;
+						
+						$qq = "INSERT INTO addresses SET is_mine=1, user_id='".$this->db_user['user_id']."', primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."', option_index='".$option_index."', vote_identifier=".$this->app->quote_escape($vote_identifier).", is_destroy_address='".$is_destroy_address."', address=".$this->app->quote_escape($addr_text).", time_created='".time()."';";
 						$rr = $this->app->run_query($qq);
 						$address_id = $this->app->last_insert_id();
 						
@@ -319,6 +322,7 @@ class User {
 						// If not, check if there is an unallocated address available to give to the user
 						$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND a.option_index='".$option_index."' AND k.account_id IS NULL;";
 						$rr = $this->app->run_query($qq);
+						echo $rr->rowCount()." ".$qq."<br/>\n";
 						
 						if ($rr->rowCount() > 0) {
 							$address = $rr->fetch();

@@ -69,23 +69,20 @@ if (!empty($_REQUEST['action'])) {
 							
 							$output_amounts = array();
 							$output_address_ids = array();
-							$destroy_amounts = array();
 							
 							for ($i=0; $i<$how_many; $i++) {
 								$address_key = $app->new_address_key($fv_currency['currency_id'], $currency_account);
 								array_push($output_amounts, $denomination['denomination']*pow(10, $fv_blockchain->db_blockchain['decimal_places']));
 								array_push($output_address_ids, $address_key['address_id']);
-								array_push($destroy_amounts, 0);
 							}
 							
 							if ($cost+$fee < $input_sum) {
 								array_push($output_amounts, $input_sum-$cost-$fee);
 								array_push($output_address_ids, $first_address_id);
-								array_push($destroy_amounts, 0);
 							}
 							
 							$error_message = false;
-							$transaction_id = $fv_blockchain->create_transaction("transaction", $output_amounts, false, $io_ids, $output_address_ids, $destroy_amounts, $fee);
+							$transaction_id = $fv_blockchain->create_transaction("transaction", $output_amounts, false, $io_ids, $output_address_ids, $fee);
 							
 							if ($transaction_id) {
 								$db_transaction = $app->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();

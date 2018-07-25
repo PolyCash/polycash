@@ -506,6 +506,13 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						<br/>
 						
 						<?php
+						if ($app->user_can_edit_game($thisuser, $game)) { ?>
+							<p>
+								<button class="btn btn-sm btn-primary" onclick="set_event_outcome(<?php echo $game->db_game['game_id'].", ".$event->db_event['event_id']; ?>);">Set Outcome</button>
+							</p>
+							<?php
+						}
+						
 						if ($game->db_game['module'] == "CoinBattles") {
 							if ($event_status == "current") {
 								$chart_starting_block = 1+$game->db_game['round_length']*($current_round-1);
@@ -715,15 +722,16 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							last_event_index_shown = <?php echo $from_event_index; ?>;
 						});
 						</script>
-						
-						<div style="display: none;" class="modal fade" id="set_event_outcome_modal">
-							<div class="modal-dialog">
-								<div class="modal-content" id="set_event_outcome_modal_content">
-								</div>
-							</div>
-						</div>
 						<?php
 					}
+					?>
+					<div style="display: none;" class="modal fade" id="set_event_outcome_modal">
+						<div class="modal-dialog">
+							<div class="modal-content" id="set_event_outcome_modal_content">
+							</div>
+						</div>
+					</div>
+					<?php
 				}
 				else if ($explore_mode == "blocks" || $explore_mode == "unconfirmed") {
 					if ($block || $explore_mode == "unconfirmed") {
@@ -1066,6 +1074,12 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					
 					echo "<p>Identifier: ".$address['vote_identifier']." (#".$address['option_index'].")</p>\n";
 					
+					if ($address['is_destroy_address'] == 1) {
+						echo "<p>This is a destroy address. ";
+						if ($game) echo "Any ".$game->db_game['coin_name_plural']." sent to this address will be destroyed.";
+						echo "</p>\n";
+					}
+					
 					echo "<p>".ucwords($blockchain->db_blockchain['coin_name'])." balance: ".($blockchain->address_balance_at_block($address, false)/pow(10,$blockchain->db_blockchain['decimal_places']))." ".$blockchain->db_blockchain['coin_name_plural']."</p>\n";
 					
 					if ($game) echo "<p>".ucwords($game->db_game['coin_name'])." balance: ".$app->format_bignum($game->address_balance_at_block($address, false)/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']."</p>\n";
@@ -1225,10 +1239,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						if ($account_r->rowCount() > 0) {
 							$account = $account_r->fetch();
 							
-							echo '<p>This UTXO is in your account <a href="/explorer/';
-							if ($game) echo 'games/'.$game->db_game['url_identifier'];
-							else echo 'blockchains/'.$blockchain->db_blockchain['url_identifier'];
-							echo '/utxos/?account_id='.$account['account_id'].'">'.$account['account_name'].'</a></p>';
+							echo '<p>This UTXO is in your account <a href="/accounts/?account_id='.$account['account_id'].'">'.$account['account_name'].'</a></p>';
 						}
 					}
 					

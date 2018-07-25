@@ -53,7 +53,7 @@ class App {
 	}
 
 	public function random_string($length) {
-		$characters = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+		$characters = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 		$bits_per_char = ceil(log(strlen($characters), 2));
 		$hex_chars_per_char = ceil($bits_per_char/4);
 		$hex_chars_needed = $length*$hex_chars_per_char;

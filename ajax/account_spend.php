@@ -51,20 +51,17 @@ if ($thisuser) {
 							
 							$amounts = array();
 							$address_ids = array();
-							$destroy_amounts = array();
 							
 							array_push($amounts, $amount);
 							array_push($address_ids, $db_address['address_id']);
-							array_push($destroy_amounts, 0);
 							
 							if ($amount+$fee < $amount_sum) {
 								array_push($amounts, $amount_sum-$amount-$fee);
 								array_push($address_ids, $first_address_id);
-								array_push($destroy_amounts, 0);
 							}
 							
 							$error_message = false;
-							$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $destroy_amounts, $fee);
+							$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $fee);
 							
 							if ($transaction_id) {
 								$app->output_message(1, 'Great, your coins have been sent! <a target="_blank" href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/transactions/'.$transaction_id.'">View Transaction</a>', false);
@@ -97,36 +94,44 @@ if ($thisuser) {
 			$db_io = $app->run_query("SELECT * FROM transaction_ios WHERE io_id='".$io_id."';")->fetch();
 			
 			if ($db_io) {
-				$color_amount = (int) ($db_io['amount'] - $buyin_amount - $fee_amount);
+				$q = "SELECT * FROM address_keys k JOIN currency_accounts c ON k.account_id=c.account_id WHERE k.address_id='".$db_io['address_id']."' AND c.user_id='".$thisuser->db_user['user_id']."';";
+				$r = $app->run_query($q);
 				
-				if ($fee_amount > 0 && $buyin_amount > 0 && $color_amount > 0) {
-					$address_text = $_REQUEST['address'];
+				if ($r->rowCount() > 0) {
+					$key_account = $r->fetch();
 					
-					$user_game = $thisuser->ensure_user_in_game($game, false);
-					$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false, false);
+					$color_amount = (int) ($db_io['amount'] - $buyin_amount - $fee_amount);
 					
-					if ($address_text == "new") {
-						$game_currency_account = $app->fetch_account_by_id($user_game['account_id']);
-						$color_address = $app->new_address_key($game->blockchain->currency_id(), $game_currency_account);
+					if ($fee_amount > 0 && $buyin_amount > 0 && $color_amount > 0) {
+						$address_text = $_REQUEST['address'];
+						
+						$user_game = $thisuser->ensure_user_in_game($game, false);
+						$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false, false);
+						
+						if ($address_text == "new") {
+							$game_currency_account = $app->fetch_account_by_id($user_game['account_id']);
+							$color_address = $app->new_address_key($game->blockchain->currency_id(), $game_currency_account);
+						}
+						else {
+							$coin_rpc = new jsonRPCClient('http://'.$game->blockchain->db_blockchain['rpc_username'].':'.$game->blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$game->blockchain->db_blockchain['rpc_port'].'/');
+							$color_address = $game->blockchain->create_or_fetch_address($address_text, true, $coin_rpc, false, false, false, false);
+						}
+						
+						$error_message = false;
+						$transaction_id = $game->create_transaction(false, array($buyin_amount, $color_amount), $user_game, false, 'transaction', array($io_id), array($escrow_address['address_id'], $color_address['address_id']), false, $fee_amount, $error_message);
+						
+						if ($transaction_id) {
+							$app->output_message(1, "Great, your transaction has been submitted (#".$transaction_id.")", false);
+						}
+						else {
+							$app->output_message(7, $error_message, false);
+						}
 					}
-					else {
-						$coin_rpc = new jsonRPCClient('http://'.$game->blockchain->db_blockchain['rpc_username'].':'.$game->blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$game->blockchain->db_blockchain['rpc_port'].'/');
-						$color_address = $game->blockchain->create_or_fetch_address($address_text, true, $coin_rpc, false, false, false, false);
-					}
-					
-					$error_message = false;
-					$transaction_id = $game->create_transaction(false, array($buyin_amount, $color_amount), $user_game, false, 'transaction', array($io_id), array($escrow_address['address_id'], $color_address['address_id']), false, $fee_amount, $error_message);
-					
-					if ($transaction_id) {
-						$app->output_message(1, "Great, your transaction has been submitted (#".$transaction_id.")", false);
-					}
-					else {
-						$app->output_message(7, $error_message, false);
-					}
+					else $app->output_message(6, "Error, one of the amounts you entered is invalid ($fee_amount > 0 && $buyin_amount > 0 && $color_amount > 0).", false);
 				}
-				else $app->output_message(6, "Error, one of the amounts you entered is invalid ($fee_amount > 0 && $buyin_amount > 0 && $color_amount > 0).", false);
+				else $app->output_message(5, "Error, incorrect io_id.", false);
 			}
-			else $app->output_message(5, "Error, incorrect io_id.", false);
+			else $app->output_message(5, "Error, you don't have permission to spend these coins.", false);
 		}
 		else $app->output_message(4, "Error, incorrect game_id", false);
 	}
@@ -213,6 +218,8 @@ if ($thisuser) {
 	}
 	else if ($action == "withdraw") {
 		$io_id = (int) $_REQUEST['io_id'];
+		$withdraw_type = $_REQUEST['withdraw_type'];
+		$address = strip_tags($_REQUEST['address']);
 		
 		$q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.io_id='".$io_id."';";
 		$r = $app->run_query($q);
@@ -220,47 +227,95 @@ if ($thisuser) {
 		if ($r->rowCount() > 0) {
 			$db_io = $r->fetch();
 			
-			$blockchain = new Blockchain($app, $db_io['blockchain_id']);
+			$q = "SELECT * FROM address_keys k JOIN currency_accounts c ON k.account_id=c.account_id WHERE k.address_id='".$db_io['address_id']."' AND c.user_id='".$thisuser->db_user['user_id']."';";
+			$r = $app->run_query($q);
 			
-			$coin_rpc = false;
-			
-			if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
-				try {
-					$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
-					$info = $coin_rpc->getinfo();
+			if ($r->rowCount() > 0) {
+				$key_account = $r->fetch();
+				
+				$blockchain = new Blockchain($app, $db_io['blockchain_id']);
+				
+				$coin_rpc = false;
+				
+				if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
+					try {
+						$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
+						$info = $coin_rpc->getinfo();
+					}
+					catch (Exception $e) {
+						$app->output_message(8, "Error: RPC connection failed.", false);
+						die();
+					}
 				}
-				catch (Exception $e) {
-					$app->output_message(8, "Error: RPC connection failed.", false);
-					die();
+				
+				$amount = (float) $_REQUEST['amount'];
+				$fee = (float) $_REQUEST['fee'];
+				
+				if ($withdraw_type == "blockchain") {
+					$amount = $amount*pow(10, $blockchain->db_blockchain['decimal_places']);
+					$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
+					
+					if ($db_io['amount'] >= $amount+$fee_amount) {
+						$remainder_amount = $db_io['amount']-$amount-$fee_amount;
+						
+						$db_address = $blockchain->create_or_fetch_address($address, true, $coin_rpc, false, false, false, false);
+						
+						$amounts = array($amount);
+						$address_ids = array($db_address['address_id']);
+						
+						if ($remainder_amount > 0) {
+							array_push($amounts, $remainder_amount);
+							array_push($address_ids, $db_io['address_id']);
+						}
+						
+						$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($db_io['io_id']), $address_ids, $fee_amount);
+						
+						if ($transaction_id) $app->output_message(1, "Transaction created successfully.", false);
+						else $app->output_message(7, "Error: failed to created transaction.", false);
+					}
+					else $app->output_message(6, "Error: not enough coins.", false);
+				}
+				else {
+					$io_game_q = "SELECT g.game_id, g.blockchain_id, SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN games g ON gio.game_id=g.game_id WHERE gio.io_id='".$db_io['io_id']."' AND g.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' GROUP BY g.game_id;";
+					$io_game_r = $app->run_query($io_game_q);
+					
+					if ($io_game_r->rowCount() == 1) {
+						$io_game = $io_game_r->fetch();
+						
+						$game = new Game($blockchain, $io_game['game_id']);
+						
+						$amount = $amount*pow(10, $game->db_game['decimal_places']);
+						$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
+						
+						$db_address = $blockchain->create_or_fetch_address($address, true, $coin_rpc, false, false, false, false);
+						
+						$coloredcoins_per_coin = $io_game['SUM(gio.colored_amount)']/($db_io['amount']-$fee_amount);
+						$io_amount = ceil($amount/$coloredcoins_per_coin);
+						$remainder_amount = $db_io['amount']-$fee-$io_amount;
+						
+						if ($remainder_amount >= 0) {
+							$amounts = array($io_amount);
+							$address_ids = array($db_address['address_id']);
+							
+							if ($remainder_amount > 0) {
+								array_push($amounts, $remainder_amount);
+								array_push($address_ids, $db_io['address_id']);
+							}
+							
+							$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($db_io['io_id']), $address_ids, false, $fee_amount);
+							
+							if ($transaction_id) $app->output_message(1, "Transaction created successfully.", false);
+							else $app->output_message(7, "Error: failed to created transaction.", false);
+						}
+						else $app->output_message(8, "Error: not enough coins.", false);
+					}
+					else if ($io_game_r->rowCount() == 0) {
+						$app->output_message(7, "Error: no game found for this UTXO.", false);
+					}
+					else $app->output_message(6, "Error: found multiple games associated with this UTXO.", false);
 				}
 			}
-			
-			$amount = (float) $_REQUEST['amount'];
-			$amount = $amount*pow(10, $blockchain->db_blockchain['decimal_places']);
-			$fee_amount = 0.001*pow(10, $blockchain->db_blockchain['decimal_places']);
-			
-			if ($db_io['amount'] >= $amount+$fee_amount) {
-				$remainder_amount = $db_io['amount']-$amount-$fee_amount;
-				
-				$address = strip_tags($_REQUEST['address']);
-				$db_address = $blockchain->create_or_fetch_address($address, true, $coin_rpc, false, false, false, false);
-				
-				$amounts = array($amount);
-				$address_ids = array($db_address['address_id']);
-				$destroy_amounts = array(0);
-				
-				if ($remainder_amount > 0) {
-					array_push($amounts, $remainder_amount);
-					array_push($address_ids, $db_io['address_id']);
-					array_push($destroy_amounts, 0);
-				}
-				
-				$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($db_io['io_id']), $address_ids, $destroy_amounts, $fee_amount);
-				
-				if ($transaction_id) $app->output_message(1, "Transaction created successfully.", false);
-				else $app->output_message(6, "Error: failed to created transaction.", false);
-			}
-			else $app->output_message(5, "Error: not enough coins.", false);
+			else $app->output_message(5, "Error, you don't have permission to spend these coins.", false);
 		}
 		else $app->output_message(4, "Error, invalid UTXO ID.", false);
 	}
