@@ -166,7 +166,7 @@ else {
 						<div class="col-md-6">
 							<div class="panel panel-info">
 								<div class="panel-heading">
-									<div class="panel-title">Manage game parameters: <?php echo $game->db_game['name']; ?></div>
+									<div class="panel-title">Manage game parameters: <?php echo $game->db_game['name']." (#".$game->db_game['game_id'].")"; ?></div>
 								</div>
 								<div class="panel-body">
 									<form onsubmit="save_game();">

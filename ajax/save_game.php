@@ -84,12 +84,8 @@ if ($thisuser) {
 						
 						$debug_text = $game->ensure_events_until_block($game->blockchain->last_block_id()+1);
 						
-						$tx_q = "SELECT * FROM transactions WHERE tx_hash=".$app->quote_escape($game->db_game['genesis_tx_hash']).";";
-						$tx_r = $app->run_query($tx_q);
-						if ($tx_r->rowCount() > 0) {
-							$genesis_tx = $tx_r->fetch();
-							$game->process_buyin_transaction($genesis_tx);
-						}
+						$user_game = false;
+						$game->add_genesis_transaction($user_game);
 						
 						$app->output_message(1, "The game has been published.", $game_info);
 					}
