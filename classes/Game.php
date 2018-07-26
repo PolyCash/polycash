@@ -703,6 +703,9 @@ class Game {
 		
 		$q = "UPDATE games SET loaded_until_block='".($block_height-1)."', events_until_block=NULL, coins_in_existence=0, coins_in_existence_block=NULL WHERE game_id='".$this->db_game['game_id']."';";
 		$r = $this->blockchain->app->run_query($q);
+		
+		$user_game = false;
+		$this->add_genesis_transaction($user_game);
 	}
 	
 	public function delete_reset_game($delete_or_reset) {
@@ -1072,10 +1075,15 @@ class Game {
 		if ((string)$this->db_game['game_starting_block'] !== "" && !empty($this->db_game['escrow_address'])) {
 			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false, false);
 			
-			$qq = "SELECT * FROM transaction_ios WHERE create_transaction_id='".$transaction['transaction_id']."' AND address_id='".$escrow_address['address_id']."';";
-			$rr = $this->blockchain->app->run_query($qq);
+			$io_q = "SELECT COUNT(*) FROM transaction_ios WHERE create_transaction_id='".$transaction['transaction_id']."' AND address_id='".$escrow_address['address_id']."';";
+			$io_r = $this->blockchain->app->run_query($io_q);
+			$io_out_count = $io_r->fetch()['COUNT(*)'];
 			
-			if ($rr->rowCount() > 0) {
+			$game_io_q = "SELECT COUNT(*) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.create_transaction_id='".$transaction['transaction_id']."';";
+			$game_io_r = $this->blockchain->app->run_query($game_io_q);
+			$game_io_out_count = $game_io_r->fetch()['COUNT(*)'];
+			
+			if ($io_out_count > 0 && $game_io_out_count == 0) {
 				$qq = "SELECT SUM(amount) FROM transaction_ios WHERE create_transaction_id='".$transaction['transaction_id']."' AND address_id = '".$escrow_address['address_id']."';";
 				$rr = $this->blockchain->app->run_query($qq);
 				$escrowed_coins = $rr->fetch()['SUM(amount)'];
