@@ -42,8 +42,8 @@ var chatWindow = function(chatWindowId, toUserId) {
 	
 	this.initialize = function() {};
 };
-var option = function(event, option_index, option_id, db_option_index, name, points, has_votingaddr, image_url) {
-	this.event = event;
+var option = function(parent_event, option_index, option_id, db_option_index, name, points, has_votingaddr, image_url) {
+	this.parent_event = parent_event;
 	this.option_index = option_index;
 	this.option_id = option_id;
 	this.db_option_index = db_option_index;
@@ -63,8 +63,8 @@ var option = function(event, option_index, option_id, db_option_index, name, poi
 	this.effective_destroy_score = 0;
 	this.unconfirmed_effective_destroy_score = 0;
 	
-	this.event.option_id2option_index[option_id] = option_index;
-	this.event.game.option_has_votingaddr[option_id] = has_votingaddr;
+	this.parent_event.option_id2option_index[option_id] = option_index;
+	this.parent_event.game.option_has_votingaddr[option_id] = has_votingaddr;
 	
 	option_id2option_index[option_id] = option_index;
 	option_index2option_id[option_index] = option_id;
@@ -1137,7 +1137,7 @@ function set_plan_round_sum(round_index) {
 		var event_id = plan_rounds[round_index].event_ids[e];
 		var event_index = games[0].all_events_db_id_to_index[event_id];
 		if (typeof games[0].all_events[event_index] !== "undefined") {
-			var event = games[0].all_events[event_index];
+			var this_event = games[0].all_events[event_index];
 			for (var o=0; o<event.options.length; o++) {
 				round_points += event.options[o].points;
 			}
@@ -1159,10 +1159,10 @@ function render_plan_option(round_index, event_index, option_index, event_id, op
 }
 function plan_option_clicked(round_id, event_id, option_id) {
 	var event_index = games[0].all_events_db_id_to_index[event_id];
-	var event = games[0].all_events[event_index];
-	var option_index = event.option_id2option_index[option_id];
-	var new_points = (event.options[option_index].points+plan_option_increment)%(plan_option_max_points+1);
-	event.options[option_index].points = new_points;
+	var this_event = games[0].all_events[event_index];
+	var option_index = this_event.option_id2option_index[option_id];
+	var new_points = (this_event.options[option_index].points+plan_option_increment)%(plan_option_max_points+1);
+	this_event.options[option_index].points = new_points;
 	var round_index = round_id2plan_round_id[round_id];
 	set_plan_round_sums();
 	render_plan_round(round_index);
@@ -1275,7 +1275,7 @@ var mature_ios = new Array();
 var utxo_spend_offset = 0;
 
 // OBJECT: Event
-var Event = function(game, game_event_index, event_id, num_voting_options, vote_effectiveness_function, effectiveness_param1, option_block_rule) {
+var Event = function(game, game_event_index, event_id, num_voting_options, vote_effectiveness_function, effectiveness_param1, option_block_rule, event_name) {
 	this.game = game;
 	this.game_event_index = game_event_index;
 	this.event_id = event_id;
@@ -1284,6 +1284,7 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 	this.vote_effectiveness_function = vote_effectiveness_function;
 	this.effectiveness_param1 = effectiveness_param1;
 	this.option_block_rule = option_block_rule;
+	this.event_name = event_name;
 	
 	this.sum_votes = 0;
 	this.sum_unconfirmed_votes = 0;
@@ -1675,7 +1676,7 @@ function set_select_add_output() {
 	var optionsAsString = "<option value=''>Please select...</option>";
 	for (var i=0; i<games[0].events.length; i++) {
 		for (var j=0; j<games[0].events[i].options.length; j++) {
-			optionsAsString += "<option value='"+games[0].events[i].options[j].option_id+"'>"+games[0].events[i].options[j].name+"</option>";
+			optionsAsString += "<option value='"+games[0].events[i].options[j].option_id+"'>"+games[0].events[i].options[j].name+" ("+games[0].events[i].event_name+")</option>";
 		}
 	}
 	$("#select_add_output").find('option').remove().end().append($(optionsAsString));
