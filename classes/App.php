@@ -805,7 +805,7 @@ class App {
 				}
 			}
 			else {
-				$address_text = $this->random_string(20);
+				$address_text = $this->random_string(34);
 				$save_method = "fake";
 			}
 			

@@ -1051,6 +1051,8 @@ class Blockchain {
 			else die("Error, that block was not found (".$r->rowCount().").");
 		}
 		else {
+			$this->app->run_query("UPDATE blockchains SET genesis_address=NULL WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';");
+			$this->db_blockchain['genesis_address'] = "";
 			$this->reset_blockchain();
 			
 			$returnvals = $this->add_genesis_block($coin_rpc);
