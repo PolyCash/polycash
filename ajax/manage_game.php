@@ -245,7 +245,8 @@ if ($thisuser) {
 					
 					for ($i=0; $i<count($verbatim_vars); $i++) {
 						$var = $verbatim_vars[$i][1];
-						$val = $_REQUEST[$var];
+						if (!empty($_REQUEST[$var])) $val = $_REQUEST[$var];
+						else $val = "";
 						if (isset($val) && $val !== "" && in_array($var, array('event_starting_time', 'event_final_time'))) {
 							$val = date("Y-m-d G:i:s", strtotime($val));
 						}

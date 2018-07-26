@@ -1901,7 +1901,7 @@ function save_gde(gde_id) {
 	var save_url = "/ajax/manage_game.php?action=save_gde&game_id="+games[0].game_id+"&gde_id="+gde_id;
 	
 	for (var i=0; i<event_verbatim_vars.length; i++) {
-		save_url += "&"+event_verbatim_vars[i]+"="+$('#event_form_'+event_verbatim_vars[i]).val();
+		save_url += "&"+event_verbatim_vars[i]+"="+encodeURIComponent($('#event_form_'+event_verbatim_vars[i]).val());
 	}
 	
 	$.get(save_url, function(result) {
