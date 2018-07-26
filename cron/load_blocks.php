@@ -36,7 +36,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			else {
 				try {
 					$coin_rpc = new jsonRPCClient('http://'.$db_blockchain['rpc_username'].':'.$db_blockchain['rpc_password'].'@127.0.0.1:'.$db_blockchain['rpc_port'].'/');
-					$coin_rpc->getinfo();
+					$coin_rpc->getwalletinfo();
 				} catch (Exception $e) {
 					$error = true;
 					if ($print_debug) echo "Error, skipped ".$db_blockchain['blockchain_name']." because RPC connection failed.<br/>\n";
