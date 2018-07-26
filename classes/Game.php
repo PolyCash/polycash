@@ -754,7 +754,7 @@ class Game {
 			$q = "UPDATE games SET game_status='published', events_until_block=NULL, coins_in_existence=0, coins_in_existence_block=NULL WHERE game_id='".$this->db_game['game_id']."';";
 			$r = $this->blockchain->app->run_query($q);
 			
-			$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.game_id='".$this->db_game['game_id']."';";
+			$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$this->db_game['game_id']."';";
 			$r = $this->blockchain->app->run_query($q);
 			
 			while ($user_game = $r->fetch()) {
@@ -1066,7 +1066,7 @@ class Game {
 	}
 	
 	public function process_buyin_transaction($transaction) {
-		if (!empty($this->db_game['game_starting_block']) && !empty($this->db_game['escrow_address']) && ($this->blockchain->db_blockchain['p2p_mode'] != "rpc" || $transaction['block_id'] >= $this->db_game['game_starting_block'])) {
+		if ((string)$this->db_game['game_starting_block'] !== "" && !empty($this->db_game['escrow_address'])) {
 			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false, false);
 			
 			$qq = "SELECT * FROM transaction_ios WHERE create_transaction_id='".$transaction['transaction_id']."' AND address_id='".$escrow_address['address_id']."';";
@@ -1096,7 +1096,6 @@ class Game {
 				
 				$qq = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$transaction['transaction_id']."' AND io.address_id != '".$escrow_address['address_id']."' AND a.is_destroy_address=0 ORDER BY io.out_index ASC;";
 				$rr = $this->blockchain->app->run_query($qq);
-				
 				$create_round_id = $this->block_to_round($transaction['block_id']);
 				
 				while ($non_escrow_io = $rr->fetch()) {
@@ -1291,7 +1290,7 @@ class Game {
 				if ($this->db_game['game_starting_block'] > $this->blockchain->last_block_id()) $html .= " in ".($this->db_game['game_starting_block']-$this->blockchain->last_block_id())." blocks. ";
 				else $html .= " on block #".$this->db_game['game_starting_block'].". ";
 			}
-			else $html .= "This game starts in ".$this->blockchain->app->format_seconds(strtotime($this->db_game['start_datetime'])-time())." at ".$this->db_game['start_datetime'];
+			else if (!empty($this->db_game['start_datetime'])) $html .= "This game starts in ".$this->blockchain->app->format_seconds(strtotime($this->db_game['start_datetime'])-time())." at ".$this->db_game['start_datetime'];
 		}
 		else if ($this->db_game['game_status'] == "completed") $html .= "This game is over. ";
 		
@@ -3069,24 +3068,32 @@ class Game {
 			
 			if ($block_r->rowCount() > 0) {
 				$db_start_block = $block_r->fetch();
-				$start_block = max($this->db_game['game_starting_block'], $db_start_block['block_id']);
-				
-				$sec_to_add = strtotime($gde['event_starting_time']) - $db_start_block['time_mined'];
-				$add_blocks = floor($sec_to_add/$this->blockchain->db_blockchain['seconds_per_block']);
-				if ($add_blocks > 0) $start_block += $add_blocks;
-				
-				$block_q = "SELECT * FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND time_mined <= ".strtotime($gde['event_final_time'])." ORDER BY time_mined DESC LIMIT 1;";
-				$block_r = $this->blockchain->app->run_query($block_q);
-				$db_final_block = $block_r->fetch();
-				$final_block = $db_final_block['block_id'];
-				
-				$sec_to_add = strtotime($gde['event_final_time']) - $db_final_block['time_mined'];
-				$add_blocks = floor($sec_to_add/$this->blockchain->db_blockchain['seconds_per_block']);
-				if ($add_blocks > 0) $final_block += $add_blocks;
-				
-				$q = "UPDATE game_defined_events SET event_starting_block=$start_block, event_final_block=$final_block, event_payout_block=$final_block WHERE game_id='".$this->db_game['game_id']."' AND event_index='".$gde['event_index']."';";
-				$r = $this->blockchain->app->run_query($q);
 			}
+			else {
+				$block_q = "SELECT * FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND block_id='".$this->db_game['game_starting_block']."';";
+				$block_r = $this->blockchain->app->run_query($block_q);
+				if ($block_r->rowCount() > 0) {
+					$db_start_block = $block_r->fetch();
+				}
+			}
+			
+			$start_block = $db_start_block['block_id'];
+			
+			$sec_to_add = strtotime($gde['event_starting_time']) - $db_start_block['time_mined'];
+			$add_blocks = floor($sec_to_add/$this->blockchain->db_blockchain['seconds_per_block']);
+			if ($add_blocks > 0) $start_block += $add_blocks;
+			
+			$block_q = "SELECT * FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND time_mined <= ".strtotime($gde['event_final_time'])." ORDER BY time_mined DESC LIMIT 1;";
+			$block_r = $this->blockchain->app->run_query($block_q);
+			$db_final_block = $block_r->fetch();
+			$final_block = $db_final_block['block_id'];
+			
+			$sec_to_add = strtotime($gde['event_final_time']) - $db_final_block['time_mined'];
+			$add_blocks = floor($sec_to_add/$this->blockchain->db_blockchain['seconds_per_block']);
+			if ($add_blocks > 0) $final_block += $add_blocks;
+			
+			$q = "UPDATE game_defined_events SET event_starting_block=$start_block, event_final_block=$final_block, event_payout_block=$final_block WHERE game_id='".$this->db_game['game_id']."' AND event_index='".$gde['event_index']."';";
+			$r = $this->blockchain->app->run_query($q);
 		}
 	}
 	
@@ -3126,8 +3133,9 @@ class Game {
 		$log_text = "";
 		$last_block_id = $this->blockchain->last_block_id();
 		
-		$event_q = "SELECT * FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."' AND ((event_starting_block <= ".$last_block_id." AND event_final_block >= ".$last_block_id.") OR event_starting_time >= '".date("Y-m-d G:i:s", time()-24*3600)."')";
-		if ($game_defined_event_id) $event_q .= " AND game_defined_event_id=".$game_defined_event_id;
+		$event_q = "SELECT * FROM game_defined_events WHERE ";
+		if ($game_defined_event_id) $event_q .= "game_defined_event_id=".$game_defined_event_id;
+		else $event_q .= "game_id='".$this->db_game['game_id']."' AND ((event_starting_block <= ".$last_block_id." AND event_final_block >= ".$last_block_id.") OR event_starting_block IS NULL OR event_final_block IS NULL)";
 		$event_q .= ";";
 		$event_r = $this->blockchain->app->run_query($event_q);
 		

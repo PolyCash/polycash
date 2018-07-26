@@ -139,7 +139,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 			?>
 			<ul class="sidebar-menu" data-widget="tree">
 				<?php
-				if ($thisuser) {
+				if (!empty($thisuser)) {
 					$cardcount_q = "SELECT COUNT(*) FROM cards WHERE user_id='".$thisuser->db_user['user_id']."' AND status='claimed';";
 					$cardcount_r = $app->run_query($cardcount_q);
 					$cardcount = $cardcount_r->fetch();

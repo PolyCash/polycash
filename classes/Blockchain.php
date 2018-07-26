@@ -850,15 +850,17 @@ class Blockchain {
 		$r = $this->app->run_query("SELECT MAX(block_id) FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';");
 		$db_block_height = $r->fetch();
 		$db_block_height = $db_block_height['MAX(block_id)'];
+		if ((string)$db_block_height == "") $db_block_height = 0;
 		
 		if ($this->db_blockchain['p2p_mode'] == "rpc") {
 			$info = $coin_rpc->getinfo();
 			$block_height = $getinfo['blocks'];
 		}
-		else {
+		else if ($this->db_blockchain['p2p_mode'] == "web_api") {
 			$info = $this->web_api_fetch_blockchain();
 			$block_height = $info['last_block_id'];
 		}
+		else $block_height = 1;
 		
 		$html = "Inserting blocks ".($db_block_height+1)." to ".$block_height."<br/>\n";
 		
@@ -960,7 +962,7 @@ class Blockchain {
 		$r = $this->app->run_query($q);
 		$genesis_io_id = $this->app->last_insert_id();
 		
-		$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_hash='".$genesis_block_hash."', block_id='0', time_created='".time()."', time_loaded='".time()."', num_transactions=1, locally_saved=1;";
+		$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_hash='".$genesis_block_hash."', block_id='0', time_created='".time()."', time_loaded='".time()."', time_mined='".time()."', num_transactions=1, locally_saved=1;";
 		$r = $this->app->run_query($q);
 		
 		$html .= "Added the genesis transaction!<br/>\n";
@@ -1509,7 +1511,7 @@ class Blockchain {
 		$mined_address_str = $this->app->random_string(34);
 		$mined_address = $this->create_or_fetch_address($mined_address_str, false, false, false, false, true, false);
 		
-		$mined_transaction_id = $this->create_transaction('coinbase', array($this->db_blockchain['initial_pow_reward']), $created_block_id, false, array($mined_address['address_id']), array(0), 0);
+		$mined_transaction_id = $this->create_transaction('coinbase', array($this->db_blockchain['initial_pow_reward']), $created_block_id, false, array($mined_address['address_id']), 0);
 		$num_transactions++;
 		$r = $this->app->run_query("UPDATE transactions SET position_in_block='0' WHERE transaction_id='".$mined_transaction_id."';");
 		

@@ -5,7 +5,7 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->in
 
 if ($thisuser) {
 	$action = $_REQUEST['action'];
-	$game_id = intval($_REQUEST['game_id']);
+	if ($action != "new") $game_id = intval($_REQUEST['game_id']);
 	
 	if ($action == "switch") {
 		$game = new Game($app, $game_id);
@@ -52,8 +52,9 @@ if ($thisuser) {
 			
 			$game_name = $_REQUEST['name'];
 			$url_identifier = $app->game_url_identifier($game_name);
+			$game_starting_block = max(1, $blockchain->last_block_id());
 			
-			$q = "INSERT INTO games SET blockchain_id='".$blockchain->db_blockchain['blockchain_id']."', creator_id='".$thisuser->db_user['user_id']."', maturity=0, round_length=1, buyin_policy='none', block_timing='realistic', creator_game_index='".$game_index."', inflation='exponential', pos_reward='0', pow_reward='0', event_rule='game_definition', event_winning_rule='game_definition', game_starting_block='".$blockchain->last_block_id()."', default_betting_mode='principal', name=".$app->quote_escape($game_name).", url_identifier=".$app->quote_escape($url_identifier).";";
+			$q = "INSERT INTO games SET blockchain_id='".$blockchain->db_blockchain['blockchain_id']."', creator_id='".$thisuser->db_user['user_id']."', maturity=0, round_length=1, buyin_policy='none', block_timing='realistic', creator_game_index='".$game_index."', inflation='exponential', pos_reward='0', pow_reward='0', event_rule='game_definition', event_winning_rule='game_definition', game_starting_block='".$game_starting_block."', default_betting_mode='principal', name=".$app->quote_escape($game_name).", url_identifier=".$app->quote_escape($url_identifier).", start_condition='fixed_block';";
 			$r = $app->run_query($q);
 			$game_id = $app->last_insert_id();
 			

@@ -20,6 +20,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	else $from_block_id = false;
 	
 	echo $blockchain->sync_initial($from_block_id);
+	echo '<br/><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/blocks/">See Blocks</a>';
 }
 else {
 	echo "Error: you supplied the wrong key for scripts/sync_coind_initial.php\n";

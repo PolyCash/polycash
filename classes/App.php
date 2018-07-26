@@ -1635,7 +1635,7 @@ class App {
 					}
 				}
 				
-				if ($reset_block) {
+				if ($reset_block !== false) {
 					$log_message .= "Resetting from ".$reset_block."\n";
 					$game->delete_from_block($reset_block);
 					$game->update_db_game();
