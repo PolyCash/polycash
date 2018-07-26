@@ -1836,7 +1836,7 @@ class App {
 						else {
 							try {
 								$coin_rpc = new jsonRPCClient('http://'.$db_blockchain['rpc_username'].':'.$db_blockchain['rpc_password'].'@127.0.0.1:'.$db_blockchain['rpc_port'].'/');
-								$test_rpc = $coin_rpc->getinfo();
+								$test_rpc = $coin_rpc->getwalletinfo();
 							} catch (Exception $e) {
 								echo "Error, skipped ".$db_blockchain['blockchain_name']." because RPC connection failed.<br/>\n";
 								die();

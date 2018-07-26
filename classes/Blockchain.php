@@ -853,12 +853,12 @@ class Blockchain {
 		if ((string)$db_block_height == "") $db_block_height = 0;
 		
 		if ($this->db_blockchain['p2p_mode'] == "rpc") {
-			$info = $coin_rpc->getinfo();
-			$block_height = $getinfo['blocks'];
+			$info = $coin_rpc->getblockchaininfo();
+			$block_height = (int) $info['headers'];
 		}
 		else if ($this->db_blockchain['p2p_mode'] == "web_api") {
 			$info = $this->web_api_fetch_blockchain();
-			$block_height = $info['last_block_id'];
+			$block_height = (int) $info['last_block_id'];
 		}
 		else $block_height = 1;
 		
@@ -994,8 +994,8 @@ class Blockchain {
 	public function set_first_required_block(&$coin_rpc) {
 		$first_required_block = false;
 		if ($coin_rpc) {
-			$info = $coin_rpc->getinfo();
-			$first_required_block = (int) $info['blocks'];
+			$info = $coin_rpc->getblockchaininfo();
+			$first_required_block = (int) $info['headers'];
 		}
 		
 		$q = "SELECT MIN(game_starting_block) FROM games WHERE game_status IN ('published', 'running') AND blockchain_id='".$this->db_blockchain['blockchain_id']."';";
@@ -1236,9 +1236,12 @@ class Blockchain {
 	}
 	
 	public function set_block_hash_by_height(&$coin_rpc, $block_height) {
-		$block_hash = $coin_rpc->getblockhash((int) $block_height);
-		$q = "UPDATE blocks SET block_hash=".$this->app->quote_escape($block_hash)." WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id='".$block_height."';";
-		$r = $this->app->run_query($q);
+		try {
+			$block_hash = $coin_rpc->getblockhash((int) $block_height);
+			$q = "UPDATE blocks SET block_hash=".$this->app->quote_escape($block_hash)." WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id='".$block_height."';";
+			$r = $this->app->run_query($q);
+		}
+		catch (Exception $e) {}
 	}
 	
 	public function address_balance_at_block($db_address, $block_id) {
@@ -1274,6 +1277,7 @@ class Blockchain {
 					else $is_mine = 0;
 				}
 			}
+			else $is_mine=0;
 			
 			if ($option_index == 0) $is_destroy_address=1;
 			else $is_destroy_address=0;

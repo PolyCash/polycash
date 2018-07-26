@@ -271,7 +271,7 @@ if ($thisuser) {
 							
 							try {
 								$coin_rpc = new jsonRPCClient('http://'.$GLOBALS['bitcoin_rpc_user'].':'.$GLOBALS['bitcoin_rpc_password'].'@127.0.0.1:'.$GLOBALS['bitcoin_port'].'/');
-								$getinfo = $coin_rpc->getinfo();
+								$getwalletinfo = $coin_rpc->getwalletinfo();
 							
 								echo "bitcoind must be running for this step to work, but it doesn't have to be fully synced.<br/>\n";
 								echo 'Once the transaction is signed, broadcast it via <a target="_blank" href="https://blockr.io/tx/push">this link</a>.<br/><br/>';

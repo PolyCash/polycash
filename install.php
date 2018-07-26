@@ -175,10 +175,10 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 								echo "<b>Connecting RPC client to ".$blockchain['blockchain_name']."...";
 								try {
 									$coin_rpc = new jsonRPCClient('http://'.$blockchain['rpc_username'].':'.$blockchain['rpc_password'].'@127.0.0.1:'.$blockchain['rpc_port'].'/');
-									$getinfo = $coin_rpc->getinfo();
+									$getblockchaininfo = $coin_rpc->getblockchaininfo();
 									echo " <font class=\"greentext\">Connected on port ".$blockchain['rpc_port']."</font></b><br/>\n";
-									echo "<pre>getinfo()\n";
-									print_r($getinfo);
+									echo "<pre>getblockchaininfo()\n";
+									print_r($getblockchaininfo);
 									echo "</pre>";
 									
 									echo "Next, please reset and synchronize this game.<br/>\n";
