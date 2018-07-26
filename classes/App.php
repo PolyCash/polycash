@@ -1627,7 +1627,11 @@ class App {
 				}
 				
 				if ($new_events > $matched_events) {
-					if ($reset_block === false) $reset_block = $new_game_obj['events'][$matched_events]->event_starting_block;
+					if ($reset_block === false) {
+						if ((string)$new_game_obj['events'][$matched_events]->event_starting_block !== "") {
+							$reset_block = $new_game_obj['events'][$matched_events]->event_starting_block;
+						}
+					}
 					
 					for ($i=$matched_events; $i<$new_events; $i++) {
 						$gde = get_object_vars($new_game_obj['events'][$i]);
