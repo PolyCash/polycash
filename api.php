@@ -1,4 +1,5 @@
 <?php
+$allow_no_https = true;
 include('includes/connect.php');
 include('includes/get_session.php');
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);

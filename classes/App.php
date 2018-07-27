@@ -313,6 +313,8 @@ class App {
 	}
 	
 	public function get_redirect_url($url) {
+		$url = strip_tags($url);
+		
 		$q = "SELECT * FROM redirect_urls WHERE url=".$this->quote_escape($url).";";
 		$r = $this->run_query($q);
 		

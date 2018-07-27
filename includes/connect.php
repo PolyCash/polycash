@@ -20,13 +20,14 @@ if (empty($GLOBALS['process_lock_method'])) {
 include("global_functions.php");
 include(realpath(dirname(dirname(__FILE__)))."/lib/bitcoin-sci/common.lib.php");
 
-if ($GLOBALS['base_url'] && (!isset($host_not_required) || !$host_not_required)) {
+if (!empty($allow_no_https)) {}
+else if ($GLOBALS['base_url'] && (!isset($host_not_required) || !$host_not_required)) {
 	$b_url = $_SERVER['HTTP_HOST'];
 	if (isset($_SERVER['HTTPS'])) $b_url = "https://".$b_url;
 	else $b_url = "http://".$b_url;
 	
-	if ($GLOBALS['b_url'] != $base_url) {
-		header("Location: ".$GLOBALS['base_url'].$_SERVER['REQUEST_URI']);
+	if ($b_url != $GLOBALS['base_url']) {
+		header("Location: ".$GLOBALS['base_url']);
 		die();
 	}
 }
