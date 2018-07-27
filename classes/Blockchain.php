@@ -997,6 +997,10 @@ class Blockchain {
 			$info = $coin_rpc->getblockchaininfo();
 			$first_required_block = (int) $info['headers'];
 		}
+		else if ($this->db_blockchain['p2p_mode'] == "web_api") {
+			$info = $this->web_api_fetch_blockchain();
+			$first_required_block = (int) $info['last_block_id'];
+		}
 		
 		$q = "SELECT MIN(game_starting_block) FROM games WHERE game_status IN ('published', 'running') AND blockchain_id='".$this->db_blockchain['blockchain_id']."';";
 		$r = $this->app->run_query($q);
@@ -1051,12 +1055,17 @@ class Blockchain {
 			else die("Error, that block was not found (".$r->rowCount().").");
 		}
 		else {
-			$this->app->run_query("UPDATE blockchains SET genesis_address=NULL WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';");
-			$this->db_blockchain['genesis_address'] = "";
+			if ($this->db_blockchain['p2p_mode'] == "none") {
+				$this->app->run_query("UPDATE blockchains SET genesis_address=NULL WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';");
+				$this->db_blockchain['genesis_address'] = "";
+			}
+			
 			$this->reset_blockchain();
 			
-			$returnvals = $this->add_genesis_block($coin_rpc);
-			$current_hash = $returnvals['nextblockhash'];
+			if ($this->db_blockchain['p2p_mode'] == "none") {
+				$returnvals = $this->add_genesis_block($coin_rpc);
+				$current_hash = $returnvals['nextblockhash'];
+			}
 		}
 		
 		$html .= $this->insert_initial_blocks($coin_rpc);
