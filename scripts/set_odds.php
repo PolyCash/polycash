@@ -26,7 +26,6 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			$game = new Game($blockchain, $db_game['game_id']);
 			
 			$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
-			$total_to_destroy_ratio = 2;
 			
 			$account_q = "SELECT * FROM currency_accounts WHERE account_id='".$account_id."';";
 			$account_r = $app->run_query($account_q);
@@ -57,79 +56,75 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 						$io_amount_sum += $io['amount'];
 						array_push($io_ids, $io['io_id']);
 						
-						if ($game_amount_sum >= $total_cost*$total_to_destroy_ratio) $keep_looping = false;
+						if ($game_amount_sum >= $total_cost*1.5) $keep_looping = false;
 					}
 					
 					$io_nonfee_amount = $io_amount_sum-$fee_amount;
 					$game_coins_per_coin = $game_amount_sum/$io_nonfee_amount;
-					$max_io_spend = $total_to_destroy_ratio*$total_cost/$game_coins_per_coin;
 					
-					if ($max_io_spend <= $io_nonfee_amount) {
-						$io_amounts = array();
-						$io_destroy_amounts = array();
-						$address_ids = array();
-						$io_spent_sum = 0;
+					echo $app->format_bignum($game_coins_per_coin)." ".$game->db_game['coin_name_plural']." per ".$blockchain->db_blockchain['coin_name'].".<br/>\n";
+					
+					$burn_address = $app->fetch_address_in_account($account['account_id'], 0);
+					$burn_amount = ceil($total_cost/$game_coins_per_coin);
+					
+					$remaining_io_amount = $io_nonfee_amount-$burn_amount;
+					$io_amount_per_event = $remaining_io_amount/$num_events;
+					
+					echo "burn ".$app->format_bignum($burn_amount/pow(10, $blockchain->db_blockchain['decimal_places']))." ".$blockchain->db_blockchain['coin_name_plural']." (".$app->format_bignum($total_cost/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural'].").<br/><br/>\n";
+					
+					$io_amounts = array($burn_amount);
+					$address_ids = array($burn_address['address_id']);
+					$io_spent_sum = $burn_amount;
+					
+					while ($db_event = $event_r->fetch()) {
+						$option_q = "SELECT op.*, gdo.target_probability FROM options op JOIN game_defined_options gdo ON op.event_option_index=gdo.option_index WHERE op.event_id='".$db_event['event_id']."' AND gdo.game_id='".$game->db_game['game_id']."' AND gdo.event_index='".$db_event['event_index']."' ORDER BY op.option_index ASC;";
+						$option_r = $app->run_query($option_q);
 						
-						while ($db_event = $event_r->fetch()) {
-							$option_q = "SELECT op.*, gdo.target_probability FROM options op JOIN game_defined_options gdo ON op.event_option_index=gdo.option_index WHERE op.event_id='".$db_event['event_id']."' AND gdo.game_id='".$game->db_game['game_id']."' AND gdo.event_index='".$db_event['event_index']."' ORDER BY op.option_index ASC;";
-							$option_r = $app->run_query($option_q);
+						$address_error = false;
+						$thisevent_io_amounts = array();
+						$thisevent_address_ids = array();
+						$thisevent_io_sum = 0;
+						
+						while ($option = $option_r->fetch()) {
+							$this_address = $app->fetch_address_in_account($account['account_id'], $option['option_index']);
 							
-							$address_error = false;
-							$thisevent_io_amounts = array();
-							$thisevent_io_destroy_amounts = array();
-							$thisevent_address_ids = array();
-							
-							while ($option = $option_r->fetch()) {
-								$addr_q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."' AND a.option_index='".$option['option_index']."';";
-								$addr_r = $app->run_query($addr_q);
+							if ($this_address) {
+								$io_amount = round($option['target_probability']*$io_amount_per_event);
 								
-								if ($addr_r->rowCount() > 0) {
-									$address = $addr_r->fetch();
-									
-									$destroy_amount = floor($option['target_probability']*$coins_per_event*pow(10, $game->db_game['decimal_places']));
-									$io_destroy_amount = floor($destroy_amount/$game_coins_per_coin);
-									$io_amount = $io_destroy_amount*$total_to_destroy_ratio;
-									
-									array_push($thisevent_io_amounts, $io_amount);
-									array_push($thisevent_io_destroy_amounts, $io_destroy_amount);
-									array_push($thisevent_address_ids, $address['address_id']);
-									
-									echo "bet $destroy_amount on ".$option['name']."<br/>\n";
-								}
-								else {
-									$address_error = true;
-									echo "Skip ".$option['name'].".. no address.<br/>\n";
-								}
+								array_push($thisevent_io_amounts, $io_amount);
+								array_push($thisevent_address_ids, $this_address['address_id']);
+								$thisevent_io_sum += $io_amount;
+								
+								echo "bet $io_amount on ".$option['name']."<br/>\n";
 							}
-							
-							if (!$address_error) {
-								for ($i=0; $i<count($thisevent_io_amounts); $i++) {
-									array_push($io_amounts, $thisevent_io_amounts[$i]);
-									array_push($io_destroy_amounts, $thisevent_io_destroy_amounts[$i]);
-									array_push($address_ids, $thisevent_address_ids[$i]);
-									$io_spent_sum += $thisevent_io_amounts[$i];
-								}
+							else {
+								$address_error = true;
+								die("Cancelling transaction.. ".$option['name']." has no address.<br/>\n");
 							}
-							echo "<br/>\n";
 						}
+						echo $app->format_bignum($thisevent_io_sum/pow(10, $blockchain->db_blockchain['decimal_places']))." coins<br/>\n";
 						
-						$remainder_amount = $io_nonfee_amount-$io_spent_sum;
-						if ($remainder_amount > 0) {
-							array_push($io_amounts, $remainder_amount);
-							array_push($io_destroy_amounts, 0);
-							array_push($address_ids, $account['current_address_id']);
+						if (!$address_error) {
+							for ($i=0; $i<count($thisevent_io_amounts); $i++) {
+								array_push($io_amounts, $thisevent_io_amounts[$i]);
+								array_push($address_ids, $thisevent_address_ids[$i]);
+								$io_spent_sum += $thisevent_io_amounts[$i];
+							}
 						}
-						
-						$transaction_id = $blockchain->create_transaction("transaction", $io_amounts, false, $io_ids, $address_ids, $io_destroy_amounts, $fee_amount);
-						
-						if ($transaction_id) {
-							echo "Great, your transaction was submitted. <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction_id."/\">View Transaction</a>";
-						}
-						else {
-							echo "Error: failed to create the transaction.";
-						}
+						echo "<br/>\n";
 					}
-					else echo "There was an error with the game amount ($max_io_spend vs $io_nonfee_amount).";
+					$overshoot_amount = $io_spent_sum-$io_nonfee_amount;
+					echo "overshoot: ".$app->format_bignum($overshoot_amount/pow(10, $blockchain->db_blockchain['decimal_places']))." coins<br/>\n";
+					$io_amounts[count($io_amounts)-1] -= $overshoot_amount;
+					
+					$transaction_id = $blockchain->create_transaction("transaction", $io_amounts, false, $io_ids, $address_ids, $fee_amount);
+					
+					if ($transaction_id) {
+						echo "Great, your transaction was submitted. <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction_id."/\">View Transaction</a>";
+					}
+					else {
+						echo "Error: failed to create the transaction.";
+					}
 				}
 				else echo "Invalid coins_per_event.";
 			}

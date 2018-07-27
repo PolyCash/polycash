@@ -1345,7 +1345,8 @@ class Game {
 			$time_q = "SELECT SUM(load_time), COUNT(*) FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND block_id >= ".($loading_block_id-$sample_size)." AND block_id<".$loading_block_id.";";
 			$time_r = $this->blockchain->app->run_query($time_q);
 			$time_data = $time_r->fetch();
-			$time_per_block = $time_data['SUM(load_time)']/$time_data['COUNT(*)'];
+			if ($time_data['COUNT(*)'] > 0) $time_per_block = $time_data['SUM(load_time)']/$time_data['COUNT(*)'];
+			else $time_per_block = 0;
 			
 			$loading_block = $this->blockchain->app->run_query("SELECT * FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND block_id='".$loading_block_id."';")->fetch();
 			if ($loading_block) {
@@ -1389,7 +1390,8 @@ class Game {
 			$time_q = "SELECT SUM(load_time), COUNT(*) FROM game_blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id>".($last_block_loaded-$sample_size)." AND block_id<=".$last_block_loaded.";";
 			$time_r = $this->blockchain->app->run_query($time_q);
 			$time_data = $time_r->fetch();
-			$time_per_block = $time_data['SUM(load_time)']/$time_data['COUNT(*)'];
+			if ($time_data['COUNT(*)'] > 0) $time_per_block = $time_data['SUM(load_time)']/$time_data['COUNT(*)'];
+			else $time_per_block = 0;
 			
 			$html .= "<p>Loading ".$this->blockchain->app->format_bignum($missing_game_blocks)." game block";
 			if ($missing_game_blocks != 1) $html .= "s";

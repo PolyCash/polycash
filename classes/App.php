@@ -2724,5 +2724,15 @@ class App {
 		if ($make_unique) return array_values(array_unique($urls));
 		else return $urls;
 	}
+	
+	public function fetch_address_in_account($account_id, $option_index) {
+		$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account_id."' AND a.option_index='".$option_index."';";
+		$r = $this->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			return $r->fetch();
+		}
+		else return false;
+	}
 }
 ?>
