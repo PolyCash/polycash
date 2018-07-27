@@ -33,9 +33,9 @@ $GLOBALS['mine_private_blocks_when_offline'] = false;
 
 $GLOBALS['new_games_per_user'] = "unlimited";
 
-$GLOBALS['coin_brand_name'] = "StakeMoney";
-$GLOBALS['site_name_short'] = "Stake.Money";
-$GLOBALS['site_name'] = "Stake.Money";
+$GLOBALS['coin_brand_name'] = "PolyCash";
+$GLOBALS['site_name_short'] = "PolyCash";
+$GLOBALS['site_name'] = "PolyCash";
 $GLOBALS['site_domain'] = $_SERVER['SERVER_ADDR']; // Enter your domain name, IP or "localhost" here
 $GLOBALS['base_url'] = "http://".$GLOBALS['site_domain'];
 $GLOBALS['homepage_fname'] = "default.php";

@@ -21,7 +21,7 @@ if ($thisuser) {
 						$error = false;
 						try {
 							$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
-							$coin_rpc->getinfo();
+							$coin_rpc->getwalletinfo();
 						}
 						catch (Exception $e) {
 							$error = true;

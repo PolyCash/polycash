@@ -240,7 +240,7 @@ if ($thisuser) {
 				if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
 					try {
 						$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
-						$info = $coin_rpc->getinfo();
+						$info = $coin_rpc->getwalletinfo();
 					}
 					catch (Exception $e) {
 						$app->output_message(8, "Error: RPC connection failed.", false);
