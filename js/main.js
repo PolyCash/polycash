@@ -1907,8 +1907,7 @@ function save_gde(gde_id) {
 	
 	$.get(save_url, function(result) {
 		var result_obj = JSON.parse(result);
-		console.log(result_obj);
-		window.location = window.location;
+		alert(result_obj['message']);
 	});
 }
 function manage_game_event_options(gde_id) {

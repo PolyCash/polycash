@@ -676,7 +676,7 @@ class Game {
 		return $log_text;
 	}
 	
-	public function delete_from_block($block_height) {
+	public function reset_blocks_from_block($block_height) {
 		$q = "DELETE FROM game_blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id >= ".$block_height.";";
 		$r = $this->blockchain->app->run_query($q);
 		
@@ -695,17 +695,22 @@ class Game {
 		$q = "DELETE eo.* FROM event_outcomes eo JOIN events e ON eo.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."' AND e.event_final_block >= ".$block_height.";";
 		$r = $this->blockchain->app->run_query($q);
 		
-		$q = "DELETE eoo.* FROM event_outcome_options eoo JOIN events e ON eoo.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."' AND e.event_final_block >= ".$block_height.";";
+		$q = "DELETE eoo.* FROM event_outcome_options eoo JOIN events e ON eoo.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."' AND e.event_payout_block >= ".$block_height.";";
 		$r = $this->blockchain->app->run_query($q);
 		
-		$q = "DELETE e.*, o.* FROM events e LEFT JOIN options o ON e.event_id=o.event_id WHERE e.game_id='".$this->db_game['game_id']."' AND e.event_final_block >= ".$block_height.";";
-		$r = $this->blockchain->app->run_query($q);
-		
-		$q = "UPDATE games SET loaded_until_block='".($block_height-1)."', events_until_block=NULL, coins_in_existence=0, coins_in_existence_block=NULL WHERE game_id='".$this->db_game['game_id']."';";
+		$q = "UPDATE games SET loaded_until_block='".($block_height-1)."', coins_in_existence=0, coins_in_existence_block=NULL WHERE game_id='".$this->db_game['game_id']."';";
 		$r = $this->blockchain->app->run_query($q);
 		
 		$user_game = false;
 		$this->add_genesis_transaction($user_game);
+	}
+	
+	public function reset_events_from_index($event_index) {
+		$q = "DELETE e.*, o.* FROM events e LEFT JOIN options o ON e.event_id=o.event_id WHERE e.game_id='".$this->db_game['game_id']."' AND e.event_index >= ".$event_index.";";
+		$r = $this->blockchain->app->run_query($q);
+		
+		$q = "UPDATE games SET events_until_block=NULL WHERE game_id='".$this->db_game['game_id']."';";
+		$r = $this->blockchain->app->run_query($q);
 	}
 	
 	public function delete_reset_game($delete_or_reset) {
@@ -2667,7 +2672,7 @@ class Game {
 			$input_sum = 0;
 			while ($input = $rr->fetch()) {
 				$amount_disp = $this->blockchain->app->format_bignum($input['colored_amount']/pow(10,$this->db_game['decimal_places']));
-				$html .= '<a class="display_address" style="';
+				$html .= '<p><a class="display_address" style="';
 				if ($input['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
 				$html .= '" href="/explorer/games/'.$this->db_game['url_identifier'].'/addresses/'.$input['address'].'">'.$input['address'].'</a>';
 				
@@ -2688,7 +2693,7 @@ class Game {
 				
 				$html .= " &nbsp; ".ucwords($input['spend_status']);
 				
-				$html .= "<br/>\n";
+				$html .= "</p>\n";
 				
 				$input_sum += $input['amount'];
 			}
@@ -2699,6 +2704,12 @@ class Game {
 		
 		$output_sum = 0;
 		while ($output = $rr->fetch()) {
+			$html .= '<p><a class="display_address" style="';
+			if ($output['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
+			$html .= '" href="/explorer/games/'.$this->db_game['url_identifier'].'/addresses/'.$output['address'].'">'.$output['address']."</a>";
+			if (!empty($output['option_id'])) $html .= " (".$output['option_name'].")";
+			$html .= "<br/>\n";
+			
 			if ($output['destroy_amount'] > 0) {
 				$destroy_amount_disp = $this->blockchain->app->format_bignum($output['destroy_amount']/pow(10,$this->db_game['decimal_places']));
 				$html .= $destroy_amount_disp." ";
@@ -2706,11 +2717,6 @@ class Game {
 				else $html .= $this->db_game['coin_name_plural'];
 				$html .= " destroyed<br/>\n";
 			}
-			$html .= '<a class="display_address" style="';
-			if ($output['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
-			$html .= '" href="/explorer/games/'.$this->db_game['url_identifier'].'/addresses/'.$output['address'].'">'.$output['address']."</a>";
-			if (!empty($output['option_id'])) $html .= " (".$output['option_name'].")";
-			$html .= "<br/>\n";
 			
 			if ($selected_io_id == $output['io_id']) $html .= "<b>";
 			else $html .= "<a href=\"/explorer/games/".$this->db_game['url_identifier']."/utxo/".$output['io_id']."\">";
@@ -2728,7 +2734,7 @@ class Game {
 			
 			$html .= " &nbsp; ".ucwords($output['spend_status']);
 			
-			$html .= "<br/>\n";
+			$html .= "</p>\n";
 			$output_sum += $output['colored_amount'];
 		}
 		$html .= '</div></div>'."\n";

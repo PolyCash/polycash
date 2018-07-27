@@ -267,7 +267,7 @@ if ($thisuser) {
 					
 					$game->check_set_game_definition("defined");
 					
-					$app->output_message(7, "Changed the game definition.", false);
+					$app->output_message(1, "Changed the game definition.", false);
 				}
 				else if ($action == "manage_gdos") {
 					$gde_id = (int) $_REQUEST['gde_id'];

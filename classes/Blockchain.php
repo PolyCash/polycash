@@ -1146,7 +1146,7 @@ class Blockchain {
 			$input_sum = 0;
 			while ($input = $rr->fetch()) {
 				$amount_disp = $this->app->format_bignum($input['amount']/pow(10,$this->db_blockchain['decimal_places']));
-				$html .= '<a class="display_address" style="';
+				$html .= '<p><a class="display_address" style="';
 				if ($input['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
 				$html .= '" href="/explorer/blockchains/'.$this->db_blockchain['url_identifier'].'/addresses/'.$input['address'].'">'.$input['address'].'</a>';
 				
@@ -1159,7 +1159,7 @@ class Blockchain {
 				if ($input['io_id'] == $selected_io_id) $html .= "</b>";
 				else $html .= "</a>";
 				$html .= " &nbsp; ".ucwords($input['spend_status']);
-				$html .= "<br/>\n";
+				$html .= "</p>\n";
 				
 				$input_sum += $input['amount'];
 			}
@@ -1169,7 +1169,7 @@ class Blockchain {
 		$rr = $this->app->run_query($qq);
 		$output_sum = 0;
 		while ($output = $rr->fetch()) {
-			$html .= '<a class="display_address" style="';
+			$html .= '<p><a class="display_address" style="';
 			if ($output['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
 			$html .= '" href="/explorer/blockchains/'.$this->db_blockchain['url_identifier'].'/addresses/'.$output['address'].'">'.$output['address']."</a><br/>\n";
 			
@@ -1182,7 +1182,7 @@ class Blockchain {
 			if ($output['io_id'] == $selected_io_id) $html .= "</b>";
 			else $html .= "</a>";
 			$html .= " &nbsp; ".ucwords($output['spend_status']);
-			$html .= "<br/>\n";
+			$html .= "</p>\n";
 			
 			$output_sum += $output['amount'];
 		}
