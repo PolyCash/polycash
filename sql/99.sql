@@ -1,0 +1,1 @@
+ALTER TABLE `events` ADD `outcome_index` INT NULL DEFAULT NULL AFTER `event_payout_offset_time`;

@@ -41,6 +41,17 @@ class App {
 		return iconv('UTF-8', 'UTF-8//IGNORE', $str);
 	}
 
+	public function min_excluding_false($some_array) {
+		$min_value = false;
+		for ($i=0; $i<count($some_array); $i++) {
+			if ((string)$some_array[$i] !== "") {
+				if ($min_value === false) $min_value = $some_array[$i];
+				else $min_value = min($min_value, $some_array[$i]);
+			}
+		}
+		return $min_value;
+	}
+	
 	public function make_alphanumeric($string, $extrachars) {
 		$allowed_chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".$extrachars;
 		$new_string = "";
@@ -1601,12 +1612,12 @@ class App {
 				$verbatim_vars = $this->game_definition_verbatim_vars();
 				$reset_block = false;
 				
+				// Check if any base params are different. If so, reset from game starting block
 				for ($i=0; $i<count($verbatim_vars); $i++) {
 					$var = $verbatim_vars[$i];
 					if ($var[2] == true) {
-						if ($initial_game_obj[$var[1]] != $new_game_obj[$var[1]]) {
-							if ($reset_block === false) $reset_block = $min_starting_block;
-							$reset_block = min($reset_block, $min_starting_block);
+						if ((string)$initial_game_obj[$var[1]] != (string)$new_game_obj[$var[1]]) {
+							$reset_block = $min_starting_block;
 							
 							$q = "UPDATE games SET ".$var[2]."=".$this->quote_escape($new_game_obj[$var[1]])." WHERE game_id=".$game->db_game['game_id'].";";
 							$r = $this->run_query($q);
@@ -1616,28 +1627,45 @@ class App {
 					}
 				}
 				
-				$event_verbatim_vars = $this->event_verbatim_vars();
-				
-				$matched_events = min(count($initial_game_obj['events']), count($new_game_obj['events']));
-				$new_events = count($new_game_obj['events']);
-				
-				for ($i=0; $i<$matched_events; $i++) {
-					if ($this->game_def_to_text($new_game_obj['events'][$i]) != $this->game_def_to_text($initial_game_obj['events'][$i])) {
-						if ($initial_game_obj['events'][$i]->event_starting_block && ($reset_block === false || $initial_game_obj['events'][$i]->event_starting_block < $reset_block)) $reset_block = $initial_game_obj['events'][$i]->event_starting_block;
-						if ($new_game_obj['events'][$i]->event_starting_block && ($reset_block === false || $new_game_obj['events'][$i]->event_starting_block < $reset_block)) $reset_block = $new_game_obj['events'][$i]->event_starting_block;
-					}
-				}
-				
-				if ($new_events > $matched_events) {
-					if ($reset_block === false) {
-						if ((string)$new_game_obj['events'][$matched_events]->event_starting_block !== "") {
-							$reset_block = $new_game_obj['events'][$matched_events]->event_starting_block;
+				if ($reset_block === false) {
+					$event_verbatim_vars = $this->event_verbatim_vars();
+					
+					$matched_events = min(count($initial_game_obj['events']), count($new_game_obj['events']));
+					$new_events = count($new_game_obj['events']);
+					
+					for ($i=0; $i<$matched_events; $i++) {
+						$initial_event_text = $this->game_def_to_text($initial_game_obj['events'][$i]);
+						
+						if ($this->game_def_to_text($new_game_obj['events'][$i]) != $initial_event_text) {
+							$compare_event = $new_game_obj['events'][$i];
+							$compare_event->outcome_index = $initial_game_obj['events'][$i]->outcome_index;
+							
+							// If the only difference is the outcome, reset from the payout block
+							// Otherwise reset from the starting block
+							if ($this->game_def_to_text($compare_event) == $initial_event_text) {
+								$reset_block = $this->min_excluding_false(array($reset_block, $initial_game_obj['events'][$i]->event_payout_block, $new_game_obj['events'][$i]->event_payout_block));
+								
+								if ($reset_block !== false) {
+									$q = "UPDATE events SET outcome_index=";
+									$new_outcome_index_str = (string)$new_game_obj['events'][$i]->outcome_index;
+									if ($new_outcome_index_str === "") $q .= "NULL";
+									else $q .= $new_outcome_index_str;
+									$q .= " WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$i."';";
+									$r = $this->run_query($q);
+								}
+							}
+							else {
+								$reset_block = $this->min_excluding_false(array($reset_block, $initial_game_obj['events'][$i]->event_starting_block, $new_game_obj['events'][$i]->event_starting_block));
+							}
 						}
 					}
 					
-					for ($i=$matched_events; $i<$new_events; $i++) {
-						$gde = get_object_vars($new_game_obj['events'][$i]);
-						$this->check_set_gde($game, $gde, $event_verbatim_vars);
+					if ($new_events > $matched_events) {
+						for ($i=$matched_events; $i<$new_events; $i++) {
+							$reset_block = $this->min_excluding_false(array($reset_block, $new_game_obj['events'][$i]->event_starting_block));
+							$gde = get_object_vars($new_game_obj['events'][$i]);
+							$this->check_set_gde($game, $gde, $event_verbatim_vars);
+						}
 					}
 				}
 				

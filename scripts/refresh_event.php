@@ -22,9 +22,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$event = new Event($game, false, $db_event['event_id']);
 		
 		$last_block_id = $blockchain->last_block_id();
-		$round_id = $game->block_to_round($last_block_id+1);
 		
-		$event->update_option_votes($last_block_id, $round_id);
+		$event->update_option_votes($last_block_id, false);
 		
 		echo "Done!\n";
 	}

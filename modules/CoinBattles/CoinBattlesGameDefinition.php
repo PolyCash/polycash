@@ -261,7 +261,7 @@ class CoinBattlesGameDefinition {
 		$q = "UPDATE game_defined_events SET outcome_index=".$best_performance_index." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$payout_event->db_event['event_index']."';";
 		$r = $this->app->run_query($q);
 		
-		$log_text = $payout_event->set_outcome_from_db($payout_event->db_event['event_payout_block'], true);
+		$log_text = $payout_event->set_outcome_from_db(true);
 		return $log_text;
 	}
 	

@@ -335,7 +335,7 @@ class SingleEliminationGameDefinition {
 				$r = $this->app->run_query($q);
 			}
 		}
-		$log_text = $payout_event->set_outcome_from_db($payout_event->db_event['event_payout_block'], true);
+		$log_text = $payout_event->set_outcome_from_db(true);
 		return $log_text;
 	}
 	
