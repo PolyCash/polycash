@@ -198,7 +198,7 @@ if ($thisuser) {
 								$fee_amount = 0.001*pow(10,$blockchain->db_blockchain['decimal_places']);
 								$amount = $db_io['amount']+$join_db_io['amount']-$fee_amount;
 								
-								$transaction_id = $blockchain->create_transaction('transaction', array($amount), false, array($db_io['io_id'], $join_db_io['io_id']), array($join_db_io['address_id']), array(0), $fee_amount);
+								$transaction_id = $blockchain->create_transaction('transaction', array($amount), false, array($db_io['io_id'], $join_db_io['io_id']), array($join_db_io['address_id']), $fee_amount);
 								
 								if ($transaction_id) {
 									$app->output_message(13, "Your transaction has been successfully created!", false);
