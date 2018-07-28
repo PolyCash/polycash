@@ -695,9 +695,6 @@ class Game {
 		$q = "DELETE eo.* FROM event_outcomes eo JOIN events e ON eo.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."' AND e.event_final_block >= ".$block_height.";";
 		$r = $this->blockchain->app->run_query($q);
 		
-		$q = "DELETE eoo.* FROM event_outcome_options eoo JOIN events e ON eoo.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."' AND e.event_payout_block >= ".$block_height.";";
-		$r = $this->blockchain->app->run_query($q);
-		
 		$q = "UPDATE games SET loaded_until_block='".($block_height-1)."', coins_in_existence=0, coins_in_existence_block=NULL WHERE game_id='".$this->db_game['game_id']."';";
 		$r = $this->blockchain->app->run_query($q);
 		
@@ -735,9 +732,6 @@ class Game {
 		$r = $this->blockchain->app->run_query($q);
 		
 		$q = "DELETE eo.* FROM event_outcomes eo JOIN events e ON eo.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."';";
-		$r = $this->blockchain->app->run_query($q);
-		
-		$q = "DELETE eoo.* FROM event_outcome_options eoo JOIN events e ON eoo.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."';";
 		$r = $this->blockchain->app->run_query($q);
 		
 		$q = "DELETE e.*, o.* FROM events e LEFT JOIN options o ON e.event_id=o.event_id WHERE e.game_id='".$this->db_game['game_id']."';";
@@ -812,12 +806,12 @@ class Game {
 			
 			if ($event_outcome['winning_option_id'] > 0) {
 				if (!empty($event_outcome['option_block_rule'])) {
-					$qq = "SELECT * FROM event_outcome_options eo JOIN events e ON eo.event_id=e.event_id WHERE eo.outcome_id='".$event_outcome['outcome_id']."' ORDER BY e.event_index ASC;";
+					$qq = "SELECT * FROM options WHERE event_id='".$event_outcome['event_id']."' ORDER BY option_event_index ASC;";
 					$rr = $this->blockchain->app->run_query($qq);
 					$score_label = "";
-					while ($outcome_option = $rr->fetch()) {
-						if (empty($score_label)) $score_label = $outcome_option['option_block_score']."-";
-						else $score_label .= $outcome_option['option_block_score'];
+					while ($option = $rr->fetch()) {
+						if (empty($score_label)) $score_label = $option['option_block_score']."-";
+						else $score_label .= $option['option_block_score'];
 					}
 					$html .= " ".$score_label." &nbsp;&nbsp; ";
 				}

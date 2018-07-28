@@ -1074,9 +1074,10 @@ function refresh_visible_inputs() {
 	}
 }
 function show_more_event_outcomes(game_id) {
+	var show_quantity = 50;
 	if ($('#show_more_link').html() == "Show More") {
 		var to_event_index = (last_event_index_shown-1);
-		var from_event_index = to_event_index - 19;
+		var from_event_index = to_event_index - show_quantity + 1;
 		
 		if (to_event_index < -1) to_event_index = -1;
 		if (from_event_index < -1) from_event_index = -1;

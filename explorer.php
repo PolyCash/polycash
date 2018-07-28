@@ -522,63 +522,6 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						
 						$round_table_html = $event->current_round_table($thisuser, false, false, 0, 0);
 						echo $round_table_html;
-						/*
-						?>
-						<h2>Rankings</h2>
-						
-						<div class="row" style="font-weight: bold;">
-						<div class="col-md-3"><?php echo ucwords($event->db_event['option_name']); ?></div>
-						<div class="col-md-1" style="text-align: center;">Percent</div>
-						</div>
-						<?php
-						if ($event) {
-							$q = "SELECT op.name, eoo.*, en.* FROM options op JOIN event_outcome_options eoo ON op.option_id=eoo.option_id LEFT JOIN entities en ON op.entity_id=en.entity_id WHERE op.event_id='".$event->db_event['event_id']."' ORDER BY eoo.rank ASC;";
-							$r = $app->run_query($q);
-						}
-						else $r = false;
-						
-						for ($rank=1; $rank<=$event->db_event['num_voting_options']; $rank++) {
-							if ($event_status == "current") {
-								$ranked_option = $stats_all[$rank-1];
-							}
-							else {
-								$ranked_option = $r->fetch();
-							}
-							
-							if (empty($event) || $ranked_option) {
-								if ($event_status == "current") {
-									$option_votes = $ranked_option['votes']+$ranked_option['unconfirmed_votes'];
-									$effective_bets = $option_votes*$coins_per_vote + $ranked_option['destroy_score'] + $ranked_option['unconfirmed_destroy_score'];
-								}
-								else {
-									$effective_bets = $ranked_option['votes']*$coins_per_vote + $ranked_option['effective_destroy_sum'];
-								}
-								echo '<div class="row';
-								if (!empty($db_event) && $db_event['winning_option_id'] == $ranked_option['option_id']) echo ' greentext';
-								echo '">';
-								echo '<div class="col-md-3">';
-								
-								if (!empty($ranked_option['image_url'])) {
-									?>
-									<div style="display: none;" class="modal fade" id="option_image_modal<?php echo $ranked_option['option_id']; ?>">
-										<div class="modal-dialog">
-											<div class="modal-content">
-												<div class="modal-body">
-													<img src="<?php echo $ranked_option['image_url']; ?>" style="max-width: 100%;" />
-												</div>
-											</div>
-										</div>
-									</div>
-									<a href="" onclick="$('#option_image_modal<?php echo $ranked_option['option_id']; ?>').modal('toggle'); return false;"><i class="fas fa-image"></i></a> &nbsp; 
-									<?php
-								}
-								
-								echo $rank.'. '.$ranked_option['name'].'</div>';
-								echo '<div class="col-md-1" style="text-align: center;">'.round(100*$effective_bets/$total_effective_bets, 2).'%</div>';
-								echo '</div>'."\n";
-							}
-						}
-						*/
 						
 						if ($event->db_event['option_block_rule'] == "football_match") {
 							echo "<br/><h2>Match Summary</h2>\n";
@@ -698,7 +641,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 									if ($r->rowCount() > 0) {
 										$db_event = $r->fetch();
 										$to_event_index = $db_event['event_index'];
-										$from_event_index = max(0, $to_event_index-20);
+										$from_event_index = max(0, $to_event_index-50);
 										$event_outcomes = $game->event_outcomes_html($from_event_index, $to_event_index, $thisuser);
 										echo $event_outcomes[1];
 									}
@@ -1399,17 +1342,18 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$num_wins = 0;
 						$num_losses = 0;
 						
-						$q = "SELECT gio.*, io.spend_transaction_id, e.entity_name, eo.winning_option_id, eo.sum_score, eo.sum_votes, eoo.effective_destroy_score AS option_effective_destroy_score, eo.destroy_score AS outcome_destroy_score, o.name AS option_name, gio.votes AS votes, ev.event_index, eoo.votes AS option_votes, gio2.colored_amount AS payout_amount FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN entities e ON o.entity_id=e.entity_id JOIN events ev ON o.event_id=ev.event_id JOIN event_outcomes eo ON ev.event_id=eo.event_id JOIN event_outcome_options eoo ON eoo.outcome_id=eo.outcome_id AND eoo.option_id=o.option_id LEFT JOIN transaction_game_ios gio2 ON gio.payout_game_io_id=gio2.game_io_id WHERE gio.game_id=".$game->db_game['game_id']." AND ug.user_game_id=".$user_game['user_game_id']." ORDER BY ev.event_index DESC, gio.game_io_id DESC;";
+						$q = "SELECT gio.*, io.spend_transaction_id, eo.winning_option_id, eo.sum_score, eo.sum_votes, o.effective_destroy_score AS option_effective_destroy_score, eo.destroy_score AS outcome_destroy_score, o.name AS option_name, ev.event_name, gio.votes AS votes, ev.event_index, o.votes AS option_votes, gio2.colored_amount AS payout_amount FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN events ev ON o.event_id=ev.event_id JOIN event_outcomes eo ON ev.event_id=eo.event_id LEFT JOIN transaction_game_ios gio2 ON gio.payout_game_io_id=gio2.game_io_id WHERE gio.game_id=".$game->db_game['game_id']." AND ug.user_game_id=".$user_game['user_game_id']." ORDER BY ev.event_index DESC, gio.game_io_id DESC;";
 						$r = $app->run_query($q);
 						$num_bets = $r->rowCount();
 						
 						$bet_table_html = '
 						<div class="row">
-							<div class="col-sm-2 boldtext">Stake</div>
-							<div class="col-sm-2 boldtext">Payout</div>
+							<div class="col-sm-1 boldtext text-center">Stake</div>
+							<div class="col-sm-1 boldtext text-center">Payout</div>
 							<div class="col-sm-1 text-center boldtext">Odds</div>
-							<div class="col-sm-2 boldtext">Effectiveness Factor</div>
-							<div class="col-sm-2 boldtext">Entity</div>
+							<div class="col-sm-1 boldtext">Effectiveness</div>
+							<div class="col-sm-2 boldtext text-center">Your Bet</div>
+							<div class="col-sm-3 boldtext">Event</div>
 							<div class="col-sm-3 boldtext">Outcome</div>
 						</div>';
 						
@@ -1424,27 +1368,28 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							
 							$bet_table_html .= '<div class="row">';
 							
-							$bet_table_html .= '<div class="col-sm-2 text-right">';
+							$bet_table_html .= '<div class="col-sm-1 text-center">';
 							$bet_table_html .= '<a href="/explorer/games/'.$game->db_game['url_identifier'].'/utxo/'.$bet['io_id'].'/">';
 							if ($game->db_game['inflation'] == "exponential") {
-								$bet_table_html .= $app->format_bignum($my_stake)." ".$game->db_game['coin_abbreviation'];
+								$bet_table_html .= $app->format_bignum($my_stake)."&nbsp;".$game->db_game['coin_abbreviation'];
 							}
 							else {
 								$bet_table_html .= $app->format_bignum($bet['votes']/pow(10,$game->db_game['decimal_places']))." votes";
 							}
 							$bet_table_html .= "</a></div>\n";
 							
-							$bet_table_html .= "<div class=\"col-sm-2 text-right\">";
-							$bet_table_html .= $app->format_bignum($expected_payout)." ".$game->db_game['coin_abbreviation'];
+							$bet_table_html .= "<div class=\"col-sm-1 text-center\">";
+							$bet_table_html .= $app->format_bignum($expected_payout)."&nbsp;".$game->db_game['coin_abbreviation'];
 							$bet_table_html .= "</div>\n";
 							
 							$bet_table_html .= "<div class=\"col-sm-1 text-center\">x".$app->format_bignum($payout_multiplier)."</div>\n";
 							
-							$bet_table_html .= "<div class=\"col-sm-2\">";
+							$bet_table_html .= "<div class=\"col-sm-1\">";
 							$bet_table_html .= round($bet['effectiveness_factor']*100, 2)."%";
 							$bet_table_html .= "</div>\n";
 							
-							$bet_table_html .= "<div class=\"col-sm-2\"><a target=\"_blank\" href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".$bet['event_index']."\">".$bet['entity_name']."</a></div>\n";
+							$bet_table_html .= "<div class=\"col-sm-2 text-center\">".$bet['option_name']."</div>";
+							$bet_table_html .= "<div class=\"col-sm-3\"><a target=\"_blank\" href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".$bet['event_index']."\">".$bet['event_name']."</a></div>\n";
 							
 							$outcome_txt = "";
 							if ($bet['winning_option_id'] == $bet['option_id']) {

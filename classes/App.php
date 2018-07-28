@@ -1302,23 +1302,10 @@ class App {
 			return floor((1-$db_game['exponential_inflation_minershare'])*$round_coins_created);
 		}
 		else {
-			$blockchain = new Blockchain($this, $db_game['blockchain_id']);
-			$game = new Game($blockchain, $db_game['game_id']);
-			$mining_block_id = $blockchain->last_block_id()+1;
-			$current_round = $game->block_to_round($mining_block_id);
-			
-			if ($round_id == $current_round) {
-				$q = "SELECT SUM(".$game->db_game['payout_weight']."_score), SUM(unconfirmed_".$game->db_game['payout_weight']."_score) FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."';";
-				$r = $this->run_query($q);
-				$r = $r->fetch();
-				$score = $r['SUM('.$game->db_game['payout_weight'].'_score)']+$r['SUM(unconfirmed_'.$game->db_game['payout_weight'].'_score)'];
-			}
-			else {
-				$q = "SELECT SUM(".$game->db_game['payout_weight']."_score) FROM event_outcome_options eoo JOIN events e ON eoo.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."' AND round_id='".$round_id."';";
-				$r = $this->run_query($q);
-				$r = $r->fetch();
-				$score = $r["SUM(".$game->db_game['payout_weight']."_score)"];
-			}
+			$q = "SELECT SUM(".$db_game['payout_weight']."_score), SUM(unconfirmed_".$db_game['payout_weight']."_score) FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$db_game['game_id']."';";
+			$r = $this->run_query($q);
+			$r = $r->fetch();
+			$score = $r['SUM('.$db_game['payout_weight'].'_score)']+$r['SUM(unconfirmed_'.$db_game['payout_weight'].'_score)'];
 			
 			return $score/$this->votes_per_coin($db_game);
 		}

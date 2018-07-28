@@ -897,7 +897,6 @@ class Blockchain {
 		
 		$this->app->run_query("DELETE FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id >= ".$block_height.";");
 		
-		$this->app->run_query("DELETE eoo.* FROM event_outcome_options eoo JOIN event_outcomes eo ON eo.outcome_id=eoo.outcome_id JOIN events e ON eo.event_id=e.event_id JOIN games g ON e.game_id=g.game_id WHERE g.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND eo.payout_block_id >= ".$block_height.";");
 		$this->app->run_query("DELETE eo.* FROM event_outcomes eo JOIN events e ON eo.event_id=e.event_id JOIN games g ON eo.game_id=g.game_id WHERE g.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND eo.payout_block_id >= ".$block_height.";");
 	}
 	
