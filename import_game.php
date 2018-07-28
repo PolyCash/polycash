@@ -14,17 +14,20 @@ include('includes/html_start.php');
 				$game_definition = $_REQUEST['game_definition'];
 
 				$error_message = false;
-				$new_game = $app->create_game_from_definition($game_definition, $thisuser, false, $error_message);
+				$db_new_game = false;
+				$app->create_game_from_definition($game_definition, $thisuser, false, $error_message, $db_new_game);
+				
+				echo '<p>Successfully created <a href="/'.$db_new_game['url_identifier'].'/">'.$db_new_game['name'].'</a></p>';
 			}
 			else $error_message = "Error, you didn't enter the right site administrator key.\n";
 			
-			if (!$error_message) {
-				echo "Your game definition was successfully imported!<br/>\n";
+			if ($db_new_game) {
+				echo "<p>Your game definition was successfully imported!<br/>\n";
 				echo "Please be patient as it may take several minutes for this game to sync.<br/>\n";
-				echo "Next please <a href=\"/".$new_game->db_game['url_identifier']."/\">click here</a> to join the game.<br/>\n";
+				echo "Please <a href=\"/".$db_new_game['url_identifier']."/\">click here</a> to join the game.</p>\n";
 			}
 			else {
-				echo $error_message."<br/><a href=\"/import/\">Try again</a><br/>\n";
+				echo $error_message."<p><a href=\"/import/\">Try again</a></p>\n";
 			}
 		}
 		else {

@@ -760,7 +760,9 @@ class Event {
 		
 		list($inflationary_score, $destroy_reward) = $this->event_total_scores();
 		
-		$q = "UPDATE events SET sum_score='".$inflationary_score."', winning_option_id='".$winning_option."', sum_votes='".$sum_votes."', winning_votes='".$winning_votes."', winning_effective_destroy_score='".$winning_effective_destroy_score."', destroy_score='".$event_destroy_score."', effective_destroy_score='".$event_effective_destroy_score."' WHERE event_id='".$this->db_event['event_id']."';";
+		$q = "UPDATE events SET sum_score='".$inflationary_score."'";
+		if ($winning_option) $q .= ", winning_option_id='".$winning_option."'";
+		$q .= ", sum_votes='".$sum_votes."', winning_votes='".$winning_votes."', winning_effective_destroy_score='".$winning_effective_destroy_score."', destroy_score='".$event_destroy_score."', effective_destroy_score='".$event_effective_destroy_score."' WHERE event_id='".$this->db_event['event_id']."';";
 		$r = $this->game->blockchain->app->run_query($q);
 		
 		if ($winning_option !== false && $add_payout_transaction) {
