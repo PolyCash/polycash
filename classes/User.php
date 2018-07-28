@@ -57,7 +57,7 @@ class User {
 		/*$html = '<div class="row"><div class="col-sm-2">Pending&nbsp;winnings:</div><div class="col-sm-3 text-right">';
 		$payout_sum = 0;
 		
-		$q = "SELECT * FROM events e JOIN event_outcomes eo ON e.event_id=eo.event_id WHERE e.game_id='".$game->db_game['game_id']."' ORDER BY e.event_index ASC;";
+		$q = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' ORDER BY event_index ASC;";
 		$r = $this->app->run_query($q);
 		
 		while ($db_event = $r->fetch()) {

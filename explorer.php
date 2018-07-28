@@ -85,7 +85,6 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 		$pagetitle = "My bets in ".$game->db_game['name'];
 	}
 	else if ($explore_mode == "events") {
-		$event_status = "";
 		$event_id = $uri_parts[5];
 		
 		if ($event_id === "") {
@@ -101,22 +100,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				$db_event = $r->fetch();
 				$event = new Event($game, false, $db_event['event_id']);
 				
-				$q = "SELECT e.event_starting_block, e.event_final_block, o.*, op.*, t.amount FROM event_outcomes o JOIN events e ON o.event_id=e.event_id LEFT JOIN options op ON o.winning_option_id=op.option_id LEFT JOIN transactions t ON o.payout_transaction_id=t.transaction_id WHERE e.event_id=".$db_event['event_id'].";";
-				$r = $app->run_query($q);
-				
 				$pagetitle = "Results: ".$event->db_event['event_name'];
 				
-				if ($r->rowCount() > 0) {
-					$db_event = $r->fetch();
-					$mode_error = false;
-					$event_status = "completed";
-				}
-				else {
-					$last_block_id = $game->blockchain->last_block_id();
-					$current_round = $game->block_to_round($last_block_id+1);
-					$mode_error = false;
-					$event_status = "current";
-				}
+				$mode_error = false;
 			}
 			else {
 				$mode_error = true;
@@ -374,45 +360,32 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				else $coins_per_vote = 0;
 				
 				if ($explore_mode == "events") {
-					if (!empty($db_event) || $event_status == "current") {
-						if ($event_status == "current") {
-							$last_block_id = $game->last_block_id();
-							$this_round = $game->block_to_round($last_block_id+1);
-							$current_round = $this_round;
-						}
-						else $this_round = $db_event['round_id'];
+					if (!empty($db_event)) {
+						$last_block_id = $game->last_block_id();
 						
 						echo '<div class="panel-heading"><div class="panel-title">';
 						echo $event->db_event['event_name'];
 						echo '</div></div>'."\n";
 						echo '<div class="panel-body">'."\n";
 						
-						//if ($event_status == "current") {
-							$rankings = $event->round_voting_stats_all();
-							$sum_votes = $rankings[0];
-							$max_votes = $rankings[1];
-							$stats_all = $rankings[2];
-							$option_id_to_rank = $rankings[3];
-							$confirmed_votes = $rankings[4];
-							$unconfirmed_votes = $rankings[5];
-							$confirmed_score = $rankings[6];
-							$unconfirmed_score = $rankings[7];
-							$destroy_score = $rankings[8];
-							$unconfirmed_destroy_score = $rankings[9];
-							$effective_destroy_score = $rankings[10];
-							$unconfirmed_effective_destroy_score = $rankings[11];
-							
-							$sum_score = $confirmed_score+$unconfirmed_score;
-							
-							$total_bets = floor($sum_score*$coins_per_vote) + $destroy_score;
-							$total_effective_bets = floor($sum_votes*$coins_per_vote) + $effective_destroy_score + $unconfirmed_effective_destroy_score;
-						/*}
-						else {
-							$max_votes = floor($event->event_outcome['sum_votes']*$event->db_event['max_voting_fraction']);
-							
-							$total_bets = floor($event->event_outcome['sum_score']*$coins_per_vote) + $event->event_outcome['destroy_score'];
-							$total_effective_bets = floor($event->event_outcome['sum_votes']*$coins_per_vote) + $event->event_outcome['effective_destroy_score'];
-						}*/
+						$rankings = $event->round_voting_stats_all();
+						$sum_votes = $rankings[0];
+						$max_votes = $rankings[1];
+						$stats_all = $rankings[2];
+						$option_id_to_rank = $rankings[3];
+						$confirmed_votes = $rankings[4];
+						$unconfirmed_votes = $rankings[5];
+						$confirmed_score = $rankings[6];
+						$unconfirmed_score = $rankings[7];
+						$destroy_score = $rankings[8];
+						$unconfirmed_destroy_score = $rankings[9];
+						$effective_destroy_score = $rankings[10];
+						$unconfirmed_effective_destroy_score = $rankings[11];
+						
+						$sum_score = $confirmed_score+$unconfirmed_score;
+						
+						$total_bets = floor($sum_score*$coins_per_vote) + $destroy_score;
+						$total_effective_bets = floor($sum_votes*$coins_per_vote) + $effective_destroy_score + $unconfirmed_effective_destroy_score;
 						
 						if (!empty($game->db_game['module'])) {
 							if (method_exists($game->module, "event_index_to_next_event_index")) {
@@ -423,10 +396,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 									
 									if ($next_event_r->rowCount() > 0) {
 										$db_next_event = $next_event_r->fetch();
-										echo "<p>The winner ";
-										if ($event_status == "current") echo "will advance";
-										else echo "has advanced";
-										echo " to <a href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".$db_next_event['event_index']."\">".$db_next_event['event_name']."</a></p>\n";
+										echo "<p>The winner advances to <a href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".$db_next_event['event_index']."\">".$db_next_event['event_name']."</a></p>\n";
 									}
 								}
 							}
@@ -463,12 +433,6 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							</div>
 						</div>
 						<?php
-						if ($thisuser && !empty($db_event) && !empty($db_event['winning_option_id'])) {
-							$my_votes = false;
-							$user_winnings_description = $event->user_winnings_description($thisuser->db_user['user_id'], $this_round, $event_status, $db_event['winning_option_id'], $db_event['winning_votes'], $db_event['name'], $my_votes);
-							if (!empty($user_winnings_description)) echo $user_winnings_description."<br/>\n";
-						}
-						
 						if (!empty($db_event)) {
 							$q = "SELECT SUM(colored_amount) FROM transaction_game_ios WHERE event_id='".$event->db_event['event_id']."' AND is_coinbase=1;";
 							$r = $app->run_query($q);
@@ -507,14 +471,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						}
 						
 						if ($game->db_game['module'] == "CoinBattles") {
-							if ($event_status == "current") {
-								$chart_starting_block = 1+$game->db_game['round_length']*($current_round-1);
-								$chart_final_block = false;
-							}
-							else {
-								$chart_starting_block = $event->db_event['event_starting_block'];
-								$chart_final_block = $event->db_event['event_final_block'];
-							}
+							$chart_starting_block = $event->db_event['event_starting_block'];
+							$chart_final_block = $event->db_event['event_final_block'];
+							
 							list($html, $js) = $game->module->currency_chart($game, $chart_starting_block, $chart_final_block);
 							echo '<div style="margin: 20px 0px;" id="game0_chart_html">'.$html."</div>\n";
 							echo '<div id="game0_chart_js"><script type="text/javascript">'.$js.'</script></div>'."\n";
@@ -1342,7 +1301,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$num_wins = 0;
 						$num_losses = 0;
 						
-						$q = "SELECT gio.*, io.spend_transaction_id, eo.winning_option_id, eo.sum_score, eo.sum_votes, o.effective_destroy_score AS option_effective_destroy_score, eo.destroy_score AS outcome_destroy_score, o.name AS option_name, ev.event_name, gio.votes AS votes, ev.event_index, o.votes AS option_votes, gio2.colored_amount AS payout_amount FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN events ev ON o.event_id=ev.event_id JOIN event_outcomes eo ON ev.event_id=eo.event_id LEFT JOIN transaction_game_ios gio2 ON gio.payout_game_io_id=gio2.game_io_id WHERE gio.game_id=".$game->db_game['game_id']." AND ug.user_game_id=".$user_game['user_game_id']." ORDER BY ev.event_index DESC, gio.game_io_id DESC;";
+						$q = "SELECT gio.*, io.spend_transaction_id, ev.*, o.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS outcome_destroy_score, o.name AS option_name, gio.votes AS votes, o.votes AS option_votes, gio2.colored_amount AS payout_amount FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN events ev ON o.event_id=ev.event_id LEFT JOIN transaction_game_ios gio2 ON gio.payout_game_io_id=gio2.game_io_id WHERE gio.game_id=".$game->db_game['game_id']." AND ug.user_game_id=".$user_game['user_game_id']." AND ev.winning_option_id IS NOT NULL ORDER BY ev.event_index DESC, gio.game_io_id DESC;";
 						$r = $app->run_query($q);
 						$num_bets = $r->rowCount();
 						
