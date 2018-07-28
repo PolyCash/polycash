@@ -1054,185 +1054,76 @@ if ($thisuser && $game) {
 				</div>
 			</div>
 		</div>
-		<div id="tabcontent3" style="display: none;" class="tabcontent">
-			<div class="panel panel-default">
-				<div class="panel-heading">
-					<div class="panel-title">Results</div>
-				</div>
-				<div class="panel-body">
-					<p>Results for all events are shown below.  Did you want to <a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">see results for your bets only</a>?</p>
-					
-					<div style="border-bottom: 1px solid #bbb; margin-bottom: 5px;" id="render_event_outcomes">
-						<div id="event_outcomes_0">
-							<?php
-							$events_to_block_id = $game->db_game['events_until_block'];
-							if ($events_to_block_id > $game->blockchain->last_block_id()) $events_to_block_id = $game->blockchain->last_block_id();
-							
-							$q = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block<=".((int)$events_to_block_id)." ORDER BY event_index DESC LIMIT 1;";
-							$r = $app->run_query($q);
-							
-							if ($r->rowCount() > 0) {
-								$db_event = $r->fetch();
-								$to_event_index = $db_event['event_index'];
-								$from_event_index = max(0, $to_event_index-20);
-								$event_outcomes = $game->event_outcomes_html($from_event_index, $to_event_index, $thisuser);
-								echo $event_outcomes[1];
-							}
-							?>
-						</div>
-					</div>
-					<center>
-						<a href="" onclick="show_more_event_outcomes(<?php echo $game->db_game['game_id']; ?>); return false;" id="show_more_link">Show More</a>
-					</center>
-				</div>
-				
-				<script type="text/javascript">
-				$(document).ready(function() {
-					last_event_index_shown = <?php if ((string) $from_event_index == "") echo "false"; else echo $from_event_index; ?>;
-				});
-				</script>
-			</div>
-		</div>
 		<div id="tabcontent4" style="display: none;" class="tabcontent">
 			<div class="panel panel-default">
 				<div class="panel-heading">
 					<div class="panel-title">Deposit or Withdraw</div>
 				</div>
 				<div class="panel-body">
-					<h3>Deposit</h3>
 					<?php
 					if ($game->db_game['buyin_policy'] != "none") { ?>
 						<p>
-						You can buy more <?php echo $game->db_game['coin_name_plural']; ?> by sending <?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?> to your deposit address.  Once your <?php echo $game->blockchain->db_blockchain['coin_name']; ?> payment is confirmed, <?php echo $game->db_game['coin_name_plural']; ?> will be added to your account based on the <?php echo $game->blockchain->db_blockchain['coin_name']; ?> / <?php echo $game->db_game['coin_name']; ?> exchange rate at the time of confirmation.
+							You can buy more <?php echo $game->db_game['coin_name_plural']; ?> by sending <?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?> to your deposit address.  Once your <?php echo $game->blockchain->db_blockchain['coin_name']; ?> payment is confirmed, <?php echo $game->db_game['coin_name_plural']; ?> will be added to your account based on the <?php echo $game->blockchain->db_blockchain['coin_name']; ?> / <?php echo $game->db_game['coin_name']; ?> exchange rate at the time of confirmation.
 						</p>
 						<p>
-						<button class="btn btn-success" onclick="initiate_buyin();">Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
+							<button class="btn btn-success" onclick="initiate_buyin();">Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
 						</p>
 						<?php
 					}
 					else {
-						echo "<p>You cannot buy directly in to this game. Instead, please purchase ".$game->db_game['coin_name_plural']." on an exchange and then send them to one of your addresses listed below.</p>\n";
+						?>
+						<p>
+							To deposit <?php echo $game->db_game['coin_name_plural']; ?> please visit <a href="/accounts/?account_id=<?php echo $user_game['account_id']; ?>">My Accounts</a> to see a list of your addresses.
+						</p>
+						<?php
 					}
 					?>
+					<br/>
 					
-					<h3>Withdraw</h3>
-					To withdraw coins please enter <?php echo $app->prepend_a_or_an($game->db_game['name']); ?> address below.<br/>
-					<div class="row">
-						<div class="col-md-3 form-control-static">
-							Amount:
-						</div>
-						<div class="col-md-3">
-							<input class="form-control" type="tel" placeholder="0.000" id="withdraw_amount" style="text-align: right;" />
-						</div>
-						<div class="col-md-3 form-control-static">
-							<?php echo $game->db_game['coin_name_plural']; ?>
-						</div>
-					</div>
-					<div class="row">
-						<div class="col-md-3 form-control-static">
-							Fee:
-						</div>
-						<div class="col-md-3">
-							<input class="form-control" type="tel" value="<?php echo $app->format_bignum($user_strategy['transaction_fee']); ?>" id="withdraw_fee" style="text-align: right;" />
-						</div>
-						<div class="col-md-3 form-control-static">
-							<?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?>
-						</div>
-					</div>
-					<div class="row">
-						<div class="col-md-3 form-control-static">
-							Address:
-						</div>
-						<div class="col-md-5">
-							<input class="form-control" type="text" id="withdraw_address" />
-						</div>
-					</div>
-					<div class="row">
-						<div class="col-md-3 form-control-static">
-							Vote remainder towards:
-						</div>
-						<div class="col-md-5">
-							<select class="form-control" id="withdraw_remainder_address_id">
-								<option value="random">Random</option>
-								<?php
-								$option_index_range = $game->option_index_range();
-								
-								for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
-									$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND a.option_index='".$option_index."';";
-									$rr = $app->run_query($qq);
-									
-									if ($rr->rowCount() > 0) {
-										$address = $rr->fetch();
-										echo "<option value=\"".$address['address_id']."\">";
-										if ($address['option_index'] == "") echo "None";
-										else echo "Voting option #".$address['option_index'];
-										echo "</option>\n";
-									}
-								}
-								?>
-							</select>
-						</div>
-					</div>
-					<div class="row">
-						<div class="col-md-push-3 col-md-5">
-							<button class="btn btn-success" id="withdraw_btn" onclick="attempt_withdrawal();">Withdraw</button>
-							<div id="withdraw_message" style="display: none; margin-top: 15px;"></div>
-						</div>
-					</div>
+					<p>To withdraw <?php echo $game->db_game['coin_name_plural']; ?> please enter <?php echo $app->prepend_a_or_an($game->db_game['name']); ?> address below.</p>
 					
-					<h3>My <?php echo $game->db_game['name']; ?> addresses</h3>
-					<?php
-					$option_index_range = $game->option_index_range();
-					
-					$addr_id_csv = "";
-					for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
-						$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND a.option_index='".$option_index."';";
-						$rr = $app->run_query($qq);
-						
-						if ($rr->rowCount() > 0) {
-							$address = $rr->fetch();
-							?>
-							<div class="row">
-								<div class="col-sm-3">
-									<?php
-									if ($address['option_index'] != "") echo "Voting option #".$address['option_index'];
-									else echo "Default Address";
-									?>
-								</div>
-								<div class="col-sm-4">
-									<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/addresses/<?php echo $address['address']; ?>"><?php echo $address['address']; ?></a>
-								</div>
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group">
+								<label for="withdraw_amount">Amount (<?php echo $game->db_game['coin_name_plural']; ?>):</label>
+								<input class="form-control" type="tel" placeholder="0.000" id="withdraw_amount" style="text-align: right;" />
 							</div>
-							<?php
-							$addr_id_csv .= $address['address_id'].",";
-						}
-					}
-					if ($addr_id_csv != "") {
-						$addr_id_csv = substr($addr_id_csv, 0, strlen($addr_id_csv)-1);
-						
-						$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND a.address_id NOT IN (".$addr_id_csv.") ORDER BY option_index ASC;";
-						$rr = $app->run_query($qq);
-						
-						if ($rr->rowCount() > 0) {
-							echo "<br/>\n";
-							while ($address = $rr->fetch()) {
-								?>
-								<div class="row">
-									<div class="col-sm-3">
-										<?php
-										if ($address['option_index'] != "") echo "Voting option #".$address['option_index'];
-										else echo "Default Address";
-										?>
-									</div>
-									<div class="col-sm-4">
-										<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/addresses/<?php echo $address['address']; ?>"><?php echo $address['address']; ?></a>
-									</div>
-								</div>
-								<?php
-							}
-						}
-					}
-					?>
+							<div class="form-group">
+								<label for="withdraw_fee">Fee (<?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?>):</label>
+								<input class="form-control" type="tel" value="<?php echo $app->format_bignum($user_strategy['transaction_fee']); ?>" id="withdraw_fee" style="text-align: right;" />
+							</div>
+							<div class="form-group">
+								<label for="withdraw_address">Address:</label>
+								<input class="form-control" type="text" id="withdraw_address" />
+							</div>
+							<?php /*
+							<div class="form-group">
+								<label for="withdraw_remainder_address_id">Vote remainder towards:</label>
+								<select class="form-control" id="withdraw_remainder_address_id">
+									<option value="random">Random</option>
+									$option_index_range = $game->option_index_range();
+									
+									for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
+										$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND a.option_index='".$option_index."';";
+										$rr = $app->run_query($qq);
+										
+										if ($rr->rowCount() > 0) {
+											$address = $rr->fetch();
+											echo "<option value=\"".$address['address_id']."\">";
+											if ($address['option_index'] == "") echo "None";
+											else echo "Voting option #".$address['option_index'];
+											echo "</option>\n";
+										}
+									}
+								</select>
+							</div>
+							*/ ?>
+							<div class="form-group">
+								<button class="btn btn-success" id="withdraw_btn" onclick="attempt_withdrawal();">Send <?php echo $game->db_game['coin_name_plural']; ?></button>
+								<div id="withdraw_message" style="display: none; margin-top: 15px;"></div>
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -1240,34 +1131,15 @@ if ($thisuser && $game) {
 		<div class="tabcontent" style="display: none;" id="tabcontent5">
 			<div class="panel panel-default">
 				<div class="panel-heading">
-					<div class="panel-title">My Games</div>
+					<div class="panel-title">Invitations</div>
 				</div>
 				<div class="panel-body">
 					<?php
-					$game_id_csv = "";
-					$q = "SELECT * FROM games WHERE creator_id='".$thisuser->db_user['user_id']."' ORDER BY game_id ASC;";
-					$r = $app->run_query($q);
-					while ($db_user_game = $r->fetch()) {
-						$game_id_csv .= $db_user_game['game_id'].",";
-						echo $app->game_admin_row($thisuser, $db_user_game, $game->db_game['game_id']);
+					$perm_to_invite = $thisuser->user_can_invite_game($user_game);
+					if ($perm_to_invite) {
+						echo '<a class="btn btn-primary" href="" onclick="manage_game_invitations('.$user_game['game_id'].'); return false;">Invitations</a>';
 					}
-					if ($game_id_csv != "") $game_id_csv = substr($game_id_csv, 0, strlen($game_id_csv)-1);
-					
-					$q = "SELECT * FROM games g LEFT JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."'";
-					if ($game_id_csv != "") $q .= " AND g.game_id NOT IN (".$game_id_csv.")";
-					$q .= " GROUP BY g.game_id ORDER BY g.game_id ASC;";
-					$r = $app->run_query($q);
-					while ($db_user_game = $r->fetch()) {
-						echo $app->game_admin_row($thisuser, $db_user_game, $game->db_game['game_id']);
-					}
-					
-					$new_game_perm = $thisuser->new_game_permission();
-					
-					if ($new_game_perm) { ?>
-						<br/>
-						<button class="btn btn-primary" onclick="manage_game(0, 'new'); return false;">Create a new Game</button>
-						<?php
-					}
+					else echo "Sorry, you don't have permission to send invitations for this game.";
 					?>
 				</div>
 			</div>
