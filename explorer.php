@@ -1300,12 +1300,13 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$net_stake = 0;
 						$num_wins = 0;
 						$num_losses = 0;
+						$num_unresolved = 0;
 						
-						$q = "SELECT gio.*, io.spend_transaction_id, ev.*, o.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS outcome_destroy_score, o.name AS option_name, gio.votes AS votes, o.votes AS option_votes, gio2.colored_amount AS payout_amount FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN events ev ON o.event_id=ev.event_id LEFT JOIN transaction_game_ios gio2 ON gio.payout_game_io_id=gio2.game_io_id WHERE gio.game_id=".$game->db_game['game_id']." AND ug.user_game_id=".$user_game['user_game_id']." AND ev.winning_option_id IS NOT NULL ORDER BY ev.event_index DESC, gio.game_io_id DESC;";
+						$q = "SELECT gio.*, io.spend_transaction_id, ev.*, o.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS outcome_destroy_score, o.name AS option_name, gio.votes AS votes, o.votes AS option_votes, gio2.colored_amount AS payout_amount FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN events ev ON o.event_id=ev.event_id LEFT JOIN transaction_game_ios gio2 ON gio.payout_game_io_id=gio2.game_io_id WHERE gio.game_id=".$game->db_game['game_id']." AND ug.user_game_id=".$user_game['user_game_id']." ORDER BY ev.event_index DESC, a.option_index ASC;";
 						$r = $app->run_query($q);
 						$num_bets = $r->rowCount();
 						
-						$bet_table_html = '
+						$bet_table_header = '
 						<div class="row">
 							<div class="col-sm-1 boldtext text-center">Stake</div>
 							<div class="col-sm-1 boldtext text-center">Payout</div>
@@ -1316,7 +1317,11 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							<div class="col-sm-3 boldtext">Outcome</div>
 						</div>';
 						
+						$resolved_bets_table = $bet_table_header;
+						$unresolved_bets_table = $bet_table_header;
+						
 						while ($bet = $r->fetch()) {
+							$this_bet_html = "";
 							$expected_payout = ($bet['effective_destroy_amount']*$bet['outcome_destroy_score']/$bet['option_effective_destroy_score'] + ($bet['sum_score']*$coins_per_vote*$bet['votes']/$bet['option_votes']))/pow(10,$game->db_game['decimal_places']);
 							$my_stake = ($bet['destroy_amount'] + $bet[$game->db_game['payout_weight']."s_destroyed"]*$coins_per_vote)/pow(10,$game->db_game['decimal_places']);
 							
@@ -1325,55 +1330,68 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							
 							$net_stake += $my_stake;
 							
-							$bet_table_html .= '<div class="row">';
+							$this_bet_html .= '<div class="row">';
 							
-							$bet_table_html .= '<div class="col-sm-1 text-center">';
-							$bet_table_html .= '<a href="/explorer/games/'.$game->db_game['url_identifier'].'/utxo/'.$bet['io_id'].'/">';
+							$this_bet_html .= '<div class="col-sm-1 text-center">';
+							$this_bet_html .= '<a href="/explorer/games/'.$game->db_game['url_identifier'].'/utxo/'.$bet['io_id'].'/">';
 							if ($game->db_game['inflation'] == "exponential") {
-								$bet_table_html .= $app->format_bignum($my_stake)."&nbsp;".$game->db_game['coin_abbreviation'];
+								$this_bet_html .= $app->format_bignum($my_stake)."&nbsp;".$game->db_game['coin_abbreviation'];
 							}
 							else {
-								$bet_table_html .= $app->format_bignum($bet['votes']/pow(10,$game->db_game['decimal_places']))." votes";
+								$this_bet_html .= $app->format_bignum($bet['votes']/pow(10,$game->db_game['decimal_places']))." votes";
 							}
-							$bet_table_html .= "</a></div>\n";
+							$this_bet_html .= "</a></div>\n";
 							
-							$bet_table_html .= "<div class=\"col-sm-1 text-center\">";
-							$bet_table_html .= $app->format_bignum($expected_payout)."&nbsp;".$game->db_game['coin_abbreviation'];
-							$bet_table_html .= "</div>\n";
+							$this_bet_html .= "<div class=\"col-sm-1 text-center\">";
+							$this_bet_html .= $app->format_bignum($expected_payout)."&nbsp;".$game->db_game['coin_abbreviation'];
+							$this_bet_html .= "</div>\n";
 							
-							$bet_table_html .= "<div class=\"col-sm-1 text-center\">x".$app->format_bignum($payout_multiplier)."</div>\n";
+							$this_bet_html .= "<div class=\"col-sm-1 text-center\">x".$app->format_bignum($payout_multiplier)."</div>\n";
 							
-							$bet_table_html .= "<div class=\"col-sm-1\">";
-							$bet_table_html .= round($bet['effectiveness_factor']*100, 2)."%";
-							$bet_table_html .= "</div>\n";
+							$this_bet_html .= "<div class=\"col-sm-1\">";
+							$this_bet_html .= round($bet['effectiveness_factor']*100, 2)."%";
+							$this_bet_html .= "</div>\n";
 							
-							$bet_table_html .= "<div class=\"col-sm-2 text-center\">".$bet['option_name']."</div>";
-							$bet_table_html .= "<div class=\"col-sm-3\"><a target=\"_blank\" href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".$bet['event_index']."\">".$bet['event_name']."</a></div>\n";
+							$this_bet_html .= "<div class=\"col-sm-2 text-center\">".$bet['option_name']."</div>";
+							$this_bet_html .= "<div class=\"col-sm-3\"><a target=\"_blank\" href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".$bet['event_index']."\">".$bet['event_name']."</a></div>\n";
 							
-							$outcome_txt = "";
-							if ($bet['winning_option_id'] == $bet['option_id']) {
-								$outcome_txt = "Won";
-								$delta = $expected_payout - $my_stake;
-								$num_wins++;
+							if (empty($bet['winning_option_id'])) {
+								$outcome_txt = "Not Resolved";
 							}
 							else {
-								$outcome_txt = "Lost";
-								$delta = (-1)*$my_stake;
-								$num_losses++;
+								if ($bet['winning_option_id'] == $bet['option_id']) {
+									$outcome_txt = "Won";
+									$delta = $expected_payout - $my_stake;
+									$num_wins++;
+								}
+								else {
+									$outcome_txt = "Lost";
+									$delta = (-1)*$my_stake;
+									$num_losses++;
+								}
+								$net_delta += $delta;
 							}
-							$net_delta += $delta;
 							
-							$bet_table_html .= "<div class=\"col-sm-3";
-							if ($delta >= 0) $bet_table_html .= " greentext";
-							else $bet_table_html .= " redtext";
-							$bet_table_html .= "\">";
-							$bet_table_html .= $outcome_txt." &nbsp;&nbsp; ";
-							if ($delta >= 0) $bet_table_html .= "+";
-							else $bet_table_html .= "-";
-							$bet_table_html .= $app->format_bignum(abs($delta));
-							$bet_table_html .= " ".$game->db_game['coin_abbreviation']."</div>\n";
+							$this_bet_html .= "<div class=\"col-sm-3";
+							if (empty($bet['winning_option_id'])) {}
+							else if ($delta >= 0) $this_bet_html .= " greentext";
+							else $this_bet_html .= " redtext";
+							$this_bet_html .= "\">";
+							$this_bet_html .= $outcome_txt;
 							
-							$bet_table_html .= "</div>\n";
+							if (!empty($bet['winning_option_id'])) {
+								$this_bet_html .= " &nbsp;&nbsp; ";
+								if ($delta >= 0) $this_bet_html .= "+";
+								else $this_bet_html .= "-";
+								$this_bet_html .= $app->format_bignum(abs($delta));
+								$this_bet_html .= " ".$game->db_game['coin_abbreviation'];
+							}
+							$this_bet_html .= "</div>\n";
+							
+							$this_bet_html .= "</div>\n";
+							
+							if (empty($bet['winning_option_id'])) $unresolved_bets_table .= $this_bet_html;
+							else $resolved_bets_table .= $this_bet_html;
 						}
 						
 						$win_rate = $num_wins/($num_wins+$num_losses);
@@ -1394,18 +1412,23 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							</select>
 						</div>
 						<?php
-						echo "You have ".$num_bets." resolved bets for this game totalling <font class=\"greentext\">".$app->format_bignum($net_stake)."</font> ".$game->db_game['coin_name_plural']."<br/>\n";
+						echo "<p>You have ".number_format($num_bets)." resolved bets for this game totalling <font class=\"greentext\">".$app->format_bignum($net_stake)."</font> ".$game->db_game['coin_name_plural']."<br/>\n";
 						echo "You won ".round($win_rate*100, 1)."% of your bets for a net ";
 						if ($net_delta >= 0) echo "gain";
 						else echo "loss";
 						echo " of <font class=\"";
 						if ($net_delta >= 0) echo "greentext";
 						else echo "redtext";
-						echo "\">".$app->format_bignum(abs($net_delta))."</font> ".$game->db_game['coin_name_plural']."<br/>\n";
+						echo "\">".$app->format_bignum(abs($net_delta))."</font> ".$game->db_game['coin_name_plural']."</p>\n";
 						
+						echo "<p><b>Resolved Bets</b></p>\n";
+						echo $resolved_bets_table;
 						echo "<br/>\n";
-						echo $bet_table_html;
+						
+						echo "<p><b>Unresolved Bets</b></p>\n";
+						echo $unresolved_bets_table;
 						echo "<br/>\n";
+						
 						echo "</div>\n";
 					}
 				}
