@@ -1298,6 +1298,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					else {
 						$net_delta = 0;
 						$net_stake = 0;
+						$pending_stake = 0;
 						$num_wins = 0;
 						$num_losses = 0;
 						$num_unresolved = 0;
@@ -1329,6 +1330,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							else $payout_multiplier = 0;
 							
 							$net_stake += $my_stake;
+							if (empty($bet['winning_option_id'])) $pending_stake += $my_stake;
 							
 							$this_bet_html .= '<div class="row">';
 							
@@ -1357,6 +1359,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							
 							if (empty($bet['winning_option_id'])) {
 								$outcome_txt = "Not Resolved";
+								$num_unresolved++;
 							}
 							else {
 								if ($bet['winning_option_id'] == $bet['option_id']) {
@@ -1394,6 +1397,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							else $resolved_bets_table .= $this_bet_html;
 						}
 						
+						$num_resolved = $num_wins+$num_losses;
 						$win_rate = $num_wins/($num_wins+$num_losses);
 						
 						echo '<div class="panel-body">';
@@ -1412,14 +1416,16 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							</select>
 						</div>
 						<?php
-						echo "<p>You have ".number_format($num_bets)." resolved bets for this game totalling <font class=\"greentext\">".$app->format_bignum($net_stake)."</font> ".$game->db_game['coin_name_plural']."<br/>\n";
-						echo "You won ".round($win_rate*100, 1)."% of your bets for a net ";
+						echo "<p>You've placed ".number_format($num_bets)." bets totalling <font class=\"greentext\">".$app->format_bignum($net_stake)."</font> ".$game->db_game['coin_name_plural']."<br/>\n";
+						echo "You've won ".number_format($num_wins)." of your ".number_format($num_resolved)." resolved bets (".round($win_rate*100, 1)."%) for a net ";
 						if ($net_delta >= 0) echo "gain";
 						else echo "loss";
 						echo " of <font class=\"";
 						if ($net_delta >= 0) echo "greentext";
 						else echo "redtext";
-						echo "\">".$app->format_bignum(abs($net_delta))."</font> ".$game->db_game['coin_name_plural']."</p>\n";
+						echo "\">".$app->format_bignum(abs($net_delta))."</font> ".$game->db_game['coin_name_plural'];
+						if ($num_unresolved > 0) echo "\n<br/>You have ".number_format($num_unresolved)." pending bets totalling <font class=\"greentext\">".$app->format_bignum($pending_stake)."</font> ".$game->db_game['coin_name_plural'];
+						echo "</p>\n";
 						
 						echo "<p><b>Resolved Bets</b></p>\n";
 						echo $resolved_bets_table;
