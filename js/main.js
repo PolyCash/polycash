@@ -312,16 +312,19 @@ function save_notification_preferences() {
 	}
 }
 function attempt_withdrawal() {
-	if ($('#withdraw_btn').html() == "Withdraw") {
-		var amount = $('#withdraw_amount').val();
-		var address = $('#withdraw_address').val();
-		
-		$('#withdraw_btn').html("Withdrawing...");
+	var amount = $('#withdraw_amount').val();
+	var address = $('#withdraw_address').val();
+	
+	var initial_btn_text = $('#withdraw_btn').html();
+	var loading_btn_text = "Sending...";
+	
+	if (initial_btn_text != loading_btn_text) {
+		$('#withdraw_btn').html(loading_btn_text);
 		
 		$.get("/ajax/withdraw.php?game_id="+games[0].game_id+"&amount="+encodeURIComponent(amount)+"&address="+encodeURIComponent(address)+"&remainder_address_id="+$('#withdraw_remainder_address_id').val()+"&fee="+encodeURIComponent($('#withdraw_fee').val()), function(result) {
 			var result_obj = JSON.parse(result);
 			
-			$('#withdraw_btn').html("Withdraw");
+			$('#withdraw_btn').html(initial_btn_text);
 			$('#withdraw_amount').val("");
 			
 			$('#withdraw_message').removeClass("redtext");
@@ -336,6 +339,7 @@ function attempt_withdrawal() {
 			setTimeout("$('#withdraw_message').slideUp('fast');", 5000);
 		});
 	}
+	else alert("Already sending");
 }
 function input_amount_sums() {
 	var amount_sum = 0;

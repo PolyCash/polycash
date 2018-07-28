@@ -53,7 +53,7 @@ if ($thisuser && $action == "donate_to_faucet") {
 					$coins_per_chain_coin = (float) $colored_coin_sum/($coin_sum-$fee_amount);
 					$chain_coins_each = ceil($satoshis_each_utxo/$coins_per_chain_coin);
 					
-					if ($game_ios[0]['spend_status'] == "unspent") {
+					if (in_array($game_ios[0]['spend_status'], array("unspent", "unconfirmed")) {
 						$address_ids = array();
 						$address_key_ids = array();
 						$addresses_needed = $quantity;

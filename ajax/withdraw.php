@@ -9,12 +9,12 @@ $output_obj['message'] = "";
 if ($thisuser && $game) {
 	$user_game = $thisuser->ensure_user_in_game($game, false);
 	
-	$amount = floatval($_REQUEST['amount']);
+	$target_amount = floatval($_REQUEST['amount']);
 	$fee = floatval($_REQUEST['fee']);
 	$address_text = $_REQUEST['address'];
 	
-	if ($amount > 0 && $fee >= 0) {
-		$amount = $amount*pow(10,$game->db_game['decimal_places']);
+	if ($target_amount > 0 && $fee >= 0) {
+		$target_amount = $target_amount*pow(10,$game->db_game['decimal_places']);
 		$fee = $fee*pow(10,$game->db_game['decimal_places']);
 		$last_block_id = $game->blockchain->last_block_id();
 		$mining_block_id = $last_block_id+1;
@@ -22,35 +22,37 @@ if ($thisuser && $game) {
 		$blockchain_mature_balance = $game->blockchain->user_mature_balance($user_game);
 		$game_mature_balance = $thisuser->mature_balance($game, $user_game);
 		
-		$remainder_address_id = $_REQUEST['remainder_address_id'];
-		
-		if ($remainder_address_id == "random") {
-			$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND k.account_id='".$user_game['account_id']."' AND a.option_index IS NOT NULL ORDER BY RAND() LIMIT 1;";
-			$r = $app->run_query($q);
-			$remainder_address = $r->fetch();
-			$remainder_address_id = $remainder_address['address_id'];
-		}
-		else $remainder_address_id = intval($remainder_address_id);
+		$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND k.account_id='".$user_game['account_id']."' AND a.option_index IS NOT NULL ORDER BY RAND() LIMIT 1;";
+		$r = $app->run_query($q);
+		$remainder_address = $r->fetch();
 		
 		$user_strategy = false;
 		$success = $game->get_user_strategy($user_game, $user_strategy);
 		
 		if ($success) {
 			if ($fee < $blockchain_mature_balance) {
-				$q = "SELECT SUM(gio.colored_amount), gio.io_id, io.amount FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND gio.game_id='".$game->db_game['game_id']."' AND k.account_id='".$user_game['account_id']."' AND io.amount > ".$fee." GROUP BY gio.io_id ORDER BY io.create_block_id DESC, SUM(gio.colored_amount) ASC;";
+				$q = "SELECT SUM(gio.colored_amount), gio.io_id, io.amount FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND gio.game_id='".$game->db_game['game_id']."' AND k.account_id='".$user_game['account_id']."' AND io.amount > ".$fee." GROUP BY gio.io_id ORDER BY SUM(gio.colored_amount) ASC;";
 				$r = $app->run_query($q);
 				
-				$spend_gio = false;
-				while ($spend_gio == false && $gio = $r->fetch()) {
-					if ($gio['SUM(gio.colored_amount)'] >= $amount) {
-						$spend_gio = $gio;
-					}
+				$gio_sum = 0;
+				$io_sum = 0;
+				$spend_io_ids = array();
+				$keep_looping = true;
+				
+				while ($keep_looping && $io = $r->fetch()) {
+					array_push($spend_io_ids, $io['io_id']);
+					
+					$gio_sum += $io['SUM(gio.colored_amount)'];
+					$io_sum += $io['amount'];
+					
+					if ($gio_sum >= $target_amount) $keep_looping = false;
 				}
 				
-				if ($spend_gio) {
-					$coloredcoins_per_coin = $spend_gio['SUM(gio.colored_amount)']/($spend_gio['amount']-$fee);
-					$io_amount = ceil($amount/$coloredcoins_per_coin);
-					$remainder_amount = $spend_gio['amount']-$fee-$io_amount;
+				if ($gio_sum >= $target_amount) {
+					$coloredcoins_per_coin = $gio_sum/($io_sum-$fee);
+					
+					$io_amount = ceil($target_amount/$coloredcoins_per_coin);
+					$remainder_amount = ($io_sum-$fee)-$io_amount;
 					
 					$address_ok = false;
 					
@@ -59,23 +61,17 @@ if ($thisuser && $game) {
 						$validate_address = $coin_rpc->validateaddress($address_text);
 						$address_ok = $validate_address['isvalid'];
 						if ($address_ok) {
-							$db_address = $game->blockchain->create_or_fetch_address($address_text, TRUE, $coin_rpc, FALSE, FALSE, FALSE, FALSE);
+							$db_address = $game->blockchain->create_or_fetch_address($address_text, true, $coin_rpc, false, false, false, false);
 						}
 					}
 					else {
-						$q = "SELECT * FROM addresses WHERE address=".$app->quote_escape($address_text).";";
-						$r = $app->run_query($q);
-						if ($r->rowCount() == 1) {
-							$db_address = $r->fetch();
-							$address_ok = true;
-						}
+						$db_address = $game->blockchain->create_or_fetch_address($address_text, true, false, false, false, false, false);
+						$address_ok = true;
 					}
 					
 					if ($address_ok) {
-						$address = $r->fetch();
-						
 						$error_message = false;
-						$transaction_id = $game->create_transaction(false, array($io_amount, $remainder_amount), $user_game, false, 'transaction', array($spend_gio['io_id']), array($db_address['address_id'], $remainder_address_id), false, $fee, $error_message);
+						$transaction_id = $game->create_transaction(false, array($io_amount, $remainder_amount), $user_game, false, 'transaction', $spend_io_ids, array($db_address['address_id'], $remainder_address['address_id']), false, $fee, $error_message);
 						
 						if ($transaction_id) {
 							$app->output_message(1, 'Great, your coins have been sent! <a target="_blank" href="/explorer/games/'.$game->db_game['url_identifier'].'/transactions/'.$transaction_id.'">View Transaction</a>', false);
