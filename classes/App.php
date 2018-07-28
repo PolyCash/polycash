@@ -999,32 +999,6 @@ class App {
 		return "Took ".(microtime(true)-$start_time)." sec to delete $delete_count unconfirmable transactions.";
 	}
 	
-	public function game_admin_row(&$thisuser, $user_game, $selected_game_id) {
-		$html = '
-		<div class="row game_row';
-		if ($user_game['game_id'] == $selected_game_id) $html .= ' boldtext';
-		$html .= '">
-			<div class="col-sm-1 game_cell">
-				'.ucwords($user_game['game_status']).'
-			</div>
-			<div class="col-sm-5 game_cell">
-				<a target="_blank" href="/wallet/'.$user_game['url_identifier'].'/">'.$user_game['name'].'</a>
-			</div>
-			<div class="col-sm-3 game_cell">
-				<a id="fetch_game_link_'.$user_game['game_id'].'" href="" onclick="manage_game('.$user_game['game_id'].', \'fetch\'); return false;">Settings</a>
-			</div>
-			<div class="col-sm-3 game_cell">';
-			$perm_to_invite = $thisuser->user_can_invite_game($user_game);
-			if ($perm_to_invite) {
-				$html .= '
-				<a href="" onclick="manage_game_invitations('.$user_game['game_id'].'); return false;">Invitations</a>';
-			}
-			$html .= '
-			</div>
-		</div>';
-		return $html;
-	}
-	
 	public function game_info_table(&$db_game) {
 		$html = "";
 		
