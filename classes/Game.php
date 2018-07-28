@@ -1328,7 +1328,7 @@ class Game {
 		
 		$total_blocks = $last_block_id;
 		
-		$total_game_blocks = $last_block_id - $this->db_game['game_starting_block'];
+		$total_game_blocks = 1 + $last_block_id - $this->db_game['game_starting_block'];
 		
 		$q = "SELECT COUNT(*) FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND block_id >= ".$this->db_game['game_starting_block']." AND block_hash IS NULL;";
 		$missingheader_blocks = $this->blockchain->app->run_query($q)->fetch()['COUNT(*)'];
@@ -2273,8 +2273,8 @@ class Game {
 	
 	public function event_next_prev_links($event) {
 		$html = "";
-		if ($event->db_event['event_index'] > 0) $html .= "<a href=\"/explorer/games/".$this->db_game['url_identifier']."/events/".$event->db_event['event_index']."\" style=\"margin-right: 30px;\">&larr; Previous Event</a>";
-		$html .= "<a href=\"/explorer/games/".$this->db_game['url_identifier']."/events/".($event->db_event['event_index']+2)."\">Next Event &rarr;</a>";
+		if ($event->db_event['event_index'] > 0) $html .= "<a href=\"/explorer/games/".$this->db_game['url_identifier']."/events/".($event->db_event['event_index']-1)."\" style=\"margin-right: 30px;\">&larr; Previous Event</a>";
+		$html .= "<a href=\"/explorer/games/".$this->db_game['url_identifier']."/events/".($event->db_event['event_index']+1)."\">Next Event &rarr;</a>";
 		return $html;
 	}
 	

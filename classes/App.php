@@ -1636,7 +1636,7 @@ class App {
 						$initial_event_text = $this->game_def_to_text($initial_game_obj['events'][$i]);
 						
 						if ($this->game_def_to_text($new_game_obj['events'][$i]) != $initial_event_text) {
-							$compare_event = $new_game_obj['events'][$i];
+							$compare_event = clone $new_game_obj['events'][$i];
 							$compare_event->outcome_index = $initial_game_obj['events'][$i]->outcome_index;
 							
 							// If the only difference is the outcome, reset from the payout block
