@@ -3,6 +3,7 @@ include('includes/connect.php');
 include('includes/get_session.php');
 
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
+else $viewer_id = false;
 
 $error_code = false;
 $message = "";
@@ -1259,13 +1260,10 @@ if ($thisuser && $game) {
 		<?php
 	}
 	else {
-		if (!empty($_REQUEST['redirect_key'])) $redirect_key = $_REQUEST['redirect_key'];
+		if (!empty($_REQUEST['redirect_key'])) $redirect_url = $app->get_redirect_by_key($_REQUEST['redirect_key']);
 		else {
-			$uri = $_SERVER['REQUEST_URI'];
-			if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "logout") $uri = "/wallet/";
-			
+			$uri = str_replace("?action=logout", "", $_SERVER['REQUEST_URI']);
 			$redirect_url = $app->get_redirect_url($uri);
-			$redirect_key = $redirect_url['redirect_key'];
 		}
 		include("includes/html_login.php");
 	}

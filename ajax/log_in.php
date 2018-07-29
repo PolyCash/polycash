@@ -13,10 +13,7 @@ else {
 	$password = $app->strong_strip_tags($_REQUEST['password']);
 	if ($password == hash("sha256", "")) $password = "";
 	
-	$redirect_key = "";
-	if (!empty($_REQUEST['redirect_key'])) $redirect_key = $_REQUEST['redirect_key'];
-	
-	if (!empty($redirect_key)) $redirect_url = $app->check_fetch_redirect_url($redirect_key);
+	if (!empty($_REQUEST['redirect_key'])) $redirect_url = $app->get_redirect_by_key($_REQUEST['redirect_key']);
 	else $redirect_url = false;
 	
 	$q = "SELECT * FROM users WHERE username=".$app->quote_escape($username).";";

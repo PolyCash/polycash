@@ -247,7 +247,7 @@ class User {
 		$this->ensure_currency_accounts();
 		
 		if (!empty($_REQUEST['redirect_key'])) {
-			$redirect_url = $this->app->check_fetch_redirect_url($_REQUEST['redirect_key']);
+			$redirect_url = $this->app->get_redirect_by_key($_REQUEST['redirect_key']);
 		}
 	}
 	

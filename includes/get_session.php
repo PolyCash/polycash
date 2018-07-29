@@ -53,6 +53,15 @@ if (strlen($session_key) > 0) {
 	}
 }
 
+if ($thisuser && !empty($_REQUEST['redirect_key'])) {
+	$redirect_url = $app->get_redirect_by_key($_REQUEST['redirect_key']);
+	
+	if ($redirect_url) {
+		header("Location: ".$redirect_url['url']);
+		die();
+	}
+}
+
 if ($thisuser && !empty($_REQUEST['game_id'])) {
 	$game_id = intval($_REQUEST['game_id']);
 	

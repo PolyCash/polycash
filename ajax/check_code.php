@@ -18,12 +18,8 @@ $r = $app->run_query($q);
 if ($r->rowCount() == 1) {
 	$card = $r->fetch();
 	
-	$redirect_url = false;
-	if (!empty($_REQUEST['redirect_key'])) {
-		$redirect_key = $_REQUEST['redirect_key'];
-		$redirect_r = $app->run_query("SELECT * FROM redirect_urls WHERE redirect_key=".$app->quote_escape($redirect_key).";");
-		if ($redirect_r->rowCount() > 0) $redirect_url = $redirect_r->fetch();
-	}
+	if (!empty($_REQUEST['redirect_key'])) $redirect_url = $app->get_redirect_by_key($_REQUEST['redirect_key']);
+	else $redirect_url = false;
 	
 	$this_issuer = $app->get_issuer_by_server_name($GLOBALS['base_url']);
 	

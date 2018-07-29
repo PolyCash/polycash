@@ -69,8 +69,8 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 				<ul class="nav navbar-nav">
 					<?php
 					if (empty($thisuser)) {
-					?><li><a href="/accounts/">Log In</a></li>
-					<?php
+						if (empty($redirect_url)) $redirect_url = $app->get_redirect_url($_SERVER['REQUEST_URI']);
+						echo '<li><a href="/accounts/?redirect_key='.$redirect_url['redirect_key'].'">Log In</a></li>';
 					}
 					if (!empty($thisuser)) { ?>
 						<li class="dropdown user user-menu">

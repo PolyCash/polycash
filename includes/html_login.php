@@ -1,10 +1,5 @@
 <?php
-if (!empty($redirect_key)) {}
-else if (!empty($_REQUEST['redirect_key'])) $redirect_key = strip_tags($_REQUEST['redirect_key']);
-else $redirect_key = FALSE;
-
-if (!empty($redirect_key)) $redirect_url = $app->check_fetch_redirect_url($redirect_key);
-else $redirect_url = false;
+if (!empty($_REQUEST['redirect_key']) && empty($redirect_url)) $redirect_url = $app->get_redirect_by_key($_REQUEST['redirect_key']);
 ?>
 <input type="hidden" id="redirect_key" value="<?php if ($redirect_url) echo $redirect_url['redirect_key']; ?>" />
 <input type="hidden" name="invite_key" value="<?php if (!empty($_REQUEST['invite_key'])) echo $app->strong_strip_tags($app->make_alphanumeric($_REQUEST['invite_key'], "")); ?>" />

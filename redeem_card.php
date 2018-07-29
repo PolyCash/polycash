@@ -8,9 +8,7 @@ $nav_tab_selected = "cards";
 $nav_subtab_selected = "redeem";
 $card = false;
 
-if (!empty($_REQUEST['redirect_key'])) $redirect_key = $_REQUEST['redirect_key'];
-
-if (!empty($redirect_key)) $redirect_url = $app->check_fetch_redirect_url($redirect_key);
+if (!empty($_REQUEST['redirect_key'])) $redirect_url = $app->get_redirect_by_key($_REQUEST['redirect_key']);
 else $redirect_url = false;
 
 include('includes/html_start.php');

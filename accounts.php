@@ -162,6 +162,9 @@ if ($thisuser && $action == "donate_to_faucet") {
 $pagetitle = "My Accounts";
 $nav_tab_selected = "accounts";
 $nav_subtab_selected = "";
+
+if (!empty($_REQUEST['redirect_key'])) $redirect_url = $app->get_redirect_by_key($_REQUEST['redirect_key']);
+
 include('includes/html_start.php');
 ?>
 <div class="container-fluid">
@@ -625,8 +628,6 @@ include('includes/html_start.php');
 		<?php
 	}
 	else {
-		$redirect_url = $app->get_redirect_url("/accounts/");
-		$redirect_key = $redirect_url['redirect_key'];
 		include("includes/html_login.php");
 	}
 	?>

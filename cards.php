@@ -942,8 +942,8 @@ include('includes/html_start.php');
 		}
 	}
 	else {
-		$redirect_url = $app->get_redirect_url("/cards/");
-		$redirect_key = $redirect_url['redirect_key'];
+		if (empty($_REQUEST['redirect_key'])) $redirect_url = $app->get_redirect_url("/cards/");
+		
 		include("includes/html_login.php");
 	}
 	?>

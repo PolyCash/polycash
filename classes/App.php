@@ -346,7 +346,7 @@ class App {
 		return $redirect_url;
 	}
 
-	public function check_fetch_redirect_url($redirect_key) {
+	public function get_redirect_by_key($redirect_key) {
 		$q = "SELECT * FROM redirect_urls WHERE redirect_key=".$this->quote_escape($redirect_key).";";
 		$r = $this->run_query($q);
 		
