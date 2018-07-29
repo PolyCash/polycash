@@ -2249,7 +2249,6 @@ function check_username() {
 			else $('#login_btn').html("Log In");
 		}
 		else if (result_obj['status_code'] == 1 || result_obj['status_code'] == 2) {
-			if (result_obj['status_code'] == 1) alert(result_obj['message']);
 			login();
 		}
 	});
