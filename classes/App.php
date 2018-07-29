@@ -2392,7 +2392,7 @@ class App {
 		if ($GLOBALS['pageview_tracking_enabled']) $q .= ", ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']);
 		if ($GLOBALS['new_games_per_user'] != "unlimited" && $GLOBALS['new_games_per_user'] > 0) $q .= ", authorized_games=".$this->quote_escape($GLOBALS['new_games_per_user']);
 		$q .= ", login_method='";
-		if (empty($password)) $q .= "email";
+		if (strpos($username, '@') === false) $q .= "email";
 		else $q .= "password";
 		$q .= "', time_created='".time()."', verify_code='".$verify_code."';";
 		$r = $this->run_query($q);
@@ -2401,9 +2401,6 @@ class App {
 		$thisuser = new User($this, $user_id);
 		
 		if ($user_id == 1) $this->set_site_constant("admin_user_id", $user_id);
-		
-		$session_key = session_id();
-		$expire_time = time()+3600*24;
 		
 		if ($GLOBALS['pageview_tracking_enabled']) {
 			$q = "SELECT * FROM viewer_connections WHERE type='viewer2user' AND from_id='".$viewer_id."' AND to_id='".$thisuser->db_user['user_id']."';";
@@ -2415,16 +2412,6 @@ class App {
 			
 			$q = "UPDATE users SET ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR'])." WHERE user_id='".$thisuser->db_user['user_id']."';";
 			$r = $this->run_query($q);
-		}
-		
-		// Send an email if the username includes
-		if ($GLOBALS['outbound_email_enabled'] && !empty($notification_email) && strpos($notification_email, '@')) {
-			$email_message = "<p>A new ".$GLOBALS['site_name_short']." web wallet has been created for <b>".$username."</b>.</p>";
-			$email_message .= "<p>Thanks for signing up!</p>";
-			$email_message .= "<p>To log in any time please visit ".$GLOBALS['base_url']."/wallet/</p>";
-			$email_message .= "<p>This message was sent to you by ".$GLOBALS['base_url']."</p>";
-			
-			$email_id = $this->mail_async($email, $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], "New account created", $email_message, "", "", "");
 		}
 		
 		return $thisuser;
