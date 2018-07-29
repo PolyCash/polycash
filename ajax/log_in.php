@@ -38,6 +38,9 @@ else {
 			if ($thisuser->db_user['login_method'] == "email") {
 				$app->send_login_link($thisuser->db_user, $redirect_url, $username);
 			}
+			else {
+				$thisuser->log_user_in($redirect_url, $viewer_id);
+			}
 			$message = $redirect_url['url'];
 			$error_code = 1;
 		}

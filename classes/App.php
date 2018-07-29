@@ -2392,8 +2392,8 @@ class App {
 		if ($GLOBALS['pageview_tracking_enabled']) $q .= ", ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']);
 		if ($GLOBALS['new_games_per_user'] != "unlimited" && $GLOBALS['new_games_per_user'] > 0) $q .= ", authorized_games=".$this->quote_escape($GLOBALS['new_games_per_user']);
 		$q .= ", login_method='";
-		if (strpos($username, '@') === false) $q .= "email";
-		else $q .= "password";
+		if (strpos($username, '@') === false) $q .= "password";
+		else $q .= "email";
 		$q .= "', time_created='".time()."', verify_code='".$verify_code."';";
 		$r = $this->run_query($q);
 		$user_id = $this->last_insert_id();
