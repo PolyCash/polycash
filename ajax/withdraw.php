@@ -22,7 +22,7 @@ if ($thisuser && $game) {
 		$blockchain_mature_balance = $game->blockchain->user_mature_balance($user_game);
 		$game_mature_balance = $thisuser->mature_balance($game, $user_game);
 		
-		$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND k.account_id='".$user_game['account_id']."' AND a.option_index IS NOT NULL ORDER BY RAND() LIMIT 1;";
+		$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND k.account_id='".$user_game['account_id']."' AND a.is_destroy=0 ORDER BY RAND() LIMIT 1;";
 		$r = $app->run_query($q);
 		$remainder_address = $r->fetch();
 		

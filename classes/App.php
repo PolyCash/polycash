@@ -928,6 +928,11 @@ class App {
 				echo '<center><h1 style="display: inline-block" title="'.$featured_game->game_description().'">'.$featured_game->db_game['name'].'</h1>';
 				if ($featured_game->db_game['short_description'] != "") echo "<p>".$featured_game->db_game['short_description']."</p>";
 				
+				echo '<p><a href="/wallet/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; ';
+				if ($faucet_io) echo 'Join now & receive '.$this->format_bignum($faucet_io['colored_amount_sum']/pow(10,$featured_game->db_game['decimal_places'])).' '.$featured_game->db_game['coin_name_plural'];
+				else echo 'Play Now';
+				echo "</a></p>\n";
+				
 				if ($featured_game->db_game['module'] == "CoinBattles") {
 					$featured_game->load_current_events();
 					$event = $featured_game->current_events[0];
@@ -944,12 +949,12 @@ class App {
 				
 				$faucet_io = $featured_game->check_faucet(false);
 				
-				echo '<br/><a href="/wallet/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-success"><i class="fas fa-play-circle"></i> &nbsp; ';
+				echo '<br/><a href="/wallet/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; ';
 				if ($faucet_io) echo 'Join now & receive '.$this->format_bignum($faucet_io['colored_amount_sum']/pow(10,$featured_game->db_game['decimal_places'])).' '.$featured_game->db_game['coin_name_plural'];
 				else echo 'Play Now';
 				echo '</a>';
-				echo ' <a href="/explorer/games/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-primary"><i class="fas fa-database"></i> &nbsp; '.ucwords($featured_game->db_game['event_type_name']).' Results</a>';
-				echo ' <a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-warning"><i class="fas fa-info-circle"></i> &nbsp; About '.$featured_game->db_game['name'].'</a>';
+				echo ' <a href="/explorer/games/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-sm btn-primary"><i class="fas fa-database"></i> &nbsp; '.ucwords($featured_game->db_game['event_type_name']).' Results</a>';
+				echo ' <a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-sm btn-warning"><i class="fas fa-info-circle"></i> &nbsp; About '.$featured_game->db_game['name'].'</a>';
 				echo '</center><br/>';
 				
 				if ($counter%(12/$cell_width) == 1) echo '</div><div class="row">';
