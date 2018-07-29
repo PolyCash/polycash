@@ -928,6 +928,8 @@ class App {
 				echo '<center><h1 style="display: inline-block" title="'.$featured_game->game_description().'">'.$featured_game->db_game['name'].'</h1>';
 				if ($featured_game->db_game['short_description'] != "") echo "<p>".$featured_game->db_game['short_description']."</p>";
 				
+				$faucet_io = $featured_game->check_faucet(false);
+				
 				echo '<p><a href="/wallet/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; ';
 				if ($faucet_io) echo 'Join now & receive '.$this->format_bignum($faucet_io['colored_amount_sum']/pow(10,$featured_game->db_game['decimal_places'])).' '.$featured_game->db_game['coin_name_plural'];
 				else echo 'Play Now';
@@ -946,8 +948,6 @@ class App {
 				echo $new_event_js;
 				echo "games[".$counter."].show_selected_event(true);\n";
 				echo '</script>';
-				
-				$faucet_io = $featured_game->check_faucet(false);
 				
 				echo '<br/><a href="/wallet/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; ';
 				if ($faucet_io) echo 'Join now & receive '.$this->format_bignum($faucet_io['colored_amount_sum']/pow(10,$featured_game->db_game['decimal_places'])).' '.$featured_game->db_game['coin_name_plural'];
