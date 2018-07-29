@@ -91,7 +91,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 								  <a href="/profile/" class="btn btn-sm btn-primary">Profile</a>
 								</div>
 								<div class="pull-right">
-								  <a href="/wallet/?action=logout" class="btn btn-sm btn-success">Sign out</a>
+								  <a href="/wallet/<?php if ($game) echo $game->db_game['url_identifier']."/"; ?>?action=logout" class="btn btn-sm btn-success">Sign out</a>
 								</div>
 							  </li>
 							</ul>
