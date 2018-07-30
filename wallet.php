@@ -760,94 +760,113 @@ if ($thisuser && $game) {
 						}
 					}
 					?>
-					<div style="overflow: auto; margin-bottom: 10px;">
-						<div style="float: right;">
+					
+					<div class="row">
+						<div class="col-md-6">
+							<div style="overflow: auto; margin-bottom: 10px;">
+								<div style="float: right;">
+									<?php
+									echo $game->event_filter_html();
+									?>
+								</div>
+							</div>
+							<div class="game_events">
+								<div id="game0_events" class="game_events_inner"></div>
+							</div>
+							
+							<script type="text/javascript">
 							<?php
-							echo $game->event_filter_html();
+							echo $new_event_js;
 							?>
+							games[0].show_selected_event(false);
+							</script>
 						</div>
-					</div>
-					<div id="game0_events" class="game_events"></div>
-					
-					<script type="text/javascript">
-					<?php
-					echo $new_event_js;
-					?>
-					games[0].show_selected_event(false);
-					</script>
-					
-					<div id="betting_mode_inflationary" style="display: none;">
-						<div id="select_input_buttons"><?php
-							echo $game->select_input_buttons($user_game);
-						?></div>
-						
-						<div class="redtext" id="compose_vote_errors" style="margin-top: 5px;"></div>
-						<div class="greentext" id="compose_vote_success" style="margin-top: 5px;"></div>
-						
-						<div id="compose_vote" style="display: none;">
-							<h3>Stake Now</h3>
-							<div class="row bordered_row" style="border: 1px solid #bbb;">
-								<div class="col-md-6 bordered_cell" id="compose_vote_inputs">
-									<b>Inputs:</b><div style="display: none; margin-left: 20px;" id="input_amount_sum"></div><div style="display: inline-block; margin-left: 20px;" id="input_vote_sum"></div><br/>
-									<p>
-										How many <?php echo $game->db_game['coin_name_plural']; ?> do you want to burn?
-										<input class="form-control input-sm" id="compose_burn_amount" value="0" />
-									</p>
-									<p id="compose_input_start_msg">Add inputs by clicking on the votes above.</p>
-								</div>
-								<div class="col-md-6 bordered_cell" id="compose_vote_outputs">
-									<b>Outputs:</b>
-									<div id="display_tx_fee"></div>
-									&nbsp;&nbsp; <a href="" onclick="add_all_options(); return false;">Add all options</a>
-									&nbsp;&nbsp; <a href="" onclick="remove_all_outputs(); return false;">Remove all options</a>
-									
-									<select class="form-control" style="margin-top: 5px;" id="select_add_output" onchange="select_add_output_changed();"></select>
+						<div class="col-md-6">
+							<div id="betting_mode_inflationary" style="display: none;">
+								<p style="float: right; clear: both;"><a href="" onclick="toggle_betting_mode('principal'); return false;">Switch to single betting mode</a></p>
+								
+								<p>
+									<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">My Bets</a>
+									&nbsp;&nbsp; <a href="" onclick="add_all_utxos_to_vote(); return false;">Add all coins</a>
+									&nbsp;&nbsp; <a href="" onclick="remove_all_utxos_from_vote(); return false;">Remove all coins</a>
+								</p>
+								<p>
+									To start a bet, click on your coins below.<br/>
+								</p>
+								
+								<div id="select_input_buttons" class="input_buttons_holder"><?php
+									echo $game->select_input_buttons($user_game);
+								?></div>
+								
+								<div class="redtext" id="compose_vote_errors" style="margin-top: 5px;"></div>
+								<div class="greentext" id="compose_vote_success" style="margin-top: 5px;"></div>
+								
+								<div id="compose_vote" style="display: none;">
+									<h3>Stake Now</h3>
+									<div class="row bordered_row" style="border: 1px solid #bbb;">
+										<div class="col-md-4 bordered_cell" id="compose_vote_inputs">
+											<b>Inputs:</b><div style="display: none; margin-left: 20px;" id="input_amount_sum"></div><div style="display: inline-block; margin-left: 20px;" id="input_vote_sum"></div><br/>
+											<p>
+												How many <?php echo $game->db_game['coin_name_plural']; ?> do you want to spend?
+												<input class="form-control input-sm" id="compose_burn_amount" value="0" />
+											</p>
+											<p id="compose_input_start_msg"></p>
+										</div>
+										<div class="col-md-8 bordered_cell" id="compose_vote_outputs">
+											<b>Outputs:</b>
+											<div id="display_tx_fee"></div>
+											&nbsp;&nbsp; <a href="" onclick="add_all_options(); return false;">Add all options</a>
+											&nbsp;&nbsp; <a href="" onclick="remove_all_outputs(); return false;">Remove all options</a>
+											
+											<select class="form-control" style="margin-top: 5px;" id="select_add_output" onchange="select_add_output_changed();"></select>
+										</div>
+									</div>
+									<button class="btn btn-success" id="confirm_compose_vote_btn" style="margin-top: 5px; margin-left: 5px;" onclick="confirm_compose_vote();"><i class="fas fa-check-circle"></i> &nbsp; Confirm & Stake</button>
 								</div>
 							</div>
-							<button class="btn btn-success" id="confirm_compose_vote_btn" style="margin-top: 5px; margin-left: 5px;" onclick="confirm_compose_vote();"><i class="fas fa-check-circle"></i> &nbsp; Confirm & Stake</button>
+							<div id="betting_mode_principal" style="display: none;">
+								<p style="float: right;"><a href="" onclick="toggle_betting_mode('inflationary'); return false;">Switch to multiple betting mode</a></p>
+								
+								<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">My Bets</a>
+								
+								<form method="get" onsubmit="submit_principal_bet(); return false;" style="clear: both;">
+									<div class="form-group">
+										<label for="principal_amount">How much do you want to bet?</label>
+										<div class="row">
+											<div class="col-sm-6">
+												<input class="form-control" type="text" id="principal_amount" name="principal_amount" style="text-align: right;" />
+											</div>
+											<div class="col-sm-6 form-control-static">
+												<?php echo $game->db_game['coin_name_plural']; ?>
+											</div>
+										</div>
+									</div>
+									<div class="form-group">
+										<label for="principal_option_id">Which option do you want to bet for?</label>
+										<div class="row">
+											<div class="col-sm-6">
+												<select class="form-control" id="principal_option_id" name="principal_option_id"></select>
+											</div>
+										</div>
+									</div>
+									<div class="form-group">
+										<label for="principal_fee">Transaction fee:</label>
+										<div class="row">
+											<div class="col-sm-6">
+												<input class="form-control" type="text" id="principal_fee" name="principal_fee" style="text-align: right;" value="<?php echo rtrim($user_strategy['transaction_fee'], "0"); ?>" />
+											</div>
+											<div class="col-sm-6 form-control-static">
+												<?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?>
+											</div>
+										</div>
+									</div>
+									<div class="form-group">
+										<button class="btn btn-success" id="principal_bet_btn"><i class="fas fa-check-circle"></i> &nbsp; Confirm Bet</button>
+										<div id="principal_bet_message" class="greentext" style="margin-top: 10px;"></div>
+									</div>
+								</form>
+							</div>
 						</div>
-					</div>
-					<div id="betting_mode_principal" style="display: none;">
-						<p>
-							Principal Betting
-							&nbsp;&nbsp; <a href="" onclick="toggle_betting_mode('inflationary'); return false;">Switch to inflationary betting</a>
-						</p>
-						<form method="get" onsubmit="submit_principal_bet(); return false;">
-							<div class="form-group">
-								<label for="principal_amount">How much do you want to bet?</label>
-								<div class="row">
-									<div class="col-sm-6">
-										<input class="form-control" type="text" id="principal_amount" name="principal_amount" style="text-align: right;" />
-									</div>
-									<div class="col-sm-6 form-control-static">
-										<?php echo $game->db_game['coin_name_plural']; ?>
-									</div>
-								</div>
-							</div>
-							<div class="form-group">
-								<label for="principal_option_id">Which option do you want to bet for?</label>
-								<div class="row">
-									<div class="col-sm-6">
-										<select class="form-control" id="principal_option_id" name="principal_option_id"></select>
-									</div>
-								</div>
-							</div>
-							<div class="form-group">
-								<label for="principal_fee">Transaction fee:</label>
-								<div class="row">
-									<div class="col-sm-6">
-										<input class="form-control" type="text" id="principal_fee" name="principal_fee" style="text-align: right;" value="<?php echo rtrim($user_strategy['transaction_fee'], "0"); ?>" />
-									</div>
-									<div class="col-sm-6 form-control-static">
-										<?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?>
-									</div>
-								</div>
-							</div>
-							<div class="form-group">
-								<button class="btn btn-success" id="principal_bet_btn"><i class="fas fa-check-circle"></i> &nbsp; Confirm Bet</button>
-								<div id="principal_bet_message" class="greentext" style="margin-top: 10px;"></div>
-							</div>
-						</form>
 					</div>
 				</div>
 			</div>

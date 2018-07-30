@@ -1736,13 +1736,6 @@ class Game {
 			$sum_votes = $round_stats[0];
 			$option_id2rank = $round_stats[3];
 			
-			if ($event->db_event['display_mode'] == "default") {
-				$holder_class = "game_event_box";
-			}
-			else {
-				$holder_class = "game_event_slim";
-			}
-			
 			$js .= '
 			games['.$game_index.'].events['.$i.'] = new Event(games['.$game_index.'], '.$i.', '.$event->db_event['event_id'].', '.$event->db_event['event_index'].', '.$event->db_event['num_voting_options'].', "'.$event->db_event['vote_effectiveness_function'].'", "'.$event->db_event['effectiveness_param1'].'", "'.$event->db_event['option_block_rule'].'", '.$this->blockchain->app->quote_escape($event->db_event['event_name']).');'."\n";
 			
@@ -1768,20 +1761,7 @@ class Game {
 			games['.$game_index.'].events['.$i.'].option_selected(0);
 			games['.$game_index.'].events['.$i.'].refresh_time_estimate();'."\n";
 			
-			if ($this->db_game['view_mode'] == "simple") {
-				$js .= 'event_html += "<div id=\'game'.$game_index.'_event'.$i.'\' style=\'display: none;\'><div id=\'game'.$game_index.'_event'.$i.'_current_round_table\'></div><div id=\'game'.$game_index.'_event'.$i.'_my_current_votes\'></div><div id=\'game'.$game_index.'_event'.$i.'_event_nav\'></div></div>";'."\n";
-			}
-			else {
-				if ($i == 0) $js .= 'event_html += "<div class=\'row\'>";';
-				$js .= 'event_html += "<div class=\'col-sm-'.$event_bootstrap_cols.'\'>";';
-				$js .= 'event_html += "<div id=\'game'.$game_index.'_event'.$i.'\' class=\''.$holder_class.'\'><div id=\'game'.$game_index.'_event'.$i.'_current_round_table\'></div><div id=\'game'.$game_index.'_event'.$i.'_my_current_votes\'></div></div>";'."\n";
-				$js .= 'event_html += "</div>";';
-				if ($i%2 == 1 || $i == count($these_events)-1) {
-					$js .= 'event_html += "</div>';
-					if ($i < count($these_events)-1) $js .= '<div class=\'row\'>';
-					$js .= '";'."\n";
-				}
-			}
+			$js .= 'event_html += "<div id=\'game'.$game_index.'_event'.$i.'\' class=\'game_event_inner\'><div id=\'game'.$game_index.'_event'.$i.'_current_round_table\'></div><div id=\'game'.$game_index.'_event'.$i.'_my_current_votes\'></div></div>";'."\n";
 		}
 		if ($event_ids != "") $event_ids = substr($event_ids, 0, strlen($event_ids)-1);
 
@@ -1827,12 +1807,7 @@ class Game {
 		
 		$js = "chain_ios.length = 0;\n";
 		$html = "<p>";
-		if ($io_r->rowCount() > 0) {
-			$html .= "Click on your coins to start a staking transaction.";
-			$html .= " &nbsp;&nbsp; <a href=\"\" onclick=\"add_all_utxos_to_vote(); return false;\">Add all coins</a>";
-			$html .= " &nbsp;&nbsp; <a href=\"\" onclick=\"remove_all_utxos_from_vote(); return false;\">Remove all coins</a>";
-		}
-		else {
+		if ($io_r->rowCount() == 0) {
 			$html .= "You need ".$this->db_game['coin_name_plural']." to bet. To deposit ".$this->db_game['coin_name_plural'].", visit <a href=\"/accounts/?account_id=".$user_game['account_id']."\">your accounts page</a> to see a list of your addresses.";
 		}
 		$html .= "</p>\n";

@@ -214,9 +214,6 @@ and (max-device-width : 480px) {
 .my_votes_header {
 	font-weight: bold;
 }
-.round_table {
-	text-align: left;
-}
 #nav_logo {
 	display: inline-block;
 	margin-top: -6px;
@@ -362,26 +359,32 @@ a.selected {
 	padding-right: 0 ! important;
 }
 .game_event_box {
-	border: 1px solid rgba(0,0,0,0.2);
-	margin: 5px 0px;
-	border-radius: 6px;
-	padding: 0px 10px;
 }
-.game_event_slim {
-	padding: 0px 6px;
+.game_event_inner {
+	padding: 0px 8px;
 	margin: 0px;
 	margin-bottom: -1px;
-	border: 1px solid #aaa;
 	background-color: #fff;
+	border: 1px solid #aaa;
 }
 .game_events {
-	margin-bottom: 15px;
-	padding: 10px;
-	height: 350px;
+	margin: 0px;
+	padding: 0px;
+	height: 700px;
 	overflow-y: scroll;
 	overflow-x: hidden;
-	border: 1px solid #888;
+	border: 1px solid #aaa;
+	border-left: 0px;
+	border-right: 0px;
 	background-color: #f8f8f8;
+}
+.game_events_inner {
+	overflow: hidden;
+	margin: 0px;
+	padding: 0px;
+}
+.round_table {
+	text-align: left;
 }
 .select_utxo_image {
 	border-radius: 50%;
@@ -519,4 +522,10 @@ a.selected {
 .card_small_sel {
 	background-color: #fff ! important;
 	border: 1px solid black;
+}
+.input_buttons_holder {
+	max-height: 200px;
+	overflow-x: hidden;
+	overflow-y: auto;
+	clear: both;
 }
