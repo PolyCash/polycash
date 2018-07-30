@@ -307,7 +307,7 @@ class Event {
 			<div class="vote_option_box_container">';
 			
 			if ($this->game->db_game['view_mode'] == "simple") {
-				$onclick_html = 'if (!transaction_in_progress) {add_utxo_to_vote(utxo_spend_offset, true, false); games['.$game_instance_id.'].add_option_to_vote('.$game_event_index.', '.$round_stats[$i]['option_id'].', \''.$round_stats[$i]['name'].'\'); confirm_compose_vote(); setTimeout(\'games[0].show_next_event();\', 1200);}';
+				$onclick_html = 'if (!transaction_in_progress) {add_utxo_to_vote(utxo_spend_offset); games['.$game_instance_id.'].add_option_to_vote('.$game_event_index.', '.$round_stats[$i]['option_id'].', \''.$round_stats[$i]['name'].'\'); confirm_compose_vote(); setTimeout(\'games[0].show_next_event();\', 1200);}';
 				$html .= '<img id="option'.$round_stats[$i]['option_id'].'_image" src="" style="cursor: pointer; max-width: 400px; max-height: 400px; border: 1px solid black; margin-bottom: 5px;" onclick="'.$onclick_html.'" />';
 			}
 			else $onclick_html = 'games['.$game_instance_id.'].events['.$game_event_index.'].option_selected('.$i.'); games['.$game_instance_id.'].events['.$game_event_index.'].start_vote('.$round_stats[$i]['option_id'].');';
@@ -559,42 +559,6 @@ class Event {
 			</div>';
 		}
 		
-		return $html;
-	}
-	
-	public function initialize_vote_option_details($option_id2rank, $sum_votes, $user_id, $game_instance_id, $game_event_index) {
-		$html = "";
-		$option_q = "SELECT * FROM options WHERE event_id='".$this->db_event['event_id']."' ORDER BY event_option_index ASC;";
-		$option_r = $this->game->blockchain->app->run_query($option_q);
-		
-		$last_block_id = $this->game->last_block_id();
-		$current_round = $this->game->block_to_round($last_block_id+1);
-		
-		while ($option = $option_r->fetch()) {
-			$rank = $option_id2rank[$option['option_id']]+1;
-			$confirmed_votes = $option['votes'];
-			$unconfirmed_votes = $option['unconfirmed_votes'];
-			
-			$html .= '
-			<div style="display: none;" class="modal fade" id="game'.$game_instance_id.'_event'.$game_event_index.'_vote_confirm_'.$option['option_id'].'">
-				<div class="modal-dialog">
-					<div class="modal-content">
-						<div class="modal-body">
-							<h2>Vote for '.$option['name'].'</h2>
-							<div id="game'.$game_instance_id.'_event'.$game_event_index.'_vote_option_details_'.$option['option_id'].'">
-								'.$this->game->blockchain->app->vote_option_details($option, $rank, $confirmed_votes, $unconfirmed_votes, $sum_votes).'
-							</div>
-							<div id="game'.$game_instance_id.'_event'.$game_event_index.'_vote_details_'.$option['option_id'].'"></div>
-							<div class="redtext" id="game'.$game_instance_id.'_event'.$game_event_index.'_vote_error_'.$option['option_id'].'"></div>
-						</div>
-						<div class="modal-footer">
-							<button class="btn btn-primary" id="game'.$game_instance_id.'_event'.$game_event_index.'_vote_confirm_btn_'.$option['option_id'].'" onclick="games['.$game_instance_id.'].add_option_to_vote('.$game_event_index.', '.$option['option_id'].', \''.$option['name'].'\');">Add '.$option['name'].' to my vote</button>
-							<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-						</div>
-					</div>
-				</div>
-			</div>';
-		}
 		return $html;
 	}
 	

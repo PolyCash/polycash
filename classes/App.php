@@ -758,33 +758,6 @@ class App {
 		return $r->fetch();
 	}
 	
-	public function vote_details_general($mature_balance) {
-		return "";
-		/*$html = '
-		<div class="row">
-			<div class="col-xs-4">Your balance:</div>
-			<div class="col-xs-8 greentext">'.number_format(floor($mature_balance/pow(10,5))/1000, 2).' EMP</div>
-		</div>	';
-		return $html;*/
-	}
-
-	public function vote_option_details($option, $rank, $confirmed_votes, $unconfirmed_votes, $sum_votes) {
-		$html = '
-		<div class="row">
-			<div class="col-xs-4">Current&nbsp;rank:</div>
-			<div class="col-xs-8">'.$this->to_ranktext($rank).'</div>
-		</div>
-		<div class="row">
-			<div class="col-xs-4">Confirmed Votes:</div>
-			<div class="col-xs-8">'.$this->format_bignum($confirmed_votes).' votes ('.(empty($sum_votes)? 0 : (ceil(100*100*$confirmed_votes/$sum_votes)/100)).'%)</div>
-		</div>
-		<div class="row">
-			<div class="col-xs-4">Unconfirmed Votes:</div>
-			<div class="col-xs-8">'.$this->format_bignum($unconfirmed_votes).' votes ('.(empty($sum_votes)? 0 : (ceil(100*100*$unconfirmed_votes/$sum_votes)/100)).'%)</div>
-		</div>';
-		return $html;
-	}
-	
 	public function new_address_key($currency_id, &$account) {
 		$q = "SELECT * FROM currencies WHERE currency_id='".$currency_id."';";
 		$r = $this->run_query($q);
@@ -919,6 +892,7 @@ class App {
 					echo ', "'.$db_game['view_mode'].'"';
 					echo ', 0';
 					echo ', false';
+					echo ', "'.$featured_game->db_game['default_betting_mode'].'"';
 				?>));
 				
 				games[<?php echo $counter; ?>].game_loop_event();
@@ -943,7 +917,7 @@ class App {
 					echo '<div id="game'.$counter.'_chart_js"><script type="text/javascript">'.$js.'</script></div>'."\n";
 				}
 				
-				echo '<div id="game'.$counter.'_events"></div>';
+				echo '<div id="game'.$counter.'_events" class="game_events"></div>';
 				echo '<script type="text/javascript" id="game'.$counter.'_new_event_js">';
 				echo $new_event_js;
 				echo "games[".$counter."].show_selected_event(true);\n";

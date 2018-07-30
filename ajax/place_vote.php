@@ -3,125 +3,85 @@ include("../includes/connect.php");
 include("../includes/get_session.php");
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
-$api_output = false;
-
-$noinfo_fail_obj = (object) [
-	'status_code' => 1,
-	'message' => "Invalid URL"
-];
-
 if ($thisuser && $game) {
 	$user_strategy = false;
 	$user_game = $thisuser->ensure_user_in_game($game, false);
 	$success = $game->get_user_strategy($user_game, $user_strategy);
 	
 	if (!$success) {
-		$api_output = (object)[
-			'status_code' => 2,
-			'message' => "Error, the transaction fee amount could not be determined."
-		];
-		echo json_encode($api_output);
+		$app->output_message(2, "Error, the transaction fee amount could not be determined.", false);
 		die();
 	}
 	
-	$account_value = $game->account_balance($user_game['account_id']);
-	$immature_balance = $thisuser->immature_balance($game, $user_game);
-	$mature_balance = $thisuser->mature_balance($game, $user_game);
+	$fee = $user_strategy['transaction_fee']*pow(10, $game->db_game['decimal_places']);
+	$burn_amount = (int) $_REQUEST['burn_amount'];
 	
-	$io_ids_csv = $_REQUEST['io_ids'];
-	$io_ids = explode(",", $io_ids_csv);
+	$tx_amounts = array();
+	$address_ids = array();
 	
-	$option_ids_csv = $_REQUEST['option_ids'];
-	$option_ids = explode(",", $option_ids_csv);
-	$int_option_ids = [];
-	for ($i=0; $i<count($option_ids); $i++) {
-		$int_option_ids[$i] = (int) $option_ids[$i];
-	}
-	$option_ids = $int_option_ids;
-	
-	$amounts_csv = $_REQUEST['amounts'];
-	$amounts = explode(",", $amounts_csv);
-	
-	if (count($io_ids) > 0 && count($amounts) > 0) {}
-	else {
-		$api_output = $noinfo_fail_obj;
-		echo json_encode($api_output);
-		die();
+	if ($burn_amount > 0) {
+		$burn_address = $app->fetch_address_in_account($user_game['account_id'], 0);
+		
+		array_push($tx_amounts, $burn_amount);
+		array_push($address_ids, $burn_address['address_id']);
 	}
 	
-	for ($i=0; $i<count($option_ids); $i++) {
-		$int_option_ids[$i] = (int) $option_ids[$i];
-	}
+	$io_ids = explode(",", $_REQUEST['io_ids']);
+	$amounts = explode(",", $_REQUEST['amounts']);
+	$option_ids = explode(",", $_REQUEST['option_ids']);
 	
 	if (count($amounts) != count($option_ids)) {
-		$api_output = (object)[
-			'status_code' => 2,
-			'message' => "Option IDs and amounts do not match"
-		];
-		echo json_encode($api_output);
+		$app->output_message(3, "Option IDs and amounts do not match", false);
 		die();
 	}
 	
-	$io_mature_balance = 0;
+	$amount_sum = 0;
+	for ($i=0; $i<count($amounts); $i++) {
+		if ($amounts[$i] < 0) {
+			$app->output_message(4, "Invalid amount specified.", false);
+			die();
+		}
+		$amount_sum += (int) $amounts[$i];
+		array_push($tx_amounts, $amounts[$i]);
+	}
 	
-	for ($i=0; $i<count($io_ids); $i++) {
-		$io_id = (int) $io_ids[$i];
+	$io_q = "SELECT COUNT(*), SUM(amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.io_id IN (".implode(",", $io_ids).") AND k.account_id='".$user_game['account_id']."';";
+	$io_r = $app->run_query($io_q);
+	$io_info = $io_r->fetch();
+	
+	if (count($io_ids) == 0 || count($amounts) == 0 || $io_info['COUNT(*)'] != count($io_ids)) {
+		$app->output_message(5, "Error: invalid amounts or IO IDs.", false);
+		die();
+	}
+	
+	if ($io_info['SUM(amount)'] != $fee+$burn_amount+$amount_sum) {
+		$app->output_message(6, "Error: amounts don't add up correctly: ".$io_info['SUM(amount)']." vs ".($fee+$burn_amount+$amount_sum), false);
+		die();
+	}
+	
+	for ($i=0; $i<count($option_ids); $i++) {
+		$option_q = "SELECT * FROM options op JOIN events ev ON op.event_id=ev.event_id WHERE op.option_id='".$option_ids[$i]."' AND ev.game_id='".$game->db_game['game_id']."';";
+		$option_r = $app->run_query($option_q);
 		
-		if ($io_id > 0) {
-			$qq = "SELECT * FROM transaction_ios WHERE io_id='".$io_id."';";
-			$rr = $app->run_query($qq);
+		if ($option_r->rowCount() > 0) {
+			$db_option = $option_r->fetch();
+			$db_address = $app->fetch_address_in_account($user_game['account_id'], $db_option['option_index']);
 			
-			if ($rr->rowCount() == 1) {
-				$io = $rr->fetch();
-				
-				$io_mature_balance += $io['amount'];
+			if ($db_address) {
+				array_push($address_ids, $db_address['address_id']);
 			}
 			else {
-				$api_output = $noinfo_fail_obj;
-				echo json_encode($api_output);
+				$app->output_message(7, "Error: no address for option #".$option_ids[$i], false);
 				die();
 			}
 		}
 		else {
-			$api_output = $noinfo_fail_obj;
-			echo json_encode($api_output);
+			$app->output_message(8, "Error: you supplied an invalid option ID.", false);
 			die();
 		}
 	}
 	
-	$amount_sum = 0;
-	
-	for ($i=0; $i<count($option_ids); $i++) {
-		$amount = $amounts[$i];
-		if ($amount > 0) {
-			$amounts[$i] = $amount;
-			$amount_sum += $amount;
-		}
-		else {
-			$api_output = (object)[
-				'status_code' => 5,
-				'message' => "An invalid amount was included."
-			];
-			echo json_encode($api_output);
-			die();
-		}
-	}
-	
-	$fee_amount = $user_strategy['transaction_fee']*pow(10, $game->blockchain->db_blockchain['decimal_places']);
-	
-	$real_amounts = [];
-	$real_amount_sum = 0;
-	for ($i=0; $i<count($option_ids)-1; $i++) {
-		$real_amount = floor(($io_mature_balance-$fee_amount)*$amounts[$i]/$amount_sum);
-		$real_amounts[$i] = $real_amount;
-		$real_amount_sum += $real_amount;
-	}
-	$real_amounts[count($option_ids)-1] = $io_mature_balance - $fee_amount - $real_amount_sum;
-	
-	$last_block_id = $game->blockchain->last_block_id();
-	
-	$error_message = false;
-	$transaction_id = $game->create_transaction($option_ids, $real_amounts, $user_game, false, 'transaction', $io_ids, false, false, $fee_amount, $error_message);
+	$transaction_id = $game->blockchain->create_transaction("transaction", $tx_amounts, false, $io_ids, $address_ids, $fee);
 	
 	if ($transaction_id) {
 		$game->update_option_votes();
@@ -130,24 +90,13 @@ if ($thisuser && $game) {
 		$r = $app->run_query($q);
 		$transaction = $r->fetch();
 		
-		$api_output = (object)[
-			'status_code' => 0,
-			'message' => "Your voting transaction has been submitted! <a href=\"/explorer/games/".$game->db_game['url_identifier']."/transactions/".$transaction['tx_hash']."\">Details</a>"
-		];
+		$app->output_message(1, "Your transaction has been submitted! <a href=\"/explorer/games/".$game->db_game['url_identifier']."/transactions/".$transaction['tx_hash']."\">Details</a>", false);
 	}
 	else {
-		$api_output = (object)[
-			'status_code' => 7,
-			'message' => $error_message
-		];
+		$app->output_message(9, "There was an error creating the transaction.", false);
 	}
 }
 else {
-	$api_output = (object)[
-		'status_code' => 9,
-		'message' => 'Please <a href=\"/wallet/\">log in</a>.'
-	];
+	$app->output_message(10, "Please log in.", false);
 }
-
-echo json_encode($api_output);
 ?>

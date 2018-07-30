@@ -199,9 +199,6 @@ else $exchange_rate = 0;
 		}
 		else $mature_balance = 0;
 		?>
-		<div style="display: none;" id="game0_vote_details_general">
-			<?php echo $app->vote_details_general($mature_balance); ?>
-		</div>
 	</div>
 </div>
 <?php
@@ -238,6 +235,7 @@ games.push(new Game(<?php
 	if ($user_game) echo $user_game['event_index'];
 	else echo "0";
 	echo ', false';
+	echo ', "'.$game->db_game['default_betting_mode'].'"';
 ?>));
 
 games[0].game_loop_event();

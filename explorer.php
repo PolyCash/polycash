@@ -1398,7 +1398,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						}
 						
 						$num_resolved = $num_wins+$num_losses;
-						$win_rate = $num_wins/($num_wins+$num_losses);
+						if ($num_resolved > 0) $win_rate = $num_wins/$num_resolved;
+						else $win_rate = 0;
 						
 						echo '<div class="panel-body">';
 						?>
@@ -1427,13 +1428,17 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						if ($num_unresolved > 0) echo "\n<br/>You have ".number_format($num_unresolved)." pending bets totalling <font class=\"greentext\">".$app->format_bignum($pending_stake)."</font> ".$game->db_game['coin_name_plural'];
 						echo "</p>\n";
 						
-						echo "<p><b>Resolved Bets</b></p>\n";
-						echo $resolved_bets_table;
-						echo "<br/>\n";
+						if ($num_resolved > 0) {
+							echo "<p><b>Resolved Bets</b></p>\n";
+							echo $resolved_bets_table;
+							echo "<br/>\n";
+						}
 						
-						echo "<p><b>Unresolved Bets</b></p>\n";
-						echo $unresolved_bets_table;
-						echo "<br/>\n";
+						if ($num_unresolved > 0) {
+							echo "<p><b>Unresolved Bets</b></p>\n";
+							echo $unresolved_bets_table;
+							echo "<br/>\n";
+						}
 						
 						echo "</div>\n";
 					}

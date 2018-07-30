@@ -55,13 +55,18 @@ var option = function(parent_event, option_index, option_id, db_option_index, na
 	this.votes = 0;
 	this.unconfirmed_votes = 0;
 	this.hypothetical_votes = 0;
-	this.score = 0;
-	this.unconfirmed_score = 0;
-	this.hypothetical_score = 0;
-	this.destroy_score = 0;
-	this.unconfirmed_destroy_score = 0;
-	this.effective_destroy_score = 0;
-	this.unconfirmed_effective_destroy_score = 0;
+	
+	this.effective_votes = 0;
+	this.unconfirmed_effective_votes = 0;
+	this.hypothetical_effective_votes = 0;
+	
+	this.burn_amount = 0;
+	this.unconfirmed_burn_amount = 0;
+	this.hypothetical_burn_amount = 0;
+	
+	this.effective_burn_amount = 0;
+	this.unconfirmed_effective_burn_amount = 0;
+	this.hypothetical_effective_burn_amount = 0;
 	
 	this.parent_event.option_id2option_index[option_id] = option_index;
 	this.parent_event.game.option_has_votingaddr[option_id] = has_votingaddr;
@@ -69,21 +74,43 @@ var option = function(parent_event, option_index, option_id, db_option_index, na
 	option_id2option_index[option_id] = option_index;
 	option_index2option_id[option_index] = option_id;
 };
-var mature_io = function(io_index, game_io_id, amount, create_block_id, io_id) {
-	this.io_index = io_index;
-	this.game_io_id = game_io_id;
+var chain_io = function(chain_io_index, io_id, amount, create_block_id) {
+	this.chain_io_index = chain_io_index;
 	this.io_id = io_id;
 	this.amount = amount;
 	this.create_block_id = create_block_id;
+	this.game_ios = new Array();
+	
+	this.votes_at_block = function(block_id) {
+		var votes = 0;
+		
+		for (var i=0; i<this.game_ios.length; i++) {
+			if (games[0].payout_weight == "coin") votes += this.game_ios[i].amount;
+			else if (games[0].payout_weight == "coin_round") votes += (games[0].block_to_round(block_id) - games[0].block_to_round(this.game_ios[i].create_block_id))*this.game_ios[i].amount;
+			else votes += (block_id - this.game_ios[i].create_block_id)*this.game_ios[i].amount;
+		}
+		return votes;
+	};
+	
+	this.game_amount_sum = function() {
+		var amount_sum = 0;
+		
+		for (var i=0; i<this.game_ios.length; i++) {
+			amount_sum += this.game_ios[i].amount;
+		}
+		return amount_sum;
+	};
 };
-var vote_input = function(input_index, game_io_id, amount, create_block_id, io_id) {
+var game_io = function(game_io_id, amount, create_block_id) {
+	this.game_io_id = game_io_id;
+	this.amount = amount;
+	this.create_block_id = create_block_id;
+};
+var vote_input = function(input_index, ref_io) {
 	this.input_index = input_index;
-	this.game_io_id = game_io_id;
-	this.io_id = io_id;
-	this.amount = amount;
-	this.create_block_id = create_block_id;
+	this.ref_io = ref_io;
 };
-var vote_option = function(option_index, name, option_id, event_index) {
+var vote_output = function(option_index, name, option_id, event_index) {
 	this.option_index = option_index;
 	this.name = name;
 	this.option_id = option_id;
@@ -342,23 +369,23 @@ function attempt_withdrawal() {
 	else alert("Already sending");
 }
 function input_amount_sums() {
+	var io_sum = 0;
 	var amount_sum = 0;
 	var vote_sum = 0;
+	
 	for (var i=0; i<vote_inputs.length; i++) {
-		amount_sum += vote_inputs[i].amount;
-		if (games[0].payout_weight == "coin_block") {
-			vote_sum += (1 + games[0].last_block_id - vote_inputs[i].create_block_id)*vote_inputs[i].amount;
-		}
-		else if (games[0].payout_weight == "coin_round") {
-			vote_sum += (games[0].block_to_round(1+games[0].last_block_id) - games[0].block_to_round(vote_inputs[i].create_block_id))*vote_inputs[i].amount;
-		}
+		io_sum += vote_inputs[i].ref_io.amount;
+		vote_sum += vote_inputs[i].ref_io.votes_at_block(games[0].last_block_id+1);
+		amount_sum += vote_inputs[i].ref_io.game_amount_sum();
 	}
-	return [amount_sum, vote_sum];
+	return [io_sum, amount_sum, vote_sum];
 }
 function set_input_amount_sums() {
 	var amount_sums = input_amount_sums();
+	var burn_amount = 0;
+	if ($('#compose_burn_amount').val() != "") burn_amount += parseFloat($('#compose_burn_amount').val())*Math.pow(10,games[0].decimal_places);
 	
-	var input_disp = format_coins(amount_sums[0]/Math.pow(10,games[0].decimal_places));
+	var input_disp = format_coins(amount_sums[1]/Math.pow(10,games[0].decimal_places));
 	if (input_disp == '1') input_disp += ' '+games[0].coin_name;
 	else input_disp += ' '+games[0].coin_name_plural;
 	$('#input_amount_sum').html(input_disp);
@@ -366,8 +393,8 @@ function set_input_amount_sums() {
 	if (games[0].payout_weight == 'coin') $('#input_amount_sum').show();
 	else {
 		if (games[0].inflation == "exponential") {
-			var coin_equiv = Math.round(amount_sums[1]*games[0].coins_per_vote);
-			var coin_disp = format_coins(coin_equiv/Math.pow(10,games[0].decimal_places));
+			var coin_equiv = Math.round(amount_sums[2]*games[0].coins_per_vote);
+			var coin_disp = format_coins((coin_equiv+burn_amount)/Math.pow(10,games[0].decimal_places));
 			
 			var render_text = coin_disp+" ";
 			if (coin_disp == '1') render_text += games[0].coin_name;
@@ -375,32 +402,30 @@ function set_input_amount_sums() {
 			$('#input_vote_sum').html(render_text);
 		}
 		else {
-			$('#input_vote_sum').html(format_coins(amount_sums[1]/Math.pow(10,games[0].decimal_places))+" votes");
+			$('#input_vote_sum').html(format_coins(amount_sums[2]/Math.pow(10,games[0].decimal_places))+" votes");
 		}
 	}
 }
-function render_selected_utxo(index_id) {
+function render_vote_input(index_id) {
 	if (games[0].logo_image_url != "") {
 		return "";
 	}
 	else {
-		var score_qty = 0;
-		if (games[0].payout_weight == "coin") score_qty = Math.floor(vote_inputs[index_id].amount);
-		else if (games[0].payout_weight == "coin_round") score_qty = (games[0].block_to_round(1+games[0].last_block_id) - games[0].block_to_round(vote_inputs[index_id].create_block_id))*vote_inputs[index_id].amount;
-		else score_qty = (1 + games[0].last_block_id - vote_inputs[index_id].create_block_id)*vote_inputs[index_id].amount;
-		
+		var votes = vote_inputs[index_id].ref_io.votes_at_block(games[0].last_block_id);
 		var render_text;
 		
 		if (games[0].inflation == "exponential") {
-			var coin_equiv = Math.round(score_qty*games[0].coins_per_vote);
-			var coin_disp = format_coins(coin_equiv/Math.pow(10,games[0].decimal_places));
+			var coin_equiv = Math.round(votes*games[0].coins_per_vote);
+			var disp_coins = coin_equiv;
+			if (games[0].default_betting_mode == "principal") disp_coins += vote_inputs[index_id].ref_io.game_amount_sum();
+			var coin_disp = format_coins(disp_coins/Math.pow(10,games[0].decimal_places));
 			
 			render_text = coin_disp+" ";
 			if (coin_disp == '1') render_text += games[0].coin_name;
 			else render_text += games[0].coin_name_plural;
 		}
 		else {
-			render_text = format_coins(score_qty/Math.pow(10,games[0].decimal_places))+' ';
+			render_text = format_coins(votes/Math.pow(10,games[0].decimal_places))+' ';
 			if (games[0].payout_weight == "coin") {
 				if (render_text == '1') render_text += games[0].coin_name;
 				else render_text += games[0].coin_name_plural;
@@ -416,20 +441,21 @@ function render_option_output(index_id, name) {
 	html += '<div><div id="output_threshold_'+index_id+'" class="noUiSlider"></div></div>';
 	return html;
 }
-function add_utxo_to_vote(mature_io_index, add_matching_utxo_ios, skip_refresh) {
-	var mature_io = mature_ios[mature_io_index];
+function add_utxo_to_vote(io_index) {
 	var index_id = vote_inputs.length;
 
 	var already_in = false;
 	for (var i=0; i<vote_inputs.length; i++) {
-		if (vote_inputs[i].game_io_id == mature_io.game_io_id) already_in = true;
+		if (vote_inputs[i].io_id == chain_ios[io_index].io_id) already_in = true;
 	}
 	if (!already_in) {
-		vote_inputs.push(new vote_input(index_id, mature_io.game_io_id, mature_io.amount, mature_io.create_block_id, mature_io.io_id));
-		$('#select_utxo_'+mature_io.game_io_id).hide('fast');
-		var select_btn_html = '<div id="selected_utxo_'+index_id+'" onclick="remove_utxo_from_vote('+index_id+', true);" class="select_utxo';
+		vote_inputs.push(new vote_input(index_id, chain_ios[io_index]));
+		
+		$('#select_utxo_'+chain_ios[io_index].io_id).hide('fast');
+		
+		var select_btn_html = '<div id="selected_utxo_'+index_id+'" onclick="remove_utxo_from_vote('+index_id+');" class="select_utxo';
 		if (games[0].logo_image_url != "") select_btn_html += ' select_utxo_image';
-		select_btn_html += ' btn btn-primary btn-sm">'+render_selected_utxo(index_id)+'</div>';
+		select_btn_html += ' btn btn-primary btn-sm">'+render_vote_input(index_id)+'</div>';
 		$('#compose_vote_inputs').append(select_btn_html);
 		
 		if (games[0].logo_image_url != "") {
@@ -440,29 +466,19 @@ function add_utxo_to_vote(mature_io_index, add_matching_utxo_ios, skip_refresh) 
 			//$('#selected_utxo_'+index_id).css("width", height+"px");
 			//$('#selected_utxo_'+index_id).css("background-image", "url('"+games[0].logo_image_url+"')");
 		}
-		game_io_id2input_index[mature_io.game_io_id] = index_id;
-		if (skip_refresh == false) {
-			refresh_compose_vote();
-			set_input_amount_sums();
-			refresh_output_amounts();
-		}
-	}
-	
-	if (add_matching_utxo_ios) {
-		for (var i=0; i<mature_ios.length; i++) {
-			if (i != mature_io_index) {
-				if (mature_ios[i].io_id == mature_io.io_id) {
-					add_utxo_to_vote(i, false, skip_refresh);
-				}
-			}
-		}
+		
+		io_id2input_index[chain_ios[io_index].io_id] = index_id;
+		
+		refresh_compose_vote();
+		set_input_amount_sums();
+		refresh_output_amounts();
 	}
 }
 function add_all_utxos_to_vote() {
-	for (var i=0; i<mature_ios.length; i++) {
-		setTimeout("add_utxo_to_vote("+i+", false, true);", i*50);
+	for (var i=0; i<chain_ios.length; i++) {
+		setTimeout("add_utxo_to_vote("+i+");", i*50);
 	}
-	setTimeout("refresh_compose_vote(); set_input_amount_sums(); refresh_output_amounts();", mature_ios.length*50);
+	setTimeout("refresh_compose_vote(); set_input_amount_sums(); refresh_output_amounts();", chain_ios.length*50);
 }
 function load_option_slider(index_id) {
 	$('#output_threshold_'+index_id).noUiSlider({
@@ -475,60 +491,50 @@ function load_option_slider(index_id) {
 			,resolution: 1
 		}
 	   ,slide: function(){
-			vote_options[index_id].slider_val = parseInt($('#output_threshold_'+index_id).val());
+			vote_outputs[index_id].slider_val = parseInt($('#output_threshold_'+index_id).val());
 			output_amounts_need_update = true;
 	   }
 	});
 }
 function remove_all_utxos_from_vote() {
 	for (var i=0; i<vote_inputs.length; i++) {
-		setTimeout("remove_utxo_from_vote(0, false);", i*50);
+		setTimeout("remove_utxo_from_vote(0);", i*50);
 	}
 }
-function remove_utxo_from_vote(index_id, remove_matching_utxo_ios) {
-	var io_id = vote_inputs[index_id].io_id;
-	$('#select_utxo_'+vote_inputs[index_id].game_io_id).show('fast');
-	game_io_id2input_index[vote_inputs[index_id].game_io_id] = false;
+function remove_utxo_from_vote(index_id) {
+	var io_id = vote_inputs[index_id].ref_io.io_id;
+	$('#select_utxo_'+io_id).show('fast');
+	
+	io_id2input_index[io_id] = false;
 	
 	for (var i=index_id; i<vote_inputs.length-1; i++) {
 		vote_inputs[i] = vote_inputs[i+1];
 		
-		game_io_id2input_index[vote_inputs[i].game_io_id] = i;
+		io_id2input_index[vote_inputs[i].ref_io.io_id] = i;
 		
-		$('#selected_utxo_'+i).html(render_selected_utxo(i));
+		$('#selected_utxo_'+i).html(render_vote_input(i));
 	}
 	$('#selected_utxo_'+(vote_inputs.length-1)).remove();
 	vote_inputs.length = vote_inputs.length-1;
 	set_input_amount_sums();
 	refresh_compose_vote();
 	refresh_output_amounts();
-	
-	if (remove_matching_utxo_ios) {
-		setTimeout("remove_utxo_from_vote_by_io_id("+io_id+");", 200);
-	}
-}
-function remove_utxo_from_vote_by_io_id(io_id) {
-	for (var i=0; i<vote_inputs.length; i++) {
-		if (vote_inputs[i].io_id == io_id) {
-			remove_utxo_from_vote(i, false);
-		}
-	}
 }
 function remove_option_from_vote(index_id) {
-	for (var i=index_id+1; i<vote_options.length; i++) {
-		$('#compose_vote_output_'+(i-1)).html(render_option_output(i-1, vote_options[i].name));
+	for (var i=index_id+1; i<vote_outputs.length; i++) {
+		$('#compose_vote_output_'+(i-1)).html(render_option_output(i-1, vote_outputs[i].name));
 		$('#compose_vote_output_'+i).html('');
-		vote_options[i-1] = vote_options[i];
+		vote_outputs[i-1] = vote_outputs[i];
 		load_option_slider(i-1);
-		$('#output_threshold_'+(i-1)).val(vote_options[i-1].slider_val);
+		$('#output_threshold_'+(i-1)).val(vote_outputs[i-1].slider_val);
 	}
-	$('#compose_vote_output_'+(vote_options.length-1)).remove();
-	vote_options.length = vote_options.length-1;
+	$('#compose_vote_output_'+(vote_outputs.length-1)).remove();
+	vote_outputs.length = vote_outputs.length-1;
 	
 	refresh_output_amounts();
 }
 function refresh_compose_vote() {
-	if (vote_inputs.length > 0 || vote_options.length > 0) $('#compose_vote').show('fast');
+	if (vote_inputs.length > 0 || vote_outputs.length > 0) $('#compose_vote').show('fast');
 	else $('#compose_vote').hide('fast');
 }
 function refresh_all_inputs() {
@@ -536,12 +542,14 @@ function refresh_all_inputs() {
 	var utxo_max_effective_votes=0;
 	var effectiveness_factor = games[0].block_id_to_effectiveness_factor(games[0].last_block_id+1);
 
-	for (var i=0; i<mature_ios.length; i++) {
-		var votes = games[0].votes_from_io(mature_ios[i].amount, mature_ios[i].create_block_id);
-		if (votes > utxo_max_effective_votes) {
-			utxo_max_effective_votes = votes;
+	for (var i=0; i<chain_ios.length; i++) {
+		var votes = chain_ios[i].votes_at_block(games[0].last_block_id+1);
+		var effective_votes = Math.round(votes*effectiveness_factor);
+		
+		if (effective_votes > utxo_max_effective_votes) {
+			utxo_max_effective_votes = effective_votes;
 		}
-		my_effective_votes += votes;
+		my_effective_votes += effective_votes;
 	}
 
 	for (var i=0; i<vote_inputs.length; i++) {
@@ -554,92 +562,116 @@ function refresh_all_inputs() {
 	games[0].utxo_max_effective_votes = utxo_max_effective_votes;
 	refresh_mature_io_btns();
 }
+
+var burn_io_amount = false;
+
 function finish_refresh_output_amounts() {
-	if (vote_options.length > 0) {
+	if (vote_outputs.length > 0) {
 		var input_sums = input_amount_sums();
-		var coin_sum = input_sums[0]-games[0].fee_amount;
-		var sum_votes = input_sums[1];
+		
+		var io_amount = input_sums[0];
+		var game_amount = input_sums[1];
+		var votes = input_sums[2];
+		var inflation_amount = votes*games[0].coins_per_vote;
+		var nonfee_amount = io_amount - (games[0].fee_amount*Math.pow(10, games[0].decimal_places));
 		var effectiveness_factor = games[0].block_id_to_effectiveness_factor(games[0].last_block_id+1);
+		var effective_votes = Math.round(votes*effectiveness_factor);
+		
+		var burn_amount = 0;
+		burn_io_amount = 0;
+		if ($('#compose_burn_amount').val() != "") {
+			burn_amount = parseInt(parseFloat($('#compose_burn_amount').val())*Math.pow(10, games[0].decimal_places));
+			burn_io_amount = Math.ceil(nonfee_amount*burn_amount/game_amount);
+		}
+		var effective_burn_amount = Math.round(burn_amount*effectiveness_factor);
+		
+		var io_nondestroy_amount = nonfee_amount-burn_io_amount;
+		var game_amount_bet = burn_amount+inflation_amount;
 		
 		var slider_sum = 0;
-		for (var i=0; i<vote_options.length; i++) {
-			slider_sum += vote_options[i].slider_val;
+		for (var i=0; i<vote_outputs.length; i++) {
+			slider_sum += vote_outputs[i].slider_val;
 		}
-		var coins_per_slider_val;
-		if (slider_sum > 0) coins_per_slider_val = Math.floor(coin_sum/slider_sum);
-		else coins_per_slider_val = 0;
 		
 		for (var i=0; i<games[0].events.length; i++) {
-			games[0].events[i].hypothetical_votes = 0;
-			games[0].events[i].hypothetical_score = 0;
+			games[0].events[i].sum_hypothetical_votes = 0;
+			games[0].events[i].sum_hypothetical_effective_votes = 0;
+			games[0].events[i].sum_hypothetical_burn_amount = 0;
+			games[0].events[i].sum_hypothetical_effective_burn_amount = 0;
 			
 			for (var j=0; j<games[0].events[i].options.length; j++) {
 				games[0].events[i].options[j].hypothetical_votes = 0;
-				games[0].events[i].options[j].hypothetical_score = 0;
+				games[0].events[i].options[j].hypothetical_effective_votes = 0;
+				games[0].events[i].options[j].hypothetical_burn_amount = 0;
+				games[0].events[i].options[j].hypothetical_effective_burn_amount = 0;
 			}
 		}
 		
-		var output_coins_sum = 0;
-		for (var i=0; i<vote_options.length; i++) {
-			var output_coins = Math.floor(coins_per_slider_val*vote_options[i].slider_val);
-			var output_score;
-			if (coin_sum > 0) output_score = output_coins*(sum_votes/coin_sum);
-			else output_score = 0;
-			var effective_votes = Math.round(output_score*effectiveness_factor);
+		var output_io_sum = 0;
+		var this_event;
+		
+		for (var i=0; i<vote_outputs.length; i++) {
+			var output_io_amount = Math.round(io_nondestroy_amount*vote_outputs[i].slider_val/slider_sum);
+			if (i == vote_outputs.length-1) output_io_amount = io_nondestroy_amount - output_io_sum;
 			
-			if (i == vote_options.length - 1) output_coins = coin_sum - output_coins_sum;
+			var output_votes = Math.round(votes*vote_outputs[i].slider_val/slider_sum);
+			var output_effective_votes = Math.round(effective_votes*vote_outputs[i].slider_val/slider_sum);
+			var output_burn_amount = Math.round(burn_amount*vote_outputs[i].slider_val/slider_sum);
+			var output_effective_burn_amount = Math.round(burn_amount*vote_outputs[i].slider_val/slider_sum);
 			
-			var this_event = games[0].events[vote_options[i].event_index];
-			this_event.hypothetical_votes += effective_votes;
-			this_event.hypothetical_score += output_score;
+			this_event = games[0].events[vote_outputs[i].event_index];
 			
-			this_event.options[this_event.option_id2option_index[vote_options[i].option_id]].hypothetical_votes += effective_votes;
-			this_event.options[this_event.option_id2option_index[vote_options[i].option_id]].hypothetical_score += output_score;
+			this_event.sum_hypothetical_votes += output_votes;
+			this_event.sum_hypothetical_effective_votes += output_effective_votes;
+			this_event.sum_hypothetical_burn_amount += output_burn_amount;
+			this_event.sum_hypothetical_effective_burn_amount += output_effective_burn_amount;
+			
+			this_event.options[this_event.option_id2option_index[vote_outputs[i].option_id]].hypothetical_votes += output_votes;
+			this_event.options[this_event.option_id2option_index[vote_outputs[i].option_id]].hypothetical_effective_votes += output_effective_votes;
+			this_event.options[this_event.option_id2option_index[vote_outputs[i].option_id]].hypothetical_burn_amount += output_burn_amount;
+			this_event.options[this_event.option_id2option_index[vote_outputs[i].option_id]].hypothetical_effective_votes += output_effective_burn_amount;
+			
+			output_io_sum += output_io_amount;
 		}
 		
-		output_coins_sum = 0;
-		for (var i=0; i<vote_options.length; i++) {
-			var output_coins = Math.floor(coins_per_slider_val*vote_options[i].slider_val);
-			var output_score;
-			if (coin_sum > 0) output_score = output_coins*(sum_votes/coin_sum);
-			else output_score = 0;
-			var effective_votes = Math.round(output_score*effectiveness_factor);
-			var effective_coins = effective_votes*games[0].coins_per_vote;
+		var output_io_sum = 0;
+		
+		for (var i=0; i<vote_outputs.length; i++) {
+			var output_io_amount = Math.round(io_nondestroy_amount*vote_outputs[i].slider_val/slider_sum);
+			if (i == vote_outputs.length-1) output_io_amount = io_nondestroy_amount - output_io_sum;
 			
-			if (i == vote_options.length-1) output_coins = coin_sum - output_coins_sum;
+			var output_votes = Math.round(votes*vote_outputs[i].slider_val/slider_sum);
+			var output_effective_votes = Math.round(effective_votes*vote_outputs[i].slider_val/slider_sum);
+			var output_burn_amount = Math.round(burn_amount*vote_outputs[i].slider_val/slider_sum);
+			var output_effective_burn_amount = Math.round(burn_amount*vote_outputs[i].slider_val/slider_sum);
 			
-			var output_val = 0;
-			if (games[0].payout_weight == "coin") output_val = output_coins;
-			else output_val = output_score;
+			var output_cost = output_votes*games[0].coins_per_vote + output_burn_amount;
+			var output_effective_coins = output_effective_votes*games[0].coins_per_vote + output_effective_burn_amount;
 			
-			var output_val_disp;
-			if (games[0].inflation == "exponential") {
-				output_val = Math.round(output_score*games[0].coins_per_vote);
-				var this_event = games[0].events[vote_options[i].event_index];
-				var this_option = this_event.options[this_event.option_id2option_index[vote_options[i].option_id]];
-				
-				var event_total_score = this_event.sum_unconfirmed_score + this_event.sum_score + this_event.hypothetical_score;
-				var event_total_payout = event_total_score*games[0].coins_per_vote + this_event.sum_destroy_score + this_event.sum_unconfirmed_destroy_score;
-				
-				var event_total_votes = this_event.sum_votes + this_event.sum_unconfirmed_votes + this_event.hypothetical_votes;
-				var event_effective_coins = event_total_votes*games[0].coins_per_vote + this_event.sum_effective_destroy_score + this_event.sum_unconfirmed_effective_destroy_score;
-				
-				var option_total_votes = this_option.hypothetical_votes + this_option.votes + this_option.unconfirmed_votes;
-				var option_effective_coins = option_total_votes*games[0].coins_per_vote + this_option.effective_destroy_score + this_option.unconfirmed_effective_destroy_score;
-				
-				var expected_payout = Math.floor(event_total_payout*(effective_coins/option_effective_coins));
-				var payout_factor = expected_payout/output_val;
-				
-				output_val_disp = format_coins(output_val/Math.pow(10,games[0].decimal_places));
-				output_val_disp += " &rarr; "+format_coins(expected_payout/Math.pow(10,games[0].decimal_places));
-				output_val_disp += " "+games[0].coin_name_plural+" (x"+format_coins(payout_factor)+")";
-			}
-			else output_val_disp = format_coins(output_val/Math.pow(10,games[0].decimal_places))+games[0].coin_name_plural;
+			var this_event = games[0].events[vote_outputs[i].event_index];
+			var this_option = this_event.options[this_event.option_id2option_index[vote_outputs[i].option_id]];
+			
+			var event_votes = this_event.sum_votes + this_event.sum_unconfirmed_votes + this_event.sum_hypothetical_votes;
+			var event_payout = event_votes*games[0].coins_per_vote + this_event.sum_burn_amount + this_event.sum_unconfirmed_burn_amount + this_event.sum_hypothetical_burn_amount;
+			
+			var event_effective_votes = this_event.sum_effective_votes + this_event.sum_unconfirmed_effective_votes + this_event.sum_hypothetical_effective_votes;
+			var event_effective_coins = event_effective_votes*games[0].coins_per_vote + this_event.sum_effective_burn_amount + this_event.sum_unconfirmed_effective_burn_amount + this_event.sum_hypothetical_burn_amount;
+			
+			var option_effective_votes = this_option.effective_votes + this_option.unconfirmed_effective_votes + this_option.hypothetical_effective_votes;
+			var option_effective_coins = option_effective_votes*games[0].coins_per_vote + this_option.effective_burn_amount + this_option.unconfirmed_effective_burn_amount + this_option.hypothetical_burn_amount;
+			
+			var expected_payout = Math.floor(event_payout*(output_effective_coins/option_effective_coins));
+			var payout_factor = expected_payout/output_cost;
+			
+			output_val_disp = format_coins(output_cost/Math.pow(10,games[0].decimal_places));
+			output_val_disp += " &rarr; "+format_coins(expected_payout/Math.pow(10,games[0].decimal_places));
+			output_val_disp += " "+games[0].coin_name_plural+" (x"+format_coins(payout_factor)+")";
 			
 			$('#output_amount_disp_'+i).html(output_val_disp);
 			
-			vote_options[i].amount = output_coins;
-			output_coins_sum += output_coins;
+			vote_outputs[i].amount = output_io_amount;
+			
+			output_io_sum += output_io_amount;
 		}
 	}
 }
@@ -670,18 +702,18 @@ function add_all_options() {
 		for (var j=0; j<games[0].events[i].options.length; j++) {
 			var this_option = games[0].events[i].options[j];
 			var already_in = false;
-			for (k=0; k<vote_options.length; k++) {
-				if (vote_options[k].option_id == this_option.option_id) already_in = true;
+			for (k=0; k<vote_outputs.length; k++) {
+				if (vote_outputs[k].option_id == this_option.option_id) already_in = true;
 			}
 			if (!already_in) games[0].add_option_to_vote(i, this_option.option_id, this_option.name);
 		}
 	}
 }
 function remove_all_outputs() {
-	for (var i=0; i<vote_options.length; i++) {
+	for (var i=0; i<vote_outputs.length; i++) {
 		$('#compose_vote_output_'+i).remove();
 	}
-	vote_options.length = 0;
+	vote_outputs.length = 0;
 }
 function show_intro_message() {
 	$('#intro_message').modal('show');
@@ -940,14 +972,18 @@ function save_game(action) {
 }
 function refresh_mature_io_btns() {
 	var effectiveness_factor = games[0].block_id_to_effectiveness_factor(games[0].last_block_id+1);
-	for (var i=0; i<mature_ios.length; i++) {
+	
+	for (var i=0; i<chain_ios.length; i++) {
 		var select_btn_text = "";
-		var votes = games[0].votes_from_io(mature_ios[i].amount, mature_ios[i].create_block_id);
+		var votes = chain_ios[i].votes_at_block(games[0].last_block_id+1);
 		
 		if (games[0].logo_image_url == "") {
 			if (games[0].inflation == "exponential") {
 				var coin_equiv = Math.round(votes*games[0].coins_per_vote);
-				var coin_disp = Math.max(0, format_coins(coin_equiv/Math.pow(10,games[0].decimal_places)));
+				var disp_coins = coin_equiv;
+				if (games[0].default_betting_mode == "principal") disp_coins += chain_ios[i].game_amount_sum();
+				if (disp_coins < 0) disp_coins = 0;
+				var coin_disp = format_coins(disp_coins/Math.pow(10,games[0].decimal_places));
 				
 				select_btn_text += "Stake "+coin_disp+" ";
 				if (coin_disp == '1') select_btn_text += games[0].coin_name;
@@ -957,7 +993,7 @@ function refresh_mature_io_btns() {
 				select_btn_text += 'Add '+format_coins(votes/Math.pow(10,games[0].decimal_places));
 				select_btn_text += ' votes';
 				if (games[0].payout_weight != 'coin') {
-					var coin_disp = format_coins(mature_ios[i].amount/Math.pow(10,games[0].decimal_places));
+					var coin_disp = format_coins(chain_ios[i].amount/Math.pow(10,games[0].decimal_places));
 					select_btn_text += "<br/>("+coin_disp+" ";
 					if (coin_disp == '1') select_btn_text += games[0].coin_name;
 					else select_btn_text += games[0].coin_name_plural;
@@ -967,14 +1003,14 @@ function refresh_mature_io_btns() {
 		}
 		else {
 			var height = Math.round(Math.sqrt(effectiveness_factor)*games[0].utxo_max_height*votes/games[0].utxo_max_effective_votes);
-			$('#select_utxo_'+mature_ios[i].game_io_id).css("height", height+"px");
-			$('#select_utxo_'+mature_ios[i].game_io_id).css("width", height+"px");
-			$('#select_utxo_'+mature_ios[i].game_io_id).css("background-image", "url('"+games[0].logo_image_url+"')");
+			$('#select_utxo_'+chain_ios[i].io_id).css("height", height+"px");
+			$('#select_utxo_'+chain_ios[i].io_id).css("width", height+"px");
+			$('#select_utxo_'+chain_ios[i].io_id).css("background-image", "url('"+games[0].logo_image_url+"')");
 		}
-		$('#select_utxo_'+mature_ios[i].game_io_id).html(select_btn_text);
+		$('#select_utxo_'+chain_ios[i].io_id).html(select_btn_text);
 	}
 	for (var i=0; i<vote_inputs.length; i++) {
-		$('#selected_utxo_'+i).html(render_selected_utxo(i));
+		$('#selected_utxo_'+i).html(render_vote_input(i));
 	}
 }
 function compose_vote_loop() {
@@ -986,30 +1022,27 @@ var transaction_in_progress = false;
 
 function confirm_compose_vote() {
 	if (vote_inputs.length > 0) {
-		if (vote_options.length > 0) {
+		if (vote_outputs.length > 0) {
 			transaction_in_progress = true;
 			utxo_spend_offset++;
 			$('#confirm_compose_vote_btn').html("Loading...");
 			
-			var place_vote_url = "/ajax/place_vote.php?game_id="+games[0].game_id+"&io_ids=";
-			var added_ios = {};
+			var place_vote_url = "/ajax/place_vote.php?game_id="+games[0].game_id+"&burn_amount="+burn_io_amount+"&io_ids=";
+			
 			for (var i=0; i<vote_inputs.length; i++) {
-				if (typeof added_ios[vote_inputs[i].io_id] == "undefined" || added_ios[vote_inputs[i].io_id] == false) {
-					place_vote_url += vote_inputs[i].io_id;
-					place_vote_url += ",";
-					added_ios[vote_inputs[i].io_id] = true;
-				}
+				place_vote_url += vote_inputs[i].ref_io.io_id;
+				place_vote_url += ",";
 			}
 			place_vote_url = place_vote_url.substr(0, place_vote_url.length-1);
 			place_vote_url += "&option_ids=";
 			var amounts_url = "&amounts=";
 			
-			for (var i=0; i<vote_options.length; i++) {
-				place_vote_url += vote_options[i].option_id;
-				if (i != vote_options.length-1) place_vote_url += ",";
+			for (var i=0; i<vote_outputs.length; i++) {
+				place_vote_url += vote_outputs[i].option_id;
+				if (i != vote_outputs.length-1) place_vote_url += ",";
 				
-				amounts_url += vote_options[i].amount;
-				if (i != vote_options.length-1) amounts_url += ",";
+				amounts_url += vote_outputs[i].amount;
+				if (i != vote_outputs.length-1) amounts_url += ",";
 			}
 			place_vote_url += amounts_url;
 			
@@ -1018,7 +1051,7 @@ function confirm_compose_vote() {
 				
 				var result_obj = JSON.parse(result);
 				
-				if (result_obj['status_code'] == 0) {
+				if (result_obj['status_code'] == 1) {
 					$('#compose_vote_success').html(result_obj['message']);
 					$('#compose_vote_success').slideDown('slow');
 					setTimeout("$('#compose_vote_success').slideUp('fast');", 5000);
@@ -1056,7 +1089,7 @@ function reload_compose_vote() {
 		$(this).hide();
 	});
 	
-	if (games[0].mature_game_io_ids_csv == "") {
+	if (games[0].mature_io_ids_csv == "") {
 		$('#select_input_buttons_msg').html("");
 	}
 	else {
@@ -1066,14 +1099,14 @@ function reload_compose_vote() {
 }
 function refresh_visible_inputs() {
 	var show_count = 0;
-	var mature_game_io_ids = games[0].mature_game_io_ids_csv.split(",");
-	for (var i=0; i<mature_game_io_ids.length; i++) {
-		if (typeof game_io_id2input_index[mature_game_io_ids[i]] == 'undefined' || game_io_id2input_index[mature_game_io_ids[i]] === false) {
-			$('#select_utxo_'+mature_game_io_ids[i]).show();
+	var mature_io_ids = games[0].mature_io_ids_csv.split(",");
+	for (var i=0; i<mature_io_ids.length; i++) {
+		if (typeof io_id2input_index[mature_io_ids[i]] == 'undefined' || io_id2input_index[mature_io_ids[i]] === false) {
+			$('#select_utxo_'+mature_io_ids[i]).show();
 			show_count++;
 		}
 		else {
-			add_utxo_to_vote(i, false, true);
+			add_utxo_to_vote(i);
 		}
 	}
 }
@@ -1143,8 +1176,8 @@ function set_plan_round_sum(round_index) {
 		var event_index = games[0].all_events_db_id_to_index[event_id];
 		if (typeof games[0].all_events[event_index] !== "undefined") {
 			var this_event = games[0].all_events[event_index];
-			for (var o=0; o<event.options.length; o++) {
-				round_points += event.options[o].points;
+			for (var o=0; o<this_event.options.length; o++) {
+				round_points += this_event.options[o].points;
 			}
 		}
 	}
@@ -1273,17 +1306,18 @@ function scramble_strategy(strategy_id) {
 
 var editing_game_id = false;
 var vote_inputs = new Array();
-var vote_options = new Array();
+var vote_outputs = new Array();
 var output_amounts_need_update = false;
-var game_io_id2input_index = {};
-var mature_ios = new Array();
+var io_id2input_index = {};
+var chain_ios = new Array();
 var utxo_spend_offset = 0;
 
 // OBJECT: Event
-var Event = function(game, game_event_index, event_id, num_voting_options, vote_effectiveness_function, effectiveness_param1, option_block_rule, event_name) {
+var Event = function(game, game_event_index, event_id, real_event_index, num_voting_options, vote_effectiveness_function, effectiveness_param1, option_block_rule, event_name) {
 	this.game = game;
 	this.game_event_index = game_event_index;
 	this.event_id = event_id;
+	this.real_event_index = real_event_index;
 	
 	this.num_voting_options = num_voting_options;
 	this.vote_effectiveness_function = vote_effectiveness_function;
@@ -1293,14 +1327,19 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 	
 	this.sum_votes = 0;
 	this.sum_unconfirmed_votes = 0;
-	this.sum_score = 0;
-	this.sum_unconfirmed_score = 0;
-	this.sum_destroy_score = 0;
-	this.sum_unconfirmed_destroy_score = 0;
-	this.sum_effective_destroy_score = 0;
-	this.sum_unconfirmed_effective_destroy_score = 0;
-	this.hypothetical_score = 0;
-	this.hypothetical_votes = 0;
+	this.sum_hypothetical_votes = 0;
+	
+	this.sum_effective_votes = 0;
+	this.sum_unconfirmed_effective_votes = 0;
+	this.sum_hypothetical_effective_votes = 0;
+	
+	this.sum_burn_amount = 0;
+	this.sum_unconfirmed_burn_amount = 0;
+	this.sum_hypothetical_burn_amount = 0;
+	
+	this.sum_effective_burn_amount = 0;
+	this.sum_unconfirmed_effective_burn_amount = 0;
+	this.sum_hypothetical_effective_burn_amount = 0;
 	
 	this.selected_option_id = false;
 	this.deleted = false;
@@ -1310,14 +1349,9 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 	this.option_id2option_index = {};
 	
 	this.start_vote = function(option_id) {
-		$('#game'+this.game.instance_id+'_event'+this.game_event_index+'_vote_confirm_'+option_id).modal('toggle');
-		$('#game'+this.game.instance_id+'_event'+this.game_event_index+'_vote_amount_'+option_id).focus();
-		
-		//var _this = this;
-		//setTimeout(function() {$('#game'+_this.game.instance_id+"_event"+_this.game_event_index+"_vote_amount_"+option_id).focus()}, 500);
-		
-		// Reselect the option button which has been inadvertently unselected by the modal
-		//setTimeout(function() {_this.option_selected($('#game'+_this.game.instance_id+'_event'+_this.game_event_index+'_option_id2rank_'+option_id).val())}, 100);
+		var option_display_name = this.options[this.db_id2option_index(option_id)].name;
+		option_display_name += ' (<a href="/explorer/games/'+games[this.game.instance_id].game_url_identifier+'/events/'+this.real_event_index+'">'+this.event_name+'</a>)';
+		games[this.game.instance_id].add_option_to_vote(game_event_index, option_id, option_display_name);
 	};
 	this.db_id2option_index = function(db_option_id) {
 		for (var i=0; i<this.options.length; i++) {
@@ -1336,14 +1370,14 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 		}
 	};
 	this.option_selected = function(option_id) {
-		if (this.selected_option_id !== false) this.option_deselected(this.selected_option_id);
+		/*if (this.selected_option_id !== false) this.option_deselected(this.selected_option_id);
 		$('#game'+this.game.instance_id+'_event'+this.game_event_index+'_vote_option_'+option_id).addClass('vote_option_box_sel');
 		this.selected_option_id = option_id;
-		this.game.sel_game_event_index = this.game_event_index;
+		this.game.sel_game_event_index = this.game_event_index;*/
 	};
 	this.option_deselected = function(option_id) {
-		$('#game'+this.game.instance_id+'_event'+this.game_event_index+'_vote_option_'+option_id).removeClass('vote_option_box_sel');
-		this.selected_option_id = false;
+		/*$('#game'+this.game.instance_id+'_event'+this.game_event_index+'_vote_option_'+option_id).removeClass('vote_option_box_sel');
+		this.selected_option_id = false;*/
 	};
 	this.refresh_time_estimate = function() {
 		if (this.deleted == false) {
@@ -1373,15 +1407,15 @@ var Event = function(game, game_event_index, event_id, num_voting_options, vote_
 };
 
 // OBJECT: Game
-var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, chain_coin_name, chain_coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, effectiveness_param1, seconds_per_block, inflation, exponential_inflation_rate, time_last_block_loaded, decimal_places, view_mode, initial_event_index, filter_date) {
+var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, chain_coin_name, chain_coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, effectiveness_param1, seconds_per_block, inflation, exponential_inflation_rate, time_last_block_loaded, decimal_places, view_mode, initial_event_index, filter_date, default_betting_mode) {
 	Game.numInstances = (Game.numInstances || 0) + 1;
 	
 	this.instance_id = Game.numInstances-1;
 	this.game_id = game_id;
 	this.last_block_id = last_block_id;
 	this.last_transaction_id = last_transaction_id;
-	this.mature_game_io_ids_csv = mature_game_io_ids_csv;
-	this.mature_game_io_ids_hash = Sha256.hash(mature_game_io_ids_csv);
+	this.mature_io_ids_csv = mature_io_ids_csv;
+	this.mature_io_ids_hash = Sha256.hash(mature_io_ids_csv);
 	this.payout_weight = payout_weight;
 	this.game_round_length = game_round_length;
 	this.fee_amount = fee_amount;
@@ -1403,6 +1437,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 	this.view_mode = view_mode;
 	this.selected_event_index = initial_event_index;
 	this.filter_date = filter_date;
+	this.default_betting_mode = default_betting_mode;
 	
 	if (filter_date) {
 		$(document).ready(function() {
@@ -1451,22 +1486,15 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 	this.block_id_to_effectiveness_factor = function(block_id) {
 		return this.round_index_to_effectiveness_factor(this.block_id_to_round_index(block_id));
 	};
-	this.votes_from_io = function(amount, create_block) {
-		var votes;
-		if (this.payout_weight == "coin") votes = Math.floor(amount);
-		else if (this.payout_weight == "coin_round") votes = (this.block_to_round(1+this.last_block_id) - this.block_to_round(create_block))*amount;
-		else votes = (1+this.last_block_id - create_block)*amount;
-		return votes;
-	};
 	this.add_option_to_vote = function(event_index, option_id, name) {
 		if (this.refresh_page != "wallet") {
 			alert("To cast votes, first log in to your wallet.");
 		}
 		else {
-			var index_id = vote_options.length;
+			var index_id = vote_outputs.length;
 			
 			if (games[0].option_has_votingaddr[option_id]) {
-				vote_options.push(new vote_option(index_id, name, option_id, event_index));
+				vote_outputs.push(new vote_output(index_id, name, option_id, event_index));
 				$('#compose_vote_outputs').append('<div id="compose_vote_output_'+index_id+'" class="select_utxo">'+render_option_output(index_id, name)+'</div>');
 				
 				load_option_slider(index_id);
@@ -1534,7 +1562,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 			this.last_refresh_time = new Date().getTime();
 			this.refresh_in_progress = true;
 			
-			var check_activity_url = "/ajax/check_new_activity.php?instance_id="+this.instance_id+"&game_id="+this.game_id+"&event_ids_hash="+this.event_ids_hash+"&refresh_page="+this.refresh_page+"&last_block_id="+this.last_block_id+"&last_transaction_id="+this.last_transaction_id+"&mature_game_io_ids_hash="+this.mature_game_io_ids_hash+"&game_loop_index="+this.game_loop_index;
+			var check_activity_url = "/ajax/check_new_activity.php?instance_id="+this.instance_id+"&game_id="+this.game_id+"&event_ids_hash="+this.event_ids_hash+"&refresh_page="+this.refresh_page+"&last_block_id="+this.last_block_id+"&last_transaction_id="+this.last_transaction_id+"&mature_io_ids_hash="+this.mature_io_ids_hash+"&game_loop_index="+this.game_loop_index;
 			if (this.filter_date) check_activity_url += "&filter_date="+this.filter_date;
 			
 			var _this = this;
@@ -1583,9 +1611,9 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 								else $('#game_status_explanation').show();
 								
 								if (parseInt(json_result['new_mature_ios']) == 1 || parseInt(json_result['new_transaction']) == 1 || json_result['new_block'] == 1) {
-									if (typeof json_result['mature_game_io_ids_csv'] == "undefined") _this.mature_game_io_ids_csv = "";
-									else _this.mature_game_io_ids_csv = json_result['mature_game_io_ids_csv'];
-									_this.mature_game_io_ids_hash = Sha256.hash(_this.mature_game_io_ids_csv);
+									if (typeof json_result['mature_io_ids_csv'] == "undefined") _this.mature_io_ids_csv = "";
+									else _this.mature_io_ids_csv = json_result['mature_io_ids_csv'];
+									_this.mature_io_ids_hash = Sha256.hash(_this.mature_io_ids_csv);
 									$('#select_input_buttons').html(json_result['select_input_buttons']);
 									reload_compose_vote();
 									utxo_spend_offset = 0;
@@ -1618,10 +1646,6 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 								$('#wallet_text_stats').fadeIn('fast');
 							}
 							
-							if (typeof json_result['vote_option_details'] != "undefined") {
-								var vote_option_details = json_result['vote_option_details'];
-							}
-							
 							for (var game_event_index=0; game_event_index<_this.events.length; game_event_index++) {
 								$('#game'+_this.instance_id+'_event'+game_event_index+'_current_round_table').html(json_result['current_round_table'][game_event_index]);
 								
@@ -1641,10 +1665,6 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_game_io_
 									$('#game'+_this.instance_id+'_event'+game_event_index+'_my_current_votes').html(json_result['my_current_votes'][game_event_index]);
 								}
 								
-								for (var option_i=0; option_i<_this.events[game_event_index].num_voting_options; option_i++) {
-									var option_id = _this.events[game_event_index].options[option_i].option_id;
-									$('#game'+_this.instance_id+'_event'+game_event_index+'_vote_confirm_'+option_id).html(vote_option_details[game_event_index][option_id]);
-								}
 								console.log(".");
 							}
 							

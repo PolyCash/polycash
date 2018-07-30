@@ -589,6 +589,7 @@ if ($thisuser && $game) {
 			echo ', "'.$game->db_game['view_mode'].'"';
 			echo ', '.$user_game['event_index'];
 			echo ', false';
+			echo ', "'.$game->db_game['default_betting_mode'].'"';
 		?>));
 		
 		games[0].game_loop_event();
@@ -611,7 +612,7 @@ if ($thisuser && $game) {
 				if ($i == 0) echo "games[0].all_events_start_index = ".$db_event['event_index'].";\n";
 				else if ($i == $initial_load_events-1) echo "games[0].all_events_stop_index = ".$db_event['event_index'].";\n";
 				
-				echo "games[0].all_events[".$db_event['event_index']."] = new Event(games[0], ".$db_event['event_index'].", ".$db_event['event_id'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'", "'.$db_event['effectiveness_param1'].'", '.$app->quote_escape($db_event['event_name']).");\n";
+				echo "games[0].all_events[".$db_event['event_index']."] = new Event(games[0], ".$i.", ".$db_event['event_id'].", ".$db_event['event_index'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'", "'.$db_event['effectiveness_param1'].'", '.$app->quote_escape($db_event['event_name']).");\n";
 				echo "games[0].all_events_db_id_to_index[".$db_event['event_id']."] = ".$db_event['event_index'].";\n";
 				
 				$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY event_option_index ASC;";
@@ -632,7 +633,7 @@ if ($thisuser && $game) {
 		echo $game->load_all_event_points_js(0, $user_strategy, $plan_start_round, $plan_stop_round);
 		?>
 		$(document).ready(function() {
-			toggle_betting_mode('<?php echo $user_game['betting_mode']; ?>');
+			toggle_betting_mode('inflationary');
 			loop_event();
 			compose_vote_loop();
 			<?php
@@ -788,7 +789,11 @@ if ($thisuser && $game) {
 							<div class="row bordered_row" style="border: 1px solid #bbb;">
 								<div class="col-md-6 bordered_cell" id="compose_vote_inputs">
 									<b>Inputs:</b><div style="display: none; margin-left: 20px;" id="input_amount_sum"></div><div style="display: inline-block; margin-left: 20px;" id="input_vote_sum"></div><br/>
-									<div id="compose_input_start_msg">Add inputs by clicking on the votes above.</div>
+									<p>
+										How many <?php echo $game->db_game['coin_name_plural']; ?> do you want to burn?
+										<input class="form-control input-sm" id="compose_burn_amount" value="0" />
+									</p>
+									<p id="compose_input_start_msg">Add inputs by clicking on the votes above.</p>
 								</div>
 								<div class="col-md-6 bordered_cell" id="compose_vote_outputs">
 									<b>Outputs:</b>
