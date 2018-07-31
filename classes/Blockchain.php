@@ -509,6 +509,8 @@ class Blockchain {
 							$insert_q = "INSERT INTO transaction_game_ios (game_id, is_coinbase, io_id, colored_amount, destroy_amount, ref_block_id, ref_coin_blocks, ref_round_id, ref_coin_rounds, option_id, event_id, effectiveness_factor, effective_destroy_amount) VALUES ";
 							
 							for ($j=0; $j<count($outputs); $j++) {
+								$payout_insert_q = "";
+								
 								$this_color_amount = floor($color_amount*($outputs[$j]["value"]*pow(10,$color_game->db_game['decimal_places']))/$output_sum);
 								if ($j == count($outputs)-1) $this_color_amount = $color_amount - $color_amount_sum;
 								
@@ -538,12 +540,15 @@ class Blockchain {
 											$effective_destroy_amount = floor($this_destroy_amount*$effectiveness_factor);
 											
 											$insert_q .= "'".$option_id."', '".$db_event['event_id']."', '".$effectiveness_factor."', '".$effective_destroy_amount."'";
+											
+											$payout_insert_q = "('".$color_game->db_game['game_id']."', 1, '".$output_io_ids[$j]."', 0, 0, null, 0, null, 0, '".$option_id."', '".$db_event['event_id']."', null, 0), ";
 										}
 										else $insert_q .= "null, null, null, 0";
 									}
 									else $insert_q .= "null, null, null, 0";
 									
 									$insert_q .= "), ";
+									if ($payout_insert_q != "") $insert_q .= $payout_insert_q;
 								}
 								$color_amount_sum += $this_color_amount;
 								$coin_block_sum += $this_coin_blocks;
@@ -551,7 +556,14 @@ class Blockchain {
 							}
 							
 							$insert_q = substr($insert_q, 0, strlen($insert_q)-2).";";
+							
+							$this->app->dbh->beginTransaction();
 							$this->app->run_query($insert_q);
+							$coinbase_q1 = "UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.parent_io_id=gio.game_io_id-1 WHERE io.create_transaction_id='".$db_transaction_id."' AND gio.game_id='".$color_game->db_game['game_id']."' AND gio.is_coinbase=1;";
+							$this->app->run_query($coinbase_q1);
+							$coinbase_q2 = "UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.payout_io_id=gio.game_io_id+1 WHERE gio.event_id IS NOT NULL AND io.create_transaction_id='".$db_transaction_id."' AND gio.game_id='".$color_game->db_game['game_id']."' AND gio.is_coinbase=0;";
+							$this->app->run_query($coinbase_q2);
+							$this->app->dbh->commit();
 						}
 					}
 					
@@ -893,7 +905,7 @@ class Blockchain {
 		$this->app->run_query("DELETE FROM transactions WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id IS NULL;");
 		$this->app->run_query("DELETE io.*, gio.* FROM transaction_ios io LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE io.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND io.create_block_id >= ".$block_height.";");
 		$this->app->run_query("DELETE io.*, gio.* FROM transaction_ios io LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE io.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND io.create_block_id IS NULL;");
-		$this->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id SET gio.spend_round_id=NULL, io.coin_blocks_created=0, gio.coin_rounds_created=0, gio.votes=0, io.spend_transaction_id=NULL, io.spend_count=NULL, io.spend_status='unspent', gio.payout_game_io_id=NULL WHERE io.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND io.spend_block_id >= ".$block_height.";");
+		$this->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id SET gio.spend_round_id=NULL, io.coin_blocks_created=0, gio.coin_rounds_created=0, gio.votes=0, io.spend_transaction_id=NULL, io.spend_count=NULL, io.spend_status='unspent', gio.payout_io_id=NULL WHERE io.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND io.spend_block_id >= ".$block_height.";");
 		$this->app->run_query("DELETE FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id >= ".$block_height.";");
 	}
 	

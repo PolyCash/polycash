@@ -363,7 +363,7 @@ class Event {
 		else $score_field = $this->game->db_game['payout_weight']."s_destroyed";
 		
 		// Loop through the correctly voted UTXOs
-		$q = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id WHERE gio.event_id='".$this->db_event['event_id']."' AND gio.option_id=".$winning_option.";";
+		$q = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id WHERE gio.event_id='".$this->db_event['event_id']."' AND gio.option_id=".$winning_option." AND is_coinbase=0;";
 		$r = $this->game->blockchain->app->run_query($q);
 		$log_text .= "Paying out ".$r->rowCount()." correct votes.<br/>\n";
 		$total_paid = 0;
@@ -379,23 +379,25 @@ class Event {
 			
 			$total_paid += $this_input_payout_amount;
 			
-			$payout_io_id = $this->game->trace_io_to_unspent_io_in_block($input, $this->db_event['event_payout_block']);
-			
-			$qq = "INSERT INTO transaction_game_ios SET io_id='".$payout_io_id."', original_io_id='".$input['io_id']."', is_coinbase=1, instantly_mature=0, game_id='".$this->game->db_game['game_id']."', event_id='".$this->db_event['event_id']."'";
-			$qq .= ", colored_amount='".$this_input_payout_amount."', create_round_id='".$this->game->block_to_round($this->db_event['event_payout_block'])."';";
-			$rr = $this->game->blockchain->app->run_query($qq);
-			$output_id = $this->game->blockchain->app->last_insert_id();
-			
-			$this->game->blockchain->app->log_message($output_id." ".$qq);
-			
-			$qq = "UPDATE transaction_game_ios SET payout_game_io_id='".$output_id."' WHERE game_io_id='".$input['game_io_id']."';";
-			$rr = $this->game->blockchain->app->run_query($qq);
-			
 			$payout_disp = $this_input_payout_amount/(pow(10,$this->game->db_game['decimal_places']));
 			$log_text .= "Pay ".$payout_disp." ";
 			if ($payout_disp == '1') $log_text .= $this->game->db_game['coin_name'];
 			else $log_text .= $this->game->db_game['coin_name_plural'];
-			$log_text .= " to ".$input['address']."<br/>\n";
+			$log_text .= " to ".$input['address'];
+
+			$qq = "SELECT * FROM transaction_game_ios WHERE game_io_id='".$input['payout_io_id']."';";
+			$rr = $this->game->blockchain->app->run_query($qq);
+			
+			if ($rr->rowCount() == 1) {
+				$payout_io = $rr->fetch();
+				
+				$qq = "UPDATE transaction_game_ios SET create_block_id='".$this->db_event['event_payout_block']."', colored_amount='".$this_input_payout_amount."' WHERE game_io_id='".$payout_io['game_io_id']."';";
+				$rr = $this->game->blockchain->app->run_query($qq);
+			}
+			else $log_text .= "Error: failed to find the payout IO for #".$input['game_io_id'];
+			
+			$log_text .= "<br/>\n";
+			
 			$out_index++;
 		}
 		
