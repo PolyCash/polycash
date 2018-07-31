@@ -161,7 +161,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 	else if ($explore_mode == "utxo") {
 		$io_id = (int) $uri_parts[5];
 		
-		$io_q = "SELECT * FROM transaction_ios WHERE io_id='".$io_id."';";
+		$io_q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.io_id='".$io_id."';";
 		$io_r = $app->run_query($io_q);
 		
 		if ($io_r->rowCount() > 0) {
@@ -1150,6 +1150,11 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo '<p>This UTXO is in your account <a href="/accounts/?account_id='.$account['account_id'].'">'.$account['account_name'].'</a></p>';
 						}
 					}
+					
+					echo '<p>This UTXO belongs to <a href="/explorer/';
+					if ($game) echo 'games/'.$game->db_game['url_identifier'];
+					else echo 'blockchains/'.$blockchain->db_blockchain['url_identifier'];
+					echo '/addresses/'.$io['address'].'">'.$io['address'].'</a></p>';
 					
 					if ($create_tx || $spend_tx) {
 						if (empty($game)) {

@@ -2878,35 +2878,6 @@ class Game {
 		return $game_starting_round+$display_round_id-1;
 	}
 	
-	public function trace_io_to_unspent_io_in_block(&$transaction_io, $block_id) {
-		$current_io = $transaction_io;
-		$keep_looping = true;
-		do {
-			if ($current_io['spend_transaction_id'] > 0) {
-				$db_transaction_r = $this->blockchain->app->run_query("SELECT * FROM transactions WHERE transaction_id='".$current_io['spend_transaction_id']."';");
-				if ($db_transaction_r->rowCount() > 0) {
-					$db_transaction = $db_transaction_r->fetch();
-					
-					if (!empty($db_transaction['block_id']) && $db_transaction['block_id'] <= $block_id) {
-						$next_io_q = "SELECT * FROM transaction_ios WHERE create_transaction_id='".$db_transaction['transaction_id']."' AND is_destroy=0 ORDER BY out_index ASC LIMIT 1;";
-						$next_io_r = $this->blockchain->app->run_query($next_io_q);
-						
-						if ($next_io_r->rowCount() > 0) {
-							$current_io = $next_io_r->fetch();
-						}
-						else $keep_looping = false;
-					}
-					else $keep_looping = false;
-				}
-				else $keep_looping = false;
-			}
-			else $keep_looping = false;
-		}
-		while ($keep_looping);
-		
-		return $current_io['io_id'];
-	}
-	
 	public function transaction_coins_in($transaction_id) {
 		$qq = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.spend_transaction_id='".$transaction_id."';";
 		$rr = $this->blockchain->app->run_query($qq);

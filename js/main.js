@@ -2309,3 +2309,7 @@ function toggle_to_panel(which_panel) {
 	if (which_panel == "login") setTimeout("$('#username').focus();", 500);
 	else if (selected_panel == 'password') setTimeout("$('#login_password').focus();", 500);
 }
+function manage_game_event_filter_changed() {
+	var event_filter = $('#manage_game_event_filter').val();
+	window.location = '/manage/'+games[0].game_url_identifier+'/?next=events&event_filter='+event_filter;
+}
