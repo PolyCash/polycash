@@ -362,6 +362,8 @@ else {
 					<?php
 				}
 				else if ($next_action == "events") {
+					if (isset($_REQUEST['event_filter'])) $event_filter = $_REQUEST['event_filter'];
+					else $event_filter = "";
 					?>
 					<div class="panel panel-info">
 						<div class="panel-heading">
@@ -372,13 +374,22 @@ else {
 								<button class="btn btn-sm btn-success" onclick="manage_game_load_event('new');">New Event</button>
 								<button class="btn btn-sm btn-primary" onclick="manage_game_set_event_blocks(false);">Set Event Blocks</button>
 							</p>
+							<p>
+								<select class="form-control" id="manage_game_event_filter" onchange="manage_game_event_filter_changed();">
+									<option value="">View all events</option>
+									<option <?php if ($event_filter == "past_due") echo "selected=\"selected\" "; ?>value="past_due">Past due unresolved events</option>
+								</select>
+							</p>
 							<?php
-							$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' ORDER BY event_index DESC;";
+							$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."'";
+							if ($event_filter == "past_due") $q .= " AND outcome_index IS NULL AND event_payout_block <= ".$game->blockchain->last_block_id();
+							$q .= " ORDER BY event_index DESC;";
 							$r = $app->run_query($q);
 							while ($gde = $r->fetch()) {
 								?>
 								<div class="row">
 									<div class="col-md-4" style="text-align: center;">
+										<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/<?php echo $gde['event_index']; ?>">View</a> &nbsp;&nbsp; 
 										<a href="" onclick="manage_game_load_event(<?php echo $gde['game_defined_event_id']; ?>); return false;">Edit</a> &nbsp;&nbsp; 
 										<a href="" onclick="manage_game_event_options(<?php echo $gde['game_defined_event_id']; ?>); return false;">Edit Options</a> &nbsp;&nbsp;
 										<a href="" onclick="manage_game_set_event_blocks(<?php echo $gde['game_defined_event_id']; ?>); return false;">Set Event Blocks</a>

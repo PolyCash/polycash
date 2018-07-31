@@ -161,7 +161,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 	else if ($explore_mode == "utxo") {
 		$io_id = (int) $uri_parts[5];
 		
-		$io_q = "SELECT * FROM transaction_ios WHERE io_id='".$io_id."';";
+		$io_q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.io_id='".$io_id."';";
 		$io_r = $app->run_query($io_q);
 		
 		if ($io_r->rowCount() > 0) {
@@ -944,6 +944,19 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo '<p><a href="/explorer/games/'.$db_game['url_identifier'].'/addresses/'.$address['address'].'/">'.$db_game['name']."</a></p>\n";
 						}
 					}
+					else {
+						$associated_event_q = "SELECT * FROM events ev JOIN options op ON ev.event_id=op.event_id WHERE ev.game_id='".$game->db_game['game_id']."' AND op.option_index='".$address['option_index']."';";
+						$associated_event_r = $app->run_query($associated_event_q);
+						
+						if ($associated_event_r->rowCount() > 0) {
+							echo "<p>This is a staking address for ";
+							
+							while ($associated_event = $associated_event_r->fetch()) {
+								echo '<a href="/explorer/games/'.$game->db_game['url_identifier'].'/events/'.$associated_event['event_index'].'">'.$associated_event['event_name']."</a><br/>\n";
+							}
+							echo "</p>";
+						}
+					}
 					
 					$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND i.address_id='".$address['address_id']."' GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;";
 					$r = $app->run_query($q);
@@ -1138,6 +1151,11 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						}
 					}
 					
+					echo '<p>This UTXO belongs to <a href="/explorer/';
+					if ($game) echo 'games/'.$game->db_game['url_identifier'];
+					else echo 'blockchains/'.$blockchain->db_blockchain['url_identifier'];
+					echo '/addresses/'.$io['address'].'">'.$io['address'].'</a></p>';
+					
 					if ($create_tx || $spend_tx) {
 						if (empty($game)) {
 							$tx_associated_games = $blockchain->games_by_io($io['io_id']);
@@ -1303,7 +1321,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$num_losses = 0;
 						$num_unresolved = 0;
 						
-						$q = "SELECT gio.*, io.spend_transaction_id, ev.*, o.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS outcome_destroy_score, o.name AS option_name, gio.votes AS votes, o.votes AS option_votes, gio2.colored_amount AS payout_amount FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN events ev ON o.event_id=ev.event_id LEFT JOIN transaction_game_ios gio2 ON gio.payout_game_io_id=gio2.game_io_id WHERE gio.game_id=".$game->db_game['game_id']." AND ug.user_game_id=".$user_game['user_game_id']." ORDER BY ev.event_index DESC, a.option_index ASC;";
+						$q = "SELECT gio.*, io.spend_transaction_id, ev.*, o.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS outcome_destroy_score, o.name AS option_name, gio.votes AS votes, o.votes AS option_votes, gio2.colored_amount AS payout_amount FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN events ev ON o.event_id=ev.event_id LEFT JOIN transaction_game_ios gio2 ON gio.payout_io_id=gio2.game_io_id WHERE gio.game_id=".$game->db_game['game_id']." AND ug.user_game_id=".$user_game['user_game_id']." ORDER BY ev.event_index DESC, a.option_index ASC;";
 						$r = $app->run_query($q);
 						$num_bets = $r->rowCount();
 						
