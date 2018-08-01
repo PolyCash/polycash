@@ -33,7 +33,9 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			if ($account_r->rowCount() > 0) {
 				$account = $account_r->fetch();
 				
-				$event_q = "SELECT * FROM events ev JOIN game_defined_options gdo ON ev.event_index=gdo.event_index WHERE ev.game_id='".$game->db_game['game_id']."' AND gdo.game_id='".$game->db_game['game_id']."' AND gdo.target_probability IS NOT NULL GROUP BY ev.event_id ORDER BY ev.event_index ASC;";
+				$event_q = "SELECT * FROM events ev JOIN game_defined_options gdo ON ev.event_index=gdo.event_index WHERE ev.game_id='".$game->db_game['game_id']."' AND gdo.game_id='".$game->db_game['game_id']."' AND gdo.target_probability IS NOT NULL";
+				if (!empty($_REQUEST['from_event_index'])) $event_q .= " AND ev.event_index>=".((int)$_REQUEST['from_event_index']);
+				$event_q .= " GROUP BY ev.event_id ORDER BY ev.event_index ASC;";
 				$event_r = $app->run_query($event_q);
 				$num_events = $event_r->rowCount();
 				
@@ -43,7 +45,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 					
 					echo "Betting ".$app->format_bignum($coins_per_event)." on each of ".$num_events." events.<br/>\n";
 					
-					$q = "SELECT *, SUM(gio.colored_amount) AS coins, SUM(gio.colored_amount)*(".($blockchain->last_block_id()+1)."-io.create_block_id) AS coin_blocks FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account['account_id']."' GROUP BY gio.io_id ORDER BY coin_blocks ASC;";
+					$q = "SELECT *, SUM(gio.colored_amount) AS coins, SUM(gio.colored_amount)*(".($blockchain->last_block_id()+1)."-io.create_block_id) AS coin_blocks FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.is_resolved=1 AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account['account_id']."' GROUP BY gio.io_id ORDER BY coin_blocks ASC;";
 					$r = $app->run_query($q);
 					
 					$io_amount_sum = 0;
