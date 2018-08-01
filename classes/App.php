@@ -1572,34 +1572,18 @@ class App {
 					$initial_event_text = $this->game_def_to_text($initial_game_obj['events'][$i]);
 					
 					if ($this->game_def_to_text($new_game_obj['events'][$i]) != $initial_event_text) {
-						$compare_event = clone $new_game_obj['events'][$i];
-						$compare_event->outcome_index = $initial_game_obj['events'][$i]->outcome_index;
+						$reset_block = $this->min_excluding_false(array($reset_block, $initial_game_obj['events'][$i]->event_starting_block, $new_game_obj['events'][$i]->event_starting_block));
 						
-						// If the only difference is the outcome, reset from the payout block
-						// Otherwise reset from the starting block
-						if ($this->game_def_to_text($compare_event) == $initial_event_text) {
-							$reset_block = $this->min_excluding_false(array($reset_block, $initial_game_obj['events'][$i]->event_payout_block, $new_game_obj['events'][$i]->event_payout_block));
-							
-							$q = "UPDATE game_defined_events SET outcome_index=";
-							$new_outcome_index_str = (string)$new_game_obj['events'][$i]->outcome_index;
-							if ($new_outcome_index_str === "") $q .= "NULL";
-							else $q .= $new_outcome_index_str;
-							$q .= " WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$i."';";
-							$r = $this->run_query($q);
-						}
-						else {
-							$reset_block = $this->min_excluding_false(array($reset_block, $initial_game_obj['events'][$i]->event_starting_block, $new_game_obj['events'][$i]->event_starting_block));
-						}
 						if ($reset_event_index === false) $reset_event_index = $i;
 					}
 				}
 				
-				if ($reset_event_index !== false) {
-					$log_message .= "Resetting events from #".$reset_event_index."\n";
-					$game->reset_events_from_index($reset_event_index);
-				}
-				
 				$set_events_from = $this->min_excluding_false(array($reset_event_index, $matched_events));
+				
+				if ($set_events_from !== false) {
+					$log_message .= "Resetting events from #".$set_events_from."\n";
+					$game->reset_events_from_index($set_events_from);
+				}
 				
 				for ($i=$set_events_from; $i<count($new_game_obj['events']); $i++) {
 					$gde = get_object_vars($new_game_obj['events'][$i]);
