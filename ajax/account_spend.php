@@ -276,7 +276,7 @@ if ($thisuser) {
 					else $app->output_message(6, "Error: not enough coins.", false);
 				}
 				else {
-					$io_game_q = "SELECT g.game_id, g.blockchain_id, SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN games g ON gio.game_id=g.game_id WHERE gio.io_id='".$db_io['io_id']."' AND g.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' GROUP BY g.game_id;";
+					$io_game_q = "SELECT g.game_id, g.blockchain_id, SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN games g ON gio.game_id=g.game_id WHERE gio.is_resolved=1 AND gio.io_id='".$db_io['io_id']."' AND g.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' GROUP BY g.game_id;";
 					$io_game_r = $app->run_query($io_game_q);
 					
 					if ($io_game_r->rowCount() == 1) {
