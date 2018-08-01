@@ -14,7 +14,7 @@ class User {
 	}
 
 	public function immature_balance(&$game, &$user_game) {
-		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND io.spend_status='unconfirmed';";
+		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND k.account_id='".$user_game['account_id']."' AND io.spend_status != 'spent' AND gio.is_resolved=0;";
 		$r = $this->app->run_query($q);
 		$sum = $r->fetch(PDO::FETCH_NUM);
 		$sum = $sum[0];
@@ -23,7 +23,7 @@ class User {
 	}
 
 	public function mature_balance(&$game, &$user_game) {
-		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status='unspent' AND k.account_id='".$user_game['account_id']."';";
+		$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND k.account_id='".$user_game['account_id']."' AND gio.is_resolved=1 AND io.spend_status != 'spent';";
 		$r = $this->app->run_query($q);
 		$sum = $r->fetch(PDO::FETCH_NUM);
 		$sum = $sum[0];

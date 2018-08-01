@@ -31,7 +31,7 @@ if ($thisuser && $game) {
 		
 		if ($success) {
 			if ($fee < $blockchain_mature_balance) {
-				$q = "SELECT SUM(gio.colored_amount), gio.io_id, io.amount FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND gio.game_id='".$game->db_game['game_id']."' AND k.account_id='".$user_game['account_id']."' AND io.amount > ".$fee." GROUP BY gio.io_id ORDER BY SUM(gio.colored_amount) ASC;";
+				$q = "SELECT SUM(gio.colored_amount), gio.io_id, io.amount FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND gio.game_id='".$game->db_game['game_id']."' AND gio.is_resolved=1 AND k.account_id='".$user_game['account_id']."' AND io.amount > ".$fee." GROUP BY gio.io_id ORDER BY SUM(gio.colored_amount) ASC;";
 				$r = $app->run_query($q);
 				
 				$gio_sum = 0;
