@@ -17,6 +17,8 @@ include('includes/html_start.php');
 				$db_new_game = false;
 				$app->create_game_from_definition($game_definition, $thisuser, false, $error_message, $db_new_game);
 				
+				if (!empty($error_message)) echo "<p>".$error_message."</p>\n";
+				
 				echo '<p>Successfully created <a href="/'.$db_new_game['url_identifier'].'/">'.$db_new_game['name'].'</a></p>';
 			}
 			else $error_message = "Error, you didn't enter the right site administrator key.\n";

@@ -1567,60 +1567,40 @@ class App {
 				$event_verbatim_vars = $this->event_verbatim_vars();
 				
 				$matched_events = min(count($initial_game_obj['events']), count($new_game_obj['events']));
-				$new_events = count($new_game_obj['events']);
 				
 				for ($i=0; $i<$matched_events; $i++) {
 					$initial_event_text = $this->game_def_to_text($initial_game_obj['events'][$i]);
 					
 					if ($this->game_def_to_text($new_game_obj['events'][$i]) != $initial_event_text) {
-						$compare_event = clone $new_game_obj['events'][$i];
-						$compare_event->outcome_index = $initial_game_obj['events'][$i]->outcome_index;
+						$reset_block = $this->min_excluding_false(array($reset_block, $initial_game_obj['events'][$i]->event_starting_block, $new_game_obj['events'][$i]->event_starting_block));
 						
-						// If the only difference is the outcome, reset from the payout block
-						// Otherwise reset from the starting block
-						if ($this->game_def_to_text($compare_event) == $initial_event_text) {
-							$reset_block = $this->min_excluding_false(array($reset_block, $initial_game_obj['events'][$i]->event_payout_block, $new_game_obj['events'][$i]->event_payout_block));
-							
-							if ($reset_block !== false) {
-								$q = "UPDATE events SET outcome_index=";
-								$new_outcome_index_str = (string)$new_game_obj['events'][$i]->outcome_index;
-								if ($new_outcome_index_str === "") $q .= "NULL";
-								else $q .= $new_outcome_index_str;
-								$q .= " WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$i."';";
-								$r = $this->run_query($q);
-							}
-						}
-						else {
-							$reset_block = $this->min_excluding_false(array($reset_block, $initial_game_obj['events'][$i]->event_starting_block, $new_game_obj['events'][$i]->event_starting_block));
-							if ($reset_event_index === false) $reset_event_index = $i;
-						}
+						if ($reset_event_index === false) $reset_event_index = $i;
 					}
 				}
 				
-				if ($new_events > $matched_events) {
-					for ($i=$matched_events; $i<$new_events; $i++) {
-						$reset_block = $this->min_excluding_false(array($reset_block, $new_game_obj['events'][$i]->event_starting_block));
-						$gde = get_object_vars($new_game_obj['events'][$i]);
-						$this->check_set_gde($game, $gde, $event_verbatim_vars);
-					}
+				$set_events_from = $this->min_excluding_false(array($reset_event_index, $matched_events));
+				
+				if ($set_events_from !== false) {
+					$log_message .= "Resetting events from #".$set_events_from."\n";
+					$game->reset_events_from_index($set_events_from);
+				}
+				
+				for ($i=$set_events_from; $i<count($new_game_obj['events']); $i++) {
+					$gde = get_object_vars($new_game_obj['events'][$i]);
+					$this->check_set_gde($game, $gde, $event_verbatim_vars);
 				}
 				
 				if ($reset_block !== false) {
 					$log_message .= "Resetting blocks from #".$reset_block."\n";
 					$game->reset_blocks_from_block($reset_block);
-					
-					if ($reset_event_index !== false) {
-						$log_message .= "Resetting events from #".$reset_event_index."\n";
-						$game->reset_events_from_index($reset_event_index);
-					}
 				}
 				else $log_message .= "Failed to determine a reset block.\n";
 				
 				$game->update_db_game();
 			}
-			else $log_message .= "No match for ".$new_game_def_hash."\n";
+			else $log_message .= "No match for new game def: ".$new_game_def_hash."\n";
 		}
-		else $log_message .= "No match for ".$initial_game_def_hash."\n";
+		else $log_message .= "No match for initial game def: ".$initial_game_def_hash."\n";
 		
 		return $log_message;
 	}
@@ -1792,18 +1772,17 @@ class App {
 							$game = new Game($blockchain, $game_id);
 						}
 						
-						$game->check_set_game_definition("actual");
+						$from_game_def = $this->fetch_game_definition($game, "defined");
+						$from_game_def_str = $this->game_def_to_text($from_game_def);
+						$from_game_def_hash = $this->game_def_to_hash($from_game_def_str);
+						$this->check_set_game_definition($from_game_def_hash, $from_game_def_str);
 						
-						$game_def_str = $this->game_def_to_text($game_def);
-						$game_def_hash = $this->game_def_to_hash($game_def_str);
-						$this->check_set_game_definition($game_def_hash, $game_def_str);
+						$to_game_def_str = $this->game_def_to_text($game_def);
+						$to_game_def_hash = $this->game_def_to_hash($to_game_def_str);
+						$this->check_set_game_definition($to_game_def_hash, $to_game_def_str);
 						
-						$actual_game_def = $this->fetch_game_definition($game, "actual");
-						$actual_game_def_str = $this->game_def_to_text($actual_game_def);
-						$actual_game_def_hash = $this->game_def_to_hash($actual_game_def_str);
-						
-						if ($game_def_hash != $actual_game_def_hash) {
-							$error_message = $this->migrate_game_definitions($game, $actual_game_def_hash, $game_def_hash);
+						if ($from_game_def_hash != $to_game_def_hash) {
+							$error_message = $this->migrate_game_definitions($game, $from_game_def_hash, $to_game_def_hash);
 						}
 						else $error_message = "Found no changes to apply.";
 						
