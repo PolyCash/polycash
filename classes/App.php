@@ -1585,9 +1585,13 @@ class App {
 					$game->reset_events_from_index($set_events_from);
 				}
 				
-				for ($i=$set_events_from; $i<count($new_game_obj['events']); $i++) {
-					$gde = get_object_vars($new_game_obj['events'][$i]);
-					$this->check_set_gde($game, $gde, $event_verbatim_vars);
+				if (count($new_game_obj['events']) > $set_events_from) {
+					if ($reset_block === false) $reset_block = $new_game_obj['events'][0]->event_starting_block;
+					
+					for ($i=$set_events_from; $i<count($new_game_obj['events']); $i++) {
+						$gde = get_object_vars($new_game_obj['events'][$i]);
+						$this->check_set_gde($game, $gde, $event_verbatim_vars);
+					}
 				}
 				
 				if ($reset_block !== false) {
