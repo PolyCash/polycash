@@ -41,7 +41,7 @@ $GLOBALS['base_url'] = "http://".$GLOBALS['site_domain'];
 $GLOBALS['homepage_fname'] = "default.php";
 $GLOBALS['navbar_icon_path'] = "";
 
-$GLOBALS['default_timezone'] = 'America/Chicago';
+$GLOBALS['default_timezone'] = 'UTC';
 
 $GLOBALS['rsa_keyholder_email'] = "";
 $GLOBALS['rsa_pub_key'] = "";

@@ -2126,7 +2126,7 @@ class App {
 			
 			$this->change_card_status($card, 'claimed');
 			
-			$session_key = session_id();
+			$session_key = $_COOKIE['my_session'];
 			$expire_time = time()+3600*24;
 			
 			$q = "INSERT INTO card_sessions SET card_user_id='".$card_user_id."', session_key=".$this->quote_escape($session_key).", login_time='".time()."', expire_time='".$expire_time."'";

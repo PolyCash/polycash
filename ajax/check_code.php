@@ -97,7 +97,7 @@ if ($r->rowCount() == 1) {
 					$supplied_secret_hash = $app->card_secret_to_hash($_REQUEST['code']);
 					
 					if ($correct_secret) {
-						$session_key = session_id();
+						$session_key = $_COOKIE['my_session'];
 						$expire_time = time()+3600*24;
 						
 						$query = "INSERT INTO card_sessions SET card_user_id=".$card_user['card_user_id'];

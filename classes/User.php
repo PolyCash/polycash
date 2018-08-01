@@ -219,7 +219,7 @@ class User {
 			}
 		}
 		
-		$session_key = session_id();
+		$session_key = $_COOKIE['my_session'];
 		$expire_time = time()+3600*24;
 		
 		$q = "INSERT INTO user_sessions SET user_id='".$this->db_user['user_id']."', session_key=".$this->app->quote_escape($session_key).", login_time='".time()."', expire_time='".$expire_time."'";

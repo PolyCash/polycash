@@ -595,7 +595,7 @@ if ($thisuser && $game) {
 		games[0].game_loop_event();
 		
 		<?php
-		$load_event_rounds = 20;
+		$load_event_rounds = 1;
 		
 		$plan_start_round = $current_round;
 		$plan_stop_round = $plan_start_round+$load_event_rounds-1;
@@ -619,11 +619,8 @@ if ($thisuser && $game) {
 				$option_r = $app->run_query($option_q);
 				$j=0;
 				while ($option = $option_r->fetch()) {
-					$has_votingaddr = "false";
-					$votingaddr_id = $thisuser->user_address_id($game, $option['option_index'], false, $user_game['account_id']);
-					if ($votingaddr_id !== false) $has_votingaddr = "true";
-					
-					echo "games[0].all_events[".$db_event['event_index']."].options.push(new option(games[0].all_events[".$db_event['event_index']."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", '".str_replace("'", "", $option['name'])."', 0, $has_votingaddr));\n";
+					$has_votingaddr = "true";
+					echo "games[0].all_events[".$db_event['event_index']."].options.push(new option(games[0].all_events[".$db_event['event_index']."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$app->quote_escape($option['name']).", 0, $has_votingaddr));\n";
 					$j++;
 				}
 				$i++;

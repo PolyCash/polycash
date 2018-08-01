@@ -1499,8 +1499,6 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_c
 				
 				load_option_slider(index_id);
 				
-				$('#game'+this.instance_id+'_event'+this.sel_game_event_index+'_vote_confirm_'+option_id).modal('hide');
-				
 				refresh_compose_vote();
 				refresh_output_amounts();
 			}

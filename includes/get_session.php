@@ -1,11 +1,10 @@
 <?php
-if (!isset($session_key)) {
-	$session_key = session_id();
+if (isset($_COOKIE['my_session'])) {
+	$session_key = $_COOKIE['my_session'];
 }
-
-if ($session_key == "") {
-	session_start();
-	$session_key = session_id();
+else {
+	$session_key = $app->random_string(24);
+	setcookie('my_session', $session_key, time()+24*3600, '.'.$GLOBALS['site_domain']);
 }
 
 $thisuser = FALSE;

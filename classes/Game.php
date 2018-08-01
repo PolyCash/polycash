@@ -1732,33 +1732,19 @@ class Game {
 			$event = $these_events[$i];
 			$event_ids .= $event->db_event['event_id'].",";
 			
-			$round_stats = $event->round_voting_stats_all();
-			$sum_votes = $round_stats[0];
-			$option_id2rank = $round_stats[3];
-			
 			$js .= '
 			games['.$game_index.'].events['.$i.'] = new Event(games['.$game_index.'], '.$i.', '.$event->db_event['event_id'].', '.$event->db_event['event_index'].', '.$event->db_event['num_voting_options'].', "'.$event->db_event['vote_effectiveness_function'].'", "'.$event->db_event['effectiveness_param1'].'", "'.$event->db_event['option_block_rule'].'", '.$this->blockchain->app->quote_escape($event->db_event['event_name']).');'."\n";
 			
 			$option_q = "SELECT * FROM options o LEFT JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id='".$event->db_event['event_id']."' ORDER BY o.event_option_index ASC;";
 			$option_r = $this->blockchain->app->run_query($option_q);
-			while ($option = $option_r->fetch()) {
-				$js .= 'event_html += "<div class=\'modal fade\' id=\'game'.$game_index.'_event'.$i.'_vote_confirm_'.$option['option_id'].'\'></div>";';
-			}
-			
-			$option_r = $this->blockchain->app->run_query($option_q);
 			
 			$j=0;
 			while ($option = $option_r->fetch()) {
-				$has_votingaddr = "false";
-				if ($user) {
-					$votingaddr_id = $user->user_address_id($this, $option['option_index'], false, $user_game['account_id']);
-					if ($votingaddr_id !== false) $has_votingaddr = "true";
-				}
-				$js .= "games[".$game_index."].events[".$i."].options.push(new option(games[".$game_index."].events[".$i."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", '".str_replace("'", "", $option['name'])."', 0, $has_votingaddr, ".$this->blockchain->app->quote_escape($option['image_url'])."));\n";
+				$has_votingaddr = "true";
+				$js .= "games[".$game_index."].events[".$i."].options.push(new option(games[".$game_index."].events[".$i."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$this->blockchain->app->quote_escape($option['name']).", 0, $has_votingaddr, ".$this->blockchain->app->quote_escape($option['image_url'])."));\n";
 				$j++;
 			}
-			$js .= '
-			games['.$game_index.'].events['.$i.'].option_selected(0);
+			if ($event->db_event['option_block_rule'] == "football_match") $js .= '
 			games['.$game_index.'].events['.$i.'].refresh_time_estimate();'."\n";
 			
 			$js .= 'event_html += "<div id=\'game'.$game_index.'_event'.$i.'\' class=\'game_event_inner\'><div id=\'game'.$game_index.'_event'.$i.'_current_round_table\'></div><div id=\'game'.$game_index.'_event'.$i.'_my_current_votes\'></div></div>";'."\n";
