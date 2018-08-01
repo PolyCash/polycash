@@ -1,0 +1,1 @@
+UPDATE transaction_game_ios SET is_resolved=1 WHERE option_id IS NULL;

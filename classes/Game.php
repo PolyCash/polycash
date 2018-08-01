@@ -1112,7 +1112,7 @@ class Game {
 					$colored_coins = floor($colored_coins_generated*$non_escrow_io['amount']/$non_escrowed_coins);
 					$sum_colored_coins += $colored_coins;
 					
-					$qqq = "INSERT INTO transaction_game_ios SET io_id='".$non_escrow_io['io_id']."', game_id='".$this->db_game['game_id']."', is_coinbase=0, colored_amount='".$colored_coins."', create_round_id='".$create_round_id."', coin_blocks_destroyed=0, coin_rounds_destroyed=0;";
+					$qqq = "INSERT INTO transaction_game_ios SET io_id='".$non_escrow_io['io_id']."', game_id='".$this->db_game['game_id']."', is_coinbase=0, colored_amount='".$colored_coins."', create_round_id='".$create_round_id."', coin_blocks_destroyed=0, coin_rounds_destroyed=0, is_coinbase=0, is_resolved=1;";
 					$rrr = $this->blockchain->app->run_query($qqq);
 				}
 			}
@@ -2439,7 +2439,7 @@ class Game {
 						$output_i = 0;
 						
 						if ($rr->rowCount() > 0) {
-							$insert_q = "INSERT INTO transaction_game_ios (game_id, io_id, is_coinbase, colored_amount, destroy_amount, coin_blocks_destroyed, coin_rounds_destroyed, create_round_id, option_id, event_id, effectiveness_factor, votes, effective_destroy_amount) VALUES ";
+							$insert_q = "INSERT INTO transaction_game_ios (game_id, io_id, is_coinbase, colored_amount, destroy_amount, coin_blocks_destroyed, coin_rounds_destroyed, create_round_id, option_id, event_id, effectiveness_factor, votes, effective_destroy_amount, is_resolved) VALUES ";
 							
 							while ($output_io = $rr->fetch()) {
 								$payout_insert_q = "";
@@ -2468,13 +2468,13 @@ class Game {
 										
 										$effective_destroy_amount = floor($this_destroy_amount*$effectiveness_factor);
 										
-										$insert_q .= "'".$option_id."', '".$db_event['event_id']."', '".$effectiveness_factor."', '".$votes."', '".$effective_destroy_amount."'";
+										$insert_q .= "'".$option_id."', '".$db_event['event_id']."', '".$effectiveness_factor."', '".$votes."', '".$effective_destroy_amount."', 0";
 										
-										$payout_insert_q = "('".$this->db_game['game_id']."', '".$output_io['io_id']."', 1, 0, 0, 0, 0, null, '".$option_id."', '".$db_event['event_id']."', null, 0, 0), ";
+										$payout_insert_q = "('".$this->db_game['game_id']."', '".$output_io['io_id']."', 1, 0, 0, 0, 0, null, '".$option_id."', '".$db_event['event_id']."', null, 0, 0, 0), ";
 									}
-									else $insert_q .= "null, null, null, null, 0";
+									else $insert_q .= "null, null, null, null, 0, 1";
 								}
-								else $insert_q .= "null, null, null, null, 0";
+								else $insert_q .= "null, null, null, null, 0, 1";
 								
 								$insert_q .= "), ";
 								if ($payout_insert_q != "") $insert_q .= $payout_insert_q;

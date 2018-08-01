@@ -506,7 +506,7 @@ class Blockchain {
 							
 							$destroy_sum = 0;
 							
-							$insert_q = "INSERT INTO transaction_game_ios (game_id, is_coinbase, io_id, colored_amount, destroy_amount, ref_block_id, ref_coin_blocks, ref_round_id, ref_coin_rounds, option_id, event_id, effectiveness_factor, effective_destroy_amount) VALUES ";
+							$insert_q = "INSERT INTO transaction_game_ios (game_id, is_coinbase, io_id, colored_amount, destroy_amount, ref_block_id, ref_coin_blocks, ref_round_id, ref_coin_rounds, option_id, event_id, effectiveness_factor, effective_destroy_amount, is_resolved) VALUES ";
 							
 							for ($j=0; $j<count($outputs); $j++) {
 								$payout_insert_q = "";
@@ -539,13 +539,13 @@ class Blockchain {
 											
 											$effective_destroy_amount = floor($this_destroy_amount*$effectiveness_factor);
 											
-											$insert_q .= "'".$option_id."', '".$db_event['event_id']."', '".$effectiveness_factor."', '".$effective_destroy_amount."'";
+											$insert_q .= "'".$option_id."', '".$db_event['event_id']."', '".$effectiveness_factor."', '".$effective_destroy_amount."', 0";
 											
-											$payout_insert_q = "('".$color_game->db_game['game_id']."', 1, '".$output_io_ids[$j]."', 0, 0, null, 0, null, 0, '".$option_id."', '".$db_event['event_id']."', null, 0), ";
+											$payout_insert_q = "('".$color_game->db_game['game_id']."', 1, '".$output_io_ids[$j]."', 0, 0, null, 0, null, 0, '".$option_id."', '".$db_event['event_id']."', null, 0, 0), ";
 										}
-										else $insert_q .= "null, null, null, 0";
+										else $insert_q .= "null, null, null, 0, 1";
 									}
-									else $insert_q .= "null, null, null, 0";
+									else $insert_q .= "null, null, null, 0, 1";
 									
 									$insert_q .= "), ";
 									if ($payout_insert_q != "") $insert_q .= $payout_insert_q;
