@@ -795,9 +795,6 @@ if ($thisuser && $game) {
 									echo $game->select_input_buttons($user_game);
 								?></div>
 								
-								<div class="redtext" id="compose_vote_errors" style="margin-top: 5px;"></div>
-								<div class="greentext" id="compose_vote_success" style="margin-top: 5px;"></div>
-								
 								<div id="compose_vote" style="display: none;">
 									<h3>Stake Now</h3>
 									<div class="row bordered_row" style="border: 1px solid #bbb;">
@@ -820,6 +817,9 @@ if ($thisuser && $game) {
 									</div>
 									<button class="btn btn-success" id="confirm_compose_vote_btn" style="margin-top: 5px; margin-left: 5px;" onclick="confirm_compose_vote();"><i class="fas fa-check-circle"></i> &nbsp; Confirm & Stake</button>
 								</div>
+								
+								<div class="redtext" id="compose_vote_errors" style="margin-top: 10px;"></div>
+								<div class="greentext" id="compose_vote_success" style="margin-top: 10px;"></div>
 							</div>
 							<div id="betting_mode_principal" style="display: none;">
 								<p style="float: right;"><a href="" onclick="toggle_betting_mode('inflationary'); return false;">Switch to multiple betting mode</a></p>

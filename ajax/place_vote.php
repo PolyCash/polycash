@@ -45,7 +45,11 @@ if ($thisuser && $game) {
 		array_push($tx_amounts, $amounts[$i]);
 	}
 	
-	$io_q = "SELECT COUNT(*), SUM(amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.io_id IN (".implode(",", $io_ids).") AND k.account_id='".$user_game['account_id']."';";
+	$gio_q = "SELECT COUNT(*), SUM(gio.colored_amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.io_id IN (".implode(",", $io_ids).") AND k.account_id='".$user_game['account_id']."';";
+	$gio_r = $app->run_query($gio_q);
+	$gio_info = $gio_r->fetch();
+	
+	$io_q = "SELECT COUNT(*), SUM(io.amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.io_id IN (".implode(",", $io_ids).") AND k.account_id='".$user_game['account_id']."';";
 	$io_r = $app->run_query($io_q);
 	$io_info = $io_r->fetch();
 	
@@ -54,8 +58,16 @@ if ($thisuser && $game) {
 		die();
 	}
 	
-	if ($io_info['SUM(amount)'] != $fee+$burn_amount+$amount_sum) {
-		$app->output_message(6, "Error: amounts don't add up correctly: ".$io_info['SUM(amount)']." vs ".($fee+$burn_amount+$amount_sum), false);
+	$max_burn_frac = 0.75;
+	$max_burn_amount = floor($io_info['SUM(io.amount)']*$max_burn_frac);
+	$gio_max_burn_amount = floor($gio_info['SUM(gio.colored_amount)']*$max_burn_frac);
+	
+	if ($burn_amount > $max_burn_amount) {
+		$app->output_message(6, "Please spend a maximum of ".$app->format_bignum($gio_max_burn_amount/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural'].", or add more ".$game->db_game['coin_name_plural']." to this transaction.", false);
+		die();
+	}
+	else if ($io_info['SUM(io.amount)'] != $fee+$burn_amount+$amount_sum) {
+		$app->output_message(6, "Error: amounts don't add up correctly: ".$io_info['SUM(io.amount)']." vs ".($fee+$burn_amount+$amount_sum), false);
 		die();
 	}
 	

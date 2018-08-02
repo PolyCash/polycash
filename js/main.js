@@ -1056,12 +1056,14 @@ function confirm_compose_vote() {
 					$('#compose_vote_success').slideDown('slow');
 					setTimeout("$('#compose_vote_success').slideUp('fast');", 5000);
 					
-					remove_all_outputs();
-					
-					var num_inputs = vote_inputs.length;
-					for (var i=0; i<num_inputs; i++) {
-						remove_utxo_from_vote(0, false);
-					}
+					setTimeout(function() {
+						remove_all_outputs();
+						
+						var num_inputs = vote_inputs.length;
+						for (var i=0; i<num_inputs; i++) {
+							remove_utxo_from_vote(0, false);
+						}
+					}, 1500);
 				}
 				else {
 					$('#compose_vote_errors').html(result_obj['message']);
