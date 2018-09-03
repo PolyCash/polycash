@@ -121,10 +121,7 @@ if ($thisuser) {
 					
 					imagettftext($im, 27, 0, 790, 503, $black, $mainfont, $nextline);
 					
-					$sitename = "www.Poly.Cash";
-					if ($fv_currency['name'] == "GamerholicCoin") $sitename = "Gamerholic.com";
-					
-					imagettftext($im, 27, 0, 315, 605, $black, $mainfont, "Use your phone to scan the QR code above, or visit ".$sitename.".");
+					imagettftext($im, 27, 0, 315, 605, $black, $mainfont, "Use your phone to scan the QR code above, or visit ".$GLOBALS['base_url'].".");
 					imagettftext($im, 27, 0, 462, 659, $black, $mainfont, "Then scratch off the strip below to get your ".$fv_currency['short_name_plural'].".");
 					
 					imagettftext($im, 44, 0, 530, 805, $black, $mainfont, $secret_formatted);

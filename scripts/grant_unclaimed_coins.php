@@ -35,7 +35,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	$coins_to_grant = floatval($_REQUEST['coins']);
 	$coins_granted = 0;
 	
-	$unclaimed_coins_q = "SELECT SUM(io.amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE NOT EXISTS (SELECT * FROM address_keys ak WHERE ak.address_id=a.address_id) AND io.blockchain_id=".$blockchain->db_blockchain['blockchain_id']." AND io.spend_status='unspent';";
+	$unclaimed_coins_q = "SELECT SUM(io.amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE NOT EXISTS (SELECT * FROM address_keys ak WHERE ak.address_id=a.address_id AND ak.account_id IS NOT NULL) AND io.blockchain_id=".$blockchain->db_blockchain['blockchain_id']." AND io.spend_status='unspent';";
 	$unclaimed_coins_r = $app->run_query($unclaimed_coins_q);
 	$unclaimed_coins = $unclaimed_coins_r->fetch(PDO::FETCH_NUM);
 	$unclaimed_coins = $unclaimed_coins[0]/pow(10,$blockchain->db_blockchain['decimal_places']);
@@ -50,7 +50,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			$db_user = $user_r->fetch();
 			$user = new User($app, $db_user['user_id']);
 			
-			$unclaimed_output_q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE NOT EXISTS (SELECT * FROM address_keys ak WHERE ak.address_id=a.address_id) AND io.blockchain_id=".$blockchain->db_blockchain['blockchain_id']." AND io.spend_status='unspent';";
+			$unclaimed_output_q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE NOT EXISTS (SELECT * FROM address_keys ak WHERE ak.address_id=a.address_id AND ak.account_id IS NOT NULL) AND io.blockchain_id=".$blockchain->db_blockchain['blockchain_id']." AND io.spend_status='unspent';";
 			$unclaimed_output_r = $app->run_query($unclaimed_output_q);
 			
 			echo "Looping through ".$unclaimed_output_r->rowCount()." unclaimed outputs.<br/>\n";

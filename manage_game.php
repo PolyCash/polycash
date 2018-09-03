@@ -3,92 +3,106 @@ include("includes/connect.php");
 include("includes/get_session.php");
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
-$db_game = $app->fetch_game_from_url();
-
-if (empty($db_game)) {
-	$nav_tab_selected = "manage_game";
-	$pagetitle = "Create a new game";
-	include('includes/html_start.php');
+if (!$thisuser) {
+	$redirect_url = $app->get_redirect_url($_SERVER['REQUEST_URI']);
+	$redirect_key = $redirect_url['redirect_key'];
+	
+	include("includes/html_start.php");
 	?>
 	<div class="container-fluid">
-		<div class="panel panel-info" style="margin-top: 15px;">
-			<div class="panel-heading">
-				<div class="panel-title">Would you like to create a new game?</div>
-			</div>
-			<div class="panel-body">
-				<?php
-				$new_game_perm = $thisuser->new_game_permission();
-				
-				if ($new_game_perm) {
-					?>
-					<form action="/ajax/manage_game.php" onsubmit="create_new_game(); return false;">
-						<div class="form-group">
-							<label for="new_game_name">Please enter a title for the game:</label>
-							<input class="form-control" id="new_game_name" />
-						</div>
-						<div class="form-group">
-							<label for="new_game_blockchain_id">Which blockchain should the game run on?</label>
-							<select id="new_game_blockchain_id" class="form-control">
-								<option value="">-- Please Select --</option>
-								<?php
-								$q = "SELECT * FROM blockchains ORDER BY blockchain_name ASC;";
-								$r = $app->run_query($q);
-								while ($db_blockchain = $r->fetch()) {
-									echo "<option value=\"".$db_blockchain['blockchain_id']."\">".$db_blockchain['blockchain_name']."</option>\n";
-								}
-								?>
-							</select>
-						</div>
-						<div class="form-group">
-							<label for="new_game_genesis_tx_type">
-								Do you want to use an existing transaction as the genesis for this game, or create a new genesis transaction?
-							</label>
-							<select id="new_game_genesis_type" class="form-control" onchange="new_game_genesis_type_changed();">
-								<option value="">-- Please Select --</option>
-								<option value="existing">Use an existing transaction</option>
-								<option value="new">Create a new transaction</option>
-							</select>
-						</div>
-						<div class="form-group" id="new_game_genesis_tx_hash_holder" style="display: none;">
-							<label for="new_game_genesis_tx_hash">
-								Please enter the genesis transaction ID:
-							</label>
-							<input type="text" class="form-control" id="new_game_genesis_tx_hash" />
-						</div>
-						<div id="new_game_existing_genesis" style="display: none;">
-							<div class="form-group">
-								<label for="new_game_genesis_account_id">Please select an account to pay for the new transaction:</label>
-								<select id="new_game_genesis_account_id" class="form-control" onchange="new_game_genesis_account_changed();"></select>
-							</div>
-							<div class="form-group">
-								<label for="new_game_genesis_io_id">Please select coins for your new genesis transaction:</label>
-								<select id="new_game_genesis_io_id" class="form-control"></select>
-							</div>
-							<div class="form-group">
-								<label for="new_game_genesis_escrow_amount">For the UTXO you selected, how many coins should be deposited to escrow?</label>
-								<input type="text" id="new_game_genesis_escrow_amount" class="form-control" />
-							</div>
-						</div>
-						<div class="form-group">
-							<button id="new_game_save_btn" class="btn btn-primary">Save &amp; Continue</button>
-						</div>
-					</form>
-					<?php
-				}
-				else {
-					?>
-					Sorry, you don't have permission to create a new game.
-					<?php
-				}
-				?>
-			</div>
-		</div>
+	<?php
+	include("includes/html_login.php");
+	?>
 	</div>
 	<?php
 	include('includes/html_stop.php');
 }
 else {
-	if ($thisuser) {
+	$db_game = $app->fetch_game_from_url();
+
+	if (empty($db_game)) {
+		$nav_tab_selected = "manage_game";
+		$pagetitle = "Create a new game";
+		include('includes/html_start.php');
+		?>
+		<div class="container-fluid">
+			<div class="panel panel-info" style="margin-top: 15px;">
+				<div class="panel-heading">
+					<div class="panel-title">Would you like to create a new game?</div>
+				</div>
+				<div class="panel-body">
+					<?php
+					$new_game_perm = $thisuser->new_game_permission();
+					
+					if ($new_game_perm) {
+						?>
+						<form action="/ajax/manage_game.php" onsubmit="create_new_game(); return false;">
+							<div class="form-group">
+								<label for="new_game_name">Please enter a title for the game:</label>
+								<input class="form-control" id="new_game_name" />
+							</div>
+							<div class="form-group">
+								<label for="new_game_blockchain_id">Which blockchain should the game run on?</label>
+								<select id="new_game_blockchain_id" class="form-control">
+									<option value="">-- Please Select --</option>
+									<?php
+									$q = "SELECT * FROM blockchains ORDER BY blockchain_name ASC;";
+									$r = $app->run_query($q);
+									while ($db_blockchain = $r->fetch()) {
+										echo "<option value=\"".$db_blockchain['blockchain_id']."\">".$db_blockchain['blockchain_name']."</option>\n";
+									}
+									?>
+								</select>
+							</div>
+							<div class="form-group">
+								<label for="new_game_genesis_tx_type">
+									Do you want to use an existing transaction as the genesis for this game, or create a new genesis transaction?
+								</label>
+								<select id="new_game_genesis_type" class="form-control" onchange="new_game_genesis_type_changed();">
+									<option value="">-- Please Select --</option>
+									<option value="existing">Use an existing transaction</option>
+									<option value="new">Create a new transaction</option>
+								</select>
+							</div>
+							<div class="form-group" id="new_game_genesis_tx_hash_holder" style="display: none;">
+								<label for="new_game_genesis_tx_hash">
+									Please enter the genesis transaction ID:
+								</label>
+								<input type="text" class="form-control" id="new_game_genesis_tx_hash" />
+							</div>
+							<div id="new_game_existing_genesis" style="display: none;">
+								<div class="form-group">
+									<label for="new_game_genesis_account_id">Please select an account to pay for the new transaction:</label>
+									<select id="new_game_genesis_account_id" class="form-control" onchange="new_game_genesis_account_changed();"></select>
+								</div>
+								<div class="form-group">
+									<label for="new_game_genesis_io_id">Please select coins for your new genesis transaction:</label>
+									<select id="new_game_genesis_io_id" class="form-control"></select>
+								</div>
+								<div class="form-group">
+									<label for="new_game_genesis_escrow_amount">For the UTXO you selected, how many coins should be deposited to escrow?</label>
+									<input type="text" id="new_game_genesis_escrow_amount" class="form-control" />
+								</div>
+							</div>
+							<div class="form-group">
+								<button id="new_game_save_btn" class="btn btn-primary">Save &amp; Continue</button>
+							</div>
+						</form>
+						<?php
+					}
+					else {
+						?>
+						Sorry, you don't have permission to create a new game.
+						<?php
+					}
+					?>
+				</div>
+			</div>
+		</div>
+		<?php
+		include('includes/html_stop.php');
+	}
+	else {
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$game = new Game($blockchain, $db_game['game_id']);
 		
@@ -570,20 +584,6 @@ else {
 			<?php
 			include('includes/html_stop.php');
 		}
-	}
-	else {
-		$redirect_url = $app->get_redirect_url($_SERVER['REQUEST_URI']);
-		$redirect_key = $redirect_url['redirect_key'];
-		
-		include("includes/html_start.php");
-		?>
-		<div class="container-fluid">
-		<?php
-		include("includes/html_login.php");
-		?>
-		</div>
-		<?php
-		include('includes/html_stop.php');
 	}
 }
 ?>

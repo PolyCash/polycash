@@ -25,20 +25,24 @@ if ($thisuser && $game) {
 		array_push($tx_amounts, $burn_amount);
 		array_push($address_ids, $burn_address['address_id']);
 	}
+	else {
+		$app->output_message(3, "How many ".$game->db_game['coin_name_plural']." do you want to spend?", false);
+		die();
+	}
 	
 	$io_ids = explode(",", $_REQUEST['io_ids']);
 	$amounts = explode(",", $_REQUEST['amounts']);
 	$option_ids = explode(",", $_REQUEST['option_ids']);
 	
 	if (count($amounts) != count($option_ids)) {
-		$app->output_message(3, "Option IDs and amounts do not match", false);
+		$app->output_message(4, "Option IDs and amounts do not match", false);
 		die();
 	}
 	
 	$amount_sum = 0;
 	for ($i=0; $i<count($amounts); $i++) {
 		if ($amounts[$i] < 0) {
-			$app->output_message(4, "Invalid amount specified.", false);
+			$app->output_message(5, "Invalid amount specified.", false);
 			die();
 		}
 		$amount_sum += (int) $amounts[$i];
@@ -54,7 +58,7 @@ if ($thisuser && $game) {
 	$io_info = $io_r->fetch();
 	
 	if (count($io_ids) == 0 || count($amounts) == 0 || $io_info['COUNT(*)'] != count($io_ids)) {
-		$app->output_message(5, "Error: invalid amounts or IO IDs.", false);
+		$app->output_message(6, "Error: invalid amounts or IO IDs.", false);
 		die();
 	}
 	
@@ -63,11 +67,11 @@ if ($thisuser && $game) {
 	$gio_max_burn_amount = floor($gio_info['SUM(gio.colored_amount)']*$max_burn_frac);
 	
 	if ($burn_amount > $max_burn_amount) {
-		$app->output_message(6, "Please spend a maximum of ".$app->format_bignum($gio_max_burn_amount/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural'].", or add more ".$game->db_game['coin_name_plural']." to this transaction.", false);
+		$app->output_message(7, "Please spend a maximum of ".$app->format_bignum($gio_max_burn_amount/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural'].", or add more ".$game->db_game['coin_name_plural']." to this transaction.", false);
 		die();
 	}
 	else if ($io_info['SUM(io.amount)'] != $fee+$burn_amount+$amount_sum) {
-		$app->output_message(6, "Error: amounts don't add up correctly: ".$io_info['SUM(io.amount)']." vs ".($fee+$burn_amount+$amount_sum), false);
+		$app->output_message(8, "Error: amounts don't add up correctly: ".$io_info['SUM(io.amount)']." vs ".($fee+$burn_amount+$amount_sum), false);
 		die();
 	}
 	
@@ -83,12 +87,12 @@ if ($thisuser && $game) {
 				array_push($address_ids, $db_address['address_id']);
 			}
 			else {
-				$app->output_message(7, "Error: no address for option #".$option_ids[$i], false);
+				$app->output_message(9, "Error: no address for option #".$option_ids[$i], false);
 				die();
 			}
 		}
 		else {
-			$app->output_message(8, "Error: you supplied an invalid option ID.", false);
+			$app->output_message(10, "Error: you supplied an invalid option ID.", false);
 			die();
 		}
 	}
@@ -105,10 +109,10 @@ if ($thisuser && $game) {
 		$app->output_message(1, "Your transaction has been submitted! <a href=\"/explorer/games/".$game->db_game['url_identifier']."/transactions/".$transaction['tx_hash']."\">Details</a>", false);
 	}
 	else {
-		$app->output_message(9, "There was an error creating the transaction.", false);
+		$app->output_message(11, "There was an error creating the transaction.", false);
 	}
 }
 else {
-	$app->output_message(10, "Please log in.", false);
+	$app->output_message(12, "Please log in.", false);
 }
 ?>
