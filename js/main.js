@@ -1570,7 +1570,9 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_c
 				url: check_activity_url,
 				success: function(result) {
 					if (_this.refresh_page == "wallet" && result == "0") {
-						window.location = '/wallet/'+_this.game_url_identifier+'/?action=logout';
+						alert(check_activity_url);
+						alert(result);
+						//window.location = '/wallet/'+_this.game_url_identifier+'/?action=logout';
 					}
 					else {
 						_this.refresh_in_progress = false;
@@ -1718,7 +1720,9 @@ function account_start_spend_io(game_id, io_id, amount, blockchain_coin_name, ga
 	$('#account_spend_buyin_total').html("(Total: "+format_coins(amount)+" coins)");
 	$('#account_spend_modal').modal('show');
 	$('#account_io_id').val(account_io_id);
+	$('#set_for_sale_io_id').val(account_io_id);
 	$('#donate_game_id').val(game_id);
+	$('#set_for_sale_game_id').val(game_id);
 	
 	var optionsAsString = "<option value='blockchain'>"+blockchain_coin_name+"</option>\n";
 	optionsAsString += "<option value='game'>"+game_coin_name+"</option>\n";

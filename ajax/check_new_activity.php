@@ -2,7 +2,7 @@
 include("../includes/connect.php");
 include("../includes/get_session.php");
 
-if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
+if ($thisuser) {
 	$instance_id = (int) $_REQUEST['instance_id'];
 	$game_loop_index = (int) $_REQUEST['game_loop_index'];
 	$event_ids_hash = $_REQUEST['event_ids_hash'];
@@ -92,7 +92,7 @@ if ($thisuser || $_REQUEST['refresh_page'] != "wallet") {
 		for ($game_event_index=0; $game_event_index<count($these_events); $game_event_index++) {
 			$output['my_current_votes'][$game_event_index] = $these_events[$game_event_index]->my_votes_table($current_round, $user_game);
 		}
-		$output['account_value'] = $game->account_value_html($account_value, $user_game['account_id']);
+		$output['account_value'] = $game->account_value_html($account_value, $user_game);
 	}
 	
 	$set_options_js = "";

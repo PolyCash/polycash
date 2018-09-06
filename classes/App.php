@@ -668,24 +668,31 @@ class App {
 		
 		while ($currency_url = $r->fetch()) {
 			$api_response_raw = file_get_contents($currency_url['url']);
-			$api_response = json_decode($api_response_raw);
 			
 			$qq = "SELECT * FROM currencies WHERE oracle_url_id='".$currency_url['oracle_url_id']."';";
 			$rr = $this->run_query($qq);
 			
 			while ($currency = $rr->fetch()) {
 				if ($currency_url['format_id'] == 2) {
+					$api_response = json_decode($api_response_raw);
 					$price = $api_response->USD->bid;
 				}
 				else if ($currency_url['format_id'] == 1) {
+					$api_response = json_decode($api_response_raw);
 					if (!empty($api_response->rates)) {
 						$api_rates = (array) $api_response->rates;
 						$price = 1/($api_rates[$currency['abbreviation']]);
 					}
 				}
+				else if ($currency_url['format_id'] == 3) {
+					$html_data = $this->first_snippet_between($api_response_raw, '<div id="currency-exchange-rates"', '></div>');
+					$price = (float) $this->first_snippet_between($html_data, 'data-btc="', '"');
+				}
 				
-				$qqq = "INSERT INTO currency_prices SET currency_id='".$currency['currency_id']."', reference_currency_id='".$reference_currency_id."', price='".$price."', time_added='".time()."';";
-				$rrr = $this->run_query($qqq);
+				if ($price > 0) {
+					$qqq = "INSERT INTO currency_prices SET currency_id='".$currency['currency_id']."', reference_currency_id='".$reference_currency_id."', price='".$price."', time_added='".time()."';";
+					$rrr = $this->run_query($qqq);
+				}
 			}
 		}
 	}
@@ -959,7 +966,7 @@ class App {
 	
 	public function delete_unconfirmable_transactions() {
 		$start_time = microtime(true);
-		$unconfirmed_tx_r = $this->run_query("SELECT * FROM transactions t JOIN blockchains b ON t.blockchain_id=b.blockchain_id WHERE b.online=1 AND t.block_id IS NULL ORDER BY t.blockchain_id ASC;");
+		$unconfirmed_tx_r = $this->run_query("SELECT * FROM transactions t JOIN blockchains b ON t.blockchain_id=b.blockchain_id WHERE b.online=1 AND t.block_id IS NULL AND t.transaction_desc='transaction' ORDER BY t.blockchain_id ASC;");
 		$game_id = false;
 		$delete_count = 0;
 		

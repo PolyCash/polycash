@@ -142,7 +142,7 @@ class User {
 			$q = "INSERT INTO user_games SET user_id='".$this->db_user['user_id']."', game_id='".$game->db_game['game_id']."', api_access_code=".$this->app->quote_escape($this->app->random_string(32)).", show_intro_message=1";
 			if (!empty($this->db_user['payout_address_id'])) $q .= ", payout_address_id='".$this->db_user['payout_address_id']."'";
 			if ($game->db_game['giveaway_status'] == "public_pay" || $game->db_game['giveaway_status'] == "invite_pay") $q .= ", payment_required=1";
-			$q .= ", notification_preference='email', prompt_notification_preference=1, betting_mode='principal'";
+			$q .= ", notification_preference='email', prompt_notification_preference=1, betting_mode='principal', display_currency_id='".$game->db_game['default_display_currency_id']."'";
 			$q .= ";";
 			$r = $this->app->run_query($q);
 			$user_game_id = $this->app->last_insert_id();
@@ -219,7 +219,7 @@ class User {
 			}
 		}
 		
-		$session_key = $_COOKIE['my_session'];
+		$session_key = $_COOKIE['my_session_global'];
 		$expire_time = time()+3600*24;
 		
 		$q = "INSERT INTO user_sessions SET user_id='".$this->db_user['user_id']."', session_key=".$this->app->quote_escape($session_key).", login_time='".time()."', expire_time='".$expire_time."'";
