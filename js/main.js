@@ -1570,9 +1570,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_c
 				url: check_activity_url,
 				success: function(result) {
 					if (_this.refresh_page == "wallet" && result == "0") {
-						alert(check_activity_url);
-						alert(result);
-						//window.location = '/wallet/'+_this.game_url_identifier+'/?action=logout';
+						window.location = '/wallet/'+_this.game_url_identifier+'/?action=logout';
 					}
 					else {
 						_this.refresh_in_progress = false;

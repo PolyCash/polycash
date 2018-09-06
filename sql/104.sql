@@ -19,3 +19,9 @@ ALTER TABLE `game_escrow_accounts`
 ALTER TABLE `game_escrow_accounts`
   MODIFY `escrow_account_id` int(11) NOT NULL AUTO_INCREMENT;
 COMMIT;
+
+ALTER TABLE `games` CHANGE `buyin_policy` `buyin_policy` ENUM('unlimited','per_user_cap','game_cap','game_and_user_cap','none','for_sale') CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL DEFAULT 'none';
+
+ALTER TABLE `games` ADD `default_buyin_currency_id` INT NOT NULL DEFAULT '6' AFTER `default_display_currency_id`;
+ALTER TABLE `user_games` ADD `buyin_currency_id` INT NULL DEFAULT NULL AFTER `display_currency_id`;
+UPDATE user_games SET buyin_currency_id=6;
