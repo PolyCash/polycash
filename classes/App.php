@@ -668,7 +668,7 @@ class App {
 		
 		while ($currency_url = $r->fetch()) {
 			$api_response_raw = file_get_contents($currency_url['url']);
-			
+			echo "(".strlen($api_response_raw).") ".$currency_url['url']."<br/>\n";
 			$qq = "SELECT * FROM currencies WHERE oracle_url_id='".$currency_url['oracle_url_id']."';";
 			$rr = $this->run_query($qq);
 			
@@ -751,12 +751,11 @@ class App {
 		return round(pow(10,8)*$denominator_rate['price']/$numerator_rate['price'])/pow(10,8);
 	}
 	
-	public function new_currency_invoice(&$pay_currency, $pay_amount, &$user, &$user_game, $invoice_type) {
-		$currency_account = $user->fetch_currency_account($pay_currency['currency_id']);
-		$address_key = $this->new_address_key($pay_currency['currency_id'], $currency_account);
+	public function new_currency_invoice(&$account, $pay_amount, &$user, &$user_game, $invoice_type) {
+		$address_key = $this->new_address_key($account['currency_id'], $account);
 		
 		$time = time();
-		$q = "INSERT INTO currency_invoices SET time_created='".$time."', pay_currency_id='".$pay_currency['currency_id']."', address_id='".$address_key['address_id']."', expire_time='".($time+$GLOBALS['invoice_expiration_seconds'])."', user_game_id='".$user_game['user_game_id']."', invoice_type='".$invoice_type."', status='unpaid', invoice_key_string='".$this->random_string(32)."', pay_amount='".$pay_amount."';";
+		$q = "INSERT INTO currency_invoices SET time_created='".$time."', pay_currency_id='".$account['currency_id']."', address_id='".$address_key['address_id']."', expire_time='".($time+$GLOBALS['invoice_expiration_seconds'])."', user_game_id='".$user_game['user_game_id']."', invoice_type='".$invoice_type."', status='unpaid', invoice_key_string='".$this->random_string(32)."', pay_amount='".$pay_amount."';";
 		$r = $this->run_query($q);
 		$invoice_id = $this->last_insert_id();
 		
@@ -783,7 +782,7 @@ class App {
 						$save_method = "wallet.dat";
 					}
 					catch (Exception $e) {
-						if (empty($GLOBALS['rsa_pub_key']) || empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
+						/*if (empty($GLOBALS['rsa_pub_key']) || empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
 							$this->log_message('Error generating a payment address. Please visit /install.php and then set $GLOBALS["rsa_pub_key"] in includes/config.php');
 							$save_method = "skip";
 						}
@@ -793,7 +792,8 @@ class App {
 							$address_text = $keySet['pubAdd'];
 							$save_method = "db";
 						}
-						else $save_method = "skip";
+						else */
+						$save_method = "skip";
 					}
 				}
 			}

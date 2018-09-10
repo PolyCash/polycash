@@ -2895,18 +2895,33 @@ class Game {
 		}
 	}
 	
-	public function check_set_for_sale_account() {
-		$q = "SELECT * FROM currency_accounts WHERE is_sale_account=1 AND game_id='".$this->db_game['game_id']."' ORDER BY account_id DESC;";
+	public function check_set_game_sale_account(&$thisuser) {
+		$q = "SELECT * FROM currency_accounts WHERE is_game_sale_account=1 AND game_id='".$this->db_game['game_id']."' ORDER BY account_id DESC;";
 		$r = $this->blockchain->app->run_query($q);
 		
 		if ($r->rowCount() > 0) {
 			return $r->fetch();
 		}
 		else {
-			$q = "INSERT INTO currency_accounts SET is_sale_account=1, currency_id='".$this->blockchain->currency_id()."', game_id='".$this->db_game['game_id']."', account_name=".$this->blockchain->app->quote_escape($this->db_game['name'].' For Sale').', time_created='.time().';';
+			$q = "INSERT INTO currency_accounts SET is_game_sale_account=1, currency_id='".$this->blockchain->currency_id()."', game_id='".$this->db_game['game_id']."', user_id='".$thisuser->db_user['user_id']."', account_name=".$this->blockchain->app->quote_escape($this->db_game['name'].' '.$this->db_game['coin_name_plural'].' for sale').', time_created='.time().';';
 			$r = $this->blockchain->app->run_query($q);
 			
-			return $this->check_set_for_sale_account();
+			return $this->check_set_game_sale_account($thisuser);
+		}
+	}
+	
+	public function check_set_blockchain_sale_account(&$thisuser, &$currency) {
+		$q = "SELECT * FROM currency_accounts WHERE is_blockchain_sale_account=1 AND currency_id='".$currency['currency_id']."' AND game_id='".$this->db_game['game_id']."' ORDER BY account_id DESC;";
+		$r = $this->blockchain->app->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			return $r->fetch();
+		}
+		else {
+			$q = "INSERT INTO currency_accounts SET is_blockchain_sale_account=1, currency_id='".$currency['currency_id']."', game_id='".$this->db_game['game_id']."', user_id='".$thisuser->db_user['user_id']."', account_name=".$this->blockchain->app->quote_escape($this->db_game['name'].' '.$currency['short_name_plural'].' for sale').', time_created='.time().';';
+			$r = $this->blockchain->app->run_query($q);
+			
+			return $this->check_set_blockchain_sale_account($thisuser, $currency);
 		}
 	}
 	

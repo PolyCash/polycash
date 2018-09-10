@@ -45,11 +45,13 @@ if ($thisuser && $game) {
 				if ($game->db_game['buyin_policy'] == "for_sale") {
 					$buyin_currency = $app->fetch_currency_by_id($user_game['buyin_currency_id']);
 					$escrow_value = $game->escrow_value_in_currency($user_game['buyin_currency_id']);
+					$pay_to_account = $game->check_set_blockchain_sale_account($thisuser, $buyin_currency);
 				}
 				else {
 					$buyin_currency = $app->run_query("SELECT * FROM currencies WHERE blockchain_id='".$game->db_game['blockchain_id']."';")->fetch();
 					$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false, false);
 					$escrow_value = $game->escrow_value(false)/pow(10, $game->db_game['decimal_places']);
+					$pay_to_account = $thisuser->fetch_currency_account($buyin_currency['currency_id']);
 				}
 				
 				$buyin_blockchain = new Blockchain($app, $buyin_currency['blockchain_id']);
@@ -106,16 +108,17 @@ if ($thisuser && $game) {
 							echo "This game has a game-wide buy-in cap of ".$app->format_bignum($game->db_game['game_buyin_cap'])." ".$game->blockchain->db_blockchain['coin_name_plural'].". ";
 						}
 						else if ($game->db_game['buyin_policy'] == "for_sale") {
-							$for_sale_account = $game->check_set_for_sale_account();
-							$for_sale_amount = $game->account_balance($for_sale_account['account_id']);
-							echo "There are ".$app->format_bignum($for_sale_amount/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." for sale. ";
+							$game_sale_account = $game->check_set_game_sale_account($thisuser);
+							$game_sale_amount = $game->account_balance($game_sale_account['account_id']);
+							echo "There are ".$app->format_bignum($game_sale_amount/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." for sale. ";
 						}
 						else die("Invalid buy-in policy.");
 						
-						$currency_account = $thisuser->fetch_currency_account($chain_currency['currency_id']);
-						
-						if ($currency_account) {
-							$invoice = $app->new_currency_invoice($buyin_currency, false, $thisuser, $user_game, 'buyin');
+						if ($pay_to_account) {
+							$invoice_type = "buyin";
+							if ($game->db_game['buyin_policy'] == "for_sale") $invoice_type = "sale_buyin";
+							
+							$invoice = $app->new_currency_invoice($pay_to_account, false, $thisuser, $user_game, $invoice_type);
 							$invoice_addr_q = "SELECT * FROM addresses WHERE address_id='".$invoice['address_id']."';";
 							$invoice_address = $app->run_query($invoice_addr_q)->fetch();
 						}

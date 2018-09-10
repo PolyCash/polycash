@@ -18,8 +18,8 @@ if ($thisuser) {
 		
 		if ($r->rowCount() > 0) {
 			$db_game = $r->fetch();
-			$set_for_sale_blockchain = new Blockchain($app, $db_game['blockchain_id']);
-			$set_for_sale_game = new Game($set_for_sale_blockchain, $db_game['game_id']);
+			$sale_blockchain = new Blockchain($app, $db_game['blockchain_id']);
+			$sale_game = new Game($sale_blockchain, $db_game['game_id']);
 			
 			$satoshis_each = pow(10,$db_game['decimal_places'])*$amount_each;
 			$fee_amount = 0.001*pow(10,$db_game['decimal_places']);
@@ -37,7 +37,7 @@ if ($thisuser) {
 					$r = $app->run_query($q);
 					
 					if ($r->rowCount() > 0) {
-						$for_sale_account = $set_for_sale_game->check_set_for_sale_account();
+						$game_sale_account = $sale_game->check_set_game_sale_account($thisuser);
 						
 						$game_ios = array();
 						$colored_coin_sum = 0;
@@ -59,9 +59,9 @@ if ($thisuser) {
 							do {
 								if ($donate_blockchain->db_blockchain['p2p_mode'] != "rpc") {
 									$addr_text = $app->random_string(34);
-									$temp_address = $set_for_sale_blockchain->create_or_fetch_address($addr_text, false, false, false, false, true, false);
+									$temp_address = $sale_blockchain->create_or_fetch_address($addr_text, false, false, false, false, true, false);
 								}
-								$addr_q = "SELECT * FROM addresses a WHERE a.primary_blockchain_id='".$set_for_sale_blockchain->db_blockchain['blockchain_id']."' AND a.is_mine=1 AND a.user_id IS NULL AND NOT EXISTS (SELECT * FROM transaction_ios io WHERE io.address_id=a.address_id) ORDER BY RAND() LIMIT 1;";
+								$addr_q = "SELECT * FROM addresses a WHERE a.primary_blockchain_id='".$sale_blockchain->db_blockchain['blockchain_id']."' AND a.is_mine=1 AND a.user_id IS NULL AND NOT EXISTS (SELECT * FROM transaction_ios io WHERE io.address_id=a.address_id) ORDER BY RAND() LIMIT 1;";
 								$addr_r = $app->run_query($addr_q);
 								
 								if ($addr_r->rowCount() > 0) {
@@ -76,7 +76,7 @@ if ($thisuser) {
 										
 										if ($addr_key_r->rowCount() > 0) {
 											$addr_key = $addr_key_r->fetch();
-											$addr_key_q = "UPDATE address_keys SET account_id='".$for_sale_account['account_id']."' WHERE address_key_id='".$addr_key['address_key_id']."';";
+											$addr_key_q = "UPDATE address_keys SET account_id='".$game_sale_account['account_id']."' WHERE address_key_id='".$addr_key['address_key_id']."';";
 											$addr_key_r = $app->run_query($addr_key_q);
 											$address_key_id = $addr_key['address_key_id'];
 										}
@@ -129,7 +129,7 @@ if ($thisuser) {
 										array_push($send_address_ids, $game_ios[0]['address_id']);
 									}
 									
-									$transaction_id = $set_for_sale_game->blockchain->create_transaction('transaction', $amounts, false, array($game_ios[0]['io_id']), $send_address_ids, $fee_amount);
+									$transaction_id = $sale_game->blockchain->create_transaction('transaction', $amounts, false, array($game_ios[0]['io_id']), $send_address_ids, $fee_amount);
 									
 									if ($transaction_id) {
 										header("Location: /explorer/games/".$db_game['url_identifier']."/transactions/".$transaction_id."/");
@@ -138,7 +138,7 @@ if ($thisuser) {
 									else echo "Error: failed to create the transaction.<br/>\n";
 								}
 								else {
-									echo "UTXO is only ".$app->format_bignum($colored_coin_sum/pow(10,$set_for_sale_game->db_game['decimal_places']))." ".$set_for_sale_game->db_game['coin_name_plural']." but you tried to spend ".$app->format_bignum($total_cost_satoshis/pow(10,$set_for_sale_game->db_game['decimal_places']))."<br/>\n";
+									echo "UTXO is only ".$app->format_bignum($colored_coin_sum/pow(10,$sale_game->db_game['decimal_places']))." ".$sale_game->db_game['coin_name_plural']." but you tried to spend ".$app->format_bignum($total_cost_satoshis/pow(10,$sale_game->db_game['decimal_places']))."<br/>\n";
 								}
 							}
 							else echo "You don't own this UTXO.<br/>\n";

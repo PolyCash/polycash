@@ -109,6 +109,7 @@ else {
 		if ($app->user_can_edit_game($thisuser, $game)) {
 			$next_action = "params";
 			$last_action = "";
+			$messages = "";
 			
 			if (!empty($_REQUEST['next'])) $next_action = $_REQUEST['next'];
 			if (!empty($_REQUEST['last'])) $last_action = $_REQUEST['last'];
@@ -121,10 +122,73 @@ else {
 				
 				$game->db_game['short_description'] = $game_description;
 			}
+			else if ($last_action == "upload_csv") {
+				$csv_content = file_get_contents($_FILES['csv_file']['tmp_name']);
+				$csv_lines = explode("\n", $csv_content);
+				$header_vars = explode(",", trim(strtolower($csv_lines[0])));
+				
+				$ties_allowed = (int) $_REQUEST['ties_allowed'];
+				
+				$home_col = array_search("home", $header_vars);
+				$away_col = array_search("away", $header_vars);
+				$name_col = array_search("event name", $header_vars);
+				$time_col = array_search("datetime utc", $header_vars);
+				
+				if ($home_col === false || $away_col === false || $name_col === false || $time_col === false) {
+					$messages .= "A required column was missing in the file you uploaded. Required fields are 'Home', 'Away', 'Event Name' and 'Datetime UTC'<br/>\n";
+				}
+				else {
+					$q = "SELECT MAX(event_index) FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."';";
+					$r = $app->run_query($q);
+					$game_max_event_index = (int) $r->fetch()['MAX(event_index)'];
+					$game_event_index_offset = 0;
+					$event_starting_time = date("Y-m-d", time())." 0:00:00";
+					
+					for ($line_i=1; $line_i<count($csv_lines); $line_i++) {
+						$line_vals = explode(",", trim($csv_lines[$line_i]));
+						$home = $line_vals[$home_col];
+						$away = $line_vals[$away_col];
+						$event_name = $line_vals[$name_col];
+						$event_time = $line_vals[$time_col];
+						
+						if (!empty($home) && !empty($away) && !empty($event_name) && !empty($event_time)) {
+							$event_final_time = date("Y-m-d G:i:s", strtotime($event_time));
+							
+							$event_index = $game_max_event_index+$game_event_index_offset+1;
+							
+							$gde_q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND event_name=".$app->quote_escape($event_name)." AND event_final_time='".$event_final_time."';";
+							$gde_r = $app->run_query($gde_q);
+							
+							if ($gde_r->rowCount() == 0) {
+								$gde_ins_q = "INSERT INTO game_defined_events SET game_id='".$game->db_game['game_id']."', event_index='".$event_index."', event_name=".$app->quote_escape($event_name).", event_starting_time='".$event_starting_time."', event_final_time='".$event_final_time."', event_payout_offset_time='2:00:00', option_name='team', option_name_plural='teams';";
+								$gde_ins_r = $app->run_query($gde_ins_q);
+								
+								$gdo_ins_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index=".$event_index.", option_index=0, name=".$app->quote_escape($home).";";
+								$gdo_ins_r = $app->run_query($gdo_ins_q);
+								
+								$gdo_ins_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index=".$event_index.", option_index=1, name=".$app->quote_escape($away).";";
+								$gdo_ins_r = $app->run_query($gdo_ins_q);
+								
+								if ($ties_allowed) {
+									$gdo_ins_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index=".$event_index.", option_index=2, name='Tie';";
+									$gdo_ins_r = $app->run_query($gdo_ins_q);
+								}
+								
+								$game_event_index_offset++;
+							}
+							else $messages .= $event_name." already exists, skipping..<br/>\n";
+						}
+					}
+					
+					$messages .= "Added ".$game_event_index_offset." events.<br/>\n";
+				}
+			}
 			
 			$nav_tab_selected = "manage_game";
 			$pagetitle = "Manage game: ".$game->db_game['name'];
 			include('includes/html_start.php');
+			
+			if (!empty($messages)) echo $messages;
 			
 			$actions = array("params", "events", "description", "game_definition");
 			$action_labels = array("Game Parameters", "Manage Events", "Description", "Game Definition");
@@ -282,6 +346,7 @@ else {
 												<option value="none">No additional buy-ins</option>
 												<option value="unlimited">Unlimited buy-ins</option>
 												<option value="game_cap">Buy-in cap for the whole game</option>
+												<option value="for_sale">Allow each node to sell their own coins</option>
 											</select>
 										</div>
 										<div id="game_form_game_buyin_cap_disp">
@@ -387,6 +452,7 @@ else {
 							<p>
 								<button class="btn btn-sm btn-success" onclick="manage_game_load_event('new');">New Event</button>
 								<button class="btn btn-sm btn-primary" onclick="manage_game_set_event_blocks(false);">Set Event Blocks</button>
+								<button class="btn btn-sm btn-info" onclick="$('#import_csv_modal').modal('show');">Import Events from CSV</button>
 							</p>
 							<p>
 								<select class="form-control" id="manage_game_event_filter" onchange="manage_game_event_filter_changed();">
@@ -493,6 +559,34 @@ else {
 					<div style="display: none;" class="modal fade" id="options_modal">
 						<div class="modal-dialog">
 							<div class="modal-content" id="options_modal_content">
+							</div>
+						</div>
+					</div>
+					
+					<div style="display: none;" class="modal fade" id="import_csv_modal">
+						<div class="modal-dialog">
+							<div class="modal-content">
+								<form action="/manage/<?php echo $game->db_game['url_identifier']; ?>/" method="post" enctype="multipart/form-data">
+									<input type="hidden" name="last" value="upload_csv" />
+									<input type="hidden" name="next" value="events" />
+									<div class="modal-body">
+										<div class="form-group">
+											<label for="ties_allowed">Can the teams tie?</label>
+											<select class="form-control" name="ties_allowed">
+												<option value="1">Yes, ties are allowed</option>
+												<option value="0">No ties</option>
+											</select>
+										</div>
+										<div class="form-group">
+											<label for="csv_file">Please select a file to upload</label>
+											<input type="file" name="csv_file" class="btn btn-warning" />
+										</div>
+									</div>
+									<div class="modal-footer">
+										<input type="submit" value="Upload CSV" class="btn btn-primary" />
+										<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+									</div>
+								</form>
 							</div>
 						</div>
 					</div>

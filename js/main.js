@@ -1887,7 +1887,6 @@ function clear_event_form() {
 		$('#event_form_'+event_verbatim_vars[form_i]).val("");
 	}
 }
-
 function manage_game_set_event_blocks(game_defined_event_id) {
 	var ajax_url = "/ajax/set_event_blocks.php?game_id="+games[0].game_id;
 	if (game_defined_event_id) ajax_url += "&game_defined_event_id="+game_defined_event_id;
@@ -1897,7 +1896,6 @@ function manage_game_set_event_blocks(game_defined_event_id) {
 		alert(result_obj['message']);
 	});
 }
-
 function manage_game_load_event(gde_id) {
 	clear_event_form();
 	
