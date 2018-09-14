@@ -26,7 +26,11 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		if (empty($blockchains[$invoice_address['blockchain_id']])) $blockchains[$invoice_address['blockchain_id']] = new Blockchain($app, $invoice_address['blockchain_id']);
 		$game = new Game($blockchains[$invoice_address['blockchain_id']], $invoice_address['game_id']);
 		
-		$address_balance = $game->blockchain->address_balance_at_block($invoice_address, false);
+		$pay_currency = $app->fetch_currency_by_id($invoice_address['pay_currency_id']);
+		if (empty($blockchains[$pay_currency['blockchain_id']])) $blockchains[$pay_currency['blockchain_id']] = new Blockchain($app, $pay_currency['blockchain_id']);
+		$pay_blockchain = $blockchains[$pay_currency['blockchain_id']];
+		
+		$address_balance = $pay_blockchain->address_balance_at_block($invoice_address, false);
 		
 		$qq = "SELECT SUM(confirmed_amount_paid) FROM currency_invoices WHERE address_id='".$invoice_address['address_id']."' AND status IN('confirmed','settled','pending_refund','refunded');";
 		$rr = $app->run_query($qq);
