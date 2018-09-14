@@ -755,7 +755,9 @@ class App {
 		$address_key = $this->new_address_key($account['currency_id'], $account);
 		
 		$time = time();
-		$q = "INSERT INTO currency_invoices SET time_created='".$time."', pay_currency_id='".$account['currency_id']."', address_id='".$address_key['address_id']."', expire_time='".($time+$GLOBALS['invoice_expiration_seconds'])."', user_game_id='".$user_game['user_game_id']."', invoice_type='".$invoice_type."', status='unpaid', invoice_key_string='".$this->random_string(32)."', pay_amount='".$pay_amount."';";
+		$q = "INSERT INTO currency_invoices SET time_created='".$time."', pay_currency_id='".$account['currency_id']."'";
+		if ($address_key) $q .= ", address_id='".$address_key['address_id']."'";
+		$q .= ", expire_time='".($time+$GLOBALS['invoice_expiration_seconds'])."', user_game_id='".$user_game['user_game_id']."', invoice_type='".$invoice_type."', status='unpaid', invoice_key_string='".$this->random_string(32)."', pay_amount='".$pay_amount."';";
 		$r = $this->run_query($q);
 		$invoice_id = $this->last_insert_id();
 		
