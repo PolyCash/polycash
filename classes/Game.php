@@ -3092,17 +3092,12 @@ class Game {
 	public function escrow_value_in_currency($currency_id) {
 		$total_value = 0;
 		
-		$account_q = "SELECT * FROM game_escrow_accounts ea JOIN currency_accounts ca ON ea.account_id=ca.account_id JOIN currencies c ON ca.currency_id=c.currency_id WHERE ea.game_id='".$this->db_game['game_id']."';";
-		$account_r = $this->blockchain->app->run_query($account_q);
+		$amount_q = "SELECT * FROM game_escrow_amounts ea JOIN currencies c ON ea.currency_id=c.currency_id WHERE ea.game_id='".$this->db_game['game_id']."';";
+		$amount_r = $this->blockchain->app->run_query($amount_q);
 		
-		while ($escrow_account = $account_r->fetch()) {
-			$escrow_blockchain = new Blockchain($this->blockchain->app, $escrow_account['blockchain_id']);
-			
-			$account_value = $escrow_blockchain->account_balance($escrow_account['account_id'])/pow(10, $escrow_blockchain->db_blockchain['decimal_places']);
-			
-			$conversion_rate = $this->blockchain->app->currency_conversion_rate($currency_id, $escrow_account['currency_id']);
-			
-			$value_in_currency = $account_value*$conversion_rate['conversion_rate'];
+		while ($escrow_amount = $amount_r->fetch()) {
+			$conversion_rate = $this->blockchain->app->currency_conversion_rate($currency_id, $escrow_amount['currency_id']);
+			$value_in_currency = $escrow_amount['amount']*$conversion_rate['conversion_rate'];
 			$total_value += $value_in_currency;
 		}
 		

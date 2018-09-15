@@ -1135,6 +1135,23 @@ class App {
 			$game_definition[$var_name] = $var_val;
 		}
 		
+		$escrow_amounts = array();
+		
+		if ($definition_mode == "actual") {
+			$q = "SELECT * FROM game_escrow_amounts ea JOIN currencies c ON ea.currency_id=c.currency_id WHERE ea.game_id='".$game->db_game['game_id']."' ORDER BY c.short_name_plural ASC;";
+		}
+		else if ($definition_mode == "defined") {
+			$q = "SELECT * FROM game_defined_escrow_amounts ea JOIN currencies c ON ea.currency_id=c.currency_id WHERE ea.game_id='".$game->db_game['game_id']."' ORDER BY c.short_name_plural ASC;";
+		}
+		
+		$r = $this->run_query($q);
+		
+		while ($escrow_amount = $r->fetch()) {
+			$escrow_amounts[$escrow_amount['short_name_plural']] = (float) $escrow_amount['amount'];
+		}
+		
+		$game_definition['escrow_amounts'] = $escrow_amounts;
+		
 		$event_verbatim_vars = $this->event_verbatim_vars();
 		$events_obj = array();
 		
@@ -1501,6 +1518,7 @@ class App {
 		return array(
 			array('float', 'protocol_version', true),
 			array('string', 'url_identifier', false),
+			array('int', 'decimal_places', true),
 			array('int', 'category_id', false),
 			array('string', 'name', false),
 			array('string', 'event_type_name', false),
@@ -1570,6 +1588,21 @@ class App {
 							$q = "UPDATE games SET ".$var[1]."=".$this->quote_escape($new_game_obj[$var[1]])." WHERE game_id=".$game->db_game['game_id'].";";
 							$r = $this->run_query($q);
 						}
+					}
+				}
+				
+				$q = "DELETE FROM game_escrow_amounts WHERE game_id='".$game->db_game['game_id']."';";
+				$r = $this->run_query($q);
+				
+				foreach ($new_game_obj['escrow_amounts'] as $currency_identifier => $amount) {
+					$q = "SELECT * FROM currencies WHERE short_name_plural='".$currency_identifier."';";
+					$r = $this->run_query($q);
+					
+					if ($r->rowCount() > 0) {
+						$escrow_currency = $r->fetch();
+						
+						$q = "INSERT INTO game_escrow_amounts SET game_id='".$game->db_game['game_id']."', currency_id='".$escrow_currency['currency_id']."', amount='".$amount."';";
+						$r = $this->run_query($q);
 					}
 				}
 				
@@ -1783,6 +1816,21 @@ class App {
 							$game_id = $this->last_insert_id();
 							
 							$game = new Game($blockchain, $game_id);
+						}
+						
+						$q = "DELETE FROM game_defined_escrow_amounts WHERE game_id='".$game->db_game['game_id']."';";
+						$r = $this->run_query($q);
+						
+						foreach ($game_def->escrow_amounts as $currency_identifier => $amount) {
+							$q = "SELECT * FROM currencies WHERE short_name_plural='".$currency_identifier."';";
+							$r = $this->run_query($q);
+							
+							if ($r->rowCount() > 0) {
+								$escrow_currency = $r->fetch();
+								
+								$q = "INSERT INTO game_defined_escrow_amounts SET game_id='".$game->db_game['game_id']."', currency_id='".$escrow_currency['currency_id']."', amount='".$amount."';";
+								$r = $this->run_query($q);
+							}
 						}
 						
 						$from_game_def = $this->fetch_game_definition($game, "defined");

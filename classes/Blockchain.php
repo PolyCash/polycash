@@ -232,10 +232,12 @@ class Blockchain {
 				if ($db_transaction['transaction_desc'] != "transaction") $coins_created += $db_transaction['amount'];
 			}
 			
+			$q = "UPDATE blocks SET ";
 			if (!$tx_error) {
-				$this->app->run_query("UPDATE blocks SET locally_saved=1, time_loaded='".time()."' WHERE internal_block_id='".$db_block['internal_block_id']."';");
+				$q .= "locally_saved=1, time_loaded='".time()."', ";
 			}
-			$this->app->run_query("UPDATE blocks SET load_time=load_time+".(microtime(true)-$start_time)." WHERE internal_block_id='".$db_block['internal_block_id']."';");
+			$q .= "load_time=load_time+".(microtime(true)-$start_time)." WHERE internal_block_id='".$db_block['internal_block_id']."';";
+			$this->app->run_query($q);
 			
 			$this->try_start_games($block_height);
 			$html .= "Took ".(microtime(true)-$start_time)." sec to add block #".$block_height."<br/>\n";
