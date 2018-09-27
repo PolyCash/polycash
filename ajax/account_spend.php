@@ -372,6 +372,94 @@ if ($thisuser) {
 		}
 		else $app->output_message(4, "Error: invalid card or issuer ID.", false);
 	}
+	else if ($action == "split") {
+		$io_id = (int) $_REQUEST['io_id'];
+		$amount_each = (float) $_REQUEST['amount_each'];
+		$quantity = (int) $_REQUEST['quantity'];
+		$game_id = (int) $_REQUEST['game_id'];
+		
+		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
+		$r = $app->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			$db_game = $r->fetch();
+			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+			$game = new Game($blockchain, $db_game['game_id']);
+			
+			$satoshis_each = round(pow(10,$game->db_game['decimal_places'])*$amount_each);
+			$fee_amount = 0.00001*pow(10,$game->db_game['decimal_places']);
+			
+			if ($quantity > 0 && $satoshis_each > 0) {
+				$total_cost_satoshis = $quantity*$satoshis_each;
+				
+				$q = "SELECT * FROM transaction_ios WHERE io_id='".$io_id."';";
+				$r = $app->run_query($q);
+				
+				if ($r->rowCount() == 1) {
+					$db_io = $r->fetch();
+					
+					$q = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id WHERE io.io_id='".$io_id."' AND gio.game_id='".$game->db_game['game_id']."';";
+					$r = $app->run_query($q);
+					
+					if ($r->rowCount() > 0) {
+						$game_ios = array();
+						$colored_coin_sum = 0;
+						
+						while ($game_io = $r->fetch()) {
+							array_push($game_ios, $game_io);
+							$colored_coin_sum += $game_io['colored_amount'];
+						}
+						
+						$coin_sum = $game_ios[0]['amount'];
+						$coins_per_chain_coin = (float) $colored_coin_sum/($coin_sum-$fee_amount);
+						$chain_coins_each = ceil($satoshis_each/$coins_per_chain_coin);
+						
+						if ($chain_coins_each > 0 && in_array($game_ios[0]['spend_status'], array("unspent", "unconfirmed"))) {
+							$account_q = "SELECT ca.* FROM currency_accounts ca JOIN games g ON g.game_id=ca.game_id JOIN address_keys k ON k.account_id=ca.account_id WHERE ca.user_id='".$thisuser->db_user['user_id']."' AND k.address_id='".$game_ios[0]['address_id']."';";
+							$account_r = $app->run_query($account_q);
+							
+							if ($account_r->rowCount() > 0) {
+								$account = $account_r->fetch();
+								
+								if ($total_cost_satoshis < $colored_coin_sum && $coin_sum > ($chain_coins_each*$quantity*$utxos_each) - $fee_amount) {
+									$remainder_satoshis = $coin_sum - ($chain_coins_each*$quantity) - $fee_amount;
+									
+									$amounts = array();
+									$address_ids = array();
+									
+									for ($i=0; $i<$quantity; $i++) {
+										$address_key = $app->new_address_key($account['currency_id'], $account);
+										array_push($address_ids, $address_key['address_id']);
+										array_push($amounts, $chain_coins_each);
+									}
+									if ($remainder_satoshis > 0) {
+										array_push($amounts, $remainder_satoshis);
+										array_push($address_ids, $db_io['address_id']);
+									}
+									
+									$transaction_id = $game->blockchain->create_transaction('transaction', $amounts, false, array($db_io['io_id']), $address_ids, $fee_amount);
+									
+									if ($transaction_id) {
+										$app->output_message(1, "/explorer/games/".$db_game['url_identifier']."/transactions/".$transaction_id."/");
+									}
+									else $app->output_message(11, "Error: failed to create the transaction.", false);
+								}
+								else {
+									$app->output_message(10, "UTXO is only ".$app->format_bignum($colored_coin_sum/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." but you tried to spend ".$app->format_bignum($total_cost_satoshis/pow(10,$game->db_game['decimal_places'])), false);
+								}
+							}
+							else $app->output_message(9, "You don't own this UTXO.", false);
+						}
+						else $app->output_message(8, "Invalid UTXO.", false);
+					}
+					else $app->output_message(7, "Invalid UTXO ID.", false);
+				}
+				else $app->output_message(6, "Invalid UTXO ID.", false);
+			}
+			else $app->output_message(5, "Invalid quantity.", false);
+		}
+		else $app->output_message(4, "Invalid game ID.", false);
+	}
 	else $app->output_message(3, "This action is not yet implemented.", false);
 }
 else $app->output_message(2, "You must be logged in to complete this step.", false);
