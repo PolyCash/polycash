@@ -323,17 +323,6 @@ include('includes/html_start.php');
 		?>
 		<script type="text/javascript">
 		var selected_account_id = <?php echo $selected_account_id; ?>;
-		
-		function manage_addresses(account_id, action, address_id) {
-			var ajax_url = "/ajax/manage_addresses.php?action="+action+"&account_id="+account_id;
-			if (address_id) ajax_url += "&address_id="+address_id;
-			
-			$.get(ajax_url, function(result) {
-				var result_obj = JSON.parse(result);
-				if (result_obj['status_code'] == 1) window.location = window.location;
-				else alert(result_obj['message']);
-			});
-		}
 		</script>
 		
 		<div class="panel panel-info" style="margin-top: 15px;">
@@ -639,6 +628,7 @@ include('includes/html_start.php');
 							<select class="form-control" id="account_spend_action" onchange="account_spend_action_changed();">
 								<option value="">-- Please select --</option>
 								<option value="withdraw">Spend</option>
+								<option value="split">Split into pieces</option>
 								<option value="buyin">Buy in to a game</option>
 								<option value="faucet">Donate to a faucet</option>
 								<option value="set_for_sale">Set as for sale</option>
@@ -718,6 +708,23 @@ include('includes/html_start.php');
 								</div>
 							</form>
 						</div>
+						<div id="account_spend_split" style="display: none;" onsubmit="account_spend_split(); return false;">
+							<form action="/accounts/" method="get">
+								<input type="hidden" name="action" value="split" />
+								
+								<div class="form-group">
+									<label for="split_amount_each">How many coins should be in each UTXO?</label>
+									<input type="text" class="form-control" name="split_amount_each" id="split_amount_each" />
+								</div>
+								<div class="form-group">
+									<label for="split_quantity">How many UTXOs do you want to make?</label>
+									<input type="text" class="form-control" name="split_quantity" id="split_quantity" />
+								</div>
+								<div class="form-group">
+									<button class="btn btn-primary">Split my coins</button>
+								</div>
+							</form>
+						</div>
 						<div id="account_spend_buyin" style="display: none;">
 							<br/>
 							<p>
@@ -786,9 +793,11 @@ include('includes/html_start.php');
 			account_spend_refresh();
 			<?php
 			if ($action == "prompt_game_buyin") {
-				echo "account_start_spend_io(false, ".((int) $_REQUEST['io_id']).", ".((float) $_REQUEST['amount']).", '', '');\n";
-				echo "$('#account_spend_action').val('buyin');\n";
-				echo "account_spend_action_changed();\n";
+				?>
+				account_start_spend_io(false, <?php echo ((int) $_REQUEST['io_id']); ?>, <?php echo ((float) $_REQUEST['amount']); ?>, '', '');
+				$('#account_spend_action').val('buyin');
+				account_spend_action_changed();
+				<?php
 			}
 			?>
 		});
