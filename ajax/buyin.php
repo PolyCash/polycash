@@ -77,15 +77,6 @@ if ($thisuser && $game) {
 					
 					$.get("/ajax/buyin.php?action=submit&game_id=<?php echo $game->db_game['game_id']; ?>&invoice_id="+buyin_invoice_id+"&buyin_amount="+amount_in+"&color_amount="+color_amount, function(result) {});
 				}
-				function submit_buyin() {
-					var buyin_amount = $('#buyin_amount').val();
-					var color_amount = $('#color_amount').val();
-					
-					$.get("/ajax/buyin.php?action=submit&game_id=<?php echo $game->db_game['game_id']; ?>&invoice_id="+buyin_invoice_id+"&buyin_amount="+buyin_amount+"&color_amount="+color_amount, function(result) {
-						var result_json = JSON.parse(result);
-						alert(result_json['message']);
-					});
-				}
 				</script>
 				<?php
 				echo '<div class="paragraph">';
@@ -180,10 +171,7 @@ if ($thisuser && $game) {
 								<center><img style="margin: 10px;" src="/render_qr_code.php?data=<?php echo $invoice_address['address']; ?>" /></center>
 							</p>
 							<p>
-								After making the payment please click below to request <?php echo $game->db_game['coin_name_plural']; ?>:
-							</p>
-							<p>
-								<button class="btn btn-success" onclick="submit_buyin();">Request <?php echo ucwords($game->db_game['coin_name_plural']); ?></button>
+								<?php echo ucfirst($game->db_game['coin_name_plural']); ?> will automatically be credited to your account when your payment is received.
 							</p>
 						</div>
 						<?php

@@ -1268,7 +1268,7 @@ class Blockchain {
 			$q = "SELECT SUM(amount) FROM transaction_ios WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND address_id='".$db_address['address_id']."' AND create_block_id <= ".$block_id." AND (spend_status IN ('unspent','unconfirmed') OR spend_block_id>".$block_id.");";
 		}
 		else {
-			$q = "SELECT SUM(amount) FROM transaction_ios WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND address_id='".$db_address['address_id']."' AND spend_status='unspent';";
+			$q = "SELECT SUM(amount) FROM transaction_ios WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND address_id='".$db_address['address_id']."' AND spend_status IN ('unspent','unconfirmed');";
 		}
 		$r = $this->app->run_query($q);
 		$balance = $r->fetch();

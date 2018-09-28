@@ -62,7 +62,7 @@ if ($thisuser && $game) {
 		die();
 	}
 	
-	$max_burn_frac = 0.75;
+	$max_burn_frac = 0.9;
 	$max_burn_amount = floor($io_info['SUM(io.amount)']*$max_burn_frac);
 	$gio_max_burn_amount = floor($gio_info['SUM(gio.colored_amount)']*$max_burn_frac);
 	
