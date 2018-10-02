@@ -232,10 +232,12 @@ class Blockchain {
 				if ($db_transaction['transaction_desc'] != "transaction") $coins_created += $db_transaction['amount'];
 			}
 			
+			$q = "UPDATE blocks SET ";
 			if (!$tx_error) {
-				$this->app->run_query("UPDATE blocks SET locally_saved=1, time_loaded='".time()."' WHERE internal_block_id='".$db_block['internal_block_id']."';");
+				$q .= "locally_saved=1, time_loaded='".time()."', ";
 			}
-			$this->app->run_query("UPDATE blocks SET load_time=load_time+".(microtime(true)-$start_time)." WHERE internal_block_id='".$db_block['internal_block_id']."';");
+			$q .= "load_time=load_time+".(microtime(true)-$start_time)." WHERE internal_block_id='".$db_block['internal_block_id']."';";
+			$this->app->run_query($q);
 			
 			$this->try_start_games($block_height);
 			$html .= "Took ".(microtime(true)-$start_time)." sec to add block #".$block_height."<br/>\n";
@@ -541,7 +543,9 @@ class Blockchain {
 											
 											$insert_q .= "'".$option_id."', '".$db_event['event_id']."', '".$effectiveness_factor."', '".$effective_destroy_amount."', 0";
 											
-											$payout_insert_q = "('".$color_game->db_game['game_id']."', 1, '".$output_io_ids[$j]."', 0, 0, null, 0, null, 0, '".$option_id."', '".$db_event['event_id']."', null, 0, 0), ";
+											$is_resolved = 0;
+											if ($this_destroy_amount == 0) $is_resolved=1;
+											$payout_insert_q = "('".$color_game->db_game['game_id']."', 1, '".$output_io_ids[$j]."', 0, 0, null, 0, null, 0, '".$option_id."', '".$db_event['event_id']."', null, 0, ".$is_resolved."), ";
 										}
 										else $insert_q .= "null, null, null, 0, 1";
 									}
@@ -1266,7 +1270,7 @@ class Blockchain {
 			$q = "SELECT SUM(amount) FROM transaction_ios WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND address_id='".$db_address['address_id']."' AND create_block_id <= ".$block_id." AND (spend_status IN ('unspent','unconfirmed') OR spend_block_id>".$block_id.");";
 		}
 		else {
-			$q = "SELECT SUM(amount) FROM transaction_ios WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND address_id='".$db_address['address_id']."' AND spend_status='unspent';";
+			$q = "SELECT SUM(amount) FROM transaction_ios WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND address_id='".$db_address['address_id']."' AND spend_status IN ('unspent','unconfirmed');";
 		}
 		$r = $this->app->run_query($q);
 		$balance = $r->fetch();
@@ -1476,35 +1480,34 @@ class Blockchain {
 				return false;
 			}
 			else {
-				if ($type != "coinbase") {
-					$successful = false;
-					$coin_rpc = false;
-					if ($this->db_blockchain['p2p_mode'] == "rpc") {
-						$coin_rpc = new jsonRPCClient('http://'.$this->db_blockchain['rpc_username'].':'.$this->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->db_blockchain['rpc_port'].'/');
-						
-						try {
-							$raw_transaction = $coin_rpc->createrawtransaction($raw_txin, $raw_txout);
-							$signed_raw_transaction = $coin_rpc->signrawtransaction($raw_transaction);
-							$decoded_transaction = $coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
-							$tx_hash = $decoded_transaction['txid'];
-							$verified_tx_hash = $coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
-							
-							$this->walletnotify($coin_rpc, $verified_tx_hash, FALSE);
-							
-							$db_transaction = $this->app->run_query("SELECT * FROM transactions WHERE tx_hash=".$this->app->quote_escape($tx_hash).";")->fetch();
-							
-							return $db_transaction['transaction_id'];
-						}
-						catch (Exception $e) {
-							return false;
-						}
-					}
-					$this->add_transaction($coin_rpc, $tx_hash, $block_id, true, $successful, false, false, false);
+				$successful = false;
+				$coin_rpc = false;
+				if ($this->db_blockchain['p2p_mode'] == "rpc") {
+					$coin_rpc = new jsonRPCClient('http://'.$this->db_blockchain['rpc_username'].':'.$this->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->db_blockchain['rpc_port'].'/');
 					
-					if ($this->db_blockchain['p2p_mode'] == "web_api") {
-						$this->web_api_push_transaction($transaction_id);
+					try {
+						$raw_transaction = $coin_rpc->createrawtransaction($raw_txin, $raw_txout);
+						$signed_raw_transaction = $coin_rpc->signrawtransaction($raw_transaction);
+						$decoded_transaction = $coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
+						$tx_hash = $decoded_transaction['txid'];
+						$verified_tx_hash = $coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
+						
+						$this->walletnotify($coin_rpc, $verified_tx_hash, FALSE);
+						
+						$db_transaction = $this->app->run_query("SELECT * FROM transactions WHERE tx_hash=".$this->app->quote_escape($tx_hash).";")->fetch();
+						
+						return $db_transaction['transaction_id'];
+					}
+					catch (Exception $e) {
+						return false;
 					}
 				}
+				$this->add_transaction($coin_rpc, $tx_hash, $block_id, true, $successful, false, false, false);
+				
+				if ($this->db_blockchain['p2p_mode'] == "web_api") {
+					$this->web_api_push_transaction($transaction_id);
+				}
+				
 				return $transaction_id;
 			}
 		}
@@ -1539,7 +1542,7 @@ class Blockchain {
 		$r = $this->app->run_query("UPDATE transactions SET position_in_block='0' WHERE transaction_id='".$mined_transaction_id."';");
 		
 		// Include all unconfirmed TXs in the just-mined block
-		$q = "SELECT * FROM transactions WHERE transaction_desc='transaction' AND blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id IS NULL;";
+		$q = "SELECT * FROM transactions WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id IS NULL;";
 		$r = $this->app->run_query($q);
 		$fee_sum = 0;
 		$tx_error = false;
@@ -1548,7 +1551,7 @@ class Blockchain {
 			$coins_in = $this->app->transaction_coins_in($unconfirmed_tx['transaction_id']);
 			$coins_out = $this->app->transaction_coins_out($unconfirmed_tx['transaction_id']);
 			
-			if ($coins_in > 0 && $coins_in >= $coins_out) {
+			if (($coins_in > 0 && $coins_in >= $coins_out) || $unconfirmed_tx['transaction_desc'] == "coinbase") {
 				$fee_amount = $coins_in - $coins_out;
 				
 				$successful = true;

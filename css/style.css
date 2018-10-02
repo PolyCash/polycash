@@ -370,7 +370,7 @@ a.selected {
 .game_events {
 	margin: 0px;
 	padding: 0px;
-	height: 700px;
+	max-height: 700px;
 	overflow-y: scroll;
 	overflow-x: hidden;
 	border: 1px solid #aaa;

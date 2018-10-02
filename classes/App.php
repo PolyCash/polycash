@@ -668,24 +668,31 @@ class App {
 		
 		while ($currency_url = $r->fetch()) {
 			$api_response_raw = file_get_contents($currency_url['url']);
-			$api_response = json_decode($api_response_raw);
-			
+			echo "(".strlen($api_response_raw).") ".$currency_url['url']."<br/>\n";
 			$qq = "SELECT * FROM currencies WHERE oracle_url_id='".$currency_url['oracle_url_id']."';";
 			$rr = $this->run_query($qq);
 			
 			while ($currency = $rr->fetch()) {
 				if ($currency_url['format_id'] == 2) {
+					$api_response = json_decode($api_response_raw);
 					$price = $api_response->USD->bid;
 				}
 				else if ($currency_url['format_id'] == 1) {
+					$api_response = json_decode($api_response_raw);
 					if (!empty($api_response->rates)) {
 						$api_rates = (array) $api_response->rates;
 						$price = 1/($api_rates[$currency['abbreviation']]);
 					}
 				}
+				else if ($currency_url['format_id'] == 3) {
+					$html_data = $this->first_snippet_between($api_response_raw, '<div id="currency-exchange-rates"', '></div>');
+					$price = (float) $this->first_snippet_between($html_data, 'data-btc="', '"');
+				}
 				
-				$qqq = "INSERT INTO currency_prices SET currency_id='".$currency['currency_id']."', reference_currency_id='".$reference_currency_id."', price='".$price."', time_added='".time()."';";
-				$rrr = $this->run_query($qqq);
+				if ($price > 0) {
+					$qqq = "INSERT INTO currency_prices SET currency_id='".$currency['currency_id']."', reference_currency_id='".$reference_currency_id."', price='".$price."', time_added='".time()."';";
+					$rrr = $this->run_query($qqq);
+				}
 			}
 		}
 	}
@@ -744,12 +751,13 @@ class App {
 		return round(pow(10,8)*$denominator_rate['price']/$numerator_rate['price'])/pow(10,8);
 	}
 	
-	public function new_currency_invoice(&$pay_currency, $pay_amount, &$user, &$user_game, $invoice_type) {
-		$currency_account = $user->fetch_currency_account($pay_currency['currency_id']);
-		$address_key = $this->new_address_key($pay_currency['currency_id'], $currency_account);
+	public function new_currency_invoice(&$account, $pay_amount, &$user, &$user_game, $invoice_type) {
+		$address_key = $this->new_address_key($account['currency_id'], $account);
 		
 		$time = time();
-		$q = "INSERT INTO currency_invoices SET time_created='".$time."', pay_currency_id='".$pay_currency['currency_id']."', address_id='".$address_key['address_id']."', expire_time='".($time+$GLOBALS['invoice_expiration_seconds'])."', user_game_id='".$user_game['user_game_id']."', invoice_type='".$invoice_type."', status='unpaid', invoice_key_string='".$this->random_string(32)."', pay_amount='".$pay_amount."';";
+		$q = "INSERT INTO currency_invoices SET time_created='".$time."', pay_currency_id='".$account['currency_id']."'";
+		if ($address_key) $q .= ", address_id='".$address_key['address_id']."'";
+		$q .= ", expire_time='".($time+$GLOBALS['invoice_expiration_seconds'])."', user_game_id='".$user_game['user_game_id']."', invoice_type='".$invoice_type."', status='unpaid', invoice_key_string='".$this->random_string(32)."', pay_amount='".$pay_amount."';";
 		$r = $this->run_query($q);
 		$invoice_id = $this->last_insert_id();
 		
@@ -776,7 +784,7 @@ class App {
 						$save_method = "wallet.dat";
 					}
 					catch (Exception $e) {
-						if (empty($GLOBALS['rsa_pub_key']) || empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
+						/*if (empty($GLOBALS['rsa_pub_key']) || empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
 							$this->log_message('Error generating a payment address. Please visit /install.php and then set $GLOBALS["rsa_pub_key"] in includes/config.php');
 							$save_method = "skip";
 						}
@@ -786,7 +794,8 @@ class App {
 							$address_text = $keySet['pubAdd'];
 							$save_method = "db";
 						}
-						else $save_method = "skip";
+						else */
+						$save_method = "skip";
 					}
 				}
 			}
@@ -959,7 +968,7 @@ class App {
 	
 	public function delete_unconfirmable_transactions() {
 		$start_time = microtime(true);
-		$unconfirmed_tx_r = $this->run_query("SELECT * FROM transactions t JOIN blockchains b ON t.blockchain_id=b.blockchain_id WHERE b.online=1 AND t.block_id IS NULL ORDER BY t.blockchain_id ASC;");
+		$unconfirmed_tx_r = $this->run_query("SELECT * FROM transactions t JOIN blockchains b ON t.blockchain_id=b.blockchain_id WHERE b.online=1 AND t.block_id IS NULL AND t.transaction_desc='transaction' ORDER BY t.blockchain_id ASC;");
 		$game_id = false;
 		$delete_count = 0;
 		
@@ -1125,6 +1134,23 @@ class App {
 			
 			$game_definition[$var_name] = $var_val;
 		}
+		
+		$escrow_amounts = array();
+		
+		if ($definition_mode == "actual") {
+			$q = "SELECT * FROM game_escrow_amounts ea JOIN currencies c ON ea.currency_id=c.currency_id WHERE ea.game_id='".$game->db_game['game_id']."' ORDER BY c.short_name_plural ASC;";
+		}
+		else if ($definition_mode == "defined") {
+			$q = "SELECT * FROM game_defined_escrow_amounts ea JOIN currencies c ON ea.currency_id=c.currency_id WHERE ea.game_id='".$game->db_game['game_id']."' ORDER BY c.short_name_plural ASC;";
+		}
+		
+		$r = $this->run_query($q);
+		
+		while ($escrow_amount = $r->fetch()) {
+			$escrow_amounts[$escrow_amount['short_name_plural']] = (float) $escrow_amount['amount'];
+		}
+		
+		$game_definition['escrow_amounts'] = $escrow_amounts;
 		
 		$event_verbatim_vars = $this->event_verbatim_vars();
 		$events_obj = array();
@@ -1492,6 +1518,7 @@ class App {
 		return array(
 			array('float', 'protocol_version', true),
 			array('string', 'url_identifier', false),
+			array('int', 'decimal_places', true),
 			array('int', 'category_id', false),
 			array('string', 'name', false),
 			array('string', 'event_type_name', false),
@@ -1564,6 +1591,21 @@ class App {
 					}
 				}
 				
+				$q = "DELETE FROM game_escrow_amounts WHERE game_id='".$game->db_game['game_id']."';";
+				$r = $this->run_query($q);
+				
+				foreach ($new_game_obj['escrow_amounts'] as $currency_identifier => $amount) {
+					$q = "SELECT * FROM currencies WHERE short_name_plural='".$currency_identifier."';";
+					$r = $this->run_query($q);
+					
+					if ($r->rowCount() > 0) {
+						$escrow_currency = $r->fetch();
+						
+						$q = "INSERT INTO game_escrow_amounts SET game_id='".$game->db_game['game_id']."', currency_id='".$escrow_currency['currency_id']."', amount='".$amount."';";
+						$r = $this->run_query($q);
+					}
+				}
+				
 				$event_verbatim_vars = $this->event_verbatim_vars();
 				
 				$matched_events = min(count($initial_game_obj['events']), count($new_game_obj['events']));
@@ -1586,7 +1628,7 @@ class App {
 				}
 				
 				if (count($new_game_obj['events']) > $set_events_from) {
-					if ($reset_block === false) $reset_block = $new_game_obj['events'][$set_events_from]->event_starting_block;
+					if (!is_numeric($reset_block)) $reset_block = $new_game_obj['events'][$set_events_from]->event_starting_block;
 					
 					for ($i=$set_events_from; $i<count($new_game_obj['events']); $i++) {
 						$gde = get_object_vars($new_game_obj['events'][$i]);
@@ -1594,7 +1636,7 @@ class App {
 					}
 				}
 				
-				if ($reset_block !== false) {
+				if (is_numeric($reset_block)) {
 					$log_message .= "Resetting blocks from #".$reset_block."\n";
 					$game->reset_blocks_from_block($reset_block);
 				}
@@ -1774,6 +1816,21 @@ class App {
 							$game_id = $this->last_insert_id();
 							
 							$game = new Game($blockchain, $game_id);
+						}
+						
+						$q = "DELETE FROM game_defined_escrow_amounts WHERE game_id='".$game->db_game['game_id']."';";
+						$r = $this->run_query($q);
+						
+						foreach ($game_def->escrow_amounts as $currency_identifier => $amount) {
+							$q = "SELECT * FROM currencies WHERE short_name_plural='".$currency_identifier."';";
+							$r = $this->run_query($q);
+							
+							if ($r->rowCount() > 0) {
+								$escrow_currency = $r->fetch();
+								
+								$q = "INSERT INTO game_defined_escrow_amounts SET game_id='".$game->db_game['game_id']."', currency_id='".$escrow_currency['currency_id']."', amount='".$amount."';";
+								$r = $this->run_query($q);
+							}
 						}
 						
 						$from_game_def = $this->fetch_game_definition($game, "defined");

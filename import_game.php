@@ -10,11 +10,12 @@ include('includes/html_start.php');
 	<?php
 	if ($thisuser) {
 		if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "import_game_definition") {
+			$db_new_game = false;
+			
 			if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 				$game_definition = $_REQUEST['game_definition'];
 
 				$error_message = false;
-				$db_new_game = false;
 				$app->create_game_from_definition($game_definition, $thisuser, false, $error_message, $db_new_game);
 				
 				if (!empty($error_message)) echo "<p>".$error_message."</p>\n";

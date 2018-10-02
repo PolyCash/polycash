@@ -380,6 +380,8 @@ function input_amount_sums() {
 	}
 	return [io_sum, amount_sum, vote_sum];
 }
+
+var set_usable_coins = false;
 function set_input_amount_sums() {
 	var amount_sums = input_amount_sums();
 	var burn_amount = 0;
@@ -400,6 +402,12 @@ function set_input_amount_sums() {
 			if (coin_disp == '1') render_text += games[0].coin_name;
 			else render_text += games[0].coin_name_plural;
 			$('#input_vote_sum').html(render_text);
+			
+			if ($('#compose_burn_amount').val() == "0" || $('#compose_burn_amount').val() == "" || $('#compose_burn_amount').val() == set_usable_coins) {
+				var usable_coins = Math.floor(amount_sums[1]*0.9/Math.pow(10,games[0].decimal_places));
+				set_usable_coins = usable_coins;
+				$('#compose_burn_amount').val(usable_coins);
+			}
 		}
 		else {
 			$('#input_vote_sum').html(format_coins(amount_sums[2]/Math.pow(10,games[0].decimal_places))+" votes");
@@ -457,15 +465,6 @@ function add_utxo_to_vote(io_index) {
 		if (games[0].logo_image_url != "") select_btn_html += ' select_utxo_image';
 		select_btn_html += ' btn btn-primary btn-sm">'+render_vote_input(index_id)+'</div>';
 		$('#compose_vote_inputs').append(select_btn_html);
-		
-		if (games[0].logo_image_url != "") {
-			//var effectiveness_factor = games[0].block_id_to_effectiveness_factor(games[0].last_block_id+1);
-			//var votes = games[0].votes_from_io(amount, create_block_id);
-			//var height = Math.round(games[0].utxo_max_height*votes*Math.sqrt(effectiveness_factor)/games[0].utxo_max_effective_votes);
-			//$('#selected_utxo_'+index_id).css("height", height+"px");
-			//$('#selected_utxo_'+index_id).css("width", height+"px");
-			//$('#selected_utxo_'+index_id).css("background-image", "url('"+games[0].logo_image_url+"')");
-		}
 		
 		io_id2input_index[chain_ios[io_index].io_id] = index_id;
 		
@@ -1710,15 +1709,20 @@ function set_select_add_output() {
 
 var account_io_id = false;
 var account_io_amount = false;
+var account_game_id = false;
 var selected_account_action = false;
 
 function account_start_spend_io(game_id, io_id, amount, blockchain_coin_name, game_coin_name) {
 	account_io_id = io_id;
 	account_io_amount = amount;
+	account_game_id = game_id;
+	
 	$('#account_spend_buyin_total').html("(Total: "+format_coins(amount)+" coins)");
 	$('#account_spend_modal').modal('show');
 	$('#account_io_id').val(account_io_id);
+	$('#set_for_sale_io_id').val(account_io_id);
 	$('#donate_game_id').val(game_id);
+	$('#set_for_sale_game_id').val(game_id);
 	
 	var optionsAsString = "<option value='blockchain'>"+blockchain_coin_name+"</option>\n";
 	optionsAsString += "<option value='game'>"+game_coin_name+"</option>\n";
@@ -1787,6 +1791,25 @@ function account_spend_withdraw() {
 		var result_obj = JSON.parse(result);
 		alert(result_obj['message']);
 		if (result_obj['status_code'] == 1) window.location = window.location;
+	});
+}
+function account_spend_split() {
+	var spend_url = "/ajax/account_spend.php?action=split&game_id="+account_game_id+"&io_id="+account_io_id+"&amount_each="+$('#split_amount_each').val()+"&quantity="+$('#split_quantity').val();
+	
+	$.get(spend_url, function(result) {
+		var result_obj = JSON.parse(result);
+		if (result_obj['status_code'] == 1) window.location = result_obj['message'];
+		else alert(result_obj['message']);
+	});
+}
+function manage_addresses(account_id, action, address_id) {
+	var ajax_url = "/ajax/manage_addresses.php?action="+action+"&account_id="+account_id;
+	if (address_id) ajax_url += "&address_id="+address_id;
+	
+	$.get(ajax_url, function(result) {
+		var result_obj = JSON.parse(result);
+		if (result_obj['status_code'] == 1) window.location = window.location;
+		else alert(result_obj['message']);
 	});
 }
 
@@ -1885,7 +1908,6 @@ function clear_event_form() {
 		$('#event_form_'+event_verbatim_vars[form_i]).val("");
 	}
 }
-
 function manage_game_set_event_blocks(game_defined_event_id) {
 	var ajax_url = "/ajax/set_event_blocks.php?game_id="+games[0].game_id;
 	if (game_defined_event_id) ajax_url += "&game_defined_event_id="+game_defined_event_id;
@@ -1895,7 +1917,6 @@ function manage_game_set_event_blocks(game_defined_event_id) {
 		alert(result_obj['message']);
 	});
 }
-
 function manage_game_load_event(gde_id) {
 	clear_event_form();
 	

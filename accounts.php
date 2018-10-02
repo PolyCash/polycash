@@ -6,157 +6,305 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->in
 $action = "";
 if (!empty($_REQUEST['action'])) $action = $_REQUEST['action'];
 
-if ($thisuser && $action == "donate_to_faucet") {
-	$io_id = (int) $_REQUEST['account_io_id'];
-	$amount_each = (float) $_REQUEST['donate_amount_each'];
-	$utxos_each = (int) $_REQUEST['donate_utxos_each'];
-	$quantity = (int) $_REQUEST['donate_quantity'];
-	$game_id = (int) $_REQUEST['donate_game_id'];
-	
-	$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
-	$r = $app->run_query($q);
-	
-	if ($r->rowCount() > 0) {
-		$db_game = $r->fetch();
-		$donate_blockchain = new Blockchain($app, $db_game['blockchain_id']);
-		$donate_game = new Game($donate_blockchain, $db_game['game_id']);
+if ($thisuser) {
+	if ($action == "set_for_sale") {
+		$io_id = (int) $_REQUEST['set_for_sale_io_id'];
+		$amount_each = (float) $_REQUEST['set_for_sale_amount_each'];
+		$quantity = (int) $_REQUEST['set_for_sale_quantity'];
+		$game_id = (int) $_REQUEST['set_for_sale_game_id'];
 		
-		$satoshis_each = pow(10,$db_game['decimal_places'])*$amount_each;
-		$satoshis_each_utxo = ceil($satoshis_each/$utxos_each);
-		$satoshis_each = $satoshis_each_utxo*$utxos_each;
-		$fee_amount = 0.001*pow(10,$db_game['decimal_places']);
+		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
+		$r = $app->run_query($q);
 		
-		if ($quantity > 0 && $satoshis_each > 0) {
-			$total_cost_satoshis = $quantity*$satoshis_each;
+		if ($r->rowCount() > 0) {
+			$db_game = $r->fetch();
+			$sale_blockchain = new Blockchain($app, $db_game['blockchain_id']);
+			$sale_game = new Game($sale_blockchain, $db_game['game_id']);
 			
-			$q = "SELECT * FROM transaction_ios WHERE io_id='".$io_id."';";
-			$r = $app->run_query($q);
+			$satoshis_each = pow(10,$db_game['decimal_places'])*$amount_each;
+			$fee_amount = 0.001*pow(10,$db_game['decimal_places']);
 			
-			if ($r->rowCount() == 1) {
-				$db_io = $r->fetch();
+			if ($quantity > 0 && $satoshis_each > 0) {
+				$total_cost_satoshis = $quantity*$satoshis_each;
 				
-				$q = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id WHERE io.io_id='".$io_id."' AND gio.game_id='".$game_id."';";
+				$q = "SELECT * FROM transaction_ios WHERE io_id='".$io_id."';";
 				$r = $app->run_query($q);
 				
-				if ($r->rowCount() > 0) {
-					$faucet_account = $donate_game->check_set_faucet_account();
+				if ($r->rowCount() == 1) {
+					$db_io = $r->fetch();
 					
-					$game_ios = array();
-					$colored_coin_sum = 0;
+					$q = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id WHERE io.io_id='".$io_id."' AND gio.game_id='".$game_id."';";
+					$r = $app->run_query($q);
 					
-					while ($game_io = $r->fetch()) {
-						array_push($game_ios, $game_io);
-						$colored_coin_sum += $game_io['colored_amount'];
-					}
-					
-					$coin_sum = $game_ios[0]['amount'];
-					$coins_per_chain_coin = (float) $colored_coin_sum/($coin_sum-$fee_amount);
-					$chain_coins_each = ceil($satoshis_each_utxo/$coins_per_chain_coin);
-					
-					if (in_array($game_ios[0]['spend_status'], array("unspent", "unconfirmed"))) {
-						$address_ids = array();
-						$address_key_ids = array();
-						$addresses_needed = $quantity;
-						$loop_count = 0;
-						do {
-							if ($donate_blockchain->db_blockchain['p2p_mode'] != "rpc") {
-								$addr_text = $app->random_string(34);
-								$temp_address = $donate_blockchain->create_or_fetch_address($addr_text, false, false, false, false, true, false);
-							}
-							$addr_q = "SELECT * FROM addresses a WHERE a.primary_blockchain_id='".$donate_blockchain->db_blockchain['blockchain_id']."' AND a.is_mine=1 AND a.user_id IS NULL AND NOT EXISTS (SELECT * FROM transaction_ios io WHERE io.address_id=a.address_id) ORDER BY RAND() LIMIT 1;";
-							$addr_r = $app->run_query($addr_q);
-							
-							if ($addr_r->rowCount() > 0) {
-								$db_address = $addr_r->fetch();
-								
-								if (empty($db_address['user_id'])) {
-									$update_addr_q = "UPDATE addresses SET user_id='".$thisuser->db_user['user_id']."' WHERE address_id='".$db_address['address_id']."';";
-									$update_addr_r = $app->run_query($update_addr_q);
-									
-									$addr_key_q = "SELECT * FROM address_keys WHERE address_id='".$db_address['address_id']."';";
-									$addr_key_r = $app->run_query($addr_key_q);
-									
-									if ($addr_key_r->rowCount() > 0) {
-										$addr_key = $addr_key_r->fetch();
-										$addr_key_q = "UPDATE address_keys SET account_id='".$faucet_account['account_id']."' WHERE address_key_id='".$addr_key['address_key_id']."';";
-										$addr_key_r = $app->run_query($addr_key_q);
-										$address_key_id = $addr_key['address_key_id'];
-									}
-									else {
-										$addr_key_q = "INSERT INTO address_keys SET address_id='".$db_address['address_id']."', account_id='".$faucet_account['account_id']."', save_method='wallet.dat', pub_key=".$app->quote_escape($db_address['address']).";";
-										$addr_key_r = $app->run_query($addr_key_q);
-										$address_key_id = $app->last_insert_id();
-									}
-									
-									$addresses_needed--;
-									
-									array_push($address_ids, $db_address['address_id']);
-									array_push($address_key_ids, $address_key_id);
+					if ($r->rowCount() > 0) {
+						$game_sale_account = $sale_game->check_set_game_sale_account($thisuser);
+						
+						$game_ios = array();
+						$colored_coin_sum = 0;
+						
+						while ($game_io = $r->fetch()) {
+							array_push($game_ios, $game_io);
+							$colored_coin_sum += $game_io['colored_amount'];
+						}
+						
+						$coin_sum = $game_ios[0]['amount'];
+						$coins_per_chain_coin = (float) $colored_coin_sum/($coin_sum-$fee_amount);
+						$chain_coins_each = ceil($satoshis_each/$coins_per_chain_coin);
+						
+						if (in_array($game_ios[0]['spend_status'], array("unspent", "unconfirmed"))) {
+							$address_ids = array();
+							$address_key_ids = array();
+							$addresses_needed = $quantity;
+							$loop_count = 0;
+							do {
+								if ($donate_blockchain->db_blockchain['p2p_mode'] != "rpc") {
+									$addr_text = $app->random_string(34);
+									$temp_address = $sale_blockchain->create_or_fetch_address($addr_text, false, false, false, false, true, false);
 								}
-								else echo "Error, ".$address['address_id']." is already owned by someone.<br/>\n";
-							}
-							$loop_count++;
-						}
-						while ($addresses_needed > 0 && $loop_count < $quantity*2);
-						
-						if ($addresses_needed > 0) {
-							if (count($address_ids) > 0) {
-								$q = "UPDATE addresses SET user_id=NULL WHERE address_id IN (".implode(",", $address_ids).");";
-								$r = $app->run_query($q);
+								$addr_q = "SELECT * FROM addresses a WHERE a.primary_blockchain_id='".$sale_blockchain->db_blockchain['blockchain_id']."' AND a.is_mine=1 AND a.user_id IS NULL AND a.is_destroy_address=0 ORDER BY RAND() LIMIT 1;";
+								$addr_r = $app->run_query($addr_q);
 								
-								$q = "UPDATE address_keys SET account_id=NULL WHERE address_key_id IN (".implode(",", $address_key_ids).");";
-								$r = $app->run_query($q);
+								if ($addr_r->rowCount() > 0) {
+									$db_address = $addr_r->fetch();
+									
+									if (empty($db_address['user_id'])) {
+										$update_addr_q = "UPDATE addresses SET user_id='".$thisuser->db_user['user_id']."' WHERE address_id='".$db_address['address_id']."';";
+										$update_addr_r = $app->run_query($update_addr_q);
+										
+										$addr_key_q = "SELECT * FROM address_keys WHERE address_id='".$db_address['address_id']."';";
+										$addr_key_r = $app->run_query($addr_key_q);
+										
+										if ($addr_key_r->rowCount() > 0) {
+											$addr_key = $addr_key_r->fetch();
+											$addr_key_q = "UPDATE address_keys SET account_id='".$game_sale_account['account_id']."' WHERE address_key_id='".$addr_key['address_key_id']."';";
+											$addr_key_r = $app->run_query($addr_key_q);
+											$address_key_id = $addr_key['address_key_id'];
+										}
+										else {
+											$addr_key_q = "INSERT INTO address_keys SET address_id='".$db_address['address_id']."', account_id='".$faucet_account['account_id']."', save_method='wallet.dat', pub_key=".$app->quote_escape($db_address['address']).";";
+											$addr_key_r = $app->run_query($addr_key_q);
+											$address_key_id = $app->last_insert_id();
+										}
+										
+										$addresses_needed--;
+										
+										array_push($address_ids, $db_address['address_id']);
+										array_push($address_key_ids, $address_key_id);
+									}
+									else echo "Error, ".$address['address_id']." is already owned by someone.<br/>\n";
+								}
+								$loop_count++;
 							}
-							die("Not enough free addresses (still need $addresses_needed/$quantity).");
-						}
-						
-						$account_q = "SELECT ca.* FROM currency_accounts ca JOIN games g ON g.game_id=ca.game_id JOIN address_keys k ON k.account_id=ca.account_id WHERE ca.user_id='".$thisuser->db_user['user_id']."' AND k.address_id='".$game_ios[0]['address_id']."';";
-						$account_r = $app->run_query($account_q);
-						
-						if ($account_r->rowCount() > 0) {
-							$donate_account = $account_r->fetch();
+							while ($addresses_needed > 0 && $loop_count < $quantity*2);
 							
-							if ($total_cost_satoshis < $colored_coin_sum && $coin_sum > ($chain_coins_each*$quantity*$utxos_each) - $fee_amount) {
-								$remainder_satoshis = $coin_sum - ($chain_coins_each*$quantity*$utxos_each) - $fee_amount;
+							if ($addresses_needed > 0) {
+								if (count($address_ids) > 0) {
+									$q = "UPDATE addresses SET user_id=NULL WHERE address_id IN (".implode(",", $address_ids).");";
+									$r = $app->run_query($q);
+									
+									$q = "UPDATE address_keys SET account_id=NULL WHERE address_key_id IN (".implode(",", $address_key_ids).");";
+									$r = $app->run_query($q);
+								}
+								die("Not enough free addresses (still need $addresses_needed/$quantity).");
+							}
+							
+							$account_q = "SELECT ca.* FROM currency_accounts ca JOIN games g ON g.game_id=ca.game_id JOIN address_keys k ON k.account_id=ca.account_id WHERE ca.user_id='".$thisuser->db_user['user_id']."' AND k.address_id='".$game_ios[0]['address_id']."';";
+							$account_r = $app->run_query($account_q);
+							
+							if ($account_r->rowCount() > 0) {
+								$donate_account = $account_r->fetch();
 								
-								$send_address_ids = array();
-								$amounts = array();
-								
-								for ($i=0; $i<$quantity; $i++) {
-									for ($j=0; $j<$utxos_each; $j++) {
+								if ($total_cost_satoshis < $colored_coin_sum && $coin_sum > ($chain_coins_each*$quantity) - $fee_amount) {
+									$remainder_satoshis = $coin_sum - ($chain_coins_each*$quantity) - $fee_amount;
+									
+									$send_address_ids = array();
+									$amounts = array();
+									
+									for ($i=0; $i<$quantity; $i++) {
 										array_push($amounts, $chain_coins_each);
 										array_push($send_address_ids, $address_ids[$i]);
 									}
+									if ($remainder_satoshis > 0) {
+										array_push($amounts, $remainder_satoshis);
+										array_push($send_address_ids, $game_ios[0]['address_id']);
+									}
+									
+									$transaction_id = $sale_game->blockchain->create_transaction('transaction', $amounts, false, array($game_ios[0]['io_id']), $send_address_ids, $fee_amount);
+									
+									if ($transaction_id) {
+										header("Location: /explorer/games/".$db_game['url_identifier']."/transactions/".$transaction_id."/");
+										die();
+									}
+									else echo "Error: failed to create the transaction.<br/>\n";
 								}
-								if ($remainder_satoshis > 0) {
-									array_push($amounts, $remainder_satoshis);
-									array_push($send_address_ids, $game_ios[0]['address_id']);
+								else {
+									echo "UTXO is only ".$app->format_bignum($colored_coin_sum/pow(10,$sale_game->db_game['decimal_places']))." ".$sale_game->db_game['coin_name_plural']." but you tried to spend ".$app->format_bignum($total_cost_satoshis/pow(10,$sale_game->db_game['decimal_places']))."<br/>\n";
 								}
-								
-								$transaction_id = $donate_game->blockchain->create_transaction('transaction', $amounts, false, array($game_ios[0]['io_id']), $send_address_ids, $fee_amount);
-								
-								if ($transaction_id) {
-									header("Location: /explorer/games/".$db_game['url_identifier']."/transactions/".$transaction_id."/");
-									die();
-								}
-								else echo "Error: failed to create the transaction.<br/>\n";
 							}
-							else {
-								echo "UTXO is only ".$app->format_bignum($colored_coin_sum/pow(10,$donate_game->db_game['decimal_places']))." ".$donate_game->db_game['coin_name_plural']." but you tried to spend ".$app->format_bignum($total_cost_satoshis/pow(10,$donate_game->db_game['decimal_places']))."<br/>\n";
-							}
+							else echo "You don't own this UTXO.<br/>\n";
 						}
-						else echo "You don't own this UTXO.<br/>\n";
+						else echo "Invalid UTXO.";
 					}
-					else echo "Invalid UTXO.<br/>\n";
+					else echo "Invalid UTXO.";
+				}
+				else echo "Invalid UTXO ID.";
+			}
+			else echo "Invalid quantity or amount per UTXO.";
+		}
+		else echo "Invalid game ID.";
+	}
+	else if ($action == "donate_to_faucet") {
+		$io_id = (int) $_REQUEST['account_io_id'];
+		$amount_each = (float) $_REQUEST['donate_amount_each'];
+		$utxos_each = (int) $_REQUEST['donate_utxos_each'];
+		$quantity = (int) $_REQUEST['donate_quantity'];
+		$game_id = (int) $_REQUEST['donate_game_id'];
+		
+		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
+		$r = $app->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			$db_game = $r->fetch();
+			$donate_blockchain = new Blockchain($app, $db_game['blockchain_id']);
+			$donate_game = new Game($donate_blockchain, $db_game['game_id']);
+			
+			$satoshis_each = pow(10,$db_game['decimal_places'])*$amount_each;
+			$satoshis_each_utxo = ceil($satoshis_each/$utxos_each);
+			$satoshis_each = $satoshis_each_utxo*$utxos_each;
+			$fee_amount = 0.001*pow(10,$db_game['decimal_places']);
+			
+			if ($quantity > 0 && $satoshis_each > 0) {
+				$total_cost_satoshis = $quantity*$satoshis_each;
+				
+				$q = "SELECT * FROM transaction_ios WHERE io_id='".$io_id."';";
+				$r = $app->run_query($q);
+				
+				if ($r->rowCount() == 1) {
+					$db_io = $r->fetch();
+					
+					$q = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id WHERE io.io_id='".$io_id."' AND gio.game_id='".$game_id."';";
+					$r = $app->run_query($q);
+					
+					if ($r->rowCount() > 0) {
+						$faucet_account = $donate_game->check_set_faucet_account();
+						
+						$game_ios = array();
+						$colored_coin_sum = 0;
+						
+						while ($game_io = $r->fetch()) {
+							array_push($game_ios, $game_io);
+							$colored_coin_sum += $game_io['colored_amount'];
+						}
+						
+						$coin_sum = $game_ios[0]['amount'];
+						$coins_per_chain_coin = (float) $colored_coin_sum/($coin_sum-$fee_amount);
+						$chain_coins_each = ceil($satoshis_each_utxo/$coins_per_chain_coin);
+						
+						if (in_array($game_ios[0]['spend_status'], array("unspent", "unconfirmed"))) {
+							$address_ids = array();
+							$address_key_ids = array();
+							$addresses_needed = $quantity;
+							$loop_count = 0;
+							do {
+								if ($donate_blockchain->db_blockchain['p2p_mode'] != "rpc") {
+									$addr_text = $app->random_string(34);
+									$temp_address = $donate_blockchain->create_or_fetch_address($addr_text, false, false, false, false, true, false);
+								}
+								$addr_q = "SELECT * FROM addresses a WHERE a.primary_blockchain_id='".$donate_blockchain->db_blockchain['blockchain_id']."' AND a.is_mine=1 AND a.user_id IS NULL AND NOT EXISTS (SELECT * FROM transaction_ios io WHERE io.address_id=a.address_id) ORDER BY RAND() LIMIT 1;";
+								$addr_r = $app->run_query($addr_q);
+								
+								if ($addr_r->rowCount() > 0) {
+									$db_address = $addr_r->fetch();
+									
+									if (empty($db_address['user_id'])) {
+										$update_addr_q = "UPDATE addresses SET user_id='".$thisuser->db_user['user_id']."' WHERE address_id='".$db_address['address_id']."';";
+										$update_addr_r = $app->run_query($update_addr_q);
+										
+										$addr_key_q = "SELECT * FROM address_keys WHERE address_id='".$db_address['address_id']."';";
+										$addr_key_r = $app->run_query($addr_key_q);
+										
+										if ($addr_key_r->rowCount() > 0) {
+											$addr_key = $addr_key_r->fetch();
+											$addr_key_q = "UPDATE address_keys SET account_id='".$faucet_account['account_id']."' WHERE address_key_id='".$addr_key['address_key_id']."';";
+											$addr_key_r = $app->run_query($addr_key_q);
+											$address_key_id = $addr_key['address_key_id'];
+										}
+										else {
+											$addr_key_q = "INSERT INTO address_keys SET address_id='".$db_address['address_id']."', account_id='".$faucet_account['account_id']."', save_method='wallet.dat', pub_key=".$app->quote_escape($db_address['address']).";";
+											$addr_key_r = $app->run_query($addr_key_q);
+											$address_key_id = $app->last_insert_id();
+										}
+										
+										$addresses_needed--;
+										
+										array_push($address_ids, $db_address['address_id']);
+										array_push($address_key_ids, $address_key_id);
+									}
+									else echo "Error, ".$address['address_id']." is already owned by someone.<br/>\n";
+								}
+								$loop_count++;
+							}
+							while ($addresses_needed > 0 && $loop_count < $quantity*2);
+							
+							if ($addresses_needed > 0) {
+								if (count($address_ids) > 0) {
+									$q = "UPDATE addresses SET user_id=NULL WHERE address_id IN (".implode(",", $address_ids).");";
+									$r = $app->run_query($q);
+									
+									$q = "UPDATE address_keys SET account_id=NULL WHERE address_key_id IN (".implode(",", $address_key_ids).");";
+									$r = $app->run_query($q);
+								}
+								die("Not enough free addresses (still need $addresses_needed/$quantity).");
+							}
+							
+							$account_q = "SELECT ca.* FROM currency_accounts ca JOIN games g ON g.game_id=ca.game_id JOIN address_keys k ON k.account_id=ca.account_id WHERE ca.user_id='".$thisuser->db_user['user_id']."' AND k.address_id='".$game_ios[0]['address_id']."';";
+							$account_r = $app->run_query($account_q);
+							
+							if ($account_r->rowCount() > 0) {
+								$donate_account = $account_r->fetch();
+								
+								if ($total_cost_satoshis < $colored_coin_sum && $coin_sum > ($chain_coins_each*$quantity*$utxos_each) - $fee_amount) {
+									$remainder_satoshis = $coin_sum - ($chain_coins_each*$quantity*$utxos_each) - $fee_amount;
+									
+									$send_address_ids = array();
+									$amounts = array();
+									
+									for ($i=0; $i<$quantity; $i++) {
+										for ($j=0; $j<$utxos_each; $j++) {
+											array_push($amounts, $chain_coins_each);
+											array_push($send_address_ids, $address_ids[$i]);
+										}
+									}
+									if ($remainder_satoshis > 0) {
+										array_push($amounts, $remainder_satoshis);
+										array_push($send_address_ids, $game_ios[0]['address_id']);
+									}
+									
+									$transaction_id = $donate_game->blockchain->create_transaction('transaction', $amounts, false, array($game_ios[0]['io_id']), $send_address_ids, $fee_amount);
+									
+									if ($transaction_id) {
+										header("Location: /explorer/games/".$db_game['url_identifier']."/transactions/".$transaction_id."/");
+										die();
+									}
+									else echo "Error: failed to create the transaction.<br/>\n";
+								}
+								else {
+									echo "UTXO is only ".$app->format_bignum($colored_coin_sum/pow(10,$donate_game->db_game['decimal_places']))." ".$donate_game->db_game['coin_name_plural']." but you tried to spend ".$app->format_bignum($total_cost_satoshis/pow(10,$donate_game->db_game['decimal_places']))."<br/>\n";
+								}
+							}
+							else echo "You don't own this UTXO.<br/>\n";
+						}
+						else echo "Invalid UTXO.<br/>\n";
+					}
+					else echo "Invalid UTXO ID.<br/>\n";
 				}
 				else echo "Invalid UTXO ID.<br/>\n";
 			}
-			else echo "Invalid UTXO ID.<br/>\n";
+			else echo "Invalid quantity.<br/>\n";
 		}
-		else echo "Invalid quantity.<br/>\n";
+		else echo "Invalid game ID.<br/>\n";
+		die();
 	}
-	else echo "Invalid game ID.<br/>\n";
-	die();
 }
 
 $pagetitle = "My Accounts";
@@ -175,17 +323,6 @@ include('includes/html_start.php');
 		?>
 		<script type="text/javascript">
 		var selected_account_id = <?php echo $selected_account_id; ?>;
-		
-		function manage_addresses(account_id, action, address_id) {
-			var ajax_url = "/ajax/manage_addresses.php?action="+action+"&account_id="+account_id;
-			if (address_id) ajax_url += "&address_id="+address_id;
-			
-			$.get(ajax_url, function(result) {
-				var result_obj = JSON.parse(result);
-				if (result_obj['status_code'] == 1) window.location = window.location;
-				else alert(result_obj['message']);
-			});
-		}
 		</script>
 		
 		<div class="panel panel-info" style="margin-top: 15px;">
@@ -491,8 +628,10 @@ include('includes/html_start.php');
 							<select class="form-control" id="account_spend_action" onchange="account_spend_action_changed();">
 								<option value="">-- Please select --</option>
 								<option value="withdraw">Spend</option>
+								<option value="split">Split into pieces</option>
 								<option value="buyin">Buy in to a game</option>
 								<option value="faucet">Donate to a faucet</option>
+								<option value="set_for_sale">Set as for sale</option>
 								<option value="join_tx">Join with another UTXO</option>
 							</select>
 						</div>
@@ -529,9 +668,9 @@ include('includes/html_start.php');
 						</div>
 						<div id="account_spend_faucet" style="display: none;">
 							<form action="/accounts/" method="get">
+								<input type="hidden" name="action" value="donate_to_faucet" />
 								<input type="hidden" name="donate_game_id" id="donate_game_id" value="" />
 								<input type="hidden" name="account_io_id" id="account_io_id" value="" />
-								<input type="hidden" name="action" value="donate_to_faucet" />
 								
 								<div class="form-group">
 									<label for="donate_amount_each">How many in-game coins should each person receive?</label>
@@ -547,6 +686,42 @@ include('includes/html_start.php');
 								</div>
 								<div class="form-group">
 									<button class="btn btn-primary">Donate to Faucet</button>
+								</div>
+							</form>
+						</div>
+						<div id="account_spend_set_for_sale" style="display: none;">
+							<form action="/accounts/" method="get">
+								<input type="hidden" name="action" value="set_for_sale" />
+								<input type="hidden" name="set_for_sale_game_id" id="set_for_sale_game_id" value="" />
+								<input type="hidden" name="set_for_sale_io_id" id="set_for_sale_io_id" value="" />
+								
+								<div class="form-group">
+									<label for="donate_amount_each">How many in-game coins should be in each UTXO?</label>
+									<input type="text" class="form-control" name="set_for_sale_amount_each" />
+								</div>
+								<div class="form-group">
+									<label for="donate_quantity">How many UTXOs do you want to make?</label>
+									<input type="text" class="form-control" name="set_for_sale_quantity" />
+								</div>
+								<div class="form-group">
+									<button class="btn btn-primary">Set for sale</button>
+								</div>
+							</form>
+						</div>
+						<div id="account_spend_split" style="display: none;" onsubmit="account_spend_split(); return false;">
+							<form action="/accounts/" method="get">
+								<input type="hidden" name="action" value="split" />
+								
+								<div class="form-group">
+									<label for="split_amount_each">How many coins should be in each UTXO?</label>
+									<input type="text" class="form-control" name="split_amount_each" id="split_amount_each" />
+								</div>
+								<div class="form-group">
+									<label for="split_quantity">How many UTXOs do you want to make?</label>
+									<input type="text" class="form-control" name="split_quantity" id="split_quantity" />
+								</div>
+								<div class="form-group">
+									<button class="btn btn-primary">Split my coins</button>
 								</div>
 							</form>
 						</div>
@@ -618,9 +793,11 @@ include('includes/html_start.php');
 			account_spend_refresh();
 			<?php
 			if ($action == "prompt_game_buyin") {
-				echo "account_start_spend_io(false, ".((int) $_REQUEST['io_id']).", ".((float) $_REQUEST['amount']).", '', '');\n";
-				echo "$('#account_spend_action').val('buyin');\n";
-				echo "account_spend_action_changed();\n";
+				?>
+				account_start_spend_io(false, <?php echo ((int) $_REQUEST['io_id']); ?>, <?php echo ((float) $_REQUEST['amount']); ?>, '', '');
+				$('#account_spend_action').val('buyin');
+				account_spend_action_changed();
+				<?php
 			}
 			?>
 		});

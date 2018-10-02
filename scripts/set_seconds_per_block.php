@@ -1,4 +1,5 @@
 <?php
+ini_set('memory_limit', '1024M');
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
@@ -42,7 +43,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				$last_block_time = $db_block['time_mined'];
 			}
 			
-			$q = "SELECT AVG(sec_since_prev_block) FROM `blocks` WHERE blockchain_id=".$db_blockchain['blockchain_id']." AND sec_since_prev_block < ".($db_blockchain['seconds_per_block']*10).";";
+			$q = "SELECT AVG(sec_since_prev_block) FROM `blocks` WHERE blockchain_id=".$db_blockchain['blockchain_id']." AND sec_since_prev_block > 1 AND sec_since_prev_block < ".($db_blockchain['seconds_per_block']*10).";";
 			$r = $app->run_query($q);
 			$avg = $r->fetch();
 			

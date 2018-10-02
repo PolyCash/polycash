@@ -27,7 +27,7 @@ else if ($GLOBALS['base_url'] && (!isset($host_not_required) || !$host_not_requi
 	else $b_url = "http://".$b_url;
 	
 	if ($b_url != $GLOBALS['base_url']) {
-		header("Location: ".$GLOBALS['base_url']);
+		header("Location: ".$GLOBALS['base_url'].$_SERVER['REQUEST_URI']);
 		die();
 	}
 }

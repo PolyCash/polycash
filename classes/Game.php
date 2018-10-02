@@ -1136,22 +1136,24 @@ class Game {
 		return $value;
 	}
 	
-	public function account_value_html($account_value, $account_id) {
-		$html = '<font class="greentext"><a href="/accounts/?account_id='.$account_id.'">'.$this->blockchain->app->format_bignum($account_value/pow(10,$this->db_game['decimal_places']), 2).'</a></font> '.$this->db_game['coin_name_plural'];
+	public function account_value_html($account_value, &$user_game) {
+		$html = '<font class="greentext"><a href="/accounts/?account_id='.$user_game['account_id'].'">'.$this->blockchain->app->format_bignum($account_value/pow(10,$this->db_game['decimal_places']), 2).'</a></font> '.$this->db_game['coin_name_plural'];
 		$html .= ' <font style="font-size: 12px;">(';
 		$coins_in_existence = $this->coins_in_existence(false);
 		if ($coins_in_existence > 0) $html .= $this->blockchain->app->format_bignum(100*$account_value/$coins_in_existence)."%";
 		else $html .= "0%";
 		
-		$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false, false);
-		$escrow_value = $this->escrow_value(false);
-		if ($coins_in_existence > 0) {
-			$innate_currency_value = floor(($account_value/$coins_in_existence)*$escrow_value);
-		}
-		else $innate_currency_value = 0;
+		$display_currency = $this->blockchain->app->fetch_currency_by_id($user_game['display_currency_id']);
 		
-		if ($innate_currency_value > 0) {
-			$html .= "&nbsp;=&nbsp;".$this->blockchain->app->format_bignum($innate_currency_value/pow(10,$this->blockchain->db_blockchain['decimal_places']))." ".$this->blockchain->db_blockchain['coin_name_plural'];
+		$escrow_value = $this->escrow_value_in_currency($display_currency['currency_id']);
+		
+		if ($coins_in_existence > 0) {
+			$display_value = floor(($account_value/$coins_in_existence)*$escrow_value);
+		}
+		else $display_value = 0;
+		
+		if ($display_value > 0) {
+			$html .= "&nbsp;=&nbsp;".$this->blockchain->app->format_bignum($display_value)." ".$display_currency['short_name_plural'];
 		}
 		
 		$html .= ")</font>";
@@ -2456,7 +2458,9 @@ class Game {
 										
 										$insert_q .= "'".$option_id."', '".$db_event['event_id']."', '".$effectiveness_factor."', '".$votes."', '".$effective_destroy_amount."', 0";
 										
-										$payout_insert_q = "('".$this->db_game['game_id']."', '".$output_io['io_id']."', 1, 0, 0, 0, 0, null, '".$option_id."', '".$db_event['event_id']."', null, 0, 0, 0), ";
+										$is_resolved = 0;
+										if ($this_destroy_amount == 0) $is_resolved=1;
+										$payout_insert_q = "('".$this->db_game['game_id']."', '".$output_io['io_id']."', 1, 0, 0, 0, 0, null, '".$option_id."', '".$db_event['event_id']."', null, 0, 0, ".$is_resolved."), ";
 									}
 									else $insert_q .= "null, null, null, null, 0, 1";
 								}
@@ -2893,11 +2897,41 @@ class Game {
 		}
 	}
 	
+	public function check_set_game_sale_account(&$thisuser) {
+		$q = "SELECT * FROM currency_accounts WHERE is_game_sale_account=1 AND game_id='".$this->db_game['game_id']."' ORDER BY account_id DESC;";
+		$r = $this->blockchain->app->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			return $r->fetch();
+		}
+		else {
+			$q = "INSERT INTO currency_accounts SET is_game_sale_account=1, currency_id='".$this->blockchain->currency_id()."', game_id='".$this->db_game['game_id']."', user_id='".$thisuser->db_user['user_id']."', account_name=".$this->blockchain->app->quote_escape($this->db_game['name'].' '.$this->db_game['coin_name_plural'].' for sale').', time_created='.time().';';
+			$r = $this->blockchain->app->run_query($q);
+			
+			return $this->check_set_game_sale_account($thisuser);
+		}
+	}
+	
+	public function check_set_blockchain_sale_account(&$thisuser, &$currency) {
+		$q = "SELECT * FROM currency_accounts WHERE is_blockchain_sale_account=1 AND currency_id='".$currency['currency_id']."' AND game_id='".$this->db_game['game_id']."' ORDER BY account_id DESC;";
+		$r = $this->blockchain->app->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			return $r->fetch();
+		}
+		else {
+			$q = "INSERT INTO currency_accounts SET is_blockchain_sale_account=1, currency_id='".$currency['currency_id']."', game_id='".$this->db_game['game_id']."', user_id='".$thisuser->db_user['user_id']."', account_name=".$this->blockchain->app->quote_escape($this->db_game['name'].' '.$currency['short_name_plural'].' for sale').', time_created='.time().';';
+			$r = $this->blockchain->app->run_query($q);
+			
+			return $this->check_set_blockchain_sale_account($thisuser, $currency);
+		}
+	}
+	
 	public function check_faucet($user_game) {
 		if (empty($user_game) || $user_game['faucet_claims'] == 0) {
 			$faucet_account = $this->check_set_faucet_account();
 			
-			$q = "SELECT *, SUM(gio.colored_amount) AS colored_amount_sum FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.spend_status='unspent' AND k.account_id='".$faucet_account['account_id']."' GROUP BY a.address_id ORDER BY colored_amount_sum DESC;";
+			$q = "SELECT *, SUM(gio.colored_amount) AS colored_amount_sum FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.spend_status='unspent' AND k.account_id='".$faucet_account['account_id']."' AND gio.option_id IS NULL GROUP BY a.address_id ORDER BY colored_amount_sum DESC;";
 			$r = $this->blockchain->app->run_query($q);
 			
 			if ($r->rowCount() > 0) {
@@ -3055,6 +3089,21 @@ class Game {
 			$log_text .= "Setting GDE blocks for ".$this->db_game['name']."<br/>\n";
 		}
 		return $log_text;
+	}
+	
+	public function escrow_value_in_currency($currency_id) {
+		$total_value = 0;
+		
+		$amount_q = "SELECT * FROM game_escrow_amounts ea JOIN currencies c ON ea.currency_id=c.currency_id WHERE ea.game_id='".$this->db_game['game_id']."';";
+		$amount_r = $this->blockchain->app->run_query($amount_q);
+		
+		while ($escrow_amount = $amount_r->fetch()) {
+			$conversion_rate = $this->blockchain->app->currency_conversion_rate($currency_id, $escrow_amount['currency_id']);
+			$value_in_currency = $escrow_amount['amount']*$conversion_rate['conversion_rate'];
+			$total_value += $value_in_currency;
+		}
+		
+		return $total_value;
 	}
 }
 ?>

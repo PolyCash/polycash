@@ -1,8 +1,24 @@
 <?php
+$is_dev = false;
+$GLOBALS['coin_brand_name'] = "PolyCash";
+$GLOBALS['site_name_short'] = "PolyCash";
+$GLOBALS['site_name'] = "PolyCash";
+$site_domain = "";			 		// Enter your domain name, IP or "localhost" here
+$dev_site_domain = ""; 				// Enter your dev domain name here if you have one
+if (!empty($dev_site_domain) && $_SERVER['SERVER_NAME'] == $dev_site_domain) {
+	$site_domain = $dev_site_domain;
+	$is_dev = true;
+}
+else $site_domain = $site_domain;
+$GLOBALS['base_url'] = "http://".$site_domain;
+
 $GLOBALS['mysql_server'] = "localhost";
-$GLOBALS['mysql_user'] = ""; // Enter your mysql username here
-$GLOBALS['mysql_password'] = ""; // Enter your mysql password here
-$GLOBALS['mysql_database'] = ""; // Enter your mysql database name here
+$GLOBALS['mysql_user'] = ""; 				// Enter your mysql username here
+$GLOBALS['mysql_password'] = ""; 			// Enter your mysql password here
+$database = "";			 					// Enter your mysql database name here
+$dev_database = "";							// Enter your dev db name here if you have one
+if ($is_dev) $GLOBALS['mysql_database'] = $dev_database;
+else $GLOBALS['mysql_database'] = $database;
 
 $GLOBALS['signup_captcha_required'] = false;
 $GLOBALS['recaptcha_publickey'] = "";
@@ -30,14 +46,7 @@ $GLOBALS['invoice_expiration_seconds'] = 60*60*10;
 $GLOBALS['cron_interval_seconds'] = 5;
 $GLOBALS['load_unconfirmed_transactions'] = true;
 $GLOBALS['mine_private_blocks_when_offline'] = false;
-
 $GLOBALS['new_games_per_user'] = "unlimited";
-
-$GLOBALS['coin_brand_name'] = "PolyCash";
-$GLOBALS['site_name_short'] = "PolyCash";
-$GLOBALS['site_name'] = "PolyCash";
-$GLOBALS['site_domain'] = $_SERVER['SERVER_ADDR']; // Enter your domain name, IP or "localhost" here
-$GLOBALS['base_url'] = "http://".$GLOBALS['site_domain'];
 $GLOBALS['homepage_fname'] = "default.php";
 $GLOBALS['navbar_icon_path'] = "";
 
