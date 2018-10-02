@@ -2458,7 +2458,9 @@ class Game {
 										
 										$insert_q .= "'".$option_id."', '".$db_event['event_id']."', '".$effectiveness_factor."', '".$votes."', '".$effective_destroy_amount."', 0";
 										
-										$payout_insert_q = "('".$this->db_game['game_id']."', '".$output_io['io_id']."', 1, 0, 0, 0, 0, null, '".$option_id."', '".$db_event['event_id']."', null, 0, 0, 0), ";
+										$is_resolved = 0;
+										if ($this_destroy_amount == 0) $is_resolved=1;
+										$payout_insert_q = "('".$this->db_game['game_id']."', '".$output_io['io_id']."', 1, 0, 0, 0, 0, null, '".$option_id."', '".$db_event['event_id']."', null, 0, 0, ".$is_resolved."), ";
 									}
 									else $insert_q .= "null, null, null, null, 0, 1";
 								}

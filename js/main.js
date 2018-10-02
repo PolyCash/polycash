@@ -380,6 +380,8 @@ function input_amount_sums() {
 	}
 	return [io_sum, amount_sum, vote_sum];
 }
+
+var set_usable_coins = false;
 function set_input_amount_sums() {
 	var amount_sums = input_amount_sums();
 	var burn_amount = 0;
@@ -400,6 +402,12 @@ function set_input_amount_sums() {
 			if (coin_disp == '1') render_text += games[0].coin_name;
 			else render_text += games[0].coin_name_plural;
 			$('#input_vote_sum').html(render_text);
+			
+			if ($('#compose_burn_amount').val() == "0" || $('#compose_burn_amount').val() == "" || $('#compose_burn_amount').val() == set_usable_coins) {
+				var usable_coins = Math.floor(amount_sums[1]*0.9/Math.pow(10,games[0].decimal_places));
+				set_usable_coins = usable_coins;
+				$('#compose_burn_amount').val(usable_coins);
+			}
 		}
 		else {
 			$('#input_vote_sum').html(format_coins(amount_sums[2]/Math.pow(10,games[0].decimal_places))+" votes");
@@ -457,15 +465,6 @@ function add_utxo_to_vote(io_index) {
 		if (games[0].logo_image_url != "") select_btn_html += ' select_utxo_image';
 		select_btn_html += ' btn btn-primary btn-sm">'+render_vote_input(index_id)+'</div>';
 		$('#compose_vote_inputs').append(select_btn_html);
-		
-		if (games[0].logo_image_url != "") {
-			//var effectiveness_factor = games[0].block_id_to_effectiveness_factor(games[0].last_block_id+1);
-			//var votes = games[0].votes_from_io(amount, create_block_id);
-			//var height = Math.round(games[0].utxo_max_height*votes*Math.sqrt(effectiveness_factor)/games[0].utxo_max_effective_votes);
-			//$('#selected_utxo_'+index_id).css("height", height+"px");
-			//$('#selected_utxo_'+index_id).css("width", height+"px");
-			//$('#selected_utxo_'+index_id).css("background-image", "url('"+games[0].logo_image_url+"')");
-		}
 		
 		io_id2input_index[chain_ios[io_index].io_id] = index_id;
 		
