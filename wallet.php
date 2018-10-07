@@ -252,7 +252,7 @@ if ($thisuser) {
 						$invoice = $app->fetch_currency_invoice_by_id($user_game['current_invoice_id']);
 					}
 					else {
-						$invoice = $app->new_currency_invoice($invite_currency, $requested_game['invite_cost'], $thisuser, $user_game, 'join_buyin');
+						$invoice = $app->new_currency_invoice($invite_currency, $invite_currency['currency_id'], $requested_game['invite_cost'], $thisuser, $user_game, 'join_buyin');
 						
 						$q = "UPDATE user_games SET current_invoice_id='".$invoice['invoice_id']."' WHERE user_game_id='".$user_game['user_game_id']."';";
 						$r = $app->run_query($q);
@@ -703,6 +703,10 @@ if ($thisuser && $game) {
 				<?php
 				if ($game->db_game['buyin_policy'] != "none") { ?>
 					<button class="btn btn-success" style="margin-top: 8px;" onclick="initiate_buyin();"><i class="fas fa-shopping-cart"></i> &nbsp; Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
+					<?php
+				}
+				if ($game->db_game['sellout_policy'] == "on") { ?>
+					<button class="btn btn-info" style="margin-top: 8px;" onclick="initiate_sellout();"><i class="fas fa-exchange-alt"></i> &nbsp; Sell your <?php echo $game->db_game['coin_name_plural']; ?></button>
 					<?php
 				}
 				?>
@@ -1259,15 +1263,19 @@ if ($thisuser && $game) {
 		
 		<div style="display: none;" class="modal fade" id="set_event_outcome_modal">
 			<div class="modal-dialog">
-				<div class="modal-content" id="set_event_outcome_modal_content">
-				</div>
+				<div class="modal-content" id="set_event_outcome_modal_content"></div>
 			</div>
 		</div>
 		
 		<div style="display: none;" class="modal fade" id="buyin_modal">
 			<div class="modal-dialog">
-				<div class="modal-content" id="buyin_modal_content">
-				</div>
+				<div class="modal-content" id="buyin_modal_content"></div>
+			</div>
+		</div>
+		
+		<div style="display: none;" class="modal fade" id="sellout_modal">
+			<div class="modal-dialog">
+				<div class="modal-content" id="sellout_modal_content"></div>
 			</div>
 		</div>
 		

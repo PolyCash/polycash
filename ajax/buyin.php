@@ -40,7 +40,7 @@ if ($thisuser && $game) {
 			</div>
 			<div class="modal-body">
 				<?php
-				$coins_in_existence = $game->coins_in_existence(false)/pow(10, $game->db_game['decimal_places']);
+				$coins_in_existence = ($game->coins_in_existence(false)+$game->pending_bets())/pow(10, $game->db_game['decimal_places']);
 				
 				if ($game->db_game['buyin_policy'] == "for_sale") {
 					$buyin_currency = $app->fetch_currency_by_id($user_game['buyin_currency_id']);
@@ -109,7 +109,7 @@ if ($thisuser && $game) {
 							$invoice_type = "buyin";
 							if ($game->db_game['buyin_policy'] == "for_sale") $invoice_type = "sale_buyin";
 							
-							$invoice = $app->new_currency_invoice($pay_to_account, false, $thisuser, $user_game, $invoice_type);
+							$invoice = $app->new_currency_invoice($pay_to_account, $pay_to_account['currency_id'], false, $thisuser, $user_game, $invoice_type);
 							$invoice_addr_q = "SELECT * FROM addresses WHERE address_id='".$invoice['address_id']."';";
 							$invoice_address = $app->run_query($invoice_addr_q)->fetch();
 						}

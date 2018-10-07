@@ -3105,5 +3105,14 @@ class Game {
 		
 		return $total_value;
 	}
+	
+	public function pending_bets() {
+		$coins_per_vote = $this->blockchain->app->coins_per_vote($this->db_game);
+		$q = "SELECT SUM(destroy_amount) as destroy_amount, SUM(".$this->db_game['payout_weight']."s_destroyed) as inflation_score FROM transaction_game_ios WHERE game_id='".$this->db_game['game_id']."' AND is_resolved=0;";
+		$r = $this->blockchain->app->run_query($q);
+		$result = $r->fetch();
+		$pending_bets = $result['destroy_amount'] + round($result['inflation_score']*$coins_per_vote);
+		return $pending_bets;
+	}
 }
 ?>
