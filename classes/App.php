@@ -1585,6 +1585,11 @@ class App {
 		}
 		else $blockchain_definition['issuer'] = "none";
 		
+		if (in_array($blockchain->db_blockchain['p2p_mode'], array("none","web_api"))) {
+			$blockchain_definition['p2p_mode'] = "web";
+		}
+		else $blockchain_definition['p2p_mode'] = "rpc";
+		
 		for ($i=0; $i<count($verbatim_vars); $i++) {
 			$var_type = $verbatim_vars[$i][0];
 			$var_name = $verbatim_vars[$i][1];
@@ -1790,8 +1795,12 @@ class App {
 			$db_blockchain = $this->fetch_blockchain_by_identifier($blockchain_def->url_identifier);
 			
 			if (!$db_blockchain) {
-				$import_q = "INSERT INTO blockchains SET creator_id='".$thisuser->db_user['user_id']."', ";
-				
+				$import_q = "INSERT INTO blockchains SET online=1, p2p_mode=".$this->quote_escape($blockchain_def->p2p_mode).", creator_id='".$thisuser->db_user['user_id']."', ";
+				if ($blockchain_def->issuer == "none") $import_q .= "authoritative_issuer_id='NULL', ";
+				else {
+					$issuer = $this->get_issuer_by_server_name($blockchain_def->issuer);
+					$import_q .= "authoritative_issuer_id='".$issuer['issuer_id']."', ";
+				}
 				$verbatim_vars = $this->blockchain_verbatim_vars();
 				
 				for ($var_i=0; $var_i<count($verbatim_vars); $var_i++) {
@@ -1802,7 +1811,9 @@ class App {
 				}
 				$import_q = substr($import_q, 0, strlen($import_q)-2).";";
 				
-				$error_message = $import_q;
+				$import_r = $this->run_query($import_q);
+				
+				$error_message = "Successfully imported <a href=\"/explorer/blockchains/".$blockchain_def->url_identifier."/\">".$blockchain_def->blockchain_name."</a>";
 			}
 			else $error_message = "Error: this blockchain already exists.";
 		}
