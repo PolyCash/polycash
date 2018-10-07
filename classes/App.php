@@ -1812,8 +1812,9 @@ class App {
 				$import_q = substr($import_q, 0, strlen($import_q)-2).";";
 				
 				$import_r = $this->run_query($import_q);
+				$blockchain_id = $app->last_insert_id();
 				
-				$error_message = "Successfully imported <a href=\"/explorer/blockchains/".$blockchain_def->url_identifier."/\">".$blockchain_def->blockchain_name."</a>";
+				$error_message = "Import was a success! Next please <a href=\"/scripts/sync_blockchain_initial.php?key=".$GLOBALS['cron_key_string']."&blockchain_id=".$blockchain_id."\">reset and synchronize ".$blockchain_def->blockchain_name."</a>";
 			}
 			else $error_message = "Error: this blockchain already exists.";
 		}

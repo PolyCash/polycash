@@ -7,21 +7,23 @@ $pagetitle = "Import Game Definition - ".$GLOBALS['coin_brand_name'];
 include('includes/html_start.php');
 ?>
 <div class="container-fluid">
-	<div class="panel panel-info" style="margin-top: 10px;">
-		<div class="panel-heading">
-			<div class="panel-title">Import a game or blockchain</div>
-		</div>
-		<div class="panel-body">
+	<?php
+	$definition_mode = "game";
+	$toggle_mode = "blockchain";
+	
+	if ($_REQUEST['definition_mode'] == "blockchain") {
+		$definition_mode = $_REQUEST['definition_mode'];
+		$toggle_mode = "game";
+	}
+	
+	if ($thisuser) {
+		?>
+		<div class="panel panel-info" style="margin-top: 10px;">
+			<div class="panel-heading">
+				<div class="panel-title">Import a game or blockchain</div>
+			</div>
+			<div class="panel-body">
 			<?php
-			$definition_mode = "game";
-			$toggle_mode = "blockchain";
-			
-			if ($_REQUEST['definition_mode'] == "blockchain") {
-				$definition_mode = $_REQUEST['definition_mode'];
-				$toggle_mode = "game";
-			}
-			
-			if ($thisuser) {
 				if ($app->user_is_admin($thisuser)) {
 					if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "import_definition") {
 						$db_new_game = false;
@@ -76,15 +78,17 @@ include('includes/html_start.php');
 					}
 				}
 				else echo "You don't have permission to complete this action.";
-			}
-			else {
-				$redirect_url = $app->get_redirect_url("/import/?definition_mode=".$definition_mode);
-				$redirect_key = $redirect_url['redirect_key'];
-				include("includes/html_login.php");
-			}
-			?>
+				?>
+			</div>
 		</div>
-	</div>
+		<?php
+	}
+	else {
+		$redirect_url = $app->get_redirect_url("/import/?definition_mode=".$definition_mode);
+		$redirect_key = $redirect_url['redirect_key'];
+		include("includes/html_login.php");
+	}
+	?>
 </div>
 <?php
 include('includes/html_stop.php');
