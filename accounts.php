@@ -129,13 +129,14 @@ if ($thisuser) {
 										array_push($send_address_ids, $game_ios[0]['address_id']);
 									}
 									
-									$transaction_id = $sale_game->blockchain->create_transaction('transaction', $amounts, false, array($game_ios[0]['io_id']), $send_address_ids, $fee_amount);
+									$error_message = false;
+									$transaction_id = $sale_game->blockchain->create_transaction('transaction', $amounts, false, array($game_ios[0]['io_id']), $send_address_ids, $fee_amount, $error_message);
 									
 									if ($transaction_id) {
 										header("Location: /explorer/games/".$db_game['url_identifier']."/transactions/".$transaction_id."/");
 										die();
 									}
-									else echo "Error: failed to create the transaction.<br/>\n";
+									else echo "TX Error: ".$error_message.".<br/>\n";
 								}
 								else {
 									echo "UTXO is only ".$app->format_bignum($colored_coin_sum/pow(10,$sale_game->db_game['decimal_places']))." ".$sale_game->db_game['coin_name_plural']." but you tried to spend ".$app->format_bignum($total_cost_satoshis/pow(10,$sale_game->db_game['decimal_places']))."<br/>\n";
@@ -280,13 +281,14 @@ if ($thisuser) {
 										array_push($send_address_ids, $game_ios[0]['address_id']);
 									}
 									
-									$transaction_id = $donate_game->blockchain->create_transaction('transaction', $amounts, false, array($game_ios[0]['io_id']), $send_address_ids, $fee_amount);
+									$error_message = false;
+									$transaction_id = $donate_game->blockchain->create_transaction('transaction', $amounts, false, array($game_ios[0]['io_id']), $send_address_ids, $fee_amount, $error_message);
 									
 									if ($transaction_id) {
 										header("Location: /explorer/games/".$db_game['url_identifier']."/transactions/".$transaction_id."/");
 										die();
 									}
-									else echo "Error: failed to create the transaction.<br/>\n";
+									else echo "TX Error: ".$error_message."<br/>\n";
 								}
 								else {
 									echo "UTXO is only ".$app->format_bignum($colored_coin_sum/pow(10,$donate_game->db_game['decimal_places']))." ".$donate_game->db_game['coin_name_plural']." but you tried to spend ".$app->format_bignum($total_cost_satoshis/pow(10,$donate_game->db_game['decimal_places']))."<br/>\n";

@@ -2559,7 +2559,8 @@ class App {
 				$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
 				$amounts = array($io['amount']-$fee_amount);
 				
-				$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($io['io_id']), array($db_address['address_id']), array(0), $fee_amount);
+				$payout_tx_error = false;
+				$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($io['io_id']), array($db_address['address_id']), array(0), $fee_amount, $payout_tx_error);
 				
 				if ($transaction_id) {
 					$transaction = $this->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
@@ -2570,6 +2571,7 @@ class App {
 					
 					return $transaction;
 				}
+				else return false;
 			}
 			else return false;
 		}
@@ -2630,7 +2632,8 @@ class App {
 							$io = $io_r->fetch();
 							$success_message .= "&io_id=".$io['io_id'];
 							
-							$transaction_id = $blockchain->create_transaction("transaction", array($io['amount']-$fee_amount), false, array($io['io_id']), array($db_address['address_id']), array(0), $fee_amount);
+							$redeem_tx_error = false;
+							$transaction_id = $blockchain->create_transaction("transaction", array($io['amount']-$fee_amount), false, array($io['io_id']), array($db_address['address_id']), array(0), $fee_amount, $redeem_tx_error);
 							
 							if ($transaction_id) {
 								$transaction = $this->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
@@ -2643,7 +2646,7 @@ class App {
 								$r = $this->run_query($q);
 								$card['redemption_tx_hash'] = $transaction['tx_hash'];
 							}
-							else {$status_code=11; $message="Error: failed to create the transaction.";}
+							else {$status_code=11; $message="TX Error: ".$error_message;}
 						}
 						else {$status_code=10; $message="Error: card payment UTXO not found.";}
 					}

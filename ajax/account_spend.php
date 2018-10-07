@@ -66,7 +66,7 @@ if ($thisuser) {
 							if ($transaction_id) {
 								$app->output_message(1, 'Great, your coins have been sent! <a target="_blank" href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/transactions/'.$transaction_id.'">View Transaction</a>', false);
 							}
-							else $app->output_message(9, $error_message, false);
+							else $app->output_message(9, "TX Error: ".$error_message, false);
 						}
 						else $app->output_message(8, "Error, you don't have enough coins.", false);
 					}
@@ -124,7 +124,7 @@ if ($thisuser) {
 							$app->output_message(1, "Great, your transaction has been submitted (#".$transaction_id.")", false);
 						}
 						else {
-							$app->output_message(7, $error_message, false);
+							$app->output_message(7, "TX Error: ".$error_message, false);
 						}
 					}
 					else $app->output_message(6, "Error, one of the amounts you entered is invalid ($fee_amount > 0 && $buyin_amount > 0 && $color_amount > 0).", false);
@@ -198,12 +198,13 @@ if ($thisuser) {
 								$fee_amount = 0.001*pow(10,$blockchain->db_blockchain['decimal_places']);
 								$amount = $db_io['amount']+$join_db_io['amount']-$fee_amount;
 								
-								$transaction_id = $blockchain->create_transaction('transaction', array($amount), false, array($db_io['io_id'], $join_db_io['io_id']), array($join_db_io['address_id']), $fee_amount);
+								$error_message = false;
+								$transaction_id = $blockchain->create_transaction('transaction', array($amount), false, array($db_io['io_id'], $join_db_io['io_id']), array($join_db_io['address_id']), $fee_amount, $error_message);
 								
 								if ($transaction_id) {
 									$app->output_message(13, "Your transaction has been successfully created!", false);
 								}
-								else $app->output_message(12, "Error, failed to create transaction.", false);
+								else $app->output_message(12, "TX Error: ".$error_message, false);
 							}
 							else $app->output_message(11, "Error, invalid join UTXO ID.", false);
 						}
@@ -268,10 +269,11 @@ if ($thisuser) {
 							array_push($address_ids, $db_io['address_id']);
 						}
 						
-						$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($db_io['io_id']), $address_ids, $fee_amount);
+						$error_message = false;
+						$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($db_io['io_id']), $address_ids, $fee_amount, $error_message);
 						
 						if ($transaction_id) $app->output_message(1, "Transaction created successfully.", false);
-						else $app->output_message(7, "Error: failed to created transaction.", false);
+						else $app->output_message(7, "Error: ", false);
 					}
 					else $app->output_message(6, "Error: not enough coins.", false);
 				}
@@ -291,7 +293,7 @@ if ($thisuser) {
 						
 						$coloredcoins_per_coin = $io_game['SUM(gio.colored_amount)']/($db_io['amount']-$fee_amount);
 						$io_amount = ceil($amount/$coloredcoins_per_coin);
-						$remainder_amount = $db_io['amount']-$fee-$io_amount;
+						$remainder_amount = $db_io['amount']-$fee_amount-$io_amount;
 						
 						if ($remainder_amount >= 0) {
 							$amounts = array($io_amount);
@@ -302,10 +304,11 @@ if ($thisuser) {
 								array_push($address_ids, $db_io['address_id']);
 							}
 							
-							$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($db_io['io_id']), $address_ids, false, $fee_amount);
+							$error_message = false;
+							$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($db_io['io_id']), $address_ids, $fee_amount, $error_message);
 							
 							if ($transaction_id) $app->output_message(1, "Transaction created successfully.", false);
-							else $app->output_message(7, "Error: failed to created transaction.", false);
+							else $app->output_message(7, "TX Error: ".$error_message, false);
 						}
 						else $app->output_message(8, "Error: not enough coins.", false);
 					}
@@ -437,12 +440,13 @@ if ($thisuser) {
 										array_push($address_ids, $db_io['address_id']);
 									}
 									
-									$transaction_id = $game->blockchain->create_transaction('transaction', $amounts, false, array($db_io['io_id']), $address_ids, $fee_amount);
+									$error_message = false;
+									$transaction_id = $game->blockchain->create_transaction('transaction', $amounts, false, array($db_io['io_id']), $address_ids, $fee_amount, $error_message);
 									
 									if ($transaction_id) {
 										$app->output_message(1, "/explorer/games/".$db_game['url_identifier']."/transactions/".$transaction_id."/");
 									}
-									else $app->output_message(11, "Error: failed to create the transaction.", false);
+									else $app->output_message(11, "TX Error: ".$error_message, false);
 								}
 								else {
 									$app->output_message(10, "UTXO is only ".$app->format_bignum($colored_coin_sum/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." but you tried to spend ".$app->format_bignum($total_cost_satoshis/pow(10,$game->db_game['decimal_places'])), false);

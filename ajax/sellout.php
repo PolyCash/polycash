@@ -78,13 +78,14 @@ if ($thisuser && $game) {
 							array_push($address_ids, $ios[0]['address_id']);
 						}
 						
-						$transaction_id = $game->blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $tx_fee);
+						$error_message = false;
+						$transaction_id = $game->blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $tx_fee, $error_message);
 						
 						if ($transaction_id) {
 							$app->output_message(1, "Great! ".ucfirst($game->db_game['coin_name_plural'])." will be credited to your account as soon as your BTC payment is confirmed.", false);
 						}
 						else {
-							$app->output_message(2, "Error: failed to create the transaction.", false);
+							$app->output_message(2, "TX Error: ".$error_message, false);
 						}
 					}
 					else $app->output_message(3, "Error: you don't have permission to update this invoice.", false);

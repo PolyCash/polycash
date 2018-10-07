@@ -97,7 +97,8 @@ if ($thisuser && $game) {
 		}
 	}
 	
-	$transaction_id = $game->blockchain->create_transaction("transaction", $tx_amounts, false, $io_ids, $address_ids, $fee);
+	$error_message = false;
+	$transaction_id = $game->blockchain->create_transaction("transaction", $tx_amounts, false, $io_ids, $address_ids, $fee, $error_message);
 	
 	if ($transaction_id) {
 		$game->update_option_votes();
@@ -109,7 +110,7 @@ if ($thisuser && $game) {
 		$app->output_message(1, "Your transaction has been submitted! <a href=\"/explorer/games/".$game->db_game['url_identifier']."/transactions/".$transaction['tx_hash']."\">Details</a>", false);
 	}
 	else {
-		$app->output_message(11, "There was an error creating the transaction.", false);
+		$app->output_message(11, "There was an error creating the transaction: ".$error_message, false);
 	}
 }
 else {

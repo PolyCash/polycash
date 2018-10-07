@@ -37,7 +37,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				$coins = ((int)$_REQUEST['coins'])*pow(10, $blockchain->db_blockchain['decimal_places']);
 				$debug_text = "";
 				
-				$transaction_id = $blockchain->create_transaction("coinbase", array($coins), false, array(), array($address_key['address_id']), 0.001);
+				$error_message = false;
+				$transaction_id = $blockchain->create_transaction("coinbase", array($coins), false, array(), array($address_key['address_id']), 0.001, $error_message);
 				
 				$blockchain->new_block($debug_text);
 				

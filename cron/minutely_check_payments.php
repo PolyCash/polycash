@@ -90,7 +90,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 							array_push($address_ids, $overshoot_address_id);
 						}
 						
-						$transaction_id = $game->blockchain->create_transaction("transaction", $amounts, false, $spend_io_ids, $address_ids, $chain_fee);
+						$error_message = false;
+						$transaction_id = $game->blockchain->create_transaction("transaction", $amounts, false, $spend_io_ids, $address_ids, $chain_fee, $error_message);
 					}
 				}
 			}
@@ -132,7 +133,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 					$address_ids = array($escrow_address['address_id'], $game_currency_account['current_address_id']);
 					
 					$error_message = false;
-					$transaction_id = $game->blockchain->create_transaction("transaction", array($buyin_amount, $color_amount), false, $io_ids, $address_ids, array(0, 0), $fee_amount);
+					$transaction_id = $game->blockchain->create_transaction("transaction", array($buyin_amount, $color_amount), false, $io_ids, $address_ids, array(0, 0), $fee_amount, $error_message);
 				}
 				else if ($print_debug) echo "fee: ".$app->format_bignum($fee_amount/pow(10,$game->blockchain->db_blockchain['decimal_places'])).", buyin: ".$app->format_bignum($buyin_amount/pow(10,$game->blockchain->db_blockchain['decimal_places'])).", color: ".$app->format_bignum($color_amount/pow(10,$game->blockchain->db_blockchain['decimal_places']))."<br/>\n";
 			}
@@ -212,7 +213,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 					array_push($address_ids, $ios[0]['address_id']);
 				}
 				
-				$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $fee_amount);
+				$error_message = false;
+				$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $fee_amount, $error_message);
 				
 				if ($transaction_id) {
 					$qq = "UPDATE currency_invoices SET confirmed_amount_paid='".$amount_paid/pow(10,$game->blockchain->db_blockchain['decimal_places'])."', unconfirmed_amount_paid='".$amount_paid/pow(10,$game->blockchain->db_blockchain['decimal_places'])."', status='confirmed' WHERE invoice_id='".$invoice_address['invoice_id']."';";
@@ -221,7 +223,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				
 				if ($print_debug) {
 					if ($transaction_id) echo "Created tx #".$transaction_id."\n";
-					else echo "Failed to create the transaction.\n";
+					else echo "Failed to create the transaction: ".$error_message."\n";
 				}
 			}
 			else if ($print_debug) echo "Invalid payment amount.\n";
@@ -293,7 +295,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 							if ($print_debug) echo "Created sellout refund transaction ".$db_transaction['tx_hash']."<br/>\n";
 						}
 						else {
-							if ($print_debug) echo "Failed to add transaction for sellout #".$unprocessed_sellout['sellout_id']."<br/>\n";
+							if ($print_debug) echo "Failed to add transaction for sellout #".$unprocessed_sellout['sellout_id'].": ".$error_message."<br/>\n";
 						}
 					}
 				}
