@@ -1,0 +1,1 @@
+UPDATE transaction_game_ios SET is_resolved=1 WHERE destroy_amount=0 AND is_resolved=0;

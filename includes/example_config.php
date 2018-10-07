@@ -42,7 +42,7 @@ $GLOBALS['default_coin_winner'] = "";
 $GLOBALS['pageview_tracking_enabled'] = false;
 
 $GLOBALS['currency_price_refresh_seconds'] = 30;
-$GLOBALS['invoice_expiration_seconds'] = 60*60*10;
+$GLOBALS['invoice_expiration_seconds'] = 60*60*48;
 $GLOBALS['cron_interval_seconds'] = 5;
 $GLOBALS['load_unconfirmed_transactions'] = true;
 $GLOBALS['mine_private_blocks_when_offline'] = false;

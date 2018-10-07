@@ -1290,6 +1290,20 @@ function initiate_buyin() {
 		setTimeout("$('#buyin_amount').focus();", 1000);
 	});
 }
+function initiate_sellout() {
+	$.get("/ajax/sellout.php?game_id="+games[0].game_id, function(result) {
+		$('#sellout_modal_content').html(result);
+		$('#sellout_modal').modal('show');
+		setTimeout("$('#sellout_amount').focus();", 1000);
+	});
+}
+function confirm_sellout() {
+	$.get("/ajax/sellout.php?game_id="+games[0].game_id+"&action=confirm&invoice_id="+sellout_invoice_id+"&sellout_amount="+$('#sellout_amount').val()+"&address="+$('#sellout_blockchain_address').val(), function(result) {
+		var json_result = JSON.parse(result);
+		console.log(json_result);
+		alert(json_result['message']);
+	});
+}
 function scramble_strategy(strategy_id) {
 	var btn_default_text = $('#scramble_plan_btn').html();
 	var btn_loading_text = "Randomizing...";

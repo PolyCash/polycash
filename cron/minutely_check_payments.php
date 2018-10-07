@@ -17,7 +17,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	
 	$blockchains = array();
 	
-	$q = "SELECT *, ug.user_id AS user_id, ug.account_id AS user_game_account_id FROM user_games ug JOIN currency_invoices i ON ug.user_game_id=i.user_game_id JOIN addresses a ON i.address_id=a.address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status IN ('unpaid','unconfirmed') AND (i.status='unconfirmed' OR i.expire_time >= ".time().") GROUP BY a.address_id;";
+	$q = "SELECT *, ug.user_id AS user_id, ug.account_id AS user_game_account_id FROM user_games ug JOIN currency_invoices i ON ug.user_game_id=i.user_game_id JOIN addresses a ON i.address_id=a.address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status IN ('unpaid','unconfirmed') AND (i.status='unconfirmed' OR i.expire_time >= ".time().") AND i.invoice_type != 'sellout' GROUP BY a.address_id;";
 	$r = $app->run_query($q);
 	
 	if ($print_debug) echo "Checking ".$r->rowCount()." addresses.<br/>\n";
@@ -45,7 +45,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			
 			if ($invoice_address['invoice_type'] == "sale_buyin") {
 				$escrow_value = $game->escrow_value_in_currency($invoice_address['pay_currency_id']);
-				$coins_in_existence = $game->coins_in_existence(false)/pow(10, $game->db_game['decimal_places']);
+				$coins_in_existence = ($game->coins_in_existence(false)+$game->pending_bets())/pow(10, $game->db_game['decimal_places']);
 				$exchange_rate = $coins_in_existence/$escrow_value;
 				$game_coins = $amount_paid*$exchange_rate;
 				$sale_game_account = $game->check_set_game_sale_account($thisuser);
@@ -146,6 +146,87 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			else if ($print_debug) echo "failed to create a transaction.\n";
 		}
 		else if ($print_debug) echo "amount paid: ".$amount_paid."<br/>\n";
+	}
+	
+	// Handle sellout invoices
+	$q = "SELECT *, ug.user_id AS user_id, ug.account_id AS user_game_account_id FROM user_games ug JOIN currency_invoices i ON ug.user_game_id=i.user_game_id JOIN addresses a ON i.address_id=a.address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status IN ('unpaid','unconfirmed') AND (i.status='unconfirmed' OR i.expire_time >= ".time().") AND i.invoice_type='sellout' GROUP BY a.address_id;";
+	$r = $app->run_query($q);
+	
+	while ($invoice_address = $r->fetch()) {
+		if (empty($blockchains[$invoice_address['blockchain_id']])) $blockchains[$invoice_address['blockchain_id']] = new Blockchain($app, $invoice_address['blockchain_id']);
+		$game = new Game($blockchains[$invoice_address['blockchain_id']], $invoice_address['game_id']);
+		
+		$blockchain_currency = $app->fetch_currency_by_id($invoice_address['pay_currency_id']);
+		$blockchain = new Blockchain($app, $blockchain_currency['blockchain_id']);
+		
+		$address_balance = (float) $game->address_balance_at_block($invoice_address, false);
+		
+		$qq = "SELECT SUM(confirmed_amount_paid) FROM currency_invoices WHERE address_id='".$invoice_address['address_id']."' AND status IN('confirmed','settled','pending_refund','refunded');";
+		$rr = $app->run_query($qq);
+		$preexisting_balance = $rr->fetch()['SUM(confirmed_amount_paid)']*pow(10, $game->db_game['decimal_places']);
+		
+		$amount_paid = $address_balance-$preexisting_balance;
+		
+		if ($print_debug) echo $invoice_address['address']." ".$address_balance.", paid: ".$amount_paid."\n";
+		
+		if ($amount_paid > 0) {
+			$escrow_value = $game->escrow_value_in_currency($invoice_address['pay_currency_id']);
+			$coins_in_existence = ($game->coins_in_existence(false)+$game->pending_bets())/pow(10, $game->db_game['decimal_places']);
+			$exchange_rate = $coins_in_existence/$escrow_value;
+			
+			$blockchain_amount = $amount_paid/$exchange_rate;
+			$sale_blockchain_account = $game->check_set_blockchain_sale_account($thisuser, $blockchain_currency);
+			$sale_blockchain_account_balance = $blockchain->account_balance($sale_blockchain_account['account_id']);
+			$fee_amount = $invoice_address['fee_amount']*pow(10, $blockchain->db_blockchain['decimal_places']);
+			$blockchain_amount = max(0, min($blockchain_amount, $sale_blockchain_account_balance)-$fee_amount);
+			
+			if ($blockchain_amount > 0) {
+				$blockchain_cost = $blockchain_amount+$fee_amount;
+				
+				if ($print_debug) echo "exch: $exchange_rate, pay: $blockchain_amount, tx fee: ".$invoice_address['fee_amount']."<br/>\n";
+				
+				$qq = "SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$sale_blockchain_account['account_id']."' ORDER BY io.amount ASC;";
+				$rr = $app->run_query($qq);
+				
+				$io_amount_sum = 0;
+				$ios = array();
+				$io_ids = array();
+				$keep_looping = true;
+				
+				while ($keep_looping && $io = $rr->fetch()) {
+					$io_amount_sum += $io['amount'];
+					array_push($io_ids, $io['io_id']);
+					array_push($ios, $io);
+					
+					if ($io_amount_sum >= $blockchain_cost) $keep_looping = false;
+				}
+				
+				$io_nonfee_amount = $io_amount_sum-$fee_amount;
+				
+				$amounts = array($blockchain_amount);
+				$address_ids = array($invoice_address['receive_address_id']);
+				
+				if ($io_nonfee_amount > $blockchain_cost) {
+					$remainder_amount = $io_nonfee_amount-$blockchain_amount;
+					array_push($amounts, $remainder_amount);
+					array_push($address_ids, $ios[0]['address_id']);
+				}
+				
+				$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $fee_amount);
+				
+				if ($transaction_id) {
+					$qq = "UPDATE currency_invoices SET confirmed_amount_paid='".$amount_paid/pow(10,$game->blockchain->db_blockchain['decimal_places'])."', unconfirmed_amount_paid='".$amount_paid/pow(10,$game->blockchain->db_blockchain['decimal_places'])."', status='confirmed' WHERE invoice_id='".$invoice_address['invoice_id']."';";
+					$rr = $app->run_query($qq);
+				}
+				
+				if ($print_debug) {
+					if ($transaction_id) echo "Created tx #".$transaction_id."\n";
+					else echo "Failed to create the transaction.\n";
+				}
+			}
+			else if ($print_debug) echo "Invalid payment amount.\n";
+		}
+		else if ($print_debug) echo "Nothing was paid.\n";
 	}
 	
 	// Broadcast sellout refund transactions for games where this node owns the escrow address
