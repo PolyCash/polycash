@@ -19,7 +19,7 @@ $r = $app->run_query($q);
 
 if ($r->rowCount() > 0) {
 	$db_address = $r->fetch();
-	$permission_to_claim_address = $app->permission_to_claim_address($thisuser, $db_address);
+	$permission_to_claim_address = $app->permission_to_claim_address($thisuser, $blockchain, $db_address);
 	
 	if ($permission_to_claim_address) {
 		if ($thisuser) {

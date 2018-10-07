@@ -1007,7 +1007,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					
 					<br/>
 					<?php
-					$permission_to_claim_address = $app->permission_to_claim_address($thisuser, $address);
+					$permission_to_claim_address = $app->permission_to_claim_address($thisuser, $blockchain, $address);
 					
 					if ($permission_to_claim_address) {
 						if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "claim") {
