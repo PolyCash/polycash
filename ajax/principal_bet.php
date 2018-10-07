@@ -55,14 +55,15 @@ if ($thisuser && $game) {
 						$destroy_frac = $amount_total/$game_amount_sum;
 						$destroy_io_amount = ceil($destroy_frac*$io_nonfee_amount);
 						$nondestroy_io_amount = $io_nonfee_amount-$destroy_io_amount;
+						$error_message = false;
 						
-						$transaction_id = $game->blockchain->create_transaction("transaction", array($destroy_io_amount, $nondestroy_io_amount), false, $io_ids, array($destroy_address['address_id'], $address['address_id']), $fee_total);
+						$transaction_id = $game->blockchain->create_transaction("transaction", array($destroy_io_amount, $nondestroy_io_amount), false, $io_ids, array($destroy_address['address_id'], $address['address_id']), $fee_total, $error_message);
 						
 						if ($transaction_id) {
 							$app->output_message(1, "Great, your transaction was submitted. <a href=\"/explorer/blockchains/".$game->blockchain->db_blockchain['url_identifier']."/transactions/".$transaction_id."/\">View Transaction</a>", false);
 						}
 						else {
-							$app->output_message(8, "Error: failed to create the transaction.", false);
+							$app->output_message(8, "TX Error: ".$error_message, false);
 						}
 					}
 					else $app->output_message(7, "Not enough ".$game->blockchain->db_blockchain['coin_name_plural'].": ".$app->format_bignum($io_amount_sum/pow(10, $game->blockchain->db_blockchain['decimal_places']))." available.", false);

@@ -119,13 +119,14 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 					echo "overshoot: ".$app->format_bignum($overshoot_amount/pow(10, $blockchain->db_blockchain['decimal_places']))." coins<br/>\n";
 					$io_amounts[count($io_amounts)-1] -= $overshoot_amount;
 					
-					$transaction_id = $blockchain->create_transaction("transaction", $io_amounts, false, $io_ids, $address_ids, $fee_amount);
+					$error_message = false;
+					$transaction_id = $blockchain->create_transaction("transaction", $io_amounts, false, $io_ids, $address_ids, $fee_amount, $error_message);
 					
 					if ($transaction_id) {
 						echo "Great, your transaction was submitted. <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction_id."/\">View Transaction</a>";
 					}
 					else {
-						echo "Error: failed to create the transaction.";
+						echo "TX Error: ".$error_message;
 					}
 				}
 				else echo "Invalid coins_per_event.";

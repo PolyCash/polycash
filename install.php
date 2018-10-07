@@ -70,6 +70,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			
 			$pagetitle = $GLOBALS['site_name']." - Installing...";
 			$include_crypto_js = TRUE;
+			$nav_tab_selected = "install";
 			include("includes/html_start.php");
 			?>
 			<div class="container-fluid">

@@ -82,7 +82,7 @@ if (!empty($_REQUEST['action'])) {
 							}
 							
 							$error_message = false;
-							$transaction_id = $fv_blockchain->create_transaction("transaction", $output_amounts, false, $io_ids, $output_address_ids, $fee);
+							$transaction_id = $fv_blockchain->create_transaction("transaction", $output_amounts, false, $io_ids, $output_address_ids, $fee, $error_message);
 							
 							if ($transaction_id) {
 								$db_transaction = $app->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();

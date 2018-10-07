@@ -1360,7 +1360,7 @@ class Blockchain {
 		$this->db_blockchain['creator_id'] = $user->db_user['user_id'];
 	}
 	
-	public function create_transaction($type, $amounts, $block_id, $io_ids, $address_ids, $transaction_fee) {
+	public function create_transaction($type, $amounts, $block_id, $io_ids, $address_ids, $transaction_fee, &$error_message) {
 		$amount = $transaction_fee;
 		for ($i=0; $i<count($amounts); $i++) {
 			$amount += $amounts[$i];
@@ -1476,12 +1476,14 @@ class Blockchain {
 			}
 			
 			if ($output_error) {
+				$error_message = "There was an error creating the outputs.";
 				//$this->blockchain->app->cancel_transaction($transaction_id, $affected_input_ids, false);
 				return false;
 			}
 			else {
 				$successful = false;
 				$coin_rpc = false;
+				
 				if ($this->db_blockchain['p2p_mode'] == "rpc") {
 					$coin_rpc = new jsonRPCClient('http://'.$this->db_blockchain['rpc_username'].':'.$this->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->db_blockchain['rpc_port'].'/');
 					
@@ -1496,9 +1498,11 @@ class Blockchain {
 						
 						$db_transaction = $this->app->run_query("SELECT * FROM transactions WHERE tx_hash=".$this->app->quote_escape($tx_hash).";")->fetch();
 						
+						$error_message = "Success!";
 						return $db_transaction['transaction_id'];
 					}
 					catch (Exception $e) {
+						$error_message = "There was an error with one of the RPC calls";
 						return false;
 					}
 				}
@@ -1508,10 +1512,14 @@ class Blockchain {
 					$this->web_api_push_transaction($transaction_id);
 				}
 				
+				$error_message = "Finished adding the transaction";
 				return $transaction_id;
 			}
 		}
-		else return false;
+		else {
+			$error_message = "Invalid balance or inputs.";
+			return false;
+		}
 	}
 	
 	public function new_block(&$log_text) {
@@ -1537,7 +1545,8 @@ class Blockchain {
 		$mined_address_str = $this->app->random_string(34);
 		$mined_address = $this->create_or_fetch_address($mined_address_str, false, false, false, false, true, false);
 		
-		$mined_transaction_id = $this->create_transaction('coinbase', array($this->db_blockchain['initial_pow_reward']), $created_block_id, false, array($mined_address['address_id']), 0);
+		$mined_error = false;
+		$mined_transaction_id = $this->create_transaction('coinbase', array($this->db_blockchain['initial_pow_reward']), $created_block_id, false, array($mined_address['address_id']), 0, $mined_error);
 		$num_transactions++;
 		$r = $this->app->run_query("UPDATE transactions SET position_in_block='0' WHERE transaction_id='".$mined_transaction_id."';");
 		

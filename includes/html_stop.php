@@ -54,7 +54,7 @@
 		<?php
 		}
 		
-		$q = "SELECT * FROM blockchains b JOIN images i ON b.default_image_id=i.image_id WHERE b.online=1;";
+		$q = "SELECT * FROM blockchains b LEFT JOIN images i ON b.default_image_id=i.image_id WHERE b.online=1;";
 		$r = $app->run_query($q);
 		
 		while ($db_blockchain = $r->fetch()) {
@@ -68,8 +68,8 @@
 			
 			echo '<div class="status_footer_section">';
 			echo '<a href="/explorer/blockchains/'.$db_blockchain['url_identifier'].'/blocks/">';
-			echo '<img class="status_footer_img" src="/images/custom/'.$db_blockchain['default_image_id'].'.'.$db_blockchain['extension'].'" />';
-			
+			if ($db_blockchain['default_image_id'] > 0) echo '<img class="status_footer_img" src="/images/custom/'.$db_blockchain['default_image_id'].'.'.$db_blockchain['extension'].'" />';
+			else echo $db_blockchain['blockchain_name']." "; 
 			if ($blockchain_last_active > time()-(60*2)) {
 				echo '<font class="greentext">Online</font>';
 			}

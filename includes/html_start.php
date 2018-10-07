@@ -107,6 +107,14 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 	<aside class="main-sidebar">
 		<section class="sidebar">
 			<?php
+			if ($thisuser && $app->user_is_admin($thisuser)) {
+				?>
+				<ul class="sidebar-menu" data-widget="tree">
+					<li class="header">Admin Functions</li>
+					<li<?php if ($nav_tab_selected == "install") echo ' class="active"'; ?>><a href="/install.php?key=<?php echo $GLOBALS['cron_key_string']; ?>"><i class="fa fa-download"></i> <span>Install</span></a></li>
+				</ul>
+				<?php
+			}
 			if ($nav_tab_selected == "cards" || $nav_tab_selected == "accounts") { ?>
 				<ul class="sidebar-menu" data-widget="tree">
 					<li class="header">Cards</li>

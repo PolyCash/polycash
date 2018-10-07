@@ -1558,6 +1558,54 @@ class App {
 		);
 	}
 	
+	public function blockchain_verbatim_vars() {
+		return array(
+			array('string', 'blockchain_name'),
+			array('string', 'url_identifier'),
+			array('string', 'coin_name'),
+			array('string', 'coin_name_plural'),
+			array('int', 'seconds_per_block'),
+			array('int', 'decimal_places'),
+			array('int', 'initial_pow_reward')
+		);
+	}
+	
+	public function fetch_blockchain_definition(&$blockchain) {
+		$verbatim_vars = $this->blockchain_verbatim_vars();
+		$blockchain_definition = array();
+		
+		if (in_array($blockchain->db_blockchain['p2p_mode'], array("web_api", "none"))) {
+			if ($blockchain->db_blockchain['p2p_mode'] == "none") {
+				$card_issuer = $this->get_issuer_by_server_name($GLOBALS['base_url']);
+			}
+			else {
+				$card_issuer = $this->get_issuer_by_id($this->db_blockchain['authoritative_issuer_id']);
+			}
+			$blockchain_definition['issuer'] = $card_issuer['base_url'];
+		}
+		else $blockchain_definition['issuer'] = "none";
+		
+		if (in_array($blockchain->db_blockchain['p2p_mode'], array("none","web_api"))) {
+			$blockchain_definition['p2p_mode'] = "web";
+		}
+		else $blockchain_definition['p2p_mode'] = "rpc";
+		
+		for ($i=0; $i<count($verbatim_vars); $i++) {
+			$var_type = $verbatim_vars[$i][0];
+			$var_name = $verbatim_vars[$i][1];
+			
+			if ($var_type == "int") {
+				if ($blockchain->db_blockchain[$var_name] == "0" || $blockchain->db_blockchain[$var_name] > 0) $var_val = (int) $blockchain->db_blockchain[$var_name];
+				else $var_val = null;
+			}
+			else if ($var_type == "float") $var_val = (float) $blockchain->db_blockchain[$var_name];
+			else $var_val = $blockchain->db_blockchain[$var_name];
+			
+			$blockchain_definition[$var_name] = $var_val;
+		}
+		return $blockchain_definition;
+	}
+	
 	public function migrate_game_definitions($game, $initial_game_def_hash, $new_game_def_hash) {
 		$log_message = "";
 		$initial_game_def_r = $this->run_query("SELECT * FROM game_definitions WHERE definition_hash=".$this->quote_escape($initial_game_def_hash).";");
@@ -1737,6 +1785,44 @@ class App {
 		}
 		
 		return $db_module;
+	}
+	
+	public function create_blockchain_from_definition(&$definition, &$thisuser, &$error_message, &$db_new_blockchain) {
+		$blockchain = false;
+		$blockchain_def = json_decode($definition) or die("Error: invalid JSON formatted blockchain");
+		
+		if (!empty($blockchain_def->url_identifier)) {
+			$db_blockchain = $this->fetch_blockchain_by_identifier($blockchain_def->url_identifier);
+			
+			if (!$db_blockchain) {
+				$p2p_mode = "web_api";
+				if ($blockchain_def->p2p_mode == "rpc") $p2p_mode = "rpc";
+				
+				$import_q = "INSERT INTO blockchains SET online=1, p2p_mode='".$p2p_mode."', creator_id='".$thisuser->db_user['user_id']."', ";
+				
+				if ($blockchain_def->issuer == "none") $import_q .= "authoritative_issuer_id='NULL', ";
+				else {
+					$issuer = $this->get_issuer_by_server_name($blockchain_def->issuer);
+					$import_q .= "authoritative_issuer_id='".$issuer['issuer_id']."', ";
+				}
+				$verbatim_vars = $this->blockchain_verbatim_vars();
+				
+				for ($var_i=0; $var_i<count($verbatim_vars); $var_i++) {
+					$var_type = $verbatim_vars[$var_i][0];
+					$var_name = $verbatim_vars[$var_i][1];
+					
+					$import_q .= $var_name."=".$this->quote_escape($blockchain_def->$var_name).", ";
+				}
+				$import_q = substr($import_q, 0, strlen($import_q)-2).";";
+				
+				$import_r = $this->run_query($import_q);
+				$blockchain_id = $this->last_insert_id();
+				
+				$error_message = "Import was a success! Next please <a href=\"/scripts/sync_blockchain_initial.php?key=".$GLOBALS['cron_key_string']."&blockchain_id=".$blockchain_id."\">reset and synchronize ".$blockchain_def->blockchain_name."</a>";
+			}
+			else $error_message = "Error: this blockchain already exists.";
+		}
+		else $error_message = "Invalid url_identifier";
 	}
 	
 	public function create_game_from_definition(&$game_definition, &$thisuser, $module_name, &$error_message, &$db_game) {
@@ -2473,7 +2559,8 @@ class App {
 				$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
 				$amounts = array($io['amount']-$fee_amount);
 				
-				$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($io['io_id']), array($db_address['address_id']), array(0), $fee_amount);
+				$payout_tx_error = false;
+				$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($io['io_id']), array($db_address['address_id']), array(0), $fee_amount, $payout_tx_error);
 				
 				if ($transaction_id) {
 					$transaction = $this->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
@@ -2484,6 +2571,7 @@ class App {
 					
 					return $transaction;
 				}
+				else return false;
 			}
 			else return false;
 		}
@@ -2544,7 +2632,8 @@ class App {
 							$io = $io_r->fetch();
 							$success_message .= "&io_id=".$io['io_id'];
 							
-							$transaction_id = $blockchain->create_transaction("transaction", array($io['amount']-$fee_amount), false, array($io['io_id']), array($db_address['address_id']), array(0), $fee_amount);
+							$redeem_tx_error = false;
+							$transaction_id = $blockchain->create_transaction("transaction", array($io['amount']-$fee_amount), false, array($io['io_id']), array($db_address['address_id']), array(0), $fee_amount, $redeem_tx_error);
 							
 							if ($transaction_id) {
 								$transaction = $this->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
@@ -2557,7 +2646,7 @@ class App {
 								$r = $this->run_query($q);
 								$card['redemption_tx_hash'] = $transaction['tx_hash'];
 							}
-							else {$status_code=11; $message="Error: failed to create the transaction.";}
+							else {$status_code=11; $message="TX Error: ".$error_message;}
 						}
 						else {$status_code=10; $message="Error: card payment UTXO not found.";}
 					}
