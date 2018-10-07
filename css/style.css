@@ -534,3 +534,10 @@ a.selected {
 	overflow-y: auto;
 	overflow-x: hidden;
 }
+.definition {
+	width: 100%;
+	min-height: 400px;
+	background-color: #f5f5f5;
+	border: 1px solid #cccccc;
+	margin-top: 10px;
+}

@@ -1558,6 +1558,49 @@ class App {
 		);
 	}
 	
+	public function blockchain_verbatim_vars() {
+		return array(
+			array('string', 'blockchain_name'),
+			array('string', 'url_identifier'),
+			array('string', 'coin_name'),
+			array('string', 'coin_name_plural'),
+			array('int', 'seconds_per_block'),
+			array('int', 'decimal_places'),
+			array('int', 'initial_pow_reward')
+		);
+	}
+	
+	public function fetch_blockchain_definition(&$blockchain) {
+		$verbatim_vars = $this->blockchain_verbatim_vars();
+		$blockchain_definition = array();
+		
+		if (in_array($blockchain->db_blockchain['p2p_mode'], array("web_api", "none"))) {
+			if ($blockchain->db_blockchain['p2p_mode'] == "none") {
+				$card_issuer = $this->get_issuer_by_server_name($GLOBALS['base_url']);
+			}
+			else {
+				$card_issuer = $this->get_issuer_by_id($this->db_blockchain['authoritative_issuer_id']);
+			}
+			$blockchain_definition['issuer'] = $card_issuer['base_url'];
+		}
+		else $blockchain_definition['issuer'] = "none";
+		
+		for ($i=0; $i<count($verbatim_vars); $i++) {
+			$var_type = $verbatim_vars[$i][0];
+			$var_name = $verbatim_vars[$i][1];
+			
+			if ($var_type == "int") {
+				if ($blockchain->db_blockchain[$var_name] == "0" || $blockchain->db_blockchain[$var_name] > 0) $var_val = (int) $blockchain->db_blockchain[$var_name];
+				else $var_val = null;
+			}
+			else if ($var_type == "float") $var_val = (float) $blockchain->db_blockchain[$var_name];
+			else $var_val = $blockchain->db_blockchain[$var_name];
+			
+			$blockchain_definition[$var_name] = $var_val;
+		}
+		return $blockchain_definition;
+	}
+	
 	public function migrate_game_definitions($game, $initial_game_def_hash, $new_game_def_hash) {
 		$log_message = "";
 		$initial_game_def_r = $this->run_query("SELECT * FROM game_definitions WHERE definition_hash=".$this->quote_escape($initial_game_def_hash).";");
@@ -1737,6 +1780,33 @@ class App {
 		}
 		
 		return $db_module;
+	}
+	
+	public function create_blockchain_from_definition(&$definition, &$thisuser, &$error_message, &$db_new_blockchain) {
+		$blockchain = false;
+		$blockchain_def = json_decode($definition) or die("Error: invalid JSON formatted blockchain");
+		
+		if (!empty($blockchain_def->url_identifier)) {
+			$db_blockchain = $this->fetch_blockchain_by_identifier($blockchain_def->url_identifier);
+			
+			if (!$db_blockchain) {
+				$import_q = "INSERT INTO blockchains SET creator_id='".$thisuser->db_user['user_id']."', ";
+				
+				$verbatim_vars = $this->blockchain_verbatim_vars();
+				
+				for ($var_i=0; $var_i<count($verbatim_vars); $var_i++) {
+					$var_type = $verbatim_vars[$var_i][0];
+					$var_name = $verbatim_vars[$var_i][1];
+					
+					$import_q .= $var_name."=".$this->quote_escape($blockchain_def->$var_name).", ";
+				}
+				$import_q = substr($import_q, 0, strlen($import_q)-2).";";
+				
+				$error_message = $import_q;
+			}
+			else $error_message = "Error: this blockchain already exists.";
+		}
+		else $error_message = "Invalid blockchain_identifier";
 	}
 	
 	public function create_game_from_definition(&$game_definition, &$thisuser, $module_name, &$error_message, &$db_game) {
