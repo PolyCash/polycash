@@ -1795,7 +1795,11 @@ class App {
 			$db_blockchain = $this->fetch_blockchain_by_identifier($blockchain_def->url_identifier);
 			
 			if (!$db_blockchain) {
-				$import_q = "INSERT INTO blockchains SET online=1, p2p_mode=".$this->quote_escape($blockchain_def->p2p_mode).", creator_id='".$thisuser->db_user['user_id']."', ";
+				$p2p_mode = "web_api";
+				if ($blockchain_def->p2p_mode == "rpc") $p2p_mode = "rpc";
+				
+				$import_q = "INSERT INTO blockchains SET online=1, p2p_mode='".$p2p_mode."', creator_id='".$thisuser->db_user['user_id']."', ";
+				
 				if ($blockchain_def->issuer == "none") $import_q .= "authoritative_issuer_id='NULL', ";
 				else {
 					$issuer = $this->get_issuer_by_server_name($blockchain_def->issuer);
@@ -1812,13 +1816,13 @@ class App {
 				$import_q = substr($import_q, 0, strlen($import_q)-2).";";
 				
 				$import_r = $this->run_query($import_q);
-				$blockchain_id = $app->last_insert_id();
+				$blockchain_id = $this->last_insert_id();
 				
 				$error_message = "Import was a success! Next please <a href=\"/scripts/sync_blockchain_initial.php?key=".$GLOBALS['cron_key_string']."&blockchain_id=".$blockchain_id."\">reset and synchronize ".$blockchain_def->blockchain_name."</a>";
 			}
 			else $error_message = "Error: this blockchain already exists.";
 		}
-		else $error_message = "Invalid blockchain_identifier";
+		else $error_message = "Invalid url_identifier";
 	}
 	
 	public function create_game_from_definition(&$game_definition, &$thisuser, $module_name, &$error_message, &$db_game) {
