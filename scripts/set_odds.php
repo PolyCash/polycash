@@ -24,8 +24,10 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			$db_game = $game_r->fetch();
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
-			$mining_block_id = $blockchain->last_block_id()+1;
 			
+			$mining_block_id = $blockchain->last_block_id()+1;
+			$round_id = $game->block_to_round($mining_block_id);
+			$coins_per_vote = $app->coins_per_vote($game->db_game);
 			$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
 			
 			$account_q = "SELECT * FROM currency_accounts WHERE account_id='".$account_id."';";
@@ -46,9 +48,12 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 					
 					echo "Betting ".$app->format_bignum($coins_per_event)." on each of ".$num_events." events.<br/>\n";
 					
-					$q = "SELECT *, SUM(gio.colored_amount) AS coins, SUM(gio.colored_amount)*(".($blockchain->last_block_id()+1)."-io.create_block_id) AS coin_blocks FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.is_resolved=1 AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account['account_id']."' GROUP BY gio.io_id ORDER BY coin_blocks ASC;";
+					$q = "SELECT *, SUM(gio.colored_amount) AS coins, SUM(gio.colored_amount)*(".($blockchain->last_block_id()+1)."-io.create_block_id) AS coin_blocks, SUM(gio.colored_amount*(".$round_id."-gio.create_round_id)) AS coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.is_resolved=1 AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account['account_id']."' GROUP BY gio.io_id";
+					if ($game->db_game['inflation'] == "exponential" && $game->db_game['exponential_inflation_rate'] > 0) $q .= " HAVING(".$game->db_game['payout_weight']."s*".$coins_per_vote.") < ".$total_cost;
+					$q .= " ORDER BY coins DESC;";
 					$r = $app->run_query($q);
 					
+					$mandatory_bets = 0;
 					$io_amount_sum = 0;
 					$game_amount_sum = 0;
 					$io_ids = array();
@@ -57,10 +62,21 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 					while ($keep_looping && $io = $r->fetch()) {
 						$game_amount_sum += $io['coins'];
 						$io_amount_sum += $io['amount'];
-						array_push($io_ids, $io['io_id']);
 						
-						if ($game_amount_sum >= $total_cost*1.5) $keep_looping = false;
+						if ($game->db_game['inflation'] == "exponential" && $game->db_game['exponential_inflation_rate'] > 0) {
+							if ($game->db_game['payout_weight'] == "coin_block") $votes = $io['coin_blocks'];
+							else if ($game->db_game['payout_weight'] == "coin_round") $votes = $io['coin_rounds'];
+							$this_mandatory_bets = floor($votes*$coins_per_vote);
+						}
+						else $this_mandatory_bets = 0;
+						
+						$mandatory_bets += $this_mandatory_bets;
+						array_push($io_ids, $io['io_id']);
+						$keep_looping = false; // Always use a single IO as input, else cancel this
 					}
+					$burn_game_amount = $total_cost-$mandatory_bets;
+					
+					if ($burn_game_amount < 0 || $burn_game_amount > $game_amount_sum) die("Failed to determine a valid burn amount (".$burn_game_amount.").");
 					
 					$io_nonfee_amount = $io_amount_sum-$fee_amount;
 					$game_coins_per_coin = $game_amount_sum/$io_nonfee_amount;
@@ -68,12 +84,12 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 					echo $app->format_bignum($game_coins_per_coin)." ".$game->db_game['coin_name_plural']." per ".$blockchain->db_blockchain['coin_name'].".<br/>\n";
 					
 					$burn_address = $app->fetch_address_in_account($account['account_id'], 0);
-					$burn_amount = ceil($total_cost/$game_coins_per_coin);
+					$burn_amount = ceil($burn_game_amount/$game_coins_per_coin);
 					
 					$remaining_io_amount = $io_nonfee_amount-$burn_amount;
 					$io_amount_per_event = $remaining_io_amount/$num_events;
 					
-					echo "burn ".$app->format_bignum($burn_amount/pow(10, $blockchain->db_blockchain['decimal_places']))." ".$blockchain->db_blockchain['coin_name_plural']." (".$app->format_bignum($total_cost/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural'].").<br/><br/>\n";
+					echo "burn ".$app->format_bignum($burn_amount/pow(10, $blockchain->db_blockchain['decimal_places']))." ".$blockchain->db_blockchain['coin_name_plural']." (".$app->format_bignum($burn_game_amount/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." + ".$app->format_bignum($mandatory_bets/pow(10, $game->db_game['decimal_places']))." from inflation).<br/><br/>\n";
 					
 					$io_amounts = array($burn_amount);
 					$address_ids = array($burn_address['address_id']);
