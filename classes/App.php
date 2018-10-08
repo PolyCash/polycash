@@ -1898,10 +1898,14 @@ class App {
 							if ($module_name) $q .= "module=".$this->quote_escape($module_name).", ";
 							if ($thisuser) $q .= "creator_id='".$thisuser->db_user['user_id']."', ";
 							$q .= "blockchain_id='".$db_blockchain['blockchain_id']."', game_status='published', featured=1";
+							
 							for ($i=0; $i<count($verbatim_vars); $i++) {
 								$var_type = $verbatim_vars[$i][0];
 								$var_name = $verbatim_vars[$i][1];
-								$q .= ", ".$var_name."=".$this->quote_escape($game_def->$var_name);
+								
+								if ($game_def->$var_name != "") {
+									$q .= ", ".$var_name."=".$this->quote_escape($game_def->$var_name);
+								}
 							}
 							$q .= ";";
 							$r = $this->run_query($q);

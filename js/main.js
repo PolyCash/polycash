@@ -1,3 +1,10 @@
+function toggle_push_menu(expand_collapse) {
+	$.get("/ajax/toggle_left_menu.php?expand_collapse="+expand_collapse, function(result) {});
+}
+
+$(document).on('expanded.pushMenu', function() {toggle_push_menu('expand');});
+$(document).on('collapsed.pushMenu', function() {toggle_push_menu('collapse');});
+
 // Class Definitions
 var Image = function (id) {
 	this.imageId = id;
@@ -403,7 +410,7 @@ function set_input_amount_sums() {
 			else render_text += games[0].coin_name_plural;
 			$('#input_vote_sum').html(render_text);
 			
-			if ($('#compose_burn_amount').val() == "0" || $('#compose_burn_amount').val() == "" || $('#compose_burn_amount').val() == set_usable_coins) {
+			if (games[0].exponential_inflation_rate == 0 && ($('#compose_burn_amount').val() == "" || $('#compose_burn_amount').val() == set_usable_coins)) {
 				var usable_coins = Math.floor(amount_sums[1]*0.9/Math.pow(10,games[0].decimal_places));
 				set_usable_coins = usable_coins;
 				$('#compose_burn_amount').val(usable_coins);
@@ -1053,6 +1060,7 @@ function confirm_compose_vote() {
 				if (result_obj['status_code'] == 1) {
 					$('#compose_vote_success').html(result_obj['message']);
 					$('#compose_vote_success').slideDown('slow');
+					$('#compose_burn_amount').val("");
 					setTimeout("$('#compose_vote_success').slideUp('fast');", 5000);
 					
 					setTimeout(function() {

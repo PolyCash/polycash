@@ -64,6 +64,22 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 			<a href="#" class="fa fa-bars" data-toggle="push-menu" role="button" style="padding: 15px; line-height: 20px; color: #fff; text-decoration: none;">
 				<span class="sr-only">Toggle navigation</span>
 			</a>
+			<?php
+			$left_menu_open = 1;
+			if ($GLOBALS['pageview_tracking_enabled']) {
+				$viewer = $pageview_controller->get_viewer($viewer_id);
+				$left_menu_open = $viewer['left_menu_open'];
+			}
+			else if ($thisuser) $left_menu_open = $thisuser->db_user['left_menu_open'];
+			
+			if ($left_menu_open == 0) {
+				?>
+				<script type="text/javascript">
+				$('[data-toggle="push-menu"]').pushMenu('toggle');
+				</script>
+				<?php
+			}
+			?>
 			<!-- Navbar Right Menu -->
 			<div class="navbar-custom-menu">
 				<ul class="nav navbar-nav">

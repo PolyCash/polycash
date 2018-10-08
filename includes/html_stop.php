@@ -18,8 +18,8 @@
 		<div class="status_footer_section">
 			Tracking is: 
 			<?php
-			if ($GLOBALS['pageview_tracking_enabled']) echo "<font class='redtext'>Enabled</font>";
-			else echo "<font class='greentext'>Disabled</font>";
+			if ($GLOBALS['pageview_tracking_enabled']) echo "<font class='greentext'>Enabled</font>";
+			else echo "<font class='redtext'>Disabled</font>";
 			?>
 		</div>
 		<?php

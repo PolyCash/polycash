@@ -805,8 +805,8 @@ if ($thisuser && $game) {
 										<div class="col-md-4 bordered_cell" id="compose_vote_inputs">
 											<b>Inputs:</b><div style="display: none; margin-left: 20px;" id="input_amount_sum"></div><div style="display: inline-block; margin-left: 20px;" id="input_vote_sum"></div><br/>
 											<p>
-												How many <?php echo $game->db_game['coin_name_plural']; ?> do you want to spend?
-												<input class="form-control input-sm" id="compose_burn_amount" value="0" />
+												How many <?php echo $game->db_game['coin_name_plural']; ?> do you want to burn?
+												<input class="form-control input-sm" id="compose_burn_amount" placeholder="0" />
 											</p>
 											<p id="compose_input_start_msg"></p>
 										</div>

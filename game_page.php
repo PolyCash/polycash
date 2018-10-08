@@ -65,25 +65,11 @@ else $exchange_rate = 0;
 						else ", and the supply of coins increases by ".(100*$game->db_game['exponential_inflation_rate'])."% after each round. ";
 					}
 					
-					if ($game->db_game['start_condition'] == "players_joined") {
-						$num_players = $game->paid_players_in_game();
-						if ($game->db_game['game_status'] == "running") {
-							echo "This game started ".$app->format_seconds(time()-strtotime($game->db_game['start_datetime']))." ago with ".$game->db_game['start_condition_players']." players. ";
-						}
-						else {
-							echo "This game starts when ".$game->db_game['start_condition_players']." players have joined. So far ".$num_players;
-							if ($num_players == 1) echo " has ";
-							else echo " have ";
-							echo "joined.<br/>\n";
-						}
+					if ($game->db_game['game_status'] == "running") {
+						echo "This game started at ".date("M j, Y g:ia", strtotime($game->db_game['start_datetime'])).". ";
 					}
-					else {
-						if ($game->db_game['game_status'] == "running") {
-							echo "This game started at ".date("M j, Y g:ia", strtotime($game->db_game['start_datetime'])).". ";
-						}
-						else if (strtotime($game->db_game['start_datetime']) > 0) {
-							echo "This game starts in ".$app->format_seconds(strtotime($game->db_game['start_datetime'])-time())." on ".date("M d Y", strtotime($game->db_game['start_datetime'])).". ";
-						}
+					else if (strtotime($game->db_game['start_datetime']) > 0) {
+						echo "This game starts in ".$app->format_seconds(strtotime($game->db_game['start_datetime'])-time())." on ".date("M d Y", strtotime($game->db_game['start_datetime'])).". ";
 					}
 					
 					if ($game->db_game['short_description'] != "") {
