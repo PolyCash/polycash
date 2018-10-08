@@ -499,7 +499,7 @@ class Event {
 			$num_confirmed++;
 		}
 		
-		$q = "SELECT gio.*, gvo.option_id, gvo.name, t.transaction_id, t.tx_hash, t.fee_amount, t.amount AS transaction_amount FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN options gvo ON gio.option_id=gvo.option_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.event_id='".$this->db_event['event_id']."' AND io.create_block_id IS NULL AND t.block_id IS NULL AND k.account_id='".$user_game['account_id']."' ORDER BY gio.game_io_id ASC;";
+		$q = "SELECT gio.*, gvo.option_id, gvo.name, t.transaction_id, t.tx_hash, t.fee_amount, t.amount AS transaction_amount FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN options gvo ON gio.option_id=gvo.option_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.event_id='".$this->db_event['event_id']."' AND io.create_block_id IS NULL AND t.block_id IS NULL AND k.account_id='".$user_game['account_id']."' AND gio.colored_amount > 0 ORDER BY gio.game_io_id ASC;";
 		$r = $this->game->blockchain->app->run_query($q);
 		
 		$current_effectiveness_factor = $this->block_id_to_effectiveness_factor($last_block_id+1);

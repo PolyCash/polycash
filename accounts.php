@@ -510,7 +510,9 @@ include('includes/html_start.php');
 							echo '<div class="col-sm-2">'.$app->format_bignum($game_balance/pow(10, $account_game->db_game['decimal_places'])).' '.$account_game->db_game['coin_name_plural'].'</div>';
 						}
 						
-						echo '<div class="col-sm-2">'.$address['vote_identifier'].' (#'.$address['option_index'].')</div>';
+						echo '<div class="col-sm-2">'.$address['vote_identifier'].' (#'.$address['option_index'].')';
+						if ($address['is_destroy_address'] == 1) echo ' <font class="redtext">Destroy Address</font>';
+						echo '</div>';
 						
 						echo '<div class="col-sm-4"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$address['address'].'">'.$address['address'].'</a></div>';
 						
