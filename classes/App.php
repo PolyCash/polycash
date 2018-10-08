@@ -767,6 +767,8 @@ class App {
 	}
 	
 	public function new_address_key($currency_id, &$account) {
+		$reject_destroy_addresses = true;
+		
 		$q = "SELECT * FROM currencies WHERE currency_id='".$currency_id."';";
 		$r = $this->run_query($q);
 		$currency = $r->fetch();
@@ -807,38 +809,42 @@ class App {
 			if ($save_method == "skip") return false;
 			else {
 				$db_address = $blockchain->create_or_fetch_address($address_text, true, false, false, false, true, false);
-				if ($account) {
-					$q = "UPDATE addresses SET user_id='".$account['user_id']."' WHERE address_id='".$db_address['address_id']."';";
-					$r = $this->run_query($q);
-					$q = "UPDATE transaction_ios SET user_id='".$account['user_id']."' WHERE address_id='".$db_address['address_id']."';";
-					$r = $this->run_query($q);
-				}
 				
-				$q = "SELECT * FROM address_keys WHERE address_id='".$db_address['address_id']."';";
-				$r = $this->run_query($q);
-				
-				if ($r->rowCount() > 0) {
-					$address_key = $r->fetch();
-					
-					if ($account) {
-						$q = "UPDATE address_keys SET account_id='".$account['account_id']."' WHERE address_key_id='".$address_key['address_key_id']."';";
-						$r = $this->run_query($q);
-						
-						$address_key['account_id'] = $account['account_id'];
-					}
-				}
+				if ($reject_destroy_addresses && $db_address['is_destroy_address'] == 1) return $this->new_address_key($currency_id, $account, $reject_destroy_addresses);
 				else {
-					$q = "INSERT INTO address_keys SET currency_id='".$blockchain->currency_id()."', address_id='".$db_address['address_id']."', save_method='".$save_method."', pub_key=".$this->quote_escape($address_text);
-					if (!empty($keySet['privWIF'])) $q .= ", priv_key=".$this->quote_escape($keySet['privWIF']);
-					if (!empty($account)) $q .= ", account_id='".$account['account_id']."'";
-					$q .= ";";
-					$r = $this->run_query($q);
-					$address_key_id = $this->last_insert_id();
+					if ($account) {
+						$q = "UPDATE addresses SET user_id='".$account['user_id']."' WHERE address_id='".$db_address['address_id']."';";
+						$r = $this->run_query($q);
+						$q = "UPDATE transaction_ios SET user_id='".$account['user_id']."' WHERE address_id='".$db_address['address_id']."';";
+						$r = $this->run_query($q);
+					}
 					
-					$address_key = $this->run_query("SELECT * FROM address_keys WHERE address_key_id='".$address_key_id."';")->fetch();
+					$q = "SELECT * FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id WHERE ak.address_id='".$db_address['address_id']."';";
+					$r = $this->run_query($q);
+					
+					if ($r->rowCount() > 0) {
+						$address_key = $r->fetch();
+						
+						if ($account) {
+							$q = "UPDATE address_keys SET account_id='".$account['account_id']."' WHERE address_key_id='".$address_key['address_key_id']."';";
+							$r = $this->run_query($q);
+							
+							$address_key['account_id'] = $account['account_id'];
+						}
+					}
+					else {
+						$q = "INSERT INTO address_keys SET currency_id='".$blockchain->currency_id()."', address_id='".$db_address['address_id']."', save_method='".$save_method."', pub_key=".$this->quote_escape($address_text);
+						if (!empty($keySet['privWIF'])) $q .= ", priv_key=".$this->quote_escape($keySet['privWIF']);
+						if (!empty($account)) $q .= ", account_id='".$account['account_id']."'";
+						$q .= ";";
+						$r = $this->run_query($q);
+						$address_key_id = $this->last_insert_id();
+						
+						$address_key = $this->run_query("SELECT * FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id WHERE ak.address_key_id='".$address_key_id."';")->fetch();
+					}
+					
+					return $address_key;
 				}
-				
-				return $address_key;
 			}
 		}
 		else return false;

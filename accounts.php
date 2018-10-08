@@ -206,46 +206,18 @@ if ($thisuser) {
 							$address_key_ids = array();
 							$addresses_needed = $quantity;
 							$loop_count = 0;
+							
 							do {
-								if ($donate_blockchain->db_blockchain['p2p_mode'] != "rpc") {
-									$addr_text = $app->random_string(34);
-									$temp_address = $donate_blockchain->create_or_fetch_address($addr_text, false, false, false, false, true, false);
-								}
-								$addr_q = "SELECT * FROM addresses a WHERE a.primary_blockchain_id='".$donate_blockchain->db_blockchain['blockchain_id']."' AND a.is_mine=1 AND a.user_id IS NULL AND NOT EXISTS (SELECT * FROM transaction_ios io WHERE io.address_id=a.address_id) ORDER BY RAND() LIMIT 1;";
-								$addr_r = $app->run_query($addr_q);
+								$address_key = $app->new_address_key($faucet_account['currency_id'], $faucet_account);
 								
-								if ($addr_r->rowCount() > 0) {
-									$db_address = $addr_r->fetch();
-									
-									if (empty($db_address['user_id'])) {
-										$update_addr_q = "UPDATE addresses SET user_id='".$thisuser->db_user['user_id']."' WHERE address_id='".$db_address['address_id']."';";
-										$update_addr_r = $app->run_query($update_addr_q);
-										
-										$addr_key_q = "SELECT * FROM address_keys WHERE address_id='".$db_address['address_id']."';";
-										$addr_key_r = $app->run_query($addr_key_q);
-										
-										if ($addr_key_r->rowCount() > 0) {
-											$addr_key = $addr_key_r->fetch();
-											$addr_key_q = "UPDATE address_keys SET account_id='".$faucet_account['account_id']."' WHERE address_key_id='".$addr_key['address_key_id']."';";
-											$addr_key_r = $app->run_query($addr_key_q);
-											$address_key_id = $addr_key['address_key_id'];
-										}
-										else {
-											$addr_key_q = "INSERT INTO address_keys SET address_id='".$db_address['address_id']."', account_id='".$faucet_account['account_id']."', save_method='wallet.dat', pub_key=".$app->quote_escape($db_address['address']).";";
-											$addr_key_r = $app->run_query($addr_key_q);
-											$address_key_id = $app->last_insert_id();
-										}
-										
-										$addresses_needed--;
-										
-										array_push($address_ids, $db_address['address_id']);
-										array_push($address_key_ids, $address_key_id);
-									}
-									else echo "Error, ".$address['address_id']." is already owned by someone.<br/>\n";
+								if ($address_key['is_destroy_address'] == 0) {
+									array_push($address_ids, $address_key['address_id']);
+									array_push($address_key_ids, $address_key_id);
+									$addresses_needed--;
 								}
 								$loop_count++;
 							}
-							while ($addresses_needed > 0 && $loop_count < $quantity*2);
+							while ($addresses_needed > 0);
 							
 							if ($addresses_needed > 0) {
 								if (count($address_ids) > 0) {
