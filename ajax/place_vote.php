@@ -14,6 +14,7 @@ if ($thisuser && $game) {
 	}
 	
 	$fee = $user_strategy['transaction_fee']*pow(10, $game->db_game['decimal_places']);
+	
 	$burn_amount = (int) $_REQUEST['burn_amount'];
 	
 	$tx_amounts = array();
@@ -24,10 +25,6 @@ if ($thisuser && $game) {
 		
 		array_push($tx_amounts, $burn_amount);
 		array_push($address_ids, $burn_address['address_id']);
-	}
-	else {
-		$app->output_message(3, "How many ".$game->db_game['coin_name_plural']." do you want to spend?", false);
-		die();
 	}
 	
 	$io_ids = explode(",", $_REQUEST['io_ids']);

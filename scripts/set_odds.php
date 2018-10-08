@@ -24,6 +24,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			$db_game = $game_r->fetch();
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
+			$mining_block_id = $blockchain->last_block_id()+1;
 			
 			$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
 			
@@ -34,7 +35,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				$account = $account_r->fetch();
 				
 				$event_q = "SELECT * FROM events ev JOIN game_defined_options gdo ON ev.event_index=gdo.event_index WHERE ev.game_id='".$game->db_game['game_id']."' AND gdo.game_id='".$game->db_game['game_id']."' AND gdo.target_probability IS NOT NULL";
-				if (!empty($_REQUEST['from_event_index'])) $event_q .= " AND ev.event_index>=".((int)$_REQUEST['from_event_index']);
+				$event_q .= " AND ev.event_starting_block<=".$mining_block_id." AND ev.event_final_block>=".$mining_block_id;
 				$event_q .= " GROUP BY ev.event_id ORDER BY ev.event_index ASC;";
 				$event_r = $app->run_query($event_q);
 				$num_events = $event_r->rowCount();

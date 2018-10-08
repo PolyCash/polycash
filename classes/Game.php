@@ -1934,15 +1934,31 @@ class Game {
 	
 	public function ensure_events_until_block($block_id) {
 		$msg = "";
-		$round_id = $this->block_to_round($block_id);
-		$ensured_round = $this->block_to_round((int)$this->db_game['events_until_block']);
-		$add_count = 0;
+		$ensured_block = (int)$this->db_game['events_until_block'];
 		
-		if ($round_id > 0 && $round_id > $ensured_round) {
-			if (!empty($this->db_game['module'])) {
-				$game_starting_round = $this->block_to_round($this->db_game['game_starting_block']);
+		if ($block_id > $ensured_block) {
+			$round_id = $this->block_to_round($block_id);
+			$game_starting_round = $this->block_to_round($this->db_game['game_starting_block']);
+			$add_count = 0;
+			$from_event_index = false;
+			
+			$q = "SELECT * FROM events WHERE game_id='".$this->db_game['game_id']."' AND event_starting_block < ".$block_id." ORDER BY event_index DESC LIMIT 1;";
+			$r = $this->blockchain->app->run_query($q);
+			
+			if ($r->rowCount() > 0) {
+				$prev_event = $r->fetch();
 				
-				$q = "SELECT * FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."' ORDER BY event_index DESC LIMIT 1;";
+				$prev_option = $this->blockchain->app->run_query("SELECT * FROM game_defined_options WHERE game_id='".$this->db_game['game_id']."' AND event_index='".$prev_event['event_index']."' ORDER BY option_index DESC LIMIT 1;")->fetch();
+				$option_offset = $prev_option['option_index']+1;
+				$from_event_index = $prev_event['event_index']+1;
+			}
+			else {
+				$from_event_index = 0;
+				$option_offset = 1;
+			}
+			
+			if (!empty($this->db_game['module'])) {
+				$q = "SELECT * FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."' AND event_starting_block < ".$block_id." ORDER BY event_index DESC LIMIT 1;";
 				$r = $this->blockchain->app->run_query($q);
 				
 				if ($r->rowCount() > 0) {
@@ -1979,20 +1995,12 @@ class Game {
 				}
 			}
 			
-			$option_offset = 1;
 			$last_used_starting_block = false;
 			
-			$q = "SELECT * FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."' AND event_starting_block <= ".$block_id;
-			if ($this->db_game['events_until_block'] > $block_id) $q .= " AND event_starting_block > ".$this->db_game['events_until_block'];
-			$q .= " ORDER BY event_index ASC;";
+			$q = "SELECT * FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."' AND event_index >= ".$from_event_index." AND event_starting_block <= ".$block_id." ORDER BY event_index ASC;";
 			$r = $this->blockchain->app->run_query($q);
 			
 			while ($game_defined_event = $r->fetch()) {
-				if (!$last_used_starting_block || $last_used_starting_block != $game_defined_event['event_starting_block']) {
-					$last_used_starting_block = $game_defined_event['event_starting_block'];
-					$option_offset = 1;
-				}
-				
 				$event_start_time = microtime(true);
 				
 				$qq = "SELECT * FROM events WHERE game_id='".$this->db_game['game_id']."' AND event_index='".$game_defined_event['event_index']."';";
@@ -2156,7 +2164,6 @@ class Game {
 			}
 			
 			$msg .= "Added ".$add_count." events\n";
-			
 			$this->set_events_until_block();
 		}
 		return $msg;

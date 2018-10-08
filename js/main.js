@@ -569,7 +569,7 @@ function refresh_all_inputs() {
 	refresh_mature_io_btns();
 }
 
-var burn_io_amount = false;
+var burn_io_amount = "";
 
 function finish_refresh_output_amounts() {
 	if (vote_outputs.length > 0) {
@@ -584,14 +584,15 @@ function finish_refresh_output_amounts() {
 		var effective_votes = Math.round(votes*effectiveness_factor);
 		
 		var burn_amount = 0;
-		burn_io_amount = 0;
+		burn_io_amount = "";
 		if ($('#compose_burn_amount').val() != "") {
 			burn_amount = parseInt(parseFloat($('#compose_burn_amount').val())*Math.pow(10, games[0].decimal_places));
 			burn_io_amount = Math.ceil(nonfee_amount*burn_amount/game_amount);
 		}
 		var effective_burn_amount = Math.round(burn_amount*effectiveness_factor);
 		
-		var io_nondestroy_amount = nonfee_amount-burn_io_amount;
+		var io_nondestroy_amount = nonfee_amount;
+		if (burn_io_amount != "") io_nondestroy_amount -= burn_io_amount;
 		var game_amount_bet = burn_amount+inflation_amount;
 		
 		var slider_sum = 0;
