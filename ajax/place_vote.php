@@ -16,6 +16,10 @@ if ($thisuser && $game) {
 	$fee = $user_strategy['transaction_fee']*pow(10, $game->db_game['decimal_places']);
 	
 	$burn_amount = (int) $_REQUEST['burn_amount'];
+	if ($burn_amount == 0 && $game->db_game['inflation'] == "exponential" && $game->db_game['exponential_inflation_rate'] == 0) {
+		$app->output_message(3, "How many ".$game->db_game['coin_name_plural']." do you want to spend?", false);
+		die();
+	}
 	
 	$tx_amounts = array();
 	$address_ids = array();
