@@ -149,6 +149,9 @@ else $exchange_rate = 0;
 					?>
 					</a>
 					<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/" class="btn btn-sm btn-primary"><i class="fas fa-database"></i> &nbsp; Blockchain Explorer</a>
+					<?php if ($app->user_can_edit_game($thisuser, $game)) { ?>
+					<a class="btn btn-sm btn-warning" href="/manage/<?php echo $game->db_game['url_identifier']; ?>/"><i class="fa fa-edit"></i> Manage this Game</a>
+					<?php } ?>
 				</div>
 			</div>
 			<div class="col-md-6">
