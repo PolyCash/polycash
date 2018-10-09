@@ -1782,10 +1782,7 @@ class Game {
 	}
 	
 	public function select_input_buttons($user_game) {
-		$last_block_id = $this->blockchain->last_block_id();
-		
 		$io_q = "SELECT io.* FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.is_resolved=1 AND io.spend_status != 'spent' AND k.account_id='".$user_game['account_id']."'";
-		if ($this->db_game['payout_weight'] == "coin_round") $io_q .= " AND gio.create_round_id < ".$this->block_to_round($last_block_id+1);
 		$io_q .= " GROUP BY io.io_id ORDER BY io.io_id ASC;";
 		$io_r = $this->blockchain->app->run_query($io_q);
 		

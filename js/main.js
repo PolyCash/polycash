@@ -988,7 +988,7 @@ function refresh_mature_io_btns() {
 			if (games[0].inflation == "exponential") {
 				var coin_equiv = Math.round(votes*games[0].coins_per_vote);
 				var disp_coins = coin_equiv;
-				if (games[0].default_betting_mode == "principal") disp_coins += chain_ios[i].game_amount_sum();
+				disp_coins += chain_ios[i].game_amount_sum();
 				if (disp_coins < 0) disp_coins = 0;
 				var coin_disp = format_coins(disp_coins/Math.pow(10,games[0].decimal_places));
 				

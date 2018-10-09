@@ -730,12 +730,17 @@ class App {
 	}
 	
 	public function currency_conversion_rate($numerator_currency_id, $denominator_currency_id) {
-		$latest_numerator_rate = $this->latest_currency_price($numerator_currency_id);
-		$latest_denominator_rate = $this->latest_currency_price($denominator_currency_id);
+		if ($numerator_currency_id == $denominator_currency_id) {
+			$returnvals['conversion_rate'] = 1;
+		}
+		else {
+			$latest_numerator_rate = $this->latest_currency_price($numerator_currency_id);
+			$latest_denominator_rate = $this->latest_currency_price($denominator_currency_id);
 
-		$returnvals['numerator_price_id'] = $latest_numerator_rate['price_id'];
-		$returnvals['denominator_price_id'] = $latest_denominator_rate['price_id'];
-		$returnvals['conversion_rate'] = round(pow(10,8)*$latest_denominator_rate['price']/$latest_numerator_rate['price'])/pow(10,8);
+			$returnvals['numerator_price_id'] = $latest_numerator_rate['price_id'];
+			$returnvals['denominator_price_id'] = $latest_denominator_rate['price_id'];
+			$returnvals['conversion_rate'] = round(pow(10,8)*$latest_denominator_rate['price']/$latest_numerator_rate['price'])/pow(10,8);
+		}
 		return $returnvals;
 	}
 	
