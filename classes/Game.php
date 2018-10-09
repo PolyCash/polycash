@@ -2994,26 +2994,26 @@ class Game {
 			if ($block_r->rowCount() > 0) {
 				$db_start_block = $block_r->fetch();
 				
-				$start_block = max($this->db_game['game_starting_block'], $db_start_block['block_id']);
+				$start_block = max($this->db_game['game_starting_block']+1, $db_start_block['block_id']);
 				
 				$sec_to_add = strtotime($gde['event_starting_time']) - $db_start_block['time_mined'];
 				$add_blocks = floor($sec_to_add/$this->blockchain->db_blockchain['seconds_per_block']);
 				if ($add_blocks > 0) $start_block += $add_blocks;
 			}
-			else $start_block = $this->db_game['game_starting_block'];
+			else $start_block = $this->db_game['game_starting_block']+1;
 			
 			$block_q = "SELECT * FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND time_mined <= ".strtotime($gde['event_final_time'])." ORDER BY time_mined DESC LIMIT 1;";
 			$block_r = $this->blockchain->app->run_query($block_q);
 			
 			if ($block_r->rowCount() > 0) {
 				$db_final_block = $block_r->fetch();
-				$final_block = max($start_block, max($this->db_game['game_starting_block'], $db_final_block['block_id']));
+				$final_block = max($start_block, max($this->db_game['game_starting_block']+1, $db_final_block['block_id']));
 				
 				$sec_to_add = strtotime($gde['event_final_time']) - $db_final_block['time_mined'];
 				$add_blocks = floor($sec_to_add/$this->blockchain->db_blockchain['seconds_per_block']);
 				if ($add_blocks > 0) $final_block += $add_blocks;
 			}
-			else $final_block = max($start_block, $this->db_game['game_starting_block']);
+			else $final_block = max($start_block, $this->db_game['game_starting_block']+1);
 			
 			$q = "UPDATE game_defined_events SET event_starting_block=$start_block, event_final_block=$final_block, event_payout_block=$final_block WHERE game_id='".$this->db_game['game_id']."' AND event_index='".$gde['event_index']."';";
 			$r = $this->blockchain->app->run_query($q);

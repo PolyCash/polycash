@@ -692,6 +692,7 @@ class Event {
 					$winning_votes = $rankings[$rank_index]['votes'];
 					$winning_effective_destroy_score = $rankings[$rank_index]['effective_destroy_score'];
 				}
+				else throw new Exception("Failed to identify the winning option for event #".$this->db_event['event_id']);
 			}
 		}
 		
