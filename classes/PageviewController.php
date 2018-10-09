@@ -158,7 +158,9 @@ class PageviewController {
 			$refer_url = $_SERVER['HTTP_REFERER'];
 		}
 		
-		$q = "SELECT * FROM browserstrings WHERE viewer_id='".$cookie_identifier['viewer_id']."' AND browser_string=".$this->app->quote_escape($_SERVER['HTTP_USER_AGENT']).";";
+		$user_agent = "";
+		if (!empty($_SERVER['HTTP_USER_AGENT'])) $user_agent = $_SERVER['HTTP_USER_AGENT'];
+		$q = "SELECT * FROM browserstrings WHERE viewer_id='".$cookie_identifier['viewer_id']."' AND browser_string=".$this->app->quote_escape($user_agent).";";
 		$r = $this->app->run_query($q);
 		if ($r->rowCount() > 0) {
 			$browserstring = $r->fetch();
@@ -179,9 +181,7 @@ class PageviewController {
 				$browser_id = $this->app->last_insert_id();
 			}
 			
-			if ($this->IsTorExitPoint()) $browser_id = 1; // ID number for Tor
-			
-			$q = "INSERT INTO browserstrings SET viewer_id='".$cookie_identifier['viewer_id']."', browser_string=".$this->app->quote_escape($_SERVER['HTTP_USER_AGENT']).", browser_id='$browser_id', ";
+			$q = "INSERT INTO browserstrings SET viewer_id='".$cookie_identifier['viewer_id']."', browser_string=".$this->app->quote_escape($_SERVER['HTTP_USER_AGENT']).", browser_id='".$browser_id."', ";
 			$q .= "name=".$this->app->quote_escape($ub['name']).", version=".$this->app->quote_escape($ub['version']).", platform=".$this->app->quote_escape($ub['platform']).", pattern=".$this->app->quote_escape($ub['pattern']).";";
 			$r = $this->app->run_query($q);
 			$browserstring_id = $this->app->last_insert_id();

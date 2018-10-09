@@ -725,6 +725,8 @@ class Game {
 	}
 	
 	public function delete_reset_game($delete_or_reset) {
+		$this->blockchain->app->dbh->beginTransaction();
+		
 		$q = "DELETE FROM game_blocks WHERE game_id='".$this->db_game['game_id']."';";
 		$r = $this->blockchain->app->run_query($q);
 		
@@ -751,36 +753,9 @@ class Game {
 		$q = "UPDATE games SET events_until_block=NULL, loaded_until_block=NULL, min_option_index=NULL, max_option_index=NULL WHERE game_id='".$this->db_game['game_id']."';";
 		$r = $this->blockchain->app->run_query($q);
 		
-		$invite_user_ids = array();
-		if ($delete_or_reset == "reset") {
-			$q = "SELECT * FROM game_invitations WHERE game_id='".$this->db_game['game_id']."' AND used_user_id > 0;";
-			$r = $this->blockchain->app->run_query($q);
-			while ($invitation = $r->fetch()) {
-				$invite_user_ids[count($invite_user_ids)] = $invitation['used_user_id'];
-			}
-		}
-		
-		$q = "DELETE FROM game_invitations WHERE game_id='".$this->db_game['game_id']."';";
-		$r = $this->blockchain->app->run_query($q);
-		
 		if ($delete_or_reset == "reset") {
 			$q = "UPDATE games SET game_status='published', events_until_block=NULL, coins_in_existence=0, coins_in_existence_block=NULL WHERE game_id='".$this->db_game['game_id']."';";
 			$r = $this->blockchain->app->run_query($q);
-			
-			$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$this->db_game['game_id']."';";
-			$r = $this->blockchain->app->run_query($q);
-			
-			while ($user_game = $r->fetch()) {
-				$temp_user = new User($this->blockchain->app, $user_game['user_id']);
-				$temp_user->generate_user_addresses($this, $user_game);
-			}
-			
-			for ($i=0; $i<count($invite_user_ids); $i++) {
-				$invitation = false;
-				$this->generate_invitation($this->db_game['creator_id'], $invitation, $invite_user_ids[$i]);
-				$invite_event = false;
-				$this->blockchain->app->try_apply_invite_key($invite_user_ids[$i], $invitation['invitation_key'], $invite_event);
-			}
 			
 			$user_game = false;
 			$this->add_genesis_transaction($user_game);
@@ -792,7 +767,7 @@ class Game {
 			$q = "DELETE s.*, sra.* FROM user_strategies s LEFT JOIN strategy_round_allocations sra ON s.strategy_id=sra.strategy_id WHERE s.game_id='".$this->db_game['game_id']."';";
 			$r = $this->blockchain->app->run_query($q);
 		}
-		$this->update_option_votes();
+		$this->blockchain->app->dbh->commit();
 	}
 	
 	public function event_outcomes_html($from_event_index, $to_event_index, $thisuser) {
