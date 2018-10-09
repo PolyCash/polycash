@@ -113,8 +113,9 @@ $game = false;
 
 if ($thisuser) {
 	if (!empty($_REQUEST['invite_key'])) {
+		$invite_user_game = false;
 		$invite_game = false;
-		$success = $app->try_apply_invite_key($thisuser->db_user['user_id'], $_REQUEST['invite_key'], $invite_game);
+		$success = $app->try_apply_invite_key($thisuser->db_user['user_id'], $_REQUEST['invite_key'], $invite_game, $invite_user_game);
 		if ($success) {
 			header("Location: /wallet/".$invite_game['url_identifier']);
 			die();
@@ -216,8 +217,9 @@ if ($thisuser) {
 				$r = $app->run_query($q);
 				if ($r->rowCount() > 0) {
 					$invitation = $r->fetch();
+					$invite_user_game = false;
 					$invite_game = false;
-					$app->try_apply_invite_key($thisuser->db_user['user_id'], $invitation['invitation_key'], $invite_game);
+					$app->try_apply_invite_key($thisuser->db_user['user_id'], $invitation['invitation_key'], $invite_game, $invite_user_game);
 					header("Location: /wallet/".$invite_game->db_game['url_identifier']);
 					die();
 				}

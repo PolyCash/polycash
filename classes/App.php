@@ -491,7 +491,7 @@ class App {
 		echo json_encode($dump_object);
 	}
 	
-	public function try_apply_invite_key($user_id, $invite_key, &$invite_game) {
+	public function try_apply_invite_key($user_id, $invite_key, &$invite_game, &$user_game) {
 		$reload_page = false;
 		$invite_key = $this->quote_escape($invite_key);
 		
@@ -520,6 +520,17 @@ class App {
 			else return false;
 		}
 		else return false;
+	}
+	
+	public function send_apply_invitation(&$db_user, &$invitation) {
+		$invite_game = false;
+		$user_game = false;
+		$this->try_apply_invite_key($db_user['user_id'], $invitation['invitation_key'], $invite_game, $user_game);
+		$invite_game->give_faucet_to_user($user_game);
+		
+		if (strpos($db_user['notification_email'], '@')) {
+			$email_id = $invite_game->send_invitation_email($db_user['notification_email'], $invitation);
+		}
 	}
 	
 	public function format_seconds($seconds) {
@@ -927,7 +938,10 @@ class App {
 				echo '<p><a href="/wallet/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; ';
 				if ($faucet_io) echo 'Join now & receive '.$this->format_bignum($faucet_io['colored_amount_sum']/pow(10,$featured_game->db_game['decimal_places'])).' '.$featured_game->db_game['coin_name_plural'];
 				else echo 'Play Now';
-				echo "</a></p>\n";
+				echo "</a>";
+				echo ' <a href="/explorer/games/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-sm btn-primary"><i class="fas fa-database"></i> &nbsp; '.ucwords($featured_game->db_game['event_type_name']).' Results</a>';
+				echo ' <a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-sm btn-warning"><i class="fas fa-info-circle"></i> &nbsp; About '.$featured_game->db_game['name'].'</a>';
+				echo "</p>\n";
 				
 				if ($featured_game->db_game['module'] == "CoinBattles") {
 					$featured_game->load_current_events();

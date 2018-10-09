@@ -122,6 +122,41 @@ else {
 				
 				$game->db_game['short_description'] = $game_description;
 			}
+			else if ($last_action == "invite_upload_csv") {
+				$csv_content = file_get_contents($_FILES['csv_file']['tmp_name']);
+				$csv_lines = explode("\n", $csv_content);
+				$header_vars = explode(",", trim(strtolower($csv_lines[0])));
+				$id_col = array_search("user_id", $header_vars);
+				
+				if ($id_col === false) {
+					$messages .= "Required column user_id was missing.<br/>\n";
+				}
+				else {
+					$invite_count = 0;
+					
+					for ($line_i=1; $line_i<count($csv_lines); $line_i++) {
+						$line_vals = explode(",", trim($csv_lines[$line_i]));
+						$user_id = (int) $line_vals[$id_col];
+						
+						if ($user_id > 0) {
+							$user_r = $app->run_query("SELECT * FROM users WHERE user_id='".$user_id."';");
+							
+							if ($user_r->rowCount() == 1) {
+								$send_to_user = $user_r->fetch();
+								$user_game_r = $app->run_query("SELECT * FROM user_games WHERE user_id='".$user_id."' AND game_id='".$game->db_game['game_id']."';");
+								if ($user_game_r->rowCount() == 0) {
+									$invitation = false;
+									$game->generate_invitation($user_id, $invitation, false);
+									$app->send_apply_invitation($send_to_user, $invitation);
+									$invite_count++;
+								}
+							}
+						}
+					}
+					
+					$messages .= $invite_count." invitations have been sent & applied.<br/>\n";
+				}
+			}
 			else if ($last_action == "upload_csv") {
 				$csv_content = file_get_contents($_FILES['csv_file']['tmp_name']);
 				$csv_lines = explode("\n", $csv_content);
@@ -132,17 +167,17 @@ else {
 				$home_col = array_search("home", $header_vars);
 				$away_col = array_search("away", $header_vars);
 				$name_col = array_search("event name", $header_vars);
+				$starttime_col = array_search("start time utc", $header_vars);
 				$time_col = array_search("datetime utc", $header_vars);
 				
-				if ($home_col === false || $away_col === false || $name_col === false || $time_col === false) {
-					$messages .= "A required column was missing in the file you uploaded. Required fields are 'Home', 'Away', 'Event Name' and 'Datetime UTC'<br/>\n";
+				if ($home_col === false || $away_col === false || $name_col === false || $time_col === false || $starttime_col === false) {
+					$messages .= "A required column was missing in the file you uploaded. Required fields are 'Home', 'Away', 'Event Name', 'Start Time UTC' and 'Datetime UTC'<br/>\n";
 				}
 				else {
 					$q = "SELECT MAX(event_index) FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."';";
 					$r = $app->run_query($q);
 					$game_max_event_index = (int) $r->fetch()['MAX(event_index)'];
 					$game_event_index_offset = 0;
-					$event_starting_time = date("Y-m-d", time())." 0:00:00";
 					
 					for ($line_i=1; $line_i<count($csv_lines); $line_i++) {
 						$line_vals = explode(",", trim($csv_lines[$line_i]));
@@ -150,8 +185,10 @@ else {
 						$away = $line_vals[$away_col];
 						$event_name = $line_vals[$name_col];
 						$event_time = $line_vals[$time_col];
+						$event_starttime = $line_vals[$starttime_col];
 						
 						if (!empty($home) && !empty($away) && !empty($event_name) && !empty($event_time)) {
+							$event_starting_time = date("Y-m-d G:i:s", strtotime($event_starttime));
 							$event_final_time = date("Y-m-d G:i:s", strtotime($event_time));
 							
 							$event_index = $game_max_event_index+$game_event_index_offset+1;

@@ -1188,6 +1188,8 @@ class Game {
 		$table = str_replace('<div class="row"><div class="col-sm-5">', '<tr><td>', $this->blockchain->app->game_info_table($this->db_game));
 		$table = str_replace('</div><div class="col-sm-7">', '</td><td>', $table);
 		$table = str_replace('</div></div>', '</td></tr>', $table);
+		$table = str_replace('href="', 'href="'.$GLOBALS['base_url'], $table);
+		
 		$message .= '<table>'.$table.'</table>';
 		$message .= "<p>To start playing, accept your invitation by following <a href=\"".$GLOBALS['base_url']."/wallet/".$this->db_game['url_identifier']."/?invite_key=".$invitation['invitation_key']."\">this link</a>.</p>";
 		$message .= "<p>This message was sent to you by ".$GLOBALS['site_name']."</p>";
@@ -2915,17 +2917,43 @@ class Game {
 	}
 	
 	public function check_faucet($user_game) {
-		if (empty($user_game) || $user_game['faucet_claims'] == 0) {
-			$faucet_account = $this->check_set_faucet_account();
-			
-			$q = "SELECT *, SUM(gio.colored_amount) AS colored_amount_sum FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.spend_status='unspent' AND k.account_id='".$faucet_account['account_id']."' AND gio.option_id IS NULL GROUP BY a.address_id ORDER BY colored_amount_sum DESC;";
-			$r = $this->blockchain->app->run_query($q);
-			
-			if ($r->rowCount() > 0) {
-				$faucet_io = $r->fetch();
-				return $faucet_io;
+		if ($this->db_game['faucet_policy'] == "on") {
+			if (empty($user_game) || $user_game['faucet_claims'] == 0) {
+				$faucet_account = $this->check_set_faucet_account();
+				
+				$q = "SELECT *, SUM(gio.colored_amount) AS colored_amount_sum FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.spend_status='unspent' AND k.account_id='".$faucet_account['account_id']."' AND gio.option_id IS NULL GROUP BY a.address_id ORDER BY colored_amount_sum DESC;";
+				$r = $this->blockchain->app->run_query($q);
+				
+				if ($r->rowCount() > 0) {
+					$faucet_io = $r->fetch();
+					return $faucet_io;
+				}
+				else return false;
 			}
 			else return false;
+		}
+		else return false;
+	}
+	
+	public function give_faucet_to_user($user_game) {
+		$faucet_account = $this->check_set_faucet_account();
+		
+		$q = "SELECT *, SUM(gio.colored_amount) AS colored_amount_sum FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.spend_status='unspent' AND k.account_id='".$faucet_account['account_id']."' AND gio.option_id IS NULL GROUP BY a.address_id ORDER BY colored_amount_sum DESC;";
+		$r = $this->blockchain->app->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			$faucet_io = $r->fetch();
+			
+			$q = "UPDATE address_keys SET account_id='".$user_game['account_id']."' WHERE address_key_id='".$faucet_io['address_key_id']."';";
+			$r = $this->blockchain->app->run_query($q);
+			
+			$q = "UPDATE addresses SET user_id='".$user_game['user_id']."' WHERE address_id='".$faucet_io['address_id']."';";
+			$r = $this->blockchain->app->run_query($q);
+			
+			$q = "UPDATE user_games SET faucet_claims=faucet_claims+1 WHERE user_game_id='".$user_game['user_game_id']."';";
+			$r = $this->blockchain->app->run_query($q);
+			
+			return true;
 		}
 		else return false;
 	}

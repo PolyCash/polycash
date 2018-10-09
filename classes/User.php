@@ -240,8 +240,9 @@ class User {
 		$r = $this->app->run_query($q);
 		
 		if (!empty($_REQUEST['invite_key'])) {
+			$user_game = false;
 			$invite_game = false;
-			$this->app->try_apply_invite_key($this->db_user['user_id'], $_REQUEST['invite_key'], $invite_game);
+			$this->app->try_apply_invite_key($this->db_user['user_id'], $_REQUEST['invite_key'], $invite_game, $user_game);
 		}
 		
 		$this->ensure_currency_accounts();
@@ -259,11 +260,7 @@ class User {
 	}
 	
 	public function user_can_invite_game($db_game) {
-		if ($db_game['giveaway_status'] == "invite_free" || $db_game['giveaway_status'] == "invite_pay") {
-			if ($this->db_user['user_id'] == $db_game['creator_id']) return true;
-			else return false;
-		}
-		else if ($db_game['giveaway_status'] == "public_pay" || $db_game['giveaway_status'] == "public_free") return true;
+		if ($this->db_user['user_id'] == $db_game['creator_id']) return true;
 		else return false;
 	}
 	

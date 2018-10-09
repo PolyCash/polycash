@@ -42,9 +42,17 @@ if ($thisuser) {
 						echo "</div>\n";
 					}
 					?>
-					<br/>
-					<button style="float: right;" type="button" class="btn btn-sm btn-default" data-dismiss="modal">Close</button>
 					<button class="btn btn-sm btn-success" onclick="generate_invitation(<?php echo $game->db_game['game_id']; ?>);">Generate an Invitation</button>
+					<br/><br/>
+					Or invite bulk users by uploading a CSV:<br/>
+					<form id="invite_upload_form" action="/manage/<?php echo $game->db_game['url_identifier']; ?>/" method="post" enctype="multipart/form-data">
+						<input type="hidden" name="last" value="invite_upload_csv" />
+						<input type="hidden" name="next" value="events" />
+						<input type="file" name="csv_file" class="btn btn-sm btn-warning" onchange="$('#invite_upload_form').submit();" />
+					</form>
+					<br/>
+					<br/>
+					<button type="button" class="btn btn-sm btn-default" data-dismiss="modal">Close</button>
 					<?php
 				}
 				else if ($action == "send") {
@@ -76,7 +84,9 @@ if ($thisuser) {
 									$send_to_user = $r->fetch();
 									
 									$invite_game = false;
-									$app->try_apply_invite_key($send_to_user['user_id'], $invitation['invitation_key'], $invite_game);
+									$send_user_game = false;
+									$app->try_apply_invite_key($send_to_user['user_id'], $invitation['invitation_key'], $invite_game, $send_user_game);
+									$game->give_faucet_to_user($send_user_game);
 									
 									if (strpos($send_to_user['notification_email'], '@')) {
 										$email_id = $invite_game->send_invitation_email($send_to_user['notification_email'], $invitation);
