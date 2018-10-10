@@ -6,17 +6,12 @@ class Event {
 	
 	public function __construct(&$game, $db_event, $event_id) {
 		$this->game = $game;
-		
-		if ($db_event) {
-			$this->db_event = $db_event;
-		}
-		else {
-			$this->load_db_event($event_id);
-		}
+		if ($db_event) $event_id = $db_event['event_id'];
+		$this->load_db_event($event_id);
 	}
 	
 	public function load_db_event($event_id) {
-		$q = "SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities en ON et.entity_id=en.entity_id WHERE ev.event_id='".$event_id."';";
+		$q = "SELECT *, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities en ON et.entity_id=en.entity_id LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.event_id='".$event_id."';";
 		$r = $this->game->blockchain->app->run_query($q);
 		$this->db_event = $r->fetch() or die("Error, could not load event #".$event_id);
 	}
@@ -233,6 +228,10 @@ class Event {
 		$html .= " &nbsp;&nbsp; ";
 		$html .= $score_disp;
 		$html .= "</p>\n";
+		
+		if ($this->db_event['sport_name'].$this->db_event['league_name'] != "") {
+			$html .= "<p>".$this->db_event['sport_name']." &nbsp;&nbsp; ".$this->db_event['league_name']."</p>\n";
+		}
 		
 		if ($expected_winner) {
 			$html .= "<p class=\"greentext\">Winner: ".$expected_winner['name']."</p>\n";

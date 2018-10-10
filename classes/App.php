@@ -527,10 +527,6 @@ class App {
 		$user_game = false;
 		$this->try_apply_invite_key($db_user['user_id'], $invitation['invitation_key'], $invite_game, $user_game);
 		$invite_game->give_faucet_to_user($user_game);
-		
-		if (strpos($db_user['notification_email'], '@')) {
-			$email_id = $invite_game->send_invitation_email($db_user['notification_email'], $invitation);
-		}
 	}
 	
 	public function format_seconds($seconds) {
@@ -1181,10 +1177,10 @@ class App {
 		$events_obj = array();
 		
 		if ($definition_mode == "defined") {
-			$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' ORDER BY event_index ASC;";
+			$q = "SELECT ev.*, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM game_defined_events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id='".$game->db_game['game_id']."' ORDER BY ev.event_index ASC;";
 		}
 		else {
-			$q = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' ORDER BY event_index ASC;";
+			$q = "SELECT ev.*, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id='".$game->db_game['game_id']."' ORDER BY ev.event_index ASC;";
 		}
 		$r = $this->run_query($q);
 		
@@ -1202,6 +1198,9 @@ class App {
 				
 				$temp_event[$var_name] = $var_val;
 			}
+			
+			if ($db_event['sport_name'] != "") $temp_event['sport'] = $db_event['sport_name'];
+			if ($db_event['league_name'] != "") $temp_event['league'] = $db_event['league_name'];
 			
 			if ($definition_mode == "defined") {
 				$qq = "SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."' ORDER BY option_index ASC;";
@@ -1651,6 +1650,9 @@ class App {
 				$reset_block = false;
 				$reset_event_index = false;
 				
+				$sports_entity_type = $app->check_set_entity_type("sports");
+				$leagues_entity_type = $app->check_set_entity_type("leagues");
+				
 				// Check if any base params are different. If so, reset from game starting block
 				for ($i=0; $i<count($verbatim_vars); $i++) {
 					$var = $verbatim_vars[$i];
@@ -1705,7 +1707,7 @@ class App {
 					
 					for ($i=$set_events_from; $i<count($new_game_obj['events']); $i++) {
 						$gde = get_object_vars($new_game_obj['events'][$i]);
-						$this->check_set_gde($game, $gde, $event_verbatim_vars);
+						$this->check_set_gde($game, $gde, $event_verbatim_vars, $sports_entity_type['entity_type_id'], $leagues_entity_type['entity_type_id']);
 					}
 				}
 				
@@ -1724,7 +1726,7 @@ class App {
 		return $log_message;
 	}
 	
-	public function check_set_gde(&$game, &$gde, &$event_verbatim_vars) {
+	public function check_set_gde(&$game, &$gde, &$event_verbatim_vars, $sport_entity_type_id, $league_entity_type_id) {
 		$db_gde = false;
 		
 		$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gde['event_index']."';";
@@ -1736,6 +1738,18 @@ class App {
 		else {
 			$q = "INSERT INTO game_defined_events SET game_id='".$game->db_game['game_id']."', ";
 		}
+		
+		if ($gde['sport'] != "") {
+			$sport_entity = $this->check_set_entity($sport_entity_type_id, $gde['sport']);
+			$q .= "sport_entity_id=".$sport_entity['entity_id'].", ";
+		}
+		else $q .= "sport_entity_id=NULL, ";
+		
+		if ($gde['league'] != "") {
+			$league_entity = $this->check_set_entity($league_entity_type_id, $gde['league']);
+			$q .= "league_entity_id=".$league_entity['entity_id'].", ";
+		}
+		else $q .= "league_entity_id=NULL, ";
 		
 		for ($j=0; $j<count($event_verbatim_vars); $j++) {
 			$var_type = $event_verbatim_vars[$j][0];

@@ -1960,6 +1960,9 @@ class Game {
 				
 				$msg .= "Adding ".count($gdes_to_add)." events for rounds (".$from_round." : ".$to_round.")";
 				
+				$sports_entity_type = $app->check_set_entity_type("sports");
+				$leagues_entity_type = $app->check_set_entity_type("leagues");
+				
 				if (count($gdes_to_add) > 0) {
 					$init_event_index = $gdes_to_add[0]['event_index'];
 					
@@ -1971,7 +1974,7 @@ class Game {
 					
 					$i = 0;
 					for ($event_index=$init_event_index; $event_index<$init_event_index+count($gdes_to_add); $event_index++) {
-						$this->blockchain->app->check_set_gde($this, $gdes_to_add[$i], $event_verbatim_vars);
+						$this->blockchain->app->check_set_gde($this, $gdes_to_add[$i], $event_verbatim_vars, $sports_entity_type['entity_type_id'], $leagues_entity_type['entity_type_id']);
 						$i++;
 					}
 				}
@@ -2014,6 +2017,8 @@ class Game {
 					else $event_type = $rr->fetch();
 					
 					$qq = "INSERT INTO events SET game_id='".$this->db_game['game_id']."', event_type_id='".$event_type['event_type_id']."', event_index='".$game_defined_event['event_index']."'";
+					if ($game_defined_event['sport_entity_id'] > 0) $qq .= ", sport_entity_id='".$game_defined_event['sport_entity_id']."'";
+					if ($game_defined_event['league_entity_id'] > 0) $qq .= ", league_entity_id='".$game_defined_event['league_entity_id']."'";
 					if ($game_defined_event['next_event_index'] > 0) $qq .= ", next_event_index='".$game_defined_event['next_event_index']."'";
 					if ($game_defined_event['event_payout_offset_time'] != "") $qq .= ", event_payout_offset_time='".$game_defined_event['event_payout_offset_time']."'";
 					if ($game_defined_event['outcome_index'] != "") $qq .= ", outcome_index=".$game_defined_event['outcome_index'];

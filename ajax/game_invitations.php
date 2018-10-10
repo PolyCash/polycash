@@ -88,10 +88,6 @@ if ($thisuser) {
 									$app->try_apply_invite_key($send_to_user['user_id'], $invitation['invitation_key'], $invite_game, $send_user_game);
 									$game->give_faucet_to_user($send_user_game);
 									
-									if (strpos($send_to_user['notification_email'], '@')) {
-										$email_id = $invite_game->send_invitation_email($send_to_user['notification_email'], $invitation);
-									}
-									
 									$app->output_message(1, "Great, the invitation has been sent.", false);
 								}
 								else $app->output_message(2, "No one with that username was found.", false);

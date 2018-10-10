@@ -170,10 +170,18 @@ else {
 				$starttime_col = array_search("start time utc", $header_vars);
 				$time_col = array_search("datetime utc", $header_vars);
 				
+				$home_odds_col = array_search("home odds", $header_vars);
+				$away_odds_col = array_search("away odds", $header_vars);
+				$sport_col = array_search("sport", $header_vars);
+				$league_col = array_search("league", $header_vars);
+				
 				if ($home_col === false || $away_col === false || $name_col === false || $time_col === false || $starttime_col === false) {
 					$messages .= "A required column was missing in the file you uploaded. Required fields are 'Home', 'Away', 'Event Name', 'Start Time UTC' and 'Datetime UTC'<br/>\n";
 				}
 				else {
+					$sports_entity_type = $app->check_set_entity_type("sports");
+					$leagues_entity_type = $app->check_set_entity_type("leagues");
+					
 					$q = "SELECT MAX(event_index) FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."';";
 					$r = $app->run_query($q);
 					$game_max_event_index = (int) $r->fetch()['MAX(event_index)'];
@@ -197,17 +205,61 @@ else {
 							$gde_r = $app->run_query($gde_q);
 							
 							if ($gde_r->rowCount() == 0) {
-								$gde_ins_q = "INSERT INTO game_defined_events SET game_id='".$game->db_game['game_id']."', event_index='".$event_index."', event_name=".$app->quote_escape($event_name).", event_starting_time='".$event_starting_time."', event_final_time='".$event_final_time."', event_payout_offset_time='2:00:00', option_name='team', option_name_plural='teams';";
+								if ($home_odds_col !== false) {
+									$home_odds = $line_vals[$home_odds_col];
+									$away_odds = $line_vals[$away_odds_col];
+									
+									$prob_sum = 1/$home_odds + 1/$away_odds;
+									
+									$home_target_prob = (1/$home_odds)/$prob_sum;
+									$away_target_prob = (1/$away_odds)/$prob_sum;
+									$target_prob_sum = $home_target_prob+$away_target_prob;
+									$tie_target_prob = 1-$target_prob_sum;
+								}
+								else {
+									$home_target_prob = false;
+									$away_target_prob = false;
+									$tie_target_prob = false;
+								}
+								
+								if ($sport_col !== false) {
+									$sport_name = $line_vals[$sport_col];
+									if ($sport_name != "") {
+										$this_sport_entity = $app->check_set_entity($sports_entity_type['entity_type_id'], $sport_name);
+									}
+									else $this_sport_entity = false;
+								}
+								else $this_sport_entity = false;
+								
+								if ($league_col !== false) {
+									$league_name = $line_vals[$league_col];
+									if ($league_name != "") {
+										$this_league_entity = $app->check_set_entity($leagues_entity_type['entity_type_id'], $league_name);
+									}
+									else $this_league_entity = false;
+								}
+								else $this_league_entity = false;
+								
+								$gde_ins_q = "INSERT INTO game_defined_events SET game_id='".$game->db_game['game_id']."'";
+								if ($this_sport_entity) $gde_ins_q .= ", sport_entity_id=".$this_sport_entity['entity_id'];
+								if ($this_league_entity) $gde_ins_q .= ", league_entity_id=".$this_league_entity['entity_id'];
+								$gde_ins_q .= ", event_index='".$event_index."', event_name=".$app->quote_escape($event_name).", event_starting_time='".$event_starting_time."', event_final_time='".$event_final_time."', event_payout_offset_time='0:00:00', option_name='team', option_name_plural='teams';";
 								$gde_ins_r = $app->run_query($gde_ins_q);
 								
-								$gdo_ins_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index=".$event_index.", option_index=0, name=".$app->quote_escape($home).";";
+								$gdo_ins_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index=".$event_index.", option_index=0, name=".$app->quote_escape($home);
+								if ($home_target_prob) $gdo_ins_q .= ", target_probability=".$home_target_prob;
+								$gdo_ins_q .= ";";
 								$gdo_ins_r = $app->run_query($gdo_ins_q);
 								
-								$gdo_ins_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index=".$event_index.", option_index=1, name=".$app->quote_escape($away).";";
+								$gdo_ins_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index=".$event_index.", option_index=1, name=".$app->quote_escape($away);
+								if ($away_target_prob) $gdo_ins_q .= ", target_probability=".$away_target_prob;
+								$gdo_ins_q .= ";";
 								$gdo_ins_r = $app->run_query($gdo_ins_q);
 								
 								if ($ties_allowed) {
-									$gdo_ins_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index=".$event_index.", option_index=2, name='Tie';";
+									$gdo_ins_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index=".$event_index.", option_index=2, name='Tie'";
+									if ($tie_target_prob) $gdo_ins_q .= ", target_probability=".$tie_target_prob;
+									$gdo_ins_q .= ";";
 									$gdo_ins_r = $app->run_query($gdo_ins_q);
 								}
 								
