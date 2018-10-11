@@ -10,6 +10,7 @@ if (!empty($argv)) {
 
 if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
 	$html_by_email = array();
+	$betcount_by_email = array();
 	
 	$table_header_html = '<tr><td>Stake</td><td>Payout</td><td>Odds</td><td>Effectiveness</td><td>Option</td><td>Event</td><td>Outcome</td></tr>';
 	
@@ -20,90 +21,66 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$game = new Game($blockchain, $db_game['game_id']);
 		$coins_per_vote = $app->coins_per_vote($game->db_game);
+		$last_block_id = $game->blockchain->last_block_id();
+		$current_round = $game->block_to_round(1+$last_block_id);
 		
-		$bet_q = "SELECT gio.*, io.spend_transaction_id, ev.*, o.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS outcome_destroy_score, o.name AS option_name, gio.votes AS votes, o.votes AS option_votes, gio2.colored_amount AS payout_amount, u.notification_email FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN users u ON ug.user_id=u.user_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN events ev ON o.event_id=ev.event_id JOIN blocks b ON ev.event_payout_block=b.block_id LEFT JOIN transaction_game_ios gio2 ON gio.payout_io_id=gio2.game_io_id WHERE gio.game_id=".$game->db_game['game_id']." AND gio.is_coinbase=0 AND b.time_created > ".(time()-3600*24)." AND ug.notification_preference='email' AND u.notification_email LIKE '%@%' ORDER BY gio.game_io_id ASC;";
+		$net_delta = 0;
+		$net_stake = 0;
+		$pending_stake = 0;
+		$num_wins = 0;
+		$num_losses = 0;
+		$num_unresolved = 0;
+		$prev_user_game_id = false;
+		$prev_notification_email = false;
+		
+		$bet_q = "SELECT gio.*, io.spend_transaction_id, io.spend_status, ev.*, et.vote_effectiveness_function, et.effectiveness_param1, o.effective_destroy_score AS option_effective_destroy_score, o.unconfirmed_votes AS option_unconfirmed_votes, o.unconfirmed_effective_destroy_score, ev.destroy_score AS event_destroy_score, o.name AS option_name, gio.votes AS votes, o.votes AS option_votes, gio2.colored_amount AS payout_amount, ug.user_game_id, u.notification_email FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN users u ON ug.user_id=u.user_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN events ev ON o.event_id=ev.event_id LEFT JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN transaction_game_ios gio2 ON gio.payout_io_id=gio2.game_io_id JOIN blocks b ON ev.event_payout_block=b.block_id WHERE gio.game_id=".$game->db_game['game_id']." AND gio.is_coinbase=0 AND b.blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND b.time_created > ".(time()-3600*24)." AND ug.notification_preference='email' AND u.notification_email LIKE '%@%' ORDER BY ug.user_game_id ASC, ev.event_index ASC;";
 		$bet_r = $app->run_query($bet_q);
 		
 		while ($bet = $bet_r->fetch()) {
-			$this_bet_html = "";
-			$expected_payout = ($bet['effective_destroy_amount']*$bet['outcome_destroy_score']/$bet['option_effective_destroy_score'] + ($bet['sum_score']*$coins_per_vote*$bet['votes']/$bet['option_votes']))/pow(10,$game->db_game['decimal_places']);
-			$my_stake = ($bet['destroy_amount'] + $bet[$game->db_game['payout_weight']."s_destroyed"]*$coins_per_vote)/pow(10,$game->db_game['decimal_places']);
+			$this_bet_html = $app->render_bet($bet, $game, $coins_per_vote, $current_round, $net_delta, $net_stake, $pending_stake, $num_wins, $num_losses, $num_unresolved, 'td');
 			
-			if ($my_stake > 0) $payout_multiplier = $expected_payout/$my_stake;
-			else $payout_multiplier = 0;
-			
-			$net_stake += $my_stake;
-			if (empty($bet['winning_option_id'])) $pending_stake += $my_stake;
-			
-			$this_bet_html .= '<tr>';
-			
-			$this_bet_html .= '<td><a href="'.$GLOBALS['base_url'].'/explorer/games/'.$game->db_game['url_identifier'].'/utxo/'.$bet['io_id'].'/">';
-			if ($game->db_game['inflation'] == "exponential") {
-				$this_bet_html .= $app->format_bignum($my_stake)."&nbsp;".$game->db_game['coin_abbreviation'];
+			if (!array_key_exists($bet['notification_email'], $html_by_email)) {
+				$html_by_email[$bet['notification_email']] = "";
+				$betcount_by_email[$bet['notification_email']] = 0;
 			}
-			else {
-				$this_bet_html .= $app->format_bignum($bet['votes']/pow(10,$game->db_game['decimal_places']))." votes";
-			}
-			$this_bet_html .= "</a></td>\n";
 			
-			$this_bet_html .= "<td>";
-			$this_bet_html .= $app->format_bignum($expected_payout)."&nbsp;".$game->db_game['coin_abbreviation'];
-			$this_bet_html .= "</td>\n";
-			
-			$this_bet_html .= "<td>x".$app->format_bignum($payout_multiplier)."</td>\n";
-			
-			$this_bet_html .= "<td>";
-			$this_bet_html .= round($bet['effectiveness_factor']*100, 2)."%";
-			$this_bet_html .= "</td>\n";
-			
-			$this_bet_html .= "<td>".$bet['option_name']."</td>";
-			$this_bet_html .= "<td><a target=\"_blank\" href=\"".$GLOBALS['base_url']."/explorer/games/".$game->db_game['url_identifier']."/events/".$bet['event_index']."\">".$bet['event_name']."</a></td>\n";
-			
-			if (empty($bet['winning_option_id'])) {
-				$outcome_txt = "Not Resolved";
-			}
-			else {
-				if ($bet['winning_option_id'] == $bet['option_id']) {
-					$outcome_txt = "Won";
-					$delta = $expected_payout - $my_stake;
+			if ($bet['user_game_id'] != $prev_user_game_id) {
+				if ($prev_user_game_id !== false) {
+					$betcount_by_email[$prev_notification_email] = $num_wins+$num_losses+$num_unresolved;
+					
+					$bet_summary = "In <a href=\"".$GLOBALS['base_url']."/wallet/".$game->db_game['url_identifier']."\">".$game->db_game['name']."</a> ".lcfirst($app->bets_summary($game, $net_stake, $num_wins, $num_losses, $num_unresolved, $pending_stake, $net_delta));
+					$html_by_email[$prev_notification_email] = "<p>".$bet_summary."</p><table>".$table_header_html.$html_by_email[$prev_notification_email]."</table>\n";
+					
+					$net_delta = 0;
+					$net_stake = 0;
+					$pending_stake = 0;
+					$num_wins = 0;
+					$num_losses = 0;
+					$num_unresolved = 0;
 				}
-				else {
-					$outcome_txt = "Lost";
-					$delta = (-1)*$my_stake;
-				}
+				
+				$prev_user_game_id = $bet['user_game_id'];
+				$prev_notification_email = $bet['notification_email'];
 			}
 			
-			$this_bet_html .= '<td style="color:';
-			if (empty($bet['winning_option_id'])) $this_bet_html .= '#000';
-			else if ($delta >= 0) $this_bet_html .= "#0b0";
-			else $this_bet_html .= "#f00";
-			$this_bet_html .= '">';
-			$this_bet_html .= $outcome_txt;
-			
-			if (!empty($bet['winning_option_id'])) {
-				$this_bet_html .= " &nbsp;&nbsp; ";
-				if ($delta >= 0) $this_bet_html .= "+";
-				else $this_bet_html .= "-";
-				$this_bet_html .= $app->format_bignum(abs($delta));
-				$this_bet_html .= " ".$game->db_game['coin_abbreviation'];
-			}
-			$this_bet_html .= "</td>\n";
-			
-			$this_bet_html .= "</tr>\n";
-			
-			if (!array_key_exists($bet['notification_email'], $html_by_email)) $html_by_email[$bet['notification_email']] = "";
-			$html_by_email[$bet['notification_email']] .= $this_bet_html;
+			$html_by_email[$bet['notification_email']] .= "<tr>".$this_bet_html."</tr>\n";
 		}
 	}
 	
+	$betcount_by_email[$prev_notification_email] = $num_wins+$num_losses+$num_unresolved;
+	$bet_summary = "In <a href=\"".$GLOBALS['base_url']."/wallet/".$game->db_game['url_identifier']."\">".$game->db_game['name']."</a> ".lcfirst($app->bets_summary($game, $net_stake, $num_wins, $num_losses, $num_unresolved, $pending_stake, $net_delta));
+	$html_by_email[$prev_notification_email] = "<p>".$bet_summary."</p><table>".$table_header_html.$html_by_email[$prev_notification_email]."</table>\n";
+	
 	foreach ($html_by_email as $email=>$html) {
 		$delivery_key = $app->random_string(16);
-		
-		$message_html = "<p>You have bets in ".$GLOBALS['site_name_short']." which were resolved in the past 24 hours. ";
-		$message_html .= "For more information, please <a href=\"".$GLOBALS['base_url']."/accounts/\">log in to your account</a>.</p><p>To stop receiving these notifications please <a href=\"".$GLOBALS['base_url']."/wallet/?action=unsubscribe&delivery_key=".$delivery_key."\">click here to unsubscribe</a></p>\n<table>".$table_header_html.$html."</table>\n";
-		
-		$app->mail_async($email, $GLOBALS['site_name_short'], "no-reply@".$GLOBALS['site_domain'], "Your ".$GLOBALS['site_name_short']." bets have been paid out", $message_html, "", "", $delivery_key);
-		echo "Sent to ".$email."<br/>\n";
+	
+		if ($betcount_by_email[$email] > 0) {
+			$message_html = "<p>You have bets in ".$GLOBALS['site_name_short']." which were resolved in the past 24 hours.<br/>\nTo stop receiving these notifications please <a href=\"".$GLOBALS['base_url']."/wallet/?action=unsubscribe&delivery_key=".$delivery_key."\">click here to unsubscribe</a></p>\n".$html;
+			
+			$app->mail_async($email, $GLOBALS['site_name_short'], "no-reply@".$GLOBALS['site_domain'], "Your ".$GLOBALS['site_name_short']." bets have been paid out", $message_html, "", "", $delivery_key);
+			
+			echo "Sent to ".$email."<br/>\n";
+		}
 	}
 }
 else echo "Incorrect key.";

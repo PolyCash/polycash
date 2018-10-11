@@ -1345,113 +1345,15 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$current_round = $game->block_to_round(1+$last_block_id);
 						
 						while ($bet = $r->fetch()) {
-							$this_bet_html = "";
-							$event_total_reward = ($bet['sum_score']*$coins_per_vote + $bet['event_destroy_score'])/pow(10,$game->db_game['decimal_places']);
-							$option_effective_reward = $bet['option_effective_destroy_score']+$bet['unconfirmed_effective_destroy_score'] + ($bet['option_votes']+$bet['unconfirmed_votes'])*$coins_per_vote;
-							$current_effectiveness = $app->calculate_effectiveness_factor($bet['vote_effectiveness_function'], $bet['effectiveness_param1'], $bet['event_starting_block'], $bet['event_final_block'], $last_block_id+1);
+							$this_bet_html = $app->render_bet($bet, $game, $coins_per_vote, $current_round, $net_delta, $net_stake, $pending_stake, $num_wins, $num_losses, $num_unresolved, 'div');
 							
-							if ($bet['spend_status'] != "unconfirmed") {
-								$my_inflation_stake = $bet[$game->db_game['payout_weight']."s_destroyed"]*$coins_per_vote;
-								$my_effective_stake = $bet['effective_destroy_amount'] + $bet['votes']*$coins_per_vote;
-								$expected_payout = $event_total_reward*($my_effective_stake/$option_effective_reward);
-							}
-							else {
-								$event_effective_reward = 0;
-								if ($game->db_game['payout_weight'] == "coin_block") {
-									$num_votes = $bet['ref_coin_blocks'] + ((1+$last_block_id)-$bet['ref_block_id'])*$bet['colored_amount'];
-								}
-								else if ($game->db_game['payout_weight'] == "coin_round") {
-									$num_votes = $bet['ref_coin_rounds'] + ($current_round-$bet['ref_round_id'])*$bet['colored_amount'];
-								}
-								else $num_votes = $my_vote['colored_amount'];
-								
-								$my_inflation_stake = $num_votes*$coins_per_vote;
-								$my_effective_stake = ($bet['destroy_amount'] + $num_votes*$coins_per_vote)*$current_effectiveness;
-								$expected_payout = $event_total_reward*($my_effective_stake/$option_effective_reward);
-							}
-							$my_stake = ($bet['destroy_amount'] + $my_inflation_stake)/pow(10,$game->db_game['decimal_places']);
-							
-							if ($my_stake > 0) {
-								$payout_multiplier = $expected_payout/$my_stake;
-							
-								$net_stake += $my_stake;
-								if (empty($bet['winning_option_id'])) $pending_stake += $my_stake;
-								
-								$this_bet_html .= '<div class="row">';
-								
-								$this_bet_html .= '<div class="col-sm-1 text-center">';
-								$this_bet_html .= '<a href="/explorer/games/'.$game->db_game['url_identifier'].'/utxo/'.$bet['io_id'].'/">';
-								if ($game->db_game['inflation'] == "exponential") {
-									$this_bet_html .= $app->format_bignum($my_stake)."&nbsp;".$game->db_game['coin_abbreviation'];
-								}
-								else {
-									$this_bet_html .= $app->format_bignum($bet['votes']/pow(10,$game->db_game['decimal_places']))." votes";
-								}
-								$this_bet_html .= "</a></div>\n";
-								
-								$this_bet_html .= "<div class=\"col-sm-1 text-center";
-								if ($bet['spend_status'] == "unconfirmed") $this_bet_html .= " yellowtext";
-								$this_bet_html .= "\">";
-								$this_bet_html .= $app->format_bignum($expected_payout)."&nbsp;".$game->db_game['coin_abbreviation'];
-								$this_bet_html .= "</div>\n";
-								
-								$this_bet_html .= "<div class=\"col-sm-1 text-center";
-								if ($bet['spend_status'] == "unconfirmed") $this_bet_html .= " yellowtext";
-								$this_bet_html .= "\">x".$app->format_bignum($payout_multiplier)."</div>\n";
-								
-								$this_bet_html .= "<div class=\"col-sm-1";
-								if ($bet['spend_status'] == "unconfirmed") $this_bet_html .= " yellowtext";
-								$this_bet_html .= "\">";
-								$this_bet_html .= round($bet['effectiveness_factor']*100, 2)."%";
-								$this_bet_html .= "</div>\n";
-								
-								$this_bet_html .= "<div class=\"col-sm-2 text-center\">".$bet['option_name']."</div>";
-								$this_bet_html .= "<div class=\"col-sm-3\"><a target=\"_blank\" href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".$bet['event_index']."\">".$bet['event_name']."</a></div>\n";
-								
-								if (empty($bet['winning_option_id'])) {
-									$outcome_txt = "Not Resolved";
-									$num_unresolved++;
-								}
-								else {
-									if ($bet['winning_option_id'] == $bet['option_id']) {
-										$outcome_txt = "Won";
-										$delta = $expected_payout - $my_stake;
-										$num_wins++;
-									}
-									else {
-										$outcome_txt = "Lost";
-										$delta = (-1)*$my_stake;
-										$num_losses++;
-									}
-									$net_delta += $delta;
-								}
-								
-								$this_bet_html .= "<div class=\"col-sm-3";
-								if (empty($bet['winning_option_id'])) {}
-								else if ($delta >= 0) $this_bet_html .= " greentext";
-								else $this_bet_html .= " redtext";
-								$this_bet_html .= "\">";
-								$this_bet_html .= $outcome_txt;
-								
-								if (!empty($bet['winning_option_id'])) {
-									$this_bet_html .= " &nbsp;&nbsp; ";
-									if ($delta >= 0) $this_bet_html .= "+";
-									else $this_bet_html .= "-";
-									$this_bet_html .= $app->format_bignum(abs($delta));
-									$this_bet_html .= " ".$game->db_game['coin_abbreviation'];
-								}
-								$this_bet_html .= "</div>\n";
-								
-								$this_bet_html .= "</div>\n";
+							if (!empty($this_bet_html)) {
+								$this_bet_html = '<div class="row">'.$this_bet_html."</div>\n";
 								
 								if (empty($bet['winning_option_id'])) $unresolved_bets_table .= $this_bet_html;
 								else $resolved_bets_table .= $this_bet_html;
 							}
 						}
-						
-						$num_resolved = $num_wins+$num_losses;
-						if ($num_resolved > 0) $win_rate = $num_wins/$num_resolved;
-						else $win_rate = 0;
 						
 						echo '<div class="panel-body">';
 						?>
@@ -1469,18 +1371,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							</select>
 						</div>
 						<?php
-						echo "<p>You've placed ".number_format($num_bets)." bets totalling <font class=\"greentext\">".$app->format_bignum($net_stake)."</font> ".$game->db_game['coin_name_plural']."<br/>\n";
-						echo "You've won ".number_format($num_wins)." of your ".number_format($num_resolved)." resolved bets (".round($win_rate*100, 1)."%) for a net ";
-						if ($net_delta >= 0) echo "gain";
-						else echo "loss";
-						echo " of <font class=\"";
-						if ($net_delta >= 0) echo "greentext";
-						else echo "redtext";
-						echo "\">".$app->format_bignum(abs($net_delta))."</font> ".$game->db_game['coin_name_plural'];
-						if ($num_unresolved > 0) echo "\n<br/>You have ".number_format($num_unresolved)." pending bets totalling <font class=\"greentext\">".$app->format_bignum($pending_stake)."</font> ".$game->db_game['coin_name_plural'];
-						echo "</p>\n";
+						echo "<p>".$app->bets_summary($game, $net_stake, $num_wins, $num_losses, $num_unresolved, $pending_stake, $net_delta)."</p>\n";
 						
-						if ($num_resolved > 0) {
+						if ($num_wins+$num_losses > 0) {
 							echo "<p><b>Resolved Bets</b></p>\n";
 							echo $resolved_bets_table;
 							echo "<br/>\n";
