@@ -41,8 +41,7 @@ if ($thisuser) {
 				
 				if ($amount_mode == "per_event") $coins_per_event = (float) $_REQUEST['coins_per_event'];
 				else {
-					$user_votes = $thisuser->user_current_votes($game, $blockchain->last_block_id(), $round_id, $user_game);
-					$votes_value = $user_votes*$coins_per_vote;
+					list($user_votes, $votes_value) = $thisuser->user_current_votes($game, $blockchain->last_block_id(), $round_id, $user_game);
 					$coins_per_event = ceil($votes_value/$num_events)/pow(10, $game->db_game['decimal_places']);
 				}
 				

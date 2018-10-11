@@ -291,7 +291,7 @@ if ($uri_parts[1] == "api") {
 						$account_value = $game->account_balance($user_game['account_id']);
 						$immature_balance = $api_user->immature_balance($game, $user_game);
 						$mature_balance = $api_user->mature_balance($game, $user_game);
-						$votes_available = $api_user->user_current_votes($game, $last_block_id, $current_round, $user_game);
+						list($votes_available, $votes_value) = $api_user->user_current_votes($game, $last_block_id, $current_round, $user_game);
 						
 						$api_user_info['username'] = $api_user->db_user['username'];
 						$api_user_info['account_id'] = intval($user_game['account_id']);

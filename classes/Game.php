@@ -421,7 +421,7 @@ class Game {
 		$mature_balance = $this->blockchain->user_mature_balance($user_game);
 		$free_balance = $mature_balance;
 		
-		$available_votes = $strategy_user->user_current_votes($this, $last_block_id, $current_round_id, $user_game);
+		list($available_votes, $votes_value) = $strategy_user->user_current_votes($this, $last_block_id, $current_round_id, $user_game);
 		
 		$log_text .= $strategy_user->db_user['username'].": ".$this->blockchain->app->format_bignum($free_balance/pow(10,$this->db_game['decimal_places']))." coins (".$free_balance.") ".$user_game['voting_strategy']."<br/>\n";
 		
@@ -1108,10 +1108,10 @@ class Game {
 		return $value;
 	}
 	
-	public function account_value_html($account_value, &$user_game) {
+	public function account_value_html($account_value, &$user_game, $game_pending_bets, $vote_supply_value) {
 		$html = '<font class="greentext"><a href="/accounts/?account_id='.$user_game['account_id'].'">'.$this->blockchain->app->format_bignum($account_value/pow(10,$this->db_game['decimal_places']), 2).'</a></font> '.$this->db_game['coin_name_plural'];
 		$html .= ' <font style="font-size: 12px;">(';
-		$coins_in_existence = $this->coins_in_existence(false);
+		$coins_in_existence = $this->coins_in_existence(false)+$game_pending_bets+$vote_supply_value;
 		if ($coins_in_existence > 0) $html .= $this->blockchain->app->format_bignum(100*$account_value/$coins_in_existence)."%";
 		else $html .= "0%";
 		
@@ -3119,6 +3119,24 @@ class Game {
 		$result = $r->fetch();
 		$pending_bets = $result['destroy_amount'] + round($result['inflation_score']*$coins_per_vote);
 		return $pending_bets;
+	}
+	
+	public function user_pending_bets(&$user_game) {
+		$coins_per_vote = $this->blockchain->app->coins_per_vote($this->db_game);
+		$q = "SELECT SUM(gio.destroy_amount) as destroy_amount, SUM(gio.".$this->db_game['payout_weight']."s_destroyed) as inflation_score FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.colored_amount > 0 AND gio.game_id='".$this->db_game['game_id']."' AND gio.is_resolved=0 AND k.account_id='".$user_game['account_id']."';";
+		$r = $this->blockchain->app->run_query($q);
+		$result = $r->fetch();
+		$pending_bets = $result['destroy_amount'] + round($result['inflation_score']*$coins_per_vote);
+		return $pending_bets;
+	}
+	
+	public function vote_supply(&$last_block_id, &$current_round, &$coins_per_vote) {
+		$supply_q = "SELECT *, SUM(gio.colored_amount*(".($last_block_id+1)."-io.create_block_id)) AS coin_blocks, SUM(gio.colored_amount*(".$current_round."-gio.create_round_id)) AS coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.spend_status='unspent';";
+		$supply_r = $this->blockchain->app->run_query($supply_q);
+		$supply = $supply_r->fetch();
+		$vote_supply = $supply[$this->db_game['payout_weight']."s"];
+		$vote_supply_value = $coins_per_vote*$vote_supply;
+		return array($vote_supply, $vote_supply_value);
 	}
 }
 ?>

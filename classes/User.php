@@ -36,8 +36,11 @@ class User {
 		$r = $this->app->run_query($q);
 		$sum = $r->fetch();
 		$votes = $sum[$game->db_game['payout_weight']."s"];
-		if ($votes > 0) return $votes;
-		else return 0;
+		
+		$coins_per_vote = $game->blockchain->app->coins_per_vote($game->db_game);
+		$votes_value = $votes*$coins_per_vote;
+		
+		return array($votes, $votes_value);
 	}
 	
 	public function my_last_transaction_id($game_id) {
@@ -53,40 +56,7 @@ class User {
 		else return 0;
 	}
 	
-	public function wallet_text_stats(&$game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance, &$user_game) {
-		/*$html = '<div class="row"><div class="col-sm-2">Pending&nbsp;winnings:</div><div class="col-sm-3 text-right">';
-		$payout_sum = 0;
-		
-		$q = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' ORDER BY event_index ASC;";
-		$r = $this->app->run_query($q);
-		
-		while ($db_event = $r->fetch()) {
-			$event = new Event($game, false, $db_event['event_id']);
-			$my_votes_in_round = $event->user_votes_in_event($this->db_user['user_id'], false);
-			$my_votes_r = $my_votes_in_round[0];
-			$total_votes = $my_votes_in_round[4];
-			
-			if (empty($my_votes_r[$db_event['winning_option_id']])) $payout_est = 0;
-			else {
-				$my_votes = $my_votes_r[$db_event['winning_option_id']]['votes'];
-				
-				$total_votes = $event->option_stats($db_event['winning_option_id']);
-				$total_votes = $total_votes['sum'];
-				
-				if ($total_votes > 0 && $my_votes > 0) {
-					$my_pct = $my_votes/$total_votes;
-					$total_payout = $event->event_pos_reward_in_round($game->block_to_round($db_event['event_starting_block']));
-					$payout_est = $my_pct*$total_payout;
-				}
-				else $payout_est = 0;
-			}
-			
-			$payout_sum += $payout_est;
-		}
-		$html .= $this->app->format_bignum($payout_sum/pow(10,$game->db_game['decimal_places']));
-		
-		$html .= '</div></div>'."\n";*/
-		
+	public function wallet_text_stats(&$game, $current_round, $last_block_id, $block_within_round, $mature_balance, $immature_balance, $user_votes, $votes_value, $pending_bets, &$user_game) {
 		$html = '<div class="row"><div class="col-sm-2">Available&nbsp;funds:</div>';
 		$html .= '<div class="col-sm-3 text-right"><font class="greentext">';
 		$html .= $this->app->format_bignum($mature_balance/pow(10,$game->db_game['decimal_places']));
@@ -97,18 +67,15 @@ class User {
 		$html .= "</div>\n";
 		
 		if ($game->db_game['payout_weight'] != "coin") {
-			$user_votes = $this->user_current_votes($game, $last_block_id, $current_round, $user_game);
-			
 			if ($game->db_game['inflation'] == "exponential") {
-				$votes_per_coin = $game->blockchain->app->votes_per_coin($game->db_game);
-				if ($votes_per_coin > 0) $votes_value = $user_votes/$votes_per_coin;
-				else $votes_value = 0;
 				$html .= '<div class="row"><div class="col-sm-2">Unrealized gains:</div><div class="col-sm-3 text-right"><font class="greentext">'.$this->app->format_bignum($votes_value/pow(10,$game->db_game['decimal_places'])).'</font> '.$game->db_game['coin_name_plural'].'</div></div>'."\n";
 			}
 			else {
 				$html .= '<div class="row"><div class="col-sm-2">Votes:</div><div class="col-sm-3 text-right"><font class="greentext">'.$this->app->format_bignum($user_votes/pow(10,$game->db_game['decimal_places'])).'</font> votes available</div></div>'."\n";
 			}
 		}
+		
+		$html .= '<div class="row"><div class="col-sm-2">Pending bets:</div><div class="col-sm-3 text-right"><font class="greentext">'.$this->app->format_bignum($pending_bets/pow(10,$game->db_game['decimal_places'])).'</font> '.$game->db_game['coin_name_plural'].'</div></div>'."\n";
 		
 		$html .= "Last block completed: <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$last_block_id."\">#".$last_block_id."</a>, currently mining <a href=\"/explorer/games/".$game->db_game['url_identifier']."/transactions/unconfirmed\">#".($last_block_id+1)."</a><br/>\n";
 		$html .= "Current votes count towards block ".$block_within_round."/".$game->db_game['round_length']." in round #".$game->round_to_display_round($current_round).".<br/>\n";

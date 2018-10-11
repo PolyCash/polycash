@@ -1068,13 +1068,40 @@ class App {
 		$html .= "</div></div>\n";
 		
 		if ($db_game['game_id'] > 0) {
-			$sample_block_id = $game->blockchain->last_block_id()-1;
+			$last_block_id = $game->blockchain->last_block_id();
+			$current_round = $game->block_to_round($last_block_id+1);
+			$sample_block_id = $last_block_id-1;
+			$coins_per_vote = $this->coins_per_vote($game->db_game);
 			$game->refresh_coins_in_existence();
+			$game_pending_bets = $game->pending_bets();
+			list($vote_supply, $vote_supply_value) = $game->vote_supply($last_block_id, $current_round, $coins_per_vote);
+			$coins_in_existence = $game->coins_in_existence($sample_block_id);
 			
-			$circulation_amount_disp = $this->format_bignum($game->coins_in_existence($sample_block_id)/pow(10,$db_game['decimal_places']));
+			$circulation_amount_disp = $this->format_bignum($coins_in_existence/pow(10,$db_game['decimal_places']));
 			$html .= '<div class="row"><div class="col-sm-5">'.ucwords($game->db_game['coin_name_plural']).' in circulation:</div><div class="col-sm-7">';
 			$html .= $circulation_amount_disp.' ';
 			if ($circulation_amount_disp == "1") $html .= $db_game['coin_name'];
+			else $html .= $db_game['coin_name_plural'];
+			$html .= "</div></div>\n";
+			
+			$pending_bets_disp = $this->format_bignum($game_pending_bets/pow(10,$db_game['decimal_places']));
+			$html .= '<div class="row"><div class="col-sm-5">Pending bets:</div><div class="col-sm-7">';
+			$html .= $pending_bets_disp.' ';
+			if ($pending_bets_disp == "1") $html .= $db_game['coin_name'];
+			else $html .= $db_game['coin_name_plural'];
+			$html .= "</div></div>\n";
+			
+			$supply_disp = $this->format_bignum($vote_supply_value/pow(10,$db_game['decimal_places']));
+			$html .= '<div class="row"><div class="col-sm-5">Unrealized '.ucwords($game->db_game['coin_name_plural']).':</div><div class="col-sm-7">';
+			$html .= $supply_disp.' ';
+			if ($supply_disp == "1") $html .= $db_game['coin_name'];
+			else $html .= $db_game['coin_name_plural'];
+			$html .= "</div></div>\n";
+			
+			$unrealized_supply_disp = $this->format_bignum(($coins_in_existence+$vote_supply_value+$game_pending_bets)/pow(10,$db_game['decimal_places']));
+			$html .= '<div class="row"><div class="col-sm-5">Greater supply:</div><div class="col-sm-7">';
+			$html .= $unrealized_supply_disp.' ';
+			if ($unrealized_supply_disp == "1") $html .= $db_game['coin_name'];
 			else $html .= $db_game['coin_name_plural'];
 			$html .= "</div></div>\n";
 			
@@ -1086,7 +1113,7 @@ class App {
 				else $html .= $game->blockchain->db_blockchain['coin_name_plural'];
 				$html .= "</div></div>\n";
 				
-				$exchange_rate_disp = $this->format_bignum($game->coins_in_existence($sample_block_id)/$game->escrow_value($sample_block_id));
+				$exchange_rate_disp = $this->format_bignum($coins_in_existence/$game->escrow_value($sample_block_id));
 				$html .= '<div class="row"><div class="col-sm-5">Current exchange rate:</div><div class="col-sm-7">';
 				$html .= $exchange_rate_disp.' ';
 				if ($exchange_rate_disp == "1") $html .= $db_game['coin_name'];

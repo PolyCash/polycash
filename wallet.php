@@ -526,18 +526,23 @@ $initial_tab = 0;
 if (!empty($_REQUEST['initial_tab'])) $initial_tab = (int) $_REQUEST['initial_tab'];
 
 if ($thisuser && $game) {
-	$account_value = $game->account_balance($user_game['account_id']);
+	$last_block_id = $game->last_block_id();
+	$current_round = $game->block_to_round($last_block_id+1);
+	$block_within_round = $game->block_id_to_round_index($last_block_id+1);
+	$coins_per_vote = $app->coins_per_vote($game->db_game);
+	
 	$immature_balance = $thisuser->immature_balance($game, $user_game);
 	$mature_balance = $thisuser->mature_balance($game, $user_game);
+	list($user_votes, $votes_value) = $thisuser->user_current_votes($game, $last_block_id, $current_round, $user_game);
+	$user_pending_bets = $game->user_pending_bets($user_game);
+	$game_pending_bets = $game->pending_bets();
+	list($vote_supply, $vote_supply_value) = $game->vote_supply($last_block_id, $current_round, $coins_per_vote);
+	$account_value = $game->account_balance($user_game['account_id'])+$user_pending_bets+$votes_value;
 	
 	$blockchain_last_block_id = $game->blockchain->last_block_id();
 	$blockchain_current_round = $game->block_to_round($blockchain_last_block_id+1);
 	$blockchain_block_within_round = $game->block_id_to_round_index($blockchain_last_block_id+1);
 	$blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_block_id);
-	
-	$last_block_id = $game->last_block_id();
-	$current_round = $game->block_to_round($last_block_id+1);
-	$block_within_round = $game->block_id_to_round_index($last_block_id+1);
 }
 ?>
 <div class="container-fluid">
@@ -688,7 +693,7 @@ if ($thisuser && $game) {
 					<div class="row">
 						<div class="col-sm-2">Account&nbsp;value:</div>
 						<div class="col-sm-3" style="text-align: right;" id="account_value"><?php
-						echo $game->account_value_html($account_value, $user_game);
+						echo $game->account_value_html($account_value, $user_game, $game_pending_bets, $vote_supply_value);
 						?></div>
 					</div>
 				</div>
@@ -700,7 +705,7 @@ if ($thisuser && $game) {
 				?>
 				<div id="wallet_text_stats">
 					<?php
-					echo $thisuser->wallet_text_stats($game, $blockchain_current_round, $blockchain_last_block_id, $blockchain_block_within_round, $mature_balance, $immature_balance, $user_game);
+					echo $thisuser->wallet_text_stats($game, $blockchain_current_round, $blockchain_last_block_id, $blockchain_block_within_round, $mature_balance, $immature_balance, $user_votes, $votes_value, $user_pending_bets, $user_game);
 					?>
 				</div>
 				<?php
