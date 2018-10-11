@@ -482,16 +482,13 @@ class Blockchain {
 					if (count($spend_io_ids) > 0 && $block_height === false) {
 						$ref_block_id = $this->last_block_id()+1;
 						
-						$q = "SELECT g.game_id, SUM(gio.colored_amount) AS colored_amount_sum, SUM(gio.colored_amount*(".$ref_block_id."-io.create_block_id)) AS ref_coin_block_sum FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN games g ON gio.game_id=g.game_id WHERE io.io_id IN (".implode(",", $spend_io_ids).") GROUP BY gio.game_id ORDER BY g.game_id ASC;";
+						$q = "SELECT g.game_id, SUM(gio.colored_amount) AS game_amount_sum, SUM(gio.colored_amount*(".$ref_block_id."-io.create_block_id)) AS ref_coin_block_sum FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN games g ON gio.game_id=g.game_id WHERE io.io_id IN (".implode(",", $spend_io_ids).") GROUP BY gio.game_id ORDER BY g.game_id ASC;";
 						$r = $this->app->run_query($q);
 						
 						while ($db_color_game = $r->fetch()) {
 							$color_game = new Game($this, $db_color_game['game_id']);
-							$escrow_address = $this->create_or_fetch_address($color_game->db_game['escrow_address'], true, false, false, false, false, false);
-							$color_amount = $db_color_game['colored_amount_sum'];
+							$game_amount_in = $db_color_game['game_amount_sum'];
 							$coin_blocks = $db_color_game['ref_coin_block_sum'];
-							$color_amount_sum = 0;
-							$coin_block_sum = 0;
 							
 							$ref_round_id = $color_game->block_to_round($ref_block_id);
 							
@@ -500,37 +497,54 @@ class Blockchain {
 							$coin_rounds = $rr->fetch();
 							$coin_rounds = $coin_rounds['ref_coin_round_sum'];
 							
+							$qq = "SELECT SUM(amount) FROM transaction_ios WHERE io_id IN (".implode(",", $spend_io_ids).");";
+							$rr = $this->app->run_query($qq);
+							$io_amount_in = $rr->fetch();
+							$io_amount_in = $io_amount_in['SUM(amount)'];
+							
+							$io_destroy_amount = 0;
+							$io_amount_out = 0;
+							
+							for ($j=0; $j<count($outputs); $j++) {
+								$io_amount_out += $outputs[$j]["value"]*pow(10,$color_game->db_game['decimal_places']);
+								if ($output_is_destroy[$j] == 1) $io_destroy_amount += $outputs[$j]["value"]*pow(10,$color_game->db_game['decimal_places']);
+							}
+							
+							$io_nondestroy_amount = $io_amount_out-$io_destroy_amount;
+							$destroy_game_amount = floor($game_amount_in*($io_destroy_amount/$io_amount_out));
+							
 							$coin_round_sum = 0;
-							$ref_round_id = $color_game->block_to_round($ref_block_id);
-							
-							$destroy_color_amount = ceil($color_amount*$output_destroy_sum/$output_sum);
-							$nondestroy_color_amount = $color_amount-$destroy_color_amount;
-							
-							$destroy_sum = 0;
+							$game_amount_sum = 0;
+							$coin_block_sum = 0;
+							$game_destroy_sum = 0;
 							
 							$insert_q = "INSERT INTO transaction_game_ios (game_id, is_coinbase, io_id, colored_amount, destroy_amount, ref_block_id, ref_coin_blocks, ref_round_id, ref_coin_rounds, option_id, event_id, effectiveness_factor, effective_destroy_amount, is_resolved) VALUES ";
 							
 							for ($j=0; $j<count($outputs); $j++) {
 								$payout_insert_q = "";
 								
-								$this_color_amount = floor($color_amount*($outputs[$j]["value"]*pow(10,$color_game->db_game['decimal_places']))/$output_sum);
-								if ($j == count($outputs)-1) $this_color_amount = $color_amount - $color_amount_sum;
+								$this_game_amount = floor($game_amount_in*($outputs[$j]["value"]*pow(10,$color_game->db_game['decimal_places']))/$io_amount_out);
+								if ($j == count($outputs)-1) $this_game_amount = $game_amount_in - $game_amount_sum;
 								
-								if ($output_is_destroy[$j] == 1) $this_destroy_amount = 0;
-								else {
-									if ($j == $last_nondestroy_output_index) $this_destroy_amount = $destroy_color_amount-$destroy_sum;
-									else $this_destroy_amount = floor($destroy_color_amount*$this_color_amount/$nondestroy_color_amount);
+								if ($output_is_destroy[$j] == 1) {
+									$this_destroy_amount = 0;
+									$this_coin_blocks = 0;
+									$this_coin_rounds = 0;
 								}
-								$destroy_sum += $this_destroy_amount;
-								
-								$this_coin_blocks = floor($coin_blocks*($outputs[$j]["value"]*pow(10,$color_game->db_game['decimal_places']))/$output_sum);
-								if ($j == count($outputs)-1) $this_coin_blocks = $coin_blocks - $coin_block_sum;
-								
-								$this_coin_rounds = floor($coin_rounds*($outputs[$j]["value"]*pow(10,$color_game->db_game['decimal_places']))/$output_sum);
-								if ($j == count($outputs)-1) $this_coin_rounds = $coin_rounds - $coin_round_sum;
+								else {
+									if ($j == $last_nondestroy_output_index) $this_destroy_amount = $destroy_game_amount-$game_destroy_sum;
+									else $this_destroy_amount = floor($destroy_game_amount*$this_game_amount/$nondestroy_game_amount);
 									
+									$this_coin_blocks = floor($coin_blocks*($outputs[$j]["value"]*pow(10,$color_game->db_game['decimal_places']))/$io_nondestroy_amount);
+									if ($j == count($outputs)-1) $this_coin_blocks = $coin_blocks - $coin_block_sum;
+									
+									$this_coin_rounds = floor($coin_rounds*($outputs[$j]["value"]*pow(10,$color_game->db_game['decimal_places']))/$io_nondestroy_amount);
+									if ($j == count($outputs)-1) $this_coin_rounds = $coin_rounds - $coin_round_sum;
+								}
+								$game_destroy_sum += $this_destroy_amount;
+								
 								if ($output_is_destroy[$j] == 0) {
-									$insert_q .= "('".$color_game->db_game['game_id']."', '0', '".$output_io_ids[$j]."', '".$this_color_amount."', '".$this_destroy_amount."', '".$ref_block_id."', '".$this_coin_blocks."', '".$ref_round_id."', '".$this_coin_rounds."', ";
+									$insert_q .= "('".$color_game->db_game['game_id']."', '0', '".$output_io_ids[$j]."', '".$this_game_amount."', '".$this_destroy_amount."', '".$ref_block_id."', '".$this_coin_blocks."', '".$ref_round_id."', '".$this_coin_rounds."', ";
 									
 									if ($output_io_indices[$j] !== false) {
 										$option_id = $color_game->option_index_to_option_id_in_block($output_io_indices[$j], $ref_block_id);
@@ -554,7 +568,7 @@ class Blockchain {
 									$insert_q .= "), ";
 									if ($payout_insert_q != "") $insert_q .= $payout_insert_q;
 								}
-								$color_amount_sum += $this_color_amount;
+								$game_amount_sum += $this_game_amount;
 								$coin_block_sum += $this_coin_blocks;
 								$coin_round_sum += $this_coin_rounds;
 							}

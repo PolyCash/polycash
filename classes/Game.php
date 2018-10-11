@@ -2416,8 +2416,8 @@ class Game {
 								$payout_insert_q = "";
 								
 								$colored_amount = floor($input_colored_sum*$output_io['amount']/$output_sum);
-								$cbd = floor($cbd_sum*$output_io['amount']/$output_sum);
-								$crd = floor($crd_sum*$output_io['amount']/$output_sum);
+								$cbd = floor($cbd_sum*$output_io['amount']/$nondestroy_amount);
+								$crd = floor($crd_sum*$output_io['amount']/$nondestroy_amount);
 								
 								if ($output_i == $nondestroy_outputs-1) $this_destroy_amount = $destroy_colored_amount-$destroy_sum;
 								else $this_destroy_amount = floor($destroy_colored_amount*$colored_amount/$nondestroy_colored_amount);
