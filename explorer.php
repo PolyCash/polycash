@@ -1324,7 +1324,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$num_losses = 0;
 						$num_unresolved = 0;
 						
-						$q = "SELECT gio.*, io.spend_transaction_id, ev.*, o.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS outcome_destroy_score, o.name AS option_name, gio.votes AS votes, o.votes AS option_votes, gio2.colored_amount AS payout_amount FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN events ev ON o.event_id=ev.event_id LEFT JOIN transaction_game_ios gio2 ON gio.payout_io_id=gio2.game_io_id WHERE gio.game_id=".$game->db_game['game_id']." AND ug.user_game_id=".$user_game['user_game_id']." AND gio.is_coinbase=0 ORDER BY gio.game_io_id ASC;";
+						$q = "SELECT gio.*, io.spend_transaction_id, io.spend_status, ev.*, et.vote_effectiveness_function, et.effectiveness_param1, o.effective_destroy_score AS option_effective_destroy_score, o.unconfirmed_votes AS option_unconfirmed_votes, o.unconfirmed_effective_destroy_score, ev.destroy_score AS event_destroy_score, o.name AS option_name, gio.votes AS votes, o.votes AS option_votes, gio2.colored_amount AS payout_amount FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN events ev ON o.event_id=ev.event_id LEFT JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN transaction_game_ios gio2 ON gio.payout_io_id=gio2.game_io_id WHERE gio.game_id=".$game->db_game['game_id']." AND ug.user_game_id=".$user_game['user_game_id']." AND gio.is_coinbase=0 ORDER BY ev.event_index ASC, gio.game_io_id ASC;";
 						$r = $app->run_query($q);
 						$num_bets = $r->rowCount();
 						
@@ -1342,80 +1342,111 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$resolved_bets_table = $bet_table_header;
 						$unresolved_bets_table = $bet_table_header;
 						
+						$current_round = $game->block_to_round(1+$last_block_id);
+						
 						while ($bet = $r->fetch()) {
 							$this_bet_html = "";
-							$expected_payout = ($bet['effective_destroy_amount']*$bet['outcome_destroy_score']/$bet['option_effective_destroy_score'] + ($bet['sum_score']*$coins_per_vote*$bet['votes']/$bet['option_votes']))/pow(10,$game->db_game['decimal_places']);
-							$my_stake = ($bet['destroy_amount'] + $bet[$game->db_game['payout_weight']."s_destroyed"]*$coins_per_vote)/pow(10,$game->db_game['decimal_places']);
+							$event_total_reward = ($bet['sum_score']*$coins_per_vote + $bet['event_destroy_score'])/pow(10,$game->db_game['decimal_places']);
+							$option_effective_reward = $bet['option_effective_destroy_score']+$bet['unconfirmed_effective_destroy_score'] + ($bet['option_votes']+$bet['unconfirmed_votes'])*$coins_per_vote;
+							$current_effectiveness = $app->calculate_effectiveness_factor($bet['vote_effectiveness_function'], $bet['effectiveness_param1'], $bet['event_starting_block'], $bet['event_final_block'], $last_block_id+1);
 							
-							if ($my_stake > 0) $payout_multiplier = $expected_payout/$my_stake;
-							else $payout_multiplier = 0;
-							
-							$net_stake += $my_stake;
-							if (empty($bet['winning_option_id'])) $pending_stake += $my_stake;
-							
-							$this_bet_html .= '<div class="row">';
-							
-							$this_bet_html .= '<div class="col-sm-1 text-center">';
-							$this_bet_html .= '<a href="/explorer/games/'.$game->db_game['url_identifier'].'/utxo/'.$bet['io_id'].'/">';
-							if ($game->db_game['inflation'] == "exponential") {
-								$this_bet_html .= $app->format_bignum($my_stake)."&nbsp;".$game->db_game['coin_abbreviation'];
+							if ($bet['spend_status'] != "unconfirmed") {
+								$my_inflation_stake = $bet[$game->db_game['payout_weight']."s_destroyed"]*$coins_per_vote;
+								$my_effective_stake = $bet['effective_destroy_amount'] + $bet['votes']*$coins_per_vote;
+								$expected_payout = $event_total_reward*($my_effective_stake/$option_effective_reward);
 							}
 							else {
-								$this_bet_html .= $app->format_bignum($bet['votes']/pow(10,$game->db_game['decimal_places']))." votes";
+								$event_effective_reward = 0;
+								if ($game->db_game['payout_weight'] == "coin_block") {
+									$num_votes = $bet['ref_coin_blocks'] + ((1+$last_block_id)-$bet['ref_block_id'])*$bet['colored_amount'];
+								}
+								else if ($game->db_game['payout_weight'] == "coin_round") {
+									$num_votes = $bet['ref_coin_rounds'] + ($current_round-$bet['ref_round_id'])*$bet['colored_amount'];
+								}
+								else $num_votes = $my_vote['colored_amount'];
+								
+								$my_inflation_stake = $num_votes*$coins_per_vote;
+								$my_effective_stake = ($bet['destroy_amount'] + $num_votes*$coins_per_vote)*$current_effectiveness;
+								$expected_payout = $event_total_reward*($my_effective_stake/$option_effective_reward);
 							}
-							$this_bet_html .= "</a></div>\n";
+							$my_stake = ($bet['destroy_amount'] + $my_inflation_stake)/pow(10,$game->db_game['decimal_places']);
 							
-							$this_bet_html .= "<div class=\"col-sm-1 text-center\">";
-							$this_bet_html .= $app->format_bignum($expected_payout)."&nbsp;".$game->db_game['coin_abbreviation'];
-							$this_bet_html .= "</div>\n";
+							if ($my_stake > 0) {
+								$payout_multiplier = $expected_payout/$my_stake;
 							
-							$this_bet_html .= "<div class=\"col-sm-1 text-center\">x".$app->format_bignum($payout_multiplier)."</div>\n";
-							
-							$this_bet_html .= "<div class=\"col-sm-1\">";
-							$this_bet_html .= round($bet['effectiveness_factor']*100, 2)."%";
-							$this_bet_html .= "</div>\n";
-							
-							$this_bet_html .= "<div class=\"col-sm-2 text-center\">".$bet['option_name']."</div>";
-							$this_bet_html .= "<div class=\"col-sm-3\"><a target=\"_blank\" href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".$bet['event_index']."\">".$bet['event_name']."</a></div>\n";
-							
-							if (empty($bet['winning_option_id'])) {
-								$outcome_txt = "Not Resolved";
-								$num_unresolved++;
-							}
-							else {
-								if ($bet['winning_option_id'] == $bet['option_id']) {
-									$outcome_txt = "Won";
-									$delta = $expected_payout - $my_stake;
-									$num_wins++;
+								$net_stake += $my_stake;
+								if (empty($bet['winning_option_id'])) $pending_stake += $my_stake;
+								
+								$this_bet_html .= '<div class="row">';
+								
+								$this_bet_html .= '<div class="col-sm-1 text-center">';
+								$this_bet_html .= '<a href="/explorer/games/'.$game->db_game['url_identifier'].'/utxo/'.$bet['io_id'].'/">';
+								if ($game->db_game['inflation'] == "exponential") {
+									$this_bet_html .= $app->format_bignum($my_stake)."&nbsp;".$game->db_game['coin_abbreviation'];
 								}
 								else {
-									$outcome_txt = "Lost";
-									$delta = (-1)*$my_stake;
-									$num_losses++;
+									$this_bet_html .= $app->format_bignum($bet['votes']/pow(10,$game->db_game['decimal_places']))." votes";
 								}
-								$net_delta += $delta;
+								$this_bet_html .= "</a></div>\n";
+								
+								$this_bet_html .= "<div class=\"col-sm-1 text-center";
+								if ($bet['spend_status'] == "unconfirmed") $this_bet_html .= " yellowtext";
+								$this_bet_html .= "\">";
+								$this_bet_html .= $app->format_bignum($expected_payout)."&nbsp;".$game->db_game['coin_abbreviation'];
+								$this_bet_html .= "</div>\n";
+								
+								$this_bet_html .= "<div class=\"col-sm-1 text-center";
+								if ($bet['spend_status'] == "unconfirmed") $this_bet_html .= " yellowtext";
+								$this_bet_html .= "\">x".$app->format_bignum($payout_multiplier)."</div>\n";
+								
+								$this_bet_html .= "<div class=\"col-sm-1";
+								if ($bet['spend_status'] == "unconfirmed") $this_bet_html .= " yellowtext";
+								$this_bet_html .= "\">";
+								$this_bet_html .= round($bet['effectiveness_factor']*100, 2)."%";
+								$this_bet_html .= "</div>\n";
+								
+								$this_bet_html .= "<div class=\"col-sm-2 text-center\">".$bet['option_name']."</div>";
+								$this_bet_html .= "<div class=\"col-sm-3\"><a target=\"_blank\" href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".$bet['event_index']."\">".$bet['event_name']."</a></div>\n";
+								
+								if (empty($bet['winning_option_id'])) {
+									$outcome_txt = "Not Resolved";
+									$num_unresolved++;
+								}
+								else {
+									if ($bet['winning_option_id'] == $bet['option_id']) {
+										$outcome_txt = "Won";
+										$delta = $expected_payout - $my_stake;
+										$num_wins++;
+									}
+									else {
+										$outcome_txt = "Lost";
+										$delta = (-1)*$my_stake;
+										$num_losses++;
+									}
+									$net_delta += $delta;
+								}
+								
+								$this_bet_html .= "<div class=\"col-sm-3";
+								if (empty($bet['winning_option_id'])) {}
+								else if ($delta >= 0) $this_bet_html .= " greentext";
+								else $this_bet_html .= " redtext";
+								$this_bet_html .= "\">";
+								$this_bet_html .= $outcome_txt;
+								
+								if (!empty($bet['winning_option_id'])) {
+									$this_bet_html .= " &nbsp;&nbsp; ";
+									if ($delta >= 0) $this_bet_html .= "+";
+									else $this_bet_html .= "-";
+									$this_bet_html .= $app->format_bignum(abs($delta));
+									$this_bet_html .= " ".$game->db_game['coin_abbreviation'];
+								}
+								$this_bet_html .= "</div>\n";
+								
+								$this_bet_html .= "</div>\n";
+								
+								if (empty($bet['winning_option_id'])) $unresolved_bets_table .= $this_bet_html;
+								else $resolved_bets_table .= $this_bet_html;
 							}
-							
-							$this_bet_html .= "<div class=\"col-sm-3";
-							if (empty($bet['winning_option_id'])) {}
-							else if ($delta >= 0) $this_bet_html .= " greentext";
-							else $this_bet_html .= " redtext";
-							$this_bet_html .= "\">";
-							$this_bet_html .= $outcome_txt;
-							
-							if (!empty($bet['winning_option_id'])) {
-								$this_bet_html .= " &nbsp;&nbsp; ";
-								if ($delta >= 0) $this_bet_html .= "+";
-								else $this_bet_html .= "-";
-								$this_bet_html .= $app->format_bignum(abs($delta));
-								$this_bet_html .= " ".$game->db_game['coin_abbreviation'];
-							}
-							$this_bet_html .= "</div>\n";
-							
-							$this_bet_html .= "</div>\n";
-							
-							if (empty($bet['winning_option_id'])) $unresolved_bets_table .= $this_bet_html;
-							else $resolved_bets_table .= $this_bet_html;
 						}
 						
 						$num_resolved = $num_wins+$num_losses;

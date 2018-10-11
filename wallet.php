@@ -397,6 +397,7 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 	$voting_strategy_id = intval($_REQUEST['voting_strategy_id']);
 	$aggregate_threshold = intval($_REQUEST['aggregate_threshold']);
 	$api_url = $app->quote_escape($app->strong_strip_tags($_REQUEST['api_url']));
+	if ($voting_strategy == "hit_url") $api_url = $app->quote_escape($app->strong_strip_tags($_REQUEST['hit_api_url']));
 	$by_rank_csv = "";
 	
 	if ($voting_strategy_id > 0) {
@@ -427,7 +428,7 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 		$message = "Great, your transaction fee has been updated!";
 	}
 	else {
-		if (in_array($voting_strategy, array('manual', 'api', 'by_plan', 'by_entity'))) {
+		if (in_array($voting_strategy, array('manual', 'api', 'by_plan', 'by_entity','hit_url'))) {
 			/*for ($i=1; $i<=$game->db_game['num_voting_options']; $i++) {
 				if ($_REQUEST['by_rank_'.$i] == "1") $by_rank_csv .= $i.",";
 			}
@@ -948,11 +949,22 @@ if ($thisuser && $game) {
 						
 						<div class="row bordered_row">
 							<div class="col-md-2">
+								<input type="radio" id="voting_strategy_api" name="voting_strategy" value="hit_url"<?php if ($user_strategy['voting_strategy'] == "hit_url") echo ' checked="checked"'; ?>><label class="plainlabel" for="voting_strategy_api">&nbsp;Hit URL</label>
+							</div>
+							<div class="col-md-10">
+								<label class="plainlabel" for="hit_api_url">Hit this URL every minute</label>
+								<input class="form-control" type="text" size="40" placeholder="http://" name="hit_api_url" id="hit_api_url" value="<?php echo $user_strategy['api_url']; ?>" />
+							</div>
+						</div>
+						
+						<div class="row bordered_row">
+							<div class="col-md-2">
 								<input type="radio" id="voting_strategy_api" name="voting_strategy" value="api"<?php if ($user_strategy['voting_strategy'] == "api") echo ' checked="checked"'; ?>><label class="plainlabel" for="voting_strategy_api">&nbsp;Vote&nbsp;by&nbsp;API</label>
 							</div>
 							<div class="col-md-10">
 								<label class="plainlabel" for="voting_strategy_api">
-									Hit a custom URL whenever I have <?php echo $game->db_game['coin_name_plural']; ?> available to determine my votes: <input type="text" size="40" placeholder="http://" name="api_url" id="api_url" value="<?php echo $user_strategy['api_url']; ?>" />
+									Hit a URL matching the PolyCash API format:
+									<input class="form-control" type="text" size="40" placeholder="http://" name="api_url" id="api_url" value="<?php echo $user_strategy['api_url']; ?>" />
 								</label><br/>
 								Your API access code is <?php echo $user_game['api_access_code']; ?><br/>
 								<a href="/api/about/">API documentation</a><br/>

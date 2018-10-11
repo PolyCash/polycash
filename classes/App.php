@@ -1650,8 +1650,8 @@ class App {
 				$reset_block = false;
 				$reset_event_index = false;
 				
-				$sports_entity_type = $app->check_set_entity_type("sports");
-				$leagues_entity_type = $app->check_set_entity_type("leagues");
+				$sports_entity_type = $this->check_set_entity_type("sports");
+				$leagues_entity_type = $this->check_set_entity_type("leagues");
 				
 				// Check if any base params are different. If so, reset from game starting block
 				for ($i=0; $i<count($verbatim_vars); $i++) {
@@ -2808,6 +2808,18 @@ class App {
 			return $r->fetch();
 		}
 		else return false;
+	}
+	
+	public function calculate_effectiveness_factor($vote_effectiveness_function, $effectiveness_param1, $event_starting_block, $event_final_block, $block_id) {
+		if ($vote_effectiveness_function == "linear_decrease") {
+			$slope = -1*$effectiveness_param1;
+			$event_length_blocks = $event_final_block-$event_starting_block+1;
+			$blocks_in = $block_id-$event_starting_block;
+			$frac_complete = $blocks_in/$event_length_blocks;
+			$effectiveness = floor(pow(10,8)*$frac_complete*$slope)/pow(10,8) + 1;
+			return max(0, $effectiveness);
+		}
+		else return 1;
 	}
 }
 ?>

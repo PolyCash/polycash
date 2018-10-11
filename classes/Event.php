@@ -584,18 +584,16 @@ class Event {
 		$rr = $this->game->blockchain->app->run_query($qq);
 	}
 	
-	public function round_index_to_effectiveness_factor($round_index) {
+	public function block_id_to_effectiveness_factor($block_id) {
 		if ($this->db_event['vote_effectiveness_function'] == "linear_decrease") {
 			$slope = -1*$this->db_event['effectiveness_param1'];
-			$frac_complete = floor(pow(10,8)*$round_index/$this->game->db_game['round_length'])/pow(10,8);
+			$event_length_blocks = $this->db_event['event_final_block']-$this->db_event['event_starting_block']+1;
+			$blocks_in = $block_id-$this->db_event['event_starting_block'];
+			$frac_complete = $blocks_in/$event_length_blocks;
 			$effectiveness = floor(pow(10,8)*$frac_complete*$slope)/pow(10,8) + 1;
 			return $effectiveness;
 		}
 		else return 1;
-	}
-	
-	public function block_id_to_effectiveness_factor($block_id) {
-		return $this->round_index_to_effectiveness_factor($this->game->block_id_to_round_index($block_id));
 	}
 	
 	public function option_stats($option_id) {
