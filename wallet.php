@@ -710,14 +710,18 @@ if ($thisuser && $game) {
 				</div>
 				<?php
 				if ($game->db_game['buyin_policy'] != "none") { ?>
-					<button class="btn btn-success" style="margin-top: 8px;" onclick="initiate_buyin();"><i class="fas fa-shopping-cart"></i> &nbsp; Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
+					<button class="btn btn-sm btn-success" style="margin-top: 8px;" onclick="initiate_buyin();"><i class="fas fa-shopping-cart"></i> &nbsp; Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
 					<?php
 				}
 				if ($game->db_game['sellout_policy'] == "on") { ?>
-					<button class="btn btn-info" style="margin-top: 8px;" onclick="initiate_sellout();"><i class="fas fa-exchange-alt"></i> &nbsp; Sell your <?php echo $game->db_game['coin_name_plural']; ?></button>
+					<button class="btn btn-sm btn-info" style="margin-top: 8px;" onclick="initiate_sellout();"><i class="fas fa-exchange-alt"></i> &nbsp; Sell your <?php echo $game->db_game['coin_name_plural']; ?></button>
 					<?php
 				}
 				?>
+				<button class="btn btn-sm btn-warning" style="margin-top: 8px;" onclick="apply_my_strategy();">Apply my strategy now</button>
+				<button class="btn btn-sm btn-success" style="margin-top: 8px;" onclick="show_featured_strategies(); return false;">Change my strategy</button>
+				
+				<div id="apply_my_strategy_status" class="greentext"></div>
 			</div>
 		</div>
 		
@@ -971,7 +975,6 @@ if ($thisuser && $game) {
 									Hit a URL matching the PolyCash API format:
 									<input class="form-control" type="text" size="40" placeholder="http://" name="api_url" id="api_url" value="<?php echo $user_strategy['api_url']; ?>" />
 								</label><br/>
-								Your API access code is <?php echo $user_game['api_access_code']; ?><br/>
 								<a href="/api/about/">API documentation</a><br/>
 							</div>
 						</div>

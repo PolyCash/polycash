@@ -1092,7 +1092,7 @@ class App {
 			$html .= "</div></div>\n";
 			
 			$supply_disp = $this->format_bignum($vote_supply_value/pow(10,$db_game['decimal_places']));
-			$html .= '<div class="row"><div class="col-sm-5">Unrealized '.ucwords($game->db_game['coin_name_plural']).':</div><div class="col-sm-7">';
+			$html .= '<div class="row"><div class="col-sm-5">Unrealized '.$game->db_game['coin_name_plural'].':</div><div class="col-sm-7">';
 			$html .= $supply_disp.' ';
 			if ($supply_disp == "1") $html .= $db_game['coin_name'];
 			else $html .= $db_game['coin_name_plural'];

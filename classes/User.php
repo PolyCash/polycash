@@ -102,7 +102,7 @@ class User {
 	}
 
 	public function ensure_user_in_game(&$game, $force_new) {
-		$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$this->db_user['user_id']."' AND ug.game_id='".$game->db_game['game_id']."' ORDER BY selected DESC;";
+		$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id LEFT JOIN user_strategies us ON us.strategy_id=ug.strategy_id LEFT JOIN featured_strategies fs ON us.featured_strategy_id=fs.featured_strategy_id WHERE ug.user_id='".$this->db_user['user_id']."' AND ug.game_id='".$game->db_game['game_id']."' ORDER BY ug.selected DESC;";
 		$r = $this->app->run_query($q);
 		
 		if ($force_new || $r->rowCount() == 0) {
@@ -129,7 +129,7 @@ class User {
 			$q = "UPDATE user_games SET account_id='".$account_id."' WHERE user_game_id='".$user_game_id."';";
 			$r = $this->app->run_query($q);
 			
-			$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_game_id='".$user_game_id."';";
+			$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id LEFT JOIN user_strategies us ON ug.strategy_id=us.strategy_id LEFT JOIN featured_strategies fs ON us.featured_strategy_id=fs.featured_strategy_id WHERE ug.user_game_id='".$user_game_id."';";
 			$r = $this->app->run_query($q);
 			$user_game = $r->fetch();
 		}

@@ -2357,3 +2357,11 @@ function manage_game_event_filter_changed() {
 	var event_filter = $('#manage_game_event_filter').val();
 	window.location = '/manage/'+games[0].game_url_identifier+'/?next=events&event_filter='+event_filter;
 }
+function apply_my_strategy() {
+	$.get("/strategies/apply_strategy.php?game_id="+games[0].game_id, function(result) {
+		var response = JSON.parse(result);
+		$('#apply_my_strategy_status').html(response['message']);
+		$('#apply_my_strategy_status').slideDown('fast');
+		setTimeout(function() {$('#apply_my_strategy_status').slideUp('fast');}, 10000);
+	});
+}
