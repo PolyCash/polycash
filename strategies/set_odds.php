@@ -24,7 +24,7 @@ if ($r->rowCount() > 0) {
 	
 	$hours_between_applications = 8;
 	$sec_between_applications = 60*60*$hours_between_applications;
-	$rand_sec_offset = rand(0, 60*60);
+	$rand_sec_offset = rand(0, 60*60*$hours_between_applications*0.75);
 	
 	if ($user_game['time_last_applied'] == "" || $user_game['time_last_applied'] <= time()-$sec_between_applications || !empty($_REQUEST['force'])) {
 		$account_q = "SELECT * FROM currency_accounts WHERE account_id='".$account_id."';";

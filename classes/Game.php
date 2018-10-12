@@ -407,6 +407,7 @@ class Game {
 			while ($user_game = $r->fetch()) {
 				$api_response = false;
 				$this->apply_user_strategy($log_text, $user_game, $mining_block_id, $current_round_id, $api_response, false);
+				if ($api_response) $log_text .= json_encode($api_response)."<br/>\n";
 			}
 			$this->update_option_votes();
 		}
@@ -1926,7 +1927,8 @@ class Game {
 			if ($r->rowCount() > 0) {
 				$prev_event = $r->fetch();
 				
-				$prev_option = $this->blockchain->app->run_query("SELECT * FROM game_defined_options WHERE game_id='".$this->db_game['game_id']."' AND event_index='".$prev_event['event_index']."' ORDER BY option_index DESC LIMIT 1;")->fetch();
+				$prev_option_q = "SELECT * FROM options WHERE event_id='".$prev_event['event_id']."' ORDER BY option_index DESC LIMIT 1;";
+				$prev_option = $this->blockchain->app->run_query($prev_option_q)->fetch();
 				$option_offset = $prev_option['option_index']+1;
 				$from_event_index = $prev_event['event_index']+1;
 			}
@@ -3038,9 +3040,15 @@ class Game {
 				$db_final_block = $block_r->fetch();
 				$final_block = max($start_block, max($this->db_game['game_starting_block']+1, $db_final_block['block_id']));
 				
-				$sec_to_add = strtotime($gde['event_final_time']) - $db_final_block['time_mined'];
-				$add_blocks = floor($sec_to_add/$this->blockchain->db_blockchain['seconds_per_block']);
-				if ($add_blocks > 0) $final_block += $add_blocks;
+				if ($final_block == $this->blockchain->last_block_id()) {
+					$sec_to_add = strtotime($gde['event_final_time']) - $db_final_block['time_mined'];
+					
+					$block_q = "SELECT * FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND time_mined <= ".strtotime($gde['event_final_time'])." ORDER BY time_mined DESC LIMIT 1;";
+					$block_r = $this->blockchain->app->run_query($block_q);
+					
+					$add_blocks = floor($sec_to_add/$this->blockchain->db_blockchain['seconds_per_block']);
+					if ($add_blocks > 0) $final_block += $add_blocks;
+				}
 			}
 			else $final_block = max($start_block, $this->db_game['game_starting_block']+1);
 			
