@@ -39,42 +39,20 @@ else $exchange_rate = 0;
 		<h1 style="margin-bottom: 2px;"><?php echo $game->db_game['name']; ?></h1>
 		<div class="row">
 			<div class="col-md-6">
-				<?php
-				$blocks_per_hour = 3600/$game->blockchain->db_blockchain['seconds_per_block'];
-				$seconds_per_round = $game->blockchain->db_blockchain['seconds_per_block']*$game->db_game['round_length'];
-				$round_reward = ($app->coins_created_in_round($game->db_game, $current_round))/pow(10,$game->db_game['decimal_places']);
-
-				if ($game->db_game['inflation'] == "linear") {
-					$miner_pct = 100*($game->db_game['pow_reward']*$game->db_game['round_length'])/($round_reward*pow(10,$game->db_game['decimal_places']));
-				}
-				else $miner_pct = 100*$game->db_game['exponential_inflation_minershare'];
-				?>
-				<div class="paragraph">
+				<p>
 					<?php
-					if ($game->db_game['final_round'] > 0) echo "This game runs for ".$game->db_game['final_round']." rounds (approximately ".$app->format_seconds($seconds_per_round*$game->db_game['final_round'])."). ";
-					
-					if ($game->db_game['inflation'] == "linear") {
-						$rounds_per_hour = 3600/($game->blockchain->db_blockchain['seconds_per_block']*$game->db_game['round_length']);
-						$coins_per_hour = $round_reward*$rounds_per_hour;
-						echo "Rounds take about ".$app->format_seconds($seconds_per_round)." and ";
-						echo $app->format_bignum($round_reward)." ".$game->db_game['coin_name_plural']." are created and given out at the end of each round. ";
-					}
-					else {
-						echo "Rounds take about ".$app->format_seconds($seconds_per_round)." each";
-						if ($game->db_game['inflation'] == "exponential") echo ". Votes can be traded for ".$game->db_game['coin_name_plural']." at a rate of ".$app->votes_per_coin($game->db_game)." votes per ".$game->db_game['coin_name'].", giving this game an inflation rate of approximately ".(100*$game->db_game['exponential_inflation_rate'])."% per round. ";
-						else ", and the supply of coins increases by ".(100*$game->db_game['exponential_inflation_rate'])."% after each round. ";
-					}
-					
-					if ($game->db_game['game_status'] == "running") {
-						echo "This game started at ".date("M j, Y g:ia", strtotime($game->db_game['start_datetime'])).". ";
-					}
-					else if (strtotime($game->db_game['start_datetime']) > 0) {
-						echo "This game starts in ".$app->format_seconds(strtotime($game->db_game['start_datetime'])-time())." on ".date("M d Y", strtotime($game->db_game['start_datetime'])).". ";
-					}
-					
 					if ($game->db_game['short_description'] != "") {
-						echo '</div><div class="paragraph">'.$game->db_game['short_description']." ";
+						echo str_replace("<br/>", " ", $game->db_game['short_description'])." ";
 					}
+					
+					$blocks_per_hour = 3600/$game->blockchain->db_blockchain['seconds_per_block'];
+					$seconds_per_round = $game->blockchain->db_blockchain['seconds_per_block']*$game->db_game['round_length'];
+					$round_reward = ($app->coins_created_in_round($game->db_game, $current_round))/pow(10,$game->db_game['decimal_places']);
+
+					if ($game->db_game['inflation'] == "linear") {
+						$miner_pct = 100*($game->db_game['pow_reward']*$game->db_game['round_length'])/($round_reward*pow(10,$game->db_game['decimal_places']));
+					}
+					else $miner_pct = 100*$game->db_game['exponential_inflation_minershare'];
 					
 					if ($exchange_rate > 0 && $game->db_game['buyin_policy'] != "none") {
 						if ($game->escrow_value(false) > 0) {
@@ -87,59 +65,37 @@ else $exchange_rate = 0;
 						else echo "The";
 						echo " exchange rate is ".$app->format_bignum($exchange_rate)." ".$game->db_game['coin_name_plural']." per ".$invite_currency['short_name'].". ";
 					}
-					?>
-				</div>
-				<?php
-				if ($game->db_game['giveaway_status'] == "public_pay" || $game->db_game['giveaway_status'] == "invite_pay") {
-					$q = "SELECT * FROM currencies WHERE currency_id='".$game->db_game['invite_currency']."';";
-					$r = $app->run_query($q);
-					if ($r->rowCount() > 0) {
-						$invite_currency = $r->fetch();
-						echo '<div class="paragraph">';
-						
-						$receive_disp = $app->format_bignum($game->db_game['giveaway_amount']/pow(10,$game->db_game['decimal_places']));
-						if ($game->db_game['giveaway_status'] == "invite_pay" || $game->db_game['giveaway_status'] == "invite_free") echo "You need an invitation to join this game. After receiving an invitation you can join";
-						else echo 'You can join this game';
-						echo ' by buying '.$receive_disp.' ';
-						if ($receive_disp == '1') echo $game->db_game['coin_name'];
-						else echo $game->db_game['coin_name_plural'];
-						
-						$buyin_disp = $app->format_bignum($game->db_game['invite_cost']);
-						echo ' for '.$buyin_disp.' ';
-						echo $invite_currency['short_name'];
-						if ($buyin_disp != '1') echo "s";
-						echo ". ";
-
-						/*if ($game->db_game['game_status'] == "running") {
-							echo "This game started ".$app->format_seconds(time()-$game->db_game['start_time'])." ago; ".$app->format_bignum($game->coins_in_existence(false)/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']."  are already in circulation. ";
+					
+					if ($game->db_game['giveaway_status'] == "public_pay" || $game->db_game['giveaway_status'] == "invite_pay") {
+						$q = "SELECT * FROM currencies WHERE currency_id='".$game->db_game['invite_currency']."';";
+						$r = $app->run_query($q);
+						if ($r->rowCount() > 0) {
+							$invite_currency = $r->fetch();
+							
+							$receive_disp = $app->format_bignum($game->db_game['giveaway_amount']/pow(10,$game->db_game['decimal_places']));
+							if ($game->db_game['giveaway_status'] == "invite_pay" || $game->db_game['giveaway_status'] == "invite_free") echo "You need an invitation to join this game. After receiving an invitation you can join";
+							else echo 'You can join this game';
+							echo ' by buying '.$receive_disp.' ';
+							if ($receive_disp == '1') echo $game->db_game['coin_name'];
+							else echo $game->db_game['coin_name_plural'];
+							
+							$buyin_disp = $app->format_bignum($game->db_game['invite_cost']);
+							echo ' for '.$buyin_disp.' ';
+							echo $invite_currency['short_name'];
+							if ($buyin_disp != '1') echo "s";
+							echo ". ";
 						}
-						else {
-							if ($game->db_game['start_condition'] == "fixed_time") {
-								$unix_starttime = strtotime($game->db_game['start_datetime']);
-								echo "This game starts in ".$app->format_seconds($unix_starttime-time())." at ".date("M j, Y g:ia", $unix_starttime).". ";
-							}
-							else {
-								$current_players = $game->paid_players_in_game();
-								echo "This game will start when ".$game->db_game['start_condition_players']." player";
-								if ($game->db_game['start_condition_players'] == 1) echo " joins";
-								else echo "s have joined";
-								echo ". ".($game->db_game['start_condition_players']-$current_players)." player";
-								if ($game->db_game['start_condition_players']-$current_players == 1) echo " is";
-								else echo "s are";
-								echo " needed, ".$current_players;
-								if ($current_players == 1) echo " has";
-								else echo " have";
-								echo " already joined. ";
-							}
-						}*/
-						echo '</div>';
 					}
-				}
-				/* ?>
-				<div class="paragraph">
-					In this game you can win <?php echo $game->db_game['coin_name_plural']; ?> by casting your votes correctly.  Votes build up over time based on the number of <?php echo $game->db_game['coin_name_plural']; ?> that you hold.  When you vote for <?php echo $app->prepend_a_or_an($game->db_game['option_name']); ?>, your votes are used up but your <?php echo $game->db_game['coin_name_plural']; ?> are retained. By collaborating with your teammates against competing groups, you can make money by accumulating <?php echo $game->db_game['coin_name_plural']; ?> faster than the other players.  Through the <?php echo $GLOBALS['coin_brand_name']; ?> API you can code up a custom strategy which makes smart, real-time decisions about how to cast your votes.
-				</div>*/ ?>
-				<div class="paragraph">
+					
+					if ($game->db_game['game_status'] == "running") {
+						echo "This game started ".date("M j, Y g:ia", strtotime($game->db_game['start_datetime'])).". ";
+					}
+					else if (strtotime($game->db_game['start_datetime']) > 0) {
+						echo "This game starts in ".$app->format_seconds(strtotime($game->db_game['start_datetime'])-time())." on ".date("M d Y", strtotime($game->db_game['start_datetime'])).". ";
+					}
+					?>
+				</p>
+				<p>
 					<a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; 
 					<?php
 					$faucet_io = $game->check_faucet(false);
@@ -152,7 +108,7 @@ else $exchange_rate = 0;
 					<?php if ($app->user_can_edit_game($thisuser, $game)) { ?>
 					<a class="btn btn-sm btn-warning" href="/manage/<?php echo $game->db_game['url_identifier']; ?>/"><i class="fa fa-edit"></i> Manage this Game</a>
 					<?php } ?>
-				</div>
+				</p>
 			</div>
 			<div class="col-md-6">
 				<div style="border: 1px solid #ccc; padding: 10px; background-color: #fff;">

@@ -151,10 +151,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			
 			while ($user_game = $rr->fetch()) {
 				$user = new User($app, $user_game['user_id']);
-				$last_block_id = $running_games[$game_i]->blockchain->last_block_id();
-				$round_id = $running_games[$game_i]->block_to_round($last_block_id+1);
-				list($user_votes, $votes_value) = $user->user_current_votes($running_games[$game_i], $last_block_id, $round_id, $user_game);
-				$account_value = ($running_games[$game_i]->account_balance($user_game['account_id'])+$votes_value)/pow(10,$running_games[$game_i]->db_game['decimal_places']);
+				$user_pending_bets = $running_games[$game_i]->user_pending_bets($user_game);
+				$account_value = ($running_games[$game_i]->account_balance($user_game['account_id'])+$user_pending_bets)/pow(10,$running_games[$game_i]->db_game['decimal_places']);
 				
 				$qqq = "UPDATE user_games SET account_value='".$account_value."' WHERE user_game_id='".$user_game['user_game_id']."';";
 				$rrr = $app->run_query($qqq);
