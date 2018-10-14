@@ -191,7 +191,8 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 				<li<?php if ($nav_tab_selected == "manage") echo ' class="active"'; ?>><a href="/manage/"><i class="fa fa-plus-circle"></i> <span>Create a New Game</span></a></li>
 			</ul>
 			<?php
-			if (empty($game) && $nav_tab_selected != "cards" && $nav_tab_selected != "accounts") {
+			// Not relevant: disabled for now
+			if (false && empty($game) && $nav_tab_selected != "cards" && $nav_tab_selected != "accounts") {
 				?>
 				<ul class="sidebar-menu" data-widget="tree">
 					<li class="header">Categories</li>
