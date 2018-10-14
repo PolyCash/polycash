@@ -2922,7 +2922,13 @@ class Game {
 	
 	public function check_faucet($user_game) {
 		if ($this->db_game['faucet_policy'] == "on") {
-			if (empty($user_game) || $user_game['faucet_claims'] == 0) {
+			if ($user_game) {
+				$user_faucet_claims = $this->blockchain->app->run_query("SELECT SUM(faucet_claims) FROM user_games WHERE user_id='".$user_game['user_id']."' AND game_id='".$user_game['game_id']."';")->fetch();
+				$user_faucet_claims = $user_faucet_claims['SUM(faucet_claims)'];
+			}
+			else $user_faucet_claims = 0;
+			
+			if (empty($user_game) || $user_faucet_claims == 0) {
 				$faucet_account = $this->check_set_faucet_account();
 				
 				$q = "SELECT *, SUM(gio.colored_amount) AS colored_amount_sum FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.spend_status='unspent' AND k.account_id='".$faucet_account['account_id']."' AND gio.option_id IS NULL GROUP BY a.address_id ORDER BY colored_amount_sum DESC;";
