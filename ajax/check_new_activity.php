@@ -36,7 +36,7 @@ if ($thisuser) {
 	$user_pending_bets = $game->user_pending_bets($user_game);
 	$game_pending_bets = $game->pending_bets();
 	list($vote_supply, $vote_supply_value) = $game->vote_supply($last_block_id, $current_round, $coins_per_vote);
-	$account_value = $game->account_balance($user_game['account_id'])+$user_pending_bets+$votes_value;
+	$account_value = $game->account_balance($user_game['account_id'])+$user_pending_bets;
 }
 else {
 	$account_value = 0;

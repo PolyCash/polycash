@@ -5,7 +5,7 @@ include(realpath(dirname(dirname(__FILE__)))."/includes/get_session.php");
 
 $api_key = $_REQUEST['api_key'];
 
-$q = "SELECT *, g.game_id AS game_id FROM users u JOIN user_games ug ON u.user_id=ug.user_id JOIN games g ON ug.game_id=g.game_id JOIN user_strategies s ON ug.strategy_id=s.strategy_id LEFT JOIN featured_strategies fs ON s.featured_strategy_id=fs.featured_strategy_id WHERE ug.api_access_code=".$app->quote_escape($api_key).";";
+$q = "SELECT *, u.user_id AS user_id, g.game_id AS game_id FROM users u JOIN user_games ug ON u.user_id=ug.user_id JOIN games g ON ug.game_id=g.game_id JOIN user_strategies s ON ug.strategy_id=s.strategy_id LEFT JOIN featured_strategies fs ON s.featured_strategy_id=fs.featured_strategy_id WHERE ug.api_access_code=".$app->quote_escape($api_key).";";
 $r = $app->run_query($q);
 
 if ($r->rowCount() > 0) {
@@ -39,124 +39,127 @@ if ($r->rowCount() > 0) {
 			$event_r = $app->run_query($event_q);
 			$num_events = $event_r->rowCount();
 			
-			$amount_mode = "per_event";
-			if (!empty($_REQUEST['amount_mode']) && $_REQUEST['amount_mode'] == "inflation_only") $amount_mode = "inflation_only";
-			
-			if ($amount_mode == "per_event") {
-				$aggressiveness = "low";
-				$frac_mature_bal = 0.25;
+			if ($num_events > 0) {
+				$amount_mode = "per_event";
+				if (!empty($_REQUEST['amount_mode']) && $_REQUEST['amount_mode'] == "inflation_only") $amount_mode = "inflation_only";
 				
-				if (!empty($_REQUEST['aggressiveness']) && $_REQUEST['aggressiveness'] == "high") {
-					$aggressiveness = "high";
-					$frac_mature_bal = 0.5;
-				}
-				
-				$mature_balance = $user->mature_balance($game, $user_game);
-				$coins_per_event = ($mature_balance*$frac_mature_bal/$num_events)/pow(10, $game->db_game['decimal_places']);
-			}
-			else {
-				list($user_votes, $votes_value) = $thisuser->user_current_votes($game, $blockchain->last_block_id(), $round_id, $user_game);
-				$coins_per_event = ceil($votes_value/$num_events)/pow(10, $game->db_game['decimal_places']);
-			}
-			
-			if ($coins_per_event > 0) {
-				$total_cost = $coins_per_event*$num_events*pow(10, $game->db_game['decimal_places']);
-				
-				$q = "SELECT *, SUM(gio.colored_amount) AS coins, SUM(gio.colored_amount)*(".($blockchain->last_block_id()+1)."-io.create_block_id) AS coin_blocks, SUM(gio.colored_amount*(".$round_id."-gio.create_round_id)) AS coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.is_resolved=1 AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account['account_id']."' GROUP BY gio.io_id";
-				if ($game->db_game['inflation'] == "exponential" && $game->db_game['exponential_inflation_rate'] > 0) $q .= " HAVING(".$game->db_game['payout_weight']."s*".$coins_per_vote.") < ".$total_cost;
-				$q .= " ORDER BY coins DESC;";
-				$r = $app->run_query($q);
-				
-				$mandatory_bets = 0;
-				$io_amount_sum = 0;
-				$game_amount_sum = 0;
-				$io_ids = array();
-				$keep_looping = true;
-				
-				while ($keep_looping && $io = $r->fetch()) {
-					$game_amount_sum += $io['coins'];
-					$io_amount_sum += $io['amount'];
+				if ($amount_mode == "per_event") {
+					$aggressiveness = "low";
+					$frac_mature_bal = 0.25;
 					
-					if ($game->db_game['inflation'] == "exponential" && $game->db_game['exponential_inflation_rate'] > 0) {
-						if ($game->db_game['payout_weight'] == "coin_block") $votes = $io['coin_blocks'];
-						else if ($game->db_game['payout_weight'] == "coin_round") $votes = $io['coin_rounds'];
-						$this_mandatory_bets = floor($votes*$coins_per_vote);
-					}
-					else $this_mandatory_bets = 0;
-					
-					$mandatory_bets += $this_mandatory_bets;
-					array_push($io_ids, $io['io_id']);
-					
-					$burn_game_amount = $total_cost-$mandatory_bets;
-					if ($amount_mode != "inflation_only" && $game_amount_sum >= $burn_game_amount) $keep_looping = false;
-				}
-				
-				if ($burn_game_amount < 0 || $burn_game_amount > $game_amount_sum) die("Failed to determine a valid burn amount (".$burn_game_amount." vs ".$game_amount_sum.").");
-				
-				$io_nonfee_amount = $io_amount_sum-$fee_amount;
-				$game_coins_per_coin = $game_amount_sum/$io_nonfee_amount;
-				
-				$burn_address = $app->fetch_address_in_account($account['account_id'], 0);
-				$burn_amount = ceil($burn_game_amount/$game_coins_per_coin);
-				
-				$remaining_io_amount = $io_nonfee_amount-$burn_amount;
-				$io_amount_per_event = $remaining_io_amount/$num_events;
-				
-				$io_amounts = array($burn_amount);
-				$address_ids = array($burn_address['address_id']);
-				$io_spent_sum = $burn_amount;
-				
-				while ($db_event = $event_r->fetch()) {
-					$option_q = "SELECT op.*, gdo.target_probability FROM options op JOIN game_defined_options gdo ON op.event_option_index=gdo.option_index WHERE op.event_id='".$db_event['event_id']."' AND gdo.game_id='".$game->db_game['game_id']."' AND gdo.event_index='".$db_event['event_index']."' ORDER BY op.option_index ASC;";
-					$option_r = $app->run_query($option_q);
-					
-					$address_error = false;
-					$thisevent_io_amounts = array();
-					$thisevent_address_ids = array();
-					$thisevent_io_sum = 0;
-					
-					while ($option = $option_r->fetch()) {
-						$this_address = $app->fetch_address_in_account($account['account_id'], $option['option_index']);
-						
-						if ($this_address) {
-							$io_amount = round($option['target_probability']*$io_amount_per_event);
-							
-							array_push($thisevent_io_amounts, $io_amount);
-							array_push($thisevent_address_ids, $this_address['address_id']);
-							$thisevent_io_sum += $io_amount;
-						}
-						else {
-							$address_error = true;
-							$app->output_message(7, "Cancelling transaction.. ".$option['name']." has no address.", false);
-							die();
-						}
+					if (!empty($_REQUEST['aggressiveness']) && $_REQUEST['aggressiveness'] == "high") {
+						$aggressiveness = "high";
+						$frac_mature_bal = 0.5;
 					}
 					
-					if (!$address_error) {
-						for ($i=0; $i<count($thisevent_io_amounts); $i++) {
-							array_push($io_amounts, $thisevent_io_amounts[$i]);
-							array_push($address_ids, $thisevent_address_ids[$i]);
-							$io_spent_sum += $thisevent_io_amounts[$i];
-						}
-					}
-				}
-				$overshoot_amount = $io_spent_sum-$io_nonfee_amount;
-				$io_amounts[count($io_amounts)-1] -= $overshoot_amount;
-				
-				$error_message = false;
-				$transaction_id = $blockchain->create_transaction("transaction", $io_amounts, false, $io_ids, $address_ids, $fee_amount, $error_message);
-				
-				if ($transaction_id) {
-					$strategy_q = "UPDATE user_strategies SET time_last_applied='".(time()+$rand_sec_offset)."' WHERE strategy_id='".$user_game['strategy_id']."';";
-					$strategy_r = $app->run_query($strategy_q);
-					
-					$app->output_message(1, "Great, your transaction was submitted. <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction_id."/\">View Transaction</a>", false);
+					$mature_balance = $user->mature_balance($game, $user_game);
+					$coins_per_event = ($mature_balance*$frac_mature_bal/$num_events)/pow(10, $game->db_game['decimal_places']);
 				}
 				else {
-					$app->output_message(6, "TX Error: ".$error_message, false);
+					list($user_votes, $votes_value) = $thisuser->user_current_votes($game, $blockchain->last_block_id(), $round_id, $user_game);
+					$coins_per_event = ceil($votes_value/$num_events)/pow(10, $game->db_game['decimal_places']);
 				}
+				
+				if ($coins_per_event > 0) {
+					$total_cost = $coins_per_event*$num_events*pow(10, $game->db_game['decimal_places']);
+					
+					$q = "SELECT *, SUM(gio.colored_amount) AS coins, SUM(gio.colored_amount)*(".($blockchain->last_block_id()+1)."-io.create_block_id) AS coin_blocks, SUM(gio.colored_amount*(".$round_id."-gio.create_round_id)) AS coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.is_resolved=1 AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account['account_id']."' GROUP BY gio.io_id";
+					if ($game->db_game['inflation'] == "exponential" && $game->db_game['exponential_inflation_rate'] > 0) $q .= " HAVING(".$game->db_game['payout_weight']."s*".$coins_per_vote.") < ".$total_cost;
+					$q .= " ORDER BY coins DESC;";
+					$r = $app->run_query($q);
+					
+					$mandatory_bets = 0;
+					$io_amount_sum = 0;
+					$game_amount_sum = 0;
+					$io_ids = array();
+					$keep_looping = true;
+					
+					while ($keep_looping && $io = $r->fetch()) {
+						$game_amount_sum += $io['coins'];
+						$io_amount_sum += $io['amount'];
+						
+						if ($game->db_game['inflation'] == "exponential" && $game->db_game['exponential_inflation_rate'] > 0) {
+							if ($game->db_game['payout_weight'] == "coin_block") $votes = $io['coin_blocks'];
+							else if ($game->db_game['payout_weight'] == "coin_round") $votes = $io['coin_rounds'];
+							$this_mandatory_bets = floor($votes*$coins_per_vote);
+						}
+						else $this_mandatory_bets = 0;
+						
+						$mandatory_bets += $this_mandatory_bets;
+						array_push($io_ids, $io['io_id']);
+						
+						$burn_game_amount = $total_cost-$mandatory_bets;
+						if ($amount_mode != "inflation_only" && $game_amount_sum >= $burn_game_amount) $keep_looping = false;
+					}
+					
+					if ($burn_game_amount < 0 || $burn_game_amount > $game_amount_sum) die("Failed to determine a valid burn amount (".$burn_game_amount." vs ".$game_amount_sum.").");
+					
+					$io_nonfee_amount = $io_amount_sum-$fee_amount;
+					$game_coins_per_coin = $game_amount_sum/$io_nonfee_amount;
+					
+					$burn_address = $app->fetch_address_in_account($account['account_id'], 0);
+					$burn_amount = ceil($burn_game_amount/$game_coins_per_coin);
+					
+					$remaining_io_amount = $io_nonfee_amount-$burn_amount;
+					$io_amount_per_event = $remaining_io_amount/$num_events;
+					
+					$io_amounts = array($burn_amount);
+					$address_ids = array($burn_address['address_id']);
+					$io_spent_sum = $burn_amount;
+					
+					while ($db_event = $event_r->fetch()) {
+						$option_q = "SELECT op.*, gdo.target_probability FROM options op JOIN game_defined_options gdo ON op.event_option_index=gdo.option_index WHERE op.event_id='".$db_event['event_id']."' AND gdo.game_id='".$game->db_game['game_id']."' AND gdo.event_index='".$db_event['event_index']."' ORDER BY op.option_index ASC;";
+						$option_r = $app->run_query($option_q);
+						
+						$address_error = false;
+						$thisevent_io_amounts = array();
+						$thisevent_address_ids = array();
+						$thisevent_io_sum = 0;
+						
+						while ($option = $option_r->fetch()) {
+							$this_address = $app->fetch_address_in_account($account['account_id'], $option['option_index']);
+							
+							if ($this_address) {
+								$io_amount = round($option['target_probability']*$io_amount_per_event);
+								
+								array_push($thisevent_io_amounts, $io_amount);
+								array_push($thisevent_address_ids, $this_address['address_id']);
+								$thisevent_io_sum += $io_amount;
+							}
+							else {
+								$address_error = true;
+								$app->output_message(8, "Cancelling transaction.. ".$option['name']." has no address.", false);
+								die();
+							}
+						}
+						
+						if (!$address_error) {
+							for ($i=0; $i<count($thisevent_io_amounts); $i++) {
+								array_push($io_amounts, $thisevent_io_amounts[$i]);
+								array_push($address_ids, $thisevent_address_ids[$i]);
+								$io_spent_sum += $thisevent_io_amounts[$i];
+							}
+						}
+					}
+					$overshoot_amount = $io_spent_sum-$io_nonfee_amount;
+					$io_amounts[count($io_amounts)-1] -= $overshoot_amount;
+					
+					$error_message = false;
+					$transaction_id = $blockchain->create_transaction("transaction", $io_amounts, false, $io_ids, $address_ids, $fee_amount, $error_message);
+					
+					if ($transaction_id) {
+						$strategy_q = "UPDATE user_strategies SET time_last_applied='".(time()+$rand_sec_offset)."' WHERE strategy_id='".$user_game['strategy_id']."';";
+						$strategy_r = $app->run_query($strategy_q);
+						
+						$app->output_message(1, "Great, your transaction was submitted. <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction_id."/\">View Transaction</a>", false);
+					}
+					else {
+						$app->output_message(7, "TX Error: ".$error_message, false);
+					}
+				}
+				else $app->output_message(6, "Invalid coins_per_event.\n", false);
 			}
-			else $app->output_message(5, "Invalid coins_per_event.\n", false);
+			else $app->output_message(5, "There are no events running right now.\n", false);
 		}
 		else $app->output_message(4, "Invalid account ID.\n");
 	}

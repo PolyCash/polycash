@@ -336,7 +336,12 @@ class Event {
 				$html .= '
 					<div class="ball vote_option_box" style="width: '.$box_diam.'px; height: '.$box_diam.'px;';
 					if ($holder_width != $box_diam) $html .= 'left: '.(($holder_width-$box_diam)/2).'px; top: '.(($holder_width-$box_diam)/2).'px;';
-					if ($round_stats[$i]['image_id'] > 0) $html .= 'background-image: url(\''.$this->game->blockchain->app->image_url($round_stats[$i]).'\');';
+					
+					if ($round_stats[$i]['image_id'] > 0) $bg_im_url = $this->game->blockchain->app->image_url($round_stats[$i]);
+					else if (!empty($round_stats[$i]['content_url'])) $bg_im_url = $round_stats[$i]['content_url'];
+					else $bg_im_url = "";
+					if ($bg_im_url != "") $html .= 'background-image: url('.$this->game->blockchain->app->quote_escape($bg_im_url).');';
+					
 					if ($clickable) $html .= 'cursor: pointer;';
 					if ($this->db_event['event_winning_rule'] == "max_below_cap" && $option_votes > $max_sum_votes) $html .= 'opacity: 0.5;';
 					$html .= '" id="game'.$game_instance_id.'_event'.$game_event_index.'_vote_option_'.$i.'"';

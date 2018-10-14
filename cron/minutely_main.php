@@ -149,11 +149,14 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			$qq = "SELECT * FROM users u JOIN user_games ug ON u.user_id=ug.user_id WHERE ug.game_id='".$running_game['game_id']."' ORDER BY u.user_id ASC;";
 			$rr = $app->run_query($qq);
 			
-			while ($db_user = $rr->fetch()) {
-				$user = new User($app, $db_user['user_id']);
-				$account_value = $running_games[$game_i]->account_balance($db_user['account_id'])/pow(10,$running_games[$game_i]->db_game['decimal_places']);
+			while ($user_game = $rr->fetch()) {
+				$user = new User($app, $user_game['user_id']);
+				$last_block_id = $running_games[$game_i]->blockchain->last_block_id();
+				$round_id = $running_games[$game_i]->block_to_round($last_block_id+1);
+				list($user_votes, $votes_value) = $user->user_current_votes($running_games[$game_i], $last_block_id, $round_id, $user_game);
+				$account_value = ($running_games[$game_i]->account_balance($user_game['account_id'])+$votes_value)/pow(10,$running_games[$game_i]->db_game['decimal_places']);
 				
-				$qqq = "UPDATE user_games SET account_value='".$account_value."' WHERE user_game_id='".$db_user['user_game_id']."';";
+				$qqq = "UPDATE user_games SET account_value='".$account_value."' WHERE user_game_id='".$user_game['user_game_id']."';";
 				$rrr = $app->run_query($qqq);
 			}
 		}

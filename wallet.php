@@ -537,7 +537,7 @@ if ($thisuser && $game) {
 	$user_pending_bets = $game->user_pending_bets($user_game);
 	$game_pending_bets = $game->pending_bets();
 	list($vote_supply, $vote_supply_value) = $game->vote_supply($last_block_id, $current_round, $coins_per_vote);
-	$account_value = $game->account_balance($user_game['account_id'])+$user_pending_bets+$votes_value;
+	$account_value = $game->account_balance($user_game['account_id'])+$user_pending_bets;
 	
 	$blockchain_last_block_id = $game->blockchain->last_block_id();
 	$blockchain_current_round = $game->block_to_round($blockchain_last_block_id+1);
@@ -1185,7 +1185,7 @@ if ($thisuser && $game) {
 					<?php
 					$perm_to_invite = $thisuser->user_can_invite_game($user_game);
 					if ($perm_to_invite) {
-						echo '<a class="btn btn-primary" href="" onclick="manage_game_invitations('.$user_game['game_id'].'); return false;">Invitations</a>';
+						echo '<a class="btn btn-primary" href="" onclick="manage_game_invitations('.$game->db_game['game_id'].'); return false;">Invitations</a>';
 					}
 					else echo "Sorry, you don't have permission to send invitations for this game.";
 					?>

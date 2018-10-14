@@ -427,10 +427,10 @@ class App {
 		$number = abs($number);
 		if ($number > 1) $number = $this->to_significant_digits($number, 5);
 		
-		if ($number > pow(10, 9)) {
+		if ($number >= pow(10, 9)) {
 			return $sign.($number/pow(10, 9))."B";
 		}
-		else if ($number > pow(10, 6)) {
+		else if ($number >= pow(10, 6)) {
 			return $sign.($number/pow(10, 6))."M";
 		}
 		else if ($number > pow(10, 5)) {
@@ -593,7 +593,7 @@ class App {
 	}
 	
 	public function normalize_uri_part($uri_part) {
-		return $this->make_alphanumeric(str_replace(" ", "-", strtolower($uri_part)), "-().:;");
+		return $this->make_alphanumeric(str_replace(" ", "-", strtolower($uri_part)), "-().");
 	}
 	
 	public function prepend_a_or_an($word) {
@@ -1051,7 +1051,7 @@ class App {
 		else $html .= "Game does not end";
 		$html .= "</div></div>\n";
 		
-		$html .= '<div class="row"><div class="col-sm-5">Starts on block:</div><div class="col-sm-7">'.$db_game['game_starting_block']."</div></div>\n";
+		$html .= '<div class="row"><div class="col-sm-5">Starts on block:</div><div class="col-sm-7"><a href="/explorer/games/'.$db_game['url_identifier'].'/blocks/'.$db_game['game_starting_block'].'">'.$db_game['game_starting_block']."</a></div></div>\n";
 		
 		$html .= '<div class="row"><div class="col-sm-5">Escrow address:</div><div class="col-sm-7" style="font-size: 11px;">';
 		if ($db_game['escrow_address'] == "") $html .= "None";
@@ -1220,7 +1220,6 @@ class App {
 				$var_name = $event_verbatim_vars[$j][1];
 				$var_val = $db_event[$var_name];
 				
-				if ($var_name == "event_index") $var_val = $i;
 				if ($var_type == "int" && $var_val != "") $var_val = (int) $var_val;
 				
 				$temp_event[$var_name] = $var_val;
@@ -1718,22 +1717,22 @@ class App {
 					if ($this->game_def_to_text($new_game_obj['events'][$i]) != $initial_event_text) {
 						$reset_block = $this->min_excluding_false(array($reset_block, $initial_game_obj['events'][$i]->event_starting_block, $new_game_obj['events'][$i]->event_starting_block));
 						
-						if ($reset_event_index === false) $reset_event_index = $i;
+						if ($reset_event_index === false) $reset_event_index = $new_game_obj['events'][$i]->event_index;
 					}
 				}
 				
-				$set_events_from = $this->min_excluding_false(array($reset_event_index, $matched_events));
+				$set_events_from = $this->min_excluding_false(array($reset_event_index, $matched_events+1));
 				
 				if ($set_events_from !== false) {
 					$log_message .= "Resetting events from #".$set_events_from."\n";
 					$game->reset_events_from_index($set_events_from);
 				}
 				
-				if (count($new_game_obj['events']) > $set_events_from) {
-					if (!is_numeric($reset_block)) $reset_block = $new_game_obj['events'][$set_events_from]->event_starting_block;
+				if (count($new_game_obj['events'])+1 > $set_events_from) {
+					if (!is_numeric($reset_block)) $reset_block = $new_game_obj['events'][$set_events_from-1]->event_starting_block;
 					
-					for ($i=$set_events_from; $i<count($new_game_obj['events']); $i++) {
-						$gde = get_object_vars($new_game_obj['events'][$i]);
+					for ($i=$set_events_from; $i<count($new_game_obj['events'])+1; $i++) {
+						$gde = get_object_vars($new_game_obj['events'][$i-1]);
 						$this->check_set_gde($game, $gde, $event_verbatim_vars, $sports_entity_type['entity_type_id'], $leagues_entity_type['entity_type_id']);
 					}
 				}

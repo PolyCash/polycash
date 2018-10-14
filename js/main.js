@@ -743,7 +743,7 @@ var game_form_vars = "blockchain_id,event_rule,option_group_id,event_entity_type
 function create_new_game() {
 	$('#new_game_save_btn').html("Loading...");
 	
-	var url_string = "/ajax/manage_game.php?action=new&name="+$('#new_game_name').val()+"&blockchain_id="+$('#new_game_blockchain_id').val();
+	var url_string = "/ajax/manage_game.php?action=new&name="+encodeURIComponent($('#new_game_name').val())+"&blockchain_id="+$('#new_game_blockchain_id').val();
 
 	var genesis_type = $('#new_game_genesis_type').val();
 	url_string += "&genesis_type="+genesis_type;
@@ -834,7 +834,7 @@ function manage_game(game_id, action) {
 					json_result[game_form_vars[i]] = parseInt(json_result[game_form_vars[i]])/Math.pow(10,games[0].decimal_places);
 				}
 				else if (game_form_vars[i] == "exponential_inflation_minershare" || game_form_vars[i] == "exponential_inflation_rate" || game_form_vars[i] == "default_max_voting_fraction") {
-					json_result[game_form_vars[i]] = Math.round(json_result[game_form_vars[i]]*100*Math.pow(10,games[0].decimal_places))/Math.pow(10,games[0].decimal_places);
+					json_result[game_form_vars[i]] = parseFloat(json_result[game_form_vars[i]]);
 				}
 				else if (game_form_vars[i] == "per_user_buyin_cap" || game_form_vars[i] == "game_buyin_cap") {
 					if (json_result[game_form_vars[i]].indexOf('.') != -1) {

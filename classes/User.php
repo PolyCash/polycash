@@ -66,6 +66,8 @@ class User {
 		$html .= '<div class="col-sm-3 text-right"><font class="redtext">'.$this->app->format_bignum($immature_balance/pow(10,$game->db_game['decimal_places'])).'</font> '.$game->db_game['coin_name_plural'].'</div>';
 		$html .= "</div>\n";
 		
+		$html .= '<div class="row"><div class="col-sm-2">Pending bets:</div><div class="col-sm-3 text-right"><font class="greentext">'.$this->app->format_bignum($pending_bets/pow(10,$game->db_game['decimal_places'])).'</font> '.$game->db_game['coin_name_plural'].'</div></div>'."\n";
+		
 		if ($game->db_game['payout_weight'] != "coin") {
 			if ($game->db_game['inflation'] == "exponential") {
 				$html .= '<div class="row"><div class="col-sm-2">Unrealized gains:</div><div class="col-sm-3 text-right"><font class="greentext">'.$this->app->format_bignum($votes_value/pow(10,$game->db_game['decimal_places'])).'</font> '.$game->db_game['coin_name_plural'].'</div></div>'."\n";
@@ -74,8 +76,6 @@ class User {
 				$html .= '<div class="row"><div class="col-sm-2">Votes:</div><div class="col-sm-3 text-right"><font class="greentext">'.$this->app->format_bignum($user_votes/pow(10,$game->db_game['decimal_places'])).'</font> votes available</div></div>'."\n";
 			}
 		}
-		
-		$html .= '<div class="row"><div class="col-sm-2">Pending bets:</div><div class="col-sm-3 text-right"><font class="greentext">'.$this->app->format_bignum($pending_bets/pow(10,$game->db_game['decimal_places'])).'</font> '.$game->db_game['coin_name_plural'].'</div></div>'."\n";
 		
 		$html .= "Last block completed: <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$last_block_id."\">#".$last_block_id."</a>, currently mining <a href=\"/explorer/games/".$game->db_game['url_identifier']."/transactions/unconfirmed\">#".($last_block_id+1)."</a><br/>\n";
 		$html .= "Current votes count towards block ".$block_within_round."/".$game->db_game['round_length']." in round #".$game->round_to_display_round($current_round).".<br/>\n";
@@ -102,7 +102,7 @@ class User {
 	}
 
 	public function ensure_user_in_game(&$game, $force_new) {
-		$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id LEFT JOIN user_strategies us ON us.strategy_id=ug.strategy_id LEFT JOIN featured_strategies fs ON us.featured_strategy_id=fs.featured_strategy_id WHERE ug.user_id='".$this->db_user['user_id']."' AND ug.game_id='".$game->db_game['game_id']."' ORDER BY ug.selected DESC;";
+		$q = "SELECT *, ug.user_id AS user_id, ug.game_id AS game_id FROM user_games ug JOIN games g ON ug.game_id=g.game_id LEFT JOIN user_strategies us ON us.strategy_id=ug.strategy_id LEFT JOIN featured_strategies fs ON us.featured_strategy_id=fs.featured_strategy_id WHERE ug.user_id='".$this->db_user['user_id']."' AND ug.game_id='".$game->db_game['game_id']."' ORDER BY ug.selected DESC;";
 		$r = $this->app->run_query($q);
 		
 		if ($force_new || $r->rowCount() == 0) {
@@ -129,7 +129,7 @@ class User {
 			$q = "UPDATE user_games SET account_id='".$account_id."' WHERE user_game_id='".$user_game_id."';";
 			$r = $this->app->run_query($q);
 			
-			$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id LEFT JOIN user_strategies us ON ug.strategy_id=us.strategy_id LEFT JOIN featured_strategies fs ON us.featured_strategy_id=fs.featured_strategy_id WHERE ug.user_game_id='".$user_game_id."';";
+			$q = "SELECT *, ug.user_id AS user_id, ug.game_id AS game_id FROM user_games ug JOIN games g ON ug.game_id=g.game_id LEFT JOIN user_strategies us ON ug.strategy_id=us.strategy_id LEFT JOIN featured_strategies fs ON us.featured_strategy_id=fs.featured_strategy_id WHERE ug.user_game_id='".$user_game_id."';";
 			$r = $this->app->run_query($q);
 			$user_game = $r->fetch();
 		}

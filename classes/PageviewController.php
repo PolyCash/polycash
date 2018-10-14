@@ -66,6 +66,8 @@ class PageviewController {
 			$bname = 'Netscape';
 			$ub = "Netscape";
 		}
+		else $ub = "";
+		
 		// finally get the correct version number
 		$known = array('Version', $ub, 'other');
 		$pattern = '#(?<browser>' . join('|', $known) .

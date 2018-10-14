@@ -181,6 +181,7 @@ else {
 				else {
 					$sports_entity_type = $app->check_set_entity_type("sports");
 					$leagues_entity_type = $app->check_set_entity_type("leagues");
+					$teams_entity_type = $app->check_set_entity_type("teams");
 					
 					$q = "SELECT MAX(event_index) FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."';";
 					$r = $app->run_query($q);
@@ -231,6 +232,9 @@ else {
 								}
 								else $this_sport_entity = false;
 								
+								$home_entity = $app->check_set_entity($teams_entity_type['entity_type_id'], $home);
+								$away_entity = $app->check_set_entity($teams_entity_type['entity_type_id'], $away);
+								
 								if ($league_col !== false) {
 									$league_name = $line_vals[$league_col];
 									if ($league_name != "") {
@@ -246,12 +250,12 @@ else {
 								$gde_ins_q .= ", event_index='".$event_index."', event_name=".$app->quote_escape($event_name).", event_starting_time='".$event_starting_time."', event_final_time='".$event_final_time."', event_payout_offset_time='0:00:00', option_name='team', option_name_plural='teams';";
 								$gde_ins_r = $app->run_query($gde_ins_q);
 								
-								$gdo_ins_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index=".$event_index.", option_index=0, name=".$app->quote_escape($home);
+								$gdo_ins_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index=".$event_index.", option_index=0, name=".$app->quote_escape($home).", entity_id='".$home_entity['entity_id']."'";
 								if ($home_target_prob) $gdo_ins_q .= ", target_probability=".$home_target_prob;
 								$gdo_ins_q .= ";";
 								$gdo_ins_r = $app->run_query($gdo_ins_q);
 								
-								$gdo_ins_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index=".$event_index.", option_index=1, name=".$app->quote_escape($away);
+								$gdo_ins_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index=".$event_index.", option_index=1, name=".$app->quote_escape($away).", entity_id='".$away_entity['entity_id']."'";
 								if ($away_target_prob) $gdo_ins_q .= ", target_probability=".$away_target_prob;
 								$gdo_ins_q .= ";";
 								$gdo_ins_r = $app->run_query($gdo_ins_q);
