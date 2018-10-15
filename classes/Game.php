@@ -1093,7 +1093,7 @@ class Game {
 					$colored_coins = floor($colored_coins_generated*$non_escrow_io['amount']/$non_escrowed_coins);
 					$sum_colored_coins += $colored_coins;
 					
-					$qqq = "INSERT INTO transaction_game_ios SET io_id='".$non_escrow_io['io_id']."', game_id='".$this->db_game['game_id']."', is_coinbase=0, colored_amount='".$colored_coins."', create_round_id='".$create_round_id."', coin_blocks_destroyed=0, coin_rounds_destroyed=0, is_resolved=1;";
+					$qqq = "INSERT INTO transaction_game_ios SET io_id='".$non_escrow_io['io_id']."', game_id='".$this->db_game['game_id']."', is_coinbase=0, colored_amount='".$colored_coins."', create_block_id='".$transaction['block_id']."', create_round_id='".$create_round_id."', coin_blocks_destroyed=0, coin_rounds_destroyed=0, is_resolved=1;";
 					$rrr = $this->blockchain->app->run_query($qqq);
 				}
 			}
@@ -2420,7 +2420,7 @@ class Game {
 						$output_i = 0;
 						
 						if ($rr->rowCount() > 0) {
-							$insert_q = "INSERT INTO transaction_game_ios (game_id, io_id, is_coinbase, colored_amount, destroy_amount, coin_blocks_destroyed, coin_rounds_destroyed, create_round_id, option_id, event_id, effectiveness_factor, votes, effective_destroy_amount, is_resolved) VALUES ";
+							$insert_q = "INSERT INTO transaction_game_ios (game_id, io_id, is_coinbase, colored_amount, destroy_amount, coin_blocks_destroyed, coin_rounds_destroyed, create_block_id, create_round_id, option_id, event_id, effectiveness_factor, votes, effective_destroy_amount, is_resolved) VALUES ";
 							
 							while ($output_io = $rr->fetch()) {
 								$payout_insert_q = "";
@@ -2434,7 +2434,7 @@ class Game {
 								
 								$destroy_sum += $this_destroy_amount;
 								
-								$insert_q .= "('".$this->db_game['game_id']."', '".$output_io['io_id']."', 0, '".$colored_amount."', '".$this_destroy_amount."', '".$cbd."', '".$crd."', '".$round_id."', ";
+								$insert_q .= "('".$this->db_game['game_id']."', '".$output_io['io_id']."', 0, '".$colored_amount."', '".$this_destroy_amount."', '".$cbd."', '".$crd."', '".$block_height."', '".$round_id."', ";
 								
 								if ($output_io['option_index'] != "") {
 									$option_id = $this->option_index_to_option_id_in_block($output_io['option_index'], $block_height);
@@ -2453,7 +2453,7 @@ class Game {
 										
 										$is_resolved = 0;
 										if ($this_destroy_amount == 0) $is_resolved=1;
-										$payout_insert_q = "('".$this->db_game['game_id']."', '".$output_io['io_id']."', 1, 0, 0, 0, 0, null, '".$option_id."', '".$db_event['event_id']."', null, 0, 0, ".$is_resolved."), ";
+										$payout_insert_q = "('".$this->db_game['game_id']."', '".$output_io['io_id']."', 1, 0, 0, 0, 0, '".$block_height."', '".$round_id."', '".$option_id."', '".$db_event['event_id']."', null, 0, 0, ".$is_resolved."), ";
 									}
 									else $insert_q .= "null, null, null, null, 0, 1";
 								}
@@ -2631,7 +2631,7 @@ class Game {
 			$html .= "<br/>\n";
 			
 			if ($selected_io_id == $io['io_id']) $html .= "<b>";
-			else $html .= "<a href=\"/explorer/games/".$this->db_game['url_identifier']."/utxo/".$io['io_id']."\">";
+			else $html .= "<a href=\"/explorer/games/".$this->db_game['url_identifier']."/utxo/".$io['game_io_id']."\">";
 			$amount_disp = $this->blockchain->app->format_bignum($io['colored_amount']/pow(10,$this->db_game['decimal_places']));
 			$html .= $amount_disp." ";
 			if ($amount_disp == '1') $html .= $this->db_game['coin_name'];
@@ -2651,7 +2651,9 @@ class Game {
 					if ($this_round_id != $io['ref_round_id']) $unconfirmed_votes += $io['colored_amount']*($this_round_id-$io['ref_round_id']);
 					$inflation_stake = $unconfirmed_votes*$coins_per_vote;
 				}
-				else $inflation_stake = $io[$this->db_game['payout_weight']."s_destroyed"]*$coins_per_vote;
+				else {
+					$inflation_stake = $io[$this->db_game['payout_weight']."s_destroyed"]*$coins_per_vote;
+				}
 			}
 			else $inflation_stake = 0;
 			
@@ -2680,11 +2682,11 @@ class Game {
 				
 				$odds = round($expected_payout/($io['destroy_amount']+$inflation_stake), 2);
 				$html .= " &nbsp;&nbsp; x".$odds." ";
-				$html .= '&nbsp;&nbsp;<font class="';
+				$html .= '&nbsp;&nbsp;<a href="/explorer/games/'.$this->db_game['url_identifier'].'/utxo/'.$io['payout_io_id'].'" class="';
 				if ($io['payout_amount'] > 0) $html .= 'greentext';
 				else if ($io['is_resolved'] == 1) $html .= 'redtext';
 				else $html .= 'yellowtext';
-				$html .= '">+'.$this->blockchain->app->format_bignum($expected_payout/pow(10,$this->db_game['decimal_places'])).'</font>';
+				$html .= '">+'.$this->blockchain->app->format_bignum($expected_payout/pow(10,$this->db_game['decimal_places'])).'</a>';
 			}
 			
 			$html .= "</p>\n";

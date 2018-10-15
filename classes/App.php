@@ -2878,7 +2878,7 @@ class App {
 			else $this_bet_html .= '<td>';
 			$this_bet_html .= '<a href="';
 			if ($div_td == "td") $this_bet_html .= $GLOBALS['base_url'];
-			$this_bet_html .= '/explorer/games/'.$game->db_game['url_identifier'].'/utxo/'.$bet['io_id'].'/">';
+			$this_bet_html .= '/explorer/games/'.$game->db_game['url_identifier'].'/utxo/'.$bet['game_io_id'].'/">';
 			if ($game->db_game['inflation'] == "exponential") {
 				$this_bet_html .= $this->format_bignum($my_stake/pow(10,$game->db_game['decimal_places']))."&nbsp;".$game->db_game['coin_abbreviation'];
 			}

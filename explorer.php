@@ -161,15 +161,20 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 	else if ($explore_mode == "utxo") {
 		$io_id = (int) $uri_parts[5];
 		
-		$io_q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.io_id='".$io_id."';";
-		$io_r = $app->run_query($io_q);
+		if ($game) {
+			$io_q = "SELECT * FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN addresses a ON io.address_id=a.address_id WHERE gio.game_io_id='".$io_id."';";
+			$io_r = $app->run_query($io_q);
+		}
+		else {
+			$io_q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.io_id='".$io_id."';";
+			$io_r = $app->run_query($io_q);
+		}
 		
 		if ($io_r->rowCount() > 0) {
 			$io = $io_r->fetch();
 			$mode_error = false;
-			$pagetitle = "UTXO #".$io['io_id'];
-			if ($game) $pagetitle .= " - ".$game->db_game['name']." Explorer";
-			else $pagetitle .= " - ".$blockchain->db_blockchain['blockchain_name']." Explorer";
+			if ($game) $pagetitle = "UTXO #".$io['game_io_id'].": ".$game->db_game['name']." Explorer";
+			else $pagetitle = "UTXO #".$io['io_id'].": ".$blockchain->db_blockchain['blockchain_name']." Explorer";
 		}
 		else {
 			$io = false;
@@ -1092,11 +1097,18 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$block_index = false;
 						$round_id = false;
 					}
-					echo "This transaction has ".(int) $transaction['num_inputs']." inputs and ".(int) $transaction['num_outputs']." outputs totalling ".$app->format_bignum($transaction['amount']/pow(10,$blockchain->db_blockchain['decimal_places']))." ".$blockchain->db_blockchain['coin_name_plural'].". ";
+					echo "This transaction has ".(int) $transaction['num_inputs']." inputs and ".(int) $transaction['num_outputs']." outputs totalling ".$app->format_bignum($transaction['amount']/pow(10,$blockchain->db_blockchain['decimal_places']))." ".$blockchain->db_blockchain['coin_name_plural'].".<br/>\n";
 					if ($game) {
+						$coins_per_votes = $app->coins_per_vote($game->db_game);
 						$coins_in = $game->transaction_coins_in($transaction['transaction_id']);
 						$coins_out = $game->transaction_coins_out($transaction['transaction_id'], true);
-						echo $app->format_bignum($coins_in/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." in, ".$app->format_bignum($coins_out/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." out. ";
+						$coins_diff = $coins_in-$coins_out;
+						echo $app->format_bignum($coins_in/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." in, ".$app->format_bignum($coins_out/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." out (".$app->format_bignum($coins_diff/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." destroyed).<br/>\n";
+						
+						$votes_in_q = "SELECT SUM(gio.".$game->db_game['payout_weight']."s_created) votes_in FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE io.spend_transaction_id='".$transaction['transaction_id']."';";
+						$votes_in = $app->run_query($votes_in_q)->fetch();
+						$votes_in_value = $votes_in['votes_in']*$coins_per_votes;
+						echo "This transaction realizes ".$app->format_bignum($votes_in_value/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." of unrealized gains.<br/>\n";
 					}
 					echo "Loaded in ".number_format($transaction['load_time'], 2)." seconds.";
 					echo "<br/>\n";
@@ -1150,14 +1162,39 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						if ($account_r->rowCount() > 0) {
 							$account = $account_r->fetch();
 							
-							echo '<p>This UTXO is in your account <a href="/accounts/?account_id='.$account['account_id'].'">'.$account['account_name'].'</a></p>';
+							echo 'This UTXO is in your account <a href="/accounts/?account_id='.$account['account_id'].'">'.$account['account_name']."</a><br/>\n";
 						}
 					}
 					
-					echo '<p>This UTXO belongs to <a href="/explorer/';
+					echo 'This UTXO belongs to <a href="/explorer/';
 					if ($game) echo 'games/'.$game->db_game['url_identifier'];
 					else echo 'blockchains/'.$blockchain->db_blockchain['url_identifier'];
-					echo '/addresses/'.$io['address'].'">'.$io['address'].'</a></p>';
+					echo '/addresses/'.$io['address'].'">'.$io['address']."</a><br/>\n";
+					
+					if ($game) {
+						echo "Amount: &nbsp;&nbsp; ".$app->format_bignum($io['colored_amount']/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']."<br/>";
+						echo "Status: &nbsp;&nbsp; ".ucwords($io['spend_status'])."<br/>\n";
+
+						echo "This UTXO";
+						if ($io['spend_status'] == "unconfirmed") echo " has not been confirmed yet";
+						else echo " was created on block <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$io['create_block_id']."\">#".$io['create_block_id']."</a> (round #".$game->block_to_round($io['create_block_id']).")";
+						
+						if ($io['spend_block_id'] > 0) {
+							echo " and spent on block <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$io['spend_block_id']."\">#".$io['spend_block_id']."</a> (round #".$game->block_to_round($io['spend_block_id']).")";
+							
+							$votes_value = $io[$game->db_game['payout_weight']."s_created"]*$coins_per_vote;
+							echo ".<br/>It added ".$app->format_bignum($votes_value/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." to inflation.";
+						}
+						else if ($io['spend_status'] != "unconfirmed") {
+							$blocks = ($last_block_id+1)-$io['create_block_id'];
+							$rounds = $game->block_to_round($last_block_id+1)-$io['create_round_id'];
+							if ($game->db_game['payout_weight'] == "coin_round") $votes = $rounds*$io['colored_amount'];
+							else $votes = $blocks*$io['colored_amount'];
+							$votes_value = floor($votes*$coins_per_vote);
+							echo ".<br/>It currently holds ".$app->format_bignum($votes_value/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." in unrealized gains.";
+						}
+						echo "<br/>\n";
+					}
 					
 					if ($create_tx || $spend_tx) {
 						if (empty($game)) {
@@ -1248,7 +1285,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							else $votes = 0;
 							
 							echo '<div class="row">';
-							echo '<div class="col-sm-3"><a href="/explorer/games/'.$game->db_game['url_identifier'].'/utxo/'.$utxo['io_id'].'/">'.$app->format_bignum($utxo['colored_amount']/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].'</a></div>';
+							echo '<div class="col-sm-3"><a href="/explorer/games/'.$game->db_game['url_identifier'].'/utxo/'.$utxo['game_io_id'].'/">'.$app->format_bignum($utxo['colored_amount']/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].'</a></div>';
 							echo '<div class="col-sm-3 greentext text-right">';
 							
 							if ($game->db_game['inflation'] == "exponential") {
