@@ -35,7 +35,7 @@ if ($r->rowCount() > 0) {
 			
 			$event_q = "SELECT * FROM events ev JOIN game_defined_options gdo ON ev.event_index=gdo.event_index WHERE ev.game_id='".$game->db_game['game_id']."' AND gdo.game_id='".$game->db_game['game_id']."' AND gdo.target_probability IS NOT NULL";
 			$event_q .= " AND ev.event_starting_block<=".$mining_block_id." AND ev.event_final_block>=".$mining_block_id;
-			$event_q .= " AND ev.event_final_time > NOW() GROUP BY ev.event_id ORDER BY ev.event_index ASC;";
+			$event_q .= " AND ev.event_starting_time < NOW() AND ev.event_final_time > NOW() GROUP BY ev.event_id ORDER BY ev.event_index ASC;";
 			$event_r = $app->run_query($event_q);
 			$num_events = $event_r->rowCount();
 			

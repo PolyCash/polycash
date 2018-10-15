@@ -837,8 +837,8 @@ class Event {
 		}
 		
 		$q = "UPDATE events e JOIN (
-				SELECT SUM(".$this->game->db_game['payout_weight']."_score) sum_score, SUM(destroy_score) destroy_score, SUM(votes) sum_votes, SUM(effective_destroy_score) effective_destroy_score FROM options WHERE event_id='".$this->db_event['event_id']."'
-			) op SET e.sum_score=op.sum_score, e.destroy_score=op.destroy_score, e.sum_votes=op.sum_votes, e.effective_destroy_score=op.effective_destroy_score WHERE e.event_id='".$this->db_event['event_id']."';";
+				SELECT SUM(".$this->game->db_game['payout_weight']."_score) sum_score, SUM(destroy_score) destroy_score, SUM(votes) sum_votes, SUM(effective_destroy_score) effective_destroy_score, SUM(unconfirmed_".$this->game->db_game['payout_weight']."_score) sum_unconfirmed_score, SUM(unconfirmed_votes) sum_unconfirmed_votes, SUM(unconfirmed_destroy_score) sum_unconfirmed_destroy_score, SUM(unconfirmed_effective_destroy_score) sum_unconfirmed_effective_destroy_score FROM options WHERE event_id='".$this->db_event['event_id']."'
+			) op SET e.sum_score=op.sum_score, e.destroy_score=op.destroy_score, e.sum_votes=op.sum_votes, e.effective_destroy_score=op.effective_destroy_score, e.sum_unconfirmed_score=op.sum_unconfirmed_score, e.sum_unconfirmed_votes=op.sum_unconfirmed_votes, e.sum_unconfirmed_destroy_score=op.sum_unconfirmed_destroy_score, e.sum_unconfirmed_effective_destroy_score=op.sum_unconfirmed_effective_destroy_score WHERE e.event_id='".$this->db_event['event_id']."';";
 		$r = $this->game->blockchain->app->run_query($q);
 	}
 }

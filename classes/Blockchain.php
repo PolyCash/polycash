@@ -512,6 +512,7 @@ class Blockchain {
 							
 							$io_nondestroy_amount = $io_amount_out-$io_destroy_amount;
 							$destroy_game_amount = floor($game_amount_in*($io_destroy_amount/$io_amount_out));
+							$nondestroy_game_amount = $game_amount_in-$destroy_game_amount;
 							
 							$coin_round_sum = 0;
 							$game_amount_sum = 0;
@@ -574,7 +575,6 @@ class Blockchain {
 							}
 							
 							$insert_q = substr($insert_q, 0, strlen($insert_q)-2).";";
-							
 							$this->app->dbh->beginTransaction();
 							$this->app->run_query($insert_q);
 							$coinbase_q1 = "UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.parent_io_id=gio.game_io_id-1 WHERE io.create_transaction_id='".$db_transaction_id."' AND gio.game_id='".$color_game->db_game['game_id']."' AND gio.is_coinbase=1;";

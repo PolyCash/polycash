@@ -2848,9 +2848,9 @@ class App {
 		else return 1;
 	}
 	
-	public function render_bet(&$bet, &$game, $coins_per_vote, $current_round, &$net_delta, &$net_stake, &$pending_stake, &$num_wins, &$num_losses, &$num_unresolved, $div_td) {
+	public function render_bet(&$bet, &$game, $coins_per_vote, $current_round, &$net_delta, &$net_stake, &$pending_stake, &$num_wins, &$num_losses, &$num_unresolved, $div_td, $last_block_id) {
 		$this_bet_html = "";
-		$event_total_reward = ($bet['sum_score']*$coins_per_vote + $bet['event_destroy_score'])/pow(10,$game->db_game['decimal_places']);
+		$event_total_reward = ($bet['sum_score']+$bet['sum_unconfirmed_score'])*$coins_per_vote + $bet['sum_destroy_score'] + $bet['sum_unconfirmed_destroy_score'];
 		$option_effective_reward = $bet['option_effective_destroy_score']+$bet['unconfirmed_effective_destroy_score'] + ($bet['option_votes']+$bet['unconfirmed_votes'])*$coins_per_vote;
 		$current_effectiveness = $this->calculate_effectiveness_factor($bet['vote_effectiveness_function'], $bet['effectiveness_param1'], $bet['event_starting_block'], $bet['event_final_block'], $last_block_id+1);
 		
@@ -2860,26 +2860,19 @@ class App {
 			$expected_payout = $event_total_reward*($my_effective_stake/$option_effective_reward);
 		}
 		else {
-			$event_effective_reward = 0;
-			if ($game->db_game['payout_weight'] == "coin_block") {
-				$num_votes = $bet['ref_coin_blocks'] + ((1+$last_block_id)-$bet['ref_block_id'])*$bet['colored_amount'];
-			}
-			else if ($game->db_game['payout_weight'] == "coin_round") {
-				$num_votes = $bet['ref_coin_rounds'] + ($current_round-$bet['ref_round_id'])*$bet['colored_amount'];
-			}
-			else $num_votes = $my_vote['colored_amount'];
-			
-			$my_inflation_stake = $num_votes*$coins_per_vote;
-			$my_effective_stake = ($bet['destroy_amount'] + $num_votes*$coins_per_vote)*$current_effectiveness;
+			$unconfirmed_votes = $bet['ref_'.$game->db_game['payout_weight']."s"];
+			if ($current_round != $bet['ref_round_id']) $unconfirmed_votes += $bet['colored_amount']*($current_round-$bet['ref_round_id']);
+			$my_inflation_stake = $unconfirmed_votes*$coins_per_vote;
+			$my_effective_stake = floor(($bet['destroy_amount']+$my_inflation_stake)*$current_effectiveness);
 			$expected_payout = $event_total_reward*($my_effective_stake/$option_effective_reward);
 		}
-		$my_stake = ($bet['destroy_amount'] + $my_inflation_stake)/pow(10,$game->db_game['decimal_places']);
+		$my_stake = $bet['destroy_amount'] + $my_inflation_stake;
 		
 		if ($my_stake > 0) {
 			$payout_multiplier = $expected_payout/$my_stake;
-		
-			$net_stake += $my_stake;
-			if (empty($bet['winning_option_id'])) $pending_stake += $my_stake;
+			
+			$net_stake += $my_stake/pow(10,$game->db_game['decimal_places']);
+			if (empty($bet['winning_option_id'])) $pending_stake += $my_stake/pow(10,$game->db_game['decimal_places']);
 			
 			if ($div_td == "div") $this_bet_html .= '<div class="col-sm-1 text-center">';
 			else $this_bet_html .= '<td>';
@@ -2887,7 +2880,7 @@ class App {
 			if ($div_td == "td") $this_bet_html .= $GLOBALS['base_url'];
 			$this_bet_html .= '/explorer/games/'.$game->db_game['url_identifier'].'/utxo/'.$bet['io_id'].'/">';
 			if ($game->db_game['inflation'] == "exponential") {
-				$this_bet_html .= $this->format_bignum($my_stake)."&nbsp;".$game->db_game['coin_abbreviation'];
+				$this_bet_html .= $this->format_bignum($my_stake/pow(10,$game->db_game['decimal_places']))."&nbsp;".$game->db_game['coin_abbreviation'];
 			}
 			else {
 				$this_bet_html .= $this->format_bignum($bet['votes']/pow(10,$game->db_game['decimal_places']))." votes";
@@ -2902,7 +2895,7 @@ class App {
 				$this_bet_html .= "\">";
 			}
 			else $this_bet_html .= "<td>";
-			$this_bet_html .= $this->format_bignum($expected_payout)."&nbsp;".$game->db_game['coin_abbreviation'];
+			$this_bet_html .= $this->format_bignum($expected_payout/pow(10,$game->db_game['decimal_places']))."&nbsp;".$game->db_game['coin_abbreviation'];
 			if ($div_td == "div") $this_bet_html .= "</div>\n";
 			else $this_bet_html .= "</td>\n";
 			
@@ -2947,12 +2940,12 @@ class App {
 			else {
 				if ($bet['winning_option_id'] == $bet['option_id']) {
 					$outcome_txt = "Won";
-					$delta = $expected_payout - $my_stake;
+					$delta = ($expected_payout - $my_stake)/pow(10,$game->db_game['decimal_places']);
 					$num_wins++;
 				}
 				else {
 					$outcome_txt = "Lost";
-					$delta = (-1)*$my_stake;
+					$delta = (-1)*$my_stake/pow(10,$game->db_game['decimal_places']);
 					$num_losses++;
 				}
 				$net_delta += $delta;
