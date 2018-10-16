@@ -89,7 +89,16 @@ if ($r->rowCount() > 0) {
 						array_push($io_ids, $io['io_id']);
 						
 						$burn_game_amount = $total_cost-$mandatory_bets;
-						if ($amount_mode != "inflation_only" && $game_amount_sum >= $burn_game_amount) $keep_looping = false;
+						if ($amount_mode != "inflation_only" && $game_amount_sum >= $burn_game_amount*1.2) $keep_looping = false;
+					}
+					
+					$q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."' AND a.is_destroy_address=1 ORDER BY io.amount DESC;";
+					$r = $app->run_query($q);
+					
+					if ($r->rowCount() > 0) {
+						$recycle_io = $r->fetch();
+						array_push($io_ids, $recycle_io['io_id']);
+						$io_amount_sum += $recycle_io['amount'];
 					}
 					
 					if ($burn_game_amount < 0 || $burn_game_amount > $game_amount_sum) die("Failed to determine a valid burn amount (".$burn_game_amount." vs ".$game_amount_sum.").");
