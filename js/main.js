@@ -2239,11 +2239,16 @@ function save_featured_strategy() {
 function apply_game_definition(game_id) {
 	var apply_url = "/ajax/apply_game_definition.php?game_id="+game_id;
 	
-	$.get(apply_url, function(result) {
-		var result_obj = JSON.parse(result);
-		alert(result_obj['message']);
-		console.log(result_obj);
-	});
+	if ($('#apply_def_link').html() == "Apply Changes") {
+		$('#apply_def_link').html("Applying...");
+		
+		$.get(apply_url, function(result) {
+			$('#apply_def_link').html("Apply Changes");
+			var result_obj = JSON.parse(result);
+			alert(result_obj['message']);
+			console.log(result_obj);
+		});
+	}
 }
 function filter_changed(which_filter) {
 	var filter_value = $('#filter_by_'+which_filter).val();

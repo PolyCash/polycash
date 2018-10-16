@@ -22,9 +22,9 @@ if ($r->rowCount() > 0) {
 	$coins_per_vote = $app->coins_per_vote($game->db_game);
 	$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
 	
-	$hours_between_applications = 8;
+	$hours_between_applications = 12;
 	$sec_between_applications = 60*60*$hours_between_applications;
-	$rand_sec_offset = rand(0, 60*60*$hours_between_applications*0.75);
+	$rand_sec_offset = 60*60*$hours_between_applications - rand(0, 60*60*$hours_between_applications*2);
 	
 	if ($user_game['time_last_applied'] == "" || $user_game['time_last_applied'] <= time()-$sec_between_applications || !empty($_REQUEST['force'])) {
 		$account_q = "SELECT * FROM currency_accounts WHERE account_id='".$account_id."';";

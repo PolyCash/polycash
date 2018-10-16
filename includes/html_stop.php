@@ -45,7 +45,7 @@
 					echo '<a href="/explorer/games/'.$game->db_game['url_identifier'].'/definition/?definition_mode=actual">'.$actual_game_def_hash_3."</a>";
 					echo " &rarr; ";
 					echo '<a href="/explorer/games/'.$game->db_game['url_identifier'].'/definition/?definition_mode=defined">'.$game_def_hash_3."</a>\n";
-					echo " &nbsp;&nbsp; <a href=\"\" onclick=\"apply_game_definition(".$game->db_game['game_id']."); return false;\">Apply Changes</a>";
+					echo " &nbsp;&nbsp; <a id=\"apply_def_link\" href=\"\" onclick=\"apply_game_definition(".$game->db_game['game_id']."); return false;\">Apply Changes</a>";
 					echo "</font>\n";
 				}
 			}

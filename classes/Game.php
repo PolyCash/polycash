@@ -2449,10 +2449,11 @@ class Game {
 										
 										$effective_destroy_amount = floor($this_destroy_amount*$effectiveness_factor);
 										
-										$insert_q .= "'".$option_id."', '".$db_event['event_id']."', '".$effectiveness_factor."', '".$votes."', '".$effective_destroy_amount."', 0";
-										
 										$is_resolved = 0;
-										if ($this_destroy_amount == 0) $is_resolved=1;
+										if ($this_destroy_amount == 0 && $this->db_game['exponential_inflation_rate'] == 0) $is_resolved=1;
+										
+										$insert_q .= "'".$option_id."', '".$db_event['event_id']."', '".$effectiveness_factor."', '".$votes."', '".$effective_destroy_amount."', ".$is_resolved;
+										
 										$payout_insert_q = "('".$this->db_game['game_id']."', '".$output_io['io_id']."', 1, 0, 0, 0, 0, '".$block_height."', '".$round_id."', '".$option_id."', '".$db_event['event_id']."', null, 0, 0, ".$is_resolved."), ";
 									}
 									else $insert_q .= "null, null, null, null, 0, 1";
