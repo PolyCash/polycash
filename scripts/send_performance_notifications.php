@@ -37,8 +37,6 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$bet_r = $app->run_query($bet_q);
 		
 		while ($bet = $bet_r->fetch()) {
-			$this_bet_html = $app->render_bet($bet, $game, $coins_per_vote, $current_round, $net_delta, $net_stake, $pending_stake, $num_wins, $num_losses, $num_unresolved, 'td');
-			
 			if (!array_key_exists($bet['notification_email'], $html_by_email)) {
 				$html_by_email[$bet['notification_email']] = "";
 				$betcount_by_email[$bet['notification_email']] = 0;
@@ -62,6 +60,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				$prev_user_game_id = $bet['user_game_id'];
 				$prev_notification_email = $bet['notification_email'];
 			}
+			
+			$this_bet_html = $app->render_bet($bet, $game, $coins_per_vote, $current_round, $net_delta, $net_stake, $pending_stake, $num_wins, $num_losses, $num_unresolved, 'td');
 			
 			$html_by_email[$bet['notification_email']] .= "<tr>".$this_bet_html."</tr>\n";
 		}

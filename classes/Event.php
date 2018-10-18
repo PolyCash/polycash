@@ -455,7 +455,7 @@ class Event {
 			else $score_field = "gio.coin_rounds_destroyed";
 		}
 		
-		$q = "SELECT gio.*, op.option_id, op.name, t.transaction_id, t.tx_hash, t.fee_amount, io.spend_status FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN options op ON gio.option_id=op.option_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.event_id='".$this->db_event['event_id']."' AND gio.parent_io_id IS NULL AND k.account_id='".$user_game['account_id']."' ORDER BY gio.game_io_id ASC;";
+		$q = "SELECT gio.*, op.option_id, op.name, t.transaction_id, t.tx_hash, t.fee_amount, io.spend_status FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN options op ON gio.option_id=op.option_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.event_id='".$this->db_event['event_id']."' AND gio.parent_io_id IS NULL AND k.account_id='".$user_game['account_id']."' AND io.create_block_id IS NOT NULL ORDER BY gio.game_io_id ASC;";
 		$r = $this->game->blockchain->app->run_query($q);
 		
 		list($inflationary_reward, $destroy_reward, $total_reward) = $this->event_rewards();
