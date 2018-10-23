@@ -269,6 +269,14 @@ class App {
 		$cached_url_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($cached_url_process)) $process_count++;
 		else $html .= "Failed to start a process for loading cached urls.<br/>\n";
+		sleep(0.1);
+		
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/ensure_user_addresses.php" key='.$key_string;
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
+		$ensure_addresses_process = proc_open($cmd, $pipe_config, $pipes);
+		if (is_resource($ensure_addresses_process)) $process_count++;
+		else $html .= "Failed to start a process for ensuring user addresses.<br/>\n";
 		
 		$html .= "Started ".$process_count." background processes.<br/>\n";
 		return $html;

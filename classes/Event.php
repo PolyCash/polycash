@@ -126,7 +126,6 @@ class Event {
 		
 		$max_block_id = min($this->db_event['event_final_block'], $this->game->blockchain->last_block_id());
 		
-		if ($this->game->db_game['inflation'] == "exponential") $votes_per_coin = $this->game->blockchain->app->votes_per_coin($this->game->db_game);
 		$coins_per_vote = $this->game->blockchain->app->coins_per_vote($this->game->db_game);
 		
 		$display_mode = "slim";//$this->db_event['display_mode'];
@@ -238,9 +237,7 @@ class Event {
 		}
 		
 		if ($this->game->db_game['inflation'] == "exponential") {
-			if ($votes_per_coin > 0) $confirmed_coins = $destroy_score + $confirmed_score/$votes_per_coin;
-			else $confirmed_coins = $destroy_score;
-			
+			$confirmed_coins = $destroy_score + $confirmed_score*$coins_per_vote;
 			$unconfirmed_coins = $total_reward - $confirmed_coins;
 			
 			$html .= "<p>".$this->game->blockchain->app->format_bignum($confirmed_coins/pow(10,$this->game->db_game['decimal_places']))." ".$this->game->db_game['coin_name_plural']." in confirmed bets";

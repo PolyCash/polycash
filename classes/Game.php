@@ -428,7 +428,7 @@ class Game {
 		
 		$log_text .= $strategy_user->db_user['username'].": ".$this->blockchain->app->format_bignum($free_balance/pow(10,$this->db_game['decimal_places']))." coins (".$free_balance.") ".$user_game['voting_strategy']."<br/>\n";
 		
-		if ($free_balance > 0 && $available_votes > 0) {
+		if ($free_balance > 0) {
 			if ($user_game['voting_strategy'] == "api" || $user_game['voting_strategy'] == "featured") {
 				if ($user_game['voting_strategy'] == "api") $api_url = $user_game['api_url'];
 				else {

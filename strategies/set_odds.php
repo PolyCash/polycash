@@ -45,7 +45,7 @@ if ($r->rowCount() > 0) {
 				
 				if ($amount_mode == "per_event") {
 					$aggressiveness = "low";
-					$frac_mature_bal = 0.25;
+					$frac_mature_bal = 0.5;
 					
 					if (!empty($_REQUEST['aggressiveness']) && $_REQUEST['aggressiveness'] == "high") {
 						$aggressiveness = "high";
@@ -65,7 +65,7 @@ if ($r->rowCount() > 0) {
 					
 					$q = "SELECT *, SUM(gio.colored_amount) AS coins, SUM(gio.colored_amount)*(".($blockchain->last_block_id()+1)."-io.create_block_id) AS coin_blocks, SUM(gio.colored_amount*(".$round_id."-gio.create_round_id)) AS coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.is_resolved=1 AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account['account_id']."' GROUP BY gio.io_id";
 					if ($game->db_game['inflation'] == "exponential" && $game->db_game['exponential_inflation_rate'] > 0) $q .= " HAVING(".$game->db_game['payout_weight']."s*".$coins_per_vote.") < ".$total_cost;
-					$q .= " ORDER BY coins DESC;";
+					$q .= " ORDER BY coins ASC;";
 					$r = $app->run_query($q);
 					
 					$mandatory_bets = 0;
