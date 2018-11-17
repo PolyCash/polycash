@@ -1657,7 +1657,7 @@ class Game {
 		$events = array();
 		$q = "SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities en ON et.entity_id=en.entity_id WHERE ev.game_id='".$this->db_game['game_id']."' AND ev.event_starting_block<=".$block_id." AND ev.event_final_block>=".$block_id;
 		if (!empty($filter_arr['date'])) $q .= " AND DATE(ev.event_final_time)='".$filter_arr['date']."'";
-		$q .= " AND ev.event_starting_time < NOW() AND ev.event_final_time > NOW() ORDER BY ev.event_id ASC;";
+		$q .= " AND (ev.event_starting_time IS NULL OR ev.event_starting_time < NOW()) AND (ev.event_final_time IS NULL OR ev.event_final_time > NOW()) ORDER BY ev.event_id ASC;";
 		$r = $this->blockchain->app->run_query($q);
 		while ($db_event = $r->fetch()) {
 			$events[count($events)] = new Event($this, $db_event, false);

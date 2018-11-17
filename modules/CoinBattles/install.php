@@ -21,12 +21,6 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	?>
 	<p><a href="/modules/CoinBattles/set_style.php?key=<?php echo $GLOBALS['cron_key_string']; ?>">Run styling script</a></p>
 	<?php
-	$q = "SELECT * FROM games WHERE module=".$app->quote_escape($module['module_name']).";";
-	$r = $app->run_query($q);
-	
-	if ($r->rowCount() > 0) $db_game = $r->fetch();
-	else $db_game = false;
-	
 	$game_def = new CoinBattlesGameDefinition($app);
 	
 	$blockchain = false;
@@ -36,6 +30,19 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
 	}
 	
+	$q = "SELECT * FROM games WHERE module=".$app->quote_escape($module['module_name']).";";
+	$r = $app->run_query($q);
+	
+	if ($r->rowCount() > 0) {
+		$db_game = $r->fetch();
+		$game_starting_block = $db_game['game_starting_block'];
+	}
+	else {
+		$db_game = false;
+		$game_starting_block = floor($blockchain->last_block_id()/$game_def->game_def->round_length)*$game_def->game_def->round_length+1;
+	}
+	
+	$game_def->game_def->game_starting_block = $game_starting_block;
 	$new_game_def_txt = $app->game_def_to_text($game_def->game_def);
 	
 	$error_message = false;

@@ -38,7 +38,7 @@ class CoinBattlesGameDefinition {
 			"coin_abbreviation": "BTL",
 			"escrow_address": "MjtdAk3A5SpifhdV9ZYst62xnWjVYz8HNH",
 			"genesis_tx_hash": "8be0252751d660024d44ff5847d38cca",
-			"genesis_amount": 1000000000000,
+			"genesis_amount": 1000000,
 			"game_starting_block": 1,
 			"game_winning_rule": "none",
 			"game_winning_field": "",
@@ -104,15 +104,15 @@ class CoinBattlesGameDefinition {
 			
 			foreach ($this->events_per_round as $currency_code => $currency_name) {
 				$entity = $this->app->check_set_entity($general_entity_type['entity_type_id'], $currency_name);
-				array_push($possible_outcomes, array("title" => $currency_name." wins", "entity_id" => $entity['entity_id']));
+				array_push($possible_outcomes, array("title" => $currency_name, "entity_id" => $entity['entity_id']));
 			}
 			
 			$event = array(
 				"event_index" => $round-1,
-				"event_starting_block" => $chain_starting_block+($round-1)*$round_length,
-				"event_final_block" => $chain_starting_block+$round*$round_length-1,
-				"event_payout_block" => $chain_starting_block+$round*$round_length-1,
-				"event_name" => "Coin Battle #".$round,
+				"event_starting_block" => $chain_starting_block+($round-2)*$round_length,
+				"event_final_block" => $chain_starting_block+($round-1)*$round_length-1,
+				"event_payout_block" => $chain_starting_block+($round-1)*$round_length-1,
+				"event_name" => "Coin Battle #".($round-1),
 				"option_name" => "outcome",
 				"option_name_plural" => "outcomes",
 				"outcome_index" => null,
@@ -285,7 +285,7 @@ class CoinBattlesGameDefinition {
 		for ($i=1; $i<count($this->currencies); $i++) {
 			$currency_price = $this->app->currency_price_at_time($this->currencies[$i]['currency_id'], $btc_currency['currency_id'], time());
 			
-			if ($currency_price) $last_price_time = $currency_price['time_added'];
+			if ($currency_price) $last_price_time = max(time()-(3600*24*2), $currency_price['time_added']);
 			else {
 				$mining_block_id = $game->last_block_id()+1;
 				$this_round = $game->block_to_round($mining_block_id);
@@ -345,7 +345,8 @@ class CoinBattlesGameDefinition {
 		
 		if (!empty($to_block_id)) {
 			$to_block = $game->blockchain->fetch_block_by_id($to_block_id);
-			$to_time = $to_block['time_mined'];
+			if ($to_block) $to_time = $to_block['time_mined'];
+			else $to_time = time();
 		}
 		else {
 			$to_block = false;

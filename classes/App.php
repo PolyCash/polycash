@@ -2026,7 +2026,7 @@ class App {
 		}
 		else $error_message = "Error, blockchain url identifier was empty.";
 		
-		return false;
+		return $game;
 	}
 	
 	public function check_set_option_group($description, $singular_form, $plural_form) {
