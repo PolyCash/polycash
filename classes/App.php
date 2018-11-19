@@ -1175,6 +1175,14 @@ class App {
 		$game_definition = array();
 		$game_definition['blockchain_identifier'] = $game->blockchain->db_blockchain['url_identifier'];
 		
+		if ($game->db_game['option_group_id'] > 0) {
+			$group_q = "SELECT * FROM option_groups WHERE group_id='".$game->db_game['option_group_id']."';";
+			$group_r = $this->run_query($group_q);
+			$db_group = $group_r->fetch();
+			$game_definition['option_group'] = $db_group['description'];
+		}
+		else $game_definition['option_group'] = "null";
+		
 		$verbatim_vars = $this->game_definition_verbatim_vars();
 		
 		for ($i=0; $i<count($verbatim_vars); $i++) {
@@ -1575,16 +1583,16 @@ class App {
 	public function game_definition_verbatim_vars() {
 		return array(
 			array('float', 'protocol_version', true),
-			array('string', 'url_identifier', false),
-			array('int', 'decimal_places', true),
-			array('int', 'category_id', false),
 			array('string', 'name', false),
+			array('string', 'url_identifier', false),
+			array('string', 'module', true),
+			array('int', 'category_id', false),
+			array('int', 'decimal_places', true),
 			array('string', 'event_type_name', false),
 			array('string', 'event_type_name_plural', false),
 			array('string', 'event_rule', true),
 			array('string', 'event_winning_rule', true),
 			array('int', 'event_entity_type_id', true),
-			array('int', 'option_group_id', true),
 			array('int', 'events_per_round', true),
 			array('string', 'inflation', true),
 			array('float', 'exponential_inflation_rate', true),
@@ -1898,7 +1906,7 @@ class App {
 		else $error_message = "Invalid url_identifier";
 	}
 	
-	public function create_game_from_definition(&$game_definition, &$thisuser, $module_name, &$error_message, &$db_game) {
+	public function create_game_from_definition(&$game_definition, &$thisuser, &$error_message, &$db_game) {
 		$game = false;
 		$game_def = json_decode($game_definition) or die("Error: the game definition you entered could not be imported.<br/>Please make sure to enter properly formatted JSON.<br/><a href=\"/import/\">Try again</a>");
 		
@@ -1962,7 +1970,6 @@ class App {
 					if ($permission_to_change) {
 						if (!$game) {
 							$q = "INSERT INTO games SET ";
-							if ($module_name) $q .= "module=".$this->quote_escape($module_name).", ";
 							if ($thisuser) $q .= "creator_id='".$thisuser->db_user['user_id']."', ";
 							$q .= "blockchain_id='".$db_blockchain['blockchain_id']."', game_status='published', featured=1";
 							
@@ -2999,6 +3006,41 @@ class App {
 		if ($num_unresolved > 0) $html .= "\n<br/>You have ".number_format($num_unresolved)." pending bets totalling <font class=\"greentext\">".$this->format_bignum($pending_stake)."</font> ".$game->db_game['coin_name_plural'];
 		
 		return $html;
+	}
+	
+	public function import_group_from_file($import_group_description, &$error_message) {
+		$import_group_fname = realpath(dirname(dirname(__FILE__)))."/lib/groups/".$import_group_description.".csv";
+		
+		if (is_file($import_group_fname)) {
+			$import_group_fh = fopen($import_group_fname, 'r');
+			$import_group_content = fread($import_group_fh, filesize($import_group_fname));
+			fclose($import_group_fname);
+			
+			$general_entity_type = $this->check_set_entity_type("general entity");
+			
+			$csv_lines = explode("\n", $import_group_content);
+			$header_vars = explode(",", trim(strtolower($csv_lines[0])));
+			$name_col = array_search("entity_name", $header_vars);
+			$image_col = array_search("default_image_id", $header_vars);
+			$group_params = explode(",", $csv_lines[1]);
+			
+			$insert_group_q = "INSERT INTO option_groups SET option_name=".$this->quote_escape($group_params[0]).", option_name_plural=".$this->quote_escape($group_params[1]).", description=".$this->quote_escape($import_group_description).";";
+			$insert_group_r = $this->run_query($insert_group_q);
+			$group_id = $this->last_insert_id();
+			
+			for ($csv_i=2; $csv_i<count($csv_lines); $csv_i++) {
+				$csv_params = explode(",", $csv_lines[$csv_i]);
+				$member_entity = $this->check_set_entity($general_entity_type['entity_type_id'], $csv_params[$name_col]);
+				
+				if (empty($member_entity['default_image_id']) && !empty($csv_params[$image_col])) {
+					$member_image_q = "UPDATE entities SET default_image_id='".$csv_params[$image_col]."' WHERE entity_id='".$member_entity['entity_id']."';";
+					$member_image_r = $this->run_query($member_image_q);
+				}
+				$insert_member_q = "INSERT INTO option_group_memberships SET option_group_id='".$group_id."', entity_id='".$member_entity['entity_id']."';";
+				$insert_member_r = $this->run_query($insert_member_q);
+			}
+		}
+		else $error_message = "Failed to import group from file.. the file does not exist.\n";
 	}
 }
 ?>

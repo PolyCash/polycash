@@ -87,8 +87,9 @@ html, body {
 .vote_option_label {
 	display: block;
 	font-size: 14px;
-	text-align: center;
+	text-align: left;
 	line-height: 20px;
+	margin-bottom: 5px;
 }
 .vote_option_box {
 	position: absolute;

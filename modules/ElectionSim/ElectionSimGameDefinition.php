@@ -9,15 +9,16 @@ class ElectionSimGameDefinition {
 
 		$this->game_def_base_txt = '{
 			"blockchain_identifier": "stakechain",
+			"option_group": "Clinton & Trump",
 			"protocol_version": 0,
-			"category_id": 31,
 			"url_identifier": "virtual-election",
 			"name": "Virtual Election 2018",
+			"module": "ElectionSim",
+			"category_id": 31,
 			"event_type_name": "election",
 			"event_type_name_plural": "elections",
 			"event_rule": "all_pairs",
 			"event_entity_type_id": 0,
-			"option_group_id": 6,
 			"events_per_round": 2,
 			"inflation": "exponential",
 			"exponential_inflation_rate": 0.01,
@@ -33,8 +34,8 @@ class ElectionSimGameDefinition {
 			"coin_name": "dollar",
 			"coin_name_plural": "dollars",
 			"coin_abbreviation": "USD",
-			"escrow_address": "2XGAfem85egbprCGKyeXFaDHmYkNfhFbCM",
-			"genesis_tx_hash": "cb0fbe0a0bdfdb48a3ff3cd108030fcf",
+			"escrow_address": "",
+			"genesis_tx_hash": "",
 			"genesis_amount": 10000000000000,
 			"game_starting_block": 1,
 			"game_winning_rule": "none",
@@ -54,7 +55,7 @@ class ElectionSimGameDefinition {
 		$this->game_def = $game_def;
 	}
 	
-	public function events_between_rounds($from_round, $to_round, $round_length, $chain_starting_block) {
+	public function events_starting_between_rounds(&$game, $from_round, $to_round, $round_length, $chain_starting_block) {
 		/*if (!empty($this->game_def->final_round) && $to_round > $this->game_def->final_round) $to_round = $this->game_def->final_round;
 		
 		$rounds_per_tournament = $this->get_rounds_per_tournament();

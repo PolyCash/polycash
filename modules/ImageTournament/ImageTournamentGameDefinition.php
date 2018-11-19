@@ -13,10 +13,12 @@ class ImageTournamentGameDefinition {
 		
 		$this->game_def_base_txt = '{
 			"blockchain_identifier": "stakechain",
+			"option_group": "Reddit /r/sexygirls pics",
 			"protocol_version": 0,
-			"category_id": 1,
 			"url_identifier": "hot-or-not",
 			"name": "Hot or Not",
+			"module": "ImageTournament",
+			"category_id": 1,
 			"event_type_name": "match",
 			"event_type_name_plural": "matches",
 			"event_rule": "game_definition",
@@ -83,7 +85,7 @@ class ImageTournamentGameDefinition {
 		$this->game_def = $game_def;
 	}
 	
-	public function events_between_rounds($from_round, $to_round, $round_length, $chain_starting_block) {
+	public function events_starting_between_rounds(&$game, $from_round, $to_round, $round_length, $chain_starting_block) {
 		if (!empty($this->game_def->final_round) && $to_round > $this->game_def->final_round) $to_round = $this->game_def->final_round;
 		
 		$rounds_per_tournament = $this->get_rounds_per_tournament();

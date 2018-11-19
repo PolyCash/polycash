@@ -9,10 +9,12 @@ class EmpirecoinClassicGameDefinition {
 
 		$this->game_def_base_txt = '{
 			"blockchain_identifier": "stakechain",
+			"option_group": "16 largest modern empires",
 			"protocol_version": 0,
-			"category_id": 31,
 			"url_identifier": "empirecoin-classic",
 			"name": "Empirecoin Classic",
+			"module": "EmpirecoinClassic",
+			"category_id": 31,
 			"event_type_name": "competition",
 			"event_type_name_plural": "competitions",
 			"event_rule": "single_event_series",
@@ -33,8 +35,8 @@ class EmpirecoinClassicGameDefinition {
 			"coin_name": "empirecoin",
 			"coin_name_plural": "empirecoins",
 			"coin_abbreviation": "EMP",
-			"escrow_address": "bVDQZzaQAqGF5eyapGzfMXcW8Knd8kwu64",
-			"genesis_tx_hash": "819d6ff4b8ab1b1ba0c875f203ee535b",
+			"escrow_address": "",
+			"genesis_tx_hash": "",
 			"genesis_amount": 100000000000000,
 			"game_starting_block": 1,
 			"game_winning_rule": "none",
@@ -62,7 +64,7 @@ class EmpirecoinClassicGameDefinition {
 		return 1+$event_index;
 	}
 	
-	public function events_between_rounds($from_round_id, $to_round_id) {
+	public function events_starting_between_rounds(&$game, $from_round_id, $to_round_id) {
 		return array();
 	}
 }

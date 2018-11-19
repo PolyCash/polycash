@@ -688,15 +688,6 @@ CREATE TABLE IF NOT EXISTS `option_groups` (
   PRIMARY KEY (`group_id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=4 ;
 
---
--- Dumping data for table `option_groups`
---
-
-INSERT INTO `option_groups` (`group_id`, `option_name`, `option_name_plural`, `description`) VALUES
-(1, 'candidate', 'candidates', 'top two 2016 presidential candidates'),
-(2, 'candidate', 'candidates', 'top three 2016 presidential candidates'),
-(3, 'team', 'teams', 'Red & Blue teams');
-
 -- --------------------------------------------------------
 
 --
@@ -711,19 +702,6 @@ CREATE TABLE IF NOT EXISTS `option_group_memberships` (
   KEY `option_group_id` (`option_group_id`),
   KEY `entity_id` (`entity_id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=8 ;
-
---
--- Dumping data for table `option_group_memberships`
---
-
-INSERT INTO `option_group_memberships` (`membership_id`, `option_group_id`, `entity_id`) VALUES
-(1, 2, 1),
-(2, 2, 2),
-(3, 2, 3),
-(4, 3, 58),
-(5, 3, 61),
-(6, 1, 2),
-(7, 1, 3);
 
 -- --------------------------------------------------------
 

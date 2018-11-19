@@ -47,6 +47,9 @@ else if ($uri_parts[1] == "directory") {
 else if ($uri_parts[1] == "manage") {
 	include("manage_game.php");
 }
+else if ($uri_parts[1] == "groups") {
+	include("manage_groups.php");
+}
 else {
 	include("includes/connect.php");
 	include("includes/get_session.php");

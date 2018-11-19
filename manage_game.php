@@ -38,8 +38,21 @@ else {
 						?>
 						<form action="/ajax/manage_game.php" onsubmit="create_new_game(); return false;">
 							<div class="form-group">
-								<label for="new_game_name">Please enter a title for the game:</label>
+								<label for="new_game_name">Please enter a title for this game:</label>
 								<input class="form-control" id="new_game_name" />
+							</div>
+							<div class="form-group">
+								<label for="new_game_module">Please select a module for this game:</label>
+								<select id="new_game_module" class="form-control">
+									<option value="">None</option>
+									<?php
+									$q = "SELECT * FROM modules ORDER BY module_name ASC;";
+									$r = $app->run_query($q);
+									while ($db_module = $r->fetch()) {
+										echo "<option value=\"".$db_module['module_name']."\">".$db_module['module_name']."</option>\n";
+									}
+									?>
+								</select>
 							</div>
 							<div class="form-group">
 								<label for="new_game_blockchain_id">Which blockchain should the game run on?</label>
@@ -476,6 +489,7 @@ else {
 										</div>
 										<div class="form-group">
 											<label for="game_form_option_group_id">Voting options:</label>
+											&nbsp;&nbsp; <a href="/groups/">Manage Groups</a>
 											<select id="game_form_option_group_id" class="form-control">
 												<?php
 												$q = "SELECT * FROM option_groups ORDER BY description ASC;";

@@ -269,6 +269,14 @@ class Event {
 			}
 		} */
 		
+		if ($this->game->db_game['module'] == "CryptoDuels") {
+			$btc_currency = $this->game->blockchain->app->get_currency_by_abbreviation("BTC");
+			$event_starting_block = $this->game->blockchain->fetch_block_by_id($this->db_event['event_starting_block']);
+			$event_final_block = $this->game->blockchain->fetch_block_by_id($this->db_event['event_final_block']);
+			if ($event_final_block) $event_to_time = $event_final_block['time_mined'];
+			else $event_to_time = time();
+		}
+		
 		for ($i=0; $i<count($round_stats); $i++) {
 			$option_votes = $round_stats[$i]['votes'] + $round_stats[$i]['unconfirmed_votes'];
 			$option_effective_coins = $option_votes*$coins_per_vote + $round_stats[$i]['effective_destroy_score'] + $round_stats[$i]['unconfirmed_effective_destroy_score'];
@@ -308,6 +316,20 @@ class Event {
 			}
 			else $onclick_html = 'games['.$game_instance_id.'].events['.$game_event_index.'].option_selected('.$i.'); games['.$game_instance_id.'].events['.$game_event_index.'].start_vote('.$round_stats[$i]['option_id'].');';
 			
+			if ($this->game->db_game['module'] == "CryptoDuels") {
+				$db_currency = $this->game->blockchain->app->run_query("SELECT * FROM currencies WHERE name='".$round_stats[$i]['name']."';")->fetch();
+				$initial_price = $this->game->blockchain->app->currency_price_after_time($db_currency['currency_id'], $btc_currency['currency_id'], $event_starting_block['time_mined']);
+				
+				if ($round_stats[$i]['name'] == "Bitcoin") {
+					$final_price = 0;
+					$final_performance = 1;
+				}
+				else {
+					$final_price = $this->game->blockchain->app->currency_price_at_time($db_currency['currency_id'], $btc_currency['currency_id'], $event_to_time);
+					$final_performance = $final_price['price']/$initial_price['price'];
+				}
+			}
+			
 			$html .= '
 				<div class="vote_option_label';
 				if ($this->db_event['event_winning_rule'] == "max_below_cap") {
@@ -319,6 +341,12 @@ class Event {
 				$html .= '>'.$round_stats[$i]['name'];
 				if (!empty($odds_disp)) $html .= ' &nbsp; '.$odds_disp;
 				$html .= ' &nbsp; ('.$pct_votes.'%)';
+				
+				if ($this->game->db_game['module'] == "CryptoDuels") {
+					$html .= '<br/>';
+					if ($final_performance >= 1) $html .= '<font class="greentext">Up '.round(($final_performance-1)*100, 2).'%</font>';
+					else $html .= '<font class="redtext">Down '.round((1-$final_performance)*100, 2).'%</font>';
+				}
 				$html .= '
 				</div>';
 			if ($this->game->db_game['view_mode'] == "simple") {}

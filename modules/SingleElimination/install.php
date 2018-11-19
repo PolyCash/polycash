@@ -54,7 +54,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		$new_game_def_txt = $app->game_def_to_text($game_def->game_def);
 		
 		$error_message = false;
-		$new_game = $app->create_game_from_definition($new_game_def_txt, $thisuser, "SingleElimination", $error_message, $db_game);
+		$new_game = $app->create_game_from_definition($new_game_def_txt, $thisuser, $error_message, $db_game);
 		
 		if (!empty($new_game)) {
 			if ($new_game->blockchain->db_blockchain['p2p_mode'] == "none") {

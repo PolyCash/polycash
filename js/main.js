@@ -732,7 +732,7 @@ var game_form_vars = "blockchain_id,event_rule,option_group_id,event_entity_type
 function create_new_game() {
 	$('#new_game_save_btn').html("Loading...");
 	
-	var url_string = "/ajax/manage_game.php?action=new&name="+encodeURIComponent($('#new_game_name').val())+"&blockchain_id="+$('#new_game_blockchain_id').val();
+	var url_string = "/ajax/manage_game.php?action=new&name="+encodeURIComponent($('#new_game_name').val())+"&module="+$('#new_game_module').val()+"&blockchain_id="+$('#new_game_blockchain_id').val();
 
 	var genesis_type = $('#new_game_genesis_type').val();
 	url_string += "&genesis_type="+genesis_type;
@@ -2356,4 +2356,8 @@ function apply_my_strategy() {
 		$('#apply_my_strategy_status').slideDown('fast');
 		setTimeout(function() {$('#apply_my_strategy_status').slideUp('fast');}, 10000);
 	});
+}
+function new_group_member(group_id) {
+	var member_name = prompt("Please enter a name:");
+	window.location = '/groups/?action=add_member&group_id='+group_id+'&member_name='+encodeURIComponent(member_name);
 }

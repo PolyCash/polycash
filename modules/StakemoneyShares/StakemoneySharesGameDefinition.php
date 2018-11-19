@@ -8,10 +8,12 @@ class StakemoneySharesGameDefinition {
 		$this->app = $app;
 		$this->game_def_base_txt = '{
 			"blockchain_identifier": "litecoin",
+			"option_group": null,
 			"protocol_version": 0,
-			"category_id": 4,
 			"url_identifier": "stakemoney-shares",
 			"name": "Stakemoney Shares",
+			"module":  "StakemoneyShares",
+			"category_id": 4,
 			"event_type_name": "referendum",
 			"event_type_name_plural": "referendums",
 			"event_rule": "game_definition",
@@ -53,7 +55,7 @@ class StakemoneySharesGameDefinition {
 		$this->game_def = $game_def;
 	}
 	
-	public function events_between_rounds($from_round, $to_round, $round_length, $chain_starting_block) {
+	public function events_starting_between_rounds(&$game, $from_round, $to_round, $round_length, $chain_starting_block) {
 		return array();
 	}
 }

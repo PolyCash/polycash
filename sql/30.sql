@@ -1,5 +1,4 @@
 ALTER TABLE `games` CHANGE `event_rule` `event_rule` ENUM('entity_type_option_group','single_event_series','all_pairs') CHARACTER SET latin1 COLLATE latin1_swedish_ci NULL DEFAULT NULL;
-INSERT INTO `option_groups` (`group_id`, `option_name`, `option_name_plural`, `description`) VALUES (NULL, 'candidate', 'candidates', 'Top 20 presidential candidates in 2016');
 INSERT INTO `images` (`image_id`, `access_key`, `extension`) VALUES
 (36, '', 'jpg'),
 (37, '', 'jpg'),
@@ -29,26 +28,5 @@ INSERT INTO `entities` (`entity_id`, `entity_type_id`, `default_image_id`, `enti
 (95, 1, 45, 'Sarah Palin', 'Sarah', 'Palin', 0),
 (96, 1, 46, 'Scott Walker', 'Scott', 'Walker', 0),
 (97, 1, 24, 'Ted Cruz', 'Ted', 'Cruz', 0);
-INSERT INTO `option_group_memberships` (`option_group_id`, `entity_id`) VALUES 
-(6, 1),
-(6, 2),
-(6, 3),
-(6, 65),
-(6, 82),
-(6, 83),
-(6, 84),
-(6, 85),
-(6, 86),
-(6, 87),
-(6, 88),
-(6, 89),
-(6, 90),
-(6, 91),
-(6, 92),
-(6, 93),
-(6, 94),
-(6, 95),
-(6, 96),
-(6, 97);
 ALTER TABLE `event_types` ADD `primary_entity_id` INT NULL DEFAULT NULL AFTER `entity_id`;
 ALTER TABLE `event_types` ADD `secondary_entity_id` INT NULL DEFAULT NULL AFTER `primary_entity_id`;

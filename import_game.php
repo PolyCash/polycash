@@ -32,7 +32,7 @@ include('includes/html_start.php');
 						$definition = $_REQUEST['definition'];
 						
 						if ($definition_mode == "game") {
-							$app->create_game_from_definition($definition, $thisuser, false, $error_message, $db_new_game);
+							$app->create_game_from_definition($definition, $thisuser, $error_message, $db_new_game);
 							
 							if (!empty($error_message)) echo "<p>".$error_message."</p>\n";
 							

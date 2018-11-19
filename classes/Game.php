@@ -1955,7 +1955,7 @@ class Game {
 				$to_round = $round_id - ($game_starting_round-1);
 				if (!empty($this->db_game['final_round'])) $to_round = $this->db_game['final_round'];
 				
-				$gdes_to_add = $this->module->events_between_rounds($from_round, $to_round, $this->db_game['round_length'], $this->db_game['game_starting_block']);
+				$gdes_to_add = $this->module->events_starting_between_rounds($this, $from_round, $to_round, $this->db_game['round_length'], $this->db_game['game_starting_block']);
 				
 				$msg .= "Adding ".count($gdes_to_add)." events for rounds (".$from_round." : ".$to_round.")";
 				
@@ -2235,7 +2235,7 @@ class Game {
 		
 		if ($r->rowCount() > 0) {
 			$db_event = $r->fetch();
-			$ref_block_id = $db_event['event_final_block'];
+			$ref_block_id = $db_event['event_starting_block'];
 		}
 		else $ref_block_id = $this->db_game['game_starting_block'];
 		

@@ -11,16 +11,18 @@ class CoinBattlesGameDefinition {
 		$this->events_per_round = array('BTC'=>'Bitcoin', 'BCH'=>'Bitcoin Cash', 'DASH'=>'Dash', 'ETH'=>'Ethereum', 'ETC'=>'Ethereum Classic', 'LTC'=>'Litecoin', 'XMR'=>'Monero', 'XEM'=>'NEM', 'XRP'=>'Ripple');
 		$this->game_def_base_txt = '{
 			"blockchain_identifier": "stakechain",
+			"option_group": "9 significant cryptocurrencies",
 			"protocol_version": 0,
-			"category_id": 4,
-			"url_identifier": "coin-battles",
 			"name": "Coin Battles",
+			"url_identifier": "coin-battles",
+			"module": "CoinBattles",
+			"category_id": 4,
+			"decimal_places": 8,
 			"event_type_name": "battle",
 			"event_type_name_plural": "battles",
 			"event_rule": "game_definition",
 			"event_winning_rule": "game_definition",
 			"event_entity_type_id": 0,
-			"option_group_id": 0,
 			"events_per_round": 1,
 			"inflation": "exponential",
 			"exponential_inflation_rate": 0.01,
@@ -29,16 +31,16 @@ class CoinBattlesGameDefinition {
 			"maturity": 0,
 			"payout_weight": "coin_block",
 			"final_round": null,
-			"buyin_policy": "unlimited",
+			"buyin_policy": "none",
 			"game_buyin_cap": 0,
 			"sellout_policy": "off",
 			"sellout_confirmations": 0,
 			"coin_name": "battlecoin",
 			"coin_name_plural": "battlecoins",
 			"coin_abbreviation": "BTL",
-			"escrow_address": "MjtdAk3A5SpifhdV9ZYst62xnWjVYz8HNH",
-			"genesis_tx_hash": "8be0252751d660024d44ff5847d38cca",
-			"genesis_amount": 1000000,
+			"escrow_address": "",
+			"genesis_tx_hash": "",
+			"genesis_amount": 100000000000000,
 			"game_starting_block": 1,
 			"game_winning_rule": "none",
 			"game_winning_field": "",
@@ -88,14 +90,14 @@ class CoinBattlesGameDefinition {
 
 			$defined_rounds = ceil(($chain_events_until_block - $chain_starting_block)/$game_def->round_length);
 
-			$game_def->events = $this->events_between_rounds(1, $defined_rounds, $game_def->round_length, $chain_starting_block);
+			//$game_def->events = $this->events_starting_between_rounds($game, 1, $defined_rounds, $game_def->round_length, $chain_starting_block);
 			
 			$this->game_def = $game_def;
 		}
 		else echo "No blockchain found matching that identifier.";
 	}
 	
-	public function events_between_rounds($from_round, $to_round, $round_length, $chain_starting_block) {
+	public function events_starting_between_rounds(&$game, $from_round, $to_round, $round_length, $chain_starting_block) {
 		$general_entity_type = $this->app->check_set_entity_type("general entity");
 		$events = array();
 		

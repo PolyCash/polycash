@@ -2,7 +2,7 @@
 ini_set('memory_limit', '512M');
 include(dirname(dirname(dirname(__FILE__)))."/includes/connect.php");
 include(dirname(dirname(dirname(__FILE__)))."/includes/get_session.php");
-include_once(dirname(__FILE__)."/CoinBattlesGameDefinition.php");
+include_once(dirname(__FILE__)."/CryptoDuelsGameDefinition.php");
 
 if (!empty($argv)) {
 	$cmd_vars = $app->argv_to_array($argv);
@@ -17,11 +17,11 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		die();
 	}
 	
-	$module = $app->check_set_module("CoinBattles");
+	$module = $app->check_set_module("CryptoDuels");
 	?>
-	<p><a href="/modules/CoinBattles/set_style.php?key=<?php echo $GLOBALS['cron_key_string']; ?>">Run styling script</a></p>
+	<p><a href="/modules/CryptoDuels/set_style.php?key=<?php echo $GLOBALS['cron_key_string']; ?>">Run styling script</a></p>
 	<?php
-	$game_def = new CoinBattlesGameDefinition($app);
+	$game_def = new CryptoDuelsGameDefinition($app);
 	
 	$blockchain = false;
 	$db_blockchain = $app->fetch_blockchain_by_identifier($game_def->game_def->blockchain_identifier);

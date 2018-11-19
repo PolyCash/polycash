@@ -1,1 +1,0 @@
-INSERT INTO `option_groups` (`group_id`, `option_name`, `option_name_plural`, `description`) VALUES (NULL, 'empire', 'empires', '8 largest modern empires');

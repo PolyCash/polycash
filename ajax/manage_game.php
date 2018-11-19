@@ -39,6 +39,52 @@ if ($thisuser) {
 		$new_game_perm = $thisuser->new_game_permission();
 		
 		if ($new_game_perm) {
+			$default_game_def_txt = '{
+				"protocol_version": 0,
+				"name": "",
+				"url_identifier": "",
+				"module": null,
+				"decimal_places": 8,
+				"category_id": null,
+				"event_type_name": "event",
+				"event_type_name_plural": "events",
+				"event_rule": "game_definition",
+				"event_winning_rule": "game_definition",
+				"event_entity_type_id": null,
+				"option_group_id": null,
+				"events_per_round": 1,
+				"inflation": "exponential",
+				"exponential_inflation_rate": 0,
+				"pos_reward": 0,
+				"round_length": 1,
+				"maturity": 0,
+				"payout_weight": "coin_round",
+				"final_round": null,
+				"buyin_policy": "none",
+				"game_buyin_cap": 0,
+				"sellout_policy": "off",
+				"sellout_confirmations": 0,
+				"coin_name": "coin",
+				"coin_name_plural": "coins",
+				"coin_abbreviation": "COIN",
+				"escrow_address": "",
+				"genesis_tx_hash": "",
+				"genesis_amount": 100000000000000,
+				"game_starting_block": 1,
+				"game_winning_rule": "none",
+				"game_winning_field": "",
+				"game_winning_inflation": 0,
+				"default_vote_effectiveness_function": "constant",
+				"default_effectiveness_param1": 1,
+				"default_max_voting_fraction": 1,
+				"default_option_max_width": 200,
+				"default_payout_block_delay": 0,
+				"view_mode": "default"
+			}';
+			
+			$setup_error = false;
+			$setup_error_message = "";
+			
 			$q = "SELECT MAX(creator_game_index) FROM games WHERE creator_id='".$thisuser->db_user['user_id']."';";
 			$r = $app->run_query($q);
 			if ($r->rowCount() > 0) {
@@ -50,92 +96,132 @@ if ($thisuser) {
 			$blockchain_id = (int) $_REQUEST['blockchain_id'];
 			$blockchain = new Blockchain($app, $blockchain_id);
 			
-			$game_name = $_REQUEST['name'];
-			$url_identifier = $app->game_url_identifier($game_name);
-			$game_starting_block = max(1, $blockchain->last_block_id());
+			$game_module = $_REQUEST['module'];
 			
-			$q = "INSERT INTO games SET blockchain_id='".$blockchain->db_blockchain['blockchain_id']."', creator_id='".$thisuser->db_user['user_id']."', maturity=0, round_length=1, buyin_policy='none', block_timing='realistic', creator_game_index='".$game_index."', inflation='exponential', pos_reward='0', pow_reward='0', event_rule='game_definition', event_winning_rule='game_definition', game_starting_block='".$game_starting_block."', default_betting_mode='principal', name=".$app->quote_escape($game_name).", url_identifier=".$app->quote_escape($url_identifier).", start_condition='fixed_block';";
-			$r = $app->run_query($q);
-			$game_id = $app->last_insert_id();
-			
-			$game = new Game($blockchain, $game_id);
-			
-			$user_game = $thisuser->ensure_user_in_game($game, false);
-			$user_strategy = $app->run_query("SELECT * FROM user_strategies WHERE strategy_id='".$user_game['strategy_id']."';")->fetch();
-			
-			$genesis_tx_hash = "";
-			$escrow_address = "";
-			
-			if ($_REQUEST['genesis_type'] == "existing") {
-				$genesis_tx_hash = $_REQUEST['genesis_tx_hash'];
-				
-				$genesis_first_address_r = $app->run_query("SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id WHERE t.tx_hash=".$app->quote_escape($genesis_tx_hash)." AND io.out_index=0;");
-				if ($genesis_first_address_r->rowCount() == 1) {
-					$genesis_first_address = $genesis_first_address_r->fetch();
-					$escrow_address = $genesis_first_address['address'];
-				}
+			if (empty($game_module)) {
+				$initial_game_def = json_decode($default_game_def_txt);
 			}
 			else {
-				$io_id = (int) $_REQUEST['genesis_io_id'];
-				$escrow_amount = (float) $_REQUEST['escrow_amount'];
+				eval('$module = new '.$game_module.'GameDefinition($app);');
+				$initial_game_def = json_decode($module->game_def_base_txt);
+			}
+			
+			$initial_game_def->name = urldecode($_REQUEST['name']);
+			$initial_game_def->url_identifier = $app->game_url_identifier($initial_game_def->name);
+			$initial_game_def->module = $game_module;
+			$initial_game_def->game_starting_block = floor($blockchain->last_block_id()/$initial_game_def->round_length)*$initial_game_def->round_length+1;
+			
+			$db_group = false;
+			if (!empty($initial_game_def->option_group)) {
+				$group_q = "SELECT * FROM option_groups WHERE description=".$app->quote_escape($initial_game_def->option_group).";";
+				$group_r = $app->run_query($group_q);
 				
-				$io_q = "SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id JOIN currency_accounts ca ON k.account_id=ca.account_id WHERE io.io_id='".$io_id."' AND ca.user_id='".$thisuser->db_user['user_id']."';";
-				$io_r = $app->run_query($io_q);
+				if ($group_r->rowCount() > 0) {
+					$db_group = $group_r->fetch();
+				}
+				else {
+					$setup_error = true;
+					$setup_error_message = "Error: the \"".$initial_game_def->option_group."\" group does not exist. Please visit /groups/ to add this group and then try again.";
+				}
+			}
+			
+			if (!$setup_error) {
+				$verbatim_vars = $app->game_definition_verbatim_vars();
 				
-				if ($io_r->rowCount() > 0) {
-					$io = $io_r->fetch();
-					$escrow_amount = $escrow_amount*pow(10, $blockchain->db_blockchain['decimal_places']);
-					$fee_amount = $user_strategy['transaction_fee']*pow(10, $blockchain->db_blockchain['decimal_places']);
-					$genesis_remainder = $io['amount']-$escrow_amount-$fee_amount;
+				$q = "INSERT INTO games SET creator_id='".$thisuser->db_user['user_id']."', blockchain_id='".$blockchain->db_blockchain['blockchain_id']."', game_status='editable', featured=1";
+				if ($db_group) $q .= ", option_group_id=".$db_group['group_id'];
+				
+				for ($i=0; $i<count($verbatim_vars); $i++) {
+					$var_type = $verbatim_vars[$i][0];
+					$var_name = $verbatim_vars[$i][1];
 					
-					if ($escrow_amount > 0) {
-						if ($genesis_remainder > 0) {
-							$account_name = "Escrow account for ".$game_name;
-							
-							$genesis_account_q = "INSERT INTO currency_accounts SET currency_id='".$blockchain->currency_id()."', user_id='".$thisuser->db_user['user_id']."', account_name=".$app->quote_escape($account_name).", time_created='".time()."';";
-							$genesis_account_r = $app->run_query($genesis_account_q);
-							$account_id = $app->last_insert_id();
-							$genesis_account = $app->run_query("SELECT * FROM currency_accounts WHERE account_id='".$account_id."';")->fetch();
-							
-							$db_genesis_address = $app->new_address_key($blockchain->currency_id(), $genesis_account);
-							$escrow_address = $db_genesis_address['pub_key'];
-							
-							$address_q = "SELECT * FROM address_keys WHERE account_id='".$user_game['account_id']."';";
-							$address_r = $app->run_query($address_q);
-							$my_address = $address_r->fetch();
-							
-							$error_message = false;
-							$transaction_id = $blockchain->create_transaction('transaction', array($escrow_amount, $genesis_remainder), false, array($io['io_id']), array($db_genesis_address['address_id'], $my_address['address_id']), $fee_amount, $error_message);
-							
-							$transaction = $app->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
-							$genesis_tx_hash = $transaction['tx_hash'];
+					if ($initial_game_def->$var_name != "") {
+						$q .= ", ".$var_name."=".$app->quote_escape($initial_game_def->$var_name);
+					}
+				}
+				$q .= ";";
+				$r = $app->run_query($q);
+				$game_id = $app->last_insert_id();
+				
+				$game = new Game($blockchain, $game_id);
+				
+				$user_game = $thisuser->ensure_user_in_game($game, false);
+				$user_strategy = $app->run_query("SELECT * FROM user_strategies WHERE strategy_id='".$user_game['strategy_id']."';")->fetch();
+				
+				$genesis_tx_hash = "";
+				$escrow_address = "";
+				
+				if ($_REQUEST['genesis_type'] == "existing") {
+					$genesis_tx_hash = $_REQUEST['genesis_tx_hash'];
+					
+					$genesis_first_address_r = $app->run_query("SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id WHERE t.tx_hash=".$app->quote_escape($genesis_tx_hash)." AND io.out_index=0;");
+					if ($genesis_first_address_r->rowCount() == 1) {
+						$genesis_first_address = $genesis_first_address_r->fetch();
+						$escrow_address = $genesis_first_address['address'];
+					}
+				}
+				else {
+					$io_id = (int) $_REQUEST['genesis_io_id'];
+					$escrow_amount = (float) $_REQUEST['escrow_amount'];
+					
+					$io_q = "SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id JOIN currency_accounts ca ON k.account_id=ca.account_id WHERE io.io_id='".$io_id."' AND ca.user_id='".$thisuser->db_user['user_id']."';";
+					$io_r = $app->run_query($io_q);
+					
+					if ($io_r->rowCount() > 0) {
+						$io = $io_r->fetch();
+						$escrow_amount = $escrow_amount*pow(10, $blockchain->db_blockchain['decimal_places']);
+						$fee_amount = $user_strategy['transaction_fee']*pow(10, $blockchain->db_blockchain['decimal_places']);
+						$genesis_remainder = $io['amount']-$escrow_amount-$fee_amount;
+						
+						if ($escrow_amount > 0) {
+							if ($genesis_remainder > 0) {
+								$account_name = "Escrow account for ".$game_name;
+								
+								$genesis_account_q = "INSERT INTO currency_accounts SET currency_id='".$blockchain->currency_id()."', user_id='".$thisuser->db_user['user_id']."', is_escrow_account=1, account_name=".$app->quote_escape($account_name).", time_created='".time()."';";
+								$genesis_account_r = $app->run_query($genesis_account_q);
+								$account_id = $app->last_insert_id();
+								$genesis_account = $app->run_query("SELECT * FROM currency_accounts WHERE account_id='".$account_id."';")->fetch();
+								
+								$db_genesis_address = $app->new_address_key($blockchain->currency_id(), $genesis_account);
+								$escrow_address = $db_genesis_address['pub_key'];
+								
+								$address_q = "SELECT * FROM address_keys WHERE account_id='".$user_game['account_id']."';";
+								$address_r = $app->run_query($address_q);
+								$my_address = $address_r->fetch();
+								
+								$error_message = false;
+								$transaction_id = $blockchain->create_transaction('transaction', array($escrow_amount, $genesis_remainder), false, array($io['io_id']), array($db_genesis_address['address_id'], $my_address['address_id']), $fee_amount, $error_message);
+								
+								$transaction = $app->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
+								$genesis_tx_hash = $transaction['tx_hash'];
+							}
+							else {
+								$app->output_message(2, "The escrow amount must be smaller than the amount of your UTXO.", false);
+								die();
+							}
 						}
 						else {
-							$app->output_message(4, "The escrow amount must be smaller than the amount of your UTXO.", false);
+							$app->output_message(3, "The escrow amount must be greater than zero.", false);
 							die();
 						}
 					}
 					else {
-						$app->output_message(3, "The escrow amount must be greater than zero.", false);
+						$app->output_message(4, "Error, you don't have permission to spend those coins.", false);
 						die();
 					}
 				}
-				else {
-					$app->output_message(2, "Error, you don't have permission to spend those coins.", false);
-					die();
-				}
+				
+				$q = "UPDATE games SET escrow_address=".$app->quote_escape($escrow_address).", genesis_tx_hash=".$app->quote_escape($genesis_tx_hash)." WHERE game_id='".$game->db_game['game_id']."';";
+				$r = $app->run_query($q);
+				
+				$app->output_message(1, $game->db_game['url_identifier'], false);
 			}
-			
-			$q = "UPDATE games SET escrow_address=".$app->quote_escape($escrow_address).", genesis_tx_hash=".$app->quote_escape($genesis_tx_hash)." WHERE game_id='".$game->db_game['game_id']."';";
-			$r = $app->run_query($q);
-			$game->db_game['name'] = $game_name;
-			$game->db_game['url_identifier'] = $url_identifier;
-			
-			$app->output_message(1, $url_identifier, false);
+			else {
+				$app->output_message(5, $setup_error_message, false);
+			}
 		}
 		else {
-			$app->output_message(2, "You don't have permission to create a new game.", false);
-			die();
+			$app->output_message(6, "You don't have permission to create a new game.", false);
 		}
 	}
 	else if ($action == "fetch") {

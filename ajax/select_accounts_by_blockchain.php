@@ -6,7 +6,7 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->in
 if ($thisuser) {
 	$blockchain_id = (int) $_REQUEST['blockchain_id'];
 
-	$q = "SELECT * FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id WHERE c.blockchain_id='".$blockchain_id."' AND ca.user_id='".$thisuser->db_user['user_id']."' AND ca.game_id IS NULL ORDER BY ca.account_name ASC;";
+	$q = "SELECT * FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id WHERE c.blockchain_id='".$blockchain_id."' AND ca.user_id='".$thisuser->db_user['user_id']."' AND ca.game_id IS NULL AND ca.is_escrow_account=0 ORDER BY ca.account_name ASC;";
 	$r = $app->run_query($q);
 
 	$html = "<option value=\"\">-- Please Select --</option>\n";
