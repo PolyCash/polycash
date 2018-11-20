@@ -40,7 +40,7 @@ class CryptoDuelsGameDefinition {
 			"pos_reward": 0,
 			"round_length": 50,
 			"maturity": 0,
-			"payout_weight": "coin_block",
+			"payout_weight": "coin_round",
 			"final_round": null,
 			"buyin_policy": "none",
 			"game_buyin_cap": 0,

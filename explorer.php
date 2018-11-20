@@ -1408,7 +1408,13 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							</select>
 						</div>
 						<?php
-						echo "<p>".$app->bets_summary($game, $net_stake, $num_wins, $num_losses, $num_unresolved, $pending_stake, $net_delta)."</p>\n";
+						echo "<p>You've placed ".$app->bets_summary($game, $net_stake, $num_wins, $num_losses, $num_unresolved, $pending_stake, $net_delta);
+						
+						$destroyed_coins = $game->sum_destroyed_coins($user_game['account_id']);
+						if ($destroyed_coins > 0) {
+							echo "<br/>You've destroyed <font class=\"redtext\">".$app->format_bignum($destroyed_coins/pow(10, $game->db_game['decimal_places']))."</font> ".$game->db_game['coin_name_plural'];
+						}
+						echo "</p>\n";
 						
 						if ($num_wins+$num_losses > 0) {
 							echo "<p><b>Resolved Bets</b></p>\n";

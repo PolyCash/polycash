@@ -2995,7 +2995,7 @@ class App {
 		else $win_rate = 0;
 		$num_bets = $num_wins+$num_losses+$num_unresolved;
 		
-		$html = "You've placed ".number_format($num_bets)." bets totalling <font class=\"greentext\">".$this->format_bignum($net_stake)."</font> ".$game->db_game['coin_name_plural']."<br/>\n";
+		$html = number_format($num_bets)." bets totalling <font class=\"greentext\">".$this->format_bignum($net_stake)."</font> ".$game->db_game['coin_name_plural']."<br/>\n";
 		$html .= "You've won ".number_format($num_wins)." of your ".number_format($num_resolved)." resolved bets (".round($win_rate*100, 1)."%) for a net ";
 		if ($net_delta >= 0) $html .= "gain";
 		else $html .= "loss";

@@ -2482,9 +2482,6 @@ class Game {
 			}
 			while ($keep_looping);
 			
-			$resolve_q = "UPDATE transaction_game_ios gio JOIN events ev ON gio.event_id=ev.event_id SET gio.is_resolved=1 WHERE ev.game_id='".$this->db_game['game_id']."' AND ev.event_payout_block='".$block_height."' AND ev.outcome_index IS NOT NULL;";
-			$resolve_r = $this->blockchain->app->run_query($resolve_q);
-			
 			if ($this->db_game['buyin_policy'] != "none") $this->process_sellouts_in_block($block_height);
 			
 			$filter_arr = false;
@@ -2524,6 +2521,9 @@ class Game {
 					}
 				}
 			}
+			
+			$resolve_q = "UPDATE transaction_game_ios gio JOIN events ev ON gio.event_id=ev.event_id SET gio.is_resolved=1 WHERE ev.game_id='".$this->db_game['game_id']."' AND ev.event_payout_block='".$block_height."' AND ev.outcome_index IS NOT NULL;";
+			$resolve_r = $this->blockchain->app->run_query($resolve_q);
 			
 			$q = "UPDATE game_blocks SET locally_saved=1, time_loaded='".time()."', load_time=load_time+".(microtime(true)-$start_time)." WHERE game_block_id='".$game_block['game_block_id']."';";
 			$r = $this->blockchain->app->run_query($q);
@@ -3166,7 +3166,7 @@ class Game {
 	
 	public function pending_bets() {
 		$coins_per_vote = $this->blockchain->app->coins_per_vote($this->db_game);
-		$q = "SELECT SUM(destroy_amount) as destroy_amount, SUM(".$this->db_game['payout_weight']."s_destroyed) as inflation_score FROM transaction_game_ios WHERE game_id='".$this->db_game['game_id']."' AND is_resolved=0;";
+		$q = "SELECT SUM(destroy_amount) as destroy_amount, SUM(".$this->db_game['payout_weight']."s_destroyed) as inflation_score FROM transaction_game_ios WHERE game_id='".$this->db_game['game_id']."' AND is_resolved=0 AND option_id IS NOT NULL;";
 		$r = $this->blockchain->app->run_query($q);
 		$result = $r->fetch();
 		$pending_bets = $result['destroy_amount'] + round($result['inflation_score']*$coins_per_vote);
@@ -3189,6 +3189,19 @@ class Game {
 		$vote_supply = $supply[$this->db_game['payout_weight']."s"];
 		$vote_supply_value = $coins_per_vote*$vote_supply;
 		return array($vote_supply, $vote_supply_value);
+	}
+	
+	public function sum_destroyed_coins($account_id) {
+		$destroy_q = "SELECT SUM(gio.destroy_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.destroy_amount>0 AND gio.option_id IS NULL AND k.account_id='".$account_id."' AND gio.game_id='".$this->db_game['game_id']."';";
+		$destroy_r = $this->blockchain->app->run_query($destroy_q);
+		
+		if ($destroy_r->rowCount() > 0) {
+			$destroy_stat = $destroy_r->fetch();
+			$destroy_amount = $destroy_stat['SUM(gio.destroy_amount)'];
+		}
+		else $destroy_amount = 0;
+		
+		return $destroy_amount;
 	}
 }
 ?>

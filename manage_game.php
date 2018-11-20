@@ -149,7 +149,7 @@ else {
 					
 					for ($line_i=1; $line_i<count($csv_lines); $line_i++) {
 						$line_vals = explode(",", trim($csv_lines[$line_i]));
-						$user_id = (int) $line_vals[$id_col];
+						$user_id = (int) str_replace('"', '', $line_vals[$id_col]);
 						
 						if ($user_id > 0) {
 							$user_r = $app->run_query("SELECT * FROM users WHERE user_id='".$user_id."';");
