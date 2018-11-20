@@ -11,7 +11,7 @@ include('includes/html_start.php');
 	$definition_mode = "game";
 	$toggle_mode = "blockchain";
 	
-	if ($_REQUEST['definition_mode'] == "blockchain") {
+	if (!empty($_REQUEST['definition_mode']) && $_REQUEST['definition_mode'] == "blockchain") {
 		$definition_mode = $_REQUEST['definition_mode'];
 		$toggle_mode = "game";
 	}

@@ -101,8 +101,6 @@ class CryptoDuelsGameDefinition {
 				"possible_outcomes" => $possible_outcomes
 			);
 			array_push($events, $event);
-			
-			//echo "$event_i: ".$this->currencies[$first_currency_i]['entity_name']." vs ".$this->currencies[$second_currency_i]['entity_name']."<br/>\n";
 		}
 		
 		return $events;
