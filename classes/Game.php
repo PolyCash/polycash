@@ -1917,6 +1917,8 @@ class Game {
 		$ensured_block = (int)$this->db_game['events_until_block'];
 		
 		if ($block_id > $ensured_block) {
+			$this->blockchain->app->dbh->beginTransaction();
+			
 			$round_id = $this->block_to_round($block_id);
 			$game_starting_round = $this->block_to_round($this->db_game['game_starting_block']);
 			$add_count = 0;
@@ -2151,6 +2153,8 @@ class Game {
 			
 			$msg .= "Added ".$add_count." events\n";
 			$this->set_events_until_block();
+			
+			$this->blockchain->app->dbh->commit();
 		}
 		return $msg;
 	}
