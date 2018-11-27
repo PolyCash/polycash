@@ -664,7 +664,7 @@ if ($thisuser && $game) {
 			$(".datepicker").datepicker();
 			<?php
 			if ($_REQUEST['action'] == "start_bet") {
-				echo "games[0].add_option_to_vote(".((int)$_REQUEST['event_index']).", ".((int)$_REQUEST['option_id']).", '".urlencode($_REQUEST['name'])."');\n";
+				echo "games[0].add_option_to_vote(".((int)$_REQUEST['event_index']).", ".((int)$_REQUEST['option_id']).");\n";
 			}
 			?>
 		});
