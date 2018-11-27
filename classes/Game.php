@@ -975,7 +975,6 @@ class Game {
 		var plan_option_increment = 1;
 		var plan_rounds = new Array();
 		var round_id2plan_round_id = {};
-		console.log('Running plan_options_html');
 		</script>\n";
 		$js = "";
 		$round_i = 0;
@@ -1698,7 +1697,6 @@ class Game {
 			$user_game = $user->ensure_user_in_game($this, false);
 		}
 		
-		$js = "console.log('loading new events!');\n";
 		$js .= "for (var i=0; i<games[".$game_index."].events.length; i++) {\n";
 		$js .= "\tgames[".$game_index."].events[i].deleted = true;\n";
 		$js .= "\t$('#game".$game_index."_event'+i).remove();\n";
@@ -1718,7 +1716,7 @@ class Game {
 			$event_ids .= $event->db_event['event_id'].",";
 			
 			$js .= '
-			games['.$game_index.'].events['.$i.'] = new Event(games['.$game_index.'], '.$i.', '.$event->db_event['event_id'].', '.$event->db_event['event_index'].', '.$event->db_event['num_voting_options'].', "'.$event->db_event['vote_effectiveness_function'].'", "'.$event->db_event['effectiveness_param1'].'", "'.$event->db_event['option_block_rule'].'", '.$this->blockchain->app->quote_escape($event->db_event['event_name']).');'."\n";
+			games['.$game_index.'].events['.$i.'] = new Event(games['.$game_index.'], '.$i.', '.$event->db_event['event_id'].', '.$event->db_event['event_index'].', '.$event->db_event['num_voting_options'].', "'.$event->db_event['vote_effectiveness_function'].'", "'.$event->db_event['effectiveness_param1'].'", "'.$event->db_event['option_block_rule'].'", '.$this->blockchain->app->quote_escape($event->db_event['event_name']).', '.$event->db_event['event_starting_block'].', '.$event->db_event['event_final_block'].');'."\n";
 			
 			$option_q = "SELECT * FROM options o LEFT JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id='".$event->db_event['event_id']."' ORDER BY o.event_option_index ASC;";
 			$option_r = $this->blockchain->app->run_query($option_q);

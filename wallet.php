@@ -620,7 +620,7 @@ if ($thisuser && $game) {
 				if ($i == 0) echo "games[0].all_events_start_index = ".$db_event['event_index'].";\n";
 				else if ($i == $initial_load_events-1) echo "games[0].all_events_stop_index = ".$db_event['event_index'].";\n";
 				
-				echo "games[0].all_events[".$db_event['event_index']."] = new Event(games[0], ".$i.", ".$db_event['event_id'].", ".$db_event['event_index'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'", "'.$db_event['effectiveness_param1'].'", '.$app->quote_escape($db_event['event_name']).");\n";
+				echo "games[0].all_events[".$db_event['event_index']."] = new Event(games[0], ".$i.", ".$db_event['event_id'].", ".$db_event['event_index'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'", "'.$db_event['effectiveness_param1'].'", '.$app->quote_escape($db_event['event_name']).", ".$db_event['event_starting_block'].", ".$db_event['event_final_block'].");\n";
 				echo "games[0].all_events_db_id_to_index[".$db_event['event_id']."] = ".$db_event['event_index'].";\n";
 				
 				$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY event_option_index ASC;";
