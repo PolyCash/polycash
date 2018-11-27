@@ -5,6 +5,9 @@ function toggle_push_menu(expand_collapse) {
 $(document).on('expanded.pushMenu', function() {toggle_push_menu('expand');});
 $(document).on('collapsed.pushMenu', function() {toggle_push_menu('collapse');});
 
+var User = function(id) {
+	this.userId = id;
+};
 var Image = function (id) {
 	this.imageId = id;
 	this.imageSrc = '/images/carousel/'+id+'.jpg';
@@ -670,7 +673,7 @@ function select_add_output_changed() {
 		}
 		if (event_index !== false) {
 			var this_option = games[0].events[event_index].options[event_option_index];
-			games[0].add_option_to_vote(event_index, option_id, this_option.name);
+			games[0].add_option_to_vote(event_index, option_id);
 			$('#select_add_output').val("");
 		}
 	}
@@ -683,7 +686,7 @@ function add_all_options() {
 			for (k=0; k<vote_outputs.length; k++) {
 				if (vote_outputs[k].option_id == this_option.option_id) already_in = true;
 			}
-			if (!already_in) games[0].add_option_to_vote(i, this_option.option_id, this_option.name);
+			if (!already_in) games[0].add_option_to_vote(i, this_option.option_id);
 		}
 	}
 }
@@ -1335,7 +1338,7 @@ var Event = function(game, game_event_index, event_id, real_event_index, num_vot
 	this.start_vote = function(option_id) {
 		var option_display_name = this.options[this.db_id2option_index(option_id)].name;
 		option_display_name += ' (<a href="/explorer/games/'+games[this.game.instance_id].game_url_identifier+'/events/'+this.real_event_index+'">'+this.event_name+'</a>)';
-		games[this.game.instance_id].add_option_to_vote(game_event_index, option_id, option_display_name);
+		games[this.game.instance_id].add_option_to_vote(game_event_index, option_id);
 	};
 	this.db_id2option_index = function(db_option_id) {
 		for (var i=0; i<this.options.length; i++) {
@@ -1466,16 +1469,23 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_c
 	this.block_to_round = function(block_id) {
 		return Math.ceil(block_id/this.game_round_length);
 	};
-	this.add_option_to_vote = function(event_index, option_id, name) {
+	this.add_option_to_vote = function(event_index, option_id) {
+		var this_event = this.events[event_index];
+		var this_option = this_event.options[this_event.option_id2option_index[option_id]];
+		var option_display_name = this_option.name;
+		
 		if (this.refresh_page != "wallet") {
-			alert("To cast votes, first log in to your wallet.");
+			if (thisuser) {
+				window.location = '/wallet/'+games[0].game_url_identifier+'/?action=start_bet&event_index='+event_index+'&option_id='+option_id;
+			}
+			else alert("To bet, first log in to your wallet.");
 		}
 		else {
 			var index_id = vote_outputs.length;
 			
 			if (games[0].option_has_votingaddr[option_id]) {
-				vote_outputs.push(new vote_output(index_id, name, option_id, event_index));
-				$('#compose_vote_outputs').append('<div id="compose_vote_output_'+index_id+'" class="select_utxo">'+render_option_output(index_id, name)+'</div>');
+				vote_outputs.push(new vote_output(index_id, option_display_name, option_id, event_index));
+				$('#compose_vote_outputs').append('<div id="compose_vote_output_'+index_id+'" class="select_utxo">'+render_option_output(index_id, option_display_name)+'</div>');
 				
 				load_option_slider(index_id);
 				

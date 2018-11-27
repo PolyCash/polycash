@@ -2365,7 +2365,7 @@ class App {
 			$r = $this->run_query($q);
 			
 			$redirect_url = false;
-			$thisuser->log_user_in($redirect_url, false);
+			$login_success = $thisuser->log_user_in($redirect_url, false);
 			
 			$txt = "<p>Your account has been created! ";
 			$txt .= "Any time you want to access your money, please visit the link on your gift card.</p>\n";
@@ -3041,6 +3041,13 @@ class App {
 			}
 		}
 		else $error_message = "Failed to import group from file.. the file does not exist.\n";
+	}
+	
+	public function flush_buffers() {
+		ob_end_flush();
+		ob_flush();
+		flush();
+		ob_start();
 	}
 }
 ?>

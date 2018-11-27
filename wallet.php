@@ -89,7 +89,7 @@ if (empty($thisuser) && !empty($_REQUEST['login_key'])) {
 					$r = $app->run_query($q);
 					
 					$redirect_url = false;
-					$thisuser->log_user_in($redirect_url, $viewer_id);
+					$login_success = $thisuser->log_user_in($redirect_url, $viewer_id);
 					
 					if ($redirect_url) {
 						header("Location: ".$redirect_url['url']);
@@ -662,6 +662,11 @@ if ($thisuser && $game) {
 			set_select_add_output();
 			
 			$(".datepicker").datepicker();
+			<?php
+			if ($_REQUEST['action'] == "start_bet") {
+				echo "games[0].add_option_to_vote(".((int)$_REQUEST['event_index']).", ".((int)$_REQUEST['option_id']).", '".urlencode($_REQUEST['name'])."');\n";
+			}
+			?>
 		});
 		
 		//]]>

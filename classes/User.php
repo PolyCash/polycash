@@ -187,36 +187,42 @@ class User {
 		}
 		
 		$session_key = $_COOKIE['my_session_global'];
-		$expire_time = time()+3600*24;
 		
-		$q = "INSERT INTO user_sessions SET user_id='".$this->db_user['user_id']."', session_key=".$this->app->quote_escape($session_key).", login_time='".time()."', expire_time='".$expire_time."'";
-		if ($GLOBALS['pageview_tracking_enabled']) {
-			$q .= ", ip_address=".$this->app->quote_escape($_SERVER['REMOTE_ADDR']);
+		if (!empty($session_key)) {
+			$expire_time = time()+3600*24;
+			
+			$q = "INSERT INTO user_sessions SET user_id='".$this->db_user['user_id']."', session_key=".$this->app->quote_escape($session_key).", login_time='".time()."', expire_time='".$expire_time."'";
+			if ($GLOBALS['pageview_tracking_enabled']) {
+				$q .= ", ip_address=".$this->app->quote_escape($_SERVER['REMOTE_ADDR']);
+			}
+			$q .= ";";
+			$r = $this->app->run_query($q);
+			
+			$q = "UPDATE users SET logged_in=1";
+			if ($GLOBALS['pageview_tracking_enabled']) {
+				$q .= ", ip_address=".$this->app->quote_escape($_SERVER['REMOTE_ADDR']);
+			}
+			$q .= " WHERE user_id='".$this->db_user['user_id']."';";
+			$r = $this->app->run_query($q);
+			
+			$q = "UPDATE user_games ug JOIN users u ON ug.user_id=u.user_id SET ug.prompt_notification_preference=1 WHERE (ug.notification_preference='none' OR u.notification_email='') AND ug.user_id='".$this->db_user['user_id']."' AND ug.prompt_notification_preference=0;";
+			$r = $this->app->run_query($q);
+			
+			if (!empty($_REQUEST['invite_key'])) {
+				$user_game = false;
+				$invite_game = false;
+				$this->app->try_apply_invite_key($this->db_user['user_id'], $_REQUEST['invite_key'], $invite_game, $user_game);
+			}
+			
+			$this->ensure_currency_accounts();
+			
+			if (!empty($_REQUEST['redirect_key'])) {
+				$redirect_url = $this->app->get_redirect_by_key($_REQUEST['redirect_key']);
+			}
+			
+			return true;
 		}
-		$q .= ";";
-		$r = $this->app->run_query($q);
-		
-		$q = "UPDATE users SET logged_in=1";
-		if ($GLOBALS['pageview_tracking_enabled']) {
-			$q .= ", ip_address=".$this->app->quote_escape($_SERVER['REMOTE_ADDR']);
-		}
-		$q .= " WHERE user_id='".$this->db_user['user_id']."';";
-		$r = $this->app->run_query($q);
-		
-		$q = "UPDATE user_games ug JOIN users u ON ug.user_id=u.user_id SET ug.prompt_notification_preference=1 WHERE (ug.notification_preference='none' OR u.notification_email='') AND ug.user_id='".$this->db_user['user_id']."' AND ug.prompt_notification_preference=0;";
-		$r = $this->app->run_query($q);
-		
-		if (!empty($_REQUEST['invite_key'])) {
-			$user_game = false;
-			$invite_game = false;
-			$this->app->try_apply_invite_key($this->db_user['user_id'], $_REQUEST['invite_key'], $invite_game, $user_game);
-		}
-		
-		$this->ensure_currency_accounts();
-		
-		if (!empty($_REQUEST['redirect_key'])) {
-			$redirect_url = $this->app->get_redirect_by_key($_REQUEST['redirect_key']);
-		}
+		else return false;
 	}
 	
 	public function user_in_game($game_id) {

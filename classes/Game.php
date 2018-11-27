@@ -1333,7 +1333,7 @@ class Game {
 			
 			$loading_block = $this->blockchain->app->run_query("SELECT * FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND block_id='".$loading_block_id."';")->fetch();
 			if ($loading_block) {
-				list($loading_transactions, $loading_block_sum) = $this->blockchain->block_stats($loading_block);
+				$loading_transactions = $this->blockchain->set_block_stats($loading_block);
 				if ($loading_block['num_transactions'] > 0) $block_fraction = $loading_transactions/$loading_block['num_transactions'];
 				else $block_fraction = 0;
 			}
@@ -2530,6 +2530,8 @@ class Game {
 			$q = "UPDATE game_blocks SET locally_saved=1, time_loaded='".time()."', load_time=load_time+".(microtime(true)-$start_time)." WHERE game_block_id='".$game_block['game_block_id']."';";
 			$r = $this->blockchain->app->run_query($q);
 			
+			$this->set_block_stats($game_block);
+			
 			$this->set_all_gde_blocks_by_time();
 		}
 		else {
@@ -2704,11 +2706,34 @@ class Game {
 		return $this->blockchain->explorer_block_list($from_block_id, $to_block_id, $this, false);
 	}
 	
-	public function block_stats($block) {
-		$q = "SELECT COUNT(*), SUM(gio.colored_amount) FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND t.block_id='".$block['block_id']."' GROUP BY t.transaction_id;";
+	public function set_block_stats(&$game_block) {
+		$q = "SELECT COUNT(*) ios_out, SUM(gio.colored_amount) coins_out FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND t.block_id='".$game_block['block_id']."' GROUP BY t.transaction_id;";
 		$r = $this->blockchain->app->run_query($q);
-		$r = $r->fetch(PDO::FETCH_NUM);
-		return array($r[0], $r[1]);
+		
+		$num_ios_out = 0;
+		$sum_coins_out = 0;
+		$num_transactions = $r->rowCount();
+		
+		while ($out_stat = $r->fetch()) {
+			$num_ios_out += $out_stat['ios_out'];
+			$sum_coins_out += $out_stat['coins_out'];
+		}
+		
+		$q = "SELECT COUNT(*) ios_in, SUM(gio.colored_amount) coins_in FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND t.block_id='".$game_block['block_id']."';";
+		$r = $this->blockchain->app->run_query($q);
+		$in_stat = $r->fetch();
+		
+		$num_ios_in = $in_stat['ios_in'];
+		$sum_coins_in = $in_stat['coins_in'];
+		
+		$q = "UPDATE game_blocks SET num_transactions='".$num_transactions."', num_ios_in='".$num_ios_in."', num_ios_out='".$num_ios_out."', sum_coins_in='".$sum_coins_in."', sum_coins_out='".$sum_coins_out."' WHERE game_block_id='".$game_block['game_block_id']."';";
+		$r = $this->blockchain->app->run_query($q);
+		
+		$game_block['num_transactions'] = $num_transactions;
+		$game_block['num_ios_in'] = $num_ios_in;
+		$game_block['num_ios_out'] = $num_ios_out;
+		$game_block['sum_coins_in'] = $sum_coins_in;
+		$game_block['sum_coins_out'] = $sum_coins_out;
 	}
 	
 	public function address_balance_at_block($db_address, $block_id) {

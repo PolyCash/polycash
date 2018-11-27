@@ -171,6 +171,8 @@ class Blockchain {
 				}
 				$this->app->run_query("UPDATE blocks SET load_time=load_time+".(microtime(true)-$start_time)." WHERE internal_block_id='".$db_block['internal_block_id']."';");
 				
+				$this->set_block_stats($db_block);
+				
 				$html .= "Took ".(microtime(true)-$start_time)." sec to add block #".$db_block['block_id']."<br/>\n";
 			}
 		}
@@ -238,6 +240,8 @@ class Blockchain {
 			}
 			$q .= "load_time=load_time+".(microtime(true)-$start_time)." WHERE internal_block_id='".$db_block['internal_block_id']."';";
 			$this->app->run_query($q);
+			
+			$this->set_block_stats($db_block);
 			
 			$this->try_start_games($block_height);
 			$html .= "Took ".(microtime(true)-$start_time)." sec to add block #".$block_height."<br/>\n";
@@ -1220,8 +1224,8 @@ class Blockchain {
 	public function explorer_block_list($from_block_id, $to_block_id, &$game, $complete_blocks_only) {
 		$html = "";
 		
-		$q = "SELECT * FROM blocks b";
-		if ($game) $q .= " JOIN game_blocks gb ON b.internal_block_id=gb.internal_block_id";
+		if ($game) $q = "SELECT gb.* FROM blocks b JOIN game_blocks gb ON b.internal_block_id=gb.internal_block_id";
+		else $q = "SELECT * FROM blocks b";
 		$q .= " WHERE b.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND b.block_id >= ".$from_block_id." AND b.block_id <= ".$to_block_id;
 		if ($game) $q .= " AND gb.game_id=".$game->db_game['game_id'];
 		if ($complete_blocks_only) $q .= " AND b.locally_saved=1";
@@ -1230,12 +1234,12 @@ class Blockchain {
 		
 		while ($block = $r->fetch()) {
 			if ($game) {
-				list($num_trans, $block_sum) = $game->block_stats($block);
-				$block_sum_disp = $block_sum/pow(10,$game->db_game['decimal_places']);
+				$num_trans = $block['num_transactions'];
+				$block_sum_disp = $block['sum_coins_in']/pow(10,$game->db_game['decimal_places']);
 			}
 			else {
-				list($num_trans, $block_sum) = $this->block_stats($block);
-				$block_sum_disp = $block_sum/pow(10,$this->db_blockchain['decimal_places']);
+				$num_trans = $this->set_block_stats($block);
+				$block_sum_disp = $block['sum_coins_in']/pow(10,$this->db_blockchain['decimal_places']);
 			}
 			$html .= "<div class=\"row\">";
 			$html .= "<div class=\"col-sm-3\">";
@@ -1263,11 +1267,38 @@ class Blockchain {
 		return $html;
 	}
 	
-	public function block_stats($block) {
-		$q = "SELECT COUNT(*), SUM(amount) FROM transactions WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id='".$block['block_id']."' AND (amount > 0 OR num_inputs = 0);";
+	public function set_block_stats(&$block) {
+		$q = "SELECT COUNT(*) ios_out, SUM(io.amount) coins_out FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.block_id='".$block['block_id']."' AND t.blockchain_id='".$this->db_blockchain['blockchain_id']."';";
 		$r = $this->app->run_query($q);
-		$r = $r->fetch(PDO::FETCH_NUM);
-		return array($r[0], $r[1]);
+		$out_stat = $r->fetch();
+		
+		$num_ios_out = $out_stat['ios_out'];
+		$sum_coins_out = $out_stat['coins_out'];
+		
+		$q = "SELECT COUNT(*) FROM transactions WHERE block_id='".$block['block_id']."' AND blockchain_id='".$this->db_blockchain['blockchain_id']."';";
+		$r = $this->app->run_query($q);
+		$stat = $r->fetch();
+		$num_transactions = $stat['COUNT(*)'];
+		
+		$q = "SELECT COUNT(*) ios_in, SUM(io.amount) coins_in FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id WHERE t.block_id='".$block['block_id']."' AND t.blockchain_id='".$this->db_blockchain['blockchain_id']."';";
+		$r = $this->app->run_query($q);
+		$in_stat = $r->fetch();
+		
+		$num_ios_in = $in_stat['ios_in'];
+		$sum_coins_in = $in_stat['coins_in'];
+		
+		$q = "UPDATE blocks SET ";
+		if ($this->db_blockchain['p2p_mode'] == "rpc") $q .= "num_transactions='".$num_transactions."', ";
+		$q .= "num_ios_in='".$num_ios_in."', num_ios_out='".$num_ios_out."', sum_coins_in='".$sum_coins_in."', sum_coins_out='".$sum_coins_out."' WHERE internal_block_id='".$block['internal_block_id']."';";
+		$r = $this->app->run_query($q);
+		
+		if ($this->db_blockchain['p2p_mode'] == "rpc") $block['num_transactions'] = $num_transactions;
+		$block['num_ios_in'] = $num_ios_in;
+		$block['num_ios_out'] = $num_ios_out;
+		$block['sum_coins_in'] = $sum_coins_in;
+		$block['sum_coins_out'] = $sum_coins_out;
+		
+		return $num_transactions;
 	}
 	
 	public function set_block_hash_by_height(&$coin_rpc, $block_height) {
@@ -1537,7 +1568,7 @@ class Blockchain {
 	}
 	
 	public function new_block(&$log_text) {
-		// This function only runs for private blockchains
+		// This function only runs for blockchains with p2p_mode='none'
 		$last_block_id = (int) $this->last_block_id();
 		$coin_rpc = false;
 		
@@ -1592,6 +1623,8 @@ class Blockchain {
 		
 		$q = "UPDATE blocks SET num_transactions=".$num_transactions." WHERE internal_block_id='".$internal_block_id."';";
 		$r = $this->app->run_query($q);
+		
+		$this->set_block_stats($block);
 		
 		$associated_games = $this->associated_games(array('running'));
 		

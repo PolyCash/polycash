@@ -4,8 +4,6 @@ include(dirname(dirname(__FILE__)).'/includes/get_session.php');
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
 if ($thisuser) {
-	$vars = explode(",", "denomination_id,purity,name,title,email,pnum");
-
 	$denomination_id = (int) $_REQUEST['denomination_id'];
 	$q = "SELECT * FROM card_currency_denominations d JOIN currencies c ON d.currency_id=c.currency_id WHERE d.denomination_id='".$denomination_id."';";
 	$r = $app->run_query($q);
@@ -147,10 +145,8 @@ if ($thisuser) {
 			}
 		}
 		else {
-			$img_url_vars = "";
-			for ($i=0; $i<count($vars); $i++) {
-				eval('$img_url_vars .= "&'.$vars[$i].'='.$_REQUEST[$vars[$i]].'";');
-			}
+			$img_url_vars = "&denomination_id=".((int)$_REQUEST['denomination_id'])."&purity=".((int)$_REQUEST['purity'])."&name=".urlencode(strip_tags($_REQUEST['name']))."&title=".urlencode(strip_tags($_REQUEST['title']))."&pnum=".urlencode(strip_tags($_REQUEST['pnum']));
+			
 			echo '<div class="row">';
 			echo "<div class='col-sm-6'><img class=\"preview_card_image\" style=\"width: 100%;\" src=\"/ajax/card_preview.php?mode=image&side=front".$img_url_vars."\" /></div>\n";
 			echo "<div class='col-sm-6'><img class=\"preview_card_image\" style=\"width: 100%;\" src=\"/ajax/card_preview.php?mode=image&side=back".$img_url_vars."\" /></div>\n";

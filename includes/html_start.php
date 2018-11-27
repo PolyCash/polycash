@@ -242,3 +242,12 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 		<!-- /.sidebar -->
 	</aside>
 	<div class="content-wrapper">
+		<?php
+		if ($thisuser) {
+			?>
+			<script type="text/javascript">
+			var thisuser = new User(<?php echo $thisuser->db_user['user_id']; ?>);
+			</script>
+			<?php
+		}
+		?>

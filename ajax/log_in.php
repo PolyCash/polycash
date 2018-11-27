@@ -34,12 +34,20 @@ else {
 			
 			if ($thisuser->db_user['login_method'] == "email") {
 				$app->send_login_link($thisuser->db_user, $redirect_url, $username);
+				$success = true;
 			}
 			else {
-				$thisuser->log_user_in($redirect_url, $viewer_id);
+				$success = $thisuser->log_user_in($redirect_url, $viewer_id);
 			}
-			$message = $redirect_url['url'];
-			$error_code = 1;
+			
+			if ($success) {
+				$message = $redirect_url['url'];
+				$error_code = 1;
+			}
+			else {
+				$message = "Login failed. Please make sure you have cookies enabled.";
+				$error_code = 4;
+			}
 		}
 	}
 	else if ($r->rowCount() == 1) {
@@ -49,10 +57,16 @@ else {
 			if ($db_thisuser['password'] == $app->normalize_password($password, $db_thisuser['salt'])) {
 				$thisuser = new User($app, $db_thisuser['user_id']);
 				
-				$thisuser->log_user_in($redirect_url, $viewer_id);
+				$success = $thisuser->log_user_in($redirect_url, $viewer_id);
 				
-				$message = $redirect_url['url'];
-				$error_code = 1;
+				if ($success) {
+					$message = $redirect_url['url'];
+					$error_code = 1;
+				}
+				else {
+					$message = "Login failed. Please make sure you have cookies enabled.";
+					$error_code = 4;
+				}
 			}
 			else {
 				$message = $noinfo_message;
