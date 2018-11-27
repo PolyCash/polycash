@@ -48,10 +48,6 @@ else if ($uri_parts[2] == "blockchains") {
 	}
 }
 
-if (!empty($blockchain) && $blockchain->db_blockchain['p2p_mode'] == "rpc") {
-	$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
-}
-
 if (rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer") $explore_mode = "explorer_home";
 else if ($game && rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer/games/".$game->db_game['url_identifier']) $explore_mode = "game_home";
 else if (!$game && $blockchain && rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']) $explore_mode = "blockchain_home";
@@ -208,24 +204,6 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				else $pagetitle = $blockchain->db_blockchain['blockchain_name'];
 				$pagetitle = " Transaction: ".$transaction['tx_hash'];
 			}
-			else if ($r->rowCount() == 0) {
-				if (!empty($coin_rpc) && !empty($blockchain) && !empty($tx_hash)) {
-					$successful = false;
-					$blockchain->add_transaction($coin_rpc, $tx_hash, false, true, $successful, false, false, false);
-					
-					$q = "SELECT * FROM transactions WHERE tx_hash=".$app->quote_escape($tx_hash).";";
-					$r = $app->run_query($q);
-					
-					if ($r->rowCount() == 1) {
-						$transaction = $r->fetch();
-						$mode_error = false;
-						
-						if ($game) $pagetitle = $game->db_game['name'];
-						else $pagetitle = $blockchain->db_blockchain['blockchain_name'];
-						$pagetitle = " Transaction: ".$transaction['tx_hash'];
-					}
-				}
-			}
 		}
 	}
 	else if ($explore_mode == "utxos") {
@@ -265,7 +243,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 	<div class="container-fluid" style="padding-top: 15px;">
 		<?php
 		if ($mode_error) {
-			echo "1 Error, you've reached an invalid page.";
+			echo "Error, you've reached an invalid page.";
 		}
 		else {
 			$coins_per_vote = 0;
@@ -662,6 +640,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo '</div></div>'."\n";
 							
 							echo '<div class="panel-body">';
+							echo "Block hash: ".$block['block_hash']."<br/>\n";
 							echo "Mined at ".date("Y-m-d g:ia", $block['time_mined'])." (".$app->format_seconds(time()-$block['time_mined'])." ago)<br/>\n";
 							
 							if (!$game && !empty($block['num_transactions']) && $num_trans != $block['num_transactions']) {
@@ -780,16 +759,6 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						echo $next_prev_links;
 						?>
 						<br/><br/>
-						<a href="" onclick="$('#block_info').toggle('fast'); return false;">See block details</a><br/>
-						<pre id="block_info" style="display: none;"><?php
-						print_r($block);
-						
-						if (!empty($coin_rpc)) {
-							$rpc_block = $coin_rpc->getblock($block['block_hash']);
-							if ($rpc_block) echo print_r($rpc_block);
-						}
-						?>
-						</pre>
 						<?php
 						echo "</div>\n";
 					}
@@ -1055,22 +1024,6 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					echo '</div>'."\n";
 				}
 				else if ($explore_mode == "transactions") {
-					$rpc_transaction = false;
-					$rpc_raw_transaction = false;
-					
-					if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
-						try {
-							$rpc_transaction = $coin_rpc->gettransaction($transaction['tx_hash']);
-						}
-						catch (Exception $e) {}
-						
-						try {
-							$rpc_raw_transaction = $coin_rpc->getrawtransaction($transaction['tx_hash']);
-							$rpc_raw_transaction = $coin_rpc->decoderawtransaction($rpc_raw_transaction);
-						}
-						catch (Exception $e) {}
-					}
-					
 					echo '<div class="panel-heading"><div class="panel-title">';
 					echo $blockchain->db_blockchain['blockchain_name']." Transaction: ".$transaction['tx_hash'];
 					echo "</div></div>\n";
@@ -1117,19 +1070,6 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					if ($game) echo $game->render_transaction($transaction, false, false, $coins_per_vote, $last_block_id);
 					else echo $blockchain->render_transaction($transaction, false, false);
 					echo "</div>\n";
-					
-					if ($rpc_transaction || $rpc_raw_transaction) {
-						?>
-						<br/>
-						<a href="" onclick="$('#transaction_info').toggle('fast'); return false;">See transaction details</a><br/>
-						<pre id="transaction_info" style="display: none;"><?php
-						print_r($transaction);
-						echo "<br/>\n";
-						if ($rpc_transaction) echo print_r($rpc_transaction);
-						if ($rpc_raw_transaction) echo print_r($rpc_raw_transaction);
-						?></pre>
-						<?php
-					}
 					
 					echo "</div>\n";
 				}

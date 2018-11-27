@@ -1697,7 +1697,7 @@ class Game {
 			$user_game = $user->ensure_user_in_game($this, false);
 		}
 		
-		$js .= "for (var i=0; i<games[".$game_index."].events.length; i++) {\n";
+		$js = "for (var i=0; i<games[".$game_index."].events.length; i++) {\n";
 		$js .= "\tgames[".$game_index."].events[i].deleted = true;\n";
 		$js .= "\t$('#game".$game_index."_event'+i).remove();\n";
 		$js .= "}\n";
