@@ -97,7 +97,8 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 					else { ?>
 						<li class="dropdown user user-menu">
 							<a href="/profile/" class="dropdown-toggle" data-toggle="dropdown">
-							  <span class="hidden-xs"><?php echo $thisuser->db_user['username']; ?></span>
+							  <i class="fas fa-key"></i> &nbsp; 
+							  <span><?php echo $thisuser->db_user['username']; ?></span>
 							</a>
 							<ul class="dropdown-menu">
 							  <!-- User image -->
