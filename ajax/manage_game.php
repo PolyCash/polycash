@@ -113,15 +113,18 @@ if ($thisuser) {
 			
 			$db_group = false;
 			if (!empty($initial_game_def->option_group)) {
-				$group_q = "SELECT * FROM option_groups WHERE description=".$app->quote_escape($initial_game_def->option_group).";";
-				$group_r = $app->run_query($group_q);
+				$db_group = $app->select_group_by_description($initial_game_def->option_group);
 				
-				if ($group_r->rowCount() > 0) {
-					$db_group = $group_r->fetch();
-				}
-				else {
-					$setup_error = true;
-					$setup_error_message = "Error: the \"".$initial_game_def->option_group."\" group does not exist. Please visit /groups/ to add this group and then try again.";
+				if (!$db_group) {
+					$import_error = "";
+					$app->import_group_from_file($initial_game_def->option_group, $import_error);
+					
+					$db_group = $app->select_group_by_description($initial_game_def->option_group);
+					
+					if (!$db_group) {
+						$setup_error = true;
+						$setup_error_message = "Error: the \"".$initial_game_def->option_group."\" group does not exist. Please visit /groups/ to add this group and then try again.";
+					}
 				}
 			}
 			

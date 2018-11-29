@@ -1781,13 +1781,13 @@ class App {
 			$q = "INSERT INTO game_defined_events SET game_id='".$game->db_game['game_id']."', ";
 		}
 		
-		if ($gde['sport'] != "") {
+		if (!empty($gde['sport'])) {
 			$sport_entity = $this->check_set_entity($sport_entity_type_id, $gde['sport']);
 			$q .= "sport_entity_id=".$sport_entity['entity_id'].", ";
 		}
 		else $q .= "sport_entity_id=NULL, ";
 		
-		if ($gde['league'] != "") {
+		if (!empty($gde['league'])) {
 			$league_entity = $this->check_set_entity($league_entity_type_id, $gde['league']);
 			$q .= "league_entity_id=".$league_entity['entity_id'].", ";
 		}
@@ -1969,8 +1969,21 @@ class App {
 					
 					if ($permission_to_change) {
 						if (!$game) {
+							$db_group = false;
+							if (!empty($game_def->option_group)) {
+								$db_group = $this->select_group_by_description($game_def->option_group);
+								
+								if (!$db_group) {
+									$import_error = "";
+									$this->import_group_from_file($game_def->option_group, $import_error);
+									
+									$db_group = $this->select_group_by_description($game_def->option_group);
+								}
+							}
+							
 							$q = "INSERT INTO games SET ";
 							if ($thisuser) $q .= "creator_id='".$thisuser->db_user['user_id']."', ";
+							if ($db_group) $q .= "option_group_id='".$db_group['group_id']."', ";
 							$q .= "blockchain_id='".$db_blockchain['blockchain_id']."', game_status='published', featured=1";
 							
 							for ($i=0; $i<count($verbatim_vars); $i++) {
@@ -2014,6 +2027,11 @@ class App {
 						
 						if ($from_game_def_hash != $to_game_def_hash) {
 							$error_message = $this->migrate_game_definitions($game, $from_game_def_hash, $to_game_def_hash);
+							
+							$general_entity_type = $this->check_set_entity_type("general entity");
+							
+							$entity_q = "UPDATE game_defined_options gdo JOIN game_defined_events ev ON gdo.event_index=ev.event_index JOIN entities en ON gdo.name=en.entity_name SET gdo.entity_id=en.entity_id WHERE gdo.game_id='".$game->db_game['game_id']."' AND ev.game_id='".$game->db_game['game_id']."' AND en.entity_type_id='".$general_entity_type['entity_type_id']."';";
+							$entity_r = $this->run_query($entity_q);
 						}
 						else $error_message = "Found no changes to apply.";
 						
@@ -3048,6 +3066,16 @@ class App {
 		ob_flush();
 		flush();
 		ob_start();
+	}
+	
+	public function select_group_by_description($description) {
+		$group_q = "SELECT * FROM option_groups WHERE description=".$this->quote_escape($description).";";
+		$group_r = $this->run_query($group_q);
+		
+		if ($group_r->rowCount() > 0) {
+			return $group_r->fetch();
+		}
+		else return false;
 	}
 }
 ?>
