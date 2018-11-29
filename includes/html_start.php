@@ -47,6 +47,9 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 	<script type="text/javascript" src="/js/rsa/jsbn2.js"></script>
 	<?php
 	}
+	if ($_SERVER['HTTP_HOST'] != "poly.cash") {
+		echo '<link rel="canonical" href="https://poly.cash'.$_SERVER['REQUEST_URI'].'" />'."\n";
+	}
 	?>
 	<meta property="og:image" content="<?php echo $GLOBALS['base_url']; ?>/images/logo/icon-150x150.png"/>
 </head>
@@ -54,8 +57,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 <div class="wrapper">
 	<header class="main-header">
 		<a href="/" class="logo">
-			<span class="logo-mini"><b>P</b>C</span>
-			<span class="logo-lg"><b>Poly</b>Cash</span>
+			<span class="logo-lg"><img src="/images/polycash-logo-white-sm.png" /></span>
 		</a>
 
 		<!-- Header Navbar -->
@@ -80,15 +82,19 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 				<?php
 			}
 			?>
-			<!-- Navbar Right Menu -->
 			<div class="navbar-custom-menu">
 				<ul class="nav navbar-nav">
+					<li><a href="/"><i class="fas fa-home"></i> &nbsp; <span>Home</span></a></li>
+					<li><a href="/about/"><i class="fas fa-question-circle"></i> &nbsp; <span>About</span></a></li>
+					<li><a target="_blank" href="https://medium.com/polycash"><i class="fas fa-rss-square"></i> &nbsp; <span>Our Blog</span></a></li>
+					<li><a href="/polycash-whitepaper-v2.pdf"><i class="fas fa-file-alt"></i> &nbsp; <span>Whitepaper</span></a></li>
+					<li><a target="_blank" href="https://github.com/polycash/polycash"><i class="fas fa-code"></i> &nbsp; <span>Source Code</span></a></li>
 					<?php
 					if (empty($thisuser)) {
 						if (empty($redirect_url)) $redirect_url = $app->get_redirect_url($_SERVER['REQUEST_URI']);
-						echo '<li><a href="/accounts/?redirect_key='.$redirect_url['redirect_key'].'">Log In</a></li>';
+						echo '<li><a href="/accounts/?redirect_key='.$redirect_url['redirect_key'].'"><i class="fas fa-key"></i> &nbsp; <span>Log In</span></a></li>';
 					}
-					if (!empty($thisuser)) { ?>
+					else { ?>
 						<li class="dropdown user user-menu">
 							<a href="/profile/" class="dropdown-toggle" data-toggle="dropdown">
 							  <span class="hidden-xs"><?php echo $thisuser->db_user['username']; ?></span>
@@ -179,7 +185,6 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 					<?php
 				}
 				?>
-				<li<?php if ($nav_tab_selected == "directory" && empty($selected_category)) echo ' class="active"'; ?>><a href="/directory/"><i class="fa fa-sitemap"></i> <span>Browse Games</span></a></li>
 				<li<?php if ($nav_tab_selected == "wallet" && empty($game)) echo ' class="active"'; ?>><a href="/wallet/"><i class="fa fa-cubes"></i> <span>My Games</span></a></li>
 				<li<?php if ($nav_tab_selected == "accounts") echo ' class="active"'; ?>><a href="/accounts/"><i class="fa fa-user-circle"></i> <span>My Accounts</span></a></li>
 				<li<?php if ($nav_tab_selected == "cards") echo ' class="active"'; ?>><a href="/cards/"><i class="fa fa-id-card"></i> <span>My Cards</span><?php

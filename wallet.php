@@ -569,8 +569,6 @@ if ($thisuser && $game) {
 		//<![CDATA[
 		var current_tab = 0;
 		
-		var user_logged_in = true;
-		
 		var games = new Array();
 		games.push(new Game(<?php
 			echo $game->db_game['game_id'];

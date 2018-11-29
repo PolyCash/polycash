@@ -190,18 +190,6 @@ echo $new_event_js;
 ?>
 games[0].show_selected_event(false);
 
-var user_logged_in = <?php if (empty($thisuser)) echo 'false'; else echo 'true'; ?>;
-
-var homeCarousel;
-
-$(document).ready(function() {
-	homeCarousel = new ImageCarousel('home_carousel');
-	homeCarousel.initialize();
-});
-
-$(".navbar-toggle").click(function(event) {
-	$(".navbar-collapse").toggle('in');
-});
 //]]>
 </script>
 <?php

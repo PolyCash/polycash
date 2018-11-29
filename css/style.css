@@ -1,6 +1,12 @@
 html, body {
 	overflow-x: hidden;
 }
+.polycash_header {
+	text-align: center;
+	padding: 50px 0px;
+	background-color: #333;
+	color: #fff;
+}
 .top_banner {
 	text-align: center;
 	height: 400px;

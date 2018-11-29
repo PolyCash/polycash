@@ -939,12 +939,11 @@ class App {
 				
 				$faucet_io = $featured_game->check_faucet(false);
 				
-				echo '<p><a href="/wallet/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; ';
+				echo '<p><a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; ';
 				if ($faucet_io) echo 'Join now & receive '.$this->format_bignum($faucet_io['colored_amount_sum']/pow(10,$featured_game->db_game['decimal_places'])).' '.$featured_game->db_game['coin_name_plural'];
 				else echo 'Play Now';
 				echo "</a>";
 				echo ' <a href="/explorer/games/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-sm btn-primary"><i class="fas fa-database"></i> &nbsp; '.ucwords($featured_game->db_game['event_type_name']).' Results</a>';
-				echo ' <a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-sm btn-warning"><i class="fas fa-info-circle"></i> &nbsp; About '.$featured_game->db_game['name'].'</a>';
 				echo "</p>\n";
 				
 				if ($featured_game->db_game['module'] == "CoinBattles") {
@@ -961,12 +960,11 @@ class App {
 				echo "games[".$counter."].show_selected_event(true);\n";
 				echo '</script>';
 				
-				echo '<br/><a href="/wallet/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; ';
+				echo '<br/><a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; ';
 				if ($faucet_io) echo 'Join now & receive '.$this->format_bignum($faucet_io['colored_amount_sum']/pow(10,$featured_game->db_game['decimal_places'])).' '.$featured_game->db_game['coin_name_plural'];
 				else echo 'Play Now';
 				echo '</a>';
 				echo ' <a href="/explorer/games/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-sm btn-primary"><i class="fas fa-database"></i> &nbsp; '.ucwords($featured_game->db_game['event_type_name']).' Results</a>';
-				echo ' <a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-sm btn-warning"><i class="fas fa-info-circle"></i> &nbsp; About '.$featured_game->db_game['name'].'</a>';
 				echo '</center><br/>';
 				
 				if ($counter%(12/$cell_width) == 1) echo '</div><div class="row">';
@@ -1241,8 +1239,8 @@ class App {
 				$temp_event[$var_name] = $var_val;
 			}
 			
-			if ($db_event['sport_name'] != "") $temp_event['sport'] = $db_event['sport_name'];
-			if ($db_event['league_name'] != "") $temp_event['league'] = $db_event['league_name'];
+			if (!empty($db_event['sport_name'])) $temp_event['sport'] = $db_event['sport_name'];
+			if (!empty($db_event['league_name'])) $temp_event['league'] = $db_event['league_name'];
 			
 			if ($definition_mode == "defined") {
 				$qq = "SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."' ORDER BY option_index ASC;";
@@ -1972,7 +1970,6 @@ class App {
 							$db_group = false;
 							if (!empty($game_def->option_group)) {
 								$db_group = $this->select_group_by_description($game_def->option_group);
-								
 								if (!$db_group) {
 									$import_error = "";
 									$this->import_group_from_file($game_def->option_group, $import_error);
@@ -2029,7 +2026,6 @@ class App {
 							$error_message = $this->migrate_game_definitions($game, $from_game_def_hash, $to_game_def_hash);
 							
 							$general_entity_type = $this->check_set_entity_type("general entity");
-							
 							$entity_q = "UPDATE game_defined_options gdo JOIN game_defined_events ev ON gdo.event_index=ev.event_index JOIN entities en ON gdo.name=en.entity_name SET gdo.entity_id=en.entity_id WHERE gdo.game_id='".$game->db_game['game_id']."' AND ev.game_id='".$game->db_game['game_id']."' AND en.entity_type_id='".$general_entity_type['entity_type_id']."';";
 							$entity_r = $this->run_query($entity_q);
 						}
