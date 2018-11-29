@@ -569,7 +569,6 @@ if ($thisuser && $game) {
 		//<![CDATA[
 		var current_tab = 0;
 		
-		var games = new Array();
 		games.push(new Game(<?php
 			echo $game->db_game['game_id'];
 			echo ', false';
@@ -596,9 +595,8 @@ if ($thisuser && $game) {
 			echo ', '.$user_game['event_index'];
 			echo ', false';
 			echo ', "'.$game->db_game['default_betting_mode'].'"';
+			echo ', true';
 		?>));
-		
-		games[0].game_loop_event();
 		
 		<?php
 		$load_event_rounds = 1;
@@ -635,7 +633,7 @@ if ($thisuser && $game) {
 		
 		echo $game->load_all_event_points_js(0, $user_strategy, $plan_start_round, $plan_stop_round);
 		?>
-		$(document).ready(function() {
+		window.onload = function() {
 			toggle_betting_mode('inflationary');
 			loop_event();
 			compose_vote_loop();
@@ -665,7 +663,12 @@ if ($thisuser && $game) {
 				echo "games[0].add_option_to_vote(".((int)$_REQUEST['event_index']).", ".((int)$_REQUEST['option_id']).");\n";
 			}
 			?>
-		});
+			tab_clicked(<?php echo $initial_tab; ?>);
+			
+			set_plan_rightclicks();
+			set_plan_round_sums();
+			render_plan_rounds();
+		};
 		
 		//]]>
 		</script>
@@ -794,7 +797,6 @@ if ($thisuser && $game) {
 							<?php
 							echo $new_event_js;
 							?>
-							games[0].show_selected_event(false);
 							</script>
 						</div>
 						<div class="col-md-6">
@@ -1305,12 +1307,6 @@ if ($thisuser && $game) {
 		</div>
 		
 		<br/><br/>
-		
-		<script type="text/javascript">
-		$(document).ready(function() {
-			tab_clicked(<?php echo $initial_tab; ?>);
-		});
-		</script>
 		<?php
 	}
 	else {

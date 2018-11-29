@@ -153,7 +153,6 @@ $new_event_js = $game->new_event_js(0, $thisuser, $filter_arr, $event_ids);
 ?>
 <script type="text/javascript">
 //<![CDATA[
-var games = new Array();
 games.push(new Game(<?php
 	echo $game->db_game['game_id'];
 	echo ', false';
@@ -181,15 +180,12 @@ games.push(new Game(<?php
 	else echo "0";
 	echo ', false';
 	echo ', "'.$game->db_game['default_betting_mode'].'"';
+	echo ', true';
 ?>));
-
-games[0].game_loop_event();
 
 <?php
 echo $new_event_js;
 ?>
-games[0].show_selected_event(false);
-
 //]]>
 </script>
 <?php

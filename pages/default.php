@@ -3,9 +3,6 @@ $pagetitle = $GLOBALS['coin_brand_name']." - Home";
 $nav_tab_selected = "home";
 include('includes/html_start.php');
 ?>
-<script type="text/javascript">
-var games = new Array();
-</script>
 <div class="container-fluid" style="padding-top: 10px;">
 	<?php
 	$app->display_games(false, false);

@@ -1009,7 +1009,7 @@ class Game {
 			$html .= "</div>\n";
 			$round_i++;
 		}
-		$html .= '<script type="text/javascript">'.$js."\n".$this->load_all_event_points_js(0, $user_strategy, $from_round, $to_round)."\nset_plan_rightclicks();\nset_plan_round_sums();\nrender_plan_rounds();\n</script>\n";
+		$html .= '<script type="text/javascript">'.$js."\n".$this->load_all_event_points_js(0, $user_strategy, $from_round, $to_round)."\n</script>\n";
 		return $html;
 	}
 	
@@ -1734,7 +1734,7 @@ class Game {
 		}
 		if ($event_ids != "") $event_ids = substr($event_ids, 0, strlen($event_ids)-1);
 
-		$js .= '$("#game'.$game_index.'_events").html(event_html);';
+		$js .= 'document.getElementById("game'.$game_index.'_events").innerHTML = event_html;'."\n";
 		return $js;
 	}
 	

@@ -34,9 +34,6 @@ $nav_tab_selected = "directory";
 include('includes/html_start.php');
 ?>
 <div class="container-fluid" style="padding-top: 10px;">
-	<script type="text/javascript">
-	var games = new Array();
-	</script>
 	<?php
 	if (!empty($selected_category)) {
 		$subcategory_q = "SELECT * FROM categories WHERE parent_category_id='".$selected_category['category_id']."';";

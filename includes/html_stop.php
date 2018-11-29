@@ -82,10 +82,44 @@
 		?>
 	</div>
 </footer>
+
+<script type="text/javascript" src="/js/jquery-1.11.3.js"></script>
+<script type="text/javascript" src="/js/onload.js"></script>
+
+<script type="text/javascript">
+for (var game_i=0; game_i<games.length; game_i++) {
+	if (games[game_i].render_events) games[game_i].game_loop_event();
+}
+</script>
+
+<script type="text/javascript" src="/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="/js/jquery.ui.js"></script>
+<script type="text/javascript" src="/js/jquery.nouislider.js"></script>
+<script type="text/javascript" src="/js/adminlte.min.js"></script>
+<script type="text/javascript" src="/js/tiny.editor.js"></script>
+<script type="text/javascript" src="/js/chart.js"></script>
+<script type="text/javascript" src="/js/maskedinput.js"></script>
+<script type="text/javascript" src="/js/qrcam.js"></script>
 <?php
+if (!empty($include_crypto_js)) { ?>
+<script type="text/javascript" src="/js/base64.lib.js" ></script>
+<script type="text/javascript" src="/js/rsa/prng4.js"></script>
+<script type="text/javascript" src="/js/rsa/rng.js"></script>
+<script type="text/javascript" src="/js/rsa/rsa.js"></script>
+<script type="text/javascript" src="/js/rsa/rsa2.js"></script>
+<script type="text/javascript" src="/js/rsa/base64.js"></script>
+<script type="text/javascript" src="/js/rsa/jsbn.js"></script>
+<script type="text/javascript" src="/js/rsa/jsbn2.js"></script>
+<?php
+}
 if ($GLOBALS['signup_captcha_required']) { ?>
+<script type="text/javascript" src="https://www.google.com/jsapi"></script>
 <script type='text/javascript' src='https://www.google.com/recaptcha/api.js'></script>
 <?php } ?>
+
+<link rel="stylesheet" type="text/css" href="/css/jquery.ui.css" />
+<link rel="stylesheet" type="text/css" href="/css/jquery.nouislider.css" />
+<link rel="stylesheet" type="text/css" href="/css/fontawesome-all.min.css" media="screen" />
 
 </body>
 </html>

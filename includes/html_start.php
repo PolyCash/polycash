@@ -14,39 +14,11 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 	<link rel="stylesheet" type="text/css" href="/css/style.css<?php if (!empty($GLOBALS['cachebuster'])) echo '?v='.$GLOBALS['cachebuster']; ?>" />
 	<link rel="stylesheet" type="text/css" href="/css/AdminLTE.min.css">
 	<link rel="stylesheet" type="text/css" href="/css/skin-blue.min.css">
-	<link rel="stylesheet" type="text/css" href="/css/jquery.ui.css" />
-	<link rel="stylesheet" type="text/css" href="/css/jquery.nouislider.css" />
 	<link rel="stylesheet" type="text/css" href="/css/bootstrap.min.css" media="screen" />
-	<link rel="stylesheet" type="text/css" href="/css/fontawesome-all.min.css" media="screen" />
-	<?php
-	if ($GLOBALS['signup_captcha_required']) { ?>
-	<script type="text/javascript" src="https://www.google.com/jsapi"></script>
-	<?php
-	}
-	?>
-	<script type="text/javascript" src="/js/jquery-1.11.3.js"></script>
-	<script type="text/javascript" src="/js/bootstrap.min.js"></script>
-	<script type="text/javascript" src="/js/jquery.ui.js"></script>
-	<script type="text/javascript" src="/js/jquery.nouislider.js"></script>
+	
 	<script type="text/javascript" src="/js/sha256.js"></script>
 	<script type="text/javascript" src="/js/main.js<?php if (!empty($GLOBALS['cachebuster'])) echo '?v='.$GLOBALS['cachebuster']; ?>"></script>
-	<script type="text/javascript" src="/js/adminlte.min.js"></script>
-	<script type="text/javascript" src="/js/tiny.editor.js"></script>
-	<script type="text/javascript" src="/js/chart.js"></script>
-	<script type="text/javascript" src="/js/maskedinput.js"></script>
-	<script type="text/javascript" src="/js/qrcam.js"></script>
 	<?php
-	if (!empty($include_crypto_js)) { ?>
-	<script type="text/javascript" src="/js/base64.lib.js" ></script>
-	<script type="text/javascript" src="/js/rsa/prng4.js"></script>
-	<script type="text/javascript" src="/js/rsa/rng.js"></script>
-	<script type="text/javascript" src="/js/rsa/rsa.js"></script>
-	<script type="text/javascript" src="/js/rsa/rsa2.js"></script>
-	<script type="text/javascript" src="/js/rsa/base64.js"></script>
-	<script type="text/javascript" src="/js/rsa/jsbn.js"></script>
-	<script type="text/javascript" src="/js/rsa/jsbn2.js"></script>
-	<?php
-	}
 	if ($_SERVER['HTTP_HOST'] != "poly.cash") {
 		echo '<link rel="canonical" href="https://poly.cash'.$_SERVER['REQUEST_URI'].'" />'."\n";
 	}
@@ -248,12 +220,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 		<!-- /.sidebar -->
 	</aside>
 	<div class="content-wrapper">
-		<?php
-		if ($thisuser) {
-			?>
-			<script type="text/javascript">
-			var thisuser = new User(<?php echo $thisuser->db_user['user_id']; ?>);
-			</script>
-			<?php
-		}
-		?>
+		<script type="text/javascript">
+		var thisuser = <?php if ($thisuser) echo "new User(".$thisuser->db_user['user_id'].")"; else echo "false"; ?>;
+		var games = [];
+		</script>

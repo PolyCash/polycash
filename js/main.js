@@ -2,9 +2,6 @@ function toggle_push_menu(expand_collapse) {
 	$.get("/ajax/toggle_left_menu.php?expand_collapse="+expand_collapse, function(result) {});
 }
 
-$(document).on('expanded.pushMenu', function() {toggle_push_menu('expand');});
-$(document).on('collapsed.pushMenu', function() {toggle_push_menu('collapse');});
-
 var User = function(id) {
 	this.userId = id;
 };
@@ -18,7 +15,7 @@ var ImageCarousel = function (containerElementId) {
 	this.slideTime = 5000;
 	this.widthToHeight = Math.round(1800/570, 6);
 	this.containerElementId = containerElementId;
-	this.images = new Array();
+	this.images = [];
 	var _this = this;
 	
 	this.initialize = function() {
@@ -88,7 +85,7 @@ var chain_io = function(chain_io_index, io_id, amount, create_block_id) {
 	this.io_id = io_id;
 	this.amount = amount;
 	this.create_block_id = create_block_id;
-	this.game_ios = new Array();
+	this.game_ios = [];
 	
 	this.votes_at_block = function(block_id) {
 		var votes = 0;
@@ -165,8 +162,8 @@ function explorer_search() {
 	});
 }
 
-var chatWindows = new Array();
-var userId2ChatWindowId = new Array();
+var chatWindows = [];
+var userId2ChatWindowId = [];
 var visibleChatWindows = 0;
 var option_id2option_index = {};
 var option_index2option_id = {};
@@ -225,15 +222,6 @@ function sendChatMessage(chatWindowId) {
 		$('#chatWindowContent'+chatWindowId).scrollTop($('#chatWindowContent'+chatWindowId)[0].scrollHeight);
 	});
 }
-$(window).keydown(function(e){
-	var key = (e.which) ? e.which : e.keyCode;
-	if (key == 13) {
-		if ($(":focus").attr("class") == "chatWindowWriter") {
-			var chatWindowId = $(":focus").attr("id").replace(/chatWindowWriter/g, '');
-			sendChatMessage(chatWindowId);
-		}
-	}
-});
 function tab_clicked(index_id) {
 	if (current_tab !== false) {
 		$('#tabcell'+current_tab).removeClass("active");
@@ -1134,7 +1122,7 @@ function send_invitation(this_game_id, invitation_id, send_method) {
 }
 var plan_round = function(round_id) {
 	this.round_id = round_id;
-	this.event_ids = new Array();
+	this.event_ids = [];
 	this.sum_points = 0;
 }
 function set_plan_round_sums() {
@@ -1291,11 +1279,11 @@ function scramble_strategy(strategy_id) {
 }
 
 var editing_game_id = false;
-var vote_inputs = new Array();
-var vote_outputs = new Array();
+var vote_inputs = [];
+var vote_outputs = [];
 var output_amounts_need_update = false;
 var io_id2input_index = {};
-var chain_ios = new Array();
+var chain_ios = [];
 var utxo_spend_offset = 0;
 
 var Event = function(game, game_event_index, event_id, real_event_index, num_voting_options, vote_effectiveness_function, effectiveness_param1, option_block_rule, event_name, event_starting_block, event_final_block) {
@@ -1332,7 +1320,7 @@ var Event = function(game, game_event_index, event_id, real_event_index, num_vot
 	this.deleted = false;
 	this.details_shown = true;
 	
-	this.options = new Array();
+	this.options = [];
 	this.option_id2option_index = {};
 	
 	this.start_vote = function(option_id) {
@@ -1404,15 +1392,15 @@ var Event = function(game, game_event_index, event_id, real_event_index, num_vot
 	};
 };
 
-var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, chain_coin_name, chain_coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, effectiveness_param1, seconds_per_block, inflation, exponential_inflation_rate, time_last_block_loaded, decimal_places, view_mode, initial_event_index, filter_date, default_betting_mode) {
+var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, chain_coin_name, chain_coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, effectiveness_param1, seconds_per_block, inflation, exponential_inflation_rate, time_last_block_loaded, decimal_places, view_mode, initial_event_index, filter_date, default_betting_mode, render_events) {
 	Game.numInstances = (Game.numInstances || 0) + 1;
 	
 	this.instance_id = Game.numInstances-1;
 	this.game_id = game_id;
 	this.last_block_id = last_block_id;
 	this.last_transaction_id = last_transaction_id;
-	this.mature_io_ids_csv = mature_io_ids_csv;
-	this.mature_io_ids_hash = Sha256.hash(mature_io_ids_csv);
+	this.mature_io_ids_csv = mature_io_ids_csv ? mature_io_ids_csv : "";
+	this.mature_io_ids_hash = Sha256.hash(this.mature_io_ids_csv);
 	this.payout_weight = payout_weight;
 	this.game_round_length = game_round_length;
 	this.fee_amount = fee_amount;
@@ -1422,8 +1410,8 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_c
 	this.chain_coin_name = chain_coin_name;
 	this.chain_coin_name_plural = chain_coin_name_plural;
 	this.refresh_page = refresh_page;
-	this.event_ids = event_ids;
-	this.event_ids_hash = Sha256.hash(event_ids);
+	this.event_ids = event_ids ? event_ids : "";
+	this.event_ids_hash = Sha256.hash(this.event_ids);
 	this.logo_image_url = logo_image_url;
 	this.vote_effectiveness_function = vote_effectiveness_function;
 	this.effectiveness_param1 = effectiveness_param1;
@@ -1435,15 +1423,14 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_c
 	this.selected_event_index = initial_event_index;
 	this.filter_date = filter_date;
 	this.default_betting_mode = default_betting_mode;
+	this.render_events = render_events;
 	
 	if (filter_date) {
-		$(document).ready(function() {
-			$('#filter_by_date').val(filter_date);
-		});
+		document.getElementById('filter_by_date').value(filter_date);
 	}
 	
-	this.events = new Array();
-	this.all_events = new Array();
+	this.events = [];
+	this.all_events = [];
 	this.all_events_start_index = false;
 	this.all_events_stop_index = false;
 	this.option_has_votingaddr = [];
@@ -1507,8 +1494,8 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_c
 		var event_nav_txt = "Viewing "+(this.selected_event_index+1)+" of "+this.events.length;
 		event_nav_txt += " &nbsp;&nbsp;&nbsp; <a href='' onclick='games["+this.instance_id+"].show_previous_event(); return false;'>Previous</a> &nbsp; <a href='' onclick='games["+this.instance_id+"].show_next_event(); return false;'>Next</a> &nbsp;&nbsp;&nbsp; Jump to: <input id=\"jump_to_event_index_"+this.selected_event_index+"\" class=\"form-control input-sm\" style=\"width: 80px; display: inline-block;\" /><button class=\"btn btn-primary btn-sm\" onclick=\"games["+this.instance_id+"].hide_selected_event(); games["+this.instance_id+"].selected_event_index=parseInt($('#jump_to_event_index_"+this.selected_event_index+"').val())-1; games["+this.instance_id+"].show_selected_event(false);\">Go</button>";
 		
-		$('#game'+this.instance_id+'_event'+this.selected_event_index).fadeIn('fast');
-		$('#game'+this.instance_id+'_event'+this.selected_event_index+'_event_nav').html(event_nav_txt);
+		document.getElementById('game'+this.instance_id+'_event'+this.selected_event_index).style.display = 'block';
+		document.getElementById('game'+this.instance_id+'_event'+this.selected_event_index+'_event_nav').innerHTML = event_nav_txt;
 		
 		if (!skip_set_event_index) this.set_user_game_event_index();
 		

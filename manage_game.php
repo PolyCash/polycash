@@ -300,13 +300,12 @@ else {
 			$action_labels = array("Game Parameters", "Manage Events", "Description", "Game Definition");
 			?>
 			<script type="text/javascript">
-			var games = new Array();
 			$(document).ready(function() {
 				games.push(new Game(<?php
 					echo $game->db_game['game_id'];
 					echo ', false';
 					echo ', false';
-					echo ', ""';
+					echo ', false';
 					echo ', "'.$game->db_game['payout_weight'].'"';
 					echo ', '.$game->db_game['round_length'];
 					echo ', 0';
@@ -315,7 +314,7 @@ else {
 					echo ', "'.$game->db_game['coin_name_plural'].'"';
 					echo ', "'.$game->blockchain->db_blockchain['coin_name'].'"';
 					echo ', "'.$game->blockchain->db_blockchain['coin_name_plural'].'"';
-					echo ', "wallet", "'.$game->event_ids().'"';
+					echo ', "explorer", false';
 					echo ', "'.$game->logo_image_url().'"';
 					echo ', "'.$game->vote_effectiveness_function().'"';
 					echo ', "'.$game->effectiveness_param1().'"';
@@ -324,6 +323,11 @@ else {
 					echo ', "'.$game->db_game['exponential_inflation_rate'].'"';
 					echo ', false';
 					echo ', "'.$game->db_game['decimal_places'].'"';
+					echo ', "'.$game->db_game['view_mode'].'"';
+					echo ', 0';
+					echo ', false';
+					echo ', "'.$game->db_game['default_betting_mode'].'"';
+					echo ', false';
 				?>));
 				
 				manage_game(<?php echo $game->db_game['game_id']; ?>, 'fetch');

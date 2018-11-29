@@ -928,9 +928,8 @@ class App {
 					echo ', 0';
 					echo ', false';
 					echo ', "'.$featured_game->db_game['default_betting_mode'].'"';
+					echo ', true';
 				?>));
-				
-				games[<?php echo $counter; ?>].game_loop_event();
 				</script>
 				<?php
 				echo '<div class="col-md-'.$cell_width.'">';
@@ -954,29 +953,29 @@ class App {
 					echo '<div id="game'.$counter.'_chart_js"><script type="text/javascript">'.$js.'</script></div>'."\n";
 				}
 				
-				echo '<div id="game'.$counter.'_events" class="game_events"></div>';
-				echo '<script type="text/javascript" id="game'.$counter.'_new_event_js">';
+				echo '<div id="game'.$counter.'_events" class="game_events"></div>'."\n";
+				echo '<script type="text/javascript" id="game'.$counter.'_new_event_js">'."\n";
 				echo $new_event_js;
-				echo "games[".$counter."].show_selected_event(true);\n";
 				echo '</script>';
 				
-				echo '<br/><a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; ';
+				echo "<br/>\n";
+				echo '<a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; ';
 				if ($faucet_io) echo 'Join now & receive '.$this->format_bignum($faucet_io['colored_amount_sum']/pow(10,$featured_game->db_game['decimal_places'])).' '.$featured_game->db_game['coin_name_plural'];
 				else echo 'Play Now';
 				echo '</a>';
 				echo ' <a href="/explorer/games/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-sm btn-primary"><i class="fas fa-database"></i> &nbsp; '.ucwords($featured_game->db_game['event_type_name']).' Results</a>';
-				echo '</center><br/>';
+				echo "</center><br/>\n";
 				
 				if ($counter%(12/$cell_width) == 1) echo '</div><div class="row">';
 				$counter++;
-				echo '</div>';
+				echo "</div>\n";
 			}
-			echo '</div>';
+			echo "</div>\n";
 		}
 		else {
 			echo "No public games are running right now.<br/>\n";
 		}
-		echo '</div>';
+		echo "</div>\n";
 	}
 	
 	public function refresh_utxo_user_ids($only_unspent_utxos) {

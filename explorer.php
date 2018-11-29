@@ -257,18 +257,33 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 			if ($game) {
 				?>
 				<script type="text/javascript">
-				var games = new Array();
 				games.push(new Game(<?php
 					echo $game->db_game['game_id'];
-					echo ', '.$game->blockchain->last_block_id();
-					echo ', '.$game->blockchain->last_transaction_id();
-					echo ', "", "'.$game->db_game['payout_weight'].'"';
+					echo ', false';
+					echo ', false';
+					echo ', false';
+					echo ', "'.$game->db_game['payout_weight'].'"';
 					echo ', '.$game->db_game['round_length'];
 					echo ', 0';
 					echo ', "'.$game->db_game['url_identifier'].'"';
 					echo ', "'.$game->db_game['coin_name'].'"';
 					echo ', "'.$game->db_game['coin_name_plural'].'"';
-					echo ', "explorer", "'.$game->event_ids().'"';
+					echo ', "'.$game->blockchain->db_blockchain['coin_name'].'"';
+					echo ', "'.$game->blockchain->db_blockchain['coin_name_plural'].'"';
+					echo ', "explorer", false';
+					echo ', "'.$game->logo_image_url().'"';
+					echo ', "'.$game->vote_effectiveness_function().'"';
+					echo ', "'.$game->effectiveness_param1().'"';
+					echo ', "'.$game->blockchain->db_blockchain['seconds_per_block'].'"';
+					echo ', "'.$game->db_game['inflation'].'"';
+					echo ', "'.$game->db_game['exponential_inflation_rate'].'"';
+					echo ', false';
+					echo ', "'.$game->db_game['decimal_places'].'"';
+					echo ', "'.$game->db_game['view_mode'].'"';
+					echo ', 0';
+					echo ', false';
+					echo ', "'.$game->db_game['default_betting_mode'].'"';
+					echo ', false';
 				?>));
 				</script>
 				<?php
@@ -605,9 +620,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						</div>
 						
 						<script type="text/javascript">
-						$(document).ready(function() {
-							last_event_index_shown = <?php echo $from_event_index; ?>;
-						});
+						last_event_index_shown = <?php echo $from_event_index; ?>;
 						</script>
 						<?php
 					}
@@ -987,7 +1000,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "claim") {
 							?>
 							<script type="text/javascript">
-							$(document).ready(function() {
+							window.onload = function() {
 								try_claim_address(<?php
 								echo $blockchain->db_blockchain['blockchain_id'].", ";
 								if ($game) echo $game->db_game['game_id'];
@@ -995,7 +1008,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								echo ", ";
 								echo $address['address_id'];
 								?>);
-							});
+							};
 							</script>
 							<?php
 						}
