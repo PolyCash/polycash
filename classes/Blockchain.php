@@ -1234,11 +1234,9 @@ class Blockchain {
 		
 		while ($block = $r->fetch()) {
 			if ($game) {
-				$num_trans = $block['num_transactions'];
 				$block_sum_disp = $block['sum_coins_in']/pow(10,$game->db_game['decimal_places']);
 			}
 			else {
-				$num_trans = $this->set_block_stats($block);
 				$block_sum_disp = $block['sum_coins_in']/pow(10,$this->db_blockchain['decimal_places']);
 			}
 			$html .= "<div class=\"row\">";
@@ -1250,13 +1248,7 @@ class Blockchain {
 			if ($block['locally_saved'] == 0 && $block['block_id'] >= $this->db_blockchain['first_required_block']) $html .= "&nbsp;(Pending)";
 			$html .= "</div>";
 			$html .= "<div class=\"col-sm-2";
-			$block_loading = false;
-			if ($block['num_transactions'] > 0 && $block['num_transactions'] != $num_trans) {
-				$block_loading = true;
-				$html .= " redtext";
-			}
-			$html .= "\" style=\"text-align: right;\">".number_format($num_trans);
-			if ($block_loading) $html .= "/".number_format($block['num_transactions']);
+			$html .= "\" style=\"text-align: right;\">".number_format($block['num_transactions']);
 			$html .= "&nbsp;transactions</div>\n";
 			$html .= "<div class=\"col-sm-2\" style=\"text-align: right;\">".$this->app->format_bignum($block_sum_disp)."&nbsp;";
 			if ($game) $html .= $game->db_game['coin_name_plural'];

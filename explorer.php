@@ -640,11 +640,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								$round_id = $game->block_to_round($block['block_id']);
 								$block_index = $game->block_id_to_round_index($block['block_id']);
 								$block_sum_disp = $block['sum_coins_in']/pow(10,$game->db_game['decimal_places']);
-								$num_trans = $block['num_transactions'];
 							}
 							else {
 								$block_sum_disp = $block['sum_coins_in']/pow(10,$blockchain->db_blockchain['decimal_places']);
-								$num_trans = $blockchain->set_block_stats($block);
 							}
 							
 							echo '<div class="panel-heading"><div class="panel-title">';
@@ -656,10 +654,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo "Block hash: ".$block['block_hash']."<br/>\n";
 							echo "Mined at ".date("Y-m-d g:ia", $block['time_mined'])." (".$app->format_seconds(time()-$block['time_mined'])." ago)<br/>\n";
 							
-							if (!$game && !empty($block['num_transactions']) && $num_trans != $block['num_transactions']) {
-								echo "Loaded ".number_format($num_trans)." / ".number_format($block['num_transactions'])." transactions (".number_format(100*$num_trans/$block['num_transactions'], 2)."%).<br/>\n";
-							}
-							echo "This block contains ".number_format($num_trans)." transactions totaling ".number_format($block_sum_disp, 2)." ";
+							echo "This block contains ".number_format($block['num_transactions'])." transactions totaling ".number_format($block_sum_disp, 2)." ";
 							if ($game) echo $game->db_game['coin_name_plural'];
 							else echo $blockchain->db_blockchain['coin_name_plural'];
 							echo ".<br/>\n";
