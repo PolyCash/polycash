@@ -57,7 +57,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 			<div class="navbar-custom-menu">
 				<ul class="nav navbar-nav">
 					<li><a href="/"><i class="fas fa-home"></i> &nbsp; <span>Home</span></a></li>
-					<li><a href="/about/"><i class="fas fa-question-circle"></i> &nbsp; <span>About</span></a></li>
+					<li><a href="/about/"><i class="fas fa-info-circle"></i> &nbsp; <span>About</span></a></li>
 					<li><a target="_blank" href="https://medium.com/polycash"><i class="fas fa-rss-square"></i> &nbsp; <span>Our Blog</span></a></li>
 					<li><a href="/polycash-whitepaper-v2.pdf"><i class="fas fa-file-alt"></i> &nbsp; <span>Whitepaper</span></a></li>
 					<li><a target="_blank" href="https://github.com/polycash/polycash"><i class="fas fa-code"></i> &nbsp; <span>Source Code</span></a></li>
@@ -118,14 +118,14 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 					<li id="section_link_withdraw_btc"><a href="/cards/?start_section=withdraw_btc"<?php if ($nav_subtab_selected == "cards") echo ' onclick="open_page_section(\'withdraw_btc\'); return false;"'; ?>><i class="fa fa-exchange-alt"></i> <span>Withdraw Bitcoins</span></a></li>
 					<li<?php if ($nav_subtab_selected == "manage") echo ' class="active"'; ?>><a href="/cards/?action=manage"><i class="fa fa-print"></i> <span>Print cards</span></a></li>
 					<li<?php if ($nav_subtab_selected == "create") echo ' class="active"'; ?>><a href="/cards/?action=create"><i class="fa fa-plus-circle"></i> <span>Create cards</span></a></li>
-					<?php if (empty($thisuser)) { ?><li<?php if ($nav_subtab_selected == "redeem") echo ' class="active"'; ?>><a href="/redeem/"><i class="fa fa-money"></i> <span>Redeem a card</span></a></li><?php } ?>
+					<?php if (empty($thisuser)) { ?><li<?php if ($nav_subtab_selected == "redeem") echo ' class="active"'; ?>><a href="/redeem/"><i class="fa fa-check-square"></i> <span>Redeem a card</span></a></li><?php } ?>
 				</ul>
 				<?php
 			}
 			else if (!empty($game)) { ?>
 				<ul class="sidebar-menu" data-widget="tree">
 					<li class="header"><?php echo $game->db_game['name']; ?></li>
-					<li<?php if ($nav_tab_selected == "game_page") echo ' class="active"'; ?>><a href="/<?php echo $game->db_game['url_identifier']; ?>/"><i class="fa fa-question-circle"></i> <span>About</span></a></li>
+					<li<?php if ($nav_tab_selected == "game_page") echo ' class="active"'; ?>><a href="/<?php echo $game->db_game['url_identifier']; ?>/"><i class="fa fa-info-circle"></i> <span><?php echo $game->db_game['name']; ?></span></a></li>
 					<li id="tabcell0"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="tab_clicked(0); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=0"'; ?>><i class="fa fa-play"></i> <span>Play Now</span></a></li>
 					<li id="tabcell1"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="tab_clicked(1); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=1"'; ?>><i class="fa fa-users"></i> <span>Players</span></a></li>
 					<li id="tabcell2"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="tab_clicked(2); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=2"'; ?>><i class="fa fa-cogs"></i> <span>Settings</span></a></li>
@@ -154,7 +154,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 				<li<?php if ($nav_tab_selected == "home") echo ' class="active"'; ?>><a href="/"><i class="fa fa-home"></i> <span>Home</span></a></li>
 				<?php
 				if (file_exists("pages/about.php")) { ?>
-					<li<?php if ($nav_tab_selected == "about") echo ' class="active"'; ?>><a href="/about/"><i class="fa fa-question"></i> <span>About</span></a></li>
+					<li<?php if ($nav_tab_selected == "about") echo ' class="active"'; ?>><a href="/about/"><i class="fa fa-info-circle"></i> <span>About</span></a></li>
 					<?php
 				}
 				?>

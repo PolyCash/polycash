@@ -2,6 +2,7 @@
 include("includes/connect.php");
 include("includes/get_session.php");
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
+$nav_tab_selected = "manage";
 
 if (!$thisuser) {
 	$redirect_url = $app->get_redirect_url($_SERVER['REQUEST_URI']);
@@ -21,7 +22,6 @@ else {
 	$db_game = $app->fetch_game_from_url();
 
 	if (empty($db_game)) {
-		$nav_tab_selected = "manage_game";
 		$pagetitle = "Create a new game";
 		include('includes/html_start.php');
 		?>

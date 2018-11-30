@@ -8,6 +8,9 @@ if ($uri_parts[1] == "reset_password") {
 else if ($uri_parts[1] == "about") {
 	include("pages/about.php");
 }
+else if ($uri_parts[1] == "faq") {
+	include("pages/faq.php");
+}
 else if ($uri_parts[1] == "unsubscribe") {
 	include("unsubscribe.php");
 }
