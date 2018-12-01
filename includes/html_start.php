@@ -57,9 +57,9 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 			<div class="navbar-custom-menu">
 				<ul class="nav navbar-nav">
 					<li><a href="/"><i class="fas fa-home"></i> &nbsp; <span>Home</span></a></li>
-					<li><a href="/about/"><i class="fas fa-info-circle"></i> &nbsp; <span>About</span></a></li>
+					<?php if (is_file(dirname(dirname(__FILE__))."/pages/about.php")) { ?><li><a href="/about/"><i class="fas fa-info-circle"></i> &nbsp; <span>About</span></a></li><?php } ?>
 					<li><a target="_blank" href="https://medium.com/polycash"><i class="fas fa-rss-square"></i> &nbsp; <span>Our Blog</span></a></li>
-					<li><a href="/polycash-whitepaper-v2.pdf"><i class="fas fa-file-alt"></i> &nbsp; <span>Whitepaper</span></a></li>
+					<li><a href="/pages/PolyCash-whitepaper-v3.pdf"><i class="fas fa-file-alt"></i> &nbsp; <span>Whitepaper</span></a></li>
 					<li><a target="_blank" href="https://github.com/polycash/polycash"><i class="fas fa-code"></i> &nbsp; <span>Source Code</span></a></li>
 					<?php
 					if (empty($thisuser)) {
@@ -153,7 +153,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 				<li class="header">Navigation</li>
 				<li<?php if ($nav_tab_selected == "home") echo ' class="active"'; ?>><a href="/"><i class="fa fa-home"></i> <span>Home</span></a></li>
 				<?php
-				if (file_exists("pages/about.php")) { ?>
+				if (file_exists(dirname(dirname(__FILE__))."/pages/about.php")) { ?>
 					<li<?php if ($nav_tab_selected == "about") echo ' class="active"'; ?>><a href="/about/"><i class="fa fa-info-circle"></i> <span>About</span></a></li>
 					<?php
 				}
