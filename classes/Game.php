@@ -1011,7 +1011,7 @@ class Game {
 	}
 	
 	public function start_game() {
-		$game_start_time = time();
+		$start_block = $this->blockchain->fetch_block_by_id($this->db_game['game_starting_block']);
 		
 		if ($this->blockchain->db_blockchain['p2p_mode'] == "rpc") {
 			try {
@@ -1025,19 +1025,10 @@ class Game {
 			}
 		}
 		
-		$qq = "UPDATE games SET initial_coins='".$this->coins_in_existence(false)."', game_status='running', start_time='".$game_start_time."', start_datetime='".date("Y-m-d g:ia", $game_start_time)."' WHERE game_id='".$this->db_game['game_id']."';";
+		$qq = "UPDATE games SET initial_coins='".$this->coins_in_existence(false)."', game_status='running', start_time='".$start_block['time_mined']."', start_datetime='".date("Y-m-d g:ia", $start_block['time_mined'])."' WHERE game_id='".$this->db_game['game_id']."';";
 		$rr = $this->blockchain->app->run_query($qq);
 		
 		$this->db_game['seconds_per_block'] = $this->blockchain->db_blockchain['seconds_per_block'];
-		
-		/*$qq = "SELECT * FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$this->db_game['game_id']."' AND u.notification_email LIKE '%@%';";
-		$rr = $this->blockchain->app->run_query($qq);
-		while ($player = $rr->fetch()) {
-			$subject = $GLOBALS['coin_brand_name']." game \"".$this->db_game['name']."\" has started.";
-			$message = $this->db_game['name']." has started. If haven't already entered your votes, please log in now and start playing.<br/>\n";
-			$message .= $this->blockchain->app->game_info_table($this->db_game);
-			$email_id = $this->blockchain->app->mail_async($player['notification_email'], $GLOBALS['site_name'], "no-reply@".$GLOBALS['site_domain'], $subject, $message, "", "", "");
-		}*/
 	}
 	
 	public function max_game_io_index() {
