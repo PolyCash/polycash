@@ -349,7 +349,7 @@ class App {
 			$redirect_url = $r->fetch();
 		}
 		else {
-			$redirect_key = $this->random_string(32);
+			$redirect_key = $this->random_string(24);
 			
 			$q = "INSERT INTO redirect_urls SET redirect_key=".$this->quote_escape($redirect_key).", url=".$this->quote_escape($url).", time_created='".time()."';";
 			$r = $this->run_query($q);
@@ -2917,7 +2917,7 @@ class App {
 			else $this_bet_html .= '<td>';
 			$this_bet_html .= '<a href="';
 			if ($div_td == "td") $this_bet_html .= $GLOBALS['base_url'];
-			$this_bet_html .= '/explorer/games/'.$game->db_game['url_identifier'].'/utxo/'.$bet['game_io_id'].'/">';
+			$this_bet_html .= '/explorer/games/'.$game->db_game['url_identifier'].'/utxo/'.$bet['tx_hash']."/".$bet['game_out_index'].'">';
 			if ($game->db_game['inflation'] == "exponential") {
 				$this_bet_html .= $this->format_bignum($my_stake/pow(10,$game->db_game['decimal_places']))."&nbsp;".$game->db_game['coin_abbreviation'];
 			}

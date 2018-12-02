@@ -965,10 +965,10 @@ function refresh_mature_io_btns() {
 				select_btn_text += ")";
 			}
 		}
-		$('#select_utxo_'+chain_ios[i].io_id).html(select_btn_text);
+		document.getElementById('select_utxo_'+chain_ios[i].io_id).innerHTML = select_btn_text;
 	}
 	for (var i=0; i<vote_inputs.length; i++) {
-		$('#selected_utxo_'+i).html(render_vote_input(i));
+		document.getElementById('selected_utxo_'+i).innerHTML = render_vote_input(i);
 	}
 }
 function compose_vote_loop() {
@@ -1623,10 +1623,10 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_c
 							}
 							
 							for (var game_event_index=0; game_event_index<_this.events.length; game_event_index++) {
-								$('#game'+_this.instance_id+'_event'+game_event_index+'_current_round_table').html(json_result['current_round_table'][game_event_index]);
+								$('#game'+_this.instance_id+'_event'+game_event_index+'_display').html(json_result['event_html'][game_event_index]);
 								
-								$('#game'+_this.instance_id+'_event'+game_event_index+'_current_round_table').hide();
-								$('#game'+_this.instance_id+'_event'+game_event_index+'_current_round_table').show();
+								$('#game'+_this.instance_id+'_event'+game_event_index+'_display').hide();
+								$('#game'+_this.instance_id+'_event'+game_event_index+'_display').show();
 								
 								_this.render_event_images(game_event_index);
 								

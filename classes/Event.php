@@ -121,7 +121,7 @@ class Event {
 		return $output_arr;
 	}
 	
-	public function current_round_table($user, $show_intro_text, $clickable, $game_instance_id, $game_event_index) {
+	public function event_html($user, $show_intro_text, $clickable, $game_instance_id, $game_event_index) {
 		$score_field = $this->game->db_game['payout_weight']."_score";
 		
 		$max_block_id = min($this->db_event['event_final_block'], $this->game->blockchain->last_block_id());
@@ -130,7 +130,7 @@ class Event {
 		
 		$display_mode = "slim";//$this->db_event['display_mode'];
 		
-		$html = '<div id="game'.$game_instance_id.'_event'.$game_event_index.'_round_table" class="round_table">';
+		$html = '';
 		
 		$option_max_width = $this->db_event['option_max_width'];
 		if ($display_mode == "slim") $option_max_width = min(100, $option_max_width);
@@ -380,7 +380,6 @@ class Event {
 			$html .= '
 			</div>';
 		}
-		$html .= "</div>";
 		
 		return $html;
 	}

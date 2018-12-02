@@ -365,8 +365,6 @@ a.selected {
 	padding-left: 0 ! important;
 	padding-right: 0 ! important;
 }
-.game_event_box {
-}
 .game_event_inner {
 	padding: 0px 8px;
 	margin: 0px;
@@ -390,7 +388,7 @@ a.selected {
 	margin: 0px;
 	padding: 0px;
 }
-.round_table {
+.game_event_display {
 	text-align: left;
 }
 .select_utxo_image {
