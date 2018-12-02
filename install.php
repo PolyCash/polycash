@@ -87,14 +87,12 @@ if ($app->running_as_admin()) {
 					<h2>Run <?php echo $GLOBALS['site_name']; ?></h1>
 					Make sure this line has been added to your /etc/crontab:<br/>
 <pre>
-* * * * * root <?php echo $app->php_binary_location(); ?> <?php echo str_replace("\\", "/", realpath(dirname(__FILE__)))."/cron/minutely.php key=".$GLOBALS['cron_key_string']; ?>
+* * * * * root <?php echo $app->php_binary_location(); ?> <?php echo str_replace("\\", "/", realpath(dirname(__FILE__)))."/cron/minutely.php"; ?>
 </pre>
 					If you can't use cron, please run this app in a new tab or run the command below.<br/>
 					<a class="btn btn-success" target="_blank" href="cron/minutely.php?key=<?php echo $GLOBALS['cron_key_string']; ?>">Start process in a new tab</a>
 					<br/>
-					<pre>
-<?php echo $app->php_binary_location(); ?> <?php echo str_replace("\\", "/", realpath(dirname(__FILE__))."/scripts/main.php key=".$GLOBALS['cron_key_string']); ?>
-					</pre>
+					<pre><?php echo $app->php_binary_location(); ?> <?php echo str_replace("\\", "/", realpath(dirname(__FILE__))."/scripts/main.php"); ?></pre>
 					
 					<h2>Configure Apache for symlinked URLs</h1>
 					Please run this command:<br/>
@@ -227,11 +225,11 @@ if ($app->running_as_admin()) {
 		else echo "An invalid database name was specified in includes/config.php\n";
 	}
 	else {
-		echo "Please set the $GLOBALS[\'mysql_database\'] variable in includes/config.php\n";
+		echo 'Please set the $GLOBALS[\'mysql_database\'] variable in includes/config.php'."\n";
 	}
 }
 else {
 	echo 'Please set the correct value for "key" in the URL.<br/>';
-	echo "To find the correct key value, open includes/config.php and look for $GLOBALS[\'cron_key_string\'].\n";
+	echo 'To find the correct key value, open includes/config.php and look for $GLOBALS[\'cron_key_string\'].'."\n";
 }
 ?>

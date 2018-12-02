@@ -86,7 +86,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 	<aside class="main-sidebar">
 		<section class="sidebar">
 			<?php
-			if ($thisuser && $app->user_is_admin($thisuser)) {
+			if (!empty($thisuser) && $app->user_is_admin($thisuser)) {
 				?>
 				<ul class="sidebar-menu" data-widget="tree">
 					<li class="header">Admin Functions</li>
@@ -205,6 +205,6 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 	</aside>
 	<div class="content-wrapper">
 		<script type="text/javascript">
-		var thisuser = <?php if ($thisuser) echo "new User(".$thisuser->db_user['user_id'].")"; else echo "false"; ?>;
+		var thisuser = <?php if (!empty($thisuser)) echo "new User(".$thisuser->db_user['user_id'].")"; else echo "false"; ?>;
 		var games = [];
 		</script>

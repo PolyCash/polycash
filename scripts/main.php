@@ -8,9 +8,9 @@ include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
 if ($app->running_as_admin()) {
 	do {
-		echo $app->start_regular_background_processes($_REQUEST['key']);
+		echo $app->start_regular_background_processes();
 		echo "Waiting 60 seconds...\n";
-		$app->flush_buffers();
+		if (!$app->running_from_commandline()) $app->flush_buffers();
 		sleep(60);
 	}
 	while (true);

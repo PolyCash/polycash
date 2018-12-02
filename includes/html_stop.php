@@ -23,7 +23,7 @@
 			?>
 		</div>
 		<?php
-		if ($game) { ?>
+		if (!empty($game)) { ?>
 			<div class="status_footer_section">
 			<?php
 			echo '<a href="/'.$game->db_game['url_identifier'].'/">'.$game->db_game['name']."</a>\n";
@@ -124,6 +124,8 @@ if ($GLOBALS['signup_captcha_required']) { ?>
 <?php
 $left_menu_open = 1;
 if ($GLOBALS['pageview_tracking_enabled']) {
+	if (empty($thisuser)) $thisuser = false;
+	if (empty($viewer_id)) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 	$viewer = $pageview_controller->get_viewer($viewer_id);
 	$left_menu_open = $viewer['left_menu_open'];
 }
