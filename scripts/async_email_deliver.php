@@ -2,14 +2,10 @@
 $host_not_required = TRUE;
 require_once(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
-if (!empty($argv)) {
-	$cmd_vars = $app->argv_to_array($argv);
-	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
-	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
-	if (!empty($cmd_vars['delivery_id'])) $_REQUEST['delivery_id'] = $cmd_vars['delivery_id'];
-}
+$allowed_params = ['delivery_id', 'action'];
+$app->safe_merge_argv_to_request($argv, $allowed_params);
 
-if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if ($app->running_as_admin()) {
 	if ($_REQUEST['action'] == "send_all") {
 		$keeplooping = true;
 	}
@@ -69,7 +65,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			if ($json_response->message == "success") $successful = 1;
 			else $successful = 0;
 			
-			$q = "UPDATE async_email_deliveries SET time_delivered='".time()."', successful=$successful, sendgrid_response=".$app->quote_escape($response)." WHERE delivery_id='".$delivery['delivery_id']."';";
+			$q = "UPDATE async_email_deliveries SET time_delivered='".time()."', successful=".$successful.", sendgrid_response=".$app->quote_escape($response)." WHERE delivery_id='".$delivery['delivery_id']."';";
 			$r = $app->run_query($q);
 			
 			echo "response from Sendgrid was: ".$response;
@@ -81,4 +77,5 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	}
 	while ($keeplooping);
 }
+else echo "You need admin privileges to run this script.\n";
 ?>

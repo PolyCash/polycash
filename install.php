@@ -3,7 +3,7 @@ ini_set('memory_limit', '1024M');
 $skip_select_db = TRUE;
 include("includes/connect.php");
 
-if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if ($app->running_as_admin()) {
 	if ($GLOBALS['mysql_database'] != "") {
 		if (!strpos($GLOBALS['mysql_database'], "'") && $GLOBALS['mysql_database'] === strip_tags($GLOBALS['mysql_database'])) {
 			$db_exists = false;
@@ -213,14 +213,6 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 						}
 					}
 					
-					$module_q = "SELECT * FROM modules ORDER BY module_id ASC;";
-					$module_r = $app->run_query($module_q);
-					
-					echo "<h2>Available Modules (".$module_r->rowCount().")</h2>\n";
-					
-					while ($db_module = $module_r->fetch()) {
-						echo "<div class='row'><div class='col-sm-4'>".$db_module['module_name']."</div><div class='col-sm-4'><a href='/modules/".$db_module['module_name']."/install.php?key=".$GLOBALS['cron_key_string']."'>Install</a></div></div>\n";
-					}
 					?>
 					<br/>
 					<a class="btn btn-success" href="/">Check if installation was successful</a>
@@ -232,14 +224,14 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			<?php
 			include("includes/html_stop.php");
 		}
-		else echo "An invalid database name was specified in includes/config.php";
+		else echo "An invalid database name was specified in includes/config.php\n";
 	}
 	else {
-		echo 'Please set the $GLOBALS[\'mysql_database\'] variable in includes/config.php';
+		echo "Please set the $GLOBALS[\'mysql_database\'] variable in includes/config.php\n";
 	}
 }
 else {
 	echo 'Please set the correct value for "key" in the URL.<br/>';
-	echo 'To find the correct key value, open includes/config.php and look for $GLOBALS[\'cron_key_string\'].';
+	echo "To find the correct key value, open includes/config.php and look for $GLOBALS[\'cron_key_string\'].\n";
 }
 ?>

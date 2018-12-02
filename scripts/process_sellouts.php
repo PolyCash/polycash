@@ -2,13 +2,10 @@
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
-if (!empty($argv)) {
-	$cmd_vars = $app->argv_to_array($argv);
-	$_REQUEST['game_id'] = $cmd_vars['game_id'];
-	$_REQUEST['key'] = $cmd_vars['key'];
-}
+$allowed_params = ['game_id'];
+$app->safe_merge_argv_to_request($argv, $allowed_params);
 
-if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if ($app->running_as_admin()) {
 	$game_id = (int) $_REQUEST['game_id'];
 
 	if ($game_id > 0) {
@@ -32,5 +29,5 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		}
 	}
 }
-else echo "Please supply the correct key.\n";
+else echo "You need admin privileges to run this script.\n";
 ?>

@@ -1,16 +1,10 @@
 <?php
-include('includes/connect.php');
-include('includes/get_session.php');
+include(dirname(dirname(__FILE__)).'/includes/connect.php');
+include(dirname(dirname(__FILE__)).'/includes/get_session.php');
 $pagetitle = "Checking donations";
-include('includes/html_start.php');
+include(dirname(dirname(__FILE__)).'/includes/html_start.php');
 
-if (!empty($argv)) {
-	$cmd_vars = $app->argv_to_array($argv);
-	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
-	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
-}
-
-if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if ($app->running_as_admin()) {
 	?>
 	<div class="container-fluid">
 		<div class="panel panel-info" style="margin-top: 15px;">
@@ -28,8 +22,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 					
 					echo '<div class="row">';
 					echo '<div class="col-sm-4">'.$address_key['pub_key']."</div>\n";
-					echo '<div class="col-sm-2">'.$api_data->n_tx." transactions</div>\n";
-					echo '<div class="col-sm-2">'.$api_data->final_balance." BTC</div>\n";
+					echo '<div class="col-sm-2">'.number_format($api_data->n_tx)." transactions</div>\n";
+					echo '<div class="col-sm-2">'.$api_data->final_balance/pow(10, 8)." BTC</div>\n";
 					echo "</div>\n";
 				}
 				?>
@@ -38,7 +32,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	</div>
 	<?php
 }
-else echo "Incorrect key.";
+else echo "You need admin privileges to run this script.\n";
 
-include('includes/html_stop.php');
+include(dirname(dirname(__FILE__)).'/includes/html_stop.php');
 ?>

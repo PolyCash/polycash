@@ -6,16 +6,11 @@ set_time_limit(0);
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
-if (!empty($argv)) {
-	$cmd_vars = $app->argv_to_array($argv);
-	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
-	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
-}
-
-if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if ($app->running_as_admin()) {
 	do {
 		echo $app->start_regular_background_processes($_REQUEST['key']);
 		echo "Waiting 60 seconds...\n";
+		$app->flush_buffers();
 		sleep(60);
 	}
 	while (true);

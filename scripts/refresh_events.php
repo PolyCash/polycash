@@ -2,15 +2,10 @@
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
-if (!empty($argv)) {
-	$cmd_vars = $app->argv_to_array($argv);
-	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
-	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
-	$_REQUEST['event_id'] = $cmd_vars['event_id'];
-	$_REQUEST['game_id'] = $cmd_vars['game_id'];
-}
+$allowed_params = ['game_id', 'event_id'];
+$app->safe_merge_argv_to_request($argv, $allowed_params);
 
-if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if ($app->running_as_admin()) {
 	if (!empty($_REQUEST['event_id'])) {
 		$event_id = (int) $_REQUEST['event_id'];
 		$event_q = "SELECT * FROM games g JOIN events e ON e.game_id=g.game_id WHERE e.event_id='".$event_id."';";
@@ -46,4 +41,5 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		}
 	}
 }
+else echo "You need admin privileges to run this script.\n";
 ?>

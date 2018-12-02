@@ -2,16 +2,10 @@
 $host_not_required = true;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
-if (!empty($argv)) {
-	$cmd_vars = $app->argv_to_array($argv);
-	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
-	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
-	$_REQUEST['game_id'] = $cmd_vars['game_id'];
-	$_REQUEST['from_block'] = $cmd_vars['from_block'];
-	$_REQUEST['to_block'] = $cmd_vars['to_block'];
-}
+$allowed_params = ['game_id', 'from_block', 'to_block'];
+$app->safe_merge_argv_to_request($argv, $allowed_params);
 
-if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if ($app->running_as_admin()) {
 	$game_id = (int) $_REQUEST['game_id'];
 	$from_block = (int) $_REQUEST['from_block'];
 	$to_block = (int) $_REQUEST['to_block'];
@@ -25,5 +19,5 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		echo $app->format_bignum($coins_in_existence/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." at block #".$block."<br/>\n";
 	}
 }
-else echo "Please supply the correct key.\n";
+else echo "You need admin privileges to run this script.\n";
 ?>

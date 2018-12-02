@@ -3,9 +3,10 @@ ini_set('memory_limit', '1024M');
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
-if ($argv) $_REQUEST['key'] = $argv[1];
+$allowed_params = ['game_id'];
+$app->safe_merge_argv_to_request($argv, $allowed_params);
 
-if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if ($app->running_as_admin()) {
 	$game_id = intval($_REQUEST['game_id']);
 	$q = "SELECT * FROM games";
 	if ($game_id > 0) $q .= " WHERE game_id='".$game_id."'";
@@ -77,7 +78,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			echo "<br/>\n";
 		}
 	}
-	echo "Done!";
+	echo "Done!\n";
 }
-else echo "Incorrect key.";
+else echo "You need admin privileges to run this script.\n";
 ?>

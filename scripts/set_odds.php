@@ -3,15 +3,10 @@ $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 include(realpath(dirname(dirname(__FILE__)))."/includes/get_session.php");
 
-if (!empty($argv)) {
-	$cmd_vars = $app->argv_to_array($argv);
-	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
-	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
-	if (!empty($cmd_vars['game_id'])) $_REQUEST['game_id'] = $cmd_vars['game_id'];
-	if (!empty($cmd_vars['game_id'])) $_REQUEST['account_id'] = $cmd_vars['account_id'];
-}
+$allowed_params = ['game_id', 'account_id'];
+$app->safe_merge_argv_to_request($argv, $allowed_params);
 
-if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if ($app->running_as_admin()) {
 	if (!empty($_REQUEST['account_id'])) {
 		$game_id = (int) $_REQUEST['game_id'];
 		$account_id = (int) $_REQUEST['account_id'];
@@ -140,19 +135,19 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 					$transaction_id = $blockchain->create_transaction("transaction", $io_amounts, false, $io_ids, $address_ids, $fee_amount, $error_message);
 					
 					if ($transaction_id) {
-						echo "Great, your transaction was submitted. <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction_id."/\">View Transaction</a>";
+						echo "Great, your transaction was submitted. <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction_id."/\">View Transaction</a>\n";
 					}
 					else {
-						echo "TX Error: ".$error_message;
+						echo "TX Error: ".$error_message."\n";
 					}
 				}
-				else echo "Invalid coins_per_event.";
+				else echo "Invalid coins_per_event.\n";
 			}
-			else echo "Invalid account ID.";
+			else echo "Invalid account ID.\n";
 		}
-		else echo "Please supply a valid game ID.";
+		else echo "Please supply a valid game ID.\n";
 	}
-	else echo "Please supply a valid account ID.";
+	else echo "Please supply a valid account ID.\n";
 }
 else echo "Incorrect key supplied.\n";
 ?>

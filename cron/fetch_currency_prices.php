@@ -4,14 +4,10 @@ include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
 $script_start_time = microtime(true);
 
-if (!empty($argv)) {
-	$cmd_vars = $app->argv_to_array($argv);
-	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
-	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
-	if (!empty($cmd_vars['force'])) $_REQUEST['key'] = $cmd_vars['force'];
-}
+$allowed_params = ['force'];
+$app->safe_merge_argv_to_request($argv, $allowed_params);
 
-if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if ($app->running_as_admin()) {
 	$minute = date("i", time());
 	$fetch_frequency_minutes = 30;
 	

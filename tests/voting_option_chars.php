@@ -2,13 +2,7 @@
 $host_not_required = true;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
-if (!empty($argv)) {
-	$cmd_vars = $app->argv_to_array($argv);
-	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
-	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
-}
-
-if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if ($app->running_as_admin()) {
 	$pass_count = 0;
 	$fail_count = 0;
 	for ($option_index=0; $option_index<1000; $option_index++) {
@@ -22,5 +16,5 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	}
 	echo "Passed ".$pass_count." tests and failed ".$fail_count."<br/>\n";
 }
-else echo "Please supply the correct key.\n";
+else echo "You need admin privileges to run this script.\n";
 ?>

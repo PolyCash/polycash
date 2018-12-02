@@ -166,20 +166,19 @@ class App {
 		}
 	}
 	
-	public function argv_to_array($argv) {
-		$arr = array();
-		$arg_i = 0;
-		foreach ($argv as $arg) {
-			if ($arg_i > 0) {
-				$arg_parts = explode("=", $arg);
-				if(count($arg_parts) == 2)
-					$arr[$arg_parts[0]] = $arg_parts[1];
-				else
-					$arr[$arg_i-1] = $arg_parts[0];
+	public function safe_merge_argv_to_request(&$argv, &$allowed_params) {
+		if ($argv && $this->running_from_commandline()) {
+			$arg_i = 0;
+			foreach ($argv as $arg) {
+				if ($arg_i > 0) {
+					$arg_parts = explode("=", $arg);
+					if(count($arg_parts) == 2 && in_array($arg_parts[0], $allowed_params)) {
+						$_REQUEST[$arg_parts[0]] = $arg_parts[1];
+					}
+				}
+				$arg_i++;
 			}
-			$arg_i++;
 		}
-		return $arr;
 	}
 	
 	public function mysql_binary_location() {
@@ -199,7 +198,7 @@ class App {
 		else return PHP_BINDIR ."/php";
 	}
 	
-	public function start_regular_background_processes($key_string) {
+	public function start_regular_background_processes() {
 		$html = "";
 		$process_count = 0;
 		
@@ -215,7 +214,7 @@ class App {
 		if (PHP_OS == "WINNT") $script_path_name = dirname(dirname(__FILE__));
 		else $script_path_name = realpath(dirname(dirname(__FILE__)));
 		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_blocks.php" key='.$key_string;
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_blocks.php"';
 		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
 		else $cmd .= " 2>&1 >/dev/null";
 		$block_loading_process = proc_open($cmd, $pipe_config, $pipes);
@@ -223,7 +222,7 @@ class App {
 		else $html .= "Failed to start a process for loading blocks.<br/>\n";
 		sleep(0.1);
 		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_games.php" key='.$key_string;
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_games.php"';
 		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
 		else $cmd .= " 2>&1 >/dev/null";
 		$block_loading_process = proc_open($cmd, $pipe_config, $pipes);
@@ -231,7 +230,7 @@ class App {
 		else $html .= "Failed to start a process for loading blocks.<br/>\n";
 		sleep(0.1);
 		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_main.php" key='.$key_string;
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_main.php"';
 		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
 		else $cmd .= " 2>&1 >/dev/null";
 		$main_process = proc_open($cmd, $pipe_config, $pipes);
@@ -239,7 +238,7 @@ class App {
 		else $html .= "Failed to start the main process.<br/>\n";
 		sleep(0.1);
 		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_check_payments.php" key='.$key_string;
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_check_payments.php"';
 		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
 		else $cmd .= " 2>&1 >/dev/null";
 		$payments_process = proc_open($cmd, $pipe_config, $pipes);
@@ -247,7 +246,7 @@ class App {
 		else $html .= "Failed to start a process for processing payments.<br/>\n";
 		sleep(0.1);
 		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/address_miner.php" key='.$key_string;
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/address_miner.php"';
 		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
 		else $cmd .= " 2>&1 >/dev/null";
 		$address_miner_process = proc_open($cmd, $pipe_config, $pipes);
@@ -255,7 +254,7 @@ class App {
 		else $html .= "Failed to start a process for mining addresses.<br/>\n";
 		sleep(0.1);
 		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/fetch_currency_prices.php" key='.$key_string;
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/fetch_currency_prices.php"';
 		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
 		else $cmd .= " 2>&1 >/dev/null";
 		$currency_prices_process = proc_open($cmd, $pipe_config, $pipes);
@@ -263,7 +262,7 @@ class App {
 		else $html .= "Failed to start a process for updating currency prices.<br/>\n";
 		sleep(0.1);
 		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_cached_urls.php" key='.$key_string;
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_cached_urls.php"';
 		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
 		else $cmd .= " 2>&1 >/dev/null";
 		$cached_url_process = proc_open($cmd, $pipe_config, $pipes);
@@ -271,7 +270,7 @@ class App {
 		else $html .= "Failed to start a process for loading cached urls.<br/>\n";
 		sleep(0.1);
 		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/ensure_user_addresses.php" key='.$key_string;
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/ensure_user_addresses.php"';
 		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
 		else $cmd .= " 2>&1 >/dev/null";
 		$ensure_addresses_process = proc_open($cmd, $pipe_config, $pipes);
@@ -3070,6 +3069,17 @@ class App {
 		if ($group_r->rowCount() > 0) {
 			return $group_r->fetch();
 		}
+		else return false;
+	}
+	
+	public function running_from_commandline() {
+		if (PHP_SAPI == "cli") return true;
+		else return false;
+	}
+	
+	public function running_as_admin() {
+		if ($this->running_from_commandline()) return true;
+		else if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) return true;
 		else return false;
 	}
 }

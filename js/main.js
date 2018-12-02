@@ -1462,10 +1462,14 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_c
 		var option_display_name = this_option.name;
 		
 		if (this.refresh_page != "wallet") {
+			var add_option_url = '/wallet/'+games[0].game_url_identifier+'/?action=start_bet&event_index='+event_index+'&option_id='+option_id;
 			if (thisuser) {
-				window.location = '/wallet/'+games[0].game_url_identifier+'/?action=start_bet&event_index='+event_index+'&option_id='+option_id;
+				window.location = add_option_url;
 			}
-			else alert("To bet, first log in to your wallet.");
+			else {
+				var ans = confirm("To bet, first log in to your wallet.");
+				if (ans) window.location = add_option_url;
+			}
 		}
 		else {
 			var index_id = vote_outputs.length;

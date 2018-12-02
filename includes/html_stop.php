@@ -121,5 +121,21 @@ if ($GLOBALS['signup_captcha_required']) { ?>
 <link rel="stylesheet" type="text/css" href="/css/jquery.nouislider.css" />
 <link rel="stylesheet" type="text/css" href="/css/fontawesome-all.min.css" media="screen" />
 
+<?php
+$left_menu_open = 1;
+if ($GLOBALS['pageview_tracking_enabled']) {
+	$viewer = $pageview_controller->get_viewer($viewer_id);
+	$left_menu_open = $viewer['left_menu_open'];
+}
+else if ($thisuser) $left_menu_open = $thisuser->db_user['left_menu_open'];
+
+if ($left_menu_open == 0) {
+	?>
+	<script type="text/javascript">
+	$('[data-toggle="push-menu"]').pushMenu('toggle');
+	</script>
+	<?php
+}
+?>
 </body>
 </html>

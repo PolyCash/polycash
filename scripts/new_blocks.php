@@ -2,19 +2,10 @@
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
-if (!empty($argv)) {
-	$cmd_vars = $app->argv_to_array($argv);
-	
-	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
-	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
-	
-	if (!empty($cmd_vars['game_id'])) $_REQUEST['game_id'] = $cmd_vars['game_id'];
-	if (!empty($cmd_vars['blockchain_id'])) $_REQUEST['blockchain_id'] = $cmd_vars['blockchain_id'];
-	if (!empty($cmd_vars['quantity'])) $_REQUEST['quantity'] = $cmd_vars['quantity'];
-	if (!empty($cmd_vars['apply_user_strategies'])) $_REQUEST['apply_user_strategies'] = $cmd_vars['apply_user_strategies'];
-}
+$allowed_params = ['game_id','blockchain_id','quantity','apply_user_strategies'];
+$app->safe_merge_argv_to_request($argv, $allowed_params);
 
-if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if ($app->running_as_admin()) {
 	if (!empty($_REQUEST['game_id'])) {
 		$game_id = intval($_REQUEST['game_id']);
 		$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
@@ -40,9 +31,9 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				if (!empty($_REQUEST['apply_user_strategies'])) echo $game->apply_user_strategies();
 			}
 		}
-		echo "Done!<br/>\n";
+		echo "Done!\n";
 	}
-	else echo "A block can't be added for this game.";
+	else echo "A block can't be added for this game.\n";
 }
-else echo "Incorrect key.";
+else echo "You need admin privileges to run this script.\n";
 ?>

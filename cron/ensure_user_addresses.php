@@ -2,15 +2,10 @@
 $host_not_required = TRUE;
 include_once(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
-if (!empty($argv)) {
-	$cmd_vars = $app->argv_to_array($argv);
-	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
-	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
-	if (!empty($cmd_vars['game_id'])) $_REQUEST['game_id'] = $cmd_vars['game_id'];
-	if (!empty($cmd_vars['print_debug'])) $_REQUEST['print_debug'] = 1;
-}
+$allowed_params = ['print_debug', 'game_id'];
+$app->safe_merge_argv_to_request($argv, $allowed_params);
 
-if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if ($app->running_as_admin()) {
 	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
 	else $print_debug = false;
 	
@@ -34,5 +29,5 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	}
 	if ($print_debug) echo "Done!\n";
 }
-else echo "Invalid key supplied.\n";
+else echo "You need admin privileges to run this script.\n";
 ?>

@@ -2,13 +2,7 @@
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
-if (!empty($argv)) {
-	$cmd_vars = $app->argv_to_array($argv);
-	if (!empty($cmd_vars['key'])) $_REQUEST['key'] = $cmd_vars['key'];
-	else if (!empty($cmd_vars[0])) $_REQUEST['key'] = $cmd_vars[0];
-}
-
-if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if ($app->running_as_admin()) {
 	$previous_rounds = 4;
 	
 	$q = "SELECT * FROM featured_strategies fs JOIN currency_accounts ca ON fs.reference_account_id=ca.account_id JOIN games g ON ca.game_id=g.game_id;";
@@ -48,4 +42,5 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 		echo "<br/>\n";
 	}
 }
+else echo "You need admin privileges to run this script.\n";
 ?>

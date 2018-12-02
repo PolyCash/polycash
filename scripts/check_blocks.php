@@ -2,9 +2,10 @@
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
-if ($argv) $_REQUEST['key'] = $argv[1];
+$allowed_params = ['blockchain_id'];
+$app->safe_merge_argv_to_request($argv, $allowed_params);
 
-if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) {
+if ($app->running_as_admin()) {
 	if (!empty($_REQUEST['blockchain_id'])) {
 		$blockchain_id = (int) $_REQUEST['blockchain_id'];
 	}
@@ -48,11 +49,11 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 					}
 					else echo $temp_block['block_id']." ";
 				}
-				else $block_id = $last_block_id();
+				else $block_id = $last_block_id;
 			}
 		}
 		else echo $db_blockchain['blockchain_name']." has no blocks which require updating.\n";
 	}
 }
-else echo "Incorrect key.\n";
+else echo "You need admin privileges to run this script.\n";
 ?>
