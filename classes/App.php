@@ -1011,9 +1011,9 @@ class App {
 		
 		while ($unconfirmed_tx = $unconfirmed_tx_r->fetch()) {
 			$coins_in = $this->transaction_coins_in($unconfirmed_tx['transaction_id']);
-			//$coins_out = $this->transaction_coins_out($unconfirmed_tx['transaction_id']);
+			$coins_out = $this->transaction_coins_out($unconfirmed_tx['transaction_id']);
 			
-			if ($coins_in == 0 || $unconfirmed_tx['fee_amount'] < 0) {
+			if ($coins_in == 0 || $coins_out > $coins_in) {
 				$this->run_query("UPDATE transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id LEFT JOIN transaction_game_ios gio ON io.io_id=gio.io_id SET io.spend_status='unspent', io.spend_block_id=NULL, io.spend_transaction_id=NULL, gio.spend_round_id=NULL WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';");
 				
 				$this->run_query("DELETE t.*, io.*, gio.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';");

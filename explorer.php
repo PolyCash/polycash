@@ -1081,7 +1081,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$coins_in = $game->transaction_coins_in($transaction['transaction_id']);
 						$coins_out = $game->transaction_coins_out($transaction['transaction_id'], true);
 						$coins_diff = $coins_in-$coins_out;
-						echo $app->format_bignum($coins_in/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." in, ".$app->format_bignum($coins_out/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." out (".$app->format_bignum($coins_diff/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." destroyed).<br/>\n";
+						echo $app->format_bignum($coins_in/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." in, ".$app->format_bignum($coins_out/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." out";
+						if ($coins_in > 0) echo " (".$app->format_bignum($coins_diff/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." destroyed)";
+						echo ".<br/>\n";
 						
 						$votes_in_q = "SELECT SUM(gio.".$game->db_game['payout_weight']."s_created) votes_in FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE io.spend_transaction_id='".$transaction['transaction_id']."';";
 						$votes_in = $app->run_query($votes_in_q)->fetch();

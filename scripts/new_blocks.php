@@ -2,7 +2,7 @@
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
-$allowed_params = ['game_id','blockchain_id','quantity','apply_user_strategies'];
+$allowed_params = ['game_id','blockchain_id','quantity','apply_user_strategies','print_debug'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);
 
 if ($app->running_as_admin()) {
@@ -25,6 +25,7 @@ if ($app->running_as_admin()) {
 		for ($i=0; $i<$quantity; $i++) {
 			$log_text = "";
 			$blockchain->new_block($log_text);
+			if (!empty($_REQUEST['print_debug'])) echo $log_text."\n";
 			
 			if ($game && !empty($_REQUEST['apply_user_strategies'])) {
 				$block_of_round = $game->block_id_to_round_index($game->blockchain->last_block_id()+1);
