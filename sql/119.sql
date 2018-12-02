@@ -1,0 +1,10 @@
+TRUNCATE `redirect_urls`;
+ALTER TABLE `redirect_urls` ADD UNIQUE (`redirect_key`);
+ALTER TABLE `redirect_urls` CHANGE `redirect_key` `redirect_key` VARCHAR(24) CHARACTER SET latin1 COLLATE latin1_swedish_ci NULL DEFAULT NULL;
+ALTER TABLE `transaction_game_ios` ADD `game_io_index` INT NULL DEFAULT NULL AFTER `option_id`;
+ALTER TABLE `transaction_game_ios` ADD UNIQUE (`game_id`, `game_io_index`);
+ALTER TABLE `game_blocks` ADD `max_game_io_index` INT NULL DEFAULT NULL AFTER `sum_coins_out`;
+ALTER TABLE `transactions` ADD UNIQUE (`blockchain_id`, `block_id`, `position_in_block`);
+ALTER TABLE `transaction_game_ios` ADD `game_out_index` INT NULL DEFAULT NULL AFTER `option_id`;
+ALTER TABLE `transaction_game_ios` ADD INDEX (`parent_io_id`);
+ALTER TABLE `transaction_game_ios` ADD INDEX (`payout_io_id`);

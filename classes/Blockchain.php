@@ -522,8 +522,9 @@ class Blockchain {
 							$game_amount_sum = 0;
 							$coin_block_sum = 0;
 							$game_destroy_sum = 0;
+							$game_out_index = 0;
 							
-							$insert_q = "INSERT INTO transaction_game_ios (game_id, is_coinbase, io_id, colored_amount, destroy_amount, ref_block_id, ref_coin_blocks, ref_round_id, ref_coin_rounds, option_id, event_id, effectiveness_factor, effective_destroy_amount, is_resolved) VALUES ";
+							$insert_q = "INSERT INTO transaction_game_ios (game_id, is_coinbase, io_id, game_out_index, colored_amount, destroy_amount, ref_block_id, ref_coin_blocks, ref_round_id, ref_coin_rounds, option_id, event_id, effectiveness_factor, effective_destroy_amount, is_resolved) VALUES ";
 							
 							for ($j=0; $j<count($outputs); $j++) {
 								$payout_insert_q = "";
@@ -549,7 +550,8 @@ class Blockchain {
 								$game_destroy_sum += $this_destroy_amount;
 								
 								if ($output_is_destroy[$j] == 0) {
-									$insert_q .= "('".$color_game->db_game['game_id']."', '0', '".$output_io_ids[$j]."', '".$this_game_amount."', '".$this_destroy_amount."', '".$ref_block_id."', '".$this_coin_blocks."', '".$ref_round_id."', '".$this_coin_rounds."', ";
+									$insert_q .= "('".$color_game->db_game['game_id']."', '0', '".$output_io_ids[$j]."', '".$game_out_index."', '".$this_game_amount."', '".$this_destroy_amount."', '".$ref_block_id."', '".$this_coin_blocks."', '".$ref_round_id."', '".$this_coin_rounds."', ";
+									$game_out_index++;
 									
 									if ($output_io_indices[$j] !== false) {
 										$option_id = $color_game->option_index_to_option_id_in_block($output_io_indices[$j], $ref_block_id);
@@ -564,7 +566,8 @@ class Blockchain {
 											
 											$is_resolved = 0;
 											if ($this_destroy_amount == 0) $is_resolved=1;
-											$payout_insert_q = "('".$color_game->db_game['game_id']."', 1, '".$output_io_ids[$j]."', 0, 0, null, 0, null, 0, '".$option_id."', '".$db_event['event_id']."', null, 0, ".$is_resolved."), ";
+											$payout_insert_q = "('".$color_game->db_game['game_id']."', 1, '".$output_io_ids[$j]."', '".$game_out_index."', 0, 0, null, 0, null, 0, '".$option_id."', '".$db_event['event_id']."', null, 0, ".$is_resolved."), ";
+											$game_out_index++;
 										}
 										else $insert_q .= "null, null, null, 0, 1";
 									}
@@ -1182,7 +1185,7 @@ class Blockchain {
 				
 				$html .= "<br/>\n";
 				if ($input['io_id'] == $selected_io_id) $html .= "<b>";
-				else $html .= "<a href=\"/explorer/blockchains/".$this->db_blockchain['url_identifier']."/utxo/".$input['io_id']."\">";
+				else $html .= "<a href=\"/explorer/blockchains/".$this->db_blockchain['url_identifier']."/utxo/".$transaction['tx_hash']."/".$input['out_index']."\">";
 				$html .= $amount_disp." ";
 				if ($amount_disp == '1') $html .= $this->db_blockchain['coin_name'];
 				else $html .= $this->db_blockchain['coin_name_plural'];
@@ -1204,7 +1207,7 @@ class Blockchain {
 			$html .= '" href="/explorer/blockchains/'.$this->db_blockchain['url_identifier'].'/addresses/'.$output['address'].'">'.$output['address']."</a><br/>\n";
 			
 			if ($output['io_id'] == $selected_io_id) $html .= "<b>";
-			else $html .= "<a href=\"/explorer/blockchains/".$this->db_blockchain['url_identifier']."/utxo/".$output['io_id']."\">";
+			else $html .= "<a href=\"/explorer/blockchains/".$this->db_blockchain['url_identifier']."/utxo/".$transaction['tx_hash']."/".$output['out_index']."\">";
 			$amount_disp = $this->app->format_bignum($output['amount']/pow(10,$this->db_blockchain['decimal_places']));
 			$html .= $amount_disp." ";
 			if ($amount_disp == '1') $html .= $this->db_blockchain['coin_name'];
@@ -1617,12 +1620,6 @@ class Blockchain {
 		$r = $this->app->run_query($q);
 		
 		$this->set_block_stats($block);
-		
-		$associated_games = $this->associated_games(array('running'));
-		
-		for ($i=0; $i<count($associated_games); $i++) {
-			$associated_games[$i]->add_block($created_block_id);
-		}
 		
 		return $created_block_id;
 	}

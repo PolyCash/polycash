@@ -23,8 +23,17 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 		echo '<link rel="canonical" href="https://poly.cash'.$_SERVER['REQUEST_URI'].'" />'."\n";
 	}
 	?>
-	<meta property="og:image" content="<?php echo $GLOBALS['base_url']; ?>/images/logo/icon-150x150.png"/>
 </head>
+<?php if (!empty($GLOBALS['ga_tracking_id'])) { ?>
+<script async src="https://www.googletagmanager.com/gtag/js?id=<?php echo $GLOBALS['ga_tracking_id']; ?>"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', '<?php echo $GLOBALS['ga_tracking_id']; ?>');
+</script>
+<?php } ?>
 <body class="hold-transition skin-blue sidebar-mini">
 <div class="wrapper">
 	<header class="main-header">

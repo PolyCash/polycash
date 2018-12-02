@@ -93,7 +93,7 @@ $these_events = $game->events_by_block($last_block_id, $filter_arr);
 
 $show_intro_text = false;
 for ($game_event_index=0; $game_event_index<count($these_events); $game_event_index++) {
-	$output['current_round_table'][$game_event_index] = $these_events[$game_event_index]->current_round_table($thisuser, $show_intro_text, true, $instance_id, $game_event_index);
+	$output['event_html'][$game_event_index] = $these_events[$game_event_index]->event_html($thisuser, $show_intro_text, true, $instance_id, $game_event_index);
 }
 
 if ($thisuser) {
