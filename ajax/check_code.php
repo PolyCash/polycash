@@ -64,7 +64,7 @@ if ($r->rowCount() == 1) {
 						if ($card['default_game_id'] > 0) {
 							list($status_code, $message) = $app->redeem_card_to_account($thisuser, $card, "to_account");
 							
-							$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$card['default_game_id']."';")->fetch();
+							$db_game = $app->fetch_db_game_by_id($card['default_game_id']);
 							$message = "/wallet/".$db_game['url_identifier']."/";
 						}
 						

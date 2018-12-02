@@ -13,11 +13,9 @@ if ($thisuser) {
 		$quantity = (int) $_REQUEST['set_for_sale_quantity'];
 		$game_id = (int) $_REQUEST['set_for_sale_game_id'];
 		
-		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
-		$r = $app->run_query($q);
+		$db_game = $app->fetch_db_game_by_id($game_id);
 		
-		if ($r->rowCount() > 0) {
-			$db_game = $r->fetch();
+		if ($db_game) {
 			$sale_blockchain = new Blockchain($app, $db_game['blockchain_id']);
 			$sale_game = new Game($sale_blockchain, $db_game['game_id']);
 			
@@ -161,11 +159,9 @@ if ($thisuser) {
 		$quantity = (int) $_REQUEST['donate_quantity'];
 		$game_id = (int) $_REQUEST['donate_game_id'];
 		
-		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
-		$r = $app->run_query($q);
+		$db_game = $app->fetch_db_game_by_id($game_id);
 		
-		if ($r->rowCount() > 0) {
-			$db_game = $r->fetch();
+		if ($db_game) {
 			$donate_blockchain = new Blockchain($app, $db_game['blockchain_id']);
 			$donate_game = new Game($donate_blockchain, $db_game['game_id']);
 			

@@ -16,7 +16,7 @@ if ($uri_parts[1] == "api") {
 		if (empty($game_id)) {
 			$game_id = $app->run_query("SELECT * FROM games WHERE featured=1 ORDER BY game_id ASC LIMIT 1;")->fetch()['game_id'];
 		}
-		$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
+		$db_game = $app->fetch_db_game_by_id($game_id);
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$api_game = new Game($blockchain, $game_id);
 		$api_game->load_current_events();

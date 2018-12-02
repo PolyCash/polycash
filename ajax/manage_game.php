@@ -228,7 +228,7 @@ if ($thisuser) {
 		}
 	}
 	else if ($action == "fetch") {
-		$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
+		$db_game = $app->fetch_db_game_by_id($game_id);
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$game = new Game($blockchain, $game_id);
 		
@@ -260,11 +260,9 @@ if ($thisuser) {
 		else $app->output_message(2, "Access denied", false);
 	}
 	else if ($action == "load_gde" || $action == "save_gde" || $action == "manage_gdos" || $action == "add_new_gdo" || $action == "delete_gdo") {
-		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
-		$r = $app->run_query($q);
+		$db_game = $app->fetch_db_game_by_id($game_id);
 		
-		if ($r->rowCount() > 0) {
-			$db_game = $r->fetch();
+		if ($db_game) {
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
 			

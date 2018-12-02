@@ -12,11 +12,9 @@ if ($app->running_as_admin()) {
 		$account_id = (int) $_REQUEST['account_id'];
 		$fee = 0.00001;
 		
-		$game_q = "SELECT * FROM games WHERE game_id='".$game_id."';";
-		$game_r = $app->run_query($game_q);
+		$db_game = $app->fetch_db_game_by_id($game_id);
 		
-		if ($game_r->rowCount() == 1) {
-			$db_game = $game_r->fetch();
+		if ($db_game) {
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
 			

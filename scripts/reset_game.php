@@ -7,8 +7,7 @@ $app->safe_merge_argv_to_request($argv, $allowed_params);
 
 if ($app->running_as_admin()) {
 	$game_id = (int)$_REQUEST['game_id'];
-	$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
-	
+	$db_game = $app->fetch_db_game_by_id($game_id);
 	$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 	$game = new Game($blockchain, $db_game['game_id']);
 	

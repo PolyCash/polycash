@@ -5,17 +5,13 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->in
 
 if ($thisuser) {
 	$event_id = (int) $_REQUEST['event_id'];
-
 	$db_event_r = $app->run_query("SELECT * FROM events WHERE event_id='".$event_id."';");
 
 	if ($db_event_r->rowCount() > 0) {
 		$db_event = $db_event_r->fetch();
+		$db_game = $app->fetch_db_game_by_id($db_event['game_id']);
 		
-		$db_game_r = $app->run_query("SELECT * FROM games WHERE game_id='".$db_event['game_id']."';");
-		
-		if ($db_game_r->rowCount() > 0) {
-			$db_game = $db_game_r->fetch();
-			
+		if ($db_game) {
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
 			

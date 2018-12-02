@@ -8,7 +8,7 @@ $game_id = false;
 
 if (!empty($_REQUEST['game_id'])) {
 	$game_id = (int) $_REQUEST['game_id'];
-	$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
+	$db_game = $app->fetch_db_game_by_id($game_id);
 	if ($db_game) {
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$game = new Game($blockchain, $db_game['game_id']);

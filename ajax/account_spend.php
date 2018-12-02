@@ -80,7 +80,7 @@ if ($thisuser) {
 	}
 	else if ($action == "buyin") {
 		$io_id = (int) $_REQUEST['io_id'];
-		$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
+		$db_game = $app->fetch_db_game_by_id($game_id);
 		
 		if ($db_game) {
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
@@ -152,7 +152,7 @@ if ($thisuser) {
 				
 				if (in_array($db_io['spend_status'], array("unconfirmed", "unspent"))) {
 					if ($key_account['game_id'] > 0) {
-						$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$key_account['game_id']."';")->fetch();
+						$db_game = $app->fetch_db_game_by_id($key_account['game_id']);
 						$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 					}
 					else $blockchain = new Blockchain($app, $db_io['blockchain_id']);
@@ -381,11 +381,9 @@ if ($thisuser) {
 		$quantity = (int) $_REQUEST['quantity'];
 		$game_id = (int) $_REQUEST['game_id'];
 		
-		$q = "SELECT * FROM games WHERE game_id='".$game_id."';";
-		$r = $app->run_query($q);
+		$db_game = $app->fetch_db_game_by_id($game_id);
 		
-		if ($r->rowCount() > 0) {
-			$db_game = $r->fetch();
+		if ($db_game) {
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
 			

@@ -2,7 +2,7 @@
 include("../includes/connect.php");
 include("../includes/get_session.php");
 
-$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".(int)$_REQUEST['game_id']."';")->fetch();
+$db_game = $app->fetch_db_game_by_id((int)$_REQUEST['game_id']);
 $blockchain = new Blockchain($app, $db_game['blockchain_id']);
 $game = new Game($blockchain, (int)$_REQUEST['game_id']);
 

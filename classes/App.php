@@ -135,6 +135,15 @@ class App {
 		else return true;
 	}
 	
+	public function fetch_db_game_by_id($game_id) {
+		$game_q = "SELECT * FROM games WHERE game_id='".((int)$game_id)."';";
+		$game_r = $this->run_query($game_q);
+		if ($game_r->rowCount() > 0) {
+			return $game_r->fetch();
+		}
+		else return false;
+	}
+	
 	public function update_schema() {
 		$migrations_path = realpath(dirname(__FILE__)."/../sql");
 		
@@ -509,20 +518,23 @@ class App {
 			$invitation = $r->fetch();
 			
 			if ($invitation['used'] == 0 && $invitation['used_user_id'] == "" && $invitation['used_time'] == 0) {
-				$db_game = $this->run_query("SELECT * FROM games WHERE game_id='".$invitation['game_id']."';")->fetch();
+				$db_game = $this->fetch_db_game_by_id($invitation['game_id']);
 				
-				$qq = "UPDATE game_invitations SET used_user_id='".$user_id."', used_time='".time()."', used=1";
-				if ($GLOBALS['pageview_tracking_enabled']) $q .= ", used_ip='".$_SERVER['REMOTE_ADDR']."'";
-				$qq .= " WHERE invitation_id='".$invitation['invitation_id']."';";
-				$rr = $this->run_query($qq);
-				
-				$user = new User($this, $user_id);
-				$blockchain = new Blockchain($this, $db_game['blockchain_id']);
-				$invite_game = new Game($blockchain, $invitation['game_id']);
-				
-				$user_game = $user->ensure_user_in_game($invite_game, false);
-				
-				return true;
+				if ($db_game) {
+					$qq = "UPDATE game_invitations SET used_user_id='".$user_id."', used_time='".time()."', used=1";
+					if ($GLOBALS['pageview_tracking_enabled']) $q .= ", used_ip='".$_SERVER['REMOTE_ADDR']."'";
+					$qq .= " WHERE invitation_id='".$invitation['invitation_id']."';";
+					$rr = $this->run_query($qq);
+					
+					$user = new User($this, $user_id);
+					$blockchain = new Blockchain($this, $db_game['blockchain_id']);
+					$invite_game = new Game($blockchain, $invitation['game_id']);
+					
+					$user_game = $user->ensure_user_in_game($invite_game, false);
+					
+					return true;
+				}
+				else return false;
 			}
 			else return false;
 		}

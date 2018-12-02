@@ -8,9 +8,13 @@ $event_ids_hash = $_REQUEST['event_ids_hash'];
 
 if (!$game) {
 	$game_id = (int) $_REQUEST['game_id'];
-	$db_game = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';")->fetch();
-	$blockchain = new Blockchain($app, $db_game['blockchain_id']);
-	$game = new Game($blockchain, $game_id);
+	$db_game = $app->fetch_db_game_by_id($game_id);
+	
+	if ($db_game) {
+		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+		$game = new Game($blockchain, $game_id);
+	}
+	else die("Invalid game ID supplied.\n");
 }
 $game->load_current_events();
 

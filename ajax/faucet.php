@@ -5,11 +5,9 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->in
 
 if ($thisuser) {
 	$game_id = (int) $_REQUEST['game_id'];
-	$db_game_r = $app->run_query("SELECT * FROM games WHERE game_id='".$game_id."';");
+	$db_game = $app->fetch_db_game_by_id($game_id);
 	
-	if ($db_game_r->rowCount() > 0) {
-		$db_game = $db_game_r->fetch();
-		
+	if ($db_game) {
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$game = new Game($blockchain, $db_game['game_id']);
 		$user_game = $thisuser->ensure_user_in_game($game, false);
