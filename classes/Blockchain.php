@@ -1174,7 +1174,7 @@ class Blockchain {
 			$html .= "Miner found a block.";
 		}
 		else {
-			$qq = "SELECT * FROM transaction_ios i JOIN addresses a ON i.address_id=a.address_id WHERE i.spend_transaction_id='".$transaction['transaction_id']."' ORDER BY i.amount DESC;";
+			$qq = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id JOIN addresses a ON i.address_id=a.address_id WHERE i.spend_transaction_id='".$transaction['transaction_id']."' ORDER BY i.amount DESC;";
 			$rr = $this->app->run_query($qq);
 			$input_sum = 0;
 			while ($input = $rr->fetch()) {
@@ -1185,7 +1185,7 @@ class Blockchain {
 				
 				$html .= "<br/>\n";
 				if ($input['io_id'] == $selected_io_id) $html .= "<b>";
-				else $html .= "<a href=\"/explorer/blockchains/".$this->db_blockchain['url_identifier']."/utxo/".$transaction['tx_hash']."/".$input['out_index']."\">";
+				else $html .= "<a href=\"/explorer/blockchains/".$this->db_blockchain['url_identifier']."/utxo/".$input['tx_hash']."/".$input['out_index']."\">";
 				$html .= $amount_disp." ";
 				if ($amount_disp == '1') $html .= $this->db_blockchain['coin_name'];
 				else $html .= $this->db_blockchain['coin_name_plural'];

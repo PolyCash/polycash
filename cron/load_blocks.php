@@ -14,7 +14,7 @@ if ($app->running_as_admin()) {
 	$print_debug = false;
 	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
 	
-	$process_lock_name = "loading_blocks";
+	$process_lock_name = "load_blocks";
 	$process_locked = $app->check_process_running($process_lock_name);
 	
 	if (!$process_locked) {
@@ -66,7 +66,6 @@ if ($app->running_as_admin()) {
 		while (microtime(true) < $script_start_time + ($script_target_time-$loop_target_time));
 	}
 	else {
-		$app->log_message("NOT running load_blocks.php");
 		if ($print_debug) echo "Block loading script is already running, skip...\n";
 	}
 }

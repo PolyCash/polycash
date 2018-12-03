@@ -13,7 +13,7 @@ if ($app->running_as_admin()) {
 	$print_debug = false;
 	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
 	
-	$process_lock_name = "loading_games";
+	$process_lock_name = "load_game";
 	$process_locked = $app->check_process_running($process_lock_name);
 	
 	if (!$process_locked) {
@@ -45,6 +45,8 @@ if ($app->running_as_admin()) {
 			usleep($sleep_usec);
 		}
 		while (microtime(true) < $script_start_time + ($script_target_time-$loop_target_time));
+		
+		$app->set_site_constant($process_lock_name, 0);
 	}
 	else echo "Game load script is already running...\n";
 }

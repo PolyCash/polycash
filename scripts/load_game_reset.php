@@ -14,13 +14,30 @@ if ($app->running_as_admin()) {
 	if ($game) {
 		$action = 'reset';
 		if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "delete") $action = "delete";
+		$process_lock_name = "load_game";
+		
+		echo "Waiting for game loading script to finish";
+		do {
+			echo ". ";
+			$app->flush_buffers();
+			sleep(1);
+			$process_locked = $app->check_process_running($process_lock_name);
+		}
+		while ($process_locked);
+		
+		echo "now resetting the game<br/>\n";
+		$app->flush_buffers();
+		
+		$app->set_site_constant($process_lock_name, getmypid());
 		
 		$game->delete_reset_game($action);
 		$game->blockchain->unset_first_required_block();
 		$game->update_db_game();
 		$game->start_game();
 		
-		echo "Great, the game has been ".$action."!\n";
+		echo "Great, ".$game->db_game['name']." has been ".$action."!\n";
+		
+		$app->set_site_constant($process_lock_name, 0);
 	}
 	else echo "Failed to load game #".$game_id."<br/>\n";
 }

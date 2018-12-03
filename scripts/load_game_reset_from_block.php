@@ -14,13 +14,28 @@ if ($app->running_as_admin()) {
 	if ($game) {
 		if ($_REQUEST['block_id'] > 0) {
 			$block_id = (int)$_REQUEST['block_id'];
-			$game->reset_blocks_from_block($block_id);
+			$process_lock_name = "load_game";
 			
+			echo "Waiting for game loading script to finish";
+			do {
+				echo ". ";
+				$app->flush_buffers();
+				sleep(1);
+				$process_locked = $app->check_process_running($process_lock_name);
+			}
+			while ($process_locked);
+			
+			echo "now resetting the game<br/>\n";
+			$app->flush_buffers();
+			
+			$app->set_site_constant($process_lock_name, getmypid());
+			$game->reset_blocks_from_block($block_id);
 			echo $game->db_game['name']." has been reset from block ".$block_id."\n";
+			$app->set_site_constant($process_lock_name, 0);
 		}
 		else echo "Invalid block supplied.\n";
 	}
-	else echo "Failed to load game #".$game_id."<br/>\n";
+	else echo "Failed to load game #".$game_id."\n";
 }
 else echo "You need admin privileges to run this script.\n";
 ?>
