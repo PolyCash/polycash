@@ -45,7 +45,7 @@ else $exchange_rate = 0;
 						echo str_replace("<br/>", " ", $game->db_game['short_description'])." ";
 					}
 					
-					$blocks_per_hour = 3600/$game->blockchain->db_blockchain['seconds_per_block'];
+					/*$blocks_per_hour = 3600/$game->blockchain->db_blockchain['seconds_per_block'];
 					$seconds_per_round = $game->blockchain->db_blockchain['seconds_per_block']*$game->db_game['round_length'];
 					$round_reward = ($app->coins_created_in_round($game->db_game, $current_round))/pow(10,$game->db_game['decimal_places']);
 
@@ -85,7 +85,7 @@ else $exchange_rate = 0;
 							if ($buyin_disp != '1') echo "s";
 							echo ". ";
 						}
-					}
+					}*/
 					
 					if ($game->db_game['game_status'] == "running") {
 						echo "This game started ".date("M j, Y g:ia", strtotime($game->db_game['start_datetime'])).". ";

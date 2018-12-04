@@ -558,45 +558,22 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								}
 							}
 						}
+						
+						$event_tx_count = 0;
+						$confirmed_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."'";
+						if ($event) $confirmed_q .= " AND gio.event_id='".$event->db_event['event_id']."'";
+						else $confirmed_q .= " AND gio.game_id='".$game->db_game['game_id']."'";
+						$confirmed_q .= " GROUP BY t.transaction_id ORDER BY t.block_id ASC, t.position_in_block ASC;";
+						$confirmed_r = $app->run_query($confirmed_q);
+						$event_tx_count += $confirmed_r->rowCount();
 						?>
 						<br/>
-						<h2>Transactions</h2>
+						<h2>Transactions (<?php echo number_format($event_tx_count); ?>)</h2>
 						<div class="transaction_table">
 						<?php
-						if ($event) {
-							$q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND t.block_id IS NULL AND gio.event_id='".$event->db_event['event_id']."' GROUP BY t.transaction_id ORDER BY transaction_id ASC;";
-							$r = $app->run_query($q);
-							
-							if ($r->rowCount() > 0) {
-								echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/transactions/unconfirmed\">Unconfirmed</a>";
-								if ($event->db_event['vote_effectiveness_function'] != "constant") {
-									echo ", vote effectiveness: ".$event->block_id_to_effectiveness_factor($last_block_id+1);
-								}
-								echo "<br/>\n";
-								
-								while ($transaction = $r->fetch()) {
-									echo $game->render_transaction($transaction, false, false, $coins_per_vote, $last_block_id);
-								}
-							}
-						}
-						
-						for ($i=$from_block_id; $i<=$to_block_id; $i++) {
-							$q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND t.block_id='".$i."'";
-							if ($event) $q .= " AND gio.event_id='".$event->db_event['event_id']."'";
-							else $q .= " AND gio.game_id='".$game->db_game['game_id']."'";
-							$q .= " GROUP BY t.transaction_id ORDER BY transaction_id ASC;";
-							$r = $app->run_query($q);
-							
-							if ($r->rowCount() > 0) {
-								echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$i."\">Block #".$i."</a>";
-								if ($event->db_event['vote_effectiveness_function'] != "constant") {
-									echo ", vote effectiveness: ".$event->block_id_to_effectiveness_factor($i);
-								}
-								echo "<br/>\n";
-								
-								while ($transaction = $r->fetch()) {
-									echo $game->render_transaction($transaction, false, false, $coins_per_vote, $last_block_id);
-								}
+						if ($confirmed_r->rowCount() > 0) {
+							while ($transaction = $confirmed_r->fetch()) {
+								echo $game->render_transaction($transaction, false, false, $coins_per_vote, $last_block_id);
 							}
 						}
 						echo '</div>';
