@@ -358,7 +358,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						if ($explore_mode == "blocks") echo $block['block_id'];
 						else if ($explore_mode == "addresses") echo $address['address'];
 						else if ($explore_mode == "transactions") echo $transaction['tx_hash'];
-						else if ($explore_mode == "utxo") echo $io['io_id'];
+						else if ($explore_mode == "utxo") echo $io['tx_hash']."/".$io['out_index'];
 						else if ($explore_mode == "utxos") {
 							if ($account) echo "?account_id=".$account['account_id'];
 						}

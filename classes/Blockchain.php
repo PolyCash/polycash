@@ -111,7 +111,7 @@ class Blockchain {
 	}
 	
 	public function delete_transaction($transaction) {
-		if ($transaction['block_id'] === "") {
+		if ($transaction['block_id'] == "") {
 			$this->app->run_query("UPDATE transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id LEFT JOIN transaction_game_ios gio ON io.io_id=gio.io_id SET io.spend_status='unspent', io.spend_block_id=NULL, io.spend_transaction_id=NULL, gio.spend_round_id=NULL WHERE t.transaction_id='".$transaction['transaction_id']."';");
 			
 			$this->app->run_query("DELETE t.*, io.*, gio.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE t.transaction_id='".$transaction['transaction_id']."';");

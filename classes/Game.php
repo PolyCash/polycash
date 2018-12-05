@@ -684,16 +684,19 @@ class Game {
 	public function reset_blocks_from_block($block_height) {
 		$this->blockchain->app->dbh->beginTransaction();
 		
+		$prev_block = $this->fetch_game_block_by_height($block_height-1);
+		if (!$prev_block) die("Failed to fetch prior block.");
+		
 		$q = "DELETE FROM game_blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id >= ".$block_height.";";
 		$r = $this->blockchain->app->run_query($q);
 		
 		$q = "DELETE FROM game_sellouts WHERE game_id='".$this->db_game['game_id']."' AND in_block_id >= ".$block_height.";";
 		$r = $this->blockchain->app->run_query($q);
 		
-		$q = "DELETE gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.create_block_id >= ".$block_height.";";
+		$q = "DELETE FROM transaction_game_ios WHERE game_id='".$this->db_game['game_id']."' AND (game_io_index > ".$prev_block['max_game_io_index']." OR game_io_index IS NULL);";
 		$r = $this->blockchain->app->run_query($q);
 		
-		$q = "UPDATE transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id SET gio.spend_round_id=NULL WHERE gio.game_id='".$this->db_game['game_id']."' AND gio.spend_round_id >= ".$this->block_to_round($block_height).";";
+		$q = "UPDATE transaction_game_ios SET spend_round_id=NULL WHERE game_id='".$this->db_game['game_id']."' AND spend_round_id >= ".$this->block_to_round($block_height).";";
 		$r = $this->blockchain->app->run_query($q);
 		
 		$q = "DELETE ob.* FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id JOIN events e ON o.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."' AND ob.block_height >= ".$block_height.";";
