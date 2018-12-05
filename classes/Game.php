@@ -684,16 +684,19 @@ class Game {
 	public function reset_blocks_from_block($block_height) {
 		$this->blockchain->app->dbh->beginTransaction();
 		
+		$prev_block = $this->fetch_game_block_by_height($block_height-1);
+		if (!$prev_block) die("Failed to fetch prior block.");
+		
 		$q = "DELETE FROM game_blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id >= ".$block_height.";";
 		$r = $this->blockchain->app->run_query($q);
 		
 		$q = "DELETE FROM game_sellouts WHERE game_id='".$this->db_game['game_id']."' AND in_block_id >= ".$block_height.";";
 		$r = $this->blockchain->app->run_query($q);
 		
-		$q = "DELETE gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.create_block_id >= ".$block_height.";";
+		$q = "DELETE FROM transaction_game_ios WHERE game_id='".$this->db_game['game_id']."' AND (game_io_index > ".$prev_block['max_game_io_index']." OR game_io_index IS NULL);";
 		$r = $this->blockchain->app->run_query($q);
 		
-		$q = "UPDATE transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id SET gio.spend_round_id=NULL WHERE gio.game_id='".$this->db_game['game_id']."' AND gio.spend_round_id >= ".$this->block_to_round($block_height).";";
+		$q = "UPDATE transaction_game_ios SET spend_round_id=NULL WHERE game_id='".$this->db_game['game_id']."' AND spend_round_id >= ".$this->block_to_round($block_height).";";
 		$r = $this->blockchain->app->run_query($q);
 		
 		$q = "DELETE ob.* FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id JOIN events e ON o.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."' AND ob.block_height >= ".$block_height.";";
@@ -1307,8 +1310,7 @@ class Game {
 		$q = "SELECT COUNT(*) FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND block_id >= ".$this->db_game['game_starting_block']." AND locally_saved=0;";
 		$missing_blocks = $this->blockchain->app->run_query($q)->fetch()['COUNT(*)'];
 		
-		if (empty($this->db_game['loaded_until_block'])) $last_block_loaded = $this->db_game['game_starting_block'];
-		else $last_block_loaded = $this->db_game['loaded_until_block'];
+		$last_block_loaded = $this->last_block_id();
 		$missing_game_blocks = $last_block_id - $last_block_loaded;
 		
 		$loading_block = false;
@@ -1362,12 +1364,11 @@ class Game {
 		else $game_blocks_pct_complete = 100*($total_game_blocks-$missing_game_blocks)/$total_game_blocks;
 		
 		if ($missing_game_blocks > 0) {
-			$sample_size = 10;
-			$time_q = "SELECT SUM(load_time), COUNT(*) FROM game_blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id>".($last_block_loaded-$sample_size)." AND block_id<=".$last_block_loaded.";";
-			$time_r = $this->blockchain->app->run_query($time_q);
-			$time_data = $time_r->fetch();
-			if ($time_data['COUNT(*)'] > 0) $time_per_block = $time_data['SUM(load_time)']/$time_data['COUNT(*)'];
-			else $time_per_block = 0;
+			$sample_size = 100;
+			$last_block = $this->fetch_game_block_by_height($last_block_loaded);
+			$sample_block = $this->fetch_game_block_by_height(max($this->db_game['game_starting_block'], $last_block_loaded-100));
+			
+			$time_per_block = ($last_block['time_loaded']-$sample_block['time_loaded'])/($last_block['block_id']-$sample_block['block_id']);
 			
 			$html .= "<p>Loading ".$this->blockchain->app->format_bignum($missing_game_blocks)." game block";
 			if ($missing_game_blocks != 1) $html .= "s";
@@ -1582,24 +1583,23 @@ class Game {
 	public function coins_in_existence($block_id) {
 		$last_block_id = $this->blockchain->last_block_id();
 		
-		if ($last_block_id == 0 || ($last_block_id != $this->db_game['coins_in_existence_block'] || ($block_id !== false && $last_block_id != $block_id))) {
+		if ($block_id === false || $block_id != $this->db_game['coins_in_existence_block']) {
 			$q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id WHERE gio.game_id='".$this->db_game['game_id']."'";
-			if ($block_id !== false) $q .= " AND io.create_block_id <= ".$block_id." AND ((io.spend_block_id IS NULL AND io.spend_status IN ('unspent','unconfirmed')) OR io.spend_block_id>".$block_id.")";
+			if ($block_id !== false) $q .= " AND gio.create_block_id <= ".$block_id." AND ((io.spend_block_id IS NULL AND io.spend_status IN ('unspent','unconfirmed')) OR io.spend_block_id>".$block_id.")";
 			else $q .= " AND io.spend_status IN ('unspent','unconfirmed')";
 			$q .= ";";
 			$r = $this->blockchain->app->run_query($q);
 			$coins = $r->fetch(PDO::FETCH_NUM);
 			$coins = $coins[0];
 			if ($coins > 0) {} else $coins = 0;
-			if (!$block_id || $block_id == $last_block_id) {
+			
+			if ($block_id == $last_block_id) {
 				$q = "UPDATE games SET coins_in_existence='".$coins."', coins_in_existence_block='".$last_block_id."' WHERE game_id='".$this->db_game['game_id']."';";
 				$this->blockchain->app->run_query($q);
 			}
 			return $coins;
 		}
-		else {
-			return $this->db_game['coins_in_existence'];
-		}
+		else return $this->db_game['coins_in_existence'];
 		
 		return 0;
 	}
@@ -2307,6 +2307,7 @@ class Game {
 		$msg = "Adding block ".$block_height." to ".$this->db_game['name']."\n";
 		$log_text = $msg;
 		
+		$this->blockchain->app->dbh->beginTransaction();
 		$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND block_id='".$block_height."' AND locally_saved=1;";
 		$r = $this->blockchain->app->run_query($q);
 		
@@ -2323,6 +2324,9 @@ class Game {
 			
 			if ($r->rowCount() > 0) {
 				$game_block = $r->fetch();
+				$this->blockchain->app->dbh->commit();
+				$successful = false;
+				return array($successful, $log_text);
 			}
 			else {
 				$msg = "Creating new game block #".$block_height."\n";
@@ -2367,7 +2371,6 @@ class Game {
 			}
 			
 			$keep_looping = true;
-			$this->blockchain->app->dbh->beginTransaction();
 			
 			do {
 				$q = "SELECT * FROM transaction_ios io JOIN transactions t ON io.spend_transaction_id=t.transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id=".$this->db_game['game_id']." AND t.block_id='".$block_height."' AND t.blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND gio.spend_round_id IS NULL GROUP BY t.transaction_id ORDER BY t.position_in_block ASC;";
@@ -2375,7 +2378,6 @@ class Game {
 				
 				if ($r->rowCount() > 0) {
 					while ($db_transaction = $r->fetch()) {
-						$round_spent = $this->block_to_round($block_height);
 						$input_colored_sum = 0;
 						$crd_sum = 0;
 						$cbd_sum = 0;
@@ -2485,7 +2487,6 @@ class Game {
 				else $keep_looping = false;
 			}
 			while ($keep_looping);
-			$this->blockchain->app->dbh->commit();
 			
 			if ($this->db_game['buyin_policy'] != "none") $this->process_sellouts_in_block($block_height);
 			
@@ -2497,9 +2498,6 @@ class Game {
 					$events[$i]->process_option_blocks($game_block, count($events), $events[0]->db_event['event_index']);
 				}
 			}
-			
-			$ensure_events_debug_text = $this->ensure_events_until_block($block_height+1);
-			$log_text .= $ensure_events_debug_text;
 			
 			$payout_events = $this->events_by_payout_block($block_height);
 			
@@ -2542,6 +2540,8 @@ class Game {
 			$msg = "Skipping.. block ".$block_height." does not exist on ".$this->blockchain->db_blockchain['url_identifier']."\n";
 			$log_text .= $msg;
 		}
+		
+		$this->blockchain->app->dbh->commit();
 		
 		return array($successful, $log_text);
 	}
@@ -2877,12 +2877,9 @@ class Game {
 			$r = $this->blockchain->app->run_query($q);
 			
 			while ($pending_sellout = $r->fetch()) {
-				$qq = "SELECT * FROM transactions WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND tx_hash=".$this->blockchain->app->quote_escape($pending_sellout['in_tx_hash']).";";
-				$rr = $this->blockchain->app->run_query($qq);
+				$in_transaction = $this->blockchain->fetch_transaction_by_hash($pending_sellout['in_tx_hash']);
 				
-				if ($rr->rowCount() == 1) {
-					$in_transaction = $rr->fetch();
-					
+				if ($in_transaction) {
 					$matching_tx_id = false;
 					$matching_tx_error = false;
 					
@@ -3045,11 +3042,9 @@ class Game {
 	}
 	
 	public function add_genesis_transaction(&$user_game) {
-		$tx_q = "SELECT * FROM transactions WHERE tx_hash=".$this->blockchain->app->quote_escape($this->db_game['genesis_tx_hash']).";";
-		$tx_r = $this->blockchain->app->run_query($tx_q);
+		$genesis_tx = $this->blockchain->fetch_transaction_by_hash($this->db_game['genesis_tx_hash']);
 		
-		if ($tx_r->rowCount() > 0) {
-			$genesis_tx = $tx_r->fetch();
+		if ($genesis_tx) {
 			$this->process_buyin_transaction($genesis_tx);
 			return true;
 		}

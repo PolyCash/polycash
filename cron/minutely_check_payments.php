@@ -243,12 +243,9 @@ if ($app->running_as_admin()) {
 			$rr = $app->run_query($qq);
 			
 			while ($unprocessed_sellout = $rr->fetch()) {
-				$qqq = "SELECT * FROM transactions WHERE blockchain_id='".$db_game['blockchain_id']."' AND tx_hash=".$app->quote_escape($unprocessed_sellout['in_tx_hash']).";";
-				$rrr = $app->run_query($qqq);
+				$sellout_transaction = $this_game->blockchain->fetch_transaction_by_hash($unprocessed_sellout['in_tx_hash']);
 				
-				if ($rrr->rowCount() == 1) {
-					$sellout_transaction = $rrr->fetch();
-					
+				if ($sellout_transaction) {
 					$refund_amount = $unprocessed_sellout['amount_out'] - $unprocessed_sellout['fee_amount'];
 					
 					if ($print_debug) echo "process sellout ".$unprocessed_sellout['in_tx_hash']."<br/>\n";
@@ -285,9 +282,11 @@ if ($app->running_as_admin()) {
 						$transaction_id = $this_game->create_transaction(false, $amounts, false, false, 'transaction', $io_ids, $address_ids, false, $unprocessed_sellout['fee_amount'], $error_message);
 						
 						if ($transaction_id) {
-							$db_transaction = $app->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
+							$db_transaction = $app->fetch_transaction_by_id($transaction_id);
+							
 							$qqq = "UPDATE game_sellouts SET out_tx_hash=".$app->quote_escape($db_transaction['tx_hash'])." WHERE sellout_id='".$unprocessed_sellout['sellout_id']."';";
 							$rrr = $app->run_query($qqq);
+							
 							if ($print_debug) echo "Created sellout refund transaction ".$db_transaction['tx_hash']."<br/>\n";
 						}
 						else {

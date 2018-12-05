@@ -43,12 +43,9 @@ if ($blockchain) {
 			else $app->output_message(1, "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/addresses/".$db_address['address'], false);
 		}
 		else {
-			$q = "SELECT * FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND tx_hash=".$app->quote_escape($search_term).";";
-			$r = $app->run_query($q);
+			$db_transaction = $blockchain->fetch_transaction_by_hash($search_term);
 			
-			if ($r->rowCount() > 0) {
-				$db_transaction = $r->fetch();
-				
+			if ($db_transaction) {
 				if ($game) {
 					$app->output_message(1, "/explorer/games/".$game->db_game['url_identifier']."/transactions/".$db_transaction['tx_hash'], false);
 				}

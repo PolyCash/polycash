@@ -104,9 +104,7 @@ if ($thisuser && $game) {
 	if ($transaction_id) {
 		$game->update_option_votes();
 		
-		$q = "SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';";
-		$r = $app->run_query($q);
-		$transaction = $r->fetch();
+		$transaction = $app->fetch_transaction_by_id($transaction_id);
 		
 		$app->output_message(1, "Your transaction has been submitted! <a href=\"/explorer/games/".$game->db_game['url_identifier']."/transactions/".$transaction['tx_hash']."\">Details</a>", false);
 	}
