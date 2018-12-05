@@ -747,8 +747,6 @@ class Event {
 		}
 		else $log_text .= "No winner<br/>";
 		
-		$this->game->blockchain->app->dbh->beginTransaction();
-		
 		$this->load_db_event($this->db_event['event_id']);
 		
 		list($inflationary_score, $destroy_reward) = $this->event_total_scores();
@@ -767,7 +765,6 @@ class Event {
 		
 		$this->set_event_completed();
 		
-		$this->game->blockchain->app->dbh->commit();
 		return $log_text;
 	}
 	

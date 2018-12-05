@@ -144,6 +144,13 @@ class App {
 		else return false;
 	}
 	
+	public function fetch_transaction_by_id($transaction_id) {
+		$q = "SELECT * FROM transactions WHERE transaction_id='".((int)$transaction_id)."';";
+		$r = $this->run_query($q);
+		if ($r->rowCount() > 0) return $r->fetch();
+		else return false;
+	}
+	
 	public function update_schema() {
 		$migrations_path = realpath(dirname(__FILE__)."/../sql");
 		
@@ -1010,15 +1017,15 @@ class App {
 		$delete_count = 0;
 		
 		while ($unconfirmed_tx = $unconfirmed_tx_r->fetch()) {
+			$blockchain = new Blockchain($this, $unconfirmed_tx['blockchain_id']);
+			
 			$coins_in = $this->transaction_coins_in($unconfirmed_tx['transaction_id']);
 			$coins_out = $this->transaction_coins_out($unconfirmed_tx['transaction_id']);
 			
 			if ($coins_in == 0 || $coins_out > $coins_in) {
-				$this->run_query("UPDATE transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id LEFT JOIN transaction_game_ios gio ON io.io_id=gio.io_id SET io.spend_status='unspent', io.spend_block_id=NULL, io.spend_transaction_id=NULL, gio.spend_round_id=NULL WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';");
-				
-				$this->run_query("DELETE t.*, io.*, gio.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';");
-				
-				$delete_count++;
+				$success = $blockchain->delete_transaction($unconfirmed_tx);
+
+				if ($success) $delete_count++;
 			}
 		}
 		return "Took ".(microtime(true)-$start_time)." sec to delete $delete_count unconfirmable transactions.";
@@ -2655,11 +2662,9 @@ class App {
 		$db_currency = $this->run_query("SELECT * FROM currencies WHERE currency_id='".$card['currency_id']."';")->fetch();
 		$blockchain = new Blockchain($this, $db_currency['blockchain_id']);
 		
-		$tx_q = "SELECT * FROM transactions WHERE tx_hash=".$this->quote_escape($card['io_tx_hash']).";";
-		$tx_r = $this->run_query($tx_q);
+		$io_tx = $blockchain->fetch_transaction_by_hash($card['io_tx_hash']);
 		
-		if ($tx_r->rowCount() == 1) {
-			$io_tx = $tx_r->fetch();
+		if ($io_tx) {
 			$io_r = $this->run_query("SELECT * FROM transaction_ios WHERE create_transaction_id='".$io_tx['transaction_id']."' AND out_index='".$card['io_out_index']."';");
 			
 			if ($io_r->rowCount() > 0) {
@@ -2673,7 +2678,7 @@ class App {
 				$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($io['io_id']), array($db_address['address_id']), array(0), $fee_amount, $payout_tx_error);
 				
 				if ($transaction_id) {
-					$transaction = $this->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
+					$transaction = $this->fetch_transaction_by_id($transaction_id);
 					
 					$this->run_query("UPDATE cards SET redemption_tx_hash=".$this->quote_escape($transaction['tx_hash'])." WHERE card_id='".$card['card_id']."';");
 					$card['redemption_tx_hash'] = $transaction['tx_hash'];
@@ -2731,11 +2736,9 @@ class App {
 					else {$status_code=12; $message = $remote_response['message'];}
 				}
 				else {
-					$tx_q = "SELECT * FROM transactions WHERE tx_hash=".$this->quote_escape($card['io_tx_hash']).";";
-					$tx_r = $this->run_query($tx_q);
+					$io_tx = $blockchain->fetch_transaction_by_hash($card['io_tx_hash']);
 					
-					if ($tx_r->rowCount() == 1) {
-						$io_tx = $tx_r->fetch();
+					if ($io_tx) {
 						$io_r = $this->run_query("SELECT * FROM transaction_ios WHERE create_transaction_id='".$io_tx['transaction_id']."' AND out_index='".$card['io_out_index']."';");
 						
 						if ($io_r->rowCount() > 0) {
@@ -2746,7 +2749,7 @@ class App {
 							$transaction_id = $blockchain->create_transaction("transaction", array($io['amount']-$fee_amount), false, array($io['io_id']), array($db_address['address_id']), array(0), $fee_amount, $redeem_tx_error);
 							
 							if ($transaction_id) {
-								$transaction = $this->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
+								$transaction = $this->fetch_transaction_by_id($transaction_id);
 								
 								$message = $success_message;
 								$this->change_card_status($card, "redeemed");

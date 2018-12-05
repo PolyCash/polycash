@@ -195,7 +195,7 @@ if ($thisuser) {
 								$error_message = false;
 								$transaction_id = $blockchain->create_transaction('transaction', array($escrow_amount, $genesis_remainder), false, array($io['io_id']), array($db_genesis_address['address_id'], $my_address['address_id']), $fee_amount, $error_message);
 								
-								$transaction = $app->run_query("SELECT * FROM transactions WHERE transaction_id='".$transaction_id."';")->fetch();
+								$transaction = $app->fetch_transaction_by_id($transaction_id);
 								$genesis_tx_hash = $transaction['tx_hash'];
 							}
 							else {

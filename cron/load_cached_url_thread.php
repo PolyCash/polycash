@@ -15,8 +15,6 @@ if ($app->running_as_admin()) {
 	
 	$process_index = $_REQUEST['process_index'];
 	
-	$app->log_message("running cached url thread $process_index at ".time());
-	
 	$max_urls_per_execution = 200;
 	
 	$q = "SELECT * FROM cached_urls WHERE time_fetched IS NULL ORDER BY cached_url_id ASC LIMIT ".$max_urls_per_execution." OFFSET ".($process_index*$max_urls_per_execution).";";

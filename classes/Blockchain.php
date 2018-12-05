@@ -103,6 +103,24 @@ class Blockchain {
 		return $r[0];
 	}
 	
+	public function fetch_transaction_by_hash(&$tx_hash) {
+		$q = "SELECT * FROM transactions WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND tx_hash=".$this->app->quote_escape($tx_hash).";";
+		$r = $this->app->run_query($q);
+		if ($r->rowCount() > 0) return $r->fetch();
+		else return false;
+	}
+	
+	public function delete_transaction($transaction) {
+		if ($transaction['block_id'] === "") {
+			$this->app->run_query("UPDATE transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id LEFT JOIN transaction_game_ios gio ON io.io_id=gio.io_id SET io.spend_status='unspent', io.spend_block_id=NULL, io.spend_transaction_id=NULL, gio.spend_round_id=NULL WHERE t.transaction_id='".$transaction['transaction_id']."';");
+			
+			$this->app->run_query("DELETE t.*, io.*, gio.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE t.transaction_id='".$transaction['transaction_id']."';");
+			
+			return true;
+		}
+		else return false;
+	}
+	
 	public function new_nonuser_address() {
 		$ref_account = false;
 		$address_key = $this->app->new_address_key(false, $ref_account);
@@ -268,12 +286,9 @@ class Blockchain {
 		
 		$add_transaction = true;
 		
-		$q = "SELECT * FROM transactions WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND tx_hash='".$tx_hash."';";
-		$r = $this->app->run_query($q);
+		$unconfirmed_tx = $this->fetch_transaction_by_hash($tx_hash);
 		
-		if ($r->rowCount() > 0) {
-			$unconfirmed_tx = $r->fetch();
-			
+		if ($unconfirmed_tx) {
 			if ($this->db_blockchain['p2p_mode'] == "rpc") {
 				$q = "DELETE t.*, io.*, gio.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.transaction_id='".$unconfirmed_tx['transaction_id']."';";
 				$r = $this->app->run_query($q);
@@ -342,7 +357,7 @@ class Blockchain {
 					}
 					else $transaction_type = "transaction";
 					
-					$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', transaction_desc='".$transaction_type."', tx_hash='".$tx_hash."', num_inputs='".count($inputs)."', num_outputs='".count($outputs)."'";
+					$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', transaction_desc=".$this->app->quote_escape($transaction_type).", tx_hash=".$this->app->quote_escape($tx_hash).", num_inputs='".count($inputs)."', num_outputs='".count($outputs)."'";
 					if ($position_in_block !== false) $q .= ", position_in_block='".$position_in_block."'";
 					if ($block_height !== false) $q .= ", block_id='".$block_height."'";
 					$q .= ", time_created='".time()."';";
@@ -353,7 +368,7 @@ class Blockchain {
 					
 					if ($transaction_type == "transaction" && $require_inputs) {
 						for ($j=0; $j<count($inputs); $j++) {
-							$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id WHERE t.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND t.tx_hash='".$inputs[$j]["txid"]."' AND i.out_index='".$inputs[$j]["vout"]."';";
+							$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id WHERE t.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND t.tx_hash=".$this->app->quote_escape($inputs[$j]["txid"])." AND i.out_index=".$this->app->quote_escape($inputs[$j]["vout"]).";";
 							$r = $this->app->run_query($q);
 							
 							if ($r->rowCount() > 0) {
@@ -454,7 +469,7 @@ class Blockchain {
 								$q = "INSERT INTO transaction_ios SET spend_status='";
 								if ($block_height !== false) $q .= "unspent";
 								else $q .= "unconfirmed";
-								$q .= "', blockchain_id='".$this->db_blockchain['blockchain_id']."', script_type='".$script_type."', out_index='".$j."'";
+								$q .= "', blockchain_id='".$this->db_blockchain['blockchain_id']."', script_type=".$this->app->quote_escape($script_type).", out_index='".$j."'";
 								if ($output_address['user_id'] > 0) $q .= ", user_id='".$output_address['user_id']."'";
 								$q .= ", address_id='".$output_address['address_id']."'";
 								
@@ -613,7 +628,7 @@ class Blockchain {
 					
 					if ($show_debug) echo ". ";
 					
-					$db_transaction = $this->app->run_query("SELECT * FROM transactions WHERE transaction_id='".$db_transaction_id."';")->fetch();
+					$db_transaction = $this->app->fetch_transaction_by_id($db_transaction_id);
 					return $db_transaction;
 				}
 				else {
@@ -1151,7 +1166,7 @@ class Blockchain {
 			else $html .= "#".(int)$transaction['position_in_block'];
 			$html .= " in block <a href=\"/explorer/blockchains/".$this->db_blockchain['url_identifier']."/blocks/".$transaction['block_id']."\">#".$transaction['block_id']."</a>, ";
 		}
-		$html .= (int)$transaction['num_inputs']." inputs, ".(int)$transaction['num_outputs']." outputs, ".$this->app->format_bignum($transaction['amount']/pow(10,$this->db_blockchain['decimal_places']))." coins";
+		$html .= (int)$transaction['num_inputs']." inputs, ".(int)$transaction['num_outputs']." outputs, ".$this->app->format_bignum($transaction['amount']/pow(10,$this->db_blockchain['decimal_places']))." ".$this->db_blockchain['coin_name_plural'];
 		
 		$transaction_fee = $transaction['fee_amount'];
 		if ($transaction['transaction_desc'] != "coinbase" && $transaction['transaction_desc'] != "votebase") {
@@ -1164,13 +1179,7 @@ class Blockchain {
 		
 		$html .= '</div><div class="col-md-6">';
 		
-		if ($transaction['transaction_desc'] == "votebase") {
-			$payout_disp = round($transaction['amount']/pow(10,$this->db_blockchain['decimal_places']), 2);
-			$html .= "Voting Payout&nbsp;&nbsp;".$payout_disp." ";
-			if ($payout_disp == '1') $html .= "coin";
-			else $html .= "coins";
-		}
-		else if ($transaction['transaction_desc'] == "coinbase") {
+		if (in_array($transaction['transaction_desc'], ['coinbase','votebase'])) {
 			$html .= "Miner found a block.";
 		}
 		else {

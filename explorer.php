@@ -165,12 +165,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 			$tx_hash = $uri_parts[5];
 			$out_index = (int) $uri_parts[6];
 			
-			$tx_q = "SELECT * FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND tx_hash=".$app->quote_escape($tx_hash).";";
-			$tx_r = $app->run_query($tx_q);
+			$io_tx = $blockchain->fetch_transaction_by_hash($tx_hash);
 			
-			if ($tx_r->rowCount() > 0) {
-				$io_tx = $tx_r->fetch();
-				
+			if ($io_tx) {
 				if ($game) {
 					$io_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$io_tx['transaction_id']."' AND gio.game_id='".$game->db_game['game_id']."' AND gio.game_out_index='".$out_index."';";
 					$io_r = $app->run_query($io_q);
@@ -211,16 +208,14 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 		else {
 			if (strlen($uri_parts[5]) < 15) {
 				$tx_id = intval($uri_parts[5]);
-				$q = "SELECT * FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND transaction_id='".$tx_id."';";
+				$transaction = $app->fetch_transaction_by_id($tx_id);
 			}
 			else {
 				$tx_hash = $uri_parts[5];
-				$q = "SELECT * FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND tx_hash=".$app->quote_escape($tx_hash).";";
+				$transaction = $blockchain->fetch_transaction_by_hash($tx_hash);
 			}
-			$r = $app->run_query($q);
 			
-			if ($r->rowCount() == 1) {
-				$transaction = $r->fetch();
+			if ($transaction) {
 				$mode_error = false;
 				
 				if ($game) $pagetitle = $game->db_game['name'];
@@ -1078,18 +1073,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					echo "</div>\n";
 				}
 				else if ($explore_mode == "utxo") {
-					$create_q = "SELECT * FROM transactions WHERE transaction_id='".$io['create_transaction_id']."';";
-					$create_r = $app->run_query($create_q);
-					
-					if ($create_r->rowCount() > 0) $create_tx = $create_r->fetch();
-					else $create_tx = false;
+					$create_tx = $app->fetch_transaction_by_id($io['create_transaction_id']);
 					
 					if (!empty($io['spend_transaction_id'])) {
-						$spend_q = "SELECT * FROM transactions WHERE transaction_id='".$io['spend_transaction_id']."';";
-						$spend_r = $app->run_query($spend_q);
-						
-						if ($spend_r->rowCount() > 0) $spend_tx = $spend_r->fetch();
-						else $spend_tx = false;
+						$spend_tx = $app->fetch_transaction_by_id($io['spend_transaction_id']);
 					}
 					else $spend_tx = false;
 					
