@@ -36,14 +36,11 @@ $GLOBALS['process_lock_method'] = "db";
 $GLOBALS['identifier_case_sensitive'] = 1;
 $GLOBALS['identifier_first_char'] = 2;
 
-// To give mined coins to a user by default, enter his/her username here
-$GLOBALS['default_coin_winner'] = "";
-
 $GLOBALS['pageview_tracking_enabled'] = false;
 
 $GLOBALS['currency_price_refresh_seconds'] = 30;
 $GLOBALS['invoice_expiration_seconds'] = 60*60*48;
-$GLOBALS['cron_interval_seconds'] = 5;
+
 $GLOBALS['load_unconfirmed_transactions'] = true;
 $GLOBALS['mine_private_blocks_when_offline'] = false;
 $GLOBALS['new_games_per_user'] = "unlimited";

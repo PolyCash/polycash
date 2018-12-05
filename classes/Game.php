@@ -2324,6 +2324,9 @@ class Game {
 			
 			if ($r->rowCount() > 0) {
 				$game_block = $r->fetch();
+				$this->blockchain->app->dbh->commit();
+				$successful = false;
+				return array($successful, $log_text);
 			}
 			else {
 				$msg = "Creating new game block #".$block_height."\n";
