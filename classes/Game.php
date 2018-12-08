@@ -2307,7 +2307,6 @@ class Game {
 		$msg = "Adding block ".$block_height." to ".$this->db_game['name']."\n";
 		$log_text = $msg;
 		
-		$this->blockchain->app->dbh->beginTransaction();
 		$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND block_id='".$block_height."' AND locally_saved=1;";
 		$r = $this->blockchain->app->run_query($q);
 		
@@ -2323,8 +2322,6 @@ class Game {
 			$r = $this->blockchain->app->run_query($q);
 			
 			if ($r->rowCount() > 0) {
-				$game_block = $r->fetch();
-				$this->blockchain->app->dbh->commit();
 				$successful = false;
 				return array($successful, $log_text);
 			}
@@ -2387,8 +2384,6 @@ class Game {
 						$rr = $this->blockchain->app->run_query($qq);
 						
 						while ($input_io = $rr->fetch()) {
-							$round_created = $this->block_to_round($input_io['create_block_id']);
-							
 							$input_colored_sum += $input_io['colored_amount'];
 							
 							$colored_coin_blocks = $input_io['colored_amount']*($block_height - $input_io['create_block_id']);
@@ -2474,6 +2469,7 @@ class Game {
 							
 							$insert_q = substr($insert_q, 0, strlen($insert_q)-2).";";
 							
+							$this->blockchain->app->dbh->beginTransaction();
 							$qq = "DELETE gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.create_transaction_id='".$db_transaction['transaction_id']."';";
 							$rr = $this->blockchain->app->run_query($qq);
 							$rr = $this->blockchain->app->run_query($insert_q);
@@ -2481,6 +2477,7 @@ class Game {
 							$this->blockchain->app->run_query($coinbase_q1);
 							$coinbase_q2 = "UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.payout_io_id=gio.game_io_id+1 WHERE gio.event_id IS NOT NULL AND io.create_transaction_id='".$db_transaction['transaction_id']."' AND gio.game_id='".$this->db_game['game_id']."' AND gio.is_coinbase=0;";
 							$this->blockchain->app->run_query($coinbase_q2);
+							$this->blockchain->app->dbh->commit();
 						}
 					}
 				}
@@ -2540,8 +2537,6 @@ class Game {
 			$msg = "Skipping.. block ".$block_height." does not exist on ".$this->blockchain->db_blockchain['url_identifier']."\n";
 			$log_text .= $msg;
 		}
-		
-		$this->blockchain->app->dbh->commit();
 		
 		return array($successful, $log_text);
 	}
@@ -2638,7 +2633,7 @@ class Game {
 			$html .= '<p><a class="display_address" style="';
 			if ($io['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
 			$html .= '" href="/explorer/games/'.$this->db_game['url_identifier'].'/addresses/'.$io['address'].'">'.$io['address']."</a>";
-			if (!empty($io['option_id'])) $html .= " (<a href=\"/explorer/games/".$this->db_game['url_identifier']."/events/".$io['event_index']."/\">".$io['option_name']."</a>)";
+			if (!empty($io['option_id'])) $html .= " (<a href=\"/explorer/games/".$this->db_game['url_identifier']."/events/".$io['event_index']."\">".$io['option_name']."</a>)";
 			$html .= "<br/>\n";
 			
 			if ($selected_game_io_id == $io['game_io_id']) $html .= "<b>";

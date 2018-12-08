@@ -1245,12 +1245,9 @@ class Blockchain {
 		$r = $this->app->run_query($q);
 		
 		while ($block = $r->fetch()) {
-			if ($game) {
-				$block_sum_disp = $block['sum_coins_in']/pow(10,$game->db_game['decimal_places']);
-			}
-			else {
-				$block_sum_disp = $block['sum_coins_in']/pow(10,$this->db_blockchain['decimal_places']);
-			}
+			if ($game) $block_sum_disp = $block['sum_coins_out']/pow(10,$game->db_game['decimal_places']);
+			else $block_sum_disp = $block['sum_coins_out']/pow(10,$this->db_blockchain['decimal_places']);
+			
 			$html .= "<div class=\"row\">";
 			$html .= "<div class=\"col-sm-3\">";
 			$html .= "<a href=\"/explorer/";
@@ -1576,7 +1573,7 @@ class Blockchain {
 		$last_block_id = (int) $this->last_block_id();
 		$coin_rpc = false;
 		
-		$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_id='".($last_block_id+1)."', block_hash='".$this->app->random_hex_string(64)."', time_created='".time()."', time_loaded='".time()."', time_mined='".time()."', locally_saved=1;";
+		$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_id='".($last_block_id+1)."', block_hash='".$this->app->random_hex_string(64)."', time_created='".time()."', time_loaded='".time()."', time_mined='".time()."', locally_saved=0;";
 		$r = $this->app->run_query($q);
 		$internal_block_id = $this->app->last_insert_id();
 		
@@ -1625,7 +1622,7 @@ class Blockchain {
 			else $tx_error = true;
 		}
 		
-		$q = "UPDATE blocks SET num_transactions=".$num_transactions." WHERE internal_block_id='".$internal_block_id."';";
+		$q = "UPDATE blocks SET num_transactions=".$num_transactions.", locally_saved=1 WHERE internal_block_id='".$internal_block_id."';";
 		$r = $this->app->run_query($q);
 		
 		$this->set_block_stats($block);
