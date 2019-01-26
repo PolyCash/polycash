@@ -1040,7 +1040,7 @@ class Blockchain {
 	}
 	
 	public function set_first_required_block(&$coin_rpc) {
-		$first_required_block = false;
+		$first_required_block = "";
 		if ($coin_rpc) {
 			$info = $coin_rpc->getblockchaininfo();
 			$first_required_block = (int) $info['headers'];
@@ -1053,11 +1053,11 @@ class Blockchain {
 		$q = "SELECT MIN(game_starting_block) FROM games WHERE game_status IN ('published', 'running') AND blockchain_id='".$this->db_blockchain['blockchain_id']."';";
 		$r = $this->app->run_query($q);
 		$min_starting_block = (int) $r->fetch()['MIN(game_starting_block)'];
-		if ($min_starting_block > 0 && (!$first_required_block || $min_starting_block < $first_required_block)) $first_required_block = $min_starting_block;
+		if ($min_starting_block > 0 && ($first_required_block == "" || $min_starting_block < $first_required_block)) $first_required_block = $min_starting_block;
 		
-		if ($first_required_block) $this->db_blockchain['first_required_block'] = $first_required_block;
+		if ($first_required_block != "") $this->db_blockchain['first_required_block'] = $first_required_block;
 		else {
-			$this->db_blockchain['first_required_block'] = false;
+			$this->db_blockchain['first_required_block'] = "";
 			$first_required_block = "NULL";
 		}
 		
@@ -1073,7 +1073,7 @@ class Blockchain {
 		}
 		else $coin_rpc = false;
 		
-		$this->set_first_required_block($coin_rpc);
+		if ($this->db_blockchain['first_required_block'] == "") $this->set_first_required_block($coin_rpc);
 		
 		$blocks = array();
 		$transactions = array();

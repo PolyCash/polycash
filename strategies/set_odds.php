@@ -24,9 +24,9 @@ if ($r->rowCount() > 0) {
 	
 	$hours_between_applications = 12;
 	$sec_between_applications = 60*60*$hours_between_applications;
-	$rand_sec_offset = 60*60*$hours_between_applications - rand(0, 60*60*$hours_between_applications*2);
+	$rand_sec_offset = rand(0, $sec_between_applications*2);
 	
-	if ($user_game['time_last_applied'] == "" || $user_game['time_last_applied'] <= time()-$sec_between_applications || !empty($_REQUEST['force'])) {
+	if (time() > $user_game['time_next_apply'] || !empty($_REQUEST['force'])) {
 		$account_q = "SELECT * FROM currency_accounts WHERE account_id='".$account_id."';";
 		$account_r = $app->run_query($account_q);
 		
@@ -157,7 +157,7 @@ if ($r->rowCount() > 0) {
 					$transaction_id = $blockchain->create_transaction("transaction", $io_amounts, false, $io_ids, $address_ids, $fee_amount, $error_message);
 					
 					if ($transaction_id) {
-						$strategy_q = "UPDATE user_strategies SET time_last_applied='".(time()+$rand_sec_offset)."' WHERE strategy_id='".$user_game['strategy_id']."';";
+						$strategy_q = "UPDATE user_strategies SET time_next_apply='".(time()+$rand_sec_offset)."' WHERE strategy_id='".$user_game['strategy_id']."';";
 						$strategy_r = $app->run_query($strategy_q);
 						
 						$app->output_message(1, "Great, your transaction was submitted. <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction_id."/\">View Transaction</a>", false);

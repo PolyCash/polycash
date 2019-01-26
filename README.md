@@ -71,6 +71,11 @@ Follow the instructions on install.php to configure your server for accepting Bi
 
 After completing this step, visit the home page in your browser, log in and create an account.
 
+Make sure you have curl installed:
+```
+apt-get install php-curl
+```
+
 If the home page doesn't load, it's possible that mod_rewrite needs to be enabled.  To enable mod_rewrite, edit your httpd.conf and make sure this line is uncommented:
 
 ```

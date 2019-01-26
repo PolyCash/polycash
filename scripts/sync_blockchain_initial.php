@@ -14,7 +14,21 @@ if ($app->running_as_admin()) {
 	if (!empty($_REQUEST['block_id'])) $from_block_id = (int) $_REQUEST['block_id'];
 	else $from_block_id = false;
 	
+	$process_lock_name = "load_blocks";
+	
+	echo "Waiting for block loading script to finish";
+	do {
+		echo ". ";
+		$app->flush_buffers();
+		sleep(1);
+		$process_locked = $app->check_process_running($process_lock_name);
+	}
+	while ($process_locked);
+	echo "now inserting empty blocks<br/>\n";
+	
+	$app->set_site_constant($process_lock_name, getmypid());
 	echo $blockchain->sync_initial($from_block_id);
+	$app->set_site_constant($process_lock_name, 0);
 	echo '<br/><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/blocks/">See Blocks</a>';
 }
 else {

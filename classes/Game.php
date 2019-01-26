@@ -373,8 +373,7 @@ class Game {
 		}
 	}
 	
-	public function apply_user_strategies() {
-		$log_text = "";
+	public function apply_user_strategies($print_debug) {
 		$last_block_id = $this->blockchain->last_block_id();
 		
 		if ($this->last_block_id() == $last_block_id) {
@@ -390,20 +389,19 @@ class Game {
 			$q .= " LEFT JOIN featured_strategies fs ON s.featured_strategy_id=fs.featured_strategy_id";
 			$q .= " WHERE g.game_id='".$this->db_game['game_id']."' AND usb.block_within_round='".$block_of_round."'";
 			$q .= " AND (s.voting_strategy IN ('by_rank', 'by_entity', 'api', 'by_plan', 'featured','hit_url'))";
+			$q .= " AND (s.time_next_apply=NULL OR s.time_next_apply<".time().")";
 			$q .= " ORDER BY RAND();";
 			$r = $this->blockchain->app->run_query($q);
 			
-			$log_text .= "Applying user strategies for block #".$mining_block_id." of ".$this->db_game['name']." looping through ".$r->rowCount()." users.<br/>\n";
+			if ($print_debug) echo "Applying user strategies for block #".$mining_block_id." of ".$this->db_game['name']." looping through ".$r->rowCount()." users.<br/>\n";
 			while ($user_game = $r->fetch()) {
 				$api_response = false;
 				$this->apply_user_strategy($log_text, $user_game, $mining_block_id, $current_round_id, $api_response, false);
-				if ($api_response) $log_text .= json_encode($api_response)."<br/>\n";
+				if ($print_debug && $api_response) echo json_encode($api_response)."\n";
 			}
 			$this->update_option_votes();
 		}
-		else $log_text .= "Game and blockchain are out of sync: not applying user strategies.";
-		
-		return $log_text;
+		else if ($print_debug) echo "Game and blockchain are out of sync: not applying user strategies.";
 	}
 	
 	public function apply_user_strategy(&$log_text, &$user_game, $mining_block_id, $current_round_id, &$api_response, $force_now) {
@@ -423,6 +421,7 @@ class Game {
 				if ($user_game['voting_strategy'] == "api") $api_url = $user_game['api_url'];
 				else {
 					$api_url = $user_game['base_url'];
+					if (substr($api_url, 0, 4) != "http") $api_url = $GLOBALS['base_url'].$api_url;
 					if (strpos($api_url, '?')) $api_url .= "&";
 					else $api_url .= "?";
 					$api_url .= "api_key=".$user_game['api_access_code'];

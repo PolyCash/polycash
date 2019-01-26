@@ -199,7 +199,7 @@ if ($app->running_as_admin()) {
 						if ($print_debug) echo "\n".$running_games[$running_game_i]->db_game['name']."\n";
 						
 						if ($print_debug) echo "Apply user strategies...";
-						$txt = $running_games[$running_game_i]->apply_user_strategies();
+						$running_games[$running_game_i]->apply_user_strategies($print_debug);
 						
 						if (!empty($running_games[$running_game_i]->db_game['module'])) {
 							if (method_exists($running_games[$running_game_i]->module, "regular_actions")) {

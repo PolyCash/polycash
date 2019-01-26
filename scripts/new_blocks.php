@@ -29,7 +29,7 @@ if ($app->running_as_admin()) {
 			
 			if ($game && !empty($_REQUEST['apply_user_strategies'])) {
 				$block_of_round = $game->block_id_to_round_index($game->blockchain->last_block_id()+1);
-				if (!empty($_REQUEST['apply_user_strategies'])) echo $game->apply_user_strategies();
+				if (!empty($_REQUEST['apply_user_strategies'])) $game->apply_user_strategies(true);
 			}
 		}
 		echo "Done!\n";
