@@ -15,13 +15,6 @@
 		<div class="status_footer_section">
 			Loaded in <?php echo round(microtime(true)-$pageload_start_time, 2); ?> sec.
 		</div>
-		<div class="status_footer_section">
-			Tracking is: 
-			<?php
-			if ($GLOBALS['pageview_tracking_enabled']) echo "<font class='greentext'>Enabled</font>";
-			else echo "<font class='redtext'>Disabled</font>";
-			?>
-		</div>
 		<?php
 		if (!empty($game)) { ?>
 			<div class="status_footer_section">
