@@ -10,7 +10,7 @@ if (empty($argv) && !empty($GLOBALS['restrict_ip_address'])) {
 	if ($_SERVER['REMOTE_ADDR'] != $GLOBALS['restrict_ip_address']) die("This website is closed for maintenance.\n");
 }
 
-if (empty($GLOBALS['coin_brand_name'])) die('Please add this line to your includes/config.php: $GLOBALS[\'coin_brand_name\'] = \'CoinBlock\';');
+if (empty($GLOBALS['coin_brand_name'])) die('Please add this line to your includes/config.php: $GLOBALS[\'coin_brand_name\'] = \'PolyCash\';');
 
 if (empty($GLOBALS['process_lock_method'])) {
 	if (PHP_OS == "WINNT") $GLOBALS['process_lock_method'] = "db";

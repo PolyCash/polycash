@@ -533,6 +533,7 @@ if ($thisuser && $game) {
 	
 	$immature_balance = $thisuser->immature_balance($game, $user_game);
 	$mature_balance = $thisuser->mature_balance($game, $user_game);
+	
 	list($user_votes, $votes_value) = $thisuser->user_current_votes($game, $last_block_id, $current_round, $user_game);
 	$user_pending_bets = $game->user_pending_bets($user_game);
 	$game_pending_bets = $game->pending_bets();
