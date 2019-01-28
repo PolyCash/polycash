@@ -2415,7 +2415,7 @@ class Game {
 						
 						$qq = "SELECT io.*, a.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$db_transaction['transaction_id']."' AND a.is_separator_address=1 ORDER BY io.out_index ASC;";
 						$separator_outputs_r = $this->blockchain->app->run_query($qq);
-						$separator_outputs = $separator_outputs_r->fetch_all();
+						$separator_outputs = $separator_outputs_r->fetchAll();
 						$next_separator_i = 0;
 						
 						$qq = "SELECT io.*, a.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$db_transaction['transaction_id']."' AND a.is_destroy_address=0 AND a.is_separator_address=0 ORDER BY io.out_index ASC;";

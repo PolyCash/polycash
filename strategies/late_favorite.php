@@ -180,7 +180,6 @@ if ($r->rowCount() > 0) {
 						}
 					}
 					$fee_amount = $io_amount_sum - $io_spent_sum;
-					$expected_io_spent_sum = $burn_amount+($io_separator_amount_per_bet+$io_regular_amount_per_event)*$num_events;
 					
 					$error_message = false;
 					$transaction_id = $blockchain->create_transaction("transaction", $io_amounts, false, $io_ids, $address_ids, $fee_amount, $error_message);

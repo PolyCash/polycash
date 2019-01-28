@@ -53,18 +53,18 @@ if ($r->rowCount() > 0) {
 					}
 					
 					$mature_balance = $user->mature_balance($game, $user_game);
-					$coins_per_event = ($mature_balance*$frac_mature_bal/$num_events)/pow(10, $game->db_game['decimal_places']);
+					$coins_per_event = floor($mature_balance*$frac_mature_bal/$num_events);
 				}
 				else {
 					list($user_votes, $votes_value) = $thisuser->user_current_votes($game, $blockchain->last_block_id(), $round_id, $user_game);
-					$coins_per_event = ceil($votes_value/$num_events)/pow(10, $game->db_game['decimal_places']);
+					$coins_per_event = ceil($votes_value/$num_events);
 				}
 				
 				if ($coins_per_event > 0) {
-					$total_cost = $coins_per_event*$num_events*pow(10, $game->db_game['decimal_places']);
+					$total_cost = $coins_per_event*$num_events;
 					
 					$q = "SELECT *, SUM(gio.colored_amount) AS coins, SUM(gio.colored_amount)*(".($blockchain->last_block_id()+1)."-io.create_block_id) AS coin_blocks, SUM(gio.colored_amount*(".$round_id."-gio.create_round_id)) AS coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.is_resolved=1 AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account['account_id']."' GROUP BY gio.io_id";
-					if ($game->db_game['inflation'] == "exponential" && $game->db_game['exponential_inflation_rate'] > 0) $q .= " HAVING(".$game->db_game['payout_weight']."s*".$coins_per_vote.") < ".$total_cost;
+					//if ($game->db_game['inflation'] == "exponential" && $game->db_game['exponential_inflation_rate'] > 0) $q .= " HAVING(".$game->db_game['payout_weight']."s*".$coins_per_vote.") < ".$total_cost;
 					$q .= " ORDER BY coins ASC;";
 					$r = $app->run_query($q);
 					
@@ -108,9 +108,15 @@ if ($r->rowCount() > 0) {
 					
 					$burn_address = $app->fetch_address_in_account($account['account_id'], 0);
 					$burn_amount = ceil($burn_game_amount/$game_coins_per_coin);
+					$separator_address = $app->fetch_address_in_account($account['account_id'], 1);
 					
-					$remaining_io_amount = $io_nonfee_amount-$burn_amount;
-					$io_amount_per_event = $remaining_io_amount/$num_events;
+					$io_nondestroy_amount = $io_nonfee_amount-$burn_amount;
+					$num_bets = $num_events*2;
+					$io_separator_frac = 0.25;
+					$io_separator_amount_per_bet = ceil($io_nondestroy_amount*$io_separator_frac/$num_bets);
+					$io_separator_sum = $io_separator_amount_per_bet*$num_bets;
+					$io_regular_amount = $io_nondestroy_amount - $io_separator_sum;
+					$io_regular_amount_per_bet = floor($io_regular_amount/$num_events);
 					
 					$io_amounts = array($burn_amount);
 					$address_ids = array($burn_address['address_id']);
@@ -123,17 +129,16 @@ if ($r->rowCount() > 0) {
 						$address_error = false;
 						$thisevent_io_amounts = array();
 						$thisevent_address_ids = array();
-						$thisevent_io_sum = 0;
 						
 						while ($option = $option_r->fetch()) {
 							$this_address = $app->fetch_address_in_account($account['account_id'], $option['option_index']);
 							
 							if ($this_address) {
-								$io_amount = round($option['target_probability']*$io_amount_per_event);
-								
-								array_push($thisevent_io_amounts, $io_amount);
+								array_push($thisevent_io_amounts, $io_regular_amount_per_bet);
 								array_push($thisevent_address_ids, $this_address['address_id']);
-								$thisevent_io_sum += $io_amount;
+								
+								array_push($thisevent_io_amounts, $io_separator_amount_per_bet);
+								array_push($thisevent_address_ids, $separator_address['address_id']);
 							}
 							else {
 								$address_error = true;
@@ -150,8 +155,7 @@ if ($r->rowCount() > 0) {
 							}
 						}
 					}
-					$overshoot_amount = $io_spent_sum-$io_nonfee_amount;
-					$io_amounts[count($io_amounts)-1] -= $overshoot_amount;
+					$fee_amount = $io_amount_sum - $io_spent_sum;
 					
 					$error_message = false;
 					$transaction_id = $blockchain->create_transaction("transaction", $io_amounts, false, $io_ids, $address_ids, $fee_amount, $error_message);
