@@ -2636,10 +2636,10 @@ class Game {
 	public function render_ios_in_transaction($in_out, &$db_transaction, $selected_game_io_id, $selected_address_id, $coins_per_vote, $last_block_id) {
 		$html = '<div class="explorer_ios">';
 		
-		$qq = "SELECT gio.*, p.colored_amount AS payout_amount, p.game_io_id AS payout_game_io_id, p.game_out_index AS payout_out_index, io.create_block_id, io.spend_block_id, io.io_id, io.spend_status, a.*, op.name AS option_name, ev.event_index, ev.sum_score, ev.sum_unconfirmed_score, ev.destroy_score AS sum_destroy_score, ev.sum_unconfirmed_destroy_score, op.votes AS option_votes, op.unconfirmed_votes, op.effective_destroy_score AS option_effective_destroy_score, op.unconfirmed_effective_destroy_score";
+		$qq = "SELECT gio.colored_amount, gio.option_id, gio.is_coinbase, gio.is_resolved, p.ref_block_id, p.ref_round_id, p.ref_coin_blocks, p.ref_coin_rounds, p.effectiveness_factor, p.effective_destroy_amount, p.destroy_amount, p.votes, p.".$this->db_game['payout_weight']."s_destroyed, p.game_io_id AS parent_game_io_id, p.game_out_index AS parent_out_index, io.create_block_id, io.spend_block_id, io.io_id, io.spend_status, a.*, op.name AS option_name, ev.event_index, ev.sum_score, ev.sum_unconfirmed_score, ev.destroy_score AS sum_destroy_score, ev.sum_unconfirmed_destroy_score, op.votes AS option_votes, op.unconfirmed_votes, op.effective_destroy_score AS option_effective_destroy_score, op.unconfirmed_effective_destroy_score";
 		if ($in_out == "in") $qq .= ", t.tx_hash FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id";
 		else $qq .= " FROM transaction_ios io";
-		$qq .= " JOIN transaction_game_ios gio ON io.io_id=gio.io_id LEFT JOIN transaction_game_ios p ON gio.payout_io_id=p.game_io_id JOIN addresses a ON io.address_id=a.address_id LEFT JOIN options op ON gio.option_id=op.option_id LEFT JOIN events ev ON op.event_id=ev.event_id LEFT JOIN options w ON ev.winning_option_id=w.option_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.";
+		$qq .= " JOIN transaction_game_ios gio ON io.io_id=gio.io_id LEFT JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id JOIN addresses a ON io.address_id=a.address_id LEFT JOIN options op ON gio.option_id=op.option_id LEFT JOIN events ev ON op.event_id=ev.event_id LEFT JOIN options w ON ev.winning_option_id=w.option_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.";
 		if ($in_out == "out") $qq .= "create_transaction_id";
 		else $qq .= "spend_transaction_id";
 		$qq .= "='".$db_transaction['transaction_id']."' ORDER BY io.out_index ASC;";
@@ -2670,7 +2670,7 @@ class Game {
 			$html .= "<br/>\n";
 			
 			$unconfirmed_votes = 0;
-			if ($io['option_id'] > 0) {
+			if ($io['is_coinbase'] == 1) {
 				if ($io['spend_status'] == "unconfirmed") {
 					$ref_event = new Event($this, false, $io['event_id']);
 					$this_round_id = $this->block_to_round($last_block_id+1);
@@ -2694,7 +2694,7 @@ class Game {
 				else $html .= " destroyed";
 			}
 			
-			if ($io['option_id'] > 0 && $io['is_coinbase'] == 0) {
+			if ($io['is_coinbase'] == 1) {
 				$event_payout = $io['sum_destroy_score']+$io['sum_unconfirmed_destroy_score']+($io['sum_score']+$io['sum_unconfirmed_score'])*$coins_per_vote;
 				$option_effective_stake = $io['option_effective_destroy_score']+$io['unconfirmed_effective_destroy_score']+($io['option_votes']+$io['unconfirmed_votes'])*$coins_per_vote;
 				
@@ -2718,7 +2718,7 @@ class Game {
 					$html .= "/".$io['payout_out_index'].'"';
 				}
 				$html .= ' class="';
-				if ($io['payout_amount'] > 0) $html .= 'greentext';
+				if ($io['colored_amount'] > 0) $html .= 'greentext';
 				else if ($io['is_resolved'] == 1) $html .= 'redtext';
 				else $html .= 'yellowtext';
 				$html .= '">';
