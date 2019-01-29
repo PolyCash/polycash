@@ -1583,6 +1583,7 @@ class App {
 			array('int', 'event_starting_block', true),
 			array('int', 'event_final_block', true),
 			array('int', 'event_payout_block', true),
+			array('string', 'payout_rule', true),
 			array('string', 'event_starting_time', true),
 			array('string', 'event_final_time', true),
 			array('string', 'event_payout_offset_time', true),

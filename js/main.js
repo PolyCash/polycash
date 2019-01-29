@@ -375,7 +375,6 @@ function input_amount_sums() {
 	return [io_sum, amount_sum, vote_sum];
 }
 
-var set_usable_coins = false;
 function set_input_amount_sums() {
 	var amount_sums = input_amount_sums();
 	var burn_amount = 0;
@@ -396,17 +395,14 @@ function set_input_amount_sums() {
 			if (coin_disp == '1') render_text += games[0].coin_name;
 			else render_text += games[0].coin_name_plural;
 			$('#input_vote_sum').html(render_text);
-			
-			if (games[0].exponential_inflation_rate == 0 && ($('#compose_burn_amount').val() == "" || $('#compose_burn_amount').val() == set_usable_coins)) {
-				var usable_coins = Math.floor(amount_sums[1]*0.9/Math.pow(10,games[0].decimal_places));
-				set_usable_coins = usable_coins;
-				$('#compose_burn_amount').val(usable_coins);
-			}
 		}
 		else {
 			$('#input_vote_sum').html(format_coins(amount_sums[2]/Math.pow(10,games[0].decimal_places))+" votes");
 		}
 	}
+	
+	var max_burn_amount = Math.floor(amount_sums[1]*0.9/Math.pow(10,games[0].decimal_places));
+	$('#max_burn_amount').html("Up to "+format_coins(max_burn_amount));
 }
 function render_vote_input(index_id) {
 	if (games[0].logo_image_url != "") {
@@ -1874,7 +1870,7 @@ function create_account_step(step) {
 	}
 }
 
-var event_verbatim_vars = new Array('event_index', 'next_event_index', 'event_starting_block', 'event_final_block', 'event_payout_block', 'event_starting_time', 'event_final_time', 'event_payout_offset_time', 'event_name', 'option_block_rule', 'option_name', 'option_name_plural', 'outcome_index');
+var event_verbatim_vars = new Array('event_index', 'next_event_index', 'event_starting_block', 'event_final_block', 'event_payout_block', 'event_starting_time', 'event_final_time', 'event_payout_offset_time', 'event_name', 'option_block_rule', 'option_name', 'option_name_plural', 'outcome_index', 'payout_rule');
 
 function clear_event_form() {
 	for (form_i in event_verbatim_vars) {

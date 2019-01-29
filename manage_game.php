@@ -300,7 +300,9 @@ else {
 			$action_labels = array("Game Parameters", "Manage Events", "Description", "Game Definition");
 			?>
 			<script type="text/javascript">
-			$(document).ready(function() {
+			var editor;
+			
+			window.onload = function() {
 				games.push(new Game(<?php
 					echo $game->db_game['game_id'];
 					echo ', false';
@@ -331,7 +333,33 @@ else {
 				?>));
 				
 				manage_game(<?php echo $game->db_game['game_id']; ?>, 'fetch');
-			});
+				
+				<?php
+				if ($next_action == "description") { ?>
+					editor = new TINY.editor.edit('editor', {
+						id: 'game_description',
+						width: "100%",
+						height: 330,
+						cssclass: 'tinyeditor',
+						controlclass: 'tinyeditor-control',
+						rowclass: 'tinyeditor-header',
+						dividerclass: 'tinyeditor-divider',
+						controls: ['bold', 'italic', 'underline', 'strikethrough', '|', 'subscript', 'superscript', '|',
+							'orderedlist', 'unorderedlist', '|', 'outdent', 'indent', '|', 'leftalign',
+							'centeralign', 'rightalign', 'blockjustify', '|', 'unformat', '|', 'undo', 'redo', 'n',
+							'font', 'size', 'style', '|', 'image', 'hr', 'link', 'unlink', '|', 'print'],
+						footer: true,
+						fonts: ['Verdana','Arial','Georgia','Trebuchet MS'],
+						xhtml: true,
+						bodyid: 'editor',
+						footerclass: 'tinyeditor-footer',
+						toggle: {text: 'source', activetext: 'wysiwyg', cssclass: 'toggle'},
+						resize: {cssclass: 'resize'}
+					});
+					<?php
+				}
+				?>
+			};
 			</script>
 			
 			<div class="container-fluid">
@@ -608,6 +636,13 @@ else {
 									<label for="event_form_next_event_index">Next event index:</label>
 									<input class="form-control" id="event_form_next_event_index" />
 								</div>
+								<div class="form-group">
+									<label for="event_form_payout_rule">Payout rule:</label>
+									<select class="form-control" id="event_form_payout_rule">
+										<option value="binary">Binary Options</option>
+										<option value="linear">Track an Asset</option>
+									</select>
+								</div>
 								<div id="event_form_event_blocks">
 									<p><a href="" onclick="$('#event_form_event_times').show(); $('#event_form_event_blocks').hide(); return false;">Specify times</a></p>
 									<div class="form-group">
@@ -718,31 +753,6 @@ else {
 							</form>
 						</div>
 					</div>
-					<script>
-					var editor;
-					$(document).ready(function() {
-						editor = new TINY.editor.edit('editor', {
-							id: 'game_description',
-							width: "100%",
-							height: 330,
-							cssclass: 'tinyeditor',
-							controlclass: 'tinyeditor-control',
-							rowclass: 'tinyeditor-header',
-							dividerclass: 'tinyeditor-divider',
-							controls: ['bold', 'italic', 'underline', 'strikethrough', '|', 'subscript', 'superscript', '|',
-								'orderedlist', 'unorderedlist', '|', 'outdent', 'indent', '|', 'leftalign',
-								'centeralign', 'rightalign', 'blockjustify', '|', 'unformat', '|', 'undo', 'redo', 'n',
-								'font', 'size', 'style', '|', 'image', 'hr', 'link', 'unlink', '|', 'print'],
-							footer: true,
-							fonts: ['Verdana','Arial','Georgia','Trebuchet MS'],
-							xhtml: true,
-							bodyid: 'editor',
-							footerclass: 'tinyeditor-footer',
-							toggle: {text: 'source', activetext: 'wysiwyg', cssclass: 'toggle'},
-							resize: {cssclass: 'resize'}
-						});
-					});
-					</script>
 					<?php
 				}
 				else if ($next_action == "game_definition") {

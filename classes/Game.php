@@ -683,17 +683,17 @@ class Game {
 	public function reset_blocks_from_block($block_height) {
 		$this->blockchain->app->dbh->beginTransaction();
 		
-		$prev_block = $this->fetch_game_block_by_height($block_height-1);
-		if (!$prev_block) die("Failed to fetch prior block.");
-		
 		$q = "DELETE FROM game_blocks WHERE game_id='".$this->db_game['game_id']."' AND block_id >= ".$block_height.";";
 		$r = $this->blockchain->app->run_query($q);
 		
 		$q = "DELETE FROM game_sellouts WHERE game_id='".$this->db_game['game_id']."' AND in_block_id >= ".$block_height.";";
 		$r = $this->blockchain->app->run_query($q);
 		
-		$q = "DELETE FROM transaction_game_ios WHERE game_id='".$this->db_game['game_id']."' AND (game_io_index > ".$prev_block['max_game_io_index']." OR game_io_index IS NULL);";
-		$r = $this->blockchain->app->run_query($q);
+		$prev_block = $this->fetch_game_block_by_height($block_height-1);
+		if ($prev_block) {
+			$q = "DELETE FROM transaction_game_ios WHERE game_id='".$this->db_game['game_id']."' AND (game_io_index > ".$prev_block['max_game_io_index']." OR game_io_index IS NULL);";
+			$r = $this->blockchain->app->run_query($q);
+		}
 		
 		$q = "UPDATE transaction_game_ios SET spend_round_id=NULL WHERE game_id='".$this->db_game['game_id']."' AND spend_round_id >= ".$this->block_to_round($block_height).";";
 		$r = $this->blockchain->app->run_query($q);
@@ -1926,7 +1926,7 @@ class Game {
 				$from_event_index = $prev_event['event_index']+1;
 			}
 			else {
-				$from_event_index = 1;
+				$from_event_index = 0;
 				$option_offset = 100;
 			}
 			
@@ -2015,7 +2015,7 @@ class Game {
 					if ($game_defined_event['outcome_index'] != "") $qq .= ", outcome_index=".$game_defined_event['outcome_index'];
 					$qq .= ", event_starting_block='".$game_defined_event['event_starting_block']."', event_final_block='".$game_defined_event['event_final_block']."'";
 					if ($game_defined_event['event_starting_time'] != "") $qq .= ", event_starting_time='".$game_defined_event['event_starting_time']."', event_final_time='".$game_defined_event['event_final_time']."'";
-					$qq .= ", event_payout_block='".$game_defined_event['event_payout_block']."', event_name=".$this->blockchain->app->quote_escape($game_defined_event['event_name']).", option_name=".$this->blockchain->app->quote_escape($game_defined_event['option_name']).", option_name_plural=".$this->blockchain->app->quote_escape($game_defined_event['option_name_plural']).", num_options='".$num_options."', option_max_width=".$event_type['default_option_max_width'];
+					$qq .= ", event_payout_block='".$game_defined_event['event_payout_block']."', payout_rule='".$game_defined_event['payout_rule']."', event_name=".$this->blockchain->app->quote_escape($game_defined_event['event_name']).", option_name=".$this->blockchain->app->quote_escape($game_defined_event['option_name']).", option_name_plural=".$this->blockchain->app->quote_escape($game_defined_event['option_name_plural']).", num_options='".$num_options."', option_max_width=".$event_type['default_option_max_width'];
 					if (!empty($game_defined_event['option_block_rule'])) $qq .= ", option_block_rule='".$game_defined_event['option_block_rule']."'";
 					$qq .= ";";
 					$rr = $this->blockchain->app->run_query($qq);
@@ -2201,7 +2201,7 @@ class Game {
 		$rr = $this->blockchain->app->run_query($qq);
 		
 		if ($rr->rowCount() == 0) {
-			$qq = "INSERT INTO events SET game_id='".$this->db_game['game_id']."', event_index='".$event_i."', event_type_id='".$event_type['event_type_id']."', event_starting_block='".$event_starting_block."', event_final_block='".$event_final_block."', event_payout_block='".($this->db_game['default_payout_block_delay']+$event_final_block)."', event_name=".$this->blockchain->app->quote_escape($event_name).", option_name=".$this->blockchain->app->quote_escape($option_group['option_name']).", option_name_plural=".$this->blockchain->app->quote_escape($option_group['option_name_plural']).", option_max_width='".$this->db_game['default_option_max_width']."';";
+			$qq = "INSERT INTO events SET game_id='".$this->db_game['game_id']."', event_index='".$event_i."', event_type_id='".$event_type['event_type_id']."', event_starting_block='".$event_starting_block."', event_final_block='".$event_final_block."', event_payout_block='".($this->db_game['default_payout_block_delay']+$event_final_block)."', payout_rule='".$this->db_game['default_payout_rule']."', event_name=".$this->blockchain->app->quote_escape($event_name).", option_name=".$this->blockchain->app->quote_escape($option_group['option_name']).", option_name_plural=".$this->blockchain->app->quote_escape($option_group['option_name_plural']).", option_max_width='".$this->db_game['default_option_max_width']."';";
 			$rr = $this->blockchain->app->run_query($qq);
 			$event_id = $this->blockchain->app->last_insert_id();
 			
@@ -2636,7 +2636,7 @@ class Game {
 	public function render_ios_in_transaction($in_out, &$db_transaction, $selected_game_io_id, $selected_address_id, $coins_per_vote, $last_block_id) {
 		$html = '<div class="explorer_ios">';
 		
-		$qq = "SELECT gio.colored_amount, gio.option_id, gio.is_coinbase, gio.is_resolved, p.ref_block_id, p.ref_round_id, p.ref_coin_blocks, p.ref_coin_rounds, p.effectiveness_factor, p.effective_destroy_amount, p.destroy_amount, p.votes, p.".$this->db_game['payout_weight']."s_destroyed, p.game_io_id AS parent_game_io_id, p.game_out_index AS parent_out_index, io.create_block_id, io.spend_block_id, io.io_id, io.spend_status, a.*, op.name AS option_name, ev.event_index, ev.sum_score, ev.sum_unconfirmed_score, ev.destroy_score AS sum_destroy_score, ev.sum_unconfirmed_destroy_score, op.votes AS option_votes, op.unconfirmed_votes, op.effective_destroy_score AS option_effective_destroy_score, op.unconfirmed_effective_destroy_score";
+		$qq = "SELECT gio.game_io_id, gio.colored_amount, gio.option_id, gio.is_coinbase, gio.is_resolved, gio.game_out_index, p.ref_block_id, p.ref_round_id, p.ref_coin_blocks, p.ref_coin_rounds, p.effectiveness_factor, p.effective_destroy_amount, p.destroy_amount, p.votes, p.".$this->db_game['payout_weight']."s_destroyed, p.game_io_id AS parent_game_io_id, io.create_block_id, io.spend_block_id, io.io_id, io.spend_status, a.*, op.name AS option_name, ev.event_id, ev.event_index, ev.sum_score, ev.sum_unconfirmed_score, ev.destroy_score AS sum_destroy_score, ev.sum_unconfirmed_destroy_score, ev.payout_rule, op.votes AS option_votes, op.unconfirmed_votes, op.effective_destroy_score AS option_effective_destroy_score, op.unconfirmed_effective_destroy_score";
 		if ($in_out == "in") $qq .= ", t.tx_hash FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id";
 		else $qq .= " FROM transaction_ios io";
 		$qq .= " JOIN transaction_game_ios gio ON io.io_id=gio.io_id LEFT JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id JOIN addresses a ON io.address_id=a.address_id LEFT JOIN options op ON gio.option_id=op.option_id LEFT JOIN events ev ON op.event_id=ev.event_id LEFT JOIN options w ON ev.winning_option_id=w.option_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.";
@@ -3221,7 +3221,7 @@ class Game {
 	
 	public function pending_bets() {
 		$coins_per_vote = $this->blockchain->app->coins_per_vote($this->db_game);
-		$q = "SELECT SUM(destroy_amount) as destroy_amount, SUM(".$this->db_game['payout_weight']."s_destroyed) as inflation_score FROM transaction_game_ios WHERE game_id='".$this->db_game['game_id']."' AND is_resolved=0 AND option_id IS NOT NULL;";
+		$q = "SELECT SUM(p.destroy_amount) as destroy_amount, SUM(p.".$this->db_game['payout_weight']."s_destroyed) as inflation_score FROM transaction_game_ios gio JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND gio.is_resolved=0 AND gio.option_id IS NOT NULL;";
 		$r = $this->blockchain->app->run_query($q);
 		$result = $r->fetch();
 		$pending_bets = $result['destroy_amount'] + round($result['inflation_score']*$coins_per_vote);
@@ -3230,7 +3230,7 @@ class Game {
 	
 	public function user_pending_bets(&$user_game) {
 		$coins_per_vote = $this->blockchain->app->coins_per_vote($this->db_game);
-		$q = "SELECT SUM(gio.destroy_amount) as destroy_amount, SUM(gio.".$this->db_game['payout_weight']."s_destroyed) as inflation_score, SUM(gio.ref_".$this->db_game['payout_weight']."s) as ref_votes FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.game_id='".$this->db_game['game_id']."' AND gio.is_resolved=0 AND k.account_id='".$user_game['account_id']."';";
+		$q = "SELECT SUM(p.destroy_amount) as destroy_amount, SUM(p.".$this->db_game['payout_weight']."s_destroyed) as inflation_score, SUM(p.ref_".$this->db_game['payout_weight']."s) as ref_votes FROM transaction_game_ios gio JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.game_id='".$this->db_game['game_id']."' AND gio.is_resolved=0 AND k.account_id='".$user_game['account_id']."';";
 		$r = $this->blockchain->app->run_query($q);
 		$result = $r->fetch();
 		$pending_bets = $result['destroy_amount'] + round(($result['inflation_score']+$result['ref_votes'])*$coins_per_vote);

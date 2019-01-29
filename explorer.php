@@ -1104,7 +1104,12 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					
 					if ($game) {
 						echo "Amount: &nbsp;&nbsp; ".$app->format_bignum($io['colored_amount']/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']."<br/>";
-						echo "Status: &nbsp;&nbsp; ".ucwords($io['spend_status'])."<br/>\n";
+						echo "Status: &nbsp;&nbsp; ".ucwords($io['spend_status']);
+						
+						if ($io['is_resolved'] == 1) echo ", Resolved\n";
+						else echo ", Unresolved\n";
+						
+						echo "<br/>\n";
 
 						echo "This UTXO";
 						if ($io['spend_status'] == "unconfirmed") echo " has not been confirmed yet";
@@ -1124,6 +1129,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							$votes_value = floor($votes*$coins_per_vote);
 							echo ".<br/>It currently holds ".$app->format_bignum($votes_value/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." in unrealized gains.";
 						}
+						
 						echo "<br/>\n";
 					}
 					
@@ -1298,7 +1304,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$num_losses = 0;
 						$num_unresolved = 0;
 						
-						$q = "SELECT gio.*, gio.destroy_amount AS destroy_amount, io.spend_transaction_id, io.spend_status, ev.*, et.vote_effectiveness_function, et.effectiveness_param1, o.effective_destroy_score AS option_effective_destroy_score, o.unconfirmed_effective_destroy_score, o.unconfirmed_votes, o.name AS option_name, ev.destroy_score AS sum_destroy_score, gio.votes AS votes, o.votes AS option_votes, gio2.colored_amount AS payout_amount, t.tx_hash FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transactions t ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN events ev ON o.event_id=ev.event_id LEFT JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN transaction_game_ios gio2 ON gio.payout_io_id=gio2.game_io_id WHERE gio.game_id=".$game->db_game['game_id']." AND ug.user_game_id=".$user_game['user_game_id']." AND gio.is_coinbase=0 ORDER BY ev.event_index ASC, gio.game_io_index ASC;";
+						$q = "SELECT gio.game_io_id, gio.colored_amount, gio.option_id, gio.is_coinbase, gio.is_resolved, gio.game_out_index, p.ref_block_id, p.ref_round_id, p.ref_coin_blocks, p.ref_coin_rounds, p.effectiveness_factor, p.effective_destroy_amount, p.destroy_amount, p.votes, p.".$game->db_game['payout_weight']."s_destroyed, p.game_io_id AS parent_game_io_id, io.spend_transaction_id, io.spend_status, ev.*, et.vote_effectiveness_function, et.effectiveness_param1, o.effective_destroy_score AS option_effective_destroy_score, o.unconfirmed_effective_destroy_score, o.unconfirmed_votes, o.name AS option_name, ev.destroy_score AS sum_destroy_score, gio.votes AS votes, o.votes AS option_votes, t.tx_hash FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transactions t ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN events ev ON o.event_id=ev.event_id LEFT JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id WHERE gio.game_id=".$game->db_game['game_id']." AND ug.user_game_id=".$user_game['user_game_id']." AND gio.is_coinbase=1 ORDER BY ev.event_index ASC, gio.game_io_index ASC;";
 						$r = $app->run_query($q);
 						$num_bets = $r->rowCount();
 						
