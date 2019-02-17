@@ -80,7 +80,8 @@ class SingleEliminationGameDefinition {
 			"default_effectiveness_param1": 0.5,
 			"default_max_voting_fraction": 1,
 			"default_option_max_width": 200,
-			"default_payout_block_delay": 0
+			"default_payout_block_delay": 0,
+			"default_payout_rule": "binary"
 		}';
 		$this->load();
 	}
@@ -141,6 +142,7 @@ class SingleEliminationGameDefinition {
 					"event_name" => $event_name,
 					"option_name" => "outcome",
 					"option_name_plural" => "outcomes",
+					"payout_rule" => "binary",
 					"outcome_index" => null,
 					"possible_outcomes" => $possible_outcomes
 				);

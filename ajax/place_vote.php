@@ -13,7 +13,7 @@ if ($thisuser && $game) {
 		die();
 	}
 	
-	$fee = $user_strategy['transaction_fee']*pow(10, $game->db_game['decimal_places']);
+	$fee = $user_strategy['transaction_fee']*pow(10, $game->blockchain->db_blockchain['decimal_places']);
 	
 	$burn_amount = (int) $_REQUEST['burn_amount'];
 	if ($burn_amount == 0 && $game->db_game['inflation'] == "exponential" && $game->db_game['exponential_inflation_rate'] == 0) {

@@ -131,7 +131,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 			$block_id = (int) $block_id_str;
 			
 			if ($game) {
-				$q = "SELECT b.time_mined, b.block_hash, gb.*, gb.load_time AS game_load_time FROM blocks b JOIN game_blocks gb ON b.internal_block_id=gb.internal_block_id WHERE b.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND b.block_id='".$block_id."' AND gb.game_id='".$game->db_game['game_id']."';";
+				$q = "SELECT b.time_mined, b.block_hash, gb.*, gb.load_time AS game_load_time FROM blocks b JOIN game_blocks gb ON b.block_id=gb.block_id WHERE b.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND b.block_id='".$block_id."' AND gb.game_id='".$game->db_game['game_id']."';";
 			}
 			else $q = "SELECT * FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_id='".$block_id."';";
 			
@@ -146,7 +146,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				$pagetitle .= " Block #".$block['block_id'];
 			}
 			else {
-				if ($game) $q = "SELECT b.time_mined, b.block_hash, gb.*, gb.load_time AS game_load_time FROM blocks b JOIN game_blocks gb ON b.internal_block_id=gb.internal_block_id WHERE b.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND b.block_hash=".$app->quote_escape($uri_parts[5])." AND gb.game_id='".$game->db_game['game_id']."';";
+				if ($game) $q = "SELECT b.time_mined, b.block_hash, gb.*, gb.load_time AS game_load_time FROM blocks b JOIN game_blocks gb ON b.block_id=gb.block_id WHERE b.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND b.block_hash=".$app->quote_escape($uri_parts[5])." AND gb.game_id='".$game->db_game['game_id']."';";
 				else $q = "SELECT * FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_hash=".$app->quote_escape($uri_parts[5]).";";
 				$r = $app->run_query($q);
 				
@@ -291,6 +291,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					echo ', "'.$game->db_game['exponential_inflation_rate'].'"';
 					echo ', false';
 					echo ', "'.$game->db_game['decimal_places'].'"';
+					echo ', "'.$game->blockchain->db_blockchain['decimal_places'].'"';
 					echo ', "'.$game->db_game['view_mode'].'"';
 					echo ', 0';
 					echo ', false';

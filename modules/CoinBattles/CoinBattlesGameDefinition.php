@@ -50,6 +50,7 @@ class CoinBattlesGameDefinition {
 			"default_max_voting_fraction": 1,
 			"default_option_max_width": 200,
 			"default_payout_block_delay": 0,
+			"default_payout_rule": "binary",
 			"view_mode": "default"
 		}';
 		$this->load();
@@ -117,6 +118,7 @@ class CoinBattlesGameDefinition {
 				"event_name" => "Coin Battle #".($round-1),
 				"option_name" => "outcome",
 				"option_name_plural" => "outcomes",
+				"payout_rule" => "binary",
 				"outcome_index" => null,
 				"possible_outcomes" => $possible_outcomes
 			);

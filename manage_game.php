@@ -325,6 +325,7 @@ else {
 					echo ', "'.$game->db_game['exponential_inflation_rate'].'"';
 					echo ', false';
 					echo ', "'.$game->db_game['decimal_places'].'"';
+					echo ', "'.$game->blockchain->db_blockchain['decimal_places'].'"';
 					echo ', "'.$game->db_game['view_mode'].'"';
 					echo ', 0';
 					echo ', false';
@@ -676,6 +677,18 @@ else {
 								<div class="form-group">
 									<label for="event_form_event_name">Event name:</label>
 									<input class="form-control" id="event_form_event_name" />
+								</div>
+								<div class="form-group">
+									<label for="event_form_track_max_price">Track min price:</label>
+									<input class="form-control" id="event_form_track_min_price" />
+								</div>
+								<div class="form-group">
+									<label for="event_form_track_max_price">Track max price:</label>
+									<input class="form-control" id="event_form_track_max_price" />
+								</div>
+								<div class="form-group">
+									<label for="event_form_track_name_short">Abbreviation for tracked asset:</label>
+									<input class="form-control" id="event_form_track_name_short" />
 								</div>
 								<div class="form-group">
 									<label for="event_form_option_block_rule">Option block rule:</label>

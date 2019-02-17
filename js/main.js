@@ -537,7 +537,7 @@ function finish_refresh_output_amounts() {
 		var game_amount = input_sums[1];
 		var votes = input_sums[2];
 		var inflation_amount = votes*games[0].coins_per_vote;
-		var nonfee_amount = io_amount - (games[0].fee_amount*Math.pow(10, games[0].decimal_places));
+		var nonfee_amount = io_amount - (games[0].fee_amount*Math.pow(10, games[0].blockchain_decimal_places));
 		
 		var burn_amount = 0;
 		burn_io_amount = "";
@@ -1388,7 +1388,7 @@ var Event = function(game, game_event_index, event_id, real_event_index, num_vot
 	};
 };
 
-var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, chain_coin_name, chain_coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, effectiveness_param1, seconds_per_block, inflation, exponential_inflation_rate, time_last_block_loaded, decimal_places, view_mode, initial_event_index, filter_date, default_betting_mode, render_events) {
+var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, chain_coin_name, chain_coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, effectiveness_param1, seconds_per_block, inflation, exponential_inflation_rate, time_last_block_loaded, decimal_places, blockchain_decimal_places, view_mode, initial_event_index, filter_date, default_betting_mode, render_events) {
 	Game.numInstances = (Game.numInstances || 0) + 1;
 	
 	this.instance_id = Game.numInstances-1;
@@ -1415,6 +1415,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_c
 	this.inflation = inflation;
 	this.exponential_inflation_rate = parseFloat(exponential_inflation_rate);
 	this.decimal_places = parseInt(decimal_places);
+	this.blockchain_decimal_places = parseInt(blockchain_decimal_places);
 	this.view_mode = view_mode;
 	this.selected_event_index = initial_event_index;
 	this.filter_date = filter_date;
@@ -1870,7 +1871,7 @@ function create_account_step(step) {
 	}
 }
 
-var event_verbatim_vars = new Array('event_index', 'next_event_index', 'event_starting_block', 'event_final_block', 'event_payout_block', 'event_starting_time', 'event_final_time', 'event_payout_offset_time', 'event_name', 'option_block_rule', 'option_name', 'option_name_plural', 'outcome_index', 'payout_rule');
+var event_verbatim_vars = new Array('event_index', 'next_event_index', 'event_starting_block', 'event_final_block', 'event_payout_block', 'event_starting_time', 'event_final_time', 'event_payout_offset_time', 'event_name', 'option_block_rule', 'option_name', 'option_name_plural', 'outcome_index', 'payout_rule', 'track_max_price', 'track_min_price', 'track_name_short');
 
 function clear_event_form() {
 	for (form_i in event_verbatim_vars) {

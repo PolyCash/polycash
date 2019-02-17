@@ -174,6 +174,7 @@ games.push(new Game(<?php
 	echo ', "'.$game->db_game['exponential_inflation_rate'].'"';
 	echo ', "'.$blockchain_last_block['time_mined'].'"';
 	echo ', "'.$game->db_game['decimal_places'].'"';
+	echo ', "'.$game->blockchain->db_blockchain['decimal_places'].'"';
 	echo ', "'.$game->db_game['view_mode'].'"';
 	echo ', ';
 	if ($user_game) echo $user_game['event_index'];

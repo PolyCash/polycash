@@ -16,7 +16,8 @@ if ($app->running_as_admin()) {
 	
 	for ($block_height=$from_block_height; $block_height<=$to_block_height; $block_height++) {
 		$log_text = "";
-		list($successful, $log_text) = $game->add_block($block_height);
+		list($successful, $log_text, $bulk_to_block) = $game->add_block($block_height);
+		if ($bulk_to_block) $block_height = $bulk_to_block;
 		echo "$log_text<br/>\n";
 	}
 }

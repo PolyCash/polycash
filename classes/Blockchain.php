@@ -144,7 +144,7 @@ class Blockchain {
 		}
 		
 		if (!empty($api_block['block_hash'])) {
-			if (empty($db_block['internal_block_id'])) {
+			if (empty($db_block['block_id'])) {
 				$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_hash=".$this->app->quote_escape($api_block['block_hash']).", block_id='".$db_block['block_id']."', time_created='".time()."', locally_saved=0;";
 				$r = $this->app->run_query($q);
 				$internal_block_id = $this->app->last_insert_id();
@@ -203,7 +203,7 @@ class Blockchain {
 		$html = "";
 		
 		$db_block = false;
-		$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id='".$block_height."' ORDER BY internal_block_id ASC;";
+		$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id='".$block_height."' ORDER BY block_id ASC;";
 		$r = $this->app->run_query($q);
 		if ($r->rowCount() > 0) {
 			$db_block = $r->fetch();
@@ -541,9 +541,7 @@ class Blockchain {
 							$tx_game_nondestroy_amount = floor($tx_game_input_sum*($tx_chain_regular_sum/$tx_chain_output_sum));
 							$tx_game_destroy_amount = $tx_game_input_sum-$tx_game_nondestroy_amount;
 							
-							$coin_round_sum = 0;
 							$game_amount_sum = 0;
-							$coin_block_sum = 0;
 							$game_destroy_sum = 0;
 							$game_out_index = 0;
 							$next_separator_i = 0;
@@ -602,8 +600,6 @@ class Blockchain {
 									if ($payout_insert_q != "") $insert_q .= $payout_insert_q;
 								}
 								$game_amount_sum += $this_game_amount;
-								$coin_block_sum += $this_coin_blocks;
-								$coin_round_sum += $this_coin_rounds;
 							}
 							
 							$insert_q = substr($insert_q, 0, strlen($insert_q)-2).";";
@@ -813,7 +809,7 @@ class Blockchain {
 	
 	public function more_web_api_blocks() {
 		if ($this->db_blockchain['first_required_block']) {
-			$q = "SELECT MIN(b.block_id), MAX(b.block_id) FROM (SELECT block_id FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND locally_saved=0 AND block_id >= ".$this->db_blockchain['first_required_block']." ORDER BY block_id ASC, internal_block_id ASC LIMIT 100) b;";
+			$q = "SELECT MIN(b.block_id), MAX(b.block_id) FROM (SELECT block_id FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND locally_saved=0 AND block_id >= ".$this->db_blockchain['first_required_block']." ORDER BY block_id ASC LIMIT 100) b;";
 			$r = $this->app->run_query($q);
 			$info = $r->fetch();
 			
@@ -1246,7 +1242,7 @@ class Blockchain {
 	public function explorer_block_list($from_block_id, $to_block_id, &$game, $complete_blocks_only) {
 		$html = "";
 		
-		if ($game) $q = "SELECT gb.* FROM blocks b JOIN game_blocks gb ON b.internal_block_id=gb.internal_block_id";
+		if ($game) $q = "SELECT gb.* FROM blocks b JOIN game_blocks gb ON b.block_id=gb.block_id";
 		else $q = "SELECT * FROM blocks b";
 		$q .= " WHERE b.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND b.block_id >= ".$from_block_id." AND b.block_id <= ".$to_block_id;
 		if ($game) $q .= " AND gb.game_id=".$game->db_game['game_id'];
