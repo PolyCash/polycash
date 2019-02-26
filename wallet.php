@@ -533,6 +533,7 @@ if ($thisuser && $game) {
 	
 	$immature_balance = $thisuser->immature_balance($game, $user_game);
 	$mature_balance = $thisuser->mature_balance($game, $user_game);
+	
 	list($user_votes, $votes_value) = $thisuser->user_current_votes($game, $last_block_id, $current_round, $user_game);
 	$user_pending_bets = $game->user_pending_bets($user_game);
 	$game_pending_bets = $game->pending_bets();
@@ -591,6 +592,7 @@ if ($thisuser && $game) {
 			echo ', "'.$game->db_game['exponential_inflation_rate'].'"';
 			echo ', "'.$blockchain_last_block['time_mined'].'"';
 			echo ', "'.$game->db_game['decimal_places'].'"';
+			echo ', "'.$game->blockchain->db_blockchain['decimal_places'].'"';
 			echo ', "'.$game->db_game['view_mode'].'"';
 			echo ', '.$user_game['event_index'];
 			echo ', false';
@@ -823,7 +825,7 @@ if ($thisuser && $game) {
 											<b>Inputs:</b><div style="display: none; margin-left: 20px;" id="input_amount_sum"></div><div style="display: inline-block; margin-left: 20px;" id="input_vote_sum"></div><br/>
 											<p>
 												How many <?php echo $game->db_game['coin_name_plural']; ?> do you want to burn?
-												<input class="form-control input-sm" id="compose_burn_amount" placeholder="0" />
+												<input class="form-control input-sm" id="compose_burn_amount" placeholder="0" /><font id="max_burn_amount"></font>
 											</p>
 											<p id="compose_input_start_msg"></p>
 										</div>

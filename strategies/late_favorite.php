@@ -22,7 +22,7 @@ if ($r->rowCount() > 0) {
 	$coins_per_vote = $app->coins_per_vote($game->db_game);
 	$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
 	
-	$hours_between_applications = 12;
+	$hours_between_applications = 8;
 	$sec_between_applications = 60*60*$hours_between_applications;
 	$rand_sec_offset = rand(0, $sec_between_applications*2);
 	
@@ -33,9 +33,9 @@ if ($r->rowCount() > 0) {
 		if ($account_r->rowCount() > 0) {
 			$account = $account_r->fetch();
 			
-			$event_q = "SELECT * FROM events ev JOIN game_defined_options gdo ON ev.event_index=gdo.event_index WHERE ev.game_id='".$game->db_game['game_id']."' AND gdo.game_id='".$game->db_game['game_id']."' AND gdo.target_probability IS NOT NULL";
-			$event_q .= " AND ev.event_starting_block<=".$mining_block_id." AND ev.event_final_block>=".$mining_block_id;
-			$event_q .= " AND ev.event_starting_time < NOW() AND ev.event_final_time > NOW() GROUP BY ev.event_id ORDER BY ev.event_index ASC;";
+			$event_q = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."'";
+			$event_q .= " AND (event_starting_block+event_final_block)/2<=".$mining_block_id." AND event_final_block>=".$mining_block_id;
+			$event_q .= " ORDER BY event_index ASC;";
 			$event_r = $app->run_query($event_q);
 			$num_events = $event_r->rowCount();
 			
@@ -44,13 +44,7 @@ if ($r->rowCount() > 0) {
 				if (!empty($_REQUEST['amount_mode']) && $_REQUEST['amount_mode'] == "inflation_only") $amount_mode = "inflation_only";
 				
 				if ($amount_mode == "per_event") {
-					$aggressiveness = "low";
 					$frac_mature_bal = 0.5;
-					
-					if (!empty($_REQUEST['aggressiveness']) && $_REQUEST['aggressiveness'] == "high") {
-						$aggressiveness = "high";
-						$frac_mature_bal = 0.5;
-					}
 					
 					$mature_balance = $user->mature_balance($game, $user_game);
 					$coins_per_event = floor($mature_balance*$frac_mature_bal/$num_events);
@@ -63,8 +57,7 @@ if ($r->rowCount() > 0) {
 				if ($coins_per_event > 0) {
 					$total_cost = $coins_per_event*$num_events;
 					
-					$q = "SELECT *, SUM(gio.colored_amount) AS coins, SUM(gio.colored_amount)*(".($blockchain->last_block_id()+1)."-io.create_block_id) AS coin_blocks, SUM(gio.colored_amount*(".$round_id."-gio.create_round_id)) AS coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.is_resolved=1 AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account['account_id']."' GROUP BY gio.io_id";
-					//if ($game->db_game['inflation'] == "exponential" && $game->db_game['exponential_inflation_rate'] > 0) $q .= " HAVING(".$game->db_game['payout_weight']."s*".$coins_per_vote.") < ".$total_cost;
+					$q = "SELECT *, SUM(gio.colored_amount) AS coins, SUM(gio.colored_amount)*(".$mining_block_id."-io.create_block_id) AS coin_blocks, SUM(gio.colored_amount*(".$round_id."-gio.create_round_id)) AS coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.is_resolved=1 AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account['account_id']."' GROUP BY gio.io_id";
 					$q .= " ORDER BY coins ASC;";
 					$r = $app->run_query($q);
 					
@@ -111,40 +104,71 @@ if ($r->rowCount() > 0) {
 					$separator_address = $app->fetch_address_in_account($account['account_id'], 1);
 					
 					$io_nondestroy_amount = $io_nonfee_amount-$burn_amount;
-					$num_bets = $num_events*2;
+					$num_bets = $num_events;
 					$io_separator_frac = 0.25;
 					$io_separator_amount_per_bet = ceil($io_nondestroy_amount*$io_separator_frac/$num_bets);
 					$io_separator_sum = $io_separator_amount_per_bet*$num_bets;
 					$io_regular_amount = $io_nondestroy_amount - $io_separator_sum;
-					$io_regular_amount_per_bet = floor($io_regular_amount/$num_events);
+					$io_regular_amount_per_event = floor($io_regular_amount/$num_events);
 					
 					$io_amounts = array($burn_amount);
 					$address_ids = array($burn_address['address_id']);
 					$io_spent_sum = $burn_amount;
 					
+					$btc_currency = $app->get_currency_by_abbreviation("BTC");
+					
 					while ($db_event = $event_r->fetch()) {
-						$option_q = "SELECT op.*, gdo.target_probability FROM options op JOIN game_defined_options gdo ON op.event_option_index=gdo.option_index WHERE op.event_id='".$db_event['event_id']."' AND gdo.game_id='".$game->db_game['game_id']."' AND gdo.event_index='".$db_event['event_index']."' ORDER BY op.option_index ASC;";
+						$event_starting_block = $game->blockchain->fetch_block_by_id($db_event['event_starting_block']);
+						$event_final_block = $game->blockchain->fetch_block_by_id($db_event['event_final_block']);
+						if ($event_final_block) $event_to_time = $event_final_block['time_mined'];
+						else $event_to_time = time();
+						
+						$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY option_index ASC;";
 						$option_r = $app->run_query($option_q);
+						
+						$best_performance = 0;
+						$best_performance_event_option_index = false;
+						
+						while ($option = $option_r->fetch()) { 
+							$db_currency = $app->run_query("SELECT * FROM currencies WHERE name='".$option['name']."';")->fetch();
+							$initial_price = $app->currency_price_after_time($db_currency['currency_id'], $btc_currency['currency_id'], $event_starting_block['time_mined']);
+							
+							if ($option['name'] == "Bitcoin") {
+								$final_price = 0;
+								$final_performance = 1;
+							}
+							else {
+								$final_price = $app->currency_price_at_time($db_currency['currency_id'], $btc_currency['currency_id'], $event_to_time);
+								$final_performance = $final_price['price']/$initial_price['price'];
+							}
+							
+							if ($best_performance_event_option_index === false || $final_performance > $best_performance) {
+								$best_performance = $final_performance;
+								$best_performance_event_option_index = $option['event_option_index'];
+							}
+						}
+						
+						$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' AND event_option_index='".$best_performance_event_option_index."';";
+						$option_r = $app->run_query($option_q);
+						$best_option = $option_r->fetch();
 						
 						$address_error = false;
 						$thisevent_io_amounts = array();
 						$thisevent_address_ids = array();
 						
-						while ($option = $option_r->fetch()) {
-							$this_address = $app->fetch_address_in_account($account['account_id'], $option['option_index']);
+						$this_address = $app->fetch_address_in_account($account['account_id'], $best_option['option_index']);
+						
+						if ($this_address) {
+							array_push($thisevent_io_amounts, $io_regular_amount_per_event);
+							array_push($thisevent_address_ids, $this_address['address_id']);
 							
-							if ($this_address) {
-								array_push($thisevent_io_amounts, $io_regular_amount_per_bet);
-								array_push($thisevent_address_ids, $this_address['address_id']);
-								
-								array_push($thisevent_io_amounts, $io_separator_amount_per_bet);
-								array_push($thisevent_address_ids, $separator_address['address_id']);
-							}
-							else {
-								$address_error = true;
-								$app->output_message(8, "Cancelling transaction.. ".$option['name']." has no address.", false);
-								die();
-							}
+							array_push($thisevent_io_amounts, $io_separator_amount_per_bet);
+							array_push($thisevent_address_ids, $separator_address['address_id']);
+						}
+						else {
+							$address_error = true;
+							$app->output_message(8, "Cancelling transaction.. ".$best_option['name']." has no address.", false);
+							die();
 						}
 						
 						if (!$address_error) {

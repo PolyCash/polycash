@@ -13,7 +13,7 @@ if ($thisuser && $game) {
 		die();
 	}
 	
-	$fee = $user_strategy['transaction_fee']*pow(10, $game->db_game['decimal_places']);
+	$fee = $user_strategy['transaction_fee']*pow(10, $game->blockchain->db_blockchain['decimal_places']);
 	
 	$burn_amount = (int) $_REQUEST['burn_amount'];
 	if ($burn_amount == 0 && $game->db_game['inflation'] == "exponential" && $game->db_game['exponential_inflation_rate'] == 0) {
@@ -98,8 +98,25 @@ if ($thisuser && $game) {
 		}
 	}
 	
+	$separator_address = $app->fetch_address_in_account($user_game['account_id'], 1);
+	$separator_frac = 0.25;
+	$new_amounts = [];
+	$new_address_ids = [];
+	
+	for ($out_i=0; $out_i<count($tx_amounts); $out_i++) {
+		$amount = $tx_amounts[$out_i];
+		$separator_amount = floor($separator_frac*$amount);
+		$new_amount = $amount-$separator_amount;
+		
+		array_push($new_amounts, $new_amount);
+		array_push($new_address_ids, $address_ids[$out_i]);
+		
+		array_push($new_amounts, $separator_amount);
+		array_push($new_address_ids, $separator_address['address_id']);
+	}
+	
 	$error_message = false;
-	$transaction_id = $game->blockchain->create_transaction("transaction", $tx_amounts, false, $io_ids, $address_ids, $fee, $error_message);
+	$transaction_id = $game->blockchain->create_transaction("transaction", $new_amounts, false, $io_ids, $new_address_ids, $fee, $error_message);
 	
 	if ($transaction_id) {
 		$game->update_option_votes();

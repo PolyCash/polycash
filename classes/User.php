@@ -279,7 +279,10 @@ class User {
 						if ($option_index == 0) $is_destroy_address=1;
 						else $is_destroy_address=0;
 						
-						$qq = "INSERT INTO addresses SET is_mine=1, user_id='".$this->db_user['user_id']."', primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."', option_index='".$option_index."', vote_identifier=".$this->app->quote_escape($vote_identifier).", is_destroy_address='".$is_destroy_address."', address=".$this->app->quote_escape($addr_text).", time_created='".time()."';";
+						if ($option_index == 1) $is_separator_address=1;
+						else $is_separator_address=0;
+						
+						$qq = "INSERT INTO addresses SET is_mine=1, user_id='".$this->db_user['user_id']."', primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."', option_index='".$option_index."', vote_identifier=".$this->app->quote_escape($vote_identifier).", is_destroy_address='".$is_destroy_address."', is_separator_address='".$is_separator_address."', address=".$this->app->quote_escape($addr_text).", time_created='".time()."';";
 						$rr = $this->app->run_query($qq);
 						$address_id = $this->app->last_insert_id();
 						

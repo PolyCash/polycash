@@ -61,6 +61,7 @@ class CryptoDuelsGameDefinition {
 			"default_max_voting_fraction": 1,
 			"default_option_max_width": 200,
 			"default_payout_block_delay": 0,
+			"default_payout_rule": "binary",
 			"view_mode": "default"
 		}';
 	}
@@ -97,6 +98,7 @@ class CryptoDuelsGameDefinition {
 				"event_name" => "Duel #".($event_i+1).": ".$this->currencies[$first_currency_i]['entity_name']." vs ".$this->currencies[$second_currency_i]['entity_name'],
 				"option_name" => "outcome",
 				"option_name_plural" => "outcomes",
+				"payout_rule" => "binary",
 				"outcome_index" => null,
 				"possible_outcomes" => $possible_outcomes
 			);

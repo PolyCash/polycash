@@ -52,6 +52,7 @@ class ImageTournamentGameDefinition {
 			"default_max_voting_fraction": 1.01,
 			"default_option_max_width": 200,
 			"default_payout_block_delay": 0,
+			"default_payout_rule": "binary",
 			"view_mode": "simple"
 		}';
 		$this->load();
@@ -115,6 +116,7 @@ class ImageTournamentGameDefinition {
 					"event_name" => $event_name,
 					"option_name" => "outcome",
 					"option_name_plural" => "outcomes",
+					"payout_rule" => "binary",
 					"outcome_index" => null,
 					"possible_outcomes" => $possible_outcomes
 				);

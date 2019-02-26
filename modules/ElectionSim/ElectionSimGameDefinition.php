@@ -45,7 +45,8 @@ class ElectionSimGameDefinition {
 			"default_effectiveness_param1": 0.5,
 			"default_max_voting_fraction": 0.7,
 			"default_option_max_width": 200,
-			"default_payout_block_delay": 0
+			"default_payout_block_delay": 0,
+			"default_payout_rule": "binary"
 		}';
 		$this->load();
 	}

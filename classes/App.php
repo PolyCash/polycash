@@ -671,6 +671,7 @@ class App {
 	public function latest_currency_price($currency_id) {
 		$q = "SELECT * FROM currency_prices WHERE currency_id='".$currency_id."' AND reference_currency_id='".$this->get_site_constant('reference_currency_id')."' ORDER BY price_id DESC LIMIT 1;";
 		$r = $this->run_query($q);
+		
 		if ($r->rowCount() > 0) {
 			return $r->fetch();
 		}
@@ -942,6 +943,7 @@ class App {
 					echo ', "'.$featured_game->db_game['exponential_inflation_rate'].'"';
 					echo ', "'.$db_last_block['time_mined'].'"';
 					echo ', "'.$featured_game->db_game['decimal_places'].'"';
+					echo ', "'.$featured_game->blockchain->db_blockchain['decimal_places'].'"';
 					echo ', "'.$db_game['view_mode'].'"';
 					echo ', 0';
 					echo ', false';
@@ -1583,6 +1585,9 @@ class App {
 			array('int', 'event_starting_block', true),
 			array('int', 'event_final_block', true),
 			array('int', 'event_payout_block', true),
+			array('string', 'payout_rule', true),
+			array('float', 'track_max_price', true),
+			array('float', 'track_min_price', true),
 			array('string', 'event_starting_time', true),
 			array('string', 'event_final_time', true),
 			array('string', 'event_payout_offset_time', true),
@@ -2080,6 +2085,16 @@ class App {
 			$group_q = "SELECT * FROM option_groups WHERE group_id=".$group_id.";";
 			return $this->run_query($group_q)->fetch();
 		}
+	}
+	
+	public function fetch_entity_by_id($entity_id) {
+		$q = "SELECT * FROM entities WHERE entity_id=".$entity_id.";";
+		$r = $this->run_query($q);
+		
+		if ($r->rowCount() > 0) {
+			return $r->fetch();
+		}
+		else return false;
 	}
 	
 	public function check_set_entity($entity_type_id, $name) {
