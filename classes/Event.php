@@ -418,14 +418,71 @@ class Event {
 		return $html;
 	}
 	
-	public function new_payout_transaction($winning_option, $winning_votes, $winning_effective_destroy_score) {
+	public function set_track_payout_price() {
+		$db_block = $this->game->blockchain->fetch_block_by_id($this->db_event['event_payout_block']);
+		if ($db_block) $ref_time = $db_block['time_mined'];
+		else $ref_time = time();
+		
+		$track_entity = $this->game->blockchain->app->fetch_entity_by_id($this->db_event['track_entity_id']);
+		$track_price = $this->game->blockchain->app->currency_price_at_time($track_entity['currency_id'], 6, $ref_time);
+		$btc_usd_price = $this->game->blockchain->app->currency_price_at_time(6, 1, $ref_time);
+		$track_price_usd = round($track_price['price']*$btc_usd_price['price'], 6);
+		
+		$q = "UPDATE events SET track_payout_price='".$track_price_usd."' WHERE event_id='".$this->db_event['event_id']."';";
+		$r = $this->game->blockchain->app->run_query($q);
+		
+		$q = "UPDATE game_defined_events SET track_payout_price='".$track_price_usd."' WHERE game_id='".$this->game->db_game['game_id']."' AND event_index='".$this->db_event['event_index']."';";
+		$r = $this->game->blockchain->app->run_query($q);
+		
+		$this->db_event['track_payout_price'] = $track_price_usd;
+	}
+	
+	public function new_linear_payout_transaction() {
+		if (empty($this->db_event['track_payout_price'])) $this->set_track_payout_price();
+		
+		list($inflationary_reward, $destroy_reward, $total_reward) = $this->event_rewards();
+		$coins_per_vote = $this->game->blockchain->app->coins_per_vote($this->game->db_game);
+		
+		$contract_size = $this->db_event['track_max_price']-$this->db_event['track_min_price'];
+		if ($this->db_event['track_payout_price'] > $this->db_event['track_max_price']) $long_contract_price = $contract_size;
+		else if ($this->db_event['track_payout_price'] < $this->db_event['track_min_price']) $long_contract_price = 0;
+		else $long_contract_price = $this->db_event['track_payout_price']-$this->db_event['track_min_price'];
+		
+		$long_payout_frac = $long_contract_price/$contract_size;
+		$long_payout_total = floor($total_reward*$long_payout_frac);
+		$short_payout_total = $total_reward-$long_payout_total;
+		
+		$q = "SELECT * FROM options WHERE event_id='".$this->db_event['event_id']."' ORDER BY event_option_index ASC;";
+		$r = $this->game->blockchain->app->run_query($q);
+		
+		while ($option = $r->fetch()) {
+			if ($option['event_option_index'] == 0) $option_payout_total = $long_payout_total;
+			else $option_payout_total = $short_payout_total;
+			
+			$option_effective_coins = $option['effective_destroy_score'] + $option['votes']*$coins_per_vote;
+			
+			$qq = "SELECT p.*, gio.game_io_id AS game_io_id FROM transaction_game_ios gio JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id WHERE gio.option_id=".$option['option_id']." AND gio.is_coinbase=1;";
+			$rr = $this->game->blockchain->app->run_query($qq);
+			
+			while ($payout_io = $rr->fetch()) {
+				$this_effective_coins = $payout_io['votes']*$coins_per_vote + $payout_io['effective_destroy_amount'];
+				$this_payout_amount = floor($option_payout_total*$this_effective_coins/$option_effective_coins);
+				
+				$qqq = "UPDATE transaction_game_ios SET colored_amount='".$this_payout_amount."' WHERE game_io_id='".$payout_io['game_io_id']."';";
+				$rrr = $this->game->blockchain->app->run_query($qqq);
+				echo "qqq: $qqq\n";
+			}
+		}
+	}
+	
+	public function new_binary_payout_transaction($winning_option, $winning_votes, $winning_effective_destroy_score) {
 		$log_text = "";
 		
 		if ($this->game->db_game['payout_weight'] == "coin") $score_field = "colored_amount";
 		else $score_field = $this->game->db_game['payout_weight']."s_destroyed";
 		
 		// Loop through the correctly voted UTXOs
-		$q = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id WHERE gio.event_id='".$this->db_event['event_id']."' AND gio.option_id=".$winning_option." AND is_coinbase=0;";
+		$q = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id WHERE gio.option_id=".$winning_option." AND is_coinbase=0;";
 		$r = $this->game->blockchain->app->run_query($q);
 		$log_text .= "Paying out ".$r->rowCount()." correct votes.<br/>\n";
 		$total_paid = 0;
@@ -573,7 +630,7 @@ class Event {
 				if ($borrow_delta != 0) {
 					if ($borrow_delta > 0) $html .= '<font class="greentext">+ ';
 					else $html .= '<font class="redtext">- ';
-					$html .= "$".$this->game->blockchain->app->format_bignum(abs($borrow_delta/pow(10, $this->game->db_game['decimal_places'])));
+					$html .= $this->game->blockchain->app->format_bignum(abs($borrow_delta/pow(10, $this->game->db_game['decimal_places'])));
 					$html .= "</font>\n";
 				}
 				$html .= " &nbsp; (".$this->game->blockchain->app->format_bignum($current_leverage)."X)<br/>\n";
@@ -756,13 +813,18 @@ class Event {
 		$q .= ", sum_votes='".$sum_votes."', winning_votes='".$winning_votes."', winning_effective_destroy_score='".$winning_effective_destroy_score."', destroy_score='".$event_destroy_score."', effective_destroy_score='".$event_effective_destroy_score."' WHERE event_id='".$this->db_event['event_id']."';";
 		$r = $this->game->blockchain->app->run_query($q);
 		
-		if ($winning_option !== false && $add_payout_transaction) {
-			$payout_response = $this->new_payout_transaction($winning_option, $winning_votes, $winning_effective_destroy_score);
-			
-			$log_text .= "Payout response: ".$payout_response;
-			$log_text .= "<br/>\n";
+		if ($add_payout_transaction) {
+			if ($this->db_event['payout_rule'] == "binary") {
+				if ($winning_option !== false) {
+					$payout_response = $this->new_binary_payout_transaction($winning_option, $winning_votes, $winning_effective_destroy_score);
+					$log_text .= "Payout response: ".$payout_response."<br/>\n";
+				}
+			}
+			else {
+				$payout_response = $this->new_linear_payout_transaction();
+				$log_text .= "Payout response: ".$payout_response."<br/>\n";
+			}
 		}
-		
 		$this->set_event_completed();
 		
 		return $log_text;

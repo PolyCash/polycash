@@ -465,13 +465,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo " paid out to the winners.<br/>\n";
 						}
 						
-						$from_block_id = $db_event['event_starting_block'];
-						$to_block_id = $db_event['event_final_block'];
-						
-						$q = "SELECT * FROM game_blocks WHERE game_id='".$game->db_game['game_id']."' AND block_id >= '".$from_block_id."' AND block_id <= ".$to_block_id." ORDER BY block_id ASC;";
-						$r = $app->run_query($q);
 						echo "Blocks in this event: ";
-						echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$from_block_id."\">".$from_block_id."</a> ... <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$to_block_id."\">".$to_block_id."</a>";
+						echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$db_event['event_starting_block']."\">".$db_event['event_starting_block']."</a> ... <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$db_event['event_final_block']."\">".$db_event['event_final_block']."</a>";
+						if ($db_event['event_payout_block'] != $db_event['event_final_block']) echo " ... <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$db_event['event_payout_block']."\">".$db_event['event_payout_block']."</a>";
 						?>
 						<br/>
 						<?php

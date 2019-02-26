@@ -38,7 +38,7 @@ if (!empty($_REQUEST['redirect_key']) && empty($redirect_url)) $redirect_url = $
 				<div class="col-md-8">
 					<p>
 						<button id="check_username_btn" class="btn btn-success">Continue</button>
-						&nbsp;&nbsp; Or &nbsp;&nbsp; <a href="" onclick="toggle_to_panel('noemail'); return false;">I prefer not to share my email address</a>
+						&nbsp;&nbsp; Or &nbsp;&nbsp; <a href="" onclick="toggle_to_panel('noemail'); return false;">Generate a username and password for me</a>
 					</p>
 					<p>
 						<div id="login_message" class="greentext" style="display: none;"></div>

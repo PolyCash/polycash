@@ -11,3 +11,7 @@ ALTER TABLE `events` ADD `track_name_short` VARCHAR(50) NULL DEFAULT NULL AFTER 
 ALTER TABLE `game_defined_events` ADD `track_name_short` VARCHAR(50) NULL DEFAULT NULL AFTER `track_min_price`;
 ALTER TABLE `currencies` ADD INDEX (`name`);
 ALTER TABLE `game_blocks` DROP `internal_block_id`;
+ALTER TABLE `game_defined_events` ADD `track_payout_price` FLOAT NULL DEFAULT NULL AFTER `track_min_price`;
+ALTER TABLE `events` ADD `track_payout_price` FLOAT NULL DEFAULT NULL AFTER `track_min_price`;
+ALTER TABLE `game_defined_events` ADD `track_entity_id` INT NULL DEFAULT NULL AFTER `track_payout_price`;
+ALTER TABLE `events` ADD `track_entity_id` INT NULL DEFAULT NULL AFTER `track_payout_price`;

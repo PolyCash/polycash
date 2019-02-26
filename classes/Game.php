@@ -2010,6 +2010,7 @@ class Game {
 					if ($game_defined_event['track_max_price'] != "") $qq .= ", track_max_price='".$game_defined_event['track_max_price']."'";
 					if ($game_defined_event['track_max_price'] != "") $qq .= ", track_min_price='".$game_defined_event['track_min_price']."'";
 					if ($game_defined_event['track_name_short'] != "") $qq .= ", track_name_short='".$game_defined_event['track_name_short']."'";
+					if ($game_defined_event['track_entity_id'] != "") $qq .= ", track_entity_id='".$game_defined_event['track_entity_id']."'";
 					$qq .= ", event_payout_block='".$game_defined_event['event_payout_block']."', payout_rule='".$game_defined_event['payout_rule']."', event_name=".$this->blockchain->app->quote_escape($game_defined_event['event_name']).", option_name=".$this->blockchain->app->quote_escape($game_defined_event['option_name']).", option_name_plural=".$this->blockchain->app->quote_escape($game_defined_event['option_name_plural']).", num_options='".$num_options."', option_max_width=".$event_type['default_option_max_width'];
 					if (!empty($game_defined_event['option_block_rule'])) $qq .= ", option_block_rule='".$game_defined_event['option_block_rule']."'";
 					$qq .= ";";
@@ -2751,20 +2752,20 @@ class Game {
 					$html .= "Paid ".$this->blockchain->app->format_bignum(($io['destroy_amount']+$inflation_stake)/pow(10,$this->db_game['decimal_places']));
 					$html .= ' '.$this->db_game['coin_name_plural'];
 					$html .= ' @ $'.$this->blockchain->app->format_bignum($asset_price_usd);
-					$html .= '<br/>'.$this->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->db_game['decimal_places'])).' '.$io['track_name_short'].' @ $'.$this->blockchain->app->format_bignum($bought_price_usd).' &nbsp; ('.$this->blockchain->app->format_bignum($bought_leverage).'X)<br/><br/>';
+					$html .= '<br/>'.$this->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->db_game['decimal_places'])).' '.$io['track_name_short'].' @ $'.$this->blockchain->app->format_bignum($bought_price_usd).' &nbsp; ('.$this->blockchain->app->format_bignum($bought_leverage).'X leverage)<br/><br/>';
 					
 					$html .= 'Now valued at <font class="greentext">'.$this->blockchain->app->format_bignum($estimated_io_value/pow(10,$this->db_game['decimal_places']))." ".$this->db_game['coin_name_plural']."</font>\n";
 					$html .= "@ $".$this->blockchain->app->format_bignum($track_price_usd)."<br/>\n";
-					if ($my_vote['event_option_index'] != 0) $html .= '-';
+					if ($io['event_option_index'] != 0) $html .= '-';
 					$html .= $this->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->db_game['decimal_places'])).' '.$io['track_name_short'].' ';
 					
 					if ($borrow_delta != 0) {
 						if ($borrow_delta > 0) $html .= '<font class="greentext">+ ';
 						else $html .= '<font class="redtext">- ';
-						$html .= "$".$this->blockchain->app->format_bignum(abs($borrow_delta/pow(10, $this->db_game['decimal_places'])));
+						$html .= $this->blockchain->app->format_bignum(abs($borrow_delta/pow(10, $this->db_game['decimal_places'])));
 						$html .= "</font>\n";
 					}
-					$html .= " &nbsp; (".$this->blockchain->app->format_bignum($current_leverage)."X)<br/>\n";
+					$html .= " &nbsp; (".$this->blockchain->app->format_bignum($current_leverage)."X leverage)<br/>\n";
 					
 					if ($net_delta < 0) $html .= '<font class="redtext">Net loss of ';
 					else $html .= '<font class="greentext">Net gain of ';
