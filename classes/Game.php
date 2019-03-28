@@ -397,7 +397,7 @@ class Game {
 			while ($user_game = $r->fetch()) {
 				$api_response = false;
 				$this->apply_user_strategy($log_text, $user_game, $mining_block_id, $current_round_id, $api_response, false);
-				if ($print_debug && $api_response) echo json_encode($api_response)."\n";
+				if ($print_debug && $api_response) echo "user #".$user_game['user_id'].": ".json_encode($api_response)."\n";
 			}
 			$this->update_option_votes();
 		}
