@@ -21,16 +21,7 @@ if ($thisuser && $game) {
 		die();
 	}
 	
-	$tx_amounts = array();
 	$address_ids = array();
-	
-	if ($burn_amount > 0) {
-		$burn_address = $app->fetch_address_in_account($user_game['account_id'], 0);
-		
-		array_push($tx_amounts, $burn_amount);
-		array_push($address_ids, $burn_address['address_id']);
-	}
-	
 	$io_ids = explode(",", $_REQUEST['io_ids']);
 	$amounts = explode(",", $_REQUEST['amounts']);
 	$option_ids = explode(",", $_REQUEST['option_ids']);
@@ -47,7 +38,6 @@ if ($thisuser && $game) {
 			die();
 		}
 		$amount_sum += (int) $amounts[$i];
-		array_push($tx_amounts, $amounts[$i]);
 	}
 	
 	$gio_q = "SELECT COUNT(*), SUM(gio.colored_amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.io_id IN (".implode(",", $io_ids).") AND k.account_id='".$user_game['account_id']."';";
@@ -76,6 +66,18 @@ if ($thisuser && $game) {
 		die();
 	}
 	
+	$separator_address = $app->fetch_address_in_account($user_game['account_id'], 1);
+	$separator_frac = 0.25;
+	$new_amounts = [];
+	$new_address_ids = [];
+	
+	if ($burn_amount > 0) {
+		$burn_address = $app->fetch_address_in_account($user_game['account_id'], 0);
+		
+		array_push($new_amounts, $burn_amount);
+		array_push($new_address_ids, $burn_address['address_id']);
+	}
+	
 	for ($i=0; $i<count($option_ids); $i++) {
 		$option_q = "SELECT * FROM options op JOIN events ev ON op.event_id=ev.event_id WHERE op.option_id='".$option_ids[$i]."' AND ev.game_id='".$game->db_game['game_id']."';";
 		$option_r = $app->run_query($option_q);
@@ -86,6 +88,15 @@ if ($thisuser && $game) {
 			
 			if ($db_address) {
 				array_push($address_ids, $db_address['address_id']);
+				
+				$separator_amount = floor($separator_frac*$amounts[$i]);
+				$new_amount = $amounts[$i]-$separator_amount;
+				
+				array_push($new_amounts, $new_amount);
+				array_push($new_address_ids, $address_ids[$i]);
+				
+				array_push($new_amounts, $separator_amount);
+				array_push($new_address_ids, $separator_address['address_id']);
 			}
 			else {
 				$app->output_message(9, "Error: no address for option #".$option_ids[$i], false);
@@ -96,23 +107,6 @@ if ($thisuser && $game) {
 			$app->output_message(10, "Error: you supplied an invalid option ID.", false);
 			die();
 		}
-	}
-	
-	$separator_address = $app->fetch_address_in_account($user_game['account_id'], 1);
-	$separator_frac = 0.25;
-	$new_amounts = [];
-	$new_address_ids = [];
-	
-	for ($out_i=0; $out_i<count($tx_amounts); $out_i++) {
-		$amount = $tx_amounts[$out_i];
-		$separator_amount = floor($separator_frac*$amount);
-		$new_amount = $amount-$separator_amount;
-		
-		array_push($new_amounts, $new_amount);
-		array_push($new_address_ids, $address_ids[$out_i]);
-		
-		array_push($new_amounts, $separator_amount);
-		array_push($new_address_ids, $separator_address['address_id']);
 	}
 	
 	$error_message = false;

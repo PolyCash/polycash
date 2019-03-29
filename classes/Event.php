@@ -59,7 +59,7 @@ class Event {
 		$stats_all = false;
 		$counter = 0;
 		$option_id_csv = "";
-		$option_id_to_rank = "";
+		$option_id_to_rank = [];
 		$confirmed_score = 0;
 		$unconfirmed_score = 0;
 		$destroy_score = 0;
@@ -103,7 +103,6 @@ class Event {
 		
 		$current_round = $this->game->block_to_round($this->game->blockchain->last_block_id()+1);
 		$include_unconfirmed = true;
-		
 		$sum_votes = $this->total_votes_in_round($include_unconfirmed);
 		$output_arr[0] = $sum_votes['sum'];
 		$output_arr[1] = floor($sum_votes['sum']*$this->db_event['max_voting_fraction']);

@@ -184,6 +184,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				$io_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN addresses a ON io.address_id=a.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND gio.game_io_index='".$game_io_index."';";
 				$io_r = $app->run_query($io_q);
 			}
+			else {
+				$io_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id WHERE io.io_id='".((int)$uri_parts[5])."';";
+				$io_r = $app->run_query($io_q);
+			}
 		}
 		
 		if (!empty($io_r) && $io_r->rowCount() > 0) {
@@ -954,9 +958,12 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					echo "<p>Identifier: ".$address['vote_identifier']." (#".$address['option_index'].")</p>\n";
 					
 					if ($address['is_destroy_address'] == 1) {
-						echo "<p>This is a destroy address. ";
-						if ($game) echo "Any ".$game->db_game['coin_name_plural']." sent to this address will be destroyed.";
+						echo "<p>This is a destroy address.";
+						if ($game) echo " Any ".$game->db_game['coin_name_plural']." sent to this address will be destroyed.";
 						echo "</p>\n";
+					}
+					if ($address['is_separator_address'] == 1) {
+						echo "<p>This is a separator address.</p>\n";
 					}
 					
 					echo "<p>".ucwords($blockchain->db_blockchain['coin_name'])." balance: ".($blockchain->address_balance_at_block($address, false)/pow(10,$blockchain->db_blockchain['decimal_places']))." ".$blockchain->db_blockchain['coin_name_plural']."</p>\n";
@@ -1356,15 +1363,15 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						}
 						echo "</p>\n";
 						
-						if ($num_wins+$num_losses > 0) {
-							echo "<p><b>Resolved Bets</b></p>\n";
-							echo $resolved_bets_table;
-							echo "<br/>\n";
-						}
-						
 						if ($num_unresolved > 0) {
 							echo "<p><b>Unresolved Bets</b></p>\n";
 							echo $unresolved_bets_table;
+							echo "<br/>\n";
+						}
+						
+						if ($num_wins+$num_losses > 0) {
+							echo "<p><b>Resolved Bets</b></p>\n";
+							echo $resolved_bets_table;
 							echo "<br/>\n";
 						}
 						

@@ -538,7 +538,7 @@ class Blockchain {
 							}
 							$tx_chain_regular_sum = $tx_chain_output_sum - $tx_chain_destroy_sum - $tx_chain_separator_sum;
 							
-							$tx_game_nondestroy_amount = floor($tx_game_input_sum*($tx_chain_regular_sum/$tx_chain_output_sum));
+							$tx_game_nondestroy_amount = floor($tx_game_input_sum*(($tx_chain_regular_sum+$tx_chain_separator_sum)/$tx_chain_output_sum));
 							$tx_game_destroy_amount = $tx_game_input_sum-$tx_game_nondestroy_amount;
 							
 							$game_amount_sum = 0;

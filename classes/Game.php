@@ -1501,6 +1501,7 @@ class Game {
 	}
 	
 	public function render_game_players() {
+		$networth_sum = 0;
 		$html = "";
 		
 		$q = "SELECT *, SUM(ug.account_value) AS account_value_sum FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id='".$this->db_game['game_id']."' AND ug.payment_required=0 GROUP BY ug.user_id ORDER BY account_value_sum DESC, u.user_id ASC;";
@@ -1520,7 +1521,11 @@ class Game {
 			$html .= '</div>';
 			
 			$html .= '</div>';
+			
+			$networth_sum += $temp_user_game['account_value_sum'];
 		}
+		
+		$html .= "<br/>\nSum: ".$this->blockchain->app->format_bignum($networth_sum)." ".$this->db_game['coin_name_plural'];
 		
 		return $html;
 	}
@@ -2386,12 +2391,12 @@ class Game {
 						while ($input_io = $rr->fetch()) {
 							$tx_game_input_sum += $input_io['colored_amount'];
 							
-							$tx_game_coin_blocks = $input_io['colored_amount']*($block_height - $input_io['create_block_id']);
-							$tx_game_coin_rounds = $input_io['colored_amount']*($round_id - $input_io['create_round_id']);
-							$cbd_in += $tx_game_coin_blocks;
-							$crd_in += $tx_game_coin_rounds;
+							$gio_in_coin_blocks = $input_io['colored_amount']*($block_height - $input_io['create_block_id']);
+							$gio_in_coin_rounds = $input_io['colored_amount']*($round_id - $input_io['create_round_id']);
+							$cbd_in += $gio_in_coin_blocks;
+							$crd_in += $gio_in_coin_rounds;
 							
-							$update_input_q = "UPDATE transaction_game_ios SET spend_round_id='".$round_id."', coin_blocks_created='".$tx_game_coin_blocks."', coin_rounds_created='".$tx_game_coin_rounds."' WHERE game_io_id='".$input_io['game_io_id']."';";
+							$update_input_q = "UPDATE transaction_game_ios SET spend_round_id='".$round_id."', coin_blocks_created='".$gio_in_coin_blocks."', coin_rounds_created='".$gio_in_coin_rounds."' WHERE game_io_id='".$input_io['game_io_id']."';";
 							$update_input_r = $this->blockchain->app->run_query($update_input_q);
 						}
 						
@@ -2409,7 +2414,7 @@ class Game {
 						}
 						$tx_chain_regular_sum = $tx_chain_output_sum - $tx_chain_destroy_sum - $tx_chain_separator_sum;
 						
-						$tx_game_nondestroy_amount = floor($tx_game_input_sum*($tx_chain_regular_sum/$tx_chain_output_sum));
+						$tx_game_nondestroy_amount = floor($tx_game_input_sum*(($tx_chain_regular_sum+$tx_chain_separator_sum)/$tx_chain_output_sum));
 						$tx_game_destroy_amount = $tx_game_input_sum-$tx_game_nondestroy_amount;
 						
 						$game_destroy_sum = 0;
