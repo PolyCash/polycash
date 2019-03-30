@@ -396,21 +396,17 @@ include('includes/html_start.php');
 					
 					echo '
 					<div class="tab-content">
-						<div id="primary_address_'.$account['account_id'].'" class="tab-pane fade">';
+						<div id="primary_address_'.$account['account_id'].'" class="tab-pane fade pad-this-pane">';
 					
-					if (empty($account['game_id'])) {
-						echo "To deposit to ".$account['account_name'].", send ".$account['short_name_plural']." to:<br/>";
-						echo '<a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$account['pub_key'].'">'.$account['pub_key']."</a><br/>\n";
-						echo '<img style="margin: 10px;" src="/render_qr_code.php?data='.$account['pub_key'].'" />';
-					}
-					else {
-						echo "This account stores your colored ".$account_game->blockchain->db_blockchain['coin_name_plural']." for ".$account_game->db_game['name'].".<br/>\n";
-						echo "Do not deposit ".$account_game->blockchain->db_blockchain['coin_name_plural']." directly into this account.";
-					}
+					echo "<p>You can deposit ".$account['short_name_plural'];
+					if ($account_game) echo " or ".$account_game->db_game['coin_name_plural'];
+					echo " to this account by sending to:</p>";
+					echo '<a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$account['pub_key'].'">'.$account['pub_key']."</a><br/>\n";
+					echo '<img style="margin: 10px;" src="/render_qr_code.php?data='.$account['pub_key'].'" />';
 					
 					echo '
 						</div>
-						<div id="transactions_'.$account['account_id'].'" class="tab-pane fade">';
+						<div id="transactions_'.$account['account_id'].'" class="tab-pane fade pad-this-pane">';
 					
 					echo "<p>Rendering ".($transaction_in_r->rowCount() + $transaction_out_r->rowCount())." transactions.</p>";
 					
@@ -428,11 +424,11 @@ include('includes/html_start.php');
 						echo '</a></div>';
 						
 						if ($account_game) {
-							echo '<div class="col-sm-2" style="text-align: right;"><a class="greentext" target="_blank" href="/explorer/games/'.$account_game->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'">';
+							echo '<div class="col-sm-2" style="text-align: right;"><a class="greentext" target="_blank" href="/explorer/games/'.$account_game->db_game['url_identifier'].'/transactions/'.$transaction['tx_hash'].'/">';
 							echo "+".$app->format_bignum($colored_coin_amount/pow(10,$account_game->db_game['decimal_places']))."&nbsp;".$account_game->db_game['coin_name_plural'];
 							echo '</a></div>';
 						}
-						echo '<div class="col-sm-2" style="text-align: right;"><a class="greentext" target="_blank" href="/explorer/blockchains/'.$account['blockchain_url_identifier'].'/transactions/'.$transaction['tx_hash'].'">';
+						echo '<div class="col-sm-2" style="text-align: right;"><a class="greentext" target="_blank" href="/explorer/blockchains/'.$account['blockchain_url_identifier'].'/utxo/'.$transaction['tx_hash'].'/'.$transaction['out_index'].'">';
 						echo "+".$app->format_bignum($transaction['amount']/pow(10,$blockchain->db_blockchain['decimal_places']))."&nbsp;".$account['short_name_plural'];
 						echo '</a></div>';
 						
@@ -489,7 +485,7 @@ include('includes/html_start.php');
 					
 					echo '
 						</div>
-						<div id="addresses_'.$account['account_id'].'" class="tab-pane fade">';
+						<div id="addresses_'.$account['account_id'].'" class="tab-pane fade pad-this-pane">';
 					$addr_q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."' ORDER BY a.option_index ASC LIMIT 50;";
 					$addr_r = $app->run_query($addr_q);
 					echo "<p>This account has ".$addr_r->rowCount()." addresses.</p>";
@@ -508,6 +504,7 @@ include('includes/html_start.php');
 						
 						echo '<div class="col-sm-2">'.$address['vote_identifier'].' (#'.$address['option_index'].')';
 						if ($address['is_destroy_address'] == 1) echo ' <font class="redtext">Destroy Address</font>';
+						if ($address['is_separator_address'] == 1) echo ' <font class="yellowtext">Separator Address</font>';
 						echo '</div>';
 						
 						echo '<div class="col-sm-4"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$address['address'].'">'.$address['address'].'</a></div>';

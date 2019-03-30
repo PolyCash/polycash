@@ -600,14 +600,16 @@ class Event {
 			if ($this->db_event['payout_rule'] == "binary") {
 				$html .= '<div class="col-sm-7">';
 				$payout_disp = $this->game->blockchain->app->format_bignum($max_payout/pow(10,$this->game->db_game['decimal_places']));
-				$html .= '<font class="'.$color.'text">'.$my_vote['name']."</font><br/>\n";
+				$html .= '<font class="'.$color.'text">';
 				$html .= '<a target="_blank" href="/explorer/games/'.$this->game->db_game['url_identifier'].'/utxo/'.$my_vote['tx_hash'].'/'.$my_vote['game_out_index'].'">';
-				$html .= "Paid ".$this->game->blockchain->app->format_bignum($coin_stake/pow(10,$this->game->db_game['decimal_places']));
+				$html .= "Staked ".$this->game->blockchain->app->format_bignum($coin_stake/pow(10,$this->game->db_game['decimal_places']))."</a> ";
+				$html .= " on ".$my_vote['name'];
+				$html .= "</font> ";
 				$html .= '</div>';
 				
 				$html .= '<div class="col-sm-5">';
 				$html .= '<font class="'.$color.'text">x'.round($odds, 2)." &nbsp; ";
-				$html .= '+'.$payout_disp.' '.$this->game->db_game['coin_name']."</font>\n";
+				$html .= '+'.$payout_disp.' '.$this->game->db_game['coin_name_plural']."</font>\n";
 				$html .= '</div>';
 			}
 			else {

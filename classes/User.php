@@ -170,8 +170,6 @@ class User {
 			}
 		}
 		
-		$this->generate_user_addresses($game, $user_game);
-		
 		return $user_game;
 	}
 

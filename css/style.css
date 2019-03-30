@@ -161,6 +161,9 @@ and (max-device-width : 480px) {
 .yellowtext {
 	color: #fa0;
 }
+.pad-this-pane {
+	padding-top: 10px;
+}
 .responsive_input {
 	width: 100%;
 }
