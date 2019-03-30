@@ -2678,7 +2678,7 @@ class Game {
 	public function render_ios_in_transaction($in_out, &$db_transaction, $selected_game_io_id, $selected_address_id, $coins_per_vote, $last_block_id) {
 		$html = '<div class="explorer_ios">';
 		
-		$qq = "SELECT a.*, p.*, gio.is_coinbase AS is_coinbase, gio.colored_amount AS colored_amount, gio.is_resolved AS is_resolved, op.*, ev.*, op.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS sum_destroy_score, ev.effective_destroy_score AS sum_effective_destroy_score, io.spend_status";
+		$qq = "SELECT a.*, p.*, gio.is_coinbase AS is_coinbase, gio.colored_amount AS colored_amount, gio.is_resolved AS is_resolved, gio.game_io_id, gio.game_out_index, op.*, ev.*, op.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS sum_destroy_score, ev.effective_destroy_score AS sum_effective_destroy_score, io.spend_status";
 		if ($in_out == "in") $qq .= ", t.tx_hash FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id";
 		else $qq .= " FROM transaction_ios io";
 		$qq .= " JOIN transaction_game_ios gio ON io.io_id=gio.io_id LEFT JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id JOIN addresses a ON io.address_id=a.address_id LEFT JOIN options op ON gio.option_id=op.option_id LEFT JOIN events ev ON op.event_id=ev.event_id LEFT JOIN options w ON ev.winning_option_id=w.option_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.";

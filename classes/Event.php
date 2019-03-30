@@ -582,7 +582,7 @@ class Event {
 	public function my_votes_html($color, &$coins_per_vote, &$user_game) {
 		$html = "";
 		
-		$q = "SELECT p.*, gio.is_coinbase AS is_coinbase, op.*, ev.*, op.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS sum_destroy_score, ev.effective_destroy_score AS sum_effective_destroy_score, t.transaction_id, t.tx_hash, t.fee_amount, io.spend_status FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN options op ON gio.option_id=op.option_id JOIN events ev ON op.event_id=ev.event_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.event_id='".$this->db_event['event_id']."' AND k.account_id='".$user_game['account_id']."'";
+		$q = "SELECT p.*, gio.is_coinbase AS is_coinbase, gio.game_out_index AS game_out_index, op.*, ev.*, op.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS sum_destroy_score, ev.effective_destroy_score AS sum_effective_destroy_score, t.transaction_id, t.tx_hash, t.fee_amount, io.spend_status FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN options op ON gio.option_id=op.option_id JOIN events ev ON op.event_id=ev.event_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.event_id='".$this->db_event['event_id']."' AND k.account_id='".$user_game['account_id']."'";
 		if ($color == "green") $q .= " AND io.create_block_id IS NOT NULL";
 		else $q .= " AND io.create_block_id IS NULL";
 		$q .= " ORDER BY gio.game_io_id ASC;";
@@ -601,7 +601,7 @@ class Event {
 				$html .= '<div class="col-sm-7">';
 				$payout_disp = $this->game->blockchain->app->format_bignum($max_payout/pow(10,$this->game->db_game['decimal_places']));
 				$html .= '<font class="'.$color.'text">'.$my_vote['name']."</font><br/>\n";
-				$html .= '<a target="_blank" href="/explorer/games/'.$this->game->db_game['url_identifier'].'/transactions/'.$my_vote['tx_hash'].'/'.$my_vote['game_out_index'].'">';
+				$html .= '<a target="_blank" href="/explorer/games/'.$this->game->db_game['url_identifier'].'/utxo/'.$my_vote['tx_hash'].'/'.$my_vote['game_out_index'].'">';
 				$html .= "Paid ".$this->game->blockchain->app->format_bignum($coin_stake/pow(10,$this->game->db_game['decimal_places']));
 				$html .= '</div>';
 				
@@ -613,7 +613,7 @@ class Event {
 			else {
 				$html .= '<div class="col-sm-6">';
 				$html .= '<font class="'.$color.'text">'.$my_vote['name']."</font><br/>\n";
-				$html .= '<a target="_blank" href="/explorer/games/'.$this->game->db_game['url_identifier'].'/transactions/'.$my_vote['tx_hash'].'/'.$my_vote['game_out_index'].'">';
+				$html .= '<a target="_blank" href="/explorer/games/'.$this->game->db_game['url_identifier'].'/utxo/'.$my_vote['tx_hash'].'/'.$my_vote['game_out_index'].'">';
 				$html .= "Paid ".$this->game->blockchain->app->format_bignum($coin_stake/pow(10,$this->game->db_game['decimal_places']));
 				$html .= ' '.$this->game->db_game['coin_name_plural']."</a>";
 				$html .= ' @ $'.$this->game->blockchain->app->format_bignum($asset_price_usd);
