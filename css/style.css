@@ -378,13 +378,18 @@ a.selected {
 .game_events {
 	margin: 0px;
 	padding: 0px;
-	max-height: 700px;
 	overflow-y: scroll;
 	overflow-x: hidden;
 	border: 1px solid #aaa;
 	border-left: 0px;
 	border-right: 0px;
 	background-color: #f8f8f8;
+}
+.game_events_short {
+	max-height: 400px;
+}
+.game_events_long {
+	max-height: 600px;
 }
 .game_events_inner {
 	overflow: hidden;

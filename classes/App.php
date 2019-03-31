@@ -973,7 +973,7 @@ class App {
 					echo '<div id="game'.$counter.'_chart_js"><script type="text/javascript">'.$js.'</script></div>'."\n";
 				}
 				
-				echo '<div id="game'.$counter.'_events" class="game_events"></div>'."\n";
+				echo '<div id="game'.$counter.'_events" class="game_events game_events_short"></div>'."\n";
 				echo '<script type="text/javascript" id="game'.$counter.'_new_event_js">'."\n";
 				echo $new_event_js;
 				echo '</script>';

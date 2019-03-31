@@ -569,8 +569,8 @@ class Event {
 			$html .= '
 			<div class="my_votes_table">
 				<div class="row my_votes_header">
-					<div class="col-sm-7">'.ucwords($this->db_event['option_name']).'</div>
-					<div class="col-sm-5">Payout</div>
+					<div class="col-sm-6">'.ucwords($this->db_event['option_name']).'</div>
+					<div class="col-sm-6">Payout</div>
 				</div>
 				'.$unconfirmed_html.$confirmed_html.'
 			</div>';
@@ -598,7 +598,7 @@ class Event {
 			$coin_stake = $my_vote['destroy_amount'] + $inflation_stake;
 			
 			if ($this->db_event['payout_rule'] == "binary") {
-				$html .= '<div class="col-sm-7">';
+				$html .= '<div class="col-sm-6">';
 				$payout_disp = $this->game->blockchain->app->format_bignum($max_payout/pow(10,$this->game->db_game['decimal_places']));
 				$html .= '<font class="'.$color.'text">';
 				$html .= '<a target="_blank" href="/explorer/games/'.$this->game->db_game['url_identifier'].'/utxo/'.$my_vote['tx_hash'].'/'.$my_vote['game_out_index'].'">';
@@ -607,7 +607,7 @@ class Event {
 				$html .= "</font> ";
 				$html .= '</div>';
 				
-				$html .= '<div class="col-sm-5">';
+				$html .= '<div class="col-sm-6">';
 				$html .= '<font class="'.$color.'text">';
 				$html .= '+'.$payout_disp.' '.$this->game->db_game['coin_name_plural']." &nbsp; (x".round($odds, 2).")</font>\n";
 				$html .= '</div>';

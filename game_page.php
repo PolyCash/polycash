@@ -129,7 +129,7 @@ else $exchange_rate = 0;
 		</div>
 	</div>
 	
-	<div id="game0_events"></div>
+	<div id="game0_events" class="game_events game_events_short"></div>
 
 	<div class="paragraph text-center">
 		<?php echo $GLOBALS['site_name'].", ".date("Y"); ?>

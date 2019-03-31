@@ -791,7 +791,7 @@ if ($thisuser && $game) {
 									?>
 								</div>
 							</div>
-							<div class="game_events">
+							<div class="game_events game_events_long">
 								<div id="game0_events" class="game_events_inner"></div>
 							</div>
 							
