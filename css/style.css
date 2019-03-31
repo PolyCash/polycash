@@ -554,3 +554,6 @@ a.selected {
 	border: 1px solid #cccccc;
 	margin-top: 10px;
 }
+.game_info_table .row {
+	padding: 2px 0px;
+}

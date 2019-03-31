@@ -1034,7 +1034,7 @@ class App {
 	}
 	
 	public function game_info_table(&$db_game) {
-		$html = "";
+		$html = '<div class="game_info_table">';
 		
 		$blocks_per_hour = 3600/$db_game['seconds_per_block'];
 		$round_reward = ($db_game['pos_reward']+$db_game['pow_reward']*$db_game['round_length'])/pow(10,$db_game['decimal_places']);
@@ -1071,10 +1071,11 @@ class App {
 			$html .= '<div class="row"><div class="col-sm-5">Game definition:</div><div class="col-sm-7"><a href="/explorer/games/'.$game->db_game['url_identifier'].'/definition/?definition_mode=actual">'.$this->shorten_game_def_hash($game_def_hash).'</a></div></div>';
 		}
 		
-		$html .= '<div class="row"><div class="col-sm-5">Length of game:</div><div class="col-sm-7">';
-		if ($db_game['final_round'] > 0) $html .= $db_game['final_round']." rounds (".$this->format_seconds($seconds_per_round*$db_game['final_round']).")";
-		else $html .= "Game does not end";
-		$html .= "</div></div>\n";
+		if ($db_game['final_round'] > 0) {
+			$html .= '<div class="row"><div class="col-sm-5">Length of game:</div><div class="col-sm-7">';
+			$html .= $db_game['final_round']." rounds (".$this->format_seconds($seconds_per_round*$db_game['final_round']).")";
+			$html .= "</div></div>\n";
+		}
 		
 		$html .= '<div class="row"><div class="col-sm-5">Starts on block:</div><div class="col-sm-7"><a href="/explorer/games/'.$db_game['url_identifier'].'/blocks/'.$db_game['game_starting_block'].'">'.$db_game['game_starting_block']."</a></div></div>\n";
 		
@@ -1158,7 +1159,10 @@ class App {
 		$html .= '<div class="row"><div class="col-sm-5">Inflation:</div><div class="col-sm-7">';	
 		if ($db_game['inflation'] == "linear") $html .= "Linear (".$this->format_bignum($round_reward)." coins per round)";
 		else if ($db_game['inflation'] == "fixed_exponential") $html .= "Fixed Exponential (".(100*$db_game['exponential_inflation_rate'])."% per round)";
-		else $html .= "Exponential<br/>".$this->format_bignum($this->votes_per_coin($db_game))." votes per ".$db_game['coin_name']." (".(100*$db_game['exponential_inflation_rate'])."% per round)";
+		else {
+			$html .= "Exponential (".(100*$db_game['exponential_inflation_rate'])."% per round)<br/>";
+			$html .= $this->format_bignum($this->votes_per_coin($db_game))." ".str_replace("_", " ", $db_game['payout_weight'])."s per ".$db_game['coin_name'];
+		}
 		$html .= "</div></div>\n";
 		
 		$total_inflation_pct = $this->game_final_inflation_pct($db_game);
@@ -1167,21 +1171,28 @@ class App {
 		}
 		
 		$html .= '<div class="row"><div class="col-sm-5">Distribution:</div><div class="col-sm-7">';
-		if ($db_game['inflation'] == "linear") $html .= $this->format_bignum($db_game['pos_reward']/pow(10,$db_game['decimal_places']))." to voters, ".$this->format_bignum($db_game['pow_reward']*$db_game['round_length']/pow(10,$db_game['decimal_places']))." to miners";
-		else $html .= (100 - 100*$db_game['exponential_inflation_minershare'])."% to voters, ".(100*$db_game['exponential_inflation_minershare'])."% to miners";
+		if ($db_game['inflation'] == "linear") $html .= $this->format_bignum($db_game['pos_reward']/pow(10,$db_game['decimal_places']))." to holders, ".$this->format_bignum($db_game['pow_reward']*$db_game['round_length']/pow(10,$db_game['decimal_places']))." to miners";
+		else $html .= (100 - 100*$db_game['exponential_inflation_minershare'])."% to holders, ".(100*$db_game['exponential_inflation_minershare'])."% to miners";
 		$html .= "</div></div>\n";
 		
 		$html .= '<div class="row"><div class="col-sm-5">Blocks per round:</div><div class="col-sm-7">'.$db_game['round_length']."</div></div>\n";
 		
-		$html .= '<div class="row"><div class="col-sm-5">Block target time:</div><div class="col-sm-7">'.$this->format_seconds($db_game['seconds_per_block'])."</div></div>\n";
+		$average_seconds_per_block = $blockchain->seconds_per_block('average');
+		$html .= '<div class="row"><div class="col-sm-5">Block time:</div><div class="col-sm-7">'.$this->format_seconds($db_game['seconds_per_block']);
+		if ($blockchain && $average_seconds_per_block != $db_game['seconds_per_block']) $html .= " to ".$this->format_seconds($average_seconds_per_block);
+		$html .= "</div></div>\n";
 		
-		$html .= '<div class="row"><div class="col-sm-5">Average time per round:</div><div class="col-sm-7">'.$this->format_seconds($db_game['round_length']*$db_game['seconds_per_block'])."</div></div>\n";
+		$html .= '<div class="row"><div class="col-sm-5">Time per round:</div><div class="col-sm-7">'.$this->format_seconds($db_game['round_length']*$db_game['seconds_per_block']);
+		if ($blockchain && $average_seconds_per_block != $db_game['seconds_per_block']) $html .= " to ".$this->format_seconds(round($db_game['round_length']*$average_seconds_per_block/60)*60);
+		$html .= "</div></div>\n";
 		
 		if ($db_game['maturity'] != 0) {
 			$html .= '<div class="row"><div class="col-sm-5">Transaction maturity:</div><div class="col-sm-7">'.$db_game['maturity']." block";
 			if ($db_game['maturity'] != 1) $html .= "s";
 			$html .= "</div></div>\n";
 		}
+		
+		$html .= "</div>\n";
 		
 		return $html;
 	}

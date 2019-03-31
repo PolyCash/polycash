@@ -96,24 +96,18 @@ if ($r->rowCount() > 0) {
 					
 					if ($burn_game_amount < 0 || $burn_game_amount > $game_amount_sum) die("Failed to determine a valid burn amount (".$burn_game_amount." vs ".$game_amount_sum.").");
 					
-					$io_nonfee_amount = $io_amount_sum-$fee_amount;
-					$game_coins_per_coin = $game_amount_sum/$io_nonfee_amount;
-					
 					$burn_address = $app->fetch_address_in_account($account['account_id'], 0);
-					$burn_amount = ceil($burn_game_amount/$game_coins_per_coin);
 					$separator_address = $app->fetch_address_in_account($account['account_id'], 1);
+					$separator_frac = 0.25;
 					
-					$io_nondestroy_amount = $io_nonfee_amount-$burn_amount;
-					$num_bets = $num_events;
-					$io_separator_frac = 0.25;
-					$io_separator_amount_per_bet = ceil($io_nondestroy_amount*$io_separator_frac/$num_bets);
-					$io_separator_sum = $io_separator_amount_per_bet*$num_bets;
-					$io_regular_amount = $io_nondestroy_amount - $io_separator_sum;
-					$io_regular_amount_per_event = floor($io_regular_amount/$num_events);
+					$io_nonfee_amount = $io_amount_sum-$fee_amount;
+					$burn_io_amount = ceil($io_nonfee_amount*$burn_game_amount/$game_amount_sum);
+					$nonburn_io_amount = $io_nonfee_amount-$burn_io_amount;
+					$io_amount_per_event = floor($nonburn_io_amount/$num_events);
 					
-					$io_amounts = array($burn_amount);
+					$io_amounts = array($burn_io_amount);
 					$address_ids = array($burn_address['address_id']);
-					$io_spent_sum = $burn_amount;
+					$io_spent_sum = $burn_io_amount;
 					
 					$btc_currency = $app->get_currency_by_abbreviation("BTC");
 					
@@ -159,10 +153,13 @@ if ($r->rowCount() > 0) {
 						$this_address = $app->fetch_address_in_account($account['account_id'], $best_option['option_index']);
 						
 						if ($this_address) {
-							array_push($thisevent_io_amounts, $io_regular_amount_per_event);
+							$io_separator_amount = floor($io_amount_per_event*$separator_frac);
+							$io_regular_amount = $io_amount_per_event-$io_separator_amount;
+							
+							array_push($thisevent_io_amounts, $io_regular_amount);
 							array_push($thisevent_address_ids, $this_address['address_id']);
 							
-							array_push($thisevent_io_amounts, $io_separator_amount_per_bet);
+							array_push($thisevent_io_amounts, $io_separator_amount);
 							array_push($thisevent_address_ids, $separator_address['address_id']);
 						}
 						else {
@@ -179,7 +176,8 @@ if ($r->rowCount() > 0) {
 							}
 						}
 					}
-					$fee_amount = $io_amount_sum - $io_spent_sum;
+					$overshoot_amount = $io_spent_sum-$io_nonfee_amount;
+					$io_amounts[count($io_amounts)-1] -= $overshoot_amount;
 					
 					$error_message = false;
 					$transaction_id = $blockchain->create_transaction("transaction", $io_amounts, false, $io_ids, $address_ids, $fee_amount, $error_message);

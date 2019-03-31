@@ -215,7 +215,7 @@ class Event {
 			else {
 				$blocks_left = $this->db_event['event_final_block'] - $max_block_id;
 				if ($blocks_left > 0) {
-					$sec_left = $this->game->blockchain->db_blockchain['seconds_per_block']*$blocks_left;
+					$sec_left = $this->game->blockchain->seconds_per_block('average')*$blocks_left;
 					$html .= $this->game->blockchain->app->format_bignum($blocks_left).' blocks left<br/>';
 					$html .= $this->game->blockchain->app->format_seconds($sec_left);
 				}
@@ -310,7 +310,7 @@ class Event {
 			if ($option_effective_coins > 0) {
 				$pct_votes = 100*(floor(1000*$option_effective_coins/$event_effective_coins)/1000);
 				$odds = $event_effective_coins/$option_effective_coins;
-				$odds_disp = "x".round($odds, 2);
+				$odds_disp = "x".$this->game->blockchain->app->format_bignum($odds);
 			}
 			else {
 				$pct_votes = 0;
@@ -609,7 +609,7 @@ class Event {
 				
 				$html .= '<div class="col-sm-6">';
 				$html .= '<font class="'.$color.'text">';
-				$html .= '+'.$payout_disp.' '.$this->game->db_game['coin_name_plural']." &nbsp; (x".round($odds, 2).")</font>\n";
+				$html .= '+'.$payout_disp.' '.$this->game->db_game['coin_name_plural']." &nbsp; (x".$this->game->blockchain->app->format_bignum($odds).")</font>\n";
 				$html .= '</div>';
 			}
 			else {

@@ -1755,5 +1755,13 @@ class Blockchain {
 		
 		return $transaction_id;
 	}
+	
+	public function seconds_per_block($target_or_average) {
+		if ($target_or_average == "target") return $this->db_blockchain['seconds_per_block'];
+		else {
+			if (empty($this->db_blockchain['average_seconds_per_block'])) return $this->db_blockchain['seconds_per_block'];
+			else return $this->db_blockchain['average_seconds_per_block'];
+		}
+	}
 }
 ?>
