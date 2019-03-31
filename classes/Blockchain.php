@@ -10,7 +10,10 @@ class Blockchain {
 		else {
 			throw new Exception("Failed to load blockchain #".$blockchain_id);
 		}
-		if (empty($this->db_blockchain['first_required_block'])) {
+		if (!empty($this->db_blockchain['authoritative_issuer_id'])) {
+			$this->authoritative_issuer = $this->app->run_query("SELECT * FROM card_issuers WHERE issuer_id='".$this->db_blockchain['authoritative_issuer_id']."';")->fetch();
+		}
+		if ($this->db_blockchain['first_required_block'] === "") {
 			if ($this->db_blockchain['p2p_mode'] == "rpc") {
 				if (!empty($this->db_blockchain['rpc_username']) && !empty($this->db_blockchain['rpc_password'])) {
 					try {
@@ -24,9 +27,6 @@ class Blockchain {
 				$coin_rpc = false;
 				$this->set_first_required_block($coin_rpc);
 			}
-		}
-		if (!empty($this->db_blockchain['authoritative_issuer_id'])) {
-			$this->authoritative_issuer = $this->app->run_query("SELECT * FROM card_issuers WHERE issuer_id='".$this->db_blockchain['authoritative_issuer_id']."';")->fetch();
 		}
 	}
 	
@@ -810,7 +810,7 @@ class Blockchain {
 	}
 	
 	public function more_web_api_blocks() {
-		if ($this->db_blockchain['first_required_block']) {
+		if ($this->db_blockchain['first_required_block'] !== "") {
 			$q = "SELECT MIN(b.block_id), MAX(b.block_id) FROM (SELECT block_id FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND locally_saved=0 AND block_id >= ".$this->db_blockchain['first_required_block']." ORDER BY block_id ASC LIMIT 100) b;";
 			$r = $this->app->run_query($q);
 			$info = $r->fetch();
@@ -822,7 +822,7 @@ class Blockchain {
 	}
 	
 	public function load_all_blocks(&$coin_rpc, $required_blocks_only, $print_debug) {
-		if ($required_blocks_only && empty($this->db_blockchain['first_required_block'])) {}
+		if ($required_blocks_only && $this->db_blockchain['first_required_block'] === "") {}
 		else {
 			$keep_looping = true;
 			$loop_i = 0;
@@ -856,7 +856,6 @@ class Blockchain {
 							$loop_i = 0;
 							$ref_api_blocks = $this->more_web_api_blocks();
 						}
-						
 						if (empty($ref_api_blocks[$loop_i])) $keep_looping = false;
 						else {
 							$ref_api_blocks[$loop_i] = get_object_vars($ref_api_blocks[$loop_i]);
@@ -1748,8 +1747,8 @@ class Blockchain {
 			
 			$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->db_blockchain['blockchain_id']."', out_index='".$j."', address_id='".$db_address['address_id']."', option_index=".$this->app->quote_escape($tx_output['option_index']).", create_block_id='".$block_height."', create_transaction_id='".$transaction_id."', amount=".$this->app->quote_escape($tx_output['amount']);
 			if ($block_height !== false) ", spend_status='unspent'";
-			$q .= "is_destroy='".$db_address['is_destroy_address']."', ";
-			$q .= "is_separator='".$db_address['is_separator_address']."'";
+			$q .= ", is_destroy='".$db_address['is_destroy_address']."'";
+			$q .= ", is_separator='".$db_address['is_separator_address']."'";
 			$q .= ";";
 			$r = $this->app->run_query($q);
 		}

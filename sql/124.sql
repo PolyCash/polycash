@@ -1,0 +1,2 @@
+INSERT INTO `card_issuers` (`issuer_id`, `visible`, `issuer_identifier`, `issuer_name`, `base_url`, `time_created`) VALUES (1, '1', 'poly.cash', 'poly.cash', 'https://poly.cash', 1554050326);
+UPDATE blockchains SET p2p_mode='web_api', authoritative_issuer_id=1, first_required_block=0 WHERE url_identifier='stakechain';
