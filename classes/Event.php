@@ -562,8 +562,8 @@ class Event {
 		$unconfirmed_html = "";
 		
 		$coins_per_vote = $this->game->blockchain->app->coins_per_vote($this->game->db_game);
-		$unconfirmed_html = $this->my_votes_html("yellow", $coins_per_vote, $user_game);
-		$confirmed_html = $this->my_votes_html("green", $coins_per_vote, $user_game);
+		$unconfirmed_html = $this->my_votes_html("yellow", $coins_per_vote, $user_game, $last_block_id);
+		$confirmed_html = $this->my_votes_html("green", $coins_per_vote, $user_game, $last_block_id);
 		
 		if (strlen($unconfirmed_html.$confirmed_html) > 0) {
 			$html .= '
@@ -579,10 +579,10 @@ class Event {
 		return $html;
 	}
 	
-	public function my_votes_html($color, &$coins_per_vote, &$user_game) {
+	public function my_votes_html($color, &$coins_per_vote, &$user_game, &$last_block_id) {
 		$html = "";
 		
-		$q = "SELECT p.*, gio.is_coinbase AS is_coinbase, gio.game_out_index AS game_out_index, op.*, ev.*, op.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS sum_destroy_score, ev.effective_destroy_score AS sum_effective_destroy_score, t.transaction_id, t.tx_hash, t.fee_amount, io.spend_status FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN options op ON gio.option_id=op.option_id JOIN events ev ON op.event_id=ev.event_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.event_id='".$this->db_event['event_id']."' AND k.account_id='".$user_game['account_id']."'";
+		$q = "SELECT p.*, gio.is_coinbase AS is_coinbase, gio.game_out_index AS game_out_index, op.*, ev.*, p.votes, op.votes AS option_votes, op.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS sum_destroy_score, ev.effective_destroy_score AS sum_effective_destroy_score, t.transaction_id, t.tx_hash, t.fee_amount, io.spend_status FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN options op ON gio.option_id=op.option_id JOIN events ev ON op.event_id=ev.event_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.event_id='".$this->db_event['event_id']."' AND k.account_id='".$user_game['account_id']."'";
 		if ($color == "green") $q .= " AND io.create_block_id IS NOT NULL";
 		else $q .= " AND io.create_block_id IS NULL";
 		$q .= " ORDER BY gio.game_io_id ASC;";
@@ -591,9 +591,9 @@ class Event {
 		while ($my_vote = $r->fetch()) {
 			$unconfirmed_votes = 0;
 			$temp_html = "";
-			list($track_entity, $track_price_usd, $asset_price_usd, $bought_price_usd, $estimated_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $paid_after_fees, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta) = $this->game->get_payout_info($my_vote, $coins_per_vote, $temp_html);
+			list($track_entity, $track_price_usd, $asset_price_usd, $bought_price_usd, $estimated_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $paid_after_fees, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta) = $this->game->get_payout_info($my_vote, $coins_per_vote, $last_block_id, $temp_html);
 			
-			$html .= '<div class="row" style="padding: 5px;">';
+			$html .= '<div class="row" style="padding: 5px;">'.$temp_html;
 			
 			$coin_stake = $my_vote['destroy_amount'] + $inflation_stake;
 			
@@ -608,8 +608,8 @@ class Event {
 				$html .= '</div>';
 				
 				$html .= '<div class="col-sm-5">';
-				$html .= '<font class="'.$color.'text">x'.round($odds, 2)." &nbsp; ";
-				$html .= '+'.$payout_disp.' '.$this->game->db_game['coin_name_plural']."</font>\n";
+				$html .= '<font class="'.$color.'text">';
+				$html .= '+'.$payout_disp.' '.$this->game->db_game['coin_name_plural']." &nbsp; (x".round($odds, 2).")</font>\n";
 				$html .= '</div>';
 			}
 			else {
