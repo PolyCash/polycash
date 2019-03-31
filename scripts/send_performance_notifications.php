@@ -57,7 +57,7 @@ if ($app->running_as_admin()) {
 				$prev_username = $bet['username'];
 			}
 			
-			$this_bet_html = $app->render_bet($bet, $game, $coins_per_vote, $current_round, $net_delta, $net_stake, $pending_stake, $num_wins, $num_losses, $num_unresolved, 'td');
+			$this_bet_html = $app->render_bet($bet, $game, $coins_per_vote, $current_round, $net_delta, $net_stake, $pending_stake, $num_wins, $num_losses, $num_unresolved, 'td', $last_block_id);
 			
 			$html_by_username[$bet['username']] .= "<tr>".$this_bet_html."</tr>\n";
 		}
