@@ -257,7 +257,7 @@ class CryptoDuelsGameDefinition {
 				$trade_date = new DateTime($trade['date'], new DateTimeZone('UTC'));
 				$trade_time = $trade_date->format('U');
 				
-				if ($trade['type'] == "buy" && $final_block['time_mined'] < $trade_time) {
+				if ($trade['type'] == "buy" && $final_block['time_mined'] <= $trade_time) {
 					if ($modulo == 1000) {
 						$q = substr($q, 0, strlen($q)-2).";";
 						$this->app->run_query($q);
@@ -311,18 +311,16 @@ class CryptoDuelsGameDefinition {
 				$trade_date = new DateTime($trade['date'], new DateTimeZone('UTC'));
 				$trade_time = $trade_date->format('U');
 				
-				if ($trade['type'] == "buy") {
-					if ($last_price_time < $trade_time) {
-						if ($modulo == 1000) {
-							$q = substr($q, 0, strlen($q)-2).";";
-							$this->app->run_query($q);
-							$modulo = 0;
-							$q = $start_q;
-						}
-						else $modulo++;
-						
-						$q .= "('".$cached_url['cached_url_id']."', '".$this->currencies[$i]['currency_id']."', '".$btc_currency['currency_id']."', '".$trade['rate']."', '".$trade_time."'), ";
+				if ($trade['type'] == "buy" && $last_price_time <= $trade_time) {
+					if ($modulo == 1000) {
+						$q = substr($q, 0, strlen($q)-2).";";
+						$this->app->run_query($q);
+						$modulo = 0;
+						$q = $start_q;
 					}
+					else $modulo++;
+					
+					$q .= "('".$cached_url['cached_url_id']."', '".$this->currencies[$i]['currency_id']."', '".$btc_currency['currency_id']."', '".$trade['rate']."', '".$trade_time."'), ";
 				}
 			}
 			
