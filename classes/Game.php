@@ -2824,7 +2824,6 @@ class Game {
 			}
 			else {
 				if ($io['spend_status'] == "unconfirmed") {
-					$ref_event = new Event($this, false, $io['event_id']);
 					$this_round_id = $this->block_to_round($last_block_id+1);
 					$unconfirmed_votes = $io['ref_'.$this->db_game['payout_weight']."s"];
 					if ($this_round_id != $io['ref_round_id']) {
@@ -2840,7 +2839,9 @@ class Game {
 			$event_payout = $io['sum_destroy_score']+$io['sum_unconfirmed_destroy_score']+($io['sum_score']+$io['sum_unconfirmed_score'])*$coins_per_vote;
 			$option_effective_stake = $io['option_effective_destroy_score']+$io['unconfirmed_effective_destroy_score']+($io['option_votes']+$io['unconfirmed_votes'])*$coins_per_vote;
 			$event_effective_stake = $io['sum_effective_destroy_score']+$io['sum_unconfirmed_effective_destroy_score']+($io['sum_votes']+$io['sum_unconfirmed_votes'])*$coins_per_vote;
+			
 			if ($io['spend_status'] == "unconfirmed") {
+				$ref_event = new Event($this, false, $io['event_id']);
 				$effectiveness = $ref_event->block_id_to_effectiveness_factor($last_block_id+1);
 				$effective_unconfirmed_votes = floor($unconfirmed_votes*$effectiveness);
 				$effective_stake = floor($io['destroy_amount']*$effectiveness) + floor($effective_unconfirmed_votes*$coins_per_vote);
