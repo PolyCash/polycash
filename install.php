@@ -83,7 +83,59 @@ if ($app->running_as_admin()) {
 					$redirect_key = $redirect_url['redirect_key'];
 					include("includes/html_login.php");
 				}
-				else { ?>
+				else {
+					if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "install_module") {
+						$module_name = $_REQUEST['module_name'];
+						
+						$q = "SELECT * FROM games WHERE module=".$app->quote_escape($module_name).";";
+						$r = $app->run_query($q);
+						
+						echo "<br/><b>Installing module $module_name</b><br/>\n";
+						if ($r->rowCount() > 0) {
+							$db_game = $r->fetch();
+							echo "<p>This module is already installed.</p>\n";
+						}
+						else {
+							eval('$game_def = new '.$module_name.'GameDefinition($app);');
+							
+							$blockchain = false;
+							$db_blockchain = $app->fetch_blockchain_by_identifier($game_def->game_def->blockchain_identifier);
+							
+							if ($db_blockchain) {
+								$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
+								$new_game_def_txt = $app->game_def_to_text($game_def->game_def);
+								
+								$error_message = "";
+								$db_game = false;
+								$new_game = $app->create_game_from_definition($new_game_def_txt, $thisuser, $module_name, $error_message, $db_game);
+								
+								if (!empty($new_game)) {
+									if ($new_game->blockchain->db_blockchain['p2p_mode'] == "none") {
+										if ($thisuser) {
+											$user_game = $thisuser->ensure_user_in_game($new_game, false);
+										}
+										$log_text = "";
+										$new_game->blockchain->new_block($log_text);
+										$transaction_id = $new_game->add_genesis_transaction($user_game);
+										if ($transaction_id < 0) $error_message = "Failed to add genesis transaction (".$transaction_id.").";
+									}
+									$new_game->blockchain->unset_first_required_block();
+									$new_game->start_game();
+									$new_game->ensure_events_until_block($new_game->db_game['game_starting_block']);
+								}
+								else if (empty($error_message)) $error_message = "Error: failed to create the game.";
+								
+								if (!empty($error_message)) {
+									if (is_string($error_message)) echo $error_message."<br/>\n";
+									else echo "<pre>".json_encode($error_message, JSON_PRETTY_PRINT)."</pre>\n";
+								}
+								
+								echo "<p>Next please <a href=\"/scripts/load_game_reset.php?key=".$GLOBALS['cron_key_string']."&game_id=".$new_game->db_game['game_id']."\">reset this game</a></p>\n";
+							}
+							else echo "<p>Failed to find the blockchain.</p>\n";
+						}
+					}
+					?>
 					<h2>Run <?php echo $GLOBALS['site_name']; ?></h1>
 					Make sure this line has been added to your /etc/crontab:<br/>
 <pre>
@@ -212,10 +264,27 @@ if ($app->running_as_admin()) {
 					}
 					
 					?>
+					<h2>Modules</h2>
+					<?php
+					$installed_module_r = $app->run_query("SELECT * FROM modules m JOIN games g ON m.primary_game_id=g.game_id;");
+					if ($installed_module_r->rowCount() > 0) {
+						while ($installed_module = $installed_module_r->fetch()) {
+							echo '<a href="/'.$installed_module['url_identifier'].'/">'.$installed_module['name']."</a> is already installed.<br/>\n";
+						}
+						echo "<br/>\n";
+					}
+					
+					$open_module_r = $app->run_query("SELECT * FROM modules WHERE primary_game_id IS NULL;");
+					$module_html = '<option value="">-- Select a module to install --</option>';
+					while ($open_module = $open_module_r->fetch()) {
+						$module_html .= '<option value="'.$open_module['module_name'].'">'.$open_module['module_name']."</option>\n";
+					}
+					
+					echo '<select class="form-control" id="select_install_module" onchange="start_install_module(\''.$GLOBALS['cron_key_string'].'\');">'.$module_html."</select>\n";
+					?>
 					<br/>
-					<a class="btn btn-success" href="/">Check if installation was successful</a>
-					<br/><br/>
-				<?php
+					<br/>
+					<?php
 				}
 				?>
 			</div>

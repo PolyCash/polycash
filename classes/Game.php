@@ -1371,13 +1371,14 @@ class Game {
 			$last_block = $this->fetch_game_block_by_height($last_block_loaded);
 			$sample_block = $this->fetch_game_block_by_height(max($this->db_game['game_starting_block'], $last_block_loaded-100));
 			
-			$time_per_block = ($last_block['time_loaded']-$sample_block['time_loaded'])/($last_block['block_id']-$sample_block['block_id']);
+			if ($last_block['block_id'] == $sample_block['block_id']) $time_per_block = 0;
+			else $time_per_block = ($last_block['time_loaded']-$sample_block['time_loaded'])/($last_block['block_id']-$sample_block['block_id']);
 			
 			$html .= "<p>Loading ".$this->blockchain->app->format_bignum($missing_game_blocks)." game block";
 			if ($missing_game_blocks != 1) $html .= "s";
 			
 			if ($missing_game_blocks > 1) {
-				$html .= " (".round($game_blocks_pct_complete, 2)."% complete";
+				$html .= " (".round(max(0, $game_blocks_pct_complete), 2)."% complete";
 				$seconds_left = $time_per_block*$missing_game_blocks;
 				$html .= ".. ".$this->blockchain->app->format_seconds($seconds_left)." remaining";
 				$html .= ").</p>\n";
@@ -2457,7 +2458,7 @@ class Game {
 									$option_id = $this->option_index_to_option_id_in_block($regular_output['option_index'], $block_height);
 									if ($option_id) {
 										$using_separator = false;
-										if ($separator_outputs[$next_separator_i]) {
+										if (!empty($separator_outputs[$next_separator_i])) {
 											$payout_io_id = $separator_outputs[$next_separator_i]['io_id'];
 											$next_separator_i++;
 											$using_separator = true;

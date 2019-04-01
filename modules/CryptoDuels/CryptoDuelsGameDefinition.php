@@ -36,7 +36,7 @@ class CryptoDuelsGameDefinition {
 			"event_entity_type_id": 0,
 			"events_per_round": 1,
 			"inflation": "exponential",
-			"exponential_inflation_rate": 0.01,
+			"exponential_inflation_rate": 0.0005,
 			"pos_reward": 0,
 			"round_length": 50,
 			"maturity": 0,
@@ -49,10 +49,10 @@ class CryptoDuelsGameDefinition {
 			"coin_name": "duelcoin",
 			"coin_name_plural": "duelcoins",
 			"coin_abbreviation": "DUEL",
-			"escrow_address": "",
-			"genesis_tx_hash": "",
+			"escrow_address": "fC3o5XEaC21LbZtDLAmWfsLFdpnfoUs8oE",
+			"genesis_tx_hash": "e418811e42c7b350293b8b63f83c60d7",
 			"genesis_amount": 100000000000000,
-			"game_starting_block": 1,
+			"game_starting_block": 140601,
 			"game_winning_rule": "none",
 			"game_winning_field": "",
 			"game_winning_inflation": 0,
@@ -64,6 +64,8 @@ class CryptoDuelsGameDefinition {
 			"default_payout_rule": "binary",
 			"view_mode": "default"
 		}';
+		
+		$this->game_def = json_decode($this->game_def_base_txt);
 	}
 	
 	public function load_currencies(&$game) {

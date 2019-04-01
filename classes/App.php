@@ -21,7 +21,9 @@ class App {
 	}
 	
 	public function run_query($query) {
-		if ($GLOBALS['show_query_errors'] == TRUE) $result = $this->dbh->query($query) or $this->log_then_die("Error in query: ".$query.", ".$this->dbh->errorInfo()[2]);
+		if ($GLOBALS['show_query_errors'] == TRUE) {
+			$result = $this->dbh->query($query) or die("Query error: ".$this->dbh->errorInfo()[2].": (".strlen($query).") ".substr($query, 0, min(strlen($query), 100))."\n");
+		}
 		else $result = $this->dbh->query($query) or die("Error in query");
 		return $result;
 	}
@@ -1741,21 +1743,28 @@ class App {
 				$q = "DELETE FROM game_escrow_amounts WHERE game_id='".$game->db_game['game_id']."';";
 				$r = $this->run_query($q);
 				
-				foreach ($new_game_obj['escrow_amounts'] as $currency_identifier => $amount) {
-					$q = "SELECT * FROM currencies WHERE short_name_plural='".$currency_identifier."';";
-					$r = $this->run_query($q);
-					
-					if ($r->rowCount() > 0) {
-						$escrow_currency = $r->fetch();
-						
-						$q = "INSERT INTO game_escrow_amounts SET game_id='".$game->db_game['game_id']."', currency_id='".$escrow_currency['currency_id']."', amount='".$amount."';";
+				if (!empty($new_game_obj['escrow_amounts'])) {
+					foreach ($new_game_obj['escrow_amounts'] as $currency_identifier => $amount) {
+						$q = "SELECT * FROM currencies WHERE short_name_plural='".$currency_identifier."';";
 						$r = $this->run_query($q);
+						
+						if ($r->rowCount() > 0) {
+							$escrow_currency = $r->fetch();
+							
+							$q = "INSERT INTO game_escrow_amounts SET game_id='".$game->db_game['game_id']."', currency_id='".$escrow_currency['currency_id']."', amount='".$amount."';";
+							$r = $this->run_query($q);
+						}
 					}
 				}
 				
 				$event_verbatim_vars = $this->event_verbatim_vars();
 				
-				$matched_events = min(count($initial_game_obj['events']), count($new_game_obj['events']));
+				$num_initial_events = 0;
+				if (!empty($initial_game_obj['events'])) $num_initial_events = count($initial_game_obj['events']);
+				$num_new_events = 0;
+				if (!empty($new_game_obj['events'])) $num_new_events = count($new_game_obj['events']);
+				
+				$matched_events = min($num_initial_events, $num_new_events);
 				
 				for ($i=0; $i<$matched_events; $i++) {
 					$initial_event_text = $this->game_def_to_text($initial_game_obj['events'][$i]);
@@ -1774,7 +1783,7 @@ class App {
 					$game->reset_events_from_index($set_events_from);
 				}
 				
-				if (count($new_game_obj['events'])+1 > $set_events_from) {
+				if ($num_new_events+1 > $set_events_from) {
 					if (!is_numeric($reset_block)) $reset_block = $new_game_obj['events'][$set_events_from-1]->event_starting_block;
 					
 					for ($i=$set_events_from; $i<count($new_game_obj['events'])+1; $i++) {
@@ -2027,21 +2036,27 @@ class App {
 							$r = $this->run_query($q);
 							$game_id = $this->last_insert_id();
 							
+							if (!empty($game_def->module)) {
+								$this->run_query("UPDATE modules SET primary_game_id=".$game_id." WHERE module_name=".$this->quote_escape($game_def->module)." AND primary_game_id IS NULL;");
+							}
+							
 							$game = new Game($blockchain, $game_id);
 						}
 						
 						$q = "DELETE FROM game_defined_escrow_amounts WHERE game_id='".$game->db_game['game_id']."';";
 						$r = $this->run_query($q);
 						
-						foreach ($game_def->escrow_amounts as $currency_identifier => $amount) {
-							$q = "SELECT * FROM currencies WHERE short_name_plural='".$currency_identifier."';";
-							$r = $this->run_query($q);
-							
-							if ($r->rowCount() > 0) {
-								$escrow_currency = $r->fetch();
-								
-								$q = "INSERT INTO game_defined_escrow_amounts SET game_id='".$game->db_game['game_id']."', currency_id='".$escrow_currency['currency_id']."', amount='".$amount."';";
+						if (!empty($game_def->escrow_amounts)) {
+							foreach ($game_def->escrow_amounts as $currency_identifier => $amount) {
+								$q = "SELECT * FROM currencies WHERE short_name_plural='".$currency_identifier."';";
 								$r = $this->run_query($q);
+								
+								if ($r->rowCount() > 0) {
+									$escrow_currency = $r->fetch();
+									
+									$q = "INSERT INTO game_defined_escrow_amounts SET game_id='".$game->db_game['game_id']."', currency_id='".$escrow_currency['currency_id']."', amount='".$amount."';";
+									$r = $this->run_query($q);
+								}
 							}
 						}
 						
@@ -3096,10 +3111,10 @@ class App {
 	}
 	
 	public function flush_buffers() {
-		ob_end_flush();
-		ob_flush();
-		flush();
-		ob_start();
+		@ob_end_flush();
+		@ob_flush();
+		@flush();
+		@ob_start();
 	}
 	
 	public function select_group_by_description($description) {

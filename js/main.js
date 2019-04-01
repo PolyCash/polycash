@@ -1,7 +1,3 @@
-function toggle_push_menu(expand_collapse) {
-	$.get("/ajax/toggle_left_menu.php?expand_collapse="+expand_collapse, function(result) {});
-}
-
 var User = function(id) {
 	this.userId = id;
 };
@@ -2314,4 +2310,10 @@ function apply_my_strategy() {
 function new_group_member(group_id) {
 	var member_name = prompt("Please enter a name:");
 	window.location = '/groups/?action=add_member&group_id='+group_id+'&member_name='+encodeURIComponent(member_name);
+}
+function toggle_push_menu(expand_collapse) {
+	$.get("/ajax/toggle_left_menu.php?expand_collapse="+expand_collapse, function(result) {});
+}
+function start_install_module(key_string) {
+	window.location = '/install.php?key='+key_string+'&action=install_module&module_name='+$('#select_install_module').val();
 }
