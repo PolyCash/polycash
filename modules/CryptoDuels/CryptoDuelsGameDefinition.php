@@ -237,7 +237,6 @@ class CryptoDuelsGameDefinition {
 		$start_q = "INSERT INTO currency_prices (cached_url_id, currency_id, reference_currency_id, price, time_added) VALUES ";
 		
 		$option_r = $this->app->run_query("SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY event_option_index ASC;");
-		echo "looping through ".$option_r->rowCount()." options<br/>\n";
 		
 		while ($db_option = $option_r->fetch()) {
 			$code = $this->currency_name_to_code[$db_option['name']];

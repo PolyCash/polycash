@@ -2319,6 +2319,8 @@ function start_install_module(key_string) {
 }
 function refresh_prices_by_event(game_id, event_id) {
 	$.get("/ajax/refresh_prices_by_event.php?game_id="+game_id+"&event_id="+event_id, function(result) {
-		console.log(result);
+		var result_obj = JSON.parse(result);
+		alert(result_obj['message']);
+		window.location = window.location;
 	});
 }
