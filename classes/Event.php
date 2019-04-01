@@ -392,8 +392,8 @@ class Event {
 				
 				if ($this->game->db_game['module'] == "CryptoDuels") {
 					$html .= '<br/>';
-					if ($final_performance >= 1) $html .= '<font class="greentext">Up '.round(($final_performance-1)*100, 2).'%</font>';
-					else $html .= '<font class="redtext">Down '.round((1-$final_performance)*100, 2).'%</font>';
+					if ($final_performance >= 1) $html .= '<font class="greentext">Up '.round(($final_performance-1)*100, 3).'%</font>';
+					else $html .= '<font class="redtext">Down '.round((1-$final_performance)*100, 3).'%</font>';
 				}
 				$html .= '
 				</div>';
