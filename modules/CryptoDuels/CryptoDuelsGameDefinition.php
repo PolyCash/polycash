@@ -62,7 +62,10 @@ class CryptoDuelsGameDefinition {
 			"default_option_max_width": 200,
 			"default_payout_block_delay": 0,
 			"default_payout_rule": "binary",
-			"view_mode": "default"
+			"view_mode": "default",
+			"escrow_amounts": {
+				"stakes": 100000		
+			}
 		}';
 		
 		$this->game_def = json_decode($this->game_def_base_txt);
