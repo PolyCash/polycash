@@ -2317,3 +2317,8 @@ function toggle_push_menu(expand_collapse) {
 function start_install_module(key_string) {
 	window.location = '/install.php?key='+key_string+'&action=install_module&module_name='+$('#select_install_module').val();
 }
+function refresh_prices_by_event(game_id, event_id) {
+	$.get("/ajax/refresh_prices_by_event.php?game_id="+game_id+"&event_id="+event_id, function(result) {
+		console.log(result);
+	});
+}

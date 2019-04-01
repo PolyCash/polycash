@@ -73,12 +73,16 @@ class CryptoDuelsGameDefinition {
 	
 	public function load_currencies(&$game) {
 		$this->currencies = array();
+		$this->name2currency_index = [];
 		
 		$member_q = "SELECT *, en.entity_id AS entity_id FROM option_group_memberships m JOIN entities en ON m.entity_id=en.entity_id JOIN currencies c ON en.entity_name=c.name WHERE m.option_group_id='".$game->db_game['option_group_id']."' ORDER BY m.membership_id ASC;";
 		$member_r = $this->app->run_query($member_q);
+		$currency_index = 0;
 		
 		while ($db_member = $member_r->fetch()) {
 			array_push($this->currencies, $db_member);
+			$this->name2currency_index[$db_member['name']] = $currency_index;
+			$currency_index++;
 		}
 	}
 	
@@ -222,6 +226,60 @@ class CryptoDuelsGameDefinition {
 		
 		$log_text = $payout_event->set_outcome_from_db(true);
 		return $log_text;
+	}
+	
+	public function refresh_prices_by_event(&$game, &$db_event) {
+		if (empty($this->currencies)) $this->load_currencies($game);
+		$btc_currency = $this->app->get_currency_by_abbreviation("BTC");
+		
+		$starting_block = $game->blockchain->fetch_block_by_id($db_event['event_starting_block']);
+		$final_block = $game->blockchain->fetch_block_by_id($db_event['event_final_block']);
+		$start_q = "INSERT INTO currency_prices (cached_url_id, currency_id, reference_currency_id, price, time_added) VALUES ";
+		
+		$option_r = $this->app->run_query("SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY event_option_index ASC;");
+		echo "looping through ".$option_r->rowCount()." options<br/>\n";
+		
+		while ($db_option = $option_r->fetch()) {
+			$code = $this->currency_name_to_code[$db_option['name']];
+			$this_currency = $this->currencies[$this->name2currency_index[$db_option['name']]];
+			
+			$this->app->run_query("DELETE FROM currency_prices WHERE currency_id='".$this_currency['currency_id']."' AND time_added>=".$starting_block['time_mined']." AND time_added<=".$final_block['time_mined'].";");
+			
+			$q = $start_q;
+			$modulo = 0;
+			
+			$poloniex_url = "https://poloniex.com/public?command=returnTradeHistory&currencyPair=BTC_".$code."&start=".$starting_block['time_mined']."&end=".$final_block['time_mined'];
+			$poloniex_response = $this->app->async_fetch_url($poloniex_url, true);
+			$cached_url = $this->app->cached_url_info($poloniex_url);
+			$poloniex_trades = json_decode($poloniex_response['cached_result'], true);
+			
+			for ($j=count($poloniex_trades)-2; $j>=0; $j--) {
+				$trade = $poloniex_trades[$j];
+				$trade_date = new DateTime($trade['date'], new DateTimeZone('UTC'));
+				$trade_time = $trade_date->format('U');
+				
+				if ($trade['type'] == "buy") {
+					if ($modulo == 1000) {
+						$q = substr($q, 0, strlen($q)-2).";";
+						$this->app->run_query($q);
+						$modulo = 0;
+						$q = $start_q;
+					}
+					else $modulo++;
+					
+					$q .= "('".$cached_url['cached_url_id']."', '".$this_currency['currency_id']."', '".$btc_currency['currency_id']."', '".$trade['rate']."', '".$trade_time."'), ";
+				}
+			}
+			
+			if ($modulo > 0) {
+				$q = substr($q, 0, strlen($q)-2).";";
+				$this->app->run_query($q);
+				$modulo = 0;
+			}
+		}
+		
+		$successful = true;
+		return $successful;
 	}
 	
 	public function regular_actions(&$game) {

@@ -85,7 +85,7 @@ if ($app->running_as_admin()) {
 	}
 	else if ($mode == "game_events") {
 		$loop_to = min(count($obj1), count($obj2));
-		$any_error = false;
+		$error_count = 0;
 		
 		for ($i=0; $i<$loop_to; $i++) {
 			if ($i%1000 == 0) {
@@ -93,12 +93,12 @@ if ($app->running_as_admin()) {
 				$app->flush_buffers();
 			}
 			if ($obj1[$i] != $obj2[$i]) {
-				echo "Error on line #$i: <a href=\"/explorer/games/".$game_identifier."/events/".$obj1[$i]['event_index']."\">".$obj1[$i]['event_name']."</a> vs <a href=\"/explorer/games/".$game_identifier."/events/".$obj2[$i]['event_index']."\">".$obj2[$i]['event_name']."</a><br/>\n";
-				$any_error = true;
+				echo "Error on line #$i: <a href=\"/explorer/games/".$game_identifier."/events/".$obj1[$i]->event_index."\">".$obj1[$i]->event_name."</a> vs <a href=\"".$remote_url_base."/explorer/games/".$game_identifier."/events/".$obj2[$i]->event_index."\">".$obj2[$i]->event_name."</a><br/>\n";
+				$error_count++;
 			}
 		}
 		
-		if (!$any_error) echo "No errors found.\n";
+		echo "Found $error_count errors.<br/>\n";
 	}
 	else if ($mode == "blockchain") {
 		$loop_to = min(count($obj1), count($obj2));
