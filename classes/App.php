@@ -146,6 +146,16 @@ class App {
 		else return false;
 	}
 	
+	public function fetch_db_game_by_identifier($url_identifier) {
+		$game_q = "SELECT * FROM games WHERE url_identifier=".$this->quote_escape($url_identifier).";";
+		$game_r = $this->run_query($game_q);
+		
+		if ($game_r->rowCount() > 0) {
+			return $game_r->fetch();
+		}
+		else return false;
+	}
+	
 	public function fetch_transaction_by_id($transaction_id) {
 		$q = "SELECT * FROM transactions WHERE transaction_id='".((int)$transaction_id)."';";
 		$r = $this->run_query($q);
@@ -639,13 +649,7 @@ class App {
 		$login_url_parts = explode("/", rtrim(ltrim($_SERVER['REQUEST_URI'], "/"), "/"));
 		
 		if (in_array($login_url_parts[0], array("wallet", "manage")) && count($login_url_parts) > 1) {
-			$q = "SELECT * FROM games WHERE url_identifier=".$this->quote_escape($login_url_parts[1]).";";
-			$r = $this->run_query($q);
-			
-			if ($r->rowCount() == 1) {
-				return $r->fetch();
-			}
-			else return false;
+			return $this->fetch_db_game_by_identifier($login_url_parts[1]);
 		}
 		else return false;
 	}

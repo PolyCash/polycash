@@ -350,7 +350,8 @@ class Event {
 				}
 				else {
 					$final_price = $this->game->blockchain->app->currency_price_at_time($db_currency['currency_id'], $btc_currency['currency_id'], $event_to_time);
-					$final_performance = $final_price['price']/$initial_price['price'];
+					if (empty($initial_price['price'])) $final_performance = 1;
+					else $final_performance = $final_price['price']/$initial_price['price'];
 				}
 			}
 			
