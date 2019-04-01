@@ -257,7 +257,7 @@ class CryptoDuelsGameDefinition {
 				$trade_date = new DateTime($trade['date'], new DateTimeZone('UTC'));
 				$trade_time = $trade_date->format('U');
 				
-				if ($trade['type'] == "buy") {
+				if ($trade['type'] == "buy" && $final_block['time_mined'] < $trade_time) {
 					if ($modulo == 1000) {
 						$q = substr($q, 0, strlen($q)-2).";";
 						$this->app->run_query($q);
