@@ -4,7 +4,7 @@ set_time_limit(0);
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
-$allowed_params = ['game_id','mode','blockchain_identifier'];
+$allowed_params = ['mode','game_identifier','blockchain_identifier'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);
 
 if ($app->running_as_admin()) {
@@ -30,7 +30,7 @@ if ($app->running_as_admin()) {
 	if ($mode == "game_ios") {
 		$total_issued = 0;
 		
-		$q = "SELECT io.spend_status, io.create_block_id AS io_create_block_id, gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".((int)$_REQUEST['game_id'])."' AND gio.game_io_index IS NOT NULL ORDER BY gio.game_io_index ASC;";
+		$q = "SELECT io.spend_status, io.create_block_id AS io_create_block_id, gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$game->db_game['game_id']."' AND gio.game_io_index IS NOT NULL ORDER BY gio.game_io_index ASC;";
 		$r = $app->run_query($q);
 		
 		$out_obj = [["in_existence"=>$game->coins_in_existence($blockchain->last_block_id()), "total"=>0]];
@@ -40,7 +40,7 @@ if ($app->running_as_admin()) {
 			$total_issued += $game_io['colored_amount'];
 		}
 		
-		$q = "SELECT t.tx_hash, io.spend_status, io.create_block_id AS io_create_block_id, gio.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".((int)$_REQUEST['game_id'])."' AND gio.game_io_index IS NULL ORDER BY t.tx_hash ASC, gio.game_out_index ASC;";
+		$q = "SELECT t.tx_hash, io.spend_status, io.create_block_id AS io_create_block_id, gio.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$game->db_game['game_id']."' AND gio.game_io_index IS NULL ORDER BY t.tx_hash ASC, gio.game_out_index ASC;";
 		$r = $app->run_query($q);
 		
 		while ($game_io = $r->fetch()) {

@@ -61,23 +61,33 @@ if ($app->running_as_admin()) {
 	
 	if ($mode == "game_ios") {
 		$loop_to = min(count($obj1), count($obj2));
+		$any_error = false;
+		
 		for ($i=0; $i<$loop_to; $i++) {
 			if ($obj1[$i] != $obj2[$i]) {
 				echo "First error on game IO #".$obj1[$i][0]."<br/>\n";
 				echo "<pre>".json_encode($obj1[$i])."</pre><pre>".json_encode($obj2[$i])."</pre>\n";
 				$i=$loop_to;
+				$any_error = true;
 			}
 		}
+		
+		if (!$any_error) echo "No errors found.\n";
 	}
 	else if ($mode == "blockchain") {
 		$loop_to = min(count($obj1), count($obj2));
+		$any_error = false;
+		
 		for ($i=0; $i<$loop_to; $i++) {
 			if ($obj1[$i] != $obj2[$i]) {
 				echo "First error found<br/>\n";
 				echo "<pre>".json_encode($obj1[$i])."</pre><pre>".json_encode($obj2[$i])."</pre>\n";
 				$i = $loop_to;
+				$any_error = true;
 			}
 		}
+		
+		if (!$any_error) echo "No errors found.\n";
 	}
 	else echo "You supplied an invalid mode.\n";
 	
