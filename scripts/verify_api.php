@@ -57,7 +57,7 @@ if ($app->running_as_admin()) {
 		
 		$out_obj = [];
 		
-		$q = "SELECT ".implode(",", $relevant_params)." FROM events WHERE game_id='".$game->db_game['game_id']."' ORDER BY event_index ASC;";
+		$q = "SELECT ".implode(",", $relevant_params)." FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' ORDER BY event_index ASC;";
 		$r = $app->run_query($q);
 		
 		while ($db_event = $r->fetch(PDO::FETCH_ASSOC)) {
