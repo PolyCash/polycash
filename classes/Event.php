@@ -143,9 +143,18 @@ class Event {
 		list($winning_option_id, $winning_votes, $winning_effective_destroy_score) = $this->determine_winning_option($round_stats_all);
 		
 		if ((string)$this->db_event['outcome_index'] !== "") {
-			$expected_winner = $this->game->blockchain->app->run_query("SELECT * FROM options WHERE event_id='".$this->db_event['event_id']."' AND event_option_index='".$this->db_event['outcome_index']."';")->fetch();
+			$expected_winner = $this->game->get_option_by_outcome_index($this->db_event['event_id'], $this->db_event['outcome_index']);
 		}
 		else $expected_winner = false;
+		
+		$game_defined_winner = false;
+		$gde_r = $this->game->blockchain->app->run_query("SELECT * FROM game_defined_events WHERE game_id='".$this->game->db_game['game_id']."' AND event_index='".$this->db_event['event_index']."';");
+		if ($gde_r->rowCount() > 0) {
+			$gde = $gde_r->fetch();
+			if ((string)$gde['outcome_index'] !== "") {
+				$game_defined_winner = $this->game->get_option_by_outcome_index($this->db_event['event_id'], $gde['outcome_index']);
+			}
+		}
 		
 		$sum_votes = $round_stats_all[0];
 		$max_sum_votes = $round_stats_all[1];
@@ -231,8 +240,13 @@ class Event {
 			$html .= "<p>".$this->db_event['sport_name']." &nbsp;&nbsp; ".$this->db_event['league_name']."</p>\n";
 		}
 		
-		if ($expected_winner) {
-			$html .= "<p class=\"greentext\">Winner: ".$expected_winner['name']."</p>\n";
+		if ($expected_winner || $game_defined_winner) {
+			$html .= "<p class=\"greentext\">";
+			$html .= "Winner: ";
+			if ($expected_winner) $html .= $expected_winner['name'];
+			if ($expected_winner && $game_defined_winner && $expected_winner['option_id'] != $game_defined_winner['option_id']) $html .=" &rarr; ";
+			if ($game_defined_winner && (!$expected_winner || ($expected_winner && $expected_winner['option_id'] != $game_defined_winner['option_id']))) $html .= $game_defined_winner['name'];
+			$html .= "</p>\n";
 		}
 		
 		if ($this->game->db_game['inflation'] == "exponential") {
