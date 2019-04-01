@@ -13,7 +13,7 @@ if ($app->running_as_admin()) {
 	$blockchain = false;
 	$game = false;
 	
-	if (in_array($mode, ['game_ios'])) {
+	if (in_array($mode, ['game_ios','game_events'])) {
 		$game_or_blockchain = "game";
 		$db_game = $app->fetch_db_game_by_identifier($_REQUEST['game_identifier']);
 		if (empty($db_game)) die("Invalid game identifier supplied.");
@@ -49,6 +49,20 @@ if ($app->running_as_admin()) {
 		}
 		
 		$out_obj[0]['total'] = $total_issued;
+		
+		echo json_encode($out_obj);
+	}
+	else if ($mode == "game_events") {
+		$relevant_params = ['event_index', 'event_name', 'outcome_index'];
+		
+		$out_obj = [];
+		
+		$q = "SELECT ".implode(",", $relevant_params)." FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' ORDER BY event_index ASC;";
+		$r = $app->run_query($q);
+		
+		while ($db_event = $r->fetch(PDO::FETCH_ASSOC)) {
+			array_push($out_obj, $db_event);
+		}
 		
 		echo json_encode($out_obj);
 	}

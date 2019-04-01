@@ -483,11 +483,18 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						<br/>
 						
 						<?php
-						if ($app->user_can_edit_game($thisuser, $game)) { ?>
-							<p>
-								<button class="btn btn-sm btn-primary" onclick="set_event_outcome(<?php echo $game->db_game['game_id'].", ".$event->db_event['event_id']; ?>);">Set Outcome</button>
-							</p>
+						if ($app->user_can_edit_game($thisuser, $game)) {
+							echo "<p>\n";
+							
+							if ($game->db_game['module'] == "CryptoDuels") {
+								?>
+								<button class="btn btn-sm btn-success" onclick="refresh_prices_by_event(<?php echo $game->db_game['game_id'].", ".$event->db_event['event_id']; ?>);">Reset pricing info</button>
+								<?php
+							}
+							?>
+							<button class="btn btn-sm btn-primary" onclick="set_event_outcome(<?php echo $game->db_game['game_id'].", ".$event->db_event['event_id']; ?>);">Set Outcome</button>
 							<?php
+							echo "</p>\n";
 						}
 						
 						if ($game->db_game['module'] == "CoinBattles") {

@@ -25,7 +25,7 @@ if ($app->running_as_admin()) {
 		else die("Please supply: issuer_id or remote_host");
 	}
 	
-	if (empty($_REQUEST['mode']) || !in_array($_REQUEST['mode'], ['blockchain','game_ios'])) die("Please set mode to 'blockchain' or 'game_ios'");
+	if (empty($_REQUEST['mode']) || !in_array($_REQUEST['mode'], ['blockchain','game_ios','game_events'])) die("Please set mode to 'blockchain' or 'game_ios'");
 	else $mode = $_REQUEST['mode'];
 	
 	$local_url = $GLOBALS['base_url']."/scripts/verify_api.php?mode=".$mode;
@@ -54,35 +54,65 @@ if ($app->running_as_admin()) {
 	if (empty($_REQUEST['remote_key'])) die("Please supply the right key string for the remote host");
 	else $remote_url .= "&key=".$_REQUEST['remote_key'];
 	
-	echo $local_url."<br/>".$remote_url."<br/><br/>\n";
+	echo $local_url."<br/>\n".$remote_url."<br/>\n";
 	
 	$obj1 = json_decode(file_get_contents($local_url));
+	echo ". ";
+	$app->flush_buffers();
+	
 	$obj2 = json_decode(file_get_contents($remote_url));
+	echo ". ";
+	$app->flush_buffers();
 	
 	if ($mode == "game_ios") {
 		$loop_to = min(count($obj1), count($obj2));
 		$any_error = false;
 		
 		for ($i=0; $i<$loop_to; $i++) {
+			if ($i%1000 == 0) {
+				echo ". ";
+				$app->flush_buffers();
+			}
 			if ($obj1[$i] != $obj2[$i]) {
-				echo "First error on game IO #".$obj1[$i][0]."<br/>\n";
+				echo "First error on line #$i<br/>\n";
 				echo "<pre>".json_encode($obj1[$i])."</pre><pre>".json_encode($obj2[$i])."</pre>\n";
-				$i=$loop_to;
+				if ($i > 0) $i=$loop_to;
 				$any_error = true;
 			}
 		}
 		
 		if (!$any_error) echo "No errors found.\n";
 	}
+	else if ($mode == "game_events") {
+		$loop_to = min(count($obj1), count($obj2));
+		$error_count = 0;
+		
+		for ($i=0; $i<$loop_to; $i++) {
+			if ($i%1000 == 0) {
+				echo ". ";
+				$app->flush_buffers();
+			}
+			if ($obj1[$i] != $obj2[$i]) {
+				echo "Error on line #$i: <a href=\"/explorer/games/".$game_identifier."/events/".$obj1[$i]->event_index."\">".$obj1[$i]->event_name."</a> vs <a href=\"".$remote_url_base."/explorer/games/".$game_identifier."/events/".$obj2[$i]->event_index."\">".$obj2[$i]->event_name."</a><br/>\n";
+				$error_count++;
+			}
+		}
+		
+		echo "Found $error_count errors.<br/>\n";
+	}
 	else if ($mode == "blockchain") {
 		$loop_to = min(count($obj1), count($obj2));
 		$any_error = false;
 		
 		for ($i=0; $i<$loop_to; $i++) {
+			if ($i%1000 == 0) {
+				echo ". ";
+				$app->flush_buffers();
+			}
 			if ($obj1[$i] != $obj2[$i]) {
 				echo "First error found<br/>\n";
 				echo "<pre>".json_encode($obj1[$i])."</pre><pre>".json_encode($obj2[$i])."</pre>\n";
-				$i = $loop_to;
+				if ($i > 0) $i = $loop_to;
 				$any_error = true;
 			}
 		}
@@ -93,5 +123,5 @@ if ($app->running_as_admin()) {
 	
 	echo "Script completed in ".round(microtime(true)-$script_start_time, 4)." seconds.\n";
 }
-else echo "Syntax is: main.php?key=<CRON_KEY_STRING>\n";
+else echo "Please supply the right key string.\n";
 ?>

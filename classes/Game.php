@@ -3415,5 +3415,9 @@ class Game {
 		
 		return $destroy_amount;
 	}
+	
+	public function get_option_by_outcome_index($event_id, $outcome_index) {
+		return $this->blockchain->app->run_query("SELECT * FROM options WHERE event_id='".$event_id."' AND event_option_index='".$outcome_index."';")->fetch();
+	}
 }
 ?>

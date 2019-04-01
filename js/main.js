@@ -1800,7 +1800,7 @@ function set_event_outcome_selected() {
 	if (option_id > 0) {
 		$.get("/ajax/set_event_outcome.php?action=set&event_id="+set_event_id+"&option_id="+option_id, function(result) {
 			var result_obj = JSON.parse(result);
-			alert(result_obj['message']);
+			window.location = window.location;
 		});
 	}
 }
@@ -2316,4 +2316,10 @@ function toggle_push_menu(expand_collapse) {
 }
 function start_install_module(key_string) {
 	window.location = '/install.php?key='+key_string+'&action=install_module&module_name='+$('#select_install_module').val();
+}
+function refresh_prices_by_event(game_id, event_id) {
+	$.get("/ajax/refresh_prices_by_event.php?game_id="+game_id+"&event_id="+event_id, function(result) {
+		var result_obj = JSON.parse(result);
+		window.location = window.location;
+	});
 }
