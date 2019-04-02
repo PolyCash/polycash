@@ -286,7 +286,7 @@ class Event {
 			$btc_currency = $this->game->blockchain->app->get_currency_by_abbreviation("BTC");
 			$event_starting_block = $this->game->blockchain->fetch_block_by_id($this->db_event['event_starting_block']);
 			$event_final_block = $this->game->blockchain->fetch_block_by_id($this->db_event['event_final_block']);
-			if ($event_final_block) $event_to_time = $event_final_block['time_mined'];
+			if ($event_final_block && !empty($event_final_block['time_mined'])) $event_to_time = $event_final_block['time_mined'];
 			else $event_to_time = time();
 		}
 		
@@ -356,7 +356,7 @@ class Event {
 			
 			if ($this->game->db_game['module'] == "CryptoDuels") {
 				$db_currency = $this->game->blockchain->app->run_query("SELECT * FROM currencies WHERE name='".$round_stats[$i]['name']."';")->fetch();
-				$initial_price = $this->game->blockchain->app->currency_price_after_time($db_currency['currency_id'], $btc_currency['currency_id'], $event_starting_block['time_mined']);
+				$initial_price = $this->game->blockchain->app->currency_price_after_time($db_currency['currency_id'], $btc_currency['currency_id'], $event_starting_block['time_mined'], $event_to_time);
 				
 				if ($round_stats[$i]['name'] == "Bitcoin") {
 					$final_price = 0;

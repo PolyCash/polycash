@@ -245,7 +245,7 @@ class CoinBattlesGameDefinition {
 				}
 				
 				if (count($poloniex_trades) > 1) {
-					$start_price = $this->app->currency_price_after_time($db_currency['currency_id'], $btc_currency['currency_id'], $start_time);
+					$start_price = $this->app->currency_price_after_time($db_currency['currency_id'], $btc_currency['currency_id'], $start_time, $final_time);
 					$final_price = $this->app->currency_price_at_time($db_currency['currency_id'], $btc_currency['currency_id'], $final_time);
 				}
 				

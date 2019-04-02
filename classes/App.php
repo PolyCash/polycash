@@ -664,8 +664,8 @@ class App {
 		else return false;
 	}
 	
-	public function currency_price_after_time($currency_id, $ref_currency_id, $ref_time) {
-		$q = "SELECT * FROM currency_prices WHERE currency_id='".$currency_id."' AND reference_currency_id='".$ref_currency_id."' AND time_added >= ".$ref_time." ORDER BY time_added ASC LIMIT 1;";
+	public function currency_price_after_time($currency_id, $ref_currency_id, $ref_time, $not_after_time) {
+		$q = "SELECT * FROM currency_prices WHERE currency_id='".$currency_id."' AND reference_currency_id='".$ref_currency_id."' AND time_added >= ".$ref_time." AND time_added<=".$not_after_time." ORDER BY time_added ASC LIMIT 1;";
 		$r = $this->run_query($q);
 		
 		if ($r->rowCount() > 0) {

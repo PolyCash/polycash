@@ -199,7 +199,7 @@ class CryptoDuelsGameDefinition {
 				}
 				
 				if (count($poloniex_trades) > 1) {
-					$start_price = $this->app->currency_price_after_time($db_currency['currency_id'], $btc_currency['currency_id'], $start_time);
+					$start_price = $this->app->currency_price_after_time($db_currency['currency_id'], $btc_currency['currency_id'], $start_time, $final_time);
 					$final_price = $this->app->currency_price_at_time($db_currency['currency_id'], $btc_currency['currency_id'], $final_time);
 				}
 				
@@ -235,29 +235,32 @@ class CryptoDuelsGameDefinition {
 		$starting_block = $game->blockchain->fetch_block_by_id($db_event['event_starting_block']);
 		$final_block = $game->blockchain->fetch_block_by_id($db_event['event_final_block']);
 		$start_q = "INSERT INTO currency_prices (cached_url_id, currency_id, reference_currency_id, price, time_added) VALUES ";
+		$from_time = $starting_block['time_mined'];
+		$to_time = $final_block['time_mined'];
 		
-		$option_r = $this->app->run_query("SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY event_option_index ASC;");
+		$option_r = $this->app->run_query("SELECT * FROM options WHERE event_id='".$db_event['event_id']."' AND name != 'Bitcoin' ORDER BY event_option_index ASC;");
 		
 		while ($db_option = $option_r->fetch()) {
 			$code = $this->currency_name_to_code[$db_option['name']];
 			$this_currency = $this->currencies[$this->name2currency_index[$db_option['name']]];
 			
-			$this->app->run_query("DELETE FROM currency_prices WHERE currency_id='".$this_currency['currency_id']."' AND time_added>=".$starting_block['time_mined']." AND time_added<=".$final_block['time_mined'].";");
+			$delete_q = "DELETE FROM currency_prices WHERE currency_id='".$this_currency['currency_id']."' AND time_added>".$from_time." AND time_added<".$to_time.";";
+			$this->app->run_query($delete_q);
 			
 			$q = $start_q;
 			$modulo = 0;
 			
-			$poloniex_url = "https://poloniex.com/public?command=returnTradeHistory&currencyPair=BTC_".$code."&start=".$starting_block['time_mined']."&end=".$final_block['time_mined'];
+			$poloniex_url = "https://poloniex.com/public?command=returnTradeHistory&currencyPair=BTC_".$code."&start=".$from_time."&end=".$to_time;
 			$poloniex_response = $this->app->async_fetch_url($poloniex_url, true);
 			$cached_url = $this->app->cached_url_info($poloniex_url);
 			$poloniex_trades = json_decode($poloniex_response['cached_result'], true);
 			
-			for ($j=count($poloniex_trades)-2; $j>=0; $j--) {
+			for ($j=count($poloniex_trades)-1; $j>=0; $j--) {
 				$trade = $poloniex_trades[$j];
 				$trade_date = new DateTime($trade['date'], new DateTimeZone('UTC'));
 				$trade_time = $trade_date->format('U');
 				
-				if ($trade['type'] == "buy" && $final_block['time_mined'] <= $trade_time) {
+				if ($trade['type'] == "buy") {
 					if ($modulo == 1000) {
 						$q = substr($q, 0, strlen($q)-2).";";
 						$this->app->run_query($q);
@@ -301,17 +304,18 @@ class CryptoDuelsGameDefinition {
 			$q = $start_q;
 			$modulo = 0;
 			
-			$poloniex_url = "https://poloniex.com/public?command=returnTradeHistory&currencyPair=BTC_".$this->currencies[$i]['abbreviation']."&start=".$last_price_time."&end=".time();
+			$code = $this->currency_name_to_code[$this->currencies[$i]['name']];
+			$poloniex_url = "https://poloniex.com/public?command=returnTradeHistory&currencyPair=BTC_".$code."&start=".$last_price_time."&end=".time();
 			$poloniex_response = $this->app->async_fetch_url($poloniex_url, true);
 			$cached_url = $this->app->cached_url_info($poloniex_url);
 			$poloniex_trades = json_decode($poloniex_response['cached_result'], true);
 			
-			for ($j=count($poloniex_trades)-2; $j>=0; $j--) {
+			for ($j=count($poloniex_trades)-1; $j>=0; $j--) {
 				$trade = $poloniex_trades[$j];
 				$trade_date = new DateTime($trade['date'], new DateTimeZone('UTC'));
 				$trade_time = $trade_date->format('U');
 				
-				if ($trade['type'] == "buy" && $last_price_time <= $trade_time) {
+				if ($trade['type'] == "buy") {
 					if ($modulo == 1000) {
 						$q = substr($q, 0, strlen($q)-2).";";
 						$this->app->run_query($q);

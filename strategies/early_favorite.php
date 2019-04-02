@@ -115,7 +115,7 @@ if ($r->rowCount() > 0) {
 					while ($db_event = $event_r->fetch()) {
 						$event_starting_block = $game->blockchain->fetch_block_by_id($db_event['event_starting_block']);
 						$event_final_block = $game->blockchain->fetch_block_by_id($db_event['event_final_block']);
-						if ($event_final_block) $event_to_time = $event_final_block['time_mined'];
+						if ($event_final_block && !empty($event_final_block['time_mined'])) $event_to_time = $event_final_block['time_mined'];
 						else $event_to_time = time();
 						
 						$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY option_index ASC;";
@@ -126,7 +126,7 @@ if ($r->rowCount() > 0) {
 						
 						while ($option = $option_r->fetch()) { 
 							$db_currency = $app->run_query("SELECT * FROM currencies WHERE name='".$option['name']."';")->fetch();
-							$initial_price = $app->currency_price_after_time($db_currency['currency_id'], $btc_currency['currency_id'], $event_starting_block['time_mined']);
+							$initial_price = $app->currency_price_after_time($db_currency['currency_id'], $btc_currency['currency_id'], $event_starting_block['time_mined'], $event_to_time);
 							
 							if ($option['name'] == "Bitcoin") {
 								$final_price = 0;

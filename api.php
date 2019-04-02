@@ -381,7 +381,10 @@ if ($uri_parts[1] == "api") {
 							if ($option['currency_id'] == $btc_currency['currency_id']) $final_performance = 0;
 							else {
 								$from_block = $game->blockchain->fetch_block_by_id($game->current_events[$i]->db_event['event_starting_block']);
-								$initial_price = $app->currency_price_after_time($option['currency_id'], $btc_currency['currency_id'], $from_block['time_mined']);
+								$to_block = $game->blockchain->fetch_block_by_id($game->current_events[$i]->db_event['event_final_block']);
+								if (!empty($to_block['time_mined'])) $to_time = $to_block['time_mined'];
+								else $to_time = time();
+								$initial_price = $app->currency_price_after_time($option['currency_id'], $btc_currency['currency_id'], $from_block['time_mined'], $to_time);
 								$final_price = $app->currency_price_at_time($option['currency_id'], $btc_currency['currency_id'], time());
 								if ($initial_price['price'] > 0) $final_performance = round(pow(10,8)*$final_price['price']/$initial_price['price'])/pow(10,8) - 1;
 								else $final_performance = 0;
