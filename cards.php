@@ -484,10 +484,10 @@ include('includes/html_start.php');
 			var coin_abbreviation = "";
 			var usd_per_btc = <?php if ($btc_usd_price) echo $btc_usd_price['price']; else echo "false"; ?>;
 
-			$(document).ready(function() {
+			window.onload = function() {
 				cards_howmany_changed();
 				fv_currency_id_changed();
-			});
+			};
 			</script>
 			
 			<div class="panel panel-info" style="margin-top: 15px;">
@@ -531,14 +531,14 @@ include('includes/html_start.php');
 						
 						<div class="form-group">
 							<label for="cards_denomination_id">What denomination should the cards be?</label>
-							<select id="cards_denomination_id" class="form-control" name="cards_denomination_id" onchange="set_fees();">
+							<select id="cards_denomination_id" class="form-control" name="cards_denomination_id">
 								<option value="">-- Please Select --</option>
 							</select>
 						</div>
 						
 						<div class="form-group">
 							<label for="cards_howmany">How many cards do you want to print?</label>
-							<select id="cards_howmany" class="form-control" name="cards_howmany" onchange="cards_howmany_changed(); set_fees();">
+							<select id="cards_howmany" class="form-control" name="cards_howmany" onchange="cards_howmany_changed();">
 								<?php
 								$ops = explode(",", "10,20,50,100,other");
 								
@@ -565,7 +565,7 @@ include('includes/html_start.php');
 							</div>
 							
 							<div id="cards_purity_usd">
-								<select id="cards_purity" class="form-control" name="cards_purity" onchange="set_fees();">
+								<select id="cards_purity" class="form-control" name="cards_purity">
 								<?php
 								$ops = explode(",", "100,95,92,90,88,85,80");
 								for ($i=0; $i<count($ops); $i++) {
@@ -706,26 +706,23 @@ include('includes/html_start.php');
 
 			function open_page_section(section_id) {
 				if (section_id == selected_section) {
-					$('#section_link_'+selected_section).removeClass('active');
-					$('#section_'+selected_section).hide('fast');
+					document.getElementById('section_link_'+selected_section).classList.remove('active');
+					document.getElementById('section_'+selected_section).style.display = 'none';
 					selected_section = false;
 				}
 				else {
 					if (selected_section !== false) {
-						$('#section_'+selected_section).hide();
-						$('#section_link_'+selected_section).removeClass('active');
+						document.getElementById('section_'+selected_section).style.display = 'none';
+						document.getElementById('section_link_'+selected_section).classList.remove('active');
 					}
-					$('#section_'+section_id).show();
-					$('#section_link_'+section_id).addClass('active');
+					document.getElementById('section_'+section_id).style.display = 'block';
+					document.getElementById('section_link_'+section_id).classList.add('active');
 					selected_section = section_id;
 				}
 			}
-			
-			$(document).ready(function() {
-				open_card(0);
+			window.onload = function() {
 				open_page_section("<?php if (empty($_REQUEST['start_section'])) echo "cards"; else echo $_REQUEST['start_section']; ?>");
-				$('#card_login').show();
-			});
+			};
 			</script>
 			
 			<div id="section_cards" style="display: none; margin-top: 15px;">

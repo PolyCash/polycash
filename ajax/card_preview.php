@@ -14,10 +14,14 @@ if ($thisuser) {
 		$fv_currency = $app->run_query("SELECT * FROM currencies WHERE currency_id='".$denomination['fv_currency_id']."';")->fetch();
 		
 		$purity = (float) $_REQUEST['purity'];
-		$name = strip_tags($_REQUEST['name']);
-		$title = strip_tags($_REQUEST['title']);
-		$email = strip_tags($_REQUEST['email']);
-		$pnum = strip_tags($_REQUEST['pnum']);
+		if (empty($_REQUEST['name'])) $name = "";
+		else $name = strip_tags($_REQUEST['name']);
+		if (empty($_REQUEST['title'])) $title = "";
+		else $title = strip_tags($_REQUEST['title']);
+		if (empty($_REQUEST['email'])) $email = "";
+		else $email = strip_tags($_REQUEST['email']);
+		if (empty($_REQUEST['pnum'])) $pnum = "";
+		else $pnum = strip_tags($_REQUEST['pnum']);
 		$secret_formatted = "0000-0000-0000-0000";
 
 		$scale_factor = 5;

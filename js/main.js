@@ -1966,13 +1966,13 @@ function withdraw_from_account(account_id, step) {
 	}
 }
 function cards_howmany_changed() {
-	var howmany = $('#cards_howmany').val();
+	var howmany = document.getElementById('cards_howmany').value;
 	if (howmany == "other") {
-		$('#cards_howmany_other').show();
-		$('#cards_howmany_other_val').focus();
+		document.getElementById('cards_howmany_other').style.display = 'block';
+		document.getElementById('cards_howmany_other_val').focus();
 	}
 	else {
-		$('#cards_howmany_other').hide();
+		document.getElementById('cards_howmany_other').style.display = 'none';
 	}
 }
 function fv_currency_id_changed() {
@@ -2093,14 +2093,14 @@ function card_login(create_mode, login_card_id, issuer_id) {
 function open_card(card_id) {
 	if (card_id != selected_card) {
 		if (selected_card != -1) {
-			$('#card_block'+selected_card).hide('fast');
-			$('#card_btn'+selected_card).removeClass("card_small_sel");
+			document.getElementById('card_block'+selected_card).style.display = "none";
+			document.getElementById('card_btn'+selected_card).classlist.remove("card_small_sel");
 		}
 		selected_card = card_id;
-		$('#card_btn'+card_id).addClass("card_small_sel");
+		document.getElementById('card_btn'+card_id).classlist.add("card_small_sel");
 		
 		setTimeout(function() {
-			$('#card_block'+card_id).show('medium');
+			document.getElementById('card_block'+card_id).style.display = "inline-block";
 		}, 300);
 	}
 }

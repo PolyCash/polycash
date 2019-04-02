@@ -1,10 +1,4 @@
-<div id="card_login" style="display: none;">
-	<script type="text/javascript">
-	$(document).ready(function() {
-		$("#redeem_code").mask("9999-9999-9999-9999");
-	});
-	</script>
-	
+<div id="card_login">
 	<h3><?php echo $login_title; ?></h3>
 	
 	<div class="form-group">
