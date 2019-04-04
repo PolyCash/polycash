@@ -485,8 +485,8 @@ class Blockchain {
 								
 								$q .= ", create_transaction_id='".$db_transaction_id."', amount='".($outputs[$j]["value"]*pow(10,$this->db_blockchain['decimal_places']))."'";
 								if ($block_height !== false) $q .= ", create_block_id='".$block_height."'";
-								$q .= "is_destroy='".$output_address['is_destroy_address']."', ";
-								$q .= "is_separator='".$output_address['is_separator_address']."'";
+								$q .= ", is_destroy='".$output_address['is_destroy_address']."'";
+								$q .= ", is_separator='".$output_address['is_separator_address']."'";
 								$q .= ";";
 								$r = $this->app->run_query($q);
 								$io_id = $this->app->last_insert_id();

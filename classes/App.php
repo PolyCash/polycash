@@ -22,7 +22,7 @@ class App {
 	
 	public function run_query($query) {
 		if ($GLOBALS['show_query_errors'] == TRUE) {
-			$result = $this->dbh->query($query) or die("Query error: ".$this->dbh->errorInfo()[2].": (".strlen($query).") ".substr($query, 0, min(strlen($query), 100))."\n");
+			$result = $this->dbh->query($query) or die("Query error: ".$this->dbh->errorInfo()[2].": (".strlen($query).") ".substr($query, 0, min(strlen($query), 500))."\n");
 		}
 		else $result = $this->dbh->query($query) or die("Error in query");
 		return $result;
