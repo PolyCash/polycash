@@ -2609,15 +2609,13 @@ class App {
 		if (substr($server_name, 0, 4) == "www.") $server_name = substr($server_name, 4, strlen($server_name)-4);
 		if ($server_name[strlen($server_name)-1] == "/") $server_name = substr($server_name, 0, strlen($server_name)-1);
 		
-		$q = "SELECT * FROM card_issuers WHERE issuer_identifier=".$this->quote_escape($server_name).";";
-		$r = $this->run_query($q);
+		$issuer_r = $this->run_query("SELECT * FROM card_issuers WHERE issuer_identifier=".$this->quote_escape($server_name).";");
 		
-		if ($r->rowCount() > 0) {
-			$card_issuer = $r->fetch();
+		if ($issuer_r->rowCount() > 0) {
+			$card_issuer = $issuer_r->fetch();
 		}
-		else if ($insert_new) {
-			$q = "INSERT INTO card_issuers SET issuer_identifier=".$this->quote_escape($server_name).", issuer_name=".$this->quote_escape($server_name).", base_url=".$this->quote_escape($initial_server_name).", time_created='".time()."';";
-			$r = $this->run_query($q);
+		else if ($allow_new) {
+			$this->run_query("INSERT INTO card_issuers SET issuer_identifier=".$this->quote_escape($server_name).", issuer_name=".$this->quote_escape($server_name).", base_url=".$this->quote_escape($initial_server_name).", time_created='".time()."';");
 			$issuer_id = $this->last_insert_id();
 			
 			$card_issuer = $this->run_query("SELECT * FROM card_issuers WHERE issuer_id=".$issuer_id.";")->fetch();
