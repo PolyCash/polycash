@@ -2035,7 +2035,7 @@ class Game {
 						if (!empty($game_defined_option['entity_id'])) {
 							$qqq .= ", entity_id='".$game_defined_option['entity_id']."'";
 							
-							$entity = $this->blockchain->app->run_query("SELECT * FROM entities WHERE entity_id='".$game_defined_option['entity_id']."';")->fetch();
+							$entity = $this->blockchain->app->fetch_entity_by_id($game_defined_option['entity_id']);
 							if (!empty($entity['default_image_id'])) $qqq .= ", image_id='".$entity['default_image_id']."'";
 						}
 						$qqq .= ";";
@@ -2633,10 +2633,7 @@ class Game {
 					if ($rr->rowCount() > 0) {
 						$db_option = $rr->fetch();
 						
-						$db_entity = false;
-						$db_entity_q = "SELECT * FROM entities WHERE entity_id='".$gdo['entity_id']."';";
-						$db_entity_r = $this->blockchain->app->run_query($db_entity_q);
-						if ($db_entity_r->rowCount() > 0) $db_entity = $db_entity_r->fetch();
+						$db_entity = $this->blockchain->app->fetch_entity_by_id($gdo['entity_id']);
 						
 						$qq = "UPDATE options SET entity_id='".$gdo['entity_id']."'";
 						if ($db_entity && !empty($db_entity['default_image_id'])) $qq .= ", image_id='".$db_entity['default_image_id']."'";
@@ -2719,7 +2716,7 @@ class Game {
 			$html .= " &nbsp; ".ucwords($io['spend_status']);
 			$html .= "<br/>\n";
 			
-			list($track_entity, $track_price_usd, $asset_price_usd, $bought_price_usd, $estimated_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $paid_after_fees, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta) = $this->get_payout_info($io, $coins_per_vote, $last_block_id, $html);
+			list($track_entity, $track_price_usd, $track_pay_price, $asset_price_usd, $bought_price_usd, $estimated_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $paid_after_fees, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta) = $this->get_payout_info($io, $coins_per_vote, $last_block_id, $html);
 			
 			if ($io['destroy_amount']+$inflation_stake > 0) {
 				$destroy_amount_disp = $this->blockchain->app->format_bignum(($io['destroy_amount']+$inflation_stake)/pow(10,$this->db_game['decimal_places']));
@@ -2759,7 +2756,10 @@ class Game {
 					$html .= '<br/>'.$this->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->db_game['decimal_places'])).' '.$io['track_name_short'].' @ $'.$this->blockchain->app->format_bignum($bought_price_usd).' &nbsp; ('.$this->blockchain->app->format_bignum($bought_leverage).'X leverage)<br/><br/>';
 					
 					$html .= 'Now valued at <font class="greentext">'.$this->blockchain->app->format_bignum($estimated_io_value/pow(10,$this->db_game['decimal_places']))." ".$this->db_game['coin_name_plural']."</font>\n";
-					$html .= "@ $".$this->blockchain->app->format_bignum($track_price_usd)."<br/>\n";
+					$html .= "@ ";
+					$html .= "$".$this->blockchain->app->format_bignum($track_pay_price);
+					if ($track_price_usd != $track_pay_price) $html .= " ($".$this->blockchain->app->format_bignum($track_price_usd).")";
+					$html .= "<br/>\n";
 					if ($io['event_option_index'] != 0) $html .= '-';
 					$html .= $this->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->db_game['decimal_places'])).' '.$io['track_name_short'].' ';
 					
@@ -2769,7 +2769,8 @@ class Game {
 						$html .= $this->blockchain->app->format_bignum(abs($borrow_delta/pow(10, $this->db_game['decimal_places'])));
 						$html .= "</font>\n";
 					}
-					$html .= " &nbsp; (".$this->blockchain->app->format_bignum($current_leverage)."X leverage)<br/>\n";
+					if ($current_leverage) $html .= " &nbsp; (".$this->blockchain->app->format_bignum($current_leverage)."X leverage)\n";
+					$html .= "<br/>\n";
 					
 					if ($net_delta < 0) $html .= '<font class="redtext">Net loss of ';
 					else $html .= '<font class="greentext">Net gain of ';
@@ -2791,6 +2792,7 @@ class Game {
 	public function get_payout_info(&$io, &$coins_per_vote, &$last_block_id, &$html) {
 		$track_entity = false;
 		$track_price_usd = false;
+		$track_pay_price = false;
 		$position_price = false;
 		$bought_price_usd = false;
 		$estimated_io_value = false;
@@ -2854,6 +2856,11 @@ class Game {
 				$track_price = $this->blockchain->app->currency_price_at_time($track_entity['currency_id'], 6, time());
 				$btc_usd_price = $this->blockchain->app->currency_price_at_time(6, 1, time());
 				$track_price_usd = $track_price['price']*$btc_usd_price['price'];
+				
+				if ($track_price_usd > $io['track_max_price']) $track_pay_price = $io['track_max_price'];
+				else if ($track_price_usd < $io['track_min_price']) $track_pay_price = $io['track_min_price'];
+				else $track_pay_price = $track_price_usd;
+				
 				$contract_price_size = $io['track_max_price']-$io['track_min_price'];
 				$position_price = $contract_price_size*$option_effective_stake/$event_effective_stake;
 				if ($io['event_option_index'] == 0) {
@@ -2864,6 +2871,8 @@ class Game {
 					$track_position_price = $io['track_max_price']-$track_price_usd;
 					$bought_price_usd = $io['track_max_price']-$position_price;
 				}
+				$track_position_price = max(0, min($contract_price_size, $track_position_price));
+				
 				$paid_after_fees = $event_payout*$effective_stake/$event_effective_stake;
 				$equivalent_contracts = $paid_after_fees/$position_price;
 				
@@ -2874,7 +2883,8 @@ class Game {
 				}
 				else {
 					$bought_leverage = ($io['track_max_price']-$position_price)/$position_price;
-					$current_leverage = $track_price_usd/$track_position_price;
+					if ($track_position_price > 0) $current_leverage = $track_price_usd/$track_position_price;
+					else $current_leverage = false;
 					$borrow_delta = $equivalent_contracts*$io['track_max_price'];
 				}
 				
@@ -2883,7 +2893,7 @@ class Game {
 			}
 		}
 		
-		return array($track_entity, $track_price_usd, $position_price, $bought_price_usd, $estimated_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $paid_after_fees, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta);
+		return array($track_entity, $track_price_usd, $track_pay_price, $position_price, $bought_price_usd, $estimated_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $paid_after_fees, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta);
 	}
 	
 	public function explorer_block_list($from_block_id, $to_block_id) {

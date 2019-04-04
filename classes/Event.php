@@ -606,7 +606,7 @@ class Event {
 		while ($my_vote = $r->fetch()) {
 			$unconfirmed_votes = 0;
 			$temp_html = "";
-			list($track_entity, $track_price_usd, $asset_price_usd, $bought_price_usd, $estimated_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $paid_after_fees, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta) = $this->game->get_payout_info($my_vote, $coins_per_vote, $last_block_id, $temp_html);
+			list($track_entity, $track_price_usd, $track_pay_price, $asset_price_usd, $bought_price_usd, $estimated_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $paid_after_fees, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta) = $this->game->get_payout_info($my_vote, $coins_per_vote, $last_block_id, $temp_html);
 			
 			$html .= '<div class="row" style="padding: 5px;">'.$temp_html;
 			
@@ -639,7 +639,10 @@ class Event {
 				
 				$html .= '<div class="col-sm-6">';
 				$html .= '<font class="'.$color.'text">'.$this->game->blockchain->app->format_bignum($estimated_io_value/pow(10,$this->game->db_game['decimal_places']))." ".$this->game->db_game['coin_name_plural']."</font>\n";
-				$html .= "@ $".$this->game->blockchain->app->format_bignum($track_price_usd)."<br/>\n";
+				$html .= "@ ";
+				$html .= "$".$this->game->blockchain->app->format_bignum($track_pay_price);
+				if ($track_pay_price != $track_price_usd) $html .= " ($".$this->game->blockchain->app->format_bignum($track_price_usd).")";
+				$html .= "<br/>\n";
 				if ($my_vote['event_option_index'] != 0) $html .= '-';
 				$html .= $this->game->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->game->db_game['decimal_places'])).' '.$this->db_event['track_name_short'].' ';
 				
@@ -649,7 +652,8 @@ class Event {
 					$html .= $this->game->blockchain->app->format_bignum(abs($borrow_delta/pow(10, $this->game->db_game['decimal_places'])));
 					$html .= "</font>\n";
 				}
-				$html .= " &nbsp; (".$this->game->blockchain->app->format_bignum($current_leverage)."X)<br/>\n";
+				if ($current_leverage) $html .= " &nbsp; (".$this->game->blockchain->app->format_bignum($current_leverage)."X)\n";
+				$html .= "<br/>\n";
 				
 				if ($net_delta < 0) $html .= '<font class="redtext">Net loss of ';
 				else $html .= '<font class="greentext">Net gain of ';

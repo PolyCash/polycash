@@ -2120,7 +2120,7 @@ class App {
 	}
 	
 	public function fetch_entity_by_id($entity_id) {
-		$q = "SELECT * FROM entities WHERE entity_id=".$entity_id.";";
+		$q = "SELECT * FROM entities WHERE entity_id='".((int)$entity_id)."';";
 		$r = $this->run_query($q);
 		
 		if ($r->rowCount() > 0) {
@@ -2144,8 +2144,8 @@ class App {
 			$q .= ";";
 			$r = $this->run_query($q);
 			$entity_id = $this->last_insert_id();
-			$q = "SELECT * FROM entities WHERE entity_id=".$entity_id.";";
-			return $this->run_query($q)->fetch();
+			
+			return $this->fetch_entity_by_id($entity_id);
 		}
 	}
 	
@@ -3238,7 +3238,6 @@ class App {
 			$qq .= ", primary_blockchain_id='".$blockchain->db_blockchain['blockchain_id']."', option_index='".$option_index."', vote_identifier=".$this->quote_escape($vote_identifier).", is_destroy_address='".$is_destroy_address."', is_separator_address='".$is_separator_address."', address=".$this->quote_escape($addr_text).", time_created='".time()."';";
 			$rr = $this->run_query($qq);
 			$address_id = $this->last_insert_id();
-			echo "$qq<br/>\n";
 			$this->flush_buffers();
 			
 			$qq = "INSERT INTO address_keys SET address_id='".$address_id."'";
