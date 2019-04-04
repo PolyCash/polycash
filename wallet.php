@@ -38,7 +38,7 @@ if ($_REQUEST['action'] == "logout" && $thisuser) {
 	$q = "UPDATE users SET logged_in=0 WHERE user_id='".$thisuser->db_user['user_id']."';";
 	$r = $app->run_query($q);
 	
-	session_regenerate_id();
+	@session_regenerate_id();
 	
 	$thisuser = FALSE;
 	$message = "You have been logged out. ";

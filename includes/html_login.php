@@ -26,7 +26,8 @@ if (!empty($_REQUEST['redirect_key']) && empty($redirect_url)) $redirect_url = $
 		<form action="/" method="get" onsubmit="check_username(); return false;">
 			<div class="row">
 				<div class="col-md-8">
-					Please enter your username or email address. This will be kept private.
+					Please enter your username or email address. This will be kept private.<br/>
+					If you enter an email address, we'll email you a link each time to log in. If you enter a username, you'll log in with a password.
 				</div>
 			</div>
 			<div class="row" style="padding-top: 10px;">

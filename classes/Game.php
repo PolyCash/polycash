@@ -2740,23 +2740,14 @@ class Game {
 					$html .= " &nbsp; &rarr; ";
 				}
 				
-				$html .= '&nbsp;&nbsp;';
-				if ($selected_game_io_id == $io['game_io_id']) $html .= "<b";
-				else {
-					$html .= '<a href="/explorer/games/'.$this->db_game['url_identifier'].'/utxo/';
-					if ($in_out == "in") $html .= $io['tx_hash'];
-					else $html .= $db_transaction['tx_hash'];
-					$html .= "/".$io['game_out_index'].'"';
-				}
-				$html .= ' class="';
+				$html .= '&nbsp;&nbsp;<font class="';
 				if ($io['colored_amount'] > 0 || ($io['payout_rule'] == "linear" && $io['event_final_block'] <= $last_block_id)) $html .= 'greentext';
 				else if ($io['is_resolved'] == 1) $html .= 'redtext';
 				else $html .= 'yellowtext';
 				$html .= '">';
 				if ($io['payout_rule'] == "binary") $html .= '+';
 				$html .= $this->blockchain->app->format_bignum($this_payout_disp/pow(10,$this->db_game['decimal_places']));
-				if ($selected_game_io_id == $io['game_io_id']) $html .= "</b>";
-				else $html .= '</a>';
+				$html .= "</font>";
 				
 				if ($io['payout_rule'] == "linear") {
 					$html .= " &nbsp; <a href=\"\" onclick=\"$('#gio_details_".$io['game_io_id']."').toggle('fast'); return false;\">Details</a>";
@@ -2851,7 +2842,8 @@ class Game {
 			}
 			
 			$max_payout = $event_payout*$effective_stake/$option_effective_stake;
-			$odds = $max_payout/($io['destroy_amount']+$inflation_stake);
+			if ($io['destroy_amount']+$inflation_stake > 0) $odds = $max_payout/($io['destroy_amount']+$inflation_stake);
+			else $odds = 0;
 			$estimated_io_value = false;
 			$track_price_usd = false;
 			

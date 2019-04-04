@@ -3141,5 +3141,109 @@ class App {
 		else if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key_string']) return true;
 		else return false;
 	}
+	
+	public function refresh_address_set_indices(&$address_set) {
+		$info = $this->run_query("SELECT MAX(option_index) FROM addresses WHERE address_set_id='".$address_set['address_set_id']."';")->fetch();
+		if ($info['MAX(option_index)'] > 0) {
+			$this->run_query("UPDATE address_sets SET has_option_indices_until='".$info['MAX(option_index)']."' WHERE address_set_id='".$address_set['address_set_id']."';");
+			$address_set['has_option_indices_until'] = $info['MAX(option_index)'];
+		}
+	}
+	
+	public function finish_address_sets(&$game, &$game_addrsets, $to_option_index) {
+		$fully_successful = true;
+		$account = false;
+		
+		for ($set_i=0; $set_i<count($game_addrsets); $set_i++) {
+			if ($game_addrsets[$set_i]['has_option_indices_until'] >= $to_option_index) {}
+			else {
+				$this->refresh_address_set_indices($game_addrsets[$set_i]);
+				
+				if ((string)$game_addrsets[$set_i]['has_option_indices_until'] === "") $from_option_index = 0;
+				else if ($game_addrsets[$set_i]['has_option_indices_until'] == 0) $from_option_index = 1;
+				else $from_option_index = $game_addrsets[$set_i]['has_option_indices_until']+1;
+				
+				$has_option_indices_until = false;
+				$set_successful = true;
+				
+				for ($option_index=$from_option_index; $option_index<=$to_option_index; $option_index++) {
+					if ($game->blockchain->db_blockchain['p2p_mode'] != "rpc") {
+						$this->gen_address_by_index($game->blockchain, $account, $game_addrsets[$set_i]['address_set_id'], $option_index);
+						
+						$has_option_indices_until = $option_index;
+					}
+					else {
+						$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND a.option_index='".$option_index."' AND k.account_id IS NULL AND a.address_set_id=NULL;";
+						$rr = $this->run_query($qq);
+						
+						if ($rr->rowCount() > 0) {
+							$address = $rr->fetch();
+							
+							$this->run_query("UPDATE addresses SET address_set_id='".$game_addrsets[$set_i]['address_set_id']."' WHERE address_id='".$address['address_id']."';");
+							
+							$has_option_indices_until = $option_index;
+						}
+						else {
+							$set_successful = false;
+							$set_i = $num_sets_needed;
+							$option_index = $to_option_index+1;
+						}
+					}
+				}
+				
+				if ($has_option_indices_until !== false) {
+					$this->run_query("UPDATE address_sets SET has_option_indices_until='".$has_option_indices_until."' WHERE address_set_id='".$game_addrsets[$set_i]['address_set_id']."';");
+				}
+				
+				if (!$set_successful) $fully_successful = false;
+			}
+		}
+		
+		return $fully_successful;
+	}
+	
+	public function apply_address_set(&$game, $account_id) {
+		$addrset_r = $this->run_query("SELECT * FROM address_sets WHERE game_id='".$game->db_game['game_id']."' AND applied=0 AND has_option_indices_until IS NOT NULL ORDER BY RAND() LIMIT 1;");
+		
+		if ($addrset_r->rowCount() > 0) {
+			$address_set = $addrset_r->fetch();
+			
+			$this->refresh_address_set_indices($address_set);
+			
+			$this->run_query("UPDATE address_sets SET applied=1 WHERE address_set_id='".$address_set['address_set_id']."';");
+			
+			$this->run_query("UPDATE addresses a JOIN address_keys k ON a.address_id=k.address_id SET k.account_id='".$account_id."' WHERE a.address_set_id='".$address_set['address_set_id']."' AND k.account_id IS NULL;");
+			
+			$this->run_query("UPDATE currency_accounts SET has_option_indices_until=".$address_set['has_option_indices_until']." WHERE account_id='".$account_id."';");
+		}
+	}
+	
+	public function gen_address_by_index(&$blockchain, $account, $address_set_id, $option_index) {
+		if ($blockchain->db_blockchain['p2p_mode'] != "rpc") {
+			$vote_identifier = $this->option_index_to_vote_identifier($option_index);
+			$addr_text = "11".$vote_identifier;
+			$addr_text .= $this->random_string(34-strlen($addr_text));
+			
+			if ($option_index == 0) $is_destroy_address=1;
+			else $is_destroy_address=0;
+			
+			if ($option_index == 1) $is_separator_address=1;
+			else $is_separator_address=0;
+			
+			$qq = "INSERT INTO addresses SET is_mine=1";
+			if ($account) $qq .= ", user_id='".$account['user_id']."'";
+			if ($address_set_id) $qq .= ", address_set_id=".$address_set_id;
+			$qq .= ", primary_blockchain_id='".$blockchain->db_blockchain['blockchain_id']."', option_index='".$option_index."', vote_identifier=".$this->quote_escape($vote_identifier).", is_destroy_address='".$is_destroy_address."', is_separator_address='".$is_separator_address."', address=".$this->quote_escape($addr_text).", time_created='".time()."';";
+			$rr = $this->run_query($qq);
+			$address_id = $this->last_insert_id();
+			echo "$qq<br/>\n";
+			$this->flush_buffers();
+			
+			$qq = "INSERT INTO address_keys SET address_id='".$address_id."'";
+			if ($account) $qq .= ", account_id='".$account['account_id']."'";
+			$qq .= ", save_method='fake', pub_key='".$addr_text."';";
+			$rr = $this->run_query($qq);
+		}
+	}
 }
 ?>
