@@ -339,7 +339,7 @@ if ($thisuser) {
 					$address = $_REQUEST['address'];
 					
 					if ($fee > 0 && $fee < $card['amount']) {
-						$this_issuer = $app->get_issuer_by_server_name($GLOBALS['base_url']);
+						$this_issuer = $app->get_issuer_by_server_name($GLOBALS['base_url'], true);
 						
 						if ($card['issuer_id'] != $this_issuer['issuer_id']) {
 							$remote_issuer = $app->run_query("SELECT * FROM card_issuers WHERE issuer_id='".$card['issuer_id']."';")->fetch();

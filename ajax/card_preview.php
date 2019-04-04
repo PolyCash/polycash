@@ -149,7 +149,7 @@ if ($thisuser) {
 			}
 		}
 		else {
-			$img_url_vars = "&denomination_id=".((int)$_REQUEST['denomination_id'])."&purity=".((int)$_REQUEST['purity'])."&name=".urlencode(strip_tags($_REQUEST['name']))."&title=".urlencode(strip_tags($_REQUEST['title']))."&pnum=".urlencode(strip_tags($_REQUEST['pnum']));
+			$img_url_vars = "&denomination_id=".((int)$_REQUEST['denomination_id'])."&purity=".((int)$_REQUEST['purity'])."&name=".urlencode(strip_tags($_REQUEST['name']))."&title=".urlencode(strip_tags($_REQUEST['title']))."&pnum=".urlencode(strip_tags($_REQUEST['pnum']))."&email=".urlencode(strip_tags($_REQUEST['email']));
 			
 			echo '<div class="row">';
 			echo "<div class='col-sm-6'><img class=\"preview_card_image\" style=\"width: 100%;\" src=\"/ajax/card_preview.php?mode=image&side=front".$img_url_vars."\" /></div>\n";

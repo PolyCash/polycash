@@ -21,7 +21,7 @@ if ($r->rowCount() == 1) {
 	if (!empty($_REQUEST['redirect_key'])) $redirect_url = $app->get_redirect_by_key($_REQUEST['redirect_key']);
 	else $redirect_url = false;
 	
-	$this_issuer = $app->get_issuer_by_server_name($GLOBALS['base_url']);
+	$this_issuer = $app->get_issuer_by_server_name($GLOBALS['base_url'], true);
 	
 	if ($card['issuer_id'] != $this_issuer['issuer_id']) {
 		$remote_issuer = $app->run_query("SELECT * FROM card_issuers WHERE issuer_id='".$card['issuer_id']."';")->fetch();

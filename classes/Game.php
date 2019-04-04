@@ -2841,7 +2841,9 @@ class Game {
 				$effective_stake = $io['effective_destroy_amount']+$io['votes']*$coins_per_vote;
 			}
 			
-			$max_payout = $event_payout*$effective_stake/$option_effective_stake;
+			if ($option_effective_stake > 0) $max_payout = $event_payout*$effective_stake/$option_effective_stake;
+			else $max_payout = 0;
+			
 			if ($io['destroy_amount']+$inflation_stake > 0) $odds = $max_payout/($io['destroy_amount']+$inflation_stake);
 			else $odds = 0;
 			$estimated_io_value = false;

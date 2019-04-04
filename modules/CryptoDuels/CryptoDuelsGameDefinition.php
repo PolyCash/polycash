@@ -255,21 +255,23 @@ class CryptoDuelsGameDefinition {
 			$cached_url = $this->app->cached_url_info($poloniex_url);
 			$poloniex_trades = json_decode($poloniex_response['cached_result'], true);
 			
-			for ($j=count($poloniex_trades)-1; $j>=0; $j--) {
-				$trade = $poloniex_trades[$j];
-				$trade_date = new DateTime($trade['date'], new DateTimeZone('UTC'));
-				$trade_time = $trade_date->format('U');
-				
-				if ($trade['type'] == "buy") {
-					if ($modulo == 1000) {
-						$q = substr($q, 0, strlen($q)-2).";";
-						$this->app->run_query($q);
-						$modulo = 0;
-						$q = $start_q;
-					}
-					else $modulo++;
+			if (!empty($poloniex_trades)) {
+				for ($j=count($poloniex_trades)-1; $j>=0; $j--) {
+					$trade = $poloniex_trades[$j];
+					$trade_date = new DateTime($trade['date'], new DateTimeZone('UTC'));
+					$trade_time = $trade_date->format('U');
 					
-					$q .= "('".$cached_url['cached_url_id']."', '".$this_currency['currency_id']."', '".$btc_currency['currency_id']."', '".$trade['rate']."', '".$trade_time."'), ";
+					if ($trade['type'] == "buy") {
+						if ($modulo == 1000) {
+							$q = substr($q, 0, strlen($q)-2).";";
+							$this->app->run_query($q);
+							$modulo = 0;
+							$q = $start_q;
+						}
+						else $modulo++;
+						
+						$q .= "('".$cached_url['cached_url_id']."', '".$this_currency['currency_id']."', '".$btc_currency['currency_id']."', '".$trade['rate']."', '".$trade_time."'), ";
+					}
 				}
 			}
 			

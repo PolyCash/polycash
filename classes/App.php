@@ -1678,7 +1678,7 @@ class App {
 		
 		if (in_array($blockchain->db_blockchain['p2p_mode'], array("web_api", "none"))) {
 			if ($blockchain->db_blockchain['p2p_mode'] == "none") {
-				$card_issuer = $this->get_issuer_by_server_name($GLOBALS['base_url']);
+				$card_issuer = $this->get_issuer_by_server_name($GLOBALS['base_url'], true);
 			}
 			else {
 				$card_issuer = $this->get_issuer_by_id($this->db_blockchain['authoritative_issuer_id']);
@@ -1924,11 +1924,13 @@ class App {
 				
 				$import_q = "INSERT INTO blockchains SET online=1, p2p_mode='".$p2p_mode."', creator_id='".$thisuser->db_user['user_id']."', ";
 				
-				if ($blockchain_def->issuer == "none") $import_q .= "authoritative_issuer_id='NULL', ";
-				else {
-					$issuer = $this->get_issuer_by_server_name($blockchain_def->issuer);
-					$import_q .= "authoritative_issuer_id='".$issuer['issuer_id']."', ";
+				$issuer = false;
+				if ($blockchain_def->issuer != "none") {
+					$issuer = $this->get_issuer_by_server_name($blockchain_def->issuer, false);
+					if ($issuer) $import_q .= "authoritative_issuer_id='".$issuer['issuer_id']."', ";
 				}
+				if (!$issuer) $import_q .= "authoritative_issuer_id='NULL', ";
+				
 				$verbatim_vars = $this->blockchain_verbatim_vars();
 				
 				for ($var_i=0; $var_i<count($verbatim_vars); $var_i++) {
@@ -2599,7 +2601,7 @@ class App {
 		return $error_message;
 	}
 	
-	public function get_issuer_by_server_name($server_name) {
+	public function get_issuer_by_server_name($server_name, $allow_new) {
 		$server_name = trim(strtolower(strip_tags($server_name)));
 		$initial_server_name = $server_name;
 		if (substr($server_name, 0, 7) == "http://") $server_name = substr($server_name, 7, strlen($server_name)-7);
@@ -2613,13 +2615,15 @@ class App {
 		if ($r->rowCount() > 0) {
 			$card_issuer = $r->fetch();
 		}
-		else {
+		else if ($insert_new) {
 			$q = "INSERT INTO card_issuers SET issuer_identifier=".$this->quote_escape($server_name).", issuer_name=".$this->quote_escape($server_name).", base_url=".$this->quote_escape($initial_server_name).", time_created='".time()."';";
 			$r = $this->run_query($q);
 			$issuer_id = $this->last_insert_id();
 			
 			$card_issuer = $this->run_query("SELECT * FROM card_issuers WHERE issuer_id=".$issuer_id.";")->fetch();
 		}
+		else $card_issuer = false;
+		
 		return $card_issuer;
 	}
 	
@@ -2754,7 +2758,7 @@ class App {
 				
 				$blockchain = new Blockchain($this, $db_currency['blockchain_id']);
 				
-				$this_issuer = $this->get_issuer_by_server_name($GLOBALS['base_url']);
+				$this_issuer = $this->get_issuer_by_server_name($GLOBALS['base_url'], true);
 				
 				$fee = 0.001;
 				$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);

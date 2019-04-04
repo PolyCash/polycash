@@ -73,7 +73,7 @@ if ($uri_parts[1] == "api") {
 		echo $raw;
 	}
 	else if ($uri_parts[2] == "card" || $uri_parts[2] == "cards") {
-		$this_issuer = $app->get_issuer_by_server_name($GLOBALS['base_url']);
+		$this_issuer = $app->get_issuer_by_server_name($GLOBALS['base_url'], true);
 		
 		if ($uri_parts[2] == "card" && !empty($uri_parts[4]) && !empty($uri_parts[5]) && $uri_parts[4] == "check") {
 			$card_id = (int) $uri_parts[3];

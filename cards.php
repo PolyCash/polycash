@@ -10,7 +10,7 @@ $nav_subtab_selected = "cards";
 if (!empty($_REQUEST['action'])) {
 	$action = $_REQUEST['action'];
 	
-	$this_issuer = $app->get_issuer_by_server_name($GLOBALS['base_url']);
+	$this_issuer = $app->get_issuer_by_server_name($GLOBALS['base_url'], true);
 	
 	if ($action == "create") {
 		$nav_subtab_selected = "create";
@@ -416,32 +416,33 @@ if (!empty($_REQUEST['action'])) {
 		$to_card_id = (int) $_REQUEST['to_card_id'];
 		if ($issuer_name[strlen($issuer_name)-1] == "/") $issuer_name = substr($issuer_name, 0, strlen($issuer_name)-1);
 		
-		$issuer = $app->get_issuer_by_server_name($issuer_name);
-		
-		$remote_url = $issuer_name."/api/cards/".$from_card_id."-".$to_card_id;
-		$remote_response = get_object_vars(json_decode(file_get_contents($remote_url)));
-		$card_public_vars = $app->card_public_vars();
-		
+		$issuer = $app->get_issuer_by_server_name($issuer_name, false);
 		$add_count = 0;
 		
-		if (!empty($remote_response) && count($remote_response['cards']) > 0) {
-			for ($i=0; $i<count($remote_response['cards']); $i++) {
-				$import_card = get_object_vars($remote_response['cards'][$i]);
-				$q = "SELECT * FROM cards WHERE issuer_id='".$issuer['issuer_id']."' AND issuer_card_id='".$import_card['issuer_card_id']."';";
-				$r = $app->run_query($q);
-				
-				if ($r->rowCount() == 0) {
-					$fv_currency = $app->get_currency_by_abbreviation($import_card['currency_abbreviation']);
-					$currency = $app->get_currency_by_abbreviation($import_card['fv_currency_abbreviation']);
-					
-					$q = "INSERT INTO cards SET issuer_id='".$issuer['issuer_id']."', currency_id='".$currency['currency_id']."', fv_currency_id='".$fv_currency['currency_id']."', ";
-					for ($j=0; $j<count($card_public_vars); $j++) {
-						$q .= $card_public_vars[$j]."=".$app->quote_escape($import_card[$card_public_vars[$j]]).", ";
-					}
-					$q = substr($q, 0, strlen($q)-2).";";
+		if ($issuer) {
+			$remote_url = $issuer_name."/api/cards/".$from_card_id."-".$to_card_id;
+			$remote_response = get_object_vars(json_decode(file_get_contents($remote_url)));
+			$card_public_vars = $app->card_public_vars();
+			
+			if (!empty($remote_response) && count($remote_response['cards']) > 0) {
+				for ($i=0; $i<count($remote_response['cards']); $i++) {
+					$import_card = get_object_vars($remote_response['cards'][$i]);
+					$q = "SELECT * FROM cards WHERE issuer_id='".$issuer['issuer_id']."' AND issuer_card_id='".$import_card['issuer_card_id']."';";
 					$r = $app->run_query($q);
 					
-					$add_count++;
+					if ($r->rowCount() == 0) {
+						$fv_currency = $app->get_currency_by_abbreviation($import_card['currency_abbreviation']);
+						$currency = $app->get_currency_by_abbreviation($import_card['fv_currency_abbreviation']);
+						
+						$q = "INSERT INTO cards SET issuer_id='".$issuer['issuer_id']."', currency_id='".$currency['currency_id']."', fv_currency_id='".$fv_currency['currency_id']."', ";
+						for ($j=0; $j<count($card_public_vars); $j++) {
+							$q .= $card_public_vars[$j]."=".$app->quote_escape($import_card[$card_public_vars[$j]]).", ";
+						}
+						$q = substr($q, 0, strlen($q)-2).";";
+						$r = $app->run_query($q);
+						
+						$add_count++;
+					}
 				}
 			}
 		}
