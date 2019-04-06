@@ -1,0 +1,12 @@
+entity_name,default_image_id
+currency,currencies,10 significant cryptocurrencies
+Bitcoin,35
+Bitcoin Cash,78
+Litecoin,73
+Ethereum,70
+Ethereum Classic,71
+Dash,72
+Monero,74
+NEM,75
+Ripple,76
+EOS,81
