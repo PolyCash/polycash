@@ -2081,7 +2081,11 @@ class App {
 							$error_message = $this->migrate_game_definitions($game, $from_game_def_hash, $to_game_def_hash);
 							
 							$general_entity_type = $this->check_set_entity_type("general entity");
+							
 							$entity_q = "UPDATE game_defined_options gdo JOIN game_defined_events ev ON gdo.event_index=ev.event_index JOIN entities en ON gdo.name=en.entity_name SET gdo.entity_id=en.entity_id WHERE gdo.game_id='".$game->db_game['game_id']."' AND ev.game_id='".$game->db_game['game_id']."' AND en.entity_type_id='".$general_entity_type['entity_type_id']."';";
+							$entity_r = $this->run_query($entity_q);
+							
+							$entity_q = "UPDATE currencies c JOIN entities en ON c.currency_id=en.currency_id JOIN game_defined_events gde ON gde.track_name_short=c.abbreviation JOIN game_defined_options gdo ON gdo.event_index=gde.event_index SET gde.track_entity_id=en.entity_id, gdo.entity_id=en.entity_id WHERE gdo.game_id='".$game->db_game['game_id']."' AND gde.game_id='".$game->db_game['game_id']."' AND en.entity_type_id='".$general_entity_type['entity_type_id']."';";
 							$entity_r = $this->run_query($entity_q);
 						}
 						else $error_message = "Found no changes to apply.";

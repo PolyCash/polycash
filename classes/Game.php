@@ -2753,7 +2753,9 @@ class Game {
 					$html .= "Paid ".$this->blockchain->app->format_bignum(($io['destroy_amount']+$inflation_stake)/pow(10,$this->db_game['decimal_places']));
 					$html .= ' '.$this->db_game['coin_name_plural'];
 					$html .= ' @ $'.$this->blockchain->app->format_bignum($asset_price_usd);
-					$html .= '<br/>'.$this->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->db_game['decimal_places'])).' '.$io['track_name_short'].' @ $'.$this->blockchain->app->format_bignum($bought_price_usd).' &nbsp; ('.$this->blockchain->app->format_bignum($bought_leverage).'X leverage)<br/><br/>';
+					$html .= '<br/>'.$this->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->db_game['decimal_places'])).' '.$io['track_name_short'].' @ $'.$this->blockchain->app->format_bignum($bought_price_usd);
+					if ($bought_leverage != 1) $html .= ' &nbsp; ('.$this->blockchain->app->format_bignum($bought_leverage).'X leverage)';
+					$html .= '<br/><br/>';
 					
 					$html .= 'Now valued at <font class="greentext">'.$this->blockchain->app->format_bignum($estimated_io_value/pow(10,$this->db_game['decimal_places']))." ".$this->db_game['coin_name_plural']."</font>\n";
 					$html .= "@ ";
@@ -2769,7 +2771,7 @@ class Game {
 						$html .= $this->blockchain->app->format_bignum(abs($borrow_delta/pow(10, $this->db_game['decimal_places'])));
 						$html .= "</font>\n";
 					}
-					if ($current_leverage) $html .= " &nbsp; (".$this->blockchain->app->format_bignum($current_leverage)."X leverage)\n";
+					if ($current_leverage && $current_leverage != 1) $html .= " &nbsp; (".$this->blockchain->app->format_bignum($current_leverage)."X leverage)\n";
 					$html .= "<br/>\n";
 					
 					if ($net_delta < 0) $html .= '<font class="redtext">Net loss of ';
