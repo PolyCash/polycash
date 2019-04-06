@@ -7,7 +7,7 @@ $allowed_params = ['print_debug'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);
 
 if ($app->running_as_admin()) {
-	if (date("g:ia") == "7:30am") {
+	if (date("g:ia") == "12:30pm") {
 		include(dirname(dirname(__FILE__))."/scripts/send_performance_notifications.php");
 	}
 	
