@@ -65,7 +65,7 @@ class Game {
 		else if ($utxo_balance == $amount || (!$io_ids && $amount <= $mature_balance)) $amount_ok = true;
 		else $amount_ok = false;
 		
-		if ($amount_ok && (count($option_ids) == count($amounts) || ($option_ids === false && count($amounts) == count($address_ids)))) {
+		if ($amount_ok && (($option_ids === false && count($amounts) == count($address_ids)) || count($option_ids) == count($amounts))) {
 			// For rpc games, don't insert a tx record, it will come in via walletnotify
 			if ($this->blockchain->db_blockchain['p2p_mode'] != "rpc") {
 				$new_tx_hash = $this->blockchain->app->random_string(64);
@@ -2853,16 +2853,22 @@ class Game {
 			
 			if ($io['payout_rule'] == "linear") {
 				$track_entity = $this->blockchain->app->fetch_entity_by_id($io['entity_id']);
-				$track_price = $this->blockchain->app->currency_price_at_time($track_entity['currency_id'], 6, time());
 				$btc_usd_price = $this->blockchain->app->currency_price_at_time(6, 1, time());
-				$track_price_usd = $track_price['price']*$btc_usd_price['price'];
+				
+				if ($track_entity['currency_id'] == 6) $track_price_usd = $btc_usd_price['price'];
+				else {
+					$track_price = $this->blockchain->app->currency_price_at_time($track_entity['currency_id'], 6, time());
+					$track_price_usd = $track_price['price']*$btc_usd_price['price'];
+				}
 				
 				if ($track_price_usd > $io['track_max_price']) $track_pay_price = $io['track_max_price'];
 				else if ($track_price_usd < $io['track_min_price']) $track_pay_price = $io['track_min_price'];
 				else $track_pay_price = $track_price_usd;
 				
 				$contract_price_size = $io['track_max_price']-$io['track_min_price'];
-				$position_price = $contract_price_size*$option_effective_stake/$event_effective_stake;
+				if ($event_effective_stake > 0) $position_price = $contract_price_size*$option_effective_stake/$event_effective_stake;
+				else $position_price = 0;
+				
 				if ($io['event_option_index'] == 0) {
 					$track_position_price = $track_price_usd-$io['track_min_price'];
 					$bought_price_usd = $io['track_min_price']+$position_price;
@@ -2873,19 +2879,30 @@ class Game {
 				}
 				$track_position_price = max(0, min($contract_price_size, $track_position_price));
 				
-				$paid_after_fees = $event_payout*$effective_stake/$event_effective_stake;
-				$equivalent_contracts = $paid_after_fees/$position_price;
+				if ($event_effective_stake > 0) $paid_after_fees = $event_payout*$effective_stake/$event_effective_stake;
+				else $paid_after_fees = 0;
 				
-				if ($io['event_option_index'] == 0) {
-					$bought_leverage = ($position_price+$io['track_min_price'])/$position_price;
-					$current_leverage = $track_price_usd/$track_position_price;
-					$borrow_delta = (-1)*$equivalent_contracts*$io['track_min_price'];
+				if ($position_price > 0) $equivalent_contracts = $paid_after_fees/$position_price;
+				else $equivalent_contracts = 0;
+				
+				if ($position_price == 0) {
+					$bought_leverage = false;
+					$current_leverage = false;
+					$borrow_delta = 0;
 				}
 				else {
-					$bought_leverage = ($io['track_max_price']-$position_price)/$position_price;
-					if ($track_position_price > 0) $current_leverage = $track_price_usd/$track_position_price;
-					else $current_leverage = false;
-					$borrow_delta = $equivalent_contracts*$io['track_max_price'];
+					if ($io['event_option_index'] == 0) {
+						$bought_leverage = ($position_price+$io['track_min_price'])/$position_price;
+						if ($track_position_price == 0) $current_leverage = false;
+						else $current_leverage = $track_price_usd/$track_position_price;
+						$borrow_delta = (-1)*$equivalent_contracts*$io['track_min_price'];
+					}
+					else {
+						$bought_leverage = ($io['track_max_price']-$position_price)/$position_price;
+						if ($track_position_price > 0 && $track_position_price > 0) $current_leverage = $track_price_usd/$track_position_price;
+						else $current_leverage = false;
+						$borrow_delta = $equivalent_contracts*$io['track_max_price'];
+					}
 				}
 				
 				$estimated_io_value = $track_position_price*$equivalent_contracts;

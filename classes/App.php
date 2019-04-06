@@ -1605,6 +1605,8 @@ class App {
 			array('string', 'payout_rule', true),
 			array('float', 'track_max_price', true),
 			array('float', 'track_min_price', true),
+			array('float', 'track_payout_price', true),
+			array('string', 'track_name_short', true),
 			array('string', 'event_starting_time', true),
 			array('string', 'event_final_time', true),
 			array('string', 'event_payout_offset_time', true),
@@ -3087,7 +3089,7 @@ class App {
 		if (is_file($import_group_fname)) {
 			$import_group_fh = fopen($import_group_fname, 'r');
 			$import_group_content = fread($import_group_fh, filesize($import_group_fname));
-			fclose($import_group_fname);
+			fclose($import_group_fh);
 			
 			$general_entity_type = $this->check_set_entity_type("general entity");
 			

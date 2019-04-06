@@ -39,7 +39,7 @@ if ($app->running_as_admin()) {
 				$last_block_time = $db_block['time_mined'];
 			}
 			
-			$q = "SELECT AVG(sec_since_prev_block) FROM `blocks` WHERE blockchain_id=".$db_blockchain['blockchain_id']." AND sec_since_prev_block > 1 AND sec_since_prev_block < ".($db_blockchain['seconds_per_block']*10).";";
+			$q = "SELECT AVG(sec_since_prev_block) FROM `blocks` WHERE blockchain_id=".$db_blockchain['blockchain_id']." AND sec_since_prev_block > 1 AND sec_since_prev_block < ".($db_blockchain['seconds_per_block']*20).";";
 			$r = $app->run_query($q);
 			$avg = $r->fetch();
 			
