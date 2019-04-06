@@ -600,8 +600,9 @@ class Blockchain {
 									
 									$insert_q .= "), ";
 									if ($payout_insert_q != "") $insert_q .= $payout_insert_q;
+									
+									$game_amount_sum += $gio_amount;
 								}
-								$game_amount_sum += $this_game_amount;
 							}
 							
 							$insert_q = substr($insert_q, 0, strlen($insert_q)-2).";";

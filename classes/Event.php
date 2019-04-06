@@ -225,13 +225,17 @@ class Event {
 				$blocks_left = $this->db_event['event_final_block'] - $max_block_id;
 				if ($blocks_left > 0) {
 					$sec_left = $this->game->blockchain->seconds_per_block('average')*$blocks_left;
-					$html .= $this->game->blockchain->app->format_bignum($blocks_left).' blocks left<br/>';
-					$html .= $this->game->blockchain->app->format_seconds($sec_left);
+					$html .= $this->game->blockchain->app->format_bignum($blocks_left)." betting blocks left";
+					$html .= " (".$this->game->blockchain->app->format_seconds($sec_left).")";
+				}
+				if ($this->db_event['event_final_block'] != $this->db_event['event_payout_block']) {
+					$payout_blocks_left = $this->db_event['event_payout_block'] - $max_block_id;
+					$html .= "<br/>Paid out in \n".$this->game->blockchain->app->format_seconds($this->game->blockchain->seconds_per_block('average')*$payout_blocks_left);
 				}
 			}
 			$html .= '</div></p>';
 		}
-		$html .= "<strong><a style=\"color: #000; text-decoration: underline;\" target=\"_blank\" href=\"/explorer/games/".$this->game->db_game['url_identifier']."/events/".$this->db_event['event_index']."\">".$this->db_event['event_name']."</a></strong> ";
+		$html .= "<strong><a style=\"color: #000; text-decoration: underline; display: inline-block;\" target=\"_blank\" href=\"/explorer/games/".$this->game->db_game['url_identifier']."/events/".$this->db_event['event_index']."\">".$this->db_event['event_name']."</a></strong> ";
 		$html .= " &nbsp;&nbsp; ";
 		$html .= $score_disp;
 		$html .= "</p>\n";
@@ -292,9 +296,13 @@ class Event {
 		
 		if ($this->db_event['payout_rule'] == "linear") {
 			$track_entity = $this->game->blockchain->app->fetch_entity_by_id($round_stats[0]['entity_id']);
-			$track_price = $this->game->blockchain->app->currency_price_at_time($track_entity['currency_id'], 6, time());
 			$btc_usd_price = $this->game->blockchain->app->currency_price_at_time(6, 1, time());
-			$track_price_usd = $track_price['price']*$btc_usd_price['price'];
+			
+			if ($track_entity['currency_id'] == 6) $track_price_usd = $btc_usd_price['price'];
+			else {
+				$track_price = $this->game->blockchain->app->currency_price_at_time($track_entity['currency_id'], 6, time());
+				$track_price_usd = $track_price['price']*$btc_usd_price['price'];
+			}
 			
 			$html .= "Market price: &nbsp; $".number_format($track_price_usd, 2)."<br/>\n";
 			
@@ -634,7 +642,8 @@ class Event {
 				$html .= "Paid ".$this->game->blockchain->app->format_bignum($coin_stake/pow(10,$this->game->db_game['decimal_places']));
 				$html .= ' '.$this->game->db_game['coin_name_plural']."</a>";
 				$html .= ' @ $'.$this->game->blockchain->app->format_bignum($asset_price_usd);
-				$html .= '<br/>'.$this->game->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->game->db_game['decimal_places'])).' '.$this->db_event['track_name_short'].' @ $'.$this->game->blockchain->app->format_bignum($bought_price_usd).' &nbsp; ('.$this->game->blockchain->app->format_bignum($bought_leverage).'X)';
+				$html .= '<br/>'.$this->game->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->game->db_game['decimal_places'])).' '.$this->db_event['track_name_short'].' @ $'.$this->game->blockchain->app->format_bignum($bought_price_usd);
+				if ($bought_leverage != 1) $html .= ' &nbsp; ('.$this->game->blockchain->app->format_bignum($bought_leverage).'X)';
 				$html .= '</div>';
 				
 				$html .= '<div class="col-sm-6">';
@@ -652,7 +661,7 @@ class Event {
 					$html .= $this->game->blockchain->app->format_bignum(abs($borrow_delta/pow(10, $this->game->db_game['decimal_places'])));
 					$html .= "</font>\n";
 				}
-				if ($current_leverage) $html .= " &nbsp; (".$this->game->blockchain->app->format_bignum($current_leverage)."X)\n";
+				if ($current_leverage && $current_leverage != 1) $html .= " &nbsp; (".$this->game->blockchain->app->format_bignum($current_leverage)."X)\n";
 				$html .= "<br/>\n";
 				
 				if ($net_delta < 0) $html .= '<font class="redtext">Net loss of ';
