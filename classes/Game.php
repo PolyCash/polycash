@@ -720,7 +720,9 @@ class Game {
 		$q = "DELETE e.*, o.* FROM events e LEFT JOIN options o ON e.event_id=o.event_id WHERE e.game_id='".$this->db_game['game_id']."' AND e.event_index >= ".$event_index.";";
 		$r = $this->blockchain->app->run_query($q);
 		
-		$q = "UPDATE games SET events_until_block=NULL WHERE game_id='".$this->db_game['game_id']."';";
+		$info = $this->blockchain->app->run_query("SELECT MAX(event_starting_block) FROM events WHERE game_id='".$this->db_game['game_id']."';")->fetch();
+		
+		$q = "UPDATE games SET events_until_block=".$info['MAX(event_starting_block)']." WHERE game_id='".$this->db_game['game_id']."';";
 		$r = $this->blockchain->app->run_query($q);
 		
 		$this->blockchain->app->dbh->commit();
@@ -1353,13 +1355,11 @@ class Game {
 			$html .= "<p>Loaded ".$loading_transactions."/".$loading_block['num_transactions']." in block <a href=\"/explorer/games/".$this->db_game['url_identifier']."/blocks/".$loading_block_id."\">#".$loading_block_id."</a>.</p>\n";
 		}
 		
-		if (empty($this->db_game['events_until_block'])) $this->set_events_until_block();
-		
-		$max_event_starting_block = $this->max_event_starting_block();
-		
-		if ($this->db_game['events_until_block'] < $max_event_starting_block) {
-			$events_missing_blocks = $total_game_blocks - ($max_event_starting_block - $this->db_game['events_until_block']);
-			$events_pct_complete = ($this->db_game['events_until_block']-$this->db_game['game_starting_block'])/$total_game_blocks;
+		if ($this->db_game['events_until_block'] < $last_block_id) {
+			if (empty($this->db_game['events_until_block'])) $events_until_block = $this->db_game['game_starting_block'];
+			else $events_until_block = $this->db_game['events_until_block'];
+			
+			$events_pct_complete = ($events_until_block-$this->db_game['game_starting_block'])/$total_game_blocks;
 			$html .= "<p>Loading events.. <a target=\"_blank\" href=\"/explorer/games/".$this->db_game['url_identifier']."/events/\">".round(100*$events_pct_complete, 2)."% complete</a>.</p>\n";
 		}
 		
@@ -1906,7 +1906,7 @@ class Game {
 	
 	public function ensure_events_until_block($block_id) {
 		$msg = "";
-		$ensured_block = (int)$this->db_game['events_until_block'];
+		$ensured_block = max((int)$this->db_game['events_until_block'], $this->db_game['game_starting_block']);
 		
 		if ($block_id > $ensured_block) {
 			$this->blockchain->app->dbh->beginTransaction();
@@ -1938,20 +1938,12 @@ class Game {
 				
 				if ($r->rowCount() > 0) {
 					$db_last_gde = $r->fetch();
-					
-					$from_round = 1+$this->block_to_round($db_last_gde['event_starting_block'])-($game_starting_round-1);
-				}
-				else {
-					$from_round = 1;
 				}
 				$event_verbatim_vars = $this->blockchain->app->event_verbatim_vars();
 				
-				$to_round = $round_id - ($game_starting_round-1);
-				if (!empty($this->db_game['final_round'])) $to_round = $this->db_game['final_round'];
+				$gdes_to_add = $this->module->events_starting_between_blocks($this, $ensured_block, $block_id);
 				
-				$gdes_to_add = $this->module->events_starting_between_rounds($this, $from_round, $to_round, $this->db_game['round_length'], $this->db_game['game_starting_block']);
-				
-				$msg .= "Adding ".count($gdes_to_add)." events for rounds (".$from_round." : ".$to_round.")";
+				$msg .= "Adding ".count($gdes_to_add)." events for blocks (".$ensured_block." : ".$block_id.")";
 				
 				$sports_entity_type = $this->blockchain->app->check_set_entity_type("sports");
 				$leagues_entity_type = $this->blockchain->app->check_set_entity_type("leagues");
@@ -2043,8 +2035,6 @@ class Game {
 						$option_i++;
 					}
 					
-					if ($add_count%20 == 0) $this->set_events_until_block();
-					
 					$option_offset += $num_options;
 					$add_count++;
 				}
@@ -2103,8 +2093,6 @@ class Game {
 							$this->add_event_by_event_type($event_type, $db_option_entities, $option_group, $round_option_i, $event_i, $event_type['name'], $event_entity);
 							$add_count++;
 						}
-						
-						$this->set_events_until_block();
 					}
 				}
 				else if ($this->db_game['event_rule'] == "all_pairs") {
@@ -2131,8 +2119,6 @@ class Game {
 							$this->add_event_by_event_type($event_type, $option_entities, $option_group, $round_option_i, $event_i, $event_type['name'], false);
 							$add_count++;
 						}
-						
-						$this->set_events_until_block();
 					}
 				}
 				else {
@@ -2148,11 +2134,16 @@ class Game {
 			}
 			
 			$msg .= "Added ".$add_count." events\n";
-			$this->set_events_until_block();
+			
+			$this->set_events_until_block($block_id);
 			
 			$this->blockchain->app->dbh->commit();
 		}
 		return $msg;
+	}
+	
+	public function set_events_until_block($block_id) {
+		$this->blockchain->app->run_query("UPDATE games SET events_until_block='".$block_id."' WHERE game_id='".$this->db_game['game_id']."';");
 	}
 	
 	public function add_event_type($db_option_entities, $event_entity, $event_i) {
@@ -2229,24 +2220,6 @@ class Game {
 		return $html;
 	}
 	
-	public function set_events_until_block() {
-		$q = "SELECT * FROM events WHERE game_id='".$this->db_game['game_id']."' ORDER BY event_index DESC LIMIT 1;";
-		$r = $this->blockchain->app->run_query($q);
-		
-		if ($r->rowCount() > 0) {
-			$db_event = $r->fetch();
-			$ref_block_id = $db_event['event_starting_block'];
-		}
-		else $ref_block_id = $this->db_game['game_starting_block'];
-		
-		if ((string) $ref_block_id !== "") {
-			$q = "UPDATE games SET events_until_block=".$ref_block_id." WHERE game_id='".$this->db_game['game_id']."';";
-			$r = $this->blockchain->app->run_query($q);
-			
-			$this->db_game['events_until_block'] = $ref_block_id;
-		}
-	}
-	
 	public function set_loaded_until_block() {
 		$q = "SELECT * FROM game_blocks WHERE game_id='".$this->db_game['game_id']."' AND locally_saved=1 ORDER BY block_id DESC LIMIT 1;";
 		$r = $this->blockchain->app->run_query($q);
@@ -2269,9 +2242,7 @@ class Game {
 		$last_set_loaded_time = microtime(true);
 		
 		$load_block_height = $this->db_game['loaded_until_block']+1;
-		$to_block_height = $this->blockchain->last_block_id() + $this->db_game['ensure_events_future_rounds']*$this->db_game['round_length'];
-		
-		if (empty($this->db_game['events_until_block'])) $this->set_events_until_block();
+		$to_block_height = $this->blockchain->last_block_id();
 		
 		if ($show_debug) echo "Loading blocks ".$load_block_height." to ".$to_block_height."\n";
 		
@@ -3327,13 +3298,6 @@ class Game {
 			$q = "UPDATE game_defined_events SET event_starting_block=$start_block, event_final_block=$final_block, event_payout_block=$final_block WHERE game_id='".$this->db_game['game_id']."' AND event_index='".$gde['event_index']."';";
 			$r = $this->blockchain->app->run_query($q);
 		}
-	}
-	
-	public function max_event_starting_block() {
-		$q = "SELECT MAX(event_starting_block) FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."';";
-		$r = $this->blockchain->app->run_query($q);
-		$rr = $r->fetch();
-		return $rr['MAX(event_starting_block)'];
 	}
 	
 	public function event_filter_html() {

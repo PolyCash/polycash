@@ -91,38 +91,47 @@ class CoinBattlesGameDefinition {
 
 			$defined_rounds = ceil(($chain_events_until_block - $chain_starting_block)/$game_def->round_length);
 
-			//$game_def->events = $this->events_starting_between_rounds($game, 1, $defined_rounds, $game_def->round_length, $chain_starting_block);
-			
 			$this->game_def = $game_def;
 		}
 		else echo "No blockchain found matching that identifier.";
 	}
 	
-	public function events_starting_between_rounds(&$game, $from_round, $to_round, $round_length, $chain_starting_block) {
+	public function events_starting_between_blocks(&$game, $from_block, $to_block) {
 		$general_entity_type = $this->app->check_set_entity_type("general entity");
 		$events = array();
 		
-		for ($round = $from_round; $round<=$to_round; $round++) {
-			$possible_outcomes = array();
+		$start_block = ($game->block_to_round($from_block)-1)*$game->db_game['round_length']+1;
+		if ($from_block > $start_block) $start_block += $game->db_game['round_length'];
+		$end_block = ($game->block_to_round($to_block)-1)*$game->db_game['round_length']+1;
+		
+		if ($end_block >= $start_block) {
+			$start_event_i = ($start_block-$game->db_game['game_starting_block'])/$game->db_game['round_length'];
+			$end_event_i = ($end_block-$game->db_game['game_starting_block'])/$game->db_game['round_length'];
 			
-			foreach ($this->events_per_round as $currency_code => $currency_name) {
-				$entity = $this->app->check_set_entity($general_entity_type['entity_type_id'], $currency_name);
-				array_push($possible_outcomes, array("title" => $currency_name, "entity_id" => $entity['entity_id']));
+			$events_per_cycle = count($this->currencies);
+			
+			for ($event_i=$start_event_i; $event_i<=$end_event_i; $event_i++) {
+				$possible_outcomes = array();
+				
+				foreach ($this->events_per_round as $currency_code => $currency_name) {
+					$entity = $this->app->check_set_entity($general_entity_type['entity_type_id'], $currency_name);
+					array_push($possible_outcomes, array("title" => $currency_name, "entity_id" => $entity['entity_id']));
+				}
+				
+				$event = array(
+					"event_index" => $event_i,
+					"event_starting_block" => $game->db_game['game_starting_block']+$event_i*$game->db_game['round_length'],
+					"event_final_block" => $game->db_game['game_starting_block']+($event_i+1)*$game->db_game['round_length']-1,
+					"event_payout_block" => $game->db_game['game_starting_block']+($event_i+1)*$game->db_game['round_length']-1,
+					"event_name" => "Coin Battle #".($event_i+1),
+					"option_name" => "outcome",
+					"option_name_plural" => "outcomes",
+					"payout_rule" => "binary",
+					"outcome_index" => null,
+					"possible_outcomes" => $possible_outcomes
+				);
+				array_push($events, $event);
 			}
-			
-			$event = array(
-				"event_index" => $round-1,
-				"event_starting_block" => $chain_starting_block+($round-2)*$round_length,
-				"event_final_block" => $chain_starting_block+($round-1)*$round_length-1,
-				"event_payout_block" => $chain_starting_block+($round-1)*$round_length-1,
-				"event_name" => "Coin Battle #".($round-1),
-				"option_name" => "outcome",
-				"option_name_plural" => "outcomes",
-				"payout_rule" => "binary",
-				"outcome_index" => null,
-				"possible_outcomes" => $possible_outcomes
-			);
-			array_push($events, $event);
 		}
 		return $events;
 	}

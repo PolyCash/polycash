@@ -86,12 +86,14 @@ class ImageTournamentGameDefinition {
 		$this->game_def = $game_def;
 	}
 	
-	public function events_starting_between_rounds(&$game, $from_round, $to_round, $round_length, $chain_starting_block) {
-		if (!empty($this->game_def->final_round) && $to_round > $this->game_def->final_round) $to_round = $this->game_def->final_round;
-		
+	public function events_starting_between_blocks(&$game, $from_block, $to_block) {
 		$rounds_per_tournament = $this->get_rounds_per_tournament();
 		$events = array();
 		$entity_type = $this->app->check_set_entity_type("images");
+		
+		$from_round = $game->block_to_round($from_block);
+		$to_round = $game->block_to_round($to_block);
+		if (!empty($this->game_def->final_round) && $to_round > $this->game_def->final_round) $to_round = $this->game_def->final_round;
 		
 		for ($round=$from_round; $round<=$to_round; $round++) {
 			$meta_round = floor(($round-1)/$rounds_per_tournament);

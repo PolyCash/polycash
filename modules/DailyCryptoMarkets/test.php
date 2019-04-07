@@ -10,7 +10,7 @@ if ($app->running_as_admin()) {
 		$game = new Game($blockchain, $db_game['game_id']);
 		
 		$game_def = new DailyCryptoMarketsGameDefinition($app);
-		$events = $game_def->events_starting_between_rounds($game, 1, 12, 50, 281501);
+		$events = $game_def->events_starting_between_blocks($game, 281501, 282551);
 		
 		echo "<pre>".json_encode($events, JSON_PRETTY_PRINT)."</pre>\n";
 	}

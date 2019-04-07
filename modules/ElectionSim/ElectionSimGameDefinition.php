@@ -56,7 +56,7 @@ class ElectionSimGameDefinition {
 		$this->game_def = $game_def;
 	}
 	
-	public function events_starting_between_rounds(&$game, $from_round, $to_round, $round_length, $chain_starting_block) {
+	public function events_starting_between_blocks(&$game, $from_block, $to_block) {
 		/*if (!empty($this->game_def->final_round) && $to_round > $this->game_def->final_round) $to_round = $this->game_def->final_round;
 		
 		$rounds_per_tournament = $this->get_rounds_per_tournament();

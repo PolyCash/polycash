@@ -94,47 +94,55 @@ class DailyCryptoMarketsGameDefinition {
 		return $readable_number;
 	}
 	
-	public function events_starting_between_rounds(&$game, $from_round, $to_round, $round_length, $chain_starting_block) {
+	public function events_starting_between_blocks(&$game, $from_block, $to_block) {
 		if (empty($this->currencies)) $this->load_currencies($game);
 		$btc_currency = $this->app->get_currency_by_abbreviation("BTC");
 		$btc_to_usd = $this->app->currency_price_at_time($btc_currency['currency_id'], 1, time());
 		
-		$events_per_cycle = count($this->currencies);
-		$from_round_offset = ($from_round-1)%$events_per_cycle;
+		$start_block = ($game->block_to_round($from_block)-1)*$game->db_game['round_length']+1;
+		if ($from_block > $start_block) $start_block += $game->db_game['round_length'];
+		$end_block = ($game->block_to_round($to_block)-1)*$game->db_game['round_length']+1;
 		
-		$events = array();
+		$events = [];
 		
-		for ($event_i=$from_round-1; $event_i<$to_round; $event_i++) {
-			$currency_i = ($from_round_offset+$event_i)%$events_per_cycle;
+		if ($end_block >= $start_block) {
+			$start_event_i = ($start_block-$game->db_game['game_starting_block'])/$game->db_game['round_length'];
+			$end_event_i = ($end_block-$game->db_game['game_starting_block'])/$game->db_game['round_length'];
 			
-			if ($currency_i == 0) $price_usd = $btc_to_usd['price'];
-			else {
-				$price_btc = $this->app->currency_price_at_time($this->currencies[$currency_i]['currency_id'], $btc_currency['currency_id'], time());
-				$price_usd = $price_btc['price']*$btc_to_usd['price'];
+			$events_per_cycle = count($this->currencies);
+			
+			for ($event_i=$start_event_i; $event_i<=$end_event_i; $event_i++) {
+				$currency_i = $event_i%$events_per_cycle;
+				
+				if ($currency_i == 0) $price_usd = $btc_to_usd['price'];
+				else {
+					$price_btc = $this->app->currency_price_at_time($this->currencies[$currency_i]['currency_id'], $btc_currency['currency_id'], time());
+					$price_usd = $price_btc['price']*$btc_to_usd['price'];
+				}
+				$price_max_target = $price_usd*1.4;
+				$round_price_target = $this->get_readable_number($price_max_target, $price_max_target);
+				
+				$event_name = $this->currencies[$currency_i]['entity_name']." up to $".$this->app->format_bignum($round_price_target);
+				
+				$possible_outcomes = [array("title" => "Buy ".$this->currencies[$currency_i]['entity_name'], "entity_id" => $this->currencies[$currency_i]['entity_id']), array("title" => "Sell ".$this->currencies[$currency_i]['entity_name'], "entity_id" => $this->currencies[$currency_i]['entity_id'])];
+				
+				$event = array(
+					"event_index" => $event_i,
+					"event_starting_block" => $game->db_game['game_starting_block'] + $event_i*$game->db_game['round_length'],
+					"event_final_block" => $game->db_game['game_starting_block'] + ($event_i+$events_per_cycle)*$game->db_game['round_length'] - 1,
+					"event_payout_block" => $game->db_game['game_starting_block'] + ($event_i+$events_per_cycle*4)*$game->db_game['round_length'] - 1,
+					"event_name" => $event_name,
+					"option_name" => "position",
+					"option_name_plural" => "positions",
+					"payout_rule" => "linear",
+					"outcome_index" => null,
+					"track_min_price" => 0,
+					"track_max_price" => $round_price_target,
+					"track_name_short" => $this->currencies[$currency_i]['abbreviation'],
+					"possible_outcomes" => $possible_outcomes
+				);
+				array_push($events, $event);
 			}
-			$price_max_target = $price_usd*1.4;
-			$round_price_target = $this->get_readable_number($price_max_target, $price_max_target);
-			
-			$event_name = $this->currencies[$currency_i]['entity_name']." up to $".$this->app->format_bignum($round_price_target);
-			
-			$possible_outcomes = [array("title" => "Buy ".$this->currencies[$currency_i]['entity_name'], "entity_id" => $this->currencies[$currency_i]['entity_id']), array("title" => "Sell ".$this->currencies[$currency_i]['entity_name'], "entity_id" => $this->currencies[$currency_i]['entity_id'])];
-			
-			$event = array(
-				"event_index" => $event_i,
-				"event_starting_block" => $chain_starting_block + $event_i*$round_length,
-				"event_final_block" => $chain_starting_block + ($event_i+$events_per_cycle)*$round_length - 1,
-				"event_payout_block" => $chain_starting_block + ($event_i+$events_per_cycle*4)*$round_length - 1,
-				"event_name" => $event_name,
-				"option_name" => "position",
-				"option_name_plural" => "positions",
-				"payout_rule" => "linear",
-				"outcome_index" => null,
-				"track_min_price" => 0,
-				"track_max_price" => $round_price_target,
-				"track_name_short" => $this->currencies[$currency_i]['abbreviation'],
-				"possible_outcomes" => $possible_outcomes
-			);
-			array_push($events, $event);
 		}
 		
 		return $events;

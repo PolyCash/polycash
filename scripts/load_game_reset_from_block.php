@@ -30,6 +30,15 @@ if ($app->running_as_admin()) {
 			
 			$app->set_site_constant($process_lock_name, getmypid());
 			$game->reset_blocks_from_block($block_id);
+			
+			if (!empty($game->db_game['module'])) {
+				$event_r = $app->run_query("SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block <= ".$block_id." ORDER BY event_index DESC LIMIT 1;");
+				if ($event_r->rowCount() > 0) {
+					$db_reset_event = $event_r->fetch();
+					$game->reset_events_from_index($db_reset_event['event_index']);
+				}
+			}
+			
 			echo $game->db_game['name']." has been reset from block ".$block_id."\n";
 			$app->set_site_constant($process_lock_name, 0);
 		}

@@ -86,32 +86,42 @@ class CryptoDuelsGameDefinition {
 		}
 	}
 	
-	public function events_starting_between_rounds(&$game, $from_round, $to_round, $round_length, $chain_starting_block) {
-		if (empty($this->currencies)) $this->load_currencies($game);
-		$num_pairs = count($this->currencies)*(count($this->currencies)-1);
-		$events = array();
+	public function events_starting_between_blocks(&$game, $from_block, $to_block) {
+		$events = [];
 		
-		for ($event_i=$from_round-1; $event_i<$to_round; $event_i++) {
-			$event_pair_i = $event_i%$num_pairs;
-			$first_currency_i = floor($event_pair_i/(count($this->currencies)-1));
-			$second_currency_i = $event_pair_i%(count($this->currencies)-1);
-			if ($second_currency_i >= $first_currency_i) $second_currency_i++;
+		$start_block = ($game->block_to_round($from_block)-1)*$game->db_game['round_length']+1;
+		if ($from_block > $start_block) $start_block += $game->db_game['round_length'];
+		$end_block = ($game->block_to_round($to_block)-1)*$game->db_game['round_length']+1;
+		
+		if ($end_block >= $start_block) {
+			$start_event_i = ($start_block-$game->db_game['game_starting_block'])/$game->db_game['round_length'];
+			$end_event_i = ($end_block-$game->db_game['game_starting_block'])/$game->db_game['round_length'];
 			
-			$possible_outcomes = [array("title" => $this->currencies[$first_currency_i]['entity_name'], "entity_id" => $this->currencies[$first_currency_i]['entity_id']), array("title" => $this->currencies[$second_currency_i]['entity_name'], "entity_id" => $this->currencies[$second_currency_i]['entity_id'])];
+			if (empty($this->currencies)) $this->load_currencies($game);
+			$num_pairs = count($this->currencies)*(count($this->currencies)-1);
 			
-			$event = array(
-				"event_index" => $event_i+1,
-				"event_starting_block" => $chain_starting_block + $event_i*$round_length,
-				"event_final_block" => $chain_starting_block + ($event_i+5)*$round_length - 1,
-				"event_payout_block" => $chain_starting_block + ($event_i+5)*$round_length - 1,
-				"event_name" => "Duel #".($event_i+1).": ".$this->currencies[$first_currency_i]['entity_name']." vs ".$this->currencies[$second_currency_i]['entity_name'],
-				"option_name" => "outcome",
-				"option_name_plural" => "outcomes",
-				"payout_rule" => "binary",
-				"outcome_index" => null,
-				"possible_outcomes" => $possible_outcomes
-			);
-			array_push($events, $event);
+			for ($event_i=$start_event_i; $event_i<=$end_event_i; $event_i++) {
+				$event_pair_i = $event_i%$num_pairs;
+				$first_currency_i = floor($event_pair_i/(count($this->currencies)-1));
+				$second_currency_i = $event_pair_i%(count($this->currencies)-1);
+				if ($second_currency_i >= $first_currency_i) $second_currency_i++;
+				
+				$possible_outcomes = [array("title" => $this->currencies[$first_currency_i]['entity_name'], "entity_id" => $this->currencies[$first_currency_i]['entity_id']), array("title" => $this->currencies[$second_currency_i]['entity_name'], "entity_id" => $this->currencies[$second_currency_i]['entity_id'])];
+				
+				$event = array(
+					"event_index" => $event_i+1,
+					"event_starting_block" => $game->db_game['game_starting_block'] + $event_i*$game->db_game['round_length'],
+					"event_final_block" => $game->db_game['game_starting_block'] + ($event_i+5)*$game->db_game['round_length'] - 1,
+					"event_payout_block" => $game->db_game['game_starting_block'] + ($event_i+5)*$game->db_game['round_length'] - 1,
+					"event_name" => "Duel #".($event_i+1).": ".$this->currencies[$first_currency_i]['entity_name']." vs ".$this->currencies[$second_currency_i]['entity_name'],
+					"option_name" => "outcome",
+					"option_name_plural" => "outcomes",
+					"payout_rule" => "binary",
+					"outcome_index" => null,
+					"possible_outcomes" => $possible_outcomes
+				);
+				array_push($events, $event);
+			}
 		}
 		
 		return $events;
