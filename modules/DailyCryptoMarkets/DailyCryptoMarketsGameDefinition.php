@@ -120,7 +120,7 @@ class DailyCryptoMarketsGameDefinition {
 			$possible_outcomes = [array("title" => "Buy ".$this->currencies[$currency_i]['entity_name'], "entity_id" => $this->currencies[$currency_i]['entity_id']), array("title" => "Sell ".$this->currencies[$currency_i]['entity_name'], "entity_id" => $this->currencies[$currency_i]['entity_id'])];
 			
 			$event = array(
-				"event_index" => $event_i+1,
+				"event_index" => $event_i,
 				"event_starting_block" => $chain_starting_block + $event_i*$round_length,
 				"event_final_block" => $chain_starting_block + ($event_i+$events_per_cycle)*$round_length - 1,
 				"event_payout_block" => $chain_starting_block + ($event_i+$events_per_cycle*4)*$round_length - 1,

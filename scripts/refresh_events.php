@@ -37,6 +37,7 @@ if ($app->running_as_admin()) {
 			echo "Done!\n";
 		}
 	}
+	else echo "Please supply a game ID or an event ID.\n";
 }
 else echo "You need admin privileges to run this script.\n";
 ?>
