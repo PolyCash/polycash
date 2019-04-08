@@ -26,7 +26,7 @@ if ($r->rowCount() > 0) {
 	$btc_currency = $app->get_currency_by_abbreviation("BTC");
 	$btc_price = $app->currency_price_at_time($btc_currency['currency_id'], 1, time());
 	
-	$hours_between_applications = 8;
+	$hours_between_applications = 2;
 	$sec_between_applications = 60*60*$hours_between_applications;
 	$rand_sec_offset = rand(0, $sec_between_applications*2);
 	
@@ -100,7 +100,7 @@ if ($r->rowCount() > 0) {
 				if (!empty($_REQUEST['amount_mode']) && $_REQUEST['amount_mode'] == "inflation_only") $amount_mode = "inflation_only";
 				
 				if ($amount_mode == "per_event") {
-					$frac_mature_bal = 0.5;
+					$frac_mature_bal = 0.1;
 					
 					$mature_balance = $user->mature_balance($game, $user_game);
 					$coins_per_event = floor($mature_balance*$frac_mature_bal/count($selected_events));
@@ -196,7 +196,7 @@ if ($r->rowCount() > 0) {
 						
 						$ideal_buy_option_stake = $info['market_ratio']*$new_event_stake;
 						
-						$this_buy_amount = max(0, min($coins_per_event, $ideal_buy_option_stake-$buy_option_stake));
+						$this_buy_amount = max(0, min($coins_per_event, ($ideal_buy_option_stake-$buy_option_stake)*($new_total_payout/$new_event_stake)));
 						$this_buy_io_amount = round($io_amount_per_event*$this_buy_amount/$coins_per_event);
 						$this_sell_io_amount = max(0, $io_amount_per_event-$this_buy_io_amount);
 						

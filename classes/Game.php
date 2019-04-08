@@ -393,7 +393,7 @@ class Game {
 			$q .= " LEFT JOIN featured_strategies fs ON s.featured_strategy_id=fs.featured_strategy_id";
 			$q .= " WHERE g.game_id='".$this->db_game['game_id']."' AND usb.block_within_round='".$block_of_round."'";
 			$q .= " AND (s.voting_strategy IN ('by_rank', 'by_entity', 'api', 'by_plan', 'featured','hit_url'))";
-			$q .= " AND (s.time_next_apply=NULL OR s.time_next_apply<".time().")";
+			$q .= " AND (s.time_next_apply IS NULL OR s.time_next_apply<".time().")";
 			$q .= " ORDER BY RAND();";
 			$r = $this->blockchain->app->run_query($q);
 			
