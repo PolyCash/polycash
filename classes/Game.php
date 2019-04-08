@@ -2689,33 +2689,45 @@ class Game {
 			
 			list($track_entity, $track_price_usd, $track_pay_price, $asset_price_usd, $bought_price_usd, $estimated_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $paid_after_fees, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta) = $this->get_payout_info($io, $coins_per_vote, $last_block_id, $html);
 			
-			if ($io['destroy_amount']+$inflation_stake > 0) {
+			if (empty($io['option_id']) && $io['destroy_amount']+$inflation_stake > 0) {
 				$destroy_amount_disp = $this->blockchain->app->format_bignum(($io['destroy_amount']+$inflation_stake)/pow(10,$this->db_game['decimal_places']));
 				$html .= $destroy_amount_disp." ";
 				if ($destroy_amount_disp == '1') $html .= $this->db_game['coin_name'];
 				else $html .= $this->db_game['coin_name_plural'];
-				
-				if (empty($io['option_id'])) $html .= " destroyed";
 			}
 			
 			if ($io['is_coinbase'] == 1) {
 				if ($io['payout_rule'] == "binary") {
+					$destroy_amount_disp = $this->blockchain->app->format_bignum(($io['destroy_amount']+$inflation_stake)/pow(10,$this->db_game['decimal_places']));
+					$html .= $destroy_amount_disp." ";
+					if ($destroy_amount_disp == '1') $html .= $this->db_game['coin_name'];
+					else $html .= $this->db_game['coin_name_plural'];
+					
 					$this_payout_disp = $max_payout;
 					$html .= " &nbsp;&nbsp; x".$this->blockchain->app->format_bignum($odds)." ";
+					
+					$html .= '&nbsp;&nbsp;<font class="';
+					if ($io['colored_amount'] > 0 || ($io['payout_rule'] == "linear" && $io['event_final_block'] <= $last_block_id)) $html .= 'greentext';
+					else if ($io['is_resolved'] == 1) $html .= 'redtext';
+					else $html .= 'yellowtext';
+					$html .= '">';
+					if ($io['payout_rule'] == "binary") $html .= '+';
+					$html .= $this->blockchain->app->format_bignum($this_payout_disp/pow(10,$this->db_game['decimal_places']));
+					$html .= "</font>";
 				}
 				else {
+					if ($io['event_option_index'] != 0) $html .= '-';
+					$html .= $this->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->db_game['decimal_places'])).' '.$io['track_name_short'].' ';
+					
 					$this_payout_disp = $estimated_io_value;
-					$html .= " &nbsp; &rarr; ";
+					
+					if ($borrow_delta != 0) {
+						if ($borrow_delta > 0) $html .= '<font class="greentext">+ ';
+						else $html .= '<font class="redtext">- ';
+						$html .= $this->blockchain->app->format_bignum(abs($borrow_delta/pow(10, $this->db_game['decimal_places'])));
+						$html .= "</font>\n";
+					}
 				}
-				
-				$html .= '&nbsp;&nbsp;<font class="';
-				if ($io['colored_amount'] > 0 || ($io['payout_rule'] == "linear" && $io['event_final_block'] <= $last_block_id)) $html .= 'greentext';
-				else if ($io['is_resolved'] == 1) $html .= 'redtext';
-				else $html .= 'yellowtext';
-				$html .= '">';
-				if ($io['payout_rule'] == "binary") $html .= '+';
-				$html .= $this->blockchain->app->format_bignum($this_payout_disp/pow(10,$this->db_game['decimal_places']));
-				$html .= "</font>";
 				
 				if ($io['payout_rule'] == "linear") {
 					$html .= " &nbsp; <a href=\"\" onclick=\"$('#gio_details_".$io['game_io_id']."').toggle('fast'); return false;\">Details</a>";
