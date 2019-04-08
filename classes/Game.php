@@ -792,36 +792,60 @@ class Game {
 			$html .= '<div class="col-sm-3"><a href="/explorer/games/'.$this->db_game['url_identifier'].'/events/'.$db_event['event_index'].'">'.$db_event['event_name'].'</a></div>';
 			$html .= '<div class="col-sm-4">';
 			
-			if ($db_event['winning_option_id'] > 0) {
-				if (!empty($db_event['option_block_rule'])) {
-					$qq = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY option_event_index ASC;";
-					$rr = $this->blockchain->app->run_query($qq);
-					$score_label = "";
-					while ($option = $rr->fetch()) {
-						if (empty($score_label)) $score_label = $option['option_block_score']."-";
-						else $score_label .= $option['option_block_score'];
+			if ($db_event['payout_rule'] == "binary") {
+				if ($db_event['winning_option_id'] > 0) {
+					if (!empty($db_event['option_block_rule'])) {
+						$qq = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY option_event_index ASC;";
+						$rr = $this->blockchain->app->run_query($qq);
+						$score_label = "";
+						while ($option = $rr->fetch()) {
+							if (empty($score_label)) $score_label = $option['option_block_score']."-";
+							else $score_label .= $option['option_block_score'];
+						}
+						$html .= " ".$score_label." &nbsp;&nbsp; ";
 					}
-					$html .= " ".$score_label." &nbsp;&nbsp; ";
+					
+					$winning_effective_coins = $db_event['winning_votes']*$coins_per_vote + $db_event['winning_effective_destroy_score'];
+					
+					if ($event_effective_bets > 0) {
+						$winner_pct = $winning_effective_coins/$event_effective_bets;
+						$html .= round(100*$winner_pct, 2)."% &nbsp;&nbsp; ";
+					}
+					
+					if ($winning_effective_coins > 0) {
+						$winner_odds = $event_effective_bets/$winning_effective_coins;
+						$html .= "x".round($winner_odds, 2)." &nbsp;&nbsp; ";
+					}
+					
+					$html .= $db_event['winner_name'];
 				}
-				
-				$winning_effective_coins = $db_event['winning_votes']*$coins_per_vote + $db_event['winning_effective_destroy_score'];
-				
-				if ($event_effective_bets > 0) {
-					$winner_pct = $winning_effective_coins/$event_effective_bets;
-					$html .= round(100*$winner_pct, 2)."% &nbsp;&nbsp; ";
-				}
-				
-				if ($winning_effective_coins > 0) {
-					$winner_odds = $event_effective_bets/$winning_effective_coins;
-					$html .= "x".round($winner_odds, 2)." &nbsp;&nbsp; ";
-				}
-				
-				$html .= $db_event['winner_name'];
+				else $html .= "No winner";
 			}
-			else $html .= "No winner";
-			
-			if ($thisuser && $thisuser->db_user['user_id'] == $this->db_game['creator_id']) $html .= " &nbsp;&nbsp; <a href=\"\" onclick=\"set_event_outcome(".$this->db_game['game_id'].", ".$db_event['event_id']."); return false;\">Set&nbsp;outcome</a>";
-			
+			else {
+				$buy_option = $this->blockchain->app->run_query("SELECT * FROM options WHERE event_id='".$db_event['event_id']."' AND event_option_index=0;")->fetch();
+				
+				$buy_stake = $buy_option['effective_destroy_score']+$buy_option['unconfirmed_effective_destroy_score'] + $coins_per_vote*($buy_option['votes']+$buy_option['unconfirmed_votes']);
+				
+				if ((string)$db_event['track_payout_price'] != "") {
+					$roundto_decimals = max(2, 3-floor(log10($db_event['track_payout_price'])));
+					
+					$html .= "<div style='display: inline-block; min-width: 190px;'>".$db_event['track_name_short']." &nbsp; ";
+					if ($event_effective_bets > 0) {
+						$our_buy_price = ($buy_stake/$event_effective_bets)*($db_event['track_max_price']-$db_event['track_min_price'])+$db_event['track_min_price'];
+						$html .= "$".$this->blockchain->app->format_bignum(round($our_buy_price, $roundto_decimals))." &rarr; \n";
+					}
+					$html .= "$".$this->blockchain->app->format_bignum(round($db_event['track_payout_price'], $roundto_decimals));
+					$html .= "</div>\n";
+					
+					if ($event_effective_bets > 0) {
+						$pct_gain = round(100*($db_event['track_payout_price']/$our_buy_price - 1), $roundto_decimals);
+						
+						if ($pct_gain >= 0) $html .= ' &nbsp; <font class="greentext">+'.$this->blockchain->app->format_bignum($pct_gain)."%</font>\n";
+						else $html .= ' &nbsp; <font class="redtext">-'.$this->blockchain->app->format_bignum(abs($pct_gain))."%</font>\n";
+					}
+				}
+				else $html .= "Not yet paid out";
+			}
 			$html .= "</div>";
 			$html .= '<div class="col-sm-3">'.$this->blockchain->app->format_bignum($event_total_bets/pow(10,$this->db_game['decimal_places'])).' '.$this->db_game['coin_name_plural'].' bet</div>';
 			
@@ -2838,12 +2862,18 @@ class Game {
 			
 			if ($io['payout_rule'] == "linear") {
 				$track_entity = $this->blockchain->app->fetch_entity_by_id($io['entity_id']);
-				$btc_usd_price = $this->blockchain->app->currency_price_at_time(6, 1, time());
 				
-				if ($track_entity['currency_id'] == 6) $track_price_usd = $btc_usd_price['price'];
+				if ((string)$io['track_payout_price'] == "") {
+					$btc_usd_price = $this->blockchain->app->currency_price_at_time(6, 1, time());
+					
+					if ($track_entity['currency_id'] == 6) $track_price_usd = $btc_usd_price['price'];
+					else {
+						$track_price = $this->blockchain->app->currency_price_at_time($track_entity['currency_id'], 6, time());
+						$track_price_usd = $track_price['price']*$btc_usd_price['price'];
+					}
+				}
 				else {
-					$track_price = $this->blockchain->app->currency_price_at_time($track_entity['currency_id'], 6, time());
-					$track_price_usd = $track_price['price']*$btc_usd_price['price'];
+					$track_price_usd = $io['track_payout_price'];
 				}
 				
 				if ($track_price_usd > $io['track_max_price']) $track_pay_price = $io['track_max_price'];

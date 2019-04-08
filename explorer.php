@@ -649,7 +649,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							
 							echo '<div class="panel-body">';
 							echo "Block hash: ".$block['block_hash']."<br/>\n";
-							echo "Mined at ".date("Y-m-d g:ia", $block['time_mined'])." (".$app->format_seconds(time()-$block['time_mined'])." ago)<br/>\n";
+							echo "Mined at ".date("Y-m-d H:m:s", $block['time_mined'])." UTC (".$app->format_seconds(time()-$block['time_mined'])." ago)<br/>\n";
 							
 							echo "This block contains ".number_format($block['num_transactions'])." transactions totaling ".number_format($block_sum_disp, 2)." ";
 							if ($game) echo $game->db_game['coin_name_plural'];

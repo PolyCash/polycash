@@ -96,8 +96,8 @@ class DailyCryptoMarketsGameDefinition {
 	
 	public function events_starting_between_blocks(&$game, $from_block, $to_block) {
 		if (empty($this->currencies)) $this->load_currencies($game);
+		
 		$btc_currency = $this->app->get_currency_by_abbreviation("BTC");
-		$btc_to_usd = $this->app->currency_price_at_time($btc_currency['currency_id'], 1, time());
 		
 		$start_block = ($game->block_to_round($from_block)-1)*$game->db_game['round_length']+1;
 		if ($from_block > $start_block) $start_block += $game->db_game['round_length'];
@@ -114,9 +114,19 @@ class DailyCryptoMarketsGameDefinition {
 			for ($event_i=$start_event_i; $event_i<=$end_event_i; $event_i++) {
 				$currency_i = $event_i%$events_per_cycle;
 				
+				$event_starting_block = $game->db_game['game_starting_block'] + $event_i*$game->db_game['round_length'];
+				$event_final_block = $game->db_game['game_starting_block'] + ($event_i+$events_per_cycle)*$game->db_game['round_length'] - 1;
+				$event_payout_block = $game->db_game['game_starting_block'] + ($event_i+$events_per_cycle*4)*$game->db_game['round_length'] - 1;
+				
+				$payout_block = $game->blockchain->fetch_block_by_id($event_payout_block);
+				if ($payout_block) $ref_time = $payout_block['time_mined'];
+				else $ref_time = time();
+				
+				$btc_to_usd = $this->app->currency_price_at_time($btc_currency['currency_id'], 1, $ref_time);
+				
 				if ($currency_i == 0) $price_usd = $btc_to_usd['price'];
 				else {
-					$price_btc = $this->app->currency_price_at_time($this->currencies[$currency_i]['currency_id'], $btc_currency['currency_id'], time());
+					$price_btc = $this->app->currency_price_at_time($this->currencies[$currency_i]['currency_id'], $btc_currency['currency_id'], $ref_time);
 					$price_usd = $price_btc['price']*$btc_to_usd['price'];
 				}
 				$price_max_target = $price_usd*1.4;
@@ -128,9 +138,9 @@ class DailyCryptoMarketsGameDefinition {
 				
 				$event = array(
 					"event_index" => $event_i,
-					"event_starting_block" => $game->db_game['game_starting_block'] + $event_i*$game->db_game['round_length'],
-					"event_final_block" => $game->db_game['game_starting_block'] + ($event_i+$events_per_cycle)*$game->db_game['round_length'] - 1,
-					"event_payout_block" => $game->db_game['game_starting_block'] + ($event_i+$events_per_cycle*4)*$game->db_game['round_length'] - 1,
+					"event_starting_block" => $event_starting_block,
+					"event_final_block" => $event_final_block,
+					"event_payout_block" => $event_payout_block,
 					"event_name" => $event_name,
 					"option_name" => "position",
 					"option_name_plural" => "positions",
@@ -148,7 +158,34 @@ class DailyCryptoMarketsGameDefinition {
 		return $events;
 	}
 	
-	public function set_event_outcome(&$game, &$coin_rpc, $payout_event) {
+	public function set_event_outcome(&$game, &$coin_rpc, &$payout_event) {
+		if ((string)$payout_event->db_event['track_payout_price'] == "") {
+			$payout_block = $game->blockchain->fetch_block_by_id($payout_event->db_event['event_payout_block']);
+			
+			if ($payout_block) {
+				$btc_currency = $this->app->get_currency_by_abbreviation("BTC");
+				$currency = $this->app->get_currency_by_abbreviation($payout_event->db_event['track_name_short']);
+				
+				$ref_time = $payout_block['time_mined'];
+			
+				$btc_price = $this->app->currency_price_at_time($btc_currency['currency_id'], 1, $ref_time);
+				$currency_price = $this->app->currency_price_at_time($currency['currency_id'], $btc_currency['currency_id'], $ref_time);
+				
+				if ($currency['currency_id'] == $btc_currency['currency_id']) $usd_price = $btc_price['price'];
+				else $usd_price = $currency_price['price']*$btc_price['price'];
+				
+				$roundto_decimals = max(2, 5-floor(log10($usd_price)));
+				$usd_price = round($usd_price, $roundto_decimals);
+				
+				$this->app->run_query("UPDATE game_defined_events SET track_payout_price='".$usd_price."' WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$payout_event->db_event['event_index']."';");
+				
+				$this->app->run_query("UPDATE events SET track_payout_price='".$usd_price."' WHERE event_id='".$payout_event->db_event['event_id']."';");
+				
+				$payout_event->db_event['track_payout_price'] = $usd_price;
+				$payout_event->set_outcome_from_db(true);
+			}
+		}
+		
 		return "";
 	}
 	

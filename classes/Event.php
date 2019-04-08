@@ -123,7 +123,8 @@ class Event {
 	public function event_html($user, $show_intro_text, $clickable, $game_instance_id, $game_event_index) {
 		$score_field = $this->game->db_game['payout_weight']."_score";
 		
-		$max_block_id = min($this->db_event['event_final_block'], $this->game->blockchain->last_block_id());
+		$last_block_id = $this->game->blockchain->last_block_id();
+		$max_block_id = min($this->db_event['event_final_block'], $last_block_id);
 		
 		$coins_per_vote = $this->game->blockchain->app->coins_per_vote($this->game->db_game);
 		
@@ -228,9 +229,13 @@ class Event {
 					$html .= $this->game->blockchain->app->format_bignum($blocks_left)." betting blocks left";
 					$html .= " (".$this->game->blockchain->app->format_seconds($sec_left).")";
 				}
-				if ($this->db_event['event_final_block'] != $this->db_event['event_payout_block']) {
-					$payout_blocks_left = $this->db_event['event_payout_block'] - $max_block_id;
-					$html .= "<br/>Paid out in \n".$this->game->blockchain->app->format_seconds($this->game->blockchain->seconds_per_block('average')*$payout_blocks_left);
+				if ($last_block_id < $this->db_event['event_payout_block']) {
+					$payout_blocks_left = $this->db_event['event_payout_block'] - $last_block_id;
+					$html .= "<br/>Pays out in ".$this->game->blockchain->app->format_seconds($this->game->blockchain->seconds_per_block('average')*$payout_blocks_left);
+				}
+				else {
+					$payout_block = $this->game->blockchain->fetch_block_by_id($this->db_event['event_payout_block']);
+					$html .= "<br/>Paid ".$this->game->blockchain->app->format_seconds(time()-$payout_block['time_mined'])." ago<br/>".date("Y-m-d H:m:s", $payout_block['time_mined'])." UTC";
 				}
 			}
 			$html .= '</div></p>';
@@ -304,23 +309,54 @@ class Event {
 				$track_price_usd = $track_price['price']*$btc_usd_price['price'];
 			}
 			
-			$html .= "Market price: &nbsp; $".number_format($track_price_usd, 2)."<br/>\n";
-			
 			// For tracked asset events, the buy position is always the first option (min option ID)
 			$min_option_id = min(array_keys($option_id_to_rank));
 			$min_option_index = $option_id_to_rank[$min_option_id];
 			
 			$buy_pos_votes = $round_stats[$min_option_index]['votes'] + $round_stats[$min_option_index]['unconfirmed_votes'];
 			$buy_pos_effective_coins = $buy_pos_votes*$coins_per_vote + $round_stats[$min_option_index]['effective_destroy_score'] + $round_stats[$min_option_index]['unconfirmed_effective_destroy_score'];
+			
+			$roundto_decimals = max(2, 3-floor(log10($track_price_usd)));
+			
+			if ($last_block_id < $this->db_event['event_payout_block']) {
+				$html .= "Market price: &nbsp; $".round($track_price_usd, $roundto_decimals)."<br/>\n";
+			}
+			
+			$buy_pos_payout_frac = false;
+			$our_buy_price = false;
+			
 			if ($event_effective_coins > 0) {
 				$buy_pos_payout_frac = $buy_pos_effective_coins/$event_effective_coins;
 				$our_buy_price = $this->db_event['track_min_price'] + $buy_pos_payout_frac*($this->db_event['track_max_price']-$this->db_event['track_min_price']);
-				$html .= "Buy here for: &nbsp; $".number_format($our_buy_price, 2)."<br/>\n";
+				
+				if ($last_block_id < $this->db_event['event_final_block']) {
+					$html .= "Buy here for: &nbsp; $".round($our_buy_price, $roundto_decimals)."<br/>\n";
+				}
+				else {
+					$html .= "Bought at: &nbsp; $".$this->game->blockchain->app->format_bignum($our_buy_price)."<br/>\n";
+				}
+			}
+			
+			if ((string)$this->db_event['track_payout_price'] != "") {
+				$pct_gain = 100*($this->db_event['track_payout_price']/$our_buy_price-1);
+				$html .= "Paid out at: &nbsp; $".$this->game->blockchain->app->format_bignum($this->db_event['track_payout_price'])."<br/>\n";
+			}
+			else if ($our_buy_price > 0) {
+				$pct_gain = 100*($track_price_usd/$our_buy_price-1);
+			}
+			else $pct_gain = 0;
+			
+			$pct_gain = round($pct_gain, $roundto_decimals);
+			
+			$html .= $this-> db_event['track_name_short'];
+			
+			if ($pct_gain >= 0) {
+				$html .= ' up <font class="greentext">'.$this->game->blockchain->app->format_bignum($pct_gain)."%</font>\n";
 			}
 			else {
-				$buy_pos_payout_frac = false;
-				$our_buy_price = false;
+				$html .= ' down <font class="redtext">'.$this->game->blockchain->app->format_bignum(abs($pct_gain))."%</font>\n";
 			}
+			$html .= "<br/>\n";
 		}
 		
 		for ($i=0; $i<count($round_stats); $i++) {
@@ -490,9 +526,8 @@ class Event {
 				$this_effective_coins = $payout_io['votes']*$coins_per_vote + $payout_io['effective_destroy_amount'];
 				$this_payout_amount = floor($option_payout_total*$this_effective_coins/$option_effective_coins);
 				
-				$qqq = "UPDATE transaction_game_ios SET colored_amount='".$this_payout_amount."' WHERE game_io_id='".$payout_io['game_io_id']."';";
+				$qqq = "UPDATE transaction_game_ios SET is_resolved=1, colored_amount='".$this_payout_amount."' WHERE game_io_id='".$payout_io['game_io_id']."';";
 				$rrr = $this->game->blockchain->app->run_query($qqq);
-				echo "qqq: $qqq\n";
 			}
 		}
 	}
