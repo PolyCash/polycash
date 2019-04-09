@@ -1125,10 +1125,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 
 						echo "This UTXO";
 						if ($io['spend_status'] == "unconfirmed") echo " has not been confirmed yet";
-						else echo " was created on block <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$io['create_block_id']."\">#".$io['create_block_id']."</a> (round #".$game->block_to_round($io['create_block_id']).")";
+						else echo " was created on block <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$io['create_block_id']."\">#".$io['create_block_id']."</a> (round #".$game->round_to_display_round($game->block_to_round($io['create_block_id'])).")";
 						
 						if ($io['spend_block_id'] > 0) {
-							echo " and spent on block <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$io['spend_block_id']."\">#".$io['spend_block_id']."</a> (round #".$game->block_to_round($io['spend_block_id']).")";
+							echo " and spent on block <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$io['spend_block_id']."\">#".$io['spend_block_id']."</a> (round #".$game->round_to_display_round($game->block_to_round($io['spend_block_id'])).")";
 							
 							$votes_value = $io[$game->db_game['payout_weight']."s_created"]*$coins_per_vote;
 							echo ".<br/>It added ".$app->format_bignum($votes_value/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." to inflation.";

@@ -2561,7 +2561,7 @@ class Game {
 				}
 			}
 			
-			$resolve_q = "UPDATE transaction_game_ios gio JOIN events ev ON gio.event_id=ev.event_id SET gio.is_resolved=1 WHERE ev.game_id='".$this->db_game['game_id']."' AND ev.event_payout_block='".$block_height."' AND ev.outcome_index IS NOT NULL;";
+			$resolve_q = "UPDATE transaction_game_ios gio JOIN events ev ON gio.event_id=ev.event_id SET gio.is_resolved=1 WHERE ev.game_id='".$this->db_game['game_id']."' AND ev.event_payout_block='".$block_height."' AND (ev.outcome_index IS NOT NULL OR ev.track_payout_price IS NOT NULL);";
 			$resolve_r = $this->blockchain->app->run_query($resolve_q);
 			
 			$q = "UPDATE game_blocks SET locally_saved=1, time_loaded='".time()."', load_time=load_time+".(microtime(true)-$start_time).", max_game_io_index='".$game_io_index."' WHERE game_block_id='".$game_block['game_block_id']."';";
@@ -2807,7 +2807,7 @@ class Game {
 					$html .= " &nbsp; ";
 					if ($pct_gain >= 0) $html .= "+";
 					else $html .= "-";
-					$html .= $this->blockchain->app->format_bignum(round(abs($pct_gain), 2))."%";
+					$html .= round(abs($pct_gain), 2)."%";
 					$html .= '</font>';
 					
 					$html .= "</div>\n";

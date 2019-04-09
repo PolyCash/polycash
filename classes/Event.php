@@ -525,7 +525,7 @@ class Event {
 				$this_effective_coins = $payout_io['votes']*$coins_per_vote + $payout_io['effective_destroy_amount'];
 				$this_payout_amount = floor($option_payout_total*$this_effective_coins/$option_effective_coins);
 				
-				$qqq = "UPDATE transaction_game_ios SET is_resolved=1, colored_amount='".$this_payout_amount."' WHERE game_io_id='".$payout_io['game_io_id']."';";
+				$qqq = "UPDATE transaction_game_ios SET colored_amount='".$this_payout_amount."' WHERE game_io_id='".$payout_io['game_io_id']."';";
 				$rrr = $this->game->blockchain->app->run_query($qqq);
 			}
 		}
