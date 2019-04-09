@@ -845,21 +845,20 @@ class Game {
 						$ref_price = $this->blockchain->app->currency_price_at_time($ref_currency['currency_id'], $btc_currency['currency_id'], time());
 						$ref_price_usd = $ref_price['price']*$btc_to_usd['price'];
 					}
+					$ref_price_usd = max($db_event['track_min_price'], min($db_event['track_max_price'], $ref_price_usd));
 				}
 				$html .= " &nbsp;&nbsp; ";
-				
-				$roundto_decimals = max(2, 3-floor(log10($ref_price_usd)));
 				
 				$html .= "<div style='display: inline-block; min-width: 190px;'>".$db_event['track_name_short']." &nbsp; ";
 				if ($event_effective_bets > 0) {
 					$our_buy_price = ($buy_stake/$event_effective_bets)*($db_event['track_max_price']-$db_event['track_min_price'])+$db_event['track_min_price'];
-					$html .= "$".$this->blockchain->app->format_bignum(round($our_buy_price, $roundto_decimals))." &rarr; \n";
+					$html .= "$".$this->blockchain->app->round_to($our_buy_price, 2, 4)." &rarr; \n";
 				}
-				$html .= "$".$this->blockchain->app->format_bignum(round($ref_price_usd, $roundto_decimals));
+				$html .= "$".$this->blockchain->app->round_to($ref_price_usd, 2, 4);
 				$html .= "</div>\n";
 				
 				if ($event_effective_bets > 0) {
-					$pct_gain = round(100*($ref_price_usd/$our_buy_price - 1), $roundto_decimals);
+					$pct_gain = round(100*($ref_price_usd/$our_buy_price - 1), 2);
 					
 					if ($pct_gain >= 0) $html .= ' &nbsp; <font class="greentext">+'.$this->blockchain->app->format_bignum($pct_gain)."%</font>\n";
 					else $html .= ' &nbsp; <font class="redtext">-'.$this->blockchain->app->format_bignum(abs($pct_gain))."%</font>\n";
@@ -2800,9 +2799,15 @@ class Game {
 					if ($current_leverage && $current_leverage != 1) $html .= " &nbsp; (".$this->blockchain->app->format_bignum($current_leverage)."X leverage)\n";
 					$html .= "<br/>\n";
 					
+					$pct_gain = 100*($net_delta/($io['destroy_amount']+$inflation_stake));
+					
 					if ($net_delta < 0) $html .= '<font class="redtext">Net loss of ';
 					else $html .= '<font class="greentext">Net gain of ';
 					$html .= $this->blockchain->app->format_bignum(abs($net_delta)/pow(10, $this->db_game['decimal_places'])).' '.$this->db_game['coin_name_plural'];
+					$html .= " &nbsp; ";
+					if ($pct_gain >= 0) $html .= "+";
+					else $html .= "-";
+					$html .= $this->blockchain->app->format_bignum(round(abs($pct_gain), 2))."%";
 					$html .= '</font>';
 					
 					$html .= "</div>\n";

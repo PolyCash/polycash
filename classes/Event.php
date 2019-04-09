@@ -308,6 +308,7 @@ class Event {
 				$track_price = $this->game->blockchain->app->currency_price_at_time($track_entity['currency_id'], 6, time());
 				$track_price_usd = $track_price['price']*$btc_usd_price['price'];
 			}
+			$track_price_usd = max($this->db_event['track_min_price'], min($this->db_event['track_max_price'], $track_price_usd));
 			
 			// For tracked asset events, the buy position is always the first option (min option ID)
 			$min_option_id = min(array_keys($option_id_to_rank));
@@ -316,10 +317,8 @@ class Event {
 			$buy_pos_votes = $round_stats[$min_option_index]['votes'] + $round_stats[$min_option_index]['unconfirmed_votes'];
 			$buy_pos_effective_coins = $buy_pos_votes*$coins_per_vote + $round_stats[$min_option_index]['effective_destroy_score'] + $round_stats[$min_option_index]['unconfirmed_effective_destroy_score'];
 			
-			$roundto_decimals = max(2, 3-floor(log10($track_price_usd)));
-			
 			if ($last_block_id < $this->db_event['event_payout_block']) {
-				$html .= "Market price: &nbsp; $".round($track_price_usd, $roundto_decimals)."<br/>\n";
+				$html .= "Market price: &nbsp; $".$this->game->blockchain->app->round_to($track_price_usd, 2, 4)."<br/>\n";
 			}
 			
 			$buy_pos_payout_frac = false;
@@ -330,10 +329,10 @@ class Event {
 				$our_buy_price = $this->db_event['track_min_price'] + $buy_pos_payout_frac*($this->db_event['track_max_price']-$this->db_event['track_min_price']);
 				
 				if ($last_block_id < $this->db_event['event_final_block']) {
-					$html .= "Buy here for: &nbsp; $".round($our_buy_price, $roundto_decimals)."<br/>\n";
+					$html .= "Buy here for: &nbsp; $".$this->game->blockchain->app->round_to($our_buy_price, 2, 4)."<br/>\n";
 				}
 				else {
-					$html .= "Bought at: &nbsp; $".$this->game->blockchain->app->format_bignum($our_buy_price)."<br/>\n";
+					$html .= "Bought at: &nbsp; $".$this->game->blockchain->app->round_to($our_buy_price, 2, 4)."<br/>\n";
 				}
 			}
 			
@@ -346,7 +345,7 @@ class Event {
 			}
 			else $pct_gain = 0;
 			
-			$pct_gain = round($pct_gain, $roundto_decimals);
+			$pct_gain = round($pct_gain, 2);
 			
 			$html .= $this-> db_event['track_name_short'];
 			

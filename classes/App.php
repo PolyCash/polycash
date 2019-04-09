@@ -449,8 +449,7 @@ class App {
 	
 	public function to_significant_digits($number, $significant_digits) {
 		if ($number === 0) return 0;
-		if ($number < 1) $significant_digits++;
-		$number_digits = (int)(log10($number));
+		$number_digits = floor(log10($number));
 		$returnval = (pow(10, $number_digits - $significant_digits + 1)) * floor($number/(pow(10, $number_digits - $significant_digits + 1)));
 		return $returnval;
 	}
@@ -472,6 +471,12 @@ class App {
 			return $sign.($number/pow(10, 3))."k";
 		}
 		else return $sign.rtrim(rtrim(number_format(sprintf('%.8F', $number), 8), '0'), ".");
+	}
+	
+	public function round_to($number, $min_decimals, $target_sigfigs) {
+		$decimals = $target_sigfigs-1-floor(log10($number));
+		if ($min_decimals !== false) $decimals = max($min_decimals, $decimals);
+		return number_format($number, $decimals);
 	}
 	
 	public function to_ranktext($rank) {
