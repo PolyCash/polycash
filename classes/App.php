@@ -2956,7 +2956,12 @@ class App {
 		if ($bet['spend_status'] != "unconfirmed") {
 			$my_inflation_stake = $bet[$game->db_game['payout_weight']."s_destroyed"]*$coins_per_vote;
 			$my_effective_stake = $bet['effective_destroy_amount'] + $bet['votes']*$coins_per_vote;
-			$expected_payout = $event_total_reward*($my_effective_stake/$option_effective_reward);
+			
+			if ($bet['payout_rule'] == "binary") $expected_payout = $event_total_reward*($my_effective_stake/$option_effective_reward);
+			else {
+				if ((string)$bet['track_payout_price'] != "") $expected_payout = $bet['colored_amount'];
+				else $expected_payout = 0;
+			}
 		}
 		else {
 			$unconfirmed_votes = $bet['ref_'.$game->db_game['payout_weight']."s"];
@@ -2971,7 +2976,7 @@ class App {
 			$payout_multiplier = $expected_payout/$my_stake;
 			
 			$net_stake += $my_stake/pow(10,$game->db_game['decimal_places']);
-			if (empty($bet['winning_option_id'])) $pending_stake += $my_stake/pow(10,$game->db_game['decimal_places']);
+			if (empty($bet['winning_option_id']) && (string)$bet['track_payout_price'] == "") $pending_stake += $my_stake/pow(10,$game->db_game['decimal_places']);
 			
 			if ($div_td == "div") $this_bet_html .= '<div class="col-sm-1 text-center">';
 			else $this_bet_html .= '<td>';
@@ -3004,7 +3009,8 @@ class App {
 				$this_bet_html .= "\">";
 			}
 			else $this_bet_html .= "<td>";
-			$this_bet_html .= "x".$this->format_bignum($payout_multiplier);
+			if ($bet['payout_rule'] == "binary") $this_bet_html .= "x".$this->format_bignum($payout_multiplier);
+			else $this_bet_html .= "N/A";
 			if ($div_td == "div") $this_bet_html .= "</div>\n";
 			else $this_bet_html .= "</td>\n";
 			
@@ -3032,27 +3038,44 @@ class App {
 			if ($div_td == "div") $this_bet_html .= "</div>\n";
 			else $this_bet_html .= "</td>\n";
 			
-			if (empty($bet['winning_option_id'])) {
+			$pct_gain = false;
+			
+			if (empty($bet['winning_option_id']) && (string)$bet['track_payout_price'] == "") {
 				$outcome_txt = "Not Resolved";
 				$num_unresolved++;
 			}
 			else {
-				if ($bet['winning_option_id'] == $bet['option_id']) {
-					$outcome_txt = "Won";
-					$delta = ($expected_payout - $my_stake)/pow(10,$game->db_game['decimal_places']);
-					$num_wins++;
+				if ($bet['payout_rule'] == "binary") {
+					if ($bet['winning_option_id'] == $bet['option_id']) {
+						$outcome_txt = "Won";
+						$delta = ($expected_payout - $my_stake)/pow(10,$game->db_game['decimal_places']);
+						$num_wins++;
+					}
+					else {
+						$outcome_txt = "Lost";
+						$delta = (-1)*$my_stake/pow(10,$game->db_game['decimal_places']);
+						$num_losses++;
+					}
 				}
 				else {
-					$outcome_txt = "Lost";
-					$delta = (-1)*$my_stake/pow(10,$game->db_game['decimal_places']);
-					$num_losses++;
+					$delta = ($expected_payout - $my_stake)/pow(10,$game->db_game['decimal_places']);
+					$pct_gain = round(100*($expected_payout/$my_stake-1), 2);
+					
+					if ($delta >= 0) {
+						$outcome_txt = "Won";
+						$num_wins++;
+					}
+					else {
+						$outcome_txt = "Lost";
+						$num_losses++;
+					}
 				}
 				$net_delta += $delta;
 			}
 			
 			if ($div_td == "div") {
 				$this_bet_html .= "<div class=\"col-sm-3";
-				if (empty($bet['winning_option_id'])) {}
+				if (empty($bet['winning_option_id']) && (string)$bet['track_payout_price'] == "") {}
 				else if ($delta >= 0) $this_bet_html .= " greentext";
 				else $this_bet_html .= " redtext";
 				$this_bet_html .= "\">";
@@ -3060,12 +3083,19 @@ class App {
 			else $this_bet_html .= "<td>";
 			$this_bet_html .= $outcome_txt;
 			
-			if (!empty($bet['winning_option_id'])) {
+			if (!empty($bet['winning_option_id']) || (string)$bet['track_payout_price'] != "") {
 				$this_bet_html .= " &nbsp;&nbsp; ";
 				if ($delta >= 0) $this_bet_html .= "+";
 				else $this_bet_html .= "-";
 				$this_bet_html .= $this->format_bignum(abs($delta));
 				$this_bet_html .= " ".$game->db_game['coin_abbreviation'];
+				
+				if ($pct_gain !== false) {
+					$this_bet_html .= " &nbsp; ";
+					if ($pct_gain >= 0) $this_bet_html .= "+";
+					else $this_bet_html .= "-";
+					$this_bet_html .= abs($pct_gain)."%";
+				}
 			}
 			if ($div_td == "div") $this_bet_html .= "</div>\n";
 			else $this_bet_html .= "</td>\n";

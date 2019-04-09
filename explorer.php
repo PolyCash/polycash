@@ -1342,7 +1342,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							if (!empty($this_bet_html)) {
 								$this_bet_html = '<div class="row">'.$this_bet_html."</div>\n";
 								
-								if (empty($bet['winning_option_id'])) $unresolved_bets_table .= $this_bet_html;
+								if (empty($bet['winning_option_id']) && (string)$bet['track_payout_price'] == "") $unresolved_bets_table .= $this_bet_html;
 								else $resolved_bets_table .= $this_bet_html;
 							}
 						}
