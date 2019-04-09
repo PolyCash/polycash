@@ -473,10 +473,11 @@ class App {
 		else return $sign.rtrim(rtrim(number_format(sprintf('%.8F', $number), 8), '0'), ".");
 	}
 	
-	public function round_to($number, $min_decimals, $target_sigfigs) {
+	public function round_to($number, $min_decimals, $target_sigfigs, $format_string) {
 		$decimals = $target_sigfigs-1-floor(log10($number));
 		if ($min_decimals !== false) $decimals = max($min_decimals, $decimals);
-		return number_format($number, $decimals);
+		if ($format_string) return number_format($number, $decimals);
+		else return round($number, $decimals);
 	}
 	
 	public function to_ranktext($rank) {
@@ -2953,22 +2954,22 @@ class App {
 		$option_effective_reward = $bet['option_effective_destroy_score']+$bet['unconfirmed_effective_destroy_score'] + ($bet['option_votes']+$bet['unconfirmed_votes'])*$coins_per_vote;
 		$current_effectiveness = $this->calculate_effectiveness_factor($bet['vote_effectiveness_function'], $bet['effectiveness_param1'], $bet['event_starting_block'], $bet['event_final_block'], $last_block_id+1);
 		
+		$expected_payout = 0;
+		
 		if ($bet['spend_status'] != "unconfirmed") {
 			$my_inflation_stake = $bet[$game->db_game['payout_weight']."s_destroyed"]*$coins_per_vote;
 			$my_effective_stake = $bet['effective_destroy_amount'] + $bet['votes']*$coins_per_vote;
 			
 			if ($bet['payout_rule'] == "binary") $expected_payout = $event_total_reward*($my_effective_stake/$option_effective_reward);
-			else {
-				if ((string)$bet['track_payout_price'] != "") $expected_payout = $bet['colored_amount'];
-				else $expected_payout = 0;
-			}
+			else if ((string)$bet['track_payout_price'] != "") $expected_payout = $bet['colored_amount'];
 		}
 		else {
 			$unconfirmed_votes = $bet['ref_'.$game->db_game['payout_weight']."s"];
 			if ($current_round != $bet['ref_round_id']) $unconfirmed_votes += $bet['colored_amount']*($current_round-$bet['ref_round_id']);
 			$my_inflation_stake = $unconfirmed_votes*$coins_per_vote;
 			$my_effective_stake = floor(($bet['destroy_amount']+$my_inflation_stake)*$current_effectiveness);
-			$expected_payout = $event_total_reward*($my_effective_stake/$option_effective_reward);
+			
+			if ($bet['payout_rule'] == "binary") $expected_payout = $event_total_reward*($my_effective_stake/$option_effective_reward);
 		}
 		$my_stake = $bet['destroy_amount'] + $my_inflation_stake;
 		

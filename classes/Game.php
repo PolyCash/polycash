@@ -852,9 +852,9 @@ class Game {
 				$html .= "<div style='display: inline-block; min-width: 190px;'>".$db_event['track_name_short']." &nbsp; ";
 				if ($event_effective_bets > 0) {
 					$our_buy_price = ($buy_stake/$event_effective_bets)*($db_event['track_max_price']-$db_event['track_min_price'])+$db_event['track_min_price'];
-					$html .= "$".$this->blockchain->app->round_to($our_buy_price, 2, 4)." &rarr; \n";
+					$html .= "$".$this->blockchain->app->round_to($our_buy_price, 2, 4, true)." &rarr; \n";
 				}
-				$html .= "$".$this->blockchain->app->round_to($ref_price_usd, 2, 4);
+				$html .= "$".$this->blockchain->app->round_to($ref_price_usd, 2, 4, true);
 				$html .= "</div>\n";
 				
 				if ($event_effective_bets > 0) {
@@ -1718,6 +1718,16 @@ class Game {
 		return $events;
 	}
 	
+	public function events_by_final_block($block_id) {
+		$events = array();
+		$q = "SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities en ON et.entity_id=en.entity_id WHERE ev.game_id='".$this->db_game['game_id']."' AND ev.event_final_block=".$block_id." AND ev.event_final_block != ev.event_payout_block ORDER BY ev.event_index ASC;";
+		$r = $this->blockchain->app->run_query($q);
+		while ($db_event = $r->fetch()) {
+			$events[count($events)] = new Event($this, $db_event, false);
+		}
+		return $events;
+	}
+	
 	public function event_ids() {
 		$this->load_current_events();
 		
@@ -2532,6 +2542,14 @@ class Game {
 			for ($i=0; $i<count($events); $i++) {
 				if (!empty($events[$i]->db_event['option_block_rule'])) {
 					$events[$i]->process_option_blocks($game_block, count($events), $events[0]->db_event['event_index']);
+				}
+			}
+			
+			$finalblock_events = $this->events_by_final_block($block_height);
+			
+			if (count($finalblock_events) > 0) {
+				for ($i=0; $i<count($finalblock_events); $i++) {
+					$finalblock_events[$i]->update_option_votes($block_height, false);
 				}
 			}
 			

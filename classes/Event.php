@@ -318,7 +318,7 @@ class Event {
 			$buy_pos_effective_coins = $buy_pos_votes*$coins_per_vote + $round_stats[$min_option_index]['effective_destroy_score'] + $round_stats[$min_option_index]['unconfirmed_effective_destroy_score'];
 			
 			if ($last_block_id < $this->db_event['event_payout_block']) {
-				$html .= "Market price: &nbsp; $".$this->game->blockchain->app->round_to($track_price_usd, 2, 4)."<br/>\n";
+				$html .= "Market price: &nbsp; $".$this->game->blockchain->app->round_to($track_price_usd, 2, 4, true)."<br/>\n";
 			}
 			
 			$buy_pos_payout_frac = false;
@@ -329,10 +329,10 @@ class Event {
 				$our_buy_price = $this->db_event['track_min_price'] + $buy_pos_payout_frac*($this->db_event['track_max_price']-$this->db_event['track_min_price']);
 				
 				if ($last_block_id < $this->db_event['event_final_block']) {
-					$html .= "Buy here for: &nbsp; $".$this->game->blockchain->app->round_to($our_buy_price, 2, 4)."<br/>\n";
+					$html .= "Buy here for: &nbsp; $".$this->game->blockchain->app->round_to($our_buy_price, 2, 4, true)."<br/>\n";
 				}
 				else {
-					$html .= "Bought at: &nbsp; $".$this->game->blockchain->app->round_to($our_buy_price, 2, 4)."<br/>\n";
+					$html .= "Bought at: &nbsp; $".$this->game->blockchain->app->round_to($our_buy_price, 2, 4, true)."<br/>\n";
 				}
 			}
 			

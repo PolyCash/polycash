@@ -174,7 +174,7 @@ class DailyCryptoMarketsGameDefinition {
 				if ($currency['currency_id'] == $btc_currency['currency_id']) $usd_price = $btc_price['price'];
 				else $usd_price = $currency_price['price']*$btc_price['price'];
 				
-				$usd_price = $this->app->round_to($usd_price, 2, 6);
+				$usd_price = $this->app->round_to($usd_price, 2, 6, false);
 				$usd_price = max($payout_event->db_event['track_min_price'], min($payout_event->db_event['track_max_price'], $usd_price));
 				
 				$this->app->run_query("UPDATE game_defined_events SET track_payout_price='".$usd_price."' WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$payout_event->db_event['event_index']."';");
