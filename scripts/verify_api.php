@@ -53,18 +53,25 @@ if ($app->running_as_admin()) {
 		echo json_encode($out_obj);
 	}
 	else if ($mode == "game_events") {
+		$check_tx_count = true;
 		$relevant_params = ['event_index', 'event_name', 'outcome_index'];
 		
 		$out_obj = [];
 		
-		$q = "SELECT ".implode(",", $relevant_params)." FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' ORDER BY event_index ASC;";
+		$q = "SELECT ev.event_id, ".implode(",", preg_filter('/^/', 'gde.', $relevant_params))." FROM game_defined_events gde LEFT JOIN events ev ON gde.event_index=ev.event_index WHERE gde.game_id='".$game->db_game['game_id']."' AND ev.game_id='".$game->db_game['game_id']."' ORDER BY gde.event_index ASC;";
 		$r = $app->run_query($q);
 		
 		while ($db_event = $r->fetch(PDO::FETCH_ASSOC)) {
+			if ($check_tx_count && !empty($db_event['event_id'])) {
+				$event_tx_r = $game->blockchain->transactions_by_event($db_event['event_id']);
+				$db_event['num_transactions'] = $event_tx_r->rowCount();
+			}
+			unset($db_event['event_id']);
+			
 			array_push($out_obj, $db_event);
 		}
 		
-		echo json_encode($out_obj);
+		echo json_encode($out_obj, JSON_PRETTY_PRINT);
 	}
 	else if ($mode == "blockchain") {
 		$blockchain_r = $app->run_query("SELECT * FROM blockchains WHERE url_identifier=".$app->quote_escape($_REQUEST['blockchain_identifier']).";");

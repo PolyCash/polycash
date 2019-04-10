@@ -118,8 +118,8 @@ class DailyCryptoMarketsGameDefinition {
 				$event_final_block = $game->db_game['game_starting_block'] + ($event_i+$events_per_cycle)*$game->db_game['round_length'] - 1;
 				$event_payout_block = $game->db_game['game_starting_block'] + ($event_i+$events_per_cycle*4)*$game->db_game['round_length'] - 1;
 				
-				$payout_block = $game->blockchain->fetch_block_by_id($event_payout_block);
-				if ($payout_block) $ref_time = $payout_block['time_mined'];
+				$final_block = $game->blockchain->fetch_block_by_id($event_payout_block);
+				if ($final_block) $ref_time = $final_block['time_mined'];
 				else $ref_time = time();
 				
 				$btc_to_usd = $this->app->currency_price_at_time($btc_currency['currency_id'], 1, $ref_time);

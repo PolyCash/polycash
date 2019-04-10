@@ -1764,5 +1764,9 @@ class Blockchain {
 			else return $this->db_blockchain['average_seconds_per_block'];
 		}
 	}
+	
+	public function transactions_by_event($event_id) {
+		return $this->app->run_query("SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND gio.event_id=".$this->app->quote_escape($event_id)." GROUP BY t.transaction_id ORDER BY t.block_id ASC, t.position_in_block ASC;");
+	}
 }
 ?>
