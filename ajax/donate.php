@@ -21,11 +21,10 @@ if ($action == "load") {
 	$q = "INSERT INTO address_keys SET access_key=".$app->quote_escape($access_key).", pub_key=".$app->quote_escape($address_text).", priv_key=".$app->quote_escape($address_secret).", save_method='db', currency_id='".$bitcoin_currency['currency_id']."', address_id='".$db_address['address_id']."';";
 	$r = $app->run_query($q);
 	?>
-	<p>To donate bitcoins, please send BTC to the address below. This address was just generated and will remain private unless you share it. If you make a donation but don't wish to share your email address, please write down the backup code below for your records.</p>
+	<p>To donate bitcoins, please send BTC to the address below. This address was just generated and will remain private unless you share it.</p>
 	<center>
 		<p><?php echo $address_text; ?></p>
 		<p><img src="render_qr_code.php?data=<?php echo $address_text; ?>" /></p>
-		<p>Backup code: <?php echo $access_key; ?></p>
 	</center>
 	<form action="/" method="get" onsubmit="donate_step('save_email'); return false;" id="donate_email_form">
 		<input type="hidden" id="donate_access_key" value="<?php echo $access_key; ?>" />

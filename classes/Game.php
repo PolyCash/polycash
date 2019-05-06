@@ -860,8 +860,8 @@ class Game {
 				if ($event_effective_bets > 0) {
 					$pct_gain = round(100*($ref_price_usd/$our_buy_price - 1), 2);
 					
-					if ($pct_gain >= 0) $html .= ' &nbsp; <font class="greentext">+'.$this->blockchain->app->format_bignum($pct_gain)."%</font>\n";
-					else $html .= ' &nbsp; <font class="redtext">-'.$this->blockchain->app->format_bignum(abs($pct_gain))."%</font>\n";
+					if ($pct_gain >= 0) $html .= ' &nbsp; <font class="greentext">+'.$pct_gain."%</font>\n";
+					else $html .= ' &nbsp; <font class="redtext">-'.abs($pct_gain)."%</font>\n";
 				}
 			}
 			$html .= "</div>";

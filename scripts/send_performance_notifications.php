@@ -75,7 +75,7 @@ if ($app->running_as_admin()) {
 			
 			$message_html = "<p>You have bets in ".$GLOBALS['site_name_short']." which were resolved in the past 24 hours.<br/>\nTo stop receiving these notifications please <a href=\"".$GLOBALS['base_url']."/wallet/?action=unsubscribe&delivery_key=".$delivery_key."\">click here to unsubscribe</a></p>\n".$html;
 			
-			$app->mail_async($email, $GLOBALS['site_name_short'], "no-reply@".$GLOBALS['site_domain'], "Your ".$GLOBALS['site_name_short']." bets have been paid out", $message_html, "", "", $delivery_key);
+			$app->mail_async($email, $GLOBALS['site_name_short'], "no-reply@".$GLOBALS['site_domain'], "Your bets have been paid out", $message_html, "", "", $delivery_key);
 			
 			echo "Sent to ".$email."<br/>\n";
 		}

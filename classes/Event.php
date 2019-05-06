@@ -350,10 +350,10 @@ class Event {
 			$html .= $this-> db_event['track_name_short'];
 			
 			if ($pct_gain >= 0) {
-				$html .= ' up <font class="greentext">'.$this->game->blockchain->app->format_bignum($pct_gain)."%</font>\n";
+				$html .= ' up <font class="greentext">'.$pct_gain."%</font>\n";
 			}
 			else {
-				$html .= ' down <font class="redtext">'.$this->game->blockchain->app->format_bignum(abs($pct_gain))."%</font>\n";
+				$html .= ' down <font class="redtext">'.abs($pct_gain)."%</font>\n";
 			}
 			$html .= "<br/>\n";
 		}
