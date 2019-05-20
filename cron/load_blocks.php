@@ -31,12 +31,16 @@ if ($app->running_as_admin()) {
 			$error = false;
 			
 			if ($db_blockchain['p2p_mode'] != "web_api") {
-				try {
-					$blockchain->coin_rpc->getwalletinfo();
-				} catch (Exception $e) {
-					$error = true;
-					if ($print_debug) echo "Error, skipped ".$db_blockchain['blockchain_name']." because RPC connection failed.<br/>\n";
+				if ($blockchain->coin_rpc) {
+					try {
+						$blockchain->coin_rpc->getwalletinfo();
+					} catch (Exception $e) {
+						$error = true;
+					}
 				}
+				else $error = true;
+				
+				if ($print_debug && $error) echo "Error, skipped ".$db_blockchain['blockchain_name']." because RPC connection failed.<br/>\n";
 			}
 			
 			if (!$error) {
