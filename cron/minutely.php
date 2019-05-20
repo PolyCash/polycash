@@ -37,5 +37,5 @@ if ($app->running_as_admin()) {
 		<?php
 	}
 }
-else echo "Syntax is: minutely.php?key=<CRON_KEY_STRING>\n";
+else echo "Please supply the right key\n";
 ?>

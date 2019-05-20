@@ -229,10 +229,21 @@ if ($app->running_as_admin()) {
 								echo "<b>Connecting RPC client to ".$db_blockchain['blockchain_name']."...";
 								
 								$blockchain->load_coin_rpc();
+								$getblockchaininfo = false;
 								
 								if ($blockchain->coin_rpc) {
-									$getblockchaininfo = $blockchain->coin_rpc->getblockchaininfo();
-									
+									try {
+										$getblockchaininfo = $blockchain->coin_rpc->getblockchaininfo();
+									}
+									catch (Exception $e) {}
+								}
+								
+								if (!$getblockchaininfo) {
+									echo " <font class=\"redtext\">Failed to connect on port ".$db_blockchain['rpc_port']."</font></b><br/>";
+									echo "<pre>Make sure the coin daemon is running.</pre>\n";
+									echo "<br/>\n";
+								}
+								else {
 									echo " <font class=\"greentext\">Connected on port ".$db_blockchain['rpc_port']."</font></b><br/>\n";
 									echo "<pre>getblockchaininfo()\n";
 									print_r($getblockchaininfo);
@@ -241,11 +252,6 @@ if ($app->running_as_admin()) {
 									echo "Next, please reset and synchronize this game.<br/>\n";
 									echo "<a class=\"btn btn-primary\" target=\"_blank\" href=\"/scripts/sync_blockchain_initial.php?key=".$GLOBALS['cron_key_string']."&blockchain_id=".$db_blockchain['blockchain_id']."\">Reset & synchronize ".$db_blockchain['blockchain_name']."</a>\n";
 									echo "<br/><br/>\n";
-								}
-								else {
-									echo " <font class=\"redtext\">Failed to connect on port ".$db_blockchain['rpc_port']."</font></b><br/>";
-									echo "<pre>Make sure the coin daemon is running.</pre>\n";
-									echo "<br/>\n";
 								}
 							}
 							else { ?>
