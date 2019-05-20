@@ -2,8 +2,10 @@
 class Blockchain {
 	public $db_blockchain;
 	public $app;
+	public $coin_rpc;
 	
 	public function __construct(&$app, $blockchain_id) {
+		$this->coin_rpc = false;
 		$this->app = $app;
 		$r = $this->app->run_query("SELECT * FROM blockchains WHERE blockchain_id='".$blockchain_id."';");
 		if ($r->rowCount() == 1) $this->db_blockchain = $r->fetch();
@@ -14,18 +16,18 @@ class Blockchain {
 			$this->authoritative_issuer = $this->app->run_query("SELECT * FROM card_issuers WHERE issuer_id='".$this->db_blockchain['authoritative_issuer_id']."';")->fetch();
 		}
 		if ($this->db_blockchain['first_required_block'] === "") {
-			if ($this->db_blockchain['p2p_mode'] == "rpc") {
-				if (!empty($this->db_blockchain['rpc_username']) && !empty($this->db_blockchain['rpc_password'])) {
-					try {
-						$coin_rpc = new jsonRPCClient('http://'.$this->db_blockchain['rpc_username'].':'.$this->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->db_blockchain['rpc_port'].'/');
-						$this->set_first_required_block($coin_rpc);
-					}
-					catch (Exception $e) {}
+			$this->set_first_required_block();
+		}
+	}
+	
+	public function load_coin_rpc() {
+		if ($this->coin_rpc) {}
+		else if ($this->db_blockchain['p2p_mode'] == "rpc") {
+			if (!empty($this->db_blockchain['rpc_username']) && !empty($this->db_blockchain['rpc_password'])) {
+				try {
+					$this->coin_rpc = new jsonRPCClient('http://'.$this->db_blockchain['rpc_username'].':'.$this->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->db_blockchain['rpc_port'].'/');
 				}
-			}
-			else {
-				$coin_rpc = false;
-				$this->set_first_required_block($coin_rpc);
+				catch (Exception $e) {}
 			}
 		}
 	}
@@ -177,9 +179,8 @@ class Blockchain {
 						$transaction_id = $this->add_transaction_from_web_api($db_block['block_id'], $tx);
 					}
 					
-					$coin_rpc = false;
 					$successful = true;
-					$db_transaction = $this->add_transaction($coin_rpc, $tx_hash, $db_block['block_id'], true, $successful, $i, false, $print_debug);
+					$db_transaction = $this->add_transaction($tx_hash, $db_block['block_id'], true, $successful, $i, false, $print_debug);
 					
 					if ($db_transaction['transaction_desc'] != "transaction") $coins_created += $db_transaction['amount'];
 				}
@@ -198,9 +199,10 @@ class Blockchain {
 		return $html;
 	}
 	
-	public function coind_add_block(&$coin_rpc, $block_hash, $block_height, $headers_only, $print_debug) {
+	public function coind_add_block($block_hash, $block_height, $headers_only, $print_debug) {
 		$start_time = microtime(true);
 		$html = "";
+		$this->load_coin_rpc();
 		
 		$db_block = false;
 		$q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id='".$block_height."' ORDER BY block_id ASC;";
@@ -221,9 +223,9 @@ class Blockchain {
 			$html .= $block_height." ";
 		}
 		
-		if ($coin_rpc && $db_block['locally_saved'] == 0 && !$headers_only) {
+		if ($this->coin_rpc && $db_block['locally_saved'] == 0 && !$headers_only) {
 			try {
-				$lastblock_rpc = $coin_rpc->getblock($block_hash);
+				$lastblock_rpc = $this->coin_rpc->getblock($block_hash);
 			}
 			catch (Exception $e) {
 				var_dump($e);
@@ -242,7 +244,7 @@ class Blockchain {
 				$tx_hash = $lastblock_rpc['tx'][$i];
 				$html .= $i."/".count($lastblock_rpc['tx'])." ".$tx_hash." ";
 				$successful = true;
-				$db_transaction = $this->add_transaction($coin_rpc, $tx_hash, $block_height, true, $successful, $i, false, $print_debug);
+				$db_transaction = $this->add_transaction($tx_hash, $block_height, true, $successful, $i, false, $print_debug);
 				if (!$successful) {
 					$tx_error = true;
 					$i = count($lastblock_rpc['tx']);
@@ -279,10 +281,11 @@ class Blockchain {
 		}
 	}
 	
-	public function add_transaction(&$coin_rpc, $tx_hash, $block_height, $require_inputs, &$successful, $position_in_block, $only_vout, $show_debug) {
+	public function add_transaction($tx_hash, $block_height, $require_inputs, &$successful, $position_in_block, $only_vout, $show_debug) {
 		$successful = true;
 		$start_time = microtime(true);
 		$benchmark_time = $start_time;
+		$this->load_coin_rpc();
 		
 		$add_transaction = true;
 		
@@ -332,17 +335,17 @@ class Blockchain {
 				}
 				else {
 					if ($block_height !== false) {
-						$raw_transaction = $coin_rpc->getrawtransaction($tx_hash);
-						$transaction_rpc = $coin_rpc->decoderawtransaction($raw_transaction);
+						$raw_transaction = $this->coin_rpc->getrawtransaction($tx_hash);
+						$transaction_rpc = $this->coin_rpc->decoderawtransaction($raw_transaction);
 					}
 					else {
-						$transaction_rpc = $coin_rpc->getrawtransaction($tx_hash, 1);
+						$transaction_rpc = $this->coin_rpc->getrawtransaction($tx_hash, 1);
 						if (!empty($transaction_rpc['blockhash'])) {
 							if ($this->db_blockchain['supports_getblockheader'] == 1) {
-								$rpc_block = $coin_rpc->getblockheader($transaction_rpc['blockhash']);
+								$rpc_block = $this->coin_rpc->getblockheader($transaction_rpc['blockhash']);
 							}
 							else {
-								$rpc_block = $coin_rpc->getblock($transaction_rpc['blockhash']);
+								$rpc_block = $this->coin_rpc->getblock($transaction_rpc['blockhash']);
 							}
 							$block_height = $rpc_block['height'];
 						}
@@ -377,7 +380,7 @@ class Blockchain {
 							else {
 								$child_successful = true;
 								if ($show_debug) echo "\n -> $j ";
-								$new_tx = $this->add_transaction($coin_rpc, $inputs[$j]["txid"], false, false, $child_successful, false, $inputs[$j]["vout"], $show_debug);
+								$new_tx = $this->add_transaction($inputs[$j]["txid"], false, false, $child_successful, false, $inputs[$j]["vout"], $show_debug);
 								$r = $this->app->run_query($q);
 								
 								if ($r->rowCount() > 0) {
@@ -432,7 +435,7 @@ class Blockchain {
 						while ($out_io = $r->fetch()) {
 							$outputs[$j] = array("value"=>$out_io['amount']/pow(10,$this->db_blockchain['decimal_places']));
 							
-							$output_address = $this->create_or_fetch_address($out_io['address'], true, false, false, true, false, false);
+							$output_address = $this->create_or_fetch_address($out_io['address'], true, false, true, false, false);
 							$output_io_indices[$j] = $output_address['option_index'];
 							
 							$output_io_ids[$j] = $out_io['io_id'];
@@ -468,7 +471,7 @@ class Blockchain {
 								else $address_text = $outputs[$j]["scriptPubKey"]["hex"];
 								if (strlen($address_text) > 50) $address_text = substr($address_text, 0, 50);
 								
-								$output_address = $this->create_or_fetch_address($address_text, true, $coin_rpc, false, true, false, false);
+								$output_address = $this->create_or_fetch_address($address_text, true, false, true, false, false);
 								
 								$q = "INSERT INTO transaction_ios SET spend_status='";
 								if ($block_height !== false) $q .= "unspent";
@@ -654,20 +657,21 @@ class Blockchain {
 		}
 	}
 	
-	public function walletnotify(&$coin_rpc, $tx_hash, $skip_set_site_constant) {
+	public function walletnotify($tx_hash, $skip_set_site_constant) {
 		$start_time = microtime(true);
 		if (!$skip_set_site_constant) $this->app->set_site_constant('walletnotify', $tx_hash);
 		
 		$require_inputs = true;
 		$successful = true;
-		$this->add_transaction($coin_rpc, $tx_hash, false, $require_inputs, $successful, false, false, false);
+		$this->add_transaction($tx_hash, false, $require_inputs, $successful, false, false, false);
 	}
 	
-	public function sync_coind(&$coin_rpc, $print_debug) {
+	public function sync_coind($print_debug) {
 		$html = "";
 		$txt = "Running Blockchain->sync_coind() for ".$this->db_blockchain['blockchain_name']."\n";
 		if ($print_debug) echo $txt;
 		else $html .= $txt;
+		$this->load_coin_rpc();
 		
 		$last_block_id = $this->last_complete_block_id();
 		$startblock_q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id='".$last_block_id."';";
@@ -675,7 +679,7 @@ class Blockchain {
 		
 		if ($startblock_r->rowCount() == 0) {
 			if ($last_block_id == 0) {
-				$this->add_genesis_block($coin_rpc);
+				$this->add_genesis_block();
 				$startblock_r = $this->app->run_query($startblock_q);
 			}
 			else {
@@ -690,8 +694,8 @@ class Blockchain {
 			$last_block = $startblock_r->fetch();
 			
 			if ($this->db_blockchain['p2p_mode'] == "rpc" && $last_block['block_hash'] == "") {
-				$last_block_hash = $coin_rpc->getblockhash((int) $last_block['block_id']);
-				$this->coind_add_block($coin_rpc, $last_block_hash, $last_block['block_id'], TRUE, $print_debug);
+				$last_block_hash = $this->coin_rpc->getblockhash((int) $last_block['block_id']);
+				$this->coind_add_block($last_block_hash, $last_block['block_id'], TRUE, $print_debug);
 				$last_block = $this->app->run_query("SELECT * FROM blocks WHERE internal_block_id='".$last_block['internal_block_id']."';")->fetch();
 			}
 			
@@ -699,20 +703,20 @@ class Blockchain {
 				$txt = "Resolving potential fork on block #".$last_block['block_id']."\n";
 				if ($print_debug) echo $txt;
 				else $html .= $txt;
-				$this->resolve_potential_fork_on_block($coin_rpc, $last_block);
+				$this->resolve_potential_fork_on_block($last_block);
 			}
 			
 			$txt = "Loading new blocks...\n";
 			if ($print_debug) echo $txt;
 			else $html .= $txt;
-			$txt = $this->load_new_blocks($coin_rpc, $print_debug);
+			$txt = $this->load_new_blocks($print_debug);
 			if ($print_debug) echo $txt;
 			else $html .= $txt;
 			
 			$txt = "Loading all blocks...\n";
 			if ($print_debug) echo $txt;
 			else $html .= $txt;
-			$txt = $this->load_all_blocks($coin_rpc, TRUE, $print_debug);
+			$txt = $this->load_all_blocks(TRUE, $print_debug);
 			if ($print_debug) echo $txt;
 			else $html .= $txt;
 			
@@ -720,7 +724,7 @@ class Blockchain {
 				$txt = "Loading unconfirmed transactions...\n";
 				if ($print_debug) echo $txt;
 				else $html .= $txt;
-				$txt = $this->load_unconfirmed_transactions($coin_rpc, 30);
+				$txt = $this->load_unconfirmed_transactions(30);
 				if ($print_debug) echo $txt;
 				else $html .= $txt;
 			}
@@ -733,14 +737,15 @@ class Blockchain {
 		return $html;
 	}
 	
-	public function load_new_blocks(&$coin_rpc, $print_debug) {
+	public function load_new_blocks($print_debug) {
 		$last_block_id = $this->last_block_id();
 		$last_block = $this->app->run_query("SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id='".$last_block_id."';")->fetch();
 		$block_height = $last_block['block_id'];
+		$this->load_coin_rpc();
 		
 		if ($this->db_blockchain['p2p_mode'] == "rpc") {
 			if (!empty($last_block['block_hash'])) {
-				$rpc_block = $coin_rpc->getblock($last_block['block_hash']);
+				$rpc_block = $this->coin_rpc->getblock($last_block['block_hash']);
 				$keep_looping = true;
 				do {
 					$block_height++;
@@ -748,8 +753,8 @@ class Blockchain {
 						$keep_looping = false;
 					}
 					else {
-						$rpc_block = $coin_rpc->getblock($rpc_block['nextblockhash']);
-						$txt = $this->coind_add_block($coin_rpc, $rpc_block['hash'], $block_height, true, $print_debug);
+						$rpc_block = $this->coin_rpc->getblock($rpc_block['nextblockhash']);
+						$txt = $this->coind_add_block($rpc_block['hash'], $block_height, true, $print_debug);
 					}
 				}
 				while ($keep_looping);
@@ -782,9 +787,10 @@ class Blockchain {
 		}
 	}
 	
-	public function load_all_block_headers(&$coin_rpc, $required_blocks_only, $max_execution_time, $print_debug) {
+	public function load_all_block_headers($required_blocks_only, $max_execution_time, $print_debug) {
 		$start_time = microtime(true);
 		$html = "";
+		$this->load_coin_rpc();
 		
 		// Load headers for blocks with NULL block hash
 		$keep_looping = true;
@@ -797,8 +803,8 @@ class Blockchain {
 			if ($r->rowCount() > 0) {
 				$unknown_block = $r->fetch();
 				
-				$unknown_block_hash = $coin_rpc->getblockhash((int) $unknown_block['block_id']);
-				$this->coind_add_block($coin_rpc, $unknown_block_hash, $unknown_block['block_id'], TRUE, $print_debug);
+				$unknown_block_hash = $this->coin_rpc->getblockhash((int) $unknown_block['block_id']);
+				$this->coind_add_block($unknown_block_hash, $unknown_block['block_id'], TRUE, $print_debug);
 				
 				$html .= $unknown_block['block_id']." ";
 				if ((microtime(true)-$start_time) >= $max_execution_time) $keep_looping = false;
@@ -822,9 +828,10 @@ class Blockchain {
 		else return array();
 	}
 	
-	public function load_all_blocks(&$coin_rpc, $required_blocks_only, $print_debug) {
+	public function load_all_blocks($required_blocks_only, $print_debug) {
 		if ($required_blocks_only && $this->db_blockchain['first_required_block'] === "") {}
 		else {
+			$this->load_coin_rpc();
 			$keep_looping = true;
 			$loop_i = 0;
 			$load_at_once = 100;
@@ -845,12 +852,12 @@ class Blockchain {
 				while ($unknown_block = $loadblocks_r->fetch()) {
 					if ($this->db_blockchain['p2p_mode'] == "rpc") {
 						if (empty($unknown_block['block_hash'])) {
-							$unknown_block_hash = $coin_rpc->getblockhash((int)$unknown_block['block_id']);
+							$unknown_block_hash = $this->coin_rpc->getblockhash((int)$unknown_block['block_id']);
 							$this->app->run_query("UPDATE blocks SET block_hash=".$this->app->quote_escape($unknown_block_hash)." WHERE internal_block_id='".$unknown_block['internal_block_id']."';");
-							$this->coind_add_block($coin_rpc, $unknown_block_hash, $unknown_block['block_id'], true, $print_debug);
+							$this->coind_add_block($unknown_block_hash, $unknown_block['block_id'], true, $print_debug);
 							$unknown_block = $this->app->run_query("SELECT * FROM blocks WHERE internal_block_id='".$unknown_block['internal_block_id']."';")->fetch();
 						}
-						$this->coind_add_block($coin_rpc, $unknown_block['block_hash'], $unknown_block['block_id'], false, $print_debug);
+						$this->coind_add_block($unknown_block['block_hash'], $unknown_block['block_id'], false, $print_debug);
 					}
 					else {
 						if ($loop_i >= count($ref_api_blocks)) {
@@ -870,8 +877,9 @@ class Blockchain {
 		}
 	}
 	
-	public function resolve_potential_fork_on_block(&$coin_rpc, &$db_block) {
-		$rpc_block = $coin_rpc->getblock($db_block['block_hash']);
+	public function resolve_potential_fork_on_block(&$db_block) {
+		$this->load_coin_rpc();
+		$rpc_block = $this->coin_rpc->getblock($db_block['block_hash']);
 		
 		if ($rpc_block['confirmations'] < 0) {
 			$this->app->log_message("Detected a chain fork at block #".$db_block['block_id']);
@@ -880,7 +888,7 @@ class Blockchain {
 			$rpc_delete_block = $rpc_block;
 			$keep_looping = true;
 			do {
-				$rpc_prev_block = $coin_rpc->getblock($rpc_delete_block['previousblockhash']);
+				$rpc_prev_block = $this->coin_rpc->getblock($rpc_delete_block['previousblockhash']);
 				if ($rpc_prev_block['confirmations'] < 0) {
 					$rpc_delete_block = $rpc_prev_block;
 					$delete_block_height--;
@@ -895,25 +903,28 @@ class Blockchain {
 		}
 	}
 	
-	public function load_unconfirmed_transactions(&$coin_rpc, $max_execution_time) {
+	public function load_unconfirmed_transactions($max_execution_time) {
 		$start_time = microtime(true);
-		$unconfirmed_txs = $coin_rpc->getrawmempool();
+		$this->load_coin_rpc();
+		$unconfirmed_txs = $this->coin_rpc->getrawmempool();
 		
 		for ($i=0; $i<count($unconfirmed_txs); $i++) {
-			$this->walletnotify($coin_rpc, $unconfirmed_txs[$i], TRUE);
+			$this->walletnotify($unconfirmed_txs[$i], TRUE);
 			if ($max_execution_time && (microtime(true)-$start_time) > $max_execution_time) $i=count($unconfirmed_txs);
 		}
 		$this->app->set_site_constant('walletnotify', $unconfirmed_txs[count($unconfirmed_txs)-1]);
 	}
 	
-	public function insert_initial_blocks(&$coin_rpc) {
+	public function insert_initial_blocks() {
+		$this->load_coin_rpc();
+		
 		$r = $this->app->run_query("SELECT MAX(block_id) FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';");
 		$db_block_height = $r->fetch();
 		$db_block_height = $db_block_height['MAX(block_id)'];
 		if ((string)$db_block_height == "") $db_block_height = 0;
 		
 		if ($this->db_blockchain['p2p_mode'] == "rpc") {
-			$info = $coin_rpc->getblockchaininfo();
+			$info = $this->coin_rpc->getblockchaininfo();
 			$block_height = (int) $info['headers'];
 		}
 		else if ($this->db_blockchain['p2p_mode'] == "web_api") {
@@ -957,11 +968,10 @@ class Blockchain {
 		$this->app->run_query("DELETE FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id >= ".$block_height.";");
 	}
 	
-	public function add_genesis_block(&$input) {
+	public function add_genesis_block() {
 		$html = "";
 		
 		if ($this->db_blockchain['p2p_mode'] == "none") {
-			$game = &$input;
 			$genesis_block_hash = $this->app->random_hex_string(64);
 			$nextblock_hash = "";
 			$genesis_tx_hash = $this->app->random_hex_string(64);
@@ -975,11 +985,10 @@ class Blockchain {
 			$nextblock_hash = "";
 		}
 		else {
-			$coin_rpc = &$input;
-			$genesis_block_hash = $coin_rpc->getblockhash(0);
-			$rpc_block = new block($coin_rpc->getblock($genesis_block_hash), 0, $genesis_block_hash);
+			$this->load_coin_rpc();
+			$genesis_block_hash = $this->coin_rpc->getblockhash(0);
+			$rpc_block = new block($this->coin_rpc->getblock($genesis_block_hash), 0, $genesis_block_hash);
 			$genesis_tx_hash = $rpc_block->json_obj['tx'][0];
-			
 			$nextblock_hash = $rpc_block->json_obj['nextblockhash'];
 		}
 		
@@ -1006,7 +1015,7 @@ class Blockchain {
 		$force_is_mine = false;
 		if ($this->db_blockchain['p2p_mode'] == "none") $force_is_mine = true;
 		
-		$output_address = $this->create_or_fetch_address($genesis_address, true, false, false, false, $force_is_mine, false);
+		$output_address = $this->create_or_fetch_address($genesis_address, true, false, false, $force_is_mine, false);
 		$html .= "genesis hash: ".$genesis_block_hash."<br/>\n";
 		
 		$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', amount='".$this->db_blockchain['initial_pow_reward']."', transaction_desc='coinbase', tx_hash='".$genesis_tx_hash."', block_id='0', position_in_block=0, time_created='".time()."', num_inputs=0, num_outputs=1, has_all_inputs=1, has_all_outputs=1;";
@@ -1032,24 +1041,15 @@ class Blockchain {
 	public function unset_first_required_block() {
 		$q = "UPDATE blockchains SET first_required_block=NULL WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."';";
 		$r = $this->app->run_query($q);
-		
-		if ($this->db_blockchain['p2p_mode'] == "rpc") {
-			try {
-				$coin_rpc = new jsonRPCClient('http://'.$this->db_blockchain['rpc_username'].':'.$this->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->db_blockchain['rpc_port'].'/');
-				$this->set_first_required_block($coin_rpc);
-			}
-			catch (Exception $e) {}
-		}
-		else {
-			$coin_rpc = false;
-			$this->set_first_required_block($coin_rpc);
-		}
+
+		$this->set_first_required_block();
 	}
 	
-	public function set_first_required_block(&$coin_rpc) {
+	public function set_first_required_block() {
+		$this->load_coin_rpc();
 		$first_required_block = "";
-		if ($coin_rpc) {
-			$info = $coin_rpc->getblockchaininfo();
+		if ($this->db_blockchain['p2p_mode'] == "rpc") {
+			$info = $this->coin_rpc->getblockchaininfo();
 			$first_required_block = (int) $info['headers'];
 		}
 		else if ($this->db_blockchain['p2p_mode'] == "web_api") {
@@ -1075,12 +1075,9 @@ class Blockchain {
 	public function sync_initial($from_block_id) {
 		$html = "";
 		$start_time = microtime(true);
-		if ($this->db_blockchain['p2p_mode'] == "rpc") {
-			$coin_rpc = new jsonRPCClient('http://'.$this->db_blockchain['rpc_username'].':'.$this->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->db_blockchain['rpc_port'].'/');
-		}
-		else $coin_rpc = false;
+		$this->load_coin_rpc();
 		
-		if ($this->db_blockchain['first_required_block'] == "") $this->set_first_required_block($coin_rpc);
+		if ($this->db_blockchain['first_required_block'] == "") $this->set_first_required_block();
 		
 		$blocks = array();
 		$transactions = array();
@@ -1102,7 +1099,7 @@ class Blockchain {
 				$db_prev_block = $r->fetch();
 				
 				if ($this->db_blockchain['p2p_mode'] == "rpc") {
-					$temp_block = $coin_rpc->getblock($db_prev_block['block_hash']);
+					$temp_block = $this->coin_rpc->getblock($db_prev_block['block_hash']);
 					$current_hash = $temp_block['nextblockhash'];
 				}
 				$this->delete_blocks_from_height($block_height+1);
@@ -1118,14 +1115,14 @@ class Blockchain {
 			$this->reset_blockchain();
 			
 			if ($this->db_blockchain['p2p_mode'] == "none") {
-				$returnvals = $this->add_genesis_block($coin_rpc);
+				$returnvals = $this->add_genesis_block();
 				$current_hash = $returnvals['nextblockhash'];
 			}
 		}
 		
-		$html .= $this->insert_initial_blocks($coin_rpc);
+		$html .= $this->insert_initial_blocks();
 		$last_block_id = $this->last_block_id();
-		if ($this->db_blockchain['p2p_mode'] == "rpc") $this->set_block_hash_by_height($coin_rpc, $last_block_id);
+		if ($this->db_blockchain['p2p_mode'] == "rpc") $this->set_block_hash_by_height($last_block_id);
 		
 		$html .= "<br/>Finished inserting blocks at ".(microtime(true) - $start_time)." sec<br/>\n";
 		
@@ -1317,9 +1314,11 @@ class Blockchain {
 		return $num_transactions;
 	}
 	
-	public function set_block_hash_by_height(&$coin_rpc, $block_height) {
+	public function set_block_hash_by_height($block_height) {
+		$this->load_coin_rpc();
+		
 		try {
-			$block_hash = $coin_rpc->getblockhash((int) $block_height);
+			$block_hash = $this->coin_rpc->getblockhash((int) $block_height);
 			$q = "UPDATE blocks SET block_hash=".$this->app->quote_escape($block_hash)." WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND block_id='".$block_height."';";
 			$r = $this->app->run_query($q);
 		}
@@ -1338,7 +1337,9 @@ class Blockchain {
 		return $balance['SUM(amount)'];
 	}
 	
-	public function create_or_fetch_address($address, $check_existing, $rpc, $delete_optionless, $claimable, $force_is_mine, $account_id) {
+	public function create_or_fetch_address($address, $check_existing, $delete_optionless, $claimable, $force_is_mine, $account_id) {
+		$this->load_coin_rpc();
+		
 		if ($check_existing) {
 			$q = "SELECT * FROM addresses WHERE address=".$this->app->quote_escape($address).";";
 			$r = $this->app->run_query($q);
@@ -1350,10 +1351,10 @@ class Blockchain {
 		$option_index = $this->app->vote_identifier_to_option_index($vote_identifier);
 		
 		if ($option_index !== false || !$delete_optionless) {
-			if ($rpc || $force_is_mine) {
+			if ($this->coin_rpc || $force_is_mine) {
 				if ($force_is_mine) $is_mine=1;
 				else {
-					$validate_address = $rpc->validateaddress($address);
+					$validate_address = $this->coin_rpc->validateaddress($address);
 					
 					if (!empty($validate_address['ismine'])) $is_mine = 1;
 					else $is_mine = 0;
@@ -1548,19 +1549,17 @@ class Blockchain {
 			}
 			else {
 				$successful = false;
-				$coin_rpc = false;
+				$this->load_coin_rpc();
 				
 				if ($this->db_blockchain['p2p_mode'] == "rpc") {
-					$coin_rpc = new jsonRPCClient('http://'.$this->db_blockchain['rpc_username'].':'.$this->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->db_blockchain['rpc_port'].'/');
-					
 					try {
-						$raw_transaction = $coin_rpc->createrawtransaction($raw_txin, $raw_txout);
-						$signed_raw_transaction = $coin_rpc->signrawtransaction($raw_transaction);
-						$decoded_transaction = $coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
+						$raw_transaction = $this->coin_rpc->createrawtransaction($raw_txin, $raw_txout);
+						$signed_raw_transaction = $this->coin_rpc->signrawtransaction($raw_transaction);
+						$decoded_transaction = $this->coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
 						$tx_hash = $decoded_transaction['txid'];
-						$verified_tx_hash = $coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
+						$verified_tx_hash = $this->coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
 						
-						$this->walletnotify($coin_rpc, $verified_tx_hash, FALSE);
+						$this->walletnotify($verified_tx_hash, FALSE);
 						
 						$db_transaction = $this->app->run_query("SELECT * FROM transactions WHERE tx_hash=".$this->app->quote_escape($tx_hash).";")->fetch();
 						
@@ -1572,7 +1571,7 @@ class Blockchain {
 						return false;
 					}
 				}
-				$this->add_transaction($coin_rpc, $tx_hash, $block_id, true, $successful, false, false, false);
+				$this->add_transaction($tx_hash, $block_id, true, $successful, false, false, false);
 				
 				if ($this->db_blockchain['p2p_mode'] == "web_api") {
 					$this->web_api_push_transaction($transaction_id);
@@ -1591,7 +1590,6 @@ class Blockchain {
 	public function new_block(&$log_text) {
 		// This function only runs for blockchains with p2p_mode='none'
 		$last_block_id = (int) $this->last_block_id();
-		$coin_rpc = false;
 		
 		$q = "INSERT INTO blocks SET blockchain_id='".$this->db_blockchain['blockchain_id']."', block_id='".($last_block_id+1)."', block_hash='".$this->app->random_hex_string(64)."', time_created='".time()."', time_loaded='".time()."', time_mined='".time()."', locally_saved=0;";
 		$r = $this->app->run_query($q);
@@ -1609,7 +1607,7 @@ class Blockchain {
 		
 		$ref_account = false;
 		$mined_address_str = $this->app->random_string(34);
-		$mined_address = $this->create_or_fetch_address($mined_address_str, false, false, false, false, true, false);
+		$mined_address = $this->create_or_fetch_address($mined_address_str, false, false, false, true, false);
 		
 		$mined_error = false;
 		$mined_transaction_id = $this->create_transaction('coinbase', array($this->db_blockchain['initial_pow_reward']), $created_block_id, false, array($mined_address['address_id']), 0, $mined_error);
@@ -1630,7 +1628,7 @@ class Blockchain {
 				$fee_amount = $coins_in - $coins_out;
 				
 				$successful = true;
-				$db_transaction = $this->add_transaction($coin_rpc, $unconfirmed_tx['tx_hash'], $created_block_id, true, $successful, $num_transactions, false, false);
+				$db_transaction = $this->add_transaction($unconfirmed_tx['tx_hash'], $created_block_id, true, $successful, $num_transactions, false, false);
 				if (!$successful) {
 					$tx_error = true;
 					$log_text .= "failed to add tx ".$unconfirmed_tx['tx_hash']."<br/>\n";
@@ -1744,7 +1742,7 @@ class Blockchain {
 		
 		for ($j=0; $j<count($tx['outputs']); $j++) {
 			$tx_output = get_object_vars($tx['outputs'][$j]);
-			$db_address = $this->create_or_fetch_address($tx_output['address'], true, false, false, false, false, false);
+			$db_address = $this->create_or_fetch_address($tx_output['address'], true, false, false, false, false);
 			
 			$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->db_blockchain['blockchain_id']."', out_index='".$j."', address_id='".$db_address['address_id']."', option_index=".$this->app->quote_escape($tx_output['option_index']).", create_block_id='".$block_height."', create_transaction_id='".$transaction_id."', amount=".$this->app->quote_escape($tx_output['amount']);
 			if ($block_height !== false) ", spend_status='unspent'";

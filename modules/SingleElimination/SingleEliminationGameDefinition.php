@@ -289,7 +289,7 @@ class SingleEliminationGameDefinition {
 		else return false;
 	}
 	
-	public function set_event_outcome(&$game, &$coin_rpc, $payout_event) {
+	public function set_event_outcome(&$game, &$payout_event) {
 		$q = "SELECT *, SUM(ob.score) AS score FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id LEFT JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id='".$payout_event->db_event['event_id']."' GROUP BY o.option_id ORDER BY o.option_index ASC;";
 		$r = $this->app->run_query($q);
 		

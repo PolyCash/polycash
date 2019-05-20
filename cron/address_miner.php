@@ -18,21 +18,14 @@ if ($app->running_as_admin()) {
 		echo "Looping through ".$r->rowCount()." games.<br/>\n";
 		
 		while ($db_game = $r->fetch()) {
-			if (empty($blockchains[$db_game['blockchain_id']])) $blockchains[$db_game['blockchain_id']] = new Blockchain($app, $db_game['blockchain_id']);
+			if (empty($blockchains[$db_game['blockchain_id']])) {
+				$blockchains[$db_game['blockchain_id']] = new Blockchain($app, $db_game['blockchain_id']);
+				$blockchains[$db_game['blockchain_id']]->load_coin_rpc();
+			}
 			$game = new Game($blockchains[$db_game['blockchain_id']], $db_game['game_id']);
 			
 			if ($game->db_game['min_unallocated_addresses'] > 0) {
-				if (!empty($blockchains[$db_game['blockchain_id']]->db_blockchain['rpc_username'])) {
-					try {
-						$coin_rpc = new jsonRPCClient('http://'.$blockchains[$db_game['blockchain_id']]->db_blockchain['rpc_username'].':'.$blockchains[$db_game['blockchain_id']]->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchains[$db_game['blockchain_id']]->db_blockchain['rpc_port'].'/');
-					}
-					catch (Exception $e) {
-						$coin_rpc = false;
-					}
-				}
-				else $coin_rpc = false;
-				
-				echo $game->generate_voting_addresses($coin_rpc, 10);
+				echo $game->generate_voting_addresses(10);
 			}
 		}
 		

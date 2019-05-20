@@ -17,18 +17,19 @@ if ($thisuser) {
 		if ($action == "by_rpc_account") {
 			if ($app->user_is_admin($thisuser)) {
 				if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
-					if (!empty($blockchain->db_blockchain['rpc_username']) && !empty($blockchain->db_blockchain['rpc_password'])) {
+					$blockchain->load_coin_rpc();
+					
+					if ($blockchain->coin_rpc) {
 						$error = false;
 						try {
-							$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
-							$coin_rpc->getwalletinfo();
+							$blockchain->coin_rpc->getwalletinfo();
 						}
 						catch (Exception $e) {
 							$error = true;
 						}
 						
 						if (!$error) {
-							$account_addresses = $coin_rpc->getaddressesbyaccount($account_name);
+							$account_addresses = $blockchain->coin_rpc->getaddressesbyaccount($account_name);
 							
 							if (count($account_addresses) > 0) {
 								$qq = "INSERT INTO currency_accounts SET user_id='".$thisuser->db_user['user_id']."', currency_id='".$blockchain->currency_id()."', account_name=".$app->quote_escape($blockchain->db_blockchain['blockchain_name']." account: ".$account_name).", time_created='".time()."';";
@@ -36,7 +37,7 @@ if ($thisuser) {
 								$account_id = $app->last_insert_id();
 								
 								for ($i=0; $i<count($account_addresses); $i++) {
-									$blockchain->create_or_fetch_address($account_addresses[$i], true, $coin_rpc, false, false, false, $account_id);
+									$blockchain->create_or_fetch_address($account_addresses[$i], true, $blockchain->coin_rpc, false, false, false, $account_id);
 								}
 								$app->output_message(1, '/accounts/?account_id='.$account_id, false);
 							}

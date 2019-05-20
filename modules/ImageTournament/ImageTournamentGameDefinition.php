@@ -189,7 +189,7 @@ class ImageTournamentGameDefinition {
 		return $event_name;
 	}
 	
-	public function set_event_outcome(&$game, &$coin_rpc, $payout_event) {
+	public function set_event_outcome(&$game, $payout_event) {
 		$log_text = $payout_event->set_outcome_from_db(true);
 		$winning_option = $this->app->run_query("SELECT o.*, en.* FROM events ev JOIN options o ON ev.winning_option_id=o.option_id LEFT JOIN entities en ON o.entity_id=en.entity_id WHERE ev.event_id='".$payout_event->db_event['event_id']."';")->fetch();
 		

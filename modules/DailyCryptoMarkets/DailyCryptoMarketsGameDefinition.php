@@ -158,7 +158,7 @@ class DailyCryptoMarketsGameDefinition {
 		return $events;
 	}
 	
-	public function set_event_outcome(&$game, &$coin_rpc, &$payout_event) {
+	public function set_event_outcome(&$game, &$payout_event) {
 		if ((string)$payout_event->db_event['track_payout_price'] == "") {
 			$payout_block = $game->blockchain->fetch_block_by_id($payout_event->db_event['event_payout_block']);
 			

@@ -830,26 +830,18 @@ class App {
 			if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
 				if (empty($blockchain->db_blockchain['rpc_username']) || empty($blockchain->db_blockchain['rpc_password'])) $save_method = "skip";
 				else {
-					try {
-						$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
-						
-						$address_text = $coin_rpc->getnewaddress();
-						$save_method = "wallet.dat";
-					}
-					catch (Exception $e) {
-						/*if (empty($GLOBALS['rsa_pub_key']) || empty($keySet['pubAdd']) || empty($keySet['privWIF'])) {
-							$this->log_message('Error generating a payment address. Please visit /install.php and then set $GLOBALS["rsa_pub_key"] in includes/config.php');
+					$blockchain->load_coin_rpc();
+					
+					if ($blockchain->coin_rpc) {
+						try {
+							$address_text = $blockchain->coin_rpc->getnewaddress();
+							$save_method = "wallet.dat";
+						}
+						catch (Exception $e) {
 							$save_method = "skip";
 						}
-						else if ($currency['short_name'] == "bitcoin") {
-							$keygen = new bitcoin();
-							$keySet = $keygen->getNewKeySet();
-							$address_text = $keySet['pubAdd'];
-							$save_method = "db";
-						}
-						else */
-						$save_method = "skip";
 					}
+					else $save_method = "skip";
 				}
 			}
 			else {
@@ -859,7 +851,7 @@ class App {
 			
 			if ($save_method == "skip") return false;
 			else {
-				$db_address = $blockchain->create_or_fetch_address($address_text, true, false, false, false, true, false);
+				$db_address = $blockchain->create_or_fetch_address($address_text, true, false, false, true, false);
 				
 				if ($reject_destroy_addresses && $db_address['is_destroy_address'] == 1) return $this->new_address_key($currency_id, $account, $reject_destroy_addresses);
 				else {
@@ -1990,8 +1982,6 @@ class App {
 			if ($db_blockchain) {
 				$blockchain = new Blockchain($this, $db_blockchain['blockchain_id']);
 				
-				$coin_rpc = false;
-				
 				$game_def->url_identifier = $this->normalize_uri_part($game_def->url_identifier);
 				
 				if (!empty($game_def->url_identifier)) {
@@ -2728,7 +2718,7 @@ class App {
 			
 			if ($io_r->rowCount() > 0) {
 				$io = $io_r->fetch();
-				$db_address = $blockchain->create_or_fetch_address($address, true, false, false, false, false, false);
+				$db_address = $blockchain->create_or_fetch_address($address, true, false, false, false, false);
 				
 				$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
 				$amounts = array($io['amount']-$fee_amount);

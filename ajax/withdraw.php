@@ -56,16 +56,17 @@ if ($thisuser && $game) {
 					
 					$address_ok = false;
 					
+					$game->blockchain->load_coin_rpc();
+					
 					if ($game->blockchain->db_blockchain['p2p_mode'] == "rpc") {
-						$coin_rpc = new jsonRPCClient('http://'.$game->blockchain->db_blockchain['rpc_username'].':'.$game->blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$game->blockchain->db_blockchain['rpc_port'].'/');
-						$validate_address = $coin_rpc->validateaddress($address_text);
+						$validate_address = $game->blockchain->coin_rpc->validateaddress($address_text);
 						$address_ok = $validate_address['isvalid'];
 						if ($address_ok) {
-							$db_address = $game->blockchain->create_or_fetch_address($address_text, true, $coin_rpc, false, false, false, false);
+							$db_address = $game->blockchain->create_or_fetch_address($address_text, true, false, false, false, false);
 						}
 					}
 					else {
-						$db_address = $game->blockchain->create_or_fetch_address($address_text, true, false, false, false, false, false);
+						$db_address = $game->blockchain->create_or_fetch_address($address_text, true, false, false, false, false);
 						$address_ok = true;
 					}
 					

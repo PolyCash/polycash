@@ -127,13 +127,15 @@ class CryptoDuelsGameDefinition {
 		return $events;
 	}
 	
-	public function set_event_outcome(&$game, &$coin_rpc, $payout_event) {
+	public function set_event_outcome(&$game, $payout_event) {
 		if ($game->blockchain->db_blockchain['p2p_mode'] == "rpc") {
-			$start_block_hash = $coin_rpc->getblockhash((int)$payout_event->db_event['event_starting_block']);
-			$final_block_hash = $coin_rpc->getblockhash((int)$payout_event->db_event['event_final_block']);
+			$game->blockchain->load_coin_rpc();
 			
-			$start_block = $coin_rpc->getblock($start_block_hash);
-			$final_block = $coin_rpc->getblock($final_block_hash);
+			$start_block_hash = $game->blockchain->coin_rpc->getblockhash((int)$payout_event->db_event['event_starting_block']);
+			$final_block_hash = $game->blockchain->coin_rpc->getblockhash((int)$payout_event->db_event['event_final_block']);
+			
+			$start_block = $game->blockchain->coin_rpc->getblock($start_block_hash);
+			$final_block = $game->blockchain->coin_rpc->getblock($final_block_hash);
 			
 			$start_time = $start_block['time'];
 			$final_time = $final_block['time'];

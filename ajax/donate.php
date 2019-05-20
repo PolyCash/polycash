@@ -13,10 +13,9 @@ if ($action == "load") {
 	$keySet = $keygen->getNewKeySet();
 	$address_text = $keySet['pubAdd'];
 	$address_secret = $keySet['privWIF'];
-	$coin_rpc = false;
 	$access_key = $app->random_string(20);
 	
-	$db_address = $blockchain->create_or_fetch_address($address_text, true, $coin_rpc, false, true, true, false);
+	$db_address = $blockchain->create_or_fetch_address($address_text, true, false, true, true, false);
 	
 	$q = "INSERT INTO address_keys SET access_key=".$app->quote_escape($access_key).", pub_key=".$app->quote_escape($address_text).", priv_key=".$app->quote_escape($address_secret).", save_method='db', currency_id='".$bitcoin_currency['currency_id']."', address_id='".$db_address['address_id']."';";
 	$r = $app->run_query($q);

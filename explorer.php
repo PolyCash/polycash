@@ -1294,13 +1294,16 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					echo "</div>\n";
 				}
 				else if (!empty($game) && $explore_mode == "my_bets") {
-					if (!empty($_REQUEST['user_game_id'])) {
-						$q = "SELECT * FROM user_games WHERE user_game_id='".((int)$_REQUEST['user_game_id'])."' AND user_id='".$thisuser->db_user['user_id']."';";
-						$r = $app->run_query($q);
-						if ($r->rowCount() > 0) $user_game = $r->fetch();
-						else $user_game = false;
+					if ($thisuser) {
+						if (!empty($_REQUEST['user_game_id'])) {
+							$q = "SELECT * FROM user_games WHERE user_game_id='".((int)$_REQUEST['user_game_id'])."' AND user_id='".$thisuser->db_user['user_id']."';";
+							$r = $app->run_query($q);
+							if ($r->rowCount() > 0) $user_game = $r->fetch();
+							else $user_game = false;
+						}
+						else $user_game = $thisuser->ensure_user_in_game($game, false);
 					}
-					else $user_game = $thisuser->ensure_user_in_game($game, false);
+					else $user_game = false;
 					
 					if (empty($thisuser)) echo "<br/><br/>\n<p>You must be logged in to view this page. <a href=\"/wallet/".$game->db_game['url_identifier']."/\">Log in</a></p>\n";
 					else if (!$user_game) echo "<br/><br/>\n<p>Invalid user game selected.</p>\n";

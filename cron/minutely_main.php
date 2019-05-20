@@ -21,7 +21,6 @@ if ($app->running_as_admin()) {
 		
 		$blockchains = array();
 		$real_games = array();
-		$coin_rpcs = array();
 		$game_id2real_game_i = array();
 		$game_id2private_game_i = array();
 		$private_blockchain_ids = array();
@@ -57,6 +56,17 @@ if ($app->running_as_admin()) {
 		while ($db_game = $r->fetch()) {
 			if (empty($blockchains[$db_game['blockchain_id']])) {
 				$blockchains[$db_game['blockchain_id']] = new Blockchain($app, $db_game['blockchain_id']);
+				$blockchains[$db_game['blockchain_id']]->load_coin_rpc();
+				
+				if ($blockchains[$db_game['blockchain_id']]->coin_rpc) {
+					try {
+						$getblockchaininfo = $blockchains[$db_game['blockchain_id']]->coin_rpc->getblockchaininfo();
+						
+						$qq = "UPDATE blockchains SET rpc_last_time_connected='".time()."', block_height='".$getblockchaininfo['headers']."' WHERE blockchain_id='".$db_game['blockchain_id']."';";
+						$rr = $app->run_query($qq);
+					}
+					catch (Exception $e) {}
+				}
 				
 				if ($db_game['p2p_mode'] == "rpc") array_push($public_blockchain_ids, $db_game['blockchain_id']);
 				else array_push($private_blockchain_ids, $db_game['blockchain_id']);
@@ -66,18 +76,6 @@ if ($app->running_as_admin()) {
 				$game_id2real_game_i[$db_game['game_id']] = $real_game_i;
 				$real_games[$real_game_i] = new Game($blockchains[$db_game['blockchain_id']], $db_game['game_id']);
 				
-				try {
-					$coin_rpcs[$real_game_i] = new jsonRPCClient('http://'.$db_game['rpc_username'].':'.$db_game['rpc_password'].'@127.0.0.1:'.$db_game['rpc_port'].'/');
-					$getblockchaininfo = $coin_rpcs[$real_game_i]->getblockchaininfo();
-				}
-				catch (Exception $e) {
-					$coin_rpcs[$real_game_i] = false;
-				}
-				
-				if ($coin_rpcs[$real_game_i]) {
-					$qq = "UPDATE blockchains SET rpc_last_time_connected='".time()."', block_height='".$getblockchaininfo['headers']."' WHERE blockchain_id='".$db_game['blockchain_id']."';";
-					$rr = $app->run_query($qq);
-				}
 				$real_game_i++;
 			}
 			else {
@@ -231,7 +229,7 @@ if ($app->running_as_admin()) {
 			}
 			catch (Exception $e) {
 				var_dump($e);
-				die("An error occurred when attempting a coin RPC call.\n");
+				die("An error occurred in the game loop.\n");
 			}
 		}
 

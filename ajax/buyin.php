@@ -49,7 +49,7 @@ if ($thisuser && $game) {
 				}
 				else {
 					$buyin_currency = $app->run_query("SELECT * FROM currencies WHERE blockchain_id='".$game->db_game['blockchain_id']."';")->fetch();
-					$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false, false);
+					$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false);
 					$escrow_value = $game->escrow_value(false)/pow(10, $game->db_game['decimal_places']);
 					$pay_to_account = $thisuser->fetch_currency_account($buyin_currency['currency_id']);
 				}

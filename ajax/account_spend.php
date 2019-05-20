@@ -30,8 +30,7 @@ if ($thisuser) {
 						if ($amount+$fee <= $account_balance) {
 							$amount_sum = 0;
 							
-							$rpc = false;
-							$db_address = $blockchain->create_or_fetch_address($address, true, $rpc, false, false, false, false);
+							$db_address = $blockchain->create_or_fetch_address($address, true, false, false, false, false);
 							
 							$q = "SELECT io.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND io.spend_status='unspent' AND k.account_id='".$db_account['account_id']."' AND io.create_block_id IS NOT NULL;";
 							$r = $app->run_query($q);
@@ -106,15 +105,15 @@ if ($thisuser) {
 						$address_text = $_REQUEST['address'];
 						
 						$user_game = $thisuser->ensure_user_in_game($game, false);
-						$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false, false);
+						$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false);
 						
 						if ($address_text == "new") {
 							$game_currency_account = $app->fetch_account_by_id($user_game['account_id']);
 							$color_address = $app->new_address_key($game->blockchain->currency_id(), $game_currency_account);
 						}
 						else {
-							$coin_rpc = new jsonRPCClient('http://'.$game->blockchain->db_blockchain['rpc_username'].':'.$game->blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$game->blockchain->db_blockchain['rpc_port'].'/');
-							$color_address = $game->blockchain->create_or_fetch_address($address_text, true, $coin_rpc, false, false, false, false);
+							$game->blockchain->load_coin_rpc();
+							$color_address = $game->blockchain->create_or_fetch_address($address_text, true, false, false, false, false);
 						}
 						
 						$error_message = false;
@@ -235,13 +234,11 @@ if ($thisuser) {
 				$key_account = $r->fetch();
 				
 				$blockchain = new Blockchain($app, $db_io['blockchain_id']);
-				
-				$coin_rpc = false;
+				$blockchain->load_coin_rpc();
 				
 				if ($blockchain->db_blockchain['p2p_mode'] == "rpc") {
 					try {
-						$coin_rpc = new jsonRPCClient('http://'.$blockchain->db_blockchain['rpc_username'].':'.$blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$blockchain->db_blockchain['rpc_port'].'/');
-						$info = $coin_rpc->getwalletinfo();
+						$info = $blockchain->coin_rpc->getwalletinfo();
 					}
 					catch (Exception $e) {
 						$app->output_message(8, "Error: RPC connection failed.", false);
@@ -259,7 +256,7 @@ if ($thisuser) {
 					if ($db_io['amount'] >= $amount+$fee_amount) {
 						$remainder_amount = $db_io['amount']-$amount-$fee_amount;
 						
-						$db_address = $blockchain->create_or_fetch_address($address, true, $coin_rpc, false, false, false, false);
+						$db_address = $blockchain->create_or_fetch_address($address, true, false, false, false, false);
 						
 						$amounts = array($amount);
 						$address_ids = array($db_address['address_id']);
@@ -289,7 +286,7 @@ if ($thisuser) {
 						$amount = $amount*pow(10, $game->db_game['decimal_places']);
 						$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
 						
-						$db_address = $blockchain->create_or_fetch_address($address, true, $coin_rpc, false, false, false, false);
+						$db_address = $blockchain->create_or_fetch_address($address, true, false, false, false, false);
 						
 						$coloredcoins_per_coin = $io_game['SUM(gio.colored_amount)']/($db_io['amount']-$fee_amount);
 						$io_amount = ceil($amount/$coloredcoins_per_coin);

@@ -223,11 +223,12 @@ class Game {
 				$rpc_error = false;
 				
 				if ($this->blockchain->db_blockchain['p2p_mode'] == "rpc") {
-					$coin_rpc = new jsonRPCClient('http://'.$this->blockchain->db_blockchain['rpc_username'].':'.$this->blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->blockchain->db_blockchain['rpc_port'].'/');
+					$this->blockchain->load_coin_rpc();
+					
 					try {
-						$raw_transaction = $coin_rpc->createrawtransaction($raw_txin, $raw_txout);
-						$signed_raw_transaction = $coin_rpc->signrawtransaction($raw_transaction);
-						$decoded_transaction = $coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
+						$raw_transaction = $this->blockchain->coin_rpc->createrawtransaction($raw_txin, $raw_txout);
+						$signed_raw_transaction = $this->blockchain->coin_rpc->signrawtransaction($raw_transaction);
+						$decoded_transaction = $this->blockchain->coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
 						$tx_hash = $decoded_transaction['txid'];
 					}
 					catch (Exception $e) {
@@ -237,14 +238,14 @@ class Game {
 					
 					if (!empty($tx_hash)) {
 						try {
-							$verified_tx_hash = $coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
+							$verified_tx_hash = $this->blockchain->coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
 						}
 						catch (Exception $e) {
 							$rpc_error = true;
 						}
 						
 						if (!$rpc_error) {
-							$this->blockchain->walletnotify($coin_rpc, $verified_tx_hash, FALSE);
+							$this->blockchain->walletnotify($verified_tx_hash, FALSE);
 							$this->update_option_votes();
 							
 							$db_transaction = $this->blockchain->app->run_query("SELECT * FROM transactions WHERE tx_hash=".$this->blockchain->app->quote_escape($tx_hash).";")->fetch();
@@ -263,8 +264,8 @@ class Game {
 				}
 				else {
 					$successful = false;
-					$coin_rpc = false;
-					$this->blockchain->add_transaction($coin_rpc, $new_tx_hash, $block_id, true, $successful, 0, false, false);
+					$this->blockchain->load_coin_rpc();
+					$this->blockchain->add_transaction($new_tx_hash, $block_id, true, $successful, 0, false, false);
 					
 					if ($this->blockchain->db_blockchain['p2p_mode'] == "web_api") {
 						$this->blockchain->web_api_push_transaction($transaction_id);
@@ -1065,9 +1066,9 @@ class Game {
 		
 		if ($this->blockchain->db_blockchain['p2p_mode'] == "rpc") {
 			try {
-				$coin_rpc = new jsonRPCClient('http://'.$this->blockchain->db_blockchain['rpc_username'].':'.$this->blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->blockchain->db_blockchain['rpc_port'].'/');
-				$last_block_hash = $coin_rpc->getblockhash((int) $this->db_game['game_starting_block']);
-				$rpc_block = $coin_rpc->getblock($last_block_hash);
+				$this->blockchain->load_coin_rpc();
+				$last_block_hash = $this->blockchain->coin_rpc->getblockhash((int) $this->db_game['game_starting_block']);
+				$rpc_block = $this->blockchain->coin_rpc->getblock($last_block_hash);
 				$game_start_time = $rpc_block['time'];
 			}
 			catch (Exception $e) {
@@ -1089,7 +1090,7 @@ class Game {
 	
 	public function process_buyin_transaction($transaction) {
 		if ((string)$this->db_game['game_starting_block'] !== "" && !empty($this->db_game['escrow_address'])) {
-			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false, false);
+			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
 			
 			$io_q = "SELECT COUNT(*) FROM transaction_ios WHERE create_transaction_id='".$transaction['transaction_id']."' AND address_id='".$escrow_address['address_id']."';";
 			$io_r = $this->blockchain->app->run_query($io_q);
@@ -1145,7 +1146,7 @@ class Game {
 	public function escrow_value($block_id) {
 		if (!$block_id) $block_id = $this->blockchain->last_block_id();
 		
-		$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false, false);
+		$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
 		
 		$value = $this->blockchain->address_balance_at_block($escrow_address, $block_id);
 		
@@ -1905,9 +1906,10 @@ class Game {
 		return $this->db_game['default_effectiveness_param1'];
 	}
 	
-	public function generate_voting_addresses(&$coin_rpc, $time_limit_seconds) {
+	public function generate_voting_addresses($time_limit_seconds) {
 		$log_text = "";
 		$start_time = microtime(true);
+		$this->blockchain->load_coin_rpc();
 		
 		$option_index_range = $this->option_index_range();
 		
@@ -1918,11 +1920,11 @@ class Game {
 		if ($ref_num_addr < $this->db_game['min_unallocated_addresses']) {
 			$log_text .= "Need ".($this->db_game['min_unallocated_addresses']-$ref_num_addr)." addresses for option index #".$option_index_range[1]." in ".$this->db_game['name']." (".$time_limit_seconds." seconds)\n";
 			
-			if ($coin_rpc) {
+			if ($this->blockchain->coin_rpc) {
 				$new_voting_addr_count = 0;
 				do {
-					$temp_address = $coin_rpc->getnewaddress();
-					$new_addr_db = $this->blockchain->create_or_fetch_address($temp_address, false, $coin_rpc, false, false, true, false);
+					$temp_address = $this->blockchain->coin_rpc->getnewaddress();
+					$new_addr_db = $this->blockchain->create_or_fetch_address($temp_address, false, false, false, true, false);
 				}
 				while (microtime(true) <= $start_time+$time_limit_seconds);
 			}
@@ -2368,7 +2370,7 @@ class Game {
 			}
 			
 			if ($this->db_game['buyin_policy'] != "none") {
-				$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false, false);
+				$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
 				
 				$buyin_q = "SELECT * FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.create_block_id='".$block_height."' AND io.address_id='".$escrow_address['address_id']."' GROUP BY t.transaction_id;";
 				$buyin_r = $this->blockchain->app->run_query($buyin_q);
@@ -2559,16 +2561,14 @@ class Game {
 				for ($i=0; $i<count($payout_events); $i++) {
 					if (!empty($this->module) && method_exists($this->module, "set_event_outcome")) {
 						if ($this->blockchain->db_blockchain['p2p_mode'] == "rpc") {
-							try {
-								$coin_rpc = new jsonRPCClient('http://'.$this->blockchain->db_blockchain['rpc_username'].':'.$this->blockchain->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->blockchain->db_blockchain['rpc_port'].'/');
-							}
-							catch (Exception $e) {
+							$this->blockchain->load_coin_rpc();
+							
+							if (!$this->blockchain->coin_rpc) {
 								echo "Error, failed to load RPC connection for ".$this->blockchain->db_blockchain['blockchain_name'].".<br/>\n";
 							}
 						}
-						else $coin_rpc = false;
 						
-						$log_text .= $this->module->set_event_outcome($this, $coin_rpc, $payout_events[$i]);
+						$log_text .= $this->module->set_event_outcome($this, $payout_events[$i]);
 					}
 					else $log_text .= $payout_events[$i]->set_outcome_from_db(true);
 					
@@ -2817,7 +2817,8 @@ class Game {
 					if ($current_leverage && $current_leverage != 1) $html .= " &nbsp; (".$this->blockchain->app->format_bignum($current_leverage)."X leverage)\n";
 					$html .= "<br/>\n";
 					
-					$pct_gain = 100*($net_delta/($io['destroy_amount']+$inflation_stake));
+					if ($io['destroy_amount']+$inflation_stake > 0) $pct_gain = 100*($net_delta/($io['destroy_amount']+$inflation_stake));
+					else $pct_gain = 0;
 					
 					if ($net_delta < 0) $html .= '<font class="redtext">Net loss of ';
 					else $html .= '<font class="greentext">Net gain of ';
@@ -3052,7 +3053,7 @@ class Game {
 	
 	public function process_sellouts_in_block($block_id) {
 		if ($this->db_game['sellout_policy'] == "on") {
-			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false, false);
+			$escrow_address = $this->blockchain->create_or_fetch_address($this->db_game['escrow_address'], true, false, false, false, false);
 			
 			// Identify sellout transactions paid into escrow & create records in game_sellouts table
 			$q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE io.blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND t.block_id = ".$block_id." AND io.address_id='".$escrow_address['address_id']."' GROUP BY t.transaction_id;";

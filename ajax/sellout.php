@@ -34,7 +34,7 @@ if ($thisuser && $game) {
 						//$game_sale_account = $game->check_set_game_sale_account($thisuser);
 						$sellout_blockchain = new Blockchain($app, $sellout_currency['blockchain_id']);
 						
-						$db_receive_address = $sellout_blockchain->create_or_fetch_address($receive_address, true, false, false, true, false, false);
+						$db_receive_address = $sellout_blockchain->create_or_fetch_address($receive_address, true, false, true, false, false);
 						
 						if ($escrow_value > 0) {
 							$exchange_rate = $coins_in_existence/$escrow_value;
