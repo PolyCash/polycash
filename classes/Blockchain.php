@@ -25,7 +25,7 @@ class Blockchain {
 		else if ($this->db_blockchain['p2p_mode'] == "rpc") {
 			if (!empty($this->db_blockchain['rpc_username']) && !empty($this->db_blockchain['rpc_password'])) {
 				try {
-					$this->coin_rpc = new jsonRPCClient('http://'.$this->db_blockchain['rpc_username'].':'.$this->db_blockchain['rpc_password'].'@127.0.0.1:'.$this->db_blockchain['rpc_port'].'/');
+					$this->coin_rpc = new jsonRPCClient('http://'.$this->db_blockchain['rpc_username'].':'.$this->db_blockchain['rpc_password'].'@'.$this->db_blockchain['rpc_host'].':'.$this->db_blockchain['rpc_port'].'/');
 				}
 				catch (Exception $e) {}
 			}

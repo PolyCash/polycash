@@ -55,10 +55,11 @@ if ($app->running_as_admin()) {
 				
 				if ($r->rowCount() == 1) {
 					$temp_blockchain = $r->fetch();
+					$rpc_host = $_REQUEST['rpc_host'];
 					$rpc_username = $_REQUEST['rpc_username'];
 					$rpc_password = $_REQUEST['rpc_password'];
 					$rpc_port = (int) $_REQUEST['rpc_port'];
-					$r = $app->run_query("UPDATE blockchains SET rpc_username=".$app->quote_escape($rpc_username).", rpc_password=".$app->quote_escape($rpc_password).", rpc_port=".$app->quote_escape($rpc_port)." WHERE blockchain_id=".$temp_blockchain['blockchain_id'].";");
+					$r = $app->run_query("UPDATE blockchains SET rpc_host=".$app->quote_escape($rpc_host).", rpc_username=".$app->quote_escape($rpc_username).", rpc_password=".$app->quote_escape($rpc_password).", rpc_port=".$app->quote_escape($rpc_port)." WHERE blockchain_id=".$temp_blockchain['blockchain_id'].";");
 				}
 				else die("Error, please manually save RPC parameters in the database.");
 			}
@@ -225,7 +226,11 @@ if ($app->running_as_admin()) {
 						$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
 						
 						if ($db_blockchain['p2p_mode'] == "rpc") {
-							if ($db_blockchain['rpc_username'] != "" && $db_blockchain['rpc_password'] != "") {
+							if ($db_blockchain['rpc_username'] != "" && $db_blockchain['rpc_password'] != "") $tried_rpc = true;
+							else $tried_rpc = false;
+							
+							if ($tried_rpc) {
+								echo '<div id="display_rpc_'.$db_blockchain['blockchain_id'].'">';
 								echo "<b>Connecting RPC client to ".$db_blockchain['blockchain_name']."...";
 								
 								$blockchain->load_coin_rpc();
@@ -245,29 +250,35 @@ if ($app->running_as_admin()) {
 								}
 								else {
 									echo " <font class=\"greentext\">Connected on port ".$db_blockchain['rpc_port']."</font></b><br/>\n";
-									echo "<pre>getblockchaininfo()\n";
+									echo "<pre style=\"max-height: 300px; overflow-y: scroll;\">getblockchaininfo()\n";
 									print_r($getblockchaininfo);
 									echo "</pre>";
 									
 									echo "Next, please reset and synchronize this game.<br/>\n";
 									echo "<a class=\"btn btn-primary\" target=\"_blank\" href=\"/scripts/sync_blockchain_initial.php?key=".$GLOBALS['cron_key_string']."&blockchain_id=".$db_blockchain['blockchain_id']."\">Reset & synchronize ".$db_blockchain['blockchain_name']."</a>\n";
-									echo "<br/><br/>\n";
+									echo "<br/>\n";
 								}
+								echo "<a href=\"\" onclick=\"$('#display_rpc_".$db_blockchain['blockchain_id']."').hide(); $('#edit_rpc_".$db_blockchain['blockchain_id']."').show('fast'); return false;\">Set new RPC params for ".$db_blockchain['blockchain_name']."</a>\n";
+								echo "</div>\n";
 							}
-							else { ?>
+							?>
+							<div id="edit_rpc_<?php echo $db_blockchain['blockchain_id']; ?>"<?php if ($tried_rpc) echo ' style="display: none;"'; ?>>
 								Please enter the RPC username and password for connecting to the <b><?php echo $db_blockchain['blockchain_name']; ?></b> daemon:<br/>
 								<form method="post" action="install.php">
 									<input type="hidden" name="key" value="<?php echo $GLOBALS['cron_key_string']; ?>" />
 									<input type="hidden" name="action" value="save_blockchain_params" />
 									<input type="hidden" name="blockchain_id" value="<?php echo $db_blockchain['blockchain_id']; ?>" />
+									<input class="form-control" name="rpc_host" placeholder="RPC hostname (default 127.0.0.1)" />
 									<input class="form-control" name="rpc_username" placeholder="RPC username" />
 									<input class="form-control" name="rpc_password" placeholder="RPC password" autocomplete="off" />
 									<input class="form-control" name="rpc_port" value="<?php echo $db_blockchain['default_rpc_port']; ?>" placeholder="RPC port" />
 									<input type="submit" class="btn btn-primary" value="Save" />
+									<?php if ($tried_rpc) echo ' &nbsp;&nbsp; or &nbsp;&nbsp; <a href="" onclick="$(\'#display_rpc_'.$db_blockchain['blockchain_id'].'\').show(\'fast\'); $(\'#edit_rpc_'.$db_blockchain['blockchain_id'].'\').hide(); return false;">Cancel</a>'; ?>
 								</form>
 								<br/>
-								<?php
-							}
+							</div>
+							<br/>
+							<?php
 						}
 						else {
 							echo "<p><h3>".$db_blockchain['blockchain_name']."</h3>\n";
