@@ -180,8 +180,9 @@ else {
 				$home_col = array_search("home", $header_vars);
 				$away_col = array_search("away", $header_vars);
 				$name_col = array_search("event name", $header_vars);
-				$starttime_col = array_search("start time utc", $header_vars);
+				$start_time_col = array_search("start time utc", $header_vars);
 				$time_col = array_search("datetime utc", $header_vars);
+				$payout_time_col = array_search("payout utc", $header_vars);
 				
 				$home_odds_col = array_search("home odds", $header_vars);
 				$away_odds_col = array_search("away odds", $header_vars);
@@ -189,7 +190,7 @@ else {
 				$league_col = array_search("league", $header_vars);
 				$external_id_col = array_search("external identifier", $header_vars);
 				
-				if ($home_col === false || $away_col === false || $name_col === false || $time_col === false || $starttime_col === false) {
+				if ($home_col === false || $away_col === false || $name_col === false || $time_col === false || $start_time_col === false) {
 					$messages .= "A required column was missing in the file you uploaded. Required fields are 'Home', 'Away', 'Event Name', 'Start Time UTC' and 'Datetime UTC'<br/>\n";
 				}
 				else {
@@ -208,11 +209,15 @@ else {
 						$away = $line_vals[$away_col];
 						$event_name = $line_vals[$name_col];
 						$event_time = str_replace("'", "", $line_vals[$time_col]);
-						$event_starttime = str_replace("'", "", $line_vals[$starttime_col]);
+						$event_start_time = str_replace("'", "", $line_vals[$start_time_col]);
+						
+						if ($payout_time_col === false || (string)$line_vals[$payout_time_col] == "") $event_payout_time = $event_time;
+						else $event_payout_time = str_replace("'", "", $line_vals[$payout_time_col]);
 						
 						if (!empty($home) && !empty($away) && !empty($event_name) && !empty($event_time)) {
-							$event_starting_time = date("Y-m-d G:i:s", strtotime($event_starttime));
+							$event_starting_time = date("Y-m-d G:i:s", strtotime($event_start_time));
 							$event_final_time = date("Y-m-d G:i:s", strtotime($event_time));
+							$event_payout_time = date("Y-m-d G:i:s", strtotime($event_payout_time));
 							
 							$event_index = $game_max_event_index+$game_event_index_offset+1;
 							
@@ -269,7 +274,7 @@ else {
 								if ($this_sport_entity) $gde_ins_q .= ", sport_entity_id=".$this_sport_entity['entity_id'];
 								if ($this_league_entity) $gde_ins_q .= ", league_entity_id=".$this_league_entity['entity_id'];
 								if ($external_identifier) $gde_ins_q .= ", external_identifier=".$app->quote_escape($external_identifier);
-								$gde_ins_q .= ", event_index='".$event_index."', event_name=".$app->quote_escape($event_name).", event_starting_time='".$event_starting_time."', event_final_time='".$event_final_time."', event_payout_offset_time='0:00:00', option_name='team', option_name_plural='teams';";
+								$gde_ins_q .= ", event_index='".$event_index."', event_name=".$app->quote_escape($event_name).", event_starting_time='".$event_starting_time."', event_final_time='".$event_final_time."', event_payout_time='".$event_payout_time."', option_name='team', option_name_plural='teams';";
 								$gde_ins_r = $app->run_query($gde_ins_q);
 								
 								$gdo_ins_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index=".$event_index.", option_index=0, name=".$app->quote_escape($home).", entity_id='".$home_entity['entity_id']."'";
@@ -679,8 +684,8 @@ else {
 										<input class="form-control" id="event_form_event_final_time" />
 									</div>
 									<div class="form-group">
-										<label for="event_form_event_payout_block">Event payout offset time:</label>
-										<input class="form-control" id="event_form_event_payout_offset_time" />
+										<label for="event_form_event_payout_block">Event payout time:</label>
+										<input class="form-control" id="event_form_event_payout_time" />
 									</div>
 								</div>
 								<div class="form-group">

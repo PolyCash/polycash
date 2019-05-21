@@ -215,28 +215,29 @@ class Event {
 		else {
 			$html .= '<p><div class="event_timer_slim">';
 			
+			$expired = false;
 			if (!empty($this->db_event['event_final_time'])) {
 				$sec_left = strtotime($this->db_event['event_final_time'])-time();
-				$html .= date("Y-m-d G:i:s", strtotime($this->db_event['event_final_time']));
-				$html .= "<br/>";
-				if ($sec_left > 0) $html .= $this->game->blockchain->app->format_seconds($sec_left)." left";
-				else $html .= '<font class="redtext">Expired '.$this->game->blockchain->app->format_seconds(-1*$sec_left).' ago</font>';
+				if ($sec_left <= 0) {
+					$html .= '<font class="redtext">Expired '.$this->game->blockchain->app->format_seconds(-1*$sec_left).' ago</font><br/>';
+					$expired = true;
+				}
+			}
+			
+			$blocks_left = $this->db_event['event_final_block'] - $max_block_id;
+			if ($blocks_left > 0 && !$expired) {
+				$sec_left = $this->game->blockchain->seconds_per_block('average')*$blocks_left;
+				$html .= $this->game->blockchain->app->format_bignum($blocks_left)." betting blocks left";
+				$html .= " (".$this->game->blockchain->app->format_seconds($sec_left).")<br/>";
+			}
+			
+			if ($last_block_id < $this->db_event['event_payout_block']) {
+				$payout_blocks_left = $this->db_event['event_payout_block'] - $last_block_id;
+				$html .= "Pays out in ".$this->game->blockchain->app->format_seconds($this->game->blockchain->seconds_per_block('average')*$payout_blocks_left);
 			}
 			else {
-				$blocks_left = $this->db_event['event_final_block'] - $max_block_id;
-				if ($blocks_left > 0) {
-					$sec_left = $this->game->blockchain->seconds_per_block('average')*$blocks_left;
-					$html .= $this->game->blockchain->app->format_bignum($blocks_left)." betting blocks left";
-					$html .= " (".$this->game->blockchain->app->format_seconds($sec_left).")";
-				}
-				if ($last_block_id < $this->db_event['event_payout_block']) {
-					$payout_blocks_left = $this->db_event['event_payout_block'] - $last_block_id;
-					$html .= "<br/>Pays out in ".$this->game->blockchain->app->format_seconds($this->game->blockchain->seconds_per_block('average')*$payout_blocks_left);
-				}
-				else {
-					$payout_block = $this->game->blockchain->fetch_block_by_id($this->db_event['event_payout_block']);
-					$html .= "<br/>Paid ".$this->game->blockchain->app->format_seconds(time()-$payout_block['time_mined'])." ago<br/>".date("Y-m-d H:m:s", $payout_block['time_mined'])." UTC";
-				}
+				$payout_block = $this->game->blockchain->fetch_block_by_id($this->db_event['event_payout_block']);
+				$html .= "Paid ".$this->game->blockchain->app->format_seconds(time()-$payout_block['time_mined'])." ago<br/>".date("Y-m-d H:m:s", $payout_block['time_mined'])." UTC";
 			}
 			$html .= '</div></p>';
 		}

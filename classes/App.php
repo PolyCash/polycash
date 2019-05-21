@@ -1009,11 +1009,59 @@ class App {
 		$update_user_id_r = $this->run_query($update_user_id_q);
 	}
 	
+	public function fetch_image_by_id($image_id) {
+		$image_r = $this->run_query("SELECT * FROM images WHERE image_id=".$image_id.";");
+		if ($image_r->rowCount() > 0) return $image_r->fetch();
+		else return false;
+	}
+	
 	public function image_url(&$db_image) {
 		$url = '/images/custom/'.$db_image['image_id'];
 		if ($db_image['access_key'] != "") $url .= '_'.$db_image['access_key'];
 		$url .= '.'.$db_image['extension'];
 		return $url;
+	}
+	
+	public function image_identifier(&$raw_image) {
+		return hash("sha256", $raw_image);
+	}
+	
+	public function add_image(&$raw_image, $extension, $access_key, &$error_message) {
+		$db_image = false;
+		$image_identifier = $this->image_identifier($raw_image);
+		$existing_r = $this->run_query("SELECT * FROM images WHERE image_identifier=".$this->quote_escape($image_identifier).";");
+		
+		if ($existing_r->rowCount() > 0) {
+			$error_message = "This image already exists.";
+			$db_image = $existing_r->fetch();
+		}
+		else {
+			if (in_array($extension, ['jpg','jpeg','png','gif','tif','tiff','bmp','webp'])) {
+				$q = "INSERT INTO images SET image_identifier=".$this->quote_escape($image_identifier).", extension=".$this->quote_escape($extension);
+				if (!empty($access_key)) $q .= ", access_key=".$this->quote_escape($access_key);
+				$q .= ";";
+				$r = $this->run_query($q);
+				$image_id = $this->last_insert_id();
+				
+				$db_image = $this->fetch_image_by_id($image_id);
+				$image_fname = dirname(dirname(__FILE__)).$this->image_url($db_image);
+				
+				$fh = fopen($image_fname, 'w');
+				fwrite($fh, $raw_image);
+				fclose($fh);
+				
+				$image_info = getimagesize($image_fname);
+				
+				if (!empty($image_info[0]) && !empty($image_info[1])) {
+					$this->run_query("UPDATE images SET width=".$image_info[0].", height=".$image_info[1]." WHERE image_id=".$db_image['image_id'].";");
+					$db_image['height'] = $image_info[0];
+					$db_image['width'] = $image_info[1];
+				}
+			}
+			else $error_message = "That image file type is not supported.";
+		}
+		
+		return $db_image;
 	}
 	
 	public function delete_unconfirmable_transactions() {
@@ -1608,7 +1656,7 @@ class App {
 			array('string', 'track_name_short', true),
 			array('string', 'event_starting_time', true),
 			array('string', 'event_final_time', true),
-			array('string', 'event_payout_offset_time', true),
+			array('string', 'event_payout_time', true),
 			array('string', 'event_name', false),
 			array('string', 'option_block_rule', false),
 			array('string', 'option_name', false),
