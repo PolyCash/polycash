@@ -187,6 +187,7 @@ else {
 				$away_odds_col = array_search("away odds", $header_vars);
 				$sport_col = array_search("sport", $header_vars);
 				$league_col = array_search("league", $header_vars);
+				$external_id_col = array_search("external identifier", $header_vars);
 				
 				if ($home_col === false || $away_col === false || $name_col === false || $time_col === false || $starttime_col === false) {
 					$messages .= "A required column was missing in the file you uploaded. Required fields are 'Home', 'Away', 'Event Name', 'Start Time UTC' and 'Datetime UTC'<br/>\n";
@@ -206,8 +207,8 @@ else {
 						$home = $line_vals[$home_col];
 						$away = $line_vals[$away_col];
 						$event_name = $line_vals[$name_col];
-						$event_time = $line_vals[$time_col];
-						$event_starttime = $line_vals[$starttime_col];
+						$event_time = str_replace("'", "", $line_vals[$time_col]);
+						$event_starttime = str_replace("'", "", $line_vals[$starttime_col]);
 						
 						if (!empty($home) && !empty($away) && !empty($event_name) && !empty($event_time)) {
 							$event_starting_time = date("Y-m-d G:i:s", strtotime($event_starttime));
@@ -219,21 +220,22 @@ else {
 							$gde_r = $app->run_query($gde_q);
 							
 							if ($gde_r->rowCount() == 0) {
+								$home_target_prob = false;
+								$away_target_prob = false;
+								$tie_target_prob = false;
+								
 								if ($home_odds_col !== false) {
 									$home_odds = $line_vals[$home_odds_col];
 									$away_odds = $line_vals[$away_odds_col];
 									
-									$prob_sum = 1/$home_odds + 1/$away_odds;
-									
-									$home_target_prob = (1/$home_odds)/$prob_sum;
-									$away_target_prob = (1/$away_odds)/$prob_sum;
-									$target_prob_sum = $home_target_prob+$away_target_prob;
-									$tie_target_prob = 1-$target_prob_sum;
-								}
-								else {
-									$home_target_prob = false;
-									$away_target_prob = false;
-									$tie_target_prob = false;
+									if ((string)$line_vals[$home_odds_col] != "" || (string)$line_vals[$away_odds_col] != "") {
+										$prob_sum = 1/$home_odds + 1/$away_odds;
+										
+										$home_target_prob = (1/$home_odds)/$prob_sum;
+										$away_target_prob = (1/$away_odds)/$prob_sum;
+										$target_prob_sum = $home_target_prob+$away_target_prob;
+										$tie_target_prob = 1-$target_prob_sum;
+									}
 								}
 								
 								if ($sport_col !== false) {
@@ -244,6 +246,12 @@ else {
 									else $this_sport_entity = false;
 								}
 								else $this_sport_entity = false;
+								
+								if ($external_id_col !== false) {
+									$external_identifier = $line_vals[$external_id_col];
+									if (empty($external_identifier)) $external_identifier = false;
+								}
+								else $external_identifier = false;
 								
 								$home_entity = $app->check_set_entity($teams_entity_type['entity_type_id'], $home);
 								$away_entity = $app->check_set_entity($teams_entity_type['entity_type_id'], $away);
@@ -260,6 +268,7 @@ else {
 								$gde_ins_q = "INSERT INTO game_defined_events SET game_id='".$game->db_game['game_id']."'";
 								if ($this_sport_entity) $gde_ins_q .= ", sport_entity_id=".$this_sport_entity['entity_id'];
 								if ($this_league_entity) $gde_ins_q .= ", league_entity_id=".$this_league_entity['entity_id'];
+								if ($external_identifier) $gde_ins_q .= ", external_identifier=".$app->quote_escape($external_identifier);
 								$gde_ins_q .= ", event_index='".$event_index."', event_name=".$app->quote_escape($event_name).", event_starting_time='".$event_starting_time."', event_final_time='".$event_final_time."', event_payout_offset_time='0:00:00', option_name='team', option_name_plural='teams';";
 								$gde_ins_r = $app->run_query($gde_ins_q);
 								

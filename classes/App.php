@@ -1134,7 +1134,7 @@ class App {
 			else $html .= $db_game['coin_name_plural'];
 			$html .= "</div></div>\n";
 			
-			if ($db_game['buyin_policy'] != "none") {
+			if (!in_array($db_game['buyin_policy'], ["none","for_sale",""])) {
 				$escrow_amount_disp = $this->format_bignum($game->escrow_value($last_block_id)/pow(10,$db_game['decimal_places']));
 				$html .= '<div class="row"><div class="col-sm-5">'.ucwords($game->blockchain->db_blockchain['coin_name_plural']).' in escrow:</div><div class="col-sm-7">';
 				$html .= $escrow_amount_disp.' ';
@@ -1158,6 +1158,7 @@ class App {
 		else if ($db_game['buyin_policy'] == "per_user_cap") $html .= "Up to ".$this->format_bignum($db_game['per_user_buyin_cap'])." ".$invite_currency['short_name']."s per player";
 		else if ($db_game['buyin_policy'] == "game_cap") $html .= $this->format_bignum($db_game['game_buyin_cap'])." ".$invite_currency['short_name']."s available";
 		else if ($db_game['buyin_policy'] == "game_and_user_cap") $html .= $this->format_bignum($db_game['per_user_buyin_cap'])." ".$invite_currency['short_name']."s per person until ".$this->format_bignum($db_game['game_buyin_cap'])." ".$invite_currency['short_name']."s are reached";
+		else if ($db_game['buyin_policy'] == "for_sale") $html .= "For sale by node operators";
 		$html .= "</div></div>\n";
 		
 		$html .= '<div class="row"><div class="col-sm-5">Inflation:</div><div class="col-sm-7">';	
