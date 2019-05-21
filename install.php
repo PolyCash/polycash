@@ -5,7 +5,7 @@ include("includes/connect.php");
 
 if ($app->running_as_admin()) {
 	if ($GLOBALS['mysql_database'] != "") {
-		if (!strpos($GLOBALS['mysql_database'], "'") && $GLOBALS['mysql_database'] === strip_tags($GLOBALS['mysql_database'])) {
+		if (strpos($GLOBALS['mysql_database'], "'") === false && $GLOBALS['mysql_database'] === strip_tags($GLOBALS['mysql_database'])) {
 			$db_exists = false;
 
 			$r = $app->run_query("SHOW DATABASES;");
@@ -13,12 +13,16 @@ if ($app->running_as_admin()) {
 				if ($dbname['Database'] == $GLOBALS['mysql_database']) $db_exists = true;
 			}
 			
+			if (strpos($GLOBALS['mysql_password'], "'") !== false) {
+				echo "Your mysql password includes an apostrophe. ".$GLOBALS['site_name']." may not be able to install or complete migrations to your DB.<br/>\n";
+			}
+			
 			if (!$db_exists) {
 				$r = $app->run_query("CREATE DATABASE ".$GLOBALS['mysql_database']);
 				$app->set_db($GLOBALS['mysql_database']);
 				
 				$cmd = $app->mysql_binary_location()." -u ".$GLOBALS['mysql_user']." -h ".$GLOBALS['mysql_server'];
-				if ($GLOBALS['mysql_password'] != "") $cmd .= " -p".$GLOBALS['mysql_password'];
+				if ($GLOBALS['mysql_password'] != "") $cmd .= " -p'".$GLOBALS['mysql_password']."'";
 				$cmd .= " ".$GLOBALS['mysql_database']." < ".realpath(dirname(__FILE__))."/sql/schema-initial.sql";
 				echo exec($cmd);
 			}
