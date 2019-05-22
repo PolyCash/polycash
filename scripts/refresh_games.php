@@ -11,12 +11,14 @@ if ($app->running_as_admin()) {
 	$q .= ";";
 	$r = $app->run_query($q);
 
+	$show_internal_params = true;
+	
 	while ($db_game = $r->fetch()) {
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$game = new Game($blockchain, $db_game['game_id']);
 		
-		$game->check_set_game_definition("defined");
-		$game->check_set_game_definition("actual");
+		$game->check_set_game_definition("defined", $show_internal_params);
+		$game->check_set_game_definition("actual", $show_internal_params);
 		
 		//$game->ensure_options();
 		

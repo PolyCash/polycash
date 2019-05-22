@@ -1116,7 +1116,8 @@ class App {
 			$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
 			
-			$game_def = $this->fetch_game_definition($game, "actual");
+			$show_internal_params = false;
+			$game_def = $this->fetch_game_definition($game, "actual", $show_internal_params);
 			$game_def_str = $this->game_def_to_text($game_def);
 			$game_def_hash = $this->game_def_to_hash($game_def_str);
 			
@@ -1250,7 +1251,7 @@ class App {
 		return $html;
 	}
 	
-	public function fetch_game_definition(&$game, $definition_mode) {
+	public function fetch_game_definition(&$game, $definition_mode, $show_internal_params) {
 		// $definition_mode is "defined" or "actual"
 		$game_definition = array();
 		$game_definition['blockchain_identifier'] = $game->blockchain->db_blockchain['url_identifier'];
@@ -1314,15 +1315,20 @@ class App {
 			for ($j=0; $j<count($event_verbatim_vars); $j++) {
 				$var_type = $event_verbatim_vars[$j][0];
 				$var_name = $event_verbatim_vars[$j][1];
-				$var_val = $db_event[$var_name];
 				
-				if ($var_type == "int" && $var_val != "") $var_val = (int) $var_val;
-				
-				$temp_event[$var_name] = $var_val;
+				if ($db_event['payout_rule'] != "linear" && in_array($var_name, ['track_max_price','track_min_price','track_payout_price','track_name_short'])) {}
+				else {
+					$var_val = $db_event[$var_name];
+					
+					if ($var_type == "int" && $var_val != "") $var_val = (int) $var_val;
+					
+					$temp_event[$var_name] = $var_val;
+				}
 			}
 			
 			if (!empty($db_event['sport_name'])) $temp_event['sport'] = $db_event['sport_name'];
 			if (!empty($db_event['league_name'])) $temp_event['league'] = $db_event['league_name'];
+			if (!empty($db_event['external_identifier']) && $show_internal_params) $temp_event['external_identifier'] = $db_event['external_identifier'];
 			
 			if ($definition_mode == "defined") {
 				$qq = "SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."' ORDER BY option_index ASC;";
@@ -1342,13 +1348,6 @@ class App {
 		$game_definition['events'] = $events_obj;
 		
 		return $game_definition;
-	}
-	
-	public function game_definition_hash(&$game) {
-		$game_def = $this->fetch_game_definition($game, "defined");
-		$game_def_str = $this->game_def_to_text($game_def);
-		$game_def_hash = $this->game_def_to_hash($game_def_str);
-		return $game_def_hash;
 	}
 	
 	public function shorten_game_def_hash($hash) {
@@ -1885,6 +1884,11 @@ class App {
 		}
 		else $q .= "league_entity_id=NULL, ";
 		
+		if (!empty($gde['external_identifier'])) {
+			$q .= "external_identifier=".$this->quote_escape($gde['external_identifier']).", ";
+		}
+		else $q .= "external_identifier=NULL, ";
+		
 		for ($j=0; $j<count($event_verbatim_vars); $j++) {
 			$var_type = $event_verbatim_vars[$j][0];
 			if (isset($gde[$event_verbatim_vars[$j][1]])) $var_val = (string) $gde[$event_verbatim_vars[$j][1]];
@@ -2113,7 +2117,8 @@ class App {
 							}
 						}
 						
-						$from_game_def = $this->fetch_game_definition($game, "defined");
+						$show_internal_params = false;
+						$from_game_def = $this->fetch_game_definition($game, "defined", $show_internal_params);
 						$from_game_def_str = $this->game_def_to_text($from_game_def);
 						$from_game_def_hash = $this->game_def_to_hash($from_game_def_str);
 						$this->check_set_game_definition($from_game_def_hash, $from_game_def_str);

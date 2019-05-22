@@ -309,7 +309,8 @@ if ($thisuser) {
 					$app->output_message(1, "", $output_obj);
 				}
 				else if ($action == "save_gde") {
-					$game->check_set_game_definition("defined");
+					$show_internal_params = true;
+					$game->check_set_game_definition("defined", $show_internal_params);
 					
 					$verbatim_vars = $app->event_verbatim_vars();
 					
@@ -353,7 +354,7 @@ if ($thisuser) {
 						$gde_id = $app->last_insert_id();
 					}
 					
-					$game->check_set_game_definition("defined");
+					$game->check_set_game_definition("defined", $show_internal_params);
 					
 					$app->output_message(1, "Changed the game definition.", false);
 				}
@@ -443,9 +444,11 @@ if ($thisuser) {
 							$entity_type = $r->fetch();
 							
 							if (!empty($name)) {
+								$show_internal_params = true;
+								
 								$entity = $app->check_set_entity($entity_type['entity_type_id'], $name);
 								
-								$game->check_set_game_definition("defined");
+								$game->check_set_game_definition("defined", $show_internal_params);
 								
 								$q = "SELECT COUNT(*), MAX(option_index) FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gde['event_index']."';";
 								$r = $app->run_query($q);
@@ -457,7 +460,7 @@ if ($thisuser) {
 								$r = $app->run_query($q);
 								$gdo_id = $app->last_insert_id();
 								
-								$game->check_set_game_definition("defined");
+								$game->check_set_game_definition("defined", $show_internal_params);
 								
 								$app->output_message(1, "Changed the game definition.", false);
 							}

@@ -52,12 +52,14 @@ if ($thisuser) {
 						$db_option = $db_option_r->fetch();
 						
 						if ($db_option['event_id'] == $db_event['event_id']) {
-							$game->check_set_game_definition("defined");
+							$show_internal_params = true;
+							
+							$game->check_set_game_definition("defined", $show_internal_params);
 							
 							$q = "UPDATE game_defined_events SET outcome_index=".$db_option['event_option_index']." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."';";
 							$r = $app->run_query($q);
 							
-							$game->check_set_game_definition("defined");
+							$game->check_set_game_definition("defined", $show_internal_params);
 							
 							$app->output_message(2, "Changed the game definition.", false);
 						}

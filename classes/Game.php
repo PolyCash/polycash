@@ -723,10 +723,11 @@ class Game {
 		
 		$info = $this->blockchain->app->run_query("SELECT MAX(event_starting_block) FROM events WHERE game_id='".$this->db_game['game_id']."';")->fetch();
 		
-		if ((string)$info['MAX(event_starting_block)'] != "") {
-			$q = "UPDATE games SET events_until_block=".$info['MAX(event_starting_block)']." WHERE game_id='".$this->db_game['game_id']."';";
-			$r = $this->blockchain->app->run_query($q);
-		}
+		$events_until_block = $info['MAX(event_starting_block)'];
+		if ((string)$events_until_block == "") $events_until_block = "NULL";
+		
+		$q = "UPDATE games SET events_until_block=".$events_until_block." WHERE game_id='".$this->db_game['game_id']."';";
+		$r = $this->blockchain->app->run_query($q);
 		
 		$this->blockchain->app->dbh->commit();
 	}
@@ -739,14 +740,6 @@ class Game {
 		
 		$q = "DELETE FROM game_sellouts WHERE game_id='".$this->db_game['game_id']."';";
 		$r = $this->blockchain->app->run_query($q);
-		
-		if (!empty($this->db_game['module'])) {
-			$q = "DELETE FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."';";
-			$r = $this->blockchain->app->run_query($q);
-			
-			$q = "DELETE FROM game_defined_options WHERE game_id='".$this->db_game['game_id']."';";
-			$r = $this->blockchain->app->run_query($q);
-		}
 		
 		$q = "DELETE FROM transaction_game_ios WHERE game_id='".$this->db_game['game_id']."';";
 		$r = $this->blockchain->app->run_query($q);
@@ -2006,11 +1999,12 @@ class Game {
 				
 				if (count($gdes_to_add) > 0) {
 					$init_event_index = $gdes_to_add[0]['event_index'];
+					$final_event_index = $gdes_to_add[count($gdes_to_add)-1]['event_index'];
 					
-					$q = "DELETE FROM game_defined_options WHERE game_id=".$this->db_game['game_id']." AND event_index>=".$init_event_index.";";
+					$q = "DELETE FROM game_defined_options WHERE game_id=".$this->db_game['game_id']." AND event_index>=".$init_event_index." AND event_index<=".$final_event_index.";";
 					$this->blockchain->app->run_query($q);
 					
-					$q = "DELETE FROM game_defined_events WHERE game_id=".$this->db_game['game_id']." AND event_index>=".$init_event_index.";";
+					$q = "DELETE FROM game_defined_events WHERE game_id=".$this->db_game['game_id']." AND event_index>=".$init_event_index." AND event_index<=".$final_event_index.";";
 					$this->blockchain->app->run_query($q);
 					
 					$i = 0;
@@ -2074,6 +2068,7 @@ class Game {
 						if ($game_defined_event['track_entity_id'] != "") $qq .= ", track_entity_id='".$game_defined_event['track_entity_id']."'";
 						$qq .= ", event_payout_block='".$game_defined_event['event_payout_block']."', payout_rule='".$game_defined_event['payout_rule']."', event_name=".$this->blockchain->app->quote_escape($game_defined_event['event_name']).", option_name=".$this->blockchain->app->quote_escape($game_defined_event['option_name']).", option_name_plural=".$this->blockchain->app->quote_escape($game_defined_event['option_name_plural']).", num_options='".$num_options."', option_max_width=".$event_type['default_option_max_width'];
 						if (!empty($game_defined_event['option_block_rule'])) $qq .= ", option_block_rule='".$game_defined_event['option_block_rule']."'";
+						if (!empty($game_defined_event['external_identifier'])) $qq .= ", external_identifier=".$this->blockchain->app->quote_escape($game_defined_event['external_identifier']);
 						$qq .= ";";
 						$rr = $this->blockchain->app->run_query($qq);
 						$event_id = $this->blockchain->app->last_insert_id();
@@ -3304,8 +3299,8 @@ class Game {
 		else return false;
 	}
 	
-	public function check_set_game_definition($definition_mode) {
-		$game_def = $this->blockchain->app->fetch_game_definition($this, $definition_mode);
+	public function check_set_game_definition($definition_mode, $show_internal_params) {
+		$game_def = $this->blockchain->app->fetch_game_definition($this, $definition_mode, $show_internal_params);
 		$game_def_str = $this->blockchain->app->game_def_to_text($game_def);
 		$game_def_hash = $this->blockchain->app->game_def_to_hash($game_def_str);
 
@@ -3337,13 +3332,15 @@ class Game {
 			$event_r = $this->blockchain->app->run_query($event_q);
 			
 			if ($event_r->rowCount() > 0) {
-				$this->check_set_game_definition("defined");
+				$show_internal_params = true;
+				
+				$this->check_set_game_definition("defined", $show_internal_params);
 				
 				while ($gde = $event_r->fetch()) {
 					$this->set_gde_blocks_by_time($gde);
 				}
 				
-				$this->check_set_game_definition("defined");
+				$this->check_set_game_definition("defined", $show_internal_params);
 			}
 		}
 	}
@@ -3417,12 +3414,14 @@ class Game {
 		$event_r = $this->blockchain->app->run_query($event_q);
 		
 		if ($event_r->rowCount() > 0) {
-			$this->check_set_game_definition("defined");
+			$show_internal_params = true;
+			
+			$this->check_set_game_definition("defined", $show_internal_params);
 			
 			while ($gde = $event_r->fetch()) {
 				$this->set_gde_blocks_by_time($gde);
 			}
-			$this->check_set_game_definition("defined");
+			$this->check_set_game_definition("defined", $show_internal_params);
 			
 			$log_text .= "Setting GDE blocks for ".$this->db_game['name']."<br/>\n";
 		}

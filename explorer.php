@@ -1390,7 +1390,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$definition_mode = "defined";
 						if ($_REQUEST['definition_mode'] == "actual") $definition_mode = "actual";
 						
-						$game_def = $app->fetch_game_definition($game, $definition_mode);
+						$show_internal_params = false;
+						$game_def = $app->fetch_game_definition($game, $definition_mode, $show_internal_params);
 						$game_def_str = $app->game_def_to_text($game_def);
 						$game_def_hash = $app->game_def_to_hash($game_def_str);
 						?>

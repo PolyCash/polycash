@@ -12,14 +12,16 @@ if ($thisuser) {
 		$game = new Game($blockchain, $db_game['game_id']);
 		
 		if ($app->user_can_edit_game($thisuser, $game)) {
-			$game->check_set_game_definition("defined");
-			$game->check_set_game_definition("actual");
+			$show_internal_params = true;
 			
-			$game_def = $app->fetch_game_definition($game, "defined");
+			$game->check_set_game_definition("defined", $show_internal_params);
+			$game->check_set_game_definition("actual", $show_internal_params);
+			
+			$game_def = $app->fetch_game_definition($game, "defined", $show_internal_params);
 			$game_def_str = $app->game_def_to_text($game_def);
 			$game_def_hash = $app->game_def_to_hash($game_def_str);
 			
-			$actual_game_def = $app->fetch_game_definition($game, "actual");
+			$actual_game_def = $app->fetch_game_definition($game, "actual", $show_internal_params);
 			$actual_game_def_str = $app->game_def_to_text($actual_game_def);
 			$actual_game_def_hash = $app->game_def_to_hash($actual_game_def_str);
 			
