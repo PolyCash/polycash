@@ -401,14 +401,17 @@ class Game {
 			$q .= " WHERE g.game_id='".$this->db_game['game_id']."' AND usb.block_within_round='".$block_of_round."'";
 			$q .= " AND (s.voting_strategy IN ('by_rank', 'by_entity', 'api', 'by_plan', 'featured','hit_url'))";
 			$q .= " AND (s.time_next_apply IS NULL OR s.time_next_apply<".time().")";
-			$q .= " ORDER BY RAND();";
+			$q .= " AND g.account_value > 0 ORDER BY u.user_id ASC;";
 			$r = $this->blockchain->app->run_query($q);
 			
 			if ($print_debug) echo "Applying user strategies for block #".$mining_block_id." of ".$this->db_game['name']." looping through ".$r->rowCount()." users.<br/>\n";
 			while ($user_game = $r->fetch()) {
 				$api_response = false;
 				$this->apply_user_strategy($log_text, $user_game, $mining_block_id, $current_round_id, $api_response, false);
-				if ($print_debug && $api_response) echo "user #".$user_game['user_id'].": ".json_encode($api_response)."\n";
+				if ($print_debug) {
+					if ($api_response) echo "user #".$user_game['user_id'].": ".json_encode($api_response)."\n";
+					else echo "no api response for user #".$user_game['user_id']."\n";
+				}
 			}
 			$this->update_option_votes();
 		}
