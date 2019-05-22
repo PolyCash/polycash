@@ -5,37 +5,8 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->in
 
 if ($thisuser) {
 	$action = $_REQUEST['action'];
-	if ($action != "new") $game_id = intval($_REQUEST['game_id']);
 	
-	if ($action == "switch") {
-		$game = new Game($app, $game_id);
-		
-		if ($game) {
-			$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
-			$r = $app->run_query($q);
-			
-			if ($r->rowCount() == 1) {
-				$user_game = $r->fetch();
-				
-				$app->output_message(1, "", array('redirect_url'=>'/wallet/'.$game->db_game['url_identifier']));
-			}
-			else {
-				if ($game->db_game['creator_id'] > 0) {
-					$app->output_message(2, "That game doesn't exist or you don't have permission to join it.");
-				}
-				else {
-					$user_game = $thisuser->ensure_user_in_game($game, false);
-					
-					$q = "UPDATE users SET game_id='".$game->db_game['game_id']."' WHERE user_id='".$thisuser->db_user['user_id']."';";
-					$r = $app->run_query($q);
-					
-					$app->output_message(1, "", array('redirect_url'=>'/wallet/'.$game->db_game['url_identifier']));
-				}
-			}
-		}
-		else $app->output_message(2, "That game doesn't exist or you don't have permission to join it.");
-	}
-	else if ($action == "new") {
+	if ($action == "new") {
 		$new_game_perm = $thisuser->new_game_permission();
 		
 		if ($new_game_perm) {
@@ -227,46 +198,70 @@ if ($thisuser) {
 			$app->output_message(6, "You don't have permission to create a new game.", false);
 		}
 	}
-	else if ($action == "fetch") {
+	else {
+		$game_id = (int) $_REQUEST['game_id'];
 		$db_game = $app->fetch_db_game_by_id($game_id);
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$game = new Game($blockchain, $game_id);
 		
-		$q = "SELECT game_id, blockchain_id, creator_id, event_rule, option_group_id, event_entity_type_id, events_per_round, event_type_name, game_status, block_timing, giveaway_status, giveaway_amount, maturity, name, payout_weight, round_length, pos_reward, pow_reward, inflation, exponential_inflation_rate, exponential_inflation_minershare, final_round, invite_cost, invite_currency, coin_name, coin_name_plural, coin_abbreviation, start_condition, start_datetime, buyin_policy, game_buyin_cap, default_vote_effectiveness_function, default_effectiveness_param1, default_max_voting_fraction, game_starting_block, escrow_address, genesis_tx_hash, genesis_amount, default_betting_mode FROM games WHERE game_id='".$game->db_game['game_id']."';";
-		$r = $app->run_query($q);
-		
-		if ($r->rowCount() == 1) {
-			$switch_game = $r->fetch(PDO::FETCH_ASSOC);
-
-			$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$switch_game['game_id']."';";
-			$r = $app->run_query($q);
-			$user_game = $r->fetch();
+		if ($action == "switch") {
+			$game = new Game($app, $game_id);
 			
-			if ($switch_game['creator_id'] == $thisuser->db_user['user_id'] || $user_game) {
-				if ($switch_game['creator_id'] == $thisuser->db_user['user_id']) $switch_game['my_game'] = true;
-				else $switch_game['my_game'] = false;
-
-				$switch_game['creator_id'] = false;
-
-				$switch_game['name_disp'] = '<a target="_blank" href="/'.$game->db_game['url_identifier'].'">'.$switch_game['name'].'</a>';
-
-				$switch_game['start_date'] = date("n/j/Y", strtotime($switch_game['start_datetime']));
-				$switch_game['start_time'] = date("G", strtotime($switch_game['start_datetime']));
+			if ($game) {
+				$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
+				$r = $app->run_query($q);
 				
-				$app->output_message(1, "", $switch_game);
+				if ($r->rowCount() == 1) {
+					$user_game = $r->fetch();
+					
+					$app->output_message(1, "", array('redirect_url'=>'/wallet/'.$game->db_game['url_identifier']));
+				}
+				else {
+					if ($game->db_game['creator_id'] > 0) {
+						$app->output_message(2, "That game doesn't exist or you don't have permission to join it.");
+					}
+					else {
+						$user_game = $thisuser->ensure_user_in_game($game, false);
+						
+						$q = "UPDATE users SET game_id='".$game->db_game['game_id']."' WHERE user_id='".$thisuser->db_user['user_id']."';";
+						$r = $app->run_query($q);
+						
+						$app->output_message(1, "", array('redirect_url'=>'/wallet/'.$game->db_game['url_identifier']));
+					}
+				}
 			}
-			else $app->output_message(2, "Access denied", false);
+			else $app->output_message(2, "That game doesn't exist or you don't have permission to join it.");
 		}
-		else $app->output_message(2, "Access denied", false);
-	}
-	else if ($action == "load_gde" || $action == "save_gde" || $action == "manage_gdos" || $action == "add_new_gdo" || $action == "delete_gdo") {
-		$db_game = $app->fetch_db_game_by_id($game_id);
-		
-		if ($db_game) {
-			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
-			$game = new Game($blockchain, $db_game['game_id']);
-			
-			if ($app->user_can_edit_game($thisuser, $game)) {
+		else if ($app->user_can_edit_game($thisuser, $game)) {
+			if ($action == "fetch") {
+				$q = "SELECT game_id, blockchain_id, module, creator_id, event_rule, option_group_id, event_entity_type_id, events_per_round, event_type_name, game_status, block_timing, giveaway_status, giveaway_amount, maturity, name, payout_weight, round_length, pos_reward, pow_reward, inflation, exponential_inflation_rate, exponential_inflation_minershare, final_round, invite_cost, invite_currency, coin_name, coin_name_plural, coin_abbreviation, start_condition, start_datetime, buyin_policy, game_buyin_cap, default_vote_effectiveness_function, default_effectiveness_param1, default_max_voting_fraction, game_starting_block, escrow_address, genesis_tx_hash, genesis_amount, default_betting_mode, finite_events FROM games WHERE game_id='".$game->db_game['game_id']."';";
+				$r = $app->run_query($q);
+				
+				if ($r->rowCount() == 1) {
+					$switch_game = $r->fetch(PDO::FETCH_ASSOC);
+
+					$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$switch_game['game_id']."';";
+					$r = $app->run_query($q);
+					$user_game = $r->fetch();
+					
+					if ($switch_game['creator_id'] == $thisuser->db_user['user_id'] || $user_game) {
+						if ($switch_game['creator_id'] == $thisuser->db_user['user_id']) $switch_game['my_game'] = true;
+						else $switch_game['my_game'] = false;
+
+						$switch_game['creator_id'] = false;
+
+						$switch_game['name_disp'] = '<a target="_blank" href="/'.$game->db_game['url_identifier'].'">'.$switch_game['name'].'</a>';
+
+						$switch_game['start_date'] = date("n/j/Y", strtotime($switch_game['start_datetime']));
+						$switch_game['start_time'] = date("G", strtotime($switch_game['start_datetime']));
+						
+						$app->output_message(1, "", $switch_game);
+					}
+					else $app->output_message(2, "Access denied", false);
+				}
+				else $app->output_message(2, "Access denied", false);
+			}
+			else if (in_array($action, ["load_gde","save_gde","manage_gdos","add_new_gdo","delete_gdo"])) {
 				if ($action == "load_gde") {
 					$gde_id = $_REQUEST['gde_id'];
 					$gde = false;
@@ -491,11 +486,31 @@ if ($thisuser) {
 				}
 				else $app->output_message(6, "Invalid action.", false);
 			}
-			else $app->output_message(5, "You don't have permission to perform this action.", false);
+			else if (in_array($action, ['start','unpublish','complete','delete','reset'])) {
+				if ($action == "delete") $app->output_message(2, "This function is disabled", false);
+				else if ($action == "reset") {
+					$game->delete_reset_game('reset');
+					$game->start_game();
+					$app->output_message(2, "This game has been reset.", false);
+				}
+				else if ($action == "start") {
+					$game->start_game();
+					$app->output_message(2, "Successfully started the game.", false);
+				}
+				else {
+					if ($action == "unpublish") $new_status = "editable";
+					else if ($action == "complete") $new_status = "completed";
+					
+					$error_message = $game->set_game_status($new_status);
+					if (empty($error_message)) $error_message = "Game status was successfully changed.";
+					
+					$app->output_message(2, $error_message, false);
+				}
+			}
 		}
-		else $app->output_message(4, "Invalid game ID.", false);
+		else $app->output_message(5, "You don't have permission to perform this action.", false);
 	}
-	else $app->output_message(3, "Bad URL", false);
+	
 	/*else if ($action == "reset" || $action == "delete") {
 		$q = "SELECT * FROM game_types WHERE game_id='".$game_id."';";
 		$r = $app->run_query($q);

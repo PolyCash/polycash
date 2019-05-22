@@ -40,7 +40,7 @@ else {
 			<div class="panel-body">
 				<?php
 				if ($selected_group) {
-					if ($_REQUEST['action'] == "add_member") {
+					if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "add_member") {
 						$member_name = urldecode($_REQUEST['member_name']);
 						$general_entity_type = $app->check_set_entity_type("general entity");
 						$member_entity = $app->check_set_entity($general_entity_type['entity_type_id'], $member_name);
@@ -62,7 +62,7 @@ else {
 				else {
 					$import_groups_dir = realpath(dirname(__FILE__))."/lib/groups/";
 					
-					if ($_REQUEST['action'] == "import_from_file") {
+					if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "import_from_file") {
 						$import_group_description = $_REQUEST['group'];
 						$error_message = "";
 						$app->import_group_from_file($import_group_description, $error_message);

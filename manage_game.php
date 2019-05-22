@@ -305,6 +305,21 @@ else {
 					$messages .= "Added ".$game_event_index_offset." events.<br/>\n";
 				}
 			}
+			else if ($last_action == "internal_settings") {
+				$featured = (int)$_REQUEST['featured'];
+				$faucet_policy = $_REQUEST['faucet_policy'];
+				if ($faucet_policy != "on") $faucet_policy = "off";
+				
+				$internal_q = "UPDATE games SET featured='".$featured."', faucet_policy='".$faucet_policy."' WHERE game_id='".$game->db_game['game_id']."';";
+				$app->run_query($internal_q);
+				$game->db_game['featured'] = $featured;
+				$game->db_game['faucet_policy'] = $faucet_policy;
+				
+				$messages .= "Game internal settings have been updated.<br/>\n";
+			}
+			
+			$manage_game_action = "";
+			if ($next_action == "params") $manage_game_action = "fetch";
 			
 			$nav_tab_selected = "manage_game";
 			$pagetitle = "Manage game: ".$game->db_game['name'];
@@ -312,8 +327,8 @@ else {
 			
 			if (!empty($messages)) echo $messages;
 			
-			$actions = array("params", "events", "description", "game_definition");
-			$action_labels = array("Game Parameters", "Manage Events", "Description", "Game Definition");
+			$actions = array("params", "internal_settings", "events", "description", "game_definition");
+			$action_labels = array("Public Parameters", "Internal Settings", "Manage Events", "Description", "Game Definition");
 			?>
 			<script type="text/javascript">
 			var editor;
@@ -349,9 +364,9 @@ else {
 					echo ', false';
 				?>));
 				
-				manage_game(<?php echo $game->db_game['game_id']; ?>, 'fetch');
-				
 				<?php
+				if ($manage_game_action) echo "manage_game(".$game->db_game['game_id'].", '".$manage_game_action."');\n";
+				
 				if ($next_action == "description") { ?>
 					editor = new TINY.editor.edit('editor', {
 						id: 'game_description',
@@ -421,6 +436,10 @@ else {
 											</select>
 										</div>
 										<div class="form-group">
+											<label for="game_form_coin_name">Module:</label>
+											<input class="form-control" type="text" id="game_form_module" />
+										</div>
+										<div class="form-group">
 											<label for="game_form_coin_name">Each coin is called a(n):</label>
 											<input class="form-control" type="text" id="game_form_coin_name" />
 										</div>
@@ -431,17 +450,6 @@ else {
 										<div class="form-group">
 											<label for="game_form_coin_abbreviation">Currency abbreviation:</label>
 											<input class="form-control" type="text" id="game_form_coin_abbreviation" />
-										</div>
-										<div class="form-group">
-											<label for="game_form_game_status">Game status:</label>
-											<div id="game_form_game_status" class="form-control-static"></div>
-										</div>
-										<div class="form-group">
-											<button id="start_game_btn" class="btn btn-info" style="display: none;" onclick="manage_game(editing_game_id, 'running'); return false;">Start Game</button>
-											<button id="pause_game_btn" class="btn btn-info" style="display: none;" onclick="manage_game(editing_game_id, 'paused'); return false;">Pause Game</button>
-
-											<button id="delete_game_btn" class="btn btn-danger" style="display: none;" onclick="manage_game(editing_game_id, 'delete'); return false;">Delete Game</button>
-											<button id="reset_game_btn" class="btn btn-warning" style="display: none;" onclick="manage_game(editing_game_id, 'reset'); return false;">Reset Game</button>
 										</div>
 										<div class="form-group">
 											<label for="game_form_has_final_round">Game ends?</label>
@@ -537,6 +545,13 @@ else {
 											</select>
 										</div>
 										<div class="form-group">
+											<label for="game_form_finite_events">Finite events?</label>
+											<select id="game_form_finite_events" class="form-control">
+												<option value="1">Yes</option>
+												<option value="0">No</option>
+											</select>
+										</div>
+										<div class="form-group">
 											<label for="game_form_option_group_id">Voting options:</label>
 											&nbsp;&nbsp; <a href="/groups/">Manage Groups</a>
 											<select id="game_form_option_group_id" class="form-control">
@@ -589,6 +604,53 @@ else {
 											<button id="publish_game_btn" type="button" class="btn btn-primary" onclick="save_game('publish');">Save &amp; Publish</button>
 										</div>
 										<?php /*<button id="game_invitations_game_btn" type="button" class="btn btn-info" data-dismiss="modal" onclick="manage_game_invitations(editing_game_id);">Invite People</button> */ ?>
+									</form>
+								</div>
+							</div>
+						</div>
+					</div>
+					<?php
+				}
+				else if ($next_action == "internal_settings") {
+					?>
+					<div class="row">
+						<div class="col-md-6">
+							<div class="panel panel-info">
+								<div class="panel-heading">
+									<div class="panel-title">Internal settings for <?php echo $game->db_game['name']." (#".$game->db_game['game_id'].")"; ?></div>
+								</div>
+								<div class="panel-body">
+									<div class="form-group">
+										<b>Game status:</b> &nbsp; <?php echo ucwords($game->db_game['game_status']); ?>
+									</div>
+									<div class="form-group">
+										<button id="start_game_btn" class="btn btn-success" onclick="manage_game(<?php echo $game->db_game['game_id']; ?>, 'start'); return false;">Start Game</button>
+										<button id="unpublish_game_btn" class="btn btn-info" onclick="manage_game(<?php echo $game->db_game['game_id']; ?>, 'unpublish'); return false;">Unpublish</button>
+										<button id="complete_game_btn" class="btn btn-primary" onclick="manage_game(<?php echo $game->db_game['game_id']; ?>, 'complete'); return false;">Mark Completed</button>
+										<button id="delete_game_btn" class="btn btn-danger" style="display: none;" onclick="manage_game(<?php echo $game->db_game['game_id']; ?>, 'delete'); return false;">Delete</button>
+										<button id="reset_game_btn" class="btn btn-warning" onclick="manage_game(<?php echo $game->db_game['game_id']; ?>, 'reset'); return false;">Reset</button>
+									</div>
+									
+									<form method="get" action="/manage/<?php echo $game->db_game['url_identifier']; ?>/">
+										<input type="hidden" name="next" value="internal_settings" />
+										<input type="hidden" name="last" value="internal_settings" />
+										
+										<div class="form-group">
+											<label for="featured">Featured?</label>
+											<select class="form-control" name="featured" id="featured">
+												<option value="1">Yes</option>
+												<option value="0"<?php if ($game->db_game['featured'] == 0) echo ' selected="selected"'; ?>>No</option>
+											</select>
+										</div>
+										<div class="form-group">
+											<label for="faucet_policy">Faucet?</label>
+											<select class="form-control" name="faucet_policy" id="faucet_policy">
+												<option value="on">On</option>
+												<option value="off"<?php if ($game->db_game['faucet_policy'] == "off") echo ' selected="selected"'; ?>>Off</option>
+											</select>
+										</div>
+										
+										<input type="submit" class="btn btn-primary" value="Save Settings" />
 									</form>
 								</div>
 							</div>

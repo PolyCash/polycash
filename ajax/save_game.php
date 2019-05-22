@@ -78,8 +78,7 @@ if ($thisuser) {
 					$action = $_REQUEST['action'];
 					
 					if ($action == "publish") {
-						$q = "UPDATE games SET game_status='published' WHERE game_id='".$game->db_game['game_id']."';";
-						$r = $app->run_query($q);
+						$game->set_game_status('published');
 						
 						$ensure_block_id = $game->blockchain->last_block_id()+1;
 						if ($game->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $game->max_gde_starting_block());
@@ -88,6 +87,7 @@ if ($thisuser) {
 						
 						$user_game = false;
 						$game->add_genesis_transaction($user_game);
+						$game->blockchain->try_start_games($game->blockchain->last_block_id());
 						
 						$app->output_message(1, "The game has been published.", $game_info);
 					}

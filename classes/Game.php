@@ -326,10 +326,20 @@ class Game {
 		}
 	}
 	
-	public function set_game_over() {		
-		$q = "UPDATE games SET game_status='completed', completion_datetime=NOW() WHERE game_id='".$this->db_game['game_id']."';";
-		$r = $this->blockchain->app->run_query($q);
-		$this->db_game['game_status'] = "completed";
+	public function set_game_status($new_status) {
+		if (in_array($new_status, ['completed','editable','running','published'])) {
+			$q = "UPDATE games SET game_status='".$new_status."'";
+			$q .= ", completion_datetime=NOW()";
+			$q .= " WHERE game_id='".$this->db_game['game_id']."';";
+			$r = $this->blockchain->app->run_query($q);
+			$this->db_game['game_status'] = $new_status;
+			return "";
+		}
+		else return "This status transition is not allowed.";
+	}
+	
+	public function set_game_over() {
+		$error_message = $this->set_game_status('completed');
 		
 		if ($this->db_game['game_winning_rule'] == "event_points") {
 			$entity_score_info = $this->entity_score_info();

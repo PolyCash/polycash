@@ -31,8 +31,6 @@ if ($app->running_as_admin()) {
 		$app->set_site_constant($process_lock_name, getmypid());
 		
 		$game->delete_reset_game($action);
-		$game->blockchain->unset_first_required_block();
-		$game->update_db_game();
 		$game->start_game();
 		
 		echo "Great, ".$game->db_game['name']." has been ".$action."!\n";
