@@ -574,7 +574,7 @@ class Blockchain {
 										$option_id = $color_game->option_index_to_option_id_in_block($output_io_indices[$j], $ref_block_id);
 										if ($option_id) {
 											$using_separator = false;
-											if ($separator_io_ids[$next_separator_i]) {
+											if (!empty($separator_io_ids[$next_separator_i])) {
 												$payout_io_id = $separator_io_ids[$next_separator_i];
 												$next_separator_i++;
 												$using_separator = true;

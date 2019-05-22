@@ -27,10 +27,13 @@ if ($thisuser) {
 			if ($addr_r->rowCount() > 0) {
 				$address_key = $addr_r->fetch();
 				
-				$q = "UPDATE currency_accounts SET current_address_id='".$address_key['address_id']."' WHERE account_id='".$account['account_id']."';";
-				$r = $app->run_query($q);
-				
-				$app->output_message(5, "This address has been set as primary for this account.", false);
+				if ($address_key['is_separator_address'] == 0 && $address_key['is_destroy_address'] == 0) {
+					$q = "UPDATE currency_accounts SET current_address_id='".$address_key['address_id']."' WHERE account_id='".$account['account_id']."';";
+					$r = $app->run_query($q);
+					
+					$app->output_message(6, "This address has been set as primary for this account.", false);
+				}
+				else $app->output_message(5, "Action canceled: this is not a standard address.", false);
 			}
 			else $app->output_message(4, "That address is not in this account.", false);
 		}
