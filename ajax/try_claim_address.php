@@ -14,11 +14,9 @@ $blockchain = new Blockchain($app, $blockchain_id);
 if ($game_id) $game = new Game($blockchain, $game_id);
 else $game = false;
 
-$q = "SELECT * FROM addresses WHERE address_id='".$address_id."';";
-$r = $app->run_query($q);
+$db_address = $app->fetch_address_by_id($address_id);
 
-if ($r->rowCount() > 0) {
-	$db_address = $r->fetch();
+if ($db_address) {
 	$permission_to_claim_address = $app->permission_to_claim_address($thisuser, $blockchain, $db_address);
 	
 	if ($permission_to_claim_address) {

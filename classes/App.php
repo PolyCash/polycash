@@ -1726,7 +1726,7 @@ class App {
 				$peer = $this->get_peer_by_server_name($GLOBALS['base_url'], true);
 			}
 			else {
-				$peer = $this->get_peer_by_id($this->db_blockchain['authoritative_peer_id']);
+				$peer = $this->get_peer_by_id($blockchain->db_blockchain['authoritative_peer_id']);
 			}
 			$blockchain_definition['peer'] = $peer['base_url'];
 		}
@@ -2800,11 +2800,9 @@ class App {
 		$db_account = $this->user_blockchain_account($thisuser->db_user['user_id'], $card['fv_currency_id']);
 		
 		if ($db_account['current_address_id'] > 0) {
-			$address_r = $this->run_query("SELECT * FROM addresses WHERE address_id=".$db_account['current_address_id'].";");
+			$db_address = $this->fetch_address_by_id($db_account['current_address_id']);
 			
-			if ($address_r->rowCount() > 0) {
-				$db_address = $address_r->fetch();
-				
+			if ($db_address) {
 				$db_currency = $this->run_query("SELECT * FROM currencies WHERE currency_id='".$db_account['currency_id']."';")->fetch();
 				
 				$blockchain = new Blockchain($this, $db_currency['blockchain_id']);
@@ -2974,6 +2972,12 @@ class App {
 		if ($r->rowCount() > 0) {
 			return $r->fetch();
 		}
+		else return false;
+	}
+	
+	public function fetch_address_by_id($address_id) {
+		$address_r = $this->run_query("SELECT * FROM addresses WHERE address_id='".(int)$address_id."';");
+		if ($address_r->rowCount() > 0) return $address_r->fetch();
 		else return false;
 	}
 	

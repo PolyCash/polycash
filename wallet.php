@@ -1118,21 +1118,27 @@ if ($thisuser && $game) {
 					<?php
 					if ($game->db_game['buyin_policy'] != "none") { ?>
 						<p>
-							You can buy more <?php echo $game->db_game['coin_name_plural']; ?> by sending <?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?> to your deposit address.  Once your <?php echo $game->blockchain->db_blockchain['coin_name']; ?> payment is confirmed, <?php echo $game->db_game['coin_name_plural']; ?> will be added to your account based on the <?php echo $game->blockchain->db_blockchain['coin_name']; ?> / <?php echo $game->db_game['coin_name']; ?> exchange rate at the time of confirmation.
+							You can buy <?php echo $game->db_game['coin_name_plural']; ?> by clicking below.  Once your payment is confirmed, <?php echo $game->db_game['coin_name_plural']; ?> will be added to your account based on the exchange rate at the time of confirmation.
 						</p>
 						<p>
 							<button class="btn btn-success" onclick="initiate_buyin();">Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
 						</p>
 						<?php
 					}
-					else {
-						?>
-						<p>
-							To deposit <?php echo $game->db_game['coin_name_plural']; ?> please visit <a href="/accounts/?account_id=<?php echo $user_game['account_id']; ?>">My Accounts</a> to see a list of your addresses.
-						</p>
-						<?php
-					}
 					?>
+					<p>
+						You can also deposit <?php echo $game->db_game['coin_name_plural']; ?> directly to this account. Visit <a href="/accounts/?account_id=<?php echo $user_game['account_id']; ?>">My Accounts</a> to see a list of your addresses.
+						<?php
+						$game_account = $app->fetch_account_by_id($user_game['account_id']);
+						
+						if (!empty($game_account['current_address_id'])) {
+							$default_address = $app->fetch_address_by_id($game_account['current_address_id']);
+							echo "<br/>Or send ".$game->db_game['coin_name_plural']." to this address:<br/>\n";
+							echo $default_address['address']."<br/>\n";
+							echo '<img style="margin: 10px;" src="/render_qr_code.php?data='.$default_address['address'].'" />';
+						}
+						?>
+					</p>
 					<br/>
 					
 					<p>To withdraw <?php echo $game->db_game['coin_name_plural']; ?> please enter <?php echo $app->prepend_a_or_an($game->db_game['name']); ?> address below.</p>

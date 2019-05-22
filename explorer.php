@@ -1388,7 +1388,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				else if ($explore_mode == "definition") {
 					if ($game) {
 						$definition_mode = "defined";
-						if ($_REQUEST['definition_mode'] == "actual") $definition_mode = "actual";
+						if (!empty($_REQUEST['definition_mode']) && $_REQUEST['definition_mode'] == "actual") $definition_mode = "actual";
 						
 						$show_internal_params = false;
 						$game_def = $app->fetch_game_definition($game, $definition_mode, $show_internal_params);

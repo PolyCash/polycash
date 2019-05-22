@@ -138,9 +138,7 @@ class Game {
 					else $address_id = $from_user->user_address_id($this, false, $option_ids[$out_index], $user_game['account_id']);
 					
 					if ($address_id) {
-						$q = "SELECT * FROM addresses WHERE address_id='".$address_id."';";
-						$r = $this->blockchain->app->run_query($q);
-						$address = $r->fetch();
+						$address = $this->blockchain->app->fetch_address_by_id($address_id);
 						
 						if ($this->blockchain->db_blockchain['p2p_mode'] != "rpc") {
 							$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."', script_type='pubkeyhash', spend_status='unconfirmed', out_index='".$out_index."', ";
@@ -183,9 +181,7 @@ class Game {
 				if ($overshoot_amount > 0) {
 					$out_index++;
 					
-					$q = "SELECT * FROM addresses WHERE address_id='".$overshoot_return_addr_id."';";
-					$r = $this->blockchain->app->run_query($q);
-					$overshoot_address = $r->fetch();
+					$overshoot_address = $this->blockchain->app->fetch_address_by_id($overshoot_return_addr_id);
 					
 					if ($this->blockchain->db_blockchain['p2p_mode'] != "rpc") {
 						$q = "INSERT INTO transaction_ios SET out_index='".$out_index."', spend_status='unconfirmed', blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."', script_type='pubkeyhash', ";

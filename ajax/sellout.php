@@ -147,8 +147,7 @@ if ($thisuser && $game) {
 						if ($game_sale_account) {
 							$invoice_type = "sellout";
 							$invoice = $app->new_currency_invoice($game_sale_account, $sellout_currency['currency_id'], false, $thisuser, $user_game, $invoice_type);
-							$invoice_addr_q = "SELECT * FROM addresses WHERE address_id='".$invoice['address_id']."';";
-							$invoice_address = $app->run_query($invoice_addr_q)->fetch();
+							$invoice_address = $app->fetch_address_by_id($invoice['address_id']);
 						}
 						else {
 							die("Failed to generate a deposit address.");

@@ -1380,10 +1380,7 @@ class Blockchain {
 				$r = $this->app->run_query($q);
 			}
 			
-			$q = "SELECT * FROM addresses WHERE address_id='".$output_address_id."';";
-			$r = $this->app->run_query($q);
-			
-			return $r->fetch();
+			return $this->app->fetch_address_by_id($output_address_id);
 		}
 		else return false;
 	}
@@ -1502,9 +1499,7 @@ class Blockchain {
 					$address_id = $address_ids[$out_index];
 					
 					if ($address_id) {
-						$q = "SELECT * FROM addresses WHERE address_id='".$address_id."';";
-						$r = $this->app->run_query($q);
-						$address = $r->fetch();
+						$address = $this->app->fetch_address_by_id($address_id);
 						
 						if ($this->db_blockchain['p2p_mode'] != "rpc") {
 							$spend_status = "unconfirmed";
