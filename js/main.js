@@ -80,7 +80,7 @@ var chain_io = function(chain_io_index, io_id, amount, create_block_id) {
 	this.chain_io_index = chain_io_index;
 	this.io_id = io_id;
 	this.amount = amount;
-	this.create_block_id = create_block_id;
+	this.create_block_id = (create_block_id == "") ? null : parseInt(create_block_id);
 	this.game_ios = [];
 	
 	this.votes_at_block = function(block_id) {
@@ -106,7 +106,7 @@ var chain_io = function(chain_io_index, io_id, amount, create_block_id) {
 var game_io = function(game_io_id, amount, create_block_id) {
 	this.game_io_id = game_io_id;
 	this.amount = amount;
-	this.create_block_id = create_block_id;
+	this.create_block_id = (create_block_id == "") ? null : parseInt(create_block_id);
 };
 var vote_input = function(input_index, ref_io) {
 	this.input_index = input_index;

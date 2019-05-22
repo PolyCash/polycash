@@ -385,7 +385,7 @@ if ($thisuser) {
 			$game = new Game($blockchain, $db_game['game_id']);
 			
 			$satoshis_each = round(pow(10,$game->db_game['decimal_places'])*$amount_each);
-			$fee_amount = 0.00001*pow(10,$game->db_game['decimal_places']);
+			$fee_amount = (int)0.0001*pow(10,$game->db_game['decimal_places']);
 			
 			if ($quantity > 0 && $satoshis_each > 0) {
 				$total_cost_satoshis = $quantity*$satoshis_each;

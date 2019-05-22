@@ -1829,10 +1829,10 @@ class Game {
 			$gio_q = "SELECT * FROM transaction_game_ios WHERE game_id='".$this->db_game['game_id']."' AND io_id='".$io['io_id']."';";
 			$gio_r = $this->blockchain->app->run_query($gio_q);
 			
-			$js .= "chain_ios[".$io_i."] = new chain_io(".$io_i.", ".$io['io_id'].", ".$io['amount'].", ".$io['create_block_id'].");\n";
+			$js .= "chain_ios[".$io_i."] = new chain_io(".$io_i.", ".$io['io_id'].", ".$io['amount'].", '".$io['create_block_id']."');\n";
 			
 			while ($gio = $gio_r->fetch()) {
-				$js .= "chain_ios[".$io_i."].game_ios.push(new game_io(".$gio['game_io_id'].", ".$gio['colored_amount'].", ".$io['create_block_id']."));\n";
+				$js .= "chain_ios[".$io_i."].game_ios.push(new game_io(".$gio['game_io_id'].", ".$gio['colored_amount'].", '".$io['create_block_id']."'));\n";
 			}
 			
 			$input_buttons_html .= '<div id="select_utxo_'.$io['io_id'].'" class="btn btn-primary btn-sm select_utxo';
