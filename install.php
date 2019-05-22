@@ -126,7 +126,10 @@ if ($app->running_as_admin()) {
 									}
 									$new_game->blockchain->unset_first_required_block();
 									$new_game->start_game();
-									$new_game->ensure_events_until_block($new_game->db_game['game_starting_block']);
+									
+									$ensure_block_id = $new_game->db_game['game_starting_block'];
+									if ($new_game->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $new_game->max_gde_starting_block());
+									$new_game->ensure_events_until_block($ensure_block_id);
 								}
 								else if (empty($error_message)) $error_message = "Error: failed to create the game.";
 								

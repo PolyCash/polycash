@@ -14,6 +14,8 @@ class StakemoneySharesGameDefinition {
 			"name": "Stakemoney Shares",
 			"module":  "StakemoneyShares",
 			"category_id": 4,
+			"decimal_places": 4,
+			"finite_events": true,
 			"event_type_name": "referendum",
 			"event_type_name_plural": "referendums",
 			"event_rule": "game_definition",

@@ -81,7 +81,10 @@ if ($thisuser) {
 						$q = "UPDATE games SET game_status='published' WHERE game_id='".$game->db_game['game_id']."';";
 						$r = $app->run_query($q);
 						
-						$debug_text = $game->ensure_events_until_block($game->blockchain->last_block_id()+1);
+						$ensure_block_id = $game->blockchain->last_block_id()+1;
+						if ($game->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $game->max_gde_starting_block());
+						
+						$debug_text = $game->ensure_events_until_block($ensure_block_id);
 						
 						$user_game = false;
 						$game->add_genesis_transaction($user_game);

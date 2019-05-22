@@ -15,6 +15,8 @@ class EmpirecoinClassicGameDefinition {
 			"name": "Empirecoin Classic",
 			"module": "EmpirecoinClassic",
 			"category_id": 31,
+			"decimal_places": 4,
+			"finite_events": false,
 			"event_type_name": "competition",
 			"event_type_name_plural": "competitions",
 			"event_rule": "single_event_series",

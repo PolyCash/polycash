@@ -916,7 +916,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$address_associated_games = $blockchain->games_by_address($address);
 						echo "<p>This address is associated with ".count($address_associated_games)." game";
 						if (count($address_associated_games) != 1) echo "s";
-						echo "</p>\n";
+						echo ".</p>\n";
 						
 						for ($i=0; $i<count($address_associated_games); $i++) {
 							$db_game = $address_associated_games[$i];
@@ -1039,7 +1039,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$tx_associated_games = $blockchain->games_by_transaction($transaction);
 						echo "<p>This transaction is associated with ".count($tx_associated_games)." game";
 						if (count($tx_associated_games) != 1) echo "s";
-						echo "</p>\n";
+						echo ".</p>\n";
 						
 						for ($i=0; $i<count($tx_associated_games); $i++) {
 							$db_game = $tx_associated_games[$i];
@@ -1146,12 +1146,12 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							$tx_associated_games = $blockchain->games_by_io($io['io_id']);
 							echo "<p>This UTXO is associated with ".count($tx_associated_games)." game";
 							if (count($tx_associated_games) != 1) echo "s";
-							echo "</p>\n";
+							echo ".</p>\n";
 							
 							for ($i=0; $i<count($tx_associated_games); $i++) {
 								$db_game = $tx_associated_games[$i];
 								
-								$game_io_q = "SELECT * FROM transaction_game_ios WHERE game_id='".$db_game['game_id']."' AND io_id='".$io['io_id']."' AND parent_io_id IS NULL ORDER BY game_out_index ASC;";
+								$game_io_q = "SELECT * FROM transaction_game_ios WHERE game_id='".$db_game['game_id']."' AND io_id='".$io['io_id']."' ORDER BY game_out_index ASC;";
 								$game_io_r = $app->run_query($game_io_q);
 								
 								while ($game_io = $game_io_r->fetch()) {

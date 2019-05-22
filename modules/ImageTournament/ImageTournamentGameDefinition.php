@@ -19,6 +19,8 @@ class ImageTournamentGameDefinition {
 			"name": "Hot or Not",
 			"module": "ImageTournament",
 			"category_id": 1,
+			"decimal_places": 4,
+			"finite_events": false,
 			"event_type_name": "match",
 			"event_type_name_plural": "matches",
 			"event_rule": "game_definition",

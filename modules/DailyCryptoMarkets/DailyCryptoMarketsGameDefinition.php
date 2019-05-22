@@ -30,6 +30,7 @@ class DailyCryptoMarketsGameDefinition {
 			"module": "DailyCryptoMarkets",
 			"category_id": null,
 			"decimal_places": 4,
+			"finite_events": false,
 			"event_type_name": "market",
 			"event_type_name_plural": "markets",
 			"event_rule": "game_definition",

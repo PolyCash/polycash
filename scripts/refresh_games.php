@@ -46,7 +46,8 @@ if ($app->running_as_admin()) {
 			echo "&nbsp;&nbsp;".$strategy_count['COUNT(*)']."&nbsp;".$strategy_count['voting_strategy']."<br/>\n";
 		}
 		*/
-		$ensure_block = $blockchain->last_block_id()+($game->db_game['round_length']*50);
+		$ensure_block = $blockchain->last_block_id()+1;
+		if ($game->db_game['finite_events'] == 1) $ensure_block = max($ensure_block, $game->max_gde_starting_block());
 		$debug_text = $game->ensure_events_until_block($ensure_block);
 		echo $debug_text."\n";
 		$game->update_option_votes();

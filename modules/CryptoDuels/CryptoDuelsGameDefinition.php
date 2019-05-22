@@ -29,6 +29,7 @@ class CryptoDuelsGameDefinition {
 			"module": "CryptoDuels",
 			"category_id": null,
 			"decimal_places": 8,
+			"finite_events": false,
 			"event_type_name": "duel",
 			"event_type_name_plural": "duels",
 			"event_rule": "game_definition",

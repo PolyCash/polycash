@@ -2301,7 +2301,10 @@ class Game {
 		
 		if ($show_debug) echo $this->db_game['name'].".. loading blocks ".$load_block_height." to ".$to_block_height."\n";
 		
-		$ensure_events_debug_text = $this->ensure_events_until_block($to_block_height+1);
+		$ensure_block_id = $to_block_height+1;
+		if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
+		
+		$ensure_events_debug_text = $this->ensure_events_until_block($ensure_block_id);
 		if ($show_debug) echo $ensure_events_debug_text;
 		
 		if ($load_block_height == $this->db_game['game_starting_block']) $game_io_index = 0;
@@ -3485,6 +3488,12 @@ class Game {
 	
 	public function get_option_by_outcome_index($event_id, $outcome_index) {
 		return $this->blockchain->app->run_query("SELECT * FROM options WHERE event_id='".$event_id."' AND event_option_index='".$outcome_index."';")->fetch();
+	}
+	
+	public function max_gde_starting_block() {
+		$info = $this->blockchain->app->run_query("SELECT MAX(event_starting_block) FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."';")->fetch();
+		if ((string)$info['MAX(event_starting_block)'] != "") return (int)$info['MAX(event_starting_block)'];
+		else return (int)$this->db_game['game_starting_block'];
 	}
 }
 ?>

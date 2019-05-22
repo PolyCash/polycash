@@ -348,14 +348,6 @@ class App {
 		$q = substr($q, 0, strlen($q)-2).";";
 		$r = $this->run_query($q);
 		$game_id = $this->last_insert_id();
-		
-		$blockchain = new Blockchain($this, $default_blockchain_id);
-		$game = new Game($blockchain, $game_id);
-		
-		if ($game->db_game['final_round'] > 0) $event_block = $game->db_game['final_round']*$game->db_game['round_length'];
-		else $event_block = $game->db_game['round_length']+1;
-		
-		$debug_text = $game->ensure_events_until_block($event_block);
 	}
 	
 	public function get_redirect_url($url) {
@@ -1262,7 +1254,7 @@ class App {
 			$db_group = $group_r->fetch();
 			$game_definition['option_group'] = $db_group['description'];
 		}
-		else $game_definition['option_group'] = "null";
+		else $game_definition['option_group'] = null;
 		
 		$verbatim_vars = $this->game_definition_verbatim_vars();
 		
@@ -1275,6 +1267,10 @@ class App {
 				else $var_val = null;
 			}
 			else if ($var_type == "float") $var_val = (float) $game->db_game[$var_name];
+			else if ($var_type == "bool") {
+				if ($game->db_game[$var_name]) $var_val = true;
+				else $var_val = false;
+			}
 			else $var_val = $game->db_game[$var_name];
 			
 			$game_definition[$var_name] = $var_val;
@@ -1672,6 +1668,7 @@ class App {
 			array('string', 'module', true),
 			array('int', 'category_id', false),
 			array('int', 'decimal_places', true),
+			array('bool', 'finite_events', true),
 			array('string', 'event_type_name', false),
 			array('string', 'event_type_name_plural', false),
 			array('string', 'event_rule', true),
