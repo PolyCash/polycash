@@ -1723,14 +1723,14 @@ class App {
 		
 		if (in_array($blockchain->db_blockchain['p2p_mode'], array("web_api", "none"))) {
 			if ($blockchain->db_blockchain['p2p_mode'] == "none") {
-				$card_issuer = $this->get_issuer_by_server_name($GLOBALS['base_url'], true);
+				$peer = $this->get_peer_by_server_name($GLOBALS['base_url'], true);
 			}
 			else {
-				$card_issuer = $this->get_issuer_by_id($this->db_blockchain['authoritative_issuer_id']);
+				$peer = $this->get_peer_by_id($this->db_blockchain['authoritative_peer_id']);
 			}
-			$blockchain_definition['issuer'] = $card_issuer['base_url'];
+			$blockchain_definition['peer'] = $peer['base_url'];
 		}
-		else $blockchain_definition['issuer'] = "none";
+		else $blockchain_definition['peer'] = "none";
 		
 		if (in_array($blockchain->db_blockchain['p2p_mode'], array("none","web_api"))) {
 			$blockchain_definition['p2p_mode'] = "web";
@@ -1974,12 +1974,12 @@ class App {
 				
 				$import_q = "INSERT INTO blockchains SET online=1, p2p_mode='".$p2p_mode."', creator_id='".$thisuser->db_user['user_id']."', ";
 				
-				$issuer = false;
-				if ($blockchain_def->issuer != "none") {
-					$issuer = $this->get_issuer_by_server_name($blockchain_def->issuer, false);
-					if ($issuer) $import_q .= "authoritative_issuer_id='".$issuer['issuer_id']."', ";
+				$peer = false;
+				if ($blockchain_def->peer != "none") {
+					$peer = $this->get_peer_by_server_name($blockchain_def->peer, false);
+					if ($peer) $import_q .= "authoritative_peer_id='".$peer['peer_id']."', ";
 				}
-				if (!$issuer) $import_q .= "authoritative_issuer_id='NULL', ";
+				if (!$peer) $import_q .= "authoritative_peer_id='NULL', ";
 				
 				$verbatim_vars = $this->blockchain_verbatim_vars();
 				
@@ -2654,7 +2654,7 @@ class App {
 		return $error_message;
 	}
 	
-	public function get_issuer_by_server_name($server_name, $allow_new) {
+	public function get_peer_by_server_name($server_name, $allow_new) {
 		$server_name = trim(strtolower(strip_tags($server_name)));
 		$initial_server_name = $server_name;
 		if (substr($server_name, 0, 7) == "http://") $server_name = substr($server_name, 7, strlen($server_name)-7);
@@ -2662,24 +2662,24 @@ class App {
 		if (substr($server_name, 0, 4) == "www.") $server_name = substr($server_name, 4, strlen($server_name)-4);
 		if ($server_name[strlen($server_name)-1] == "/") $server_name = substr($server_name, 0, strlen($server_name)-1);
 		
-		$issuer_r = $this->run_query("SELECT * FROM card_issuers WHERE issuer_identifier=".$this->quote_escape($server_name).";");
+		$peer_r = $this->run_query("SELECT * FROM peers WHERE peer_identifier=".$this->quote_escape($server_name).";");
 		
-		if ($issuer_r->rowCount() > 0) {
-			$card_issuer = $issuer_r->fetch();
+		if ($peer_r->rowCount() > 0) {
+			$peer = $peer_r->fetch();
 		}
 		else if ($allow_new) {
-			$this->run_query("INSERT INTO card_issuers SET issuer_identifier=".$this->quote_escape($server_name).", issuer_name=".$this->quote_escape($server_name).", base_url=".$this->quote_escape($initial_server_name).", time_created='".time()."';");
-			$issuer_id = $this->last_insert_id();
+			$this->run_query("INSERT INTO peers SET peer_identifier=".$this->quote_escape($server_name).", peer_name=".$this->quote_escape($server_name).", base_url=".$this->quote_escape($initial_server_name).", time_created='".time()."';");
+			$peer_id = $this->last_insert_id();
 			
-			$card_issuer = $this->run_query("SELECT * FROM card_issuers WHERE issuer_id=".$issuer_id.";")->fetch();
+			$peer = $this->run_query("SELECT * FROM peers WHERE peer_id=".$peer_id.";")->fetch();
 		}
-		else $card_issuer = false;
+		else $peer = false;
 		
-		return $card_issuer;
+		return $peer;
 	}
 	
-	public function get_issuer_by_id($issuer_id) {
-		$q = "SELECT * FROM card_issuers WHERE issuer_id='".$issuer_id."';";
+	public function get_peer_by_id($peer_id) {
+		$q = "SELECT * FROM peers WHERE peer_id='".$peer_id."';";
 		$r = $this->run_query($q);
 		
 		if ($r->rowCount() > 0) {
@@ -2755,7 +2755,7 @@ class App {
 	}
 	
 	public function card_public_vars() {
-		return array('issuer_card_id', 'mint_time', 'amount', 'purity', 'status');
+		return array('peer_card_id', 'mint_time', 'amount', 'purity', 'status');
 	}
 	
 	public function pay_out_card(&$card, $address, $fee) {
@@ -2809,7 +2809,7 @@ class App {
 				
 				$blockchain = new Blockchain($this, $db_currency['blockchain_id']);
 				
-				$this_issuer = $this->get_issuer_by_server_name($GLOBALS['base_url'], true);
+				$this_peer = $this->get_peer_by_server_name($GLOBALS['base_url'], true);
 				
 				$fee = 0.001;
 				$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
@@ -2817,10 +2817,10 @@ class App {
 				if ($claim_type == "to_game") $success_message = "/accounts/?action=prompt_game_buyin&account_id=".$db_account['account_id']."&amount=".($card['amount']-$fee);
 				else $success_message = "/accounts/?action=view_account&account_id=".$db_account['account_id'];
 				
-				if ($card['issuer_id'] != $this_issuer['issuer_id']) {
-					$remote_issuer = $this->run_query("SELECT * FROM card_issuers WHERE issuer_id='".$card['issuer_id']."';")->fetch();
+				if ($card['peer_id'] != $this_peer['peer_id']) {
+					$remote_peer = $this->run_query("SELECT * FROM peers WHERE peer_id='".$card['peer_id']."';")->fetch();
 					
-					$remote_url = $remote_issuer['base_url']."/api/card/".$card['issuer_card_id']."/withdraw/?secret=".$card['secret_hash']."&fee=".$fee."&address=".$db_address['address'];
+					$remote_url = $remote_peer['base_url']."/api/card/".$card['peer_card_id']."/withdraw/?secret=".$card['secret_hash']."&fee=".$fee."&address=".$db_address['address'];
 					$remote_response_raw = file_get_contents($remote_url);
 					$remote_response = get_object_vars(json_decode($remote_response_raw));
 					

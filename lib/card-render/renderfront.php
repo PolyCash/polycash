@@ -26,7 +26,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			$im = imagecreatefrompng(dirname(dirname(dirname(__FILE__)))."/images/card_images/production/".$card['currency_id']."/".$card['fv_currency_id']."/front_".$card['amount'].".png") or die("failed");
 		}
 		
-		$text_url = "http://".$_SERVER['SERVER_NAME']."/lib/card-render/rendertext.php?string=".$card['issuer_card_id'];
+		$text_url = "http://".$_SERVER['SERVER_NAME']."/lib/card-render/rendertext.php?string=".$card['peer_card_id'];
 		if (!empty($card['text_color'])) $text_url .= "&color=".$card['text_color'];
 		
 		$text_im = imagecreatefrompng($text_url) or die('failed to load: '.$text_url);

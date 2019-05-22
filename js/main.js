@@ -2013,9 +2013,9 @@ function show_card_preview() {
 	});
 }
 function search_card_id() {
-	var issuer_id = $('#card_issuer_id').val();
+	var peer_id = $('#peer_id').val();
 	var card_id = $('#card_id_search').val();
-	var url = "/redeem/"+issuer_id+"/"+card_id;
+	var url = "/redeem/"+peer_id+"/"+card_id;
 	if ($('#redirect_key').val() != "") url += "/?redirect_key="+$('#redirect_key').val();
 	window.location = url;
 }
@@ -2039,7 +2039,7 @@ function check_show_confirm_button() {
 	else $('#confirm_button').hide();
 }
 function check_the_code() {
-	var url = "/ajax/check_code.php?issuer_id="+issuer_id+"&card_id="+card_id+"&code="+$('#redeem_code').val().replace(/-/g, '');
+	var url = "/ajax/check_code.php?peer_id="+peer_id+"&card_id="+card_id+"&code="+$('#redeem_code').val().replace(/-/g, '');
 	$('#confirm_button').html("Checking...");
 	$('#messages').hide();
 	
@@ -2059,7 +2059,7 @@ function check_the_code() {
 		}
 	});
 }
-function card_login(create_mode, login_card_id, issuer_id) {
+function card_login(create_mode, login_card_id, peer_id) {
 	$('#card_account_password').val(Sha256.hash($('#card_account_password').val()));
 	if (create_mode) $('#card_account_password2').val(Sha256.hash($('#card_account_password2').val()));
 	
@@ -2070,7 +2070,7 @@ function card_login(create_mode, login_card_id, issuer_id) {
 	var successful = false;
 	
 	if (!create_mode || card_password == card_password2) {
-		var url = "/ajax/check_code.php?action=login&issuer_id="+issuer_id+"&card_id="+login_card_id+"&password="+card_password+"&code="+$('#redeem_code').val().replace(/-/g, '');
+		var url = "/ajax/check_code.php?action=login&peer_id="+peer_id+"&card_id="+login_card_id+"&password="+card_password+"&code="+$('#redeem_code').val().replace(/-/g, '');
 		if ($('#redirect_key').val() != "") url += "&redirect_key="+$('#redirect_key').val();
 		
 		$.get(url, function(result) {
@@ -2126,15 +2126,15 @@ function claim_card(claim_type) {
 	var btn_id = "";
 	var btn_original_text = "";
 	if (claim_type == "to_address") btn_id = 'claim_address_btn';
-	else if (claim_type == "to_game") btn_id = 'claim_game_btn_'+card_id+'_'+issuer_id;
-	else if (claim_type == "to_account") btn_id = 'claim_account_btn_'+card_id+'_'+issuer_id;
+	else if (claim_type == "to_game") btn_id = 'claim_game_btn_'+card_id+'_'+peer_id;
+	else if (claim_type == "to_account") btn_id = 'claim_account_btn_'+card_id+'_'+peer_id;
 	
 	if ($('#'+btn_id).html() != "Loading...") {
 		btn_original_text = $('#'+btn_id).html();
 		
 		$('#'+btn_id).html("Loading...");
 		
-		var ajax_url = "/ajax/account_spend.php?action=withdraw_from_card&claim_type="+claim_type+"&card_id="+card_id+"&issuer_id="+issuer_id;
+		var ajax_url = "/ajax/account_spend.php?action=withdraw_from_card&claim_type="+claim_type+"&card_id="+card_id+"&peer_id="+peer_id;
 		if (claim_type == "to_address") ajax_url += "&fee="+$('#claim_fee').val()+"&address="+$('#claim_address').val();
 		
 		$.get(ajax_url, function(result) {

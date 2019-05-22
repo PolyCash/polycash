@@ -73,14 +73,14 @@ if ($uri_parts[1] == "api") {
 		echo $raw;
 	}
 	else if ($uri_parts[2] == "card" || $uri_parts[2] == "cards") {
-		$this_issuer = $app->get_issuer_by_server_name($GLOBALS['base_url'], true);
+		$this_peer = $app->get_peer_by_server_name($GLOBALS['base_url'], true);
 		
 		if ($uri_parts[2] == "card" && !empty($uri_parts[4]) && !empty($uri_parts[5]) && $uri_parts[4] == "check") {
 			$card_id = (int) $uri_parts[3];
 			$supplied_secret = $uri_parts[5];
 			$supplied_secret_hash = $app->card_secret_to_hash($supplied_secret);
 			
-			$card_q = "SELECT * FROM cards WHERE issuer_card_id='".$card_id."' AND issuer_id='".$this_issuer['issuer_id']."';";
+			$card_q = "SELECT * FROM cards WHERE peer_card_id='".$card_id."' AND peer_id='".$this_peer['peer_id']."';";
 			$card_r = $app->run_query($card_q);
 			
 			if ($card_r->rowCount() > 0) {
@@ -105,7 +105,7 @@ if ($uri_parts[1] == "api") {
 			$fee = $_REQUEST['fee'];
 			$address = $_REQUEST['address'];
 			
-			$card_q = "SELECT * FROM cards WHERE issuer_card_id='".$card_id."' AND issuer_id='".$this_issuer['issuer_id']."';";
+			$card_q = "SELECT * FROM cards WHERE peer_card_id='".$card_id."' AND peer_id='".$this_peer['peer_id']."';";
 			$card_r = $app->run_query($card_q);
 			
 			if ($card_r->rowCount() > 0) {
@@ -143,9 +143,9 @@ if ($uri_parts[1] == "api") {
 			foreach ($card_public_vars as $var_name) {
 				$q .= "c.".$var_name.", ";
 			}
-			$q .= "curr.abbreviation AS currency_abbreviation, fv_curr.abbreviation AS fv_currency_abbreviation FROM cards c JOIN currencies curr ON c.currency_id=curr.currency_id JOIN currencies fv_curr ON c.fv_currency_id=fv_curr.currency_id LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.issuer_id='".$this_issuer['issuer_id']."' AND ";
-			if ($uri_parts[2] == "card") $q .= "c.issuer_card_id='".$card_id."'";
-			else $q .= "c.issuer_card_id >= ".$from_card_id." AND c.issuer_card_id <= ".$to_card_id;
+			$q .= "curr.abbreviation AS currency_abbreviation, fv_curr.abbreviation AS fv_currency_abbreviation FROM cards c JOIN currencies curr ON c.currency_id=curr.currency_id JOIN currencies fv_curr ON c.fv_currency_id=fv_curr.currency_id LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.peer_id='".$this_peer['peer_id']."' AND ";
+			if ($uri_parts[2] == "card") $q .= "c.peer_card_id='".$card_id."'";
+			else $q .= "c.peer_card_id >= ".$from_card_id." AND c.peer_card_id <= ".$to_card_id;
 			$q .= ";";
 			$r = $app->run_query($q);
 			

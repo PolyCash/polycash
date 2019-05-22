@@ -321,10 +321,10 @@ if ($thisuser) {
 	}
 	else if ($action == "withdraw_from_card") {
 		$card_id = (int) $_REQUEST['card_id'];
-		$issuer_id = (int) $_REQUEST['issuer_id'];
+		$peer_id = (int) $_REQUEST['peer_id'];
 		$claim_type = $_REQUEST['claim_type'];
 		
-		$q = "SELECT c.* FROM cards c LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.issuer_id='".$issuer_id."' AND c.issuer_card_id='".$card_id."';";
+		$q = "SELECT c.* FROM cards c LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.peer_id='".$peer_id."' AND c.peer_card_id='".$card_id."';";
 		$r = $app->run_query($q);
 		
 		if ($r->rowCount() == 1) {
@@ -336,12 +336,12 @@ if ($thisuser) {
 					$address = $_REQUEST['address'];
 					
 					if ($fee > 0 && $fee < $card['amount']) {
-						$this_issuer = $app->get_issuer_by_server_name($GLOBALS['base_url'], true);
+						$this_peer = $app->get_peer_by_server_name($GLOBALS['base_url'], true);
 						
-						if ($card['issuer_id'] != $this_issuer['issuer_id']) {
-							$remote_issuer = $app->run_query("SELECT * FROM card_issuers WHERE issuer_id='".$card['issuer_id']."';")->fetch();
+						if ($card['peer_id'] != $this_peer['peer_id']) {
+							$remote_peer = $app->run_query("SELECT * FROM peers WHERE peer_id='".$card['peer_id']."';")->fetch();
 							
-							$remote_url = $remote_issuer['base_url']."/api/card/".$card['issuer_card_id']."/withdraw/?secret=".$card['secret_hash']."&fee=".$fee."&address=".$address;
+							$remote_url = $remote_peer['base_url']."/api/card/".$card['peer_card_id']."/withdraw/?secret=".$card['secret_hash']."&fee=".$fee."&address=".$address;
 							$remote_response_raw = file_get_contents($remote_url);
 							$remote_response = get_object_vars(json_decode($remote_response_raw));
 							
@@ -370,7 +370,7 @@ if ($thisuser) {
 			}
 			else $app->output_message(5, "Error: you don't own this card.", false);
 		}
-		else $app->output_message(4, "Error: invalid card or issuer ID.", false);
+		else $app->output_message(4, "Error: invalid card or peer ID.", false);
 	}
 	else if ($action == "split") {
 		$io_id = (int) $_REQUEST['io_id'];
