@@ -196,7 +196,7 @@ else {
 				else {
 					$sports_entity_type = $app->check_set_entity_type("sports");
 					$leagues_entity_type = $app->check_set_entity_type("leagues");
-					$teams_entity_type = $app->check_set_entity_type("teams");
+					$general_entity_type = $app->check_set_entity_type("general entity");
 					
 					$q = "SELECT MAX(event_index) FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."';";
 					$r = $app->run_query($q);
@@ -259,8 +259,8 @@ else {
 									}
 									else $external_identifier = false;
 									
-									$home_entity = $app->check_set_entity($teams_entity_type['entity_type_id'], $home);
-									$away_entity = $app->check_set_entity($teams_entity_type['entity_type_id'], $away);
+									$home_entity = $app->check_set_entity($general_entity_type['entity_type_id'], $home);
+									$away_entity = $app->check_set_entity($general_entity_type['entity_type_id'], $away);
 									
 									if ($league_col !== false) {
 										$league_name = $line_vals[$league_col];

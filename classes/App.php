@@ -1038,16 +1038,22 @@ class App {
 				$db_image = $this->fetch_image_by_id($image_id);
 				$image_fname = dirname(dirname(__FILE__)).$this->image_url($db_image);
 				
-				$fh = fopen($image_fname, 'w');
-				fwrite($fh, $raw_image);
-				fclose($fh);
-				
-				$image_info = getimagesize($image_fname);
-				
-				if (!empty($image_info[0]) && !empty($image_info[1])) {
-					$this->run_query("UPDATE images SET width=".$image_info[0].", height=".$image_info[1]." WHERE image_id=".$db_image['image_id'].";");
-					$db_image['height'] = $image_info[0];
-					$db_image['width'] = $image_info[1];
+				if ($fh = fopen($image_fname, 'w')) {
+					fwrite($fh, $raw_image);
+					fclose($fh);
+					
+					$image_info = getimagesize($image_fname);
+					
+					if (!empty($image_info[0]) && !empty($image_info[1])) {
+						$this->run_query("UPDATE images SET width=".$image_info[0].", height=".$image_info[1]." WHERE image_id=".$db_image['image_id'].";");
+						$db_image['height'] = $image_info[0];
+						$db_image['width'] = $image_info[1];
+					}
+				}
+				else {
+					$db_image = false;
+					$this->run_query("DELETE FROM images WHERE image_id='".$image_id."';");
+					$error_message = 'Failed to write '.$image_fname;
 				}
 			}
 			else $error_message = "That image file type is not supported.";
@@ -1775,6 +1781,7 @@ class App {
 				
 				$sports_entity_type = $this->check_set_entity_type("sports");
 				$leagues_entity_type = $this->check_set_entity_type("leagues");
+				$general_entity_type = $this->check_set_entity_type("general entity");
 				
 				// Check if any base params are different. If so, reset from game starting block
 				for ($i=0; $i<count($verbatim_vars); $i++) {
@@ -1837,7 +1844,7 @@ class App {
 					
 					for ($i=$set_events_from; $i<count($new_game_obj['events'])+1; $i++) {
 						$gde = get_object_vars($new_game_obj['events'][$i-1]);
-						$this->check_set_gde($game, $gde, $event_verbatim_vars, $sports_entity_type['entity_type_id'], $leagues_entity_type['entity_type_id']);
+						$this->check_set_gde($game, $gde, $event_verbatim_vars, $sports_entity_type['entity_type_id'], $leagues_entity_type['entity_type_id'], $general_entity_type['entity_type_id']);
 					}
 				}
 				
@@ -1856,7 +1863,7 @@ class App {
 		return $log_message;
 	}
 	
-	public function check_set_gde(&$game, &$gde, &$event_verbatim_vars, $sport_entity_type_id, $league_entity_type_id) {
+	public function check_set_gde(&$game, &$gde, &$event_verbatim_vars, $sport_entity_type_id, $league_entity_type_id, $general_entity_type_id) {
 		$db_gde = false;
 		
 		$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gde['event_index']."';";
@@ -1923,7 +1930,12 @@ class App {
 				else $q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index='".$gde['event_index']."', option_index='".$k."', ";
 				
 				$q .= "name=".$this->quote_escape($possible_outcome['title']);
-				if (!empty($possible_outcome['entity_id'])) $q .= ", entity_id='".$possible_outcome['entity_id']."'";
+				
+				if (empty($possible_outcome['entity_id'])) {
+					$gdo_entity = $this->check_set_entity($general_entity_type_id, $possible_outcome['title']);
+					$possible_outcome['entity_id'] = $gdo_entity['entity_id'];
+				}
+				$q .= ", entity_id='".$possible_outcome['entity_id']."'";
 				
 				if ($existing_gdo) $q .= " WHERE game_defined_option_id='".$existing_gdo['game_defined_option_id']."'";
 				

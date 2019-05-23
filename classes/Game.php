@@ -401,7 +401,7 @@ class Game {
 			$q .= " WHERE g.game_id='".$this->db_game['game_id']."' AND usb.block_within_round='".$block_of_round."'";
 			$q .= " AND (s.voting_strategy IN ('by_rank', 'by_entity', 'api', 'by_plan', 'featured','hit_url'))";
 			$q .= " AND (s.time_next_apply IS NULL OR s.time_next_apply<".time().")";
-			$q .= " AND g.account_value > 0 ORDER BY u.user_id ASC;";
+			$q .= " AND g.account_value > 0 ORDER BY RAND();";
 			$r = $this->blockchain->app->run_query($q);
 			
 			if ($print_debug) echo "Applying user strategies for block #".$mining_block_id." of ".$this->db_game['name']." looping through ".$r->rowCount()." users.<br/>\n";
@@ -2005,6 +2005,7 @@ class Game {
 				
 				$sports_entity_type = $this->blockchain->app->check_set_entity_type("sports");
 				$leagues_entity_type = $this->blockchain->app->check_set_entity_type("leagues");
+				$general_entity_type = $this->blockchain->app->check_set_entity_type("general entity");
 				
 				if (count($gdes_to_add) > 0) {
 					$init_event_index = $gdes_to_add[0]['event_index'];
@@ -2018,7 +2019,7 @@ class Game {
 					
 					$i = 0;
 					for ($event_index=$init_event_index; $event_index<$init_event_index+count($gdes_to_add); $event_index++) {
-						$this->blockchain->app->check_set_gde($this, $gdes_to_add[$i], $event_verbatim_vars, $sports_entity_type['entity_type_id'], $leagues_entity_type['entity_type_id']);
+						$this->blockchain->app->check_set_gde($this, $gdes_to_add[$i], $event_verbatim_vars, $sports_entity_type['entity_type_id'], $leagues_entity_type['entity_type_id'], $general_entity_type['entity_type_id']);
 						$i++;
 					}
 				}
