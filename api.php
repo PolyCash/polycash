@@ -265,7 +265,7 @@ if ($uri_parts[1] == "api") {
 			if ($uri_parts[3] == "definition") {
 				if (empty($game->db_game['events_until_block']) || $game->db_game['events_until_block'] < $last_block_id) {
 					$api_output['status_code'] = 2;
-					$api_output['status_message'] = "This game is currently loading.";
+					$api_output['message'] = "This game is currently loading.";
 				}
 				else {
 					$client_needs_info = true;
@@ -273,7 +273,7 @@ if ($uri_parts[1] == "api") {
 					
 					if (!$client_needs_info) {
 						$api_output['status_code'] = 3;
-						$api_output['status_message'] = "You're already in sync.";
+						$api_output['message'] = "You're already in sync.";
 					}
 					else {
 						$show_internal_params = false;
@@ -423,14 +423,14 @@ if ($uri_parts[1] == "api") {
 				}
 				$output_game['current_events'] = $current_events;
 				
-				$api_output = array('status_code'=>1, 'status_message'=>"Successful", 'game'=>$output_game, 'user_info'=>$api_user_info);
+				$api_output = array('status_code'=>1, 'message'=>"Successful", 'game'=>$output_game, 'user_info'=>$api_user_info);
 			}
 			else {
-				$api_output = array('status_code'=>0, 'status_message'=>'Error, URL not recognized');
+				$api_output = array('status_code'=>0, 'message'=>'Error, URL not recognized');
 			}
 		}
 		else {
-			$api_output = array('status_code'=>0, 'status_message'=>'Error: Invalid game ID');
+			$api_output = array('status_code'=>0, 'message'=>'Error: Invalid game ID');
 		}
 		echo json_encode($api_output, JSON_PRETTY_PRINT);
 	}
@@ -439,7 +439,7 @@ if ($uri_parts[1] == "api") {
 		die();
 	}
 	else {
-		echo json_encode(array('status_code'=>0, 'status_message'=>"You've reached an invalid URL."));
+		echo json_encode(array('status_code'=>0, 'message'=>"You've reached an invalid URL."));
 	}
 }
 ?>

@@ -1800,7 +1800,8 @@ function set_event_outcome_changed() {
 	if (outcome_index != "select") {
 		$.get("/ajax/set_event_outcome.php?action=set&event_id="+set_event_id+"&outcome_index="+outcome_index, function(result) {
 			var result_obj = JSON.parse(result);
-			window.location = window.location;
+			if (result_obj['status_code'] == 2) window.location = window.location;
+			else alert(result_obj['message']);
 		});
 	}
 }

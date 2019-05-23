@@ -54,7 +54,7 @@ if ($thisuser) {
 					else {
 						$outcome_index = (int)$_REQUEST['outcome_index'];
 						
-						$gdo_r = $app->run_query("SELECT * FROM game_defined_options WHERE event_index='".$db_event['event_index']."' AND option_index='".$outcome_index."';");
+						$gdo_r = $app->run_query("SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."' AND option_index='".$outcome_index."';");
 						
 						if ($gdo_r->rowCount() == 1) $option_ok = true;
 						else $option_ok = false;
