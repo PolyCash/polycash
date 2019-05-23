@@ -2288,20 +2288,23 @@ class Game {
 		$definitive_peer = $this->get_definitive_peer();
 		
 		if ($definitive_peer) {
-			$api_url = $definitive_peer['base_url']."/".$this->db_game['url_identifier']."/definition/?definition_hash=".$this->db_game['cached_definition_hash'];
+			$api_url = $definitive_peer['base_url']."/api/".$this->db_game['url_identifier']."/definition/?definition_hash=".$this->db_game['cached_definition_hash'];
 			
 			$api_response = json_decode($this->blockchain->app->safe_fetch_url($api_url));
-			
+
 			if ($api_response->status_code == 1) {
 				if ($api_response->definition->url_identifier == $this->db_game['url_identifier']) {
 					$ref_user = false;
-					$this->blockchain->app->set_game_from_definition($api_response->definition, $ref_user, $error_message, $this->db_game, true);
+					$db_new_game = false;
+					$this->blockchain->app->set_game_from_definition($api_response->definition, $ref_user, $error_message, $db_new_game, true);
 				}
 				else $error_message = "Sync canceled: definitive peer tried to change the game identifier.";
 			}
-			else $error_message = $api_response->status_message;
+			else $error_message = $api_response->message;
 		}
 		else $error_message = "This game does not have a definitive peer.";
+		
+		return $error_message;
 	}
 	
 	public function sync($show_debug) {
@@ -2318,7 +2321,8 @@ class Game {
 		if ($show_debug) echo $ensure_events_debug_text;
 		
 		if (!empty($this->db_game['definitive_game_peer_id'])) {
-			$this->sync_with_definitive_peer();
+			$sync_definitive_message = $this->sync_with_definitive_peer();
+			if ($show_debug) echo $sync_definitive_message."\n";
 		}
 		
 		if ($to_block_height >= $load_block_height) {
