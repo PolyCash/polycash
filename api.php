@@ -260,22 +260,49 @@ if ($uri_parts[1] == "api") {
 			
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
-			$game->load_current_events();
-			
 			$last_block_id = $game->blockchain->last_block_id();
-			$current_round = $game->block_to_round($last_block_id+1);
-			$coins_per_vote = $game->blockchain->app->coins_per_vote($game->db_game);
 			
-			if ($game->db_game['module'] == "CoinBattles") {
-				$btc_currency = $app->get_currency_by_abbreviation("BTC");
+			if ($uri_parts[3] == "definition") {
+				if (empty($game->db_game['events_until_block']) || $game->db_game['events_until_block'] < $last_block_id) {
+					$api_output['status_code'] = 2;
+					$api_output['status_message'] = "This game is currently loading.";
+				}
+				else {
+					$client_needs_info = true;
+					if (!empty($_REQUEST['definition_hash']) && $_REQUEST['definition_hash'] == $game->db_game['cached_definition_hash']) $client_needs_info = false;
+					
+					if (!$client_needs_info) {
+						$api_output['status_code'] = 3;
+						$api_output['status_message'] = "You're already in sync.";
+					}
+					else {
+						$show_internal_params = false;
+						$game_def = $app->fetch_game_definition($game, "actual", $show_internal_params);
+						$game_def_str = $app->game_def_to_text($game_def);
+						$game_def_hash = $app->game_def_to_hash($game_def_str);
+						
+						$api_output['status_code'] = 1;
+						$api_output['definition_hash'] = $game_def_hash;
+						$api_output['events_until_block'] = $game->db_game['events_until_block'];
+						$api_output['definition'] = $game_def;
+					}
+				}
 			}
-			
-			$intval_vars = array('game_id','round_length','maturity');
-			for ($i=0; $i<count($intval_vars); $i++) {
-				$game->db_game[$intval_vars[$i]] = intval($game->db_game[$intval_vars[$i]]);
-			}
-			
-			if (empty($uri_parts[3]) || $uri_parts[3] == "status") {
+			else if ($uri_parts[3] == "current_events") {
+				$game->load_current_events();
+				
+				$current_round = $game->block_to_round($last_block_id+1);
+				$coins_per_vote = $game->blockchain->app->coins_per_vote($game->db_game);
+				
+				if ($game->db_game['module'] == "CoinBattles") {
+					$btc_currency = $app->get_currency_by_abbreviation("BTC");
+				}
+				
+				$intval_vars = array('game_id','round_length','maturity');
+				for ($i=0; $i<count($intval_vars); $i++) {
+					$game->db_game[$intval_vars[$i]] = intval($game->db_game[$intval_vars[$i]]);
+				}
+				
 				$api_user = FALSE;
 				$api_user_info = FALSE;
 				
@@ -388,8 +415,8 @@ if ($uri_parts[1] == "api") {
 								if ($initial_price['price'] > 0) $final_performance = round(pow(10,8)*$final_price['price']/$initial_price['price'])/pow(10,8) - 1;
 								else $final_performance = 0;
 							}
+							$api_stat['price_performance'] = $final_performance;
 						}
-						$api_stat['price_performance'] = $final_performance;
 						array_push($api_event['options'], $api_stat);
 					}
 					array_push($current_events, $api_event);

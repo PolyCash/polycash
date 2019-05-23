@@ -304,6 +304,14 @@ class App {
 		$ensure_addresses_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($ensure_addresses_process)) $process_count++;
 		else $html .= "Failed to start a process for ensuring user addresses.<br/>\n";
+		sleep(0.1);
+		
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/set_cached_game_definition_hashes.php"';
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
+		$ensure_addresses_process = proc_open($cmd, $pipe_config, $pipes);
+		if (is_resource($ensure_addresses_process)) $process_count++;
+		else $html .= "Failed to start a process for caching game definitions.<br/>\n";
 		
 		$html .= "Started ".$process_count." background processes.<br/>\n";
 		return $html;
@@ -2013,7 +2021,7 @@ class App {
 		else $error_message = "Invalid url_identifier";
 	}
 	
-	public function create_game_from_definition(&$game_definition, &$thisuser, &$error_message, &$db_game) {
+	public function set_game_from_definition(&$game_definition, &$thisuser, &$error_message, &$db_game, $permission_override) {
 		$game = false;
 		$game_def = json_decode($game_definition) or die("Error: the game definition you entered could not be imported.<br/>Please make sure to enter properly formatted JSON.<br/><a href=\"/import/\">Try again</a>");
 		
@@ -2060,13 +2068,16 @@ class App {
 						if ($db_url_matched_game['blockchain_id'] == $blockchain->db_blockchain['blockchain_id']) {
 							$url_matched_game = new Game($blockchain, $db_url_matched_game['game_id']);
 							
-							if ($thisuser) {
-								$permission_to_change = $this->user_can_edit_game($thisuser, $url_matched_game);
-								
-								if ($permission_to_change) $game = $url_matched_game;
-								else $error_message = "Error: you can't edit this game.";
+							if ($permission_override) $permission_to_change = true;
+							else {
+								if ($thisuser) {
+									$permission_to_change = $this->user_can_edit_game($thisuser, $url_matched_game);
+									
+									if ($permission_to_change) $game = $url_matched_game;
+									else $error_message = "Error: you can't edit this game.";
+								}
+								else $error_message = "Permission denied. You must be logged in.";
 							}
-							else $error_message = "Permission denied. You must be logged in.";
 						}
 						else $error_message = "Error: invalid game.blockchain_id.";
 					}
@@ -3015,7 +3026,7 @@ class App {
 			$my_inflation_stake = $bet[$game->db_game['payout_weight']."s_destroyed"]*$coins_per_vote;
 			$my_effective_stake = $bet['effective_destroy_amount'] + $bet['votes']*$coins_per_vote;
 			
-			if ($bet['payout_rule'] == "binary") $expected_payout = $event_total_reward*($my_effective_stake/$option_effective_reward);
+			if ($bet['payout_rule'] == "binary" && $option_effective_reward > 0) $expected_payout = $event_total_reward*($my_effective_stake/$option_effective_reward);
 			else if ((string)$bet['track_payout_price'] != "") $expected_payout = $bet['colored_amount'];
 		}
 		else {
@@ -3342,6 +3353,20 @@ class App {
 			$qq .= ", save_method='fake', pub_key='".$addr_text."';";
 			$rr = $this->run_query($qq);
 		}
+	}
+	
+	public function safe_fetch_url($url) {
+		if ($GLOBALS['api_proxy_url']) $safe_url = $GLOBALS['api_proxy_url'].urlencode($url);
+		else $safe_url = str_replace('&amp;', '&', $url);
+		
+		$arrContextOptions=array(
+			"ssl"=>array(
+				"verify_peer"=>false,
+				"verify_peer_name"=>false,
+			),
+		);
+		
+		return file_get_contents($safe_url, false, stream_context_create($arrContextOptions));
 	}
 }
 ?>

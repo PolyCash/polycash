@@ -443,16 +443,7 @@ class Game {
 					if ($force_now) $api_url .= "&force=1";
 				}
 				
-				if ($GLOBALS['api_proxy_url']) $api_client_url = $GLOBALS['api_proxy_url'].urlencode($api_url);
-				else $api_client_url = str_replace('&amp;', '&', $api_url);
-				
-				$arrContextOptions=array(
-					"ssl"=>array(
-						"verify_peer"=>false,
-						"verify_peer_name"=>false,
-					),
-				);
-				$api_response = file_get_contents($api_client_url, false, stream_context_create($arrContextOptions));
+				$api_response = $this->blockchain->app->safe_fetch_url($api_url);
 				
 				if ($user_game['hit_url'] == 1) {
 					$api_response = json_decode($api_response);
@@ -569,18 +560,7 @@ class Game {
 				}
 			}
 			else if ($user_game['voting_strategy'] == "hit_url") {
-				$api_url = $user_game['api_url'];
-				
-				if ($GLOBALS['api_proxy_url']) $api_client_url = $GLOBALS['api_proxy_url'].urlencode($api_url);
-				else $api_client_url = str_replace('&amp;', '&', $api_url);
-				
-				$arrContextOptions=array(
-					"ssl"=>array(
-						"verify_peer"=>false,
-						"verify_peer_name"=>false,
-					),
-				);
-				$api_response = json_decode(file_get_contents($api_client_url, false, stream_context_create($arrContextOptions)));
+				$api_response = $this->blockchain->app->safe_fetch_url($user_game['api_url']);
 			}
 			else {
 				$log_text .= "user game #".$user_game['user_game_id'].", strategy: ".$user_game['voting_strategy']." ";
@@ -2303,6 +2283,27 @@ class Game {
 		$this->db_game['loaded_until_block'] = $loaded_until_block;
 	}
 	
+	public function sync_with_definitive_peer() {
+		$error_message = "";
+		$definitive_peer = $this->get_definitive_peer();
+		
+		if ($definitive_peer) {
+			$api_url = $definitive_peer['base_url']."/".$this->db_game['url_identifier']."/definition/?definition_hash=".$this->db_game['cached_definition_hash'];
+			
+			$api_response = json_decode($this->blockchain->app->safe_fetch_url($api_url));
+			
+			if ($api_response->status_code == 1) {
+				if ($api_response->definition->url_identifier == $this->db_game['url_identifier']) {
+					$ref_user = false;
+					$this->blockchain->app->set_game_from_definition($api_response->definition, $ref_user, $error_message, $this->db_game, true);
+				}
+				else $error_message = "Sync canceled: definitive peer tried to change the game identifier.";
+			}
+			else $error_message = $api_response->status_message;
+		}
+		else $error_message = "This game does not have a definitive peer.";
+	}
+	
 	public function sync($show_debug) {
 		$this->set_loaded_until_block();
 		$last_set_loaded_time = microtime(true);
@@ -2310,32 +2311,39 @@ class Game {
 		$load_block_height = $this->db_game['loaded_until_block']+1;
 		$to_block_height = $this->blockchain->last_block_id();
 		
-		if ($show_debug) echo $this->db_game['name'].".. loading blocks ".$load_block_height." to ".$to_block_height."\n";
-		
 		$ensure_block_id = $to_block_height+1;
 		if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
 		
 		$ensure_events_debug_text = $this->ensure_events_until_block($ensure_block_id);
 		if ($show_debug) echo $ensure_events_debug_text;
 		
-		if ($load_block_height == $this->db_game['game_starting_block']) $game_io_index = 0;
-		else {
-			$prev_block = $this->fetch_game_block_by_height($load_block_height-1);
-			$game_io_index = $prev_block['max_game_io_index'];
+		if (!empty($this->db_game['definitive_game_peer_id'])) {
+			$this->sync_with_definitive_peer();
 		}
 		
-		for ($block_height=$load_block_height; $block_height<=$to_block_height; $block_height++) {
-			list($successful, $log_text, $bulk_to_block) = $this->add_block($block_height, $game_io_index);
-			if ($bulk_to_block) $block_height = $bulk_to_block;
+		if ($to_block_height >= $load_block_height) {
+			if ($show_debug) echo $this->db_game['name'].".. loading blocks ".$load_block_height." to ".$to_block_height."\n";
 			
-			if ($show_debug) echo $log_text;
-			
-			if (microtime(true)-$last_set_loaded_time >= 3) {
-				$this->set_loaded_until_block();
-				$last_set_loaded_time = microtime(true);
+			if ($load_block_height == $this->db_game['game_starting_block']) $game_io_index = 0;
+			else {
+				$prev_block = $this->fetch_game_block_by_height($load_block_height-1);
+				$game_io_index = $prev_block['max_game_io_index'];
 			}
-			if (!$successful) $block_height = $to_block_height+1;
+			
+			for ($block_height=$load_block_height; $block_height<=$to_block_height; $block_height++) {
+				list($successful, $log_text, $bulk_to_block) = $this->add_block($block_height, $game_io_index);
+				if ($bulk_to_block) $block_height = $bulk_to_block;
+				
+				if ($show_debug) echo $log_text;
+				
+				if (microtime(true)-$last_set_loaded_time >= 3) {
+					$this->set_loaded_until_block();
+					$last_set_loaded_time = microtime(true);
+				}
+				if (!$successful) $block_height = $to_block_height+1;
+			}
 		}
+		else if ($show_debug) echo $this->db_game['name']." is already fully loaded.\n";
 		
 		$this->update_option_votes();
 	}

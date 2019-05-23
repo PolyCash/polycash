@@ -1793,12 +1793,12 @@ function set_event_outcome(game_id, event_id) {
 	});
 }
 
-function set_event_outcome_selected() {
-	var option_id = parseInt($('#set_event_outcome_option_id').val());
-	$('#set_event_outcome_option_id').attr('disabled', 'disabled');
+function set_event_outcome_changed() {
+	var outcome_index = $('#set_event_outcome_index').val();
+	$('#set_event_outcome_index').attr('disabled', 'disabled');
 	
-	if (option_id > 0) {
-		$.get("/ajax/set_event_outcome.php?action=set&event_id="+set_event_id+"&option_id="+option_id, function(result) {
+	if (outcome_index != "select") {
+		$.get("/ajax/set_event_outcome.php?action=set&event_id="+set_event_id+"&outcome_index="+outcome_index, function(result) {
 			var result_obj = JSON.parse(result);
 			window.location = window.location;
 		});
@@ -2324,7 +2324,6 @@ function refresh_prices_by_event(game_id, event_id) {
 	});
 }
 function toggle_definitive_game_peer() {
-	console.log($('#definitive_game_peer_on').val());
 	if ($('#definitive_game_peer_on').val() == 1) {
 		$('#definitive_game_peer').show('fast');
 		$('#definitive_game_peer').focus();
