@@ -254,8 +254,9 @@ class Event {
 			$html .= "<p class=\"greentext\">";
 			$html .= "Winner: ";
 			if ($expected_winner) $html .= $expected_winner['name'];
-			if ($expected_winner && $game_defined_winner && $expected_winner['option_id'] != $game_defined_winner['option_id']) $html .=" &rarr; ";
+			if ($expected_winner && $game_defined_winner && $expected_winner['option_id'] != $game_defined_winner['option_id'] || ($expected_winner && !$game_defined_winner)) $html .=" &rarr; ";
 			if ($game_defined_winner && (!$expected_winner || ($expected_winner && $expected_winner['option_id'] != $game_defined_winner['option_id']))) $html .= $game_defined_winner['name'];
+			if ($expected_winner && !$game_defined_winner) $html .= "Unset";
 			$html .= "</p>\n";
 		}
 		

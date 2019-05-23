@@ -4,7 +4,7 @@ include(dirname(dirname(__FILE__)).'/includes/get_session.php');
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
 $card_id = (int) $_REQUEST['card_id'];
-$issuer_id = (int) $_REQUEST['issuer_id'];
+$peer_id = (int) $_REQUEST['peer_id'];
 
 $code = $_REQUEST['code'];
 $code_hash = $app->card_secret_to_hash($code);
@@ -12,7 +12,7 @@ $code_hash = $app->card_secret_to_hash($code);
 $action = "";
 if (!empty($_REQUEST['action'])) $action = $_REQUEST['action'];
 
-$q = "SELECT c.* FROM cards c LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.issuer_id='".$issuer_id."' AND c.issuer_card_id='".$card_id."';";
+$q = "SELECT c.* FROM cards c LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.peer_id='".$peer_id."' AND c.peer_card_id='".$card_id."';";
 $r = $app->run_query($q);
 
 if ($r->rowCount() == 1) {
@@ -21,12 +21,12 @@ if ($r->rowCount() == 1) {
 	if (!empty($_REQUEST['redirect_key'])) $redirect_url = $app->get_redirect_by_key($_REQUEST['redirect_key']);
 	else $redirect_url = false;
 	
-	$this_issuer = $app->get_issuer_by_server_name($GLOBALS['base_url'], true);
+	$this_peer = $app->get_peer_by_server_name($GLOBALS['base_url'], true);
 	
-	if ($card['issuer_id'] != $this_issuer['issuer_id']) {
-		$remote_issuer = $app->run_query("SELECT * FROM card_issuers WHERE issuer_id='".$card['issuer_id']."';")->fetch();
+	if ($card['peer_id'] != $this_peer['peer_id']) {
+		$remote_peer = $app->run_query("SELECT * FROM peers WHERE peer_id='".$card['peer_id']."';")->fetch();
 	}
-	else $remote_issuer = false;
+	else $remote_peer = false;
 	
 	if ($GLOBALS['pageview_tracking_enabled']) {
 		$bruteforce_q = "SELECT * FROM card_failedchecks WHERE ip_address=".$app->quote_escape($_SERVER['REMOTE_ADDR'])." AND check_time > ".(time()-3600*24*4).";";
@@ -36,8 +36,8 @@ if ($r->rowCount() == 1) {
 	else $num_bruteforce = 0;
 	
 	$correct_secret = false;
-	if ($remote_issuer) {
-		$remote_url = $remote_issuer['base_url']."/api/card/".$card['issuer_card_id']."/check/".$code_hash;
+	if ($remote_peer) {
+		$remote_url = $remote_peer['base_url']."/api/card/".$card['peer_card_id']."/check/".$code_hash;
 		$remote_response = get_object_vars(json_decode(file_get_contents($remote_url)));
 		if ($remote_response['status_code'] == 1) $correct_secret = true;
 	}

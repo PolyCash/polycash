@@ -110,8 +110,7 @@ if ($thisuser && $game) {
 							if ($game->db_game['buyin_policy'] == "for_sale") $invoice_type = "sale_buyin";
 							
 							$invoice = $app->new_currency_invoice($pay_to_account, $pay_to_account['currency_id'], false, $thisuser, $user_game, $invoice_type);
-							$invoice_addr_q = "SELECT * FROM addresses WHERE address_id='".$invoice['address_id']."';";
-							$invoice_address = $app->run_query($invoice_addr_q)->fetch();
+							$invoice_address = $app->fetch_address_by_id($invoice['address_id']);
 						}
 						else {
 							die("Failed to generate a deposit address.");

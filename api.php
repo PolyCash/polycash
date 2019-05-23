@@ -73,14 +73,14 @@ if ($uri_parts[1] == "api") {
 		echo $raw;
 	}
 	else if ($uri_parts[2] == "card" || $uri_parts[2] == "cards") {
-		$this_issuer = $app->get_issuer_by_server_name($GLOBALS['base_url'], true);
+		$this_peer = $app->get_peer_by_server_name($GLOBALS['base_url'], true);
 		
 		if ($uri_parts[2] == "card" && !empty($uri_parts[4]) && !empty($uri_parts[5]) && $uri_parts[4] == "check") {
 			$card_id = (int) $uri_parts[3];
 			$supplied_secret = $uri_parts[5];
 			$supplied_secret_hash = $app->card_secret_to_hash($supplied_secret);
 			
-			$card_q = "SELECT * FROM cards WHERE issuer_card_id='".$card_id."' AND issuer_id='".$this_issuer['issuer_id']."';";
+			$card_q = "SELECT * FROM cards WHERE peer_card_id='".$card_id."' AND peer_id='".$this_peer['peer_id']."';";
 			$card_r = $app->run_query($card_q);
 			
 			if ($card_r->rowCount() > 0) {
@@ -105,7 +105,7 @@ if ($uri_parts[1] == "api") {
 			$fee = $_REQUEST['fee'];
 			$address = $_REQUEST['address'];
 			
-			$card_q = "SELECT * FROM cards WHERE issuer_card_id='".$card_id."' AND issuer_id='".$this_issuer['issuer_id']."';";
+			$card_q = "SELECT * FROM cards WHERE peer_card_id='".$card_id."' AND peer_id='".$this_peer['peer_id']."';";
 			$card_r = $app->run_query($card_q);
 			
 			if ($card_r->rowCount() > 0) {
@@ -143,9 +143,9 @@ if ($uri_parts[1] == "api") {
 			foreach ($card_public_vars as $var_name) {
 				$q .= "c.".$var_name.", ";
 			}
-			$q .= "curr.abbreviation AS currency_abbreviation, fv_curr.abbreviation AS fv_currency_abbreviation FROM cards c JOIN currencies curr ON c.currency_id=curr.currency_id JOIN currencies fv_curr ON c.fv_currency_id=fv_curr.currency_id LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.issuer_id='".$this_issuer['issuer_id']."' AND ";
-			if ($uri_parts[2] == "card") $q .= "c.issuer_card_id='".$card_id."'";
-			else $q .= "c.issuer_card_id >= ".$from_card_id." AND c.issuer_card_id <= ".$to_card_id;
+			$q .= "curr.abbreviation AS currency_abbreviation, fv_curr.abbreviation AS fv_currency_abbreviation FROM cards c JOIN currencies curr ON c.currency_id=curr.currency_id JOIN currencies fv_curr ON c.fv_currency_id=fv_curr.currency_id LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.peer_id='".$this_peer['peer_id']."' AND ";
+			if ($uri_parts[2] == "card") $q .= "c.peer_card_id='".$card_id."'";
+			else $q .= "c.peer_card_id >= ".$from_card_id." AND c.peer_card_id <= ".$to_card_id;
 			$q .= ";";
 			$r = $app->run_query($q);
 			
@@ -260,22 +260,49 @@ if ($uri_parts[1] == "api") {
 			
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
-			$game->load_current_events();
-			
 			$last_block_id = $game->blockchain->last_block_id();
-			$current_round = $game->block_to_round($last_block_id+1);
-			$coins_per_vote = $game->blockchain->app->coins_per_vote($game->db_game);
 			
-			if ($game->db_game['module'] == "CoinBattles") {
-				$btc_currency = $app->get_currency_by_abbreviation("BTC");
+			if ($uri_parts[3] == "definition") {
+				if (empty($game->db_game['events_until_block']) || $game->db_game['events_until_block'] < $last_block_id) {
+					$api_output['status_code'] = 2;
+					$api_output['message'] = "This game is currently loading.";
+				}
+				else {
+					$client_needs_info = true;
+					if (!empty($_REQUEST['definition_hash']) && $_REQUEST['definition_hash'] == $game->db_game['cached_definition_hash']) $client_needs_info = false;
+					
+					if (!$client_needs_info) {
+						$api_output['status_code'] = 3;
+						$api_output['message'] = "You're already in sync.";
+					}
+					else {
+						$show_internal_params = false;
+						$game_def = $app->fetch_game_definition($game, "actual", $show_internal_params);
+						$game_def_str = $app->game_def_to_text($game_def);
+						$game_def_hash = $app->game_def_to_hash($game_def_str);
+						
+						$api_output['status_code'] = 1;
+						$api_output['definition_hash'] = $game_def_hash;
+						$api_output['events_until_block'] = $game->db_game['events_until_block'];
+						$api_output['definition'] = $game_def;
+					}
+				}
 			}
-			
-			$intval_vars = array('game_id','round_length','maturity');
-			for ($i=0; $i<count($intval_vars); $i++) {
-				$game->db_game[$intval_vars[$i]] = intval($game->db_game[$intval_vars[$i]]);
-			}
-			
-			if (empty($uri_parts[3]) || $uri_parts[3] == "status") {
+			else if ($uri_parts[3] == "current_events") {
+				$game->load_current_events();
+				
+				$current_round = $game->block_to_round($last_block_id+1);
+				$coins_per_vote = $game->blockchain->app->coins_per_vote($game->db_game);
+				
+				if ($game->db_game['module'] == "CoinBattles") {
+					$btc_currency = $app->get_currency_by_abbreviation("BTC");
+				}
+				
+				$intval_vars = array('game_id','round_length','maturity');
+				for ($i=0; $i<count($intval_vars); $i++) {
+					$game->db_game[$intval_vars[$i]] = intval($game->db_game[$intval_vars[$i]]);
+				}
+				
 				$api_user = FALSE;
 				$api_user_info = FALSE;
 				
@@ -388,22 +415,22 @@ if ($uri_parts[1] == "api") {
 								if ($initial_price['price'] > 0) $final_performance = round(pow(10,8)*$final_price['price']/$initial_price['price'])/pow(10,8) - 1;
 								else $final_performance = 0;
 							}
+							$api_stat['price_performance'] = $final_performance;
 						}
-						$api_stat['price_performance'] = $final_performance;
 						array_push($api_event['options'], $api_stat);
 					}
 					array_push($current_events, $api_event);
 				}
 				$output_game['current_events'] = $current_events;
 				
-				$api_output = array('status_code'=>1, 'status_message'=>"Successful", 'game'=>$output_game, 'user_info'=>$api_user_info);
+				$api_output = array('status_code'=>1, 'message'=>"Successful", 'game'=>$output_game, 'user_info'=>$api_user_info);
 			}
 			else {
-				$api_output = array('status_code'=>0, 'status_message'=>'Error, URL not recognized');
+				$api_output = array('status_code'=>0, 'message'=>'Error, URL not recognized');
 			}
 		}
 		else {
-			$api_output = array('status_code'=>0, 'status_message'=>'Error: Invalid game ID');
+			$api_output = array('status_code'=>0, 'message'=>'Error: Invalid game ID');
 		}
 		echo json_encode($api_output, JSON_PRETTY_PRINT);
 	}
@@ -412,7 +439,7 @@ if ($uri_parts[1] == "api") {
 		die();
 	}
 	else {
-		echo json_encode(array('status_code'=>0, 'status_message'=>"You've reached an invalid URL."));
+		echo json_encode(array('status_code'=>0, 'message'=>"You've reached an invalid URL."));
 	}
 }
 ?>

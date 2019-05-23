@@ -31,7 +31,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			$base_img_fname = "back_".$card['amount'].".png";
 		}
 		
-		$qr_url = "http://".$_SERVER['SERVER_NAME']."/render_qr_code.php?data=".urlencode($GLOBALS['base_url']."/redeem/".$card['issuer_id']."/".$card['issuer_card_id']);
+		$qr_url = "http://".$_SERVER['SERVER_NAME']."/render_qr_code.php?data=".urlencode($GLOBALS['base_url']."/redeem/".$card['peer_id']."/".$card['peer_card_id']);
 		
 		if (empty($card['secret'])) die("Failed to render: the card secret is not present.");
 		else {
@@ -66,7 +66,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				if ($formatted_amount > 1000) $formatted_amount = number_format($formatted_amount);
 				
 				$mainfont = dirname(dirname(dirname(__FILE__)))."/images/card_images/calibri.ttf";
-				imagettftext($im, 35, 0, 1400, 960, $black, $mainfont, "Card ID:  ".$card['issuer_card_id']);
+				imagettftext($im, 35, 0, 1400, 960, $black, $mainfont, "Card ID:  ".$card['peer_card_id']);
 				$value_txt = "Value:  ".$formatted_amount." ".$fv_currency['abbreviation'];
 				imagettftext($im, 35, 0, 40, 960, $black, $mainfont, $value_txt);
 				
@@ -98,7 +98,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 				$redeemable_sentence = "When active, this card is redeemable for ".$formatted_amount." ".$cname_disp.".";
 				
 				imagettftext($im, 27, 0, 790, 450, $black, $mainfont, $redeemable_sentence);
-				$nextline = "This is card #".$card['issuer_card_id'].", minted ".date("M d, Y", $card['mint_time']);
+				$nextline = "This is card #".$card['peer_card_id'].", minted ".date("M d, Y", $card['mint_time']);
 				
 				if ($fee_amt > 0) $nextline .= " with ".$fee_amt_formatted." in fees";
 				$nextline .= ".";
@@ -115,9 +115,9 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			else {
 				$arial_path = dirname(dirname(dirname(__FILE__)))."/images/card_images/arial.ttf";
 				
-				imagettftext($im, 32, 0, 882, 169, $black, $arial_path, $card['issuer_card_id']);
-				imagettftext($im, 32, 0, 1444, 670, $black, $arial_path, $card['issuer_card_id']);
-				imagettftext($im, 43, 0, 1578, 960, $black, $arial_path, $card['issuer_card_id']);
+				imagettftext($im, 32, 0, 882, 169, $black, $arial_path, $card['peer_card_id']);
+				imagettftext($im, 32, 0, 1444, 670, $black, $arial_path, $card['peer_card_id']);
+				imagettftext($im, 43, 0, 1578, 960, $black, $arial_path, $card['peer_card_id']);
 				
 				imagecopyresized($im, $im_qr, 655, 180, 0, 0, 440, 440, 132, 132);
 				

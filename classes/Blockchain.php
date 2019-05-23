@@ -12,8 +12,8 @@ class Blockchain {
 		else {
 			throw new Exception("Failed to load blockchain #".$blockchain_id);
 		}
-		if (!empty($this->db_blockchain['authoritative_issuer_id'])) {
-			$this->authoritative_issuer = $this->app->run_query("SELECT * FROM card_issuers WHERE issuer_id='".$this->db_blockchain['authoritative_issuer_id']."';")->fetch();
+		if (!empty($this->db_blockchain['authoritative_peer_id'])) {
+			$this->authoritative_peer = $this->app->run_query("SELECT * FROM peers WHERE peer_id='".$this->db_blockchain['authoritative_peer_id']."';")->fetch();
 		}
 		if ($this->db_blockchain['first_required_block'] === "") {
 			$this->set_first_required_block();
@@ -574,7 +574,7 @@ class Blockchain {
 										$option_id = $color_game->option_index_to_option_id_in_block($output_io_indices[$j], $ref_block_id);
 										if ($option_id) {
 											$using_separator = false;
-											if ($separator_io_ids[$next_separator_i]) {
+											if (!empty($separator_io_ids[$next_separator_i])) {
 												$payout_io_id = $separator_io_ids[$next_separator_i];
 												$next_separator_i++;
 												$using_separator = true;
@@ -1380,10 +1380,7 @@ class Blockchain {
 				$r = $this->app->run_query($q);
 			}
 			
-			$q = "SELECT * FROM addresses WHERE address_id='".$output_address_id."';";
-			$r = $this->app->run_query($q);
-			
-			return $r->fetch();
+			return $this->app->fetch_address_by_id($output_address_id);
 		}
 		else return false;
 	}
@@ -1502,9 +1499,7 @@ class Blockchain {
 					$address_id = $address_ids[$out_index];
 					
 					if ($address_id) {
-						$q = "SELECT * FROM addresses WHERE address_id='".$address_id."';";
-						$r = $this->app->run_query($q);
-						$address = $r->fetch();
+						$address = $this->app->fetch_address_by_id($address_id);
 						
 						if ($this->db_blockchain['p2p_mode'] != "rpc") {
 							$spend_status = "unconfirmed";
@@ -1692,19 +1687,19 @@ class Blockchain {
 	}
 	
 	public function web_api_fetch_block($block_height) {
-		$remote_url = $this->authoritative_issuer['base_url']."/api/block/".$this->db_blockchain['url_identifier']."/".$block_height;
+		$remote_url = $this->authoritative_peer['base_url']."/api/block/".$this->db_blockchain['url_identifier']."/".$block_height;
 		$remote_response_raw = file_get_contents($remote_url);
 		return get_object_vars(json_decode($remote_response_raw));
 	}
 	
 	public function web_api_fetch_blocks($from_block_height, $to_block_height) {
-		$remote_url = $this->authoritative_issuer['base_url']."/api/blocks/".$this->db_blockchain['url_identifier']."/".$from_block_height.":".$to_block_height;
+		$remote_url = $this->authoritative_peer['base_url']."/api/blocks/".$this->db_blockchain['url_identifier']."/".$from_block_height.":".$to_block_height;
 		$remote_response_raw = file_get_contents($remote_url);
 		return get_object_vars(json_decode($remote_response_raw));
 	}
 	
 	public function web_api_fetch_blockchain() {
-		$remote_url = $this->authoritative_issuer['base_url']."/api/blockchain/".$this->db_blockchain['url_identifier']."/";
+		$remote_url = $this->authoritative_peer['base_url']."/api/blockchain/".$this->db_blockchain['url_identifier']."/";
 		$remote_response_raw = file_get_contents($remote_url);
 		return get_object_vars(json_decode($remote_response_raw));
 	}
@@ -1721,7 +1716,7 @@ class Blockchain {
 			$data_txt = json_encode($tx, JSON_PRETTY_PRINT);
 			$data['data'] = $data_txt;
 			
-			$url = $this->authoritative_issuer['base_url']."/api/transactions/".$this->db_blockchain['url_identifier']."/post/";
+			$url = $this->authoritative_peer['base_url']."/api/transactions/".$this->db_blockchain['url_identifier']."/post/";
 			
 			$remote_response = $this->app->curl_post_request($url, $data, false);
 		}

@@ -11,7 +11,7 @@ http://mywebserver.com/APIClient.php?key=$GLOBALS['cron_key_string']
 
 // Log into your web wallet -> Settings to find your server access key, then enter it below
 $server_access_key = $GLOBALS['default_server_api_access_key'];
-$server_host = "http://chainbets.com";
+$server_host = "https://poly.cash";
 $client_access_key = $GLOBALS['cron_key_string'];
 
 $event_id = intval($_REQUEST['event_id']);
@@ -65,7 +65,7 @@ if ($_REQUEST['key'] == $client_access_key) {
 		
 		// Fetch information about the current status of the game
 		public function getCurrentStatus() {
-			$fetch_url = $this->server_host."/api/".$this->event_id."/status/";
+			$fetch_url = $this->server_host."/api/".$this->event_id."/current_events/";
 			if ($this->server_access_key && $this->server_access_key != "") {
 				$fetch_url .= "?api_access_code=".$this->server_access_key;
 			}

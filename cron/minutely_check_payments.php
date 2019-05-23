@@ -66,7 +66,7 @@ if ($app->running_as_admin()) {
 				}
 				
 				if ($game_coins_in >= $game_coins) {
-					$chain_fee = 0.00001*pow(10, $game->blockchain->db_blockchain['decimal_places']);
+					$chain_fee = (int) 0.0001*pow(10, $game->blockchain->db_blockchain['decimal_places']);
 					$chain_coins_per_game_coin = ($chain_coins_in-$chain_fee)/$game_coins_in;
 					$send_chain_coins = ceil($game_coins*$chain_coins_per_game_coin);
 					

@@ -635,7 +635,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								$block_sum_disp = $block['sum_coins_in']/pow(10,$game->db_game['decimal_places']);
 							}
 							else {
-								$block_sum_disp = $block['sum_coins_in']/pow(10,$blockchain->db_blockchain['decimal_places']);
+								$block_sum_disp = $block['sum_coins_out']/pow(10,$blockchain->db_blockchain['decimal_places']);
 							}
 							
 							echo '<div class="panel-heading"><div class="panel-title">';
@@ -647,7 +647,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo "Block hash: ".$block['block_hash']."<br/>\n";
 							echo "Mined at ".date("Y-m-d H:m:s", $block['time_mined'])." UTC (".$app->format_seconds(time()-$block['time_mined'])." ago)<br/>\n";
 							
-							echo "This block contains ".number_format($block['num_transactions'])." transactions totaling ".number_format($block_sum_disp, 2)." ";
+							echo "This block contains ".number_format($block['num_transactions'])." transactions totaling ".$app->format_bignum($block_sum_disp)." ";
 							if ($game) echo $game->db_game['coin_name_plural'];
 							else echo $blockchain->db_blockchain['coin_name_plural'];
 							echo ".<br/>\n";
@@ -1388,7 +1388,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				else if ($explore_mode == "definition") {
 					if ($game) {
 						$definition_mode = "defined";
-						if ($_REQUEST['definition_mode'] == "actual") $definition_mode = "actual";
+						if (!empty($_REQUEST['definition_mode']) && $_REQUEST['definition_mode'] == "actual") $definition_mode = "actual";
 						
 						$show_internal_params = false;
 						$game_def = $app->fetch_game_definition($game, $definition_mode, $show_internal_params);

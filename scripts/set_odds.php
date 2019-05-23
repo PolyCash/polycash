@@ -10,7 +10,7 @@ if ($app->running_as_admin()) {
 	if (!empty($_REQUEST['account_id'])) {
 		$game_id = (int) $_REQUEST['game_id'];
 		$account_id = (int) $_REQUEST['account_id'];
-		$fee = 0.00001;
+		$fee = 0.0001;
 		
 		$db_game = $app->fetch_db_game_by_id($game_id);
 		
@@ -21,7 +21,7 @@ if ($app->running_as_admin()) {
 			$mining_block_id = $blockchain->last_block_id()+1;
 			$round_id = $game->block_to_round($mining_block_id);
 			$coins_per_vote = $app->coins_per_vote($game->db_game);
-			$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
+			$fee_amount = (int) $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
 			
 			$account_q = "SELECT * FROM currency_accounts WHERE account_id='".$account_id."';";
 			$account_r = $app->run_query($account_q);

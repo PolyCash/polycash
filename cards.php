@@ -10,7 +10,7 @@ $nav_subtab_selected = "cards";
 if (!empty($_REQUEST['action'])) {
 	$action = $_REQUEST['action'];
 	
-	$this_issuer = $app->get_issuer_by_server_name($GLOBALS['base_url'], true);
+	$this_peer = $app->get_peer_by_server_name($GLOBALS['base_url'], true);
 	
 	if ($action == "create") {
 		$nav_subtab_selected = "create";
@@ -99,7 +99,7 @@ if (!empty($_REQUEST['action'])) {
 								$r = $app->run_query($q);
 								$design_id = $app->last_insert_id();
 								
-								$q = "INSERT INTO card_printrequests SET issuer_id='".$this_issuer['issuer_id']."', secrets_present=1, design_id='".$design_id."', user_id='".$thisuser->db_user['user_id']."', how_many='".$how_many."', print_status='not-printed', pay_status='not-received', time_created='".time()."';";
+								$q = "INSERT INTO card_printrequests SET peer_id='".$this_peer['peer_id']."', secrets_present=1, design_id='".$design_id."', user_id='".$thisuser->db_user['user_id']."', how_many='".$how_many."', print_status='not-printed', pay_status='not-received', time_created='".time()."';";
 								$r = $app->run_query($q);
 								$request_id = $app->last_insert_id();
 								
@@ -108,7 +108,7 @@ if (!empty($_REQUEST['action'])) {
 								if (empty($paper_width)) $paper_width = "standard";
 								else if ($paper_width == "small") {}
 								
-								$q = "SELECT MAX(issuer_card_id), MAX(group_id) FROM cards WHERE issuer_id='".$this_issuer['issuer_id']."';";
+								$q = "SELECT MAX(peer_card_id), MAX(group_id) FROM cards WHERE peer_id='".$this_peer['peer_id']."';";
 								$r = $app->run_query($q);
 								$max_id = $r->fetch();
 								
@@ -121,7 +121,7 @@ if (!empty($_REQUEST['action'])) {
 									$card_id = $i+$first_id;
 									$secret = $app->random_number(16);
 									$secret_hash = $app->card_secret_to_hash($secret);
-									$qq = "INSERT INTO cards SET design_id='".$design_id."', issuer_id='".$this_issuer['issuer_id']."', purity='".$purity."', group_id='".$card_group_id."', secret='".$secret."', secret_hash=".$app->quote_escape($secret_hash).", issuer_card_id='".$card_id."', mint_time='".time()."', currency_id='".$db_currency['currency_id']."', fv_currency_id='".$fv_currency['currency_id']."', amount='".$denomination['denomination']."', status='issued', io_tx_hash=".$app->quote_escape($db_transaction['tx_hash']).", io_out_index='".$i."';";
+									$qq = "INSERT INTO cards SET design_id='".$design_id."', peer_id='".$this_peer['peer_id']."', purity='".$purity."', group_id='".$card_group_id."', secret='".$secret."', secret_hash=".$app->quote_escape($secret_hash).", peer_card_id='".$card_id."', mint_time='".time()."', currency_id='".$db_currency['currency_id']."', fv_currency_id='".$fv_currency['currency_id']."', amount='".$denomination['denomination']."', status='issued', io_tx_hash=".$app->quote_escape($db_transaction['tx_hash']).", io_out_index='".$i."';";
 									$rr = $app->run_query($qq);
 								}
 								
@@ -411,30 +411,30 @@ if (!empty($_REQUEST['action'])) {
 		}
 	}
 	else if ($action == "import_cards") {
-		$issuer_name = urldecode($_REQUEST['issuer_name']);
+		$peer_name = urldecode($_REQUEST['peer_name']);
 		$from_card_id = (int) $_REQUEST['from_card_id'];
 		$to_card_id = (int) $_REQUEST['to_card_id'];
-		if ($issuer_name[strlen($issuer_name)-1] == "/") $issuer_name = substr($issuer_name, 0, strlen($issuer_name)-1);
+		if ($peer_name[strlen($peer_name)-1] == "/") $peer_name = substr($peer_name, 0, strlen($peer_name)-1);
 		
-		$issuer = $app->get_issuer_by_server_name($issuer_name, false);
+		$peer = $app->get_peer_by_server_name($peer_name, false);
 		$add_count = 0;
 		
-		if ($issuer) {
-			$remote_url = $issuer_name."/api/cards/".$from_card_id."-".$to_card_id;
+		if ($peer) {
+			$remote_url = $peer_name."/api/cards/".$from_card_id."-".$to_card_id;
 			$remote_response = get_object_vars(json_decode(file_get_contents($remote_url)));
 			$card_public_vars = $app->card_public_vars();
 			
 			if (!empty($remote_response) && count($remote_response['cards']) > 0) {
 				for ($i=0; $i<count($remote_response['cards']); $i++) {
 					$import_card = get_object_vars($remote_response['cards'][$i]);
-					$q = "SELECT * FROM cards WHERE issuer_id='".$issuer['issuer_id']."' AND issuer_card_id='".$import_card['issuer_card_id']."';";
+					$q = "SELECT * FROM cards WHERE peer_id='".$peer['peer_id']."' AND peer_card_id='".$import_card['peer_card_id']."';";
 					$r = $app->run_query($q);
 					
 					if ($r->rowCount() == 0) {
 						$fv_currency = $app->get_currency_by_abbreviation($import_card['currency_abbreviation']);
 						$currency = $app->get_currency_by_abbreviation($import_card['fv_currency_abbreviation']);
 						
-						$q = "INSERT INTO cards SET issuer_id='".$issuer['issuer_id']."', currency_id='".$currency['currency_id']."', fv_currency_id='".$fv_currency['currency_id']."', ";
+						$q = "INSERT INTO cards SET peer_id='".$peer['peer_id']."', currency_id='".$currency['currency_id']."', fv_currency_id='".$fv_currency['currency_id']."', ";
 						for ($j=0; $j<count($card_public_vars); $j++) {
 							$q .= $card_public_vars[$j]."=".$app->quote_escape($import_card[$card_public_vars[$j]]).", ";
 						}
@@ -624,14 +624,14 @@ include('includes/html_start.php');
 				<div class="panel-body">';
 			
 			while ($printrequest = $r->fetch()) {
-				$issuer = $app->get_issuer_by_id($printrequest['issuer_id']);
+				$peer = $app->get_peer_by_id($printrequest['peer_id']);
 				
-				$qq = "SELECT MIN(card_id), MAX(card_id), MIN(issuer_card_id), MAX(issuer_card_id) FROM cards WHERE group_id=".$printrequest['card_group_id'].";";
+				$qq = "SELECT MIN(card_id), MAX(card_id), MIN(peer_card_id), MAX(peer_card_id) FROM cards WHERE group_id=".$printrequest['card_group_id'].";";
 				$rr = $app->run_query($qq);
 				$minmax = $rr->fetch();
 				
 				echo "<div class=\"row\">";
-				echo "<div class=\"col-sm-4\">".$issuer['issuer_name']." cards ".$minmax['MIN(issuer_card_id)'].":".$minmax['MAX(issuer_card_id)']." &nbsp;&nbsp; ".$printrequest['how_many']." &cross; ".$printrequest['denomination']." ".$printrequest['short_name']." cards</div>";
+				echo "<div class=\"col-sm-4\">".$peer['peer_name']." cards ".$minmax['MIN(peer_card_id)'].":".$minmax['MAX(peer_card_id)']." &nbsp;&nbsp; ".$printrequest['how_many']." &cross; ".$printrequest['denomination']." ".$printrequest['short_name']." cards</div>";
 				echo "<div class=\"col-sm-4\">".$printrequest['display_name'].", ".$printrequest['display_email']."</div>\n";
 				echo "<div class=\"col-sm-4\">";
 				echo "<a href=\"/cards/?action=activate_cards&printrequest_id=".$printrequest['request_id']."\">Activate Cards</a>\n";
@@ -657,7 +657,7 @@ include('includes/html_start.php');
 			
 			while ($db_card = $card_r->fetch()) {
 				echo '<div class="card_small">';
-				echo '<a target="_blank" href="/redeem/'.$db_card['issuer_id'].'/'.$db_card['issuer_card_id'].'">'.$db_card['issuer_card_id']."</a><br/>\n";
+				echo '<a target="_blank" href="/redeem/'.$db_card['peer_id'].'/'.$db_card['peer_card_id'].'">'.$db_card['peer_card_id']."</a><br/>\n";
 				echo " ".$app->format_bignum($db_card['amount'])." ".$db_card['abbreviation'];
 				echo "<br/>";
 				echo $db_card['status'];
@@ -671,13 +671,13 @@ include('includes/html_start.php');
 				</div>
 				<div class="panel-body">
 					<p>
-						To import cards from a remote card issuer, please enter the issuer's website URL and the range of card IDs that you wish to import.
+						To import cards from a remote card peer, please enter the peer's website URL and the range of card IDs that you wish to import.
 					</p>
 					<form action="/cards/" method="get">
 						<input type="hidden" name="action" value="import_cards" />
 						<div class="form-group">
-							<label for="issuer_name">From website:</label>
-							<input type="text" class="form-control" name="issuer_name" placeholder="http://" />
+							<label for="peer_name">From website:</label>
+							<input type="text" class="form-control" name="peer_name" placeholder="http://" />
 						</div>
 						<div class="form-group">
 							<label for="from_card_id">From card ID:</label>
@@ -744,7 +744,7 @@ include('includes/html_start.php');
 								for ($i=0; $i<count($my_cards); $i++) {
 									echo '<div class="card_small" id="card_btn'.$i.'" onclick="open_card('.$i.');">';
 									if ($my_cards[$i]['status'] == "claimed") echo "<b>";
-									echo $my_cards[$i]['issuer_card_id'];
+									echo $my_cards[$i]['peer_card_id'];
 									echo "<br/>\n";
 									echo $app->format_bignum($my_cards[$i]['amount'])." ".$my_cards[$i]['abbreviation'];
 									if ($my_cards[$i]['status'] == "claimed") echo "</b>";
@@ -781,13 +781,13 @@ include('includes/html_start.php');
 										?>
 										<div style="display: block; overflow: hidden;">
 											<div class="row">
-												<div class="col-xs-4">Issuer</div><div class="col-xs-8"><?php
-												$issuer = $app->run_query("SELECT * FROM card_issuers WHERE issuer_id='".$my_cards[$i]['issuer_id']."';")->fetch();
-												echo $issuer['issuer_identifier'];
+												<div class="col-xs-4">peer</div><div class="col-xs-8"><?php
+												$peer = $app->run_query("SELECT * FROM peers WHERE peer_id='".$my_cards[$i]['peer_id']."';")->fetch();
+												echo $peer['peer_identifier'];
 												?></div>
 											</div>
 											<div class="row">
-												<div class="col-xs-4">Card ID</div><div class="col-xs-8">#<?php echo $my_cards[$i]['issuer_card_id']; ?></div>
+												<div class="col-xs-4">Card ID</div><div class="col-xs-8">#<?php echo $my_cards[$i]['peer_card_id']; ?></div>
 											</div>
 											<div class="row">
 												<div class="col-xs-4">Minted</div><div class="col-xs-8"><?php echo $app->format_seconds(time() - $my_cards[$i]['mint_time']); ?> ago</div>
@@ -831,9 +831,9 @@ include('includes/html_start.php');
 											if ($my_cards[$i]['status'] == "claimed") {
 												?>
 												<p style="margin-top: 15px;">
-													<button class="btn btn-success" onclick="card_id=<?php echo $my_cards[$i]['issuer_card_id']; ?>; issuer_id=<?php echo $my_cards[$i]['issuer_id']; ?>; $('#claim_dialog').modal('show');">Withdraw to Address</button>
-													<button id="claim_account_btn_<?php echo $my_cards[$i]['issuer_card_id'].'_'.$my_cards[$i]['issuer_id']; ?>" class="btn btn-primary" onclick="card_id=<?php echo $my_cards[$i]['issuer_card_id']; ?>; issuer_id=<?php echo $my_cards[$i]['issuer_id']; ?>; claim_card('to_account');">Withdraw to Account</button>
-													<button id="claim_game_btn_<?php echo $my_cards[$i]['issuer_card_id'].'_'.$my_cards[$i]['issuer_id']; ?>" class="btn btn-info" onclick="card_id=<?php echo $my_cards[$i]['issuer_card_id']; ?>; issuer_id=<?php echo $my_cards[$i]['issuer_id']; ?>; claim_card('to_game');">Buy in to Game</button>
+													<button class="btn btn-success" onclick="card_id=<?php echo $my_cards[$i]['peer_card_id']; ?>; peer_id=<?php echo $my_cards[$i]['peer_id']; ?>; $('#claim_dialog').modal('show');">Withdraw to Address</button>
+													<button id="claim_account_btn_<?php echo $my_cards[$i]['peer_card_id'].'_'.$my_cards[$i]['peer_id']; ?>" class="btn btn-primary" onclick="card_id=<?php echo $my_cards[$i]['peer_card_id']; ?>; peer_id=<?php echo $my_cards[$i]['peer_id']; ?>; claim_card('to_account');">Withdraw to Account</button>
+													<button id="claim_game_btn_<?php echo $my_cards[$i]['peer_card_id'].'_'.$my_cards[$i]['peer_id']; ?>" class="btn btn-info" onclick="card_id=<?php echo $my_cards[$i]['peer_card_id']; ?>; peer_id=<?php echo $my_cards[$i]['peer_id']; ?>; claim_card('to_game');">Buy in to Game</button>
 												</p>
 												<?php
 											}
@@ -880,8 +880,8 @@ include('includes/html_start.php');
 						<?php
 						$ask4nameid = TRUE;
 						$login_title = "";
-						$card_login_card_id = "$('#issuer_card_id').val()";
-						$card_login_issuer_id = "$('#issuer_id').val()";
+						$card_login_card_id = "$('#peer_card_id').val()";
+						$card_login_peer_id = "$('#peer_id').val()";
 						include(dirname(__FILE__)."/includes/html_card_login.php");
 						?>
 					</div>

@@ -17,18 +17,18 @@ include('includes/html_start.php');
 	<input type="hidden" id="redirect_key" value="<?php if ($redirect_url) echo $redirect_url['redirect_key']; ?>" />
 	<?php
 	if ($uri_parts[1] == "redeem") {
-		$issuer_id = (int) $uri_parts[2];
+		$peer_id = (int) $uri_parts[2];
 		if (empty($uri_parts[3])) $card_id = false;
 		else $card_id = (int) $uri_parts[3];
 		
-		if (!empty($card_id) && !empty($issuer_id)) {
-			$q = "SELECT c.* FROM cards c LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.issuer_card_id=".$app->quote_escape($card_id)." AND c.issuer_id='".$issuer_id."';";
+		if (!empty($card_id) && !empty($peer_id)) {
+			$q = "SELECT c.* FROM cards c LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.peer_card_id=".$app->quote_escape($card_id)." AND c.peer_id='".$peer_id."';";
 			$r = $app->run_query($q);
 			
 			if ($r->rowCount() > 0) {
 				$card = $r->fetch();
 				
-				$issuer = $app->get_issuer_by_id($card['issuer_id']);
+				$peer = $app->get_peer_by_id($card['peer_id']);
 				
 				$printrequest_q = "SELECT * FROM card_printrequests pr JOIN card_designs d ON pr.design_id=d.design_id WHERE d.design_id='".$card['design_id']."';";
 				$printrequest_r = $app->run_query($printrequest_q);
@@ -39,8 +39,8 @@ include('includes/html_start.php');
 				$fv_currency = $app->run_query("SELECT * FROM currencies WHERE currency_id='".$card['fv_currency_id']."';")->fetch();
 				?>
 				<script type="text/javascript">
-				var card_id = '<?php echo $card['issuer_card_id']; ?>';
-				var issuer_id = '<?php echo $card['issuer_id']; ?>';
+				var card_id = '<?php echo $card['peer_card_id']; ?>';
+				var peer_id = '<?php echo $card['peer_id']; ?>';
 				
 				$(document).ready(function() {
 					update_page();
@@ -76,10 +76,10 @@ include('includes/html_start.php');
 							?>
 							<div class="row">
 								<div class="col-xs-4">
-									<b>Issuer</b>
+									<b>peer</b>
 								</div>
 								<div class="col-xs-8">
-									<?php echo $issuer['issuer_name']; ?>
+									<?php echo $peer['peer_name']; ?>
 								</div>
 							</div>
 							<div class="row">
@@ -87,7 +87,7 @@ include('includes/html_start.php');
 									<b>Card ID</b>
 								</div>
 								<div class="col-xs-8">
-									#<?php echo $card['issuer_card_id']; ?>
+									#<?php echo $card['peer_card_id']; ?>
 								</div>
 							</div>
 							<div class="row">
@@ -185,8 +185,8 @@ include('includes/html_start.php');
 							else if ($card['status'] == "redeemed" || $card['status'] == "claimed") {
 								?>
 								<script type="text/javascript">
-								var card_id = '<?php echo $card['issuer_card_id']; ?>';
-								var issuer_id = '<?php echo $card['issuer_id']; ?>';
+								var card_id = '<?php echo $card['peer_card_id']; ?>';
+								var peer_id = '<?php echo $card['peer_id']; ?>';
 								</script>
 								<br/>
 								<p>
@@ -198,8 +198,8 @@ include('includes/html_start.php');
 								<?php
 								$ask4nameid = FALSE;
 								$login_title = "Please log in:";
-								$card_login_card_id = "'".$card['issuer_card_id']."'";
-								$card_login_issuer_id = $card['issuer_id'];
+								$card_login_card_id = "'".$card['peer_card_id']."'";
+								$card_login_peer_id = $card['peer_id'];
 								include('includes/html_card_login.php');
 							}
 							
@@ -261,13 +261,13 @@ include('includes/html_start.php');
 				<form action="/redeem/" method="get" onsubmit="search_card_id(); return false;">
 					<div class="form-group">
 						<label for="card_id_search">Which website issued your card?</label>
-						<select class="form-control" name="card_issuer_id" id="card_issuer_id">
+						<select class="form-control" name="peer_id" id="peer_id">
 							<option value="">-- Please Select --</option>
 							<?php
-							$q = "SELECT * FROM card_issuers WHERE visible=1 ORDER BY issuer_name ASC;";
+							$q = "SELECT * FROM peers WHERE visible=1 ORDER BY peer_name ASC;";
 							$r = $app->run_query($q);
-							while ($db_issuer = $r->fetch()) {
-								echo "<option value=\"".$db_issuer['issuer_id']."\">".$db_issuer['issuer_name']."</option>\n";
+							while ($db_peer = $r->fetch()) {
+								echo "<option value=\"".$db_peer['peer_id']."\">".$db_peer['peer_name']."</option>\n";
 							}
 							?>
 						</select>

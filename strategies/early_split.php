@@ -57,9 +57,7 @@ if ($r->rowCount() > 0) {
 				if ($coins_per_event > 0) {
 					$total_cost = $coins_per_event*$num_events*pow(10, $game->db_game['decimal_places']);
 					
-					$q = "SELECT *, SUM(gio.colored_amount) AS coins, SUM(gio.colored_amount)*(".($blockchain->last_block_id()+1)."-io.create_block_id) AS coin_blocks, SUM(gio.colored_amount*(".$round_id."-gio.create_round_id)) AS coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.is_resolved=1 AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account['account_id']."' GROUP BY gio.io_id";
-					if ($game->db_game['inflation'] == "exponential" && $game->db_game['exponential_inflation_rate'] > 0) $q .= " HAVING(".$game->db_game['payout_weight']."s*".$coins_per_vote.") < ".$total_cost;
-					$q .= " ORDER BY coins ASC;";
+					$q = "SELECT *, SUM(gio.colored_amount) AS coins, SUM(gio.colored_amount)*(".($blockchain->last_block_id()+1)."-io.create_block_id) AS coin_blocks, SUM(gio.colored_amount*(".$round_id."-gio.create_round_id)) AS coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.is_resolved=1 AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account['account_id']."' GROUP BY gio.io_id ORDER BY coins ASC;";
 					$r = $app->run_query($q);
 					
 					$mandatory_bets = 0;
@@ -95,7 +93,8 @@ if ($r->rowCount() > 0) {
 						$io_amount_sum += $recycle_io['amount'];
 					}
 					
-					if ($burn_game_amount < 0 || $burn_game_amount > $game_amount_sum) die("Failed to determine a valid burn amount (".$burn_game_amount." vs ".$game_amount_sum.").");
+					if ($burn_game_amount > $game_amount_sum) die("Failed to determine a valid burn amount (".$burn_game_amount." vs ".$game_amount_sum.").");
+					if ($burn_game_amount < 0) $burn_game_amount = 0;
 					
 					$burn_address = $app->fetch_address_in_account($account['account_id'], 0);
 					$separator_address = $app->fetch_address_in_account($account['account_id'], 1);

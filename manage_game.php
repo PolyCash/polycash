@@ -196,7 +196,7 @@ else {
 				else {
 					$sports_entity_type = $app->check_set_entity_type("sports");
 					$leagues_entity_type = $app->check_set_entity_type("leagues");
-					$teams_entity_type = $app->check_set_entity_type("teams");
+					$general_entity_type = $app->check_set_entity_type("general entity");
 					
 					$q = "SELECT MAX(event_index) FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."';";
 					$r = $app->run_query($q);
@@ -259,8 +259,8 @@ else {
 									}
 									else $external_identifier = false;
 									
-									$home_entity = $app->check_set_entity($teams_entity_type['entity_type_id'], $home);
-									$away_entity = $app->check_set_entity($teams_entity_type['entity_type_id'], $away);
+									$home_entity = $app->check_set_entity($general_entity_type['entity_type_id'], $home);
+									$away_entity = $app->check_set_entity($general_entity_type['entity_type_id'], $away);
 									
 									if ($league_col !== false) {
 										$league_name = $line_vals[$league_col];
@@ -308,9 +308,26 @@ else {
 			else if ($last_action == "internal_settings") {
 				$featured = (int)$_REQUEST['featured'];
 				$faucet_policy = $_REQUEST['faucet_policy'];
+				$definitive_game_peer_on = $_REQUEST['definitive_game_peer_on'];
+				if ($definitive_game_peer_on == 1) {
+					$definitive_game_peer_url = $_REQUEST['definitive_game_peer'];
+				}
+				else $definitive_game_peer_url = "";
 				if ($faucet_policy != "on") $faucet_policy = "off";
 				
-				$internal_q = "UPDATE games SET featured='".$featured."', faucet_policy='".$faucet_policy."' WHERE game_id='".$game->db_game['game_id']."';";
+				$definitive_game_peer_id = "NULL";
+				$game->db_game['definitive_game_peer_id'] = "";
+				
+				if (!empty($definitive_game_peer_url)) {
+					$definitive_game_peer = $game->get_game_peer_by_server_name($definitive_game_peer_url);
+					
+					if ($definitive_game_peer) {
+						$definitive_game_peer_id = "'".$definitive_game_peer['game_peer_id']."'";
+						$game->db_game['definitive_game_peer_id'] = $definitive_game_peer['game_peer_id'];
+					}
+				}
+				
+				$internal_q = "UPDATE games SET featured='".$featured."', faucet_policy='".$faucet_policy."', definitive_game_peer_id=".$definitive_game_peer_id." WHERE game_id='".$game->db_game['game_id']."';";
 				$app->run_query($internal_q);
 				$game->db_game['featured'] = $featured;
 				$game->db_game['faucet_policy'] = $faucet_policy;
@@ -648,6 +665,17 @@ else {
 												<option value="on">On</option>
 												<option value="off"<?php if ($game->db_game['faucet_policy'] == "off") echo ' selected="selected"'; ?>>Off</option>
 											</select>
+										</div>
+										<div class="form-group">
+											<?php
+											$definitive_game_peer = $game->get_definitive_peer();
+											?>
+											<label for="definitive_game_peer">Does this game have a definitive peer?</label>
+											<select class="form-control" name="definitive_game_peer_on" id="definitive_game_peer_on" onchange="toggle_definitive_game_peer();">
+												<option value="0">No</option>
+												<option value="1"<?php if ($definitive_game_peer) echo ' selected="selected"'; ?>>Yes</option>
+											</select>
+											<input type="text" class="form-control" name="definitive_game_peer" id="definitive_game_peer" placeholder="http://" value="<?php if ($definitive_game_peer) echo $definitive_game_peer['base_url']; ?>"<?php if (!$definitive_game_peer) echo ' style="display: none;"'; ?> />
 										</div>
 										
 										<input type="submit" class="btn btn-primary" value="Save Settings" />

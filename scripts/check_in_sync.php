@@ -5,24 +5,24 @@ $script_start_time = microtime(true);
 $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
-$allowed_params = ['mode','game_identifier','blockchain_identifier','issuer_id','key','remote_key'];
+$allowed_params = ['mode','game_identifier','blockchain_identifier','peer_id','key','remote_key'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);
 
 if ($app->running_as_admin()) {
 	$remote_url_base = "";
-	$issuer = false;
-	if (!empty($_REQUEST['issuer_id'])) {
-		$issuer_id = (int)$_REQUEST['issuer_id'];
-		$issuer_r = $app->run_query("SELECT * FROM card_issuers WHERE issuer_id='".$issuer_id."';");
-		if ($issuer_r->rowCount() > 0) {
-			$issuer = $issuer_r->fetch();
-			$remote_url_base = $issuer['base_url'];
+	$peer = false;
+	if (!empty($_REQUEST['peer_id'])) {
+		$peer_id = (int)$_REQUEST['peer_id'];
+		$peer_r = $app->run_query("SELECT * FROM peers WHERE peer_id='".$peer_id."';");
+		if ($peer_r->rowCount() > 0) {
+			$peer = $peer_r->fetch();
+			$remote_url_base = $peer['base_url'];
 		}
-		else die("Invalid issuer_id supplied.");
+		else die("Invalid peer_id supplied.");
 	}
 	else {
 		if (!empty($_REQUEST['remote_host'])) $remote_url_base = urldecode($_REQUEST['remote_host']);
-		else die("Please supply: issuer_id or remote_host");
+		else die("Please supply: peer_id or remote_host");
 	}
 	
 	if (empty($_REQUEST['mode']) || !in_array($_REQUEST['mode'], ['blockchain','game_ios','game_events'])) die("Please set mode to 'blockchain' or 'game_ios'");

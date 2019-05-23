@@ -94,7 +94,8 @@ if ($r->rowCount() > 0) {
 						$io_amount_sum += $recycle_io['amount'];
 					}
 					
-					if ($burn_game_amount < 0 || $burn_game_amount > $game_amount_sum) die("Failed to determine a valid burn amount (".$burn_game_amount." vs ".$game_amount_sum.").");
+					if ($burn_game_amount > $game_amount_sum) die("Failed to determine a valid burn amount (".$burn_game_amount." vs ".$game_amount_sum.").");
+					if ($burn_game_amount < 0) $burn_game_amount = 0;
 					
 					$burn_address = $app->fetch_address_in_account($account['account_id'], 0);
 					$separator_address = $app->fetch_address_in_account($account['account_id'], 1);

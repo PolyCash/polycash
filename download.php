@@ -15,11 +15,11 @@ include('includes/html_start.php');
 		<div class="panel-body">
 			<div class="row">
 				<div class="col-md-6">
-					<h2>StakeMoney</h2>
+					<h2>PolyCash</h2>
 					<p>
-					StakeMoney is a web app front-end for the StakeMoney protocol.  To get started, please install PHP, MySQL and Apache on your computer.  If you're on Windows you can get PHP, MySQL and Apache by installing <a target="_blank" href="http://www.wampserver.com/en/">WAMP</a> or <a target="_blank" href="https://www.apachefriends.org/download.html">XAMPP</a>. Then, open your web directory and download our latest source code from Github.
+					PolyCash is a web app front-end for the PolyCash protocol.  To get started, please install PHP, MySQL and Apache on your computer.  If you're on Windows you can get PHP, MySQL and Apache by installing <a target="_blank" href="http://www.wampserver.com/en/">WAMP</a> or <a target="_blank" href="https://www.apachefriends.org/download.html">XAMPP</a>. Then, open your web directory and download our latest source code from Github.
 					</p>
-					<a target="_blank" class="btn btn-success" href="https://github.com/CoinBlockOrg/coinblock.git">Download StakeMoney</a>
+					<a target="_blank" class="btn btn-success" href="https://github.com/PolyCash/polycash">Download PolyCash</a>
 				</div>
 				<div class="col-md-6">
 					<h2>EmpireCoin</h2>

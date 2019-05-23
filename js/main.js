@@ -80,7 +80,7 @@ var chain_io = function(chain_io_index, io_id, amount, create_block_id) {
 	this.chain_io_index = chain_io_index;
 	this.io_id = io_id;
 	this.amount = amount;
-	this.create_block_id = create_block_id;
+	this.create_block_id = (create_block_id == "") ? null : parseInt(create_block_id);
 	this.game_ios = [];
 	
 	this.votes_at_block = function(block_id) {
@@ -106,7 +106,7 @@ var chain_io = function(chain_io_index, io_id, amount, create_block_id) {
 var game_io = function(game_io_id, amount, create_block_id) {
 	this.game_io_id = game_io_id;
 	this.amount = amount;
-	this.create_block_id = create_block_id;
+	this.create_block_id = (create_block_id == "") ? null : parseInt(create_block_id);
 };
 var vote_input = function(input_index, ref_io) {
 	this.input_index = input_index;
@@ -1793,14 +1793,15 @@ function set_event_outcome(game_id, event_id) {
 	});
 }
 
-function set_event_outcome_selected() {
-	var option_id = parseInt($('#set_event_outcome_option_id').val());
-	$('#set_event_outcome_option_id').attr('disabled', 'disabled');
+function set_event_outcome_changed() {
+	var outcome_index = $('#set_event_outcome_index').val();
+	$('#set_event_outcome_index').attr('disabled', 'disabled');
 	
-	if (option_id > 0) {
-		$.get("/ajax/set_event_outcome.php?action=set&event_id="+set_event_id+"&option_id="+option_id, function(result) {
+	if (outcome_index != "select") {
+		$.get("/ajax/set_event_outcome.php?action=set&event_id="+set_event_id+"&outcome_index="+outcome_index, function(result) {
 			var result_obj = JSON.parse(result);
-			window.location = window.location;
+			if (result_obj['status_code'] == 2) window.location = window.location;
+			else alert(result_obj['message']);
 		});
 	}
 }
@@ -2013,9 +2014,9 @@ function show_card_preview() {
 	});
 }
 function search_card_id() {
-	var issuer_id = $('#card_issuer_id').val();
+	var peer_id = $('#peer_id').val();
 	var card_id = $('#card_id_search').val();
-	var url = "/redeem/"+issuer_id+"/"+card_id;
+	var url = "/redeem/"+peer_id+"/"+card_id;
 	if ($('#redirect_key').val() != "") url += "/?redirect_key="+$('#redirect_key').val();
 	window.location = url;
 }
@@ -2039,7 +2040,7 @@ function check_show_confirm_button() {
 	else $('#confirm_button').hide();
 }
 function check_the_code() {
-	var url = "/ajax/check_code.php?issuer_id="+issuer_id+"&card_id="+card_id+"&code="+$('#redeem_code').val().replace(/-/g, '');
+	var url = "/ajax/check_code.php?peer_id="+peer_id+"&card_id="+card_id+"&code="+$('#redeem_code').val().replace(/-/g, '');
 	$('#confirm_button').html("Checking...");
 	$('#messages').hide();
 	
@@ -2059,7 +2060,7 @@ function check_the_code() {
 		}
 	});
 }
-function card_login(create_mode, login_card_id, issuer_id) {
+function card_login(create_mode, login_card_id, peer_id) {
 	$('#card_account_password').val(Sha256.hash($('#card_account_password').val()));
 	if (create_mode) $('#card_account_password2').val(Sha256.hash($('#card_account_password2').val()));
 	
@@ -2070,7 +2071,7 @@ function card_login(create_mode, login_card_id, issuer_id) {
 	var successful = false;
 	
 	if (!create_mode || card_password == card_password2) {
-		var url = "/ajax/check_code.php?action=login&issuer_id="+issuer_id+"&card_id="+login_card_id+"&password="+card_password+"&code="+$('#redeem_code').val().replace(/-/g, '');
+		var url = "/ajax/check_code.php?action=login&peer_id="+peer_id+"&card_id="+login_card_id+"&password="+card_password+"&code="+$('#redeem_code').val().replace(/-/g, '');
 		if ($('#redirect_key').val() != "") url += "&redirect_key="+$('#redirect_key').val();
 		
 		$.get(url, function(result) {
@@ -2126,15 +2127,15 @@ function claim_card(claim_type) {
 	var btn_id = "";
 	var btn_original_text = "";
 	if (claim_type == "to_address") btn_id = 'claim_address_btn';
-	else if (claim_type == "to_game") btn_id = 'claim_game_btn_'+card_id+'_'+issuer_id;
-	else if (claim_type == "to_account") btn_id = 'claim_account_btn_'+card_id+'_'+issuer_id;
+	else if (claim_type == "to_game") btn_id = 'claim_game_btn_'+card_id+'_'+peer_id;
+	else if (claim_type == "to_account") btn_id = 'claim_account_btn_'+card_id+'_'+peer_id;
 	
 	if ($('#'+btn_id).html() != "Loading...") {
 		btn_original_text = $('#'+btn_id).html();
 		
 		$('#'+btn_id).html("Loading...");
 		
-		var ajax_url = "/ajax/account_spend.php?action=withdraw_from_card&claim_type="+claim_type+"&card_id="+card_id+"&issuer_id="+issuer_id;
+		var ajax_url = "/ajax/account_spend.php?action=withdraw_from_card&claim_type="+claim_type+"&card_id="+card_id+"&peer_id="+peer_id;
 		if (claim_type == "to_address") ajax_url += "&fee="+$('#claim_fee').val()+"&address="+$('#claim_address').val();
 		
 		$.get(ajax_url, function(result) {
@@ -2322,4 +2323,13 @@ function refresh_prices_by_event(game_id, event_id) {
 		var result_obj = JSON.parse(result);
 		window.location = window.location;
 	});
+}
+function toggle_definitive_game_peer() {
+	if ($('#definitive_game_peer_on').val() == 1) {
+		$('#definitive_game_peer').show('fast');
+		$('#definitive_game_peer').focus();
+	}
+	else {
+		$('#definitive_game_peer').hide('fast');
+	}
 }

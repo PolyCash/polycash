@@ -112,7 +112,7 @@ if ($app->running_as_admin()) {
 								
 								$error_message = "";
 								$db_game = false;
-								$new_game = $app->create_game_from_definition($new_game_def_txt, $thisuser, $module_name, $error_message, $db_game);
+								$new_game = $app->set_game_from_definition($new_game_def_txt, $thisuser, $module_name, $error_message, $db_game, false);
 								
 								if (!empty($new_game)) {
 									if ($new_game->blockchain->db_blockchain['p2p_mode'] == "none") {

@@ -30,11 +30,12 @@ if ($thisuser) {
 					$q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY option_index ASC;";
 					$r = $app->run_query($q);
 					
-					$html .= '<select class="form-control" id="set_event_outcome_option_id" onchange="set_event_outcome_selected();">'."\n";
-					$html .= '<option value="">-- Please Select --</option>'."\n";
+					$html .= '<select class="form-control" id="set_event_outcome_index" onchange="set_event_outcome_changed();">'."\n";
+					$html .= '<option value="select">-- Please Select --</option>'."\n";
 					while ($option = $r->fetch()) {
-						$html .= '<option value="'.$option['option_id'].'">'.$option['name'].'</option>'."\n";
+						$html .= '<option value="'.$option['event_option_index'].'">'.$option['name'].'</option>'."\n";
 					}
+					$html .= '<option value="">Unset</option>'."\n";
 					$html .= '</select>'."\n";
 					
 					$html .= '</div>';
@@ -44,26 +45,32 @@ if ($thisuser) {
 					$app->output_message(1, "", $dump_object);
 				}
 				else if ($_REQUEST['action'] == "set") {
-					$option_id = (int) $_REQUEST['option_id'];
+					$outcome_index = $_REQUEST['outcome_index'];
 					
-					$db_option_r = $app->run_query("SELECT * FROM options WHERE option_id='".$option_id."';");
-					
-					if ($db_option_r->rowCount() > 0) {
-						$db_option = $db_option_r->fetch();
+					if ($outcome_index == "") {
+						$option_ok = true;
+						$outcome_index = 'NULL';
+					}
+					else {
+						$outcome_index = (int)$_REQUEST['outcome_index'];
 						
-						if ($db_option['event_id'] == $db_event['event_id']) {
-							$show_internal_params = true;
-							
-							$game->check_set_game_definition("defined", $show_internal_params);
-							
-							$q = "UPDATE game_defined_events SET outcome_index=".$db_option['event_option_index']." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."';";
-							$r = $app->run_query($q);
-							
-							$game->check_set_game_definition("defined", $show_internal_params);
-							
-							$app->output_message(2, "Changed the game definition.", false);
-						}
-						else $app->output_message(9, "Option event ID does not match.", false);
+						$gdo_r = $app->run_query("SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."' AND option_index='".$outcome_index."';");
+						
+						if ($gdo_r->rowCount() == 1) $option_ok = true;
+						else $option_ok = false;
+					}
+					
+					if ($option_ok) {
+						$show_internal_params = false;
+						
+						$game->check_set_game_definition("defined", $show_internal_params);
+						
+						$q = "UPDATE game_defined_events SET outcome_index=".$outcome_index." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."';";
+						$r = $app->run_query($q);
+						
+						$game->check_set_game_definition("defined", $show_internal_params);
+						
+						$app->output_message(2, "Changed the game definition.", false);
 					}
 					else $app->output_message(8, "Failed to find option by ID.", false);
 				}

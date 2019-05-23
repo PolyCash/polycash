@@ -509,7 +509,11 @@ include('includes/html_start.php');
 						
 						echo '<div class="col-sm-4"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$address['address'].'">'.$address['address'].'</a></div>';
 						
-						echo '<div class="col-sm-2"><a href="" onclick="manage_addresses('.$account['account_id'].', \'set_primary\', '.$address['address_id'].');">Set as Primary</a></div>';
+						echo '<div class="col-sm-2">';
+						if ($address['is_separator_address'] == 0 && $address['is_destroy_address'] == 0) {
+							echo '<a href="" onclick="manage_addresses('.$account['account_id'].', \'set_primary\', '.$address['address_id'].');">Set as Primary</a>';
+						}
+						echo '</div>';
 						
 						echo "</div>\n";
 					}

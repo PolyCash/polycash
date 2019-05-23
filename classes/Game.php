@@ -4,6 +4,7 @@ class Game {
 	public $blockchain;
 	public $current_events;
 	public $genesis_hash;
+	public $definitive_peer = false;
 	
 	public function __construct(&$blockchain, $game_id) {
 		$this->blockchain = $blockchain;
@@ -138,9 +139,7 @@ class Game {
 					else $address_id = $from_user->user_address_id($this, false, $option_ids[$out_index], $user_game['account_id']);
 					
 					if ($address_id) {
-						$q = "SELECT * FROM addresses WHERE address_id='".$address_id."';";
-						$r = $this->blockchain->app->run_query($q);
-						$address = $r->fetch();
+						$address = $this->blockchain->app->fetch_address_by_id($address_id);
 						
 						if ($this->blockchain->db_blockchain['p2p_mode'] != "rpc") {
 							$q = "INSERT INTO transaction_ios SET blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."', script_type='pubkeyhash', spend_status='unconfirmed', out_index='".$out_index."', ";
@@ -183,9 +182,7 @@ class Game {
 				if ($overshoot_amount > 0) {
 					$out_index++;
 					
-					$q = "SELECT * FROM addresses WHERE address_id='".$overshoot_return_addr_id."';";
-					$r = $this->blockchain->app->run_query($q);
-					$overshoot_address = $r->fetch();
+					$overshoot_address = $this->blockchain->app->fetch_address_by_id($overshoot_return_addr_id);
 					
 					if ($this->blockchain->db_blockchain['p2p_mode'] != "rpc") {
 						$q = "INSERT INTO transaction_ios SET out_index='".$out_index."', spend_status='unconfirmed', blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."', script_type='pubkeyhash', ";
@@ -405,14 +402,17 @@ class Game {
 			$q .= " WHERE g.game_id='".$this->db_game['game_id']."' AND usb.block_within_round='".$block_of_round."'";
 			$q .= " AND (s.voting_strategy IN ('by_rank', 'by_entity', 'api', 'by_plan', 'featured','hit_url'))";
 			$q .= " AND (s.time_next_apply IS NULL OR s.time_next_apply<".time().")";
-			$q .= " ORDER BY RAND();";
+			$q .= " AND g.account_value > 0 ORDER BY RAND();";
 			$r = $this->blockchain->app->run_query($q);
 			
 			if ($print_debug) echo "Applying user strategies for block #".$mining_block_id." of ".$this->db_game['name']." looping through ".$r->rowCount()." users.<br/>\n";
 			while ($user_game = $r->fetch()) {
 				$api_response = false;
 				$this->apply_user_strategy($log_text, $user_game, $mining_block_id, $current_round_id, $api_response, false);
-				if ($print_debug && $api_response) echo "user #".$user_game['user_id'].": ".json_encode($api_response)."\n";
+				if ($print_debug) {
+					if ($api_response) echo "user #".$user_game['user_id'].": ".json_encode($api_response)."\n";
+					else echo "no api response for user #".$user_game['user_id']."\n";
+				}
 			}
 			$this->update_option_votes();
 		}
@@ -443,16 +443,7 @@ class Game {
 					if ($force_now) $api_url .= "&force=1";
 				}
 				
-				if ($GLOBALS['api_proxy_url']) $api_client_url = $GLOBALS['api_proxy_url'].urlencode($api_url);
-				else $api_client_url = str_replace('&amp;', '&', $api_url);
-				
-				$arrContextOptions=array(
-					"ssl"=>array(
-						"verify_peer"=>false,
-						"verify_peer_name"=>false,
-					),
-				);
-				$api_response = file_get_contents($api_client_url, false, stream_context_create($arrContextOptions));
+				$api_response = $this->blockchain->app->safe_fetch_url($api_url);
 				
 				if ($user_game['hit_url'] == 1) {
 					$api_response = json_decode($api_response);
@@ -569,18 +560,7 @@ class Game {
 				}
 			}
 			else if ($user_game['voting_strategy'] == "hit_url") {
-				$api_url = $user_game['api_url'];
-				
-				if ($GLOBALS['api_proxy_url']) $api_client_url = $GLOBALS['api_proxy_url'].urlencode($api_url);
-				else $api_client_url = str_replace('&amp;', '&', $api_url);
-				
-				$arrContextOptions=array(
-					"ssl"=>array(
-						"verify_peer"=>false,
-						"verify_peer_name"=>false,
-					),
-				);
-				$api_response = json_decode(file_get_contents($api_client_url, false, stream_context_create($arrContextOptions)));
+				$api_response = $this->blockchain->app->safe_fetch_url($user_game['api_url']);
 			}
 			else {
 				$log_text .= "user game #".$user_game['user_game_id'].", strategy: ".$user_game['voting_strategy']." ";
@@ -1833,10 +1813,10 @@ class Game {
 			$gio_q = "SELECT * FROM transaction_game_ios WHERE game_id='".$this->db_game['game_id']."' AND io_id='".$io['io_id']."';";
 			$gio_r = $this->blockchain->app->run_query($gio_q);
 			
-			$js .= "chain_ios[".$io_i."] = new chain_io(".$io_i.", ".$io['io_id'].", ".$io['amount'].", ".$io['create_block_id'].");\n";
+			$js .= "chain_ios[".$io_i."] = new chain_io(".$io_i.", ".$io['io_id'].", ".$io['amount'].", '".$io['create_block_id']."');\n";
 			
 			while ($gio = $gio_r->fetch()) {
-				$js .= "chain_ios[".$io_i."].game_ios.push(new game_io(".$gio['game_io_id'].", ".$gio['colored_amount'].", ".$io['create_block_id']."));\n";
+				$js .= "chain_ios[".$io_i."].game_ios.push(new game_io(".$gio['game_io_id'].", ".$gio['colored_amount'].", '".$io['create_block_id']."'));\n";
 			}
 			
 			$input_buttons_html .= '<div id="select_utxo_'.$io['io_id'].'" class="btn btn-primary btn-sm select_utxo';
@@ -2006,6 +1986,7 @@ class Game {
 				
 				$sports_entity_type = $this->blockchain->app->check_set_entity_type("sports");
 				$leagues_entity_type = $this->blockchain->app->check_set_entity_type("leagues");
+				$general_entity_type = $this->blockchain->app->check_set_entity_type("general entity");
 				
 				if (count($gdes_to_add) > 0) {
 					$init_event_index = $gdes_to_add[0]['event_index'];
@@ -2019,7 +2000,7 @@ class Game {
 					
 					$i = 0;
 					for ($event_index=$init_event_index; $event_index<$init_event_index+count($gdes_to_add); $event_index++) {
-						$this->blockchain->app->check_set_gde($this, $gdes_to_add[$i], $event_verbatim_vars, $sports_entity_type['entity_type_id'], $leagues_entity_type['entity_type_id']);
+						$this->blockchain->app->check_set_gde($this, $gdes_to_add[$i], $event_verbatim_vars, $sports_entity_type['entity_type_id'], $leagues_entity_type['entity_type_id'], $general_entity_type['entity_type_id']);
 						$i++;
 					}
 				}
@@ -2302,6 +2283,30 @@ class Game {
 		$this->db_game['loaded_until_block'] = $loaded_until_block;
 	}
 	
+	public function sync_with_definitive_peer() {
+		$error_message = "";
+		$definitive_peer = $this->get_definitive_peer();
+		
+		if ($definitive_peer) {
+			$api_url = $definitive_peer['base_url']."/api/".$this->db_game['url_identifier']."/definition/?definition_hash=".$this->db_game['cached_definition_hash'];
+			
+			$api_response = json_decode($this->blockchain->app->safe_fetch_url($api_url));
+
+			if ($api_response->status_code == 1) {
+				if ($api_response->definition->url_identifier == $this->db_game['url_identifier']) {
+					$ref_user = false;
+					$db_new_game = false;
+					$this->blockchain->app->set_game_from_definition($api_response->definition, $ref_user, $error_message, $db_new_game, true);
+				}
+				else $error_message = "Sync canceled: definitive peer tried to change the game identifier.";
+			}
+			else $error_message = $api_response->message;
+		}
+		else $error_message = "This game does not have a definitive peer.";
+		
+		return $error_message;
+	}
+	
 	public function sync($show_debug) {
 		$this->set_loaded_until_block();
 		$last_set_loaded_time = microtime(true);
@@ -2309,32 +2314,40 @@ class Game {
 		$load_block_height = $this->db_game['loaded_until_block']+1;
 		$to_block_height = $this->blockchain->last_block_id();
 		
-		if ($show_debug) echo $this->db_game['name'].".. loading blocks ".$load_block_height." to ".$to_block_height."\n";
-		
 		$ensure_block_id = $to_block_height+1;
 		if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
 		
 		$ensure_events_debug_text = $this->ensure_events_until_block($ensure_block_id);
 		if ($show_debug) echo $ensure_events_debug_text;
 		
-		if ($load_block_height == $this->db_game['game_starting_block']) $game_io_index = 0;
-		else {
-			$prev_block = $this->fetch_game_block_by_height($load_block_height-1);
-			$game_io_index = $prev_block['max_game_io_index'];
+		if (!empty($this->db_game['definitive_game_peer_id'])) {
+			$sync_definitive_message = $this->sync_with_definitive_peer();
+			if ($show_debug) echo $sync_definitive_message."\n";
 		}
 		
-		for ($block_height=$load_block_height; $block_height<=$to_block_height; $block_height++) {
-			list($successful, $log_text, $bulk_to_block) = $this->add_block($block_height, $game_io_index);
-			if ($bulk_to_block) $block_height = $bulk_to_block;
+		if ($to_block_height >= $load_block_height) {
+			if ($show_debug) echo $this->db_game['name'].".. loading blocks ".$load_block_height." to ".$to_block_height."\n";
 			
-			if ($show_debug) echo $log_text;
-			
-			if (microtime(true)-$last_set_loaded_time >= 3) {
-				$this->set_loaded_until_block();
-				$last_set_loaded_time = microtime(true);
+			if ($load_block_height == $this->db_game['game_starting_block']) $game_io_index = 0;
+			else {
+				$prev_block = $this->fetch_game_block_by_height($load_block_height-1);
+				$game_io_index = $prev_block['max_game_io_index'];
 			}
-			if (!$successful) $block_height = $to_block_height+1;
+			
+			for ($block_height=$load_block_height; $block_height<=$to_block_height; $block_height++) {
+				list($successful, $log_text, $bulk_to_block) = $this->add_block($block_height, $game_io_index);
+				if ($bulk_to_block) $block_height = $bulk_to_block;
+				
+				if ($show_debug) echo $log_text;
+				
+				if (microtime(true)-$last_set_loaded_time >= 3) {
+					$this->set_loaded_until_block();
+					$last_set_loaded_time = microtime(true);
+				}
+				if (!$successful) $block_height = $to_block_height+1;
+			}
 		}
+		else if ($show_debug) echo $this->db_game['name']." is already fully loaded.\n";
 		
 		$this->update_option_votes();
 	}
@@ -3504,6 +3517,40 @@ class Game {
 		$info = $this->blockchain->app->run_query("SELECT MAX(event_starting_block) FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."';")->fetch();
 		if ((string)$info['MAX(event_starting_block)'] != "") return (int)$info['MAX(event_starting_block)'];
 		else return (int)$this->db_game['game_starting_block'];
+	}
+	
+	public function get_game_peer_by_id($game_peer_id) {
+		$peer_r = $this->blockchain->app->run_query("SELECT * FROM peers p JOIN game_peers gp ON p.peer_id=gp.peer_id WHERE gp.game_peer_id=".$game_peer_id.";");
+		if ($peer_r->rowCount() > 0) return $peer_r->fetch();
+		else return false;
+	}
+	
+	public function get_definitive_peer() {
+		if ($this->definitive_peer) return $this->definitive_peer;
+		else {
+			if (empty($this->db_game['definitive_game_peer_id'])) return false;
+			else {
+				$this->definitive_peer = $this->get_game_peer_by_id($this->db_game['definitive_game_peer_id']);
+				return $this->definitive_peer;
+			}
+		}
+	}
+	
+	public function get_game_peer_by_server_name($server_name) {
+		$game_peer = false;
+		$peer = $this->blockchain->app->get_peer_by_server_name($server_name, true);
+		
+		if ($peer) {
+			$game_peer_r = $this->blockchain->app->run_query("SELECT * FROM game_peers WHERE game_id='".$this->db_game['game_id']."' AND peer_id='".$peer['peer_id']."';");
+			
+			if ($game_peer_r->rowCount() == 0) {
+				$this->blockchain->app->run_query("INSERT INTO game_peers SET game_id=".$this->db_game['game_id'].", peer_id=".$peer['peer_id'].";");
+				$game_peer = $this->get_game_peer_by_id($this->blockchain->app->last_insert_id());
+			}
+			else $game_peer = $game_peer_r->fetch();
+		}
+		
+		return $game_peer;
 	}
 }
 ?>
