@@ -4,6 +4,7 @@ class Game {
 	public $blockchain;
 	public $current_events;
 	public $genesis_hash;
+	public $definitive_peer = false;
 	
 	public function __construct(&$blockchain, $game_id) {
 		$this->blockchain = $blockchain;
@@ -3504,6 +3505,40 @@ class Game {
 		$info = $this->blockchain->app->run_query("SELECT MAX(event_starting_block) FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."';")->fetch();
 		if ((string)$info['MAX(event_starting_block)'] != "") return (int)$info['MAX(event_starting_block)'];
 		else return (int)$this->db_game['game_starting_block'];
+	}
+	
+	public function get_game_peer_by_id($game_peer_id) {
+		$peer_r = $this->blockchain->app->run_query("SELECT * FROM peers p JOIN game_peers gp ON p.peer_id=gp.peer_id WHERE gp.game_peer_id=".$game_peer_id.";");
+		if ($peer_r->rowCount() > 0) return $peer_r->fetch();
+		else return false;
+	}
+	
+	public function get_definitive_peer() {
+		if ($this->definitive_peer) return $this->definitive_peer;
+		else {
+			if (empty($this->db_game['definitive_game_peer_id'])) return false;
+			else {
+				$this->definitive_peer = $this->get_game_peer_by_id($this->db_game['definitive_game_peer_id']);
+				return $this->definitive_peer;
+			}
+		}
+	}
+	
+	public function get_game_peer_by_server_name($server_name) {
+		$game_peer = false;
+		$peer = $this->blockchain->app->get_peer_by_server_name($server_name, true);
+		
+		if ($peer) {
+			$game_peer_r = $this->blockchain->app->run_query("SELECT * FROM game_peers WHERE game_id='".$this->db_game['game_id']."' AND peer_id='".$peer['peer_id']."';");
+			
+			if ($game_peer_r->rowCount() == 0) {
+				$this->blockchain->app->run_query("INSERT INTO game_peers SET game_id=".$this->db_game['game_id'].", peer_id=".$peer['peer_id'].";");
+				$game_peer = $this->get_game_peer_by_id($this->blockchain->app->last_insert_id());
+			}
+			else $game_peer = $game_peer_r->fetch();
+		}
+		
+		return $game_peer;
 	}
 }
 ?>

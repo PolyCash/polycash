@@ -2323,3 +2323,13 @@ function refresh_prices_by_event(game_id, event_id) {
 		window.location = window.location;
 	});
 }
+function toggle_definitive_game_peer() {
+	console.log($('#definitive_game_peer_on').val());
+	if ($('#definitive_game_peer_on').val() == 1) {
+		$('#definitive_game_peer').show('fast');
+		$('#definitive_game_peer').focus();
+	}
+	else {
+		$('#definitive_game_peer').hide('fast');
+	}
+}

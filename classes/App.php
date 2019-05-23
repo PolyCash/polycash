@@ -2681,9 +2681,7 @@ class App {
 		}
 		else if ($allow_new) {
 			$this->run_query("INSERT INTO peers SET peer_identifier=".$this->quote_escape($server_name).", peer_name=".$this->quote_escape($server_name).", base_url=".$this->quote_escape($initial_server_name).", time_created='".time()."';");
-			$peer_id = $this->last_insert_id();
-			
-			$peer = $this->run_query("SELECT * FROM peers WHERE peer_id=".$peer_id.";")->fetch();
+			$peer = $this->get_peer_by_id($this->last_insert_id());
 		}
 		else $peer = false;
 		
