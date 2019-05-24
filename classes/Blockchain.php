@@ -1423,6 +1423,11 @@ class Blockchain {
 	}
 	
 	public function create_transaction($type, $amounts, $block_id, $io_ids, $address_ids, $transaction_fee, &$error_message) {
+		if ($transaction_fee < 0) {
+			$error_message = "Tried creating a transaction with a negative transaction fee ($transaction_fee).\n";
+			return false;
+		}
+		
 		$amount = $transaction_fee;
 		for ($i=0; $i<count($amounts); $i++) {
 			$amount += $amounts[$i];
