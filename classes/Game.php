@@ -3432,10 +3432,11 @@ class Game {
 	public function set_event_blocks($game_defined_event_id) {
 		$log_text = "";
 		$last_block_id = $this->blockchain->last_block_id();
+		$avoid_changing_completed_events = false;
 		
-		$event_q = "SELECT * FROM game_defined_events WHERE ";
-		if ($game_defined_event_id) $event_q .= "game_defined_event_id=".$game_defined_event_id;
-		else $event_q .= "game_id='".$this->db_game['game_id']."' AND ((event_starting_block <= ".$last_block_id." AND event_final_block >= ".$last_block_id.") OR event_starting_block IS NULL OR event_final_block IS NULL)";
+		$event_q = "SELECT * FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."' AND event_starting_time IS NOT NULL";
+		if ($game_defined_event_id) $event_q .= " AND game_defined_event_id=".$game_defined_event_id;
+		else if ($avoid_changing_completed_events) $event_q .= " AND ((event_starting_block <= ".$last_block_id." AND event_payout_block >= ".$last_block_id.") OR event_starting_block IS NULL OR event_final_block IS NULL)";
 		$event_q .= ";";
 		$event_r = $this->blockchain->app->run_query($event_q);
 		

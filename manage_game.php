@@ -189,6 +189,7 @@ else {
 				$sport_col = array_search("sport", $header_vars);
 				$league_col = array_search("league", $header_vars);
 				$external_id_col = array_search("external identifier", $header_vars);
+				$outcome_col = array_search("outcome", $header_vars);
 				
 				if ($home_col === false || $away_col === false || $name_col === false || $time_col === false || $start_time_col === false) {
 					$messages .= "A required column was missing in the file you uploaded. Required fields are 'Home', 'Away', 'Event Name', 'Start Time UTC' and 'Datetime UTC'<br/>\n";
@@ -271,11 +272,16 @@ else {
 									}
 									else $this_league_entity = false;
 									
+									$outcome_index = 'NULL';
+									if ($outcome_col !== false) {
+										if ($line_vals[$outcome_col] != "") $outcome_index = (int)$line_vals[$outcome_col];
+									}
+									
 									$gde_ins_q = "INSERT INTO game_defined_events SET game_id='".$game->db_game['game_id']."'";
 									if ($this_sport_entity) $gde_ins_q .= ", sport_entity_id=".$this_sport_entity['entity_id'];
 									if ($this_league_entity) $gde_ins_q .= ", league_entity_id=".$this_league_entity['entity_id'];
 									if ($external_identifier) $gde_ins_q .= ", external_identifier=".$app->quote_escape($external_identifier);
-									$gde_ins_q .= ", event_index='".$event_index."', event_name=".$app->quote_escape($event_name).", event_starting_time='".$event_starting_time."', event_final_time='".$event_final_time."', event_payout_time='".$event_payout_time."', option_name='team', option_name_plural='teams';";
+									$gde_ins_q .= ", outcome_index=".$outcome_index.", event_index='".$event_index."', event_name=".$app->quote_escape($event_name).", event_starting_time='".$event_starting_time."', event_final_time='".$event_final_time."', event_payout_time='".$event_payout_time."', option_name='team', option_name_plural='teams';";
 									$gde_ins_r = $app->run_query($gde_ins_q);
 									
 									$gdo_ins_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index=".$event_index.", option_index=0, name=".$app->quote_escape($home).", entity_id='".$home_entity['entity_id']."'";
