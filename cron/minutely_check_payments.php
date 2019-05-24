@@ -66,7 +66,7 @@ if ($app->running_as_admin()) {
 				}
 				
 				if ($game_coins_in >= $game_coins) {
-					$chain_fee = (int) 0.0001*pow(10, $game->blockchain->db_blockchain['decimal_places']);
+					$chain_fee = (int)(0.0001*pow(10, $game->blockchain->db_blockchain['decimal_places']));
 					$chain_coins_per_game_coin = ($chain_coins_in-$chain_fee)/$game_coins_in;
 					$send_chain_coins = ceil($game_coins*$chain_coins_per_game_coin);
 					
@@ -103,10 +103,10 @@ if ($app->running_as_admin()) {
 					if ($rr->rowCount() > 0) {
 						$strategy = $rr->fetch();
 						
-						$fee_amount = (int) $strategy['transaction_fee'];
+						$fee_amount = (int) ($strategy['transaction_fee']*pow(10,$game->blockchain->db_blockchain['decimal_places']));
 					}
 				}
-				if (!$fee_amount) $fee_amount = 0.001*pow(10,$game->blockchain->db_blockchain['decimal_places']);
+				if (!$fee_amount) $fee_amount = (int) (0.0001*pow(10,$game->blockchain->db_blockchain['decimal_places']));
 				
 				$color_amount = $amount_paid - $fee_amount - $buyin_amount;
 				

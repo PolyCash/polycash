@@ -46,7 +46,7 @@ if (!empty($_REQUEST['action'])) {
 					
 					if ($how_many > 0) {
 						$cost = $how_many*$denomination['denomination']*pow(10, $fv_blockchain->db_blockchain['decimal_places']);
-						$fee = 0.001*pow(10, $fv_blockchain->db_blockchain['decimal_places']);
+						$fee = (int) (0.0001*pow(10, $fv_blockchain->db_blockchain['decimal_places']));
 						$account_balance = $app->account_balance($currency_account['account_id']);
 						
 						if ($cost+$fee <= $account_balance) {
@@ -858,7 +858,7 @@ include('includes/html_start.php');
 						<div class="modal-body">
 							<div class="form-group">
 								<label for="claim_fee">Fee:</label>
-								<input class="form-control" type="tel" placeholder="0.001" value="0.001" id="claim_fee" style="text-align: right;" />
+								<input class="form-control" type="tel" placeholder="0.0001" value="0.0001" id="claim_fee" style="text-align: right;" />
 							</div>
 							<div class="form-group">
 								<label for="claim_address">Address:</label>

@@ -927,7 +927,7 @@ if ($thisuser && $game) {
 						<input type="hidden" name="voting_strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
 						Pay fees on every transaction of:<br/>
 						<div class="row">
-							<div class="col-sm-4"><input class="form-control" name="transaction_fee" value="<?php echo $app->format_bignum($user_strategy['transaction_fee']); ?>" placeholder="0.001" /></div>
+							<div class="col-sm-4"><input class="form-control" name="transaction_fee" value="<?php echo $app->format_bignum($user_strategy['transaction_fee']); ?>" placeholder="0.0001" /></div>
 							<div class="col-sm-4 form-control-static"><?php
 							echo $game->blockchain->db_blockchain['coin_name_plural'];
 							?></div>

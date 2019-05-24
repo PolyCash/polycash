@@ -39,7 +39,7 @@ if ($thisuser) {
 					$game_var = $game_form_vars[$i];
 					$game_val = $_REQUEST[$game_form_vars[$i]];
 					
-					if (in_array($game_var, array('pos_reward', 'genesis_amount'))) $game_val = (int) $game_val*pow(10,$game->db_game['decimal_places']);
+					if (in_array($game_var, array('pos_reward', 'genesis_amount'))) $game_val = (int) ($game_val*pow(10,$game->db_game['decimal_places']));
 					else if (in_array($game_var, array("exponential_inflation_rate", "default_max_voting_fraction"))) $game_val = (float) $game_val;
 					else if (in_array($game_var, array('maturity', 'round_length', 'final_round','blockchain_id'))) $game_val = intval($game_val);
 					else $game_val = $app->strong_strip_tags($game_val);

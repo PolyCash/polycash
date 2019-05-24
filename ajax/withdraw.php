@@ -15,7 +15,7 @@ if ($thisuser && $game) {
 	
 	if ($target_amount > 0 && $fee >= 0) {
 		$target_amount = $target_amount*pow(10,$game->db_game['decimal_places']);
-		$fee = (int) $fee*pow(10,$game->db_game['decimal_places']);
+		$fee = (int)($fee*pow(10,$game->db_game['decimal_places']));
 		$last_block_id = $game->blockchain->last_block_id();
 		$mining_block_id = $last_block_id+1;
 		

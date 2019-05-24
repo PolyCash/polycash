@@ -1535,7 +1535,8 @@ class Blockchain {
 							$created_input_ids[count($created_input_ids)] = $this->app->last_insert_id();
 						}
 						else if ($this->db_blockchain['p2p_mode'] == "rpc") {
-							$raw_txout[$address['address']] = $amounts[$out_index]/pow(10,$this->db_blockchain['decimal_places']);
+							if (empty($raw_txout[$address['address']])) $raw_txout[$address['address']] = 0;
+							$raw_txout[$address['address']] += $amounts[$out_index]/pow(10,$this->db_blockchain['decimal_places']);
 						}
 					}
 					else $output_error = true;
