@@ -2137,6 +2137,15 @@ class App {
 								$game = new Game($blockchain, $game_id);
 							}
 							
+							if (!empty($game_def->definitive_peer)) {
+								$definitive_game_peer = $game->get_game_peer_by_server_name($game_def->definitive_peer);
+								
+								if ($definitive_game_peer) {
+									$this->run_query("UPDATE games SET definitive_game_peer_id='".$definitive_game_peer['game_peer_id']."' WHERE game_id='".$game->db_game['game_id']."';");
+									$game->db_game['definitive_game_peer_id'] = $definitive_game_peer['game_peer_id'];
+								}
+							}
+							
 							$q = "DELETE FROM game_defined_escrow_amounts WHERE game_id='".$game->db_game['game_id']."';";
 							$r = $this->run_query($q);
 							

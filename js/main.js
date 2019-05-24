@@ -1762,7 +1762,7 @@ function account_spend_withdraw() {
 	});
 }
 function account_spend_split() {
-	var spend_url = "/ajax/account_spend.php?action=split&game_id="+account_game_id+"&io_id="+account_io_id+"&amount_each="+$('#split_amount_each').val()+"&quantity="+$('#split_quantity').val();
+	var spend_url = "/ajax/account_spend.php?action=split&game_id="+account_game_id+"&io_id="+account_io_id+"&amount_each="+$('#split_amount_each').val()+"&quantity="+$('#split_quantity').val()+"&fee="+$('#split_fee').val();
 	
 	$.get(spend_url, function(result) {
 		var result_obj = JSON.parse(result);

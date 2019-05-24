@@ -694,6 +694,17 @@ include('includes/html_start.php');
 									<input type="text" class="form-control" name="split_quantity" id="split_quantity" />
 								</div>
 								<div class="form-group">
+									<label for="split_quantity">Transaction fee:</label>
+									<div class="row">
+										<div class="col-sm-8">
+											<input type="text" class="form-control" name="split_fee" id="split_fee" placeholder="0.0001" />
+										</div>
+										<div class="col-sm-4 form-control-static">
+											<?php echo $blockchain->db_blockchain['coin_name_plural']; ?>
+										</div>
+									</div>
+								</div>
+								<div class="form-group">
 									<button class="btn btn-primary">Split my coins</button>
 								</div>
 							</form>
