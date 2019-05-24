@@ -701,6 +701,12 @@ else {
 							<div class="panel-title"><?php echo $game->db_game['name']; ?>: Manage Events</div>
 						</div>
 						<div class="panel-body">
+							<?php
+							if ($game->get_definitive_peer()) { ?>
+								<p><font class="redtext">This game is set to update automatically from a definitive peer. Any changes you make here will be overwritten.</font></p>
+								<?php
+							}
+							?>
 							<p>
 								<button class="btn btn-sm btn-success" onclick="manage_game_load_event('new');">New Event</button>
 								<button class="btn btn-sm btn-primary" onclick="manage_game_set_event_blocks(false);">Set Event Blocks</button>

@@ -2288,7 +2288,9 @@ class Game {
 		$definitive_peer = $this->get_definitive_peer();
 		
 		if ($definitive_peer) {
-			$api_url = $definitive_peer['base_url']."/api/".$this->db_game['url_identifier']."/definition/?definition_hash=".$this->db_game['cached_definition_hash'];
+			$send_hash = $this->db_game['cached_definition_hash'];
+			if ($this->db_game['defined_cached_definition_hash'] != $this->db_game['cached_definition_hash']) $send_hash = "";
+			$api_url = $definitive_peer['base_url']."/api/".$this->db_game['url_identifier']."/definition/?definition_hash=".$send_hash;
 			
 			$api_response = json_decode($this->blockchain->app->safe_fetch_url($api_url));
 

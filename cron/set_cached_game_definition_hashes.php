@@ -31,13 +31,22 @@ if ($app->running_as_admin()) {
 		$loop_start_time = microtime(true);
 		
 		foreach ($running_games as $running_game) {
-			$game_def = $app->fetch_game_definition($running_game, "actual", $show_internal_params);
-			$game_def_str = $app->game_def_to_text($game_def);
-			$game_def_hash = $app->game_def_to_hash($game_def_str);
+			$actual_game_def = $app->fetch_game_definition($running_game, "actual", $show_internal_params);
+			$actual_game_def_str = $app->game_def_to_text($actual_game_def);
+			$actual_game_def_hash = $app->game_def_to_hash($actual_game_def_str);
 			
-			if ($running_game->db_game['cached_definition_hash'] != $game_def_hash) {
-				$app->run_query("UPDATE games SET cached_definition_hash='".$game_def_hash."' WHERE game_id='".$running_game->db_game['game_id']."';");
-				$running_game->db_game['cached_definition_hash'] = $game_def_hash;
+			if ($running_game->db_game['cached_definition_hash'] != $actual_game_def_hash) {
+				$app->run_query("UPDATE games SET cached_definition_hash='".$actual_game_def_hash."', cached_definition_time='".time()."' WHERE game_id='".$running_game->db_game['game_id']."';");
+				$running_game->db_game['cached_definition_hash'] = $actual_game_def_hash;
+			}
+			
+			$defined_game_def = $app->fetch_game_definition($running_game, "defined", $show_internal_params);
+			$defined_game_def_str = $app->game_def_to_text($defined_game_def);
+			$defined_game_def_hash = $app->game_def_to_hash($defined_game_def_str);
+			
+			if ($running_game->db_game['defined_cached_definition_hash'] != $defined_game_def_hash) {
+				$app->run_query("UPDATE games SET defined_cached_definition_hash='".$defined_game_def_hash."' WHERE game_id='".$running_game->db_game['game_id']."';");
+				$running_game->db_game['defined_cached_definition_hash'] = $defined_game_def_hash;
 			}
 		}
 		
