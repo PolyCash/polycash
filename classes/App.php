@@ -1349,7 +1349,12 @@ class App {
 			$rr = $this->run_query($qq);
 			$j = 0;
 			while ($option = $rr->fetch()) {
-				$temp_event['possible_outcomes'][$j] = array("title"=>$option['name']);
+				$possible_outcome = ["title"=>$option['name']];
+				if ($show_internal_params) {
+					if (!empty($option['target_probability'])) $possible_outcome['target_probability'] = $option['target_probability'];
+					if (!empty($option['entity_id'])) $possible_outcome['entity_id'] = $option['entity_id'];
+				}
+				$temp_event['possible_outcomes'][$j] = $possible_outcome;
 				$j++;
 			}
 			$events_obj[$i] = $temp_event;
@@ -1939,6 +1944,11 @@ class App {
 				
 				$q .= "name=".$this->quote_escape($possible_outcome['title']);
 				
+				if (!empty($possible_outcome['target_probability'])) {
+					$q .= ", target_probability='".$possible_outcome['target_probability']."'";
+				}
+				else $q .= ", target_probability=NULL";
+				
 				if (empty($possible_outcome['entity_id'])) {
 					$gdo_entity = $this->check_set_entity($general_entity_type_id, $possible_outcome['title']);
 					$possible_outcome['entity_id'] = $gdo_entity['entity_id'];
@@ -1946,7 +1956,6 @@ class App {
 				$q .= ", entity_id='".$possible_outcome['entity_id']."'";
 				
 				if ($existing_gdo) $q .= " WHERE game_defined_option_id='".$existing_gdo['game_defined_option_id']."'";
-				
 				$q .= ";";
 				$r = $this->run_query($q);
 			}

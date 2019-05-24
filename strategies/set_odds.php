@@ -20,7 +20,7 @@ if ($r->rowCount() > 0) {
 	$mining_block_id = $blockchain->last_block_id()+1;
 	$round_id = $game->block_to_round($mining_block_id);
 	$coins_per_vote = $app->coins_per_vote($game->db_game);
-	$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
+	$fee_amount = (int) $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
 	
 	$hours_between_applications = 12;
 	$sec_between_applications = 60*60*$hours_between_applications;
@@ -63,9 +63,7 @@ if ($r->rowCount() > 0) {
 				if ($coins_per_event > 0) {
 					$total_cost = $coins_per_event*$num_events;
 					
-					$q = "SELECT *, SUM(gio.colored_amount) AS coins, SUM(gio.colored_amount)*(".($blockchain->last_block_id()+1)."-io.create_block_id) AS coin_blocks, SUM(gio.colored_amount*(".$round_id."-gio.create_round_id)) AS coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.is_resolved=1 AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account['account_id']."' GROUP BY gio.io_id";
-					//if ($game->db_game['inflation'] == "exponential" && $game->db_game['exponential_inflation_rate'] > 0) $q .= " HAVING(".$game->db_game['payout_weight']."s*".$coins_per_vote.") < ".$total_cost;
-					$q .= " ORDER BY coins ASC;";
+					$q = "SELECT *, SUM(gio.colored_amount) AS coins, SUM(gio.colored_amount)*(".($blockchain->last_block_id()+1)."-io.create_block_id) AS coin_blocks, SUM(gio.colored_amount*(".$round_id."-gio.create_round_id)) AS coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.is_resolved=1 AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account['account_id']."' GROUP BY gio.io_id ORDER BY coins ASC;";
 					$r = $app->run_query($q);
 					
 					$mandatory_bets = 0;
@@ -101,7 +99,7 @@ if ($r->rowCount() > 0) {
 						$io_amount_sum += $recycle_io['amount'];
 					}
 					
-					if ($burn_game_amount < 0 || $burn_game_amount > $game_amount_sum) die("Failed to determine a valid burn amount (".$burn_game_amount." vs ".$game_amount_sum.").");
+					if ($burn_game_amount < 0 || $burn_game_amount > $game_amount_sum*1.2) die("Failed to determine a valid burn amount (".$burn_game_amount." vs ".$game_amount_sum.").");
 					
 					$io_nonfee_amount = $io_amount_sum-$fee_amount;
 					$game_coins_per_coin = $game_amount_sum/$io_nonfee_amount;
@@ -111,12 +109,8 @@ if ($r->rowCount() > 0) {
 					$separator_address = $app->fetch_address_in_account($account['account_id'], 1);
 					
 					$io_nondestroy_amount = $io_nonfee_amount-$burn_amount;
-					$num_bets = $num_events*2;
+					$io_nondestroy_per_event = floor($io_nondestroy_amount/$num_events);
 					$io_separator_frac = 0.25;
-					$io_separator_amount_per_bet = ceil($io_nondestroy_amount*$io_separator_frac/$num_bets);
-					$io_separator_sum = $io_separator_amount_per_bet*$num_bets;
-					$io_regular_amount = $io_nondestroy_amount - $io_separator_sum;
-					$io_regular_amount_per_bet = floor($io_regular_amount/$num_events);
 					
 					$io_amounts = array($burn_amount);
 					$address_ids = array($burn_address['address_id']);
@@ -134,10 +128,14 @@ if ($r->rowCount() > 0) {
 							$this_address = $app->fetch_address_in_account($account['account_id'], $option['option_index']);
 							
 							if ($this_address) {
-								array_push($thisevent_io_amounts, $io_regular_amount_per_bet);
+								$thisbet_io_amount = floor($io_nondestroy_per_event*$option['target_probability']);
+								$thisbet_io_separator_amount = floor($thisbet_io_amount*$io_separator_frac);
+								$thisbet_io_regular_amount = $thisbet_io_amount-$thisbet_io_separator_amount;
+								
+								array_push($thisevent_io_amounts, $thisbet_io_regular_amount);
 								array_push($thisevent_address_ids, $this_address['address_id']);
 								
-								array_push($thisevent_io_amounts, $io_separator_amount_per_bet);
+								array_push($thisevent_io_amounts, $thisbet_io_separator_amount);
 								array_push($thisevent_address_ids, $separator_address['address_id']);
 							}
 							else {
@@ -172,7 +170,7 @@ if ($r->rowCount() > 0) {
 				}
 				else $app->output_message(6, "Invalid coins_per_event.\n", false);
 			}
-			else $app->output_message(5, "There are no events running right now.\n", false);
+			else $app->output_message(5, "Failed to find any running events with target probabilities.\n", false);
 		}
 		else $app->output_message(4, "Invalid account ID.\n");
 	}
