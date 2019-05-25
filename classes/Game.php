@@ -225,7 +225,7 @@ class Game {
 					try {
 						$raw_transaction = $this->blockchain->coin_rpc->createrawtransaction($raw_txin, $raw_txout);
 						$signed_raw_transaction = $this->blockchain->coin_rpc->signrawtransaction($raw_transaction);
-						$decoded_transaction = $this->blockchain->coin_rpc->getrawtransaction($signed_raw_transaction['hex'], true);
+						$decoded_transaction = $this->blockchain->coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
 						$tx_hash = $decoded_transaction['txid'];
 					}
 					catch (Exception $e) {

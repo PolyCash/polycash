@@ -1553,7 +1553,7 @@ class Blockchain {
 					try {
 						$raw_transaction = $this->coin_rpc->createrawtransaction($raw_txin, $raw_txout);
 						$signed_raw_transaction = $this->coin_rpc->signrawtransaction($raw_transaction);
-						$decoded_transaction = $this->coin_rpc->getrawtransaction($signed_raw_transaction['hex'], true);
+						$decoded_transaction = $this->coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
 						$tx_hash = $decoded_transaction['txid'];
 						$verified_tx_hash = $this->coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
 						$this->walletnotify($verified_tx_hash, FALSE);
