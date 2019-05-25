@@ -2300,8 +2300,7 @@ class Game {
 					$recommended_entity = $this->blockchain->app->check_set_entity($recommended_entity_type['entity_type_id'], $api_response->option->entity);
 					
 					if (empty($recommended_entity['default_image_id'])) {
-						$db_image = $this->blockchain->app->set_entity_image_from_url($api_response->option->image_url, $recommended_entity['entity_id']);
-						$error_message .= "Set ".$imageless_option['name']." to image #".$db_image['image_id']."\n";
+						$db_image = $this->blockchain->app->set_entity_image_from_url($api_response->option->image_url, $recommended_entity['entity_id'], $error_message);
 					}
 					else $error_message .= $imageless_option['name']." already has an image.\n";
 				}
@@ -2354,7 +2353,7 @@ class Game {
 		
 		if (!empty($this->db_game['definitive_game_peer_id'])) {
 			$sync_definitive_message = $this->sync_with_definitive_peer();
-			if ($show_debug) echo $sync_definitive_message."\n";
+			if ($show_debug) echo $sync_definitive_message;
 		}
 		
 		if ($to_block_height >= $load_block_height) {
