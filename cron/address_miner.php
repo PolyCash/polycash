@@ -5,7 +5,7 @@ include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 $script_start_time = microtime(true);
 
 if ($app->running_as_admin()) {
-	$process_lock_name = "address_miner_running";
+	$process_lock_name = "address_miner";
 	$process_locked = $app->check_process_running($process_lock_name);
 	
 	if (!$process_locked) {

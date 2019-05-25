@@ -11,6 +11,9 @@ if ($app->running_as_admin()) {
 	}
 	else $blockchain_id = false;
 	
+	$block_id = false;
+	if (!empty($_REQUEST['block_id'])) $block_id = (int)$_REQUEST['block_id'];
+	
 	$q = "SELECT * FROM blockchains WHERE ";
 	if ($blockchain_id) $q .= "blockchain_id='".$blockchain_id."'";
 	else $q .= "online=1";
@@ -22,37 +25,26 @@ if ($app->running_as_admin()) {
 		
 		$last_block_id = $blockchain->last_block_id();
 		
-		$qq = "SELECT * FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND num_ios_in IS NULL AND block_id>=".$db_blockchain['first_required_block']." ORDER BY block_id ASC LIMIT 1;";
+		$qq = "SELECT * FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."'";
+		if ($block_id) $qq .= " AND block_id=".$block_id;
+		else $qq .= " AND ((num_ios_in IS NULL AND block_id>=".$db_blockchain['first_required_block'].") OR sum_coins_in<0 OR sum_coins_out<0)";
+		$qq .= " ORDER BY block_id ASC;";
 		$rr = $app->run_query($qq);
 		
-		if ($rr->rowCount() > 0) {
-			$start_block = $rr->fetch();
-			$start_block_id = $start_block['block_id'];
+		echo $db_blockchain['blockchain_name'].": checking ".$rr->rowCount()." blocks<br/>\n";
+		$app->flush_buffers();
+		
+		while ($temp_block = $rr->fetch()) {
+			$num_trans = $blockchain->set_block_stats($temp_block);
 			
-			echo $db_blockchain['blockchain_name'].": checking blocks ".$start_block_id." to ".$last_block_id." (".number_format($last_block_id-$start_block_id+1)." blocks)<br/>\n";
+			if ($num_trans != $temp_block['num_transactions']) {
+				$message = "Error in block ".$temp_block['block_id'].", (Should be ".$temp_block['num_transactions']." but there are only ".$num_trans.")";
+				echo "$message<br/>\n";
+			}
+			else echo $temp_block['block_id']." ";
 			
 			$app->flush_buffers();
-			
-			for ($block_id=$start_block_id; $block_id<=$last_block_id; $block_id++) {
-				$temp_block = $app->run_query("SELECT * FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_id='".$block_id."';")->fetch();
-				
-				if ($temp_block) {
-					$num_trans = $blockchain->set_block_stats($temp_block);
-					
-					if ($num_trans != $temp_block['num_transactions']) {
-						$message = "Error in block ".$temp_block['block_id'].", (Should be ".$temp_block['num_transactions']." but there are only ".$num_trans.")";
-						echo "$message<br/>\n";
-						$app->log_message($message);
-						
-						//$qq = "UPDATE blocks SET locally_saved=0 WHERE internal_block_id='".$temp_block['internal_block_id']."';";
-						//$rr = $app->run_query($qq);
-					}
-					else echo $temp_block['block_id']." ";
-				}
-				else $block_id = $last_block_id;
-			}
 		}
-		else echo $db_blockchain['blockchain_name']." has no blocks which require updating.\n";
 	}
 }
 else echo "You need admin privileges to run this script.\n";

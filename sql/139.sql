@@ -1,0 +1,1 @@
+ALTER TABLE `user_strategies` CHANGE `transaction_fee` `transaction_fee` DECIMAL(16,10) NOT NULL DEFAULT '0.0001';

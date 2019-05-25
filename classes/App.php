@@ -3322,7 +3322,7 @@ class App {
 						}
 						else {
 							$set_successful = false;
-							$set_i = $num_sets_needed;
+							$set_i = count($game_addrsets);
 							$option_index = $to_option_index+1;
 						}
 					}

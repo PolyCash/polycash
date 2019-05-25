@@ -45,8 +45,6 @@ if ($app->running_as_admin()) {
 			usleep($sleep_usec);
 		}
 		while (microtime(true) < $script_start_time + ($script_target_time-$loop_target_time));
-		
-		$app->set_site_constant($process_lock_name, 0);
 	}
 	else echo "Game load script is already running...\n";
 }

@@ -20,7 +20,7 @@ if ($thisuser) {
 			$sale_game = new Game($sale_blockchain, $db_game['game_id']);
 			
 			$satoshis_each = pow(10,$db_game['decimal_places'])*$amount_each;
-			$fee_amount = 0.001*pow(10,$db_game['decimal_places']);
+			$fee_amount = (int) (0.0001*pow(10,$sale_blockchain->db_blockchain['decimal_places']));
 			
 			if ($quantity > 0 && $satoshis_each > 0) {
 				$total_cost_satoshis = $quantity*$satoshis_each;
@@ -55,10 +55,6 @@ if ($thisuser) {
 							$addresses_needed = $quantity;
 							$loop_count = 0;
 							do {
-								if ($donate_blockchain->db_blockchain['p2p_mode'] != "rpc") {
-									$addr_text = $app->random_string(34);
-									$temp_address = $sale_blockchain->create_or_fetch_address($addr_text, false, false, false, true, false);
-								}
 								$addr_q = "SELECT * FROM addresses a WHERE a.primary_blockchain_id='".$sale_blockchain->db_blockchain['blockchain_id']."' AND a.is_mine=1 AND a.user_id IS NULL AND a.is_destroy_address=0 AND a.is_separator_address=0 ORDER BY RAND() LIMIT 1;";
 								$addr_r = $app->run_query($addr_q);
 								

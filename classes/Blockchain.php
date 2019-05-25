@@ -1474,7 +1474,8 @@ class Blockchain {
 				
 				while ($transaction_input = $r->fetch()) {
 					if ($input_sum < $amount) {
-						$qq = "UPDATE transaction_ios SET spend_count=spend_count+1, spend_transaction_id='".$transaction_id."', spend_transaction_ids=CONCAT(spend_transaction_ids, CONCAT('".$transaction_id."', ','))";
+						$qq = "UPDATE transaction_ios SET spend_count=spend_count+1";
+						if (!empty($transaction_id)) $qq .= ", spend_transaction_id='".$transaction_id."', spend_transaction_ids=CONCAT(spend_transaction_ids, CONCAT('".$transaction_id."', ','))";
 						if ($block_id !== false) $qq .= ", spend_status='spent', spend_block_id='".$block_id."'";
 						else $qq .= ", spend_status='unconfirmed'";
 						$qq .= " WHERE io_id='".$transaction_input['io_id']."';";
@@ -1559,7 +1560,6 @@ class Blockchain {
 						$decoded_transaction = $this->coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
 						$tx_hash = $decoded_transaction['txid'];
 						$verified_tx_hash = $this->coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
-						
 						$this->walletnotify($verified_tx_hash, FALSE);
 						
 						$db_transaction = $this->app->run_query("SELECT * FROM transactions WHERE tx_hash=".$this->app->quote_escape($tx_hash).";")->fetch();
