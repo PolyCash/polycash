@@ -1776,7 +1776,7 @@ function manage_addresses(account_id, action, address_id) {
 	
 	$.get(ajax_url, function(result) {
 		var result_obj = JSON.parse(result);
-		if (result_obj['status_code'] == 1) window.location = window.location;
+		if (result_obj['status_code'] == 1) window.location = result_obj['message'];
 		else alert(result_obj['message']);
 	});
 }

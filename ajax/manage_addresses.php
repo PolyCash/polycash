@@ -15,7 +15,7 @@ if ($thisuser) {
 		if ($_REQUEST['action'] == "new") {
 			$address_key = $app->new_address_key($account['currency_id'], $account);
 			
-			if ($address_key) $app->output_message(1, "Great, a new address was generated.", false);
+			if ($address_key) $app->output_message(1, "/explorer/blockchains/".$account['url_identifier']."/addresses/".$address_key['address'], false);
 			else $app->output_message(4, "There was an error generating the address.", false);
 		}
 		else if ($_REQUEST['action'] == "set_primary") {
