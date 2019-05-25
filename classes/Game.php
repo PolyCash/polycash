@@ -62,7 +62,7 @@ class Game {
 		$affected_input_ids = array();
 		$created_input_ids = array();
 		
-		if ($type == "votebase" || $type == "coinbase") $amount_ok = true;
+		if ($type == "coinbase") $amount_ok = true;
 		else if ($utxo_balance == $amount || (!$io_ids && $amount <= $mature_balance)) $amount_ok = true;
 		else $amount_ok = false;
 		
@@ -83,7 +83,7 @@ class Game {
 			$overshoot_amount = 0;
 			$overshoot_return_addr_id = $remainder_address_id;
 			
-			if ($type == "votebase" || $type == "coinbase") {}
+			if ($type == "coinbase") {}
 			else {
 				$q = "SELECT *, io.address_id AS address_id, io.amount AS amount FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.spend_status IN ('unspent','unconfirmed') AND io.blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."'";
 				if ($this->db_game['maturity'] > 0) $q .= " AND io.create_block_id <= ".($this->blockchain->last_block_id()-$this->db_game['maturity']);
@@ -225,7 +225,7 @@ class Game {
 					try {
 						$raw_transaction = $this->blockchain->coin_rpc->createrawtransaction($raw_txin, $raw_txout);
 						$signed_raw_transaction = $this->blockchain->coin_rpc->signrawtransaction($raw_transaction);
-						$decoded_transaction = $this->blockchain->coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
+						$decoded_transaction = $this->blockchain->coin_rpc->getrawtransaction($signed_raw_transaction['hex'], true);
 						$tx_hash = $decoded_transaction['txid'];
 					}
 					catch (Exception $e) {
@@ -373,7 +373,7 @@ class Game {
 					}
 					$last_block_id = $this->blockchain->last_block_id();
 					$error_message = false;
-					$transaction_id = $this->create_transaction(false, $amounts, false, false, "votebase", false, $address_ids, false, 0, $error_message);
+					$transaction_id = $this->create_transaction(false, $amounts, false, false, "coinbase", false, $address_ids, false, 0, $error_message);
 					$q = "UPDATE transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id SET t.block_id='".$last_block_id."', io.spend_status='unspent', io.create_block_id='".$last_block_id."', gio.create_round_id='".$this->block_to_round($last_block_id)."' WHERE t.transaction_id='".$transaction_id."';";
 					$r = $this->blockchain->app->run_query($q);
 					$this->refresh_coins_in_existence();
@@ -2718,7 +2718,7 @@ class Game {
 		$html .= (int)$transaction['num_inputs']." inputs, ".(int)$transaction['num_outputs']." outputs";
 		
 		$transaction_fee = $transaction['fee_amount'];
-		if ($transaction['transaction_desc'] != "coinbase" && $transaction['transaction_desc'] != "votebase") {
+		if ($transaction['transaction_desc'] != "coinbase") {
 			$fee_disp = $this->blockchain->app->format_bignum($transaction_fee/pow(10,$this->blockchain->db_blockchain['decimal_places']));
 			$html .= ", ".$fee_disp." ".$this->blockchain->db_blockchain['coin_name'];
 			$html .= " tx fee";
