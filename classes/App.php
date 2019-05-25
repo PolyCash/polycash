@@ -834,7 +834,7 @@ class App {
 					
 					if ($blockchain->coin_rpc) {
 						try {
-							$address_text = $blockchain->coin_rpc->getnewaddress();
+							$address_text = $blockchain->coin_rpc->getnewaddress("", "legacy");
 							$save_method = "wallet.dat";
 						}
 						catch (Exception $e) {

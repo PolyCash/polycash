@@ -1908,7 +1908,7 @@ class Game {
 			if ($this->blockchain->coin_rpc) {
 				$new_voting_addr_count = 0;
 				do {
-					$temp_address = $this->blockchain->coin_rpc->getnewaddress();
+					$temp_address = $this->blockchain->coin_rpc->getnewaddress("", "legacy");
 					$new_addr_db = $this->blockchain->create_or_fetch_address($temp_address, false, false, false, true, false);
 				}
 				while (microtime(true) <= $start_time+$time_limit_seconds);
