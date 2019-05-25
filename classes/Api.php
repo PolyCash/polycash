@@ -17,7 +17,6 @@ class transaction {
 	public $json_obj;
 	public $block_id;
 	public $is_coinbase;
-	public $is_votebase;
 	public $db_id;
 	public $output_sum;
 	
@@ -27,7 +26,6 @@ class transaction {
 		$this->json_obj = $json_obj;
 		$this->block_id = $block_id;
 		$this->is_coinbase = false;
-		$this->is_votebase = false;
 		$this->db_id = false;
 		$this->output_sum = 0;
 	}

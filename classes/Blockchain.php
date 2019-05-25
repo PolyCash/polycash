@@ -271,11 +271,10 @@ class Blockchain {
 	}
 	
 	public function try_start_games($block_height) {
-		$q = "SELECT * FROM games WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND game_starting_block<='".$block_height."' AND game_status='published';";
+		$q = "SELECT * FROM games WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND start_condition='fixed_block' AND game_starting_block='".$block_height."' AND game_status='published';";
 		$r = $this->app->run_query($q);
 		
-		if ($r->rowCount() > 0) {
-			$db_start_game = $r->fetch();
+		while ($db_start_game = $r->fetch()) {
 			$start_game = new Game($this, $db_start_game['game_id']);
 			$start_game->start_game();
 		}
@@ -335,11 +334,10 @@ class Blockchain {
 				}
 				else {
 					if ($block_height !== false) {
-						$raw_transaction = $this->coin_rpc->getrawtransaction($tx_hash);
-						$transaction_rpc = $this->coin_rpc->decoderawtransaction($raw_transaction);
+						$transaction_rpc = $this->coin_rpc->getrawtransaction($tx_hash, true);
 					}
 					else {
-						$transaction_rpc = $this->coin_rpc->getrawtransaction($tx_hash, 1);
+						$transaction_rpc = $this->coin_rpc->getrawtransaction($tx_hash, true);
 						if (!empty($transaction_rpc['blockhash'])) {
 							if ($this->db_blockchain['supports_getblockheader'] == 1) {
 								$rpc_block = $this->coin_rpc->getblockheader($transaction_rpc['blockhash']);
@@ -354,10 +352,7 @@ class Blockchain {
 					$outputs = $transaction_rpc["vout"];
 					$inputs = $transaction_rpc["vin"];
 					
-					if (count($inputs) == 1 && !empty($inputs[0]['coinbase'])) {
-						$transaction_type = "coinbase";
-						if (count($outputs) > 1) $transaction_type = "votebase";
-					}
+					if (count($inputs) == 1 && !empty($inputs[0]['coinbase'])) $transaction_type = "coinbase";
 					else $transaction_type = "transaction";
 					
 					$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', transaction_desc=".$this->app->quote_escape($transaction_type).", tx_hash=".$this->app->quote_escape($tx_hash).", num_inputs='".count($inputs)."', num_outputs='".count($outputs)."'";
@@ -1173,7 +1168,7 @@ class Blockchain {
 		$html .= (int)$transaction['num_inputs']." inputs, ".(int)$transaction['num_outputs']." outputs, ".$this->app->format_bignum($transaction['amount']/pow(10,$this->db_blockchain['decimal_places']))." ".$this->db_blockchain['coin_name_plural'];
 		
 		$transaction_fee = $transaction['fee_amount'];
-		if ($transaction['transaction_desc'] != "coinbase" && $transaction['transaction_desc'] != "votebase") {
+		if ($transaction['transaction_desc'] != "coinbase") {
 			$fee_disp = $this->app->format_bignum($transaction_fee/pow(10,$this->db_blockchain['decimal_places']));
 			$html .= ", ".$fee_disp;
 			$html .= " tx fee";
@@ -1183,7 +1178,7 @@ class Blockchain {
 		
 		$html .= '</div><div class="col-md-6">';
 		
-		if (in_array($transaction['transaction_desc'], ['coinbase','votebase'])) {
+		if ($transaction['transaction_desc'] == 'coinbase') {
 			$html .= "Miner found a block.";
 		}
 		else {
