@@ -271,11 +271,10 @@ class Blockchain {
 	}
 	
 	public function try_start_games($block_height) {
-		$q = "SELECT * FROM games WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND game_starting_block<='".$block_height."' AND game_status='published';";
+		$q = "SELECT * FROM games WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND start_condition='fixed_block' AND game_starting_block='".$block_height."' AND game_status='published';";
 		$r = $this->app->run_query($q);
 		
-		if ($r->rowCount() > 0) {
-			$db_start_game = $r->fetch();
+		while ($db_start_game = $r->fetch()) {
 			$start_game = new Game($this, $db_start_game['game_id']);
 			$start_game->start_game();
 		}
