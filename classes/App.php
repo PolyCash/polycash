@@ -3396,20 +3396,19 @@ class App {
 		return file_get_contents($safe_url, false, stream_context_create($arrContextOptions));
 	}
 	
-	public function set_entity_image_from_url($image_url, $entity_id) {
-		$error_message = "";
-		
+	public function set_entity_image_from_url($image_url, $entity_id, &$error_message) {
+		$db_image = false;
 		$image_fname_parts = explode(".", $image_url);
 		$image_extension = trim($image_fname_parts[count($image_fname_parts)-1]);
 		
-		if ($raw_image = file_get_contents($image_url)) {
+		if ($raw_image = $this->safe_fetch_url($image_url)) {
 			$access_key = $this->random_string(20);
 			
 			$db_image = $this->add_image($raw_image, $image_extension, $access_key, $error_message);
 			
 			if ($db_image) {
 				$this->run_query("UPDATE entities SET default_image_id=".$db_image['image_id']." WHERE entity_id=".$entity_id.";");
-				$this->run_query("UPDATE options SET image_id=".$db_image['image_id']." WHERE entity_id=".$entity_id.";");
+				$this->run_query("UPDATE options SET image_id=".$db_image['image_id']." WHERE entity_id=".$entity_id." AND image_id IS NULL;");
 				
 				$error_message .= "Added image #".$db_image['image_id']." (".strlen($raw_image).")<br/>\n";
 			}
@@ -3417,7 +3416,7 @@ class App {
 		}
 		else $error_message .= "Failed to fetch $image_url<br/>\n";
 		
-		return $error_message;
+		return $db_image;
 	}
 }
 ?>
