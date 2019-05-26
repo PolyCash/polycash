@@ -744,7 +744,7 @@ class Game {
 		$r = $this->blockchain->app->run_query($q);
 		
 		if ($delete_or_reset == "reset") {
-			$q = "UPDATE games SET game_status='published', events_until_block=NULL, coins_in_existence=0, coins_in_existence_block=NULL WHERE game_id='".$this->db_game['game_id']."';";
+			$q = "UPDATE games SET game_status='published', events_until_block=NULL, coins_in_existence=0, coins_in_existence_block=NULL, cached_definition_hash=NULL, defined_cached_definition_hash=NULL, cached_definition_time=NULL WHERE game_id='".$this->db_game['game_id']."';";
 			$r = $this->blockchain->app->run_query($q);
 			
 			$user_game = false;
@@ -1971,7 +1971,7 @@ class Game {
 				$option_offset = 100;
 			}
 			
-			if (!empty($this->db_game['module'])) {
+			if (!empty($this->db_game['module']) && !$this->get_definitive_peer()) {
 				$q = "SELECT * FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."' AND event_starting_block < ".$block_id." ORDER BY event_index DESC LIMIT 1;";
 				$r = $this->blockchain->app->run_query($q);
 				
@@ -2055,6 +2055,7 @@ class Game {
 						if ($game_defined_event['event_starting_time'] != "") $qq .= ", event_starting_time='".$game_defined_event['event_starting_time']."', event_final_time='".$game_defined_event['event_final_time']."'";
 						if ($game_defined_event['track_max_price'] != "") $qq .= ", track_max_price='".$game_defined_event['track_max_price']."'";
 						if ($game_defined_event['track_max_price'] != "") $qq .= ", track_min_price='".$game_defined_event['track_min_price']."'";
+						if ($game_defined_event['track_payout_price'] != "") $qq .= ", track_payout_price='".$game_defined_event['track_payout_price']."'";
 						if ($game_defined_event['track_name_short'] != "") $qq .= ", track_name_short='".$game_defined_event['track_name_short']."'";
 						if ($game_defined_event['track_entity_id'] != "") $qq .= ", track_entity_id='".$game_defined_event['track_entity_id']."'";
 						$qq .= ", event_payout_block='".$game_defined_event['event_payout_block']."', payout_rule='".$game_defined_event['payout_rule']."', event_name=".$this->blockchain->app->quote_escape($game_defined_event['event_name']).", option_name=".$this->blockchain->app->quote_escape($game_defined_event['option_name']).", option_name_plural=".$this->blockchain->app->quote_escape($game_defined_event['option_name_plural']).", num_options='".$num_options."', option_max_width=".$event_type['default_option_max_width'];
@@ -2346,15 +2347,24 @@ class Game {
 		$to_block_height = $this->blockchain->last_block_id();
 		
 		$ensure_block_id = $to_block_height+1;
-		if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
+		
+		if (!empty($this->db_game['definitive_game_peer_id']) && $this->db_game['loaded_until_block'] == $this->blockchain->last_block_id()) {
+			$sync_definitive_message = $this->sync_with_definitive_peer();
+			
+			if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
+			$ensure_events_debug_text = $this->ensure_events_until_block($ensure_block_id);
+			$this->set_cached_definition_hashes();
+			
+			if ($show_debug) {
+				echo $sync_definitive_message;
+				echo $ensure_events_debug_text;
+				$this->blockchain->app->flush_buffers();
+			}
+		}
+		else if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
 		
 		$ensure_events_debug_text = $this->ensure_events_until_block($ensure_block_id);
 		if ($show_debug) echo $ensure_events_debug_text;
-		
-		if (!empty($this->db_game['definitive_game_peer_id'])) {
-			$sync_definitive_message = $this->sync_with_definitive_peer();
-			if ($show_debug) echo $sync_definitive_message;
-		}
 		
 		if ($to_block_height >= $load_block_height) {
 			if ($show_debug) echo $this->db_game['name'].".. loading blocks ".$load_block_height." to ".$to_block_height."\n";
@@ -2377,6 +2387,7 @@ class Game {
 				}
 				if (!$successful) $block_height = $to_block_height+1;
 			}
+			$this->set_loaded_until_block();
 		}
 		else if ($show_debug) echo $this->db_game['name']." is already fully loaded.\n";
 		
@@ -2645,8 +2656,6 @@ class Game {
 			
 			$this->set_block_stats($game_block);
 			
-			//$this->set_all_gde_blocks_by_time();
-			
 			// If nothing was added this block & it's allowed, add game blocks in bulk
 			if ($relevant_tx_count == 0 && $this->db_game['buyin_policy'] == "none") {
 				$next_required_block_id = $this->blockchain->last_block_id();
@@ -2657,6 +2666,13 @@ class Game {
 					if ($next_spend_block_r->rowCount() > 0) {
 						$next_spend_block = $next_spend_block_r->fetch();
 						if ($next_spend_block['block_id'] < $next_required_block_id) $next_required_block_id = $next_spend_block['block_id'];
+					}
+					
+					$next_event_final_block_q = "SELECT event_final_block FROM events WHERE game_id='".$this->db_game['game_id']."' AND event_final_block > ".$block_height." ORDER BY event_final_block ASC LIMIT 1;";
+					$next_event_final_block_r = $this->blockchain->app->run_query($next_event_final_block_q);
+					if ($next_event_final_block_r->rowCount() > 0) {
+						$next_event_final_block = $next_event_final_block_r->fetch();
+						if ($next_event_final_block['event_final_block'] < $next_required_block_id) $next_required_block_id = $next_event_final_block['event_final_block'];
 					}
 					
 					$next_event_payout_block_q = "SELECT event_payout_block FROM events WHERE game_id='".$this->db_game['game_id']."' AND event_payout_block > ".$block_height." ORDER BY event_payout_block ASC LIMIT 1;";
@@ -2671,7 +2687,7 @@ class Game {
 					$ref_time = time();
 					
 					if ($bulk_from_block < $bulk_to_block) {
-						$log_text .= "Adding game blocks in bulk.. ".$bulk_from_block." to ".$bulk_to_block."\n";
+						$log_text .= "Adding ".($bulk_to_block-$bulk_from_block)." game blocks in bulk.. ".$bulk_from_block." to ".$bulk_to_block."\n";
 						
 						$bulk_insert_q = "INSERT INTO game_blocks (game_id, block_id, locally_saved, num_transactions, time_created, time_loaded, load_time, max_game_io_index) VALUES ";
 						for ($bulk_block_id=$bulk_from_block; $bulk_block_id<=$bulk_to_block; $bulk_block_id++) {
@@ -3583,6 +3599,27 @@ class Game {
 		}
 		
 		return $game_peer;
+	}
+	
+	public function set_cached_definition_hashes() {
+		$show_internal_params = false;
+		$actual_game_def = $this->blockchain->app->fetch_game_definition($this, "actual", $show_internal_params);
+		$actual_game_def_str = $this->blockchain->app->game_def_to_text($actual_game_def);
+		$actual_game_def_hash = $this->blockchain->app->game_def_to_hash($actual_game_def_str);
+		
+		if ($this->db_game['cached_definition_hash'] != $actual_game_def_hash) {
+			$this->blockchain->app->run_query("UPDATE games SET cached_definition_hash='".$actual_game_def_hash."', cached_definition_time='".time()."' WHERE game_id='".$this->db_game['game_id']."';");
+			$this->db_game['cached_definition_hash'] = $actual_game_def_hash;
+		}
+		
+		$defined_game_def = $this->blockchain->app->fetch_game_definition($this, "defined", $show_internal_params);
+		$defined_game_def_str = $this->blockchain->app->game_def_to_text($defined_game_def);
+		$defined_game_def_hash = $this->blockchain->app->game_def_to_hash($defined_game_def_str);
+		
+		if ($this->db_game['defined_cached_definition_hash'] != $defined_game_def_hash) {
+			$this->blockchain->app->run_query("UPDATE games SET defined_cached_definition_hash='".$defined_game_def_hash."' WHERE game_id='".$this->db_game['game_id']."';");
+			$this->db_game['defined_cached_definition_hash'] = $defined_game_def_hash;
+		}
 	}
 }
 ?>

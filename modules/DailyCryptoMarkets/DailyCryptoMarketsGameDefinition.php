@@ -183,9 +183,10 @@ class DailyCryptoMarketsGameDefinition {
 				$this->app->run_query("UPDATE events SET track_payout_price='".$usd_price."' WHERE event_id='".$payout_event->db_event['event_id']."';");
 				
 				$payout_event->db_event['track_payout_price'] = $usd_price;
-				$payout_event->set_outcome_from_db(true);
 			}
 		}
+		
+		$payout_event->set_outcome_from_db(true);
 		
 		return "";
 	}

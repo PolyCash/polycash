@@ -805,6 +805,10 @@ else {
 									<input class="form-control" id="event_form_track_max_price" />
 								</div>
 								<div class="form-group">
+									<label for="event_form_track_max_price">Track payout price:</label>
+									<input class="form-control" id="event_form_track_payout_price" />
+								</div>
+								<div class="form-group">
 									<label for="event_form_track_name_short">Abbreviation for tracked asset:</label>
 									<input class="form-control" id="event_form_track_name_short" />
 								</div>

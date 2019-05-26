@@ -1688,8 +1688,8 @@ class App {
 			array('int', 'category_id', false),
 			array('int', 'decimal_places', true),
 			array('bool', 'finite_events', true),
-			array('string', 'event_type_name', false),
-			array('string', 'event_type_name_plural', false),
+			array('string', 'event_type_name', true),
+			array('string', 'event_type_name_plural', true),
 			array('string', 'event_rule', true),
 			array('string', 'event_winning_rule', true),
 			array('int', 'event_entity_type_id', true),
@@ -1705,9 +1705,9 @@ class App {
 			array('float', 'game_buyin_cap', true),
 			array('string', 'sellout_policy', true),
 			array('int', 'sellout_confirmations', true),
-			array('string', 'coin_name', false),
-			array('string', 'coin_name_plural', false),
-			array('string', 'coin_abbreviation', false),
+			array('string', 'coin_name', true),
+			array('string', 'coin_name_plural', true),
+			array('string', 'coin_abbreviation', true),
 			array('string', 'escrow_address', true),
 			array('string', 'genesis_tx_hash', true),
 			array('int', 'genesis_amount', true),
@@ -1856,8 +1856,10 @@ class App {
 					if (!is_numeric($reset_block)) $reset_block = $new_game_obj['events'][$set_events_from-1]->event_starting_block;
 					
 					for ($i=$set_events_from; $i<count($new_game_obj['events'])+1; $i++) {
-						$gde = get_object_vars($new_game_obj['events'][$i-1]);
-						$this->check_set_gde($game, $gde, $event_verbatim_vars, $sports_entity_type['entity_type_id'], $leagues_entity_type['entity_type_id'], $general_entity_type['entity_type_id']);
+						if (!empty($new_game_obj['events'][$i-1])) {
+							$gde = get_object_vars($new_game_obj['events'][$i-1]);
+							$this->check_set_gde($game, $gde, $event_verbatim_vars, $sports_entity_type['entity_type_id'], $leagues_entity_type['entity_type_id'], $general_entity_type['entity_type_id']);
+						}
 					}
 				}
 				
@@ -1906,6 +1908,18 @@ class App {
 		}
 		else $q .= "external_identifier=NULL, ";
 		
+		$track_entity_id = false;
+		if (!empty($gde['track_entity_id'])) $track_entity_id = $gde['track_entity_id'];
+		else if (!empty($gde['track_name_short'])) {
+			$track_currency = $this->get_currency_by_abbreviation($gde['track_name_short']);
+			if ($track_currency) $track_entity = $this->check_set_entity($general_entity_type_id, $track_currency['name']);
+			else $track_entity = $this->check_set_entity($general_entity_type_id, $gde['track_name_short']);
+			$track_entity_id = $track_entity['entity_id'];
+		}
+		
+		if ($track_entity_id) $q .= "track_entity_id=".$track_entity_id.", ";
+		else $q .= "track_entity_id=NULL, ";
+		
 		for ($j=0; $j<count($event_verbatim_vars); $j++) {
 			$var_type = $event_verbatim_vars[$j][0];
 			if (isset($gde[$event_verbatim_vars[$j][1]])) $var_val = (string) $gde[$event_verbatim_vars[$j][1]];
@@ -1950,8 +1964,11 @@ class App {
 				else $q .= ", target_probability=NULL";
 				
 				if (empty($possible_outcome['entity_id'])) {
-					$gdo_entity = $this->check_set_entity($general_entity_type_id, $possible_outcome['title']);
-					$possible_outcome['entity_id'] = $gdo_entity['entity_id'];
+					if ($track_entity_id) $possible_outcome['entity_id'] = $track_entity_id;
+					else {
+						$gdo_entity = $this->check_set_entity($general_entity_type_id, $possible_outcome['title']);
+						$possible_outcome['entity_id'] = $gdo_entity['entity_id'];
+					}
 				}
 				$q .= ", entity_id='".$possible_outcome['entity_id']."'";
 				
@@ -2038,6 +2055,7 @@ class App {
 		else {
 			if ($game_def = json_decode($game_definition)) {}
 			else {
+				$decode_error = true;
 				$error_message .= "Error: the game definition you entered could not be imported. Please make sure to enter properly formatted JSON.\n";
 			}
 		}
@@ -2089,14 +2107,14 @@ class App {
 									if ($thisuser) {
 										$permission_to_change = $this->user_can_edit_game($thisuser, $url_matched_game);
 										
-										if (!$permission_to_change) $error_message .= "Error: you can't edit this game.";
+										if (!$permission_to_change) $error_message .= "Error: you can't edit this game.\n";
 									}
-									else $error_message .= "Permission denied. You must be logged in.";
+									else $error_message .= "Permission denied. You must be logged in.\n";
 								}
 								
 								if ($permission_to_change) $game = $url_matched_game;
 							}
-							else $error_message .= "Error: invalid game.blockchain_id.";
+							else $error_message .= "Error: invalid game.blockchain_id.\n";
 						}
 						else $permission_to_change = true;
 						
@@ -2175,32 +2193,24 @@ class App {
 							
 							if ($from_game_def_hash != $to_game_def_hash) {
 								$error_message .= $this->migrate_game_definitions($game, $from_game_def_hash, $to_game_def_hash);
-								
-								$general_entity_type = $this->check_set_entity_type("general entity");
-								
-								$entity_q = "UPDATE game_defined_options gdo JOIN game_defined_events ev ON gdo.event_index=ev.event_index JOIN entities en ON gdo.name=en.entity_name SET gdo.entity_id=en.entity_id WHERE gdo.game_id='".$game->db_game['game_id']."' AND ev.game_id='".$game->db_game['game_id']."' AND en.entity_type_id='".$general_entity_type['entity_type_id']."';";
-								$entity_r = $this->run_query($entity_q);
-								
-								$entity_q = "UPDATE currencies c JOIN entities en ON c.currency_id=en.currency_id JOIN game_defined_events gde ON gde.track_name_short=c.abbreviation JOIN game_defined_options gdo ON gdo.event_index=gde.event_index SET gde.track_entity_id=en.entity_id, gdo.entity_id=en.entity_id WHERE gdo.game_id='".$game->db_game['game_id']."' AND gde.game_id='".$game->db_game['game_id']."' AND en.entity_type_id='".$general_entity_type['entity_type_id']."';";
-								$entity_r = $this->run_query($entity_q);
 							}
-							else $error_message .= "Found no changes to apply.";
+							else $error_message .= "Found no changes to apply.\n";
 							
 							$game->update_db_game();
 							$db_game = $game->db_game;
 						}
 					}
-					else $error_message .= "Error, invalid game URL identifier.";
+					else $error_message .= "Error, invalid game URL identifier.\n";
 				}
 				else {
 					if ($new_private_blockchain) {
 						$q = "DELETE FROM blockchains WHERE blockchain_id='".$new_blockchain->db_blockchain['blockchain_id']."';";
 						$r = $this->run_query($q);
 					}
-					$error_message .= "Error, failed to identify the right blockchain.";
+					$error_message .= "Error, failed to identify the right blockchain.\n";
 				}
 			}
-			else $error_message .= "Error, blockchain url identifier was empty.";
+			else $error_message .= "Error, blockchain url identifier was empty.\n";
 		}
 		
 		return $game;

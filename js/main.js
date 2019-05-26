@@ -1868,7 +1868,7 @@ function create_account_step(step) {
 	}
 }
 
-var event_verbatim_vars = new Array('event_index', 'next_event_index', 'event_starting_block', 'event_final_block', 'event_payout_block', 'event_starting_time', 'event_final_time', 'event_payout_time', 'event_name', 'option_block_rule', 'option_name', 'option_name_plural', 'outcome_index', 'payout_rule', 'track_max_price', 'track_min_price', 'track_name_short');
+var event_verbatim_vars = new Array('event_index', 'next_event_index', 'event_starting_block', 'event_final_block', 'event_payout_block', 'event_starting_time', 'event_final_time', 'event_payout_time', 'event_name', 'option_block_rule', 'option_name', 'option_name_plural', 'outcome_index', 'payout_rule', 'track_max_price', 'track_min_price', 'track_payout_price', 'track_name_short');
 
 function clear_event_form() {
 	for (form_i in event_verbatim_vars) {

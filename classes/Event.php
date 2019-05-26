@@ -339,7 +339,8 @@ class Event {
 			}
 			
 			if ((string)$this->db_event['track_payout_price'] != "") {
-				$pct_gain = 100*($this->db_event['track_payout_price']/$our_buy_price-1);
+				if ($our_buy_price) $pct_gain = 100*($this->db_event['track_payout_price']/$our_buy_price-1);
+				else $pct_gain = 0;
 				$html .= "Paid out at: &nbsp; $".$this->game->blockchain->app->format_bignum($this->db_event['track_payout_price'])."<br/>\n";
 			}
 			else if ($our_buy_price > 0) {
