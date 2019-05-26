@@ -1353,7 +1353,7 @@ class Game {
 			$loading_block_id = $this->blockchain->last_complete_block_id()+1;
 			
 			$sample_size = 10;
-			$time_q = "SELECT SUM(load_time), COUNT(*) FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND block_id >= ".($loading_block_id-$sample_size)." AND block_id<".$loading_block_id.";";
+			$time_q = "SELECT SUM(load_time), COUNT(*) FROM blocks WHERE blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND locally_saved=1 AND block_id >= ".($loading_block_id-$sample_size)." AND block_id<".$loading_block_id.";";
 			$time_r = $this->blockchain->app->run_query($time_q);
 			$time_data = $time_r->fetch();
 			if ($time_data['COUNT(*)'] > 0) $time_per_block = $time_data['SUM(load_time)']/$time_data['COUNT(*)'];

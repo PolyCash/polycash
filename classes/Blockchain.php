@@ -188,9 +188,9 @@ class Blockchain {
 				if (!$tx_error) {
 					$this->app->run_query("UPDATE blocks SET locally_saved=1, time_loaded='".time()."' WHERE internal_block_id='".$db_block['internal_block_id']."';");
 				}
-				$this->app->run_query("UPDATE blocks SET load_time=load_time+".(microtime(true)-$start_time)." WHERE internal_block_id='".$db_block['internal_block_id']."';");
-				
 				$this->set_block_stats($db_block);
+				
+				$this->app->run_query("UPDATE blocks SET load_time=load_time+".(microtime(true)-$start_time)." WHERE internal_block_id='".$db_block['internal_block_id']."';");
 				
 				$html .= "Took ".(microtime(true)-$start_time)." sec to add block #".$db_block['block_id']."<br/>\n";
 			}
@@ -254,6 +254,10 @@ class Blockchain {
 				if ($db_transaction['transaction_desc'] != "transaction") $coins_created += $db_transaction['amount'];
 			}
 			
+			$this->set_block_stats($db_block);
+			
+			$this->try_start_games($block_height);
+			
 			$q = "UPDATE blocks SET ";
 			if (!$tx_error) {
 				$q .= "locally_saved=1, time_loaded='".time()."', ";
@@ -261,9 +265,6 @@ class Blockchain {
 			$q .= "load_time=load_time+".(microtime(true)-$start_time)." WHERE internal_block_id='".$db_block['internal_block_id']."';";
 			$this->app->run_query($q);
 			
-			$this->set_block_stats($db_block);
-			
-			$this->try_start_games($block_height);
 			$html .= "Took ".(microtime(true)-$start_time)." sec to add block #".$block_height."<br/>\n";
 		}
 		
@@ -715,7 +716,7 @@ class Blockchain {
 			if ($print_debug) echo $txt;
 			else $html .= $txt;
 			
-			if ($this->db_blockchain['p2p_mode'] == "rpc" && !empty($GLOBALS['load_unconfirmed_transactions'])) {
+			if ($this->db_blockchain['p2p_mode'] == "rpc" && $this->db_blockchain['load_unconfirmed_transactions'] == 1) {
 				$txt = "Loading unconfirmed transactions...\n";
 				if ($print_debug) echo $txt;
 				else $html .= $txt;

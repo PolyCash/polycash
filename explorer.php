@@ -842,7 +842,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							$pending_blocks = $pending_blocks['COUNT(*)'];
 							
 							if ($pending_blocks > 0) {
-								$loadtime_q = "SELECT COUNT(*), SUM(load_time) FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND locally_saved=1 AND block_id >= ".($complete_block_id-100).";";
+								$loadtime_q = "SELECT COUNT(*), SUM(load_time) FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND locally_saved=1 AND block_id >= ".($complete_block_id-10).";";
 								$loadtime_r = $app->run_query($loadtime_q);
 								$loadtime = $loadtime_r->fetch();
 								if ($loadtime['COUNT(*)'] > 0) $avg_loadtime = $loadtime['SUM(load_time)']/$loadtime['COUNT(*)'];
