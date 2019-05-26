@@ -14,7 +14,7 @@ if ($app->running_as_admin()) {
 	$show_internal_params = false;
 	$script_target_time = 54;
 	$cache_expiry_time = 30;
-	$loop_target_time = 5;
+	$loop_target_time = 10;
 	$blockchains = [];
 	$running_games = [];
 	
@@ -52,6 +52,8 @@ if ($app->running_as_admin()) {
 		
 		$loop_stop_time = microtime(true);
 		$loop_time = $loop_stop_time-$loop_start_time;
+		$loop_target_time = max($loop_target_time, $loop_time*4);
+		
 		if ($loop_time < $loop_target_time) {
 			$sleep_usec = round(pow(10,6)*($loop_target_time - $loop_time));
 			if ($print_debug) {
