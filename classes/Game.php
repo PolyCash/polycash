@@ -2283,6 +2283,33 @@ class Game {
 		$this->db_game['loaded_until_block'] = $loaded_until_block;
 	}
 	
+	public function set_option_images_from_definitive_peer() {
+		$error_message = "";
+		
+		$definitive_peer = $this->get_definitive_peer();
+		
+		if ($definitive_peer) {
+			$imageless_option_r = $this->blockchain->app->run_query("SELECT * FROM options op JOIN events ev ON op.event_id=ev.event_id LEFT JOIN entities en ON op.entity_id=en.entity_id WHERE ev.game_id='".$this->db_game['game_id']."' AND op.image_id IS NULL;");
+			
+			while ($imageless_option = $imageless_option_r->fetch()) {
+				$api_url = $definitive_peer['base_url']."/api/".$this->db_game['url_identifier']."/events/".$imageless_option['event_index']."/options/".$imageless_option['event_option_index'];
+				$api_response = json_decode($this->blockchain->app->safe_fetch_url($api_url));
+				
+				if ($api_response->status_code == 1) {
+					$recommended_entity_type = $this->blockchain->app->check_set_entity_type($api_response->option->entity_type);
+					$recommended_entity = $this->blockchain->app->check_set_entity($recommended_entity_type['entity_type_id'], $api_response->option->entity);
+					
+					if (empty($recommended_entity['default_image_id'])) {
+						$db_image = $this->blockchain->app->set_entity_image_from_url($api_response->option->image_url, $recommended_entity['entity_id'], $error_message);
+					}
+					else $error_message .= $imageless_option['name']." already has an image.\n";
+				}
+				else $error_message .= "Failed to set image for ".$imageless_option['name'].": ".$api_url."\n";
+			}
+		}
+		else $error_message .= "This game does not have a definitive peer.\n";
+	}
+	
 	public function sync_with_definitive_peer() {
 		$error_message = "";
 		$definitive_peer = $this->get_definitive_peer();
@@ -2300,11 +2327,13 @@ class Game {
 					$db_new_game = false;
 					$this->blockchain->app->set_game_from_definition($api_response->definition, $ref_user, $error_message, $db_new_game, true);
 				}
-				else $error_message = "Sync canceled: definitive peer tried to change the game identifier.";
+				else $error_message .= "Sync canceled: definitive peer tried to change the game identifier.\n";
 			}
-			else $error_message = $api_response->message;
+			else $error_message .= $api_response->message."\n";
+			
+			$error_message .= $this->set_option_images_from_definitive_peer();
 		}
-		else $error_message = "This game does not have a definitive peer.";
+		else $error_message .= "This game does not have a definitive peer.\n";
 		
 		return $error_message;
 	}
@@ -2324,7 +2353,7 @@ class Game {
 		
 		if (!empty($this->db_game['definitive_game_peer_id'])) {
 			$sync_definitive_message = $this->sync_with_definitive_peer();
-			if ($show_debug) echo $sync_definitive_message."\n";
+			if ($show_debug) echo $sync_definitive_message;
 		}
 		
 		if ($to_block_height >= $load_block_height) {

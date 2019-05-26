@@ -425,13 +425,46 @@ if ($uri_parts[1] == "api") {
 				
 				$api_output = array('status_code'=>1, 'message'=>"Successful", 'game'=>$output_game, 'user_info'=>$api_user_info);
 			}
-			else {
-				$api_output = array('status_code'=>0, 'message'=>'Error, URL not recognized');
+			else if ($uri_parts[3] == "events") {
+				$event_index = (int)$uri_parts[4];
+				
+				$event_r = $app->run_query("SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$event_index."';");
+				
+				if ($event_r->rowCount() > 0) {
+					$db_event = $event_r->fetch();
+					
+					if ($uri_parts[5] == "options") {
+						$event_option_index = (int)$uri_parts[6];
+						
+						$option_r = $app->run_query("SELECT *, en.entity_name AS entity_name, et.entity_name AS entity_type FROM options op LEFT JOIN entities en ON op.entity_id=en.entity_id LEFT JOIN images i ON op.image_id=i.image_id LEFT JOIN entity_types et ON en.entity_type_id=et.entity_type_id WHERE op.event_id='".$db_event['event_id']."' AND op.event_option_index='".$event_option_index."';");
+						
+						if ($option_r->rowCount() > 0) {
+							$db_option = $option_r->fetch();
+							$image_url = $GLOBALS['base_url'].$app->image_url($db_option);
+							
+							$api_option = [
+								'title'=>$db_option['name'],
+								'entity'=>$db_option['entity_name'],
+								'entity_type'=>$db_option['entity_type'],
+								'event_index'=>(int)$db_event['event_index'],
+								'option_index'=>(int)$db_option['option_index'],
+								'event_option_index'=>(int)$db_option['event_option_index'],
+								'image_url'=>$image_url
+							];
+							
+							$api_output = ['status_code'=>1, 'message'=>'Successful', 'option'=>$api_option];
+						}
+						else $api_output = ['status_code'=>0, 'message'=>'No option was found matching those indices.'];
+					}
+					else {
+					}
+				}
+				else $api_output = ['status_code'=>1, 'message'=>'No event was found matching that index.'];
 			}
+			else $api_output = array('status_code'=>0, 'message'=>'Error, URL not recognized');
 		}
-		else {
-			$api_output = array('status_code'=>0, 'message'=>'Error: Invalid game ID');
-		}
+		else $api_output = array('status_code'=>0, 'message'=>'Error: Invalid game ID');
+		
 		echo json_encode($api_output, JSON_PRETTY_PRINT);
 	}
 	else if ($uri == "/api/") {
