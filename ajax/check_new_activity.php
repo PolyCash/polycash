@@ -96,15 +96,6 @@ for ($game_event_index=0; $game_event_index<count($these_events); $game_event_in
 	$output['event_html'][$game_event_index] = $these_events[$game_event_index]->event_html($thisuser, $show_intro_text, true, $instance_id, $game_event_index);
 }
 
-if ($thisuser) {
-	$output['wallet_text_stats'] = $thisuser->wallet_text_stats($game, $blockchain_current_round, $blockchain_last_block_id, $blockchain_block_within_round, $mature_balance, $immature_balance, $user_votes, $votes_value, $user_pending_bets, $user_game);
-	
-	for ($game_event_index=0; $game_event_index<count($these_events); $game_event_index++) {
-		$output['my_current_votes'][$game_event_index] = $these_events[$game_event_index]->my_votes_table($current_round, $user_game);
-	}
-	$output['account_value'] = $game->account_value_html($account_value, $user_game, $game_pending_bets, $vote_supply_value);
-}
-
 $set_options_js = "";
 
 for ($game_event_index=0; $game_event_index<count($these_events); $game_event_index++) {
@@ -166,6 +157,13 @@ if ($mature_io_ids_hash != $_REQUEST['mature_io_ids_hash'] || !empty($output['ne
 	$output['select_input_buttons'] = $thisuser? $game->select_input_buttons($user_game) : "";
 	$output['mature_io_ids_csv'] = $mature_io_ids_csv;
 	$output['new_mature_ios'] = 1;
+	
+	$output['wallet_text_stats'] = $thisuser->wallet_text_stats($game, $blockchain_current_round, $blockchain_last_block_id, $blockchain_block_within_round, $mature_balance, $immature_balance, $user_votes, $votes_value, $user_pending_bets, $user_game);
+	
+	for ($game_event_index=0; $game_event_index<count($these_events); $game_event_index++) {
+		$output['my_current_votes'][$game_event_index] = $these_events[$game_event_index]->my_votes_table($current_round, $user_game);
+	}
+	$output['account_value'] = $game->account_value_html($account_value, $user_game, $game_pending_bets, $vote_supply_value);
 }
 else $output['new_mature_ios'] = 0;
 

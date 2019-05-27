@@ -1605,7 +1605,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_c
 								$('#game'+_this.instance_id+'_chart_js').html('<script type="text/javascript">'+json_result['chart_js']+'</script>');
 							}
 							
-							if (parseInt(json_result['new_block']) == 1 || parseInt(json_result['new_transaction']) == 1) {
+							if (parseInt(json_result['new_mature_ios']) == 1) {
 								$('#account_value').html(json_result['account_value']);
 								$('#account_value').hide();
 								$('#account_value').fadeIn('medium');

@@ -1558,6 +1558,9 @@ class Blockchain {
 				
 				if ($this->db_blockchain['p2p_mode'] == "rpc") {
 					try {
+						foreach ($raw_txout as $addr => $amount) {
+							$raw_txout[$addr] = sprintf('%.'.$this->db_blockchain['decimal_places'].'F', $amount);
+						}
 						$raw_transaction = $this->coin_rpc->createrawtransaction($raw_txin, $raw_txout);
 						$signed_raw_transaction = $this->coin_rpc->signrawtransaction($raw_transaction);
 						$decoded_transaction = $this->coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);

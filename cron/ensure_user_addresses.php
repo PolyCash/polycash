@@ -2,6 +2,7 @@
 $host_not_required = TRUE;
 include_once(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 
+$script_start_time = microtime(true);
 $allowed_params = ['print_debug', 'game_id'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);
 
@@ -16,13 +17,21 @@ if ($app->running_as_admin()) {
 		$app->set_site_constant($process_lock_name, getmypid());
 		
 		$buffer_address_sets = 5;
+		$script_target_time = 49;
+		$loop_target_time = 10;
 		
 		$db_running_games = $app->run_query("SELECT * FROM games WHERE game_status='running';")->fetchAll();
 		$running_games = [];
+		$blockchains = [];
+		
+		if ($print_debug) {
+			echo "Giving addresses to users.\n";
+			$app->flush_buffers();
+		}
 		
 		for ($game_i=0; $game_i<count($db_running_games); $game_i++) {
-			$blockchain = new Blockchain($app, $db_running_games[$game_i]['blockchain_id']);
-			$running_games[$game_i] = new Game($blockchain, $db_running_games[$game_i]['game_id']);
+			if (empty($blockchains[$db_running_games[$game_i]['blockchain_id']])) $blockchains[$db_running_games[$game_i]['blockchain_id']] = new Blockchain($app, $db_running_games[$game_i]['blockchain_id']);
+			$running_games[$game_i] = new Game($blockchains[$db_running_games[$game_i]['blockchain_id']], $db_running_games[$game_i]['game_id']);
 			
 			list($from_option_index, $to_option_index) = $running_games[$game_i]->option_index_range();
 			
@@ -30,7 +39,10 @@ if ($app->running_as_admin()) {
 				$q = "SELECT * FROM user_games ug JOIN currency_accounts ca ON ug.account_id=ca.account_id WHERE ug.game_id='".$running_games[$game_i]->db_game['game_id']."' AND ca.has_option_indices_until<".$to_option_index." ORDER BY ca.account_id ASC;";
 				$r = $app->run_query($q);
 				
-				if ($print_debug) echo "Looping through ".$r->rowCount()." users.<br/>\n";
+				if ($print_debug) {
+					echo "Looping through ".$r->rowCount()." users for ".$running_games[$game_i]->db_game['name'].".<br/>\n";
+					$app->flush_buffers();
+				}
 				
 				while ($user_game = $r->fetch()) {
 					$user = new User($app, $user_game['user_id']);
@@ -43,7 +55,11 @@ if ($app->running_as_admin()) {
 			}
 		}
 		
-		if ($print_debug) echo "Looping through ".count($db_running_games)." games.<br/>\n";
+		$need_address_blockchain_ids = [];
+		if ($print_debug) {
+			echo "Now filling address sets for ".count($db_running_games)." games.<br/>\n";
+			$app->flush_buffers();
+		}
 		
 		for ($game_i=0; $game_i<count($running_games); $game_i++) {
 			list($from_option_index, $to_option_index) = $running_games[$game_i]->option_index_range();
@@ -62,7 +78,29 @@ if ($app->running_as_admin()) {
 				}
 				
 				$gen_sets_successful = $app->finish_address_sets($running_games[$game_i], $game_addrsets, $to_option_index);
+				
+				if (!$gen_sets_successful) $need_address_blockchain_ids[$running_games[$game_i]->blockchain->db_blockchain['blockchain_id']] = true;
 			}
+		}
+		
+		$need_address_blockchain_ids = array_keys($need_address_blockchain_ids);
+		
+		if ($print_debug) {
+			echo "Now generating addresses for ".count($need_address_blockchain_ids)." blockchains.\n";
+			$app->flush_buffers();
+		}
+		
+		if (count($need_address_blockchain_ids) > 0) {
+			$need_address_db_blockchains = $app->run_query("SELECT * FROM blockchains WHERE blockchain_id IN (".implode(",", $need_address_blockchain_ids).");")->fetchAll();
+			$blockchain_loop_i = 0;
+			
+			do {
+				$db_blockchain = $need_address_db_blockchains[$blockchain_loop_i%count($need_address_db_blockchains)];
+				echo $blockchains[$db_blockchain['blockchain_id']]->generate_addresses($loop_target_time);
+				$app->flush_buffers();
+				$blockchain_loop_i++;
+			}
+			while (microtime(true) < $script_start_time+$script_target_time);
 		}
 		
 		if ($print_debug) echo "Done!\n";

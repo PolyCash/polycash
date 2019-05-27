@@ -15,13 +15,13 @@ if ($r->rowCount() > 0) {
 	$game = new Game($blockchain, $user_game['game_id']);
 	
 	$account_id = $user_game['account_id'];
-	$fee = 0;
+	$fee = (float) $user_game['transaction_fee'];
 	
 	$last_block_id = $blockchain->last_block_id();
 	$mining_block_id = $last_block_id+1;
 	$round_id = $game->block_to_round($mining_block_id);
 	$coins_per_vote = $app->coins_per_vote($game->db_game);
-	$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
+	$fee_amount = (int) ($fee*pow(10, $blockchain->db_blockchain['decimal_places']));
 	
 	$btc_currency = $app->get_currency_by_abbreviation("BTC");
 	$btc_price = $app->currency_price_at_time($btc_currency['currency_id'], 1, time());
