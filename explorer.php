@@ -215,8 +215,19 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				$transaction = $app->fetch_transaction_by_id($tx_id);
 			}
 			else {
-				$tx_hash = $uri_parts[5];
-				$transaction = $blockchain->fetch_transaction_by_hash($tx_hash);
+				$tx_hash = trim(strip_tags(urldecode($uri_parts[5])));
+				
+				if (strpos($tx_hash, " ") === false) {
+					$transaction = $blockchain->fetch_transaction_by_hash($tx_hash);
+					
+					if (!$transaction) {
+						try {
+							$blockchain->walletnotify($tx_hash, true);
+							$transaction = $blockchain->fetch_transaction_by_hash($tx_hash);
+						}
+						catch (Exception $e) {}
+					}
+				}
 			}
 			
 			if ($transaction) {

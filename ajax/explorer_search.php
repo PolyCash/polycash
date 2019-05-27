@@ -21,7 +21,7 @@ if (!$game && !empty($_REQUEST['blockchain_id'])) {
 }
 
 if ($blockchain) {
-	$search_term = $_REQUEST['search_term'];
+	$search_term = trim(strip_tags(urldecode($_REQUEST['search_term'])));
 	
 	$q = "SELECT e.*, g.url_identifier AS game_url_identifier FROM events e JOIN games g ON e.game_id=g.game_id WHERE e.event_name=".$app->quote_escape($search_term).";";
 	$r = $app->run_query($q);
@@ -50,6 +50,9 @@ if ($blockchain) {
 					$app->output_message(1, "/explorer/games/".$game->db_game['url_identifier']."/transactions/".$db_transaction['tx_hash'], false);
 				}
 				else $app->output_message(1, "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$db_transaction['tx_hash'], false);
+			}
+			else if (strlen($search_term) == 64) {
+				$app->output_message(1, "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$search_term, false);
 			}
 			else $app->output_message(3, "No results were found.", false);
 		}

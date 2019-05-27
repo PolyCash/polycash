@@ -141,12 +141,9 @@ class User {
 		
 		if ($user_game['strategy_id'] > 0) {}
 		else {
-			if ($game->blockchain->db_blockchain['p2p_mode'] != "rpc") $tx_fee=0.0001;
-			else $tx_fee=0.001;
+			$tx_fee=0.0001;
 			
-			$q = "INSERT INTO user_strategies SET voting_strategy='manual', game_id='".$game->db_game['game_id']."', user_id='".$user_game['user_id']."'";
-			$q .= ", transaction_fee=".$tx_fee;
-			$q .= ";";
+			$q = "INSERT INTO user_strategies SET voting_strategy='manual', game_id='".$game->db_game['game_id']."', user_id='".$user_game['user_id']."', transaction_fee=".$tx_fee.";";
 			$r = $this->app->run_query($q);
 			$strategy_id = $this->app->last_insert_id();
 			

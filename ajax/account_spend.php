@@ -194,7 +194,7 @@ if ($thisuser) {
 							if ($r->rowCount() > 0) {
 								$join_key_account = $r->fetch();
 								
-								$fee_amount = 0.001*pow(10,$blockchain->db_blockchain['decimal_places']);
+								$fee_amount = (int)(0.0001*pow(10,$blockchain->db_blockchain['decimal_places']));
 								$amount = $db_io['amount']+$join_db_io['amount']-$fee_amount;
 								
 								$error_message = false;

@@ -16,7 +16,7 @@ if ($app->running_as_admin()) {
 	
 	if (!$process_locked) {
 		$app->set_site_constant($process_lock_name, getmypid());
-			
+		
 		$blockchains = array();
 		
 		$q = "SELECT *, ug.user_id AS user_id, ug.account_id AS user_game_account_id FROM user_games ug JOIN currency_invoices i ON ug.user_game_id=i.user_game_id JOIN addresses a ON i.address_id=a.address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status IN ('unpaid','unconfirmed') AND (i.status='unconfirmed' OR i.expire_time >= ".time().") AND i.invoice_type != 'sellout' GROUP BY a.address_id;";
@@ -25,6 +25,8 @@ if ($app->running_as_admin()) {
 		if ($print_debug) echo "Checking ".$r->rowCount()." addresses.<br/>\n";
 		
 		while ($invoice_address = $r->fetch()) {
+			$transaction_id = false;
+			
 			if (empty($blockchains[$invoice_address['blockchain_id']])) $blockchains[$invoice_address['blockchain_id']] = new Blockchain($app, $invoice_address['blockchain_id']);
 			$game = new Game($blockchains[$invoice_address['blockchain_id']], $invoice_address['game_id']);
 			
@@ -43,8 +45,6 @@ if ($app->running_as_admin()) {
 			if ($print_debug) echo $invoice_address['address']." ".$address_balance.", paid: ".$amount_paid."<br/>\n";
 			
 			if ($amount_paid > 0) {
-				$transaction_id = false;
-				
 				if ($invoice_address['invoice_type'] == "sale_buyin") {
 					$escrow_value = $game->escrow_value_in_currency($invoice_address['pay_currency_id']);
 					$coins_in_existence = ($game->coins_in_existence(false)+$game->pending_bets())/pow(10, $game->db_game['decimal_places']);
@@ -76,7 +76,7 @@ if ($app->running_as_admin()) {
 						$chain_coins_per_game_coin = ($chain_coins_in-$chain_fee)/$game_coins_in;
 						$send_chain_coins = ceil($game_coins*$chain_coins_per_game_coin*pow(10, $game->blockchain->db_blockchain['decimal_places']));
 						
-						$qq = "SELECT * FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id WHERE ak.account_id='".$invoice_address['user_game_account_id']."' AND a.is_destroy_address=0 ORDER BY a.option_index ASC LIMIT 1;";
+						$qq = "SELECT * FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id WHERE ak.account_id='".$invoice_address['user_game_account_id']."' AND a.is_destroy_address=0 AND a.is_separator_address=0 ORDER BY a.option_index ASC LIMIT 1;";
 						$rr = $app->run_query($qq);
 						
 						if ($rr->rowCount() > 0) {
@@ -94,8 +94,16 @@ if ($app->running_as_admin()) {
 							
 							$error_message = false;
 							$transaction_id = $game->blockchain->create_transaction("transaction", $amounts, false, $spend_io_ids, $address_ids, $chain_fee*pow(10, $game->blockchain->db_blockchain['decimal_places']), $error_message);
+							
+							if ($transaction_id) {
+								$transaction = $app->fetch_transaction_by_id($transaction_id);
+								if ($print_debug) echo "Created tx: ".$transaction['tx_hash']."\n";
+							}
+							else if ($print_debug) echo "TX failed: ".$error_message."\n";
 						}
+						else if ($print_debug) echo "Couldn't find the address to pay to.\n";
 					}
+					else if ($print_debug) echo "Not enough game coins available.\n";
 				}
 				else {
 					$buyin_amount = (int)($amount_paid/2);
@@ -141,7 +149,7 @@ if ($app->running_as_admin()) {
 				}
 				
 				if ($transaction_id) {
-					if ($print_debug) echo "created tx #".$transaction_id;
+					if ($print_debug) echo "created tx #".$transaction_id."\n";
 					
 					$qq = "UPDATE currency_invoices SET confirmed_amount_paid='".$amount_paid/pow(10,$game->blockchain->db_blockchain['decimal_places'])."', unconfirmed_amount_paid='".$amount_paid/pow(10,$game->blockchain->db_blockchain['decimal_places'])."', status='confirmed' WHERE invoice_id='".$invoice_address['invoice_id']."';";
 					$rr = $app->run_query($qq);
@@ -231,6 +239,8 @@ if ($app->running_as_admin()) {
 				else if ($print_debug) echo "Invalid payment amount.\n";
 			}
 			else if ($print_debug) echo "Nothing was paid.\n";
+			
+			if ($print_debug) echo "\n";
 		}
 		
 		// Broadcast sellout refund transactions for games where this node owns the escrow address

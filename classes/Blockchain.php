@@ -334,70 +334,77 @@ class Blockchain {
 					}
 				}
 				else {
-					if ($block_height !== false) {
-						$transaction_rpc = $this->coin_rpc->getrawtransaction($tx_hash, true);
-					}
-					else {
-						$transaction_rpc = $this->coin_rpc->getrawtransaction($tx_hash, true);
-						if (!empty($transaction_rpc['blockhash'])) {
-							if ($this->db_blockchain['supports_getblockheader'] == 1) {
-								$rpc_block = $this->coin_rpc->getblockheader($transaction_rpc['blockhash']);
+					try {
+						if ($block_height !== false) {
+							$transaction_rpc = $this->coin_rpc->getrawtransaction($tx_hash, true);
+						}
+						else {
+							$transaction_rpc = $this->coin_rpc->getrawtransaction($tx_hash, true);
+							if (!empty($transaction_rpc['blockhash'])) {
+								if ($this->db_blockchain['supports_getblockheader'] == 1) {
+									$rpc_block = $this->coin_rpc->getblockheader($transaction_rpc['blockhash']);
+								}
+								else {
+									$rpc_block = $this->coin_rpc->getblock($transaction_rpc['blockhash']);
+								}
+								$block_height = $rpc_block['height'];
 							}
-							else {
-								$rpc_block = $this->coin_rpc->getblock($transaction_rpc['blockhash']);
-							}
-							$block_height = $rpc_block['height'];
 						}
 					}
+					catch (Exception $e) {
+						$add_transaction = false;
+					}
 					
-					$outputs = $transaction_rpc["vout"];
-					$inputs = $transaction_rpc["vin"];
-					
-					if (count($inputs) == 1 && !empty($inputs[0]['coinbase'])) $transaction_type = "coinbase";
-					else $transaction_type = "transaction";
-					
-					$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', transaction_desc=".$this->app->quote_escape($transaction_type).", tx_hash=".$this->app->quote_escape($tx_hash).", num_inputs='".count($inputs)."', num_outputs='".count($outputs)."'";
-					if ($position_in_block !== false) $q .= ", position_in_block='".$position_in_block."'";
-					if ($block_height !== false) $q .= ", block_id='".$block_height."'";
-					$q .= ", time_created='".time()."';";
-					$r = $this->app->run_query($q);
-					$db_transaction_id = $this->app->last_insert_id();
-					
-					$benchmark_time = microtime(true);
-					
-					if ($transaction_type == "transaction" && $require_inputs) {
-						for ($j=0; $j<count($inputs); $j++) {
-							$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id WHERE t.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND t.tx_hash=".$this->app->quote_escape($inputs[$j]["txid"])." AND i.out_index=".$this->app->quote_escape($inputs[$j]["vout"]).";";
-							$r = $this->app->run_query($q);
-							
-							if ($r->rowCount() > 0) {
-								$spend_io = $r->fetch();
-							}
-							else {
-								$child_successful = true;
-								if ($show_debug) echo "\n -> $j ";
-								$new_tx = $this->add_transaction($inputs[$j]["txid"], false, false, $child_successful, false, $inputs[$j]["vout"], $show_debug);
+					if ($add_transaction) {
+						$outputs = $transaction_rpc["vout"];
+						$inputs = $transaction_rpc["vin"];
+						
+						if (count($inputs) == 1 && !empty($inputs[0]['coinbase'])) $transaction_type = "coinbase";
+						else $transaction_type = "transaction";
+						
+						$q = "INSERT INTO transactions SET blockchain_id='".$this->db_blockchain['blockchain_id']."', transaction_desc=".$this->app->quote_escape($transaction_type).", tx_hash=".$this->app->quote_escape($tx_hash).", num_inputs='".count($inputs)."', num_outputs='".count($outputs)."'";
+						if ($position_in_block !== false) $q .= ", position_in_block='".$position_in_block."'";
+						if ($block_height !== false) $q .= ", block_id='".$block_height."'";
+						$q .= ", time_created='".time()."';";
+						$r = $this->app->run_query($q);
+						$db_transaction_id = $this->app->last_insert_id();
+						
+						$benchmark_time = microtime(true);
+						
+						if ($transaction_type == "transaction" && $require_inputs) {
+							for ($j=0; $j<count($inputs); $j++) {
+								$q = "SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id WHERE t.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND t.tx_hash=".$this->app->quote_escape($inputs[$j]["txid"])." AND i.out_index=".$this->app->quote_escape($inputs[$j]["vout"]).";";
 								$r = $this->app->run_query($q);
 								
 								if ($r->rowCount() > 0) {
 									$spend_io = $r->fetch();
 								}
 								else {
-									$successful = false;
-									$error_message = "Failed to create inputs for tx #".$db_transaction_id.", created tx #".$new_tx['transaction_id']." then looked for tx_hash=".$inputs[$j]['txid'].", vout=".$inputs[$j]['vout'];
-									$this->app->log_message($error_message);
-									if ($show_debug) echo $error_message."\n";
+									$child_successful = true;
+									if ($show_debug) echo "\n -> $j ";
+									$new_tx = $this->add_transaction($inputs[$j]["txid"], false, false, $child_successful, false, $inputs[$j]["vout"], $show_debug);
+									$r = $this->app->run_query($q);
+									
+									if ($r->rowCount() > 0) {
+										$spend_io = $r->fetch();
+									}
+									else {
+										$successful = false;
+										$error_message = "Failed to create inputs for tx #".$db_transaction_id.", created tx #".$new_tx['transaction_id']." then looked for tx_hash=".$inputs[$j]['txid'].", vout=".$inputs[$j]['vout'];
+										$this->app->log_message($error_message);
+										if ($show_debug) echo $error_message."\n";
+									}
 								}
-							}
-							if ($successful) {
-								$spend_io_ids[$j] = $spend_io['io_id'];
-								
-								$input_sum += (int) $spend_io['amount'];
-								
-								if ($block_height !== false) {
-									$this_io_cbd = ($block_height - $spend_io['block_id'])*$spend_io['amount'];
-									$coin_blocks_destroyed += $this_io_cbd;
-									$r = $this->app->run_query("UPDATE transaction_ios SET coin_blocks_created='".$this_io_cbd."' WHERE io_id='".$spend_io['io_id']."';");
+								if ($successful) {
+									$spend_io_ids[$j] = $spend_io['io_id'];
+									
+									$input_sum += (int) $spend_io['amount'];
+									
+									if ($block_height !== false) {
+										$this_io_cbd = ($block_height - $spend_io['block_id'])*$spend_io['amount'];
+										$coin_blocks_destroyed += $this_io_cbd;
+										$r = $this->app->run_query("UPDATE transaction_ios SET coin_blocks_created='".$this_io_cbd."' WHERE io_id='".$spend_io['io_id']."';");
+									}
 								}
 							}
 						}
@@ -1558,10 +1565,17 @@ class Blockchain {
 						$verified_tx_hash = $this->coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
 						$this->walletnotify($verified_tx_hash, FALSE);
 						
-						$db_transaction = $this->app->run_query("SELECT * FROM transactions WHERE tx_hash=".$this->app->quote_escape($tx_hash).";")->fetch();
+						$db_transaction_r = $this->app->run_query("SELECT * FROM transactions WHERE tx_hash=".$this->app->quote_escape($tx_hash).";");
 						
-						$error_message = "Success!";
-						return $db_transaction['transaction_id'];
+						if ($db_transaction_r->rowCount() == 1) {
+							$db_transaction = $db_transaction_r->fetch();
+							$error_message = "Success!";
+							return $db_transaction['transaction_id'];
+						}
+						else {
+							$error_message = "Failed to find the TX in db after sending.";
+							return false;
+						}
 					}
 					catch (Exception $e) {
 						$error_message = "There was an error with one of the RPC calls";
@@ -1762,6 +1776,23 @@ class Blockchain {
 	
 	public function transactions_by_event($event_id) {
 		return $this->app->run_query("SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND gio.event_id=".$this->app->quote_escape($event_id)." GROUP BY t.transaction_id ORDER BY t.block_id ASC, t.position_in_block ASC;");
+	}
+	
+	public function generate_addresses($time_limit_seconds) {
+		$start_time = microtime(true);
+		$this->load_coin_rpc();
+		$new_addr_count = 0;
+		$error_message = "";
+		
+		do {
+			$new_addr_txt = $this->coin_rpc->getnewaddress("", "legacy");
+			$new_addr_db = $this->create_or_fetch_address($new_addr_txt, false, false, false, true, false);
+			$new_addr_count++;
+		}
+		while (microtime(true) <= $start_time+$time_limit_seconds);
+		
+		$error_message .= "Added ".$new_addr_count." ".$this->db_blockchain['blockchain_name']." addresses.\n";
+		return $error_message;
 	}
 }
 ?>

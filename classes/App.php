@@ -803,7 +803,10 @@ class App {
 	}
 	
 	public function new_currency_invoice(&$account, $pay_currency_id, $pay_amount, &$user, &$user_game, $invoice_type) {
-		$address_key = $this->new_address_key($account['currency_id'], $account);
+		do {
+			$address_key = $this->new_address_key($account['currency_id'], $account);
+		}
+		while ($address_key['is_separator_address'] == 1 || $address_key['is_destroy_address'] == 1);
 		
 		$time = time();
 		$q = "INSERT INTO currency_invoices SET time_created='".$time."', pay_currency_id='".$pay_currency_id."'";
@@ -3320,7 +3323,7 @@ class App {
 						$has_option_indices_until = $option_index;
 					}
 					else {
-						$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND a.option_index='".$option_index."' AND k.account_id IS NULL AND a.address_set_id=NULL;";
+						$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND a.option_index='".$option_index."' AND k.account_id IS NULL AND a.address_set_id IS NULL;";
 						$rr = $this->run_query($qq);
 						
 						if ($rr->rowCount() > 0) {

@@ -127,7 +127,8 @@ if ($thisuser) {
 									$transaction_id = $sale_game->blockchain->create_transaction('transaction', $amounts, false, array($game_ios[0]['io_id']), $send_address_ids, $fee_amount, $error_message);
 									
 									if ($transaction_id) {
-										header("Location: /explorer/games/".$db_game['url_identifier']."/transactions/".$transaction_id."/");
+										$transaction = $app->fetch_transaction_by_id($transaction_id);
+										header("Location: /explorer/games/".$db_game['url_identifier']."/transactions/".$transaction['tx_hash']."/");
 										die();
 									}
 									else echo "TX Error: ".$error_message.".<br/>\n";
@@ -362,12 +363,12 @@ include('includes/html_start.php');
 					
 					$transaction_in_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."'";
 					if ($account['game_id'] > 0) $transaction_in_q .= " AND t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."'";
-					$transaction_in_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC LIMIT 50;";
+					$transaction_in_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC LIMIT 200;";
 					$transaction_in_r = $app->run_query($transaction_in_q);
 					
 					$transaction_out_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."'";
 					if ($account['game_id'] > 0) $transaction_out_q .= " AND t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."'";
-					$transaction_out_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC LIMIT 50;";
+					$transaction_out_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC LIMIT 200;";
 					$transaction_out_r = $app->run_query($transaction_out_q);
 					
 					echo ' ('.($transaction_in_r->rowCount()+$transaction_out_r->rowCount()).')';
@@ -482,7 +483,7 @@ include('includes/html_start.php');
 					echo '
 						</div>
 						<div id="addresses_'.$account['account_id'].'" class="tab-pane fade pad-this-pane">';
-					$addr_q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."' ORDER BY a.option_index ASC LIMIT 50;";
+					$addr_q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."' ORDER BY a.option_index ASC LIMIT 500;";
 					$addr_r = $app->run_query($addr_q);
 					echo "<p>This account has ".$addr_r->rowCount()." addresses.</p>";
 					

@@ -11,8 +11,7 @@ if ($app->running_as_admin()) {
 	$print_debug = false;
 	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
 	
-	$script_target_time = 54;
-	$cache_expiry_time = 30;
+	$script_target_time = 49;
 	$loop_target_time = 10;
 	$blockchains = [];
 	$running_games = [];

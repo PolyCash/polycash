@@ -4,12 +4,9 @@ include("../includes/get_session.php");
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
 if ($thisuser && $game) {
-	$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND g.game_id='".$game->db_game['game_id']."';";
-	$r = $app->run_query($q);
+	$user_game = $thisuser->ensure_user_in_game($game, false);
 	
-	if ($r->rowCount() > 0) {
-		$user_game = $r->fetch();
-		
+	if ($user_game) {
 		$q = "SELECT * FROM currencies WHERE currency_id='".$game->blockchain->currency_id()."';";
 		$r = $app->run_query($q);
 		$chain_currency = $r->fetch();
@@ -181,6 +178,7 @@ if ($thisuser && $game) {
 			<?php
 		}
 	}
+	else echo "You're not logged in to this game.\n";
 }
 else { ?>
 	<div class="modal-body" style="overflow: hidden;">

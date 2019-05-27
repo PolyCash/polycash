@@ -1891,32 +1891,6 @@ class Game {
 		return $this->db_game['default_effectiveness_param1'];
 	}
 	
-	public function generate_voting_addresses($time_limit_seconds) {
-		$log_text = "";
-		$start_time = microtime(true);
-		$this->blockchain->load_coin_rpc();
-		
-		$option_index_range = $this->option_index_range();
-		
-		$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$this->blockchain->db_blockchain['blockchain_id']."' AND a.option_index='".$option_index_range[1]."' AND k.account_id IS NULL;";
-		$rr = $this->blockchain->app->run_query($qq);
-		$ref_num_addr = $rr->rowCount();
-		
-		if ($ref_num_addr < $this->db_game['min_unallocated_addresses']) {
-			$log_text .= "Need ".($this->db_game['min_unallocated_addresses']-$ref_num_addr)." addresses for option index #".$option_index_range[1]." in ".$this->db_game['name']." (".$time_limit_seconds." seconds)\n";
-			
-			if ($this->blockchain->coin_rpc) {
-				$new_voting_addr_count = 0;
-				do {
-					$temp_address = $this->blockchain->coin_rpc->getnewaddress("", "legacy");
-					$new_addr_db = $this->blockchain->create_or_fetch_address($temp_address, false, false, false, true, false);
-				}
-				while (microtime(true) <= $start_time+$time_limit_seconds);
-			}
-		}
-		return $log_text;
-	}
-	
 	public function all_pairs_points_to_index($num_options) {
 		$points_to_index = array();
 		$min_points = 1;
