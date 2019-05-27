@@ -170,7 +170,7 @@ if ($app->running_as_admin()) {
 			$blockchain_currency = $app->fetch_currency_by_id($invoice_address['pay_currency_id']);
 			$blockchain = new Blockchain($app, $blockchain_currency['blockchain_id']);
 			
-			$address_balance = (float) $game->address_balance_at_block($invoice_address, false);
+			$address_balance = $game->address_balance_at_block($invoice_address, false)/pow(10, $game->db_game['decimal_places']);
 			
 			$qq = "SELECT SUM(confirmed_amount_paid) FROM currency_invoices WHERE address_id='".$invoice_address['address_id']."' AND status IN('confirmed','settled','pending_refund','refunded');";
 			$rr = $app->run_query($qq);
@@ -185,7 +185,7 @@ if ($app->running_as_admin()) {
 				$coins_in_existence = ($game->coins_in_existence(false)+$game->pending_bets())/pow(10, $game->db_game['decimal_places']);
 				$exchange_rate = $coins_in_existence/$escrow_value;
 				
-				$blockchain_amount = $amount_paid/$exchange_rate;
+				$blockchain_amount = (int) (pow(10, $blockchain->db_blockchain['decimal_places'])*$amount_paid/$exchange_rate);
 				$sale_blockchain_account = $game->check_set_blockchain_sale_account($thisuser, $blockchain_currency);
 				$sale_blockchain_account_balance = $blockchain->account_balance($sale_blockchain_account['account_id']);
 				$fee_amount = $invoice_address['fee_amount']*pow(10, $blockchain->db_blockchain['decimal_places']);

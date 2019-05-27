@@ -4,12 +4,9 @@ include("../includes/get_session.php");
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
 if ($thisuser && $game) {
-	$q = "SELECT * FROM games g JOIN user_games ug ON g.game_id=ug.game_id JOIN user_strategies us ON ug.strategy_id=us.strategy_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' AND g.game_id='".$game->db_game['game_id']."';";
-	$r = $app->run_query($q);
+	$user_game = $thisuser->ensure_user_in_game($game, false);
 	
-	if ($r->rowCount() > 0) {
-		$user_game = $r->fetch();
-		
+	if ($user_game) {
 		$q = "SELECT * FROM currencies WHERE currency_id='".$game->blockchain->currency_id()."';";
 		$r = $app->run_query($q);
 		$chain_currency = $r->fetch();
@@ -18,7 +15,6 @@ if ($thisuser && $game) {
 			if ($game->db_game['sellout_policy'] == "on") {
 				$invoice_id = (int) $_REQUEST['invoice_id'];
 				$sellout_amount = ceil(floatval($_REQUEST['sellout_amount'])*pow(10, $game->db_game['decimal_places']));
-				$tx_fee = ceil($user_game['transaction_fee']*pow(10, $game->db_game['decimal_places']));
 				$receive_address = $_REQUEST['address'];
 				
 				$q = "SELECT * FROM currency_invoices ci JOIN user_games ug ON ci.user_game_id=ug.user_game_id WHERE ci.invoice_id='".$invoice_id."';";
@@ -28,10 +24,10 @@ if ($thisuser && $game) {
 					$invoice = $r->fetch();
 					
 					if ($invoice['user_id'] == $thisuser->db_user['user_id']) {
+						$tx_fee = (int) ($user_game['transaction_fee']*pow(10, $game->blockchain->db_blockchain['decimal_places']));
 						$coins_in_existence = ($game->coins_in_existence(false)+$game->pending_bets())/pow(10, $game->db_game['decimal_places']);
 						$sellout_currency = $app->fetch_currency_by_id($user_game['buyin_currency_id']);
 						$escrow_value = $game->escrow_value_in_currency($user_game['buyin_currency_id']);
-						//$game_sale_account = $game->check_set_game_sale_account($thisuser);
 						$sellout_blockchain = new Blockchain($app, $sellout_currency['blockchain_id']);
 						
 						$db_receive_address = $sellout_blockchain->create_or_fetch_address($receive_address, true, false, true, false, false);
@@ -40,9 +36,6 @@ if ($thisuser && $game) {
 							$exchange_rate = $coins_in_existence/$escrow_value;
 						}
 						else $exchange_rate = 0;
-						
-						$cost_game_coins = $sellout_amount+$tx_fee;
-						//$pay_amount = max(0, $sellout_amount/$exchange_rate - $tx_fee);
 						
 						$q = "UPDATE currency_invoices SET receive_address_id='".$db_receive_address['address_id']."', buyin_amount='".$sellout_amount/pow(10, $game->db_game['decimal_places'])."', fee_amount='".$user_game['transaction_fee']."' WHERE invoice_id='".$invoice['invoice_id']."';";
 						$r = $app->run_query($q);
@@ -56,43 +49,55 @@ if ($thisuser && $game) {
 						$io_ids = array();
 						$keep_looping = true;
 						
+						$recycle_r = $app->run_query("SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND a.is_destroy_address=1 AND io.spend_status='unspent' ORDER BY io.amount ASC;");
+						
+						if ($recycle_r->rowCount() > 0) {
+							$recycle_io = $recycle_r->fetch();
+							array_push($io_ids, $recycle_io['io_id']);
+							$io_amount_sum += $recycle_io['amount'];
+						}
+						
 						while ($keep_looping && $io = $r->fetch()) {
 							$game_amount_sum += $io['coins'];
 							$io_amount_sum += $io['amount'];
 							array_push($io_ids, $io['io_id']);
 							array_push($ios, $io);
 							
-							if ($game_amount_sum >= $cost_game_coins) $keep_looping = false;
+							if ($game_amount_sum >= $sellout_amount && $io_amount_sum > ($tx_fee*2)) $keep_looping = false;
 						}
 						
-						$io_nonfee_amount = $io_amount_sum-$tx_fee;
-						$game_coins_per_coin = $game_amount_sum/$io_nonfee_amount;
-						
-						$send_chain_amount = ceil($sellout_amount/$game_coins_per_coin);
-						$amounts = array($send_chain_amount);
-						$address_ids = array($invoice['address_id']);
-						
-						if ($io_nonfee_amount > $send_chain_amount) {
-							$remainder_amount = $io_nonfee_amount-$send_chain_amount;
-							array_push($amounts, $remainder_amount);
-							array_push($address_ids, $ios[0]['address_id']);
+						if ($io_amount_sum > $tx_fee*2) {
+							$io_nonfee_amount = $io_amount_sum-$tx_fee;
+							$game_coins_per_coin = $game_amount_sum/$io_nonfee_amount;
+							
+							$send_chain_amount = ceil($sellout_amount/$game_coins_per_coin);
+							
+							$amounts = array($send_chain_amount);
+							$address_ids = array($invoice['address_id']);
+							
+							if ($io_nonfee_amount > $send_chain_amount) {
+								$remainder_amount = $io_nonfee_amount-$send_chain_amount;
+								array_push($amounts, $remainder_amount);
+								array_push($address_ids, $ios[0]['address_id']);
+							}
+							
+							$error_message = false;
+							$transaction_id = $game->blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $tx_fee, $error_message);
+							
+							if ($transaction_id) {
+								$app->output_message(1, "Great! ".ucfirst($game->db_game['coin_name_plural'])." will be credited to your account as soon as your BTC payment is confirmed.", false);
+							}
+							else {
+								$app->output_message(2, "TX Error: ".$error_message, false);
+							}
 						}
-						
-						$error_message = false;
-						$transaction_id = $game->blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $tx_fee, $error_message);
-						
-						if ($transaction_id) {
-							$app->output_message(1, "Great! ".ucfirst($game->db_game['coin_name_plural'])." will be credited to your account as soon as your BTC payment is confirmed.", false);
-						}
-						else {
-							$app->output_message(2, "TX Error: ".$error_message, false);
-						}
+						else $app->output_message(3, "Error: you can't afford the TX fee for the sellout transaction.", false);
 					}
-					else $app->output_message(3, "Error: you don't have permission to update this invoice.", false);
+					else $app->output_message(4, "Error: you don't have permission to update this invoice.", false);
 				}
-				else $app->output_message(4, "Error: invalid invoice ID.", false);
+				else $app->output_message(5, "Error: invalid invoice ID.", false);
 			}
-			else $app->output_message(5, "Error: sellouts are disabled for this game.", false);
+			else $app->output_message(6, "Error: sellouts are disabled for this game.", false);
 		}
 		else {
 			?>
@@ -101,7 +106,7 @@ if ($thisuser && $game) {
 			</div>
 			<div class="modal-body">
 				<?php
-				$coins_in_existence = $game->coins_in_existence(false)/pow(10, $game->db_game['decimal_places']);
+				$coins_in_existence = ($game->coins_in_existence(false)+$game->pending_bets())/pow(10, $game->db_game['decimal_places']);
 				
 				if ($game->db_game['sellout_policy'] == "on") {
 					$sellout_currency = $app->fetch_currency_by_id($user_game['buyin_currency_id']);
@@ -132,7 +137,7 @@ if ($thisuser && $game) {
 					</script>
 					<?php
 					echo '<div class="paragraph">';
-					echo "Right now, there are ".$app->format_bignum($coins_in_existence)." ".$game->db_game['coin_name_plural']." in circulation";
+					echo "Right now, there are ".$app->format_bignum($coins_in_existence)." ".$game->db_game['coin_name_plural']." in existence";
 					echo " and ".$app->format_bignum($escrow_value)." ".$sellout_currency['short_name_plural']." in escrow. ";
 					echo "The exchange rate is currently ".$app->format_bignum($exchange_rate)." ".$game->db_game['coin_name_plural']." per ".$sellout_currency['short_name'].". ";
 					echo '</div>';
@@ -197,6 +202,7 @@ if ($thisuser && $game) {
 			<?php
 		}
 	}
+	else echo "You're not logged in to this game.\n";
 }
 else { ?>
 	<div class="modal-body" style="overflow: hidden;">
