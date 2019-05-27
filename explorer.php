@@ -220,10 +220,18 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				if (strpos($tx_hash, " ") === false) {
 					$transaction = $blockchain->fetch_transaction_by_hash($tx_hash);
 					
+					// Allow unconfirmed txns to be loaded by viewing them in explorer, for user convenience
+					// But not confirmed b/c they may be before the blockchain first required block
 					if (!$transaction) {
+						$blockchain->load_coin_rpc();
+						
 						try {
-							$blockchain->walletnotify($tx_hash, true);
-							$transaction = $blockchain->fetch_transaction_by_hash($tx_hash);
+							$transaction_rpc = $blockchain->coin_rpc->getrawtransaction($tx_hash, true);
+							
+							if ($transaction_rpc && empty($transaction_rpc['blockhash'])) {
+								$blockchain->walletnotify($tx_hash, true);
+								$transaction = $blockchain->fetch_transaction_by_hash($tx_hash);
+							}
 						}
 						catch (Exception $e) {}
 					}

@@ -330,7 +330,7 @@ include('includes/html_start.php');
 					}
 					else $account_game = false;
 					
-					if ($selected_account_id && !empty($account['user_game_id'])) {
+					if ($selected_account_id && $account_game) {
 						echo '<p><a href="/wallet/'.$account_game->db_game['url_identifier'].'/?action=change_user_game&user_game_id='.$account['user_game_id'].'" class="btn btn-sm btn-success">Play Now</a></p>';
 					}
 					

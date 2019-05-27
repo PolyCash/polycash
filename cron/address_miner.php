@@ -32,7 +32,7 @@ if ($app->running_as_admin()) {
 			
 			if ($to_option_index !== false) {
 				$addrsets_r = $app->run_query("SELECT * FROM address_sets WHERE game_id='".$game->db_game['game_id']."' AND applied=0 AND (has_option_indices_until IS NULL OR has_option_indices_until<".$to_option_index.");");
-				if ($addrsets_r->rowCount() > 0) $needs_addresses = true;
+				if ($addrsets_r->rowCount() >= 2) $needs_addresses = true;
 			}
 			
 			if ($needs_addresses) $need_address_blockchain_ids[$game->db_game['blockchain_id']] = true;
