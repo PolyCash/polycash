@@ -977,26 +977,26 @@ function confirm_compose_vote() {
 			utxo_spend_offset++;
 			$('#confirm_compose_vote_btn').html("Loading...");
 			
-			var place_vote_url = "/ajax/place_vote.php?game_id="+games[0].game_id+"&burn_amount="+burn_io_amount+"&io_ids=";
+			var place_bets_url = "/ajax/place_bets.php?game_id="+games[0].game_id+"&burn_amount="+burn_io_amount+"&io_ids=";
 			
 			for (var i=0; i<vote_inputs.length; i++) {
-				place_vote_url += vote_inputs[i].ref_io.io_id;
-				place_vote_url += ",";
+				place_bets_url += vote_inputs[i].ref_io.io_id;
+				place_bets_url += ",";
 			}
-			place_vote_url = place_vote_url.substr(0, place_vote_url.length-1);
-			place_vote_url += "&option_ids=";
+			place_bets_url = place_bets_url.substr(0, place_bets_url.length-1);
+			place_bets_url += "&option_ids=";
 			var amounts_url = "&amounts=";
 			
 			for (var i=0; i<vote_outputs.length; i++) {
-				place_vote_url += vote_outputs[i].option_id;
-				if (i != vote_outputs.length-1) place_vote_url += ",";
+				place_bets_url += vote_outputs[i].option_id;
+				if (i != vote_outputs.length-1) place_bets_url += ",";
 				
 				amounts_url += vote_outputs[i].amount;
 				if (i != vote_outputs.length-1) amounts_url += ",";
 			}
-			place_vote_url += amounts_url;
+			place_bets_url += amounts_url;
 			
-			$.get(place_vote_url, function(result) {
+			$.get(place_bets_url, function(result) {
 				$('#confirm_compose_vote_btn').html('<i class="fas fa-check-circle"></i> &nbsp; Confirm & Stake');
 				
 				var result_obj = JSON.parse(result);

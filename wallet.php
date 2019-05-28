@@ -1103,7 +1103,7 @@ if ($thisuser && $game) {
 							</div>
 						</div>
 						<br/>
-						<button class="btn btn-primary" type="submit">Save Voting Strategy</button>
+						<button class="btn btn-primary" type="submit">Save my Strategy</button>
 					</form>
 					<br/>
 				</div>
