@@ -14,7 +14,6 @@ if ($r->rowCount() > 0) {
 	$blockchain = new Blockchain($app, $user_game['blockchain_id']);
 	$game = new Game($blockchain, $user_game['game_id']);
 	
-	$account_id = $user_game['account_id'];
 	$fee = (float) $user_game['transaction_fee'];
 	
 	$mining_block_id = $blockchain->last_block_id()+1;
@@ -27,12 +26,9 @@ if ($r->rowCount() > 0) {
 	$rand_sec_offset = rand(0, $sec_between_applications*2);
 	
 	if ($user_game['time_next_apply'] == "" || $user_game['time_next_apply'] <= time() || !empty($_REQUEST['force'])) {
-		$account_q = "SELECT * FROM currency_accounts WHERE account_id='".$account_id."';";
-		$account_r = $app->run_query($account_q);
+		$account = $app->fetch_account_by_id($user_game['account_id']);
 		
-		if ($account_r->rowCount() > 0) {
-			$account = $account_r->fetch();
-			
+		if ($account) {
 			$event_q = "SELECT * FROM events ev JOIN game_defined_options gdo ON ev.event_index=gdo.event_index WHERE ev.game_id='".$game->db_game['game_id']."' AND gdo.game_id='".$game->db_game['game_id']."' AND gdo.target_probability IS NOT NULL";
 			$event_q .= " AND ev.event_starting_block<=".$mining_block_id." AND ev.event_final_block>=".$mining_block_id;
 			$event_q .= " AND ev.event_starting_time < NOW() AND ev.event_final_time > NOW() GROUP BY ev.event_id ORDER BY ev.event_index ASC;";
@@ -103,8 +99,8 @@ if ($r->rowCount() > 0) {
 					
 					if ($burn_game_amount < 0 || $burn_game_amount > $game_amount_sum) die("Failed to determine a valid burn amount (".$burn_game_amount." vs ".$game_amount_sum.").");
 					
-					$burn_address = $app->fetch_address_in_account($account['account_id'], 0);
-					$separator_address = $app->fetch_address_in_account($account['account_id'], 1);
+					$burn_address = $app->fetch_addresses_in_account($account['account_id'], 0, 1)[0];
+					$separator_addresses = $app->fetch_addresses_in_account($account['account_id'], 1, $num_events);
 					$separator_frac = 0.25;
 					
 					$io_nonfee_amount = $io_amount_sum-$fee_amount;
@@ -115,6 +111,7 @@ if ($r->rowCount() > 0) {
 					$io_amounts = array($burn_io_amount);
 					$address_ids = array($burn_address['address_id']);
 					$io_spent_sum = $burn_io_amount;
+					$bet_i = 0;
 					
 					while ($db_event = $event_r->fetch()) {
 						$option_q = "SELECT op.*, gdo.target_probability FROM options op JOIN game_defined_options gdo ON op.event_option_index=gdo.option_index WHERE op.event_id='".$db_event['event_id']."' AND gdo.game_id='".$game->db_game['game_id']."' AND gdo.event_index='".$db_event['event_index']."' ORDER BY gdo.target_probability ASC LIMIT 1;";
@@ -125,7 +122,7 @@ if ($r->rowCount() > 0) {
 						$thisevent_io_amounts = array();
 						$thisevent_address_ids = array();
 						
-						$this_address = $app->fetch_address_in_account($account['account_id'], $option['option_index']);
+						$this_address = $app->fetch_addresses_in_account($account['account_id'], $option['option_index'], 1)[0];
 						
 						if ($this_address) {
 							$io_separator_amount = floor($io_amount_per_event*$separator_frac);
@@ -135,13 +132,15 @@ if ($r->rowCount() > 0) {
 							array_push($thisevent_address_ids, $this_address['address_id']);
 							
 							array_push($thisevent_io_amounts, $io_separator_amount);
-							array_push($thisevent_address_ids, $separator_address['address_id']);
+							array_push($thisevent_address_ids, $separator_addresses[$bet_i%count($separator_addresses)]['address_id']);
 						}
 						else {
 							$address_error = true;
 							$app->output_message(8, "Cancelling transaction.. ".$option['name']." has no address.", false);
 							die();
 						}
+						
+						$bet_i++;
 						
 						if (!$address_error) {
 							for ($i=0; $i<count($thisevent_io_amounts); $i++) {

@@ -76,7 +76,7 @@ if ($app->running_as_admin()) {
 					
 					echo $app->format_bignum($game_coins_per_coin)." ".$game->db_game['coin_name_plural']." per ".$blockchain->db_blockchain['coin_name'].".<br/>\n";
 					
-					$burn_address = $app->fetch_address_in_account($account['account_id'], 0);
+					$burn_address = $app->fetch_addresses_in_account($account['account_id'], 0)[0];
 					$burn_amount = ceil($burn_game_amount/$game_coins_per_coin);
 					
 					$remaining_io_amount = $io_nonfee_amount-$burn_amount;
@@ -98,7 +98,7 @@ if ($app->running_as_admin()) {
 						$thisevent_io_sum = 0;
 						
 						while ($option = $option_r->fetch()) {
-							$this_address = $app->fetch_address_in_account($account['account_id'], $option['option_index']);
+							$this_address = $app->fetch_addresses_in_account($account['account_id'], $option['option_index'], 1)[0];
 							
 							if ($this_address) {
 								$io_amount = round($option['target_probability']*$io_amount_per_event);

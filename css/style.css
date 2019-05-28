@@ -563,7 +563,7 @@ a.selected {
 	clear: both;
 }
 .explorer_ios {
-	max-height: 250px;
+	max-height: 400px;
 	overflow-y: auto;
 	overflow-x: hidden;
 }

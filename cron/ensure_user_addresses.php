@@ -83,6 +83,22 @@ if ($app->running_as_admin()) {
 			}
 		}
 		
+		$min_unallocated_separators = 100;
+		
+		foreach ($blockchains as $blockchain_id => $blockchain) {
+			if ($blockchain->db_blockchain['p2p_mode'] == "rpc" && empty($need_address_blockchain_ids[$blockchain_id])) {
+				$unallocated_separator_info = $app->run_query("SELECT COUNT(*) FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$blockchain_id."' AND a.option_index=1 AND k.account_id IS NULL AND a.address_set_id IS NULL;")->fetch();
+				
+				if ((int)$unallocated_separator_info['COUNT(*)'] < $min_unallocated_separators) {
+					$need_address_blockchain_ids[$blockchain_id] = true;
+					if ($print_debug) {
+						echo $blockchain->db_blockchain['blockchain_name']." needs ".$min_unallocated_separators." but only has ".$unallocated_separator_info['COUNT(*)']."\n";
+						$app->flush_buffers();
+					}
+				}
+			}
+		}
+		
 		$need_address_blockchain_ids = array_keys($need_address_blockchain_ids);
 		
 		if ($print_debug) {

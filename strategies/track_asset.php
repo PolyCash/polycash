@@ -14,7 +14,6 @@ if ($r->rowCount() > 0) {
 	$blockchain = new Blockchain($app, $user_game['blockchain_id']);
 	$game = new Game($blockchain, $user_game['game_id']);
 	
-	$account_id = $user_game['account_id'];
 	$fee = (float) $user_game['transaction_fee'];
 	
 	$last_block_id = $blockchain->last_block_id();
@@ -31,12 +30,9 @@ if ($r->rowCount() > 0) {
 	$rand_sec_offset = rand(0, $sec_between_applications*2);
 	
 	if (time() > $user_game['time_next_apply'] || !empty($_REQUEST['force'])) {
-		$account_q = "SELECT * FROM currency_accounts WHERE account_id='".$account_id."';";
-		$account_r = $app->run_query($account_q);
+		$account = $app->fetch_account_by_id($user_game['account_id']);
 		
-		if ($account_r->rowCount() > 0) {
-			$account = $account_r->fetch();
-			
+		if ($account) {
 			$event_q = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."'";
 			$event_q .= " AND event_starting_block<=".$mining_block_id." AND event_final_block>=".$mining_block_id;
 			$event_q .= " ORDER BY event_index ASC;";
@@ -152,8 +148,8 @@ if ($r->rowCount() > 0) {
 					
 					if ($burn_game_amount < 0 || $burn_game_amount > $game_amount_sum) die("Failed to determine a valid burn amount (".$burn_game_amount." vs ".$game_amount_sum.").");
 					
-					$burn_address = $app->fetch_address_in_account($account['account_id'], 0);
-					$separator_address = $app->fetch_address_in_account($account['account_id'], 1);
+					$burn_address = $app->fetch_addresses_in_account($account, 0, 1)[0];
+					$separator_addresses = $app->fetch_addresses_in_account($account, 1, count($selected_events)*2);
 					$separator_frac = 0.25;
 					
 					$io_nonfee_amount = $io_amount_sum-$fee_amount;
@@ -166,6 +162,7 @@ if ($r->rowCount() > 0) {
 					$io_spent_sum = $burn_io_amount;
 					
 					$btc_currency = $app->get_currency_by_abbreviation("BTC");
+					$bet_i = 0;
 					
 					foreach ($selected_events as $db_event) {
 						$this_event = new Event($game, $db_event, $db_event['event_id']);
@@ -205,7 +202,7 @@ if ($r->rowCount() > 0) {
 						$thisevent_address_ids = array();
 						
 						if ($this_buy_io_amount > 0) {
-							$buy_address = $app->fetch_address_in_account($account['account_id'], $buy_option['option_index']);
+							$buy_address = $app->fetch_addresses_in_account($account, $buy_option['option_index'], 1)[0];
 							
 							if (!$buy_address) {
 								$address_error = true;
@@ -220,11 +217,13 @@ if ($r->rowCount() > 0) {
 							array_push($thisevent_address_ids, $buy_address['address_id']);
 							
 							array_push($thisevent_io_amounts, $io_separator_amount);
-							array_push($thisevent_address_ids, $separator_address['address_id']);
+							array_push($thisevent_address_ids, $separator_addresses[$bet_i%count($separator_addresses)]['address_id']);
+							
+							$bet_i++;
 						}
 						
 						if ($this_sell_io_amount > 0) {
-							$sell_address = $app->fetch_address_in_account($account['account_id'], $sell_option['option_index']);
+							$sell_address = $app->fetch_addresses_in_account($account, $sell_option['option_index'], 1)[0];
 							
 							if (!$sell_address) {
 								$address_error = true;
@@ -239,7 +238,9 @@ if ($r->rowCount() > 0) {
 							array_push($thisevent_address_ids, $sell_address['address_id']);
 							
 							array_push($thisevent_io_amounts, $io_separator_amount);
-							array_push($thisevent_address_ids, $separator_address['address_id']);
+							array_push($thisevent_address_ids, $separator_addresses[$bet_i%count($separator_addresses)]['address_id']);
+							
+							$bet_i++;
 						}
 						
 						if (!$address_error) {

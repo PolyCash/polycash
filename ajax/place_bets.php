@@ -6,6 +6,7 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->in
 if ($thisuser && $game) {
 	$user_strategy = false;
 	$user_game = $thisuser->ensure_user_in_game($game, false);
+	$account = $app->fetch_account_by_id($user_game['account_id']);
 	$success = $game->get_user_strategy($user_game, $user_strategy);
 	
 	if (!$success) {
@@ -66,13 +67,13 @@ if ($thisuser && $game) {
 		die();
 	}
 	
-	$separator_address = $app->fetch_address_in_account($user_game['account_id'], 1);
+	$separator_addresses = $app->fetch_addresses_in_account($account, 1, count($option_ids));
 	$separator_frac = 0.25;
 	$new_amounts = [];
 	$new_address_ids = [];
 	
 	if ($burn_amount > 0) {
-		$burn_address = $app->fetch_address_in_account($user_game['account_id'], 0);
+		$burn_address = $app->fetch_addresses_in_account($account, 0, 1)[0];
 		
 		array_push($new_amounts, $burn_amount);
 		array_push($new_address_ids, $burn_address['address_id']);
@@ -84,7 +85,7 @@ if ($thisuser && $game) {
 		
 		if ($option_r->rowCount() > 0) {
 			$db_option = $option_r->fetch();
-			$db_address = $app->fetch_address_in_account($user_game['account_id'], $db_option['option_index']);
+			$db_address = $app->fetch_addresses_in_account($account, $db_option['option_index'], 1)[0];
 			
 			if ($db_address) {
 				array_push($address_ids, $db_address['address_id']);
@@ -96,7 +97,7 @@ if ($thisuser && $game) {
 				array_push($new_address_ids, $address_ids[$i]);
 				
 				array_push($new_amounts, $separator_amount);
-				array_push($new_address_ids, $separator_address['address_id']);
+				array_push($new_address_ids, $separator_addresses[$i%count($separator_addresses)]['address_id']);
 			}
 			else {
 				$app->output_message(9, "Error: no address for option #".$option_ids[$i], false);

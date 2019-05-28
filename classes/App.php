@@ -3018,14 +3018,39 @@ class App {
 		else return $urls;
 	}
 	
-	public function fetch_address_in_account($account_id, $option_index) {
-		$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account_id."' AND a.option_index='".$option_index."';";
-		$r = $this->run_query($q);
+	public function fetch_addresses_in_account(&$account, $option_index, $quantity) {
+		$addresses = $this->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."' AND a.option_index='".$option_index."' LIMIT ".$quantity.";")->fetchAll();
 		
-		if ($r->rowCount() > 0) {
-			return $r->fetch();
+		if (count($addresses) < $quantity) {
+			$currency = $this->fetch_currency_by_id($account['currency_id']);
+			$blockchain = new Blockchain($this, $currency['blockchain_id']);
+			$addresses_needed = $quantity-count($addresses);
+			
+			if ($blockchain->db_blockchain['p2p_mode'] == "rpc") { 
+				$this->dbh->beginTransaction();
+				$add_addresses = $this->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$currency['blockchain_id']."' AND a.option_index='".$option_index."' AND k.account_id IS NULL AND a.address_set_id IS NULL LIMIT ".$addresses_needed.";")->fetchAll();
+				
+				if (count($add_addresses) > 0) {
+					$add_address_ids = array_column($add_addresses, 'address_id');
+					$addresses = array_merge($addresses, $add_addresses);
+					$addresses_needed = $quantity-count($addresses);
+					
+					if (!empty($account['user_id'])) {
+						$this->run_query("UPDATE addresses SET user_id='".$account['user_id']."' WHERE address_id IN (".implode(",", $add_address_ids).");");
+					}
+					
+					$this->run_query("UPDATE address_keys SET account_id='".$account['account_id']."' WHERE address_id IN (".implode(",", $add_address_ids).");");
+				}
+				$this->dbh->commit();
+			}
+			else {
+				for ($i=0; $i<$addresses_needed; $i++) {
+					array_push($addresses, $this->gen_address_by_index($blockchain, $account, false, 1));
+				}
+			}
 		}
-		else return false;
+		
+		return $addresses;
 	}
 	
 	public function fetch_address_by_id($address_id) {
@@ -3315,7 +3340,7 @@ class App {
 						$has_option_indices_until = $option_index;
 					}
 					else {
-						$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND a.option_index='".$option_index."' AND k.account_id IS NULL AND a.address_set_id IS NULL;";
+						$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND a.option_index='".$option_index."' AND k.account_id IS NULL AND a.address_set_id IS NULL LIMIT 1;";
 						$rr = $this->run_query($qq);
 						
 						if ($rr->rowCount() > 0) {
@@ -3360,7 +3385,7 @@ class App {
 		}
 	}
 	
-	public function gen_address_by_index(&$blockchain, $account, $address_set_id, $option_index) {
+	public function gen_address_by_index(&$blockchain, &$account, $address_set_id, $option_index) {
 		if ($blockchain->db_blockchain['p2p_mode'] != "rpc") {
 			$vote_identifier = $this->option_index_to_vote_identifier($option_index);
 			$addr_text = "11".$vote_identifier;
@@ -3384,6 +3409,9 @@ class App {
 			if ($account) $qq .= ", account_id='".$account['account_id']."'";
 			$qq .= ", save_method='fake', pub_key='".$addr_text."';";
 			$rr = $this->run_query($qq);
+			$address_key_id = $this->last_insert_id();
+			
+			return $this->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id='".$address_id."' AND k.address_key_id='".$address_key_id."';")->fetch();
 		}
 	}
 	
