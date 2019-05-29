@@ -53,7 +53,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 					<?php if (is_file(dirname(dirname(__FILE__))."/pages/about.php")) { ?><li><a href="/about/"><i class="fas fa-info-circle"></i> &nbsp; <span>About</span></a></li><?php } ?>
 					<li><a target="_blank" href="https://medium.com/polycash"><i class="fas fa-rss-square"></i> &nbsp; <span>Our Blog</span></a></li>
 					<li><a href="/pages/PolyCash-whitepaper-v3.pdf"><i class="fas fa-file-alt"></i> &nbsp; <span>Whitepaper</span></a></li>
-					<li><a target="_blank" href="https://github.com/polycash/polycash"><i class="fas fa-code"></i> &nbsp; <span>Source Code</span></a></li>
+					<li><a target="_blank" href="https://github.com/PolyCash/polycash"><i class="fas fa-code"></i> &nbsp; <span>Source Code</span></a></li>
 					<?php
 					if (empty($thisuser)) {
 						if (empty($redirect_url)) $redirect_url = $app->get_redirect_url($_SERVER['REQUEST_URI']);

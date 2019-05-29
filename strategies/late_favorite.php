@@ -148,7 +148,7 @@ if ($r->rowCount() > 0) {
 						$thisevent_io_amounts = array();
 						$thisevent_address_ids = array();
 						
-						$this_address = $app->fetch_addresses_in_account($account['account_id'], $best_option['option_index'], 1)[0];
+						$this_address = $app->fetch_addresses_in_account($account, $best_option['option_index'], 1)[0];
 						
 						if ($this_address) {
 							$io_separator_amount = floor($io_amount_per_event*$separator_frac);
