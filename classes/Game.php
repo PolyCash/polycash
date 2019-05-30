@@ -2050,6 +2050,7 @@ class Game {
 								$entity = $this->blockchain->app->fetch_entity_by_id($game_defined_option['entity_id']);
 								if (!empty($entity['default_image_id'])) $qqq .= ", image_id='".$entity['default_image_id']."'";
 							}
+							if (!empty($game_defined_option['target_probability'])) $qqq .= ", target_probability='".$game_defined_option['target_probability']."'";
 							$qqq .= ";";
 							$rrr = $this->blockchain->app->run_query($qqq);
 							$option_i++;
@@ -3580,6 +3581,7 @@ class Game {
 		$actual_game_def = $this->blockchain->app->fetch_game_definition($this, "actual", $show_internal_params);
 		$actual_game_def_str = $this->blockchain->app->game_def_to_text($actual_game_def);
 		$actual_game_def_hash = $this->blockchain->app->game_def_to_hash($actual_game_def_str);
+		$this->blockchain->app->check_set_game_definition($actual_game_def_hash, $actual_game_def_str);
 		
 		if ($this->db_game['cached_definition_hash'] != $actual_game_def_hash) {
 			$this->blockchain->app->run_query("UPDATE games SET cached_definition_hash='".$actual_game_def_hash."', cached_definition_time='".time()."' WHERE game_id='".$this->db_game['game_id']."';");
@@ -3589,6 +3591,7 @@ class Game {
 		$defined_game_def = $this->blockchain->app->fetch_game_definition($this, "defined", $show_internal_params);
 		$defined_game_def_str = $this->blockchain->app->game_def_to_text($defined_game_def);
 		$defined_game_def_hash = $this->blockchain->app->game_def_to_hash($defined_game_def_str);
+		$this->blockchain->app->check_set_game_definition($defined_game_def_hash, $defined_game_def_str);
 		
 		if ($this->db_game['defined_cached_definition_hash'] != $defined_game_def_hash) {
 			$this->blockchain->app->run_query("UPDATE games SET defined_cached_definition_hash='".$defined_game_def_hash."' WHERE game_id='".$this->db_game['game_id']."';");

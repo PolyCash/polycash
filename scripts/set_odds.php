@@ -29,7 +29,7 @@ if ($app->running_as_admin()) {
 			if ($account_r->rowCount() > 0) {
 				$account = $account_r->fetch();
 				
-				$event_q = "SELECT * FROM events ev JOIN game_defined_options gdo ON ev.event_index=gdo.event_index WHERE ev.game_id='".$game->db_game['game_id']."' AND gdo.game_id='".$game->db_game['game_id']."' AND gdo.target_probability IS NOT NULL";
+				$event_q = "SELECT * FROM events ev JOIN options op ON ev.event_id=op.event_id WHERE ev.game_id='".$game->db_game['game_id']."' AND op.target_probability IS NOT NULL";
 				$event_q .= " AND ev.event_starting_block<=".$mining_block_id." AND ev.event_final_block>=".$mining_block_id;
 				$event_q .= " GROUP BY ev.event_id ORDER BY ev.event_index ASC;";
 				$event_r = $app->run_query($event_q);
@@ -89,7 +89,7 @@ if ($app->running_as_admin()) {
 					$io_spent_sum = $burn_amount;
 					
 					while ($db_event = $event_r->fetch()) {
-						$option_q = "SELECT op.*, gdo.target_probability FROM options op JOIN game_defined_options gdo ON op.event_option_index=gdo.option_index WHERE op.event_id='".$db_event['event_id']."' AND gdo.game_id='".$game->db_game['game_id']."' AND gdo.event_index='".$db_event['event_index']."' ORDER BY op.option_index ASC;";
+						$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY event_option_index ASC;";
 						$option_r = $app->run_query($option_q);
 						
 						$address_error = false;

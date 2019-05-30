@@ -29,7 +29,7 @@ if ($r->rowCount() > 0) {
 		$account = $app->fetch_account_by_id($user_game['account_id']);
 		
 		if ($account) {
-			$event_q = "SELECT * FROM events ev JOIN game_defined_options gdo ON ev.event_index=gdo.event_index WHERE ev.game_id='".$game->db_game['game_id']."' AND gdo.game_id='".$game->db_game['game_id']."' AND gdo.target_probability IS NOT NULL";
+			$event_q = "SELECT * FROM events ev JOIN options op ON ev.event_id=op.event_id WHERE ev.game_id='".$game->db_game['game_id']."' AND op.target_probability IS NOT NULL";
 			$event_q .= " AND ev.event_starting_block<=".$mining_block_id." AND ev.event_final_block>=".$mining_block_id;
 			$event_q .= " AND ev.event_starting_time < NOW() AND ev.event_final_time > NOW() GROUP BY ev.event_id ORDER BY ev.event_index ASC;";
 			$event_r = $app->run_query($event_q);
@@ -114,7 +114,7 @@ if ($r->rowCount() > 0) {
 					$bet_i = 0;
 					
 					while ($db_event = $event_r->fetch()) {
-						$option_q = "SELECT op.*, gdo.target_probability FROM options op JOIN game_defined_options gdo ON op.event_option_index=gdo.option_index WHERE op.event_id='".$db_event['event_id']."' AND gdo.game_id='".$game->db_game['game_id']."' AND gdo.event_index='".$db_event['event_index']."' ORDER BY gdo.target_probability ASC LIMIT 1;";
+						$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY target_probability ASC LIMIT 1;";
 						$option_r = $app->run_query($option_q);
 						$option = $option_r->fetch();
 						

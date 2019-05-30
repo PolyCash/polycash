@@ -1117,12 +1117,7 @@ class App {
 			$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
 			
-			$show_internal_params = false;
-			$game_def = $this->fetch_game_definition($game, "actual", $show_internal_params);
-			$game_def_str = $this->game_def_to_text($game_def);
-			$game_def_hash = $this->game_def_to_hash($game_def_str);
-			
-			$html .= '<div class="row"><div class="col-sm-5">Game definition:</div><div class="col-sm-7"><a href="/explorer/games/'.$game->db_game['url_identifier'].'/definition/?definition_mode=actual">'.$this->shorten_game_def_hash($game_def_hash).'</a></div></div>';
+			$html .= '<div class="row"><div class="col-sm-5">Game definition:</div><div class="col-sm-7"><a href="/explorer/games/'.$game->db_game['url_identifier'].'/definition/?definition_mode=actual">'.$this->shorten_game_def_hash($game->db_game['cached_definition_hash']).'</a></div></div>';
 		}
 		
 		if ($db_game['final_round'] > 0) {
@@ -1974,13 +1969,17 @@ class App {
 		}
 	}
 	
+	public function get_game_definition_by_hash($game_def_hash) {
+		$game_def_r = $this->run_query("SELECT * FROM game_definitions WHERE definition_hash=".$this->quote_escape($game_def_hash).";");
+		if ($game_def_r->rowCount() > 0) return $game_def_r->fetch()['definition'];
+		else return false;
+	}
+	
 	public function check_set_game_definition($game_def_hash, $game_def_str) {
-		$q = "SELECT * FROM game_definitions WHERE definition_hash=".$this->quote_escape($game_def_hash).";";
-		$r = $this->run_query($q);
+		$existing_def = $this->get_game_definition_by_hash($game_def_hash);
 		
-		if ($r->rowCount() == 0) {
-			$q = "INSERT INTO game_definitions SET definition_hash=".$this->quote_escape($game_def_hash).", definition=".$this->quote_escape($game_def_str).";";
-			$r = $this->run_query($q);
+		if (!$existing_def) {
+			$this->run_query("INSERT INTO game_definitions SET definition_hash=".$this->quote_escape($game_def_hash).", definition=".$this->quote_escape($game_def_str).";");
 		}
 	}
 	

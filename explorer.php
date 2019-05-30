@@ -1407,12 +1407,14 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				else if ($explore_mode == "definition") {
 					if ($game) {
 						$definition_mode = "defined";
-						if (!empty($_REQUEST['definition_mode']) && $_REQUEST['definition_mode'] == "actual") $definition_mode = "actual";
+						$def_field = 'defined_cached_definition_hash';
 						
-						$show_internal_params = false;
-						$game_def = $app->fetch_game_definition($game, $definition_mode, $show_internal_params);
-						$game_def_str = $app->game_def_to_text($game_def);
-						$game_def_hash = $app->game_def_to_hash($game_def_str);
+						if (!empty($_REQUEST['definition_mode']) && $_REQUEST['definition_mode'] == "actual") {
+							$definition_mode = "actual";
+							$def_field = 'cached_definition_hash';
+						}
+						
+						$game_def_str = $app->get_game_definition_by_hash($game->db_game[$def_field]);
 						?>
 						<div class="panel panel-info">
 							<div class="panel-heading">
@@ -1426,7 +1428,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								</p>
 								<div class="row">
 									<div class="col-sm-2"><label class="form-control-static" for="definition_hash">Definition hash:</label></div>
-									<div class="col-sm-10"><input type="text" class="form-control" id="definition_hash" value="<?php echo $game_def_hash; ?>" /></div>
+									<div class="col-sm-10"><input type="text" class="form-control" id="definition_hash" value="<?php echo $game->db_game[$def_field]; ?>" /></div>
 								</div>
 								
 								<textarea class="definition" id="definition"><?php echo $game_def_str; ?></textarea>
