@@ -5,6 +5,7 @@ include("../includes/get_session.php");
 $instance_id = (int) $_REQUEST['instance_id'];
 $game_loop_index = (int) $_REQUEST['game_loop_index'];
 $event_ids_hash = $_REQUEST['event_ids_hash'];
+$refresh_page = $_REQUEST['refresh_page'];
 
 if (!$game) {
 	$game_id = (int) $_REQUEST['game_id'];
@@ -32,22 +33,10 @@ $current_round = $game->block_to_round($last_block_id+1);
 $block_within_round = $game->block_id_to_round_index($last_block_id+1);
 $coins_per_vote = $app->coins_per_vote($game->db_game);
 
-if ($thisuser) {
-	$immature_balance = $thisuser->immature_balance($game, $user_game);
-	$mature_balance = $thisuser->mature_balance($game, $user_game);
+if ($thisuser && $refresh_page == "wallet") {
 	$mature_io_ids_csv = $game->mature_io_ids_csv($user_game);
-	list($user_votes, $votes_value) = $thisuser->user_current_votes($game, $last_block_id, $current_round, $user_game);
-	$user_pending_bets = $game->user_pending_bets($user_game);
-	$game_pending_bets = $game->pending_bets();
-	list($vote_supply, $vote_supply_value) = $game->vote_supply($last_block_id, $current_round, $coins_per_vote);
-	$account_value = $game->account_balance($user_game['account_id'])+$user_pending_bets;
 }
 else {
-	$account_value = 0;
-	$immature_balance = 0;
-	$mature_balance = 0;
-	$user_pending_bets = 0;
-	$game_pending_bets = 0;
 	$mature_io_ids_csv = "";
 }
 $mature_io_ids_hash = $app->game_def_to_hash($mature_io_ids_csv);
@@ -153,23 +142,34 @@ for ($game_event_index=0; $game_event_index<count($these_events); $game_event_in
 	$output['set_options_js'] = $set_options_js;
 }
 
-if ($mature_io_ids_hash != $_REQUEST['mature_io_ids_hash'] || !empty($output['new_block'])) {
+if ($thisuser) {
+	for ($game_event_index=0; $game_event_index<count($these_events); $game_event_index++) {
+		$output['my_current_votes'][$game_event_index] = $these_events[$game_event_index]->my_votes_table($current_round, $user_game);
+	}
+}
+
+if ($refresh_page == "wallet" && ($mature_io_ids_hash != $_REQUEST['mature_io_ids_hash'] || !empty($output['new_block']))) {
 	$output['select_input_buttons'] = $thisuser? $game->select_input_buttons($user_game) : "";
 	$output['mature_io_ids_csv'] = $mature_io_ids_csv;
 	$output['new_mature_ios'] = 1;
 	
 	if ($thisuser) {
+		$immature_balance = $thisuser->immature_balance($game, $user_game);
+		$mature_balance = $thisuser->mature_balance($game, $user_game);
+		list($user_votes, $votes_value) = $thisuser->user_current_votes($game, $last_block_id, $current_round, $user_game);
+		$user_pending_bets = $game->user_pending_bets($user_game);
+		$game_pending_bets = $game->pending_bets();
+		list($vote_supply, $vote_supply_value) = $game->vote_supply($last_block_id, $current_round, $coins_per_vote);
+		$account_value = $game->account_balance($user_game['account_id'])+$user_pending_bets;
+		
 		$output['wallet_text_stats'] = $thisuser->wallet_text_stats($game, $blockchain_current_round, $blockchain_last_block_id, $blockchain_block_within_round, $mature_balance, $immature_balance, $user_votes, $votes_value, $user_pending_bets, $user_game);
 		
-		for ($game_event_index=0; $game_event_index<count($these_events); $game_event_index++) {
-			$output['my_current_votes'][$game_event_index] = $these_events[$game_event_index]->my_votes_table($current_round, $user_game);
-		}
 		$output['account_value'] = $game->account_value_html($account_value, $user_game, $game_pending_bets, $vote_supply_value);
 	}
 }
 else $output['new_mature_ios'] = 0;
 
-if ($thisuser) {
+if ($thisuser && $refresh_page == "wallet") {
 	$q = "SELECT * FROM user_messages WHERE game_id='".$game->db_game['game_id']."' AND to_user_id='".$thisuser->db_user['user_id']."' AND seen=0 GROUP BY from_user_id;";
 	$r = $app->run_query($q);
 	if ($r->rowCount() > 0) {
