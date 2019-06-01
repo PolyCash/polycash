@@ -1128,7 +1128,7 @@ class App {
 		
 		$html .= '<div class="row"><div class="col-sm-5">Starts on block:</div><div class="col-sm-7"><a href="/explorer/games/'.$db_game['url_identifier'].'/blocks/'.$db_game['game_starting_block'].'">'.$db_game['game_starting_block']."</a></div></div>\n";
 		
-		$html .= '<div class="row"><div class="col-sm-5">Escrow address:</div><div class="col-sm-7" style="font-size: 11px;">';
+		$html .= '<div class="row"><div class="col-sm-5">Escrow address:</div><div class="col-sm-7">';
 		if ($db_game['escrow_address'] == "") $html .= "None";
 		else $html .= '<a href="/explorer/games/'.$db_game['url_identifier'].'/addresses/'.$db_game['escrow_address'].'">'.$db_game['escrow_address'].'</a>';
 		$html .= "</div></div>\n";
@@ -1210,8 +1210,13 @@ class App {
 		if ($db_game['inflation'] == "linear") $html .= "Linear (".$this->format_bignum($round_reward)." coins per round)";
 		else if ($db_game['inflation'] == "fixed_exponential") $html .= "Fixed Exponential (".(100*$db_game['exponential_inflation_rate'])."% per round)";
 		else {
-			$html .= "Exponential (".(100*$db_game['exponential_inflation_rate'])."% per round)<br/>";
-			$html .= $this->format_bignum($this->votes_per_coin($db_game))." ".str_replace("_", " ", $db_game['payout_weight'])."s per ".$db_game['coin_name'];
+			if ($db_game['exponential_inflation_rate'] == 0) {
+				$html .= "None, fixed supply";
+			}
+			else {
+				$html .= "Exponential (".(100*$db_game['exponential_inflation_rate'])."% per round)<br/>";
+				$html .= $this->format_bignum($this->votes_per_coin($db_game))." ".str_replace("_", " ", $db_game['payout_weight'])."s per ".$db_game['coin_name'];
+			}
 		}
 		$html .= "</div></div>\n";
 		
@@ -1219,11 +1224,6 @@ class App {
 		if ($total_inflation_pct) {
 			$html .= '<div class="row"><div class="col-sm-5">Potential inflation:</div><div class="col-sm-7">'.number_format($total_inflation_pct)."%</div></div>\n";
 		}
-		
-		$html .= '<div class="row"><div class="col-sm-5">Distribution:</div><div class="col-sm-7">';
-		if ($db_game['inflation'] == "linear") $html .= $this->format_bignum($db_game['pos_reward']/pow(10,$db_game['decimal_places']))." to holders, ".$this->format_bignum($db_game['pow_reward']*$db_game['round_length']/pow(10,$db_game['decimal_places']))." to miners";
-		else $html .= (100 - 100*$db_game['exponential_inflation_minershare'])."% to holders, ".(100*$db_game['exponential_inflation_minershare'])."% to miners";
-		$html .= "</div></div>\n";
 		
 		$html .= '<div class="row"><div class="col-sm-5">Blocks per round:</div><div class="col-sm-7">'.$db_game['round_length']."</div></div>\n";
 		
@@ -1240,6 +1240,18 @@ class App {
 			$html .= '<div class="row"><div class="col-sm-5">Transaction maturity:</div><div class="col-sm-7">'.$db_game['maturity']." block";
 			if ($db_game['maturity'] != 1) $html .= "s";
 			$html .= "</div></div>\n";
+		}
+		
+		if ($game) {
+			$escrow_r = $this->run_query("SELECT * FROM game_escrow_amounts esa JOIN currencies c ON esa.currency_id=c.currency_id WHERE esa.game_id='".$game->db_game['game_id']."' ORDER BY c.short_name_plural ASC;");
+			
+			if ($escrow_r->rowCount() > 0) {
+				$html .= '<div class="row"><div class="col-sm-5">Backed by:</div><div class="col-sm-7">';
+				while ($escrow_amount = $escrow_r->fetch()) {
+					$html .= $this->format_bignum($escrow_amount['amount'])." ".$escrow_amount['short_name_plural']."<br/>\n";
+				}
+				$html .= "</div></div>\n";
+			}
 		}
 		
 		$html .= "</div>\n";
