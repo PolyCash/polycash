@@ -29,7 +29,7 @@ if ($r->rowCount() > 0) {
 		$account = $app->fetch_account_by_id($user_game['account_id']);
 		
 		if ($account) {
-			$event_q = "events ev JOIN option op ON ev.event_id=op.event_id WHERE ev.game_id='".$game->db_game['game_id']."' AND op.target_probability IS NOT NULL";
+			$event_q = "events ev JOIN options op ON ev.event_id=op.event_id WHERE ev.game_id='".$game->db_game['game_id']."' AND op.target_probability IS NOT NULL";
 			$event_q .= " AND ev.event_starting_block<=".$mining_block_id." AND ev.event_final_block>=".$mining_block_id;
 			$event_q .= " AND ev.event_starting_time < NOW() AND ev.event_final_time > NOW()";
 			$option_info = $app->run_query("SELECT COUNT(*) FROM ".$event_q.";")->fetch();
