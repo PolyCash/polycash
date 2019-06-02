@@ -17,10 +17,9 @@ class Game {
 	}
 	
 	public function update_db_game() {
-		$q = "SELECT g.*, b.p2p_mode, b.coin_name AS base_coin_name, b.coin_name_plural AS base_coin_name_plural FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE g.game_id='".$this->game_id."';";
-		$r = $this->blockchain->app->run_query($q);
+		$game_r = $this->blockchain->app->run_query("SELECT g.*, b.p2p_mode, b.coin_name AS base_coin_name, b.coin_name_plural AS base_coin_name_plural FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE g.game_id='".$this->game_id."';");
 		
-		if ($r->rowCount() > 0) $this->db_game = $r->fetch();
+		if ($game_r->rowCount() > 0) $this->db_game = $game_r->fetch();
 		else throw new Exception("Error, could not load game #".$this->game_id);
 	}
 	
@@ -51,10 +50,7 @@ class Game {
 		
 		$utxo_balance = false;
 		if ($io_ids) {
-			$q = "SELECT SUM(amount) FROM transaction_ios WHERE io_id IN (".implode(",", $io_ids).");";
-			$r = $this->blockchain->app->run_query($q);
-			$utxo_balance = $r->fetch(PDO::FETCH_NUM);
-			$utxo_balance = $utxo_balance[0];
+			$utxo_balance = $this->blockchain->app->run_query("SELECT SUM(amount) FROM transaction_ios WHERE io_id IN (".implode(",", $io_ids).");")->fetch(PDO::FETCH_NUM)[0];
 		}
 		
 		$raw_txin = array();
@@ -779,7 +775,8 @@ class Game {
 			$html .= '<div class="col-sm-3"><a href="/explorer/games/'.$this->db_game['url_identifier'].'/events/'.$db_event['event_index'].'">'.$db_event['event_name'].'</a></div>';
 			$html .= '<div class="col-sm-4">';
 			
-			if ($db_event['payout_rule'] == "binary") {
+			if ($db_event['outcome_index'] == -1) $html .= '<font class="redtext">Canceled</font>';
+			else if ($db_event['payout_rule'] == "binary") {
 				if ($db_event['winning_option_id'] > 0) {
 					if (!empty($db_event['option_block_rule'])) {
 						$qq = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY option_event_index ASC;";
@@ -1664,11 +1661,6 @@ class Game {
 			}
 		}
 		return $user_strategy;
-	}
-	
-	public function add_round_from_db($round_id, $last_block_id, $add_payout_transaction) {
-		$log_text = "function disabled";
-		return $log_text;
 	}
 	
 	public function load_current_events() {
@@ -2614,7 +2606,7 @@ class Game {
 						
 						$log_text .= $this->module->set_event_outcome($this, $payout_events[$i]);
 					}
-					else $log_text .= $payout_events[$i]->set_outcome_from_db(true);
+					else $log_text .= $payout_events[$i]->set_outcome_from_db();
 					
 					if (!empty($this->module) && method_exists($this->module, "event_index_to_next_event_index")) {
 						$event_index = $this->module->event_index_to_next_event_index($payout_events[$i]->db_event['event_index']);
@@ -2623,11 +2615,9 @@ class Game {
 				}
 			}
 			
-			$resolve_q = "UPDATE transaction_game_ios gio JOIN events ev ON gio.event_id=ev.event_id SET gio.is_resolved=1 WHERE ev.game_id='".$this->db_game['game_id']."' AND ev.event_payout_block='".$block_height."' AND (ev.outcome_index IS NOT NULL OR ev.track_payout_price IS NOT NULL);";
-			$resolve_r = $this->blockchain->app->run_query($resolve_q);
+			$this->blockchain->app->run_query("UPDATE transaction_game_ios gio JOIN events ev ON gio.event_id=ev.event_id SET gio.is_resolved=1 WHERE ev.game_id='".$this->db_game['game_id']."' AND ev.event_payout_block='".$block_height."' AND (ev.outcome_index IS NOT NULL OR ev.track_payout_price IS NOT NULL);");
 			
-			$q = "UPDATE game_blocks SET locally_saved=1, time_loaded='".time()."', load_time=load_time+".(microtime(true)-$start_time).", max_game_io_index='".$game_io_index."' WHERE game_block_id='".$game_block['game_block_id']."';";
-			$r = $this->blockchain->app->run_query($q);
+			$this->blockchain->app->run_query("UPDATE game_blocks SET locally_saved=1, time_loaded='".time()."', load_time=load_time+".(microtime(true)-$start_time).", max_game_io_index='".$game_io_index."' WHERE game_block_id='".$game_block['game_block_id']."';");
 			
 			$this->set_block_stats($game_block);
 			
@@ -2684,42 +2674,35 @@ class Game {
 	}
 	
 	public function set_event_labels_by_gde($event_index) {
-		$q = "SELECT * FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."' AND event_index='".$event_index."';";
-		$r = $this->blockchain->app->run_query($q);
+		$gde_r = $this->blockchain->app->run_query("SELECT * FROM game_defined_events WHERE game_id='".$this->db_game['game_id']."' AND event_index='".$event_index."';");
 		
-		if ($r->rowCount() > 0) {
-			$gde = $r->fetch();
+		if ($gde_r->rowCount() > 0) {
+			$gde = $gde_r->fetch();
 			
-			$q = "SELECT * FROM events WHERE game_id='".$this->db_game['game_id']."' AND event_index='".$event_index."';";
-			$r = $this->blockchain->app->run_query($q);
+			$event_r = $this->blockchain->app->run_query("SELECT * FROM events WHERE game_id='".$this->db_game['game_id']."' AND event_index='".$event_index."';");
 			
-			if ($r->rowCount() > 0) {
-				$db_event = $r->fetch();
+			if ($event_r->rowCount() > 0) {
+				$db_event = $event_r->fetch();
 				
-				$q = "UPDATE events SET event_name=".$this->blockchain->app->quote_escape($gde['event_name'])." WHERE event_id='".$db_event['event_id']."';";
-				$this->blockchain->app->log_message($q);
-				$r = $this->blockchain->app->run_query($q);
+				$this->blockchain->app->run_query("UPDATE events SET event_name=".$this->blockchain->app->quote_escape($gde['event_name'])." WHERE event_id='".$db_event['event_id']."';");
 				
-				$q = "SELECT * FROM game_defined_options gdo JOIN entities e ON gdo.entity_id=e.entity_id WHERE gdo.game_id='".$this->db_game['game_id']."' AND gdo.event_index='".$gde['event_index']."' ORDER BY gdo.option_index ASC;";
-				$r = $this->blockchain->app->run_query($q);
+				$gdo_r = $this->blockchain->app->run_query("SELECT * FROM game_defined_options gdo JOIN entities e ON gdo.entity_id=e.entity_id WHERE gdo.game_id='".$this->db_game['game_id']."' AND gdo.event_index='".$gde['event_index']."' ORDER BY gdo.option_index ASC;");
 				$option_offset = 0;
 				
-				while ($gdo = $r->fetch()) {
-					$qq = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY option_index ASC LIMIT 1";
-					if ($option_offset > 0) $qq .= " OFFSET ".$option_offset;
-					$qq .= ";";
-					$rr = $this->blockchain->app->run_query($qq);
+				while ($gdo = $gdo_r->fetch()) {
+					$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY option_index ASC LIMIT 1";
+					if ($option_offset > 0) $option_q .= " OFFSET ".$option_offset;
+					$option_q .= ";";
+					$option_r = $this->blockchain->app->run_query($option_q);
 					
-					if ($rr->rowCount() > 0) {
-						$db_option = $rr->fetch();
-						
+					if ($option_r->rowCount() > 0) {
+						$db_option = $option_r->fetch();
 						$db_entity = $this->blockchain->app->fetch_entity_by_id($gdo['entity_id']);
 						
-						$qq = "UPDATE options SET entity_id='".$gdo['entity_id']."'";
-						if ($db_entity && !empty($db_entity['default_image_id'])) $qq .= ", image_id='".$db_entity['default_image_id']."'";
-						$qq .= ", name=".$this->blockchain->app->quote_escape($gdo['name'])." WHERE option_id='".$db_option['option_id']."';";
-						$rr = $this->blockchain->app->run_query($qq);
-						$this->blockchain->app->log_message($qq);
+						$option_update_q = "UPDATE options SET entity_id='".$gdo['entity_id']."'";
+						if ($db_entity && !empty($db_entity['default_image_id'])) $option_update_q .= ", image_id='".$db_entity['default_image_id']."'";
+						$option_update_q .= ", name=".$this->blockchain->app->quote_escape($gdo['name'])." WHERE option_id='".$db_option['option_id']."';";
+						$this->blockchain->app->run_query($option_update_q);
 					}
 					$option_offset++;
 				}
@@ -2815,14 +2798,17 @@ class Game {
 					$this_payout_disp = $max_payout;
 					$html .= " &nbsp;&nbsp; x".$this->blockchain->app->format_bignum($odds)." ";
 					
-					$html .= '&nbsp;&nbsp;<font class="';
-					if ($io['colored_amount'] > 0 || ($io['payout_rule'] == "linear" && $io['event_final_block'] <= $last_block_id)) $html .= 'greentext';
-					else if ($io['is_resolved'] == 1) $html .= 'redtext';
-					else $html .= 'yellowtext';
-					$html .= '">';
+					$html .= '&nbsp;&nbsp;';
+					if ($io['outcome_index'] != -1) {
+						$html .= '<font class="';
+						if ($io['colored_amount'] > 0 || ($io['payout_rule'] == "linear" && $io['event_final_block'] <= $last_block_id)) $html .= 'greentext';
+						else if ($io['is_resolved'] == 1) $html .= 'redtext';
+						else $html .= 'yellowtext';
+						$html .= '">';
+					}
 					if ($io['payout_rule'] == "binary") $html .= '+';
 					$html .= $this->blockchain->app->format_bignum($this_payout_disp/pow(10,$this->db_game['decimal_places']));
-					$html .= "</font>";
+					if ($io['outcome_index'] != -1) $html .= "</font>";
 				}
 				else {
 					if ($io['event_option_index'] != 0) $html .= '-';

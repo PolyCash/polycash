@@ -700,11 +700,14 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							if ($game) {
 								$filter_arr = false;
 								$events = $game->events_by_block($block['block_id'], $filter_arr);
-								echo "<p>This block is referenced in ".count($events)." events<br/>\n";
-								for ($i=0; $i<count($events); $i++) {
-									echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".$events[$i]->db_event['event_index']."\">".$events[$i]->db_event['event_name']."</a><br/>\n";
+								
+								if (count($events) <= 50) {
+									echo "<p>This block is referenced in ".count($events)." events<br/>\n";
+									for ($i=0; $i<count($events); $i++) {
+										echo "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".$events[$i]->db_event['event_index']."\">".$events[$i]->db_event['event_name']."</a><br/>\n";
+									}
+									echo '</p>';
 								}
-								echo '</p>';
 							}
 						}
 						else {

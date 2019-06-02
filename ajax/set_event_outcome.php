@@ -35,6 +35,7 @@ if ($thisuser) {
 					while ($option = $r->fetch()) {
 						$html .= '<option value="'.$option['event_option_index'].'">'.$option['name'].'</option>'."\n";
 					}
+					$html .= '<option value="-1">Cancel &amp; Refund</option>'."\n";
 					$html .= '<option value="">Unset</option>'."\n";
 					$html .= '</select>'."\n";
 					
@@ -50,6 +51,10 @@ if ($thisuser) {
 					if ($outcome_index == "") {
 						$option_ok = true;
 						$outcome_index = 'NULL';
+					}
+					else if ($outcome_index == -1) {
+						$option_ok = true;
+						$outcome_index = '-1';
 					}
 					else {
 						$outcome_index = (int)$_REQUEST['outcome_index'];
