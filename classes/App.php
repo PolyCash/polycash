@@ -3082,7 +3082,7 @@ class App {
 		else return 1;
 	}
 	
-	public function render_bet(&$bet, &$game, $coins_per_vote, $current_round, &$net_delta, &$net_stake, &$pending_stake, &$num_wins, &$num_losses, &$num_unresolved, $div_td, $last_block_id) {
+	public function render_bet(&$bet, &$game, $coins_per_vote, $current_round, &$net_delta, &$net_stake, &$pending_stake, &$num_wins, &$num_losses, &$num_unresolved, &$num_refunded, $div_td, $last_block_id) {
 		$this_bet_html = "";
 		$event_total_reward = ($bet['sum_score']+$bet['sum_unconfirmed_score'])*$coins_per_vote + $bet['sum_destroy_score'] + $bet['sum_unconfirmed_destroy_score'];
 		$option_effective_reward = $bet['option_effective_destroy_score']+$bet['unconfirmed_effective_destroy_score'] + ($bet['option_votes']+$bet['unconfirmed_votes'])*$coins_per_vote;
@@ -3175,7 +3175,11 @@ class App {
 			
 			$pct_gain = false;
 			
-			if (empty($bet['winning_option_id']) && (string)$bet['track_payout_price'] == "") {
+			if ($bet['outcome_index'] == -1) {
+				$outcome_txt = "Refunded";
+				$num_refunded++;
+			}
+			else if (empty($bet['winning_option_id']) && (string)$bet['track_payout_price'] == "") {
 				$outcome_txt = "Not Resolved";
 				$num_unresolved++;
 			}
@@ -3238,22 +3242,27 @@ class App {
 		return $this_bet_html;
 	}
 	
-	public function bets_summary(&$game, &$net_stake, &$num_wins, &$num_losses, &$num_unresolved, &$pending_stake, &$net_delta) {
-		$num_resolved = $num_wins+$num_losses;
-		if ($num_resolved > 0) $win_rate = $num_wins/$num_resolved;
+	public function bets_summary(&$game, &$net_stake, &$num_wins, &$num_losses, &$num_unresolved, &$num_refunded, &$pending_stake, &$net_delta) {
+		$num_resolved = $num_wins+$num_losses+$num_refunded;
+		if ($num_wins+$num_losses > 0) $win_rate = $num_wins/($num_wins+$num_losses);
 		else $win_rate = 0;
-		$num_bets = $num_wins+$num_losses+$num_unresolved;
+		$num_bets = $num_resolved+$num_unresolved;
 		
 		$html = number_format($num_bets)." bets totalling <font class=\"greentext\">".$this->format_bignum($net_stake)."</font> ".$game->db_game['coin_name_plural']."<br/>\n";
-		$html .= "You've won ".number_format($num_wins)." of your ".number_format($num_resolved)." resolved bets (".round($win_rate*100, 1)."%) for a net ";
+		$html .= "You've won ".number_format($num_wins)." of your ".number_format($num_wins+$num_losses)." resolved bets (".round($win_rate*100, 1)."%) for a net ";
 		if ($net_delta >= 0) $html .= "gain";
 		else $html .= "loss";
 		$html .= " of <font class=\"";
 		if ($net_delta >= 0) $html .= "greentext";
 		else $html .= "redtext";
 		$html .= "\">".$this->format_bignum(abs($net_delta))."</font> ".$game->db_game['coin_name_plural'];
-		if ($num_unresolved > 0) $html .= "\n<br/>You have ".number_format($num_unresolved)." pending bets totalling <font class=\"greentext\">".$this->format_bignum($pending_stake)."</font> ".$game->db_game['coin_name_plural'];
-		
+		if ($num_unresolved > 0 || $num_refunded > 0) {
+			$html .= "\n<br/>";
+			if ($num_refunded > 0) $html .= number_format($num_refunded)." of your bets were refunded";
+			if ($num_unresolved > 0 && $num_refunded > 0) $html .= " and you have ";
+			else if ($num_unresolved > 0) $html .= "You have ";
+			if ($num_unresolved > 0) $html .= number_format($num_unresolved)." pending bets totalling <font class=\"greentext\">".$this->format_bignum($pending_stake)."</font> ".$game->db_game['coin_name_plural'];
+		}
 		return $html;
 	}
 	

@@ -25,6 +25,7 @@ if ($app->running_as_admin()) {
 		$num_wins = 0;
 		$num_losses = 0;
 		$num_unresolved = 0;
+		$num_refunded = 0;
 		$prev_user_game_id = false;
 		$prev_account_id = false;
 		
@@ -43,7 +44,7 @@ if ($app->running_as_admin()) {
 					$betcount_by_user_game[$prev_user_game_id] = $num_wins+$num_losses+$num_unresolved;
 					$ref_user_game = ['account_id'=>$prev_account_id];
 					$account_value = $game->account_balance($prev_account_id)+$game->user_pending_bets($ref_user_game);
-					$bet_summary = "In ".$game->db_game['name']." you placed ".$app->bets_summary($game, $net_stake, $num_wins, $num_losses, $num_unresolved, $pending_stake, $net_delta).".<br/>\n";
+					$bet_summary = "In ".$game->db_game['name']." you placed ".$app->bets_summary($game, $net_stake, $num_wins, $num_losses, $num_unresolved, $num_refunded, $pending_stake, $net_delta).".<br/>\n";
 					$bet_summary .= "Your account is now worth <a href=\"".$GLOBALS['base_url']."/wallet/".$game->db_game['url_identifier']."/?action=change_user_game&user_game_id=".$prev_user_game_id."\">".$app->format_bignum($account_value/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']."</a>";
 					$html_by_user_game[$prev_user_game_id] = "<p>".$bet_summary."</p><table>".$table_header_html.$html_by_user_game[$prev_user_game_id]."</table>\n";
 					
@@ -53,13 +54,14 @@ if ($app->running_as_admin()) {
 					$num_wins = 0;
 					$num_losses = 0;
 					$num_unresolved = 0;
+					$num_refunded = 0;
 				}
 				
 				$prev_user_game_id = $bet['user_game_id'];
 				$prev_account_id = $bet['account_id'];
 			}
 			
-			$this_bet_html = $app->render_bet($bet, $game, $coins_per_vote, $current_round, $net_delta, $net_stake, $pending_stake, $num_wins, $num_losses, $num_unresolved, 'td', $last_block_id);
+			$this_bet_html = $app->render_bet($bet, $game, $coins_per_vote, $current_round, $net_delta, $net_stake, $pending_stake, $num_wins, $num_losses, $num_unresolved, $num_refunded, 'td', $last_block_id);
 			
 			$html_by_user_game[$bet['user_game_id']] .= "<tr>".$this_bet_html."</tr>\n";
 		}
@@ -68,7 +70,7 @@ if ($app->running_as_admin()) {
 	$betcount_by_user_game[$prev_user_game_id] = $num_wins+$num_losses+$num_unresolved;
 	$ref_user_game = ['account_id'=>$prev_account_id];
 	$account_value = $game->account_balance($prev_account_id)+$game->user_pending_bets($ref_user_game);
-	$bet_summary = "In ".$game->db_game['name']." you placed ".$app->bets_summary($game, $net_stake, $num_wins, $num_losses, $num_unresolved, $pending_stake, $net_delta).".<br/>\n";
+	$bet_summary = "In ".$game->db_game['name']." you placed ".$app->bets_summary($game, $net_stake, $num_wins, $num_losses, $num_unresolved, $num_refunded, $pending_stake, $net_delta).".<br/>\n";
 	$bet_summary .= "Your account is now worth <a href=\"".$GLOBALS['base_url']."/wallet/".$game->db_game['url_identifier']."/?action=change_user_game&user_game_id=".$prev_user_game_id."\">".$app->format_bignum($account_value/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']."</a>";
 	$html_by_user_game[$prev_user_game_id] = "<p>".$bet_summary."</p><table>".$table_header_html.$html_by_user_game[$prev_user_game_id]."</table>\n";
 	
