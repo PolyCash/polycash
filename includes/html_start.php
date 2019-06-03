@@ -38,7 +38,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 <div class="wrapper">
 	<header class="main-header">
 		<a href="/" class="logo">
-			<span class="logo-lg"><img src="/images/polycash-logo-white-sm.png" /></span>
+			<span class="logo-lg"><img src="/images/polycash-logo-sm-2.png" /></span>
 		</a>
 
 		<!-- Header Navbar -->

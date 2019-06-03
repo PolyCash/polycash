@@ -3111,7 +3111,7 @@ class App {
 			$payout_multiplier = $expected_payout/$my_stake;
 			
 			$net_stake += $my_stake/pow(10,$game->db_game['decimal_places']);
-			if (empty($bet['winning_option_id']) && (string)$bet['track_payout_price'] == "") $pending_stake += $my_stake/pow(10,$game->db_game['decimal_places']);
+			if (empty($bet['winning_option_id']) && (string)$bet['track_payout_price'] == "" && $bet['outcome_index'] != -1) $pending_stake += $my_stake/pow(10,$game->db_game['decimal_places']);
 			
 			if ($div_td == "div") $this_bet_html .= '<div class="col-sm-1 text-center">';
 			else $this_bet_html .= '<td>';
