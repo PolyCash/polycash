@@ -45,6 +45,10 @@ if ($app->running_as_admin()) {
 			if ($print_debug) echo $invoice_address['address']." ".$address_balance.", paid: ".$amount_paid."<br/>\n";
 			
 			if ($amount_paid > 0) {
+				$pay_tx_hash = false;
+				$pay_out_index = false;
+				$pay_game_out_index = false;
+				
 				if ($invoice_address['invoice_type'] == "sale_buyin") {
 					$escrow_value = $game->escrow_value_in_currency($invoice_address['pay_currency_id']);
 					$coins_in_existence = ($game->coins_in_existence(false)+$game->pending_bets())/pow(10, $game->db_game['decimal_places']);
@@ -97,6 +101,11 @@ if ($app->running_as_admin()) {
 							
 							if ($transaction_id) {
 								$transaction = $app->fetch_transaction_by_id($transaction_id);
+								
+								$pay_out_index = 0;
+								$pay_game_out_index = 0;
+								$pay_tx_hash = $transaction['tx_hash'];
+								
 								if ($print_debug) echo "Created tx: ".$transaction['tx_hash']."\n";
 							}
 							else if ($print_debug) echo "TX failed: ".$error_message."\n";
@@ -143,7 +152,14 @@ if ($app->running_as_admin()) {
 						$address_ids = array($escrow_address['address_id'], $game_currency_account['current_address_id']);
 						
 						$error_message = false;
-						$transaction_id = $game->blockchain->create_transaction("transaction", array($buyin_amount, $color_amount), false, $io_ids, $address_ids, array(0, 0), $fee_amount, $error_message);
+						$transaction_id = $game->blockchain->create_transaction("transaction", array($buyin_amount, $color_amount), false, $io_ids, $address_ids, $fee_amount, $error_message);
+						
+						if ($transaction_id) {
+							$transaction = $app->fetch_transaction_by_id($transaction_id);
+							$pay_out_index = 1;
+							$pay_game_out_index = 0;
+							$pay_tx_hash = $transaction['tx_hash'];
+						}
 					}
 					else if ($print_debug) echo "fee: ".$app->format_bignum($fee_amount/pow(10,$game->blockchain->db_blockchain['decimal_places'])).", buyin: ".$app->format_bignum($buyin_amount/pow(10,$game->blockchain->db_blockchain['decimal_places'])).", color: ".$app->format_bignum($color_amount/pow(10,$game->blockchain->db_blockchain['decimal_places']))."<br/>\n";
 				}
@@ -151,8 +167,9 @@ if ($app->running_as_admin()) {
 				if ($transaction_id) {
 					if ($print_debug) echo "created tx #".$transaction_id."\n";
 					
-					$qq = "UPDATE currency_invoices SET confirmed_amount_paid='".$amount_paid/pow(10,$game->blockchain->db_blockchain['decimal_places'])."', unconfirmed_amount_paid='".$amount_paid/pow(10,$game->blockchain->db_blockchain['decimal_places'])."', status='confirmed' WHERE invoice_id='".$invoice_address['invoice_id']."';";
-					$rr = $app->run_query($qq);
+					$app->run_query("UPDATE currency_invoices SET confirmed_amount_paid='".$amount_paid/pow(10,$game->blockchain->db_blockchain['decimal_places'])."', unconfirmed_amount_paid='".$amount_paid/pow(10,$game->blockchain->db_blockchain['decimal_places'])."', status='confirmed' WHERE invoice_id='".$invoice_address['invoice_id']."';");
+					
+					$app->run_query("INSERT INTO currency_invoice_ios SET invoice_id='".$invoice_address['invoice_id']."', tx_hash=".$app->quote_escape($pay_tx_hash).", out_index='".$pay_out_index."', game_out_index='".$pay_game_out_index."';");
 				}
 				else if ($print_debug) echo "failed to create a transaction.\n";
 			}
@@ -227,8 +244,11 @@ if ($app->running_as_admin()) {
 					$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $fee_amount, $error_message);
 					
 					if ($transaction_id) {
-						$qq = "UPDATE currency_invoices SET confirmed_amount_paid='".$amount_paid/pow(10,$game->blockchain->db_blockchain['decimal_places'])."', unconfirmed_amount_paid='".$amount_paid/pow(10,$game->blockchain->db_blockchain['decimal_places'])."', status='confirmed' WHERE invoice_id='".$invoice_address['invoice_id']."';";
-						$rr = $app->run_query($qq);
+						$transaction = $app->fetch_transaction_by_id($transaction_id);
+						
+						$app->run_query("UPDATE currency_invoices SET confirmed_amount_paid='".$amount_paid/pow(10,$game->blockchain->db_blockchain['decimal_places'])."', unconfirmed_amount_paid='".$amount_paid/pow(10,$game->blockchain->db_blockchain['decimal_places'])."', status='confirmed' WHERE invoice_id='".$invoice_address['invoice_id']."';");
+						
+						$app->run_query("INSERT INTO currency_invoice_ios SET invoice_id='".$invoice_address['invoice_id']."', tx_hash=".$app->quote_escape($transaction['tx_hash']).", out_index=0, game_out_index=NULL;");
 					}
 					
 					if ($print_debug) {

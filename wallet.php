@@ -718,11 +718,11 @@ if ($thisuser && $game) {
 				</div>
 				<?php
 				if ($game->db_game['buyin_policy'] != "none") { ?>
-					<button class="btn btn-sm btn-success" style="margin-top: 8px;" onclick="initiate_buyin();"><i class="fas fa-shopping-cart"></i> &nbsp; Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
+					<button class="btn btn-sm btn-success" style="margin-top: 8px;" onclick="manage_buyin('initiate');"><i class="fas fa-shopping-cart"></i> &nbsp; Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
 					<?php
 				}
 				if ($game->db_game['sellout_policy'] == "on") { ?>
-					<button class="btn btn-sm btn-info" style="margin-top: 8px;" onclick="initiate_sellout();"><i class="fas fa-exchange-alt"></i> &nbsp; Sell your <?php echo $game->db_game['coin_name_plural']; ?></button>
+					<button class="btn btn-sm btn-info" style="margin-top: 8px;" onclick="manage_sellout('initiate');"><i class="fas fa-exchange-alt"></i> &nbsp; Sell your <?php echo $game->db_game['coin_name_plural']; ?></button>
 					<?php
 				}
 				?>
@@ -1304,13 +1304,31 @@ if ($thisuser && $game) {
 		
 		<div style="display: none;" class="modal fade" id="buyin_modal">
 			<div class="modal-dialog">
-				<div class="modal-content" id="buyin_modal_content"></div>
+				<div class="modal-content">
+					<div class="modal-header">
+						<h4 class="modal-title"><?php echo $game->db_game['name']; ?>: Buy more <?php echo $game->db_game['coin_name_plural']; ?></h4>
+					</div>
+					<div class="modal-body">
+						<div id="buyin_modal_content"></div>
+						<div id="buyin_modal_details" style="margin-top: 10px;"></div>
+						<div id="buyin_modal_invoices"></div>
+					</div>
+				</div>
 			</div>
 		</div>
 		
 		<div style="display: none;" class="modal fade" id="sellout_modal">
 			<div class="modal-dialog">
-				<div class="modal-content" id="sellout_modal_content"></div>
+				<div class="modal-content">
+					<div class="modal-header">
+						<h4 class="modal-title"><?php echo $game->db_game['name']; ?>: Sell your <?php echo $game->db_game['coin_name_plural']; ?></h4>
+					</div>
+					<div class="modal-body">
+						<div id="sellout_modal_content"></div>
+						<div id="sellout_modal_details" style="margin-top: 10px;"></div>
+						<div id="sellout_modal_invoices"></div>
+					</div>
+				</div>
 			</div>
 		</div>
 		

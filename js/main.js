@@ -1235,24 +1235,60 @@ function render_plan_rounds() {
 		render_plan_round(i);
 	}
 }
-function initiate_buyin() {
-	$.get("/ajax/buyin.php?game_id="+games[0].game_id, function(result) {
-		$('#buyin_modal_content').html(result);
-		$('#buyin_modal').modal('show');
-		setTimeout("$('#buyin_amount').focus();", 1000);
+var invoice_id = false;
+function manage_buyin(action) {
+	var buyin_url = "/ajax/buyin.php?action="+action+"&game_id="+games[0].game_id;
+	if (action == "check_amount") {
+		buyin_url += "&buyin_amount="+encodeURIComponent($('#buyin_amount').val())+"&color_amount="+encodeURIComponent($('#color_amount').val());
+		if (invoice_id) buyin_url += "&invoice_id="+invoice_id;
+	}
+	
+	$('#buyin_modal_invoice_details').hide();
+	
+	$.get(buyin_url, function(result) {
+		var result_obj = JSON.parse(result);
+		
+		if (action == "initiate") {
+			$('#buyin_modal_content').html(result_obj['content_html']);
+			$('#buyin_modal_invoices').html(result_obj['invoices_html']);
+			$('#buyin_modal').modal('show');
+			setTimeout("$('#buyin_amount').focus();", 1000);
+		}
+		else if (action == 'check_amount') {
+			$('#buyin_modal_invoice_details').html(result_obj['content_html']);
+			$('#buyin_modal_invoice_details').slideDown('fast');
+			$('#buyin_modal_invoices').html(result_obj['invoices_html']);
+			invoice_id = result_obj['invoice_id'];
+		}
 	});
 }
-function initiate_sellout() {
-	$.get("/ajax/sellout.php?game_id="+games[0].game_id, function(result) {
-		$('#sellout_modal_content').html(result);
-		$('#sellout_modal').modal('show');
-		setTimeout("$('#sellout_amount').focus();", 1000);
-	});
-}
-function confirm_sellout() {
-	$.get("/ajax/sellout.php?game_id="+games[0].game_id+"&action=confirm&invoice_id="+sellout_invoice_id+"&sellout_amount="+$('#sellout_amount').val()+"&address="+$('#sellout_blockchain_address').val(), function(result) {
-		var json_result = JSON.parse(result);
-		alert(json_result['message']);
+function manage_sellout(action) {
+	var sellout_url = "/ajax/sellout.php?action="+action+"&game_id="+games[0].game_id;
+	if (action == "confirm" || action == "check_amount") {
+		sellout_url += "&sellout_amount="+encodeURIComponent($('#sellout_amount').val());
+	}
+	else if (action == "confirm") {
+		sellout_url += "&address="+encodeURIComponent($('#sellout_blockchain_address').val());
+	}
+	
+	$('#sellout_modal_details').hide();
+	
+	$.get(sellout_url, function(result) {
+		var result_obj = JSON.parse(result);
+		
+		if (action == "initiate") {
+			$('#sellout_modal_content').html(result_obj['content_html']);
+			$('#sellout_modal_invoices').html(result_obj['invoices_html']);
+			$('#sellout_modal').modal('show');
+		}
+		else if (action == 'check_amount') {
+			$('#sellout_modal_details').html(result_obj['content_html']);
+			$('#sellout_modal_details').slideDown('fast');
+			$('#sellout_modal_invoices').html(result_obj['invoices_html']);
+		}
+		else {
+			alert(result_obj['message']);
+		}
 	});
 }
 function scramble_strategy(strategy_id) {

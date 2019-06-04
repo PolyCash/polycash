@@ -408,12 +408,7 @@ include('includes/html_start.php');
 					echo "<p>Rendering ".($transaction_in_r->rowCount() + $transaction_out_r->rowCount())." transactions.</p>";
 					
 					while ($transaction = $transaction_in_r->fetch()) {
-						if ($account_game) {
-							$colored_coin_q = "SELECT SUM(colored_amount) FROM transaction_game_ios WHERE game_id='".$account_game->db_game['game_id']."' AND io_id='".$transaction['io_id']."';";
-							$colored_coin_r = $app->run_query($colored_coin_q);
-							$colored_coin_amount = $colored_coin_r->fetch();
-							$colored_coin_amount = $colored_coin_amount['SUM(colored_amount)'];
-						}
+						if ($account_game) $colored_coin_amount = $account_game->game_amount_by_io($transaction['io_id']);
 						
 						echo '<div class="row">';
 						echo '<div class="col-sm-4"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$transaction['pub_key'].'">';
@@ -450,14 +445,9 @@ include('includes/html_start.php');
 					}
 					
 					while ($transaction = $transaction_out_r->fetch()) {
-						if ($account_game) {
-							$colored_coin_q = "SELECT SUM(colored_amount) FROM transaction_game_ios WHERE io_id='".$transaction['io_id']."';";
-							$colored_coin_r = $app->run_query($colored_coin_q);
-							$colored_coin_amount = $colored_coin_r->fetch();
-							$colored_coin_amount = $colored_coin_amount['SUM(colored_amount)'];
-						}
-						echo '<div class="row">';
+						if ($account_game) $colored_coin_amount = $account_game->game_amount_by_io($transaction['io_id']);
 						
+						echo '<div class="row">';
 						echo '<div class="col-sm-4"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$transaction['pub_key'].'">';
 						echo $transaction['pub_key'];
 						echo '</a></div>';

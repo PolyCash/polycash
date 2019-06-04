@@ -3253,7 +3253,9 @@ class Game {
 			return $r->fetch();
 		}
 		else {
-			$q = "INSERT INTO currency_accounts SET is_game_sale_account=1, currency_id='".$this->blockchain->currency_id()."', game_id='".$this->db_game['game_id']."', user_id='".$thisuser->db_user['user_id']."', account_name=".$this->blockchain->app->quote_escape($this->db_game['name'].' '.$this->db_game['coin_name_plural'].' for sale').', time_created='.time().';';
+			$q = "INSERT INTO currency_accounts SET is_game_sale_account=1, currency_id='".$this->blockchain->currency_id()."', game_id='".$this->db_game['game_id']."'";
+			if ($thisuser) $q .= ", user_id='".$thisuser->db_user['user_id']."'";
+			$q .= ", account_name=".$this->blockchain->app->quote_escape($this->db_game['name'].' '.$this->db_game['coin_name_plural'].' for sale').', time_created='.time().';';
 			$r = $this->blockchain->app->run_query($q);
 			
 			return $this->check_set_game_sale_account($thisuser);
@@ -3268,7 +3270,9 @@ class Game {
 			return $r->fetch();
 		}
 		else {
-			$q = "INSERT INTO currency_accounts SET is_blockchain_sale_account=1, currency_id='".$currency['currency_id']."', game_id='".$this->db_game['game_id']."', user_id='".$thisuser->db_user['user_id']."', account_name=".$this->blockchain->app->quote_escape($this->db_game['name'].' '.$currency['short_name_plural'].' for sale').', time_created='.time().';';
+			$q = "INSERT INTO currency_accounts SET is_blockchain_sale_account=1, currency_id='".$currency['currency_id']."', game_id='".$this->db_game['game_id']."'";
+			if ($thisuser) $q .= ", user_id='".$thisuser->db_user['user_id']."'";
+			$q .= ", account_name=".$this->blockchain->app->quote_escape($this->db_game['name'].' '.$currency['short_name_plural'].' for sale').', time_created='.time().';';
 			$r = $this->blockchain->app->run_query($q);
 			
 			return $this->check_set_blockchain_sale_account($thisuser, $currency);
@@ -3583,6 +3587,41 @@ class Game {
 			$this->blockchain->app->run_query("UPDATE games SET defined_cached_definition_hash='".$defined_game_def_hash."' WHERE game_id='".$this->db_game['game_id']."';");
 			$this->db_game['defined_cached_definition_hash'] = $defined_game_def_hash;
 		}
+	}
+	
+	public function display_buyins_by_user_game($user_game_id) {
+		$html = "";
+		$invoice_q = "SELECT * FROM currency_invoices i JOIN addresses a ON i.address_id=a.address_id JOIN currencies c ON i.pay_currency_id=c.currency_id JOIN blockchains b ON  c.blockchain_id=b.blockchain_id WHERE i.invoice_type IN ('sale_buyin','join_buyin','buyin') AND i.user_game_id='".$user_game_id."' ORDER BY i.invoice_id DESC;";
+		$invoice_r = $this->blockchain->app->run_query($invoice_q);
+		$num_invoices = $invoice_r->rowCount();
+		
+		while ($invoice = $invoice_r->fetch()) {
+			$html .= '<div class="row">';
+			$html .= '<div class="col-sm-3">'.$this->blockchain->app->format_bignum($invoice['confirmed_amount_paid']).' '.$invoice['coin_name_plural'].' paid</div>';
+			
+			$invoice_ios = $this->blockchain->app->run_query("SELECT * FROM currency_invoice_ios WHERE invoice_id='".$invoice['invoice_id']."';")->fetchAll();
+			$html .= '<div class="col-sm-3">';
+			if (count($invoice_ios) == 0) {
+				if ($invoice['confirmed_amount_paid'] == 0) $html .= 'Awaiting&nbsp;Payment';
+				else $html .= ucwords($invoice['status']);
+			}
+			else {
+				foreach ($invoice_ios as $invoice_io) {
+					$game_amount = $this->game_amount_by_io($invoice_io['io_id']);
+					$html .= '<a href="/explorer/games/'.$this->db_game['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['game_out_index'].'/">'.$this->blockchain->app->format_bignum($game_amount/pow(10, $this->db_game['decimal_places']))."</a><br/>\n";
+				}
+			}
+			$html .= '</div>';
+			
+			$html .= '<div class="col-sm-6"><a href="/explorer/blockchains/'.$invoice['url_identifier'].'/addresses/'.$invoice['address'].'/">'.$invoice['address'].'</a></div>';
+			$html .= "</div>\n";
+		}
+		
+		return [$num_invoices, $html];
+	}
+	
+	public function game_amount_by_io($io_id) {
+		return (int)($this->blockchain->app->run_query("SELECT SUM(colored_amount) FROM transaction_game_ios WHERE game_id='".$this->db_game['game_id']."' AND io_id='".$io_id."';")->fetch()['SUM(colored_amount)']);
 	}
 }
 ?>
