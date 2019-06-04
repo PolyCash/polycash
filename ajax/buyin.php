@@ -59,6 +59,8 @@ if ($thisuser && $game) {
 				$invoice = $invoice_r->fetch();
 				$invoice_address = $app->fetch_address_by_id($invoice['address_id']);
 				
+				$app->run_query("UPDATE currency_invoices SET buyin_amount='".$buyin_amount."', color_amount='".$color_amount."', pay_amount='".$pay_amount."' WHERE invoice_id='".$invoice['invoice_id']."';");
+				
 				if ($game->db_game['buyin_policy'] == "for_sale") {
 					$max_buyin_amount = $game_sale_amount/pow(10, $game->db_game['decimal_places'])/$exchange_rate;
 					if ($buyin_amount > $max_buyin_amount) {
@@ -155,7 +157,9 @@ if ($thisuser && $game) {
 		
 		$invoices_html = "";
 		if ($num_buyin_invoices > 0) {
-			$invoices_html .= '<p style="margin-top: 10px;">You have '.$num_buyin_invoices.' buyin addresses. <div style="border: 1px solid #aaa; padding: 5px; margin: 5px 0px; max-height: 100px; overflow-x: hidden; overflow-y: scroll;">'.$buyin_invoices_html."</div></p>\n";
+			$invoices_html .= '<p style="margin-top: 10px;">You have '.$num_buyin_invoices.' buyin address';
+			if ($num_buyin_invoices != 1) $invoices_html .= 'es';
+			$invoices_html .= '. <div class="buyin_sellout_list">'.$buyin_invoices_html."</div></p>\n";
 		}
 		
 		$output_obj['content_html'] = $content_html;

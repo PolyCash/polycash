@@ -577,3 +577,11 @@ a.selected {
 .game_info_table .row {
 	padding: 2px 0px;
 }
+.buyin_sellout_list {
+	border: 1px solid #aaa;
+	padding: 5px;
+	margin: 5px 0px;
+	max-height: 100px;
+	overflow-x: hidden;
+	overflow-y: scroll;
+}

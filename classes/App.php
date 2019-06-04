@@ -795,10 +795,7 @@ class App {
 	}
 	
 	public function new_currency_invoice(&$account, $pay_currency_id, $pay_amount, &$user, &$user_game, $invoice_type) {
-		do {
-			$address_key = $this->new_address_key($account['currency_id'], $account);
-		}
-		while ($address_key['is_separator_address'] == 1 || $address_key['is_destroy_address'] == 1);
+		$address_key = $this->new_normal_address_key($account['currency_id'], $account);
 		
 		$time = time();
 		$q = "INSERT INTO currency_invoices SET time_created='".$time."', pay_currency_id='".$pay_currency_id."'";
@@ -810,6 +807,15 @@ class App {
 		$q = "SELECT * FROM currency_invoices WHERE invoice_id='".$invoice_id."';";
 		$r = $this->run_query($q);
 		return $r->fetch();
+	}
+	
+	public function new_normal_address_key($currency_id, &$account) {
+		do {
+			$address_key = $this->new_address_key($currency_id, $account);
+		}
+		while ($address_key['is_separator_address'] == 1 || $address_key['is_destroy_address'] == 1);
+		
+		return $address_key;
 	}
 	
 	public function new_address_key($currency_id, &$account) {
@@ -1653,9 +1659,7 @@ class App {
 	}
 	
 	public function fetch_account_by_id($account_id) {
-		$q = "SELECT * FROM currency_accounts WHERE account_id='".$account_id."';";
-		$r = $this->run_query($q);
-		return $r->fetch();
+		return $this->run_query("SELECT * FROM currency_accounts WHERE account_id='".(int)$account_id."';")->fetch();
 	}
 	
 	public function event_verbatim_vars() {
@@ -3470,6 +3474,30 @@ class App {
 		else $error_message .= "Failed to fetch $image_url<br/>\n";
 		
 		return $db_image;
+	}
+	
+	public function any_normal_address_in_account($account_id) {
+		return $this->run_query("SELECT * FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id WHERE ak.account_id='".$account_id."' AND a.is_destroy_address=0 AND a.is_separator_address=0 ORDER BY a.option_index ASC LIMIT 1;")->fetch();
+	}
+	
+	public function fetch_strategy_by_id($strategy_id) {
+		return $this->run_query("SELECT * FROM user_strategies WHERE strategy_id='".(int)$strategy_id."';")->fetch();
+	}
+	
+	public function fetch_io_by_hash_out_index($blockchain_id, &$tx_hash, $out_index) {
+		return $this->run_query("SELECT io.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.tx_hash=".$this->quote_escape($tx_hash)." AND t.blockchain_id='".$blockchain_id."' AND io.out_index='".$out_index."';")->fetch();
+	}
+	
+	public function spendable_ios_in_account($account_id, $game_id, $round_id, $last_block_id) {
+		return $this->run_query("SELECT *, COUNT(*), SUM(gio.is_resolved) AS num_resolved, SUM(gio.colored_amount) AS coins, SUM(gio.colored_amount)*(".($last_block_id+1)."-io.create_block_id) AS coin_blocks, SUM(gio.colored_amount*(".$round_id."-gio.create_round_id)) AS coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account_id."' AND gio.game_id='".$game_id."' GROUP BY gio.io_id HAVING COUNT(*)=num_resolved ORDER BY coins ASC;");
+	}
+	
+	public function fetch_user_game_by_api_key($api_key) {
+		return $this->run_query("SELECT *, u.user_id AS user_id, g.game_id AS game_id FROM users u JOIN user_games ug ON u.user_id=ug.user_id JOIN games g ON ug.game_id=g.game_id JOIN user_strategies s ON ug.strategy_id=s.strategy_id LEFT JOIN featured_strategies fs ON s.featured_strategy_id=fs.featured_strategy_id WHERE ug.api_access_code=".$this->quote_escape($api_key).";")->fetch();
+	}
+	
+	public function fetch_io_by_id($io_id) {
+		return $this->run_query("SELECT * FROM transaction_ios WHERE io_id='".(int)$io_id."';")->fetch();
 	}
 }
 ?>

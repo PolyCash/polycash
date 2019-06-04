@@ -977,17 +977,9 @@ class Game {
 	}
 	
 	public function get_user_strategy(&$user_game, &$user_strategy) {
-		$q = "SELECT * FROM user_strategies WHERE strategy_id='".$user_game['strategy_id']."';";
-		$r = $this->blockchain->app->run_query($q);
-		
-		if ($r->rowCount() == 1) {
-			$user_strategy = $r->fetch();
-			return true;
-		}
-		else {
-			$user_strategy = false;
-			return false;
-		}
+		$user_strategy = $this->blockchain->app->fetch_strategy_by_id($user_game['strategy_id']);
+		if ($user_strategy) return true;
+		else return false;
 	}
 	
 	public function plan_options_html($from_round, $to_round, $user_strategy) {
@@ -1639,24 +1631,17 @@ class Game {
 	}
 	
 	public function fetch_user_strategy(&$user_game) {
-		$q = "SELECT * FROM user_strategies WHERE strategy_id='".$user_game['strategy_id']."';";
-		$r = $this->blockchain->app->run_query($q);
-		
-		if ($r->rowCount() > 0) {
-			$user_strategy = $r->fetch();
-		}
-		else {
-			$q = "SELECT * FROM user_strategies WHERE user_id='".$user_game['user_id']."' AND game_id='".$user_game['game_id']."';";
-			$r = $this->blockchain->app->run_query($q);
+		$user_strategy = $this->blockchain->app->fetch_strategy_by_id($user_game['strategy_id']);
+
+		if (!$user_strategy) {
+			$strategy_r = $this->blockchain->app->run_query("SELECT * FROM user_strategies WHERE user_id='".$user_game['user_id']."' AND game_id='".$user_game['game_id']."';");
 			
-			if ($r->rowCount() == 1) {
-				$user_strategy = $r->fetch();
-				$q = "UPDATE user_games SET strategy_id='".$user_strategy['strategy_id']."' WHERE user_game_id='".$user_game['user_game_id']."';";
-				$r = $this->blockchain->app->run_query($q);
+			if ($strategy_r->rowCount() == 1) {
+				$user_strategy = $strategy_r->fetch();
+				$this->blockchain->app->run_query("UPDATE user_games SET strategy_id='".$user_strategy['strategy_id']."' WHERE user_game_id='".$user_game['user_game_id']."';");
 			}
 			else {
-				$q = "DELETE FROM user_games WHERE user_game_id='".$user_game['user_game_id']."';";
-				$r = $this->blockchain->app->run_query($q);
+				$this->blockchain->app->run_query("DELETE FROM user_games WHERE user_game_id='".$user_game['user_game_id']."';");
 				die("No strategy!");
 			}
 		}
@@ -3607,13 +3592,47 @@ class Game {
 			}
 			else {
 				foreach ($invoice_ios as $invoice_io) {
-					$game_amount = $this->game_amount_by_io($invoice_io['io_id']);
-					$html .= '<a href="/explorer/games/'.$this->db_game['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['game_out_index'].'/">'.$this->blockchain->app->format_bignum($game_amount/pow(10, $this->db_game['decimal_places']))."</a><br/>\n";
+					$io = $this->blockchain->app->fetch_io_by_hash_out_index($this->blockchain->db_blockchain['blockchain_id'], $invoice_io['tx_hash'], $invoice_io['out_index']);
+					$game_amount = $this->game_amount_by_io($io['io_id']);
+					$html .= '<a href="/explorer/games/'.$this->db_game['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['game_out_index'].'/">'.$this->blockchain->app->format_bignum($game_amount/pow(10, $this->db_game['decimal_places']))." ".$this->db_game['coin_name_plural']."</a><br/>\n";
 				}
 			}
 			$html .= '</div>';
 			
 			$html .= '<div class="col-sm-6"><a href="/explorer/blockchains/'.$invoice['url_identifier'].'/addresses/'.$invoice['address'].'/">'.$invoice['address'].'</a></div>';
+			$html .= "</div>\n";
+		}
+		
+		return [$num_invoices, $html];
+	}
+	
+	public function display_sellouts_by_user_game($user_game_id) {
+		$html = "";
+		$invoice_q = "SELECT * FROM currency_invoices i JOIN addresses a ON i.address_id=a.address_id JOIN currencies c ON i.pay_currency_id=c.currency_id JOIN blockchains b ON  c.blockchain_id=b.blockchain_id WHERE i.invoice_type='sellout' AND i.user_game_id='".$user_game_id."' ORDER BY i.invoice_id DESC;";
+		$invoice_r = $this->blockchain->app->run_query($invoice_q);
+		$num_invoices = $invoice_r->rowCount();
+		
+		while ($invoice = $invoice_r->fetch()) {
+			$html .= '<div class="row">';
+			if ($invoice['confirmed_amount_paid'] == 0) $display_amount_sold = $invoice['buyin_amount'];
+			else $display_amount_sold = $invoice['confirmed_amount_paid'];
+			$html .= '<div class="col-sm-3">'.$this->blockchain->app->format_bignum($display_amount_sold).' '.$this->db_game['coin_name_plural'].' sold</div>';
+			
+			$invoice_ios = $this->blockchain->app->run_query("SELECT * FROM currency_invoice_ios WHERE invoice_id='".$invoice['invoice_id']."';")->fetchAll();
+			$html .= '<div class="col-sm-3">';
+			if (count($invoice_ios) == 0) {
+				if ($invoice['confirmed_amount_paid'] == 0) $html .= 'Pending';
+				else $html .= ucwords($invoice['status']);
+			}
+			else {
+				foreach ($invoice_ios as $invoice_io) {
+					$io = $this->blockchain->app->fetch_io_by_hash_out_index($invoice['blockchain_id'], $invoice_io['tx_hash'], $invoice_io['out_index']);
+					$html .= '<a href="/explorer/blockchains/'.$invoice['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['out_index'].'/">'.$this->blockchain->app->format_bignum($io['amount']/pow(10, $invoice['decimal_places']))." ".$invoice['coin_name_plural']."</a><br/>\n";
+				}
+			}
+			$html .= '</div>';
+			
+			$html .= '<div class="col-sm-6"><a href="/explorer/games/'.$this->db_game['url_identifier'].'/addresses/'.$invoice['address'].'/">'.$invoice['address'].'</a></div>';
 			$html .= "</div>\n";
 		}
 		

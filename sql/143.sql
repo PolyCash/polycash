@@ -12,3 +12,5 @@ ALTER TABLE `currency_invoice_ios`
 ALTER TABLE `currency_invoice_ios`
   MODIFY `invoice_io_id` int(11) NOT NULL AUTO_INCREMENT;
 COMMIT;
+
+ALTER TABLE `currency_invoice_ios` ADD INDEX (`invoice_id`);

@@ -25,22 +25,18 @@ if ($thisuser) {
 			if ($quantity > 0 && $satoshis_each > 0) {
 				$total_cost_satoshis = $quantity*$satoshis_each;
 				
-				$q = "SELECT * FROM transaction_ios WHERE io_id='".$io_id."';";
-				$r = $app->run_query($q);
+				$db_io = $app->fetch_io_by_id($io_id);
 				
-				if ($r->rowCount() == 1) {
-					$db_io = $r->fetch();
+				if ($db_io) {
+					$gios_by_io = $app->run_query("SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id WHERE io.io_id='".$io_id."' AND gio.game_id='".$game_id."';");
 					
-					$q = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id WHERE io.io_id='".$io_id."' AND gio.game_id='".$game_id."';";
-					$r = $app->run_query($q);
-					
-					if ($r->rowCount() > 0) {
+					if ($gios_by_io->rowCount() > 0) {
 						$game_sale_account = $sale_game->check_set_game_sale_account($thisuser);
 						
 						$game_ios = array();
 						$colored_coin_sum = 0;
 						
-						while ($game_io = $r->fetch()) {
+						while ($game_io = $gios_by_io->fetch()) {
 							array_push($game_ios, $game_io);
 							$colored_coin_sum += $game_io['colored_amount'];
 						}
@@ -93,11 +89,8 @@ if ($thisuser) {
 							
 							if ($addresses_needed > 0) {
 								if (count($address_ids) > 0) {
-									$q = "UPDATE addresses SET user_id=NULL WHERE address_id IN (".implode(",", $address_ids).");";
-									$r = $app->run_query($q);
-									
-									$q = "UPDATE address_keys SET account_id=NULL WHERE address_key_id IN (".implode(",", $address_key_ids).");";
-									$r = $app->run_query($q);
+									$app->run_query("UPDATE addresses SET user_id=NULL WHERE address_id IN (".implode(",", $address_ids).");");
+									$app->run_query("UPDATE address_keys SET account_id=NULL WHERE address_key_id IN (".implode(",", $address_key_ids).");");
 								}
 								die("Not enough free addresses (still need $addresses_needed/$quantity).");
 							}
@@ -165,27 +158,23 @@ if ($thisuser) {
 			$satoshis_each = pow(10,$db_game['decimal_places'])*$amount_each;
 			$satoshis_each_utxo = ceil($satoshis_each/$utxos_each);
 			$satoshis_each = $satoshis_each_utxo*$utxos_each;
-			$fee_amount = 0.001*pow(10,$db_game['decimal_places']);
+			$fee_amount = (int)(0.0001*pow(10,$db_game['decimal_places']));
 			
 			if ($quantity > 0 && $satoshis_each > 0) {
 				$total_cost_satoshis = $quantity*$satoshis_each;
 				
-				$q = "SELECT * FROM transaction_ios WHERE io_id='".$io_id."';";
-				$r = $app->run_query($q);
+				$db_io = $app->fetch_io_by_id($io_id);
 				
-				if ($r->rowCount() == 1) {
-					$db_io = $r->fetch();
+				if ($db_io) {
+					$gios_by_io = $app->run_query("SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id WHERE io.io_id='".$io_id."' AND gio.game_id='".$game_id."';");
 					
-					$q = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id WHERE io.io_id='".$io_id."' AND gio.game_id='".$game_id."';";
-					$r = $app->run_query($q);
-					
-					if ($r->rowCount() > 0) {
+					if ($gios_by_io->rowCount() > 0) {
 						$faucet_account = $donate_game->check_set_faucet_account();
 						
 						$game_ios = array();
 						$colored_coin_sum = 0;
 						
-						while ($game_io = $r->fetch()) {
+						while ($game_io = $gios_by_io->fetch()) {
 							array_push($game_ios, $game_io);
 							$colored_coin_sum += $game_io['colored_amount'];
 						}
@@ -214,11 +203,8 @@ if ($thisuser) {
 							
 							if ($addresses_needed > 0) {
 								if (count($address_ids) > 0) {
-									$q = "UPDATE addresses SET user_id=NULL WHERE address_id IN (".implode(",", $address_ids).");";
-									$r = $app->run_query($q);
-									
-									$q = "UPDATE address_keys SET account_id=NULL WHERE address_key_id IN (".implode(",", $address_key_ids).");";
-									$r = $app->run_query($q);
+									$app->run_query("UPDATE addresses SET user_id=NULL WHERE address_id IN (".implode(",", $address_ids).");");
+									$app->run_query("UPDATE address_keys SET account_id=NULL WHERE address_key_id IN (".implode(",", $address_key_ids).");");
 								}
 								die("Not enough free addresses (still need $addresses_needed/$quantity).");
 							}

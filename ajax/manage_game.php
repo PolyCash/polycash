@@ -120,7 +120,7 @@ if ($thisuser) {
 				$game = new Game($blockchain, $game_id);
 				
 				$user_game = $thisuser->ensure_user_in_game($game, false);
-				$user_strategy = $app->run_query("SELECT * FROM user_strategies WHERE strategy_id='".$user_game['strategy_id']."';")->fetch();
+				$user_strategy = $app->fetch_strategy_by_id($user_game['strategy_id']);
 				
 				$genesis_tx_hash = "";
 				$escrow_address = "";

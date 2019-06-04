@@ -18,21 +18,19 @@ if ($thisuser && $game) {
 		$fee = (int)($fee*pow(10,$game->blockchain->db_blockchain['decimal_places']));
 		$last_block_id = $game->blockchain->last_block_id();
 		$mining_block_id = $last_block_id+1;
+		$round_id = $game->block_to_round($mining_block_id);
 		
 		$blockchain_mature_balance = $game->blockchain->user_mature_balance($user_game);
 		$game_mature_balance = $thisuser->mature_balance($game, $user_game);
 		
-		$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND k.account_id='".$user_game['account_id']."' AND a.is_destroy_address=0 ORDER BY RAND() LIMIT 1;";
-		$r = $app->run_query($q);
-		$remainder_address = $r->fetch();
+		$remainder_address = $app->any_normal_address_in_account($user_game['account_id']);
 		
 		$user_strategy = false;
 		$success = $game->get_user_strategy($user_game, $user_strategy);
 		
 		if ($success) {
 			if ($fee < $blockchain_mature_balance) {
-				$q = "SELECT SUM(gio.colored_amount), gio.io_id, io.amount FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND gio.game_id='".$game->db_game['game_id']."' AND gio.is_resolved=1 AND k.account_id='".$user_game['account_id']."' AND io.amount > ".$fee." GROUP BY gio.io_id ORDER BY SUM(gio.colored_amount) ASC;";
-				$r = $app->run_query($q);
+				$spendable_ios_in_account = $app->spendable_ios_in_account($user_game['account_id'], $game->db_game['game_id'], $round_id, $last_block_id);
 				
 				$gio_sum = 0;
 				$io_sum = 0;
@@ -42,7 +40,7 @@ if ($thisuser && $game) {
 				while ($keep_looping && $io = $r->fetch()) {
 					array_push($spend_io_ids, $io['io_id']);
 					
-					$gio_sum += $io['SUM(gio.colored_amount)'];
+					$gio_sum += $io['coins'];
 					$io_sum += $io['amount'];
 					
 					if ($gio_sum >= $target_amount) $keep_looping = false;

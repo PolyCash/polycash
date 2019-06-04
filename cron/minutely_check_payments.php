@@ -17,7 +17,8 @@ if ($app->running_as_admin()) {
 	if (!$process_locked) {
 		$app->set_site_constant($process_lock_name, getmypid());
 		
-		$blockchains = array();
+		$ref_user = false;
+		$blockchains = [];
 		
 		$q = "SELECT *, ug.user_id AS user_id, ug.account_id AS user_game_account_id FROM user_games ug JOIN currency_invoices i ON ug.user_game_id=i.user_game_id JOIN addresses a ON i.address_id=a.address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status IN ('unpaid','unconfirmed') AND (i.status='unconfirmed' OR i.expire_time >= ".time().") AND i.invoice_type != 'sellout' GROUP BY a.address_id;";
 		$r = $app->run_query($q);
@@ -34,146 +35,149 @@ if ($app->running_as_admin()) {
 			if (empty($blockchains[$pay_currency['blockchain_id']])) $blockchains[$pay_currency['blockchain_id']] = new Blockchain($app, $pay_currency['blockchain_id']);
 			$pay_blockchain = $blockchains[$pay_currency['blockchain_id']];
 			
-			$address_balance = (float) $pay_blockchain->address_balance_at_block($invoice_address, false);
+			$address_balance_float = (float)($pay_blockchain->address_balance_at_block($invoice_address, false)/pow(10, $pay_blockchain->db_blockchain['decimal_places']));
 			
-			$qq = "SELECT SUM(confirmed_amount_paid) FROM currency_invoices WHERE address_id='".$invoice_address['address_id']."' AND status IN('confirmed','settled','pending_refund','refunded');";
-			$rr = $app->run_query($qq);
-			$preexisting_balance = $rr->fetch()['SUM(confirmed_amount_paid)'];
+			$preexisting_balance_float = (float)$app->run_query("SELECT SUM(confirmed_amount_paid) FROM currency_invoices WHERE address_id='".$invoice_address['address_id']."' AND status IN('confirmed','settled','pending_refund','refunded');")->fetch()['SUM(confirmed_amount_paid)'];
 			
-			$amount_paid = ($address_balance-$preexisting_balance)/pow(10, $pay_blockchain->db_blockchain['decimal_places']);
+			$amount_paid_float = $address_balance_float-$preexisting_balance_float;
 			
-			if ($print_debug) echo $invoice_address['address']." ".$address_balance.", paid: ".$amount_paid."<br/>\n";
+			if ($print_debug) echo $invoice_address['address']." ".$address_balance_float.", paid: ".$amount_paid_float."<br/>\n";
 			
-			if ($amount_paid > 0) {
+			if ($amount_paid_float > 0) {
 				$pay_tx_hash = false;
 				$pay_out_index = false;
 				$pay_game_out_index = false;
 				
 				if ($invoice_address['invoice_type'] == "sale_buyin") {
-					$escrow_value = $game->escrow_value_in_currency($invoice_address['pay_currency_id']);
-					$coins_in_existence = ($game->coins_in_existence(false)+$game->pending_bets())/pow(10, $game->db_game['decimal_places']);
-					$exchange_rate = $coins_in_existence/$escrow_value;
-					$game_coins = $amount_paid*$exchange_rate;
-					$sale_game_account = $game->check_set_game_sale_account($thisuser);
-					$sale_game_account_balance = $game->account_balance($sale_game_account['account_id'])/pow(10, $game->db_game['decimal_places']);
-					$game_coins = min($game_coins, $sale_game_account_balance);
+					$escrow_value_float = $game->escrow_value_in_currency($invoice_address['pay_currency_id']);
+					$coins_in_existence = $game->coins_in_existence(false)+$game->pending_bets();
+					$exchange_rate = $coins_in_existence/pow(10, $game->db_game['decimal_places'])/$escrow_value_float;
+					$buyin_amount_int = ceil($amount_paid_float*$exchange_rate*pow(10, $game->db_game['decimal_places']));
+					$sale_game_account = $game->check_set_game_sale_account($ref_user);
+					$sale_game_account_balance_int = $game->account_balance($sale_game_account['account_id']);
 					
-					$qq = "SELECT io.io_id, io.address_id, io.amount, SUM(gio.colored_amount) AS game_amount FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN address_keys ak ON ak.address_id=io.address_id WHERE ak.account_id='".$sale_game_account['account_id']."' AND io.spend_status IN ('unspent','unconfirmed') AND gio.game_id='".$game->db_game['game_id']."' GROUP BY io.io_id;";
-					$rr = $app->run_query($qq);
+					$last_block_id = $game->blockchain->last_block_id();
+					$round_id = $game->block_to_round($last_block_id+1);
 					
-					$spend_ios = array();
-					$spend_io_ids = array();
+					$sale_spend_ios = $app->spendable_ios_in_account($sale_game_account['account_id'], $game->db_game['game_id'], $round_id, $last_block_id);
+					
+					$spend_ios = [];
+					$spend_io_ids = [];
 					$game_coins_in = 0;
 					$chain_coins_in = 0;
 					
-					while ($spend_io = $rr->fetch()) {
-						if ($game_coins_in < $game_coins) {
+					while ($spend_io = $sale_spend_ios->fetch()) {
+						if ($game_coins_in < $buyin_amount_int) {
 							array_push($spend_ios, $spend_io);
 							array_push($spend_io_ids, $spend_io['io_id']);
-							$game_coins_in += $spend_io['game_amount']/pow(10, $game->db_game['decimal_places']);
-							$chain_coins_in += $spend_io['amount']/pow(10, $game->blockchain->db_blockchain['decimal_places']);
+							$game_coins_in += $spend_io['coins'];
+							$chain_coins_in += $spend_io['amount'];
 						}
 					}
 					
-					if ($game_coins_in >= $game_coins) {
-						$chain_fee = 0.0001;
-						$chain_coins_per_game_coin = ($chain_coins_in-$chain_fee)/$game_coins_in;
-						$send_chain_coins = ceil($game_coins*$chain_coins_per_game_coin*pow(10, $game->blockchain->db_blockchain['decimal_places']));
+					if ($game_coins_in >= $buyin_amount_int) {
+						$chain_fee_float = 0.0001;
+						$chain_fee_int = (int)($chain_fee_float*pow(10, $game->blockchain->db_blockchain['decimal_places']));
 						
-						$qq = "SELECT * FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id WHERE ak.account_id='".$invoice_address['user_game_account_id']."' AND a.is_destroy_address=0 AND a.is_separator_address=0 ORDER BY a.option_index ASC LIMIT 1;";
-						$rr = $app->run_query($qq);
+						$chain_coins_per_game_coin = ($chain_coins_in-$chain_fee_int)/$game_coins_in;
+						$send_chain_coins = ceil($buyin_amount_int*$chain_coins_per_game_coin);
 						
-						if ($rr->rowCount() > 0) {
-							$pay_to_address = $rr->fetch();
+						$pay_to_address = $app->any_normal_address_in_account($invoice_address['user_game_account_id']);
+						
+						if ($pay_to_address) {
 							$amounts = array($send_chain_coins);
 							$address_ids = array($pay_to_address['address_id']);
 							
-							if ($chain_coins_in*pow(10, $game->blockchain->db_blockchain['decimal_places']) > $send_chain_coins+($chain_fee*pow(10, $game->blockchain->db_blockchain['decimal_places']))) {
-								$overshoot_chain_coins = ($chain_coins_in*pow(10, $game->blockchain->db_blockchain['decimal_places'])) - $send_chain_coins - ($chain_fee*pow(10, $game->blockchain->db_blockchain['decimal_places']));
-								$overshoot_address_id = $spend_ios[0]['address_id'];
+							$remainder_error = false;
+							if ($chain_coins_in > $send_chain_coins+$chain_fee_int) {
+								$remainder_chain_coins = $chain_coins_in-$send_chain_coins-$chain_fee_int;
+								$remainder_address = $app->new_normal_address_key($sale_game_account['currency_id'], $sale_game_account);
 								
-								array_push($amounts, $overshoot_chain_coins);
-								array_push($address_ids, $overshoot_address_id);
+								if ($remainder_address) {
+									array_push($amounts, $remainder_chain_coins);
+									array_push($address_ids, $remainder_address['address_id']);
+								}
+								else $remainder_error = true;
 							}
 							
-							$error_message = false;
-							$transaction_id = $game->blockchain->create_transaction("transaction", $amounts, false, $spend_io_ids, $address_ids, $chain_fee*pow(10, $game->blockchain->db_blockchain['decimal_places']), $error_message);
-							
-							if ($transaction_id) {
-								$transaction = $app->fetch_transaction_by_id($transaction_id);
+							if (!$remainder_error) {
+								$error_message = false;
+								$transaction_id = $game->blockchain->create_transaction("transaction", $amounts, false, $spend_io_ids, $address_ids, $chain_fee_int, $error_message);
 								
-								$pay_out_index = 0;
-								$pay_game_out_index = 0;
-								$pay_tx_hash = $transaction['tx_hash'];
-								
-								if ($print_debug) echo "Created tx: ".$transaction['tx_hash']."\n";
+								if ($transaction_id) {
+									$transaction = $app->fetch_transaction_by_id($transaction_id);
+									
+									$pay_out_index = 0;
+									$pay_game_out_index = 0;
+									$pay_tx_hash = $transaction['tx_hash'];
+									
+									if ($print_debug) echo "Created tx: ".$transaction['tx_hash']."\n";
+								}
+								else if ($print_debug) echo "TX failed: ".$error_message."\n";
 							}
-							else if ($print_debug) echo "TX failed: ".$error_message."\n";
+							else if ($print_debug) echo "Couldn't find an remainder address.\n";
 						}
 						else if ($print_debug) echo "Couldn't find the address to pay to.\n";
 					}
 					else if ($print_debug) echo "Not enough game coins available.\n";
 				}
 				else {
-					$buyin_amount = (int)($amount_paid/2);
-					if ($invoice_address['buyin_amount'] > 0) $buyin_amount = $invoice_address['buyin_amount']*pow(10,$game->blockchain->db_blockchain['decimal_places']);
+					if ($invoice_address['buyin_amount'] > 0) $buyin_amount_float = $invoice_address['buyin_amount'];
+					else $buyin_amount_float = (int)($amount_paid_float/2);
 					
-					$fee_amount = false;
-					if ($invoice_address['strategy_id'] > 0) {
-						$qq = "SELECT * FROM user_strategies WHERE strategy_id='".$invoice_address['strategy_id']."';";
-						$rr = $app->run_query($qq);
-						
-						if ($rr->rowCount() > 0) {
-							$strategy = $rr->fetch();
-							
-							$fee_amount = (int) ($strategy['transaction_fee']*pow(10,$game->blockchain->db_blockchain['decimal_places']));
-						}
-					}
-					if (!$fee_amount) $fee_amount = (int) (0.0001*pow(10,$game->blockchain->db_blockchain['decimal_places']));
+					$buyin_amount_int = ceil($buyin_amount_float*pow(10, $game->db_game['decimal_places']));
 					
-					$color_amount = $amount_paid - $fee_amount - $buyin_amount;
+					$strategy = $app->fetch_strategy_by_id($invoice_address['strategy_id']);
+					if ($strategy) $fee_amount_int = $strategy['transaction_fee']*pow(10,$game->blockchain->db_blockchain['decimal_places']);
+					else $fee_amount_int = 0.0001*pow(10,$game->blockchain->db_blockchain['decimal_places']);
 					
-					if ($print_debug) echo "preexisting: ".$app->format_bignum($preexisting_balance/pow(10,$game->blockchain->db_blockchain['decimal_places'])).", amount paid: ".$app->format_bignum($amount_paid/pow(10,$game->blockchain->db_blockchain['decimal_places'])).", fee: ".$app->format_bignum($fee_amount/pow(10,$game->blockchain->db_blockchain['decimal_places'])).", buyin: ".$app->format_bignum($buyin_amount/pow(10,$game->blockchain->db_blockchain['decimal_places'])).", color: ".$app->format_bignum($color_amount/pow(10,$game->blockchain->db_blockchain['decimal_places']))."<br/>\n";
+					$amount_paid_int = (int) ($amount_paid_float*pow(10,$game->blockchain->db_blockchain['decimal_places']));
 					
-					if ($fee_amount > 0 && $buyin_amount > 0 && $color_amount > 0) {
+					$amount_to_color = $amount_paid_int - $fee_amount_int - $buyin_amount_int;
+					
+					if ($fee_amount_int > 0 && $buyin_amount_int > 0 && $amount_to_color > 0) {
 						$invoice_user = new User($app, $invoice_address['user_id']);
-						$user_game = $invoice_user->ensure_user_in_game($game, false);
+						
 						$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false);
+						$user_address = $app->any_normal_address_in_account($invoice_address['user_game_account_id']);
 						
-						$game_currency_account = $app->fetch_account_by_id($user_game['account_id']);
-						
-						$io_ids = array();
-						$qq = "SELECT * FROM transaction_ios WHERE blockchain_id='".$invoice_address['blockchain_id']."' AND address_id='".$invoice_address['address_id']."' AND spend_status='unspent';";
-						$rr = $app->run_query($qq);
-						while ($io = $rr->fetch()) {
-							array_push($io_ids, $io['io_id']);
+						if ($user_address) {
+							$io_ids = [];
+							
+							/*$escrow_spendable_ios = $app->run_query("SELECT * FROM transaction_ios WHERE blockchain_id='".$invoice_address['blockchain_id']."' AND address_id='".$invoice_address['address_id']."' AND spend_status='unspent';");
+							
+							while ($io = $escrow_spendable_ios->fetch()) {
+								array_push($io_ids, $io['io_id']);
+							}
+							
+							$address_ids = array($escrow_address['address_id'], $game_currency_account['current_address_id']);
+							
+							$error_message = false;
+							$transaction_id = $game->blockchain->create_transaction("transaction", array($buyin_amount, $amount_to_color), false, $io_ids, $address_ids, $fee_amount, $error_message);
+							
+							if ($transaction_id) {
+								$transaction = $app->fetch_transaction_by_id($transaction_id);
+								$pay_out_index = 1;
+								$pay_game_out_index = 0;
+								$pay_tx_hash = $transaction['tx_hash'];
+							}*/
+							if ($print_debug) echo "Direct game buyins are currently disabled.\n";
 						}
-						
-						$address_ids = array($escrow_address['address_id'], $game_currency_account['current_address_id']);
-						
-						$error_message = false;
-						$transaction_id = $game->blockchain->create_transaction("transaction", array($buyin_amount, $color_amount), false, $io_ids, $address_ids, $fee_amount, $error_message);
-						
-						if ($transaction_id) {
-							$transaction = $app->fetch_transaction_by_id($transaction_id);
-							$pay_out_index = 1;
-							$pay_game_out_index = 0;
-							$pay_tx_hash = $transaction['tx_hash'];
-						}
+						else if ($print_debug) echo "Failed to find an address to pay to for this user.\n";
 					}
-					else if ($print_debug) echo "fee: ".$app->format_bignum($fee_amount/pow(10,$game->blockchain->db_blockchain['decimal_places'])).", buyin: ".$app->format_bignum($buyin_amount/pow(10,$game->blockchain->db_blockchain['decimal_places'])).", color: ".$app->format_bignum($color_amount/pow(10,$game->blockchain->db_blockchain['decimal_places']))."<br/>\n";
+					else if ($print_debug) echo "fee: ".$app->format_bignum($fee_amount_int).", buyin: ".$app->format_bignum($buyin_amount_int).", color: ".$app->format_bignum($amount_to_color)."<br/>\n";
 				}
 				
 				if ($transaction_id) {
 					if ($print_debug) echo "created tx #".$transaction_id."\n";
 					
-					$app->run_query("UPDATE currency_invoices SET confirmed_amount_paid='".$amount_paid/pow(10,$game->blockchain->db_blockchain['decimal_places'])."', unconfirmed_amount_paid='".$amount_paid/pow(10,$game->blockchain->db_blockchain['decimal_places'])."', status='confirmed' WHERE invoice_id='".$invoice_address['invoice_id']."';");
+					$app->run_query("UPDATE currency_invoices SET confirmed_amount_paid='".$address_balance_float."', unconfirmed_amount_paid='".$address_balance_float."', status='confirmed' WHERE invoice_id='".$invoice_address['invoice_id']."';");
 					
 					$app->run_query("INSERT INTO currency_invoice_ios SET invoice_id='".$invoice_address['invoice_id']."', tx_hash=".$app->quote_escape($pay_tx_hash).", out_index='".$pay_out_index."', game_out_index='".$pay_game_out_index."';");
 				}
 				else if ($print_debug) echo "failed to create a transaction.\n";
 			}
-			else if ($print_debug) echo "amount paid: ".$amount_paid."<br/>\n";
+			else if ($print_debug) echo "amount paid: ".$amount_paid_float."<br/>\n";
 		}
 		
 		// Handle sellout invoices
@@ -184,77 +188,84 @@ if ($app->running_as_admin()) {
 			if (empty($blockchains[$invoice_address['blockchain_id']])) $blockchains[$invoice_address['blockchain_id']] = new Blockchain($app, $invoice_address['blockchain_id']);
 			$game = new Game($blockchains[$invoice_address['blockchain_id']], $invoice_address['game_id']);
 			
-			$blockchain_currency = $app->fetch_currency_by_id($invoice_address['pay_currency_id']);
-			$blockchain = new Blockchain($app, $blockchain_currency['blockchain_id']);
+			$sellout_currency = $app->fetch_currency_by_id($invoice_address['pay_currency_id']);
+			$sellout_blockchain = new Blockchain($app, $sellout_currency['blockchain_id']);
 			
-			$address_balance = $game->address_balance_at_block($invoice_address, false)/pow(10, $game->db_game['decimal_places']);
+			$address_balance_float = (float)($game->address_balance_at_block($invoice_address, false)/pow(10, $game->db_game['decimal_places']));
 			
-			$qq = "SELECT SUM(confirmed_amount_paid) FROM currency_invoices WHERE address_id='".$invoice_address['address_id']."' AND status IN('confirmed','settled','pending_refund','refunded');";
-			$rr = $app->run_query($qq);
-			$preexisting_balance = $rr->fetch()['SUM(confirmed_amount_paid)']*pow(10, $game->db_game['decimal_places']);
+			$preexisting_balance_float = (float)$app->run_query("SELECT SUM(confirmed_amount_paid) FROM currency_invoices WHERE address_id='".$invoice_address['address_id']."' AND status IN('confirmed','settled','pending_refund','refunded');")->fetch()['SUM(confirmed_amount_paid)'];
 			
-			$amount_paid = $address_balance-$preexisting_balance;
+			$amount_paid_float = $address_balance_float-$preexisting_balance_float;
 			
-			if ($print_debug) echo $invoice_address['address']." ".$address_balance.", paid: ".$amount_paid."\n";
+			if ($print_debug) echo $invoice_address['address']." ".$address_balance_float.", paid: ".$amount_paid_float."\n";
 			
-			if ($amount_paid > 0) {
-				$escrow_value = $game->escrow_value_in_currency($invoice_address['pay_currency_id']);
-				$coins_in_existence = ($game->coins_in_existence(false)+$game->pending_bets())/pow(10, $game->db_game['decimal_places']);
-				$exchange_rate = $coins_in_existence/$escrow_value;
+			if ($amount_paid_float > 0) {
+				$escrow_value_float = $game->escrow_value_in_currency($sellout_currency['currency_id']);
+				$coins_in_existence = $game->coins_in_existence(false)+$game->pending_bets();
+				$exchange_rate = $coins_in_existence/pow(10, $game->db_game['decimal_places'])/$escrow_value_float;
 				
-				$blockchain_amount = (int) (pow(10, $blockchain->db_blockchain['decimal_places'])*$amount_paid/$exchange_rate);
-				$sale_blockchain_account = $game->check_set_blockchain_sale_account($thisuser, $blockchain_currency);
-				$sale_blockchain_account_balance = $blockchain->account_balance($sale_blockchain_account['account_id']);
-				$fee_amount = $invoice_address['fee_amount']*pow(10, $blockchain->db_blockchain['decimal_places']);
-				$blockchain_amount = max(0, min($blockchain_amount, $sale_blockchain_account_balance)-$fee_amount);
+				$sellout_account = $game->check_set_blockchain_sale_account($ref_user, $sellout_currency);
+				$sellout_account_balance_int = $sellout_blockchain->account_balance($sellout_account['account_id']);
 				
-				if ($blockchain_amount > 0) {
-					$blockchain_cost = $blockchain_amount+$fee_amount;
+				$sellout_amount_int = (int)($amount_paid_float/$exchange_rate*pow(10, $sellout_blockchain->db_blockchain['decimal_places']));
+				$fee_amount_int = (int)($invoice_address['fee_amount']*pow(10, $sellout_blockchain->db_blockchain['decimal_places']));
+				$sellout_amount_int = max(0, min($sellout_amount_int, $sellout_account_balance_int)-$fee_amount_int);
+				
+				if ($sellout_amount_int > 0) {
+					$sellout_cost_int = $sellout_amount_int+$fee_amount_int;
 					
-					if ($print_debug) echo "exch: $exchange_rate, pay: $blockchain_amount, tx fee: ".$invoice_address['fee_amount']."<br/>\n";
+					if ($print_debug) echo "exchange rate: $exchange_rate, pay: $sellout_amount_int, tx fee: $fee_amount_int<br/>\n";
 					
-					$qq = "SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$sale_blockchain_account['account_id']."' ORDER BY io.amount ASC;";
-					$rr = $app->run_query($qq);
+					$spend_ios = $app->run_query("SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$sellout_account['account_id']."' ORDER BY io.amount ASC;");
 					
 					$io_amount_sum = 0;
-					$ios = array();
-					$io_ids = array();
+					$ios = [];
+					$io_ids = [];
 					$keep_looping = true;
 					
-					while ($keep_looping && $io = $rr->fetch()) {
+					while ($keep_looping && $io = $spend_ios->fetch()) {
 						$io_amount_sum += $io['amount'];
 						array_push($io_ids, $io['io_id']);
 						array_push($ios, $io);
 						
-						if ($io_amount_sum >= $blockchain_cost) $keep_looping = false;
+						if ($io_amount_sum >= $sellout_cost_int) $keep_looping = false;
 					}
 					
-					$io_nonfee_amount = $io_amount_sum-$fee_amount;
+					$io_nonfee_amount = $io_amount_sum-$fee_amount_int;
 					
-					$amounts = array($blockchain_amount);
+					$amounts = array($sellout_amount_int);
 					$address_ids = array($invoice_address['receive_address_id']);
 					
-					if ($io_nonfee_amount > $blockchain_cost) {
-						$remainder_amount = $io_nonfee_amount-$blockchain_amount;
-						array_push($amounts, $remainder_amount);
-						array_push($address_ids, $ios[0]['address_id']);
-					}
-					
-					$error_message = false;
-					$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $fee_amount, $error_message);
-					
-					if ($transaction_id) {
-						$transaction = $app->fetch_transaction_by_id($transaction_id);
+					$remainder_error = false;
+					if ($io_nonfee_amount > $sellout_amount_int) {
+						$remainder_amount = $io_nonfee_amount-$sellout_amount_int;
+						$remainder_address = $app->new_normal_address_key($sellout_account['currency_id'], $sellout_account);
 						
-						$app->run_query("UPDATE currency_invoices SET confirmed_amount_paid='".$amount_paid/pow(10,$game->blockchain->db_blockchain['decimal_places'])."', unconfirmed_amount_paid='".$amount_paid/pow(10,$game->blockchain->db_blockchain['decimal_places'])."', status='confirmed' WHERE invoice_id='".$invoice_address['invoice_id']."';");
-						
-						$app->run_query("INSERT INTO currency_invoice_ios SET invoice_id='".$invoice_address['invoice_id']."', tx_hash=".$app->quote_escape($transaction['tx_hash']).", out_index=0, game_out_index=NULL;");
+						if ($remainder_address) {
+							array_push($amounts, $remainder_amount);
+							array_push($address_ids, $remainder_address['address_id']);
+						}
+						else $remainder_error = true;
 					}
 					
-					if ($print_debug) {
-						if ($transaction_id) echo "Created tx #".$transaction_id."\n";
-						else echo "Failed to create the transaction: ".$error_message."\n";
+					if (!$remainder_error) {
+						$error_message = false;
+						$transaction_id = $sellout_blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $fee_amount_int, $error_message);
+						
+						if ($transaction_id) {
+							$transaction = $app->fetch_transaction_by_id($transaction_id);
+							
+							$app->run_query("UPDATE currency_invoices SET confirmed_amount_paid='".$address_balance_float."', unconfirmed_amount_paid='".$address_balance_float."', status='confirmed' WHERE invoice_id='".$invoice_address['invoice_id']."';");
+							
+							$app->run_query("INSERT INTO currency_invoice_ios SET invoice_id='".$invoice_address['invoice_id']."', tx_hash=".$app->quote_escape($transaction['tx_hash']).", out_index=0, game_out_index=NULL;");
+						}
+						
+						if ($print_debug) {
+							if ($transaction_id) echo "Created tx #".$transaction_id."\n";
+							else echo "Failed to create the transaction: ".$error_message."\n";
+						}
 					}
+					else if ($print_debug) echo "Couldn't find an remainder address.\n";
 				}
 				else if ($print_debug) echo "Invalid payment amount.\n";
 			}
@@ -264,7 +275,9 @@ if ($app->running_as_admin()) {
 		}
 		
 		// Broadcast sellout refund transactions for games where this node owns the escrow address
-		$q = "SELECT * FROM games WHERE game_status='running';";
+		// This functionality is currently disabled.
+		
+		/*$q = "SELECT * FROM games WHERE game_status='running';";
 		$r = $app->run_query($q);
 		
 		while ($db_game = $r->fetch()) {
@@ -287,7 +300,7 @@ if ($app->running_as_admin()) {
 						if ($print_debug) echo "process sellout ".$unprocessed_sellout['in_tx_hash']."<br/>\n";
 						
 						$input_sum = 0;
-						$io_ids = array();
+						$io_ids = [];
 						
 						$qqq = "SELECT * FROM transaction_ios WHERE blockchain_id='".$db_game['blockchain_id']."' AND address_id='".$escrow_address['address_id']."' AND spend_status='unspent' AND create_block_id IS NOT NULL ORDER BY create_block_id ASC;";
 						$rrr = $app->run_query($qqq);
@@ -299,7 +312,7 @@ if ($app->running_as_admin()) {
 						
 						if ($input_sum >= $unprocessed_sellout['amount_out']) {
 							$amounts = explode(",", $unprocessed_sellout['out_amounts']);
-							$address_ids = array();
+							$address_ids = [];
 							
 							$qqq = "SELECT * FROM transaction_ios WHERE spend_transaction_id='".$sellout_transaction['transaction_id']."';";
 							$rrr = $app->run_query($qqq);
@@ -332,7 +345,7 @@ if ($app->running_as_admin()) {
 					}
 				}
 			}
-		}
+		}*/
 	}
 	else echo "This process is already running.\n";
 }

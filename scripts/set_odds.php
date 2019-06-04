@@ -18,7 +18,8 @@ if ($app->running_as_admin()) {
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
 			
-			$mining_block_id = $blockchain->last_block_id()+1;
+			$last_block_id = $blockchain->last_block_id();
+			$mining_block_id = $last_block_id+1;
 			$round_id = $game->block_to_round($mining_block_id);
 			$coins_per_vote = $app->coins_per_vote($game->db_game);
 			$fee_amount = (int) ($fee*pow(10, $blockchain->db_blockchain['decimal_places']));
@@ -41,10 +42,7 @@ if ($app->running_as_admin()) {
 					
 					echo "Betting ".$app->format_bignum($coins_per_event)." on each of ".$num_events." events.<br/>\n";
 					
-					$q = "SELECT *, SUM(gio.colored_amount) AS coins, SUM(gio.colored_amount)*(".($blockchain->last_block_id()+1)."-io.create_block_id) AS coin_blocks, SUM(gio.colored_amount*(".$round_id."-gio.create_round_id)) AS coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.is_resolved=1 AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account['account_id']."' GROUP BY gio.io_id";
-					if ($game->db_game['inflation'] == "exponential" && $game->db_game['exponential_inflation_rate'] > 0) $q .= " HAVING(".$game->db_game['payout_weight']."s*".$coins_per_vote.") < ".$total_cost;
-					$q .= " ORDER BY coins DESC;";
-					$r = $app->run_query($q);
+					$spendable_ios_in_account = $app->spendable_ios_in_account($account['account_id'], $game->db_game['game_id'], $round_id, $last_block_id);
 					
 					$mandatory_bets = 0;
 					$io_amount_sum = 0;
@@ -52,7 +50,7 @@ if ($app->running_as_admin()) {
 					$io_ids = array();
 					$keep_looping = true;
 					
-					while ($keep_looping && $io = $r->fetch()) {
+					while ($keep_looping && $io = $spendable_ios_in_account->fetch()) {
 						$game_amount_sum += $io['coins'];
 						$io_amount_sum += $io['amount'];
 						

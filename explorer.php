@@ -992,7 +992,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						echo "<p>This is a separator address.</p>\n";
 					}
 					
-					echo "<p>".ucwords($blockchain->db_blockchain['coin_name'])." balance: ".($blockchain->address_balance_at_block($address, false)/pow(10,$blockchain->db_blockchain['decimal_places']))." ".$blockchain->db_blockchain['coin_name_plural']."</p>\n";
+					echo "<p>".ucwords($blockchain->db_blockchain['coin_name'])." balance: ".$app->format_bignum($blockchain->address_balance_at_block($address, false)/pow(10,$blockchain->db_blockchain['decimal_places']))." ".$blockchain->db_blockchain['coin_name_plural']."</p>\n";
 					
 					if ($game) echo "<p>".ucwords($game->db_game['coin_name'])." balance: ".$app->format_bignum($game->address_balance_at_block($address, false)/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']."</p>\n";
 					

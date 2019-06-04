@@ -1243,7 +1243,7 @@ function manage_buyin(action) {
 		if (invoice_id) buyin_url += "&invoice_id="+invoice_id;
 	}
 	
-	$('#buyin_modal_invoice_details').hide();
+	$('#buyin_modal_details').hide();
 	
 	$.get(buyin_url, function(result) {
 		var result_obj = JSON.parse(result);
@@ -1255,8 +1255,8 @@ function manage_buyin(action) {
 			setTimeout("$('#buyin_amount').focus();", 1000);
 		}
 		else if (action == 'check_amount') {
-			$('#buyin_modal_invoice_details').html(result_obj['content_html']);
-			$('#buyin_modal_invoice_details').slideDown('fast');
+			$('#buyin_modal_details').html(result_obj['content_html']);
+			$('#buyin_modal_details').slideDown('fast');
 			$('#buyin_modal_invoices').html(result_obj['invoices_html']);
 			invoice_id = result_obj['invoice_id'];
 		}
@@ -1267,11 +1267,11 @@ function manage_sellout(action) {
 	if (action == "confirm" || action == "check_amount") {
 		sellout_url += "&sellout_amount="+encodeURIComponent($('#sellout_amount').val());
 	}
-	else if (action == "confirm") {
+	if (action == "confirm") {
 		sellout_url += "&address="+encodeURIComponent($('#sellout_blockchain_address').val());
 	}
 	
-	$('#sellout_modal_details').hide();
+	if (action != 'confirm') $('#sellout_modal_details').hide();
 	
 	$.get(sellout_url, function(result) {
 		var result_obj = JSON.parse(result);
@@ -1284,9 +1284,9 @@ function manage_sellout(action) {
 		else if (action == 'check_amount') {
 			$('#sellout_modal_details').html(result_obj['content_html']);
 			$('#sellout_modal_details').slideDown('fast');
-			$('#sellout_modal_invoices').html(result_obj['invoices_html']);
 		}
 		else {
+			$('#sellout_modal_invoices').html(result_obj['invoices_html']);
 			alert(result_obj['message']);
 		}
 	});

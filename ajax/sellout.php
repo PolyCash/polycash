@@ -29,8 +29,13 @@ if ($thisuser && $game) {
 				
 				$output_obj = [];
 				$content_html = "";
+				$invoices_html = "";
 				$message = "";
 				$error_code = 1;
+				
+				if (in_array($_REQUEST['action'], ["check_amount","confirm"])) {
+					$sellout_amount = floatval(str_replace(",", "", urldecode($_REQUEST['sellout_amount'])));
+				}
 				
 				if ($_REQUEST['action'] == "initiate") {
 					$content_html .= '<p>';
@@ -55,8 +60,14 @@ if ($thisuser && $game) {
 					}
 				}
 				else if ($_REQUEST['action'] == "check_amount") {
-					$sellout_amount = floatval(str_replace(",", "", urldecode($_REQUEST['sellout_amount'])));
 					$sellout_receive_amount = $sellout_amount/$exchange_rate - $user_game['transaction_fee'];
+					
+					if ($game->db_game['buyin_policy'] == "for_sale") {
+						if ($sellout_amount > $game_forsale_amount) {
+							$content_html .= '<p class="redtext">Don\'t send that many '.$game->db_game['coin_name_plural'].'. There are only '.$app->format_bignum($game_forsale_amount).' '.$game->db_game['coin_name_plural']." for sale.</p>\n";
+						}
+					}
+					
 					$content_html .= '
 					<p>
 						'.(float)$user_game['transaction_fee'].' '.$sellout_currency['short_name'].' tx fee
@@ -73,24 +84,25 @@ if ($thisuser && $game) {
 					</p>';
 				}
 				else if ($_REQUEST['action'] == "confirm") {
-					$invoice_type = "sellout";
-					$invoice = $app->new_currency_invoice($game_sale_account, $sellout_currency['currency_id'], false, $thisuser, $user_game, $invoice_type);
+					$sellout_amount = ceil($sellout_amount*pow(10, $game->db_game['decimal_places']));
+					$invoice = $app->new_currency_invoice($game_sale_account, $sellout_currency['currency_id'], false, $thisuser, $user_game, "sellout");
 					$invoice_address = $app->fetch_address_by_id($invoice['address_id']);
 					
 					$tx_fee = (int) ($user_game['transaction_fee']*pow(10, $game->blockchain->db_blockchain['decimal_places']));
+					
+					$user_game_account = $app->fetch_account_by_id($user_game['account_id']);
 					
 					$receive_address = $_REQUEST['address'];
 					$db_receive_address = $sellout_blockchain->create_or_fetch_address($receive_address, true, false, true, false, false);
 					
 					$app->run_query("UPDATE currency_invoices SET receive_address_id='".$db_receive_address['address_id']."', buyin_amount='".$sellout_amount/pow(10, $game->db_game['decimal_places'])."', fee_amount='".$user_game['transaction_fee']."' WHERE invoice_id='".$invoice['invoice_id']."';");
 					
-					$q = "SELECT *, SUM(gio.colored_amount) AS coins FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.is_resolved=1 AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$user_game['account_id']."' GROUP BY gio.io_id ORDER BY coins ASC;";
-					$r = $app->run_query($q);
+					$my_spendable_ios = $app->run_query("SELECT *, COUNT(*), SUM(gio.is_resolved) AS num_resolved, SUM(gio.colored_amount) AS coins FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$user_game['account_id']."' AND gio.game_id='".$game->db_game['game_id']."' GROUP BY gio.io_id HAVING COUNT(*)=num_resolved ORDER BY coins ASC;");
 					
 					$io_amount_sum = 0;
 					$game_amount_sum = 0;
-					$ios = array();
-					$io_ids = array();
+					$ios = [];
+					$io_ids = [];
 					$keep_looping = true;
 					
 					$recycle_r = $app->run_query("SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND a.is_destroy_address=1 AND io.spend_status='unspent' ORDER BY io.amount ASC;");
@@ -101,7 +113,7 @@ if ($thisuser && $game) {
 						$io_amount_sum += $recycle_io['amount'];
 					}
 					
-					while ($keep_looping && $io = $r->fetch()) {
+					while ($keep_looping && $io = $my_spendable_ios->fetch()) {
 						$game_amount_sum += $io['coins'];
 						$io_amount_sum += $io['amount'];
 						array_push($io_ids, $io['io_id']);
@@ -119,16 +131,26 @@ if ($thisuser && $game) {
 						$amounts = array($send_chain_amount);
 						$address_ids = array($invoice['address_id']);
 						
+						$remainder_error = false;
+						
 						if ($io_nonfee_amount > $send_chain_amount) {
 							$remainder_amount = $io_nonfee_amount-$send_chain_amount;
-							array_push($amounts, $remainder_amount);
-							array_push($address_ids, $ios[0]['address_id']);
+							$remainder_address = $app->new_normal_address_key($user_game_account['currency_id'], $user_game_account);
+							
+							if ($remainder_address) {
+								array_push($amounts, $remainder_amount);
+								array_push($address_ids, $remainder_address['address_id']);
+							}
+							else $remainder_error = true;
 						}
 						
-						$transaction_id = $game->blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $tx_fee, $message);
-						
-						if ($transaction_id) {
-							$message = ucfirst($game->db_game['coin_name_plural'])." have been debited from this account. ".$sellout_currency['short_name_plural']." will be sent to the address you specified soon.";
+						if (!$remainder_error) {
+							$transaction_id = $game->blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $tx_fee, $message);
+							
+							if ($transaction_id) {
+								$message = ucfirst($game->db_game['coin_name_plural'])." have been debited from this account. ".ucwords($sellout_currency['short_name_plural'])." will be sent to the address you specified soon.";
+							}
+							else $error_code = 8;
 						}
 						else $error_code = 7;
 					}
@@ -138,8 +160,17 @@ if ($thisuser && $game) {
 					}
 				}
 				
+				if (in_array($_REQUEST['action'], ['initiate','confirm'])) {
+					list($num_invoices, $sellout_invoices_html) = $game->display_sellouts_by_user_game($user_game['user_game_id']);
+					if ($num_invoices > 0) {
+						$invoices_html = '<p style="margin-top: 10px;">You have '.$num_invoices.' sellout';
+						if ($num_invoices != 1) $invoices_html .= 's';
+						$invoices_html .= '. <div class="buyin_sellout_list">'.$sellout_invoices_html."</div></p>\n";
+						$output_obj['invoices_html'] = $invoices_html;
+					}
+				}
+				
 				if (!empty($content_html)) $output_obj['content_html'] = $content_html;
-				//$output_obj['invoices_html'] = $invoices_html;
 				
 				$app->output_message($error_code, $message, $output_obj);
 			}

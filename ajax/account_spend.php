@@ -9,19 +9,15 @@ if ($thisuser) {
 	
 	if ($action == "withdraw_from_account") {
 		if ($thisuser) {
-			$account_id = (int) $_REQUEST['account_id'];
+			$db_account = $app->fetch_account_by_id($_REQUEST['account_id']);
 			
-			$account_r = $app->run_query("SELECT * FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id WHERE ca.account_id='".$account_id."';");
-			
-			if ($account_r->rowCount() > 0) {
-				$db_account = $account_r->fetch();
-				
+			if ($db_account) {
 				if (!empty($db_account['blockchain_id'])) {
 					$blockchain = new Blockchain($app, $db_account['blockchain_id']);
 					
-					if ($thisuser->db_user['user_id'] == $db_account['user_id'] || $app->user_is_admin($thisuser)) {
-						$amount = round(pow(10,8)*floatval($_REQUEST['amount']));
-						$fee = round(pow(10,8)*floatval($_REQUEST['fee']));
+					if ($thisuser->db_user['user_id'] == $db_account['user_id'] || ($db_account['user_id'] == "" && $app->user_is_admin($thisuser))) {
+						$amount = round(pow(10,$blockchain->db_blockchain['decimal_places'])*floatval($_REQUEST['amount']));
+						$fee = round(pow(10,$blockchain->db_blockchain['decimal_places'])*floatval($_REQUEST['fee']));
 						
 						$address = $_REQUEST['address'];
 						
@@ -32,40 +28,43 @@ if ($thisuser) {
 							
 							$db_address = $blockchain->create_or_fetch_address($address, true, false, false, false, false);
 							
-							$q = "SELECT io.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND io.spend_status='unspent' AND k.account_id='".$db_account['account_id']."' AND io.create_block_id IS NOT NULL;";
-							$r = $app->run_query($q);
+							$spendable_ios = $app->run_query("SELECT io.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$db_account['account_id']."';");
 							$keep_looping = true;
 							
-							$io_ids = array();
-							$first_address_id = false;
+							$io_ids = [];
 							
-							while ($keep_looping && $io = $r->fetch()) {
+							while ($keep_looping && $io = $spendable_ios->fetch()) {
 								array_push($io_ids, $io['io_id']);
-								
-								if (empty($first_address_id)) $first_address_id = $io['address_id'];
 								
 								$amount_sum += $io['amount'];
 								if ($amount_sum >= $amount+$fee) $keep_looping = false;
 							}
 							
-							$amounts = array();
-							$address_ids = array();
+							$amounts = [];
+							$address_ids = [];
 							
 							array_push($amounts, $amount);
 							array_push($address_ids, $db_address['address_id']);
 							
+							$refund_error = false;
 							if ($amount+$fee < $amount_sum) {
-								array_push($amounts, $amount_sum-$amount-$fee);
-								array_push($address_ids, $first_address_id);
+								$refund_address = $app->new_normal_address_key($db_account['currency_id'], $db_account);
+								if ($refund_address) {
+									array_push($amounts, $amount_sum-$amount-$fee);
+									array_push($address_ids, $refund_address['address_id']);
+								}
 							}
 							
-							$error_message = false;
-							$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $fee);
-							
-							if ($transaction_id) {
-								$app->output_message(1, 'Great, your coins have been sent! <a target="_blank" href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/transactions/'.$transaction_id.'">View Transaction</a>', false);
+							if (!$refund_error) {
+								$error_message = false;
+								$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, $io_ids, $address_ids, $fee);
+								
+								if ($transaction_id) {
+									$app->output_message(1, 'Great, your coins have been sent! <a target="_blank" href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/transactions/'.$transaction_id.'">View Transaction</a>', false);
+								}
+								else $app->output_message(9, "TX Error: ".$error_message, false);
 							}
-							else $app->output_message(9, "TX Error: ".$error_message, false);
+							else $app->output_message(9, "Failed to generate a refund address.", false);
 						}
 						else $app->output_message(8, "Error, you don't have enough coins.", false);
 					}
@@ -88,9 +87,9 @@ if ($thisuser) {
 			$buyin_amount = (int) ($_REQUEST['buyin_amount']*pow(10,$blockchain->db_blockchain['decimal_places']));
 			$fee_amount = (int) ($_REQUEST['fee_amount']*pow(10,$blockchain->db_blockchain['decimal_places']));
 			
-			$db_currency = $app->run_query("SELECT * FROM currencies WHERE currency_id='".$game->blockchain->currency_id()."';")->fetch();
+			$db_currency = $app->fetch_currency_by_id($game->blockchain->currency_id());
 			
-			$db_io = $app->run_query("SELECT * FROM transaction_ios WHERE io_id='".$io_id."';")->fetch();
+			$db_io = $app->fetch_io_by_id($io_id);
 			
 			if ($db_io) {
 				$q = "SELECT * FROM address_keys k JOIN currency_accounts c ON k.account_id=c.account_id WHERE k.address_id='".$db_io['address_id']."' AND c.user_id='".$thisuser->db_user['user_id']."';";
@@ -391,12 +390,9 @@ if ($thisuser) {
 			if ($quantity > 0 && $satoshis_each > 0) {
 				$total_cost_satoshis = $quantity*$satoshis_each;
 				
-				$q = "SELECT * FROM transaction_ios WHERE io_id='".$io_id."';";
-				$r = $app->run_query($q);
+				$db_io = $app->fetch_io_by_id($io_id);
 				
-				if ($r->rowCount() == 1) {
-					$db_io = $r->fetch();
-					
+				if ($db_io) {
 					$q = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id WHERE io.io_id='".$io_id."' AND gio.game_id='".$game->db_game['game_id']."';";
 					$r = $app->run_query($q);
 					

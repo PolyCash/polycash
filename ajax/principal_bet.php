@@ -4,6 +4,7 @@ include("../includes/get_session.php");
 
 if ($thisuser && $game) {
 	$user_game = $thisuser->ensure_user_in_game($game, false);
+	$user_game_account = $app->fetch_account_by_id($user_game['account_id']);
 	
 	$amount = (float) $_REQUEST['amount'];
 	$option_id = (int) $_REQUEST['option_id'];
@@ -11,36 +12,27 @@ if ($thisuser && $game) {
 	$fee_total = round($fee*pow(10, $game->blockchain->db_blockchain['decimal_places']));
 	$amount_total = round($amount*pow(10, $game->blockchain->db_blockchain['decimal_places']));
 	
-	$option_q = "SELECT * FROM options WHERE option_id='".$option_id."';";
-	$option_r = $app->run_query($option_q);
+	$option = $app->run_query("SELECT * FROM options WHERE option_id='".$option_id."';")->fetch();
 	
-	if ($option_r->rowCount() > 0) {
-		$option = $option_r->fetch();
+	if ($option) {
+		$address = $app->fetch_addresses_in_account($user_game_account, $option['option_index'], 1)[0];
 		
-		$address_q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND a.option_index='".$option['option_index']."';";
-		$address_r = $app->run_query($address_q);
-		
-		if ($address_r->rowCount() > 0) {
-			$address = $address_r->fetch();
+		if ($address) {
+			$destroy_address = $app->fetch_addresses_in_account($user_game_account, 0, 1)[0];
 			
-			$destroy_address_q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND a.option_index='0';";
-			$destroy_address_r = $app->run_query($destroy_address_q);
-			
-			if ($destroy_address_r->rowCount() > 0) {
-				$destroy_address = $destroy_address_r->fetch();
-				
+			if ($destroy_address) {
 				$last_block_id = $game->blockchain->last_block_id();
 				$mining_block_id = $last_block_id+1;
+				$round_id = $game->block_to_round($mining_block_id);
 				
-				$q = "SELECT *, SUM(gio.colored_amount) AS coins, SUM(gio.colored_amount)*(".$mining_block_id."-io.create_block_id) AS coin_blocks FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.is_resolved=1 AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$user_game['account_id']."' GROUP BY gio.io_id ORDER BY coin_blocks ASC;";
-				$r = $app->run_query($q);
+				$spendable_ios_in_account = $app->spendable_ios_in_account($user_game_account['account_id'], $game->db_game['game_id'], $round_id, $last_block_id);
 				
 				$io_amount_sum = 0;
 				$game_amount_sum = 0;
 				$io_ids = array();
 				$keep_looping = true;
 				
-				while ($keep_looping && $io = $r->fetch()) {
+				while ($keep_looping && $io = $spendable_ios_in_account->fetch()) {
 					$game_amount_sum += $io['coins'];
 					$io_amount_sum += $io['amount'];
 					array_push($io_ids, $io['io_id']);

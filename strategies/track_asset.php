@@ -3,13 +3,9 @@ $host_not_required = TRUE;
 include(realpath(dirname(dirname(__FILE__)))."/includes/connect.php");
 include(realpath(dirname(dirname(__FILE__)))."/includes/get_session.php");
 
-$api_key = $_REQUEST['api_key'];
+$user_game = $app->fetch_user_game_by_api_key($_REQUEST['api_key']);
 
-$q = "SELECT *, u.user_id AS user_id, g.game_id AS game_id FROM users u JOIN user_games ug ON u.user_id=ug.user_id JOIN games g ON ug.game_id=g.game_id JOIN user_strategies s ON ug.strategy_id=s.strategy_id LEFT JOIN featured_strategies fs ON s.featured_strategy_id=fs.featured_strategy_id WHERE ug.api_access_code=".$app->quote_escape($api_key).";";
-$r = $app->run_query($q);
-
-if ($r->rowCount() > 0) {
-	$user_game = $r->fetch();
+if ($user_game) {
 	$user = new User($app, $user_game['user_id']);
 	$blockchain = new Blockchain($app, $user_game['blockchain_id']);
 	$game = new Game($blockchain, $user_game['game_id']);
@@ -109,9 +105,7 @@ if ($r->rowCount() > 0) {
 				if ($coins_per_event > 0) {
 					$total_cost = $coins_per_event*count($selected_events);
 					
-					$q = "SELECT *, SUM(gio.colored_amount) AS coins, SUM(gio.colored_amount)*(".$mining_block_id."-io.create_block_id) AS coin_blocks, SUM(gio.colored_amount*(".$round_id."-gio.create_round_id)) AS coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.is_resolved=1 AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account['account_id']."' GROUP BY gio.io_id";
-					$q .= " ORDER BY coins ASC;";
-					$r = $app->run_query($q);
+					$spendable_ios_in_account = $app->spendable_ios_in_account($account['account_id'], $game->db_game['game_id'], $round_id, $last_block_id);
 					
 					$mandatory_bets = 0;
 					$io_amount_sum = 0;
@@ -119,7 +113,7 @@ if ($r->rowCount() > 0) {
 					$io_ids = array();
 					$keep_looping = true;
 					
-					while ($keep_looping && $io = $r->fetch()) {
+					while ($keep_looping && $io = $spendable_ios_in_account->fetch()) {
 						$game_amount_sum += $io['coins'];
 						$io_amount_sum += $io['amount'];
 						

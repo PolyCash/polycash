@@ -8,21 +8,15 @@ if ($thisuser && $game) {
 	$voting_strategy_id = intval($_REQUEST['voting_strategy_id']);
 	
 	if ($voting_strategy_id > 0) {
-		$q = "SELECT * FROM user_strategies WHERE user_id='".$thisuser->db_user['user_id']."' AND strategy_id='".$voting_strategy_id."';";
-		$r = $app->run_query($q);
-		if ($r->rowCount() == 1) {
-			$user_strategy = $r->fetch();
-		}
-		else die("Invalid strategy ID");
+		$user_strategy = $app->run_query("SELECT * FROM user_strategies WHERE user_id='".$thisuser->db_user['user_id']."' AND strategy_id='".$voting_strategy_id."';")->fetch();
+		
+		if (!$user_strategy) die("Invalid strategy ID");
 	}
 	else {
-		$q = "INSERT INTO user_strategies SET user_id='".$thisuser->db_user['user_id']."', game_id='".$game->db_game['game_id']."';";
-		$r = $app->run_query($q);
+		$app->run_query("INSERT INTO user_strategies SET user_id='".$thisuser->db_user['user_id']."', game_id='".$game->db_game['game_id']."';");
 		$voting_strategy_id = $app->last_insert_id();
 		
-		$q = "SELECT * FROM user_strategies WHERE strategy_id='".$voting_strategy_id."';";
-		$r = $app->run_query($q);
-		$user_strategy = $r->fetch();
+		$user_strategy = $app->fetch_strategy_by_id($voting_strategy_id);
 	}
 	
 	if ($action == "save") {
