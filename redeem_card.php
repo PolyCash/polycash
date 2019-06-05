@@ -22,21 +22,14 @@ include('includes/html_start.php');
 		else $card_id = (int) $uri_parts[3];
 		
 		if (!empty($card_id) && !empty($peer_id)) {
-			$q = "SELECT c.* FROM cards c LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.peer_card_id=".$app->quote_escape($card_id)." AND c.peer_id='".$peer_id."';";
-			$r = $app->run_query($q);
+			$card = $app->run_query("SELECT c.* FROM cards c LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.peer_card_id=".$app->quote_escape($card_id)." AND c.peer_id='".$peer_id."';")->fetch();
 			
-			if ($r->rowCount() > 0) {
-				$card = $r->fetch();
+			if ($card) {
+				$peer = $app->fetch_peer_by_id($card['peer_id']);
 				
-				$peer = $app->get_peer_by_id($card['peer_id']);
-				
-				$printrequest_q = "SELECT * FROM card_printrequests pr JOIN card_designs d ON pr.design_id=d.design_id WHERE d.design_id='".$card['design_id']."';";
-				$printrequest_r = $app->run_query($printrequest_q);
-				if ($printrequest_r->rowCount() > 0) $printrequest = $printrequest_r->fetch();
-				else $printrequest = false;
-				
-				$currency = $app->run_query("SELECT * FROM currencies WHERE currency_id='".$card['currency_id']."';")->fetch();
-				$fv_currency = $app->run_query("SELECT * FROM currencies WHERE currency_id='".$card['fv_currency_id']."';")->fetch();
+				$printrequest = $app->run_query("SELECT * FROM card_printrequests pr JOIN card_designs d ON pr.design_id=d.design_id WHERE d.design_id='".$card['design_id']."';")->fetch();
+				$currency = $app->fetch_currency_by_id($card['currency_id']);
+				$fv_currency = $app->fetch_currency_by_id($card['fv_currency_id']);
 				?>
 				<script type="text/javascript">
 				var card_id = '<?php echo $card['peer_card_id']; ?>';
@@ -264,9 +257,8 @@ include('includes/html_start.php');
 						<select class="form-control" name="peer_id" id="peer_id">
 							<option value="">-- Please Select --</option>
 							<?php
-							$q = "SELECT * FROM peers WHERE visible=1 ORDER BY peer_name ASC;";
-							$r = $app->run_query($q);
-							while ($db_peer = $r->fetch()) {
+							$db_peers = $app->run_query("SELECT * FROM peers WHERE visible=1 ORDER BY peer_name ASC;");
+							while ($db_peer = $db_peers->fetch()) {
 								echo "<option value=\"".$db_peer['peer_id']."\">".$db_peer['peer_name']."</option>\n";
 							}
 							?>

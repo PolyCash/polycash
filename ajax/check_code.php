@@ -12,26 +12,21 @@ $code_hash = $app->card_secret_to_hash($code);
 $action = "";
 if (!empty($_REQUEST['action'])) $action = $_REQUEST['action'];
 
-$q = "SELECT c.* FROM cards c LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.peer_id='".$peer_id."' AND c.peer_card_id='".$card_id."';";
-$r = $app->run_query($q);
+$card = $app->run_query("SELECT c.* FROM cards c LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.peer_id='".$peer_id."' AND c.peer_card_id='".$card_id."';")->fetch();
 
-if ($r->rowCount() == 1) {
-	$card = $r->fetch();
-	
+if ($card) {
 	if (!empty($_REQUEST['redirect_key'])) $redirect_url = $app->get_redirect_by_key($_REQUEST['redirect_key']);
 	else $redirect_url = false;
 	
 	$this_peer = $app->get_peer_by_server_name($GLOBALS['base_url'], true);
 	
 	if ($card['peer_id'] != $this_peer['peer_id']) {
-		$remote_peer = $app->run_query("SELECT * FROM peers WHERE peer_id='".$card['peer_id']."';")->fetch();
+		$remote_peer = $app->fetch_peer_by_id($card['peer_id']);
 	}
 	else $remote_peer = false;
 	
 	if ($GLOBALS['pageview_tracking_enabled']) {
-		$bruteforce_q = "SELECT * FROM card_failedchecks WHERE ip_address=".$app->quote_escape($_SERVER['REMOTE_ADDR'])." AND check_time > ".(time()-3600*24*4).";";
-		$bruteforce_r = $app->run_query($bruteforce_q);
-		$num_bruteforce = $bruteforce_r->rowCount();
+		$num_bruteforce = $app->run_query("SELECT * FROM card_failedchecks WHERE ip_address=".$app->quote_escape($_SERVER['REMOTE_ADDR'])." AND check_time > ".(time()-3600*24*4).";")->rowCount();
 	}
 	else $num_bruteforce = 0;
 	
@@ -78,10 +73,10 @@ if ($r->rowCount() == 1) {
 			else $app->output_message(4, "Correct!", false);
 		}
 		else {
-			$q = "INSERT INTO card_failedchecks SET card_id=".$app->quote_escape($card['card_id']);
-			if ($GLOBALS['pageview_tracking_enabled']) $q .= ", ip_address=".$app->quote_escape($_SERVER['REMOTE_ADDR']);
-			$q .= ", check_time='".time()."', attempted_code=".$app->quote_escape($code).";";
-			$r = $app->run_query($q);
+			$failedcheck_q = "INSERT INTO card_failedchecks SET card_id=".$app->quote_escape($card['card_id']);
+			if ($GLOBALS['pageview_tracking_enabled']) $failedcheck_q .= ", ip_address=".$app->quote_escape($_SERVER['REMOTE_ADDR']);
+			$failedcheck_q .= ", check_time='".time()."', attempted_code=".$app->quote_escape($code).";";
+			$app->run_query($failedcheck_q);
 			
 			$app->output_message(0, "Unspecified error", false);
 		}
@@ -89,9 +84,7 @@ if ($r->rowCount() == 1) {
 	else {
 		if ($action == "login") {
 			if ($card['status'] == "redeemed" || $card['status'] == "claimed") {
-				$q = "SELECT * FROM card_users WHERE card_user_id='".$card['card_user_id']."';";
-				$r = $app->run_query($q);
-				$card_user = $r->fetch();
+				$card_user = $app->run_query("SELECT * FROM card_users WHERE card_user_id='".$card['card_user_id']."';")->fetch();
 				
 				if ($card_user['password'] == $_REQUEST['password']) {
 					$supplied_secret_hash = $app->card_secret_to_hash($_REQUEST['code']);
@@ -100,11 +93,11 @@ if ($r->rowCount() == 1) {
 						$session_key = $_COOKIE['my_session'];
 						$expire_time = time()+3600*24;
 						
-						$query = "INSERT INTO card_sessions SET card_user_id=".$card_user['card_user_id'];
-						$query .= ", session_key=".$app->quote_escape($session_key).", login_time='".time()."', expire_time='".$expire_time."'";
-						if ($GLOBALS['pageview_tracking_enabled']) $query .= ", ip_address=".$app->quote_escape($_SERVER['REMOTE_ADDR']);
-						$query .= ";";
-						$result = $app->run_query($query);
+						$card_session_q = "INSERT INTO card_sessions SET card_user_id=".$card_user['card_user_id'];
+						$card_session_q .= ", session_key=".$app->quote_escape($session_key).", login_time='".time()."', expire_time='".$expire_time."'";
+						if ($GLOBALS['pageview_tracking_enabled']) $card_session_q .= ", ip_address=".$app->quote_escape($_SERVER['REMOTE_ADDR']);
+						$card_session_q .= ";";
+						$app->run_query($card_session_q);
 						
 						$message = "/wallet/";
 						if ($redirect_url) $message = $redirect_url['url'];

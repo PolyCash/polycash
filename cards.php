@@ -613,8 +613,7 @@ include('includes/html_start.php');
 			<?php
 		}
 		else if ($nav_subtab_selected == "manage") {
-			$q = "SELECT * FROM card_printrequests pr JOIN card_designs cd ON pr.design_id=cd.design_id JOIN card_currency_denominations denom ON cd.denomination_id=denom.denomination_id JOIN currencies c ON denom.currency_id=c.currency_id WHERE pr.user_id='".$thisuser->db_user['user_id']."' ORDER BY pr.time_created DESC;";
-			$r = $app->run_query($q);
+			$my_printrequests = $app->run_query("SELECT * FROM card_printrequests pr JOIN card_designs cd ON pr.design_id=cd.design_id JOIN card_currency_denominations denom ON cd.denomination_id=denom.denomination_id JOIN currencies c ON denom.currency_id=c.currency_id WHERE pr.user_id='".$thisuser->db_user['user_id']."' ORDER BY pr.time_created DESC;");
 			
 			echo '
 			<div class="panel panel-info" style="margin-top: 15px;">
@@ -623,12 +622,10 @@ include('includes/html_start.php');
 				</div>
 				<div class="panel-body">';
 			
-			while ($printrequest = $r->fetch()) {
-				$peer = $app->get_peer_by_id($printrequest['peer_id']);
+			while ($printrequest = $my_printrequests->fetch()) {
+				$peer = $app->fetch_peer_by_id($printrequest['peer_id']);
 				
-				$qq = "SELECT MIN(card_id), MAX(card_id), MIN(peer_card_id), MAX(peer_card_id) FROM cards WHERE group_id=".$printrequest['card_group_id'].";";
-				$rr = $app->run_query($qq);
-				$minmax = $rr->fetch();
+				$minmax = $app->run_query("SELECT MIN(card_id), MAX(card_id), MIN(peer_card_id), MAX(peer_card_id) FROM cards WHERE group_id=".$printrequest['card_group_id'].";")->fetch();
 				
 				echo "<div class=\"row\">";
 				echo "<div class=\"col-sm-4\">".$peer['peer_name']." cards ".$minmax['MIN(peer_card_id)'].":".$minmax['MAX(peer_card_id)']." &nbsp;&nbsp; ".$printrequest['how_many']." &cross; ".$printrequest['denomination']." ".$printrequest['short_name']." cards</div>";
@@ -645,17 +642,16 @@ include('includes/html_start.php');
 			}
 			echo "</div></div>\n";
 			
-			$card_q = "SELECT * FROM card_printrequests pr JOIN card_designs cd ON pr.design_id=cd.design_id JOIN card_currency_denominations denom ON cd.denomination_id=denom.denomination_id JOIN currencies c ON denom.currency_id=c.currency_id JOIN cards ON cards.design_id=cd.design_id WHERE pr.user_id='".$thisuser->db_user['user_id']."' ORDER BY cards.card_id ASC;";
-			$card_r = $app->run_query($card_q);
+			$my_cards_r = $app->run_query("SELECT * FROM card_printrequests pr JOIN card_designs cd ON pr.design_id=cd.design_id JOIN card_currency_denominations denom ON cd.denomination_id=denom.denomination_id JOIN currencies c ON denom.currency_id=c.currency_id JOIN cards ON cards.design_id=cd.design_id WHERE pr.user_id='".$thisuser->db_user['user_id']."' ORDER BY cards.card_id ASC;");
 			
 			echo '
 			<div class="panel panel-info" style="margin-top: 15px;">
 				<div class="panel-heading">
-					<div class="panel-title">My Cards ('.$card_r->rowCount().')</div>
+					<div class="panel-title">My Cards ('.$my_cards_r->rowCount().')</div>
 				</div>
 				<div class="panel-body">';
 			
-			while ($db_card = $card_r->fetch()) {
+			while ($db_card = $my_cards_r->fetch()) {
 				echo '<div class="card_small">';
 				echo '<a target="_blank" href="/redeem/'.$db_card['peer_id'].'/'.$db_card['peer_card_id'].'">'.$db_card['peer_card_id']."</a><br/>\n";
 				echo " ".$app->format_bignum($db_card['amount'])." ".$db_card['abbreviation'];
@@ -782,7 +778,7 @@ include('includes/html_start.php');
 										<div style="display: block; overflow: hidden;">
 											<div class="row">
 												<div class="col-xs-4">peer</div><div class="col-xs-8"><?php
-												$peer = $app->run_query("SELECT * FROM peers WHERE peer_id='".$my_cards[$i]['peer_id']."';")->fetch();
+												$peer = $app->fetch_peer_by_id($my_cards[$i]['peer_id']);
 												echo $peer['peer_identifier'];
 												?></div>
 											</div>

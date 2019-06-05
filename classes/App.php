@@ -138,29 +138,15 @@ class App {
 	}
 	
 	public function fetch_db_game_by_id($game_id) {
-		$game_q = "SELECT * FROM games WHERE game_id='".((int)$game_id)."';";
-		$game_r = $this->run_query($game_q);
-		if ($game_r->rowCount() > 0) {
-			return $game_r->fetch();
-		}
-		else return false;
+		return $this->run_query("SELECT * FROM games WHERE game_id='".((int)$game_id)."';")->fetch();
 	}
 	
 	public function fetch_db_game_by_identifier($url_identifier) {
-		$game_q = "SELECT * FROM games WHERE url_identifier=".$this->quote_escape($url_identifier).";";
-		$game_r = $this->run_query($game_q);
-		
-		if ($game_r->rowCount() > 0) {
-			return $game_r->fetch();
-		}
-		else return false;
+		return $this->run_query("SELECT * FROM games WHERE url_identifier=".$this->quote_escape($url_identifier).";")->fetch();
 	}
 	
 	public function fetch_transaction_by_id($transaction_id) {
-		$q = "SELECT * FROM transactions WHERE transaction_id='".((int)$transaction_id)."';";
-		$r = $this->run_query($q);
-		if ($r->rowCount() > 0) return $r->fetch();
-		else return false;
+		return $this->run_query("SELECT * FROM transactions WHERE transaction_id='".((int)$transaction_id)."';")->fetch();
 	}
 	
 	public function update_schema() {
@@ -310,17 +296,14 @@ class App {
 	}
 	
 	public function generate_games($default_blockchain_id) {
-		$q = "SELECT * FROM game_types ORDER BY game_type_id ASC;";
-		$r = $this->run_query($q);
-		while ($game_type = $r->fetch(PDO::FETCH_ASSOC)) {
+		$game_types = $this->run_query("SELECT * FROM game_types ORDER BY game_type_id ASC;");
+		while ($game_type = $game_types->fetch(PDO::FETCH_ASSOC)) {
 			$this->generate_games_by_type($game_type, $default_blockchain_id);
 		}
 	}
 	
 	public function generate_games_by_type($game_type, $default_blockchain_id) {
-		$q = "SELECT * FROM games WHERE game_type_id='".$game_type['game_type_id']."' AND game_status IN('editable','published','running');";
-		$r = $this->run_query($q);
-		$num_running_games = $r->rowCount();
+		$num_running_games = $this->run_query("SELECT * FROM games WHERE game_type_id='".$game_type['game_type_id']."' AND game_status IN('editable','published','running');")->rowCount();
 		$needed_games = $game_type['target_open_games'] - $num_running_games;
 		for ($i=0; $i<$needed_games; $i++) {
 			$this->generate_game_by_type($game_type, $default_blockchain_id);
@@ -330,65 +313,48 @@ class App {
 	public function generate_game_by_type($game_type, $default_blockchain_id) {
 		$skip_game_type_vars = explode(",", "name,url_identifier,target_open_games,default_game_winning_inflation,default_logo_image_id,identifier_case_sensitive");
 		
-		$series_index_q = "SELECT MAX(game_series_index) FROM games WHERE game_type_id='".$game_type['game_type_id']."';";
-		$series_index_r = $this->run_query($series_index_q);
-		$series_index = (int) $series_index_r->fetch()['MAX(game_series_index)'] + 1;
+		$series_index = (int)($this->run_query("SELECT MAX(game_series_index) FROM games WHERE game_type_id='".$game_type['game_type_id']."';")->fetch()['MAX(game_series_index)']+1);
 		
 		$game_name = $game_type['name'];
 		if ($game_type['event_rule'] == "entity_type_option_group") $game_name .= $series_index;
 		
 		$url_identifier = $this->game_url_identifier($game_name);
 		
-		$q = "INSERT INTO games SET blockchain_id='".$default_blockchain_id."', game_status='published', game_series_index=".$series_index.", name=".$this->quote_escape($game_name).", url_identifier=".$this->quote_escape($url_identifier).", game_winning_inflation=".$this->quote_escape($game_type['default_game_winning_inflation']).", logo_image_id=".$this->quote_escape($game_type['default_logo_image_id']).", ";
+		$new_game_q = "INSERT INTO games SET blockchain_id='".$default_blockchain_id."', game_status='published', game_series_index=".$series_index.", name=".$this->quote_escape($game_name).", url_identifier=".$this->quote_escape($url_identifier).", game_winning_inflation=".$this->quote_escape($game_type['default_game_winning_inflation']).", logo_image_id=".$this->quote_escape($game_type['default_logo_image_id']).", ";
 		foreach ($game_type AS $var => $val) {
 			if (!in_array($var, $skip_game_type_vars)) {
-				if (!empty($val)) $q .= $var.'='.$this->quote_escape($val).', ';
+				if (!empty($val)) $new_game_q .= $var.'='.$this->quote_escape($val).', ';
 			}
 		}
-		$q = substr($q, 0, strlen($q)-2).";";
-		$r = $this->run_query($q);
+		$new_game_q = substr($new_game_q, 0, strlen($new_game_q)-2).";";
+		$this->run_query($new_game_q);
 		$game_id = $this->last_insert_id();
 	}
 	
 	public function get_redirect_url($url) {
 		$url = strip_tags($url);
 		
-		$q = "SELECT * FROM redirect_urls WHERE url=".$this->quote_escape($url).";";
-		$r = $this->run_query($q);
+		$redirect_url = $this->run_query("SELECT * FROM redirect_urls WHERE url=".$this->quote_escape($url).";")->fetch();
 		
-		if ($r->rowCount() > 0) {
-			$redirect_url = $r->fetch();
-		}
-		else {
+		if (!$redirect_url) {
 			$redirect_key = $this->random_string(24);
 			
-			$q = "INSERT INTO redirect_urls SET redirect_key=".$this->quote_escape($redirect_key).", url=".$this->quote_escape($url).", time_created='".time()."';";
-			$r = $this->run_query($q);
+			$this->run_query("INSERT INTO redirect_urls SET redirect_key=".$this->quote_escape($redirect_key).", url=".$this->quote_escape($url).", time_created='".time()."';");
 			$redirect_url_id = $this->last_insert_id();
 			
-			$q = "SELECT * FROM redirect_urls WHERE redirect_url_id='".$redirect_url_id."';";
-			$r = $this->run_query($q);
-			$redirect_url = $r->fetch();
+			$redirect_url = $this->run_query("SELECT * FROM redirect_urls WHERE redirect_url_id='".$redirect_url_id."';")->fetch();
 		}
 		return $redirect_url;
 	}
 
 	public function get_redirect_by_key($redirect_key) {
-		$q = "SELECT * FROM redirect_urls WHERE redirect_key=".$this->quote_escape($redirect_key).";";
-		$r = $this->run_query($q);
-		
-		if ($r->rowCount() > 0) {
-			$redirect_url = $r->fetch();
-			return $redirect_url;
-		}
-		else $redirect_url = false;
+		return $this->run_query("SELECT * FROM redirect_urls WHERE redirect_key=".$this->quote_escape($redirect_key).";")->fetch();
 	}
 	
 	public function mail_async($email, $from_name, $from, $subject, $message, $bcc, $cc, $delivery_key) {
 		if (empty($delivery_key)) $delivery_key = $this->random_string(16);
 		
-		$q = "INSERT INTO async_email_deliveries SET to_email=".$this->quote_escape($email).", from_name=".$this->quote_escape($from_name).", from_email=".$this->quote_escape($from).", subject=".$this->quote_escape($subject).", message=".$this->quote_escape($message).", bcc=".$this->quote_escape($bcc).", cc=".$this->quote_escape($cc).", delivery_key=".$this->quote_escape($delivery_key).", time_created='".time()."';";
-		$r = $this->run_query($q);
+		$this->run_query("INSERT INTO async_email_deliveries SET to_email=".$this->quote_escape($email).", from_name=".$this->quote_escape($from_name).", from_email=".$this->quote_escape($from).", subject=".$this->quote_escape($subject).", message=".$this->quote_escape($message).", bcc=".$this->quote_escape($bcc).", cc=".$this->quote_escape($cc).", delivery_key=".$this->quote_escape($delivery_key).", time_created='".time()."';");
 		$delivery_id = $this->last_insert_id();
 		
 		$command = $this->php_binary_location()." ".realpath(dirname(dirname(__FILE__)))."/scripts/async_email_deliver.php key=".$GLOBALS['cron_key_string']." delivery_id=".$delivery_id." > /dev/null 2>/dev/null &";
@@ -406,19 +372,14 @@ class App {
 	}
 	
 	public function get_site_constant($constant_name) {
-		$q = "SELECT * FROM site_constants WHERE constant_name='".$constant_name."';";
-		$r = $this->run_query($q);
-		if ($r->rowCount() == 1) {
-			$constant = $r->fetch();
-			return $constant['constant_value'];
-		}
+		$constant = $this->run_query("SELECT * FROM site_constants WHERE constant_name=".$this->quote_escape($constant_name).";")->fetch();
+		if ($constant) return $constant['constant_value'];
 		else return "";
 	}
 
 	public function set_site_constant($constant_name, $constant_value) {
 		try {
-			$q = "SELECT * FROM site_constants WHERE constant_name='".$constant_name."';";
-			$r = $this->run_query($q);
+			$constant = $this->run_query("SELECT * FROM site_constants WHERE constant_name=".$this->quote_escape($constant_name).";")->fetch();
 			$run_query = true;
 		}
 		catch (Exception $e) {
@@ -427,14 +388,11 @@ class App {
 		}
 		
 		if ($run_query) {
-			if ($r->rowCount() > 0) {
-				$constant = $r->fetch();
-				$q = "UPDATE site_constants SET constant_value='".$constant_value."' WHERE constant_id='".$constant['constant_id']."';";
-				$r = $this->run_query($q);
+			if ($constant) {
+				$this->run_query("UPDATE site_constants SET constant_value=".$this->quote_escape($constant_value)." WHERE constant_id='".$constant['constant_id']."';");
 			}
 			else {
-				$q = "INSERT INTO site_constants SET constant_name='".$constant_name."', constant_value='".$constant_value."';";
-				$r = $this->run_query($q);
+				$this->run_query("INSERT INTO site_constants SET constant_name=".$this->quote_escape($constant_name).", constant_value=".$this->quote_escape($constant_value).";");
 			}
 		}
 	}
@@ -477,41 +435,26 @@ class App {
 	}
 	
 	public function cancel_transaction($transaction_id, $affected_input_ids, $created_input_ids) {
-		$q = "DELETE FROM transactions WHERE transaction_id='".$transaction_id."';";
-		$r = $this->run_query($q);
+		$this->run_query("DELETE FROM transactions WHERE transaction_id='".(int)$transaction_id."';");
 		
 		if (count($affected_input_ids) > 0) {
-			$q = "UPDATE transaction_ios SET spend_status='unspent', spend_transaction_id=NULL, spend_block_id=NULL WHERE io_id IN (".implode(",", $affected_input_ids).")";
-			$r = $this->run_query($q);
+			$this->run_query("UPDATE transaction_ios SET spend_status='unspent', spend_transaction_id=NULL, spend_block_id=NULL WHERE io_id IN (".implode(",", $affected_input_ids).");");
 		}
 		
 		if ($created_input_ids && count($created_input_ids) > 0) {
-			$q = "DELETE FROM transaction_ios WHERE io_id IN (".implode(",", $created_input_ids).");";
-			$r = $this->run_query($q);
+			$this->run_query("DELETE FROM transaction_ios WHERE io_id IN (".implode(",", $created_input_ids).");");
 		}
 	}
 
 	public function transaction_coins_in($transaction_id) {
-		$qq = "SELECT SUM(amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.spend_transaction_id='".$transaction_id."';";
-		$rr = $this->run_query($qq);
-		$coins_in = $rr->fetch(PDO::FETCH_NUM);
+		$coins_in = $this->run_query("SELECT SUM(amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.spend_transaction_id='".$transaction_id."';")->fetch(PDO::FETCH_NUM);
 		if ($coins_in[0] > 0) return $coins_in[0];
 		else return 0;
 	}
 
 	public function transaction_coins_out($transaction_id) {
-		$qq = "SELECT SUM(amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$transaction_id."';";
-		$rr = $this->run_query($qq);
-		$coins_out = $rr->fetch(PDO::FETCH_NUM);
+		$coins_out = $this->run_query("SELECT SUM(amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$transaction_id."';")->fetch(PDO::FETCH_NUM);
 		if ($coins_out[0] > 0) return $coins_out[0];
-		else return 0;
-	}
-
-	public function transaction_voted_coins_out($transaction_id) {
-		$qq = "SELECT SUM(amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$transaction_id."' AND a.option_index > 0;";
-		$rr = $this->run_query($qq);
-		$voted_coins_out = $rr->fetch(PDO::FETCH_NUM);
-		if ($voted_coins_out[0] > 0) return $voted_coins_out[0];
 		else return 0;
 	}
 
@@ -526,22 +469,17 @@ class App {
 	
 	public function try_apply_invite_key($user_id, $invite_key, &$invite_game, &$user_game) {
 		$reload_page = false;
-		$invite_key = $this->quote_escape($invite_key);
+		$invitation = $this->run_query("SELECT * FROM game_invitations WHERE invitation_key=".$this->quote_escape($invite_key).";")->fetch();
 		
-		$q = "SELECT * FROM game_invitations WHERE invitation_key=".$invite_key.";";
-		$r = $this->run_query($q);
-		
-		if ($r->rowCount() == 1) {
-			$invitation = $r->fetch();
-			
+		if ($invitation) {
 			if ($invitation['used'] == 0 && $invitation['used_user_id'] == "" && $invitation['used_time'] == 0) {
 				$db_game = $this->fetch_db_game_by_id($invitation['game_id']);
 				
 				if ($db_game) {
-					$qq = "UPDATE game_invitations SET used_user_id='".$user_id."', used_time='".time()."', used=1";
-					if ($GLOBALS['pageview_tracking_enabled']) $q .= ", used_ip='".$_SERVER['REMOTE_ADDR']."'";
-					$qq .= " WHERE invitation_id='".$invitation['invitation_id']."';";
-					$rr = $this->run_query($qq);
+					$update_invitation_q = "UPDATE game_invitations SET used_user_id='".$user_id."', used_time='".time()."', used=1";
+					if ($GLOBALS['pageview_tracking_enabled']) $update_invitation_q .= ", used_ip=".$this->quote_escape($_SERVER['REMOTE_ADDR']);
+					$update_invitation_q .= " WHERE invitation_id='".$invitation['invitation_id']."';";
+					$this->run_query($update_invitation_q);
 					
 					$user = new User($this, $user_id);
 					$blockchain = new Blockchain($this, $db_game['blockchain_id']);
@@ -618,9 +556,8 @@ class App {
 			if ($append_index > 0) $append = "(".$append_index.")";
 			else $append = "";
 			$url_identifier = $this->normalize_uri_part($game_name.$append);
-			$q = "SELECT * FROM games WHERE url_identifier=".$this->quote_escape($url_identifier).";";
-			$r = $this->run_query($q);
-			if ($r->rowCount() == 0) $keeplooping = false;
+			$conflicting_games = $this->run_query("SELECT * FROM games WHERE url_identifier=".$this->quote_escape($url_identifier).";");
+			if ($conflicting_games->rowCount() == 0) $keeplooping = false;
 			else $append_index++;
 		}
 		while ($keeplooping);
@@ -653,64 +590,38 @@ class App {
 	}
 	
 	public function currency_price_at_time($currency_id, $ref_currency_id, $ref_time) {
-		$q = "SELECT * FROM currency_prices WHERE currency_id='".$currency_id."' AND reference_currency_id='".$ref_currency_id."' AND time_added <= ".$ref_time." ORDER BY time_added DESC LIMIT 1;";
-		$r = $this->run_query($q);
-		
-		if ($r->rowCount() > 0) {
-			return $r->fetch();
-		}
-		else return false;
+		return $this->run_query("SELECT * FROM currency_prices WHERE currency_id='".$currency_id."' AND reference_currency_id='".$ref_currency_id."' AND time_added <= ".$ref_time." ORDER BY time_added DESC LIMIT 1;")->fetch();
 	}
 	
 	public function currency_price_after_time($currency_id, $ref_currency_id, $ref_time, $not_after_time) {
-		$q = "SELECT * FROM currency_prices WHERE currency_id='".$currency_id."' AND reference_currency_id='".$ref_currency_id."' AND time_added >= ".$ref_time." AND time_added<=".$not_after_time." ORDER BY time_added ASC LIMIT 1;";
-		$r = $this->run_query($q);
-		
-		if ($r->rowCount() > 0) {
-			return $r->fetch();
-		}
-		else return false;
+		return $this->run_query("SELECT * FROM currency_prices WHERE currency_id='".$currency_id."' AND reference_currency_id='".$ref_currency_id."' AND time_added >= ".$ref_time." AND time_added<=".$not_after_time." ORDER BY time_added ASC LIMIT 1;")->fetch();
 	}
 	
 	public function latest_currency_price($currency_id) {
-		$q = "SELECT * FROM currency_prices WHERE currency_id='".$currency_id."' AND reference_currency_id='".$this->get_site_constant('reference_currency_id')."' ORDER BY price_id DESC LIMIT 1;";
-		$r = $this->run_query($q);
-		
-		if ($r->rowCount() > 0) {
-			return $r->fetch();
-		}
-		else return false;
+		return $this->run_query("SELECT * FROM currency_prices WHERE currency_id='".$currency_id."' AND reference_currency_id='".$this->get_site_constant('reference_currency_id')."' ORDER BY price_id DESC LIMIT 1;")->fetch();
 	}
 	
 	public function get_currency_by_abbreviation($currency_abbreviation) {
-		$q = "SELECT * FROM currencies WHERE abbreviation='".strtoupper($currency_abbreviation)."';";
-		$r = $this->run_query($q);
-
-		if ($r->rowCount() > 0) {
-			return $r->fetch();
-		}
-		else return false;
+		return $this->run_query("SELECT * FROM currencies WHERE abbreviation='".strtoupper($currency_abbreviation)."';")->fetch();
 	}
 	
 	public function get_reference_currency() {
-		$q = "SELECT * FROM currencies WHERE currency_id='".$this->get_site_constant('reference_currency_id')."';";
-		$r = $this->run_query($q);
-		if ($r->rowCount() > 0) return $r->fetch();
+		$reference_currency = $this->run_query("SELECT * FROM currencies WHERE currency_id='".$this->get_site_constant('reference_currency_id')."';")->fetch();
+		if ($reference_currency) return $reference_currency;
 		else die('Error, reference_currency_id is not set properly in site_constants.');
 	}
 	
 	public function update_all_currency_prices() {
 		$reference_currency_id = $this->get_site_constant('reference_currency_id');
-		$q = "SELECT * FROM currencies c JOIN oracle_urls o ON c.oracle_url_id=o.oracle_url_id WHERE c.currency_id != '".$reference_currency_id."' GROUP BY o.oracle_url_id;";
-		$r = $this->run_query($q);
+		$currency_urls = $this->run_query("SELECT * FROM currencies c JOIN oracle_urls o ON c.oracle_url_id=o.oracle_url_id WHERE c.currency_id != '".$reference_currency_id."' GROUP BY o.oracle_url_id;");
 		
-		while ($currency_url = $r->fetch()) {
+		while ($currency_url = $currency_urls->fetch()) {
 			$api_response_raw = file_get_contents($currency_url['url']);
 			echo "(".strlen($api_response_raw).") ".$currency_url['url']."<br/>\n";
-			$qq = "SELECT * FROM currencies WHERE oracle_url_id='".$currency_url['oracle_url_id']."';";
-			$rr = $this->run_query($qq);
 			
-			while ($currency = $rr->fetch()) {
+			$currencies_by_url = $this->run_query("SELECT * FROM currencies WHERE oracle_url_id='".$currency_url['oracle_url_id']."';");
+			
+			while ($currency = $currencies_by_url->fetch()) {
 				if ($currency_url['format_id'] == 2) {
 					$api_response = json_decode($api_response_raw);
 					$price = $api_response->USD->bid;
@@ -728,20 +639,16 @@ class App {
 				}
 				
 				if ($price > 0) {
-					$qqq = "INSERT INTO currency_prices SET currency_id='".$currency['currency_id']."', reference_currency_id='".$reference_currency_id."', price='".$price."', time_added='".time()."';";
-					$rrr = $this->run_query($qqq);
+					$this->run_query("INSERT INTO currency_prices SET currency_id='".$currency['currency_id']."', reference_currency_id='".$reference_currency_id."', price='".$price."', time_added='".time()."';");
 				}
 			}
 		}
 	}
 	
 	public function update_currency_price($currency_id) {
-		$q = "SELECT * FROM currencies WHERE currency_id='".$currency_id."';";
-		$r = $this->run_query($q);
+		$currency = $this->run_query("SELECT * FROM currencies WHERE currency_id='".$currency_id."';")->fetch();
 
-		if ($r->rowCount() > 0) {
-			$currency = $r->fetch();
-
+		if ($currency) {
 			if ($currency['abbreviation'] == "BTC") {
 				$reference_currency = $this->get_reference_currency();
 				
@@ -752,13 +659,10 @@ class App {
 				$price = $api_response->$reference_currency['abbreviation']->bid;
 
 				if ($price > 0) {
-					$q = "INSERT INTO currency_prices SET currency_id='".$currency_id."', reference_currency_id='".$reference_currency['currency_id']."', price='".$price."', time_added='".time()."';";
-					$r = $this->run_query($q);
+					$this->run_query("INSERT INTO currency_prices SET currency_id='".$currency_id."', reference_currency_id='".$reference_currency['currency_id']."', price='".$price."', time_added='".time()."';");
 					$currency_price_id = $this->last_insert_id();
 
-					$q = "SELECT * FROM currency_prices WHERE price_id='".$currency_price_id."';";
-					$r = $this->run_query($q);
-					return $r->fetch();
+					return $this->run_query("SELECT * FROM currency_prices WHERE price_id='".$currency_price_id."';")->fetch();
 				}
 				else return false;
 			}
@@ -783,14 +687,10 @@ class App {
 	}
 	
 	public function historical_currency_conversion_rate($numerator_price_id, $denominator_price_id) {
-		$q = "SELECT * FROM currency_prices WHERE price_id='".$numerator_price_id."';";
-		$r = $this->run_query($q);
-		$numerator_rate = $r->fetch();
+		$numerator_rate = $this->run_query("SELECT * FROM currency_prices WHERE price_id='".$numerator_price_id."';")->fetch();
 
-		$q = "SELECT * FROM currency_prices WHERE price_id='".$denominator_price_id."';";
-		$r = $this->run_query($q);
-		$denominator_rate = $r->fetch();
-
+		$denominator_rate = $this->run_query("SELECT * FROM currency_prices WHERE price_id='".$denominator_price_id."';")->fetch();
+		
 		return round(pow(10,8)*$denominator_rate['price']/$numerator_rate['price'])/pow(10,8);
 	}
 	
@@ -798,15 +698,13 @@ class App {
 		$address_key = $this->new_normal_address_key($account['currency_id'], $account);
 		
 		$time = time();
-		$q = "INSERT INTO currency_invoices SET time_created='".$time."', pay_currency_id='".$pay_currency_id."'";
-		if ($address_key) $q .= ", address_id='".$address_key['address_id']."'";
-		$q .= ", expire_time='".($time+$GLOBALS['invoice_expiration_seconds'])."', user_game_id='".$user_game['user_game_id']."', invoice_type='".$invoice_type."', status='unpaid', invoice_key_string='".$this->random_string(32)."', pay_amount='".$pay_amount."';";
-		$r = $this->run_query($q);
+		$new_invoice_q = "INSERT INTO currency_invoices SET time_created='".$time."', pay_currency_id='".$pay_currency_id."'";
+		if ($address_key) $new_invoice_q .= ", address_id='".$address_key['address_id']."'";
+		$new_invoice_q .= ", expire_time='".($time+$GLOBALS['invoice_expiration_seconds'])."', user_game_id='".$user_game['user_game_id']."', invoice_type='".$invoice_type."', status='unpaid', invoice_key_string='".$this->random_string(32)."', pay_amount='".$pay_amount."';";
+		$this->run_query($new_invoice_q);
 		$invoice_id = $this->last_insert_id();
 		
-		$q = "SELECT * FROM currency_invoices WHERE invoice_id='".$invoice_id."';";
-		$r = $this->run_query($q);
-		return $r->fetch();
+		return $this->run_query("SELECT * FROM currency_invoices WHERE invoice_id='".$invoice_id."';")->fetch();
 	}
 	
 	public function new_normal_address_key($currency_id, &$account) {
@@ -821,9 +719,7 @@ class App {
 	public function new_address_key($currency_id, &$account) {
 		$reject_destroy_addresses = true;
 		
-		$q = "SELECT * FROM currencies WHERE currency_id='".$currency_id."';";
-		$r = $this->run_query($q);
-		$currency = $r->fetch();
+		$currency = $this->fetch_currency_by_id($currency_id);
 		
 		if ($currency['blockchain_id'] > 0) {
 			$blockchain = new Blockchain($this, $currency['blockchain_id']);
@@ -857,31 +753,25 @@ class App {
 				if ($reject_destroy_addresses && $db_address['is_destroy_address'] == 1) return $this->new_address_key($currency_id, $account, $reject_destroy_addresses);
 				else {
 					if ($account) {
-						$q = "UPDATE addresses SET user_id='".$account['user_id']."' WHERE address_id='".$db_address['address_id']."';";
-						$r = $this->run_query($q);
-						$q = "UPDATE transaction_ios SET user_id='".$account['user_id']."' WHERE address_id='".$db_address['address_id']."';";
-						$r = $this->run_query($q);
+						$this->run_query("UPDATE addresses SET user_id='".$account['user_id']."' WHERE address_id='".$db_address['address_id']."';");
+						$this->run_query("UPDATE transaction_ios SET user_id='".$account['user_id']."' WHERE address_id='".$db_address['address_id']."';");
 					}
 					
-					$q = "SELECT * FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id WHERE ak.address_id='".$db_address['address_id']."';";
-					$r = $this->run_query($q);
+					$address_key = $this->run_query("SELECT * FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id WHERE ak.address_id='".$db_address['address_id']."';")->fetch();
 					
-					if ($r->rowCount() > 0) {
-						$address_key = $r->fetch();
-						
+					if ($address_key) {
 						if ($account) {
-							$q = "UPDATE address_keys SET account_id='".$account['account_id']."' WHERE address_key_id='".$address_key['address_key_id']."';";
-							$r = $this->run_query($q);
+							$this->run_query("UPDATE address_keys SET account_id='".$account['account_id']."' WHERE address_key_id='".$address_key['address_key_id']."';");
 							
 							$address_key['account_id'] = $account['account_id'];
 						}
 					}
 					else {
-						$q = "INSERT INTO address_keys SET currency_id='".$blockchain->currency_id()."', address_id='".$db_address['address_id']."', save_method='".$save_method."', pub_key=".$this->quote_escape($address_text);
-						if (!empty($keySet['privWIF'])) $q .= ", priv_key=".$this->quote_escape($keySet['privWIF']);
-						if (!empty($account)) $q .= ", account_id='".$account['account_id']."'";
-						$q .= ";";
-						$r = $this->run_query($q);
+						$new_key_q = "INSERT INTO address_keys SET currency_id='".$blockchain->currency_id()."', address_id='".$db_address['address_id']."', save_method='".$save_method."', pub_key=".$this->quote_escape($address_text);
+						if (!empty($keySet['privWIF'])) $new_key_q .= ", priv_key=".$this->quote_escape($keySet['privWIF']);
+						if (!empty($account)) $new_key_q .= ", account_id='".$account['account_id']."'";
+						$new_key_q .= ";";
+						$this->run_query($new_key_q);
 						$address_key_id = $this->last_insert_id();
 						
 						$address_key = $this->run_query("SELECT * FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id WHERE ak.address_key_id='".$address_key_id."';")->fetch();
@@ -901,18 +791,19 @@ class App {
 	
 	public function display_games($category_id, $game_id) {
 		echo '<div class="paragraph">';
-		$q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='published' OR g.game_status='running')";
-		if (!empty($category_id)) $q .= " AND g.category_id=".$category_id;
-		if (!empty($game_id)) $q .= " AND g.game_id=".$game_id;
-		$q .= " ORDER BY g.featured_score DESC, g.game_id DESC;";
-		$r = $this->run_query($q);
-		if ($r->rowCount() > 0) {
+		$display_games_q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='published' OR g.game_status='running')";
+		if (!empty($category_id)) $display_games_q .= " AND g.category_id=".$category_id;
+		if (!empty($game_id)) $display_games_q .= " AND g.game_id=".$game_id;
+		$display_games_q .= " ORDER BY g.featured_score DESC, g.game_id DESC;";
+		$display_games = $this->run_query($display_games_q);
+		
+		if ($display_games->rowCount() > 0) {
 			$cell_width = 12;
 			
 			$counter = 0;
 			echo '<div class="row">';
 			
-			while ($db_game = $r->fetch()) {
+			while ($db_game = $display_games->fetch()) {
 				$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 				$featured_game = new Game($blockchain, $db_game['game_id']);
 				$last_block_id = $blockchain->last_block_id();
@@ -1007,13 +898,11 @@ class App {
 		$update_user_id_q = "UPDATE transaction_ios io JOIN addresses a ON io.address_id=a.address_id SET io.user_id=a.user_id";
 		if ($only_unspent_utxos) $update_user_id_q .= " WHERE io.spend_status='unspent'";
 		$update_user_id_q .= ";";
-		$update_user_id_r = $this->run_query($update_user_id_q);
+		$this->run_query($update_user_id_q);
 	}
 	
 	public function fetch_image_by_id($image_id) {
-		$image_r = $this->run_query("SELECT * FROM images WHERE image_id=".$image_id.";");
-		if ($image_r->rowCount() > 0) return $image_r->fetch();
-		else return false;
+		return $this->run_query("SELECT * FROM images WHERE image_id=".$image_id.";")->fetch();
 	}
 	
 	public function image_url(&$db_image) {
@@ -1038,10 +927,10 @@ class App {
 		}
 		else {
 			if (in_array($extension, ['jpg','jpeg','png','gif','tif','tiff','bmp','webp'])) {
-				$q = "INSERT INTO images SET image_identifier=".$this->quote_escape($image_identifier).", extension=".$this->quote_escape($extension);
-				if (!empty($access_key)) $q .= ", access_key=".$this->quote_escape($access_key);
-				$q .= ";";
-				$r = $this->run_query($q);
+				$new_image_q = "INSERT INTO images SET image_identifier=".$this->quote_escape($image_identifier).", extension=".$this->quote_escape($extension);
+				if (!empty($access_key)) $new_image_q .= ", access_key=".$this->quote_escape($access_key);
+				$new_image_q .= ";";
+				$this->run_query($new_image_q);
 				$image_id = $this->last_insert_id();
 				
 				$db_image = $this->fetch_image_by_id($image_id);
@@ -1101,9 +990,7 @@ class App {
 		
 		$invite_currency = false;
 		if ($db_game['invite_currency'] > 0) {
-			$q = "SELECT * FROM currencies WHERE currency_id='".$db_game['invite_currency']."';";
-			$r = $this->run_query($q);
-			$invite_currency = $r->fetch();
+			$invite_currency = $this->fetch_currency_by_id($db_game['invite_currency']);
 		}
 		
 		if ($db_game['game_id'] > 0) { // This public function can also be called with a game variation
@@ -1112,8 +999,7 @@ class App {
 		
 		$html .= '<div class="row"><div class="col-sm-5">Blockchain:</div><div class="col-sm-7">';
 		if ($db_game['blockchain_id'] > 0) {
-			$q = "SELECT * FROM blockchains WHERE blockchain_id='".$db_game['blockchain_id']."';";
-			$db_blockchain = $this->run_query($q)->fetch();
+			$db_blockchain = $this->run_query("SELECT * FROM blockchains WHERE blockchain_id='".$db_game['blockchain_id']."';")->fetch();
 			$html .= '<a href="/explorer/blockchains/'.$db_blockchain['url_identifier'].'/blocks/">'.$db_blockchain['blockchain_name'].'</a>';
 		}
 		else $html .= "None";
@@ -1301,15 +1187,15 @@ class App {
 		$escrow_amounts = array();
 		
 		if ($definition_mode == "actual") {
-			$q = "SELECT * FROM game_escrow_amounts ea JOIN currencies c ON ea.currency_id=c.currency_id WHERE ea.game_id='".$game->db_game['game_id']."' ORDER BY c.short_name_plural ASC;";
+			$escrow_amounts_q = "SELECT * FROM game_escrow_amounts ea JOIN currencies c ON ea.currency_id=c.currency_id WHERE ea.game_id='".$game->db_game['game_id']."' ORDER BY c.short_name_plural ASC;";
 		}
 		else if ($definition_mode == "defined") {
-			$q = "SELECT * FROM game_defined_escrow_amounts ea JOIN currencies c ON ea.currency_id=c.currency_id WHERE ea.game_id='".$game->db_game['game_id']."' ORDER BY c.short_name_plural ASC;";
+			$escrow_amounts_q = "SELECT * FROM game_defined_escrow_amounts ea JOIN currencies c ON ea.currency_id=c.currency_id WHERE ea.game_id='".$game->db_game['game_id']."' ORDER BY c.short_name_plural ASC;";
 		}
 		
-		$r = $this->run_query($q);
+		$escrow_amounts = $this->run_query($escrow_amounts_q);
 		
-		while ($escrow_amount = $r->fetch()) {
+		while ($escrow_amount = $escrow_amounts->fetch()) {
 			$escrow_amounts[$escrow_amount['short_name_plural']] = (float) $escrow_amount['amount'];
 		}
 		
@@ -1319,15 +1205,15 @@ class App {
 		$events_obj = array();
 		
 		if ($definition_mode == "defined") {
-			$q = "SELECT ev.*, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM game_defined_events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id='".$game->db_game['game_id']."' ORDER BY ev.event_index ASC;";
+			$events_q = "SELECT ev.*, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM game_defined_events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id='".$game->db_game['game_id']."' ORDER BY ev.event_index ASC;";
 		}
 		else {
-			$q = "SELECT ev.*, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id='".$game->db_game['game_id']."' ORDER BY ev.event_index ASC;";
+			$events_q = "SELECT ev.*, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id='".$game->db_game['game_id']."' ORDER BY ev.event_index ASC;";
 		}
-		$r = $this->run_query($q);
+		$db_events = $this->run_query($q);
 		
 		$i=0;
-		while ($db_event = $r->fetch()) {
+		while ($db_event = $db_events->fetch()) {
 			$temp_event = array();
 			
 			for ($j=0; $j<count($event_verbatim_vars); $j++) {
@@ -1349,14 +1235,14 @@ class App {
 			if (!empty($db_event['external_identifier']) && $show_internal_params) $temp_event['external_identifier'] = $db_event['external_identifier'];
 			
 			if ($definition_mode == "defined") {
-				$qq = "SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."' ORDER BY option_index ASC;";
+				$options_q = "SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."' ORDER BY option_index ASC;";
 			}
 			else {
-				$qq = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY event_option_index ASC;";
+				$options_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY event_option_index ASC;";
 			}
-			$rr = $this->run_query($qq);
+			$db_options = $this->run_query($options_q);
 			$j = 0;
-			while ($option = $rr->fetch()) {
+			while ($option = $db_options->fetch()) {
 				$possible_outcome = ["title"=>$option['name']];
 				if ($show_internal_params) {
 					if (!empty($option['target_probability'])) $possible_outcome['target_probability'] = $option['target_probability'];
@@ -1449,10 +1335,8 @@ class App {
 			return floor((1-$db_game['exponential_inflation_minershare'])*$round_coins_created);
 		}
 		else {
-			$q = "SELECT SUM(".$db_game['payout_weight']."_score), SUM(unconfirmed_".$db_game['payout_weight']."_score) FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$db_game['game_id']."';";
-			$r = $this->run_query($q);
-			$r = $r->fetch();
-			$score = $r['SUM('.$db_game['payout_weight'].'_score)']+$r['SUM(unconfirmed_'.$db_game['payout_weight'].'_score)'];
+			$info = $this->run_query("SELECT SUM(".$db_game['payout_weight']."_score), SUM(unconfirmed_".$db_game['payout_weight']."_score) FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$db_game['game_id']."';")->fetch();
+			$score = $info['SUM('.$db_game['payout_weight'].'_score)']+$info['SUM(unconfirmed_'.$db_game['payout_weight'].'_score)'];
 			
 			return $score/$this->votes_per_coin($db_game);
 		}
@@ -1480,24 +1364,15 @@ class App {
 	}
 	
 	public function fetch_currency_by_id($currency_id) {
-		$q = "SELECT * FROM currencies WHERE currency_id='".$currency_id."';";
-		$r = $this->run_query($q);
-		return $r->fetch();
+		return $this->run_query("SELECT * FROM currencies WHERE currency_id='".$currency_id."';")->fetch();
 	}
 	
 	public function fetch_external_address_by_id($external_address_id) {
-		$q = "SELECT * FROM external_addresses WHERE address_id='".$external_address_id."';";
-		$r = $this->run_query($q);
-		return $r->fetch();
+		return $this->run_query("SELECT * FROM external_addresses WHERE address_id='".$external_address_id."';")->fetch();
 	}
 	
 	public function fetch_currency_invoice_by_id($currency_invoice_id) {
-		$q = "SELECT * FROM currency_invoices WHERE invoice_id='".$currency_invoice_id."';";
-		$r = $this->run_query($q);
-		if ($r->rowCount() > 0) {
-			return $r->fetch();
-		}
-		else return false;
+		return $this->run_query("SELECT * FROM currency_invoices WHERE invoice_id='".$currency_invoice_id."';")->fetch();
 	}
 	
 	public function check_process_running($lock_name) {
@@ -1751,7 +1626,7 @@ class App {
 				$peer = $this->get_peer_by_server_name($GLOBALS['base_url'], true);
 			}
 			else {
-				$peer = $this->get_peer_by_id($blockchain->db_blockchain['authoritative_peer_id']);
+				$peer = $this->fetch_peer_by_id($blockchain->db_blockchain['authoritative_peer_id']);
 			}
 			$blockchain_definition['peer'] = $peer['base_url'];
 		}
@@ -1780,17 +1655,15 @@ class App {
 	
 	public function migrate_game_definitions($game, $initial_game_def_hash, $new_game_def_hash) {
 		$log_message = "";
-		$initial_game_def_r = $this->run_query("SELECT * FROM game_definitions WHERE definition_hash=".$this->quote_escape($initial_game_def_hash).";");
+		$initial_game_def = $this->get_game_definition_by_hash($initial_game_def_hash);
 		
-		if ($initial_game_def_r->rowCount() == 1) {
-			$initial_game_def = $initial_game_def_r->fetch();
-			$initial_game_obj = get_object_vars(json_decode($initial_game_def['definition']));
+		if ($initial_game_def) {
+			$initial_game_obj = get_object_vars(json_decode($initial_game_def));
 			
-			$new_game_def_r = $this->run_query("SELECT * FROM game_definitions WHERE definition_hash=".$this->quote_escape($new_game_def_hash).";");
+			$new_game_def = $this->get_game_definition_by_hash($new_game_def_hash);
 			
-			if ($new_game_def_r->rowCount() == 1) {
-				$new_game_def = $new_game_def_r->fetch();
-				$new_game_obj = get_object_vars(json_decode($new_game_def['definition']));
+			if ($new_game_def) {
+				$new_game_obj = get_object_vars(json_decode($new_game_def));
 				
 				$min_starting_block = min($initial_game_obj['game_starting_block'], $new_game_obj['game_starting_block']);
 				
@@ -1809,25 +1682,19 @@ class App {
 						if ((string)$initial_game_obj[$var[1]] != (string)$new_game_obj[$var[1]]) {
 							$reset_block = $min_starting_block;
 							
-							$q = "UPDATE games SET ".$var[1]."=".$this->quote_escape($new_game_obj[$var[1]])." WHERE game_id=".$game->db_game['game_id'].";";
-							$r = $this->run_query($q);
+							$this->run_query("UPDATE games SET ".$var[1]."=".$this->quote_escape($new_game_obj[$var[1]])." WHERE game_id=".$game->db_game['game_id'].";");
 						}
 					}
 				}
 				
-				$q = "DELETE FROM game_escrow_amounts WHERE game_id='".$game->db_game['game_id']."';";
-				$r = $this->run_query($q);
+				$this->run_query("DELETE FROM game_escrow_amounts WHERE game_id='".$game->db_game['game_id']."';");
 				
 				if (!empty($new_game_obj['escrow_amounts'])) {
 					foreach ($new_game_obj['escrow_amounts'] as $currency_identifier => $amount) {
-						$q = "SELECT * FROM currencies WHERE short_name_plural='".$currency_identifier."';";
-						$r = $this->run_query($q);
+						$escrow_currency = $this->run_query("SELECT * FROM currencies WHERE short_name_plural='".$currency_identifier."';");
 						
-						if ($r->rowCount() > 0) {
-							$escrow_currency = $r->fetch();
-							
-							$q = "INSERT INTO game_escrow_amounts SET game_id='".$game->db_game['game_id']."', currency_id='".$escrow_currency['currency_id']."', amount='".$amount."';";
-							$r = $this->run_query($q);
+						if ($escrow_currency) {
+							$this->run_query("INSERT INTO game_escrow_amounts SET game_id='".$game->db_game['game_id']."', currency_id='".$escrow_currency['currency_id']."', amount='".$amount."';");
 						}
 					}
 				}
@@ -1885,34 +1752,27 @@ class App {
 	}
 	
 	public function check_set_gde(&$game, &$gde, &$event_verbatim_vars, $sport_entity_type_id, $league_entity_type_id, $general_entity_type_id) {
-		$db_gde = false;
+		$db_gde = $this->run_query("SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gde['event_index']."';")->fetch();
 		
-		$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gde['event_index']."';";
-		$r = $this->run_query($q);
-		if ($r->rowCount() > 0) {
-			$db_gde = $r->fetch();
-			$q = "UPDATE game_defined_events SET ";
-		}
-		else {
-			$q = "INSERT INTO game_defined_events SET game_id='".$game->db_game['game_id']."', ";
-		}
+		if ($db_gde) $gde_q = "UPDATE game_defined_events SET ";
+		else $gde_q = "INSERT INTO game_defined_events SET game_id='".$game->db_game['game_id']."', ";
 		
 		if (!empty($gde['sport'])) {
 			$sport_entity = $this->check_set_entity($sport_entity_type_id, $gde['sport']);
-			$q .= "sport_entity_id=".$sport_entity['entity_id'].", ";
+			$gde_q .= "sport_entity_id=".$sport_entity['entity_id'].", ";
 		}
-		else $q .= "sport_entity_id=NULL, ";
+		else $gde_q .= "sport_entity_id=NULL, ";
 		
 		if (!empty($gde['league'])) {
 			$league_entity = $this->check_set_entity($league_entity_type_id, $gde['league']);
-			$q .= "league_entity_id=".$league_entity['entity_id'].", ";
+			$gde_q .= "league_entity_id=".$league_entity['entity_id'].", ";
 		}
-		else $q .= "league_entity_id=NULL, ";
+		else $gde_q .= "league_entity_id=NULL, ";
 		
 		if (!empty($gde['external_identifier'])) {
-			$q .= "external_identifier=".$this->quote_escape($gde['external_identifier']).", ";
+			$gde_q .= "external_identifier=".$this->quote_escape($gde['external_identifier']).", ";
 		}
-		else $q .= "external_identifier=NULL, ";
+		else $gde_q .= "external_identifier=NULL, ";
 		
 		$track_entity_id = false;
 		if (!empty($gde['track_entity_id'])) $track_entity_id = $gde['track_entity_id'];
@@ -1923,8 +1783,8 @@ class App {
 			$track_entity_id = $track_entity['entity_id'];
 		}
 		
-		if ($track_entity_id) $q .= "track_entity_id=".$track_entity_id.", ";
-		else $q .= "track_entity_id=NULL, ";
+		if ($track_entity_id) $gde_q .= "track_entity_id=".$track_entity_id.", ";
+		else $gde_q .= "track_entity_id=NULL, ";
 		
 		for ($j=0; $j<count($event_verbatim_vars); $j++) {
 			$var_type = $event_verbatim_vars[$j][0];
@@ -1934,15 +1794,13 @@ class App {
 			if ($var_val === "" || strtolower($var_val) == "null") $escaped_var_val = "NULL";
 			else $escaped_var_val = $this->quote_escape($var_val);
 			
-			$q .= $event_verbatim_vars[$j][1]."=".$escaped_var_val.", ";
+			$gde_q .= $event_verbatim_vars[$j][1]."=".$escaped_var_val.", ";
 		}
-		$q = substr($q, 0, strlen($q)-2);
 		
-		if ($db_gde) {
-			$q .= " WHERE game_defined_event_id='".$db_gde['game_defined_event_id']."'";
-		}
-		$q .= ";";
-		$r = $this->run_query($q);
+		$gde_q = substr($gde_q, 0, strlen($gde_q)-2);
+		if ($db_gde) $gde_q .= " WHERE game_defined_event_id='".$db_gde['game_defined_event_id']."'";
+		$gde_q .= ";";
+		$this->run_query($gde_q);
 		
 		$delete_q = "DELETE FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gde['event_index']."'";
 		if (!empty($gde['possible_outcomes'])) $delete_q .= " AND option_index > ".count($gde['possible_outcomes']);
@@ -1950,24 +1808,23 @@ class App {
 		$this->run_query($delete_q);
 		
 		if (!empty($gde['possible_outcomes'])) {
-			$existing_gdo_r = $this->run_query("SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gde['event_index']."' ORDER BY option_index ASC;");
+			$existing_gdos = $this->run_query("SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gde['event_index']."' ORDER BY option_index ASC;");
 			
 			for ($k=0; $k<count($gde['possible_outcomes']); $k++) {
-				if ($existing_gdo_r->rowCount() > 0) $existing_gdo = $existing_gdo_r->fetch();
-				else $existing_gdo = false;
+				$existing_gdo = $existing_gdos->fetch();
 				
 				if (is_object($gde['possible_outcomes'][$k])) $possible_outcome = get_object_vars($gde['possible_outcomes'][$k]);
 				else $possible_outcome = $gde['possible_outcomes'][$k];
 				
-				if ($existing_gdo) $q = "UPDATE game_defined_options SET ";
-				else $q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index='".$gde['event_index']."', option_index='".$k."', ";
+				if ($existing_gdo) $gdo_q = "UPDATE game_defined_options SET ";
+				else $gdo_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index='".$gde['event_index']."', option_index='".$k."', ";
 				
-				$q .= "name=".$this->quote_escape($possible_outcome['title']);
+				$gdo_q .= "name=".$this->quote_escape($possible_outcome['title']);
 				
 				if (!empty($possible_outcome['target_probability'])) {
-					$q .= ", target_probability='".$possible_outcome['target_probability']."'";
+					$gdo_q .= ", target_probability='".$possible_outcome['target_probability']."'";
 				}
-				else $q .= ", target_probability=NULL";
+				else $gdo_q .= ", target_probability=NULL";
 				
 				if (empty($possible_outcome['entity_id'])) {
 					if ($track_entity_id) $possible_outcome['entity_id'] = $track_entity_id;
@@ -1976,18 +1833,18 @@ class App {
 						$possible_outcome['entity_id'] = $gdo_entity['entity_id'];
 					}
 				}
-				$q .= ", entity_id='".$possible_outcome['entity_id']."'";
+				$gdo_q .= ", entity_id='".$possible_outcome['entity_id']."'";
 				
-				if ($existing_gdo) $q .= " WHERE game_defined_option_id='".$existing_gdo['game_defined_option_id']."'";
-				$q .= ";";
-				$r = $this->run_query($q);
+				if ($existing_gdo) $gdo_q .= " WHERE game_defined_option_id='".$existing_gdo['game_defined_option_id']."'";
+				$gdo_q .= ";";
+				$this->run_query($gdo_q);
 			}
 		}
 	}
 	
 	public function get_game_definition_by_hash($game_def_hash) {
-		$game_def_r = $this->run_query("SELECT * FROM game_definitions WHERE definition_hash=".$this->quote_escape($game_def_hash).";");
-		if ($game_def_r->rowCount() > 0) return $game_def_r->fetch()['definition'];
+		$db_game_def = $this->run_query("SELECT * FROM game_definitions WHERE definition_hash=".$this->quote_escape($game_def_hash).";")->fetch();
+		if ($db_game_def) return $db_game_def['definition'];
 		else return false;
 	}
 	
@@ -2000,15 +1857,10 @@ class App {
 	}
 	
 	public function check_set_module($module_name) {
-		$q = "SELECT * FROM modules WHERE module_name=".$this->quote_escape($module_name).";";
-		$r = $this->run_query($q);
+		$db_module = $this->run_query("SELECT * FROM modules WHERE module_name=".$this->quote_escape($module_name).";");
 		
-		if ($r->rowCount() > 0) {
-			$db_module = $r->fetch();
-		}
-		else {
-			$q = "INSERT INTO modules SET module_name=".$this->quote_escape($module_name).";";
-			$r = $this->run_query($q);
+		if (!$db_module) {
+			$this->run_query("INSERT INTO modules SET module_name=".$this->quote_escape($module_name).";");
 			$module_id = $this->last_insert_id();
 			
 			$db_module = $this->run_query("SELECT * FROM modules WHERE module_id=".$module_id.";")->fetch();
@@ -2047,7 +1899,7 @@ class App {
 				}
 				$import_q = substr($import_q, 0, strlen($import_q)-2).";";
 				
-				$import_r = $this->run_query($import_q);
+				$this->run_query($import_q);
 				$blockchain_id = $this->last_insert_id();
 				
 				$error_message = "Import was a success! Next please <a href=\"/scripts/sync_blockchain_initial.php?key=".$GLOBALS['cron_key_string']."&blockchain_id=".$blockchain_id."\">reset and synchronize ".$blockchain_def->blockchain_name."</a>";
@@ -2081,8 +1933,7 @@ class App {
 					$url_identifier = "private-chain-".$chain_id;
 					$chain_pow_reward = 25*pow(10,$decimal_places);
 					
-					$q = "INSERT INTO blockchains SET online=1, p2p_mode='none', blockchain_name='Private Chain ".$chain_id."', url_identifier='".$url_identifier."', coin_name='chaincoin', coin_name_plural='chaincoins', seconds_per_block=30, decimal_places=".$decimal_places.", initial_pow_reward=".$chain_pow_reward.";";
-					$r = $this->run_query($q);
+					$this->run_query("INSERT INTO blockchains SET online=1, p2p_mode='none', blockchain_name='Private Chain ".$chain_id."', url_identifier='".$url_identifier."', coin_name='chaincoin', coin_name_plural='chaincoins', seconds_per_block=30, decimal_places=".$decimal_places.", initial_pow_reward=".$chain_pow_reward.";");
 					$blockchain_id = $this->last_insert_id();
 					
 					$new_blockchain = new Blockchain($this, $blockchain_id);
@@ -2103,12 +1954,9 @@ class App {
 						
 						$permission_to_change = false;
 						
-						$q = "SELECT * FROM games WHERE url_identifier=".$this->quote_escape($game_def->url_identifier).";";
-						$r = $this->run_query($q);
+						$db_url_matched_game = $this->run_query("SELECT * FROM games WHERE url_identifier=".$this->quote_escape($game_def->url_identifier).";")->fetch();
 						
-						if ($r->rowCount() > 0) {
-							$db_url_matched_game = $r->fetch();
-							
+						if ($db_url_matched_game) {
 							if ($db_url_matched_game['blockchain_id'] == $blockchain->db_blockchain['blockchain_id']) {
 								$url_matched_game = new Game($blockchain, $db_url_matched_game['game_id']);
 								
@@ -2141,21 +1989,21 @@ class App {
 									}
 								}
 								
-								$q = "INSERT INTO games SET ";
-								if ($thisuser) $q .= "creator_id='".$thisuser->db_user['user_id']."', ";
-								if ($db_group) $q .= "option_group_id='".$db_group['group_id']."', ";
-								$q .= "blockchain_id='".$db_blockchain['blockchain_id']."', game_status='published', featured=1";
+								$new_game_q = "INSERT INTO games SET ";
+								if ($thisuser) $new_game_q .= "creator_id='".$thisuser->db_user['user_id']."', ";
+								if ($db_group) $new_game_q .= "option_group_id='".$db_group['group_id']."', ";
+								$new_game_q .= "blockchain_id='".$db_blockchain['blockchain_id']."', game_status='published', featured=1";
 								
 								for ($i=0; $i<count($verbatim_vars); $i++) {
 									$var_type = $verbatim_vars[$i][0];
 									$var_name = $verbatim_vars[$i][1];
 									
 									if ($game_def->$var_name != "") {
-										$q .= ", ".$var_name."=".$this->quote_escape($game_def->$var_name);
+										$new_game_q .= ", ".$var_name."=".$this->quote_escape($game_def->$var_name);
 									}
 								}
-								$q .= ";";
-								$r = $this->run_query($q);
+								$new_game_q .= ";";
+								$this->run_query($new_game_q);
 								$game_id = $this->last_insert_id();
 								
 								if (!empty($game_def->module)) {
@@ -2174,19 +2022,14 @@ class App {
 								}
 							}
 							
-							$q = "DELETE FROM game_defined_escrow_amounts WHERE game_id='".$game->db_game['game_id']."';";
-							$r = $this->run_query($q);
+							$this->run_query("DELETE FROM game_defined_escrow_amounts WHERE game_id='".$game->db_game['game_id']."';");
 							
 							if (!empty($game_def->escrow_amounts)) {
 								foreach ($game_def->escrow_amounts as $currency_identifier => $amount) {
-									$q = "SELECT * FROM currencies WHERE short_name_plural='".$currency_identifier."';";
-									$r = $this->run_query($q);
+									$escrow_currency = $this->run_query("SELECT * FROM currencies WHERE short_name_plural='".$currency_identifier."';")->fetch();
 									
-									if ($r->rowCount() > 0) {
-										$escrow_currency = $r->fetch();
-										
-										$q = "INSERT INTO game_defined_escrow_amounts SET game_id='".$game->db_game['game_id']."', currency_id='".$escrow_currency['currency_id']."', amount='".$amount."';";
-										$r = $this->run_query($q);
+									if ($escrow_currency) {
+										$this->run_query("INSERT INTO game_defined_escrow_amounts SET game_id='".$game->db_game['game_id']."', currency_id='".$escrow_currency['currency_id']."', amount='".$amount."';");
 									}
 								}
 							}
@@ -2214,8 +2057,7 @@ class App {
 				}
 				else {
 					if ($new_private_blockchain) {
-						$q = "DELETE FROM blockchains WHERE blockchain_id='".$new_blockchain->db_blockchain['blockchain_id']."';";
-						$r = $this->run_query($q);
+						$this->run_query("DELETE FROM blockchains WHERE blockchain_id='".$new_blockchain->db_blockchain['blockchain_id']."';");
 					}
 					$error_message .= "Error, failed to identify the right blockchain.\n";
 				}
@@ -2227,106 +2069,74 @@ class App {
 	}
 	
 	public function check_set_option_group($description, $singular_form, $plural_form) {
-		$group_q = "SELECT * FROM option_groups WHERE description=".$this->quote_escape($description).";";
-		$group_r = $this->run_query($group_q);
+		$group = $this->run_query("SELECT * FROM option_groups WHERE description=".$this->quote_escape($description).";")->fetch();
 		
-		if ($group_r->rowCount() > 0) {
-			return $group_r->fetch();
-		}
+		if ($group) return $group;
 		else {
-			$group_q = "INSERT INTO option_groups SET description=".$this->quote_escape($description).", option_name=".$this->quote_escape($singular_form).", option_name_plural=".$this->quote_escape($plural_form).";";
-			$group_r = $this->run_query($group_q);
-			$group_id = $this->last_insert_id();
-			$group_q = "SELECT * FROM option_groups WHERE group_id=".$group_id.";";
-			return $this->run_query($group_q)->fetch();
+			$this->run_query("INSERT INTO option_groups SET description=".$this->quote_escape($description).", option_name=".$this->quote_escape($singular_form).", option_name_plural=".$this->quote_escape($plural_form).";");
+			return $this->run_query("SELECT * FROM option_groups WHERE group_id=".$this->last_insert_id().";")->fetch();
 		}
 	}
 	
 	public function fetch_entity_by_id($entity_id) {
-		$q = "SELECT * FROM entities WHERE entity_id='".((int)$entity_id)."';";
-		$r = $this->run_query($q);
-		
-		if ($r->rowCount() > 0) {
-			return $r->fetch();
-		}
-		else return false;
+		return $this->run_query("SELECT * FROM entities WHERE entity_id='".((int)$entity_id)."';")->fetch();
 	}
 	
 	public function check_set_entity($entity_type_id, $name) {
-		$q = "SELECT * FROM entities WHERE ";
-		if ($entity_type_id) $q .= "entity_type_id='".$entity_type_id."' AND ";
-		$q .= "entity_name=".$this->quote_escape($name).";";
-		$r = $this->run_query($q);
+		$existing_entity_q = "SELECT * FROM entities WHERE ";
+		if ($entity_type_id) $existing_entity_q .= "entity_type_id='".$entity_type_id."' AND ";
+		$existing_entity_q .= "entity_name=".$this->quote_escape($name).";";
+		$existing_entity = $this->run_query($existing_entity_q)->fetch();
 		
-		if ($r->rowCount() > 0) {
-			return $r->fetch();
-		}
+		if ($existing_entity) return $existing_entity;
 		else {
-			$q = "INSERT INTO entities SET entity_name=".$this->quote_escape($name);
-			if ($entity_type_id) $q .= ", entity_type_id='".$entity_type_id."'";
-			$q .= ";";
-			$r = $this->run_query($q);
-			$entity_id = $this->last_insert_id();
+			$new_entity_q = "INSERT INTO entities SET entity_name=".$this->quote_escape($name);
+			if ($entity_type_id) $new_entity_q .= ", entity_type_id='".$entity_type_id."'";
+			$new_entity_q .= ";";
+			$this->run_query($new_entity_q);
 			
-			return $this->fetch_entity_by_id($entity_id);
+			return $this->fetch_entity_by_id($this->last_insert_id());
 		}
 	}
 	
 	public function check_set_entity_type($name) {
-		$q = "SELECT * FROM entity_types WHERE entity_name=".$this->quote_escape($name).";";
-		$r = $this->run_query($q);
-		if ($r->rowCount() > 0) {
-			return $r->fetch();
-		}
+		$existing_entity_type = $this->run_query("SELECT * FROM entity_types WHERE entity_name=".$this->quote_escape($name).";")->fetch();
+		
+		if ($existing_entity_type) return $existing_entity_type;
 		else {
-			$q = "INSERT INTO entity_types SET entity_name=".$this->quote_escape($name).";";
-			$r = $this->run_query($q);
-			$entity_type_id = $this->last_insert_id();
-			$q = "SELECT * FROM entity_types WHERE entity_type_id=".$entity_type_id.";";
-			return $this->run_query($q)->fetch();
+			$this->run_query("INSERT INTO entity_types SET entity_name=".$this->quote_escape($name).";");
+			return $this->run_query("SELECT * FROM entity_types WHERE entity_type_id=".$this->last_insert_id().";")->fetch();
 		}
 	}
 	
 	public function cached_url_info($url) {
-		$q = "SELECT * FROM cached_urls WHERE url=".$this->quote_escape($url).";";
-		$r = $this->run_query($q);
-		
-		if ($r->rowCount() > 0) return $r->fetch();
-		else return false;
+		return $this->run_query("SELECT * FROM cached_urls WHERE url=".$this->quote_escape($url).";")->fetch();
 	}
 	
 	public function async_fetch_url($url, $require_now) {
-		$q = "SELECT * FROM cached_urls WHERE url=".$this->quote_escape($url).";";
-		$r = $this->run_query($q);
+		$cached_url = $this->run_query("SELECT * FROM cached_urls WHERE url=".$this->quote_escape($url).";")->fetch();
 		
-		if ($r->rowCount() > 0) {
-			$cached_url = $r->fetch();
-			
+		if ($cached_url) {
 			if ($require_now && empty($cached_url['time_fetched'])) {
 				$start_load_time = microtime(true);
 				$http_response = file_get_contents($cached_url['url']) or die("Failed to fetch url: $url");
-				$q = "UPDATE cached_urls SET cached_result=".$this->quote_escape($http_response).", time_fetched='".time()."', load_time='".(microtime(true)-$start_load_time)."' WHERE cached_url_id='".$cached_url['cached_url_id']."';";
-				$r = $this->run_query($q);
 				
-				$q = "SELECT * FROM cached_urls WHERE cached_url_id=".$cached_url['cached_url_id'].";";
-				$r = $this->run_query($q);
-				$cached_url = $r->fetch();
+				$this->run_query("UPDATE cached_urls SET cached_result=".$this->quote_escape($http_response).", time_fetched='".time()."', load_time='".(microtime(true)-$start_load_time)."' WHERE cached_url_id='".$cached_url['cached_url_id']."';");
+				
+				$cached_url = $this->run_query("SELECT * FROM cached_urls WHERE cached_url_id=".$cached_url['cached_url_id'].";")->fetch();
 			}
 		}
 		else {
-			$q = "INSERT INTO cached_urls SET url=".$this->quote_escape($url).", time_created='".time()."'";
+			$new_cached_url_q = "INSERT INTO cached_urls SET url=".$this->quote_escape($url).", time_created='".time()."'";
 			if ($require_now) {
 				$start_load_time = microtime(true);
 				$http_response = file_get_contents($url) or die("Failed to fetch url: $url");
-				$q .= ", time_fetched='".time()."', cached_result=".$this->quote_escape($http_response).", load_time='".(microtime(true)-$start_load_time)."'";
+				$new_cached_url_q .= ", time_fetched='".time()."', cached_result=".$this->quote_escape($http_response).", load_time='".(microtime(true)-$start_load_time)."'";
 			}
-			$q .= ";";
-			$r = $this->run_query($q);
-			$cached_url_id = $this->last_insert_id();
+			$new_cached_url_q .= ";";
+			$this->run_query($new_cached_url_q);
 			
-			$q = "SELECT * FROM cached_urls WHERE cached_url_id=".$cached_url_id.";";
-			$r = $this->run_query($q);
-			$cached_url = $r->fetch();
+			$cached_url = $this->run_query("SELECT * FROM cached_urls WHERE cached_url_id=".$this->last_insert_id().";")->fetch();
 		}
 		
 		return $cached_url;
@@ -2345,21 +2155,15 @@ class App {
 			$user_game = $user->ensure_user_in_game($game, false);
 			
 			if ($user_game) {
-				$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id='".$db_address['address_id']."';";
-				$r = $this->run_query($q);
+				$address_key = $this->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id='".$db_address['address_id']."';")->fetch();
 				
-				if ($r->rowCount() == 1) {
-					$address_key = $r->fetch();
-					
-					$q = "UPDATE address_keys SET account_id='".$user_game['account_id']."' WHERE address_key_id='".$address_key['address_key_id']."';";
-					$r = $this->run_query($q);
+				if ($address_key) {
+					$this->run_query("UPDATE address_keys SET account_id='".$user_game['account_id']."' WHERE address_key_id='".$address_key['address_key_id']."';");
 				}
 				else {
-					$q = "INSERT INTO address_keys SET address_id='".$db_address['address_id']."', account_id='".$user_game['account_id']."', save_method='fake', pub_key=".$this->quote_escape($db_address['address']).";";
-					$r = $this->run_query($q);
+					$this->run_query("INSERT INTO address_keys SET address_id='".$db_address['address_id']."', account_id='".$user_game['account_id']."', save_method='fake', pub_key=".$this->quote_escape($db_address['address']).";");
 				}
-				$q = "UPDATE addresses SET user_id='".$user->db_user['user_id']."' WHERE address_id='".$db_address['address_id']."';";
-				$r = $this->run_query($q);
+				$this->run_query("UPDATE addresses SET user_id='".$user->db_user['user_id']."' WHERE address_id='".$db_address['address_id']."';");
 				
 				return true;
 			}
@@ -2372,21 +2176,16 @@ class App {
 			$account = $this->user_blockchain_account($user->db_user['user_id'], $currency_id);
 			
 			if ($account) {
-				$q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id='".$db_address['address_id']."';";
-				$r = $this->run_query($q);
+				$address_key = $this->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id='".$db_address['address_id']."';")->fetch();
 				
-				if ($r->rowCount() == 1) {
-					$address_key = $r->fetch();
-					
-					$q = "UPDATE address_keys SET account_id='".$account['account_id']."' WHERE address_key_id='".$address_key['address_key_id']."';";
-					$r = $this->run_query($q);
+				if ($address_key) {
+					$this->run_query("UPDATE address_keys SET account_id='".$account['account_id']."' WHERE address_key_id='".$address_key['address_key_id']."';");
 				}
 				else {
-					$q = "INSERT INTO address_keys SET address_id='".$db_address['address_id']."', account_id='".$account['account_id']."', save_method='fake', pub_key=".$this->quote_escape($db_address['address']).";";
-					$r = $this->run_query($q);
+					$this->run_query("INSERT INTO address_keys SET address_id='".$db_address['address_id']."', account_id='".$account['account_id']."', save_method='fake', pub_key=".$this->quote_escape($db_address['address']).";");
 				}
-				$q = "UPDATE addresses SET user_id='".$user->db_user['user_id']."' WHERE address_id='".$db_address['address_id']."';";
-				$r = $this->run_query($q);
+				
+				$this->run_query("UPDATE addresses SET user_id='".$user->db_user['user_id']."' WHERE address_id='".$db_address['address_id']."';");
 				
 				return true;
 			}
@@ -2395,12 +2194,10 @@ class App {
 	}
 	
 	public function blockchain_ensure_currencies() {
-		$q = "SELECT b.* FROM blockchains b WHERE NOT EXISTS (SELECT * FROM currencies c WHERE b.blockchain_id=c.blockchain_id);";
-		$r = $this->run_query($q);
+		$problem_blockchains = $this->run_query("SELECT b.* FROM blockchains b WHERE NOT EXISTS (SELECT * FROM currencies c WHERE b.blockchain_id=c.blockchain_id);");
 		
-		while ($db_blockchain = $r->fetch()) {
-			$qq = "INSERT INTO currencies SET blockchain_id='".$db_blockchain['blockchain_id']."', name=".$this->quote_escape($db_blockchain['blockchain_name']).", short_name=".$this->quote_escape($db_blockchain['coin_name']).", short_name_plural=".$this->quote_escape($db_blockchain['coin_name_plural']).", abbreviation=".$this->quote_escape($db_blockchain['coin_name_plural']).";";
-			$rr = $this->run_query($qq);
+		while ($db_blockchain = $problem_blockchains->fetch()) {
+			$this->run_query("INSERT INTO currencies SET blockchain_id='".$db_blockchain['blockchain_id']."', name=".$this->quote_escape($db_blockchain['blockchain_name']).", short_name=".$this->quote_escape($db_blockchain['coin_name']).", short_name_plural=".$this->quote_escape($db_blockchain['coin_name_plural']).", abbreviation=".$this->quote_escape($db_blockchain['coin_name_plural']).";");
 		}
 	}
 	
@@ -2421,15 +2218,7 @@ class App {
 	}
 	
 	public function user_blockchain_account($user_id, $currency_id) {
-		$qq = "SELECT * FROM currency_accounts WHERE game_id IS NULL AND user_id='".$user_id."' AND currency_id='".$currency_id."';";
-		$rr = $this->run_query($qq);
-		
-		if ($rr->rowCount() > 0) {
-			$currency_account = $rr->fetch();
-		}
-		else $currency_account = false;
-		
-		return $currency_account;
+		return $this->run_query("SELECT * FROM currency_accounts WHERE game_id IS NULL AND user_id='".$user_id."' AND currency_id='".$currency_id."';")->fetch();
 	}
 	
 	public function render_error_message(&$error_message, $error_class) {
@@ -2446,16 +2235,7 @@ class App {
 	}
 	
 	public function get_card_denominations($currency, $fv_currency_id) {
-		$denominations = array();
-		
-		$q = "SELECT * FROM card_currency_denominations WHERE currency_id='".$currency['currency_id']."' AND fv_currency_id='".$fv_currency_id."' ORDER BY denomination ASC;";
-		$r = $this->run_query($q);
-		
-		while ($denomination = $r->fetch()) {
-			array_push($denominations, $denomination);
-		}
-		
-		return $denominations;
+		return $this->run_query("SELECT * FROM card_currency_denominations WHERE currency_id='".$currency['currency_id']."' AND fv_currency_id='".$fv_currency_id."' ORDER BY denomination ASC;")->fetchAll();
 	}
 	
 	public function calculate_cards_cost($usd_per_btc, $denomination, $purity, $how_many) {
@@ -2545,24 +2325,23 @@ class App {
 				$thisuser = $this->create_new_user($verify_code, $salt, $username, $user_password);
 			}
 			
-			$q = "INSERT INTO card_users SET card_id='".$card['card_id']."', password=".$this->quote_escape($password).", create_time='".time()."'";
-			if ($GLOBALS['pageview_tracking_enabled']) $q .= ", create_ip=".$this->quote_escape($_SERVER['REMOTE_ADDR']);
-			$q .= ";";
-			$r = $this->run_query($q);
+			$new_card_user_q = "INSERT INTO card_users SET card_id='".$card['card_id']."', password=".$this->quote_escape($password).", create_time='".time()."'";
+			if ($GLOBALS['pageview_tracking_enabled']) $new_card_user_q .= ", create_ip=".$this->quote_escape($_SERVER['REMOTE_ADDR']);
+			$new_card_user_q .= ";";
+			$this->run_query($new_card_user_q);
 			$card_user_id = $this->last_insert_id();
 			
-			$q = "UPDATE cards SET user_id='".$thisuser->db_user['user_id']."', card_user_id='".$card_user_id."', claim_time='".time()."' WHERE card_id='".$card['card_id']."';";
-			$r = $this->run_query($q);
+			$this->run_query("UPDATE cards SET user_id='".$thisuser->db_user['user_id']."', card_user_id='".$card_user_id."', claim_time='".time()."' WHERE card_id='".$card['card_id']."';");
 			
 			$this->change_card_status($card, 'claimed');
 			
 			$session_key = $_COOKIE['my_session'];
 			$expire_time = time()+3600*24;
 			
-			$q = "INSERT INTO card_sessions SET card_user_id='".$card_user_id."', session_key=".$this->quote_escape($session_key).", login_time='".time()."', expire_time='".$expire_time."'";
-			if ($GLOBALS['pageview_tracking_enabled']) $q .= ", ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']);
-			$q .= ";";
-			$r = $this->run_query($q);
+			$card_session_q = "INSERT INTO card_sessions SET card_user_id='".$card_user_id."', session_key=".$this->quote_escape($session_key).", login_time='".time()."', expire_time='".$expire_time."'";
+			if ($GLOBALS['pageview_tracking_enabled']) $card_session_q .= ", ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']);
+			$card_session_q .= ";";
+			$this->run_query($card_session_q);
 			
 			$redirect_url = false;
 			$login_success = $thisuser->log_user_in($redirect_url, false);
@@ -2585,37 +2364,22 @@ class App {
 	}
 	
 	public function get_card_currency_balance($card_id, $currency_id) {
-		$q = "SELECT * FROM card_currency_balances WHERE card_id='".$card_id."' AND currency_id='".$currency_id."';";
-		$r = $this->run_query($q);
+		$balance = $this->run_query("SELECT * FROM card_currency_balances WHERE card_id='".$card_id."' AND currency_id='".$currency_id."';")->fetch();
 		
-		if ($r->rowCount() > 0) {
-			$balance = $r->fetch();
-			
-			return $balance['balance'];
-		}
+		if ($balance) return $balance['balance'];
 		else return 0;
 	}
 	
 	public function get_card_currency_balances($card_id) {
-		$q = "SELECT * FROM card_currency_balances b JOIN currencies c ON b.currency_id=c.currency_id WHERE b.card_id='".$card_id."' ORDER BY b.currency_id ASC;";
-		$r = $this->run_query($q);
-		
-		$balances = array();
-		
-		while ($balance = $r->fetch()) {
-			array_push($balances, $balance);
-		}
-		
-		return $balances;
+		return $this->run_query("SELECT * FROM card_currency_balances b JOIN currencies c ON b.currency_id=c.currency_id WHERE b.card_id='".$card_id."' ORDER BY b.currency_id ASC;")->fetchAll();
 	}
 	
 	public function set_card_currency_balances($card) {
 		$balances_by_currency_id = array();
 		
-		$q = "SELECT * FROM card_conversions WHERE card_id='".$card['card_id']."';";
-		$r = $this->run_query($q);
+		$card_conversions = $this->run_query("SELECT * FROM card_conversions WHERE card_id='".$card['card_id']."';");
 		
-		while ($conversion = $r->fetch()) {
+		while ($conversion = $card_conversions->fetch()) {
 			if (!empty($conversion['currency1_id'])) {
 				if (empty($balances_by_currency_id[$conversion['currency1_id']])) $balances_by_currency_id[$conversion['currency1_id']] = 0;
 				$balances_by_currency_id[$conversion['currency1_id']] += $conversion['currency1_delta'];
@@ -2627,29 +2391,23 @@ class App {
 		}
 		
 		foreach ($balances_by_currency_id as $currency_id => $balance) {
-			$q = "SELECT * FROM card_currency_balances WHERE card_id='".$card['card_id']."' AND currency_id='".$currency_id."';";
-			$r = $this->run_query($q);
+			$db_balance = $this->run_query("SELECT * FROM card_currency_balances WHERE card_id='".$card['card_id']."' AND currency_id='".$currency_id."';")->fetch();
 			
-			if ($r->rowCount() > 0) {
-				$db_balance = $r->fetch();
-				$q = "UPDATE card_currency_balances SET balance='".$balance."' WHERE balance_id='".$db_balance['balance_id']."';";
-				$r = $this->run_query($q);
+			if ($db_balance) {
+				$this->run_query("UPDATE card_currency_balances SET balance='".$balance."' WHERE balance_id='".$db_balance['balance_id']."';");
 			}
 			else {
-				$q = "INSERT INTO card_currency_balances SET card_id='".$card['card_id']."', currency_id='".$currency_id."', balance='".$balance."';";
-				$r = $this->run_query($q);
+				$this->run_query("INSERT INTO card_currency_balances SET card_id='".$card['card_id']."', currency_id='".$currency_id."', balance='".$balance."';");
 			}
 		}
 	}
 	
 	public function calculate_cards_networth($my_cards) {
 		$networth = 0;
-		
 		$currency_prices = $this->fetch_currency_prices();
 		
 		foreach ($my_cards as $card) {
 			$balances = $this->get_card_currency_balances($card['card_id']);
-			
 			$networth += $this->calculate_card_networth($card, $balances, $currency_prices);
 		}
 		
@@ -2699,22 +2457,16 @@ class App {
 		}
 		
 		if (!$mobilemoney_error) {
-			$q = "UPDATE mobile_payments SET beyonic_request_id='".$beyonic_request->id."' WHERE payment_id='".$payment->db_payment['payment_id']."';";
-			$r = $this->run_query($q);
+			$this->run_query("UPDATE mobile_payments SET beyonic_request_id='".$beyonic_request->id."' WHERE payment_id='".$payment->db_payment['payment_id']."';");
 			
 			$this->change_card_status($my_cards[0], 'redeemed');
 			
-			$q = "UPDATE cards SET status='redeemed' WHERE card_id='".$my_cards[0]['card_id']."';";
-			$r = $this->run_query($q);
+			$this->run_query("UPDATE cards SET status='redeemed' WHERE card_id='".$my_cards[0]['card_id']."';");
 			
-			$q = "INSERT INTO card_withdrawals SET withdraw_method='mobilemoney', card_id='".$my_cards[0]['card_id']."', currency_id='".$currency_id."', status_change_id='".$status_change_id."', withdraw_time='".time()."', amount='".$amount."', ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']).";";
-			$r = $this->run_query($q);
+			$this->run_query("INSERT INTO card_withdrawals SET withdraw_method='mobilemoney', card_id='".$my_cards[0]['card_id']."', currency_id='".$currency_id."', status_change_id='".$status_change_id."', withdraw_time='".time()."', amount='".$amount."', ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']).";");
 			$withdrawal_id = $this->last_insert_id();
 			
-			$q = "INSERT INTO card_conversions SET card_id='".$my_cards[0]['card_id']."'";
-			$q .= ", withdrawal_id='".$withdrawal_id."'";
-			$q .= ", time_created='".time()."', ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']).", currency1_id=".$currency_id.", currency1_delta=".(-1*$amount).";";
-			$r = $this->run_query($q);
+			$this->run_query("INSERT INTO card_conversions SET card_id='".$my_cards[0]['card_id']."', withdrawal_id='".$withdrawal_id."', time_created='".time()."', ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']).", currency1_id=".$currency_id.", currency1_delta=".(-1*$amount).";");
 			
 			$this->set_card_currency_balances($my_cards[0]);
 			
@@ -2732,36 +2484,20 @@ class App {
 		if (substr($server_name, 0, 4) == "www.") $server_name = substr($server_name, 4, strlen($server_name)-4);
 		if ($server_name[strlen($server_name)-1] == "/") $server_name = substr($server_name, 0, strlen($server_name)-1);
 		
-		$peer_r = $this->run_query("SELECT * FROM peers WHERE peer_identifier=".$this->quote_escape($server_name).";");
+		$peer = $this->run_query("SELECT * FROM peers WHERE peer_identifier=".$this->quote_escape($server_name).";")->fetch();
 		
-		if ($peer_r->rowCount() > 0) {
-			$peer = $peer_r->fetch();
-		}
-		else if ($allow_new) {
+		if (!$peer && $allow_new) {
 			$this->run_query("INSERT INTO peers SET peer_identifier=".$this->quote_escape($server_name).", peer_name=".$this->quote_escape($server_name).", base_url=".$this->quote_escape($initial_server_name).", time_created='".time()."';");
-			$peer = $this->get_peer_by_id($this->last_insert_id());
+			$peer = $this->fetch_peer_by_id($this->last_insert_id());
 		}
-		else $peer = false;
 		
 		return $peer;
 	}
 	
-	public function get_peer_by_id($peer_id) {
-		$q = "SELECT * FROM peers WHERE peer_id='".$peer_id."';";
-		$r = $this->run_query($q);
-		
-		if ($r->rowCount() > 0) {
-			return $r->fetch();
-		}
-		else return false;
-	}
-	
 	public function change_card_status(&$db_card, $new_status) {
-		$q = "INSERT INTO card_status_changes SET card_id='".$db_card['card_id']."', from_status='".$db_card['status']."', to_status='".$new_status."', change_time='".time()."';";
-		$r = $this->run_query($q);
+		$this->run_query("INSERT INTO card_status_changes SET card_id='".$db_card['card_id']."', from_status='".$db_card['status']."', to_status='".$new_status."', change_time='".time()."';");
 		
-		$q = "UPDATE cards SET status='".$new_status."' WHERE card_id='".$db_card['card_id']."';";
-		$r = $this->run_query($q);
+		$this->run_query("UPDATE cards SET status='".$new_status."' WHERE card_id='".$db_card['card_id']."';");
 		
 		$db_card['status'] = $new_status;
 	}
@@ -2771,16 +2507,16 @@ class App {
 	}
 	
 	public function create_new_user($verify_code, $salt, $username, $password) {
-		$q = "INSERT INTO users SET username=".$this->quote_escape($username);
-		$q .= ", password=".$this->quote_escape($this->normalize_password($password, $salt)).", salt=".$this->quote_escape($salt);
-		if (strpos($username, '@') !== false) $q .= ", notification_email=".$this->quote_escape($username);
-		if ($GLOBALS['pageview_tracking_enabled']) $q .= ", ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']);
-		if ($GLOBALS['new_games_per_user'] != "unlimited" && $GLOBALS['new_games_per_user'] > 0) $q .= ", authorized_games=".$this->quote_escape($GLOBALS['new_games_per_user']);
-		$q .= ", login_method='";
-		if (strpos($username, '@') === false) $q .= "password";
-		else $q .= "email";
-		$q .= "', time_created='".time()."', verify_code='".$verify_code."';";
-		$r = $this->run_query($q);
+		$new_user_q = "INSERT INTO users SET username=".$this->quote_escape($username);
+		$new_user_q .= ", password=".$this->quote_escape($this->normalize_password($password, $salt)).", salt=".$this->quote_escape($salt);
+		if (strpos($username, '@') !== false) $new_user_q .= ", notification_email=".$this->quote_escape($username);
+		if ($GLOBALS['pageview_tracking_enabled']) $new_user_q .= ", ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR']);
+		if ($GLOBALS['new_games_per_user'] != "unlimited" && $GLOBALS['new_games_per_user'] > 0) $new_user_q .= ", authorized_games=".$this->quote_escape($GLOBALS['new_games_per_user']);
+		$new_user_q .= ", login_method='";
+		if (strpos($username, '@') === false) $new_user_q .= "password";
+		else $new_user_q .= "email";
+		$new_user_q .= "', time_created='".time()."', verify_code='".$verify_code."';";
+		$this->run_query($new_user_q);
 		$user_id = $this->last_insert_id();
 		
 		$thisuser = new User($this, $user_id);
@@ -2788,27 +2524,17 @@ class App {
 		if ($user_id == 1) $this->set_site_constant("admin_user_id", $user_id);
 		
 		if ($GLOBALS['pageview_tracking_enabled']) {
-			$q = "SELECT * FROM viewer_connections WHERE type='viewer2user' AND from_id='".$viewer_id."' AND to_id='".$thisuser->db_user['user_id']."';";
-			$r = $this->run_query($q);
-			if ($r->rowCount() == 0) {
-				$q = "INSERT INTO viewer_connections SET type='viewer2user', from_id='".$viewer_id."', to_id='".$thisuser->db_user['user_id']."';";
-				$r = $this->run_query($q);
-			}
-			
-			$q = "UPDATE users SET ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR'])." WHERE user_id='".$thisuser->db_user['user_id']."';";
-			$r = $this->run_query($q);
+			$this->run_query("UPDATE users SET ip_address=".$this->quote_escape($_SERVER['REMOTE_ADDR'])." WHERE user_id='".$thisuser->db_user['user_id']."';");
 		}
 		
 		return $thisuser;
 	}
 	
 	public function fetch_currency_prices() {
-		$prices = array();
+		$prices = [];
+		$all_currencies = $this->run_query("SELECT * FROM currencies ORDER BY currency_id ASC;");
 		
-		$q = "SELECT * FROM currencies ORDER BY currency_id ASC;";
-		$r = $this->run_query($q);
-		
-		while ($db_currency = $r->fetch()) {
+		while ($db_currency = $all_currencies->fetch()) {
 			$prices[$db_currency['currency_id']] = $this->latest_currency_price($db_currency['currency_id']);
 		}
 		
@@ -2816,27 +2542,23 @@ class App {
 	}
 	
 	public function account_balance($account_id) {
-		$balance_q = "SELECT SUM(io.amount) FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account_id."' AND io.spend_status='unspent';";
-		$balance_r = $this->run_query($balance_q);
-		$balance = $balance_r->fetch();
-		return $balance['SUM(io.amount)'];
+		return $this->run_query("SELECT SUM(io.amount) FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account_id."' AND io.spend_status='unspent';")->fetch()['SUM(io.amount)'];
 	}
 	
 	public function card_public_vars() {
-		return array('peer_card_id', 'mint_time', 'amount', 'purity', 'status');
+		return ['peer_card_id', 'mint_time', 'amount', 'purity', 'status'];
 	}
 	
 	public function pay_out_card(&$card, $address, $fee) {
-		$db_currency = $this->run_query("SELECT * FROM currencies WHERE currency_id='".$card['currency_id']."';")->fetch();
+		$db_currency = $this->fetch_currency_by_id($card['currency_id']);
 		$blockchain = new Blockchain($this, $db_currency['blockchain_id']);
 		
 		$io_tx = $blockchain->fetch_transaction_by_hash($card['io_tx_hash']);
 		
 		if ($io_tx) {
-			$io_r = $this->run_query("SELECT * FROM transaction_ios WHERE create_transaction_id='".$io_tx['transaction_id']."' AND out_index='".$card['io_out_index']."';");
+			$io = $this->run_query("SELECT * FROM transaction_ios WHERE create_transaction_id='".$io_tx['transaction_id']."' AND out_index='".$card['io_out_index']."';")->fetch();
 			
-			if ($io_r->rowCount() > 0) {
-				$io = $io_r->fetch();
+			if ($io) {
 				$db_address = $blockchain->create_or_fetch_address($address, true, false, false, false, false);
 				
 				$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
@@ -2871,20 +2593,20 @@ class App {
 			$db_address = $this->fetch_address_by_id($db_account['current_address_id']);
 			
 			if ($db_address) {
-				$db_currency = $this->run_query("SELECT * FROM currencies WHERE currency_id='".$db_account['currency_id']."';")->fetch();
+				$db_currency = $this->fetch_currency_by_id($db_account['currency_id']);
 				
 				$blockchain = new Blockchain($this, $db_currency['blockchain_id']);
 				
 				$this_peer = $this->get_peer_by_server_name($GLOBALS['base_url'], true);
 				
-				$fee = 0.001;
-				$fee_amount = $fee*pow(10, $blockchain->db_blockchain['decimal_places']);
+				$fee = 0.0001;
+				$fee_amount = (int)($fee*pow(10, $blockchain->db_blockchain['decimal_places']));
 				
 				if ($claim_type == "to_game") $success_message = "/accounts/?action=prompt_game_buyin&account_id=".$db_account['account_id']."&amount=".($card['amount']-$fee);
 				else $success_message = "/accounts/?action=view_account&account_id=".$db_account['account_id'];
 				
 				if ($card['peer_id'] != $this_peer['peer_id']) {
-					$remote_peer = $this->run_query("SELECT * FROM peers WHERE peer_id='".$card['peer_id']."';")->fetch();
+					$remote_peer = $this->fetch_peer_by_id($card['peer_id']);
 					
 					$remote_url = $remote_peer['base_url']."/api/card/".$card['peer_card_id']."/withdraw/?secret=".$card['secret_hash']."&fee=".$fee."&address=".$db_address['address'];
 					$remote_response_raw = file_get_contents($remote_url);
@@ -2895,8 +2617,8 @@ class App {
 						$message = $success_message;
 						$this->change_card_status($card, "redeemed");
 						
-						$q = "UPDATE cards SET redemption_tx_hash=".$this->quote_escape($remote_response['message'])." WHERE card_id='".$card['card_id']."';";
-						$r = $this->run_query($q);
+						$this->run_query("UPDATE cards SET redemption_tx_hash=".$this->quote_escape($remote_response['message'])." WHERE card_id='".$card['card_id']."';");
+						
 						$card['redemption_tx_hash'] = $remote_response['message'];
 					}
 					else {$status_code=12; $message = $remote_response['message'];}
@@ -2905,10 +2627,9 @@ class App {
 					$io_tx = $blockchain->fetch_transaction_by_hash($card['io_tx_hash']);
 					
 					if ($io_tx) {
-						$io_r = $this->run_query("SELECT * FROM transaction_ios WHERE create_transaction_id='".$io_tx['transaction_id']."' AND out_index='".$card['io_out_index']."';");
+						$io = $this->run_query("SELECT * FROM transaction_ios WHERE create_transaction_id='".$io_tx['transaction_id']."' AND out_index='".$card['io_out_index']."';")->fetch();
 						
-						if ($io_r->rowCount() > 0) {
-							$io = $io_r->fetch();
+						if ($io) {
 							$success_message .= "&io_id=".$io['io_id'];
 							
 							$redeem_tx_error = false;
@@ -2921,8 +2642,7 @@ class App {
 								$this->change_card_status($card, "redeemed");
 								$status_code = 1;
 								
-								$q = "UPDATE cards SET redemption_tx_hash=".$this->quote_escape($transaction['tx_hash'])." WHERE card_id='".$card['card_id']."';";
-								$r = $this->run_query($q);
+								$this->run_query("UPDATE cards SET redemption_tx_hash=".$this->quote_escape($transaction['tx_hash'])." WHERE card_id='".$card['card_id']."';");
 								$card['redemption_tx_hash'] = $transaction['tx_hash'];
 							}
 							else {$status_code=11; $message="TX Error: ".$error_message;}
@@ -2973,10 +2693,7 @@ class App {
 	}
 	
 	public function fetch_blockchain_by_identifier($blockchain_identifier) {
-		$q = "SELECT * FROM blockchains WHERE url_identifier=".$this->quote_escape($blockchain_identifier).";";
-		$r = $this->run_query($q);
-		if ($r->rowCount() == 1) return $r->fetch();
-		else return false;
+		return $this->run_query("SELECT * FROM blockchains WHERE url_identifier=".$this->quote_escape($blockchain_identifier).";")->fetch();
 	}
 	
 	public function send_login_link(&$db_thisuser, &$redirect_url, $username) {
@@ -2985,10 +2702,10 @@ class App {
 		$login_url = $GLOBALS['base_url']."/wallet/?login_key=".$access_key;
 		if (!empty($redirect_url)) $login_url .= "&redirect_key=".$redirect_url['redirect_key'];
 		
-		$q = "INSERT INTO user_login_links SET access_key=".$this->quote_escape($access_key).", username=".$this->quote_escape($username);
-		if (!empty($db_thisuser['user_id'])) $q .= ", user_id='".$db_thisuser['user_id']."'";
-		$q .= ", time_created='".time()."';";
-		$r = $this->run_query($q);
+		$new_login_link_q = "INSERT INTO user_login_links SET access_key=".$this->quote_escape($access_key).", username=".$this->quote_escape($username);
+		if (!empty($db_thisuser['user_id'])) $new_login_link_q .= ", user_id='".$db_thisuser['user_id']."'";
+		$new_login_link_q .= ", time_created='".time()."';";
+		$this->run_query($new_login_link_q);
 		
 		$subject = "Click here to log in to ".$GLOBALS['coin_brand_name'];
 		
@@ -3069,9 +2786,7 @@ class App {
 	}
 	
 	public function fetch_address_by_id($address_id) {
-		$address_r = $this->run_query("SELECT * FROM addresses WHERE address_id='".(int)$address_id."';");
-		if ($address_r->rowCount() > 0) return $address_r->fetch();
-		else return false;
+		return $this->run_query("SELECT * FROM addresses WHERE address_id='".(int)$address_id."';")->fetch();
 	}
 	
 	public function calculate_effectiveness_factor($vote_effectiveness_function, $effectiveness_param1, $event_starting_block, $event_final_block, $block_id) {
@@ -3286,8 +3001,7 @@ class App {
 			$image_col = array_search("default_image_id", $header_vars);
 			$group_params = explode(",", $csv_lines[1]);
 			
-			$insert_group_q = "INSERT INTO option_groups SET option_name=".$this->quote_escape($group_params[0]).", option_name_plural=".$this->quote_escape($group_params[1]).", description=".$this->quote_escape($import_group_description).";";
-			$insert_group_r = $this->run_query($insert_group_q);
+			$this->run_query("INSERT INTO option_groups SET option_name=".$this->quote_escape($group_params[0]).", option_name_plural=".$this->quote_escape($group_params[1]).", description=".$this->quote_escape($import_group_description).";");
 			$group_id = $this->last_insert_id();
 			
 			for ($csv_i=2; $csv_i<count($csv_lines); $csv_i++) {
@@ -3295,11 +3009,9 @@ class App {
 				$member_entity = $this->check_set_entity($general_entity_type['entity_type_id'], $csv_params[$name_col]);
 				
 				if (empty($member_entity['default_image_id']) && !empty($csv_params[$image_col])) {
-					$member_image_q = "UPDATE entities SET default_image_id='".$csv_params[$image_col]."' WHERE entity_id='".$member_entity['entity_id']."';";
-					$member_image_r = $this->run_query($member_image_q);
+					$this->run_query("UPDATE entities SET default_image_id='".$csv_params[$image_col]."' WHERE entity_id='".$member_entity['entity_id']."';");
 				}
-				$insert_member_q = "INSERT INTO option_group_memberships SET option_group_id='".$group_id."', entity_id='".$member_entity['entity_id']."';";
-				$insert_member_r = $this->run_query($insert_member_q);
+				$this->run_query("INSERT INTO option_group_memberships SET option_group_id='".$group_id."', entity_id='".$member_entity['entity_id']."';");
 			}
 		}
 		else $error_message = "Failed to import group from file.. the file does not exist.\n";
@@ -3313,13 +3025,7 @@ class App {
 	}
 	
 	public function select_group_by_description($description) {
-		$group_q = "SELECT * FROM option_groups WHERE description=".$this->quote_escape($description).";";
-		$group_r = $this->run_query($group_q);
-		
-		if ($group_r->rowCount() > 0) {
-			return $group_r->fetch();
-		}
-		else return false;
+		return $this->run_query("SELECT * FROM option_groups WHERE description=".$this->quote_escape($description).";")->fetch();
 	}
 	
 	public function running_from_commandline() {
@@ -3364,12 +3070,9 @@ class App {
 						$has_option_indices_until = $option_index;
 					}
 					else {
-						$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND a.option_index='".$option_index."' AND k.account_id IS NULL AND a.address_set_id IS NULL LIMIT 1;";
-						$rr = $this->run_query($qq);
+						$address = $this->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND a.option_index='".$option_index."' AND k.account_id IS NULL AND a.address_set_id IS NULL LIMIT 1;")->fetch();
 						
-						if ($rr->rowCount() > 0) {
-							$address = $rr->fetch();
-							
+						if ($address) {
 							$this->run_query("UPDATE addresses SET address_set_id='".$game_addrsets[$set_i]['address_set_id']."' WHERE address_id='".$address['address_id']."';");
 							
 							$has_option_indices_until = $option_index;
@@ -3394,11 +3097,9 @@ class App {
 	}
 	
 	public function apply_address_set(&$game, $account_id) {
-		$addrset_r = $this->run_query("SELECT * FROM address_sets WHERE game_id='".$game->db_game['game_id']."' AND applied=0 AND has_option_indices_until IS NOT NULL ORDER BY RAND() LIMIT 1;");
+		$address_set = $this->run_query("SELECT * FROM address_sets WHERE game_id='".$game->db_game['game_id']."' AND applied=0 AND has_option_indices_until IS NOT NULL ORDER BY RAND() LIMIT 1;")->fetch();
 		
-		if ($addrset_r->rowCount() > 0) {
-			$address_set = $addrset_r->fetch();
-			
+		if ($address_set) {
 			$this->refresh_address_set_indices($address_set);
 			
 			$this->run_query("UPDATE address_sets SET applied=1 WHERE address_set_id='".$address_set['address_set_id']."';");
@@ -3421,18 +3122,18 @@ class App {
 			if ($option_index == 1) $is_separator_address=1;
 			else $is_separator_address=0;
 			
-			$qq = "INSERT INTO addresses SET is_mine=1";
-			if ($account) $qq .= ", user_id='".$account['user_id']."'";
-			if ($address_set_id) $qq .= ", address_set_id=".$address_set_id;
-			$qq .= ", primary_blockchain_id='".$blockchain->db_blockchain['blockchain_id']."', option_index='".$option_index."', vote_identifier=".$this->quote_escape($vote_identifier).", is_destroy_address='".$is_destroy_address."', is_separator_address='".$is_separator_address."', address=".$this->quote_escape($addr_text).", time_created='".time()."';";
-			$rr = $this->run_query($qq);
+			$new_address_q = "INSERT INTO addresses SET is_mine=1";
+			if ($account) $new_address_q .= ", user_id='".$account['user_id']."'";
+			if ($address_set_id) $new_address_q .= ", address_set_id=".$address_set_id;
+			$new_address_q .= ", primary_blockchain_id='".$blockchain->db_blockchain['blockchain_id']."', option_index='".$option_index."', vote_identifier=".$this->quote_escape($vote_identifier).", is_destroy_address='".$is_destroy_address."', is_separator_address='".$is_separator_address."', address=".$this->quote_escape($addr_text).", time_created='".time()."';";
+			$this->run_query($new_address_q);
 			$address_id = $this->last_insert_id();
 			$this->flush_buffers();
 			
-			$qq = "INSERT INTO address_keys SET address_id='".$address_id."'";
-			if ($account) $qq .= ", account_id='".$account['account_id']."'";
-			$qq .= ", save_method='fake', pub_key='".$addr_text."';";
-			$rr = $this->run_query($qq);
+			$new_key_q = "INSERT INTO address_keys SET address_id='".$address_id."'";
+			if ($account) $new_key_q .= ", account_id='".$account['account_id']."'";
+			$new_key_q .= ", save_method='fake', pub_key='".$addr_text."';";
+			$this->run_query($new_key_q);
 			$address_key_id = $this->last_insert_id();
 			
 			return $this->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id='".$address_id."' AND k.address_key_id='".$address_key_id."';")->fetch();
@@ -3497,7 +3198,11 @@ class App {
 	}
 	
 	public function fetch_io_by_id($io_id) {
-		return $this->run_query("SELECT * FROM transaction_ios WHERE io_id='".(int)$io_id."';")->fetch();
+		return $this->run_query("SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.io_id='".(int)$io_id."';")->fetch();
+	}
+	
+	public function fetch_peer_by_id($peer_id) {
+		return $this->run_query("SELECT * FROM peers WHERE peer_id='".(int)$peer_id."';")->fetch();
 	}
 }
 ?>

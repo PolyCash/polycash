@@ -544,9 +544,8 @@ include('includes/html_start.php');
 						<select class="form-control" id="create_account_blockchain_id" onchange="create_account_step(2);">
 							<option value="">-- Please Select --</option>
 							<?php
-							$q = "SELECT * FROM blockchains ORDER BY blockchain_name ASC;";
-							$r = $app->run_query($q);
-							while ($db_blockchain = $r->fetch()) {
+							$all_blockchains = $app->run_query("SELECT * FROM blockchains ORDER BY blockchain_name ASC;");
+							while ($db_blockchain = $all_blockchains->fetch()) {
 								echo '<option value="'.$db_blockchain['blockchain_id'].'">'.$db_blockchain['blockchain_name'].'</option>'."\n";
 							}
 							?>
@@ -690,9 +689,8 @@ include('includes/html_start.php');
 							<select class="form-control" id="account_spend_game_id">
 								<option value="">-- Please select --</option>
 								<?php
-								$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' GROUP BY g.game_id ORDER BY g.name ASC;";
-								$r = $app->run_query($q);
-								while ($db_game = $r->fetch()) {
+								$my_games = $app->run_query("SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' GROUP BY g.game_id ORDER BY g.name ASC;");
+								while ($db_game = $my_games->fetch()) {
 									echo "<option value=\"".$db_game['game_id']."\">".$db_game['name']."</option>\n";
 								}
 								?>
