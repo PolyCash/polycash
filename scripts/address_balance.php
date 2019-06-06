@@ -6,12 +6,9 @@ $allowed_params = ['address'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);
 
 if ($app->running_as_admin()) {
-	$q = "SELECT * FROM addresses WHERE address=".$app->quote_escape($_REQUEST['address']).";";
-	$r = $app->run_query($q);
+	$db_address = $app->fetch_address($_REQUEST['address']);
 	
-	if ($r->rowCount() > 0) {
-		$db_address = $r->fetch();
-		
+	if ($db_address) {
 		$blockchain = new Blockchain($app, $db_address['primary_blockchain_id']);
 		$confirmed_bal = $blockchain->address_balance_at_block($db_address, $blockchain->last_block_id());
 		$unconfirmed_bal = $blockchain->address_balance_at_block($db_address, false);

@@ -15,14 +15,9 @@ if ($thisuser) {
 		$faucet_io = $game->check_faucet($user_game);
 		
 		if ($faucet_io) {
-			$q = "UPDATE address_keys SET account_id='".$user_game['account_id']."' WHERE address_key_id='".$faucet_io['address_key_id']."';";
-			$r = $app->run_query($q);
-			
-			$q = "UPDATE addresses SET user_id='".$thisuser->db_user['user_id']."' WHERE address_id='".$faucet_io['address_id']."';";
-			$r = $app->run_query($q);
-			
-			$q = "UPDATE user_games SET faucet_claims=faucet_claims+1 WHERE user_game_id='".$user_game['user_game_id']."';";
-			$r = $app->run_query($q);
+			$app->run_query("UPDATE address_keys SET account_id='".$user_game['account_id']."' WHERE address_key_id='".$faucet_io['address_key_id']."';");
+			$app->run_query("UPDATE addresses SET user_id='".$thisuser->db_user['user_id']."' WHERE address_id='".$faucet_io['address_id']."';");
+			$app->run_query("UPDATE user_games SET faucet_claims=faucet_claims+1 WHERE user_game_id='".$user_game['user_game_id']."';");
 			
 			$app->set_site_constant("last_faucet_giveaway_time", time());
 			

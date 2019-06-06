@@ -6,7 +6,7 @@ class User {
 	public function __construct(&$app, $user_id) {
 		$this->app = $app;
 		
-		$this->db_user = $this->app->run_query("SELECT * FROM users WHERE user_id='".$user_id."';")->fetch();
+		$this->db_user = $this->app->fetch_user_by_id($user_id);
 		
 		if (!$this->db_user) throw new Exception("Failed to load user #".$user_id);
 	}
@@ -161,7 +161,7 @@ class User {
 	}
 	
 	public function user_in_game($game_id) {
-		$user_game = $this->app->run_query("SELECT * FROM user_games WHERE user_id='".$this->db_user['user_id']."' AND game_id='".$game_id."';")->fetch();
+		$user_game = $this->app->fetch_user_game($this->db_user['user_id'], $game_id);
 		if ($user_game) return true;
 		else return false;
 	}

@@ -28,7 +28,7 @@ if ($thisuser) {
 				$db_io = $app->fetch_io_by_id($io_id);
 				
 				if ($db_io) {
-					$gios_by_io = $app->run_query("SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id WHERE io.io_id='".$io_id."' AND gio.game_id='".$game_id."';");
+					$gios_by_io = $sale_game->fetch_game_ios_by_io($io_id);
 					
 					if ($gios_by_io->rowCount() > 0) {
 						$game_sale_account = $sale_game->check_set_game_sale_account($thisuser);
@@ -166,7 +166,7 @@ if ($thisuser) {
 				$db_io = $app->fetch_io_by_id($io_id);
 				
 				if ($db_io) {
-					$gios_by_io = $app->run_query("SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id WHERE io.io_id='".$io_id."' AND gio.game_id='".$game_id."';");
+					$gios_by_io = $donate_game->fetch_game_ios_by_io($io_id);
 					
 					if ($gios_by_io->rowCount() > 0) {
 						$faucet_account = $donate_game->check_set_faucet_account();

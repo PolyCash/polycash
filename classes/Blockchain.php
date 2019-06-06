@@ -7,7 +7,7 @@ class Blockchain {
 	public function __construct(&$app, $blockchain_id) {
 		$this->coin_rpc = false;
 		$this->app = $app;
-		$this->db_blockchain = $this->app->run_query("SELECT * FROM blockchains WHERE blockchain_id='".$blockchain_id."';")->fetch();
+		$this->db_blockchain = $this->app->fetch_blockchain_by_id($blockchain_id);
 		if (!$this->db_blockchain) throw new Exception("Failed to load blockchain #".$blockchain_id);
 		
 		if (!empty($this->db_blockchain['authoritative_peer_id'])) {
@@ -1244,7 +1244,7 @@ class Blockchain {
 	
 	public function create_or_fetch_address($address, $check_existing, $delete_optionless, $claimable, $force_is_mine, $account_id) {
 		if ($check_existing) {
-			$db_address = $this->app->run_query("SELECT * FROM addresses WHERE address=".$this->app->quote_escape($address).";")->fetch();
+			$db_address = $this->app->fetch_address($address);
 			if ($db_address) return $db_address;
 		}
 		$vote_identifier = $this->app->addr_text_to_vote_identifier($address);

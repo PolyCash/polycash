@@ -556,7 +556,7 @@ class App {
 			if ($append_index > 0) $append = "(".$append_index.")";
 			else $append = "";
 			$url_identifier = $this->normalize_uri_part($game_name.$append);
-			$conflicting_games = $this->run_query("SELECT * FROM games WHERE url_identifier=".$this->quote_escape($url_identifier).";");
+			$conflicting_games = $this->fetch_db_game_by_identifier($url_identifier);
 			if ($conflicting_games->rowCount() == 0) $keeplooping = false;
 			else $append_index++;
 		}
@@ -1000,7 +1000,7 @@ class App {
 		
 		$html .= '<div class="row"><div class="col-sm-5">Blockchain:</div><div class="col-sm-7">';
 		if ($db_game['blockchain_id'] > 0) {
-			$db_blockchain = $this->run_query("SELECT * FROM blockchains WHERE blockchain_id='".$db_game['blockchain_id']."';")->fetch();
+			$db_blockchain = $this->fetch_blockchain_by_id($db_game['blockchain_id']);
 			$html .= '<a href="/explorer/blockchains/'.$db_blockchain['url_identifier'].'/blocks/">'.$db_blockchain['blockchain_name'].'</a>';
 		}
 		else $html .= "None";
@@ -1158,9 +1158,8 @@ class App {
 		$game_definition['blockchain_identifier'] = $game->blockchain->db_blockchain['url_identifier'];
 		
 		if ($game->db_game['option_group_id'] > 0) {
-			$group_q = "SELECT * FROM option_groups WHERE group_id='".$game->db_game['option_group_id']."';";
-			$group_r = $this->run_query($group_q);
-			$db_group = $group_r->fetch();
+			$db_group = $this->fetch_group_by_id($game->db_game['option_group_id']);
+			
 			$game_definition['option_group'] = $db_group['description'];
 		}
 		else $game_definition['option_group'] = null;
@@ -1236,12 +1235,12 @@ class App {
 			if (!empty($db_event['external_identifier']) && $show_internal_params) $temp_event['external_identifier'] = $db_event['external_identifier'];
 			
 			if ($definition_mode == "defined") {
-				$options_q = "SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."' ORDER BY option_index ASC;";
+				$db_options = $this->run_query("SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."' ORDER BY option_index ASC;");
 			}
 			else {
-				$options_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY event_option_index ASC;";
+				$db_options = $this->fetch_options_by_event($db_event['event_id']);
 			}
-			$db_options = $this->run_query($options_q);
+			
 			$j = 0;
 			while ($option = $db_options->fetch()) {
 				$possible_outcome = ["title"=>$option['name']];
@@ -1857,17 +1856,8 @@ class App {
 		}
 	}
 	
-	public function check_set_module($module_name) {
-		$db_module = $this->run_query("SELECT * FROM modules WHERE module_name=".$this->quote_escape($module_name).";")->fetch();
-		
-		if (!$db_module) {
-			$this->run_query("INSERT INTO modules SET module_name=".$this->quote_escape($module_name).";");
-			$module_id = $this->last_insert_id();
-			
-			$db_module = $this->run_query("SELECT * FROM modules WHERE module_id=".$module_id.";")->fetch();
-		}
-		
-		return $db_module;
+	public function check_module($module_name) {
+		return $this->run_query("SELECT * FROM modules WHERE module_name=".$this->quote_escape($module_name).";")->fetch();
 	}
 	
 	public function create_blockchain_from_definition(&$definition, &$thisuser, &$error_message, &$db_new_blockchain) {
@@ -1955,7 +1945,7 @@ class App {
 						
 						$permission_to_change = false;
 						
-						$db_url_matched_game = $this->run_query("SELECT * FROM games WHERE url_identifier=".$this->quote_escape($game_def->url_identifier).";")->fetch();
+						$db_url_matched_game = $this->fetch_db_game_by_identifier($game_def->url_identifier);
 						
 						if ($db_url_matched_game) {
 							if ($db_url_matched_game['blockchain_id'] == $blockchain->db_blockchain['blockchain_id']) {
@@ -1981,12 +1971,13 @@ class App {
 							if (!$game) {
 								$db_group = false;
 								if (!empty($game_def->option_group)) {
-									$db_group = $this->select_group_by_description($game_def->option_group);
+									$db_group = $this->fetch_group_by_description($game_def->option_group);
+									
 									if (!$db_group) {
 										$import_error = "";
 										$this->import_group_from_file($game_def->option_group, $import_error);
 										
-										$db_group = $this->select_group_by_description($game_def->option_group);
+										$db_group = $this->fetch_group_by_description($game_def->option_group);
 									}
 								}
 								
@@ -2070,12 +2061,12 @@ class App {
 	}
 	
 	public function check_set_option_group($description, $singular_form, $plural_form) {
-		$group = $this->run_query("SELECT * FROM option_groups WHERE description=".$this->quote_escape($description).";")->fetch();
+		$group = $this->fetch_group_by_description($description);
 		
 		if ($group) return $group;
 		else {
 			$this->run_query("INSERT INTO option_groups SET description=".$this->quote_escape($description).", option_name=".$this->quote_escape($singular_form).", option_name_plural=".$this->quote_escape($plural_form).";");
-			return $this->run_query("SELECT * FROM option_groups WHERE group_id=".$this->last_insert_id().";")->fetch();
+			return $this->fetch_group_by_id($this->last_insert_id());
 		}
 	}
 	
@@ -2693,10 +2684,6 @@ class App {
 		return $contents;
 	}
 	
-	public function fetch_blockchain_by_identifier($blockchain_identifier) {
-		return $this->run_query("SELECT * FROM blockchains WHERE url_identifier=".$this->quote_escape($blockchain_identifier).";")->fetch();
-	}
-	
 	public function send_login_link(&$db_thisuser, &$redirect_url, $username) {
 		$access_key = $this->random_string(16);
 		
@@ -2788,6 +2775,10 @@ class App {
 	
 	public function fetch_address_by_id($address_id) {
 		return $this->run_query("SELECT * FROM addresses WHERE address_id='".(int)$address_id."';")->fetch();
+	}
+	
+	public function fetch_address($address) {
+		return $this->run_query("SELECT * FROM addresses WHERE address=".$this->quote_escape($address).";")->fetch();
 	}
 	
 	public function calculate_effectiveness_factor($vote_effectiveness_function, $effectiveness_param1, $event_starting_block, $event_final_block, $block_id) {
@@ -3025,8 +3016,12 @@ class App {
 		@ob_start();
 	}
 	
-	public function select_group_by_description($description) {
+	public function fetch_group_by_description($description) {
 		return $this->run_query("SELECT * FROM option_groups WHERE description=".$this->quote_escape($description).";")->fetch();
+	}
+	
+	public function fetch_group_by_id($group_id) {
+		return $this->run_query("SELECT * FROM option_groups WHERE group_id='".(int)$group_id."';")->fetch();
 	}
 	
 	public function running_from_commandline() {
@@ -3178,6 +3173,20 @@ class App {
 		return $db_image;
 	}
 	
+	public function change_user_game($thisuser, $game, $user_game_id) {
+		if ($user_game_id == "new") {
+			$select_user_game = $thisuser->ensure_user_in_game($game, true);
+			$thisuser->set_selected_user_game($game, $select_user_game['user_game_id']);
+		}
+		else {
+			$select_user_game = $this->run_query("SELECT * FROM user_games WHERE user_game_id=".(int)$user_game_id.";")->fetch();
+			
+			if ($select_user_game && $select_user_game['user_id'] == $thisuser->db_user['user_id'] && $select_user_game['game_id'] == $game->db_game['game_id']) {
+				$thisuser->set_selected_user_game($game, $select_user_game['user_game_id']);
+			}
+		}
+	}
+	
 	public function any_normal_address_in_account($account_id) {
 		return $this->run_query("SELECT * FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id WHERE ak.account_id='".$account_id."' AND a.is_destroy_address=0 AND a.is_separator_address=0 ORDER BY a.option_index ASC LIMIT 1;")->fetch();
 	}
@@ -3198,6 +3207,14 @@ class App {
 		return $this->run_query($spendable_io_q);
 	}
 	
+	public function fetch_blockchain_by_identifier($blockchain_identifier) {
+		return $this->run_query("SELECT * FROM blockchains WHERE url_identifier=".$this->quote_escape($blockchain_identifier).";")->fetch();
+	}
+	
+	public function fetch_blockchain_by_id($blockchain_id) {
+		return $this->run_query("SELECT * FROM blockchains WHERE blockchain_id='".(int)$blockchain_id."';")->fetch();
+	}
+	
 	public function fetch_user_game_by_api_key($api_key) {
 		return $this->run_query("SELECT *, u.user_id AS user_id, g.game_id AS game_id FROM users u JOIN user_games ug ON u.user_id=ug.user_id JOIN games g ON ug.game_id=g.game_id JOIN user_strategies s ON ug.strategy_id=s.strategy_id LEFT JOIN featured_strategies fs ON s.featured_strategy_id=fs.featured_strategy_id WHERE ug.api_access_code=".$this->quote_escape($api_key).";")->fetch();
 	}
@@ -3210,8 +3227,40 @@ class App {
 		return $this->run_query("SELECT * FROM peers WHERE peer_id='".(int)$peer_id."';")->fetch();
 	}
 	
+	public function fetch_event_by_id($event_id) {
+		return $this->run_query("SELECT * FROM events WHERE event_id='".(int)$event_id."';")->fetch();
+	}
+	
 	public function fetch_option_by_id($option_id) {
-		return $this->run_query("SELECT * FROM options WHERE option_id='".(int)$option_id."';")->fetch();
+		return $this->run_query("SELECT * FROM options op JOIN events ev ON op.event_id=ev.event_id WHERE op.option_id='".(int)$option_id."';")->fetch();
+	}
+	
+	public function fetch_options_by_event($event_id) {
+		return $this->run_query("SELECT * FROM options WHERE event_id='".(int)$event_id."' ORDER BY option_index ASC;");
+	}
+	
+	public function fetch_option_by_event_option_index($event_id, $event_option_index) {
+		return $this->run_query("SELECT * FROM options WHERE event_id='".(int)$event_id."' AND event_option_index='".(int)$event_option_index."';")->fetch();
+	}
+	
+	public function fetch_card_by_peer_and_id($peer_id, $card_id) {
+		return $this->run_query("SELECT * FROM cards WHERE peer_card_id='".(int)$card_id."' AND peer_id='".(int)$peer_id."';")->fetch();
+	}
+	
+	public function fetch_user_game($user_id, $game_id) {
+		return $this->run_query("SELECT * FROM user_games WHERE user_id='".(int)$user_id."' AND game_id='".(int)$game_id."' ORDER BY selected DESC;")->fetch();
+	}
+	
+	public function fetch_user_by_id($user_id) {
+		return $this->run_query("SELECT * FROM users WHERE user_id='".(int)$user_id."';")->fetch();
+	}
+	
+	public function fetch_user_by_username($username) {
+		return $this->run_query("SELECT * FROM users WHERE username=".$this->quote_escape($username).";")->fetch();
+	}
+	
+	public function fetch_recycle_ios_in_account($account_id, $quantity) {
+		return $this->run_query("SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".(int)$account_id."' AND a.is_destroy_address=1 AND io.spend_status='unspent' ORDER BY io.amount DESC LIMIT ".(int)$quantity.";")->fetchAll();
 	}
 }
 ?>

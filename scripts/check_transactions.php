@@ -8,17 +8,14 @@ $app->safe_merge_argv_to_request($argv, $allowed_params);
 
 if ($app->running_as_admin()) {
 	$game_id = intval($_REQUEST['game_id']);
-	$q = "SELECT * FROM games";
-	if ($game_id > 0) $q .= " WHERE game_id='".$game_id."'";
-	$q .= ";";
-	$r = $app->run_query($q);
+	$check_games_q = "SELECT * FROM games";
+	if ($game_id > 0) $check_games_q .= " WHERE game_id='".$game_id."'";
+	$check_games_q .= ";";
+	$check_games = $app->run_query($check_games_q);
 	
-	while ($db_game = $r->fetch()) {
+	while ($db_game = $check_games->fetch()) {
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$game = new Game($blockchain, $db_game['game_id']);
-		
-		$qq = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$game->db_game['game_id']."' AND t.transaction_desc='transaction' AND io.spend_block_id<=".$game->last_block_id()." GROUP BY t.transaction_id ORDER BY t.block_id ASC;";
-		$rr = $app->run_query($qq);
 		
 		$error_count = 0;
 		$first_error_block = false;
@@ -27,12 +24,11 @@ if ($app->running_as_admin()) {
 		
 		echo "Last game block loaded was #".$last_block_id."<br/>\n";
 		
-		$qqq = "SELECT * FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND transaction_desc='transaction' AND block_id IS NULL;";
-		$rrr = $app->run_query($qqq);
+		$check_unconfirmed_transactions = $app->run_query("SELECT * FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND transaction_desc='transaction' AND block_id IS NULL;");
 		
-		echo "Checking ".$rrr->rowCount()." unconfirmed transactions in ".$blockchain->db_blockchain['blockchain_name']."<br/>\n";
+		echo "Checking ".$check_unconfirmed_transactions->rowCount()." unconfirmed transactions in ".$blockchain->db_blockchain['blockchain_name']."<br/>\n";
 		
-		while ($transaction = $rrr->fetch()) {
+		while ($transaction = $check_unconfirmed_transactions->fetch()) {
 			$coins_in = $app->transaction_coins_in($transaction['transaction_id']);
 			$coins_out = $app->transaction_coins_out($transaction['transaction_id']);
 			
@@ -41,18 +37,18 @@ if ($app->running_as_admin()) {
 				
 				if ($coins_in == 0) {
 					echo "Deleting ".$transaction['tx_hash']." ...<br/>\n";
-					$qqqq = "DELETE FROM transaction_ios WHERE create_transaction_id='".$transaction['transaction_id']."';";
-					$rrrr = $app->run_query($qqqq);
-					$qqqq = "DELETE FROM transactions WHERE transaction_id='".$transaction['transaction_id']."';";
-					$rrrr = $app->run_query($qqqq);
+					$app->run_query("DELETE FROM transaction_ios WHERE create_transaction_id='".$transaction['transaction_id']."';");
+					$app->run_query("DELETE FROM transactions WHERE transaction_id='".$transaction['transaction_id']."';");
 				}
 			}
 		}
 		
-		echo "Checking ".$rr->rowCount()." transactions for ".$game->db_game['name']."<br/>\n";
+		$check_game_transactions = $app->run_query("SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$game->db_game['game_id']."' AND t.transaction_desc='transaction' AND io.spend_block_id<=".$game->last_block_id()." GROUP BY t.transaction_id ORDER BY t.block_id ASC;");
+		
+		echo "Checking ".$check_game_transactions->rowCount()." transactions for ".$game->db_game['name']."<br/>\n";
 		$severe_threshold = 50;
 		
-		while ($transaction = $rr->fetch()) {
+		while ($transaction = $check_game_transactions->fetch()) {
 			$coins_in = $game->transaction_coins_in($transaction['transaction_id']);
 			$coins_out = $game->transaction_coins_out($transaction['transaction_id'], true);
 			

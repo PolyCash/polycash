@@ -13,19 +13,17 @@ if ($app->running_as_admin()) {
 		$keeplooping = false;
 	}
 	do {
-		if ($_REQUEST['action'] == "send_all") {	
-			$q = "SELECT * FROM async_email_deliveries WHERE time_delivered=0 ORDER BY delivery_id ASC LIMIT 1;";
-			$r = $app->run_query($q);
+		if ($_REQUEST['action'] == "send_all") {
+			$deliveries = $app->run_query("SELECT * FROM async_email_deliveries WHERE time_delivered=0 ORDER BY delivery_id ASC LIMIT 1;");
 		}
 		else {
 			$delivery_id = (int) $_REQUEST['delivery_id'];
 			
-			$q = "SELECT * FROM async_email_deliveries WHERE delivery_id='".$delivery_id."' AND time_delivered=0;";
-			$r = $app->run_query($q);
+			$deliveries = $app->run_query("SELECT * FROM async_email_deliveries WHERE delivery_id='".$delivery_id."' AND time_delivered=0;");
 		}
 		
-		if ($r->rowCount() == 1) {
-			$delivery = $r->fetch();
+		if ($deliveries->rowCount() == 1) {
+			$delivery = $deliveries->fetch();
 			
 			$url = 'https://api.sendgrid.com/';
 			
@@ -65,8 +63,7 @@ if ($app->running_as_admin()) {
 			if ($json_response->message == "success") $successful = 1;
 			else $successful = 0;
 			
-			$q = "UPDATE async_email_deliveries SET time_delivered='".time()."', successful=".$successful.", sendgrid_response=".$app->quote_escape($response)." WHERE delivery_id='".$delivery['delivery_id']."';";
-			$r = $app->run_query($q);
+			$app->run_query("UPDATE async_email_deliveries SET time_delivered='".time()."', successful=".$successful.", sendgrid_response=".$app->quote_escape($response)." WHERE delivery_id='".$delivery['delivery_id']."';");
 			
 			echo "response from Sendgrid was: ".$response;
 		}

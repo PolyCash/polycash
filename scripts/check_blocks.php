@@ -14,34 +14,34 @@ if ($app->running_as_admin()) {
 	$block_id = false;
 	if (!empty($_REQUEST['block_id'])) $block_id = (int)$_REQUEST['block_id'];
 	
-	$q = "SELECT * FROM blockchains WHERE ";
-	if ($blockchain_id) $q .= "blockchain_id='".$blockchain_id."'";
-	else $q .= "online=1";
-	$q .= ";";
-	$r = $app->run_query($q);
+	$check_blockchains_q = "SELECT * FROM blockchains WHERE ";
+	if ($blockchain_id) $check_blockchains_q .= "blockchain_id='".$blockchain_id."'";
+	else $check_blockchains_q .= "online=1";
+	$check_blockchains_q .= ";";
+	$check_blockchains = $app->run_query($check_blockchains_q);
 	
-	while ($db_blockchain = $r->fetch()) {
+	while ($db_blockchain = $check_blockchains->fetch()) {
 		$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
 		
 		$last_block_id = $blockchain->last_block_id();
 		
-		$qq = "SELECT * FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."'";
-		if ($block_id) $qq .= " AND block_id=".$block_id;
-		else $qq .= " AND ((num_ios_in IS NULL AND block_id>=".$db_blockchain['first_required_block'].") OR sum_coins_in<0 OR sum_coins_out<0)";
-		$qq .= " ORDER BY block_id ASC;";
-		$rr = $app->run_query($qq);
+		$check_blocks_q = "SELECT * FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."'";
+		if ($block_id) $check_blocks_q .= " AND block_id=".$block_id;
+		else $check_blocks_q .= " AND ((num_ios_in IS NULL AND block_id>=".$db_blockchain['first_required_block'].") OR sum_coins_in<0 OR sum_coins_out<0)";
+		$check_blocks_q .= " ORDER BY block_id ASC;";
+		$check_blocks = $app->run_query($check_blocks_q);
 		
-		echo $db_blockchain['blockchain_name'].": checking ".$rr->rowCount()." blocks<br/>\n";
+		echo $db_blockchain['blockchain_name'].": checking ".$check_blocks->rowCount()." blocks<br/>\n";
 		$app->flush_buffers();
 		
-		while ($temp_block = $rr->fetch()) {
-			$num_trans = $blockchain->set_block_stats($temp_block);
+		while ($check_block = $check_blocks->fetch()) {
+			$num_trans = $blockchain->set_block_stats($check_block);
 			
-			if ($num_trans != $temp_block['num_transactions']) {
-				$message = "Error in block ".$temp_block['block_id'].", (Should be ".$temp_block['num_transactions']." but there are only ".$num_trans.")";
+			if ($num_trans != $check_block['num_transactions']) {
+				$message = "Error in block ".$check_block['block_id'].", (Should be ".$check_block['num_transactions']." but there are only ".$num_trans.")";
 				echo "$message<br/>\n";
 			}
-			else echo $temp_block['block_id']." ";
+			else echo $check_block['block_id']." ";
 			
 			$app->flush_buffers();
 		}

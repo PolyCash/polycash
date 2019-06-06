@@ -80,7 +80,7 @@ if ($thisuser && $game) {
 					}
 					else $app->output_message(7, "It looks like you entered an invalid address.", false);
 				}
-				else $app->output_message(6, "You don't have any single UTXO with that many ".$game->db_game['coin_name_plural'].". Try making several smaller transactions.", false);
+				else $app->output_message(6, "You don't have that many coins to spend, your transaction has been canceled.", false);
 			}
 			else $app->output_message(5, "You don't have that many coins to spend, your transaction has been canceled.", false);
 		}

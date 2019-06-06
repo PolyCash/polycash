@@ -108,7 +108,7 @@ class Event {
 		list($winning_option_id, $winning_votes, $winning_effective_destroy_score) = $this->determine_winning_option($round_stats_all);
 		
 		if ((string)$this->db_event['outcome_index'] !== "") {
-			$expected_winner = $this->game->get_option_by_outcome_index($this->db_event['event_id'], $this->db_event['outcome_index']);
+			$expected_winner = $this->game->blockchain->app->fetch_option_by_event_option_index($this->db_event['event_id'], $this->db_event['outcome_index']);
 		}
 		else $expected_winner = false;
 		
@@ -117,7 +117,7 @@ class Event {
 		
 		if ($gde) {
 			if ((string)$gde['outcome_index'] !== "") {
-				$game_defined_winner = $this->game->get_option_by_outcome_index($this->db_event['event_id'], $gde['outcome_index']);
+				$game_defined_winner = $this->game->blockchain->app->fetch_option_by_event_option_index($this->db_event['event_id'], $gde['outcome_index']);
 			}
 		}
 		
@@ -473,7 +473,7 @@ class Event {
 		$long_payout_total = floor($total_reward*$long_payout_frac);
 		$short_payout_total = $total_reward-$long_payout_total;
 		
-		$options_by_event = $this->game->blockchain->app->run_query("SELECT * FROM options WHERE event_id='".$this->db_event['event_id']."' ORDER BY event_option_index ASC;");
+		$options_by_event = $this->game->blockchain->app->fetch_options_by_event($this->db_event['event_id']);
 		
 		while ($option = $options_by_event->fetch()) {
 			if ($option['event_option_index'] == 0) $option_payout_total = $long_payout_total;
@@ -717,7 +717,7 @@ class Event {
 		}
 		else if ($this->db_event['event_winning_rule'] == "game_definition") {
 			if (!in_array((string)$this->db_event['outcome_index'], ["", "-1"])) {
-				$db_winning_option = $this->game->blockchain->app->run_query("SELECT * FROM options WHERE event_id='".$this->db_event['event_id']."' AND event_option_index='".$this->db_event['outcome_index']."';")->fetch();
+				$db_winning_option = $this->game->blockchain->app->fetch_option_by_event_option_index($this->db_event['event_id'], $this->db_event['outcome_index']);
 				
 				if ($db_winning_option) {
 					$winning_option_id = $db_winning_option['option_id'];
@@ -806,7 +806,7 @@ class Event {
 			$team_avg_goals_per_game = 1.35;
 			
 			$rand_i = 0;
-			$these_options = $this->game->blockchain->app->run_query("SELECT * FROM options WHERE event_id='".$this->db_event['event_id']."' ORDER BY option_index ASC;");
+			$these_options = $this->game->blockchain->app->fetch_options_by_event($this->db_event['event_id']);
 			
 			while ($db_option = $these_options->fetch()) {
 				$score_prob = min(1, $team_avg_goals_per_game/$event_blocks);

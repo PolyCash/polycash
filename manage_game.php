@@ -46,9 +46,8 @@ else {
 								<select id="new_game_module" class="form-control">
 									<option value="">None</option>
 									<?php
-									$q = "SELECT * FROM modules ORDER BY module_name ASC;";
-									$r = $app->run_query($q);
-									while ($db_module = $r->fetch()) {
+									$all_modules = $app->run_query("SELECT * FROM modules ORDER BY module_name ASC;");
+									while ($db_module = $all_modules->fetch()) {
 										echo "<option value=\"".$db_module['module_name']."\">".$db_module['module_name']."</option>\n";
 									}
 									?>
@@ -59,8 +58,7 @@ else {
 								<select id="new_game_blockchain_id" class="form-control">
 									<option value="">-- Please Select --</option>
 									<?php
-									$q = "SELECT * FROM blockchains ORDER BY blockchain_name ASC;";
-									$r = $app->run_query($q);
+									$all_blockchains = $app->run_query("SELECT * FROM blockchains ORDER BY blockchain_name ASC;");
 									while ($db_blockchain = $r->fetch()) {
 										echo "<option value=\"".$db_blockchain['blockchain_id']."\">".$db_blockchain['blockchain_name']."</option>\n";
 									}
@@ -130,8 +128,7 @@ else {
 			if ($last_action == "description") {
 				$game_description = $_REQUEST['game_description'];
 				
-				$q = "UPDATE games SET short_description=".$app->quote_escape($game_description)." WHERE game_id='".$game->db_game['game_id']."';";
-				$r = $app->run_query($q);
+				$app->run_query("UPDATE games SET short_description=".$app->quote_escape($game_description)." WHERE game_id='".$game->db_game['game_id']."';");
 				
 				$game->db_game['short_description'] = $game_description;
 			}
@@ -152,12 +149,12 @@ else {
 						$user_id = (int) str_replace('"', '', $line_vals[$id_col]);
 						
 						if ($user_id > 0) {
-							$user_r = $app->run_query("SELECT * FROM users WHERE user_id='".$user_id."';");
+							$send_to_user = $app->fetch_user_by_id($user_id);
 							
-							if ($user_r->rowCount() == 1) {
-								$send_to_user = $user_r->fetch();
-								$user_game_r = $app->run_query("SELECT * FROM user_games WHERE user_id='".$user_id."' AND game_id='".$game->db_game['game_id']."';");
-								if ($user_game_r->rowCount() == 0) {
+							if ($send_to_user) {
+								$send_user_game = $app->fetch_user_game($send_to_user['user_id'], $game->db_game['game_id']);
+								
+								if (!$send_user_game) {
 									$invitation = false;
 									$game->generate_invitation($user_id, $invitation, false);
 									$app->send_apply_invitation($send_to_user, $invitation);
@@ -199,9 +196,7 @@ else {
 					$leagues_entity_type = $app->check_set_entity_type("leagues");
 					$general_entity_type = $app->check_set_entity_type("general entity");
 					
-					$q = "SELECT MAX(event_index) FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."';";
-					$r = $app->run_query($q);
-					$game_max_event_index = (int) $r->fetch()['MAX(event_index)'];
+					$game_max_event_index = (int) $app->run_query("SELECT MAX(event_index) FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."';")->fetch()['MAX(event_index)'];
 					$game_event_index_offset = 0;
 					
 					for ($line_i=1; $line_i<count($csv_lines); $line_i++) {
@@ -223,10 +218,9 @@ else {
 								
 								$event_index = $game_max_event_index+$game_event_index_offset+1;
 								
-								$gde_q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND event_name=".$app->quote_escape($event_name)." AND event_final_time='".$event_final_time."';";
-								$gde_r = $app->run_query($gde_q);
+								$existing_gde = $app->run_query("SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND event_name=".$app->quote_escape($event_name)." AND event_final_time='".$event_final_time."';")->fetch();
 								
-								if ($gde_r->rowCount() == 0) {
+								if (!$existing_gde) {
 									$home_target_prob = false;
 									$away_target_prob = false;
 									$tie_target_prob = false;
@@ -282,23 +276,23 @@ else {
 									if ($this_league_entity) $gde_ins_q .= ", league_entity_id=".$this_league_entity['entity_id'];
 									if ($external_identifier) $gde_ins_q .= ", external_identifier=".$app->quote_escape($external_identifier);
 									$gde_ins_q .= ", outcome_index=".$outcome_index.", event_index='".$event_index."', event_name=".$app->quote_escape($event_name).", event_starting_time='".$event_starting_time."', event_final_time='".$event_final_time."', event_payout_time='".$event_payout_time."', option_name='team', option_name_plural='teams';";
-									$gde_ins_r = $app->run_query($gde_ins_q);
+									$app->run_query($gde_ins_q);
 									
 									$gdo_ins_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index=".$event_index.", option_index=0, name=".$app->quote_escape($home).", entity_id='".$home_entity['entity_id']."'";
 									if ($home_target_prob) $gdo_ins_q .= ", target_probability=".$home_target_prob;
 									$gdo_ins_q .= ";";
-									$gdo_ins_r = $app->run_query($gdo_ins_q);
+									$app->run_query($gdo_ins_q);
 									
 									$gdo_ins_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index=".$event_index.", option_index=1, name=".$app->quote_escape($away).", entity_id='".$away_entity['entity_id']."'";
 									if ($away_target_prob) $gdo_ins_q .= ", target_probability=".$away_target_prob;
 									$gdo_ins_q .= ";";
-									$gdo_ins_r = $app->run_query($gdo_ins_q);
+									$app->run_query($gdo_ins_q);
 									
 									if ($ties_allowed) {
 										$gdo_ins_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index=".$event_index.", option_index=2, name='Tie'";
 										if ($tie_target_prob) $gdo_ins_q .= ", target_probability=".$tie_target_prob;
 										$gdo_ins_q .= ";";
-										$gdo_ins_r = $app->run_query($gdo_ins_q);
+										$app->run_query($gdo_ins_q);
 									}
 									
 									$game_event_index_offset++;
@@ -333,8 +327,7 @@ else {
 					}
 				}
 				
-				$internal_q = "UPDATE games SET featured='".$featured."', faucet_policy='".$faucet_policy."', definitive_game_peer_id=".$definitive_game_peer_id." WHERE game_id='".$game->db_game['game_id']."';";
-				$app->run_query($internal_q);
+				$app->run_query("UPDATE games SET featured='".$featured."', faucet_policy='".$faucet_policy."', definitive_game_peer_id=".$definitive_game_peer_id." WHERE game_id='".$game->db_game['game_id']."';");
 				$game->db_game['featured'] = $featured;
 				$game->db_game['faucet_policy'] = $faucet_policy;
 				
@@ -450,9 +443,8 @@ else {
 											<select id="game_form_blockchain_id" class="form-control">
 												<option value="">-- Please Select --</option>
 												<?php
-												$q = "SELECT * FROM blockchains ORDER BY blockchain_name ASC;";
-												$r = $app->run_query($q);
-												while ($db_blockchain = $r->fetch()) {
+												$all_blockchains = $app->run_query("SELECT * FROM blockchains ORDER BY blockchain_name ASC;");
+												while ($db_blockchain = $all_blockchains->fetch()) {
 													echo "<option value=\"".$db_blockchain['blockchain_id']."\">".$db_blockchain['blockchain_name']."</option>\n";
 												}
 												?>
@@ -579,8 +571,7 @@ else {
 											&nbsp;&nbsp; <a href="/groups/">Manage Groups</a>
 											<select id="game_form_option_group_id" class="form-control">
 												<?php
-												$q = "SELECT * FROM option_groups ORDER BY description ASC;";
-												$r = $app->run_query($q);
+												$all_option_groups = $app->run_query("SELECT * FROM option_groups ORDER BY description ASC;");
 												while ($option_group = $r->fetch()) {
 													echo '<option value="'.$option_group['group_id'].'">'.$option_group['description']."</option>\n";
 												}
@@ -596,9 +587,8 @@ else {
 												<label for="game_form_event_entity_type_id">One event for each of these:</label>
 												<select id="game_form_event_entity_type_id" class="form-control">
 													<?php
-													$q = "SELECT * FROM entity_types ORDER BY entity_name ASC;";
-													$r = $app->run_query($q);
-													while ($entity_type = $r->fetch()) {
+													$all_entity_types = $app->run_query("SELECT * FROM entity_types ORDER BY entity_name ASC;");
+													while ($entity_type = $all_entity_types->fetch()) {
 														echo '<option value="'.$entity_type['entity_type_id'].'">'.$entity_type['entity_name']."</option>\n";
 													}
 													?>
@@ -626,7 +616,6 @@ else {
 											<button id="save_game_btn" type="button" class="btn btn-success" onclick="save_game('save');">Save Settings</button>
 											<button id="publish_game_btn" type="button" class="btn btn-primary" onclick="save_game('publish');">Save &amp; Publish</button>
 										</div>
-										<?php /*<button id="game_invitations_game_btn" type="button" class="btn btn-info" data-dismiss="modal" onclick="manage_game_invitations(editing_game_id);">Invite People</button> */ ?>
 									</form>
 								</div>
 							</div>
@@ -719,11 +708,11 @@ else {
 								</select>
 							</p>
 							<?php
-							$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."'";
-							if ($event_filter == "past_due") $q .= " AND outcome_index IS NULL AND event_payout_block <= ".$game->blockchain->last_block_id();
-							$q .= " ORDER BY event_index DESC;";
-							$r = $app->run_query($q);
-							while ($gde = $r->fetch()) {
+							$manage_gdes_q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."'";
+							if ($event_filter == "past_due") $manage_gdes_q .= " AND outcome_index IS NULL AND event_payout_block <= ".$game->blockchain->last_block_id();
+							$manage_gdes_q .= " ORDER BY event_index DESC;";
+							$manage_gdes = $app->run_query($manage_gdes_q);
+							while ($gde = $manage_gdes->fetch()) {
 								?>
 								<div class="row">
 									<div class="col-md-4" style="text-align: center;">

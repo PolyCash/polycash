@@ -44,7 +44,7 @@ if (empty($thisuser) && !empty($_REQUEST['login_key'])) {
 		if (empty($login_link['time_clicked'])) {
 			if ($login_link['time_created'] > time()-(60*15)) {
 				if (empty($login_link['user_id'])) {
-					$existing_user = $app->run_query("SELECT * FROM users WHERE username=".$app->quote_escape($login_link['username']).";")->fetch();
+					$existing_user = $app->fetch_user_by_username($login_link['username']);
 					
 					if (!$existing_user) {
 						$verify_code = $app->random_string(32);
@@ -58,7 +58,7 @@ if (empty($thisuser) && !empty($_REQUEST['login_key'])) {
 					}
 				}
 				else {
-					$db_user = $app->run_query("SELECT * FROM users WHERE user_id='".$login_link['user_id']."';")->fetch();
+					$db_user = $app->fetch_user_by_id($login_link['user_id']);
 					
 					if ($db_user) {
 						$thisuser = new User($app, $db_user['user_id']);
@@ -116,21 +116,8 @@ if ($thisuser) {
 		$game = new Game($blockchain, $requested_game['game_id']);
 		
 		if ($_REQUEST['action'] == "change_user_game") {
-			$user_game_id = $_REQUEST['user_game_id'];
+			$app->change_user_game($thisuser, $game, $_REQUEST['user_game_id']);
 			
-			if ($user_game_id == "new") {
-				$select_user_game = $thisuser->ensure_user_in_game($game, true);
-				$thisuser->set_selected_user_game($game, $select_user_game['user_game_id']);
-			}
-			else {
-				$user_game_id = (int) $user_game_id;
-				
-				$select_user_game = $app->run_query("SELECT * FROM user_games WHERE user_game_id='".$user_game_id."';")->fetch();
-				
-				if ($select_user_game && $select_user_game['user_id'] == $thisuser->db_user['user_id']) {
-					$thisuser->set_selected_user_game($game, $select_user_game['user_game_id']);
-				}
-			}
 			header("Location: /wallet/".$game->db_game['url_identifier']."/");
 			die();
 		}
@@ -156,34 +143,6 @@ if ($thisuser) {
 					$user_game['payout_address_id'] = $address_id;
 				}
 			}
-			
-			/*if ($user_game['payout_address_id'] > 0) {}
-			else if ($requested_game['giveaway_status'] == "invite_pay" || $requested_game['giveaway_status'] == "public_pay" || $game->escrow_value(false) > 0) {
-				$pagetitle = "Join ".$requested_game['name'];
-				$nav_tab_selected = "wallet";
-				include('includes/html_start.php');
-				?>
-				<script type="text/javascript">
-				$(document).ready(function() {
-					$('#payout_address').focus();
-				});
-				</script>
-				<div class="container-fluid">
-					<form action="/wallet/<?php echo $requested_game['url_identifier']; ?>/" method="post">
-						<input type="hidden" name="action" value="save_address" />
-						Please specify a <?php echo $game->blockchain->db_blockchain['coin_name']; ?> address where your winnings should be sent:<br/>
-						<div class="row" style="margin-top: 10px;">
-							<div class="col-md-8">
-								<input class="form-control" id="payout_address" name="payout_address" />
-							</div>
-						</div>
-						<input type="submit" class="btn btn-primary" value="Save Address" style="margin-top: 10px;" />
-					</form>
-				</div>
-				<?php
-				include('includes/html_stop.php');
-				die();
-			}*/
 		}
 		else if (!$user_game && ($requested_game['giveaway_status'] == "invite_free" || $requested_game['giveaway_status'] == "invite_pay")) {
 			if ($requested_game['public_unclaimed_game_invitations'] == 1) {
@@ -567,10 +526,9 @@ if ($thisuser && $game) {
 			echo "games[0].all_events[".$db_event['event_index']."] = new Event(games[0], ".$i.", ".$db_event['event_id'].", ".$db_event['event_index'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'", "'.$db_event['effectiveness_param1'].'", '.$app->quote_escape($db_event['event_name']).", ".$db_event['event_starting_block'].", ".$db_event['event_final_block'].");\n";
 			echo "games[0].all_events_db_id_to_index[".$db_event['event_id']."] = ".$db_event['event_index'].";\n";
 			
-			$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY event_option_index ASC;";
-			$option_r = $app->run_query($option_q);
+			$options_by_event = $app->fetch_options_by_event($db_event['event_id']);
 			$j=0;
-			while ($option = $option_r->fetch()) {
+			while ($option = $options_by_event->fetch()) {
 				$has_votingaddr = "true";
 				echo "games[0].all_events[".$db_event['event_index']."].options.push(new option(games[0].all_events[".$db_event['event_index']."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$app->quote_escape($option['name']).", 0, $has_votingaddr));\n";
 				$j++;
@@ -1051,7 +1009,7 @@ if ($thisuser && $game) {
 							You can buy <?php echo $game->db_game['coin_name_plural']; ?> by clicking below.  Once your payment is confirmed, <?php echo $game->db_game['coin_name_plural']; ?> will be added to your account based on the exchange rate at the time of confirmation.
 						</p>
 						<p>
-							<button class="btn btn-success" onclick="initiate_buyin();">Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
+							<button class="btn btn-success" onclick="manage_buyin('initiate');">Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
 						</p>
 						<?php
 					}

@@ -30,20 +30,18 @@ if ($app->running_as_admin()) {
 	if ($mode == "game_ios") {
 		$total_issued = 0;
 		
-		$q = "SELECT io.spend_status, io.create_block_id AS io_create_block_id, gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$game->db_game['game_id']."' AND gio.game_io_index IS NOT NULL ORDER BY gio.game_io_index ASC;";
-		$r = $app->run_query($q);
+		$confirmed_gios = $app->run_query("SELECT io.spend_status, io.create_block_id AS io_create_block_id, gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$game->db_game['game_id']."' AND gio.game_io_index IS NOT NULL ORDER BY gio.game_io_index ASC;");
 		
 		$out_obj = [["in_existence"=>$game->coins_in_existence($blockchain->last_block_id()), "total"=>0]];
 		
-		while ($game_io = $r->fetch()) {
+		while ($game_io = $confirmed_gios->fetch()) {
 			array_push($out_obj, [$game_io['game_io_index'], $game_io['io_create_block_id'], $game_io['create_block_id'], $game_io['colored_amount'], $game_io['spend_status'], $game_io['coin_rounds_created']]);
 			$total_issued += $game_io['colored_amount'];
 		}
 		
-		$q = "SELECT t.tx_hash, io.spend_status, io.create_block_id AS io_create_block_id, gio.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$game->db_game['game_id']."' AND gio.game_io_index IS NULL ORDER BY t.tx_hash ASC, gio.game_out_index ASC;";
-		$r = $app->run_query($q);
+		$unconfirmed_gios = $app->run_query("SELECT t.tx_hash, io.spend_status, io.create_block_id AS io_create_block_id, gio.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$game->db_game['game_id']."' AND gio.game_io_index IS NULL ORDER BY t.tx_hash ASC, gio.game_out_index ASC;");
 		
-		while ($game_io = $r->fetch()) {
+		while ($game_io = $unconfirmed_gios->fetch()) {
 			array_push($out_obj, [null, $game_io['io_create_block_id'], $game_io['create_block_id'], $game_io['colored_amount'], $game_io['spend_status'], $game_io['coin_rounds_created']]);
 			$total_issued += $game_io['colored_amount'];
 		}
@@ -58,10 +56,9 @@ if ($app->running_as_admin()) {
 		
 		$out_obj = [];
 		
-		$q = "SELECT ev.event_id, ".implode(",", preg_filter('/^/', 'gde.', $relevant_params))." FROM game_defined_events gde LEFT JOIN events ev ON gde.event_index=ev.event_index WHERE gde.game_id='".$game->db_game['game_id']."' AND ev.game_id='".$game->db_game['game_id']."' ORDER BY gde.event_index ASC;";
-		$r = $app->run_query($q);
+		$events_by_game = $app->run_query("SELECT ev.event_id, ".implode(",", preg_filter('/^/', 'gde.', $relevant_params))." FROM game_defined_events gde LEFT JOIN events ev ON gde.event_index=ev.event_index WHERE gde.game_id='".$game->db_game['game_id']."' AND ev.game_id='".$game->db_game['game_id']."' ORDER BY gde.event_index ASC;");
 		
-		while ($db_event = $r->fetch(PDO::FETCH_ASSOC)) {
+		while ($db_event = $events_by_game->fetch(PDO::FETCH_ASSOC)) {
 			if ($check_tx_count && !empty($db_event['event_id'])) {
 				$event_tx_r = $game->blockchain->transactions_by_event($db_event['event_id']);
 				$db_event['num_transactions'] = $event_tx_r->rowCount();
@@ -74,17 +71,14 @@ if ($app->running_as_admin()) {
 		echo json_encode($out_obj, JSON_PRETTY_PRINT);
 	}
 	else if ($mode == "blockchain") {
-		$blockchain_r = $app->run_query("SELECT * FROM blockchains WHERE url_identifier=".$app->quote_escape($_REQUEST['blockchain_identifier']).";");
+		$db_blockchain = $app->fetch_blockchain_by_identifier($_REQUEST['blockchain_identifier']);
 		
-		if ($blockchain_r->rowCount() > 0) {
-			$db_blockchain = $blockchain_r->fetch();
-			
-			$q = "SELECT * FROM blocks WHERE blockchain_id='".$db_blockchain['blockchain_id']."' AND block_id>0 ORDER BY block_id ASC;";
-			$r = $app->run_query($q);
+		if ($db_blockchain) {
+			$all_blocks = $app->run_query("SELECT * FROM blocks WHERE blockchain_id='".$db_blockchain['blockchain_id']."' AND block_id>0 ORDER BY block_id ASC;");
 			
 			$out_obj = [];
 			
-			while ($block = $r->fetch()) {
+			while ($block = $all_blocks->fetch()) {
 				array_push($out_obj, ["block_id"=>$block['block_id'], "num_transactions"=>$block['num_transactions']]);
 			}
 			echo json_encode($out_obj);

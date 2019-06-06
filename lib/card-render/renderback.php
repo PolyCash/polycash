@@ -7,23 +7,13 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	$card_id = (int) $_REQUEST['card_id'];
 
 	if ($card_id > 0) {
-		$q = "SELECT * FROM cards WHERE card_id='".$card_id."';";
-		$r = $app->run_query($q);
-		$card = $r->fetch();
-		
-		$q = "SELECT * FROM currencies WHERE currency_id='".$card['currency_id']."';";
-		$r = $app->run_query($q);
-		$currency = $r->fetch();
-		
-		$q = "SELECT * FROM currencies WHERE currency_id='".$card['fv_currency_id']."';";
-		$r = $app->run_query($q);
-		$fv_currency = $r->fetch();
+		$card = $app->run_query("SELECT * FROM cards WHERE card_id='".$card_id."';")->fetch();
+		$currency = $app->fetch_currency_by_id($card['currency_id']);
+		$fv_currency = $app->fetch_currency_by_id($card['fv_currency_id']);
 		
 		$base_img_fname = "";
 		if ($card['design_id'] > 0) {
-			$q = "SELECT * FROM card_designs WHERE design_id='".$card['design_id']."';";
-			$r = $app->run_query($q);
-			$card_design = $r->fetch();
+			$card_design = $app->run_query("SELECT * FROM card_designs WHERE design_id='".$card['design_id']."';")->fetch();
 			$base_img_fname = dirname(dirname(dirname(__FILE__)))."/images/card_images/designed_blank.png";
 		}
 		else {
@@ -45,9 +35,7 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 			
 			if ($card_design) {
 				if ($card_design['image_id'] > 0) {
-					$q = "SELECT * FROM images WHERE image_id='".$card_design['image_id']."';";
-					$r = $app->run_query($q);
-					$design_image = $r->fetch();
+					$design_image = $app->fetch_image_by_id($card_design['image_id']);
 					
 					$d_img_fname = dirname(dirname(dirname(__FILE__)))."/images/custom/".$design_image['image_id'].".".$design_image['extension'];
 					$d_img = imagecreatefrompng($d_img_fname) or die("Failed to open the watermark image");

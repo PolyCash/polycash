@@ -16,9 +16,9 @@ if ($app->running_as_admin()) {
 	$blockchains = [];
 	$running_games = [];
 	
-	$running_game_r = $app->run_query("SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.online=1 AND g.game_status IN('published','running');");
+	$db_running_games = $app->run_query("SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.online=1 AND g.game_status IN('published','running');");
 	
-	while ($running_game = $running_game_r->fetch()) {
+	while ($running_game = $db_running_games->fetch()) {
 		$game_i = count($running_games);
 		if (empty($blockchains[$running_game['blockchain_id']])) $blockchains[$running_game['blockchain_id']] = new Blockchain($app, $running_game['blockchain_id']);
 		$running_games[$game_i] = new Game($blockchains[$running_game['blockchain_id']], $running_game['game_id']);

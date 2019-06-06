@@ -19,20 +19,19 @@ if ($app->running_as_admin()) {
 	if (!$process_locked) {
 		$app->set_site_constant($process_lock_name, getmypid());
 		
-		$blockchains = array();
-		$real_games = array();
-		$game_id2real_game_i = array();
-		$game_id2private_game_i = array();
-		$private_blockchain_ids = array();
-		$public_blockchain_ids = array();
+		$blockchains = [];
+		$real_games = [];
+		$game_id2real_game_i = [];
+		$game_id2private_game_i = [];
+		$private_blockchain_ids = [];
+		$public_blockchain_ids = [];
 
 		// If block hashing hasn't run for a long time on private blockchain, add some blocks
 		if (!empty($GLOBALS['mine_private_blocks_when_offline'])) {
-			$q = "SELECT * FROM blockchains WHERE online=1 AND p2p_mode='none' AND last_hash_time IS NOT NULL AND (".time()."-last_hash_time) > (seconds_per_block*2);";
-			$r = $GLOBALS['app']->run_query($q);
+			$mine_blockchains = $app->run_query("SELECT * FROM blockchains WHERE online=1 AND p2p_mode='none' AND last_hash_time IS NOT NULL AND (".time()."-last_hash_time) > (seconds_per_block*2);");
 			$log_text = "";
 			
-			while ($db_blockchain = $r->fetch()) {
+			while ($db_blockchain = $mine_blockchains->fetch()) {
 				if (empty($blockchains[$db_blockchain['blockchain_id']])) $blockchains[$db_blockchain['blockchain_id']] = new Blockchain($app, $db_blockchain['blockchain_id']);
 				
 				$seconds_to_add = time()-$db_blockchain['last_hash_time'];
@@ -48,12 +47,11 @@ if ($app->running_as_admin()) {
 		}
 		
 		// Initial load of all online games & blockchains
-		$q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.online=1;";
-		$r = $GLOBALS['app']->run_query($q);
+		$online_games = $app->run_query("SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.online=1;");
 		$real_game_i = 0;
 		$private_game_i = 0;
 
-		while ($db_game = $r->fetch()) {
+		while ($db_game = $online_games->fetch()) {
 			if (empty($blockchains[$db_game['blockchain_id']])) {
 				$blockchains[$db_game['blockchain_id']] = new Blockchain($app, $db_game['blockchain_id']);
 				$blockchains[$db_game['blockchain_id']]->load_coin_rpc();
@@ -85,10 +83,9 @@ if ($app->running_as_admin()) {
 			}
 		}
 
-		$q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE g.game_status='published' AND g.start_condition='players_joined' AND g.start_condition_players > 0 AND b.online=1;";
-		$r = $app->run_query($q);
+		$unstarted_games = $app->run_query("SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE g.game_status='published' AND g.start_condition='players_joined' AND g.start_condition_players > 0 AND b.online=1;");
 		
-		while ($db_unstarted_game = $r->fetch()) {
+		while ($db_unstarted_game = $unstarted_games->fetch()) {
 			if (!$blockchains[$db_unstarted_game['blockchain_id']]) $blockchains[$db_unstarted_game['blockchain_id']] = new Blockchain($app, $db_unstarted_game['blockchain_id']);
 			$unstarted_game = new Game($blockchains[$db_unstarted_game['blockchain_id']], $db_unstarted_game['game_id']);
 			$num_players = $unstarted_game->paid_players_in_game();
@@ -97,8 +94,7 @@ if ($app->running_as_admin()) {
 			}
 		}
 
-		$q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.online=1 AND g.game_status='published' AND g.start_condition='fixed_time' AND g.start_datetime <= NOW() AND g.start_datetime IS NOT NULL;";
-		$r = $app->run_query($q);
+		$unstarted_games = $app->run_query("SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.online=1 AND g.game_status='published' AND g.start_condition='fixed_time' AND g.start_datetime <= NOW() AND g.start_datetime IS NOT NULL;");
 		
 		while ($db_unstarted_game = $r->fetch()) {
 			if (time() >= strtotime($db_unstarted_game['start_datetime'])) {
@@ -109,12 +105,10 @@ if ($app->running_as_admin()) {
 		}
 
 		if ($GLOBALS['outbound_email_enabled']) {
-			$q = "SELECT *, TIME_TO_SEC(TIMEDIFF(NOW(), completion_datetime)) AS sec_since_completion FROM games WHERE giveaway_status IN ('public_pay','invite_pay') AND game_status='completed' AND payout_complete=0 AND (payout_reminder_datetime < DATE_SUB(NOW(), INTERVAL 30 MINUTE) OR payout_reminder_datetime IS NULL);";
-			$r = $app->run_query($q);
+			$completed_games = $app->run_query("SELECT *, TIME_TO_SEC(TIMEDIFF(NOW(), completion_datetime)) AS sec_since_completion FROM games WHERE giveaway_status IN ('public_pay','invite_pay') AND game_status='completed' AND payout_complete=0 AND (payout_reminder_datetime < DATE_SUB(NOW(), INTERVAL 30 MINUTE) OR payout_reminder_datetime IS NULL);");
 
-			while ($completed_game = $r->fetch()) {
-				$qq = "UPDATE games SET payout_reminder_datetime=NOW() WHERE game_id='".$completed_game['game_id']."';";
-				$rr = $app->run_query($qq);
+			while ($completed_game = $completed_games->fetch()) {
+				$app->run_query("UPDATE games SET payout_reminder_datetime=NOW() WHERE game_id='".$completed_game['game_id']."';");
 				
 				$subject = $completed_game['name']." has finished, please process payouts.";
 				$message = "This game finished ".$app->format_seconds($completed_game['sec_since_completion'])." ago. Please log in with your admin account and follow this link to complete the payout: ".$GLOBALS['base_url']."/payout_game.php?game_id=".$completed_game['game_id'];
@@ -123,27 +117,24 @@ if ($app->running_as_admin()) {
 		}
 
 		// Load all running games
-		$running_games = array();
-		$q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.online=1 AND g.game_status IN('published','running');";
-		$r = $GLOBALS['app']->run_query($q);
+		$running_games = [];
+		$db_running_games = $app->run_query("SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.online=1 AND g.game_status IN('published','running');");
 		
-		while ($running_game = $r->fetch()) {
+		while ($running_game = $db_running_games->fetch()) {
 			$game_i = count($running_games);
 			if (empty($blockchains[$running_game['blockchain_id']])) $blockchains[$running_game['blockchain_id']] = new Blockchain($app, $running_game['blockchain_id']);
 			$running_games[$game_i] = new Game($blockchains[$running_game['blockchain_id']], $running_game['game_id']);
 			if ($print_debug) echo "Including game: ".$running_game['name']."\n";
 			
 			// Update user account values
-			$qq = "SELECT * FROM users u JOIN user_games ug ON u.user_id=ug.user_id WHERE ug.game_id='".$running_game['game_id']."' ORDER BY u.user_id ASC;";
-			$rr = $app->run_query($qq);
+			$user_games = $app->run_query("SELECT * FROM users u JOIN user_games ug ON u.user_id=ug.user_id WHERE ug.game_id='".$running_game['game_id']."' ORDER BY u.user_id ASC;");
 			
-			while ($user_game = $rr->fetch()) {
+			while ($user_game = $user_games->fetch()) {
 				$user = new User($app, $user_game['user_id']);
 				$user_pending_bets = $running_games[$game_i]->user_pending_bets($user_game);
 				$account_value = ($running_games[$game_i]->account_balance($user_game['account_id'])+$user_pending_bets)/pow(10,$running_games[$game_i]->db_game['decimal_places']);
 				
-				$qqq = "UPDATE user_games SET account_value='".$account_value."' WHERE user_game_id='".$user_game['user_game_id']."';";
-				$rrr = $app->run_query($qqq);
+				$app->run_query("UPDATE user_games SET account_value='".$account_value."' WHERE user_game_id='".$user_game['user_game_id']."';");
 			}
 		}
 		

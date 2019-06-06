@@ -32,9 +32,9 @@ if ($app->running_as_admin()) {
 			$game->reset_blocks_from_block($block_id);
 			
 			if (!empty($game->db_game['module'])) {
-				$event_r = $app->run_query("SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block <= ".$block_id." ORDER BY event_index DESC LIMIT 1;");
-				if ($event_r->rowCount() > 0) {
-					$db_reset_event = $event_r->fetch();
+				$db_reset_event = $app->run_query("SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block <= ".$block_id." ORDER BY event_index DESC LIMIT 1;")->fetch();
+				
+				if ($db_reset_event) {
 					$game->reset_events_from_index($db_reset_event['event_index']);
 				}
 			}

@@ -193,11 +193,10 @@ class SingleEliminationGameDefinition {
 			if (empty($game)) $game_id = "";
 			else $game_id = $game->db_game['game_id'];
 			
-			$entities_q = "SELECT * FROM game_defined_options gdo JOIN entities e ON gdo.entity_id=e.entity_id WHERE gdo.game_id='".$game_id."' AND gdo.event_index='".$event_index."' ORDER BY gdo.game_defined_option_id ASC;";
-			$entities_r = $this->app->run_query($entities_q);
+			$entities_by_game = $this->app->run_query("SELECT * FROM game_defined_options gdo JOIN entities e ON gdo.entity_id=e.entity_id WHERE gdo.game_id='".$game_id."' AND gdo.event_index='".$event_index."' ORDER BY gdo.game_defined_option_id ASC;");
 			
-			if ($entities_r->rowCount() > 0) {
-				while ($entity = $entities_r->fetch()) {
+			if ($entities_by_game->rowCount() > 0) {
+				while ($entity = $entities_by_game->fetch()) {
 					$event_name .= $entity['entity_name']." vs. ";
 					
 					$possible_outcome = array("title" => $entity['entity_name']." wins", "entity_id" => $entity['entity_id']);
@@ -228,11 +227,9 @@ class SingleEliminationGameDefinition {
 	}
 	
 	public function break_tie(&$game, &$db_event, &$first_option, &$second_option) {
-		$final_block_q = "SELECT * FROM blocks WHERE blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND block_id='".$db_event['event_final_block']."';";
-		$final_block_r = $this->app->run_query($final_block_q);
+		$final_block = $this->app->run_query("SELECT * FROM blocks WHERE blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND block_id='".$db_event['event_final_block']."';")->fetch();
 		
-		if ($final_block_r->rowCount() > 0) {
-			$final_block = $final_block_r->fetch();
+		if ($final_block) {
 			$random_data = hash("sha256", $final_block['block_hash']);
 			
 			$filter_arr = false;
@@ -292,12 +289,11 @@ class SingleEliminationGameDefinition {
 	}
 	
 	public function set_event_outcome(&$game, &$payout_event) {
-		$q = "SELECT *, SUM(ob.score) AS score FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id LEFT JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id='".$payout_event->db_event['event_id']."' GROUP BY o.option_id ORDER BY o.option_index ASC;";
-		$r = $this->app->run_query($q);
+		$first_options = $this->app->run_query("SELECT *, SUM(ob.score) AS score FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id LEFT JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id='".$payout_event->db_event['event_id']."' GROUP BY o.option_id ORDER BY o.option_index ASC;");
 		
-		if ($r->rowCount() > 0) {
-			$first_option = $r->fetch();
-			$second_option = $r->fetch();
+		if ($first_options->rowCount() > 0) {
+			$first_option = $first_options->fetch();
+			$second_option = $first_options->fetch();
 			$winning_option = false;
 			
 			if ($first_option['score'] != $second_option['score']) {
@@ -315,23 +311,18 @@ class SingleEliminationGameDefinition {
 			
 			$this->app->log_message("Update ".$next_event_index." based on ".$payout_event->db_event['event_index']." (event_id=".$payout_event->db_event['event_id'].")");
 			
-			$q = "UPDATE game_defined_events SET outcome_index=".$gde_option_index." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$payout_event->db_event['event_index']."';";
-			$r = $this->app->run_query($q);
+			$this->app->run_query("UPDATE game_defined_events SET outcome_index=".$gde_option_index." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$payout_event->db_event['event_index']."';");
 		
 			if ($next_event_index) {	
 				if (!empty($winning_option['entity_id'])) {
 					$pos_in_next_event = $payout_event->db_event['event_index']%2;
-					$q = "SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$next_event_index."' ORDER BY game_defined_option_id ASC LIMIT 1";
-					if ($pos_in_next_event > 0) $q .= " OFFSET ".$pos_in_next_event;
-					$q .= ";";
-					$r = $this->app->run_query($q);
+					$next_gdo_q = "SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$next_event_index."' ORDER BY game_defined_option_id ASC LIMIT 1";
+					if ($pos_in_next_event > 0) $next_gdo_q .= " OFFSET ".$pos_in_next_event;
+					$next_gdo_q .= ";";
+					$gdo = $this->app->run_query($next_gdo_q)->fetch();
 					
-					if ($r->rowCount() > 0) {
-						$gdo = $r->fetch();
-						
-						$q = "UPDATE game_defined_options SET entity_id='".$winning_option['entity_id']."', name=".$this->app->quote_escape($winning_option['entity_name']." wins")." WHERE game_defined_option_id='".$gdo['game_defined_option_id']."';";
-						$r = $this->app->run_query($q);
-						$this->app->log_message($q);
+					if ($gdo) {
+						$this->app->run_query("UPDATE game_defined_options SET entity_id='".$winning_option['entity_id']."', name=".$this->app->quote_escape($winning_option['entity_name']." wins")." WHERE game_defined_option_id='".$gdo['game_defined_option_id']."';");
 					}
 				}
 				
@@ -339,8 +330,7 @@ class SingleEliminationGameDefinition {
 				
 				list($possible_outcomes, $event_name) = $this->rename_event($next_gde, $game);
 				
-				$q = "UPDATE game_defined_events SET event_name=".$this->app->quote_escape($event_name)." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$next_event_index."';";
-				$r = $this->app->run_query($q);
+				$this->app->run_query("UPDATE game_defined_events SET event_name=".$this->app->quote_escape($event_name)." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$next_event_index."';");
 			}
 		}
 		$log_text = $payout_event->set_outcome_from_db();

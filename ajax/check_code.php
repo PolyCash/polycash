@@ -12,7 +12,7 @@ $code_hash = $app->card_secret_to_hash($code);
 $action = "";
 if (!empty($_REQUEST['action'])) $action = $_REQUEST['action'];
 
-$card = $app->run_query("SELECT c.* FROM cards c LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.peer_id='".$peer_id."' AND c.peer_card_id='".$card_id."';")->fetch();
+$card = $app->fetch_card_by_peer_and_id($peer_id, $card_id);
 
 if ($card) {
 	if (!empty($_REQUEST['redirect_key'])) $redirect_url = $app->get_redirect_by_key($_REQUEST['redirect_key']);

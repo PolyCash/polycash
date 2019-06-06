@@ -23,13 +23,8 @@ else {
 	include('includes/html_start.php');
 	
 	$selected_group = false;
-	
 	if (!empty($_REQUEST['group_id'])) {
-		$group_q = "SELECT * FROM option_groups WHERE group_id='".((int)$_REQUEST['group_id'])."';";
-		$group_r = $app->run_query($group_q);
-		if ($group_r->rowCount()) {
-			$selected_group = $group_r->fetch();
-		}
+		$selected_group = $app->fetch_group_by_id((int)$_REQUEST['group_id']);
 	}
 	?>
 	<div class="container-fluid">
@@ -45,16 +40,14 @@ else {
 						$general_entity_type = $app->check_set_entity_type("general entity");
 						$member_entity = $app->check_set_entity($general_entity_type['entity_type_id'], $member_name);
 						
-						$member_q = "INSERT INTO option_group_memberships SET option_group_id='".$selected_group['group_id']."', entity_id='".$member_entity['entity_id']."';";
-						$member_r = $app->run_query($member_q);
+						$app->run_query("INSERT INTO option_group_memberships SET option_group_id='".$selected_group['group_id']."', entity_id='".$member_entity['entity_id']."';");
 					}
 					
 					echo "<a href=\"/groups/\">&larr; All Groups</a><br/><br/>\n";
 					
-					$membership_q = "SELECT * FROM option_group_memberships m JOIN entities en ON m.entity_id=en.entity_id WHERE m.option_group_id='".$selected_group['group_id']."' ORDER BY m.membership_id ASC;";
-					$membership_r = $app->run_query($membership_q);
+					$memberships = $app->run_query("SELECT * FROM option_group_memberships m JOIN entities en ON m.entity_id=en.entity_id WHERE m.option_group_id='".$selected_group['group_id']."' ORDER BY m.membership_id ASC;");
 					
-					while ($membership = $membership_r->fetch()) {
+					while ($membership = $memberships->fetch()) {
 						echo $membership['entity_name']."<br/>\n";
 					}
 					echo '<a href="" onclick="new_group_member('.$selected_group['group_id'].'); return false;">Add Another</a><br/>';
@@ -74,10 +67,9 @@ else {
 					<?php
 					$group_names = [];
 					
-					$group_q = "SELECT * FROM option_groups ORDER BY group_id ASC;";
-					$group_r = $app->run_query($group_q);
+					$db_groups = $app->run_query("SELECT * FROM option_groups ORDER BY group_id ASC;");
 					
-					while ($db_group = $group_r->fetch()) {
+					while ($db_group = $db_groups->fetch()) {
 						echo '<div class="row"><div class="col-sm-6"><a href="/groups/?group_id='.$db_group['group_id'].'">Edit</a>&nbsp;&nbsp;&nbsp;'.$db_group['description']."</div></div>\n";
 						array_push($group_names, $db_group['description']);
 					}

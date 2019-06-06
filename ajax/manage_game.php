@@ -56,147 +56,140 @@ if ($thisuser) {
 			$setup_error = false;
 			$setup_error_message = "";
 			
-			$q = "SELECT MAX(creator_game_index) FROM games WHERE creator_id='".$thisuser->db_user['user_id']."';";
-			$r = $app->run_query($q);
-			if ($r->rowCount() > 0) {
-				$game_index = $r->fetch(PDO::FETCH_NUM);
-				$game_index = $game_index[0]+1;
-			}
-			else $game_index = 1;
+			$game_index = (int)$app->run_query("SELECT MAX(creator_game_index) FROM games WHERE creator_id='".$thisuser->db_user['user_id']."';")->fetch(PDO::FETCH_NUM))+1;
 			
 			$blockchain_id = (int) $_REQUEST['blockchain_id'];
 			$blockchain = new Blockchain($app, $blockchain_id);
 			
-			$game_module = $_REQUEST['module'];
-			
-			if (empty($game_module)) {
-				$initial_game_def = json_decode($default_game_def_txt);
-			}
-			else {
-				eval('$module = new '.$game_module.'GameDefinition($app);');
-				$initial_game_def = json_decode($module->game_def_base_txt);
+			$module_ok = true;
+			$game_module = "";
+			if (!empty($_REQUEST['module'])) {
+				$existing_module = $app->check_module($_REQUEST['module']);
+				if ($existing_module) $game_module = $existing_module['module_name'];
+				else $module_ok = false;
 			}
 			
-			$initial_game_def->name = urldecode($_REQUEST['name']);
-			$initial_game_def->url_identifier = $app->game_url_identifier($initial_game_def->name);
-			$initial_game_def->module = $game_module;
-			$initial_game_def->game_starting_block = floor($blockchain->last_block_id()/$initial_game_def->round_length)*$initial_game_def->round_length+1;
-			
-			$db_group = false;
-			if (!empty($initial_game_def->option_group)) {
-				$db_group = $app->select_group_by_description($initial_game_def->option_group);
-				
-				if (!$db_group) {
-					$import_error = "";
-					$app->import_group_from_file($initial_game_def->option_group, $import_error);
-					
-					$db_group = $app->select_group_by_description($initial_game_def->option_group);
-					
-					if (!$db_group) {
-						$setup_error = true;
-						$setup_error_message = "Error: the \"".$initial_game_def->option_group."\" group does not exist. Please visit /groups/ to add this group and then try again.";
-					}
-				}
-			}
-			
-			if (!$setup_error) {
-				$verbatim_vars = $app->game_definition_verbatim_vars();
-				
-				$q = "INSERT INTO games SET creator_id='".$thisuser->db_user['user_id']."', blockchain_id='".$blockchain->db_blockchain['blockchain_id']."', game_status='editable', featured=1";
-				if ($db_group) $q .= ", option_group_id=".$db_group['group_id'];
-				
-				for ($i=0; $i<count($verbatim_vars); $i++) {
-					$var_type = $verbatim_vars[$i][0];
-					$var_name = $verbatim_vars[$i][1];
-					
-					if ($initial_game_def->$var_name != "") {
-						$q .= ", ".$var_name."=".$app->quote_escape($initial_game_def->$var_name);
-					}
-				}
-				$q .= ";";
-				$r = $app->run_query($q);
-				$game_id = $app->last_insert_id();
-				
-				$game = new Game($blockchain, $game_id);
-				
-				$user_game = $thisuser->ensure_user_in_game($game, false);
-				$user_strategy = $app->fetch_strategy_by_id($user_game['strategy_id']);
-				
-				$genesis_tx_hash = "";
-				$escrow_address = "";
-				
-				if ($_REQUEST['genesis_type'] == "existing") {
-					$genesis_tx_hash = $_REQUEST['genesis_tx_hash'];
-					
-					$genesis_first_address_r = $app->run_query("SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id WHERE t.tx_hash=".$app->quote_escape($genesis_tx_hash)." AND io.out_index=0;");
-					if ($genesis_first_address_r->rowCount() == 1) {
-						$genesis_first_address = $genesis_first_address_r->fetch();
-						$escrow_address = $genesis_first_address['address'];
-					}
+			if ($module_ok) {
+				if (empty($game_module)) {
+					$initial_game_def = json_decode($default_game_def_txt);
 				}
 				else {
-					$io_id = (int) $_REQUEST['genesis_io_id'];
-					$escrow_amount = (float) $_REQUEST['escrow_amount'];
+					eval('$module = new '.$game_module.'GameDefinition($app);');
+					$initial_game_def = json_decode($module->game_def_base_txt);
+				}
+				
+				$initial_game_def->name = urldecode($_REQUEST['name']);
+				$initial_game_def->url_identifier = $app->game_url_identifier($initial_game_def->name);
+				$initial_game_def->module = $game_module;
+				$initial_game_def->game_starting_block = floor($blockchain->last_block_id()/$initial_game_def->round_length)*$initial_game_def->round_length+1;
+				
+				$db_group = false;
+				if (!empty($initial_game_def->option_group)) {
+					$db_group = $app->fetch_group_by_description($initial_game_def->option_group);
 					
-					$io_q = "SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id JOIN currency_accounts ca ON k.account_id=ca.account_id WHERE io.io_id='".$io_id."' AND ca.user_id='".$thisuser->db_user['user_id']."';";
-					$io_r = $app->run_query($io_q);
-					
-					if ($io_r->rowCount() > 0) {
-						$io = $io_r->fetch();
-						$escrow_amount = $escrow_amount*pow(10, $blockchain->db_blockchain['decimal_places']);
-						$fee_amount = $user_strategy['transaction_fee']*pow(10, $blockchain->db_blockchain['decimal_places']);
-						$genesis_remainder = $io['amount']-$escrow_amount-$fee_amount;
+					if (!$db_group) {
+						$import_error = "";
+						$app->import_group_from_file($initial_game_def->option_group, $import_error);
 						
-						if ($escrow_amount > 0) {
-							if ($genesis_remainder > 0) {
-								$account_name = "Escrow account for ".$game_name;
-								
-								$genesis_account_q = "INSERT INTO currency_accounts SET currency_id='".$blockchain->currency_id()."', user_id='".$thisuser->db_user['user_id']."', is_escrow_account=1, account_name=".$app->quote_escape($account_name).", time_created='".time()."';";
-								$genesis_account_r = $app->run_query($genesis_account_q);
-								$account_id = $app->last_insert_id();
-								$genesis_account = $app->run_query("SELECT * FROM currency_accounts WHERE account_id='".$account_id."';")->fetch();
-								
-								$db_genesis_address = $app->new_address_key($blockchain->currency_id(), $genesis_account);
-								$escrow_address = $db_genesis_address['pub_key'];
-								
-								$address_q = "SELECT * FROM address_keys WHERE account_id='".$user_game['account_id']."';";
-								$address_r = $app->run_query($address_q);
-								$my_address = $address_r->fetch();
-								
-								$error_message = false;
-								$transaction_id = $blockchain->create_transaction('transaction', array($escrow_amount, $genesis_remainder), false, array($io['io_id']), array($db_genesis_address['address_id'], $my_address['address_id']), $fee_amount, $error_message);
-								
-								$transaction = $app->fetch_transaction_by_id($transaction_id);
-								$genesis_tx_hash = $transaction['tx_hash'];
+						$db_group = $app->fetch_group_by_description($initial_game_def->option_group);
+						
+						if (!$db_group) {
+							$setup_error = true;
+							$setup_error_message = "Error: the \"".$initial_game_def->option_group."\" group does not exist. Please visit /groups/ to add this group and then try again.";
+						}
+					}
+				}
+				
+				if (!$setup_error) {
+					$verbatim_vars = $app->game_definition_verbatim_vars();
+					
+					$new_game_q = "INSERT INTO games SET creator_id='".$thisuser->db_user['user_id']."', blockchain_id='".$blockchain->db_blockchain['blockchain_id']."', game_status='editable', featured=1";
+					if ($db_group) $new_game_q .= ", option_group_id=".$db_group['group_id'];
+					
+					for ($i=0; $i<count($verbatim_vars); $i++) {
+						$var_type = $verbatim_vars[$i][0];
+						$var_name = $verbatim_vars[$i][1];
+						
+						if ($initial_game_def->$var_name != "") {
+							$new_game_q .= ", ".$var_name."=".$app->quote_escape($initial_game_def->$var_name);
+						}
+					}
+					$new_game_q .= ";";
+					$app->run_query($new_game_q);
+					$game_id = $app->last_insert_id();
+					
+					$game = new Game($blockchain, $game_id);
+					
+					$user_game = $thisuser->ensure_user_in_game($game, false);
+					$user_strategy = $app->fetch_strategy_by_id($user_game['strategy_id']);
+					
+					$genesis_tx_hash = "";
+					$escrow_address = "";
+					
+					if ($_REQUEST['genesis_type'] == "existing") {
+						$genesis_tx_hash = $_REQUEST['genesis_tx_hash'];
+						
+						$genesis_first_address_r = $app->run_query("SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id WHERE t.tx_hash=".$app->quote_escape($genesis_tx_hash)." AND io.out_index=0;");
+						if ($genesis_first_address_r->rowCount() == 1) {
+							$genesis_first_address = $genesis_first_address_r->fetch();
+							$escrow_address = $genesis_first_address['address'];
+						}
+					}
+					else {
+						$genesis_io_id = (int) $_REQUEST['genesis_io_id'];
+						$escrow_amount = (float) $_REQUEST['escrow_amount'];
+						
+						$genesis_io = $app->run_query("SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id JOIN currency_accounts ca ON k.account_id=ca.account_id WHERE io.io_id='".$genesis_io_id."' AND ca.user_id='".$thisuser->db_user['user_id']."';")->fetch();
+						
+						if ($genesis_io) {
+							$escrow_amount = $escrow_amount*pow(10, $blockchain->db_blockchain['decimal_places']);
+							$fee_amount = $user_strategy['transaction_fee']*pow(10, $blockchain->db_blockchain['decimal_places']);
+							$genesis_remainder = $genesis_io['amount']-$escrow_amount-$fee_amount;
+							
+							if ($escrow_amount > 0) {
+								if ($genesis_remainder > 0) {
+									$account_name = "Escrow account for ".$game_name;
+									
+									$app->run_query("INSERT INTO currency_accounts SET currency_id='".$blockchain->currency_id()."', user_id='".$thisuser->db_user['user_id']."', is_escrow_account=1, account_name=".$app->quote_escape($account_name).", time_created='".time()."';");
+									$account_id = $app->last_insert_id();
+									$genesis_account = $app->fetch_account_by_id($account_id);
+									
+									$db_genesis_address = $app->new_address_key($blockchain->currency_id(), $genesis_account);
+									$escrow_address = $db_genesis_address['pub_key'];
+									
+									$my_address = $app->run_query("SELECT * FROM address_keys WHERE account_id='".$user_game['account_id']."';")->fetch();
+									
+									$error_message = false;
+									$transaction_id = $blockchain->create_transaction('transaction', array($escrow_amount, $genesis_remainder), false, array($genesis_io['io_id']), array($db_genesis_address['address_id'], $my_address['address_id']), $fee_amount, $error_message);
+									
+									$transaction = $app->fetch_transaction_by_id($transaction_id);
+									$genesis_tx_hash = $transaction['tx_hash'];
+								}
+								else {
+									$app->output_message(2, "The escrow amount must be smaller than the amount of your UTXO.", false);
+									die();
+								}
 							}
 							else {
-								$app->output_message(2, "The escrow amount must be smaller than the amount of your UTXO.", false);
+								$app->output_message(3, "The escrow amount must be greater than zero.", false);
 								die();
 							}
 						}
 						else {
-							$app->output_message(3, "The escrow amount must be greater than zero.", false);
+							$app->output_message(4, "Error, you don't have permission to spend those coins.", false);
 							die();
 						}
 					}
-					else {
-						$app->output_message(4, "Error, you don't have permission to spend those coins.", false);
-						die();
-					}
+					
+					$app->run_query("UPDATE games SET escrow_address=".$app->quote_escape($escrow_address).", genesis_tx_hash=".$app->quote_escape($genesis_tx_hash)." WHERE game_id='".$game->db_game['game_id']."';");
+					
+					$app->output_message(1, $game->db_game['url_identifier'], false);
 				}
-				
-				$q = "UPDATE games SET escrow_address=".$app->quote_escape($escrow_address).", genesis_tx_hash=".$app->quote_escape($genesis_tx_hash)." WHERE game_id='".$game->db_game['game_id']."';";
-				$r = $app->run_query($q);
-				
-				$app->output_message(1, $game->db_game['url_identifier'], false);
+				else $app->output_message(5, $setup_error_message, false);
 			}
-			else {
-				$app->output_message(5, $setup_error_message, false);
-			}
+			else $app->output_message(6, "Invalid module.", false);
 		}
-		else {
-			$app->output_message(6, "You don't have permission to create a new game.", false);
-		}
+		else $app->output_message(6, "You don't have permission to create a new game.", false);
 	}
 	else {
 		$game_id = (int) $_REQUEST['game_id'];
@@ -208,12 +201,9 @@ if ($thisuser) {
 			$game = new Game($app, $game_id);
 			
 			if ($game) {
-				$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
-				$r = $app->run_query($q);
+				$user_game = $app->fetch_user_game($thisuser->db_user['user_id'], $game->db_game['game_id']);
 				
-				if ($r->rowCount() == 1) {
-					$user_game = $r->fetch();
-					
+				if ($user_game) {
 					$app->output_message(1, "", array('redirect_url'=>'/wallet/'.$game->db_game['url_identifier']));
 				}
 				else {
@@ -223,8 +213,7 @@ if ($thisuser) {
 					else {
 						$user_game = $thisuser->ensure_user_in_game($game, false);
 						
-						$q = "UPDATE users SET game_id='".$game->db_game['game_id']."' WHERE user_id='".$thisuser->db_user['user_id']."';";
-						$r = $app->run_query($q);
+						$app->run_query("UPDATE users SET game_id='".$game->db_game['game_id']."' WHERE user_id='".$thisuser->db_user['user_id']."';");
 						
 						$app->output_message(1, "", array('redirect_url'=>'/wallet/'.$game->db_game['url_identifier']));
 					}
@@ -234,15 +223,10 @@ if ($thisuser) {
 		}
 		else if ($app->user_can_edit_game($thisuser, $game)) {
 			if ($action == "fetch") {
-				$q = "SELECT game_id, blockchain_id, module, creator_id, event_rule, option_group_id, event_entity_type_id, events_per_round, event_type_name, game_status, block_timing, giveaway_status, giveaway_amount, maturity, name, payout_weight, round_length, pos_reward, pow_reward, inflation, exponential_inflation_rate, exponential_inflation_minershare, final_round, invite_cost, invite_currency, coin_name, coin_name_plural, coin_abbreviation, start_condition, start_datetime, buyin_policy, game_buyin_cap, default_vote_effectiveness_function, default_effectiveness_param1, default_max_voting_fraction, game_starting_block, escrow_address, genesis_tx_hash, genesis_amount, default_betting_mode, finite_events FROM games WHERE game_id='".$game->db_game['game_id']."';";
-				$r = $app->run_query($q);
+				$switch_game = $app->run_query("SELECT game_id, blockchain_id, module, creator_id, event_rule, option_group_id, event_entity_type_id, events_per_round, event_type_name, game_status, block_timing, giveaway_status, giveaway_amount, maturity, name, payout_weight, round_length, pos_reward, pow_reward, inflation, exponential_inflation_rate, exponential_inflation_minershare, final_round, invite_cost, invite_currency, coin_name, coin_name_plural, coin_abbreviation, start_condition, start_datetime, buyin_policy, game_buyin_cap, default_vote_effectiveness_function, default_effectiveness_param1, default_max_voting_fraction, game_starting_block, escrow_address, genesis_tx_hash, genesis_amount, default_betting_mode, finite_events FROM games WHERE game_id='".$game->db_game['game_id']."';")->fetch(PDO::FETCH_ASSOC);
 				
-				if ($r->rowCount() == 1) {
-					$switch_game = $r->fetch(PDO::FETCH_ASSOC);
-
-					$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$switch_game['game_id']."';";
-					$r = $app->run_query($q);
-					$user_game = $r->fetch();
+				if ($switch_game) {
+					$user_game = $app->fetch_user_game($thisuser->db_user['user_id'], $switch_game['game_id']);
 					
 					if ($switch_game['creator_id'] == $thisuser->db_user['user_id'] || $user_game) {
 						if ($switch_game['creator_id'] == $thisuser->db_user['user_id']) $switch_game['my_game'] = true;
@@ -267,28 +251,18 @@ if ($thisuser) {
 					$gde = false;
 					
 					if ($gde_id == "new") {
-						$q = "SELECT COUNT(*), MAX(event_index) FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."';";
-						$r = $app->run_query($q);
+						$gde_info = $app->run_query("SELECT COUNT(*), MAX(event_index) FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."';")->fetch();
 						
-						if ($r->rowCount() > 0) {
-							$row = $r->fetch();
-							if ($row['COUNT(*)'] > 0) $new_event_index = $row['MAX(event_index)']+1;
+						if ($gde_info) {
+							if ($gde_info['COUNT(*)'] > 0) $new_event_index = $gde_info['MAX(event_index)']+1;
 							else $new_event_index = 0;
 						}
-						else {
-							$new_event_index = 0;
-						}
+						else $new_event_index = 0;
+						
 						$gde['event_index'] = $new_event_index;
 					}
 					else {
-						$gde_id = (int) $gde_id;
-						
-						$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND game_defined_event_id='".$gde_id."';";
-						$r = $app->run_query($q);
-						
-						if ($r->rowCount() > 0) {
-							$gde = $r->fetch(PDO::FETCH_ASSOC);
-						}
+						$gde = $app->run_query("SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND game_defined_event_id='".(int)$gde_id."';")->fetch(PDO::FETCH_ASSOC);
 					}
 					
 					$verbatim_vars = $app->event_verbatim_vars();
@@ -311,15 +285,12 @@ if ($thisuser) {
 					
 					$gde_id = $_REQUEST['gde_id'];
 					
-					if ($gde_id == "new") $q = "INSERT INTO game_defined_events SET game_id='".$game->db_game['game_id']."', ";
+					if ($gde_id == "new") $change_gde_q = "INSERT INTO game_defined_events SET game_id='".$game->db_game['game_id']."', ";
 					else {
-						$gde_id = (int) $gde_id;
-						$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND game_defined_event_id='".$gde_id."';";
-						$r = $app->run_query($q);
+						$gde = $app->run_query("SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND game_defined_event_id='".(int)$gde_id."';")->fetch();
 						
-						if ($r->rowCount() > 0) {
-							$gde = $r->fetch();
-							$q = "UPDATE game_defined_events SET ";
+						if ($gde) {
+							$change_gde_q = "UPDATE game_defined_events SET ";
 						}
 						else {
 							$app->output_message(8, "Failed to load that event.", false);
@@ -334,40 +305,30 @@ if ($thisuser) {
 						if (isset($val) && $val !== "" && in_array($var, array('event_starting_time', 'event_final_time'))) {
 							$val = date("Y-m-d G:i:s", strtotime($val));
 						}
-						$q .= $var."=";
+						$change_gde_q .= $var."=";
 						if (!isset($val) || $val === "") $q .= "NULL";
 						else $q .= $app->quote_escape($val);
-						$q .= ", ";
+						$change_gde_q .= ", ";
 					}
-					$q = substr($q, 0, strlen($q)-2);
+					$change_gde_q = substr($change_gde_q, 0, strlen($change_gde_q)-2);
 					
-					if ($gde_id == "new") $q .= ";";
-					else $q .= " WHERE game_defined_event_id='".$gde['game_defined_event_id']."';";
-					$r = $app->run_query($q);
-					
-					if ($gde_id == "new") {
-						$gde_id = $app->last_insert_id();
-					}
+					if ($gde_id == "new") $change_gde_q .= ";";
+					else $change_gde_q .= " WHERE game_defined_event_id='".$gde['game_defined_event_id']."';";
+					$app->run_query($change_gde_q);
 					
 					$game->set_cached_definition_hashes();
 					
 					$app->output_message(1, "Changed the game definition.", false);
 				}
 				else if ($action == "manage_gdos") {
-					$gde_id = (int) $_REQUEST['gde_id'];
+					$gde = $app->run_query("SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND game_defined_event_id='".(int)$_REQUEST['gde_id']."';")->fetch();
 					
-					$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND game_defined_event_id='".$gde_id."';";
-					$r = $app->run_query($q);
-					
-					if ($r->rowCount() > 0) {
-						$gde = $r->fetch();
-						
+					if ($gde) {
 						$html = '<div class="modal-body"><p><b>'.$gde['event_name'].':</b></p>'."\n";
 						
-						$q = "SELECT * FROM game_defined_options gdo LEFT JOIN entities e ON gdo.entity_id=e.entity_id LEFT JOIN entity_types et ON e.entity_type_id=et.entity_type_id WHERE gdo.game_id='".$game->db_game['game_id']."' AND gdo.event_index='".$gde['event_index']."' ORDER BY gdo.option_index ASC;";
-						$r = $app->run_query($q);
+						$gdos = $app->run_query("SELECT * FROM game_defined_options gdo LEFT JOIN entities e ON gdo.entity_id=e.entity_id LEFT JOIN entity_types et ON e.entity_type_id=et.entity_type_id WHERE gdo.game_id='".$game->db_game['game_id']."' AND gdo.event_index='".$gde['event_index']."' ORDER BY gdo.option_index ASC;");
 						
-						while ($gdo = $r->fetch()) {
+						while ($gdo = $gdos->fetch()) {
 							$html .= '<div class="row">';
 							
 							$html .= '<div class="col-md-6">';
@@ -398,16 +359,15 @@ if ($thisuser) {
 						$html .= '<label for="new_gdo_entity_type_id">Entity type:</label>'."\n";
 						$html .= '<select class="form-control" id="new_gdo_entity_type_id">'."\n";
 						
-						$q = "SELECT * FROM entity_types ORDER BY entity_name='general entity' DESC, entity_name ASC;";
-						$r = $app->run_query($q);
+						$entity_types = $app->run_query("SELECT * FROM entity_types ORDER BY entity_name='general entity' DESC, entity_name ASC;");
 						
-						while ($entity_type = $r->fetch()) {
+						while ($entity_type = $entity_types->fetch()) {
 							$html .= '<option value="'.$entity_type['entity_type_id'].'">'.$entity_type['entity_name'].'</option>'."\n";
 						}
 						$html .= '</select>'."\n";
 						$html .= "</div>\n";
 						
-						$html .= '<button type="button" class="btn btn-primary" onclick="add_game_defined_option(\''.$gde_id.'\');">Add option</button>'."\n";
+						$html .= '<button type="button" class="btn btn-primary" onclick="add_game_defined_option(\''.$gde['game_defined_event_id'].'\');">Add option</button>'."\n";
 						
 						$html .= "</div>\n";
 						
@@ -421,23 +381,14 @@ if ($thisuser) {
 					else $app->output_message(7, "Invalid game defined event ID.", false);
 				}
 				else if ($action == "add_new_gdo") {
-					$gde_id = (int) $_REQUEST['gde_id'];
+					$gde = $app->run_query("SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND game_defined_event_id='".(int)$_REQUEST['gde_id']."';")->fetch();
 					
-					$q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND game_defined_event_id='".$gde_id."';";
-					$r = $app->run_query($q);
-					
-					if ($r->rowCount() > 0) {
-						$gde = $r->fetch();
-						
+					if ($gde) {
 						$name = $_REQUEST['name'];
-						$entity_type_id = (int) $_REQUEST['entity_type_id'];
 						
-						$q = "SELECT * FROM entity_types WHERE entity_type_id='".$entity_type_id."';";
-						$r = $app->run_query($q);
+						$entity_type = $app->run_query("SELECT * FROM entity_types WHERE entity_type_id='".(int)$_REQUEST['entity_type_id']."';")->fetch();
 						
-						if ($r->rowCount() > 0) {
-							$entity_type = $r->fetch();
-							
+						if ($entity_type) {
 							if (!empty($name)) {
 								$show_internal_params = true;
 								
@@ -445,15 +396,9 @@ if ($thisuser) {
 								
 								$game->check_set_game_definition("defined", $show_internal_params);
 								
-								$q = "SELECT COUNT(*), MAX(option_index) FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gde['event_index']."';";
-								$r = $app->run_query($q);
-								$info = $r->fetch();
-								if ($info['COUNT(*)'] > 0) $option_index = $info['COUNT(*)'];
-								else $option_index = 0;
+								$option_index = (int)($app->run_query("SELECT COUNT(*), MAX(option_index) FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gde['event_index']."';")->fetch()$info['COUNT(*)']);
 								
-								$q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index='".$gde['event_index']."', entity_id='".$entity['entity_id']."', name=".$app->quote_escape($name).", option_index='".$option_index."';";
-								$r = $app->run_query($q);
-								$gdo_id = $app->last_insert_id();
+								$app->run_query("INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index='".$gde['event_index']."', entity_id='".$entity['entity_id']."', name=".$app->quote_escape($name).", option_index='".$option_index."';");
 								
 								$game->set_cached_definition_hashes();
 								
@@ -466,19 +411,11 @@ if ($thisuser) {
 					else $app->output_message(7, "Invalid game defined event ID.", false);
 				}
 				else if ($action == "delete_gdo") {
-					$gdo_id = (int) $_REQUEST['gdo_id'];
+					$gdo = $app->run_query("SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND game_defined_option_id='".(int)$_REQUEST['gdo_id']."';")->fetch();
 					
-					$q = "SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND game_defined_option_id='".$gdo_id."';";
-					$r = $app->run_query($q);
-					
-					if ($r->rowCount() > 0) {
-						$gdo = $r->fetch();
-						
-						$q = "DELETE FROM game_defined_options WHERE game_defined_option_id='".$gdo['game_defined_option_id']."';";
-						$r = $app->run_query($q);
-						
-						$q = "UPDATE game_defined_options SET option_index=option_index-1 WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gdo['event_index']."' AND option_index>".$gdo['option_index'].";";
-						$r = $app->run_query($q);
+					if ($gdo) {
+						$app->run_query("DELETE FROM game_defined_options WHERE game_defined_option_id='".$gdo['game_defined_option_id']."';");
+						$app->run_query("UPDATE game_defined_options SET option_index=option_index-1 WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gdo['event_index']."' AND option_index>".$gdo['option_index'].";");
 						
 						$game->set_cached_definition_hashes();
 						
@@ -512,27 +449,6 @@ if ($thisuser) {
 		}
 		else $app->output_message(5, "You don't have permission to perform this action.", false);
 	}
-	
-	/*else if ($action == "reset" || $action == "delete") {
-		$q = "SELECT * FROM game_types WHERE game_id='".$game_id."';";
-		$r = $app->run_query($q);
-		
-		if ($r->rowCount() == 1) {
-			$this_game = $r->fetch();
-			if ($this_game['p2p_mode'] != "rpc" && $this_game['creator_id'] == $thisuser->db_user['user_id']) {
-				$success = delete_reset_game($action, $game_id);
-				
-				if ($success) {
-					$output_obj['redirect_url'] = '/wallet/'.$game->db_game['url_identifier'];
-					
-					output_message(1, "", $output_obj);
-				}
-				else output_message(2, "Error, the game couldn't be reset.", false);
-			}
-			else output_message(2, "You can't modify this game.", false);
-		}
-		else output_message(2, "You can't modify this game.", false);
-	}*/
 }
 else $app->output_message(2, "Please log in.", false);
 ?>

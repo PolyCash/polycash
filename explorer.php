@@ -22,7 +22,7 @@ if ($uri_parts[2] == "games") {
 		$game = new Game($blockchain, $db_game['game_id']);
 		
 		if ($thisuser) {
-			$user_game = $app->run_query("SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."' ORDER BY selected DESC;")->fetch();
+			$user_game = $app->fetch_user_game($thisuser->db_user['user_id'], $game->db_game['game_id']);
 		}
 	}
 }
@@ -73,7 +73,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 		}
 		else {
 			$event_index = (int) $event_id;
-			$db_event = $app->run_query("SELECT * FROM events WHERE event_index='".$event_index."' AND game_id='".$game->db_game['game_id']."';")->fetch();
+			$db_event = $game->fetch_event_by_index($event_index);
 			
 			if ($db_event) {
 				$event = new Event($game, false, $db_event['event_id']);
@@ -88,7 +88,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 	}
 	else if ($explore_mode == "addresses") {
 		$address_text = $uri_parts[5];
-		$address = $app->run_query("SELECT * FROM addresses WHERE address=".$app->quote_escape($address_text).";")->fetch();
+		$address = $app->fetch_address($address_text);
 		
 		if ($address) {
 			$mode_error = false;
@@ -405,7 +405,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$total_effective_bets = floor($sum_votes*$coins_per_vote) + $effective_destroy_score + $unconfirmed_effective_destroy_score;
 						
 						if ($event->db_event['next_event_index'] !== "") {
-							$db_next_event = $app->run_query("SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$event->db_event['next_event_index']."';")->fetch();
+							$db_next_event = $game->fetch_event_by_index($event->db_event['next_event_index']);
 							
 							if ($db_next_event) {
 								echo "<p>The winner advances to <a href=\"/explorer/games/".$game->db_game['url_identifier']."/events/".$db_next_event['event_index']."\">".$db_next_event['event_name']."</a></p>\n";
@@ -1110,8 +1110,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							
 							for ($i=0; $i<count($tx_associated_games); $i++) {
 								$db_game = $tx_associated_games[$i];
+								$associated_game = new Game($blockchain, $db_game['game_id']);
 								
-								$game_ios = $app->run_query("SELECT * FROM transaction_game_ios WHERE game_id='".$db_game['game_id']."' AND io_id='".$io['io_id']."' ORDER BY game_out_index ASC;");
+								$game_ios = $associated_game->fetch_game_ios_by_io($io['io_id']);
 								
 								while ($game_io = $game_ios->fetch()) {
 									echo '<p><a href="/explorer/games/'.$db_game['url_identifier'].'/utxo/'.$io['tx_hash'].'/'.$game_io['game_out_index'].'">'.$app->format_bignum($game_io['colored_amount']/pow(10,$db_game['decimal_places']))." ".$db_game['coin_name_plural']." in ".$db_game['name']."</a></p>\n";
@@ -1243,9 +1244,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				else if (!empty($game) && $explore_mode == "my_bets") {
 					if ($thisuser) {
 						if (!empty($_REQUEST['user_game_id'])) {
-							$user_game = $app->run_query("SELECT * FROM user_games WHERE user_game_id='".((int)$_REQUEST['user_game_id'])."' AND user_id='".$thisuser->db_user['user_id']."';")->fetch();
+							$app->change_user_game($thisuser, $game, $_REQUEST['user_game_id']);
 						}
-						else $user_game = $thisuser->ensure_user_in_game($game, false);
+						$user_game = $app->fetch_user_game($thisuser->db_user['user_id'], $game->db_game['game_id']);
 					}
 					else $user_game = false;
 					

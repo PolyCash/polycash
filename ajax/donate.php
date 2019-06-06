@@ -17,8 +17,7 @@ if ($action == "load") {
 	
 	$db_address = $blockchain->create_or_fetch_address($address_text, true, false, true, true, false);
 	
-	$q = "INSERT INTO address_keys SET access_key=".$app->quote_escape($access_key).", pub_key=".$app->quote_escape($address_text).", priv_key=".$app->quote_escape($address_secret).", save_method='db', currency_id='".$bitcoin_currency['currency_id']."', address_id='".$db_address['address_id']."';";
-	$r = $app->run_query($q);
+	$app->run_query("INSERT INTO address_keys SET access_key=".$app->quote_escape($access_key).", pub_key=".$app->quote_escape($address_text).", priv_key=".$app->quote_escape($address_secret).", save_method='db', currency_id='".$bitcoin_currency['currency_id']."', address_id='".$db_address['address_id']."';");
 	?>
 	<p>To donate bitcoins, please send BTC to the address below. This address was just generated and will remain private unless you share it.</p>
 	<center>
@@ -41,15 +40,11 @@ else if ($action == "save_email") {
 	$email = $_REQUEST['email'];
 	$access_key = $_REQUEST['access_key'];
 	
-	$q = "SELECT * FROM address_keys WHERE access_key=".$app->quote_escape($access_key).";";
-	$r = $app->run_query($q);
+	$address_key = $app->run_query("SELECT * FROM address_keys WHERE access_key=".$app->quote_escape($access_key).";")->fetch();
 	
-	if ($r->rowCount() > 0) {
-		$address_key = $r->fetch();
-		
+	if ($address_key) {
 		if (empty($address_key['associated_email_address'])) {
-			$q = "UPDATE address_keys SET associated_email_address=".$app->quote_escape($email)." WHERE address_key_id='".$address_key['address_key_id']."';";
-			$r = $app->run_query($q);
+			$app->run_query("UPDATE address_keys SET associated_email_address=".$app->quote_escape($email)." WHERE address_key_id='".$address_key['address_key_id']."';");
 			
 			$app->output_message(1, "<font class=\"greentext\">All donations to this address will be credited to <b>$email</b></font>", false);
 		}

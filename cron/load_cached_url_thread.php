@@ -17,11 +17,10 @@ if ($app->running_as_admin()) {
 	
 	$max_urls_per_execution = 200;
 	
-	$q = "SELECT * FROM cached_urls WHERE time_fetched IS NULL ORDER BY cached_url_id ASC LIMIT ".$max_urls_per_execution." OFFSET ".($process_index*$max_urls_per_execution).";";
-	$r = $app->run_query($q);
+	$unprocessed_urls = $app->run_query("SELECT * FROM cached_urls WHERE time_fetched IS NULL ORDER BY cached_url_id ASC LIMIT ".$max_urls_per_execution." OFFSET ".($process_index*$max_urls_per_execution).";");
 	$keeplooping = true;
 	
-	while ($keeplooping && $cached_url = $r->fetch()) {
+	while ($keeplooping && $cached_url = $unprocessed_urls->fetch()) {
 		$app->async_fetch_url($cached_url['url'], true);
 		if (microtime(true)-$script_start_time > $script_target_time) $keeplooping = false;
 	}

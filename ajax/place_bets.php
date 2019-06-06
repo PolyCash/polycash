@@ -41,13 +41,9 @@ if ($thisuser && $game) {
 		$amount_sum += (int) $amounts[$i];
 	}
 	
-	$gio_q = "SELECT COUNT(*), SUM(gio.colored_amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.io_id IN (".implode(",", $io_ids).") AND k.account_id='".$user_game['account_id']."';";
-	$gio_r = $app->run_query($gio_q);
-	$gio_info = $gio_r->fetch();
+	$gio_info = $app->run_query("SELECT COUNT(*), SUM(gio.colored_amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.io_id IN (".implode(",", $io_ids).") AND k.account_id='".$user_game['account_id']."';")->fetch();
 	
-	$io_q = "SELECT COUNT(*), SUM(io.amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.io_id IN (".implode(",", $io_ids).") AND k.account_id='".$user_game['account_id']."';";
-	$io_r = $app->run_query($io_q);
-	$io_info = $io_r->fetch();
+	$io_info = $app->run_query("SELECT COUNT(*), SUM(io.amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.io_id IN (".implode(",", $io_ids).") AND k.account_id='".$user_game['account_id']."';")->fetch();
 	
 	if (count($io_ids) == 0 || count($amounts) == 0 || $io_info['COUNT(*)'] != count($io_ids)) {
 		$app->output_message(6, "Error: invalid amounts or IO IDs.", false);
@@ -63,7 +59,7 @@ if ($thisuser && $game) {
 		die();
 	}
 	else if ($io_info['SUM(io.amount)'] != $fee+$burn_amount+$amount_sum) {
-		$app->output_message(8, "Error: amounts don't add up correctly: ".$io_info['SUM(io.amount)']." vs ".($fee+$burn_amount+$amount_sum), false);
+		$app->output_message(8, "Error: amounts don't add up correctly: $io_q ".$io_info['SUM(io.amount)']." vs ($fee+$burn_amount+$amount_sum)", false);
 		die();
 	}
 	
@@ -80,11 +76,9 @@ if ($thisuser && $game) {
 	}
 	
 	for ($i=0; $i<count($option_ids); $i++) {
-		$option_q = "SELECT * FROM options op JOIN events ev ON op.event_id=ev.event_id WHERE op.option_id='".$option_ids[$i]."' AND ev.game_id='".$game->db_game['game_id']."';";
-		$option_r = $app->run_query($option_q);
+		$db_option = $app->fetch_option_by_id($option_ids[$i]);
 		
-		if ($option_r->rowCount() > 0) {
-			$db_option = $option_r->fetch();
+		if ($db_option && $db_option['game_id'] == $game->db_game['game_id']) {
 			$db_address = $app->fetch_addresses_in_account($account, $db_option['option_index'], 1)[0];
 			
 			if ($db_address) {
@@ -120,11 +114,7 @@ if ($thisuser && $game) {
 		
 		$app->output_message(1, "Your transaction has been submitted! <a href=\"/explorer/games/".$game->db_game['url_identifier']."/transactions/".$transaction['tx_hash']."\">Details</a>", false);
 	}
-	else {
-		$app->output_message(11, "There was an error creating the transaction: ".$error_message, false);
-	}
+	else $app->output_message(11, "There was an error creating the transaction: ".$error_message, false);
 }
-else {
-	$app->output_message(12, "Please log in.", false);
-}
+else $app->output_message(12, "Please log in.", false);
 ?>

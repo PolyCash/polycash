@@ -107,26 +107,6 @@ include('includes/html_start.php');
 									<?php echo $app->format_seconds(time()-$card['mint_time']); ?> ago
 								</div>
 							</div>
-							<?php
-							/*if ($card['currency_fv'] == 0) { ?>
-								<div class="row">
-									<div class="col-xs-4">
-										<b>Exchange Rate</b>
-									</div>
-									<div class="col-xs-5">
-										<font style="color: #0a0; font-size: inherit;">
-										$<?php
-										if ($usd_per_coin > 0.01) {
-											echo number_format($usd_per_coin, 2);
-										}
-										else {
-											echo number_format($usd_per_coin, 6);
-										}
-										?>
-										</font> / <?php echo $card['currency_abbrev']; ?>
-									</div>
-								</div>
-							<?php }*/ ?>
 							<div class="row">
 								<div class="col-xs-4">
 									<b>Value</b>

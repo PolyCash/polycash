@@ -136,10 +136,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 			<ul class="sidebar-menu" data-widget="tree">
 				<?php
 				if (!empty($thisuser)) {
-					$cardcount_q = "SELECT COUNT(*) FROM cards WHERE user_id='".$thisuser->db_user['user_id']."' AND status='claimed';";
-					$cardcount_r = $app->run_query($cardcount_q);
-					$cardcount = $cardcount_r->fetch();
-					$cardcount = $cardcount['COUNT(*)'];
+					$cardcount = (int)($app->run_query("SELECT COUNT(*) FROM cards WHERE user_id='".$thisuser->db_user['user_id']."' AND status='claimed';")->fetch()['COUNT(*)']);
 				}
 				else $cardcount = 0;
 				?>
@@ -168,14 +165,12 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 				<ul class="sidebar-menu" data-widget="tree">
 					<li class="header">Categories</li>
 					<?php
-					$q = "SELECT * FROM categories WHERE category_level=0 ORDER BY display_rank ASC;";
-					$r = $app->run_query($q);
+					$db_categories = $app->run_query("SELECT * FROM categories WHERE category_level=0 ORDER BY display_rank ASC;");
 					
-					while ($db_category = $r->fetch()) {
-						$qq = "SELECT * FROM categories WHERE parent_category_id='".$db_category['category_id']."' ORDER BY display_rank ASC;";
-						$rr = $app->run_query($qq);
+					while ($db_category = $db_categories->fetch()) {
+						$subcategories = $app->run_query("SELECT * FROM categories WHERE parent_category_id='".$db_category['category_id']."' ORDER BY display_rank ASC;");
 						
-						if ($rr->rowCount() > 0) {
+						if ($subcategories->rowCount() > 0) {
 							echo '<li class="treeview';
 							if (!empty($selected_category) && $selected_category['category_id'] == $db_category['category_id']) echo " active";
 							echo '">';
@@ -186,7 +181,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 							echo '<span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>';
 							echo '</a><ul class="treeview-menu">';
 							echo '<li><a href="/'.$db_category['url_identifier'].'/">All</a></li>'."\n";
-							while ($subcategory = $rr->fetch()) {
+							while ($subcategory = $subcategories->fetch()) {
 								echo '<li';
 								if (!empty($selected_subcategory) && $selected_subcategory['category_id'] == $subcategory['category_id']) echo ' class="active"';
 								echo '><a href="/'.$db_category['url_identifier'].'/'.$subcategory['url_identifier'].'/">'.$subcategory['category_name']."</a></li>\n";

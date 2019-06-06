@@ -42,10 +42,9 @@
 		<?php
 		}
 		
-		$q = "SELECT * FROM blockchains b LEFT JOIN images i ON b.default_image_id=i.image_id WHERE b.online=1;";
-		$r = $app->run_query($q);
+		$online_blockchains = $app->run_query("SELECT * FROM blockchains b LEFT JOIN images i ON b.default_image_id=i.image_id WHERE b.online=1;");
 		
-		while ($db_blockchain = $r->fetch()) {
+		while ($db_blockchain = $online_blockchains->fetch()) {
 			$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
 			$recent_block = $blockchain->most_recently_loaded_block();
 			

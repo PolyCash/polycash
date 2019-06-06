@@ -12,11 +12,9 @@ if ($thisuser) {
 		$game = new Game($blockchain, $db_game['game_id']);
 		
 		if ($app->user_can_edit_game($thisuser, $game)) {
-			$event_r = $app->run_query("SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_id='".((int)$_REQUEST['event_id'])."';");
+			$db_event = $app->fetch_event_by_id((int)$_REQUEST['event_id']);
 			
-			if ($event_r->rowCount() > 0) {
-				$db_event = $event_r->fetch();
-				
+			if ($db_event && $db_event['game_id'] == $game->db_game['game_id']) {
 				$CryptoDuels = new CryptoDuelsGameDefinition($app);
 				$successful = $CryptoDuels->refresh_prices_by_event($game, $db_event);
 				

@@ -299,7 +299,7 @@ if ($thisuser) {
 		$peer_id = (int) $_REQUEST['peer_id'];
 		$claim_type = $_REQUEST['claim_type'];
 		
-		$card = $app->run_query("SELECT c.* FROM cards c LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.peer_id='".$peer_id."' AND c.peer_card_id='".$card_id."';")->fetch();
+		$card = $app->fetch_card_by_peer_and_id($peer_id, $card_id);
 		
 		if ($card) {
 			if ($card['user_id'] == $thisuser->db_user['user_id']) {
@@ -325,7 +325,7 @@ if ($thisuser) {
 						}
 						else {
 							$transaction = $app->pay_out_card($card, $address, $fee);
-							$db_blockchain = $app->run_query("SELECT * FROM blockchains WHERE blockchain_id='".$transaction['blockchain_id']."';")->fetch();
+							$db_blockchain = $app->fetch_blockchain_by_id($transaction['blockchain_id']);
 							
 							if ($transaction) $app->output_message(1, "Great! Coins have been sent to <a href=\"/explorer/blockchains/".$db_blockchain['url_identifier']."/transactions/".$transaction['tx_hash']."\">your address</a>.", false);
 							else $app->output_message(7, "Error: failed to create the transaction.", false);
@@ -366,14 +366,13 @@ if ($thisuser) {
 				$db_io = $app->fetch_io_by_id($io_id);
 				
 				if ($db_io) {
-					$q = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id WHERE io.io_id='".$io_id."' AND gio.game_id='".$game->db_game['game_id']."';";
-					$r = $app->run_query($q);
+					$db_game_ios = $game->fetch_game_ios_by_io($io_id);
 					
-					if ($r->rowCount() > 0) {
-						$game_ios = array();
+					if ($db_game_ios->rowCount() > 0) {
+						$game_ios = [];
 						$colored_coin_sum = 0;
 						
-						while ($game_io = $r->fetch()) {
+						while ($game_io = $db_game_ios->fetch()) {
 							array_push($game_ios, $game_io);
 							$colored_coin_sum += $game_io['colored_amount'];
 						}
@@ -383,17 +382,14 @@ if ($thisuser) {
 						$chain_coins_each = ceil($satoshis_each/$coins_per_chain_coin);
 						
 						if ($chain_coins_each > 0 && in_array($game_ios[0]['spend_status'], array("unspent", "unconfirmed"))) {
-							$account_q = "SELECT ca.* FROM currency_accounts ca JOIN games g ON g.game_id=ca.game_id JOIN address_keys k ON k.account_id=ca.account_id WHERE ca.user_id='".$thisuser->db_user['user_id']."' AND k.address_id='".$game_ios[0]['address_id']."';";
-							$account_r = $app->run_query($account_q);
+							$account = $app->run_query("SELECT ca.* FROM currency_accounts ca JOIN games g ON g.game_id=ca.game_id JOIN address_keys k ON k.account_id=ca.account_id WHERE ca.user_id='".$thisuser->db_user['user_id']."' AND k.address_id='".$game_ios[0]['address_id']."';")->fetch();
 							
-							if ($account_r->rowCount() > 0) {
-								$account = $account_r->fetch();
-								
+							if ($account) {
 								if ($total_cost_satoshis < $colored_coin_sum && $coin_sum > ($chain_coins_each*$quantity*$utxos_each) - $fee_amount) {
 									$remainder_satoshis = $coin_sum - ($chain_coins_each*$quantity) - $fee_amount;
 									
-									$amounts = array();
-									$address_ids = array();
+									$amounts = [];
+									$address_ids = [];
 									
 									for ($i=0; $i<$quantity; $i++) {
 										$address_key = $app->new_address_key($account['currency_id'], $account);

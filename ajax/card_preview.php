@@ -4,14 +4,10 @@ include(dirname(dirname(__FILE__)).'/includes/get_session.php');
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
 if ($thisuser) {
-	$denomination_id = (int) $_REQUEST['denomination_id'];
-	$q = "SELECT * FROM card_currency_denominations d JOIN currencies c ON d.currency_id=c.currency_id WHERE d.denomination_id='".$denomination_id."';";
-	$r = $app->run_query($q);
+	$denomination = $app->run_query("SELECT * FROM card_currency_denominations d JOIN currencies c ON d.currency_id=c.currency_id WHERE d.denomination_id='".(int)$_REQUEST['denomination_id']."';")->fetch();
 
-	if ($r->rowCount() > 0) {
-		$denomination = $r->fetch();
-
-		$fv_currency = $app->run_query("SELECT * FROM currencies WHERE currency_id='".$denomination['fv_currency_id']."';")->fetch();
+	if ($denomination) {
+		$fv_currency = $app->fetch_currency_by_id($denomination['fv_currency_id']);
 		
 		$purity = (float) $_REQUEST['purity'];
 		if (empty($_REQUEST['name'])) $name = "";
@@ -63,9 +59,7 @@ if ($thisuser) {
 					
 					// 2. Apply the watermark image
 					if (!empty($fv_currency['default_design_image_id'])) {
-						$q = "SELECT * FROM images WHERE image_id='".$fv_currency['default_design_image_id']."';";
-						$r = $app->run_query($q);
-						$card_image = $r->fetch();
+						$card_image = $app->fetch_image_by_id($fv_currency['default_design_image_id']);
 						
 						$card_image_fname = dirname(dirname(__FILE__))."/images/custom/".$card_image['image_id'].".".$card_image['extension'];
 						$card_image_obj = imagecreatefrompng($card_image_fname) or die("Failed to open the watermark image");

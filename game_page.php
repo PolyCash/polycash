@@ -13,11 +13,7 @@ $current_round = $game->block_to_round($last_block_id+1);
 
 $user_game = false;
 if ($game && $thisuser) {
-	$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
-	$r = $app->run_query($q);
-	if ($r->rowCount() == 1) {
-		$user_game = $r->fetch();
-	}
+	$user_game = $app->fetch_user_game($thisuser->db_user['user_id'], $game->db_game['game_id']);
 }
 
 if ($game->db_game['invite_currency'] > 0) {
@@ -44,48 +40,6 @@ else $exchange_rate = 0;
 					if ($game->db_game['short_description'] != "") {
 						echo str_replace("<br/>", " ", $game->db_game['short_description'])." ";
 					}
-					
-					/*$blocks_per_hour = 3600/$game->blockchain->db_blockchain['seconds_per_block'];
-					$seconds_per_round = $game->blockchain->db_blockchain['seconds_per_block']*$game->db_game['round_length'];
-					$round_reward = ($app->coins_created_in_round($game->db_game, $current_round))/pow(10,$game->db_game['decimal_places']);
-
-					if ($game->db_game['inflation'] == "linear") {
-						$miner_pct = 100*($game->db_game['pow_reward']*$game->db_game['round_length'])/($round_reward*pow(10,$game->db_game['decimal_places']));
-					}
-					else $miner_pct = 100*$game->db_game['exponential_inflation_minershare'];
-					
-					if ($exchange_rate > 0 && $game->db_game['buyin_policy'] != "none") {
-						if ($game->escrow_value(false) > 0) {
-							$escrow_amount_disp = $app->format_bignum($game->escrow_value(false)/pow(10,$game->db_game['decimal_places']));
-							echo "Right now there's ".$escrow_amount_disp." ";
-							if ($escrow_amount_disp == "1") echo $game->blockchain->db_blockchain['coin_name'];
-							else echo $game->blockchain->db_blockchain['coin_name_plural'];
-							echo " in escrow and the";
-						}
-						else echo "The";
-						echo " exchange rate is ".$app->format_bignum($exchange_rate)." ".$game->db_game['coin_name_plural']." per ".$invite_currency['short_name'].". ";
-					}
-					
-					if ($game->db_game['giveaway_status'] == "public_pay" || $game->db_game['giveaway_status'] == "invite_pay") {
-						$q = "SELECT * FROM currencies WHERE currency_id='".$game->db_game['invite_currency']."';";
-						$r = $app->run_query($q);
-						if ($r->rowCount() > 0) {
-							$invite_currency = $r->fetch();
-							
-							$receive_disp = $app->format_bignum($game->db_game['giveaway_amount']/pow(10,$game->db_game['decimal_places']));
-							if ($game->db_game['giveaway_status'] == "invite_pay" || $game->db_game['giveaway_status'] == "invite_free") echo "You need an invitation to join this game. After receiving an invitation you can join";
-							else echo 'You can join this game';
-							echo ' by buying '.$receive_disp.' ';
-							if ($receive_disp == '1') echo $game->db_game['coin_name'];
-							else echo $game->db_game['coin_name_plural'];
-							
-							$buyin_disp = $app->format_bignum($game->db_game['invite_cost']);
-							echo ' for '.$buyin_disp.' ';
-							echo $invite_currency['short_name'];
-							if ($buyin_disp != '1') echo "s";
-							echo ". ";
-						}
-					}*/
 					
 					if ($game->db_game['game_status'] == "running") {
 						echo "This game started ".date("M j, Y g:ia", strtotime($game->db_game['start_datetime'])).". ";

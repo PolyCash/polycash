@@ -13,10 +13,9 @@ if ($app->running_as_admin()) {
 			</div>
 			<div class="panel-body">
 				<?php
-				$q = "SELECT * FROM address_keys WHERE priv_key IS NOT NULL ORDER BY address_key_id ASC;";
-				$r = $app->run_query($q);
+				$donate_addresses = $app->run_query("SELECT * FROM address_keys WHERE priv_key IS NOT NULL ORDER BY address_key_id ASC;");
 				
-				while ($address_key = $r->fetch()) {
+				while ($address_key = $donate_addresses->fetch()) {
 					$api_url = "https://blockchain.info/rawaddr/".$address_key['pub_key'];
 					$api_data = json_decode(file_get_contents($api_url));
 					

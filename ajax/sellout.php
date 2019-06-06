@@ -97,7 +97,7 @@ if ($thisuser && $game) {
 					
 					$app->run_query("UPDATE currency_invoices SET receive_address_id='".$db_receive_address['address_id']."', buyin_amount='".$sellout_amount/pow(10, $game->db_game['decimal_places'])."', fee_amount='".$user_game['transaction_fee']."' WHERE invoice_id='".$invoice['invoice_id']."';");
 					
-					$my_spendable_ios = $app->run_query("SELECT *, COUNT(*), SUM(gio.is_resolved) AS num_resolved, SUM(gio.colored_amount) AS coins FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$user_game['account_id']."' AND gio.game_id='".$game->db_game['game_id']."' GROUP BY gio.io_id HAVING COUNT(*)=num_resolved ORDER BY coins ASC;");
+					$my_spendable_ios = $app->spendable_ios_in_account($user_game['account_id'], $game->db_game['game_id'], false, false);
 					
 					$io_amount_sum = 0;
 					$game_amount_sum = 0;

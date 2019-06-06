@@ -10,12 +10,10 @@ if ($GLOBALS['pageview_tracking_enabled']) {
 	$viewer_id = $pageview_controller->insert_pageview($thisuser);
 	$viewer = $pageview_controller->get_viewer($viewer_id);
 	
-	$q = "UPDATE viewers SET left_menu_open='".$left_menu_open."' WHERE viewer_id='".$viewer['viewer_id']."';";
-	$r = $app->run_query($q);
+	$app->run_query("UPDATE viewers SET left_menu_open='".$left_menu_open."' WHERE viewer_id='".$viewer['viewer_id']."';");
 }
 else if ($thisuser) {
-	$q = "UPDATE users SET left_menu_open='".$left_menu_open."' WHERE user_id='".$thisuser->db_user['user_id']."';";
-	$r = $app->run_query($q);
+	$app->run_query("UPDATE users SET left_menu_open='".$left_menu_open."' WHERE user_id='".$thisuser->db_user['user_id']."';");
 }
 
 echo $left_menu_open;

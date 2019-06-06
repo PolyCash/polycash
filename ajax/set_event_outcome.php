@@ -4,11 +4,9 @@ include("../includes/get_session.php");
 if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->insert_pageview($thisuser);
 
 if ($thisuser) {
-	$event_id = (int) $_REQUEST['event_id'];
-	$db_event_r = $app->run_query("SELECT * FROM events WHERE event_id='".$event_id."';");
+	$db_event = $app->fetch_event_by_id((int)$_REQUEST['event_id']);
 
-	if ($db_event_r->rowCount() > 0) {
-		$db_event = $db_event_r->fetch();
+	if ($db_event) {
 		$db_game = $app->fetch_db_game_by_id($db_event['game_id']);
 		
 		if ($db_game) {
@@ -27,12 +25,11 @@ if ($thisuser) {
 					
 					$html .= '<p>To set the outcome of this event, please select one of these options.</p>';
 					
-					$q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY option_index ASC;";
-					$r = $app->run_query($q);
+					$options_by_event = $app->fetch_options_by_event($db_event['event_id']);
 					
 					$html .= '<select class="form-control" id="set_event_outcome_index" onchange="set_event_outcome_changed();">'."\n";
 					$html .= '<option value="select">-- Please Select --</option>'."\n";
-					while ($option = $r->fetch()) {
+					while ($option = $options_by_event->fetch()) {
 						$html .= '<option value="'.$option['event_option_index'].'">'.$option['name'].'</option>'."\n";
 					}
 					$html .= '<option value="-1">Cancel &amp; Refund</option>'."\n";
@@ -70,10 +67,10 @@ if ($thisuser) {
 						
 						$game->check_set_game_definition("defined", $show_internal_params);
 						
-						$q = "UPDATE game_defined_events SET outcome_index=".$outcome_index." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."';";
-						$r = $app->run_query($q);
+						$app->run_query("UPDATE game_defined_events SET outcome_index=".$outcome_index." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."';");
 						
 						$game->check_set_game_definition("defined", $show_internal_params);
+						$game->set_cached_definition_hashes();
 						
 						$app->output_message(2, "Changed the game definition.", false);
 					}
