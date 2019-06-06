@@ -12,9 +12,9 @@ if ($thisuser) {
 	if ($game) {
 		$game_info = false;
 		
-		$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
-		$r = $app->run_query($q);
-		if ($r->rowCount() > 0) {
+		$user_game = $app->fetch_user_game($thisuser->db_user['user_id'], $game->db_game['game_id']);
+		
+		if ($user_game) {
 			$game_info['redirect_user'] = 1;
 		}
 		else $game_info['redirect_user'] = 0;
@@ -31,9 +31,9 @@ if ($thisuser) {
 				if ($_REQUEST['event_rule'] == "single_event_series") $_REQUEST['events_per_round'] = 1;
 				
 				$blockchain_id = (int) $_REQUEST['blockchain_id'];
-				$db_blockchain = $app->run_query("SELECT * FROM blockchains WHERE blockchain_id='".$blockchain_id."';")->fetch();
+				$db_blockchain = $app->fetch_blockchain_by_id($blockchain_id);
 				
-				$q = "UPDATE games SET blockchain_id='".$db_blockchain['blockchain_id']."', ";
+				$change_game_q = "UPDATE games SET blockchain_id='".$db_blockchain['blockchain_id']."', ";
 				
 				for ($i=0; $i<count($game_form_vars); $i++) {
 					$game_var = $game_form_vars[$i];
@@ -44,29 +44,27 @@ if ($thisuser) {
 					else if (in_array($game_var, array('maturity', 'round_length', 'final_round','blockchain_id'))) $game_val = intval($game_val);
 					else $game_val = $app->strong_strip_tags($game_val);
 					
-					$q .= $game_var."=".$app->quote_escape($game_val).", ";
+					$change_game_q .= $game_var."=".$app->quote_escape($game_val).", ";
 					$game->db_game[$game_var] = $game_val;
 				}
 				
-				$q = substr($q, 0, strlen($q)-2)." WHERE game_id='".$game->db_game['game_id']."';";
-				$r = $app->run_query($q);
+				$change_game_q = substr($change_game_q, 0, strlen($change_game_q)-2)." WHERE game_id='".$game->db_game['game_id']."';";
+				$app->run_query($change_game_q);
 				
 				$game_name = $app->strong_strip_tags($app->make_alphanumeric($_REQUEST['name'], "$ -()/!.,:;#"));
 				
 				$url_error = false;
 
 				if ($game_name != $game->db_game['name']) {
-					$q = "SELECT * FROM games WHERE name=".$app->quote_escape($game_name)." AND game_id != '".$game->db_game['game_id']."';";
-					$r = $app->run_query($q);
+					$conflicting_game = $app->run_query("SELECT * FROM games WHERE name=".$app->quote_escape($game_name)." AND game_id != '".$game->db_game['game_id']."';")->fetch();
 					
-					if ($r->rowCount() > 0) {
+					if ($conflicting_game) {
 						$url_error = true;
 						$error_message = "Game title could not be changed; a game with that name already exists.";
 					}
 					else {
 						$url_identifier = $app->game_url_identifier($game_name);
-						$q = "UPDATE games SET name=".$app->quote_escape($game_name).", url_identifier=".$app->quote_escape($url_identifier)." WHERE game_id='".$game->db_game['game_id']."';";
-						$r = $app->run_query($q);
+						$app->run_query("UPDATE games SET name=".$app->quote_escape($game_name).", url_identifier=".$app->quote_escape($url_identifier)." WHERE game_id='".$game->db_game['game_id']."';");
 						$game_info['url_identifier'] = $url_identifier;
 					}
 				}

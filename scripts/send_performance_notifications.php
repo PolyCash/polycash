@@ -9,10 +9,9 @@ if ($app->running_as_admin()) {
 	
 	$table_header_html = '<tr><td>Stake</td><td>Payout</td><td>Odds</td><td>Effectiveness</td><td>Option</td><td>Event</td><td>Outcome</td></tr>';
 	
-	$game_q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE g.game_status='running' GROUP BY g.game_id ORDER BY g.game_id ASC";
-	$game_r = $app->run_query($game_q);
+	$running_games = $app->run_query("SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE g.game_status='running' GROUP BY g.game_id ORDER BY g.game_id ASC");
 	
-	while ($db_game = $game_r->fetch()) {
+	while ($db_game = $running_games->fetch()) {
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$game = new Game($blockchain, $db_game['game_id']);
 		$coins_per_vote = $app->coins_per_vote($game->db_game);

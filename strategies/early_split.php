@@ -28,8 +28,8 @@ if ($user_game) {
 			$event_q = "events WHERE game_id='".$game->db_game['game_id']."'";
 			$event_q .= " AND event_starting_block<=".$mining_block_id." AND (3*event_starting_block+event_final_block)/4>=".$mining_block_id;
 			$option_info = $app->run_query("SELECT SUM(num_options) FROM ".$event_q.";")->fetch();
-			$event_r = $app->run_query("SELECT * FROM ".$event_q." ORDER BY event_index ASC;");
-			$num_events = $event_r->rowCount();
+			$db_events = $app->run_query("SELECT * FROM ".$event_q." ORDER BY event_index ASC;")->fetchAll();
+			$num_events = count($db_events);
 			
 			if ($num_events > 0) {
 				$amount_mode = "per_event";
@@ -54,7 +54,7 @@ if ($user_game) {
 					$mandatory_bets = 0;
 					$io_amount_sum = 0;
 					$game_amount_sum = 0;
-					$io_ids = array();
+					$io_ids = [];
 					$keep_looping = true;
 					
 					while ($keep_looping && $io = $spendable_ios_in_account->fetch()) {
@@ -75,11 +75,9 @@ if ($user_game) {
 						if ($amount_mode != "inflation_only" && $game_amount_sum >= $burn_game_amount*1.2) $keep_looping = false;
 					}
 					
-					$q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."' AND a.is_destroy_address=1 AND io.spend_status='unspent' ORDER BY io.amount DESC;";
-					$r = $app->run_query($q);
+					$recycle_io = $app->fetch_recycle_ios_in_account($account['account_id'], 1)[0];
 					
-					if ($r->rowCount() > 0) {
-						$recycle_io = $r->fetch();
+					if ($recycle_io) {
 						array_push($io_ids, $recycle_io['io_id']);
 						$io_amount_sum += $recycle_io['amount'];
 					}
@@ -101,15 +99,14 @@ if ($user_game) {
 					$io_spent_sum = $burn_io_amount;
 					$bet_i = 0;
 					
-					while ($db_event = $event_r->fetch()) {
-						$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY option_index ASC;";
-						$option_r = $app->run_query($option_q);
-						$options_this_event = $option_r->rowCount();
+					foreach ($db_events as $db_event) {
+						$db_options = $app->fetch_options_by_event($db_event['event_id']);
+						$options_this_event = $db_options->rowCount();
 						
-						while ($option = $option_r->fetch()) {
+						while ($option = $db_options->fetch()) {
 							$address_error = false;
-							$thisevent_io_amounts = array();
-							$thisevent_address_ids = array();
+							$thisevent_io_amounts = [];
+							$thisevent_address_ids = [];
 							
 							$this_address = $app->fetch_addresses_in_account($account, $option['option_index'], 1)[0];
 							
@@ -147,8 +144,7 @@ if ($user_game) {
 					$transaction_id = $blockchain->create_transaction("transaction", $io_amounts, false, $io_ids, $address_ids, $fee_amount, $error_message);
 					
 					if ($transaction_id) {
-						$strategy_q = "UPDATE user_strategies SET time_next_apply='".(time()+$rand_sec_offset)."' WHERE strategy_id='".$user_game['strategy_id']."';";
-						$strategy_r = $app->run_query($strategy_q);
+						$app->run_query("UPDATE user_strategies SET time_next_apply='".(time()+$rand_sec_offset)."' WHERE strategy_id='".$user_game['strategy_id']."';");
 						
 						$app->output_message(1, "Great, your transaction was submitted. <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction_id."/\">View Transaction</a>", false);
 					}

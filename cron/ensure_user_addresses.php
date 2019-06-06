@@ -36,15 +36,14 @@ if ($app->running_as_admin()) {
 			list($from_option_index, $to_option_index) = $running_games[$game_i]->option_index_range();
 			
 			if ($to_option_index !== false) {
-				$q = "SELECT * FROM user_games ug JOIN currency_accounts ca ON ug.account_id=ca.account_id WHERE ug.game_id='".$running_games[$game_i]->db_game['game_id']."' AND ca.has_option_indices_until<".$to_option_index." ORDER BY ca.account_id ASC;";
-				$r = $app->run_query($q);
+				$user_games = $app->run_query("SELECT * FROM user_games ug JOIN currency_accounts ca ON ug.account_id=ca.account_id WHERE ug.game_id='".$running_games[$game_i]->db_game['game_id']."' AND ca.has_option_indices_until<".$to_option_index." ORDER BY ca.account_id ASC;");
 				
 				if ($print_debug) {
-					echo "Looping through ".$r->rowCount()." users for ".$running_games[$game_i]->db_game['name'].".<br/>\n";
+					echo "Looping through ".$user_games->rowCount()." users for ".$running_games[$game_i]->db_game['name'].".<br/>\n";
 					$app->flush_buffers();
 				}
 				
-				while ($user_game = $r->fetch()) {
+				while ($user_game = $user_games->fetch()) {
 					$user = new User($app, $user_game['user_id']);
 					$user->generate_user_addresses($running_games[$game_i], $user_game);
 					if ($print_debug) {

@@ -64,11 +64,10 @@ class ImageTournamentGameDefinition {
 		$this->images = array();
 		$game_def = json_decode($this->game_def_base_txt);
 		
-		$q = "SELECT * FROM option_group_memberships m JOIN entities e ON m.entity_id=e.entity_id WHERE m.option_group_id='".$this->option_group['group_id']."';";
-		$r = $this->app->run_query($q);
+		$members = $this->app->run_query("SELECT * FROM option_group_memberships m JOIN entities e ON m.entity_id=e.entity_id WHERE m.option_group_id='".$this->option_group['group_id']."';");
 		
 		$i = 0;
-		while ($image = $r->fetch()) {
+		while ($image = $members->fetch()) {
 			array_push($this->images, array('image_index'=>$i, 'initial_event_index'=>floor($i/2), 'image_name'=>$image['entity_name']));
 			$i++;
 		}
@@ -167,11 +166,10 @@ class ImageTournamentGameDefinition {
 			if (empty($game)) $game_id = "";
 			else $game_id = $game->db_game['game_id'];
 			
-			$entities_q = "SELECT * FROM game_defined_options gdo JOIN entities e ON gdo.entity_id=e.entity_id WHERE gdo.game_id='".$game_id."' AND gdo.event_index='".$event_index."' ORDER BY gdo.game_defined_option_id ASC;";
-			$entities_r = $this->app->run_query($entities_q);
+			$entities_by_game = $this->app->run_query("SELECT * FROM game_defined_options gdo JOIN entities e ON gdo.entity_id=e.entity_id WHERE gdo.game_id='".$game_id."' AND gdo.event_index='".$event_index."' ORDER BY gdo.game_defined_option_id ASC;");
 			
-			if ($entities_r->rowCount() > 0) {
-				while ($entity = $entities_r->fetch()) {
+			if ($entities_by_game->rowCount() > 0) {
+				while ($entity = $entities_by_game->fetch()) {
 					$event_name .= $entity['entity_name']." vs. ";
 					
 					$possible_outcome = array("title" => $entity['entity_name']." wins", "entity_id" => $entity['entity_id']);
@@ -200,23 +198,19 @@ class ImageTournamentGameDefinition {
 		
 		$next_event_index = $this->event_index_to_next_event_index($payout_event->db_event['event_index']);
 		
-		$q = "UPDATE game_defined_events SET outcome_index=".$gde_option_index." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$payout_event->db_event['event_index']."';";
-		$r = $this->app->run_query($q);
+		$this->app->run_query("UPDATE game_defined_events SET outcome_index=".$gde_option_index." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$payout_event->db_event['event_index']."';");
 	
 		if ($next_event_index) {	
 			if (!empty($winning_option['entity_id'])) {
 				$pos_in_next_event = $payout_event->db_event['event_index']%2;
-				$q = "SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$next_event_index."' ORDER BY game_defined_option_id ASC LIMIT 1";
-				if ($pos_in_next_event > 0) $q .= " OFFSET ".$pos_in_next_event;
-				$q .= ";";
-				$r = $this->app->run_query($q);
 				
-				if ($r->rowCount() > 0) {
-					$gdo = $r->fetch();
-					
-					$q = "UPDATE game_defined_options SET entity_id='".$winning_option['entity_id']."', name=".$this->app->quote_escape($winning_option['entity_name']." wins")." WHERE game_defined_option_id='".$gdo['game_defined_option_id']."';";
-					$r = $this->app->run_query($q);
-					$this->app->log_message($q);
+				$next_gdo_q = "SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$next_event_index."' ORDER BY game_defined_option_id ASC LIMIT 1";
+				if ($pos_in_next_event > 0) $next_gdo_q .= " OFFSET ".$pos_in_next_event;
+				$next_gdo_q .= ";";
+				$gdo = $this->app->run_query($next_gdo_q);
+				
+				if ($gdo) {
+					$this->app->run_query("UPDATE game_defined_options SET entity_id='".$winning_option['entity_id']."', name=".$this->app->quote_escape($winning_option['entity_name']." wins")." WHERE game_defined_option_id='".$gdo['game_defined_option_id']."';");
 				}
 			}
 			
@@ -224,8 +218,7 @@ class ImageTournamentGameDefinition {
 			
 			list($possible_outcomes, $event_name) = $this->rename_event($next_gde, $game);
 			
-			$q = "UPDATE game_defined_events SET event_name=".$this->app->quote_escape($event_name)." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$next_event_index."';";
-			$r = $this->app->run_query($q);
+			$this->app->run_query("UPDATE game_defined_events SET event_name=".$this->app->quote_escape($event_name)." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$next_event_index."';");
 		}
 		return $log_text;
 	}

@@ -8,10 +8,9 @@ if ($thisuser) {
 	$blockchain_id = (int) $_REQUEST['blockchain_id'];
 	$account_name = strip_tags($_REQUEST['account_name']);
 	
-	$blockchain_r = $app->run_query("SELECT * FROM blockchains WHERE blockchain_id='".$blockchain_id."';");
+	$db_blockchain = $app->fetch_blockchain_by_id($blockchain_id);
 	
-	if ($blockchain_r->rowCount() > 0) {
-		$db_blockchain = $blockchain_r->fetch();
+	if ($db_blockchain) {
 		$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
 		
 		if ($action == "by_rpc_account") {
@@ -32,8 +31,7 @@ if ($thisuser) {
 							$account_addresses = $blockchain->coin_rpc->getaddressesbyaccount($account_name);
 							
 							if (count($account_addresses) > 0) {
-								$qq = "INSERT INTO currency_accounts SET user_id='".$thisuser->db_user['user_id']."', currency_id='".$blockchain->currency_id()."', account_name=".$app->quote_escape($blockchain->db_blockchain['blockchain_name']." account: ".$account_name).", time_created='".time()."';";
-								$rr = $app->run_query($qq);
+								$app->run_query("INSERT INTO currency_accounts SET user_id='".$thisuser->db_user['user_id']."', currency_id='".$blockchain->currency_id()."', account_name=".$app->quote_escape($blockchain->db_blockchain['blockchain_name']." account: ".$account_name).", time_created='".time()."';");
 								$account_id = $app->last_insert_id();
 								
 								for ($i=0; $i<count($account_addresses); $i++) {
@@ -54,8 +52,7 @@ if ($thisuser) {
 		else if ($action == "for_blockchain") {
 			$account_name = $blockchain->db_blockchain['blockchain_name']." Account ".$app->random_string(5);
 			
-			$qq = "INSERT INTO currency_accounts SET user_id='".$thisuser->db_user['user_id']."', currency_id='".$blockchain->currency_id()."', account_name=".$app->quote_escape($account_name).", time_created='".time()."';";
-			$rr = $app->run_query($qq);
+			$app->run_query("INSERT INTO currency_accounts SET user_id='".$thisuser->db_user['user_id']."', currency_id='".$blockchain->currency_id()."', account_name=".$app->quote_escape($account_name).", time_created='".time()."';");
 			$account_id = $app->last_insert_id();
 			
 			$app->output_message(1, '/accounts/?account_id='.$account_id, false);

@@ -57,21 +57,16 @@ else {
 	include("includes/connect.php");
 	include("includes/get_session.php");
 	
-	$q = "SELECT * FROM categories WHERE category_level=0 AND url_identifier=".$app->quote_escape($uri_parts[1]).";";
-	$r = $app->run_query($q);
+	$selected_category = $app->run_query("SELECT * FROM categories WHERE category_level=0 AND url_identifier=".$app->quote_escape($uri_parts[1]).";")->fetch();
 	
-	if ($r->rowCount() == 1) {
-		$selected_category = $r->fetch();
+	if ($selected_category) {
 		include("directory.php");
 	}
 	else {
-		$q = "SELECT * FROM games WHERE url_identifier=".$app->quote_escape($uri_parts[1]).";";
-		$r = $app->run_query($q);
+		$db_game = $app->fetch_db_game_by_identifier($uri_parts[1]);
 		
-		if ($r->rowCount() == 1) {
-			$db_game = $r->fetch();
-			
-			if (in_array($db_game['game_status'], array("running","published","completed"))) {
+		if ($db_game) {
+			if (in_array($db_game['game_status'], ["running","published","completed"])) {
 				$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 				$game = new Game($blockchain, $db_game['game_id']);
 				include("game_page.php");

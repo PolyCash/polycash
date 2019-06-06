@@ -78,8 +78,7 @@ if ($last_block_id != (int) $_REQUEST['last_block_id']) {
 }
 else $output['new_block'] = 0;
 
-$these_events = $game->events_by_block($last_block_id, $filter_arr);
-
+$these_events = $game->events_by_block($blockchain_last_block_id, $filter_arr);
 $show_intro_text = false;
 for ($game_event_index=0; $game_event_index<count($these_events); $game_event_index++) {
 	$output['event_html'][$game_event_index] = $these_events[$game_event_index]->event_html($thisuser, $show_intro_text, true, $instance_id, $game_event_index);
@@ -170,12 +169,13 @@ if ($refresh_page == "wallet" && ($mature_io_ids_hash != $_REQUEST['mature_io_id
 else $output['new_mature_ios'] = 0;
 
 if ($thisuser && $refresh_page == "wallet") {
-	$q = "SELECT * FROM user_messages WHERE game_id='".$game->db_game['game_id']."' AND to_user_id='".$thisuser->db_user['user_id']."' AND seen=0 GROUP BY from_user_id;";
-	$r = $app->run_query($q);
-	if ($r->rowCount() > 0) {
+	$unseen_message_threads = $app->run_query("SELECT * FROM user_messages WHERE game_id='".$game->db_game['game_id']."' AND to_user_id='".$thisuser->db_user['user_id']."' AND seen=0 GROUP BY from_user_id;");
+	
+	if ($unseen_message_threads->rowCount() > 0) {
 		$output['new_messages'] = 1;
 		$output['new_message_user_ids'] = "";
-		while ($thread = $r->fetch()) {
+		
+		while ($thread = $unseen_message_threads->fetch()) {
 			$output['new_message_user_ids'] .= $thread['from_user_id'].",";
 		}
 		$output['new_message_user_ids'] = substr($output['new_message_user_ids'], 0, strlen($output['new_message_user_ids'])-1);

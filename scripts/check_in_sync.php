@@ -12,13 +12,8 @@ if ($app->running_as_admin()) {
 	$remote_url_base = "";
 	$peer = false;
 	if (!empty($_REQUEST['peer_id'])) {
-		$peer_id = (int)$_REQUEST['peer_id'];
-		$peer_r = $app->run_query("SELECT * FROM peers WHERE peer_id='".$peer_id."';");
-		if ($peer_r->rowCount() > 0) {
-			$peer = $peer_r->fetch();
-			$remote_url_base = $peer['base_url'];
-		}
-		else die("Invalid peer_id supplied.");
+		$peer = $app->fetch_peer_by_id((int)$_REQUEST['peer_id']);
+		if (!$peer) die("Invalid peer_id supplied.");
 	}
 	else {
 		if (!empty($_REQUEST['remote_host'])) $remote_url_base = urldecode($_REQUEST['remote_host']);

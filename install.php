@@ -8,8 +8,8 @@ if ($app->running_as_admin()) {
 		if (strpos($GLOBALS['mysql_database'], "'") === false && $GLOBALS['mysql_database'] === strip_tags($GLOBALS['mysql_database'])) {
 			$db_exists = false;
 
-			$r = $app->run_query("SHOW DATABASES;");
-			while ($dbname = $r->fetch()) {
+			$list_of_dbs = $app->run_query("SHOW DATABASES;");
+			while ($dbname = $list_of_dbs->fetch()) {
 				if ($dbname['Database'] == $GLOBALS['mysql_database']) $db_exists = true;
 			}
 			
@@ -18,7 +18,7 @@ if ($app->running_as_admin()) {
 			}
 			
 			if (!$db_exists) {
-				$r = $app->run_query("CREATE DATABASE ".$GLOBALS['mysql_database']);
+				$app->run_query("CREATE DATABASE ".$GLOBALS['mysql_database']);
 				$app->set_db($GLOBALS['mysql_database']);
 				
 				$cmd = $app->mysql_binary_location()." -u ".$GLOBALS['mysql_user']." -h ".$GLOBALS['mysql_server'];
@@ -29,8 +29,7 @@ if ($app->running_as_admin()) {
 			else {
 				$app->set_db($GLOBALS['mysql_database']);
 			}
-			$result = $app->run_query("SHOW TABLES;");
-			$table_exists = $result->rowCount() > 0;
+			$table_exists = $app->run_query("SHOW TABLES;")->rowCount() > 0;
 			if (!$table_exists) {
 				echo "Database tables failed to be created, please install manually by importing all files in the \"sql\" folder via phpMyAdmin or any other MySQL interface.<br/>\n";
 				die();
@@ -41,12 +40,9 @@ if ($app->running_as_admin()) {
 			if (!isset($GLOBALS['identifier_case_sensitive'])) die('Please set the variable $GLOBALS[\'identifier_case_sensitive\'] in your config file.');
 			if (!isset($GLOBALS['identifier_first_char'])) die('Please set the variable $GLOBALS[\'identifier_first_char\'] in your config file.');
 			
-			$q = "SELECT * FROM currency_prices WHERE currency_id=1 AND reference_currency_id=1;";
-			$r = $app->run_query($q);
-			
-			if ($r->rowCount() == 0) {
-				$q = "INSERT INTO currency_prices SET currency_id=1, reference_currency_id=1, price=1, time_added='".time()."';";
-				$r = $app->run_query($q);
+			$has_ref_price = $app->run_query("SELECT * FROM currency_prices WHERE currency_id=1 AND reference_currency_id=1;")->rowCount() > 0;
+			if (!$has_ref_price) {
+				$app->run_query("INSERT INTO currency_prices SET currency_id=1, reference_currency_id=1, price=1, time_added='".time()."';");
 			}
 			
 			$app->set_site_constant("event_loop_seconds", 2);
@@ -54,16 +50,15 @@ if ($app->running_as_admin()) {
 			
 			if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "save_blockchain_params") {
 				$blockchain_id = (int) $_REQUEST['blockchain_id'];
-				$q = "SELECT * FROM blockchains WHERE blockchain_id=".$app->quote_escape($blockchain_id).";";
-				$r = $app->run_query($q);
+				$existing_blockchain = $app->fetch_blockchain_by_id($blockchain_id);
 				
-				if ($r->rowCount() == 1) {
-					$temp_blockchain = $r->fetch();
+				if ($existing_blockchain) {
 					$rpc_host = $_REQUEST['rpc_host'];
 					$rpc_username = $_REQUEST['rpc_username'];
 					$rpc_password = $_REQUEST['rpc_password'];
 					$rpc_port = (int) $_REQUEST['rpc_port'];
-					$r = $app->run_query("UPDATE blockchains SET rpc_host=".$app->quote_escape($rpc_host).", rpc_username=".$app->quote_escape($rpc_username).", rpc_password=".$app->quote_escape($rpc_password).", rpc_port=".$app->quote_escape($rpc_port)." WHERE blockchain_id=".$temp_blockchain['blockchain_id'].";");
+					
+					$app->run_query("UPDATE blockchains SET rpc_host=".$app->quote_escape($rpc_host).", rpc_username=".$app->quote_escape($rpc_username).", rpc_password=".$app->quote_escape($rpc_password).", rpc_port=".$app->quote_escape($rpc_port)." WHERE blockchain_id=".$existing_blockchain['blockchain_id'].";");
 				}
 				else die("Error, please manually save RPC parameters in the database.");
 			}
@@ -91,13 +86,11 @@ if ($app->running_as_admin()) {
 				else {
 					if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "install_module") {
 						$module_name = $_REQUEST['module_name'];
-						
-						$q = "SELECT * FROM games WHERE module=".$app->quote_escape($module_name).";";
-						$r = $app->run_query($q);
+						$games_by_module = $app->run_query("SELECT * FROM games WHERE module=".$app->quote_escape($module_name).";");
 						
 						echo "<br/><b>Installing module $module_name</b><br/>\n";
-						if ($r->rowCount() > 0) {
-							$db_game = $r->fetch();
+						
+						if ($games_by_module->rowCount() > 0) {
 							echo "<p>This module is already installed.</p>\n";
 						}
 						else {
@@ -167,63 +160,6 @@ if ($app->running_as_admin()) {
 	Require all granted
 &lt;/Directory&gt;
 </pre>
-					
-					<h2>Configure Bitcoin for accepting payments</h1>
-					<script type="text/javascript">
-					function generate_keypair() {
-						$('#keypair_details').slideDown('fast');
-
-						var rsa = new RSAKey();
-						var e = '10001';
-						rsa.generate(1024, e);
-					  
-						n_value = rsa.n.toString(16);
-						d_value = rsa.d.toString(16);
-						p_value = rsa.p.toString(16);
-						q_value = rsa.q.toString(16);
-						dmp1_value = rsa.dmp1.toString(16);
-						dmq1_value = rsa.dmq1.toString(16);
-						coeff_value = rsa.coeff.toString(16);
-
-						$('#pub_key_disp').val(n_value);
-						$('#priv_key_disp').val(d_value+':'+p_value+':'+q_value+':'+dmp1_value+':'+dmq1_value+':'+coeff_value);
-						$('#pub_key_config_line').html("$GLOBALS['rsa_keyholder_email'] = 'myname@myemailprovider.com';\n$GLOBALS['rsa_pub_key'] = '"+n_value+"';");
-					}
-					</script>
-					<?php
-					if (!empty($GLOBALS['rsa_pub_key']) && !empty($GLOBALS['bitcoin_port']) && !empty($GLOBALS['bitcoin_rpc_user']) && !empty($GLOBALS['bitcoin_rpc_password'])) { ?>
-						Great, it looks like you've already configured an RSA key for accepting Bitcoin payments.
-						<br/>
-						<?php
-					}
-					else {
-						if (empty($GLOBALS['rsa_pub_key'])) { ?>
-							You have not yet specified an RSA keypair for accepting Bitcoin payments.<br/>
-							To allow private event_types to accept Bitcoin payments, please generate an RSA key pair.<br/>
-							<button class="btn btn-primary" onclick="generate_keypair();">Generate RSA Keypair</button>
-							<br/>
-							<div id="keypair_details" style="display: none; border: 1px solid #aaa; padding: 10px; margin-top: 10px;">
-								<b>A new RSA keypair has just been generated.</b><br/>
-								<br/>
-								This is your <font class="greentext">public key</font>. Copy and save your public key into includes/config.php.
-								<input type="text" id="pub_key_disp" class="form-control" /><br/>
-								This is your <font class="redtext">private key</font>. Save it somewhere safe.
-								<input type="text" id="priv_key_disp" class="form-control" />
-								<br/>
-								Add your public key into includes/config.php like this:<br/>
-								<pre id="pub_key_config_line"></pre>
-								But replace 'myname@myemailprovider.com' with an email address.  This email address will not be shown to anyone but will receive an email prompting you to enter your private key whenever a event that you administer finishes.<br/>
-								<br/>
-								After saving your public key in includes/config.php, save your private key somewhere safe. Your public key can be derived from your private key. Next <a href="" onclick="window.location=window.location;">click here</a> to reload this page.<br/>
-								<br/>
-								If you lose or leak your private key, all escrowed bitcoins on this site will be irrevocably lost.<br/>
-							
-							</div>
-							<br/>
-							<?php
-						}
-					}
-					?>
 					
 					<h2>Install Blockchains</h2>
 					<?php
@@ -296,17 +232,17 @@ if ($app->running_as_admin()) {
 					?>
 					<h2>Modules</h2>
 					<?php
-					$installed_module_r = $app->run_query("SELECT * FROM modules m JOIN games g ON m.primary_game_id=g.game_id;");
-					if ($installed_module_r->rowCount() > 0) {
-						while ($installed_module = $installed_module_r->fetch()) {
+					$installed_modules = $app->run_query("SELECT * FROM modules m JOIN games g ON m.primary_game_id=g.game_id;");
+					if ($installed_modules->rowCount() > 0) {
+						while ($installed_module = $installed_modules->fetch()) {
 							echo '<a href="/'.$installed_module['url_identifier'].'/">'.$installed_module['name']."</a> is already installed.<br/>\n";
 						}
 						echo "<br/>\n";
 					}
 					
-					$open_module_r = $app->run_query("SELECT * FROM modules WHERE primary_game_id IS NULL;");
+					$open_modules = $app->run_query("SELECT * FROM modules WHERE primary_game_id IS NULL;");
 					$module_html = '<option value="">-- Select a module to install --</option>';
-					while ($open_module = $open_module_r->fetch()) {
+					while ($open_module = $open_modules->fetch()) {
 						$module_html .= '<option value="'.$open_module['module_name'].'">'.$open_module['module_name']."</option>\n";
 					}
 					

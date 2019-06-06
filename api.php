@@ -80,12 +80,9 @@ if ($uri_parts[1] == "api") {
 			$supplied_secret = $uri_parts[5];
 			$supplied_secret_hash = $app->card_secret_to_hash($supplied_secret);
 			
-			$card_q = "SELECT * FROM cards WHERE peer_card_id='".$card_id."' AND peer_id='".$this_peer['peer_id']."';";
-			$card_r = $app->run_query($card_q);
+			$card = $app->fetch_card_by_peer_and_id($this_peer['peer_id'], $card_id);
 			
-			if ($card_r->rowCount() > 0) {
-				$card = $card_r->fetch();
-				
+			if ($card) {
 				if ($supplied_secret == $card['secret_hash'] || $supplied_secret_hash == $card['secret_hash']) {
 					$app->output_message(1, "Correct!");
 				}
@@ -105,12 +102,9 @@ if ($uri_parts[1] == "api") {
 			$fee = $_REQUEST['fee'];
 			$address = $_REQUEST['address'];
 			
-			$card_q = "SELECT * FROM cards WHERE peer_card_id='".$card_id."' AND peer_id='".$this_peer['peer_id']."';";
-			$card_r = $app->run_query($card_q);
+			$card = $app->fetch_card_by_peer_and_id($this_peer['peer_id'], $card_id);
 			
-			if ($card_r->rowCount() > 0) {
-				$card = $card_r->fetch();
-				
+			if ($card) {
 				if ($fee > 0 && $fee < $card['amount']) {
 					if ($supplied_secret == $card['secret_hash'] || $supplied_secret_hash == $card['secret_hash']) {
 						$transaction = $app->pay_out_card($card, $address, $fee);
@@ -139,21 +133,17 @@ if ($uri_parts[1] == "api") {
 				$to_card_id = (int) $card_range[1];
 			}
 			
-			$q = "SELECT ";
+			$card_q = "SELECT ";
 			foreach ($card_public_vars as $var_name) {
-				$q .= "c.".$var_name.", ";
+				$card_q .= "c.".$var_name.", ";
 			}
-			$q .= "curr.abbreviation AS currency_abbreviation, fv_curr.abbreviation AS fv_currency_abbreviation FROM cards c JOIN currencies curr ON c.currency_id=curr.currency_id JOIN currencies fv_curr ON c.fv_currency_id=fv_curr.currency_id LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.peer_id='".$this_peer['peer_id']."' AND ";
-			if ($uri_parts[2] == "card") $q .= "c.peer_card_id='".$card_id."'";
-			else $q .= "c.peer_card_id >= ".$from_card_id." AND c.peer_card_id <= ".$to_card_id;
-			$q .= ";";
-			$r = $app->run_query($q);
+			$card_q .= "curr.abbreviation AS currency_abbreviation, fv_curr.abbreviation AS fv_currency_abbreviation FROM cards c JOIN currencies curr ON c.currency_id=curr.currency_id JOIN currencies fv_curr ON c.fv_currency_id=fv_curr.currency_id LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.peer_id='".$this_peer['peer_id']."' AND ";
+			if ($uri_parts[2] == "card") $card_q .= "c.peer_card_id='".$card_id."'";
+			else $card_q .= "c.peer_card_id >= ".$from_card_id." AND c.peer_card_id <= ".$to_card_id;
+			$card_q .= ";";
+			$cards = $app->run_query($card_q)->fetchAll(PDO::FETCH_ASSOC);
 			
-			if ($r->rowCount() > 0) {
-				$cards = array();
-				while ($card = $r->fetch(PDO::FETCH_ASSOC)) {
-					array_push($cards, $card);
-				}
+			if (count($cards) > 0) {
 				$api_output['status_code'] = 1;
 				$api_output['cards'] = $cards;
 				echo json_encode($api_output, JSON_PRETTY_PRINT);
@@ -185,10 +175,10 @@ if ($uri_parts[1] == "api") {
 			$block_q .= ";";
 			$block_r = $app->run_query($block_q);
 			
-			$blocks = array();
+			$blocks = [];
 			
 			while ($db_block = $block_r->fetch(PDO::FETCH_ASSOC)) {
-				$transactions = array();
+				$transactions = [];
 				
 				$tx_q = "SELECT transaction_id, block_id, transaction_desc, tx_hash, amount, fee_amount, time_created, position_in_block, num_inputs, num_outputs FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_id='".$db_block['block_id']."' ORDER BY position_in_block ASC;";
 				$tx_r = $app->run_query($tx_q);
@@ -237,10 +227,9 @@ if ($uri_parts[1] == "api") {
 	}
 	else if ($uri_parts[2] == "blockchain") {
 		$url_identifier = $uri_parts[3];
-		$blockchain_r = $app->run_query("SELECT blockchain_id, blockchain_name, url_identifier, p2p_mode, coin_name, coin_name_plural, seconds_per_block, decimal_places, initial_pow_reward FROM blockchains WHERE url_identifier=".$app->quote_escape($url_identifier).";");
+		$db_blockchain = $app->run_query("SELECT blockchain_id, blockchain_name, url_identifier, p2p_mode, coin_name, coin_name_plural, seconds_per_block, decimal_places, initial_pow_reward FROM blockchains WHERE url_identifier=".$app->quote_escape($url_identifier).";")->fetch(PDO::FETCH_ASSOC);
 		
-		if ($blockchain_r->rowCount() > 0) {
-			$db_blockchain = $blockchain_r->fetch(PDO::FETCH_ASSOC);
+		if ($db_blockchain) {
 			$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
 			$db_blockchain['last_block_id'] = $blockchain->last_block_id();
 			unset($db_blockchain['blockchain_id']);
@@ -252,12 +241,9 @@ if ($uri_parts[1] == "api") {
 	else if (!empty($uri_parts[2])) {
 		$game_identifier = $uri_parts[2];
 		
-		$q = "SELECT game_id, blockchain_id, maturity, pos_reward, pow_reward, round_length, payout_weight, name FROM games WHERE url_identifier=".$app->quote_escape($game_identifier).";";
-		$r = $app->run_query($q);
+		$db_game = $app->run_query("SELECT game_id, blockchain_id, maturity, pos_reward, pow_reward, round_length, payout_weight, name FROM games WHERE url_identifier=".$app->quote_escape($game_identifier).";")->fetch();
 		
-		if ($r->rowCount() == 1) {
-			$db_game = $r->fetch();
-			
+		if ($db_game) {
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
 			$last_block_id = $game->blockchain->last_block_id();
@@ -298,21 +284,18 @@ if ($uri_parts[1] == "api") {
 					$btc_currency = $app->get_currency_by_abbreviation("BTC");
 				}
 				
-				$intval_vars = array('game_id','round_length','maturity');
+				$intval_vars = ['game_id','round_length','maturity'];
 				for ($i=0; $i<count($intval_vars); $i++) {
-					$game->db_game[$intval_vars[$i]] = intval($game->db_game[$intval_vars[$i]]);
+					$game->db_game[$intval_vars[$i]] = (int) $game->db_game[$intval_vars[$i]];
 				}
 				
 				$api_user = FALSE;
 				$api_user_info = FALSE;
 				
 				if (!empty($_REQUEST['api_access_code'])) {
-					$q = "SELECT * FROM users u JOIN user_games ug ON u.user_id=ug.user_id WHERE ug.game_id='".$game->db_game['game_id']."' AND ug.api_access_code=".$app->quote_escape($_REQUEST['api_access_code']).";";
-					$r = $app->run_query($q);
+					$user_game = $app->fetch_user_game_by_api_key($_REQUEST['api_access_code']);
 					
-					if ($r->rowCount() == 1) {
-						$user_game = $r->fetch();
-						
+					if ($user_game && $user_game['game_id'] == $game->db_game['game_id']) {
 						$api_user = new User($app, $user_game['user_id']);
 						$account_value = $game->account_balance($user_game['account_id']);
 						$immature_balance = $api_user->immature_balance($game, $user_game);
@@ -326,22 +309,29 @@ if ($uri_parts[1] == "api") {
 						$api_user_info['immature_balance'] = $immature_balance;
 						$api_user_info['votes_available'] = $votes_available;
 						
-						$mature_utxos = array();
-						$mature_utxo_q = "SELECT io.*, ak.pub_key AS address FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN address_keys ak ON io.address_id=ak.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND ak.account_id=".$user_game['account_id']." AND gio.game_id=".$game->db_game['game_id']." AND io.create_block_id <= ".($last_block_id-$game->db_game['maturity'])." GROUP BY io.io_id ORDER BY io.io_id ASC;";
-						$mature_utxo_r = $app->run_query($mature_utxo_q);
+						$mature_utxos = [];
+						$mature_utxo_r = $app->run_query("SELECT io.*, ak.pub_key AS address FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN address_keys ak ON io.address_id=ak.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND ak.account_id=".$user_game['account_id']." AND gio.game_id=".$game->db_game['game_id']." AND io.create_block_id <= ".($last_block_id-$game->db_game['maturity'])." GROUP BY io.io_id ORDER BY io.io_id ASC;");
 						
 						$utxo_i = 0;
 						
 						while ($utxo = $mature_utxo_r->fetch()) {
-							$game_io_q = "SELECT * FROM transaction_game_ios WHERE game_id='".$game->db_game['game_id']."' AND io_id='".$utxo['io_id']."'";
-							$game_io_q .= " ORDER BY game_io_id ASC;";
-							$game_io_r = $app->run_query($game_io_q);
+							$db_game_ios = $game->fetch_game_ios_by_io($utxo['io_id']);
 							
-							$mature_utxo = array('io_id'=>intval($utxo['io_id']), 'coins'=>$utxo['amount'], 'create_block_id'=>intval($utxo['create_block_id']), 'address'=>$utxo['address']);
-							$game_utxos = array();
+							$mature_utxo = [
+								'io_id' => (int) $utxo['io_id'],
+								'coins' => (int) $utxo['amount'],
+								'create_block_id' => (int) $utxo['create_block_id'],
+								'address' => $utxo['address']
+							];
 							
-							while ($game_io = $game_io_r->fetch()) {
-								array_push($game_utxos, array('game_io_id'=>intval($game_io['game_io_id']), 'coins'=>$game_io['colored_amount'], 'is_coinbase'=>intval($game_io['is_coinbase'])));
+							$game_utxos = [];
+							
+							while ($game_io = $db_game_ios->fetch()) {
+								array_push($game_utxos, [
+									'game_io_id' => (int) $game_io['game_io_id'],
+									'coins' => (int) $game_io['colored_amount'],
+									'is_coinbase' => (int) $game_io['is_coinbase']
+								]);
 							}
 							$mature_utxo['game_utxos'] = $game_utxos;
 							$mature_utxos[$utxo_i] = $mature_utxo;
@@ -354,20 +344,28 @@ if ($uri_parts[1] == "api") {
 				
 				$output_game['game_id'] = $game->db_game['game_id'];
 				$output_game['name'] = $game->db_game['name'];
-				$output_game['last_block_id'] = intval($last_block_id);
+				$output_game['last_block_id'] = (int) $last_block_id;
 				$output_game['current_round'] = $current_round;
 				$output_game['block_within_round'] = $game->block_id_to_round_index($last_block_id+1);
 				$output_game['exponential_inflation_rate'] = (float) $game->db_game['exponential_inflation_rate'];
 				$output_game['payout_weight'] = $game->db_game['payout_weight'];
 				
-				$event_vars = array('event_id','event_type_id','event_name','event_starting_block','event_final_block','option_name','option_name_plural');
-				$current_events = array();
+				$event_vars = [
+					'event_id',
+					'event_type_id',
+					'event_name',
+					'event_starting_block',
+					'event_final_block',
+					'option_name',
+					'option_name_plural'
+				];
+				$current_events = [];
 				for ($i=0; $i<count($game->current_events); $i++) {
 					for ($j=0; $j<count($event_vars); $j++) {
 						$api_event[$event_vars[$j]] = $game->current_events[$i]->db_event[$event_vars[$j]];
-						if (in_array($event_vars[$j], array('event_id', 'event_type_id', 'event_starting_block', 'event_final_block'))) $api_event[$event_vars[$j]] = (int) $api_event[$event_vars[$j]];
+						if (in_array($event_vars[$j], ['event_id', 'event_type_id', 'event_starting_block', 'event_final_block'])) $api_event[$event_vars[$j]] = (int) $api_event[$event_vars[$j]];
 					}
-					$api_event['options'] = array();
+					$api_event['options'] = [];
 					
 					$event_stats = $game->current_events[$i]->round_voting_stats_all();
 					$total_vote_sum = $event_stats[0];
@@ -381,10 +379,9 @@ if ($uri_parts[1] == "api") {
 					
 					$event_effective_coins = ($confirmed_votes+$unconfirmed_votes)*$coins_per_vote + $effective_destroy_score + $unconfirmed_effective_destroy_score;
 					
-					$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id LEFT JOIN currencies c ON op.entity_id=c.entity_id WHERE e.event_id=".$game->current_events[$i]->db_event['event_id'].";";
-					$rr = $app->run_query($qq);
+					$options_by_event = $app->run_query("SELECT * FROM options op JOIN events e ON op.event_id=e.event_id LEFT JOIN currencies c ON op.entity_id=c.entity_id WHERE e.event_id=".$game->current_events[$i]->db_event['event_id'].";");
 					
-					while ($option = $rr->fetch()) {
+					while ($option = $options_by_event->fetch()) {
 						$stat = $ranked_stats[$option_id_to_rank[$option['option_id']]];
 						$api_stat = false;
 						$api_stat['option_id'] = (int) $option['option_id'];
@@ -423,23 +420,20 @@ if ($uri_parts[1] == "api") {
 				}
 				$output_game['current_events'] = $current_events;
 				
-				$api_output = array('status_code'=>1, 'message'=>"Successful", 'game'=>$output_game, 'user_info'=>$api_user_info);
+				$api_output = ['status_code'=>1, 'message'=>"Successful", 'game'=>$output_game, 'user_info'=>$api_user_info];
 			}
 			else if ($uri_parts[3] == "events") {
-				$event_index = (int)$uri_parts[4];
+				$event_index = (int) $uri_parts[4];
 				
-				$event_r = $app->run_query("SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$event_index."';");
+				$db_event = $game->fetch_event_by_index($event_index);
 				
-				if ($event_r->rowCount() > 0) {
-					$db_event = $event_r->fetch();
-					
+				if ($db_event) {
 					if ($uri_parts[5] == "options") {
-						$event_option_index = (int)$uri_parts[6];
+						$event_option_index = (int) $uri_parts[6];
 						
-						$option_r = $app->run_query("SELECT *, en.entity_name AS entity_name, et.entity_name AS entity_type FROM options op LEFT JOIN entities en ON op.entity_id=en.entity_id LEFT JOIN images i ON op.image_id=i.image_id LEFT JOIN entity_types et ON en.entity_type_id=et.entity_type_id WHERE op.event_id='".$db_event['event_id']."' AND op.event_option_index='".$event_option_index."';");
+						$db_option = $app->run_query("SELECT *, en.entity_name AS entity_name, et.entity_name AS entity_type FROM options op LEFT JOIN entities en ON op.entity_id=en.entity_id LEFT JOIN images i ON op.image_id=i.image_id LEFT JOIN entity_types et ON en.entity_type_id=et.entity_type_id WHERE op.event_id='".$db_event['event_id']."' AND op.event_option_index='".$event_option_index."';")->fetch();
 						
-						if ($option_r->rowCount() > 0) {
-							$db_option = $option_r->fetch();
+						if ($db_option) {
 							$image_url = $GLOBALS['base_url'].$app->image_url($db_option);
 							
 							$api_option = [
@@ -456,14 +450,12 @@ if ($uri_parts[1] == "api") {
 						}
 						else $api_output = ['status_code'=>0, 'message'=>'No option was found matching those indices.'];
 					}
-					else {
-					}
 				}
 				else $api_output = ['status_code'=>1, 'message'=>'No event was found matching that index.'];
 			}
-			else $api_output = array('status_code'=>0, 'message'=>'Error, URL not recognized');
+			else $api_output = ['status_code'=>0, 'message'=>'Error, URL not recognized'];
 		}
-		else $api_output = array('status_code'=>0, 'message'=>'Error: Invalid game ID');
+		else $api_output = ['status_code'=>0, 'message'=>'Error: Invalid game ID'];
 		
 		echo json_encode($api_output, JSON_PRETTY_PRINT);
 	}
@@ -472,7 +464,7 @@ if ($uri_parts[1] == "api") {
 		die();
 	}
 	else {
-		echo json_encode(array('status_code'=>0, 'message'=>"You've reached an invalid URL."));
+		echo json_encode(['status_code'=>0, 'message'=>"You've reached an invalid URL."]);
 	}
 }
 ?>

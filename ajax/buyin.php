@@ -53,10 +53,9 @@ if ($thisuser && $game) {
 			$pay_amount = $buyin_amount+$color_amount;
 			$receive_amount = $buyin_amount*$exchange_rate;
 			
-			$invoice_r = $app->run_query("SELECT * FROM currency_invoices ci JOIN user_games ug ON ci.user_game_id=ug.user_game_id WHERE ci.invoice_id='".$invoice_id."' AND ci.user_game_id='".$user_game['user_game_id']."';");
+			$invoice = $app->run_query("SELECT * FROM currency_invoices ci JOIN user_games ug ON ci.user_game_id=ug.user_game_id WHERE ci.invoice_id='".$invoice_id."' AND ci.user_game_id='".$user_game['user_game_id']."';")->fetch();
 			
-			if ($invoice_r->rowCount() == 1) {
-				$invoice = $invoice_r->fetch();
+			if ($invoice) {
 				$invoice_address = $app->fetch_address_by_id($invoice['address_id']);
 				
 				$app->run_query("UPDATE currency_invoices SET buyin_amount='".$buyin_amount."', color_amount='".$color_amount."', pay_amount='".$pay_amount."' WHERE invoice_id='".$invoice['invoice_id']."';");

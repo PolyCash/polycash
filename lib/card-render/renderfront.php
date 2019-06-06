@@ -9,13 +9,8 @@ if (empty($GLOBALS['cron_key_string']) || $_REQUEST['key'] == $GLOBALS['cron_key
 	$card_id = (int) $_REQUEST['card_id'];
 
 	if ($card_id > 0) {
-		$q = "SELECT * FROM cards c JOIN card_designs d ON c.design_id=d.design_id WHERE c.card_id='".$card_id."';";
-		$r = $app->run_query($q);
-		$card = $r->fetch();
-		
-		$q = "SELECT * FROM currencies WHERE currency_id='".$card['currency_id']."';";
-		$r = $app->run_query($q);
-		$currency = $r->fetch();
+		$card = $app->run_query("SELECT * FROM cards c JOIN card_designs d ON c.design_id=d.design_id WHERE c.card_id='".$card_id."';")->fetch();
+		$currency = $app->fetch_currency_by_id($card['currency_id']);
 		
 		if ($res == "low") {
 			header("Content-type: image/jpeg");

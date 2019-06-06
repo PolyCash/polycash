@@ -16,10 +16,9 @@ else {
 	if (!empty($_REQUEST['redirect_key'])) $redirect_url = $app->get_redirect_by_key($_REQUEST['redirect_key']);
 	else $redirect_url = false;
 	
-	$q = "SELECT * FROM users WHERE username=".$app->quote_escape($username).";";
-	$r = $app->run_query($q);
+	$existing_user = $app->fetch_user_by_username($username);
 	
-	if ($r->rowCount() == 0) {
+	if (!$existing_user) {
 		if (empty($password)) {
 			$db_thisuser = false;
 			$app->send_login_link($db_thisuser, $redirect_url, $username);

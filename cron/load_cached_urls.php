@@ -13,18 +13,18 @@ if ($app->running_as_admin()) {
 	$print_debug = false;
 	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
 	
-	$process_lock_name = "loading_urls";
+	$process_lock_name = "load_cached_urls";
 	$process_locked = $app->check_process_running($process_lock_name);
 	
 	if (!$process_locked) {
 		$app->set_site_constant($process_lock_name, getmypid());
 		
-		$pipe_config = array(
-			0 => array('pipe', 'r'),
-			1 => array('pipe', 'w'),
-			2 => array('pipe', 'w')
-		);
-		$pipes = array();
+		$pipe_config = [
+			0 => ['pipe', 'r'],
+			1 => ['pipe', 'w'],
+			2 => ['pipe', 'w']
+		];
+		$pipes = [];
 		
 		if (PHP_OS == "WINNT") $script_path_name = dirname(dirname(__FILE__));
 		else $script_path_name = realpath(dirname(dirname(__FILE__)));

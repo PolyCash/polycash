@@ -28,7 +28,7 @@ if ($thisuser) {
 				$db_io = $app->fetch_io_by_id($io_id);
 				
 				if ($db_io) {
-					$gios_by_io = $app->run_query("SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id WHERE io.io_id='".$io_id."' AND gio.game_id='".$game_id."';");
+					$gios_by_io = $sale_game->fetch_game_ios_by_io($io_id);
 					
 					if ($gios_by_io->rowCount() > 0) {
 						$game_sale_account = $sale_game->check_set_game_sale_account($thisuser);
@@ -166,7 +166,7 @@ if ($thisuser) {
 				$db_io = $app->fetch_io_by_id($io_id);
 				
 				if ($db_io) {
-					$gios_by_io = $app->run_query("SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id WHERE io.io_id='".$io_id."' AND gio.game_id='".$game_id."';");
+					$gios_by_io = $donate_game->fetch_game_ios_by_io($io_id);
 					
 					if ($gios_by_io->rowCount() > 0) {
 						$faucet_account = $donate_game->check_set_faucet_account();
@@ -544,9 +544,8 @@ include('includes/html_start.php');
 						<select class="form-control" id="create_account_blockchain_id" onchange="create_account_step(2);">
 							<option value="">-- Please Select --</option>
 							<?php
-							$q = "SELECT * FROM blockchains ORDER BY blockchain_name ASC;";
-							$r = $app->run_query($q);
-							while ($db_blockchain = $r->fetch()) {
+							$all_blockchains = $app->run_query("SELECT * FROM blockchains ORDER BY blockchain_name ASC;");
+							while ($db_blockchain = $all_blockchains->fetch()) {
 								echo '<option value="'.$db_blockchain['blockchain_id'].'">'.$db_blockchain['blockchain_name'].'</option>'."\n";
 							}
 							?>
@@ -690,9 +689,8 @@ include('includes/html_start.php');
 							<select class="form-control" id="account_spend_game_id">
 								<option value="">-- Please select --</option>
 								<?php
-								$q = "SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' GROUP BY g.game_id ORDER BY g.name ASC;";
-								$r = $app->run_query($q);
-								while ($db_game = $r->fetch()) {
+								$my_games = $app->run_query("SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' GROUP BY g.game_id ORDER BY g.name ASC;");
+								while ($db_game = $my_games->fetch()) {
 									echo "<option value=\"".$db_game['game_id']."\">".$db_game['name']."</option>\n";
 								}
 								?>

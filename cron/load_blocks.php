@@ -22,10 +22,9 @@ if ($app->running_as_admin()) {
 		
 		$blockchains = array();
 		
-		$blockchain_q = "SELECT * FROM blockchains WHERE online=1 AND p2p_mode IN ('rpc','web_api');";
-		$blockchain_r = $GLOBALS['app']->run_query($blockchain_q);
+		$sync_blockchains = $app->run_query("SELECT * FROM blockchains WHERE online=1 AND p2p_mode IN ('rpc','web_api');");
 		
-		while ($db_blockchain = $blockchain_r->fetch()) {
+		while ($db_blockchain = $sync_blockchains->fetch()) {
 			$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
 			$blockchain->load_coin_rpc();
 			$error = false;

@@ -23,33 +23,28 @@ if (!$game && !empty($_REQUEST['blockchain_id'])) {
 if ($blockchain) {
 	$search_term = trim(strip_tags(urldecode($_REQUEST['search_term'])));
 	
-	$q = "SELECT e.*, g.url_identifier AS game_url_identifier FROM events e JOIN games g ON e.game_id=g.game_id WHERE e.event_name=".$app->quote_escape($search_term).";";
-	$r = $app->run_query($q);
+	$matching_event = $app->run_query("SELECT e.*, g.url_identifier AS game_url_identifier FROM events e JOIN games g ON e.game_id=g.game_id WHERE e.event_name=".$app->quote_escape($search_term).";")->fetch();
 	
-	if ($r->rowCount() > 0) {
-		$db_event = $r->fetch();
-		$app->output_message(1, "/explorer/games/".$db_event['game_url_identifier']."/events/".$db_event['event_index'], false);
+	if ($matching_event) {
+		$app->output_message(1, "/explorer/games/".$matching_event['game_url_identifier']."/events/".$matching_event['event_index'], false);
 	}
 	else {
-		$q = "SELECT * FROM addresses WHERE primary_blockchain_id=".$blockchain->db_blockchain['blockchain_id']." AND address=".$app->quote_escape($search_term).";";
-		$r = $app->run_query($q);
+		$matching_address = $app->run_query("SELECT * FROM addresses WHERE primary_blockchain_id=".$blockchain->db_blockchain['blockchain_id']." AND address=".$app->quote_escape($search_term).";")->fetch();
 		
-		if ($r->rowCount() > 0) {
-			$db_address = $r->fetch();
-			
+		if ($matching_address) {
 			if ($game) {
-				$app->output_message(1, "/explorer/games/".$game->db_game['url_identifier']."/addresses/".$db_address['address'], false);
+				$app->output_message(1, "/explorer/games/".$game->db_game['url_identifier']."/addresses/".$matching_address['address'], false);
 			}
-			else $app->output_message(1, "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/addresses/".$db_address['address'], false);
+			else $app->output_message(1, "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/addresses/".$matching_address['address'], false);
 		}
 		else {
-			$db_transaction = $blockchain->fetch_transaction_by_hash($search_term);
+			$matching_tx = $blockchain->fetch_transaction_by_hash($search_term);
 			
-			if ($db_transaction) {
+			if ($matching_tx) {
 				if ($game) {
-					$app->output_message(1, "/explorer/games/".$game->db_game['url_identifier']."/transactions/".$db_transaction['tx_hash'], false);
+					$app->output_message(1, "/explorer/games/".$game->db_game['url_identifier']."/transactions/".$matching_tx['tx_hash'], false);
 				}
-				else $app->output_message(1, "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$db_transaction['tx_hash'], false);
+				else $app->output_message(1, "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$matching_tx['tx_hash'], false);
 			}
 			else if (strlen($search_term) == 64) {
 				$app->output_message(1, "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$search_term, false);

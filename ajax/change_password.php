@@ -15,8 +15,7 @@ if ($thisuser) {
 	if ($username == $thisuser->db_user['username']) {
 		if ($thisuser->db_user['password'] == $existing_password) {
 			if (!empty($new)) {
-				$update_q = "UPDATE users SET password=".$app->quote_escape($new_password)." WHERE user_id='".$thisuser->db_user['user_id']."';";
-				$update_r = $app->run_query($update_q);
+				$app->run_query("UPDATE users SET password=".$app->quote_escape($new_password)." WHERE user_id='".$thisuser->db_user['user_id']."';");
 				
 				$app->output_message(1, "Your password has been changed.", false);
 			}

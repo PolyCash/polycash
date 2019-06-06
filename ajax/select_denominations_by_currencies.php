@@ -8,20 +8,12 @@ if ($thisuser) {
 	$denominations_html = "";
 	$accounts_html = "";
 
-	$q = "SELECT * FROM currencies WHERE currency_id='".$currency_id."';";
-	$r = $app->run_query($q);
+	$currency = $app->fetch_currency_by_id($currency_id);
 
-	if ($r->rowCount() == 1) {
-		$currency = $r->fetch();
+	if ($currency) {
+		$fv_currency = $app->fetch_currency_by_id((int)$_REQUEST['fv_currency_id']);
 		
-		$fv_currency_id = (int) $_REQUEST['fv_currency_id'];
-		
-		$q = "SELECT * FROM currencies WHERE currency_id='".$fv_currency_id."';";
-		$r = $app->run_query($q);
-
-		if ($r->rowCount() == 1) {
-			$fv_currency = $r->fetch();
-			
+		if ($fv_currency) {
 			$denominations_html .= "<option value=\"\">-- Please Select --</option>\n";
 			
 			$denominations = $app->get_card_denominations($currency, $fv_currency['currency_id']);
@@ -32,10 +24,9 @@ if ($thisuser) {
 			
 			$accounts_html .= "<option value=\"\">-- Please Select --</option>\n";
 			
-			$account_q = "SELECT * FROM currency_accounts WHERE game_id IS NULL AND user_id='".$thisuser->db_user['user_id']."' AND currency_id=".$fv_currency['currency_id']." ORDER BY account_name ASC;";
-			$account_r = $app->run_query($account_q);
+			$accounts_by_currency = $app->run_query("SELECT * FROM currency_accounts WHERE game_id IS NULL AND user_id='".$thisuser->db_user['user_id']."' AND currency_id=".$fv_currency['currency_id']." ORDER BY account_name ASC;");
 			
-			while ($account = $account_r->fetch()) {
+			while ($account = $accounts_by_currency->fetch()) {
 				$accounts_html .= "<option value=\"".$account['account_id']."\">".$account['account_name']."</option>\n";;
 			}
 		}
@@ -49,7 +40,5 @@ if ($thisuser) {
 	if (!empty($fv_currency)) $output_obj['coin_abbreviation'] = $fv_currency['abbreviation'];
 	echo json_encode($output_obj);
 }
-else {
-	$app->output_message(1, "Please log in", false);
-}
+else $app->output_message(1, "Please log in", false);
 ?>

@@ -5,17 +5,13 @@ if ($GLOBALS['pageview_tracking_enabled']) $viewer_id = $pageview_controller->in
 
 if ($thisuser) {
 	if ($game) {
-		$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
-		$r = $app->run_query($q);
+		$user_game = $app->fetch_user_game($thisuser->db_user['user_id'], $game->db_game['game_id']);
 		
-		if ($r->rowCount() == 1) {
-			$user_game = $r->fetch();
-			
+		if ($user_game) {
 			$preference = $_REQUEST['preference'];
 			if ($preference != "email") $preference = "none";
 			
-			$q = "UPDATE user_games SET notification_preference=".$app->quote_escape($preference)." WHERE user_game_id='".$user_game['user_game_id']."';";
-			$r = $app->run_query($q);
+			$app->run_query("UPDATE user_games SET notification_preference=".$app->quote_escape($preference)." WHERE user_game_id='".$user_game['user_game_id']."';");
 			
 			$email = $app->normalize_username($_REQUEST['email']);
 			if ($email != $thisuser->db_user['notification_email']) {

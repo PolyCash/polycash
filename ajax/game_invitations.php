@@ -19,10 +19,11 @@ if ($thisuser) {
 
 				if ($perm_to_invite) {
 					if ($action == "manage") {
-						$q = "SELECT * FROM game_invitations i LEFT JOIN users u ON i.used_user_id=u.user_id LEFT JOIN async_email_deliveries d ON i.sent_email_id=d.delivery_id WHERE i.game_id='".$game->db_game['game_id']."' AND i.inviter_id='".$thisuser->db_user['user_id']."' ORDER BY invitation_id ASC;";
-						$r = $app->run_query($q);
+						$my_invitations = $app->run_query("SELECT * FROM game_invitations i LEFT JOIN users u ON i.used_user_id=u.user_id LEFT JOIN async_email_deliveries d ON i.sent_email_id=d.delivery_id WHERE i.game_id='".$game->db_game['game_id']."' AND i.inviter_id='".$thisuser->db_user['user_id']."' ORDER BY invitation_id ASC;");
+						
 						echo 'You\'ve generated '.$r->rowCount().' invitations for this game.<br/>';
-						while ($invitation = $r->fetch()) {
+						
+						while ($invitation = $my_invitations->fetch()) {
 							echo '<div class="row">';
 							echo '<div class="col-sm-6">';
 							if ($invitation['used_user_id'] > 0) echo 'Claimed by '.$invitation['username'];
@@ -61,12 +62,9 @@ if ($thisuser) {
 						$send_to = urldecode($_REQUEST['send_to']);
 						$invitation_id = intval($_REQUEST['invitation_id']);
 						
-						$q = "SELECT * FROM game_invitations WHERE invitation_id='".$invitation_id."' AND inviter_id='".$thisuser->db_user['user_id']."';";
-						$r = $app->run_query($q);
+						$invitation = $app->run_query("SELECT * FROM game_invitations WHERE invitation_id='".$invitation_id."' AND inviter_id='".$thisuser->db_user['user_id']."';")->fetch();
 						
-						if ($r->rowCount() > 0) {
-							$invitation = $r->fetch();
-							
+						if ($invitation) {
 							if ($invitation['game_id'] == $game->db_game['game_id'] && $invitation['used'] == 0) {
 								$send_method = $_REQUEST['send_method'];
 								
@@ -79,12 +77,9 @@ if ($thisuser) {
 									else $app->output_message(2, "Error: that invitation has already been sent or used.", $invitation);
 								}
 								else if ($send_method == "user") {
-									$q = "SELECT * FROM users WHERE username=".$app->quote_escape($send_to).";";
-									$r = $app->run_query($q);
+									$send_to_user = $app->fetch_user_by_username($send_to);
 									
-									if ($r->rowCount() > 0) {
-										$send_to_user = $r->fetch();
-										
+									if ($send_to_user) {
 										$invite_game = false;
 										$send_user_game = false;
 										$app->try_apply_invite_key($send_to_user['user_id'], $invitation['invitation_key'], $invite_game, $send_user_game);

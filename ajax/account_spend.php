@@ -92,12 +92,9 @@ if ($thisuser) {
 			$db_io = $app->fetch_io_by_id($io_id);
 			
 			if ($db_io) {
-				$q = "SELECT * FROM address_keys k JOIN currency_accounts c ON k.account_id=c.account_id WHERE k.address_id='".$db_io['address_id']."' AND c.user_id='".$thisuser->db_user['user_id']."';";
-				$r = $app->run_query($q);
+				$key_account = $app->run_query("SELECT * FROM address_keys k JOIN currency_accounts c ON k.account_id=c.account_id WHERE k.address_id='".$db_io['address_id']."' AND c.user_id='".$thisuser->db_user['user_id']."';")->fetch();
 				
-				if ($r->rowCount() > 0) {
-					$key_account = $r->fetch();
-					
+				if ($key_account) {
 					$color_amount = (int) ($db_io['amount'] - $buyin_amount - $fee_amount);
 					
 					if ($fee_amount > 0 && $buyin_amount > 0 && $color_amount > 0) {
@@ -136,18 +133,12 @@ if ($thisuser) {
 	else if ($action == "start_join_tx" || $action == "finish_join_tx") {
 		$io_id = (int) $_REQUEST['io_id'];
 		
-		$q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.io_id='".$io_id."';";
-		$r = $app->run_query($q);
+		$db_io = $app->fetch_io_by_id($io_id);
 		
-		if ($r->rowCount() > 0) {
-			$db_io = $r->fetch();
+		if ($db_io) {
+			$key_account = $app->run_query("SELECT *, c.currency_id AS currency_id FROM address_keys k JOIN currency_accounts c ON k.account_id=c.account_id WHERE k.address_id='".$db_io['address_id']."' AND c.user_id='".$thisuser->db_user['user_id']."';")->fetch();
 			
-			$q = "SELECT *, c.currency_id AS currency_id FROM address_keys k JOIN currency_accounts c ON k.account_id=c.account_id WHERE k.address_id='".$db_io['address_id']."' AND c.user_id='".$thisuser->db_user['user_id']."';";
-			$r = $app->run_query($q);
-			
-			if ($r->rowCount() > 0) {
-				$key_account = $r->fetch();
-				
+			if ($key_account) {
 				if (in_array($db_io['spend_status'], array("unconfirmed", "unspent"))) {
 					if ($key_account['game_id'] > 0) {
 						$db_game = $app->fetch_db_game_by_id($key_account['game_id']);
@@ -156,14 +147,14 @@ if ($thisuser) {
 					else $blockchain = new Blockchain($app, $db_io['blockchain_id']);
 					
 					if ($action == "start_join_tx") {
-						if ($key_account['game_id'] > 0) $q = "SELECT *, SUM(gio.colored_amount) AS colored_amount_sum FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$key_account['account_id']."' AND gio.game_id='".$key_account['game_id']."' AND (io.spend_status='unspent' OR io.spend_status='unconfirmed') AND io.io_id != ".$db_io['io_id']." GROUP BY io.io_id ORDER BY colored_amount_sum DESC;";
-						else $q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$key_account['account_id']."' AND (io.spend_status='unspent' OR io.spend_status='unconfirmed') AND io.io_id != ".$db_io['io_id']." GROUP BY io.io_id ORDER BY amount DESC;";
-						$r = $app->run_query($q);
+						if ($key_account['game_id'] > 0) $joinable_ios_q = "SELECT *, SUM(gio.colored_amount) AS colored_amount_sum FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$key_account['account_id']."' AND gio.game_id='".$key_account['game_id']."' AND (io.spend_status='unspent' OR io.spend_status='unconfirmed') AND io.io_id != ".$db_io['io_id']." GROUP BY io.io_id ORDER BY colored_amount_sum DESC;";
+						else $joinable_ios_q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$key_account['account_id']."' AND (io.spend_status='unspent' OR io.spend_status='unconfirmed') AND io.io_id != ".$db_io['io_id']." GROUP BY io.io_id ORDER BY amount DESC;";
+						$joinable_ios = $app->run_query($joinable_ios_q);
 						
 						$html = '<form action="/accounts/" method="get" onsubmit="finish_join_tx(); return false;">';
 						$html .= '<select id="join_tx_io_id" name="join_tx_io_id" class="form-control">'."\n";
 						$html .= '<option value="">-- Please Select --</option>'."\n";
-						while ($db_io = $r->fetch()) {
+						while ($db_io = $joinable_ios->fetch()) {
 							$html .= '<option value="'.$db_io['io_id'].'">';
 							if ($key_account['game_id'] > 0) $html .= $app->format_bignum($db_io['colored_amount_sum']/pow(10,$db_game['decimal_places'])).' '.$db_game['coin_abbreviation'].' (';
 							$html .= $app->format_bignum($db_io['amount']/pow(10,$blockchain->db_blockchain['decimal_places'])).' '.$blockchain->db_blockchain['coin_name_plural'];
@@ -181,18 +172,12 @@ if ($thisuser) {
 					else if ($action == "finish_join_tx") {
 						$join_io_id = (int) $_REQUEST['join_io_id'];
 						
-						$q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.io_id='".$join_io_id."';";
-						$r = $app->run_query($q);
+						$join_db_io = $app->run_query("SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.io_id='".$join_io_id."';")->fetch();
 						
-						if ($r->rowCount() > 0) {
-							$join_db_io = $r->fetch();
+						if ($join_db_io) {
+							$join_key_account = $app->run_query("SELECT *, c.currency_id AS currency_id FROM address_keys k JOIN currency_accounts c ON k.account_id=c.account_id WHERE k.address_id='".$join_db_io['address_id']."' AND c.user_id='".$thisuser->db_user['user_id']."';")->fetch();
 							
-							$q = "SELECT *, c.currency_id AS currency_id FROM address_keys k JOIN currency_accounts c ON k.account_id=c.account_id WHERE k.address_id='".$join_db_io['address_id']."' AND c.user_id='".$thisuser->db_user['user_id']."';";
-							$r = $app->run_query($q);
-							
-							if ($r->rowCount() > 0) {
-								$join_key_account = $r->fetch();
-								
+							if ($join_key_account) {
 								$fee_amount = (int)(0.0001*pow(10,$blockchain->db_blockchain['decimal_places']));
 								$amount = $db_io['amount']+$join_db_io['amount']-$fee_amount;
 								
@@ -220,18 +205,12 @@ if ($thisuser) {
 		$withdraw_type = $_REQUEST['withdraw_type'];
 		$address = strip_tags($_REQUEST['address']);
 		
-		$q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.io_id='".$io_id."';";
-		$r = $app->run_query($q);
+		$db_io = $app->fetch_io_by_id($io_id);
 		
-		if ($r->rowCount() > 0) {
-			$db_io = $r->fetch();
+		if ($db_io) {
+			$key_account = $app->run_query("SELECT * FROM address_keys k JOIN currency_accounts c ON k.account_id=c.account_id WHERE k.address_id='".$db_io['address_id']."' AND c.user_id='".$thisuser->db_user['user_id']."';")->fetch();
 			
-			$q = "SELECT * FROM address_keys k JOIN currency_accounts c ON k.account_id=c.account_id WHERE k.address_id='".$db_io['address_id']."' AND c.user_id='".$thisuser->db_user['user_id']."';";
-			$r = $app->run_query($q);
-			
-			if ($r->rowCount() > 0) {
-				$key_account = $r->fetch();
-				
+			if ($key_account) {
 				$blockchain = new Blockchain($app, $db_io['blockchain_id']);
 				$blockchain->load_coin_rpc();
 				
@@ -274,12 +253,9 @@ if ($thisuser) {
 					else $app->output_message(6, "Error: not enough coins.", false);
 				}
 				else {
-					$io_game_q = "SELECT g.game_id, g.blockchain_id, SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN games g ON gio.game_id=g.game_id WHERE gio.is_resolved=1 AND gio.io_id='".$db_io['io_id']."' AND g.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' GROUP BY g.game_id;";
-					$io_game_r = $app->run_query($io_game_q);
+					$io_game = $app->run_query("SELECT g.game_id, g.blockchain_id, SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN games g ON gio.game_id=g.game_id WHERE gio.is_resolved=1 AND gio.io_id='".$db_io['io_id']."' AND g.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' GROUP BY g.game_id;")->fetch();
 					
-					if ($io_game_r->rowCount() == 1) {
-						$io_game = $io_game_r->fetch();
-						
+					if ($io_game) {
 						$game = new Game($blockchain, $io_game['game_id']);
 						
 						$amount = $amount*pow(10, $game->db_game['decimal_places']);
@@ -323,12 +299,9 @@ if ($thisuser) {
 		$peer_id = (int) $_REQUEST['peer_id'];
 		$claim_type = $_REQUEST['claim_type'];
 		
-		$q = "SELECT c.* FROM cards c LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.peer_id='".$peer_id."' AND c.peer_card_id='".$card_id."';";
-		$r = $app->run_query($q);
+		$card = $app->fetch_card_by_peer_and_id($peer_id, $card_id);
 		
-		if ($r->rowCount() == 1) {
-			$card = $r->fetch();
-			
+		if ($card) {
 			if ($card['user_id'] == $thisuser->db_user['user_id']) {
 				if ($claim_type == "to_address") {
 					$fee = (float) $_REQUEST['fee'];
@@ -338,7 +311,7 @@ if ($thisuser) {
 						$this_peer = $app->get_peer_by_server_name($GLOBALS['base_url'], true);
 						
 						if ($card['peer_id'] != $this_peer['peer_id']) {
-							$remote_peer = $app->run_query("SELECT * FROM peers WHERE peer_id='".$card['peer_id']."';")->fetch();
+							$remote_peer = $app->fetch_peer_by_id($card['peer_id']);
 							
 							$remote_url = $remote_peer['base_url']."/api/card/".$card['peer_card_id']."/withdraw/?secret=".$card['secret_hash']."&fee=".$fee."&address=".$address;
 							$remote_response_raw = file_get_contents($remote_url);
@@ -352,7 +325,7 @@ if ($thisuser) {
 						}
 						else {
 							$transaction = $app->pay_out_card($card, $address, $fee);
-							$db_blockchain = $app->run_query("SELECT * FROM blockchains WHERE blockchain_id='".$transaction['blockchain_id']."';")->fetch();
+							$db_blockchain = $app->fetch_blockchain_by_id($transaction['blockchain_id']);
 							
 							if ($transaction) $app->output_message(1, "Great! Coins have been sent to <a href=\"/explorer/blockchains/".$db_blockchain['url_identifier']."/transactions/".$transaction['tx_hash']."\">your address</a>.", false);
 							else $app->output_message(7, "Error: failed to create the transaction.", false);
@@ -393,14 +366,13 @@ if ($thisuser) {
 				$db_io = $app->fetch_io_by_id($io_id);
 				
 				if ($db_io) {
-					$q = "SELECT * FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id WHERE io.io_id='".$io_id."' AND gio.game_id='".$game->db_game['game_id']."';";
-					$r = $app->run_query($q);
+					$db_game_ios = $game->fetch_game_ios_by_io($io_id);
 					
-					if ($r->rowCount() > 0) {
-						$game_ios = array();
+					if ($db_game_ios->rowCount() > 0) {
+						$game_ios = [];
 						$colored_coin_sum = 0;
 						
-						while ($game_io = $r->fetch()) {
+						while ($game_io = $db_game_ios->fetch()) {
 							array_push($game_ios, $game_io);
 							$colored_coin_sum += $game_io['colored_amount'];
 						}
@@ -410,17 +382,14 @@ if ($thisuser) {
 						$chain_coins_each = ceil($satoshis_each/$coins_per_chain_coin);
 						
 						if ($chain_coins_each > 0 && in_array($game_ios[0]['spend_status'], array("unspent", "unconfirmed"))) {
-							$account_q = "SELECT ca.* FROM currency_accounts ca JOIN games g ON g.game_id=ca.game_id JOIN address_keys k ON k.account_id=ca.account_id WHERE ca.user_id='".$thisuser->db_user['user_id']."' AND k.address_id='".$game_ios[0]['address_id']."';";
-							$account_r = $app->run_query($account_q);
+							$account = $app->run_query("SELECT ca.* FROM currency_accounts ca JOIN games g ON g.game_id=ca.game_id JOIN address_keys k ON k.account_id=ca.account_id WHERE ca.user_id='".$thisuser->db_user['user_id']."' AND k.address_id='".$game_ios[0]['address_id']."';")->fetch();
 							
-							if ($account_r->rowCount() > 0) {
-								$account = $account_r->fetch();
-								
+							if ($account) {
 								if ($total_cost_satoshis < $colored_coin_sum && $coin_sum > ($chain_coins_each*$quantity*$utxos_each) - $fee_amount) {
 									$remainder_satoshis = $coin_sum - ($chain_coins_each*$quantity) - $fee_amount;
 									
-									$amounts = array();
-									$address_ids = array();
+									$amounts = [];
+									$address_ids = [];
 									
 									for ($i=0; $i<$quantity; $i++) {
 										$address_key = $app->new_address_key($account['currency_id'], $account);

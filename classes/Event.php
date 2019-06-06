@@ -1,57 +1,41 @@
 <?php
 class Event {
 	public $db_event;
-	public $app;
 	public $game;
 	
 	public function __construct(&$game, $db_event, $event_id) {
 		$this->game = $game;
-		if ($db_event) $event_id = $db_event['event_id'];
-		$this->load_db_event($event_id);
+		if ($db_event) {
+			$event_id = $db_event['event_id'];
+			$this->db_event = $db_event;
+		}
+		else $this->load_db_event($event_id);
 	}
 	
 	public function load_db_event($event_id) {
-		$q = "SELECT *, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities en ON et.entity_id=en.entity_id LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.event_id='".$event_id."';";
-		$r = $this->game->blockchain->app->run_query($q);
-		$this->db_event = $r->fetch() or die("Error, could not load event #".$event_id);
+		$this->db_event = $this->game->blockchain->app->run_query("SELECT *, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities en ON et.entity_id=en.entity_id LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.event_id='".$event_id."';")->fetch();
+		if (!$this->db_event) die("Error, could not load event #".$event_id);
 	}
 	
 	public function round_voting_stats() {
 		$coins_per_vote = $this->game->blockchain->app->coins_per_vote($this->game->db_game);
 		
-		$q = "SELECT * FROM options op LEFT JOIN images i ON op.image_id=i.image_id LEFT JOIN entities e ON op.entity_id=e.entity_id WHERE op.event_id='".$this->db_event['event_id']."' ORDER BY ((op.votes+op.unconfirmed_votes)*".$coins_per_vote.")+(op.effective_destroy_score+op.unconfirmed_effective_destroy_score) DESC, op.option_id ASC;";
-		
-		return $this->game->blockchain->app->run_query($q);
+		return $this->game->blockchain->app->run_query("SELECT * FROM options op LEFT JOIN images i ON op.image_id=i.image_id LEFT JOIN entities e ON op.entity_id=e.entity_id WHERE op.event_id='".$this->db_event['event_id']."' ORDER BY ((op.votes+op.unconfirmed_votes)*".$coins_per_vote.")+(op.effective_destroy_score+op.unconfirmed_effective_destroy_score) DESC, op.option_id ASC;");
 	}
 
 	public function total_votes_in_round($include_unconfirmed) {
-		$sum = 0;
-		
-		$base_q = "SELECT SUM(votes) FROM transaction_game_ios WHERE event_id='".$this->db_event['event_id']."' AND option_id > 0";
-		$confirmed_q = $base_q." AND create_round_id IS NOT NULL;";
-		$confirmed_r = $this->game->blockchain->app->run_query($confirmed_q);
-		$confirmed_votes = $confirmed_r->fetch(PDO::FETCH_NUM);
-		$confirmed_votes = $confirmed_votes[0];
-		if ($confirmed_votes > 0) {} else $confirmed_votes = 0;
-		
-		$sum += $confirmed_votes;
-		
-		$returnvals['confirmed'] = $confirmed_votes;
+		$confirmed_votes = (int)($this->game->blockchain->app->run_query("SELECT SUM(votes) FROM transaction_game_ios WHERE event_id='".$this->db_event['event_id']."' AND create_round_id IS NOT NULL;")->fetch(PDO::FETCH_NUM)[0]);
 		
 		if ($include_unconfirmed) {
-			$q = "SELECT SUM(unconfirmed_votes) FROM options WHERE event_id='".$this->db_event['event_id']."';";
-			$r = $this->game->blockchain->app->run_query($q);
-			$sums = $r->fetch(PDO::FETCH_NUM);
-			
-			$unconfirmed_votes = $sums[0];
-			$sum += $unconfirmed_votes;
-			$returnvals['unconfirmed'] = $unconfirmed_votes;
+			$unconfirmed_votes = (int)($this->game->blockchain->app->run_query("SELECT SUM(unconfirmed_votes) FROM options WHERE event_id='".$this->db_event['event_id']."';")->fetch(PDO::FETCH_NUM)[0]);
 		}
-		else $returnvals['unconfirmed'] = 0;
+		else $unconfirmed_votes = 0;
 		
-		$returnvals['sum'] = $sum;
-		
-		return $returnvals;
+		return [
+			'confirmed' => $confirmed_votes,
+			'unconfirmed' => $unconfirmed_votes,
+			'sum' => $confirmed_votes+$unconfirmed_votes
+		];
 	}
 
 	public function round_voting_stats_all() {
@@ -82,26 +66,6 @@ class Event {
 		}
 		if ($option_id_csv != "") $option_id_csv = substr($option_id_csv, 0, strlen($option_id_csv)-1);
 		
-		$q = "SELECT * FROM options gvo LEFT JOIN images i ON gvo.image_id=i.image_id LEFT JOIN entities e ON gvo.entity_id=e.entity_id WHERE gvo.event_id='".$this->db_event['event_id']."'";
-		if ($option_id_csv != "") $q .= " AND gvo.option_id NOT IN (".$option_id_csv.")";
-		$q .= " ORDER BY gvo.option_id ASC;";
-		$r = $this->game->blockchain->app->run_query($q);
-		
-		while ($stat = $r->fetch()) {
-			$stat['votes'] = 0;
-			$stat['unconfirmed_votes'] = 0;
-			$stat['option_block_score'] = 0;
-			$stat['destroy_score'] = 0;
-			$stat['unconfirmed_destroy_score'] = 0;
-			$stat['effective_destroy_score'] = 0;
-			$stat['unconfirmed_effective_destroy_score'] = 0;
-			
-			$stats_all[$counter] = $stat;
-			$option_id_to_rank[$stat['option_id']] = $counter;
-			$counter++;
-		}
-		
-		$current_round = $this->game->block_to_round($this->game->blockchain->last_block_id()+1);
 		$include_unconfirmed = true;
 		$sum_votes = $this->total_votes_in_round($include_unconfirmed);
 		$output_arr[0] = $sum_votes['sum'];
@@ -128,7 +92,7 @@ class Event {
 		
 		$coins_per_vote = $this->game->blockchain->app->coins_per_vote($this->game->db_game);
 		
-		$display_mode = "slim";//$this->db_event['display_mode'];
+		$display_mode = "slim";
 		
 		$html = '';
 		
@@ -144,16 +108,16 @@ class Event {
 		list($winning_option_id, $winning_votes, $winning_effective_destroy_score) = $this->determine_winning_option($round_stats_all);
 		
 		if ((string)$this->db_event['outcome_index'] !== "") {
-			$expected_winner = $this->game->get_option_by_outcome_index($this->db_event['event_id'], $this->db_event['outcome_index']);
+			$expected_winner = $this->game->blockchain->app->fetch_option_by_event_option_index($this->db_event['event_id'], $this->db_event['outcome_index']);
 		}
 		else $expected_winner = false;
 		
 		$game_defined_winner = false;
-		$gde_r = $this->game->blockchain->app->run_query("SELECT * FROM game_defined_events WHERE game_id='".$this->game->db_game['game_id']."' AND event_index='".$this->db_event['event_index']."';");
-		if ($gde_r->rowCount() > 0) {
-			$gde = $gde_r->fetch();
+		$gde = $this->game->blockchain->app->run_query("SELECT * FROM game_defined_events WHERE game_id='".$this->game->db_game['game_id']."' AND event_index='".$this->db_event['event_index']."';")->fetch();
+		
+		if ($gde) {
 			if ((string)$gde['outcome_index'] !== "") {
-				$game_defined_winner = $this->game->get_option_by_outcome_index($this->db_event['event_id'], $gde['outcome_index']);
+				$game_defined_winner = $this->game->blockchain->app->fetch_option_by_event_option_index($this->db_event['event_id'], $gde['outcome_index']);
 			}
 		}
 		
@@ -174,8 +138,8 @@ class Event {
 		
 		$score_disp = "";
 		if (!empty($this->db_event['option_block_rule'])) {
-			$option_ids = array();
-			$scores = array();
+			$option_ids = [];
+			$scores = [];
 			
 			if ($display_mode == "default") {
 				$score_disp .= '<div class="event_score_box">';
@@ -186,14 +150,13 @@ class Event {
 				$score_disp .= "</div>\n";
 			}
 			else {
-				$qq = "SELECT *, SUM(ob.score) AS option_block_score FROM options o LEFT JOIN option_blocks ob ON o.option_id=ob.option_id LEFT JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id='".$this->db_event['event_id']."' GROUP BY o.option_id ORDER BY o.option_index ASC;";
-				$rr = $this->game->blockchain->app->run_query($qq);
+				$option_block_info = $this->game->blockchain->app->run_query("SELECT *, SUM(ob.score) AS option_block_score FROM options o LEFT JOIN option_blocks ob ON o.option_id=ob.option_id LEFT JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id='".$this->db_event['event_id']."' GROUP BY o.option_id ORDER BY o.option_index ASC;");
 				
 				$score_disp = "";
 				$first_option = false;
 				$second_option = false;
 				
-				while ($option = $rr->fetch()) {
+				while ($option = $option_block_info->fetch()) {
 					$score_disp .= ((int)$option['option_block_score'])."-";
 					if (empty($first_option)) $first_option = $option;
 					else if (empty($second_option)) $second_option = $option;
@@ -246,7 +209,7 @@ class Event {
 		$html .= $score_disp;
 		$html .= "</p>\n";
 		
-		if ($this->db_event['sport_name'].$this->db_event['league_name'] != "") {
+		if (!empty($this->db_event['sport_name']) || !empty($this->db_event['league_name'])) {
 			$html .= "<p>".$this->db_event['sport_name']." &nbsp;&nbsp; ".$this->db_event['league_name']."</p>\n";
 		}
 		
@@ -271,30 +234,6 @@ class Event {
 			if ($unconfirmed_coins > 0) $html .= ", ".$this->game->blockchain->app->format_bignum($unconfirmed_coins/pow(10,$this->game->db_game['decimal_places']))." unconfirmed";
 			$html .= "</p>\n";
 		}
-		
-		/* To-do
-		if ($this->db_event['vote_effectiveness_function'] != "constant") {
-			$q = "SELECT SUM(".$this->game->db_game['payout_weight']."_score), SUM(unconfirmed_".$this->game->db_game['payout_weight']."_score), SUM(votes), SUM(unconfirmed_votes) FROM options WHERE event_id='".$this->db_event['event_id']."';";
-			$r = $this->game->blockchain->app->run_query($q);
-			$score_votes = $r->fetch();
-			$score = ($score_votes['SUM('.$this->game->db_game['payout_weight'].'_score)']+$score_votes['SUM(unconfirmed_'.$this->game->db_game['payout_weight'].'_score)']);
-			$votes = $score_votes['SUM(votes)']+$score_votes['SUM(unconfirmed_votes)'];
-			if ($score > 0) $average_effectiveness = $votes/$score;
-			else $average_effectiveness = 1;
-			
-			$nextblock_effectiveness = $this->block_id_to_effectiveness_factor($max_block_id+1);
-			$actual_votes_per_coin = $this->game->blockchain->app->votes_per_coin($this->game->db_game)*$average_effectiveness;
-			
-			if ($display_mode == "slim") {}
-			else {
-				if ($nextblock_effectiveness > 0) $html .= "Votes are ".round(100*$nextblock_effectiveness)."% effective right now. \n";
-				$html .= '<div class="row"><div class="col-sm-6 boldtext">Average Effectiveness:</div><div class="col-sm-6">'.round(100*$average_effectiveness, 2)."%";
-				if ($this->game->db_game['inflation'] == "exponential") {
-					$html .= " (".$this->game->blockchain->app->format_bignum($actual_votes_per_coin)." votes per ".$this->game->db_game['coin_name'].")";
-				}
-				$html .= "</div></div>\n";
-			}
-		} */
 		
 		if ($this->game->db_game['module'] == "CryptoDuels") {
 			$btc_currency = $this->game->blockchain->app->get_currency_by_abbreviation("BTC");
@@ -491,11 +430,8 @@ class Event {
 		$btc_usd_price = $this->game->blockchain->app->currency_price_at_time(6, 1, $ref_time);
 		$track_price_usd = round($track_price['price']*$btc_usd_price['price'], 6);
 		
-		$q = "UPDATE events SET track_payout_price='".$track_price_usd."' WHERE event_id='".$this->db_event['event_id']."';";
-		$r = $this->game->blockchain->app->run_query($q);
-		
-		$q = "UPDATE game_defined_events SET track_payout_price='".$track_price_usd."' WHERE game_id='".$this->game->db_game['game_id']."' AND event_index='".$this->db_event['event_index']."';";
-		$r = $this->game->blockchain->app->run_query($q);
+		$this->game->blockchain->app->run_query("UPDATE events SET track_payout_price='".$track_price_usd."' WHERE event_id='".$this->db_event['event_id']."';");
+		$this->game->blockchain->app->run_query("UPDATE game_defined_events SET track_payout_price='".$track_price_usd."' WHERE game_id='".$this->game->db_game['game_id']."' AND event_index='".$this->db_event['event_index']."';");
 		
 		$this->db_event['track_payout_price'] = $track_price_usd;
 	}
@@ -537,7 +473,7 @@ class Event {
 		$long_payout_total = floor($total_reward*$long_payout_frac);
 		$short_payout_total = $total_reward-$long_payout_total;
 		
-		$options_by_event = $this->game->blockchain->app->run_query("SELECT * FROM options WHERE event_id='".$this->db_event['event_id']."' ORDER BY event_option_index ASC;");
+		$options_by_event = $this->game->blockchain->app->fetch_options_by_event($this->db_event['event_id']);
 		
 		while ($option = $options_by_event->fetch()) {
 			if ($option['event_option_index'] == 0) $option_payout_total = $long_payout_total;
@@ -582,39 +518,6 @@ class Event {
 		return $log_text;
 	}
 	
-	public function user_votes_in_event($user_id, $include_unconfirmed) {
-		/*$q = "SELECT SUM(t_fees.fee_amount) FROM (SELECT t.fee_amount FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN options op ON gio.option_id=op.option_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE gio.game_id='".$this->game->db_game['game_id']."' AND gio.create_round_id = ".$round_id." AND io.user_id='".$user_id."' GROUP BY t.transaction_id) t_fees;";
-		$r = $this->game->blockchain->app->run_query($q);
-		$fee_amount = $r->fetch(PDO::FETCH_NUM);
-		$fee_amount = $fee_amount[0];*/
-		$fee_amount = 0;
-		
-		$q = "SELECT op.*, SUM(gio.colored_amount), SUM(gio.coin_blocks_destroyed), SUM(gio.coin_rounds_destroyed), SUM(gio.votes) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN options op ON gio.option_id=op.option_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE gio.event_id='".$this->db_event['event_id']."' AND io.user_id='".$user_id."' GROUP BY gio.option_id ORDER BY op.option_id ASC;";
-		$r = $this->game->blockchain->app->run_query($q);
-		$coins_voted = 0;
-		$coin_blocks_voted = 0;
-		$coin_rounds_voted = 0;
-		$votes = 0;
-		$my_votes = array();
-		while ($votesum = $r->fetch()) {
-			$my_votes[$votesum['option_id']]['coins'] = $votesum['SUM(gio.colored_amount)'];
-			$my_votes[$votesum['option_id']]['coin_blocks'] = $votesum['SUM(gio.coin_blocks_destroyed)'];
-			$my_votes[$votesum['option_id']]['coin_rounds'] = $votesum['SUM(gio.coin_rounds_destroyed)'];
-			$my_votes[$votesum['option_id']]['votes'] = $votesum['SUM(gio.votes)'];
-			$coins_voted += $votesum['SUM(gio.colored_amount)'];
-			$coin_blocks_voted += $votesum['SUM(gio.coin_blocks_destroyed)'];
-			$coin_rounds_voted += $votesum['SUM(gio.coin_rounds_destroyed)'];
-			$votes += $votesum['SUM(gio.votes)'];
-		}
-		$returnvals[0] = $my_votes;
-		$returnvals[1] = $coins_voted;
-		$returnvals[2] = $coin_blocks_voted;
-		$returnvals[3] = $coin_rounds_voted;
-		$returnvals[4] = $votes;
-		$returnvals['fee_amount'] = $fee_amount;
-		return $returnvals;
-	}
-
 	public function my_votes_table($round_id, &$user_game) {
 		$last_block_id = $this->game->blockchain->last_block_id();
 		$html = "";
@@ -642,13 +545,13 @@ class Event {
 	public function my_votes_html($color, &$coins_per_vote, &$user_game, &$last_block_id) {
 		$html = "";
 		
-		$q = "SELECT p.*, gio.is_coinbase AS is_coinbase, gio.game_out_index AS game_out_index, op.*, ev.*, p.votes, op.votes AS option_votes, op.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS sum_destroy_score, ev.effective_destroy_score AS sum_effective_destroy_score, t.transaction_id, t.tx_hash, t.fee_amount, io.spend_status FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN options op ON gio.option_id=op.option_id JOIN events ev ON op.event_id=ev.event_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.event_id='".$this->db_event['event_id']."' AND k.account_id='".$user_game['account_id']."'";
-		if ($color == "green") $q .= " AND io.create_block_id IS NOT NULL";
-		else $q .= " AND io.create_block_id IS NULL";
-		$q .= " ORDER BY gio.game_io_id ASC;";
-		$r = $this->game->blockchain->app->run_query($q);
+		$my_votes_q = "SELECT p.*, gio.is_coinbase AS is_coinbase, gio.game_out_index AS game_out_index, op.*, ev.*, p.votes, op.votes AS option_votes, op.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS sum_destroy_score, ev.effective_destroy_score AS sum_effective_destroy_score, t.transaction_id, t.tx_hash, t.fee_amount, io.spend_status FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN options op ON gio.option_id=op.option_id JOIN events ev ON op.event_id=ev.event_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.event_id='".$this->db_event['event_id']."' AND k.account_id='".$user_game['account_id']."'";
+		if ($color == "green") $my_votes_q .= " AND io.create_block_id IS NOT NULL";
+		else $my_votes_q .= " AND io.create_block_id IS NULL";
+		$my_votes_q .= " ORDER BY gio.game_io_id ASC;";
+		$my_votes = $this->game->blockchain->app->run_query($my_votes_q);
 		
-		while ($my_vote = $r->fetch()) {
+		while ($my_vote = $my_votes->fetch()) {
 			$unconfirmed_votes = 0;
 			$temp_html = "";
 			list($track_entity, $track_price_usd, $track_pay_price, $asset_price_usd, $bought_price_usd, $estimated_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $paid_after_fees, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta) = $this->game->get_payout_info($my_vote, $coins_per_vote, $last_block_id, $temp_html);
@@ -716,24 +619,11 @@ class Event {
 	}
 	
 	public function set_event_completed() {
-		$q = "UPDATE events SET completion_datetime=NOW() WHERE event_id='".$this->db_event['event_id']."';";
-		$r = $this->game->blockchain->app->run_query($q);
-	}
-	
-	public function ensure_options() {
-		/*$qq = "SELECT * FROM option_group_memberships mem JOIN entities ent ON mem.entity_id=ent.entity_id WHERE mem.option_group_id='".$this->db_event['option_group_id']."' AND NOT EXISTS (SELECT * FROM options op WHERE op.event_id='".$this->db_event['event_id']."' AND op.entity_id=mem.entity_id);";
-		$rr = $this->game->blockchain->app->run_query($qq);
-		while ($required_membership = $rr->fetch()) {
-			$qqq = "INSERT INTO options SET event_id='".$this->db_event['event_id']."', entity_id='".$required_membership['entity_id']."', membership_id='".$required_membership['membership_id']."'";
-			if ($required_membership['default_image_id'] > 0) $qqq .= ", image_id='".$required_membership['default_image_id']."'";
-			$qqq .= ", name='".$required_membership['name']."', voting_character='".$required_membership['voting_character']."';";
-			$rrr = $this->game->blockchain->app->run_query($qqq);
-		}*/
+		$this->game->blockchain->app->run_query("UPDATE events SET completion_datetime=NOW() WHERE event_id='".$this->db_event['event_id']."';");
 	}
 	
 	public function delete_options() {
-		$qq = "DELETE FROM options WHERE event_id='".$this->db_event['event_id']."';";
-		$rr = $this->game->blockchain->app->run_query($qq);
+		$this->game->blockchain->app->run_query("DELETE FROM options WHERE event_id='".$this->db_event['event_id']."';");
 	}
 	
 	public function block_id_to_effectiveness_factor($block_id) {
@@ -749,23 +639,21 @@ class Event {
 	}
 	
 	public function option_stats($option_id) {
-		$q = "SELECT coin_score, unconfirmed_coin_score, coin_block_score, unconfirmed_coin_block_score, coin_round_score, unconfirmed_coin_round_score, votes, unconfirmed_votes, destroy_score, unconfirmed_destroy_score, effective_destroy_score, unconfirmed_effective_destroy_score FROM options WHERE option_id='".$option_id."';";
-		$r = $this->game->blockchain->app->run_query($q);
-		$result = $r->fetch();
+		$info = $this->game->blockchain->app->run_query("SELECT coin_score, unconfirmed_coin_score, coin_block_score, unconfirmed_coin_block_score, coin_round_score, unconfirmed_coin_round_score, votes, unconfirmed_votes, destroy_score, unconfirmed_destroy_score, effective_destroy_score, unconfirmed_effective_destroy_score FROM options WHERE option_id='".$option_id."';")->fetch();
 		
-		$confirmed_votes = $result['votes'];
-		$unconfirmed_votes = $result['unconfirmed_votes'];
-		$confirmed_score = $result[$this->game->db_game['payout_weight'].'_score'];
-		$unconfirmed_score = $result['unconfirmed_'.$this->game->db_game['payout_weight'].'_score'];
-		$confirmed_effective_destroy = $result["effective_destroy_score"];
-		$unconfirmed_effective_destroy = $result['unconfirmed_effective_destroy_score'];
-		$confirmed_destroy = $result['destroy_score'];
-		$unconfirmed_destroy = $result['unconfirmed_destroy_score'];
+		$confirmed_votes = $info['votes'];
+		$unconfirmed_votes = $info['unconfirmed_votes'];
+		$confirmed_score = $info[$this->game->db_game['payout_weight'].'_score'];
+		$unconfirmed_score = $info['unconfirmed_'.$this->game->db_game['payout_weight'].'_score'];
+		$confirmed_effective_destroy = $info["effective_destroy_score"];
+		$unconfirmed_effective_destroy = $info['unconfirmed_effective_destroy_score'];
+		$confirmed_destroy = $info['destroy_score'];
+		$unconfirmed_destroy = $info['unconfirmed_destroy_score'];
 		
 		if (!$confirmed_votes) $confirmed_votes = 0;
 		if (!$unconfirmed_votes) $unconfirmed_votes = 0;
 		
-		return array(
+		return [
 			'confirmed'=>$confirmed_votes, 
 			'unconfirmed'=>$unconfirmed_votes,
 			'sum'=>$confirmed_votes+$unconfirmed_votes,
@@ -778,7 +666,7 @@ class Event {
 			'destroy'=>$confirmed_destroy,
 			'unconfirmed_destroy'=>$unconfirmed_destroy,
 			'destroy_sum'=>$confirmed_destroy+$unconfirmed_destroy
-		);
+		];
 	}
 	
 	public function event_rewards() {
@@ -797,14 +685,12 @@ class Event {
 	}
 	
 	public function event_total_scores() {
-		$q = "SELECT SUM(".$this->game->db_game['payout_weight']."_score), SUM(unconfirmed_".$this->game->db_game['payout_weight']."_score), SUM(destroy_score), SUM(unconfirmed_destroy_score) FROM options WHERE event_id='".$this->db_event['event_id']."';";
-		$r = $this->game->blockchain->app->run_query($q);
-		$r = $r->fetch();
+		$info = $this->game->blockchain->app->run_query("SELECT SUM(".$this->game->db_game['payout_weight']."_score), SUM(unconfirmed_".$this->game->db_game['payout_weight']."_score), SUM(destroy_score), SUM(unconfirmed_destroy_score) FROM options WHERE event_id='".$this->db_event['event_id']."';")->fetch();
 		
-		$score = $r['SUM('.$this->game->db_game['payout_weight'].'_score)']+$r['SUM(unconfirmed_'.$this->game->db_game['payout_weight'].'_score)'];
-		$destroy_score = $r['SUM(destroy_score)']+$r['SUM(unconfirmed_destroy_score)'];
+		$score = $info['SUM('.$this->game->db_game['payout_weight'].'_score)']+$info['SUM(unconfirmed_'.$this->game->db_game['payout_weight'].'_score)'];
+		$destroy_score = $info['SUM(destroy_score)']+$info['SUM(unconfirmed_destroy_score)'];
 		
-		return array($score, $destroy_score);
+		return [$score, $destroy_score];
 	}
 	
 	public function determine_winning_option(&$round_voting_stats_all) {
@@ -831,11 +717,9 @@ class Event {
 		}
 		else if ($this->db_event['event_winning_rule'] == "game_definition") {
 			if (!in_array((string)$this->db_event['outcome_index'], ["", "-1"])) {
-				$db_winning_option_q = "SELECT * FROM options WHERE event_id='".$this->db_event['event_id']."' AND event_option_index='".$this->db_event['outcome_index']."';";
-				$db_winning_option_r = $this->game->blockchain->app->run_query($db_winning_option_q);
+				$db_winning_option = $this->game->blockchain->app->fetch_option_by_event_option_index($this->db_event['event_id'], $this->db_event['outcome_index']);
 				
-				if ($db_winning_option_r->rowCount() > 0) {
-					$db_winning_option = $db_winning_option_r->fetch();
+				if ($db_winning_option) {
 					$winning_option_id = $db_winning_option['option_id'];
 					$rank_index = $option_id_to_rank[$winning_option_id];
 					$winning_votes = $rankings[$rank_index]['votes'];
@@ -845,7 +729,7 @@ class Event {
 			}
 		}
 		
-		return array($winning_option_id, $winning_votes, $winning_effective_destroy_score);
+		return [$winning_option_id, $winning_votes, $winning_effective_destroy_score];
 	}
 	
 	public function set_outcome_from_db() {
@@ -922,7 +806,7 @@ class Event {
 			$team_avg_goals_per_game = 1.35;
 			
 			$rand_i = 0;
-			$these_options = $this->game->blockchain->app->run_query("SELECT * FROM options WHERE event_id='".$this->db_event['event_id']."' ORDER BY option_index ASC;");
+			$these_options = $this->game->blockchain->app->fetch_options_by_event($this->db_event['event_id']);
 			
 			while ($db_option = $these_options->fetch()) {
 				$score_prob = min(1, $team_avg_goals_per_game/$event_blocks);
@@ -947,46 +831,40 @@ class Event {
 	public function update_option_votes($last_block_id, $round_id) {
 		$effectiveness_factor = $this->block_id_to_effectiveness_factor($last_block_id+1);
 		
-		$q = "UPDATE options SET coin_score=0, unconfirmed_coin_score=0, coin_block_score=0, unconfirmed_coin_block_score=0, coin_round_score=0, unconfirmed_coin_round_score=0, destroy_score=0, unconfirmed_destroy_score=0, votes=0, unconfirmed_votes=0, effective_destroy_score=0, unconfirmed_effective_destroy_score=0 WHERE event_id='".$this->db_event['event_id']."';";
-		$r = $this->game->blockchain->app->run_query($q);
+		$this->game->blockchain->app->run_query("UPDATE options SET coin_score=0, unconfirmed_coin_score=0, coin_block_score=0, unconfirmed_coin_block_score=0, coin_round_score=0, unconfirmed_coin_round_score=0, destroy_score=0, unconfirmed_destroy_score=0, votes=0, unconfirmed_votes=0, effective_destroy_score=0, unconfirmed_effective_destroy_score=0 WHERE event_id='".$this->db_event['event_id']."';");
 		
-		$q = "UPDATE options op INNER JOIN (
+		$this->game->blockchain->app->run_query("UPDATE options op INNER JOIN (
 			SELECT option_id, SUM(colored_amount) sum_amount, SUM(coin_blocks_destroyed) sum_cbd, SUM(coin_rounds_destroyed) sum_crd, SUM(votes) sum_votes, SUM(destroy_amount) sum_destroyed, SUM(effective_destroy_amount) sum_effective_destroyed FROM transaction_game_ios 
 			WHERE event_id='".$this->db_event['event_id']."' AND create_round_id IS NOT NULL AND colored_amount > 0
 			GROUP BY option_id
-		) i ON op.option_id=i.option_id SET op.coin_score=i.sum_amount, op.coin_block_score=i.sum_cbd, op.coin_round_score=i.sum_crd, op.votes=i.sum_votes, op.destroy_score=i.sum_destroyed, op.effective_destroy_score=i.sum_effective_destroyed WHERE op.event_id='".$this->db_event['event_id']."';";
-		$r = $this->game->blockchain->app->run_query($q);
+		) i ON op.option_id=i.option_id SET op.coin_score=i.sum_amount, op.coin_block_score=i.sum_cbd, op.coin_round_score=i.sum_crd, op.votes=i.sum_votes, op.destroy_score=i.sum_destroyed, op.effective_destroy_score=i.sum_effective_destroyed WHERE op.event_id='".$this->db_event['event_id']."';");
 		
 		if ($this->game->db_game['payout_weight'] == "coin") {
-			$q = "UPDATE options op INNER JOIN (
+			$this->game->blockchain->app->run_query("UPDATE options op INNER JOIN (
 				SELECT option_id, SUM(colored_amount) sum_amount, SUM(colored_amount)*".$effectiveness_factor." sum_votes, SUM(destroy_amount) sum_destroyed FROM transaction_game_ios 
 				WHERE event_id='".$this->db_event['event_id']."' AND create_round_id IS NULL AND colored_amount > 0
 				GROUP BY option_id
-			) i ON op.option_id=i.option_id SET op.unconfirmed_coin_score=i.sum_amount, op.unconfirmed_votes=i.sum_votes, op.unconfirmed_destroy_score=i.sum_destroyed WHERE op.event_id='".$this->db_event['event_id']."';";
-			$r = $this->game->blockchain->app->run_query($q);
+			) i ON op.option_id=i.option_id SET op.unconfirmed_coin_score=i.sum_amount, op.unconfirmed_votes=i.sum_votes, op.unconfirmed_destroy_score=i.sum_destroyed WHERE op.event_id='".$this->db_event['event_id']."';");
 		}
 		else if ($this->game->db_game['payout_weight'] == "coin_block") {
-			$q = "UPDATE options op INNER JOIN (
+			$this->game->blockchain->app->run_query("UPDATE options op INNER JOIN (
 				SELECT option_id, SUM(ref_coin_blocks+(".($last_block_id+1)."-ref_block_id)*colored_amount) sum_cbd, SUM(ref_coin_blocks+(".($last_block_id+1)."-ref_block_id)*colored_amount)*".$effectiveness_factor." sum_votes, SUM(destroy_amount) sum_destroyed, SUM(destroy_amount)*".$effectiveness_factor." unconfirmed_sum_destroyed FROM transaction_game_ios 
 				WHERE event_id='".$this->db_event['event_id']."' AND create_round_id IS NULL AND colored_amount > 0
 				GROUP BY option_id
-			) i ON op.option_id=i.option_id SET op.unconfirmed_coin_block_score=i.sum_cbd, op.unconfirmed_votes=i.sum_votes, op.unconfirmed_destroy_score=i.sum_destroyed, op.unconfirmed_effective_destroy_score=i.unconfirmed_sum_destroyed WHERE op.event_id='".$this->db_event['event_id']."';";
-			$r = $this->game->blockchain->app->run_query($q);
+			) i ON op.option_id=i.option_id SET op.unconfirmed_coin_block_score=i.sum_cbd, op.unconfirmed_votes=i.sum_votes, op.unconfirmed_destroy_score=i.sum_destroyed, op.unconfirmed_effective_destroy_score=i.unconfirmed_sum_destroyed WHERE op.event_id='".$this->db_event['event_id']."';");
 		}
 		else {
 			if (empty($round_id)) $round_id = $this->game->block_to_round($last_block_id+1);
-			$q = "UPDATE options op INNER JOIN (
+			$this->game->blockchain->app->run_query("UPDATE options op INNER JOIN (
 				SELECT option_id, SUM(ref_coin_rounds+(".$round_id."-ref_round_id)*colored_amount) sum_crd, SUM(ref_coin_rounds+(".$round_id."-ref_round_id)*colored_amount)*".$effectiveness_factor." sum_votes, SUM(destroy_amount) sum_destroyed, SUM(destroy_amount)*".$effectiveness_factor." unconfirmed_sum_destroyed FROM transaction_game_ios
 				WHERE event_id='".$this->db_event['event_id']."' AND create_round_id IS NULL AND colored_amount > 0
 				GROUP BY option_id
-			) i ON op.option_id=i.option_id SET op.unconfirmed_coin_round_score=i.sum_crd, op.unconfirmed_votes=i.sum_votes, op.unconfirmed_destroy_score=i.sum_destroyed, op.unconfirmed_effective_destroy_score=i.unconfirmed_sum_destroyed WHERE op.event_id='".$this->db_event['event_id']."';";
-			$r = $this->game->blockchain->app->run_query($q);
+			) i ON op.option_id=i.option_id SET op.unconfirmed_coin_round_score=i.sum_crd, op.unconfirmed_votes=i.sum_votes, op.unconfirmed_destroy_score=i.sum_destroyed, op.unconfirmed_effective_destroy_score=i.unconfirmed_sum_destroyed WHERE op.event_id='".$this->db_event['event_id']."';");
 		}
 		
-		$q = "UPDATE events e JOIN (
+		$this->game->blockchain->app->run_query("UPDATE events e JOIN (
 				SELECT SUM(".$this->game->db_game['payout_weight']."_score) sum_score, SUM(destroy_score) destroy_score, SUM(votes) sum_votes, SUM(effective_destroy_score) effective_destroy_score, SUM(unconfirmed_".$this->game->db_game['payout_weight']."_score) sum_unconfirmed_score, SUM(unconfirmed_votes) sum_unconfirmed_votes, SUM(unconfirmed_destroy_score) sum_unconfirmed_destroy_score, SUM(unconfirmed_effective_destroy_score) sum_unconfirmed_effective_destroy_score FROM options WHERE event_id='".$this->db_event['event_id']."'
-			) op SET e.sum_score=op.sum_score, e.destroy_score=op.destroy_score, e.sum_votes=op.sum_votes, e.effective_destroy_score=op.effective_destroy_score, e.sum_unconfirmed_score=op.sum_unconfirmed_score, e.sum_unconfirmed_votes=op.sum_unconfirmed_votes, e.sum_unconfirmed_destroy_score=op.sum_unconfirmed_destroy_score, e.sum_unconfirmed_effective_destroy_score=op.sum_unconfirmed_effective_destroy_score WHERE e.event_id='".$this->db_event['event_id']."';";
-		$r = $this->game->blockchain->app->run_query($q);
+			) op SET e.sum_score=op.sum_score, e.destroy_score=op.destroy_score, e.sum_votes=op.sum_votes, e.effective_destroy_score=op.effective_destroy_score, e.sum_unconfirmed_score=op.sum_unconfirmed_score, e.sum_unconfirmed_votes=op.sum_unconfirmed_votes, e.sum_unconfirmed_destroy_score=op.sum_unconfirmed_destroy_score, e.sum_unconfirmed_effective_destroy_score=op.sum_unconfirmed_effective_destroy_score WHERE e.event_id='".$this->db_event['event_id']."';");
 	}
 }
 ?>

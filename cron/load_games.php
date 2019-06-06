@@ -25,16 +25,16 @@ if ($app->running_as_admin()) {
 		do {
 			$loop_start_time = microtime(true);
 			
-			$real_game_q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE g.game_status IN ('published','running')";
-			if (!empty($_REQUEST['game_id'])) $real_game_q .= " AND g.game_id='".(int)$_REQUEST['game_id']."'";
-			$real_game_q .= " AND b.online=1;";
-			$real_game_r = $app->run_query($real_game_q);
-			if ($print_debug) echo "Looping through ".$real_game_r->rowCount()." games.\n";
+			$running_game_q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE g.game_status IN ('published','running')";
+			if (!empty($_REQUEST['game_id'])) $running_game_q .= " AND g.game_id='".(int)$_REQUEST['game_id']."'";
+			$running_game_q .= " AND b.online=1;";
+			$db_running_games = $app->run_query($running_game_q);
+			if ($print_debug) echo "Looping through ".$db_running_games->rowCount()." games.\n";
 			
-			while ($db_real_game = $real_game_r->fetch()) {
-				if (empty($blockchains[$db_real_game['blockchain_id']])) $blockchains[$db_real_game['blockchain_id']] = new Blockchain($app, $db_real_game['blockchain_id']);
-				$real_game = new Game($blockchains[$db_real_game['blockchain_id']], $db_real_game['game_id']);
-				$real_game->sync($print_debug);
+			while ($db_running_game = $db_running_games->fetch()) {
+				if (empty($blockchains[$db_running_game['blockchain_id']])) $blockchains[$db_running_game['blockchain_id']] = new Blockchain($app, $db_running_game['blockchain_id']);
+				$running_game = new Game($blockchains[$db_running_game['blockchain_id']], $db_running_game['game_id']);
+				$running_game->sync($print_debug);
 			}
 			
 			$loop_stop_time = microtime(true);

@@ -8,9 +8,9 @@ if ($thisuser && $game) {
 	$voting_strategy_id = intval($_REQUEST['voting_strategy_id']);
 	
 	if ($voting_strategy_id > 0) {
-		$user_strategy = $app->run_query("SELECT * FROM user_strategies WHERE user_id='".$thisuser->db_user['user_id']."' AND strategy_id='".$voting_strategy_id."';")->fetch();
+		$user_strategy = $app->fetch_strategy_by_id($voting_strategy_id);
 		
-		if (!$user_strategy) die("Invalid strategy ID");
+		if (!$user_strategy || $user_strategy['user_id'] != $thisuser->db_user['user_id']) die("Invalid strategy ID");
 	}
 	else {
 		$app->run_query("INSERT INTO user_strategies SET user_id='".$thisuser->db_user['user_id']."', game_id='".$game->db_game['game_id']."';");

@@ -13,16 +13,10 @@ if (!isset($_REQUEST['action'])) $_REQUEST['action'] = "";
 if ($_REQUEST['action'] == "unsubscribe") {
 	include('includes/html_start.php');
 	
-	$delivery_key = $_REQUEST['delivery_key'];
+	$delivery = $app->run_query("SELECT * FROM async_email_deliveries WHERE delivery_key=".$app->quote_escape($_REQUEST['delivery_key']).";")->fetch();
 	
-	$q = "SELECT * FROM async_email_deliveries WHERE delivery_key=".$app->quote_escape($delivery_key).";";
-	$r = $app->run_query($q);
-	
-	if ($r->rowCount() == 1) {
-		$delivery = $r->fetch();
-		
-		$q = "UPDATE users u JOIN user_games ug ON u.user_id=ug.user_id SET ug.notification_preference='none' WHERE u.notification_email=".$app->quote_escape($delivery['to_email']).";";
-		$r = $app->run_query($q);
+	if ($delivery) {
+		$app->run_query("UPDATE users u JOIN user_games ug ON u.user_id=ug.user_id SET ug.notification_preference='none' WHERE u.notification_email=".$app->quote_escape($delivery['to_email']).";");
 	}
 	
 	echo "<br/><p>&nbsp;&nbsp; You've been unsubscribed. You'll no longer receive email notifications about your accounts.</p>\n";
@@ -32,11 +26,8 @@ if ($_REQUEST['action'] == "unsubscribe") {
 }
 
 if ($_REQUEST['action'] == "logout" && $thisuser) {
-	$q = "UPDATE user_sessions SET logout_time='".time()."' WHERE session_id='".$session['session_id']."';";
-	$r = $app->run_query($q);
-	
-	$q = "UPDATE users SET logged_in=0 WHERE user_id='".$thisuser->db_user['user_id']."';";
-	$r = $app->run_query($q);
+	$app->run_query("UPDATE user_sessions SET logout_time='".time()."' WHERE session_id='".$session['session_id']."';");
+	$app->run_query("UPDATE users SET logged_in=0 WHERE user_id='".$thisuser->db_user['user_id']."';");
 	
 	@session_regenerate_id();
 	
@@ -47,19 +38,15 @@ if ($_REQUEST['action'] == "logout" && $thisuser) {
 if (empty($thisuser) && !empty($_REQUEST['login_key'])) {
 	$login_link_error = false;
 	
-	$login_link_q = "SELECT * FROM user_login_links WHERE access_key=".$app->quote_escape($_REQUEST['login_key']).";";
-	$login_link_r = $app->run_query($login_link_q);
+	$login_link = $app->run_query("SELECT * FROM user_login_links WHERE access_key=".$app->quote_escape($_REQUEST['login_key']).";")->fetch();
 	
-	if ($login_link_r->rowCount() > 0) {
-		$login_link = $login_link_r->fetch();
-		
+	if ($login_link) {
 		if (empty($login_link['time_clicked'])) {
 			if ($login_link['time_created'] > time()-(60*15)) {
 				if (empty($login_link['user_id'])) {
-					$q = "SELECT * FROM users WHERE username=".$app->quote_escape($login_link['username']);
-					$r = $app->run_query($q);
+					$existing_user = $app->fetch_user_by_username($login_link['username']);
 					
-					if ($r->rowCount() == 0) {
+					if (!$existing_user) {
 						$verify_code = $app->random_string(32);
 						$salt = $app->random_string(16);
 						
@@ -71,11 +58,9 @@ if (empty($thisuser) && !empty($_REQUEST['login_key'])) {
 					}
 				}
 				else {
-					$q = "SELECT * FROM users WHERE user_id='".$login_link['user_id']."';";
-					$r = $app->run_query($q);
+					$db_user = $app->fetch_user_by_id($login_link['user_id']);
 					
-					if ($r->rowCount() > 0) {
-						$db_user = $r->fetch();
+					if ($db_user) {
 						$thisuser = new User($app, $db_user['user_id']);
 					}
 					else {
@@ -131,21 +116,8 @@ if ($thisuser) {
 		$game = new Game($blockchain, $requested_game['game_id']);
 		
 		if ($_REQUEST['action'] == "change_user_game") {
-			$user_game_id = $_REQUEST['user_game_id'];
+			$app->change_user_game($thisuser, $game, $_REQUEST['user_game_id']);
 			
-			if ($user_game_id == "new") {
-				$select_user_game = $thisuser->ensure_user_in_game($game, true);
-				$thisuser->set_selected_user_game($game, $select_user_game['user_game_id']);
-			}
-			else {
-				$user_game_id = (int) $user_game_id;
-				
-				$select_user_game = $app->run_query("SELECT * FROM user_games WHERE user_game_id='".$user_game_id."';")->fetch();
-				
-				if ($select_user_game && $select_user_game['user_id'] == $thisuser->db_user['user_id']) {
-					$thisuser->set_selected_user_game($game, $select_user_game['user_game_id']);
-				}
-			}
 			header("Location: /wallet/".$game->db_game['url_identifier']."/");
 			die();
 		}
@@ -171,34 +143,6 @@ if ($thisuser) {
 					$user_game['payout_address_id'] = $address_id;
 				}
 			}
-			
-			/*if ($user_game['payout_address_id'] > 0) {}
-			else if ($requested_game['giveaway_status'] == "invite_pay" || $requested_game['giveaway_status'] == "public_pay" || $game->escrow_value(false) > 0) {
-				$pagetitle = "Join ".$requested_game['name'];
-				$nav_tab_selected = "wallet";
-				include('includes/html_start.php');
-				?>
-				<script type="text/javascript">
-				$(document).ready(function() {
-					$('#payout_address').focus();
-				});
-				</script>
-				<div class="container-fluid">
-					<form action="/wallet/<?php echo $requested_game['url_identifier']; ?>/" method="post">
-						<input type="hidden" name="action" value="save_address" />
-						Please specify a <?php echo $game->blockchain->db_blockchain['coin_name']; ?> address where your winnings should be sent:<br/>
-						<div class="row" style="margin-top: 10px;">
-							<div class="col-md-8">
-								<input class="form-control" id="payout_address" name="payout_address" />
-							</div>
-						</div>
-						<input type="submit" class="btn btn-primary" value="Save Address" style="margin-top: 10px;" />
-					</form>
-				</div>
-				<?php
-				include('includes/html_stop.php');
-				die();
-			}*/
 		}
 		else if (!$user_game && ($requested_game['giveaway_status'] == "invite_free" || $requested_game['giveaway_status'] == "invite_pay")) {
 			if ($requested_game['public_unclaimed_game_invitations'] == 1) {
@@ -341,16 +285,16 @@ if ($thisuser) {
 		<div class="container-fluid">
 			<div class="panel panel-default" style="margin-top: 15px;">
 				<?php
-				$my_user_games = $app->run_query("SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser->db_user['user_id']."' AND (g.creator_id='".$thisuser->db_user['user_id']."' OR g.game_status IN ('running','completed','published')) GROUP BY ug.game_id;");
+				$my_games = $app->run_query("SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser->db_user['user_id']."' AND (g.creator_id='".$thisuser->db_user['user_id']."' OR g.game_status IN ('running','completed','published')) GROUP BY ug.game_id;");
 				
-				if ($my_user_games->rowCount() > 0) {
+				if ($my_games->rowCount() > 0) {
 					?>
 					<div class="panel-heading">
 						<div class="panel-title">Please select a game:</div>
 					</div>
 					<div class="panel-body">
 						<?php
-						while ($user_game = $my_user_games->fetch()) {
+						while ($user_game = $my_games->fetch()) {
 							echo "<a href=\"/wallet/".$user_game['url_identifier']."/\">".$user_game['name']."</a><br/>\n";
 						}
 						?>
@@ -385,12 +329,9 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 	$by_rank_csv = "";
 	
 	if ($voting_strategy_id > 0) {
-		$q = "SELECT * FROM user_strategies WHERE user_id='".$thisuser->db_user['user_id']."' AND strategy_id='".$voting_strategy_id."';";
-		$r = $app->run_query($q);
-		if ($r->rowCount() == 1) {
-			$user_strategy = $r->fetch();
-		}
-		else die("Invalid strategy ID");
+		$user_strategy = $app->fetch_strategy_by_id($voting_strategy_id);
+		
+		if (!$user_strategy || $user_strategy['user_id'] != $thisuser->db_user['user_id']) die("Invalid strategy ID");
 	}
 	else {
 		$app->run_query("INSERT INTO user_strategies SET user_id='".$thisuser->db_user['user_id']."', game_id='".$game->db_game['game_id']."';");
@@ -402,8 +343,7 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 	if ($_REQUEST['action'] == "save_voting_strategy_fees") {
 		$transaction_fee = floatval($_REQUEST['transaction_fee']);
 		
-		$q = "UPDATE user_strategies SET transaction_fee='".$transaction_fee."' WHERE strategy_id='".$user_strategy['strategy_id']."';";
-		$r = $app->run_query($q);
+		$app->run_query("UPDATE user_strategies SET transaction_fee='".$transaction_fee."' WHERE strategy_id='".$user_strategy['strategy_id']."';");
 		$user_strategy['transaction_fee'] = $transaction_fee;
 		
 		$error_code = 1;
@@ -411,14 +351,9 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 	}
 	else {
 		if (in_array($voting_strategy, array('manual', 'api', 'by_plan', 'by_entity','hit_url'))) {
-			/*for ($i=1; $i<=$game->db_game['num_voting_options']; $i++) {
-				if ($_REQUEST['by_rank_'.$i] == "1") $by_rank_csv .= $i.",";
-			}
-			if ($by_rank_csv != "") $by_rank_csv = substr($by_rank_csv, 0, strlen($by_rank_csv)-1);*/
-			
-			$q = "UPDATE user_strategies SET voting_strategy='".$voting_strategy."'";
+			$update_strategy_q = "UPDATE user_strategies SET voting_strategy='".$voting_strategy."'";
 			if ($aggregate_threshold >= 0 && $aggregate_threshold <= 100) {
-				$q .= ", aggregate_threshold='".$aggregate_threshold."'";
+				$update_strategy_q .= ", aggregate_threshold='".$aggregate_threshold."'";
 			}
 			
 			$min_votesum_pct = intval($_REQUEST['min_votesum_pct']);
@@ -427,9 +362,9 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 			if ($min_votesum_pct < 0) $min_votesum_pct = 0;
 			if ($max_votesum_pct < $min_votesum_pct) $max_votesum_pct = $min_votesum_pct;
 			
-			$q .= ", max_votesum_pct='".$max_votesum_pct."', min_votesum_pct='".$min_votesum_pct."', api_url=".$api_url;
-			$q .= " WHERE strategy_id='".$user_strategy['strategy_id']."';";
-			$app->run_query($q);
+			$update_strategy_q .= ", max_votesum_pct='".$max_votesum_pct."', min_votesum_pct='".$min_votesum_pct."', api_url=".$api_url;
+			$update_strategy_q .= " WHERE strategy_id='".$user_strategy['strategy_id']."';";
+			$app->run_query($update_strategy_q);
 			
 			$app->run_query("UPDATE user_games SET strategy_id='".$user_strategy['strategy_id']."' WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."';");
 		}
@@ -437,25 +372,20 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 		$entity_pct_sum = 0;
 		$entity_pct_error = FALSE;
 		
-		$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id JOIN entities en ON op.entity_id=en.entity_id WHERE e.game_id='".$game->db_game['game_id']."' GROUP BY en.entity_id ORDER BY en.entity_id ASC;";
-		$rr = $app->run_query($qq);
-		while ($entity = $rr->fetch()) {
+		$entities_by_game = $game->entities_by_game()->fetchAll();
+		
+		foreach ($entities_by_game as $entity) {
 			$entity_pct = intval($_REQUEST['entity_pct_'.$entity['entity_id']]);
 			$entity_pct_sum += $entity_pct;
 		}
 		
 		if ($entity_pct_sum == 100) {
-			$qq = "DELETE FROM user_strategy_entities WHERE strategy_id='".$user_strategy['strategy_id']."';";
-			$rr = $app->run_query($qq);
+			$app->run_query("DELETE FROM user_strategy_entities WHERE strategy_id='".$user_strategy['strategy_id']."';");
 			
-			$qq = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id JOIN entities en ON op.entity_id=en.entity_id WHERE e.game_id='".$game->db_game['game_id']."' GROUP BY en.entity_id ORDER BY en.entity_id ASC;";
-			$rr = $app->run_query($qq);
-			
-			while ($entity = $rr->fetch()) {
+			foreach ($entities_by_game as $entity) {
 				$entity_pct = intval($_REQUEST['entity_pct_'.$entity['entity_id']]);
 				if ($entity_pct > 0) {
-					$qqq = "INSERT INTO user_strategy_entities SET strategy_id='".$user_strategy['strategy_id']."', entity_id='".$entity['entity_id']."', pct_points='".$entity_pct."';";
-					$rrr = $app->run_query($qqq);
+					$app->run_query("INSERT INTO user_strategy_entities SET strategy_id='".$user_strategy['strategy_id']."', entity_id='".$entity['entity_id']."', pct_points='".$entity_pct."';");
 				}
 			}
 		}
@@ -467,20 +397,15 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 		}
 		
 		for ($block=1; $block<=$game->db_game['round_length']; $block++) {
-			$strategy_block = false;
-			$q = "SELECT * FROM user_strategy_blocks WHERE strategy_id='".$user_strategy['strategy_id']."' AND block_within_round='".$block."';";
-			$r = $app->run_query($q);
-			if ($r->rowCount() > 0) $strategy_block = $r->fetch();
+			$strategy_block = $app->run_query("SELECT * FROM user_strategy_blocks WHERE strategy_id='".$user_strategy['strategy_id']."' AND block_within_round='".$block."';")->fetch();
 			
 			if ($_REQUEST['vote_on_block_'.$block] == "1") {
 				if (!$strategy_block) {
-					$q = "INSERT INTO user_strategy_blocks SET strategy_id='".$user_strategy['strategy_id']."', block_within_round='".$block."';";
-					$r = $app->run_query($q);
+					$app->run_query("INSERT INTO user_strategy_blocks SET strategy_id='".$user_strategy['strategy_id']."', block_within_round='".$block."';");
 				}
 			}
 			else if ($strategy_block) {
-				$q = "DELETE FROM user_strategy_blocks WHERE strategy_block_id='".$strategy_block['strategy_block_id']."';";
-				$r = $app->run_query($q);
+				$app->run_query("DELETE FROM user_strategy_blocks WHERE strategy_block_id='".$strategy_block['strategy_block_id']."';");
 			}
 		}
 	}
@@ -590,28 +515,25 @@ if ($thisuser && $game) {
 		$from_block_id = ($plan_start_round-1)*$game->db_game['round_length']+1;
 		$to_block_id = ($plan_stop_round-1)*$game->db_game['round_length']+1;
 		
-		$q = "SELECT * FROM events e JOIN event_types t ON e.event_type_id=t.event_type_id WHERE e.game_id='".$game->db_game['game_id']."' AND e.event_starting_block >= ".$from_block_id." AND e.event_starting_block <= ".$to_block_id." ORDER BY e.event_id ASC;";
-		$r = $app->run_query($q);
-		$initial_load_events = $r->rowCount();
+		$initial_load_events = $app->run_query("SELECT * FROM events e JOIN event_types t ON e.event_type_id=t.event_type_id WHERE e.game_id='".$game->db_game['game_id']."' AND e.event_starting_block >= ".$from_block_id." AND e.event_starting_block <= ".$to_block_id." ORDER BY e.event_id ASC;");
+		$num_initial_load_events = $initial_load_events->rowCount();
 		$i=0;
-		if ($initial_load_events > 0) {
-			while ($db_event = $r->fetch()) {
-				if ($i == 0) echo "games[0].all_events_start_index = ".$db_event['event_index'].";\n";
-				else if ($i == $initial_load_events-1) echo "games[0].all_events_stop_index = ".$db_event['event_index'].";\n";
-				
-				echo "games[0].all_events[".$db_event['event_index']."] = new Event(games[0], ".$i.", ".$db_event['event_id'].", ".$db_event['event_index'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'", "'.$db_event['effectiveness_param1'].'", '.$app->quote_escape($db_event['event_name']).", ".$db_event['event_starting_block'].", ".$db_event['event_final_block'].");\n";
-				echo "games[0].all_events_db_id_to_index[".$db_event['event_id']."] = ".$db_event['event_index'].";\n";
-				
-				$option_q = "SELECT * FROM options WHERE event_id='".$db_event['event_id']."' ORDER BY event_option_index ASC;";
-				$option_r = $app->run_query($option_q);
-				$j=0;
-				while ($option = $option_r->fetch()) {
-					$has_votingaddr = "true";
-					echo "games[0].all_events[".$db_event['event_index']."].options.push(new option(games[0].all_events[".$db_event['event_index']."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$app->quote_escape($option['name']).", 0, $has_votingaddr));\n";
-					$j++;
-				}
-				$i++;
+		
+		while ($db_event = $initial_load_events->fetch()) {
+			if ($i == 0) echo "games[0].all_events_start_index = ".$db_event['event_index'].";\n";
+			else if ($i == $initial_load_events-1) echo "games[0].all_events_stop_index = ".$db_event['event_index'].";\n";
+			
+			echo "games[0].all_events[".$db_event['event_index']."] = new Event(games[0], ".$i.", ".$db_event['event_id'].", ".$db_event['event_index'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'", "'.$db_event['effectiveness_param1'].'", '.$app->quote_escape($db_event['event_name']).", ".$db_event['event_starting_block'].", ".$db_event['event_final_block'].");\n";
+			echo "games[0].all_events_db_id_to_index[".$db_event['event_id']."] = ".$db_event['event_index'].";\n";
+			
+			$options_by_event = $app->fetch_options_by_event($db_event['event_id']);
+			$j=0;
+			while ($option = $options_by_event->fetch()) {
+				$has_votingaddr = "true";
+				echo "games[0].all_events[".$db_event['event_index']."].options.push(new option(games[0].all_events[".$db_event['event_index']."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$app->quote_escape($option['name']).", 0, $has_votingaddr));\n";
+				$j++;
 			}
+			$i++;
 		}
 		
 		echo $game->load_all_event_points_js(0, $user_strategy, $plan_start_round, $plan_stop_round);
@@ -625,14 +547,12 @@ if ($thisuser && $game) {
 				if ($user_game['show_intro_message'] == 1) { ?>
 					show_intro_message();
 					<?php
-					$qq = "UPDATE user_games SET show_intro_message=0 WHERE user_game_id='".$user_game['user_game_id']."';";
-					$rr = $app->run_query($qq);
+					$app->run_query("UPDATE user_games SET show_intro_message=0 WHERE user_game_id='".$user_game['user_game_id']."';");
 				}
 				if ($user_game['prompt_notification_preference'] == 1) { ?>
 					$('#notification_modal').modal('show');
 					<?php
-					$qq = "UPDATE user_games SET prompt_notification_preference=0 WHERE user_game_id='".$user_game['user_game_id']."';";
-					$rr = $app->run_query($qq);
+					$app->run_query("UPDATE user_games SET prompt_notification_preference=0 WHERE user_game_id='".$user_game['user_game_id']."';");
 				}
 			}
 			?>
@@ -686,12 +606,6 @@ if ($thisuser && $game) {
 						?></div>
 					</div>
 				</div>
-				<?php
-				/*if ($game->db_game['inflation'] == "exponential") {
-					echo '<div class="row"><div class="col-sm-2">Vote&nbsp;conversion&nbsp;rate:</div><div style="text-align: right;" class="col-sm-3"><font class="greentext">';
-					echo $app->format_bignum($app->votes_per_coin($game->db_game)).'</font> votes &rarr; <font class="greentext">1</font> '.$game->db_game['coin_name'].'</div></div>';
-				}*/
-				?>
 				<div id="wallet_text_stats">
 					<?php
 					echo $thisuser->wallet_text_stats($game, $blockchain_current_round, $blockchain_last_block_id, $blockchain_block_within_round, $mature_balance, $immature_balance, $user_votes, $votes_value, $user_pending_bets, $user_game);
@@ -723,9 +637,8 @@ if ($thisuser && $game) {
 						<div id="change_user_game">
 							<select id="select_user_game" class="form-control input-sm" onchange="change_user_game();">
 								<?php
-								$q = "SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';";
-								$r = $app->run_query($q);
-								while ($db_user_game = $r->fetch()) {
+								$user_games_by_game = $app->run_query("SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';");
+								while ($db_user_game = $user_games_by_game->fetch()) {
 									echo "<option ";
 									if ($db_user_game['user_game_id'] == $user_game['user_game_id']) echo "selected=\"selected\" ";
 									echo "value=\"".$db_user_game['user_game_id']."\">Account #".$db_user_game['account_id']." &nbsp;&nbsp; ".$app->format_bignum($db_user_game['account_value'])." ".$game->db_game['coin_abbreviation']."</option>\n";
@@ -977,16 +890,10 @@ if ($thisuser && $game) {
 									<?php /*<a href="" onclick="by_entity_reset_pct(); return false;">Set all to zero</a> <div style="margin-left: 15px; display: inline-block;" id="entity_pct_subtotal">&nbsp;</div>*/ ?>
 								</label><br/>
 								<?php
-								$q = "SELECT * FROM options op JOIN events e ON op.event_id=e.event_id JOIN entities en ON op.entity_id=en.entity_id WHERE e.game_id='".$game->db_game['game_id']."' GROUP BY en.entity_id ORDER BY en.entity_id ASC;";
-								$r = $app->run_query($q);
+								$entities_by_game = $game->entities_by_game();
 								$entity_i = 0;
-								while ($entity = $r->fetch()) {
-									$qq = "SELECT * FROM user_strategy_entities WHERE strategy_id='".$user_strategy['strategy_id']."' AND entity_id='".$entity['entity_id']."';";
-									$rr = $app->run_query($qq);
-									if ($rr->rowCount() > 0) {
-										$pct_points = $rr->fetch()['pct_points'];
-									}
-									else $pct_points = "";
+								while ($entity = $entities_by_game->fetch()) {
+									$pct_points = $app->run_query("SELECT * FROM user_strategy_entities WHERE strategy_id='".$user_strategy['strategy_id']."' AND entity_id='".$entity['entity_id']."';")->fetch()['pct_points'];
 									
 									if ($entity_i%4 == 0) echo '<div class="row">';
 									echo '<div class="col-md-3">';
@@ -1102,7 +1009,7 @@ if ($thisuser && $game) {
 							You can buy <?php echo $game->db_game['coin_name_plural']; ?> by clicking below.  Once your payment is confirmed, <?php echo $game->db_game['coin_name_plural']; ?> will be added to your account based on the exchange rate at the time of confirmation.
 						</p>
 						<p>
-							<button class="btn btn-success" onclick="initiate_buyin();">Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
+							<button class="btn btn-success" onclick="manage_buyin('initiate');">Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
 						</p>
 						<?php
 					}
@@ -1138,28 +1045,6 @@ if ($thisuser && $game) {
 								<label for="withdraw_address">Address:</label>
 								<input class="form-control" type="text" id="withdraw_address" />
 							</div>
-							<?php /*
-							<div class="form-group">
-								<label for="withdraw_remainder_address_id">Vote remainder towards:</label>
-								<select class="form-control" id="withdraw_remainder_address_id">
-									<option value="random">Random</option>
-									$option_index_range = $game->option_index_range();
-									
-									for ($option_index=$option_index_range[0]; $option_index<=$option_index_range[1]; $option_index++) {
-										$qq = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND a.option_index='".$option_index."';";
-										$rr = $app->run_query($qq);
-										
-										if ($rr->rowCount() > 0) {
-											$address = $rr->fetch();
-											echo "<option value=\"".$address['address_id']."\">";
-											if ($address['option_index'] == "") echo "None";
-											else echo "Voting option #".$address['option_index'];
-											echo "</option>\n";
-										}
-									}
-								</select>
-							</div>
-							*/ ?>
 							<div class="form-group">
 								<button class="btn btn-success" id="withdraw_btn" onclick="attempt_withdrawal();">Send <?php echo $game->db_game['coin_name_plural']; ?></button>
 								<div id="withdraw_message" style="display: none; margin-top: 15px;"></div>

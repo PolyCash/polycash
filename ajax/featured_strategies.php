@@ -21,25 +21,21 @@ if ($game) {
 		$previous_rounds = 3;
 		$current_event = $game->current_events[0];
 		
-		$q = "SELECT * FROM featured_strategies fs LEFT JOIN currency_accounts ca ON fs.reference_account_id=ca.account_id WHERE fs.game_id='".$game->db_game['game_id']."';";
-		$r = $app->run_query($q);
+		$featured_strategies = $app->run_query("SELECT * FROM featured_strategies fs LEFT JOIN currency_accounts ca ON fs.reference_account_id=ca.account_id WHERE fs.game_id='".$game->db_game['game_id']."';");
 		
-		while ($featured_strategy = $r->fetch()) {
+		while ($featured_strategy = $featured_strategies->fetch()) {
 			if ($featured_strategy['account_id'] > 0) {
 				$event_ref_block = $current_event->db_event['event_starting_block'];				
 				$performances = array();
 				
 				for ($i=0; $i<$previous_rounds; $i++) {
-					$qq = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block<".$event_ref_block." ORDER BY event_index DESC;";
-					$rr = $app->run_query($qq);
-					$first_prev_event = $rr->fetch();
+					$first_prev_event = $app->run_query("SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block<".$event_ref_block." ORDER BY event_index DESC;")->fetch();
 					$event_ref_block = $first_prev_event['event_starting_block'];
 					
 					if ($featured_strategy['reference_starting_block'] <= $first_prev_event['event_starting_block']) {
-						$qq = "SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block='".$first_prev_event['event_starting_block']."' ORDER BY event_index ASC;";
-						$rr = $app->run_query($qq);
+						$ref_performance_events = $app->run_query("SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block='".$first_prev_event['event_starting_block']."' ORDER BY event_index ASC;");
 						
-						while ($db_event = $rr->fetch()) {
+						while ($db_event = $ref_performance_events->fetch()) {
 							$bal1 = $game->account_balance_at_block($featured_strategy['account_id'], $db_event['event_final_block'], false);
 							$bal2 = $game->account_balance_at_block($featured_strategy['account_id'], $db_event['event_final_block'], true);
 							$performance = ($bal2/$bal1)-1;

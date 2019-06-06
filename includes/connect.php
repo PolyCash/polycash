@@ -56,12 +56,12 @@ $app = new App($dbh);
 try {
 	$app->set_db($GLOBALS['mysql_database']);
 	
-	$r = $app->run_query("SHOW DATABASES;");
-	if ($r->rowCount() > 0) {
+	$all_dbs = $app->run_query("SHOW DATABASES;");
+	if ($all_dbs->rowCount() > 0) {
 		try {
-			$module_q = "SELECT * FROM modules ORDER BY module_id ASC;";
-			$module_r = $app->run_query($module_q);
-			while ($module = $module_r->fetch()) {
+			$all_modules = $app->run_query("SELECT * FROM modules ORDER BY module_id ASC;");
+			
+			while ($module = $all_modules->fetch()) {
 				include(realpath(dirname(dirname(__FILE__)))."/modules/".$module['module_name']."/".$module['module_name']."GameDefinition.php");	
 			}
 		}

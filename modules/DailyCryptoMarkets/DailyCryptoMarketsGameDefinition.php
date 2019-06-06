@@ -77,11 +77,10 @@ class DailyCryptoMarketsGameDefinition {
 		$this->currencies = array();
 		$this->name2currency_index = [];
 		
-		$member_q = "SELECT *, en.entity_id AS entity_id FROM option_group_memberships m JOIN entities en ON m.entity_id=en.entity_id JOIN currencies c ON en.entity_name=c.name WHERE m.option_group_id='".$game->db_game['option_group_id']."' ORDER BY m.membership_id ASC;";
-		$member_r = $this->app->run_query($member_q);
+		$members = $this->app->run_query("SELECT *, en.entity_id AS entity_id FROM option_group_memberships m JOIN entities en ON m.entity_id=en.entity_id JOIN currencies c ON en.entity_name=c.name WHERE m.option_group_id='".$game->db_game['option_group_id']."' ORDER BY m.membership_id ASC;");
 		$currency_index = 0;
 		
-		while ($db_member = $member_r->fetch()) {
+		while ($db_member = $members->fetch()) {
 			array_push($this->currencies, $db_member);
 			$this->name2currency_index[$db_member['name']] = $currency_index;
 			$currency_index++;
@@ -208,7 +207,7 @@ class DailyCryptoMarketsGameDefinition {
 				$last_price_time = $start_block['time_mined'];
 			}
 			
-			$q = $start_q;
+			$new_prices_q = $start_q;
 			$modulo = 0;
 			
 			$code = $this->currency_name_to_code[$this->currencies[$i]['name']];
@@ -224,20 +223,20 @@ class DailyCryptoMarketsGameDefinition {
 				
 				if ($trade['type'] == "buy") {
 					if ($modulo == 1000) {
-						$q = substr($q, 0, strlen($q)-2).";";
-						$this->app->run_query($q);
+						$new_prices_q = substr($new_prices_q, 0, strlen($new_prices_q)-2).";";
+						$this->app->run_query($new_prices_q);
 						$modulo = 0;
-						$q = $start_q;
+						$new_prices_q = $start_q;
 					}
 					else $modulo++;
 					
-					$q .= "('".$cached_url['cached_url_id']."', '".$this->currencies[$i]['currency_id']."', '".$btc_currency['currency_id']."', '".$trade['rate']."', '".$trade_time."'), ";
+					$new_prices_q .= "('".$cached_url['cached_url_id']."', '".$this->currencies[$i]['currency_id']."', '".$btc_currency['currency_id']."', '".$trade['rate']."', '".$trade_time."'), ";
 				}
 			}
 			
 			if ($modulo > 0) {
-				$q = substr($q, 0, strlen($q)-2).";";
-				$this->app->run_query($q);
+				$new_prices_q = substr($new_prices_q, 0, strlen($new_prices_q)-2).";";
+				$this->app->run_query($new_prices_q);
 				$modulo = 0;
 			}
 		}

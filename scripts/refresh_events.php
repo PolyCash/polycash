@@ -7,13 +7,9 @@ $app->safe_merge_argv_to_request($argv, $allowed_params);
 
 if ($app->running_as_admin()) {
 	if (!empty($_REQUEST['event_id'])) {
-		$event_id = (int) $_REQUEST['event_id'];
-		$event_q = "SELECT * FROM games g JOIN events e ON e.game_id=g.game_id WHERE e.event_id='".$event_id."';";
-		$event_r = $app->run_query($event_q);
+		$db_event = $app->fetch_event_by_id((int)$_REQUEST['event_id']);
 		
-		if ($event_r->rowCount() > 0) {
-			$db_event = $event_r->fetch();
-			
+		if ($db_event) {
 			$blockchain = new Blockchain($app, $db_event['blockchain_id']);
 			$game = new Game($blockchain, $db_event['game_id']);
 			$event = new Event($game, false, $db_event['event_id']);
