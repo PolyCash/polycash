@@ -20,8 +20,8 @@ else {
 	
 	if (!$existing_user) {
 		if (empty($password)) {
-			$db_thisuser = false;
-			$app->send_login_link($db_thisuser, $redirect_url, $username);
+			$ref_user = false;
+			$app->send_login_link($ref_user, $redirect_url, $username);
 			$message = "We just sent you a verification email. Please open that email to log in.";
 			$error_code = 3;
 		}
@@ -49,12 +49,10 @@ else {
 			}
 		}
 	}
-	else if ($r->rowCount() == 1) {
-		$db_thisuser = $r->fetch();
-		
-		if ($db_thisuser['login_method'] == "password") {
-			if ($db_thisuser['password'] == $app->normalize_password($password, $db_thisuser['salt'])) {
-				$thisuser = new User($app, $db_thisuser['user_id']);
+	else {
+		if ($existing_user['login_method'] == "password") {
+			if ($existing_user['password'] == $app->normalize_password($password, $existing_user['salt'])) {
+				$thisuser = new User($app, $existing_user['user_id']);
 				
 				$success = $thisuser->log_user_in($redirect_url, $viewer_id);
 				
@@ -73,14 +71,10 @@ else {
 			}
 		}
 		else {
-			$app->send_login_link($db_thisuser, $redirect_url, $username);
+			$app->send_login_link($existing_user, $redirect_url, $username);
 			$message = "We just sent you a verification email. Please open that email to log in.";
 			$error_code = 3;
 		}
-	}
-	else {
-		$message = "System error, a duplicate user account was found.";
-		$error_code = 2;
 	}
 	
 	$app->output_message($error_code, $message, false);

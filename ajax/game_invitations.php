@@ -21,7 +21,7 @@ if ($thisuser) {
 					if ($action == "manage") {
 						$my_invitations = $app->run_query("SELECT * FROM game_invitations i LEFT JOIN users u ON i.used_user_id=u.user_id LEFT JOIN async_email_deliveries d ON i.sent_email_id=d.delivery_id WHERE i.game_id='".$game->db_game['game_id']."' AND i.inviter_id='".$thisuser->db_user['user_id']."' ORDER BY invitation_id ASC;");
 						
-						echo 'You\'ve generated '.$r->rowCount().' invitations for this game.<br/>';
+						echo 'You\'ve generated '.$my_invitations->rowCount().' invitations for this game.<br/>';
 						
 						while ($invitation = $my_invitations->fetch()) {
 							echo '<div class="row">';

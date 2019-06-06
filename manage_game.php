@@ -59,7 +59,7 @@ else {
 									<option value="">-- Please Select --</option>
 									<?php
 									$all_blockchains = $app->run_query("SELECT * FROM blockchains ORDER BY blockchain_name ASC;");
-									while ($db_blockchain = $r->fetch()) {
+									while ($db_blockchain = $all_blockchains->fetch()) {
 										echo "<option value=\"".$db_blockchain['blockchain_id']."\">".$db_blockchain['blockchain_name']."</option>\n";
 									}
 									?>
@@ -572,7 +572,7 @@ else {
 											<select id="game_form_option_group_id" class="form-control">
 												<?php
 												$all_option_groups = $app->run_query("SELECT * FROM option_groups ORDER BY description ASC;");
-												while ($option_group = $r->fetch()) {
+												while ($option_group = $all_option_groups->fetch()) {
 													echo '<option value="'.$option_group['group_id'].'">'.$option_group['description']."</option>\n";
 												}
 												?>

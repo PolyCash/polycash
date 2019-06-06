@@ -570,7 +570,7 @@ include('includes/html_start.php');
 			echo '
 			<div class="panel panel-info" style="margin-top: 15px;">
 				<div class="panel-heading">
-					<div class="panel-title">My Print Requests ('.$r->rowCount().')</div>
+					<div class="panel-title">My Print Requests ('.$my_printrequests->rowCount().')</div>
 				</div>
 				<div class="panel-body">';
 			

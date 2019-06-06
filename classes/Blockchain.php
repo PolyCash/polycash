@@ -1026,7 +1026,7 @@ class Blockchain {
 				}
 				$this->delete_blocks_from_height($block_height+1);
 			}
-			else die("Error, that block was not found (".$r->rowCount().").");
+			else die("Error, block $block_height was not found.");
 		}
 		else {
 			if ($this->db_blockchain['p2p_mode'] == "none") {

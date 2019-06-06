@@ -3262,5 +3262,9 @@ class App {
 	public function fetch_recycle_ios_in_account($account_id, $quantity) {
 		return $this->run_query("SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".(int)$account_id."' AND a.is_destroy_address=1 AND io.spend_status='unspent' ORDER BY io.amount DESC LIMIT ".(int)$quantity.";")->fetchAll();
 	}
+	
+	public function set_strategy_time_next_apply($strategy_id, $time_next_apply) {
+		$this->run_query("UPDATE user_strategies SET time_next_apply='".(int)$time_next_apply."' WHERE strategy_id='".(int)$strategy_id."';");
+	}
 }
 ?>

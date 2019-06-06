@@ -389,7 +389,7 @@ class Game {
 			$strategies_q .= " AND g.account_value > 0 ORDER BY RAND();";
 			$apply_strategies = $this->blockchain->app->run_query($strategies_q);
 			
-			if ($print_debug) echo "Applying user strategies for block #".$mining_block_id." of ".$this->db_game['name']." looping through ".$r->rowCount()." users.<br/>\n";
+			if ($print_debug) echo "Applying user strategies for block #".$mining_block_id." of ".$this->db_game['name']." looping through ".$apply_strategies->rowCount()." users.<br/>\n";
 			while ($user_game = $apply_strategies->fetch()) {
 				$api_response = false;
 				$this->apply_user_strategy($log_text, $user_game, $mining_block_id, $current_round_id, $api_response, false);
@@ -491,11 +491,9 @@ class Game {
 							if ($recommendation->recommended_amount && $recommendation->recommended_amount > 0 && $this->blockchain->app->friendly_intval($recommendation->recommended_amount) == $recommendation->recommended_amount) $amount_sum += $recommendation->recommended_amount;
 							else $amount_error = true;
 							
-							$qq = "SELECT * FROM options op JOIN events ev ON op.event_id=ev.event_id WHERE op.option_index='".$recommendation->option_index."' AND ev.game_id='".$this->db_game['game_id']."' AND ev.event_starting_block <= ".$mining_block_id." AND ev.event_final_block >= ".$mining_block_id.";";
-							$rr = $this->blockchain->app->run_query($qq);
+							$db_option = $this->blockchain->app->run_query("SELECT * FROM options op JOIN events ev ON op.event_id=ev.event_id WHERE op.option_index='".$recommendation->option_index."' AND ev.game_id='".$this->db_game['game_id']."' AND ev.event_starting_block <= ".$mining_block_id." AND ev.event_final_block >= ".$mining_block_id.";")->fetch();
 							
-							if ($rr->rowCount() == 1) {
-								$db_option = $rr->fetch();
+							if ($db_option) {
 								$recommendation->option_id = $db_option['option_id'];
 							}
 							else $option_id_error = true;
@@ -2310,13 +2308,10 @@ class Game {
 							
 							$insert_q = substr($insert_q, 0, strlen($insert_q)-2).";";
 							$this->blockchain->app->dbh->beginTransaction();
-							$qq = "DELETE gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.create_transaction_id='".$db_transaction['transaction_id']."';";
-							$rr = $this->blockchain->app->run_query($qq);
-							$rr = $this->blockchain->app->run_query($insert_q);
-							$coinbase_q1 = "UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.parent_io_id=gio.game_io_id-1 WHERE io.create_transaction_id='".$db_transaction['transaction_id']."' AND gio.game_id='".$this->db_game['game_id']."' AND gio.is_coinbase=1;";
-							$this->blockchain->app->run_query($coinbase_q1);
-							$coinbase_q2 = "UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.payout_io_id=gio.game_io_id+1 WHERE gio.event_id IS NOT NULL AND io.create_transaction_id='".$db_transaction['transaction_id']."' AND gio.game_id='".$this->db_game['game_id']."' AND gio.is_coinbase=0;";
-							$this->blockchain->app->run_query($coinbase_q2);
+							$this->blockchain->app->run_query("DELETE gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.create_transaction_id='".$db_transaction['transaction_id']."';");
+							$this->blockchain->app->run_query($insert_q);
+							$this->blockchain->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.parent_io_id=gio.game_io_id-1 WHERE io.create_transaction_id='".$db_transaction['transaction_id']."' AND gio.game_id='".$this->db_game['game_id']."' AND gio.is_coinbase=1;");
+							$this->blockchain->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.payout_io_id=gio.game_io_id+1 WHERE gio.event_id IS NOT NULL AND io.create_transaction_id='".$db_transaction['transaction_id']."' AND gio.game_id='".$this->db_game['game_id']."' AND gio.is_coinbase=0;");
 							$this->blockchain->app->dbh->commit();
 						}
 					}

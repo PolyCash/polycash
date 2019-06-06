@@ -37,7 +37,7 @@ if ($thisuser && $game) {
 				$spend_io_ids = array();
 				$keep_looping = true;
 				
-				while ($keep_looping && $io = $r->fetch()) {
+				while ($keep_looping && $io = $spendable_ios_in_account->fetch()) {
 					array_push($spend_io_ids, $io['io_id']);
 					
 					$gio_sum += $io['coins'];

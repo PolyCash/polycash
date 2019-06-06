@@ -16,7 +16,7 @@ if ($app->running_as_admin()) {
 		$vote_identifier = $app->addr_text_to_vote_identifier($db_address['address']);
 		$option_index = $app->vote_identifier_to_option_index($vote_identifier);
 		
-		$rr = $app->run_query("UPDATE addresses SET option_index='".$option_index."', vote_identifier='".$vote_identifier."' WHERE address_id='".$db_address['address_id']."';");
+		$app->run_query("UPDATE addresses SET option_index='".$option_index."', vote_identifier='".$vote_identifier."' WHERE address_id='".$db_address['address_id']."';");
 		
 		$reset_count++;
 		if ($reset_count%1000 == 0) echo $reset_count." \n";

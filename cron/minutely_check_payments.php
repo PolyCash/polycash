@@ -22,7 +22,7 @@ if ($app->running_as_admin()) {
 		
 		$buyin_invoices = $app->run_query("SELECT *, ug.user_id AS user_id, ug.account_id AS user_game_account_id FROM user_games ug JOIN currency_invoices i ON ug.user_game_id=i.user_game_id JOIN addresses a ON i.address_id=a.address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status IN ('unpaid','unconfirmed') AND (i.status='unconfirmed' OR i.expire_time >= ".time().") AND i.invoice_type != 'sellout' GROUP BY a.address_id;");
 		
-		if ($print_debug) echo "Checking ".$r->rowCount()." addresses.<br/>\n";
+		if ($print_debug) echo "Checking ".$buyin_invoices->rowCount()." buyin addresses.<br/>\n";
 		
 		while ($invoice_address = $buyin_invoices->fetch()) {
 			$transaction_id = false;
@@ -274,10 +274,10 @@ if ($app->running_as_admin()) {
 		// Broadcast sellout refund transactions for games where this node owns the escrow address
 		// This functionality is currently disabled.
 		
-		/*$q = "SELECT * FROM games WHERE game_status='running';";
-		$r = $app->run_query($q);
+		/*
+		$db_running_games = $app->run_query("SELECT * FROM games WHERE game_status='running';");
 		
-		while ($db_game = $r->fetch()) {
+		while ($db_game = $db_running_games->fetch()) {
 			if (empty($blockchains[$db_game['blockchain_id']])) $blockchains[$db_game['blockchain_id']] = new Blockchain($app, $db_game['blockchain_id']);
 			$escrow_address = $blockchains[$db_game['blockchain_id']]->create_or_fetch_address($db_game['escrow_address'], true, false, false, false, false);
 			
@@ -285,10 +285,9 @@ if ($app->running_as_admin()) {
 				$this_game = new Game($blockchains[$db_game['blockchain_id']], $db_game['game_id']);
 				$required_block = $blockchains[$db_game['blockchain_id']]->last_block_id()+1-(int)$db_game['sellout_confirmations'];
 				
-				$qq = "SELECT * FROM game_sellouts WHERE game_id='".$db_game['game_id']."' AND out_tx_hash IS NULL AND in_block_id <= ".$required_block.";";
-				$rr = $app->run_query($qq);
+				$unprocessed_sellouts = $app->run_query("SELECT * FROM game_sellouts WHERE game_id='".$db_game['game_id']."' AND out_tx_hash IS NULL AND in_block_id <= ".$required_block.";");
 				
-				while ($unprocessed_sellout = $rr->fetch()) {
+				while ($unprocessed_sellout = $unprocessed_sellouts->fetch()) {
 					$sellout_transaction = $this_game->blockchain->fetch_transaction_by_hash($unprocessed_sellout['in_tx_hash']);
 					
 					if ($sellout_transaction) {
@@ -299,10 +298,9 @@ if ($app->running_as_admin()) {
 						$input_sum = 0;
 						$io_ids = [];
 						
-						$qqq = "SELECT * FROM transaction_ios WHERE blockchain_id='".$db_game['blockchain_id']."' AND address_id='".$escrow_address['address_id']."' AND spend_status='unspent' AND create_block_id IS NOT NULL ORDER BY create_block_id ASC;";
-						$rrr = $app->run_query($qqq);
+						$escrow_inputs = $app->run_query("SELECT * FROM transaction_ios WHERE blockchain_id='".$db_game['blockchain_id']."' AND address_id='".$escrow_address['address_id']."' AND spend_status='unspent' AND create_block_id IS NOT NULL ORDER BY create_block_id ASC;");
 						
-						while ($input_sum < $unprocessed_sellout['amount_out'] && $escrow_utxo = $rrr->fetch()) {
+						while ($input_sum < $unprocessed_sellout['amount_out'] && $escrow_utxo = $escrow_inputs->fetch()) {
 							$input_sum += $escrow_utxo['amount'];
 							array_push($io_ids, $escrow_utxo['io_id']);
 						}
@@ -311,10 +309,9 @@ if ($app->running_as_admin()) {
 							$amounts = explode(",", $unprocessed_sellout['out_amounts']);
 							$address_ids = [];
 							
-							$qqq = "SELECT * FROM transaction_ios WHERE spend_transaction_id='".$sellout_transaction['transaction_id']."';";
-							$rrr = $app->run_query($qqq);
+							$sellout_inputs = $app->run_query("SELECT * FROM transaction_ios WHERE spend_transaction_id='".$sellout_transaction['transaction_id']."';");
 							
-							while ($in_io = $rrr->fetch()) {
+							while ($in_io = $sellout_inputs->fetch()) {
 								array_push($address_ids, $in_io['address_id']);
 							}
 							
@@ -330,8 +327,7 @@ if ($app->running_as_admin()) {
 							if ($transaction_id) {
 								$db_transaction = $app->fetch_transaction_by_id($transaction_id);
 								
-								$qqq = "UPDATE game_sellouts SET out_tx_hash=".$app->quote_escape($db_transaction['tx_hash'])." WHERE sellout_id='".$unprocessed_sellout['sellout_id']."';";
-								$rrr = $app->run_query($qqq);
+								$app->run_query("UPDATE game_sellouts SET out_tx_hash=".$app->quote_escape($db_transaction['tx_hash'])." WHERE sellout_id='".$unprocessed_sellout['sellout_id']."';");
 								
 								if ($print_debug) echo "Created sellout refund transaction ".$db_transaction['tx_hash']."<br/>\n";
 							}

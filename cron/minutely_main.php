@@ -60,8 +60,7 @@ if ($app->running_as_admin()) {
 					try {
 						$getblockchaininfo = $blockchains[$db_game['blockchain_id']]->coin_rpc->getblockchaininfo();
 						
-						$qq = "UPDATE blockchains SET rpc_last_time_connected='".time()."', block_height='".$getblockchaininfo['headers']."' WHERE blockchain_id='".$db_game['blockchain_id']."';";
-						$rr = $app->run_query($qq);
+						$app->run_query("UPDATE blockchains SET rpc_last_time_connected='".time()."', block_height='".$getblockchaininfo['headers']."' WHERE blockchain_id='".$db_game['blockchain_id']."';");
 					}
 					catch (Exception $e) {}
 				}
@@ -96,7 +95,7 @@ if ($app->running_as_admin()) {
 
 		$unstarted_games = $app->run_query("SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.online=1 AND g.game_status='published' AND g.start_condition='fixed_time' AND g.start_datetime <= NOW() AND g.start_datetime IS NOT NULL;");
 		
-		while ($db_unstarted_game = $r->fetch()) {
+		while ($db_unstarted_game = $unstarted_games->fetch()) {
 			if (time() >= strtotime($db_unstarted_game['start_datetime'])) {
 				if (!$blockchains[$db_unstarted_game['blockchain_id']]) $blockchains[$db_unstarted_game['blockchain_id']] = new Blockchain($app, $db_unstarted_game['blockchain_id']);
 				$unstarted_game = new Game($blockchains[$db_unstarted_game['blockchain_id']], $db_unstarted_game['game_id']);

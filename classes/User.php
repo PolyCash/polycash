@@ -233,9 +233,9 @@ class User {
 		if ($from_round > 0 && $to_round > 0 && $to_round >= $from_round) {
 			$this->app->run_query("DELETE FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND round_id >= ".$from_round." AND round_id <= ".$to_round.";");
 			
-			$this->app->run_query("SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."';");
+			$options_by_game = $this->app->run_query("SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."';");
 			
-			while ($op = $r->fetch()) {
+			while ($op = $options_by_game->fetch()) {
 				$round_id = $game->block_to_round($op['event_starting_block']);
 				$points = (int)$_REQUEST['poi_'.$op['option_id']];
 				

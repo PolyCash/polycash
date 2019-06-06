@@ -246,13 +246,13 @@ if ($user_game) {
 					$transaction_id = $blockchain->create_transaction("transaction", $io_amounts, false, $io_ids, $address_ids, $fee_amount, $error_message);
 					
 					if ($transaction_id) {
-						$app->run_query("UPDATE user_strategies SET time_next_apply='".(time()+$rand_sec_offset)."' WHERE strategy_id='".$user_game['strategy_id']."';");
+						$transaction = $app->fetch_transaction_by_id($transaction_id);
 						
-						$app->output_message(1, "Great, your transaction was submitted. <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction_id."/\">View Transaction</a>", false);
+						$app->set_strategy_time_next_apply($user_game['strategy_id'], time()+$rand_sec_offset);
+						
+						$app->output_message(1, "Great, your transaction was submitted. <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction['tx_hash']."/\">View Transaction</a>", false);
 					}
-					else {
-						$app->output_message(7, "TX Error: ".$error_message, false);
-					}
+					else $app->output_message(7, "TX Error: ".$error_message, false);
 				}
 				else $app->output_message(6, "Invalid coins_per_event.\n", false);
 			}
