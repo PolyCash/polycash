@@ -17,9 +17,7 @@ class MobilePayment {
 	
 	public function load() {
 		if ($this->payment_id) {
-			$q = "SELECT * FROM mobile_payments WHERE payment_id='".$this->payment_id."';";
-			$r = $this->app->run_query($q);
-			$this->db_payment = $r->fetch();
+			$this->db_payment = $this->app->run_query("SELECT * FROM mobile_payments WHERE payment_id='".$this->payment_id."';")->fetch();
 		}
 	}
 	
@@ -32,8 +30,7 @@ class MobilePayment {
 	}
 	
 	public function create() {
-		$q = "INSERT INTO mobile_payments SET currency_id='".$this->currency_id."', amount=".$this->app->quote_escape($this->amount).", payment_status='pending', time_created='".time()."', phone_number=".$this->app->quote_escape($this->phone_number).", first_name=".$this->app->quote_escape($this->first_name).", last_name=".$this->app->quote_escape($this->last_name).", payment_key='".$this->app->random_string(16)."';";
-		$r = $this->app->run_query($q);
+		$this->app->run_query("INSERT INTO mobile_payments SET currency_id='".$this->currency_id."', amount=".$this->app->quote_escape($this->amount).", payment_status='pending', time_created='".time()."', phone_number=".$this->app->quote_escape($this->phone_number).", first_name=".$this->app->quote_escape($this->first_name).", last_name=".$this->app->quote_escape($this->last_name).", payment_key='".$this->app->random_string(16)."';");
 		
 		$this->payment_id = $this->app->last_insert_id();
 		$this->load();

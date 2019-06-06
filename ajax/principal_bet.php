@@ -12,7 +12,7 @@ if ($thisuser && $game) {
 	$fee_total = round($fee*pow(10, $game->blockchain->db_blockchain['decimal_places']));
 	$amount_total = round($amount*pow(10, $game->blockchain->db_blockchain['decimal_places']));
 	
-	$option = $app->run_query("SELECT * FROM options WHERE option_id='".$option_id."';")->fetch();
+	$option = $app->fetch_option_by_id($option_id);
 	
 	if ($option) {
 		$address = $app->fetch_addresses_in_account($user_game_account, $option['option_index'], 1)[0];

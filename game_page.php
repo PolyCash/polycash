@@ -98,7 +98,8 @@ else $exchange_rate = 0;
 				<p>
 					<a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; 
 					<?php
-					$faucet_io = $game->check_faucet(false);
+					$ref_user_game = false;
+					$faucet_io = $game->check_faucet($ref_user_game);
 					
 					if ($faucet_io) echo 'Join now & receive '.$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'];
 					else echo 'Play Now';

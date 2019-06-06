@@ -200,7 +200,7 @@ class App {
 		else {
 			$var = $this->run_query("SHOW VARIABLES LIKE 'basedir';")->fetch();
 			$var_val = str_replace("\\", "/", $var['Value']);
-			if (!in_array($var_val[strlen($var_val)-1], array('/', '\\'))) $var_val .= "/";
+			if (!in_array($var_val[strlen($var_val)-1], ['/', '\\'])) $var_val .= "/";
 			if (PHP_OS == "WINNT") return $var_val."bin/mysql.exe";
 			else return $var_val."bin/mysql";
 		}
@@ -216,12 +216,12 @@ class App {
 		$html = "";
 		$process_count = 0;
 		
-		$pipe_config = array(
-			0 => array('pipe', 'r'),
-			1 => array('pipe', 'w'),
-			2 => array('pipe', 'w')
-		);
-		$pipes = array();
+		$pipe_config = [
+			0 => ['pipe', 'r'],
+			1 => ['pipe', 'w'],
+			2 => ['pipe', 'w']
+		];
+		$pipes = [];
 		
 		$last_script_run_time = (int) $this->get_site_constant("last_script_run_time");
 		
@@ -459,7 +459,7 @@ class App {
 	}
 
 	public function output_message($status_code, $message, $dump_object) {
-		if (empty($dump_object)) $dump_object = array("status_code"=>$status_code, "message"=>$message);
+		if (empty($dump_object)) $dump_object = ["status_code"=>$status_code, "message"=>$message];
 		else {
 			$dump_object['status_code'] = $status_code;
 			$dump_object['message'] = $message;
@@ -583,7 +583,7 @@ class App {
 	public function fetch_game_from_url() {
 		$login_url_parts = explode("/", rtrim(ltrim($_SERVER['REQUEST_URI'], "/"), "/"));
 		
-		if (in_array($login_url_parts[0], array("wallet", "manage")) && count($login_url_parts) > 1) {
+		if (in_array($login_url_parts[0], ["wallet", "manage"]) && count($login_url_parts) > 1) {
 			return $this->fetch_db_game_by_identifier($login_url_parts[1]);
 		}
 		else return false;
@@ -852,7 +852,8 @@ class App {
 				echo '<center><h1 style="display: inline-block" title="'.$featured_game->game_description().'">'.$featured_game->db_game['name'].'</h1>';
 				if ($featured_game->db_game['short_description'] != "") echo "<p>".$featured_game->db_game['short_description']."</p>";
 				
-				$faucet_io = $featured_game->check_faucet(false);
+				$ref_user_game = false;
+				$faucet_io = $featured_game->check_faucet($ref_user_game);
 				
 				echo '<p><a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; ';
 				if ($faucet_io) echo 'Join now & receive '.$this->format_bignum($faucet_io['colored_amount_sum']/pow(10,$featured_game->db_game['decimal_places'])).' '.$featured_game->db_game['coin_name_plural'];
@@ -1153,7 +1154,7 @@ class App {
 	
 	public function fetch_game_definition(&$game, $definition_mode, $show_internal_params) {
 		// $definition_mode is "defined" or "actual"
-		$game_definition = array();
+		$game_definition = [];
 		$game_definition['blockchain_identifier'] = $game->blockchain->db_blockchain['url_identifier'];
 		
 		if ($game->db_game['option_group_id'] > 0) {
@@ -1184,7 +1185,7 @@ class App {
 			$game_definition[$var_name] = $var_val;
 		}
 		
-		$escrow_amounts = array();
+		$escrow_amounts = [];
 		
 		if ($definition_mode == "actual") {
 			$escrow_amounts_q = "SELECT * FROM game_escrow_amounts ea JOIN currencies c ON ea.currency_id=c.currency_id WHERE ea.game_id='".$game->db_game['game_id']."' ORDER BY c.short_name_plural ASC;";
@@ -1193,16 +1194,16 @@ class App {
 			$escrow_amounts_q = "SELECT * FROM game_defined_escrow_amounts ea JOIN currencies c ON ea.currency_id=c.currency_id WHERE ea.game_id='".$game->db_game['game_id']."' ORDER BY c.short_name_plural ASC;";
 		}
 		
-		$escrow_amounts = $this->run_query($escrow_amounts_q);
+		$db_escrow_amounts = $this->run_query($escrow_amounts_q);
 		
-		while ($escrow_amount = $escrow_amounts->fetch()) {
+		while ($escrow_amount = $db_escrow_amounts->fetch()) {
 			$escrow_amounts[$escrow_amount['short_name_plural']] = (float) $escrow_amount['amount'];
 		}
 		
 		$game_definition['escrow_amounts'] = $escrow_amounts;
 		
 		$event_verbatim_vars = $this->event_verbatim_vars();
-		$events_obj = array();
+		$events_obj = [];
 		
 		if ($definition_mode == "defined") {
 			$events_q = "SELECT ev.*, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM game_defined_events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id='".$game->db_game['game_id']."' ORDER BY ev.event_index ASC;";
@@ -1210,11 +1211,11 @@ class App {
 		else {
 			$events_q = "SELECT ev.*, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id='".$game->db_game['game_id']."' ORDER BY ev.event_index ASC;";
 		}
-		$db_events = $this->run_query($q);
+		$db_events = $this->run_query($events_q);
 		
 		$i=0;
 		while ($db_event = $db_events->fetch()) {
-			$temp_event = array();
+			$temp_event = [];
 			
 			for ($j=0; $j<count($event_verbatim_vars); $j++) {
 				$var_type = $event_verbatim_vars[$j][0];
@@ -1425,16 +1426,16 @@ class App {
 	public function voting_character_definitions() {
 		if ($GLOBALS['identifier_case_sensitive'] == 1) {
 			$voting_characters = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-			$firstchar_divisions = array(26,16,8,4,2,1);
+			$firstchar_divisions = [26,16,8,4,2,1];
 		}
 		else {
 			$voting_characters = "123456789abcdefghijklmnopqrstuvwxyz";
-			$firstchar_divisions = array(19,8,4,2,1);
+			$firstchar_divisions = [19,8,4,2,1];
 		}
 		$range_max = -1;
 		for ($i=0; $i<count($firstchar_divisions); $i++) {
 			$num_this_length = $firstchar_divisions[$i]*pow(strlen($voting_characters), $i);
-			$length_to_range[$i+1] = array($range_max+1, $range_max+$num_this_length);
+			$length_to_range[$i+1] = [$range_max+1, $range_max+$num_this_length];
 			$range_max = $range_max+$num_this_length;
 		}
 		$returnvals['voting_characters'] = $voting_characters;
@@ -1538,88 +1539,88 @@ class App {
 	}
 	
 	public function event_verbatim_vars() {
-		return array(
-			array('int', 'event_index', true),
-			array('int', 'next_event_index', true),
-			array('int', 'event_starting_block', true),
-			array('int', 'event_final_block', true),
-			array('int', 'event_payout_block', true),
-			array('string', 'payout_rule', true),
-			array('float', 'track_max_price', true),
-			array('float', 'track_min_price', true),
-			array('float', 'track_payout_price', true),
-			array('string', 'track_name_short', true),
-			array('string', 'event_starting_time', true),
-			array('string', 'event_final_time', true),
-			array('string', 'event_payout_time', true),
-			array('string', 'event_name', false),
-			array('string', 'option_block_rule', false),
-			array('string', 'option_name', false),
-			array('string', 'option_name_plural', false),
-			array('int', 'outcome_index', true)
-		);
+		return [
+			['int', 'event_index', true],
+			['int', 'next_event_index', true],
+			['int', 'event_starting_block', true],
+			['int', 'event_final_block', true],
+			['int', 'event_payout_block', true],
+			['string', 'payout_rule', true],
+			['float', 'track_max_price', true],
+			['float', 'track_min_price', true],
+			['float', 'track_payout_price', true],
+			['string', 'track_name_short', true],
+			['string', 'event_starting_time', true],
+			['string', 'event_final_time', true],
+			['string', 'event_payout_time', true],
+			['string', 'event_name', false],
+			['string', 'option_block_rule', false],
+			['string', 'option_name', false],
+			['string', 'option_name_plural', false],
+			['int', 'outcome_index', true]
+		];
 	}
 	
 	public function game_definition_verbatim_vars() {
-		return array(
-			array('float', 'protocol_version', true),
-			array('string', 'name', false),
-			array('string', 'url_identifier', false),
-			array('string', 'module', true),
-			array('int', 'category_id', false),
-			array('int', 'decimal_places', true),
-			array('bool', 'finite_events', true),
-			array('string', 'event_type_name', true),
-			array('string', 'event_type_name_plural', true),
-			array('string', 'event_rule', true),
-			array('string', 'event_winning_rule', true),
-			array('int', 'event_entity_type_id', true),
-			array('int', 'events_per_round', true),
-			array('string', 'inflation', true),
-			array('float', 'exponential_inflation_rate', true),
-			array('int', 'pos_reward', true),
-			array('int', 'round_length', true),
-			array('int', 'maturity', true),
-			array('string', 'payout_weight', true),
-			array('int', 'final_round', true),
-			array('string', 'buyin_policy', true),
-			array('float', 'game_buyin_cap', true),
-			array('string', 'sellout_policy', true),
-			array('int', 'sellout_confirmations', true),
-			array('string', 'coin_name', true),
-			array('string', 'coin_name_plural', true),
-			array('string', 'coin_abbreviation', true),
-			array('string', 'escrow_address', true),
-			array('string', 'genesis_tx_hash', true),
-			array('int', 'genesis_amount', true),
-			array('int', 'game_starting_block', true),
-			array('string', 'game_winning_rule', true),
-			array('string', 'game_winning_field', true),
-			array('float', 'game_winning_inflation', true),
-			array('string', 'default_vote_effectiveness_function', true),
-			array('string', 'default_effectiveness_param1', true),
-			array('float', 'default_max_voting_fraction', true),
-			array('int', 'default_option_max_width', false),
-			array('int', 'default_payout_block_delay', true),
-			array('string', 'view_mode', true)
-		);
+		return [
+			['float', 'protocol_version', true],
+			['string', 'name', false],
+			['string', 'url_identifier', false],
+			['string', 'module', true],
+			['int', 'category_id', false],
+			['int', 'decimal_places', true],
+			['bool', 'finite_events', true],
+			['string', 'event_type_name', true],
+			['string', 'event_type_name_plural', true],
+			['string', 'event_rule', true],
+			['string', 'event_winning_rule', true],
+			['int', 'event_entity_type_id', true],
+			['int', 'events_per_round', true],
+			['string', 'inflation', true],
+			['float', 'exponential_inflation_rate', true],
+			['int', 'pos_reward', true],
+			['int', 'round_length', true],
+			['int', 'maturity', true],
+			['string', 'payout_weight', true],
+			['int', 'final_round', true],
+			['string', 'buyin_policy', true],
+			['float', 'game_buyin_cap', true],
+			['string', 'sellout_policy', true],
+			['int', 'sellout_confirmations', true],
+			['string', 'coin_name', true],
+			['string', 'coin_name_plural', true],
+			['string', 'coin_abbreviation', true],
+			['string', 'escrow_address', true],
+			['string', 'genesis_tx_hash', true],
+			['int', 'genesis_amount', true],
+			['int', 'game_starting_block', true],
+			['string', 'game_winning_rule', true],
+			['string', 'game_winning_field', true],
+			['float', 'game_winning_inflation', true],
+			['string', 'default_vote_effectiveness_function', true],
+			['string', 'default_effectiveness_param1', true],
+			['float', 'default_max_voting_fraction', true],
+			['int', 'default_option_max_width', false],
+			['int', 'default_payout_block_delay', true],
+			['string', 'view_mode', true]
+		];
 	}
 	
 	public function blockchain_verbatim_vars() {
-		return array(
-			array('string', 'blockchain_name'),
-			array('string', 'url_identifier'),
-			array('string', 'coin_name'),
-			array('string', 'coin_name_plural'),
-			array('int', 'seconds_per_block'),
-			array('int', 'decimal_places'),
-			array('int', 'initial_pow_reward')
-		);
+		return [
+			['string', 'blockchain_name'],
+			['string', 'url_identifier'],
+			['string', 'coin_name'],
+			['string', 'coin_name_plural'],
+			['int', 'seconds_per_block'],
+			['int', 'decimal_places'],
+			['int', 'initial_pow_reward']
+		];
 	}
 	
 	public function fetch_blockchain_definition(&$blockchain) {
 		$verbatim_vars = $this->blockchain_verbatim_vars();
-		$blockchain_definition = array();
+		$blockchain_definition = [];
 		
 		if (in_array($blockchain->db_blockchain['p2p_mode'], array("web_api", "none"))) {
 			if ($blockchain->db_blockchain['p2p_mode'] == "none") {
@@ -1691,7 +1692,7 @@ class App {
 				
 				if (!empty($new_game_obj['escrow_amounts'])) {
 					foreach ($new_game_obj['escrow_amounts'] as $currency_identifier => $amount) {
-						$escrow_currency = $this->run_query("SELECT * FROM currencies WHERE short_name_plural='".$currency_identifier."';");
+						$escrow_currency = $this->run_query("SELECT * FROM currencies WHERE short_name_plural='".$currency_identifier."';")->fetch();
 						
 						if ($escrow_currency) {
 							$this->run_query("INSERT INTO game_escrow_amounts SET game_id='".$game->db_game['game_id']."', currency_id='".$escrow_currency['currency_id']."', amount='".$amount."';");
@@ -1857,7 +1858,7 @@ class App {
 	}
 	
 	public function check_set_module($module_name) {
-		$db_module = $this->run_query("SELECT * FROM modules WHERE module_name=".$this->quote_escape($module_name).";");
+		$db_module = $this->run_query("SELECT * FROM modules WHERE module_name=".$this->quote_escape($module_name).";")->fetch();
 		
 		if (!$db_module) {
 			$this->run_query("INSERT INTO modules SET module_name=".$this->quote_escape($module_name).";");
@@ -2375,7 +2376,7 @@ class App {
 	}
 	
 	public function set_card_currency_balances($card) {
-		$balances_by_currency_id = array();
+		$balances_by_currency_id = [];
 		
 		$card_conversions = $this->run_query("SELECT * FROM card_conversions WHERE card_id='".$card['card_id']."';");
 		
@@ -2660,8 +2661,8 @@ class App {
 	}
 	
 	public function web_api_transaction_ios($transaction_id) {
-		$inputs = array();
-		$outputs = array();
+		$inputs = [];
+		$outputs = [];
 		
 		$tx_in_q = "SELECT a.address, t.tx_hash, io.out_index, io.amount, io.spend_status, io.option_index FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.spend_transaction_id='".$transaction_id."';";
 		$tx_in_r = $this->run_query($tx_in_q);
@@ -2677,7 +2678,7 @@ class App {
 			array_push($outputs, $output);
 		}
 		
-		return array($inputs, $outputs);
+		return [$inputs, $outputs];
 	}
 	
 	public function curl_post_request($url, $data, $headers) {
@@ -3144,12 +3145,12 @@ class App {
 		if ($GLOBALS['api_proxy_url']) $safe_url = $GLOBALS['api_proxy_url'].urlencode($url);
 		else $safe_url = str_replace('&amp;', '&', $url);
 		
-		$arrContextOptions=array(
-			"ssl"=>array(
+		$arrContextOptions = [
+			"ssl" => [
 				"verify_peer"=>false,
 				"verify_peer_name"=>false,
-			),
-		);
+			],
+		];
 		
 		return file_get_contents($safe_url, false, stream_context_create($arrContextOptions));
 	}
@@ -3190,7 +3191,11 @@ class App {
 	}
 	
 	public function spendable_ios_in_account($account_id, $game_id, $round_id, $last_block_id) {
-		return $this->run_query("SELECT *, COUNT(*), SUM(gio.is_resolved) AS num_resolved, SUM(gio.colored_amount) AS coins, SUM(gio.colored_amount)*(".($last_block_id+1)."-io.create_block_id) AS coin_blocks, SUM(gio.colored_amount*(".$round_id."-gio.create_round_id)) AS coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account_id."' AND gio.game_id='".$game_id."' GROUP BY gio.io_id HAVING COUNT(*)=num_resolved ORDER BY coins ASC;");
+		$spendable_io_q = "SELECT *, COUNT(*), SUM(gio.is_resolved) AS num_resolved, SUM(gio.colored_amount) AS coins";
+		if ($last_block_id !== false) $spendable_io_q .= ", SUM(gio.colored_amount)*(".($last_block_id+1)."-io.create_block_id) AS coin_blocks";
+		if ($round_id !== false) $spendable_io_q .= ", SUM(gio.colored_amount*(".$round_id."-gio.create_round_id)) AS coin_rounds";
+		$spendable_io_q .= " FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account_id."' AND gio.game_id='".$game_id."' GROUP BY gio.io_id HAVING COUNT(*)=num_resolved ORDER BY io.io_id ASC;";
+		return $this->run_query($spendable_io_q);
 	}
 	
 	public function fetch_user_game_by_api_key($api_key) {
@@ -3203,6 +3208,10 @@ class App {
 	
 	public function fetch_peer_by_id($peer_id) {
 		return $this->run_query("SELECT * FROM peers WHERE peer_id='".(int)$peer_id."';")->fetch();
+	}
+	
+	public function fetch_option_by_id($option_id) {
+		return $this->run_query("SELECT * FROM options WHERE option_id='".(int)$option_id."';")->fetch();
 	}
 }
 ?>

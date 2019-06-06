@@ -349,7 +349,7 @@ if ($thisuser) {
 						$gde_id = $app->last_insert_id();
 					}
 					
-					$game->check_set_game_definition("defined", $show_internal_params);
+					$game->set_cached_definition_hashes();
 					
 					$app->output_message(1, "Changed the game definition.", false);
 				}
@@ -455,7 +455,7 @@ if ($thisuser) {
 								$r = $app->run_query($q);
 								$gdo_id = $app->last_insert_id();
 								
-								$game->check_set_game_definition("defined", $show_internal_params);
+								$game->set_cached_definition_hashes();
 								
 								$app->output_message(1, "Changed the game definition.", false);
 							}
@@ -479,6 +479,8 @@ if ($thisuser) {
 						
 						$q = "UPDATE game_defined_options SET option_index=option_index-1 WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gdo['event_index']."' AND option_index>".$gdo['option_index'].";";
 						$r = $app->run_query($q);
+						
+						$game->set_cached_definition_hashes();
 						
 						$app->output_message(1, "Deleting...", false);
 					}

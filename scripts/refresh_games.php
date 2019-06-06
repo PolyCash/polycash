@@ -20,8 +20,6 @@ if ($app->running_as_admin()) {
 		$game->check_set_game_definition("defined", $show_internal_params);
 		$game->check_set_game_definition("actual", $show_internal_params);
 		
-		//$game->ensure_options();
-		
 		/*if ($game->db_game['creator_id'] > 0) {}
 		else {
 			$qq = "SELECT * FROM users;";

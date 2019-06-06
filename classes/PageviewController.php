@@ -6,31 +6,14 @@ class PageviewController {
 		$this->app = $app;
 	}
 	function get_viewer($viewer_id) {
-		$q = "SELECT * FROM viewers WHERE viewer_id='".$viewer_id."';";
-		$r = $this->app->run_query($q);
-		if ($r->rowCount() == 1) {
-			return $r->fetch();
-		}
-		else return NULL;
+		return $this->app->run_query("SELECT * FROM viewers WHERE viewer_id='".$viewer_id."';")->fetch();
 	}
 	function ip_identifier() {
-		$q = "SELECT * FROM viewer_identifiers WHERE type='ip' AND identifier=".$this->app->quote_escape($_SERVER['REMOTE_ADDR']).";";
-		$r = $this->app->run_query($q);
-		if ($r->rowCount() > 0) {
-			$identifier = $r->fetch();
-			return $identifier;
-		}
-		else return false;
+		return $this->app->run_query("SELECT * FROM viewer_identifiers WHERE type='ip' AND identifier=".$this->app->quote_escape($_SERVER['REMOTE_ADDR']).";")->fetch();
 	}
 	function cookie_identifier() {
 		if (isset($_COOKIE["cookie_str"])) {
-			$q = "SELECT * FROM viewer_identifiers WHERE type='cookie' AND identifier=".$this->app->quote_escape($_COOKIE["cookie_str"]).";";
-			$r = $this->app->run_query($q);
-			if ($r->rowCount() > 0) {
-				$identifier = $r->fetch();
-				return $identifier;
-			}
-			else return false;
+			return $this->app->run_query("SELECT * FROM viewer_identifiers WHERE type='cookie' AND identifier=".$this->app->quote_escape($_COOKIE["cookie_str"]).";")->fetch();
 		}
 		else return false;
 	}
@@ -42,33 +25,31 @@ class PageviewController {
 		
 		if ($ip_identifier && $cookie_identifier) {}
 		else if (!$ip_identifier && !$cookie_identifier) {
-			$q = "INSERT INTO viewers SET time_created='".time()."';";
-			$r = $this->app->run_query($q);
+			$this->app->run_query("INSERT INTO viewers SET time_created='".time()."';");
 			$viewer_id = $this->app->last_insert_id();
-			$q = "INSERT INTO viewer_identifiers SET type='ip', identifier=".$this->app->quote_escape($_SERVER['REMOTE_ADDR']).", viewer_id='".$viewer_id."';";
-			$r = $this->app->run_query($q);
+			
+			$this->app->run_query("INSERT INTO viewer_identifiers SET type='ip', identifier=".$this->app->quote_escape($_SERVER['REMOTE_ADDR']).", viewer_id='".$viewer_id."';");
+			
 			$cookie_str = $this->app->random_string($cookie_length);
-			$q = "INSERT INTO viewer_identifiers SET type='cookie', identifier=".$this->app->quote_escape($cookie_str).", viewer_id='".$viewer_id."';";
-			$r = $this->app->run_query($q);
+			
+			$this->app->run_query("INSERT INTO viewer_identifiers SET type='cookie', identifier=".$this->app->quote_escape($cookie_str).", viewer_id='".$viewer_id."';");
+			
 			setcookie("cookie_str", $cookie_str, time()+$cookie_time_sec);
 		}
 		else if (!$ip_identifier) {
-			$q = "INSERT INTO viewer_identifiers SET type='ip', identifier=".$this->app->quote_escape($_SERVER['REMOTE_ADDR']).", viewer_id='".$cookie_identifier['viewer_id']."';";
-			$r = $this->app->run_query($q);
+			$this->app->run_query("INSERT INTO viewer_identifiers SET type='ip', identifier=".$this->app->quote_escape($_SERVER['REMOTE_ADDR']).", viewer_id='".$cookie_identifier['viewer_id']."';");
 			$ip_id = $this->app->last_insert_id();
-			$q = "SELECT * FROM viewer_identifiers WHERE identifier_id='".$ip_id."';";
-			$r = $this->app->run_query($q);
-			$ip_identifier = $r->fetch();
+			
+			$ip_identifier = $this->app->run_query("SELECT * FROM viewer_identifiers WHERE identifier_id='".$ip_id."';")->fetch();
 		}
 		else if (!$cookie_identifier) {
 			$cookie_str = $this->app->random_string($cookie_length);
 			setcookie("cookie_str", $cookie_str, time()+$cookie_time_sec);
-			$q = "INSERT INTO viewer_identifiers SET viewer_id='".$ip_identifier['viewer_id']."', type='cookie', identifier=".$this->app->quote_escape($cookie_str).";";
-			$r = $this->app->run_query($q);
+			
+			$this->app->run_query("INSERT INTO viewer_identifiers SET viewer_id='".$ip_identifier['viewer_id']."', type='cookie', identifier=".$this->app->quote_escape($cookie_str).";");
 			$cookie_id = $this->app->last_insert_id();
-			$q = "SELECT * FROM viewer_identifiers WHERE identifier_id='".$cookie_id."';";
-			$r = $this->app->run_query($q);
-			$cookie_identifier = $r->fetch();
+			
+			$cookie_identifier = $this->app->run_query("SELECT * FROM viewer_identifiers WHERE identifier_id='".$cookie_id."';")->fetch();
 		}
 		
 		$refer_url = "";
@@ -80,29 +61,26 @@ class PageviewController {
 			$domain = str_replace("?", "/", $domain);
 			$domain = explode("/", $domain);
 			$domain = $domain[0];
-			$domain = explode(".", $domain);
-			$domain = $domain[count($domain)-2].".".$domain[count($domain)-1];
+			$domain_parts = explode(".", $domain);
+			$domain = $domain_parts[count($domain_parts)-1];
+			if (count($domain_parts) > 1) $domain = $domain_parts[count($domain_parts)-2].".".$domain;
 			
 			$refer_url = $_SERVER['HTTP_REFERER'];
 		}
 		
 		if (strlen($_SERVER['REQUEST_URI']) > 255) $_SERVER['REQUEST_URI'] = substr($_SERVER['REQUEST_URI'], 0, 255);
-		$page_url = $this->app->quote_escape($_SERVER['REQUEST_URI']);
-		$q = "SELECT page_url_id FROM page_urls WHERE url=".$page_url.";";
-		$r = $this->app->run_query($q);
-		if ($r->rowCount() > 0) {
-			$pv_page_id = $r->fetch(PDO::FETCH_NUM);
-			$pv_page_id = $pv_page_id[0];
-		}
-		else {
-			$q = "INSERT INTO page_urls SET url=".$page_url.";";
-			$r = $this->app->run_query($q);
+		
+		$pv_page_id = (int)($this->app->run_query("SELECT page_url_id FROM page_urls WHERE url=".$this->app->quote_escape($_SERVER['REQUEST_URI']).";")->fetch(PDO::FETCH_NUM)[0]);
+		
+		if (!$pv_page_id) {
+			$this->app->run_query("INSERT INTO page_urls SET url=".$this->app->quote_escape($_SERVER['REQUEST_URI']).";");
 			$pv_page_id = $this->app->last_insert_id();
 		}
-		$q = "INSERT INTO pageviews SET ";
-		if ($thisuser) $q .= "user_id='".$thisuser->db_user['user_id']."', ";
-		$q .= "viewer_id='".$cookie_identifier['viewer_id']."', ip_id='".$ip_identifier['identifier_id']."', cookie_id='".$cookie_identifier['identifier_id']."', time='".time()."', pv_page_id='".$pv_page_id."', refer_url=".$this->app->quote_escape($refer_url).";";
-		$r = $this->app->run_query($q);
+		
+		$new_pv_q = "INSERT INTO pageviews SET ";
+		if ($thisuser) $new_pv_q .= "user_id='".$thisuser->db_user['user_id']."', ";
+		$new_pv_q .= "viewer_id='".$cookie_identifier['viewer_id']."', ip_id='".$ip_identifier['identifier_id']."', cookie_id='".$cookie_identifier['identifier_id']."', time='".time()."', pv_page_id='".$pv_page_id."', refer_url=".$this->app->quote_escape($refer_url).";";
+		$this->app->run_query($new_pv_q);
 		$pageview_id = $this->app->last_insert_id();
 		
 		$result[0] = $pageview_id;
