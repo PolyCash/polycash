@@ -293,7 +293,7 @@ class Game {
 		
 		$this->blockchain->app->dbh->beginTransaction();
 		
-		$all_events = $this->blockchain->app->run_query("SELECT * FROM events WHERE game_id='".$this->db_game['game_id']."' ORDER BY event_index ASC;");
+		$all_events = $this->blockchain->app->run_query("SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id WHERE game_id='".$this->db_game['game_id']."' ORDER BY event_index ASC;");
 		
 		while ($db_event = $all_events->fetch()) {
 			$this_event = new Event($this, $db_event, $db_event['event_id']);
@@ -2774,7 +2774,14 @@ class Game {
 		$game_block['sum_coins_out'] = $sum_coins_out;
 	}
 	
-	public function address_balance_at_block($db_address, $block_id) {
+	public function total_paid_to_address(&$db_address, $confirmed_only) {
+		$balance_q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.address_id='".$db_address['address_id']."'";
+		if ($confirmed_only) $balance_q .= " AND io.spend_status IN ('spent','unspent')";
+		
+		return (int)($this->blockchain->app->run_query($balance_q)->fetch()['SUM(gio.colored_amount)']);
+	}
+	
+	public function address_balance_at_block(&$db_address, $block_id) {
 		if ($block_id) {
 			$balance_q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE gio.game_id='".$this->db_game['game_id']."' AND io.address_id='".$db_address['address_id']."' AND io.create_block_id <= ".$block_id." AND ((io.spend_block_id IS NULL AND io.spend_status='unspent') OR io.spend_block_id>".$block_id.");";
 		}
@@ -3264,7 +3271,10 @@ class Game {
 			}
 			$html .= '</div>';
 			
-			$html .= '<div class="col-sm-6"><a href="/explorer/blockchains/'.$invoice['url_identifier'].'/addresses/'.$invoice['address'].'/">'.$invoice['address'].'</a></div>';
+			$html .= '<div class="col-sm-6">';
+			if (time() > $invoice['expire_time'] - 3600*2) $html .= '<font class="redtext">Expired</font> &nbsp; ';
+			$html .= '<a href="/explorer/blockchains/'.$invoice['url_identifier'].'/addresses/'.$invoice['address'].'/">'.$invoice['address'].'</a>';
+			$html .= '</div>';
 			$html .= "</div>\n";
 		}
 		
@@ -3296,7 +3306,10 @@ class Game {
 			}
 			$html .= '</div>';
 			
-			$html .= '<div class="col-sm-6"><a href="/explorer/games/'.$this->db_game['url_identifier'].'/addresses/'.$invoice['address'].'/">'.$invoice['address'].'</a></div>';
+			$html .= '<div class="col-sm-6">';
+			if (time() > $invoice['expire_time'] - 3600*2) $html .= '<font class="redtext">Expired</font> &nbsp; ';
+			$html .= '<a href="/explorer/games/'.$this->db_game['url_identifier'].'/addresses/'.$invoice['address'].'/">'.$invoice['address'].'</a>';
+			$html .= '</div>';
 			$html .= "</div>\n";
 		}
 		

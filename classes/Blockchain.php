@@ -1232,7 +1232,14 @@ class Blockchain {
 		catch (Exception $e) {}
 	}
 	
-	public function address_balance_at_block($db_address, $block_id) {
+	public function total_paid_to_address(&$db_address, $confirmed_only) {
+		$balance_q = "SELECT SUM(amount) FROM transaction_ios WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND address_id='".$db_address['address_id']."'";
+		if ($confirmed_only) $balance_q .= " AND spend_status IN ('spent','unspent')";
+		
+		return $this->app->run_query($balance_q)->fetch()['SUM(amount)'];
+	}
+	
+	public function address_balance_at_block(&$db_address, $block_id) {
 		if ($block_id) {
 			$balance_q = "SELECT SUM(amount) FROM transaction_ios WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."' AND address_id='".$db_address['address_id']."' AND create_block_id <= ".$block_id." AND (spend_status IN ('unspent','unconfirmed') OR spend_block_id>".$block_id.");";
 		}

@@ -202,15 +202,17 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					if (!$transaction) {
 						$blockchain->load_coin_rpc();
 						
-						try {
-							$transaction_rpc = $blockchain->coin_rpc->getrawtransaction($tx_hash, true);
-							
-							if ($transaction_rpc && empty($transaction_rpc['blockhash'])) {
-								$blockchain->walletnotify($tx_hash, true);
-								$transaction = $blockchain->fetch_transaction_by_hash($tx_hash);
+						if ($blockchain->coin_rpc) {
+							try {
+								$transaction_rpc = $blockchain->coin_rpc->getrawtransaction($tx_hash, true);
+								
+								if ($transaction_rpc && empty($transaction_rpc['blockhash'])) {
+									$blockchain->walletnotify($tx_hash, true);
+									$transaction = $blockchain->fetch_transaction_by_hash($tx_hash);
+								}
 							}
+							catch (Exception $e) {}
 						}
-						catch (Exception $e) {}
 					}
 				}
 			}

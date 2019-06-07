@@ -554,6 +554,7 @@ else {
 										<div class="form-group">
 											<label for="game_form_event_rule">Event rule:</label>
 											<select id="game_form_event_rule" class="form-control" onchange="game_form_event_rule_changed();">
+												<option value="game_definition">Game definition</option>
 												<option value="single_event_series">Single, repeating event</option>
 												<option value="entity_type_option_group">One event for each item in a group</option>
 												<option value="all_pairs">Head to head between all options</option>

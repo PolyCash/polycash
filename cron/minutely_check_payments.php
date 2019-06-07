@@ -20,7 +20,7 @@ if ($app->running_as_admin()) {
 		$ref_user = false;
 		$blockchains = [];
 		
-		$buyin_invoices = $app->run_query("SELECT *, ug.user_id AS user_id, ug.account_id AS user_game_account_id FROM user_games ug JOIN currency_invoices i ON ug.user_game_id=i.user_game_id JOIN addresses a ON i.address_id=a.address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status IN ('unpaid','unconfirmed') AND (i.status='unconfirmed' OR i.expire_time >= ".time().") AND i.invoice_type != 'sellout' GROUP BY a.address_id;");
+		$buyin_invoices = $app->run_query("SELECT *, ug.user_id AS user_id, ug.account_id AS user_game_account_id FROM user_games ug JOIN currency_invoices i ON ug.user_game_id=i.user_game_id JOIN addresses a ON i.address_id=a.address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status IN ('unpaid','unconfirmed','confirmed') AND (i.status='unconfirmed' OR i.expire_time >= ".time().") AND i.invoice_type != 'sellout' GROUP BY a.address_id;");
 		
 		if ($print_debug) echo "Checking ".$buyin_invoices->rowCount()." buyin addresses.<br/>\n";
 		
@@ -34,7 +34,7 @@ if ($app->running_as_admin()) {
 			if (empty($blockchains[$pay_currency['blockchain_id']])) $blockchains[$pay_currency['blockchain_id']] = new Blockchain($app, $pay_currency['blockchain_id']);
 			$pay_blockchain = $blockchains[$pay_currency['blockchain_id']];
 			
-			$address_balance_float = (float)($pay_blockchain->address_balance_at_block($invoice_address, false)/pow(10, $pay_blockchain->db_blockchain['decimal_places']));
+			$address_balance_float = (float)($pay_blockchain->total_paid_to_address($invoice_address, true)/pow(10, $pay_blockchain->db_blockchain['decimal_places']));
 			
 			$preexisting_balance_float = (float)$app->run_query("SELECT SUM(confirmed_amount_paid) FROM currency_invoices WHERE address_id='".$invoice_address['address_id']."' AND status IN('confirmed','settled','pending_refund','refunded');")->fetch()['SUM(confirmed_amount_paid)'];
 			
@@ -179,7 +179,7 @@ if ($app->running_as_admin()) {
 			else if ($print_debug) echo "amount paid: ".$amount_paid_float."<br/>\n";
 		}
 		
-		$sellout_invoices = $app->run_query("SELECT *, ug.user_id AS user_id, ug.account_id AS user_game_account_id FROM user_games ug JOIN currency_invoices i ON ug.user_game_id=i.user_game_id JOIN addresses a ON i.address_id=a.address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status IN ('unpaid','unconfirmed') AND (i.status='unconfirmed' OR i.expire_time >= ".time().") AND i.invoice_type='sellout' GROUP BY a.address_id;");
+		$sellout_invoices = $app->run_query("SELECT *, ug.user_id AS user_id, ug.account_id AS user_game_account_id FROM user_games ug JOIN currency_invoices i ON ug.user_game_id=i.user_game_id JOIN addresses a ON i.address_id=a.address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status IN ('unpaid','unconfirmed','confirmed') AND (i.status='unconfirmed' OR i.expire_time >= ".time().") AND i.invoice_type='sellout' GROUP BY a.address_id;");
 		
 		while ($invoice_address = $sellout_invoices->fetch()) {
 			if (empty($blockchains[$invoice_address['blockchain_id']])) $blockchains[$invoice_address['blockchain_id']] = new Blockchain($app, $invoice_address['blockchain_id']);
@@ -188,7 +188,7 @@ if ($app->running_as_admin()) {
 			$sellout_currency = $app->fetch_currency_by_id($invoice_address['pay_currency_id']);
 			$sellout_blockchain = new Blockchain($app, $sellout_currency['blockchain_id']);
 			
-			$address_balance_float = (float)($game->address_balance_at_block($invoice_address, false)/pow(10, $game->db_game['decimal_places']));
+			$address_balance_float = (float)($game->total_paid_to_address($invoice_address, true)/pow(10, $game->db_game['decimal_places']));
 			
 			$preexisting_balance_float = (float)$app->run_query("SELECT SUM(confirmed_amount_paid) FROM currency_invoices WHERE address_id='".$invoice_address['address_id']."' AND status IN('confirmed','settled','pending_refund','refunded');")->fetch()['SUM(confirmed_amount_paid)'];
 			

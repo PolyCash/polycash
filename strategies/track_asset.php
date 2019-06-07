@@ -153,7 +153,7 @@ if ($user_game) {
 					$bet_i = 0;
 					
 					foreach ($selected_events as $db_event) {
-						$this_event = new Event($game, $db_event, $db_event['event_id']);
+						$this_event = new Event($game, false, $db_event['event_id']);
 						
 						$event_starting_block = $game->blockchain->fetch_block_by_id($db_event['event_starting_block']);
 						$event_final_block = $game->blockchain->fetch_block_by_id($db_event['event_final_block']);

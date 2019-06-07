@@ -39,7 +39,7 @@ $GLOBALS['identifier_first_char'] = 2;
 $GLOBALS['pageview_tracking_enabled'] = false;
 
 $GLOBALS['currency_price_refresh_seconds'] = 30;
-$GLOBALS['invoice_expiration_seconds'] = 60*60*48;
+$GLOBALS['invoice_expiration_seconds'] = 60*60*24*7;
 
 $GLOBALS['mine_private_blocks_when_offline'] = false;
 $GLOBALS['new_games_per_user'] = "unlimited";

@@ -32,7 +32,7 @@ if (!empty($_REQUEST['redirect_key']) && empty($redirect_url)) $redirect_url = $
 			</div>
 			<div class="row" style="padding-top: 10px;">
 				<div class="col-md-8">
-					<input id="username" class="form-control" placeholder="Enter your email address" />
+					<input id="username" class="form-control" placeholder="Enter your username or email address" />
 				</div>
 			</div>
 			<div class="row" style="padding-top: 10px;">

@@ -56,7 +56,7 @@ if ($thisuser) {
 			$setup_error = false;
 			$setup_error_message = "";
 			
-			$game_index = (int)$app->run_query("SELECT MAX(creator_game_index) FROM games WHERE creator_id='".$thisuser->db_user['user_id']."';")->fetch(PDO::FETCH_NUM))+1;
+			$game_index = (int)($app->run_query("SELECT MAX(creator_game_index) FROM games WHERE creator_id='".$thisuser->db_user['user_id']."';")->fetch(PDO::FETCH_NUM))+1;
 			
 			$blockchain_id = (int) $_REQUEST['blockchain_id'];
 			$blockchain = new Blockchain($app, $blockchain_id);
@@ -396,7 +396,7 @@ if ($thisuser) {
 								
 								$game->check_set_game_definition("defined", $show_internal_params);
 								
-								$option_index = (int)($app->run_query("SELECT COUNT(*), MAX(option_index) FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gde['event_index']."';")->fetch()$info['COUNT(*)']);
+								$option_index = (int)($app->run_query("SELECT COUNT(*) FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$gde['event_index']."';")->fetch()['COUNT(*)']);
 								
 								$app->run_query("INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index='".$gde['event_index']."', entity_id='".$entity['entity_id']."', name=".$app->quote_escape($name).", option_index='".$option_index."';");
 								
