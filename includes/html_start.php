@@ -120,7 +120,9 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 					<li class="header"><?php echo $game->db_game['name']; ?></li>
 					<li<?php if ($nav_tab_selected == "game_page") echo ' class="active"'; ?>><a href="/<?php echo $game->db_game['url_identifier']; ?>/"><i class="fa fa-info-circle"></i> <span><?php echo $game->db_game['name']; ?></span></a></li>
 					<li id="tabcell0"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="tab_clicked(0); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=0"'; ?>><i class="fa fa-play"></i> <span>Play Now</span></a></li>
+					<?php if ($game->db_game['public_players'] == 1) { ?>
 					<li id="tabcell1"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="tab_clicked(1); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=1"'; ?>><i class="fa fa-users"></i> <span>Players</span></a></li>
+					<?php } ?>
 					<li id="tabcell2"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="tab_clicked(2); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=2"'; ?>><i class="fa fa-cogs"></i> <span>Settings</span></a></li>
 					<li id="tabcell4"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="tab_clicked(4); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=4"'; ?>><i class="fa fa-exchange-alt"></i> <span>Deposit or Withdraw</span></a></li>
 					<li id="tabcell5"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="tab_clicked(5); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=5"'; ?>><i class="fa fa-envelope"></i> <span>Invitations</span></a></li>

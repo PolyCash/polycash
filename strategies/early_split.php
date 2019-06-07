@@ -12,7 +12,8 @@ if ($user_game) {
 	
 	$fee = (float) $user_game['transaction_fee'];
 	
-	$mining_block_id = $blockchain->last_block_id()+1;
+	$last_block_id = $blockchain->last_block_id();
+	$mining_block_id = $last_block_id+1;
 	$round_id = $game->block_to_round($mining_block_id);
 	$coins_per_vote = $app->coins_per_vote($game->db_game);
 	$fee_amount = (int) ($fee*pow(10, $blockchain->db_blockchain['decimal_places']));

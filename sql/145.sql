@@ -1,0 +1,1 @@
+ALTER TABLE `games` ADD `public_players` TINYINT(1) NOT NULL DEFAULT '0' AFTER `featured_score`;
