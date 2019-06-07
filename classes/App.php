@@ -526,7 +526,7 @@ class App {
 			if ($hours != 1) $str .= $hours." hours";
 			else $str .= $hours." hour";
 			$remainder_min = round(($seconds - (3600*$hours))/60);
-			if ($remainder_min > 0) {
+			if ($remainder_min > 0 && $hours < 3) {
 				$str .= " and ".$remainder_min." ";
 				if ($remainder_min == '1') $str .= "minute";
 				else $str .= "minutes";
@@ -538,7 +538,7 @@ class App {
 			$str = "";
 			if ($minutes != 1) $str .= $minutes." minutes";
 			else $str .= $minutes." minute";
-			if ($remainder_sec > 0) $str .= " and ".$remainder_sec." seconds";
+			if ($remainder_sec > 0 && $minutes < 10) $str .= " and ".$remainder_sec." seconds";
 			return $str;
 		}
 		else {

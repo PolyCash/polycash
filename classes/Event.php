@@ -178,17 +178,18 @@ class Event {
 		else {
 			$html .= '<p><div class="event_timer_slim">';
 			
-			$expired = false;
-			if (!empty($this->db_event['event_final_time'])) {
+			$blocks_left = $this->db_event['event_final_block'] - $max_block_id;
+			
+			$html .= '<font style="font-size: 88%">';
+			
+			if (!empty($this->db_event['event_final_time']) && $blocks_left > 0) {
 				$sec_left = strtotime($this->db_event['event_final_time'])-time();
 				if ($sec_left <= 0) {
 					$html .= '<font class="redtext">Expired '.$this->game->blockchain->app->format_seconds(-1*$sec_left).' ago</font><br/>';
-					$expired = true;
 				}
 			}
 			
-			$blocks_left = $this->db_event['event_final_block'] - $max_block_id;
-			if ($blocks_left > 0 && !$expired) {
+			if ($blocks_left > 0) {
 				$sec_left = $this->game->blockchain->seconds_per_block('average')*$blocks_left;
 				$html .= $this->game->blockchain->app->format_bignum($blocks_left)." betting blocks left";
 				$html .= " (".$this->game->blockchain->app->format_seconds($sec_left).")<br/>";
@@ -196,12 +197,23 @@ class Event {
 			
 			if ($last_block_id < $this->db_event['event_payout_block']) {
 				$payout_blocks_left = $this->db_event['event_payout_block'] - $last_block_id;
-				$html .= "Pays out in ".$this->game->blockchain->app->format_seconds($this->game->blockchain->seconds_per_block('average')*$payout_blocks_left);
+				
+				if (!empty($this->db_event['event_payout_time'])) {
+					$html .= "Pays out at ".$this->db_event['event_payout_time']." UTC (";
+					$html .= $this->game->blockchain->app->format_seconds(strtotime($this->db_event['event_payout_time'])-time());
+					$html .= ")";
+				}
+				else {
+					$html .= "Pays out in ";
+					$html .= $this->game->blockchain->app->format_seconds($this->game->blockchain->seconds_per_block('average')*$payout_blocks_left);
+				}
 			}
 			else {
 				$payout_block = $this->game->blockchain->fetch_block_by_id($this->db_event['event_payout_block']);
 				$html .= "Paid ".$this->game->blockchain->app->format_seconds(time()-$payout_block['time_mined'])." ago<br/>".date("Y-m-d H:m:s", $payout_block['time_mined'])." UTC";
 			}
+			$html .= "</font>\n";
+			
 			$html .= '</div></p>';
 		}
 		$html .= "<strong><a style=\"color: #000; text-decoration: underline; display: inline-block;\" target=\"_blank\" href=\"/explorer/games/".$this->game->db_game['url_identifier']."/events/".$this->db_event['event_index']."\">".$this->db_event['event_name']."</a></strong> ";

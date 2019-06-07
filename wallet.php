@@ -101,7 +101,7 @@ if ($thisuser) {
 		$invite_game = false;
 		$success = $app->try_apply_invite_key($thisuser->db_user['user_id'], $_REQUEST['invite_key'], $invite_game, $invite_user_game);
 		if ($success) {
-			header("Location: /wallet/".$invite_game['url_identifier']);
+			header("Location: /wallet/".$invite_game->db_game['url_identifier']);
 			die();
 		}
 	}

@@ -2573,7 +2573,9 @@ class Game {
 					if ($bought_leverage != 1) $html .= ' &nbsp; ('.$this->blockchain->app->format_bignum($bought_leverage).'X leverage)';
 					$html .= '<br/><br/>';
 					
-					$html .= 'Now valued at <font class="greentext">'.$this->blockchain->app->format_bignum($estimated_io_value/pow(10,$this->db_game['decimal_places']))." ".$this->db_game['coin_name_plural']."</font>\n";
+					if ($io['is_resolved'] == 1) $html .= 'Paid out';
+					else $html .= 'Now valued';
+					$html .= ' at <font class="greentext">'.$this->blockchain->app->format_bignum($estimated_io_value/pow(10,$this->db_game['decimal_places']))." ".$this->db_game['coin_name_plural']."</font>\n";
 					$html .= "@ ";
 					$html .= "$".$this->blockchain->app->format_bignum($track_pay_price);
 					if ($track_price_usd != $track_pay_price) $html .= " ($".$this->blockchain->app->format_bignum($track_price_usd).")";
