@@ -406,7 +406,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$total_bets = floor($sum_score*$coins_per_vote) + $destroy_score;
 						$total_effective_bets = floor($sum_votes*$coins_per_vote) + $effective_destroy_score + $unconfirmed_effective_destroy_score;
 						
-						if ($event->db_event['next_event_index'] !== "") {
+						if ((string)$event->db_event['next_event_index'] != "") {
 							$db_next_event = $game->fetch_event_by_index($event->db_event['next_event_index']);
 							
 							if ($db_next_event) {
@@ -1088,10 +1088,12 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						if ($io['spend_block_id'] > 0) {
 							echo " and spent on block <a href=\"/explorer/games/".$game->db_game['url_identifier']."/blocks/".$io['spend_block_id']."\">#".$io['spend_block_id']."</a> (round #".$game->round_to_display_round($game->block_to_round($io['spend_block_id'])).")";
 							
-							$votes_value = $io[$game->db_game['payout_weight']."s_created"]*$coins_per_vote;
-							echo ".<br/>It added ".$app->format_bignum($votes_value/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." to inflation.";
+							if ($coins_per_vote > 0) {
+								$votes_value = $io[$game->db_game['payout_weight']."s_created"]*$coins_per_vote;
+								echo ".<br/>It added ".$app->format_bignum($votes_value/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." to inflation.";
+							}
 						}
-						else if ($io['spend_status'] != "unconfirmed") {
+						else if ($io['spend_status'] != "unconfirmed" && $coins_per_vote > 0) {
 							$blocks = ($last_block_id+1)-$io['create_block_id'];
 							$rounds = $game->block_to_round($last_block_id+1)-$io['create_round_id'];
 							if ($game->db_game['payout_weight'] == "coin_round") $votes = $rounds*$io['colored_amount'];

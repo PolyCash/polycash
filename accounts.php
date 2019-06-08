@@ -516,7 +516,7 @@ include('includes/html_start.php');
 								</div>
 								<div class="form-group">
 									<label for="withdraw_fee">Fee:</label>
-									<input class="form-control" type="tel" placeholder="0.001" id="withdraw_fee" style="text-align: right;" />
+									<input class="form-control" type="tel" placeholder="0.0001" id="withdraw_fee" style="text-align: right;" />
 								</div>
 								<div class="form-group">
 									<label for="withdraw_address">Address:</label>
@@ -602,7 +602,7 @@ include('includes/html_start.php');
 								<div class="form-group">
 									<label for="spend_withdraw_fee">Fee:</label>
 									<div class="row">
-										<div class="col-sm-8"><input type="text" class="form-control" id="spend_withdraw_fee" placeholder="0.001" style="text-align: right;" /></div>
+										<div class="col-sm-8"><input type="text" class="form-control" id="spend_withdraw_fee" placeholder="0.0001" style="text-align: right;" /></div>
 										<div class="col-sm-4 form-control-static" id="spend_withdraw_fee_label"></div>
 									</div>
 								</div>
@@ -714,7 +714,7 @@ include('includes/html_start.php');
 							</p>
 							<div class="row">
 								<div class="col-md-4">
-									<input class="form-control" style="text-align: right;" type="text" id="account_spend_buyin_fee" value="0.001" />
+									<input class="form-control" style="text-align: right;" type="text" id="account_spend_buyin_fee" value="0.0001" />
 								</div>
 								<div class="col-md-4 form-control-static">
 									coins
