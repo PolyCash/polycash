@@ -15,7 +15,7 @@ if ($app->running_as_admin()) {
 	$game = new Game($blockchain, $game_id);
 
 	for ($block=$from_block; $block<=$to_block; $block++) {
-		$coins_in_existence = $game->coins_in_existence($block);
+		$coins_in_existence = $game->coins_in_existence($block, false);
 		echo $app->format_bignum($coins_in_existence/pow(10,$game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." at block #".$block."<br/>\n";
 	}
 }

@@ -8,7 +8,7 @@ if ($thisuser && $game) {
 	
 	if ($user_game) {
 		if ($game->db_game['sellout_policy'] == "on") {
-			$coins_in_existence = ($game->coins_in_existence(false)+$game->pending_bets())/pow(10, $game->db_game['decimal_places']);
+			$coins_in_existence = ($game->coins_in_existence(false, true)+$game->pending_bets(true))/pow(10, $game->db_game['decimal_places']);
 			
 			$sellout_currency = $app->fetch_currency_by_id($user_game['buyin_currency_id']);
 			$escrow_value = $game->escrow_value_in_currency($user_game['buyin_currency_id']);

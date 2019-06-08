@@ -849,7 +849,7 @@ class App {
 				</script>
 				<?php
 				echo '<div class="col-md-'.$cell_width.'">';
-				echo '<center><h1 style="display: inline-block" title="'.$featured_game->game_description().'">'.$featured_game->db_game['name'].'</h1>';
+				echo '<center><h1 style="display: inline-block">'.$featured_game->db_game['name'].'</h1>';
 				if ($featured_game->db_game['short_description'] != "") echo "<p>".$featured_game->db_game['short_description']."</p>";
 				
 				$ref_user_game = false;
@@ -1039,10 +1039,10 @@ class App {
 			$last_block_id = $game->blockchain->last_block_id();
 			$current_round = $game->block_to_round($last_block_id+1);
 			$coins_per_vote = $this->coins_per_vote($game->db_game);
-			$game->refresh_coins_in_existence();
-			$game_pending_bets = $game->pending_bets();
-			list($vote_supply, $vote_supply_value) = $game->vote_supply($last_block_id, $current_round, $coins_per_vote);
-			$coins_in_existence = $game->coins_in_existence($last_block_id);
+			
+			$game_pending_bets = $game->pending_bets(true);
+			list($vote_supply, $vote_supply_value) = $game->vote_supply($last_block_id, $current_round, $coins_per_vote, true);
+			$coins_in_existence = $game->coins_in_existence(false, true);
 			
 			$circulation_amount_disp = $this->format_bignum($coins_in_existence/pow(10,$db_game['decimal_places']));
 			$html .= '<div class="row"><div class="col-sm-5">'.ucwords($game->db_game['coin_name_plural']).' in circulation:</div><div class="col-sm-7">';
@@ -1300,7 +1300,7 @@ class App {
 			$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
 			$coi_block = ($round_id-1)*$game->db_game['round_length'];
-			$coins_in_existence = $game->coins_in_existence($coi_block);
+			$coins_in_existence = $game->coins_in_existence($coi_block, false);
 			return $coins_in_existence*$game->db_game['exponential_inflation_rate'];
 		}
 		else {
@@ -1330,7 +1330,7 @@ class App {
 			else {
 				$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 				$game = new Game($blockchain, $db_game['game_id']);
-				$round_coins_created = $game->coins_in_existence(false)*$db_game['exponential_inflation_rate'];
+				$round_coins_created = $game->coins_in_existence(false, true)*$db_game['exponential_inflation_rate'];
 			}
 			return floor((1-$db_game['exponential_inflation_minershare'])*$round_coins_created);
 		}

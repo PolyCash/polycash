@@ -157,8 +157,8 @@ if ($refresh_page == "wallet" && ($mature_io_ids_hash != $_REQUEST['mature_io_id
 		$mature_balance = $thisuser->mature_balance($game, $user_game);
 		list($user_votes, $votes_value) = $thisuser->user_current_votes($game, $last_block_id, $current_round, $user_game);
 		$user_pending_bets = $game->user_pending_bets($user_game);
-		$game_pending_bets = $game->pending_bets();
-		list($vote_supply, $vote_supply_value) = $game->vote_supply($last_block_id, $current_round, $coins_per_vote);
+		$game_pending_bets = $game->pending_bets(true);
+		list($vote_supply, $vote_supply_value) = $game->vote_supply($last_block_id, $current_round, $coins_per_vote, true);
 		$account_value = $game->account_balance($user_game['account_id'])+$user_pending_bets;
 		
 		$output['wallet_text_stats'] = $thisuser->wallet_text_stats($game, $blockchain_current_round, $blockchain_last_block_id, $blockchain_block_within_round, $mature_balance, $immature_balance, $user_votes, $votes_value, $user_pending_bets, $user_game);

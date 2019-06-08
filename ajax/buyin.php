@@ -7,7 +7,7 @@ if ($thisuser && $game) {
 	$user_game = $thisuser->ensure_user_in_game($game, false);
 	
 	if ($user_game) {
-		$coins_in_existence = ($game->coins_in_existence(false)+$game->pending_bets())/pow(10, $game->db_game['decimal_places']);
+		$coins_in_existence = ($game->coins_in_existence(false, true)+$game->pending_bets(true))/pow(10, $game->db_game['decimal_places']);
 		
 		if ($game->db_game['buyin_policy'] == "for_sale") {
 			$buyin_currency = $app->fetch_currency_by_id($user_game['buyin_currency_id']);

@@ -442,8 +442,8 @@ if ($thisuser && $game) {
 	
 	list($user_votes, $votes_value) = $thisuser->user_current_votes($game, $last_block_id, $current_round, $user_game);
 	$user_pending_bets = $game->user_pending_bets($user_game);
-	$game_pending_bets = $game->pending_bets();
-	list($vote_supply, $vote_supply_value) = $game->vote_supply($last_block_id, $current_round, $coins_per_vote);
+	$game_pending_bets = $game->pending_bets(true);
+	list($vote_supply, $vote_supply_value) = $game->vote_supply($last_block_id, $current_round, $coins_per_vote, true);
 	$account_value = $game->account_balance($user_game['account_id'])+$user_pending_bets;
 	
 	$blockchain_last_block_id = $game->blockchain->last_block_id();

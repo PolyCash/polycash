@@ -21,7 +21,7 @@ if ($game->db_game['invite_currency'] > 0) {
 	
 	$btc_currency = $app->get_currency_by_abbreviation('btc');
 	
-	$coins_in_existence = $game->coins_in_existence(false);
+	$coins_in_existence = $game->coins_in_existence(false, true);
 	$escrow_value = $game->escrow_value(false);
 	if ($escrow_value > 0) {
 		$exchange_rate = $coins_in_existence/$escrow_value;
@@ -88,17 +88,6 @@ else $exchange_rate = 0;
 
 	<div class="paragraph text-center">
 		<?php echo $GLOBALS['site_name'].", ".date("Y"); ?>
-	</div>
-
-	<div class="paragraph">
-		<?php
-		if ($thisuser) {
-			$account_value = $game->account_balance($user_game['account_id']);
-			$immature_balance = $thisuser->immature_balance($game, $user_game);
-			$mature_balance = $thisuser->mature_balance($game, $user_game);
-		}
-		else $mature_balance = 0;
-		?>
 	</div>
 </div>
 <?php
