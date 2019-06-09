@@ -3252,11 +3252,12 @@ class Game {
 		}
 		
 		$this->coins_in_existence(false, false);
-		$game->pending_bets(false);
+		$this->pending_bets(false);
 		
 		$last_block_id = $this->blockchain->last_block_id();
 		$current_round = $this->block_to_round($last_block_id+1);
-		$this->vote_supply($last_block_id, $current_round, $this->blockchain->app->coins_per_vote($this->db_game), false);
+		$coins_per_vote = $this->blockchain->app->coins_per_vote($this->db_game);
+		$this->vote_supply($last_block_id, $current_round, $coins_per_vote, false);
 	}
 	
 	public function display_buyins_by_user_game($user_game_id) {

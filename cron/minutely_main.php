@@ -199,12 +199,6 @@ if ($app->running_as_admin()) {
 								}
 							}
 						}
-						
-						if ($print_debug) {
-							echo $txt;
-							echo (microtime(true)-$benchmark_time)." sec\n";
-						}
-						$benchmark_time = microtime(true);
 					}
 					
 					$loop_stop_time = microtime(true);
