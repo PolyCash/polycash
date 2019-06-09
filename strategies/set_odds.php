@@ -28,7 +28,7 @@ if ($user_game) {
 		if ($account) {
 			$event_q = "events ev JOIN options op ON ev.event_id=op.event_id WHERE ev.game_id='".$game->db_game['game_id']."' AND op.target_probability IS NOT NULL";
 			$event_q .= " AND ev.event_starting_block<=".$mining_block_id." AND ev.event_final_block>=".$mining_block_id;
-			$event_q .= " AND ev.sum_score+ev.sum_unconfirmed_score=0 AND ev.destroy_score+ev.sum_unconfirmed_destroy_score=0 AND  AND ev.event_starting_time < NOW() AND ev.event_final_time > NOW()";
+			$event_q .= " AND ev.sum_score+ev.sum_unconfirmed_score=0 AND ev.destroy_score+ev.sum_unconfirmed_destroy_score=0 AND (ev.event_starting_time < NOW() OR ev.event_starting_time IS NULL) AND (ev.event_final_time > NOW() OR ev.event_final_time IS NULL)";
 			$option_info = $app->run_query("SELECT COUNT(*) FROM ".$event_q.";")->fetch();
 			$db_events = $app->run_query("SELECT * FROM ".$event_q." GROUP BY ev.event_id ORDER BY ev.event_index ASC;")->fetchAll();
 			$num_events = count($db_events);
@@ -148,7 +148,8 @@ if ($user_game) {
 							}
 						}
 					}
-					$fee_amount = $io_amount_sum - $io_spent_sum;
+					$overshoot_amount = $io_spent_sum-$io_nonfee_amount;
+					$io_amounts[count($io_amounts)-1] -= $overshoot_amount;
 					
 					$error_message = false;
 					$transaction_id = $blockchain->create_transaction("transaction", $io_amounts, false, $io_ids, $address_ids, $fee_amount, $error_message);
