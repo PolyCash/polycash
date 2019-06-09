@@ -663,7 +663,7 @@ class Game {
 		
 		$this->blockchain->app->run_query("UPDATE transaction_game_ios SET spend_round_id=NULL WHERE game_id='".$this->db_game['game_id']."' AND spend_round_id >= ".$this->block_to_round($block_height).";");
 		$this->blockchain->app->run_query("DELETE ob.* FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id JOIN events e ON o.event_id=e.event_id WHERE e.game_id='".$this->db_game['game_id']."' AND ob.block_height >= ".$block_height.";");
-		$this->blockchain->app->run_query("UPDATE games SET loaded_until_block='".($block_height-1)."', coins_in_existence=0, coins_in_existence_block=NULL WHERE game_id='".$this->db_game['game_id']."';");
+		$this->blockchain->app->run_query("UPDATE games SET loaded_until_block='".($block_height-1)."', coins_in_existence=0, cached_pending_bets=NULL, cached_vote_supply=NULL WHERE game_id='".$this->db_game['game_id']."';");
 		
 		$user_game = false;
 		$this->add_genesis_transaction($user_game);
@@ -697,7 +697,7 @@ class Game {
 		$this->blockchain->app->run_query("UPDATE games SET events_until_block=NULL, loaded_until_block=NULL, min_option_index=NULL, max_option_index=NULL WHERE game_id='".$this->db_game['game_id']."';");
 		
 		if ($delete_or_reset == "reset") {
-			$this->blockchain->app->run_query("UPDATE games SET game_status='published', events_until_block=NULL, coins_in_existence=0, coins_in_existence_block=NULL, cached_definition_hash=NULL, defined_cached_definition_hash=NULL, cached_definition_time=NULL WHERE game_id='".$this->db_game['game_id']."';");
+			$this->blockchain->app->run_query("UPDATE games SET game_status='published', events_until_block=NULL, coins_in_existence=0, cached_pending_bets=NULL, cached_vote_supply=NULL, cached_definition_hash=NULL, defined_cached_definition_hash=NULL, cached_definition_time=NULL WHERE game_id='".$this->db_game['game_id']."';");
 			
 			$user_game = false;
 			$this->add_genesis_transaction($user_game);
@@ -1439,7 +1439,7 @@ class Game {
 	}
 	
 	public function coins_in_existence($block_id, $use_cache) {
-		if ($use_cache && (string)$this->db_game['coins_in_existence'] != "") return $this->db_game['coins_in_existence'];
+		if ($use_cache && $this->db_game['coins_in_existence'] != 0) return $this->db_game['coins_in_existence'];
 		else {
 			$in_existence_q = "SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id WHERE gio.game_id='".$this->db_game['game_id']."'";
 			if ($block_id !== false) $in_existence_q .= " AND gio.create_block_id <= ".$block_id." AND ((io.spend_block_id IS NULL AND io.spend_status IN ('unspent','unconfirmed')) OR io.spend_block_id>".$block_id.")";
