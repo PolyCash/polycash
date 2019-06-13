@@ -180,6 +180,7 @@ else {
 				$start_time_col = array_search("start time utc", $header_vars);
 				$time_col = array_search("datetime utc", $header_vars);
 				$payout_time_col = array_search("payout utc", $header_vars);
+				$fee_col = array_search("fee percentage", $header_vars);
 				
 				$home_odds_col = array_search("home odds", $header_vars);
 				$away_odds_col = array_search("away odds", $header_vars);
@@ -198,6 +199,7 @@ else {
 					
 					$game_max_event_index = (int) $app->run_query("SELECT MAX(event_index) FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."';")->fetch()['MAX(event_index)'];
 					$game_event_index_offset = 0;
+					$skip_count = 0;
 					
 					for ($line_i=1; $line_i<count($csv_lines); $line_i++) {
 						if (!empty(trim($csv_lines[$line_i]))) {
@@ -207,6 +209,9 @@ else {
 							$event_name = $line_vals[$name_col];
 							$event_time = str_replace("'", "", $line_vals[$time_col]);
 							$event_start_time = str_replace("'", "", $line_vals[$start_time_col]);
+							
+							$payout_rate = 1;
+							if ((string)$line_vals[$fee_col] != "") $payout_rate = (100-$line_vals[$fee_col])/100;
 							
 							if ($payout_time_col === false || (string)$line_vals[$payout_time_col] == "") $event_payout_time = $event_time;
 							else $event_payout_time = str_replace("'", "", $line_vals[$payout_time_col]);
@@ -275,7 +280,7 @@ else {
 									if ($this_sport_entity) $gde_ins_q .= ", sport_entity_id=".$this_sport_entity['entity_id'];
 									if ($this_league_entity) $gde_ins_q .= ", league_entity_id=".$this_league_entity['entity_id'];
 									if ($external_identifier) $gde_ins_q .= ", external_identifier=".$app->quote_escape($external_identifier);
-									$gde_ins_q .= ", outcome_index=".$outcome_index.", event_index='".$event_index."', event_name=".$app->quote_escape($event_name).", event_starting_time='".$event_starting_time."', event_final_time='".$event_final_time."', event_payout_time='".$event_payout_time."', option_name='team', option_name_plural='teams';";
+									$gde_ins_q .= ", payout_rate='".$payout_rate."', outcome_index=".$outcome_index.", event_index='".$event_index."', event_name=".$app->quote_escape($event_name).", event_starting_time='".$event_starting_time."', event_final_time='".$event_final_time."', event_payout_time='".$event_payout_time."', option_name='team', option_name_plural='teams';";
 									$app->run_query($gde_ins_q);
 									
 									$gdo_ins_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index=".$event_index.", option_index=0, name=".$app->quote_escape($home).", entity_id='".$home_entity['entity_id']."'";
@@ -297,12 +302,13 @@ else {
 									
 									$game_event_index_offset++;
 								}
-								else $messages .= $event_name." already exists, skipping..<br/>\n";
+								else $skip_count++;
 							}
 						}
 					}
 					
 					$messages .= "Added ".$game_event_index_offset." events.<br/>\n";
+					if ($skip_count > 0) $messages .= "Skipped ".$skip_count." events that already exist.<br/>\n";
 				}
 			}
 			else if ($last_action == "internal_settings") {

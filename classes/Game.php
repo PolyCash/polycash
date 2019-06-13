@@ -2749,7 +2749,8 @@ class Game {
 				$net_delta = $fair_io_value - ($io['destroy_amount']+$inflation_stake) - $payout_fees;
 			}
 			else {
-				$payout_fees = round((1-$io['payout_rate'])*$event_payout*$effective_stake/$option_effective_stake);
+				if ($option_effective_stake > 0) $payout_fees = round((1-$io['payout_rate'])*$event_payout*$effective_stake/$option_effective_stake);
+				else $payout_fees = 0;
 			}
 		}
 		

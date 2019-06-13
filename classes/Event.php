@@ -189,10 +189,15 @@ class Event {
 				}
 			}
 			
-			if ($blocks_left > 0) {
+			if ($this->db_event['event_starting_block'] > $last_block_id) {
+				$blocks_to_start = $this->db_event['event_starting_block'] - $last_block_id;
+				$sec_to_start = $this->game->blockchain->seconds_per_block('average')*$blocks_to_start;
+				$html .= "Betting starts in ".number_format($blocks_to_start)." blocks (".$this->game->blockchain->app->format_seconds($sec_to_start).")<br/>\n";
+			}
+			else if ($blocks_left > 0) {
 				$sec_left = $this->game->blockchain->seconds_per_block('average')*$blocks_left;
 				$html .= $this->game->blockchain->app->format_bignum($blocks_left)." betting blocks left";
-				$html .= " (".$this->game->blockchain->app->format_seconds($sec_left).")<br/>";
+				$html .= " (".$this->game->blockchain->app->format_seconds($sec_left).")<br/>\n";
 			}
 			
 			if ($last_block_id < $this->db_event['event_payout_block']) {
