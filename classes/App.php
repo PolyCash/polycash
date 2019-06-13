@@ -2791,7 +2791,7 @@ class App {
 			}
 			else {
 				for ($i=0; $i<$addresses_needed; $i++) {
-					array_push($addresses, $this->gen_address_by_index($blockchain, $account, false, 1));
+					array_push($addresses, $this->gen_address_by_index($blockchain, $account, false, $option_index));
 				}
 			}
 		}

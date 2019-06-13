@@ -493,6 +493,7 @@ class Blockchain {
 							$next_separator_i = 0;
 							
 							$insert_q = "INSERT INTO transaction_game_ios (game_id, is_coinbase, io_id, game_out_index, colored_amount, destroy_amount, ref_block_id, ref_coin_blocks, ref_round_id, ref_coin_rounds, option_id, event_id, effectiveness_factor, effective_destroy_amount, is_resolved) VALUES ";
+							$num_gios_added = 0;
 							
 							for ($j=0; $j<count($outputs); $j++) {
 								if ($output_is_destroy[$j] == 0 && $output_is_separator[$j] == 0) {
@@ -546,17 +547,20 @@ class Blockchain {
 									if ($payout_insert_q != "") $insert_q .= $payout_insert_q;
 									
 									$game_amount_sum += $gio_amount;
+									$num_gios_added++;
 								}
 							}
 							
-							$insert_q = substr($insert_q, 0, strlen($insert_q)-2).";";
-							$this->app->dbh->beginTransaction();
-							$this->app->run_query($insert_q);
-							$coinbase_q1 = "UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.parent_io_id=gio.game_io_id-1 WHERE io.create_transaction_id='".$db_transaction_id."' AND gio.game_id='".$color_game->db_game['game_id']."' AND gio.is_coinbase=1;";
-							$this->app->run_query($coinbase_q1);
-							$coinbase_q2 = "UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.payout_io_id=gio.game_io_id+1 WHERE gio.event_id IS NOT NULL AND io.create_transaction_id='".$db_transaction_id."' AND gio.game_id='".$color_game->db_game['game_id']."' AND gio.is_coinbase=0;";
-							$this->app->run_query($coinbase_q2);
-							$this->app->dbh->commit();
+							if ($num_gios_added > 0) {
+								$insert_q = substr($insert_q, 0, strlen($insert_q)-2).";";
+								$this->app->dbh->beginTransaction();
+								$this->app->run_query($insert_q);
+								$coinbase_q1 = "UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.parent_io_id=gio.game_io_id-1 WHERE io.create_transaction_id='".$db_transaction_id."' AND gio.game_id='".$color_game->db_game['game_id']."' AND gio.is_coinbase=1;";
+								$this->app->run_query($coinbase_q1);
+								$coinbase_q2 = "UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.payout_io_id=gio.game_io_id+1 WHERE gio.event_id IS NOT NULL AND io.create_transaction_id='".$db_transaction_id."' AND gio.game_id='".$color_game->db_game['game_id']."' AND gio.is_coinbase=0;";
+								$this->app->run_query($coinbase_q2);
+								$this->app->dbh->commit();
+							}
 						}
 					}
 					
