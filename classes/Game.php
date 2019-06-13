@@ -749,7 +749,7 @@ class Game {
 					
 					if ($winning_effective_coins > 0) {
 						$winner_odds = $event_effective_bets/$winning_effective_coins;
-						$html .= "x".round($winner_odds, 2)." &nbsp;&nbsp; ";
+						$html .= "x".$this->blockchain->app->round_to($winner_odds, 2, 4, true)." &nbsp;&nbsp; ";
 					}
 					
 					$html .= $db_event['winner_name'];
@@ -2535,7 +2535,7 @@ class Game {
 					else $html .= $this->db_game['coin_name_plural'];
 					
 					$this_payout_disp = $max_payout;
-					$html .= " &nbsp;&nbsp; x".$this->blockchain->app->format_bignum($odds)." ";
+					$html .= " &nbsp;&nbsp; x".$this->blockchain->app->round_to($odds, 2, 4, true)." ";
 					
 					$html .= '&nbsp;&nbsp;';
 					if ($io['outcome_index'] != -1) {

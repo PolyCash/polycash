@@ -327,7 +327,7 @@ class Event {
 			if ($option_effective_coins > 0) {
 				$pct_votes = 100*(floor(1000*$option_effective_coins/$event_effective_coins)/1000);
 				$odds = $this->db_event['payout_rate']*$event_effective_coins/$option_effective_coins;
-				$odds_disp = "x".$this->game->blockchain->app->format_bignum($odds);
+				$odds_disp = "x".$this->game->blockchain->app->round_to($odds, 2, 4, true);
 			}
 			else {
 				$pct_votes = 0;

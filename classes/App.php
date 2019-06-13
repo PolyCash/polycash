@@ -1148,8 +1148,8 @@ class App {
 		$html .= "</div></div>\n";
 		
 		$html .= '<div class="row"><div class="col-sm-5">Betting fees:</div><div class="col-sm-7">';
-		$html .= ((1-$db_game['max_payout_rate'])*100)."%";
-		if ($db_game['min_payout_rate'] != $db_game['max_payout_rate']) $html .= " to ".((1-$db_game['min_payout_rate'])*100)."%";
+		$html .= $this->format_percentage((1-$db_game['max_payout_rate'])*100)."%";
+		if ($db_game['min_payout_rate'] != $db_game['max_payout_rate']) $html .= " to ".$this->format_percentage((1-$db_game['min_payout_rate'])*100)."%";
 		$html .= "</div></div>\n";
 		
 		if ($db_game['maturity'] != 0) {
@@ -2894,7 +2894,7 @@ class App {
 				$this_bet_html .= "\">";
 			}
 			else $this_bet_html .= "<td>";
-			if ($bet['payout_rule'] == "binary") $this_bet_html .= "x".$this->format_bignum($payout_multiplier);
+			if ($bet['payout_rule'] == "binary") $this_bet_html .= "x".$this->round_to($payout_multiplier, 2, 4, true);
 			else $this_bet_html .= "N/A";
 			if ($div_td == "div") $this_bet_html .= "</div>\n";
 			else $this_bet_html .= "</td>\n";

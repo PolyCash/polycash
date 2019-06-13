@@ -146,7 +146,7 @@ class DailyCryptoMarketsGameDefinition {
 					"option_name" => "position",
 					"option_name_plural" => "positions",
 					"payout_rule" => "linear",
-					"payout_rate"=>0.99,
+					"payout_rate"=>1,
 					"outcome_index" => null,
 					"track_min_price" => 0,
 					"track_max_price" => $round_price_target,
