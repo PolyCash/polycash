@@ -1260,6 +1260,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$net_delta = 0;
 						$net_stake = 0;
 						$pending_stake = 0;
+						$resolved_fees_paid = 0;
 						$num_wins = 0;
 						$num_losses = 0;
 						$num_unresolved = 0;
@@ -1285,7 +1286,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$current_round = $game->block_to_round(1+$last_block_id);
 						
 						while ($bet = $my_bets->fetch()) {
-							$this_bet_html = $app->render_bet($bet, $game, $coins_per_vote, $current_round, $net_delta, $net_stake, $pending_stake, $num_wins, $num_losses, $num_unresolved, $num_refunded, 'div', $last_block_id);
+							$this_bet_html = $app->render_bet($bet, $game, $coins_per_vote, $current_round, $net_delta, $net_stake, $pending_stake, $resolved_fees_paid, $num_wins, $num_losses, $num_unresolved, $num_refunded, 'div', $last_block_id);
 							
 							if (!empty($this_bet_html)) {
 								$this_bet_html = '<div class="row">'.$this_bet_html."</div>\n";
@@ -1310,7 +1311,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							</select>
 						</div>
 						<?php
-						echo "<p>You've placed ".$app->bets_summary($game, $net_stake, $num_wins, $num_losses, $num_unresolved, $num_refunded, $pending_stake, $net_delta);
+						echo "<p>You've placed ".$app->bets_summary($game, $net_stake, $num_wins, $num_losses, $num_unresolved, $num_refunded, $pending_stake, $net_delta, $resolved_fees_paid);
 						
 						$destroyed_coins = $game->destroyed_coins_by_account($user_game['account_id']);
 						if ($destroyed_coins > 0) {

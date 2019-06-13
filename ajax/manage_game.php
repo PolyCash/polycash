@@ -11,18 +11,19 @@ if ($thisuser) {
 		
 		if ($new_game_perm) {
 			$default_game_def_txt = '{
+				"option_group": null,
 				"protocol_version": 0,
 				"name": "",
 				"url_identifier": "",
 				"module": null,
-				"decimal_places": 8,
 				"category_id": null,
+				"decimal_places": 4,
+				"finite_events": true,
 				"event_type_name": "event",
 				"event_type_name_plural": "events",
 				"event_rule": "game_definition",
 				"event_winning_rule": "game_definition",
 				"event_entity_type_id": null,
-				"option_group_id": null,
 				"events_per_round": 1,
 				"inflation": "exponential",
 				"exponential_inflation_rate": 0,
@@ -31,22 +32,23 @@ if ($thisuser) {
 				"maturity": 0,
 				"payout_weight": "coin_round",
 				"final_round": null,
-				"buyin_policy": "none",
+				"buyin_policy": "for_sale",
 				"game_buyin_cap": 0,
-				"sellout_policy": "off",
+				"sellout_policy": "on",
 				"sellout_confirmations": 0,
 				"coin_name": "coin",
 				"coin_name_plural": "coins",
 				"coin_abbreviation": "COIN",
 				"escrow_address": "",
 				"genesis_tx_hash": "",
-				"genesis_amount": 100000000000000,
+				"genesis_amount": 10000000000,
 				"game_starting_block": 1,
 				"game_winning_rule": "none",
 				"game_winning_field": "",
 				"game_winning_inflation": 0,
+				"default_payout_rate": 0.99,
 				"default_vote_effectiveness_function": "constant",
-				"default_effectiveness_param1": 1,
+				"default_effectiveness_param1": 0,
 				"default_max_voting_fraction": 1,
 				"default_option_max_width": 200,
 				"default_payout_block_delay": 0,
@@ -306,8 +308,8 @@ if ($thisuser) {
 							$val = date("Y-m-d G:i:s", strtotime($val));
 						}
 						$change_gde_q .= $var."=";
-						if (!isset($val) || $val === "") $q .= "NULL";
-						else $q .= $app->quote_escape($val);
+						if (!isset($val) || $val === "") $change_gde_q .= "NULL";
+						else $change_gde_q .= $app->quote_escape($val);
 						$change_gde_q .= ", ";
 					}
 					$change_gde_q = substr($change_gde_q, 0, strlen($change_gde_q)-2);

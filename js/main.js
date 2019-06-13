@@ -621,7 +621,7 @@ function finish_refresh_output_amounts() {
 			var option_effective_votes = this_option.effective_votes + this_option.unconfirmed_effective_votes + this_option.hypothetical_effective_votes;
 			var option_effective_coins = option_effective_votes*games[0].coins_per_vote + this_option.effective_burn_amount + this_option.unconfirmed_effective_burn_amount + this_option.hypothetical_burn_amount;
 			
-			var expected_payout = Math.floor(event_payout*(output_effective_coins/option_effective_coins));
+			var expected_payout = Math.floor(this_event.payout_rate*event_payout*(output_effective_coins/option_effective_coins));
 			var payout_factor = expected_payout/output_cost;
 			
 			output_val_disp = format_coins(output_cost/Math.pow(10,games[0].decimal_places));
@@ -1314,7 +1314,7 @@ var io_id2input_index = {};
 var chain_ios = [];
 var utxo_spend_offset = 0;
 
-var Event = function(game, game_event_index, event_id, real_event_index, num_voting_options, vote_effectiveness_function, effectiveness_param1, option_block_rule, event_name, event_starting_block, event_final_block) {
+var Event = function(game, game_event_index, event_id, real_event_index, num_voting_options, vote_effectiveness_function, effectiveness_param1, option_block_rule, event_name, event_starting_block, event_final_block, payout_rate) {
 	this.game = game;
 	this.game_event_index = game_event_index;
 	this.event_id = event_id;
@@ -1327,6 +1327,7 @@ var Event = function(game, game_event_index, event_id, real_event_index, num_vot
 	this.event_name = event_name;
 	this.event_starting_block = event_starting_block;
 	this.event_final_block = event_final_block;
+	this.payout_rate = payout_rate;
 	
 	this.sum_votes = 0;
 	this.sum_unconfirmed_votes = 0;
@@ -1904,7 +1905,7 @@ function create_account_step(step) {
 	}
 }
 
-var event_verbatim_vars = new Array('event_index', 'next_event_index', 'event_starting_block', 'event_final_block', 'event_payout_block', 'event_starting_time', 'event_final_time', 'event_payout_time', 'event_name', 'option_block_rule', 'option_name', 'option_name_plural', 'outcome_index', 'payout_rule', 'track_max_price', 'track_min_price', 'track_payout_price', 'track_name_short');
+var event_verbatim_vars = new Array('event_index', 'next_event_index', 'event_starting_block', 'event_final_block', 'event_payout_block', 'event_starting_time', 'event_final_time', 'event_payout_time', 'event_name', 'option_block_rule', 'option_name', 'option_name_plural', 'outcome_index', 'payout_rule', 'payout_rate', 'track_max_price', 'track_min_price', 'track_payout_price', 'track_name_short');
 
 function clear_event_form() {
 	for (form_i in event_verbatim_vars) {

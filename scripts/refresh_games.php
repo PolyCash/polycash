@@ -17,14 +17,14 @@ if ($app->running_as_admin()) {
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$game = new Game($blockchain, $db_game['game_id']);
 		
-		$game->check_set_game_definition("defined", $show_internal_params);
-		$game->check_set_game_definition("actual", $show_internal_params);
-		
 		$ensure_block = $blockchain->last_block_id()+1;
 		if ($game->db_game['finite_events'] == 1) $ensure_block = max($ensure_block, $game->max_gde_starting_block());
 		$debug_text = $game->ensure_events_until_block($ensure_block);
 		echo $debug_text."\n";
 		$game->update_option_votes();
+		
+		$game->set_cached_definition_hashes();
+		
 		echo "Ensured events until ".$ensure_block."<br/>\n";
 	}
 }

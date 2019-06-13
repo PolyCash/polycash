@@ -761,6 +761,10 @@ else {
 										<option value="linear">Track an Asset</option>
 									</select>
 								</div>
+								<div class="form-group">
+									<label for="event_form_payout_rate">Payout rate (betting fees):</label>
+									<input class="form-control" id="event_form_payout_rate" />
+								</div>
 								<div id="event_form_event_blocks">
 									<p><a href="" onclick="$('#event_form_event_times').show(); $('#event_form_event_blocks').hide(); return false;">Specify times</a></p>
 									<div class="form-group">

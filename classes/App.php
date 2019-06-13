@@ -430,6 +430,24 @@ class App {
 		else return round($number, $decimals);
 	}
 	
+	public function format_percentage($number) {
+		if ($number >= 50) $min_decimals = 0;
+		else $min_decimals = 2;
+
+		$max_decimals = 20;
+		
+		$decimal_places = $min_decimals;
+		$keep_looping = true;
+		do {
+			$pow10 = pow(10, $decimal_places);
+			if ((string)($number*$pow10) == (string)(round($number*$pow10))) $keep_looping = false;
+			else $decimal_places++;
+		}
+		while ($keep_looping && $decimal_places < $max_decimals);
+		
+		return number_format($number, $decimal_places);
+	}
+	
 	public function to_ranktext($rank) {
 		return $rank.date("S", strtotime("1/".$rank."/".date("Y")));
 	}
@@ -1129,6 +1147,11 @@ class App {
 		if ($blockchain && $average_seconds_per_block != $db_game['seconds_per_block']) $html .= " to ".$this->format_seconds(round($db_game['round_length']*$average_seconds_per_block/60)*60);
 		$html .= "</div></div>\n";
 		
+		$html .= '<div class="row"><div class="col-sm-5">Betting fees:</div><div class="col-sm-7">';
+		$html .= $this->format_percentage((1-$db_game['max_payout_rate'])*100)."%";
+		if ($db_game['min_payout_rate'] != $db_game['max_payout_rate']) $html .= " to ".$this->format_percentage((1-$db_game['min_payout_rate'])*100)."%";
+		$html .= "</div></div>\n";
+		
 		if ($db_game['maturity'] != 0) {
 			$html .= '<div class="row"><div class="col-sm-5">Transaction maturity:</div><div class="col-sm-7">'.$db_game['maturity']." block";
 			if ($db_game['maturity'] != 1) $html .= "s";
@@ -1225,6 +1248,7 @@ class App {
 					$var_val = $db_event[$var_name];
 					
 					if ($var_type == "int" && $var_val != "") $var_val = (int) $var_val;
+					else if ($var_type == "float" && $var_val != "") $var_val = (float) $var_val;
 					
 					$temp_event[$var_name] = $var_val;
 				}
@@ -1545,6 +1569,7 @@ class App {
 			['int', 'event_final_block', true],
 			['int', 'event_payout_block', true],
 			['string', 'payout_rule', true],
+			['float', 'payout_rate', true],
 			['float', 'track_max_price', true],
 			['float', 'track_min_price', true],
 			['float', 'track_payout_price', true],
@@ -1596,6 +1621,7 @@ class App {
 			['string', 'game_winning_rule', true],
 			['string', 'game_winning_field', true],
 			['float', 'game_winning_inflation', true],
+			['float', 'default_payout_rate', true],
 			['string', 'default_vote_effectiveness_function', true],
 			['string', 'default_effectiveness_param1', true],
 			['float', 'default_max_voting_fraction', true],
@@ -2793,19 +2819,28 @@ class App {
 		else return 1;
 	}
 	
-	public function render_bet(&$bet, &$game, $coins_per_vote, $current_round, &$net_delta, &$net_stake, &$pending_stake, &$num_wins, &$num_losses, &$num_unresolved, &$num_refunded, $div_td, $last_block_id) {
+	public function render_bet(&$bet, &$game, $coins_per_vote, $current_round, &$net_delta, &$net_stake, &$pending_stake, &$resolved_fees_paid, &$num_wins, &$num_losses, &$num_unresolved, &$num_refunded, $div_td, $last_block_id) {
 		$this_bet_html = "";
 		$event_total_reward = ($bet['sum_score']+$bet['sum_unconfirmed_score'])*$coins_per_vote + $bet['sum_destroy_score'] + $bet['sum_unconfirmed_destroy_score'];
 		$option_effective_reward = $bet['option_effective_destroy_score']+$bet['unconfirmed_effective_destroy_score'] + ($bet['option_votes']+$bet['unconfirmed_votes'])*$coins_per_vote;
 		$current_effectiveness = $this->calculate_effectiveness_factor($bet['vote_effectiveness_function'], $bet['effectiveness_param1'], $bet['event_starting_block'], $bet['event_final_block'], $last_block_id+1);
 		
 		$expected_payout = 0;
+		$bet_fees_paid = 0;
 		
 		if ($bet['spend_status'] != "unconfirmed") {
 			$my_inflation_stake = $bet[$game->db_game['payout_weight']."s_destroyed"]*$coins_per_vote;
 			$my_effective_stake = $bet['effective_destroy_amount'] + $bet['votes']*$coins_per_vote;
 			
-			if ($bet['payout_rule'] == "binary" && $option_effective_reward > 0) $expected_payout = $event_total_reward*($my_effective_stake/$option_effective_reward);
+			if ($bet['payout_rule'] == "binary" && $option_effective_reward > 0) {
+				$nofees_reward = round($event_total_reward*($my_effective_stake/$option_effective_reward));
+				$bet_fees_paid = round((1-$bet['payout_rate'])*$nofees_reward);
+				$expected_payout = $nofees_reward-$bet_fees_paid;
+				
+				if ($bet['winning_option_id'] == $bet['option_id']) {
+					$resolved_fees_paid += $bet_fees_paid/pow(10,$game->db_game['decimal_places']);
+				}
+			}
 			else if ((string)$bet['track_payout_price'] != "") $expected_payout = $bet['colored_amount'];
 		}
 		else {
@@ -2814,7 +2849,11 @@ class App {
 			$my_inflation_stake = $unconfirmed_votes*$coins_per_vote;
 			$my_effective_stake = floor(($bet['destroy_amount']+$my_inflation_stake)*$current_effectiveness);
 			
-			if ($bet['payout_rule'] == "binary") $expected_payout = $event_total_reward*($my_effective_stake/$option_effective_reward);
+			if ($bet['payout_rule'] == "binary") {
+				$nofees_reward = round($event_total_reward*($my_effective_stake/$option_effective_reward));
+				$bet_fees_paid = round((1-$bet['payout_rate'])*$nofees_reward);
+				$expected_payout = $nofees_reward-$bet_fees_paid;
+			}
 		}
 		$my_stake = $bet['destroy_amount'] + $my_inflation_stake;
 		
@@ -2855,7 +2894,7 @@ class App {
 				$this_bet_html .= "\">";
 			}
 			else $this_bet_html .= "<td>";
-			if ($bet['payout_rule'] == "binary") $this_bet_html .= "x".$this->format_bignum($payout_multiplier);
+			if ($bet['payout_rule'] == "binary") $this_bet_html .= "x".$this->round_to($payout_multiplier, 2, 4, true);
 			else $this_bet_html .= "N/A";
 			if ($div_td == "div") $this_bet_html .= "</div>\n";
 			else $this_bet_html .= "</td>\n";
@@ -2953,26 +2992,32 @@ class App {
 		return $this_bet_html;
 	}
 	
-	public function bets_summary(&$game, &$net_stake, &$num_wins, &$num_losses, &$num_unresolved, &$num_refunded, &$pending_stake, &$net_delta) {
+	public function bets_summary(&$game, &$net_stake, &$num_wins, &$num_losses, &$num_unresolved, &$num_refunded, &$pending_stake, &$net_delta, &$resolved_fees_paid) {
 		$num_resolved = $num_wins+$num_losses+$num_refunded;
 		if ($num_wins+$num_losses > 0) $win_rate = $num_wins/($num_wins+$num_losses);
 		else $win_rate = 0;
 		$num_bets = $num_resolved+$num_unresolved;
 		
-		$html = number_format($num_bets)." bets totalling <font class=\"greentext\">".$this->format_bignum($net_stake)."</font> ".$game->db_game['coin_name_plural']."<br/>\n";
-		$html .= "You've won ".number_format($num_wins)." of your ".number_format($num_wins+$num_losses)." resolved bets (".round($win_rate*100, 1)."%) for a net ";
-		if ($net_delta >= 0) $html .= "gain";
+		$adjusted_net_delta = $net_delta+$resolved_fees_paid;
+		
+		$html = number_format($num_bets)." bets totalling <font class=\"greentext\">".$this->format_bignum($net_stake)."</font> ".$game->db_game['coin_name_plural'].".<br/>\n";
+		$html .= "You've won ".number_format($num_wins)." of your ".number_format($num_wins+$num_losses)." resolved bets (".round($win_rate*100, 1)."%). ";
+		if ($resolved_fees_paid > 0) $html .= "You paid <font class=\"redtext\">".$this->format_bignum($resolved_fees_paid)."</font> ".$game->db_game['coin_name_plural']." in fees and made ";
+		else $html .= "You made ";
+		$html .= " a net ";
+		if ($adjusted_net_delta >= 0) $html .= "gain";
 		else $html .= "loss";
 		$html .= " of <font class=\"";
-		if ($net_delta >= 0) $html .= "greentext";
+		if ($adjusted_net_delta >= 0) $html .= "greentext";
 		else $html .= "redtext";
-		$html .= "\">".$this->format_bignum(abs($net_delta))."</font> ".$game->db_game['coin_name_plural'];
+		$html .= "\">".$this->format_bignum(abs($adjusted_net_delta))."</font> ".$game->db_game['coin_name_plural']." on your bets.";
 		if ($num_unresolved > 0 || $num_refunded > 0) {
 			$html .= "\n<br/>";
 			if ($num_refunded > 0) $html .= number_format($num_refunded)." of your bets were refunded";
 			if ($num_unresolved > 0 && $num_refunded > 0) $html .= " and you have ";
 			else if ($num_unresolved > 0) $html .= "You have ";
 			if ($num_unresolved > 0) $html .= number_format($num_unresolved)." pending bets totalling <font class=\"greentext\">".$this->format_bignum($pending_stake)."</font> ".$game->db_game['coin_name_plural'];
+			$html .= ".";
 		}
 		return $html;
 	}

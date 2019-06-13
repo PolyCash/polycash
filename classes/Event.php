@@ -212,6 +212,9 @@ class Event {
 				$payout_block = $this->game->blockchain->fetch_block_by_id($this->db_event['event_payout_block']);
 				$html .= "Paid ".$this->game->blockchain->app->format_seconds(time()-$payout_block['time_mined'])." ago<br/>".date("Y-m-d H:m:s", $payout_block['time_mined'])." UTC";
 			}
+			
+			$html .= "<br/>".$this->game->blockchain->app->format_percentage((1-$this->db_event['payout_rate'])*100)."% fee\n";
+			
 			$html .= "</font>\n";
 			
 			$html .= '</div></p>';
@@ -323,8 +326,8 @@ class Event {
 			
 			if ($option_effective_coins > 0) {
 				$pct_votes = 100*(floor(1000*$option_effective_coins/$event_effective_coins)/1000);
-				$odds = $event_effective_coins/$option_effective_coins;
-				$odds_disp = "x".$this->game->blockchain->app->format_bignum($odds);
+				$odds = $this->db_event['payout_rate']*$event_effective_coins/$option_effective_coins;
+				$odds_disp = "x".$this->game->blockchain->app->round_to($odds, 2, 4, true);
 			}
 			else {
 				$pct_votes = 0;
@@ -497,7 +500,7 @@ class Event {
 			
 			while ($payout_io = $bets_by_option->fetch()) {
 				$this_effective_coins = $payout_io['votes']*$coins_per_vote + $payout_io['effective_destroy_amount'];
-				$this_payout_amount = floor($option_payout_total*$this_effective_coins/$option_effective_coins);
+				$this_payout_amount = floor($this->db_event['payout_rate']*$option_payout_total*$this_effective_coins/$option_effective_coins);
 				
 				$this->game->blockchain->app->run_query("UPDATE transaction_game_ios SET colored_amount='".$this_payout_amount."' WHERE game_io_id='".$payout_io['game_io_id']."';");
 			}
@@ -522,7 +525,7 @@ class Event {
 		
 		while ($input = $winning_bets->fetch()) {
 			$this_input_effective_coins = floor($input['votes']*$coins_per_vote) + $input['effective_destroy_amount'];
-			$this_input_payout_amount = floor($total_reward*($this_input_effective_coins/$winning_effective_coins));
+			$this_input_payout_amount = floor($total_reward*$this->db_event['payout_rate']*($this_input_effective_coins/$winning_effective_coins));
 			
 			$this->game->blockchain->app->run_query("UPDATE transaction_game_ios SET colored_amount='".$this_input_payout_amount."' WHERE game_io_id='".$input['payout_io_id']."';");
 		}
@@ -566,7 +569,7 @@ class Event {
 		while ($my_vote = $my_votes->fetch()) {
 			$unconfirmed_votes = 0;
 			$temp_html = "";
-			list($track_entity, $track_price_usd, $track_pay_price, $asset_price_usd, $bought_price_usd, $estimated_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $paid_after_fees, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta) = $this->game->get_payout_info($my_vote, $coins_per_vote, $last_block_id, $temp_html);
+			list($track_entity, $track_price_usd, $track_pay_price, $asset_price_usd, $bought_price_usd, $fair_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $effective_paid, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta, $payout_fees) = $this->game->get_payout_info($my_vote, $coins_per_vote, $last_block_id, $temp_html);
 			
 			$html .= '<div class="row" style="padding: 5px;">'.$temp_html;
 			
@@ -599,7 +602,7 @@ class Event {
 				$html .= '</div>';
 				
 				$html .= '<div class="col-sm-6">';
-				$html .= '<font class="'.$color.'text">'.$this->game->blockchain->app->format_bignum($estimated_io_value/pow(10,$this->game->db_game['decimal_places']))." ".$this->game->db_game['coin_name_plural']."</font>\n";
+				$html .= '<font class="'.$color.'text">'.$this->game->blockchain->app->format_bignum(($fair_io_value-$payout_fees)/pow(10,$this->game->db_game['decimal_places']))." ".$this->game->db_game['coin_name_plural']."</font>\n";
 				$html .= "@ ";
 				$html .= "$".$this->game->blockchain->app->format_bignum($track_pay_price);
 				if ($track_pay_price != $track_price_usd) $html .= " ($".$this->game->blockchain->app->format_bignum($track_price_usd).")";

@@ -44,6 +44,7 @@ class eSportsGameDefinition {
 			"game_winning_rule": "none",
 			"game_winning_field": "",
 			"game_winning_inflation": 0,
+			"default_payout_rate": 1,
 			"default_vote_effectiveness_function": "constant",
 			"default_effectiveness_param1": 0,
 			"default_max_voting_fraction": 1,
@@ -90,6 +91,7 @@ class eSportsGameDefinition {
 				"option_name" => $db_gde['option_name'],
 				"option_name_plural" => $db_gde['option_name_plural'],
 				"payout_rule" => $db_gde['payout_rule'],
+				"payout_rate" => 1,
 				"outcome_index" => $db_gde['outcome_index'],
 				"possible_outcomes" => $possible_outcomes
 			);
