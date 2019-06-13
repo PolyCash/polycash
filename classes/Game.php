@@ -1559,7 +1559,7 @@ class Game {
 			$event_ids .= $event->db_event['event_id'].",";
 			
 			$js .= '
-			games['.$game_index.'].events['.$i.'] = new Event(games['.$game_index.'], '.$i.', '.$event->db_event['event_id'].', '.$event->db_event['event_index'].', '.$event->db_event['num_voting_options'].', "'.$event->db_event['vote_effectiveness_function'].'", "'.$event->db_event['effectiveness_param1'].'", "'.$event->db_event['option_block_rule'].'", '.$this->blockchain->app->quote_escape($event->db_event['event_name']).', '.$event->db_event['event_starting_block'].', '.$event->db_event['event_final_block'].');'."\n";
+			games['.$game_index.'].events['.$i.'] = new Event(games['.$game_index.'], '.$i.', '.$event->db_event['event_id'].', '.$event->db_event['event_index'].', '.$event->db_event['num_voting_options'].', "'.$event->db_event['vote_effectiveness_function'].'", "'.$event->db_event['effectiveness_param1'].'", "'.$event->db_event['option_block_rule'].'", '.$this->blockchain->app->quote_escape($event->db_event['event_name']).', '.$event->db_event['event_starting_block'].', '.$event->db_event['event_final_block'].', '.$event->db_event['payout_rate'].');'."\n";
 			
 			$options_by_event = $this->blockchain->app->run_query("SELECT * FROM options o LEFT JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id='".$event->db_event['event_id']."' ORDER BY o.event_option_index ASC;");
 			
@@ -1646,7 +1646,7 @@ class Game {
 		
 		while ($db_event = $relevant_events->fetch()) {
 			$js .= "if (typeof games[".$game_index."].all_events[".$db_event['event_index']."] == 'undefined') {";
-			$js .= "games[".$game_index."].all_events[".$db_event['event_index']."] = new Event(games[".$game_index."], ".$i.", ".$db_event['event_id'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'", "'.$db_event['effectiveness_param1'].'", "'.$db_event['option_block_rule'].'", '.$this->blockchain->app->quote_escape($db_event['event_name']).');';
+			$js .= "games[".$game_index."].all_events[".$db_event['event_index']."] = new Event(games[".$game_index."], ".$i.", ".$db_event['event_id'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'", "'.$db_event['effectiveness_param1'].'", "'.$db_event['option_block_rule'].'", '.$this->blockchain->app->quote_escape($db_event['event_name']).', '.$db_event['event_starting_block'].', '.$db_event['event_final_block'].', '.$db_event['payout_rate'].');';
 			$js .= "}\n";
 			
 			$options_by_event = $this->blockchain->app->fetch_options_by_event($db_event['event_id']);
@@ -1801,7 +1801,7 @@ class Game {
 						}
 						else $event_type = $existing_event_type_r->fetch();
 						
-						$new_event_q = "INSERT INTO events SET game_id='".$this->db_game['game_id']."', event_type_id='".$event_type['event_type_id']."', event_index='".$game_defined_event['event_index']."', event_starting_block='".$game_defined_event['event_starting_block']."', event_final_block='".$game_defined_event['event_final_block']."', event_payout_block='".$game_defined_event['event_payout_block']."', payout_rule='".$game_defined_event['payout_rule']."', event_name=".$this->blockchain->app->quote_escape($game_defined_event['event_name']).", option_name=".$this->blockchain->app->quote_escape($game_defined_event['option_name']).", option_name_plural=".$this->blockchain->app->quote_escape($game_defined_event['option_name_plural']).", num_options='".$num_options."', option_max_width=".$event_type['default_option_max_width'];
+						$new_event_q = "INSERT INTO events SET game_id='".$this->db_game['game_id']."', event_type_id='".$event_type['event_type_id']."', event_index='".$game_defined_event['event_index']."', event_starting_block='".$game_defined_event['event_starting_block']."', event_final_block='".$game_defined_event['event_final_block']."', event_payout_block='".$game_defined_event['event_payout_block']."', payout_rule='".$game_defined_event['payout_rule']."', payout_rate='".$game_defined_event['payout_rate']."', event_name=".$this->blockchain->app->quote_escape($game_defined_event['event_name']).", option_name=".$this->blockchain->app->quote_escape($game_defined_event['option_name']).", option_name_plural=".$this->blockchain->app->quote_escape($game_defined_event['option_name_plural']).", num_options='".$num_options."', option_max_width=".$event_type['default_option_max_width'];
 						
 						foreach ($optional_event_fields as $optional_event_field) {
 							if ((string)$game_defined_event[$optional_event_field] != "") $new_event_q .= ", ".$optional_event_field."=".$this->blockchain->app->quote_escape($game_defined_event[$optional_event_field]);
@@ -2086,10 +2086,16 @@ class Game {
 		else if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
 		
 		$ensure_events_debug_text = $this->ensure_events_until_block($ensure_block_id);
-		if ($show_debug) echo $ensure_events_debug_text;
+		if ($show_debug) {
+			echo $ensure_events_debug_text;
+			$this->blockchain->app->flush_buffers();
+		}
 		
 		if ($to_block_height >= $load_block_height) {
-			if ($show_debug) echo $this->db_game['name'].".. loading blocks ".$load_block_height." to ".$to_block_height."\n";
+			if ($show_debug) {
+				echo $this->db_game['name'].".. loading blocks ".$load_block_height." to ".$to_block_height."\n";
+				$this->blockchain->app->flush_buffers();
+			}
 			
 			if ($load_block_height == $this->db_game['game_starting_block']) $game_io_index = 0;
 			else {
@@ -2111,7 +2117,10 @@ class Game {
 			}
 			$this->set_loaded_until_block();
 		}
-		else if ($show_debug) echo $this->db_game['name']." is already fully loaded.\n";
+		else if ($show_debug) {
+			echo $this->db_game['name']." is already fully loaded.\n";
+			$this->blockchain->app->flush_buffers();
+		}
 		
 		$this->update_option_votes();
 	}
@@ -2509,7 +2518,7 @@ class Game {
 			$html .= " &nbsp; ".ucwords($io['spend_status']);
 			$html .= "<br/>\n";
 			
-			list($track_entity, $track_price_usd, $track_pay_price, $asset_price_usd, $bought_price_usd, $estimated_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $paid_after_fees, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta) = $this->get_payout_info($io, $coins_per_vote, $last_block_id, $html);
+			list($track_entity, $track_price_usd, $track_pay_price, $asset_price_usd, $bought_price_usd, $fair_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $effective_paid, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta, $payout_fees) = $this->get_payout_info($io, $coins_per_vote, $last_block_id, $html);
 			
 			if (empty($io['option_id']) && $io['destroy_amount']+$inflation_stake > 0) {
 				$destroy_amount_disp = $this->blockchain->app->format_bignum(($io['destroy_amount']+$inflation_stake)/pow(10,$this->db_game['decimal_places']));
@@ -2544,7 +2553,7 @@ class Game {
 					if ($io['event_option_index'] != 0) $html .= '-';
 					$html .= $this->blockchain->app->format_bignum($equivalent_contracts/pow(10, $this->db_game['decimal_places'])).' '.$io['track_name_short'].' ';
 					
-					$this_payout_disp = $estimated_io_value;
+					$this_payout_disp = $fair_io_value;
 					
 					if ($borrow_delta != 0) {
 						if ($borrow_delta > 0) $html .= '<font class="greentext">+ ';
@@ -2567,7 +2576,7 @@ class Game {
 					
 					if ($io['is_resolved'] == 1) $html .= 'Paid out';
 					else $html .= 'Now valued';
-					$html .= ' at <font class="greentext">'.$this->blockchain->app->format_bignum($estimated_io_value/pow(10,$this->db_game['decimal_places']))." ".$this->db_game['coin_name_plural']."</font>\n";
+					$html .= ' at <font class="greentext">'.$this->blockchain->app->format_bignum(($fair_io_value-$payout_fees)/pow(10,$this->db_game['decimal_places']))." ".$this->db_game['coin_name_plural']."</font>\n";
 					$html .= "@ ";
 					$html .= "$".$this->blockchain->app->format_bignum($track_pay_price);
 					if ($track_price_usd != $track_pay_price) $html .= " ($".$this->blockchain->app->format_bignum($track_price_usd).")";
@@ -2583,6 +2592,10 @@ class Game {
 					}
 					if ($current_leverage && $current_leverage != 1) $html .= " &nbsp; (".$this->blockchain->app->format_bignum($current_leverage)."X leverage)\n";
 					$html .= "<br/>\n";
+					
+					if ($payout_fees > 0) {
+						$html .= "<font class=\"redtext\">".$this->blockchain->app->format_bignum($payout_fees/pow(10, $this->db_game['decimal_places']))."</font> ".$this->db_game['coin_name_plural']." in fees<br/>\n";
+					}
 					
 					if ($io['destroy_amount']+$inflation_stake > 0) $pct_gain = 100*($net_delta/($io['destroy_amount']+$inflation_stake));
 					else $pct_gain = 0;
@@ -2614,7 +2627,7 @@ class Game {
 		$track_pay_price = false;
 		$position_price = false;
 		$bought_price_usd = false;
-		$estimated_io_value = false;
+		$fair_io_value = false;
 		$inflation_stake = 0;
 		$effective_stake = false;
 		$unconfirmed_votes = 0;
@@ -2624,8 +2637,9 @@ class Game {
 		$current_leverage = false;
 		$borrow_delta = false;
 		$net_delta = false;
+		$payout_fees = 0;
 		
-		$paid_after_fees = 0;
+		$effective_paid = 0;
 		$equivalent_contracts = 0;
 		$event_equivalent_contracts = 0;
 		$track_position_price = false;
@@ -2662,12 +2676,12 @@ class Game {
 				$effective_stake = $io['effective_destroy_amount']+$io['votes']*$coins_per_vote;
 			}
 			
-			if ($option_effective_stake > 0) $max_payout = $event_payout*$effective_stake/$option_effective_stake;
+			if ($option_effective_stake > 0) $max_payout = $io['payout_rate']*$event_payout*$effective_stake/$option_effective_stake;
 			else $max_payout = 0;
 			
 			if ($io['destroy_amount']+$inflation_stake > 0) $odds = $max_payout/($io['destroy_amount']+$inflation_stake);
 			else $odds = 0;
-			$estimated_io_value = false;
+			$fair_io_value = false;
 			$track_price_usd = false;
 			
 			if ($io['payout_rule'] == "linear") {
@@ -2704,10 +2718,10 @@ class Game {
 				}
 				$track_position_price = max(0, min($contract_price_size, $track_position_price));
 				
-				if ($event_effective_stake > 0) $paid_after_fees = $event_payout*$effective_stake/$event_effective_stake;
-				else $paid_after_fees = 0;
+				if ($event_effective_stake > 0) $effective_paid = $event_payout*$effective_stake/$event_effective_stake;
+				else $effective_paid = 0;
 				
-				if ($position_price > 0) $equivalent_contracts = $paid_after_fees/$position_price;
+				if ($position_price > 0) $equivalent_contracts = $effective_paid/$position_price;
 				else $equivalent_contracts = 0;
 				
 				if ($position_price == 0) {
@@ -2730,12 +2744,16 @@ class Game {
 					}
 				}
 				
-				$estimated_io_value = $track_position_price*$equivalent_contracts;
-				$net_delta = $estimated_io_value - ($io['destroy_amount']+$inflation_stake);
+				$fair_io_value = $track_position_price*$equivalent_contracts;
+				$payout_fees = round($fair_io_value*(1-$io['payout_rate']));
+				$net_delta = $fair_io_value - ($io['destroy_amount']+$inflation_stake) - $payout_fees;
+			}
+			else {
+				$payout_fees = round((1-$io['payout_rate'])*$event_payout*$effective_stake/$option_effective_stake);
 			}
 		}
 		
-		return array($track_entity, $track_price_usd, $track_pay_price, $position_price, $bought_price_usd, $estimated_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $paid_after_fees, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta);
+		return array($track_entity, $track_price_usd, $track_pay_price, $position_price, $bought_price_usd, $fair_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $effective_paid, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $net_delta, $payout_fees);
 	}
 	
 	public function explorer_block_list($from_block_id, $to_block_id) {
@@ -3258,6 +3276,13 @@ class Game {
 		$current_round = $this->block_to_round($last_block_id+1);
 		$coins_per_vote = $this->blockchain->app->coins_per_vote($this->db_game);
 		$this->vote_supply($last_block_id, $current_round, $coins_per_vote, false);
+		
+		$this->set_minmax_payout_rates();
+	}
+	
+	public function set_minmax_payout_rates() {
+		$minmax = $this->blockchain->app->run_query("SELECT MIN(payout_rate), MAX(payout_rate) FROM events WHERE game_id='".$this->db_game['game_id']."';")->fetch();
+		$this->blockchain->app->run_query("UPDATE games SET min_payout_rate='".$minmax['MIN(payout_rate)']."', max_payout_rate='".$minmax['MAX(payout_rate)']."' WHERE game_id='".$this->db_game['game_id']."';");
 	}
 	
 	public function display_buyins_by_user_game($user_game_id) {

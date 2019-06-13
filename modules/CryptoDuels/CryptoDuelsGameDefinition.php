@@ -57,6 +57,7 @@ class CryptoDuelsGameDefinition {
 			"game_winning_rule": "none",
 			"game_winning_field": "",
 			"game_winning_inflation": 0,
+			"default_payout_rate": 1,
 			"default_vote_effectiveness_function": "linear_decrease",
 			"default_effectiveness_param1": 0.5,
 			"default_max_voting_fraction": 1,
@@ -117,6 +118,7 @@ class CryptoDuelsGameDefinition {
 					"option_name" => "outcome",
 					"option_name_plural" => "outcomes",
 					"payout_rule" => "binary",
+					"payout_rate" => 1,
 					"outcome_index" => null,
 					"possible_outcomes" => $possible_outcomes
 				);

@@ -43,6 +43,7 @@ class StakemoneySharesGameDefinition {
 			"game_winning_rule": "none",
 			"game_winning_field": "",
 			"game_winning_inflation": 0,
+			"default_payout_rate": 1,
 			"default_vote_effectiveness_function": "constant",
 			"default_effectiveness_param1": 0,
 			"default_max_voting_fraction": 1,
