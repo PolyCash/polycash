@@ -748,7 +748,7 @@ class Game {
 					}
 					
 					if ($winning_effective_coins > 0) {
-						$winner_odds = $event_effective_bets/$winning_effective_coins;
+						$winner_odds = $db_event['payout_rate']*$event_effective_bets/$winning_effective_coins;
 						$html .= "x".$this->blockchain->app->round_to($winner_odds, 2, 4, true)." &nbsp;&nbsp; ";
 					}
 					
@@ -1604,6 +1604,9 @@ class Game {
 		$html = "<p>";
 		if ($mature_ios->rowCount() == 0) {
 			$html .= "You need ".$this->db_game['coin_name_plural']." to bet. To deposit ".$this->db_game['coin_name_plural'].", visit <a href=\"/accounts/?account_id=".$user_game['account_id']."\">your accounts page</a> to see a list of your addresses.";
+			if ($this->db_game['buyin_policy'] != "none") {
+				$html .= '<br/><button class="btn btn-sm btn-success" style="margin-top: 8px;" onclick="manage_buyin(\'initiate\');"><i class="fas fa-shopping-cart"></i> &nbsp; Buy '.$this->db_game['coin_name_plural'].'</button>';
+			}
 		}
 		$html .= "</p>\n";
 		$input_buttons_html = "";

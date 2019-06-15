@@ -275,7 +275,7 @@ include('includes/html_start.php');
 		else $selected_account_id = false;
 		?>
 		<script type="text/javascript">
-		var selected_account_id = <?php echo $selected_account_id; ?>;
+		var selected_account_id = <?php if ($selected_account_id) echo $selected_account_id; else echo 'false'; ?>;
 		</script>
 		
 		<div class="panel panel-info" style="margin-top: 15px;">
