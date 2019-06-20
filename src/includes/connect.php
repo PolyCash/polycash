@@ -37,22 +37,12 @@ include(AppSettings::srcPath()."/classes/Event.php");
 if (AppSettings::getParam('pageview_tracking_enabled')) include(AppSettings::srcPath()."/classes/PageviewController.php");
 include(AppSettings::srcPath()."/classes/User.php");
 
-$app = new App();
+if (empty($skip_select_db)) $skip_select_db = false;
+$app = new App($skip_select_db);
 
-try {
-	$all_dbs = $app->run_query("SHOW DATABASES;");
-	if ($all_dbs->rowCount() > 0) {
-		try {
-			$all_modules = $app->run_query("SELECT * FROM modules ORDER BY module_id ASC;");
-			
-			while ($module = $all_modules->fetch()) {
-				include(AppSettings::srcPath()."/modules/".$module['module_name']."/".$module['module_name']."GameDefinition.php");
-			}
-		}
-		catch(Exception $ee) {}
-	}	
+if (!$skip_select_db) {
+	$app->load_module_classes();
 }
-catch (Exception $e) {}
 
 if (AppSettings::getParam('pageview_tracking_enabled')) $pageview_controller = new PageviewController($app);
 ?>

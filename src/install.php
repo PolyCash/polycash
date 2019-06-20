@@ -17,15 +17,19 @@ if ($app->running_as_admin()) {
 				echo "Your mysql password includes an apostrophe. ".AppSettings::getParam('site_name')." may not be able to install or complete migrations to your DB.<br/>\n";
 			}
 			
-			if (!$db_exists) {
+			if ($db_exists) {
+				$app->select_db(AppSettings::getParam('mysql_database'));
+			}
+			else {
 				$app->run_query("CREATE DATABASE ".AppSettings::getParam('mysql_database'));
-				$app->set_db(AppSettings::getParam('mysql_database'));
+				$app->select_db(AppSettings::getParam('mysql_database'));
 				
 				$cmd = $app->mysql_binary_location()." -u ".AppSettings::getParam('mysql_user')." -h ".AppSettings::getParam('mysql_server');
 				if (AppSettings::getParam('mysql_password') != "") $cmd .= " -p'".AppSettings::getParam('mysql_password')."'";
 				$cmd .= " ".AppSettings::getParam('mysql_database')." < ".AppSettings::srcPath()."/sql/schema-initial.sql";
 				echo exec($cmd);
 			}
+			$app->load_module_classes();
 			
 			$table_exists = $app->run_query("SHOW TABLES;")->rowCount() > 0;
 			if (!$table_exists) {
@@ -92,46 +96,49 @@ if ($app->running_as_admin()) {
 							echo "<p>This module is already installed.</p>\n";
 						}
 						else {
-							eval('$game_def = new '.$module_name.'GameDefinition($app);');
-							
-							$blockchain = false;
-							$db_blockchain = $app->fetch_blockchain_by_identifier($game_def->game_def->blockchain_identifier);
-							
-							if ($db_blockchain) {
-								$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
-								$new_game_def_txt = $app->game_def_to_text($game_def->game_def);
+							if ($existing_module = $app->check_module($module_name)) {
+								eval('$game_def = new '.$module_name.'GameDefinition($app);');
 								
-								$error_message = "";
-								$db_game = false;
-								$new_game = $app->set_game_from_definition($new_game_def_txt, $thisuser, $module_name, $error_message, $db_game, false);
+								$blockchain = false;
+								$db_blockchain = $app->fetch_blockchain_by_identifier($game_def->game_def->blockchain_identifier);
 								
-								if (!empty($new_game)) {
-									if ($new_game->blockchain->db_blockchain['p2p_mode'] == "none") {
-										if ($thisuser) {
-											$user_game = $thisuser->ensure_user_in_game($new_game, false);
-										}
-										$log_text = "";
-										$new_game->blockchain->new_block($log_text);
-										$transaction_id = $new_game->add_genesis_transaction($user_game);
-										if ($transaction_id < 0) $error_message = "Failed to add genesis transaction (".$transaction_id.").";
-									}
-									$new_game->blockchain->unset_first_required_block();
-									$new_game->start_game();
+								if ($db_blockchain) {
+									$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
+									$new_game_def_txt = $app->game_def_to_text($game_def->game_def);
 									
-									$ensure_block_id = $new_game->db_game['game_starting_block'];
-									if ($new_game->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $new_game->max_gde_starting_block());
-									$new_game->ensure_events_until_block($ensure_block_id);
+									$error_message = "";
+									$db_game = false;
+									$new_game = $app->set_game_from_definition($new_game_def_txt, $thisuser, $module_name, $error_message, $db_game, false);
+									
+									if (!empty($new_game)) {
+										if ($new_game->blockchain->db_blockchain['p2p_mode'] == "none") {
+											if ($thisuser) {
+												$user_game = $thisuser->ensure_user_in_game($new_game, false);
+											}
+											$log_text = "";
+											$new_game->blockchain->new_block($log_text);
+											$transaction_id = $new_game->add_genesis_transaction($user_game);
+											if ($transaction_id < 0) $error_message = "Failed to add genesis transaction (".$transaction_id.").";
+										}
+										$new_game->blockchain->unset_first_required_block();
+										$new_game->start_game();
+										
+										$ensure_block_id = $new_game->db_game['game_starting_block'];
+										if ($new_game->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $new_game->max_gde_starting_block());
+										$new_game->ensure_events_until_block($ensure_block_id);
+									}
+									else if (empty($error_message)) $error_message = "Error: failed to create the game.";
+									
+									if (!empty($error_message)) {
+										if (is_string($error_message)) echo $error_message."<br/>\n";
+										else echo "<pre>".json_encode($error_message, JSON_PRETTY_PRINT)."</pre>\n";
+									}
+									
+									echo "<p>Next please <a href=\"/scripts/load_game_reset.php?key=".AppSettings::getParam('cron_key_string')."&game_id=".$new_game->db_game['game_id']."\">reset this game</a></p>\n";
 								}
-								else if (empty($error_message)) $error_message = "Error: failed to create the game.";
-								
-								if (!empty($error_message)) {
-									if (is_string($error_message)) echo $error_message."<br/>\n";
-									else echo "<pre>".json_encode($error_message, JSON_PRETTY_PRINT)."</pre>\n";
-								}
-								
-								echo "<p>Next please <a href=\"/scripts/load_game_reset.php?key=".AppSettings::getParam('cron_key_string')."&game_id=".$new_game->db_game['game_id']."\">reset this game</a></p>\n";
+								else echo "<p>Failed to find the blockchain.</p>\n";
 							}
-							else echo "<p>Failed to find the blockchain.</p>\n";
+							else echo "<p>The module must already exist in DB before you can install it.</p>\n";
 						}
 					}
 					?>

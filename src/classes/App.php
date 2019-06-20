@@ -2,12 +2,18 @@
 class App {
 	public $dbh;
 	
-	public function __construct() {
+	public function __construct($skip_select_db) {
 		$conn = new PDO("mysql:host=".AppSettings::getParam('mysql_server').";charset=utf8", AppSettings::getParam('mysql_user'), AppSettings::getParam('mysql_password')) or die("Error, failed to connect to the database.");
-		$conn->query("USE ".AppSettings::getParam('mysql_database')) or die("Error accessing the '".AppSettings::getParam('mysql_database')."' database, please visit <a href=\"/install.php?key=\">install.php</a>.");
-		$conn->query("SET sql_mode='';");
-		
 		$this->dbh = $conn;
+		
+		if (!$skip_select_db) {
+			$this->select_db(AppSettings::getParam('mysql_database'));
+		}
+	}
+	
+	public function select_db($db_name) {
+		$this->dbh->query("USE ".$db_name.";") or die("Error accessing the '".$db_name."' database, please visit <a href=\"/install.php?key=\">install.php</a>.");
+		$this->dbh->query("SET sql_mode='';");
 	}
 	
 	public function quote_escape($string) {
@@ -1935,147 +1941,155 @@ class App {
 		}
 		
 		if (!$decode_error) {
-			if (!empty($game_def->blockchain_identifier)) {
-				$new_private_blockchain = false;
-				
-				if ($game_def->blockchain_identifier == "private") {
-					$new_private_blockchain = true;
-					$chain_id = $this->random_string(6);
-					$decimal_places = 8;
-					$url_identifier = "private-chain-".$chain_id;
-					$chain_pow_reward = 25*pow(10,$decimal_places);
-					
-					$this->run_query("INSERT INTO blockchains SET online=1, p2p_mode='none', blockchain_name='Private Chain ".$chain_id."', url_identifier='".$url_identifier."', coin_name='chaincoin', coin_name_plural='chaincoins', seconds_per_block=30, decimal_places=".$decimal_places.", initial_pow_reward=".$chain_pow_reward.";");
-					$blockchain_id = $this->last_insert_id();
-					
-					$new_blockchain = new Blockchain($this, $blockchain_id);
-					if ($thisuser) $new_blockchain->set_blockchain_creator($thisuser);
-					
-					$game_def->blockchain_identifier = $url_identifier;
-				}
-				
-				$db_blockchain = $this->fetch_blockchain_by_identifier($game_def->blockchain_identifier);
-				
-				if ($db_blockchain) {
-					$blockchain = new Blockchain($this, $db_blockchain['blockchain_id']);
-					
-					$game_def->url_identifier = $this->normalize_uri_part($game_def->url_identifier);
-					
-					if (!empty($game_def->url_identifier)) {
-						$verbatim_vars = $this->game_definition_verbatim_vars();
-						
-						$permission_to_change = false;
-						
-						$db_url_matched_game = $this->fetch_db_game_by_identifier($game_def->url_identifier);
-						
-						if ($db_url_matched_game) {
-							if ($db_url_matched_game['blockchain_id'] == $blockchain->db_blockchain['blockchain_id']) {
-								$url_matched_game = new Game($blockchain, $db_url_matched_game['game_id']);
-								
-								if ($permission_override) $permission_to_change = true;
-								else {
-									if ($thisuser) {
-										$permission_to_change = $this->user_can_edit_game($thisuser, $url_matched_game);
-										
-										if (!$permission_to_change) $error_message .= "Error: you can't edit this game.\n";
-									}
-									else $error_message .= "Permission denied. You must be logged in.\n";
-								}
-								
-								if ($permission_to_change) $game = $url_matched_game;
-							}
-							else $error_message .= "Error: invalid game.blockchain_id.\n";
-						}
-						else $permission_to_change = true;
-						
-						if ($permission_to_change) {
-							if (!$game) {
-								$db_group = false;
-								if (!empty($game_def->option_group)) {
-									$db_group = $this->fetch_group_by_description($game_def->option_group);
-									
-									if (!$db_group) {
-										$import_error = "";
-										$this->import_group_from_file($game_def->option_group, $import_error);
-										
-										$db_group = $this->fetch_group_by_description($game_def->option_group);
-									}
-								}
-								
-								$new_game_q = "INSERT INTO games SET ";
-								if ($thisuser) $new_game_q .= "creator_id='".$thisuser->db_user['user_id']."', ";
-								if ($db_group) $new_game_q .= "option_group_id='".$db_group['group_id']."', ";
-								$new_game_q .= "blockchain_id='".$db_blockchain['blockchain_id']."', game_status='published', featured=1";
-								
-								for ($i=0; $i<count($verbatim_vars); $i++) {
-									$var_type = $verbatim_vars[$i][0];
-									$var_name = $verbatim_vars[$i][1];
-									
-									if ($game_def->$var_name != "") {
-										$new_game_q .= ", ".$var_name."=".$this->quote_escape($game_def->$var_name);
-									}
-								}
-								$new_game_q .= ";";
-								$this->run_query($new_game_q);
-								$game_id = $this->last_insert_id();
-								
-								if (!empty($game_def->module)) {
-									$this->run_query("UPDATE modules SET primary_game_id=".$game_id." WHERE module_name=".$this->quote_escape($game_def->module)." AND primary_game_id IS NULL;");
-								}
-								
-								$game = new Game($blockchain, $game_id);
-							}
-							
-							if (!empty($game_def->definitive_peer)) {
-								$definitive_game_peer = $game->get_game_peer_by_server_name($game_def->definitive_peer);
-								
-								if ($definitive_game_peer) {
-									$this->run_query("UPDATE games SET definitive_game_peer_id='".$definitive_game_peer['game_peer_id']."' WHERE game_id='".$game->db_game['game_id']."';");
-									$game->db_game['definitive_game_peer_id'] = $definitive_game_peer['game_peer_id'];
-								}
-							}
-							
-							$this->run_query("DELETE FROM game_defined_escrow_amounts WHERE game_id='".$game->db_game['game_id']."';");
-							
-							if (!empty($game_def->escrow_amounts)) {
-								foreach ($game_def->escrow_amounts as $currency_identifier => $amount) {
-									$escrow_currency = $this->run_query("SELECT * FROM currencies WHERE short_name_plural='".$currency_identifier."';")->fetch();
-									
-									if ($escrow_currency) {
-										$this->run_query("INSERT INTO game_defined_escrow_amounts SET game_id='".$game->db_game['game_id']."', currency_id='".$escrow_currency['currency_id']."', amount='".$amount."';");
-									}
-								}
-							}
-							
-							$show_internal_params = false;
-							$from_game_def = $this->fetch_game_definition($game, "defined", $show_internal_params);
-							$from_game_def_str = $this->game_def_to_text($from_game_def);
-							$from_game_def_hash = $this->game_def_to_hash($from_game_def_str);
-							$this->check_set_game_definition($from_game_def_hash, $from_game_def_str);
-							
-							$to_game_def_str = $this->game_def_to_text($game_def);
-							$to_game_def_hash = $this->game_def_to_hash($to_game_def_str);
-							$this->check_set_game_definition($to_game_def_hash, $to_game_def_str);
-							
-							if ($from_game_def_hash != $to_game_def_hash) {
-								$error_message .= $this->migrate_game_definitions($game, $from_game_def_hash, $to_game_def_hash);
-							}
-							else $error_message .= "Found no changes to apply.\n";
-							
-							$game->update_db_game();
-							$db_game = $game->db_game;
-						}
-					}
-					else $error_message .= "Error, invalid game URL identifier.\n";
-				}
-				else {
-					if ($new_private_blockchain) {
-						$this->run_query("DELETE FROM blockchains WHERE blockchain_id='".$new_blockchain->db_blockchain['blockchain_id']."';");
-					}
-					$error_message .= "Error, failed to identify the right blockchain.\n";
-				}
+			$module_ok = true;
+			if (!empty($game_def->module)) {
+				if (!$this->check_module($game_def->module)) $module_ok = false;
 			}
-			else $error_message .= "Error, blockchain url identifier was empty.\n";
+			
+			if ($module_ok) {
+				if (!empty($game_def->blockchain_identifier)) {
+					$new_private_blockchain = false;
+					
+					if ($game_def->blockchain_identifier == "private") {
+						$new_private_blockchain = true;
+						$chain_id = $this->random_string(6);
+						$decimal_places = 8;
+						$url_identifier = "private-chain-".$chain_id;
+						$chain_pow_reward = 25*pow(10,$decimal_places);
+						
+						$this->run_query("INSERT INTO blockchains SET online=1, p2p_mode='none', blockchain_name='Private Chain ".$chain_id."', url_identifier='".$url_identifier."', coin_name='chaincoin', coin_name_plural='chaincoins', seconds_per_block=30, decimal_places=".$decimal_places.", initial_pow_reward=".$chain_pow_reward.";");
+						$blockchain_id = $this->last_insert_id();
+						
+						$new_blockchain = new Blockchain($this, $blockchain_id);
+						if ($thisuser) $new_blockchain->set_blockchain_creator($thisuser);
+						
+						$game_def->blockchain_identifier = $url_identifier;
+					}
+					
+					$db_blockchain = $this->fetch_blockchain_by_identifier($game_def->blockchain_identifier);
+					
+					if ($db_blockchain) {
+						$blockchain = new Blockchain($this, $db_blockchain['blockchain_id']);
+						
+						$game_def->url_identifier = $this->normalize_uri_part($game_def->url_identifier);
+						
+						if (!empty($game_def->url_identifier)) {
+							$verbatim_vars = $this->game_definition_verbatim_vars();
+							
+							$permission_to_change = false;
+							
+							$db_url_matched_game = $this->fetch_db_game_by_identifier($game_def->url_identifier);
+							
+							if ($db_url_matched_game) {
+								if ($db_url_matched_game['blockchain_id'] == $blockchain->db_blockchain['blockchain_id']) {
+									$url_matched_game = new Game($blockchain, $db_url_matched_game['game_id']);
+									
+									if ($permission_override) $permission_to_change = true;
+									else {
+										if ($thisuser) {
+											$permission_to_change = $this->user_can_edit_game($thisuser, $url_matched_game);
+											
+											if (!$permission_to_change) $error_message .= "Error: you can't edit this game.\n";
+										}
+										else $error_message .= "Permission denied. You must be logged in.\n";
+									}
+									
+									if ($permission_to_change) $game = $url_matched_game;
+								}
+								else $error_message .= "Error: invalid game.blockchain_id.\n";
+							}
+							else $permission_to_change = true;
+							
+							if ($permission_to_change) {
+								if (!$game) {
+									$db_group = false;
+									if (!empty($game_def->option_group)) {
+										$db_group = $this->fetch_group_by_description($game_def->option_group);
+										
+										if (!$db_group) {
+											$import_error = "";
+											$this->import_group_from_file($game_def->option_group, $import_error);
+											
+											$db_group = $this->fetch_group_by_description($game_def->option_group);
+										}
+									}
+									
+									$new_game_q = "INSERT INTO games SET ";
+									if ($thisuser) $new_game_q .= "creator_id='".$thisuser->db_user['user_id']."', ";
+									if ($db_group) $new_game_q .= "option_group_id='".$db_group['group_id']."', ";
+									$new_game_q .= "blockchain_id='".$db_blockchain['blockchain_id']."', game_status='published', featured=1";
+									
+									for ($i=0; $i<count($verbatim_vars); $i++) {
+										$var_type = $verbatim_vars[$i][0];
+										$var_name = $verbatim_vars[$i][1];
+										
+										if ($game_def->$var_name != "") {
+											$new_game_q .= ", ".$var_name."=".$this->quote_escape($game_def->$var_name);
+										}
+									}
+									$new_game_q .= ";";
+									$this->run_query($new_game_q);
+									$game_id = $this->last_insert_id();
+									
+									if (!empty($game_def->module)) {
+										$this->run_query("UPDATE modules SET primary_game_id=".$game_id." WHERE module_name=".$this->quote_escape($game_def->module)." AND primary_game_id IS NULL;");
+									}
+									
+									$game = new Game($blockchain, $game_id);
+								}
+								
+								if (!empty($game_def->definitive_peer)) {
+									$definitive_game_peer = $game->get_game_peer_by_server_name($game_def->definitive_peer);
+									
+									if ($definitive_game_peer) {
+										$this->run_query("UPDATE games SET definitive_game_peer_id='".$definitive_game_peer['game_peer_id']."' WHERE game_id='".$game->db_game['game_id']."';");
+										$game->db_game['definitive_game_peer_id'] = $definitive_game_peer['game_peer_id'];
+									}
+								}
+								
+								$this->run_query("DELETE FROM game_defined_escrow_amounts WHERE game_id='".$game->db_game['game_id']."';");
+								
+								if (!empty($game_def->escrow_amounts)) {
+									foreach ($game_def->escrow_amounts as $currency_identifier => $amount) {
+										$escrow_currency = $this->run_query("SELECT * FROM currencies WHERE short_name_plural='".$currency_identifier."';")->fetch();
+										
+										if ($escrow_currency) {
+											$this->run_query("INSERT INTO game_defined_escrow_amounts SET game_id='".$game->db_game['game_id']."', currency_id='".$escrow_currency['currency_id']."', amount='".$amount."';");
+										}
+									}
+								}
+								
+								$show_internal_params = false;
+								$from_game_def = $this->fetch_game_definition($game, "defined", $show_internal_params);
+								$from_game_def_str = $this->game_def_to_text($from_game_def);
+								$from_game_def_hash = $this->game_def_to_hash($from_game_def_str);
+								$this->check_set_game_definition($from_game_def_hash, $from_game_def_str);
+								
+								$to_game_def_str = $this->game_def_to_text($game_def);
+								$to_game_def_hash = $this->game_def_to_hash($to_game_def_str);
+								$this->check_set_game_definition($to_game_def_hash, $to_game_def_str);
+								
+								if ($from_game_def_hash != $to_game_def_hash) {
+									$error_message .= $this->migrate_game_definitions($game, $from_game_def_hash, $to_game_def_hash);
+								}
+								else $error_message .= "Found no changes to apply.\n";
+								
+								$game->update_db_game();
+								$db_game = $game->db_game;
+							}
+						}
+						else $error_message .= "Error, invalid game URL identifier.\n";
+					}
+					else {
+						if ($new_private_blockchain) {
+							$this->run_query("DELETE FROM blockchains WHERE blockchain_id='".$new_blockchain->db_blockchain['blockchain_id']."';");
+						}
+						$error_message .= "Error, failed to identify the right blockchain.\n";
+					}
+				}
+				else $error_message .= "Error, blockchain url identifier was empty.\n";
+			}
+			else $error_message .= "Error, invalid module.\n";
 		}
 		
 		return $game;
@@ -3305,6 +3319,23 @@ class App {
 	
 	public function set_strategy_time_next_apply($strategy_id, $time_next_apply) {
 		$this->run_query("UPDATE user_strategies SET time_next_apply='".(int)$time_next_apply."' WHERE strategy_id='".(int)$strategy_id."';");
+	}
+	
+	public function load_module_classes() {
+		try {
+			$all_dbs = $this->run_query("SHOW DATABASES;");
+			if ($all_dbs->rowCount() > 0) {
+				try {
+					$all_modules = $this->run_query("SELECT * FROM modules ORDER BY module_id ASC;");
+					
+					while ($module = $all_modules->fetch()) {
+						include(AppSettings::srcPath()."/modules/".$module['module_name']."/".$module['module_name']."GameDefinition.php");
+					}
+				}
+				catch(Exception $ee) {}
+			}
+		}
+		catch (Exception $e) {}
 	}
 }
 ?>
