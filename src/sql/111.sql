@@ -1,0 +1,2 @@
+ALTER TABLE `game_defined_events` ADD `sport_entity_id` INT NULL DEFAULT NULL AFTER `game_id`, ADD `league_entity_id` INT NULL DEFAULT NULL AFTER `sport_entity_id`;
+ALTER TABLE `events` ADD `sport_entity_id` INT NULL DEFAULT NULL AFTER `game_id`, ADD `league_entity_id` INT NULL DEFAULT NULL AFTER `sport_entity_id`;

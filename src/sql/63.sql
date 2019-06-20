@@ -1,0 +1,2 @@
+ALTER TABLE `games` ADD `default_effectiveness_param1` DECIMAL(12,8) NULL DEFAULT NULL AFTER `default_vote_effectiveness_function`;
+ALTER TABLE `event_types` ADD `effectiveness_param1` DECIMAL(12,8) NULL DEFAULT NULL AFTER `vote_effectiveness_function`;

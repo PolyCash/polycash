@@ -1,2 +1,0 @@
-ALTER TABLE `game_blocks` ADD `num_ios_in` INT NULL DEFAULT NULL AFTER `num_transactions`, ADD `num_ios_out` INT NULL DEFAULT NULL AFTER `num_ios_in`, ADD `sum_coins_in` BIGINT NULL DEFAULT NULL AFTER `num_ios_out`, ADD `sum_coins_out` BIGINT NULL DEFAULT NULL AFTER `sum_coins_in`;
-ALTER TABLE `blocks` ADD `num_ios_in` INT NULL DEFAULT NULL AFTER `num_transactions`, ADD `num_ios_out` INT NULL DEFAULT NULL AFTER `num_ios_in`, ADD `sum_coins_in` BIGINT NULL DEFAULT NULL AFTER `num_ios_out`, ADD `sum_coins_out` BIGINT NULL DEFAULT NULL AFTER `sum_coins_in`;

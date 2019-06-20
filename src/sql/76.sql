@@ -1,0 +1,10 @@
+INSERT INTO `images` (`image_id`, `access_key`, `extension`) VALUES ('78', '', 'png'), ('79', '', 'png');
+INSERT INTO currencies SET name='Bitcoin Cash', short_name='bcash', short_name_plural='bitcoins', abbreviation='BCH';
+INSERT INTO currencies SET name='Dash', short_name='dash', short_name_plural='dash', abbreviation='DASH';
+INSERT INTO currencies SET name='Ethereum', short_name='ether', short_name_plural='ether', abbreviation='ETH';
+INSERT INTO currencies SET name='Ethereum Classic', short_name='ether', short_name_plural='ether', abbreviation='ETC';
+INSERT INTO currencies SET name='Monero', short_name='monero', short_name_plural='monero', abbreviation='XMR';
+INSERT INTO currencies SET name='NEM', short_name='xem', short_name_plural='xem', abbreviation='XEM';
+INSERT INTO currencies SET name='NEO', short_name='neo', short_name_plural='neo', abbreviation='NEO';
+INSERT INTO currencies SET name='Ripple', short_name='ripple', short_name_plural='ripples', abbreviation='XRP';
+ALTER TABLE `currency_prices` ADD INDEX (`currency_id`, `reference_currency_id`, `time_added`);
