@@ -1,4 +1,4 @@
-To get started, first please install and secure Apache, MySQL and PHP.  Then create a file src/config/config.json by copying and pasting src/config/example_config.json.
+To get started, first please install and secure Apache, MySQL and PHP.  Set your Apache web root to the "public" folder of this repository.  Then create a file src/config/config.json by copying and pasting src/config/example_config.json.
 
 Make sure to set the following params in your config.json to something like the following:
 ```
@@ -11,13 +11,13 @@ Make sure to set the following params in your config.json to something like the 
 ```
 "cron_key_string" is a parameter which allows a site administrator to perform certain actions like updating the application.  If you are installing PolyCash on a public facing server, be sure to set a secure value for this parameter.
 
-If you want to allow users to log in with an email address enter your sendgrid credentials in to these variables in your config file:
+If you want to allow users to log in with an email address, enter your sendgrid credentials into these variables in your config file:
 ```
 "sendgrid_user": "",
 "sendgrid_pass": ""
 ```
 
-Next, configure cron to poll polycash every minute. This keeps PolyCash in sync at all times. Add this line to your /etc/crontab:
+Next, configure cron to poll PolyCash every minute. This keeps PolyCash in sync at all times. Add this line to your /etc/crontab:
 ```
 * * * * * root /usr/bin/php /var/www/html/polycash/src/cron/minutely.php
 ```

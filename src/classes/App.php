@@ -5,6 +5,7 @@ class App {
 	public function __construct() {
 		$conn = new PDO("mysql:host=".AppSettings::getParam('mysql_server').";charset=utf8", AppSettings::getParam('mysql_user'), AppSettings::getParam('mysql_password')) or die("Error, failed to connect to the database.");
 		$conn->query("USE ".AppSettings::getParam('mysql_database')) or die("Error accessing the '".AppSettings::getParam('mysql_database')."' database, please visit <a href=\"/install.php?key=\">install.php</a>.");
+		$conn->query("SET sql_mode='';");
 		
 		$this->dbh = $conn;
 	}

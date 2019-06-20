@@ -18,7 +18,7 @@ if (count($uri_parts) < 2 || $uri_parts[1] == "") {
 	include($src_path."/includes/connect.php");
 	include($src_path."/includes/get_session.php");
 
-	if (!empty($GLOBALS['homepage_fname'])) include($src_path."/pages/".$GLOBALS['homepage_fname']);
+	if (!empty(AppSettings::getParam('homepage_fname'))) include($src_path."/pages/".AppSettings::getParam('homepage_fname'));
 	else include($src_path."/pages/default.php");
 }
 else if ($requested_filename && is_file($src_path.$requested_filename)) {
