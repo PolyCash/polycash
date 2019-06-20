@@ -1,75 +1,30 @@
-To get started, first please install and secure Apache, MySQL and PHP.  Then create a new file: includes/config.php and paste the following code into this file.  You can also find an example config file in includes/example_config.php
+To get started, first please install and secure Apache, MySQL and PHP.  Set your Apache web root to the "public" folder of this repository.  Then create a file src/config/config.json by copying and pasting src/config/example_config.json.
 
+Make sure to set the following params in your config.json to something like the following:
 ```
-<?php
-$GLOBALS['mysql_server'] = "localhost";
-$GLOBALS['mysql_user'] = "root"; // Enter your mysql username here
-$GLOBALS['mysql_password'] = ""; // Enter your mysql password here
-$GLOBALS['mysql_database'] = "polycash";
+"site_domain": "localhost",
+"mysql_server": "localhost",
+"mysql_user": "root",
+"mysql_password": "somesecurepass",
+"database": "polycash",
+"cron_key_string": "anothersecurepass"
+```
+"cron_key_string" is a parameter which allows a site administrator to perform certain actions like updating the application.  If you are installing PolyCash on a public facing server, be sure to set a secure value for this parameter.
 
-$GLOBALS['signup_captcha_required'] = false;
-$GLOBALS['recaptcha_publickey'] = "";
-$GLOBALS['recaptcha_privatekey'] = "";
-
-$GLOBALS['outbound_email_enabled'] = false;
-$GLOBALS['sendgrid_user'] = "";
-$GLOBALS['sendgrid_pass'] = "";
-
-$GLOBALS['show_query_errors'] = true;
-$GLOBALS['cron_key_string'] = ""; // Enter a random string / password here
-
-$GLOBALS['process_lock_method'] = "db";
-
-$GLOBALS['identifier_case_sensitive'] = 1;
-$GLOBALS['identifier_first_char'] = 2;
-
-$GLOBALS['pageview_tracking_enabled'] = false;
-
-$GLOBALS['currency_price_refresh_seconds'] = 30;
-$GLOBALS['invoice_expiration_seconds'] = 60*60*10;
-
-$GLOBALS['new_games_per_user'] = "unlimited";
-
-$GLOBALS['coin_brand_name'] = "PolyCash";
-$GLOBALS['site_name_short'] = "PolyCash";
-$GLOBALS['site_name'] = "Poly.Cash";
-$GLOBALS['site_domain'] = $_SERVER['SERVER_ADDR']; // Enter your domain name, IP or "localhost" here
-$GLOBALS['base_url'] = "http://".$GLOBALS['site_domain'];
-$GLOBALS['homepage_fname'] = "default.php";
-$GLOBALS['navbar_icon_path'] = "";
-
-$GLOBALS['default_timezone'] = 'America/Chicago';
-
-$GLOBALS['rsa_keyholder_email'] = "";
-$GLOBALS['rsa_pub_key'] = "";
-$GLOBALS['profit_btc_address'] = "";
-
-$GLOBALS['api_proxy_url'] = "";
-
-$GLOBALS['default_server_api_access_key'] = false;
+If you want to allow users to log in with an email address, enter your sendgrid credentials into these variables in your config file:
+```
+"sendgrid_user": "",
+"sendgrid_pass": ""
 ```
 
-Enter the username, password and database name for your MySQL database into your includes/config.php.
-
-Next, configure cron to poll polycash every minute. This keeps PolyCash in sync at all times. Add this line to your /etc/crontab:
+Next, configure cron to poll PolyCash every minute. This keeps PolyCash in sync at all times. Add this line to your /etc/crontab:
 ```
-* * * * * root /usr/bin/php /var/www/html/polycash/cron/minutely.php
+* * * * * root /usr/bin/php /var/www/html/polycash/src/cron/minutely.php
 ```
 
-You can configure outbound emails by setting $GLOBALS['outbound_email_enabled'] = true, and then entering your sendgrid credentials in the following 2 parameters.
-
-Set $GLOBALS['pageview_tracking_enabled'] = true if you want to track all pageviews.  This may help you to detect malicious activity on your server.  If you set $GLOBALS['pageview_tracking_enabled'] = false; no IP addresses or pageviews will be tracked.
-
-Set $GLOBALS['base_url'] to the URL for your server.  If you are running locally, this should be "http://localhost".  If you are using a domain, it should be something like "https://mydomain.com".
-Also enter values for site_name_short, site_name, and site_domain.
-
-Next, use a password generator or otherwise generate a secure random string of at least 10 characters, and enter it into the config file as $GLOBALS['cron_key_string'].  Certain actions such as installing the application should only be accessible by the site administrator; this secret string protects these actions.
+Set "pageview_tracking_enabled" = true in your config.json if you want to track all pageviews.  This may help you to detect malicious activity on your server.  If you don't set this parameter, no IP addresses or pageviews will be tracked.
 
 Next, point your browser to http://localhost/install.php?key=<cron_key_string> where <cron_key_string> is the random string that you generated above.  If Apache, MySQL and PHP are all installed correctly, PolyCash should automatically install.
-
-Follow the instructions on install.php to configure your server for accepting Bitcoin payments and resolving any other potential issues.
-
-After completing this step, visit the home page in your browser, log in and create an account.
 
 Make sure you have curl installed:
 ```
