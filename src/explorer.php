@@ -713,21 +713,21 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						
 						echo '<div style="margin-top: 10px; border-bottom: 1px solid #bbb;">';
 						
-						$relevant_tx_q = "SELECT * FROM transactions t";
-						if ($game) $relevant_tx_q .= " JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id";
-						$relevant_tx_q .= " WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND t.block_id";
-						if ($explore_mode == "unconfirmed") $relevant_tx_q .= " IS NULL";
-						else $relevant_tx_q .= "='".$block['block_id']."'";
-						if ($game) $relevant_tx_q .= " AND gio.game_id='".$game->db_game['game_id']."'";
-						$relevant_tx_q .= " AND t.amount > 0";
-						if ($game) $relevant_tx_q .= " GROUP BY t.transaction_id";
-						$relevant_tx_q .= " ORDER BY t.position_in_block ASC;";
-						$relevant_transactions = $app->run_query($relevant_tx_q);
-						
-						while ($transaction = $relevant_transactions->fetch()) {
-							if ($game) echo $game->render_transaction($transaction, false, false, $coins_per_vote, $last_block_id);
-							else echo $blockchain->render_transaction($transaction, false, false);
+						if ($game) {
+							$relevant_tx_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND t.block_id";
+							if ($explore_mode == "unconfirmed") $relevant_tx_q .= " IS NULL";
+							else $relevant_tx_q .= "='".$block['block_id']."'";
+							$relevant_tx_q .= " AND gio.game_id='".$game->db_game['game_id']."' GROUP BY t.transaction_id ORDER BY t.position_in_block ASC;";
+							$relevant_transactions = $app->run_query($relevant_tx_q);
+							
+							while ($transaction = $relevant_transactions->fetch()) {
+								echo $game->render_transaction($transaction, false, false, $coins_per_vote, $last_block_id);
+							}
 						}
+						else {
+							echo $blockchain->render_transactions_in_block($block, $explore_mode == "unconfirmed");
+						}
+						
 						echo '</div>';
 						echo "<br/>\n";
 						
