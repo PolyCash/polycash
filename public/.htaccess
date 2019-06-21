@@ -4,3 +4,9 @@ RewriteBase /
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule . index.php [L]
+
+<IfModule mod_expires.c>
+ExpiresActive On
+ExpiresByType text/html None
+ExpiresDefault "access 1 year"
+</IfModule>

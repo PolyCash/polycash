@@ -42,3 +42,8 @@ Or run this command:
 ```
 a2enmod rewrite
 ```
+
+For faster page loads, make sure that browser caching is enabled
+```
+a2enmod expires
+```

@@ -72,7 +72,7 @@ if ($uri_parts[1] == "api") {
 		echo $raw;
 	}
 	else if ($uri_parts[2] == "card" || $uri_parts[2] == "cards") {
-		$this_peer = $app->get_peer_by_server_name(AppSettings::getParam('base_url') true);
+		$this_peer = $app->get_peer_by_server_name(AppSettings::getParam('base_url'), true);
 		
 		if ($uri_parts[2] == "card" && !empty($uri_parts[4]) && !empty($uri_parts[5]) && $uri_parts[4] == "check") {
 			$card_id = (int) $uri_parts[3];
