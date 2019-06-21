@@ -140,6 +140,7 @@ class Blockchain {
 				
 				if (!$tx_error) {
 					$this->app->run_query("UPDATE blocks SET locally_saved=1, time_loaded='".time()."' WHERE internal_block_id='".$db_block['internal_block_id']."';");
+					$db_block['locally_saved'] = 1;
 					$this->render_transactions_in_block($db_block, false);
 				}
 				$this->set_block_stats($db_block);
@@ -209,6 +210,7 @@ class Blockchain {
 			$update_block_q = "UPDATE blocks SET ";
 			if (!$tx_error) {
 				$update_block_q .= "locally_saved=1, time_loaded='".time()."', ";
+				$db_block['locally_saved'] = 1;
 				$this->render_transactions_in_block($db_block, false);
 			}
 			$update_block_q .= "load_time=load_time+".(microtime(true)-$start_time)." WHERE internal_block_id='".$db_block['internal_block_id']."';";
@@ -1130,9 +1132,9 @@ class Blockchain {
 			while ($input = $tx_inputs->fetch()) {
 				$amount_disp = $this->app->format_bignum($input['amount']/pow(10,$this->db_blockchain['decimal_places']));
 				$html .= '<p>';
-				$html .= '<a class="display_address" style="';
-				if ($input['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
-				$html .= '" href="/explorer/blockchains/'.$this->db_blockchain['url_identifier'].'/addresses/'.$input['address'].'">';
+				$html .= '<a class="display_address"';
+				if ($input['address_id'] == $selected_address_id) $html .= ' style="font-weight: bold; color: #000;"';
+				$html .= ' href="/explorer/blockchains/'.$this->db_blockchain['url_identifier'].'/addresses/'.$input['address'].'">';
 				if ($input['is_destroy'] == 1) $html .= '[D] ';
 				if ($input['is_separator'] == 1) $html .= '[S] ';
 				$html .= $input['address'].'</a>';
@@ -1156,9 +1158,9 @@ class Blockchain {
 		$output_sum = 0;
 		while ($output = $tx_outputs->fetch()) {
 			$html .= '<p>';
-			$html .= '<a class="display_address" style="';
-			if ($output['address_id'] == $selected_address_id) $html .= " font-weight: bold; color: #000;";
-			$html .= '" href="/explorer/blockchains/'.$this->db_blockchain['url_identifier'].'/addresses/'.$output['address'].'">';
+			$html .= '<a class="display_address"';
+			if ($output['address_id'] == $selected_address_id) $html .= ' style="font-weight: bold; color: #000;"';
+			$html .= ' href="/explorer/blockchains/'.$this->db_blockchain['url_identifier'].'/addresses/'.$output['address'].'">';
 			if ($output['is_destroy'] == 1) $html .= '[D] ';
 			if ($output['is_separator'] == 1) $html .= '[S] ';
 			$html .= $output['address']."</a><br/>\n";
@@ -1556,6 +1558,8 @@ class Blockchain {
 		}
 		
 		$this->app->run_query("UPDATE blocks SET num_transactions=".$num_transactions.", locally_saved=1 WHERE internal_block_id='".$internal_block_id."';");
+		$block['locally_saved'] = 1;
+		$block['num_transactions'] = $num_transactions;
 		$this->set_block_stats($block);
 		$this->render_transactions_in_block($block, false);
 		

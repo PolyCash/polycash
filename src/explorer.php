@@ -221,7 +221,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				
 				if ($game) $pagetitle = $game->db_game['name'];
 				else $pagetitle = $blockchain->db_blockchain['blockchain_name'];
-				$pagetitle = " Transaction: ".$transaction['tx_hash'];
+				$pagetitle .= " Transaction: ".$transaction['tx_hash'];
 			}
 		}
 	}
