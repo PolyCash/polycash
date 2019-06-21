@@ -56,19 +56,11 @@ class Blockchain {
 	public function last_complete_block_id() {
 		$complete_block_q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."'";
 		if (!empty($this->db_blockchain['first_required_block'])) $complete_block_q .= " AND block_id >= ".$this->db_blockchain['first_required_block'];
-		$complete_block_q .= " AND locally_saved=0 ORDER BY block_id ASC LIMIT 1;";
+		$complete_block_q .= " AND locally_saved=1 ORDER BY block_id DESC LIMIT 1;";
 		$block = $this->app->run_query($complete_block_q)->fetch();
 		
-		if ($block) return $block['block_id']-1;
-		else {
-			$complete_block_q = "SELECT * FROM blocks WHERE blockchain_id='".$this->db_blockchain['blockchain_id']."'";
-			if (!empty($this->db_blockchain['first_required_block'])) $complete_block_q .= " AND block_id >= ".$this->db_blockchain['first_required_block'];
-			$complete_block_q .= " AND locally_saved=1 ORDER BY block_id DESC LIMIT 1;";
-			$block = $this->app->run_query($complete_block_q)->fetch();
-			
-			if ($block) return $block['block_id'];
-			else return 0;
-		}
+		if ($block) return $block['block_id'];
+		else return $this->db_blockchain['first_required_block']-1;
 	}
 	
 	public function most_recently_loaded_block() {
@@ -148,6 +140,7 @@ class Blockchain {
 				
 				if (!$tx_error) {
 					$this->app->run_query("UPDATE blocks SET locally_saved=1, time_loaded='".time()."' WHERE internal_block_id='".$db_block['internal_block_id']."';");
+					$this->render_transactions_in_block($db_block, false);
 				}
 				$this->set_block_stats($db_block);
 				
@@ -216,6 +209,7 @@ class Blockchain {
 			$update_block_q = "UPDATE blocks SET ";
 			if (!$tx_error) {
 				$update_block_q .= "locally_saved=1, time_loaded='".time()."', ";
+				$this->render_transactions_in_block($db_block, false);
 			}
 			$update_block_q .= "load_time=load_time+".(microtime(true)-$start_time)." WHERE internal_block_id='".$db_block['internal_block_id']."';";
 			$this->app->run_query($update_block_q);
@@ -1082,6 +1076,29 @@ class Blockchain {
 		return $html;
 	}
 	
+	public function render_transactions_in_block(&$block, $unconfirmed_only) {
+		if (!$unconfirmed_only && $block['locally_saved'] == 1 && !empty($block['transactions_html'])) return $block['transactions_html'];
+		else {
+			$html = "";
+			
+			$relevant_tx_q = "SELECT * FROM transactions t WHERE t.blockchain_id='".$this->db_blockchain['blockchain_id']."' AND t.block_id";
+			if ($unconfirmed_only) $relevant_tx_q .= " IS NULL";
+			else $relevant_tx_q .= "='".$block['block_id']."'";
+			$relevant_tx_q .= " ORDER BY t.position_in_block ASC;";
+			$relevant_transactions = $this->app->run_query($relevant_tx_q);
+			
+			while ($transaction = $relevant_transactions->fetch()) {
+				$html .= $this->render_transaction($transaction, false, false);
+			}
+			
+			if (!$unconfirmed_only && $block['locally_saved'] == 1) {
+				$this->app->run_query("UPDATE blocks SET transactions_html=".$this->app->quote_escape($html)." WHERE internal_block_id='".$block['internal_block_id']."';");
+				$block['transactions_html'] = $html;
+			}
+			return $html;
+		}
+	}
+	
 	public function render_transaction($transaction, $selected_address_id, $selected_io_id) {
 		$html = "";
 		$html .= '<div class="row bordered_row"><div class="col-md-12">';
@@ -1539,8 +1556,8 @@ class Blockchain {
 		}
 		
 		$this->app->run_query("UPDATE blocks SET num_transactions=".$num_transactions.", locally_saved=1 WHERE internal_block_id='".$internal_block_id."';");
-		
 		$this->set_block_stats($block);
+		$this->render_transactions_in_block($block, false);
 		
 		return $created_block_id;
 	}
