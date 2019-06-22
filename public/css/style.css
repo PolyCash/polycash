@@ -1,5 +1,6 @@
 html, body {
 	overflow-x: hidden;
+	font-display: swap;
 }
 .polycash_header {
 	position: relative;

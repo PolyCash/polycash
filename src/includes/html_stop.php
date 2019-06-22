@@ -104,10 +104,6 @@ if (AppSettings::getParam('signup_captcha_required')) { ?>
 <script type='text/javascript' src='https://www.google.com/recaptcha/api.js'></script>
 <?php } ?>
 
-<link rel="stylesheet" type="text/css" href="/css/jquery.ui.css" />
-<link rel="stylesheet" type="text/css" href="/css/jquery.nouislider.css" />
-<link rel="stylesheet" type="text/css" href="/css/fontawesome-all.min.css" media="screen" />
-
 <?php
 $left_menu_open = 1;
 if (AppSettings::getParam('pageview_tracking_enabled')) {
