@@ -17,15 +17,25 @@ if ($thisuser && $game) {
 				if ($action == "send") {
 					$message = $app->strong_strip_tags($_REQUEST['message']);
 					
-					if ($message != "") {
-						$app->run_query("INSERT INTO user_messages SET game_id='".$game->db_game['game_id']."', from_user_id='".$thisuser->db_user['user_id']."', to_user_id='".$to_user->db_user['user_id']."', message=".$app->quote_escape($message).", send_time='".time()."';");
+					if (!empty($message)) {
+						$app->run_query("INSERT INTO user_messages SET game_id=:game_id, from_user_id=:from_user_id, to_user_id=:to_user_id, message=:message, send_time=:send_time;", [
+							'game_id' => $game->db_game['game_id'],
+							'from_user_id' => $thisuser->db_user['user_id'],
+							'to_user_id' => $to_user->db_user['user_id'],
+							'message' => $message,
+							'send_time' => time()
+						]);
 					}
 				}
 				
 				$output_obj['username'] = "Player".$to_user->db_user['user_id'];
 				$output_obj['content'] = "";
 
-				$thread_messages = $app->run_query("SELECT * FROM user_messages WHERE game_id=".$game->db_game['game_id']." AND ((from_user_id=".$thisuser->db_user['user_id']." AND to_user_id=".$to_user->db_user['user_id'].") OR (from_user_id=".$to_user->db_user['user_id']." AND to_user_id='".$thisuser->db_user['user_id']."'));");
+				$thread_messages = $app->run_query("SELECT * FROM user_messages WHERE game_id=:game_id AND ((from_user_id=:from_user_id AND to_user_id=:to_user_id) OR (from_user_id=:to_user_id AND to_user_id=:from_user_id));", [
+					'game_id' => $game->db_game['game_id'],
+					'from_user_id' => $thisuser->db_user['user_id'],
+					'to_user_id' => $to_user->db_user['user_id']
+				]);
 				
 				while ($message = $thread_messages->fetch()) {
 					$time_disp = $app->format_seconds(time()-$message['send_time']).' ago';
@@ -38,7 +48,11 @@ if ($thisuser && $game) {
 					$output_obj['content'] .= $message['message'].'</div></div>';
 				}
 				
-				$app->run_query("UPDATE user_messages SET seen=1 WHERE game_id='".$game->db_game['game_id']."' AND to_user_id='".$thisuser->db_user['user_id']."' AND from_user_id='".$to_user->db_user['user_id']."';");
+				$app->run_query("UPDATE user_messages SET seen=1 WHERE game_id=:game_id AND to_user_id=:to_user_id AND from_user_id=:from_user_id;", [
+					'game_id' => $game->db_game['game_id'],
+					'to_user_id' => $thisuser->db_user['user_id'],
+					'from_user_id' => $to_user->db_user['user_id']
+				]);
 			}
 		}
 	}

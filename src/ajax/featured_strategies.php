@@ -21,7 +21,9 @@ if ($game) {
 		$previous_rounds = 3;
 		$current_event = $game->current_events[0];
 		
-		$featured_strategies = $app->run_query("SELECT * FROM featured_strategies fs LEFT JOIN currency_accounts ca ON fs.reference_account_id=ca.account_id WHERE fs.game_id='".$game->db_game['game_id']."';");
+		$featured_strategies = $app->run_query("SELECT * FROM featured_strategies fs LEFT JOIN currency_accounts ca ON fs.reference_account_id=ca.account_id WHERE fs.game_id=:game_id;", [
+			'game_id' => $game->db_game['game_id']
+		]);
 		
 		while ($featured_strategy = $featured_strategies->fetch()) {
 			if ($featured_strategy['account_id'] > 0) {
@@ -29,11 +31,17 @@ if ($game) {
 				$performances = array();
 				
 				for ($i=0; $i<$previous_rounds; $i++) {
-					$first_prev_event = $app->run_query("SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block<".$event_ref_block." ORDER BY event_index DESC;")->fetch();
+					$first_prev_event = $app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_starting_block<:event_ref_block ORDER BY event_index DESC;", [
+						'game_id' => $game->db_game['game_id'],
+						'event_ref_block' => $event_ref_block
+					])->fetch();
 					$event_ref_block = $first_prev_event['event_starting_block'];
 					
 					if ($featured_strategy['reference_starting_block'] <= $first_prev_event['event_starting_block']) {
-						$ref_performance_events = $app->run_query("SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block='".$first_prev_event['event_starting_block']."' ORDER BY event_index ASC;");
+						$ref_performance_events = $app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_starting_block=:block_id ORDER BY event_index ASC;", [
+							'game_id' => $game->db_game['game_id'],
+							'block_id' => $first_prev_event['event_starting_block']
+						]);
 						
 						while ($db_event = $ref_performance_events->fetch()) {
 							$bal1 = $game->account_balance_at_block($featured_strategy['account_id'], $db_event['event_final_block'], false);

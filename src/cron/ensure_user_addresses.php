@@ -20,7 +20,7 @@ if ($app->running_as_admin()) {
 		$script_target_time = 49;
 		$loop_target_time = 10;
 		
-		$db_running_games = $app->run_query("SELECT * FROM games WHERE game_status='running';")->fetchAll();
+		$db_running_games = $app->fetch_running_games()->fetchAll();
 		$running_games = [];
 		$blockchains = [];
 		
@@ -36,7 +36,10 @@ if ($app->running_as_admin()) {
 			list($from_option_index, $to_option_index) = $running_games[$game_i]->option_index_range();
 			
 			if ($to_option_index !== false) {
-				$user_games = $app->run_query("SELECT * FROM user_games ug JOIN currency_accounts ca ON ug.account_id=ca.account_id WHERE ug.game_id='".$running_games[$game_i]->db_game['game_id']."' AND ca.has_option_indices_until<".$to_option_index." ORDER BY ca.account_id ASC;");
+				$user_games = $app->run_query("SELECT * FROM user_games ug JOIN currency_accounts ca ON ug.account_id=ca.account_id WHERE ug.game_id=:game_id AND ca.has_option_indices_until<:to_option_index ORDER BY ca.account_id ASC;", [
+					'game_id' => $running_games[$game_i]->db_game['game_id'],
+					'to_option_index' => $to_option_index
+				]);
 				
 				if ($print_debug) {
 					echo "Looping through ".$user_games->rowCount()." users for ".$running_games[$game_i]->db_game['name'].".<br/>\n";
@@ -64,16 +67,22 @@ if ($app->running_as_admin()) {
 			list($from_option_index, $to_option_index) = $running_games[$game_i]->option_index_range();
 			
 			if ($to_option_index !== false) {
-				$game_addrsets = $app->run_query("SELECT * FROM address_sets WHERE game_id='".$running_games[$game_i]->db_game['game_id']."' AND applied=0;")->fetchAll();
+				$game_addrsets = $app->run_query("SELECT * FROM address_sets WHERE game_id=:game_id AND applied=0;", [
+					'game_id' => $running_games[$game_i]->db_game['game_id']
+				])->fetchAll();
 				
 				if (count($game_addrsets) < $buffer_address_sets) {
 					$num_sets_needed = $buffer_address_sets-count($game_addrsets);
 					
 					for ($new_addrset_i=0; $new_addrset_i<$num_sets_needed; $new_addrset_i++) {
-						$app->run_query("INSERT INTO address_sets SET game_id='".$running_games[$game_i]->db_game['game_id']."';");
+						$app->run_query("INSERT INTO address_sets SET game_id=:game_id;", [
+							'game_id' => $running_games[$game_i]->db_game['game_id']
+						]);
 					}
 					
-					$game_addrsets = $app->run_query("SELECT * FROM address_sets WHERE game_id='".$running_games[$game_i]->db_game['game_id']."' AND applied=0;")->fetchAll();
+					$game_addrsets = $app->run_query("SELECT * FROM address_sets WHERE game_id=:game_id AND applied=0;", [
+						'game_id' => $running_games[$game_i]->db_game['game_id']
+					])->fetchAll();
 				}
 				
 				$gen_sets_successful = $app->finish_address_sets($running_games[$game_i], $game_addrsets, $to_option_index);
@@ -86,7 +95,7 @@ if ($app->running_as_admin()) {
 		
 		foreach ($blockchains as $blockchain_id => $blockchain) {
 			if ($blockchain->db_blockchain['p2p_mode'] == "rpc" && empty($need_address_blockchain_ids[$blockchain_id])) {
-				$unallocated_separator_info = $app->run_query("SELECT COUNT(*) FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$blockchain_id."' AND a.option_index=1 AND k.account_id IS NULL AND a.address_set_id IS NULL;")->fetch();
+				$unallocated_separator_info = $app->run_query("SELECT COUNT(*) FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id=:blockchain_id AND a.option_index=1 AND k.account_id IS NULL AND a.address_set_id IS NULL;", ['blockchain_id'=>$blockchain_id])->fetch();
 				
 				if ((int)$unallocated_separator_info['COUNT(*)'] < $min_unallocated_separators) {
 					$need_address_blockchain_ids[$blockchain_id] = true;
@@ -106,7 +115,9 @@ if ($app->running_as_admin()) {
 		}
 		
 		if (count($need_address_blockchain_ids) > 0) {
-			$need_address_db_blockchains = $app->run_query("SELECT * FROM blockchains WHERE blockchain_id IN (".implode(",", $need_address_blockchain_ids).");")->fetchAll();
+			$need_address_db_blockchains = $app->run_query("SELECT * FROM blockchains WHERE blockchain_id IN (:need_address_blockchain_ids);", [
+				'need_address_blockchain_ids' => implode(",", $need_address_blockchain_ids)
+			])->fetchAll();
 			$blockchain_loop_i = 0;
 			
 			do {

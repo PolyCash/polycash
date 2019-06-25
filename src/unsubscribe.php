@@ -7,7 +7,7 @@ $pagetitle = "Unsubscribe";
 if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "unsubscribe") {
 	$email = $_REQUEST['unsubscribe_email'];
 	
-	$app->run_query("UPDATE newsletter_subscribers SET subscribed=0 WHERE email_address=".$app->quote_escape($email).";");
+	$app->run_query("UPDATE newsletter_subscribers SET subscribed=0 WHERE email_address=:email_address;", ['email_address' => $email]);
 	
 	$error_message = "You have been unsubscribed";
 }

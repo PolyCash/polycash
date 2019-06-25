@@ -17,16 +17,27 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 		$token_id = intval($_REQUEST['tid']);
 		$token_key = $_REQUEST['reset_key'];
 		
-		$reset_token = $app->run_query("SELECT * FROM user_resettokens WHERE token_id=".$token_id." AND token_key=".$app->quote_escape($token_key).";")->fetch();
+		$reset_token = $app->run_query("SELECT * FROM user_resettokens WHERE token_id=:token_id AND token_key=:token_key;", [
+			'token_id' => $token_id,
+			'token_key' => $token_key
+		])->fetch();
 		
 		if ($reset_token) {
 			if ($reset_token['firstclick_time'] == 0 && $reset_token['expire_time'] > time()) {
 				$user = $app->fetch_user_by_id($reset_token['user_id']);
 				
-				$update_resettoken_q = "UPDATE user_resettokens SET firstclick_time='".time()."'";
-				if (AppSettings::getParam('pageview_tracking_enabled')) $update_resettoken_q .= ", firstclick_ip=".$app->quote_escape($_SERVER['REMOTE_ADDR']);
-				$update_resettoken_q .= ", firstclick_viewer_id='".$viewer_id."' WHERE token_id='".$reset_token['token_id']."';";
-				$app->run_query($update_resettoken_q);
+				$update_resettoken_params = [
+					'firstclick_time' => time(),
+					'token_id' => $reset_token['token_id']
+				];
+				$update_resettoken_q = "UPDATE user_resettokens SET firstclick_time=:firstclick_time";
+				if (AppSettings::getParam('pageview_tracking_enabled')) {
+					$update_resettoken_q .= ", firstclick_ip=:firstclick_ip, firstclick_viewer_id=:viewer_id";
+					$update_resettoken_params['firstclick_ip'] = $_SERVER['REMOTE_ADDR'];
+					$update_resettoken_params['viewer_id'] = $viewer_id;
+				}
+				$update_resettoken_q .= " WHERE token_id=:token_id;";
+				$app->run_query($update_resettoken_q, $update_resettoken_params);
 				?>
 				Please enter a new password for your user account:<br/>
 				<form action="/reset_password/" method="post" onsubmit="$('#reset_password').val(Sha256.hash($('#reset_password').val())); $('#reset_password_confirm').val(Sha256.hash($('#reset_password_confirm').val()));">
@@ -70,7 +81,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 	else if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "reset_confirm") {
 		$token_id = intval($_REQUEST['tid']);
 		
-		$reset_token = $app->run_query("SELECT * FROM user_resettokens WHERE token_id=".$token_id.";")->fetch();
+		$reset_token = $app->run_query("SELECT * FROM user_resettokens WHERE token_id=:token_id;", ['token_id' => $token_id])->fetch();
 		
 		if ($reset_token) {
 			$token2_key = $_REQUEST['token2'];
@@ -85,11 +96,16 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 					$db_reset_user = $app->fetch_user_by_id($reset_token['user_id']);
 					
 					if ($db_reset_user) {
-						$app->run_query("UPDATE users SET password=".$app->quote_escape($app->normalize_password($password, $db_reset_user['salt']))." WHERE user_id=".$db_reset_user['user_id'].";");
+						$app->run_query("UPDATE users SET password=:password WHERE user_id=:user_id;", [
+							'password' => $app->normalize_password($password, $db_reset_user['salt']),
+							'user_id' => $db_reset_user['user_id']
+						]);
 						
 						$reset_success = true;
 						
-						$app->run_query("UPDATE user_resettokens SET completed=2 WHERE token_id=".$reset_token['token_id'].";");
+						$app->run_query("UPDATE user_resettokens SET completed=2 WHERE token_id=:token_id;", [
+							'token_id' => $reset_token['token_id']
+						]);
 					}
 				}
 				
@@ -99,7 +115,9 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 				else {
 					echo "The passwords that you entered didn't match, please <a href=\"/reset_password/\">click here</a> to try again.<br/><br/>\n";
 					
-					$app->run_query("UPDATE user_resettokens SET completed=1 WHERE token_id='".$reset_token['token_id']."';");
+					$app->run_query("UPDATE user_resettokens SET completed=1 WHERE token_id=:token_id;", [
+						'token_id' => $reset_token['token_id']
+					]);
 				}
 			}
 			else {

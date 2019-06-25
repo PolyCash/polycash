@@ -23,7 +23,7 @@ if ($app->running_as_admin()) {
 	}
 	else if (!empty($_REQUEST['game_id'])) {
 		$game_id = (int) $_REQUEST['game_id'];
-		$db_game = $app->fetch_db_game_by_id($game_id);
+		$db_game = $app->fetch_game_by_id($game_id);
 		
 		if ($db_game) {
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);

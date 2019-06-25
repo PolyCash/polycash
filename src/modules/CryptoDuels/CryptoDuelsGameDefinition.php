@@ -77,7 +77,7 @@ class CryptoDuelsGameDefinition {
 		$this->currencies = array();
 		$this->name2currency_index = [];
 		
-		$members = $this->app->run_query("SELECT *, en.entity_id AS entity_id FROM option_group_memberships m JOIN entities en ON m.entity_id=en.entity_id JOIN currencies c ON en.entity_name=c.name WHERE m.option_group_id='".$game->db_game['option_group_id']."' ORDER BY m.membership_id ASC;");
+		$members = $this->app->run_query("SELECT *, en.entity_id AS entity_id FROM option_group_memberships m JOIN entities en ON m.entity_id=en.entity_id JOIN currencies c ON en.entity_name=c.name WHERE m.option_group_id=:option_group_id ORDER BY m.membership_id ASC;", ['option_group_id' => $game->db_game['option_group_id']]);
 		$currency_index = 0;
 		
 		while ($db_member = $members->fetch()) {
@@ -165,7 +165,7 @@ class CryptoDuelsGameDefinition {
 			if ($db_option['name'] != "Bitcoin") {
 				$poloniex_url = "https://poloniex.com/public?command=returnTradeHistory&currencyPair=BTC_".$currency_code."&start=".$start_time."&end=".$final_time;
 				
-				$db_currency = $this->app->run_query("SELECT * FROM currencies WHERE name=".$this->app->quote_escape($db_option['name']).";")->fetch();
+				$db_currency = $this->app->fetch_currency_by_name($db_option['name']);
 				$currency_price = $this->app->currency_price_at_time($db_currency['currency_id'], $btc_currency['currency_id'], $start_time);
 				
 				if (!empty($currency_price['time_added'])) $last_price_time = $currency_price['time_added'];
@@ -175,7 +175,7 @@ class CryptoDuelsGameDefinition {
 				$poloniex_trades = json_decode($poloniex_response['cached_result'], true);
 				$cached_url = $this->app->cached_url_info($poloniex_url);
 				
-				$num_cached_prices = (int)$this->app->run_query("SELECT COUNT(*) FROM currency_prices WHERE cached_url_id='".$cached_url['cached_url_id']."';")->fetch()['COUNT(*)'];
+				$num_cached_prices = (int)$this->app->run_query("SELECT COUNT(*) FROM currency_prices WHERE cached_url_id=:cached_url_id;", ['cached_url_id' => $cached_url['cached_url_id']])->fetch()['COUNT(*)'];
 				
 				if ($num_cached_prices == 0) {
 					$start_q = "INSERT INTO currency_prices (cached_url_id, currency_id, reference_currency_id, price, time_added) VALUES ";
@@ -197,7 +197,7 @@ class CryptoDuelsGameDefinition {
 							}
 							else $modulo++;
 							
-							$new_prices_q .= "('".$cached_url['cached_url_id']."', '".$db_currency['currency_id']."', '".$btc_currency['currency_id']."', '".$trade['rate']."', '".$trade_time."'), ";
+							$new_prices_q .= "('".$cached_url['cached_url_id']."', '".$db_currency['currency_id']."', '".$btc_currency['currency_id']."', ".$this->app->quote_escape($trade['rate']).", ".$this->app->quote_escape($trade_time)."), ";
 							
 							$last_price_time = $trade_time;
 						}
@@ -226,9 +226,13 @@ class CryptoDuelsGameDefinition {
 			$loop_index++;
 		}
 		
-		$this->app->run_query("UPDATE game_defined_events SET outcome_index=".$best_performance_index." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$payout_event->db_event['event_index']."';");
+		$game->set_game_defined_outcome($payout_event->db_event['event_index'], $best_performance_index);
 		
-		$this->app->run_query("UPDATE events SET outcome_index=".$best_performance_index." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$payout_event->db_event['event_index']."';");
+		$this->app->run_query("UPDATE events SET outcome_index=:outcome_index WHERE game_id=:game_id AND event_index=:event_index;", [
+			'outcome_index' => $best_performance_index,
+			'game_id' => $game->db_game['game_id'],
+			'event_index' => $payout_event->db_event['event_index']
+		]);
 		
 		$payout_event->db_event['outcome_index'] = $best_performance_index;
 		
@@ -253,7 +257,11 @@ class CryptoDuelsGameDefinition {
 				$code = $this->currency_name_to_code[$db_option['name']];
 				$this_currency = $this->currencies[$this->name2currency_index[$db_option['name']]];
 				
-				$this->app->run_query("DELETE FROM currency_prices WHERE currency_id='".$this_currency['currency_id']."' AND time_added>".$from_time." AND time_added<".$to_time.";");
+				$this->app->run_query("DELETE FROM currency_prices WHERE currency_id=:currency_id AND time_added>:from_time AND time_added<:to_time;", [
+					'currency_id' => $this_currency['currency_id'],
+					'from_time' => $from_time,
+					'to_time' => $to_time
+				]);
 				
 				$new_prices_q = $start_q;
 				$modulo = 0;
@@ -278,7 +286,7 @@ class CryptoDuelsGameDefinition {
 							}
 							else $modulo++;
 							
-							$new_prices_q .= "('".$cached_url['cached_url_id']."', '".$this_currency['currency_id']."', '".$btc_currency['currency_id']."', '".$trade['rate']."', '".$trade_time."'), ";
+							$new_prices_q .= "('".$cached_url['cached_url_id']."', '".$this_currency['currency_id']."', '".$btc_currency['currency_id']."', ".$this->app->quote_escape($trade['rate']).", ".$this->app->quote_escape($trade_time)."), ";
 						}
 					}
 				}
@@ -335,7 +343,7 @@ class CryptoDuelsGameDefinition {
 					}
 					else $modulo++;
 					
-					$new_prices_q .= "('".$cached_url['cached_url_id']."', '".$this->currencies[$i]['currency_id']."', '".$btc_currency['currency_id']."', '".$trade['rate']."', '".$trade_time."'), ";
+					$new_prices_q .= "('".$cached_url['cached_url_id']."', '".$this->currencies[$i]['currency_id']."', '".$btc_currency['currency_id']."', ".$this->app->quote_escape($trade['rate']).", ".$this->app->quote_escape($trade_time)."), ";
 				}
 			}
 			

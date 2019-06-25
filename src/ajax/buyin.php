@@ -17,7 +17,7 @@ if ($thisuser && $game) {
 			$game_sale_amount = $game->account_balance($game_sale_account['account_id']);
 		}
 		else {
-			$buyin_currency = $app->run_query("SELECT * FROM currencies WHERE blockchain_id='".$game->db_game['blockchain_id']."';")->fetch();
+			$buyin_currency = $app->fetch_currency_by_id($game->blockchain->currency_id());
 			$escrow_address = $game->blockchain->create_or_fetch_address($game->db_game['escrow_address'], true, false, false, false, false);
 			$escrow_value = $game->escrow_value(false)/pow(10, $game->db_game['decimal_places']);
 			$pay_to_account = $thisuser->fetch_currency_account($buyin_currency['currency_id']);
@@ -52,12 +52,20 @@ if ($thisuser && $game) {
 			$pay_amount = $buyin_amount+$color_amount;
 			$receive_amount = $buyin_amount*$exchange_rate;
 			
-			$invoice = $app->run_query("SELECT * FROM currency_invoices ci JOIN user_games ug ON ci.user_game_id=ug.user_game_id WHERE ci.invoice_id='".$invoice_id."' AND ci.user_game_id='".$user_game['user_game_id']."';")->fetch();
+			$invoice = $app->run_query("SELECT * FROM currency_invoices ci JOIN user_games ug ON ci.user_game_id=ug.user_game_id WHERE ci.invoice_id=:invoice_id AND ci.user_game_id=:user_game_id;", [
+				'invoice_id' => $invoice_id,
+				'user_game_id' => $user_game['user_game_id']
+			])->fetch();
 			
 			if ($invoice) {
 				$invoice_address = $app->fetch_address_by_id($invoice['address_id']);
 				
-				$app->run_query("UPDATE currency_invoices SET buyin_amount='".$buyin_amount."', color_amount='".$color_amount."', pay_amount='".$pay_amount."' WHERE invoice_id='".$invoice['invoice_id']."';");
+				$app->run_query("UPDATE currency_invoices SET buyin_amount=:buyin_amount, color_amount=:color_amount, pay_amount=:pay_amount WHERE invoice_id=:invoice_id;", [
+					'buyin_amount' => $buyin_amount,
+					'color_amount' => $color_amount,
+					'pay_amount' => $pay_amount,
+					'invoice_id' => $invoice['invoice_id']
+				]);
 				
 				if ($game->db_game['buyin_policy'] == "for_sale") {
 					$max_buyin_amount = $game_sale_amount/pow(10, $game->db_game['decimal_places'])/$exchange_rate;

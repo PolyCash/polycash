@@ -15,8 +15,9 @@ $blockchain = false;
 $user_game = false;
 
 if ($uri_parts[2] == "games") {
-	$db_game = $app->run_query("SELECT * FROM games WHERE url_identifier=".$app->quote_escape($game_identifier)." AND (game_status IN ('running','completed','published'));")->fetch();
-	if ($db_game) {
+	$db_game = $app->fetch_game_by_identifier($game_identifier);
+	
+	if ($db_game && in_array($db_game['game_status'], ['running','completed','published'])) {
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$game = new Game($blockchain, $db_game['game_id']);
 		
@@ -109,11 +110,15 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 			$block_id = (int) $block_id_str;
 			
 			if ($game) {
-				$block_q = "SELECT b.time_mined, b.block_hash, gb.*, gb.load_time AS game_load_time FROM blocks b JOIN game_blocks gb ON b.block_id=gb.block_id WHERE b.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND b.block_id='".$block_id."' AND gb.game_id='".$game->db_game['game_id']."';";
+				$block = $app->run_query("SELECT b.time_mined, b.block_hash, gb.*, gb.load_time AS game_load_time FROM blocks b JOIN game_blocks gb ON b.block_id=gb.block_id WHERE b.blockchain_id=:blockchain_id AND b.block_id=:block_id AND gb.game_id=:game_id;", [
+					'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
+					'block_id' => $block_id,
+					'game_id' => $game->db_game['game_id']
+				])->fetch();
 			}
-			else $block_q = "SELECT * FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_id='".$block_id."';";
-			
-			$block = $app->run_query($block_q)->fetch();
+			else {
+				$block = $blockchain->fetch_block_by_id($block_id);
+			}
 			
 			if ($block) {
 				$mode_error = false;
@@ -123,9 +128,16 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				$pagetitle .= " Block #".$block['block_id'];
 			}
 			else {
-				if ($game) $block_q = "SELECT b.time_mined, b.block_hash, gb.*, gb.load_time AS game_load_time FROM blocks b JOIN game_blocks gb ON b.block_id=gb.block_id WHERE b.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND b.block_hash=".$app->quote_escape($uri_parts[5])." AND gb.game_id='".$game->db_game['game_id']."';";
-				else $block_q = "SELECT * FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_hash=".$app->quote_escape($uri_parts[5]).";";
-				$block = $app->run_query($block_q)->fetch();
+				if ($game) {
+					$block = $app->run_query("SELECT b.time_mined, b.block_hash, gb.*, gb.load_time AS game_load_time FROM blocks b JOIN game_blocks gb ON b.block_id=gb.block_id WHERE b.blockchain_id=:blockchain_id AND b.block_hash=:block_hash AND gb.game_id=:game_id;", [
+						'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
+						'block_hash' => $uri_parts[5],
+						'game_id' => $game->db_game['game_id']
+					])->fetch();
+				}
+				else {
+					$block = $blockchain->fetch_block_by_hash($uri_parts[5]);
+				}
 				
 				if ($block) {
 					$mode_error = false;
@@ -144,25 +156,32 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 			$io_tx = $blockchain->fetch_transaction_by_hash($tx_hash);
 			
 			if ($io_tx) {
+				$io_params = [
+					'create_transaction_id' => $io_tx['transaction_id'],
+					'out_index' => $out_index
+				];
+				
 				if ($game) {
-					$io_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$io_tx['transaction_id']."' AND gio.game_id='".$game->db_game['game_id']."' AND gio.game_out_index='".$out_index."';";
-					$io_r = $app->run_query($io_q);
+					$io_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:create_transaction_id AND gio.game_id=:game_id AND gio.game_out_index=:out_index;";
+					$io_params['game_id'] = $game->db_game['game_id'];
 				}
 				else {
-					$io_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id='".$io_tx['transaction_id']."' AND io.out_index='".$out_index."';";
-					$io_r = $app->run_query($io_q);
+					$io_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:create_transaction_id AND io.out_index=:out_index;";
 				}
+				$io_r = $app->run_query($io_q, $io_params);
 			}
 		}
 		else {
 			if ($game) {
-				$game_io_index = (int) $uri_parts[5];
-				$io_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN addresses a ON io.address_id=a.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND gio.game_io_index='".$game_io_index."';";
-				$io_r = $app->run_query($io_q);
+				$io_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN addresses a ON io.address_id=a.address_id WHERE gio.game_id=:game_id AND gio.game_io_index=:game_io_index;";
+				$io_r = $app->run_query($io_q, [
+					'game_id' => $game->db_game['game_id'],
+					'game_io_index' => (int) $uri_parts[5]
+				]);
 			}
 			else {
-				$io_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id WHERE io.io_id='".((int)$uri_parts[5])."';";
-				$io_r = $app->run_query($io_q);
+				$io_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id WHERE io.io_id=:io_id;";
+				$io_r = $app->run_query($io_q, ['io_id' => (int) $uri_parts[5]]);
 			}
 		}
 		
@@ -413,7 +432,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							}
 						}
 						
-						$precursor_events = $app->run_query("SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND next_event_index='".$event->db_event['event_index']."' ORDER BY event_index ASC;");
+						$precursor_events = $app->run_query("SELECT * FROM events WHERE game_id=:game_id AND next_event_index=:next_event_index ORDER BY event_index ASC;", [
+							'game_id' => $game->db_game['game_id'],
+							'next_event_index' => $event->db_event['event_index']
+						]);
 						
 						if ($precursor_events->rowCount() > 0) {
 							echo "<p>".$precursor_events->rowCount()." ";
@@ -444,7 +466,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						</div>
 						<?php
 						if (!empty($db_event)) {
-							$payout_amount = (int)($app->run_query("SELECT SUM(colored_amount) FROM transaction_game_ios WHERE event_id='".$event->db_event['event_id']."' AND is_coinbase=1;")->fetch()['SUM(colored_amount)']);
+							$payout_amount = (int)($app->run_query("SELECT SUM(colored_amount) FROM transaction_game_ios WHERE event_id=:event_id AND is_coinbase=1;", [
+								'event_id' => $event->db_event['event_id']
+							])->fetch()['SUM(colored_amount)']);
 							$payout_disp = $app->format_bignum($payout_amount/pow(10,$game->db_game['decimal_places']));
 							echo '<font class="greentext">'.$payout_disp."</font> ";
 							if ($payout_disp == '1') echo $game->db_game['coin_name']." was";
@@ -495,7 +519,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						if ($event->db_event['option_block_rule'] == "football_match") {
 							echo "<br/><h2>Match Summary</h2>\n";
 							
-							$option_blocks = $app->run_query("SELECT * FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id='".$event->db_event['event_id']."' AND ob.score > 0 ORDER BY ob.option_block_id ASC;");
+							$option_blocks = $app->run_query("SELECT * FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id=:event_id AND ob.score > 0 ORDER BY ob.option_block_id ASC;", ['event_id' => $event->db_event['event_id']]);
 							$scores_by_entity_id = [];
 							$entities_by_id = [];
 							
@@ -520,7 +544,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								}
 							}
 							
-							$options_by_event = $app->run_query("SELECT *, SUM(ob.score) AS score FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id LEFT JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id='".$event->db_event['event_id']."' GROUP BY o.option_id ORDER BY o.option_index ASC;");
+							$options_by_event = $app->run_query("SELECT *, SUM(ob.score) AS score FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id LEFT JOIN entities e ON o.entity_id=e.entity_id WHERE o.event_id=:event_id GROUP BY o.option_id ORDER BY o.option_index ASC;", ['event_id' => $event->db_event['event_id']]);
 							
 							if ($options_by_event->rowCount() > 0) {
 								$first_option = $options_by_event->fetch();
@@ -575,7 +599,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 									$events_to_block_id = $game->db_game['events_until_block'];
 									if ($events_to_block_id > $game->blockchain->last_block_id()) $events_to_block_id = $game->blockchain->last_block_id();
 									
-									$db_latest_event = $app->run_query("SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block<=".((int)$events_to_block_id)." ORDER BY event_index DESC LIMIT 1;")->fetch();
+									$db_latest_event = $app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_starting_block <= :events_to_block ORDER BY event_index DESC LIMIT 1;", [
+										'game_id' => $game->db_game['game_id'],
+										'events_to_block' => $events_to_block_id
+									])->fetch();
 									
 									if ($db_latest_event) {
 										$to_event_index = $db_latest_event['event_index'];
@@ -638,7 +665,11 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								echo AppSettings::getParam('coin_brand_name')." took ".number_format($load_time, 2)." seconds to load this block.<br/>\n";
 							}
 							else {
-								$load_time = $app->run_query("SELECT SUM(load_time) FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_id='".$block['block_id']."';")->fetch()['SUM(load_time)'];
+								$load_time = $app->run_query("SELECT SUM(load_time) FROM transactions WHERE blockchain_id=:blockchain_id AND block_id=:block_id;", [
+									'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
+									'block_id' => $block['block_id']
+								])->fetch()['SUM(load_time)'];
+								
 								echo "Still loading... ".number_format($load_time, 2)." seconds elapsed.<br/>\n";
 							}
 							
@@ -671,13 +702,21 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						}
 						else {
 							if ($game) {
-								$block_sum = (int)($app->run_query("SELECT SUM(gio.colored_amount) FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND t.block_id IS NULL;")->fetch(PDO::FETCH_NUM)[0]);
+								$block_sum = (int)($app->run_query("SELECT SUM(gio.colored_amount) FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id=:blockchain_id AND t.block_id IS NULL;", [
+									'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
+								])->fetch(PDO::FETCH_NUM)[0]);
+								
 								$block_sum_disp = $block_sum/pow(10,$game->db_game['decimal_places']);
 								
-								$num_trans = $app->run_query("SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND t.block_id IS NULL GROUP BY t.transaction_id;")->rowCount();
+								$num_trans = $app->run_query("SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id=:blockchain_id AND t.block_id IS NULL GROUP BY t.transaction_id;", [
+									'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
+								])->rowCount();
 							}
 							else {
-								$info = $app->run_query("SELECT COUNT(*), SUM(amount) FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_id IS NULL;")->fetch(PDO::FETCH_NUM);
+								$info = $app->run_query("SELECT COUNT(*), SUM(amount) FROM transactions WHERE blockchain_id=:blockchain_id AND block_id IS NULL;", [
+									'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
+								])->fetch(PDO::FETCH_NUM);
+								
 								$num_trans = $info[0];
 								$block_sum = $info[1];
 								$block_sum_disp = $block_sum/pow(10,$blockchain->db_blockchain['decimal_places']);
@@ -714,11 +753,18 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						echo '<div style="margin-top: 10px; border-bottom: 1px solid #bbb;">';
 						
 						if ($game) {
-							$relevant_tx_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND t.block_id";
+							$relevant_tx_params = [
+								'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
+								'game_id' => $game->db_game['game_id']
+							];
+							$relevant_tx_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id=:blockchain_id AND t.block_id";
 							if ($explore_mode == "unconfirmed") $relevant_tx_q .= " IS NULL";
-							else $relevant_tx_q .= "='".$block['block_id']."'";
-							$relevant_tx_q .= " AND gio.game_id='".$game->db_game['game_id']."' GROUP BY t.transaction_id ORDER BY t.position_in_block ASC;";
-							$relevant_transactions = $app->run_query($relevant_tx_q);
+							else {
+								$relevant_tx_q .= "=:block_id";
+								$relevant_tx_params['block_id'] = $block['block_id'];
+							}
+							$relevant_tx_q .= " AND gio.game_id=:game_id GROUP BY t.transaction_id ORDER BY t.position_in_block ASC;";
+							$relevant_transactions = $app->run_query($relevant_tx_q, $relevant_tx_params);
 							
 							while ($transaction = $relevant_transactions->fetch()) {
 								echo $game->render_transaction($transaction, false, false, $coins_per_vote, $last_block_id);
@@ -809,15 +855,25 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								echo "<p>Last block loaded was <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$recent_block['block_id']."\">#".$recent_block['block_id']."</a> (loaded ".$app->format_seconds(time()-$recent_block['time_loaded'])." ago)</p>\n";
 							}
 							
-							$pending_blocks_q = "SELECT COUNT(*) FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND locally_saved=0";
-							if (!empty($blockchain->db_blockchain['first_required_block'])) $pending_blocks_q .= " AND block_id > ".$blockchain->db_blockchain['first_required_block'];
-							$pending_blocks_q .= ";";
-							$pending_blocks = (int)($app->run_query($pending_blocks_q)->fetch()['COUNT(*)']);
+							$pending_blocks_params = [
+								'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
+							];
+							$pending_blocks_q = "SELECT COUNT(*) FROM blocks WHERE blockchain_id=:blockchain_id AND locally_saved=0";
+							if (!empty($blockchain->db_blockchain['first_required_block'])) {
+								$pending_blocks_q .= " AND block_id > :first_required_block";
+								$pending_blocks_params['first_required_block'] = $blockchain->db_blockchain['first_required_block'];
+							}
+							$pending_blocks = (int)($app->run_query($pending_blocks_q, $pending_blocks_params)->fetch()['COUNT(*)']);
 							
 							if ($pending_blocks > 0) {
-								$loadtime = $app->run_query("SELECT COUNT(*), SUM(load_time) FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND locally_saved=1 AND block_id >= ".($complete_block_id-10).";")->fetch();
+								$loadtime = $app->run_query("SELECT COUNT(*), SUM(load_time) FROM blocks WHERE blockchain_id=:blockchain_id AND locally_saved=1 AND block_id >= :ref_block;", [
+									'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
+									'ref_block' => $complete_block_id-10
+								])->fetch();
+								
 								if ($loadtime['COUNT(*)'] > 0) $avg_loadtime = $loadtime['SUM(load_time)']/$loadtime['COUNT(*)'];
 								else $avg_loadtime = 0;
+								
 								$sec_left = round($avg_loadtime*$pending_blocks);
 								echo "<p>".number_format($pending_blocks)." blocks haven't loaded yet (".$app->format_seconds($sec_left)." left)</p>\n";
 							}
@@ -873,7 +929,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					echo '<img style="margin: 10px;" src="/render_qr_code.php?data='.$address['address'].'" />';
 					
 					if ($thisuser) {
-						$account = $app->run_query("SELECT * FROM currency_accounts a JOIN address_keys k ON a.account_id=k.account_id WHERE k.address_id='".$address['address_id']."' AND a.user_id='".$thisuser->db_user['user_id']."';")->fetch();
+						$account = $app->fetch_account_by_user_and_address($thisuser->db_user['user_id'], $address['address_id']);
 						
 						if ($account) {
 							echo '<p>This address is in your account <a href="/accounts/?account_id='.$account['account_id'].'">'.$account['account_name'].'</a></p>';
@@ -892,7 +948,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						}
 					}
 					else {
-						$associated_events = $app->run_query("SELECT * FROM events ev JOIN options op ON ev.event_id=op.event_id WHERE ev.game_id='".$game->db_game['game_id']."' AND op.option_index='".$address['option_index']."';");
+						$associated_events = $app->run_query("SELECT * FROM events ev JOIN options op ON ev.event_id=op.event_id WHERE ev.game_id=:game_id AND op.option_index=:option_index;", [
+							'game_id' => $game->db_game['game_id'],
+							'option_index' => $address['option_index']
+						]);
 						
 						if ($associated_events->rowCount() > 0) {
 							echo "<p>This is a staking address for ";
@@ -907,14 +966,20 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					$transaction_ids = [];
 					$transaction_ios = [];
 					
-					$transactions_by_address = $app->run_query("SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND i.address_id='".$address['address_id']."' GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;");
+					$transactions_by_address = $app->run_query("SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id WHERE t.blockchain_id=:blockchain_id AND i.address_id=:address_id GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;", [
+						'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
+						'address_id' => $address['address_id']
+					]);
 					
 					while ($transaction_io = $transactions_by_address->fetch()) {
 						array_push($transaction_ids, $transaction_io['transaction_id']);
 						array_push($transaction_ios, $transaction_io);
 					}
 					
-					$transactions_by_address = $app->run_query("SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.spend_transaction_id WHERE t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND i.address_id='".$address['address_id']."' GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;");
+					$transactions_by_address = $app->run_query("SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.spend_transaction_id WHERE t.blockchain_id=:blockchain_id AND i.address_id=:address_id GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;", [
+						'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
+						'address_id' => $address['address_id']
+					]);
 					
 					while ($transaction_io = $transactions_by_address->fetch()) {
 						if (!in_array($transaction_io['transaction_id'], $transaction_ids)) {
@@ -983,7 +1048,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					echo "</div>\n";
 				}
 				else if ($explore_mode == "initial") {
-					$initial_block_transactions = $app->run_query("SELECT * FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_id=0 AND amount > 0 ORDER BY transaction_id ASC;");
+					$initial_block_transactions = $app->run_query("SELECT * FROM transactions WHERE blockchain_id=:blockchain_id AND block_id=0 AND amount > 0 ORDER BY transaction_id ASC;", [
+						'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
+					]);
 					
 					echo '<div class="panel-body">'."\n";
 					echo '<div style="border-bottom: 1px solid #bbb;">'."\n";
@@ -1030,8 +1097,14 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						if ($coins_in > 0) echo " (".$app->format_bignum($coins_diff/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." destroyed)";
 						echo ".<br/>\n";
 						
-						$votes_in = $app->run_query("SELECT SUM(gio.".$game->db_game['payout_weight']."s_created) votes_in FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE io.spend_transaction_id='".$transaction['transaction_id']."';")->fetch();
+						$votes_in_params = [
+							'votes_field' => "gio.".$game->db_game['payout_weight']."s_created",
+							'transaction_id' => $transaction['transaction_id']
+						];
+						$votes_in = $app->run_query("SELECT SUM(:votes_field) votes_in FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id WHERE io.spend_transaction_id=:transaction_id;", $votes_in_params)->fetch();
+						
 						$votes_in_value = $votes_in['votes_in']*$coins_per_votes;
+						
 						echo "This transaction realizes ".$app->format_bignum($votes_in_value/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']." of unrealized gains.<br/>\n";
 					}
 					echo "Loaded in ".number_format($transaction['load_time'], 2)." seconds.";
@@ -1059,7 +1132,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					echo '<div class="panel-body">';
 					
 					if ($thisuser) {
-						$account = $app->run_query("SELECT * FROM currency_accounts a JOIN address_keys k ON a.account_id=k.account_id WHERE k.address_id='".$io['address_id']."' AND a.user_id='".$thisuser->db_user['user_id']."';")->fetch();
+						$account = $app->fetch_account_by_user_and_address($thisuser->db_user['user_id'], $io['address_id']);
 						
 						if ($account) {
 							echo 'This UTXO is in your account <a href="/accounts/?account_id='.$account['account_id'].'">'.$account['account_name']."</a><br/>\n";
@@ -1174,15 +1247,20 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						
 						echo '<div class="panel-body">';
 						
+						$utxo_params = [
+							'game_id' => $game->db_game['game_id']
+						];
 						if ($account) {
 							echo '<p><a href="/accounts/?account_id='.$account['account_id'].'">Manage this Account</a></p>';
 							
-							$utxo_q = "SELECT * FROM transactions t JOIN transaction_ios io ON io.create_transaction_id=t.transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account['account_id']."' ORDER BY gio.colored_amount DESC;";
+							$utxo_q = "SELECT * FROM transactions t JOIN transaction_ios io ON io.create_transaction_id=t.transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE gio.game_id=:game_id AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id=:account_id ORDER BY gio.colored_amount DESC;";
+							
+							$utxo_params['account_id'] = $account['account_id'];
 						}
 						else {
-							$utxo_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id JOIN addresses a ON a.address_id=io.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND gio.colored_amount > 0 AND io.spend_status IN ('unspent','unconfirmed') ORDER BY gio.colored_amount DESC;";
+							$utxo_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON gio.io_id=io.io_id JOIN addresses a ON a.address_id=io.address_id WHERE gio.game_id=:game_id AND gio.colored_amount > 0 AND io.spend_status IN ('unspent','unconfirmed') ORDER BY gio.colored_amount DESC;";
 						}
-						$utxo_r = $app->run_query($utxo_q);
+						$utxo_r = $app->run_query($utxo_q, $utxo_params);
 						
 						while ($utxo = $utxo_r->fetch()) {
 							if ($game->db_game['payout_weight'] == "coin") $votes = $utxo['colored_amount'];
@@ -1210,7 +1288,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					}
 					else {
 						if ($account) {
-							$display_utxos = $app->run_query("SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$account['account_id']."' ORDER BY io.amount DESC;");
+							$display_utxos = $app->run_query("SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.blockchain_id=:blockchain_id AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id=:account_id ORDER BY io.amount DESC;", [
+								'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
+								'account_id' => $account['account_id']
+							]);
 							
 							echo '<div class="panel-heading"><div class="panel-title">';
 							echo "Showing all ".$display_utxos->rowCount()." UTXOs for ".$account['account_name'];
@@ -1221,9 +1302,13 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo '<p><a href="/accounts/?account_id='.$account['account_id'].'">Manage this Account</a></p>';
 						}
 						else {
-							$utxo_count = $app->run_query("SELECT COUNT(*) FROM transaction_ios WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND spend_status='unspent';")->fetch();
+							$utxo_count = $app->run_query("SELECT COUNT(*) FROM transaction_ios WHERE blockchain_id=:blockchain_id AND spend_status='unspent';", [
+								'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
+							])->fetch();
 							
-							$display_utxos = $app->run_query("SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON a.address_id=io.address_id WHERE io.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND io.spend_status IN ('unspent','unconfirmed') ORDER BY io.amount DESC LIMIT 500;");
+							$display_utxos = $app->run_query("SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON a.address_id=io.address_id WHERE io.blockchain_id=:blockchain_id AND io.spend_status IN ('unspent','unconfirmed') ORDER BY io.amount DESC LIMIT 500;", [
+								'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
+							]);
 							
 							echo '<div class="panel-heading"><div class="panel-title">';
 							echo "Showing the ".$display_utxos->rowCount()." largest ".$blockchain->db_blockchain['blockchain_name']." UTXOs";
@@ -1265,7 +1350,11 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$num_unresolved = 0;
 						$num_refunded = 0;
 						
-						$my_bets = $app->run_query("SELECT gio.game_io_id, gio.colored_amount, gio.option_id, gio.is_coinbase, gio.is_resolved, gio.game_out_index, p.ref_block_id, p.ref_round_id, p.ref_coin_blocks, p.ref_coin_rounds, p.effectiveness_factor, p.effective_destroy_amount, p.destroy_amount, p.votes, p.".$game->db_game['payout_weight']."s_destroyed, p.game_io_id AS parent_game_io_id, io.spend_transaction_id, io.spend_status, ev.*, et.vote_effectiveness_function, et.effectiveness_param1, o.effective_destroy_score AS option_effective_destroy_score, o.unconfirmed_effective_destroy_score, o.unconfirmed_votes, o.name AS option_name, ev.destroy_score AS sum_destroy_score, p.votes, o.votes AS option_votes, t.tx_hash FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transactions t ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN events ev ON o.event_id=ev.event_id LEFT JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id WHERE gio.game_id=".$game->db_game['game_id']." AND ug.user_game_id=".$user_game['user_game_id']." AND gio.is_coinbase=1 ORDER BY ev.event_index DESC, gio.game_io_index DESC;");
+						$my_bets = $app->run_query("SELECT gio.game_io_id, gio.colored_amount, gio.option_id, gio.is_coinbase, gio.is_resolved, gio.game_out_index, p.ref_block_id, p.ref_round_id, p.ref_coin_blocks, p.ref_coin_rounds, p.effectiveness_factor, p.effective_destroy_amount, p.destroy_amount, p.votes, :payout_weight_field, p.game_io_id AS parent_game_io_id, io.spend_transaction_id, io.spend_status, ev.*, et.vote_effectiveness_function, et.effectiveness_param1, o.effective_destroy_score AS option_effective_destroy_score, o.unconfirmed_effective_destroy_score, o.unconfirmed_votes, o.name AS option_name, ev.destroy_score AS sum_destroy_score, p.votes, o.votes AS option_votes, t.tx_hash FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transactions t ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN events ev ON o.event_id=ev.event_id LEFT JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id WHERE gio.game_id=:game_id AND ug.user_game_id=:user_game_id AND gio.is_coinbase=1 ORDER BY ev.event_index DESC, gio.game_io_index DESC;", [
+							'game_id' => $game->db_game['game_id'],
+							'payout_weight_field' => "p.".$game->db_game['payout_weight']."s_destroyed",
+							'user_game_id' => $user_game['user_game_id']
+						]);
 						$num_bets = $my_bets->rowCount();
 						
 						$bet_table_header = '
@@ -1300,7 +1389,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						<div id="change_user_game">
 							<select id="select_user_game" class="form-control" onchange="explorer_change_user_game();">
 								<?php
-								$my_user_games = $app->run_query("SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';");
+								$my_user_games = $app->run_query("SELECT * FROM user_games WHERE user_id=:user_id AND game_id=:game_id;", [
+									'user_id' => $thisuser->db_user['user_id'],
+									'game_id' => $game->db_game['game_id']
+								]);
 								while ($db_user_game = $my_user_games->fetch()) {
 									echo "<option ";
 									if ($db_user_game['user_game_id'] == $user_game['user_game_id']) echo "selected=\"selected\" ";

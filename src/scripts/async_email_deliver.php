@@ -19,7 +19,9 @@ if ($app->running_as_admin()) {
 		else {
 			$delivery_id = (int) $_REQUEST['delivery_id'];
 			
-			$deliveries = $app->run_query("SELECT * FROM async_email_deliveries WHERE delivery_id='".$delivery_id."' AND time_delivered=0;");
+			$deliveries = $app->run_query("SELECT * FROM async_email_deliveries WHERE delivery_id=:delivery_id AND time_delivered=0;", [
+				'delivery_id' => $delivery_id
+			]);
 		}
 		
 		if ($deliveries->rowCount() == 1) {
@@ -63,7 +65,12 @@ if ($app->running_as_admin()) {
 			if ($json_response->message == "success") $successful = 1;
 			else $successful = 0;
 			
-			$app->run_query("UPDATE async_email_deliveries SET time_delivered='".time()."', successful=".$successful.", sendgrid_response=".$app->quote_escape($response)." WHERE delivery_id='".$delivery['delivery_id']."';");
+			$app->run_query("UPDATE async_email_deliveries SET time_delivered=:time_delivered, successful=:successful, sendgrid_response=:sendgrid_response WHERE delivery_id=:delivery_id;", [
+				'time_delivered' => time(),
+				'successful' => $successful,
+				'sendgrid_response' => $response,
+				'delivery_id' => $delivery['delivery_id']
+			]);
 			
 			echo "response from Sendgrid was: ".$response;
 		}

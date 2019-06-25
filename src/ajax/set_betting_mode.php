@@ -8,7 +8,10 @@ if ($thisuser && $game) {
 	
 	$user_game = $thisuser->ensure_user_in_game($game, false);
 	
-	$app->run_query("UPDATE user_games SET betting_mode='".$mode."' WHERE user_game_id='".$user_game['user_game_id']."';");
+	$app->run_query("UPDATE user_games SET betting_mode=:betting_mode WHERE user_game_id=:user_game_id;", [
+		'betting_mode' => $mode,
+		'user_game_id' => $user_game['user_game_id']
+	]);
 	
 	$app->output_message(1, "Mode has been changed.", false);
 }

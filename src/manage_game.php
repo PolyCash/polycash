@@ -127,7 +127,10 @@ else {
 			if ($last_action == "description") {
 				$game_description = $_REQUEST['game_description'];
 				
-				$app->run_query("UPDATE games SET short_description=".$app->quote_escape($game_description)." WHERE game_id='".$game->db_game['game_id']."';");
+				$app->run_query("UPDATE games SET short_description=:short_description WHERE game_id=:game_id;", [
+					'short_description' => $game_description,
+					'game_id' => $game->db_game['game_id']
+				]);
 				
 				$game->db_game['short_description'] = $game_description;
 			}
@@ -196,7 +199,7 @@ else {
 					$leagues_entity_type = $app->check_set_entity_type("leagues");
 					$general_entity_type = $app->check_set_entity_type("general entity");
 					
-					$game_max_event_index = (int) $app->run_query("SELECT MAX(event_index) FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."';")->fetch()['MAX(event_index)'];
+					$game_max_event_index = (int) $app->run_query("SELECT MAX(event_index) FROM game_defined_events WHERE game_id=:game_id;", ['game_id' => $game->db_game['game_id']])->fetch()['MAX(event_index)'];
 					$game_event_index_offset = 0;
 					$skip_count = 0;
 					
@@ -222,7 +225,11 @@ else {
 								
 								$event_index = $game_max_event_index+$game_event_index_offset+1;
 								
-								$existing_gde = $app->run_query("SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."' AND event_name=".$app->quote_escape($event_name)." AND event_final_time='".$event_final_time."';")->fetch();
+								$existing_gde = $app->run_query("SELECT * FROM game_defined_events WHERE game_id=:game_id AND event_name=:event_name AND event_final_time=:event_final_time;", [
+									'game_id' => $game->db_game['game_id'],
+									'event_name' => $event_name,
+									'event_final_time' => $event_final_time
+								])->fetch();
 								
 								if (!$existing_gde) {
 									$home_target_prob = false;
@@ -275,28 +282,53 @@ else {
 										if ($line_vals[$outcome_col] != "") $outcome_index = (int)$line_vals[$outcome_col];
 									}
 									
-									$gde_ins_q = "INSERT INTO game_defined_events SET game_id='".$game->db_game['game_id']."'";
-									if ($this_sport_entity) $gde_ins_q .= ", sport_entity_id=".$this_sport_entity['entity_id'];
-									if ($this_league_entity) $gde_ins_q .= ", league_entity_id=".$this_league_entity['entity_id'];
-									if ($external_identifier) $gde_ins_q .= ", external_identifier=".$app->quote_escape($external_identifier);
-									$gde_ins_q .= ", payout_rate='".$payout_rate."', outcome_index=".$outcome_index.", event_index='".$event_index."', event_name=".$app->quote_escape($event_name).", event_starting_time='".$event_starting_time."', event_final_time='".$event_final_time."', event_payout_time='".$event_payout_time."', option_name='team', option_name_plural='teams';";
-									$app->run_query($gde_ins_q);
+									$gde_ins_params = [
+										'game_id' => $game->db_game['game_id'],
+										'sport_entity_id' => $this_sport_entity ? $this_sport_entity['entity_id'] : null,
+										'league_entity_id' => $this_league_entity ? $this_league_entity['entity_id'] : null,
+										'external_identifier' => $external_identifier ? $external_identifier : null,
+										'payout_rate' => $payout_rate,
+										'outcome_index' => $outcome_index,
+										'event_index' => $event_index,
+										'event_name' => $event_name,
+										'event_starting_time' => $event_starting_time,
+										'event_final_time' => $event_final_time,
+										'event_payout_time' => $event_payout_time,
+									];
+									$gde_ins_q = "INSERT INTO game_defined_events SET game_id=:game_id, sport_entity_id=:sport_entity_id, league_entity_id=:league_entity_id, external_identifier=:external_identifier, payout_rate=:payout_rate, outcome_index=:outcome_index, event_index=:event_index, event_name=:event_name, event_starting_time=:event_starting_time, event_final_time=:event_final_time, event_payout_time=:event_payout_time, option_name='team', option_name_plural='teams';";
+									$app->run_query($gde_ins_q, $gde_ins_params);
 									
-									$gdo_ins_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index=".$event_index.", option_index=0, name=".$app->quote_escape($home).", entity_id='".$home_entity['entity_id']."'";
-									if ($home_target_prob) $gdo_ins_q .= ", target_probability=".$home_target_prob;
-									$gdo_ins_q .= ";";
-									$app->run_query($gdo_ins_q);
+									$gdo_home_params = [
+										'game_id' => $game->db_game['game_id'],
+										'event_index' => $event_index,
+										'option_index' => 0,
+										'name' => $home,
+										'entity_id' => $home_entity['entity_id'],
+										'target_probability' => $home_target_prob ? $home_target_prob : null
+									];
+									$gdo_away_params = [
+										'game_id' => $game->db_game['game_id'],
+										'event_index' => $event_index,
+										'option_index' => 1,
+										'name' => $away,
+										'entity_id' => $away_entity['entity_id'],
+										'target_probability' => $away_target_prob ? $away_target_prob : null
+									];
+									$gdo_ins_q = "INSERT INTO game_defined_options SET game_id=:game_id, event_index=:event_index, option_index=:option_index, name=:name, entity_id=:entity_id, target_probability=:target_probability;";
 									
-									$gdo_ins_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index=".$event_index.", option_index=1, name=".$app->quote_escape($away).", entity_id='".$away_entity['entity_id']."'";
-									if ($away_target_prob) $gdo_ins_q .= ", target_probability=".$away_target_prob;
-									$gdo_ins_q .= ";";
-									$app->run_query($gdo_ins_q);
+									$app->run_query($gdo_ins_q, $gdo_home_params);
+									$app->run_query($gdo_ins_q, $gdo_away_params);
 									
 									if ($ties_allowed) {
-										$gdo_ins_q = "INSERT INTO game_defined_options SET game_id='".$game->db_game['game_id']."', event_index=".$event_index.", option_index=2, name='Tie'";
-										if ($tie_target_prob) $gdo_ins_q .= ", target_probability=".$tie_target_prob;
-										$gdo_ins_q .= ";";
-										$app->run_query($gdo_ins_q);
+										$gdo_tie_params = [
+											'game_id' => $game->db_game['game_id'],
+											'event_index' => $event_index,
+											'option_index' => 2,
+											'name' => "Tie",
+											'entity_id' => null,
+											'target_probability' => $tie_target_prob ? $tie_target_prob : null
+										];
+										$app->run_query($gdo_ins_q, $gdo_tie_params);
 									}
 									
 									$game_event_index_offset++;
@@ -324,16 +356,23 @@ else {
 				$definitive_game_peer_id = "NULL";
 				$game->db_game['definitive_game_peer_id'] = "";
 				
+				$definitive_game_peer = false;
+				
 				if (!empty($definitive_game_peer_url)) {
 					$definitive_game_peer = $game->get_game_peer_by_server_name($definitive_game_peer_url);
 					
 					if ($definitive_game_peer) {
-						$definitive_game_peer_id = "'".$definitive_game_peer['game_peer_id']."'";
 						$game->db_game['definitive_game_peer_id'] = $definitive_game_peer['game_peer_id'];
 					}
 				}
 				
-				$app->run_query("UPDATE games SET featured='".$featured."', public_players='".$public_players."', faucet_policy='".$faucet_policy."', definitive_game_peer_id=".$definitive_game_peer_id." WHERE game_id='".$game->db_game['game_id']."';");
+				$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, faucet_policy=:faucet_policy, definitive_game_peer_id=:definitive_game_peer_id WHERE game_id=:game_id;", [
+					'featured' => $featured,
+					'public_players' => $public_players,
+					'faucet_policy' => $faucet_policy,
+					'definitive_game_peer_id' => $definitive_game_peer ? $definitive_game_peer['game_peer_id'] : null,
+					'game_id' => $game->db_game['game_id']
+				]);
 				$game->db_game['featured'] = $featured;
 				$game->db_game['public_players'] = $public_players;
 				$game->db_game['faucet_policy'] = $faucet_policy;
@@ -723,10 +762,16 @@ else {
 								</select>
 							</p>
 							<?php
-							$manage_gdes_q = "SELECT * FROM game_defined_events WHERE game_id='".$game->db_game['game_id']."'";
-							if ($event_filter == "past_due") $manage_gdes_q .= " AND outcome_index IS NULL AND event_payout_block <= ".$game->blockchain->last_block_id();
+							$manage_gdes_params = [
+								'game_id' => $game->db_game['game_id']
+							];
+							$manage_gdes_q = "SELECT * FROM game_defined_events WHERE game_id=:game_id";
+							if ($event_filter == "past_due") {
+								$manage_gdes_q .= " AND outcome_index IS NULL AND event_payout_block <= :ref_block";
+								$manage_gdes_params['ref_block'] = $game->blockchain->last_block_id();
+							}
 							$manage_gdes_q .= " ORDER BY event_index DESC;";
-							$manage_gdes = $app->run_query($manage_gdes_q);
+							$manage_gdes = $app->run_query($manage_gdes_q, $manage_gdes_params);
 							while ($gde = $manage_gdes->fetch()) {
 								?>
 								<div class="row">

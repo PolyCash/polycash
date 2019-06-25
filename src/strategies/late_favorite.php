@@ -26,7 +26,10 @@ if ($user_game) {
 		$account = $app->fetch_account_by_id($user_game['account_id']);
 		
 		if ($account) {
-			$db_events = $app->run_query("SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND (event_starting_block+event_final_block)/2<=".$mining_block_id." AND event_final_block>=".$mining_block_id." ORDER BY event_index ASC;")->fetchAll();
+			$db_events = $app->run_query("SELECT * FROM events WHERE game_id=:game_id AND (event_starting_block+event_final_block)/2 <= :mining_block_id AND event_final_block >= :mining_block_id ORDER BY event_index ASC;", [
+				'game_id' => $game->db_game['game_id'],
+				'mining_block_id' => $mining_block_id
+			])->fetchAll();
 			$num_events = count($db_events);
 			
 			if ($num_events > 0) {
@@ -111,7 +114,7 @@ if ($user_game) {
 						$best_performance_event_option_index = false;
 						
 						while ($option = $options_by_event->fetch()) { 
-							$db_currency = $app->run_query("SELECT * FROM currencies WHERE name='".$option['name']."';")->fetch();
+							$db_currency = $app->fetch_currency_by_name($option['name']);
 							$initial_price = $app->currency_price_after_time($db_currency['currency_id'], $btc_currency['currency_id'], $event_starting_block['time_mined'], $event_to_time);
 							
 							if ($option['name'] == "Bitcoin") {

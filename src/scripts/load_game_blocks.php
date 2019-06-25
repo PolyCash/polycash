@@ -10,7 +10,7 @@ if ($app->running_as_admin()) {
 	$from_block_height = (int) $_REQUEST['from_block_height'];
 	$to_block_height = (int) $_REQUEST['to_block_height'];
 	
-	$db_game = $app->fetch_db_game_by_id($game_id);
+	$db_game = $app->fetch_game_by_id($game_id);
 	$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 	$game = new Game($blockchain, $db_game['game_id']);
 	

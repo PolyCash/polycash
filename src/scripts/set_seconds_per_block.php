@@ -12,10 +12,13 @@ if ($app->running_as_admin()) {
 	$db_blockchain = $app->fetch_blockchain_by_id($blockchain_id);
 	
 	if ($db_blockchain) {
-		$first_unset_block = $app->run_query("SELECT * FROM blocks WHERE blockchain_id='".$blockchain_id."' AND block_id>0 AND sec_since_prev_block IS NULL ORDER BY block_id ASC LIMIT 1;")->fetch();
+		$first_unset_block = $app->run_query("SELECT * FROM blocks WHERE blockchain_id=:blockchain_id AND block_id>0 AND sec_since_prev_block IS NULL ORDER BY block_id ASC LIMIT 1;", ['blockchain_id' => $blockchain_id])->fetch();
 		
 		if ($first_unset_block) {
-			$set_blocks = $app->run_query("SELECT * FROM blocks WHERE blockchain_id='".$blockchain_id."' AND block_id>=".($first_unset_block['block_id']-1)." ORDER BY block_id ASC;");
+			$set_blocks = $app->run_query("SELECT * FROM blocks WHERE blockchain_id=:blockchain_id AND block_id>=:ref_block_id ORDER BY block_id ASC;", [
+				'blockchain_id' => $blockchain_id,
+				'ref_block_id' => ($first_unset_block['block_id']-1)
+			]);
 			
 			$last_block_time = false;
 			
@@ -25,16 +28,25 @@ if ($app->running_as_admin()) {
 				if ($last_block_time !== false) {
 					$sec_since_prev_block = $db_block['time_mined']-$last_block_time;
 					
-					$app->run_query("UPDATE blocks SET sec_since_prev_block='".$sec_since_prev_block."' WHERE internal_block_id='".$db_block['internal_block_id']."';");
+					$app->run_query("UPDATE blocks SET sec_since_prev_block=:sec_since_prev_block WHERE internal_block_id=:internal_block_id;", [
+						'sec_since_prev_block' => $sec_since_prev_block,
+						'internal_block_id' => $db_block['internal_block_id']
+					]);
 					
 					echo ". ";
 				}
 				$last_block_time = $db_block['time_mined'];
 			}
 			
-			$avg = $app->run_query("SELECT AVG(sec_since_prev_block) FROM `blocks` WHERE blockchain_id=".$db_blockchain['blockchain_id']." AND sec_since_prev_block > 1 AND sec_since_prev_block < ".($db_blockchain['seconds_per_block']*20).";")->fetch();
+			$avg = $app->run_query("SELECT AVG(sec_since_prev_block) FROM `blocks` WHERE blockchain_id=:blockchain_id AND sec_since_prev_block > 1 AND sec_since_prev_block < :max_seconds_per_block;", [
+				'blockchain_id' => $db_blockchain['blockchain_id'],
+				'max_seconds_per_block' => ($db_blockchain['seconds_per_block']*20)
+			])->fetch();
 			
-			$app->run_query("UPDATE blockchains SET average_seconds_per_block=".$avg['AVG(sec_since_prev_block)']." WHERE blockchain_id='".$db_blockchain['blockchain_id']."';");
+			$app->run_query("UPDATE blockchains SET average_seconds_per_block=:average_seconds_per_block WHERE blockchain_id=:blockchain_id;", [
+				'average_seconds_per_block' => $avg['AVG(sec_since_prev_block)'],
+				'blockchain_id' => $db_blockchain['blockchain_id']
+			]);
 			
 			echo "<br/>\nDone. (Average block time: ".$avg['AVG(sec_since_prev_block)']." sec)\n";
 		}

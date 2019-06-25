@@ -29,7 +29,10 @@ if ($user_game) {
 		$account = $app->fetch_account_by_id($user_game['account_id']);
 		
 		if ($account) {
-			$db_events = $app->run_query("SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block<=".$mining_block_id." AND event_final_block>=".$mining_block_id." ORDER BY event_index ASC;")->fetchAll();
+			$db_events = $app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_starting_block <= :mining_block_id AND event_final_block >= :mining_block_id ORDER BY event_index ASC;", [
+				'game_id' => $game->db_game['game_id'],
+				'mining_block_id' => $mining_block_id
+			])->fetchAll();
 			
 			$num_events = count($db_events);
 			
@@ -39,7 +42,7 @@ if ($user_game) {
 				$event_info_by_id = [];
 				
 				for ($event_i=0; $event_i<count($db_events); $event_i++) {
-					$options = $app->run_query("SELECT * FROM options op JOIN entities en ON op.entity_id=en.entity_id WHERE op.event_id='".$db_events[$event_i]['event_id']."' ORDER BY op.event_option_index ASC;")->fetchAll();
+					$options = $app->run_query("SELECT * FROM options op JOIN entities en ON op.entity_id=en.entity_id WHERE op.event_id=:event_id ORDER BY op.event_option_index ASC;", ['event_id'=>$db_events[$event_i]['event_id']])->fetchAll();
 					
 					$this_currency = $app->fetch_currency_by_id($options[0]['currency_id']);
 					

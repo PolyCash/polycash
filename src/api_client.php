@@ -10,7 +10,7 @@ http://mywebserver.com/APIClient.php?key=AppSettings::getParam('cron_key_string'
 */
 
 // Log into your web wallet -> Settings to find your server access key, then enter it below
-$server_access_key = AppSettings->getParam('default_server_api_access_key');
+$server_access_key = "";
 $server_host = "https://poly.cash";
 $client_access_key = AppSettings::getParam('cron_key_string');
 

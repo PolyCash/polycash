@@ -6,10 +6,13 @@ $allowed_params = ['game_id'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);
 
 if ($app->running_as_admin()) {
+	$refresh_games_params = [];
 	$refresh_games_q = "SELECT * FROM games";
-	if (!empty($_REQUEST['game_id'])) $refresh_games_q .= " WHERE game_id='".(int)$_REQUEST['game_id']."'";
-	$refresh_games_q .= ";";
-	$refresh_games = $app->run_query($refresh_games_q);
+	if (!empty($_REQUEST['game_id'])) {
+		$refresh_games_q .= " WHERE game_id=:game_id";
+		$refresh_games_params['game_id'] = $_REQUEST['game_id'];
+	}
+	$refresh_games = $app->run_query($refresh_games_q, $refresh_games_params);
 
 	$show_internal_params = true;
 	

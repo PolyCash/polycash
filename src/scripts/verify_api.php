@@ -15,7 +15,7 @@ if ($app->running_as_admin()) {
 	
 	if (in_array($mode, ['game_ios','game_events'])) {
 		$game_or_blockchain = "game";
-		$db_game = $app->fetch_db_game_by_identifier($_REQUEST['game_identifier']);
+		$db_game = $app->fetch_game_by_identifier($_REQUEST['game_identifier']);
 		if (empty($db_game)) die("Invalid game identifier supplied.");
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$game = new Game($blockchain, $db_game['game_id']);
@@ -30,7 +30,7 @@ if ($app->running_as_admin()) {
 	if ($mode == "game_ios") {
 		$total_issued = 0;
 		
-		$confirmed_gios = $app->run_query("SELECT io.spend_status, io.create_block_id AS io_create_block_id, gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$game->db_game['game_id']."' AND gio.game_io_index IS NOT NULL ORDER BY gio.game_io_index ASC;");
+		$confirmed_gios = $app->run_query("SELECT io.spend_status, io.create_block_id AS io_create_block_id, gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id=:game_id AND gio.game_io_index IS NOT NULL ORDER BY gio.game_io_index ASC;", ['game_id'=>$game->db_game['game_id']]);
 		
 		$out_obj = [["in_existence"=>$game->coins_in_existence($blockchain->last_block_id(), false), "total"=>0]];
 		
@@ -39,7 +39,7 @@ if ($app->running_as_admin()) {
 			$total_issued += $game_io['colored_amount'];
 		}
 		
-		$unconfirmed_gios = $app->run_query("SELECT t.tx_hash, io.spend_status, io.create_block_id AS io_create_block_id, gio.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id='".$game->db_game['game_id']."' AND gio.game_io_index IS NULL ORDER BY t.tx_hash ASC, gio.game_out_index ASC;");
+		$unconfirmed_gios = $app->run_query("SELECT t.tx_hash, io.spend_status, io.create_block_id AS io_create_block_id, gio.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id=:game_id AND gio.game_io_index IS NULL ORDER BY t.tx_hash ASC, gio.game_out_index ASC;", ['game_id'=>$game->db_game['game_id']]);
 		
 		while ($game_io = $unconfirmed_gios->fetch()) {
 			array_push($out_obj, [null, $game_io['io_create_block_id'], $game_io['create_block_id'], $game_io['colored_amount'], $game_io['spend_status'], $game_io['coin_rounds_created']]);
@@ -52,11 +52,14 @@ if ($app->running_as_admin()) {
 	}
 	else if ($mode == "game_events") {
 		$check_tx_count = true;
-		$relevant_params = ['event_index', 'event_name', 'outcome_index'];
 		
 		$out_obj = [];
 		
-		$events_by_game = $app->run_query("SELECT ev.event_id, ".implode(",", preg_filter('/^/', 'gde.', $relevant_params))." FROM game_defined_events gde LEFT JOIN events ev ON gde.event_index=ev.event_index WHERE gde.game_id='".$game->db_game['game_id']."' AND ev.game_id='".$game->db_game['game_id']."' ORDER BY gde.event_index ASC;");
+		$events_by_game_params = [
+			'game_id' => $game->db_game['game_id']
+		];
+		$events_by_game_q = "SELECT ev.event_id, gde.event_index, gde.event_name, gde.outcome_index FROM game_defined_events gde LEFT JOIN events ev ON gde.event_index=ev.event_index WHERE gde.game_id=:game_id AND ev.game_id=:game_id ORDER BY gde.event_index ASC;";
+		$events_by_game = $app->run_query($events_by_game_q, $events_by_game_params);
 		
 		while ($db_event = $events_by_game->fetch(PDO::FETCH_ASSOC)) {
 			if ($check_tx_count && !empty($db_event['event_id'])) {
@@ -74,7 +77,7 @@ if ($app->running_as_admin()) {
 		$db_blockchain = $app->fetch_blockchain_by_identifier($_REQUEST['blockchain_identifier']);
 		
 		if ($db_blockchain) {
-			$all_blocks = $app->run_query("SELECT * FROM blocks WHERE blockchain_id='".$db_blockchain['blockchain_id']."' AND block_id>0 ORDER BY block_id ASC;");
+			$all_blocks = $app->run_query("SELECT * FROM blocks WHERE blockchain_id=:blockchain_id AND block_id>0 ORDER BY block_id ASC;", ['blockchain_id'=>$db_blockchain['blockchain_id']]);
 			
 			$out_obj = [];
 			

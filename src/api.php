@@ -15,7 +15,7 @@ if ($uri_parts[1] == "api") {
 		if (empty($game_id)) {
 			$game_id = $app->run_query("SELECT * FROM games WHERE featured=1 ORDER BY game_id ASC LIMIT 1;")->fetch()['game_id'];
 		}
-		$db_game = $app->fetch_db_game_by_id($game_id);
+		$db_game = $app->fetch_game_by_id($game_id);
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$api_game = new Game($blockchain, $game_id);
 		$api_game->load_current_events();
@@ -61,7 +61,6 @@ if ($uri_parts[1] == "api") {
 		$raw = str_replace('include(AppSettings::srcPath()."/includes/config.php");', '', $raw);
 		$raw = str_replace('$access_key = AppSettings::getParam(\'cron_key_string\')', '$access_key = "'.$example_password.'"', $raw);
 		$raw = str_replace('AppSettings::getParam(\'cron_key_string\')', $example_password, $raw);
-		$raw = str_replace('AppSettings::getParam(\'default_server_api_access_key\')', '""', $raw);
 		
 		header('Content-Type: application/x-download');
 		header('Content-disposition: attachment; filename="'.AppSettings::getParam('coin_brand_name').'APIClient.php"');
@@ -132,15 +131,25 @@ if ($uri_parts[1] == "api") {
 				$to_card_id = (int) $card_range[1];
 			}
 			
+			$card_params = [
+				'peer_id' => $this_peer['peer_id'],
+				'peer_card_id' => $card_id
+			];
 			$card_q = "SELECT ";
 			foreach ($card_public_vars as $var_name) {
 				$card_q .= "c.".$var_name.", ";
 			}
-			$card_q .= "curr.abbreviation AS currency_abbreviation, fv_curr.abbreviation AS fv_currency_abbreviation FROM cards c JOIN currencies curr ON c.currency_id=curr.currency_id JOIN currencies fv_curr ON c.fv_currency_id=fv_curr.currency_id LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.peer_id='".$this_peer['peer_id']."' AND ";
-			if ($uri_parts[2] == "card") $card_q .= "c.peer_card_id='".$card_id."'";
-			else $card_q .= "c.peer_card_id >= ".$from_card_id." AND c.peer_card_id <= ".$to_card_id;
-			$card_q .= ";";
-			$cards = $app->run_query($card_q)->fetchAll(PDO::FETCH_ASSOC);
+			$card_q .= "curr.abbreviation AS currency_abbreviation, fv_curr.abbreviation AS fv_currency_abbreviation FROM cards c JOIN currencies curr ON c.currency_id=curr.currency_id JOIN currencies fv_curr ON c.fv_currency_id=fv_curr.currency_id LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.peer_id=:peer_id AND ";
+			if ($uri_parts[2] == "card") {
+				$card_q .= "c.peer_card_id=:peer_card_id";
+				$card_params['peer_card_id'] = $card_id;
+			}
+			else {
+				$card_q .= "c.peer_card_id >= :from_card_id AND c.peer_card_id <= :to_card_id";
+				$card_params['from_card_id'] = $from_card_id;
+				$card_params['to_card_id'] = $to_card_id;
+			}
+			$cards = $app->run_query($card_q, $card_params)->fetchAll(PDO::FETCH_ASSOC);
 			
 			if (count($cards) > 0) {
 				$api_output['status_code'] = 1;
@@ -168,19 +177,31 @@ if ($uri_parts[1] == "api") {
 		if ($db_blockchain) {
 			$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
 			
-			$block_q = "SELECT block_id, block_hash, num_transactions, time_mined FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."'";
-			if ($uri_parts[2] == "block") $block_q .= " AND block_id='".$block_height."'";
-			else $block_q .= " AND block_id >= ".$from_block_height." AND block_id <= ".$to_block_height;
-			$block_q .= ";";
-			$block_r = $app->run_query($block_q);
+			$block_params = [
+				'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
+			];
+			$block_q = "SELECT block_id, block_hash, num_transactions, time_mined FROM blocks WHERE blockchain_id=:blockchain_id";
+			if ($uri_parts[2] == "block") {
+				$block_q .= " AND block_id=:block_id";
+				$block_params['block_id'] = $block_height;
+			}
+			else {
+				$block_q .= " AND block_id >= :from_block_height AND block_id <= :to_block_height";
+				$block_params['from_block_height'] = $from_block_height;
+				$block_params['to_block_height'] = $to_block_height;
+			}
+			$block_r = $app->run_query($block_q, $block_params);
 			
 			$blocks = [];
 			
 			while ($db_block = $block_r->fetch(PDO::FETCH_ASSOC)) {
 				$transactions = [];
 				
-				$tx_q = "SELECT transaction_id, block_id, transaction_desc, tx_hash, amount, fee_amount, time_created, position_in_block, num_inputs, num_outputs FROM transactions WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."' AND block_id='".$db_block['block_id']."' ORDER BY position_in_block ASC;";
-				$tx_r = $app->run_query($tx_q);
+				$tx_q = "SELECT transaction_id, block_id, transaction_desc, tx_hash, amount, fee_amount, time_created, position_in_block, num_inputs, num_outputs FROM transactions WHERE blockchain_id=:blockchain_id AND block_id=:block_id ORDER BY position_in_block ASC;";
+				$tx_r = $app->run_query($tx_q, [
+					'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
+					'block_id' => $db_block['block_id']
+				]);
 				
 				while ($tx = $tx_r->fetch(PDO::FETCH_ASSOC)) {
 					list($inputs, $outputs) = $app->web_api_transaction_ios($tx['transaction_id']);
@@ -226,7 +247,7 @@ if ($uri_parts[1] == "api") {
 	}
 	else if ($uri_parts[2] == "blockchain") {
 		$url_identifier = $uri_parts[3];
-		$db_blockchain = $app->run_query("SELECT blockchain_id, blockchain_name, url_identifier, p2p_mode, coin_name, coin_name_plural, seconds_per_block, decimal_places, initial_pow_reward FROM blockchains WHERE url_identifier=".$app->quote_escape($url_identifier).";")->fetch(PDO::FETCH_ASSOC);
+		$db_blockchain = $app->run_query("SELECT blockchain_id, blockchain_name, url_identifier, p2p_mode, coin_name, coin_name_plural, seconds_per_block, decimal_places, initial_pow_reward FROM blockchains WHERE url_identifier=:url_identifier;", ['url_identifier' => $url_identifier])->fetch(PDO::FETCH_ASSOC);
 		
 		if ($db_blockchain) {
 			$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
@@ -240,7 +261,7 @@ if ($uri_parts[1] == "api") {
 	else if (!empty($uri_parts[2])) {
 		$game_identifier = $uri_parts[2];
 		
-		$db_game = $app->run_query("SELECT game_id, blockchain_id, maturity, pos_reward, pow_reward, round_length, payout_weight, name FROM games WHERE url_identifier=".$app->quote_escape($game_identifier).";")->fetch();
+		$db_game = $app->run_query("SELECT game_id, blockchain_id, maturity, pos_reward, pow_reward, round_length, payout_weight, name FROM games WHERE url_identifier=:url_identifier;", ['url_identifier'=>$game_identifier])->fetch();
 		
 		if ($db_game) {
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
@@ -309,7 +330,11 @@ if ($uri_parts[1] == "api") {
 						$api_user_info['votes_available'] = $votes_available;
 						
 						$mature_utxos = [];
-						$mature_utxo_r = $app->run_query("SELECT io.*, ak.pub_key AS address FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN address_keys ak ON io.address_id=ak.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND ak.account_id=".$user_game['account_id']." AND gio.game_id=".$game->db_game['game_id']." AND io.create_block_id <= ".($last_block_id-$game->db_game['maturity'])." GROUP BY io.io_id ORDER BY io.io_id ASC;");
+						$mature_utxo_r = $app->run_query("SELECT io.*, ak.pub_key AS address FROM transaction_game_ios gio JOIN transaction_ios io ON io.io_id=gio.io_id JOIN address_keys ak ON io.address_id=ak.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND ak.account_id=:account_id AND gio.game_id=:game_id AND io.create_block_id <= :ref_block GROUP BY io.io_id ORDER BY io.io_id ASC;", [
+							'account_id' => $user_game['account_id'],
+							'game_id' => $game->db_game['game_id'],
+							'ref_block' => ($last_block_id-$game->db_game['maturity'])
+						]);
 						
 						$utxo_i = 0;
 						
@@ -378,7 +403,7 @@ if ($uri_parts[1] == "api") {
 					
 					$event_effective_coins = ($confirmed_votes+$unconfirmed_votes)*$coins_per_vote + $effective_destroy_score + $unconfirmed_effective_destroy_score;
 					
-					$options_by_event = $app->run_query("SELECT * FROM options op JOIN events e ON op.event_id=e.event_id LEFT JOIN currencies c ON op.entity_id=c.entity_id WHERE e.event_id=".$game->current_events[$i]->db_event['event_id'].";");
+					$options_by_event = $app->run_query("SELECT * FROM options op JOIN events e ON op.event_id=e.event_id LEFT JOIN currencies c ON op.entity_id=c.entity_id WHERE e.event_id=:event_id;", ['event_id' => $game->current_events[$i]->db_event['event_id']]);
 					
 					while ($option = $options_by_event->fetch()) {
 						$stat = $ranked_stats[$option_id_to_rank[$option['option_id']]];
@@ -430,7 +455,7 @@ if ($uri_parts[1] == "api") {
 					if ($uri_parts[5] == "options") {
 						$event_option_index = (int) $uri_parts[6];
 						
-						$db_option = $app->run_query("SELECT *, en.entity_name AS entity_name, et.entity_name AS entity_type FROM options op LEFT JOIN entities en ON op.entity_id=en.entity_id LEFT JOIN images i ON op.image_id=i.image_id LEFT JOIN entity_types et ON en.entity_type_id=et.entity_type_id WHERE op.event_id='".$db_event['event_id']."' AND op.event_option_index='".$event_option_index."';")->fetch();
+						$db_option = $app->run_query("SELECT *, en.entity_name AS entity_name, et.entity_name AS entity_type FROM options op LEFT JOIN entities en ON op.entity_id=en.entity_id LEFT JOIN images i ON op.image_id=i.image_id LEFT JOIN entity_types et ON en.entity_type_id=et.entity_type_id WHERE op.event_id='".$db_event['event_id']."' AND op.event_option_index=:event_option_index;", ['event_option_index' => $event_option_index])->fetch();
 						
 						if ($db_option) {
 							$image_url = AppSettings::getParam('base_url').$app->image_url($db_option);

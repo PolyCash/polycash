@@ -40,9 +40,15 @@ if ($thisuser && $game) {
 		$amount_sum += (int) $amounts[$i];
 	}
 	
-	$gio_info = $app->run_query("SELECT COUNT(*), SUM(gio.colored_amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.io_id IN (".implode(",", $io_ids).") AND k.account_id='".$user_game['account_id']."';")->fetch();
+	$gio_info = $app->run_query("SELECT COUNT(*), SUM(gio.colored_amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.io_id IN (:io_ids) AND k.account_id=:account_id;", [
+		'io_ids' => implode(",", $io_ids),
+		'account_id' => $user_game['account_id']
+	])->fetch();
 	
-	$io_info = $app->run_query("SELECT COUNT(*), SUM(io.amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.io_id IN (".implode(",", $io_ids).") AND k.account_id='".$user_game['account_id']."';")->fetch();
+	$io_info = $app->run_query("SELECT COUNT(*), SUM(io.amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.io_id IN (:io_ids) AND k.account_id=:account_id;", [
+		'io_ids' => implode(",", $io_ids),
+		'account_id' => $user_game['account_id']
+	])->fetch();
 	
 	if (count($io_ids) == 0 || count($amounts) == 0 || $io_info['COUNT(*)'] != count($io_ids)) {
 		$app->output_message(6, "Error: invalid amounts or IO IDs.", false);

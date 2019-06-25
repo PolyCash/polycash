@@ -20,7 +20,7 @@ if ($app->running_as_admin()) {
 		$ref_user = false;
 		$blockchains = [];
 		
-		$buyin_invoices = $app->run_query("SELECT *, ug.user_id AS user_id, ug.account_id AS user_game_account_id FROM user_games ug JOIN currency_invoices i ON ug.user_game_id=i.user_game_id JOIN addresses a ON i.address_id=a.address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status IN ('unpaid','unconfirmed','confirmed') AND (i.status='unconfirmed' OR i.expire_time >= ".time().") AND i.invoice_type != 'sellout' GROUP BY a.address_id;");
+		$buyin_invoices = $app->run_query("SELECT *, ug.user_id AS user_id, ug.account_id AS user_game_account_id FROM user_games ug JOIN currency_invoices i ON ug.user_game_id=i.user_game_id JOIN addresses a ON i.address_id=a.address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status IN ('unpaid','unconfirmed','confirmed') AND (i.status='unconfirmed' OR i.expire_time >= :current_time) AND i.invoice_type != 'sellout' GROUP BY a.address_id;", ['current_time'=>time()]);
 		
 		if ($print_debug) echo "Checking ".$buyin_invoices->rowCount()." buyin addresses.<br/>\n";
 		
@@ -40,7 +40,9 @@ if ($app->running_as_admin()) {
 				
 				$address_balance_float = (float)($pay_blockchain->total_paid_to_address($invoice_address, true)/pow(10, $pay_blockchain->db_blockchain['decimal_places']));
 				
-				$preexisting_balance_float = (float)$app->run_query("SELECT SUM(confirmed_amount_paid) FROM currency_invoices WHERE address_id='".$invoice_address['address_id']."' AND status IN('confirmed','settled','pending_refund','refunded');")->fetch()['SUM(confirmed_amount_paid)'];
+				$preexisting_balance_float = (float)($app->run_query("SELECT SUM(confirmed_amount_paid) FROM currency_invoices WHERE address_id=:address_id AND status IN('confirmed','settled','pending_refund','refunded');", [
+					'address_id' => $invoice_address['address_id']
+				])->fetch()['SUM(confirmed_amount_paid)']);
 				
 				$amount_paid_float = $address_balance_float-$preexisting_balance_float;
 				
@@ -144,7 +146,10 @@ if ($app->running_as_admin()) {
 							if ($user_address) {
 								$io_ids = [];
 								
-								/*$escrow_spendable_ios = $app->run_query("SELECT * FROM transaction_ios WHERE blockchain_id='".$invoice_address['blockchain_id']."' AND address_id='".$invoice_address['address_id']."' AND spend_status='unspent';");
+								/*$escrow_spendable_ios = $app->run_query("SELECT * FROM transaction_ios WHERE blockchain_id=:blockchain_id AND address_id=:address_id AND spend_status='unspent';", [
+									'blockchain_id' => $invoice_address['blockchain_id'],
+									'address_id' => $invoice_address['address_id']
+								]);
 								
 								while ($io = $escrow_spendable_ios->fetch()) {
 									array_push($io_ids, $io['io_id']);
@@ -171,9 +176,17 @@ if ($app->running_as_admin()) {
 					if ($transaction_id) {
 						if ($print_debug) echo "created tx #".$transaction_id."\n";
 						
-						$app->run_query("UPDATE currency_invoices SET confirmed_amount_paid='".$address_balance_float."', unconfirmed_amount_paid='".$address_balance_float."', status='confirmed' WHERE invoice_id='".$invoice_address['invoice_id']."';");
+						$app->run_query("UPDATE currency_invoices SET confirmed_amount_paid=:address_balance_float, unconfirmed_amount_paid=:address_balance_float, status='confirmed' WHERE invoice_id=:invoice_id;", [
+							'address_balance_float' => $address_balance_float,
+							'invoice_id' => $invoice_address['invoice_id']
+						]);
 						
-						$app->run_query("INSERT INTO currency_invoice_ios SET invoice_id='".$invoice_address['invoice_id']."', tx_hash=".$app->quote_escape($pay_tx_hash).", out_index='".$pay_out_index."', game_out_index='".$pay_game_out_index."';");
+						$app->run_query("INSERT INTO currency_invoice_ios SET invoice_id=:invoice_id, tx_hash=:tx_hash, out_index=:out_index, game_out_index=:game_out_index;", [
+							'invoice_id' => $invoice_address['invoice_id'],
+							'tx_hash' => $pay_tx_hash,
+							'out_index' => $pay_out_index,
+							'game_out_index' => $pay_game_out_index
+						]);
 					}
 					else if ($print_debug) echo "failed to create a transaction.\n";
 				}
@@ -181,7 +194,7 @@ if ($app->running_as_admin()) {
 			}
 		}
 		
-		$sellout_invoices = $app->run_query("SELECT *, ug.user_id AS user_id, ug.account_id AS user_game_account_id FROM user_games ug JOIN currency_invoices i ON ug.user_game_id=i.user_game_id JOIN addresses a ON i.address_id=a.address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status IN ('unpaid','unconfirmed','confirmed') AND (i.status='unconfirmed' OR i.expire_time >= ".time().") AND i.invoice_type='sellout' GROUP BY a.address_id;");
+		$sellout_invoices = $app->run_query("SELECT *, ug.user_id AS user_id, ug.account_id AS user_game_account_id FROM user_games ug JOIN currency_invoices i ON ug.user_game_id=i.user_game_id JOIN addresses a ON i.address_id=a.address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status IN ('unpaid','unconfirmed','confirmed') AND (i.status='unconfirmed' OR i.expire_time >= :current_time) AND i.invoice_type='sellout' GROUP BY a.address_id;", ['current_time'=>time()]);
 		
 		while ($invoice_address = $sellout_invoices->fetch()) {
 			if (empty($blockchains[$invoice_address['blockchain_id']])) $blockchains[$invoice_address['blockchain_id']] = new Blockchain($app, $invoice_address['blockchain_id']);
@@ -193,7 +206,9 @@ if ($app->running_as_admin()) {
 				
 				$address_balance_float = (float)($game->total_paid_to_address($invoice_address, true)/pow(10, $game->db_game['decimal_places']));
 				
-				$preexisting_balance_float = (float)$app->run_query("SELECT SUM(confirmed_amount_paid) FROM currency_invoices WHERE address_id='".$invoice_address['address_id']."' AND status IN('confirmed','settled','pending_refund','refunded');")->fetch()['SUM(confirmed_amount_paid)'];
+				$preexisting_balance_float = (float)($app->run_query("SELECT SUM(confirmed_amount_paid) FROM currency_invoices WHERE address_id=:address_id AND status IN('confirmed','settled','pending_refund','refunded');", [
+					'address_id' => $invoice_address['address_id']
+				])->fetch()['SUM(confirmed_amount_paid)']);
 				
 				$amount_paid_float = $address_balance_float-$preexisting_balance_float;
 				
@@ -216,7 +231,7 @@ if ($app->running_as_admin()) {
 						
 						if ($print_debug) echo "exchange rate: $exchange_rate, pay: $sellout_amount_int, tx fee: $fee_amount_int<br/>\n";
 						
-						$spend_ios = $app->run_query("SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND k.account_id='".$sellout_account['account_id']."' ORDER BY io.amount ASC;");
+						$spend_ios = $app->run_query("SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND k.account_id=:account_id ORDER BY io.amount ASC;", ['account_id'=>$sellout_account['account_id']]);
 						
 						$io_amount_sum = 0;
 						$ios = [];
@@ -255,9 +270,15 @@ if ($app->running_as_admin()) {
 							if ($transaction_id) {
 								$transaction = $app->fetch_transaction_by_id($transaction_id);
 								
-								$app->run_query("UPDATE currency_invoices SET confirmed_amount_paid='".$address_balance_float."', unconfirmed_amount_paid='".$address_balance_float."', status='confirmed' WHERE invoice_id='".$invoice_address['invoice_id']."';");
+								$app->run_query("UPDATE currency_invoices SET confirmed_amount_paid=:address_balance_float, unconfirmed_amount_paid=:address_balance_float, status='confirmed' WHERE invoice_id=:invoice_id;", [
+									'address_balance_float' => $address_balance_float,
+									'invoice_id' => $invoice_address['invoice_id']
+								]);
 								
-								$app->run_query("INSERT INTO currency_invoice_ios SET invoice_id='".$invoice_address['invoice_id']."', tx_hash=".$app->quote_escape($transaction['tx_hash']).", out_index=0, game_out_index=NULL;");
+								$app->run_query("INSERT INTO currency_invoice_ios SET invoice_id=:invoice_id, tx_hash=:tx_hash, out_index=0, game_out_index=NULL;", [
+									'invoice_id' => $invoice_address['invoice_id'],
+									'tx_hash' => $transaction['tx_hash']
+								]);
 							}
 							
 							if ($print_debug) {
@@ -279,7 +300,7 @@ if ($app->running_as_admin()) {
 		// This functionality is currently disabled.
 		
 		/*
-		$db_running_games = $app->run_query("SELECT * FROM games WHERE game_status='running';");
+		$db_running_games = $app->fetch_running_games();
 		
 		while ($db_game = $db_running_games->fetch()) {
 			if (empty($blockchains[$db_game['blockchain_id']])) $blockchains[$db_game['blockchain_id']] = new Blockchain($app, $db_game['blockchain_id']);
@@ -289,7 +310,10 @@ if ($app->running_as_admin()) {
 				$this_game = new Game($blockchains[$db_game['blockchain_id']], $db_game['game_id']);
 				$required_block = $blockchains[$db_game['blockchain_id']]->last_block_id()+1-(int)$db_game['sellout_confirmations'];
 				
-				$unprocessed_sellouts = $app->run_query("SELECT * FROM game_sellouts WHERE game_id='".$db_game['game_id']."' AND out_tx_hash IS NULL AND in_block_id <= ".$required_block.";");
+				$unprocessed_sellouts = $app->run_query("SELECT * FROM game_sellouts WHERE game_id=:game_id AND out_tx_hash IS NULL AND in_block_id <= :block_id;", [
+					'game_id' => $db_game['game_id'],
+					'block_id' => $required_block
+				]);
 				
 				while ($unprocessed_sellout = $unprocessed_sellouts->fetch()) {
 					$sellout_transaction = $this_game->blockchain->fetch_transaction_by_hash($unprocessed_sellout['in_tx_hash']);
@@ -302,7 +326,10 @@ if ($app->running_as_admin()) {
 						$input_sum = 0;
 						$io_ids = [];
 						
-						$escrow_inputs = $app->run_query("SELECT * FROM transaction_ios WHERE blockchain_id='".$db_game['blockchain_id']."' AND address_id='".$escrow_address['address_id']."' AND spend_status='unspent' AND create_block_id IS NOT NULL ORDER BY create_block_id ASC;");
+						$escrow_inputs = $app->run_query("SELECT * FROM transaction_ios WHERE blockchain_id=:blockchain_id AND address_id=:address_id AND spend_status='unspent' AND create_block_id IS NOT NULL ORDER BY create_block_id ASC;", [
+							'blockchain_id' => $db_game['blockchain_id'],
+							'address_id' => $escrow_address['address_id']
+						]);
 						
 						while ($input_sum < $unprocessed_sellout['amount_out'] && $escrow_utxo = $escrow_inputs->fetch()) {
 							$input_sum += $escrow_utxo['amount'];
@@ -313,7 +340,7 @@ if ($app->running_as_admin()) {
 							$amounts = explode(",", $unprocessed_sellout['out_amounts']);
 							$address_ids = [];
 							
-							$sellout_inputs = $app->run_query("SELECT * FROM transaction_ios WHERE spend_transaction_id='".$sellout_transaction['transaction_id']."';");
+							$sellout_inputs = $app->run_query("SELECT * FROM transaction_ios WHERE spend_transaction_id=:transaction_id;", ['transaction_id'=>$sellout_transaction['transaction_id']]);
 							
 							while ($in_io = $sellout_inputs->fetch()) {
 								array_push($address_ids, $in_io['address_id']);
@@ -331,7 +358,10 @@ if ($app->running_as_admin()) {
 							if ($transaction_id) {
 								$db_transaction = $app->fetch_transaction_by_id($transaction_id);
 								
-								$app->run_query("UPDATE game_sellouts SET out_tx_hash=".$app->quote_escape($db_transaction['tx_hash'])." WHERE sellout_id='".$unprocessed_sellout['sellout_id']."';");
+								$app->run_query("UPDATE game_sellouts SET out_tx_hash=:tx_hash WHERE sellout_id=:sellout_id;", [
+									'tx_hash' => $db_transaction['tx_hash'],
+									'sellout_id' => $unprocessed_sellout['sellout_id']
+								]);
 								
 								if ($print_debug) echo "Created sellout refund transaction ".$db_transaction['tx_hash']."<br/>\n";
 							}

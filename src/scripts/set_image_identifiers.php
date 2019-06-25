@@ -16,7 +16,12 @@ if ($app->running_as_admin()) {
 		
 		$image_info = getimagesize($image_fname);
 		
-		$app->run_query("UPDATE images SET image_identifier=".$app->quote_escape($image_identifier).", width='".$image_info[0]."', height='".$image_info[1]."' WHERE image_id=".$db_image['image_id'].";");
+		$app->run_query("UPDATE images SET image_identifier=:image_identifier, width=:width, height=:height WHERE image_id=:image_id;", [
+			'image_identifier' => $image_identifier,
+			'width' => $image_info[0],
+			'height' => $image_info[1],
+			'image_id' => $db_image['image_id']
+		]);
 	}
 	echo "Done.\n";
 }

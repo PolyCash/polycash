@@ -10,10 +10,14 @@ if (!isset($_REQUEST['action'])) $_REQUEST['action'] = "";
 if ($_REQUEST['action'] == "unsubscribe") {
 	include(AppSettings::srcPath().'/includes/html_start.php');
 	
-	$delivery = $app->run_query("SELECT * FROM async_email_deliveries WHERE delivery_key=".$app->quote_escape($_REQUEST['delivery_key']).";")->fetch();
+	$delivery = $app->run_query("SELECT * FROM async_email_deliveries WHERE delivery_key=:delivery_key;", [
+		'delivery_key' => $_REQUEST['delivery_key']
+	])->fetch();
 	
 	if ($delivery) {
-		$app->run_query("UPDATE users u JOIN user_games ug ON u.user_id=ug.user_id SET ug.notification_preference='none' WHERE u.notification_email=".$app->quote_escape($delivery['to_email']).";");
+		$app->run_query("UPDATE users u JOIN user_games ug ON u.user_id=ug.user_id SET ug.notification_preference='none' WHERE u.notification_email=:email;", [
+			'email' => $delivery['to_email']
+		]);
 	}
 	
 	echo "<br/><p>&nbsp;&nbsp; You've been unsubscribed. You'll no longer receive email notifications about your accounts.</p>\n";
@@ -23,10 +27,7 @@ if ($_REQUEST['action'] == "unsubscribe") {
 }
 
 if ($_REQUEST['action'] == "logout" && $thisuser) {
-	$app->run_query("UPDATE user_sessions SET logout_time='".time()."' WHERE session_id='".$session['session_id']."';");
-	$app->run_query("UPDATE users SET logged_in=0 WHERE user_id='".$thisuser->db_user['user_id']."';");
-	
-	@session_regenerate_id();
+	$thisuser->log_out($session);
 	
 	$thisuser = FALSE;
 	$message = "You have been logged out. ";
@@ -35,7 +36,9 @@ if ($_REQUEST['action'] == "logout" && $thisuser) {
 if (empty($thisuser) && !empty($_REQUEST['login_key'])) {
 	$login_link_error = false;
 	
-	$login_link = $app->run_query("SELECT * FROM user_login_links WHERE access_key=".$app->quote_escape($_REQUEST['login_key']).";")->fetch();
+	$login_link = $app->run_query("SELECT * FROM user_login_links WHERE access_key=:access_key;", [
+		'access_key' => $_REQUEST['login_key']
+	])->fetch();
 	
 	if ($login_link) {
 		if (empty($login_link['time_clicked'])) {
@@ -67,7 +70,10 @@ if (empty($thisuser) && !empty($_REQUEST['login_key'])) {
 				}
 				
 				if (!$login_link_error) {
-					$app->run_query("UPDATE user_login_links SET time_clicked='".time()."' WHERE login_link_id='".$login_link['login_link_id']."';");
+					$app->run_query("UPDATE user_login_links SET time_clicked=:time_clicked WHERE login_link_id=:login_link_id;", [
+						'time_clicked' => time(),
+						'login_link_id' => $login_link['login_link_id']
+					]);
 					
 					$redirect_url = false;
 					$login_success = $thisuser->log_user_in($redirect_url, $viewer_id);
@@ -106,9 +112,9 @@ if ($thisuser) {
 	$uri_parts = explode("/", $uri);
 	$url_identifier = $uri_parts[2];
 	
-	$requested_game = $app->run_query("SELECT * FROM games WHERE url_identifier=".$app->quote_escape($url_identifier)." AND (game_status IN ('published','running','completed') OR creator_id='".$thisuser->db_user['user_id']."');")->fetch();
+	$requested_game = $app->fetch_game_by_identifier($url_identifier);
 	
-	if ($requested_game) {
+	if ($requested_game && (in_array($requested_game['game_status'], ['published','running','completed']) || $requested_game['creator_id'] == $thisuser->db_user['user_id'])) {
 		$blockchain = new Blockchain($app, $requested_game['blockchain_id']);
 		$game = new Game($blockchain, $requested_game['game_id']);
 		
@@ -133,17 +139,27 @@ if ($thisuser) {
 				
 				if ($payout_address != "") {
 					$base_currency = $app->fetch_currency_by_id($game->blockchain->currency_id());
-					$app->run_query("INSERT INTO external_addresses SET user_id='".$thisuser->db_user['user_id']."', currency_id=".$base_currency['currency_id'].", address=".$app->quote_escape($payout_address).", time_created='".time()."';");
+					$app->run_query("INSERT INTO external_addresses SET user_id=:user_id, currency_id=:currency_id, address=:address, time_created=:time_created;", [
+						'user_id' => $thisuser->db_user['user_id'],
+						'currency_id' => $base_currency['currency_id'],
+						'address' => $payout_address,
+						'time_created' => time()
+					]);
 					$address_id = $app->last_insert_id();
 					
-					$app->run_query("UPDATE user_games SET payout_address_id='".$address_id."' WHERE user_game_id='".$user_game['user_game_id']."';");
+					$app->run_query("UPDATE user_games SET payout_address_id=:payout_address_id WHERE user_game_id=:user_game_id;", [
+						'payout_address_id' => $address_id,
+						'user_game_id' => $user_game['user_game_id']
+					]);
 					$user_game['payout_address_id'] = $address_id;
 				}
 			}
 		}
 		else if (!$user_game && ($requested_game['giveaway_status'] == "invite_free" || $requested_game['giveaway_status'] == "invite_pay")) {
 			if ($requested_game['public_unclaimed_game_invitations'] == 1) {
-				$invitation = $app->run_query("SELECT * FROM game_invitations WHERE game_id='".$requested_game['game_id']."' AND used=0 AND used_user_id IS NULL ORDER BY invitation_id DESC LIMIT 1;")->fetch();
+				$invitation = $app->run_query("SELECT * FROM game_invitations WHERE game_id=:game_id AND used=0 AND used_user_id IS NULL ORDER BY invitation_id DESC LIMIT 1;", [
+					'game_id' => $requested_game['game_id']
+				])->fetch();
 				
 				if ($invitation) {
 					$invite_user_game = false;
@@ -185,7 +201,10 @@ if ($thisuser) {
 					else {
 						$invoice = $app->new_currency_invoice($invite_currency, $invite_currency['currency_id'], $requested_game['invite_cost'], $thisuser, $user_game, 'join_buyin');
 						
-						$app->run_query("UPDATE user_games SET current_invoice_id='".$invoice['invoice_id']."' WHERE user_game_id='".$user_game['user_game_id']."';");
+						$app->run_query("UPDATE user_games SET current_invoice_id=:current_invoice_id WHERE user_game_id=:user_game_id;", [
+							'current_invoice_id' => $invoice['invoice_id'],
+							'user_game_id' => $user_game['user_game_id']
+						]);
 					}
 					?>
 					<script type="text/javascript">
@@ -282,7 +301,9 @@ if ($thisuser) {
 		<div class="container-fluid">
 			<div class="panel panel-default" style="margin-top: 15px;">
 				<?php
-				$my_games = $app->run_query("SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id='".$thisuser->db_user['user_id']."' AND (g.creator_id='".$thisuser->db_user['user_id']."' OR g.game_status IN ('running','completed','published')) GROUP BY ug.game_id;");
+				$my_games = $app->run_query("SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id=:user_id AND (g.creator_id=:user_id OR g.game_status IN ('running','completed','published')) GROUP BY ug.game_id;", [
+					'user_id' => $thisuser->db_user['user_id']
+				]);
 				
 				if ($my_games->rowCount() > 0) {
 					?>
@@ -321,8 +342,8 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 	$voting_strategy = $_REQUEST['voting_strategy'];
 	$voting_strategy_id = intval($_REQUEST['voting_strategy_id']);
 	$aggregate_threshold = intval($_REQUEST['aggregate_threshold']);
-	$api_url = $app->quote_escape($app->strong_strip_tags($_REQUEST['api_url']));
-	if ($voting_strategy == "hit_url") $api_url = $app->quote_escape($app->strong_strip_tags($_REQUEST['hit_api_url']));
+	$api_url = $app->strong_strip_tags($_REQUEST['api_url']);
+	if ($voting_strategy == "hit_url") $api_url = $app->strong_strip_tags($_REQUEST['hit_api_url']);
 	$by_rank_csv = "";
 	
 	if ($voting_strategy_id > 0) {
@@ -331,7 +352,10 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 		if (!$user_strategy || $user_strategy['user_id'] != $thisuser->db_user['user_id']) die("Invalid strategy ID");
 	}
 	else {
-		$app->run_query("INSERT INTO user_strategies SET user_id='".$thisuser->db_user['user_id']."', game_id='".$game->db_game['game_id']."';");
+		$app->run_query("INSERT INTO user_strategies SET user_id=:user_id, game_id=:game_id;", [
+			'user_id' => $thisuser->db_user['user_id'],
+			'game_id' => $game->db_game['game_id']
+		]);
 		$voting_strategy_id = $app->last_insert_id();
 		
 		$user_strategy = $app->fetch_strategy_by_id($voting_strategy_id);
@@ -340,17 +364,28 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 	if ($_REQUEST['action'] == "save_voting_strategy_fees") {
 		$transaction_fee = floatval($_REQUEST['transaction_fee']);
 		
-		$app->run_query("UPDATE user_strategies SET transaction_fee='".$transaction_fee."' WHERE strategy_id='".$user_strategy['strategy_id']."';");
+		$app->run_query("UPDATE user_strategies SET transaction_fee=:transaction_fee WHERE strategy_id=:strategy_id;", [
+			'transaction_fee' => $transaction_fee,
+			'strategy_id' => $user_strategy['strategy_id']
+		]);
 		$user_strategy['transaction_fee'] = $transaction_fee;
 		
 		$error_code = 1;
 		$message = "Great, your transaction fee has been updated!";
 	}
 	else {
-		if (in_array($voting_strategy, array('manual', 'api', 'by_plan', 'by_entity','hit_url'))) {
-			$update_strategy_q = "UPDATE user_strategies SET voting_strategy='".$voting_strategy."'";
+		if (in_array($voting_strategy, ['manual', 'api', 'by_plan', 'by_entity','hit_url'])) {
+			$update_strategy_params = [
+				'voting_strategy' => $voting_strategy,
+				'max_votesum_pct' => $max_votesum_pct,
+				'min_votesum_pct' => $min_votesum_pct,
+				'api_url' => $api_url,
+				'strategy_id' => $user_strategy['strategy_id']
+			];
+			$update_strategy_q = "UPDATE user_strategies SET voting_strategy=:voting_strategy";
 			if ($aggregate_threshold >= 0 && $aggregate_threshold <= 100) {
-				$update_strategy_q .= ", aggregate_threshold='".$aggregate_threshold."'";
+				$update_strategy_q .= ", aggregate_threshold=:aggregate_threshold";
+				$update_strategy_params['aggregate_threshold'] = $aggregate_threshold;
 			}
 			
 			$min_votesum_pct = intval($_REQUEST['min_votesum_pct']);
@@ -359,11 +394,14 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 			if ($min_votesum_pct < 0) $min_votesum_pct = 0;
 			if ($max_votesum_pct < $min_votesum_pct) $max_votesum_pct = $min_votesum_pct;
 			
-			$update_strategy_q .= ", max_votesum_pct='".$max_votesum_pct."', min_votesum_pct='".$min_votesum_pct."', api_url=".$api_url;
-			$update_strategy_q .= " WHERE strategy_id='".$user_strategy['strategy_id']."';";
-			$app->run_query($update_strategy_q);
+			$update_strategy_q .= ", max_votesum_pct=:max_votesum_pct, min_votesum_pct=:min_votesum_pct, api_url=:api_url WHERE strategy_id=:strategy_id;";
+			$app->run_query($update_strategy_q, $update_strategy_params);
 			
-			$app->run_query("UPDATE user_games SET strategy_id='".$user_strategy['strategy_id']."' WHERE game_id='".$game->db_game['game_id']."' AND user_id='".$thisuser->db_user['user_id']."';");
+			$app->run_query("UPDATE user_games SET strategy_id=:strategy_id WHERE game_id=:game_id AND user_id=:user_id;", [
+				'strategy_id' => $user_strategy['strategy_id'],
+				'game_id' => $game->db_game['game_id'],
+				'user_id' => $thisuser->db_user['user_id']
+			]);
 		}
 		
 		$entity_pct_sum = 0;
@@ -377,12 +415,18 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 		}
 		
 		if ($entity_pct_sum == 100) {
-			$app->run_query("DELETE FROM user_strategy_entities WHERE strategy_id='".$user_strategy['strategy_id']."';");
+			$app->run_query("DELETE FROM user_strategy_entities WHERE strategy_id=:strategy_id;", [
+				'strategy_id' => $user_strategy['strategy_id']
+			]);
 			
 			foreach ($entities_by_game as $entity) {
 				$entity_pct = intval($_REQUEST['entity_pct_'.$entity['entity_id']]);
 				if ($entity_pct > 0) {
-					$app->run_query("INSERT INTO user_strategy_entities SET strategy_id='".$user_strategy['strategy_id']."', entity_id='".$entity['entity_id']."', pct_points='".$entity_pct."';");
+					$app->run_query("INSERT INTO user_strategy_entities SET strategy_id=:strategy_id, entity_id=:entity_id, pct_points=:pct_points;", [
+						'strategy_id' => $user_strategy['strategy_id'],
+						'entity_id' => $entity['entity_id'],
+						'pct_points' => $entity_pct
+					]);
 				}
 			}
 		}
@@ -394,15 +438,23 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 		}
 		
 		for ($block=1; $block<=$game->db_game['round_length']; $block++) {
-			$strategy_block = $app->run_query("SELECT * FROM user_strategy_blocks WHERE strategy_id='".$user_strategy['strategy_id']."' AND block_within_round='".$block."';")->fetch();
+			$strategy_block = $app->run_query("SELECT * FROM user_strategy_blocks WHERE strategy_id=:strategy_id AND block_within_round=:block_within_round;", [
+				'strategy_id' => $user_strategy['strategy_id'],
+				'block_within_round' => $block
+			])->fetch();
 			
 			if ($_REQUEST['vote_on_block_'.$block] == "1") {
 				if (!$strategy_block) {
-					$app->run_query("INSERT INTO user_strategy_blocks SET strategy_id='".$user_strategy['strategy_id']."', block_within_round='".$block."';");
+					$app->run_query("INSERT INTO user_strategy_blocks SET strategy_id=:strategy_id, block_within_round=:block_within_round;", [
+						'strategy_id' => $user_strategy['strategy_id'],
+						'block_within_round' => $block
+					]);
 				}
 			}
 			else if ($strategy_block) {
-				$app->run_query("DELETE FROM user_strategy_blocks WHERE strategy_block_id='".$strategy_block['strategy_block_id']."';");
+				$app->run_query("DELETE FROM user_strategy_blocks WHERE strategy_block_id=:strategy_block_id;", [
+					'strategy_block_id' => $strategy_block['strategy_block_id']
+				]);
 			}
 		}
 	}
@@ -512,7 +564,11 @@ if ($thisuser && $game) {
 		$from_block_id = ($plan_start_round-1)*$game->db_game['round_length']+1;
 		$to_block_id = ($plan_stop_round-1)*$game->db_game['round_length']+1;
 		
-		$initial_load_events = $app->run_query("SELECT * FROM events e JOIN event_types t ON e.event_type_id=t.event_type_id WHERE e.game_id='".$game->db_game['game_id']."' AND e.event_starting_block >= ".$from_block_id." AND e.event_starting_block <= ".$to_block_id." ORDER BY e.event_id ASC;");
+		$initial_load_events = $app->run_query("SELECT * FROM events e JOIN event_types t ON e.event_type_id=t.event_type_id WHERE e.game_id=:game_id AND e.event_starting_block >= :from_block_id AND e.event_starting_block <= :to_block_id ORDER BY e.event_id ASC;", [
+			'game_id' => $game->db_game['game_id'],
+			'from_block_id' => $from_block_id,
+			'to_block_id' => $to_block_id
+		]);
 		$num_initial_load_events = $initial_load_events->rowCount();
 		$i=0;
 		
@@ -544,12 +600,12 @@ if ($thisuser && $game) {
 				if ($user_game['show_intro_message'] == 1) { ?>
 					show_intro_message();
 					<?php
-					$app->run_query("UPDATE user_games SET show_intro_message=0 WHERE user_game_id='".$user_game['user_game_id']."';");
+					$app->run_query("UPDATE user_games SET show_intro_message=0 WHERE user_game_id=:user_game_id;", ['user_game_id' => $user_game['user_game_id']]);
 				}
 				if ($user_game['prompt_notification_preference'] == 1) { ?>
 					$('#notification_modal').modal('show');
 					<?php
-					$app->run_query("UPDATE user_games SET prompt_notification_preference=0 WHERE user_game_id='".$user_game['user_game_id']."';");
+					$app->run_query("UPDATE user_games SET prompt_notification_preference=0 WHERE user_game_id=:user_game_id;", ['user_game_id' => $user_game['user_game_id']]);
 				}
 			}
 			?>
@@ -634,7 +690,10 @@ if ($thisuser && $game) {
 						<div id="change_user_game">
 							<select id="select_user_game" class="form-control input-sm" onchange="change_user_game();">
 								<?php
-								$user_games_by_game = $app->run_query("SELECT * FROM user_games WHERE user_id='".$thisuser->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."';");
+								$user_games_by_game = $app->run_query("SELECT * FROM user_games WHERE user_id=:user_id AND game_id=:game_id;", [
+									'user_id' => $thisuser->db_user['user_id'],
+									'game_id' => $game->db_game['game_id']
+								]);
 								while ($db_user_game = $user_games_by_game->fetch()) {
 									echo "<option ";
 									if ($db_user_game['user_game_id'] == $user_game['user_game_id']) echo "selected=\"selected\" ";
@@ -782,7 +841,7 @@ if ($thisuser && $game) {
 				</div>
 			</div>
 		</div>
-		
+		<?php if ($game->db_game['public_players'] == 1) { ?>
 		<div class="tabcontent" style="display: none;" id="tabcontent1">
 			<div class="panel panel-default">
 				<div class="panel-heading">
@@ -795,7 +854,7 @@ if ($thisuser && $game) {
 				</div>
 			</div>
 		</div>
-		
+		<?php } ?>
 		<div id="tabcontent2" style="display: none;" class="tabcontent">
 			<div class="panel panel-default">
 				<div class="panel-heading">
@@ -890,7 +949,10 @@ if ($thisuser && $game) {
 								$entities_by_game = $game->entities_by_game();
 								$entity_i = 0;
 								while ($entity = $entities_by_game->fetch()) {
-									$pct_points = $app->run_query("SELECT * FROM user_strategy_entities WHERE strategy_id='".$user_strategy['strategy_id']."' AND entity_id='".$entity['entity_id']."';")->fetch()['pct_points'];
+									$pct_points = $app->run_query("SELECT * FROM user_strategy_entities WHERE strategy_id=:strategy_id AND entity_id=:entity_id;", [
+										'strategy_id' => $user_strategy['strategy_id'],
+										'entity_id' => $entity['entity_id']
+									])->fetch()['pct_points'];
 									
 									if ($entity_i%4 == 0) echo '<div class="row">';
 									echo '<div class="col-md-3">';
@@ -969,8 +1031,11 @@ if ($thisuser && $game) {
 											echo '<div class="col-md-2">';
 											echo '<input type="checkbox" name="vote_on_block_'.$block.'" id="vote_on_block_'.$block.'" value="1"';
 											
-											$strategy_block_q = "SELECT * FROM user_strategy_blocks WHERE strategy_id='".$user_strategy['strategy_id']."' AND block_within_round='".$block."';";
-											$strategy_block_r = $app->run_query($strategy_block_q);
+											$strategy_block_q = "SELECT * FROM user_strategy_blocks WHERE strategy_id=:strategy_id AND block_within_round=:block_within_round;";
+											$strategy_block_r = $app->run_query($strategy_block_q, [
+												'strategy_id' => $user_strategy['strategy_id'],
+												'block_within_round' => $block
+											]);
 											if ($strategy_block_r->rowCount() > 0) echo ' checked="checked"';
 											
 											echo '><label class="plainlabel" for="vote_on_block_'.$block.'">&nbsp;&nbsp;';

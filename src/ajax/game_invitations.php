@@ -7,7 +7,7 @@ if ($thisuser) {
 	
 	if (in_array($action, array('manage', 'generate', 'send'))) {
 		$game_id = intval($_REQUEST['game_id']);
-		$db_game = $app->fetch_db_game_by_id($game_id);
+		$db_game = $app->fetch_game_by_id($game_id);
 		
 		if ($db_game) {
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
@@ -18,7 +18,10 @@ if ($thisuser) {
 
 				if ($perm_to_invite) {
 					if ($action == "manage") {
-						$my_invitations = $app->run_query("SELECT * FROM game_invitations i LEFT JOIN users u ON i.used_user_id=u.user_id LEFT JOIN async_email_deliveries d ON i.sent_email_id=d.delivery_id WHERE i.game_id='".$game->db_game['game_id']."' AND i.inviter_id='".$thisuser->db_user['user_id']."' ORDER BY invitation_id ASC;");
+						$my_invitations = $app->run_query("SELECT * FROM game_invitations i LEFT JOIN users u ON i.used_user_id=u.user_id LEFT JOIN async_email_deliveries d ON i.sent_email_id=d.delivery_id WHERE i.game_id=:game_id AND i.inviter_id=:inviter_id ORDER BY invitation_id ASC;", [
+							'game_id' => $game->db_game['game_id'],
+							'inviter_id' => $thisuser->db_user['user_id']
+						]);
 						
 						echo 'You\'ve generated '.$my_invitations->rowCount().' invitations for this game.<br/>';
 						
@@ -58,10 +61,13 @@ if ($thisuser) {
 						<?php
 					}
 					else if ($action == "send") {
-						$send_to = urldecode($_REQUEST['send_to']);
+						$send_to = strip_tags(urldecode($_REQUEST['send_to']));
 						$invitation_id = intval($_REQUEST['invitation_id']);
 						
-						$invitation = $app->run_query("SELECT * FROM game_invitations WHERE invitation_id='".$invitation_id."' AND inviter_id='".$thisuser->db_user['user_id']."';")->fetch();
+						$invitation = $app->run_query("SELECT * FROM game_invitations WHERE invitation_id=:invitation_id AND inviter_id=:inviter_id;", [
+							'invitation_id' => $invitation_id,
+							'inviter_id' => $thisuser->db_user['user_id']
+						])->fetch();
 						
 						if ($invitation) {
 							if ($invitation['game_id'] == $game->db_game['game_id'] && $invitation['used'] == 0) {

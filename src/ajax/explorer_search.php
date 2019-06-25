@@ -7,7 +7,7 @@ $game_id = false;
 
 if (!empty($_REQUEST['game_id'])) {
 	$game_id = (int) $_REQUEST['game_id'];
-	$db_game = $app->fetch_db_game_by_id($game_id);
+	$db_game = $app->fetch_game_by_id($game_id);
 	if ($db_game) {
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 		$game = new Game($blockchain, $db_game['game_id']);
@@ -22,13 +22,18 @@ if (!$game && !empty($_REQUEST['blockchain_id'])) {
 if ($blockchain) {
 	$search_term = trim(strip_tags(urldecode($_REQUEST['search_term'])));
 	
-	$matching_event = $app->run_query("SELECT e.*, g.url_identifier AS game_url_identifier FROM events e JOIN games g ON e.game_id=g.game_id WHERE e.event_name=".$app->quote_escape($search_term).";")->fetch();
+	$matching_event = $app->run_query("SELECT e.*, g.url_identifier AS game_url_identifier FROM events e JOIN games g ON e.game_id=g.game_id WHERE e.event_name=:search_term;", [
+		'search_term' => $search_term
+	])->fetch();
 	
 	if ($matching_event) {
 		$app->output_message(1, "/explorer/games/".$matching_event['game_url_identifier']."/events/".$matching_event['event_index'], false);
 	}
 	else {
-		$matching_address = $app->run_query("SELECT * FROM addresses WHERE primary_blockchain_id=".$blockchain->db_blockchain['blockchain_id']." AND address=".$app->quote_escape($search_term).";")->fetch();
+		$matching_address = $app->run_query("SELECT * FROM addresses WHERE primary_blockchain_id=:blockchain_id AND address=:search_term;", [
+			'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
+			'search_term' => $search_term
+		])->fetch();
 		
 		if ($matching_address) {
 			if ($game) {

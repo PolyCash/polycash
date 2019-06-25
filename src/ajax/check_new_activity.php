@@ -9,7 +9,7 @@ $refresh_page = $_REQUEST['refresh_page'];
 
 if (!$game) {
 	$game_id = (int) $_REQUEST['game_id'];
-	$db_game = $app->fetch_db_game_by_id($game_id);
+	$db_game = $app->fetch_game_by_id($game_id);
 	
 	if ($db_game) {
 		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
@@ -169,7 +169,10 @@ if ($refresh_page == "wallet" && ($mature_io_ids_hash != $_REQUEST['mature_io_id
 else $output['new_mature_ios'] = 0;
 
 if ($thisuser && $refresh_page == "wallet") {
-	$unseen_message_threads = $app->run_query("SELECT * FROM user_messages WHERE game_id='".$game->db_game['game_id']."' AND to_user_id='".$thisuser->db_user['user_id']."' AND seen=0 GROUP BY from_user_id;");
+	$unseen_message_threads = $app->run_query("SELECT * FROM user_messages WHERE game_id=:game_id AND to_user_id=:to_user_id AND seen=0 GROUP BY from_user_id;", [
+		'game_id' => $game->db_game['game_id'],
+		'to_user_id' => $thisuser->db_user['user_id']
+	]);
 	
 	if ($unseen_message_threads->rowCount() > 0) {
 		$output['new_messages'] = 1;

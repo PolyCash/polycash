@@ -79,13 +79,15 @@ else {
 	include($src_path."/includes/connect.php");
 	include($src_path."/includes/get_session.php");
 	
-	$selected_category = $app->run_query("SELECT * FROM categories WHERE category_level=0 AND url_identifier=".$app->quote_escape($uri_parts[1]).";")->fetch();
+	$selected_category = $app->run_query("SELECT * FROM categories WHERE category_level=0 AND url_identifier=:url_identifier;", [
+		'url_identifier' => $uri_parts[1]
+	])->fetch();
 	
 	if ($selected_category) {
 		include($src_path."/directory.php");
 	}
 	else {
-		$db_game = $app->fetch_db_game_by_identifier($uri_parts[1]);
+		$db_game = $app->fetch_game_by_identifier($uri_parts[1]);
 		
 		if ($db_game) {
 			if (in_array($db_game['game_status'], ["running","published","completed"])) {

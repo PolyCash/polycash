@@ -39,12 +39,15 @@ else {
 						$general_entity_type = $app->check_set_entity_type("general entity");
 						$member_entity = $app->check_set_entity($general_entity_type['entity_type_id'], $member_name);
 						
-						$app->run_query("INSERT INTO option_group_memberships SET option_group_id='".$selected_group['group_id']."', entity_id='".$member_entity['entity_id']."';");
+						$app->run_query("INSERT INTO option_group_memberships SET option_group_id=:option_group_id, entity_id=:entity_id;", [
+							'option_group_id' => $selected_group['group_id'],
+							'entity_id' => $member_entity['entity_id']
+						]);
 					}
 					
 					echo "<a href=\"/groups/\">&larr; All Groups</a><br/><br/>\n";
 					
-					$memberships = $app->run_query("SELECT * FROM option_group_memberships m JOIN entities en ON m.entity_id=en.entity_id WHERE m.option_group_id='".$selected_group['group_id']."' ORDER BY m.membership_id ASC;");
+					$memberships = $app->run_query("SELECT * FROM option_group_memberships m JOIN entities en ON m.entity_id=en.entity_id WHERE m.option_group_id=:option_group_id ORDER BY m.membership_id ASC;", ['option_group_id' => $selected_group['group_id']]);
 					
 					while ($membership = $memberships->fetch()) {
 						echo $membership['entity_name']."<br/>\n";

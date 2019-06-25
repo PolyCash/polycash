@@ -2,7 +2,7 @@
 include(AppSettings::srcPath()."/includes/connect.php");
 include(AppSettings::srcPath()."/includes/get_session.php");
 
-$db_game = $app->fetch_db_game_by_id((int)$_REQUEST['game_id']);
+$db_game = $app->fetch_game_by_id((int)$_REQUEST['game_id']);
 $blockchain = new Blockchain($app, $db_game['blockchain_id']);
 $game = new Game($blockchain, (int)$_REQUEST['game_id']);
 

@@ -35,8 +35,14 @@ if ($app->running_as_admin()) {
 						}
 						
 						if ($db_image) {
-							$app->run_query("UPDATE entities SET default_image_id=".$db_image['image_id']." WHERE entity_id=".$entity['entity_id'].";");
-							$app->run_query("UPDATE options SET image_id=".$db_image['image_id']." WHERE entity_id=".$entity['entity_id'].";");
+							$app->run_query("UPDATE entities SET default_image_id=:image_id WHERE entity_id=:entity_id;", [
+								'image_id' => $db_image['image_id'],
+								'entity_id' => $entity['entity_id']
+							]);
+							$app->run_query("UPDATE options SET image_id=:image_id WHERE entity_id=:entity_id;", [
+								'image_id' => $db_image['image_id'],
+								'entity_id' => $entity['entity_id']
+							]);
 						}
 					}
 					else echo "Failed to open ".$image_fullname."\n";
