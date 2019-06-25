@@ -4,7 +4,7 @@ include(AppSettings::srcPath()."/includes/get_session.php");
 
 if ($thisuser) {
 	$game_id = (int) $_REQUEST['game_id'];
-	$db_game = $app->fetch_db_game_by_id($game_id);
+	$db_game = $app->fetch_game_by_id($game_id);
 	$blockchain = new Blockchain($app, $db_game['blockchain_id']);
 	$game = new Game($blockchain, $game_id);
 	
@@ -24,7 +24,7 @@ if ($thisuser) {
 			if ($game->db_game['game_status'] == "editable") {
 				if (!empty($_REQUEST['giveaway_status']) && ($_REQUEST['giveaway_status'] == "public_free" || $_REQUEST['giveaway_status'] == "public_pay")) $game_info['redirect_user'] = 1;
 				
-				$game_form_vars = explode(",", "event_rule,option_group_id,event_entity_type_id,events_per_round,event_type_name,maturity,name,payout_weight,round_length,pos_reward,inflation,exponential_inflation_rate,final_round,coin_name,coin_name_plural,coin_abbreviation,start_condition,buyin_policy,game_buyin_cap,default_vote_effectiveness_function,default_effectiveness_param1,default_max_voting_fraction,game_starting_block,escrow_address,genesis_tx_hash,genesis_amount");
+				$game_form_vars = ['event_rule','option_group_id','event_entity_type_id','events_per_round','event_type_name','maturity','name','payout_weight','round_length','pos_reward','inflation','exponential_inflation_rate','final_round','coin_name','coin_name_plural','coin_abbreviation','start_condition','buyin_policy','game_buyin_cap','default_vote_effectiveness_function','default_effectiveness_param1','default_max_voting_fraction','game_starting_block','escrow_address','genesis_tx_hash','genesis_amount'];
 				
 				if ($_REQUEST['inflation'] == "exponential") $_REQUEST['payout_weight'] = "coin_round";
 				if ($_REQUEST['event_rule'] == "single_event_series") $_REQUEST['events_per_round'] = 1;
@@ -32,30 +32,38 @@ if ($thisuser) {
 				$blockchain_id = (int) $_REQUEST['blockchain_id'];
 				$db_blockchain = $app->fetch_blockchain_by_id($blockchain_id);
 				
-				$change_game_q = "UPDATE games SET blockchain_id='".$db_blockchain['blockchain_id']."', ";
+				$change_game_q = "UPDATE games SET blockchain_id=:blockchain_id, ";
+				$change_game_params = [
+					'blockchain_id' => $db_blockchain['blockchain_id'],
+					'game_id' => $game->db_game['game_id']
+				];
 				
 				for ($i=0; $i<count($game_form_vars); $i++) {
 					$game_var = $game_form_vars[$i];
 					$game_val = $_REQUEST[$game_form_vars[$i]];
 					
-					if (in_array($game_var, array('pos_reward', 'genesis_amount'))) $game_val = (int) ($game_val*pow(10,$game->db_game['decimal_places']));
-					else if (in_array($game_var, array("exponential_inflation_rate", "default_max_voting_fraction"))) $game_val = (float) $game_val;
-					else if (in_array($game_var, array('maturity', 'round_length', 'final_round','blockchain_id'))) $game_val = intval($game_val);
+					if (in_array($game_var, ['pos_reward', 'genesis_amount'])) $game_val = (int) ($game_val*pow(10,$game->db_game['decimal_places']));
+					else if (in_array($game_var, ["exponential_inflation_rate", "default_max_voting_fraction"])) $game_val = (float) $game_val;
+					else if (in_array($game_var, ['maturity', 'round_length', 'final_round','blockchain_id'])) $game_val = intval($game_val);
 					else $game_val = $app->strong_strip_tags($game_val);
 					
-					$change_game_q .= $game_var."=".$app->quote_escape($game_val).", ";
+					$change_game_q .= $game_var."=:".$game_var.", ";
+					$change_game_params[$game_var] = $game_val;
 					$game->db_game[$game_var] = $game_val;
 				}
 				
-				$change_game_q = substr($change_game_q, 0, strlen($change_game_q)-2)." WHERE game_id='".$game->db_game['game_id']."';";
-				$app->run_query($change_game_q);
+				$change_game_q = substr($change_game_q, 0, strlen($change_game_q)-2)." WHERE game_id=:game_id;";
+				$app->run_query($change_game_q, $change_game_params);
 				
 				$game_name = $app->strong_strip_tags($app->make_alphanumeric($_REQUEST['name'], "$ -()/!.,:;#"));
 				
 				$url_error = false;
 
 				if ($game_name != $game->db_game['name']) {
-					$conflicting_game = $app->run_query("SELECT * FROM games WHERE name=".$app->quote_escape($game_name)." AND game_id != '".$game->db_game['game_id']."';")->fetch();
+					$conflicting_game = $app->run_query("SELECT * FROM games WHERE name=:name AND game_id != :game_id;", [
+						'name' => $game_name,
+						'game_id' => $game->db_game['game_id']
+					])->fetch();
 					
 					if ($conflicting_game) {
 						$url_error = true;
@@ -63,7 +71,11 @@ if ($thisuser) {
 					}
 					else {
 						$url_identifier = $app->game_url_identifier($game_name);
-						$app->run_query("UPDATE games SET name=".$app->quote_escape($game_name).", url_identifier=".$app->quote_escape($url_identifier)." WHERE game_id='".$game->db_game['game_id']."';");
+						$app->run_query("UPDATE games SET name=:name, url_identifier=:url_identifier WHERE game_id=:game_id;", [
+							'name' => $game_name,
+							'url_identifier' => $url_identifier,
+							'game_id' => $game->db_game['game_id']
+						]);
 						$game_info['url_identifier'] = $url_identifier;
 					}
 				}

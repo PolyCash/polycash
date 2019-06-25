@@ -21,12 +21,15 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 		else $card_id = (int) $uri_parts[3];
 		
 		if (!empty($card_id) && !empty($peer_id)) {
-			$card = $app->run_query("SELECT c.* FROM cards c LEFT JOIN card_designs d ON c.design_id=d.design_id WHERE c.peer_card_id=".$app->quote_escape($card_id)." AND c.peer_id='".$peer_id."';")->fetch();
+			$card = $app->fetch_card_by_peer_and_id($peer_id, $card_id);
 			
 			if ($card) {
 				$peer = $app->fetch_peer_by_id($card['peer_id']);
 				
-				$printrequest = $app->run_query("SELECT * FROM card_printrequests pr JOIN card_designs d ON pr.design_id=d.design_id WHERE d.design_id='".$card['design_id']."';")->fetch();
+				$printrequest = $app->run_query("SELECT * FROM card_printrequests pr JOIN card_designs d ON pr.design_id=d.design_id WHERE d.design_id=:design_id;", [
+					'design_id' => $card['design_id']
+				])->fetch();
+				
 				$currency = $app->fetch_currency_by_id($card['currency_id']);
 				$fv_currency = $app->fetch_currency_by_id($card['fv_currency_id']);
 				?>

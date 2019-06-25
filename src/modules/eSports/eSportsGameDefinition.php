@@ -63,10 +63,14 @@ class eSportsGameDefinition {
 	public function events_starting_between_blocks(&$game, $from_block, $to_block) {
 		$events = [];
 		
-		$gde_r = $this->app->run_query("SELECT gde.*, sp.entity_name AS sport_name, le.entity_name AS league_name FROM game_defined_events gde LEFT JOIN entities sp ON gde.sport_entity_id=sp.entity_id LEFT JOIN entities le ON gde.league_entity_id=le.entity_id WHERE gde.game_id='".$game->db_game['game_id']."' AND gde.event_starting_block>=".$from_block." AND gde.event_starting_block<=".$to_block.";");
+		$gde_r = $this->app->run_query("SELECT gde.*, sp.entity_name AS sport_name, le.entity_name AS league_name FROM game_defined_events gde LEFT JOIN entities sp ON gde.sport_entity_id=sp.entity_id LEFT JOIN entities le ON gde.league_entity_id=le.entity_id WHERE gde.game_id=:game_id AND gde.event_starting_block>=:from_block AND gde.event_starting_block<=:to_block;", [
+			'game_id' => $game->db_game['game_id'],
+			'from_block' => $from_block,
+			'to_block' => $to_block
+		]);
 		
 		while ($db_gde = $gde_r->fetch()) {
-			$gdo_r = $this->app->run_query("SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_gde['event_index']."' ORDER BY option_index ASC;");
+			$gdo_r = $this->app->fetch_game_defined_options($game->db_game['game_id'], $db_gde['event_index'], false, false);
 			
 			$possible_outcomes = [];
 			while ($db_gdo = $gdo_r->fetch()) {

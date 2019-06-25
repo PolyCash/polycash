@@ -26,10 +26,13 @@ if ($user_game) {
 		$account = $app->fetch_account_by_id($user_game['account_id']);
 		
 		if ($account) {
-			$event_q = "events WHERE game_id='".$game->db_game['game_id']."'";
-			$event_q .= " AND event_starting_block<=".$mining_block_id." AND (3*event_starting_block+event_final_block)/4>=".$mining_block_id;
-			$option_info = $app->run_query("SELECT SUM(num_options) FROM ".$event_q.";")->fetch();
-			$db_events = $app->run_query("SELECT * FROM ".$event_q." ORDER BY event_index ASC;")->fetchAll();
+			$event_params = [
+				'game_id' => $game->db_game['game_id'],
+				'mining_block_id' => $mining_block_id
+			];
+			$event_q = "events WHERE game_id=:game_id AND event_starting_block <= :mining_block_id AND (3*event_starting_block+event_final_block)/4 >= :mining_block_id";
+			$option_info = $app->run_query("SELECT SUM(num_options) FROM ".$event_q.";", $event_params)->fetch();
+			$db_events = $app->run_query("SELECT * FROM ".$event_q." ORDER BY event_index ASC;", $event_params)->fetchAll();
 			$num_events = count($db_events);
 			
 			if ($num_events > 0) {

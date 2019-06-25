@@ -5,7 +5,10 @@ include(AppSettings::srcPath().'/includes/get_session.php');
 if ($thisuser) {
 	$account_id = (int) $_REQUEST['account_id'];
 
-	$account = $app->run_query("SELECT * FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id JOIN blockchains b ON c.blockchain_id=b.blockchain_id WHERE ca.account_id='".$account_id."' AND ca.user_id='".$thisuser->db_user['user_id']."';")->fetch();
+	$account = $app->fetch_acrun_query("SELECT * FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id JOIN blockchains b ON c.blockchain_id=b.blockchain_id WHERE ca.account_id=:account_id AND ca.user_id=:user_id;", [
+		'account_id' => $account_id,
+		'user_id' => $thisuser->db_user['user_id']
+	])->fetch();
 	
 	if ($account) {
 		if ($_REQUEST['action'] == "new") {
@@ -17,11 +20,17 @@ if ($thisuser) {
 		else if ($_REQUEST['action'] == "set_primary") {
 			$address_id = (int) $_REQUEST['address_id'];
 			
-			$address_key = $app->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id='".$address_id."' AND k.account_id='".$account['account_id']."';")->fetch();
+			$address_key = $app->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id=:address_id AND k.account_id=:account_id;", [
+				'address_id' => $address_id,
+				'account_id' => $account['account_id']
+			])->fetch();
 			
 			if ($address_key) {
 				if ($address_key['is_separator_address'] == 0 && $address_key['is_destroy_address'] == 0) {
-					$app->run_query("UPDATE currency_accounts SET current_address_id='".$address_key['address_id']."' WHERE account_id='".$account['account_id']."';");
+					$app->run_query("UPDATE currency_accounts SET current_address_id=:address_id WHERE account_id=:account_id;", [
+						'address_id' => $address_key['address_id'],
+						'account_id' => $account['account_id']
+					]);
 					
 					$app->output_message(6, "This address has been set as primary for this account.", false);
 				}

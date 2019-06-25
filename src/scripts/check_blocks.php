@@ -15,22 +15,35 @@ if ($app->running_as_admin()) {
 	$block_id = false;
 	if (!empty($_REQUEST['block_id'])) $block_id = (int)$_REQUEST['block_id'];
 	
+	$check_blockchain_params = [];
 	$check_blockchains_q = "SELECT * FROM blockchains WHERE ";
-	if ($blockchain_id) $check_blockchains_q .= "blockchain_id='".$blockchain_id."'";
+	if ($blockchain_id) {
+		$check_blockchains_q .= "blockchain_id=:blockchain_id";
+		$check_blockchain_params['blockchain_id'] = $blockchain_id;
+	}
 	else $check_blockchains_q .= "online=1";
-	$check_blockchains_q .= ";";
-	$check_blockchains = $app->run_query($check_blockchains_q);
+	
+	$check_blockchains = $app->run_query($check_blockchains_q, $check_blockchain_params);
 	
 	while ($db_blockchain = $check_blockchains->fetch()) {
 		$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
 		
 		$last_block_id = $blockchain->last_block_id();
 		
-		$check_blocks_q = "SELECT * FROM blocks WHERE blockchain_id='".$blockchain->db_blockchain['blockchain_id']."'";
-		if ($block_id) $check_blocks_q .= " AND block_id=".$block_id;
-		else $check_blocks_q .= " AND ((num_ios_in IS NULL AND block_id>=".$db_blockchain['first_required_block'].") OR sum_coins_in<0 OR sum_coins_out<0 OR transactions_html IS NULL)";
-		$check_blocks_q .= " AND block_id>= ".$blockchain->db_blockchain['first_required_block']." ORDER BY block_id ASC;";
-		$check_blocks = $app->run_query($check_blocks_q);
+		$check_blocks_params = [
+			'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
+			'first_required_block' => $db_blockchain['first_required_block']
+		];
+		$check_blocks_q = "SELECT * FROM blocks WHERE blockchain_id=:blockchain_id";
+		if ($block_id) {
+			$check_blocks_q .= " AND block_id=:block_id";
+			$check_blocks_params['block_id'] = $block_id;
+		}
+		else {
+			$check_blocks_q .= " AND ((num_ios_in IS NULL AND block_id >= :first_required_block) OR sum_coins_in<0 OR sum_coins_out<0 OR transactions_html IS NULL)";
+		}
+		$check_blocks_q .= " AND block_id>= :first_required_block ORDER BY block_id ASC;";
+		$check_blocks = $app->run_query($check_blocks_q, $check_blocks_params);
 		
 		echo $db_blockchain['blockchain_name'].": checking ".$check_blocks->rowCount()." blocks<br/>\n";
 		$app->flush_buffers();

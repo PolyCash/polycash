@@ -12,15 +12,28 @@ class User {
 	}
 
 	public function immature_balance(&$game, &$user_game) {
-		return (int)($this->app->run_query("SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND k.account_id='".$user_game['account_id']."' AND io.spend_status != 'spent' AND gio.is_resolved=0;")->fetch(PDO::FETCH_NUM)[0]);
+		$query_params = [
+			'game_id' => $game->db_game['game_id'],
+			'account_id' => $user_game['account_id']
+		];
+		return (int)($this->app->run_query("SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.game_id=:game_id AND k.account_id=:account_id AND io.spend_status != 'spent' AND gio.is_resolved=0;", $query_params)->fetch(PDO::FETCH_NUM)[0]);
 	}
 
 	public function mature_balance(&$game, &$user_game) {
-		return (int)($this->app->run_query("SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.game_id='".$game->db_game['game_id']."' AND k.account_id='".$user_game['account_id']."' AND gio.is_resolved=1 AND io.spend_status != 'spent';")->fetch(PDO::FETCH_NUM)[0]);
+		$query_params = [
+			'game_id' => $game->db_game['game_id'],
+			'account_id' => $user_game['account_id']
+		];
+		return (int)($this->app->run_query("SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.game_id=:game_id AND k.account_id=:account_id AND gio.is_resolved=1 AND io.spend_status != 'spent';", $query_params)->fetch(PDO::FETCH_NUM)[0]);
 	}
 
 	public function user_current_votes(&$game, $last_block_id, $current_round, &$user_game) {
-		$info = $this->app->run_query("SELECT ROUND(SUM(gio.colored_amount)) coins, ROUND(SUM(gio.colored_amount*(".($last_block_id+1)."-gio.create_block_id))) coin_blocks, ROUND(SUM(gio.colored_amount*(".$current_round."-gio.create_round_id))) coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status='unspent' AND k.account_id='".$user_game['account_id']."';")->fetch();
+		$query_params = [
+			'ref_block' => ($last_block_id+1),
+			'ref_round' => $current_round,
+			'account_id' => $user_game['account_id']
+		];
+		$info = $this->app->run_query("SELECT ROUND(SUM(gio.colored_amount)) coins, ROUND(SUM(gio.colored_amount*(:ref_block-gio.create_block_id))) coin_blocks, ROUND(SUM(gio.colored_amount*(:ref_round-gio.create_round_id))) coin_rounds FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status='unspent' AND k.account_id=:account_id;", $query_params)->fetch();
 		$votes = (int) $info[$game->db_game['payout_weight']."s"];
 		
 		$coins_per_vote = $game->blockchain->app->coins_per_vote($game->db_game);
@@ -57,31 +70,54 @@ class User {
 	}
 	
 	public function ensure_user_in_game(&$game, $force_new) {
-		$existing_user_games = $this->app->run_query("SELECT *, ug.user_id AS user_id, ug.game_id AS game_id FROM user_games ug JOIN games g ON ug.game_id=g.game_id LEFT JOIN user_strategies us ON us.strategy_id=ug.strategy_id LEFT JOIN featured_strategies fs ON us.featured_strategy_id=fs.featured_strategy_id WHERE ug.user_id='".$this->db_user['user_id']."' AND ug.game_id='".$game->db_game['game_id']."' ORDER BY ug.selected DESC;");
+		$existing_user_games = $this->app->run_query("SELECT *, ug.user_id AS user_id, ug.game_id AS game_id FROM user_games ug JOIN games g ON ug.game_id=g.game_id LEFT JOIN user_strategies us ON us.strategy_id=ug.strategy_id LEFT JOIN featured_strategies fs ON us.featured_strategy_id=fs.featured_strategy_id WHERE ug.user_id=:user_id AND ug.game_id=:game_id ORDER BY ug.selected DESC;", [
+			'user_id' => $this->db_user['user_id'],
+			'game_id' => $game->db_game['game_id']
+		]);
 		
 		if ($force_new || $existing_user_games->rowCount() == 0) {
-			$new_user_game_q = "INSERT INTO user_games SET user_id='".$this->db_user['user_id']."', game_id='".$game->db_game['game_id']."', api_access_code=".$this->app->quote_escape($this->app->random_string(32)).", show_intro_message=1";
-			if (!empty($this->db_user['payout_address_id'])) $new_user_game_q .= ", payout_address_id='".$this->db_user['payout_address_id']."'";
-			if ($game->db_game['giveaway_status'] == "public_pay" || $game->db_game['giveaway_status'] == "invite_pay") $q .= ", payment_required=1";
-			$new_user_game_q .= ", notification_preference='email', prompt_notification_preference=1, betting_mode='principal', display_currency_id='".$game->db_game['default_display_currency_id']."', buyin_currency_id='".$game->db_game['default_buyin_currency_id']."'";
+			$new_user_game_params = [
+				'user_id' => $this->db_user['user_id'],
+				'game_id' => $game->db_game['game_id'],
+				'api_access_code' => $this->app->random_string(32),
+				'display_currency_id' => $game->db_game['default_display_currency_id'],
+				'buyin_currency_id' => $game->db_game['default_buyin_currency_id']
+			];
+			$new_user_game_q = "INSERT INTO user_games SET user_id=:user_id, game_id=:game_id, api_access_code=:api_access_code, show_intro_message=1, notification_preference='email', prompt_notification_preference=1, betting_mode='principal', display_currency_id=:display_currency_id, buyin_currency_id=:buyin_currency_id";
+			if (!empty($this->db_user['payout_address_id'])) {
+				$new_user_game_q .= ", payout_address_id=:payout_address_id";
+				$new_user_game_params['payout_address_id'] = $this->db_user['payout_address_id'];
+			}
+			if ($game->db_game['giveaway_status'] == "public_pay" || $game->db_game['giveaway_status'] == "invite_pay") $new_user_game_q .= ", payment_required=1";
 			$new_user_game_q .= ";";
-			$this->app->run_query($new_user_game_q);
+			$this->app->run_query($new_user_game_q, $new_user_game_params);
 			$user_game_id = $this->app->last_insert_id();
 			
 			$currency_id = $game->blockchain->currency_id();
 			
-			$this->app->run_query("INSERT INTO currency_accounts SET user_id='".$this->db_user['user_id']."', game_id='".$game->db_game['game_id']."', currency_id='".$currency_id."', account_name=".$this->app->quote_escape(ucwords($game->blockchain->db_blockchain['coin_name_plural'])." for ".$game->db_game['name']).", time_created='".time()."';");
-			$account_id = $this->app->last_insert_id();
-			$account = $this->app->fetch_account_by_id($account_id);
+			$account = $this->app->create_new_account([
+				'user_id' => $this->db_user['user_id'],
+				'game_id' => $game->db_game['game_id'],
+				'currency_id' => $currency_id,
+				'account_name' => ucwords($game->blockchain->db_blockchain['coin_name_plural'])." for ".$game->db_game['name']
+			]);
 			
 			$address_key = $this->app->new_address_key($currency_id, $account);
 			
-			$this->app->run_query("UPDATE currency_accounts SET current_address_id='".$address_key['address_id']."' WHERE account_id='".$account_id."';");
-			$this->app->run_query("UPDATE user_games SET account_id='".$account_id."' WHERE user_game_id='".$user_game_id."';");
+			$this->app->run_query("UPDATE currency_accounts SET current_address_id=:current_address_id WHERE account_id=:account_id;", [
+				'current_address_id' => $address_key['address_id'],
+				'account_id' => $account['account_id']
+			]);
+			$this->app->run_query("UPDATE user_games SET account_id=:account_id WHERE user_game_id=:user_game_id;", [
+				'account_id' => $account['account_id'],
+				'user_game_id' => $user_game_id
+			]);
 			
-			$user_game = $this->app->run_query("SELECT *, ug.user_id AS user_id, ug.game_id AS game_id FROM user_games ug JOIN games g ON ug.game_id=g.game_id LEFT JOIN user_strategies us ON ug.strategy_id=us.strategy_id LEFT JOIN featured_strategies fs ON us.featured_strategy_id=fs.featured_strategy_id WHERE ug.user_game_id='".$user_game_id."';")->fetch();
+			$user_game = $this->app->run_query("SELECT *, ug.user_id AS user_id, ug.game_id AS game_id FROM user_games ug JOIN games g ON ug.game_id=g.game_id LEFT JOIN user_strategies us ON ug.strategy_id=us.strategy_id LEFT JOIN featured_strategies fs ON us.featured_strategy_id=fs.featured_strategy_id WHERE ug.user_game_id=:user_game_id;", [
+				'user_game_id' => $user_game_id
+			])->fetch();
 			
-			$this->app->apply_address_set($game, $account_id);
+			$this->app->apply_address_set($game, $account['account_id']);
 		}
 		else $user_game = $existing_user_games->fetch();
 		
@@ -89,16 +125,26 @@ class User {
 		else {
 			$tx_fee=0.0001;
 			
-			$this->app->run_query("INSERT INTO user_strategies SET voting_strategy='manual', game_id='".$game->db_game['game_id']."', user_id='".$user_game['user_id']."', transaction_fee=".$tx_fee.";");
+			$this->app->run_query("INSERT INTO user_strategies SET voting_strategy='manual', game_id=:game_id, user_id=:user_id, transaction_fee=:tx_fee;", [
+				'game_id' => $game->db_game['game_id'],
+				'user_id' => $user_game['user_id'],
+				'tx_fee' => $tx_fee
+			]);
 			$strategy_id = $this->app->last_insert_id();
 			
 			$strategy = $this->app->fetch_strategy_by_id($strategy_id);
 			
 			for ($block=1; $block<=$game->db_game['round_length']; $block++) {
-				$this->app->run_query("INSERT INTO user_strategy_blocks SET strategy_id='".$strategy_id."', block_within_round='".$block."';");
+				$this->app->run_query("INSERT INTO user_strategy_blocks SET strategy_id=:strategy_id, block_within_round=:block_within_round;", [
+					'strategy_id' => $strategy_id,
+					'block_within_round' => $block
+				]);
 			}
 			
-			$this->app->run_query("UPDATE user_games SET strategy_id='".$strategy_id."' WHERE user_game_id='".$user_game['user_game_id']."';");
+			$this->app->run_query("UPDATE user_games SET strategy_id=:strategy_id WHERE user_game_id=:user_game_id;", [
+				'strategy_id' => $strategy_id,
+				'user_game_id' => $user_game['user_game_id']
+			]);
 			
 			$user_game['strategy_id'] = $strategy_id;
 		}
@@ -115,10 +161,16 @@ class User {
 
 	public function log_user_in(&$redirect_url, $viewer_id) {
 		if (AppSettings::getParam('pageview_tracking_enabled')) {
-			$viewer_connection = $this->app->run_query("SELECT * FROM viewer_connections WHERE type='viewer2user' AND from_id=".$this->app->quote_escape($viewer_id)." AND to_id='".$this->db_user['user_id']."';")->fetch();
+			$viewer_connection = $this->app->run_query("SELECT * FROM viewer_connections WHERE type='viewer2user' AND from_id=:viewer_id AND to_id=:user_id;", [
+				'viewer_id' => $viewer_id,
+				'user_id' => $this->db_user['user_id']
+			])->fetch();
 			
 			if (!$viewer_connection) {
-				$this->app->run_query("INSERT INTO viewer_connections SET type='viewer2user', from_id=".$this->app->quote_escape($viewer_id).", to_id='".$this->db_user['user_id']."';");
+				$this->app->run_query("INSERT INTO viewer_connections SET type='viewer2user', from_id=:viewer_id, to_id=:user_id;", [
+					'viewer_id' => $viewer_id,
+					'user_id' => $this->db_user['user_id']
+				]);
 			}
 		}
 		
@@ -127,21 +179,33 @@ class User {
 		if (!empty($session_key)) {
 			$expire_time = time()+3600*24;
 			
-			$new_session_q = "INSERT INTO user_sessions SET user_id='".$this->db_user['user_id']."', session_key=".$this->app->quote_escape($session_key).", login_time='".time()."', expire_time='".$expire_time."'";
+			$new_session_params = [
+				'user_id' => $this->db_user['user_id'],
+				'session_key' => $session_key,
+				'login_time' => time(),
+				'expire_time' => $expire_time
+			];
+			$new_session_q = "INSERT INTO user_sessions SET user_id=:user_id, session_key=:session_key, login_time=:login_time, expire_time=:expire_time";
 			if (AppSettings::getParam('pageview_tracking_enabled')) {
-				$new_session_q .= ", ip_address=".$this->app->quote_escape($_SERVER['REMOTE_ADDR']);
+				$new_session_q .= ", ip_address=:ip_address";
+				$new_session_params['ip_address'] = $_SERVER['REMOTE_ADDR'];
 			}
-			$new_session_q .= ";";
-			$this->app->run_query($new_session_q);
+			$this->app->run_query($new_session_q, $new_session_params);
 			
+			$login_user_params = [
+				'user_id' => $this->db_user['user_id']
+			];
 			$login_user_q = "UPDATE users SET logged_in=1";
 			if (AppSettings::getParam('pageview_tracking_enabled')) {
-				$login_user_q .= ", ip_address=".$this->app->quote_escape($_SERVER['REMOTE_ADDR']);
+				$login_user_q .= ", ip_address=:ip_address";
+				$login_user_params['ip_address'] = $_SERVER['REMOTE_ADDR'];
 			}
-			$login_user_q .= " WHERE user_id='".$this->db_user['user_id']."';";
-			$this->app->run_query($login_user_q);
+			$login_user_q .= " WHERE user_id=:user_id;";
+			$this->app->run_query($login_user_q, $login_user_params);
 			
-			$this->app->run_query("UPDATE user_games ug JOIN users u ON ug.user_id=u.user_id SET ug.prompt_notification_preference=1 WHERE (ug.notification_preference='none' OR u.notification_email='') AND ug.user_id='".$this->db_user['user_id']."' AND ug.prompt_notification_preference=0;");
+			$this->app->run_query("UPDATE user_games ug JOIN users u ON ug.user_id=u.user_id SET ug.prompt_notification_preference=1 WHERE (ug.notification_preference='none' OR u.notification_email='') AND ug.user_id=:user_id AND ug.prompt_notification_preference=0;", [
+				'user_id' => $this->db_user['user_id']
+			]);
 			
 			if (!empty($_REQUEST['invite_key'])) {
 				$user_game = false;
@@ -172,7 +236,9 @@ class User {
 	}
 	
 	public function count_user_games_created() {
-		return (int)($this->app->run_query("SELECT * FROM games WHERE creator_id='".$this->db_user['user_id']."';")->rowCount());
+		return (int)($this->app->run_query("SELECT * FROM games WHERE creator_id=:user_id;", [
+			'user_id' => $this->db_user['user_id']
+		])->rowCount());
 	}
 	
 	public function new_game_permission() {
@@ -186,14 +252,20 @@ class User {
 		$option_index_range = $game->option_index_range();
 		
 		$this->app->dbh->beginTransaction();
-		$account = $this->app->run_query("SELECT * FROM currency_accounts WHERE account_id='".$user_game['account_id']."';")->fetch();
+		$account = $this->app->run_query("SELECT * FROM currency_accounts WHERE account_id=:account_id;", [
+			'account_id' => $user_game['account_id']
+		])->fetch();
 		
 		if ($account) {
 			$start_option_index = $account['has_option_indices_until']+1;
 			$has_option_indices_until = false;
 			
 			for ($option_index=$start_option_index; $option_index<=$option_index_range[1]; $option_index++) {
-				$existing_address = $this->app->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND a.option_index='".$option_index."' AND k.account_id='".$account['account_id']."';")->fetch();
+				$existing_address = $this->app->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id=:blockchain_id AND a.option_index=:option_index AND k.account_id=:account_id;", [
+					'blockchain_id' => $game->blockchain->db_blockchain['blockchain_id'],
+					'option_index' => $option_index,
+					'account_id' => $account['account_id']
+				])->fetch();
 				
 				if (!$existing_address) {
 					if ($game->blockchain->db_blockchain['p2p_mode'] != "rpc") {
@@ -202,11 +274,20 @@ class User {
 						$has_option_indices_until = $option_index;
 					}
 					else {
-						$address = $this->app->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id='".$game->blockchain->db_blockchain['blockchain_id']."' AND a.option_index='".$option_index."' AND k.account_id IS NULL AND a.address_set_id IS NULL;")->fetch();
+						$address = $this->app->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id=:blockchain_id AND a.option_index=:option_index AND k.account_id IS NULL AND a.address_set_id IS NULL;", [
+							'blockchain_id' => $game->blockchain->db_blockchain['blockchain_id'],
+							'option_index' => $option_index
+						])->fetch();
 						
 						if ($address) {
-							$this->app->run_query("UPDATE addresses SET user_id='".$this->db_user['user_id']."' WHERE address_id='".$address['address_id']."';");
-							$this->app->run_query("UPDATE address_keys SET account_id='".$account['account_id']."' WHERE address_id='".$address['address_id']."';");
+							$this->app->run_query("UPDATE addresses SET user_id=:user_id WHERE address_id=:address_id;", [
+								'user_id' => $this->db_user['user_id'],
+								'address_id' => $address['address_id']
+							]);
+							$this->app->run_query("UPDATE address_keys SET account_id=:account_id WHERE address_id=:address_id;", [
+								'account_id' => $account['account_id'],
+								'address_id' => $address['address_id']
+							]);
 							
 							$has_option_indices_until = $option_index;
 						}
@@ -219,28 +300,45 @@ class User {
 			}
 			
 			if ($has_option_indices_until !== false) {
-				$this->app->run_query("UPDATE currency_accounts SET has_option_indices_until='".$has_option_indices_until."' WHERE account_id='".$user_game['account_id']."';");
+				$this->app->run_query("UPDATE currency_accounts SET has_option_indices_until=:has_option_indices_until WHERE account_id=:account_id;", [
+					'has_option_indices_until' => $has_option_indices_until,
+					'account_id' => $user_game['account_id']
+				]);
 			}
 		}
 		$this->app->dbh->commit();
 	}
 
 	public function set_user_active() {
-		$this->app->run_query("UPDATE users SET logged_in=1, last_active='".time()."' WHERE user_id='".$this->db_user['user_id']."';");
+		$this->app->run_query("UPDATE users SET logged_in=1, last_active=:last_active_time WHERE user_id=:user_id;", [
+			'last_active_time' => time(),
+			'user_id' => $this->db_user['user_id']
+		]);
 	}
 	
 	public function save_plan_allocations(&$game, $user_strategy, $from_round, $to_round) {
 		if ($from_round > 0 && $to_round > 0 && $to_round >= $from_round) {
-			$this->app->run_query("DELETE FROM strategy_round_allocations WHERE strategy_id='".$user_strategy['strategy_id']."' AND round_id >= ".$from_round." AND round_id <= ".$to_round.";");
+			$this->app->run_query("DELETE FROM strategy_round_allocations WHERE strategy_id=:strategy_id AND round_id >= :from_round AND round_id <= :to_round;", [
+				'strategy_id' => $user_strategy['strategy_id'],
+				'from_round' => $from_round,
+				'to_round' => $to_round
+			]);
 			
-			$options_by_game = $this->app->run_query("SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id='".$game->db_game['game_id']."';");
+			$options_by_game = $this->app->run_query("SELECT * FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id=:game_id;", [
+				'game_id' => $game->db_game['game_id']
+			]);
 			
 			while ($op = $options_by_game->fetch()) {
 				$round_id = $game->block_to_round($op['event_starting_block']);
 				$points = (int)$_REQUEST['poi_'.$op['option_id']];
 				
 				if ($points > 0) {
-					$this->app->run_query("INSERT INTO strategy_round_allocations SET strategy_id='".$user_strategy['strategy_id']."', round_id='".$round_id."', option_id='".$op['option_id']."', points='".$points."';");
+					$this->app->run_query("INSERT INTO strategy_round_allocations SET strategy_id=:strategy_id, round_id=:round_id, option_id=:option_id, points=:points;", [
+						'strategy_id' => $user_strategy['strategy_id'],
+						'round_id' => $round_id,
+						'option_id' => $op['option_id'],
+						'points' => $points
+					]);
 				}
 			}
 		}
@@ -253,27 +351,52 @@ class User {
 			$user_blockchain_account = $this->app->user_blockchain_account($this->db_user['user_id'], $currency['currency_id']);
 			
 			if (empty($user_blockchain_account)) {
-				$this->app->run_query("INSERT INTO currency_accounts SET user_id='".$this->db_user['user_id']."', currency_id='".$currency['currency_id']."', account_name='Primary ".$currency['name']." Account', time_created='".time()."';");
-				$account_id = $this->app->last_insert_id();
-				
-				$account = $this->app->fetch_account_by_id($account_id);
+				$account = $this->app->create_new_account([
+					'user_id' => $this->db_user['user_id'],
+					'currency_id' => $currency['currency_id'],
+					'account_name' => "Primary ".$currency['name']." Account"
+				]);
 				
 				$address_key = $this->app->new_address_key($currency['currency_id'], $account);
 				
 				if ($address_key) {
-					$this->app->run_query("UPDATE currency_accounts SET current_address_id='".$address_key['address_id']."' WHERE account_id='".$account_id."';");
+					$this->app->run_query("UPDATE currency_accounts SET current_address_id=:address_id WHERE account_id=:account_id;", [
+						'address_id' => $address_key['address_id'],
+						'account_id' => $account['account_id']
+					]);
 				}
 			}
 		}
 	}
 	
 	public function fetch_currency_account($currency_id) {
-		return $this->app->run_query("SELECT * FROM currency_accounts WHERE game_id IS NULL AND currency_id='".$currency_id."' AND user_id='".$this->db_user['user_id']."' ORDER BY account_id DESC;")->fetch();
+		return $this->app->run_query("SELECT * FROM currency_accounts WHERE game_id IS NULL AND currency_id=:currency_id AND user_id=:user_id ORDER BY account_id DESC;", [
+			'currency_id' => $currency_id,
+			'user_id' => $this->db_user['user_id']
+		])->fetch();
 	}
 	
 	public function set_selected_user_game(&$game, $user_game_id) {
-		$this->app->run_query("UPDATE user_games SET selected=1 WHERE user_game_id='".$user_game_id."';");
-		$this->app->run_query("UPDATE user_games SET selected=0 WHERE user_id='".$this->db_user['user_id']."' AND game_id='".$game->db_game['game_id']."' AND user_game_id != ".$user_game_id.";");
+		$this->app->run_query("UPDATE user_games SET selected=1 WHERE user_game_id=:user_game_id;", [
+			'user_game_id' => $user_game_id
+		]);
+		$this->app->run_query("UPDATE user_games SET selected=0 WHERE user_id=:user_id AND game_id=:game_id AND user_game_id != :user_game_id;", [
+			'user_id' => $this->db_user['user_id'],
+			'game_id' => $game->db_game['game_id'],
+			'user_game_id' => $user_game_id
+		]);
+	}
+	
+	public function log_out(&$session) {
+		$this->app->run_query("UPDATE user_sessions SET logout_time=:logout_time WHERE session_id=:session_id;", [
+			'logout_time' => time(),
+			'session_id' => $session['session_id']
+		]);
+		$this->app->run_query("UPDATE users SET logged_in=0 WHERE user_id=:user_id;", [
+			'user_id' => $this->db_user['user_id']
+		]);
+		
+		@session_regenerate_id();
 	}
 }
 ?>

@@ -94,7 +94,12 @@ if ($thisuser && $game) {
 					$receive_address = $_REQUEST['address'];
 					$db_receive_address = $sellout_blockchain->create_or_fetch_address($receive_address, true, false, true, false, false);
 					
-					$app->run_query("UPDATE currency_invoices SET receive_address_id='".$db_receive_address['address_id']."', buyin_amount='".$sellout_amount/pow(10, $game->db_game['decimal_places'])."', fee_amount='".$user_game['transaction_fee']."' WHERE invoice_id='".$invoice['invoice_id']."';");
+					$app->run_query("UPDATE currency_invoices SET receive_address_id=:receive_address_id, buyin_amount=:buyin_amount, fee_amount=:fee_amount WHERE invoice_id=:invoice_id;", [
+						'receive_address_id' => $db_receive_address['address_id'],
+						'buyin_amount' => $sellout_amount/pow(10, $game->db_game['decimal_places']),
+						'fee_amount' => $user_game['transaction_fee'],
+						'invoice_id' => $invoice['invoice_id']
+					]);
 					
 					$my_spendable_ios = $app->spendable_ios_in_account($user_game['account_id'], $game->db_game['game_id'], false, false);
 					
@@ -104,10 +109,9 @@ if ($thisuser && $game) {
 					$io_ids = [];
 					$keep_looping = true;
 					
-					$recycle_r = $app->run_query("SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$user_game['account_id']."' AND a.is_destroy_address=1 AND io.spend_status='unspent' ORDER BY io.amount ASC;");
+					$recycle_io = $app->fetch_recycle_ios_in_account($user_game['account_id'], 1)[0];
 					
-					if ($recycle_r->rowCount() > 0) {
-						$recycle_io = $recycle_r->fetch();
+					if ($recycle_io) {
 						array_push($io_ids, $recycle_io['io_id']);
 						$io_amount_sum += $recycle_io['amount'];
 					}

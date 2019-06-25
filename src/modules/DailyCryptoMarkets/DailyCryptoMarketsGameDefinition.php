@@ -78,7 +78,7 @@ class DailyCryptoMarketsGameDefinition {
 		$this->currencies = array();
 		$this->name2currency_index = [];
 		
-		$members = $this->app->run_query("SELECT *, en.entity_id AS entity_id FROM option_group_memberships m JOIN entities en ON m.entity_id=en.entity_id JOIN currencies c ON en.entity_name=c.name WHERE m.option_group_id='".$game->db_game['option_group_id']."' ORDER BY m.membership_id ASC;");
+		$members = $this->app->run_query("SELECT *, en.entity_id AS entity_id FROM option_group_memberships m JOIN entities en ON m.entity_id=en.entity_id JOIN currencies c ON en.entity_name=c.name WHERE m.option_group_id=:option_group_id ORDER BY m.membership_id ASC;", ['option_group_id'=>$game->db_game['option_group_id']]);
 		$currency_index = 0;
 		
 		while ($db_member = $members->fetch()) {
@@ -179,9 +179,16 @@ class DailyCryptoMarketsGameDefinition {
 				$usd_price = $this->app->round_to($usd_price, 2, 6, false);
 				$usd_price = max($payout_event->db_event['track_min_price'], min($payout_event->db_event['track_max_price'], $usd_price));
 				
-				$this->app->run_query("UPDATE game_defined_events SET track_payout_price='".$usd_price."' WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$payout_event->db_event['event_index']."';");
+				$this->app->run_query("UPDATE game_defined_events SET track_payout_price=:track_payout_price WHERE game_id=:game_id AND event_index=:event_index;", [
+					'track_payout_price' => $usd_price,
+					'game_id' => $game->db_game['game_id'],
+					'event_index' => $payout_event->db_event['event_index']
+				]);
 				
-				$this->app->run_query("UPDATE events SET track_payout_price='".$usd_price."' WHERE event_id='".$payout_event->db_event['event_id']."';");
+				$this->app->run_query("UPDATE events SET track_payout_price=:track_payout_price WHERE event_id=:event_id;", [
+					'track_payout_price' => $usd_price,
+					'event_id' => $payout_event->db_event['event_id']
+				]);
 				
 				$payout_event->db_event['track_payout_price'] = $usd_price;
 			}
@@ -232,7 +239,7 @@ class DailyCryptoMarketsGameDefinition {
 					}
 					else $modulo++;
 					
-					$new_prices_q .= "('".$cached_url['cached_url_id']."', '".$this->currencies[$i]['currency_id']."', '".$btc_currency['currency_id']."', '".$trade['rate']."', '".$trade_time."'), ";
+					$new_prices_q .= "('".$cached_url['cached_url_id']."', '".$this->currencies[$i]['currency_id']."', '".$btc_currency['currency_id']."', ".$this->app->quote_escape($trade['rate']).", ".$this->app->quote_escape($trade_time)."), ";
 				}
 			}
 			

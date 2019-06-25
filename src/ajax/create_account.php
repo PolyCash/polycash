@@ -30,13 +30,16 @@ if ($thisuser) {
 							$account_addresses = $blockchain->coin_rpc->getaddressesbyaccount($account_name);
 							
 							if (count($account_addresses) > 0) {
-								$app->run_query("INSERT INTO currency_accounts SET user_id='".$thisuser->db_user['user_id']."', currency_id='".$blockchain->currency_id()."', account_name=".$app->quote_escape($blockchain->db_blockchain['blockchain_name']." account: ".$account_name).", time_created='".time()."';");
-								$account_id = $app->last_insert_id();
+								$account = $app->create_new_account([
+									'user_id' => $thisuser->db_user['user_id'],
+									'currency_id' => $blockchain->currency_id(),
+									'account_name' => $blockchain->db_blockchain['blockchain_name']." account: ".$account_name
+								]);
 								
 								for ($i=0; $i<count($account_addresses); $i++) {
-									$blockchain->create_or_fetch_address($account_addresses[$i], true, $blockchain->coin_rpc, false, false, false, $account_id);
+									$blockchain->create_or_fetch_address($account_addresses[$i], true, $blockchain->coin_rpc, false, false, false, $account['account_id']);
 								}
-								$app->output_message(1, '/accounts/?account_id='.$account_id, false);
+								$app->output_message(1, '/accounts/?account_id='.$account['account_id'], false);
 							}
 							else $app->output_message(8, "Error: that account doesn't exist.", false);
 						}
@@ -49,12 +52,13 @@ if ($thisuser) {
 			else $app->output_message(3, "You don't have permission to perform this action.", false);
 		}
 		else if ($action == "for_blockchain") {
-			$account_name = $blockchain->db_blockchain['blockchain_name']." Account ".$app->random_string(5);
+			$account = $app->create_new_account([
+				'user_id' => $thisuser->db_user['user_id'],
+				'currency_id' => $blockchain->currency_id(),
+				'account_name' => $blockchain->db_blockchain['blockchain_name']." Account ".$app->random_string(5)
+			]);
 			
-			$app->run_query("INSERT INTO currency_accounts SET user_id='".$thisuser->db_user['user_id']."', currency_id='".$blockchain->currency_id()."', account_name=".$app->quote_escape($account_name).", time_created='".time()."';");
-			$account_id = $app->last_insert_id();
-			
-			$app->output_message(1, '/accounts/?account_id='.$account_id, false);
+			$app->output_message(1, '/accounts/?account_id='.$account['account_id'], false);
 		}
 	}
 	else $app->output_message(7, "Error: invalid blockchain ID.", false);

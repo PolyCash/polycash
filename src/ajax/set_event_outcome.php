@@ -6,7 +6,7 @@ if ($thisuser) {
 	$db_event = $app->fetch_event_by_id((int)$_REQUEST['event_id']);
 
 	if ($db_event) {
-		$db_game = $app->fetch_db_game_by_id($db_event['game_id']);
+		$db_game = $app->fetch_game_by_id($db_event['game_id']);
 		
 		if ($db_game) {
 			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
@@ -42,20 +42,20 @@ if ($thisuser) {
 					$app->output_message(1, "", $dump_object);
 				}
 				else if ($_REQUEST['action'] == "set") {
-					$outcome_index = $_REQUEST['outcome_index'];
+					$outcome_index = (string) $_REQUEST['outcome_index'];
 					
 					if ($outcome_index == "") {
 						$option_ok = true;
-						$outcome_index = 'NULL';
+						$outcome_index = null;
 					}
-					else if ($outcome_index == -1) {
+					else if ($outcome_index == "-1") {
 						$option_ok = true;
-						$outcome_index = '-1';
+						$outcome_index = -1;
 					}
 					else {
 						$outcome_index = (int)$_REQUEST['outcome_index'];
 						
-						$gdo_r = $app->run_query("SELECT * FROM game_defined_options WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."' AND option_index='".$outcome_index."';");
+						$gdo_r = $app->fetch_game_defined_options($game->db_game['game_id'], $db_event['event_index'], $outcome_index, false);
 						
 						if ($gdo_r->rowCount() == 1) $option_ok = true;
 						else $option_ok = false;
@@ -66,7 +66,7 @@ if ($thisuser) {
 						
 						$game->check_set_game_definition("defined", $show_internal_params);
 						
-						$app->run_query("UPDATE game_defined_events SET outcome_index=".$outcome_index." WHERE game_id='".$game->db_game['game_id']."' AND event_index='".$db_event['event_index']."';");
+						$game->set_game_defined_outcome($db_event['event_index'], $outcome_index);
 						
 						$game->check_set_game_definition("defined", $show_internal_params);
 						$game->set_cached_definition_hashes();

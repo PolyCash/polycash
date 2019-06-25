@@ -23,7 +23,10 @@ if ($thisuser) {
 			
 			$accounts_html .= "<option value=\"\">-- Please Select --</option>\n";
 			
-			$accounts_by_currency = $app->run_query("SELECT * FROM currency_accounts WHERE game_id IS NULL AND user_id='".$thisuser->db_user['user_id']."' AND currency_id=".$fv_currency['currency_id']." ORDER BY account_name ASC;");
+			$accounts_by_currency = $app->run_query("SELECT * FROM currency_accounts WHERE game_id IS NULL AND user_id=:user_id AND currency_id=:currency_id ORDER BY account_name ASC;", [
+				'user_id' => $thisuser->db_user['user_id'],
+				'currency_id' => $fv_currency['currency_id']
+			]);
 			
 			while ($account = $accounts_by_currency->fetch()) {
 				$accounts_html .= "<option value=\"".$account['account_id']."\">".$account['account_name']."</option>\n";;

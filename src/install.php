@@ -44,7 +44,7 @@ if ($app->running_as_admin()) {
 			
 			$has_ref_price = $app->run_query("SELECT * FROM currency_prices WHERE currency_id=1 AND reference_currency_id=1;")->rowCount() > 0;
 			if (!$has_ref_price) {
-				$app->run_query("INSERT INTO currency_prices SET currency_id=1, reference_currency_id=1, price=1, time_added='".time()."';");
+				$app->run_query("INSERT INTO currency_prices SET currency_id=1, reference_currency_id=1, price=1, time_added=:time_added;", ['time_added' => time()]);
 			}
 			
 			$app->set_site_constant("event_loop_seconds", 2);
@@ -60,7 +60,13 @@ if ($app->running_as_admin()) {
 					$rpc_password = $_REQUEST['rpc_password'];
 					$rpc_port = (int) $_REQUEST['rpc_port'];
 					
-					$app->run_query("UPDATE blockchains SET rpc_host=".$app->quote_escape($rpc_host).", rpc_username=".$app->quote_escape($rpc_username).", rpc_password=".$app->quote_escape($rpc_password).", rpc_port=".$app->quote_escape($rpc_port)." WHERE blockchain_id=".$existing_blockchain['blockchain_id'].";");
+					$app->run_query("UPDATE blockchains SET rpc_host=:rpc_host, rpc_username=:rpc_username, rpc_password=:rpc_password, rpc_port=:rpc_port WHERE blockchain_id=:blockchain_id;", [
+						'rpc_host' => $rpc_host,
+						'rpc_username' => $rpc_username,
+						'rpc_password' => $rpc_password,
+						'rpc_port' => $rpc_port,
+						'blockchain_id' => $existing_blockchain['blockchain_id']
+					]);
 				}
 				else die("Error, please manually save RPC parameters in the database.");
 			}
@@ -88,7 +94,7 @@ if ($app->running_as_admin()) {
 				else {
 					if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "install_module") {
 						$module_name = $_REQUEST['module_name'];
-						$games_by_module = $app->run_query("SELECT * FROM games WHERE module=".$app->quote_escape($module_name).";");
+						$games_by_module = $app->run_query("SELECT * FROM games WHERE module=:module;", ['module' => $module_name]);
 						
 						echo "<br/><b>Installing module $module_name</b><br/>\n";
 						

@@ -12,7 +12,7 @@ if ($thisuser) {
 		$quantity = (int) $_REQUEST['set_for_sale_quantity'];
 		$game_id = (int) $_REQUEST['set_for_sale_game_id'];
 		
-		$db_game = $app->fetch_db_game_by_id($game_id);
+		$db_game = $app->fetch_game_by_id($game_id);
 		
 		if ($db_game) {
 			$sale_blockchain = new Blockchain($app, $db_game['blockchain_id']);
@@ -50,28 +50,39 @@ if ($thisuser) {
 							$addresses_needed = $quantity;
 							$loop_count = 0;
 							do {
-								$addr_q = "SELECT * FROM addresses a WHERE a.primary_blockchain_id='".$sale_blockchain->db_blockchain['blockchain_id']."' AND a.is_mine=1 AND a.user_id IS NULL AND a.is_destroy_address=0 AND a.is_separator_address=0 ORDER BY RAND() LIMIT 1;";
-								$addr_r = $app->run_query($addr_q);
+								$addr_r = $app->run_query("SELECT * FROM addresses a WHERE a.primary_blockchain_id=:blockchain_id AND a.is_mine=1 AND a.user_id IS NULL AND a.is_destroy_address=0 AND a.is_separator_address=0 ORDER BY RAND() LIMIT 1;", [
+									'blockchain_id' => $sale_blockchain->db_blockchain['blockchain_id']
+								]);
 								
 								if ($addr_r->rowCount() > 0) {
 									$db_address = $addr_r->fetch();
 									
 									if (empty($db_address['user_id'])) {
-										$update_addr_q = "UPDATE addresses SET user_id='".$thisuser->db_user['user_id']."' WHERE address_id='".$db_address['address_id']."';";
-										$update_addr_r = $app->run_query($update_addr_q);
+										$update_addr_q = "UPDATE addresses SET user_id=:user_id WHERE address_id=:address_id;";
+										$update_addr_r = $app->run_query($update_addr_q, [
+											'user_id' => $thisuser->db_user['user_id'],
+											'address_id' => $db_address['address_id']
+										]);
 										
-										$addr_key_q = "SELECT * FROM address_keys WHERE address_id='".$db_address['address_id']."';";
-										$addr_key_r = $app->run_query($addr_key_q);
+										$addr_key_q = "SELECT * FROM address_keys WHERE address_id=:address_id;";
+										$addr_key_r = $app->run_query($addr_key_q, ['address_id' => $db_address['address_id']]);
 										
 										if ($addr_key_r->rowCount() > 0) {
 											$addr_key = $addr_key_r->fetch();
-											$addr_key_q = "UPDATE address_keys SET account_id='".$game_sale_account['account_id']."' WHERE address_key_id='".$addr_key['address_key_id']."';";
-											$addr_key_r = $app->run_query($addr_key_q);
+											$addr_key_q = "UPDATE address_keys SET account_id=:account_id WHERE address_key_id=:address_key_id;";
+											$addr_key_r = $app->run_query($addr_key_q, [
+												'account_id' => $game_sale_account['account_id'],
+												'address_key_id' => $addr_key['address_key_id']
+											]);
 											$address_key_id = $addr_key['address_key_id'];
 										}
 										else {
-											$addr_key_q = "INSERT INTO address_keys SET address_id='".$db_address['address_id']."', account_id='".$faucet_account['account_id']."', save_method='wallet.dat', pub_key=".$app->quote_escape($db_address['address']).";";
-											$addr_key_r = $app->run_query($addr_key_q);
+											$addr_key_q = "INSERT INTO address_keys SET address_id=:address_id, account_id=:account_id, save_method='wallet.dat', pub_key=:pub_key;";
+											$addr_key_r = $app->run_query($addr_key_q, [
+												'address_id' => $db_address['address_id'],
+												'account_id' => $faucet_account['account_id'],
+												'pub_key' => $db_address['address']
+											]);
 											$address_key_id = $app->last_insert_id();
 										}
 										
@@ -88,14 +99,21 @@ if ($thisuser) {
 							
 							if ($addresses_needed > 0) {
 								if (count($address_ids) > 0) {
-									$app->run_query("UPDATE addresses SET user_id=NULL WHERE address_id IN (".implode(",", $address_ids).");");
-									$app->run_query("UPDATE address_keys SET account_id=NULL WHERE address_key_id IN (".implode(",", $address_key_ids).");");
+									$app->run_query("UPDATE addresses SET user_id=NULL WHERE address_id IN (:address_ids);", [
+										'address_ids' => implode(",", $address_ids)
+									]);
+									$app->run_query("UPDATE address_keys SET account_id=NULL WHERE address_key_id IN (:address_key_ids);", [
+										'address_key_ids' => implode(",", $address_key_ids)
+									]);
 								}
 								die("Not enough free addresses (still need $addresses_needed/$quantity).");
 							}
 							
-							$account_q = "SELECT ca.* FROM currency_accounts ca JOIN games g ON g.game_id=ca.game_id JOIN address_keys k ON k.account_id=ca.account_id WHERE ca.user_id='".$thisuser->db_user['user_id']."' AND k.address_id='".$game_ios[0]['address_id']."';";
-							$account_r = $app->run_query($account_q);
+							$account_q = "SELECT ca.* FROM currency_accounts ca JOIN games g ON g.game_id=ca.game_id JOIN address_keys k ON k.account_id=ca.account_id WHERE ca.user_id=:user_id AND k.address_id=:address_id;";
+							$account_r = $app->run_query($account_q, [
+								'user_id' => $thisuser->db_user['user_id'],
+								'address_id' => $game_ios[0]['address_id']
+							]);
 							
 							if ($account_r->rowCount() > 0) {
 								$donate_account = $account_r->fetch();
@@ -148,7 +166,7 @@ if ($thisuser) {
 		$quantity = (int) $_REQUEST['donate_quantity'];
 		$game_id = (int) $_REQUEST['donate_game_id'];
 		
-		$db_game = $app->fetch_db_game_by_id($game_id);
+		$db_game = $app->fetch_game_by_id($game_id);
 		
 		if ($db_game) {
 			$donate_blockchain = new Blockchain($app, $db_game['blockchain_id']);
@@ -202,14 +220,21 @@ if ($thisuser) {
 							
 							if ($addresses_needed > 0) {
 								if (count($address_ids) > 0) {
-									$app->run_query("UPDATE addresses SET user_id=NULL WHERE address_id IN (".implode(",", $address_ids).");");
-									$app->run_query("UPDATE address_keys SET account_id=NULL WHERE address_key_id IN (".implode(",", $address_key_ids).");");
+									$app->run_query("UPDATE addresses SET user_id=NULL WHERE address_id IN (:address_ids);", [
+										'address_ids' => implode(",", $address_ids)
+									]);
+									$app->run_query("UPDATE address_keys SET account_id=NULL WHERE address_key_id IN (:address_key_ids);", [
+										'address_key_ids' => implode(",", $address_key_ids)
+									]);
 								}
 								die("Not enough free addresses (still need $addresses_needed/$quantity).");
 							}
 							
-							$account_q = "SELECT ca.* FROM currency_accounts ca JOIN games g ON g.game_id=ca.game_id JOIN address_keys k ON k.account_id=ca.account_id WHERE ca.user_id='".$thisuser->db_user['user_id']."' AND k.address_id='".$game_ios[0]['address_id']."';";
-							$account_r = $app->run_query($account_q);
+							$account_q = "SELECT ca.* FROM currency_accounts ca JOIN games g ON g.game_id=ca.game_id JOIN address_keys k ON k.account_id=ca.account_id WHERE ca.user_id=:user_id AND k.address_id=:address_id;";
+							$account_r = $app->run_query($account_q, [
+								'user_id' => $thisuser->db_user['user_id'],
+								'address_id' => $game_ios[0]['address_id']
+							]);
 							
 							if ($account_r->rowCount() > 0) {
 								$donate_account = $account_r->fetch();
@@ -280,10 +305,15 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 		<div class="panel panel-info" style="margin-top: 15px;">
 			<div class="panel-heading">
 				<?php
-				$account_q = "SELECT ca.*, c.*, b.url_identifier AS blockchain_url_identifier, k.pub_key, ug.user_game_id FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id JOIN blockchains b ON c.blockchain_id=b.blockchain_id LEFT JOIN addresses a ON ca.current_address_id=a.address_id LEFT JOIN address_keys k ON a.address_id=k.address_id LEFT JOIN user_games ug ON ug.account_id=ca.account_id WHERE ca.user_id='".$thisuser->db_user['user_id']."'";
-				if ($selected_account_id) $account_q .= " AND ca.account_id=".$selected_account_id;
-				$account_q .= ";";
-				$account_r = $app->run_query($account_q);
+				$account_params = [
+					'user_id' => $thisuser->db_user['user_id']
+				];
+				$account_q = "SELECT ca.*, c.*, b.url_identifier AS blockchain_url_identifier, k.pub_key, ug.user_game_id FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id JOIN blockchains b ON c.blockchain_id=b.blockchain_id LEFT JOIN addresses a ON ca.current_address_id=a.address_id LEFT JOIN address_keys k ON a.address_id=k.address_id LEFT JOIN user_games ug ON ug.account_id=ca.account_id WHERE ca.user_id=:user_id";
+				if ($selected_account_id) {
+					$account_q .= " AND ca.account_id=:account_id";
+					$account_params['account_id'] = $selected_account_id;
+				}
+				$account_r = $app->run_query($account_q, $account_params);
 				
 				if ($selected_account_id) {
 					$selected_account = $account_r->fetch();
@@ -346,15 +376,21 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					
 					echo '<div class="col-sm-2"><a href="" onclick="toggle_account_details('.$account['account_id'].'); return false;">Transactions';
 					
-					$transaction_in_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."'";
-					if ($account['game_id'] > 0) $transaction_in_q .= " AND t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."'";
+					$transaction_in_params = [
+						'account_id' => $account['account_id']
+					];
+					$transaction_in_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id";
+					if ($account['game_id'] > 0) {
+						$transaction_in_q .= " AND t.blockchain_id=:blockchain_id";
+						$transaction_in_params['blockchain_id'] = $blockchain->db_blockchain['blockchain_id'];
+					}
 					$transaction_in_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC LIMIT 200;";
-					$transaction_in_r = $app->run_query($transaction_in_q);
+					$transaction_in_r = $app->run_query($transaction_in_q, $transaction_in_params);
 					
-					$transaction_out_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."'";
-					if ($account['game_id'] > 0) $transaction_out_q .= " AND t.blockchain_id='".$blockchain->db_blockchain['blockchain_id']."'";
+					$transaction_out_q = "SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.spend_transaction_id JOIN addresses a ON a.address_id=io.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id";
+					if ($account['game_id'] > 0) $transaction_out_q .= " AND t.blockchain_id=:blockchain_id";
 					$transaction_out_q .= " ORDER BY (t.block_id IS NULL) DESC, t.block_id DESC LIMIT 200;";
-					$transaction_out_r = $app->run_query($transaction_out_q);
+					$transaction_out_r = $app->run_query($transaction_out_q, $transaction_in_params);
 					
 					echo ' ('.($transaction_in_r->rowCount()+$transaction_out_r->rowCount()).')';
 					
@@ -458,8 +494,9 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					echo '
 						</div>
 						<div id="addresses_'.$account['account_id'].'" class="tab-pane fade pad-this-pane">';
-					$addr_q = "SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id='".$account['account_id']."' ORDER BY a.option_index ASC LIMIT 500;";
-					$addr_r = $app->run_query($addr_q);
+					$addr_r = $app->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id ORDER BY a.option_index ASC LIMIT 500;", [
+						'account_id' => $account['account_id']
+					]);
 					echo "<p>This account has ".$addr_r->rowCount()." addresses.</p>";
 					
 					while ($address = $addr_r->fetch()) {
@@ -688,7 +725,9 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							<select class="form-control" id="account_spend_game_id">
 								<option value="">-- Please select --</option>
 								<?php
-								$my_games = $app->run_query("SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id='".$thisuser->db_user['user_id']."' GROUP BY g.game_id ORDER BY g.name ASC;");
+								$my_games = $app->run_query("SELECT * FROM user_games ug JOIN games g ON ug.game_id=g.game_id WHERE ug.user_id=:user_id GROUP BY g.game_id ORDER BY g.name ASC;", [
+									'user_id' => $thisuser->db_user['user_id']
+								]);
 								while ($db_game = $my_games->fetch()) {
 									echo "<option value=\"".$db_game['game_id']."\">".$db_game['name']."</option>\n";
 								}

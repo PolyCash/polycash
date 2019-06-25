@@ -13,7 +13,10 @@ if ($thisuser && $game) {
 		if (!$user_strategy || $user_strategy['user_id'] != $thisuser->db_user['user_id']) die("Invalid strategy ID");
 	}
 	else {
-		$app->run_query("INSERT INTO user_strategies SET user_id='".$thisuser->db_user['user_id']."', game_id='".$game->db_game['game_id']."';");
+		$app->run_query("INSERT INTO user_strategies SET user_id=:user_id, game_id=:game_id;", [
+			'user_id' => $thisuser->db_user['user_id'],
+			'game_id' => $game->db_game['game_id']
+		]);
 		$voting_strategy_id = $app->last_insert_id();
 		
 		$user_strategy = $app->fetch_strategy_by_id($voting_strategy_id);
@@ -57,7 +60,7 @@ if ($thisuser && $game) {
 	}
 	
 	if ($action == "save" || $action == "scramble") {
-		$app->run_query("UPDATE user_strategies SET voting_strategy='by_plan' WHERE strategy_id=".$user_strategy['strategy_id'].";");
+		$app->run_query("UPDATE user_strategies SET voting_strategy='by_plan' WHERE strategy_id=:strategy_id;", ['strategy_id' => $user_strategy['strategy_id']]);
 	}
 }
 else $app->output_message(2, "Please log in", false);

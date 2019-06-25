@@ -17,10 +17,16 @@ if ($app->running_as_admin()) {
 		$performances = array();
 		
 		for ($i=0; $i<$previous_rounds; $i++) {
-			$first_prev_event = $app->run_query("SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block<".$event_ref_block." ORDER BY event_index DESC;")->fetch();
+			$first_prev_event = $app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_starting_block<:ref_block ORDER BY event_index DESC;", [
+				'game_id' => $game->db_game['game_id'],
+				'ref_block' => $event_ref_block
+			])->fetch();
 			$event_ref_block = $first_prev_event['event_starting_block'];
 			
-			$ref_events = $app->run_query("SELECT * FROM events WHERE game_id='".$game->db_game['game_id']."' AND event_starting_block='".$first_prev_event['event_starting_block']."' ORDER BY event_index ASC;");
+			$ref_events = $app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_starting_block=:ref_block ORDER BY event_index ASC;", [
+				'game_id' => $game->db_game['game_id'],
+				'ref_block' => $first_prev_event['event_starting_block']
+			]);
 			
 			while ($db_event = $ref_events->fetch()) {
 				$bal1 = $game->account_balance_at_block($featured_strategy['account_id'], $db_event['event_final_block'], false);

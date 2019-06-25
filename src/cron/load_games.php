@@ -25,10 +25,14 @@ if ($app->running_as_admin()) {
 		do {
 			$loop_start_time = microtime(true);
 			
+			$running_game_params = [];
 			$running_game_q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE g.game_status IN ('published','running')";
-			if (!empty($_REQUEST['game_id'])) $running_game_q .= " AND g.game_id='".(int)$_REQUEST['game_id']."'";
+			if (!empty($_REQUEST['game_id'])) {
+				$running_game_q .= " AND g.game_id=:filter_game_id";
+				$running_game_params['filter_game_id'] = $_REQUEST['game_id'];
+			}
 			$running_game_q .= " AND b.online=1;";
-			$db_running_games = $app->run_query($running_game_q);
+			$db_running_games = $app->run_query($running_game_q, $running_game_params);
 			if ($print_debug) echo "Looping through ".$db_running_games->rowCount()." games.\n";
 			
 			while ($db_running_game = $db_running_games->fetch()) {

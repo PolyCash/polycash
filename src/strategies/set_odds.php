@@ -26,11 +26,15 @@ if ($user_game) {
 		$account = $app->fetch_account_by_id($user_game['account_id']);
 		
 		if ($account) {
-			$event_q = "events ev JOIN options op ON ev.event_id=op.event_id WHERE ev.game_id='".$game->db_game['game_id']."' AND op.target_probability IS NOT NULL";
-			$event_q .= " AND ev.event_starting_block<=".$mining_block_id." AND ev.event_final_block>=".$mining_block_id;
+			$event_params = [
+				'game_id' => $game->db_game['game_id'],
+				'mining_block_id' => $mining_block_id
+			];
+			$event_q = "events ev JOIN options op ON ev.event_id=op.event_id WHERE ev.game_id=:game_id AND op.target_probability IS NOT NULL";
+			$event_q .= " AND ev.event_starting_block <= :mining_block_id AND ev.event_final_block >= :mining_block_id";
 			$event_q .= " AND ev.sum_score+ev.sum_unconfirmed_score=0 AND ev.destroy_score+ev.sum_unconfirmed_destroy_score=0 AND (ev.event_starting_time < NOW() OR ev.event_starting_time IS NULL) AND (ev.event_final_time > NOW() OR ev.event_final_time IS NULL)";
-			$option_info = $app->run_query("SELECT COUNT(*) FROM ".$event_q.";")->fetch();
-			$db_events = $app->run_query("SELECT * FROM ".$event_q." GROUP BY ev.event_id ORDER BY ev.event_index ASC;")->fetchAll();
+			$option_info = $app->run_query("SELECT COUNT(*) FROM ".$event_q.";", $event_params)->fetch();
+			$db_events = $app->run_query("SELECT * FROM ".$event_q." GROUP BY ev.event_id ORDER BY ev.event_index ASC;", $event_params)->fetchAll();
 			$num_events = count($db_events);
 			
 			if ($num_events > 0) {

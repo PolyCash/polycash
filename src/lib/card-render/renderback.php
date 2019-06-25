@@ -7,13 +7,13 @@ if (empty(AppSettings::getParam('cron_key_string')) || $_REQUEST['key'] == AppSe
 	$card_id = (int) $_REQUEST['card_id'];
 
 	if ($card_id > 0) {
-		$card = $app->run_query("SELECT * FROM cards WHERE card_id='".$card_id."';")->fetch();
+		$card = $app->run_query("SELECT * FROM cards WHERE card_id=:card_id;", ['card_id'=>$card_id])->fetch();
 		$currency = $app->fetch_currency_by_id($card['currency_id']);
 		$fv_currency = $app->fetch_currency_by_id($card['fv_currency_id']);
 		
 		$base_img_fname = "";
 		if ($card['design_id'] > 0) {
-			$card_design = $app->run_query("SELECT * FROM card_designs WHERE design_id='".$card['design_id']."';")->fetch();
+			$card_design = $app->run_query("SELECT * FROM card_designs WHERE design_id=:design_id;", ['design_id'=>$card['design_id']])->fetch();
 			$base_img_fname = AppSettings::srcPath()."/images/card_images/designed_blank.png";
 		}
 		else {

@@ -142,7 +142,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 			<ul class="sidebar-menu" data-widget="tree">
 				<?php
 				if (!empty($thisuser)) {
-					$cardcount = (int)($app->run_query("SELECT COUNT(*) FROM cards WHERE user_id='".$thisuser->db_user['user_id']."' AND status='claimed';")->fetch()['COUNT(*)']);
+					$cardcount = (int)($app->run_query("SELECT COUNT(*) FROM cards WHERE user_id=:user_id AND status='claimed';", ['user_id'=>$thisuser->db_user['user_id']])->fetch()['COUNT(*)']);
 				}
 				else $cardcount = 0;
 				?>
@@ -174,7 +174,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 					$db_categories = $app->run_query("SELECT * FROM categories WHERE category_level=0 ORDER BY display_rank ASC;");
 					
 					while ($db_category = $db_categories->fetch()) {
-						$subcategories = $app->run_query("SELECT * FROM categories WHERE parent_category_id='".$db_category['category_id']."' ORDER BY display_rank ASC;");
+						$subcategories = $app->run_query("SELECT * FROM categories WHERE parent_category_id=:category_id ORDER BY display_rank ASC;", ['category_id'=>$db_category['category_id']]);
 						
 						if ($subcategories->rowCount() > 0) {
 							echo '<li class="treeview';

@@ -3,7 +3,9 @@ include(AppSettings::srcPath().'/includes/connect.php');
 include(AppSettings::srcPath().'/includes/get_session.php');
 
 if ($thisuser) {
-	$denomination = $app->run_query("SELECT * FROM card_currency_denominations d JOIN currencies c ON d.currency_id=c.currency_id WHERE d.denomination_id='".(int)$_REQUEST['denomination_id']."';")->fetch();
+	$denomination = $app->run_query("SELECT * FROM card_currency_denominations d JOIN currencies c ON d.currency_id=c.currency_id WHERE d.denomination_id=:denomination_id;", [
+		'denomination_id' => $_REQUEST['denomination_id']
+	])->fetch();
 
 	if ($denomination) {
 		$fv_currency = $app->fetch_currency_by_id($denomination['fv_currency_id']);

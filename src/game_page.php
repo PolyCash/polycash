@@ -15,7 +15,7 @@ if ($game && $thisuser) {
 }
 
 if ($game->db_game['invite_currency'] > 0) {
-	$invite_currency = $app->run_query("SELECT * FROM currencies WHERE currency_id='".$game->db_game['invite_currency']."';")->fetch();
+	$invite_currency = $app->fetch_currency_by_id($game->db_game['invite_currency']);
 	
 	$btc_currency = $app->get_currency_by_abbreviation('btc');
 	

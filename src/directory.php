@@ -4,14 +4,17 @@ include_once("includes/get_session.php");
 
 if (empty($selected_category) && !empty($_REQUEST['path'])) {
 	$uri_parts = explode("/", $_REQUEST['path']);
-	$selected_category = $app->run_query("SELECT * FROM categories WHERE url_identifier=".$app->quote_escape($uri_parts[1]).";")->fetch();
+	$selected_category = $app->run_query("SELECT * FROM categories WHERE url_identifier=:category_identifier;", ['category_identifier'=>$uri_parts[1]])->fetch();
 }
 
 $selected_subcategory = false;
 
 if (!empty($selected_category)) {
 	if (!empty($uri_parts[2])) {
-		$selected_subcategory = $app->run_query("SELECT * FROM categories WHERE parent_category_id='".$selected_category['category_id']."' AND url_identifier=".$app->quote_escape($uri_parts[2]).";")->fetch();
+		$selected_subcategory = $app->run_query("SELECT * FROM categories WHERE parent_category_id=:category_id AND url_identifier=:subcategory_identifier;", [
+			'category_id' => $selected_category['category_id'],
+			'subcategory_identifier' => $uri_parts[2]
+		])->fetch();
 	}
 }
 $pagetitle = "Directory";
@@ -25,7 +28,9 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 <div class="container-fluid" style="padding-top: 10px;">
 	<?php
 	if (!empty($selected_category)) {
-		$subcategories = $app->run_query("SELECT * FROM categories WHERE parent_category_id='".$selected_category['category_id']."';");
+		$subcategories = $app->run_query("SELECT * FROM categories WHERE parent_category_id=:parent_category_id;", [
+			'parent_category_id' => $selected_category['category_id']
+		]);
 		
 		if ($subcategories->rowCount() > 0) {
 			while ($subcategory = $subcategories->fetch()) {

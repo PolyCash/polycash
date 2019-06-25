@@ -14,6 +14,24 @@ if ($app->running_as_admin()) {
 	$print_debug = false;
 	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
 	
+	// If running from browser, run in background to get a unique PID, to avoid process lock problems
+	if (!$app->running_from_commandline()) {
+		$pipe_config = [
+			0 => ['pipe', 'r'],
+			1 => ['pipe', 'w'],
+			2 => ['pipe', 'w']
+		];
+		$pipes = [];
+		
+		$cmd = $app->php_binary_location().' "'.AppSettings::srcPath().'/cron/load_blocks.php"';
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
+		$block_loading_process = proc_open($cmd, $pipe_config, $pipes);
+		if (is_resource($block_loading_process)) echo "Started the background process.<br/>$cmd<br/>\n";
+		else echo "Failed to start a process for loading blocks.<br/>$cmd<br/>\n";
+		die();
+	}
+	
 	$process_lock_name = "load_blocks";
 	$process_locked = $app->check_process_running($process_lock_name);
 	
@@ -52,9 +70,7 @@ if ($app->running_as_admin()) {
 			$loop_start_time = microtime(true);
 			
 			for ($i=0; $i<count($blockchains); $i++) {
-				if ($print_debug) echo "Syncing ".$blockchains[$i]->db_blockchain['blockchain_name']."\n";
 				$debug_html = $blockchains[$i]->sync_coind($print_debug);
-				if ($print_debug) echo $debug_html;
 			}
 			
 			$loop_stop_time = microtime(true);

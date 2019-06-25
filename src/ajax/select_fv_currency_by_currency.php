@@ -8,7 +8,7 @@ if ($thisuser) {
 	if ($currency) {
 		echo "<option value=\"\">-- Please Select --</option>\n";
 		
-		$fv_currencies = $app->run_query("SELECT * FROM card_currency_denominations d JOIN currencies c ON d.fv_currency_id=c.currency_id WHERE d.currency_id='".$currency['currency_id']."' GROUP BY c.currency_id ORDER BY c.name ASC;");
+		$fv_currencies = $app->run_query("SELECT * FROM card_currency_denominations d JOIN currencies c ON d.fv_currency_id=c.currency_id WHERE d.currency_id=:currency_id GROUP BY c.currency_id ORDER BY c.name ASC;", ['currency_id' => $currency['currency_id']]);
 		
 		while ($fv_currency = $fv_currencies->fetch()) {
 			echo "<option value=\"".$fv_currency['currency_id']."\">".$fv_currency['name']."</option>\n";

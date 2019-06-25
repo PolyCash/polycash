@@ -24,15 +24,11 @@
 	"pageview_tracking_enabled": false,
 	"currency_price_refresh_seconds": 30,
 	"invoice_expiration_seconds": 604800,
-	"mine_private_blocks_when_offline": false,
 	"new_games_per_user": "unlimited",
 	"homepage_fname": "default.php",
-	"navbar_icon_path": "",
 	"default_timezone": "UTC",
 	"rsa_keyholder_email": "",
 	"rsa_pub_key": "",
-	"profit_btc_address": "",
 	"api_proxy_url": "",
-	"default_server_api_access_key": false,
 	"cachebuster": 1001
 }

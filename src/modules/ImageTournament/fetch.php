@@ -16,7 +16,9 @@ if ($app->running_as_admin()) {
 	$entity_type = $app->check_set_entity_type("images");
 	$option_group = $app->check_set_option_group("Reddit /r/sexygirls pics", "picture", "pictures");
 
-	$num_memberships = (int)($app->run_query("SELECT COUNT(*) FROM option_group_memberships WHERE option_group_id='".$option_group['group_id']."';")->fetch()['COUNT(*)']);
+	$num_memberships = (int)($app->run_query("SELECT COUNT(*) FROM option_group_memberships WHERE option_group_id=:option_group_id;", [
+		'option_group_id' => $option_group['group_id']
+	])->fetch()['COUNT(*)']);
 
 	if ($num_memberships > 0) echo "This group has already been generated. Skipping...\n";
 	else {
@@ -47,9 +49,16 @@ if ($app->running_as_admin()) {
 						echo $title."<br/><br/>\n\n";
 						$entity = $app->check_set_entity($entity_type['entity_type_id'], $title);
 						
-						$app->run_query("UPDATE entities SET image_url=".$app->quote_escape($pic_url).", content_url=".$app->quote_escape("https://reddit.com".$reddit_url)." WHERE entity_id='".$entity['entity_id']."';");
+						$app->run_query("UPDATE entities SET image_url=:image_url, content_url=:content_url WHERE entity_id=:entity_id;", [
+							'image_url' => $pic_url,
+							'content_url' => "https://reddit.com".$reddit_url,
+							'entity_id' => $entity['entity_id']
+						]);
 						
-						$app->run_query("INSERT INTO option_group_memberships SET option_group_id='".$option_group['group_id']."', entity_id='".$entity['entity_id']."';");
+						$app->run_query("INSERT INTO option_group_memberships SET option_group_id=:option_group_id, entity_id=:entity_id;", [
+							'option_group_id' => $option_group['group_id'],
+							'entity_id' => $entity['entity_id']
+						]);
 						
 						$good_images++;
 					}
