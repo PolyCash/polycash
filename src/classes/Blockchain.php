@@ -81,16 +81,26 @@ class Blockchain {
 		$complete_block_params = [
 			'blockchain_id' => $this->db_blockchain['blockchain_id']
 		];
-		$complete_block_q = "SELECT * FROM blocks WHERE blockchain_id=:blockchain_id";
-		if (!empty($this->db_blockchain['first_required_block'])) {
-			$complete_block_q .= " AND block_id >= :first_required_block";
-			$complete_block_params['first_required_block'] = $this->db_blockchain['first_required_block'];
+		$complete_block_q = "SELECT MIN(block_id) FROM blocks WHERE blockchain_id=:blockchain_id";
+		if ($this->db_blockchain['first_required_block'] !== "") {
+			$complete_block_q .= " AND block_id >= :block_id";
+			$complete_block_params['block_id'] = $this->db_blockchain['first_required_block'];
 		}
-		$complete_block_q .= " AND locally_saved=1 ORDER BY block_id DESC LIMIT 1;";
-		$block = $this->app->run_query($complete_block_q, $complete_block_params)->fetch();
+		$complete_block_q .= " AND locally_saved=0;";
+		$block = $this->app->run_query($complete_block_q, $complete_block_params)->fetch(PDO::FETCH_NUM);
 		
-		if ($block) return $block['block_id'];
-		else return $this->db_blockchain['first_required_block']-1;
+		if ($block && $block[0] != "") return $block[0]-1;
+		else {
+			$complete_block_q = "SELECT MAX(block_id) FROM blocks WHERE blockchain_id=:blockchain_id";
+			if ($this->db_blockchain['first_required_block'] !== "") {
+				$complete_block_q .= " AND block_id >= :block_id";
+			}
+			$complete_block_q .= " AND locally_saved=1;";
+			$block = $this->app->run_query($complete_block_q, $complete_block_params)->fetch(PDO::FETCH_NUM);
+			
+			if ($block && $block[0] != "") return $block[0];
+			else return $this->db_blockchain['first_required_block']-1;
+		}
 	}
 	
 	public function most_recently_loaded_block() {
