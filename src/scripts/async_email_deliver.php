@@ -1,17 +1,17 @@
 <?php
 $host_not_required = TRUE;
-require_once(AppSettings::srcPath()."/includes/connect.php");
+require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 
 $allowed_params = ['delivery_id', 'action'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);
 
 if ($app->running_as_admin()) {
-	if ($_REQUEST['action'] == "send_all") {
-		$keeplooping = true;
-	}
-	else {
-		$keeplooping = false;
-	}
+	if (!isset($_REQUEST['action'])) $_REQUEST['action'] = "";
+	if (!isset($_REQUEST['delivery_id'])) $_REQUEST['delivery_id'] = "";
+	
+	if ($_REQUEST['action'] == "send_all") $keeplooping = true;
+	else $keeplooping = false;
+	
 	do {
 		if ($_REQUEST['action'] == "send_all") {
 			$deliveries = $app->run_query("SELECT * FROM async_email_deliveries WHERE time_delivered=0 ORDER BY delivery_id ASC LIMIT 1;");
@@ -44,7 +44,7 @@ if ($app->running_as_admin()) {
 				$params["to[$i]"] = $to_list[$i];
 			}
 			
-			if ($cc_list != "") {
+			if ($delivery['cc'] != "") {
 				$cc_list = explode(",", $delivery['cc']);
 				for ($j=0; $j<count($cc_list); $j++) {
 					$params["cc[$j]"] = $cc_list[$j];

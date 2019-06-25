@@ -1,6 +1,6 @@
 <?php
 $host_not_required = TRUE;
-include_once(AppSettings::srcPath()."/includes/connect.php");
+require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 
 if ($app->running_as_admin()) {
 	$html_by_user_game = [];

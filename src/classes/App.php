@@ -392,7 +392,7 @@ class App {
 		]);
 		$delivery_id = $this->last_insert_id();
 		
-		$command = $this->php_binary_location()." ".AppSettings::srcPath()."/scripts/async_email_deliver.php key=".AppSettings::getParam('cron_key_string')." delivery_id=".$delivery_id." > /dev/null 2>/dev/null &";
+		$command = $this->php_binary_location()." ".AppSettings::srcPath()."/scripts/async_email_deliver.php delivery_id=".$delivery_id." > /dev/null 2>/dev/null &";
 		exec($command);
 		
 		/*$curl_url = AppSettings::getParam('base_url')."/scripts/async_email_deliver.php?delivery_id=".$delivery_id;
@@ -3879,7 +3879,7 @@ class App {
 		if (!isset($params['is_game_sale_account'])) $params['is_game_sale_account'] = 0;
 		if (!isset($params['is_blockchain_sale_account'])) $params['is_blockchain_sale_account'] = 0;
 		
-		$this->run_query("INSERT INTO currency_accounts SET currency_id=:currency_id, game_id=:game_id, user_id=:user_id, account_name=:account_name, is_faucet=:is_faucet, is_game_sale_account=:is_game_sale_account, is_blockchain_sale_account=:is_blockchain_sale_account, time_created=:time_created;", $params);
+		$this->run_query("INSERT INTO currency_accounts SET currency_id=:currency_id, game_id=:game_id, user_id=:user_id, account_name=:account_name, is_faucet=:is_faucet, is_escrow_account=:is_escrow_account, is_game_sale_account=:is_game_sale_account, is_blockchain_sale_account=:is_blockchain_sale_account, time_created=:time_created;", $params);
 		
 		return $this->fetch_account_by_id($this->last_insert_id());
 	}

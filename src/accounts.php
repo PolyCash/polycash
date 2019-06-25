@@ -317,7 +317,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 				
 				if ($selected_account_id) {
 					$selected_account = $account_r->fetch();
-					$account_r = $app->run_query($account_q);
+					$account_r = $app->run_query($account_q, $account_params);
 					echo '
 						<div class="panel-title">Account: '.$selected_account['account_name'].'</div>
 					</div>

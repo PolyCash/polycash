@@ -5,16 +5,16 @@ include(AppSettings::srcPath().'/includes/get_session.php');
 if ($thisuser) {
 	$account_id = (int) $_REQUEST['account_id'];
 
-	$account = $app->fetch_acrun_query("SELECT * FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id JOIN blockchains b ON c.blockchain_id=b.blockchain_id WHERE ca.account_id=:account_id AND ca.user_id=:user_id;", [
-		'account_id' => $account_id,
-		'user_id' => $thisuser->db_user['user_id']
-	])->fetch();
+	$account = $app->fetch_account_by_id($account_id);
 	
-	if ($account) {
+	if ($account && $account['user_id'] == $thisuser->db_user['user_id']) {
 		if ($_REQUEST['action'] == "new") {
 			$address_key = $app->new_address_key($account['currency_id'], $account);
 			
-			if ($address_key) $app->output_message(1, "/explorer/blockchains/".$account['url_identifier']."/addresses/".$address_key['address'], false);
+			$currency = $app->fetch_currency_by_id($account['currency_id']);
+			$account_blockchain = $app->fetch_blockchain_by_id($currency['blockchain_id']);
+			
+			if ($address_key) $app->output_message(1, "/explorer/blockchains/".$account_blockchain['url_identifier']."/addresses/".$address_key['address'], false);
 			else $app->output_message(4, "There was an error generating the address.", false);
 		}
 		else if ($_REQUEST['action'] == "set_primary") {
