@@ -17,7 +17,7 @@ if ($app->running_as_admin()) {
 	
 	$max_urls_per_execution = 200;
 	
-	$unprocessed_urls = $app->run_query("SELECT * FROM cached_urls WHERE time_fetched IS NULL ORDER BY cached_url_id ASC LIMIT :max_urls_per_execution OFFSET :offset;", [
+	$unprocessed_urls = $app->run_limited_query("SELECT * FROM cached_urls WHERE time_fetched IS NULL ORDER BY cached_url_id ASC LIMIT :max_urls_per_execution OFFSET :offset;", [
 		'max_urls_per_execution' => $max_urls_per_execution,
 		'offset' => $process_index*$max_urls_per_execution
 	]);

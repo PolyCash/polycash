@@ -1604,7 +1604,7 @@ class Blockchain {
 			$balance_params['block_id'] = $block_id;
 		}
 		else {
-			$balance_q = " AND spend_status IN ('unspent','unconfirmed');";
+			$balance_q .= " AND spend_status IN ('unspent','unconfirmed');";
 		}
 		return $this->app->run_query($balance_q, $balance_params)->fetch()['SUM(amount)'];
 	}

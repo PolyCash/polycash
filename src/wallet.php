@@ -841,7 +841,7 @@ if ($thisuser && $game) {
 				</div>
 			</div>
 		</div>
-		
+		<?php if ($game->db_game['public_players'] == 1) { ?>
 		<div class="tabcontent" style="display: none;" id="tabcontent1">
 			<div class="panel panel-default">
 				<div class="panel-heading">
@@ -854,7 +854,7 @@ if ($thisuser && $game) {
 				</div>
 			</div>
 		</div>
-		
+		<?php } ?>
 		<div id="tabcontent2" style="display: none;" class="tabcontent">
 			<div class="panel panel-default">
 				<div class="panel-heading">

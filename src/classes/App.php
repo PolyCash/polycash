@@ -14,7 +14,7 @@ class App {
 	public function select_db($db_name) {
 		$this->dbh->query("USE ".$db_name.";") or die("Error accessing the '".$db_name."' database, please visit <a href=\"/install.php?key=\">install.php</a>.");
 		$this->dbh->query("SET sql_mode='';");
-		$this->dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
+		$this->dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
 	}
 	
 	public function quote_escape($string) {
@@ -36,6 +36,13 @@ class App {
 		else {
 			throw new Exception("Failed to prepare a query");
 		}
+	}
+	
+	public function run_limited_query($query, $params) {
+		$this->dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
+		$result = $this->run_query($query, $params);
+		$this->dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
+		return $result;
 	}
 	
 	public function log_then_die($message) {
@@ -3136,7 +3143,7 @@ class App {
 	}
 	
 	public function fetch_addresses_in_account(&$account, $option_index, $quantity) {
-		$addresses = $this->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id AND a.option_index=:option_index LIMIT :quantity;", [
+		$addresses = $this->run_limited_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id AND a.option_index=:option_index LIMIT :quantity;", [
 			'account_id' => $account['account_id'],
 			'option_index' => $option_index,
 			'quantity' => $quantity
@@ -3149,7 +3156,7 @@ class App {
 			
 			if ($blockchain->db_blockchain['p2p_mode'] == "rpc") { 
 				$this->dbh->beginTransaction();
-				$add_addresses = $this->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id=:blockchain_id AND a.option_index=:option_index AND k.account_id IS NULL AND a.address_set_id IS NULL LIMIT :addresses_needed;", [
+				$add_addresses = $this->run_limited_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id=:blockchain_id AND a.option_index=:option_index AND k.account_id IS NULL AND a.address_set_id IS NULL LIMIT :addresses_needed;", [
 					'blockchain_id' => $currency['blockchain_id'],
 					'option_index' => $option_index,
 					'addresses_needed' => $addresses_needed
@@ -3781,7 +3788,7 @@ class App {
 	}
 	
 	public function fetch_recycle_ios_in_account($account_id, $quantity) {
-		return $this->run_query("SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id AND a.is_destroy_address=1 AND io.spend_status='unspent' ORDER BY io.amount DESC LIMIT :quantity;", ['account_id'=>$account_id, 'quantity'=>$quantity])->fetchAll();
+		return $this->run_limited_query("SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id AND a.is_destroy_address=1 AND io.spend_status='unspent' ORDER BY io.amount DESC LIMIT :quantity;", ['account_id'=>$account_id, 'quantity'=>$quantity])->fetchAll();
 	}
 	
 	public function set_strategy_time_next_apply($strategy_id, $time_next_apply) {

@@ -2091,7 +2091,7 @@ class Game {
 								'entity_id' => empty($game_defined_option['entity_id']) ? null : $game_defined_option['entity_id'],
 								'target_probability' => empty($game_defined_option['target_probability']) ? null : $game_defined_option['target_probability']
 							];
-							$new_option_q = "INSERT INTO options SET event_id=:event_id, name=:name, vote_identifier=:vote_identifier, option_index=:option_index, event_option_index=:event_option_index, entity_id=:entity_id, image_id=:image_id";
+							$new_option_q = "INSERT INTO options SET event_id=:event_id, name=:name, vote_identifier=:vote_identifier, option_index=:option_index, event_option_index=:event_option_index, entity_id=:entity_id, target_probability=:target_probability, image_id=:image_id";
 							
 							$new_option_params['image_id'] = null;
 							if (!empty($game_defined_option['entity_id'])) {
@@ -2147,7 +2147,7 @@ class Game {
 							$entities_by_round_q .= " OFFSET :offset";
 							$entities_by_round_params['offset'] = $offset;
 						}
-						$entities_by_round = $this->blockchain->app->run_query($entities_by_round_q, $entities_by_round_params);
+						$entities_by_round = $this->blockchain->app->run_limited_query($entities_by_round_q, $entities_by_round_params);
 						
 						for ($j=0; $j<$this->db_game['events_per_round']; $j++) {
 							$event_i = $round_first_event_i+$j;

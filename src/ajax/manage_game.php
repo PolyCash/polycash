@@ -156,7 +156,7 @@ if ($thisuser) {
 								if ($genesis_remainder > 0) {
 									$genesis_account = $app->create_new_account([
 										'currency_id' => $blockchain->currency_id(),
-										'user_id' => $thisuser->db_user['user_id']
+										'user_id' => $thisuser->db_user['user_id'],
 										'is_escrow_account' => 1,
 										'account_name' => "Escrow account for ".$game_name
 									]);
