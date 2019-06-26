@@ -15,6 +15,7 @@ class App {
 		$this->dbh->query("USE ".$db_name.";") or die("Error accessing the '".$db_name."' database, please visit <a href=\"/install.php?key=\">install.php</a>.");
 		$this->dbh->query("SET sql_mode='';");
 		$this->dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
+		$this->dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 	}
 	
 	public function quote_escape($string) {
@@ -1931,11 +1932,12 @@ class App {
 	public function check_set_gde(&$game, &$gde, &$event_verbatim_vars, $sport_entity_type_id, $league_entity_type_id, $general_entity_type_id) {
 		$db_gde = $this->fetch_game_defined_event_by_index($game->db_game['game_id'], $gde['event_index']);
 		
-		$gde_params = [
-			'game_id' => $game->db_game['game_id']
-		];
+		$gde_params = [];
 		if ($db_gde) $gde_q = "UPDATE game_defined_events SET ";
-		else $gde_q = "INSERT INTO game_defined_events SET game_id=:game_id, ";
+		else {
+			$gde_q = "INSERT INTO game_defined_events SET game_id=:game_id, ";
+			$gde_params['game_id'] = $game->db_game['game_id'];
+		}
 		
 		if (!empty($gde['sport'])) {
 			$sport_entity = $this->check_set_entity($sport_entity_type_id, $gde['sport']);
@@ -1986,7 +1988,6 @@ class App {
 			$gde_q .= " WHERE game_defined_event_id=:game_defined_event_id";
 			$gde_params['game_defined_event_id'] = $db_gde['game_defined_event_id'];
 		}
-		$gde_q .= ";";
 		$this->run_query($gde_q, $gde_params);
 		
 		$delete_params = [

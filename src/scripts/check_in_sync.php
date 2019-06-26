@@ -14,6 +14,7 @@ if ($app->running_as_admin()) {
 	if (!empty($_REQUEST['peer_id'])) {
 		$peer = $app->fetch_peer_by_id((int)$_REQUEST['peer_id']);
 		if (!$peer) die("Invalid peer_id supplied.");
+		$remote_url_base = $peer['base_url'];
 	}
 	else {
 		if (!empty($_REQUEST['remote_host'])) $remote_url_base = urldecode($_REQUEST['remote_host']);
