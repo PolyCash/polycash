@@ -92,27 +92,29 @@ class PageviewController {
 			$pv_page_id = $this->app->last_insert_id();
 		}
 		
-		$new_pv_params = [
-			'viewer_id' => $cookie_identifier['viewer_id'],
-			'ip_id' => $ip_identifier['identifier_id'],
-			'cookie_id' => $cookie_identifier['identifier_id'],
-			'time' => time(),
-			'pv_page_id' => $pv_page_id,
-			'refer_url' => $refer_url
-		];
-		$new_pv_q = "INSERT INTO pageviews SET ";
-		if ($thisuser) {
-			$new_pv_q .= "user_id=:user_id, ";
-			$new_pv_params['user_id'] = $thisuser->db_user['user_id'];
+		if ($ip_identifier['viewer_id']) {
+			$new_pv_params = [
+				'viewer_id' => $ip_identifier['viewer_id'],
+				'ip_id' => $ip_identifier['identifier_id'],
+				'cookie_id' => $cookie_identifier['identifier_id'],
+				'time' => time(),
+				'pv_page_id' => $pv_page_id,
+				'refer_url' => $refer_url
+			];
+			$new_pv_q = "INSERT INTO pageviews SET ";
+			if ($thisuser) {
+				$new_pv_q .= "user_id=:user_id, ";
+				$new_pv_params['user_id'] = $thisuser->db_user['user_id'];
+			}
+			$new_pv_q .= "viewer_id=:viewer_id, ip_id=:ip_id, cookie_id=:cookie_id, time=:time, pv_page_id=:pv_page_id, refer_url=:refer_url;";
+			$this->app->run_query($new_pv_q, $new_pv_params);
+			$pageview_id = $this->app->last_insert_id();
+			
+			$result[0] = $pageview_id;
+			$result[1] = $ip_identifier['viewer_id'];
+			return $result[1];
 		}
-		$new_pv_q .= "viewer_id=:viewer_id, ip_id=:ip_id, cookie_id=:cookie_id, time=:time, pv_page_id=:pv_page_id, refer_url=:refer_url;";
-		$this->app->run_query($new_pv_q, $new_pv_params);
-		$pageview_id = $this->app->last_insert_id();
-		
-		$result[0] = $pageview_id;
-		$result[1] = $cookie_identifier['viewer_id'];
-		
-		return $result[1];
+		else return false;
 	}
 }
 ?>

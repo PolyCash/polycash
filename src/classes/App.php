@@ -2893,7 +2893,7 @@ class App {
 			$new_user_q .= ", authorized_games=:authorized_games";
 			$new_user_params['authorized_games'] = AppSettings::getParam('new_games_per_user');
 		}
-		$new_user_q .= ", login_method=:login_method, time_created=:time_created, verify_code=:verify_code;";
+		$new_user_q .= ", login_method=:login_method, time_created=:time_created, verify_code=:verify_code, ip_address=:ip_address;";
 		$this->run_query($new_user_q, $new_user_params);
 		$user_id = $this->last_insert_id();
 		

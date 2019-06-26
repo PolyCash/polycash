@@ -236,7 +236,7 @@ if ($uri_parts[1] == "api") {
 				$transaction_id = $blockchain->add_transaction_from_web_api(false, $tx);
 				
 				$successful = true;
-				$db_transaction = $blockchain->add_transaction($tx['tx_hash'], false, true, $successful, false, false, false);
+				$db_transaction = $blockchain->add_transaction($tx['tx_hash'], false, true, $successful, false, [false], false);
 				
 				if ($db_transaction) $app->output_message(1, "Transaction successfully imported!", false);
 				else $app->output_message(4, "There was an error importing the transaction.", false);
