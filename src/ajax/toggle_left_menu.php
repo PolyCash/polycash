@@ -1,13 +1,13 @@
 <?php
-include(AppSettings::srcPath()."/includes/connect.php");
-include(AppSettings::srcPath()."/includes/get_session.php");
+require(AppSettings::srcPath()."/includes/connect.php");
+require(AppSettings::srcPath()."/includes/get_session.php");
 
 $expand_collapse = $_REQUEST['expand_collapse'];
 if ($expand_collapse == "expand") $left_menu_open = 1;
 else $left_menu_open = 0;
 
 if (AppSettings::getParam('pageview_tracking_enabled')) {
-	$viewer = $pageview_controller->get_viewer($viewer_id);
+	$viewer = $pageviewController->get_viewer($viewer_id);
 	
 	$app->run_query("UPDATE viewers SET left_menu_open=:left_menu_open WHERE viewer_id=:viewer_id;", [
 		'left_menu_open' => $left_menu_open,

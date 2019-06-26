@@ -1,7 +1,7 @@
 <?php
 ini_set('memory_limit', '1024M');
-include(AppSettings::srcPath().'/includes/connect.php');
-include(AppSettings::srcPath().'/includes/get_session.php');
+require(AppSettings::srcPath().'/includes/connect.php');
+require(AppSettings::srcPath().'/includes/get_session.php');
 
 if (empty($uri_parts[4])) $explore_mode = "";
 else $explore_mode = $uri_parts[4];

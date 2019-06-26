@@ -1,6 +1,6 @@
 <?php
-include(AppSettings::srcPath()."/includes/connect.php");
-include(AppSettings::srcPath()."/includes/get_session.php");
+require(AppSettings::srcPath()."/includes/connect.php");
+require(AppSettings::srcPath()."/includes/get_session.php");
 
 $instance_id = (int) $_REQUEST['instance_id'];
 $game_loop_index = (int) $_REQUEST['game_loop_index'];

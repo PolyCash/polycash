@@ -1,6 +1,6 @@
 <?php
-include(AppSettings::srcPath()."/includes/connect.php");
-include(AppSettings::srcPath()."/includes/get_session.php");
+require(AppSettings::srcPath()."/includes/connect.php");
+require(AppSettings::srcPath()."/includes/get_session.php");
 
 $pagetitle = "Download ".AppSettings::getParam('coin_brand_name');
 $nav_tab_selected = "download";

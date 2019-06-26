@@ -1,6 +1,5 @@
 <?php
 set_time_limit(0);
-$host_not_required = TRUE;
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 
 $script_target_time = 59;

@@ -60,5 +60,10 @@ class AppSettings {
 	public function publicPath() {
 		return self::$publicPath;
 	}
+	
+	public function runningFromCommandline() {
+		if (PHP_SAPI == "cli") return true;
+		else return false;
+	}
 }
 ?>

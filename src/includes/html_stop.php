@@ -88,17 +88,6 @@ for (var game_i=0; game_i<games.length; game_i++) {
 <script type="text/javascript" src="/js/maskedinput.js"></script>
 <script type="text/javascript" src="/js/qrcam.js"></script>
 <?php
-if (!empty($include_crypto_js)) { ?>
-<script type="text/javascript" src="/js/base64.lib.js" ></script>
-<script type="text/javascript" src="/js/rsa/prng4.js"></script>
-<script type="text/javascript" src="/js/rsa/rng.js"></script>
-<script type="text/javascript" src="/js/rsa/rsa.js"></script>
-<script type="text/javascript" src="/js/rsa/rsa2.js"></script>
-<script type="text/javascript" src="/js/rsa/base64.js"></script>
-<script type="text/javascript" src="/js/rsa/jsbn.js"></script>
-<script type="text/javascript" src="/js/rsa/jsbn2.js"></script>
-<?php
-}
 if (AppSettings::getParam('signup_captcha_required')) { ?>
 <script type="text/javascript" src="https://www.google.com/jsapi"></script>
 <script type='text/javascript' src='https://www.google.com/recaptcha/api.js'></script>
@@ -108,8 +97,8 @@ if (AppSettings::getParam('signup_captcha_required')) { ?>
 $left_menu_open = 1;
 if (AppSettings::getParam('pageview_tracking_enabled')) {
 	if (empty($thisuser)) $thisuser = false;
-	if (empty($viewer_id)) $viewer_id = $pageview_controller->insert_pageview($thisuser);
-	$viewer = $pageview_controller->get_viewer($viewer_id);
+	if (empty($viewer_id)) $viewer_id = $pageviewController->insert_pageview($thisuser);
+	$viewer = $pageviewController->get_viewer($viewer_id);
 	$left_menu_open = $viewer['left_menu_open'];
 }
 else if ($thisuser) $left_menu_open = $thisuser->db_user['left_menu_open'];

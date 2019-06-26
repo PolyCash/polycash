@@ -1,6 +1,5 @@
 <?php
 set_time_limit(0);
-$host_not_required = TRUE;
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 
 $script_target_time = 59;
@@ -29,7 +28,7 @@ if ($app->running_as_admin()) {
 		$script_path_name = AppSettings::srcPath();
 		
 		for ($i=0; $i<16; $i++) {
-			$cmd = $app->php_binary_location().' "'.$script_path_name.'/cron/load_cached_url_thread.php" key='.AppSettings::getParam('cron_key_string').' process_index='.$i;
+			$cmd = $app->php_binary_location().' "'.$script_path_name.'/cron/load_cached_url_thread.php" key='.AppSettings::getParam('operator_key').' process_index='.$i;
 			if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
 			else $cmd .= " 2>&1 >/dev/null";
 			$block_loading_process = proc_open($cmd, $pipe_config, $pipes);

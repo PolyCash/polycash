@@ -1,6 +1,6 @@
 <?php
-include(AppSettings::srcPath().'/includes/connect.php');
-include(AppSettings::srcPath().'/includes/get_session.php');
+require(AppSettings::srcPath().'/includes/connect.php');
+require(AppSettings::srcPath().'/includes/get_session.php');
 
 if ($thisuser) {
 	$denomination = $app->run_query("SELECT * FROM card_currency_denominations d JOIN currencies c ON d.currency_id=c.currency_id WHERE d.denomination_id=:denomination_id;", [

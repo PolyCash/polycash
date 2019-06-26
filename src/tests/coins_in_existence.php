@@ -1,6 +1,5 @@
 <?php
-$host_not_required = true;
-include(AppSettings::srcPath()."/includes/connect.php");
+require(AppSettings::srcPath()."/includes/connect.php");
 
 $allowed_params = ['game_id', 'from_block', 'to_block'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);

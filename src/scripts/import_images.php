@@ -1,7 +1,6 @@
 <?php
-$host_not_required = TRUE;
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
-include(AppSettings::srcPath()."/includes/get_session.php");
+require(AppSettings::srcPath()."/includes/get_session.php");
 
 if ($app->running_as_admin()) {
 	$import_dirname = AppSettings::publicPath()."/images/imports/";

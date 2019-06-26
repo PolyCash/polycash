@@ -1,7 +1,6 @@
 <?php
-$host_not_required = TRUE;
-include(AppSettings::srcPath()."/includes/connect.php");
-include(AppSettings::srcPath()."/includes/get_session.php");
+require(AppSettings::srcPath()."/includes/connect.php");
+require(AppSettings::srcPath()."/includes/get_session.php");
 
 if ($app->user_can_edit_game($thisuser, $game)) {
 	if (!empty($_REQUEST['game_defined_event_id'])) $game_defined_event_id = $_REQUEST['game_defined_event_id'];

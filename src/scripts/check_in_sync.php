@@ -2,7 +2,6 @@
 ini_set('memory_limit', '1024M');
 set_time_limit(0);
 $script_start_time = microtime(true);
-$host_not_required = TRUE;
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 
 $allowed_params = ['mode','game_identifier','blockchain_identifier','peer_id','key','remote_key'];
@@ -44,7 +43,7 @@ if ($app->running_as_admin()) {
 		}
 	}
 	
-	if (!empty(AppSettings::getParam('cron_key_string')) && empty($_REQUEST['key'])) die("Please supply the right key string for this host");
+	if (!empty(AppSettings::getParam('operator_key')) && empty($_REQUEST['key'])) die("Please supply the right key string for this host");
 	else $local_url .= "&key=".$_REQUEST['key'];
 	
 	if (empty($_REQUEST['remote_key'])) die("Please supply the right key string for the remote host");

@@ -1,6 +1,5 @@
 <?php
-$host_not_required = true;
-include(AppSettings::srcPath()."/includes/connect.php");
+require(AppSettings::srcPath()."/includes/connect.php");
 
 if ($app->running_as_admin()) {
 	$pass_count = 0;

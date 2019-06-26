@@ -1,7 +1,7 @@
 <?php
 $thispage = "account.php";
-require_once("includes/connect.php");
-include(AppSettings::srcPath()."/includes/get_session.php");
+require(AppSettings::srcPath()."/includes/connect.php");
+require(AppSettings::srcPath()."/includes/get_session.php");
 
 $pagetitle = AppSettings::getParam('site_name')." - Reset your password";
 include(AppSettings::srcPath()."/includes/html_start.php");

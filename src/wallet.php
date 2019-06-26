@@ -1,6 +1,6 @@
 <?php
-include(AppSettings::srcPath().'/includes/connect.php');
-include(AppSettings::srcPath().'/includes/get_session.php');
+require(AppSettings::srcPath().'/includes/connect.php');
+require(AppSettings::srcPath().'/includes/get_session.php');
 
 $error_code = false;
 $message = "";

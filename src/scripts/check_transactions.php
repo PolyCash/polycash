@@ -1,6 +1,5 @@
 <?php
 ini_set('memory_limit', '1024M');
-$host_not_required = TRUE;
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 
 $allowed_params = ['game_id'];
@@ -76,8 +75,8 @@ if ($app->running_as_admin()) {
 		if ($first_error_block) {
 			$reset_block = min($first_error_block, $last_block_id+1);
 			
-			echo "First error was on block #".$first_error_block.", please <a href=\"/scripts/reset_game.php?game_id=".$game->db_game['game_id']."&key=".AppSettings::getParam('cron_key_string')."&block_id=".$reset_block."\">reset the game from block ".$reset_block."</a>";
-			if ($first_severe_error_block !== false) echo " or <a href=\"/scripts/reset_game.php?game_id=".$game->db_game['game_id']."&key=".AppSettings::getParam('cron_key_string')."&block_id=".$first_severe_error_block."\">reset the game from block ".$first_severe_error_block."</a>";
+			echo "First error was on block #".$first_error_block.", please <a href=\"/scripts/reset_game.php?game_id=".$game->db_game['game_id']."&key=".AppSettings::getParam('operator_key')."&block_id=".$reset_block."\">reset the game from block ".$reset_block."</a>";
+			if ($first_severe_error_block !== false) echo " or <a href=\"/scripts/reset_game.php?game_id=".$game->db_game['game_id']."&key=".AppSettings::getParam('operator_key')."&block_id=".$first_severe_error_block."\">reset the game from block ".$first_severe_error_block."</a>";
 			echo "<br/>\n";
 		}
 	}

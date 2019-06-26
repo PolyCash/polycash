@@ -1,5 +1,5 @@
 <?php
-include(AppSettings::srcPath()."/includes/connect.php");
+require(AppSettings::srcPath()."/includes/connect.php");
 
 if ($app->running_as_admin()) {
 	$game_id = (int)$_REQUEST['game_id'];

@@ -1,8 +1,7 @@
 <?php
-$host_not_required = true;
-include(AppSettings::srcPath()."/includes/connect.php");
+require(AppSettings::srcPath()."/includes/connect.php");
 
-if (empty(AppSettings::getParam('cron_key_string')) || $_REQUEST['key'] == AppSettings::getParam('cron_key_string')) {
+if (empty(AppSettings::getParam('operator_key')) || $_REQUEST['key'] == AppSettings::getParam('operator_key')) {
 	$res = $_REQUEST['res'];
 	if ($res != "low") $res = "high";
 	

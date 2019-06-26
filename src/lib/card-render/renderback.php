@@ -1,9 +1,8 @@
 <?php
-$host_not_required = true;
-include(AppSettings::srcPath()."/includes/connect.php");
+require(AppSettings::srcPath()."/includes/connect.php");
 include(AppSettings::srcPath()."/lib/phpqrcode/qrlib.php");
 
-if (empty(AppSettings::getParam('cron_key_string')) || $_REQUEST['key'] == AppSettings::getParam('cron_key_string')) {
+if (empty(AppSettings::getParam('operator_key')) || $_REQUEST['key'] == AppSettings::getParam('operator_key')) {
 	$card_id = (int) $_REQUEST['card_id'];
 
 	if ($card_id > 0) {

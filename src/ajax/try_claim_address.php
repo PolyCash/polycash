@@ -1,6 +1,6 @@
 <?php
-include(AppSettings::srcPath()."/includes/connect.php");
-include(AppSettings::srcPath()."/includes/get_session.php");
+require(AppSettings::srcPath()."/includes/connect.php");
+require(AppSettings::srcPath()."/includes/get_session.php");
 
 $game_id = false;
 if (!empty($_REQUEST['game_id'])) $game_id = (int) $_REQUEST['game_id'];

@@ -1,6 +1,6 @@
 <?php
-include(AppSettings::srcPath()."/includes/connect.php");
-include(AppSettings::srcPath()."/includes/get_session.php");
+require(AppSettings::srcPath()."/includes/connect.php");
+require(AppSettings::srcPath()."/includes/get_session.php");
 
 $allowed_params = ['action'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);

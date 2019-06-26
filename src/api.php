@@ -1,7 +1,7 @@
 <?php
 $allow_no_https = true;
-include(AppSettings::srcPath().'/includes/connect.php');
-include(AppSettings::srcPath().'/includes/get_session.php');
+require(AppSettings::srcPath().'/includes/connect.php');
+require(AppSettings::srcPath().'/includes/get_session.php');
 
 $uri = $_SERVER['REQUEST_URI'];
 $uri_parts = explode("/", $uri);
@@ -13,12 +13,16 @@ if ($uri_parts[1] == "api") {
 		include(AppSettings::srcPath().'/includes/html_start.php');
 		
 		if (empty($game_id)) {
-			$game_id = $app->run_query("SELECT * FROM games WHERE featured=1 ORDER BY game_id ASC LIMIT 1;")->fetch()['game_id'];
+			$game_id = $app->run_query("SELECT * FROM games WHERE game_status IN ('running','published') ORDER BY featured DESC, featured_score DESC, game_id ASC LIMIT 1;")->fetch()['game_id'];
 		}
 		$db_game = $app->fetch_game_by_id($game_id);
-		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
-		$api_game = new Game($blockchain, $game_id);
-		$api_game->load_current_events();
+		
+		if ($db_game) {
+			$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+			$api_game = new Game($blockchain, $game_id);
+			$api_game->load_current_events();
+		}
+		else $api_game = false;
 		?>
 		<div class="container-fluid">
 			<div class="panel panel-default" style="margin-top: 15px;">
@@ -35,13 +39,13 @@ if ($uri_parts[1] == "api") {
 						<br/><br/>
 					</p>
 					<p>
-						<b><a target="_blank" href="/api/<?php echo $api_game->db_game['url_identifier']; ?>/status/">/api/<?php echo $api_game->db_game['url_identifier']; ?>/status/</a></b><br/>
+						<b><a target="_blank" href="/api/<?php if ($api_game) echo $api_game->db_game['url_identifier']; ?>/status/">/api/<?php if ($api_game) echo $api_game->db_game['url_identifier']; ?>/status/</a></b><br/>
 						Yields information about current status of the blockchain.
 						<br/>
 					</p>
 					<pre id="api_status_example" style="display: none;"></pre>
 					<p>
-						<b>/api/<?php echo $api_game->db_game['url_identifier']; ?>/status/?api_access_code=&lt;ACCESS_CODE&gt;</b><br/>
+						<b>/api/<?php if ($api_game) echo $api_game->db_game['url_identifier']; ?>/status/?api_access_code=&lt;ACCESS_CODE&gt;</b><br/>
 						Supply your API access code to get relevant info on your user account in addition to general blockchain information.
 						<br/>
 					</p>
@@ -54,13 +58,13 @@ if ($uri_parts[1] == "api") {
 	}
 	else if ($uri_parts[2] == "download-client-example") {
 		$example_password = "password123";
-		$fname = "api_client.php";
+		$fname = AppSettings::srcPath()."/api_client.php";
 		
 		$fh = fopen($fname, 'r');
 		$raw = fread($fh, filesize($fname));
-		$raw = str_replace('include(AppSettings::srcPath()."/includes/config.php");', '', $raw);
-		$raw = str_replace('$access_key = AppSettings::getParam(\'cron_key_string\')', '$access_key = "'.$example_password.'"', $raw);
-		$raw = str_replace('AppSettings::getParam(\'cron_key_string\')', $example_password, $raw);
+		$raw = str_replace('require_once(dirname(__FILE__)."/classes/AppSettings.php");', '', $raw);
+		$raw = str_replace('$access_key = AppSettings::getParam(\'operator_key\')', '$access_key = "\''.$example_password.'\'"', $raw);
+		$raw = str_replace('AppSettings::getParam(\'operator_key\')', "'".$example_password."'", $raw);
 		
 		header('Content-Type: application/x-download');
 		header('Content-disposition: attachment; filename="'.AppSettings::getParam('coin_brand_name').'APIClient.php"');

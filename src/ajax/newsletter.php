@@ -1,6 +1,6 @@
 <?php
-include(AppSettings::srcPath()."/includes/connect.php");
-include(AppSettings::srcPath()."/includes/get_session.php");
+require(AppSettings::srcPath()."/includes/connect.php");
+require(AppSettings::srcPath()."/includes/get_session.php");
 
 $email = $app->normalize_username($_REQUEST['email']);
 $existing_subscriber = $app->run_query("SELECT * FROM newsletter_subscribers WHERE email_address=:email_address;", [

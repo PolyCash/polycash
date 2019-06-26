@@ -1,6 +1,6 @@
 <?php
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
-include(AppSettings::srcPath().'/includes/get_session.php');
+require(AppSettings::srcPath().'/includes/get_session.php');
 $pagetitle = "Checking donations";
 include(AppSettings::srcPath().'/includes/html_start.php');
 

@@ -9,7 +9,7 @@
 	"mysql_password": "",
 	"database": "",
 	"dev_database": "",
-	"cron_key_string": "",
+	"operator_key": "",
 	"use_https": false,
 	"signup_captcha_required": false,
 	"recaptcha_publickey": "",

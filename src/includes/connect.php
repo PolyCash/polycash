@@ -1,6 +1,5 @@
 <?php
 $pageload_start_time = microtime(true);
-
 require_once(dirname(dirname(__FILE__))."/classes/AppSettings.php");
 AppSettings::load();
 
@@ -10,10 +9,8 @@ if (empty($argv) && !empty(AppSettings::getParam('restrict_ip_address'))) {
 
 if (empty(AppSettings::getParam('coin_brand_name'))) die("Please set the 'coin_brand_name' parameter in your config/config.json");
 
-include(AppSettings::srcPath()."/lib/bitcoin-sci/common.lib.php");
-
 if (!empty($allow_no_https)) {}
-else if (AppSettings::getParam('base_url') && (!isset($host_not_required) || !$host_not_required)) {
+else if (AppSettings::getParam('base_url') && !AppSettings::runningFromCommandline()) {
 	if (isset($_SERVER['HTTPS'])) $requested_base_url = "https";
 	else $requested_base_url = "http";
 	$requested_base_url .= "://".$_SERVER['HTTP_HOST'];
@@ -44,5 +41,5 @@ if (!$skip_select_db) {
 	$app->load_module_classes();
 }
 
-if (AppSettings::getParam('pageview_tracking_enabled')) $pageview_controller = new PageviewController($app);
+if (AppSettings::getParam('pageview_tracking_enabled')) $pageviewController = new PageviewController($app);
 ?>

@@ -1,18 +1,17 @@
 <?php
-include(AppSettings::srcPath()."/includes/config.php");
-ini_set('display_errors', 'Off');
+require_once(dirname(__FILE__)."/classes/AppSettings.php");
 /*
 To use custom logic, install this PHP script on a webserver
 Then enter it's URL into your user account under the Strategy tab.
 To keep your recommendations private, it's recommended that you set a secure $client_access_key below.
 Then your API url will be something like:
-http://mywebserver.com/APIClient.php?key=AppSettings::getParam('cron_key_string')
+http://mywebserver.com/APIClient.php?key=AppSettings::getParam('operator_key')
 */
 
 // Log into your web wallet -> Settings to find your server access key, then enter it below
 $server_access_key = "";
 $server_host = "https://poly.cash";
-$client_access_key = AppSettings::getParam('cron_key_string');
+$client_access_key = AppSettings::getParam('operator_key');
 
 $event_id = intval($_REQUEST['event_id']);
 if (!$event_id) die("Please provide a valid event_id");

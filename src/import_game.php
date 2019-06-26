@@ -1,20 +1,26 @@
 <?php
-include(AppSettings::srcPath()."/includes/connect.php");
-include(AppSettings::srcPath()."/includes/get_session.php");
+require(AppSettings::srcPath()."/includes/connect.php");
+require(AppSettings::srcPath()."/includes/get_session.php");
 
-$pagetitle = "Import Game Definition - ".AppSettings::getParam('coin_brand_name');
+$import_mode = "game";
+$toggle_mode = "blockchain";
+
+if (!empty($_REQUEST['import_mode']) && $_REQUEST['import_mode'] == "blockchain") {
+	$import_mode = $_REQUEST['import_mode'];
+	$toggle_mode = "game";
+}
+
+$pagetitle = "Import a ";
+if ($import_mode == "game") $pagetitle .= "Game Definition";
+else $pagetitle .= "Blockchain";
+$pagetitle .= " - ".AppSettings::getParam('coin_brand_name');
+
+$nav_tab_selected = "import";
+
 include(AppSettings::srcPath().'/includes/html_start.php');
 ?>
 <div class="container-fluid">
 	<?php
-	$definition_mode = "game";
-	$toggle_mode = "blockchain";
-	
-	if (!empty($_REQUEST['definition_mode']) && $_REQUEST['definition_mode'] == "blockchain") {
-		$definition_mode = $_REQUEST['definition_mode'];
-		$toggle_mode = "game";
-	}
-	
 	if ($thisuser) {
 		?>
 		<div class="panel panel-info" style="margin-top: 10px;">
@@ -30,7 +36,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						
 						$definition = $_REQUEST['definition'];
 						
-						if ($definition_mode == "game") {
+						if ($import_mode == "game") {
 							$app->set_game_from_definition($definition, $thisuser, $error_message, $db_new_game, false);
 							
 							if (!empty($error_message)) echo "<p>".$error_message."</p>\n";
@@ -38,12 +44,12 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							echo '<p>Successfully created <a href="/'.$db_new_game['url_identifier'].'/">'.$db_new_game['name'].'</a></p>';
 						
 							if ($db_new_game) {
-								echo "<p>Your ".$definition_mode." definition was successfully imported!<br/>\n";
+								echo "<p>Your ".$import_mode." definition was successfully imported!<br/>\n";
 								echo "Please be patient as it may take several minutes for this game to sync.<br/>\n";
 								echo "Please <a href=\"/".$db_new_game['url_identifier']."/\">click here</a> to join the game.</p>\n";
 							}
 							else {
-								echo "<p><a href=\"/import/?definition_mode=".$definition_mode."\">Try again</a></p>\n";
+								echo "<p><a href=\"/import/?import_mode=".$import_mode."\">Try again</a></p>\n";
 							}
 						}
 						else {
@@ -61,16 +67,19 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						</script>
 						<form action="/import/" method="post">
 							<input type="hidden" name="action" value="import_definition" />
-							<input type="hidden" name="definition_mode" value="<?php echo $definition_mode; ?>" />
+							<input type="hidden" name="import_mode" value="<?php echo $import_mode; ?>" />
 							<p>
-								<a href="/import/?definition_mode=<?php echo $toggle_mode; ?>">Switch to importing <?php echo $toggle_mode."s"; ?></a>
+								<b>Import a new <?php echo $import_mode; ?></b></a>
 							</p>
 							<p>
-								Definition:<br/>
+								<a href="/import/?import_mode=<?php echo $toggle_mode; ?>">Switch to importing <?php echo $toggle_mode."s"; ?></a>
+							</p>
+							<p>
+								Paste the <?php echo $import_mode; ?> definition here:<br/>
 								<textarea id="definition" name="definition" class="form-control" rows="10" style="margin: 10px 0px;"></textarea>
 							</p>
 							<p>
-								<button class="btn btn-primary">Import <?php echo ucwords($definition_mode); ?></button>
+								<button class="btn btn-primary">Import <?php echo ucwords($import_mode); ?></button>
 							</p>
 						</form>
 						<?php
@@ -83,7 +92,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 		<?php
 	}
 	else {
-		$redirect_url = $app->get_redirect_url("/import/?definition_mode=".$definition_mode);
+		$redirect_url = $app->get_redirect_url("/import/?import_mode=".$import_mode);
 		$redirect_key = $redirect_url['redirect_key'];
 		include(AppSettings::srcPath()."/includes/html_login.php");
 	}

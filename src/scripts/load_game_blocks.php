@@ -1,5 +1,4 @@
 <?php
-$host_not_required = TRUE;
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 
 $allowed_params = ['game_id'];

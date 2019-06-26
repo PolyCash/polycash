@@ -1,6 +1,6 @@
 <?php
-include(AppSettings::srcPath().'/includes/connect.php');
-include(AppSettings::srcPath().'/includes/get_session.php');
+require(AppSettings::srcPath().'/includes/connect.php');
+require(AppSettings::srcPath().'/includes/get_session.php');
 
 $pagetitle = "My Cards";
 $nav_tab_selected = "cards";
@@ -273,7 +273,7 @@ if (!empty($_REQUEST['action'])) {
 							$front_coords = $app->position_by_pos($pos, 'front', $paper_width);
 							
 							$side = "front";
-							$temp_render_url = AppSettings::getParam('base_url')."/lib/card-render/render".$side.".php?key=".AppSettings::getParam('cron_key_string')."&card_id=".$cardarr[$pos-1]['card_id']."&orient=".$orient."&res=".$res;
+							$temp_render_url = AppSettings::getParam('base_url')."/lib/card-render/render".$side.".php?key=".AppSettings::getParam('operator_key')."&card_id=".$cardarr[$pos-1]['card_id']."&orient=".$orient."&res=".$res;
 							
 							$pdf->Image($temp_render_url, $front_coords[0], $front_coords[1], $card_print_width, false, 'png');
 						}
@@ -300,7 +300,7 @@ if (!empty($_REQUEST['action'])) {
 						$back_coords = $app->position_by_pos($pos, 'back', $paper_width);
 						
 						$side = "back";
-						$img_png_url = AppSettings::getParam('base_url')."/lib/card-render/render".$side.".php?key=".AppSettings::getParam('cron_key_string')."&card_id=".$cardarr[$pos-1]['card_id']."&orient=".$orient."&res=".$res;
+						$img_png_url = AppSettings::getParam('base_url')."/lib/card-render/render".$side.".php?key=".AppSettings::getParam('operator_key')."&card_id=".$cardarr[$pos-1]['card_id']."&orient=".$orient."&res=".$res;
 						
 						$pdf->Image($img_png_url, $back_coords[0], $back_coords[1], $card_print_width, false, 'png');
 					}

@@ -197,7 +197,7 @@ class App {
 	}
 	
 	public function safe_merge_argv_to_request(&$argv, &$allowed_params) {
-		if ($argv && $this->running_from_commandline()) {
+		if ($argv && AppSettings::runningFromCommandline()) {
 			$arg_i = 0;
 			foreach ($argv as $arg) {
 				if ($arg_i > 0) {
@@ -2111,7 +2111,7 @@ class App {
 				$this->run_query($import_q, $import_params);
 				$blockchain_id = $this->last_insert_id();
 				
-				$error_message = "Import was a success! Next please <a href=\"/scripts/sync_blockchain_initial.php?key=".AppSettings::getParam('cron_key_string')."&blockchain_id=".$blockchain_id."\">reset and synchronize ".$blockchain_def->blockchain_name."</a>";
+				$error_message = "Import was a success! Next please <a href=\"/scripts/sync_blockchain_initial.php?key=".AppSettings::getParam('operator_key')."&blockchain_id=".$blockchain_id."\">reset and synchronize ".$blockchain_def->blockchain_name."</a>";
 			}
 			else $error_message = "Error: this blockchain already exists.";
 		}
@@ -3472,14 +3472,9 @@ class App {
 		return $this->run_query("SELECT * FROM option_groups WHERE group_id=:group_id;", ['group_id'=>$group_id])->fetch();
 	}
 	
-	public function running_from_commandline() {
-		if (PHP_SAPI == "cli") return true;
-		else return false;
-	}
-	
 	public function running_as_admin() {
-		if ($this->running_from_commandline()) return true;
-		else if (empty(AppSettings::getParam('cron_key_string')) || $_REQUEST['key'] == AppSettings::getParam('cron_key_string')) return true;
+		if (AppSettings::runningFromCommandline()) return true;
+		else if (empty(AppSettings::getParam('operator_key')) || $_REQUEST['key'] == AppSettings::getParam('operator_key')) return true;
 		else return false;
 	}
 	

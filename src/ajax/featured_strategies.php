@@ -1,7 +1,6 @@
 <?php
-$host_not_required = TRUE;
-include(AppSettings::srcPath()."/includes/connect.php");
-include(AppSettings::srcPath()."/includes/get_session.php");
+require(AppSettings::srcPath()."/includes/connect.php");
+require(AppSettings::srcPath()."/includes/get_session.php");
 
 if ($game) {
 	$game->load_current_events();

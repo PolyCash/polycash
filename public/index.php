@@ -15,8 +15,8 @@ else $requested_filename = false;
 
 if (count($uri_parts) < 2 || $uri_parts[1] == "") {
 	// App home page
-	include($src_path."/includes/connect.php");
-	include($src_path."/includes/get_session.php");
+	require($src_path."/includes/connect.php");
+	require($src_path."/includes/get_session.php");
 
 	if (!empty(AppSettings::getParam('homepage_fname'))) include($src_path."/pages/".AppSettings::getParam('homepage_fname'));
 	else include($src_path."/pages/default.php");
@@ -76,8 +76,8 @@ else if ($uri_parts[1] == "groups") {
 	include($src_path."/manage_groups.php");
 }
 else {
-	include($src_path."/includes/connect.php");
-	include($src_path."/includes/get_session.php");
+	require($src_path."/includes/connect.php");
+	require($src_path."/includes/get_session.php");
 	
 	$selected_category = $app->run_query("SELECT * FROM categories WHERE category_level=0 AND url_identifier=:url_identifier;", [
 		'url_identifier' => $uri_parts[1]

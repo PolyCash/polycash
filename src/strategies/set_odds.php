@@ -1,7 +1,6 @@
 <?php
-$host_not_required = TRUE;
-include(AppSettings::srcPath()."/includes/connect.php");
-include(AppSettings::srcPath()."/includes/get_session.php");
+require(AppSettings::srcPath()."/includes/connect.php");
+require(AppSettings::srcPath()."/includes/get_session.php");
 
 $user_game = $app->fetch_user_game_by_api_key($_REQUEST['api_key']);
 

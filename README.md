@@ -1,4 +1,4 @@
-To get started, first please install and secure Apache, MySQL and PHP.  Set your Apache web root to the "public" folder of this repository.  Then create a file src/config/config.json by copying and pasting src/config/example_config.json.
+To get started, first install and secure Apache, MySQL and PHP.  Set your Apache web root to the "public" folder of this repository.  Then create a file src/config/config.json by copying and pasting src/config/example_config.json.
 
 Make sure to set the following params in your config.json to something like the following:
 ```
@@ -7,9 +7,9 @@ Make sure to set the following params in your config.json to something like the 
 "mysql_user": "root",
 "mysql_password": "somesecurepass",
 "database": "polycash",
-"cron_key_string": "anothersecurepass"
+"operator_key": "anothersecurepass"
 ```
-"cron_key_string" is a parameter which allows a site administrator to perform certain actions like updating the application.  If you are installing PolyCash on a public facing server, be sure to set a secure value for this parameter.
+"operator_key" is a parameter which allows a site administrator to perform certain actions like updating the application.  If you are installing PolyCash on a public facing server, be sure to set a secure value for this parameter.
 
 If you want to allow users to log in with an email address, enter your sendgrid credentials into these variables in your config file:
 ```
@@ -24,7 +24,7 @@ Next, configure cron to poll PolyCash every minute. This keeps PolyCash in sync 
 
 Set "pageview_tracking_enabled" = true in your config.json if you want to track all pageviews.  This may help you to detect malicious activity on your server.  If you don't set this parameter, no IP addresses or pageviews will be tracked.
 
-Next, point your browser to http://localhost/install.php?key=<cron_key_string> where <cron_key_string> is the random string that you generated above.  If Apache, MySQL and PHP are all installed correctly, PolyCash should automatically install.
+Next, point your browser to http://localhost/install.php?key=<operator_key> where <operator_key> is the random string that you generated above.  If Apache, MySQL and PHP are all installed correctly, PolyCash should automatically install.
 
 Make sure you have curl installed:
 ```

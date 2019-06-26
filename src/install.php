@@ -1,7 +1,7 @@
 <?php
 ini_set('memory_limit', '1024M');
 $skip_select_db = TRUE;
-include(AppSettings::srcPath()."/includes/connect.php");
+require(AppSettings::srcPath()."/includes/connect.php");
 
 if ($app->running_as_admin()) {
 	if (AppSettings::getParam('mysql_database') != "") {
@@ -74,10 +74,9 @@ if ($app->running_as_admin()) {
 			$app->blockchain_ensure_currencies();
 			$general_entity_type = $app->check_set_entity_type("general entity");
 			
-			include(AppSettings::srcPath()."/includes/get_session.php");
+			require(AppSettings::srcPath()."/includes/get_session.php");
 			
 			$pagetitle = AppSettings::getParam('site_name')." - Installing...";
-			$include_crypto_js = TRUE;
 			$nav_tab_selected = "install";
 			include(AppSettings::srcPath()."/includes/html_start.php");
 			?>
@@ -140,7 +139,7 @@ if ($app->running_as_admin()) {
 										else echo "<pre>".json_encode($error_message, JSON_PRETTY_PRINT)."</pre>\n";
 									}
 									
-									echo "<p>Next please <a href=\"/scripts/load_game_reset.php?key=".AppSettings::getParam('cron_key_string')."&game_id=".$new_game->db_game['game_id']."\">reset this game</a></p>\n";
+									echo "<p>Next please <a href=\"/scripts/load_game_reset.php?key=".AppSettings::getParam('operator_key')."&game_id=".$new_game->db_game['game_id']."\">reset this game</a></p>\n";
 								}
 								else echo "<p>Failed to find the blockchain.</p>\n";
 							}
@@ -154,7 +153,7 @@ if ($app->running_as_admin()) {
 * * * * * root <?php echo $app->php_binary_location(); ?> <?php echo str_replace("\\", "/", AppSettings::srcPath())."/cron/minutely.php"; ?>
 </pre>
 					If you can't use cron, please run this app in a new tab or run the command below.<br/>
-					<a class="btn btn-success" target="_blank" href="cron/minutely.php?key=<?php echo AppSettings::getParam('cron_key_string'); ?>">Start process in a new tab</a>
+					<a class="btn btn-success" target="_blank" href="cron/minutely.php?key=<?php echo AppSettings::getParam('operator_key'); ?>">Start process in a new tab</a>
 					<br/>
 					<pre><?php echo $app->php_binary_location(); ?> <?php echo str_replace("\\", "/", AppSettings::srcPath()."/scripts/main.php"); ?></pre>
 					
@@ -209,7 +208,7 @@ if ($app->running_as_admin()) {
 									echo "</pre>";
 									
 									echo "Next, please reset and synchronize this game.<br/>\n";
-									echo "<a class=\"btn btn-primary\" target=\"_blank\" href=\"/scripts/sync_blockchain_initial.php?key=".AppSettings::getParam('cron_key_string')."&blockchain_id=".$db_blockchain['blockchain_id']."\">Reset & synchronize ".$db_blockchain['blockchain_name']."</a>\n";
+									echo "<a class=\"btn btn-primary\" target=\"_blank\" href=\"/scripts/sync_blockchain_initial.php?key=".AppSettings::getParam('operator_key')."&blockchain_id=".$db_blockchain['blockchain_id']."\">Reset & synchronize ".$db_blockchain['blockchain_name']."</a>\n";
 									echo "<br/>\n";
 								}
 								echo "<a href=\"\" onclick=\"$('#display_rpc_".$db_blockchain['blockchain_id']."').hide(); $('#edit_rpc_".$db_blockchain['blockchain_id']."').show('fast'); return false;\">Set new RPC params for ".$db_blockchain['blockchain_name']."</a>\n";
@@ -219,7 +218,7 @@ if ($app->running_as_admin()) {
 							<div id="edit_rpc_<?php echo $db_blockchain['blockchain_id']; ?>"<?php if ($tried_rpc) echo ' style="display: none;"'; ?>>
 								Please enter the RPC username and password for connecting to the <b><?php echo $db_blockchain['blockchain_name']; ?></b> daemon:<br/>
 								<form method="post" action="install.php">
-									<input type="hidden" name="key" value="<?php echo AppSettings::getParam('cron_key_string'); ?>" />
+									<input type="hidden" name="key" value="<?php echo AppSettings::getParam('operator_key'); ?>" />
 									<input type="hidden" name="action" value="save_blockchain_params" />
 									<input type="hidden" name="blockchain_id" value="<?php echo $db_blockchain['blockchain_id']; ?>" />
 									<input class="form-control" name="rpc_host" placeholder="RPC hostname (default 127.0.0.1)" />
@@ -236,7 +235,7 @@ if ($app->running_as_admin()) {
 						}
 						else {
 							echo "<p><h3>".$db_blockchain['blockchain_name']."</h3>\n";
-							echo "<a target=\"_blank\" href=\"/scripts/sync_blockchain_initial.php?key=".AppSettings::getParam('cron_key_string')."&blockchain_id=".$db_blockchain['blockchain_id']."\">Reset & synchronize ".$db_blockchain['blockchain_name']."</a></p>\n";
+							echo "<a target=\"_blank\" href=\"/scripts/sync_blockchain_initial.php?key=".AppSettings::getParam('operator_key')."&blockchain_id=".$db_blockchain['blockchain_id']."\">Reset & synchronize ".$db_blockchain['blockchain_name']."</a></p>\n";
 						}
 					}
 					
@@ -257,7 +256,7 @@ if ($app->running_as_admin()) {
 						$module_html .= '<option value="'.$open_module['module_name'].'">'.$open_module['module_name']."</option>\n";
 					}
 					
-					echo '<select class="form-control" id="select_install_module" onchange="start_install_module(\''.AppSettings::getParam('cron_key_string').'\');">'.$module_html."</select>\n";
+					echo '<select class="form-control" id="select_install_module" onchange="start_install_module(\''.AppSettings::getParam('operator_key').'\');">'.$module_html."</select>\n";
 					?>
 					<br/>
 					<br/>
@@ -276,6 +275,6 @@ if ($app->running_as_admin()) {
 }
 else {
 	echo 'Please set the correct value for "key" in the URL.<br/>';
-	echo 'To find the correct key value, look for "cron_key_string" in your config file.'."\n";
+	echo 'To find the correct key value, look for "operator_key" in your config file.'."\n";
 }
 ?>

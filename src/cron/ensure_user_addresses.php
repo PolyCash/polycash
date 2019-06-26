@@ -1,5 +1,4 @@
 <?php
-$host_not_required = TRUE;
 include_once(AppSettings::srcPath()."/includes/connect.php");
 
 $script_start_time = microtime(true);

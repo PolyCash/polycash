@@ -1,6 +1,5 @@
 <?php
 set_time_limit(0);
-$host_not_required = TRUE;
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 
 $script_target_time = 54;
@@ -15,7 +14,7 @@ if ($app->running_as_admin()) {
 	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
 	
 	// If running from browser, run in background to get a unique PID, to avoid process lock problems
-	if (!$app->running_from_commandline()) {
+	if (!AppSettings::runningFromCommandline()) {
 		$pipe_config = [
 			0 => ['pipe', 'r'],
 			1 => ['pipe', 'w'],

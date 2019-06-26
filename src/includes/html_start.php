@@ -103,7 +103,8 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 				?>
 				<ul class="sidebar-menu" data-widget="tree">
 					<li class="header">Admin Functions</li>
-					<li<?php if ($nav_tab_selected == "install") echo ' class="active"'; ?>><a href="/install.php?key=<?php echo AppSettings::getParam('cron_key_string'); ?>"><i class="fa fa-download"></i> <span>Install</span></a></li>
+					<li<?php if ($nav_tab_selected == "install") echo ' class="active"'; ?>><a href="/install.php?key=<?php echo AppSettings::getParam('operator_key'); ?>"><i class="fa fa-download"></i> <span>Install</span></a></li>
+					<li<?php if ($nav_tab_selected == "import") echo ' class="active"'; ?>><a href="/import/"><i class="fa fa-plus-square"></i> <span>Import</span></a></li>
 				</ul>
 				<?php
 			}
