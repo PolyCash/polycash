@@ -22,13 +22,11 @@
 	"identifier_case_sensitive": 1,
 	"identifier_first_char": 2,
 	"pageview_tracking_enabled": false,
-	"currency_price_refresh_seconds": 30,
+	"currency_price_refresh_seconds": 300,
 	"invoice_expiration_seconds": 604800,
 	"new_games_per_user": "unlimited",
 	"homepage_fname": "default.php",
 	"default_timezone": "UTC",
-	"rsa_keyholder_email": "",
-	"rsa_pub_key": "",
 	"api_proxy_url": "",
 	"cachebuster": 1001
 }

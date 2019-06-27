@@ -270,13 +270,9 @@ class Event {
 		
 		if ($this->db_event['payout_rule'] == "linear") {
 			$track_entity = $this->game->blockchain->app->fetch_entity_by_id($round_stats[0]['entity_id']);
-			$btc_usd_price = $this->game->blockchain->app->currency_price_at_time(6, 1, time());
 			
-			if ($track_entity['currency_id'] == 6) $track_price_usd = $btc_usd_price['price'];
-			else {
-				$track_price = $this->game->blockchain->app->currency_price_at_time($track_entity['currency_id'], 6, time());
-				$track_price_usd = $track_price['price']*$btc_usd_price['price'];
-			}
+			$track_price_info = $this->game->blockchain->app->exchange_rate_between_currencies(1, $track_entity['currency_id'], time(), 6);
+			$track_price_usd = $track_price_info['exchange_rate'];
 			$track_price_usd = max($this->db_event['track_min_price'], min($this->db_event['track_max_price'], $track_price_usd));
 			
 			// For tracked asset events, the buy position is always the first option (min option ID)
@@ -287,7 +283,9 @@ class Event {
 			$buy_pos_effective_coins = $buy_pos_votes*$coins_per_vote + $round_stats[$min_option_index]['effective_destroy_score'] + $round_stats[$min_option_index]['unconfirmed_effective_destroy_score'];
 			
 			if ($last_block_id < $this->db_event['event_payout_block']) {
-				$html .= "Market price: &nbsp; $".$this->game->blockchain->app->round_to($track_price_usd, 2, 4, true)."<br/>\n";
+				$html .= "Market price: &nbsp; $".$this->game->blockchain->app->round_to($track_price_usd, 2, 4, true);
+				if (time()-$track_price_info['time'] >= 60*10) $html .= ' &nbsp; <font class="redtext">'.$this->game->blockchain->app->format_seconds(time()-$track_price_info['time'])." ago</font>";
+				$html .= "<br/>\n";
 			}
 			
 			$buy_pos_payout_frac = false;
@@ -451,9 +449,9 @@ class Event {
 		else $ref_time = time();
 		
 		$track_entity = $this->game->blockchain->app->fetch_entity_by_id($this->db_event['track_entity_id']);
-		$track_price = $this->game->blockchain->app->currency_price_at_time($track_entity['currency_id'], 6, $ref_time);
-		$btc_usd_price = $this->game->blockchain->app->currency_price_at_time(6, 1, $ref_time);
-		$track_price_usd = round($track_price['price']*$btc_usd_price['price'], 6);
+		$track_price_info = $this->game->blockchain->app->exchange_rate_between_currencies(1, $track_entity['currency_id'], $ref_time, 6);
+		
+		$track_price_usd = $this->game->blockchain->app->to_significant_digits($track_price_info['exchange_rate'], 8);
 		
 		$this->game->blockchain->app->run_query("UPDATE events SET track_payout_price=:track_payout_price WHERE event_id=:event_id;", [
 			'track_payout_price' => $track_price_usd,

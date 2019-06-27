@@ -243,35 +243,30 @@ if ($thisuser) {
 								echo "You created this game, you can edit it <a href=\"/wallet/".$requested_game['url_identifier']."\">here</a>.<br/>\n";
 							}
 
-							if (AppSettings::getParam('rsa_pub_key') != "" && AppSettings::getParam('rsa_keyholder_email') != "") {
-								$invoice_exchange_rate = $app->historical_currency_conversion_rate($invoice['settle_price_id'], $invoice['pay_price_id']);
+							$invoice_exchange_rate = $app->historical_currency_conversion_rate($invoice['settle_price_id'], $invoice['pay_price_id']);
 
-								$pay_currency = $app->fetch_currency_by_id($invoice['pay_currency_id']);
-								$currency_address = $app->fetch_currency_address_by_id($invoice['currency_address_id']);
+							$pay_currency = $app->fetch_currency_by_id($invoice['pay_currency_id']);
+							$currency_address = $app->fetch_currency_address_by_id($invoice['currency_address_id']);
 
-								$coins_per_currency = ($requested_game['giveaway_amount']/pow(10,$requested_game['decimal_places']))/$requested_game['invite_cost'];
-								echo "This game has an initial exchange rate of ".$app->format_bignum($coins_per_currency)." ".$requested_game['coin_name_plural']." per ".$invite_currency['short_name'].". ";
-								
-								$buyin_disp = $app->format_bignum($requested_game['invite_cost']);
-								echo "To join this game, you need to make a payment of ".$buyin_disp." ".$invite_currency['short_name'];
-								if ($buyin_disp != '1') echo "s";
-								
-								$receive_disp = $app->format_bignum($requested_game['giveaway_amount']/pow(10,$requested_game['decimal_places']));
-								echo " in exchange for ".$receive_disp." ";
-								if ($receive_disp == '1') echo $requested_game['coin_name'];
-								else echo $requested_game['coin_name_plural'];
-								echo ".<br/>\n";
-								
-								echo "<br/>\n";
-								
-								echo "To join, send ".$app->decimal_to_float($invoice['pay_amount'])." ".$pay_currency['abbreviation']." to ";
-								echo "<a target=\"_blank\" href=\"https://blockchain.info/address/".$currency_address['pub_key']."\">".$currency_address['pub_key']."</a><br/>\n";
-								echo '<center><img style="margin: 10px;" src="/render_qr_code.php?data='.$currency_address['pub_key'].'" /></center>';
-								echo 'You will automatically be redirected when the Bitcoins are received.';
-							}
-							else {
-								echo "Sorry, this site is not configured to accept bitcoin payments. Please contact the site administrator to rectify this problem.";
-							}
+							$coins_per_currency = ($requested_game['giveaway_amount']/pow(10,$requested_game['decimal_places']))/$requested_game['invite_cost'];
+							echo "This game has an initial exchange rate of ".$app->format_bignum($coins_per_currency)." ".$requested_game['coin_name_plural']." per ".$invite_currency['short_name'].". ";
+							
+							$buyin_disp = $app->format_bignum($requested_game['invite_cost']);
+							echo "To join this game, you need to make a payment of ".$buyin_disp." ".$invite_currency['short_name'];
+							if ($buyin_disp != '1') echo "s";
+							
+							$receive_disp = $app->format_bignum($requested_game['giveaway_amount']/pow(10,$requested_game['decimal_places']));
+							echo " in exchange for ".$receive_disp." ";
+							if ($receive_disp == '1') echo $requested_game['coin_name'];
+							else echo $requested_game['coin_name_plural'];
+							echo ".<br/>\n";
+							
+							echo "<br/>\n";
+							
+							echo "To join, send ".$app->decimal_to_float($invoice['pay_amount'])." ".$pay_currency['abbreviation']." to ";
+							echo "<a target=\"_blank\" href=\"https://blockchain.info/address/".$currency_address['pub_key']."\">".$currency_address['pub_key']."</a><br/>\n";
+							echo '<center><img style="margin: 10px;" src="/render_qr_code.php?data='.$currency_address['pub_key'].'" /></center>';
+							echo 'You will automatically be redirected when the Bitcoins are received.';
 							?>
 						</div>
 						<div class="col-md-5">

@@ -909,7 +909,7 @@ class Blockchain {
 				}
 				else $html .= $txt;
 				
-				$txt = $this->load_all_blocks(TRUE, $print_debug);
+				$txt = $this->load_all_blocks(TRUE, $print_debug, 180);
 				
 				if (!$print_debug) $html .= $txt;
 				
@@ -1037,7 +1037,7 @@ class Blockchain {
 		else return [];
 	}
 	
-	public function load_all_blocks($required_blocks_only, $print_debug) {
+	public function load_all_blocks($required_blocks_only, $print_debug, $max_execution_time) {
 		$start_time = microtime(true);
 		
 		if ($required_blocks_only && $this->db_blockchain['first_required_block'] === "") {}
@@ -1087,6 +1087,8 @@ class Blockchain {
 						}
 					}
 					$loop_i++;
+					
+					if (microtime(true)-$start_time >= $max_execution_time) $keep_looping = false;
 				}
 				
 				if ($this_loop_blocks_to_load < $load_at_once) $keep_looping = false;

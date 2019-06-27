@@ -468,7 +468,7 @@ class App {
 	public function round_to($number, $min_decimals, $target_sigfigs, $format_string) {
 		$decimals = $target_sigfigs-1-floor(log10($number));
 		if ($min_decimals !== false) $decimals = max($min_decimals, $decimals);
-		if ($format_string) return number_format($number, $decimals);
+		if ($format_string) return @number_format($number, $decimals);
 		else return round($number, $decimals);
 	}
 	
@@ -657,6 +657,33 @@ class App {
 		else return false;
 	}
 	
+	public function exchange_rate_between_currencies($numerator_currency_id, $denominator_currency_id, $ref_time, $ref_currency_id) {
+		$price_time = time();
+		
+		if ($numerator_currency_id == $ref_currency_id) {
+			$rate_ref_per_numerator = 1;
+		}
+		else {
+			$rate_ref_per_numerator_record = $this->currency_price_at_time($numerator_currency_id, $ref_currency_id, $ref_time);
+			$rate_ref_per_numerator = $rate_ref_per_numerator_record['price'];
+			$price_time = min($price_time, $rate_ref_per_numerator_record['time_added']);
+		}
+		
+		if ($denominator_currency_id == $ref_currency_id) {
+			$rate_ref_per_denominator = 1;
+		}
+		else {
+			$rate_ref_per_denominator_record = $this->currency_price_at_time($denominator_currency_id, $ref_currency_id, $ref_time);
+			$rate_ref_per_denominator = $rate_ref_per_denominator_record['price'];
+			$price_time = min($price_time, $rate_ref_per_denominator_record['time_added']);
+		}
+		
+		return [
+			'exchange_rate' => $rate_ref_per_denominator/$rate_ref_per_numerator,
+			'time' => $price_time
+		];
+	}
+	
 	public function currency_price_at_time($currency_id, $ref_currency_id, $ref_time) {
 		return $this->run_query("SELECT * FROM currency_prices WHERE currency_id=:currency_id AND reference_currency_id=:reference_currency_id AND time_added <= :ref_time ORDER BY time_added DESC LIMIT 1;", [
 			'currency_id' => $currency_id,
@@ -715,7 +742,7 @@ class App {
 				}
 				else if ($currency_url['format_id'] == 3) {
 					$html_data = $this->first_snippet_between($api_response_raw, '<div id="currency-exchange-rates"', '></div>');
-					$price = (float) $this->first_snippet_between($html_data, 'data-btc="', '"');
+					$price = 1/((float)$this->first_snippet_between($html_data, 'data-btc="', '"'));
 				}
 				
 				if ($price > 0) {
@@ -790,7 +817,7 @@ class App {
 		$new_invoice_params = [
 			'current_time' => time(),
 			'pay_currency_id' => $pay_currency_id,
-			'expire_time' => $time+AppSettings::getParam('invoice_expiration_seconds'),
+			'expire_time' => time()+AppSettings::getParam('invoice_expiration_seconds'),
 			'user_game_id' => $user_game['user_game_id'],
 			'invoice_type' => $invoice_type,
 			'invoice_key_string' => $this->random_string(32),
