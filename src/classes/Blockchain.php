@@ -32,13 +32,16 @@ class Blockchain {
 	
 	public function associated_games($filter_statuses) {
 		$associated_games = [];
-		$associated_games_params = [
-			'blockchain_id' => $this->db_blockchain['blockchain_id'],
-		];
-		$associated_games_q = "SELECT * FROM games WHERE blockchain_id=:blockchain_id";
+		$associated_games_params = [$this->db_blockchain['blockchain_id']];
+		$associated_games_q = "SELECT * FROM games WHERE blockchain_id=?";
+		
 		if (!empty($filter_statuses)) {
-			$associated_games_q .= " AND game_status IN (:filter_game_statuses)";
-			$associated_games_params['filter_game_statuses'] = "'".implode("','", $filter_statuses)."'";
+			$associated_games_q .= " AND (";
+			foreach ($filter_statuses as $filter_status) {
+				$associated_games_q .= "game_status =? OR ";
+				array_push($associated_games_params, $filter_status);
+			}
+			$associated_games_q = substr($associated_games_q, 0, strlen($associated_games_q)-4).")";
 		}
 		$associated_games_q .= ";";
 		$associated_games_r = $this->app->run_query($associated_games_q, $associated_games_params);
@@ -670,9 +673,8 @@ class Blockchain {
 						
 						$events_by_option_id = [];
 						
-						$db_color_games = $this->app->run_query("SELECT g.game_id, SUM(gio.colored_amount) AS game_amount_sum, SUM(gio.colored_amount*(:ref_block_id-io.create_block_id)) AS ref_coin_block_sum FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN games g ON gio.game_id=g.game_id WHERE io.io_id IN (:spend_io_ids) GROUP BY gio.game_id ORDER BY g.game_id ASC;", [
-							'ref_block_id' => $ref_block_id,
-							'spend_io_ids' => implode(",", $spend_io_ids)
+						$db_color_games = $this->app->run_query("SELECT g.game_id, SUM(gio.colored_amount) AS game_amount_sum, SUM(gio.colored_amount*(:ref_block_id-io.create_block_id)) AS ref_coin_block_sum FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN games g ON gio.game_id=g.game_id WHERE io.io_id IN (".implode(",", array_map('intval', $spend_io_ids)).") GROUP BY gio.game_id ORDER BY g.game_id ASC;", [
+							'ref_block_id' => $ref_block_id
 						]);
 						
 						while ($db_color_game = $db_color_games->fetch()) {
@@ -682,15 +684,12 @@ class Blockchain {
 							$tx_game_input_sum = $db_color_game['game_amount_sum'];
 							$cbd_in = $db_color_game['ref_coin_block_sum'];
 							
-							$in_stats = $this->app->run_query("SELECT SUM(colored_amount*(:ref_round_id-create_round_id)) AS ref_coin_round_sum FROM transaction_game_ios WHERE io_id IN (:spend_io_ids);", [
-								'ref_round_id' => $ref_round_id,
-								'spend_io_ids' => implode(",", $spend_io_ids)
+							$in_stats = $this->app->run_query("SELECT SUM(colored_amount*(:ref_round_id-create_round_id)) AS ref_coin_round_sum FROM transaction_game_ios WHERE io_id IN (".implode(",", array_map('intval', $spend_io_ids)).");", [
+								'ref_round_id' => $ref_round_id
 							])->fetch();
 							$crd_in = $in_stats['ref_coin_round_sum'];
 							
-							$tx_chain_input_sum = $this->app->run_query("SELECT SUM(amount) FROM transaction_ios WHERE io_id IN (:spend_io_ids);", [
-								'spend_io_ids' => implode(",", $spend_io_ids)
-							])->fetch()['SUM(amount)'];
+							$tx_chain_input_sum = $this->app->run_query("SELECT SUM(amount) FROM transaction_ios WHERE io_id IN (".implode(",", array_map('intval', $spend_io_ids)).");")->fetch()['SUM(amount)'];
 							
 							$tx_chain_destroy_sum = 0;
 							$tx_chain_output_sum = 0;
@@ -1761,9 +1760,7 @@ class Blockchain {
 		$utxo_balance = 0;
 		
 		if ($type != "coinbase") {
-			$utxo_balance = (int)($this->app->run_query("SELECT SUM(amount) FROM transaction_ios WHERE io_id IN (:io_ids);", [
-				'io_ids' => implode(",", $io_ids)
-			])->fetch(PDO::FETCH_NUM)[0]);
+			$utxo_balance = (int)($this->app->run_query("SELECT SUM(amount) FROM transaction_ios WHERE io_id IN (".implode(",", array_map("intval", $io_ids)).");")->fetch(PDO::FETCH_NUM)[0]);
 		}
 		
 		$raw_txin = [];
@@ -1802,9 +1799,8 @@ class Blockchain {
 			
 			if ($type == "coinbase") {}
 			else {
-				$tx_inputs = $this->app->run_query("SELECT *, io.address_id AS address_id, io.amount AS amount FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.spend_status IN ('unspent','unconfirmed') AND io.blockchain_id=:blockchain_id AND io.io_id IN (:io_ids) ORDER BY io.amount ASC;", [
-					'blockchain_id' => $this->db_blockchain['blockchain_id'],
-					'io_ids' => implode(",", $io_ids)
+				$tx_inputs = $this->app->run_query("SELECT *, io.address_id AS address_id, io.amount AS amount FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.spend_status IN ('unspent','unconfirmed') AND io.blockchain_id=:blockchain_id AND io.io_id IN (".implode(",", array_map("intval", $io_ids)).") ORDER BY io.amount ASC;", [
+					'blockchain_id' => $this->db_blockchain['blockchain_id']
 				]);
 				
 				$ref_block_id = $this->last_block_id()+1;

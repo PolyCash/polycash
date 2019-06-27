@@ -99,12 +99,8 @@ if ($thisuser) {
 							
 							if ($addresses_needed > 0) {
 								if (count($address_ids) > 0) {
-									$app->run_query("UPDATE addresses SET user_id=NULL WHERE address_id IN (:address_ids);", [
-										'address_ids' => implode(",", $address_ids)
-									]);
-									$app->run_query("UPDATE address_keys SET account_id=NULL WHERE address_key_id IN (:address_key_ids);", [
-										'address_key_ids' => implode(",", $address_key_ids)
-									]);
+									$app->run_query("UPDATE addresses SET user_id=NULL WHERE address_id IN (".implode(",", array_map("intval", $address_ids)).");");
+									$app->run_query("UPDATE address_keys SET account_id=NULL WHERE address_key_id IN (".implode(",", array_map("intval", $address_key_ids)).");");
 								}
 								die("Not enough free addresses (still need $addresses_needed/$quantity).");
 							}
@@ -220,12 +216,8 @@ if ($thisuser) {
 							
 							if ($addresses_needed > 0) {
 								if (count($address_ids) > 0) {
-									$app->run_query("UPDATE addresses SET user_id=NULL WHERE address_id IN (:address_ids);", [
-										'address_ids' => implode(",", $address_ids)
-									]);
-									$app->run_query("UPDATE address_keys SET account_id=NULL WHERE address_key_id IN (:address_key_ids);", [
-										'address_key_ids' => implode(",", $address_key_ids)
-									]);
+									$app->run_query("UPDATE addresses SET user_id=NULL WHERE address_id IN (".implode(",", array_map("intval", $address_ids)).");");
+									$app->run_query("UPDATE address_keys SET account_id=NULL WHERE address_key_id IN (".implode(",", array_map("intval", $address_key_ids)).");");
 								}
 								die("Not enough free addresses (still need $addresses_needed/$quantity).");
 							}

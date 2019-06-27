@@ -498,15 +498,11 @@ class App {
 		$this->run_query("DELETE FROM transactions WHERE transaction_id=:transaction_id;", ['transaction_id'=>$transaction_id]);
 		
 		if (count($affected_input_ids) > 0) {
-			$this->run_query("UPDATE transaction_ios SET spend_status='unspent', spend_transaction_id=NULL, spend_block_id=NULL WHERE io_id IN (:affected_input_ids);", [
-				'affected_input_ids' => implode(",", $affected_input_ids)
-			]);
+			$this->run_query("UPDATE transaction_ios SET spend_status='unspent', spend_transaction_id=NULL, spend_block_id=NULL WHERE io_id IN (".implode(",", array_map('intval', $affected_input_ids)).");");
 		}
 		
 		if ($created_input_ids && count($created_input_ids) > 0) {
-			$this->run_query("DELETE FROM transaction_ios WHERE io_id IN (:created_input_ids);", [
-				'created_input_ids' => implode(",", $created_input_ids)
-			]);
+			$this->run_query("DELETE FROM transaction_ios WHERE io_id IN (".implode(",", array_map('intval', $created_input_ids)).");");
 		}
 	}
 
@@ -3169,15 +3165,13 @@ class App {
 					$addresses_needed = $quantity-count($addresses);
 					
 					if (!empty($account['user_id'])) {
-						$this->run_query("UPDATE addresses SET user_id=:user_id WHERE address_id IN (:address_ids);", [
-							'user_id' => $account['user_id'],
-							'address_ids' => implode(",", $add_address_ids)
+						$this->run_query("UPDATE addresses SET user_id=:user_id WHERE address_id IN (".implode(",", array_map('intval', $add_address_ids)).");", [
+							'user_id' => $account['user_id']
 						]);
 					}
 					
-					$this->run_query("UPDATE address_keys SET account_id=:account_id WHERE address_id IN (:address_ids);", [
-						'account_id' => $account['account_id'],
-						'address_ids' => implode(",", $add_address_ids)
+					$this->run_query("UPDATE address_keys SET account_id=:account_id WHERE address_id IN (".implode(",", array_map('intval', $add_address_ids)).");", [
+						'account_id' => $account['account_id']
 					]);
 				}
 				$this->dbh->commit();

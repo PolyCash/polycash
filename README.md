@@ -22,7 +22,7 @@ Next, configure cron to poll PolyCash every minute. This keeps PolyCash in sync 
 * * * * * root /usr/bin/php /var/www/html/polycash/src/cron/minutely.php
 ```
 
-Set "pageview_tracking_enabled" = true in your config.json if you want to track all pageviews.  This may help you to detect malicious activity on your server.  If you don't set this parameter, no IP addresses or pageviews will be tracked.
+Set "pageview_tracking_enabled" = true in your config.json if you want to track all pageviews.  If you don't set this parameter, no IP addresses or pageviews will be tracked.
 
 Next, point your browser to http://localhost/install.php?key=<operator_key> where <operator_key> is the random string that you generated above.  If Apache, MySQL and PHP are all installed correctly, PolyCash should automatically install.
 
@@ -47,3 +47,9 @@ For faster page loads, make sure that browser caching is enabled
 ```
 a2enmod expires
 ```
+
+The user account you set up when installing has special permissions.  Use this account to import any game definitions for crypto assets that you want to run on your node.  Any time you update PolyCash from github, make sure to visit the install page and any new database migrations will automatically be applied.
+
+Use the install page to enter the RPC parameters for any blockchains that you want to use.  Install and start your blockchains as full nodes before entering the RPC parameters.  To install full nodes, make sure to set txindex=1 in bitcoin.conf, litecoin.conf etc.  After entering blockchain RPC parameters, use the "reset & synchronize" link on the install page to quickly insert initial empty blocks.
+
+You need to set the right value for "first required block" for any blockchains that you install.  You should set the first required block for each blockchain at least as early as the lowest starting block for any games that you plan to install on that blockchain.  You should try to avoid ever changing the first required block to a lower value because this will cause the entire blockchain to re-sync with PolyCash which can take hours or days.

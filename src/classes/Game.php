@@ -63,7 +63,7 @@ class Game {
 		
 		$utxo_balance = false;
 		if ($io_ids) {
-			$utxo_balance = $this->blockchain->app->run_query("SELECT SUM(amount) FROM transaction_ios WHERE io_id IN (:io_ids);", ['io_ids'=>implode(",", $io_ids)])->fetch(PDO::FETCH_NUM)[0];
+			$utxo_balance = $this->blockchain->app->run_query("SELECT SUM(amount) FROM transaction_ios WHERE io_id IN (".implode(",", array_map("intval", $io_ids)).");")->fetch(PDO::FETCH_NUM)[0];
 		}
 		
 		$raw_txin = [];
@@ -114,12 +114,10 @@ class Game {
 					$tx_inputs_params['ref_block_id'] = $this->blockchain->last_block_id()-$this->db_game['maturity'];
 				}
 				if ($io_ids) {
-					$tx_inputs_q .= " AND io.io_id IN (:io_ids)";
-					$tx_inputs_params['io_ids'] = implode(",", $io_ids);
+					$tx_inputs_q .= " AND io.io_id IN (".implode(",", array_map("intval", $io_ids)).")";
 				}
 				else {
-					$tx_inputs_q .= " AND gio.game_io_id IN (:game_io_ids)";
-					$tx_inputs_params['game_io_ids'] = $this->mature_io_ids_csv($user_game);
+					$tx_inputs_q .= " AND gio.game_io_id IN (".implode(",", array_map("intval", $this->mature_io_ids_csv($user_game))).")";
 				}
 				$tx_inputs_q .= " GROUP BY io.io_id ORDER BY io.amount ASC;";
 				$tx_inputs = $this->blockchain->app->run_query($tx_inputs_q, $tx_inputs_params);

@@ -114,9 +114,7 @@ if ($app->running_as_admin()) {
 		}
 		
 		if (count($need_address_blockchain_ids) > 0) {
-			$need_address_db_blockchains = $app->run_query("SELECT * FROM blockchains WHERE blockchain_id IN (:need_address_blockchain_ids);", [
-				'need_address_blockchain_ids' => implode(",", $need_address_blockchain_ids)
-			])->fetchAll();
+			$need_address_db_blockchains = $app->run_query("SELECT * FROM blockchains WHERE blockchain_id IN (".implode(",", array_map("intval", $need_address_blockchain_ids)).");")->fetchAll();
 			$blockchain_loop_i = 0;
 			
 			do {

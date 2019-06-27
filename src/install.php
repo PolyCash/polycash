@@ -55,16 +55,12 @@ if ($app->running_as_admin()) {
 				$existing_blockchain = $app->fetch_blockchain_by_id($blockchain_id);
 				
 				if ($existing_blockchain) {
-					$rpc_host = $_REQUEST['rpc_host'];
-					$rpc_username = $_REQUEST['rpc_username'];
-					$rpc_password = $_REQUEST['rpc_password'];
-					$rpc_port = (int) $_REQUEST['rpc_port'];
-					
-					$app->run_query("UPDATE blockchains SET rpc_host=:rpc_host, rpc_username=:rpc_username, rpc_password=:rpc_password, rpc_port=:rpc_port WHERE blockchain_id=:blockchain_id;", [
-						'rpc_host' => $rpc_host,
-						'rpc_username' => $rpc_username,
-						'rpc_password' => $rpc_password,
-						'rpc_port' => $rpc_port,
+					$app->run_query("UPDATE blockchains SET rpc_host=:rpc_host, rpc_username=:rpc_username, rpc_password=:rpc_password, rpc_port=:rpc_port, first_required_block=:first_required_block WHERE blockchain_id=:blockchain_id;", [
+						'rpc_host' => $_REQUEST['rpc_host'],
+						'rpc_username' => $_REQUEST['rpc_username'],
+						'rpc_password' => $_REQUEST['rpc_password'],
+						'rpc_port' => $_REQUEST['rpc_port'],
+						'first_required_block' => $_REQUEST['first_required_block'],
 						'blockchain_id' => $existing_blockchain['blockchain_id']
 					]);
 				}
@@ -225,6 +221,7 @@ if ($app->running_as_admin()) {
 									<input class="form-control" name="rpc_username" placeholder="RPC username" />
 									<input class="form-control" name="rpc_password" placeholder="RPC password" autocomplete="off" />
 									<input class="form-control" name="rpc_port" value="<?php echo $db_blockchain['default_rpc_port']; ?>" placeholder="RPC port" />
+									<input class="form-control" name="first_required_block" value="<?php echo $db_blockchain['first_required_block']; ?>" placeholder="First required block" />
 									<input type="submit" class="btn btn-primary" value="Save" />
 									<?php if ($tried_rpc) echo ' &nbsp;&nbsp; or &nbsp;&nbsp; <a href="" onclick="$(\'#display_rpc_'.$db_blockchain['blockchain_id'].'\').show(\'fast\'); $(\'#edit_rpc_'.$db_blockchain['blockchain_id'].'\').hide(); return false;">Cancel</a>'; ?>
 								</form>
