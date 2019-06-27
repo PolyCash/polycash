@@ -1,4 +1,4 @@
-To get started, first install and secure Apache, MySQL and PHP.  Set your Apache web root to the "public" folder of this repository.  Then create a file src/config/config.json by copying and pasting src/config/example_config.json.
+To get started, first install and secure Apache, MySQL and PHP (at least version 7).  Set your Apache web root to the "public" folder of this repository.  Then create a file src/config/config.json by copying and pasting src/config/example_config.json.
 
 Make sure to set the following params in your config.json to something like the following:
 ```
@@ -22,7 +22,7 @@ Next, configure cron to poll PolyCash every minute. This keeps PolyCash in sync 
 * * * * * root /usr/bin/php /var/www/html/polycash/src/cron/minutely.php
 ```
 
-Set "pageview_tracking_enabled" = true in your config.json if you want to track all pageviews.  If you don't set this parameter, no IP addresses or pageviews will be tracked.
+Set "pageview_tracking_enabled": true in your config.json if you want to track all pageviews.  If you don't set this parameter, no IP addresses or pageviews will be tracked.
 
 Next, point your browser to http://localhost/install.php?key=<operator_key> where <operator_key> is the random string that you generated above.  If Apache, MySQL and PHP are all installed correctly, PolyCash should automatically install.
 

@@ -41,7 +41,7 @@ if ($app->running_as_admin()) {
 			
 			if (empty(AppSettings::getParam('identifier_case_sensitive'))) die('Please set the variable "identifier_case_sensitive" in your config file.');
 			if (empty(AppSettings::getParam('identifier_first_char'))) die('Please set the variable "identifier_first_char" in your config file.');
-			if (empty($app->get_site_constant("reference_currency_id")) $app->set_reference_currency(6);
+			if (empty($app->get_site_constant("reference_currency_id"))) $app->set_reference_currency(6);
 			
 			if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "save_blockchain_params") {
 				$blockchain_id = (int) $_REQUEST['blockchain_id'];

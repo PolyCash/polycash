@@ -518,7 +518,7 @@ class App {
 		else return 0;
 	}
 
-	public function output_message($status_code, $message, $dump_object) {
+	public function output_message($status_code, $message, $dump_object=false) {
 		if (empty($dump_object)) $dump_object = ["status_code"=>$status_code, "message"=>$message];
 		else {
 			$dump_object['status_code'] = $status_code;
@@ -1243,7 +1243,7 @@ class App {
 			$html .= "</div></div>\n";
 			
 			$unrealized_supply_disp = $this->format_bignum(($coins_in_existence+$vote_supply_value+$game_pending_bets)/pow(10,$db_game['decimal_places']));
-			$html .= '<div class="row"><div class="col-sm-5">Greater supply:</div><div class="col-sm-7">';
+			$html .= '<div class="row"><div class="col-sm-5">Total supply:</div><div class="col-sm-7">';
 			$html .= $unrealized_supply_disp.' ';
 			if ($unrealized_supply_disp == "1") $html .= $db_game['coin_name'];
 			else $html .= $db_game['coin_name_plural'];

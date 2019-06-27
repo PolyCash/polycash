@@ -45,7 +45,7 @@ if ($thisuser) {
 				"game_winning_rule": "none",
 				"game_winning_field": "",
 				"game_winning_inflation": 0,
-				"default_payout_rate": 0.99,
+				"default_payout_rate": 1,
 				"default_vote_effectiveness_function": "constant",
 				"default_effectiveness_param1": 0,
 				"default_max_voting_fraction": 1,
@@ -107,7 +107,7 @@ if ($thisuser) {
 					$new_game_params = [
 						'creator_id' => $thisuser->db_user['user_id'],
 						'game_status' => 'editable',
-						'featured' => 1,
+						'featured' => 0,
 						'option_group_id' => $db_group ? $db_group['group_id'] : null,
 					];
 					

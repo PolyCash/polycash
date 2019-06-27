@@ -423,7 +423,7 @@ if ($thisuser) {
 									
 									if ($transaction_id) {
 										$transaction = $app->fetch_transaction_by_id($transaction_id);
-										$app->output_message(1, "/explorer/games/".$db_game['url_identifier']."/transactions/".$transaction['tx_hash']."/");
+										$app->output_message(1, "/explorer/games/".$db_game['url_identifier']."/transactions/".$transaction['tx_hash']."/", false);
 									}
 									else $app->output_message(11, "TX Error: ".$error_message, false);
 								}

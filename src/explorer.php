@@ -619,7 +619,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						</div>
 						
 						<script type="text/javascript">
-						last_event_index_shown = <?php echo $from_event_index; ?>;
+						last_event_index_shown = <?php echo $from_event_index ?? 'false'; ?>;
 						</script>
 						<?php
 					}
