@@ -17,9 +17,6 @@ if ($user_game) {
 	$coins_per_vote = $app->coins_per_vote($game->db_game);
 	$fee_amount = (int) ($fee*pow(10, $blockchain->db_blockchain['decimal_places']));
 	
-	$btc_currency = $app->get_currency_by_abbreviation("BTC");
-	$btc_price = $app->currency_price_at_time($btc_currency['currency_id'], 1, time());
-	
 	$hours_between_applications = 2;
 	$sec_between_applications = 60*60*$hours_between_applications;
 	$rand_sec_offset = rand(0, $sec_between_applications*2);
@@ -53,11 +50,8 @@ if ($user_game) {
 					$sell_burn_stake = $options[1]['effective_destroy_score']+$options[1]['unconfirmed_effective_destroy_score'];
 					$sell_stake = $sell_inflation_stake+$sell_burn_stake;
 					
-					if ($this_currency['currency_id'] == $btc_currency['currency_id']) $market_price = $btc_price['price'];
-					else {
-						$latest_price = $app->currency_price_at_time($this_currency['currency_id'], $btc_currency['currency_id'], time());
-						$market_price = $latest_price['price']*$btc_price['price'];
-					}
+					$market_price_info = $app->exchange_rate_between_currencies(1, $this_currency['currency_id'], time(), 6);
+					$market_price = $market_price_info['exchange_rate'];
 					
 					$market_ratio = ($market_price-$db_events[$event_i]['track_min_price'])/($db_events[$event_i]['track_max_price']+$db_events[$event_i]['track_min_price']);
 					
@@ -151,7 +145,6 @@ if ($user_game) {
 					$address_ids = array($burn_address['address_id']);
 					$io_spent_sum = $burn_io_amount;
 					
-					$btc_currency = $app->get_currency_by_abbreviation("BTC");
 					$bet_i = 0;
 					
 					foreach ($selected_events as $db_event) {

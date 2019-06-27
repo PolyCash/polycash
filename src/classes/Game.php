@@ -427,7 +427,7 @@ class Game {
 			$strategies_q .= " AND (s.voting_strategy IN ('by_rank', 'by_entity', 'api', 'by_plan', 'featured','hit_url'))";
 			$strategies_q .= " AND (s.time_next_apply IS NULL OR s.time_next_apply<:current_time)";
 			$strategies_q .= " AND g.account_value > 0 ORDER BY RAND();";
-			$apply_strategies = $this->blockchain->app->run_query($strategies_q);
+			$apply_strategies = $this->blockchain->app->run_query($strategies_q, $strategies_params);
 			
 			if ($print_debug) echo "Applying user strategies for block #".$mining_block_id." of ".$this->db_game['name']." looping through ".$apply_strategies->rowCount()." users.<br/>\n";
 			while ($user_game = $apply_strategies->fetch()) {
@@ -852,17 +852,9 @@ class Game {
 					if ($last_block_id < $db_event['event_final_block']) $html .= "<font class='greentext'>Running</font>";
 					else $html .= "<font class='yellowtext'>Not Paid</font>";
 					
-					if (empty($btc_currency)) $btc_currency = $this->blockchain->app->get_currency_by_abbreviation("BTC");
 					$ref_currency = $this->blockchain->app->get_currency_by_abbreviation($db_event['track_name_short']);
-					
-					$btc_to_usd = $this->blockchain->app->currency_price_at_time($btc_currency['currency_id'], 1, time());
-					
-					if ($ref_currency['currency_id'] == $btc_currency['currency_id']) $ref_price_usd = $btc_to_usd['price'];
-					else {
-						$ref_price = $this->blockchain->app->currency_price_at_time($ref_currency['currency_id'], $btc_currency['currency_id'], time());
-						$ref_price_usd = $ref_price['price']*$btc_to_usd['price'];
-					}
-					$ref_price_usd = max($db_event['track_min_price'], min($db_event['track_max_price'], $ref_price_usd));
+					$ref_price_info = $this->blockchain->app->exchange_rate_between_currencies(1, $ref_currency['currency_id'], time(), 6);
+					$ref_price_usd = max($db_event['track_min_price'], min($db_event['track_max_price'], $ref_price_info['exchange_rate']));
 				}
 				$html .= " &nbsp;&nbsp; ";
 				
@@ -2394,7 +2386,8 @@ class Game {
 		return $error_message;
 	}
 	
-	public function sync($show_debug) {
+	public function sync($show_debug, $max_load_seconds) {
+		$sync_start_time = microtime(true);
 		$this->set_loaded_until_block();
 		$last_set_loaded_time = microtime(true);
 		
@@ -2443,8 +2436,13 @@ class Game {
 				if ($show_debug) echo $log_text;
 				
 				if (microtime(true)-$last_set_loaded_time >= 3) {
-					$this->set_loaded_until_block();
-					$last_set_loaded_time = microtime(true);
+					if ($max_load_seconds && microtime(true)-$sync_start_time >= $max_load_seconds) {
+						$block_height = $to_block_height+1;
+					}
+					else {
+						$this->set_loaded_until_block();
+						$last_set_loaded_time = microtime(true);
+					}
 				}
 				if (!$successful) $block_height = $to_block_height+1;
 			}
@@ -3099,13 +3097,8 @@ class Game {
 				$track_entity = $this->blockchain->app->fetch_entity_by_id($io['entity_id']);
 				
 				if ((string)$io['track_payout_price'] == "") {
-					$btc_usd_price = $this->blockchain->app->currency_price_at_time(6, 1, time());
-					
-					if ($track_entity['currency_id'] == 6) $track_price_usd = $btc_usd_price['price'];
-					else {
-						$track_price = $this->blockchain->app->currency_price_at_time($track_entity['currency_id'], 6, time());
-						$track_price_usd = $track_price['price']*$btc_usd_price['price'];
-					}
+					$track_price_info = $this->blockchain->app->exchange_rate_between_currencies(1, $track_entity['currency_id'], time(), 6);
+					$track_price_usd = $track_price_info['exchange_rate'];
 				}
 				else {
 					$track_price_usd = $io['track_payout_price'];

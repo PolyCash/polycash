@@ -2,7 +2,7 @@
 set_time_limit(0);
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 
-$script_target_time = 59;
+$script_target_time = 290;
 $script_start_time = microtime(true);
 
 $allowed_params = ['print_debug', 'game_id'];
@@ -37,7 +37,7 @@ if ($app->running_as_admin()) {
 			while ($db_running_game = $db_running_games->fetch()) {
 				if (empty($blockchains[$db_running_game['blockchain_id']])) $blockchains[$db_running_game['blockchain_id']] = new Blockchain($app, $db_running_game['blockchain_id']);
 				$running_game = new Game($blockchains[$db_running_game['blockchain_id']], $db_running_game['game_id']);
-				$running_game->sync($print_debug);
+				$running_game->sync($print_debug, 30);
 			}
 			
 			$loop_stop_time = microtime(true);

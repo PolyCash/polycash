@@ -86,18 +86,6 @@ if ($app->running_as_admin()) {
 			}
 		}
 
-		if (AppSettings::getParam('outbound_email_enabled')) {
-			$completed_games = $app->run_query("SELECT *, TIME_TO_SEC(TIMEDIFF(NOW(), completion_datetime)) AS sec_since_completion FROM games WHERE giveaway_status IN ('public_pay','invite_pay') AND game_status='completed' AND payout_complete=0 AND (payout_reminder_datetime < DATE_SUB(NOW(), INTERVAL 30 MINUTE) OR payout_reminder_datetime IS NULL);");
-
-			while ($completed_game = $completed_games->fetch()) {
-				$app->run_query("UPDATE games SET payout_reminder_datetime=NOW() WHERE game_id=:game_id;", ['game_id'=>$completed_game['game_id']]);
-				
-				$subject = $completed_game['name']." has finished, please process payouts.";
-				$message = "This game finished ".$app->format_seconds($completed_game['sec_since_completion'])." ago. Please log in with your admin account and follow this link to complete the payout: ".AppSettings::getParam('base_url')."/payout_game.php?game_id=".$completed_game['game_id'];
-				$app->mail_async(AppSettings::getParam('rsa_keyholder_email'), AppSettings::getParam('site_name'), "no-reply@".AppSettings::getParam('site_domain'), $subject, $message, "", "", "");
-			}
-		}
-
 		// Load all running games
 		$running_games = [];
 		$db_running_games = $app->run_query("SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.online=1 AND g.game_status IN('published','running');");
