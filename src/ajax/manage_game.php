@@ -158,7 +158,7 @@ if ($thisuser) {
 										'currency_id' => $blockchain->currency_id(),
 										'user_id' => $thisuser->db_user['user_id'],
 										'is_escrow_account' => 1,
-										'account_name' => "Escrow account for ".$game_name
+										'account_name' => "Escrow account for ".$new_game_params['name']
 									]);
 									
 									$db_genesis_address = $app->new_address_key($blockchain->currency_id(), $genesis_account);
@@ -303,11 +303,12 @@ if ($thisuser) {
 					
 					$gde_id = $_REQUEST['gde_id'];
 					
-					$change_gde_params = [
-						'game_id' => $game->db_game['game_id']
-					];
+					$change_gde_params = [];
 					
-					if ($gde_id == "new") $change_gde_q = "INSERT INTO game_defined_events SET game_id=:game_id, ";
+					if ($gde_id == "new") {
+						$change_gde_q = "INSERT INTO game_defined_events SET game_id=:game_id, ";
+						$change_gde_params['game_id'] = $game->db_game['game_id'];
+					}
 					else {
 						$gde = $app->fetch_game_defined_event_by_id($game->db_game['game_id'], $gde_id);
 						

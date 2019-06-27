@@ -272,8 +272,7 @@ class Event {
 			$track_entity = $this->game->blockchain->app->fetch_entity_by_id($round_stats[0]['entity_id']);
 			
 			$track_price_info = $this->game->blockchain->app->exchange_rate_between_currencies(1, $track_entity['currency_id'], time(), 6);
-			$track_price_usd = $track_price_info['exchange_rate'];
-			$track_price_usd = max($this->db_event['track_min_price'], min($this->db_event['track_max_price'], $track_price_usd));
+			$track_price_usd = max($this->db_event['track_min_price'], min($this->db_event['track_max_price'], $track_price_info['exchange_rate']));
 			
 			// For tracked asset events, the buy position is always the first option (min option ID)
 			$min_option_id = min(array_keys($option_id_to_rank));

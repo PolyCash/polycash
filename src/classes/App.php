@@ -624,8 +624,8 @@ class App {
 			if ($append_index > 0) $append = "(".$append_index.")";
 			else $append = "";
 			$url_identifier = $this->normalize_uri_part($game_name.$append);
-			$conflicting_games = $this->fetch_game_by_identifier($url_identifier);
-			if ($conflicting_games->rowCount() == 0) $keeplooping = false;
+			$conflicting_game = $this->fetch_game_by_identifier($url_identifier);
+			if (!$conflicting_game) $keeplooping = false;
 			else $append_index++;
 		}
 		while ($keeplooping);
@@ -713,9 +713,17 @@ class App {
 	}
 	
 	public function get_reference_currency() {
-		$reference_currency = $this->fetch_currency_by_id($this->get_site_constant('reference_currency_id'));
-		if ($reference_currency) return $reference_currency;
-		else die('Error, reference_currency_id is not set properly in site_constants.');
+		return $this->fetch_currency_by_id($this->get_site_constant('reference_currency_id'));
+	}
+	
+	public function set_reference_currency($reference_currency_id) {
+		$has_ref_price = $this->run_query("SELECT * FROM currency_prices WHERE currency_id=:currency_id AND reference_currency_id=:currency_id;", ['currency_id' => $reference_currency_id])->rowCount() > 0;
+		if (!$has_ref_price) {
+			$app->run_query("INSERT INTO currency_prices SET currency_id=:currency_id, reference_currency_id=:currency_id, price=1, time_added=:time_added;", [
+				'currency_id' => $reference_currency_id,
+				'time_added' => time()
+			]);
+		}
 	}
 	
 	public function update_all_currency_prices() {

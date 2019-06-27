@@ -41,14 +41,7 @@ if ($app->running_as_admin()) {
 			
 			if (empty(AppSettings::getParam('identifier_case_sensitive'))) die('Please set the variable "identifier_case_sensitive" in your config file.');
 			if (empty(AppSettings::getParam('identifier_first_char'))) die('Please set the variable "identifier_first_char" in your config file.');
-			
-			$has_ref_price = $app->run_query("SELECT * FROM currency_prices WHERE currency_id=1 AND reference_currency_id=1;")->rowCount() > 0;
-			if (!$has_ref_price) {
-				$app->run_query("INSERT INTO currency_prices SET currency_id=1, reference_currency_id=1, price=1, time_added=:time_added;", ['time_added' => time()]);
-			}
-			
-			$app->set_site_constant("event_loop_seconds", 2);
-			$app->set_site_constant("reference_currency_id", 1);
+			if (empty($app->get_site_constant("reference_currency_id")) $app->set_reference_currency(6);
 			
 			if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "save_blockchain_params") {
 				$blockchain_id = (int) $_REQUEST['blockchain_id'];

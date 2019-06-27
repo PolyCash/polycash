@@ -98,8 +98,6 @@ class DailyCryptoMarketsGameDefinition {
 	public function events_starting_between_blocks(&$game, $from_block, $to_block) {
 		if (empty($this->currencies)) $this->load_currencies($game);
 		
-		$btc_currency = $this->app->get_currency_by_abbreviation("BTC");
-		
 		$start_block = ($game->block_to_round($from_block)-1)*$game->db_game['round_length']+1;
 		if ($from_block > $start_block) $start_block += $game->db_game['round_length'];
 		$end_block = ($game->block_to_round($to_block)-1)*$game->db_game['round_length']+1;
@@ -123,14 +121,9 @@ class DailyCryptoMarketsGameDefinition {
 				if ($final_block) $ref_time = $final_block['time_mined'];
 				else $ref_time = time();
 				
-				$btc_to_usd = $this->app->currency_price_at_time($btc_currency['currency_id'], 1, $ref_time);
+				$price_usd_info = $this->app->exchange_rate_between_currencies(1, $this->currencies[$currency_i]['currency_id'], time(), 6);
 				
-				if ($currency_i == 0) $price_usd = $btc_to_usd['price'];
-				else {
-					$price_btc = $this->app->currency_price_at_time($this->currencies[$currency_i]['currency_id'], $btc_currency['currency_id'], $ref_time);
-					$price_usd = $price_btc['price']*$btc_to_usd['price'];
-				}
-				$price_max_target = $price_usd*1.4;
+				$price_max_target = $price_usd_info['exchange_rate']*1.4;
 				$round_price_target = $this->get_readable_number($price_max_target, $price_max_target);
 				
 				$event_name = $this->currencies[$currency_i]['entity_name']." up to $".$this->app->format_bignum($round_price_target);
@@ -165,18 +158,13 @@ class DailyCryptoMarketsGameDefinition {
 			$payout_block = $game->blockchain->fetch_block_by_id($payout_event->db_event['event_payout_block']);
 			
 			if ($payout_block) {
-				$btc_currency = $this->app->get_currency_by_abbreviation("BTC");
 				$currency = $this->app->get_currency_by_abbreviation($payout_event->db_event['track_name_short']);
 				
 				$ref_time = $payout_block['time_mined'];
-			
-				$btc_price = $this->app->currency_price_at_time($btc_currency['currency_id'], 1, $ref_time);
-				$currency_price = $this->app->currency_price_at_time($currency['currency_id'], $btc_currency['currency_id'], $ref_time);
 				
-				if ($currency['currency_id'] == $btc_currency['currency_id']) $usd_price = $btc_price['price'];
-				else $usd_price = $currency_price['price']*$btc_price['price'];
+				$currency_price_info = $this->app->exchange_rate_between_currencies(1, $currency['currency_id'], $ref_time, 6);
 				
-				$usd_price = $this->app->round_to($usd_price, 2, 6, false);
+				$usd_price = $this->app->round_to($currency_price_info['exchange_rate'], 2, 6, false);
 				$usd_price = max($payout_event->db_event['track_min_price'], min($payout_event->db_event['track_max_price'], $usd_price));
 				
 				$this->app->run_query("UPDATE game_defined_events SET track_payout_price=:track_payout_price WHERE game_id=:game_id AND event_index=:event_index;", [
