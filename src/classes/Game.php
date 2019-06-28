@@ -1782,6 +1782,10 @@ class Game {
 		}
 		if ($event_ids != "") $event_ids = substr($event_ids, 0, strlen($event_ids)-1);
 		
+		if (!$include_content) {
+			$js .= 'document.getElementById("game'.$game_index.'_events").innerHTML = '.json_encode($html).";\n";
+		}
+		
 		return [$js, $html];
 	}
 	
