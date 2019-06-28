@@ -81,18 +81,18 @@ else $exchange_rate = 0;
 			?>
 		</div>
 	</div>
-	
-	<div id="game0_events" class="game_events game_events_short"></div>
+	<?php
+	$filter_arr = false;
+	$event_ids = "";
+	list($new_event_js, $new_event_html) = $game->new_event_js(0, $thisuser, $filter_arr, $event_ids, true);
+	?>
+	<div id="game0_events" class="game_events game_events_short"><?php echo $new_event_html; ?></div>
 
 	<div class="paragraph text-center">
 		<?php echo AppSettings::getParam('site_name').", ".date("Y"); ?>
 	</div>
 </div>
-<?php
-$filter_arr = false;
-$event_ids = "";
-$new_event_js = $game->new_event_js(0, $thisuser, $filter_arr, $event_ids);
-?>
+
 <script type="text/javascript">
 //<![CDATA[
 games.push(new Game(<?php
@@ -123,7 +123,7 @@ games.push(new Game(<?php
 	else echo "0";
 	echo ', false';
 	echo ', "'.$game->db_game['default_betting_mode'].'"';
-	echo ', true';
+	echo ', false';
 ?>));
 
 <?php

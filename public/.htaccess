@@ -4,6 +4,7 @@ RewriteBase /
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule . index.php [L]
+AddType image/x-icon .ico
 
 <IfModule mod_expires.c>
 ExpiresActive On

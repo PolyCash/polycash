@@ -948,7 +948,7 @@ class App {
 		else return rtrim(rtrim($number, '0'), '.');
 	}
 	
-	public function display_games($category_id, $game_id) {
+	public function display_games($category_id, $game_id, $user=false) {
 		echo '<div class="paragraph">';
 		$display_games_params = [];
 		$display_games_q = "SELECT g.*, c.short_name AS currency_short_name FROM games g LEFT JOIN currencies c ON g.invite_currency=c.currency_id WHERE g.featured=1 AND (g.game_status='published' OR g.game_status='running')";
@@ -978,9 +978,8 @@ class App {
 				$current_round_id = $featured_game->block_to_round($mining_block_id);
 				
 				$filter_arr = false;
-				$user = false;
 				$event_ids = "";
-				$new_event_js = $featured_game->new_event_js($counter, $user, $filter_arr, $event_ids);
+				list($new_event_js, $new_event_html) = $featured_game->new_event_js($counter, $user, $filter_arr, $event_ids, true);
 				?>
 				<script type="text/javascript">
 				games.push(new Game(<?php
@@ -1010,7 +1009,7 @@ class App {
 					echo ', 0';
 					echo ', false';
 					echo ', "'.$featured_game->db_game['default_betting_mode'].'"';
-					echo ', true';
+					echo ', false';
 				?>));
 				</script>
 				<?php
@@ -1036,7 +1035,7 @@ class App {
 					echo '<div id="game'.$counter.'_chart_js"><script type="text/javascript">'.$js.'</script></div>'."\n";
 				}
 				
-				echo '<div id="game'.$counter.'_events" class="game_events game_events_short"></div>'."\n";
+				echo '<div id="game'.$counter.'_events" class="game_events game_events_short">'.$new_event_html.'</div>'."\n";
 				echo '<script type="text/javascript" id="game'.$counter.'_new_event_js">'."\n";
 				echo $new_event_js;
 				echo '</script>';

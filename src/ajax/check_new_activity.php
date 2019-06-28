@@ -60,7 +60,7 @@ if (!empty($_REQUEST['filter_date'])) {
 	$filter_arr['date'] = date("Y-m-d", $filter_time);
 }
 $new_event_ids = "";
-$js = $game->new_event_js($instance_id, $thisuser, $filter_arr, $new_event_ids);
+$js = $game->new_event_js($instance_id, $thisuser, $filter_arr, $new_event_ids, false)[0];
 $new_event_ids_hash = $app->game_def_to_hash($new_event_ids);
 
 if ($new_event_ids_hash != $event_ids_hash) {

@@ -5,7 +5,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 ?>
 <div class="container-fluid" style="padding-top: 10px;">
 	<?php
-	$app->display_games(false, false);
+	$app->display_games(false, false, $thisuser);
 	?>
 	<p><a href="/import/">Add another game</a></p>
 	

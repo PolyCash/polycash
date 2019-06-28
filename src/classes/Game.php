@@ -1732,10 +1732,11 @@ class Game {
 		return $event_ids;
 	}
 	
-	public function new_event_js($game_index, &$user, &$filter_arr, &$event_ids) {
+	public function new_event_js($game_index, &$user, &$filter_arr, &$event_ids, $include_content=false) {
 		$last_block_id = $this->blockchain->last_block_id();
 		$mining_block_id = $last_block_id+1;
 		$current_round = $this->block_to_round($mining_block_id);
+		$html = "";
 		
 		$user_id = false;
 		if ($user) {
@@ -1743,13 +1744,14 @@ class Game {
 			$user_game = $user->ensure_user_in_game($this, false);
 		}
 		
-		$js = "for (var i=0; i<games[".$game_index."].events.length; i++) {\n";
-		$js .= "\tgames[".$game_index."].events[i].deleted = true;\n";
-		$js .= "\t$('#game".$game_index."_event'+i).remove();\n";
-		$js .= "}\n";
-		$js .= "games[".$game_index."].events.length = 0;\n";
-		$js .= "games[".$game_index."].events = [];\n";
-		$js .= "var event_html = '';\n";
+		if (!$include_content) {
+			$js = "for (var i=0; i<games[".$game_index."].events.length; i++) {\n";
+			$js .= "\tgames[".$game_index."].events[i].deleted = true;\n";
+			$js .= "\t$('#game".$game_index."_event'+i).remove();\n";
+			$js .= "}\n";
+			$js .= "games[".$game_index."].events.length = 0;\n";
+			$js .= "games[".$game_index."].events = [];\n";
+		}
 		
 		$these_events = $this->events_by_block($last_block_id, $filter_arr);
 		$event_ids = "";
@@ -1772,12 +1774,15 @@ class Game {
 			if ($event->db_event['option_block_rule'] == "football_match") $js .= '
 			games['.$game_index.'].events['.$i.'].refresh_time_estimate();'."\n";
 			
-			$js .= 'event_html += "<div id=\'game'.$game_index.'_event'.$i.'\' class=\'game_event_inner\'><div id=\'game'.$game_index.'_event'.$i.'_display\' class=\'game_event_display\'></div><div id=\'game'.$game_index.'_event'.$i.'_my_current_votes\'></div></div>";'."\n";
+			$html .= '<div id="game'.$game_index.'_event'.$i.'" class="game_event_inner"><div id="game'.$game_index.'_event'.$i.'_display" class="game_event_display">';
+			if ($include_content) $html .= $these_events[$i]->event_html($user, false, true, $game_index, $i);
+			$html .= '</div><div id="game'.$game_index.'_event'.$i.'_my_current_votes">';
+			if ($user && $include_content) $html .= $these_events[$i]->my_votes_table($current_round, $user_game);
+			$html .= "</div></div>\n";
 		}
 		if ($event_ids != "") $event_ids = substr($event_ids, 0, strlen($event_ids)-1);
-
-		$js .= 'document.getElementById("game'.$game_index.'_events").innerHTML = event_html;'."\n";
-		return $js;
+		
+		return [$js, $html];
 	}
 	
 	public function block_id_to_round_index($block_id) {

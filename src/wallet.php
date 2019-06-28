@@ -514,7 +514,7 @@ if ($thisuser && $game) {
 		
 		$filter_arr['date'] = false;
 		$event_ids = "";
-		$new_event_js = $game->new_event_js(0, $thisuser, $filter_arr, $event_ids);
+		list($new_event_js, $new_event_html) = $game->new_event_js(0, $thisuser, $filter_arr, $event_ids, true);
 		?>
 		<script type="text/javascript">
 		//<![CDATA[
@@ -737,7 +737,7 @@ if ($thisuser && $game) {
 								</div>
 							</div>
 							<div class="game_events game_events_long">
-								<div id="game0_events" class="game_events_inner"></div>
+								<div id="game0_events" class="game_events_inner"><?php echo $new_event_html; ?></div>
 							</div>
 							
 							<script type="text/javascript">

@@ -79,14 +79,14 @@ for (var game_i=0; game_i<games.length; game_i++) {
 }
 </script>
 
-<script type="text/javascript" src="/js/bootstrap.min.js"></script>
-<script type="text/javascript" src="/js/jquery.ui.js"></script>
-<script type="text/javascript" src="/js/jquery.nouislider.js"></script>
-<script type="text/javascript" src="/js/adminlte.min.js"></script>
-<script type="text/javascript" src="/js/tiny.editor.js"></script>
-<script type="text/javascript" src="/js/chart.js"></script>
-<script type="text/javascript" src="/js/maskedinput.js"></script>
-<script type="text/javascript" src="/js/qrcam.js"></script>
+<script async type="text/javascript" src="/js/bootstrap.min.js"></script>
+<script async type="text/javascript" src="/js/jquery.ui.js"></script>
+<script async type="text/javascript" src="/js/jquery.nouislider.js"></script>
+<script async type="text/javascript" src="/js/adminlte.min.js"></script>
+<script async type="text/javascript" src="/js/tiny.editor.js"></script>
+<script async type="text/javascript" src="/js/chart.js"></script>
+<script async type="text/javascript" src="/js/maskedinput.js"></script>
+<script async type="text/javascript" src="/js/qrcam.js"></script>
 <?php
 if (AppSettings::getParam('signup_captcha_required')) { ?>
 <script type="text/javascript" src="https://www.google.com/jsapi"></script>
