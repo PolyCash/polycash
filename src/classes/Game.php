@@ -1737,15 +1737,13 @@ class Game {
 		$mining_block_id = $last_block_id+1;
 		$current_round = $this->block_to_round($mining_block_id);
 		$html = "";
+		$js = "";
 		
 		$user_id = false;
-		if ($user) {
-			$user_id = $user->db_user['user_id'];
-			$user_game = $user->ensure_user_in_game($this, false);
-		}
+		if ($user) $user_game = $user->ensure_user_in_game($this, false);
 		
 		if (!$include_content) {
-			$js = "for (var i=0; i<games[".$game_index."].events.length; i++) {\n";
+			$js .= "for (var i=0; i<games[".$game_index."].events.length; i++) {\n";
 			$js .= "\tgames[".$game_index."].events[i].deleted = true;\n";
 			$js .= "\t$('#game".$game_index."_event'+i).remove();\n";
 			$js .= "}\n";
@@ -1771,6 +1769,8 @@ class Game {
 				$js .= "games[".$game_index."].events[".$i."].options.push(new option(games[".$game_index."].events[".$i."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$this->blockchain->app->quote_escape($option['name']).", 0, ".$has_votingaddr.", ".$this->blockchain->app->quote_escape($option['image_url'])."));\n";
 				$j++;
 			}
+			$js .= "games[".$game_index."].events[".$i."].set_serialized_hash();\n";
+			
 			if ($event->db_event['option_block_rule'] == "football_match") $js .= '
 			games['.$game_index.'].events['.$i.'].refresh_time_estimate();'."\n";
 			

@@ -73,6 +73,16 @@ var option = function(parent_event, option_index, option_id, db_option_index, na
 	this.parent_event.option_id2option_index[option_id] = option_index;
 	this.parent_event.game.option_has_votingaddr[option_id] = has_votingaddr;
 	
+	this.serialize = function(to_text) {
+		var serialized_obj = {
+			"option_id": this.option_id,
+			"option_index": this.option_index,
+			"name": this.name
+		};
+		if (to_text) return JSON.stringify(serialized_obj);
+		else return serialized_obj;
+	};
+	
 	option_id2option_index[option_id] = option_index;
 	option_index2option_id[option_index] = option_id;
 };
@@ -1329,6 +1339,8 @@ var Event = function(game, game_event_index, event_id, real_event_index, num_vot
 	this.event_final_block = event_final_block;
 	this.payout_rate = payout_rate;
 	
+	this.serialized_hash;
+	
 	this.sum_votes = 0;
 	this.sum_unconfirmed_votes = 0;
 	this.sum_hypothetical_votes = 0;
@@ -1351,6 +1363,30 @@ var Event = function(game, game_event_index, event_id, real_event_index, num_vot
 	
 	this.options = [];
 	this.option_id2option_index = {};
+	
+	this.serialize = function(to_text) {
+		var serialized_obj = {
+			"event_id": this.event_id,
+			"event_index": this.real_event_index,
+			"event_name": this.event_name,
+			"event_starting_block": this.event_starting_block,
+			"event_final_block": this.event_final_block,
+			"votes": this.sum_votes,
+			"unconfirmed_votes": this.sum_unconfirmed_votes,
+			"burn_amount": this.sum_burn_amount,
+			"unconfirmed_burn_amount": this.sum_unconfirmed_burn_amount,
+			"options": []
+		};
+		for (var option_i=0; option_i<this.options.length; option_i++) {
+			serialized_obj.options.push(this.options[option_i].serialize(false));
+		}
+		if (to_text) return JSON.stringify(serialized_obj);
+		else return serialized_obj;
+	};
+	
+	this.set_serialized_hash = function() {
+		this.serialized_hash = Sha256.hash(this.serialize(true)).substring(0, 8);
+	};
 	
 	this.start_vote = function(option_id) {
 		var option_display_name = this.options[this.db_id2option_index(option_id)].name;
@@ -1572,6 +1608,13 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_c
 			this.refresh_in_progress = true;
 			
 			var check_activity_url = "/ajax/check_new_activity.php?instance_id="+this.instance_id+"&game_id="+this.game_id+"&event_ids_hash="+this.event_ids_hash+"&refresh_page="+this.refresh_page+"&last_block_id="+this.last_block_id+"&last_transaction_id="+this.last_transaction_id+"&mature_io_ids_hash="+this.mature_io_ids_hash+"&game_loop_index="+this.game_loop_index;
+			var event_hashes = "";
+			for (var event_i=0; event_i<this.events.length; event_i++) {
+				event_hashes += this.events[event_i].serialized_hash+",";
+			}
+			if (event_hashes != "") event_hashes = event_hashes.substring(0, event_hashes.length-1);
+			check_activity_url += "&event_hashes="+event_hashes;
+			
 			if (this.filter_date) check_activity_url += "&filter_date="+this.filter_date;
 			
 			var _this = this;
@@ -1653,27 +1696,35 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_c
 							}
 							
 							for (var game_event_index=0; game_event_index<_this.events.length; game_event_index++) {
-								$('#game'+_this.instance_id+'_event'+game_event_index+'_display').html(json_result['event_html'][game_event_index]);
+								if (json_result['event_html'][game_event_index] != "") {
+									$('#game'+_this.instance_id+'_event'+game_event_index+'_display').html(json_result['event_html'][game_event_index]);
+									$('#game'+_this.instance_id+'_event'+game_event_index+'_display').hide();
+									$('#game'+_this.instance_id+'_event'+game_event_index+'_display').show();
 								
-								$('#game'+_this.instance_id+'_event'+game_event_index+'_display').hide();
-								$('#game'+_this.instance_id+'_event'+game_event_index+'_display').show();
-								
-								_this.render_event_images(game_event_index);
-								
-								if (_this.events[game_event_index].details_shown) {
-									$('#game'+_this.instance_id+'_event'+game_event_index+'_details').show();
-								}
-								else {
-									$('#game'+_this.instance_id+'_event'+game_event_index+'_details').hide();
-								}
-								
-								if (typeof json_result['my_current_votes'] != "undefined" && typeof json_result['my_current_votes'][game_event_index] != "undefined") {
-									$('#game'+_this.instance_id+'_event'+game_event_index+'_my_current_votes').html(json_result['my_current_votes'][game_event_index]);
+									_this.render_event_images(game_event_index);
+									
+									if (_this.events[game_event_index].details_shown) {
+										$('#game'+_this.instance_id+'_event'+game_event_index+'_details').show();
+									}
+									else {
+										$('#game'+_this.instance_id+'_event'+game_event_index+'_details').hide();
+									}
+									
+									if (typeof json_result['my_current_votes'] != "undefined" && typeof json_result['my_current_votes'][game_event_index] != "undefined") {
+										$('#game'+_this.instance_id+'_event'+game_event_index+'_my_current_votes').html(json_result['my_current_votes'][game_event_index]);
+									}
 								}
 							}
 							
-							eval(json_result['set_options_js']);
-							refresh_output_amounts();
+							if (json_result['set_options_js'] != "") {
+								eval(json_result['set_options_js']);
+								
+								for (var event_i=0; event_i<_this.events.length; event_i++) {
+									_this.events[event_i].set_serialized_hash();
+								}
+								
+								refresh_output_amounts();
+							}
 							
 							_this.last_game_loop_index_applied = json_result['game_loop_index'];
 						}
