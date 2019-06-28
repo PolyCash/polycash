@@ -78,7 +78,9 @@ if ($last_block_id != (int) $_REQUEST['last_block_id']) {
 }
 else $output['new_block'] = 0;
 
-$event_hashes = explode(",", $_REQUEST['event_hashes']);
+if (isset($_REQUEST['event_hashes'])) $event_hashes = explode(",", $_REQUEST['event_hashes']);
+else $event_hashes = [];
+
 $these_events = $game->events_by_block($blockchain_last_block_id, $filter_arr);
 $show_intro_text = false;
 
@@ -90,7 +92,7 @@ for ($game_event_index=0; $game_event_index<count($these_events); $game_event_in
 	$this_event_hash = hash("sha256", $serialized_event);
 	$this_event_hash = substr($this_event_hash, 0, 8);
 	
-	if ($event_hashes[$game_event_index] == $this_event_hash) {
+	if (isset($event_hashes[$game_event_index]) && $event_hashes[$game_event_index] == $this_event_hash) {
 		$output['event_html'][$game_event_index] = "";
 	}
 	else {

@@ -22,11 +22,6 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 	
 	<script type="text/javascript" src="/js/sha256.js"></script>
 	<script type="text/javascript" src="/js/main.js<?php if (!empty(AppSettings::getParam('cachebuster'))) echo '?v='.AppSettings::getParam('cachebuster'); ?>"></script>
-	<?php
-	if ($_SERVER['HTTP_HOST'] != "poly.cash") {
-		echo '<link rel="canonical" href="https://poly.cash'.$_SERVER['REQUEST_URI'].'" />'."\n";
-	}
-	?>
 </head>
 <?php if (!empty(AppSettings::getParam('ga_tracking_id'))) { ?>
 <script async src="https://www.googletagmanager.com/gtag/js?id=<?php echo AppSettings::getParam('ga_tracking_id'); ?>"></script>
