@@ -73,12 +73,14 @@ if ($app->running_as_admin()) {
 		}
 	}
 	
-	$betcount_by_user_game[$prev_user_game_id] = $num_wins+$num_losses+$num_unresolved;
-	$ref_user_game = ['account_id'=>$prev_account_id];
-	$account_value = $game->account_balance($prev_account_id)+$game->user_pending_bets($ref_user_game);
-	$bet_summary = "In ".$game->db_game['name']." you placed ".$app->bets_summary($game, $net_stake, $num_wins, $num_losses, $num_unresolved, $num_refunded, $pending_stake, $net_delta, $resolved_fees_paid).".<br/>\n";
-	$bet_summary .= "Your account is now worth <a href=\"".AppSettings::getParam('base_url')."/wallet/".$game->db_game['url_identifier']."/?action=change_user_game&user_game_id=".$prev_user_game_id."\">".$app->format_bignum($account_value/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']."</a>";
-	$html_by_user_game[$prev_user_game_id] = "<p>".$bet_summary."</p><table>".$table_header_html.$html_by_user_game[$prev_user_game_id]."</table>\n";
+	if ($prev_account_id) {
+		$betcount_by_user_game[$prev_user_game_id] = $num_wins+$num_losses+$num_unresolved;
+		$ref_user_game = ['account_id'=>$prev_account_id];
+		$account_value = $game->account_balance($prev_account_id)+$game->user_pending_bets($ref_user_game);
+		$bet_summary = "In ".$game->db_game['name']." you placed ".$app->bets_summary($game, $net_stake, $num_wins, $num_losses, $num_unresolved, $num_refunded, $pending_stake, $net_delta, $resolved_fees_paid).".<br/>\n";
+		$bet_summary .= "Your account is now worth <a href=\"".AppSettings::getParam('base_url')."/wallet/".$game->db_game['url_identifier']."/?action=change_user_game&user_game_id=".$prev_user_game_id."\">".$app->format_bignum($account_value/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']."</a>";
+		$html_by_user_game[$prev_user_game_id] = "<p>".$bet_summary."</p><table>".$table_header_html.$html_by_user_game[$prev_user_game_id]."</table>\n";
+	}
 	
 	foreach ($html_by_user_game as $user_game_id=>$html) {
 		$delivery_key = $app->random_string(16);

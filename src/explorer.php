@@ -650,27 +650,47 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo '</div></div>'."\n";
 							
 							echo '<div class="panel-body">';
-							echo "Block hash: ".$block['block_hash']."<br/>\n";
-							echo "Mined at ".date("Y-m-d H:m:s", $block['time_mined'])." UTC (".$app->format_seconds(time()-$block['time_mined'])." ago)<br/>\n";
 							
-							echo "This block contains ".number_format($block['num_transactions'])." transactions totaling ".$app->format_bignum($block_sum_disp)." ";
-							if ($game) echo $game->db_game['coin_name_plural'];
-							else echo $blockchain->db_blockchain['coin_name_plural'];
-							echo ".<br/>\n";
+							if (!empty($block['block_hash'])) {
+								echo "Block hash: ".$block['block_hash']."<br/>\n";
+							}
 							
-							if ($block['locally_saved'] == 1) {
+							if (!empty($block['time_mined'])) {
+								echo "Mined at ".date("Y-m-d H:m:s", $block['time_mined'])." UTC (".$app->format_seconds(time()-$block['time_mined'])." ago)<br/>\n";
+							}
+							
+							if (!empty($block['num_transactions'])) {
+								echo "This block contains ".number_format($block['num_transactions'])." transactions totaling ".$app->format_bignum($block_sum_disp)." ";
+								if ($game) echo $game->db_game['coin_name_plural'];
+								else echo $blockchain->db_blockchain['coin_name_plural'];
+								echo ".<br/>\n";
+							}
+							
+							if ($block['locally_saved'] == 0) {
+								if ($block['block_id'] < $blockchain->db_blockchain['first_required_block']) {
+									echo "This block is before the first required block for ".$blockchain->db_blockchain['blockchain_name'].". ";
+									echo AppSettings::getParam('coin_brand_name')." has not fully loaded this block.\n";
+								}
+								else {
+									if (!empty($block['num_transactions'])) {
+										$load_time = $app->run_query("SELECT SUM(load_time) FROM transactions WHERE blockchain_id=:blockchain_id AND block_id=:block_id;", [
+											'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
+											'block_id' => $block['block_id']
+										])->fetch()['SUM(load_time)'];
+										
+										echo "Still loading... ".number_format($load_time, 2)." seconds elapsed.\n";
+									}
+									else {
+										echo AppSettings::getParam('coin_brand_name')." hasn't loaded this block yet.\n";
+									}
+								}
+								echo "<br/>\n";
+							}
+							else {
 								$load_time = $block['load_time'];
 								if ($game) $load_time += $block['game_load_time'];
 								
 								echo AppSettings::getParam('coin_brand_name')." took ".number_format($load_time, 2)." seconds to load this block.<br/>\n";
-							}
-							else {
-								$load_time = $app->run_query("SELECT SUM(load_time) FROM transactions WHERE blockchain_id=:blockchain_id AND block_id=:block_id;", [
-									'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
-									'block_id' => $block['block_id']
-								])->fetch()['SUM(load_time)'];
-								
-								echo "Still loading... ".number_format($load_time, 2)." seconds elapsed.<br/>\n";
 							}
 							
 							if (empty($game)) {

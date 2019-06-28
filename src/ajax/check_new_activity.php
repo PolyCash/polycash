@@ -78,74 +78,82 @@ if ($last_block_id != (int) $_REQUEST['last_block_id']) {
 }
 else $output['new_block'] = 0;
 
+$event_hashes = explode(",", $_REQUEST['event_hashes']);
 $these_events = $game->events_by_block($blockchain_last_block_id, $filter_arr);
 $show_intro_text = false;
-for ($game_event_index=0; $game_event_index<count($these_events); $game_event_index++) {
-	$output['event_html'][$game_event_index] = $these_events[$game_event_index]->event_html($thisuser, $show_intro_text, true, $instance_id, $game_event_index);
-}
 
 $set_options_js = "";
 
 for ($game_event_index=0; $game_event_index<count($these_events); $game_event_index++) {
-	$round_stats = $these_events[$game_event_index]->round_voting_stats_all();
-	$total_vote_sum = $round_stats[0];
-	$option_id2rank = $round_stats[3];
-	$round_stats = $round_stats[2];
+	$this_event_html = $these_events[$game_event_index]->event_html($thisuser, $show_intro_text, true, $instance_id, $game_event_index);
+	$serialized_event = $these_events[$game_event_index]->serialize_event(true);
+	$this_event_hash = hash("sha256", $serialized_event);
+	$this_event_hash = substr($this_event_hash, 0, 8);
 	
-	$sum_votes = 0;
-	$sum_unconfirmed_votes = 0;
-	
-	$sum_effective_votes = 0;
-	$sum_unconfirmed_effective_votes = 0;
-	
-	$sum_burn_amount = 0;
-	$sum_unconfirmed_burn_amount = 0;
-	
-	$sum_effective_burn_amount = 0;
-	$sum_unconfirmed_effective_burn_amount = 0;
-	
-	for ($option_id=0; $option_id<count($round_stats); $option_id++) {
-		$option = $round_stats[$option_id];
-		
-		$option_identifier = "games[".$instance_id."].events[".$game_event_index."].options[".$option['event_option_index']."]";
-		$set_options_js .= $option_identifier.".votes = ".$option[$game->db_game['payout_weight'].'_score'].";\n";
-		$set_options_js .= $option_identifier.".unconfirmed_votes = ".$option['unconfirmed_'.$game->db_game['payout_weight'].'_score'].";\n";
-		$set_options_js .= $option_identifier.".effective_votes = ".$option['votes'].";\n";
-		$set_options_js .= $option_identifier.".unconfirmed_effective_votes = ".$option['unconfirmed_votes'].";\n";
-		$set_options_js .= $option_identifier.".burn_amount = ".$option['destroy_score'].";\n";
-		$set_options_js .= $option_identifier.".unconfirmed_burn_amount = ".$option['unconfirmed_destroy_score'].";\n";
-		$set_options_js .= $option_identifier.".effective_burn_amount = ".$option['effective_destroy_score'].";\n";
-		$set_options_js .= $option_identifier.".unconfirmed_effective_burn_amount = ".$option['unconfirmed_effective_destroy_score'].";\n";
-		
-		$sum_votes += $option[$game->db_game['payout_weight'].'_score'];
-		$sum_unconfirmed_votes += $option['unconfirmed_'.$game->db_game['payout_weight'].'_score'];
-		
-		$sum_effective_votes += $option['votes'];
-		$sum_unconfirmed_effective_votes += $option['unconfirmed_votes'];
-		
-		$sum_burn_amount += $option['destroy_score'];
-		$sum_unconfirmed_burn_amount += $option['unconfirmed_destroy_score'];
-		
-		$sum_effective_burn_amount += $option['effective_destroy_score'];
-		$sum_unconfirmed_effective_burn_amount += $option['unconfirmed_effective_destroy_score'];
+	if ($event_hashes[$game_event_index] == $this_event_hash) {
+		$output['event_html'][$game_event_index] = "";
 	}
-	$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_votes = $sum_votes;\n";
-	$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_unconfirmed_votes = $sum_unconfirmed_votes;\n";
-	$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_effective_votes = $sum_effective_votes;\n";
-	$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_unconfirmed_effective_votes = $sum_unconfirmed_effective_votes;\n";
-	$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_burn_amount = $sum_burn_amount;\n";
-	$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_unconfirmed_burn_amount = $sum_unconfirmed_burn_amount;\n";
-	$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_effective_burn_amount = $sum_effective_burn_amount;\n";
-	$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_unconfirmed_effective_burn_amount = $sum_unconfirmed_effective_burn_amount;\n";
-	
-	$output['set_options_js'] = $set_options_js;
+	else {
+		$output['event_html'][$game_event_index] = $this_event_html;
+		
+		if ($thisuser) {
+			$output['my_current_votes'][$game_event_index] = $these_events[$game_event_index]->my_votes_table($current_round, $user_game);
+		}
+		
+		$round_stats = $these_events[$game_event_index]->round_voting_stats_all();
+		$total_vote_sum = $round_stats[0];
+		$option_id2rank = $round_stats[3];
+		$round_stats = $round_stats[2];
+		
+		$sum_votes = 0;
+		$sum_unconfirmed_votes = 0;
+		
+		$sum_effective_votes = 0;
+		$sum_unconfirmed_effective_votes = 0;
+		
+		$sum_burn_amount = 0;
+		$sum_unconfirmed_burn_amount = 0;
+		
+		$sum_effective_burn_amount = 0;
+		$sum_unconfirmed_effective_burn_amount = 0;
+		
+		for ($option_id=0; $option_id<count($round_stats); $option_id++) {
+			$option = $round_stats[$option_id];
+			
+			$option_identifier = "games[".$instance_id."].events[".$game_event_index."].options[".$option['event_option_index']."]";
+			$set_options_js .= $option_identifier.".votes = ".$option[$game->db_game['payout_weight'].'_score'].";\n";
+			$set_options_js .= $option_identifier.".unconfirmed_votes = ".$option['unconfirmed_'.$game->db_game['payout_weight'].'_score'].";\n";
+			$set_options_js .= $option_identifier.".effective_votes = ".$option['votes'].";\n";
+			$set_options_js .= $option_identifier.".unconfirmed_effective_votes = ".$option['unconfirmed_votes'].";\n";
+			$set_options_js .= $option_identifier.".burn_amount = ".$option['destroy_score'].";\n";
+			$set_options_js .= $option_identifier.".unconfirmed_burn_amount = ".$option['unconfirmed_destroy_score'].";\n";
+			$set_options_js .= $option_identifier.".effective_burn_amount = ".$option['effective_destroy_score'].";\n";
+			$set_options_js .= $option_identifier.".unconfirmed_effective_burn_amount = ".$option['unconfirmed_effective_destroy_score'].";\n";
+			
+			$sum_votes += $option[$game->db_game['payout_weight'].'_score'];
+			$sum_unconfirmed_votes += $option['unconfirmed_'.$game->db_game['payout_weight'].'_score'];
+			
+			$sum_effective_votes += $option['votes'];
+			$sum_unconfirmed_effective_votes += $option['unconfirmed_votes'];
+			
+			$sum_burn_amount += $option['destroy_score'];
+			$sum_unconfirmed_burn_amount += $option['unconfirmed_destroy_score'];
+			
+			$sum_effective_burn_amount += $option['effective_destroy_score'];
+			$sum_unconfirmed_effective_burn_amount += $option['unconfirmed_effective_destroy_score'];
+		}
+		$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_votes = $sum_votes;\n";
+		$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_unconfirmed_votes = $sum_unconfirmed_votes;\n";
+		$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_effective_votes = $sum_effective_votes;\n";
+		$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_unconfirmed_effective_votes = $sum_unconfirmed_effective_votes;\n";
+		$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_burn_amount = $sum_burn_amount;\n";
+		$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_unconfirmed_burn_amount = $sum_unconfirmed_burn_amount;\n";
+		$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_effective_burn_amount = $sum_effective_burn_amount;\n";
+		$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_unconfirmed_effective_burn_amount = $sum_unconfirmed_effective_burn_amount;\n";
+	}
 }
 
-if ($thisuser) {
-	for ($game_event_index=0; $game_event_index<count($these_events); $game_event_index++) {
-		$output['my_current_votes'][$game_event_index] = $these_events[$game_event_index]->my_votes_table($current_round, $user_game);
-	}
-}
+$output['set_options_js'] = $set_options_js;
 
 if ($refresh_page == "wallet" && ($mature_io_ids_hash != $_REQUEST['mature_io_ids_hash'] || !empty($output['new_block']))) {
 	$output['select_input_buttons'] = $thisuser? $game->select_input_buttons($user_game) : "";
