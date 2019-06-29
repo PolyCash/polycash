@@ -1,5 +1,5 @@
 <?php
-include_once(AppSettings::srcPath()."/includes/connect.php");
+require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 
 $script_start_time = microtime(true);
 $allowed_params = ['print_debug', 'game_id'];
