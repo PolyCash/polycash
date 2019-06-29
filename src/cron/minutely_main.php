@@ -94,7 +94,10 @@ if ($app->running_as_admin()) {
 			$game_i = count($running_games);
 			if (empty($blockchains[$running_game['blockchain_id']])) $blockchains[$running_game['blockchain_id']] = new Blockchain($app, $running_game['blockchain_id']);
 			$running_games[$game_i] = new Game($blockchains[$running_game['blockchain_id']], $running_game['game_id']);
-			if ($print_debug) echo "Including game: ".$running_game['name']."\n";
+			if ($print_debug) {
+				echo "Including game: ".$running_game['name']."\n";
+				$app->flush_buffers();
+			}
 			
 			// Update user account values
 			$user_games = $app->run_query("SELECT * FROM users u JOIN user_games ug ON u.user_id=ug.user_id WHERE ug.game_id=:game_id ORDER BY u.user_id ASC;", ['game_id'=>$running_game['game_id']]);
@@ -111,8 +114,15 @@ if ($app->running_as_admin()) {
 			}
 		}
 		
+		if ($print_debug) {
+			echo "Done setting account values. Now deleting unconfirmable transactions.\n";
+		}
+		
 		$unconf_message = $app->delete_unconfirmable_transactions();
-		if ($print_debug) echo $unconf_message."\n";
+		if ($print_debug) {
+			echo $unconf_message."\n";
+			$app->flush_buffers();
+		}
 		
 		if (count($running_games) > 0 || count($private_blockchain_ids) > 0) {
 			try {

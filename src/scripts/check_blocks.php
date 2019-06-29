@@ -111,7 +111,7 @@ if ($app->running_as_admin()) {
 				
 				if ($tx_wrong_ios_in->rowCount() > 0) {
 					echo $tx_wrong_ios_in->rowCount()." tx with incorrect ios. ";
-					echo "\n".json_encode($tx_wrong_ios_in->fetchAll(), JSON_PRETTY_PRINT)."\n";
+					echo "\n".json_encode($tx_wrong_ios_in->fetchAll(PDO::FETCH_ASSOC), JSON_PRETTY_PRINT)."\n";
 					$this_block_error = true;
 				}
 				

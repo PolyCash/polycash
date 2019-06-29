@@ -64,7 +64,7 @@ class DailyCryptoMarketsGameDefinition {
 			"default_max_voting_fraction": 1,
 			"default_option_max_width": 200,
 			"default_payout_block_delay": 0,
-			"default_payout_rule": "binary",
+			"default_payout_rule": "linear",
 			"view_mode": "default",
 			"escrow_amounts": {
 				"stakes": 1000000

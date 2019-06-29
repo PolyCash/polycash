@@ -3901,5 +3901,10 @@ class Game {
 			'event_index' => $event_index
 		])->fetch();
 	}
+	
+	public function events_rely_on_unserialized_data() {
+		if ($this->db_game['default_payout_rule'] == "linear" || $this->db_game['module'] == "CryptoDuels") return true;
+		else return false;
+	}
 }
 ?>

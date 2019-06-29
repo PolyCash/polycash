@@ -10,9 +10,9 @@ if ($app->running_as_admin()) {
 		$game = new Game($blockchain, $db_game['game_id']);
 		
 		$game_def = new DailyCryptoMarketsGameDefinition($app);
-		$events = $game_def->events_starting_between_blocks($game, 281501, 282551);
+		$game_def->regular_actions($game);
 		
-		echo "<pre>".json_encode($events, JSON_PRETTY_PRINT)."</pre>\n";
+		echo "Done!\n";
 	}
 	else echo "Invalid game ID.\n";
 }

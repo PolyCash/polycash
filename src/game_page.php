@@ -124,6 +124,9 @@ games.push(new Game(<?php
 	echo ', false';
 	echo ', "'.$game->db_game['default_betting_mode'].'"';
 	echo ', false';
+	echo ', ';
+	if ($game->events_rely_on_unserialized_data()) echo 'true';
+	else echo 'false';
 ?>));
 
 <?php

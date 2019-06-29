@@ -401,10 +401,10 @@ class Blockchain {
 			$existing_tx = $this->fetch_transaction_by_hash($tx_hash);
 			
 			if ($existing_tx) {
-				if ($this->db_blockchain['p2p_mode'] != "rpc") $add_transaction = false;
-				else {
+				$db_transaction_id = $existing_tx['transaction_id'];
+				
+				if ($this->db_blockchain['p2p_mode'] == "rpc") {
 					// Now handle cases where we are adding by RPC and there's an existing transaction
-					$db_transaction_id = $existing_tx['transaction_id'];
 					
 					// If only_vout is set, we are adding an output before the first require block
 					// and therefore need to run add_transaction without deleting anything
@@ -427,6 +427,10 @@ class Blockchain {
 					}
 				}
 			}
+			else if ($this->db_blockchain['p2p_mode'] != "rpc") $add_transaction = false;
+			// If this is not an RPC blockchain, existing transaction is required.
+			// "none" and "web_api" blockchains have no coin daemon that can give data about the TX
+			// so they first insert transactions and then call this function to process the TX
 		}
 		
 		if (!$add_transaction) return false;
@@ -447,22 +451,29 @@ class Blockchain {
 				]);
 			}
 			
-			$spend_ios = $this->app->run_query("SELECT * FROM transaction_ios WHERE spend_transaction_id=:spend_transaction_id;", [
-				'spend_transaction_id' => $db_transaction_id
-			]);
-			
-			while ($spend_io = $spend_ios->fetch()) {
-				$spend_io_ids[count($spend_io_ids)] = $spend_io['io_id'];
-				$input_sum += $spend_io['amount'];
+			if ($block_height === false) {
+				$spend_ios = $this->app->run_query("SELECT * FROM transaction_ios WHERE spend_transaction_id=:spend_transaction_id;", [
+					'spend_transaction_id' => $db_transaction_id
+				]);
 				
-				if ($block_height !== false) {
-					$this_io_cbd = ($block_height - $spend_io['create_block_id'])*$spend_io['amount'];
-					$coin_blocks_destroyed += $this_io_cbd;
-					$this->app->run_query("UPDATE transaction_ios SET spend_block_id=:spend_block_id, coin_blocks_created=:coin_blocks_created WHERE io_id=:io_id;", [
-						'spend_block_id' => $block_height,
-						'coin_blocks_created' => $this_io_cbd,
-						'io_id' => $spend_io['io_id']
-					]);
+				while ($spend_io = $spend_ios->fetch()) {
+					$spend_io_ids[count($spend_io_ids)] = $spend_io['io_id'];
+					$input_sum += $spend_io['amount'];
+					
+					if ($block_height === false) {
+						$this_io_cbd = ($block_height - $spend_io['create_block_id'])*$spend_io['amount'];
+						$coin_blocks_destroyed += $this_io_cbd;
+						$this->app->run_query("UPDATE transaction_ios SET spend_status='spent', spend_block_id=:spend_block_id, coin_blocks_created=:coin_blocks_created WHERE io_id=:io_id;", [
+							'spend_block_id' => $block_height,
+							'coin_blocks_created' => $this_io_cbd,
+							'io_id' => $spend_io['io_id']
+						]);
+					}
+					else {
+						$this->app->run_query("UPDATE transaction_ios SET spend_status='spent' WHERE io_id=:io_id;", [
+							'io_id' => $spend_io['io_id']
+						]);
+					}
 				}
 			}
 		}

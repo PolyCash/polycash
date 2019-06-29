@@ -1010,6 +1010,9 @@ class App {
 					echo ', false';
 					echo ', "'.$featured_game->db_game['default_betting_mode'].'"';
 					echo ', false';
+					echo ', ';
+					if ($featured_game->events_rely_on_unserialized_data()) echo 'true';
+					else echo 'false';
 				?>));
 				</script>
 				<?php

@@ -1457,7 +1457,7 @@ var Event = function(game, game_event_index, event_id, real_event_index, num_vot
 	};
 };
 
-var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, chain_coin_name, chain_coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, effectiveness_param1, seconds_per_block, inflation, exponential_inflation_rate, time_last_block_loaded, decimal_places, blockchain_decimal_places, view_mode, initial_event_index, filter_date, default_betting_mode, render_events) {
+var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, chain_coin_name, chain_coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, effectiveness_param1, seconds_per_block, inflation, exponential_inflation_rate, time_last_block_loaded, decimal_places, blockchain_decimal_places, view_mode, initial_event_index, filter_date, default_betting_mode, render_events, always_refresh) {
 	Game.numInstances = (Game.numInstances || 0) + 1;
 	
 	this.instance_id = Game.numInstances-1;
@@ -1490,6 +1490,7 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_c
 	this.filter_date = filter_date;
 	this.default_betting_mode = default_betting_mode;
 	this.render_events = render_events;
+	this.always_refresh = always_refresh;
 	
 	if (filter_date) {
 		document.getElementById('filter_by_date').value(filter_date);
@@ -1608,12 +1609,14 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_c
 			this.refresh_in_progress = true;
 			
 			var check_activity_url = "/ajax/check_new_activity.php?instance_id="+this.instance_id+"&game_id="+this.game_id+"&event_ids_hash="+this.event_ids_hash+"&refresh_page="+this.refresh_page+"&last_block_id="+this.last_block_id+"&last_transaction_id="+this.last_transaction_id+"&mature_io_ids_hash="+this.mature_io_ids_hash+"&game_loop_index="+this.game_loop_index;
-			var event_hashes = "";
-			for (var event_i=0; event_i<this.events.length; event_i++) {
-				event_hashes += this.events[event_i].serialized_hash+",";
+			if (!this.always_refresh) {
+				var event_hashes = "";
+				for (var event_i=0; event_i<this.events.length; event_i++) {
+					event_hashes += this.events[event_i].serialized_hash+",";
+				}
+				if (event_hashes != "") event_hashes = event_hashes.substring(0, event_hashes.length-1);
+				check_activity_url += "&event_hashes="+event_hashes;
 			}
-			if (event_hashes != "") event_hashes = event_hashes.substring(0, event_hashes.length-1);
-			check_activity_url += "&event_hashes="+event_hashes;
 			
 			if (this.filter_date) check_activity_url += "&filter_date="+this.filter_date;
 			
