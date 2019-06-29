@@ -443,37 +443,27 @@ class Blockchain {
 		if ($this->db_blockchain['p2p_mode'] != "rpc") {
 			$transaction_type = $existing_tx['transaction_desc'];
 			
-			if ($block_height !== false && $existing_tx['block_id'] !== "") {
-				$this->app->run_query("UPDATE transactions SET position_in_block=:position_in_block, block_id=:block_id WHERE transaction_id=:transaction_id;", [
-					'position_in_block' => $position_in_block,
-					'block_id' => $block_height,
-					'transaction_id' => $existing_tx['transaction_id']
-				]);
-			}
+			$spend_ios = $this->app->run_query("SELECT * FROM transaction_ios WHERE spend_transaction_id=:spend_transaction_id;", [
+				'spend_transaction_id' => $db_transaction_id
+			]);
 			
-			if ($block_height === false) {
-				$spend_ios = $this->app->run_query("SELECT * FROM transaction_ios WHERE spend_transaction_id=:spend_transaction_id;", [
-					'spend_transaction_id' => $db_transaction_id
-				]);
+			while ($spend_io = $spend_ios->fetch()) {
+				$spend_io_ids[count($spend_io_ids)] = $spend_io['io_id'];
+				$input_sum += $spend_io['amount'];
 				
-				while ($spend_io = $spend_ios->fetch()) {
-					$spend_io_ids[count($spend_io_ids)] = $spend_io['io_id'];
-					$input_sum += $spend_io['amount'];
-					
-					if ($block_height === false) {
-						$this_io_cbd = ($block_height - $spend_io['create_block_id'])*$spend_io['amount'];
-						$coin_blocks_destroyed += $this_io_cbd;
-						$this->app->run_query("UPDATE transaction_ios SET spend_status='spent', spend_block_id=:spend_block_id, coin_blocks_created=:coin_blocks_created WHERE io_id=:io_id;", [
-							'spend_block_id' => $block_height,
-							'coin_blocks_created' => $this_io_cbd,
-							'io_id' => $spend_io['io_id']
-						]);
-					}
-					else {
-						$this->app->run_query("UPDATE transaction_ios SET spend_status='spent' WHERE io_id=:io_id;", [
-							'io_id' => $spend_io['io_id']
-						]);
-					}
+				if ($block_height === false) {
+					$this_io_cbd = ($block_height - $spend_io['create_block_id'])*$spend_io['amount'];
+					$coin_blocks_destroyed += $this_io_cbd;
+					$this->app->run_query("UPDATE transaction_ios SET spend_status='spent', spend_block_id=:spend_block_id, coin_blocks_created=:coin_blocks_created WHERE io_id=:io_id;", [
+						'spend_block_id' => $block_height,
+						'coin_blocks_created' => $this_io_cbd,
+						'io_id' => $spend_io['io_id']
+					]);
+				}
+				else {
+					$this->app->run_query("UPDATE transaction_ios SET spend_status='spent' WHERE io_id=:io_id;", [
+						'io_id' => $spend_io['io_id']
+					]);
 				}
 			}
 		}
@@ -494,25 +484,9 @@ class Blockchain {
 						'num_outputs' => count($outputs),
 						'time_created' => time()
 					];
-					$new_tx_q = "INSERT INTO transactions SET blockchain_id=:blockchain_id, transaction_desc=:transaction_desc, tx_hash=:tx_hash, num_inputs=:num_inputs, num_outputs=:num_outputs";
-					if ($position_in_block !== false) {
-						$new_tx_q .= ", position_in_block=:position_in_block";
-						$new_tx_params['position_in_block'] = $position_in_block;
-					}
-					if ($block_height !== false) {
-						$new_tx_q .= ", block_id=:block_id";
-						$new_tx_params['block_id'] = $block_height;
-					}
-					$new_tx_q .= ", time_created=:time_created;";
+					$new_tx_q = "INSERT INTO transactions SET blockchain_id=:blockchain_id, transaction_desc=:transaction_desc, tx_hash=:tx_hash, num_inputs=:num_inputs, num_outputs=:num_outputs, time_created=:time_created;";
 					$this->app->run_query($new_tx_q, $new_tx_params);
 					$db_transaction_id = $this->app->last_insert_id();
-				}
-				else if ($block_height !== false) {
-					$this->app->run_query("UPDATE transactions SET block_id=:block_id, position_in_block=:position_in_block WHERE transaction_id=:transaction_id;", [
-						'block_id' => $block_height,
-						'position_in_block' => $position_in_block === false ? null : $position_in_block,
-						'transaction_id' => $db_transaction_id
-					]);
 				}
 				
 				$benchmark_time = microtime(true);
@@ -840,6 +814,14 @@ class Blockchain {
 			$update_tx_q = "UPDATE transactions SET load_time=load_time+:add_load_time";
 			if (!$only_vout) $update_tx_q .= ", has_all_outputs=1";
 			if ($require_inputs) $update_tx_q .= ", has_all_inputs=1";
+			if ($block_height !== false) {
+				$update_tx_q .= ", block_id=:block_id";
+				$update_tx_params['block_id'] = $block_height;
+			}
+			if ($position_in_block !== false) {
+				$update_tx_q .= ", position_in_block=:position_in_block";
+				$update_tx_params['position_in_block'] = $position_in_block;
+			}
 			$update_tx_q .= ", amount=:amount, fee_amount=:fee_amount WHERE transaction_id=:transaction_id;";
 			$this->app->run_query($update_tx_q, $update_tx_params);
 			
