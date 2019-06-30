@@ -116,7 +116,10 @@ if ($app->running_as_admin()) {
 						$blockchain_id = $private_blockchain_ids[$private_blockchain_i];
 						
 						if ($blockchains[$blockchain_id]->db_blockchain['p2p_mode'] == "none") {
-							$remaining_prob = round($loop_target_time/$blockchains[$blockchain_id]->db_blockchain['seconds_per_block'], 4);
+							if ($blockchains[$blockchain_id]->last_block_id()%10 == 0) $blockchains[$blockchain_id]->set_average_seconds_per_block(false);
+							
+							$speedup_factor = $blockchains[$blockchain_id]->seconds_per_block('average')/$blockchains[$blockchain_id]->seconds_per_block('target');
+							$remaining_prob = round($speedup_factor*$loop_target_time/$blockchains[$blockchain_id]->seconds_per_block('target'), 4);
 							
 							do {
 								$benchmark_time = microtime(true);

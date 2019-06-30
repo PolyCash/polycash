@@ -179,11 +179,15 @@ class Blockchain {
 			}
 			
 			if ($db_block['locally_saved'] == 0 && !$headers_only) {
-				if ($db_block['num_transactions'] == "") $this->app->run_query("UPDATE blocks SET time_mined=:time_mined, num_transactions=:num_transactions WHERE internal_block_id=:internal_block_id;", [
-					'time_mined' =>$api_block['time_mined'],
-					'num_transactions' => count($api_block['transactions']),
-					'internal_block_id' => $db_block['internal_block_id']
-				]);
+				if ($db_block['num_transactions'] == "") {
+					$prev_block = $this->fetch_block_by_id($db_block['block_id']-1);
+					$this->app->run_query("UPDATE blocks SET time_mined=:time_mined, sec_since_prev_block=:sec_since_prev_block, num_transactions=:num_transactions WHERE internal_block_id=:internal_block_id;", [
+						'time_mined' =>$api_block['time_mined'],
+						'num_transactions' => count($api_block['transactions']),
+						'internal_block_id' => $db_block['internal_block_id'],
+						'sec_since_prev_block' => $prev_block['time_mined'] ? $db_block['time_mined']-$prev_block['time_mined'] : null
+					]);
+				}
 				
 				$coins_created = 0;
 				
@@ -271,11 +275,15 @@ class Blockchain {
 				die("RPC failed to get block $block_hash");
 			}
 			
-			if ($db_block['num_transactions'] == "") $this->app->run_query("UPDATE blocks SET time_mined=:time_mined, num_transactions=:num_transactions WHERE internal_block_id=:internal_block_id;", [
-				'time_mined' => $lastblock_rpc['time'],
-				'num_transactions' => count($lastblock_rpc['tx']),
-				'internal_block_id' => $db_block['internal_block_id']
-			]);
+			if ($db_block['num_transactions'] == "") {
+				$prev_block = $this->fetch_block_by_id($db_block['block_id']-1);
+				$this->app->run_query("UPDATE blocks SET time_mined=:time_mined, num_transactions=:num_transactions, sec_since_prev_block=:sec_since_prev_block WHERE internal_block_id=:internal_block_id;", [
+					'time_mined' => $lastblock_rpc['time'],
+					'num_transactions' => count($lastblock_rpc['tx']),
+					'internal_block_id' => $db_block['internal_block_id'],
+					'sec_since_prev_block' => $prev_block['time_mined'] ? $lastblock_rpc['time'] - $prev_block['time_mined'] : null
+				]);
+			}
 			
 			$start_time = microtime(true);
 			if ($print_debug) {
@@ -888,6 +896,8 @@ class Blockchain {
 					$this->resolve_potential_fork_on_block($last_block);
 				}
 				
+				if ($last_block['block_id']%10 == 0) $this->set_average_seconds_per_block(false);
+				
 				$txt = "Loading new blocks...\n";
 				if ($print_debug) {
 					echo $txt;
@@ -1273,7 +1283,7 @@ class Blockchain {
 		]);
 		$genesis_io_id = $this->app->last_insert_id();
 		
-		$this->app->run_query("INSERT INTO blocks SET blockchain_id=:blockchain_id, block_hash=:block_hash, block_id='0', time_created=:current_time, time_loaded=:current_time, time_mined=:current_time, num_transactions=1, locally_saved=1;", [
+		$this->app->run_query("INSERT INTO blocks SET blockchain_id=:blockchain_id, block_hash=:block_hash, block_id='0', time_created=:current_time, time_loaded=:current_time, time_mined=:current_time, num_transactions=1, locally_saved=1, sec_since_prev_block=0;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'block_hash' => $genesis_block_hash,
 			'current_time' => time()
@@ -1966,12 +1976,14 @@ class Blockchain {
 	public function new_block(&$log_text) {
 		// This function only runs for blockchains with p2p_mode='none'
 		$last_block_id = (int) $this->last_block_id();
+		$prev_block = $this->fetch_block_by_id($last_block_id);
 		
-		$this->app->run_query("INSERT INTO blocks SET blockchain_id=:blockchain_id, block_id=:block_id, block_hash=:block_hash, time_created=:current_time, time_loaded=:current_time, time_mined=:current_time, locally_saved=0;", [
+		$this->app->run_query("INSERT INTO blocks SET blockchain_id=:blockchain_id, block_id=:block_id, block_hash=:block_hash, time_created=:current_time, time_loaded=:current_time, time_mined=:current_time, sec_since_prev_block=:sec_since_prev_block, locally_saved=0;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'block_id' => $last_block_id+1,
 			'block_hash' => $this->app->random_hex_string(64),
-			'current_time' => time()
+			'current_time' => time(),
+			'sec_since_prev_block' => $prev_block['time_mined'] ? time()-$prev_block['time_mined'] : null
 		]);
 		$internal_block_id = $this->app->last_insert_id();
 		
@@ -2184,6 +2196,23 @@ class Blockchain {
 		
 		$error_message .= "Added ".$new_addr_count." ".$this->db_blockchain['blockchain_name']." addresses.\n";
 		return $error_message;
+	}
+	
+	public function set_average_seconds_per_block($force_set) {
+		$to_block_id = $this->last_complete_block_id();
+		$ref_time = microtime(true);
+		
+		$avg = $this->app->run_query("SELECT AVG(sec_since_prev_block) FROM `blocks` WHERE blockchain_id=:blockchain_id AND sec_since_prev_block < :max_seconds_per_block AND sec_since_prev_block>1 AND block_id>:block_id;", [
+			'blockchain_id' => $this->db_blockchain['blockchain_id'],
+			'max_seconds_per_block' => ($this->seconds_per_block('target')*10),
+			'block_id' => $this->last_block_id()-100
+		])->fetch();
+		
+		$this->app->run_query("UPDATE blockchains SET average_seconds_per_block=:average_seconds_per_block WHERE blockchain_id=:blockchain_id;", [
+			'average_seconds_per_block' => $avg['AVG(sec_since_prev_block)'],
+			'blockchain_id' => $this->db_blockchain['blockchain_id']
+		]);
+		$this->db_blockchain['average_seconds_per_block'] = $avg['AVG(sec_since_prev_block)'];
 	}
 }
 ?>

@@ -370,6 +370,13 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 	}
 	else {
 		if (in_array($voting_strategy, ['manual', 'api', 'by_plan', 'by_entity','hit_url'])) {
+			$min_votesum_pct = intval($_REQUEST['min_votesum_pct']);
+			$max_votesum_pct = intval($_REQUEST['max_votesum_pct']);
+			
+			if ($max_votesum_pct > 100) $max_votesum_pct = 100;
+			if ($min_votesum_pct < 0) $min_votesum_pct = 0;
+			if ($max_votesum_pct < $min_votesum_pct) $max_votesum_pct = $min_votesum_pct;
+			
 			$update_strategy_params = [
 				'voting_strategy' => $voting_strategy,
 				'max_votesum_pct' => $max_votesum_pct,
@@ -382,12 +389,6 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 				$update_strategy_q .= ", aggregate_threshold=:aggregate_threshold";
 				$update_strategy_params['aggregate_threshold'] = $aggregate_threshold;
 			}
-			
-			$min_votesum_pct = intval($_REQUEST['min_votesum_pct']);
-			$max_votesum_pct = intval($_REQUEST['max_votesum_pct']);
-			if ($max_votesum_pct > 100) $max_votesum_pct = 100;
-			if ($min_votesum_pct < 0) $min_votesum_pct = 0;
-			if ($max_votesum_pct < $min_votesum_pct) $max_votesum_pct = $min_votesum_pct;
 			
 			$update_strategy_q .= ", max_votesum_pct=:max_votesum_pct, min_votesum_pct=:min_votesum_pct, api_url=:api_url WHERE strategy_id=:strategy_id;";
 			$app->run_query($update_strategy_q, $update_strategy_params);
@@ -438,7 +439,7 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 				'block_within_round' => $block
 			])->fetch();
 			
-			if ($_REQUEST['vote_on_block_'.$block] == "1") {
+			if (isset($_REQUEST['vote_on_block_'.$block]) && $_REQUEST['vote_on_block_'.$block] == "1") {
 				if (!$strategy_block) {
 					$app->run_query("INSERT INTO user_strategy_blocks SET strategy_id=:strategy_id, block_within_round=:block_within_round;", [
 						'strategy_id' => $user_strategy['strategy_id'],
