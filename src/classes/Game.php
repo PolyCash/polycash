@@ -1760,11 +1760,7 @@ class Game {
 			}
 			$html .= "<div id='game".$game_index."_event".$i."' class='game_event_inner'><div id='game".$game_index."_event".$i."_display' class='game_event_display'>";
 			
-			$rendered_event = $these_events[$i]->event_html($user, false, true, $game_index, $i);
-			$html .= $rendered_event;
-			$rendered_event_hash = hash("sha256", $rendered_event);
-			$rendered_event_hash = substr($rendered_event_hash, 0, 8);
-			$js .= 'games['.$game_index.'].events['.$i.'].rendered_event_hash = "'.$rendered_event_hash.'";'."\n";
+			$html .= $these_events[$i]->event_html($user, false, true, $game_index, $i);
 			
 			$html .= "</div><div id='game".$game_index."_event".$i."_my_current_votes'>";
 			if ($user) $html .= $these_events[$i]->my_votes_table($current_round, $user_game);
