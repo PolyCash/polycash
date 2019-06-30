@@ -17,40 +17,6 @@ class Event {
 		if (!$this->db_event) die("Error, could not load event #".$event_id);
 	}
 	
-	public function serialize_event($to_text) {
-		$serialized_options = $this->serialize_options(false);
-		
-		$serialized_event = [
-			"event_id" => (int)$this->db_event['event_id'],
-			"event_index" => (int)$this->db_event['event_index'],
-			"event_name" => $this->db_event['event_name'],
-			"event_starting_block" => (int)$this->db_event['event_starting_block'],
-			"event_final_block" => (int)$this->db_event['event_final_block'],
-			"votes" => (int)$this->db_event['sum_votes'],
-			"unconfirmed_votes" => (int)$this->db_event['sum_unconfirmed_votes'],
-			"burn_amount" => (int)$this->db_event['destroy_score'],
-			"unconfirmed_burn_amount" => (int)$this->db_event['sum_unconfirmed_destroy_score'],
-			"options" => $this->serialize_options(false)
-		];
-		
-		if ($to_text) return json_encode($serialized_event);
-		else return $serialized_event;
-	}
-	
-	public function serialize_options($to_text) {
-		$db_options = $this->game->blockchain->app->fetch_options_by_event($this->db_event['event_id'])->fetchAll();
-		$serialized_options = [];
-		foreach ($db_options as $db_option) {
-			array_push($serialized_options, [
-				"option_id" => (int)$db_option['option_id'],
-				"option_index" => (int)$db_option['event_option_index'],
-				"name" => $db_option['name']
-			]);
-		}
-		if ($to_text) return json_encode($serialized_options);
-		else return $serialized_options;
-	}
-	
 	public function round_voting_stats() {
 		$coins_per_vote = $this->game->blockchain->app->coins_per_vote($this->game->db_game);
 		

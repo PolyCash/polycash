@@ -277,7 +277,7 @@ else {
 									}
 									else $this_league_entity = false;
 									
-									$outcome_index = 'NULL';
+									$outcome_index = null;
 									if ($outcome_col !== false) {
 										if ($line_vals[$outcome_col] != "") $outcome_index = (int)$line_vals[$outcome_col];
 									}

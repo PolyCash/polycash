@@ -25,7 +25,7 @@ if ($user_game) {
 		$account = $app->fetch_account_by_id($user_game['account_id']);
 		
 		if ($account) {
-			$db_events = $app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_starting_block <= :mining_block_id AND event_final_block >= :mining_block_id ORDER BY event_index ASC;", [
+			$db_events = $app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_starting_block <= :mining_block_id AND event_final_block > :mining_block_id ORDER BY event_index ASC;", [
 				'game_id' => $game->db_game['game_id'],
 				'mining_block_id' => $mining_block_id
 			])->fetchAll();

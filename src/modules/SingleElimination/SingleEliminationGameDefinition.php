@@ -6,8 +6,8 @@ class SingleEliminationGameDefinition {
 	
 	public function __construct(&$app) {
 		$this->app = $app;
-		$this->teams = array();
-		$this->event_index2teams = array();
+		$this->teams = [];
+		$this->event_index2teams = [];
 		$this->teams_txt = "0,Algeria
 0,Argentina
 1,Australia
@@ -90,17 +90,17 @@ class SingleEliminationGameDefinition {
 	}
 	
 	public function load() {
-		$this->teams = array();
+		$this->teams = [];
 		$game_def = json_decode($this->game_def_base_txt);
 		$teams_txt = explode("\n", $this->teams_txt);
 		$i = 0;
 		foreach ($teams_txt as $team_line) {
 			$vals = explode(",", trim($team_line));
-			array_push($this->teams, array('team_index'=>$i, 'initial_event_index'=>$vals[0], 'team_name'=>$vals[1]));
+			array_push($this->teams, ['team_index'=>$i, 'initial_event_index'=>$vals[0], 'team_name'=>$vals[1]]);
 			$i++;
 		}
 		
-		$event_index2teams = array();
+		$event_index2teams = [];
 		for ($i=0; $i<count($this->teams); $i++) {
 			$eindex = $this->teams[$i]['initial_event_index'];
 			if (empty($event_index2teams[$eindex])) {
@@ -117,12 +117,11 @@ class SingleEliminationGameDefinition {
 	
 	public function events_starting_between_blocks(&$game, $from_block, $to_block) {
 		$rounds_per_tournament = $this->get_rounds_per_tournament();
-		$events = array();
+		$events = [];
 		$general_entity_type = $this->app->check_set_entity_type("general entity");
 		
-		$from_round = $game->block_to_round($from_block);
-		$to_round = $game->block_to_round($to_block);
-		if (!empty($this->game_def->final_round) && $to_round > $this->game_def->final_round) $to_round = $this->game_def->final_round;
+		$from_round = $game->round_to_display_round($game->block_to_round($from_block));
+		$to_round = $game->round_to_display_round($game->block_to_round($to_block));
 		
 		for ($round=$from_round; $round<=$to_round; $round++) {
 			$meta_round = floor(($round-1)/$rounds_per_tournament);
@@ -133,16 +132,15 @@ class SingleEliminationGameDefinition {
 			$event_index = $prevround_offset;
 			
 			for ($thisround_event_i=0; $thisround_event_i<$num_events; $thisround_event_i++) {
-				$possible_outcomes = array();
-				$game = false;
+				$possible_outcomes = [];
 				$event_name = $this->generate_event_labels($possible_outcomes, $round, $this_round, $thisround_event_i, $general_entity_type['entity_type_id'], $event_index, $game);
 				
 				$event = array(
 					"event_index" => $event_index,
 					"next_event_index" => $this->event_index_to_next_event_index($event_index),
-					"event_starting_block" => $chain_starting_block+($round-1)*$round_length,
-					"event_final_block" => $chain_starting_block+$round*$round_length-1,
-					"event_payout_block" => $chain_starting_block+$round*$round_length-1,
+					"event_starting_block" => $game->db_game['game_starting_block']+($round-1)*$game->db_game['round_length'],
+					"event_final_block" => $game->db_game['game_starting_block']+$round*$game->db_game['round_length']-1,
+					"event_payout_block" => $game->db_game['game_starting_block']+$round*$game->db_game['round_length']-1,
 					"option_block_rule" => "football_match",
 					"event_name" => $event_name,
 					"option_name" => "outcome",
@@ -220,8 +218,8 @@ class SingleEliminationGameDefinition {
 	
 	public function rename_event(&$gde, &$game) {
 		$general_entity_type = $this->app->check_set_entity_type("general entity");
-		$possible_outcomes = array();
-		$round = 1+floor(($gde['event_starting_block']-$game->db_game['game_starting_block'])/$this->game_def->round_length);
+		$possible_outcomes = [];
+		$round = $game->round_to_display_round($game->block_to_round($gde['event_starting_block']));
 		$this_round = ($round-1)%$this->get_rounds_per_tournament()+1;
 		$event_name = $this->generate_event_labels($possible_outcomes, $round, $this_round, false, $general_entity_type['entity_type_id'], $gde['event_index'], $game);
 		
@@ -252,7 +250,7 @@ class SingleEliminationGameDefinition {
 			$rand_offset_start = $rand_chars_per_event*$event_offset;
 			$rand_chars = substr($random_data, $rand_offset_start, $rand_chars_per_event);
 			
-			$pk_shootouts = array();
+			$pk_shootouts = [];
 			$winning_option = false;
 			
 			do {
@@ -308,20 +306,16 @@ class SingleEliminationGameDefinition {
 				list($winning_option, $pk_shootout_data) = $this->break_tie($game, $payout_event->db_event, $first_option, $second_option);
 			}
 			$gde_option_index = $winning_option['option_index']%2;
-			$msg = "event #".$payout_event->db_event['event_index']." won by ".$winning_option['name']." (entity ".$winning_option['entity_id'].")";
-			$this->app->log_message($msg);
 			
 			$next_event_index = $this->event_index_to_next_event_index($payout_event->db_event['event_index']);
 			
-			$this->app->log_message("Update ".$next_event_index." based on ".$payout_event->db_event['event_index']." (event_id=".$payout_event->db_event['event_id'].")");
-			
 			$game->set_game_defined_outcome($payout_event->db_event['event_index'], $gde_option_index);
-		
+			
 			if ($next_event_index) {	
 				if (!empty($winning_option['entity_id'])) {
 					$pos_in_next_event = $payout_event->db_event['event_index']%2;
 					
-					$gdo = $app->fetch_game_defined_options($game->db_game['game_id'], $next_event_index, $pos_in_next_event, false);
+					$gdo = $this->app->fetch_game_defined_options($game->db_game['game_id'], $next_event_index, $pos_in_next_event, false)->fetch();
 					
 					if ($gdo) {
 						$this->app->run_query("UPDATE game_defined_options SET entity_id=:entity_id, name=:name WHERE game_defined_option_id=:game_defined_option_id;", [

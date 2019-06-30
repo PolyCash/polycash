@@ -1769,21 +1769,24 @@ class Game {
 				$js .= "games[".$game_index."].events[".$i."].options.push(new option(games[".$game_index."].events[".$i."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$this->blockchain->app->quote_escape($option['name']).", 0, ".$has_votingaddr.", ".$this->blockchain->app->quote_escape($option['image_url'])."));\n";
 				$j++;
 			}
-			$js .= "games[".$game_index."].events[".$i."].set_serialized_hash();\n";
+			$html .= "<div id='game".$game_index."_event".$i."' class='game_event_inner'><div id='game".$game_index."_event".$i."_display' class='game_event_display'>";
 			
-			if ($event->db_event['option_block_rule'] == "football_match") $js .= '
-			games['.$game_index.'].events['.$i.'].refresh_time_estimate();'."\n";
+			$rendered_event = $these_events[$i]->event_html($user, false, true, $game_index, $i);
+			$html .= $rendered_event;
+			$rendered_event_hash = hash("sha256", $rendered_event);
+			$rendered_event_hash = substr($rendered_event_hash, 0, 8);
+			$js .= 'games['.$game_index.'].events['.$i.'].rendered_event_hash = "'.$rendered_event_hash.'";'."\n";
 			
-			$html .= '<div id="game'.$game_index.'_event'.$i.'" class="game_event_inner"><div id="game'.$game_index.'_event'.$i.'_display" class="game_event_display">';
-			if ($include_content) $html .= $these_events[$i]->event_html($user, false, true, $game_index, $i);
-			$html .= '</div><div id="game'.$game_index.'_event'.$i.'_my_current_votes">';
-			if ($user && $include_content) $html .= $these_events[$i]->my_votes_table($current_round, $user_game);
-			$html .= "</div></div>\n";
+			$html .= "</div><div id='game".$game_index."_event".$i."_my_current_votes'>";
+			if ($user) $html .= $these_events[$i]->my_votes_table($current_round, $user_game);
+			$html .= '</div></div>';
+			
+			if ($event->db_event['option_block_rule'] == "football_match") $js .= 'games['.$game_index.'].events['.$i.'].refresh_time_estimate();'."\n";
 		}
 		if ($event_ids != "") $event_ids = substr($event_ids, 0, strlen($event_ids)-1);
 		
 		if (!$include_content) {
-			$js .= 'document.getElementById("game'.$game_index.'_events").innerHTML = '.json_encode($html).";\n";
+			$js .= 'document.getElementById("game'.$game_index.'_events").innerHTML = '.json_encode($html).';';
 		}
 		
 		return [$js, $html];
@@ -2143,8 +2146,7 @@ class Game {
 						];
 						$entities_by_round_q = "SELECT * FROM entities WHERE entity_type_id=:entity_type_id ORDER BY entity_id ASC LIMIT :events_per_round";
 						if ($offset > 0) {
-							$entities_by_round_q .= " OFFSET :offset";
-							$entities_by_round_params['offset'] = $offset;
+							$entities_by_round_q .= " OFFSET ".((int)$offset);
 						}
 						$entities_by_round = $this->blockchain->app->run_limited_query($entities_by_round_q, $entities_by_round_params);
 						
@@ -2829,8 +2831,7 @@ class Game {
 					];
 					$options_by_event_q = "SELECT * FROM options WHERE event_id=:event_id ORDER BY option_index ASC LIMIT 1";
 					if ($option_offset > 0) {
-						$options_by_event_q .= " OFFSET :option_offset";
-						$options_by_event_params['option_offset'] = $option_offset;
+						$options_by_event_q .= " OFFSET ".((int)$option_offset);
 					}
 					$db_option = $this->blockchain->app->run_query($options_by_event_q, $options_by_event_params)->fetch();
 					
@@ -3900,11 +3901,6 @@ class Game {
 			'game_id' => $this->db_game['game_id'],
 			'event_index' => $event_index
 		])->fetch();
-	}
-	
-	public function events_rely_on_unserialized_data() {
-		if ($this->db_game['default_payout_rule'] == "linear" || $this->db_game['module'] == "CryptoDuels") return true;
-		else return false;
 	}
 }
 ?>

@@ -4,7 +4,6 @@ require(AppSettings::srcPath()."/includes/get_session.php");
 
 $instance_id = (int) $_REQUEST['instance_id'];
 $game_loop_index = (int) $_REQUEST['game_loop_index'];
-$event_ids_hash = $_REQUEST['event_ids_hash'];
 $refresh_page = $_REQUEST['refresh_page'];
 
 if (!$game) {
@@ -54,22 +53,6 @@ if ($game->db_game['module'] == "CoinBattles") {
 	}
 }
 
-$filter_arr = array();
-if (!empty($_REQUEST['filter_date'])) {
-	$filter_time = strtotime($_REQUEST['filter_date']);
-	$filter_arr['date'] = date("Y-m-d", $filter_time);
-}
-$new_event_ids = "";
-$js = $game->new_event_js($instance_id, $thisuser, $filter_arr, $new_event_ids, false)[0];
-$new_event_ids_hash = $app->game_def_to_hash($new_event_ids);
-
-if ($new_event_ids_hash != $event_ids_hash) {
-	$output['new_event_ids'] = 1;
-	$output['new_event_js'] = $js;
-	$output['event_ids'] = $new_event_ids;
-}
-else $output['new_event_ids'] = 0;
-
 if ($last_block_id != (int) $_REQUEST['last_block_id']) {
 	$output['new_block'] = 1;
 	$output['last_block_id'] = $last_block_id;
@@ -77,6 +60,12 @@ if ($last_block_id != (int) $_REQUEST['last_block_id']) {
 	$output['time_last_block_loaded'] = $db_last_block['time_mined'];
 }
 else $output['new_block'] = 0;
+
+$filter_arr = array();
+if (!empty($_REQUEST['filter_date'])) {
+	$filter_time = strtotime($_REQUEST['filter_date']);
+	$filter_arr['date'] = date("Y-m-d", $filter_time);
+}
 
 if (isset($_REQUEST['event_hashes'])) $event_hashes = explode(",", $_REQUEST['event_hashes']);
 else $event_hashes = [];
@@ -86,17 +75,22 @@ $show_intro_text = false;
 
 $set_options_js = "";
 
+$output['rendered_events'] = [];
+
+$display_event_ids = "";
+
 for ($game_event_index=0; $game_event_index<count($these_events); $game_event_index++) {
-	$this_event_html = $these_events[$game_event_index]->event_html($thisuser, $show_intro_text, true, $instance_id, $game_event_index);
-	$serialized_event = $these_events[$game_event_index]->serialize_event(true);
-	$this_event_hash = hash("sha256", $serialized_event);
-	$this_event_hash = substr($this_event_hash, 0, 8);
+	$rendered_event = $these_events[$game_event_index]->event_html($thisuser, $show_intro_text, true, $instance_id, $game_event_index);
+	$rendered_event_hash = hash("sha256", $rendered_event);
+	$rendered_event_hash = substr($rendered_event_hash, 0, 8);
+	$display_event_ids .= $these_events[$game_event_index]->db_event['event_id'].",";
 	
-	if (isset($event_hashes[$game_event_index]) && $event_hashes[$game_event_index] == $this_event_hash) {
-		$output['event_html'][$game_event_index] = "";
+	if (isset($event_hashes[$game_event_index]) && $event_hashes[$game_event_index] == $rendered_event_hash) {
+		$output['rendered_events'][$game_event_index] = ["hash" => false, "html" => ""];
 	}
 	else {
-		$output['event_html'][$game_event_index] = $this_event_html;
+		$any_changed_events = true;
+		$output['rendered_events'][$game_event_index] = ["hash" => $rendered_event_hash, "html" => $rendered_event];
 		
 		if ($thisuser) {
 			$output['my_current_votes'][$game_event_index] = $these_events[$game_event_index]->my_votes_table($current_round, $user_game);
@@ -156,6 +150,17 @@ for ($game_event_index=0; $game_event_index<count($these_events); $game_event_in
 }
 
 $output['set_options_js'] = $set_options_js;
+
+if ($display_event_ids != "") $display_event_ids = substr($display_event_ids, 0, strlen($display_event_ids)-1);
+$display_event_ids_hash = $app->game_def_to_hash($display_event_ids);
+
+if ($display_event_ids_hash != $_REQUEST['event_ids_hash']) {
+	$js = $game->new_event_js($instance_id, $thisuser, $filter_arr, $display_event_ids, false)[0];
+	$output['new_event_ids'] = 1;
+	$output['new_event_js'] = $js;
+	$output['event_ids'] = $display_event_ids;
+}
+else $output['new_event_ids'] = 0;
 
 if ($refresh_page == "wallet" && ($mature_io_ids_hash != $_REQUEST['mature_io_ids_hash'] || !empty($output['new_block']))) {
 	$output['select_input_buttons'] = $thisuser? $game->select_input_buttons($user_game) : "";

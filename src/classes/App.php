@@ -984,7 +984,7 @@ class App {
 				<script type="text/javascript">
 				games.push(new Game(<?php
 					echo $db_game['game_id'];
-					echo ', false';
+					echo ', '.$featured_game->last_block_id();
 					echo ', false';
 					echo ', ""';
 					echo ', "'.$db_game['payout_weight'].'"';
@@ -1010,9 +1010,6 @@ class App {
 					echo ', false';
 					echo ', "'.$featured_game->db_game['default_betting_mode'].'"';
 					echo ', false';
-					echo ', ';
-					if ($featured_game->events_rely_on_unserialized_data()) echo 'true';
-					else echo 'false';
 				?>));
 				</script>
 				<?php
@@ -3857,7 +3854,9 @@ class App {
 	}
 	
 	public function fetch_game_defined_options($game_id, $event_index, $event_option_index, $require_entity_type) {
-		$gdo_q = "SELECT * FROM game_defined_options gdo";
+		$gdo_q = "SELECT *";
+		if ($require_entity_type) $gdo_q .= ", e.entity_name AS entity_name";
+		$gdo_q .= " FROM game_defined_options gdo";
 		if ($require_entity_type) $gdo_q .= " LEFT JOIN entities e ON gdo.entity_id=e.entity_id LEFT JOIN entity_types et ON e.entity_type_id=et.entity_type_id";
 		$gdo_q .= " WHERE gdo.game_id=:game_id AND gdo.event_index=:event_index";
 		$gdo_params = [

@@ -522,7 +522,7 @@ if ($thisuser && $game) {
 		
 		games.push(new Game(<?php
 			echo $game->db_game['game_id'];
-			echo ', false';
+			echo ', '.$game->last_block_id();
 			echo ', false';
 			echo ', "'.$game->mature_io_ids_csv($user_game).'"';
 			echo ', "'.$game->db_game['payout_weight'].'"';
@@ -548,9 +548,6 @@ if ($thisuser && $game) {
 			echo ', false';
 			echo ', "'.$game->db_game['default_betting_mode'].'"';
 			echo ', true';
-			echo ', ';
-			if ($game->events_rely_on_unserialized_data()) echo 'true';
-			else echo 'false';
 		?>));
 		
 		<?php
@@ -572,7 +569,7 @@ if ($thisuser && $game) {
 		
 		while ($db_event = $initial_load_events->fetch()) {
 			if ($i == 0) echo "games[0].all_events_start_index = ".$db_event['event_index'].";\n";
-			else if ($i == $initial_load_events-1) echo "games[0].all_events_stop_index = ".$db_event['event_index'].";\n";
+			else if ($i == $num_initial_load_events-1) echo "games[0].all_events_stop_index = ".$db_event['event_index'].";\n";
 			
 			echo "games[0].all_events[".$db_event['event_index']."] = new Event(games[0], ".$i.", ".$db_event['event_id'].", ".$db_event['event_index'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'", "'.$db_event['effectiveness_param1'].'", '.$app->quote_escape($db_event['event_name']).", ".$db_event['event_starting_block'].", ".$db_event['event_final_block'].", ".$db_event['payout_rate'].");\n";
 			echo "games[0].all_events_db_id_to_index[".$db_event['event_id']."] = ".$db_event['event_index'].";\n";

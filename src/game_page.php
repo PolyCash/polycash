@@ -97,7 +97,7 @@ else $exchange_rate = 0;
 //<![CDATA[
 games.push(new Game(<?php
 	echo $game->db_game['game_id'];
-	echo ', false';
+	echo ', '.$game->last_block_id();
 	echo ', false';
 	echo ', "", "'.$game->db_game['payout_weight'].'"';
 	echo ', '.$game->db_game['round_length'];
@@ -124,9 +124,6 @@ games.push(new Game(<?php
 	echo ', false';
 	echo ', "'.$game->db_game['default_betting_mode'].'"';
 	echo ', false';
-	echo ', ';
-	if ($game->events_rely_on_unserialized_data()) echo 'true';
-	else echo 'false';
 ?>));
 
 <?php

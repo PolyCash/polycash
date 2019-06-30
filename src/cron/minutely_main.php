@@ -158,7 +158,10 @@ if ($app->running_as_admin()) {
 									if ($print_debug) echo "No block\n";
 								}
 								
-								if ($print_debug) echo (microtime(true)-$benchmark_time)." sec\n";
+								if ($print_debug) {
+									echo (microtime(true)-$benchmark_time)." sec\n";
+									$app->flush_buffers();
+								}
 								$benchmark_time = microtime(true);
 							}
 							while ($remaining_prob > 0);
