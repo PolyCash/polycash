@@ -24,6 +24,8 @@ if ($user_game) {
 	if ($user_game['time_next_apply'] == "" || $user_game['time_next_apply'] <= time() || !empty($_REQUEST['force'])) {
 		$account = $app->fetch_account_by_id($user_game['account_id']);
 		
+		$app->set_strategy_time_next_apply($user_game['strategy_id'], time()+$rand_sec_offset);
+		
 		if ($account) {
 			$event_q = "SELECT * FROM events ev JOIN options op ON ev.event_id=op.event_id WHERE ev.game_id=:game_id AND op.target_probability IS NOT NULL";
 			$event_q .= " AND ev.event_starting_block <= :mining_block_id AND ev.event_final_block > :mining_block_id";
@@ -150,8 +152,6 @@ if ($user_game) {
 					
 					if ($transaction_id) {
 						$transaction = $app->fetch_transaction_by_id($transaction_id);
-						
-						$app->set_strategy_time_next_apply($user_game['strategy_id'], time()+$rand_sec_offset);
 						
 						$app->output_message(1, "Great, your transaction was submitted. <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction['tx_hash']."/\">View Transaction</a>", false);
 					}

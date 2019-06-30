@@ -24,6 +24,8 @@ if ($user_game) {
 	if ($user_game['time_next_apply'] == "" || $user_game['time_next_apply'] <= time() || !empty($_REQUEST['force'])) {
 		$account = $app->fetch_account_by_id($user_game['account_id']);
 		
+		$app->set_strategy_time_next_apply($user_game['strategy_id'], time()+$rand_sec_offset);
+		
 		if ($account) {
 			$db_events = $app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_starting_block <= :mining_block_id AND (event_starting_block+event_final_block)/2 > :mining_block_id ORDER BY event_index ASC;", [
 				'game_id' => $game->db_game['game_id'],
@@ -174,8 +176,6 @@ if ($user_game) {
 					
 					if ($transaction_id) {
 						$transaction = $app->fetch_transaction_by_id($transaction_id);
-						
-						$app->set_strategy_time_next_apply($user_game['strategy_id'], time()+$rand_sec_offset);
 						
 						$app->output_message(1, "Great, your transaction was submitted. <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction['tx_hash']."/\">View Transaction</a>", false);
 					}

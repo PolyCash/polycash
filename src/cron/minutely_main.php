@@ -98,24 +98,6 @@ if ($app->running_as_admin()) {
 				echo "Including game: ".$running_game['name']."\n";
 				$app->flush_buffers();
 			}
-			
-			// Update user account values
-			$user_games = $app->run_query("SELECT * FROM users u JOIN user_games ug ON u.user_id=ug.user_id WHERE ug.game_id=:game_id ORDER BY u.user_id ASC;", ['game_id'=>$running_game['game_id']]);
-			
-			while ($user_game = $user_games->fetch()) {
-				$user = new User($app, $user_game['user_id']);
-				$user_pending_bets = $running_games[$game_i]->user_pending_bets($user_game);
-				$account_value = ($running_games[$game_i]->account_balance($user_game['account_id'])+$user_pending_bets)/pow(10,$running_games[$game_i]->db_game['decimal_places']);
-				
-				$app->run_query("UPDATE user_games SET account_value=:account_value WHERE user_game_id=:user_game_id;", [
-					'account_value' => $account_value,
-					'user_game_id' => $user_game['user_game_id']
-				]);
-			}
-		}
-		
-		if ($print_debug) {
-			echo "Done setting account values. Now deleting unconfirmable transactions.\n";
 		}
 		
 		$unconf_message = $app->delete_unconfirmable_transactions();

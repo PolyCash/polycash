@@ -426,7 +426,7 @@ class Game {
 			$strategies_q .= " WHERE g.game_id=:game_id AND usb.block_within_round=:block_of_round";
 			$strategies_q .= " AND (s.voting_strategy IN ('by_rank', 'by_entity', 'api', 'by_plan', 'featured','hit_url'))";
 			$strategies_q .= " AND (s.time_next_apply IS NULL OR s.time_next_apply<:current_time)";
-			$strategies_q .= " AND g.account_value > 0 ORDER BY RAND();";
+			$strategies_q .= " ORDER BY RAND();";
 			$apply_strategies = $this->blockchain->app->run_query($strategies_q, $strategies_params);
 			
 			if ($print_debug) echo "Applying user strategies for block #".$mining_block_id." of ".$this->db_game['name']." looping through ".$apply_strategies->rowCount()." users.<br/>\n";
@@ -1530,25 +1530,14 @@ class Game {
 		$networth_sum = 0;
 		$html = "";
 		
-		$user_games = $this->blockchain->app->run_query("SELECT *, SUM(ug.account_value) AS account_value_sum FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id=:game_id AND ug.payment_required=0 GROUP BY ug.user_id ORDER BY account_value_sum DESC, u.user_id ASC;", ['game_id'=>$this->db_game['game_id']]);
+		$user_games = $this->blockchain->app->run_query("SELECT * FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id=:game_id AND ug.payment_required=0 GROUP BY ug.user_id ORDER BY u.user_id ASC;", ['game_id'=>$this->db_game['game_id']]);
 		
 		$html .= "<b>".$user_games->rowCount()." players</b><br/>\n";
 		
 		while ($user_game = $user_games->fetch()) {
-			$networth_disp = $this->blockchain->app->format_bignum($user_game['account_value_sum']);
-			
 			$html .= '<div class="row">';
-			
 			$html .= '<div class="col-sm-4"><a href="" onclick="openChatWindow('.$user_game['user_id'].'); return false;">Player'.$user_game['user_id'].'</a></div>';
-			
-			$html .= '<div class="col-sm-4">'.$networth_disp.' ';
-			if ($networth_disp == '1') $html .= $this->db_game['coin_name'];
-			else $html .= $this->db_game['coin_name_plural'];
 			$html .= '</div>';
-			
-			$html .= '</div>';
-			
-			$networth_sum += $user_game['account_value_sum'];
 		}
 		
 		$html .= "<br/>\nSum: ".$this->blockchain->app->format_bignum($networth_sum)." ".$this->db_game['coin_name_plural'];
