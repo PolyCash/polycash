@@ -343,10 +343,12 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							else echo $blockchain->db_blockchain['url_identifier'];
 							?>/events/">Events</a></li>
 							<?php } ?>
+							<?php if ($game) { ?>
 							<li><a <?php if ($explore_mode == 'utxos') echo 'class="selected" '; ?>href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
 							if ($game) echo $game->db_game['url_identifier'];
 							else echo $blockchain->db_blockchain['url_identifier'];
 							?>/utxos/">UTXOs</a></li>
+							<?php } ?>
 							<li><a <?php if ($explore_mode == 'unconfirmed') echo 'class="selected" '; ?>href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
 							if ($game) echo $game->db_game['url_identifier'];
 							else echo $blockchain->db_blockchain['url_identifier'];
@@ -1320,32 +1322,14 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo '<div class="panel-body">';
 							
 							echo '<p><a href="/accounts/?account_id='.$account['account_id'].'">Manage this Account</a></p>';
-						}
-						else if (false) {
-							// Biggest UTXOs by blockchain view is disabled
-							$utxo_count = $app->run_query("SELECT COUNT(*) FROM transaction_ios WHERE blockchain_id=:blockchain_id AND spend_status='unspent';", [
-								'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
-							])->fetch();
 							
-							$display_utxos = $app->run_query("SELECT * FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON a.address_id=io.address_id WHERE io.blockchain_id=:blockchain_id AND io.spend_status IN ('unspent','unconfirmed') ORDER BY io.amount DESC LIMIT 500;", [
-								'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
-							]);
-							
-							echo '<div class="panel-heading"><div class="panel-title">';
-							echo "Showing the ".$display_utxos->rowCount()." largest ".$blockchain->db_blockchain['blockchain_name']." UTXOs";
-							echo "</div></div>\n";
-							
-							echo '<div class="panel-body">';
-							
-							echo "<p>".$blockchain->db_blockchain['blockchain_name']." currently has ".number_format($utxo_count['COUNT(*)'])." confirmed, unspent transaction outputs.</p>\n";
-						}
-						
-						while ($utxo = $display_utxos->fetch()) {
-							echo '<div class="row">';
-							echo '<div class="col-sm-3"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/utxo/'.$utxo['tx_hash']."/".$utxo['out_index'].'">'.$app->format_bignum($utxo['amount']/pow(10,$blockchain->db_blockchain['decimal_places'])).' '.$blockchain->db_blockchain['coin_name_plural'].'</a></div>';
-							echo '<div class="col-sm-3">'.$utxo['spend_status']."</div>\n";
-							echo '<div class="col-sm-3"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$utxo['address'].'">'.$utxo['address']."</a></div>\n";
-							echo '</div>';
+							while ($utxo = $display_utxos->fetch()) {
+								echo '<div class="row">';
+								echo '<div class="col-sm-3"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/utxo/'.$utxo['tx_hash']."/".$utxo['out_index'].'">'.$app->format_bignum($utxo['amount']/pow(10,$blockchain->db_blockchain['decimal_places'])).' '.$blockchain->db_blockchain['coin_name_plural'].'</a></div>';
+								echo '<div class="col-sm-3">'.$utxo['spend_status']."</div>\n";
+								echo '<div class="col-sm-3"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$utxo['address'].'">'.$utxo['address']."</a></div>\n";
+								echo '</div>';
+							}
 						}
 					}
 					echo "</div>\n";
