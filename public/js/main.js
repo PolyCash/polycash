@@ -1,13 +1,5 @@
-var User = function(id) {
-	this.userId = id;
-};
-var chatWindow = function(chatWindowId, toUserId) {
-	this.chatWindowId = chatWindowId;
-	this.toUserId = toUserId;
-	
-	this.initialize = function() {};
-};
-var option = function(parent_event, option_index, option_id, db_option_index, name, points, has_votingaddr, image_url) {
+
+var Option = function(parent_event, option_index, option_id, db_option_index, name, points, has_votingaddr, image_url) {
 	this.parent_event = parent_event;
 	this.option_index = option_index;
 	this.option_id = option_id;
@@ -39,7 +31,7 @@ var option = function(parent_event, option_index, option_id, db_option_index, na
 	option_id2option_index[option_id] = option_index;
 	option_index2option_id[option_index] = option_id;
 };
-var chain_io = function(chain_io_index, io_id, amount, create_block_id) {
+var ChainIO = function(chain_io_index, io_id, amount, create_block_id) {
 	this.chain_io_index = chain_io_index;
 	this.io_id = io_id;
 	this.amount = amount;
@@ -66,16 +58,16 @@ var chain_io = function(chain_io_index, io_id, amount, create_block_id) {
 		return amount_sum;
 	};
 };
-var game_io = function(game_io_id, amount, create_block_id) {
+var GameIO = function(game_io_id, amount, create_block_id) {
 	this.game_io_id = game_io_id;
 	this.amount = amount;
 	this.create_block_id = (create_block_id == "") ? null : parseInt(create_block_id);
 };
-var vote_input = function(input_index, ref_io) {
+var BetInput = function(input_index, ref_io) {
 	this.input_index = input_index;
 	this.ref_io = ref_io;
 };
-var vote_output = function(option_index, name, option_id, event_index) {
+var BetOutput = function(option_index, name, option_id, event_index) {
 	this.option_index = option_index;
 	this.name = name;
 	this.option_id = option_id;
@@ -83,14 +75,446 @@ var vote_output = function(option_index, name, option_id, event_index) {
 	this.slider_val = 50;
 	this.amount = 0;
 };
-
-function rtrim(str, charlist) {
-  charlist = !charlist ? ' \\s\u00A0' : (charlist + '')
-    .replace(/([\[\]\(\)\.\?\/\*\{\}\+\$\^\:])/g, '\\$1');
-  var re = new RegExp('[' + charlist + ']+$', 'g');
-  return (str + '')
-    .replace(re, '');
+var PlanRound = function(round_id) {
+	this.round_id = round_id;
+	this.event_ids = [];
+	this.sum_points = 0;
 }
+var Event = function(game, game_event_index, event_id, real_event_index, num_voting_options, vote_effectiveness_function, effectiveness_param1, option_block_rule, event_name, event_starting_block, event_final_block, payout_rate) {
+	this.game = game;
+	this.game_event_index = game_event_index;
+	this.event_id = event_id;
+	this.real_event_index = real_event_index;
+	
+	this.num_voting_options = num_voting_options;
+	this.vote_effectiveness_function = vote_effectiveness_function;
+	this.effectiveness_param1 = effectiveness_param1;
+	this.option_block_rule = option_block_rule;
+	this.event_name = event_name;
+	this.event_starting_block = event_starting_block;
+	this.event_final_block = event_final_block;
+	this.payout_rate = payout_rate;
+	
+	this.rendered_event_hash = "";
+	
+	this.sum_votes = 0;
+	this.sum_unconfirmed_votes = 0;
+	this.sum_hypothetical_votes = 0;
+	
+	this.sum_effective_votes = 0;
+	this.sum_unconfirmed_effective_votes = 0;
+	this.sum_hypothetical_effective_votes = 0;
+	
+	this.sum_burn_amount = 0;
+	this.sum_unconfirmed_burn_amount = 0;
+	this.sum_hypothetical_burn_amount = 0;
+	
+	this.sum_effective_burn_amount = 0;
+	this.sum_unconfirmed_effective_burn_amount = 0;
+	this.sum_hypothetical_effective_burn_amount = 0;
+	
+	this.selected_option_id = false;
+	this.deleted = false;
+	this.details_shown = true;
+	
+	this.options = [];
+	this.option_id2option_index = {};
+	
+	this.start_vote = function(option_id) {
+		var option_display_name = this.options[this.db_id2option_index(option_id)].name;
+		option_display_name += ' (<a href="/explorer/games/'+games[this.game.instance_id].game_url_identifier+'/events/'+this.real_event_index+'">'+this.event_name+'</a>)';
+		games[this.game.instance_id].add_option_to_vote(game_event_index, option_id);
+	};
+	this.db_id2option_index = function(db_option_id) {
+		for (var i=0; i<this.options.length; i++) {
+			if (this.options[i].option_id == db_option_id) return i;
+		}
+		return false;
+	};
+	this.toggle_details = function() {
+		if (this.details_shown) {
+			$('#game'+this.game.instance_id+'_event'+this.game_event_index+'_details').hide();
+			this.details_shown = false;
+		}
+		else {
+			$('#game'+this.game.instance_id+'_event'+this.game_event_index+'_details').show();
+			this.details_shown = true;
+		}
+	};
+	this.option_selected = function(option_id) {
+	};
+	this.option_deselected = function(option_id) {
+	};
+	this.refresh_time_estimate = function() {
+		if (this.deleted == false) {
+			if (this.option_block_rule == "football_match") {
+				var blocks_into_game = this.game.last_block_id > 0 ? Math.max(0, this.game.last_block_id - this.event_starting_block) : 0;
+				var event_sim_time_sec = 90*60;
+				var sec_into_game = 0;
+				
+				if (this.game.last_block_id >= this.event_final_block) {
+					sec_into_game = event_sim_time_sec;
+				}
+				else {
+					var block_sim_time_sec = Math.round(event_sim_time_sec/(this.event_final_block-this.event_starting_block));
+					sec_into_game = blocks_into_game*block_sim_time_sec;
+					
+					var sec_since_block_loaded;
+					if (this.game.time_last_block_loaded > 0) sec_since_block_loaded = ((new Date().getTime())/1000 - this.game.time_last_block_loaded);
+					else sec_since_block_loaded = 0;
+					
+					var expected_sec_this_block = sec_since_block_loaded + this.game.seconds_per_block;
+					var sim_sec_into_block = Math.round((sec_since_block_loaded/expected_sec_this_block)*block_sim_time_sec);
+					sec_into_game += sim_sec_into_block;
+				}
+				
+				var min_disp = Math.floor(sec_into_game/60);
+				var sec_disp = leftpad(sec_into_game - min_disp*60, 2, "0");
+				if (document.getElementById('game'+this.game.instance_id+'_event'+this.game_event_index+'_timer')) {
+					document.getElementById('game'+this.game.instance_id+'_event'+this.game_event_index+'_timer').innerHTML = min_disp+":"+sec_disp;
+				}
+			}
+			setTimeout(function() {this.refresh_time_estimate()}.bind(this), 1000);
+		}
+	};
+	this.block_id_to_effectiveness_factor = function(block_id) {
+		if (this.vote_effectiveness_function == "linear_decrease") {
+			var slope = -1*this.effectiveness_param1;
+			var event_length_blocks = this.event_final_block-this.event_starting_block+1;
+			var blocks_in = block_id-this.event_starting_block;
+			var frac_complete = blocks_in/event_length_blocks;
+			var effectiveness = Math.floor(Math.pow(10,8)*frac_complete*slope)/Math.pow(10,8) + 1;
+			return effectiveness;
+		}
+		else return 1;
+	};
+};
+var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, chain_coin_name, chain_coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, effectiveness_param1, seconds_per_block, inflation, exponential_inflation_rate, time_last_block_loaded, decimal_places, blockchain_decimal_places, view_mode, initial_event_index, filter_date, default_betting_mode, render_events) {
+	Game.numInstances = (Game.numInstances || 0) + 1;
+	
+	this.instance_id = Game.numInstances-1;
+	this.game_id = game_id;
+	this.last_block_id = last_block_id;
+	this.last_transaction_id = last_transaction_id;
+	this.mature_io_ids_csv = mature_io_ids_csv ? mature_io_ids_csv : "";
+	this.mature_io_ids_hash = Sha256.hash(this.mature_io_ids_csv);
+	this.payout_weight = payout_weight;
+	this.game_round_length = game_round_length;
+	this.fee_amount = fee_amount;
+	this.game_url_identifier = game_url_identifier;
+	this.coin_name = coin_name;
+	this.coin_name_plural = coin_name_plural;
+	this.chain_coin_name = chain_coin_name;
+	this.chain_coin_name_plural = chain_coin_name_plural;
+	this.refresh_page = refresh_page;
+	this.event_ids = event_ids ? event_ids : "";
+	this.event_ids_hash = Sha256.hash(this.event_ids);
+	this.logo_image_url = logo_image_url;
+	this.vote_effectiveness_function = vote_effectiveness_function;
+	this.effectiveness_param1 = effectiveness_param1;
+	this.seconds_per_block = parseInt(seconds_per_block);
+	this.inflation = inflation;
+	this.exponential_inflation_rate = parseFloat(exponential_inflation_rate);
+	this.decimal_places = parseInt(decimal_places);
+	this.blockchain_decimal_places = parseInt(blockchain_decimal_places);
+	this.view_mode = view_mode;
+	this.selected_event_index = initial_event_index;
+	this.filter_date = filter_date;
+	this.default_betting_mode = default_betting_mode;
+	this.render_events = render_events;
+	
+	if (filter_date) {
+		document.getElementById('filter_by_date').value(filter_date);
+	}
+	
+	this.events = [];
+	this.all_events = [];
+	this.all_events_start_index = false;
+	this.all_events_stop_index = false;
+	this.option_has_votingaddr = [];
+	this.sel_game_event_index = false;
+	this.all_events_db_id_to_index = {};
+	this.utxo_max_height = 150;
+	this.time_last_block_loaded = parseInt(time_last_block_loaded);
+	
+	this.coins_per_vote = 0;
+	if (inflation == "exponential") {
+		if (payout_weight == "coin_round") this.coins_per_vote = exponential_inflation_rate;
+		else this.coins_per_vote = exponential_inflation_rate/game_round_length;
+	}
+	
+	this.game_loop_index = 1;
+	this.last_game_loop_index_applied = -1;
+	this.refresh_in_progress = false;
+	this.last_refresh_time = 0;
+	
+	this.block_id_to_round_index = function(block_id) {
+		return ((block_id-1) % this.game_round_length);
+	};
+	this.block_to_round = function(block_id) {
+		return Math.ceil(block_id/this.game_round_length);
+	};
+	this.add_option_to_vote = function(event_index, option_id) {
+		var this_event = this.events[event_index];
+		var this_option = this_event.options[this_event.option_id2option_index[option_id]];
+		var option_display_name = this_option.name;
+		
+		if (this.refresh_page != "wallet") {
+			var add_option_url = '/wallet/'+games[0].game_url_identifier+'/?action=start_bet&event_index='+event_index+'&option_id='+option_id;
+			if (thisuser) {
+				window.location = add_option_url;
+			}
+			else {
+				var ans = confirm("To bet, first log in to your wallet.");
+				if (ans) window.location = add_option_url;
+			}
+		}
+		else {
+			var index_id = bet_outputs.length;
+			
+			if (games[0].option_has_votingaddr[option_id]) {
+				bet_outputs.push(new BetOutput(index_id, option_display_name, option_id, event_index));
+				$('#compose_bet_outputs').append('<div id="compose_bet_output_'+index_id+'" class="select_utxo">'+render_option_output(index_id, option_display_name)+'</div>');
+				
+				load_option_slider(index_id);
+				
+				refresh_compose_vote();
+				refresh_output_amounts();
+			}
+			else {
+				alert("You can't vote for this candidate yet, you don't have a voting address for it.");
+			}
+		}
+	};
+	this.set_user_game_event_index = function() {
+		$.get("/ajax/set_user_game_event_index.php?game_id="+games[0].game_id+"&event_index="+this.selected_event_index, function(result) {});
+	};
+	this.show_selected_event = function(skip_set_event_index) {
+		if (this.selected_event_index > this.events.length-1) {
+			this.selected_event_index = 0;
+		}
+		var event_nav_txt = "Viewing "+(this.selected_event_index+1)+" of "+this.events.length;
+		event_nav_txt += " &nbsp;&nbsp;&nbsp; <a href='' onclick='games["+this.instance_id+"].show_previous_event(); return false;'>Previous</a> &nbsp; <a href='' onclick='games["+this.instance_id+"].show_next_event(); return false;'>Next</a> &nbsp;&nbsp;&nbsp; Jump to: <input id=\"jump_to_event_index_"+this.selected_event_index+"\" class=\"form-control input-sm\" style=\"width: 80px; display: inline-block;\" /><button class=\"btn btn-primary btn-sm\" onclick=\"games["+this.instance_id+"].hide_selected_event(); games["+this.instance_id+"].selected_event_index=parseInt($('#jump_to_event_index_"+this.selected_event_index+"').val())-1; games["+this.instance_id+"].show_selected_event(false);\">Go</button>";
+		
+		document.getElementById('game'+this.instance_id+'_event'+this.selected_event_index).style.display = 'block';
+		document.getElementById('game'+this.instance_id+'_event'+this.selected_event_index+'_event_nav').innerHTML = event_nav_txt;
+		
+		if (!skip_set_event_index) this.set_user_game_event_index();
+		
+		this.render_event_images(this.event_index_to_previous(this.selected_event_index));
+		this.render_event_images(this.selected_event_index);
+		this.render_event_images(this.event_index_to_next(this.selected_event_index));
+	};
+	this.render_event_images = function(event_index) {
+		if (typeof this.events[event_index] !== "undefined") {
+			for (var i=0; i<this.events[event_index].options.length; i++) {
+				var this_option = this.events[event_index].options[i];
+				$('#option'+this_option.option_id+'_image').attr("src", this_option.image_url);
+			}
+		}
+	};
+	this.event_index_to_previous = function(event_index) {
+		if (event_index > 0) return event_index-1;
+		else return this.events.length-1;
+	};
+	this.event_index_to_next = function(event_index) {
+		if (event_index < this.events.length-1) return event_index+1;
+		else return 0;
+	};
+	this.show_previous_event = function() {
+		this.hide_selected_event();
+		this.selected_event_index = this.event_index_to_previous(this.selected_event_index);
+		this.show_selected_event(false);
+	};
+	this.show_next_event = function() {
+		this.hide_selected_event();
+		this.selected_event_index = this.event_index_to_next(this.selected_event_index);
+		this.show_selected_event(false);
+	};
+	this.hide_selected_event = function() {
+		$('#game'+this.instance_id+'_event'+this.selected_event_index).hide();
+	};
+	this.refresh_if_needed = function() {
+		if (!this.refresh_in_progress) {
+			this.last_refresh_time = new Date().getTime();
+			this.refresh_in_progress = true;
+			
+			var check_activity_url = "/ajax/check_new_activity.php?instance_id="+this.instance_id+"&game_id="+this.game_id+"&event_ids_hash="+this.event_ids_hash+"&refresh_page="+this.refresh_page+"&last_block_id="+this.last_block_id+"&last_transaction_id="+this.last_transaction_id+"&mature_io_ids_hash="+this.mature_io_ids_hash+"&game_loop_index="+this.game_loop_index;
+			var event_hashes = "";
+			for (var event_i=0; event_i<this.events.length; event_i++) {
+				event_hashes += this.events[event_i].rendered_event_hash+",";
+			}
+			if (event_hashes != "") event_hashes = event_hashes.substring(0, event_hashes.length-1);
+			check_activity_url += "&event_hashes="+event_hashes;
+			
+			if (this.filter_date) check_activity_url += "&filter_date="+this.filter_date;
+			
+			$.ajax({
+				url: check_activity_url,
+				success: function(result) {
+					if (this.refresh_page == "wallet" && result == "0") {
+						window.location = '/wallet/'+this.game_url_identifier+'/?action=logout';
+					}
+					else {
+						this.refresh_in_progress = false;
+						var json_result = $.parseJSON(result);
+						
+						if (json_result['game_loop_index'] > this.last_game_loop_index_applied) {
+							if (json_result['new_block'] == "1") {
+								this.last_block_id = parseInt(json_result['last_block_id']);
+								this.time_last_block_loaded = parseInt(json_result['time_last_block_loaded']);
+								
+								if (this.refresh_page == "wallet") {
+									if (parseInt(json_result['new_performance_history']) == 1) {
+										$('#performance_history_new').html(json_result['performance_history']);
+									}
+								}
+							}
+							
+							if (parseInt(json_result['new_event_ids']) == 1) {
+								eval(json_result['new_event_js']);
+								
+								this.event_ids = json_result['event_ids'];
+								this.event_ids_hash = Sha256.hash(json_result['event_ids']);
+								
+								set_select_add_output();
+								
+								if (this.view_mode == "simple") {
+									this.hide_selected_event();
+									this.selected_event_index = 0;
+									this.show_selected_event(false);
+								}
+							}
+							
+							if (this.refresh_page == "wallet") {
+								$('#game_status_explanation').html(json_result['game_status_explanation']);
+								if (json_result['game_status_explanation'] == '') $('#game_status_explanation').hide();
+								else $('#game_status_explanation').show();
+								
+								if (parseInt(json_result['new_mature_ios']) == 1 || parseInt(json_result['new_transaction']) == 1 || json_result['new_block'] == 1) {
+									if (typeof json_result['mature_io_ids_csv'] == "undefined") this.mature_io_ids_csv = "";
+									else this.mature_io_ids_csv = json_result['mature_io_ids_csv'];
+									this.mature_io_ids_hash = Sha256.hash(this.mature_io_ids_csv);
+									$('#select_input_buttons').html(json_result['select_input_buttons']);
+									reload_compose_vote();
+									utxo_spend_offset = 0;
+								}
+								
+								set_input_amount_sums();
+								refresh_mature_io_btns();
+								
+								if (parseInt(json_result['new_messages']) == 1) {
+									var new_message_user_ids = json_result['new_message_user_ids'].split(",");
+									for (var i=0; i<new_message_user_ids.length; i++) {
+										openChatWindow(new_message_user_ids[i]);
+									}
+								}
+							}
+							
+							if (typeof json_result['chart_html'] != "undefined") {
+								$('#game'+this.instance_id+'_chart_html').html(json_result['chart_html']);
+								$('#game'+this.instance_id+'_chart_js').html('<script type="text/javascript">'+json_result['chart_js']+'</script>');
+							}
+							
+							if (parseInt(json_result['new_mature_ios']) == 1) {
+								$('#account_value').html(json_result['account_value']);
+								$('#account_value').hide();
+								$('#account_value').fadeIn('medium');
+								
+								$('#wallet_text_stats').html(json_result['wallet_text_stats']);
+								$('#wallet_text_stats').hide();
+								$('#wallet_text_stats').fadeIn('fast');
+							}
+							
+							for (var game_event_index=0; game_event_index<this.events.length; game_event_index++) {
+								if (json_result['rendered_events'][game_event_index].hash != false) {
+									this.events[game_event_index].rendered_event_hash = json_result['rendered_events'][game_event_index].hash;
+									$('#game'+this.instance_id+'_event'+game_event_index+'_display').html(json_result['rendered_events'][game_event_index].html);
+									$('#game'+this.instance_id+'_event'+game_event_index+'_display').hide();
+									$('#game'+this.instance_id+'_event'+game_event_index+'_display').show();
+									
+									this.render_event_images(game_event_index);
+									
+									if (this.events[game_event_index].details_shown) {
+										$('#game'+this.instance_id+'_event'+game_event_index+'_details').show();
+									}
+									else {
+										$('#game'+this.instance_id+'_event'+game_event_index+'_details').hide();
+									}
+									
+									if (typeof json_result['my_current_votes'] != "undefined" && typeof json_result['my_current_votes'][game_event_index] != "undefined") {
+										$('#game'+this.instance_id+'_event'+game_event_index+'_my_current_votes').html(json_result['my_current_votes'][game_event_index]);
+									}
+								}
+							}
+							
+							if (json_result['set_options_js'] != "") {
+								eval(json_result['set_options_js']);
+								
+								refresh_output_amounts();
+							}
+							
+							this.last_game_loop_index_applied = json_result['game_loop_index'];
+						}
+					}
+				}.bind(this),
+				error: function(XMLHttpRequest, textStatus, errorThrown) {
+					this.refresh_in_progress = false;
+					console.log("Game loop web request failed.");
+				}.bind(this)
+			});
+		}
+	};
+	this.game_loop_event = function() {
+		this.refresh_if_needed();
+		this.game_loop_index++;
+		setTimeout(function() {this.game_loop_event()}.bind(this), 2000);
+	};
+};
+var User = function(id) {
+	this.userId = id;
+};
+var ChatWindow = function(chatWindowId, toUserId) {
+	this.chatWindowId = chatWindowId;
+	this.toUserId = toUserId;
+	
+	this.initialize = function() {};
+};
+
+var chatWindows = [];
+var userId2ChatWindowId = [];
+var visibleChatWindows = 0;
+var option_id2option_index = {};
+var option_index2option_id = {};
+
+var last_event_index_shown;
+var event_outcome_sections_shown = 1;
+
+var game_form_vars = ['blockchain_id', 'module', 'event_rule', 'option_group_id', 'event_entity_type_id', 'events_per_round', 'event_type_name', 'maturity', 'name', 'payout_weight', 'round_length', 'pos_reward', 'pow_reward', 'inflation', 'exponential_inflation_rate', 'exponential_inflation_minershare', 'final_round', 'coin_name', 'coin_name_plural', 'coin_abbreviation', 'start_condition', 'buyin_policy', 'game_buyin_cap', 'default_vote_effectiveness_function', 'default_effectiveness_param1', 'default_max_voting_fraction', 'game_starting_block', 'escrow_address', 'genesis_tx_hash', 'genesis_amount', 'default_betting_mode', 'finite_events'];
+var event_verbatim_vars = ['event_index', 'next_event_index', 'event_starting_block', 'event_final_block', 'event_payout_block', 'event_starting_time', 'event_final_time', 'event_payout_time', 'event_name', 'option_block_rule', 'option_name', 'option_name_plural', 'outcome_index', 'payout_rule', 'payout_rate', 'track_max_price', 'track_min_price', 'track_payout_price', 'track_name_short'];
+
+var transaction_in_progress = false;
+var invoice_id = false;
+
+var burn_io_amount = "";
+var editing_game_id = false;
+var bet_inputs = [];
+var bet_outputs = [];
+var output_amounts_need_update = false;
+var io_id2input_index = {};
+var chain_ios = [];
+var utxo_spend_offset = 0;
+
+var account_io_id = false;
+var account_io_amount = false;
+var account_game_id = false;
+var selected_account_action = false;
+var set_event_id = false;
+
+var betting_mode = false;
+var existing_account = false;
+var selected_panel = false;
+
 function format_coins(amount) {
 	if (amount > Math.pow(10, 10)) {
 		return parseFloat((amount/Math.pow(10, 9)).toPrecision(5))+"B";
@@ -120,16 +544,6 @@ function explorer_search() {
 		else alert(result_obj['message']);
 	});
 }
-
-var chatWindows = [];
-var userId2ChatWindowId = [];
-var visibleChatWindows = 0;
-var option_id2option_index = {};
-var option_index2option_id = {};
-
-var last_event_index_shown;
-var event_outcome_sections_shown = 1;
-
 function openChatWindow(userId) {
 	if (typeof userId2ChatWindowId[userId] === 'undefined' || userId2ChatWindowId[userId] === false) {
 		var chatWindowId = chatWindows.length;
@@ -137,7 +551,7 @@ function openChatWindow(userId) {
 	}
 }
 function newChatWindow(chatWindowId, userId) {
-	chatWindows[chatWindowId] = new chatWindow(chatWindowId, userId);
+	chatWindows[chatWindowId] = new ChatWindow(chatWindowId, userId);
 	userId2ChatWindowId[userId] = chatWindowId;
 	
 	$('#chatWindows').append('<div id="chatWindow'+chatWindowId+'" class="chatWindow"></div>');
@@ -238,24 +652,6 @@ function by_entity_reset_pct() {
 		$('#option_pct_'+option_id).val("0");
 	}
 }
-function loop_event() {
-	/*var option_pct_sum = 0;
-	for (var i=0; i<games[0].num_voting_options; i++) {
-		var temp_pct = parseInt($('#option_pct_'+i).val());
-		if (temp_pct && !$('#option_pct_'+i).is(":focus") && temp_pct != $('#option_pct_'+i).val()) {
-			$('#option_pct_'+i).val(temp_pct);
-		}
-		if (temp_pct) option_pct_sum += temp_pct;
-	}
-	if (option_pct_sum <= 100 && option_pct_sum >= 0) {
-		$('#option_pct_subtotal').html("<font class='greentext'>"+option_pct_sum+"/100 allocated, "+(100-option_pct_sum)+"% left</font>");
-	}
-	else {
-		$('#option_pct_subtotal').html("<font class='redtext'>"+option_pct_sum+"/100 allocated</font>");
-	}*/
-	
-	setTimeout("loop_event();", 1000);
-}
 function next_block() {
 	if ($('#next_block_btn').html() == "Next Block") {
 		$('#next_block_btn').html("Loading...");
@@ -326,14 +722,13 @@ function input_amount_sums() {
 	var amount_sum = 0;
 	var vote_sum = 0;
 	
-	for (var i=0; i<vote_inputs.length; i++) {
-		io_sum += vote_inputs[i].ref_io.amount;
-		vote_sum += vote_inputs[i].ref_io.votes_at_block(games[0].last_block_id+1);
-		amount_sum += vote_inputs[i].ref_io.game_amount_sum();
+	for (var i=0; i<bet_inputs.length; i++) {
+		io_sum += bet_inputs[i].ref_io.amount;
+		vote_sum += bet_inputs[i].ref_io.votes_at_block(games[0].last_block_id+1);
+		amount_sum += bet_inputs[i].ref_io.game_amount_sum();
 	}
 	return [io_sum, amount_sum, vote_sum];
 }
-
 function set_input_amount_sums() {
 	var amount_sums = input_amount_sums();
 	var burn_amount = 0;
@@ -364,18 +759,18 @@ function set_input_amount_sums() {
 	var max_burn_amount = Math.floor(amount_sums[1]*0.9/Math.pow(10,games[0].decimal_places));
 	$('#max_burn_amount').html("Up to "+format_coins(max_burn_amount));
 }
-function render_vote_input(index_id) {
+function render_bet_input(index_id) {
 	if (games[0].logo_image_url != "") {
 		return "";
 	}
 	else {
-		var votes = vote_inputs[index_id].ref_io.votes_at_block(games[0].last_block_id);
+		var votes = bet_inputs[index_id].ref_io.votes_at_block(games[0].last_block_id);
 		var render_text;
 		
 		if (games[0].inflation == "exponential") {
 			var coin_equiv = Math.round(votes*games[0].coins_per_vote);
 			var disp_coins = coin_equiv;
-			if (games[0].default_betting_mode == "principal" || games[0].coins_per_vote == 0) disp_coins += vote_inputs[index_id].ref_io.game_amount_sum();
+			if (games[0].default_betting_mode == "principal" || games[0].coins_per_vote == 0) disp_coins += bet_inputs[index_id].ref_io.game_amount_sum();
 			var coin_disp = format_coins(disp_coins/Math.pow(10,games[0].decimal_places));
 			
 			render_text = coin_disp+" ";
@@ -400,21 +795,21 @@ function render_option_output(index_id, name) {
 	return html;
 }
 function add_utxo_to_vote(io_index) {
-	var index_id = vote_inputs.length;
+	var index_id = bet_inputs.length;
 
 	var already_in = false;
-	for (var i=0; i<vote_inputs.length; i++) {
-		if (vote_inputs[i].io_id == chain_ios[io_index].io_id) already_in = true;
+	for (var i=0; i<bet_inputs.length; i++) {
+		if (bet_inputs[i].io_id == chain_ios[io_index].io_id) already_in = true;
 	}
 	if (!already_in) {
-		vote_inputs.push(new vote_input(index_id, chain_ios[io_index]));
+		bet_inputs.push(new BetInput(index_id, chain_ios[io_index]));
 		
 		$('#select_utxo_'+chain_ios[io_index].io_id).hide('fast');
 		
 		var select_btn_html = '<div id="selected_utxo_'+index_id+'" onclick="remove_utxo_from_vote('+index_id+');" class="select_utxo';
 		if (games[0].logo_image_url != "") select_btn_html += ' select_utxo_image';
-		select_btn_html += ' btn btn-primary btn-sm">'+render_vote_input(index_id)+'</div>';
-		$('#compose_vote_inputs').append(select_btn_html);
+		select_btn_html += ' btn btn-primary btn-sm">'+render_bet_input(index_id)+'</div>';
+		$('#compose_bet_inputs').append(select_btn_html);
 		
 		io_id2input_index[chain_ios[io_index].io_id] = index_id;
 		
@@ -440,57 +835,54 @@ function load_option_slider(index_id) {
 			,resolution: 1
 		}
 	   ,slide: function(){
-			vote_outputs[index_id].slider_val = parseInt($('#output_threshold_'+index_id).val());
+			bet_outputs[index_id].slider_val = parseInt($('#output_threshold_'+index_id).val());
 			output_amounts_need_update = true;
 	   }
 	});
 }
 function remove_all_utxos_from_vote() {
-	for (var i=0; i<vote_inputs.length; i++) {
+	for (var i=0; i<bet_inputs.length; i++) {
 		setTimeout("remove_utxo_from_vote(0);", i*50);
 	}
 }
 function remove_utxo_from_vote(index_id) {
-	var io_id = vote_inputs[index_id].ref_io.io_id;
+	var io_id = bet_inputs[index_id].ref_io.io_id;
 	$('#select_utxo_'+io_id).show('fast');
 	
 	io_id2input_index[io_id] = false;
 	
-	for (var i=index_id; i<vote_inputs.length-1; i++) {
-		vote_inputs[i] = vote_inputs[i+1];
+	for (var i=index_id; i<bet_inputs.length-1; i++) {
+		bet_inputs[i] = bet_inputs[i+1];
 		
-		io_id2input_index[vote_inputs[i].ref_io.io_id] = i;
+		io_id2input_index[bet_inputs[i].ref_io.io_id] = i;
 		
-		$('#selected_utxo_'+i).html(render_vote_input(i));
+		$('#selected_utxo_'+i).html(render_bet_input(i));
 	}
-	$('#selected_utxo_'+(vote_inputs.length-1)).remove();
-	vote_inputs.length = vote_inputs.length-1;
+	$('#selected_utxo_'+(bet_inputs.length-1)).remove();
+	bet_inputs.length = bet_inputs.length-1;
 	set_input_amount_sums();
 	refresh_compose_vote();
 	refresh_output_amounts();
 }
 function remove_option_from_vote(index_id) {
-	for (var i=index_id+1; i<vote_outputs.length; i++) {
-		$('#compose_vote_output_'+(i-1)).html(render_option_output(i-1, vote_outputs[i].name));
-		$('#compose_vote_output_'+i).html('');
-		vote_outputs[i-1] = vote_outputs[i];
+	for (var i=index_id+1; i<bet_outputs.length; i++) {
+		$('#compose_bet_output_'+(i-1)).html(render_option_output(i-1, bet_outputs[i].name));
+		$('#compose_bet_output_'+i).html('');
+		bet_outputs[i-1] = bet_outputs[i];
 		load_option_slider(i-1);
-		$('#output_threshold_'+(i-1)).val(vote_outputs[i-1].slider_val);
+		$('#output_threshold_'+(i-1)).val(bet_outputs[i-1].slider_val);
 	}
-	$('#compose_vote_output_'+(vote_outputs.length-1)).remove();
-	vote_outputs.length = vote_outputs.length-1;
+	$('#compose_bet_output_'+(bet_outputs.length-1)).remove();
+	bet_outputs.length = bet_outputs.length-1;
 	
 	refresh_output_amounts();
 }
 function refresh_compose_vote() {
-	if (vote_inputs.length > 0 || vote_outputs.length > 0) $('#compose_vote').show('fast');
+	if (bet_inputs.length > 0 || bet_outputs.length > 0) $('#compose_vote').show('fast');
 	else $('#compose_vote').hide('fast');
 }
-
-var burn_io_amount = "";
-
 function finish_refresh_output_amounts() {
-	if (vote_outputs.length > 0) {
+	if (bet_outputs.length > 0) {
 		var input_sums = input_amount_sums();
 		
 		var io_amount = input_sums[0];
@@ -511,8 +903,8 @@ function finish_refresh_output_amounts() {
 		var game_amount_bet = burn_amount+inflation_amount;
 		
 		var slider_sum = 0;
-		for (var i=0; i<vote_outputs.length; i++) {
-			slider_sum += vote_outputs[i].slider_val;
+		for (var i=0; i<bet_outputs.length; i++) {
+			slider_sum += bet_outputs[i].slider_val;
 		}
 		
 		for (var i=0; i<games[0].events.length; i++) {
@@ -532,16 +924,16 @@ function finish_refresh_output_amounts() {
 		var output_io_sum = 0;
 		var this_event;
 		
-		for (var i=0; i<vote_outputs.length; i++) {
-			var output_io_amount = Math.round(io_nondestroy_amount*vote_outputs[i].slider_val/slider_sum);
-			if (i == vote_outputs.length-1) output_io_amount = io_nondestroy_amount - output_io_sum;
+		for (var i=0; i<bet_outputs.length; i++) {
+			var output_io_amount = Math.round(io_nondestroy_amount*bet_outputs[i].slider_val/slider_sum);
+			if (i == bet_outputs.length-1) output_io_amount = io_nondestroy_amount - output_io_sum;
 			
-			this_event = games[0].events[vote_outputs[i].event_index];
+			this_event = games[0].events[bet_outputs[i].event_index];
 			
 			var effectiveness_factor = this_event.block_id_to_effectiveness_factor(games[0].last_block_id+1);
-			var output_votes = Math.round(votes*vote_outputs[i].slider_val/slider_sum);
+			var output_votes = Math.round(votes*bet_outputs[i].slider_val/slider_sum);
 			var output_effective_votes = Math.round(effectiveness_factor*output_votes);
-			var output_burn_amount = Math.round(burn_amount*vote_outputs[i].slider_val/slider_sum);
+			var output_burn_amount = Math.round(burn_amount*bet_outputs[i].slider_val/slider_sum);
 			var output_effective_burn_amount = Math.round(effectiveness_factor*output_burn_amount);
 			
 			this_event.sum_hypothetical_votes += output_votes;
@@ -549,32 +941,32 @@ function finish_refresh_output_amounts() {
 			this_event.sum_hypothetical_burn_amount += output_burn_amount;
 			this_event.sum_hypothetical_effective_burn_amount += output_effective_burn_amount;
 			
-			this_event.options[this_event.option_id2option_index[vote_outputs[i].option_id]].hypothetical_votes += output_votes;
-			this_event.options[this_event.option_id2option_index[vote_outputs[i].option_id]].hypothetical_effective_votes += output_effective_votes;
-			this_event.options[this_event.option_id2option_index[vote_outputs[i].option_id]].hypothetical_burn_amount += output_burn_amount;
-			this_event.options[this_event.option_id2option_index[vote_outputs[i].option_id]].hypothetical_effective_votes += output_effective_burn_amount;
+			this_event.options[this_event.option_id2option_index[bet_outputs[i].option_id]].hypothetical_votes += output_votes;
+			this_event.options[this_event.option_id2option_index[bet_outputs[i].option_id]].hypothetical_effective_votes += output_effective_votes;
+			this_event.options[this_event.option_id2option_index[bet_outputs[i].option_id]].hypothetical_burn_amount += output_burn_amount;
+			this_event.options[this_event.option_id2option_index[bet_outputs[i].option_id]].hypothetical_effective_votes += output_effective_burn_amount;
 			
 			output_io_sum += output_io_amount;
 		}
 		
 		var output_io_sum = 0;
 		
-		for (var i=0; i<vote_outputs.length; i++) {
-			var output_io_amount = Math.round(io_nondestroy_amount*vote_outputs[i].slider_val/slider_sum);
-			if (i == vote_outputs.length-1) output_io_amount = io_nondestroy_amount - output_io_sum;
+		for (var i=0; i<bet_outputs.length; i++) {
+			var output_io_amount = Math.round(io_nondestroy_amount*bet_outputs[i].slider_val/slider_sum);
+			if (i == bet_outputs.length-1) output_io_amount = io_nondestroy_amount - output_io_sum;
 			
-			var this_event = games[0].events[vote_outputs[i].event_index];
+			var this_event = games[0].events[bet_outputs[i].event_index];
 			
 			var effectiveness_factor = this_event.block_id_to_effectiveness_factor(games[0].last_block_id+1);
-			var output_votes = Math.round(votes*vote_outputs[i].slider_val/slider_sum);
+			var output_votes = Math.round(votes*bet_outputs[i].slider_val/slider_sum);
 			var output_effective_votes = Math.round(effectiveness_factor*output_votes);
-			var output_burn_amount = Math.round(burn_amount*vote_outputs[i].slider_val/slider_sum);
+			var output_burn_amount = Math.round(burn_amount*bet_outputs[i].slider_val/slider_sum);
 			var output_effective_burn_amount = Math.round(effectiveness_factor*output_burn_amount);
 			
 			var output_cost = output_votes*games[0].coins_per_vote + output_burn_amount;
 			var output_effective_coins = output_effective_votes*games[0].coins_per_vote + output_effective_burn_amount;
 			
-			var this_option = this_event.options[this_event.option_id2option_index[vote_outputs[i].option_id]];
+			var this_option = this_event.options[this_event.option_id2option_index[bet_outputs[i].option_id]];
 			
 			var event_votes = this_event.sum_votes + this_event.sum_unconfirmed_votes + this_event.sum_hypothetical_votes;
 			var event_payout = event_votes*games[0].coins_per_vote + this_event.sum_burn_amount + this_event.sum_unconfirmed_burn_amount + this_event.sum_hypothetical_burn_amount;
@@ -594,7 +986,7 @@ function finish_refresh_output_amounts() {
 			
 			$('#output_amount_disp_'+i).html(output_val_disp);
 			
-			vote_outputs[i].amount = output_io_amount;
+			bet_outputs[i].amount = output_io_amount;
 			
 			output_io_sum += output_io_amount;
 		}
@@ -627,18 +1019,18 @@ function add_all_options() {
 		for (var j=0; j<games[0].events[i].options.length; j++) {
 			var this_option = games[0].events[i].options[j];
 			var already_in = false;
-			for (k=0; k<vote_outputs.length; k++) {
-				if (vote_outputs[k].option_id == this_option.option_id) already_in = true;
+			for (k=0; k<bet_outputs.length; k++) {
+				if (bet_outputs[k].option_id == this_option.option_id) already_in = true;
 			}
 			if (!already_in) games[0].add_option_to_vote(i, this_option.option_id);
 		}
 	}
 }
 function remove_all_outputs() {
-	for (var i=0; i<vote_outputs.length; i++) {
-		$('#compose_vote_output_'+i).remove();
+	for (var i=0; i<bet_outputs.length; i++) {
+		$('#compose_bet_output_'+i).remove();
 	}
-	vote_outputs.length = 0;
+	bet_outputs.length = 0;
 }
 function show_intro_message() {
 	$('#intro_message').modal('show');
@@ -654,9 +1046,6 @@ function show_featured_strategies() {
 		$('#featured_strategies_inner').html(result_html);
 	});
 }
-
-var game_form_vars = "blockchain_id,module,event_rule,option_group_id,event_entity_type_id,events_per_round,event_type_name,maturity,name,payout_weight,round_length,pos_reward,pow_reward,inflation,exponential_inflation_rate,exponential_inflation_minershare,final_round,coin_name,coin_name_plural,coin_abbreviation,start_condition,buyin_policy,game_buyin_cap,default_vote_effectiveness_function,default_effectiveness_param1,default_max_voting_fraction,game_starting_block,escrow_address,genesis_tx_hash,genesis_amount,default_betting_mode,finite_events".split(",");
-
 function create_new_game() {
 	$('#new_game_save_btn').html("Loading...");
 	
@@ -677,7 +1066,6 @@ function create_new_game() {
 		else alert(json_result['message']);
 	});
 }
-
 function new_game_genesis_type_changed() {
 	var type = $('#new_game_genesis_type').val();
 	var blockchain_id = $('#new_game_blockchain_id').val();
@@ -697,7 +1085,6 @@ function new_game_genesis_type_changed() {
 		$('#new_game_existing_genesis').show('fast');
 	}
 }
-
 function new_game_genesis_account_changed() {
 	var account_id = $('#new_game_genesis_account_id').val();
 	
@@ -707,7 +1094,6 @@ function new_game_genesis_account_changed() {
 		$('#new_game_genesis_io_id').html(json_result['html']);
 	});
 }
-
 function manage_game(game_id, action) {
 	var fetch_link_text = $('#fetch_game_link_'+game_id).html();
 	var switch_link_text = $('#switch_game_btn').html();
@@ -923,8 +1309,8 @@ function refresh_mature_io_btns() {
 		}
 		document.getElementById('select_utxo_'+chain_ios[i].io_id).innerHTML = select_btn_text;
 	}
-	for (var i=0; i<vote_inputs.length; i++) {
-		document.getElementById('selected_utxo_'+i).innerHTML = render_vote_input(i);
+	for (var i=0; i<bet_inputs.length; i++) {
+		document.getElementById('selected_utxo_'+i).innerHTML = render_bet_input(i);
 	}
 }
 function compose_vote_loop() {
@@ -932,31 +1318,29 @@ function compose_vote_loop() {
 	output_amounts_need_update = false;
 	setTimeout("compose_vote_loop();", 400);
 }
-var transaction_in_progress = false;
-
 function confirm_compose_vote() {
-	if (vote_inputs.length > 0) {
-		if (vote_outputs.length > 0) {
+	if (bet_inputs.length > 0) {
+		if (bet_outputs.length > 0) {
 			transaction_in_progress = true;
 			utxo_spend_offset++;
 			$('#confirm_compose_vote_btn').html("Loading...");
 			
 			var place_bets_url = "/ajax/place_bets.php?game_id="+games[0].game_id+"&burn_amount="+burn_io_amount+"&io_ids=";
 			
-			for (var i=0; i<vote_inputs.length; i++) {
-				place_bets_url += vote_inputs[i].ref_io.io_id;
+			for (var i=0; i<bet_inputs.length; i++) {
+				place_bets_url += bet_inputs[i].ref_io.io_id;
 				place_bets_url += ",";
 			}
 			place_bets_url = place_bets_url.substr(0, place_bets_url.length-1);
 			place_bets_url += "&option_ids=";
 			var amounts_url = "&amounts=";
 			
-			for (var i=0; i<vote_outputs.length; i++) {
-				place_bets_url += vote_outputs[i].option_id;
-				if (i != vote_outputs.length-1) place_bets_url += ",";
+			for (var i=0; i<bet_outputs.length; i++) {
+				place_bets_url += bet_outputs[i].option_id;
+				if (i != bet_outputs.length-1) place_bets_url += ",";
 				
-				amounts_url += vote_outputs[i].amount;
-				if (i != vote_outputs.length-1) amounts_url += ",";
+				amounts_url += bet_outputs[i].amount;
+				if (i != bet_outputs.length-1) amounts_url += ",";
 			}
 			place_bets_url += amounts_url;
 			
@@ -974,7 +1358,7 @@ function confirm_compose_vote() {
 					setTimeout(function() {
 						remove_all_outputs();
 						
-						var num_inputs = vote_inputs.length;
+						var num_inputs = bet_inputs.length;
 						for (var i=0; i<num_inputs; i++) {
 							remove_utxo_from_vote(0, false);
 						}
@@ -997,10 +1381,10 @@ function confirm_compose_vote() {
 	}
 }
 function reload_compose_vote() {
-	for (var i=0; i<vote_inputs.length; i++) {
+	for (var i=0; i<bet_inputs.length; i++) {
 		$('#selected_utxo_'+i).remove();
 	}
-	vote_inputs.length = 0;
+	bet_inputs.length = 0;
 	
 	$('#select_input_buttons').find('.select_utxo').each(function() {
 		$(this).hide();
@@ -1076,11 +1460,6 @@ function send_invitation(this_game_id, invitation_id, send_method) {
 		});
 	}
 }
-var plan_round = function(round_id) {
-	this.round_id = round_id;
-	this.event_ids = [];
-	this.sum_points = 0;
-}
 function set_plan_round_sums() {
 	for (var i=0; i<plan_rounds.length; i++) {
 		set_plan_round_sum(i);
@@ -1134,7 +1513,6 @@ function render_plan_round(round_index) {
 		}
 	}
 }
-// Right click sets a planned vote to 0
 function set_plan_rightclicks() {
 	$('.plan_option').contextmenu(function() {
 		var id_parts = $(this).attr("id").split('_');
@@ -1199,7 +1577,6 @@ function render_plan_rounds() {
 		render_plan_round(i);
 	}
 }
-var invoice_id = false;
 function manage_buyin(action) {
 	var buyin_url = "/ajax/buyin.php?action="+action+"&game_id="+games[0].game_id;
 	if (action == "check_amount") {
@@ -1269,414 +1646,6 @@ function scramble_strategy(strategy_id) {
 		}
 	}
 }
-
-var editing_game_id = false;
-var vote_inputs = [];
-var vote_outputs = [];
-var output_amounts_need_update = false;
-var io_id2input_index = {};
-var chain_ios = [];
-var utxo_spend_offset = 0;
-
-var Event = function(game, game_event_index, event_id, real_event_index, num_voting_options, vote_effectiveness_function, effectiveness_param1, option_block_rule, event_name, event_starting_block, event_final_block, payout_rate) {
-	this.game = game;
-	this.game_event_index = game_event_index;
-	this.event_id = event_id;
-	this.real_event_index = real_event_index;
-	
-	this.num_voting_options = num_voting_options;
-	this.vote_effectiveness_function = vote_effectiveness_function;
-	this.effectiveness_param1 = effectiveness_param1;
-	this.option_block_rule = option_block_rule;
-	this.event_name = event_name;
-	this.event_starting_block = event_starting_block;
-	this.event_final_block = event_final_block;
-	this.payout_rate = payout_rate;
-	
-	this.rendered_event_hash = "";
-	
-	this.sum_votes = 0;
-	this.sum_unconfirmed_votes = 0;
-	this.sum_hypothetical_votes = 0;
-	
-	this.sum_effective_votes = 0;
-	this.sum_unconfirmed_effective_votes = 0;
-	this.sum_hypothetical_effective_votes = 0;
-	
-	this.sum_burn_amount = 0;
-	this.sum_unconfirmed_burn_amount = 0;
-	this.sum_hypothetical_burn_amount = 0;
-	
-	this.sum_effective_burn_amount = 0;
-	this.sum_unconfirmed_effective_burn_amount = 0;
-	this.sum_hypothetical_effective_burn_amount = 0;
-	
-	this.selected_option_id = false;
-	this.deleted = false;
-	this.details_shown = true;
-	
-	this.options = [];
-	this.option_id2option_index = {};
-	
-	this.start_vote = function(option_id) {
-		var option_display_name = this.options[this.db_id2option_index(option_id)].name;
-		option_display_name += ' (<a href="/explorer/games/'+games[this.game.instance_id].game_url_identifier+'/events/'+this.real_event_index+'">'+this.event_name+'</a>)';
-		games[this.game.instance_id].add_option_to_vote(game_event_index, option_id);
-	};
-	this.db_id2option_index = function(db_option_id) {
-		for (var i=0; i<this.options.length; i++) {
-			if (this.options[i].option_id == db_option_id) return i;
-		}
-		return false;
-	};
-	this.toggle_details = function() {
-		if (this.details_shown) {
-			$('#game'+this.game.instance_id+'_event'+this.game_event_index+'_details').hide();
-			this.details_shown = false;
-		}
-		else {
-			$('#game'+this.game.instance_id+'_event'+this.game_event_index+'_details').show();
-			this.details_shown = true;
-		}
-	};
-	this.option_selected = function(option_id) {
-		/*if (this.selected_option_id !== false) this.option_deselected(this.selected_option_id);
-		$('#game'+this.game.instance_id+'_event'+this.game_event_index+'_vote_option_'+option_id).addClass('vote_option_box_sel');
-		this.selected_option_id = option_id;
-		this.game.sel_game_event_index = this.game_event_index;*/
-	};
-	this.option_deselected = function(option_id) {
-		/*$('#game'+this.game.instance_id+'_event'+this.game_event_index+'_vote_option_'+option_id).removeClass('vote_option_box_sel');
-		this.selected_option_id = false;*/
-	};
-	this.refresh_time_estimate = function() {
-		if (this.deleted == false) {
-			if (this.option_block_rule == "football_match") {
-				var blocks_into_game = this.game.last_block_id > 0 ? Math.max(0, this.game.last_block_id - this.event_starting_block) : 0;
-				var event_sim_time_sec = 90*60;
-				var sec_into_game = 0;
-				
-				if (this.game.last_block_id >= this.event_final_block) {
-					sec_into_game = event_sim_time_sec;
-				}
-				else {
-					var block_sim_time_sec = Math.round(event_sim_time_sec/(this.event_final_block-this.event_starting_block));
-					sec_into_game = blocks_into_game*block_sim_time_sec;
-					
-					var sec_since_block_loaded;
-					if (this.game.time_last_block_loaded > 0) sec_since_block_loaded = ((new Date().getTime())/1000 - this.game.time_last_block_loaded);
-					else sec_since_block_loaded = 0;
-					
-					var expected_sec_this_block = sec_since_block_loaded + this.game.seconds_per_block;
-					var sim_sec_into_block = Math.round((sec_since_block_loaded/expected_sec_this_block)*block_sim_time_sec);
-					sec_into_game += sim_sec_into_block;
-				}
-				
-				var min_disp = Math.floor(sec_into_game/60);
-				var sec_disp = leftpad(sec_into_game - min_disp*60, 2, "0");
-				if (document.getElementById('game'+this.game.instance_id+'_event'+this.game_event_index+'_timer')) {
-					document.getElementById('game'+this.game.instance_id+'_event'+this.game_event_index+'_timer').innerHTML = min_disp+":"+sec_disp;
-				}
-			}
-			setTimeout(function() {this.refresh_time_estimate()}.bind(this), 1000);
-		}
-	};
-	this.block_id_to_effectiveness_factor = function(block_id) {
-		if (this.vote_effectiveness_function == "linear_decrease") {
-			var slope = -1*this.effectiveness_param1;
-			var event_length_blocks = this.event_final_block-this.event_starting_block+1;
-			var blocks_in = block_id-this.event_starting_block;
-			var frac_complete = blocks_in/event_length_blocks;
-			var effectiveness = Math.floor(Math.pow(10,8)*frac_complete*slope)/Math.pow(10,8) + 1;
-			return effectiveness;
-		}
-		else return 1;
-	};
-};
-
-var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_csv, payout_weight, game_round_length, fee_amount, game_url_identifier, coin_name, coin_name_plural, chain_coin_name, chain_coin_name_plural, refresh_page, event_ids, logo_image_url, vote_effectiveness_function, effectiveness_param1, seconds_per_block, inflation, exponential_inflation_rate, time_last_block_loaded, decimal_places, blockchain_decimal_places, view_mode, initial_event_index, filter_date, default_betting_mode, render_events) {
-	Game.numInstances = (Game.numInstances || 0) + 1;
-	
-	this.instance_id = Game.numInstances-1;
-	this.game_id = game_id;
-	this.last_block_id = last_block_id;
-	this.last_transaction_id = last_transaction_id;
-	this.mature_io_ids_csv = mature_io_ids_csv ? mature_io_ids_csv : "";
-	this.mature_io_ids_hash = Sha256.hash(this.mature_io_ids_csv);
-	this.payout_weight = payout_weight;
-	this.game_round_length = game_round_length;
-	this.fee_amount = fee_amount;
-	this.game_url_identifier = game_url_identifier;
-	this.coin_name = coin_name;
-	this.coin_name_plural = coin_name_plural;
-	this.chain_coin_name = chain_coin_name;
-	this.chain_coin_name_plural = chain_coin_name_plural;
-	this.refresh_page = refresh_page;
-	this.event_ids = event_ids ? event_ids : "";
-	this.event_ids_hash = Sha256.hash(this.event_ids);
-	this.logo_image_url = logo_image_url;
-	this.vote_effectiveness_function = vote_effectiveness_function;
-	this.effectiveness_param1 = effectiveness_param1;
-	this.seconds_per_block = parseInt(seconds_per_block);
-	this.inflation = inflation;
-	this.exponential_inflation_rate = parseFloat(exponential_inflation_rate);
-	this.decimal_places = parseInt(decimal_places);
-	this.blockchain_decimal_places = parseInt(blockchain_decimal_places);
-	this.view_mode = view_mode;
-	this.selected_event_index = initial_event_index;
-	this.filter_date = filter_date;
-	this.default_betting_mode = default_betting_mode;
-	this.render_events = render_events;
-	
-	if (filter_date) {
-		document.getElementById('filter_by_date').value(filter_date);
-	}
-	
-	this.events = [];
-	this.all_events = [];
-	this.all_events_start_index = false;
-	this.all_events_stop_index = false;
-	this.option_has_votingaddr = [];
-	this.sel_game_event_index = false;
-	this.all_events_db_id_to_index = {};
-	this.utxo_max_height = 150;
-	this.time_last_block_loaded = parseInt(time_last_block_loaded);
-	
-	this.coins_per_vote = 0;
-	if (inflation == "exponential") {
-		if (payout_weight == "coin_round") this.coins_per_vote = exponential_inflation_rate;
-		else this.coins_per_vote = exponential_inflation_rate/game_round_length;
-	}
-	
-	this.game_loop_index = 1;
-	this.last_game_loop_index_applied = -1;
-	this.refresh_in_progress = false;
-	this.last_refresh_time = 0;
-	
-	this.block_id_to_round_index = function(block_id) {
-		return ((block_id-1) % this.game_round_length);
-	};
-	this.block_to_round = function(block_id) {
-		return Math.ceil(block_id/this.game_round_length);
-	};
-	this.add_option_to_vote = function(event_index, option_id) {
-		var this_event = this.events[event_index];
-		var this_option = this_event.options[this_event.option_id2option_index[option_id]];
-		var option_display_name = this_option.name;
-		
-		if (this.refresh_page != "wallet") {
-			var add_option_url = '/wallet/'+games[0].game_url_identifier+'/?action=start_bet&event_index='+event_index+'&option_id='+option_id;
-			if (thisuser) {
-				window.location = add_option_url;
-			}
-			else {
-				var ans = confirm("To bet, first log in to your wallet.");
-				if (ans) window.location = add_option_url;
-			}
-		}
-		else {
-			var index_id = vote_outputs.length;
-			
-			if (games[0].option_has_votingaddr[option_id]) {
-				vote_outputs.push(new vote_output(index_id, option_display_name, option_id, event_index));
-				$('#compose_vote_outputs').append('<div id="compose_vote_output_'+index_id+'" class="select_utxo">'+render_option_output(index_id, option_display_name)+'</div>');
-				
-				load_option_slider(index_id);
-				
-				refresh_compose_vote();
-				refresh_output_amounts();
-			}
-			else {
-				alert("You can't vote for this candidate yet, you don't have a voting address for it.");
-			}
-		}
-	};
-	this.set_user_game_event_index = function() {
-		$.get("/ajax/set_user_game_event_index.php?game_id="+games[0].game_id+"&event_index="+this.selected_event_index, function(result) {});
-	};
-	this.show_selected_event = function(skip_set_event_index) {
-		if (this.selected_event_index > this.events.length-1) {
-			this.selected_event_index = 0;
-		}
-		var event_nav_txt = "Viewing "+(this.selected_event_index+1)+" of "+this.events.length;
-		event_nav_txt += " &nbsp;&nbsp;&nbsp; <a href='' onclick='games["+this.instance_id+"].show_previous_event(); return false;'>Previous</a> &nbsp; <a href='' onclick='games["+this.instance_id+"].show_next_event(); return false;'>Next</a> &nbsp;&nbsp;&nbsp; Jump to: <input id=\"jump_to_event_index_"+this.selected_event_index+"\" class=\"form-control input-sm\" style=\"width: 80px; display: inline-block;\" /><button class=\"btn btn-primary btn-sm\" onclick=\"games["+this.instance_id+"].hide_selected_event(); games["+this.instance_id+"].selected_event_index=parseInt($('#jump_to_event_index_"+this.selected_event_index+"').val())-1; games["+this.instance_id+"].show_selected_event(false);\">Go</button>";
-		
-		document.getElementById('game'+this.instance_id+'_event'+this.selected_event_index).style.display = 'block';
-		document.getElementById('game'+this.instance_id+'_event'+this.selected_event_index+'_event_nav').innerHTML = event_nav_txt;
-		
-		if (!skip_set_event_index) this.set_user_game_event_index();
-		
-		this.render_event_images(this.event_index_to_previous(this.selected_event_index));
-		this.render_event_images(this.selected_event_index);
-		this.render_event_images(this.event_index_to_next(this.selected_event_index));
-	};
-	this.render_event_images = function(event_index) {
-		if (typeof this.events[event_index] !== "undefined") {
-			for (var i=0; i<this.events[event_index].options.length; i++) {
-				var this_option = this.events[event_index].options[i];
-				$('#option'+this_option.option_id+'_image').attr("src", this_option.image_url);
-			}
-		}
-	};
-	this.event_index_to_previous = function(event_index) {
-		if (event_index > 0) return event_index-1;
-		else return this.events.length-1;
-	};
-	this.event_index_to_next = function(event_index) {
-		if (event_index < this.events.length-1) return event_index+1;
-		else return 0;
-	};
-	this.show_previous_event = function() {
-		this.hide_selected_event();
-		this.selected_event_index = this.event_index_to_previous(this.selected_event_index);
-		this.show_selected_event(false);
-	};
-	this.show_next_event = function() {
-		this.hide_selected_event();
-		this.selected_event_index = this.event_index_to_next(this.selected_event_index);
-		this.show_selected_event(false);
-	};
-	this.hide_selected_event = function() {
-		$('#game'+this.instance_id+'_event'+this.selected_event_index).hide();
-	};
-	this.refresh_if_needed = function() {
-		if (!this.refresh_in_progress) {
-			this.last_refresh_time = new Date().getTime();
-			this.refresh_in_progress = true;
-			
-			var check_activity_url = "/ajax/check_new_activity.php?instance_id="+this.instance_id+"&game_id="+this.game_id+"&event_ids_hash="+this.event_ids_hash+"&refresh_page="+this.refresh_page+"&last_block_id="+this.last_block_id+"&last_transaction_id="+this.last_transaction_id+"&mature_io_ids_hash="+this.mature_io_ids_hash+"&game_loop_index="+this.game_loop_index;
-			var event_hashes = "";
-			for (var event_i=0; event_i<this.events.length; event_i++) {
-				event_hashes += this.events[event_i].rendered_event_hash+",";
-			}
-			if (event_hashes != "") event_hashes = event_hashes.substring(0, event_hashes.length-1);
-			check_activity_url += "&event_hashes="+event_hashes;
-			
-			if (this.filter_date) check_activity_url += "&filter_date="+this.filter_date;
-			
-			$.ajax({
-				url: check_activity_url,
-				success: function(result) {
-					if (this.refresh_page == "wallet" && result == "0") {
-						window.location = '/wallet/'+this.game_url_identifier+'/?action=logout';
-					}
-					else {
-						this.refresh_in_progress = false;
-						var json_result = $.parseJSON(result);
-						
-						if (json_result['game_loop_index'] > this.last_game_loop_index_applied) {
-							if (json_result['new_block'] == "1") {
-								this.last_block_id = parseInt(json_result['last_block_id']);
-								this.time_last_block_loaded = parseInt(json_result['time_last_block_loaded']);
-								
-								if (this.refresh_page == "wallet") {
-									if (parseInt(json_result['new_performance_history']) == 1) {
-										$('#performance_history_new').html(json_result['performance_history']);
-									}
-								}
-							}
-							
-							if (parseInt(json_result['new_event_ids']) == 1) {
-								eval(json_result['new_event_js']);
-								
-								this.event_ids = json_result['event_ids'];
-								this.event_ids_hash = Sha256.hash(json_result['event_ids']);
-								
-								set_select_add_output();
-								
-								if (this.view_mode == "simple") {
-									this.hide_selected_event();
-									this.selected_event_index = 0;
-									this.show_selected_event(false);
-								}
-							}
-							
-							if (this.refresh_page == "wallet") {
-								$('#game_status_explanation').html(json_result['game_status_explanation']);
-								if (json_result['game_status_explanation'] == '') $('#game_status_explanation').hide();
-								else $('#game_status_explanation').show();
-								
-								if (parseInt(json_result['new_mature_ios']) == 1 || parseInt(json_result['new_transaction']) == 1 || json_result['new_block'] == 1) {
-									if (typeof json_result['mature_io_ids_csv'] == "undefined") this.mature_io_ids_csv = "";
-									else this.mature_io_ids_csv = json_result['mature_io_ids_csv'];
-									this.mature_io_ids_hash = Sha256.hash(this.mature_io_ids_csv);
-									$('#select_input_buttons').html(json_result['select_input_buttons']);
-									reload_compose_vote();
-									utxo_spend_offset = 0;
-								}
-								
-								set_input_amount_sums();
-								refresh_mature_io_btns();
-								
-								if (parseInt(json_result['new_messages']) == 1) {
-									var new_message_user_ids = json_result['new_message_user_ids'].split(",");
-									for (var i=0; i<new_message_user_ids.length; i++) {
-										openChatWindow(new_message_user_ids[i]);
-									}
-								}
-							}
-							
-							if (typeof json_result['chart_html'] != "undefined") {
-								$('#game'+this.instance_id+'_chart_html').html(json_result['chart_html']);
-								$('#game'+this.instance_id+'_chart_js').html('<script type="text/javascript">'+json_result['chart_js']+'</script>');
-							}
-							
-							if (parseInt(json_result['new_mature_ios']) == 1) {
-								$('#account_value').html(json_result['account_value']);
-								$('#account_value').hide();
-								$('#account_value').fadeIn('medium');
-								
-								$('#wallet_text_stats').html(json_result['wallet_text_stats']);
-								$('#wallet_text_stats').hide();
-								$('#wallet_text_stats').fadeIn('fast');
-							}
-							
-							for (var game_event_index=0; game_event_index<this.events.length; game_event_index++) {
-								if (json_result['rendered_events'][game_event_index].hash != false) {
-									this.events[game_event_index].rendered_event_hash = json_result['rendered_events'][game_event_index].hash;
-									$('#game'+this.instance_id+'_event'+game_event_index+'_display').html(json_result['rendered_events'][game_event_index].html);
-									$('#game'+this.instance_id+'_event'+game_event_index+'_display').hide();
-									$('#game'+this.instance_id+'_event'+game_event_index+'_display').show();
-									
-									this.render_event_images(game_event_index);
-									
-									if (this.events[game_event_index].details_shown) {
-										$('#game'+this.instance_id+'_event'+game_event_index+'_details').show();
-									}
-									else {
-										$('#game'+this.instance_id+'_event'+game_event_index+'_details').hide();
-									}
-									
-									if (typeof json_result['my_current_votes'] != "undefined" && typeof json_result['my_current_votes'][game_event_index] != "undefined") {
-										$('#game'+this.instance_id+'_event'+game_event_index+'_my_current_votes').html(json_result['my_current_votes'][game_event_index]);
-									}
-								}
-							}
-							
-							if (json_result['set_options_js'] != "") {
-								eval(json_result['set_options_js']);
-								
-								refresh_output_amounts();
-							}
-							
-							this.last_game_loop_index_applied = json_result['game_loop_index'];
-						}
-					}
-				}.bind(this),
-				error: function(XMLHttpRequest, textStatus, errorThrown) {
-					this.refresh_in_progress = false;
-					console.log("Game loop web request failed.");
-				}.bind(this)
-			});
-		}
-	};
-	this.game_loop_event = function() {
-		this.refresh_if_needed();
-		this.game_loop_index++;
-		setTimeout(function() {this.game_loop_event()}.bind(this), 2000);
-	};
-};
-
 function newsletter_signup() {
 	var email = $('#newsletter_email').val();
 	$.get("/ajax/newsletter.php?action=signup&email="+encodeURIComponent(email), function(result) {
@@ -1694,12 +1663,6 @@ function set_select_add_output() {
 	$("#select_add_output").find('option').remove().end().append($(optionsAsString));
 	$("#principal_option_id").find('option').remove().end().append($(optionsAsString));
 }
-
-var account_io_id = false;
-var account_io_amount = false;
-var account_game_id = false;
-var selected_account_action = false;
-
 function account_start_spend_io(game_id, io_id, amount, blockchain_coin_name, game_coin_name) {
 	account_io_id = io_id;
 	account_io_amount = amount;
@@ -1800,9 +1763,6 @@ function manage_addresses(account_id, action, address_id) {
 		else alert(result_obj['message']);
 	});
 }
-
-var set_event_id = false;
-
 function set_event_outcome(game_id, event_id) {
 	var _event_id = event_id;
 	$.get("/ajax/set_event_outcome.php?action=fetch&event_id="+event_id, function(result) {
@@ -1812,7 +1772,6 @@ function set_event_outcome(game_id, event_id) {
 		$('#set_event_outcome_modal_content').html(result_obj['html']);
 	});
 }
-
 function set_event_outcome_changed() {
 	var outcome_index = $('#set_event_outcome_index').val();
 	$('#set_event_outcome_index').attr('disabled', 'disabled');
@@ -1825,13 +1784,18 @@ function set_event_outcome_changed() {
 		});
 	}
 }
-
+function rtrim(str, charlist) {
+  charlist = !charlist ? ' \\s\u00A0' : (charlist + '')
+    .replace(/([\[\]\(\)\.\?\/\*\{\}\+\$\^\:])/g, '\\$1');
+  var re = new RegExp('[' + charlist + ']+$', 'g');
+  return (str + '')
+    .replace(re, '');
+}
 function leftpad(num, size, pad_char) {
 	var s = num+"";
 	while (s.length < size) s = pad_char + s;
 	return s;
 }
-
 function try_claim_address(blockchain_id, game_id, address_id) {
 	$.get("/ajax/try_claim_address.php?blockchain_id="+blockchain_id+"&game_id="+game_id+"&address_id="+address_id, function(result) {
 		var result_obj = JSON.parse(result);
@@ -1887,9 +1851,6 @@ function create_account_step(step) {
 		});
 	}
 }
-
-var event_verbatim_vars = new Array('event_index', 'next_event_index', 'event_starting_block', 'event_final_block', 'event_payout_block', 'event_starting_time', 'event_final_time', 'event_payout_time', 'event_name', 'option_block_rule', 'option_name', 'option_name_plural', 'outcome_index', 'payout_rule', 'payout_rate', 'track_max_price', 'track_min_price', 'track_payout_price', 'track_name_short');
-
 function clear_event_form() {
 	for (form_i in event_verbatim_vars) {
 		$('#event_form_'+event_verbatim_vars[form_i]).val("");
@@ -2174,7 +2135,6 @@ function claim_card(claim_type) {
 		});
 	}
 }
-var betting_mode = false;
 function toggle_betting_mode(to_betting_mode) {
 	if (betting_mode !== false) {
 		$('#betting_mode_'+betting_mode).hide();
@@ -2246,8 +2206,6 @@ function change_password() {
 		alert(result_obj['message']);
 	});
 }
-var existing_account = false;
-
 function generate_credentials() {
 	$.get("/ajax/check_username.php?action=generate", function(result) {
 		var result_obj = JSON.parse(result);
@@ -2298,8 +2256,6 @@ function login() {
 		}
 	});
 }
-var selected_panel = false;
-
 function toggle_to_panel(which_panel) {
 	if (selected_panel) $('#'+selected_panel+'_panel').hide();
 	

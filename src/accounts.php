@@ -774,7 +774,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 		</div>
 		
 		<script type="text/javascript">
-		$(document).ready(function() {
+		window.onload = function() {
 			account_spend_refresh();
 			<?php
 			if ($action == "prompt_game_buyin") {
@@ -785,7 +785,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 				<?php
 			}
 			?>
-		});
+		};
 		</script>
 		<?php
 	}

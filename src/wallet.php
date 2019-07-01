@@ -579,7 +579,7 @@ if ($thisuser && $game) {
 			$j=0;
 			while ($option = $options_by_event->fetch()) {
 				$has_votingaddr = "true";
-				echo "games[0].all_events[".$db_event['event_index']."].options.push(new option(games[0].all_events[".$db_event['event_index']."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$app->quote_escape($option['name']).", 0, $has_votingaddr));\n";
+				echo "games[0].all_events[".$db_event['event_index']."].options.push(new Option(games[0].all_events[".$db_event['event_index']."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$app->quote_escape($option['name']).", 0, $has_votingaddr));\n";
 				$j++;
 			}
 			$i++;
@@ -589,7 +589,6 @@ if ($thisuser && $game) {
 		?>
 		window.onload = function() {
 			toggle_betting_mode('inflationary');
-			loop_event();
 			compose_vote_loop();
 			<?php
 			if (!$faucet_io) {
@@ -767,7 +766,7 @@ if ($thisuser && $game) {
 								<div id="compose_vote" style="display: none;">
 									<h3>Stake Now</h3>
 									<div class="row bordered_row" style="border: 1px solid #bbb;">
-										<div class="col-md-4 bordered_cell" id="compose_vote_inputs">
+										<div class="col-md-4 bordered_cell" id="compose_bet_inputs">
 											<b>Inputs:</b><div style="display: none; margin-left: 20px;" id="input_amount_sum"></div><div style="display: inline-block; margin-left: 20px;" id="input_vote_sum"></div><br/>
 											<p>
 												How many <?php echo $game->db_game['coin_name_plural']; ?> do you want to spend?
@@ -775,7 +774,7 @@ if ($thisuser && $game) {
 											</p>
 											<p id="compose_input_start_msg"></p>
 										</div>
-										<div class="col-md-8 bordered_cell" id="compose_vote_outputs">
+										<div class="col-md-8 bordered_cell" id="compose_bet_outputs">
 											<b>Outputs:</b>
 											<div id="display_tx_fee"></div>
 											&nbsp;&nbsp; <a href="" onclick="add_all_options(); return false;">Add all options</a>

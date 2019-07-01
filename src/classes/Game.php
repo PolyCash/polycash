@@ -967,7 +967,7 @@ class Game {
 		$round_i = 0;
 		
 		for ($round=$from_round; $round<=$to_round; $round++) {
-			$js .= "var temp_plan_round = new plan_round(".$round.");\n";
+			$js .= "var temp_plan_round = new PlanRound(".$round.");\n";
 			$js .= "round_id2plan_round_id[".$round."] = ".$round_i.";\n";
 			
 			$block_id = ($round-1)*$this->db_game['round_length']+1;
@@ -1755,7 +1755,7 @@ class Game {
 			$j=0;
 			while ($option = $options_by_event->fetch()) {
 				$has_votingaddr = "true";
-				$js .= "games[".$game_index."].events[".$i."].options.push(new option(games[".$game_index."].events[".$i."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$this->blockchain->app->quote_escape($option['name']).", 0, ".$has_votingaddr.", ".$this->blockchain->app->quote_escape($option['image_url'])."));\n";
+				$js .= "games[".$game_index."].events[".$i."].options.push(new Option(games[".$game_index."].events[".$i."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$this->blockchain->app->quote_escape($option['name']).", 0, ".$has_votingaddr.", ".$this->blockchain->app->quote_escape($option['image_url'])."));\n";
 				$j++;
 			}
 			$html .= "<div id='game".$game_index."_event".$i."' class='game_event_inner'><div id='game".$game_index."_event".$i."_display' class='game_event_display'>";
@@ -1813,10 +1813,10 @@ class Game {
 		while ($io = $mature_ios->fetch()) {
 			$gios_by_io = $this->fetch_game_ios_by_io($io['io_id']);
 			
-			$js .= "chain_ios[".$io_i."] = new chain_io(".$io_i.", ".$io['io_id'].", ".$io['amount'].", '".$io['create_block_id']."');\n";
+			$js .= "chain_ios[".$io_i."] = new ChainIO(".$io_i.", ".$io['io_id'].", ".$io['amount'].", '".$io['create_block_id']."');\n";
 			
 			while ($gio = $gios_by_io->fetch()) {
-				$js .= "chain_ios[".$io_i."].game_ios.push(new game_io(".$gio['game_io_id'].", ".$gio['colored_amount'].", '".$io['create_block_id']."'));\n";
+				$js .= "chain_ios[".$io_i."].game_ios.push(new GameIO(".$gio['game_io_id'].", ".$gio['colored_amount'].", '".$io['create_block_id']."'));\n";
 			}
 			
 			$input_buttons_html .= '<div id="select_utxo_'.$io['io_id'].'" class="btn btn-primary btn-sm select_utxo';
@@ -1868,7 +1868,7 @@ class Game {
 				$has_votingaddr = "false";
 				
 				$js .= "if (typeof games[".$game_index."].all_events[".$db_event['event_index']."].options[".$j."] == 'undefined') {";
-				$js .= "games[".$game_index."].all_events[".$db_event['event_index']."].options[".$j."] = new option(games[".$game_index."].all_events[".$db_event['event_index']."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$this->blockchain->app->quote_escape($option['name']).", 0, ".$has_votingaddr.");\n";
+				$js .= "games[".$game_index."].all_events[".$db_event['event_index']."].options[".$j."] = new Option(games[".$game_index."].all_events[".$db_event['event_index']."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$this->blockchain->app->quote_escape($option['name']).", 0, ".$has_votingaddr.");\n";
 				$js .= "games[".$game_index."].all_events_db_id_to_index[".$db_event['event_id']."] = ".$db_event['event_index'].";\n";
 				$js .= "}\n";
 				

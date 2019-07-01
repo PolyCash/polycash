@@ -332,7 +332,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				<div class="row">
 					<div class="col-sm-7 ">
 						<ul class="list-inline explorer_nav" id="explorer_nav">
-							<?php if ($game) { ?><li><a <?php if ($explore_mode == 'my_bets') echo 'class="selected" '; ?>href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">My Bets</a></li><?php } ?>
+							<?php if ($game) { ?>
+							<li><a <?php if ($explore_mode == 'my_bets') echo 'class="selected" '; ?>href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">My Bets</a></li>
+							<?php } ?>
 							<li><a <?php if ($explore_mode == 'blocks') echo 'class="selected" '; ?>href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
 							if ($game) echo $game->db_game['url_identifier'];
 							else echo $blockchain->db_blockchain['url_identifier'];
@@ -345,8 +347,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							<?php } ?>
 							<?php if ($game) { ?>
 							<li><a <?php if ($explore_mode == 'utxos') echo 'class="selected" '; ?>href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
-							if ($game) echo $game->db_game['url_identifier'];
-							else echo $blockchain->db_blockchain['url_identifier'];
+							echo $game->db_game['url_identifier'];
 							?>/utxos/">UTXOs</a></li>
 							<?php } ?>
 							<li><a <?php if ($explore_mode == 'unconfirmed') echo 'class="selected" '; ?>href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
