@@ -1321,7 +1321,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							
 							echo '<p><a href="/accounts/?account_id='.$account['account_id'].'">Manage this Account</a></p>';
 						}
-						else {
+						else if (false) {
+							// Biggest UTXOs by blockchain view is disabled
 							$utxo_count = $app->run_query("SELECT COUNT(*) FROM transaction_ios WHERE blockchain_id=:blockchain_id AND spend_status='unspent';", [
 								'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
 							])->fetch();

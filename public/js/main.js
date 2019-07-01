@@ -1,43 +1,6 @@
 var User = function(id) {
 	this.userId = id;
 };
-var Image = function (id) {
-	this.imageId = id;
-	this.imageSrc = '/images/carousel/'+id+'.jpg';
-};
-var ImageCarousel = function (containerElementId) {
-	this.numPhotos = 16;
-	this.currentPhotoId = -1;
-	this.slideTime = 5000;
-	this.widthToHeight = Math.round(1800/570, 6);
-	this.containerElementId = containerElementId;
-	this.images = [];
-	var _this = this;
-	
-	this.initialize = function() {
-		for (var imageId=0; imageId<this.numPhotos; imageId++) {
-			this.images[imageId] = new Image(imageId);
-			$('<img />').attr('src',this.images[imageId].imageSrc).appendTo('body').css('display','none');
-			$('#'+this.containerElementId).append('<div id="'+this.containerElementId+'_image'+imageId+'" class="carouselImage" style="background-image: url(\''+this.images[imageId].imageSrc+'\');"></div>');
-		}
-		
-		this.nextPhoto();
-	};
-	
-	this.nextPhoto = function() {
-		var prevPhotoId = this.currentPhotoId;
-		var curPhotoId = prevPhotoId + 1;
-		if (curPhotoId == this.numPhotos) curPhotoId = 0;
-		
-		if (prevPhotoId == -1) {}
-		else $('#'+this.containerElementId+'_image'+prevPhotoId).fadeOut('slow');
-		
-		$('#'+this.containerElementId+'_image'+curPhotoId).fadeIn('slow');
-		this.currentPhotoId = curPhotoId;
-		
-		setTimeout(function() {_this.nextPhoto()}, this.slideTime);
-	};
-};
 var chatWindow = function(chatWindowId, toUserId) {
 	this.chatWindowId = chatWindowId;
 	this.toUserId = toUserId;
@@ -1415,8 +1378,7 @@ var Event = function(game, game_event_index, event_id, real_event_index, num_vot
 					document.getElementById('game'+this.game.instance_id+'_event'+this.game_event_index+'_timer').innerHTML = min_disp+":"+sec_disp;
 				}
 			}
-			var _this = this;
-			setTimeout(function() {_this.refresh_time_estimate();}, 1000);
+			setTimeout(function() {this.refresh_time_estimate()}.bind(this), 1000);
 		}
 	};
 	this.block_id_to_effectiveness_factor = function(block_id) {
@@ -1592,23 +1554,22 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_c
 			
 			if (this.filter_date) check_activity_url += "&filter_date="+this.filter_date;
 			
-			var _this = this;
 			$.ajax({
 				url: check_activity_url,
 				success: function(result) {
-					if (_this.refresh_page == "wallet" && result == "0") {
-						window.location = '/wallet/'+_this.game_url_identifier+'/?action=logout';
+					if (this.refresh_page == "wallet" && result == "0") {
+						window.location = '/wallet/'+this.game_url_identifier+'/?action=logout';
 					}
 					else {
-						_this.refresh_in_progress = false;
+						this.refresh_in_progress = false;
 						var json_result = $.parseJSON(result);
 						
-						if (json_result['game_loop_index'] > _this.last_game_loop_index_applied) {
+						if (json_result['game_loop_index'] > this.last_game_loop_index_applied) {
 							if (json_result['new_block'] == "1") {
-								_this.last_block_id = parseInt(json_result['last_block_id']);
-								_this.time_last_block_loaded = parseInt(json_result['time_last_block_loaded']);
+								this.last_block_id = parseInt(json_result['last_block_id']);
+								this.time_last_block_loaded = parseInt(json_result['time_last_block_loaded']);
 								
-								if (_this.refresh_page == "wallet") {
+								if (this.refresh_page == "wallet") {
 									if (parseInt(json_result['new_performance_history']) == 1) {
 										$('#performance_history_new').html(json_result['performance_history']);
 									}
@@ -1618,27 +1579,27 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_c
 							if (parseInt(json_result['new_event_ids']) == 1) {
 								eval(json_result['new_event_js']);
 								
-								_this.event_ids = json_result['event_ids'];
-								_this.event_ids_hash = Sha256.hash(json_result['event_ids']);
+								this.event_ids = json_result['event_ids'];
+								this.event_ids_hash = Sha256.hash(json_result['event_ids']);
 								
 								set_select_add_output();
 								
-								if (_this.view_mode == "simple") {
-									_this.hide_selected_event();
-									_this.selected_event_index = 0;
-									_this.show_selected_event(false);
+								if (this.view_mode == "simple") {
+									this.hide_selected_event();
+									this.selected_event_index = 0;
+									this.show_selected_event(false);
 								}
 							}
 							
-							if (_this.refresh_page == "wallet") {
+							if (this.refresh_page == "wallet") {
 								$('#game_status_explanation').html(json_result['game_status_explanation']);
 								if (json_result['game_status_explanation'] == '') $('#game_status_explanation').hide();
 								else $('#game_status_explanation').show();
 								
 								if (parseInt(json_result['new_mature_ios']) == 1 || parseInt(json_result['new_transaction']) == 1 || json_result['new_block'] == 1) {
-									if (typeof json_result['mature_io_ids_csv'] == "undefined") _this.mature_io_ids_csv = "";
-									else _this.mature_io_ids_csv = json_result['mature_io_ids_csv'];
-									_this.mature_io_ids_hash = Sha256.hash(_this.mature_io_ids_csv);
+									if (typeof json_result['mature_io_ids_csv'] == "undefined") this.mature_io_ids_csv = "";
+									else this.mature_io_ids_csv = json_result['mature_io_ids_csv'];
+									this.mature_io_ids_hash = Sha256.hash(this.mature_io_ids_csv);
 									$('#select_input_buttons').html(json_result['select_input_buttons']);
 									reload_compose_vote();
 									utxo_spend_offset = 0;
@@ -1656,8 +1617,8 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_c
 							}
 							
 							if (typeof json_result['chart_html'] != "undefined") {
-								$('#game'+_this.instance_id+'_chart_html').html(json_result['chart_html']);
-								$('#game'+_this.instance_id+'_chart_js').html('<script type="text/javascript">'+json_result['chart_js']+'</script>');
+								$('#game'+this.instance_id+'_chart_html').html(json_result['chart_html']);
+								$('#game'+this.instance_id+'_chart_js').html('<script type="text/javascript">'+json_result['chart_js']+'</script>');
 							}
 							
 							if (parseInt(json_result['new_mature_ios']) == 1) {
@@ -1670,24 +1631,24 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_c
 								$('#wallet_text_stats').fadeIn('fast');
 							}
 							
-							for (var game_event_index=0; game_event_index<_this.events.length; game_event_index++) {
+							for (var game_event_index=0; game_event_index<this.events.length; game_event_index++) {
 								if (json_result['rendered_events'][game_event_index].hash != false) {
-									_this.events[game_event_index].rendered_event_hash = json_result['rendered_events'][game_event_index].hash;
-									$('#game'+_this.instance_id+'_event'+game_event_index+'_display').html(json_result['rendered_events'][game_event_index].html);
-									$('#game'+_this.instance_id+'_event'+game_event_index+'_display').hide();
-									$('#game'+_this.instance_id+'_event'+game_event_index+'_display').show();
+									this.events[game_event_index].rendered_event_hash = json_result['rendered_events'][game_event_index].hash;
+									$('#game'+this.instance_id+'_event'+game_event_index+'_display').html(json_result['rendered_events'][game_event_index].html);
+									$('#game'+this.instance_id+'_event'+game_event_index+'_display').hide();
+									$('#game'+this.instance_id+'_event'+game_event_index+'_display').show();
 									
-									_this.render_event_images(game_event_index);
+									this.render_event_images(game_event_index);
 									
-									if (_this.events[game_event_index].details_shown) {
-										$('#game'+_this.instance_id+'_event'+game_event_index+'_details').show();
+									if (this.events[game_event_index].details_shown) {
+										$('#game'+this.instance_id+'_event'+game_event_index+'_details').show();
 									}
 									else {
-										$('#game'+_this.instance_id+'_event'+game_event_index+'_details').hide();
+										$('#game'+this.instance_id+'_event'+game_event_index+'_details').hide();
 									}
 									
 									if (typeof json_result['my_current_votes'] != "undefined" && typeof json_result['my_current_votes'][game_event_index] != "undefined") {
-										$('#game'+_this.instance_id+'_event'+game_event_index+'_my_current_votes').html(json_result['my_current_votes'][game_event_index]);
+										$('#game'+this.instance_id+'_event'+game_event_index+'_my_current_votes').html(json_result['my_current_votes'][game_event_index]);
 									}
 								}
 							}
@@ -1698,22 +1659,21 @@ var Game = function(game_id, last_block_id, last_transaction_id, mature_io_ids_c
 								refresh_output_amounts();
 							}
 							
-							_this.last_game_loop_index_applied = json_result['game_loop_index'];
+							this.last_game_loop_index_applied = json_result['game_loop_index'];
 						}
 					}
-				},
+				}.bind(this),
 				error: function(XMLHttpRequest, textStatus, errorThrown) {
-					_this.refresh_in_progress = false;
+					this.refresh_in_progress = false;
 					console.log("Game loop web request failed.");
-				}
+				}.bind(this)
 			});
 		}
 	};
 	this.game_loop_event = function() {
 		this.refresh_if_needed();
 		this.game_loop_index++;
-		var _this = this;
-		setTimeout(function() {_this.game_loop_event()}, 2000);
+		setTimeout(function() {this.game_loop_event()}.bind(this), 2000);
 	};
 };
 
