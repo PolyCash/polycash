@@ -26,7 +26,7 @@ if ($action == "load") {
 				<p><?php echo $new_donation_address['address']; ?></p>
 				<p><img src="render_qr_code.php?data=<?php echo $new_donation_address['address']; ?>" /></p>
 			</center>
-			<form action="/" method="get" onsubmit="donate_step('save_email'); return false;" id="donate_email_form">
+			<form action="/" method="get" onsubmit="thisPageManager.donate_step('save_email'); return false;" id="donate_email_form">
 				<input type="hidden" id="donate_access_key" value="<?php echo $donation_access_key; ?>" />
 				<div class="form-group">
 					<label for="donate_email_address">Donations count towards our ICO. To receive coins proportional to your donation, please enter an email address here:</label>

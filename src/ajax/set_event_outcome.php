@@ -26,7 +26,7 @@ if ($thisuser) {
 					
 					$options_by_event = $app->fetch_options_by_event($db_event['event_id']);
 					
-					$html .= '<select class="form-control" id="set_event_outcome_index" onchange="set_event_outcome_changed();">'."\n";
+					$html .= '<select class="form-control" id="set_event_outcome_index" onchange="thisPageManager.set_event_outcome_changed();">'."\n";
 					$html .= '<option value="select">-- Please Select --</option>'."\n";
 					while ($option = $options_by_event->fetch()) {
 						$html .= '<option value="'.$option['event_option_index'].'">'.$option['name'].'</option>'."\n";

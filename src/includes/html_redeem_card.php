@@ -46,7 +46,7 @@ $('#redeem_options').on('hidden.bs.modal', function () {
 						<input class="form-control" name="withdraw_address" id="withdraw_address" />
 					</div>
 					
-					<button id="card_withdrawal_btn" class="btn btn-success" onclick="card_withdrawal(<?php echo $card['card_id']; ?>);">Send <?php echo $currency['short_name_plural']; ?></button>
+					<button id="card_withdrawal_btn" class="btn btn-success" onclick="thisPageManager.card_withdrawal(<?php echo $card['card_id']; ?>);">Send <?php echo $currency['short_name_plural']; ?></button>
 				</div>
 				
 				<a href="" onclick="$('#os_options').toggle('fast'); return false;">Scan a QR code address</a>
@@ -82,7 +82,7 @@ $('#redeem_options').on('hidden.bs.modal', function () {
 					To store your <?php echo $currency['short_name_plural']; ?> in a secure wallet account, please enter a password below.  After creating the account, you can easily convert your <?php echo $currency['short_name_plural']; ?> to other currencies or withdraw your money to Bitcoin or Mobile Money at any time. The 16 digit code from your card will function as your username so please remember to keep your card somewhere safe.
 				</p>
 				
-				<form action="#" onsubmit="card_login(true); return false;" method="get">
+				<form action="#" onsubmit="thisPageManager.card_login(true); return false;" method="get">
 					<div class="form-group">
 						<label for="card_account_password">Please enter a new password:</label>
 						<input class="form-control" id="card_account_password" name="password" type="password" />
@@ -91,7 +91,7 @@ $('#redeem_options').on('hidden.bs.modal', function () {
 						<label for="card_account_password2">Please repeat your password to avoid making a mistake.</label>
 						<input class="form-control" id="card_account_password2" name="password2" type="password" />
 					</div>
-					<input type="submit" class="btn btn-success" value="Create an account" onclick="card_login(true, card_id, peer_id); return false;" />
+					<input type="submit" class="btn btn-success" value="Create an account" onclick="thisPageManager.card_login(true, card_id, peer_id); return false;" />
 				</form>
 			</div>
 			<br/>

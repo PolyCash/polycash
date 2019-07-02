@@ -126,7 +126,7 @@ if ($thisuser && $game) {
 						</div>
 					</p>';
 					
-					$content_html .= '<button class="btn btn-primary" onclick="manage_buyin(\'check_amount\');">Check</button>'."\n";
+					$content_html .= '<button class="btn btn-primary" onclick="thisPageManager.manage_buyin(\'check_amount\');">Check</button>'."\n";
 				}
 				else {
 					$content_html .= '<p class="redtext">You can\'t buy '.$game->db_game['coin_name_plural'].' with '.$buyin_currency['abbreviation'].' here right now. '.$buyin_blockchain->db_blockchain['blockchain_name']." is not running on this node.</p>\n";
@@ -155,7 +155,7 @@ if ($thisuser && $game) {
 					</div>
 				</p>';
 				
-				$content_html .= '<button class="btn btn-primary" onclick="manage_buyin(\'check_amount\');">Check</button>'."\n";
+				$content_html .= '<button class="btn btn-primary" onclick="thisPageManager.manage_buyin(\'check_amount\');">Check</button>'."\n";
 			}
 		}
 		

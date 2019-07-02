@@ -285,7 +285,7 @@ if ($thisuser) {
 					
 					$verbatim_vars = $app->event_verbatim_vars();
 					
-					$form_data = array();
+					$form_data = [];
 					
 					for ($i=0; $i<count($verbatim_vars); $i++) {
 						if (isset($gde[$verbatim_vars[$i][1]])) $form_data[$verbatim_vars[$i][1]] = $gde[$verbatim_vars[$i][1]];
@@ -366,7 +366,7 @@ if ($thisuser) {
 							$html .= '</div>'."\n";
 							
 							$html .= '<div class="col-md-1">';
-							$html .= '<i class="fa fa-times redtext" aria-hidden="true" style="cursor: pointer;" title="Delete this option" onclick="delete_game_defined_option('.$gde['game_defined_event_id'].', '.$gdo['game_defined_option_id'].');"></i>';
+							$html .= '<i class="fa fa-times redtext" aria-hidden="true" style="cursor: pointer;" title="Delete this option" onclick="thisPageManager.delete_game_defined_option('.$gde['game_defined_event_id'].', '.$gdo['game_defined_option_id'].');"></i>';
 							$html .= '</div>'."\n";
 							
 							$html .= '</div>'."\n";
@@ -393,7 +393,7 @@ if ($thisuser) {
 						$html .= '</select>'."\n";
 						$html .= "</div>\n";
 						
-						$html .= '<button type="button" class="btn btn-primary" onclick="add_game_defined_option(\''.$gde['game_defined_event_id'].'\');">Add option</button>'."\n";
+						$html .= '<button type="button" class="btn btn-primary" onclick="thisPageManager.add_game_defined_option(\''.$gde['game_defined_event_id'].'\');">Add option</button>'."\n";
 						
 						$html .= "</div>\n";
 						

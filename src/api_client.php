@@ -57,9 +57,9 @@ if ($_REQUEST['key'] == $client_access_key) {
 			$this->total_vote_amount = FALSE;
 			$this->rank2option_id = FALSE;
 			$this->recommendation_unit = FALSE;
-			$this->input_utxo_ids = array();
+			$this->input_utxo_ids = [];
 			
-			$this->recommendations = array();
+			$this->recommendations = [];
 		}
 		
 		// Fetch information about the current status of the game
@@ -97,7 +97,7 @@ if ($_REQUEST['key'] == $client_access_key) {
 		
 		// Only recommendations with amounts greater than 0 need to be sent back to the server
 		public function nonzeroRecommendations() {
-			$nonzeroRecommendations = array();
+			$nonzeroRecommendations = [];
 			
 			foreach ($this->recommendations as $recommendation) {
 				if ($recommendation->recommended_amount > 0) {
@@ -110,11 +110,11 @@ if ($_REQUEST['key'] == $client_access_key) {
 		
 		// Output our response to JSON
 		public function outputJSON() {
-			$output_obj = array();
+			$output_obj = [];
 			
 			if ($this->error_code) {
 				$output_obj['errors'] = array(0 => $this->error_message);
-				$output_obj['recommendations'] = array();
+				$output_obj['recommendations'] = [];
 			}
 			else {
 				if (count($this->input_utxo_ids) > 0) $output_obj['input_utxo_ids'] = $this->input_utxo_ids;
@@ -132,7 +132,7 @@ if ($_REQUEST['key'] == $client_access_key) {
 		public function setInputs() {
 			if ($this->user_info) {
 				$input_coins = 0;
-				$input_utxo_ids = array();
+				$input_utxo_ids = [];
 				for ($i=0; $i<count($this->user_info->my_utxos); $i++) {
 					$input_utxo_ids[count($input_utxo_ids)] = $this->user_info->my_utxos[$i]->utxo_id;
 					$input_coins += $this->user_info->my_utxos[$i]->coins;

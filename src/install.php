@@ -246,7 +246,7 @@ if ($app->running_as_admin()) {
 						$module_html .= '<option value="'.$open_module['module_name'].'">'.$open_module['module_name']."</option>\n";
 					}
 					
-					echo '<select class="form-control" id="select_install_module" onchange="start_install_module(\''.AppSettings::getParam('operator_key').'\');">'.$module_html."</select>\n";
+					echo '<select class="form-control" id="select_install_module" onchange="thisPageManager.start_install_module(\''.AppSettings::getParam('operator_key').'\');">'.$module_html."</select>\n";
 					?>
 					<br/>
 					<br/>

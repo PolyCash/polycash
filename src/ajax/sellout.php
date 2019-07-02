@@ -52,7 +52,7 @@ if ($thisuser && $game) {
 						<p>
 							<input type="text" class="form-control" id="sellout_amount" />
 						</p>
-						<button class="btn btn-primary" onclick="manage_sellout(\'check_amount\');">Check</button>'."\n";
+						<button class="btn btn-primary" onclick="thisPageManager.manage_sellout(\'check_amount\');">Check</button>'."\n";
 					}
 					else {
 						$content_html .= '<p class="redtext">You can\'t sell '.$game->db_game['coin_name_plural'].' for '.$sellout_currency['abbreviation'].' here right now. '.$sellout_blockchain->db_blockchain['blockchain_name']." is not running on this node.</p>\n";
@@ -79,7 +79,7 @@ if ($thisuser && $game) {
 						<input type="text" class="form-control" id="sellout_blockchain_address" />
 					</div>
 					<p>
-						<button class="btn btn-success" onclick="manage_sellout(\'confirm\');">Sell '.$game->db_game['coin_name_plural'].'</button>
+						<button class="btn btn-success" onclick="thisPageManager.manage_sellout(\'confirm\');">Sell '.$game->db_game['coin_name_plural'].'</button>
 					</p>';
 				}
 				else if ($_REQUEST['action'] == "confirm") {

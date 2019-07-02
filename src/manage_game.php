@@ -35,7 +35,7 @@ else {
 					
 					if ($new_game_perm) {
 						?>
-						<form action="/ajax/manage_game.php" onsubmit="create_new_game(); return false;">
+						<form action="/ajax/manage_game.php" onsubmit="thisPageManager.create_new_game(); return false;">
 							<div class="form-group">
 								<label for="new_game_name">Please enter a title for this game:</label>
 								<input class="form-control" id="new_game_name" />
@@ -68,7 +68,7 @@ else {
 								<label for="new_game_genesis_tx_type">
 									Do you want to use an existing transaction as the genesis for this game, or create a new genesis transaction?
 								</label>
-								<select id="new_game_genesis_type" class="form-control" onchange="new_game_genesis_type_changed();">
+								<select id="new_game_genesis_type" class="form-control" onchange="thisPageManager.new_game_genesis_type_changed();">
 									<option value="">-- Please Select --</option>
 									<option value="existing">Use an existing transaction</option>
 									<option value="new">Create a new transaction</option>
@@ -83,7 +83,7 @@ else {
 							<div id="new_game_existing_genesis" style="display: none;">
 								<div class="form-group">
 									<label for="new_game_genesis_account_id">Please select an account to pay for the new transaction:</label>
-									<select id="new_game_genesis_account_id" class="form-control" onchange="new_game_genesis_account_changed();"></select>
+									<select id="new_game_genesis_account_id" class="form-control" onchange="thisPageManager.new_game_genesis_account_changed();"></select>
 								</div>
 								<div class="form-group">
 									<label for="new_game_genesis_io_id">Please select coins for your new genesis transaction:</label>
@@ -396,7 +396,7 @@ else {
 			var editor;
 			
 			window.onload = function() {
-				games.push(new Game(<?php
+				games.push(new Game(thisPageManager, <?php
 					echo $game->db_game['game_id'];
 					echo ', false';
 					echo ', false';
@@ -427,7 +427,7 @@ else {
 				?>));
 				
 				<?php
-				if ($manage_game_action) echo "manage_game(".$game->db_game['game_id'].", '".$manage_game_action."');\n";
+				if ($manage_game_action) echo "thisPageManager.manage_game(".$game->db_game['game_id'].", '".$manage_game_action."');\n";
 				
 				if ($next_action == "description") { ?>
 					editor = new TINY.editor.edit('editor', {
@@ -463,7 +463,6 @@ else {
 						echo '<div class="col-sm-2 game_tab';
 						if ($next_action == $actions[$i]) echo ' game_tab_sel';
 						echo '"><a id="manage_game_tab_'.$actions[$i].'" ';
-						//if ($statuses[$i] == "deselected") echo ' onclick="return false;"';
 						echo 'href="/manage/'.$game->db_game['url_identifier'].'/?next='.$actions[$i];
 						echo '">'.($i+1).'. '.$action_labels[$i].'</a></div>'."\n";
 					}
@@ -479,7 +478,7 @@ else {
 									<div class="panel-title">Manage game parameters: <?php echo $game->db_game['name']." (#".$game->db_game['game_id'].")"; ?></div>
 								</div>
 								<div class="panel-body">
-									<form onsubmit="save_game();">
+									<form onsubmit="thisPageManager.save_game();">
 										<div class="form-group">
 											<label for="game_form_name">Game title:</label>
 											<input class="form-control" type="text" id="game_form_name" />
@@ -514,7 +513,7 @@ else {
 										</div>
 										<div class="form-group">
 											<label for="game_form_has_final_round">Game ends?</label>
-											<select class="form-control" id="game_form_has_final_round" onchange="game_form_final_round_changed();">
+											<select class="form-control" id="game_form_has_final_round" onchange="thisPageManager.game_form_final_round_changed();">
 												<option value="0">No</option>
 												<option value="1">Yes</option>
 											</select>
@@ -566,7 +565,7 @@ else {
 										</div>
 										<div class="form-group">
 											<label for="game_form_buyin_policy">Buy-in policy:</label>
-											<select class="form-control" id="game_form_buyin_policy" onchange="game_form_buyin_policy_changed();">
+											<select class="form-control" id="game_form_buyin_policy" onchange="thisPageManager.game_form_buyin_policy_changed();">
 												<option value="none">No additional buy-ins</option>
 												<option value="unlimited">Unlimited buy-ins</option>
 												<option value="game_cap">Buy-in cap for the whole game</option>
@@ -579,7 +578,7 @@ else {
 										</div>
 										<div class="form-group">
 											<label for="game_form_inflation">Inflation:</label>
-											<select id="game_form_inflation" class="form-control" onchange="game_form_inflation_changed();">
+											<select id="game_form_inflation" class="form-control" onchange="thisPageManager.game_form_inflation_changed();">
 												<option value="linear">Linear</option>
 												<option value="fixed_exponential">Fixed Exponential</option>
 												<option value="exponential">Exponential</option>
@@ -599,7 +598,7 @@ else {
 										</div>
 										<div class="form-group">
 											<label for="game_form_event_rule">Event rule:</label>
-											<select id="game_form_event_rule" class="form-control" onchange="game_form_event_rule_changed();">
+											<select id="game_form_event_rule" class="form-control" onchange="thisPageManager.game_form_event_rule_changed();">
 												<option value="game_definition">Game definition</option>
 												<option value="single_event_series">Single, repeating event</option>
 												<option value="entity_type_option_group">One event for each item in a group</option>
@@ -660,8 +659,8 @@ else {
 										</div>
 										
 										<div class="form-group">
-											<button id="save_game_btn" type="button" class="btn btn-success" onclick="save_game('save');">Save Settings</button>
-											<button id="publish_game_btn" type="button" class="btn btn-primary" onclick="save_game('publish');">Save &amp; Publish</button>
+											<button id="save_game_btn" type="button" class="btn btn-success" onclick="thisPageManager.save_game('save');">Save Settings</button>
+											<button id="publish_game_btn" type="button" class="btn btn-primary" onclick="thisPageManager.save_game('publish');">Save &amp; Publish</button>
 										</div>
 									</form>
 								</div>
@@ -683,11 +682,11 @@ else {
 										<b>Game status:</b> &nbsp; <?php echo ucwords($game->db_game['game_status']); ?>
 									</div>
 									<div class="form-group">
-										<button id="start_game_btn" class="btn btn-success" onclick="manage_game(<?php echo $game->db_game['game_id']; ?>, 'start'); return false;">Start Game</button>
-										<button id="unpublish_game_btn" class="btn btn-info" onclick="manage_game(<?php echo $game->db_game['game_id']; ?>, 'unpublish'); return false;">Unpublish</button>
-										<button id="complete_game_btn" class="btn btn-primary" onclick="manage_game(<?php echo $game->db_game['game_id']; ?>, 'complete'); return false;">Mark Completed</button>
-										<button id="delete_game_btn" class="btn btn-danger" style="display: none;" onclick="manage_game(<?php echo $game->db_game['game_id']; ?>, 'delete'); return false;">Delete</button>
-										<button id="reset_game_btn" class="btn btn-warning" onclick="manage_game(<?php echo $game->db_game['game_id']; ?>, 'reset'); return false;">Reset</button>
+										<button id="start_game_btn" class="btn btn-success" onclick="thisPageManager.manage_game(<?php echo $game->db_game['game_id']; ?>, 'start'); return false;">Start Game</button>
+										<button id="unpublish_game_btn" class="btn btn-info" onclick="thisPageManager.manage_game(<?php echo $game->db_game['game_id']; ?>, 'unpublish'); return false;">Unpublish</button>
+										<button id="complete_game_btn" class="btn btn-primary" onclick="thisPageManager.manage_game(<?php echo $game->db_game['game_id']; ?>, 'complete'); return false;">Mark Completed</button>
+										<button id="delete_game_btn" class="btn btn-danger" style="display: none;" onclick="thisPageManager.manage_game(<?php echo $game->db_game['game_id']; ?>, 'delete'); return false;">Delete</button>
+										<button id="reset_game_btn" class="btn btn-warning" onclick="thisPageManager.manage_game(<?php echo $game->db_game['game_id']; ?>, 'reset'); return false;">Reset</button>
 									</div>
 									
 									<form method="get" action="/manage/<?php echo $game->db_game['url_identifier']; ?>/">
@@ -713,7 +712,7 @@ else {
 											$definitive_game_peer = $game->get_definitive_peer();
 											?>
 											<label for="definitive_game_peer">Does this game have a definitive peer?</label>
-											<select class="form-control" name="definitive_game_peer_on" id="definitive_game_peer_on" onchange="toggle_definitive_game_peer();">
+											<select class="form-control" name="definitive_game_peer_on" id="definitive_game_peer_on" onchange="thisPageManager.toggle_definitive_game_peer();">
 												<option value="0">No</option>
 												<option value="1"<?php if ($definitive_game_peer) echo ' selected="selected"'; ?>>Yes</option>
 											</select>
@@ -751,12 +750,12 @@ else {
 							}
 							?>
 							<p>
-								<button class="btn btn-sm btn-success" onclick="manage_game_load_event('new');">New Event</button>
-								<button class="btn btn-sm btn-primary" onclick="manage_game_set_event_blocks(false);">Set Event Blocks</button>
+								<button class="btn btn-sm btn-success" onclick="thisPageManager.manage_game_load_event('new');">New Event</button>
+								<button class="btn btn-sm btn-primary" onclick="thisPageManager.manage_game_set_event_blocks(false);">Set Event Blocks</button>
 								<button class="btn btn-sm btn-info" onclick="$('#import_csv_modal').modal('show');">Import Events from CSV</button>
 							</p>
 							<p>
-								<select class="form-control" id="manage_game_event_filter" onchange="manage_game_event_filter_changed();">
+								<select class="form-control" id="manage_game_event_filter" onchange="thisPageManager.manage_game_event_filter_changed();">
 									<option value="">View all events</option>
 									<option <?php if ($event_filter == "past_due") echo "selected=\"selected\" "; ?>value="past_due">Past due unresolved events</option>
 								</select>
@@ -777,9 +776,9 @@ else {
 								<div class="row">
 									<div class="col-md-4" style="text-align: center;">
 										<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/<?php echo $gde['event_index']; ?>">View</a> &nbsp;&nbsp; 
-										<a href="" onclick="manage_game_load_event(<?php echo $gde['game_defined_event_id']; ?>); return false;">Edit</a> &nbsp;&nbsp; 
-										<a href="" onclick="manage_game_event_options(<?php echo $gde['game_defined_event_id']; ?>); return false;">Edit Options</a> &nbsp;&nbsp;
-										<a href="" onclick="manage_game_set_event_blocks(<?php echo $gde['game_defined_event_id']; ?>); return false;">Set Event Blocks</a>
+										<a href="" onclick="thisPageManager.manage_game_load_event(<?php echo $gde['game_defined_event_id']; ?>); return false;">Edit</a> &nbsp;&nbsp; 
+										<a href="" onclick="thisPageManager.manage_game_event_options(<?php echo $gde['game_defined_event_id']; ?>); return false;">Edit Options</a> &nbsp;&nbsp;
+										<a href="" onclick="thisPageManager.manage_game_set_event_blocks(<?php echo $gde['game_defined_event_id']; ?>); return false;">Set Event Blocks</a>
 									</div>
 									<div class="col-md-6"><?php
 										echo $gde['event_index'].'. '.$gde['event_name'];
@@ -962,13 +961,12 @@ else {
 							<textarea id="game_definition" style="width: 100%; min-height: 400px; background-color: #f5f5f5; border: 1px solid #cccccc; margin-top: 10px;"><?php echo $game_def_str; ?></textarea>
 							
 							<p>
-								<button class="btn btn-sm btn-primary" onclick="manage_game_set_event_blocks(false);">Set Event Blocks</button>
+								<button class="btn btn-sm btn-primary" onclick="thisPageManager.manage_game_set_event_blocks(false);">Set Event Blocks</button>
 							</p>
 						</div>
 					</div>
 					<script type="text/javascript">
 					$('#game_definition').dblclick(function() {
-						console.log("double clicked the game def");
 						$('#game_definition').focus().select();
 					});
 					</script>

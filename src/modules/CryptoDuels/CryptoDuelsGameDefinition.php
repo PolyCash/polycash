@@ -74,7 +74,7 @@ class CryptoDuelsGameDefinition {
 	}
 	
 	public function load_currencies(&$game) {
-		$this->currencies = array();
+		$this->currencies = [];
 		$this->name2currency_index = [];
 		
 		$members = $this->app->run_query("SELECT *, en.entity_id AS entity_id FROM option_group_memberships m JOIN entities en ON m.entity_id=en.entity_id JOIN currencies c ON en.entity_name=c.name WHERE m.option_group_id=:option_group_id ORDER BY m.membership_id ASC;", ['option_group_id' => $game->db_game['option_group_id']]);
@@ -152,7 +152,7 @@ class CryptoDuelsGameDefinition {
 		
 		$btc_currency = $this->app->get_currency_by_abbreviation("BTC");
 		
-		$performances = array();
+		$performances = [];
 		$best_performance_index = false;
 		$best_performance = false;
 		$loop_index = 0;

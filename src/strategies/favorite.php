@@ -65,7 +65,7 @@ if ($user_game) {
 					$mandatory_bets = 0;
 					$io_amount_sum = 0;
 					$game_amount_sum = 0;
-					$io_ids = array();
+					$io_ids = [];
 					$keep_looping = true;
 					
 					while ($keep_looping && $io = $spendable_ios_in_account->fetch()) {
@@ -113,8 +113,8 @@ if ($user_game) {
 						$option = $app->run_query("SELECT * FROM options WHERE event_id=:event_id ORDER BY target_probability DESC LIMIT 1;", ['event_id'=>$db_event['event_id']])->fetch();
 						
 						$address_error = false;
-						$thisevent_io_amounts = array();
-						$thisevent_address_ids = array();
+						$thisevent_io_amounts = [];
+						$thisevent_address_ids = [];
 						
 						$this_address = $app->fetch_addresses_in_account($account, $option['option_index'], 1)[0];
 						

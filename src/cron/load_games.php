@@ -18,7 +18,7 @@ if ($app->running_as_admin()) {
 	if (!$process_locked) {
 		$app->set_site_constant($process_lock_name, getmypid());
 		
-		$blockchains = array();
+		$blockchains = [];
 		
 		$loop_target_time = $app->get_site_constant("loop_target_time");
 		do {

@@ -2,9 +2,6 @@
 require(AppSettings::srcPath().'/includes/connect.php');
 require(AppSettings::srcPath().'/includes/get_session.php');
 
-$action = "";
-if (!empty($_REQUEST['action'])) $action = $_REQUEST['action'];
-
 $pagetitle = "My Profile";
 $nav_tab_selected = "profile";
 $nav_subtab_selected = "";
@@ -27,7 +24,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					<div id="change_password" class="tab-pane fade">
 						<?php
 						if ($thisuser->db_user['login_method'] == "password") { ?>
-							<form method="get" action="/ajax/change_password.php" onsubmit="change_password(); return false;">
+							<form method="get" action="/ajax/change_password.php" onsubmit="thisPageManager.change_password(); return false;">
 								<div class="form-group">
 									<label for="existing_password">Please enter your username:</label>
 									<input class="form-control" autocomplete="off" name="change_password_username" id="change_password_username" />
@@ -50,14 +47,6 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 				</div>
 			</div>
 		</div>
-		<script type="text/javascript">
-		$(document).ready(function() {
-			setTimeout(function () {
-				$('#change_password_username').val("");
-				$('#change_password_existing').val("");
-			}, 200);
-		});
-		</script>
 		<?php
 	}
 	else echo "<p>You must be logged in to access this page.</p>\n";

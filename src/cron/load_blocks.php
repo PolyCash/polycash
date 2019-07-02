@@ -37,7 +37,7 @@ if ($app->running_as_admin()) {
 	if (!$process_locked) {
 		$app->set_site_constant($process_lock_name, getmypid());
 		
-		$blockchains = array();
+		$blockchains = [];
 		
 		$sync_blockchains = $app->run_query("SELECT * FROM blockchains WHERE online=1 AND p2p_mode IN ('rpc','web_api');");
 		

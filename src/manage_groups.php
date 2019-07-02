@@ -52,7 +52,7 @@ else {
 					while ($membership = $memberships->fetch()) {
 						echo $membership['entity_name']."<br/>\n";
 					}
-					echo '<a href="" onclick="new_group_member('.$selected_group['group_id'].'); return false;">Add Another</a><br/>';
+					echo '<a href="" onclick="thisPageManager.new_group_member('.$selected_group['group_id'].'); return false;">Add Another</a><br/>';
 				}
 				else {
 					$import_groups_dir = AppSettings::srcPath()."/lib/groups/";

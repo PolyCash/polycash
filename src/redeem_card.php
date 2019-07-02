@@ -34,18 +34,12 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 				$fv_currency = $app->fetch_currency_by_id($card['fv_currency_id']);
 				?>
 				<script type="text/javascript">
-				var card_id = '<?php echo $card['peer_card_id']; ?>';
-				var peer_id = '<?php echo $card['peer_id']; ?>';
+				thisPageManager.card_id = '<?php echo $card['peer_card_id']; ?>';
+				thisPageManager.peer_id = '<?php echo $card['peer_id']; ?>';
 				
-				$(document).ready(function() {
-					update_page();
-				});
-				
-				function update_page() {
-					check_show_confirm_button();
-					
-					setTimeout("update_page();", 1000);
-				}
+				window.onload = function() {
+					$("#redeem_code").mask("9999-9999-9999-9999");
+				};
 				</script>
 				
 				<input type="hidden" id="redirect_key" value="<?php if ($redirect_url) echo $redirect_url['redirect_key']; ?>" />
@@ -123,15 +117,9 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							<?php
 							if ($card['status'] == "sold") {
 								?>
-								<script type="text/javascript">
-								$(document).ready(function() {
-									$("#redeem_code").mask("9999-9999-9999-9999");
-								});
-								</script>
-								
 								<div class="row">
 									<div class="col-sm-12">
-										<button class="btn btn-success btn-block" style="margin-top: 10px;" onclick="redeem_toggle();">Redeem Now</button>
+										<button class="btn btn-success btn-block" style="margin-top: 10px;" onclick="thisPageManager.redeem_toggle();">Redeem Now</button>
 									</div>
 								</div>
 								
@@ -144,7 +132,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 												<input class="form-control" type="tel" size="20" maxlength="19" class="code_enter" id="redeem_code" />
 											</div>
 											<div class="col-md-4">
-												<div class="btn btn-success" id="confirm_button" onclick="check_the_code();">Redeem</div>
+												<div class="btn btn-success" id="redeem_card_confirm_btn" onclick="thisPageManager.check_the_code();">Redeem</div>
 											</div>
 										</div>
 									</div>
@@ -160,8 +148,8 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							else if ($card['status'] == "redeemed" || $card['status'] == "claimed") {
 								?>
 								<script type="text/javascript">
-								var card_id = '<?php echo $card['peer_card_id']; ?>';
-								var peer_id = '<?php echo $card['peer_id']; ?>';
+								thisPageManager.card_id = '<?php echo $card['peer_card_id']; ?>';
+								thisPageManager.peer_id = '<?php echo $card['peer_id']; ?>';
 								</script>
 								<br/>
 								<p>
@@ -185,7 +173,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								else if ($card['status'] == "printed" || $card['status'] == "issued") {
 									$allowed_statuses = array('canceled', 'sold');
 								}
-								else $allowed_statuses = array();
+								else $allowed_statuses = [];
 								
 								if (count($allowed_statuses) > 0) {
 									?>
@@ -233,7 +221,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					Please enter card details below to find your card.<br/>
 					Or <a href="/wallet/<?php if ($redirect_url) echo '?redirect_key='.$redirect_url['redirect_key']; ?>">log in with a user account</a>
 				</p>
-				<form action="/redeem/" method="get" onsubmit="search_card_id(); return false;">
+				<form action="/redeem/" method="get" onsubmit="thisPageManager.search_card_id(); return false;">
 					<div class="form-group">
 						<label for="card_id_search">Which website issued your card?</label>
 						<select class="form-control" name="peer_id" id="peer_id">
@@ -250,7 +238,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						<label for="card_id_search">Please enter the 4-digit ID number from your card:</label>
 						<input class="form-control" type="tel" size="8" value="" placeholder="0000" id="card_id_search" name="card_id_search" /> 
 					</div>
-					<input class="btn btn-primary" type="submit" value="Find my card" onclick="search_card_id(); return false;" />
+					<input class="btn btn-primary" type="submit" value="Find my card" onclick="thisPageManager.search_card_id(); return false;" />
 				</form>
 			</div>
 		</div>

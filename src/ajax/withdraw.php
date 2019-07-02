@@ -33,7 +33,7 @@ if ($thisuser && $game) {
 				
 				$gio_sum = 0;
 				$io_sum = 0;
-				$spend_io_ids = array();
+				$spend_io_ids = [];
 				$keep_looping = true;
 				
 				while ($keep_looping && $io = $spendable_ios_in_account->fetch()) {

@@ -21,7 +21,7 @@ if ($thisuser && $game) {
 		die();
 	}
 	
-	$address_ids = array();
+	$address_ids = [];
 	$io_ids = explode(",", $_REQUEST['io_ids']);
 	$amounts = explode(",", $_REQUEST['amounts']);
 	$option_ids = explode(",", $_REQUEST['option_ids']);

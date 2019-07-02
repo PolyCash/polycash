@@ -2,7 +2,7 @@
 require(AppSettings::srcPath()."/includes/connect.php");
 require(AppSettings::srcPath()."/includes/get_session.php");
 
-$output_obj = array();
+$output_obj = [];
 
 if ($thisuser && $game) {
 	if ($game->db_game['public_players'] == 1) {

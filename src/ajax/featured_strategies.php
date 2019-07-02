@@ -15,19 +15,17 @@ if ($game) {
 	<p>
 		To write your own custom auto strategy, please see our <a href="/api/about">API documentation</a>.
 	</p>
-	<form method="get" onsubmit="save_featured_strategy(); return false;">
+	<form method="get" onsubmit="thisPageManager.save_featured_strategy(); return false;">
 		<?php
 		$previous_rounds = 3;
 		$current_event = $game->current_events[0];
 		
-		$featured_strategies = $app->run_query("SELECT * FROM featured_strategies fs LEFT JOIN currency_accounts ca ON fs.reference_account_id=ca.account_id WHERE fs.game_id=:game_id;", [
-			'game_id' => $game->db_game['game_id']
-		]);
+		$featured_strategies = $game->fetch_featured_strategies();
 		
 		while ($featured_strategy = $featured_strategies->fetch()) {
 			if ($featured_strategy['account_id'] > 0) {
 				$event_ref_block = $current_event->db_event['event_starting_block'];				
-				$performances = array();
+				$performances = [];
 				
 				for ($i=0; $i<$previous_rounds; $i++) {
 					$first_prev_event = $app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_starting_block<:event_ref_block ORDER BY event_index DESC;", [

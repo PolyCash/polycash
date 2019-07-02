@@ -35,8 +35,8 @@ if ($thisuser) {
 							
 							if ($invitation['sent_email_id'] == 0) {
 								if ($invitation['used_user_id'] == 0) {
-									echo '<a href="" onclick="send_invitation('.$game->db_game['game_id'].', '.$invitation['invitation_id'].', \'email\'); return false;">Send by email</a>&nbsp;&nbsp; ';
-									echo '<a href="" onclick="send_invitation('.$game->db_game['game_id'].', '.$invitation['invitation_id'].', \'user\'); return false;">Send to user</a>';
+									echo '<a href="" onclick="thisPageManager.send_invitation('.$game->db_game['game_id'].', '.$invitation['invitation_id'].', \'email\'); return false;">Send by email</a>&nbsp;&nbsp; ';
+									echo '<a href="" onclick="thisPageManager.send_invitation('.$game->db_game['game_id'].', '.$invitation['invitation_id'].', \'user\'); return false;">Send to user</a>';
 								}
 							}
 							else {
@@ -47,7 +47,7 @@ if ($thisuser) {
 							echo "</div>\n";
 						}
 						?>
-						<button class="btn btn-sm btn-success" onclick="generate_invitation(<?php echo $game->db_game['game_id']; ?>);">Generate an Invitation</button>
+						<button class="btn btn-sm btn-success" onclick="thisPageManager.generate_invitation(<?php echo $game->db_game['game_id']; ?>);">Generate an Invitation</button>
 						<br/><br/>
 						Or invite bulk users by uploading a CSV:<br/>
 						<form id="invite_upload_form" action="/manage/<?php echo $game->db_game['url_identifier']; ?>/" method="post" enctype="multipart/form-data">
