@@ -507,7 +507,6 @@ var PageManager = function() {
 	this.selected_card = -1;
 	this.selected_section = false;
 	this.remove_utxo_ms = 50;
-	this.io_ids_in_bet = {};
 	
 	this.format_coins = function(amount) {
 		if (amount > Math.pow(10, 10)) {
@@ -840,24 +839,20 @@ var PageManager = function() {
 	this.add_utxo_to_vote = function(io_index) {
 		var index_id = this.bet_inputs.length;
 		
-		if (typeof this.io_ids_in_bet[this.chain_ios[io_index].io_id] == "undefined") {
-			this.io_ids_in_bet[this.chain_ios[io_index].io_id] = true;
-			
-			this.bet_inputs.push(new BetInput(index_id, this.chain_ios[io_index]));
-			
-			$('#select_utxo_'+this.chain_ios[io_index].io_id).hide('fast');
-			
-			var select_btn_html = '<div id="selected_utxo_'+index_id+'" onclick="thisPageManager.remove_utxo_from_vote('+index_id+');" class="select_utxo';
-			if (games[0].logo_image_url != "") select_btn_html += ' select_utxo_image';
-			select_btn_html += ' btn btn-primary btn-sm">'+this.render_bet_input(index_id)+'</div>';
-			$('#compose_bet_inputs').append(select_btn_html);
-			
-			this.io_id2input_index[this.chain_ios[io_index].io_id] = index_id;
-			
-			this.refresh_compose_bets();
-			this.set_input_amount_sums();
-			this.refresh_output_amounts();
-		}
+		this.bet_inputs.push(new BetInput(index_id, this.chain_ios[io_index]));
+		
+		$('#select_utxo_'+this.chain_ios[io_index].io_id).hide('fast');
+		
+		var select_btn_html = '<div id="selected_utxo_'+index_id+'" onclick="thisPageManager.remove_utxo_from_vote('+index_id+');" class="select_utxo';
+		if (games[0].logo_image_url != "") select_btn_html += ' select_utxo_image';
+		select_btn_html += ' btn btn-primary btn-sm">'+this.render_bet_input(index_id)+'</div>';
+		$('#compose_bet_inputs').append(select_btn_html);
+		
+		this.io_id2input_index[this.chain_ios[io_index].io_id] = index_id;
+		
+		this.refresh_compose_bets();
+		this.set_input_amount_sums();
+		this.refresh_output_amounts();
 	}
 	this.add_all_utxos_to_vote = function() {
 		var ms_per_add = 50;
@@ -865,7 +860,9 @@ var PageManager = function() {
 		for (var i=0; i<this.chain_ios.length; i++) {
 			(function(utxo_index, _this) {
 				setTimeout(function() {
-					_this.add_utxo_to_vote(utxo_index);
+					if (typeof _this.io_id2input_index[_this.chain_ios[utxo_index].io_id] == "undefined") {
+						_this.add_utxo_to_vote(utxo_index);
+					}
 				}.bind(_this), utxo_index*ms_per_add);
 			})(i, this);
 		}
@@ -905,7 +902,7 @@ var PageManager = function() {
 			var io_id = this.bet_inputs[index_id].ref_io.io_id;
 			$('#select_utxo_'+io_id).show('fast');
 			
-			this.io_id2input_index[io_id] = false;
+			delete this.io_id2input_index[io_id];
 			
 			for (var i=index_id; i<this.bet_inputs.length-1; i++) {
 				this.bet_inputs[i] = this.bet_inputs[i+1];
@@ -915,8 +912,6 @@ var PageManager = function() {
 				$('#selected_utxo_'+i).html(this.render_bet_input(i));
 			}
 			$('#selected_utxo_'+(this.bet_inputs.length-1)).remove();
-			
-			delete this.io_ids_in_bet[io_id];
 			
 			this.bet_inputs.length = this.bet_inputs.length-1;
 			this.set_input_amount_sums();
@@ -2593,6 +2588,7 @@ var PageManager = function() {
 			data: {
 				username: username
 			},
+			context: this,
 			success: function(check_response) {
 				$('#check_username_btn').html("Continue");
 				
