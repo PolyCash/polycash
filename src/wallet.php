@@ -521,7 +521,7 @@ if ($thisuser && $game) {
 		//<![CDATA[
 		var current_tab = 0;
 		
-		games.push(new Game(<?php
+		games.push(new Game(thisPageManager, <?php
 			echo $game->db_game['game_id'];
 			echo ', '.$game->last_block_id();
 			echo ', false';
@@ -579,7 +579,7 @@ if ($thisuser && $game) {
 			$j=0;
 			while ($option = $options_by_event->fetch()) {
 				$has_votingaddr = "true";
-				echo "games[0].all_events[".$db_event['event_index']."].options.push(new option(games[0].all_events[".$db_event['event_index']."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$app->quote_escape($option['name']).", 0, $has_votingaddr));\n";
+				echo "games[0].all_events[".$db_event['event_index']."].options.push(new Option(games[0].all_events[".$db_event['event_index']."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$app->quote_escape($option['name']).", 0, $has_votingaddr));\n";
 				$j++;
 			}
 			$i++;
@@ -588,13 +588,12 @@ if ($thisuser && $game) {
 		echo $game->load_all_event_points_js(0, $user_strategy, $plan_start_round, $plan_stop_round);
 		?>
 		window.onload = function() {
-			toggle_betting_mode('inflationary');
-			loop_event();
-			compose_vote_loop();
+			thisPageManager.toggle_betting_mode('inflationary');
+			thisPageManager.compose_bets_loop();
 			<?php
 			if (!$faucet_io) {
 				if ($user_game['show_intro_message'] == 1) { ?>
-					show_intro_message();
+					thisPageManager.show_intro_message();
 					<?php
 					$app->run_query("UPDATE user_games SET show_intro_message=0 WHERE user_game_id=:user_game_id;", ['user_game_id' => $user_game['user_game_id']]);
 				}
@@ -605,9 +604,9 @@ if ($thisuser && $game) {
 				}
 			}
 			?>
-			render_tx_fee();
-			reload_compose_vote();
-			set_select_add_output();
+			thisPageManager.render_tx_fee();
+			thisPageManager.reload_compose_bets();
+			thisPageManager.set_select_add_output();
 			
 			$(".datepicker").datepicker();
 			<?php
@@ -615,11 +614,11 @@ if ($thisuser && $game) {
 				echo "games[0].add_option_to_vote(".((int)$_REQUEST['event_index']).", ".((int)$_REQUEST['option_id']).");\n";
 			}
 			?>
-			tab_clicked(<?php echo $initial_tab; ?>);
+			thisPageManager.tab_clicked(<?php echo $initial_tab; ?>);
 			
-			set_plan_rightclicks();
-			set_plan_round_sums();
-			render_plan_rounds();
+			thisPageManager.set_plan_rightclicks();
+			thisPageManager.set_plan_round_sums();
+			thisPageManager.render_plan_rounds();
 		};
 		
 		//]]>
@@ -662,17 +661,21 @@ if ($thisuser && $game) {
 				</div>
 				<?php
 				if ($game->db_game['buyin_policy'] != "none") { ?>
-					<button class="btn btn-sm btn-success" style="margin-top: 8px;" onclick="manage_buyin('initiate');"><i class="fas fa-shopping-cart"></i> &nbsp; Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
+					<button class="btn btn-sm btn-success" style="margin-top: 8px;" onclick="thisPageManager.manage_buyin('initiate');"><i class="fas fa-shopping-cart"></i> &nbsp; Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
 					<?php
 				}
 				if ($game->db_game['sellout_policy'] == "on") { ?>
-					<button class="btn btn-sm btn-info" style="margin-top: 8px;" onclick="manage_sellout('initiate');"><i class="fas fa-exchange-alt"></i> &nbsp; Sell your <?php echo $game->db_game['coin_name_plural']; ?></button>
+					<button class="btn btn-sm btn-info" style="margin-top: 8px;" onclick="thisPageManager.manage_sellout('initiate');"><i class="fas fa-exchange-alt"></i> &nbsp; Sell your <?php echo $game->db_game['coin_name_plural']; ?></button>
+					<?php
+				}
+				
+				if ($game->fetch_featured_strategies()->rowCount() > 0) {
+					?>
+					<button class="btn btn-sm btn-warning" style="margin-top: 8px;" onclick="thisPageManager.apply_my_strategy();">Apply my strategy now</button>
+					<button class="btn btn-sm btn-success" style="margin-top: 8px;" onclick="thisPageManager.show_featured_strategies(); return false;">Change my strategy</button>
 					<?php
 				}
 				?>
-				<button class="btn btn-sm btn-warning" style="margin-top: 8px;" onclick="apply_my_strategy();">Apply my strategy now</button>
-				<button class="btn btn-sm btn-success" style="margin-top: 8px;" onclick="show_featured_strategies(); return false;">Change my strategy</button>
-				
 				<div id="apply_my_strategy_status" class="greentext"></div>
 			</div>
 		</div>
@@ -684,7 +687,7 @@ if ($thisuser && $game) {
 						Play Now
 						
 						<div id="change_user_game">
-							<select id="select_user_game" class="form-control input-sm" onchange="change_user_game();">
+							<select id="select_user_game" class="form-control input-sm" onchange="thisPageManager.change_user_game();">
 								<?php
 								$user_games_by_game = $app->run_query("SELECT * FROM user_games WHERE user_id=:user_id AND game_id=:game_id;", [
 									'user_id' => $thisuser->db_user['user_id'],
@@ -704,7 +707,7 @@ if ($thisuser && $game) {
 				<div class="panel-body">
 					<?php
 					if ($faucet_io) {
-						echo '<p><button id="faucet_btn" class="btn btn-success" onclick="claim_from_faucet();"><i class="fas fa-hand-paper"></i> &nbsp; Claim '.$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].'</button></p>'."\n";
+						echo '<p><button id="faucet_btn" class="btn btn-success" onclick="thisPageManager.claim_from_faucet();"><i class="fas fa-hand-paper"></i> &nbsp; Claim '.$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].'</button></p>'."\n";
 					}
 					
 					$game_status_explanation = $game->game_status_explanation($thisuser, $user_game);
@@ -749,49 +752,53 @@ if ($thisuser && $game) {
 						</div>
 						<div class="col-md-6">
 							<div id="betting_mode_inflationary" style="display: none;">
-								<p style="float: right; clear: both;"><a href="" onclick="toggle_betting_mode('principal'); return false;">Switch to single betting mode</a></p>
+								<p style="float: right; clear: both;"><a href="" onclick="thisPageManager.toggle_betting_mode('principal'); return false;">Switch to single betting mode</a></p>
 								
 								<p>
 									<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">My Bets</a>
-									&nbsp;&nbsp; <a href="" onclick="add_all_utxos_to_vote(); return false;">Add all coins</a>
-									&nbsp;&nbsp; <a href="" onclick="remove_all_utxos_from_vote(); return false;">Remove all coins</a>
 								</p>
+								
 								<p>
-									To start a bet, click on your coins below.<br/>
+									To start a bet, click on your coins below.
 								</p>
 								
 								<div id="select_input_buttons" class="input_buttons_holder"><?php
 									echo $game->select_input_buttons($user_game);
 								?></div>
 								
-								<div id="compose_vote" style="display: none;">
+								<p>
+									<a href="" onclick="thisPageManager.add_all_utxos_to_vote(); return false;">Add all coins</a>
+									&nbsp;&nbsp; <a href="" onclick="thisPageManager.remove_all_utxos_from_vote(); return false;">Remove all coins</a>
+								</p>
+								
+								<div id="compose_bets" style="display: none;">
 									<h3>Stake Now</h3>
 									<div class="row bordered_row" style="border: 1px solid #bbb;">
-										<div class="col-md-4 bordered_cell" id="compose_vote_inputs">
+										<div class="col-md-4 bordered_cell" id="compose_bet_inputs">
 											<b>Inputs:</b><div style="display: none; margin-left: 20px;" id="input_amount_sum"></div><div style="display: inline-block; margin-left: 20px;" id="input_vote_sum"></div><br/>
 											<p>
-												How many <?php echo $game->db_game['coin_name_plural']; ?> do you want to spend?
+												How many <?php echo $game->db_game['coin_name_plural']; ?> do you want to bet?
 												<input class="form-control input-sm" id="compose_burn_amount" placeholder="0" /><font id="max_burn_amount"></font>
 											</p>
 											<p id="compose_input_start_msg"></p>
 										</div>
-										<div class="col-md-8 bordered_cell" id="compose_vote_outputs">
+										<div class="col-md-8 bordered_cell" id="compose_bet_outputs">
 											<b>Outputs:</b>
 											<div id="display_tx_fee"></div>
-											&nbsp;&nbsp; <a href="" onclick="add_all_options(); return false;">Add all options</a>
-											&nbsp;&nbsp; <a href="" onclick="remove_all_outputs(); return false;">Remove all options</a>
+											&nbsp;&nbsp; <a href="" onclick="thisPageManager.add_all_options(); return false;">Add all options</a>
+											&nbsp;&nbsp; <a href="" onclick="thisPageManager.remove_all_outputs(); return false;">Remove all options</a>
 											
-											<select class="form-control" style="margin-top: 5px;" id="select_add_output" onchange="select_add_output_changed();"></select>
+											<select class="form-control" style="margin-top: 5px;" id="select_add_output" onchange="thisPageManager.select_add_output_changed();"></select>
 										</div>
 									</div>
-									<button class="btn btn-success" id="confirm_compose_vote_btn" style="margin-top: 5px; margin-left: 5px;" onclick="confirm_compose_vote();"><i class="fas fa-check-circle"></i> &nbsp; Confirm & Stake</button>
+									<button class="btn btn-success" id="confirm_compose_bets_btn" style="margin-top: 5px; margin-left: 5px;" onclick="thisPageManager.confirm_compose_bets();"><i class="fas fa-check-circle"></i> &nbsp; Confirm & Stake</button>
 								</div>
 								
-								<div class="redtext" id="compose_vote_errors" style="margin-top: 10px;"></div>
-								<div class="greentext" id="compose_vote_success" style="margin-top: 10px;"></div>
+								<div class="redtext" id="compose_bets_errors" style="margin-top: 10px;"></div>
+								<div class="greentext" id="compose_bets_success" style="margin-top: 10px;"></div>
 							</div>
 							<div id="betting_mode_principal" style="display: none;">
-								<p style="float: right;"><a href="" onclick="toggle_betting_mode('inflationary'); return false;">Switch to multiple betting mode</a></p>
+								<p style="float: right;"><a href="" onclick="thisPageManager.toggle_betting_mode('inflationary'); return false;">Switch to multiple betting mode</a></p>
 								
 								<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">My Bets</a>
 								
@@ -894,6 +901,9 @@ if ($thisuser && $game) {
 					<p>
 						Select a staking strategy and your coins will automatically be staked even when you're not online.
 					</p>
+					<p>
+						<button class="btn btn-sm btn-warning" onclick="thisPageManager.apply_my_strategy();">Apply my strategy now</button>
+					</p>
 					<form method="post" action="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">
 						<input type="hidden" name="action" value="save_voting_strategy" />
 						<input type="hidden" id="voting_strategy_id" name="voting_strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
@@ -939,7 +949,7 @@ if ($thisuser && $game) {
 							<div class="col-md-10">
 								<label class="plainlabel" for="voting_strategy_by_entity"> 
 									Vote for these options every time. The percentages you enter below must add up to 100.<br/>
-									<?php /*<a href="" onclick="by_entity_reset_pct(); return false;">Set all to zero</a> <div style="margin-left: 15px; display: inline-block;" id="entity_pct_subtotal">&nbsp;</div>*/ ?>
+									<?php /*<a href="" onclick="thisPageManager.by_entity_reset_pct(); return false;">Set all to zero</a> <div style="margin-left: 15px; display: inline-block;" id="entity_pct_subtotal">&nbsp;</div>*/ ?>
 								</label><br/>
 								<?php
 								$entities_by_game = $game->entities_by_game();
@@ -972,7 +982,7 @@ if ($thisuser && $game) {
 								<label class="plainlabel" for="voting_strategy_by_rank">
 									Split up my free balance and vote it across options ranked:
 								</label><br/>
-								<input type="checkbox" id="rank_check_all" onchange="rank_check_all_changed();" /><label class="plainlabel" for="rank_check_all"> All</label><br/>
+								<input type="checkbox" id="rank_check_all" onchange="thisPageManager.rank_check_all_changed();" /><label class="plainlabel" for="rank_check_all"> All</label><br/>
 								<?php
 								$by_rank_ranks = explode(",", $user_strategy['by_rank_ranks']);
 								
@@ -994,7 +1004,7 @@ if ($thisuser && $game) {
 								<input type="radio" id="voting_strategy_by_plan" name="voting_strategy" value="by_plan"<?php if ($user_strategy['voting_strategy'] == "by_plan") echo ' checked="checked"'; ?>><label class="plainlabel" for="voting_strategy_by_plan">&nbsp;Plan&nbsp;my&nbsp;votes</label>
 							</div>
 							<div class="col-md-10">
-								<button class="btn btn-success" onclick="show_planned_votes(); return false;">Edit my planned votes</button>
+								<button class="btn btn-success" onclick="thisPageManager.show_planned_votes(); return false;">Edit my planned votes</button>
 							</div>
 						</div>
 						
@@ -1003,7 +1013,7 @@ if ($thisuser && $game) {
 								<input type="radio" id="voting_strategy_featured" name="voting_strategy" value="featured"<?php if ($user_strategy['voting_strategy'] == "featured") echo ' checked="checked"'; ?>><label class="plainlabel" for="voting_strategy_featured">&nbsp;Choose a strategy</label>
 							</div>
 							<div class="col-md-10">
-								<button class="btn btn-success" onclick="show_featured_strategies(); return false;">Choose a strategy</button>
+								<button class="btn btn-success" onclick="thisPageManager.show_featured_strategies(); return false;">Choose a strategy</button>
 							</div>
 						</div>
 						
@@ -1018,7 +1028,7 @@ if ($thisuser && $game) {
 								<div style="border: 1px solid #bbb; padding: 10px; margin: 10px 0px; max-height: 200px; overflow-x: hidden; overflow-y: scroll;">
 									<div class="row">
 										<div class="col-md-2">
-											<input type="checkbox" id="vote_on_block_all" onchange="vote_on_block_all_changed();" /><label class="plainlabel" for="vote_on_block_all">&nbsp;&nbsp;All</label>
+											<input type="checkbox" id="vote_on_block_all" onchange="thisPageManager.vote_on_block_all_changed();" /><label class="plainlabel" for="vote_on_block_all">&nbsp;&nbsp;All</label>
 										</div>
 									</div>
 									<div class="row">
@@ -1067,7 +1077,7 @@ if ($thisuser && $game) {
 							You can buy <?php echo $game->db_game['coin_name_plural']; ?> by clicking below.  Once your payment is confirmed, <?php echo $game->db_game['coin_name_plural']; ?> will be added to your account based on the exchange rate at the time of confirmation.
 						</p>
 						<p>
-							<button class="btn btn-success" onclick="manage_buyin('initiate');">Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
+							<button class="btn btn-success" onclick="thisPageManager.manage_buyin('initiate');">Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
 						</p>
 						<?php
 					}
@@ -1104,7 +1114,7 @@ if ($thisuser && $game) {
 								<input class="form-control" type="text" id="withdraw_address" />
 							</div>
 							<div class="form-group">
-								<button class="btn btn-success" id="withdraw_btn" onclick="attempt_withdrawal();">Send <?php echo $game->db_game['coin_name_plural']; ?></button>
+								<button class="btn btn-success" id="withdraw_btn" onclick="thisPageManager.attempt_withdrawal();">Send <?php echo $game->db_game['coin_name_plural']; ?></button>
 								<div id="withdraw_message" style="display: none; margin-top: 15px;"></div>
 							</div>
 						</div>
@@ -1122,7 +1132,7 @@ if ($thisuser && $game) {
 					<?php
 					$perm_to_invite = $thisuser->user_can_invite_game($user_game);
 					if ($perm_to_invite) {
-						echo '<a class="btn btn-primary" href="" onclick="manage_game_invitations('.$game->db_game['game_id'].'); return false;">Invitations</a>';
+						echo '<a class="btn btn-primary" href="" onclick="thisPageManager.manage_game_invitations('.$game->db_game['game_id'].'); return false;">Invitations</a>';
 					}
 					else echo "Sorry, you don't have permission to send invitations for this game.";
 					?>
@@ -1160,7 +1170,7 @@ if ($thisuser && $game) {
 					<div class="modal-body">
 						<div class="form-group">
 							<label for="notification_preference">Would you like to receive notifications about the performance of your accounts?</label>
-							<select class="form-control" id="notification_preference" name="notification_preference" onchange="notification_pref_changed();">
+							<select class="form-control" id="notification_preference" name="notification_preference" onchange="thisPageManager.notification_pref_changed();">
 								<option <?php if ($user_game['notification_preference'] == "none") echo 'selected="selected" '; ?>value="none">No, don't notify me</option>
 								<option <?php if ($user_game['notification_preference'] == "email") echo 'selected="selected" '; ?>value="email">Yes, send me email notifications</option>
 							</select>
@@ -1169,7 +1179,7 @@ if ($thisuser && $game) {
 							<input <?php if ($user_game['notification_preference'] == "none") echo 'style="display: none;" '; ?>class="form-control" type="text" name="notification_email" id="notification_email" placeholder="Enter your email address" value="<?php echo $thisuser->db_user['notification_email']; ?>" />
 						</div>
 						
-						<button id="notification_save_btn" class="btn btn-primary" onclick="save_notification_preferences();"><i class="fas fa-check-circle"></i> &nbsp; Save Notification Settings</button>
+						<button id="notification_save_btn" class="btn btn-primary" onclick="thisPageManager.save_notification_preferences();"><i class="fas fa-check-circle"></i> &nbsp; Save Notification Settings</button>
 					</div>
 				</div>
 			</div>
@@ -1197,9 +1207,9 @@ if ($thisuser && $game) {
 							Set your planned votes by clicking on the options below.  You can vote on more than one option in each round. Keep clicking on an option to increase its votes.  Or right click to remove all votes from an option.  Your planned votes are confidential and cannot be seen by other players.
 						</p>
 						
-						<button id="scramble_plan_btn" class="btn btn-warning" onclick="scramble_strategy(<?php echo $user_strategy['strategy_id']; ?>); return false;">Randomize my Votes</button>
+						<button id="scramble_plan_btn" class="btn btn-warning" onclick="thisPageManager.scramble_strategy(<?php echo $user_strategy['strategy_id']; ?>); return false;">Randomize my Votes</button>
 						
-						<font style="margin-left: 25px;">Load rounds: </font><input type="text" size="5" id="select_from_round" value="<?php echo $game->round_to_display_round($plan_start_round); ?>" /> to <input type="text" size="5" id="select_to_round" value="<?php echo $game->round_to_display_round($plan_stop_round); ?>" /> <button class="btn btn-default btn-sm" onclick="load_plan_rounds(); return false;">Go</button>
+						<font style="margin-left: 25px;">Load rounds: </font><input type="text" size="5" id="select_from_round" value="<?php echo $game->round_to_display_round($plan_start_round); ?>" /> to <input type="text" size="5" id="select_to_round" value="<?php echo $game->round_to_display_round($plan_stop_round); ?>" /> <button class="btn btn-default btn-sm" onclick="thisPageManager.load_plan_rounds(); return false;">Go</button>
 						
 						<br/>
 						<div id="plan_rows" style="margin: 10px 0px; max-height: 350px; overflow-y: scroll; border: 1px solid #bbb; padding: 0px 10px;">
@@ -1208,7 +1218,7 @@ if ($thisuser && $game) {
 							?>
 						</div>
 						
-						<button id="save_plan_btn" class="btn btn-success" onclick="save_plan_allocations(); return false;">Save Changes</button>
+						<button id="save_plan_btn" class="btn btn-success" onclick="thisPageManager.save_plan_allocations(); return false;">Save Changes</button>
 						<button style="float: right;" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
 						
 						<div id="plan_rows_js"></div>

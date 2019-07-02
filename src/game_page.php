@@ -95,7 +95,7 @@ else $exchange_rate = 0;
 
 <script type="text/javascript">
 //<![CDATA[
-games.push(new Game(<?php
+games.push(new Game(thisPageManager, <?php
 	echo $game->db_game['game_id'];
 	echo ', '.$game->last_block_id();
 	echo ', false';

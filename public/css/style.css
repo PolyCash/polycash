@@ -514,6 +514,7 @@ a.selected {
 	border: 1px solid black;
 }
 .input_buttons_holder {
+	margin-bottom: 10px;
 	max-height: 200px;
 	overflow-x: hidden;
 	overflow-y: auto;

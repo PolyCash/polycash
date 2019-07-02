@@ -32,7 +32,7 @@ if ($thisuser) {
 					if ($gios_by_io->rowCount() > 0) {
 						$game_sale_account = $sale_game->check_set_game_sale_account($thisuser);
 						
-						$game_ios = array();
+						$game_ios = [];
 						$colored_coin_sum = 0;
 						
 						while ($game_io = $gios_by_io->fetch()) {
@@ -45,8 +45,8 @@ if ($thisuser) {
 						$chain_coins_each = ceil($satoshis_each/$coins_per_chain_coin);
 						
 						if (in_array($game_ios[0]['spend_status'], array("unspent", "unconfirmed"))) {
-							$address_ids = array();
-							$address_key_ids = array();
+							$address_ids = [];
+							$address_key_ids = [];
 							$addresses_needed = $quantity;
 							$loop_count = 0;
 							do {
@@ -117,8 +117,8 @@ if ($thisuser) {
 								if ($total_cost_satoshis < $colored_coin_sum && $coin_sum > ($chain_coins_each*$quantity) - $fee_amount) {
 									$remainder_satoshis = $coin_sum - ($chain_coins_each*$quantity) - $fee_amount;
 									
-									$send_address_ids = array();
-									$amounts = array();
+									$send_address_ids = [];
+									$amounts = [];
 									
 									for ($i=0; $i<$quantity; $i++) {
 										array_push($amounts, $chain_coins_each);
@@ -184,7 +184,7 @@ if ($thisuser) {
 					if ($gios_by_io->rowCount() > 0) {
 						$faucet_account = $donate_game->check_set_faucet_account();
 						
-						$game_ios = array();
+						$game_ios = [];
 						$colored_coin_sum = 0;
 						
 						while ($game_io = $gios_by_io->fetch()) {
@@ -197,8 +197,8 @@ if ($thisuser) {
 						$chain_coins_each = ceil($satoshis_each_utxo/$coins_per_chain_coin);
 						
 						if (in_array($game_ios[0]['spend_status'], array("unspent", "unconfirmed"))) {
-							$address_ids = array();
-							$address_key_ids = array();
+							$address_ids = [];
+							$address_key_ids = [];
 							$addresses_needed = $quantity;
 							$loop_count = 0;
 							
@@ -234,8 +234,8 @@ if ($thisuser) {
 								if ($total_cost_satoshis < $colored_coin_sum && $coin_sum > ($chain_coins_each*$quantity*$utxos_each) - $fee_amount) {
 									$remainder_satoshis = $coin_sum - ($chain_coins_each*$quantity*$utxos_each) - $fee_amount;
 									
-									$send_address_ids = array();
-									$amounts = array();
+									$send_address_ids = [];
+									$amounts = [];
 									
 									for ($i=0; $i<$quantity; $i++) {
 										for ($j=0; $j<$utxos_each; $j++) {
@@ -291,7 +291,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 		else $selected_account_id = false;
 		?>
 		<script type="text/javascript">
-		var selected_account_id = <?php if ($selected_account_id) echo $selected_account_id; else echo 'false'; ?>;
+		thisPageManager.selected_account_id = <?php if ($selected_account_id) echo $selected_account_id; else echo 'false'; ?>;
 		</script>
 		
 		<div class="panel panel-info" style="margin-top: 15px;">
@@ -361,12 +361,12 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					
 					echo '<div class="col-sm-2">';
 					if (empty($account['game_id'])) {
-						echo '<a href="" onclick="toggle_account_details('.$account['account_id'].'); return false;">Deposit</a>';
-						echo ' &nbsp;&nbsp; <a href="" onclick="withdraw_from_account('.$account['account_id'].', 1); return false;">Withdraw</a>';
+						echo '<a href="" onclick="thisPageManager.toggle_account_details('.$account['account_id'].'); return false;">Deposit</a>';
+						echo ' &nbsp;&nbsp; <a href="" onclick="thisPageManager.withdraw_from_account('.$account['account_id'].', 1); return false;">Withdraw</a>';
 					}
 					echo '</div>';
 					
-					echo '<div class="col-sm-2"><a href="" onclick="toggle_account_details('.$account['account_id'].'); return false;">Transactions';
+					echo '<div class="col-sm-2"><a href="" onclick="thisPageManager.toggle_account_details('.$account['account_id'].'); return false;">Transactions';
 					
 					$transaction_in_params = [
 						'account_id' => $account['account_id']
@@ -444,7 +444,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						
 						echo '<div class="col-sm-2">'.ucwords($transaction['spend_status']);
 						if ($transaction['spend_status'] != "spent" && $transaction['block_id'] !== "") {
-							echo "&nbsp;&nbsp;<a href=\"\" onclick=\"account_start_spend_io(";
+							echo "&nbsp;&nbsp;<a href=\"\" onclick=\"thisPageManager.account_start_spend_io(";
 							if ($account_game) echo $account_game->db_game['game_id'];
 							else echo 'false';
 							
@@ -512,14 +512,14 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						
 						echo '<div class="col-sm-2">';
 						if ($address['is_separator_address'] == 0 && $address['is_destroy_address'] == 0) {
-							echo '<a href="" onclick="manage_addresses('.$account['account_id'].', \'set_primary\', '.$address['address_id'].');">Set as Primary</a>';
+							echo '<a href="" onclick="thisPageManager.manage_addresses('.$account['account_id'].', \'set_primary\', '.$address['address_id'].');">Set as Primary</a>';
 						}
 						echo '</div>';
 						
 						echo "</div>\n";
 					}
 					
-					echo '<br/><p><button class="btn btn-sm btn-primary" onclick="manage_addresses('.$account['account_id'].', \'new\', false);">New Address</button></p>';
+					echo '<br/><p><button class="btn btn-sm btn-primary" onclick="thisPageManager.manage_addresses('.$account['account_id'].', \'new\', false);">New Address</button></p>';
 					echo '
 						</div>
 					</div>';
@@ -553,7 +553,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								
 								<div class="greentext" style="display: none;" id="withdraw_message"></div>
 								
-								<button id="withdraw_btn" class="btn btn-success" onclick="withdraw_from_account(false, 2);">Withdraw</button>
+								<button id="withdraw_btn" class="btn btn-success" onclick="thisPageManager.withdraw_from_account(false, 2);">Withdraw</button>
 							</div>
 						</div>
 					</div>
@@ -561,7 +561,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 				<div id="create_account_dialog" style="display: none;">
 					<div class="form-group">
 						<label for="create_account_action">Create a new account:</label>
-						<select class="form-control" id="create_account_action" onchange="create_account_step(1);">
+						<select class="form-control" id="create_account_action" onchange="thisPageManager.create_account_step(1);">
 							<option value="">-- Please Select --</option>
 							<option value="for_blockchain">Create a new blockchain account</option>
 							<option value="by_rpc_account">Import an existing account by RPC</option>
@@ -569,7 +569,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					</div>
 					<div class="form-group" id="create_account_step2" style="display: none;">
 						<label for="create_account_blockchain_id">Please select a blockchain:</label>
-						<select class="form-control" id="create_account_blockchain_id" onchange="create_account_step(2);">
+						<select class="form-control" id="create_account_blockchain_id" onchange="thisPageManager.create_account_step(2);">
 							<option value="">-- Please Select --</option>
 							<?php
 							$all_blockchains = $app->run_query("SELECT * FROM blockchains ORDER BY blockchain_name ASC;");
@@ -584,7 +584,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						<input type="text" class="form-control" id="create_account_rpc_name" value="" />
 					</div>
 					<div class="form-group" id="create_account_submit" style="display: none;">
-						<button class="btn btn-primary" onclick="create_account_step('submit');">Create Account</button>
+						<button class="btn btn-primary" onclick="thisPageManager.create_account_step('submit');">Create Account</button>
 					</div>
 				</div>
 			</div>
@@ -598,7 +598,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					</div>
 					<div class="modal-body">
 						<div class="form-group">
-							<select class="form-control" id="account_spend_action" onchange="account_spend_action_changed();">
+							<select class="form-control" id="account_spend_action" onchange="thisPageManager.account_spend_action_changed();">
 								<option value="">-- Please select --</option>
 								<option value="withdraw">Spend</option>
 								<option value="split">Split into pieces</option>
@@ -612,7 +612,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							Loading...
 						</div>
 						<div id="account_spend_withdraw" style="display: none;">
-							<form method="get" action="/ajax/account_spend.php" onsubmit="account_spend_withdraw(); return false;">
+							<form method="get" action="/ajax/account_spend.php" onsubmit="thisPageManager.account_spend_withdraw(); return false;">
 								<div class="form-group">
 									<label for="spend_withdraw_address">Address:</label>
 									<input type="text" class="form-control" id="spend_withdraw_address" />
@@ -681,7 +681,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								</div>
 							</form>
 						</div>
-						<div id="account_spend_split" style="display: none;" onsubmit="account_spend_split(); return false;">
+						<div id="account_spend_split" style="display: none;" onsubmit="thisPageManager.account_spend_split(); return false;">
 							<form action="/accounts/" method="get">
 								<input type="hidden" name="action" value="split" />
 								
@@ -700,7 +700,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 											<input type="text" class="form-control" name="split_fee" id="split_fee" placeholder="0.0001" />
 										</div>
 										<div class="col-sm-4 form-control-static">
-											<?php echo $blockchain->db_blockchain['coin_name_plural']; ?>
+											<?php if ($selected_account_id) echo $blockchain->db_blockchain['coin_name_plural']; ?>
 										</div>
 									</div>
 								</div>
@@ -754,7 +754,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							<p>
 								Which address should colored coins be sent to?
 							</p>
-							<select class="form-control" id="account_spend_buyin_address_choice" onchange="account_spend_buyin_address_choice_changed();">
+							<select class="form-control" id="account_spend_buyin_address_choice" onchange="thisPageManager.account_spend_buyin_address_choice_changed();">
 								<option value="new">Create a new address for me</option>
 								<option value="existing">Let me enter an address</option>
 							</select>
@@ -766,7 +766,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								<input class="form-control" id="account_spend_buyin_address" />
 							</div>
 							<br/>
-							<button class="btn btn-primary" onclick="account_spend_buyin();">Buy in</button>
+							<button class="btn btn-primary" onclick="thisPageManager.account_spend_buyin();">Buy in</button>
 						</div>
 					</div>
 				</div>
@@ -774,18 +774,18 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 		</div>
 		
 		<script type="text/javascript">
-		$(document).ready(function() {
-			account_spend_refresh();
+		window.onload = function() {
+			thisPageManager.account_spend_refresh();
 			<?php
 			if ($action == "prompt_game_buyin") {
 				?>
-				account_start_spend_io(false, <?php echo ((int) $_REQUEST['io_id']); ?>, <?php echo ((float) $_REQUEST['amount']); ?>, '', '');
+				thisPageManager.account_start_spend_io(false, <?php echo ((int) $_REQUEST['io_id']); ?>, <?php echo ((float) $_REQUEST['amount']); ?>, '', '');
 				$('#account_spend_action').val('buyin');
-				account_spend_action_changed();
+				thisPageManager.account_spend_action_changed();
 				<?php
 			}
 			?>
-		});
+		};
 		</script>
 		<?php
 	}

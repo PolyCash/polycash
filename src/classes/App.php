@@ -982,7 +982,7 @@ class App {
 				list($new_event_js, $new_event_html) = $featured_game->new_event_js($counter, $user, $filter_arr, $event_ids, true);
 				?>
 				<script type="text/javascript">
-				games.push(new Game(<?php
+				games.push(new Game(thisPageManager, <?php
 					echo $db_game['game_id'];
 					echo ', '.$featured_game->last_block_id();
 					echo ', false';
@@ -1221,7 +1221,7 @@ class App {
 			$coins_in_existence = $game->coins_in_existence(false, true);
 			
 			$circulation_amount_disp = $this->format_bignum($coins_in_existence/pow(10,$db_game['decimal_places']));
-			$html .= '<div class="row"><div class="col-sm-5">'.ucwords($game->db_game['coin_name_plural']).' in circulation:</div><div class="col-sm-7">';
+			$html .= '<div class="row"><div class="col-sm-5">'.ucfirst($game->db_game['coin_name_plural']).' in circulation:</div><div class="col-sm-7">';
 			$html .= $circulation_amount_disp.' ';
 			if ($circulation_amount_disp == "1") $html .= $db_game['coin_name'];
 			else $html .= $db_game['coin_name_plural'];
@@ -1234,17 +1234,19 @@ class App {
 			else $html .= $db_game['coin_name_plural'];
 			$html .= "</div></div>\n";
 			
-			$supply_disp = $this->format_bignum($vote_supply_value/pow(10,$db_game['decimal_places']));
-			$html .= '<div class="row"><div class="col-sm-5">Unrealized '.$game->db_game['coin_name_plural'].':</div><div class="col-sm-7">';
-			$html .= $supply_disp.' ';
-			if ($supply_disp == "1") $html .= $db_game['coin_name'];
-			else $html .= $db_game['coin_name_plural'];
-			$html .= "</div></div>\n";
+			if ($db_game['exponential_inflation_rate'] != 0) {
+				$unrealized_supply_disp = $this->format_bignum($vote_supply_value/pow(10,$db_game['decimal_places']));
+				$html .= '<div class="row"><div class="col-sm-5">Unrealized '.$game->db_game['coin_name_plural'].':</div><div class="col-sm-7">';
+				$html .= $unrealized_supply_disp.' ';
+				if ($unrealized_supply_disp == "1") $html .= $db_game['coin_name'];
+				else $html .= $db_game['coin_name_plural'];
+				$html .= "</div></div>\n";
+			}
 			
-			$unrealized_supply_disp = $this->format_bignum(($coins_in_existence+$vote_supply_value+$game_pending_bets)/pow(10,$db_game['decimal_places']));
+			$total_supply_disp = $this->format_bignum(($coins_in_existence+$vote_supply_value+$game_pending_bets)/pow(10,$db_game['decimal_places']));
 			$html .= '<div class="row"><div class="col-sm-5">Total supply:</div><div class="col-sm-7">';
-			$html .= $unrealized_supply_disp.' ';
-			if ($unrealized_supply_disp == "1") $html .= $db_game['coin_name'];
+			$html .= $total_supply_disp.' ';
+			if ($total_supply_disp == "1") $html .= $db_game['coin_name'];
 			else $html .= $db_game['coin_name_plural'];
 			$html .= "</div></div>\n";
 			

@@ -127,26 +127,9 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 	}
 	else {
 		?>
-		<script type="text/javascript">
-		var reset_in_progress = false;
-		function request_pass_reset() {
-			if (reset_in_progress) {}
-			else {
-				var reset_email = $('#reset_email').val();
-				$('#reset_button').val("Sending...");
-				$.get("/ajax/reset_password.php?email="+encodeURIComponent(reset_email), function(result) {
-					$('#reset_button').val("Request Password Reset");
-					alert(result);
-				});
-				reset_in_progress = true;
-				setTimeout("reset_in_progress=false;", 100);
-			}
-		}
-		</script>
-		
 		<h1><?php echo AppSettings::getParam('site_name'); ?> - Recover your Password</h1>
 		
-		<form method="get" action="/reset_password/" onsubmit="request_pass_reset(); return false;">
+		<form method="get" action="/reset_password/" onsubmit="thisPageManager.request_pass_reset(); return false;">
 			To reset your password, please enter your email address below and we'll send you a password reset link.<br/>
 			<div class="row bootstrap_pad_row">
 				<div class="col-md-6">
@@ -155,7 +138,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 			</div>
 			<div class="row bootstrap_pad_row">
 				<div class="col-md-6">
-					<input id="reset_button" type="submit" class="btn btn-primary" onclick="request_pass_reset();" value="Request Password Reset" />
+					<input id="reset_button" type="submit" class="btn btn-primary" value="Request Password Reset" />
 				</div>
 			</div>
 		</form>

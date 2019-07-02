@@ -958,17 +958,17 @@ class Game {
 		$to_block_id = $to_round*$this->db_game['round_length']+1;
 		$html = "
 		<script type='text/javascript'>
-		var plan_option_max_points = 5;
-		var plan_option_increment = 1;
-		var plan_rounds = [];
-		var round_id2plan_round_id = {};
+		thisPageManager.plan_option_max_points = 5;
+		thisPageManager.plan_option_increment = 1;
+		thisPageManager.plan_rounds = [];
+		thisPageManager.round_id2plan_round_id = {};
 		</script>\n";
 		$js = "";
 		$round_i = 0;
 		
 		for ($round=$from_round; $round<=$to_round; $round++) {
-			$js .= "var temp_plan_round = new plan_round(".$round.");\n";
-			$js .= "round_id2plan_round_id[".$round."] = ".$round_i.";\n";
+			$js .= "var temp_plan_round = new PlanRound(".$round.");\n";
+			$js .= "thisPageManager.round_id2plan_round_id[".$round."] = ".$round_i.";\n";
 			
 			$block_id = ($round-1)*$this->db_game['round_length']+1;
 			$filter_arr = false;
@@ -984,7 +984,7 @@ class Game {
 				$thisevent_options = $this->blockchain->app->fetch_options_by_event($events[$event_i]->db_event['event_id']);
 				
 				while ($game_option = $thisevent_options->fetch()) {
-					$html .= '<div class="plan_option" id="plan_option_'.$round.'_'.$events[$event_i]->db_event['event_id'].'_'.$game_option['option_id'].'" onclick="plan_option_clicked('.$round.', '.$events[$event_i]->db_event['event_id'].', '.$game_option['option_id'].');">';
+					$html .= '<div class="plan_option" id="plan_option_'.$round.'_'.$events[$event_i]->db_event['event_id'].'_'.$game_option['option_id'].'" onclick="thisPageManager.plan_option_clicked('.$round.', '.$events[$event_i]->db_event['event_id'].', '.$game_option['option_id'].');">';
 					$html .= '<div class="plan_option_label" id="plan_option_label_'.$round.'_'.$events[$event_i]->db_event['event_id'].'_'.$game_option['option_id'].'">'.$game_option['name']."</div>";
 					$html .= '<div class="plan_option_amount" id="plan_option_amount_'.$round.'_'.$events[$event_i]->db_event['event_id'].'_'.$game_option['option_id'].'"></div>';
 					$html .= '<input type="hidden" id="plan_option_input_'.$round.'_'.$events[$event_i]->db_event['event_id'].'_'.$game_option['option_id'].'" name="poi_'.$round.'_'.$game_option['option_id'].'" value="" />';
@@ -993,7 +993,7 @@ class Game {
 				}
 				$html .= "</div>\n";
 			}
-			$js .= "plan_rounds.push(temp_plan_round);\n";
+			$js .= "thisPageManager.plan_rounds.push(temp_plan_round);\n";
 			$html .= "</div>\n";
 			$round_i++;
 		}
@@ -1536,7 +1536,7 @@ class Game {
 		
 		while ($user_game = $user_games->fetch()) {
 			$html .= '<div class="row">';
-			$html .= '<div class="col-sm-4"><a href="" onclick="openChatWindow('.$user_game['user_id'].'); return false;">Player'.$user_game['user_id'].'</a></div>';
+			$html .= '<div class="col-sm-4"><a href="" onclick="thisPageManager.openChatWindow('.$user_game['user_id'].'); return false;">Player'.$user_game['user_id'].'</a></div>';
 			$html .= '</div>';
 		}
 		
@@ -1755,7 +1755,7 @@ class Game {
 			$j=0;
 			while ($option = $options_by_event->fetch()) {
 				$has_votingaddr = "true";
-				$js .= "games[".$game_index."].events[".$i."].options.push(new option(games[".$game_index."].events[".$i."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$this->blockchain->app->quote_escape($option['name']).", 0, ".$has_votingaddr.", ".$this->blockchain->app->quote_escape($option['image_url'])."));\n";
+				$js .= "games[".$game_index."].events[".$i."].options.push(new Option(games[".$game_index."].events[".$i."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$this->blockchain->app->quote_escape($option['name']).", 0, ".$has_votingaddr.", ".$this->blockchain->app->quote_escape($option['image_url'])."));\n";
 				$j++;
 			}
 			$html .= "<div id='game".$game_index."_event".$i."' class='game_event_inner'><div id='game".$game_index."_event".$i."_display' class='game_event_display'>";
@@ -1797,12 +1797,12 @@ class Game {
 	public function select_input_buttons($user_game) {
 		$mature_ios = $this->blockchain->app->spendable_ios_in_account($user_game['account_id'], $this->db_game['game_id'], false, false);
 		
-		$js = "chain_ios.length = 0;\n";
+		$js = "thisPageManager.chain_ios.length = 0;\n";
 		$html = "<p>";
 		if ($mature_ios->rowCount() == 0) {
 			$html .= "You need ".$this->db_game['coin_name_plural']." to bet. To deposit ".$this->db_game['coin_name_plural'].", visit <a href=\"/accounts/?account_id=".$user_game['account_id']."\">your accounts page</a> to see a list of your addresses.";
 			if ($this->db_game['buyin_policy'] != "none") {
-				$html .= '<br/><button class="btn btn-sm btn-success" style="margin-top: 8px;" onclick="manage_buyin(\'initiate\');"><i class="fas fa-shopping-cart"></i> &nbsp; Buy '.$this->db_game['coin_name_plural'].'</button>';
+				$html .= '<br/><button class="btn btn-sm btn-success" style="margin-top: 8px;" onclick="thisPageManager.manage_buyin(\'initiate\');"><i class="fas fa-shopping-cart"></i> &nbsp; Buy '.$this->db_game['coin_name_plural'].'</button>';
 			}
 		}
 		$html .= "</p>\n";
@@ -1813,21 +1813,21 @@ class Game {
 		while ($io = $mature_ios->fetch()) {
 			$gios_by_io = $this->fetch_game_ios_by_io($io['io_id']);
 			
-			$js .= "chain_ios[".$io_i."] = new chain_io(".$io_i.", ".$io['io_id'].", ".$io['amount'].", '".$io['create_block_id']."');\n";
+			$js .= "thisPageManager.chain_ios[".$io_i."] = new ChainIO(".$io_i.", ".$io['io_id'].", ".$io['amount'].", '".$io['create_block_id']."');\n";
 			
 			while ($gio = $gios_by_io->fetch()) {
-				$js .= "chain_ios[".$io_i."].game_ios.push(new game_io(".$gio['game_io_id'].", ".$gio['colored_amount'].", '".$io['create_block_id']."'));\n";
+				$js .= "thisPageManager.chain_ios[".$io_i."].game_ios.push(new GameIO(".$gio['game_io_id'].", ".$gio['colored_amount'].", '".$io['create_block_id']."'));\n";
 			}
 			
 			$input_buttons_html .= '<div id="select_utxo_'.$io['io_id'].'" class="btn btn-primary btn-sm select_utxo';
 			if ($this->db_game['logo_image_id'] > 0) $input_buttons_html .= ' select_utxo_image';
-			$input_buttons_html .= '" onclick="add_utxo_to_vote('.$io_i.');">';
+			$input_buttons_html .= '" onclick="thisPageManager.add_utxo_to_vote('.$io_i.');">';
 			$input_buttons_html .= '</div>'."\n";
 			
 			$js .= "\n";
 			$io_i++;
 		}
-		$js .= "refresh_mature_io_btns();\n";
+		$js .= "thisPageManager.refresh_mature_io_btns();\n";
 		
 		$html .= '<div id="select_input_buttons_msg"></div>'."\n";
 		$html .= $input_buttons_html;
@@ -1868,7 +1868,7 @@ class Game {
 				$has_votingaddr = "false";
 				
 				$js .= "if (typeof games[".$game_index."].all_events[".$db_event['event_index']."].options[".$j."] == 'undefined') {";
-				$js .= "games[".$game_index."].all_events[".$db_event['event_index']."].options[".$j."] = new option(games[".$game_index."].all_events[".$db_event['event_index']."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$this->blockchain->app->quote_escape($option['name']).", 0, ".$has_votingaddr.");\n";
+				$js .= "games[".$game_index."].all_events[".$db_event['event_index']."].options[".$j."] = new Option(games[".$game_index."].all_events[".$db_event['event_index']."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$this->blockchain->app->quote_escape($option['name']).", 0, ".$has_votingaddr.");\n";
 				$js .= "games[".$game_index."].all_events_db_id_to_index[".$db_event['event_id']."] = ".$db_event['event_index'].";\n";
 				$js .= "}\n";
 				
@@ -3576,7 +3576,7 @@ class Game {
 		<form class="form-inline">
 			<div class="form-group">
 				<label for="filter_by_date">Date:</label> &nbsp;&nbsp; 
-				<select class="form-control input-sm" id="filter_by_date" onchange="filter_changed(\'date\');">
+				<select class="form-control input-sm" id="filter_by_date" onchange="thisPageManager.filter_changed(\'date\');">
 					<option value="">Select a Date</option>';
 					
 					$ref_date = date("Y-m-d", time());
@@ -3886,6 +3886,12 @@ class Game {
 			'game_id' => $this->db_game['game_id'],
 			'event_index' => $event_index
 		])->fetch();
+	}
+	
+	public function fetch_featured_strategies() {
+		return $this->blockchain->app->run_query("SELECT * FROM featured_strategies fs LEFT JOIN currency_accounts ca ON fs.reference_account_id=ca.account_id WHERE fs.game_id=:game_id;", [
+			'game_id' => $this->db_game['game_id']
+		]);
 	}
 }
 ?>

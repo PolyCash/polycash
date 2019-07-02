@@ -43,7 +43,7 @@ if (!empty($_REQUEST['action'])) {
 						$account_balance = $app->account_balance($currency_account['account_id']);
 						
 						if ($cost+$fee <= $account_balance) {
-							$io_ids = array();
+							$io_ids = [];
 							$input_sum = 0;
 							$first_address_id = false;
 							$keep_looping = true;
@@ -61,8 +61,8 @@ if (!empty($_REQUEST['action'])) {
 								if ($input_sum >= $cost+$fee) $keep_looping = false;
 							}
 							
-							$output_amounts = array();
-							$output_address_ids = array();
+							$output_amounts = [];
+							$output_address_ids = [];
 							
 							for ($i=0; $i<$how_many; $i++) {
 								$address_key = $app->new_address_key($fv_currency['currency_id'], $currency_account);
@@ -250,7 +250,7 @@ if (!empty($_REQUEST['action'])) {
 					
 					if ($count+$numthispage > $numcards) $numthispage = $numcards-$count;
 					
-					$cardarr = array();
+					$cardarr = [];
 					
 					for ($pos=1; $pos <= $numthispage; $pos++) {
 						$cardarr[$pos-1] = $these_cards->fetch();
@@ -468,7 +468,7 @@ if (!empty($_REQUEST['action'])) {
 	}
 }
 
-$my_cards = array();
+$my_cards = [];
 
 if (!empty($thisuser)) {
 	$my_cards = $app->run_query("SELECT c.*, u.*, curr.*, c.amount AS amount FROM cards c JOIN card_users u ON c.card_id=u.card_id JOIN currencies curr ON c.fv_currency_id=curr.currency_id WHERE c.user_id=:user_id;", ['user_id'=>$thisuser->db_user['user_id']])->fetchAll();
@@ -486,14 +486,14 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 		if ($nav_subtab_selected == "create") {
 			?>
 			<script type="text/javascript">
-			var card_printing_cost = 0.25;
-			var cost_per_coin = 1;
-			var coin_abbreviation = "";
-			var usd_per_btc = <?php if ($btc_usd_price) echo $btc_usd_price['price']; else echo "false"; ?>;
+			thisPageManager.card_printing_cost = 0.25;
+			thisPageManager.cost_per_coin = 1;
+			thisPageManager.coin_abbreviation = "";
+			thisPageManager.usd_per_btc = <?php if ($btc_usd_price) echo $btc_usd_price['price']; else echo "false"; ?>;
 
 			window.onload = function() {
-				cards_howmany_changed();
-				fv_currency_id_changed();
+				thisPageManager.cards_howmany_changed();
+				thisPageManager.fv_currency_id_changed();
 			};
 			</script>
 			
@@ -508,7 +508,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						
 						<div class="form-group">
 							<label for="cards_currency_id">Which currency should the cards convert to?</label>
-							<select id="cards_currency_id" class="form-control" name="cards_currency" onchange="currency_id_changed();">
+							<select id="cards_currency_id" class="form-control" name="cards_currency" onchange="thisPageManager.currency_id_changed();">
 								<option value="">-- Please Select --</option>
 								<?php
 								$blockchain_currencies = $app->run_query("SELECT * FROM currencies WHERE blockchain_id IS NOT NULL ORDER BY name ASC;");
@@ -523,7 +523,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						<div class="form-group">
 							<label for="cards_fv_currency_id">Which currency should the cards hold?</label>
 							
-							<select id="cards_fv_currency_id" class="form-control" name="cards_fv_currency_id" onchange="fv_currency_id_changed();">
+							<select id="cards_fv_currency_id" class="form-control" name="cards_fv_currency_id" onchange="thisPageManager.fv_currency_id_changed();">
 								<option value="">-- Please Select --</option>
 							</select>
 						</div>
@@ -545,7 +545,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						
 						<div class="form-group">
 							<label for="cards_howmany">How many cards do you want to print?</label>
-							<select id="cards_howmany" class="form-control" name="cards_howmany" onchange="cards_howmany_changed();">
+							<select id="cards_howmany" class="form-control" name="cards_howmany" onchange="thisPageManager.cards_howmany_changed();">
 								<?php
 								$ops = ['10','20','50','100','other'];
 								
@@ -608,7 +608,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							<input type="text" size="40" id="cards_pnum" class="form-control" name="cards_pnum" />
 						</div>
 						
-						<a href="" onclick="show_card_preview(); return false;">Preview my cards</a><br/>
+						<a href="" onclick="thisPageManager.show_card_preview(); return false;">Preview my cards</a><br/>
 						<div id="cards_preview" style="display: none; padding: 5px;">&nbsp;</div>
 						<br/>
 						
@@ -698,38 +698,24 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 			<?php
 		}
 		else {
-			if (empty($my_cards)) $my_cards = array();
+			if (empty($my_cards)) $my_cards = [];
 			$reference_currency = $app->get_reference_currency();
 			$btc_currency = $app->get_currency_by_abbreviation('btc');
 			$currency_prices = $app->fetch_currency_prices();
 			if (empty($my_cards)) $networth = 0;
 			else $networth = $app->calculate_cards_networth($my_cards);
-			?>
-			<script type="text/javascript">
-			var selected_card = -1;
-			var selected_section = false;
-
-			function open_page_section(section_id) {
-				if (section_id == selected_section) {
-					document.getElementById('section_link_'+selected_section).classList.remove('active');
-					document.getElementById('section_'+selected_section).style.display = 'none';
-					selected_section = false;
-				}
-				else {
-					if (selected_section !== false) {
-						document.getElementById('section_'+selected_section).style.display = 'none';
-						document.getElementById('section_link_'+selected_section).classList.remove('active');
-					}
-					document.getElementById('section_'+section_id).style.display = 'block';
-					document.getElementById('section_link_'+section_id).classList.add('active');
-					selected_section = section_id;
-				}
-			}
-			window.onload = function() {
-				open_page_section("<?php if (empty($_REQUEST['start_section'])) echo "cards"; else echo $_REQUEST['start_section']; ?>");
-			};
-			</script>
 			
+			if (empty($_REQUEST['start_section'])) $_REQUEST['start_section'] = "cards";
+			if (in_array($_REQUEST['start_section'], ['cards', 'add_card', 'withdraw_btc'])) {
+				?>
+				<script type="text/javascript">
+				window.onload = function() {
+					thisPageManager.open_page_section(<?php echo "'".$_REQUEST['start_section']."'"; ?>);
+				};
+				</script>
+				<?php
+			}
+			?>
 			<div id="section_cards" style="display: none; margin-top: 15px;">
 				<div class="panel panel-info">
 					<div class="panel-heading">
@@ -746,7 +732,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							<div id="display_hotcards">
 								<?php
 								for ($i=0; $i<count($my_cards); $i++) {
-									echo '<div class="card_small" id="card_btn'.$i.'" onclick="open_card('.$i.');">';
+									echo '<div class="card_small" id="card_btn'.$i.'" onclick="thisPageManager.open_card('.$i.');">';
 									if ($my_cards[$i]['status'] == "claimed") echo "<b>";
 									echo $my_cards[$i]['peer_card_id'];
 									echo "<br/>\n";
@@ -812,9 +798,9 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 											if ($my_cards[$i]['status'] == "claimed") {
 												?>
 												<p style="margin-top: 15px;">
-													<button class="btn btn-success" onclick="card_id=<?php echo $my_cards[$i]['peer_card_id']; ?>; peer_id=<?php echo $my_cards[$i]['peer_id']; ?>; $('#claim_dialog').modal('show');">Withdraw to Address</button>
-													<button id="claim_account_btn_<?php echo $my_cards[$i]['peer_card_id'].'_'.$my_cards[$i]['peer_id']; ?>" class="btn btn-primary" onclick="card_id=<?php echo $my_cards[$i]['peer_card_id']; ?>; peer_id=<?php echo $my_cards[$i]['peer_id']; ?>; claim_card('to_account');">Withdraw to Account</button>
-													<button id="claim_game_btn_<?php echo $my_cards[$i]['peer_card_id'].'_'.$my_cards[$i]['peer_id']; ?>" class="btn btn-info" onclick="card_id=<?php echo $my_cards[$i]['peer_card_id']; ?>; peer_id=<?php echo $my_cards[$i]['peer_id']; ?>; claim_card('to_game');">Buy in to Game</button>
+													<button class="btn btn-success" onclick="thisPageManager.card_id=<?php echo $my_cards[$i]['peer_card_id']; ?>; thisPageManager.peer_id=<?php echo $my_cards[$i]['peer_id']; ?>; $('#claim_dialog').modal('show');">Withdraw to Address</button>
+													<button id="claim_account_btn_<?php echo $my_cards[$i]['peer_card_id'].'_'.$my_cards[$i]['peer_id']; ?>" class="btn btn-primary" onclick="thisPageManager.card_id=<?php echo $my_cards[$i]['peer_card_id']; ?>; thisPageManager.peer_id=<?php echo $my_cards[$i]['peer_id']; ?>; thisPageManager.claim_card('to_account');">Withdraw to Account</button>
+													<button id="claim_game_btn_<?php echo $my_cards[$i]['peer_card_id'].'_'.$my_cards[$i]['peer_id']; ?>" class="btn btn-info" onclick="thisPageManager.card_id=<?php echo $my_cards[$i]['peer_card_id']; ?>; thisPageManager.peer_id=<?php echo $my_cards[$i]['peer_id']; ?>; thisPageManager.claim_card('to_game');">Buy in to Game</button>
 												</p>
 												<?php
 											}
@@ -847,7 +833,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							</div>
 							<span class="greentext" style="display: none;" id="claim_message"></span>
 							
-							<button id="claim_address_btn" class="btn btn-success" onclick="claim_card('to_address');">Send Coins</button>
+							<button id="claim_address_btn" class="btn btn-success" onclick="thisPageManager.claim_card('to_address');">Send Coins</button>
 						</div>
 					</div>
 				</div>
@@ -910,7 +896,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								<canvas id="qrCanvas" width="800" height="600"></canvas>
 							</div>
 						</div>
-						<button class="btn btn-success" onclick="deposit_coins();">Withdraw Bitcoins</button>
+						<button class="btn btn-success" onclick="thisPageManager.deposit_coins();">Withdraw Bitcoins</button>
 					</div>
 				</div>
 			</div>

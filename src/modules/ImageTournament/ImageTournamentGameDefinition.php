@@ -6,8 +6,8 @@ class ImageTournamentGameDefinition {
 	
 	public function __construct(&$app) {
 		$this->app = $app;
-		$this->images = array();
-		$this->event_index2images = array();
+		$this->images = [];
+		$this->event_index2images = [];
 		
 		$this->option_group = $app->check_set_option_group("Reddit /r/sexygirls pics", "picture", "pictures");
 		
@@ -62,7 +62,7 @@ class ImageTournamentGameDefinition {
 	}
 	
 	public function load() {
-		$this->images = array();
+		$this->images = [];
 		$game_def = json_decode($this->game_def_base_txt);
 		
 		$members = $this->app->run_query("SELECT * FROM option_group_memberships m JOIN entities e ON m.entity_id=e.entity_id WHERE m.option_group_id=:option_group_id;", [
@@ -75,7 +75,7 @@ class ImageTournamentGameDefinition {
 			$i++;
 		}
 		
-		$event_index2images = array();
+		$event_index2images = [];
 		for ($i=0; $i<count($this->images); $i++) {
 			$eindex = $this->images[$i]['initial_event_index'];
 			if (empty($event_index2images[$eindex])) {
@@ -92,7 +92,7 @@ class ImageTournamentGameDefinition {
 	
 	public function events_starting_between_blocks(&$game, $from_block, $to_block) {
 		$rounds_per_tournament = $this->get_rounds_per_tournament();
-		$events = array();
+		$events = [];
 		$entity_type = $this->app->check_set_entity_type("images");
 		
 		$from_round = $game->block_to_round($from_block);
@@ -108,7 +108,7 @@ class ImageTournamentGameDefinition {
 			$event_index = $prevround_offset;
 			
 			for ($thisround_event_i=0; $thisround_event_i<$num_events; $thisround_event_i++) {
-				$possible_outcomes = array();
+				$possible_outcomes = [];
 				$game = false;
 				$event_name = $this->generate_event_labels($possible_outcomes, $round, $this_round, $thisround_event_i, $entity_type['entity_type_id'], $event_index, $game);
 				
@@ -236,7 +236,7 @@ class ImageTournamentGameDefinition {
 	
 	public function rename_event(&$gde, &$game) {
 		$entity_type = $this->app->check_set_entity_type("images");
-		$possible_outcomes = array();
+		$possible_outcomes = [];
 		$round = 1+floor(($gde['event_starting_block']-$game->db_game['game_starting_block'])/$this->game_def->round_length);
 		$this_round = ($round-1)%$this->get_rounds_per_tournament()+1;
 		$event_name = $this->generate_event_labels($possible_outcomes, $round, $this_round, false, $entity_type['entity_type_id'], $gde['event_index'], $game);

@@ -61,7 +61,7 @@ if ($last_block_id != (int) $_REQUEST['last_block_id']) {
 }
 else $output['new_block'] = 0;
 
-$filter_arr = array();
+$filter_arr = [];
 if (!empty($_REQUEST['filter_date'])) {
 	$filter_time = strtotime($_REQUEST['filter_date']);
 	$filter_arr['date'] = date("Y-m-d", $filter_time);

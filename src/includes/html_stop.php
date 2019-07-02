@@ -3,10 +3,10 @@
 <div style="display: none;" id="chatWindowTemplate">
 	<div class="chatWindowHeader" id="chatWindowHeaderCHATID">
 		<div class="chatWindowTitle" id="chatWindowTitleCHATID"></div>
-		<font class="chatWindowCloseBtn" onclick="closeChatWindow(CHATID);">&#215;</font>
+		<font class="chatWindowCloseBtn" onclick="thisPageManager.closeChatWindow(CHATID);">&#215;</font>
 		<div class="chatWindowContent" id="chatWindowContentCHATID"></div>
 		<input class="chatWindowWriter" id="chatWindowWriterCHATID" />
-		<button class="btn btn-sm btn-primary" id="chatWindowSendBtnCHATID" onclick="sendChatMessage(CHATID);">Send</button>
+		<button class="btn btn-sm btn-primary" id="chatWindowSendBtnCHATID" onclick="thisPageManager.sendChatMessage(CHATID);">Send</button>
 	</div>
 </div>
 <footer class="footer" id="chatWindows"></footer>
@@ -33,7 +33,7 @@
 					echo '<a href="/explorer/games/'.$game->db_game['url_identifier'].'/definition/?definition_mode=actual">'.$actual_game_def_hash_3."</a>";
 					echo " &rarr; ";
 					echo '<a href="/explorer/games/'.$game->db_game['url_identifier'].'/definition/?definition_mode=defined">'.$defined_game_def_hash_3."</a>\n";
-					echo " &nbsp;&nbsp; <a id=\"apply_def_link\" href=\"\" onclick=\"apply_game_definition(".$game->db_game['game_id']."); return false;\">Apply Changes</a>";
+					echo " &nbsp;&nbsp; <a id=\"apply_def_link\" href=\"\" onclick=\"thisPageManager.apply_game_definition(".$game->db_game['game_id']."); return false;\">Apply Changes</a>";
 					echo "</font>\n";
 				}
 			}
@@ -70,6 +70,7 @@
 	</div>
 </footer>
 
+<script type="text/javascript" src="/js/lodash.min.js"></script>
 <script type="text/javascript" src="/js/jquery-1.11.3.js"></script>
 <script type="text/javascript" src="/js/onload.js"></script>
 

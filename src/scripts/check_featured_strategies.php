@@ -13,7 +13,7 @@ if ($app->running_as_admin()) {
 		$current_event = $game->current_events[0];
 		$event_ref_block = $current_event->db_event['event_starting_block'];
 		
-		$performances = array();
+		$performances = [];
 		
 		for ($i=0; $i<$previous_rounds; $i++) {
 			$first_prev_event = $app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_starting_block<:ref_block ORDER BY event_index DESC;", [

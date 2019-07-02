@@ -106,9 +106,9 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 			if ($nav_tab_selected == "cards" || $nav_tab_selected == "accounts") { ?>
 				<ul class="sidebar-menu" data-widget="tree">
 					<li class="header">Cards</li>
-					<li id="section_link_cards"><a href="/cards/?start_section=cards"<?php if ($nav_subtab_selected == "cards") echo ' onclick="open_page_section(\'cards\'); return false;"'; ?>><i class="fa fa-address-book"></i> <span>My Cards</span></a></li>
-					<li id="section_link_add_card"><a href="/cards/?start_section=add_card"<?php if ($nav_subtab_selected == "cards") echo ' onclick="open_page_section(\'add_card\'); return false;"'; ?>><i class="fa fa-link"></i> <span>Connect a Card</span></a></li>
-					<li id="section_link_withdraw_btc"><a href="/cards/?start_section=withdraw_btc"<?php if ($nav_subtab_selected == "cards") echo ' onclick="open_page_section(\'withdraw_btc\'); return false;"'; ?>><i class="fa fa-exchange-alt"></i> <span>Withdraw Bitcoins</span></a></li>
+					<li id="section_link_cards"><a href="/cards/?start_section=cards"<?php if ($nav_subtab_selected == "cards") echo ' onclick="thisPageManager.open_page_section(\'cards\'); return false;"'; ?>><i class="fa fa-address-book"></i> <span>My Cards</span></a></li>
+					<li id="section_link_add_card"><a href="/cards/?start_section=add_card"<?php if ($nav_subtab_selected == "cards") echo ' onclick="thisPageManager.open_page_section(\'add_card\'); return false;"'; ?>><i class="fa fa-link"></i> <span>Connect a Card</span></a></li>
+					<li id="section_link_withdraw_btc"><a href="/cards/?start_section=withdraw_btc"<?php if ($nav_subtab_selected == "cards") echo ' onclick="thisPageManager.open_page_section(\'withdraw_btc\'); return false;"'; ?>><i class="fa fa-exchange-alt"></i> <span>Withdraw Bitcoins</span></a></li>
 					<li<?php if ($nav_subtab_selected == "manage") echo ' class="active"'; ?>><a href="/cards/?action=manage"><i class="fa fa-print"></i> <span>Print cards</span></a></li>
 					<li<?php if ($nav_subtab_selected == "create") echo ' class="active"'; ?>><a href="/cards/?action=create"><i class="fa fa-plus-circle"></i> <span>Create cards</span></a></li>
 					<?php if (empty($thisuser)) { ?><li<?php if ($nav_subtab_selected == "redeem") echo ' class="active"'; ?>><a href="/redeem/"><i class="fa fa-check-square"></i> <span>Redeem a card</span></a></li><?php } ?>
@@ -119,13 +119,13 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 				<ul class="sidebar-menu" data-widget="tree">
 					<li class="header"><?php echo $game->db_game['name']; ?></li>
 					<li<?php if ($nav_tab_selected == "game_page") echo ' class="active"'; ?>><a href="/<?php echo $game->db_game['url_identifier']; ?>/"><i class="fa fa-info-circle"></i> <span><?php echo $game->db_game['name']; ?></span></a></li>
-					<li id="tabcell0"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="tab_clicked(0); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=0"'; ?>><i class="fa fa-play"></i> <span>Play Now</span></a></li>
+					<li id="tabcell0"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="thisPageManager.tab_clicked(0); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=0"'; ?>><i class="fa fa-play"></i> <span>Play Now</span></a></li>
 					<?php if ($game->db_game['public_players'] == 1) { ?>
-					<li id="tabcell1"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="tab_clicked(1); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=1"'; ?>><i class="fa fa-users"></i> <span>Players</span></a></li>
+					<li id="tabcell1"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="thisPageManager.tab_clicked(1); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=1"'; ?>><i class="fa fa-users"></i> <span>Players</span></a></li>
 					<?php } ?>
-					<li id="tabcell2"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="tab_clicked(2); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=2"'; ?>><i class="fa fa-cogs"></i> <span>Settings</span></a></li>
-					<li id="tabcell4"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="tab_clicked(4); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=4"'; ?>><i class="fa fa-exchange-alt"></i> <span>Deposit or Withdraw</span></a></li>
-					<li id="tabcell5"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="tab_clicked(5); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=5"'; ?>><i class="fa fa-envelope"></i> <span>Invitations</span></a></li>
+					<li id="tabcell2"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="thisPageManager.tab_clicked(2); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=2"'; ?>><i class="fa fa-cogs"></i> <span>Settings</span></a></li>
+					<li id="tabcell4"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="thisPageManager.tab_clicked(4); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=4"'; ?>><i class="fa fa-exchange-alt"></i> <span>Deposit or Withdraw</span></a></li>
+					<li id="tabcell5"><a <?php if ($nav_tab_selected == "wallet") echo 'href="" onclick="thisPageManager.tab_clicked(5); return false;"'; else echo 'href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=5"'; ?>><i class="fa fa-envelope"></i> <span>Invitations</span></a></li>
 					<li<?php if ($nav_tab_selected == "explorer" && $explore_mode == "my_bets") echo ' class="active"'; ?>><a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/"><i class="fa fa-chart-area"></i> <span>My Bets</span></a></li>
 					<li<?php if ($nav_tab_selected == "explorer" && $explore_mode != "my_bets") echo ' class="active"'; ?>><a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/"><i class="fa fa-cube"></i> <span>Explorer</span></a></li>
 					<?php if ($app->user_can_edit_game($thisuser, $game)) { ?>

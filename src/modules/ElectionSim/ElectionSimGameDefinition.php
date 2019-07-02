@@ -63,7 +63,7 @@ class ElectionSimGameDefinition {
 		/*if (!empty($this->game_def->final_round) && $to_round > $this->game_def->final_round) $to_round = $this->game_def->final_round;
 		
 		$rounds_per_tournament = $this->get_rounds_per_tournament();
-		$events = array();
+		$events = [];
 		$general_entity_type = $this->app->check_set_entity_type("general entity");
 		
 		for ($round=$from_round; $round<=$to_round; $round++) {
@@ -75,7 +75,7 @@ class ElectionSimGameDefinition {
 			$event_index = $prevround_offset;
 			
 			for ($thisround_event_i=0; $thisround_event_i<$num_events; $thisround_event_i++) {
-				$possible_outcomes = array();
+				$possible_outcomes = [];
 				$game = false;
 				$event_name = $this->generate_event_labels($possible_outcomes, $round, $this_round, $thisround_event_i, $general_entity_type['entity_type_id'], $event_index, $game);
 				

@@ -33,5 +33,5 @@
 		<input id="card_account_password" name="password" type="password" size="25" class="form-control" maxlength="100" />
 	</div>
 	
-	<button class="btn btn-success" onclick="card_login(false, <?php echo $card_login_card_id; ?>, <?php echo $card_login_peer_id; ?>);">Log in</button>
+	<button class="btn btn-success" onclick="thisPageManager.card_login(false, <?php echo $card_login_card_id; ?>, <?php echo $card_login_peer_id; ?>);">Log in</button>
 </div>

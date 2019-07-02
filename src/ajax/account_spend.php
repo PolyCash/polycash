@@ -163,7 +163,7 @@ if ($thisuser) {
 						else $joinable_ios_q = "SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id AND (io.spend_status='unspent' OR io.spend_status='unconfirmed') AND io.io_id != :io_id GROUP BY io.io_id ORDER BY amount DESC;";
 						$joinable_ios = $app->run_query($joinable_ios_q, $joinable_ios_params);
 						
-						$html = '<form action="/accounts/" method="get" onsubmit="finish_join_tx(); return false;">';
+						$html = '<form action="/accounts/" method="get" onsubmit="thisPageManager.finish_join_tx(); return false;">';
 						$html .= '<select id="join_tx_io_id" name="join_tx_io_id" class="form-control">'."\n";
 						$html .= '<option value="">-- Please Select --</option>'."\n";
 						while ($db_io = $joinable_ios->fetch()) {
@@ -199,7 +199,8 @@ if ($thisuser) {
 								$transaction_id = $blockchain->create_transaction('transaction', [$amount], false, [$db_io['io_id'], $join_db_io['io_id']], [$join_db_io['address_id']], $fee_amount, $error_message);
 								
 								if ($transaction_id) {
-									$app->output_message(13, "Your transaction has been successfully created!", false);
+									$transaction = $app->fetch_transaction_by_id($transaction_id);
+									$app->output_message(1, "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction['tx_hash']."/", false);
 								}
 								else $app->output_message(12, "TX Error: ".$error_message, false);
 							}
@@ -261,7 +262,10 @@ if ($thisuser) {
 						$error_message = false;
 						$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($db_io['io_id']), $address_ids, $fee_amount, $error_message);
 						
-						if ($transaction_id) $app->output_message(1, "Transaction created successfully.", false);
+						if ($transaction_id) {
+							$transaction = $app->fetch_transaction_by_id($transaction_id);
+							$app->output_message(1, "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction['tx_hash']."/", false);
+						}
 						else $app->output_message(7, "Error: ", false);
 					}
 					else $app->output_message(6, "Error: not enough coins.", false);
@@ -281,7 +285,7 @@ if ($thisuser) {
 						$db_address = $blockchain->create_or_fetch_address($address, true, false, false, false, false);
 						
 						$coloredcoins_per_coin = $io_game['SUM(gio.colored_amount)']/($db_io['amount']-$fee_amount);
-						$io_amount = ceil($amount/$coloredcoins_per_coin);
+						$io_amount = round($amount/$coloredcoins_per_coin);
 						$remainder_amount = $db_io['amount']-$fee_amount-$io_amount;
 						
 						if ($remainder_amount >= 0) {
@@ -296,7 +300,10 @@ if ($thisuser) {
 							$error_message = false;
 							$transaction_id = $blockchain->create_transaction("transaction", $amounts, false, array($db_io['io_id']), $address_ids, $fee_amount, $error_message);
 							
-							if ($transaction_id) $app->output_message(1, "Transaction created successfully.", false);
+							if ($transaction_id) {
+								$transaction = $app->fetch_transaction_by_id($transaction_id);
+								$app->output_message(1, "/explorer/games/".$game->db_game['url_identifier']."/transactions/".$transaction['tx_hash']."/", false);
+							}
 							else $app->output_message(7, "TX Error: ".$error_message, false);
 						}
 						else $app->output_message(8, "Error: not enough coins.", false);
@@ -402,7 +409,7 @@ if ($thisuser) {
 							$account = $app->fetch_account_by_user_and_address($thisuser->db_user['user_id'], $db_io['address_id']);
 							
 							if ($account) {
-								if ($total_cost_satoshis < $colored_coin_sum && $coin_sum > ($chain_coins_each*$quantity*$utxos_each) - $fee_amount) {
+								if ($total_cost_satoshis < $colored_coin_sum && $coin_sum > ($chain_coins_each*$quantity) - $fee_amount) {
 									$remainder_satoshis = $coin_sum - ($chain_coins_each*$quantity) - $fee_amount;
 									
 									$amounts = [];

@@ -11,8 +11,8 @@ if (!empty($_REQUEST['redirect_key']) && empty($redirect_url)) $redirect_url = $
 	<div class="panel-body">
 		<p>Have you already signed up?</p>
 		<p>
-			<button class="btn btn-primary" onclick="existing_account=1; toggle_to_panel('login');">Yes, I already have an account</button>
-			<button class="btn btn-success" onclick="existing_account=0; toggle_to_panel('login');">No, I need to create an account</button>
+			<button class="btn btn-primary" onclick="thisPageManager.existing_account=1; thisPageManager.toggle_to_panel('login');">Yes, I already have an account</button>
+			<button class="btn btn-success" onclick="thisPageManager.existing_account=0; thisPageManager.toggle_to_panel('login');">No, I need to create an account</button>
 			<a href="/redeem/<?php if ($redirect_url) echo "?redirect_key=".$redirect_url['redirect_key']; ?>" class="btn btn-danger">Log in with a gift card</a>
 		</p>
 	</div>
@@ -23,7 +23,7 @@ if (!empty($_REQUEST['redirect_key']) && empty($redirect_url)) $redirect_url = $
 		<div class="panel-title">Please enter your username or email address</div>
 	</div>
 	<div class="panel-body">
-		<form action="/" method="get" onsubmit="check_username(); return false;">
+		<form action="/" method="get" onsubmit="thisPageManager.check_username(); return false;">
 			<div class="row">
 				<div class="col-md-8">
 					Please enter your username or email address. This will be kept private.<br/>
@@ -39,7 +39,7 @@ if (!empty($_REQUEST['redirect_key']) && empty($redirect_url)) $redirect_url = $
 				<div class="col-md-8">
 					<p>
 						<button id="check_username_btn" class="btn btn-success">Continue</button>
-						&nbsp;&nbsp; Or &nbsp;&nbsp; <a href="" onclick="toggle_to_panel('noemail'); return false;">Generate a username and password for me</a>
+						&nbsp;&nbsp; Or &nbsp;&nbsp; <a href="" onclick="thisPageManager.toggle_to_panel('noemail'); return false;">Generate a username and password for me</a>
 					</p>
 					<p>
 						<div id="login_message" class="greentext" style="display: none;"></div>
@@ -58,10 +58,10 @@ if (!empty($_REQUEST['redirect_key']) && empty($redirect_url)) $redirect_url = $
 		<div class="row">
 			<div class="col-sm-6">
 				<p>
-					<button class="btn btn-danger" onclick="generate_credentials();">Generate a username &amp; password</button>
+					<button class="btn btn-danger" onclick="thisPageManager.generate_credentials();">Generate a username &amp; password</button>
 				</p>
-				<p>Or <a href="" onclick="toggle_to_panel('login'); return false;">enter my username</a></p>
-				<p>Or <a href="" onclick="toggle_to_panel('password'); return false;">enter my password</a></p>
+				<p>Or <a href="" onclick="thisPageManager.toggle_to_panel('login'); return false;">enter my username</a></p>
+				<p>Or <a href="" onclick="thisPageManager.toggle_to_panel('password'); return false;">enter my password</a></p>
 			</div>
 			<div class="col-sm-6">
 				<div id="generate_display"></div>
@@ -75,12 +75,12 @@ if (!empty($_REQUEST['redirect_key']) && empty($redirect_url)) $redirect_url = $
 		<div class="panel-title">Please enter your password</div>
 	</div>
 	<div class="panel-body">
-		<form action="/" method="get" onsubmit="login(); return false;">
+		<form action="/" method="get" onsubmit="thisPageManager.login(); return false;">
 			<p>Please enter your password.</p>
 			<p><input id="login_password" type="password" required="required" class="form-control" /></p>
 			<p><button id="login_btn" class="btn btn-success">Log In</button></p>
-			<p>Or <a href="" onclick="toggle_to_panel('generate'); return false;">generate a new password</a></p>
-			<p>Or <a href="" onclick="toggle_to_panel('login'); return false;">enter my username</a></p>
+			<p>Or <a href="" onclick="thisPageManager.toggle_to_panel('generate'); return false;">generate a new password</a></p>
+			<p>Or <a href="" onclick="thisPageManager.toggle_to_panel('login'); return false;">enter my username</a></p>
 		</form>
 	</div>
 </div>

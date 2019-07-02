@@ -59,7 +59,7 @@ class StakemoneySharesGameDefinition {
 	}
 	
 	public function events_starting_between_blocks(&$game, $from_block, $to_block) {
-		return array();
+		return [];
 	}
 }
 ?>

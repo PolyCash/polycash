@@ -271,22 +271,22 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 		$mode_error = false;
 	}
 	
-	if ($mode_error) $pagetitle = AppSettings::getParam('coin_brand_name')." - Blockchain Explorer";
-	$nav_tab_selected = "explorer";
-	include(AppSettings::srcPath().'/includes/html_start.php');
-	?>
-	<div class="container-fluid" style="padding-top: 15px;">
-		<?php
-		if ($mode_error) {
-			echo "Error, you've reached an invalid page.";
-		}
-		else {
+	if ($mode_error) {
+		Router::Send404();
+	}
+	else {
+		$pagetitle = AppSettings::getParam('coin_brand_name')." - Blockchain Explorer";
+		$nav_tab_selected = "explorer";
+		include(AppSettings::srcPath().'/includes/html_start.php');
+		?>
+		<div class="container-fluid" style="padding-top: 15px;">
+			<?php
 			$coins_per_vote = 0;
 			
 			if ($game) {
 				?>
 				<script type="text/javascript">
-				games.push(new Game(<?php
+				games.push(new Game(thisPageManager, <?php
 					echo $game->db_game['game_id'];
 					echo ', false';
 					echo ', false';
@@ -324,7 +324,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 			if ($blockchain || $game) {
 				?>
 				<script type="text/javascript">
-				var blockchain_id = <?php
+				thisPageManager.blockchain_id = <?php
 				if ($blockchain) echo $blockchain->db_blockchain['blockchain_id'];
 				else echo $game->blockchain->db_blockchain['blockchain_id'];
 				?>;
@@ -332,7 +332,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 				<div class="row">
 					<div class="col-sm-7 ">
 						<ul class="list-inline explorer_nav" id="explorer_nav">
-							<?php if ($game) { ?><li><a <?php if ($explore_mode == 'my_bets') echo 'class="selected" '; ?>href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">My Bets</a></li><?php } ?>
+							<?php if ($game) { ?>
+							<li><a <?php if ($explore_mode == 'my_bets') echo 'class="selected" '; ?>href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">My Bets</a></li>
+							<?php } ?>
 							<li><a <?php if ($explore_mode == 'blocks') echo 'class="selected" '; ?>href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
 							if ($game) echo $game->db_game['url_identifier'];
 							else echo $blockchain->db_blockchain['url_identifier'];
@@ -345,8 +347,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							<?php } ?>
 							<?php if ($game) { ?>
 							<li><a <?php if ($explore_mode == 'utxos') echo 'class="selected" '; ?>href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
-							if ($game) echo $game->db_game['url_identifier'];
-							else echo $blockchain->db_blockchain['url_identifier'];
+							echo $game->db_game['url_identifier'];
 							?>/utxos/">UTXOs</a></li>
 							<?php } ?>
 							<li><a <?php if ($explore_mode == 'unconfirmed') echo 'class="selected" '; ?>href="/explorer/<?php echo $uri_parts[2]; ?>/<?php
@@ -367,7 +368,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						<input type="text" class="form-control" placeholder="Search..." id="explorer_search" />
 					</div>
 					<div class="col-sm-1 row-no-padding">
-						<button class="btn btn-primary" onclick="explorer_search();">Go</button>
+						<button class="btn btn-primary" onclick="thisPageManager.explorer_search();">Go</button>
 					</div>
 				</div>
 				<?php
@@ -497,11 +498,11 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							
 							if ($game->db_game['module'] == "CryptoDuels") {
 								?>
-								<button class="btn btn-sm btn-success" onclick="refresh_prices_by_event(<?php echo $game->db_game['game_id'].", ".$event->db_event['event_id']; ?>);">Reset pricing info</button>
+								<button class="btn btn-sm btn-success" onclick="thisPageManager.refresh_prices_by_event(<?php echo $game->db_game['game_id'].", ".$event->db_event['event_id']; ?>);">Reset pricing info</button>
 								<?php
 							}
 							?>
-							<button class="btn btn-sm btn-primary" onclick="set_event_outcome(<?php echo $game->db_game['game_id'].", ".$event->db_event['event_id']; ?>);">Set Outcome</button>
+							<button class="btn btn-sm btn-primary" onclick="thisPageManager.set_event_outcome(<?php echo $game->db_game['game_id'].", ".$event->db_event['event_id']; ?>);">Set Outcome</button>
 							<?php
 							echo "</p>\n";
 						}
@@ -616,12 +617,12 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								</div>
 							</div>
 							<center>
-								<a href="" onclick="show_more_event_outcomes(<?php echo $game->db_game['game_id']; ?>); return false;" id="show_more_link">Show More</a>
+								<a href="" onclick="thisPageManager.show_more_event_outcomes(<?php echo $game->db_game['game_id']; ?>); return false;" id="show_more_link">Show More</a>
 							</center>
 						</div>
 						
 						<script type="text/javascript">
-						last_event_index_shown = <?php echo $from_event_index ?? 'false'; ?>;
+						thisPageManager.last_event_index_shown = <?php echo $from_event_index ?? 'false'; ?>;
 						</script>
 						<?php
 					}
@@ -824,25 +825,10 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						if ($from_block_id < 0) $from_block_id = 0;
 						?>
 						<script type="text/javascript">
-						var explorer_blocks_per_section = <?php echo $blocks_per_section; ?>;
-						var explorer_block_list_sections = 1;
-						var explorer_block_list_from_block = <?php echo $from_block_id; ?>;
-						var filter_complete = <?php if ($filter_complete) echo "1"; else echo "0"; ?>;
-						
-						function explorer_block_list_show_more() {
-							explorer_block_list_from_block = explorer_block_list_from_block-explorer_blocks_per_section;
-							explorer_block_list_sections++;
-							var section = explorer_block_list_sections;
-							$('#explorer_block_list').append('<div id="explorer_block_list_'+section+'">Loading...</div>');
-							
-							var block_list_url = "/ajax/explorer_block_list.php?blockchain_id="+blockchain_id;
-							<?php if ($game) echo 'block_list_url += "&game_id='.$game->db_game['game_id'].'";'."\n"; ?>
-							block_list_url += "&from_block="+explorer_block_list_from_block+"&blocks_per_section="+explorer_blocks_per_section+"&filter_complete="+filter_complete;
-							
-							$.get(block_list_url, function(html) {
-								$('#explorer_block_list_'+section).html(html);
-							});
-						}
+						thisPageManager.explorer_blocks_per_section = <?php echo $blocks_per_section; ?>;
+						thisPageManager.explorer_block_list_sections = 1;
+						thisPageManager.explorer_block_list_from_block = <?php echo $from_block_id; ?>;
+						thisPageManager.filter_complete = <?php if ($filter_complete) echo "1"; else echo "0"; ?>;
 						</script>
 						<?php
 						if ($game) {
@@ -858,7 +844,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							echo '</div>';
 							echo '</div>';
 							
-							echo '<a href="" onclick="explorer_block_list_show_more(); return false;">Show More</a>';
+							echo '<a href="" onclick="thisPageManager.explorer_block_list_show_more(); return false;">Show More</a>';
 							
 							echo '</div>';
 						}
@@ -932,7 +918,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 									?>
 								</div>
 							</div>
-							<a href="" onclick="explorer_block_list_show_more(); return false;">Show More</a>
+							<a href="" onclick="thisPageManager.explorer_block_list_show_more(); return false;">Show More</a>
 							<br/>
 							<?php
 							echo '</div>';
@@ -1046,7 +1032,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							?>
 							<script type="text/javascript">
 							window.onload = function() {
-								try_claim_address(<?php
+								thisPageManager.try_claim_address(<?php
 								echo $blockchain->db_blockchain['blockchain_id'].", ";
 								if ($game) echo $game->db_game['game_id'];
 								else echo "false";
@@ -1058,7 +1044,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							<?php
 						}
 						?>
-						<button class="btn btn-success btn-sm" onclick="try_claim_address(<?php
+						<button class="btn btn-success btn-sm" onclick="thisPageManager.try_claim_address(<?php
 						echo $blockchain->db_blockchain['blockchain_id'].", ";
 						if ($game) echo $game->db_game['game_id'];
 						else echo "false";
@@ -1391,7 +1377,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						echo '<div class="panel-body">';
 						?>
 						<div id="change_user_game">
-							<select id="select_user_game" class="form-control" onchange="explorer_change_user_game();">
+							<select id="select_user_game" class="form-control" onchange="thisPageManager.explorer_change_user_game();">
 								<?php
 								$my_user_games = $app->run_query("SELECT * FROM user_games WHERE user_id=:user_id AND game_id=:game_id;", [
 									'user_id' => $thisuser->db_user['user_id'],
@@ -1483,27 +1469,22 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					}
 					?>
 					<script type="text/javascript">
-					$('#definition').dblclick(function() {
-						$('#definition').focus().select();
-					});
+					window.onload = function() {
+						$('#definition').dblclick(function() {
+							$('#definition').focus().select();
+						});
+					}
 					</script>
 					<?php
 				}
-			}
-			?>
+				?>
+			</div>
 		</div>
-	</div>
-	<?php
-	include(AppSettings::srcPath().'/includes/html_stop.php');
+		<?php
+		include(AppSettings::srcPath().'/includes/html_stop.php');
+	}
 }
 else {
-	$pagetitle = AppSettings::getParam('coin_brand_name')." - Blockchain Explorer";
-	include(AppSettings::srcPath().'/includes/html_start.php');
-	?>
-	<div class="container-fluid">
-		Error, you've reached an invalid page.
-	</div>
-	<?php
-	include(AppSettings::srcPath().'/includes/html_stop.php');
+	Router::Send404();
 }
 ?>
