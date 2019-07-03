@@ -529,7 +529,7 @@ var PageManager = function() {
 			'search_term': $('#explorer_search').val()
 		};
 		if (typeof games !== "undefined" && games.length > 0) search_params.game_id = games[0].game_id;
-		if (typeof blockchain_id !== "undefined") search_params.blockchain_id = blockchain_id;
+		if (typeof this.blockchain_id !== "undefined") search_params.blockchain_id = this.blockchain_id;
 		
 		$.ajax({
 			url: "/ajax/explorer_search.php",

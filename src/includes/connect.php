@@ -4,6 +4,7 @@ require_once(dirname(dirname(__FILE__))."/classes/AppSettings.php");
 AppSettings::load();
 
 if (empty($argv) && !empty(AppSettings::getParam('restrict_ip_address'))) {
+	header('HTTP/1.1 503 Service Temporarily Unavailable');
 	if ($_SERVER['REMOTE_ADDR'] != AppSettings::getParam('restrict_ip_address')) die("This website is closed for maintenance.\n");
 }
 

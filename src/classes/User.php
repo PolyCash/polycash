@@ -261,7 +261,7 @@ class User {
 			$has_option_indices_until = false;
 			
 			for ($option_index=$start_option_index; $option_index<=$option_index_range[1]; $option_index++) {
-				$existing_address = $this->app->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id=:blockchain_id AND a.option_index=:option_index AND k.account_id=:account_id;", [
+				$existing_address = $this->app->run_query("SELECT * FROM address_keys WHERE primary_blockchain_id=:blockchain_id AND option_index=:option_index AND account_id=:account_id;", [
 					'blockchain_id' => $game->blockchain->db_blockchain['blockchain_id'],
 					'option_index' => $option_index,
 					'account_id' => $account['account_id']
@@ -274,7 +274,7 @@ class User {
 						$has_option_indices_until = $option_index;
 					}
 					else {
-						$address = $this->app->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id=:blockchain_id AND a.option_index=:option_index AND k.account_id IS NULL AND a.address_set_id IS NULL;", [
+						$address = $this->app->run_query("SELECT * FROM address_keys WHERE primary_blockchain_id=:blockchain_id AND option_index=:option_index AND account_id IS NULL AND address_set_id IS NULL;", [
 							'blockchain_id' => $game->blockchain->db_blockchain['blockchain_id'],
 							'option_index' => $option_index
 						])->fetch();

@@ -1716,10 +1716,13 @@ class Blockchain {
 			$output_address_id = $this->app->last_insert_id();
 			
 			if ($is_mine == 1) {
-				$this->app->run_query("INSERT INTO address_keys SET address_id=:address_id, account_id=NULL, save_method=:save_method, pub_key=:pub_key;", [
+				$this->app->insert_address_key([
+					'currency_id' => $this->currency_id(),
 					'address_id' => $output_address_id,
-					'save_method' => $this->db_blockchain['p2p_mode'] == "rpc" ? "wallet.dat" : "fake",
-					'pub_key' => $address
+					'account_id' => null,
+					'pub_key' => $address,
+					'option_index' => $option_index,
+					'primary_blockchain_id' => $this->db_blockchain['blockchain_id']
 				]);
 			}
 			

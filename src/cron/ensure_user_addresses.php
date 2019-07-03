@@ -35,7 +35,7 @@ if ($app->running_as_admin()) {
 			list($from_option_index, $to_option_index) = $running_games[$game_i]->option_index_range();
 			
 			if ($to_option_index !== false) {
-				$user_games = $app->run_query("SELECT * FROM user_games ug JOIN currency_accounts ca ON ug.account_id=ca.account_id WHERE ug.game_id=:game_id AND ca.has_option_indices_until<:to_option_index ORDER BY ca.account_id ASC;", [
+				$user_games = $app->run_query("SELECT * FROM user_games ug JOIN currency_accounts ca ON ug.account_id=ca.account_id JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id=:game_id AND ca.has_option_indices_until<:to_option_index ORDER BY ca.account_id ASC;", [
 					'game_id' => $running_games[$game_i]->db_game['game_id'],
 					'to_option_index' => $to_option_index
 				]);
@@ -94,7 +94,7 @@ if ($app->running_as_admin()) {
 		
 		foreach ($blockchains as $blockchain_id => $blockchain) {
 			if ($blockchain->db_blockchain['p2p_mode'] == "rpc" && empty($need_address_blockchain_ids[$blockchain_id])) {
-				$unallocated_separator_info = $app->run_query("SELECT COUNT(*) FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.primary_blockchain_id=:blockchain_id AND a.option_index=1 AND k.account_id IS NULL AND a.address_set_id IS NULL;", ['blockchain_id'=>$blockchain_id])->fetch();
+				$unallocated_separator_info = $app->run_query("SELECT COUNT(*) FROM address_keys WHERE primary_blockchain_id=:blockchain_id AND option_index=1 AND account_id IS NULL AND address_set_id IS NULL;", ['blockchain_id'=>$blockchain_id])->fetch();
 				
 				if ((int)$unallocated_separator_info['COUNT(*)'] < $min_unallocated_separators) {
 					$need_address_blockchain_ids[$blockchain_id] = true;
