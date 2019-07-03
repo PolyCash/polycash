@@ -803,7 +803,7 @@ class Game {
 		
 		$last_round_shown = 0;
 		while ($db_event = $db_events->fetch()) {
-			$event_total_bets = $db_event['sum_score']*$coins_per_vote + $db_event['destroy_score'];
+			$event_total_bets = ($db_event['sum_score']+$db_event['sum_unconfirmed_score'])*$coins_per_vote + $db_event['destroy_score'] + $db_event['sum_unconfirmed_destroy_score'];
 			$event_effective_bets = ($db_event['sum_votes']+$db_event['sum_unconfirmed_votes'])*$coins_per_vote + $db_event['effective_destroy_score'] + $db_event['sum_unconfirmed_effective_destroy_score'];
 			
 			$html .= '<div class="row bordered_row">';

@@ -17,6 +17,7 @@ if ($thisuser) {
 		if ($db_game) {
 			$sale_blockchain = new Blockchain($app, $db_game['blockchain_id']);
 			$sale_game = new Game($sale_blockchain, $db_game['game_id']);
+			$sale_currency_id = $sale_blockchain->currency_id();
 			
 			$satoshis_each = pow(10,$db_game['decimal_places'])*$amount_each;
 			$fee_amount = (int) (0.0001*pow(10,$sale_blockchain->db_blockchain['decimal_places']));
@@ -74,22 +75,22 @@ if ($thisuser) {
 												'account_id' => $game_sale_account['account_id'],
 												'address_key_id' => $addr_key['address_key_id']
 											]);
-											$address_key_id = $addr_key['address_key_id'];
 										}
 										else {
-											$addr_key_q = "INSERT INTO address_keys SET address_id=:address_id, account_id=:account_id, save_method='wallet.dat', pub_key=:pub_key;";
-											$addr_key_r = $app->run_query($addr_key_q, [
+											$addr_key = $app->insert_address_key([
+												'currency_id' => $sale_currency_id,
 												'address_id' => $db_address['address_id'],
 												'account_id' => $faucet_account['account_id'],
-												'pub_key' => $db_address['address']
+												'pub_key' => $db_address['address'],
+												'option_index' => $db_address['option_index'],
+												'primary_blockchain_id' => $sale_blockchain->db_blockchain['blockchain_id']
 											]);
-											$address_key_id = $app->last_insert_id();
 										}
 										
 										$addresses_needed--;
 										
 										array_push($address_ids, $db_address['address_id']);
-										array_push($address_key_ids, $address_key_id);
+										array_push($address_key_ids, $addr_key['address_key_id']);
 									}
 									else echo "Error, ".$address['address_id']." is already owned by someone.<br/>\n";
 								}
