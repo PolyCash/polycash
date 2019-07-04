@@ -11,23 +11,13 @@ class PageviewController {
 	function ip_identifier() {
 		return $this->app->run_query("SELECT * FROM viewer_identifiers WHERE type='ip' AND identifier=:identifier;", ['identifier'=>$_SERVER['REMOTE_ADDR']])->fetch();
 	}
-	function cookie_identifier() {
-		if (isset($_COOKIE["cookie_str"])) {
-			return $this->app->run_query("SELECT * FROM viewer_identifiers WHERE type='cookie' AND identifier=:identifier;", ['identifier'=>$_COOKIE["cookie_str"]])->fetch();
-		}
-		else return false;
-	}
 	function fetch_identifier_by_id($identifier_id) {
 		return $this->app->run_query("SELECT * FROM viewer_identifiers WHERE identifier_id=:identifier_id;", ['identifier_id'=>$identifier_id])->fetch();
 	}
 	function insert_pageview($thisuser) {
 		$ip_identifier = $this->ip_identifier();
-		$cookie_identifier = $this->cookie_identifier();
-		$cookie_time_sec = 365*24*60*60;
-		$cookie_length = 32;
 		
-		if ($ip_identifier && $cookie_identifier) {}
-		else if (!$ip_identifier && !$cookie_identifier) {
+		if (!$ip_identifier) {
 			$this->app->run_query("INSERT INTO viewers SET time_created=:time_created;", ['time_created'=>time()]);
 			$viewer_id = $this->app->last_insert_id();
 			
@@ -36,35 +26,7 @@ class PageviewController {
 				'viewer_id' => $viewer_id
 			]);
 			
-			$cookie_str = $this->app->random_string($cookie_length);
-			
-			$this->app->run_query("INSERT INTO viewer_identifiers SET type='cookie', identifier=:identifier, viewer_id=:viewer_id;", [
-				'identifier' => $cookie_str,
-				'viewer_id' => $viewer_id
-			]);
-			
-			setcookie("cookie_str", $cookie_str, time()+$cookie_time_sec);
-		}
-		else if (!$ip_identifier) {
-			$this->app->run_query("INSERT INTO viewer_identifiers SET type='ip', identifier=:identifier, viewer_id=:viewer_id;", [
-				'identifier' => $_SERVER['REMOTE_ADDR'],
-				'viewer_id' => $cookie_identifier['viewer_id']
-			]);
-			$ip_id = $this->app->last_insert_id();
-			
-			$ip_identifier = $this->fetch_identifier_by_id($ip_id);
-		}
-		else if (!$cookie_identifier) {
-			$cookie_str = $this->app->random_string($cookie_length);
-			setcookie("cookie_str", $cookie_str, time()+$cookie_time_sec);
-			
-			$this->app->run_query("INSERT INTO viewer_identifiers SET viewer_id=:viewer_id, type='cookie', identifier=:identifier;", [
-				'viewer_id' => $ip_identifier['viewer_id'],
-				'identifier' => $cookie_str
-			]);
-			$cookie_id = $this->app->last_insert_id();
-			
-			$cookie_identifier = $this->fetch_identifier_by_id($cookie_id);
+			$ip_identifier = $this->fetch_identifier_by_id($this->app->last_insert_id());
 		}
 		
 		$refer_url = "";
@@ -96,7 +58,6 @@ class PageviewController {
 			$new_pv_params = [
 				'viewer_id' => $ip_identifier['viewer_id'],
 				'ip_id' => $ip_identifier['identifier_id'],
-				'cookie_id' => $cookie_identifier['identifier_id'],
 				'time' => time(),
 				'pv_page_id' => $pv_page_id,
 				'refer_url' => $refer_url
@@ -106,7 +67,7 @@ class PageviewController {
 				$new_pv_q .= "user_id=:user_id, ";
 				$new_pv_params['user_id'] = $thisuser->db_user['user_id'];
 			}
-			$new_pv_q .= "viewer_id=:viewer_id, ip_id=:ip_id, cookie_id=:cookie_id, time=:time, pv_page_id=:pv_page_id, refer_url=:refer_url;";
+			$new_pv_q .= "viewer_id=:viewer_id, ip_id=:ip_id, time=:time, pv_page_id=:pv_page_id, refer_url=:refer_url;";
 			$this->app->run_query($new_pv_q, $new_pv_params);
 			$pageview_id = $this->app->last_insert_id();
 			
