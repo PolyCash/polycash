@@ -7,6 +7,8 @@ $nav_tab_selected = "cards";
 $nav_subtab_selected = "redeem";
 $card = false;
 
+AppSettings::addJsDependency("maskedinput.js");
+
 if (!empty($_REQUEST['redirect_key'])) $redirect_url = $app->get_redirect_by_key($_REQUEST['redirect_key']);
 else $redirect_url = false;
 
@@ -183,6 +185,8 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 											<input type="hidden" name="action" value="manage_cards" />
 											<input type="hidden" name="action2" value="change_card_status" />
 											<input type="hidden" name="card_id" value="<?php echo $card['card_id']; ?>" />
+											<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
+											
 											<div class="form-group">
 												<label for="to_status">Change card status:</label>
 												<select class="form-control" name="to_status" onchange="this.form.submit();">

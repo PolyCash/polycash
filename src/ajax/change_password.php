@@ -2,7 +2,7 @@
 require(AppSettings::srcPath()."/includes/connect.php");
 require(AppSettings::srcPath()."/includes/get_session.php");
 
-if ($thisuser) {
+if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 	$username = $app->normalize_username($_REQUEST['username']);
 	$existing = $app->strong_strip_tags($_REQUEST['existing']);
 	$new = $app->strong_strip_tags($_REQUEST['new']);

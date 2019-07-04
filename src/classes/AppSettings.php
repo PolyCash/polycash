@@ -4,11 +4,12 @@ class AppSettings {
 	private static $isDev = false;
 	private static $srcPath;
 	private static $publicPath;
-	private static $has_loaded = false;
+	private static $hasLoaded = false;
+	private static $jsDependencies = [];
 	
 	public static function load() {
-		if (!self::$has_loaded) {
-			self::$has_loaded = true;
+		if (!self::$hasLoaded) {
+			self::$hasLoaded = true;
 			self::$srcPath = realpath(dirname(dirname(__FILE__)));
 			self::$publicPath = realpath(dirname(dirname(dirname(__FILE__))))."/public";
 			$config_path = self::$srcPath."/config/config.json";
@@ -43,6 +44,15 @@ class AppSettings {
 	public static function getParam($paramName) {
 		if (isset(self::$settings->$paramName)) return self::$settings->$paramName;
 		else return null;
+	}
+	
+	public static function addJsDependency($jsFile) {
+		self::$jsDependencies[$jsFile] = true;
+	}
+	
+	public static function checkJsDependency($jsFile) {
+		if (isset(self::$jsDependencies[$jsFile]) && self::$jsDependencies[$jsFile]) return true;
+		else return false;
 	}
 	
 	public static function getIsDev() {

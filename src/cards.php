@@ -6,7 +6,17 @@ $pagetitle = "My Cards";
 $nav_tab_selected = "cards";
 $nav_subtab_selected = "cards";
 
-if (!empty($_REQUEST['action'])) {
+if (!$thisuser) {
+	include(AppSettings::srcPath()."/includes/html_start.php");
+	
+	if (empty($_REQUEST['redirect_key'])) $redirect_url = $app->get_redirect_url($_SERVER['REQUEST_URI']);
+	
+	include(AppSettings::srcPath()."/includes/html_login.php");
+	include(AppSettings::srcPath()."/includes/html_stop.php");
+	die();
+}
+
+if (!empty($_REQUEST['action']) && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 	$action = $_REQUEST['action'];
 	
 	$this_peer = $app->get_peer_by_server_name(AppSettings::getParam('base_url'), true);
@@ -468,445 +478,436 @@ if (!empty($_REQUEST['action'])) {
 	}
 }
 
-$my_cards = [];
+$my_cards = $app->run_query("SELECT c.*, u.*, curr.*, c.amount AS amount FROM cards c JOIN card_users u ON c.card_id=u.card_id JOIN currencies curr ON c.fv_currency_id=curr.currency_id WHERE c.user_id=:user_id;", ['user_id'=>$thisuser->db_user['user_id']])->fetchAll();
 
-if (!empty($thisuser)) {
-	$my_cards = $app->run_query("SELECT c.*, u.*, curr.*, c.amount AS amount FROM cards c JOIN card_users u ON c.card_id=u.card_id JOIN currencies curr ON c.fv_currency_id=curr.currency_id WHERE c.user_id=:user_id;", ['user_id'=>$thisuser->db_user['user_id']])->fetchAll();
-}
 include(AppSettings::srcPath().'/includes/html_start.php');
 ?>
 <div class="container-fluid">
 	<?php
 	if (!empty($error_message)) echo $app->render_error_message($error_message, $error_class);
 	
-	if ($thisuser) {
-		$btc_currency = $app->get_currency_by_abbreviation("btc");
-		$btc_usd_price = $app->latest_currency_price($btc_currency['currency_id']);
+	$btc_currency = $app->get_currency_by_abbreviation("btc");
+	$btc_usd_price = $app->latest_currency_price($btc_currency['currency_id']);
+	
+	if ($nav_subtab_selected == "create") {
+		?>
+		<script type="text/javascript">
+		thisPageManager.card_printing_cost = 0.25;
+		thisPageManager.cost_per_coin = 1;
+		thisPageManager.coin_abbreviation = "";
+		thisPageManager.usd_per_btc = <?php if ($btc_usd_price) echo $btc_usd_price['price']; else echo "false"; ?>;
+
+		window.onload = function() {
+			thisPageManager.cards_howmany_changed();
+			thisPageManager.fv_currency_id_changed();
+		};
+		</script>
 		
-		if ($nav_subtab_selected == "create") {
+		<div class="panel panel-info" style="margin-top: 15px;">
+			<div class="panel-heading">
+				<div class="panel-title">Create Cards</div>
+			</div>
+			<div class="panel-body">
+				<form action="/cards/" method="post">
+					<input type="hidden" name="action" value="try_print" />
+					<input type="hidden" name="cards_payment_amount" id="payment_amount" value="" />
+					<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
+					
+					<div class="form-group">
+						<label for="cards_currency_id">Which currency should the cards convert to?</label>
+						<select id="cards_currency_id" class="form-control" name="cards_currency" onchange="thisPageManager.currency_id_changed();">
+							<option value="">-- Please Select --</option>
+							<?php
+							$blockchain_currencies = $app->run_query("SELECT * FROM currencies WHERE blockchain_id IS NOT NULL ORDER BY name ASC;");
+							
+							while ($currency = $blockchain_currencies->fetch()) {
+								echo "<option value=\"".$currency['currency_id']."\">".$currency['name']."</option>\n";
+							}
+							?>
+						</select>
+					</div>
+					
+					<div class="form-group">
+						<label for="cards_fv_currency_id">Which currency should the cards hold?</label>
+						
+						<select id="cards_fv_currency_id" class="form-control" name="cards_fv_currency_id" onchange="thisPageManager.fv_currency_id_changed();">
+							<option value="">-- Please Select --</option>
+						</select>
+					</div>
+					
+					<div class="form-group">
+						<label for="cards_account_id">Which account should pay for these cards?</label>
+						
+						<select id="cards_account_id" class="form-control" name="cards_account_id">
+							<option value="">-- Please Select --</option>
+						</select>
+					</div>
+					
+					<div class="form-group">
+						<label for="cards_denomination_id">What denomination should the cards be?</label>
+						<select id="cards_denomination_id" class="form-control" name="cards_denomination_id">
+							<option value="">-- Please Select --</option>
+						</select>
+					</div>
+					
+					<div class="form-group">
+						<label for="cards_howmany">How many cards do you want to print?</label>
+						<select id="cards_howmany" class="form-control" name="cards_howmany" onchange="thisPageManager.cards_howmany_changed();">
+							<?php
+							$ops = ['10','20','50','100','other'];
+							
+							for ($i=0; $i<count($ops); $i++) {
+								echo "<option value=\"".$ops[$i]."\">";
+								if ($ops[$i] == "other") echo "Other";
+								else echo $ops[$i]." cards";
+								echo "</option>\n";
+							}
+							?>
+						</select>
+					</div>
+					
+					<div class="form-group" style="display: none;" id="cards_howmany_other">
+						<label for="cards_howmany_other_val">How many?</label>
+						<input type="text" class="form-control" size="4" value="" id="cards_howmany_other_val" name="cards_howmany_other_val" placeholder="100" /> cards
+					</div>
+					
+					<div class="form-group">
+						<label for="card_purity">How much should be charged in fees to the person redeeming each card?</label>
+						
+						<div id="cards_purity_btc" style="display: none;">
+							0.00%
+						</div>
+						
+						<div id="cards_purity_usd">
+							<select id="cards_purity" class="form-control" name="cards_purity">
+							<?php
+							$ops = ['100','95','92','90','88','85','80'];
+							for ($i=0; $i<count($ops); $i++) {
+								echo "<option ";
+								if ($ops[$i] == 100) echo "selected=\"selected\" ";
+								echo "value=\"".$ops[$i]."\">";
+								if ($ops[$i] == "unspecified") echo "Unspecified";
+								else echo (100-$ops[$i])."% in fees";
+								echo "</option>\n";
+							}
+							?>
+							</select>
+						</div>
+					</div>
+					
+					<div class="form-group">
+						<label for="cards_name">Please enter a name that you would like to appear on the cards:</label>
+						<input type="text" size="50" id="cards_name" class="form-control" name="cards_name" />
+					</div>
+					
+					<div class="form-group">
+						<label for="cards_title">(Optional) Please enter a position & title to appear on the cards:</label>
+						<input type="text" size="70" id="cards_title" class="form-control" name="cards_title" />
+					</div>
+					
+					<div class="form-group">
+						<label for="cards_email">(Optional) Please an email address that you would like to appear on the cards:</label>
+						<input type="text" size="40" id="cards_email" class="form-control" name="cards_email" />
+					</div>
+					
+					<div class="form-group">
+						<label for="cards_pnum">(Optional) Please enter a phone number that you would like to appear on the cards:</label>
+						<input type="text" size="40" id="cards_pnum" class="form-control" name="cards_pnum" />
+					</div>
+					
+					<a href="" onclick="thisPageManager.show_card_preview(); return false;">Preview my cards</a><br/>
+					<div id="cards_preview" style="display: none; padding: 5px;">&nbsp;</div>
+					<br/>
+					
+					<input class="btn btn-primary" type="submit" value="Save &amp; Continue" />
+				</form>
+			</div>
+		</div>
+		<?php
+	}
+	else if ($nav_subtab_selected == "manage") {
+		$my_printrequests = $app->run_query("SELECT * FROM card_printrequests pr JOIN card_designs cd ON pr.design_id=cd.design_id JOIN card_currency_denominations denom ON cd.denomination_id=denom.denomination_id JOIN currencies c ON denom.currency_id=c.currency_id WHERE pr.user_id=:user_id ORDER BY pr.time_created DESC;", ['user_id'=>$thisuser->db_user['user_id']]);
+		
+		echo '
+		<div class="panel panel-info" style="margin-top: 15px;">
+			<div class="panel-heading">
+				<div class="panel-title">My Print Requests ('.$my_printrequests->rowCount().')</div>
+			</div>
+			<div class="panel-body">';
+		
+		while ($printrequest = $my_printrequests->fetch()) {
+			$peer = $app->fetch_peer_by_id($printrequest['peer_id']);
+			
+			$minmax = $app->run_query("SELECT MIN(card_id), MAX(card_id), MIN(peer_card_id), MAX(peer_card_id) FROM cards WHERE group_id=:group_id;", [
+				'group_id' => $printrequest['card_group_id']
+			])->fetch();
+			
+			echo "<div class=\"row\">";
+			echo "<div class=\"col-sm-4\">".$peer['peer_name']." cards ".$minmax['MIN(peer_card_id)'].":".$minmax['MAX(peer_card_id)']." &nbsp;&nbsp; ".$printrequest['how_many']." &cross; ".$printrequest['denomination']." ".$printrequest['short_name']." cards</div>";
+			echo "<div class=\"col-sm-4\">".$printrequest['display_name'].", ".$printrequest['display_email']."</div>\n";
+			echo "<div class=\"col-sm-4\">";
+			echo "<a href=\"/cards/?action=activate_cards&printrequest_id=".$printrequest['request_id']."\">Activate Cards</a>\n";
+			
+			if ($printrequest['secrets_present'] == 1) {
+				echo " &nbsp;&nbsp; <a href=\"/cards/?action=print_design&design_id=".$printrequest['design_id']."\">Download PDFs</a>\n";
+				echo " &nbsp;&nbsp; <a href=\"/cards/?action=wipe_secrets&printrequest_id=".$printrequest['request_id']."\">Wipe Secrets</a>\n";
+			}
+			echo "</div>\n";
+			echo "</div>\n";
+		}
+		echo "</div></div>\n";
+		
+		$my_cards_r = $app->run_query("SELECT * FROM card_printrequests pr JOIN card_designs cd ON pr.design_id=cd.design_id JOIN card_currency_denominations denom ON cd.denomination_id=denom.denomination_id JOIN currencies c ON denom.currency_id=c.currency_id JOIN cards ON cards.design_id=cd.design_id WHERE pr.user_id=:user_id ORDER BY cards.card_id ASC;", ['user_id'=>$thisuser->db_user['user_id']]);
+		
+		echo '
+		<div class="panel panel-info" style="margin-top: 15px;">
+			<div class="panel-heading">
+				<div class="panel-title">My Cards ('.$my_cards_r->rowCount().')</div>
+			</div>
+			<div class="panel-body">';
+		
+		while ($db_card = $my_cards_r->fetch()) {
+			echo '<div class="card_small">';
+			echo '<a target="_blank" href="/redeem/'.$db_card['peer_id'].'/'.$db_card['peer_card_id'].'">'.$db_card['peer_card_id']."</a><br/>\n";
+			echo " ".$app->format_bignum($db_card['amount'])." ".$db_card['abbreviation'];
+			echo "<br/>";
+			echo $db_card['status'];
+			echo "</div>\n";
+		}
+		echo "</div></div>\n";
+		?>
+		<div class="panel panel-info">
+			<div class="panel-heading">
+				<div class="panel-title">Import Cards</div>
+			</div>
+			<div class="panel-body">
+				<p>
+					To import cards from a remote card peer, please enter the peer's website URL and the range of card IDs that you wish to import.
+				</p>
+				<form action="/cards/" method="get">
+					<input type="hidden" name="action" value="import_cards" />
+					<div class="form-group">
+						<label for="peer_name">From website:</label>
+						<input type="text" class="form-control" name="peer_name" placeholder="http://" />
+					</div>
+					<div class="form-group">
+						<label for="from_card_id">From card ID:</label>
+						<input type="text" class="form-control" name="from_card_id" />
+					</div>
+					<div class="form-group">
+						<label for="to_card_id">To card ID:</label>
+						<input type="text" class="form-control" name="to_card_id" />
+					</div>
+					<input type="submit" class="btn btn-primary" value="Import Cards" />
+				</form>
+			</div>
+		</div>
+		<?php
+	}
+	else {
+		if (empty($my_cards)) $my_cards = [];
+		$reference_currency = $app->get_reference_currency();
+		$btc_currency = $app->get_currency_by_abbreviation('btc');
+		$currency_prices = $app->fetch_currency_prices();
+		if (empty($my_cards)) $networth = 0;
+		else $networth = $app->calculate_cards_networth($my_cards);
+		
+		if (empty($_REQUEST['start_section'])) $_REQUEST['start_section'] = "cards";
+		if (in_array($_REQUEST['start_section'], ['cards', 'add_card', 'withdraw_btc'])) {
 			?>
 			<script type="text/javascript">
-			thisPageManager.card_printing_cost = 0.25;
-			thisPageManager.cost_per_coin = 1;
-			thisPageManager.coin_abbreviation = "";
-			thisPageManager.usd_per_btc = <?php if ($btc_usd_price) echo $btc_usd_price['price']; else echo "false"; ?>;
-
 			window.onload = function() {
-				thisPageManager.cards_howmany_changed();
-				thisPageManager.fv_currency_id_changed();
+				thisPageManager.open_page_section(<?php echo "'".$_REQUEST['start_section']."'"; ?>);
 			};
 			</script>
-			
-			<div class="panel panel-info" style="margin-top: 15px;">
-				<div class="panel-heading">
-					<div class="panel-title">Create Cards</div>
-				</div>
-				<div class="panel-body">
-					<form action="/cards/" method="post">
-						<input type="hidden" name="action" value="try_print" />
-						<input type="hidden" name="cards_payment_amount" id="payment_amount" value="" />
-						
-						<div class="form-group">
-							<label for="cards_currency_id">Which currency should the cards convert to?</label>
-							<select id="cards_currency_id" class="form-control" name="cards_currency" onchange="thisPageManager.currency_id_changed();">
-								<option value="">-- Please Select --</option>
-								<?php
-								$blockchain_currencies = $app->run_query("SELECT * FROM currencies WHERE blockchain_id IS NOT NULL ORDER BY name ASC;");
-								
-								while ($currency = $blockchain_currencies->fetch()) {
-									echo "<option value=\"".$currency['currency_id']."\">".$currency['name']."</option>\n";
-								}
-								?>
-							</select>
-						</div>
-						
-						<div class="form-group">
-							<label for="cards_fv_currency_id">Which currency should the cards hold?</label>
-							
-							<select id="cards_fv_currency_id" class="form-control" name="cards_fv_currency_id" onchange="thisPageManager.fv_currency_id_changed();">
-								<option value="">-- Please Select --</option>
-							</select>
-						</div>
-						
-						<div class="form-group">
-							<label for="cards_account_id">Which account should pay for these cards?</label>
-							
-							<select id="cards_account_id" class="form-control" name="cards_account_id">
-								<option value="">-- Please Select --</option>
-							</select>
-						</div>
-						
-						<div class="form-group">
-							<label for="cards_denomination_id">What denomination should the cards be?</label>
-							<select id="cards_denomination_id" class="form-control" name="cards_denomination_id">
-								<option value="">-- Please Select --</option>
-							</select>
-						</div>
-						
-						<div class="form-group">
-							<label for="cards_howmany">How many cards do you want to print?</label>
-							<select id="cards_howmany" class="form-control" name="cards_howmany" onchange="thisPageManager.cards_howmany_changed();">
-								<?php
-								$ops = ['10','20','50','100','other'];
-								
-								for ($i=0; $i<count($ops); $i++) {
-									echo "<option value=\"".$ops[$i]."\">";
-									if ($ops[$i] == "other") echo "Other";
-									else echo $ops[$i]." cards";
-									echo "</option>\n";
-								}
-								?>
-							</select>
-						</div>
-						
-						<div class="form-group" style="display: none;" id="cards_howmany_other">
-							<label for="cards_howmany_other_val">How many?</label>
-							<input type="text" class="form-control" size="4" value="" id="cards_howmany_other_val" name="cards_howmany_other_val" placeholder="100" /> cards
-						</div>
-						
-						<div class="form-group">
-							<label for="card_purity">How much should be charged in fees to the person redeeming each card?</label>
-							
-							<div id="cards_purity_btc" style="display: none;">
-								0.00%
-							</div>
-							
-							<div id="cards_purity_usd">
-								<select id="cards_purity" class="form-control" name="cards_purity">
-								<?php
-								$ops = ['100','95','92','90','88','85','80'];
-								for ($i=0; $i<count($ops); $i++) {
-									echo "<option ";
-									if ($ops[$i] == 100) echo "selected=\"selected\" ";
-									echo "value=\"".$ops[$i]."\">";
-									if ($ops[$i] == "unspecified") echo "Unspecified";
-									else echo (100-$ops[$i])."% in fees";
-									echo "</option>\n";
-								}
-								?>
-								</select>
-							</div>
-						</div>
-						
-						<div class="form-group">
-							<label for="cards_name">Please enter a name that you would like to appear on the cards:</label>
-							<input type="text" size="50" id="cards_name" class="form-control" name="cards_name" />
-						</div>
-						
-						<div class="form-group">
-							<label for="cards_title">(Optional) Please enter a position & title to appear on the cards:</label>
-							<input type="text" size="70" id="cards_title" class="form-control" name="cards_title" />
-						</div>
-						
-						<div class="form-group">
-							<label for="cards_email">(Optional) Please an email address that you would like to appear on the cards:</label>
-							<input type="text" size="40" id="cards_email" class="form-control" name="cards_email" />
-						</div>
-						
-						<div class="form-group">
-							<label for="cards_pnum">(Optional) Please enter a phone number that you would like to appear on the cards:</label>
-							<input type="text" size="40" id="cards_pnum" class="form-control" name="cards_pnum" />
-						</div>
-						
-						<a href="" onclick="thisPageManager.show_card_preview(); return false;">Preview my cards</a><br/>
-						<div id="cards_preview" style="display: none; padding: 5px;">&nbsp;</div>
-						<br/>
-						
-						<input class="btn btn-primary" type="submit" value="Save &amp; Continue" />
-					</form>
-				</div>
-			</div>
 			<?php
 		}
-		else if ($nav_subtab_selected == "manage") {
-			$my_printrequests = $app->run_query("SELECT * FROM card_printrequests pr JOIN card_designs cd ON pr.design_id=cd.design_id JOIN card_currency_denominations denom ON cd.denomination_id=denom.denomination_id JOIN currencies c ON denom.currency_id=c.currency_id WHERE pr.user_id=:user_id ORDER BY pr.time_created DESC;", ['user_id'=>$thisuser->db_user['user_id']]);
-			
-			echo '
-			<div class="panel panel-info" style="margin-top: 15px;">
-				<div class="panel-heading">
-					<div class="panel-title">My Print Requests ('.$my_printrequests->rowCount().')</div>
-				</div>
-				<div class="panel-body">';
-			
-			while ($printrequest = $my_printrequests->fetch()) {
-				$peer = $app->fetch_peer_by_id($printrequest['peer_id']);
-				
-				$minmax = $app->run_query("SELECT MIN(card_id), MAX(card_id), MIN(peer_card_id), MAX(peer_card_id) FROM cards WHERE group_id=:group_id;", [
-					'group_id' => $printrequest['card_group_id']
-				])->fetch();
-				
-				echo "<div class=\"row\">";
-				echo "<div class=\"col-sm-4\">".$peer['peer_name']." cards ".$minmax['MIN(peer_card_id)'].":".$minmax['MAX(peer_card_id)']." &nbsp;&nbsp; ".$printrequest['how_many']." &cross; ".$printrequest['denomination']." ".$printrequest['short_name']." cards</div>";
-				echo "<div class=\"col-sm-4\">".$printrequest['display_name'].", ".$printrequest['display_email']."</div>\n";
-				echo "<div class=\"col-sm-4\">";
-				echo "<a href=\"/cards/?action=activate_cards&printrequest_id=".$printrequest['request_id']."\">Activate Cards</a>\n";
-				
-				if ($printrequest['secrets_present'] == 1) {
-					echo " &nbsp;&nbsp; <a href=\"/cards/?action=print_design&design_id=".$printrequest['design_id']."\">Download PDFs</a>\n";
-					echo " &nbsp;&nbsp; <a href=\"/cards/?action=wipe_secrets&printrequest_id=".$printrequest['request_id']."\">Wipe Secrets</a>\n";
-				}
-				echo "</div>\n";
-				echo "</div>\n";
-			}
-			echo "</div></div>\n";
-			
-			$my_cards_r = $app->run_query("SELECT * FROM card_printrequests pr JOIN card_designs cd ON pr.design_id=cd.design_id JOIN card_currency_denominations denom ON cd.denomination_id=denom.denomination_id JOIN currencies c ON denom.currency_id=c.currency_id JOIN cards ON cards.design_id=cd.design_id WHERE pr.user_id=:user_id ORDER BY cards.card_id ASC;", ['user_id'=>$thisuser->db_user['user_id']]);
-			
-			echo '
-			<div class="panel panel-info" style="margin-top: 15px;">
-				<div class="panel-heading">
-					<div class="panel-title">My Cards ('.$my_cards_r->rowCount().')</div>
-				</div>
-				<div class="panel-body">';
-			
-			while ($db_card = $my_cards_r->fetch()) {
-				echo '<div class="card_small">';
-				echo '<a target="_blank" href="/redeem/'.$db_card['peer_id'].'/'.$db_card['peer_card_id'].'">'.$db_card['peer_card_id']."</a><br/>\n";
-				echo " ".$app->format_bignum($db_card['amount'])." ".$db_card['abbreviation'];
-				echo "<br/>";
-				echo $db_card['status'];
-				echo "</div>\n";
-			}
-			echo "</div></div>\n";
-			?>
+		?>
+		<div id="section_cards" style="display: none; margin-top: 15px;">
 			<div class="panel panel-info">
 				<div class="panel-heading">
-					<div class="panel-title">Import Cards</div>
+					<div class="panel-title">My Cards</div>
 				</div>
 				<div class="panel-body">
-					<p>
-						To import cards from a remote card peer, please enter the peer's website URL and the range of card IDs that you wish to import.
-					</p>
-					<form action="/cards/" method="get">
-						<input type="hidden" name="action" value="import_cards" />
-						<div class="form-group">
-							<label for="peer_name">From website:</label>
-							<input type="text" class="form-control" name="peer_name" placeholder="http://" />
-						</div>
-						<div class="form-group">
-							<label for="from_card_id">From card ID:</label>
-							<input type="text" class="form-control" name="from_card_id" />
-						</div>
-						<div class="form-group">
-							<label for="to_card_id">To card ID:</label>
-							<input type="text" class="form-control" name="to_card_id" />
-						</div>
-						<input type="submit" class="btn btn-primary" value="Import Cards" />
-					</form>
-				</div>
-			</div>
-			<?php
-		}
-		else {
-			if (empty($my_cards)) $my_cards = [];
-			$reference_currency = $app->get_reference_currency();
-			$btc_currency = $app->get_currency_by_abbreviation('btc');
-			$currency_prices = $app->fetch_currency_prices();
-			if (empty($my_cards)) $networth = 0;
-			else $networth = $app->calculate_cards_networth($my_cards);
-			
-			if (empty($_REQUEST['start_section'])) $_REQUEST['start_section'] = "cards";
-			if (in_array($_REQUEST['start_section'], ['cards', 'add_card', 'withdraw_btc'])) {
-				?>
-				<script type="text/javascript">
-				window.onload = function() {
-					thisPageManager.open_page_section(<?php echo "'".$_REQUEST['start_section']."'"; ?>);
-				};
-				</script>
-				<?php
-			}
-			?>
-			<div id="section_cards" style="display: none; margin-top: 15px;">
-				<div class="panel panel-info">
-					<div class="panel-heading">
-						<div class="panel-title">My Cards</div>
-					</div>
-					<div class="panel-body">
-						<?php
-						echo "You have ".count($my_cards)." card";
-						if (count($my_cards) != 1) echo "s";
-						echo " in this user account. ";
-						
-						if (count($my_cards) > 1) {
-							?>
-							<div id="display_hotcards">
-								<?php
-								for ($i=0; $i<count($my_cards); $i++) {
-									echo '<div class="card_small" id="card_btn'.$i.'" onclick="thisPageManager.open_card('.$i.');">';
-									if ($my_cards[$i]['status'] == "claimed") echo "<b>";
-									echo $my_cards[$i]['peer_card_id'];
-									echo "<br/>\n";
-									echo $app->format_bignum($my_cards[$i]['amount'])." ".$my_cards[$i]['abbreviation'];
-									if ($my_cards[$i]['status'] == "claimed") echo "</b>";
-									echo "</div>\n";
-								}
-								?>
-							</div>
-							<br/>
-							<?php
-						}
+					<?php
+					echo "You have ".count($my_cards)." card";
+					if (count($my_cards) != 1) echo "s";
+					echo " in this user account. ";
+					
+					if (count($my_cards) > 1) {
 						?>
-						<div><?php
-							if (!empty($my_cards)) {
-								for ($i=0; $i<count($my_cards); $i++) {
-									?>
-									<div class="card_block" id="card_block<?php echo $i; ?>" style="display: none;">
-										<div style="display: block; overflow: hidden;">
-											<div class="row">
-												<div class="col-xs-4">peer</div><div class="col-xs-8"><?php
-												$peer = $app->fetch_peer_by_id($my_cards[$i]['peer_id']);
-												echo $peer['peer_identifier'];
-												?></div>
-											</div>
-											<div class="row">
-												<div class="col-xs-4">Card ID</div><div class="col-xs-8">#<?php echo $my_cards[$i]['peer_card_id']; ?></div>
-											</div>
-											<div class="row">
-												<div class="col-xs-4">Minted</div><div class="col-xs-8"><?php echo $app->format_seconds(time() - $my_cards[$i]['mint_time']); ?> ago</div>
-											</div>
-											<div class="row">
-												<div class="col-xs-4">Card denomination</div>
-												<div class="col-xs-8 greentext">
-													<?php
-													echo $app->format_bignum($my_cards[$i]['amount'])." ".$my_cards[$i]['abbreviation'];
-													?>
-												</div>
-											</div>
-											<div class="row">
-												<div class="col-xs-4">Status</div>
-												<div class="col-xs-8">
-													<?php
-													echo ucwords($my_cards[$i]['status']);
-													?>
-												</div>
-											</div>
-											<?php
-											if ($my_cards[$i]['purity'] != 100) { ?>
-												<div class="row">
-													<div class="col-xs-4">Fees</div>
-													<div class="col-xs-8" style="color: #<?php
-														$fees = $app->get_card_fees($my_cards[$i]);
-														if ($fees > 0) echo "f00"; else echo "0a0;";
-														?>"><?php echo $app->format_bignum($fees)." ".$my_cards[$i]['abbreviation']; ?>
-													</div>
-												</div>
-												<?php
-											}
-											
-											$fv_currency = $app->fetch_currency_by_id($my_cards[$i]['fv_currency_id']);
-											
-											if ($my_cards[$i]['status'] == "claimed") {
-												?>
-												<p style="margin-top: 15px;">
-													<button class="btn btn-success" onclick="thisPageManager.card_id=<?php echo $my_cards[$i]['peer_card_id']; ?>; thisPageManager.peer_id=<?php echo $my_cards[$i]['peer_id']; ?>; $('#claim_dialog').modal('show');">Withdraw to Address</button>
-													<button id="claim_account_btn_<?php echo $my_cards[$i]['peer_card_id'].'_'.$my_cards[$i]['peer_id']; ?>" class="btn btn-primary" onclick="thisPageManager.card_id=<?php echo $my_cards[$i]['peer_card_id']; ?>; thisPageManager.peer_id=<?php echo $my_cards[$i]['peer_id']; ?>; thisPageManager.claim_card('to_account');">Withdraw to Account</button>
-													<button id="claim_game_btn_<?php echo $my_cards[$i]['peer_card_id'].'_'.$my_cards[$i]['peer_id']; ?>" class="btn btn-info" onclick="thisPageManager.card_id=<?php echo $my_cards[$i]['peer_card_id']; ?>; thisPageManager.peer_id=<?php echo $my_cards[$i]['peer_id']; ?>; thisPageManager.claim_card('to_game');">Buy in to Game</button>
-												</p>
-												<?php
-											}
-											?>
-											<div id="messages" style="margin-top: 15px; display: block;"></div>
-										</div>
-									</div>
-									<?php
-								}
+						<div id="display_hotcards">
+							<?php
+							for ($i=0; $i<count($my_cards); $i++) {
+								echo '<div class="card_small" id="card_btn'.$i.'" onclick="thisPageManager.open_card('.$i.');">';
+								if ($my_cards[$i]['status'] == "claimed") echo "<b>";
+								echo $my_cards[$i]['peer_card_id'];
+								echo "<br/>\n";
+								echo $app->format_bignum($my_cards[$i]['amount'])." ".$my_cards[$i]['abbreviation'];
+								if ($my_cards[$i]['status'] == "claimed") echo "</b>";
+								echo "</div>\n";
 							}
 							?>
 						</div>
-					</div>
-				</div>
-			</div>
-			<div id="claim_dialog" class="modal fade" style="display: none;">
-				<div class="modal-dialog">
-					<div class="modal-content">
-						<div class="modal-header">
-							<h4 class="modal-title">Claim Coins</h4>
-						</div>
-						<div class="modal-body">
-							<div class="form-group">
-								<label for="claim_fee">Fee:</label>
-								<input class="form-control" type="tel" placeholder="0.0001" value="0.0001" id="claim_fee" style="text-align: right;" />
-							</div>
-							<div class="form-group">
-								<label for="claim_address">Address:</label>
-								<input class="form-control" type="text" id="claim_address" />
-							</div>
-							<span class="greentext" style="display: none;" id="claim_message"></span>
-							
-							<button id="claim_address_btn" class="btn btn-success" onclick="thisPageManager.claim_card('to_address');">Send Coins</button>
-						</div>
-					</div>
-				</div>
-			</div>
-			<div id="section_add_card" style="display: none;">
-				<div class="panel panel-info">
-					<div class="panel-heading">
-						<div class="panel-title">Log in to a card to add it to this account</div>
-					</div>
-					<div class="panel-body">
+						<br/>
 						<?php
-						$ask4nameid = TRUE;
-						$login_title = "";
-						$card_login_card_id = "$('#peer_card_id').val()";
-						$card_login_peer_id = "$('#peer_id').val()";
-						include(AppSettings::srcPath()."/includes/html_card_login.php");
+					}
+					?>
+					<div><?php
+						if (!empty($my_cards)) {
+							for ($i=0; $i<count($my_cards); $i++) {
+								?>
+								<div class="card_block" id="card_block<?php echo $i; ?>" style="display: none;">
+									<div style="display: block; overflow: hidden;">
+										<div class="row">
+											<div class="col-xs-4">peer</div><div class="col-xs-8"><?php
+											$peer = $app->fetch_peer_by_id($my_cards[$i]['peer_id']);
+											echo $peer['peer_identifier'];
+											?></div>
+										</div>
+										<div class="row">
+											<div class="col-xs-4">Card ID</div><div class="col-xs-8">#<?php echo $my_cards[$i]['peer_card_id']; ?></div>
+										</div>
+										<div class="row">
+											<div class="col-xs-4">Minted</div><div class="col-xs-8"><?php echo $app->format_seconds(time() - $my_cards[$i]['mint_time']); ?> ago</div>
+										</div>
+										<div class="row">
+											<div class="col-xs-4">Card denomination</div>
+											<div class="col-xs-8 greentext">
+												<?php
+												echo $app->format_bignum($my_cards[$i]['amount'])." ".$my_cards[$i]['abbreviation'];
+												?>
+											</div>
+										</div>
+										<div class="row">
+											<div class="col-xs-4">Status</div>
+											<div class="col-xs-8">
+												<?php
+												echo ucwords($my_cards[$i]['status']);
+												?>
+											</div>
+										</div>
+										<?php
+										if ($my_cards[$i]['purity'] != 100) { ?>
+											<div class="row">
+												<div class="col-xs-4">Fees</div>
+												<div class="col-xs-8" style="color: #<?php
+													$fees = $app->get_card_fees($my_cards[$i]);
+													if ($fees > 0) echo "f00"; else echo "0a0;";
+													?>"><?php echo $app->format_bignum($fees)." ".$my_cards[$i]['abbreviation']; ?>
+												</div>
+											</div>
+											<?php
+										}
+										
+										$fv_currency = $app->fetch_currency_by_id($my_cards[$i]['fv_currency_id']);
+										
+										if ($my_cards[$i]['status'] == "claimed") {
+											?>
+											<p style="margin-top: 15px;">
+												<button class="btn btn-success" onclick="thisPageManager.card_id=<?php echo $my_cards[$i]['peer_card_id']; ?>; thisPageManager.peer_id=<?php echo $my_cards[$i]['peer_id']; ?>; $('#claim_dialog').modal('show');">Withdraw to Address</button>
+												<button id="claim_account_btn_<?php echo $my_cards[$i]['peer_card_id'].'_'.$my_cards[$i]['peer_id']; ?>" class="btn btn-primary" onclick="thisPageManager.card_id=<?php echo $my_cards[$i]['peer_card_id']; ?>; thisPageManager.peer_id=<?php echo $my_cards[$i]['peer_id']; ?>; thisPageManager.claim_card('to_account');">Withdraw to Account</button>
+												<button id="claim_game_btn_<?php echo $my_cards[$i]['peer_card_id'].'_'.$my_cards[$i]['peer_id']; ?>" class="btn btn-info" onclick="thisPageManager.card_id=<?php echo $my_cards[$i]['peer_card_id']; ?>; thisPageManager.peer_id=<?php echo $my_cards[$i]['peer_id']; ?>; thisPageManager.claim_card('to_game');">Buy in to Game</button>
+											</p>
+											<?php
+										}
+										?>
+										<div id="messages" style="margin-top: 15px; display: block;"></div>
+									</div>
+								</div>
+								<?php
+							}
+						}
 						?>
 					</div>
 				</div>
 			</div>
-			<div id="section_withdraw_btc" style="display: none;">
-				<div class="panel panel-info">
-					<div class="panel-heading">
-						<div class="panel-title">Withdraw Bitcoins</div>
+		</div>
+		<div id="claim_dialog" class="modal fade" style="display: none;">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h4 class="modal-title">Claim Coins</h4>
 					</div>
-					<div class="panel-body">
-						<div class="form-group">Your withdrawal limit is <div class="coinsymbol"></div><?php
-							$btc_withdraw_limit = round($networth*$currency_prices[$btc_currency['currency_id']]['price'], 8);
-							
-							echo $btc_withdraw_limit;?> BTC
+					<div class="modal-body">
+						<div class="form-group">
+							<label for="claim_fee">Fee:</label>
+							<input class="form-control" type="tel" placeholder="0.0001" value="0.0001" id="claim_fee" style="text-align: right;" />
 						</div>
 						<div class="form-group">
-							<label for="send_bitcoin_amount">How many BTC do you want to withdraw?</label>
-							<input class="form-control" type="text" size="10" id="send_bitcoin_amount" />
+							<label for="claim_address">Address:</label>
+							<input class="form-control" type="text" id="claim_address" />
 						</div>
-						<div class="form-group">
-							<label for="send_bitcoin_address">Please enter a bitcoin address:</label>
-							<input class="form-control" type="text" size="30" id="send_bitcoin_address" />
-							
-							<a href="" onclick="$('#os_options').show(); return false;">Scan a QR code address</a>
-							<div style="display: none;" id="os_options">
-								Which are you using?<br/>
-								<a class="btn btn-default" href="" onclick="QRC.selectOS('iphone'); return false;">Mobile Phone</a>&nbsp;&nbsp;&nbsp;
-								<a class="btn btn-default" href="" onclick="QRC.selectOS('pc'); return false;">Computer</a>
-							</div>
-							<div id="qrUpload" style="display: none; border: 1px solid #ccc; padding: 10px;">
-								Please upload a picture of the QR code.
-								<div id="qrfile">
-									<canvas id="out-canvas" width="200" height="150"></canvas>
-									<div id="imghelp">
-										<input type="file" onchange="QRC.handleFiles(this.files)"/>
-									</div>
-								</div>
-							</div>
-							<div id="qrCam" style="display: none; border: 1px solid #ccc; padding: 10px;">
-								To scan an address, please share your web cam with the browser, then hold the QR code up to your web cam.
-								
-								<div id="outdiv"></div>
-								
-								<canvas id="qrCanvas" width="800" height="600"></canvas>
-							</div>
-						</div>
-						<button class="btn btn-success" onclick="thisPageManager.deposit_coins();">Withdraw Bitcoins</button>
+						<span class="greentext" style="display: none;" id="claim_message"></span>
+						
+						<button id="claim_address_btn" class="btn btn-success" onclick="thisPageManager.claim_card('to_address');">Send Coins</button>
 					</div>
 				</div>
 			</div>
-			<?php
-		}
-	}
-	else {
-		if (empty($_REQUEST['redirect_key'])) $redirect_url = $app->get_redirect_url("/cards/");
-		
-		include(AppSettings::srcPath()."/includes/html_login.php");
+		</div>
+		<div id="section_add_card" style="display: none;">
+			<div class="panel panel-info">
+				<div class="panel-heading">
+					<div class="panel-title">Log in to a card to add it to this account</div>
+				</div>
+				<div class="panel-body">
+					<?php
+					$ask4nameid = TRUE;
+					$login_title = "";
+					$card_login_card_id = "$('#peer_card_id').val()";
+					$card_login_peer_id = "$('#peer_id').val()";
+					include(AppSettings::srcPath()."/includes/html_card_login.php");
+					?>
+				</div>
+			</div>
+		</div>
+		<div id="section_withdraw_btc" style="display: none;">
+			<div class="panel panel-info">
+				<div class="panel-heading">
+					<div class="panel-title">Withdraw Bitcoins</div>
+				</div>
+				<div class="panel-body">
+					<div class="form-group">Your withdrawal limit is <div class="coinsymbol"></div><?php
+						$btc_withdraw_limit = round($networth*$currency_prices[$btc_currency['currency_id']]['price'], 8);
+						
+						echo $btc_withdraw_limit;?> BTC
+					</div>
+					<div class="form-group">
+						<label for="send_bitcoin_amount">How many BTC do you want to withdraw?</label>
+						<input class="form-control" type="text" size="10" id="send_bitcoin_amount" />
+					</div>
+					<div class="form-group">
+						<label for="send_bitcoin_address">Please enter a bitcoin address:</label>
+						<input class="form-control" type="text" size="30" id="send_bitcoin_address" />
+						
+						<a href="" onclick="$('#os_options').show(); return false;">Scan a QR code address</a>
+						<div style="display: none;" id="os_options">
+							Which are you using?<br/>
+							<a class="btn btn-default" href="" onclick="QRC.selectOS('iphone'); return false;">Mobile Phone</a>&nbsp;&nbsp;&nbsp;
+							<a class="btn btn-default" href="" onclick="QRC.selectOS('pc'); return false;">Computer</a>
+						</div>
+						<div id="qrUpload" style="display: none; border: 1px solid #ccc; padding: 10px;">
+							Please upload a picture of the QR code.
+							<div id="qrfile">
+								<canvas id="out-canvas" width="200" height="150"></canvas>
+								<div id="imghelp">
+									<input type="file" onchange="QRC.handleFiles(this.files)"/>
+								</div>
+							</div>
+						</div>
+						<div id="qrCam" style="display: none; border: 1px solid #ccc; padding: 10px;">
+							To scan an address, please share your web cam with the browser, then hold the QR code up to your web cam.
+							
+							<div id="outdiv"></div>
+							
+							<canvas id="qrCanvas" width="800" height="600"></canvas>
+						</div>
+					</div>
+					<button class="btn btn-success" onclick="thisPageManager.deposit_coins();">Withdraw Bitcoins</button>
+				</div>
+			</div>
+		</div>
+		<?php
 	}
 	?>
 </div>

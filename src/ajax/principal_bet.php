@@ -2,7 +2,7 @@
 require(AppSettings::srcPath()."/includes/connect.php");
 require(AppSettings::srcPath()."/includes/get_session.php");
 
-if ($thisuser && $game) {
+if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 	$user_game = $thisuser->ensure_user_in_game($game, false);
 	$user_game_account = $app->fetch_account_by_id($user_game['account_id']);
 	

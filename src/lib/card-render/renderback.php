@@ -2,7 +2,7 @@
 require(AppSettings::srcPath()."/includes/connect.php");
 include(AppSettings::srcPath()."/lib/phpqrcode/qrlib.php");
 
-if (empty(AppSettings::getParam('operator_key')) || $_REQUEST['key'] == AppSettings::getParam('operator_key')) {
+if ($app->running_as_admin()) {
 	$card_id = (int) $_REQUEST['card_id'];
 
 	if ($card_id > 0) {

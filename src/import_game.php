@@ -6,7 +6,7 @@ $import_mode = "game";
 $toggle_mode = "blockchain";
 
 if (!empty($_REQUEST['import_mode']) && $_REQUEST['import_mode'] == "blockchain") {
-	$import_mode = $_REQUEST['import_mode'];
+	$import_mode = "blockchain";
 	$toggle_mode = "game";
 }
 
@@ -29,7 +29,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 			</div>
 			<div class="panel-body">
 			<?php
-				if ($app->user_is_admin($thisuser)) {
+				if ($app->user_is_admin($thisuser) && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 					if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "import_definition") {
 						$db_new_game = false;
 						$error_message = false;
@@ -68,6 +68,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						<form action="/import/" method="post">
 							<input type="hidden" name="action" value="import_definition" />
 							<input type="hidden" name="import_mode" value="<?php echo $import_mode; ?>" />
+							<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
 							<p>
 								<b>Import a new <?php echo $import_mode; ?></b></a>
 							</p>

@@ -124,260 +124,262 @@ else {
 			if (!empty($_REQUEST['next'])) $next_action = $_REQUEST['next'];
 			if (!empty($_REQUEST['last'])) $last_action = $_REQUEST['last'];
 			
-			if ($last_action == "description") {
-				$game_description = $_REQUEST['game_description'];
-				
-				$app->run_query("UPDATE games SET short_description=:short_description WHERE game_id=:game_id;", [
-					'short_description' => $game_description,
-					'game_id' => $game->db_game['game_id']
-				]);
-				
-				$game->db_game['short_description'] = $game_description;
-			}
-			else if ($last_action == "invite_upload_csv") {
-				$csv_content = file_get_contents($_FILES['csv_file']['tmp_name']);
-				$csv_lines = explode("\n", $csv_content);
-				$header_vars = explode(",", trim(strtolower($csv_lines[0])));
-				$id_col = array_search("user_id", $header_vars);
-				
-				if ($id_col === false) {
-					$messages .= "Required column user_id was missing.<br/>\n";
-				}
-				else {
-					$invite_count = 0;
+			if ($app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
+				if ($last_action == "description" && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
+					$game_description = $_REQUEST['game_description'];
 					
-					for ($line_i=1; $line_i<count($csv_lines); $line_i++) {
-						$line_vals = explode(",", trim($csv_lines[$line_i]));
-						$user_id = (int) str_replace('"', '', $line_vals[$id_col]);
+					$app->run_query("UPDATE games SET short_description=:short_description WHERE game_id=:game_id;", [
+						'short_description' => $game_description,
+						'game_id' => $game->db_game['game_id']
+					]);
+					
+					$game->db_game['short_description'] = $game_description;
+				}
+				else if ($last_action == "invite_upload_csv") {
+					$csv_content = file_get_contents($_FILES['csv_file']['tmp_name']);
+					$csv_lines = explode("\n", $csv_content);
+					$header_vars = explode(",", trim(strtolower($csv_lines[0])));
+					$id_col = array_search("user_id", $header_vars);
+					
+					if ($id_col === false) {
+						$messages .= "Required column user_id was missing.<br/>\n";
+					}
+					else {
+						$invite_count = 0;
 						
-						if ($user_id > 0) {
-							$send_to_user = $app->fetch_user_by_id($user_id);
+						for ($line_i=1; $line_i<count($csv_lines); $line_i++) {
+							$line_vals = explode(",", trim($csv_lines[$line_i]));
+							$user_id = (int) str_replace('"', '', $line_vals[$id_col]);
 							
-							if ($send_to_user) {
-								$send_user_game = $app->fetch_user_game($send_to_user['user_id'], $game->db_game['game_id']);
+							if ($user_id > 0) {
+								$send_to_user = $app->fetch_user_by_id($user_id);
 								
-								if (!$send_user_game) {
-									$invitation = false;
-									$game->generate_invitation($user_id, $invitation, false);
-									$app->send_apply_invitation($send_to_user, $invitation);
-									$invite_count++;
+								if ($send_to_user) {
+									$send_user_game = $app->fetch_user_game($send_to_user['user_id'], $game->db_game['game_id']);
+									
+									if (!$send_user_game) {
+										$invitation = false;
+										$game->generate_invitation($user_id, $invitation, false);
+										$app->send_apply_invitation($send_to_user, $invitation);
+										$invite_count++;
+									}
 								}
 							}
 						}
+						
+						$messages .= $invite_count." invitations have been sent & applied.<br/>\n";
 					}
-					
-					$messages .= $invite_count." invitations have been sent & applied.<br/>\n";
 				}
-			}
-			else if ($last_action == "upload_csv") {
-				$csv_content = file_get_contents($_FILES['csv_file']['tmp_name']);
-				$csv_lines = explode("\n", $csv_content);
-				$header_vars = explode(",", trim(strtolower($csv_lines[0])));
-				
-				$ties_allowed = (int) $_REQUEST['ties_allowed'];
-				
-				$home_col = array_search("home", $header_vars);
-				$away_col = array_search("away", $header_vars);
-				$name_col = array_search("event name", $header_vars);
-				$start_time_col = array_search("start time utc", $header_vars);
-				$time_col = array_search("datetime utc", $header_vars);
-				$payout_time_col = array_search("payout utc", $header_vars);
-				$fee_col = array_search("fee percentage", $header_vars);
-				
-				$home_odds_col = array_search("home odds", $header_vars);
-				$away_odds_col = array_search("away odds", $header_vars);
-				$sport_col = array_search("sport", $header_vars);
-				$league_col = array_search("league", $header_vars);
-				$external_id_col = array_search("external identifier", $header_vars);
-				$outcome_col = array_search("outcome", $header_vars);
-				
-				if ($home_col === false || $away_col === false || $name_col === false || $time_col === false || $start_time_col === false) {
-					$messages .= "A required column was missing in the file you uploaded. Required fields are 'Home', 'Away', 'Event Name', 'Start Time UTC' and 'Datetime UTC'<br/>\n";
-				}
-				else {
-					$sports_entity_type = $app->check_set_entity_type("sports");
-					$leagues_entity_type = $app->check_set_entity_type("leagues");
-					$general_entity_type = $app->check_set_entity_type("general entity");
+				else if ($last_action == "upload_csv") {
+					$csv_content = file_get_contents($_FILES['csv_file']['tmp_name']);
+					$csv_lines = explode("\n", $csv_content);
+					$header_vars = explode(",", trim(strtolower($csv_lines[0])));
 					
-					$game_max_event_index = (int) $app->run_query("SELECT MAX(event_index) FROM game_defined_events WHERE game_id=:game_id;", ['game_id' => $game->db_game['game_id']])->fetch()['MAX(event_index)'];
-					$game_event_index_offset = 0;
-					$skip_count = 0;
+					$ties_allowed = (int) $_REQUEST['ties_allowed'];
 					
-					for ($line_i=1; $line_i<count($csv_lines); $line_i++) {
-						if (!empty(trim($csv_lines[$line_i]))) {
-							$line_vals = explode(",", trim($csv_lines[$line_i]));
-							$home = $line_vals[$home_col];
-							$away = $line_vals[$away_col];
-							$event_name = $line_vals[$name_col];
-							$event_time = str_replace("'", "", $line_vals[$time_col]);
-							$event_start_time = str_replace("'", "", $line_vals[$start_time_col]);
-							
-							$payout_rate = 1;
-							if ((string)$line_vals[$fee_col] != "") $payout_rate = (100-$line_vals[$fee_col])/100;
-							
-							if ($payout_time_col === false || (string)$line_vals[$payout_time_col] == "") $event_payout_time = $event_time;
-							else $event_payout_time = str_replace("'", "", $line_vals[$payout_time_col]);
-							
-							if (!empty($home) && !empty($away) && !empty($event_name) && !empty($event_time)) {
-								$event_starting_time = date("Y-m-d G:i:s", strtotime($event_start_time));
-								$event_final_time = date("Y-m-d G:i:s", strtotime($event_time));
-								$event_payout_time = date("Y-m-d G:i:s", strtotime($event_payout_time));
+					$home_col = array_search("home", $header_vars);
+					$away_col = array_search("away", $header_vars);
+					$name_col = array_search("event name", $header_vars);
+					$start_time_col = array_search("start time utc", $header_vars);
+					$time_col = array_search("datetime utc", $header_vars);
+					$payout_time_col = array_search("payout utc", $header_vars);
+					$fee_col = array_search("fee percentage", $header_vars);
+					
+					$home_odds_col = array_search("home odds", $header_vars);
+					$away_odds_col = array_search("away odds", $header_vars);
+					$sport_col = array_search("sport", $header_vars);
+					$league_col = array_search("league", $header_vars);
+					$external_id_col = array_search("external identifier", $header_vars);
+					$outcome_col = array_search("outcome", $header_vars);
+					
+					if ($home_col === false || $away_col === false || $name_col === false || $time_col === false || $start_time_col === false) {
+						$messages .= "A required column was missing in the file you uploaded. Required fields are 'Home', 'Away', 'Event Name', 'Start Time UTC' and 'Datetime UTC'<br/>\n";
+					}
+					else {
+						$sports_entity_type = $app->check_set_entity_type("sports");
+						$leagues_entity_type = $app->check_set_entity_type("leagues");
+						$general_entity_type = $app->check_set_entity_type("general entity");
+						
+						$game_max_event_index = (int) $app->run_query("SELECT MAX(event_index) FROM game_defined_events WHERE game_id=:game_id;", ['game_id' => $game->db_game['game_id']])->fetch()['MAX(event_index)'];
+						$game_event_index_offset = 0;
+						$skip_count = 0;
+						
+						for ($line_i=1; $line_i<count($csv_lines); $line_i++) {
+							if (!empty(trim($csv_lines[$line_i]))) {
+								$line_vals = explode(",", trim($csv_lines[$line_i]));
+								$home = $line_vals[$home_col];
+								$away = $line_vals[$away_col];
+								$event_name = $line_vals[$name_col];
+								$event_time = str_replace("'", "", $line_vals[$time_col]);
+								$event_start_time = str_replace("'", "", $line_vals[$start_time_col]);
 								
-								$event_index = $game_max_event_index+$game_event_index_offset+1;
+								$payout_rate = 1;
+								if ((string)$line_vals[$fee_col] != "") $payout_rate = (100-$line_vals[$fee_col])/100;
 								
-								$existing_gde = $app->run_query("SELECT * FROM game_defined_events WHERE game_id=:game_id AND event_name=:event_name AND event_final_time=:event_final_time;", [
-									'game_id' => $game->db_game['game_id'],
-									'event_name' => $event_name,
-									'event_final_time' => $event_final_time
-								])->fetch();
+								if ($payout_time_col === false || (string)$line_vals[$payout_time_col] == "") $event_payout_time = $event_time;
+								else $event_payout_time = str_replace("'", "", $line_vals[$payout_time_col]);
 								
-								if (!$existing_gde) {
-									$home_target_prob = false;
-									$away_target_prob = false;
-									$tie_target_prob = false;
+								if (!empty($home) && !empty($away) && !empty($event_name) && !empty($event_time)) {
+									$event_starting_time = date("Y-m-d G:i:s", strtotime($event_start_time));
+									$event_final_time = date("Y-m-d G:i:s", strtotime($event_time));
+									$event_payout_time = date("Y-m-d G:i:s", strtotime($event_payout_time));
 									
-									if ($home_odds_col !== false) {
-										$home_odds = $line_vals[$home_odds_col];
-										$away_odds = $line_vals[$away_odds_col];
+									$event_index = $game_max_event_index+$game_event_index_offset+1;
+									
+									$existing_gde = $app->run_query("SELECT * FROM game_defined_events WHERE game_id=:game_id AND event_name=:event_name AND event_final_time=:event_final_time;", [
+										'game_id' => $game->db_game['game_id'],
+										'event_name' => $event_name,
+										'event_final_time' => $event_final_time
+									])->fetch();
+									
+									if (!$existing_gde) {
+										$home_target_prob = false;
+										$away_target_prob = false;
+										$tie_target_prob = false;
 										
-										if ((string)$line_vals[$home_odds_col] != "" || (string)$line_vals[$away_odds_col] != "") {
-											$prob_sum = 1/$home_odds + 1/$away_odds;
+										if ($home_odds_col !== false) {
+											$home_odds = $line_vals[$home_odds_col];
+											$away_odds = $line_vals[$away_odds_col];
 											
-											$home_target_prob = (1/$home_odds)/$prob_sum;
-											$away_target_prob = (1/$away_odds)/$prob_sum;
-											$target_prob_sum = $home_target_prob+$away_target_prob;
-											$tie_target_prob = 1-$target_prob_sum;
+											if ((string)$line_vals[$home_odds_col] != "" || (string)$line_vals[$away_odds_col] != "") {
+												$prob_sum = 1/$home_odds + 1/$away_odds;
+												
+												$home_target_prob = (1/$home_odds)/$prob_sum;
+												$away_target_prob = (1/$away_odds)/$prob_sum;
+												$target_prob_sum = $home_target_prob+$away_target_prob;
+												$tie_target_prob = 1-$target_prob_sum;
+											}
 										}
-									}
-									
-									if ($sport_col !== false) {
-										$sport_name = $line_vals[$sport_col];
-										if ($sport_name != "") {
-											$this_sport_entity = $app->check_set_entity($sports_entity_type['entity_type_id'], $sport_name);
+										
+										if ($sport_col !== false) {
+											$sport_name = $line_vals[$sport_col];
+											if ($sport_name != "") {
+												$this_sport_entity = $app->check_set_entity($sports_entity_type['entity_type_id'], $sport_name);
+											}
+											else $this_sport_entity = false;
 										}
 										else $this_sport_entity = false;
-									}
-									else $this_sport_entity = false;
-									
-									if ($external_id_col !== false) {
-										$external_identifier = $line_vals[$external_id_col];
-										if (empty($external_identifier)) $external_identifier = false;
-									}
-									else $external_identifier = false;
-									
-									$home_entity = $app->check_set_entity($general_entity_type['entity_type_id'], $home);
-									$away_entity = $app->check_set_entity($general_entity_type['entity_type_id'], $away);
-									
-									if ($league_col !== false) {
-										$league_name = $line_vals[$league_col];
-										if ($league_name != "") {
-											$this_league_entity = $app->check_set_entity($leagues_entity_type['entity_type_id'], $league_name);
+										
+										if ($external_id_col !== false) {
+											$external_identifier = $line_vals[$external_id_col];
+											if (empty($external_identifier)) $external_identifier = false;
+										}
+										else $external_identifier = false;
+										
+										$home_entity = $app->check_set_entity($general_entity_type['entity_type_id'], $home);
+										$away_entity = $app->check_set_entity($general_entity_type['entity_type_id'], $away);
+										
+										if ($league_col !== false) {
+											$league_name = $line_vals[$league_col];
+											if ($league_name != "") {
+												$this_league_entity = $app->check_set_entity($leagues_entity_type['entity_type_id'], $league_name);
+											}
+											else $this_league_entity = false;
 										}
 										else $this_league_entity = false;
-									}
-									else $this_league_entity = false;
-									
-									$outcome_index = null;
-									if ($outcome_col !== false) {
-										if ($line_vals[$outcome_col] != "") $outcome_index = (int)$line_vals[$outcome_col];
-									}
-									
-									$gde_ins_params = [
-										'game_id' => $game->db_game['game_id'],
-										'sport_entity_id' => $this_sport_entity ? $this_sport_entity['entity_id'] : null,
-										'league_entity_id' => $this_league_entity ? $this_league_entity['entity_id'] : null,
-										'external_identifier' => $external_identifier ? $external_identifier : null,
-										'payout_rate' => $payout_rate,
-										'outcome_index' => $outcome_index,
-										'event_index' => $event_index,
-										'event_name' => $event_name,
-										'event_starting_time' => $event_starting_time,
-										'event_final_time' => $event_final_time,
-										'event_payout_time' => $event_payout_time,
-									];
-									$gde_ins_q = "INSERT INTO game_defined_events SET game_id=:game_id, sport_entity_id=:sport_entity_id, league_entity_id=:league_entity_id, external_identifier=:external_identifier, payout_rate=:payout_rate, outcome_index=:outcome_index, event_index=:event_index, event_name=:event_name, event_starting_time=:event_starting_time, event_final_time=:event_final_time, event_payout_time=:event_payout_time, option_name='team', option_name_plural='teams';";
-									$app->run_query($gde_ins_q, $gde_ins_params);
-									
-									$gdo_home_params = [
-										'game_id' => $game->db_game['game_id'],
-										'event_index' => $event_index,
-										'option_index' => 0,
-										'name' => $home,
-										'entity_id' => $home_entity['entity_id'],
-										'target_probability' => $home_target_prob ? $home_target_prob : null
-									];
-									$gdo_away_params = [
-										'game_id' => $game->db_game['game_id'],
-										'event_index' => $event_index,
-										'option_index' => 1,
-										'name' => $away,
-										'entity_id' => $away_entity['entity_id'],
-										'target_probability' => $away_target_prob ? $away_target_prob : null
-									];
-									$gdo_ins_q = "INSERT INTO game_defined_options SET game_id=:game_id, event_index=:event_index, option_index=:option_index, name=:name, entity_id=:entity_id, target_probability=:target_probability;";
-									
-									$app->run_query($gdo_ins_q, $gdo_home_params);
-									$app->run_query($gdo_ins_q, $gdo_away_params);
-									
-									if ($ties_allowed) {
-										$gdo_tie_params = [
+										
+										$outcome_index = null;
+										if ($outcome_col !== false) {
+											if ($line_vals[$outcome_col] != "") $outcome_index = (int)$line_vals[$outcome_col];
+										}
+										
+										$gde_ins_params = [
+											'game_id' => $game->db_game['game_id'],
+											'sport_entity_id' => $this_sport_entity ? $this_sport_entity['entity_id'] : null,
+											'league_entity_id' => $this_league_entity ? $this_league_entity['entity_id'] : null,
+											'external_identifier' => $external_identifier ? $external_identifier : null,
+											'payout_rate' => $payout_rate,
+											'outcome_index' => $outcome_index,
+											'event_index' => $event_index,
+											'event_name' => $event_name,
+											'event_starting_time' => $event_starting_time,
+											'event_final_time' => $event_final_time,
+											'event_payout_time' => $event_payout_time,
+										];
+										$gde_ins_q = "INSERT INTO game_defined_events SET game_id=:game_id, sport_entity_id=:sport_entity_id, league_entity_id=:league_entity_id, external_identifier=:external_identifier, payout_rate=:payout_rate, outcome_index=:outcome_index, event_index=:event_index, event_name=:event_name, event_starting_time=:event_starting_time, event_final_time=:event_final_time, event_payout_time=:event_payout_time, option_name='team', option_name_plural='teams';";
+										$app->run_query($gde_ins_q, $gde_ins_params);
+										
+										$gdo_home_params = [
 											'game_id' => $game->db_game['game_id'],
 											'event_index' => $event_index,
-											'option_index' => 2,
-											'name' => "Tie",
-											'entity_id' => null,
-											'target_probability' => $tie_target_prob ? $tie_target_prob : null
+											'option_index' => 0,
+											'name' => $home,
+											'entity_id' => $home_entity['entity_id'],
+											'target_probability' => $home_target_prob ? $home_target_prob : null
 										];
-										$app->run_query($gdo_ins_q, $gdo_tie_params);
+										$gdo_away_params = [
+											'game_id' => $game->db_game['game_id'],
+											'event_index' => $event_index,
+											'option_index' => 1,
+											'name' => $away,
+											'entity_id' => $away_entity['entity_id'],
+											'target_probability' => $away_target_prob ? $away_target_prob : null
+										];
+										$gdo_ins_q = "INSERT INTO game_defined_options SET game_id=:game_id, event_index=:event_index, option_index=:option_index, name=:name, entity_id=:entity_id, target_probability=:target_probability;";
+										
+										$app->run_query($gdo_ins_q, $gdo_home_params);
+										$app->run_query($gdo_ins_q, $gdo_away_params);
+										
+										if ($ties_allowed) {
+											$gdo_tie_params = [
+												'game_id' => $game->db_game['game_id'],
+												'event_index' => $event_index,
+												'option_index' => 2,
+												'name' => "Tie",
+												'entity_id' => null,
+												'target_probability' => $tie_target_prob ? $tie_target_prob : null
+											];
+											$app->run_query($gdo_ins_q, $gdo_tie_params);
+										}
+										
+										$game_event_index_offset++;
 									}
-									
-									$game_event_index_offset++;
+									else $skip_count++;
 								}
-								else $skip_count++;
 							}
+						}
+						
+						$messages .= "Added ".$game_event_index_offset." events.<br/>\n";
+						if ($skip_count > 0) $messages .= "Skipped ".$skip_count." events that already exist.<br/>\n";
+					}
+				}
+				else if ($last_action == "internal_settings") {
+					$featured = (int)$_REQUEST['featured'];
+					$public_players = (int)$_REQUEST['public_players'];
+					$faucet_policy = $_REQUEST['faucet_policy'];
+					$definitive_game_peer_on = $_REQUEST['definitive_game_peer_on'];
+					if ($definitive_game_peer_on == 1) {
+						$definitive_game_peer_url = $_REQUEST['definitive_game_peer'];
+					}
+					else $definitive_game_peer_url = "";
+					if ($faucet_policy != "on") $faucet_policy = "off";
+					
+					$definitive_game_peer_id = "NULL";
+					$game->db_game['definitive_game_peer_id'] = "";
+					
+					$definitive_game_peer = false;
+					
+					if (!empty($definitive_game_peer_url)) {
+						$definitive_game_peer = $game->get_game_peer_by_server_name($definitive_game_peer_url);
+						
+						if ($definitive_game_peer) {
+							$game->db_game['definitive_game_peer_id'] = $definitive_game_peer['game_peer_id'];
 						}
 					}
 					
-					$messages .= "Added ".$game_event_index_offset." events.<br/>\n";
-					if ($skip_count > 0) $messages .= "Skipped ".$skip_count." events that already exist.<br/>\n";
-				}
-			}
-			else if ($last_action == "internal_settings") {
-				$featured = (int)$_REQUEST['featured'];
-				$public_players = (int)$_REQUEST['public_players'];
-				$faucet_policy = $_REQUEST['faucet_policy'];
-				$definitive_game_peer_on = $_REQUEST['definitive_game_peer_on'];
-				if ($definitive_game_peer_on == 1) {
-					$definitive_game_peer_url = $_REQUEST['definitive_game_peer'];
-				}
-				else $definitive_game_peer_url = "";
-				if ($faucet_policy != "on") $faucet_policy = "off";
-				
-				$definitive_game_peer_id = "NULL";
-				$game->db_game['definitive_game_peer_id'] = "";
-				
-				$definitive_game_peer = false;
-				
-				if (!empty($definitive_game_peer_url)) {
-					$definitive_game_peer = $game->get_game_peer_by_server_name($definitive_game_peer_url);
+					$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, faucet_policy=:faucet_policy, definitive_game_peer_id=:definitive_game_peer_id WHERE game_id=:game_id;", [
+						'featured' => $featured,
+						'public_players' => $public_players,
+						'faucet_policy' => $faucet_policy,
+						'definitive_game_peer_id' => $definitive_game_peer ? $definitive_game_peer['game_peer_id'] : null,
+						'game_id' => $game->db_game['game_id']
+					]);
+					$game->db_game['featured'] = $featured;
+					$game->db_game['public_players'] = $public_players;
+					$game->db_game['faucet_policy'] = $faucet_policy;
 					
-					if ($definitive_game_peer) {
-						$game->db_game['definitive_game_peer_id'] = $definitive_game_peer['game_peer_id'];
-					}
+					$messages .= "Game internal settings have been updated.<br/>\n";
 				}
-				
-				$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, faucet_policy=:faucet_policy, definitive_game_peer_id=:definitive_game_peer_id WHERE game_id=:game_id;", [
-					'featured' => $featured,
-					'public_players' => $public_players,
-					'faucet_policy' => $faucet_policy,
-					'definitive_game_peer_id' => $definitive_game_peer ? $definitive_game_peer['game_peer_id'] : null,
-					'game_id' => $game->db_game['game_id']
-				]);
-				$game->db_game['featured'] = $featured;
-				$game->db_game['public_players'] = $public_players;
-				$game->db_game['faucet_policy'] = $faucet_policy;
-				
-				$messages .= "Game internal settings have been updated.<br/>\n";
 			}
 			
 			$manage_game_action = "";
@@ -429,7 +431,9 @@ else {
 				<?php
 				if ($manage_game_action) echo "thisPageManager.manage_game(".$game->db_game['game_id'].", '".$manage_game_action."');\n";
 				
-				if ($next_action == "description") { ?>
+				if ($next_action == "description") {
+					AppSettings::addJsDependency("tiny.editor.js");
+					?>
 					editor = new TINY.editor.edit('editor', {
 						id: 'game_description',
 						width: "100%",
@@ -478,7 +482,7 @@ else {
 									<div class="panel-title">Manage game parameters: <?php echo $game->db_game['name']." (#".$game->db_game['game_id'].")"; ?></div>
 								</div>
 								<div class="panel-body">
-									<form onsubmit="thisPageManager.save_game();">
+									<form onsubmit="thisPageManager.save_game(); return false;">
 										<div class="form-group">
 											<label for="game_form_name">Game title:</label>
 											<input class="form-control" type="text" id="game_form_name" />
@@ -692,6 +696,7 @@ else {
 									<form method="get" action="/manage/<?php echo $game->db_game['url_identifier']; ?>/">
 										<input type="hidden" name="next" value="internal_settings" />
 										<input type="hidden" name="last" value="internal_settings" />
+										<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
 										
 										<div class="form-group">
 											<label for="featured">Featured?</label>
@@ -902,6 +907,8 @@ else {
 								<form action="/manage/<?php echo $game->db_game['url_identifier']; ?>/" method="post" enctype="multipart/form-data">
 									<input type="hidden" name="last" value="upload_csv" />
 									<input type="hidden" name="next" value="events" />
+									<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
+									
 									<div class="modal-body">
 										<div class="form-group">
 											<label for="ties_allowed">Can the teams tie?</label>
@@ -935,6 +942,7 @@ else {
 							<form action="/manage/<?php echo $game->db_game['url_identifier']; ?>/" method="get" onsubmit="editor.post();">
 								<input type="hidden" name="last" value="description" />
 								<input type="hidden" name="next" value="description" />
+								<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
 								<textarea name="game_description" id="game_description" cols="90" rows="14"><?php echo $game->db_game['short_description']; ?></textarea>
 								<input class="btn btn-primary" type="submit" value="Save Description" />
 							</form>

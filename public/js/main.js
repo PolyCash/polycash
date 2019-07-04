@@ -1,5 +1,5 @@
 
-var Option = function(parent_event, option_index, option_id, db_option_index, name, points, has_votingaddr, image_url) {
+var EventOption = function(parent_event, option_index, option_id, db_option_index, name, points, has_votingaddr, image_url) {
 	this.parent_event = parent_event;
 	this.option_index = option_index;
 	this.option_id = option_id;
@@ -280,7 +280,14 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 		}
 	};
 	this.set_user_game_event_index = function() {
-		$.get("/ajax/set_user_game_event_index.php?game_id="+games[0].game_id+"&event_index="+this.selected_event_index);
+		$.ajax({
+			url: "/ajax/set_user_game_event_index.php",
+			data: {
+				game_id: games[0].game_id,
+				event_index: this.selected_event_index,
+				synchronizer_token: this.pageManager.synchronizer_token
+			}
+		});
 	};
 	this.show_selected_event = function(skip_set_event_index) {
 		if (this.selected_event_index > this.events.length-1) {
@@ -344,7 +351,8 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 					mature_io_ids_hash: this.mature_io_ids_hash,
 					game_loop_index: this.game_loop_index,
 					event_hashes: _.map(this.events, 'rendered_event_hash').join(","),
-					filter_date: this.filter_date ? this.filter_date : ""
+					filter_date: this.filter_date ? this.filter_date : "",
+					synchronizer_token: this.pageManager.synchronizer_token
 				},
 				context: this,
 				success: function(check_activity_response) {
@@ -526,7 +534,8 @@ var PageManager = function() {
 	}
 	this.explorer_search = function() {
 		var search_params = {
-			'search_term': $('#explorer_search').val()
+			search_term: $('#explorer_search').val(),
+			synchronizer_token: this.synchronizer_token
 		};
 		if (typeof games !== "undefined" && games.length > 0) search_params.game_id = games[0].game_id;
 		if (typeof this.blockchain_id !== "undefined") search_params.blockchain_id = this.blockchain_id;
@@ -579,9 +588,10 @@ var PageManager = function() {
 			url: "/ajax/chat.php",
 			dataType: 'json',
 			data: {
-				"action": "fetch",
-				"game_id": games[0].game_id,
-				"user_id": this.chatWindows[chatWindowId].toUserId
+				action: "fetch",
+				game_id: games[0].game_id,
+				user_id: this.chatWindows[chatWindowId].toUserId,
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(chat_response) {
 				$('#chatWindowTitle'+chatWindowId).html(chat_response.username);
@@ -599,10 +609,11 @@ var PageManager = function() {
 			url: "/ajax/chat.php",
 			dataType: 'json',
 			data: {
-				"action": "send",
-				"game_id": games[0].game_id,
-				"user_id": this.chatWindows[chatWindowId].toUserId,
-				"message": message
+				action: "send",
+				game_id: games[0].game_id,
+				user_id: this.chatWindows[chatWindowId].toUserId,
+				message: message,
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(chat_response) {
 				$('#chatWindowSendBtn'+chatWindowId).html("Send");
@@ -631,7 +642,8 @@ var PageManager = function() {
 		$.ajax({
 			url: "/ajax/show_players.php",
 			data: {
-				"game_id": games[0].game_id
+				game_id: games[0].game_id,
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(show_players_html) {
 				$('#tabcontent1').html(show_players_html);
@@ -646,8 +658,9 @@ var PageManager = function() {
 			url: "/ajax/faucet.php",
 			dataType: 'json',
 			data: {
-				"game_id": games[0].game_id,
-				"action": "claim"
+				game_id: games[0].game_id,
+				action: "claim",
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(faucet_response) {
 				$('#faucet_btn').html(faucet_btn_txt);
@@ -685,8 +698,15 @@ var PageManager = function() {
 		if ($('#next_block_btn').html() == "Next Block") {
 			$('#next_block_btn').html("Loading...");
 			
-			$.get("/ajax/next_block.php?game_id="+games[0].game_id, function() {
-				games[0].refresh_if_needed();
+			$.ajax({
+				url: "/ajax/next_block.php",
+				data: {
+					game_id: games[0].game_id,
+					synchronizer_token: this.synchronizer_token
+				},
+				success: function() {
+					games[0].refresh_if_needed();
+				}
 			});
 		}
 	}
@@ -709,9 +729,10 @@ var PageManager = function() {
 			$.ajax({
 				url: "/ajax/set_notification_preference.php",
 				data: {
-					"game_id": games[0].game_id,
-					"preference": $('#notification_preference').val(),
-					"email": $('#notification_email').val()
+					game_id: games[0].game_id,
+					preference: $('#notification_preference').val(),
+					email: $('#notification_email').val(),
+					synchronizer_token: this.synchronizer_token
 				},
 				success: function(set_notification_response) {
 					$('#notification_save_btn').html(btn_text);
@@ -734,11 +755,12 @@ var PageManager = function() {
 				url: "/ajax/withdraw.php",
 				dataType: "json",
 				data: {
-					"game_id": games[0].game_id,
-					"amount": amount,
-					"address": address,
-					"remainder_address_id": $('#withdraw_remainder_address_id').val(),
-					"fee": $('#withdraw_fee').val()
+					game_id: games[0].game_id,
+					amount: amount,
+					address: address,
+					remainder_address_id: $('#withdraw_remainder_address_id').val(),
+					fee: $('#withdraw_fee').val(),
+					synchronizer_token: this.synchronizer_token
 				},
 				success: function(withdraw_response) {
 					$('#withdraw_btn').html(initial_btn_text);
@@ -1100,8 +1122,15 @@ var PageManager = function() {
 		$('#featured_strategies').modal('show');
 		$('#featured_strategies_inner').html("Loading...");
 		
-		$.get("/ajax/featured_strategies.php?game_id="+games[0].game_id, function(featured_strategies_html) {
-			$('#featured_strategies_inner').html(featured_strategies_html);
+		$.ajax({
+			url: "/ajax/featured_strategies.php",
+			data: {
+				game_id: games[0].game_id,
+				synchronizer_token: this.synchronizer_token
+			},
+			success: function(featured_strategies_html) {
+				$('#featured_strategies_inner').html(featured_strategies_html);
+			}
 		});
 	}
 	this.create_new_game = function() {
@@ -1110,11 +1139,12 @@ var PageManager = function() {
 		var genesis_type = $('#new_game_genesis_type').val();
 		
 		var new_game_params = {
-			"action": "new",
-			"name": $('#new_game_name').val(),
-			"module": $('#new_game_module').val(),
-			"blockchain_id": $('#new_game_blockchain_id').val(),
-			"genesis_type": genesis_type
+			action: "new",
+			name: $('#new_game_name').val(),
+			module: $('#new_game_module').val(),
+			blockchain_id: $('#new_game_blockchain_id').val(),
+			genesis_type: genesis_type,
+			synchronizer_token: this.synchronizer_token
 		};
 		
 		if (genesis_type == "existing") {
@@ -1138,14 +1168,14 @@ var PageManager = function() {
 	}
 	this.new_game_genesis_type_changed = function() {
 		var type = $('#new_game_genesis_type').val();
-		var new_game_params = {
-			blockchain_id: $('#new_game_blockchain_id').val(),
-		};
 		
 		$.ajax({
 			url: "/ajax/select_accounts_by_blockchain.php",
 			dataType: "json",
-			data: select_accounts_params,
+			data: {
+				blockchain_id: $('#new_game_blockchain_id').val(),
+				synchronizer_token: this.synchronizer_token
+			},
 			success: function(new_game_response) {
 				$('#new_game_genesis_account_id').html(new_game_response.html)
 			}
@@ -1165,7 +1195,8 @@ var PageManager = function() {
 			url: "/ajax/select_io_by_account.php",
 			dataType: "json",
 			data: {
-				account_id: $('#new_game_genesis_account_id').val()
+				account_id: $('#new_game_genesis_account_id').val(),
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(select_io_response) {
 				$('#new_game_genesis_io_id').html(select_io_response.html);
@@ -1184,7 +1215,8 @@ var PageManager = function() {
 			dataType: "json",
 			data: {
 				game_id: game_id,
-				action: action
+				action: action,
+				synchronizer_token: this.synchronizer_token
 			},
 			context: this,
 			success: function(manage_game_response) {
@@ -1346,7 +1378,8 @@ var PageManager = function() {
 		
 		var save_game_vars = {
 			game_id: this.editing_game_id,
-			action: action
+			action: action,
+			synchronizer_token: this.synchronizer_token
 		};
 		
 		this.game_form_vars.forEach(function(var_name) {
@@ -1422,7 +1455,8 @@ var PageManager = function() {
 				
 				var place_bets_params = {
 					game_id: games[0].game_id,
-					burn_amount: this.burn_io_amount
+					burn_amount: this.burn_io_amount,
+					synchronizer_token: this.synchronizer_token
 				};
 				
 				place_bets_params.io_ids = _.map(_.map(this.bet_inputs, 'ref_io'), 'io_id').join(",");
@@ -1531,7 +1565,8 @@ var PageManager = function() {
 				data: {
 					game_id: game_id,
 					from_event_index: from_event_index,
-					to_event_index: to_event_index
+					to_event_index: to_event_index,
+					synchronizer_token: this.synchronizer_token
 				},
 				success: function(show_events_response) {
 					$('#show_more_link').html("Show More");
@@ -1545,15 +1580,28 @@ var PageManager = function() {
 		$('#display_tx_fee').html("TX fee: "+this.format_coins(games[0].fee_amount)+" "+games[0].chain_coin_name_plural);
 	}
 	this.manage_game_invitations = function(this_game_id) {
-		$.get("/ajax/game_invitations.php?action=manage&game_id="+this_game_id, function(game_invitations_html) {
-			$('#game_invitations_inner').html(game_invitations_html);
-			$('#game_invitations').modal('show');
+		$.ajax({
+			url: "/ajax/game_invitations.php",
+			data: {
+				action: "manage",
+				game_id: this_game_id,
+				synchronizer_token: this.synchronizer_token
+			},
+			success: function(game_invitations_html) {
+				$('#game_invitations_inner').html(game_invitations_html);
+				$('#game_invitations').modal('show');
+			}
 		});
 	}
 	this.generate_invitation = function(this_game_id) {
 		$.ajax({
-			url: "/ajax/game_invitations.php?action=generate&game_id="+this_game_id,
+			url: "/ajax/game_invitations.php",
 			context: this,
+			data: {
+				action: "generate",
+				game_id: this_game_id,
+				synchronizer_token: this.synchronizer_token
+			},
 			success: function(result) {
 				this.manage_game_invitations(this_game_id)
 			}
@@ -1575,7 +1623,8 @@ var PageManager = function() {
 					send_method: send_method,
 					game_id: this_game_id,
 					invitation_id: invitation_id,
-					send_to: send_to
+					send_to: send_to,
+					synchronizer_token: this.synchronizer_token
 				},
 				context: this,
 				success: function(game_invitations_response) {
@@ -1662,7 +1711,8 @@ var PageManager = function() {
 			action: "save",
 			voting_strategy_id: parseInt($('#voting_strategy_id').val()),
 			from_round: parseInt($('#from_round').val()),
-			to_round: parseInt($('#to_round').val())
+			to_round: parseInt($('#to_round').val()),
+			synchronizer_token: this.synchronizer_token
 		};
 		
 		if (games[0].all_events_start_index !== false && games[0].all_events_stop_index !== false) {
@@ -1702,7 +1752,8 @@ var PageManager = function() {
 				action: "fetch",
 				voting_strategy_id: $('#voting_strategy_id').val(),
 				from_round: from_round,
-				to_round: to_round
+				to_round: to_round,
+				synchronizer_token: this.synchronizer_token
 			},
 			context: this,
 			success: function(result) {
@@ -1722,7 +1773,8 @@ var PageManager = function() {
 	this.manage_buyin = function(action) {
 		var buyin_params = {
 			action: action,
-			game_id: games[0].game_id
+			game_id: games[0].game_id,
+			synchronizer_token: this.synchronizer_token
 		};
 		
 		if (action == "check_amount") {
@@ -1760,7 +1812,8 @@ var PageManager = function() {
 	this.manage_sellout = function(action) {
 		var sellout_params = {
 			action: action,
-			game_id: games[0].game_id
+			game_id: games[0].game_id,
+			synchronizer_token: this.synchronizer_token
 		};
 		
 		if (action == "confirm" || action == "check_amount") {
@@ -1812,7 +1865,8 @@ var PageManager = function() {
 						voting_strategy_id: strategy_id,
 						action: "scramble",
 						from_round: $('#select_from_round').val(),
-						to_round: $('#select_to_round').val()
+						to_round: $('#select_to_round').val(),
+						synchronizer_token: this.synchronizer_token
 					},
 					success: function(scramble_response) {
 						$('#scramble_plan_btn').html(btn_default_text);
@@ -1879,7 +1933,8 @@ var PageManager = function() {
 				dataType: "json",
 				data: {
 					io_id: this.account_io_id,
-					action: "start_join_tx"
+					action: "start_join_tx",
+					synchronizer_token: this.synchronizer_token
 				},
 				success: function(spend_response) {
 					$('#account_spend_join_tx').html(spend_response.html);
@@ -1917,7 +1972,8 @@ var PageManager = function() {
 					io_id: this.account_io_id,
 					buyin_amount: parseFloat($('#account_spend_buyin_amount').val()),
 					fee_amount: parseFloat($('#account_spend_buyin_fee').val()),
-					address: $('#account_spend_buyin_address_choice').val()
+					address: $('#account_spend_buyin_address_choice').val(),
+					synchronizer_token: this.synchronizer_token
 				},
 				success: function(spend_response) {
 					alert(spend_response.message);
@@ -1936,7 +1992,8 @@ var PageManager = function() {
 				address: $('#spend_withdraw_address').val(),
 				amount: $('#spend_withdraw_amount').val(),
 				fee: $('#spend_withdraw_fee').val(),
-				withdraw_type: $("#spend_withdraw_coin_type").val()
+				withdraw_type: $("#spend_withdraw_coin_type").val(),
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(spend_response) {
 				if (spend_response.status_code == 1) window.location = spend_response.message;
@@ -1954,7 +2011,8 @@ var PageManager = function() {
 				io_id: this.account_io_id,
 				amount_each: $('#split_amount_each').val(),
 				quantity: $('#split_quantity').val(),
-				fee: $('#split_fee').val()
+				fee: $('#split_fee').val(),
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(spend_response) {
 				if (spend_response.status_code == 1) window.location = spend_response.message;
@@ -1969,7 +2027,8 @@ var PageManager = function() {
 			data: {
 				action: action,
 				account_id: account_id,
-				address_id: address_id
+				address_id: address_id,
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(manage_addresses_response) {
 				if (manage_addresses_response.status_code == 1) window.location = manage_addresses_response.message;
@@ -1983,7 +2042,8 @@ var PageManager = function() {
 			dataType: "json",
 			data: {
 				action: "fetch",
-				event_id: event_id
+				event_id: event_id,
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(set_event_response) {
 				this.set_event_id = event_id;
@@ -2003,7 +2063,8 @@ var PageManager = function() {
 				data: {
 					action: "set",
 					event_id: this.set_event_id,
-					outcome_index: outcome_index
+					outcome_index: outcome_index,
+					synchronizer_token: this.synchronizer_token
 				},
 				success: function(set_event_response) {
 					if (set_event_response.status_code == 2) window.location = window.location;
@@ -2030,7 +2091,8 @@ var PageManager = function() {
 			data: {
 				blockchain_id: blockchain_id,
 				game_id: game_id,
-				address_id: address_id
+				address_id: address_id,
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(claim_response) {
 				if (claim_response.status_code == 1) window.location = window.location;
@@ -2052,7 +2114,8 @@ var PageManager = function() {
 			data: {
 				action: "finish_join_tx",
 				io_id: this.account_io_id,
-				join_io_id: $('#join_tx_io_id').val()
+				join_io_id: $('#join_tx_io_id').val(),
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(spend_response) {
 				if (spend_response.status_code == 1) spend_response.message;
@@ -2110,7 +2173,8 @@ var PageManager = function() {
 			dataType: "json",
 			data: {
 				game_id: games[0].game_id,
-				game_defined_event_id: game_defined_event_id
+				game_defined_event_id: game_defined_event_id,
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(set_blocks_response) {
 				alert(set_blocks_response.message);
@@ -2127,7 +2191,8 @@ var PageManager = function() {
 			data: {
 				action: "load_gde",
 				game_id: games[0].game_id,
-				gde_id: gde_id
+				gde_id: gde_id,
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(this_event) {
 				$('#event_modal').modal('show');
@@ -2155,7 +2220,8 @@ var PageManager = function() {
 		var save_gde_params = {
 			action: "save_gde",
 			game_id: games[0].game_id,
-			gde_id: gde_id
+			gde_id: gde_id,
+			synchronizer_token: this.synchronizer_token
 		};
 		
 		this.event_verbatim_vars.forEach(function(var_name) {
@@ -2178,7 +2244,8 @@ var PageManager = function() {
 			data: {
 				action: "manage_gdos",
 				game_id: games[0].game_id,
-				gde_id: gde_id
+				gde_id: gde_id,
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(manage_gdos_response) {
 				$('#options_modal').modal('show');
@@ -2196,7 +2263,8 @@ var PageManager = function() {
 				game_id: games[0].game_id,
 				gde_id: gde_id,
 				name: $('#new_gdo_name').val(),
-				entity_type_id: $('#new_gdo_entity_type_id').val()
+				entity_type_id: $('#new_gdo_entity_type_id').val(),
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(response_info) {
 				if (response_info.status_code == 1) this.manage_game_event_options(gde_id);
@@ -2212,7 +2280,8 @@ var PageManager = function() {
 			data: {
 				action: "delete_gdo",
 				game_id: games[0].game_id,
-				gdo_id: gdo_id
+				gdo_id: gdo_id,
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(response_info) {
 				if (response_info.status_code == 1) this.manage_game_event_options(gde_id);
@@ -2241,7 +2310,8 @@ var PageManager = function() {
 						account_id: this.selected_account_id,
 						amount: $('#withdraw_amount').val(),
 						fee: $('#withdraw_fee').val(),
-						address: $('#withdraw_address').val()
+						address: $('#withdraw_address').val(),
+						synchronizer_token: this.synchronizer_token
 					},
 					success: function(response_info) {
 						$('#withdraw_btn').html("Withdraw");
@@ -2268,7 +2338,8 @@ var PageManager = function() {
 			dataType: "json",
 			data: {
 				currency_id: $('#cards_currency_id').val(),
-				fv_currency_id: $('#cards_fv_currency_id').val()
+				fv_currency_id: $('#cards_fv_currency_id').val(),
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(response_info) {
 				this.cost_per_coin = response_info.cost_per_coin;
@@ -2284,7 +2355,8 @@ var PageManager = function() {
 		$.ajax({
 			url: "/ajax/select_fv_currency_by_currency.php",
 			data: {
-				currency_id: $('#cards_currency_id').val()
+				currency_id: $('#cards_currency_id').val(),
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(fv_currencies_html) {
 				$('#cards_fv_currency_id').html(fv_currencies_html);
@@ -2303,7 +2375,8 @@ var PageManager = function() {
 				name: $('#cards_name').val(),
 				title: $('#cards_title').val(),
 				email: $('#cards_email').val(),
-				pnum: $('#cards_pnum').val()
+				pnum: $('#cards_pnum').val(),
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(card_preview_html) {
 				$('#cards_preview').html(card_preview_html);
@@ -2410,7 +2483,8 @@ var PageManager = function() {
 				action: "card_withdrawal",
 				address: $('#withdraw_address').val(),
 				card_id: card_id,
-				name: $('#withdraw_name').val()
+				name: $('#withdraw_name').val(),
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(withdrawal_response) {
 				if (withdrawal_response == "Beyonic request was successful!") {
@@ -2442,7 +2516,8 @@ var PageManager = function() {
 				action: "withdraw_from_card",
 				claim_type: claim_type,
 				card_id: this.card_id,
-				peer_id: this.peer_id
+				peer_id: this.peer_id,
+				synchronizer_token: this.synchronizer_token
 			};
 			
 			if (claim_type == "to_address") {
@@ -2477,7 +2552,14 @@ var PageManager = function() {
 		$('#betting_mode_'+to_betting_mode).show();
 		this.betting_mode = to_betting_mode;
 		
-		$.get("/ajax/set_betting_mode.php?game_id="+games[0].game_id+"&mode="+to_betting_mode);
+		$.ajax({
+			url: "/ajax/set_betting_mode.php",
+			data: {
+				game_id: games[0].game_id,
+				mode: to_betting_mode,
+				synchronizer_token: this.synchronizer_token
+			}
+		});
 	}
 	this.submit_principal_bet = function() {
 		$('#principal_bet_btn').html("Loading...");
@@ -2489,7 +2571,8 @@ var PageManager = function() {
 				game_id: games[0].game_id,
 				amount: $('#principal_amount').val(),
 				option_id: $('#principal_option_id').val(),
-				fee: $('#principal_fee').val()
+				fee: $('#principal_fee').val(),
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(principal_bet_response) {
 				$('#principal_bet_btn').html('<i class="fas fa-check-circle"></i> &nbsp; Confirm Bet');
@@ -2507,7 +2590,8 @@ var PageManager = function() {
 				url: "/ajax/set_featured_strategy.php",
 				data: {
 					game_id: games[0].game_id,
-					featured_strategy_id: featured_strategy_id
+					featured_strategy_id: featured_strategy_id,
+					synchronizer_token: this.synchronizer_token
 				},
 				success: function() {
 					$('#featured_strategy_save_btn').html("Save");
@@ -2524,7 +2608,8 @@ var PageManager = function() {
 				url: "/ajax/apply_game_definition.php",
 				dataType: "json",
 				data: {
-					game_id: game_id
+					game_id: game_id,
+					synchronizer_token: this.synchronizer_token
 				},
 				success: function(apply_response) {
 					$('#apply_def_link').html("Apply Changes");
@@ -2552,7 +2637,8 @@ var PageManager = function() {
 			data: {
 				username: $('#change_password_username').val(),
 				existing: $('#change_password_existing').val(),
-				"new": $('#change_password_new').val()
+				"new": $('#change_password_new').val(),
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(change_password_response) {
 				$('#change_password_btn').html("Change my Password");
@@ -2659,7 +2745,8 @@ var PageManager = function() {
 			url: "/strategies/apply_strategy.php",
 			dataType: "json",
 			data: {
-				game_id: games[0].game_id
+				game_id: games[0].game_id,
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function(strategy_response) {
 				$('#apply_my_strategy_status').html(strategy_response.message);
@@ -2683,7 +2770,8 @@ var PageManager = function() {
 			url: "/ajax/refresh_prices_by_event.php",
 			data: {
 				game_id: game_id,
-				event_id: event_id
+				event_id: event_id,
+				synchronizer_token: this.synchronizer_token
 			},
 			success: function() {
 				window.location = window.location;
@@ -2708,7 +2796,8 @@ var PageManager = function() {
 				url: "/ajax/reset_password.php",
 				context: this,
 				data: {
-					email: $('#reset_email').val()
+					email: $('#reset_email').val(),
+					synchronizer_token: this.synchronizer_token
 				},
 				success: function(reset_response) {
 					this.reset_in_progress = false;

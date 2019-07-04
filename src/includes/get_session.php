@@ -11,7 +11,7 @@ $thisuser = FALSE;
 $game = FALSE;
 
 if (strlen($session_key) > 0) {
-	$sessions = $app->run_query("SELECT * FROM user_sessions WHERE session_key=:session_key AND expire_time > :expire_time AND logout_time=0;", [
+	$sessions = $app->run_query("SELECT * FROM user_sessions WHERE session_key=:session_key AND expire_time > :expire_time AND logout_time=0 AND synchronizer_token IS NOT NULL;", [
 		'session_key' => $session_key,
 		'expire_time' => time()
 	]);
@@ -20,6 +20,7 @@ if (strlen($session_key) > 0) {
 		$session = $sessions->fetch();
 		
 		$thisuser = new User($app, $session['user_id']);
+		$thisuser->set_synchronizer_token($session['synchronizer_token']);
 	}
 	else {
 		while ($session = $sessions->fetch()) {
@@ -40,7 +41,7 @@ if (strlen($session_key) > 0) {
 		$card_sessions_q .= " AND s.ip_address=:ip_address";
 		$card_sessions_params['ip_address'] = $_SERVER['REMOTE_ADDR'];
 	}
-	$card_sessions_q .= " AND :current_time < s.expire_time AND s.logout_time IS NULL GROUP BY c.card_id;";
+	$card_sessions_q .= " AND s.synchronizer_token IS NOT NULL AND :current_time < s.expire_time AND s.logout_time IS NULL GROUP BY c.card_id;";
 	$card_sessions = $app->run_query($card_sessions_q, $card_sessions_params);
 	
 	if ($card_sessions->rowCount() > 0) {
@@ -58,6 +59,7 @@ if (strlen($session_key) > 0) {
 			
 			if (empty($thisuser) && !empty($card_session['user_id'])) {
 				$thisuser = new User($app, $card_session['user_id']);
+				$thisuser->set_synchronizer_token($card_session['synchronizer_token']);
 			}
 			
 			$j++;

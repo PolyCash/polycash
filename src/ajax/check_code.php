@@ -100,12 +100,13 @@ if ($card) {
 						$session_key = $_COOKIE['my_session'];
 						$expire_time = time()+3600*24;
 						
-						$app->run_query("INSERT INTO card_sessions SET card_user_id=:card_user_id, session_key=:session_key, login_time=:login_time, expire_time=:expire_time, ip_address=:ip_address;", [
+						$app->run_query("INSERT INTO card_sessions SET card_user_id=:card_user_id, session_key=:session_key, login_time=:login_time, expire_time=:expire_time, ip_address=:ip_address, synchronizer_token=:synchronizer_token;", [
 							'card_user_id' => $card_user['card_user_id'],
 							'session_key' => $session_key,
 							'login_time' => time(),
 							'expire_time' => $expire_time,
-							'ip_address' => AppSettings::getParam('pageview_tracking_enabled') ? $_SERVER['REMOTE_ADDR'] : null
+							'ip_address' => AppSettings::getParam('pageview_tracking_enabled') ? $_SERVER['REMOTE_ADDR'] : null,
+							'synchronizer_token' => $app->random_string(32)
 						]);
 						
 						$message = "/wallet/";

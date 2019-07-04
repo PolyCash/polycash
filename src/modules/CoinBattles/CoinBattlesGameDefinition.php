@@ -59,6 +59,8 @@ class CoinBattlesGameDefinition {
 	}
 	
 	public function load() {
+		AppSettings::addJsDependency("chart.js");
+		
 		$game_def = json_decode($this->game_def_base_txt);
 
 		$db_blockchain = $this->app->fetch_blockchain_by_identifier($game_def->blockchain_identifier);

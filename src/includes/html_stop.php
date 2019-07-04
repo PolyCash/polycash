@@ -75,20 +75,24 @@
 <script type="text/javascript" src="/js/onload.js"></script>
 
 <script type="text/javascript">
+<?php if ($thisuser) echo "thisPageManager.synchronizer_token = '".$thisuser->get_synchronizer_token()."';\n"; ?>
+
 for (var game_i=0; game_i<games.length; game_i++) {
 	if (games[game_i].render_events) games[game_i].game_loop_event();
 }
 </script>
 
 <script async type="text/javascript" src="/js/bootstrap.min.js"></script>
-<script async type="text/javascript" src="/js/jquery.ui.js"></script>
-<script async type="text/javascript" src="/js/jquery.nouislider.js"></script>
 <script async type="text/javascript" src="/js/adminlte.min.js"></script>
-<script async type="text/javascript" src="/js/tiny.editor.js"></script>
-<script async type="text/javascript" src="/js/chart.js"></script>
-<script async type="text/javascript" src="/js/maskedinput.js"></script>
-<script async type="text/javascript" src="/js/qrcam.js"></script>
 <?php
+$optional_js_files = ['jquery.nouislider.js', 'tiny.editor.js', 'chart.js', 'maskedinput.js', 'qrcam.js'];
+
+foreach ($optional_js_files as $optional_js_file) {
+	if (AppSettings::checkJsDependency($optional_js_file)) {
+		echo '<script async type="text/javascript" src="/js/'.$optional_js_file.'"></script>'."\n";
+	}
+}
+
 if (AppSettings::getParam('signup_captcha_required')) { ?>
 <script type="text/javascript" src="https://www.google.com/jsapi"></script>
 <script type='text/javascript' src='https://www.google.com/recaptcha/api.js'></script>

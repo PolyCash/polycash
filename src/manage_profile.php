@@ -25,6 +25,8 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						<?php
 						if ($thisuser->db_user['login_method'] == "password") { ?>
 							<form method="get" action="/ajax/change_password.php" onsubmit="thisPageManager.change_password(); return false;">
+								<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
+								
 								<div class="form-group">
 									<label for="existing_password">Please enter your username:</label>
 									<input class="form-control" autocomplete="off" name="change_password_username" id="change_password_username" />

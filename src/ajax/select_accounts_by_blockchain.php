@@ -2,7 +2,7 @@
 require(AppSettings::srcPath().'/includes/connect.php');
 require(AppSettings::srcPath().'/includes/get_session.php');
 
-if ($thisuser) {
+if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 	$blockchain_id = (int) $_REQUEST['blockchain_id'];
 
 	$accounts_by_blockchain = $app->run_query("SELECT * FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id WHERE c.blockchain_id=:blockchain_id AND ca.user_id=:user_id AND ca.game_id IS NULL AND ca.is_escrow_account=0 ORDER BY ca.account_name ASC;", [

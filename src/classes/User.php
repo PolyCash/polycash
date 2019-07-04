@@ -2,6 +2,7 @@
 class User {
 	public $db_user;
 	public $app;
+	private $synchronizer_token = "";
 	
 	public function __construct(&$app, $user_id) {
 		$this->app = $app;
@@ -11,6 +12,14 @@ class User {
 		if (!$this->db_user) throw new Exception("Failed to load user #".$user_id);
 	}
 
+	public function set_synchronizer_token($synchronizer_token) {
+		$this->synchronizer_token = $synchronizer_token;
+	}
+	
+	public function get_synchronizer_token() {
+		return $this->synchronizer_token;
+	}
+	
 	public function immature_balance(&$game, &$user_game) {
 		$query_params = [
 			'game_id' => $game->db_game['game_id'],
@@ -183,9 +192,10 @@ class User {
 				'user_id' => $this->db_user['user_id'],
 				'session_key' => $session_key,
 				'login_time' => time(),
-				'expire_time' => $expire_time
+				'expire_time' => $expire_time,
+				'synchronizer_token' => $this->app->random_string(32)
 			];
-			$new_session_q = "INSERT INTO user_sessions SET user_id=:user_id, session_key=:session_key, login_time=:login_time, expire_time=:expire_time";
+			$new_session_q = "INSERT INTO user_sessions SET user_id=:user_id, session_key=:session_key, login_time=:login_time, expire_time=:expire_time, synchronizer_token=:synchronizer_token";
 			if (AppSettings::getParam('pageview_tracking_enabled')) {
 				$new_session_q .= ", ip_address=:ip_address";
 				$new_session_params['ip_address'] = $_SERVER['REMOTE_ADDR'];

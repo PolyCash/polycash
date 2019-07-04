@@ -34,7 +34,7 @@ else {
 			<div class="panel-body">
 				<?php
 				if ($selected_group) {
-					if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "add_member") {
+					if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "add_member" && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 						$member_name = urldecode($_REQUEST['member_name']);
 						$general_entity_type = $app->check_set_entity_type("general entity");
 						$member_entity = $app->check_set_entity($general_entity_type['entity_type_id'], $member_name);
@@ -57,7 +57,7 @@ else {
 				else {
 					$import_groups_dir = AppSettings::srcPath()."/lib/groups/";
 					
-					if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "import_from_file") {
+					if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "import_from_file" && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 						$import_group_description = $_REQUEST['group'];
 						$error_message = "";
 						$app->import_group_from_file($import_group_description, $error_message);

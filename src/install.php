@@ -4,6 +4,9 @@ $skip_select_db = TRUE;
 require(AppSettings::srcPath()."/includes/connect.php");
 
 if ($app->running_as_admin()) {
+	// For CSRF protection on this page, operator_key is used instead of synchronizer_token
+	// The admin needs to visit this page before the db is installed so we can't require a user account here
+	
 	if (AppSettings::getParam('mysql_database') != "") {
 		if (strpos(AppSettings::getParam('mysql_database'), "'") === false && AppSettings::getParam('mysql_database') === strip_tags(AppSettings::getParam('mysql_database'))) {
 			$db_exists = false;
