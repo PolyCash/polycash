@@ -5,7 +5,7 @@ require(AppSettings::srcPath().'/includes/get_session.php');
 $action = "";
 if (!empty($_REQUEST['action'])) $action = $_REQUEST['action'];
 
-if ($thisuser) {
+if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 	if ($action == "set_for_sale") {
 		$io_id = (int) $_REQUEST['set_for_sale_io_id'];
 		$amount_each = (float) $_REQUEST['set_for_sale_amount_each'];
@@ -613,7 +613,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							Loading...
 						</div>
 						<div id="account_spend_withdraw" style="display: none;">
-							<form method="get" action="/ajax/account_spend.php" onsubmit="thisPageManager.account_spend_withdraw(); return false;">
+							<form onsubmit="thisPageManager.account_spend_withdraw(); return false;">
 								<div class="form-group">
 									<label for="spend_withdraw_address">Address:</label>
 									<input type="text" class="form-control" id="spend_withdraw_address" />
@@ -645,6 +645,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								<input type="hidden" name="action" value="donate_to_faucet" />
 								<input type="hidden" name="donate_game_id" id="donate_game_id" value="" />
 								<input type="hidden" name="account_io_id" id="account_io_id" value="" />
+								<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
 								
 								<div class="form-group">
 									<label for="donate_amount_each">How many in-game coins should each person receive?</label>
@@ -668,6 +669,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								<input type="hidden" name="action" value="set_for_sale" />
 								<input type="hidden" name="set_for_sale_game_id" id="set_for_sale_game_id" value="" />
 								<input type="hidden" name="set_for_sale_io_id" id="set_for_sale_io_id" value="" />
+								<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
 								
 								<div class="form-group">
 									<label for="donate_amount_each">How many in-game coins should be in each UTXO?</label>
@@ -685,6 +687,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						<div id="account_spend_split" style="display: none;" onsubmit="thisPageManager.account_spend_split(); return false;">
 							<form action="/accounts/" method="get">
 								<input type="hidden" name="action" value="split" />
+								<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
 								
 								<div class="form-group">
 									<label for="split_amount_each">How many coins should be in each UTXO?</label>

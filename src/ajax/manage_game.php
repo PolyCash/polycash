@@ -2,7 +2,7 @@
 require(AppSettings::srcPath()."/includes/connect.php");
 require(AppSettings::srcPath()."/includes/get_session.php");
 
-if ($thisuser) {
+if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 	$action = $_REQUEST['action'];
 	
 	if ($action == "new") {

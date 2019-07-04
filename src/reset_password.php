@@ -44,6 +44,8 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 					<input type="hidden" name="tid" value="<?php echo $reset_token['token_id']; ?>" />
 					<input type="hidden" name="action" value="reset_confirm" />
 					<input type="hidden" name="token2" value="<?php echo $reset_token['token2_key']; ?>" />
+					<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
+					
 					<div class="row">
 						<div class="col-md-4 form-control-static">
 							Alias:

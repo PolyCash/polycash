@@ -2,7 +2,7 @@
 require(AppSettings::srcPath().'/includes/connect.php');
 require(AppSettings::srcPath().'/includes/get_session.php');
 
-if ($thisuser) {
+if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 	$denomination = $app->run_query("SELECT * FROM card_currency_denominations d JOIN currencies c ON d.currency_id=c.currency_id WHERE d.denomination_id=:denomination_id;", [
 		'denomination_id' => $_REQUEST['denomination_id']
 	])->fetch();

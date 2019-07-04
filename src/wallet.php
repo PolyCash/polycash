@@ -134,7 +134,7 @@ if ($thisuser) {
 		$user_game = $thisuser->ensure_user_in_game($game, false);
 		
 		if ($user_game && $user_game['payment_required'] == 0) {
-			if ($_REQUEST['action'] == "save_address") {
+			if ($_REQUEST['action'] == "save_address" && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 				$payout_address = $app->strong_strip_tags($_REQUEST['payout_address']);
 				
 				if ($payout_address != "") {
@@ -208,27 +208,28 @@ if ($thisuser) {
 					}
 					?>
 					<script type="text/javascript">
-					var game_id = '<?php echo $requested_game['game_id']; ?>';
-
-					$(document).ready(function() {
-						game_payment_loop_event();
-					});
 					function game_payment_loop_event() {
-						var check_url = "/ajax/check_game_payment.php?game_id="+game_id+"&invoice_id=<?php echo $invoice['invoice_id']; ?>";
 						$.ajax({
-							url: check_url,
-							success: function(result) {
-								var result_json = JSON.parse(result);
-								if (result_json['payment_required'] == 0) {
-									setTimeout("window.location = window.location", 200);
+							url: "/ajax/check_game_payment.php",
+							dataType: "json",
+							data: {
+								game_id: <?php echo $requested_game['game_id']; ?>,
+								invoice_id: <?php echo $invoice['invoice_id']; ?>
+							},
+							success: function(check_payment_response) {
+								if (check_payment_response.payment_required == 0) {
+									setTimeout(function() {window.location = window.location}, 200);
 								}
-								setTimeout("game_payment_loop_event()", 1000);
+								setTimeout(function() {game_payment_loop_event()}, 1000);
 							},
 							error: function(XMLHttpRequest, textStatus, errorThrown) {
-								setTimeout("game_payment_loop_event()", 1000);
+								setTimeout(function() {game_payment_loop_event()}, 1000);
 							}
 						});
 					}
+					window.onload = function() {
+						game_payment_loop_event();
+					};
 					</script>
 					
 					<h1><?php echo $requested_game['name']; ?></h1>
@@ -333,7 +334,7 @@ if ($thisuser) {
 	}
 }
 
-if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['action'] == "save_voting_strategy_fees")) {
+if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['action'] == "save_voting_strategy_fees") && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 	$voting_strategy = $_REQUEST['voting_strategy'];
 	$voting_strategy_id = intval($_REQUEST['voting_strategy_id']);
 	$aggregate_threshold = intval($_REQUEST['aggregate_threshold']);
@@ -460,18 +461,11 @@ if (empty($pagetitle)) {
 	if ($game) $pagetitle = $game->db_game['name']." - Wallet";
 	else $pagetitle = "Please log in";
 }
+
+AppSettings::addJsDependency("jquery.nouislider.js");
+
 $nav_tab_selected = "wallet";
 include(AppSettings::srcPath().'/includes/html_start.php');
-
-if ($_REQUEST['action'] == "signup" && $error_code == 1) { ?>
-	<script type="text/javascript">
-	$(document).ready(function() {
-		$('#login_username').val('<?php echo $username; ;?>');
-		$('#login_password').focus();
-	});
-	</script>
-	<?php
-}
 
 $initial_tab = 0;
 if (!empty($_REQUEST['initial_tab'])) $initial_tab = (int) $_REQUEST['initial_tab'];
@@ -579,7 +573,7 @@ if ($thisuser && $game) {
 			$j=0;
 			while ($option = $options_by_event->fetch()) {
 				$has_votingaddr = "true";
-				echo "games[0].all_events[".$db_event['event_index']."].options.push(new Option(games[0].all_events[".$db_event['event_index']."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$app->quote_escape($option['name']).", 0, $has_votingaddr));\n";
+				echo "games[0].all_events[".$db_event['event_index']."].options.push(new EventOption(games[0].all_events[".$db_event['event_index']."], ".$j.", ".$option['option_id'].", ".$option['option_index'].", ".$app->quote_escape($option['name']).", 0, $has_votingaddr));\n";
 				$j++;
 			}
 			$i++;
@@ -608,7 +602,6 @@ if ($thisuser && $game) {
 			thisPageManager.reload_compose_bets();
 			thisPageManager.set_select_add_output();
 			
-			$(".datepicker").datepicker();
 			<?php
 			if ($_REQUEST['action'] == "start_bet") {
 				echo "games[0].add_option_to_vote(".((int)$_REQUEST['event_index']).", ".((int)$_REQUEST['option_id']).");\n";
@@ -802,7 +795,7 @@ if ($thisuser && $game) {
 								
 								<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">My Bets</a>
 								
-								<form method="get" onsubmit="submit_principal_bet(); return false;" style="clear: both;">
+								<form method="get" onsubmit="thisPageManager.submit_principal_bet(); return false;" style="clear: both;">
 									<div class="form-group">
 										<label for="principal_amount">How much do you want to bet?</label>
 										<div class="row">
@@ -878,6 +871,8 @@ if ($thisuser && $game) {
 					<form method="post" action="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">
 						<input type="hidden" name="action" value="save_voting_strategy_fees" />
 						<input type="hidden" name="voting_strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
+						<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
+						
 						Pay fees on every transaction of:<br/>
 						<div class="row">
 							<div class="col-sm-4"><input class="form-control" name="transaction_fee" value="<?php echo $app->format_bignum($user_strategy['transaction_fee']); ?>" placeholder="0.0001" /></div>
@@ -907,6 +902,7 @@ if ($thisuser && $game) {
 					<form method="post" action="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">
 						<input type="hidden" name="action" value="save_voting_strategy" />
 						<input type="hidden" id="voting_strategy_id" name="voting_strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
+						<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
 						
 						<div class="row bordered_row">
 							<div class="col-md-2">

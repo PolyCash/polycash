@@ -43,4 +43,6 @@ if (!$skip_select_db) {
 }
 
 if (AppSettings::getParam('pageview_tracking_enabled')) $pageviewController = new PageviewController($app);
+
+if (!isset($argv) && !isset($_REQUEST['synchronizer_token'])) $_REQUEST['synchronizer_token'] = "";
 ?>

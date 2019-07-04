@@ -2,7 +2,7 @@
 require(AppSettings::srcPath()."/includes/connect.php");
 require(AppSettings::srcPath()."/includes/get_session.php");
 
-if ($thisuser) {
+if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 	$action = $_REQUEST['action'];
 	
 	if (in_array($action, array('manage', 'generate', 'send'))) {
@@ -54,6 +54,7 @@ if ($thisuser) {
 							<input type="hidden" name="last" value="invite_upload_csv" />
 							<input type="hidden" name="next" value="events" />
 							<input type="file" name="csv_file" class="btn btn-sm btn-warning" onchange="$('#invite_upload_form').submit();" />
+							<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
 						</form>
 						<br/>
 						<br/>

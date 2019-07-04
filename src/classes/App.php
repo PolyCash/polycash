@@ -2697,9 +2697,10 @@ class App {
 				'card_user_id' => $card_user_id,
 				'session_key' => $session_key,
 				'login_time' => time(),
-				'expire_time' => $expire_time
+				'expire_time' => $expire_time,
+				'synchronizer_token' => $this->random_string(32)
 			];
-			$card_session_q = "INSERT INTO card_sessions SET card_user_id=:card_user_id, session_key=:session_key, login_time=:login_time, expire_time=:expire_time";
+			$card_session_q = "INSERT INTO card_sessions SET card_user_id=:card_user_id, session_key=:session_key, login_time=:login_time, expire_time=:expire_time, synchronizer_token=:synchronizer_token";
 			if (AppSettings::getParam('pageview_tracking_enabled')) {
 				$card_session_q .= ", ip_address=:ip_address";
 				$card_session_params['ip_address'] = $_SERVER['REMOTE_ADDR'];
@@ -3910,6 +3911,11 @@ class App {
 		$this->run_query("INSERT INTO currency_accounts SET currency_id=:currency_id, game_id=:game_id, user_id=:user_id, account_name=:account_name, is_faucet=:is_faucet, is_escrow_account=:is_escrow_account, is_game_sale_account=:is_game_sale_account, is_blockchain_sale_account=:is_blockchain_sale_account, time_created=:time_created;", $params);
 		
 		return $this->fetch_account_by_id($this->last_insert_id());
+	}
+	
+	public function synchronizer_ok($thisuser, $provided_synchronizer_token) {
+		if ($thisuser->get_synchronizer_token() == $provided_synchronizer_token) return true;
+		else return false;
 	}
 }
 ?>

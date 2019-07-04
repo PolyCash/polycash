@@ -5,7 +5,7 @@ require(AppSettings::srcPath()."/includes/get_session.php");
 $output_obj['result_code'] = 0;
 $output_obj['message'] = "";
 
-if ($thisuser && $game) {
+if ($game && $thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 	$user_game = $thisuser->ensure_user_in_game($game, false);
 	
 	$target_amount = floatval($_REQUEST['amount']);

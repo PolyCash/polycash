@@ -1,3 +1,6 @@
+<?php
+AppSettings::addJsDependency("qrcam.js");
+?>
 <script type="text/javascript">
 $('#redeem_options').on('hidden.bs.modal', function () {
 	$('#step1').show();

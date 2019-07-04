@@ -2,7 +2,7 @@
 require(AppSettings::srcPath()."/includes/connect.php");
 require(AppSettings::srcPath()."/includes/get_session.php");
 
-if ($thisuser) {
+if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 	$action = $_REQUEST['action'];
 	$blockchain_id = (int) $_REQUEST['blockchain_id'];
 	$account_name = strip_tags($_REQUEST['account_name']);

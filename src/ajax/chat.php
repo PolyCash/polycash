@@ -4,7 +4,7 @@ require(AppSettings::srcPath()."/includes/get_session.php");
 
 $output_obj = [];
 
-if ($thisuser && $game) {
+if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 	if ($game->db_game['public_players'] == 1) {
 		$user_id = intval($_REQUEST['user_id']);
 		
