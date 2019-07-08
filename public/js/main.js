@@ -7,7 +7,7 @@ var EventOption = function(parent_event, option_index, option_id, db_option_inde
 	this.name = name;
 	this.points = points;
 	this.has_votingaddr = has_votingaddr;
-	this.image_url = image_url
+	this.image_url = image_url;
 	
 	this.votes = 0;
 	this.unconfirmed_votes = 0;
@@ -76,8 +76,8 @@ var PlanRound = function(round_id) {
 	this.round_id = round_id;
 	this.event_ids = [];
 	this.sum_points = 0;
-}
-var Event = function(game, game_event_index, event_id, real_event_index, num_voting_options, vote_effectiveness_function, effectiveness_param1, option_block_rule, event_name, event_starting_block, event_final_block, payout_rate) {
+};
+var GameEvent = function(game, game_event_index, event_id, real_event_index, num_voting_options, vote_effectiveness_function, effectiveness_param1, option_block_rule, event_name, event_starting_block, event_final_block, payout_rate) {
 	this.game = game;
 	this.game_event_index = game_event_index;
 	this.event_id = event_id;
@@ -483,7 +483,7 @@ var PageManager = function() {
 	this.userId2ChatWindowId = [];
 	this.visibleChatWindows = 0;
 
-	this.last_event_index_shown;
+	this.last_event_index_shown = false;
 	this.event_outcome_sections_shown = 1;
 
 	this.game_form_vars = ['blockchain_id', 'module', 'event_rule', 'option_group_id', 'event_entity_type_id', 'events_per_round', 'event_type_name', 'maturity', 'name', 'payout_weight', 'round_length', 'pos_reward', 'pow_reward', 'inflation', 'exponential_inflation_rate', 'exponential_inflation_minershare', 'final_round', 'coin_name', 'coin_name_plural', 'coin_abbreviation', 'start_condition', 'buyin_policy', 'game_buyin_cap', 'default_vote_effectiveness_function', 'default_effectiveness_param1', 'default_max_voting_fraction', 'game_starting_block', 'escrow_address', 'genesis_tx_hash', 'genesis_amount', 'default_betting_mode', 'finite_events'];
@@ -898,18 +898,18 @@ var PageManager = function() {
 		var _this = this;
 		
 		$('#output_threshold_'+index_id).noUiSlider({
-			range: [0, 100]
-		   ,start: 50, step: 1
-		   ,handles: 1
-		   ,connect: "lower"
-		   ,serialization: {
-				 to: [ false, false ]
-				,resolution: 1
-			}
-		   ,slide: function(){
+			range: [0, 100],
+			start: 50, step: 1,
+			handles: 1,
+			connect: "lower",
+			serialization: {
+				to: [false, false],
+				resolution: 1
+			},
+			slide: function(){
 				_this.bet_outputs[index_id].slider_val = parseInt($('#output_threshold_'+index_id).val());
 				_this.output_amounts_need_update = true;
-		   }
+			}
 		});
 	}
 	this.remove_all_utxos_from_vote = function() {
