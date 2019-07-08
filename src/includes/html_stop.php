@@ -16,6 +16,8 @@
 			Loaded in <?php echo round(microtime(true)-$pageload_start_time, 2); ?> sec.
 		</div>
 		<?php
+		if (empty($thisuser)) $thisuser = false;
+		
 		if (!empty($game)) { ?>
 			<div class="status_footer_section">
 			<?php
@@ -101,7 +103,6 @@ if (AppSettings::getParam('signup_captcha_required')) { ?>
 <?php
 $left_menu_open = 1;
 if (AppSettings::getParam('pageview_tracking_enabled')) {
-	if (empty($thisuser)) $thisuser = false;
 	if (empty($viewer_id)) $viewer_id = $pageviewController->insert_pageview($thisuser);
 	$viewer = $pageviewController->get_viewer($viewer_id);
 	$left_menu_open = $viewer['left_menu_open'];

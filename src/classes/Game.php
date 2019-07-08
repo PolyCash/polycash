@@ -3615,6 +3615,8 @@ class Game {
 		}
 		$event_r = $this->blockchain->app->run_query($event_q, $event_params);
 		
+		$log_text .= "Set blocks for ".$event_r->rowCount()." events in ".$this->db_game['name'];
+		
 		if ($event_r->rowCount() > 0) {
 			$show_internal_params = true;
 			
@@ -3624,8 +3626,6 @@ class Game {
 				$this->set_gde_blocks_by_time($gde);
 			}
 			$this->check_set_game_definition("defined", $show_internal_params);
-			
-			$log_text .= "Setting GDE blocks for ".$this->db_game['name']."<br/>\n";
 		}
 		return $log_text;
 	}
