@@ -2167,15 +2167,17 @@ var PageManager = function() {
 			$('#event_form_'+var_name).val("");
 		});
 	}
-	this.manage_game_set_event_blocks = function(game_defined_event_id="") {
+	this.manage_game_set_event_blocks = function(game_defined_event_id = false) {
+		var set_event_params = {
+			game_id: games[0].game_id,
+			synchronizer_token: this.synchronizer_token
+		};
+		if (game_defined_event_id) set_event_params.game_defined_event_id = game_defined_event_id;
+		
 		$.ajax({
 			url: "/ajax/set_event_blocks.php",
 			dataType: "json",
-			data: {
-				game_id: games[0].game_id,
-				game_defined_event_id: game_defined_event_id,
-				synchronizer_token: this.synchronizer_token
-			},
+			data: set_event_params,
 			success: function(set_blocks_response) {
 				alert(set_blocks_response.message);
 			}

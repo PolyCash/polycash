@@ -9,7 +9,7 @@ if ($app->user_can_edit_game($thisuser, $game) && $app->synchronizer_ok($thisuse
 	$log_text = $game->set_event_blocks($game_defined_event_id);
 	$game->set_cached_definition_hashes();
 	
-	$app->output_message(1, "Successfully set the event blocks.", false);
+	$app->output_message(1, $log_text, false);
 }
 else $app->output_message(2, "Error: you don't have permission to modify this game.", false);
 ?>
