@@ -2040,6 +2040,7 @@ var PageManager = function() {
 		$.ajax({
 			url: "/ajax/set_event_outcome.php",
 			dataType: "json",
+			context: this,
 			data: {
 				action: "fetch",
 				event_id: event_id,
