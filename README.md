@@ -48,6 +48,12 @@ For faster page loads, make sure that browser caching is enabled
 a2enmod expires
 ```
 
+Make sure QR codes are rendering correctly in the blockchain explorer. If not, ensure php-gd is installed.
+```
+apt-get install php-gd
+service apache2 restart
+```
+
 The user account you set up when installing has special permissions.  Use this account to import any game definitions for crypto assets that you want to run on your node.  Any time you update PolyCash from github, make sure to visit the install page and any new database migrations will automatically be applied.
 
 Use the install page to enter the RPC parameters for any blockchains that you want to use.  Install and start your blockchains as full nodes before entering the RPC parameters.  To install full nodes, make sure to set txindex=1 in bitcoin.conf, litecoin.conf etc.  After entering blockchain RPC parameters, use the "reset & synchronize" link on the install page to quickly insert initial empty blocks.

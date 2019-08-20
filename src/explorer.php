@@ -275,7 +275,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 		Router::Send404();
 	}
 	else {
-		$pagetitle = AppSettings::getParam('coin_brand_name')." - Blockchain Explorer";
+		if (empty($pagetitle)) $pagetitle = AppSettings::getParam('coin_brand_name')." - Blockchain Explorer";
 		$nav_tab_selected = "explorer";
 		include(AppSettings::srcPath().'/includes/html_start.php');
 		?>
