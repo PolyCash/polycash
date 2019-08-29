@@ -2,7 +2,7 @@
 require(AppSettings::srcPath()."/includes/connect.php");
 require(AppSettings::srcPath()."/includes/get_session.php");
 
-if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token']) {
+if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 	$game_id = false;
 	if (!empty($_REQUEST['game_id'])) $game_id = (int) $_REQUEST['game_id'];
 

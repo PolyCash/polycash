@@ -2119,7 +2119,7 @@ var PageManager = function() {
 				synchronizer_token: this.synchronizer_token
 			},
 			success: function(spend_response) {
-				if (spend_response.status_code == 1) spend_response.message;
+				if (spend_response.status_code == 1) window.location = spend_response.message;
 				else alert(spend_response.message);
 			}
 		});
