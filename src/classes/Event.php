@@ -283,7 +283,7 @@ class Event {
 			
 			if ($last_block_id < $this->db_event['event_payout_block']) {
 				$html .= "Market price: &nbsp; $".$this->game->blockchain->app->round_to($track_price_usd, 2, 4, true);
-				if (time()-$track_price_info['time'] >= 60*10) $html .= ' &nbsp; <font class="redtext">'.$this->game->blockchain->app->format_seconds(time()-$track_price_info['time'])." ago</font>";
+				if (time()-$track_price_info['time'] >= 60*30) $html .= ' &nbsp; <font class="redtext">'.$this->game->blockchain->app->format_seconds(time()-$track_price_info['time'])." ago</font>";
 				$html .= "<br/>\n";
 			}
 			

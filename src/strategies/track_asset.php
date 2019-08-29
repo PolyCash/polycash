@@ -55,7 +55,7 @@ if ($user_game) {
 					$market_price_info = $app->exchange_rate_between_currencies(1, $this_currency['currency_id'], time(), 6);
 					$market_price = $market_price_info['exchange_rate'];
 					
-					$market_ratio = ($market_price-$db_events[$event_i]['track_min_price'])/($db_events[$event_i]['track_max_price']+$db_events[$event_i]['track_min_price']);
+					$market_ratio = ($market_price-$db_events[$event_i]['track_min_price'])/($db_events[$event_i]['track_max_price']-$db_events[$event_i]['track_min_price']);
 					
 					if ($buy_stake + $sell_stake == 0) {
 						$event_info_by_id[$db_events[$event_i]['event_id']] = ['buy_stake'=>$buy_stake, 'sell_stake'=>$sell_stake, 'currency'=>$this_currency, 'market_ratio'=>$market_ratio];
