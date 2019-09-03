@@ -66,7 +66,7 @@ if ($app->running_as_admin()) {
 				$prev_account_id = $bet['account_id'];
 			}
 			
-			$this_bet_html = $app->render_bet($bet, $game, $coins_per_vote, $current_round, $net_delta, $net_stake, $pending_stake, $resolved_fees_paid, $num_wins, $num_losses, $num_unresolved, $num_refunded, 'td', $last_block_id);
+			$this_bet_html = $app->render_binary_bet($bet, $game, $coins_per_vote, $current_round, $net_delta, $net_stake, $pending_stake, $resolved_fees_paid, $num_wins, $num_losses, $num_unresolved, $num_refunded, 'td', $last_block_id);
 			
 			$html_by_user_game[$bet['user_game_id']] .= "<tr>".$this_bet_html."</tr>\n";
 		}

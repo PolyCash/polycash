@@ -1340,14 +1340,23 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$num_losses = 0;
 						$num_unresolved = 0;
 						$num_refunded = 0;
+						$unresolved_net_delta = 0;
 						
-						$my_bets = $app->run_query("SELECT gio.game_io_id, gio.colored_amount, gio.option_id, gio.is_coinbase, gio.is_resolved, gio.game_out_index, p.ref_block_id, p.ref_round_id, p.ref_coin_blocks, p.ref_coin_rounds, p.effectiveness_factor, p.effective_destroy_amount, p.destroy_amount, p.votes, p.".$game->db_game['payout_weight']."s_destroyed, p.game_io_id AS parent_game_io_id, io.spend_transaction_id, io.spend_status, ev.*, et.vote_effectiveness_function, et.effectiveness_param1, o.effective_destroy_score AS option_effective_destroy_score, o.unconfirmed_effective_destroy_score, o.unconfirmed_votes, o.name AS option_name, ev.destroy_score AS sum_destroy_score, p.votes, o.votes AS option_votes, t.tx_hash FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transactions t ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN events ev ON o.event_id=ev.event_id LEFT JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id WHERE gio.game_id=:game_id AND ug.user_game_id=:user_game_id AND gio.is_coinbase=1 ORDER BY ev.event_index DESC, gio.game_io_index DESC;", [
-							'game_id' => $game->db_game['game_id'],
-							'user_game_id' => $user_game['user_game_id']
-						]);
-						$num_bets = $my_bets->rowCount();
+						$current_round = $game->block_to_round(1+$last_block_id);
 						
-						$bet_table_header = '
+						$bet_table_headers = [];
+						
+						$bet_table_headers['linear'] = '
+						<div class="row">
+							<div class="col-sm-1 boldtext">Amt Paid</div>
+							<div class="col-sm-2 boldtext">Option Purchased</div>
+							<div class="col-sm-1 text-center boldtext">Range</div>
+							<div class="col-sm-2 boldtext">Position Purchased</div>
+							<div class="col-sm-3 boldtext">Asset Performance</div>
+							<div class="col-sm-3 boldtext">Position Performance</div>
+						</div>';
+						
+						$bet_table_headers['binary'] = '
 						<div class="row">
 							<div class="col-sm-1 boldtext text-center">Stake</div>
 							<div class="col-sm-1 boldtext text-center">Payout</div>
@@ -1358,19 +1367,53 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							<div class="col-sm-3 boldtext">Outcome</div>
 						</div>';
 						
-						$resolved_bets_table = $bet_table_header;
-						$unresolved_bets_table = $bet_table_header;
+						$bet_tables = [
+							'binary' => [
+								'resolved' => '',
+								'unresolved' => ''
+							],
+							'linear' => [
+								'resolved' => '',
+								'unresolved' => ''
+							]
+						];
 						
-						$current_round = $game->block_to_round(1+$last_block_id);
+						$my_bets_base_q = "SELECT gio.game_io_id, gio.colored_amount, gio.option_id, gio.is_coinbase, gio.is_resolved, gio.game_out_index, p.ref_block_id, p.ref_round_id, p.ref_coin_blocks, p.ref_coin_rounds, p.effectiveness_factor, p.effective_destroy_amount, p.destroy_amount, p.votes, p.".$game->db_game['payout_weight']."s_destroyed, p.game_io_id AS parent_game_io_id, io.spend_transaction_id, io.spend_status, ev.*, ev.effective_destroy_score AS sum_effective_destroy_score, et.vote_effectiveness_function, et.effectiveness_param1, o.effective_destroy_score AS option_effective_destroy_score, o.unconfirmed_effective_destroy_score, o.unconfirmed_votes, o.name AS option_name, o.event_option_index, o.entity_id, ev.destroy_score AS sum_destroy_score, p.votes, o.votes AS option_votes, t.tx_hash FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transactions t ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN events ev ON o.event_id=ev.event_id LEFT JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id WHERE gio.game_id=:game_id AND ug.user_game_id=:user_game_id AND gio.is_coinbase=1";
 						
-						while ($bet = $my_bets->fetch()) {
-							$this_bet_html = $app->render_bet($bet, $game, $coins_per_vote, $current_round, $net_delta, $net_stake, $pending_stake, $resolved_fees_paid, $num_wins, $num_losses, $num_unresolved, $num_refunded, 'div', $last_block_id);
+						$my_binary_bets = $app->run_query($my_bets_base_q." AND ev.payout_rule='binary' ORDER BY ev.event_index DESC, gio.game_io_index DESC;", [
+							'game_id' => $game->db_game['game_id'],
+							'user_game_id' => $user_game['user_game_id']
+						]);
+						$num_binary_bets = $my_binary_bets->rowCount();
+						
+						while ($bet = $my_binary_bets->fetch()) {
+							$this_bet_html = $app->render_binary_bet($bet, $game, $coins_per_vote, $current_round, $net_delta, $net_stake, $pending_stake, $resolved_fees_paid, $num_wins, $num_losses, $num_unresolved, $num_refunded, 'div', $last_block_id);
 							
 							if (!empty($this_bet_html)) {
 								$this_bet_html = '<div class="row">'.$this_bet_html."</div>\n";
 								
-								if (empty($bet['winning_option_id']) && (string)$bet['track_payout_price'] == "" && $bet['outcome_index'] != -1) $unresolved_bets_table .= $this_bet_html;
-								else $resolved_bets_table .= $this_bet_html;
+								if (empty($bet['winning_option_id']) && $bet['outcome_index'] != -1) $bet_tables['binary']['unresolved'] .= $this_bet_html;
+								else $bet_tables['binary']['resolved'] .= $this_bet_html;
+							}
+						}
+						
+						$my_linear_bets = $app->run_query($my_bets_base_q." AND ev.payout_rule='linear' ORDER BY ev.event_index DESC, gio.game_io_index DESC;", [
+							'game_id' => $game->db_game['game_id'],
+							'user_game_id' => $user_game['user_game_id']
+						]);
+						$num_linear_bets = $my_linear_bets->rowCount();
+						$ref_html = "";
+						
+						while ($bet = $my_linear_bets->fetch()) {
+							list($track_entity, $track_price_usd, $track_pay_price, $asset_price_usd, $bought_price_usd, $fair_io_value, $inflation_stake, $effective_stake, $unconfirmed_votes, $max_payout, $odds, $effective_paid, $equivalent_contracts, $event_equivalent_contracts, $track_position_price, $bought_leverage, $current_leverage, $borrow_delta, $bet_net_delta, $payout_fees) = $game->get_payout_info($bet, $coins_per_vote, $last_block_id, $ref_html);
+							
+							$this_bet_html = $app->render_linear_bet($bet, $game, $inflation_stake, $effective_paid, $current_leverage, $equivalent_contracts, $borrow_delta, $track_pay_price, $bought_price_usd, $fair_io_value, $bet_net_delta, $net_delta, $net_stake, $pending_stake, $resolved_fees_paid, $num_wins, $num_losses, $num_unresolved, $num_refunded, $unresolved_net_delta);
+							
+							if (!empty($this_bet_html)) {
+								$this_bet_html = '<div class="row">'.$this_bet_html."</div>\n";
+								
+								if (empty($bet['winning_option_id']) && (string)$bet['track_payout_price'] == "" && $bet['outcome_index'] != -1) $bet_tables['linear']['unresolved'] .= $this_bet_html;
+								else $bet_tables['linear']['resolved'] .= $this_bet_html;
 							}
 						}
 						
@@ -1393,6 +1436,13 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						</div>
 						<?php
 						echo "<p>You've placed ".$app->bets_summary($game, $net_stake, $num_wins, $num_losses, $num_unresolved, $num_refunded, $pending_stake, $net_delta, $resolved_fees_paid);
+						if ($unresolved_net_delta > 0) {
+							echo "<br/>You're ";
+							if ($unresolved_net_delta >= 0) echo 'up <font class="greentext">';
+							else echo 'down <font class="redtext">';
+							echo $app->format_bignum(abs($unresolved_net_delta)).' '.$game->db_game['coin_name_plural'];
+							echo '</font> on your outstanding positions.';
+						}
 						
 						$destroyed_coins = $game->destroyed_coins_by_account($user_game['account_id']);
 						if ($destroyed_coins > 0) {
@@ -1400,15 +1450,27 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						}
 						echo "</p>\n";
 						
-						if ($num_unresolved > 0) {
-							echo "<p><b>Unresolved Bets</b></p>\n";
-							echo $unresolved_bets_table;
+						if (!empty($bet_tables['binary']['unresolved'])) {
+							echo "<p><b>Outstanding Bets</b></p>\n";
+							echo $bet_table_headers['binary'].$bet_tables['binary']['unresolved'];
 							echo "<br/>\n";
 						}
 						
-						if ($num_wins+$num_losses+$num_refunded > 0) {
+						if (!empty($bet_tables['linear']['unresolved'])) {
+							echo "<p><b>Outstanding Positions</b></p>\n";
+							echo $bet_table_headers['linear'].$bet_tables['linear']['unresolved'];
+							echo "<br/>\n";
+						}
+						
+						if (!empty($bet_tables['binary']['resolved'])) {
 							echo "<p><b>Resolved Bets</b></p>\n";
-							echo $resolved_bets_table;
+							echo $bet_table_headers['binary'].$bet_tables['binary']['resolved'];
+							echo "<br/>\n";
+						}
+						
+						if (!empty($bet_tables['linear']['resolved'])) {
+							echo "<p><b>Resolved Positions</b></p>\n";
+							echo $bet_table_headers['linear'].$bet_tables['linear']['resolved'];
 							echo "<br/>\n";
 						}
 						

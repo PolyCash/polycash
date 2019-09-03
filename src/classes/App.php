@@ -3255,7 +3255,7 @@ class App {
 		else return 1;
 	}
 	
-	public function render_bet(&$bet, &$game, $coins_per_vote, $current_round, &$net_delta, &$net_stake, &$pending_stake, &$resolved_fees_paid, &$num_wins, &$num_losses, &$num_unresolved, &$num_refunded, $div_td, $last_block_id) {
+	public function render_binary_bet(&$bet, &$game, $coins_per_vote, $current_round, &$net_delta, &$net_stake, &$pending_stake, &$resolved_fees_paid, &$num_wins, &$num_losses, &$num_unresolved, &$num_refunded, $div_td, $last_block_id) {
 		$this_bet_html = "";
 		$event_total_reward = ($bet['sum_score']+$bet['sum_unconfirmed_score'])*$coins_per_vote + $bet['sum_destroy_score'] + $bet['sum_unconfirmed_destroy_score'];
 		$option_effective_reward = $bet['option_effective_destroy_score']+$bet['unconfirmed_effective_destroy_score'] + ($bet['option_votes']+$bet['unconfirmed_votes'])*$coins_per_vote;
@@ -3268,7 +3268,7 @@ class App {
 			$my_inflation_stake = $bet[$game->db_game['payout_weight']."s_destroyed"]*$coins_per_vote;
 			$my_effective_stake = $bet['effective_destroy_amount'] + $bet['votes']*$coins_per_vote;
 			
-			if ($bet['payout_rule'] == "binary" && $option_effective_reward > 0) {
+			if ($option_effective_reward > 0) {
 				$nofees_reward = round($event_total_reward*($my_effective_stake/$option_effective_reward));
 				$bet_fees_paid = round((1-$bet['payout_rate'])*$nofees_reward);
 				$expected_payout = $nofees_reward-$bet_fees_paid;
@@ -3277,7 +3277,6 @@ class App {
 					$resolved_fees_paid += $bet_fees_paid/pow(10,$game->db_game['decimal_places']);
 				}
 			}
-			else if ((string)$bet['track_payout_price'] != "") $expected_payout = $bet['colored_amount'];
 		}
 		else {
 			$unconfirmed_votes = $bet['ref_'.$game->db_game['payout_weight']."s"];
@@ -3285,11 +3284,9 @@ class App {
 			$my_inflation_stake = $unconfirmed_votes*$coins_per_vote;
 			$my_effective_stake = floor(($bet['destroy_amount']+$my_inflation_stake)*$current_effectiveness);
 			
-			if ($bet['payout_rule'] == "binary") {
-				$nofees_reward = round($event_total_reward*($my_effective_stake/$option_effective_reward));
-				$bet_fees_paid = round((1-$bet['payout_rate'])*$nofees_reward);
-				$expected_payout = $nofees_reward-$bet_fees_paid;
-			}
+			$nofees_reward = round($event_total_reward*($my_effective_stake/$option_effective_reward));
+			$bet_fees_paid = round((1-$bet['payout_rate'])*$nofees_reward);
+			$expected_payout = $nofees_reward-$bet_fees_paid;
 		}
 		$my_stake = $bet['destroy_amount'] + $my_inflation_stake;
 		
@@ -3365,36 +3362,22 @@ class App {
 				$outcome_txt = "Refunded";
 				$num_refunded++;
 			}
-			else if (empty($bet['winning_option_id']) && (string)$bet['track_payout_price'] == "") {
+			else if (empty($bet['winning_option_id'])) {
 				$outcome_txt = "Not Resolved";
 				$num_unresolved++;
 			}
 			else {
-				if ($bet['payout_rule'] == "binary") {
-					if ($bet['winning_option_id'] == $bet['option_id']) {
-						$outcome_txt = "Won";
-						$delta = ($expected_payout - $my_stake)/pow(10,$game->db_game['decimal_places']);
-						$num_wins++;
-					}
-					else {
-						$outcome_txt = "Lost";
-						$delta = (-1)*$my_stake/pow(10,$game->db_game['decimal_places']);
-						$num_losses++;
-					}
+				if ($bet['winning_option_id'] == $bet['option_id']) {
+					$outcome_txt = "Won";
+					$delta = ($expected_payout - $my_stake)/pow(10,$game->db_game['decimal_places']);
+					$num_wins++;
 				}
 				else {
-					$delta = ($expected_payout - $my_stake)/pow(10,$game->db_game['decimal_places']);
-					$pct_gain = round(100*($expected_payout/$my_stake-1), 2);
-					
-					if ($delta >= 0) {
-						$outcome_txt = "Won";
-						$num_wins++;
-					}
-					else {
-						$outcome_txt = "Lost";
-						$num_losses++;
-					}
+					$outcome_txt = "Lost";
+					$delta = (-1)*$my_stake/pow(10,$game->db_game['decimal_places']);
+					$num_losses++;
 				}
+				
 				$net_delta += $delta;
 			}
 			
@@ -3408,7 +3391,7 @@ class App {
 			else $this_bet_html .= "<td>";
 			$this_bet_html .= $outcome_txt;
 			
-			if (!empty($bet['winning_option_id']) || (string)$bet['track_payout_price'] != "") {
+			if (!empty($bet['winning_option_id'])) {
 				$this_bet_html .= " &nbsp;&nbsp; ";
 				if ($delta >= 0) $this_bet_html .= "+";
 				else $this_bet_html .= "-";
@@ -3425,6 +3408,66 @@ class App {
 			if ($div_td == "div") $this_bet_html .= "</div>\n";
 			else $this_bet_html .= "</td>\n";
 		}
+		return $this_bet_html;
+	}
+	
+	public function render_linear_bet($bet, $game, $inflation_stake, $effective_paid, $current_leverage, $equivalent_contracts, $borrow_delta, $track_pay_price, $bought_price_usd, $fair_io_value, $bet_net_delta, &$net_delta, &$net_stake, &$pending_stake, &$resolved_fees_paid, &$num_wins, &$num_losses, &$num_unresolved, &$num_refunded, &$unresolved_net_delta) {
+		$this_stake_int = $bet['destroy_amount'] + $inflation_stake;
+		$this_stake = $this_stake_int/pow(10, $game->db_game['decimal_places']);
+		$net_stake += $this_stake;
+		
+		if ($bet['outcome_index'] == -1) {
+			$num_refunded++;
+		}
+		else if ((string)$bet['track_payout_price'] == "") {
+			$num_unresolved++;
+			$pending_stake += $this_stake;
+			$unresolved_net_delta += $bet_net_delta/pow(10, $game->db_game['decimal_places']);
+		}
+		else {
+			$net_delta += ($bet['colored_amount']-$this_stake_int)/pow(10, $game->db_game['decimal_places']);
+			
+			if ($bet['colored_amount'] >= $this_stake_int) {
+				$num_wins++;
+			}
+			else {
+				$num_losses++;
+			}
+		}
+		
+		$this_bet_html = "<div class=\"col-sm-1\"><a href=\"/explorer/games/".$game->db_game['url_identifier']."/utxo/".$bet['tx_hash']."/".$bet['game_out_index']."\">".$this->format_bignum($effective_paid/pow(10, $game->db_game['decimal_places']))."&nbsp;".$game->db_game['coin_abbreviation']."</a></div>\n";
+		
+		$this_bet_html .= "<div class=\"col-sm-2\">".$this->format_bignum($current_leverage)."X &nbsp; ".$bet['option_name']."</div>\n";
+		
+		$this_bet_html .= "<div class=\"col-sm-1 text-center\">$".$this->format_bignum($bet['track_min_price'])."&nbsp;-&nbsp;$".$this->format_bignum($bet['track_max_price'])."</div>\n";
+		
+		$this_bet_html .= '<div class="col-sm-2">';
+		$this_bet_html .= $this->format_bignum($equivalent_contracts/pow(10, $game->db_game['decimal_places']))."&nbsp;".$bet['track_name_short'];
+		if ($borrow_delta != 0) {
+			if ($borrow_delta > 0) $this_bet_html .= '&nbsp;+&nbsp;';
+			else $this_bet_html .= '&nbsp;-&nbsp;';
+			$this_bet_html .= $this->format_bignum(abs($borrow_delta/pow(10, $game->db_game['decimal_places'])))."&nbsp;".$game->db_game['coin_abbreviation'];
+		}
+		$this_bet_html .= '</div>';
+		
+		$track_performance_pct = 100*(($track_pay_price/$bought_price_usd)-1);
+		$this_bet_html .= "<div class=\"col-sm-3\">";
+		$this_bet_html .= $bet['track_name_short']." ";
+		if ($track_performance_pct >= 0) $this_bet_html .= '<font class="greentext">+'.$this->to_significant_digits($track_performance_pct, 4).'%</font>';
+		else $this_bet_html .= '<font class="redtext">-'.$this->to_significant_digits(abs($track_performance_pct), 4).'%</font>';
+		
+		$this_bet_html .= " &nbsp; ($".$this->format_bignum($bought_price_usd);
+		$this_bet_html .= " &rarr; $".$this->format_bignum($track_pay_price);
+		$this_bet_html .= ")</div>\n";
+		
+		$this_bet_html .= "<div class=\"col-sm-3\">";
+		$this_bet_html .= $this->format_bignum($fair_io_value/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_abbreviation']." &nbsp; ";
+		if ($bet_net_delta >= 0) $this_bet_html .= '<font class="greentext">+';
+		else $this_bet_html .= '<font class="redtext">-';
+		$this_bet_html .= $this->format_bignum(abs($bet_net_delta)/pow(10, $game->db_game['decimal_places']));
+		$this_bet_html .= " &nbsp; (".$this->to_significant_digits(100*abs($bet_net_delta/$effective_paid), 4)."%";
+		$this_bet_html .= ")</font></div>\n";
+		
 		return $this_bet_html;
 	}
 	

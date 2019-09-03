@@ -255,9 +255,21 @@ class Event {
 			$confirmed_coins = $destroy_score + $confirmed_score*$coins_per_vote;
 			$unconfirmed_coins = $total_reward - $confirmed_coins;
 			
-			$html .= "<p>".$this->game->blockchain->app->format_bignum($confirmed_coins/pow(10,$this->game->db_game['decimal_places']))." ".$this->game->db_game['coin_name_plural']." in confirmed bets";
-			if ($unconfirmed_coins > 0) $html .= ", ".$this->game->blockchain->app->format_bignum($unconfirmed_coins/pow(10,$this->game->db_game['decimal_places']))." unconfirmed";
-			$html .= "</p>\n";
+			if ($this->db_event['payout_rule'] == "binary") {
+				$html .= "<p>".$this->game->blockchain->app->format_bignum($confirmed_coins/pow(10,$this->game->db_game['decimal_places']))." ".$this->game->db_game['coin_name_plural']." in confirmed bets";
+				if ($unconfirmed_coins > 0) $html .= ", ".$this->game->blockchain->app->format_bignum($unconfirmed_coins/pow(10,$this->game->db_game['decimal_places']))." unconfirmed";
+				$html .= "</p>\n";
+			}
+			else {
+				$two_sided_contract_price = $this->db_event['track_max_price']-$this->db_event['track_min_price'];
+				$confirmed_equivalent_contracts = $confirmed_coins/$two_sided_contract_price/pow(10,$this->game->db_game['decimal_places']);
+				$unconfirmed_equivalent_contracts = $unconfirmed_coins/$two_sided_contract_price/pow(10,$this->game->db_game['decimal_places']);
+				
+				$html .= "<p>".$this->game->blockchain->app->format_bignum($confirmed_equivalent_contracts)." ".$this->db_event['track_name_short']." issued at $".$this->game->blockchain->app->format_bignum($two_sided_contract_price)." per contract";
+				if ($unconfirmed_coins > 0) $html .= " +&nbsp;".$this->game->blockchain->app->format_bignum($unconfirmed_equivalent_contracts)."&nbsp;unconfirmed&nbsp;".$this->db_event['track_name_short']."<br/>\n";
+				$html .= " (".$this->game->blockchain->app->format_bignum(($confirmed_coins+$unconfirmed_coins)/pow(10,$this->game->db_game['decimal_places']))."&nbsp;".$this->game->db_game['coin_name_plural'].")";
+				$html .= "</p>\n";
+			}
 		}
 		
 		if ($this->game->db_game['module'] == "CryptoDuels") {
