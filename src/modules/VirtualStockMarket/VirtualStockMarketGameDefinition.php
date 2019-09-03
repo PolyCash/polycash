@@ -14,7 +14,7 @@ class VirtualStockMarketGameDefinition {
 			'Apple'=>'AAPL',
 			'Facebook'=>'FB',
 			'Google'=>'GOOG',
-			'HP'=>'HP',
+			'HP'=>'HPQ',
 			'IBM'=>'IBM',
 			'Intel'=>'INTC',
 			'Microsoft'=>'MSFT',

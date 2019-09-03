@@ -2849,6 +2849,33 @@ var PageManager = function() {
 			}
 		});
 	}
+	this.donate_step = function(step) {
+		if (step == "start") {
+			$('#donate_modal').modal('show');
+			$('#donate_modal_inner').html("Loading...");
+			
+			$.get("/ajax/donate.php?action=load", function(donate_response) {
+				$('#donate_modal_inner').html(donate_response);
+			});
+		}
+		else if (step == "save_email") {
+			$('#donate_email_save_btn').html("Saving...");
+			
+			$.ajax({
+				url: "/ajax/donate.php",
+				data: {
+					action: "save_email",
+					email: $('#donate_email_address').val(),
+					access_key: $('#donate_access_key').val()
+				},
+				dataType: "json",
+				success: function(donate_response) {
+					$('#donate_email_save_btn').html("Save email address");
+					$('#donate_email_form').html(donate_response.message);
+				}
+			});
+		}
+	}
 }
 
 var thisPageManager = new PageManager();
