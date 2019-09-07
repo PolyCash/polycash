@@ -607,6 +607,7 @@ if ($thisuser && $game) {
 				echo "games[0].add_option_to_vote(".((int)$_REQUEST['event_index']).", ".((int)$_REQUEST['option_id']).");\n";
 			}
 			?>
+			thisPageManager.tab_clicked(0);
 			thisPageManager.tab_clicked(<?php echo $initial_tab; ?>);
 			
 			thisPageManager.set_plan_rightclicks();

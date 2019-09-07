@@ -1436,7 +1436,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						</div>
 						<?php
 						echo "<p>You've placed ".$app->bets_summary($game, $net_stake, $num_wins, $num_losses, $num_unresolved, $num_refunded, $pending_stake, $net_delta, $resolved_fees_paid);
-						if ($unresolved_net_delta > 0) {
+						if ($unresolved_net_delta != 0) {
 							echo "<br/>You're ";
 							if ($unresolved_net_delta >= 0) echo 'up <font class="greentext">';
 							else echo 'down <font class="redtext">';

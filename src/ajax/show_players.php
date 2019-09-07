@@ -2,7 +2,7 @@
 require(AppSettings::srcPath()."/includes/connect.php");
 require(AppSettings::srcPath()."/includes/get_session.php");
 
-if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token']) {
+if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
 	if ($game->db_game['public_players'] == 1) {
 		?>
 		<div class="panel panel-default">

@@ -24,13 +24,13 @@ if ($user_game) {
 		$user_pending_bets = $game->user_pending_bets($user_game);
 		$account_value = $game->account_balance($user_game['account_id'])+$user_pending_bets;
 		
+		$hours_between_applications = 36;
+		$sec_between_applications = 60*60*$hours_between_applications;
+		$rand_sec_offset = rand(0, $sec_between_applications*2);
+		
+		$app->set_strategy_time_next_apply($user_game['strategy_id'], time()+$rand_sec_offset);
+		
 		if (($mature_balance > $account_value*0.35 && time() > $user_game['time_next_apply']) || !empty($_REQUEST['force'])) {
-			$hours_between_applications = 12;
-			$sec_between_applications = 60*60*$hours_between_applications;
-			$rand_sec_offset = rand(0, $sec_between_applications*2);
-			
-			$app->set_strategy_time_next_apply($user_game['strategy_id'], time()+$rand_sec_offset);
-			
 			$db_events = $app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_starting_block <= :mining_block_id AND event_final_block > :mining_block_id ORDER BY event_index ASC;", [
 				'game_id' => $game->db_game['game_id'],
 				'mining_block_id' => $mining_block_id
