@@ -5,6 +5,8 @@ $allowed_params = ['game_id', 'block_id'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);
 
 if ($app->running_as_admin()) {
+	set_time_limit(0);
+	
 	if (empty($_REQUEST['blockchain_id'])) die("Please specify a blockchain_id.\n");
 	else $blockchain_id = (int) $_REQUEST['blockchain_id'];
 	

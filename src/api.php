@@ -156,9 +156,8 @@ if ($uri_parts[1] == "api") {
 			$cards = $app->run_query($card_q, $card_params)->fetchAll(PDO::FETCH_ASSOC);
 			
 			if (count($cards) > 0) {
-				$api_output['status_code'] = 1;
 				$api_output['cards'] = $cards;
-				echo json_encode($api_output, JSON_PRETTY_PRINT);
+				$app->output_message(1, "", $api_output);
 			}
 			else $app->output_message(0, "Error: card not found.");
 		}
@@ -221,9 +220,8 @@ if ($uri_parts[1] == "api") {
 				array_push($blocks, $db_block);
 			}
 			
-			$api_output['status_code'] = 1;
 			$api_output['blocks'] = $blocks;
-			echo json_encode($api_output, JSON_PRETTY_PRINT);
+			$app->output_message(1, "", $api_output);
 		}
 	}
 	else if ($uri_parts[2] == "transactions") {
@@ -258,7 +256,7 @@ if ($uri_parts[1] == "api") {
 			$db_blockchain['last_block_id'] = $blockchain->last_block_id();
 			unset($db_blockchain['blockchain_id']);
 			
-			echo json_encode($db_blockchain, JSON_PRETTY_PRINT);
+			$app->output_message(1, "", $db_blockchain);
 		}
 		else $app->output_message(2, "Error: invalid blockchain identifier.", false);
 	}
@@ -485,14 +483,14 @@ if ($uri_parts[1] == "api") {
 		}
 		else $api_output = ['status_code'=>0, 'message'=>'Error: Invalid game ID'];
 		
-		echo json_encode($api_output, JSON_PRETTY_PRINT);
+		$app->output_message(null, null, $api_output);
 	}
 	else if ($uri == "/api/") {
 		header("Location: /api/about");
 		die();
 	}
 	else {
-		echo json_encode(['status_code'=>0, 'message'=>"You've reached an invalid URL."]);
+		$app->output_message(0, "You've reached an invalid URL.", false);
 	}
 }
 ?>

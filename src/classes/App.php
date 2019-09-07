@@ -519,12 +519,14 @@ class App {
 	}
 
 	public function output_message($status_code, $message, $dump_object=false) {
+		header('Content-Type: application/json');
+		
 		if (empty($dump_object)) $dump_object = ["status_code"=>$status_code, "message"=>$message];
 		else {
 			$dump_object['status_code'] = $status_code;
 			$dump_object['message'] = $message;
 		}
-		echo json_encode($dump_object);
+		echo json_encode($dump_object, JSON_PRETTY_PRINT);
 	}
 	
 	public function try_apply_invite_key($user_id, $invite_key, &$invite_game, &$user_game) {
@@ -3098,14 +3100,14 @@ class App {
 		$inputs = [];
 		$outputs = [];
 		
-		$tx_in_q = "SELECT a.address, t.tx_hash, io.out_index, io.amount, io.spend_status, io.option_index FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.spend_transaction_id=:transaction_id;";
+		$tx_in_q = "SELECT a.address, t.tx_hash, io.out_index, io.amount, io.spend_status, io.option_index FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.spend_transaction_id=:transaction_id ORDER BY io.in_index ASC;";
 		$tx_in_r = $this->run_query($tx_in_q, ['transaction_id'=>$transaction_id]);
 		
 		while ($input = $tx_in_r->fetch(PDO::FETCH_ASSOC)) {
 			array_push($inputs, $input);
 		}
 		
-		$tx_out_q = "SELECT io.option_index, io.spend_status, io.out_index, io.amount, a.address FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:transaction_id;";
+		$tx_out_q = "SELECT io.option_index, io.spend_status, io.out_index, io.amount, a.address FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:transaction_id ORDER BY io.out_index ASC;";
 		$tx_out_r = $this->run_query($tx_out_q, ['transaction_id'=>$transaction_id]);
 		
 		while ($output = $tx_out_r->fetch(PDO::FETCH_ASSOC)) {

@@ -98,7 +98,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 		}
 	}
 	else if ($explore_mode == "blocks") {
-		if (empty($uri_parts[5])) $block_id_str = "";
+		if (!isset($uri_parts[5])) $block_id_str = "";
 		else $block_id_str = $uri_parts[5];
 		
 		if ($block_id_str !== "0" && (empty($block_id_str) || strpos($block_id_str, '?') !== false)) {

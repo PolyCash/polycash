@@ -239,8 +239,11 @@ class Blockchain {
 		$db_block = $this->fetch_block_by_id($block_height);
 		
 		if ($db_block && $db_block['locally_saved'] == 0 && !empty($db_block['num_transactions'])) {
+			$message = "Incomplete block found, resetting ".$this->db_blockchain['blockchain_name']." from block ".$block_height;
+			$this->app->log_message($message);
+			
 			if ($print_debug) {
-				echo "Incomplete block found, resetting ".$this->db_blockchain['blockchain_name']." from block ".$block_height."\n";
+				echo $message."\n";
 				$this->app->flush_buffers();
 			}
 			$this->delete_blocks_from_height($block_height);
@@ -1108,7 +1111,7 @@ class Blockchain {
 		$rpc_block = $this->coin_rpc->getblock($db_block['block_hash']);
 		
 		if ($rpc_block['confirmations'] < 0) {
-			$this->app->log_message("Detected a chain fork at block #".$db_block['block_id']);
+			$this->app->log_message("Detected a chain fork at ".$this->db_blockchain['blockchain_name']." block #".$db_block['block_id']);
 			
 			$delete_block_height = $db_block['block_id'];
 			$rpc_delete_block = $rpc_block;
