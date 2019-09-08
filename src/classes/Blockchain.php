@@ -921,9 +921,7 @@ class Blockchain {
 				}
 				else $html .= $txt;
 				
-				$txt = $this->load_all_blocks(TRUE, $print_debug, 180);
-				
-				if (!$print_debug) $html .= $txt;
+				$this->load_all_blocks(TRUE, $print_debug, 180);
 				
 				if ($this->db_blockchain['p2p_mode'] == "rpc" && $this->db_blockchain['load_unconfirmed_transactions'] == 1 && $this->last_complete_block_id() == $this->last_block_id()) {
 					$txt = "Loading unconfirmed transactions...\n";
@@ -1036,19 +1034,6 @@ class Blockchain {
 		return $html;
 	}
 	
-	public function more_web_api_blocks() {
-		if ($this->db_blockchain['first_required_block'] !== "") {
-			$info = $this->app->run_query("SELECT MIN(b.block_id), MAX(b.block_id) FROM (SELECT block_id FROM blocks WHERE blockchain_id=:blockchain_id AND locally_saved=0 AND block_id >= :block_id ORDER BY block_id ASC LIMIT 100) b;", [
-				'blockchain_id' => $this->db_blockchain['blockchain_id'],
-				'block_id' => $this->db_blockchain['first_required_block']
-			])->fetch();
-			
-			$ref_api_blocks_r = $this->web_api_fetch_blocks($info['MIN(b.block_id)'], $info['MAX(b.block_id)']);
-			return $ref_api_blocks_r['blocks'];
-		}
-		else return [];
-	}
-	
 	public function load_all_blocks($required_blocks_only, $print_debug, $max_execution_time) {
 		$start_time = microtime(true);
 		
@@ -1059,18 +1044,27 @@ class Blockchain {
 			$loop_i = 0;
 			$load_at_once = 100;
 			
+			$last_complete_block_id = $this->last_complete_block_id();
+			$load_from_block = $last_complete_block_id+1;
+			$load_to_block = $load_from_block+$load_at_once-1;
+			
 			if ($this->db_blockchain['p2p_mode'] == "web_api") {
-				$ref_api_blocks = $this->more_web_api_blocks();
+				$ref_api_blocks = $this->web_api_fetch_blocks($load_from_block, $load_to_block);
 			}
 			else $ref_api_blocks = [];
 			
 			do {
-				$last_complete_block_id = $this->last_complete_block_id();
+				$ref_time = microtime(true);
+				$blocks_loaded = 0;
 				
-				$load_blocks = $this->app->run_query("SELECT * FROM blocks WHERE blockchain_id=:blockchain_id AND locally_saved=0 AND block_id >= :from_block_id  AND block_id <= :to_block_id;", [
+				$last_complete_block_id = $this->last_complete_block_id();
+				$load_from_block = $last_complete_block_id+1;
+				$load_to_block = $load_from_block+$load_at_once-1;
+				
+				$load_blocks = $this->app->run_query("SELECT * FROM blocks WHERE blockchain_id=:blockchain_id AND block_id >= :from_block_id  AND block_id <= :to_block_id;", [
 					'blockchain_id' => $this->db_blockchain['blockchain_id'],
-					'from_block_id' => $last_complete_block_id+1,
-					'to_block_id' => $last_complete_block_id+$load_at_once
+					'from_block_id' => $load_from_block,
+					'to_block_id' => $load_to_block
 				]);
 				$this_loop_blocks_to_load = $load_blocks->rowCount();
 				
@@ -1083,21 +1077,32 @@ class Blockchain {
 						}
 						$coind_error = $this->coind_add_block($unknown_block['block_hash'], $unknown_block['block_id'], false, $print_debug);
 						if ($coind_error) $keep_looping = false;
+						else $blocks_loaded++;
 					}
 					else {
 						if ($loop_i >= count($ref_api_blocks)) {
+							$last_complete_block_id = $this->last_complete_block_id();
+							$load_from_block = $last_complete_block_id+1;
+							$load_to_block = $load_from_block+$load_at_once-1;
+							
 							$loop_i = 0;
-							$ref_api_blocks = $this->more_web_api_blocks();
+							$ref_api_blocks = $this->web_api_fetch_blocks($load_from_block, $load_to_block);
 						}
 						if (empty($ref_api_blocks[$loop_i])) $keep_looping = false;
 						else {
 							$ref_api_blocks[$loop_i] = get_object_vars($ref_api_blocks[$loop_i]);
 							$this->web_api_add_block($unknown_block, $ref_api_blocks[$loop_i], false, $print_debug);
+							$blocks_loaded++;
 						}
 					}
 					$loop_i++;
 					
 					if (microtime(true)-$start_time >= $max_execution_time) $keep_looping = false;
+				}
+				
+				if ($print_debug) {
+					echo "Loaded ".number_format($blocks_loaded)." in ".round(microtime(true)-$ref_time, 6)." sec\n";
+					$this->app->flush_buffers();
 				}
 				
 				if ($this_loop_blocks_to_load < $load_at_once) $keep_looping = false;
@@ -2087,8 +2092,8 @@ class Blockchain {
 	
 	public function web_api_fetch_blocks($from_block_height, $to_block_height) {
 		$remote_url = $this->authoritative_peer['base_url']."/api/blocks/".$this->db_blockchain['url_identifier']."/".$from_block_height.":".$to_block_height;
-		$remote_response_raw = file_get_contents($remote_url);
-		return get_object_vars(json_decode($remote_response_raw));
+		$remote_response = json_decode(file_get_contents($remote_url));
+		return $remote_response->blocks;
 	}
 	
 	public function web_api_fetch_blockchain() {
