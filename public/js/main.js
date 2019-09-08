@@ -2154,7 +2154,8 @@ var PageManager = function() {
 				data: {
 					action: create_account_action,
 					blockchain_id: $('#create_account_blockchain_id').val(),
-					account_name: $('#create_account_rpc_name').val()
+					account_name: $('#create_account_rpc_name').val(),
+					synchronizer_token: this.synchronizer_token
 				},
 				success: function(create_account_response) {
 					if (create_account_response.status_code == 1) window.location = create_account_response.message;
@@ -2215,7 +2216,7 @@ var PageManager = function() {
 				
 				$('#event_form_save_btn').click(function() {
 					this.save_gde(gde_id);
-				});
+				}.bind(this));
 			}
 		});
 	}
@@ -2228,7 +2229,7 @@ var PageManager = function() {
 		};
 		
 		this.event_verbatim_vars.forEach(function(var_name) {
-			save_gde_params[var_name] = $('#event_form_'+event_verbatim_vars[i]).val()
+			save_gde_params[var_name] = $('#event_form_'+var_name).val()
 		});
 		
 		$.ajax({

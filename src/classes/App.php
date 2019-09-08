@@ -3483,7 +3483,15 @@ class App {
 		
 		$html = number_format($num_bets)." bets totalling <font class=\"greentext\">".$this->format_bignum($net_stake)."</font> ".$game->db_game['coin_name_plural'].".<br/>\n";
 		$html .= "You've won ".number_format($num_wins)." of your ".number_format($num_wins+$num_losses)." resolved bets (".round($win_rate*100, 1)."%). ";
-		if ($resolved_fees_paid > 0) $html .= "You paid <font class=\"redtext\">".$this->format_bignum($resolved_fees_paid)."</font> ".$game->db_game['coin_name_plural']." in fees and made ";
+		if ($resolved_fees_paid != 0) {
+			if ($resolved_fees_paid > 0) {
+				$html .= "You paid <font class=\"redtext\">".$this->format_bignum($resolved_fees_paid)."</font> ";
+			}
+			else {
+				$html .= "You earned <font class=\"greentext\">".$this->format_bignum(abs($resolved_fees_paid))."</font> ";
+			}
+			$html .= $game->db_game['coin_name_plural']." in fees and made ";
+		}
 		else $html .= "You made ";
 		$html .= " a net ";
 		if ($adjusted_net_delta >= 0) $html .= "gain";
