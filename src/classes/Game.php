@@ -185,6 +185,7 @@ class Game {
 								'out_index' => $out_index,
 								'is_destroy' => $address['is_destroy_address'],
 								'is_separator' => $address['is_separator_address'],
+								'is_passthrough' => $address['is_passthrough_address'],
 								'address_id' => $address_id,
 								'option_index' => $address['option_index'],
 								'transaction_id' => $transaction_id,
@@ -195,7 +196,7 @@ class Game {
 								$new_output_q .= "user_id=:user_id, ";
 								$new_output_params['user_id'] = $address['user_id'];
 							}
-							$new_output_q .= "is_destroy=:is_destroy, is_separator=:is_separator, address_id=:address_id, option_index=:option_index, ";
+							$new_output_q .= "is_destroy=:is_destroy, is_separator=:is_separator, is_passthrough=:is_passthrough, address_id=:address_id, option_index=:option_index, ";
 							
 							if ($block_id !== false) {
 								if ($input_sum == 0) $output_cbd = 0;

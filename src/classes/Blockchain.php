@@ -565,6 +565,7 @@ class Blockchain {
 			$output_io_address_ids = [];
 			$output_is_destroy = [];
 			$output_is_separator = [];
+			$output_is_passthrough = [];
 			$separator_io_ids = [];
 			$output_sum = 0;
 			$output_destroy_sum = 0;
@@ -595,13 +596,14 @@ class Blockchain {
 					$output_io_address_ids[$out_index] = $output_address['address_id'];
 					$output_is_destroy[$out_index] = $out_io['is_destroy_address'];
 					$output_is_separator[$out_index] = $out_io['is_separator_address'];
+					$output_is_passthrough[$out_index] = $out_io['is_passthrough_address'];
 					if ($output_is_separator[$out_index] == 1) array_push($separator_io_ids, $out_io['io_id']);
 					
 					$output_sum += $out_io['amount'];
 					if ($out_io['is_destroy_address'] == 1) {
 						$output_destroy_sum += $out_io['amount'];
 					}
-					else if ($out_io['is_separator_address'] == 0) $last_regular_output_index = $out_index;
+					else if ($out_io['is_separator_address'] == 0 && $out_io['is_passthrough_address'] == 0) $last_regular_output_index = $out_index;
 					$out_index++;
 				}
 			}
@@ -637,7 +639,8 @@ class Blockchain {
 							'create_transaction_id' => $db_transaction_id,
 							'amount' => $new_io_amount,
 							'is_destroy' => $output_address['is_destroy_address'],
-							'is_separator' => $output_address['is_separator_address']
+							'is_separator' => $output_address['is_separator_address'],
+							'is_passthrough' => $output_address['is_passthrough_address']
 						];
 						$new_io_q = "INSERT INTO transaction_ios SET spend_status=:spend_status, blockchain_id=:blockchain_id, script_type=:script_type, out_index=:out_index, address_id=:address_id";
 						if ($output_address['user_id'] > 0) {
@@ -668,7 +671,7 @@ class Blockchain {
 							$new_io_q .= ", create_block_id=:create_block_id";
 							$new_io_params['create_block_id'] = $block_height;
 						}
-						$new_io_q .= ", is_destroy=:is_destroy, is_separator=:is_separator;";
+						$new_io_q .= ", is_destroy=:is_destroy, is_separator=:is_separator, is_passthrough=:is_passthrough;";
 						$this->app->run_query($new_io_q, $new_io_params);
 						$io_id = $this->app->last_insert_id();
 						
@@ -676,13 +679,14 @@ class Blockchain {
 						$output_io_address_ids[$out_index] = $output_address['address_id'];
 						$output_is_destroy[$out_index] = $output_address['is_destroy_address'];
 						$output_is_separator[$out_index] = $output_address['is_separator_address'];
+						$output_is_passthrough[$out_index] = $output_address['is_passthrough_address'];
 						if ($output_is_separator[$out_index] == 1) array_push($separator_io_ids, $io_id);
 						
 						$output_sum += $outputs[$out_index]["value"]*pow(10,$this->db_blockchain['decimal_places']);
 						if ($output_address['is_destroy_address'] == 1) {
 							$output_destroy_sum += $outputs[$out_index]["value"]*pow(10,$this->db_blockchain['decimal_places']);
 						}
-						else if ($output_address['is_separator_address'] == 0) $last_regular_output_index = $out_index;
+						else if ($output_address['is_separator_address'] == 0 && $output_address['is_passthrough_address'] == 0) $last_regular_output_index = $out_index;
 					}
 				}
 			}
@@ -1283,7 +1287,7 @@ class Blockchain {
 		]);
 		$transaction_id = $this->app->last_insert_id();
 		
-		$this->app->run_query("INSERT INTO transaction_ios SET spend_status='unspent', blockchain_id=:blockchain_id, user_id=NULL, address_id=:address_id, is_destroy=0, is_separator=0, create_transaction_id=:create_transaction_id, amount=:amount, create_block_id='0';", [
+		$this->app->run_query("INSERT INTO transaction_ios SET spend_status='unspent', blockchain_id=:blockchain_id, user_id=NULL, address_id=:address_id, is_destroy=0, is_separator=0, is_passthrough=0, create_transaction_id=:create_transaction_id, amount=:amount, create_block_id='0';", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'address_id' => $output_address['address_id'],
 			'create_transaction_id' => $transaction_id,
@@ -1708,10 +1712,9 @@ class Blockchain {
 				else $is_mine=0;
 			}
 			
-			$is_destroy_address = $option_index == 0 ? 1 : 0;
-			$is_separator_address = $option_index == 1 ? 1 : 0;
+			list($is_destroy_address, $is_separator_address, $is_passthrough_address) = $this->app->option_index_to_special_address_types($option_index);
 			
-			$this->app->run_query("INSERT INTO addresses SET primary_blockchain_id=:primary_blockchain_id, address=:address, time_created=:time_created, is_mine=:is_mine, vote_identifier=:vote_identifier, option_index=:option_index, is_destroy_address=:is_destroy_address, is_separator_address=:is_separator_address;", [
+			$this->app->run_query("INSERT INTO addresses SET primary_blockchain_id=:primary_blockchain_id, address=:address, time_created=:time_created, is_mine=:is_mine, vote_identifier=:vote_identifier, option_index=:option_index, is_destroy_address=:is_destroy_address, is_separator_address=:is_separator_address, is_passthrough_address=:is_passthrough_address;", [
 				'primary_blockchain_id' => $this->db_blockchain['blockchain_id'],
 				'address' => $address,
 				'time_created' => time(),
@@ -1719,7 +1722,8 @@ class Blockchain {
 				'vote_identifier' => $vote_identifier,
 				'option_index' => $option_index,
 				'is_destroy_address' => $is_destroy_address,
-				'is_separator_address' => $is_separator_address
+				'is_separator_address' => $is_separator_address,
+				'is_passthrough_address' => $is_passthrough_address
 			]);
 			$output_address_id = $this->app->last_insert_id();
 			
@@ -1886,6 +1890,7 @@ class Blockchain {
 								'out_index' => $out_index,
 								'is_destroy' => $address['is_destroy_address'],
 								'is_separator' => $address['is_separator_address'],
+								'is_passthrough' => $address['is_passthrough_address'],
 								'address_id' => $address_id,
 								'option_index' => $address['option_index'],
 								'create_transaction_id' => $transaction_id,
@@ -1896,7 +1901,7 @@ class Blockchain {
 								$new_output_q .= "user_id=:user_id, ";
 								$new_output_params['user_id'] = $address['user_id'];
 							}
-							$new_output_q .= "is_destroy=:is_destroy, is_separator=:is_separator, address_id=:address_id, option_index=:option_index, ";
+							$new_output_q .= "is_destroy=:is_destroy, is_separator=:is_separator, is_passthrough=:is_passthrough, address_id=:address_id, option_index=:option_index, ";
 							
 							if ($block_id !== false) {
 								if ($input_sum == 0) $output_cbd = 0;
@@ -2160,7 +2165,7 @@ class Blockchain {
 			
 			$new_output_q = "INSERT INTO transaction_ios SET blockchain_id=:blockchain_id, out_index=:out_index, address_id=:address_id, option_index=:option_index, create_block_id=:create_block_id, create_transaction_id=:create_transaction_id, amount=:amount";
 			if ($block_height !== false) $new_output_q .= ", spend_status='unspent'";
-			$new_output_q .= ", is_destroy=:is_destroy, is_separator=:is_separator;";
+			$new_output_q .= ", is_destroy=:is_destroy, is_separator=:is_separator, is_passthrough=:is_passthrough;";
 			$this->app->run_query($new_output_q, [
 				'blockchain_id' => $this->db_blockchain['blockchain_id'],
 				'out_index' => $out_index,
@@ -2170,7 +2175,8 @@ class Blockchain {
 				'create_transaction_id' => $transaction_id,
 				'amount' => $tx_output['amount'],
 				'is_destroy' => $db_address['is_destroy_address'],
-				'is_separator' => $db_address['is_separator_address']
+				'is_separator' => $db_address['is_separator_address'],
+				'is_passthrough' => $db_address['is_passthrough_address']
 			]);
 		}
 		

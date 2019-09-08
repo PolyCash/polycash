@@ -849,7 +849,7 @@ class App {
 		do {
 			$address_key = $this->new_address_key($currency_id, $account);
 		}
-		while ($address_key['is_separator_address'] == 1 || $address_key['is_destroy_address'] == 1);
+		while ($address_key['is_separator_address'] == 1 || $address_key['is_destroy_address'] == 1 || $address_key['is_passthrough_address'] == 1);
 		
 		return $address_key;
 	}
@@ -2457,9 +2457,7 @@ class App {
 			$user_game = $user->ensure_user_in_game($game, false);
 			
 			if ($user_game) {
-				$address_key = $this->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id=:address_id;", [
-					'address_id' => $db_address['address_id']
-				])->fetch();
+				$address_key = $this->fetch_address_key_by_address_id($db_address['address_id']);
 				
 				if ($address_key) {
 					$this->run_query("UPDATE address_keys SET account_id=:account_id WHERE address_key_id=:address_key_id;", [
@@ -2493,9 +2491,7 @@ class App {
 			$account = $this->user_blockchain_account($user->db_user['user_id'], $currency_id);
 			
 			if ($account) {
-				$address_key = $this->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id=:address_id;", [
-					'address_id' => $db_address['address_id']
-				])->fetch();
+				$address_key = $this->fetch_address_key_by_address_id($db_address['address_id']);
 				
 				if ($address_key) {
 					$this->run_query("UPDATE address_keys SET account_id=:account_id WHERE address_key_id=:address_key_id;", [
@@ -3245,6 +3241,19 @@ class App {
 		return $this->run_query("SELECT * FROM addresses WHERE address=:address;", ['address'=>$address])->fetch();
 	}
 	
+	public function fetch_address_key_by_address_id($address_id) {
+		return $this->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id=:address_id;", [
+			'address_id' => $address_id
+		])->fetch();
+	}
+	
+	public function fetch_address_key_by_address_in_account($address_id, $account_id) {
+		return $this->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id=:address_id AND k.account_id=:account_id;", [
+			'address_id' => $address_id,
+			'account_id' => $account_id
+		])->fetch();
+	}
+	
 	public function calculate_effectiveness_factor($vote_effectiveness_function, $effectiveness_param1, $event_starting_block, $event_final_block, $block_id) {
 		if ($vote_effectiveness_function == "linear_decrease") {
 			$slope = -1*$effectiveness_param1;
@@ -3671,11 +3680,7 @@ class App {
 			$addr_text = "11".$vote_identifier;
 			$addr_text .= $this->random_string(34-strlen($addr_text));
 			
-			if ($option_index == 0) $is_destroy_address=1;
-			else $is_destroy_address=0;
-			
-			if ($option_index == 1) $is_separator_address=1;
-			else $is_separator_address=0;
+			list($is_destroy_address, $is_separator_address, $is_passthrough_address) = $this->option_index_to_special_address_types($option_index);
 			
 			$new_address_params = [
 				'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
@@ -3683,6 +3688,7 @@ class App {
 				'vote_identifier' => $vote_identifier,
 				'is_destroy_address' => $is_destroy_address,
 				'is_separator_address' => $is_separator_address,
+				'is_passthrough_address' => $is_passthrough_address,
 				'address' => $addr_text,
 				'time_created' => time()
 			];
@@ -3691,7 +3697,7 @@ class App {
 				$new_address_q .= ", user_id=:user_id";
 				$new_address_params['user_id'] = $account['user_id'];
 			}
-			$new_address_q .= ", primary_blockchain_id=:blockchain_id, option_index=:option_index, vote_identifier=:vote_identifier, is_destroy_address=:is_destroy_address, is_separator_address=:is_separator_address, address=:address, time_created=:time_created;";
+			$new_address_q .= ", primary_blockchain_id=:blockchain_id, option_index=:option_index, vote_identifier=:vote_identifier, is_destroy_address=:is_destroy_address, is_separator_address=:is_separator_address, is_passthrough_address=:is_passthrough_address, address=:address, time_created=:time_created;";
 			$this->run_query($new_address_q, $new_address_params);
 			$address_id = $this->last_insert_id();
 			$this->flush_buffers();
@@ -3969,6 +3975,14 @@ class App {
 	public function synchronizer_ok($thisuser, $provided_synchronizer_token) {
 		if ($thisuser->get_synchronizer_token() == $provided_synchronizer_token) return true;
 		else return false;
+	}
+	
+	public function option_index_to_special_address_types($option_index) {
+		$is_destroy_address = $option_index == 0 ? 1 : 0;
+		$is_separator_address = $option_index == 1 ? 1 : 0;
+		$is_passthrough_address = $option_index == 2 ? 1 : 0;
+		
+		return [$is_destroy_address, $is_separator_address, $is_passthrough_address];
 	}
 }
 ?>

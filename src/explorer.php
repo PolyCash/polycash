@@ -1008,6 +1008,9 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					if ($address['is_separator_address'] == 1) {
 						echo "<p>This is a separator address.</p>\n";
 					}
+					if ($address['is_passthrough_address'] == 1) {
+						echo "<p>This is a passthrough address.</p>\n";
+					}
 					
 					echo "<p>".ucwords($blockchain->db_blockchain['coin_name'])." balance: ".$app->format_bignum($blockchain->address_balance_at_block($address, false)/pow(10,$blockchain->db_blockchain['decimal_places']))." ".$blockchain->db_blockchain['coin_name_plural']."</p>\n";
 					

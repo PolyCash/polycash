@@ -51,7 +51,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 							$addresses_needed = $quantity;
 							$loop_count = 0;
 							do {
-								$addr_r = $app->run_query("SELECT * FROM addresses a WHERE a.primary_blockchain_id=:blockchain_id AND a.is_mine=1 AND a.user_id IS NULL AND a.is_destroy_address=0 AND a.is_separator_address=0 ORDER BY RAND() LIMIT 1;", [
+								$addr_r = $app->run_query("SELECT * FROM addresses a WHERE a.primary_blockchain_id=:blockchain_id AND a.is_mine=1 AND a.user_id IS NULL AND a.is_destroy_address=0 AND a.is_separator_address=0 AND a.is_passthrough_address=0 ORDER BY RAND() LIMIT 1;", [
 									'blockchain_id' => $sale_blockchain->db_blockchain['blockchain_id']
 								]);
 								
@@ -507,12 +507,13 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						echo '<div class="col-sm-2">'.$address['vote_identifier'].' (#'.$address['option_index'].')';
 						if ($address['is_destroy_address'] == 1) echo ' <font class="redtext">Destroy Address</font>';
 						if ($address['is_separator_address'] == 1) echo ' <font class="yellowtext">Separator Address</font>';
+						if ($address['is_passthrough_address'] == 1) echo ' <font class="yellowtext">Passthrough Address</font>';
 						echo '</div>';
 						
 						echo '<div class="col-sm-4"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$address['address'].'">'.$address['address'].'</a></div>';
 						
 						echo '<div class="col-sm-2">';
-						if ($address['is_separator_address'] == 0 && $address['is_destroy_address'] == 0) {
+						if ($address['is_separator_address'] == 0 && $address['is_destroy_address'] == 0 && $address['is_passthrough_address'] == 0) {
 							echo '<a href="" onclick="thisPageManager.manage_addresses('.$account['account_id'].', \'set_primary\', '.$address['address_id'].');">Set as Primary</a>';
 						}
 						echo '</div>';
