@@ -1438,7 +1438,11 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							</select>
 						</div>
 						<?php
-						echo "<p>You've placed ".$app->bets_summary($game, $net_stake, $num_wins, $num_losses, $num_unresolved, $num_refunded, $pending_stake, $net_delta, $resolved_fees_paid);
+						echo "<p>";
+						
+						echo "<a href=\"/accounts/?account_id=".$user_game['account_id']."\">Account #".$user_game['account_id']."</a> is worth ".$app->format_bignum(($game->account_balance($user_game['account_id'])+$game->user_pending_bets($user_game))/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_abbreviation']."<br/>\n";
+						
+						echo "You've placed ".$app->bets_summary($game, $net_stake, $num_wins, $num_losses, $num_unresolved, $num_refunded, $pending_stake, $net_delta, $resolved_fees_paid);
 						if ($unresolved_net_delta != 0) {
 							echo "<br/>You're ";
 							if ($unresolved_net_delta >= 0) echo 'up <font class="greentext">';

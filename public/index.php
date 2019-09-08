@@ -69,6 +69,7 @@ else {
 	
 	if ($requested_filename && is_file($src_path.$requested_filename)) {
 		$whitelisted_directories = [
+			$src_path,
 			$src_path."/ajax",
 			$src_path."/cron",
 			$src_path."/scripts",
