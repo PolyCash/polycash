@@ -166,6 +166,8 @@ class Game {
 			
 			$output_error = false;
 			$out_index = 0;
+			$first_passthrough_index = false;
+			
 			for ($out_index=0; $out_index<count($amounts); $out_index++) {
 				if (!$output_error) {
 					if ($address_ids) {
@@ -179,6 +181,8 @@ class Game {
 					}
 					
 					if ($address) {
+						if ($first_passthrough_index == false && $address['is_passthrough_address'] == 1) $first_passthrough_index = $out_index;
+						
 						if ($this->blockchain->db_blockchain['p2p_mode'] != "rpc") {
 							$new_output_params = [
 								'blockchain_id' => $this->blockchain->db_blockchain['blockchain_id'],
@@ -186,6 +190,7 @@ class Game {
 								'is_destroy' => $address['is_destroy_address'],
 								'is_separator' => $address['is_separator_address'],
 								'is_passthrough' => $address['is_passthrough_address'],
+								'is_receiver' => ($first_passthrough_index !== false && $address['is_destroy_address']+$address['is_separator_address']+$address['is_passthrough_address'] == 0) ? 1 : 0,
 								'address_id' => $address_id,
 								'option_index' => $address['option_index'],
 								'transaction_id' => $transaction_id,
@@ -2883,7 +2888,7 @@ class Game {
 	public function render_ios_in_transaction($in_out, &$db_transaction, $selected_game_io_id, $selected_address_id, $coins_per_vote, $last_block_id) {
 		$html = '<div class="explorer_ios">';
 		
-		$ios_q = "SELECT a.*, p.*, gio.is_coinbase AS is_coinbase, gio.colored_amount AS colored_amount, gio.is_resolved AS is_resolved, gio.game_io_id, gio.game_out_index, gio.game_io_id AS game_io_id, op.*, ev.*, p.votes, op.votes AS option_votes, op.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS sum_destroy_score, ev.effective_destroy_score AS sum_effective_destroy_score, io.spend_status, io.is_destroy, io.is_separator";
+		$ios_q = "SELECT a.*, p.*, gio.is_coinbase AS is_coinbase, gio.colored_amount AS colored_amount, gio.is_resolved AS is_resolved, gio.game_io_id, gio.game_out_index, gio.game_io_id AS game_io_id, op.*, ev.*, p.votes, op.votes AS option_votes, op.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS sum_destroy_score, ev.effective_destroy_score AS sum_effective_destroy_score, io.spend_status, io.is_destroy, io.is_separator, io.is_passthrough, io.is_receiver";
 		if ($in_out == "in") $ios_q .= ", t.tx_hash FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id";
 		else $ios_q .= " FROM transaction_ios io";
 		$ios_q .= " JOIN transaction_game_ios gio ON io.io_id=gio.io_id LEFT JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id JOIN addresses a ON io.address_id=a.address_id LEFT JOIN options op ON gio.option_id=op.option_id LEFT JOIN events ev ON op.event_id=ev.event_id LEFT JOIN options w ON ev.winning_option_id=w.option_id WHERE gio.game_id=:game_id AND io.";
@@ -2902,6 +2907,8 @@ class Game {
 			$html .= '" href="/explorer/games/'.$this->db_game['url_identifier'].'/addresses/'.$io['address'].'">';
 			if ($io['is_destroy'] == 1) $html .= '[D] ';
 			if ($io['is_separator'] == 1) $html .= '[S] ';
+			if ($io['is_passthrough'] == 1) $html .= '[P] ';
+			if ($io['is_receiver'] == 1) $html .= '[R] ';
 			$html .= $io['address']."</a>";
 			if (!empty($io['option_id'])) $html .= " (<a href=\"/explorer/games/".$this->db_game['url_identifier']."/events/".$io['event_index']."\">".$io['name']."</a>)";
 			$html .= "<br/>\n";

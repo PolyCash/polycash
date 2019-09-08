@@ -1151,7 +1151,7 @@ if ($thisuser && $game) {
 							It's recommended that you select an auto strategy so that your account will gain value while you sleep. You can change your auto strategy at any time by logging in and clicking the "Settings" tab to the left.
 						</p>
 						<p>
-							<button class="btn btn-primary" onclick="$('#intro_message').modal('hide'); show_featured_strategies();">Choose an auto-strategy</button>
+							<button class="btn btn-primary" onclick="$('#intro_message').modal('hide'); thisPageManager.show_featured_strategies();">Choose an auto-strategy</button>
 						</p>
 					</div>
 				</div>

@@ -450,6 +450,74 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		}
 		else $app->output_message(4, "Invalid game ID.", false);
 	}
+	else if ($action == "spend_unresolved") {
+		if ($_REQUEST['whole_or_part'] == "whole") {
+			$address_text = $_REQUEST['address'];
+			
+			if (!empty($address_text)) {
+				$fee_float = (float) $_REQUEST['fee'];
+				$game_io_id = (int) $_REQUEST['game_io_id'];
+				$account_id = (int) $_REQUEST['account_id'];
+				
+				$account = $app->fetch_account_by_id($account_id);
+				
+				if ($account && $account['user_id'] == $thisuser->db_user['user_id']) {
+					$game_io = $app->fetch_game_io_by_id($game_io_id);
+					
+					if ($game_io) {
+						$address_key = $app->fetch_address_key_by_address_in_account($game_io['address_id'], $account['account_id']);
+						
+						if ($address_key) {
+							$db_game = $app->fetch_game_by_id($game_io['game_id']);
+							$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+							$game = new Game($blockchain, $db_game['game_id']);
+							
+							$fee_int = (int) pow(10, $game->db_game['decimal_places']);
+							
+							$io_nonfee_amount = $game_io['amount'] - $fee_int;
+							
+							if ($io_nonfee_amount > 0) {
+								$new_normal_address = $app->new_normal_address_key($account['currency_id'], $account);
+								$passthrough_address = $app->fetch_addresses_in_account($account, 2, 1);
+								
+								if ($new_normal_address && count($passthrough_address) > 0) {
+									$passthrough_address = $passthrough_address[0];
+									$spend_to_address = $blockchain->create_or_fetch_address($address_text, true, false, false, false, false);
+									
+									if ($spend_to_address['is_destroy_address'] == 0 && $spend_to_address['is_separator_address'] == 0 && $spend_to_address['is_passthrough_address'] == 0) {
+										$normal_amount = floor($io_nonfee_amount/3);
+										$passthrough_amount = floor($io_nonfee_amount/3);
+										$receiver_amount = $io_nonfee_amount - $normal_amount - $passthrough_amount;
+										
+										if ($normal_amount > 0 && $passthrough_amount > 0 && $receiver_amount > 0) {
+											$error_message = "";
+											
+											$transaction_id = $blockchain->create_transaction("transaction", [$normal_amount, $passthrough_amount, $receiver_amount], false, [$game_io['io_id']], [$new_normal_address['address_id'], $passthrough_address['address_id'], $spend_to_address['address_id']], $fee_int, $error_message);
+											
+											if ($transaction_id) {
+												$transaction = $app->fetch_transaction_by_id($transaction_id);
+												$app->output_message(1, "/explorer/games/".$game->db_game['url_identifier']."/transactions/".$transaction['tx_hash']."/", false);
+											}
+											else $app->output_message(13, "TX Error: ".$error_message, false);
+										}
+										else $app->output_message(12, "Is your UTXO big enough to spend?", false);
+									}
+									else $app->output_message(11, "Please use a normal address.", false);
+								}
+								else $app->output_message(10, "Error fetching your addresses.", false);
+							}
+							else $app->output_message(9, "UTXO not big enough to afford your fee.", false);
+						}
+						else $app->output_message(8, "The game IO ID you specified does not match this account ID.", false);
+					}
+					else $app->output_message(7, "You supplied an invalid game IO ID.", false);
+				}
+				else $app->output_message(6, "The account ID you specified does not match your user account.", false);
+			}
+			else $app->output_message(5, "Please specify an address.", false);
+		}
+		else $app->output_message(4, "Please specify whole_or_part", false);
+	}
 	else $app->output_message(3, "This action is not yet implemented.", false);
 }
 else $app->output_message(2, "You must be logged in to complete this step.", false);

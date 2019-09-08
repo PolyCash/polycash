@@ -1146,7 +1146,63 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$account = $app->fetch_account_by_user_and_address($thisuser->db_user['user_id'], $io['address_id']);
 						
 						if ($account) {
-							echo 'This UTXO is in your account <a href="/accounts/?account_id='.$account['account_id'].'">'.$account['account_name']."</a><br/>\n";
+							echo '<p>This UTXO is in your account <a href="/accounts/?account_id='.$account['account_id'].'">'.$account['account_name']."</a><br/>\n";
+							
+							if (!empty($io['is_coinbase'])) {
+								$user_game = $app->fetch_user_game_by_account_id($account['account_id']);
+								
+								echo 'This is <a href="/explorer/games/'.$game->db_game['url_identifier'].'/my_bets/?user_game_id='.$user_game['user_game_id'].'&selected_io_id='.$io['io_id'].'">one of your bets</a>. ';
+								
+								if ($io['spend_status'] != "spent" && $io['is_resolved'] == 0) {
+									?>
+									You can <a href="" onclick="$('#spend_unresolved_input').modal('show'); return false;">spend this UTXO</a>.
+									
+									<div class="modal fade" id="spend_unresolved_input" style="display: none;">
+										<div class="modal-dialog modal-lg">
+											<div class="modal-content">
+												<div class="modal-header">
+													<h4 class="modal-title">Spend Unresolved UTXO #<?php echo $io['game_io_index']; ?></h4>
+												</div>
+												<div class="modal-body">
+													<div class="form-group">
+														<label for="spend_unresolved_whole_or_part">Do you want to send this whole contract or just part of it?</label>
+														<select class="form-control" id="spend_unresolved_whole_or_part" onchange="thisPageManager.spend_unresolved_step(<?php echo $account['account_id'].", ".$io['game_io_id']; ?>, 'whole_or_part');">
+															<option value="">-- Please Select --</option>
+															<option value="whole">Send the whole contract</option>
+															<option value="part">Send part of it</option>
+														</select>
+													</div>
+													
+													<div id="spend_unresolved_whole" style="display: none;">
+														<form onsubmit="thisPageManager.spend_unresolved_step(<?php echo $account['account_id'].", ".$io['game_io_id']; ?>, 'spend_whole'); return false;">
+															<div class="form-group">
+																<label for="spend_unresolved_whole_address">Please enter an address:</label>
+																<input type="text" class="form-control" id="spend_unresolved_whole_address" required="true" />
+															</div>
+															<div class="form-group">
+																<label for="spend_unresolved_whole_fee">How much do you want to pay in fees?</label>
+																<div class="row">
+																	<div class="col-sm-6">
+																		<input type="text" class="form-control" id="spend_unresolved_whole_fee" placeholder="0.0001" required="true" />
+																	</div>
+																	<div class="col-sm-6 form-control-static">
+																		<?php echo $blockchain->db_blockchain['coin_name_plural']; ?>
+																	</div>
+																</div>
+															</div>
+															<input type="submit" class="btn btn-primary" value="Confirm &amp; Spend" />
+														</form>
+														<div id="spend_unresolved_whole_message" style="display: none; margin-top: 15px;"></div>
+													</div>
+													<div id="spend_unresolved_part" style="display: none;">This feature is not yet implemented</div>
+												</div>
+											</div>
+										</div>
+									</div>
+									<?php
+								}
+							}
+							echo "</p>\n";
 						}
 					}
 					
@@ -1381,7 +1437,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							]
 						];
 						
-						$my_bets_base_q = "SELECT gio.game_io_id, gio.colored_amount, gio.option_id, gio.is_coinbase, gio.is_resolved, gio.game_out_index, p.ref_block_id, p.ref_round_id, p.ref_coin_blocks, p.ref_coin_rounds, p.effectiveness_factor, p.effective_destroy_amount, p.destroy_amount, p.votes, p.".$game->db_game['payout_weight']."s_destroyed, p.game_io_id AS parent_game_io_id, io.spend_transaction_id, io.spend_status, ev.*, ev.effective_destroy_score AS sum_effective_destroy_score, et.vote_effectiveness_function, et.effectiveness_param1, o.effective_destroy_score AS option_effective_destroy_score, o.unconfirmed_effective_destroy_score, o.unconfirmed_votes, o.name AS option_name, o.event_option_index, o.entity_id, ev.destroy_score AS sum_destroy_score, p.votes, o.votes AS option_votes, t.tx_hash FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transactions t ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN events ev ON o.event_id=ev.event_id LEFT JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id WHERE gio.game_id=:game_id AND ug.user_game_id=:user_game_id AND gio.is_coinbase=1";
+						$my_bets_base_q = "SELECT gio.game_io_id, gio.colored_amount, gio.option_id, gio.is_coinbase, gio.is_resolved, gio.game_out_index, p.ref_block_id, p.ref_round_id, p.ref_coin_blocks, p.ref_coin_rounds, p.effectiveness_factor, p.effective_destroy_amount, p.destroy_amount, p.votes, p.".$game->db_game['payout_weight']."s_destroyed, p.game_io_id AS parent_game_io_id, io.io_id, io.spend_transaction_id, io.spend_status, ev.*, ev.effective_destroy_score AS sum_effective_destroy_score, et.vote_effectiveness_function, et.effectiveness_param1, o.effective_destroy_score AS option_effective_destroy_score, o.unconfirmed_effective_destroy_score, o.unconfirmed_votes, o.name AS option_name, o.event_option_index, o.entity_id, ev.destroy_score AS sum_destroy_score, p.votes, o.votes AS option_votes, t.tx_hash FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id JOIN currency_accounts ca ON ak.account_id=ca.account_id JOIN user_games ug ON ug.account_id=ca.account_id JOIN transaction_ios io ON a.address_id=io.address_id JOIN transactions t ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id JOIN options o ON gio.option_id=o.option_id JOIN events ev ON o.event_id=ev.event_id LEFT JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id WHERE gio.game_id=:game_id AND ug.user_game_id=:user_game_id AND gio.is_coinbase=1";
 						
 						$my_binary_bets = $app->run_query($my_bets_base_q." AND ev.payout_rule='binary' ORDER BY ev.event_index DESC, gio.game_io_index DESC;", [
 							'game_id' => $game->db_game['game_id'],
@@ -1391,6 +1447,8 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						
 						while ($bet = $my_binary_bets->fetch()) {
 							$this_bet_html = $app->render_binary_bet($bet, $game, $coins_per_vote, $current_round, $net_delta, $net_stake, $pending_stake, $resolved_fees_paid, $num_wins, $num_losses, $num_unresolved, $num_refunded, 'div', $last_block_id);
+							
+							if (isset($_REQUEST['selected_io_id']) && $bet['io_id'] == $_REQUEST['selected_io_id']) $this_bet_html = "<b>".$this_bet_html."</b>\n";
 							
 							if (!empty($this_bet_html)) {
 								$this_bet_html = '<div class="row">'.$this_bet_html."</div>\n";

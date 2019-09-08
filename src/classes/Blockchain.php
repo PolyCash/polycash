@@ -566,10 +566,12 @@ class Blockchain {
 			$output_is_destroy = [];
 			$output_is_separator = [];
 			$output_is_passthrough = [];
+			$output_is_receiver = [];
 			$separator_io_ids = [];
 			$output_sum = 0;
 			$output_destroy_sum = 0;
 			$last_regular_output_index = false;
+			$first_passthrough_index = false;
 			
 			if ($this->db_blockchain['p2p_mode'] != "rpc") {
 				$outputs = [];
@@ -586,7 +588,10 @@ class Blockchain {
 				]);
 				
 				$out_index=0;
+				
 				while ($out_io = $out_ios->fetch()) {
+					if ($first_passthrough_index == false && $out_io['is_passthrough_address'] == 1) $first_passthrough_index = $out_index;
+					
 					$outputs[$out_index] = array("value"=>$out_io['amount']/pow(10,$this->db_blockchain['decimal_places']));
 					
 					$output_address = $this->create_or_fetch_address($out_io['address'], true, false, true, false, false);
@@ -597,13 +602,17 @@ class Blockchain {
 					$output_is_destroy[$out_index] = $out_io['is_destroy_address'];
 					$output_is_separator[$out_index] = $out_io['is_separator_address'];
 					$output_is_passthrough[$out_index] = $out_io['is_passthrough_address'];
+					
+					$output_is_receiver[$out_index] = 0;
+					if ($first_passthrough_index !== false && $out_io['is_destroy_address'] == 0 && $out_io['is_separator_address'] == 0 && $out_io['is_passthrough_address'] == 0) $output_is_receiver[$out_index] = 1;
+					
 					if ($output_is_separator[$out_index] == 1) array_push($separator_io_ids, $out_io['io_id']);
 					
 					$output_sum += $out_io['amount'];
 					if ($out_io['is_destroy_address'] == 1) {
 						$output_destroy_sum += $out_io['amount'];
 					}
-					else if ($out_io['is_separator_address'] == 0 && $out_io['is_passthrough_address'] == 0) $last_regular_output_index = $out_index;
+					else if ($out_io['is_separator_address'] == 0 && $out_io['is_passthrough_address'] == 0 && $output_is_receiver[$out_index] == 0) $last_regular_output_index = $out_index;
 					$out_index++;
 				}
 			}
@@ -627,6 +636,8 @@ class Blockchain {
 						if (strlen($address_text) > 50) $address_text = substr($address_text, 0, 50);
 						
 						$output_address = $this->create_or_fetch_address($address_text, true, false, true, false, false);
+						
+						if ($first_passthrough_index == false && $output_address['is_passthrough_address'] == 1) $first_passthrough_index = $out_index;
 						
 						$new_io_amount = (int)($outputs[$out_index]["value"]*pow(10,$this->db_blockchain['decimal_places']));
 						
@@ -671,15 +682,23 @@ class Blockchain {
 							$new_io_q .= ", create_block_id=:create_block_id";
 							$new_io_params['create_block_id'] = $block_height;
 						}
-						$new_io_q .= ", is_destroy=:is_destroy, is_separator=:is_separator, is_passthrough=:is_passthrough;";
-						$this->app->run_query($new_io_q, $new_io_params);
-						$io_id = $this->app->last_insert_id();
+						$new_io_q .= ", is_destroy=:is_destroy, is_separator=:is_separator, is_passthrough=:is_passthrough";
 						
-						$output_io_ids[$out_index] = $io_id;
 						$output_io_address_ids[$out_index] = $output_address['address_id'];
 						$output_is_destroy[$out_index] = $output_address['is_destroy_address'];
 						$output_is_separator[$out_index] = $output_address['is_separator_address'];
 						$output_is_passthrough[$out_index] = $output_address['is_passthrough_address'];
+						
+						$output_is_receiver[$out_index] = 0;
+						if ($first_passthrough_index !== false && $output_is_destroy[$out_index] == 0 && $output_is_separator[$out_index] == 0 && $output_is_passthrough[$out_index] == 0) $output_is_receiver[$out_index] = 1;
+						
+						$new_io_params['is_receiver'] = $output_is_receiver[$out_index];
+						$new_io_q .= ", is_receiver=:is_receiver";
+						
+						$this->app->run_query($new_io_q, $new_io_params);
+						$io_id = $this->app->last_insert_id();
+						
+						$output_io_ids[$out_index] = $io_id;
 						if ($output_is_separator[$out_index] == 1) array_push($separator_io_ids, $io_id);
 						
 						$output_sum += $outputs[$out_index]["value"]*pow(10,$this->db_blockchain['decimal_places']);
@@ -1287,7 +1306,7 @@ class Blockchain {
 		]);
 		$transaction_id = $this->app->last_insert_id();
 		
-		$this->app->run_query("INSERT INTO transaction_ios SET spend_status='unspent', blockchain_id=:blockchain_id, user_id=NULL, address_id=:address_id, is_destroy=0, is_separator=0, is_passthrough=0, create_transaction_id=:create_transaction_id, amount=:amount, create_block_id='0';", [
+		$this->app->run_query("INSERT INTO transaction_ios SET spend_status='unspent', blockchain_id=:blockchain_id, user_id=NULL, address_id=:address_id, is_destroy=0, is_separator=0, is_passthrough=0, is_receiver=0, create_transaction_id=:create_transaction_id, amount=:amount, create_block_id='0';", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'address_id' => $output_address['address_id'],
 			'create_transaction_id' => $transaction_id,
@@ -1874,12 +1893,16 @@ class Blockchain {
 			
 			$output_error = false;
 			$out_index = 0;
+			$first_passthrough_index = false;
+			
 			for ($out_index=0; $out_index<count($amounts); $out_index++) {
 				if (!$output_error) {
 					$address_id = $address_ids[$out_index];
 					
 					if ($address_id) {
 						$address = $this->app->fetch_address_by_id($address_id);
+						
+						if ($first_passthrough_index == false && $address['is_passthrough_address'] == 1) $first_passthrough_index = $out_index;
 						
 						if ($this->db_blockchain['p2p_mode'] != "rpc") {
 							$spend_status = $type == "coinbase" ? "unspent" : "unconfirmed";
@@ -1891,6 +1914,7 @@ class Blockchain {
 								'is_destroy' => $address['is_destroy_address'],
 								'is_separator' => $address['is_separator_address'],
 								'is_passthrough' => $address['is_passthrough_address'],
+								'is_receiver' => ($first_passthrough_index !== false && $address['is_destroy_address']+$address['is_separator_address']+$address['is_passthrough_address'] == 0) ? 1 : 0,
 								'address_id' => $address_id,
 								'option_index' => $address['option_index'],
 								'create_transaction_id' => $transaction_id,
@@ -1901,7 +1925,7 @@ class Blockchain {
 								$new_output_q .= "user_id=:user_id, ";
 								$new_output_params['user_id'] = $address['user_id'];
 							}
-							$new_output_q .= "is_destroy=:is_destroy, is_separator=:is_separator, is_passthrough=:is_passthrough, address_id=:address_id, option_index=:option_index, ";
+							$new_output_q .= "is_destroy=:is_destroy, is_separator=:is_separator, is_passthrough=:is_passthrough, is_receiver=:is_receiver, address_id=:address_id, option_index=:option_index, ";
 							
 							if ($block_id !== false) {
 								if ($input_sum == 0) $output_cbd = 0;
@@ -2159,13 +2183,17 @@ class Blockchain {
 			]);
 		}
 		
+		$first_passthrough_index = false;
+		
 		for ($out_index=0; $out_index<count($tx['outputs']); $out_index++) {
 			$tx_output = get_object_vars($tx['outputs'][$out_index]);
 			$db_address = $this->create_or_fetch_address($tx_output['address'], true, false, false, false, false);
 			
+			if ($first_passthrough_index == false && $db_address['is_passthrough_address'] == 1) $first_passthrough_index = $out_index;
+			
 			$new_output_q = "INSERT INTO transaction_ios SET blockchain_id=:blockchain_id, out_index=:out_index, address_id=:address_id, option_index=:option_index, create_block_id=:create_block_id, create_transaction_id=:create_transaction_id, amount=:amount";
 			if ($block_height !== false) $new_output_q .= ", spend_status='unspent'";
-			$new_output_q .= ", is_destroy=:is_destroy, is_separator=:is_separator, is_passthrough=:is_passthrough;";
+			$new_output_q .= ", is_destroy=:is_destroy, is_separator=:is_separator, is_passthrough=:is_passthrough, is_receiver=:is_receiver;";
 			$this->app->run_query($new_output_q, [
 				'blockchain_id' => $this->db_blockchain['blockchain_id'],
 				'out_index' => $out_index,
@@ -2176,7 +2204,8 @@ class Blockchain {
 				'amount' => $tx_output['amount'],
 				'is_destroy' => $db_address['is_destroy_address'],
 				'is_separator' => $db_address['is_separator_address'],
-				'is_passthrough' => $db_address['is_passthrough_address']
+				'is_passthrough' => $db_address['is_passthrough_address'],
+				'is_receiver' => ($first_passthrough_index !== false && $db_address['is_destroy_address']+$db_address['is_separator_address']+$db_address['is_passthrough_address'] == 0) ? 1 : 0
 			]);
 		}
 		

@@ -3984,5 +3984,15 @@ class App {
 		
 		return [$is_destroy_address, $is_separator_address, $is_passthrough_address];
 	}
+	
+	public function fetch_user_game_by_account_id($account_id) {
+		return $this->run_query("SELECT * FROM user_games WHERE account_id=:account_id;", ['account_id' => $account_id])->fetch();
+	}
+	
+	public function fetch_game_io_by_id($game_io_id) {
+		return $this->run_query("SELECT * FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_io_id=:game_io_id;", [
+			'game_io_id' => $game_io_id
+		])->fetch();
+	}
 }
 ?>
