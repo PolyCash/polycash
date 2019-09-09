@@ -87,14 +87,20 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 			if ($db_address) {
 				array_push($address_ids, $db_address['address_id']);
 				
-				$separator_amount = floor($separator_frac*$amounts[$i]);
-				$new_amount = $amounts[$i]-$separator_amount;
-				
-				array_push($new_amounts, $new_amount);
-				array_push($new_address_ids, $address_ids[$i]);
-				
-				array_push($new_amounts, $separator_amount);
-				array_push($new_address_ids, $separator_addresses[$i%count($separator_addresses)]['address_id']);
+				if (count($separator_addresses) > 0) {
+					$separator_amount = floor($separator_frac*$amounts[$i]);
+					$new_amount = $amounts[$i]-$separator_amount;
+					
+					array_push($new_amounts, $new_amount);
+					array_push($new_address_ids, $address_ids[$i]);
+					
+					array_push($new_amounts, $separator_amount);
+					array_push($new_address_ids, $separator_addresses[$i%count($separator_addresses)]['address_id']);
+				}
+				else {
+					array_push($new_amounts, $amounts[$i]);
+					array_push($new_address_ids, $address_ids[$i]);
+				}
 			}
 			else {
 				$app->output_message(9, "Error: no address for option #".$option_ids[$i], false);

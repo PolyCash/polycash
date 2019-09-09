@@ -705,7 +705,7 @@ class Blockchain {
 						if ($output_address['is_destroy_address'] == 1) {
 							$output_destroy_sum += $outputs[$out_index]["value"]*pow(10,$this->db_blockchain['decimal_places']);
 						}
-						else if ($output_address['is_separator_address'] == 0 && $output_address['is_passthrough_address'] == 0) $last_regular_output_index = $out_index;
+						else if ($output_address['is_separator_address'] == 0 && $output_address['is_passthrough_address'] == 0 && $output_is_receiver[$out_index] == 0) $last_regular_output_index = $out_index;
 					}
 				}
 			}
@@ -736,15 +736,19 @@ class Blockchain {
 					$tx_chain_destroy_sum = 0;
 					$tx_chain_output_sum = 0;
 					$tx_chain_separator_sum = 0;
+					$tx_chain_passthrough_sum = 0;
+					$tx_chain_receiver_sum = 0;
 					
 					for ($out_index=0; $out_index<count($outputs); $out_index++) {
 						$tx_chain_output_sum += $outputs[$out_index]["value"]*pow(10,$color_game->db_game['decimal_places']);
 						if ($output_is_destroy[$out_index] == 1) $tx_chain_destroy_sum += $outputs[$out_index]["value"]*pow(10,$color_game->db_game['decimal_places']);
 						if ($output_is_separator[$out_index] == 1) $tx_chain_separator_sum += $outputs[$out_index]["value"]*pow(10,$color_game->db_game['decimal_places']);
+						if ($output_is_passthrough[$out_index] == 1) $tx_chain_passthrough_sum += $outputs[$out_index]["value"]*pow(10,$color_game->db_game['decimal_places']);
+						if ($output_is_receiver[$out_index] == 1) $tx_chain_receiver_sum += $outputs[$out_index]["value"]*pow(10,$color_game->db_game['decimal_places']);
 					}
-					$tx_chain_regular_sum = $tx_chain_output_sum - $tx_chain_destroy_sum - $tx_chain_separator_sum;
+					$tx_chain_regular_sum = $tx_chain_output_sum - $tx_chain_destroy_sum - $tx_chain_separator_sum - $tx_chain_passthrough_sum - $tx_chain_receiver_sum;
 					
-					$tx_game_nondestroy_amount = floor($tx_game_input_sum*(($tx_chain_regular_sum+$tx_chain_separator_sum)/$tx_chain_output_sum));
+					$tx_game_nondestroy_amount = floor($tx_game_input_sum*(($tx_chain_regular_sum+$tx_chain_separator_sum+$tx_chain_passthrough_sum+$tx_chain_receiver_sum)/$tx_chain_output_sum));
 					$tx_game_destroy_amount = $tx_game_input_sum-$tx_game_nondestroy_amount;
 					
 					$game_amount_sum = 0;
@@ -752,11 +756,11 @@ class Blockchain {
 					$game_out_index = 0;
 					$next_separator_i = 0;
 					
-					$insert_q = "INSERT INTO transaction_game_ios (game_id, is_coinbase, io_id, game_out_index, colored_amount, destroy_amount, ref_block_id, ref_coin_blocks, ref_round_id, ref_coin_rounds, option_id, event_id, effectiveness_factor, effective_destroy_amount, is_resolved) VALUES ";
+					$insert_q = "INSERT INTO transaction_game_ios (game_id, is_coinbase, io_id, game_out_index, colored_amount, destroy_amount, ref_block_id, ref_coin_blocks, ref_round_id, ref_coin_rounds, option_id, contract_parts, event_id, effectiveness_factor, effective_destroy_amount, is_resolved) VALUES ";
 					$num_gios_added = 0;
 					
 					for ($out_index=0; $out_index<count($outputs); $out_index++) {
-						if ($output_is_destroy[$out_index] == 0 && $output_is_separator[$out_index] == 0) {
+						if ($output_is_destroy[$out_index] == 0 && $output_is_separator[$out_index] == 0 && $output_is_passthrough[$out_index] == 0 && $output_is_receiver[$out_index] == 0) {
 							$payout_insert_q = "";
 							$io_amount = $outputs[$out_index]["value"]*pow(10,$color_game->db_game['decimal_places']);
 							
@@ -795,19 +799,19 @@ class Blockchain {
 									
 									$effective_destroy_amount = floor($this_destroy_amount*$effectiveness_factor);
 									
-									$insert_q .= "'".$option_id."', '".$event->db_event['event_id']."', '".$effectiveness_factor."', '".$effective_destroy_amount."', 0";
+									$insert_q .= "'".$option_id."', '".$color_game->db_game['default_contract_parts']."', '".$event->db_event['event_id']."', '".$effectiveness_factor."', '".$effective_destroy_amount."', 0";
 									
 									$payout_is_resolved = 0;
 									if ($this_destroy_amount == 0 && $color_game->db_game['exponential_inflation_rate'] == 0) $payout_is_resolved=1;
 									$this_is_resolved = $payout_is_resolved;
 									if ($using_separator) $this_is_resolved = 1;
 									
-									$payout_insert_q = "('".$color_game->db_game['game_id']."', 1, '".$payout_io_id."', '".$game_out_index."', 0, 0, null, 0, null, 0, '".$option_id."', '".$event->db_event['event_id']."', null, 0, ".$payout_is_resolved."), ";
+									$payout_insert_q = "('".$color_game->db_game['game_id']."', 1, '".$payout_io_id."', '".$game_out_index."', 0, 0, null, 0, null, 0, '".$option_id."', '".$color_game->db_game['default_contract_parts']."', '".$event->db_event['event_id']."', null, 0, ".$payout_is_resolved."), ";
 									$game_out_index++;
 								}
-								else $insert_q .= "null, null, null, 0, 1";
+								else $insert_q .= "null, null, null, null, 0, 1";
 							}
-							else $insert_q .= "null, null, null, 0, 1";
+							else $insert_q .= "null, null, null, null, 0, 1";
 							
 							$insert_q .= "), ";
 							if ($payout_insert_q != "") $insert_q .= $payout_insert_q;
@@ -1527,6 +1531,8 @@ class Blockchain {
 				$html .= ' href="/explorer/blockchains/'.$this->db_blockchain['url_identifier'].'/addresses/'.$input['address'].'">';
 				if ($input['is_destroy'] == 1) $html .= '[D] ';
 				if ($input['is_separator'] == 1) $html .= '[S] ';
+				if ($input['is_passthrough'] == 1) $html .= '[P] ';
+				if ($input['is_receiver'] == 1) $html .= '[R] ';
 				$html .= $input['address'].'</a>';
 				
 				$html .= "<br/>\n";
@@ -1555,6 +1561,8 @@ class Blockchain {
 			$html .= ' href="/explorer/blockchains/'.$this->db_blockchain['url_identifier'].'/addresses/'.$output['address'].'">';
 			if ($output['is_destroy'] == 1) $html .= '[D] ';
 			if ($output['is_separator'] == 1) $html .= '[S] ';
+			if ($output['is_passthrough'] == 1) $html .= '[P] ';
+			if ($output['is_receiver'] == 1) $html .= '[R] ';
 			$html .= $output['address']."</a><br/>\n";
 			
 			if ($output['io_id'] == $selected_io_id) $html .= "<b>";

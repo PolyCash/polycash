@@ -29,7 +29,7 @@ class Game {
 		foreach ($params as $var => $val) {
 			$new_game_q .= $var."=:".$var.", ";
 		}
-		$new_game_q = substr($new_game_q, 0, strlen($new_game_q)-2).";";
+		$new_game_q = substr($new_game_q, 0, -2).";";
 		$blockchain->app->run_query($new_game_q, $params);
 		$game_id = $blockchain->app->last_insert_id();
 		
@@ -201,7 +201,7 @@ class Game {
 								$new_output_q .= "user_id=:user_id, ";
 								$new_output_params['user_id'] = $address['user_id'];
 							}
-							$new_output_q .= "is_destroy=:is_destroy, is_separator=:is_separator, is_passthrough=:is_passthrough, address_id=:address_id, option_index=:option_index, ";
+							$new_output_q .= "is_destroy=:is_destroy, is_separator=:is_separator, is_passthrough=:is_passthrough, is_receiver=:is_receiver, address_id=:address_id, option_index=:option_index, ";
 							
 							if ($block_id !== false) {
 								if ($input_sum == 0) $output_cbd = 0;
@@ -1722,7 +1722,7 @@ class Game {
 		for ($i=0; $i<count($this->current_events); $i++) {
 			$event_ids .= $this->current_events[$i]->db_event['event_id'].",";
 		}
-		$event_ids = substr($event_ids, 0, strlen($event_ids)-1);
+		$event_ids = substr($event_ids, 0, -1);
 		
 		return $event_ids;
 	}
@@ -1774,7 +1774,7 @@ class Game {
 			
 			if ($event->db_event['option_block_rule'] == "football_match") $js .= 'games['.$game_index.'].events['.$i.'].refresh_time_estimate();'."\n";
 		}
-		if ($event_ids != "") $event_ids = substr($event_ids, 0, strlen($event_ids)-1);
+		if ($event_ids != "") $event_ids = substr($event_ids, 0, -1);
 		
 		if (!$include_content) {
 			$js .= 'document.getElementById("game'.$game_index.'_events").innerHTML = '.json_encode($html).';';
@@ -1796,7 +1796,7 @@ class Game {
 		while ($io = $mature_ios->fetch()) {
 			$ids_csv .= $io['io_id'].",";
 		}
-		if ($ids_csv != "") $ids_csv = substr($ids_csv, 0, strlen($ids_csv)-1);
+		if ($ids_csv != "") $ids_csv = substr($ids_csv, 0, -1);
 		return $ids_csv;
 	}
 	
@@ -2585,15 +2585,19 @@ class Game {
 						$tx_chain_output_sum = 0;
 						$tx_chain_destroy_sum = 0;
 						$tx_chain_separator_sum = 0;
+						$tx_chain_passthrough_sum = 0;
+						$tx_chain_receiver_sum = 0;
 						
 						while ($output_io = $output_ios->fetch()) {
 							$tx_chain_output_sum += $output_io['amount'];
 							if ($output_io['is_destroy_address'] == 1) $tx_chain_destroy_sum += $output_io['amount'];
 							if ($output_io['is_separator_address'] == 1) $tx_chain_separator_sum += $output_io['amount'];
+							if ($output_io['is_passthrough_address'] == 1) $tx_chain_passthrough_sum += $output_io['amount'];
+							if ($output_io['is_receiver'] == 1) $tx_chain_receiver_sum += $output_io['amount'];
 						}
-						$tx_chain_regular_sum = $tx_chain_output_sum - $tx_chain_destroy_sum - $tx_chain_separator_sum;
+						$tx_chain_regular_sum = $tx_chain_output_sum - $tx_chain_destroy_sum - $tx_chain_separator_sum - $tx_chain_passthrough_sum - $tx_chain_receiver_sum;
 						
-						$tx_game_nondestroy_amount = floor($tx_game_input_sum*(($tx_chain_regular_sum+$tx_chain_separator_sum)/$tx_chain_output_sum));
+						$tx_game_nondestroy_amount = floor($tx_game_input_sum*(($tx_chain_regular_sum+$tx_chain_separator_sum+$tx_chain_passthrough_sum+$tx_chain_receiver_sum)/$tx_chain_output_sum));
 						$tx_game_destroy_amount = $tx_game_input_sum-$tx_game_nondestroy_amount;
 						
 						$game_destroy_sum = 0;
@@ -2601,12 +2605,15 @@ class Game {
 						$separator_outputs = $this->blockchain->app->run_query("SELECT io.*, a.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:transaction_id AND a.is_separator_address=1 ORDER BY io.out_index ASC;", ['transaction_id'=>$db_transaction['transaction_id']])->fetchAll();
 						$next_separator_i = 0;
 						
-						$regular_outputs = $this->blockchain->app->run_query("SELECT io.*, a.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:transaction_id AND a.is_destroy_address=0 AND a.is_separator_address=0 ORDER BY io.out_index ASC;", ['transaction_id'=>$db_transaction['transaction_id']]);
+						$regular_outputs = $this->blockchain->app->run_query("SELECT io.*, a.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:transaction_id AND a.is_destroy_address=0 AND a.is_separator_address=0 AND a.is_passthrough_address=0 AND io.is_receiver=0 ORDER BY io.out_index ASC;", ['transaction_id'=>$db_transaction['transaction_id']]);
 						$num_regular_outputs = $regular_outputs->rowCount();
 						$output_i = 0;
 						
+						$this->blockchain->app->dbh->beginTransaction();
+						$this->blockchain->app->run_query("DELETE gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.create_transaction_id=:transaction_id;", ['transaction_id'=>$db_transaction['transaction_id']]);
+						
 						if ($num_regular_outputs > 0) {
-							$insert_q = "INSERT INTO transaction_game_ios (game_id, io_id, game_out_index, game_io_index, is_coinbase, colored_amount, destroy_amount, coin_blocks_destroyed, coin_rounds_destroyed, create_block_id, create_round_id, option_id, event_id, effectiveness_factor, votes, effective_destroy_amount, is_resolved) VALUES ";
+							$insert_q = "INSERT INTO transaction_game_ios (game_id, io_id, game_out_index, game_io_index, is_coinbase, colored_amount, destroy_amount, coin_blocks_destroyed, coin_rounds_destroyed, create_block_id, create_round_id, option_id, contract_parts, event_id, effectiveness_factor, votes, effective_destroy_amount, is_resolved) VALUES ";
 							
 							while ($regular_output = $regular_outputs->fetch()) {
 								$payout_insert_q = "";
@@ -2653,23 +2660,21 @@ class Game {
 										$this_is_resolved = $payout_is_resolved;
 										if ($using_separator) $this_is_resolved = 1;
 										
-										$insert_q .= "'".$option_id."', '".$events_by_option_id[$option_id]->db_event['event_id']."', '".$effectiveness_factor."', '".$votes."', '".$effective_destroy_amount."', ".$this_is_resolved;
+										$insert_q .= "'".$option_id."', '".$this->db_game['default_contract_parts']."', '".$events_by_option_id[$option_id]->db_event['event_id']."', '".$effectiveness_factor."', '".$votes."', '".$effective_destroy_amount."', ".$this_is_resolved;
 										
 										$game_io_index++;
-										$payout_insert_q = "('".$this->db_game['game_id']."', '".$payout_io_id."', '".$game_out_index."', '".$game_io_index."', 1, 0, 0, 0, 0, '".$block_height."', '".$round_id."', '".$option_id."', '".$events_by_option_id[$option_id]->db_event['event_id']."', null, 0, 0, ".$payout_is_resolved."), ";
+										$payout_insert_q = "('".$this->db_game['game_id']."', '".$payout_io_id."', '".$game_out_index."', '".$game_io_index."', 1, 0, 0, 0, 0, '".$block_height."', '".$round_id."', '".$option_id."', '".$this->db_game['default_contract_parts']."', '".$events_by_option_id[$option_id]->db_event['event_id']."', null, 0, 0, ".$payout_is_resolved."), ";
 										$game_out_index++;
 									}
-									else $insert_q .= "null, null, null, null, 0, 1";
+									else $insert_q .= "null, null, null, null, null, 0, 1";
 								}
-								else $insert_q .= "null, null, null, null, 0, 1";
+								else $insert_q .= "null, null, null, null, null, 0, 1";
 								
 								$insert_q .= "), ";
 								if ($payout_insert_q != "") $insert_q .= $payout_insert_q;
 							}
 							
-							$insert_q = substr($insert_q, 0, strlen($insert_q)-2).";";
-							$this->blockchain->app->dbh->beginTransaction();
-							$this->blockchain->app->run_query("DELETE gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.create_transaction_id=:transaction_id;", ['transaction_id'=>$db_transaction['transaction_id']]);
+							$insert_q = substr($insert_q, 0, -2).";";
 							$this->blockchain->app->run_query($insert_q);
 							$this->blockchain->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON gio.io_id=io.io_id SET gio.parent_io_id=gio.game_io_id-1 WHERE io.create_transaction_id=:transaction_id AND gio.game_id=:game_id AND gio.is_coinbase=1;", [
 								'transaction_id' => $db_transaction['transaction_id'],
@@ -2679,8 +2684,56 @@ class Game {
 								'transaction_id' => $db_transaction['transaction_id'],
 								'game_id' => $this->db_game['game_id']
 							]);
-							$this->blockchain->app->dbh->commit();
 						}
+						
+						$unresolved_inputs = $this->blockchain->app->run_query("SELECT * FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.spend_transaction_id=:transaction_id AND gio.game_id=:game_id AND gio.is_coinbase=1 ORDER BY io.in_index ASC;", [
+							'transaction_id' => $db_transaction['transaction_id'],
+							'game_id' => $this->db_game['game_id']
+						])->fetchAll();
+						
+						$receiver_outputs = $this->blockchain->app->run_query("SELECT io.*, a.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:transaction_id AND io.is_receiver=1 ORDER BY io.out_index ASC;", ['transaction_id'=>$db_transaction['transaction_id']])->fetchAll();
+						
+						if (count($unresolved_inputs) > 0 && count($receiver_outputs) > 0) {
+							$insert_q = "INSERT INTO transaction_game_ios (parent_io_id, game_id, io_id, game_out_index, game_io_index, is_coinbase, colored_amount, destroy_amount, coin_blocks_destroyed, coin_rounds_destroyed, create_block_id, create_round_id, option_id, contract_parts, event_id, effectiveness_factor, votes, effective_destroy_amount, is_resolved) VALUES ";
+							
+							if (count($receiver_outputs)%count($unresolved_inputs) == 0) {
+								$outputs_per_unresolved_input = count($receiver_outputs)/count($unresolved_inputs);
+							}
+							else $outputs_per_unresolved_input = 1;
+							
+							$receiver_output_index = 0;
+							
+							foreach ($unresolved_inputs as &$unresolved_input) {
+								$outputs_io_amount_sum = 0;
+								for ($this_in_output_i=0; $this_in_output_i<$outputs_per_unresolved_input; $this_in_output_i++) {
+									if (isset($receiver_outputs[$receiver_output_index+$this_in_output_i])) {
+										$this_receiver_output = $receiver_outputs[$receiver_output_index+$this_in_output_i];
+										$outputs_io_amount_sum += $this_receiver_output['amount'];
+									}
+								}
+								
+								for ($this_in_output_i=0; $this_in_output_i<$outputs_per_unresolved_input; $this_in_output_i++) {
+									if (isset($receiver_outputs[$receiver_output_index+$this_in_output_i])) {
+										$this_receiver_output = $receiver_outputs[$receiver_output_index+$this_in_output_i];
+										
+										$contract_parts = floor($unresolved_input['contract_parts']*$this_receiver_output['amount']/$outputs_io_amount_sum);
+										$votes = floor($unresolved_input['votes']*$this_receiver_output['amount']/$outputs_io_amount_sum);
+										$effective_destroy_amount = floor($unresolved_input['effective_destroy_amount']*$this_receiver_output['amount']/$outputs_io_amount_sum);
+										
+										$game_io_index++;
+										$insert_q .= "('".$unresolved_input['parent_io_id']."', '".$this->db_game['game_id']."', '".$this_receiver_output['io_id']."', '".$game_out_index."', '".$game_io_index."', 1, 0, 0, 0, 0, '".$block_height."', '".$round_id."', '".$unresolved_input['option_id']."', '".$contract_parts."', '".$unresolved_input['event_id']."', '".$unresolved_input['effectiveness_factor']."', '".$votes."', '".$effective_destroy_amount."', 0), ";
+										$game_out_index++;
+									}
+								}
+								
+								$receiver_output_index += $outputs_per_unresolved_input;
+							}
+							
+							$insert_q = substr($insert_q, 0, -2).";";
+							$this->blockchain->app->run_query($insert_q);
+						}
+						
+						$this->blockchain->app->dbh->commit();
 					}
 				}
 				else $keep_looping = false;
@@ -2786,7 +2839,7 @@ class Game {
 						for ($bulk_block_id=$bulk_from_block; $bulk_block_id<=$bulk_to_block; $bulk_block_id++) {
 							$bulk_insert_q .= "(".$this->db_game['game_id'].", ".$bulk_block_id.", 1, 0, ".$ref_time.", ".$ref_time.", 0, ".$game_io_index."), ";
 						}
-						$bulk_insert_q = substr($bulk_insert_q, 0, strlen($bulk_insert_q)-2).";";
+						$bulk_insert_q = substr($bulk_insert_q, 0, -2).";";
 						$this->blockchain->app->run_query($bulk_insert_q);
 					}
 				}

@@ -3772,7 +3772,7 @@ class App {
 	}
 	
 	public function any_normal_address_in_account($account_id) {
-		return $this->run_query("SELECT * FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id WHERE ak.account_id=:account_id AND a.is_destroy_address=0 AND a.is_separator_address=0 ORDER BY a.option_index ASC LIMIT 1;", [
+		return $this->run_query("SELECT * FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id WHERE ak.account_id=:account_id AND a.is_destroy_address=0 AND a.is_separator_address=0 AND a.is_passthrough_address=0 ORDER BY a.option_index ASC LIMIT 1;", [
 			'account_id' => $account_id
 		])->fetch();
 	}
