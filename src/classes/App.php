@@ -3275,9 +3275,11 @@ class App {
 		$expected_payout = 0;
 		$bet_fees_paid = 0;
 		
+		$frac_of_contract = $bet['contract_parts']/$bet['total_contract_parts'];
+		
 		if ($bet['spend_status'] != "unconfirmed") {
-			$my_inflation_stake = $bet[$game->db_game['payout_weight']."s_destroyed"]*$coins_per_vote;
-			$my_effective_stake = $bet['effective_destroy_amount'] + $bet['votes']*$coins_per_vote;
+			$my_inflation_stake = $frac_of_contract*$bet[$game->db_game['payout_weight']."s_destroyed"]*$coins_per_vote;
+			$my_effective_stake = $frac_of_contract*($bet['effective_destroy_amount'] + $bet['votes']*$coins_per_vote);
 			
 			if ($option_effective_reward > 0) {
 				$nofees_reward = round($event_total_reward*($my_effective_stake/$option_effective_reward));
@@ -3292,14 +3294,14 @@ class App {
 		else {
 			$unconfirmed_votes = $bet['ref_'.$game->db_game['payout_weight']."s"];
 			if ($current_round != $bet['ref_round_id']) $unconfirmed_votes += $bet['colored_amount']*($current_round-$bet['ref_round_id']);
-			$my_inflation_stake = $unconfirmed_votes*$coins_per_vote;
-			$my_effective_stake = floor(($bet['destroy_amount']+$my_inflation_stake)*$current_effectiveness);
+			$my_inflation_stake = $frac_of_contract*$unconfirmed_votes*$coins_per_vote;
+			$my_effective_stake = $frac_of_contract*floor(($bet['destroy_amount']+$my_inflation_stake)*$current_effectiveness);
 			
 			$nofees_reward = round($event_total_reward*($my_effective_stake/$option_effective_reward));
 			$bet_fees_paid = round((1-$bet['payout_rate'])*$nofees_reward);
 			$expected_payout = $nofees_reward-$bet_fees_paid;
 		}
-		$my_stake = $bet['destroy_amount'] + $my_inflation_stake;
+		$my_stake = ($frac_of_contract*$bet['destroy_amount']) + $my_inflation_stake;
 		
 		if ($my_stake > 0) {
 			$payout_multiplier = $expected_payout/$my_stake;

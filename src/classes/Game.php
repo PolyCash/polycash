@@ -2570,12 +2570,38 @@ class Game {
 							$cbd_in += $gio_in_coin_blocks;
 							$crd_in += $gio_in_coin_rounds;
 							
-							$this->blockchain->app->run_query("UPDATE transaction_game_ios SET spend_round_id=:spend_round_id, coin_blocks_created=:coin_blocks_created, coin_rounds_created=:coin_rounds_created WHERE game_io_id=:game_io_id;", [
+							$update_input_q = "UPDATE transaction_game_ios SET spend_round_id=:spend_round_id, coin_blocks_created=:coin_blocks_created, coin_rounds_created=:coin_rounds_created";
+							$update_input_params = [
 								'spend_round_id' => $round_id,
 								'coin_blocks_created' => $gio_in_coin_blocks,
 								'coin_rounds_created' => $gio_in_coin_rounds,
 								'game_io_id' => $input_io['game_io_id']
-							]);
+							];
+							
+							if ($input_io['is_coinbase'] == 1) {
+								if (empty($events_by_option_id[$input_io['option_id']])) {
+									$db_event = $this->blockchain->app->run_query("SELECT ev.*, et.* FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id WHERE ev.event_id=:event_id;", ['event_id'=>$input_io['event_id']])->fetch();
+									$events_by_option_id[$input_io['option_id']] = new Event($this, $db_event, false);
+								}
+								
+								$resolved_before_spent = $input_io['resolved_before_spent'];
+								
+								if ($block_height < $events_by_option_id[$input_io['option_id']]->db_event['event_payout_block']) {
+									$resolved_before_spent = 0;
+								}
+								else if ($block_height >= $events_by_option_id[$input_io['option_id']]->db_event['event_payout_block']) {
+									$resolved_before_spent = 1;
+								}
+								
+								if ($resolved_before_spent != $input_io['resolved_before_spent']) {
+									$update_input_q .= ", resolved_before_spent=:resolved_before_spent";
+									$update_input_params['resolved_before_spent'] = $resolved_before_spent;
+								}
+							}
+							
+							$update_input_q .= " WHERE game_io_id=:game_io_id;";
+							
+							$this->blockchain->app->run_query($update_input_q, $update_input_params);
 						}
 						
 						$output_ios = $this->blockchain->app->run_query("SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:create_transaction_id;", [
@@ -2597,7 +2623,7 @@ class Game {
 						}
 						$tx_chain_regular_sum = $tx_chain_output_sum - $tx_chain_destroy_sum - $tx_chain_separator_sum - $tx_chain_passthrough_sum - $tx_chain_receiver_sum;
 						
-						$tx_game_nondestroy_amount = floor($tx_game_input_sum*(($tx_chain_regular_sum+$tx_chain_separator_sum+$tx_chain_passthrough_sum+$tx_chain_receiver_sum)/$tx_chain_output_sum));
+						$tx_game_nondestroy_amount = $tx_chain_output_sum > 0 ? floor($tx_game_input_sum*(($tx_chain_regular_sum+$tx_chain_separator_sum+$tx_chain_passthrough_sum+$tx_chain_receiver_sum)/$tx_chain_output_sum)) : 0;
 						$tx_game_destroy_amount = $tx_game_input_sum-$tx_game_nondestroy_amount;
 						
 						$game_destroy_sum = 0;
@@ -2613,7 +2639,7 @@ class Game {
 						$this->blockchain->app->run_query("DELETE gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.create_transaction_id=:transaction_id;", ['transaction_id'=>$db_transaction['transaction_id']]);
 						
 						if ($num_regular_outputs > 0) {
-							$insert_q = "INSERT INTO transaction_game_ios (game_id, io_id, game_out_index, game_io_index, is_coinbase, colored_amount, destroy_amount, coin_blocks_destroyed, coin_rounds_destroyed, create_block_id, create_round_id, option_id, contract_parts, event_id, effectiveness_factor, votes, effective_destroy_amount, is_resolved) VALUES ";
+							$insert_q = "INSERT INTO transaction_game_ios (game_id, io_id, game_out_index, game_io_index, is_coinbase, colored_amount, destroy_amount, coin_blocks_destroyed, coin_rounds_destroyed, create_block_id, create_round_id, option_id, contract_parts, event_id, effectiveness_factor, votes, effective_destroy_amount, is_resolved, resolved_before_spent) VALUES ";
 							
 							while ($regular_output = $regular_outputs->fetch()) {
 								$payout_insert_q = "";
@@ -2660,15 +2686,15 @@ class Game {
 										$this_is_resolved = $payout_is_resolved;
 										if ($using_separator) $this_is_resolved = 1;
 										
-										$insert_q .= "'".$option_id."', '".$this->db_game['default_contract_parts']."', '".$events_by_option_id[$option_id]->db_event['event_id']."', '".$effectiveness_factor."', '".$votes."', '".$effective_destroy_amount."', ".$this_is_resolved;
+										$insert_q .= "'".$option_id."', '".$this->db_game['default_contract_parts']."', '".$events_by_option_id[$option_id]->db_event['event_id']."', '".$effectiveness_factor."', '".$votes."', '".$effective_destroy_amount."', ".$this_is_resolved.", null";
 										
 										$game_io_index++;
-										$payout_insert_q = "('".$this->db_game['game_id']."', '".$payout_io_id."', '".$game_out_index."', '".$game_io_index."', 1, 0, 0, 0, 0, '".$block_height."', '".$round_id."', '".$option_id."', '".$this->db_game['default_contract_parts']."', '".$events_by_option_id[$option_id]->db_event['event_id']."', null, 0, 0, ".$payout_is_resolved."), ";
+										$payout_insert_q = "('".$this->db_game['game_id']."', '".$payout_io_id."', '".$game_out_index."', '".$game_io_index."', 1, 0, 0, 0, 0, '".$block_height."', '".$round_id."', '".$option_id."', '".$this->db_game['default_contract_parts']."', '".$events_by_option_id[$option_id]->db_event['event_id']."', null, 0, 0, ".$payout_is_resolved.", 1), ";
 										$game_out_index++;
 									}
-									else $insert_q .= "null, null, null, null, null, 0, 1";
+									else $insert_q .= "null, null, null, null, null, 0, 1, null";
 								}
-								else $insert_q .= "null, null, null, null, null, 0, 1";
+								else $insert_q .= "null, null, null, null, null, 0, 1, null";
 								
 								$insert_q .= "), ";
 								if ($payout_insert_q != "") $insert_q .= $payout_insert_q;
@@ -2686,7 +2712,7 @@ class Game {
 							]);
 						}
 						
-						$unresolved_inputs = $this->blockchain->app->run_query("SELECT * FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.spend_transaction_id=:transaction_id AND gio.game_id=:game_id AND gio.is_coinbase=1 ORDER BY io.in_index ASC;", [
+						$unresolved_inputs = $this->blockchain->app->run_query("SELECT * FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.spend_transaction_id=:transaction_id AND gio.game_id=:game_id AND gio.is_coinbase=1 AND gio.resolved_before_spent=0 ORDER BY io.in_index ASC;", [
 							'transaction_id' => $db_transaction['transaction_id'],
 							'game_id' => $this->db_game['game_id']
 						])->fetchAll();
@@ -2694,7 +2720,7 @@ class Game {
 						$receiver_outputs = $this->blockchain->app->run_query("SELECT io.*, a.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:transaction_id AND io.is_receiver=1 ORDER BY io.out_index ASC;", ['transaction_id'=>$db_transaction['transaction_id']])->fetchAll();
 						
 						if (count($unresolved_inputs) > 0 && count($receiver_outputs) > 0) {
-							$insert_q = "INSERT INTO transaction_game_ios (parent_io_id, game_id, io_id, game_out_index, game_io_index, is_coinbase, colored_amount, destroy_amount, coin_blocks_destroyed, coin_rounds_destroyed, create_block_id, create_round_id, option_id, contract_parts, event_id, effectiveness_factor, votes, effective_destroy_amount, is_resolved) VALUES ";
+							$insert_q = "INSERT INTO transaction_game_ios (parent_io_id, game_id, io_id, game_out_index, game_io_index, is_coinbase, colored_amount, destroy_amount, coin_blocks_destroyed, coin_rounds_destroyed, create_block_id, create_round_id, option_id, contract_parts, event_id, is_resolved, resolved_before_spent) VALUES ";
 							
 							if (count($receiver_outputs)%count($unresolved_inputs) == 0) {
 								$outputs_per_unresolved_input = count($receiver_outputs)/count($unresolved_inputs);
@@ -2717,11 +2743,9 @@ class Game {
 										$this_receiver_output = $receiver_outputs[$receiver_output_index+$this_in_output_i];
 										
 										$contract_parts = floor($unresolved_input['contract_parts']*$this_receiver_output['amount']/$outputs_io_amount_sum);
-										$votes = floor($unresolved_input['votes']*$this_receiver_output['amount']/$outputs_io_amount_sum);
-										$effective_destroy_amount = floor($unresolved_input['effective_destroy_amount']*$this_receiver_output['amount']/$outputs_io_amount_sum);
 										
 										$game_io_index++;
-										$insert_q .= "('".$unresolved_input['parent_io_id']."', '".$this->db_game['game_id']."', '".$this_receiver_output['io_id']."', '".$game_out_index."', '".$game_io_index."', 1, 0, 0, 0, 0, '".$block_height."', '".$round_id."', '".$unresolved_input['option_id']."', '".$contract_parts."', '".$unresolved_input['event_id']."', '".$unresolved_input['effectiveness_factor']."', '".$votes."', '".$effective_destroy_amount."', 0), ";
+										$insert_q .= "('".$unresolved_input['parent_io_id']."', '".$this->db_game['game_id']."', '".$this_receiver_output['io_id']."', '".$game_out_index."', '".$game_io_index."', 1, 0, 0, 0, 0, '".$block_height."', '".$round_id."', '".$unresolved_input['option_id']."', '".$contract_parts."', '".$unresolved_input['event_id']."', 0, 1), ";
 										$game_out_index++;
 									}
 								}
@@ -2941,7 +2965,7 @@ class Game {
 	public function render_ios_in_transaction($in_out, &$db_transaction, $selected_game_io_id, $selected_address_id, $coins_per_vote, $last_block_id) {
 		$html = '<div class="explorer_ios">';
 		
-		$ios_q = "SELECT a.*, p.*, gio.is_coinbase AS is_coinbase, gio.colored_amount AS colored_amount, gio.is_resolved AS is_resolved, gio.game_io_id, gio.game_out_index, gio.game_io_id AS game_io_id, op.*, ev.*, p.votes, op.votes AS option_votes, op.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS sum_destroy_score, ev.effective_destroy_score AS sum_effective_destroy_score, io.spend_status, io.is_destroy, io.is_separator, io.is_passthrough, io.is_receiver";
+		$ios_q = "SELECT a.*, p.*, gio.contract_parts, gio.is_coinbase AS is_coinbase, gio.colored_amount AS colored_amount, gio.is_resolved AS is_resolved, gio.game_io_id, gio.game_out_index, gio.game_io_id AS game_io_id, op.*, ev.*, p.contract_parts AS total_contract_parts, p.votes, op.votes AS option_votes, op.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS sum_destroy_score, ev.effective_destroy_score AS sum_effective_destroy_score, io.spend_status, io.is_destroy, io.is_separator, io.is_passthrough, io.is_receiver";
 		if ($in_out == "in") $ios_q .= ", t.tx_hash FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id";
 		else $ios_q .= " FROM transaction_ios io";
 		$ios_q .= " JOIN transaction_game_ios gio ON io.io_id=gio.io_id LEFT JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id JOIN addresses a ON io.address_id=a.address_id LEFT JOIN options op ON gio.option_id=op.option_id LEFT JOIN events ev ON op.event_id=ev.event_id LEFT JOIN options w ON ev.winning_option_id=w.option_id WHERE gio.game_id=:game_id AND io.";
@@ -2993,8 +3017,10 @@ class Game {
 			}
 			
 			if ($io['is_coinbase'] == 1) {
+				$frac_of_contract = $io['contract_parts']/$io['total_contract_parts'];
+				
 				if ($io['payout_rule'] == "binary") {
-					$destroy_amount_disp = $this->blockchain->app->format_bignum(($io['destroy_amount']+$inflation_stake)/pow(10,$this->db_game['decimal_places']));
+					$destroy_amount_disp = $this->blockchain->app->format_bignum($frac_of_contract*($io['destroy_amount']+$inflation_stake)/pow(10,$this->db_game['decimal_places']));
 					$html .= $destroy_amount_disp." ";
 					if ($destroy_amount_disp == '1') $html .= $this->db_game['coin_name'];
 					else $html .= $this->db_game['coin_name_plural'];
@@ -3005,8 +3031,10 @@ class Game {
 					$html .= '&nbsp;&nbsp;';
 					if ($io['outcome_index'] != -1) {
 						$html .= '<font class="';
-						if ($io['colored_amount'] > 0 || ($io['payout_rule'] == "linear" && $io['event_final_block'] <= $last_block_id)) $html .= 'greentext';
-						else if ($io['is_resolved'] == 1) $html .= 'redtext';
+						if ($io['is_resolved'] == 1) {
+							if ($io['winning_option_id'] == $io['option_id']) $html .= 'greentext';
+							else $html .= 'redtext';
+						}
 						else $html .= 'yellowtext';
 						$html .= '">';
 					}
@@ -3127,6 +3155,8 @@ class Game {
 				}
 			}
 			
+			$frac_of_contract = $io['contract_parts']/$io['total_contract_parts'];
+			
 			$event_payout = $io['sum_destroy_score']+$io['sum_unconfirmed_destroy_score']+($io['sum_score']+$io['sum_unconfirmed_score'])*$coins_per_vote;
 			$option_effective_stake = $io['option_effective_destroy_score']+$io['unconfirmed_effective_destroy_score']+($io['option_votes']+$io['unconfirmed_votes'])*$coins_per_vote;
 			$event_effective_stake = $io['sum_effective_destroy_score']+$io['sum_unconfirmed_effective_destroy_score']+($io['sum_votes']+$io['sum_unconfirmed_votes'])*$coins_per_vote;
@@ -3141,10 +3171,10 @@ class Game {
 				$effective_stake = $io['effective_destroy_amount']+$io['votes']*$coins_per_vote;
 			}
 			
-			if ($option_effective_stake > 0) $max_payout = $io['payout_rate']*$event_payout*$effective_stake/$option_effective_stake;
+			if ($option_effective_stake > 0) $max_payout = $frac_of_contract*$io['payout_rate']*$event_payout*$effective_stake/$option_effective_stake;
 			else $max_payout = 0;
 			
-			if ($io['destroy_amount']+$inflation_stake > 0) $odds = $max_payout/($io['destroy_amount']+$inflation_stake);
+			if ($io['destroy_amount']+$inflation_stake > 0) $odds = $max_payout/($frac_of_contract*($io['destroy_amount']+$inflation_stake));
 			else $odds = 0;
 			$fair_io_value = false;
 			$track_price_usd = false;
@@ -3178,10 +3208,10 @@ class Game {
 				}
 				$track_position_price = max(0, min($contract_price_size, $track_position_price));
 				
-				if ($event_effective_stake > 0) $effective_paid = $event_payout*$effective_stake/$event_effective_stake;
+				if ($event_effective_stake > 0) $effective_paid = $frac_of_contract*$event_payout*$effective_stake/$event_effective_stake;
 				else $effective_paid = 0;
 				
-				if ($position_price > 0) $equivalent_contracts = $effective_paid/$position_price;
+				if ($position_price > 0) $equivalent_contracts = $frac_of_contract*$effective_paid/$position_price;
 				else $equivalent_contracts = 0;
 				
 				if ($position_price == 0) {
