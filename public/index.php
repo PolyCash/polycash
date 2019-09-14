@@ -77,7 +77,7 @@ else {
 			$src_path."/tests"
 		];
 		
-		if (in_array(dirname($src_path.$requested_filename), $whitelisted_directories)) {
+		if (in_array(dirname($src_path.$requested_filename), $whitelisted_directories) || dirname(dirname($src_path.$requested_filename)) == $src_path."/modules") {
 			include($src_path.$requested_filename);
 		}
 		else Router::Send404();
