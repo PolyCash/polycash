@@ -450,6 +450,99 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		}
 		else $app->output_message(4, "Invalid game ID.", false);
 	}
+	else if ($action == "spend_unresolved") {
+		if ($_REQUEST['whole_or_part'] == "whole") {
+			$address_text = $_REQUEST['address'];
+			
+			if (!empty($address_text)) {
+				$fee_float = (float) $_REQUEST['fee'];
+				$game_io_id = (int) $_REQUEST['game_io_id'];
+				$account_id = (int) $_REQUEST['account_id'];
+				
+				$account = $app->fetch_account_by_id($account_id);
+				
+				if ($account && $account['user_id'] == $thisuser->db_user['user_id']) {
+					$game_io = $app->fetch_game_io_by_id($game_io_id);
+					
+					if ($game_io) {
+						$address_key = $app->fetch_address_key_by_address_in_account($game_io['address_id'], $account['account_id']);
+						
+						if ($address_key) {
+							$db_game = $app->fetch_game_by_id($game_io['game_id']);
+							$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+							$game = new Game($blockchain, $db_game['game_id']);
+							$db_event = $app->fetch_event_by_id($game_io['event_id']);
+							
+							if ($db_event && $game_io['is_coinbase'] == 1) {
+								if ($game_io['is_resolved'] == 0 && $db_event['event_payout_block'] > $blockchain->last_block_id() && $game_io['spend_status'] != "spent") {
+									$fee_int = (int) $fee_float*pow(10, $game->db_game['decimal_places']);
+									
+									$io_nonfee_amount = $game_io['amount'] - $fee_int;
+									
+									if ($io_nonfee_amount > 0) {
+										$all_gios = $game->fetch_game_ios_by_io($game_io['io_id'])->fetchAll();
+										
+										// If more than one gio is attached to this IO, it's probably a bet placed with no separator
+										// So include a normal output to avoid deleting resolved coins
+										if (count($all_gios) > 1) {
+											$new_normal_address = $app->new_normal_address_key($account['currency_id'], $account);
+											$num_outputs = 3;
+										}
+										else {
+											$new_normal_address = false;
+											$num_outputs = 2;
+										}
+										
+										$passthrough_address = $app->fetch_addresses_in_account($account, 2, 1);
+										
+										if (count($passthrough_address) > 0) {
+											$passthrough_address = $passthrough_address[0];
+											$spend_to_address = $blockchain->create_or_fetch_address($address_text, true, false, false, false, false);
+											
+											if ($spend_to_address['is_destroy_address'] == 0 && $spend_to_address['is_separator_address'] == 0 && $spend_to_address['is_passthrough_address'] == 0) {
+												$output_amounts = [];
+												$output_address_ids = [];
+												
+												if ($new_normal_address) {
+													array_push($output_amounts, floor($io_nonfee_amount/$num_outputs));
+													array_push($output_address_ids, $new_normal_address['address_id']);
+												}
+												array_push($output_amounts, floor($io_nonfee_amount/$num_outputs));
+												array_push($output_address_ids, $passthrough_address['address_id']);
+												
+												array_push($output_amounts, $io_nonfee_amount-array_sum($output_amounts));
+												array_push($output_address_ids, $spend_to_address['address_id']);
+												
+												$error_message = "";
+												
+												$transaction_id = $blockchain->create_transaction("transaction", $output_amounts, false, [$game_io['io_id']], $output_address_ids, $fee_int, $error_message);
+												
+												if ($transaction_id) {
+													$transaction = $app->fetch_transaction_by_id($transaction_id);
+													$app->output_message(1, "/explorer/games/".$game->db_game['url_identifier']."/transactions/".$transaction['tx_hash']."/", false);
+												}
+												else $app->output_message(14, "TX Error: ".$error_message, false);
+											}
+											else $app->output_message(13, "Please use a normal address.", false);
+										}
+										else $app->output_message(12, "Error fetching your addresses.", false);
+									}
+									else $app->output_message(11, "UTXO not big enough to afford your fee.", false);
+								}
+								else $app->output_message(10, "This UTXO is already spent or resolved.", false);
+							}
+							else $app->output_message(9, "This is not a betting UTXO.", false);
+						}
+						else $app->output_message(8, "The game IO ID you specified does not match this account ID.", false);
+					}
+					else $app->output_message(7, "You supplied an invalid game IO ID.", false);
+				}
+				else $app->output_message(6, "The account ID you specified does not match your user account.", false);
+			}
+			else $app->output_message(5, "Please specify an address.", false);
+		}
+		else $app->output_message(4, "Please specify whole_or_part", false);
+	}
 	else $app->output_message(3, "This action is not yet implemented.", false);
 }
 else $app->output_message(2, "You must be logged in to complete this step.", false);

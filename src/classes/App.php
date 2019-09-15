@@ -849,7 +849,7 @@ class App {
 		do {
 			$address_key = $this->new_address_key($currency_id, $account);
 		}
-		while ($address_key['is_separator_address'] == 1 || $address_key['is_destroy_address'] == 1);
+		while ($address_key['is_separator_address'] == 1 || $address_key['is_destroy_address'] == 1 || $address_key['is_passthrough_address'] == 1);
 		
 		return $address_key;
 	}
@@ -2457,9 +2457,7 @@ class App {
 			$user_game = $user->ensure_user_in_game($game, false);
 			
 			if ($user_game) {
-				$address_key = $this->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id=:address_id;", [
-					'address_id' => $db_address['address_id']
-				])->fetch();
+				$address_key = $this->fetch_address_key_by_address_id($db_address['address_id']);
 				
 				if ($address_key) {
 					$this->run_query("UPDATE address_keys SET account_id=:account_id WHERE address_key_id=:address_key_id;", [
@@ -2493,9 +2491,7 @@ class App {
 			$account = $this->user_blockchain_account($user->db_user['user_id'], $currency_id);
 			
 			if ($account) {
-				$address_key = $this->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id=:address_id;", [
-					'address_id' => $db_address['address_id']
-				])->fetch();
+				$address_key = $this->fetch_address_key_by_address_id($db_address['address_id']);
 				
 				if ($address_key) {
 					$this->run_query("UPDATE address_keys SET account_id=:account_id WHERE address_key_id=:address_key_id;", [
@@ -3245,6 +3241,19 @@ class App {
 		return $this->run_query("SELECT * FROM addresses WHERE address=:address;", ['address'=>$address])->fetch();
 	}
 	
+	public function fetch_address_key_by_address_id($address_id) {
+		return $this->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id=:address_id;", [
+			'address_id' => $address_id
+		])->fetch();
+	}
+	
+	public function fetch_address_key_by_address_in_account($address_id, $account_id) {
+		return $this->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id=:address_id AND k.account_id=:account_id;", [
+			'address_id' => $address_id,
+			'account_id' => $account_id
+		])->fetch();
+	}
+	
 	public function calculate_effectiveness_factor($vote_effectiveness_function, $effectiveness_param1, $event_starting_block, $event_final_block, $block_id) {
 		if ($vote_effectiveness_function == "linear_decrease") {
 			$slope = -1*$effectiveness_param1;
@@ -3266,9 +3275,11 @@ class App {
 		$expected_payout = 0;
 		$bet_fees_paid = 0;
 		
+		$frac_of_contract = $bet['contract_parts']/$bet['total_contract_parts'];
+		
 		if ($bet['spend_status'] != "unconfirmed") {
-			$my_inflation_stake = $bet[$game->db_game['payout_weight']."s_destroyed"]*$coins_per_vote;
-			$my_effective_stake = $bet['effective_destroy_amount'] + $bet['votes']*$coins_per_vote;
+			$my_inflation_stake = $frac_of_contract*$bet[$game->db_game['payout_weight']."s_destroyed"]*$coins_per_vote;
+			$my_effective_stake = $frac_of_contract*($bet['effective_destroy_amount'] + $bet['votes']*$coins_per_vote);
 			
 			if ($option_effective_reward > 0) {
 				$nofees_reward = round($event_total_reward*($my_effective_stake/$option_effective_reward));
@@ -3283,14 +3294,14 @@ class App {
 		else {
 			$unconfirmed_votes = $bet['ref_'.$game->db_game['payout_weight']."s"];
 			if ($current_round != $bet['ref_round_id']) $unconfirmed_votes += $bet['colored_amount']*($current_round-$bet['ref_round_id']);
-			$my_inflation_stake = $unconfirmed_votes*$coins_per_vote;
-			$my_effective_stake = floor(($bet['destroy_amount']+$my_inflation_stake)*$current_effectiveness);
+			$my_inflation_stake = $frac_of_contract*$unconfirmed_votes*$coins_per_vote;
+			$my_effective_stake = $frac_of_contract*floor(($bet['destroy_amount']+$my_inflation_stake)*$current_effectiveness);
 			
 			$nofees_reward = round($event_total_reward*($my_effective_stake/$option_effective_reward));
 			$bet_fees_paid = round((1-$bet['payout_rate'])*$nofees_reward);
 			$expected_payout = $nofees_reward-$bet_fees_paid;
 		}
-		$my_stake = $bet['destroy_amount'] + $my_inflation_stake;
+		$my_stake = ($frac_of_contract*$bet['destroy_amount']) + $my_inflation_stake;
 		
 		if ($my_stake > 0) {
 			$payout_multiplier = $expected_payout/$my_stake;
@@ -3671,11 +3682,7 @@ class App {
 			$addr_text = "11".$vote_identifier;
 			$addr_text .= $this->random_string(34-strlen($addr_text));
 			
-			if ($option_index == 0) $is_destroy_address=1;
-			else $is_destroy_address=0;
-			
-			if ($option_index == 1) $is_separator_address=1;
-			else $is_separator_address=0;
+			list($is_destroy_address, $is_separator_address, $is_passthrough_address) = $this->option_index_to_special_address_types($option_index);
 			
 			$new_address_params = [
 				'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
@@ -3683,6 +3690,7 @@ class App {
 				'vote_identifier' => $vote_identifier,
 				'is_destroy_address' => $is_destroy_address,
 				'is_separator_address' => $is_separator_address,
+				'is_passthrough_address' => $is_passthrough_address,
 				'address' => $addr_text,
 				'time_created' => time()
 			];
@@ -3691,7 +3699,7 @@ class App {
 				$new_address_q .= ", user_id=:user_id";
 				$new_address_params['user_id'] = $account['user_id'];
 			}
-			$new_address_q .= ", primary_blockchain_id=:blockchain_id, option_index=:option_index, vote_identifier=:vote_identifier, is_destroy_address=:is_destroy_address, is_separator_address=:is_separator_address, address=:address, time_created=:time_created;";
+			$new_address_q .= ", primary_blockchain_id=:blockchain_id, option_index=:option_index, vote_identifier=:vote_identifier, is_destroy_address=:is_destroy_address, is_separator_address=:is_separator_address, is_passthrough_address=:is_passthrough_address, address=:address, time_created=:time_created;";
 			$this->run_query($new_address_q, $new_address_params);
 			$address_id = $this->last_insert_id();
 			$this->flush_buffers();
@@ -3766,7 +3774,7 @@ class App {
 	}
 	
 	public function any_normal_address_in_account($account_id) {
-		return $this->run_query("SELECT * FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id WHERE ak.account_id=:account_id AND a.is_destroy_address=0 AND a.is_separator_address=0 ORDER BY a.option_index ASC LIMIT 1;", [
+		return $this->run_query("SELECT * FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id WHERE ak.account_id=:account_id AND a.is_destroy_address=0 AND a.is_separator_address=0 AND a.is_passthrough_address=0 ORDER BY a.option_index ASC LIMIT 1;", [
 			'account_id' => $account_id
 		])->fetch();
 	}
@@ -3969,6 +3977,24 @@ class App {
 	public function synchronizer_ok($thisuser, $provided_synchronizer_token) {
 		if ($thisuser->get_synchronizer_token() == $provided_synchronizer_token) return true;
 		else return false;
+	}
+	
+	public function option_index_to_special_address_types($option_index) {
+		$is_destroy_address = $option_index == 0 ? 1 : 0;
+		$is_separator_address = $option_index == 1 ? 1 : 0;
+		$is_passthrough_address = $option_index == 2 ? 1 : 0;
+		
+		return [$is_destroy_address, $is_separator_address, $is_passthrough_address];
+	}
+	
+	public function fetch_user_game_by_account_id($account_id) {
+		return $this->run_query("SELECT * FROM user_games WHERE account_id=:account_id;", ['account_id' => $account_id])->fetch();
+	}
+	
+	public function fetch_game_io_by_id($game_io_id) {
+		return $this->run_query("SELECT * FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_io_id=:game_io_id;", [
+			'game_io_id' => $game_io_id
+		])->fetch();
 	}
 }
 ?>

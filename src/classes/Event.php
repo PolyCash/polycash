@@ -491,9 +491,8 @@ class Event {
 		while ($bet = $all_bets->fetch()) {
 			$bet_amount = floor($bet[$score_field]*$coins_per_vote) + $bet['destroy_amount'];
 			
-			$this->game->blockchain->app->run_query("UPDATE transaction_game_ios SET colored_amount=:bet_amount WHERE game_io_id=:game_io_id;", [
-				'bet_amount' => $bet_amount,
-				'game_io_id' => $bet['payout_io_id']
+			$this->game->blockchain->app->run_query("UPDATE transaction_game_ios SET colored_amount=FLOOR(".$bet_amount."*contract_parts/".$bet['contract_parts'].") WHERE parent_io_id=:parent_io_id;", [
+				'parent_io_id' => $bet['game_io_id']
 			]);
 		}
 		
@@ -525,16 +524,18 @@ class Event {
 			
 			$option_effective_coins = $option['effective_destroy_score'] + $option['votes']*$coins_per_vote;
 			
-			$bets_by_option = $this->game->blockchain->app->run_query("SELECT p.*, gio.game_io_id AS game_io_id FROM transaction_game_ios gio JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id WHERE gio.option_id=:option_id AND gio.is_coinbase=1;", ['option_id'=>$option['option_id']]);
-			
-			while ($payout_io = $bets_by_option->fetch()) {
-				$this_effective_coins = $payout_io['votes']*$coins_per_vote + $payout_io['effective_destroy_amount'];
-				$this_payout_amount = floor($this->db_event['payout_rate']*$option_payout_total*$this_effective_coins/$option_effective_coins);
+			if ($option_effective_coins > 0) {
+				$bets_by_option = $this->game->blockchain->app->run_query("SELECT p.*, gio.game_io_id AS game_io_id FROM transaction_game_ios gio JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id WHERE gio.option_id=:option_id AND gio.is_coinbase=1;", ['option_id'=>$option['option_id']]);
 				
-				$this->game->blockchain->app->run_query("UPDATE transaction_game_ios SET colored_amount=:payout_amount WHERE game_io_id=:game_io_id;", [
-					'payout_amount' => $this_payout_amount,
-					'game_io_id' => $payout_io['game_io_id']
-				]);
+				while ($payout_io = $bets_by_option->fetch()) {
+					$this_effective_coins = $payout_io['votes']*$coins_per_vote + $payout_io['effective_destroy_amount'];
+					$this_payout_amount = floor($this->db_event['payout_rate']*$option_payout_total*$this_effective_coins/$option_effective_coins);
+					$weighted_payout = $this_payout_amount*$payout_io['contract_parts'];
+					
+					$this->game->blockchain->app->run_query("UPDATE transaction_game_ios SET colored_amount=FLOOR(".$weighted_payout."*contract_parts) WHERE parent_io_id=:parent_io_id AND resolved_before_spent=1;", [
+						'parent_io_id' => $payout_io['parent_io_id']
+					]);
+				}
 			}
 		}
 		
@@ -560,10 +561,10 @@ class Event {
 		while ($input = $winning_bets->fetch()) {
 			$this_input_effective_coins = floor($input['votes']*$coins_per_vote) + $input['effective_destroy_amount'];
 			$this_input_payout_amount = floor($total_reward*$this->db_event['payout_rate']*($this_input_effective_coins/$winning_effective_coins));
+			$weighted_payout = $this_input_payout_amount/$input['contract_parts'];
 			
-			$this->game->blockchain->app->run_query("UPDATE transaction_game_ios SET colored_amount=:payout_amount WHERE game_io_id=:game_io_id;", [
-				'payout_amount' => $this_input_payout_amount,
-				'game_io_id' => $input['payout_io_id']
+			$this->game->blockchain->app->run_query("UPDATE transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id SET gio.colored_amount=FLOOR(".$weighted_payout."*gio.contract_parts) WHERE gio.parent_io_id=:game_io_id AND gio.resolved_before_spent=1;", [
+				'game_io_id' => $input['game_io_id']
 			]);
 		}
 		
@@ -597,7 +598,7 @@ class Event {
 	public function my_votes_html($color, &$coins_per_vote, &$user_game, &$last_block_id) {
 		$html = "";
 		
-		$my_votes_q = "SELECT p.*, gio.is_coinbase AS is_coinbase, gio.game_out_index AS game_out_index, op.*, ev.*, p.votes, op.votes AS option_votes, op.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS sum_destroy_score, ev.effective_destroy_score AS sum_effective_destroy_score, t.transaction_id, t.tx_hash, t.fee_amount, io.spend_status FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN options op ON gio.option_id=op.option_id JOIN events ev ON op.event_id=ev.event_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.event_id=:event_id AND k.account_id=:account_id";
+		$my_votes_q = "SELECT p.*, p.contract_parts AS total_contract_parts, gio.contract_parts, gio.is_coinbase AS is_coinbase, gio.game_out_index AS game_out_index, op.*, ev.*, p.votes, op.votes AS option_votes, op.effective_destroy_score AS option_effective_destroy_score, ev.destroy_score AS sum_destroy_score, ev.effective_destroy_score AS sum_effective_destroy_score, t.transaction_id, t.tx_hash, t.fee_amount, io.spend_status FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN options op ON gio.option_id=op.option_id JOIN events ev ON op.event_id=ev.event_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.event_id=:event_id AND k.account_id=:account_id AND gio.resolved_before_spent=1";
 		if ($color == "green") $my_votes_q .= " AND io.create_block_id IS NOT NULL";
 		else $my_votes_q .= " AND io.create_block_id IS NULL";
 		$my_votes_q .= " ORDER BY gio.game_io_id ASC;";
@@ -613,7 +614,7 @@ class Event {
 			
 			$html .= '<div class="row" style="padding: 5px;">'.$temp_html;
 			
-			$coin_stake = $my_vote['destroy_amount'] + $inflation_stake;
+			$coin_stake = (($my_vote['contract_parts']/$my_vote['total_contract_parts'])*$my_vote['destroy_amount']) + $inflation_stake;
 			
 			if ($this->db_event['payout_rule'] == "binary") {
 				$html .= '<div class="col-sm-6">';

@@ -20,13 +20,10 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		else if ($_REQUEST['action'] == "set_primary") {
 			$address_id = (int) $_REQUEST['address_id'];
 			
-			$address_key = $app->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE a.address_id=:address_id AND k.account_id=:account_id;", [
-				'address_id' => $address_id,
-				'account_id' => $account['account_id']
-			])->fetch();
+			$address_key = $app->fetch_address_key_by_address_in_account($address_id, $account['account_id']);
 			
 			if ($address_key) {
-				if ($address_key['is_separator_address'] == 0 && $address_key['is_destroy_address'] == 0) {
+				if ($address_key['is_separator_address'] == 0 && $address_key['is_destroy_address'] == 0 && $address_key['is_passthrough_address'] == 0) {
 					$app->run_query("UPDATE currency_accounts SET current_address_id=:address_id WHERE account_id=:account_id;", [
 						'address_id' => $address_key['address_id'],
 						'account_id' => $account['account_id']

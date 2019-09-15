@@ -2877,6 +2877,49 @@ var PageManager = function() {
 			});
 		}
 	}
+	this.spend_unresolved_step = function(account_id, game_io_id, step) {
+		if (step == "whole_or_part") {
+			var whole_or_part = $('#spend_unresolved_whole_or_part').val();
+			
+			if (whole_or_part == "") {
+				$('#spend_unresolved_whole').hide();
+				$('#spend_unresolved_part').hide();
+			}
+			else if (whole_or_part == "whole") {
+				$('#spend_unresolved_part').hide();
+				$('#spend_unresolved_whole').show('fast');
+			}
+			else {
+				$('#spend_unresolved_whole').hide();
+				$('#spend_unresolved_part').show('fast');
+			}
+		}
+		else if (step == "spend_whole") {
+			$.ajax({
+				url: "/ajax/account_spend.php",
+				dataType: "json",
+				data: {
+					action: "spend_unresolved",
+					whole_or_part: "whole",
+					address: $('#spend_unresolved_whole_address').val(),
+					fee: $('#spend_unresolved_whole_fee').val(),
+					account_id: account_id,
+					game_io_id: game_io_id,
+					synchronizer_token: this.synchronizer_token
+				},
+				success: function(spend_response) {
+					if (spend_response.status_code == 1) window.location = spend_response.message;
+					else {
+						$('#spend_unresolved_whole_message').html('<font class="redtext">'+spend_response.message+'</font>');
+						$('#spend_unresolved_whole_message').slideDown('fast');
+						setTimeout(function() {
+							$('#spend_unresolved_whole_message').hide()
+						}, 12000);
+					}
+				}
+			});
+		}
+	}
 }
 
 var thisPageManager = new PageManager();

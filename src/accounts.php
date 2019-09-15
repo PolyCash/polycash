@@ -51,7 +51,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 							$addresses_needed = $quantity;
 							$loop_count = 0;
 							do {
-								$addr_r = $app->run_query("SELECT * FROM addresses a WHERE a.primary_blockchain_id=:blockchain_id AND a.is_mine=1 AND a.user_id IS NULL AND a.is_destroy_address=0 AND a.is_separator_address=0 ORDER BY RAND() LIMIT 1;", [
+								$addr_r = $app->run_query("SELECT * FROM addresses a WHERE a.primary_blockchain_id=:blockchain_id AND a.is_mine=1 AND a.user_id IS NULL AND a.is_destroy_address=0 AND a.is_separator_address=0 AND a.is_passthrough_address=0 ORDER BY RAND() LIMIT 1;", [
 									'blockchain_id' => $sale_blockchain->db_blockchain['blockchain_id']
 								]);
 								
@@ -339,7 +339,10 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					else $account_game = false;
 					
 					if ($selected_account_id && $account_game) {
-						echo '<p><a href="/wallet/'.$account_game->db_game['url_identifier'].'/?action=change_user_game&user_game_id='.$account['user_game_id'].'" class="btn btn-sm btn-success">Play Now</a></p>';
+						echo '<p>';
+						echo '<a href="/wallet/'.$account_game->db_game['url_identifier'].'/?action=change_user_game&user_game_id='.$account['user_game_id'].'" class="btn btn-sm btn-success">Play Now</a> ';
+						echo '<a href="/explorer/games/'.$account_game->db_game['url_identifier'].'/my_bets/?user_game_id='.$account['user_game_id'].'" class="btn btn-sm btn-primary">My Bets</a>';
+						echo '</p>';
 					}
 					
 					echo '<div class="row">';
@@ -397,17 +400,19 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 
 					echo "<div class=\"account_details\">";
 					
+					$account_selected_tab = isset($_REQUEST['selected_tab']) ? $_REQUEST['selected_tab'] : "";
+					if (empty($account_selected_tab) && $selected_account_id == $account['account_id']) $account_selected_tab = "primary_address";
+					
 					echo '
 					<ul class="nav nav-tabs">
-						<li><a data-toggle="tab" href="#primary_address_'.$account['account_id'].'">Deposit Address</a></li>
-						<li><a data-toggle="tab" href="#transactions_'.$account['account_id'].'">Transactions</a></li>
-						<li><a data-toggle="tab" href="#addresses_'.$account['account_id'].'">Addresses</a></li>
-						<li><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/utxos/?account_id='.$account['account_id'].'">UTXOs</a></li>
+						<li '.($account_selected_tab == "primary_address" ? 'class="active" ' : '').'role="presentation"><a data-toggle="tab" href="#primary_address_'.$account['account_id'].'">Deposit Address</a></li>
+						<li '.($account_selected_tab == "transactions" ? 'class="active" ' : '').'role="presentation"><a data-toggle="tab" href="#transactions_'.$account['account_id'].'">Transactions</a></li>
+						<li '.($account_selected_tab == "addresses" ? 'class="active" ' : '').'role="presentation"><a data-toggle="tab" href="#addresses_'.$account['account_id'].'">Addresses</a></li>
 					</ul>';
 					
 					echo '
-					<div class="tab-content">
-						<div id="primary_address_'.$account['account_id'].'" class="tab-pane fade pad-this-pane">';
+					<div class="tab-content" style="padding-top: 10px;">
+						<div id="primary_address_'.$account['account_id'].'" class="tab-pane'.($account_selected_tab == "primary_address" ? ' active' : ' fade').'">';
 					
 					echo "<p>You can deposit ".$account['short_name_plural'];
 					if ($account_game) echo " or ".$account_game->db_game['coin_name_plural'];
@@ -417,7 +422,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					
 					echo '
 						</div>
-						<div id="transactions_'.$account['account_id'].'" class="tab-pane fade pad-this-pane">';
+						<div id="transactions_'.$account['account_id'].'" class="tab-pane'.($account_selected_tab == "transactions" ? ' active' : ' fade').'">';
 					
 					echo "<p>Rendering ".($transaction_in_r->rowCount() + $transaction_out_r->rowCount())." transactions.</p>";
 					
@@ -486,7 +491,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					
 					echo '
 						</div>
-						<div id="addresses_'.$account['account_id'].'" class="tab-pane fade pad-this-pane">';
+						<div id="addresses_'.$account['account_id'].'" class="tab-pane'.($account_selected_tab == "addresses" ? ' active' : ' fade').'">';
 					$addr_r = $app->run_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id ORDER BY a.option_index ASC LIMIT 500;", [
 						'account_id' => $account['account_id']
 					]);
@@ -507,12 +512,13 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						echo '<div class="col-sm-2">'.$address['vote_identifier'].' (#'.$address['option_index'].')';
 						if ($address['is_destroy_address'] == 1) echo ' <font class="redtext">Destroy Address</font>';
 						if ($address['is_separator_address'] == 1) echo ' <font class="yellowtext">Separator Address</font>';
+						if ($address['is_passthrough_address'] == 1) echo ' <font class="yellowtext">Passthrough Address</font>';
 						echo '</div>';
 						
 						echo '<div class="col-sm-4"><a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$address['address'].'">'.$address['address'].'</a></div>';
 						
 						echo '<div class="col-sm-2">';
-						if ($address['is_separator_address'] == 0 && $address['is_destroy_address'] == 0) {
+						if ($address['is_separator_address'] == 0 && $address['is_destroy_address'] == 0 && $address['is_passthrough_address'] == 0) {
 							echo '<a href="" onclick="thisPageManager.manage_addresses('.$account['account_id'].', \'set_primary\', '.$address['address_id'].');">Set as Primary</a>';
 						}
 						echo '</div>';
