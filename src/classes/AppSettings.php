@@ -63,15 +63,15 @@ class AppSettings {
 		self::$isDev = $isDev;
 	}
 	
-	public function srcPath() {
+	public static function srcPath() {
 		return self::$srcPath;
 	}
 	
-	public function publicPath() {
+	public static function publicPath() {
 		return self::$publicPath;
 	}
 	
-	public function runningFromCommandline() {
+	public static function runningFromCommandline() {
 		if (PHP_SAPI == "cli") return true;
 		else return false;
 	}

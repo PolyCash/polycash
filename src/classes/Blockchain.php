@@ -2061,22 +2061,32 @@ class Blockchain {
 						}
 						$decoded_transaction = $this->coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
 						$tx_hash = $decoded_transaction['txid'];
-						$verified_tx_hash = $this->coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
-						$this->walletnotify($verified_tx_hash, FALSE);
 						
-						$db_transaction = $this->fetch_transaction_by_hash($tx_hash);
+						$sendraw_response = $this->coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
 						
-						if ($db_transaction) {
-							$error_message = "Success!";
-							return $db_transaction['transaction_id'];
+						if (isset($sendraw_response['message'])) {
+							$error_message = $sendraw_response['message'];
+							return false;
 						}
 						else {
-							$error_message = "Failed to find the TX in db after sending.";
-							return false;
+							$verified_tx_hash = $sendraw_response;
+							
+							$this->walletnotify($verified_tx_hash, FALSE);
+							
+							$db_transaction = $this->fetch_transaction_by_hash($verified_tx_hash);
+							
+							if ($db_transaction) {
+								$error_message = "Success!";
+								return $db_transaction['transaction_id'];
+							}
+							else {
+								$error_message = "Failed to find the TX in db after sending.";
+								return false;
+							}
 						}
 					}
 					catch (Exception $e) {
-						$error_message = "There was an error with one of the RPC calls";
+						$error_message = "There was an error with one of the RPC calls.";
 						return false;
 					}
 				}

@@ -475,7 +475,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 							
 							if ($db_event && $game_io['is_coinbase'] == 1) {
 								if ($game_io['is_resolved'] == 0 && $db_event['event_payout_block'] > $blockchain->last_block_id() && $game_io['spend_status'] != "spent") {
-									$fee_int = (int) $fee_float*pow(10, $game->db_game['decimal_places']);
+									$fee_int = (int)($fee_float*pow(10, $blockchain->db_blockchain['decimal_places']));
 									
 									$io_nonfee_amount = $game_io['amount'] - $fee_int;
 									
