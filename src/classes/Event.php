@@ -525,15 +525,15 @@ class Event {
 			$option_effective_coins = $option['effective_destroy_score'] + $option['votes']*$coins_per_vote;
 			
 			if ($option_effective_coins > 0) {
-				$bets_by_option = $this->game->blockchain->app->run_query("SELECT p.*, gio.game_io_id AS game_io_id FROM transaction_game_ios gio JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id WHERE gio.option_id=:option_id AND gio.is_coinbase=1;", ['option_id'=>$option['option_id']]);
+				$bets_by_option = $this->game->blockchain->app->run_query("SELECT * FROM transaction_game_ios WHERE option_id=:option_id AND is_coinbase=0;", ['option_id'=>$option['option_id']]);
 				
-				while ($payout_io = $bets_by_option->fetch()) {
-					$this_effective_coins = $payout_io['votes']*$coins_per_vote + $payout_io['effective_destroy_amount'];
+				while ($parent_io = $bets_by_option->fetch()) {
+					$this_effective_coins = $parent_io['votes']*$coins_per_vote + $parent_io['effective_destroy_amount'];
 					$this_payout_amount = floor($this->db_event['payout_rate']*$option_payout_total*$this_effective_coins/$option_effective_coins);
-					$weighted_payout = $this_payout_amount*$payout_io['contract_parts'];
+					$weighted_payout = $this_payout_amount/$parent_io['contract_parts'];
 					
 					$this->game->blockchain->app->run_query("UPDATE transaction_game_ios SET colored_amount=FLOOR(".$weighted_payout."*contract_parts) WHERE parent_io_id=:parent_io_id AND resolved_before_spent=1;", [
-						'parent_io_id' => $payout_io['parent_io_id']
+						'parent_io_id' => $parent_io['game_io_id']
 					]);
 				}
 			}
@@ -840,12 +840,12 @@ class Event {
 		else if ($this->db_event['payout_rule'] == "binary") {
 			if ($winning_option !== false) {
 				$payout_response = $this->new_binary_payout($winning_option, $winning_votes, $winning_effective_destroy_score);
-				$log_text .= "Payout response: ".$payout_response."<br/>\n";
+				$log_text .= "Binary payout response: ".$payout_response."<br/>\n";
 			}
 		}
 		else {
 			$payout_response = $this->new_linear_payout();
-			$log_text .= "Payout response: ".$payout_response."<br/>\n";
+			$log_text .= "Linear payout response: ".$payout_response."<br/>\n";
 		}
 		
 		$this->set_event_completed();

@@ -185,6 +185,8 @@ class VirtualStockMarketGameDefinition {
 	}
 	
 	public function set_event_outcome(&$game, &$payout_event) {
+		$log_text = "";
+		
 		if ((string)$payout_event->db_event['track_payout_price'] == "") {
 			$payout_block = $game->blockchain->fetch_block_by_id($payout_event->db_event['event_payout_block']);
 			
@@ -213,9 +215,9 @@ class VirtualStockMarketGameDefinition {
 			}
 		}
 		
-		$payout_event->set_outcome_from_db();
+		$log_text .= $payout_event->set_outcome_from_db();
 		
-		return "";
+		return $log_text;
 	}
 	
 	public function regular_actions(&$game) {

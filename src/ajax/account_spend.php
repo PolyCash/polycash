@@ -195,14 +195,19 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 								$fee_amount = (int)(0.0001*pow(10,$blockchain->db_blockchain['decimal_places']));
 								$amount = $db_io['amount']+$join_db_io['amount']-$fee_amount;
 								
-								$error_message = false;
-								$transaction_id = $blockchain->create_transaction('transaction', [$amount], false, [$db_io['io_id'], $join_db_io['io_id']], [$join_db_io['address_id']], $fee_amount, $error_message);
+								$new_normal_address = $app->new_normal_address_key($join_key_account['currency_id'], $join_key_account);
 								
-								if ($transaction_id) {
-									$transaction = $app->fetch_transaction_by_id($transaction_id);
-									$app->output_message(1, "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction['tx_hash']."/", false);
+								if ($new_normal_address) {
+									$error_message = false;
+									$transaction_id = $blockchain->create_transaction('transaction', [$amount], false, [$db_io['io_id'], $join_db_io['io_id']], [$new_normal_address['address_id']], $fee_amount, $error_message);
+									
+									if ($transaction_id) {
+										$transaction = $app->fetch_transaction_by_id($transaction_id);
+										$app->output_message(1, "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/transactions/".$transaction['tx_hash']."/", false);
+									}
+									else $app->output_message(13, "TX Error: ".$error_message, false);
 								}
-								else $app->output_message(12, "TX Error: ".$error_message, false);
+								else $app->output_message(12, "There was an error generating a new address.", false);
 							}
 							else $app->output_message(11, "Error, invalid join UTXO ID.", false);
 						}

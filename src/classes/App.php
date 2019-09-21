@@ -3438,7 +3438,7 @@ class App {
 			$unresolved_net_delta += $bet_net_delta/pow(10, $game->db_game['decimal_places']);
 		}
 		else {
-			$net_delta += ($bet['colored_amount']-$this_stake_int)/pow(10, $game->db_game['decimal_places']);
+			$net_delta += $bet_net_delta/pow(10, $game->db_game['decimal_places']);
 			
 			if ($bet['colored_amount'] >= $this_stake_int) {
 				$num_wins++;
