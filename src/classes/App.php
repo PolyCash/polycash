@@ -3424,7 +3424,7 @@ class App {
 		return $this_bet_html;
 	}
 	
-	public function render_linear_bet($bet, $game, $inflation_stake, $effective_paid, $current_leverage, $equivalent_contracts, $borrow_delta, $track_pay_price, $bought_price_usd, $fair_io_value, $bet_net_delta, &$net_delta, &$net_stake, &$pending_stake, &$resolved_fees_paid, &$num_wins, &$num_losses, &$num_unresolved, &$num_refunded, &$unresolved_net_delta) {
+	public function render_linear_bet($div_td, $bet, $game, $inflation_stake, $effective_paid, $current_leverage, $equivalent_contracts, $borrow_delta, $track_pay_price, $bought_price_usd, $fair_io_value, $bet_net_delta, &$net_delta, &$net_stake, &$pending_stake, &$resolved_fees_paid, &$num_wins, &$num_losses, &$num_unresolved, &$num_refunded, &$unresolved_net_delta) {
 		$this_stake_int = $bet['destroy_amount'] + $inflation_stake;
 		$this_stake = $this_stake_int/pow(10, $game->db_game['decimal_places']);
 		$net_stake += $this_stake;
@@ -3448,38 +3448,61 @@ class App {
 			}
 		}
 		
-		$this_bet_html = "<div class=\"col-sm-1\"><a href=\"/explorer/games/".$game->db_game['url_identifier']."/utxo/".$bet['tx_hash']."/".$bet['game_out_index']."\">".$this->format_bignum($effective_paid/pow(10, $game->db_game['decimal_places']))."&nbsp;".$game->db_game['coin_abbreviation']."</a></div>\n";
+		if ($div_td == 'div') $this_bet_html = "<div class=\"col-sm-1\">";
+		else $this_bet_html = '<td>';
 		
-		$this_bet_html .= "<div class=\"col-sm-2\">".$this->format_bignum($current_leverage)."X &nbsp; ".$bet['option_name']."</div>\n";
+		$this_bet_html .= "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/utxo/".$bet['tx_hash']."/".$bet['game_out_index']."\">".$this->format_bignum($effective_paid/pow(10, $game->db_game['decimal_places']))."&nbsp;".$game->db_game['coin_abbreviation']."</a>";
 		
-		$this_bet_html .= "<div class=\"col-sm-1 text-center\">$".$this->format_bignum($bet['track_min_price'])."&nbsp;-&nbsp;$".$this->format_bignum($bet['track_max_price'])."</div>\n";
+		if ($div_td == 'div') $this_bet_html .= "</div>\n";
+		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
 		
-		$this_bet_html .= '<div class="col-sm-2">';
+		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-sm-2\">";
+		else $this_bet_html .= "<td>";
+		$this_bet_html .= $this->format_bignum($current_leverage)."X &nbsp; ".$bet['option_name'];
+		if ($div_td == 'div') $this_bet_html .= "</div>\n";
+		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
+		
+		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-sm-1 text-center\">";
+		else $this_bet_html .= "<td>";
+		$this_bet_html .= "$".$this->format_bignum($bet['track_min_price'])."&nbsp;-&nbsp;$".$this->format_bignum($bet['track_max_price']);
+		if ($div_td == 'div') $this_bet_html .= "</div>\n";
+		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
+		
+		if ($div_td == 'div') $this_bet_html .= '<div class="col-sm-2">';
+		else $this_bet_html .= "<td>";
+		
 		$this_bet_html .= $this->format_bignum($equivalent_contracts/pow(10, $game->db_game['decimal_places']))."&nbsp;".$bet['track_name_short'];
 		if ($borrow_delta != 0) {
 			if ($borrow_delta > 0) $this_bet_html .= '&nbsp;+&nbsp;';
 			else $this_bet_html .= '&nbsp;-&nbsp;';
 			$this_bet_html .= $this->format_bignum(abs($borrow_delta/pow(10, $game->db_game['decimal_places'])))."&nbsp;".$game->db_game['coin_abbreviation'];
 		}
-		$this_bet_html .= '</div>';
+		if ($div_td == 'div') $this_bet_html .= "</div>\n";
+		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
 		
 		$track_performance_pct = 100*(($track_pay_price/$bought_price_usd)-1);
-		$this_bet_html .= "<div class=\"col-sm-3\">";
+		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-sm-3\">";
+		else $this_bet_html .= "<td>";
 		$this_bet_html .= $bet['track_name_short']." ";
 		if ($track_performance_pct >= 0) $this_bet_html .= '<font class="greentext">+'.$this->to_significant_digits($track_performance_pct, 4).'%</font>';
 		else $this_bet_html .= '<font class="redtext">-'.$this->to_significant_digits(abs($track_performance_pct), 4).'%</font>';
 		
 		$this_bet_html .= " &nbsp; ($".$this->format_bignum($bought_price_usd);
 		$this_bet_html .= " &rarr; $".$this->format_bignum($track_pay_price);
-		$this_bet_html .= ")</div>\n";
+		$this_bet_html .= ")";
+		if ($div_td == 'div') $this_bet_html .= "</div>\n";
+		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
 		
-		$this_bet_html .= "<div class=\"col-sm-3\">";
+		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-sm-3\">";
+		else $this_bet_html .= "<td>";
 		$this_bet_html .= $this->format_bignum($fair_io_value/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_abbreviation']." &nbsp; ";
 		if ($bet_net_delta >= 0) $this_bet_html .= '<font class="greentext">+';
 		else $this_bet_html .= '<font class="redtext">-';
 		$this_bet_html .= $this->format_bignum(abs($bet_net_delta)/pow(10, $game->db_game['decimal_places']));
 		$this_bet_html .= " &nbsp; (".$this->to_significant_digits(100*abs($bet_net_delta/$effective_paid), 4)."%";
-		$this_bet_html .= ")</font></div>\n";
+		$this_bet_html .= ")</font>";
+		if ($div_td == 'div') $this_bet_html .= "</div>\n";
+		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
 		
 		return $this_bet_html;
 	}
