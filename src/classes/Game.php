@@ -951,7 +951,7 @@ class Game {
 		$this->blockchain->app->run_query($new_invitation_q, $new_invitation_params);
 		$invitation_id = $this->blockchain->app->last_insert_id();
 		
-		return $this->blockchain->app->run_query("SELECT * FROM game_invitations WHERE invitation_id=:invitation_id;", ['invitation_id'=>$invitation_id])->fetch();
+		$invitation = $this->blockchain->app->run_query("SELECT * FROM game_invitations WHERE invitation_id=:invitation_id;", ['invitation_id'=>$invitation_id])->fetch();
 	}
 	
 	public function get_user_strategy(&$user_game, &$user_strategy) {

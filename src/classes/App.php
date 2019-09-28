@@ -549,7 +549,7 @@ class App {
 						$update_invitation_params['used_ip'] = $_SERVER['REMOTE_ADDR'];
 					}
 					$update_invitation_q .= " WHERE invitation_id=:invitation_id;";
-					$this->run_query($update_invitation_q);
+					$this->run_query($update_invitation_q, $update_invitation_params);
 					
 					$user = new User($this, $user_id);
 					$blockchain = new Blockchain($this, $db_game['blockchain_id']);

@@ -162,8 +162,6 @@ if ($user_game) {
 						
 						$info = $event_info_by_id[$db_event['event_id']];
 						
-						echo "<pre>".json_encode([$info, $db_event], JSON_PRETTY_PRINT)."<pre><br/>\n";
-						
 						$buy_option = $app->fetch_option_by_event_option_index($db_event['event_id'], 0);
 						$sell_option = $app->fetch_option_by_event_option_index($db_event['event_id'], 1);
 						
