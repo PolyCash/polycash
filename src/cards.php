@@ -8,15 +8,20 @@ $nav_subtab_selected = "cards";
 
 if (!$thisuser) {
 	include(AppSettings::srcPath()."/includes/html_start.php");
-	
-	if (empty($_REQUEST['redirect_key'])) $redirect_url = $app->get_redirect_url($_SERVER['REQUEST_URI']);
-	
-	include(AppSettings::srcPath()."/includes/html_login.php");
+	?>
+	<div class="container-fluid">
+		<?php
+		if (empty($_REQUEST['redirect_key'])) $redirect_url = $app->get_redirect_url($_SERVER['REQUEST_URI']);
+		
+		include(AppSettings::srcPath()."/includes/html_login.php");
+		?>
+	</div>
+	<?php
 	include(AppSettings::srcPath()."/includes/html_stop.php");
 	die();
 }
 
-if (!empty($_REQUEST['action']) && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
+if (!empty($_REQUEST['action'])) {
 	$action = $_REQUEST['action'];
 	
 	$this_peer = $app->get_peer_by_server_name(AppSettings::getParam('base_url'), true);
@@ -28,247 +33,275 @@ if (!empty($_REQUEST['action']) && $app->synchronizer_ok($thisuser, $_REQUEST['s
 		$nav_subtab_selected = "manage";
 	}
 	
-	if ($action == "try_print") {
-		$denomination_id = (int) $_REQUEST['cards_denomination_id'];
-		
-		$denomination = $app->run_query("SELECT * FROM card_currency_denominations WHERE denomination_id=:denomination_id;", ['denomination_id' => $denomination_id])->fetch();
-		
-		if ($denomination) {
-			$cards_account_id = (int) $_REQUEST['cards_account_id'];
-			$currency_account = $app->fetch_account_by_id($cards_account_id);
+	if ($app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
+		if ($action == "try_print") {
+			$denomination_id = (int) $_REQUEST['cards_denomination_id'];
 			
-			if ($currency_account) {
-				if ($currency_account['user_id'] == $thisuser->db_user['user_id']) {
-					$db_currency = $app->fetch_currency_by_id($denomination['currency_id']);
-					$fv_currency = $app->fetch_currency_by_id($denomination['fv_currency_id']);
-					
-					$fv_blockchain = new Blockchain($app, $fv_currency['blockchain_id']);
-					
-					$how_many = intval($_REQUEST['cards_howmany']);
-					if ($_REQUEST['cards_howmany'] == "other") $how_many = intval($_REQUEST['cards_howmany_other_val']);
-					
-					if ($how_many > 0) {
-						$cost = $how_many*$denomination['denomination']*pow(10, $fv_blockchain->db_blockchain['decimal_places']);
-						$fee = (int) (0.0001*pow(10, $fv_blockchain->db_blockchain['decimal_places']));
-						$account_balance = $app->account_balance($currency_account['account_id']);
+			$denomination = $app->run_query("SELECT * FROM card_currency_denominations WHERE denomination_id=:denomination_id;", ['denomination_id' => $denomination_id])->fetch();
+			
+			if ($denomination) {
+				$cards_account_id = (int) $_REQUEST['cards_account_id'];
+				$currency_account = $app->fetch_account_by_id($cards_account_id);
+				
+				if ($currency_account) {
+					if ($currency_account['user_id'] == $thisuser->db_user['user_id']) {
+						$db_currency = $app->fetch_currency_by_id($denomination['currency_id']);
+						$fv_currency = $app->fetch_currency_by_id($denomination['fv_currency_id']);
 						
-						if ($cost+$fee <= $account_balance) {
-							$io_ids = [];
-							$input_sum = 0;
-							$first_address_id = false;
-							$keep_looping = true;
+						$fv_blockchain = new Blockchain($app, $fv_currency['blockchain_id']);
+						
+						$how_many = intval($_REQUEST['cards_howmany']);
+						if ($_REQUEST['cards_howmany'] == "other") $how_many = intval($_REQUEST['cards_howmany_other_val']);
+						
+						if ($how_many > 0) {
+							$cost = $how_many*$denomination['denomination']*pow(10, $fv_blockchain->db_blockchain['decimal_places']);
+							$fee = (int) (0.0001*pow(10, $fv_blockchain->db_blockchain['decimal_places']));
+							$account_balance = $app->account_balance($currency_account['account_id']);
 							
-							$balance_r = $app->run_query("SELECT io.* FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id AND io.spend_status='unspent';", [
-								'account_id' => $currency_account['account_id']
-							]);
-							
-							while ($keep_looping && $io = $balance_r->fetch()) {
-								array_push($io_ids, $io['io_id']);
+							if ($cost+$fee <= $account_balance) {
+								$io_ids = [];
+								$input_sum = 0;
+								$first_address_id = false;
+								$keep_looping = true;
 								
-								if (empty($first_address_id)) $first_address_id = $io['address_id'];
-								
-								$input_sum += $io['amount'];
-								if ($input_sum >= $cost+$fee) $keep_looping = false;
-							}
-							
-							$output_amounts = [];
-							$output_address_ids = [];
-							
-							for ($i=0; $i<$how_many; $i++) {
-								$address_key = $app->new_address_key($fv_currency['currency_id'], $currency_account);
-								array_push($output_amounts, $denomination['denomination']*pow(10, $fv_blockchain->db_blockchain['decimal_places']));
-								array_push($output_address_ids, $address_key['address_id']);
-							}
-							
-							if ($cost+$fee < $input_sum) {
-								array_push($output_amounts, $input_sum-$cost-$fee);
-								array_push($output_address_ids, $first_address_id);
-							}
-							
-							$error_message = false;
-							$transaction_id = $fv_blockchain->create_transaction("transaction", $output_amounts, false, $io_ids, $output_address_ids, $fee, $error_message);
-							
-							if ($transaction_id) {
-								$db_transaction = $app->fetch_transaction_by_id($transaction_id);
-								
-								$name = $_REQUEST['cards_name'];
-								$title = $_REQUEST['cards_title'];
-								$email = $_REQUEST['cards_email'];
-								$pnum = $_REQUEST['cards_pnum'];
-								$purity = $_REQUEST['cards_purity'];
-								
-								$new_card_params = [
-									'image_id' => $db_currency['default_design_image_id'],
-									'denomination_id' => $denomination['denomination_id'],
-									'purity' => $purity,
-									'display_name' => $name,
-									'display_title' => $title,
-									'display_email' => $email,
-									'display_pnum' => $pnum,
-									'time_created' => time(),
-									'user_id' => $thisuser->db_user['user_id'],
-									'redeem_url' => AppSettings::getParam('base_url'),
-									'text_color' => empty($fv_currency['default_design_text_color']) ? null : $fv_currency['default_design_text_color']
-								];
-								$new_card_design_q = "INSERT INTO card_designs SET image_id=:image_id, denomination_id=:denomination_id, purity=:purity, display_name=:display_name, display_title=:display_title, display_email=:display_email, display_pnum=:display_pnum, time_created=:time_created, user_id=:user_id, redeem_url=:redeem_url, text_color=:text_color;";
-								$app->run_query($new_card_design_q, $new_card_params);
-								$design_id = $app->last_insert_id();
-								
-								$app->run_query("INSERT INTO card_printrequests SET peer_id=:peer_id, secrets_present=1, design_id=:design_id, user_id=:user_id, how_many=:how_many, print_status='not-printed', pay_status='not-received', time_created=:time_created;", [
-									'peer_id' => $this_peer['peer_id'],
-									'design_id' => $design_id,
-									'user_id' => $thisuser->db_user['user_id'],
-									'how_many' => $how_many,
-									'time_created' => time()
+								$balance_r = $app->run_query("SELECT io.* FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id AND io.spend_status='unspent';", [
+									'account_id' => $currency_account['account_id']
 								]);
-								$request_id = $app->last_insert_id();
 								
-								$paper_width = "";
-								if (!empty($_REQUEST['paper_width'])) $paper_width = $_REQUEST['paper_width'];
-								if (empty($paper_width)) $paper_width = "standard";
-								else if ($paper_width == "small") {}
-								
-								$max_id = $app->run_query("SELECT MAX(peer_card_id), MAX(group_id) FROM cards WHERE peer_id=:peer_id;", ['peer_id' => $this_peer['peer_id']])->fetch();
-								
-								$card_group_id = $max_id[1]+1;
-								
-								$first_id = 1;
-								if ($max_id[0] > 0) $first_id = $max_id[0]+1;
-								
-								for ($i=0; $i<$how_many; $i++) {
-									$card_id = $i+$first_id;
-									$secret = $app->random_number(16);
-									$secret_hash = $app->card_secret_to_hash($secret);
-									$app->run_query("INSERT INTO cards SET design_id=:design_id, peer_id=:peer_id, purity=:purity, group_id=:group_id, secret=:secret, secret_hash=:secret_hash, peer_card_id=:peer_card_id, mint_time=:mint_time, currency_id=:currency_id, fv_currency_id=:fv_currency_id, amount=:amount, status='issued', io_tx_hash=:io_tx_hash, io_out_index=:io_out_index;", [
-										'design_id' => $design_id,
-										'peer_id' => $this_peer['peer_id'],
-										'purity' => $purity,
-										'group_id' => $card_group_id,
-										'secret' => $secret,
-										'secret_hash' => $secret_hash,
-										'peer_card_id' => $card_id,
-										'mint_time' => time(),
-										'currency_id' => $db_currency['currency_id'],
-										'fv_currency_id' => $fv_currency['currency_id'],
-										'amount' => $denomination['denomination'],
-										'io_tx_hash' => $db_transaction['tx_hash'],
-										'io_out_index' => $i
-									]);
+								while ($keep_looping && $io = $balance_r->fetch()) {
+									array_push($io_ids, $io['io_id']);
+									
+									if (empty($first_address_id)) $first_address_id = $io['address_id'];
+									
+									$input_sum += $io['amount'];
+									if ($input_sum >= $cost+$fee) $keep_looping = false;
 								}
 								
-								$app->run_query("UPDATE card_printrequests SET card_group_id=:card_group_id WHERE request_id=:request_id;", [
-									'card_group_id' => $card_group_id,
-									'request_id' => $request_id
-								]);
-								$app->run_query("UPDATE card_designs SET status='printed' WHERE design_id=:design_id;", [
-									'design_id' => $design_id
-								]);
+								$output_amounts = [];
+								$output_address_ids = [];
 								
-								$error_message = $how_many." cards have been created, next please <a href=\"/cards/?action=print_design&design_id=".$design_id."\">download the PDFs</a> or <a href=\"/explorer/blockchains/".$fv_blockchain->db_blockchain['url_identifier']."/transactions/".$db_transaction['tx_hash']."\">view the transaction</a>.<br/>\n";
-								$error_class = "error";
+								for ($i=0; $i<$how_many; $i++) {
+									$address_key = $app->new_address_key($fv_currency['currency_id'], $currency_account);
+									array_push($output_amounts, $denomination['denomination']*pow(10, $fv_blockchain->db_blockchain['decimal_places']));
+									array_push($output_address_ids, $address_key['address_id']);
+								}
 								
-								$action = "manage";
-								$nav_subtab_selected = "manage";
+								if ($cost+$fee < $input_sum) {
+									array_push($output_amounts, $input_sum-$cost-$fee);
+									array_push($output_address_ids, $first_address_id);
+								}
+								
+								$error_message = false;
+								$transaction_id = $fv_blockchain->create_transaction("transaction", $output_amounts, false, $io_ids, $output_address_ids, $fee, $error_message);
+								
+								if ($transaction_id) {
+									$db_transaction = $app->fetch_transaction_by_id($transaction_id);
+									
+									$name = $_REQUEST['cards_name'];
+									$title = $_REQUEST['cards_title'];
+									$email = $_REQUEST['cards_email'];
+									$pnum = $_REQUEST['cards_pnum'];
+									$purity = $_REQUEST['cards_purity'];
+									
+									$new_card_params = [
+										'image_id' => $db_currency['default_design_image_id'],
+										'denomination_id' => $denomination['denomination_id'],
+										'purity' => $purity,
+										'display_name' => $name,
+										'display_title' => $title,
+										'display_email' => $email,
+										'display_pnum' => $pnum,
+										'time_created' => time(),
+										'user_id' => $thisuser->db_user['user_id'],
+										'redeem_url' => AppSettings::getParam('base_url'),
+										'text_color' => empty($fv_currency['default_design_text_color']) ? null : $fv_currency['default_design_text_color']
+									];
+									$new_card_design_q = "INSERT INTO card_designs SET image_id=:image_id, denomination_id=:denomination_id, purity=:purity, display_name=:display_name, display_title=:display_title, display_email=:display_email, display_pnum=:display_pnum, time_created=:time_created, user_id=:user_id, redeem_url=:redeem_url, text_color=:text_color;";
+									$app->run_query($new_card_design_q, $new_card_params);
+									$design_id = $app->last_insert_id();
+									
+									$app->run_query("INSERT INTO card_printrequests SET peer_id=:peer_id, secrets_present=1, design_id=:design_id, user_id=:user_id, how_many=:how_many, print_status='not-printed', pay_status='not-received', time_created=:time_created;", [
+										'peer_id' => $this_peer['peer_id'],
+										'design_id' => $design_id,
+										'user_id' => $thisuser->db_user['user_id'],
+										'how_many' => $how_many,
+										'time_created' => time()
+									]);
+									$request_id = $app->last_insert_id();
+									
+									$paper_width = "";
+									if (!empty($_REQUEST['paper_width'])) $paper_width = $_REQUEST['paper_width'];
+									if (empty($paper_width)) $paper_width = "standard";
+									else if ($paper_width == "small") {}
+									
+									$max_id = $app->run_query("SELECT MAX(peer_card_id), MAX(group_id) FROM cards WHERE peer_id=:peer_id;", ['peer_id' => $this_peer['peer_id']])->fetch();
+									
+									$card_group_id = $max_id[1]+1;
+									
+									$first_id = 1;
+									if ($max_id[0] > 0) $first_id = $max_id[0]+1;
+									
+									for ($i=0; $i<$how_many; $i++) {
+										$card_id = $i+$first_id;
+										$secret = $app->random_number(16);
+										$secret_hash = $app->card_secret_to_hash($secret);
+										$app->run_query("INSERT INTO cards SET design_id=:design_id, peer_id=:peer_id, purity=:purity, group_id=:group_id, secret=:secret, secret_hash=:secret_hash, peer_card_id=:peer_card_id, mint_time=:mint_time, currency_id=:currency_id, fv_currency_id=:fv_currency_id, amount=:amount, status='issued', io_tx_hash=:io_tx_hash, io_out_index=:io_out_index;", [
+											'design_id' => $design_id,
+											'peer_id' => $this_peer['peer_id'],
+											'purity' => $purity,
+											'group_id' => $card_group_id,
+											'secret' => $secret,
+											'secret_hash' => $secret_hash,
+											'peer_card_id' => $card_id,
+											'mint_time' => time(),
+											'currency_id' => $db_currency['currency_id'],
+											'fv_currency_id' => $fv_currency['currency_id'],
+											'amount' => $denomination['denomination'],
+											'io_tx_hash' => $db_transaction['tx_hash'],
+											'io_out_index' => $i
+										]);
+									}
+									
+									$app->run_query("UPDATE card_printrequests SET card_group_id=:card_group_id WHERE request_id=:request_id;", [
+										'card_group_id' => $card_group_id,
+										'request_id' => $request_id
+									]);
+									$app->run_query("UPDATE card_designs SET status='printed' WHERE design_id=:design_id;", [
+										'design_id' => $design_id
+									]);
+									
+									$error_message = $how_many." cards have been created, next please <a href=\"/cards/?action=print_design&design_id=".$design_id."\">download the PDFs</a> or <a href=\"/explorer/blockchains/".$fv_blockchain->db_blockchain['url_identifier']."/transactions/".$db_transaction['tx_hash']."\">view the transaction</a>.<br/>\n";
+									$error_class = "error";
+									
+									$action = "manage";
+									$nav_subtab_selected = "manage";
+								}
+								else {
+									$error_message = "Payment error: failed to create a transaction on the blockchain.";
+									$error_class = "error";
+								}
 							}
 							else {
-								$error_message = "Payment error: failed to create a transaction on the blockchain.";
+								$error_message = "Payment error: the account you selected cannot afford to generate these cards.";
 								$error_class = "error";
 							}
 						}
 						else {
-							$error_message = "Payment error: the account you selected cannot afford to generate these cards.";
+							$error_message = "Error: invalid quantity of cards.";
 							$error_class = "error";
 						}
 					}
 					else {
-						$error_message = "Error: invalid quantity of cards.";
+						$error_message = "Error: you don't have permission to perform this action.";
 						$error_class = "error";
 					}
 				}
 				else {
-					$error_message = "Error: you don't have permission to perform this action.";
+					$error_message = "Error: invalid account selected.";
 					$error_class = "error";
 				}
 			}
 			else {
-				$error_message = "Error: invalid account selected.";
+				$error_message = "Error: invalid denomination.";
 				$error_class = "error";
 			}
 		}
-		else {
-			$error_message = "Error: invalid denomination.";
-			$error_class = "error";
-		}
-	}
-	
-	if ($action == "print_design") {
-		$design_id = (int) $_REQUEST['design_id'];
 		
-		$design = $app->run_query("SELECT * FROM card_designs d JOIN card_printrequests r ON r.design_id=d.design_id JOIN users u ON d.user_id=u.user_id WHERE d.design_id=:design_id;", [
-			'design_id' => $design_id
-		])->fetch();
-		
-		if ($design) {
-			if ($design['user_id'] == $thisuser->db_user['user_id']) {
-				$paper_width = "";
-				if (!empty($_REQUEST['paper_width'])) $paper_width = $_REQUEST['paper_width'];
-				if (empty($paper_width)) $paper_width = "standard";
-				else if ($paper_width == "small") {}
-				
-				$card_group_id = $design['card_group_id'];
-				$from = $app->run_query("SELECT MIN(card_id) FROM cards WHERE design_id=:design_id;", ['design_id' => $design['design_id']])->fetch()[0];
-				
-				if (empty($from)) die("Error, the cards haven't been created yet.");
-				
-				$to = $from + $design['how_many'] - 1;
-				
-				require_once(AppSettings::srcPath().'/lib/card-render/fpdf.php');
-				
-				$perpage = 10;
-				
-				$numcards = $to-$from+1;
-				$numpages = ceil($numcards/$perpage);
-				
-				if ($paper_width == "small") {
-					$pdf = new FPDF('P','in',array(2.4,3.5*5+0.5));
-					$orient = "tall";
-					$card_print_width = 2;
-				}
-				else {
-					$pdf = new FPDF('P','in',array(8.5,11));
-					$orient = "fat";
-					$card_print_width = 3.5;
-				}
-				
-				$these_cards = $app->run_query("SELECT * FROM cards WHERE card_id >= :from_card_id AND card_id <= :to_card_id;", [
-					'from_card_id' => $from,
-					'to_card_id' => $to
-				]);
-				$count = 0;
-				
-				$res = "";
-				if (!empty($_REQUEST['res'])) {
-					$res = $_REQUEST['res'];
-					if ($res != "low") $res = "high";
-				}
-				
-				if ($res == "low") $extension = "jpg";
-				else $extension = "png";
-				
-				for ($dubpage=1; $dubpage<=$numpages; $dubpage++) {
-					$numthispage = 10;
+		if ($action == "print_design") {
+			$design_id = (int) $_REQUEST['design_id'];
+			
+			$design = $app->run_query("SELECT * FROM card_designs d JOIN card_printrequests r ON r.design_id=d.design_id JOIN users u ON d.user_id=u.user_id WHERE d.design_id=:design_id;", [
+				'design_id' => $design_id
+			])->fetch();
+			
+			if ($design) {
+				if ($design['user_id'] == $thisuser->db_user['user_id']) {
+					$paper_width = "";
+					if (!empty($_REQUEST['paper_width'])) $paper_width = $_REQUEST['paper_width'];
+					if (empty($paper_width)) $paper_width = "standard";
+					else if ($paper_width == "small") {}
 					
-					if ($count+$numthispage > $numcards) $numthispage = $numcards-$count;
+					$card_group_id = $design['card_group_id'];
+					$from = $app->run_query("SELECT MIN(card_id) FROM cards WHERE design_id=:design_id;", ['design_id' => $design['design_id']])->fetch()[0];
 					
-					$cardarr = [];
+					if (empty($from)) die("Error, the cards haven't been created yet.");
 					
-					for ($pos=1; $pos <= $numthispage; $pos++) {
-						$cardarr[$pos-1] = $these_cards->fetch();
-						
-						$count++;
+					$to = $from + $design['how_many'] - 1;
+					
+					require_once(AppSettings::srcPath().'/lib/card-render/fpdf.php');
+					
+					$perpage = 10;
+					
+					$numcards = $to-$from+1;
+					$numpages = ceil($numcards/$perpage);
+					
+					if ($paper_width == "small") {
+						$pdf = new FPDF('P','in',array(2.4,3.5*5+0.5));
+						$orient = "tall";
+						$card_print_width = 2;
+					}
+					else {
+						$pdf = new FPDF('P','in',array(8.5,11));
+						$orient = "fat";
+						$card_print_width = 3.5;
 					}
 					
-					if ($paper_width != "small") {
+					$these_cards = $app->run_query("SELECT * FROM cards WHERE card_id >= :from_card_id AND card_id <= :to_card_id;", [
+						'from_card_id' => $from,
+						'to_card_id' => $to
+					]);
+					$count = 0;
+					
+					$res = "";
+					if (!empty($_REQUEST['res'])) {
+						$res = $_REQUEST['res'];
+						if ($res != "low") $res = "high";
+					}
+					
+					if ($res == "low") $extension = "jpg";
+					else $extension = "png";
+					
+					for ($dubpage=1; $dubpage<=$numpages; $dubpage++) {
+						$numthispage = 10;
+						
+						if ($count+$numthispage > $numcards) $numthispage = $numcards-$count;
+						
+						$cardarr = [];
+						
+						for ($pos=1; $pos <= $numthispage; $pos++) {
+							$cardarr[$pos-1] = $these_cards->fetch();
+							
+							$count++;
+						}
+						
+						if ($paper_width != "small") {
+							$pdf->AddPage();
+							
+							$pdf->Line(0, 0.5, 0.25, 0.5);
+							$pdf->Line(8.25, 0.5, 8.5, 0.5);
+							
+							$pdf->Line(0.75, 0, 0.75, 0.25);
+							$pdf->Line(7.75, 0, 7.75, 0.25);
+							
+							$pdf->Line(4.25, 0, 4.25, 0.25);
+							
+							for ($pos=1; $pos <= $numthispage; $pos++) {
+								$front_coords = $app->position_by_pos($pos, 'front', $paper_width);
+								
+								$side = "front";
+								$temp_render_url = AppSettings::getParam('base_url')."/lib/card-render/render".$side.".php?key=".AppSettings::getParam('operator_key')."&card_id=".$cardarr[$pos-1]['card_id']."&orient=".$orient."&res=".$res;
+								
+								$pdf->Image($temp_render_url, $front_coords[0], $front_coords[1], $card_print_width, false, 'png');
+							}
+							$pdf->Line(0, 10.5, 0.25, 10.5);
+							$pdf->Line(8.25, 10.5, 8.5, 10.5);
+							
+							$pdf->Line(0.75, 11, 0.75, 10.75);
+							$pdf->Line(7.75, 11, 7.75, 10.75);
+							
+							$pdf->Line(4.25, 10.75, 4.25, 11);
+						}
+						
 						$pdf->AddPage();
 						
 						$pdf->Line(0, 0.5, 0.25, 0.5);
@@ -280,12 +313,12 @@ if (!empty($_REQUEST['action']) && $app->synchronizer_ok($thisuser, $_REQUEST['s
 						$pdf->Line(4.25, 0, 4.25, 0.25);
 						
 						for ($pos=1; $pos <= $numthispage; $pos++) {
-							$front_coords = $app->position_by_pos($pos, 'front', $paper_width);
+							$back_coords = $app->position_by_pos($pos, 'back', $paper_width);
 							
-							$side = "front";
-							$temp_render_url = AppSettings::getParam('base_url')."/lib/card-render/render".$side.".php?key=".AppSettings::getParam('operator_key')."&card_id=".$cardarr[$pos-1]['card_id']."&orient=".$orient."&res=".$res;
+							$side = "back";
+							$img_png_url = AppSettings::getParam('base_url')."/lib/card-render/render".$side.".php?key=".AppSettings::getParam('operator_key')."&card_id=".$cardarr[$pos-1]['card_id']."&orient=".$orient."&res=".$res;
 							
-							$pdf->Image($temp_render_url, $front_coords[0], $front_coords[1], $card_print_width, false, 'png');
+							$pdf->Image($img_png_url, $back_coords[0], $back_coords[1], $card_print_width, false, 'png');
 						}
 						$pdf->Line(0, 10.5, 0.25, 10.5);
 						$pdf->Line(8.25, 10.5, 8.5, 10.5);
@@ -296,185 +329,159 @@ if (!empty($_REQUEST['action']) && $app->synchronizer_ok($thisuser, $_REQUEST['s
 						$pdf->Line(4.25, 10.75, 4.25, 11);
 					}
 					
-					$pdf->AddPage();
+					$app->run_query("UPDATE card_printrequests SET print_status='printed' WHERE request_id=:request_id;", [
+						'request_id' => $design['request_id']
+					]);
 					
-					$pdf->Line(0, 0.5, 0.25, 0.5);
-					$pdf->Line(8.25, 0.5, 8.5, 0.5);
-					
-					$pdf->Line(0.75, 0, 0.75, 0.25);
-					$pdf->Line(7.75, 0, 7.75, 0.25);
-					
-					$pdf->Line(4.25, 0, 4.25, 0.25);
-					
-					for ($pos=1; $pos <= $numthispage; $pos++) {
-						$back_coords = $app->position_by_pos($pos, 'back', $paper_width);
-						
-						$side = "back";
-						$img_png_url = AppSettings::getParam('base_url')."/lib/card-render/render".$side.".php?key=".AppSettings::getParam('operator_key')."&card_id=".$cardarr[$pos-1]['card_id']."&orient=".$orient."&res=".$res;
-						
-						$pdf->Image($img_png_url, $back_coords[0], $back_coords[1], $card_print_width, false, 'png');
-					}
-					$pdf->Line(0, 10.5, 0.25, 10.5);
-					$pdf->Line(8.25, 10.5, 8.5, 10.5);
-					
-					$pdf->Line(0.75, 11, 0.75, 10.75);
-					$pdf->Line(7.75, 11, 7.75, 10.75);
-					
-					$pdf->Line(4.25, 10.75, 4.25, 11);
-				}
-				
-				$app->run_query("UPDATE card_printrequests SET print_status='printed' WHERE request_id=:request_id;", [
-					'request_id' => $design['request_id']
-				]);
-				
-				$pdf->Output('cards'.$from.'_'.$to.'.pdf', "D");
-				die();
-			}
-			else {
-				$error_message = "Error, you don't have permission to perform this action.";
-				$error_class = "error";
-			}
-		}
-		else {
-			$error_message = "Error, invalid denomination or number of cards.";
-			$error_class = "error";
-		}
-		
-		$action = "manage";
-		$nav_subtab_selected = "manage";
-	}
-	else if ($action == "activate_cards") {
-		$printrequest = $app->run_query("SELECT * FROM card_printrequests pr JOIN card_designs d ON pr.design_id=d.design_id WHERE pr.request_id=:request_id;", [
-			'request_id' => $_REQUEST['printrequest_id']
-		])->fetch();
-		
-		if ($printrequest) {
-			if ($printrequest['user_id'] == $thisuser->db_user['user_id']) {
-				$card_r = $app->run_query("SELECT * FROM card_printrequests pr JOIN card_designs d ON pr.design_id=d.design_id JOIN cards c ON c.design_id=d.design_id WHERE pr.request_id=:request_id ORDER BY c.card_id ASC;", ['request_id' => $printrequest['request_id']]);
-				
-				$change_count = 0;
-				
-				if ($card_r->rowCount() > 0) {
-					while ($card = $card_r->fetch()) {
-						if (in_array($card['status'], array('issued','printed','assigned'))) {
-							$app->change_card_status($card, 'sold');
-							$change_count++;
-						}
-					}
-					$error_message = $change_count." cards have been activated.";
-					$error_class = "success";
-				}
-			}
-		}
-		
-		$action = "manage";
-		$nav_subtab_selected = "manage";
-	}
-	else if ($action == "wipe_secrets") {
-		$printrequest = $app->run_query("SELECT * FROM card_printrequests pr JOIN card_designs d ON pr.design_id=d.design_id WHERE pr.request_id=:request_id;", ['request_id'=>$_REQUEST['printrequest_id']])->fetch();
-		
-		if ($printrequest) {
-			if ($printrequest['secrets_present'] == 1) {
-				$app->run_query("UPDATE cards SET secret=NULL WHERE group_id=:group_id;", [
-					'group_id' => $printrequest['card_group_id']
-				]);
-				$app->run_query("UPDATE card_printrequests SET secrets_present=0 WHERE request_id=:request_id;", ['request_id'=>$printrequest['request_id']]);
-				
-				$error_message = "Secrets have been successfully wiped for this card group!";
-				$error_class = "success";
-			}
-			else {
-				$error_message = "Action canceled: secrets have already been wiped.";
-				$error_class = "error";
-			}
-		}
-		else {
-			$error_message = "Error: invalid print request ID.";
-			$error_class = "error";
-		}
-		
-		$action = "manage";
-		$nav_subtab_selected = "manage";
-	}
-	else if ($action == "change_card_status") {
-		$card_id = (int) $_REQUEST['card_id'];
-		$to_status = $_REQUEST['to_status'];
-		
-		$card = $app->run_query("SELECT *, pr.user_id AS user_id FROM card_printrequests pr JOIN card_designs d ON pr.design_id=d.design_id JOIN cards c ON c.design_id=d.design_id WHERE c.card_id=:card_id;", ['card_id'=>$card_id])->fetch();
-		
-		if ($card) {
-			if ($card['user_id'] == $thisuser->db_user['user_id']) {
-				$ok = false;
-				if ($card['status'] == "sold" && ($to_status == "canceled" || $to_status == "printed")) $ok = true;
-				else if (in_array($card['status'], array("printed", "issued")) && in_array($to_status, array('canceled','sold'))) $ok = true;
-				
-				if ($ok) {
-					$app->change_card_status($card, $to_status);
-					$error_message = "Successfully changed status of <a href=\"/redeem/".$card['card_id']."\">card #".$card['card_id']."</a>";
-					$error_class = "success";
+					$pdf->Output('cards'.$from.'_'.$to.'.pdf', "D");
+					die();
 				}
 				else {
-					$error_message = "You can't switch this card to that status.";
+					$error_message = "Error, you don't have permission to perform this action.";
 					$error_class = "error";
 				}
 			}
 			else {
-				$error_message = "Permission denied.";
+				$error_message = "Error, invalid denomination or number of cards.";
 				$error_class = "error";
 			}
-		}
-		else {
-			$error_message = "Failed to change card status: invalid card ID.";
-			$error_class = "error";
-		}
-	}
-	else if ($action == "import_cards") {
-		$peer_name = urldecode($_REQUEST['peer_name']);
-		$from_card_id = (int) $_REQUEST['from_card_id'];
-		$to_card_id = (int) $_REQUEST['to_card_id'];
-		if ($peer_name[strlen($peer_name)-1] == "/") $peer_name = substr($peer_name, 0, strlen($peer_name)-1);
-		
-		$peer = $app->get_peer_by_server_name($peer_name, false);
-		$add_count = 0;
-		
-		if ($peer) {
-			$remote_url = $peer_name."/api/cards/".$from_card_id."-".$to_card_id;
-			$remote_response = get_object_vars(json_decode(file_get_contents($remote_url)));
-			$card_public_vars = $app->card_public_vars();
 			
-			if (!empty($remote_response) && count($remote_response['cards']) > 0) {
-				for ($i=0; $i<count($remote_response['cards']); $i++) {
-					$import_card = get_object_vars($remote_response['cards'][$i]);
-					$existing_card = $app->fetch_card_by_peer_and_id($peer['peer_id'], $import_card['peer_card_id']);
+			$action = "manage";
+			$nav_subtab_selected = "manage";
+		}
+		else if ($action == "activate_cards") {
+			$printrequest = $app->run_query("SELECT * FROM card_printrequests pr JOIN card_designs d ON pr.design_id=d.design_id WHERE pr.request_id=:request_id;", [
+				'request_id' => $_REQUEST['printrequest_id']
+			])->fetch();
+			
+			if ($printrequest) {
+				if ($printrequest['user_id'] == $thisuser->db_user['user_id']) {
+					$card_r = $app->run_query("SELECT * FROM card_printrequests pr JOIN card_designs d ON pr.design_id=d.design_id JOIN cards c ON c.design_id=d.design_id WHERE pr.request_id=:request_id ORDER BY c.card_id ASC;", ['request_id' => $printrequest['request_id']]);
 					
-					if (!$existing_card) {
-						$fv_currency = $app->get_currency_by_abbreviation($import_card['currency_abbreviation']);
-						$currency = $app->get_currency_by_abbreviation($import_card['fv_currency_abbreviation']);
-						
-						$new_card_params = [
-							'peer_id' => $peer['peer_id'],
-							'currency_id' => $currency['currency_id'],
-							'fv_currency_id' => $fv_currency['currency_id']
-						];
-						$new_card_q = "INSERT INTO cards SET peer_id=:peer_id, currency_id=:currency_id, fv_currency_id=:fv_currency_id, ";
-						for ($j=0; $j<count($card_public_vars); $j++) {
-							$new_card_q .= $card_public_vars[$j]."=:".$card_public_vars[$j].", ";
-							$new_card_params[$card_public_vars[$j]] = $import_card[$card_public_vars[$j]];
+					$change_count = 0;
+					
+					if ($card_r->rowCount() > 0) {
+						while ($card = $card_r->fetch()) {
+							if (in_array($card['status'], array('issued','printed','assigned'))) {
+								$app->change_card_status($card, 'sold');
+								$change_count++;
+							}
 						}
-						$new_card_q = substr($new_card_q, 0, strlen($new_card_q)-2).";";
-						$app->run_query($new_card_q, $new_card_params);
-						
-						$add_count++;
+						$error_message = $change_count." cards have been activated.";
+						$error_class = "success";
 					}
 				}
 			}
+			
+			$action = "manage";
+			$nav_subtab_selected = "manage";
 		}
-		
-		$error_message = $add_count." cards have been imported.";
-		$error_class = "error";
-		
-		$action = "manage";
-		$nav_subtab_selected = "manage";
+		else if ($action == "wipe_secrets") {
+			$printrequest = $app->run_query("SELECT * FROM card_printrequests pr JOIN card_designs d ON pr.design_id=d.design_id WHERE pr.request_id=:request_id;", ['request_id'=>$_REQUEST['printrequest_id']])->fetch();
+			
+			if ($printrequest) {
+				if ($printrequest['secrets_present'] == 1) {
+					$app->run_query("UPDATE cards SET secret=NULL WHERE group_id=:group_id;", [
+						'group_id' => $printrequest['card_group_id']
+					]);
+					$app->run_query("UPDATE card_printrequests SET secrets_present=0 WHERE request_id=:request_id;", ['request_id'=>$printrequest['request_id']]);
+					
+					$error_message = "Secrets have been successfully wiped for this card group!";
+					$error_class = "success";
+				}
+				else {
+					$error_message = "Action canceled: secrets have already been wiped.";
+					$error_class = "error";
+				}
+			}
+			else {
+				$error_message = "Error: invalid print request ID.";
+				$error_class = "error";
+			}
+			
+			$action = "manage";
+			$nav_subtab_selected = "manage";
+		}
+		else if ($action == "change_card_status") {
+			$card_id = (int) $_REQUEST['card_id'];
+			$to_status = $_REQUEST['to_status'];
+			
+			$card = $app->run_query("SELECT *, pr.user_id AS user_id FROM card_printrequests pr JOIN card_designs d ON pr.design_id=d.design_id JOIN cards c ON c.design_id=d.design_id WHERE c.card_id=:card_id;", ['card_id'=>$card_id])->fetch();
+			
+			if ($card) {
+				if ($card['user_id'] == $thisuser->db_user['user_id']) {
+					$ok = false;
+					if ($card['status'] == "sold" && ($to_status == "canceled" || $to_status == "printed")) $ok = true;
+					else if (in_array($card['status'], array("printed", "issued")) && in_array($to_status, array('canceled','sold'))) $ok = true;
+					
+					if ($ok) {
+						$app->change_card_status($card, $to_status);
+						$error_message = "Successfully changed status of <a href=\"/redeem/".$card['card_id']."\">card #".$card['card_id']."</a>";
+						$error_class = "success";
+					}
+					else {
+						$error_message = "You can't switch this card to that status.";
+						$error_class = "error";
+					}
+				}
+				else {
+					$error_message = "Permission denied.";
+					$error_class = "error";
+				}
+			}
+			else {
+				$error_message = "Failed to change card status: invalid card ID.";
+				$error_class = "error";
+			}
+		}
+		else if ($action == "import_cards") {
+			$peer_name = urldecode($_REQUEST['peer_name']);
+			$from_card_id = (int) $_REQUEST['from_card_id'];
+			$to_card_id = (int) $_REQUEST['to_card_id'];
+			if ($peer_name[strlen($peer_name)-1] == "/") $peer_name = substr($peer_name, 0, strlen($peer_name)-1);
+			
+			$peer = $app->get_peer_by_server_name($peer_name, false);
+			$add_count = 0;
+			
+			if ($peer) {
+				$remote_url = $peer_name."/api/cards/".$from_card_id."-".$to_card_id;
+				$remote_response = get_object_vars(json_decode(file_get_contents($remote_url)));
+				$card_public_vars = $app->card_public_vars();
+				
+				if (!empty($remote_response) && count($remote_response['cards']) > 0) {
+					for ($i=0; $i<count($remote_response['cards']); $i++) {
+						$import_card = get_object_vars($remote_response['cards'][$i]);
+						$existing_card = $app->fetch_card_by_peer_and_id($peer['peer_id'], $import_card['peer_card_id']);
+						
+						if (!$existing_card) {
+							$fv_currency = $app->get_currency_by_abbreviation($import_card['currency_abbreviation']);
+							$currency = $app->get_currency_by_abbreviation($import_card['fv_currency_abbreviation']);
+							
+							$new_card_params = [
+								'peer_id' => $peer['peer_id'],
+								'currency_id' => $currency['currency_id'],
+								'fv_currency_id' => $fv_currency['currency_id']
+							];
+							$new_card_q = "INSERT INTO cards SET peer_id=:peer_id, currency_id=:currency_id, fv_currency_id=:fv_currency_id, ";
+							for ($j=0; $j<count($card_public_vars); $j++) {
+								$new_card_q .= $card_public_vars[$j]."=:".$card_public_vars[$j].", ";
+								$new_card_params[$card_public_vars[$j]] = $import_card[$card_public_vars[$j]];
+							}
+							$new_card_q = substr($new_card_q, 0, strlen($new_card_q)-2).";";
+							$app->run_query($new_card_q, $new_card_params);
+							
+							$add_count++;
+						}
+					}
+				}
+			}
+			
+			$error_message = $add_count." cards have been imported.";
+			$error_class = "error";
+			
+			$action = "manage";
+			$nav_subtab_selected = "manage";
+		}
 	}
 }
 
