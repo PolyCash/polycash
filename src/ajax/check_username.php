@@ -12,7 +12,7 @@ if ($action == "generate") {
 	$html = "<p>Please write down the following username and password:</p>\n";
 	$html .= "<p><b>Username:</b> &nbsp;&nbsp;&nbsp; $username</p>\n";
 	$html .= "<p><b>Password:</b> &nbsp;&nbsp;&nbsp; $password</p>\n";
-	$html .= "<p><button class=\"btn btn-success\" onclick=\"thisPageManager.login();\">Continue</button></p>\n";
+	$html .= "<p><button class=\"btn btn-success\" onclick=\"thisPageManager.login();\" id=\"generate_login_btn\">Continue</button></p>\n";
 	$html .= "<input type=\"hidden\" id=\"generate_username\" name=\"generate_username\" value=\"".$username."\" />\n";
 	$html .= "<input type=\"hidden\" id=\"generate_password\" name=\"generate_password\" value=\"".$password."\" />\n";
 	

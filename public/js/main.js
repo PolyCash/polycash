@@ -2702,7 +2702,8 @@ var PageManager = function() {
 	this.login = function() {
 		if ($('#login_password').val() != "") $('#login_password').val(Sha256.hash($('#login_password').val()));
 		
-		$('#login_btn').val("Loading...");
+		$('#login_btn').html("Loading...");
+		$('#generate_login_btn').html("Loading...");
 		
 		$.ajax({
 			url: "/ajax/log_in.php",
@@ -2713,7 +2714,8 @@ var PageManager = function() {
 				redirect_key: $('#redirect_key').val()
 			},
 			success: function(login_response) {
-				$('#login_btn').val("Log In");
+				$('#login_btn').html("Log In");
+				$('#generate_login_btn').html("Continue");
 				
 				if (login_response.status_code == 1) {
 					window.location = login_response.message;

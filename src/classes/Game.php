@@ -1735,7 +1735,7 @@ class Game {
 		$js = "";
 		
 		$user_id = false;
-		if ($user) $user_game = $user->ensure_user_in_game($this, false);
+		if ($user) $user_game = $this->blockchain->app->fetch_user_game($user->db_user['user_id'], $this->game_id);
 		
 		if (!$include_content) {
 			$js .= "for (var i=0; i<games[".$game_index."].events.length; i++) {\n";
