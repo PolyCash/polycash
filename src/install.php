@@ -4,6 +4,8 @@ $skip_select_db = TRUE;
 require(AppSettings::srcPath()."/includes/connect.php");
 
 if ($app->running_as_admin()) {
+	set_time_limit(0);
+	
 	// For CSRF protection on this page, operator_key is used instead of synchronizer_token
 	// The admin needs to visit this page before the db is installed so we can't require a user account here
 	

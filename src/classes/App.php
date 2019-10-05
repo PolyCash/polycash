@@ -30,6 +30,7 @@ class App {
 		$statement = $this->dbh->prepare($query);
 		
 		if ($statement) {
+			if ($params === false) $params = [];
 			$statement->execute($params);
 			
 			return $statement;
