@@ -51,49 +51,12 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 							$addresses_needed = $quantity;
 							$loop_count = 0;
 							do {
-								$addr_r = $app->run_query("SELECT * FROM addresses a WHERE a.primary_blockchain_id=:blockchain_id AND a.is_mine=1 AND a.user_id IS NULL AND a.is_destroy_address=0 AND a.is_separator_address=0 AND a.is_passthrough_address=0 ORDER BY RAND() LIMIT 1;", [
-									'blockchain_id' => $sale_blockchain->db_blockchain['blockchain_id']
-								]);
+								$db_address = $app->new_normal_address_key($game_sale_account['currency_id'], $game_sale_account);
 								
-								if ($addr_r->rowCount() > 0) {
-									$db_address = $addr_r->fetch();
-									
-									if (empty($db_address['user_id'])) {
-										$update_addr_q = "UPDATE addresses SET user_id=:user_id WHERE address_id=:address_id;";
-										$update_addr_r = $app->run_query($update_addr_q, [
-											'user_id' => $thisuser->db_user['user_id'],
-											'address_id' => $db_address['address_id']
-										]);
-										
-										$addr_key_q = "SELECT * FROM address_keys WHERE address_id=:address_id;";
-										$addr_key_r = $app->run_query($addr_key_q, ['address_id' => $db_address['address_id']]);
-										
-										if ($addr_key_r->rowCount() > 0) {
-											$addr_key = $addr_key_r->fetch();
-											$addr_key_q = "UPDATE address_keys SET account_id=:account_id WHERE address_key_id=:address_key_id;";
-											$addr_key_r = $app->run_query($addr_key_q, [
-												'account_id' => $game_sale_account['account_id'],
-												'address_key_id' => $addr_key['address_key_id']
-											]);
-										}
-										else {
-											$addr_key = $app->insert_address_key([
-												'currency_id' => $sale_currency_id,
-												'address_id' => $db_address['address_id'],
-												'account_id' => $faucet_account['account_id'],
-												'pub_key' => $db_address['address'],
-												'option_index' => $db_address['option_index'],
-												'primary_blockchain_id' => $sale_blockchain->db_blockchain['blockchain_id']
-											]);
-										}
-										
-										$addresses_needed--;
-										
-										array_push($address_ids, $db_address['address_id']);
-										array_push($address_key_ids, $addr_key['address_key_id']);
-									}
-									else echo "Error, ".$address['address_id']." is already owned by someone.<br/>\n";
-								}
+								array_push($address_ids, $db_address['address_id']);
+								array_push($address_key_ids, $addr_key['address_key_id']);
+								
+								$addresses_needed--;
 								$loop_count++;
 							}
 							while ($addresses_needed > 0 && $loop_count < $quantity*2);
@@ -204,13 +167,12 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 							$loop_count = 0;
 							
 							do {
-								$address_key = $app->new_address_key($faucet_account['currency_id'], $faucet_account);
+								$address_key = $app->new_normal_address_key($faucet_account['currency_id'], $faucet_account);
 								
-								if ($address_key['is_destroy_address'] == 0) {
-									array_push($address_ids, $address_key['address_id']);
-									array_push($address_key_ids, $address_key_id);
-									$addresses_needed--;
-								}
+								array_push($address_ids, $address_key['address_id']);
+								array_push($address_key_ids, $address_key_id);
+								
+								$addresses_needed--;
 								$loop_count++;
 							}
 							while ($addresses_needed > 0);
