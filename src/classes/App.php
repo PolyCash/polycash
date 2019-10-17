@@ -4020,5 +4020,12 @@ class App {
 			'game_io_id' => $game_io_id
 		])->fetch();
 	}
+	
+	public function set_last_account_notified_value($account_id, $account_value) {
+		$this->run_query("UPDATE currency_accounts SET last_notified_account_value=:account_value WHERE account_id=:account_id;", [
+			'account_value' => $account_value,
+			'account_id' => $account_id
+		]);
+	}
 }
 ?>
