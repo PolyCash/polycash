@@ -16,7 +16,7 @@ CREATE TABLE `cards` (
   `card_user_id` int(20) DEFAULT NULL,
   `card_group_id` int(12) DEFAULT NULL,
   `reseller_sale_id` int(20) DEFAULT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
   
 CREATE TABLE `card_conversions` (
   `conversion_id` int(20) NOT NULL,
@@ -30,7 +30,7 @@ CREATE TABLE `card_conversions` (
   `reason` enum('conversion','withdrawal','group_withdrawal','nonneg_conversion') COLLATE latin1_german2_ci NOT NULL DEFAULT 'conversion',
   `time_created` int(20) NOT NULL,
   `ip_address` varchar(40) COLLATE latin1_german2_ci NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
 
 CREATE TABLE `card_currency_balances` (
   `balance_id` int(11) NOT NULL,
@@ -59,7 +59,7 @@ CREATE TABLE `card_designs` (
   `redeem_url` varchar(255) COLLATE latin1_german2_ci DEFAULT NULL,
   `time_created` int(20) NOT NULL DEFAULT '0',
   `purity` varchar(20) COLLATE latin1_german2_ci NOT NULL DEFAULT ''
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
 
 CREATE TABLE `card_failedchecks` (
   `check_id` int(20) NOT NULL,
@@ -67,7 +67,7 @@ CREATE TABLE `card_failedchecks` (
   `ip_address` varchar(100) NOT NULL DEFAULT '',
   `check_time` int(20) NOT NULL DEFAULT '0',
   `attempted_code` varchar(100) NOT NULL DEFAULT ''
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 CREATE TABLE `card_printrequests` (
   `request_id` int(20) NOT NULL,
@@ -81,7 +81,7 @@ CREATE TABLE `card_printrequests` (
   `pay_status` enum('not-received','received') COLLATE latin1_german2_ci NOT NULL DEFAULT 'not-received',
   `time_created` int(20) NOT NULL DEFAULT '0',
   `time_payment_sent` int(20) NOT NULL DEFAULT '0'
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
 
 CREATE TABLE `card_sessions` (
   `session_id` int(22) NOT NULL,
@@ -92,7 +92,7 @@ CREATE TABLE `card_sessions` (
   `logout_time` int(12) DEFAULT NULL,
   `expire_time` int(12) NOT NULL DEFAULT '0',
   `ip_address` varchar(30) COLLATE latin1_german2_ci NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
 
 CREATE TABLE `card_status_changes` (
   `change_id` int(11) NOT NULL,
@@ -100,7 +100,7 @@ CREATE TABLE `card_status_changes` (
   `from_status` varchar(20) COLLATE latin1_german2_ci NOT NULL,
   `to_status` varchar(20) COLLATE latin1_german2_ci NOT NULL,
   `change_time` varchar(20) COLLATE latin1_german2_ci NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
 
 CREATE TABLE `card_users` (
   `card_user_id` int(20) NOT NULL,
@@ -108,7 +108,7 @@ CREATE TABLE `card_users` (
   `create_time` int(20) NOT NULL DEFAULT '0',
   `create_ip` varchar(100) COLLATE latin1_german2_ci NOT NULL,
   `password` varchar(100) COLLATE latin1_german2_ci NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
 
 CREATE TABLE `card_withdrawals` (
   `withdrawal_id` int(20) NOT NULL,
@@ -123,7 +123,7 @@ CREATE TABLE `card_withdrawals` (
   `amount` double NOT NULL,
   `to_address` varchar(100) COLLATE latin1_german2_ci NOT NULL,
   `ip_address` varchar(50) COLLATE latin1_german2_ci NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_german2_ci;
 
 CREATE TABLE `mobile_payments` (
   `payment_id` int(11) NOT NULL,
