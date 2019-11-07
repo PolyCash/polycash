@@ -671,7 +671,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							
 							if ($block['locally_saved'] == 0) {
 								if ($block['block_id'] < $blockchain->db_blockchain['first_required_block']) {
-									echo "This block is before the first required block for ".$blockchain->db_blockchain['blockchain_name'].". ";
+									echo "This block is before <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$blockchain->db_blockchain['first_required_block']."\">".$blockchain->db_blockchain['blockchain_name']." block #".$blockchain->db_blockchain['first_required_block']."</a>. ";
 									echo AppSettings::getParam('coin_brand_name')." has not fully loaded this block.\n";
 								}
 								else {

@@ -3472,6 +3472,7 @@ class App {
 		if ($div_td == 'div') $this_bet_html .= '<div class="col-sm-2">';
 		else $this_bet_html .= "<td>";
 		
+		if ($bet['event_option_index'] != 0) $this_bet_html .= '-';
 		$this_bet_html .= $this->format_bignum($equivalent_contracts/pow(10, $game->db_game['decimal_places']))."&nbsp;".$bet['track_name_short'];
 		if ($borrow_delta != 0) {
 			if ($borrow_delta > 0) $this_bet_html .= '&nbsp;+&nbsp;';
