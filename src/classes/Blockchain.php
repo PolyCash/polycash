@@ -1059,46 +1059,35 @@ class Blockchain {
 		$this->load_coin_rpc();
 		
 		if ($this->db_blockchain['p2p_mode'] == "rpc") {
-			if (!empty($last_block['block_hash'])) {
-				$rpc_block = $this->coin_rpc->getblock($last_block['block_hash']);
-				$keep_looping = true;
-				do {
-					$block_height++;
-					if (empty($rpc_block['nextblockhash'])) {
-						$keep_looping = false;
-					}
-					else {
-						$rpc_block = $this->coin_rpc->getblock($rpc_block['nextblockhash']);
-						$coind_error = $this->coind_add_block($rpc_block['hash'], $block_height, true, $print_debug);
-						if ($coind_error) $keep_looping = false;
-					}
-				}
-				while ($keep_looping);
-			}
+			$info = $this->coin_rpc->getblockchaininfo();
+			$actual_block_height = (int) $info['headers'];
 		}
 		else {
 			$info = $this->web_api_fetch_blockchain();
 			$last_block_id = $this->last_block_id();
+			$actual_block_height = $info['last_block_id'];
+		}
+		
+		if ($actual_block_height && $last_block_id < $actual_block_height) {
+			if ($print_debug) echo "Quick adding blocks ".$last_block_id.":".$actual_block_height."\n";
 			
-			if ($last_block_id < $info['last_block_id']) {
-				$start_q = "INSERT INTO blocks (blockchain_id, block_id, time_created) VALUES ";
-				$modulo = 0;
-				$new_blocks_q = $start_q;
-				for ($block_id = $last_block_id+1; $block_id <= $info['last_block_id']; $block_id++) {
-					if ($modulo == 100) {
-						$new_blocks_q = substr($new_blocks_q, 0, -2).";";
-						$this->app->run_query($new_blocks_q);
-						$modulo = 0;
-						$new_blocks_q = $start_q;
-					}
-					else $modulo++;
-					
-					$new_blocks_q .= "('".$this->db_blockchain['blockchain_id']."', '".$block_id."', '".time()."'), ";
-				}
-				if ($modulo > 0) {
+			$start_q = "INSERT INTO blocks (blockchain_id, block_id, time_created) VALUES ";
+			$modulo = 0;
+			$new_blocks_q = $start_q;
+			for ($block_id = $last_block_id+1; $block_id <= $actual_block_height; $block_id++) {
+				if ($modulo == 1000) {
 					$new_blocks_q = substr($new_blocks_q, 0, -2).";";
 					$this->app->run_query($new_blocks_q);
+					$modulo = 0;
+					$new_blocks_q = $start_q;
 				}
+				else $modulo++;
+				
+				$new_blocks_q .= "('".$this->db_blockchain['blockchain_id']."', '".$block_id."', '".time()."'), ";
+			}
+			if ($modulo > 0) {
+				$new_blocks_q = substr($new_blocks_q, 0, -2).";";
+				$this->app->run_query($new_blocks_q);
 			}
 		}
 	}
