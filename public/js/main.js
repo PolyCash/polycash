@@ -1207,17 +1207,22 @@ var PageManager = function() {
 		var fetch_link_text = $('#fetch_game_link_'+game_id).html();
 		var switch_link_text = $('#switch_game_btn').html();
 		
+		var manage_parameters = {
+			game_id: game_id,
+			action: action,
+			synchronizer_token: this.synchronizer_token
+		};
+		
 		if (action == "fetch") $('#fetch_game_link_'+game_id).html("Loading...");
 		if (action == "switch") $('#switch_game_btn').html("Switching...");
+		if (action == "reset") {
+			manage_parameters.from_block = prompt("What block would you like to reset from? Hit cancel to reset from the beginning.");
+		}
 		
 		$.ajax({
 			url: "/ajax/manage_game.php",
 			dataType: "json",
-			data: {
-				game_id: game_id,
-				action: action,
-				synchronizer_token: this.synchronizer_token
-			},
+			data: manage_parameters,
 			context: this,
 			success: function(manage_game_response) {
 				if (action == "fetch") {

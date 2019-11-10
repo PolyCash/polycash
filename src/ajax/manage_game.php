@@ -470,8 +470,14 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 			else if (in_array($action, ['start','unpublish','complete','delete','reset'])) {
 				if ($action == "delete") $app->output_message(2, "This function is disabled", false);
 				else if ($action == "reset") {
-					$game->delete_reset_game('reset');
-					$game->start_game();
+					if (!empty($_REQUEST['from_block'])) {
+						$from_block = (int) $_REQUEST['from_block'];
+						$game->reset_blocks_from_block($from_block);
+					}
+					else {
+						$game->delete_reset_game('reset');
+						$game->start_game();
+					}
 					$app->output_message(2, "This game has been reset.", false);
 				}
 				else if ($action == "start") {

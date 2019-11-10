@@ -3452,7 +3452,7 @@ class App {
 		if ($div_td == 'div') $this_bet_html = "<div class=\"col-sm-1\">";
 		else $this_bet_html = '<td>';
 		
-		$this_bet_html .= "<a href=\"/explorer/games/".$game->db_game['url_identifier']."/utxo/".$bet['tx_hash']."/".$bet['game_out_index']."\">".$this->format_bignum($effective_paid/pow(10, $game->db_game['decimal_places']))."&nbsp;".$game->db_game['coin_abbreviation']."</a>";
+		$this_bet_html .= "<a href=\"".AppSettings::getParam('base_url')."/explorer/games/".$game->db_game['url_identifier']."/utxo/".$bet['tx_hash']."/".$bet['game_out_index']."\">".$this->format_bignum($effective_paid/pow(10, $game->db_game['decimal_places']))."&nbsp;".$game->db_game['coin_abbreviation']."</a>";
 		
 		if ($div_td == 'div') $this_bet_html .= "</div>\n";
 		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
