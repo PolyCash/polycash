@@ -1217,7 +1217,7 @@ class Blockchain {
 		$this->load_coin_rpc();
 		$rpc_block = $this->coin_rpc->getblock($db_block['block_hash']);
 		
-		if ($rpc_block['confirmations'] < 0) {
+		if (isset($rpc_block['confirmations']) && $rpc_block['confirmations'] < 0) {
 			$this->app->log_message("Detected a chain fork at ".$this->db_blockchain['blockchain_name']." block #".$db_block['block_id']);
 			
 			$delete_block_height = $db_block['block_id'];
@@ -1244,9 +1244,11 @@ class Blockchain {
 		$this->load_coin_rpc();
 		$unconfirmed_txs = $this->coin_rpc->getrawmempool();
 		
-		for ($i=0; $i<count($unconfirmed_txs); $i++) {
-			$this->walletnotify($unconfirmed_txs[$i], TRUE);
-			if ($max_execution_time && (microtime(true)-$start_time) > $max_execution_time) $i=count($unconfirmed_txs);
+		if (empty($unconfirmed_txs['code'])) {
+			for ($i=0; $i<count($unconfirmed_txs); $i++) {
+				$this->walletnotify($unconfirmed_txs[$i], TRUE);
+				if ($max_execution_time && (microtime(true)-$start_time) > $max_execution_time) $i=count($unconfirmed_txs);
+			}
 		}
 	}
 	

@@ -2,7 +2,7 @@
 set_time_limit(0);
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 
-$script_target_time = 115;
+$script_target_time = 595;
 $min_loop_target_time = 5;
 $script_start_time = microtime(true);
 
