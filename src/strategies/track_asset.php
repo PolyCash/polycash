@@ -27,7 +27,7 @@ if ($user_game) {
 		$app->set_strategy_time_next_apply($user_game['strategy_id'], time()+$rand_sec_offset);
 		
 		if ($account) {
-			$db_events = $app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_starting_block <= :mining_block_id AND event_final_block > :mining_block_id ORDER BY event_index ASC;", [
+			$db_events = $app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_starting_block <= :mining_block_id AND event_final_block > :mining_block_id AND track_max_price != 0 ORDER BY event_index ASC;", [
 				'game_id' => $game->db_game['game_id'],
 				'mining_block_id' => $mining_block_id
 			])->fetchAll();
