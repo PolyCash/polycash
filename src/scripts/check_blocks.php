@@ -69,7 +69,7 @@ if ($app->running_as_admin()) {
 			$check_blocks_params = [
 				'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
 				'from_block' => $_REQUEST['from_block'],
-				'to_block' => min($blockchain->last_complete_block_id(), $_REQUEST['to_block'])
+				'to_block' => min($blockchain->db_blockchain['last_complete_block'], $_REQUEST['to_block'])
 			];
 			$check_blocks_q = "SELECT * FROM blocks WHERE blockchain_id=:blockchain_id AND block_id >= :from_block AND block_id <= :to_block;";
 			

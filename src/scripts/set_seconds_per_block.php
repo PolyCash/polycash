@@ -9,7 +9,7 @@ if ($app->running_as_admin()) {
 	$blockchain_id = (int) $_REQUEST['blockchain_id'];
 	$blockchain = new Blockchain($app, $blockchain_id);
 	
-	$to_block_id = $blockchain->last_complete_block_id();
+	$to_block_id = $blockchain->db_blockchain['last_complete_block'];
 	$ref_time = microtime(true);
 
 	$from_block = $app->run_query("SELECT MIN(block_id) AS block_id FROM blocks WHERE blockchain_id=:blockchain_id AND sec_since_prev_block IS NULL AND block_id > :first_required_block;", [

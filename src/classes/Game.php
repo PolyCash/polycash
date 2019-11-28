@@ -1343,7 +1343,7 @@ class Game {
 		
 		$block_fraction = 0;
 		if ($missing_blocks > 0) {
-			$loading_block_id = $this->blockchain->last_complete_block_id()+1;
+			$loading_block_id = $this->blockchain->db_blockchain['last_complete_block']+1;
 			
 			$sample_size = 10;
 			$time_data = $this->blockchain->app->run_query("SELECT SUM(load_time), COUNT(*) FROM blocks WHERE blockchain_id=:blockchain_id AND locally_saved=1 AND block_id >= :from_block_id AND block_id<:to_block_id;", [
@@ -3690,7 +3690,7 @@ class Game {
 	public function set_event_blocks($game_defined_event_id) {
 		$log_text = "";
 		$last_block_id = $this->blockchain->last_block_id();
-		$avoid_changing_completed_events = false;
+		$avoid_changing_completed_events = true;
 		
 		$event_params = [
 			'game_id' => $this->db_game['game_id']

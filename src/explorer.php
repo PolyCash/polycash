@@ -810,7 +810,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$blocks_per_section = 40;
 						$last_block_id = $blockchain->last_block_id();
 						if ($game) $last_block_id = $game->last_block_id();
-						$complete_block_id = $blockchain->last_complete_block_id();
+						$complete_block_id = $blockchain->db_blockchain['last_complete_block'];
 						if ($game) $complete_block_id = $last_block_id;
 						
 						$filter_complete = false;

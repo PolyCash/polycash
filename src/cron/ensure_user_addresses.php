@@ -15,7 +15,7 @@ if ($app->running_as_admin()) {
 	if (!$process_locked) {
 		$app->set_site_constant($process_lock_name, getmypid());
 		
-		$buffer_address_sets = 5;
+		$buffer_address_sets = 3;
 		$script_target_time = 49;
 		$loop_target_time = 10;
 		

@@ -30,6 +30,13 @@ class Blockchain {
 		}
 	}
 	
+	public function set_last_complete_block($block_id) {
+		$this->app->run_query("UPDATE blockchains SET last_complete_block=:block_id WHERE blockchain_id=:blockchain_id;", [
+			'block_id' => $block_id,
+			'blockchain_id' => $this->db_blockchain['blockchain_id']
+		]);
+	}
+	
 	public function associated_games($filter_statuses) {
 		$associated_games = [];
 		$associated_games_params = [$this->db_blockchain['blockchain_id']];
@@ -215,6 +222,7 @@ class Blockchain {
 						'internal_block_id' => $db_block['internal_block_id']
 					]);
 					$db_block['locally_saved'] = 1;
+					$this->set_last_complete_block($db_block['block_id']);
 					$this->render_transactions_in_block($db_block, false);
 				}
 				$this->set_block_stats($db_block);
@@ -270,71 +278,68 @@ class Blockchain {
 		}
 		
 		if ($this->coin_rpc && $db_block['locally_saved'] == 0 && !$headers_only) {
-			try {
-				$lastblock_rpc = $this->coin_rpc->getblock($block_hash);
-			}
-			catch (Exception $e) {
-				var_dump($e);
-				die("RPC failed to get block $block_hash");
-			}
+			$lastblock_rpc = $this->coin_rpc->getblock($block_hash);
 			
-			if ($db_block['num_transactions'] == "") {
-				$prev_block = $this->fetch_block_by_id($db_block['block_id']-1);
-				$this->app->run_query("UPDATE blocks SET time_mined=:time_mined, num_transactions=:num_transactions, sec_since_prev_block=:sec_since_prev_block WHERE internal_block_id=:internal_block_id;", [
-					'time_mined' => $lastblock_rpc['time'],
-					'num_transactions' => count($lastblock_rpc['tx']),
-					'internal_block_id' => $db_block['internal_block_id'],
-					'sec_since_prev_block' => $prev_block['time_mined'] ? $lastblock_rpc['time'] - $prev_block['time_mined'] : null
-				]);
-			}
-			
-			$start_time = microtime(true);
-			if ($print_debug) {
-				echo "\nLoading ".count($lastblock_rpc['tx'])." in block ".$db_block['block_id'];
-				$this->app->flush_buffers();
-			}
-			for ($i=0; $i<count($lastblock_rpc['tx']); $i++) {
-				$tx_hash = $lastblock_rpc['tx'][$i];
-				$successful = true;
-				$db_transaction = $this->add_transaction($tx_hash, $block_height, true, $successful, $i, [false], $print_debug);
+			if (isset($lastblock_rpc['time'])) {
+				if ($db_block['num_transactions'] == "") {
+					$prev_block = $this->fetch_block_by_id($db_block['block_id']-1);
+					$this->app->run_query("UPDATE blocks SET time_mined=:time_mined, num_transactions=:num_transactions, sec_since_prev_block=:sec_since_prev_block WHERE internal_block_id=:internal_block_id;", [
+						'time_mined' => $lastblock_rpc['time'],
+						'num_transactions' => count($lastblock_rpc['tx']),
+						'internal_block_id' => $db_block['internal_block_id'],
+						'sec_since_prev_block' => $prev_block['time_mined'] ? $lastblock_rpc['time'] - $prev_block['time_mined'] : null
+					]);
+				}
+				
+				$start_time = microtime(true);
 				if ($print_debug) {
-					echo ". ";
+					echo "\nLoading ".count($lastblock_rpc['tx'])." in block ".$db_block['block_id'];
 					$this->app->flush_buffers();
 				}
-				if (!$successful) {
-					$any_error = true;
-					$i = count($lastblock_rpc['tx']);
-					
+				for ($i=0; $i<count($lastblock_rpc['tx']); $i++) {
+					$tx_hash = $lastblock_rpc['tx'][$i];
+					$successful = true;
+					$db_transaction = $this->add_transaction($tx_hash, $block_height, true, $successful, $i, [false], $print_debug);
 					if ($print_debug) {
-						echo "Failed to add tx ".$tx_hash."\n";
+						echo ". ";
 						$this->app->flush_buffers();
 					}
+					if (!$successful) {
+						$any_error = true;
+						$i = count($lastblock_rpc['tx']);
+						
+						if ($print_debug) {
+							echo "Failed to add tx ".$tx_hash."\n";
+							$this->app->flush_buffers();
+						}
+					}
 				}
-			}
-			
-			if (!$any_error) {
-				$this->set_block_stats($db_block);
 				
-				$this->try_start_games($block_height);
-			}
-			
-			$update_block_params = [
-				'add_load_time' => (microtime(true)-$start_time),
-				'internal_block_id' => $db_block['internal_block_id']
-			];
-			$update_block_q = "UPDATE blocks SET ";
-			if (!$any_error) {
-				$update_block_q .= "locally_saved=1, time_loaded=:time_loaded, ";
-				$update_block_params['time_loaded'] = time();
-				$db_block['locally_saved'] = 1;
-				$this->render_transactions_in_block($db_block, false);
-			}
-			$update_block_q .= "load_time=load_time+:add_load_time WHERE internal_block_id=:internal_block_id;";
-			$this->app->run_query($update_block_q, $update_block_params);
-			
-			if ($print_debug) {
-				echo (microtime(true)-$start_time)." sec<br/>";
-				$this->app->flush_buffers();
+				if (!$any_error) {
+					$this->set_block_stats($db_block);
+					
+					$this->try_start_games($block_height);
+				}
+				
+				$update_block_params = [
+					'add_load_time' => (microtime(true)-$start_time),
+					'internal_block_id' => $db_block['internal_block_id']
+				];
+				$update_block_q = "UPDATE blocks SET ";
+				if (!$any_error) {
+					$update_block_q .= "locally_saved=1, time_loaded=:time_loaded, ";
+					$update_block_params['time_loaded'] = time();
+					$db_block['locally_saved'] = 1;
+					$this->set_last_complete_block($db_block['block_id']);
+					$this->render_transactions_in_block($db_block, false);
+				}
+				$update_block_q .= "load_time=load_time+:add_load_time WHERE internal_block_id=:internal_block_id;";
+				$this->app->run_query($update_block_q, $update_block_params);
+				
+				if ($print_debug) {
+					echo (microtime(true)-$start_time)." sec<br/>";
+					$this->app->flush_buffers();
+				}
 			}
 		}
 		
@@ -954,7 +959,7 @@ class Blockchain {
 	
 	public function sync_coind($print_debug) {
 		$html = "";
-		$last_block_id = $this->last_complete_block_id();
+		$last_block_id = $this->db_blockchain['last_complete_block'];
 		
 		if ($last_block_id >= 0) {
 			$txt = "Running Blockchain->sync_coind() for ".$this->db_blockchain['blockchain_name']."\n";
@@ -1025,7 +1030,7 @@ class Blockchain {
 				
 				$this->load_all_blocks(TRUE, $print_debug, 180);
 				
-				if ($this->db_blockchain['p2p_mode'] == "rpc" && $this->db_blockchain['load_unconfirmed_transactions'] == 1 && $this->last_complete_block_id() == $this->last_block_id()) {
+				if ($this->db_blockchain['p2p_mode'] == "rpc" && $this->db_blockchain['load_unconfirmed_transactions'] == 1 && $this->db_blockchain['last_complete_block'] == $this->last_block_id()) {
 					$txt = "Loading unconfirmed transactions...\n";
 					if ($print_debug) {
 						echo $txt;
@@ -1135,7 +1140,7 @@ class Blockchain {
 			$loop_i = 0;
 			$load_at_once = 100;
 			
-			$last_complete_block_id = $this->last_complete_block_id();
+			$last_complete_block_id = $this->db_blockchain['last_complete_block'];
 			$load_from_block = $last_complete_block_id+1;
 			$load_to_block = $load_from_block+$load_at_once-1;
 			
@@ -1148,7 +1153,7 @@ class Blockchain {
 				$ref_time = microtime(true);
 				$blocks_loaded = 0;
 				
-				$last_complete_block_id = $this->last_complete_block_id();
+				$last_complete_block_id = $this->db_blockchain['last_complete_block'];
 				$load_from_block = $last_complete_block_id+1;
 				$load_to_block = $load_from_block+$load_at_once-1;
 				
@@ -1172,7 +1177,7 @@ class Blockchain {
 					}
 					else {
 						if ($loop_i >= count($ref_api_blocks)) {
-							$last_complete_block_id = $this->last_complete_block_id();
+							$last_complete_block_id = $this->db_blockchain['last_complete_block'];
 							$load_from_block = $last_complete_block_id+1;
 							$load_to_block = $load_from_block+$load_at_once-1;
 							
@@ -1289,20 +1294,23 @@ class Blockchain {
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'sellout_block_id' => $block_height
 		]);
+		
+		$this->app->run_query("DELETE io.*, gio.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id=:blockchain_id AND t.block_id >= :create_block_id;", [
+			'blockchain_id' => $this->db_blockchain['blockchain_id'],
+			'create_block_id' => $block_height
+		]);
 		$this->app->run_query("DELETE FROM transactions WHERE blockchain_id=:blockchain_id AND block_id >= :block_id;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'block_id' => $block_height
 		]);
+		
+		$this->app->run_query("DELETE io.*, gio.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id=:blockchain_id AND t.block_id IS NULL;", [
+			'blockchain_id' => $this->db_blockchain['blockchain_id']
+		]);
 		$this->app->run_query("DELETE FROM transactions WHERE blockchain_id=:blockchain_id AND block_id IS NULL;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id']
 		]);
-		$this->app->run_query("DELETE io.*, gio.* FROM transaction_ios io LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE io.blockchain_id=:blockchain_id AND io.create_block_id >= :create_block_id;", [
-			'blockchain_id' => $this->db_blockchain['blockchain_id'],
-			'create_block_id' => $block_height
-		]);
-		$this->app->run_query("DELETE io.*, gio.* FROM transaction_ios io LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE io.blockchain_id=:blockchain_id AND io.create_block_id IS NULL;", [
-			'blockchain_id' => $this->db_blockchain['blockchain_id']
-		]);
+		
 		$this->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id SET gio.spend_round_id=NULL, io.coin_blocks_created=0, gio.coin_rounds_created=0, gio.votes=0, io.spend_transaction_id=NULL, io.spend_count=NULL, io.spend_status='unspent', io.in_index=NULL, gio.payout_io_id=NULL WHERE io.blockchain_id=:blockchain_id AND io.spend_block_id >= :spend_block_id;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'spend_block_id' => $block_height
@@ -1389,6 +1397,7 @@ class Blockchain {
 			'block_hash' => $genesis_block_hash,
 			'current_time' => time()
 		]);
+		$this->set_last_complete_block(0);
 		
 		$html .= "Added the genesis transaction!<br/>\n";
 		$this->app->log_message($html);
@@ -2163,6 +2172,7 @@ class Blockchain {
 		]);
 		$block['locally_saved'] = 1;
 		$block['num_transactions'] = $num_transactions;
+		$this->set_last_complete_block($block['block_id']);
 		$this->set_block_stats($block);
 		$this->render_transactions_in_block($block, false);
 		
@@ -2332,7 +2342,7 @@ class Blockchain {
 		$avg = $this->app->run_query("SELECT AVG(sec_since_prev_block) FROM `blocks` WHERE blockchain_id=:blockchain_id AND sec_since_prev_block < :max_seconds_per_block AND sec_since_prev_block>1 AND block_id>:block_id;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'max_seconds_per_block' => ($this->seconds_per_block('target')*10),
-			'block_id' => $this->last_complete_block_id()-100
+			'block_id' => $this->db_blockchain['last_complete_block']-100
 		])->fetch();
 		
 		$this->app->run_query("UPDATE blockchains SET average_seconds_per_block=:average_seconds_per_block WHERE blockchain_id=:blockchain_id;", [
