@@ -35,6 +35,7 @@ class Blockchain {
 			'block_id' => $block_id,
 			'blockchain_id' => $this->db_blockchain['blockchain_id']
 		]);
+		$this->db_blockchain['last_complete_block'] = $block_id;
 	}
 	
 	public function associated_games($filter_statuses) {
@@ -185,54 +186,57 @@ class Blockchain {
 				]);
 			}
 			
-			if ($db_block['locally_saved'] == 0 && !$headers_only) {
-				if ($db_block['num_transactions'] == "") {
-					$prev_block = $this->fetch_block_by_id($db_block['block_id']-1);
-					$this->app->run_query("UPDATE blocks SET time_mined=:time_mined, sec_since_prev_block=:sec_since_prev_block, num_transactions=:num_transactions WHERE internal_block_id=:internal_block_id;", [
-						'time_mined' =>$api_block['time_mined'],
-						'num_transactions' => count($api_block['transactions']),
-						'internal_block_id' => $db_block['internal_block_id'],
-						'sec_since_prev_block' => $prev_block['time_mined'] ? $db_block['time_mined']-$prev_block['time_mined'] : null
-					]);
-				}
-				
-				$coins_created = 0;
-				
-				$tx_error = false;
-				
-				for ($i=0; $i<count($api_block['transactions']); $i++) {
-					$tx = get_object_vars($api_block['transactions'][$i]);
-					$tx_hash = $tx['tx_hash'];
-					
-					$existing_tx = $this->fetch_transaction_by_hash($tx_hash);
-					
-					if (!$existing_tx) {
-						$transaction_id = $this->add_transaction_from_web_api($db_block['block_id'], $tx);
+			if (!$headers_only) {
+				if ($db_block['locally_saved'] == 0) {
+					if ($db_block['num_transactions'] == "") {
+						$prev_block = $this->fetch_block_by_id($db_block['block_id']-1);
+						$this->app->run_query("UPDATE blocks SET time_mined=:time_mined, sec_since_prev_block=:sec_since_prev_block, num_transactions=:num_transactions WHERE internal_block_id=:internal_block_id;", [
+							'time_mined' =>$api_block['time_mined'],
+							'num_transactions' => count($api_block['transactions']),
+							'internal_block_id' => $db_block['internal_block_id'],
+							'sec_since_prev_block' => $prev_block['time_mined'] ? $db_block['time_mined']-$prev_block['time_mined'] : null
+						]);
 					}
 					
-					$successful = true;
-					$db_transaction = $this->add_transaction($tx_hash, $db_block['block_id'], true, $successful, $i, [false], $print_debug);
+					$coins_created = 0;
 					
-					if ($db_transaction['transaction_desc'] != "transaction") $coins_created += $db_transaction['amount'];
-				}
-				
-				if (!$tx_error) {
-					$this->app->run_query("UPDATE blocks SET locally_saved=1, time_loaded=:time_loaded WHERE internal_block_id=:internal_block_id;", [
-						'time_loaded' => time(),
+					$tx_error = false;
+					
+					for ($i=0; $i<count($api_block['transactions']); $i++) {
+						$tx = get_object_vars($api_block['transactions'][$i]);
+						$tx_hash = $tx['tx_hash'];
+						
+						$existing_tx = $this->fetch_transaction_by_hash($tx_hash);
+						
+						if (!$existing_tx) {
+							$transaction_id = $this->add_transaction_from_web_api($db_block['block_id'], $tx);
+						}
+						
+						$successful = true;
+						$db_transaction = $this->add_transaction($tx_hash, $db_block['block_id'], true, $successful, $i, [false], $print_debug);
+						
+						if ($db_transaction['transaction_desc'] != "transaction") $coins_created += $db_transaction['amount'];
+					}
+					
+					if (!$tx_error) {
+						$this->app->run_query("UPDATE blocks SET locally_saved=1, time_loaded=:time_loaded WHERE internal_block_id=:internal_block_id;", [
+							'time_loaded' => time(),
+							'internal_block_id' => $db_block['internal_block_id']
+						]);
+						$db_block['locally_saved'] = 1;
+						$this->set_last_complete_block($db_block['block_id']);
+						$this->render_transactions_in_block($db_block, false);
+					}
+					$this->set_block_stats($db_block);
+					
+					$this->app->run_query("UPDATE blocks SET load_time=load_time+:add_load_time WHERE internal_block_id=:internal_block_id;", [
+						'add_load_time' => (microtime(true)-$start_time),
 						'internal_block_id' => $db_block['internal_block_id']
 					]);
-					$db_block['locally_saved'] = 1;
-					$this->set_last_complete_block($db_block['block_id']);
-					$this->render_transactions_in_block($db_block, false);
+					
+					$html .= "Took ".(microtime(true)-$start_time)." sec to add block #".$db_block['block_id']."<br/>\n";
 				}
-				$this->set_block_stats($db_block);
-				
-				$this->app->run_query("UPDATE blocks SET load_time=load_time+:add_load_time WHERE internal_block_id=:internal_block_id;", [
-					'add_load_time' => (microtime(true)-$start_time),
-					'internal_block_id' => $db_block['internal_block_id']
-				]);
-				
-				$html .= "Took ".(microtime(true)-$start_time)." sec to add block #".$db_block['block_id']."<br/>\n";
+				else $this->set_last_complete_block($db_block['block_id']);
 			}
 		}
 		
@@ -293,7 +297,7 @@ class Blockchain {
 				
 				$start_time = microtime(true);
 				if ($print_debug) {
-					echo "\nLoading ".count($lastblock_rpc['tx'])." in block ".$db_block['block_id'];
+					echo "Loading ".count($lastblock_rpc['tx'])." in block ".$db_block['block_id'];
 					$this->app->flush_buffers();
 				}
 				for ($i=0; $i<count($lastblock_rpc['tx']); $i++) {
@@ -337,7 +341,7 @@ class Blockchain {
 				$this->app->run_query($update_block_q, $update_block_params);
 				
 				if ($print_debug) {
-					echo (microtime(true)-$start_time)." sec<br/>";
+					echo (microtime(true)-$start_time)." sec<br/>\n";
 					$this->app->flush_buffers();
 				}
 			}
@@ -962,7 +966,7 @@ class Blockchain {
 		$last_block_id = $this->db_blockchain['last_complete_block'];
 		
 		if ($last_block_id >= 0) {
-			$txt = "Running Blockchain->sync_coind() for ".$this->db_blockchain['blockchain_name']."\n";
+			$txt = "Syncing ".$this->db_blockchain['blockchain_name']."\n";
 			if ($print_debug) {
 				echo $txt;
 				$this->app->flush_buffers();
@@ -1028,7 +1032,7 @@ class Blockchain {
 				}
 				else $html .= $txt;
 				
-				$this->load_all_blocks(TRUE, $print_debug, 180);
+				$this->load_all_blocks(TRUE, $print_debug, 30);
 				
 				if ($this->db_blockchain['p2p_mode'] == "rpc" && $this->db_blockchain['load_unconfirmed_transactions'] == 1 && $this->db_blockchain['last_complete_block'] == $this->last_block_id()) {
 					$txt = "Loading unconfirmed transactions...\n";
@@ -1045,7 +1049,7 @@ class Blockchain {
 					else $html .= $txt;
 				}
 				
-				$txt = "Done syncing ".$this->db_blockchain['blockchain_name']."\n";
+				$txt = "Done with ".$this->db_blockchain['blockchain_name']."\n";
 				if ($print_debug) {
 					echo $txt;
 					$this->app->flush_buffers();
@@ -1197,7 +1201,7 @@ class Blockchain {
 				}
 				
 				if ($print_debug) {
-					echo "Loaded ".number_format($blocks_loaded)." in ".round(microtime(true)-$ref_time, 6)." sec\n";
+					echo "Loaded ".number_format($blocks_loaded)." (to block ".$this->db_blockchain['last_complete_block'].") in ".round(microtime(true)-$ref_time, 6)." sec\n";
 					$this->app->flush_buffers();
 				}
 				

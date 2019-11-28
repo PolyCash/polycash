@@ -244,13 +244,17 @@ class App {
 		
 		$script_path_name = AppSettings::srcPath();
 		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_blocks.php"';
-		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
-		else $cmd .= " 2>&1 >/dev/null";
-		$block_loading_process = proc_open($cmd, $pipe_config, $pipes);
-		if (is_resource($block_loading_process)) $process_count++;
-		else $html .= "Failed to start a process for loading blocks.<br/>\n";
-		sleep(0.1);
+		$sync_blockchains = $this->run_query("SELECT * FROM blockchains WHERE online=1 AND p2p_mode IN ('rpc','web_api');");
+		
+		while ($sync_blockchain = $sync_blockchains->fetch()) {
+			$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_blocks.php" blockchain_id='.$sync_blockchain['blockchain_id'];
+			if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+			else $cmd .= " 2>&1 >/dev/null";
+			$block_loading_process = proc_open($cmd, $pipe_config, $pipes);
+			if (is_resource($block_loading_process)) $process_count++;
+			else $html .= "Failed to start a process for syncing ".$sync_blockchain['blockchain_name'].".<br/>\n";
+			sleep(0.1);
+		}
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_games.php"';
 		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
