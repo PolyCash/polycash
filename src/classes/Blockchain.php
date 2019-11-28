@@ -84,12 +84,12 @@ class Blockchain {
 		$complete_block_params = [
 			'blockchain_id' => $this->db_blockchain['blockchain_id']
 		];
-		$complete_block_q = "SELECT MIN(block_id) FROM blocks WHERE blockchain_id=:blockchain_id";
+		$complete_block_q = "SELECT block_id FROM blocks WHERE blockchain_id=:blockchain_id";
 		if ($this->db_blockchain['first_required_block'] !== "") {
 			$complete_block_q .= " AND block_id >= :first_required_block";
 			$complete_block_params['first_required_block'] = $this->db_blockchain['first_required_block'];
 		}
-		$complete_block_q .= " AND locally_saved=0;";
+		$complete_block_q .= " AND locally_saved=0 ORDER BY block_id ASC LIMIT 1;";
 		$block = $this->app->run_query($complete_block_q, $complete_block_params)->fetch(PDO::FETCH_NUM);
 		
 		if ($block && $block[0] != "") return $block[0]-1;
