@@ -672,7 +672,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 											<input type="text" class="form-control" name="split_fee" id="split_fee" placeholder="0.0001" />
 										</div>
 										<div class="col-sm-4 form-control-static">
-											<?php if ($selected_account_id) echo $blockchain->db_blockchain['coin_name_plural']; ?>
+											<?php if ($selected_account_id && !empty($blockchain)) echo $blockchain->db_blockchain['coin_name_plural']; ?>
 										</div>
 									</div>
 								</div>

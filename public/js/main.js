@@ -517,13 +517,13 @@ var PageManager = function() {
 	this.remove_utxo_ms = 50;
 	
 	this.format_coins = function(amount) {
-		if (amount > Math.pow(10, 10)) {
+		if (amount >= Math.pow(10, 10)) {
 			return parseFloat((amount/Math.pow(10, 9)).toPrecision(5))+"B";
 		}
-		else if (amount > Math.pow(10, 7)) {
+		else if (amount >= Math.pow(10, 7)) {
 			return parseFloat((amount/Math.pow(10, 6)).toPrecision(5))+"M";
 		}
-		else if (amount > Math.pow(10, 4)) {
+		else if (amount >= Math.pow(10, 4)) {
 			return parseFloat((amount/Math.pow(10, 3)).toPrecision(5))+"k";
 		}
 		else if (amount == 0) return "0";

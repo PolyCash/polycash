@@ -9,7 +9,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 	
 	if ($account && $account['user_id'] == $thisuser->db_user['user_id']) {
 		if ($_REQUEST['action'] == "new") {
-			$address_key = $app->new_address_key($account['currency_id'], $account);
+			$address_key = $app->new_normal_address_key($account['currency_id'], $account);
 			
 			$currency = $app->fetch_currency_by_id($account['currency_id']);
 			$account_blockchain = $app->fetch_blockchain_by_id($currency['blockchain_id']);
