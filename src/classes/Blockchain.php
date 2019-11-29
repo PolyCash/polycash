@@ -1888,6 +1888,10 @@ class Blockchain {
 		
 		$amount = $transaction_fee;
 		for ($i=0; $i<count($amounts); $i++) {
+			if ($amounts[$i] <= 0) {
+				$error_message = "Invalid amount ".$amounts[$i]." for output #".$i;
+				return false;
+			}
 			$amount += $amounts[$i];
 		}
 		$utxo_balance = 0;

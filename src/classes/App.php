@@ -786,7 +786,8 @@ class App {
 
 			$returnvals['numerator_price_id'] = $latest_numerator_rate['price_id'];
 			$returnvals['denominator_price_id'] = $latest_denominator_rate['price_id'];
-			$returnvals['conversion_rate'] = round(pow(10,8)*$latest_denominator_rate['price']/$latest_numerator_rate['price'])/pow(10,8);
+			if ($latest_numerator_rate['price'] > 0) $returnvals['conversion_rate'] = round(pow(10,8)*$latest_denominator_rate['price']/$latest_numerator_rate['price'])/pow(10,8);
+			else $returnvals['conversion_rate'] = 0;
 		}
 		return $returnvals;
 	}
