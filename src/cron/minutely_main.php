@@ -65,6 +65,15 @@ if ($app->running_as_admin()) {
 			}
 		}
 
+		// Load virtual blockchains even if they have no games running
+		$mineable_blockchains = $app->run_query("SELECT * FROM blockchains WHERE online=1 AND p2p_mode='none';");
+		while ($mineable_blockchain = $mineable_blockchains->fetch()) {
+			if (empty($blockchains[$mineable_blockchain['blockchain_id']])) {
+				array_push($private_blockchain_ids, $mineable_blockchain['blockchain_id']);
+				$blockchains[$mineable_blockchain['blockchain_id']] = new Blockchain($app, $mineable_blockchain['blockchain_id']);
+			}
+		}
+		
 		$unstarted_games = $app->run_query("SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE g.game_status='published' AND g.start_condition='players_joined' AND g.start_condition_players > 0 AND b.online=1;");
 		
 		while ($db_unstarted_game = $unstarted_games->fetch()) {
