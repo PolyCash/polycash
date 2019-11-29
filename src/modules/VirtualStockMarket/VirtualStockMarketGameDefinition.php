@@ -139,10 +139,17 @@ class VirtualStockMarketGameDefinition {
 				
 				$price_usd_info = $this->app->exchange_rate_between_currencies(1, $this->currencies[$currency_i]['currency_id'], time(), 6);
 				
-				$price_max_target = $price_usd_info['exchange_rate']*1.05;
-				$price_min_target = $price_usd_info['exchange_rate']*0.95;
+				$price_usd = $price_usd_info['exchange_rate'];
+				if (empty($price_usd) || $price_usd < 0 || $price_usd > pow(10, 6)) {
+					$price_api_url = "https://cloud.iexapis.com/stable/stock/".$this->currencies[$currency_i]['abbreviation']."/quote?token=".$this->iex_api_key;
+					$api_response = json_decode(file_get_contents($price_api_url));
+					$price_usd = (float) $api_response->latestPrice;
+				}
 				
-				$log10 = floor(log10($price_usd_info['exchange_rate']));
+				$price_max_target = $price_usd*1.05;
+				$price_min_target = $price_usd*0.95;
+				
+				$log10 = floor(log10($price_usd));
 				$round_targets_to = pow(10, $log10-1);
 				
 				$price_min = floor($price_min_target/$round_targets_to)*$round_targets_to;
@@ -245,9 +252,11 @@ class VirtualStockMarketGameDefinition {
 				$new_price_usd = (float)$api_data['latestPrice'];
 				$new_price_in_btc = $new_price_usd/$usd_to_btc['exchange_rate'];
 				
-				$new_prices_q .= "('".$this->currencies[$i]['currency_id']."', '".$btc_currency['currency_id']."', ".$this->app->quote_escape($new_price_in_btc).", ".time()."), ";
-				
-				$modulo++;
+				if ($new_price_in_btc > 0) {
+					$new_prices_q .= "('".$this->currencies[$i]['currency_id']."', '".$btc_currency['currency_id']."', ".$this->app->quote_escape($new_price_in_btc).", ".time()."), ";
+					
+					$modulo++;
+				}
 			}
 		}
 		

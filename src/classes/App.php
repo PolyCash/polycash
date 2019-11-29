@@ -757,8 +757,12 @@ class App {
 				}
 				else if ($currency_url['format_id'] == 3) {
 					$html_data = $this->first_snippet_between($api_response_raw, '<div id="currency-exchange-rates"', '></div>');
-					$price = 1/((float)$this->first_snippet_between($html_data, 'data-btc="', '"'));
+					$price_usd = (float)$this->first_snippet_between($html_data, 'data-btc="', '"');
+					if ($price_usd > 0) $price = 1/$price_usd;
+					else $price = 0;
 				}
+				
+				$price = round($price, 10);
 				
 				if ($price > 0) {
 					$this->run_query("INSERT INTO currency_prices SET currency_id=:currency_id, reference_currency_id=:reference_currency_id, price=:price, time_added=:time_added;", [
@@ -770,37 +774,6 @@ class App {
 				}
 			}
 		}
-	}
-	
-	public function update_currency_price($currency_id) {
-		$currency = $this->fetch_currency_by_id($currency_id);
-
-		if ($currency) {
-			if ($currency['abbreviation'] == "BTC") {
-				$reference_currency = $this->get_reference_currency();
-				
-				$api_url = "https://api.bitcoinaverage.com/ticker/global/all";
-				$api_response_raw = file_get_contents($api_url);
-				$api_response = json_decode($api_response_raw);
-				
-				$price = $api_response->$reference_currency['abbreviation']->bid;
-
-				if ($price > 0) {
-					$this->run_query("INSERT INTO currency_prices SET currency_id=:currency_id, reference_currency_id=:reference_currency_id, price=:price, time_added=:time_added;", [
-						'currency_id' => $currency_id,
-						'reference_currency_id' => $reference_currency['currency_id'],
-						'price' => $price,
-						'time_added' => time()
-					]);
-					$currency_price_id = $this->last_insert_id();
-
-					return $this->run_query("SELECT * FROM currency_prices WHERE price_id=:price_id;", ['price_id'=>$currency_price_id])->fetch();
-				}
-				else return false;
-			}
-			else return false;
-		}
-		else return false;
 	}
 	
 	public function currency_conversion_rate($numerator_currency_id, $denominator_currency_id) {

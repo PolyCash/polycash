@@ -476,7 +476,7 @@ else {
 				if ($next_action == "params") {
 					?>
 					<div class="row">
-						<div class="col-md-6">
+						<div class="col-lg-6">
 							<div class="panel panel-info">
 								<div class="panel-heading">
 									<div class="panel-title">Manage game parameters: <?php echo $game->db_game['name']." (#".$game->db_game['game_id'].")"; ?></div>
@@ -676,7 +676,7 @@ else {
 				else if ($next_action == "internal_settings") {
 					?>
 					<div class="row">
-						<div class="col-md-6">
+						<div class="col-lg-6">
 							<div class="panel panel-info">
 								<div class="panel-heading">
 									<div class="panel-title">Internal settings for <?php echo $game->db_game['name']." (#".$game->db_game['game_id'].")"; ?></div>
@@ -779,13 +779,13 @@ else {
 							while ($gde = $manage_gdes->fetch()) {
 								?>
 								<div class="row">
-									<div class="col-md-4" style="text-align: center;">
+									<div class="col-lg-4" style="text-align: center;">
 										<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/<?php echo $gde['event_index']; ?>">View</a> &nbsp;&nbsp; 
 										<a href="" onclick="thisPageManager.manage_game_load_event(<?php echo $gde['game_defined_event_id']; ?>); return false;">Edit</a> &nbsp;&nbsp; 
 										<a href="" onclick="thisPageManager.manage_game_event_options(<?php echo $gde['game_defined_event_id']; ?>); return false;">Edit Options</a> &nbsp;&nbsp;
 										<a href="" onclick="thisPageManager.manage_game_set_event_blocks(<?php echo $gde['game_defined_event_id']; ?>); return false;">Set Event Blocks</a>
 									</div>
-									<div class="col-md-6"><?php
+									<div class="col-lg-6"><?php
 										echo $gde['event_index'].'. '.$gde['event_name'];
 										?>
 									</div>
