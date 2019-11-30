@@ -337,8 +337,8 @@ class SingleEliminationGameDefinition {
 				]);
 			}
 		}
-		$log_text = $payout_event->set_outcome_from_db();
-		return $log_text;
+		
+		return "";
 	}
 	
 	public function event_index_to_next_event_index($event_index) {

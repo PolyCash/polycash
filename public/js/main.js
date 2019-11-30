@@ -515,6 +515,7 @@ var PageManager = function() {
 	this.selected_card = -1;
 	this.selected_section = false;
 	this.remove_utxo_ms = 50;
+	this.avoid_bet_buffer_blocks = 1;
 	
 	this.format_coins = function(amount) {
 		if (amount >= Math.pow(10, 9)) {
@@ -1094,13 +1095,15 @@ var PageManager = function() {
 	}
 	this.add_all_options = function() {
 		for (var i=0; i<games[0].events.length; i++) {
-			for (var j=0; j<games[0].events[i].options.length; j++) {
-				var this_option = games[0].events[i].options[j];
-				var already_in = false;
-				this.bet_outputs.forEach(function(bet_output) {
-					if (bet_output.option_id == this_option.option_id) already_in = true;
-				});
-				if (!already_in) games[0].add_option_to_vote(i, this_option.option_id);
+			if (games[0].last_block_id < games[0].events[i].event_final_block - this.avoid_bet_buffer_blocks) {
+				for (var j=0; j<games[0].events[i].options.length; j++) {
+					var this_option = games[0].events[i].options[j];
+					var already_in = false;
+					this.bet_outputs.forEach(function(bet_output) {
+						if (bet_output.option_id == this_option.option_id) already_in = true;
+					});
+					if (!already_in) games[0].add_option_to_vote(i, this_option.option_id);
+				}
 			}
 		}
 	}

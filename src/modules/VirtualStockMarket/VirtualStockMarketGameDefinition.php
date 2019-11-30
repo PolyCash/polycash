@@ -222,8 +222,6 @@ class VirtualStockMarketGameDefinition {
 			}
 		}
 		
-		$log_text .= $payout_event->set_outcome_from_db();
-		
 		return $log_text;
 	}
 	

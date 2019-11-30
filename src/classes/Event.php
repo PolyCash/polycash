@@ -2,6 +2,7 @@
 class Event {
 	public $db_event;
 	public $game;
+	private $avoid_bet_buffer_blocks = 1;
 	
 	public function __construct(&$game, $db_event, $event_id) {
 		$this->game = $game;
@@ -238,6 +239,15 @@ class Event {
 			$html .= "<p>".$this->db_event['sport_name']." &nbsp;&nbsp; ".$this->db_event['league_name']."</p>\n";
 		}
 		
+		if ($last_block_id >= $this->db_event['event_final_block']) {
+			if ($this->db_event['outcome_index'] == "") $html .= '<p class="greentext">Betting has ended</p>';
+			$clickable = false;
+		}
+		else if ($last_block_id >= $this->db_event['event_final_block']-$this->avoid_bet_buffer_blocks) {
+			$html .= '<p class="text-warning">Betting is about to end</p>';
+			$clickable = false;
+		}
+		
 		if ($this->db_event['outcome_index'] == "-1") {
 			$html .= "<p class=\"redtext\">This event has been canceled</p>\n";
 		}
@@ -452,6 +462,14 @@ class Event {
 		}
 		
 		return $html;
+	}
+	
+	public function set_outcome_index($outcome_index) {
+		$this->game->blockchain->app->run_query("UPDATE events SET outcome_index=:outcome_index WHERE event_id=:event_id;", [
+			'outcome_index' => $outcome_index,
+			'event_id' => $this->db_event['event_id']
+		]);
+		$this->db_event['outcome_index'] = $outcome_index;
 	}
 	
 	public function set_track_payout_price() {
@@ -790,7 +808,7 @@ class Event {
 		return [$winning_option_id, $winning_votes, $winning_effective_destroy_score];
 	}
 	
-	public function set_outcome_from_db() {
+	public function pay_out_event() {
 		$this->update_option_votes($this->db_event['event_final_block'], false);
 		
 		$round_voting_stats_all = false;

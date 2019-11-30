@@ -1688,6 +1688,19 @@ class Game {
 		return $events;
 	}
 	
+	public function events_by_outcome_block($block_id) {
+		$events = [];
+		$db_events = $this->blockchain->app->run_query("SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities en ON et.entity_id=en.entity_id WHERE ev.game_id=:game_id AND ev.event_outcome_block=:block_id ORDER BY ev.event_index ASC;", [
+			'game_id' => $this->db_game['game_id'],
+			'block_id' => $block_id
+		]);
+		
+		while ($db_event = $db_events->fetch()) {
+			array_push($events, new Event($this, $db_event, false));
+		}
+		return $events;
+	}
+	
 	public function events_by_payout_block($block_id) {
 		$events = [];
 		$db_events = $this->blockchain->app->run_query("SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities en ON et.entity_id=en.entity_id WHERE ev.game_id=:game_id AND ev.event_payout_block=:block_id ORDER BY ev.event_index ASC;", [
@@ -2045,12 +2058,15 @@ class Game {
 						}
 						else $event_type = $existing_event_type_r->fetch();
 						
+						$event_outcome_block = $game_defined_event['event_outcome_block'] ? $game_defined_event['event_outcome_block'] : $game_defined_event['event_payout_block'];
+						
 						$new_event_params = [
 							'game_id' => $this->db_game['game_id'],
 							'event_type_id' => $event_type['event_type_id'],
 							'event_index' => $game_defined_event['event_index'],
 							'event_starting_block' => $game_defined_event['event_starting_block'],
 							'event_final_block' => $game_defined_event['event_final_block'],
+							'event_outcome_block' => $event_outcome_block,
 							'event_payout_block' => $game_defined_event['event_payout_block'],
 							'payout_rule' => $game_defined_event['payout_rule'],
 							'payout_rate' => $game_defined_event['payout_rate'],
@@ -2060,7 +2076,7 @@ class Game {
 							'num_options' => $num_options,
 							'option_max_width' => $event_type['default_option_max_width']
 						];
-						$new_event_q = "INSERT INTO events SET game_id=:game_id, event_type_id=:event_type_id, event_index=:event_index, event_starting_block=:event_starting_block, event_final_block=:event_final_block, event_payout_block=:event_payout_block, payout_rule=:payout_rule, payout_rate=:payout_rate, event_name=:event_name, option_name=:option_name, option_name_plural=:option_name_plural, num_options=:num_options, option_max_width=:option_max_width";
+						$new_event_q = "INSERT INTO events SET game_id=:game_id, event_type_id=:event_type_id, event_index=:event_index, event_starting_block=:event_starting_block, event_final_block=:event_final_block, event_outcome_block=:event_outcome_block, event_payout_block=:event_payout_block, payout_rule=:payout_rule, payout_rate=:payout_rate, event_name=:event_name, option_name=:option_name, option_name_plural=:option_name_plural, num_options=:num_options, option_max_width=:option_max_width";
 						
 						foreach ($optional_event_fields as $optional_event_field) {
 							if ((string)$game_defined_event[$optional_event_field] != "") {
@@ -2777,34 +2793,30 @@ class Game {
 			
 			$finalblock_events = $this->events_by_final_block($block_height);
 			
-			if (count($finalblock_events) > 0) {
-				for ($i=0; $i<count($finalblock_events); $i++) {
-					$finalblock_events[$i]->update_option_votes($block_height, false);
+			foreach ($finalblock_events as $finalblock_event) {
+				$finalblock_event->update_option_votes($block_height, false);
+			}
+			
+			$set_outcome_events = $this->events_by_outcome_block($block_height);
+			
+			foreach ($set_outcome_events as $set_outcome_event) {
+				if (!empty($this->module) && method_exists($this->module, "set_event_outcome")) {
+					if ($this->blockchain->db_blockchain['p2p_mode'] == "rpc") {
+						$this->blockchain->load_coin_rpc();
+					}
+					
+					$log_text .= $this->module->set_event_outcome($this, $set_outcome_event);
+				}
+				if (!empty($this->module) && method_exists($this->module, "event_index_to_next_event_index")) {
+					$event_index = $this->module->event_index_to_next_event_index($set_outcome_event->db_event['event_index']);
+					$this->set_event_labels_by_gde($event_index);
 				}
 			}
 			
 			$payout_events = $this->events_by_payout_block($block_height);
 			
-			if (count($payout_events) > 0) {
-				for ($i=0; $i<count($payout_events); $i++) {
-					if (!empty($this->module) && method_exists($this->module, "set_event_outcome")) {
-						if ($this->blockchain->db_blockchain['p2p_mode'] == "rpc") {
-							$this->blockchain->load_coin_rpc();
-							
-							if (!$this->blockchain->coin_rpc) {
-								echo "Error, failed to load RPC connection for ".$this->blockchain->db_blockchain['blockchain_name'].".<br/>\n";
-							}
-						}
-						
-						$log_text .= $this->module->set_event_outcome($this, $payout_events[$i]);
-					}
-					else $log_text .= $payout_events[$i]->set_outcome_from_db();
-					
-					if (!empty($this->module) && method_exists($this->module, "event_index_to_next_event_index")) {
-						$event_index = $this->module->event_index_to_next_event_index($payout_events[$i]->db_event['event_index']);
-						$this->set_event_labels_by_gde($event_index);
-					}
-				}
+			foreach ($payout_events as $payout_event) {
+				$payout_event->pay_out_event();
 			}
 			
 			$this->blockchain->app->run_query("UPDATE transaction_game_ios gio JOIN events ev ON gio.event_id=ev.event_id SET gio.is_resolved=1 WHERE ev.game_id=:game_id AND ev.event_payout_block=:block_id AND (ev.outcome_index IS NOT NULL OR ev.track_payout_price IS NOT NULL);", [

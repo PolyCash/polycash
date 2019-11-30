@@ -1734,6 +1734,7 @@ class App {
 			['int', 'next_event_index', true],
 			['int', 'event_starting_block', true],
 			['int', 'event_final_block', true],
+			['int', 'event_outcome_block', true],
 			['int', 'event_payout_block', true],
 			['string', 'payout_rule', true],
 			['float', 'payout_rate', true],

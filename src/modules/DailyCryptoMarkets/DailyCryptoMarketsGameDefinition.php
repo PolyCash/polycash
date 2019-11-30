@@ -182,8 +182,6 @@ class DailyCryptoMarketsGameDefinition {
 			}
 		}
 		
-		$payout_event->set_outcome_from_db();
-		
 		return "";
 	}
 	

@@ -237,8 +237,7 @@ class CryptoDuelsGameDefinition {
 		
 		$payout_event->db_event['outcome_index'] = $best_performance_index;
 		
-		$log_text = $payout_event->set_outcome_from_db();
-		return $log_text;
+		return "";
 	}
 	
 	public function refresh_prices_by_event(&$game, &$db_event) {

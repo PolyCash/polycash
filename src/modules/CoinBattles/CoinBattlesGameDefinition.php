@@ -273,8 +273,7 @@ class CoinBattlesGameDefinition {
 		
 		$game->set_game_defined_outcome($payout_event->db_event['event_index'], $best_performance_index);
 		
-		$log_text = $payout_event->set_outcome_from_db();
-		return $log_text;
+		return "";
 	}
 	
 	public function load_currencies() {
