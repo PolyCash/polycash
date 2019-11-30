@@ -347,6 +347,7 @@ else {
 					$featured = (int)$_REQUEST['featured'];
 					$public_players = (int)$_REQUEST['public_players'];
 					$faucet_policy = $_REQUEST['faucet_policy'];
+					$hide_module = (int)$_REQUEST['hide_module'];
 					$definitive_game_peer_on = $_REQUEST['definitive_game_peer_on'];
 					if ($definitive_game_peer_on == 1) {
 						$definitive_game_peer_url = $_REQUEST['definitive_game_peer'];
@@ -367,16 +368,18 @@ else {
 						}
 					}
 					
-					$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, faucet_policy=:faucet_policy, definitive_game_peer_id=:definitive_game_peer_id WHERE game_id=:game_id;", [
+					$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, faucet_policy=:faucet_policy, hide_module=:hide_module,  definitive_game_peer_id=:definitive_game_peer_id WHERE game_id=:game_id;", [
 						'featured' => $featured,
 						'public_players' => $public_players,
 						'faucet_policy' => $faucet_policy,
+						'hide_module' => $hide_module,
 						'definitive_game_peer_id' => $definitive_game_peer ? $definitive_game_peer['game_peer_id'] : null,
 						'game_id' => $game->db_game['game_id']
 					]);
 					$game->db_game['featured'] = $featured;
 					$game->db_game['public_players'] = $public_players;
 					$game->db_game['faucet_policy'] = $faucet_policy;
+					$game->db_game['hide_module'] = $hide_module;
 					
 					$messages .= "Game internal settings have been updated.<br/>\n";
 				}
@@ -710,6 +713,13 @@ else {
 											<select class="form-control" name="faucet_policy" id="faucet_policy">
 												<option value="on">On</option>
 												<option value="off"<?php if ($game->db_game['faucet_policy'] == "off") echo ' selected="selected"'; ?>>Off</option>
+											</select>
+										</div>
+										<div class="form-group">
+											<label for="hide_module">Hide module?</label>
+											<select class="form-control" name="hide_module" id="hide_module">
+												<option value="0">No</option>
+												<option value="1"<?php if ($game->db_game['hide_module']) echo ' selected="selected"'; ?>>Yes</option>
 											</select>
 										</div>
 										<div class="form-group">

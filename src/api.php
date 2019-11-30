@@ -483,7 +483,7 @@ if ($uri_parts[1] == "api") {
 		}
 		else $api_output = ['status_code'=>0, 'message'=>'Error: Invalid game ID'];
 		
-		$app->output_message(null, null, $api_output);
+		$app->output_message($api_output['status_code'], $api_output['message'], $api_output);
 	}
 	else if ($uri == "/api/") {
 		header("Location: /api/about");

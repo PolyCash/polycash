@@ -1350,6 +1350,7 @@ class App {
 				if ($game->db_game[$var_name]) $var_val = true;
 				else $var_val = false;
 			}
+			else if ($var_name == "module" && $game->db_game['hide_module']) $var_val = null;
 			else $var_val = $game->db_game[$var_name];
 			
 			$game_definition[$var_name] = $var_val;
