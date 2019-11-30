@@ -22,24 +22,18 @@ if ($app->running_as_admin()) {
 		$script_target_time = 549;
 		$loop_target_time = 30;
 		$blockchains = [];
-		$running_games = [];
-		
-		$game_q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE ";
-		if ($only_game_id) $game_q .= "g.game_id=".$only_game_id;
-		else $game_q .= "b.online=1 AND g.game_status IN('published','running')";
-		$db_running_games = $app->run_query($game_q);
-		
-		while ($running_game = $db_running_games->fetch()) {
-			$game_i = count($running_games);
-			if (empty($blockchains[$running_game['blockchain_id']])) $blockchains[$running_game['blockchain_id']] = new Blockchain($app, $running_game['blockchain_id']);
-			$running_games[$game_i] = new Game($blockchains[$running_game['blockchain_id']], $running_game['game_id']);
-			if ($print_debug) echo "Including game: ".$running_game['name']."\n";
-		}
 		
 		do {
 			$loop_start_time = microtime(true);
 			
-			foreach ($running_games as $running_game) {
+			$game_q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE ";
+			if ($only_game_id) $game_q .= "g.game_id=".$only_game_id;
+			else $game_q .= "b.online=1 AND g.game_status IN('published','running')";
+			$db_running_games = $app->run_query($game_q);
+			
+			while ($db_running_game = $db_running_games->fetch()) {
+				if (empty($blockchains[$db_running_game['blockchain_id']])) $blockchains[$db_running_game['blockchain_id']] = new Blockchain($app, $db_running_game['blockchain_id']);
+				$running_game = new Game($blockchains[$db_running_game['blockchain_id']], $db_running_game['game_id']);
 				$running_game->set_cached_definition_hashes();
 				if ($print_debug) echo "Set ".$running_game->db_game['name']." at ".round(microtime(true)-$loop_start_time, 8)."\n";
 			}

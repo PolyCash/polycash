@@ -110,7 +110,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 						
 						if ($address_text == "new") {
 							$game_currency_account = $app->fetch_account_by_id($user_game['account_id']);
-							$color_address = $app->new_address_key($game->blockchain->currency_id(), $game_currency_account);
+							$color_address = $app->new_normal_address_key($game->blockchain->currency_id(), $game_currency_account);
 						}
 						else {
 							$game->blockchain->load_coin_rpc();
@@ -421,7 +421,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 									$address_ids = [];
 									
 									for ($i=0; $i<$quantity; $i++) {
-										$address_key = $app->new_address_key($account['currency_id'], $account);
+										$address_key = $app->new_normal_address_key($account['currency_id'], $account);
 										array_push($address_ids, $address_key['address_id']);
 										array_push($amounts, $chain_coins_each);
 									}

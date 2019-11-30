@@ -1174,7 +1174,10 @@ class App {
 			$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
 			
-			$html .= '<div class="row"><div class="col-sm-5">Game definition:</div><div class="col-sm-7"><a href="/explorer/games/'.$game->db_game['url_identifier'].'/definition/?definition_mode=actual">'.$this->shorten_game_def_hash($game->db_game['cached_definition_hash']).'</a></div></div>';
+			$display_def_hash = $this->shorten_game_def_hash($game->db_game['cached_definition_hash']);
+			if (empty($display_def_hash)) $display_def_hash = "Not set";
+			
+			$html .= '<div class="row"><div class="col-sm-5">Game definition:</div><div class="col-sm-7"><a href="/explorer/games/'.$game->db_game['url_identifier'].'/definition/?definition_mode=actual">'.$display_def_hash.'</a></div></div>';
 		}
 		
 		if ($db_game['final_round'] > 0) {

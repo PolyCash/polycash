@@ -677,6 +677,8 @@ else {
 					<?php
 				}
 				else if ($next_action == "internal_settings") {
+					$publish_action = "unpublish";
+					if ($game->db_game['game_status'] == "editable") $publish_action = "publish";
 					?>
 					<div class="row">
 						<div class="col-lg-6">
@@ -690,7 +692,7 @@ else {
 									</div>
 									<div class="form-group">
 										<button id="start_game_btn" class="btn btn-success" onclick="thisPageManager.manage_game(<?php echo $game->db_game['game_id']; ?>, 'start'); return false;">Start Game</button>
-										<button id="unpublish_game_btn" class="btn btn-info" onclick="thisPageManager.manage_game(<?php echo $game->db_game['game_id']; ?>, 'unpublish'); return false;">Unpublish</button>
+										<button id="unpublish_game_btn" class="btn btn-info" onclick="thisPageManager.manage_game(<?php echo $game->db_game['game_id']; ?>, '<?php echo $publish_action; ?>'); return false;"><?php echo ucwords($publish_action); ?></button>
 										<button id="complete_game_btn" class="btn btn-primary" onclick="thisPageManager.manage_game(<?php echo $game->db_game['game_id']; ?>, 'complete'); return false;">Mark Completed</button>
 										<button id="delete_game_btn" class="btn btn-danger" style="display: none;" onclick="thisPageManager.manage_game(<?php echo $game->db_game['game_id']; ?>, 'delete'); return false;">Delete</button>
 										<button id="reset_game_btn" class="btn btn-warning" onclick="thisPageManager.manage_game(<?php echo $game->db_game['game_id']; ?>, 'reset'); return false;">Reset</button>

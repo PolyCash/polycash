@@ -467,7 +467,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 				}
 				else $app->output_message(6, "Invalid action.", false);
 			}
-			else if (in_array($action, ['start','unpublish','complete','delete','reset'])) {
+			else if (in_array($action, ['start','publish','unpublish','complete','delete','reset'])) {
 				if ($action == "delete") $app->output_message(2, "This function is disabled", false);
 				else if ($action == "reset") {
 					if (!empty($_REQUEST['from_block'])) {
@@ -486,6 +486,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 				}
 				else {
 					if ($action == "unpublish") $new_status = "editable";
+					else if ($action == "publish") $new_status = "published";
 					else if ($action == "complete") $new_status = "completed";
 					
 					$error_message = $game->set_game_status($new_status);

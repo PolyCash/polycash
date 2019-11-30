@@ -2358,6 +2358,8 @@ class Game {
 			}
 		}
 		else $error_message .= "This game does not have a definitive peer.\n";
+		
+		return $error_message;
 	}
 	
 	public function sync_with_definitive_peer() {
