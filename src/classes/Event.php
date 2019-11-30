@@ -202,7 +202,7 @@ class Event {
 			}
 			else if ($blocks_left > 0) {
 				$sec_left = $this->game->blockchain->seconds_per_block('average')*$blocks_left;
-				$html .= $this->game->blockchain->app->format_bignum($blocks_left)." betting blocks left";
+				$html .= $this->game->blockchain->app->format_bignum($blocks_left)." betting block".($blocks_left==1 ? "" : "s")." left";
 				$html .= " (".$this->game->blockchain->app->format_seconds($sec_left).")<br/>\n";
 			}
 			
@@ -245,7 +245,6 @@ class Event {
 		}
 		else if ($last_block_id >= $this->db_event['event_final_block']-$this->avoid_bet_buffer_blocks) {
 			$html .= '<p class="text-warning">Betting is about to end</p>';
-			$clickable = false;
 		}
 		
 		if ($this->db_event['outcome_index'] == "-1") {
