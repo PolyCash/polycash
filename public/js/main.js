@@ -2110,6 +2110,9 @@ var PageManager = function() {
 			}
 		});
 	}
+	this.change_game = function(select_element) {
+		window.location = '/wallet/'+select_element.value;
+	}
 	this.change_user_game = function() {
 		window.location = '/wallet/'+games[0].game_url_identifier+'/?action=change_user_game&user_game_id='+$('#select_user_game').val();
 	}

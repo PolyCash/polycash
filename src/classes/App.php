@@ -315,6 +315,12 @@ class App {
 		return $html;
 	}
 	
+	public function my_games($user_id) {
+		return $this->run_query("SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id=:user_id AND (g.creator_id=:user_id OR g.game_status IN ('running','completed','published')) GROUP BY ug.game_id;", [
+			'user_id' => $user_id
+		]);
+	}
+	
 	public function generate_games($default_blockchain_id) {
 		$game_types = $this->run_query("SELECT * FROM game_types ORDER BY game_type_id ASC;");
 		while ($game_type = $game_types->fetch(PDO::FETCH_ASSOC)) {

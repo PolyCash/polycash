@@ -297,9 +297,7 @@ if ($thisuser) {
 		<div class="container-fluid">
 			<div class="panel panel-default" style="margin-top: 15px;">
 				<?php
-				$my_games = $app->run_query("SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id=:user_id AND (g.creator_id=:user_id OR g.game_status IN ('running','completed','published')) GROUP BY ug.game_id;", [
-					'user_id' => $thisuser->db_user['user_id']
-				]);
+				$my_games = $app->my_games($thisuser->db_user['user_id']);
 				
 				if ($my_games->rowCount() > 0) {
 					?>
@@ -626,6 +624,20 @@ if ($thisuser && $game) {
 					if ($game->db_game['game_status'] == "paused" || $game->db_game['game_status'] == "unstarted") echo " (Paused)";
 					else if ($game->db_game['game_status'] == "completed") echo " (Completed)";
 					?>
+					<div style="float: right; display: inline-block; margin-top: -3px;">
+						<select class="form-control input-sm" onchange="thisPageManager.change_game(this);">
+							<option value="">-- Switch Games --</option>
+							<?php
+							$my_games = $app->my_games($thisuser->db_user['user_id']);
+							
+							while ($my_game = $my_games->fetch()) {
+								echo "<option ";
+								if ($game->db_game['game_id'] == $my_game['game_id']) echo 'selected="selected" ';
+								echo "value=\"".$my_game['url_identifier']."\">".$my_game['name']."</option>\n";
+							}
+							?>
+						</select>
+					</div>
 				</div>
 			</div>
 			<div class="panel-body">
@@ -680,7 +692,7 @@ if ($thisuser && $game) {
 					<div class="panel-title">
 						Play Now
 						
-						<div id="change_user_game">
+						<div id="change_user_game" style="margin-top: -3px;">
 							<select id="select_user_game" class="form-control input-sm" onchange="thisPageManager.change_user_game();">
 								<?php
 								$user_games_by_game = $app->run_query("SELECT * FROM user_games WHERE user_id=:user_id AND game_id=:game_id;", [
