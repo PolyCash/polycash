@@ -264,12 +264,20 @@ class App {
 		else $html .= "Failed to start a process for loading blocks.<br/>\n";
 		sleep(0.1);
 		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_main.php"';
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/mine_blocks.php"';
 		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
 		else $cmd .= " 2>&1 >/dev/null";
 		$main_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($main_process)) $process_count++;
-		else $html .= "Failed to start the main process.<br/>\n";
+		else $html .= "Failed to start the block mining process.<br/>\n";
+		sleep(0.1);
+		
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/apply_strategies.php"';
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
+		$main_process = proc_open($cmd, $pipe_config, $pipes);
+		if (is_resource($main_process)) $process_count++;
+		else $html .= "Failed to start a process for applying strategies.<br/>\n";
 		sleep(0.1);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_check_payments.php"';

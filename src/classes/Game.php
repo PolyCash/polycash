@@ -436,12 +436,19 @@ class Game {
 			$apply_strategies = $this->blockchain->app->run_query($strategies_q, $strategies_params);
 			
 			if ($print_debug) echo "Applying user strategies for block #".$mining_block_id." of ".$this->db_game['name']." looping through ".$apply_strategies->rowCount()." users.<br/>\n";
+			
 			while ($user_game = $apply_strategies->fetch()) {
 				$api_response = false;
 				$this->apply_user_strategy($log_text, $user_game, $mining_block_id, $current_round_id, $api_response, false);
+				
 				if ($print_debug) {
+					echo $log_text."\n";
+					
 					if ($api_response) echo "user #".$user_game['user_id'].": ".json_encode($api_response)."\n";
-					else echo "no api response for user #".$user_game['user_id']."\n";
+					else {
+						echo "no api response for user #".$user_game['user_id']."\n";
+						$this->blockchain->app->set_strategy_time_next_apply($user_game['strategy_id'], time()+3600*12);
+					}
 				}
 			}
 			$this->update_option_votes();

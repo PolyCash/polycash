@@ -29,7 +29,7 @@ if ($user_game) {
 			$event_params = [
 				'game_id' => $game->db_game['game_id'],
 				'mining_block_id' => $mining_block_id,
-				'ref_block' => $mining_block_id+1
+				'ref_block' => $mining_block_id
 			];
 			$event_q = "events ev JOIN options op ON ev.event_id=op.event_id WHERE ev.game_id=:game_id AND ev.event_starting_block <= :mining_block_id AND ev.event_final_block > :ref_block AND (ev.event_starting_time < NOW() OR ev.event_starting_time IS NULL) AND (ev.event_final_time > NOW() OR ev.event_final_time IS NULL)";
 			$option_info = $app->run_query("SELECT COUNT(*) FROM ".$event_q.";", $event_params)->fetch();

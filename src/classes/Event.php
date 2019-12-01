@@ -245,6 +245,7 @@ class Event {
 		}
 		else if ($last_block_id >= $this->db_event['event_final_block']-$this->avoid_bet_buffer_blocks) {
 			$html .= '<p class="text-warning">Betting is about to end</p>';
+			$clickable = false;
 		}
 		
 		if ($this->db_event['outcome_index'] == "-1") {
