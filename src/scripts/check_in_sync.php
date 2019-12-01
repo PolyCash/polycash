@@ -88,7 +88,10 @@ if ($app->running_as_admin()) {
 				$app->flush_buffers();
 			}
 			if ($obj1[$i] != $obj2[$i]) {
-				echo "Error on line #$i: <a href=\"/explorer/games/".$game_identifier."/events/".$obj1[$i]->event_index."\">".$obj1[$i]->event_name."</a> vs <a href=\"".$remote_url_base."/explorer/games/".$game_identifier."/events/".$obj2[$i]->event_index."\">".$obj2[$i]->event_name."</a><br/>\n";
+				echo "Error on line #$i:\n";
+				echo json_encode($obj1[$i], JSON_PRETTY_PRINT)."\n";
+				echo json_encode($obj2[$i], JSON_PRETTY_PRINT)."\n";
+				echo "<a href=\"/explorer/games/".$game_identifier."/events/".$obj1[$i]->event_index."\">".$obj1[$i]->event_name."</a> vs <a href=\"".$remote_url_base."/explorer/games/".$game_identifier."/events/".$obj2[$i]->event_index."\">".$obj2[$i]->event_name."</a><br/>\n";
 				$error_count++;
 			}
 		}
