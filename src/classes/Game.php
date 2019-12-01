@@ -410,7 +410,8 @@ class Game {
 		}
 	}
 	
-	public function apply_user_strategies($print_debug) {
+	public function apply_user_strategies($print_debug, $max_seconds) {
+		$ref_time = microtime(true);
 		$last_block_id = $this->blockchain->last_block_id();
 		
 		if ($this->last_block_id() == $last_block_id) {
@@ -437,17 +438,18 @@ class Game {
 			
 			if ($print_debug) echo "Applying user strategies for block #".$mining_block_id." of ".$this->db_game['name']." looping through ".$apply_strategies->rowCount()." users.<br/>\n";
 			
-			while ($user_game = $apply_strategies->fetch()) {
+			while (microtime(true)-$ref_time < $max_seconds && $user_game = $apply_strategies->fetch()) {
 				$api_response = false;
-				$this->apply_user_strategy($log_text, $user_game, $mining_block_id, $current_round_id, $api_response, false);
+				$this_log_text = "";
+				$this->apply_user_strategy($this_log_text, $user_game, $mining_block_id, $current_round_id, $api_response, false);
 				
 				if ($print_debug) {
-					echo $log_text."\n";
+					echo $this_log_text."\n";
 					
 					if ($api_response) echo "user #".$user_game['user_id'].": ".json_encode($api_response)."\n";
 					else {
 						echo "no api response for user #".$user_game['user_id']."\n";
-						$this->blockchain->app->set_strategy_time_next_apply($user_game['strategy_id'], time()+3600*12);
+						$this->blockchain->app->set_strategy_time_next_apply($user_game['strategy_id'], time()+60*15);
 					}
 				}
 			}

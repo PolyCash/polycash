@@ -17,7 +17,7 @@ if ($user_game) {
 	$coins_per_vote = $app->coins_per_vote($game->db_game);
 	$fee_amount = (int) ($fee*pow(10, $blockchain->db_blockchain['decimal_places']));
 	
-	$sec_between_applications = 60;
+	$sec_between_applications = 10*60;
 	$rand_sec_offset = rand(0, $sec_between_applications*2);
 	
 	if (time() > $user_game['time_next_apply'] || !empty($_REQUEST['force'])) {

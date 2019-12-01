@@ -31,7 +31,7 @@ if ($app->running_as_admin()) {
 				$running_game = new Game($blockchains[$db_running_game['blockchain_id']], $db_running_game['game_id']);
 				
 				if ($print_debug) echo "\nApply user strategies for ".$running_game->db_game['name']."...";
-				$running_game->apply_user_strategies($print_debug);
+				$running_game->apply_user_strategies($print_debug, 30);
 				
 				if (!empty($running_game->db_game['module'])) {
 					if (method_exists($running_game->module, "regular_actions")) {

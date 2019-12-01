@@ -578,8 +578,8 @@ class Event {
 		
 		while ($input = $winning_bets->fetch()) {
 			$this_input_effective_coins = floor($input['votes']*$coins_per_vote) + $input['effective_destroy_amount'];
-			$this_input_payout_amount = floor($total_reward*$this->db_event['payout_rate']*($this_input_effective_coins/$winning_effective_coins));
-			$weighted_payout = $this_input_payout_amount/$input['contract_parts'];
+			$this_input_payout_amount = $winning_effective_coins>0 ? floor($total_reward*$this->db_event['payout_rate']*($this_input_effective_coins/$winning_effective_coins)) : 0;
+			$weighted_payout = $input['contract_parts'] > 0 ? $this_input_payout_amount/$input['contract_parts'] : 0;
 			
 			$this->game->blockchain->app->run_query("UPDATE transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id SET gio.colored_amount=FLOOR(".$weighted_payout."*gio.contract_parts) WHERE gio.parent_io_id=:game_io_id AND gio.resolved_before_spent=1;", [
 				'game_io_id' => $input['game_io_id']

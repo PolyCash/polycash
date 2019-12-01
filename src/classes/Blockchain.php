@@ -1323,6 +1323,8 @@ class Blockchain {
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'block_id' => $block_height
 		]);
+		
+		$this->set_last_complete_block($block_height-1);
 	}
 	
 	public function add_genesis_block() {

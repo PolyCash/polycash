@@ -25,11 +25,6 @@ if ($app->running_as_admin()) {
 			$log_text = "";
 			$blockchain->new_block($log_text);
 			if (!empty($_REQUEST['print_debug'])) echo $log_text."\n";
-			
-			if ($game && !empty($_REQUEST['apply_user_strategies'])) {
-				$block_of_round = $game->block_id_to_round_index($game->blockchain->last_block_id()+1);
-				if (!empty($_REQUEST['apply_user_strategies'])) $game->apply_user_strategies(true);
-			}
 		}
 		echo "Done!\n";
 	}

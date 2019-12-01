@@ -13,7 +13,7 @@ if ($app->running_as_admin()) {
 		$game = new Game($blockchain, $game_id);
 		
 		echo "<pre>";
-		$game->apply_user_strategies(true);
+		$game->apply_user_strategies(true, 300);
 		echo "</pre>\n";
 	}
 	else echo "Please supply a valid game ID.\n";
