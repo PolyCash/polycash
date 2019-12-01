@@ -16,15 +16,46 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 	$fee = (int)($user_strategy['transaction_fee']*pow(10, $game->blockchain->db_blockchain['decimal_places']));
 	
 	$burn_amount = (int) $_REQUEST['burn_amount'];
+	$address_ids = [];
+	$io_ids = explode(",", $_REQUEST['io_ids']);
+	$amounts = array_map('intval', explode(",", $_REQUEST['amounts']));
+	$option_ids = explode(",", $_REQUEST['option_ids']);
+	
+	// This step pulls in IOs in this account which have no game IO
+	// (usually coins sent to a delete address in a betting tx)
+	// without this, the user will run out of chain coins after several bets
+	$recommended_recycle_ios = 2;
+	$recycle_ios = $app->fetch_recycle_ios_in_account($account['account_id'], $recommended_recycle_ios);
+	
+	if (count($recycle_ios) > 0) {
+		$recycle_amount = 0;
+		
+		foreach ($recycle_ios as $recycle_io) {
+			$recycle_amount += $recycle_io['amount'];
+			array_push($io_ids, $recycle_io['io_id']);
+		}
+		
+		$amount_sum = array_sum($amounts);
+		$initial_amount_sum = $amount_sum+$burn_amount;
+		$new_amount_sum = $initial_amount_sum+$recycle_amount;
+		
+		$new_burn_amount = ceil($burn_amount*($new_amount_sum/$initial_amount_sum));
+		$new_remainder_amount = $new_amount_sum-$new_burn_amount;
+		
+		for ($amount_i=0; $amount_i<count($amounts); $amount_i++) {
+			$amounts[$amount_i] = round($amounts[$amount_i]*$new_remainder_amount/$amount_sum);
+		}
+		
+		$overshoot_amount = array_sum($amounts)-$new_remainder_amount;
+		$amounts[count($amounts)-1] -= $overshoot_amount;
+		$burn_amount = $new_burn_amount;
+	}
+	
+	// Now run some sanity checks
 	if ($burn_amount == 0 && $game->db_game['inflation'] == "exponential" && $game->db_game['exponential_inflation_rate'] == 0) {
 		$app->output_message(3, "How many ".$game->db_game['coin_name_plural']." do you want to spend?", false);
 		die();
 	}
-	
-	$address_ids = [];
-	$io_ids = explode(",", $_REQUEST['io_ids']);
-	$amounts = explode(",", $_REQUEST['amounts']);
-	$option_ids = explode(",", $_REQUEST['option_ids']);
 	
 	if (count($amounts) != count($option_ids)) {
 		$app->output_message(4, "Option IDs and amounts do not match", false);
@@ -37,7 +68,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 			$app->output_message(5, "Invalid amount specified.", false);
 			die();
 		}
-		$amount_sum += (int) $amounts[$i];
+		$amount_sum += $amounts[$i];
 	}
 	
 	$gio_info = $app->run_query("SELECT COUNT(*), SUM(gio.colored_amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.io_id IN (".implode(",", array_map("intval", $io_ids)).") AND k.account_id=:account_id;", [
@@ -62,10 +93,11 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 		die();
 	}
 	else if ($io_info['SUM(io.amount)'] != $fee+$burn_amount+$amount_sum) {
-		$app->output_message(8, "Error: amounts don't add up correctly: $io_q ".$io_info['SUM(io.amount)']." vs ($fee+$burn_amount+$amount_sum)", false);
+		$app->output_message(8, "Error: amounts don't add up correctly: ".$io_info['SUM(io.amount)']." vs ($fee+$burn_amount+$amount_sum)", false);
 		die();
 	}
 	
+	// Now create the transaction
 	$separator_addresses = $app->fetch_addresses_in_account($account, 1, count($option_ids));
 	$separator_frac = 0.25;
 	$new_amounts = [];
