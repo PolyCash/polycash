@@ -280,6 +280,14 @@ class App {
 		else $html .= "Failed to start a process for applying strategies.<br/>\n";
 		sleep(0.1);
 		
+		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/game_regular_actions.php"';
+		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+		else $cmd .= " 2>&1 >/dev/null";
+		$main_process = proc_open($cmd, $pipe_config, $pipes);
+		if (is_resource($main_process)) $process_count++;
+		else $html .= "Failed to start a process for game regular actions.<br/>\n";
+		sleep(0.1);
+		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_check_payments.php"';
 		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
 		else $cmd .= " 2>&1 >/dev/null";
@@ -770,8 +778,10 @@ class App {
 					}
 				}
 				else if ($currency_url['format_id'] == 3) {
-					$html_data = $this->first_snippet_between($api_response_raw, '<div id="currency-exchange-rates"', '></div>');
-					$price_usd = (float)$this->first_snippet_between($html_data, 'data-btc="', '"');
+					$coin_data_raw = $this->first_snippet_between($api_response_raw, '<script id="__NEXT_DATA__" type="application/json">', '</script>');
+					$coin_data = json_decode($coin_data_raw);
+					$price_usd = $coin_data->props->initialState->cryptocurrency->listingLatest->data[0]->quote->USD->price;
+					
 					if ($price_usd > 0) $price = 1/$price_usd;
 					else $price = 0;
 				}
