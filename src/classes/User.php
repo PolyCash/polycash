@@ -33,7 +33,7 @@ class User {
 			'game_id' => $game->db_game['game_id'],
 			'account_id' => $user_game['account_id']
 		];
-		return (int)($this->app->run_query("SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.game_id=:game_id AND k.account_id=:account_id AND gio.is_resolved=1 AND io.spend_status != 'spent';", $query_params)->fetch(PDO::FETCH_NUM)[0]);
+		return (int)($this->app->run_query("SELECT SUM(gio.colored_amount) FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.game_id=:game_id AND k.account_id=:account_id AND gio.is_resolved=1 AND io.spend_status IN ('unspent','unconfirmed');", $query_params)->fetch(PDO::FETCH_NUM)[0]);
 	}
 
 	public function user_current_votes(&$game, $last_block_id, $current_round, &$user_game) {

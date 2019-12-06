@@ -3196,7 +3196,7 @@ class App {
 	}
 	
 	public function fetch_addresses_in_account(&$account, $option_index, $quantity) {
-		$addresses = $this->run_limited_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id AND a.option_index=:option_index LIMIT :quantity;", [
+		$addresses = $this->run_limited_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id AND k.option_index=:option_index LIMIT :quantity;", [
 			'account_id' => $account['account_id'],
 			'option_index' => $option_index,
 			'quantity' => $quantity
@@ -3908,7 +3908,7 @@ class App {
 	}
 	
 	public function fetch_recycle_ios_in_account($account_id, $quantity) {
-		return $this->run_limited_query("SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id AND a.is_destroy_address=1 AND io.spend_status='unspent' ORDER BY io.amount DESC LIMIT :quantity;", ['account_id'=>$account_id, 'quantity'=>$quantity])->fetchAll();
+		return $this->run_limited_query("SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE k.account_id=:account_id AND k.option_index=0 AND io.spend_status='unspent' ORDER BY io.amount DESC LIMIT :quantity;", ['account_id'=>$account_id, 'quantity'=>$quantity])->fetchAll();
 	}
 	
 	public function set_strategy_time_next_apply($strategy_id, $time_next_apply) {
