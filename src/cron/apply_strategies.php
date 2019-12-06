@@ -1,18 +1,21 @@
 <?php
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 
-$script_target_time = 174;
-$loop_target_time = 30;
+$script_target_time = 285;
+$loop_target_time = 10;
 $script_start_time = microtime(true);
 
-$allowed_params = ['key', 'print_debug'];
+$allowed_params = ['key', 'print_debug', 'game_id'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);
 
 if ($app->running_as_admin()) {
 	$print_debug = false;
 	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
 	
-	$process_lock_name = "apply_strategies";
+	$only_game_id = false;
+	if (!empty($_REQUEST['game_id'])) $only_game_id = (int) $_REQUEST['game_id'];
+	
+	$process_lock_name = "apply_strategies".($only_game_id ? "_".$only_game_id : "");
 	$process_locked = $app->check_process_running($process_lock_name);
 	
 	if (!$process_locked) {
@@ -23,7 +26,11 @@ if ($app->running_as_admin()) {
 		do {
 			$loop_start_time = microtime(true);
 			
-			$db_running_games = $app->run_query("SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.online=1 AND g.game_status IN('published','running');");
+			$game_q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE ";
+			if ($only_game_id) $game_q .= "g.game_id=".$only_game_id;
+			else $game_q .= "b.online=1 AND g.game_status='running'";
+			
+			$db_running_games = $app->run_query($game_q);
 			
 			while ($db_running_game = $db_running_games->fetch()) {
 				if (empty($blockchains[$db_running_game['blockchain_id']])) $blockchains[$db_running_game['blockchain_id']] = new Blockchain($app, $db_running_game['blockchain_id']);
