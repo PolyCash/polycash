@@ -450,7 +450,7 @@ class Game {
 					$this_log_text = "";
 					$this->apply_user_strategy($this_log_text, $user_game, $mining_block_id, $current_round_id, $api_response, false);
 					
-					if (!$api_response || $api_response->status_code != 1) {
+					if (!$api_response || $api_response->status_code > 3) {
 						$this->blockchain->app->set_strategy_time_next_apply($user_game['strategy_id'], time()+60*60);
 					}
 					else {

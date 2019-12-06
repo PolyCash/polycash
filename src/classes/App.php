@@ -253,7 +253,7 @@ class App {
 			$block_loading_process = proc_open($cmd, $pipe_config, $pipes);
 			if (is_resource($block_loading_process)) $process_count++;
 			else $html .= "Failed to start a process for syncing ".$sync_blockchain['blockchain_name'].".<br/>\n";
-			sleep(0.1);
+			sleep(0.02);
 		}
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_games.php"';
@@ -262,7 +262,7 @@ class App {
 		$block_loading_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($block_loading_process)) $process_count++;
 		else $html .= "Failed to start a process for loading blocks.<br/>\n";
-		sleep(0.1);
+		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/mine_blocks.php"';
 		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
@@ -270,15 +270,19 @@ class App {
 		$main_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($main_process)) $process_count++;
 		else $html .= "Failed to start the block mining process.<br/>\n";
-		sleep(0.1);
+		sleep(0.02);
 		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/apply_strategies.php"';
-		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
-		else $cmd .= " 2>&1 >/dev/null";
-		$main_process = proc_open($cmd, $pipe_config, $pipes);
-		if (is_resource($main_process)) $process_count++;
-		else $html .= "Failed to start a process for applying strategies.<br/>\n";
-		sleep(0.1);
+		$apply_strategy_games = $this->run_query("SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE b.online=1 AND g.game_status='running'");
+		
+		while ($strategy_game = $apply_strategy_games->fetch()) {
+			$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/apply_strategies.php" game_id='.$strategy_game['game_id'];
+			if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+			else $cmd .= " 2>&1 >/dev/null";
+			$main_process = proc_open($cmd, $pipe_config, $pipes);
+			if (is_resource($main_process)) $process_count++;
+			else $html .= "Failed to start a process for applying strategies for ".$strategy_game['name'].".<br/>\n";
+			sleep(0.02);
+		}
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/game_regular_actions.php"';
 		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
@@ -286,7 +290,7 @@ class App {
 		$main_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($main_process)) $process_count++;
 		else $html .= "Failed to start a process for game regular actions.<br/>\n";
-		sleep(0.1);
+		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/minutely_check_payments.php"';
 		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
@@ -294,7 +298,7 @@ class App {
 		$payments_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($payments_process)) $process_count++;
 		else $html .= "Failed to start a process for processing payments.<br/>\n";
-		sleep(0.1);
+		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/fetch_currency_prices.php"';
 		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
@@ -302,7 +306,7 @@ class App {
 		$currency_prices_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($currency_prices_process)) $process_count++;
 		else $html .= "Failed to start a process for updating currency prices.<br/>\n";
-		sleep(0.1);
+		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_cached_urls.php"';
 		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
@@ -310,7 +314,7 @@ class App {
 		$cached_url_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($cached_url_process)) $process_count++;
 		else $html .= "Failed to start a process for loading cached urls.<br/>\n";
-		sleep(0.1);
+		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/ensure_user_addresses.php"';
 		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
@@ -318,7 +322,7 @@ class App {
 		$ensure_addresses_process = proc_open($cmd, $pipe_config, $pipes);
 		if (is_resource($ensure_addresses_process)) $process_count++;
 		else $html .= "Failed to start a process for ensuring user addresses.<br/>\n";
-		sleep(0.1);
+		sleep(0.02);
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/set_cached_game_definition_hashes.php"';
 		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
@@ -3196,7 +3200,7 @@ class App {
 	}
 	
 	public function fetch_addresses_in_account(&$account, $option_index, $quantity) {
-		$addresses = $this->run_limited_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id AND a.option_index=:option_index LIMIT :quantity;", [
+		$addresses = $this->run_limited_query("SELECT * FROM addresses a JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id AND k.option_index=:option_index LIMIT :quantity;", [
 			'account_id' => $account['account_id'],
 			'option_index' => $option_index,
 			'quantity' => $quantity
@@ -3837,7 +3841,7 @@ class App {
 			$spendable_io_q .= ", SUM(gio.colored_amount*(:ref_round_id-gio.create_round_id)) AS coin_rounds";
 			$spendable_io_params['ref_round_id'] = $round_id;
 		}
-		$spendable_io_q .= " FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND k.account_id=:account_id AND gio.game_id=:game_id GROUP BY gio.io_id HAVING COUNT(*)=num_resolved ORDER BY io.io_id ASC;";
+		$spendable_io_q .= " FROM transaction_game_ios gio JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id AND gio.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND k.account_id=:account_id AND gio.game_id=:game_id GROUP BY gio.io_id HAVING COUNT(*)=num_resolved ORDER BY io.io_id ASC;";
 		return $this->run_query($spendable_io_q, $spendable_io_params);
 	}
 	
@@ -3908,7 +3912,7 @@ class App {
 	}
 	
 	public function fetch_recycle_ios_in_account($account_id, $quantity) {
-		return $this->run_limited_query("SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id AND a.is_destroy_address=1 AND io.spend_status='unspent' ORDER BY io.amount DESC LIMIT :quantity;", ['account_id'=>$account_id, 'quantity'=>$quantity])->fetchAll();
+		return $this->run_limited_query("SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE k.account_id=:account_id AND k.option_index=0 AND io.spend_status='unspent' ORDER BY io.amount DESC LIMIT :quantity;", ['account_id'=>$account_id, 'quantity'=>$quantity])->fetchAll();
 	}
 	
 	public function set_strategy_time_next_apply($strategy_id, $time_next_apply) {

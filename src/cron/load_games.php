@@ -3,6 +3,7 @@ set_time_limit(0);
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 
 $script_target_time = 290;
+$loop_target_time = 5;
 $script_start_time = microtime(true);
 
 $allowed_params = ['print_debug', 'game_id'];
@@ -20,7 +21,6 @@ if ($app->running_as_admin()) {
 		
 		$blockchains = [];
 		
-		$loop_target_time = $app->get_site_constant("loop_target_time");
 		do {
 			$loop_start_time = microtime(true);
 			
@@ -42,8 +42,8 @@ if ($app->running_as_admin()) {
 			
 			$loop_stop_time = microtime(true);
 			$loop_time = $loop_stop_time-$loop_start_time;
-			$loop_target_time = max(1, $loop_time);
-			$sleep_usec = round(pow(10,6)*($loop_target_time - $loop_time));
+			$sleep_usec = max(0, round(pow(10,6)*($loop_target_time - $loop_time)));
+			
 			if ($print_debug) echo "script run time: ".(microtime(true)-$script_start_time).", sleeping ".$sleep_usec/pow(10,6)." seconds.\n\n";
 			usleep($sleep_usec);
 		}
