@@ -225,7 +225,6 @@ class Blockchain {
 						]);
 						$db_block['locally_saved'] = 1;
 						$this->set_last_complete_block($db_block['block_id']);
-						$this->render_transactions_in_block($db_block, false);
 					}
 					$this->set_block_stats($db_block);
 					
@@ -1443,16 +1442,16 @@ class Blockchain {
 		}
 		else if ($this->db_blockchain['p2p_mode'] == "web_api") {
 			$info = $this->web_api_fetch_blockchain();
-			$first_required_block = (int) $info['last_block_id'];
+			$first_required_block = 0;
 		}
 		
 		$min_starting_block = (int)($this->app->run_query("SELECT MIN(game_starting_block) FROM games WHERE game_status IN ('published', 'running') AND blockchain_id=:blockchain_id;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id']
 		])->fetch()['MIN(game_starting_block)']);
 		
-		if ($min_starting_block > 0 && ($first_required_block == "" || $min_starting_block < $first_required_block)) $first_required_block = $min_starting_block;
+		if ($min_starting_block > 0 && ($first_required_block === "" || $min_starting_block < $first_required_block)) $first_required_block = $min_starting_block;
 		
-		if ($first_required_block != "") $this->db_blockchain['first_required_block'] = $first_required_block;
+		if ($first_required_block !== "") $this->db_blockchain['first_required_block'] = $first_required_block;
 		else {
 			$this->db_blockchain['first_required_block'] = "";
 			$first_required_block = null;
@@ -2238,8 +2237,12 @@ class Blockchain {
 	
 	public function web_api_fetch_blocks($from_block_height, $to_block_height) {
 		$remote_url = $this->authoritative_peer['base_url']."/api/blocks/".$this->db_blockchain['url_identifier']."/".$from_block_height.":".$to_block_height;
-		$remote_response = json_decode(file_get_contents($remote_url));
-		return $remote_response->blocks;
+		
+		if ($raw_response = file_get_contents($remote_url)) {
+			if ($remote_response = json_decode($raw_response)) return $remote_response->blocks;
+			else return [];
+		}
+		else return [];
 	}
 	
 	public function web_api_fetch_blockchain() {
