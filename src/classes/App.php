@@ -714,7 +714,7 @@ class App {
 		}
 		
 		return [
-			'exchange_rate' => $rate_ref_per_denominator/$rate_ref_per_numerator,
+			'exchange_rate' => $rate_ref_per_numerator > 0 ? $rate_ref_per_denominator/$rate_ref_per_numerator : 0,
 			'time' => $price_time
 		];
 	}

@@ -43,14 +43,16 @@ if ($app->running_as_admin()) {
 			$online_blockchain = new Blockchain($app, $db_online_blockchain['blockchain_id']);
 			$online_blockchain->load_coin_rpc();
 			
-			$getblockchaininfo = $online_blockchain->coin_rpc->getblockchaininfo();
-			
-			if (!empty($getblockchaininfo['headers'])) {
-				$app->run_query("UPDATE blockchains SET rpc_last_time_connected=:current_time, block_height=:block_height WHERE blockchain_id=:blockchain_id;", [
-					'current_time' => time(),
-					'block_height' => $getblockchaininfo['headers'],
-					'blockchain_id' => $online_blockchain->db_blockchain['blockchain_id']
-				]);
+			if ($online_blockchain->coin_rpc) {
+				$getblockchaininfo = $online_blockchain->coin_rpc->getblockchaininfo();
+				
+				if (!empty($getblockchaininfo['headers'])) {
+					$app->run_query("UPDATE blockchains SET rpc_last_time_connected=:current_time, block_height=:block_height WHERE blockchain_id=:blockchain_id;", [
+						'current_time' => time(),
+						'block_height' => $getblockchaininfo['headers'],
+						'blockchain_id' => $online_blockchain->db_blockchain['blockchain_id']
+					]);
+				}
 			}
 		}
 		

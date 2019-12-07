@@ -1,5 +1,5 @@
 <?php
-ini_set('memory_limit', '1024M');
+ini_set('memory_limit', '4096M');
 set_time_limit(0);
 $script_start_time = microtime(true);
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
@@ -17,21 +17,21 @@ if ($app->running_as_admin()) {
 	$peer = false;
 	$acceptable_modes = ['blockchain','game_ios','game_events'];
 	
-	if (empty($_REQUEST['mode']) || !in_array($_REQUEST['mode'], $acceptable_modes)) die("Please set mode to one of these: ".json_encode($acceptable_modes));
+	if (empty($_REQUEST['mode']) || !in_array($_REQUEST['mode'], $acceptable_modes)) die("Please set mode to one of these: ".json_encode($acceptable_modes)."\n");
 	else $mode = $_REQUEST['mode'];
 	
 	if ($mode == "blockchain") {
-		if (empty($_REQUEST['blockchain_identifier'])) die("Please supply a blockchain_identifier");
+		if (empty($_REQUEST['blockchain_identifier'])) die("Please supply a blockchain_identifier\n");
 		else $blockchain_identifier = $_REQUEST['blockchain_identifier'];
 	}
 	else {
-		if (empty($_REQUEST['game_identifier'])) die("Please supply a valid game identifier");
+		if (empty($_REQUEST['game_identifier'])) die("Please supply a valid game identifier\n");
 		else $game_identifier = $_REQUEST['game_identifier'];
 	}
 	
 	if (!empty($_REQUEST['peer_id'])) {
 		$peer = $app->fetch_peer_by_id((int)$_REQUEST['peer_id']);
-		if (!$peer) die("Invalid peer_id supplied.");
+		if (!$peer) die("Invalid peer_id supplied.\n");
 	}
 	
 	if (!$peer) {
