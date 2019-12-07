@@ -1148,14 +1148,12 @@ class Blockchain {
 	}
 	
 	public function load_all_blocks($required_blocks_only, $print_debug, $max_execution_time) {
-		$start_time = microtime(true);
-		
 		if ($required_blocks_only && $this->db_blockchain['first_required_block'] === "") {}
 		else {
 			$this->load_coin_rpc();
 			$keep_looping = true;
 			$loop_i = 0;
-			$load_at_once = 100;
+			$load_at_once = 20;
 			
 			$last_complete_block_id = $this->db_blockchain['last_complete_block'];
 			$load_from_block = $last_complete_block_id+1;
@@ -1165,6 +1163,8 @@ class Blockchain {
 				$ref_api_blocks = $this->web_api_fetch_blocks($load_from_block, $load_to_block);
 			}
 			else $ref_api_blocks = [];
+			
+			$start_time = microtime(true);
 			
 			do {
 				$ref_time = microtime(true);
@@ -1865,14 +1865,14 @@ class Blockchain {
 	}
 	
 	public function account_balance($account_id) {
-		return (int)($this->app->run_query("SELECT SUM(io.amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.blockchain_id=:blockchain_id AND io.spend_status='unspent' AND k.account_id=:account_id AND io.create_block_id IS NOT NULL;", [
+		return (int)($this->app->run_query("SELECT SUM(io.amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.blockchain_id=:blockchain_id AND io.spend_status='unspent' AND k.account_id=:account_id AND io.create_block_id IS NOT NULL;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'account_id' => $account_id
 		])->fetch(PDO::FETCH_NUM)[0]);
 	}
 	
 	public function user_immature_balance(&$user_game) {
-		return (int)($this->app->run_query("SELECT SUM(io.amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.blockchain_id=:blockchain_id AND k.account_id=:account_id AND (io.create_block_id > :block_id OR io.create_block_id IS NULL);", [
+		return (int)($this->app->run_query("SELECT SUM(io.amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.blockchain_id=:blockchain_id AND k.account_id=:account_id AND (io.create_block_id > :block_id OR io.create_block_id IS NULL);", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'account_id' => $user_game['account_id'],
 			'block_id' => $this->last_block_id()
@@ -1880,7 +1880,7 @@ class Blockchain {
 	}
 
 	public function user_mature_balance(&$user_game) {
-		return (int)($this->app->run_query("SELECT SUM(io.amount) FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND io.blockchain_id=:blockchain_id AND k.account_id=:account_id AND io.create_block_id <= :block_id;", [
+		return (int)($this->app->run_query("SELECT SUM(io.amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status='unspent' AND io.spend_transaction_id IS NULL AND io.blockchain_id=:blockchain_id AND k.account_id=:account_id AND io.create_block_id <= :block_id;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'account_id' => $user_game['account_id'],
 			'block_id' => $this->last_block_id()
