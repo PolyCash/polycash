@@ -876,9 +876,12 @@ class App {
 		$this->run_query($new_key_q, $new_key_params);
 		$address_key_id = $this->last_insert_id();
 		
-		return $this->run_query("SELECT * FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id WHERE ak.address_key_id=:address_key_id;", [
-			'address_key_id' => $address_key_id
-		])->fetch();
+		if ($address_key_id) {
+			return $this->run_query("SELECT * FROM addresses a JOIN address_keys ak ON a.address_id=ak.address_id WHERE ak.address_key_id=:address_key_id;", [
+				'address_key_id' => $address_key_id
+			])->fetch();
+		}
+		else return false;
 	}
 	
 	public function new_address_key($currency_id, &$account) {

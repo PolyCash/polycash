@@ -1,5 +1,6 @@
 <?php
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
+if (AppSettings::getParam('disable_address_generation')) die("This function is disabled.\n");
 
 $script_start_time = microtime(true);
 $allowed_params = ['print_debug', 'game_id'];
