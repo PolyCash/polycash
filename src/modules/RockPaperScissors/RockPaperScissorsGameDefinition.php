@@ -69,9 +69,9 @@ class RockPaperScissorsGameDefinition {
 			$event = [
 				"event_index" => $event_index,
 				"event_starting_block" => $block,
-				"event_final_block" => $block+3,
-				"event_outcome_block" => $block+3,
-				"event_payout_block" => $block+4,
+				"event_final_block" => $block+7,
+				"event_outcome_block" => $block+7,
+				"event_payout_block" => $block+8,
 				"event_name" => "Match #".number_format($event_index),
 				"option_name" => "hand",
 				"option_name_plural" => "hands",
