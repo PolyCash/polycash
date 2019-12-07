@@ -1147,7 +1147,7 @@ class Blockchain {
 	}
 	
 	public function load_all_blocks($required_blocks_only, $print_debug, $max_execution_time) {
-		if ($required_blocks_only && $this->db_blockchain['first_required_block'] === "") {}
+		if ($required_blocks_only && (string) $this->db_blockchain['first_required_block'] === "") {}
 		else {
 			$this->load_coin_rpc();
 			$keep_looping = true;

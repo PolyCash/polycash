@@ -3,11 +3,17 @@ $pageload_start_time = microtime(true);
 require_once(dirname(dirname(__FILE__))."/classes/AppSettings.php");
 AppSettings::load();
 
-if (empty($argv) && !empty(AppSettings::getParam('restrict_ip_address'))) {
+if (AppSettings::runningFromCommandline() && !empty(AppSettings::getParam('restrict_ip_address'))) {
 	if ($_SERVER['REMOTE_ADDR'] != AppSettings::getParam('restrict_ip_address')) {
 		header('HTTP/1.1 503 Service Temporarily Unavailable');
 		die("This website is closed for maintenance.\n");
 	}
+}
+
+if (AppSettings::runningFromCommandline()) {
+	ini_set('display_errors', 1);
+	ini_set('display_startup_errors', 1);
+	error_reporting(E_ALL);
 }
 
 if (empty(AppSettings::getParam('coin_brand_name'))) die("Please set the 'coin_brand_name' parameter in your config/config.json");
