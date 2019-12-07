@@ -1148,8 +1148,6 @@ class Blockchain {
 	}
 	
 	public function load_all_blocks($required_blocks_only, $print_debug, $max_execution_time) {
-		$start_time = microtime(true);
-		
 		if ($required_blocks_only && $this->db_blockchain['first_required_block'] === "") {}
 		else {
 			$this->load_coin_rpc();
@@ -1165,6 +1163,8 @@ class Blockchain {
 				$ref_api_blocks = $this->web_api_fetch_blocks($load_from_block, $load_to_block);
 			}
 			else $ref_api_blocks = [];
+			
+			$start_time = microtime(true);
 			
 			do {
 				$ref_time = microtime(true);
