@@ -1,5 +1,6 @@
 <?php
 $allow_no_https = true;
+$script_start_time = microtime(true);
 require(AppSettings::srcPath().'/includes/connect.php');
 require(AppSettings::srcPath().'/includes/get_session.php');
 
@@ -183,7 +184,7 @@ if ($uri_parts[1] == "api") {
 			$block_params = [
 				'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
 			];
-			$block_q = "SELECT block_id, block_hash, num_transactions, time_mined FROM blocks WHERE block_id<=".$blockchain->db_blockchain['last_complete_block']." AND blockchain_id=:blockchain_id";
+			$block_q = "SELECT block_id, block_hash, num_transactions, time_mined, json_transactions FROM blocks WHERE block_id<=".$blockchain->db_blockchain['last_complete_block']." AND blockchain_id=:blockchain_id";
 			if ($uri_parts[2] == "block") {
 				$block_q .= " AND block_id=:block_id";
 				$block_params['block_id'] = $block_height;
@@ -200,27 +201,38 @@ if ($uri_parts[1] == "api") {
 			while ($db_block = $block_r->fetch(PDO::FETCH_ASSOC)) {
 				$transactions = [];
 				
-				$tx_q = "SELECT transaction_id, block_id, transaction_desc, tx_hash, amount, fee_amount, time_created, position_in_block, num_inputs, num_outputs FROM transactions WHERE blockchain_id=:blockchain_id AND block_id=:block_id ORDER BY position_in_block ASC;";
-				$tx_r = $app->run_query($tx_q, [
-					'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
-					'block_id' => $db_block['block_id']
-				]);
-				
-				while ($tx = $tx_r->fetch(PDO::FETCH_ASSOC)) {
-					list($inputs, $outputs) = $app->web_api_transaction_ios($tx['transaction_id']);
-					
-					unset($tx['transaction_id']);
-					$tx['inputs'] = $inputs;
-					$tx['outputs'] = $outputs;
-					
-					array_push($transactions, $tx);
+				if (!empty($db_block['json_transactions'])) {
+					$db_block['transactions'] = json_decode($db_block['json_transactions']);
 				}
-				$db_block['transactions'] = $transactions;
+				else {
+					$tx_q = "SELECT transaction_id, block_id, transaction_desc, tx_hash, amount, fee_amount, time_created, position_in_block, num_inputs, num_outputs FROM transactions WHERE blockchain_id=:blockchain_id AND block_id=:block_id ORDER BY position_in_block ASC;";
+					$tx_r = $app->run_query($tx_q, [
+						'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
+						'block_id' => $db_block['block_id']
+					]);
+					
+					while ($tx = $tx_r->fetch(PDO::FETCH_ASSOC)) {
+						list($inputs, $outputs) = $app->web_api_transaction_ios($tx['transaction_id']);
+						
+						unset($tx['transaction_id']);
+						$tx['inputs'] = $inputs;
+						$tx['outputs'] = $outputs;
+						
+						array_push($transactions, $tx);
+					}
+					$db_block['transactions'] = $transactions;
+					
+					$app->run_query("UPDATE blocks SET json_transactions=:json_transactions WHERE internal_block_id=:internal_block_id;", [
+						'json_transactions' => json_encode($transactions),
+						'internal_block_id' => $db_block['internal_block_id']
+					]);
+				}
 				
 				array_push($blocks, $db_block);
 			}
 			
 			$api_output['blocks'] = $blocks;
+			$api_output['load_time'] = round(microtime(true)-$script_start_time, 4);
 			$app->output_message(1, "", $api_output);
 		}
 	}

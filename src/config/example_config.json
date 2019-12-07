@@ -28,5 +28,7 @@
 	"homepage_fname": "default.php",
 	"default_timezone": "UTC",
 	"api_proxy_url": "",
-	"cachebuster": 1001
+	"cachebuster": 1001,
+	"disable_address_generation": false,
+	"restrict_ip_address": false
 }
