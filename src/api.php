@@ -222,9 +222,10 @@ if ($uri_parts[1] == "api") {
 					}
 					$db_block['transactions'] = $transactions;
 					
-					$app->run_query("UPDATE blocks SET json_transactions=:json_transactions WHERE internal_block_id=:internal_block_id;", [
+					$app->run_query("UPDATE blocks SET json_transactions=:json_transactions WHERE blockchain_id=:blockchain_id AND block_id=:block_id;", [
 						'json_transactions' => json_encode($transactions),
-						'internal_block_id' => $db_block['internal_block_id']
+						'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
+						'block_id' => $db_block['block_id']
 					]);
 				}
 				

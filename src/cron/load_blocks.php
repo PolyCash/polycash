@@ -59,7 +59,7 @@ if ($app->running_as_admin()) {
 				$blockchain->load_coin_rpc();
 				$error = false;
 				
-				if ($db_blockchain['p2p_mode'] != "web_api") {
+				if ($db_blockchain['p2p_mode'] == "rpc") {
 					if ($blockchain->coin_rpc) {
 						try {
 							$blockchain->coin_rpc->getwalletinfo();

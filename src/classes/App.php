@@ -3,8 +3,10 @@ class App {
 	public $dbh;
 	
 	public function __construct($skip_select_db) {
-		$conn = new PDO("mysql:host=".AppSettings::getParam('mysql_server').";charset=utf8", AppSettings::getParam('mysql_user'), AppSettings::getParam('mysql_password')) or die("Error, failed to connect to the database.");
-		$this->dbh = $conn;
+		try {
+			$this->dbh = new PDO("mysql:host=".AppSettings::getParam('mysql_server').";charset=utf8", AppSettings::getParam('mysql_user'), AppSettings::getParam('mysql_password')) or die("Error, failed to connect to the database.");
+		}
+		catch (PDOException $err) {}
 		
 		if (!$skip_select_db) {
 			$this->select_db(AppSettings::getParam('mysql_database'));
