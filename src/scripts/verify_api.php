@@ -1,5 +1,5 @@
 <?php
-ini_set('memory_limit', '1024M');
+ini_set('memory_limit', '4096M');
 set_time_limit(0);
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 require_once(dirname(dirname(__FILE__))."/classes/PeerVerifier.php");

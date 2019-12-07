@@ -158,6 +158,7 @@ class Blockchain {
 		else return false;
 	}
 	
+	// Loads a block for blockchains with p2p_mode = web_api/none. (The 2 modes for dev blockchains)
 	public function web_api_add_block(&$db_block, &$api_block, $headers_only, $print_debug) {
 		$start_time = microtime(true);
 		$html = "";
@@ -242,6 +243,7 @@ class Blockchain {
 		return $html;
 	}
 	
+	// Loads a block for blockchains with p2p_mode="rpc" (bitcoin etc)
 	public function coind_add_block($block_hash, $block_height, $headers_only, $print_debug) {
 		$start_time = microtime(true);
 		$any_error = false;
@@ -334,7 +336,13 @@ class Blockchain {
 					$update_block_params['time_loaded'] = time();
 					$db_block['locally_saved'] = 1;
 					$this->set_last_complete_block($db_block['block_id']);
-					$this->render_transactions_in_block($db_block, false);
+					
+					// Render transactions caches html for all transactions in a block
+					// Slow to run, but makes block explorer much faster
+					// So run when blockchain is fully loaded, but not when doing initial sync
+					if ($db_block['block_id'] > $this->last_block_id()-5) {
+						$this->render_transactions_in_block($db_block, false);
+					}
 				}
 				$update_block_q .= "load_time=load_time+:add_load_time WHERE internal_block_id=:internal_block_id;";
 				$this->app->run_query($update_block_q, $update_block_params);
@@ -2247,8 +2255,13 @@ class Blockchain {
 	
 	public function web_api_fetch_blockchain() {
 		$remote_url = $this->authoritative_peer['base_url']."/api/blockchain/".$this->db_blockchain['url_identifier']."/";
-		$remote_response_raw = file_get_contents($remote_url);
-		return get_object_vars(json_decode($remote_response_raw));
+		if ($remote_response_raw = file_get_contents($remote_url)) {
+			if ($remote_response_json = json_decode($remote_response_raw)) {
+				return get_object_vars($remote_response_json);
+			}
+			else return null;
+		}
+		else return null;
 	}
 	
 	public function web_api_push_transaction($transaction_id) {
