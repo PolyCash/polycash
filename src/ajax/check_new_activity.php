@@ -81,24 +81,24 @@ $output['rendered_events'] = [];
 
 $display_event_ids = "";
 
-for ($game_event_index=0; $game_event_index<count($these_events); $game_event_index++) {
-	$rendered_event = $these_events[$game_event_index]->event_html($thisuser, $show_intro_text, true, $instance_id, $game_event_index);
+for ($render_event_i=0; $render_event_i<count($these_events); $render_event_i++) {
+	$rendered_event = $these_events[$render_event_i]->event_html($thisuser, $show_intro_text, true, $instance_id, $render_event_i);
 	$rendered_event_hash = hash("sha256", $rendered_event);
 	$rendered_event_hash = substr($rendered_event_hash, 0, 8);
-	$display_event_ids .= $these_events[$game_event_index]->db_event['event_id'].",";
+	$display_event_ids .= $these_events[$render_event_i]->db_event['event_id'].",";
 	
-	if (isset($event_hashes[$game_event_index]) && $event_hashes[$game_event_index] == $rendered_event_hash) {
-		$output['rendered_events'][$game_event_index] = ["hash" => false, "html" => ""];
+	if (isset($event_hashes[$render_event_i]) && $event_hashes[$render_event_i] == $rendered_event_hash) {
+		$output['rendered_events'][$render_event_i] = ["hash" => false, "html" => ""];
 	}
 	else {
 		$any_changed_events = true;
-		$output['rendered_events'][$game_event_index] = ["hash" => $rendered_event_hash, "html" => $rendered_event];
+		$output['rendered_events'][$render_event_i] = ["hash" => $rendered_event_hash, "html" => $rendered_event];
 		
 		if ($thisuser) {
-			$output['my_current_votes'][$game_event_index] = $these_events[$game_event_index]->my_votes_table($current_round, $user_game);
+			$output['my_current_votes'][$render_event_i] = $these_events[$render_event_i]->my_votes_table($current_round, $user_game);
 		}
 		
-		$round_stats = $these_events[$game_event_index]->round_voting_stats_all();
+		$round_stats = $these_events[$render_event_i]->round_voting_stats_all();
 		$total_vote_sum = $round_stats[0];
 		$option_id2rank = $round_stats[3];
 		$round_stats = $round_stats[2];
@@ -118,7 +118,7 @@ for ($game_event_index=0; $game_event_index<count($these_events); $game_event_in
 		for ($option_id=0; $option_id<count($round_stats); $option_id++) {
 			$option = $round_stats[$option_id];
 			
-			$option_identifier = "games[".$instance_id."].events[".$game_event_index."].options[".$option['event_option_index']."]";
+			$option_identifier = "games[".$instance_id."].events[".$render_event_i."].options[".$option['event_option_index']."]";
 			$set_options_js .= $option_identifier.".votes = ".$option[$game->db_game['payout_weight'].'_score'].";\n";
 			$set_options_js .= $option_identifier.".unconfirmed_votes = ".$option['unconfirmed_'.$game->db_game['payout_weight'].'_score'].";\n";
 			$set_options_js .= $option_identifier.".effective_votes = ".$option['votes'].";\n";
@@ -140,14 +140,14 @@ for ($game_event_index=0; $game_event_index<count($these_events); $game_event_in
 			$sum_effective_burn_amount += $option['effective_destroy_score'];
 			$sum_unconfirmed_effective_burn_amount += $option['unconfirmed_effective_destroy_score'];
 		}
-		$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_votes = $sum_votes;\n";
-		$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_unconfirmed_votes = $sum_unconfirmed_votes;\n";
-		$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_effective_votes = $sum_effective_votes;\n";
-		$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_unconfirmed_effective_votes = $sum_unconfirmed_effective_votes;\n";
-		$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_burn_amount = $sum_burn_amount;\n";
-		$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_unconfirmed_burn_amount = $sum_unconfirmed_burn_amount;\n";
-		$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_effective_burn_amount = $sum_effective_burn_amount;\n";
-		$set_options_js .= "games[".$instance_id."].events[".$game_event_index."].sum_unconfirmed_effective_burn_amount = $sum_unconfirmed_effective_burn_amount;\n";
+		$set_options_js .= "games[".$instance_id."].events[".$render_event_i."].sum_votes = $sum_votes;\n";
+		$set_options_js .= "games[".$instance_id."].events[".$render_event_i."].sum_unconfirmed_votes = $sum_unconfirmed_votes;\n";
+		$set_options_js .= "games[".$instance_id."].events[".$render_event_i."].sum_effective_votes = $sum_effective_votes;\n";
+		$set_options_js .= "games[".$instance_id."].events[".$render_event_i."].sum_unconfirmed_effective_votes = $sum_unconfirmed_effective_votes;\n";
+		$set_options_js .= "games[".$instance_id."].events[".$render_event_i."].sum_burn_amount = $sum_burn_amount;\n";
+		$set_options_js .= "games[".$instance_id."].events[".$render_event_i."].sum_unconfirmed_burn_amount = $sum_unconfirmed_burn_amount;\n";
+		$set_options_js .= "games[".$instance_id."].events[".$render_event_i."].sum_effective_burn_amount = $sum_effective_burn_amount;\n";
+		$set_options_js .= "games[".$instance_id."].events[".$render_event_i."].sum_unconfirmed_effective_burn_amount = $sum_unconfirmed_effective_burn_amount;\n";
 	}
 }
 

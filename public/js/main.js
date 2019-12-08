@@ -64,11 +64,11 @@ var BetInput = function(input_index, ref_io) {
 	this.input_index = input_index;
 	this.ref_io = ref_io;
 };
-var BetOutput = function(option_index, name, option_id, event_index) {
+var BetOutput = function(option_index, name, option_id, real_event_index) {
 	this.option_index = option_index;
 	this.name = name;
 	this.option_id = option_id;
-	this.event_index = event_index;
+	this.real_event_index = real_event_index;
 	this.slider_val = 50;
 	this.amount = 0;
 };
@@ -118,9 +118,7 @@ var GameEvent = function(game, game_event_index, event_id, real_event_index, num
 	this.option_id2option_index = {};
 	
 	this.start_vote = function(option_id) {
-		var option_display_name = this.options[this.db_id2option_index(option_id)].name;
-		option_display_name += ' (<a href="/explorer/games/'+games[this.game.instance_id].game_url_identifier+'/events/'+this.real_event_index+'">'+this.event_name+'</a>)';
-		games[this.game.instance_id].add_option_to_vote(game_event_index, option_id);
+		games[this.game.instance_id].add_option_to_vote(this.game_event_index, option_id);
 	};
 	this.db_id2option_index = function(db_option_id) {
 		for (var i=0; i<this.options.length; i++) {
@@ -267,7 +265,7 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 			var index_id = this.pageManager.bet_outputs.length;
 			
 			if (games[0].option_has_votingaddr[option_id]) {
-				this.pageManager.bet_outputs.push(new BetOutput(index_id, option_display_name, option_id, event_index));
+				this.pageManager.bet_outputs.push(new BetOutput(index_id, option_display_name, option_id, this_event.real_event_index));
 				$('#compose_bet_outputs').append('<div id="compose_bet_output_'+index_id+'" class="select_utxo">'+this.pageManager.render_option_output(index_id, option_display_name)+'</div>');
 				
 				this.pageManager.load_option_slider(index_id);
@@ -960,6 +958,11 @@ var PageManager = function() {
 		if (this.bet_inputs.length > 0 || this.bet_outputs.length > 0) $('#compose_bets').show('fast');
 		else $('#compose_bets').hide('fast');
 	}
+	this.real_event_index2rendered_event_index = function(real_event_index) {
+		for (var event_i=0; event_i<games[0].events.length; event_i++) {
+			if (games[0].events[event_i].real_event_index == real_event_index) return event_i;
+		}
+	}
 	this.finish_refresh_output_amounts = function() {
 		if (this.bet_outputs.length > 0) {
 			var input_sums = this.input_amount_sums();
@@ -1007,7 +1010,8 @@ var PageManager = function() {
 				var output_io_amount = Math.round(io_nondestroy_amount*this.bet_outputs[i].slider_val/slider_sum);
 				if (i == this.bet_outputs.length-1) output_io_amount = io_nondestroy_amount - output_io_sum;
 				
-				this_event = games[0].events[this.bet_outputs[i].event_index];
+				var rendered_event_index = this.real_event_index2rendered_event_index(this.bet_outputs[i].real_event_index);
+				this_event = games[0].events[rendered_event_index];
 				
 				var effectiveness_factor = this_event.block_id_to_effectiveness_factor(games[0].last_block_id+1);
 				var output_votes = Math.round(votes*this.bet_outputs[i].slider_val/slider_sum);
@@ -1034,7 +1038,8 @@ var PageManager = function() {
 				var output_io_amount = Math.round(io_nondestroy_amount*this.bet_outputs[i].slider_val/slider_sum);
 				if (i == this.bet_outputs.length-1) output_io_amount = io_nondestroy_amount - output_io_sum;
 				
-				var this_event = games[0].events[this.bet_outputs[i].event_index];
+				var rendered_event_index = this.real_event_index2rendered_event_index(this.bet_outputs[i].real_event_index);
+				var this_event = games[0].events[rendered_event_index];
 				
 				var effectiveness_factor = this_event.block_id_to_effectiveness_factor(games[0].last_block_id+1);
 				var output_votes = Math.round(votes*this.bet_outputs[i].slider_val/slider_sum);
