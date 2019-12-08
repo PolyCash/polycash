@@ -1937,6 +1937,8 @@ class App {
 				
 				$event_verbatim_vars = $this->event_verbatim_vars();
 				
+				$event_array_pos_to_index_offset = $new_game_obj['events'][0]->event_index;
+				
 				$num_initial_events = 0;
 				if (!empty($initial_game_obj['events'])) $num_initial_events = count($initial_game_obj['events']);
 				$num_new_events = 0;
@@ -1954,19 +1956,21 @@ class App {
 					}
 				}
 				
-				$set_events_from = $this->min_excluding_false(array($reset_event_index, $matched_events+1));
+				$set_events_from_index = $this->min_excluding_false(array($reset_event_index, $matched_events+1));
 				
-				if ($set_events_from !== false) {
-					$log_message .= "Resetting events from #".$set_events_from."\n";
-					$game->reset_events_from_index($set_events_from);
-				}
-				
-				if ($num_new_events+1 > $set_events_from) {
-					if (!is_numeric($reset_block)) $reset_block = $new_game_obj['events'][$set_events_from-1]->event_starting_block;
+				if ($set_events_from_index !== false) {
+					$log_message .= "Resetting events from #".$set_events_from_index."\n";
+					$game->reset_events_from_index($set_events_from_index);
 					
-					for ($i=$set_events_from; $i<count($new_game_obj['events'])+1; $i++) {
-						if (!empty($new_game_obj['events'][$i-1])) {
-							$gde = get_object_vars($new_game_obj['events'][$i-1]);
+					$set_events_from_pos = $set_events_from_index-$event_array_pos_to_index_offset;
+					
+					if (!is_numeric($reset_block)) $reset_block = $new_game_obj['events'][$set_events_from_pos]->event_starting_block;
+					
+					for ($event_pos=$set_events_from_pos; $event_pos<=count($new_game_obj['events']); $event_pos++) {
+						$event_index = $event_pos+$event_array_pos_to_index_offset;
+						
+						if (!empty($new_game_obj['events'][$event_pos])) {
+							$gde = get_object_vars($new_game_obj['events'][$event_pos]);
 							$this->check_set_gde($game, $gde, $event_verbatim_vars, $sports_entity_type['entity_type_id'], $leagues_entity_type['entity_type_id'], $general_entity_type['entity_type_id']);
 						}
 					}
