@@ -12,13 +12,15 @@ class PeerVerifier {
 		$this->mode = $mode;
 		
 		if (in_array($mode, ['game_ios','game_events'])) {
+			$this->game_identifier = $game_identifier;
 			$this->game_or_blockchain = "game";
-			$db_game = $this->app->fetch_game_by_identifier($game_identifier);
+			$db_game = $this->app->fetch_game_by_identifier($this->game_identifier);
 			if (empty($db_game)) die("Invalid game identifier supplied.");
 			$this->blockchain = new Blockchain($this->app, $db_game['blockchain_id']);
 			$this->game = new Game($this->blockchain, $db_game['game_id']);
 		}
 		else {
+			$this->blockchain_identifier = $blockchain_identifier;
 			$this->game_or_blockchain = "blockchain";
 			$db_blockchain = $this->app->fetch_blockchain_by_identifier($blockchain_identifier);
 			if (empty($db_blockchain)) die("Invalid blockchain identifier supplied.");

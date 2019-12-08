@@ -135,7 +135,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 				}
 			}
 			else {
-				$app->output_message(9, "Error: no address for option #".$option_ids[$i], false);
+				$app->output_message(9, "Error: no address for option #".$db_option['option_index'], false);
 				die();
 			}
 		}
