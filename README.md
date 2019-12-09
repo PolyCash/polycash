@@ -1,9 +1,9 @@
 ## About PolyCash
-PolyCash is the ultimate open source betting solution.  The PolyCash web app runs on PHP and MySQL and is easy to install and configure.
+PolyCash is an open source P2P blockchain protocol & app that makes it easy to launch your own digital currencies and crypto assets.  PolyCash is a colored coins implementation & is a virtualization layer for the blockchain.  It can be used to create currencies on top of bitcoin, litecoin or any other blockchain based on the Bitcoin source code.  The PolyCash web app runs on PHP and MySQL and is easy to install and configure.
 
-PolyCash is a colored coins implementation built using blockchain technology and can be used to create betting currencies on top of bitcoin, litecoin or any other blockchain based on the Bitcoin source code.
+PolyCash is designed for stablecoins which are backed by tangible assets such as dollars, stocks or intellectual property.  PolyCash was built for P2P prediction markets, and betting currencies are the primary application of this protocol.  But PolyCash is also great for launching crypto assets which have nothing to do with betting.  This app includes a blockchain explorer which is useful for viewing blockchain data.  PolyCash loads blockchains into a relational database making it easy to run fast queries about blockchain data.
 
-Design your new betting currency by choosing a blockchain to run on, a name for your coins and an initial supply. Then create your genesis transaction and import the new coins into your wallet.  Next decentralize your currency by installing it on a bunch of different nodes and distributing the coins to any initial investors and stakeholders.
+Design your new currency by choosing a blockchain to run on, a name for your coins and an initial supply. Then create your genesis transaction and import the new coins into your wallet.  Next decentralize your currency by installing it on a bunch of different nodes and distributing the coins to any initial investors and stakeholders.
 
 You can manage the list of betting events associated with your currency by uploading a spreadsheet or by integrating an API data source. Depending on the topology of your network, any changes that you make to the betting events for your currency may automatically propagate or may require the approval of the node operators running your currency.
 
@@ -16,7 +16,7 @@ Make sure to set the following params in your config.json to something like the 
 ```
 "site_domain": "localhost",
 "mysql_server": "localhost",
-"mysql_user": "root",
+"mysql_user": "mysqluser",
 "mysql_password": "somesecurepass",
 "database": "polycash",
 "operator_key": "anothersecurepass"
