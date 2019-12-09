@@ -530,7 +530,7 @@ class Event {
 		else if ($this->db_event['track_payout_price'] < $this->db_event['track_min_price']) $long_contract_price = 0;
 		else $long_contract_price = $this->db_event['track_payout_price']-$this->db_event['track_min_price'];
 		
-		$long_payout_frac = $long_contract_price/$contract_size;
+		$long_payout_frac = $contract_size > 0 ? $long_contract_price/$contract_size : 0;
 		$long_payout_total = floor($total_reward*$long_payout_frac);
 		$short_payout_total = $total_reward-$long_payout_total;
 		

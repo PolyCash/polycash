@@ -258,13 +258,17 @@ class App {
 			sleep(0.02);
 		}
 		
-		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_games.php"';
-		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
-		else $cmd .= " 2>&1 >/dev/null";
-		$block_loading_process = proc_open($cmd, $pipe_config, $pipes);
-		if (is_resource($block_loading_process)) $process_count++;
-		else $html .= "Failed to start a process for loading blocks.<br/>\n";
-		sleep(0.02);
+		$running_games = $this->fetch_running_games();
+		
+		while ($running_game = $running_games->fetch()) {
+			$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/load_games.php" game_id='.$running_game['game_id'];
+			if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+			else $cmd .= " 2>&1 >/dev/null";
+			$game_loading_process = proc_open($cmd, $pipe_config, $pipes);
+			if (is_resource($game_loading_process)) $process_count++;
+			else $html .= "Failed to start a process for loading ".$running_game['game_name'].".<br/>\n";
+			sleep(0.02);
+		}
 		
 		$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/mine_blocks.php"';
 		if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
@@ -499,7 +503,7 @@ class App {
 	}
 	
 	public function round_to($number, $min_decimals, $target_sigfigs, $format_string) {
-		$decimals = $target_sigfigs-1-floor(log10($number));
+		$decimals = (int) ($target_sigfigs-1-floor(log10($number)));
 		if ($min_decimals !== false) $decimals = max($min_decimals, $decimals);
 		if ($format_string) return @number_format($number, $decimals);
 		else return round($number, $decimals);

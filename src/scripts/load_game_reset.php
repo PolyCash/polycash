@@ -13,7 +13,7 @@ if ($app->running_as_admin()) {
 	if ($game) {
 		$action = 'reset';
 		if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "delete") $action = "delete";
-		$process_lock_name = "load_game";
+		$process_lock_name = "load_game_".$game->db_game['game_id'];
 		
 		echo "Waiting for game loading script to finish";
 		do {

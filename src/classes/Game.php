@@ -1055,6 +1055,13 @@ class Game {
 		]);
 		
 		$this->db_game['seconds_per_block'] = $this->blockchain->db_blockchain['seconds_per_block'];
+		
+		// Game->sync() only syncs to remote when game is fully loaded
+		// So set fully loaded to trigger sync to remote
+		if (!empty($this->db_game['definitive_game_peer_id'])) {
+			$this->set_loaded_until_block($this->blockchain->last_block_id());
+		}
+		else $this->set_loaded_until_block(null);
 	}
 	
 	public function max_game_io_index() {
@@ -2354,20 +2361,22 @@ class Game {
 		return $html;
 	}
 	
-	public function set_loaded_until_block() {
-		$last_block_loaded = $this->blockchain->app->run_query("SELECT * FROM game_blocks WHERE game_id=:game_id AND locally_saved=1 ORDER BY block_id DESC LIMIT 1;", [
-			'game_id' => $this->db_game['game_id']
-		])->fetch();
-		
-		if ($last_block_loaded) $loaded_until_block = $last_block_loaded['block_id'];
-		else $loaded_until_block = $this->db_game['game_starting_block']-1;
+	public function set_loaded_until_block($block_id) {
+		if ($block_id === null) {
+			$last_block_loaded = $this->blockchain->app->run_query("SELECT * FROM game_blocks WHERE game_id=:game_id AND locally_saved=1 ORDER BY block_id DESC LIMIT 1;", [
+				'game_id' => $this->db_game['game_id']
+			])->fetch();
+			
+			if ($last_block_loaded) $block_id = $last_block_loaded['block_id'];
+			else $block_id = $this->db_game['game_starting_block']-1;
+		}
 		
 		$this->blockchain->app->run_query("UPDATE games SET loaded_until_block=:loaded_until_block WHERE game_id=:game_id;", [
-			'loaded_until_block' => $loaded_until_block,
+			'loaded_until_block' => $block_id,
 			'game_id' => $this->db_game['game_id']
 		]);
 		
-		$this->db_game['loaded_until_block'] = $loaded_until_block;
+		$this->db_game['loaded_until_block'] = $block_id;
 	}
 	
 	public function set_option_images_from_definitive_peer() {
@@ -2376,7 +2385,7 @@ class Game {
 		$definitive_peer = $this->get_definitive_peer();
 		
 		if ($definitive_peer) {
-			$imageless_options = $this->blockchain->app->run_query("SELECT * FROM options op JOIN events ev ON op.event_id=ev.event_id LEFT JOIN entities en ON op.entity_id=en.entity_id WHERE ev.game_id=:game_id AND op.image_id IS NULL;", [
+			$imageless_options = $this->blockchain->app->run_query("SELECT * FROM options op JOIN events ev ON op.event_id=ev.event_id LEFT JOIN entities en ON op.entity_id=en.entity_id WHERE ev.game_id=:game_id AND op.image_id IS NULL GROUP BY en.entity_id;", [
 				'game_id' => $this->db_game['game_id']
 			]);
 			
@@ -2401,14 +2410,24 @@ class Game {
 		return $error_message;
 	}
 	
-	public function sync_with_definitive_peer() {
+	public function sync_with_definitive_peer($print_debug) {
 		$error_message = "";
 		$definitive_peer = $this->get_definitive_peer();
+		
+		if ($print_debug) {
+			echo "Syncing with definitive peer..\n";
+			$this->blockchain->app->flush_buffers();
+		}
 		
 		if ($definitive_peer) {
 			$send_hash = $this->db_game['cached_definition_hash'];
 			if ($this->db_game['defined_cached_definition_hash'] != $this->db_game['cached_definition_hash']) $send_hash = "";
 			$api_url = $definitive_peer['base_url']."/api/".$this->db_game['url_identifier']."/definition/?definition_hash=".$send_hash;
+			
+			if ($print_debug) {
+				echo $api_url."\n";
+				$this->blockchain->app->flush_buffers();
+			}
 			
 			$api_response = json_decode($this->blockchain->app->safe_fetch_url($api_url));
 
@@ -2426,12 +2445,16 @@ class Game {
 		}
 		else $error_message .= "This game does not have a definitive peer.\n";
 		
+		if ($print_debug) {
+			echo $error_message;
+			$this->blockchain->app->flush_buffers();
+		}
+		
 		return $error_message;
 	}
 	
 	public function sync($show_debug, $max_load_seconds) {
 		$sync_start_time = microtime(true);
-		$this->set_loaded_until_block();
 		$last_set_loaded_time = microtime(true);
 		
 		$load_block_height = $this->db_game['loaded_until_block']+1;
@@ -2440,7 +2463,7 @@ class Game {
 		$ensure_block_id = $to_block_height+1;
 		
 		if (!empty($this->db_game['definitive_game_peer_id']) && $this->db_game['loaded_until_block'] == $this->blockchain->last_block_id()) {
-			$sync_definitive_message = $this->sync_with_definitive_peer();
+			$sync_definitive_message = $this->sync_with_definitive_peer($show_debug);
 			
 			if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
 			$ensure_events_debug_text = $this->ensure_events_until_block($ensure_block_id);
@@ -2476,20 +2499,23 @@ class Game {
 				list($successful, $log_text, $bulk_to_block) = $this->add_block($block_height, $game_io_index);
 				if ($bulk_to_block) $block_height = $bulk_to_block;
 				
-				if ($show_debug) echo $log_text;
+				if ($successful) $this->set_loaded_until_block($block_height);
+				
+				if ($show_debug) {
+					echo $log_text;
+					$this->blockchain->app->flush_buffers();
+				}
 				
 				if (microtime(true)-$last_set_loaded_time >= 3) {
 					if ($max_load_seconds && microtime(true)-$sync_start_time >= $max_load_seconds) {
 						$block_height = $to_block_height+1;
 					}
-					else {
-						$this->set_loaded_until_block();
-						$last_set_loaded_time = microtime(true);
-					}
+					else $last_set_loaded_time = microtime(true);
 				}
 				if (!$successful) $block_height = $to_block_height+1;
 			}
-			$this->set_loaded_until_block();
+			echo "loaded to ".$block_height."\n";
+			$this->blockchain->app->flush_buffers();
 		}
 		else if ($show_debug) {
 			echo $this->db_game['name']." is already fully loaded.\n";

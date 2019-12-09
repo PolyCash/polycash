@@ -13,7 +13,9 @@ if ($app->running_as_admin()) {
 	$print_debug = false;
 	if (!empty($_REQUEST['print_debug'])) $print_debug = true;
 	
-	$process_lock_name = "load_game";
+	$only_game_id = empty($_REQUEST['game_id']) ? false : (int) $_REQUEST['game_id'];
+	
+	$process_lock_name = "load_game".($only_game_id ? "_".$only_game_id : "");
 	$process_locked = $app->check_process_running($process_lock_name);
 	
 	if (!$process_locked) {
@@ -24,27 +26,25 @@ if ($app->running_as_admin()) {
 		do {
 			$loop_start_time = microtime(true);
 			
-			$running_game_params = [];
-			$running_game_q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE g.game_status IN ('published','running')";
-			if (!empty($_REQUEST['game_id'])) {
-				$running_game_q .= " AND g.game_id=:filter_game_id";
-				$running_game_params['filter_game_id'] = $_REQUEST['game_id'];
-			}
-			$running_game_q .= " AND b.online=1;";
-			$db_running_games = $app->run_query($running_game_q, $running_game_params);
-			if ($print_debug) echo "Looping through ".$db_running_games->rowCount()." games.\n";
+			$db_running_games = $app->fetch_running_games();
 			
 			while ($db_running_game = $db_running_games->fetch()) {
-				if (empty($blockchains[$db_running_game['blockchain_id']])) $blockchains[$db_running_game['blockchain_id']] = new Blockchain($app, $db_running_game['blockchain_id']);
-				$running_game = new Game($blockchains[$db_running_game['blockchain_id']], $db_running_game['game_id']);
-				$running_game->sync($print_debug, 30);
+				if (!$only_game_id || $db_running_game['game_id'] == $only_game_id) {
+					if (empty($blockchains[$db_running_game['blockchain_id']])) $blockchains[$db_running_game['blockchain_id']] = new Blockchain($app, $db_running_game['blockchain_id']);
+					$running_game = new Game($blockchains[$db_running_game['blockchain_id']], $db_running_game['game_id']);
+					$running_game->sync($print_debug, 30);
+				}
 			}
 			
 			$loop_stop_time = microtime(true);
 			$loop_time = $loop_stop_time-$loop_start_time;
 			$sleep_usec = max(0, round(pow(10,6)*($loop_target_time - $loop_time)));
 			
-			if ($print_debug) echo "script run time: ".(microtime(true)-$script_start_time).", sleeping ".$sleep_usec/pow(10,6)." seconds.\n\n";
+			if ($print_debug) {
+				echo "Script run time: ".(microtime(true)-$script_start_time).", sleeping ".$sleep_usec/pow(10,6)." seconds.\n\n";
+				$app->flush_buffers();
+			}
+			
 			usleep($sleep_usec);
 		}
 		while (microtime(true) < $script_start_time + ($script_target_time-$loop_target_time));

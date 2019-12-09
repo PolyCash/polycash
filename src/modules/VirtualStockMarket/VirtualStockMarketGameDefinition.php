@@ -26,6 +26,7 @@ class VirtualStockMarketGameDefinition {
 		
 		$this->game_def_base_txt = '{
 			"blockchain_identifier": "stakechain",
+			"definitive_peer": "https://poly.cash",
 			"option_group": "12 American tech stocks",
 			"protocol_version": 0,
 			"name": "Virtual Stock Market",

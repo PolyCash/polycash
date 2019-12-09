@@ -42,12 +42,9 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								
 								if (!empty($error_message)) echo "<p>".$error_message."</p>\n";
 								
-								echo '<p>Successfully created <a href="/'.$db_new_game['url_identifier'].'/">'.$db_new_game['name'].'</a></p>';
-							
 								if ($db_new_game) {
 									echo "<p>Your ".$import_mode." definition was successfully imported!<br/>\n";
-									echo "Please be patient as it may take several minutes for this game to sync.<br/>\n";
-									echo "Please <a href=\"/".$db_new_game['url_identifier']."/\">click here</a> to join the game.</p>\n";
+									echo "Next please <a href=\"/manage/".$db_new_game['url_identifier']."/?next=internal_settings\">click here</a> and then start the game.</p>\n";
 								}
 								else {
 									echo "<p><a href=\"/import/?import_mode=".$import_mode."\">Try again</a></p>\n";
