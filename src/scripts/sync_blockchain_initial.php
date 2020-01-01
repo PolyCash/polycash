@@ -1,10 +1,11 @@
 <?php
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
+require(AppSettings::srcPath()."/includes/get_session.php");
 
 $allowed_params = ['game_id', 'block_id'];
 $app->safe_merge_argv_to_request($argv, $allowed_params);
 
-if ($app->running_as_admin()) {
+if ($app->running_as_admin() || $app->user_is_admin($thisuser)) {
 	set_time_limit(0);
 	
 	if (empty($_REQUEST['blockchain_id'])) die("Please specify a blockchain_id.\n");

@@ -57,6 +57,9 @@ else if ($uri_parts[1] == "directory") {
 else if ($uri_parts[1] == "manage") {
 	include($src_path."/manage_game.php");
 }
+else if ($uri_parts[1] == "manage_blockchains") {
+	include($src_path."/manage_blockchains.php");
+}
 else if ($uri_parts[1] == "groups") {
 	include($src_path."/manage_groups.php");
 }

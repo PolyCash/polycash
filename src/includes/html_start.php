@@ -13,6 +13,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 	
 	<link rel="preload" href="/css/jquery.ui.css" as="style" onload="this.rel='stylesheet'">
 	<link rel="preload" href="/css/jquery.nouislider.css" as="style" onload="this.rel='stylesheet'">
+	<link rel="preload" href="/css/jquery.datatables.css" as="style" onload="this.rel='stylesheet'">
 	<link rel="preload" href="/css/fontawesome-all.min.css" as="style" onload="this.rel='stylesheet'">
 	
 	<link rel="stylesheet" type="text/css" href="/css/style.css<?php if (!empty(AppSettings::getParam('cachebuster'))) echo '?v='.AppSettings::getParam('cachebuster'); ?>" />
@@ -100,6 +101,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 					<li class="header">Admin Functions</li>
 					<li<?php if ($nav_tab_selected == "install") echo ' class="active"'; ?>><a href="/install.php?key=<?php echo AppSettings::getParam('operator_key'); ?>"><i class="fa fa-download"></i> <span>Install</span></a></li>
 					<li<?php if ($nav_tab_selected == "import") echo ' class="active"'; ?>><a href="/import/"><i class="fa fa-plus-square"></i> <span>Import</span></a></li>
+					<li<?php if ($nav_tab_selected == "manage_blockchains") echo ' class="active"'; ?>><a href="/manage_blockchains/"><i class="fa fa-cube"></i> <span>Manage Blockchains</span></a></li>
 				</ul>
 				<?php
 			}
