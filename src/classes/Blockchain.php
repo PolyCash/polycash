@@ -2390,5 +2390,16 @@ class Blockchain {
 		]);
 		$this->db_blockchain['average_seconds_per_block'] = $avg['AVG(sec_since_prev_block)'];
 	}
+	
+	public function last_active_time() {
+		$recent_block = $this->most_recently_loaded_block();
+		
+		if (!empty($this->db_blockchain['rpc_last_time_connected'])) $blockchain_last_active = $this->db_blockchain['rpc_last_time_connected'];
+		else $blockchain_last_active = false;
+		
+		if (!empty($recent_block['time_loaded']) && $recent_block['time_loaded'] > $blockchain_last_active) $blockchain_last_active = $recent_block['time_loaded'];
+		
+		return $blockchain_last_active;
+	}
 }
 ?>

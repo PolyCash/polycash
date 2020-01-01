@@ -48,22 +48,17 @@
 		
 		while ($db_blockchain = $online_blockchains->fetch()) {
 			$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
-			$recent_block = $blockchain->most_recently_loaded_block();
-			
-			if (!empty($db_blockchain['rpc_last_time_connected'])) $blockchain_last_active = $db_blockchain['rpc_last_time_connected'];
-			else $blockchain_last_active = false;
-			
-			if (!empty($recent_block['time_loaded']) && $recent_block['time_loaded'] > $blockchain_last_active) $blockchain_last_active = $recent_block['time_loaded'];
 			
 			echo '<div class="status_footer_section">';
 			echo '<a href="/explorer/blockchains/'.$db_blockchain['url_identifier'].'/blocks/">';
 			if ($db_blockchain['default_image_id'] > 0) echo '<img class="status_footer_img" src="/images/custom/'.$db_blockchain['default_image_id'].'.'.$db_blockchain['extension'].'" />';
-			else echo $db_blockchain['blockchain_name']." "; 
-			if ($blockchain_last_active > time()-(60*60)) {
-				echo '<font class="greentext">Online</font>';
+			else echo $db_blockchain['blockchain_name']." ";
+			
+			if ($blockchain->last_active_time() > time()-(60*60)) {
+				echo '<font class="text-success">Online</font>';
 			}
 			else {
-				echo '<font class="redtext">Offline</font>';
+				echo '<font class="text-danger">Offline</font>';
 			}
 			echo "</a>";
 			echo '</div>';
@@ -87,7 +82,7 @@ for (var game_i=0; game_i<games.length; game_i++) {
 <script async type="text/javascript" src="/js/bootstrap.min.js"></script>
 <script async type="text/javascript" src="/js/adminlte.min.js"></script>
 <?php
-$optional_js_files = ['jquery.nouislider.js', 'tiny.editor.js', 'chart.js', 'maskedinput.js', 'qrcam.js'];
+$optional_js_files = ['jquery.nouislider.js', 'tiny.editor.js', 'chart.js', 'maskedinput.js', 'qrcam.js', 'jquery.datatables.js'];
 
 foreach ($optional_js_files as $optional_js_file) {
 	if (AppSettings::checkJsDependency($optional_js_file)) {

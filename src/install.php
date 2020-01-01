@@ -48,23 +48,6 @@ if ($app->running_as_admin()) {
 			if (empty(AppSettings::getParam('identifier_first_char'))) die('Please set the variable "identifier_first_char" in your config file.');
 			if (empty($app->get_site_constant("reference_currency_id"))) $app->set_reference_currency(6);
 			
-			if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "save_blockchain_params") {
-				$blockchain_id = (int) $_REQUEST['blockchain_id'];
-				$existing_blockchain = $app->fetch_blockchain_by_id($blockchain_id);
-				
-				if ($existing_blockchain) {
-					$app->run_query("UPDATE blockchains SET rpc_host=:rpc_host, rpc_username=:rpc_username, rpc_password=:rpc_password, rpc_port=:rpc_port, first_required_block=:first_required_block WHERE blockchain_id=:blockchain_id;", [
-						'rpc_host' => $_REQUEST['rpc_host'],
-						'rpc_username' => $_REQUEST['rpc_username'],
-						'rpc_password' => $_REQUEST['rpc_password'],
-						'rpc_port' => $_REQUEST['rpc_port'],
-						'first_required_block' => $_REQUEST['first_required_block'],
-						'blockchain_id' => $existing_blockchain['blockchain_id']
-					]);
-				}
-				else die("Error, please manually save RPC parameters in the database.");
-			}
-			
 			$app->blockchain_ensure_currencies();
 			$general_entity_type = $app->check_set_entity_type("general entity");
 			
@@ -148,77 +131,10 @@ if ($app->running_as_admin()) {
 	Require all granted
 &lt;/Directory&gt;
 </pre>
+					<h2>Blockchains</h2>
+					To configure &amp; install blockchains, go to the <a href="/manage_blockchains/">blockchain manager</a>.
+					<br/>
 					
-					<h2>Install Blockchains</h2>
-					<?php
-					$blockchain_r = $app->run_query("SELECT * FROM blockchains ORDER BY blockchain_name ASC;");
-					
-					while ($db_blockchain = $blockchain_r->fetch()) {
-						$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
-						
-						if ($db_blockchain['p2p_mode'] == "rpc") {
-							if ($db_blockchain['rpc_username'] != "" && $db_blockchain['rpc_password'] != "") $tried_rpc = true;
-							else $tried_rpc = false;
-							
-							if ($tried_rpc) {
-								echo '<div id="display_rpc_'.$db_blockchain['blockchain_id'].'">';
-								echo "<b>Connecting RPC client to ".$db_blockchain['blockchain_name']."...";
-								
-								$blockchain->load_coin_rpc();
-								$getblockchaininfo = false;
-								
-								if ($blockchain->coin_rpc) {
-									try {
-										$getblockchaininfo = $blockchain->coin_rpc->getblockchaininfo();
-									}
-									catch (Exception $e) {}
-								}
-								
-								if (!$getblockchaininfo) {
-									echo " <font class=\"redtext\">Failed to connect on port ".$db_blockchain['rpc_port']."</font></b><br/>";
-									echo "<pre>Make sure the coin daemon is running.</pre>\n";
-									echo "<br/>\n";
-								}
-								else {
-									echo " <font class=\"greentext\">Connected on port ".$db_blockchain['rpc_port']."</font></b><br/>\n";
-									echo "<pre style=\"max-height: 300px; overflow-y: scroll;\">getblockchaininfo()\n";
-									print_r($getblockchaininfo);
-									echo "</pre>";
-									
-									echo "Next, please reset and synchronize this game.<br/>\n";
-									echo "<a class=\"btn btn-primary\" target=\"_blank\" href=\"/scripts/sync_blockchain_initial.php?key=".AppSettings::getParam('operator_key')."&blockchain_id=".$db_blockchain['blockchain_id']."\">Reset & synchronize ".$db_blockchain['blockchain_name']."</a>\n";
-									echo "<br/>\n";
-								}
-								echo "<a href=\"\" onclick=\"$('#display_rpc_".$db_blockchain['blockchain_id']."').hide(); $('#edit_rpc_".$db_blockchain['blockchain_id']."').show('fast'); return false;\">Set new RPC params for ".$db_blockchain['blockchain_name']."</a>\n";
-								echo "</div>\n";
-							}
-							?>
-							<div id="edit_rpc_<?php echo $db_blockchain['blockchain_id']; ?>"<?php if ($tried_rpc) echo ' style="display: none;"'; ?>>
-								Please enter the RPC username and password for connecting to the <b><?php echo $db_blockchain['blockchain_name']; ?></b> daemon:<br/>
-								<form method="post" action="install.php">
-									<input type="hidden" name="key" value="<?php echo AppSettings::getParam('operator_key'); ?>" />
-									<input type="hidden" name="action" value="save_blockchain_params" />
-									<input type="hidden" name="blockchain_id" value="<?php echo $db_blockchain['blockchain_id']; ?>" />
-									<input class="form-control" name="rpc_host" placeholder="RPC hostname (default 127.0.0.1)" />
-									<input class="form-control" name="rpc_username" placeholder="RPC username" />
-									<input class="form-control" name="rpc_password" placeholder="RPC password" autocomplete="off" />
-									<input class="form-control" name="rpc_port" value="<?php echo $db_blockchain['default_rpc_port']; ?>" placeholder="RPC port" />
-									<input class="form-control" name="first_required_block" value="<?php echo $db_blockchain['first_required_block']; ?>" placeholder="First required block" />
-									<input type="submit" class="btn btn-primary" value="Save" />
-									<?php if ($tried_rpc) echo ' &nbsp;&nbsp; or &nbsp;&nbsp; <a href="" onclick="$(\'#display_rpc_'.$db_blockchain['blockchain_id'].'\').show(\'fast\'); $(\'#edit_rpc_'.$db_blockchain['blockchain_id'].'\').hide(); return false;">Cancel</a>'; ?>
-								</form>
-								<br/>
-							</div>
-							<br/>
-							<?php
-						}
-						else {
-							echo "<p><h3>".$db_blockchain['blockchain_name']."</h3>\n";
-							echo "<a target=\"_blank\" href=\"/scripts/sync_blockchain_initial.php?key=".AppSettings::getParam('operator_key')."&blockchain_id=".$db_blockchain['blockchain_id']."\">Reset & synchronize ".$db_blockchain['blockchain_name']."</a></p>\n";
-						}
-					}
-					
-					?>
 					<h2>Modules</h2>
 					<?php
 					$installed_modules = $app->run_query("SELECT * FROM modules m JOIN games g ON m.primary_game_id=g.game_id;");
