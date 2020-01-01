@@ -50,7 +50,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 			else die("Error: invalid blockchain ID.");
 		}
 		
-		$blockchain_r = $app->run_query("SELECT * FROM blockchains ORDER BY blockchain_name ASC;");
+		$blockchain_r = $app->run_query("SELECT * FROM blockchains ORDER BY blockchain_id ASC;");
 		?>
 		<div class="panel panel-default" style="margin-top: 15px;">
 			<div class="panel-heading">
@@ -106,22 +106,28 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 								</td>
 								<td>
 									<select class="form-control input-sm" onchange='thisBlockchainManager.actionSelected(<?php
-										echo $blockchain->db_blockchain['blockchain_id'].','.json_encode($blockchain->db_blockchain['blockchain_name']);
+										echo $blockchain->db_blockchain['blockchain_id'];
+										echo ','.json_encode($blockchain->db_blockchain['blockchain_name']);
+										echo ','.json_encode($blockchain->db_blockchain['url_identifier']);
 										?>, this);'>
 										<option value="">-- Please Select --</option>
-										<option value="reset_synchronize">Reset &amp; Synchronize</option>
-										<?php if ($blockchain->db_blockchain['p2p_mode'] == "rpc") { ?>
-											<option value="set_rpc_credentials"><?php echo empty($blockchain->db_blockchain['rpc_username'].$blockchain->db_blockchain['rpc_password']) ? "Set" : "Change"; ?> RPC credentials</option>
+										<option value="see_definition">See Definition</option>
+										<?php if ($blockchain->db_blockchain['p2p_mode'] != "none") { ?>
+											<option value="reset_synchronize">Reset &amp; Synchronize</option>
+											<?php
+										}
+										if ($blockchain->db_blockchain['p2p_mode'] == "rpc") { ?>
+											<option value="set_rpc_credentials"><?php echo empty($blockchain->db_blockchain['rpc_username'].$blockchain->db_blockchain['rpc_password']) ? "Set" : "Change"; ?> RPC Credentials</option>
 											<?php
 										}
 										if ($blockchain->db_blockchain['online']) {
 											?>
-											<option value="disable">Disable <?php echo $blockchain->db_blockchain['blockchain_name']; ?></option>
+											<option value="disable">Disable</option>
 											<?php
 										}
 										else {
 											?>
-											<option value="enable">Enable <?php echo $blockchain->db_blockchain['blockchain_name']; ?></option>
+											<option value="enable">Enable</option>
 											<?php
 										}
 										?>
@@ -188,13 +194,13 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 		</div>
 		<script type="text/javascript">
 		var BlockchainManager = function() {
-			this.actionSelected = function(blockchain_id, blockchain_name, selectElement) {
+			this.actionSelected = function(blockchain_id, blockchain_name, blockchain_identifier, selectElement) {
 				var action = selectElement.value;
 				selectElement.value = "";
 				
 				var confirm_ok = false;
 				
-				if (action == "set_rpc_credentials") confirm_ok = true;
+				if (action == "set_rpc_credentials" || action == "see_definition") confirm_ok = true;
 				else {
 					var confirm_message = "Are you sure you want to ";
 					if (action == "reset_synchronize") confirm_message += "reset & synchronize";
@@ -209,6 +215,9 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 					}
 					else if (action == "set_rpc_credentials") {
 						$('#set_rpc_'+blockchain_id).modal('show');
+					}
+					else if (action == "see_definition") {
+						window.open('/explorer/blockchains/'+blockchain_identifier+'/definition/', '_blank');
 					}
 					else {
 						$('#'+action+'_'+blockchain_id).submit();
