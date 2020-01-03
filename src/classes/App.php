@@ -187,7 +187,21 @@ class App {
 					$cmd = $this->mysql_binary_location()." -u ".AppSettings::getParam('mysql_user')." -h ".AppSettings::getParam('mysql_server');
 					if (AppSettings::getParam('mysql_password')) $cmd .= " -p'".AppSettings::getParam('mysql_password')."'";
 					$cmd .= " ".AppSettings::getParam('mysql_database')." < ".$fname;
-					exec($cmd);
+					
+					if (PHP_OS == "WINNT") $cmd .= " 2>&1";
+					else $cmd .= " 2>&1";
+					
+					$cmd_response = exec($cmd);
+					
+					if (!empty($cmd_response)) {
+						$error_path = $migrations_path."/".$migration_id."-errors.txt";
+						if ($error_fh = @fopen($error_path, 'w')) {
+							fwrite($error_fh, $cmd_response);
+							fclose($error_fh);
+						}
+						echo "Error on migration #".$migration_id.": ".$cmd_response."<br/>\n";
+						die();
+					}
 					$migration_id++;
 				}
 				else {

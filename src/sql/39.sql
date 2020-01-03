@@ -13,5 +13,3 @@ ALTER TABLE `cached_urls`
 
 ALTER TABLE `cached_urls`
   MODIFY `cached_url_id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `event_outcome_options` CHANGE `score` `data_value` VARCHAR(100) NULL DEFAULT NULL;
