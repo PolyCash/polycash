@@ -476,7 +476,6 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 					}
 					else {
 						$game->delete_reset_game('reset');
-						$game->start_game();
 					}
 					$app->output_message(2, "This game has been reset.", false);
 				}
