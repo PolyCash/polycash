@@ -1345,7 +1345,8 @@ class Game {
 				if ($this->db_game['game_starting_block'] > $this->blockchain->last_block_id()) $html .= " in ".($this->db_game['game_starting_block']-$this->blockchain->last_block_id())." blocks. ";
 				else $html .= " on block #".$this->db_game['game_starting_block'].". ";
 			}
-			else if (!empty($this->db_game['start_datetime'])) $html .= "This game starts in ".$this->blockchain->app->format_seconds(strtotime($this->db_game['start_datetime'])-time())." at ".$this->db_game['start_datetime'];
+			else if (!empty($this->db_game['start_datetime'])) $html .= "This game starts in ".$this->blockchain->app->format_seconds(strtotime($this->db_game['start_datetime'])-time())." at ".$this->db_game['start_datetime'].". ";
+			else $html .= "This game hasn't started yet. ";
 		}
 		else if ($this->db_game['game_status'] == "completed") $html .= "This game is over. ";
 		
