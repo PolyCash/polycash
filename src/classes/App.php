@@ -186,10 +186,7 @@ class App {
 				if (is_file($fname)) {
 					$cmd = $this->mysql_binary_location()." -u ".AppSettings::getParam('mysql_user')." -h ".AppSettings::getParam('mysql_server');
 					if (AppSettings::getParam('mysql_password')) $cmd .= " -p'".AppSettings::getParam('mysql_password')."'";
-					$cmd .= " ".AppSettings::getParam('mysql_database')." < ".$fname;
-					
-					if (PHP_OS == "WINNT") $cmd .= " 2>&1";
-					else $cmd .= " 2>&1";
+					$cmd .= " ".AppSettings::getParam('mysql_database')." < ".$fname." 2>&1";
 					
 					$cmd_response = exec($cmd);
 					
