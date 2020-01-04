@@ -798,7 +798,20 @@ class Game {
 		
 		$this->blockchain->app->run_query("DELETE FROM game_blocks WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
 		$this->blockchain->app->run_query("DELETE FROM game_sellouts WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
-		$this->blockchain->app->run_query("DELETE FROM transaction_game_ios WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
+		
+		$delete_limit = 20000;
+		$max_io_index = $this->max_game_io_index();
+		$delete_gio_queries = ceil($max_io_index/$delete_limit);
+		$this->blockchain->app->run_query("DELETE FROM transaction_game_ios WHERE game_id=:game_id AND game_io_index IS NULL;", ['game_id'=>$this->db_game['game_id']]);
+		
+		for ($d=0; $d<$delete_gio_queries; $d++) {
+			$this->blockchain->app->run_query("DELETE FROM transaction_game_ios WHERE game_id=:game_id AND game_io_index >= :from_index AND game_io_index <= :to_index;", [
+				'game_id' => $this->db_game['game_id'],
+				'from_index' => $d*$delete_limit,
+				'to_index' => ($d+1)*$delete_limit
+			]);
+		}
+		
 		$this->blockchain->app->run_query("DELETE ob.* FROM option_blocks ob JOIN options o ON ob.option_id=o.option_id JOIN events e ON o.event_id=e.event_id WHERE e.game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
 		$this->blockchain->app->run_query("DELETE e.*, o.* FROM events e LEFT JOIN options o ON e.event_id=o.event_id WHERE e.game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
 		$this->blockchain->app->run_query("UPDATE games SET events_until_block=NULL, loaded_until_block=NULL, min_option_index=NULL, max_option_index=NULL WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
