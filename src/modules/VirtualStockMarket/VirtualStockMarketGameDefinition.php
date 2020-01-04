@@ -25,7 +25,7 @@ class VirtualStockMarketGameDefinition {
 		);
 		
 		$this->game_def_base_txt = '{
-			"blockchain_identifier": "stakechain",
+			"blockchain_identifier": "freechain",
 			"definitive_peer": "https://poly.cash",
 			"option_group": "12 American tech stocks",
 			"protocol_version": 0,
@@ -55,10 +55,10 @@ class VirtualStockMarketGameDefinition {
 			"coin_name": "dollars",
 			"coin_name_plural": "dollars",
 			"coin_abbreviation": "USDF",
-			"escrow_address": "D7MBXDEHXGQm2hWhPr4pQo3tRP6bjVV8D5",
-			"genesis_tx_hash": "dfd7adbafca1f9387f16cb6bc4a1e58a",
+			"escrow_address": "g1Kx3LdcDK4N8KYHGgKmEf9295mXPV8m3K",
+			"genesis_tx_hash": "f8973e795d5cbda07c7029066f75b8ef",
 			"genesis_amount": 100000000000,
-			"game_starting_block": 419101,
+			"game_starting_block": 92301,
 			"game_winning_rule": "none",
 			"game_winning_field": "",
 			"game_winning_inflation": 0,
