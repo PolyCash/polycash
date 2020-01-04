@@ -2433,9 +2433,12 @@ class Game {
 
 			if ($api_response->status_code == 1) {
 				if ($api_response->definition->url_identifier == $this->db_game['url_identifier']) {
-					$ref_user = false;
-					$db_new_game = false;
-					$this->blockchain->app->set_game_from_definition($api_response->definition, $ref_user, $error_message, $db_new_game, true);
+					if ($api_response->definition_hash == $send_hash) $error_message = "Already in sync.\n";
+					else {
+						$ref_user = false;
+						$db_new_game = false;
+						$this->blockchain->app->set_game_from_definition($api_response->definition, $ref_user, $error_message, $db_new_game, true);
+					}
 				}
 				else $error_message .= "Sync canceled: definitive peer tried to change the game identifier.\n";
 			}
@@ -2514,7 +2517,7 @@ class Game {
 				}
 				if (!$successful) $block_height = $to_block_height+1;
 			}
-			echo "loaded to ".$block_height."\n";
+			
 			$this->blockchain->app->flush_buffers();
 		}
 		else if ($show_debug) {
@@ -2552,6 +2555,7 @@ class Game {
 			
 			if ($check_game_block) {
 				// The game block already exists. There was an error in a previous load or multiple processes are loading games simultaneously
+				$log_text .= "Failed: game block already exists.\n";
 				$successful = false;
 				return array($successful, $log_text, $bulk_to_block);
 			}
@@ -2816,7 +2820,7 @@ class Game {
 										$contract_parts = floor($unresolved_input['contract_parts']*$this_receiver_output['amount']/$outputs_io_amount_sum);
 										
 										$game_io_index++;
-										$insert_q .= "('".$unresolved_input['parent_io_id']."', '".$unresolved_input['address_id']."', '".$this->db_game['game_id']."', '".$this_receiver_output['io_id']."', '".$game_out_index."', '".$game_io_index."', 1, 0, 0, 0, 0, '".$block_height."', '".$round_id."', '".$unresolved_input['option_id']."', '".$contract_parts."', '".$unresolved_input['event_id']."', 0, 1), ";
+										$insert_q .= "('".$unresolved_input['parent_io_id']."', '".$this->db_game['game_id']."', '".$this_receiver_output['io_id']."', '".$unresolved_input['address_id']."', '".$game_out_index."', '".$game_io_index."', 1, 0, 0, 0, 0, '".$block_height."', '".$round_id."', '".$unresolved_input['option_id']."', '".$contract_parts."', '".$unresolved_input['event_id']."', 0, 1), ";
 										$game_out_index++;
 									}
 								}
@@ -2928,7 +2932,7 @@ class Game {
 						
 						$bulk_insert_q = "INSERT INTO game_blocks (game_id, block_id, locally_saved, num_transactions, time_created, time_loaded, load_time, max_game_io_index) VALUES ";
 						for ($bulk_block_id=$bulk_from_block; $bulk_block_id<=$bulk_to_block; $bulk_block_id++) {
-							$bulk_insert_q .= "(".$this->db_game['game_id'].", ".$bulk_block_id.", 1, 0, ".$ref_time.", ".$ref_time.", 0, ".$game_io_index."), ";
+							$bulk_insert_q .= "(".$this->db_game['game_id'].", ".$bulk_block_id.", 1, 0, ".$ref_time.", ".$ref_time.", 0, ".(int)$game_io_index."), ";
 						}
 						$bulk_insert_q = substr($bulk_insert_q, 0, -2).";";
 						$this->blockchain->app->run_query($bulk_insert_q);
