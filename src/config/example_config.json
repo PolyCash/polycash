@@ -21,6 +21,7 @@
 	"process_lock_method": "db",
 	"identifier_case_sensitive": 1,
 	"identifier_first_char": 2,
+	"options_begin_at_index": 10,
 	"pageview_tracking_enabled": false,
 	"currency_price_refresh_seconds": 300,
 	"invoice_expiration_seconds": 604800,

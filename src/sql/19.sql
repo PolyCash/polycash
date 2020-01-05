@@ -12,9 +12,9 @@ CREATE TABLE `blockchains` (
 ALTER TABLE `blockchains` ADD PRIMARY KEY (`blockchain_id`);
 ALTER TABLE `blockchains` MODIFY `blockchain_id` int(11) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `blockchains` ADD `default_rpc_port` INT NULL DEFAULT NULL AFTER `rpc_port`;
-ALTER TABLE `blocks` DROP INDEX IF EXISTS `block_id_2`;
-ALTER TABLE `blocks` DROP INDEX IF EXISTS `game_id`;
-ALTER TABLE `blocks` DROP INDEX IF EXISTS `game_id_2`;
+ALTER TABLE `blocks` DROP INDEX `block_id_2`;
+ALTER TABLE `blocks` DROP INDEX `game_id`;
+ALTER TABLE `blocks` DROP INDEX `game_id_2`;
 ALTER TABLE `blocks` DROP `game_id`;
 ALTER TABLE `blocks` ADD `blockchain_id` INT NULL DEFAULT NULL AFTER `internal_block_id`;
 DROP INDEX `address` ON `addresses`;

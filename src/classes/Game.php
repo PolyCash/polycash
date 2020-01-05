@@ -2010,7 +2010,7 @@ class Game {
 			}
 			else {
 				$from_event_index = 0;
-				$option_offset = 100;
+				$option_offset = AppSettings::getParam('options_begin_at_index');
 			}
 			
 			if (!empty($this->db_game['module']) && !$this->get_definitive_peer()) {
