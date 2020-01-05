@@ -297,7 +297,7 @@ if ($thisuser) {
 		<div class="container-fluid">
 			<div class="panel panel-default" style="margin-top: 15px;">
 				<?php
-				$my_games = $app->my_games($thisuser->db_user['user_id']);
+				$my_games = $app->my_games($thisuser->db_user['user_id'], false);
 				
 				if ($my_games->rowCount() > 0) {
 					?>
@@ -628,7 +628,7 @@ if ($thisuser && $game) {
 						<select class="form-control input-sm" onchange="thisPageManager.change_game(this);">
 							<option value="">-- Switch Games --</option>
 							<?php
-							$my_games = $app->my_games($thisuser->db_user['user_id']);
+							$my_games = $app->my_games($thisuser->db_user['user_id'], true);
 							
 							while ($my_game = $my_games->fetch()) {
 								echo "<option ";

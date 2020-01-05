@@ -352,10 +352,16 @@ class App {
 		return $html;
 	}
 	
-	public function my_games($user_id) {
-		return $this->run_query("SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id=:user_id AND (g.creator_id=:user_id OR g.game_status IN ('running','completed','published')) GROUP BY ug.game_id;", [
+	public function my_games($user_id, $running_only) {
+		$game_q = "SELECT * FROM games g, user_games ug WHERE g.game_id=ug.game_id AND ug.user_id=:user_id";
+		$game_params = [
 			'user_id' => $user_id
-		]);
+		];
+		if ($running_only) $game_q .= " AND g.game_status='running'";
+		else $game_q .= " AND (g.creator_id=:user_id OR g.game_status IN ('running','completed','published'))";
+		$game_q .= " GROUP BY ug.game_id;";
+		
+		return $this->run_query($game_q, $game_params);
 	}
 	
 	public function generate_games($default_blockchain_id) {
@@ -1050,7 +1056,7 @@ class App {
 				</script>
 				<?php
 				echo '<div class="col-md-'.$cell_width.'">';
-				echo '<center><h1 style="display: inline-block">'.$featured_game->db_game['name'].'</h1>';
+				echo '<center><h2 style="display: inline-block">'.$featured_game->db_game['name'].'</h2>';
 				if ($featured_game->db_game['short_description'] != "") echo "<p>".$featured_game->db_game['short_description']."</p>";
 				
 				$ref_user_game = false;
