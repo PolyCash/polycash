@@ -16,7 +16,7 @@ class RockPaperScissorsGameDefinition {
 			"module": "RockPaperScissors",
 			"category_id": null,
 			"decimal_places": 4,
-			"finite_events": true,
+			"finite_events": false,
 			"event_type_name": "match",
 			"event_type_name_plural": "matches",
 			"event_rule": "game_definition",

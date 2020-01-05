@@ -1262,7 +1262,7 @@ class Blockchain {
 		$this->load_coin_rpc();
 		$unconfirmed_txs = $this->coin_rpc->getrawmempool();
 		
-		if (empty($unconfirmed_txs['code'])) {
+		if (empty($unconfirmed_txs['code']) && !empty($unconfirmed_txs)) {
 			for ($i=0; $i<count($unconfirmed_txs); $i++) {
 				$this->walletnotify($unconfirmed_txs[$i], TRUE);
 				if ($max_execution_time && (microtime(true)-$start_time) > $max_execution_time) $i=count($unconfirmed_txs);

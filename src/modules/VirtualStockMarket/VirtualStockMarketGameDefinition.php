@@ -48,7 +48,7 @@ class VirtualStockMarketGameDefinition {
 			"maturity": 0,
 			"payout_weight": "coin_round",
 			"final_round": null,
-			"buyin_policy": "none",
+			"buyin_policy": "for_sale",
 			"game_buyin_cap": 0,
 			"sellout_policy": "off",
 			"sellout_confirmations": 0,
