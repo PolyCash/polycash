@@ -2178,7 +2178,7 @@ class App {
 				$peer = false;
 				$import_params['authoritative_peer_id'] = null;
 				if ($blockchain_def->peer != "none") {
-					$peer = $this->get_peer_by_server_name($blockchain_def->peer, false);
+					$peer = $this->get_peer_by_server_name($blockchain_def->peer, true);
 					if ($peer) {
 						$import_params['authoritative_peer_id'] = $peer['peer_id'];
 					}
@@ -3618,7 +3618,7 @@ class App {
 			
 			for ($csv_i=2; $csv_i<count($csv_lines); $csv_i++) {
 				$csv_params = explode(",", $csv_lines[$csv_i]);
-				$member_entity = $this->check_set_entity($general_entity_type['entity_type_id'], $csv_params[$name_col]);
+				$member_entity = $this->check_set_entity($general_entity_type['entity_type_id'], trim($csv_params[$name_col]));
 				
 				if (empty($member_entity['default_image_id']) && !empty($csv_params[$image_col])) {
 					$this->run_query("UPDATE entities SET default_image_id=:default_image_id WHERE entity_id=:entity_id;", [
