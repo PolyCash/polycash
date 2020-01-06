@@ -141,18 +141,23 @@ class VirtualStockMarketGameDefinition {
 				
 				$price_usd_info = $this->app->exchange_rate_between_currencies(1, $this->currencies[$currency_i]['currency_id'], time(), 6);
 				
-				$price_usd = $price_usd_info['exchange_rate'];
+				if (!empty($price_usd_info['exchange_rate'])) $price_usd = $price_usd_info['exchange_rate'];
+				else $price_usd = 0;
+				
 				if (empty($price_usd) || $price_usd < 0 || $price_usd > pow(10, 6)) {
 					$price_api_url = "https://cloud.iexapis.com/stable/stock/".$this->currencies[$currency_i]['abbreviation']."/quote?token=".$this->iex_api_key;
-					$api_response = json_decode(file_get_contents($price_api_url));
-					$price_usd = (float) $api_response->latestPrice;
+					if ($api_response_raw = @file_get_contents($price_api_url)) {
+						if ($api_response = @json_decode($api_response_raw)) {
+							$price_usd = (float) $api_response->latestPrice;
+						}
+					}
 				}
 				
 				$price_max_target = $price_usd*1.05;
 				$price_min_target = $price_usd*0.95;
 				
 				$log10 = floor(log10($price_usd));
-				$round_targets_to = pow(10, $log10-1);
+				$round_targets_to = $price_usd == 0 ? 1 : pow(10, $log10-1);
 				
 				$price_min = floor($price_min_target/$round_targets_to)*$round_targets_to;
 				$price_max = ceil($price_max_target/$round_targets_to)*$round_targets_to;

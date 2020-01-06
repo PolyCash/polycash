@@ -1350,14 +1350,25 @@ class Blockchain {
 	public function add_genesis_block() {
 		$html = "";
 		
+		$first_block_id = 0;
+		
 		if ($this->db_blockchain['p2p_mode'] == "none") {
 			$genesis_block_hash = $this->app->random_hex_string(64);
 			$nextblock_hash = "";
 			$genesis_tx_hash = $this->app->random_hex_string(64);
 		}
 		else if ($this->db_blockchain['p2p_mode'] == "web_api") {
-			$web_api_block = $this->web_api_fetch_block(0);
-			$first_block = get_object_vars($web_api_block['blocks'][0]);
+			$web_api_block = $this->web_api_fetch_block($first_block_id);
+			
+			if (!empty($web_api_block['blocks'][0])) {
+				$first_block = get_object_vars($web_api_block['blocks'][0]);
+			}
+			else {
+				$first_block_id++;
+				$web_api_block = $this->web_api_fetch_block($first_block_id);
+				$first_block = get_object_vars($web_api_block['blocks'][0]);
+			}
+			
 			$first_transaction = get_object_vars($first_block['transactions'][0]);
 			$genesis_block_hash = $first_block['block_hash'];
 			$genesis_tx_hash = $first_transaction['tx_hash'];
@@ -1402,28 +1413,31 @@ class Blockchain {
 		$output_address = $this->create_or_fetch_address($genesis_address, true, false, false, $force_is_mine, false);
 		$html .= "genesis hash: ".$genesis_block_hash."<br/>\n";
 		
-		$this->app->run_query("INSERT INTO transactions SET blockchain_id=:blockchain_id, amount=:amount, transaction_desc='coinbase', tx_hash=:tx_hash, block_id='0', position_in_block=0, time_created=:time_created, num_inputs=0, num_outputs=1, has_all_inputs=1, has_all_outputs=1;", [
+		$this->app->run_query("INSERT INTO transactions SET blockchain_id=:blockchain_id, amount=:amount, transaction_desc='coinbase', tx_hash=:tx_hash, block_id=:first_block_id, position_in_block=0, time_created=:time_created, num_inputs=0, num_outputs=1, has_all_inputs=1, has_all_outputs=1;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'amount' => $this->db_blockchain['initial_pow_reward'],
 			'tx_hash' => $genesis_tx_hash,
+			'first_block_id' => $first_block_id,
 			'time_created' => time()
 		]);
 		$transaction_id = $this->app->last_insert_id();
 		
-		$this->app->run_query("INSERT INTO transaction_ios SET spend_status='unspent', blockchain_id=:blockchain_id, user_id=NULL, address_id=:address_id, is_destroy=0, is_separator=0, is_passthrough=0, is_receiver=0, create_transaction_id=:create_transaction_id, amount=:amount, create_block_id='0';", [
+		$this->app->run_query("INSERT INTO transaction_ios SET spend_status='unspent', blockchain_id=:blockchain_id, user_id=NULL, address_id=:address_id, is_destroy=0, is_separator=0, is_passthrough=0, is_receiver=0, create_transaction_id=:create_transaction_id, amount=:amount, create_block_id=:first_block_id;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'address_id' => $output_address['address_id'],
 			'create_transaction_id' => $transaction_id,
-			'amount' => $this->db_blockchain['initial_pow_reward']
+			'amount' => $this->db_blockchain['initial_pow_reward'],
+			'first_block_id' => $first_block_id
 		]);
 		$genesis_io_id = $this->app->last_insert_id();
 		
-		$this->app->run_query("INSERT INTO blocks SET blockchain_id=:blockchain_id, block_hash=:block_hash, block_id='0', time_created=:current_time, time_loaded=:current_time, time_mined=:current_time, num_transactions=1, locally_saved=1, sec_since_prev_block=0;", [
+		$this->app->run_query("INSERT INTO blocks SET blockchain_id=:blockchain_id, block_hash=:block_hash, block_id=:first_block_id, time_created=:current_time, time_loaded=:current_time, time_mined=:current_time, num_transactions=1, locally_saved=1, sec_since_prev_block=0;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'block_hash' => $genesis_block_hash,
-			'current_time' => time()
+			'current_time' => time(),
+			'first_block_id' => $first_block_id
 		]);
-		$this->set_last_complete_block(0);
+		$this->set_last_complete_block($first_block_id);
 		
 		$html .= "Added the genesis transaction!<br/>\n";
 		$this->app->log_message($html);
@@ -1450,7 +1464,7 @@ class Blockchain {
 		}
 		else if ($this->db_blockchain['p2p_mode'] == "web_api") {
 			$info = $this->web_api_fetch_blockchain();
-			$first_required_block = 0;
+			$first_required_block = 1;
 		}
 		
 		$min_starting_block = (int)($this->app->run_query("SELECT MIN(game_starting_block) FROM games WHERE game_status IN ('published', 'running') AND blockchain_id=:blockchain_id;", [
@@ -1512,7 +1526,7 @@ class Blockchain {
 			
 			$this->reset_blockchain();
 			
-			if ($this->db_blockchain['p2p_mode'] == "none") {
+			if (in_array($this->db_blockchain['p2p_mode'], ["none","web_api"])) {
 				$returnvals = $this->add_genesis_block();
 				$current_hash = $returnvals['nextblockhash'];
 			}
