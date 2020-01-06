@@ -8,7 +8,7 @@ class RockPaperScissorsGameDefinition {
 		$this->app = $app;
 		
 		$this->game_def_base_txt = '{
-			"blockchain_identifier": "stakemoney-dev",
+			"blockchain_identifier": "freechain",
 			"option_group": null,
 			"protocol_version": 0,
 			"name": "Rock Paper Scissors",
@@ -17,6 +17,7 @@ class RockPaperScissorsGameDefinition {
 			"category_id": null,
 			"decimal_places": 4,
 			"finite_events": false,
+			"max_simultaneous_options": 1200,
 			"event_type_name": "match",
 			"event_type_name_plural": "matches",
 			"event_rule": "game_definition",

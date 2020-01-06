@@ -1820,6 +1820,7 @@ class App {
 			['int', 'category_id', false],
 			['int', 'decimal_places', true],
 			['bool', 'finite_events', true],
+			['int', 'max_simultaneous_options', true],
 			['string', 'event_type_name', true],
 			['string', 'event_type_name_plural', true],
 			['string', 'event_rule', true],
