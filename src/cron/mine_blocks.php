@@ -118,7 +118,7 @@ if ($app->running_as_admin()) {
 		
 		if ($print_debug) echo "Script ran for ".round($runtime_sec, 2)." seconds.\n";
 	}
-	else echo "Skipped starting the game loop; it's already running.\n";
+	else echo "A block mining process is already running.\n";
 }
 else echo "Error: incorrect key supplied in cron/minutely_main.php\n";
 ?>

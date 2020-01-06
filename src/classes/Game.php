@@ -1992,6 +1992,8 @@ class Game {
 		if ($block_id > $ensured_block) {
 			$this->blockchain->app->dbh->beginTransaction();
 			
+			$options_begin_at_index = AppSettings::getParam('options_begin_at_index');
+			
 			$round_id = $this->block_to_round($block_id);
 			$game_starting_round = $this->block_to_round($this->db_game['game_starting_block']);
 			$add_count = 0;
@@ -2005,12 +2007,12 @@ class Game {
 				$prev_option = $this->blockchain->app->run_query("SELECT * FROM options WHERE event_id=:event_id ORDER BY option_index DESC LIMIT 1;", [
 					'event_id' => $prev_event['event_id']
 				])->fetch();
-				$option_offset = $prev_option['option_index']+1;
-				$from_event_index = $prev_event['event_index']+1;
+				$option_offset = $prev_option['option_index']+1-$options_begin_at_index;
+				$from_event_index = $prev_event['event_index']+1-$options_begin_at_index;
 			}
 			else {
 				$from_event_index = 0;
-				$option_offset = AppSettings::getParam('options_begin_at_index');
+				$option_offset = 0;
 			}
 			
 			if (!empty($this->db_game['module']) && !$this->get_definitive_peer()) {
@@ -2134,12 +2136,16 @@ class Game {
 						
 						$option_i = 0;
 						while ($game_defined_option = $gdo_r->fetch()) {
-							$vote_identifier = $this->blockchain->app->option_index_to_vote_identifier($option_i + $option_offset);
+							$option_index = $option_i + $option_offset;
+							if ($this->db_game['max_simultaneous_options']) $option_index = $option_index%$this->db_game['max_simultaneous_options'];
+							$option_index += $options_begin_at_index;
+							
+							$vote_identifier = $this->blockchain->app->option_index_to_vote_identifier($option_index);
 							$new_option_params = [
 								'event_id' => $event_id,
 								'name' => $game_defined_option['name'],
 								'vote_identifier' => $vote_identifier,
-								'option_index' => ($option_i + $option_offset),
+								'option_index' => $option_index,
 								'event_option_index' => $option_i,
 								'entity_id' => empty($game_defined_option['entity_id']) ? null : $game_defined_option['entity_id'],
 								'target_probability' => empty($game_defined_option['target_probability']) ? null : $game_defined_option['target_probability']
