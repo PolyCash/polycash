@@ -130,6 +130,10 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 											<option value="enable">Enable</option>
 											<?php
 										}
+										if ($blockchain->db_blockchain['p2p_mode'] == "none") { ?>
+											<option value="claim_coinbase">Transfer mined coins to address</option>
+											<?php
+										}
 										?>
 									</select>
 									
@@ -193,7 +197,9 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 			</div>
 		</div>
 		<script type="text/javascript">
-		var BlockchainManager = function() {
+		var BlockchainManager = function(synchronizer_token) {
+			this.synchronizer_token = synchronizer_token;
+			
 			this.actionSelected = function(blockchain_id, blockchain_name, blockchain_identifier, selectElement) {
 				var action = selectElement.value;
 				selectElement.value = "";
@@ -203,9 +209,9 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 				if (action == "set_rpc_credentials" || action == "see_definition") confirm_ok = true;
 				else {
 					var confirm_message = "Are you sure you want to ";
-					if (action == "reset_synchronize") confirm_message += "reset & synchronize";
-					else confirm_message += action;
-					confirm_message += " "+blockchain_name+"?";
+					if (action == "reset_synchronize") confirm_message += "reset & synchronize "+blockchain_name+"?";
+					else if (action == "claim_coinbase") confirm_message += "move mined coins to an address?";
+					else confirm_message += action+" "+blockchain_name+"?";
 					confirm_ok = confirm(confirm_message);
 				}
 				
@@ -219,6 +225,28 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 					else if (action == "see_definition") {
 						window.open('/explorer/blockchains/'+blockchain_identifier+'/definition/', '_blank');
 					}
+					else if (action == "claim_coinbase") {
+						var coinbase_quantity = prompt("How many "+blockchain_name+" coinbase outputs do you want to claim?");
+						if (coinbase_quantity) {
+							var to_address = prompt("Please enter the address where these coins should be deposited:");
+							if (to_address) {
+								$.ajax({
+									url: "/ajax/claim_coinbase.php",
+									dataType: "json",
+									data: {
+										blockchain_id: blockchain_id,
+										synchronizer_token: this.synchronizer_token,
+										quantity: coinbase_quantity,
+										to_address: to_address
+									},
+									success: function(claim_response) {
+										if (claim_response.status_code == 1) window.location = claim_response.message;
+										else alert(claim_response.message);
+									}
+								});
+							}
+						}
+					}
 					else {
 						$('#'+action+'_'+blockchain_id).submit();
 					}
@@ -229,7 +257,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 		var thisBlockchainManager;
 		
 		window.onload = function() {
-			thisBlockchainManager = new BlockchainManager();
+			thisBlockchainManager = new BlockchainManager('<?php echo $thisuser->get_synchronizer_token(); ?>');
 		};
 		</script>
 		<?php

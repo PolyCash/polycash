@@ -191,13 +191,17 @@ class App {
 					$cmd_response = exec($cmd);
 					
 					if (!empty($cmd_response)) {
-						$error_path = $migrations_path."/".$migration_id."-errors.txt";
-						if ($error_fh = @fopen($error_path, 'w')) {
-							fwrite($error_fh, $cmd_response);
-							fclose($error_fh);
+						$skip_error = "mysql: [Warning]";
+						if (substr($cmd_response, 0, strlen($skip_error)) == $skip_error) {}
+						else {
+							$error_path = $migrations_path."/".$migration_id."-errors.txt";
+							if ($error_fh = @fopen($error_path, 'w')) {
+								fwrite($error_fh, $cmd_response);
+								fclose($error_fh);
+							}
+							echo "Error on migration #".$migration_id.": ".$cmd_response."<br/>\n";
+							die();
 						}
-						echo "Error on migration #".$migration_id.": ".$cmd_response."<br/>\n";
-						die();
 					}
 					$migration_id++;
 				}
@@ -1670,11 +1674,11 @@ class App {
 	public function voting_character_definitions() {
 		if (AppSettings::getParam('identifier_case_sensitive') == 1) {
 			$voting_characters = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-			$firstchar_divisions = [26,16,8,4,2,1];
+			$firstchar_divisions = [5,22,16,8,4,2,1];
 		}
 		else {
 			$voting_characters = "123456789abcdefghijklmnopqrstuvwxyz";
-			$firstchar_divisions = [19,8,4,2,1];
+			$firstchar_divisions = [5,15,8,4,2,1];
 		}
 		$range_max = -1;
 		for ($i=0; $i<count($firstchar_divisions); $i++) {
@@ -1816,6 +1820,7 @@ class App {
 			['int', 'category_id', false],
 			['int', 'decimal_places', true],
 			['bool', 'finite_events', true],
+			['int', 'max_simultaneous_options', true],
 			['string', 'event_type_name', true],
 			['string', 'event_type_name_plural', true],
 			['string', 'event_rule', true],

@@ -1,17 +1,13 @@
 <?php
-require_once(dirname(dirname(__FILE__))."/includes/connect.php");
+require(AppSettings::srcPath()."/includes/connect.php");
+require(AppSettings::srcPath()."/includes/get_session.php");
 
-$allowed_params = ['blockchain_id','coinbase_quantity','address'];
-$app->safe_merge_argv_to_request($argv, $allowed_params);
-
-if ($app->running_as_admin()) {
-	$blockchain_id = (int) $_REQUEST['blockchain_id'];
+if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
+	$blockchain = new Blockchain($app, $_REQUEST['blockchain_id']);
 	
-	$blockchain = new Blockchain($app, $blockchain_id);
-	
-	if (in_array($blockchain->db_blockchain['p2p_mode'], ['none','web_api'])) {
-		$coinbase_quantity = (int) $_REQUEST['coinbase_quantity'];
-		$db_address = $blockchain->create_or_fetch_address($_REQUEST['address'], true, false, true, false, false);
+	if ($app->user_is_admin($thisuser) && $blockchain->db_blockchain['p2p_mode'] == "none") {
+		$coinbase_quantity = (int) $_REQUEST['quantity'];
+		$db_address = $blockchain->create_or_fetch_address($_REQUEST['to_address'], true, false, true, false, false);
 		
 		$coinbase_ios = $app->run_query("SELECT * FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN address_keys ak ON io.address_id=ak.address_id WHERE t.blockchain_id=".$blockchain->db_blockchain['blockchain_id']." AND t.transaction_desc='coinbase' AND io.spend_status='unspent' AND ak.account_id IS NULL ORDER BY t.block_id ASC LIMIT ".$coinbase_quantity.";");
 		
@@ -29,12 +25,12 @@ if ($app->running_as_admin()) {
 			
 			if ($transaction_id) {
 				$transaction = $app->fetch_transaction_by_id($transaction_id);
-				echo "successful: ".$transaction['tx_hash']."\n";
+				$app->output_message(1, '/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/transactions/'.$transaction['tx_hash']);
 			}
-			else echo "failed: ".$error_message."\n";
+			else $app->output_message(5, "Failed: ".$error_message);
 		}
-		else echo "Couldn't find that many available coinbase outputs.\n";
+		else $app->output_message(4, "Couldn't find that many available coinbase outputs.");
 	}
-	else echo "This action cannot be performed for this blockchain.\n";
+	else $app->output_message(3, "Permission denied.");
 }
-else echo "Please run this script as admin.\n";
+else $app->output_message(2, "Permission denied.");

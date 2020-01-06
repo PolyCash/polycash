@@ -31,7 +31,11 @@ if ($app->running_as_admin()) {
 				
 				$cmd = $app->mysql_binary_location()." -u ".AppSettings::getParam('mysql_user')." -h ".AppSettings::getParam('mysql_server');
 				if (AppSettings::getParam('mysql_password') != "") $cmd .= " -p'".AppSettings::getParam('mysql_password')."'";
-				$cmd .= " ".AppSettings::getParam('mysql_database')." < ".AppSettings::srcPath()."/sql/schema-initial.sql";
+				
+				if (is_file(AppSettings::srcPath()."/sql/schema-base.sql")) $base_schema_path = AppSettings::srcPath()."/sql/schema-base.sql";
+				else $base_schema_path = AppSettings::srcPath()."/sql/schema-initial.sql";
+				
+				$cmd .= " ".AppSettings::getParam('mysql_database')." < ".$base_schema_path;
 				echo exec($cmd);
 			}
 			$app->load_module_classes();
