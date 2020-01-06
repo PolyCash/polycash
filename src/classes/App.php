@@ -3650,7 +3650,7 @@ class App {
 			$member_i++;
 		}
 		
-		return $formatted_members;
+		return [$members, $formatted_members];
 	}
 	
 	public function flush_buffers() {
