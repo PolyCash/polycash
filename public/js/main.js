@@ -2938,6 +2938,12 @@ var PageManager = function() {
 			});
 		}
 	}
+	this.fetch_group_images_from_peer = function(group_id) {
+		var peer_url = prompt("Please enter the peer's URL:");
+		if (peer_url) {
+			window.location = '/groups/?group_id='+group_id+'&synchronizer_token='+this.synchronizer_token+'&action=fetch_images_from_peer&peer_url='+encodeURIComponent(peer_url);
+		}
+	}
 }
 
 var thisPageManager = new PageManager();

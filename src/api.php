@@ -273,6 +273,13 @@ if ($uri_parts[1] == "api") {
 		}
 		else $app->output_message(2, "Error: invalid blockchain identifier.", false);
 	}
+	else if ($uri_parts[2] == "groups") {
+		$db_group = $app->fetch_group_by_description($_REQUEST['group']);
+		
+		list($members, $formatted_members) = $app->group_details_json($db_group);
+		
+		$app->output_message(1, "", ['members' => $formatted_members]);
+	}
 	else if (!empty($uri_parts[2])) {
 		$game_identifier = $uri_parts[2];
 		
