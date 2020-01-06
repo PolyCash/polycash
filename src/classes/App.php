@@ -3630,6 +3630,29 @@ class App {
 		else $error_message = "Failed to import group from file.. the file does not exist.\n";
 	}
 	
+	public function group_details_json($db_group) {
+		$members_q = "SELECT *, en.entity_name AS entity_name, et.entity_name AS entity_type FROM option_group_memberships m LEFT JOIN entities en ON m.entity_id=en.entity_id LEFT JOIN images i ON en.default_image_id=i.image_id LEFT JOIN entity_types et ON en.entity_type_id=et.entity_type_id WHERE m.option_group_id=:group_id ORDER BY m.membership_id ASC;";
+		$members_params = [
+			'group_id' => $db_group['group_id']
+		];
+		
+		$members = $this->run_query($members_q, $members_params)->fetchAll();
+		
+		$formatted_members = [];
+		$member_i = 0;
+		foreach ($members as $member) {
+			array_push($formatted_members, [
+				'position' => $member_i,
+				'entity_name' => $member['entity_name'],
+				'entity_type' => $member['entity_type'],
+				'image_url' => AppSettings::getParam('base_url').$this->image_url($member)
+			]);
+			$member_i++;
+		}
+		
+		return $formatted_members;
+	}
+	
 	public function flush_buffers() {
 		@ob_end_flush();
 		@ob_flush();
