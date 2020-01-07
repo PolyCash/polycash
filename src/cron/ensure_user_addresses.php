@@ -35,6 +35,8 @@ if ($app->running_as_admin()) {
 			
 			list($from_option_index, $to_option_index) = $running_games[$game_i]->option_index_range();
 			
+			echo $running_games[$game_i]->db_game['name']." to ".$to_option_index."\n";
+			
 			if ($to_option_index !== false) {
 				$user_games = $app->run_query("SELECT * FROM user_games ug JOIN currency_accounts ca ON ug.account_id=ca.account_id JOIN users u ON ug.user_id=u.user_id WHERE ug.game_id=:game_id AND ca.has_option_indices_until<:to_option_index ORDER BY ca.account_id ASC;", [
 					'game_id' => $running_games[$game_i]->db_game['game_id'],

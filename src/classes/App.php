@@ -784,6 +784,7 @@ class App {
 				'time_added' => time()
 			]);
 		}
+		$this->set_site_constant("reference_currency_id", $reference_currency_id);
 	}
 	
 	public function update_all_currency_prices() {

@@ -953,7 +953,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							'option_index' => $address['option_index']
 						]);
 						
-						if ($associated_events->rowCount() > 0) {
+						if ($associated_events->rowCount() > 0 && $associated_events->rowCount() <= 10) {
 							echo "<p>This is a staking address for ";
 							
 							while ($associated_event = $associated_events->fetch()) {

@@ -671,14 +671,14 @@ if ($thisuser && $game) {
 					<?php
 				}
 				if ($game->db_game['sellout_policy'] == "on") { ?>
-					<button class="btn btn-sm btn-info" style="margin-top: 8px;" onclick="thisPageManager.manage_sellout('initiate');"><i class="fas fa-exchange-alt"></i> &nbsp; Sell your <?php echo $game->db_game['coin_name_plural']; ?></button>
+					<button class="btn btn-sm btn-warning" style="margin-top: 8px;" onclick="thisPageManager.manage_sellout('initiate');"><i class="fas fa-exchange-alt"></i> &nbsp; Sell your <?php echo $game->db_game['coin_name_plural']; ?></button>
 					<?php
 				}
 				
 				if ($game->fetch_featured_strategies()->rowCount() > 0) {
 					?>
-					<button class="btn btn-sm btn-warning" style="margin-top: 8px;" onclick="thisPageManager.apply_my_strategy();">Apply my strategy now</button>
-					<button class="btn btn-sm btn-success" style="margin-top: 8px;" onclick="thisPageManager.show_featured_strategies(); return false;">Change my strategy</button>
+					<button class="btn btn-sm btn-info" style="margin-top: 8px;" onclick="thisPageManager.apply_my_strategy();">Apply my strategy now</button>
+					<button class="btn btn-sm btn-danger" style="margin-top: 8px;" onclick="thisPageManager.show_featured_strategies(); return false;">Change my strategy</button>
 					<?php
 				}
 				?>
