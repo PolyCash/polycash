@@ -1983,6 +1983,10 @@ class App {
 					}
 				}
 				
+				for ($i=$matched_events; $i<count($new_game_obj['events']); $i++) {
+					$reset_block = $this->min_excluding_false(array($reset_block, $new_game_obj['events'][$i]->event_starting_block));
+				}
+				
 				$set_events_from_index = $this->min_excluding_false(array($reset_event_index, $matched_events+1));
 				
 				if ($set_events_from_index !== false) {
