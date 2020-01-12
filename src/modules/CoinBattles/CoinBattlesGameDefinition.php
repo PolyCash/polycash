@@ -19,6 +19,7 @@ class CoinBattlesGameDefinition {
 			"category_id": 4,
 			"decimal_places": 8,
 			"finite_events": false,
+			"save_every_definition": false,
 			"event_type_name": "battle",
 			"event_type_name_plural": "battles",
 			"event_rule": "game_definition",

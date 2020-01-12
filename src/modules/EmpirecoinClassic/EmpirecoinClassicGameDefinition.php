@@ -17,6 +17,7 @@ class EmpirecoinClassicGameDefinition {
 			"category_id": 31,
 			"decimal_places": 4,
 			"finite_events": false,
+			"save_every_definition": false,
 			"event_type_name": "competition",
 			"event_type_name_plural": "competitions",
 			"event_rule": "single_event_series",

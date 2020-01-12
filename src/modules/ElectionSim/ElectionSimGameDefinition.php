@@ -17,6 +17,7 @@ class ElectionSimGameDefinition {
 			"category_id": 31,
 			"decimal_places": 4,
 			"finite_events": false,
+			"save_every_definition": false,
 			"event_type_name": "election",
 			"event_type_name_plural": "elections",
 			"event_rule": "all_pairs",

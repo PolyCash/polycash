@@ -31,6 +31,7 @@ class DailyCryptoMarketsGameDefinition {
 			"category_id": null,
 			"decimal_places": 4,
 			"finite_events": false,
+			"save_every_definition": false,
 			"event_type_name": "market",
 			"event_type_name_plural": "markets",
 			"event_rule": "game_definition",
