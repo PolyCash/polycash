@@ -3738,10 +3738,11 @@ class Game {
 			if ($gde['event_payout_time'] == "" || $gde['event_payout_time'] == $gde['event_final_time']) $payout_block = $final_block;
 			else $payout_block = $this->time_to_block_in_game(strtotime($gde['event_payout_time']));
 			
-			$this->blockchain->app->run_query("UPDATE game_defined_events SET event_starting_block=:event_starting_block, event_final_block=:event_final_block, event_payout_block=:event_payout_block WHERE game_id=:game_id AND event_index=:event_index;", [
+			$this->blockchain->app->run_query("UPDATE game_defined_events SET event_starting_block=:event_starting_block, event_final_block=:event_final_block, event_payout_block=:event_payout_block, event_outcome_block=:event_outcome_block WHERE game_id=:game_id AND event_index=:event_index;", [
 				'event_starting_block' => $start_block,
 				'event_final_block' => $final_block,
 				'event_payout_block' => $payout_block,
+				'event_outcome_block' => $payout_block,
 				'game_id' => $this->db_game['game_id'],
 				'event_index' => $gde['event_index']
 			]);

@@ -24,7 +24,7 @@ if ($user_game) {
 		$user_pending_bets = $game->user_pending_bets($user_game);
 		$account_value = $game->account_balance($user_game['account_id'])+$user_pending_bets;
 		
-		$hours_between_applications = 36;
+		$hours_between_applications = 12;
 		$sec_between_applications = 60*60*$hours_between_applications;
 		$rand_sec_offset = rand(0, $sec_between_applications*2);
 		
