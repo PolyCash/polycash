@@ -32,7 +32,7 @@ if ($app->running_as_admin()) {
 		
 		while ($db_game = $relevant_games->fetch()) {
 			$game = new Game($blockchain, $db_game['game_id']);
-			$log_text .= $game->set_event_blocks(false);
+			$log_text .= $game->set_event_blocks(false, null);
 		}
 	}
 	echo $log_text;

@@ -74,17 +74,18 @@ if ($app->running_as_admin()) {
 				else {
 					if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "install_module") {
 						$module_name = $_REQUEST['module_name'];
-						$conflicting_game = $app->fetch_game_by_identifier($game_def->game_def->url_identifier);
 						
 						echo "<br/><b>Installing module $module_name</b><br/>\n";
 						
-						if ($conflicting_game) {
-							echo "<p>This module is already installed.</p>\n";
-						}
-						else {
-							if ($existing_module = $app->check_module($module_name)) {
-								eval('$game_def = new '.$module_name.'GameDefinition($app);');
-								
+						if ($existing_module = $app->check_module($module_name)) {
+							eval('$game_def = new '.$module_name.'GameDefinition($app);');
+							
+							$conflicting_game = $app->fetch_game_by_identifier($game_def->game_def->url_identifier);
+							
+							if ($conflicting_game) {
+								echo "<p>There's already a game using this URL key.</p>\n";
+							}
+							else {
 								$blockchain = false;
 								$db_blockchain = $app->fetch_blockchain_by_identifier($game_def->game_def->blockchain_identifier);
 								
@@ -94,7 +95,7 @@ if ($app->running_as_admin()) {
 									
 									$error_message = "";
 									$db_game = false;
-									$new_game = $app->set_game_from_definition($new_game_def_txt, $thisuser, $module_name, $error_message, $db_game, false);
+									$new_game = GameDefinition::set_game_from_definition($app, $new_game_def_txt, $thisuser, $error_message, $db_game, false);
 									
 									if (!empty($new_game)) {
 										$error_message = "Import was successful. Next please <a href=\"/manage/".$new_game->db_game['url_identifier']."/?next=internal_settings\">visit this page and start the game</a>.";
@@ -108,8 +109,8 @@ if ($app->running_as_admin()) {
 								}
 								else echo "<p>Failed to find the blockchain.</p>\n";
 							}
-							else echo "<p>The module must already exist in DB before you can install it.</p>\n";
 						}
+						else echo "<p>The module must already exist in DB before you can install it.</p>\n";
 					}
 					?>
 					<h2>Run <?php echo AppSettings::getParam('site_name'); ?></h1>

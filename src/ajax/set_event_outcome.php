@@ -64,12 +64,17 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 					if ($option_ok) {
 						$show_internal_params = false;
 						
-						$game->check_set_game_definition("defined", $show_internal_params);
+						list($initial_game_def_hash, $initial_game_def) = GameDefinition::fetch_game_definition($game, "defined", $show_internal_params, false);
+						GameDefinition::check_set_game_definition($app, $initial_game_def_hash, $initial_game_def);
 						
 						$game->set_game_defined_outcome($db_event['event_index'], $outcome_index);
 						
-						$game->check_set_game_definition("defined", $show_internal_params);
-						$game->set_cached_definition_hashes();
+						list($final_game_def_hash, $final_game_def) = GameDefinition::fetch_game_definition($game, "defined", $show_internal_params, false);
+						GameDefinition::check_set_game_definition($app, $final_game_def_hash, $final_game_def);
+						
+						GameDefinition::record_migration($game, $thisuser->db_user['user_id'], "set_outcome_by_ui", $show_internal_params, $initial_game_def, $final_game_def);
+						
+						GameDefinition::set_cached_definition_hashes($game);
 						
 						$app->output_message(2, "Changed the game definition.", false);
 					}

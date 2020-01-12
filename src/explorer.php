@@ -1554,7 +1554,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							$def_field = 'cached_definition_hash';
 						}
 						
-						$game_def_str = $app->get_game_definition_by_hash($game->db_game[$def_field]);
+						list($game_def_hash, $game_def) = GameDefinition::fetch_game_definition($game, $definition_mode, false, true);
 						?>
 						<div class="panel panel-info">
 							<div class="panel-heading">
@@ -1568,18 +1568,18 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								</p>
 								<div class="row">
 									<div class="col-sm-2"><label class="form-control-static" for="definition_hash">Definition hash:</label></div>
-									<div class="col-sm-10"><input type="text" class="form-control" id="definition_hash" value="<?php echo $game->db_game[$def_field]; ?>" /></div>
+									<div class="col-sm-10"><input type="text" class="form-control" id="definition_hash" value="<?php echo $game_def_hash; ?>" /></div>
 								</div>
 								
-								<textarea class="definition" id="definition"><?php echo $game_def_str; ?></textarea>
+								<textarea class="definition" id="definition"><?php echo GameDefinition::game_def_to_text($game_def); ?></textarea>
 							</div>
 						</div>
 						<?php
 					}
 					else {
 						$blockchain_def = $app->fetch_blockchain_definition($blockchain);
-						$blockchain_def_str = $app->game_def_to_text($blockchain_def);
-						$blockchain_def_hash = $app->game_def_to_hash($blockchain_def_str);
+						$blockchain_def_str = json_decode(json_encode($blockchain_def));
+						$blockchain_def_hash = AppSettings::standardHash($blockchain_def_str);
 						?>
 						<div class="panel panel-info">
 							<div class="panel-heading">

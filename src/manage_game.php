@@ -964,9 +964,7 @@ else {
 				}
 				else if ($next_action == "game_definition") {
 					$show_internal_params = false;
-					$game_def = $app->fetch_game_definition($game, "defined", $show_internal_params);
-					$game_def_str = $app->game_def_to_text($game_def);
-					$game_def_hash = $app->game_def_to_hash($game_def_str);
+					list($game_def_hash, $game_def) = GameDefinition::fetch_game_definition($game, "defined", $show_internal_params, false);
 					?>
 					<div class="panel panel-info">
 						<div class="panel-heading">

@@ -23,9 +23,10 @@ if ($app->running_as_admin()) {
 		if ($game->db_game['finite_events'] == 1) $ensure_block = max($ensure_block, $game->max_gde_starting_block());
 		$debug_text = $game->ensure_events_until_block($ensure_block);
 		echo $debug_text."\n";
-		$game->update_option_votes();
 		
-		$game->set_cached_definition_hashes();
+		$game->update_option_votes();
+		GameDefinition::set_cached_definition_hashes($game);
+		$game->set_cached_fields();
 		
 		echo "Ensured events until ".$ensure_block."<br/>\n";
 	}

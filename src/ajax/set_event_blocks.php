@@ -6,8 +6,7 @@ if ($app->user_can_edit_game($thisuser, $game) && $app->synchronizer_ok($thisuse
 	if (!empty($_REQUEST['game_defined_event_id'])) $game_defined_event_id = $_REQUEST['game_defined_event_id'];
 	else $game_defined_event_id = false;
 	
-	$log_text = $game->set_event_blocks($game_defined_event_id);
-	$game->set_cached_definition_hashes();
+	$log_text = $game->set_event_blocks($game_defined_event_id, $thisuser->db_user['user_id']);
 	
 	$app->output_message(1, $log_text, false);
 }

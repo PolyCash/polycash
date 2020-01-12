@@ -75,5 +75,9 @@ class AppSettings {
 		if (PHP_SAPI == "cli") return true;
 		else return false;
 	}
+	
+	public static function standardHash(&$string) {
+		return hash("sha256", $string);
+	}
 }
 ?>

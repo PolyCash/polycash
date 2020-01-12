@@ -40,7 +40,7 @@ if ($thisuser && $refresh_page == "wallet") {
 else {
 	$mature_io_ids_csv = "";
 }
-$mature_io_ids_hash = $app->game_def_to_hash($mature_io_ids_csv);
+$mature_io_ids_hash = AppSettings::standardHash($mature_io_ids_csv);
 
 $output = false;
 $output['game_loop_index'] = $game_loop_index;
@@ -154,7 +154,7 @@ for ($render_event_i=0; $render_event_i<count($these_events); $render_event_i++)
 $output['set_options_js'] = $set_options_js;
 
 if ($display_event_ids != "") $display_event_ids = substr($display_event_ids, 0, strlen($display_event_ids)-1);
-$display_event_ids_hash = $app->game_def_to_hash($display_event_ids);
+$display_event_ids_hash = AppSettings::standardHash($display_event_ids);
 
 if ($display_event_ids_hash != $_REQUEST['event_ids_hash']) {
 	$js = $game->new_event_js($instance_id, $thisuser, $filter_arr, $display_event_ids, false)[0];

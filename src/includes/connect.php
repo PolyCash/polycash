@@ -16,6 +16,8 @@ if (AppSettings::runningFromCommandline()) {
 	error_reporting(E_ALL);
 }
 
+if (!empty(AppSettings::getParam('memory_limit'))) ini_set('memory_limit', AppSettings::getParam('memory_limit'));
+
 if (empty(AppSettings::getParam('coin_brand_name'))) die("Please set the 'coin_brand_name' parameter in your config/config.json");
 
 if (!empty($allow_no_https)) {}
@@ -42,6 +44,7 @@ include(AppSettings::srcPath()."/classes/Game.php");
 include(AppSettings::srcPath()."/classes/Event.php");
 if (AppSettings::getParam('pageview_tracking_enabled')) include(AppSettings::srcPath()."/classes/PageviewController.php");
 include(AppSettings::srcPath()."/classes/User.php");
+include(AppSettings::srcPath()."/classes/GameDefinition.php");
 
 if (empty($skip_select_db)) $skip_select_db = false;
 $app = new App($skip_select_db);
