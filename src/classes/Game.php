@@ -2457,7 +2457,7 @@ class Game {
 					else {
 						$ref_user = false;
 						$db_new_game = false;
-						$this->blockchain->app->set_game_from_definition($api_response->definition, $ref_user, $error_message, $db_new_game, true);
+						GameDefinition::set_game_from_definition($this->blockchain->app, $api_response->definition, $ref_user, $error_message, $db_new_game, true);
 					}
 				}
 				else $error_message .= "Sync canceled: definitive peer tried to change the game identifier.\n";
@@ -2490,7 +2490,8 @@ class Game {
 			
 			if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
 			$ensure_events_debug_text = $this->ensure_events_until_block($ensure_block_id);
-			$this->set_cached_definition_hashes();
+			
+			GameDefinition::set_cached_definition_hashes($this);
 			
 			if ($show_debug) {
 				echo $sync_definitive_message;
@@ -2911,10 +2912,12 @@ class Game {
 			$this->set_block_stats($game_block);
 			
 			// If nothing was added this block & it's allowed, add game blocks in bulk
-			if ($relevant_tx_count == 0 && $this->db_game['buyin_policy'] == "none") {
-				$next_required_block_id = $this->blockchain->last_block_id();
+			if ($relevant_tx_count == 0 && in_array($this->db_game['buyin_policy'], ["none", "for_sale"])) {
+				$last_block_id = $this->blockchain->last_block_id();
 				
-				if ($next_required_block_id > $block_height+5) {
+				if ($last_block_id > $block_height+5) {
+					$next_required_block_id = $last_block_id;
+					
 					$next_spend_block = $this->blockchain->app->run_query("SELECT t.block_id FROM transaction_ios io JOIN transactions t ON io.spend_transaction_id=t.transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id=:game_id AND t.block_id>:block_id AND t.blockchain_id=:blockchain_id ORDER BY t.block_id ASC LIMIT 1;", [
 						'game_id' => $this->db_game['game_id'],
 						'block_id' => $block_height,
@@ -3706,14 +3709,6 @@ class Game {
 		else return false;
 	}
 	
-	public function check_set_game_definition($definition_mode, $show_internal_params) {
-		$game_def = $this->blockchain->app->fetch_game_definition($this, $definition_mode, $show_internal_params);
-		$game_def_str = $this->blockchain->app->game_def_to_text($game_def);
-		$game_def_hash = $this->blockchain->app->game_def_to_hash($game_def_str);
-
-		$this->blockchain->app->check_set_game_definition($game_def_hash, $game_def_str);
-	}
-	
 	public function time_to_block_in_game($time) {
 		if ($time < time()) {
 			$db_block = $this->blockchain->app->run_query("SELECT * FROM blocks WHERE blockchain_id=:blockchain_id AND time_mined <= :time ORDER BY time_mined DESC LIMIT 1;", [
@@ -3778,7 +3773,7 @@ class Game {
 		return $html;
 	}
 	
-	public function set_event_blocks($game_defined_event_id) {
+	public function set_event_blocks($user_id, $game_defined_event_id) {
 		$log_text = "";
 		$last_block_id = $this->blockchain->last_block_id();
 		$avoid_changing_completed_events = true;
@@ -3802,12 +3797,19 @@ class Game {
 		if ($event_r->rowCount() > 0) {
 			$show_internal_params = true;
 			
-			$this->check_set_game_definition("defined", $show_internal_params);
+			list($initial_game_def_hash, $initial_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
+			GameDefinition::check_set_game_definition($this->blockchain->app, $initial_game_def_hash, $initial_game_def);
 			
 			while ($gde = $event_r->fetch()) {
 				$this->set_gde_blocks_by_time($gde);
 			}
-			$this->check_set_game_definition("defined", $show_internal_params);
+			
+			list($final_game_def_hash, $final_game_def) = GameDefinition::fetch_game_definition($this, "defined", $show_internal_params, false);
+			GameDefinition::check_set_game_definition($this->blockchain->app, $final_game_def_hash, $final_game_def);
+			
+			GameDefinition::record_migration($this, $user_id, "set_blocks_by_ui", $show_internal_params, $initial_game_def, $final_game_def);
+			
+			GameDefinition::set_cached_definition_hashes($this);
 		}
 		return $log_text;
 	}
@@ -3927,35 +3929,7 @@ class Game {
 		return $game_peer;
 	}
 	
-	public function set_cached_definition_hashes() {
-		$show_internal_params = false;
-		$actual_game_def = $this->blockchain->app->fetch_game_definition($this, "actual", $show_internal_params);
-		$actual_game_def_str = $this->blockchain->app->game_def_to_text($actual_game_def);
-		$actual_game_def_hash = $this->blockchain->app->game_def_to_hash($actual_game_def_str);
-		$this->blockchain->app->check_set_game_definition($actual_game_def_hash, $actual_game_def_str);
-		
-		if ($this->db_game['cached_definition_hash'] != $actual_game_def_hash) {
-			$this->blockchain->app->run_query("UPDATE games SET cached_definition_hash=:cached_definition_hash, cached_definition_time=:cached_definition_time WHERE game_id=:game_id;", [
-				'cached_definition_hash' => $actual_game_def_hash,
-				'cached_definition_time' => time(),
-				'game_id' => $this->db_game['game_id']
-			]);
-			$this->db_game['cached_definition_hash'] = $actual_game_def_hash;
-		}
-		
-		$defined_game_def = $this->blockchain->app->fetch_game_definition($this, "defined", $show_internal_params);
-		$defined_game_def_str = $this->blockchain->app->game_def_to_text($defined_game_def);
-		$defined_game_def_hash = $this->blockchain->app->game_def_to_hash($defined_game_def_str);
-		$this->blockchain->app->check_set_game_definition($defined_game_def_hash, $defined_game_def_str);
-		
-		if ($this->db_game['defined_cached_definition_hash'] != $defined_game_def_hash) {
-			$this->blockchain->app->run_query("UPDATE games SET defined_cached_definition_hash=:defined_cached_definition_hash WHERE game_id=:game_id;", [
-				'defined_cached_definition_hash' => $defined_game_def_hash,
-				'game_id' => $this->db_game['game_id']
-			]);
-			$this->db_game['defined_cached_definition_hash'] = $defined_game_def_hash;
-		}
-		
+	public function set_cached_fields() {
 		$this->coins_in_existence(false, false);
 		$this->pending_bets(false);
 		
@@ -3966,7 +3940,7 @@ class Game {
 		
 		$this->set_minmax_payout_rates();
 	}
-	
+
 	public function set_minmax_payout_rates() {
 		$minmax = $this->blockchain->app->run_query("SELECT MIN(payout_rate), MAX(payout_rate) FROM events WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']])->fetch();
 		$this->blockchain->app->run_query("UPDATE games SET min_payout_rate=:min_payout_rate, max_payout_rate=:max_payout_rate WHERE game_id=:game_id;", [

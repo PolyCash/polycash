@@ -13,19 +13,14 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		if ($app->user_can_edit_game($thisuser, $game)) {
 			$show_internal_params = true;
 			
-			$game->check_set_game_definition("defined", $show_internal_params);
-			$game->check_set_game_definition("actual", $show_internal_params);
+			list($defined_game_def_hash, $defined_game_def) = GameDefinition::fetch_game_definition($game, "defined", $show_internal_params, false);
+			list($actual_game_def_hash, $actual_game_def) = GameDefinition::fetch_game_definition($game, "actual", $show_internal_params, false);
 			
-			$game_def = $app->fetch_game_definition($game, "defined", $show_internal_params);
-			$game_def_str = $app->game_def_to_text($game_def);
-			$game_def_hash = $app->game_def_to_hash($game_def_str);
+			GameDefinition::check_set_game_definition($app, $defined_game_def_hash, $defined_game_def);
+			GameDefinition::check_set_game_definition($app, $actual_game_def_hash, $actual_game_def);
 			
-			$actual_game_def = $app->fetch_game_definition($game, "actual", $show_internal_params);
-			$actual_game_def_str = $app->game_def_to_text($actual_game_def);
-			$actual_game_def_hash = $app->game_def_to_hash($actual_game_def_str);
-			
-			if ($game_def_hash != $actual_game_def_hash) {
-				$log_message = $app->migrate_game_definitions($game, $actual_game_def_hash, $game_def_hash);
+			if ($defined_game_def_hash != $actual_game_def_hash) {
+				$log_message = GameDefinition::migrate_game_definitions($game, $thisuser->db_user['user_id'], "apply_defined_to_actual", $show_internal_params, $actual_game_def, $defined_game_def);
 				$app->output_message(1, $log_message, false);
 			}
 			else $app->output_message(5, "Found no changes to apply.", false);

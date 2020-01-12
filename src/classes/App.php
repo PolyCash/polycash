@@ -1233,8 +1233,13 @@ class App {
 			$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
 			
-			$display_def_hash = $this->shorten_game_def_hash($game->db_game['cached_definition_hash']);
-			if (empty($display_def_hash)) $display_def_hash = "Not set";
+			if (!empty($game->db_game['cached_definition_hash'])) {
+				$display_def_hash = GameDefinition::shorten_game_def_hash($game->db_game['cached_definition_hash']);
+			}
+			else {
+				list($display_def_hash, $game_def) = GameDefinition::fetch_game_definition($game, "actual", false, false);
+				$display_def_hash = GameDefinition::shorten_game_def_hash($display_def_hash);
+			}
 			
 			$html .= '<div class="row"><div class="col-sm-5">Game definition:</div><div class="col-sm-7"><a href="/explorer/games/'.$game->db_game['url_identifier'].'/definition/?definition_mode=actual">'.$display_def_hash.'</a></div></div>';
 		}
@@ -1358,7 +1363,8 @@ class App {
 		$html .= "</div></div>\n";
 		
 		$html .= '<div class="row"><div class="col-sm-5">Betting fees:</div><div class="col-sm-7">';
-		$html .= $this->format_percentage((1-$db_game['max_payout_rate'])*100)."%";
+		$fee_rate = empty($db_game['max_payout_rate']) ? 0 : (1-$db_game['max_payout_rate']);
+		$html .= $this->format_percentage($fee_rate*100)."%";
 		if ($db_game['min_payout_rate'] != $db_game['max_payout_rate']) $html .= " to ".$this->format_percentage((1-$db_game['min_payout_rate'])*100)."%";
 		$html .= "</div></div>\n";
 		
@@ -1383,127 +1389,6 @@ class App {
 		$html .= "</div>\n";
 		
 		return $html;
-	}
-	
-	public function fetch_game_definition(&$game, $definition_mode, $show_internal_params) {
-		// $definition_mode is "defined" or "actual"
-		$game_definition = [];
-		$game_definition['blockchain_identifier'] = $game->blockchain->db_blockchain['url_identifier'];
-		
-		if ($game->db_game['option_group_id'] > 0) {
-			$db_group = $this->fetch_group_by_id($game->db_game['option_group_id']);
-			
-			$game_definition['option_group'] = $db_group['description'];
-		}
-		else $game_definition['option_group'] = null;
-		
-		$verbatim_vars = $this->game_definition_verbatim_vars();
-		
-		for ($i=0; $i<count($verbatim_vars); $i++) {
-			$var_type = $verbatim_vars[$i][0];
-			$var_name = $verbatim_vars[$i][1];
-			
-			if ($var_type == "int") {
-				if ($game->db_game[$var_name] == "0" || $game->db_game[$var_name] > 0) $var_val = (int) $game->db_game[$var_name];
-				else $var_val = null;
-			}
-			else if ($var_type == "float") $var_val = (float) $game->db_game[$var_name];
-			else if ($var_type == "bool") {
-				if ($game->db_game[$var_name]) $var_val = true;
-				else $var_val = false;
-			}
-			else if ($var_name == "module" && $game->db_game['hide_module']) $var_val = null;
-			else $var_val = $game->db_game[$var_name];
-			
-			$game_definition[$var_name] = $var_val;
-		}
-		
-		$escrow_amounts = [];
-		
-		if ($definition_mode == "actual") {
-			$escrow_amounts_q = "SELECT * FROM game_escrow_amounts ea JOIN currencies c ON ea.currency_id=c.currency_id WHERE ea.game_id=:game_id ORDER BY c.short_name_plural ASC;";
-		}
-		else if ($definition_mode == "defined") {
-			$escrow_amounts_q = "SELECT * FROM game_defined_escrow_amounts ea JOIN currencies c ON ea.currency_id=c.currency_id WHERE ea.game_id=:game_id ORDER BY c.short_name_plural ASC;";
-		}
-		
-		$db_escrow_amounts = $this->run_query($escrow_amounts_q, ['game_id'=>$game->db_game['game_id']]);
-		
-		while ($escrow_amount = $db_escrow_amounts->fetch()) {
-			$escrow_amounts[$escrow_amount['short_name_plural']] = (float) $escrow_amount['amount'];
-		}
-		
-		$game_definition['escrow_amounts'] = $escrow_amounts;
-		
-		$event_verbatim_vars = $this->event_verbatim_vars();
-		$events_obj = [];
-		
-		if ($definition_mode == "defined") {
-			$events_q = "SELECT ev.*, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM game_defined_events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id=:game_id ORDER BY ev.event_index ASC;";
-		}
-		else {
-			$events_q = "SELECT ev.*, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id=:game_id ORDER BY ev.event_index ASC;";
-		}
-		$db_events = $this->run_query($events_q, ['game_id'=>$game->db_game['game_id']]);
-		
-		$i=0;
-		while ($db_event = $db_events->fetch()) {
-			$temp_event = [];
-			
-			for ($j=0; $j<count($event_verbatim_vars); $j++) {
-				$var_type = $event_verbatim_vars[$j][0];
-				$var_name = $event_verbatim_vars[$j][1];
-				
-				if ($db_event['payout_rule'] != "linear" && in_array($var_name, ['track_max_price','track_min_price','track_payout_price','track_name_short'])) {}
-				else {
-					$var_val = $db_event[$var_name];
-					
-					if ($var_type == "int" && $var_val != "") $var_val = (int) $var_val;
-					else if ($var_type == "float" && $var_val != "") $var_val = (float) $var_val;
-					
-					$temp_event[$var_name] = $var_val;
-				}
-			}
-			
-			if (!empty($db_event['sport_name'])) $temp_event['sport'] = $db_event['sport_name'];
-			if (!empty($db_event['league_name'])) $temp_event['league'] = $db_event['league_name'];
-			if (!empty($db_event['external_identifier']) && $show_internal_params) $temp_event['external_identifier'] = $db_event['external_identifier'];
-			
-			if ($definition_mode == "defined") {
-				$db_options = $this->fetch_game_defined_options($game->db_game['game_id'], $db_event['event_index'], false, false);
-			}
-			else {
-				$db_options = $this->fetch_options_by_event($db_event['event_id']);
-			}
-			
-			$j = 0;
-			while ($option = $db_options->fetch()) {
-				$possible_outcome = ["title"=>$option['name']];
-				if ($show_internal_params) {
-					if (!empty($option['target_probability'])) $possible_outcome['target_probability'] = $option['target_probability'];
-					if (!empty($option['entity_id'])) $possible_outcome['entity_id'] = $option['entity_id'];
-				}
-				$temp_event['possible_outcomes'][$j] = $possible_outcome;
-				$j++;
-			}
-			$events_obj[$i] = $temp_event;
-			$i++;
-		}
-		$game_definition['events'] = $events_obj;
-		
-		return $game_definition;
-	}
-	
-	public function shorten_game_def_hash($hash) {
-		return substr($hash, 0, 16);
-	}
-	
-	public function game_def_to_hash(&$game_def_str) {
-		return hash("sha256", $game_def_str);
-	}
-	
-	public function game_def_to_text(&$game_def) {
-		return json_encode($game_def, JSON_PRETTY_PRINT);
 	}
 	
 	public function game_final_inflation_pct(&$db_game) {
@@ -1821,6 +1706,7 @@ class App {
 			['int', 'category_id', false],
 			['int', 'decimal_places', true],
 			['bool', 'finite_events', true],
+			['bool', 'save_every_definition', true],
 			['int', 'max_simultaneous_options', true],
 			['string', 'event_type_name', true],
 			['string', 'event_type_name_plural', true],
@@ -1905,121 +1791,6 @@ class App {
 			$blockchain_definition[$var_name] = $var_val;
 		}
 		return $blockchain_definition;
-	}
-	
-	public function migrate_game_definitions($game, $initial_game_def_hash, $new_game_def_hash) {
-		$log_message = "";
-		$initial_game_def = $this->get_game_definition_by_hash($initial_game_def_hash);
-		
-		if ($initial_game_def) {
-			$initial_game_obj = get_object_vars(json_decode($initial_game_def));
-			
-			$new_game_def = $this->get_game_definition_by_hash($new_game_def_hash);
-			
-			if ($new_game_def) {
-				$new_game_obj = get_object_vars(json_decode($new_game_def));
-				
-				$min_starting_block = min($initial_game_obj['game_starting_block'], $new_game_obj['game_starting_block']);
-				
-				$verbatim_vars = $this->game_definition_verbatim_vars();
-				$reset_block = false;
-				$reset_event_index = false;
-				
-				$sports_entity_type = $this->check_set_entity_type("sports");
-				$leagues_entity_type = $this->check_set_entity_type("leagues");
-				$general_entity_type = $this->check_set_entity_type("general entity");
-				
-				// Check if any base params are different. If so, reset from game starting block
-				for ($i=0; $i<count($verbatim_vars); $i++) {
-					$var = $verbatim_vars[$i];
-					if ($var[2] == true) {
-						if ((string)$initial_game_obj[$var[1]] != (string)$new_game_obj[$var[1]]) {
-							$reset_block = $min_starting_block;
-							
-							$this->run_query("UPDATE games SET ".$var[1]."=:".$var[1]." WHERE game_id=:game_id;", [
-								$var[1] => $new_game_obj[$var[1]],
-								'game_id' => $game->db_game['game_id']
-							]);
-						}
-					}
-				}
-				
-				$this->run_query("DELETE FROM game_escrow_amounts WHERE game_id=:game_id;", ['game_id'=>$game->db_game['game_id']]);
-				
-				if (!empty($new_game_obj['escrow_amounts'])) {
-					foreach ($new_game_obj['escrow_amounts'] as $currency_identifier => $amount) {
-						$escrow_currency = $this->run_query("SELECT * FROM currencies WHERE short_name_plural=:currency_identifier;", [
-							'currency_identifier' => $currency_identifier
-						])->fetch();
-						
-						if ($escrow_currency) {
-							$this->run_query("INSERT INTO game_escrow_amounts SET game_id=:game_id, currency_id=:currency_id, amount=:amount;", [
-								'game_id' => $game->db_game['game_id'],
-								'currency_id' => $escrow_currency['currency_id'],
-								'amount' => $amount
-							]);
-						}
-					}
-				}
-				
-				$event_verbatim_vars = $this->event_verbatim_vars();
-				
-				$event_array_pos_to_index_offset = $new_game_obj['events'][0]->event_index;
-				
-				$num_initial_events = 0;
-				if (!empty($initial_game_obj['events'])) $num_initial_events = count($initial_game_obj['events']);
-				$num_new_events = 0;
-				if (!empty($new_game_obj['events'])) $num_new_events = count($new_game_obj['events']);
-				
-				$matched_events = min($num_initial_events, $num_new_events);
-				
-				for ($i=0; $i<$matched_events; $i++) {
-					$initial_event_text = $this->game_def_to_text($initial_game_obj['events'][$i]);
-					
-					if ($this->game_def_to_text($new_game_obj['events'][$i]) != $initial_event_text) {
-						$reset_block = $this->min_excluding_false(array($reset_block, $initial_game_obj['events'][$i]->event_starting_block, $new_game_obj['events'][$i]->event_starting_block));
-						
-						if ($reset_event_index === false) $reset_event_index = $new_game_obj['events'][$i]->event_index;
-					}
-				}
-				
-				for ($i=$matched_events; $i<count($new_game_obj['events']); $i++) {
-					$reset_block = $this->min_excluding_false(array($reset_block, $new_game_obj['events'][$i]->event_starting_block));
-				}
-				
-				$set_events_from_index = $this->min_excluding_false(array($reset_event_index, $matched_events+1));
-				
-				if ($set_events_from_index !== false) {
-					$log_message .= "Resetting events from #".$set_events_from_index."\n";
-					$game->reset_events_from_index($set_events_from_index);
-					
-					$set_events_from_pos = $set_events_from_index-$event_array_pos_to_index_offset;
-					
-					if (!is_numeric($reset_block)) $reset_block = $new_game_obj['events'][$set_events_from_pos]->event_starting_block;
-					
-					for ($event_pos=$set_events_from_pos; $event_pos<=count($new_game_obj['events']); $event_pos++) {
-						$event_index = $event_pos+$event_array_pos_to_index_offset;
-						
-						if (!empty($new_game_obj['events'][$event_pos])) {
-							$gde = get_object_vars($new_game_obj['events'][$event_pos]);
-							$this->check_set_gde($game, $gde, $event_verbatim_vars, $sports_entity_type['entity_type_id'], $leagues_entity_type['entity_type_id'], $general_entity_type['entity_type_id']);
-						}
-					}
-				}
-				
-				if (is_numeric($reset_block)) {
-					$log_message .= "Resetting blocks from #".$reset_block."\n";
-					$game->reset_blocks_from_block($reset_block);
-				}
-				else $log_message .= "Failed to determine a reset block.\n";
-				
-				$game->update_db_game();
-			}
-			else $log_message .= "No match for new game def: ".$new_game_def_hash."\n";
-		}
-		else $log_message .= "No match for initial game def: ".$initial_game_def_hash."\n";
-		
-		return $log_message;
 	}
 	
 	public function check_set_gde(&$game, &$gde, &$event_verbatim_vars, $sport_entity_type_id, $league_entity_type_id, $general_entity_type_id) {
@@ -2142,23 +1913,6 @@ class App {
 		}
 	}
 	
-	public function get_game_definition_by_hash($game_def_hash) {
-		$db_game_def = $this->run_query("SELECT * FROM game_definitions WHERE definition_hash=:definition_hash;", ['definition_hash'=>$game_def_hash])->fetch();
-		if ($db_game_def) return $db_game_def['definition'];
-		else return false;
-	}
-	
-	public function check_set_game_definition($game_def_hash, $game_def_str) {
-		$existing_def = $this->get_game_definition_by_hash($game_def_hash);
-		
-		if (!$existing_def) {
-			$this->run_query("INSERT INTO game_definitions SET definition_hash=:definition_hash, definition=:definition;", [
-				'definition_hash' => $game_def_hash,
-				'definition' => $game_def_str
-			]);
-		}
-	}
-	
 	public function check_module($module_name) {
 		return $this->run_query("SELECT * FROM modules WHERE module_name=:module_name;", ['module_name'=>$module_name])->fetch();
 	}
@@ -2209,192 +1963,6 @@ class App {
 			else $error_message = "Error: this blockchain already exists.";
 		}
 		else $error_message = "Invalid url_identifier";
-	}
-	
-	public function set_game_from_definition(&$game_definition, &$thisuser, &$error_message, &$db_game, $permission_override) {
-		$game = false;
-		$decode_error = false;
-		
-		if (is_object($game_definition)) $game_def = $game_definition;
-		else {
-			if ($game_def = json_decode($game_definition)) {}
-			else {
-				$decode_error = true;
-				$error_message .= "Error: the game definition you entered could not be imported. Please make sure to enter properly formatted JSON.\n";
-			}
-		}
-		
-		if (!$decode_error) {
-			$module_ok = true;
-			if (!empty($game_def->module)) {
-				if (!$this->check_module($game_def->module)) $module_ok = false;
-			}
-			
-			if ($module_ok) {
-				if (!empty($game_def->blockchain_identifier)) {
-					$new_private_blockchain = false;
-					
-					if ($game_def->blockchain_identifier == "private") {
-						$new_private_blockchain = true;
-						$chain_id = $this->random_string(6);
-						$decimal_places = 8;
-						$url_identifier = "private-chain-".$chain_id;
-						$chain_pow_reward = 25*pow(10,$decimal_places);
-						
-						$this->run_query("INSERT INTO blockchains SET online=1, p2p_mode='none', blockchain_name=:blockchain_name, url_identifier=:url_identifier, coin_name='chaincoin', coin_name_plural='chaincoins', seconds_per_block=30, decimal_places=:decimal_places, initial_pow_reward=:initial_pow_reward;", [
-							'blockchain_name' => "Private Chain ".$chain_id,
-							'url_identifier' => $url_identifier,
-							'decimal_places' => $decimal_places,
-							'initial_pow_reward' => $chain_pow_reward
-						]);
-						$blockchain_id = $this->last_insert_id();
-						
-						$new_blockchain = new Blockchain($this, $blockchain_id);
-						if ($thisuser) $new_blockchain->set_blockchain_creator($thisuser);
-						
-						$game_def->blockchain_identifier = $url_identifier;
-					}
-					
-					$db_blockchain = $this->fetch_blockchain_by_identifier($game_def->blockchain_identifier);
-					
-					if ($db_blockchain) {
-						$blockchain = new Blockchain($this, $db_blockchain['blockchain_id']);
-						
-						$game_def->url_identifier = $this->normalize_uri_part($game_def->url_identifier);
-						
-						if (!empty($game_def->url_identifier)) {
-							$verbatim_vars = $this->game_definition_verbatim_vars();
-							
-							$permission_to_change = false;
-							
-							$db_url_matched_game = $this->fetch_game_by_identifier($game_def->url_identifier);
-							
-							if ($db_url_matched_game) {
-								if ($db_url_matched_game['blockchain_id'] == $blockchain->db_blockchain['blockchain_id']) {
-									$url_matched_game = new Game($blockchain, $db_url_matched_game['game_id']);
-									
-									if ($permission_override) $permission_to_change = true;
-									else {
-										if ($thisuser) {
-											$permission_to_change = $this->user_can_edit_game($thisuser, $url_matched_game);
-											
-											if (!$permission_to_change) $error_message .= "Error: you can't edit this game.\n";
-										}
-										else $error_message .= "Permission denied. You must be logged in.\n";
-									}
-									
-									if ($permission_to_change) $game = $url_matched_game;
-								}
-								else $error_message .= "Error: invalid game.blockchain_id.\n";
-							}
-							else $permission_to_change = true;
-							
-							if ($permission_to_change) {
-								if (!$game) {
-									$db_group = false;
-									if (!empty($game_def->option_group)) {
-										$db_group = $this->fetch_group_by_description($game_def->option_group);
-										
-										if (!$db_group) {
-											$import_error = "";
-											$this->import_group_from_file($game_def->option_group, $import_error);
-											
-											$db_group = $this->fetch_group_by_description($game_def->option_group);
-										}
-									}
-									
-									$new_game_params = [
-										'featured' => 1,
-										'game_status' => 'published'
-									];
-									if ($thisuser) $new_game_params['creator_id'] = $thisuser->db_user['user_id'];
-									if ($db_group) $new_game_params['option_group_id'] = $db_group['group_id'];
-									
-									for ($i=0; $i<count($verbatim_vars); $i++) {
-										$var_type = $verbatim_vars[$i][0];
-										$var_name = $verbatim_vars[$i][1];
-										
-										if ($game_def->$var_name != "") {
-											$new_game_params[$var_name] = $game_def->$var_name;
-										}
-									}
-									
-									$game = Game::create_game($blockchain, $new_game_params);
-									
-									if (!empty($game_def->module)) {
-										$this->run_query("UPDATE modules SET primary_game_id=:primary_game_id WHERE module_name=:module_name AND primary_game_id IS NULL;", [
-											'primary_game_id' => $game->db_game['game_id'],
-											'module_name' => $game_def->module
-										]);
-									}
-								}
-								
-								if (!empty($game_def->definitive_peer)) {
-									$definitive_game_peer = $game->get_game_peer_by_server_name($game_def->definitive_peer);
-									
-									if ($definitive_game_peer) {
-										$this->run_query("UPDATE games SET definitive_game_peer_id=:definitive_game_peer_id WHERE game_id=:game_id;", [
-											'definitive_game_peer_id' => $definitive_game_peer['game_peer_id'],
-											'game_id' => $game->db_game['game_id']
-										]);
-										$game->db_game['definitive_game_peer_id'] = $definitive_game_peer['game_peer_id'];
-									}
-								}
-								
-								$this->run_query("DELETE FROM game_defined_escrow_amounts WHERE game_id=:game_id;", ['game_id'=>$game->db_game['game_id']]);
-								
-								if (!empty($game_def->escrow_amounts)) {
-									foreach ($game_def->escrow_amounts as $currency_identifier => $amount) {
-										$escrow_currency = $this->run_query("SELECT * FROM currencies WHERE short_name_plural=:currency_identifier;", [
-											'currency_identifier'=>$currency_identifier
-										])->fetch();
-										
-										if ($escrow_currency) {
-											$this->run_query("INSERT INTO game_defined_escrow_amounts SET game_id=:game_id, currency_id=:currency_id, amount=:amount;", [
-												'game_id' => $game->db_game['game_id'],
-												'currency_id' => $escrow_currency['currency_id'],
-												'amount' => $amount
-											]);
-										}
-									}
-								}
-								
-								$show_internal_params = false;
-								$from_game_def = $this->fetch_game_definition($game, "defined", $show_internal_params);
-								$from_game_def_str = $this->game_def_to_text($from_game_def);
-								$from_game_def_hash = $this->game_def_to_hash($from_game_def_str);
-								$this->check_set_game_definition($from_game_def_hash, $from_game_def_str);
-								
-								$to_game_def_str = $this->game_def_to_text($game_def);
-								$to_game_def_hash = $this->game_def_to_hash($to_game_def_str);
-								$this->check_set_game_definition($to_game_def_hash, $to_game_def_str);
-								
-								if ($from_game_def_hash != $to_game_def_hash) {
-									$error_message .= $this->migrate_game_definitions($game, $from_game_def_hash, $to_game_def_hash);
-								}
-								else $error_message .= "Found no changes to apply.\n";
-								
-								$game->update_db_game();
-								$db_game = $game->db_game;
-							}
-						}
-						else $error_message .= "Error, invalid game URL identifier.\n";
-					}
-					else {
-						if ($new_private_blockchain) {
-							$this->run_query("DELETE FROM blockchains WHERE blockchain_id=:blockchain_id;", [
-								'blockchain_id'=>$new_blockchain->db_blockchain['blockchain_id']
-							]);
-						}
-						$error_message .= "Error, failed to identify the right blockchain.\n";
-					}
-				}
-				else $error_message .= "Error, blockchain url identifier was empty.\n";
-			}
-			else $error_message .= "Error, invalid module.\n";
-		}
-		
-		return $game;
 	}
 	
 	public function check_set_option_group($description, $singular_form, $plural_form) {

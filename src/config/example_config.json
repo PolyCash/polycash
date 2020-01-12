@@ -31,5 +31,6 @@
 	"api_proxy_url": "",
 	"cachebuster": 1001,
 	"disable_address_generation": false,
-	"restrict_ip_address": false
+	"restrict_ip_address": false,
+	"memory_limit": "1024M"
 }

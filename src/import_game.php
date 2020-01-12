@@ -38,7 +38,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							$definition = $_REQUEST['definition'];
 							
 							if ($import_mode == "game") {
-								$app->set_game_from_definition($definition, $thisuser, $error_message, $db_new_game, false);
+								GameDefinition::set_game_from_definition($app, $definition, $thisuser, $error_message, $db_new_game, false);
 								
 								if (!empty($error_message)) echo "<p>".$error_message."</p>\n";
 								

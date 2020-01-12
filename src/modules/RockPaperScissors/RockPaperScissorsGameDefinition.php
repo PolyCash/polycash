@@ -17,6 +17,7 @@ class RockPaperScissorsGameDefinition {
 			"category_id": null,
 			"decimal_places": 4,
 			"finite_events": false,
+			"save_every_definition": false,
 			"max_simultaneous_options": 100,
 			"event_type_name": "match",
 			"event_type_name_plural": "matches",

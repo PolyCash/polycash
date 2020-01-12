@@ -17,6 +17,7 @@ class eSportsGameDefinition {
 			"category_id": null,
 			"decimal_places": 4,
 			"finite_events": true,
+			"save_every_definition": true,
 			"event_type_name": "match",
 			"event_type_name_plural": "matches",
 			"event_rule": "game_definition",
