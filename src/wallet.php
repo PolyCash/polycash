@@ -96,7 +96,14 @@ if (empty($thisuser) && !empty($_REQUEST['login_key'])) {
 	}
 }
 
-$game = false;
+$uri_parts = explode("/", $uri);
+$url_identifier = $uri_parts[2];
+
+$requested_game = $app->fetch_game_by_identifier($url_identifier);
+if ($requested_game) {
+	$blockchain = new Blockchain($app, $requested_game['blockchain_id']);
+	$game = new Game($blockchain, $requested_game['game_id']);
+}
 
 if ($thisuser) {
 	if (!empty($_REQUEST['invite_key'])) {
@@ -109,15 +116,7 @@ if ($thisuser) {
 		}
 	}
 	
-	$uri_parts = explode("/", $uri);
-	$url_identifier = $uri_parts[2];
-	
-	$requested_game = $app->fetch_game_by_identifier($url_identifier);
-	
 	if ($requested_game && (in_array($requested_game['game_status'], ['published','running','completed']) || $requested_game['creator_id'] == $thisuser->db_user['user_id'])) {
-		$blockchain = new Blockchain($app, $requested_game['blockchain_id']);
-		$game = new Game($blockchain, $requested_game['game_id']);
-		
 		if ($_REQUEST['action'] == "change_user_game") {
 			$app->change_user_game($thisuser, $game, $_REQUEST['user_game_id']);
 			
@@ -489,7 +488,7 @@ if ($thisuser && $game) {
 	$blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_block_id);
 }
 ?>
-<div class="container-fluid">
+<div class="container-fluid" style="padding-top: 15px;">
 	<?php
 	if ($message != "") {
 		echo '<font style="display: block; margin: 10px 0px;" class="';
@@ -615,7 +614,12 @@ if ($thisuser && $game) {
 		
 		//]]>
 		</script>
-		
+		<?php
+		$top_nav_show_search = true;
+		$explorer_type = "games";
+		$explore_mode = "wallet";
+		include('includes/explorer_top_nav.php');
+		?>
 		<div class="panel panel-default" style="margin-top: 15px;">
 			<div class="panel-heading">
 				<div class="panel-title">
@@ -1289,6 +1293,11 @@ if ($thisuser && $game) {
 			$uri = str_replace("?action=logout", "", $_SERVER['REQUEST_URI']);
 			$redirect_url = $app->get_redirect_url($uri);
 		}
+		
+		$top_nav_show_search = true;
+		$explorer_type = "games";
+		$explore_mode = "wallet";
+		include('includes/explorer_top_nav.php');
 		include(AppSettings::srcPath()."/includes/html_login.php");
 	}
 	?>

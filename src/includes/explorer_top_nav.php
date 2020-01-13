@@ -8,9 +8,8 @@ else echo $game->blockchain->db_blockchain['blockchain_id'];
 	<div class="col-sm-7 ">
 		<ul class="list-inline explorer_nav" id="explorer_nav">
 			<?php if ($game) { ?>
+			<li><a <?php if ($explore_mode == 'wallet') echo 'class="selected" '; ?>href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">Wallet</a></li>
 			<li><a <?php if ($explore_mode == 'my_bets') echo 'class="selected" '; ?>href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">My Bets</a></li>
-			<?php } ?>
-			<?php if ($game) { ?>
 			<li><a <?php if ($explore_mode == 'about') echo 'class="selected" '; ?>href="/<?php echo $game->db_game['url_identifier']; ?>/">About</a></li>
 			<?php } ?>
 			<li><a <?php if ($explore_mode == 'blocks') echo 'class="selected" '; ?>href="/explorer/<?php echo $explorer_type; ?>/<?php

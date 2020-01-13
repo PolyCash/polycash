@@ -345,6 +345,12 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					<?php
 				}
 			}
+			
+			if ($explore_mode == "my_bets" && empty($thisuser)) {
+				include(AppSettings::srcPath()."/includes/html_login.php");
+				include(AppSettings::srcPath()."/includes/html_stop.php");
+				die();
+			}
 			?>
 			<div class="panel panel-default" style="margin-top: 15px;">
 				<?php
@@ -1337,8 +1343,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					}
 					else $user_game = false;
 					
-					if (empty($thisuser)) echo "<br/>\n<p>&nbsp;&nbsp;&nbsp;You must be logged in to view this page. <a href=\"/wallet/".$game->db_game['url_identifier']."/\">Log in</a></p>\n";
-					else if (!$user_game) echo "<br/>\n<p>&nbsp;&nbsp;&nbsp;Invalid user game selected.</p>\n";
+					if (!$user_game) echo "<br/>\n<p>&nbsp;&nbsp;&nbsp;Invalid user game selected.</p>\n";
 					else {
 						$net_delta = 0;
 						$net_stake = 0;
