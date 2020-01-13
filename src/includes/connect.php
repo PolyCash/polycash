@@ -18,7 +18,9 @@ if (AppSettings::runningFromCommandline()) {
 
 if (!empty(AppSettings::getParam('memory_limit'))) ini_set('memory_limit', AppSettings::getParam('memory_limit'));
 
-if (empty(AppSettings::getParam('coin_brand_name'))) die("Please set the 'coin_brand_name' parameter in your config/config.json");
+if ((string) AppSettings::getParam('options_begin_at_index') == "") die('Please add this line to your src/config/config.json: "options_begin_at_index": 10');
+
+if (empty(AppSettings::getParam('coin_brand_name'))) die("Please set the 'coin_brand_name' parameter in your src/config/config.json");
 
 if (!empty($allow_no_https)) {}
 else if (AppSettings::getParam('base_url') && !AppSettings::runningFromCommandline()) {
