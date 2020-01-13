@@ -28,48 +28,52 @@ if ($game->db_game['invite_currency'] > 0) {
 }
 else $exchange_rate = 0;
 ?>
-<div class="container-fluid">
-	<div class="paragraph">
-		<h1 style="margin-bottom: 2px;"><?php echo $game->db_game['name']; ?></h1>
-		<div class="row">
-			<div class="col-md-6">
-				<p>
-					<?php
-					if ($game->db_game['short_description'] != "") {
-						echo str_replace("<br/>", " ", $game->db_game['short_description'])." ";
-					}
-					
-					if ($game->db_game['game_status'] == "running") {
-						echo "This game started ".date("M j, Y g:ia", strtotime($game->db_game['start_datetime'])).". ";
-					}
-					else if (strtotime($game->db_game['start_datetime']) > 0) {
-						echo "This game starts in ".$app->format_seconds(strtotime($game->db_game['start_datetime'])-time())." on ".date("M d Y", strtotime($game->db_game['start_datetime'])).". ";
-					}
-					?>
-				</p>
-				<p>
-					<a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; 
-					<?php
-					$ref_user_game = false;
-					$faucet_io = $game->check_faucet($ref_user_game);
-					
-					if ($faucet_io) echo 'Join now & receive '.$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'];
-					else echo 'Play Now';
-					?>
-					</a>
-					<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/" class="btn btn-sm btn-primary"><i class="fas fa-database"></i> &nbsp; Blockchain Explorer</a>
-					<?php if ($app->user_can_edit_game($thisuser, $game)) { ?>
-					<a class="btn btn-sm btn-warning" href="/manage/<?php echo $game->db_game['url_identifier']; ?>/"><i class="fa fa-edit"></i> Manage this Game</a>
-					<?php } ?>
-				</p>
-			</div>
-			<div class="col-md-6">
-				<div style="border: 1px solid #ccc; padding: 10px; background-color: #fff;">
-					<?php
-					$game->db_game['seconds_per_block'] = $game->blockchain->db_blockchain['seconds_per_block'];
-					echo $app->game_info_table($game->db_game);
-					?>
-				</div>
+<div class="container-fluid" style="padding-top: 15px;">
+	<?php
+	$top_nav_show_search = true;
+	$explorer_type = "games";
+	$explore_mode = "about";
+	include('includes/explorer_top_nav.php');
+	?>
+	<h2 style="margin-top: 0px;"><?php echo $game->db_game['name']; ?></h2>
+	<div class="row">
+		<div class="col-md-6">
+			<p>
+				<?php
+				if ($game->db_game['short_description'] != "") {
+					echo str_replace("<br/>", " ", $game->db_game['short_description'])." ";
+				}
+				
+				if ($game->db_game['game_status'] == "running") {
+					echo "This game started ".date("M j, Y g:ia", strtotime($game->db_game['start_datetime'])).". ";
+				}
+				else if (strtotime($game->db_game['start_datetime']) > 0) {
+					echo "This game starts in ".$app->format_seconds(strtotime($game->db_game['start_datetime'])-time())." on ".date("M d Y", strtotime($game->db_game['start_datetime'])).". ";
+				}
+				?>
+			</p>
+			<p>
+				<a href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; 
+				<?php
+				$ref_user_game = false;
+				$faucet_io = $game->check_faucet($ref_user_game);
+				
+				if ($faucet_io) echo 'Join now & receive '.$app->format_bignum($faucet_io['colored_amount_sum']/pow(10,$game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'];
+				else echo 'Play Now';
+				?>
+				</a>
+				<a href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/events/" class="btn btn-sm btn-primary"><i class="fas fa-database"></i> &nbsp; Blockchain Explorer</a>
+				<?php if ($app->user_can_edit_game($thisuser, $game)) { ?>
+				<a class="btn btn-sm btn-warning" href="/manage/<?php echo $game->db_game['url_identifier']; ?>/"><i class="fa fa-edit"></i> Manage this Game</a>
+				<?php } ?>
+			</p>
+		</div>
+		<div class="col-md-6">
+			<div style="border: 1px solid #ccc; padding: 10px; background-color: #fff;">
+				<?php
+				$game->db_game['seconds_per_block'] = $game->blockchain->db_blockchain['seconds_per_block'];
+				echo $app->game_info_table($game->db_game);
+				?>
 			</div>
 		</div>
 	</div>

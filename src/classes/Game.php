@@ -1985,6 +1985,12 @@ class Game {
 		return count($points_to_index);
 	}
 	
+	public function latest_event() {
+		return $this->blockchain->app->run_query("SELECT * FROM events WHERE game_id=:game_id ORDER BY event_index DESC LIMIT 1;", [
+			'game_id' => $this->db_game['game_id']
+		])->fetch();
+	}
+	
 	public function ensure_events_until_block($block_id) {
 		$msg = "";
 		$ensured_block = max((int)$this->db_game['events_until_block'], $this->db_game['game_starting_block']);
@@ -1999,9 +2005,7 @@ class Game {
 			$add_count = 0;
 			$from_event_index = false;
 			
-			$prev_event = $this->blockchain->app->run_query("SELECT * FROM events WHERE game_id=:game_id ORDER BY event_index DESC LIMIT 1;", [
-				'game_id' => $this->db_game['game_id']
-			])->fetch();
+			$prev_event = $this->latest_event();
 			
 			if ($prev_event) {
 				$prev_option = $this->blockchain->app->run_query("SELECT * FROM options WHERE event_id=:event_id ORDER BY option_index DESC LIMIT 1;", [

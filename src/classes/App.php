@@ -1233,7 +1233,7 @@ class App {
 			$blockchain = new Blockchain($this, $db_game['blockchain_id']);
 			$game = new Game($blockchain, $db_game['game_id']);
 			
-			if (!empty($game->db_game['cached_definition_hash'])) {
+			if (!empty($game->db_game['cached_definition_hash']) && $game->db_game['cached_definition_time'] > time()-300) {
 				$display_def_hash = GameDefinition::shorten_game_def_hash($game->db_game['cached_definition_hash']);
 			}
 			else {
@@ -1384,6 +1384,9 @@ class App {
 				}
 				$html .= "</div></div>\n";
 			}
+			
+			$latest_event = $game->latest_event();
+			$html .= '<div class="row"><div class="col-sm-5">Events:</div><div class="col-sm-7">'.number_format($latest_event['event_index'])."</div></div>\n";
 		}
 		
 		$html .= "</div>\n";
