@@ -110,11 +110,14 @@ class CryptoDuelsGameDefinition {
 				
 				$possible_outcomes = [array("title" => $this->currencies[$first_currency_i]['entity_name'], "entity_id" => $this->currencies[$first_currency_i]['entity_id']), array("title" => $this->currencies[$second_currency_i]['entity_name'], "entity_id" => $this->currencies[$second_currency_i]['entity_id'])];
 				
+				$payout_block = $game->db_game['game_starting_block'] + ($event_i+5)*$game->db_game['round_length'] - 1;
+				
 				$event = array(
 					"event_index" => $event_i+1,
 					"event_starting_block" => $game->db_game['game_starting_block'] + $event_i*$game->db_game['round_length'],
 					"event_final_block" => $game->db_game['game_starting_block'] + ($event_i+5)*$game->db_game['round_length'] - 1,
-					"event_payout_block" => $game->db_game['game_starting_block'] + ($event_i+5)*$game->db_game['round_length'] - 1,
+					"event_outcome_block" => $payout_block,
+					"event_payout_block" => $payout_block,
 					"event_name" => "Duel #".($event_i+1).": ".$this->currencies[$first_currency_i]['entity_name']." vs ".$this->currencies[$second_currency_i]['entity_name'],
 					"option_name" => "outcome",
 					"option_name_plural" => "outcomes",

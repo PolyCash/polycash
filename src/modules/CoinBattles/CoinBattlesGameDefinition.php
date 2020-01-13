@@ -113,11 +113,14 @@ class CoinBattlesGameDefinition {
 					array_push($possible_outcomes, array("title" => $currency_name, "entity_id" => $entity['entity_id']));
 				}
 				
+				$payout_block = $game->db_game['game_starting_block']+($event_i+1)*$game->db_game['round_length']-1;
+				
 				$event = array(
 					"event_index" => $event_i,
 					"event_starting_block" => $game->db_game['game_starting_block']+$event_i*$game->db_game['round_length'],
 					"event_final_block" => $game->db_game['game_starting_block']+($event_i+1)*$game->db_game['round_length']-1,
-					"event_payout_block" => $game->db_game['game_starting_block']+($event_i+1)*$game->db_game['round_length']-1,
+					"event_outcome_block" => $payout_block,
+					"event_payout_block" => $payout_block,
 					"event_name" => "Coin Battle #".($event_i+1),
 					"option_name" => "outcome",
 					"option_name_plural" => "outcomes",

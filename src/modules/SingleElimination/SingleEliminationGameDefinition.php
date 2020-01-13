@@ -136,12 +136,15 @@ class SingleEliminationGameDefinition {
 				$possible_outcomes = [];
 				$event_name = $this->generate_event_labels($possible_outcomes, $round, $this_round, $thisround_event_i, $general_entity_type['entity_type_id'], $event_index, $game);
 				
+				$payout_block = $game->db_game['game_starting_block']+$round*$game->db_game['round_length']-1;
+				
 				$event = array(
 					"event_index" => $event_index,
 					"next_event_index" => $this->event_index_to_next_event_index($event_index),
 					"event_starting_block" => $game->db_game['game_starting_block']+($round-1)*$game->db_game['round_length'],
 					"event_final_block" => $game->db_game['game_starting_block']+$round*$game->db_game['round_length']-1,
-					"event_payout_block" => $game->db_game['game_starting_block']+$round*$game->db_game['round_length']-1,
+					"event_outcome_block" => $payout_block,
+					"event_payout_block" => $payout_block,
 					"option_block_rule" => "football_match",
 					"event_name" => $event_name,
 					"option_name" => "outcome",

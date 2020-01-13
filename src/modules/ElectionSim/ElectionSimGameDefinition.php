@@ -85,6 +85,7 @@ class ElectionSimGameDefinition {
 					"next_event_index" => $this->event_index_to_next_event_index($event_index),
 					"event_starting_block" => $chain_starting_block+($round-1)*$round_length,
 					"event_final_block" => $chain_starting_block+$round*$round_length-1,
+					"event_outcome_block" => $chain_starting_block+$round*$round_length-1,
 					"event_payout_block" => $chain_starting_block+$round*$round_length-1,
 					"option_block_rule" => "football_match",
 					"event_name" => $event_name,

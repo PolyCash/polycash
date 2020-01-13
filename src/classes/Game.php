@@ -2053,6 +2053,7 @@ class Game {
 					
 					$i = 0;
 					for ($event_index=$init_event_index; $event_index<$init_event_index+count($gdes_to_add); $event_index++) {
+						if ((string)$gdes_to_add[$i]['event_outcome_block'] == "") $gdes_to_add[$i]['event_outcome_block'] = $gdes_to_add[$i]['event_payout_block'];
 						$this->blockchain->app->check_set_gde($this, $gdes_to_add[$i], $event_verbatim_vars, $sports_entity_type['entity_type_id'], $leagues_entity_type['entity_type_id'], $general_entity_type['entity_type_id']);
 						$i++;
 					}

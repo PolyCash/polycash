@@ -180,6 +180,7 @@ class VirtualStockMarketGameDefinition {
 					"event_index" => $event_i,
 					"event_starting_block" => $event_starting_block,
 					"event_final_block" => $event_final_block,
+					"event_outcome_block" => $event_payout_block,
 					"event_payout_block" => $event_payout_block,
 					"event_name" => $event_name,
 					"option_name" => "position",

@@ -192,7 +192,7 @@ class GameDefinition {
 		$final_hash = self::game_def_to_hash($final_game_def_str);
 		
 		self::check_set_game_definition($game->blockchain->app, $initial_hash, $initial_game_def);
-		self::check_set_game_definition($game->blockchain->app, $final_hash, $initial_game_def);
+		self::check_set_game_definition($game->blockchain->app, $final_hash, $final_game_def);
 		
 		$new_migration_q = "INSERT INTO game_definition_migrations SET game_id=:game_id, user_id=:user_id, migration_time=:migration_time, migration_type=:migration_type, internal_params=:internal_params, from_hash=:from_hash, to_hash=:to_hash;";
 		$new_migration_params = [
