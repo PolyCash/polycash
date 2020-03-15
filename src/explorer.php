@@ -1537,7 +1537,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					}
 					else {
 						$blockchain_def = $app->fetch_blockchain_definition($blockchain);
-						$blockchain_def_str = json_decode(json_encode($blockchain_def));
+						$blockchain_def_str = json_encode($blockchain_def, JSON_PRETTY_PRINT);
 						$blockchain_def_hash = AppSettings::standardHash($blockchain_def_str);
 						?>
 						<div class="panel panel-info">
