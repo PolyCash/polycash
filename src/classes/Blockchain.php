@@ -810,7 +810,7 @@ class Blockchain {
 					$game_out_index = 0;
 					$next_separator_i = 0;
 					
-					$insert_q = "INSERT INTO transaction_game_ios (game_id, is_coinbase, io_id, address_id, game_out_index, ref_block_id, ref_coin_blocks, ref_round_id, ref_coin_rounds, option_id, contract_parts, event_id, effectiveness_factor, effective_destroy_amount, is_resolved, resolved_before_spent) VALUES ";
+					$insert_q = "INSERT INTO transaction_game_ios (game_id, is_coinbase, io_id, address_id, game_out_index, ref_block_id, ref_coin_blocks, ref_round_id, ref_coin_rounds, colored_amount, destroy_amount, option_id, contract_parts, event_id, effectiveness_factor, effective_destroy_amount, is_resolved, resolved_before_spent) VALUES ";
 					$num_gios_added = 0;
 					
 					for ($out_index=0; $out_index<count($outputs); $out_index++) {

@@ -184,7 +184,7 @@ if ($uri_parts[1] == "api") {
 			$block_params = [
 				'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
 			];
-			$block_q = "SELECT block_id, block_hash, num_transactions, time_mined, json_transactions FROM blocks WHERE block_id<=".$blockchain->db_blockchain['last_complete_block']." AND blockchain_id=:blockchain_id";
+			$block_q = "SELECT block_id, block_hash, num_transactions, time_mined, json_transactions FROM blocks WHERE block_id<=".(int)$blockchain->db_blockchain['last_complete_block']." AND blockchain_id=:blockchain_id";
 			if ($uri_parts[2] == "block") {
 				$block_q .= " AND block_id=:block_id";
 				$block_params['block_id'] = $block_height;
