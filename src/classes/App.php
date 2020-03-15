@@ -1920,7 +1920,7 @@ class App {
 		return $this->run_query("SELECT * FROM modules WHERE module_name=:module_name;", ['module_name'=>$module_name])->fetch();
 	}
 	
-	public function create_blockchain_from_definition(&$definition, &$thisuser, &$error_message, &$db_new_blockchain) {
+	public function create_blockchain_from_definition(&$definition, &$thisuser, &$error_message) {
 		$blockchain = false;
 		$blockchain_def = json_decode($definition) or die("Error: invalid JSON formatted blockchain");
 		
@@ -1928,8 +1928,8 @@ class App {
 			$db_blockchain = $this->fetch_blockchain_by_identifier($blockchain_def->url_identifier);
 			
 			if (!$db_blockchain) {
-				$p2p_mode = "web_api";
-				if ($blockchain_def->p2p_mode == "rpc") $p2p_mode = "rpc";
+				if (empty($blockchain_def->p2p_mode) || !in_array($blockchain_def->p2p_mode, ['rpc', 'none', 'web_api'])) $p2p_mode = "web_api";
+				else $p2p_mode = $blockchain_def->p2p_mode;
 				
 				$import_params = [
 					'p2p_mode' => $p2p_mode,
@@ -1962,10 +1962,14 @@ class App {
 				$blockchain_id = $this->last_insert_id();
 				
 				$error_message = "Import was a success! Next please <a href=\"/scripts/sync_blockchain_initial.php?key=".AppSettings::getParam('operator_key')."&blockchain_id=".$blockchain_id."\">reset and synchronize ".$blockchain_def->blockchain_name."</a>";
+				
+				return $blockchain_id;
 			}
-			else $error_message = "Error: this blockchain already exists.";
+			else $error_message = "There's already a blockchain using that URL identifier.";
 		}
-		else $error_message = "Invalid url_identifier";
+		else $error_message = "You supplied an invalid URL identifier";
+		
+		return false;
 	}
 	
 	public function check_set_option_group($description, $singular_form, $plural_form) {

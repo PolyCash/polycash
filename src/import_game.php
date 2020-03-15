@@ -51,7 +51,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								}
 							}
 							else {
-								$app->create_blockchain_from_definition($definition, $thisuser, $error_message, $db_new_blockchain);
+								$new_blockchain_id = $app->create_blockchain_from_definition($definition, $thisuser, $error_message);
 								$app->blockchain_ensure_currencies();
 								
 								if (!empty($error_message)) echo "<p>".$error_message."</p>\n";

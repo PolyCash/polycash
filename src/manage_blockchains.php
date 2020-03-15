@@ -23,31 +23,67 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 	}
 	else {
 		if (!empty($_REQUEST['action']) && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
-			$blockchain_id = (int) $_REQUEST['blockchain_id'];
-			$existing_blockchain = $app->fetch_blockchain_by_id($blockchain_id);
-			
-			if ($existing_blockchain) {
-				if ($_REQUEST['action'] == "save_blockchain_params") {
-					$app->run_query("UPDATE blockchains SET rpc_host=:rpc_host, rpc_username=:rpc_username, rpc_password=:rpc_password, rpc_port=:rpc_port, first_required_block=:first_required_block WHERE blockchain_id=:blockchain_id;", [
-						'rpc_host' => $_REQUEST['rpc_host'],
-						'rpc_username' => $_REQUEST['rpc_username'],
-						'rpc_password' => $_REQUEST['rpc_password'],
-						'rpc_port' => $_REQUEST['rpc_port'],
-						'first_required_block' => $_REQUEST['first_required_block'],
-						'blockchain_id' => $existing_blockchain['blockchain_id']
-					]);
+			if ($_REQUEST['action'] == "new_blockchain") {
+				$p2p_mode = $_REQUEST['p2p_mode'];
+				if (!in_array($p2p_mode, ['rpc', 'none', 'web'])) $p2p_mode = "none";
+				
+				$blockchain_name = $_REQUEST['blockchain_name'];
+				$url_identifier = $_REQUEST['url_identifier'];
+				$coin_name = $_REQUEST['coin_name'];
+				$coin_name_plural = $_REQUEST['coin_name_plural'];
+				
+				$seconds_per_block = (int) $_REQUEST['seconds_per_block'];
+				$decimal_places = (int) $_REQUEST['decimal_places'];
+				$first_required_block = (int) $_REQUEST['first_required_block'];
+				$initial_pow_reward = ((float) $_REQUEST['initial_pow_reward'])*pow(10, $decimal_places);
+				
+				$new_blockchain_def = json_encode([
+					'peer' => 'none',
+					'p2p_mode' => $p2p_mode,
+					'blockchain_name' => $blockchain_name,
+					'url_identifier' => $url_identifier,
+					'coin_name' => $coin_name,
+					'coin_name_plural' => $coin_name_plural,
+					'seconds_per_block' => $seconds_per_block,
+					'decimal_places' => $decimal_places,
+					'initial_pow_reward' => $initial_pow_reward
+				], JSON_PRETTY_PRINT);
+				
+				$new_blockchain_message = "";
+				$new_blockchain_id = $app->create_blockchain_from_definition($new_blockchain_def, $thisuser, $new_blockchain_message);
+				
+				if ($new_blockchain_id) {
+					echo "Great, your blockchain has been created!<br/>\n";
 				}
-				else if (in_array($_REQUEST['action'], ['enable','disable'])) {
-					$online = $_REQUEST['action'] == "enable" ? 1 : 0;
-					
-					$app->run_query("UPDATE blockchains SET online=:online WHERE blockchain_id=:blockchain_id;", [
-						'online' => $online,
-						'blockchain_id' => $existing_blockchain['blockchain_id']
-					]);
-				}
-				else die("Invalid action supplied.");
+				else echo $new_blockchain_message."<br/>\n";
 			}
-			else die("Error: invalid blockchain ID.");
+			else {
+				$blockchain_id = (int) $_REQUEST['blockchain_id'];
+				$existing_blockchain = $app->fetch_blockchain_by_id($blockchain_id);
+				
+				if ($existing_blockchain) {
+					if ($_REQUEST['action'] == "save_blockchain_params") {
+						$app->run_query("UPDATE blockchains SET rpc_host=:rpc_host, rpc_username=:rpc_username, rpc_password=:rpc_password, rpc_port=:rpc_port, first_required_block=:first_required_block WHERE blockchain_id=:blockchain_id;", [
+							'rpc_host' => $_REQUEST['rpc_host'],
+							'rpc_username' => $_REQUEST['rpc_username'],
+							'rpc_password' => $_REQUEST['rpc_password'],
+							'rpc_port' => $_REQUEST['rpc_port'],
+							'first_required_block' => $_REQUEST['first_required_block'],
+							'blockchain_id' => $existing_blockchain['blockchain_id']
+						]);
+					}
+					else if (in_array($_REQUEST['action'], ['enable','disable'])) {
+						$online = $_REQUEST['action'] == "enable" ? 1 : 0;
+						
+						$app->run_query("UPDATE blockchains SET online=:online WHERE blockchain_id=:blockchain_id;", [
+							'online' => $online,
+							'blockchain_id' => $existing_blockchain['blockchain_id']
+						]);
+					}
+					else die("Invalid action supplied.");
+				}
+				else die("Error: invalid blockchain ID.");
+			}
 		}
 		
 		$blockchain_r = $app->run_query("SELECT * FROM blockchains ORDER BY blockchain_id ASC;");
@@ -59,6 +95,8 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 				</div>
 			</div>
 			<div class="panel-body">
+				<button class="btn btn-success btn-sm" style="margin-bottom: 15px; float: right;" onclick="$('#new_blockchain_modal').modal('show');">+ New Blockchain</button>
+				
 				<p><?php echo $blockchain_r->rowCount(); ?> blockchains are installed.</p>
 				
 				<table style="width: 100%;" class="table table-bordered">
@@ -194,6 +232,77 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 						?>
 					</tbody>
 				</table>
+				
+				<div class="modal fade" id="new_blockchain_modal" style="display: none;">
+					<div class="modal-dialog">
+						<div class="modal-content">
+							<form method="post" action="/manage_blockchains/">
+								<div class="modal-header">
+									Create a new blockchain
+								</div>
+								<div class="modal-body">
+									<input type="hidden" name="action" value="new_blockchain" />
+									<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
+									
+									<div class="form-group">
+										<label for="new_p2p_mode">What P2P mode will this blockchain use?</label>
+										<select class="form-control" name="p2p_mode" id="new_p2p_mode" required="required">
+											<option value="">-- Please Select --</option>
+											<option value="rpc">Use a coin daemon and connect via RPC</option>
+											<option value="web">Read blocks from a trusted peer via web api</option>
+											<option value="none" selected="selected">Mine all my own blocks &amp; allow peers to read via web api</option>
+										</select>
+									</div>
+									
+									<div class="form-group">
+										<label for="new_blockchain_name">Please enter a name for this blockchain:</label>
+										<input class="form-control" name="blockchain_name" id="new_blockchain_name" placeholder="Bitcoin" required="required" />
+									</div>
+									
+									<div class="form-group">
+										<label for="new_url_identifier">Please enter a URL identifier to uniquely identify this blockchain:</label>
+										<input class="form-control" name="url_identifier" id="new_url_identifier" placeholder="bitcoin" required="required" />
+									</div>
+									
+									<div class="form-group">
+										<label for="new_coin_name">What is a single coin called on this blockchain?</label>
+										<input class="form-control" name="coin_name" id="new_coin_name" placeholder="bitcoin" required="required" />
+									</div>
+									
+									<div class="form-group">
+										<label for="new_coin_name_plural">What are multiple coins called on this blockchain?</label>
+										<input class="form-control" name="coin_name_plural" id="new_coin_name_plural" placeholder="bitcoins" required="required" />
+									</div>
+									
+									<div class="form-group">
+										<label for="new_seconds_per_block">How many seconds does it take to mine a block on average?</label>
+										<input class="form-control" name="seconds_per_block" id="new_seconds_per_block" placeholder="600" required="required" />
+									</div>
+									
+									<div class="form-group">
+										<label for="new_seconds_per_block">How many decimal places can a coin be divided into?</label>
+										<input class="form-control" name="decimal_places" id="new_decimal_places" placeholder="8" value="8" required="required" />
+									</div>
+									
+									<div class="form-group">
+										<label for="new_first_required_block">What block do you want to load this blockchain from?</label>
+										<input class="form-control" name="first_required_block" id="new_first_required_block" placeholder="1" value="1" required="required" />
+									</div>
+									
+									<div class="form-group">
+										<label for="new_initial_pow_reward">How many coins do miners receive per block? (initially)</label>
+										<input class="form-control" name="initial_pow_reward" id="new_initial_pow_reward" placeholder="50" required="required" />
+									</div>
+								</div>
+								<div class="modal-footer">
+									<button type="button" class="btn btn-warning btn-sm" data-dismiss="modal">Cancel</button>
+									 &nbsp;&nbsp; or &nbsp; 
+									<input type="submit" class="btn btn-success btn-sm" value="Create new blockchain" />
+								</div>
+							</form>
+						</div>
+					</div>
+				</div>
 			</div>
 		</div>
 		<script type="text/javascript">
