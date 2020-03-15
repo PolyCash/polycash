@@ -91,7 +91,7 @@ if ($app->running_as_admin()) {
 								
 								if ($db_blockchain) {
 									$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
-									$new_game_def_txt = $app->game_def_to_text($game_def->game_def);
+									$new_game_def_txt = GameDefinition::game_def_to_text($game_def->game_def);
 									
 									$error_message = "";
 									$db_game = false;
