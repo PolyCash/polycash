@@ -2736,7 +2736,7 @@ class Game {
 						$this->blockchain->app->run_query("DELETE gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.create_transaction_id=:transaction_id;", ['transaction_id'=>$db_transaction['transaction_id']]);
 						
 						if ($num_regular_outputs > 0) {
-							$insert_q = "INSERT INTO transaction_game_ios (game_id, io_id, address_id, game_out_index, game_io_index, is_coinbase, colored_amount, destroy_amount, coin_blocks_destroyed, coin_rounds_destroyed, create_block_id, create_round_id, option_id, contract_parts, event_id, effectiveness_factor, votes, effective_destroy_amount, is_resolved, resolved_before_spent) VALUES ";
+							$insert_q = "INSERT INTO transaction_game_ios (game_id, io_id, address_id, game_out_index, game_io_index, is_coinbase, coin_blocks_destroyed, coin_rounds_destroyed, create_block_id, create_round_id, colored_amount, destroy_amount, option_id, contract_parts, event_id, effectiveness_factor, votes, effective_destroy_amount, is_resolved, resolved_before_spent) VALUES ";
 							
 							while ($regular_output = $regular_outputs->fetch()) {
 								$payout_insert_q = "";
@@ -2751,7 +2751,7 @@ class Game {
 								$game_destroy_sum += $this_destroy_amount;
 								
 								$game_io_index++;
-								$insert_q .= "('".$this->db_game['game_id']."', '".$regular_output['io_id']."', '".$regular_output['address_id']."', '".$game_out_index."', '".$game_io_index."', 0, '".$gio_amount."', '".$this_destroy_amount."', '".$cbd."', '".$crd."', '".$block_height."', '".$round_id."', ";
+								$insert_q .= "('".$this->db_game['game_id']."', '".$regular_output['io_id']."', '".$regular_output['address_id']."', '".$game_out_index."', '".$game_io_index."', 0, '".$cbd."', '".$crd."', '".$block_height."', '".$round_id."', ";
 								$game_out_index++;
 								
 								if ($regular_output['option_index'] != "") {
@@ -2787,15 +2787,15 @@ class Game {
 										$this_is_resolved = $payout_is_resolved;
 										if ($using_separator) $this_is_resolved = 1;
 										
-										$insert_q .= "'".$option_id."', '".$this->db_game['default_contract_parts']."', '".$events_by_option_id[$option_id]->db_event['event_id']."', '".$effectiveness_factor."', '".$votes."', '".$effective_destroy_amount."', ".$this_is_resolved.", null";
+										$insert_q .= "'".$gio_amount."', '".$this_destroy_amount."', '".$option_id."', '".$this->db_game['default_contract_parts']."', '".$events_by_option_id[$option_id]->db_event['event_id']."', '".$effectiveness_factor."', '".$votes."', '".$effective_destroy_amount."', ".$this_is_resolved.", null";
 										
 										$game_io_index++;
-										$payout_insert_q = "('".$this->db_game['game_id']."', '".$payout_io_id."', '".$payout_address_id."', '".$game_out_index."', '".$game_io_index."', 1, 0, 0, 0, 0, '".$block_height."', '".$round_id."', '".$option_id."', '".$this->db_game['default_contract_parts']."', '".$events_by_option_id[$option_id]->db_event['event_id']."', null, 0, 0, ".$payout_is_resolved.", 1), ";
+										$payout_insert_q = "('".$this->db_game['game_id']."', '".$payout_io_id."', '".$payout_address_id."', '".$game_out_index."', '".$game_io_index."', 1, 0, 0, '".$block_height."', '".$round_id."', 0, 0, '".$option_id."', '".$this->db_game['default_contract_parts']."', '".$events_by_option_id[$option_id]->db_event['event_id']."', null, 0, 0, ".$payout_is_resolved.", 1), ";
 										$game_out_index++;
 									}
-									else $insert_q .= "null, null, null, null, null, 0, 1, null";
+									else $insert_q .= "'".($gio_amount+$this_destroy_amount)."', 0, null, null, null, null, null, 0, 1, null";
 								}
-								else $insert_q .= "null, null, null, null, null, 0, 1, null";
+								else $insert_q .= "'".$gio_amount."', '".$this_destroy_amount."', null, null, null, null, null, 0, 1, null";
 								
 								$insert_q .= "), ";
 								if ($payout_insert_q != "") $insert_q .= $payout_insert_q;
