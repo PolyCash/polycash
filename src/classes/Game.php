@@ -2581,7 +2581,13 @@ class Game {
 			
 			if ($check_game_block) {
 				// The game block already exists. There was an error in a previous load or multiple processes are loading games simultaneously
-				$log_text .= "Failed: game block already exists.\n";
+				if (empty(AppSettings::getParam('fix_game_blocks_disabled')) && $block_height > 1) {
+					$log_text .= "Game block already exists: resetting from ".($block_height-1)."\n";
+					$this->reset_blocks_from_block($block_height-1);
+					$this->blockchain->app->log_message("Reset ".$this->db_game['name']." due to error on block #".$block_height);
+				}
+				else $log_text .= "Failed: game block already exists.\n";
+				
 				$successful = false;
 				return array($successful, $log_text, $bulk_to_block);
 			}
