@@ -2971,6 +2971,7 @@ class Game {
 						$bulk_insert_q = substr($bulk_insert_q, 0, -2).";";
 						$this->blockchain->app->run_query($bulk_insert_q);
 					}
+					else $bulk_to_block = false;
 				}
 			}
 		}
