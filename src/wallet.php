@@ -1225,9 +1225,9 @@ if ($thisuser && $game) {
 							Set your planned votes by clicking on the options below.  You can vote on more than one option in each round. Keep clicking on an option to increase its votes.  Or right click to remove all votes from an option.  Your planned votes are confidential and cannot be seen by other players.
 						</p>
 						
-						<button id="scramble_plan_btn" class="btn btn-warning" onclick="thisPageManager.scramble_strategy(<?php echo $user_strategy['strategy_id']; ?>); return false;">Randomize my Votes</button>
+						<button id="scramble_plan_btn" class="btn btn-sm btn-warning" onclick="thisPageManager.scramble_strategy(<?php echo $user_strategy['strategy_id']; ?>); return false;">Randomize my Votes</button>
 						
-						<font style="margin-left: 25px;">Load rounds: </font><input type="text" size="5" id="select_from_round" value="<?php echo $game->round_to_display_round($plan_start_round); ?>" /> to <input type="text" size="5" id="select_to_round" value="<?php echo $game->round_to_display_round($plan_stop_round); ?>" /> <button class="btn btn-default btn-sm" onclick="thisPageManager.load_plan_rounds(); return false;">Go</button>
+						<font style="margin-left: 25px;">Load rounds: </font><input type="text" size="5" id="select_from_round" value="<?php echo $game->round_to_display_round($plan_start_round); ?>" /> to <input type="text" size="5" id="select_to_round" value="<?php echo $game->round_to_display_round($plan_stop_round); ?>" /> <button class="btn btn-primary btn-sm" onclick="thisPageManager.load_plan_rounds(); return false;">Go</button>
 						
 						<br/>
 						<div id="plan_rows" style="margin: 10px 0px; max-height: 350px; overflow-y: scroll; border: 1px solid #bbb; padding: 0px 10px;">
@@ -1236,13 +1236,15 @@ if ($thisuser && $game) {
 							?>
 						</div>
 						
-						<button id="save_plan_btn" class="btn btn-success" onclick="thisPageManager.save_plan_allocations(); return false;">Save Changes</button>
-						<button style="float: right;" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-						
 						<div id="plan_rows_js"></div>
 						
 						<input type="hidden" id="from_round" name="from_round" value="<?php echo $game->round_to_display_round($plan_start_round); ?>" />
 						<input type="hidden" id="to_round" name="to_round" value="<?php echo $game->round_to_display_round($plan_stop_round); ?>" />
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+						 &nbsp;&nbsp;or&nbsp;&nbsp; 
+						<button id="save_plan_btn" class="btn btn-success" onclick="thisPageManager.save_plan_allocations(); return false;">Save Changes</button>
 					</div>
 				</div>
 			</div>

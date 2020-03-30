@@ -1679,8 +1679,17 @@ var PageManager = function() {
 		$('#plan_option_input_'+round_id+'_'+event_id+'_'+option_id).val(this_option.points);
 	}
 	this.plan_option_clicked = function(round_id, event_id, option_id) {
-		var event_index = games[0].all_events_db_id_to_index[event_id];
-		var this_event = games[0].all_events[event_index];
+		var event_pos;
+		for (var event_i=0; event_i<games[0].events.length; event_i++) {
+			if (games[0].events[event_i].event_id == event_id) {
+				event_pos = event_i;
+				event_i = games[0].events.length;
+			}
+		}
+		var plan_option_increment = 1;
+		var plan_option_max_points = 5;
+		
+		var this_event = games[0].events[event_pos];
 		var option_index = this_event.option_id2option_index[option_id];
 		var new_points = (this_event.options[option_index].points+plan_option_increment)%(plan_option_max_points+1);
 		this_event.options[option_index].points = new_points;
@@ -2944,6 +2953,16 @@ var PageManager = function() {
 			window.location = '/groups/?group_id='+group_id+'&synchronizer_token='+this.synchronizer_token+'&action=fetch_images_from_peer&peer_url='+encodeURIComponent(peer_url);
 		}
 	}
+	this.toggle_bet_reminder_minutes = function() {
+		if ($('#every_event_bet_reminder').val() > 0) {
+			$('#bet_reminder_minutes').show('fast');
+			$('#every_event_bet_reminder_minutes').focus();
+		}
+		else {
+			$('#bet_reminder_minutes').hide('fast');
+			$('#every_event_bet_reminder_minutes').val(0);
+		}
+	};
 }
 
 var thisPageManager = new PageManager();

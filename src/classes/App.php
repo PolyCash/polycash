@@ -541,7 +541,6 @@ class App {
 		$keep_looping = true;
 		do {
 			$pow10 = pow(10, $decimal_places);
-				$temp .= (string)($number*$pow10)." vs ".(string)(round($number*$pow10))."<br/>\n";
 			if ((string)($number*$pow10) == (string)(round($number*$pow10))) {
 				$keep_looping = false;
 			}

@@ -348,11 +348,14 @@ else {
 					$public_players = (int)$_REQUEST['public_players'];
 					$faucet_policy = $_REQUEST['faucet_policy'];
 					$hide_module = (int)$_REQUEST['hide_module'];
+					$every_event_bet_reminder_minutes = (int) $_REQUEST['every_event_bet_reminder_minutes'];
+					
 					$definitive_game_peer_on = $_REQUEST['definitive_game_peer_on'];
 					if ($definitive_game_peer_on == 1) {
 						$definitive_game_peer_url = $_REQUEST['definitive_game_peer'];
 					}
 					else $definitive_game_peer_url = "";
+					
 					if ($faucet_policy != "on") $faucet_policy = "off";
 					
 					$definitive_game_peer_id = "NULL";
@@ -368,18 +371,21 @@ else {
 						}
 					}
 					
-					$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, faucet_policy=:faucet_policy, hide_module=:hide_module,  definitive_game_peer_id=:definitive_game_peer_id WHERE game_id=:game_id;", [
+					$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, faucet_policy=:faucet_policy, hide_module=:hide_module, definitive_game_peer_id=:definitive_game_peer_id, every_event_bet_reminder_minutes=:every_event_bet_reminder_minutes WHERE game_id=:game_id;", [
 						'featured' => $featured,
 						'public_players' => $public_players,
 						'faucet_policy' => $faucet_policy,
 						'hide_module' => $hide_module,
 						'definitive_game_peer_id' => $definitive_game_peer ? $definitive_game_peer['game_peer_id'] : null,
-						'game_id' => $game->db_game['game_id']
+						'game_id' => $game->db_game['game_id'],
+						'every_event_bet_reminder_minutes' => $every_event_bet_reminder_minutes
 					]);
+					
 					$game->db_game['featured'] = $featured;
 					$game->db_game['public_players'] = $public_players;
 					$game->db_game['faucet_policy'] = $faucet_policy;
 					$game->db_game['hide_module'] = $hide_module;
+					$game->db_game['every_event_bet_reminder_minutes'] = $every_event_bet_reminder_minutes;
 					
 					$messages .= "Game internal settings have been updated.<br/>\n";
 				}
@@ -741,6 +747,17 @@ else {
 												<option value="0">No</option>
 												<option value="1"<?php if ($game->db_game['public_players'] == 1) echo ' selected="selected"'; ?>>Yes</option>
 											</select>
+										</div>
+										<div class="form-group">
+											<label for="every_event_bet_reminder">Do you want to remind players to bet near the end of every event?</label>
+											<select class="form-control" name="every_event_bet_reminder" id="every_event_bet_reminder" onchange="thisPageManager.toggle_bet_reminder_minutes();">
+												<option value="0">No</option>
+												<option value="1"<?php if ($game->db_game['every_event_bet_reminder_minutes'] > 0) echo ' selected="selected"'; ?>>Yes</option>
+											</select>
+										</div>
+										<div class="form-group" id="bet_reminder_minutes"<?php if (empty($game->db_game['every_event_bet_reminder_minutes'])) echo ' style="display:none;"'; ?>>
+											<label for="every_event_bet_reminder_minutes">How many minutes before each event ends should the reminder be sent?</label>
+											<input class="form-control" name="every_event_bet_reminder_minutes" id="every_event_bet_reminder_minutes" value="<?php echo $game->db_game['every_event_bet_reminder_minutes']; ?>" />
 										</div>
 										
 										<input type="submit" class="btn btn-primary" value="Save Settings" />
