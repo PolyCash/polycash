@@ -46,7 +46,7 @@ class RockPaperScissorsGameDefinition {
 			"game_winning_rule": "none",
 			"game_winning_field": "",
 			"game_winning_inflation": 0,
-			"default_payout_rate": 1,
+			"default_payout_rate": 0.9975,
 			"default_vote_effectiveness_function": "constant",
 			"default_effectiveness_param1": 0,
 			"default_max_voting_fraction": 1,
@@ -65,20 +65,27 @@ class RockPaperScissorsGameDefinition {
 	public function events_starting_between_blocks(&$game, $from_block, $to_block) {
 		$events = [];
 		
-		$event_index = $from_block - $game->db_game['game_starting_block']+1;
+		$from_block_in_game = $from_block - $game->db_game['game_starting_block'];
+		$to_block_in_game = $to_block - $game->db_game['game_starting_block'];
+		$event_block_length = 2700;
+		$blocks_between_events = 900;
+		$from_event_index = floor($from_block_in_game/$blocks_between_events)+1;
+		$num_events = floor(($to_block_in_game - $from_block_in_game)/$blocks_between_events)+1;
 		
-		for ($block=$from_block; $block<=$to_block; $block++) {
+		for ($event_index=$from_event_index; $event_index<$from_event_index+$num_events; $event_index++) {
+			$event_starting_block = $game->db_game['game_starting_block']+($blocks_between_events*($event_index-1));
+			
 			$event = [
 				"event_index" => $event_index,
-				"event_starting_block" => $block,
-				"event_final_block" => $block+7,
-				"event_outcome_block" => $block+7,
-				"event_payout_block" => $block+8,
+				"event_starting_block" => $event_starting_block,
+				"event_final_block" => $event_starting_block+$event_block_length-1,
+				"event_outcome_block" => $event_starting_block+$event_block_length-1,
+				"event_payout_block" => $event_starting_block+$event_block_length,
 				"event_name" => "Match #".number_format($event_index),
 				"option_name" => "hand",
 				"option_name_plural" => "hands",
 				"payout_rule" => "binary",
-				"payout_rate" => 1,
+				"payout_rate" => 0.9975,
 				"outcome_index" => null,
 				"possible_outcomes" => [
 					[
