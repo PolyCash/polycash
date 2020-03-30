@@ -67,8 +67,8 @@ class RockPaperScissorsGameDefinition {
 		
 		$from_block_in_game = $from_block - $game->db_game['game_starting_block'];
 		$to_block_in_game = $to_block - $game->db_game['game_starting_block'];
-		$event_block_length = 2700;
-		$blocks_between_events = 900;
+		$event_block_length = 2400;
+		$blocks_between_events = 480;
 		$from_event_index = floor($from_block_in_game/$blocks_between_events)+1;
 		$num_events = floor(($to_block_in_game - $from_block_in_game)/$blocks_between_events)+1;
 		
@@ -99,8 +99,6 @@ class RockPaperScissorsGameDefinition {
 			];
 			
 			array_push($events, $event);
-			
-			$event_index++;
 		}
 		
 		return $events;
