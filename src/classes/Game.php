@@ -3662,18 +3662,82 @@ class Game {
 		}
 	}
 	
+	public function earliest_join_time($user_id, $game_id) {
+		$joined_at = $this->blockchain->app->run_query("SELECT MIN(created_at) FROM user_games WHERE user_id=:user_id AND game_id=:game_id;", [
+			'user_id' => $user_id,
+			'game_id' => $game_id
+		]);
+		
+		if ($joined_at->rowCount() > 0) {
+			return (int) $joined_at->fetch()['MIN(created_at)'];
+		}
+		else return false;
+	}
+	
+	public function most_recent_faucet_claim($user_id, $game_id) {
+		$claim_info = $this->blockchain->app->run_query("SELECT MAX(latest_claim_time) FROM user_games WHERE user_id=:user_id AND game_id=:game_id;", [
+			'user_id' => $user_id,
+			'game_id' => $game_id
+		]);
+		
+		if ($claim_info->rowCount() > 0) {
+			return (int) $claim_info->fetch()['MAX(latest_claim_time)'];
+		}
+		else return false;
+	}
+	
+	public function user_faucet_claims($user_id, $game_id) {
+		$user_faucet_claims = $this->blockchain->app->run_query("SELECT SUM(faucet_claims) FROM user_games WHERE user_id=:user_id AND game_id=:game_id;", [
+			'user_id' => $user_id,
+			'game_id' => $game_id
+		])->fetch();
+		
+		return (int) $user_faucet_claims['SUM(faucet_claims)'];
+	}
+	
+	public function user_faucet_info($user_id, $game_id) {
+		$earliest_join_time = $this->earliest_join_time($user_id, $game_id);
+		$most_recent_claim_time = $this->most_recent_faucet_claim($user_id, $game_id);
+		$user_faucet_claims = $this->user_faucet_claims($user_id, $game_id);
+		$eligible_for_faucet = false;
+		$time_available = false;
+		
+		$target_sec_per_claim = 3600*24;
+		$min_sec_between_claims = 3600*12;
+		
+		if ($earliest_join_time) {
+			$sec_since_joined = time() - $earliest_join_time;
+			
+			$allowed_claims = ceil($sec_since_joined/$target_sec_per_claim);
+			
+			if ($user_faucet_claims < $allowed_claims) {
+				if ($most_recent_claim_time <= time()-$min_sec_between_claims) {
+					$time_available = time();
+					$eligible_for_faucet = true;
+				}
+				else $time_available = $most_recent_claim_time + $min_sec_between_claims;
+			}
+			else $time_available = $earliest_join_time + ($allowed_claims*$target_sec_per_claim);
+		}
+		
+		return [
+			$earliest_join_time,
+			$most_recent_claim_time,
+			$user_faucet_claims,
+			$eligible_for_faucet,
+			$time_available
+		];
+	}
+	
 	public function check_faucet(&$user_game) {
 		if ($this->db_game['faucet_policy'] == "on") {
-			if ($user_game) {
-				$user_faucet_claims = $this->blockchain->app->run_query("SELECT SUM(faucet_claims) FROM user_games WHERE user_id=:user_id AND game_id=:game_id;", [
-					'user_id' => $user_game['user_id'],
-					'game_id' => $user_game['game_id']
-				])->fetch();
-				$user_faucet_claims = $user_faucet_claims['SUM(faucet_claims)'];
-			}
-			else $user_faucet_claims = 0;
+			$eligible_for_faucet = false;
 			
-			if (empty($user_game) || $user_faucet_claims == 0) {
+			if ($user_game) {
+				list($earliest_join_time, $most_recent_claim_time, $user_faucet_claims, $eligible_for_faucet, $time_available) = $this->user_faucet_info($user_game['user_id'], $user_game['game_id']);
+			}
+			
+			if (empty($user_game) || $eligible_for_faucet) {
 				$faucet_account = $this->check_set_faucet_account();
 				
 				$faucet_io = $this->blockchain->app->run_query("SELECT *, SUM(gio.colored_amount) AS colored_amount_sum FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id=:game_id AND io.spend_status='unspent' AND k.account_id=:account_id AND gio.option_id IS NULL GROUP BY a.address_id ORDER BY colored_amount_sum DESC;", [

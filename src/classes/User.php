@@ -98,9 +98,10 @@ class User {
 				'game_id' => $game->db_game['game_id'],
 				'api_access_code' => $this->app->random_string(32),
 				'display_currency_id' => $game->db_game['default_display_currency_id'],
-				'buyin_currency_id' => $game->db_game['default_buyin_currency_id']
+				'buyin_currency_id' => $game->db_game['default_buyin_currency_id'],
+				'created_at' => time()
 			];
-			$new_user_game_q = "INSERT INTO user_games SET user_id=:user_id, game_id=:game_id, api_access_code=:api_access_code, show_intro_message=1, notification_preference='email', prompt_notification_preference=1, betting_mode='principal', display_currency_id=:display_currency_id, buyin_currency_id=:buyin_currency_id";
+			$new_user_game_q = "INSERT INTO user_games SET user_id=:user_id, game_id=:game_id, api_access_code=:api_access_code, show_intro_message=1, notification_preference='email', prompt_notification_preference=1, betting_mode='principal', display_currency_id=:display_currency_id, buyin_currency_id=:buyin_currency_id, created_at=:created_at";
 			if (!empty($this->db_user['payout_address_id'])) {
 				$new_user_game_q .= ", payout_address_id=:payout_address_id";
 				$new_user_game_params['payout_address_id'] = $this->db_user['payout_address_id'];

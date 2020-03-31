@@ -2963,6 +2963,22 @@ var PageManager = function() {
 			$('#every_event_bet_reminder_minutes').val(0);
 		}
 	};
+	this.check_faucet = function(game_id) {
+		$.ajax({
+			url: "/ajax/faucet.php",
+			dataType: "json",
+			type: "POST",
+			data: {
+				action: "check",
+				game_id: game_id,
+				synchronizer_token: this.synchronizer_token
+			},
+			success: function(faucet_response) {
+				$('#faucet_info').modal('show');
+				$('#faucet_info_inner').html(faucet_response.message);
+			}
+		});
+	};
 }
 
 var thisPageManager = new PageManager();

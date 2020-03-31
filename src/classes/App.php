@@ -3680,5 +3680,12 @@ class App {
 			'account_id' => $account_id
 		]);
 	}
+	
+	public function set_latest_event_reminder_time($user_game_id, $latest_event_reminder_time) {
+		$this->run_query("UPDATE user_games SET latest_event_reminder_time=:latest_event_reminder_time WHERE user_game_id=:user_game_id;", [
+			'latest_event_reminder_time' => $latest_event_reminder_time,
+			'user_game_id' => $user_game_id
+		]);
+	}
 }
 ?>

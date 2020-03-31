@@ -15,13 +15,26 @@ if ($_REQUEST['action'] == "unsubscribe") {
 	])->fetch();
 	
 	if ($delivery) {
-		$app->run_query("UPDATE users u JOIN user_games ug ON u.user_id=ug.user_id SET ug.notification_preference='none' WHERE u.notification_email=:email;", [
+		$unsubscribe_q = "UPDATE users u JOIN user_games ug ON u.user_id=ug.user_id SET ug.notification_preference='none' WHERE u.notification_email=:email";
+		$unsubscribe_params = [
 			'email' => $delivery['to_email']
-		]);
+		];
+		if ($game) {
+			$unsubscribe_q .= " AND ug.game_id=:game_id";
+			$unsubscribe_params['game_id'] = $game->db_game['game_id'];
+		}
+		
+		$app->run_query($unsubscribe_q, $unsubscribe_params);
 	}
-	
-	echo "<br/><p>&nbsp;&nbsp; You've been unsubscribed. You'll no longer receive email notifications about your accounts.</p>\n";
-	
+	?>
+	<div style="padding: 15px;">
+		<p>
+			You've been unsubscribed.<br/>
+			You'll no longer receive these email notifications.<br/>
+			If you want to start receiving notifications again, you can log in to your account and edit your settings.
+		</p>
+	</div>
+	<?php
 	include(AppSettings::srcPath().'/includes/html_stop.php');
 	die();
 }
@@ -681,12 +694,33 @@ if ($thisuser && $game) {
 				
 				if ($game->fetch_featured_strategies()->rowCount() > 0) {
 					?>
-					<button class="btn btn-sm btn-info" style="margin-top: 8px;" onclick="thisPageManager.apply_my_strategy();">Apply my strategy now</button>
-					<button class="btn btn-sm btn-danger" style="margin-top: 8px;" onclick="thisPageManager.show_featured_strategies(); return false;">Change my strategy</button>
+					<button class="btn btn-sm btn-info" style="margin-top: 8px;" onclick="thisPageManager.apply_my_strategy();"><i class="fas fa-hand-point-up"></i> &nbsp; Apply my strategy now</button>
+					<button class="btn btn-sm btn-danger" style="margin-top: 8px;" onclick="thisPageManager.show_featured_strategies(); return false;"><i class="fas fa-list"></i> &nbsp; Change my strategy</button>
+					<?php
+				}
+				
+				if ($game->db_game['faucet_policy'] == "on") { ?>
+					<button class="btn btn-sm btn-default" style="margin-top: 8px;" onclick="thisPageManager.check_faucet(<?php echo $game->db_game['game_id']; ?>);"><i class="fas fa-tint"></i> &nbsp; Check Faucet</button>
 					<?php
 				}
 				?>
 				<div id="apply_my_strategy_status" class="greentext"></div>
+			</div>
+		</div>
+		
+		<div class="modal fade" id="faucet_info">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<b class="modal-title">Check the faucet for <?php echo $game->db_game['name']; ?></b>
+						
+						<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+							<span aria-hidden="true">&times;</span>
+						</button>
+					</div>
+					<div class="modal-body" id="faucet_info_inner">
+					</div>
+				</div>
 			</div>
 		</div>
 		
@@ -1095,7 +1129,7 @@ if ($thisuser && $game) {
 							You can buy <?php echo $game->db_game['coin_name_plural']; ?> by clicking below.  Once your payment is confirmed, <?php echo $game->db_game['coin_name_plural']; ?> will be added to your account based on the exchange rate at the time of confirmation.
 						</p>
 						<p>
-							<button class="btn btn-success" onclick="thisPageManager.manage_buyin('initiate');">Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
+							<button class="btn btn-sm btn-success" onclick="thisPageManager.manage_buyin('initiate');"><i class="fas fa-shopping-cart"></i> &nbsp; Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
 						</p>
 						<?php
 					}
@@ -1207,7 +1241,11 @@ if ($thisuser && $game) {
 			<div class="modal-dialog">
 				<div class="modal-content">
 					<div class="modal-header">
-						<h4 class="modal-title">Please select a staking strategy</h4>
+						<b class="modal-title">Please select a staking strategy</b>
+						
+						<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+							<span aria-hidden="true">&times;</span>
+						</button>
 					</div>
 					<div class="modal-body" id="featured_strategies_inner"></div>
 				</div>
@@ -1260,7 +1298,11 @@ if ($thisuser && $game) {
 			<div class="modal-dialog modal-lg">
 				<div class="modal-content">
 					<div class="modal-header">
-						<h4 class="modal-title"><?php echo $game->db_game['name']; ?>: Buy more <?php echo $game->db_game['coin_name_plural']; ?></h4>
+						<b class="modal-title"><?php echo $game->db_game['name']; ?>: Buy more <?php echo $game->db_game['coin_name_plural']; ?></b>
+						
+						<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+							<span aria-hidden="true">&times;</span>
+						</button>
 					</div>
 					<div class="modal-body">
 						<div id="buyin_modal_content"></div>
