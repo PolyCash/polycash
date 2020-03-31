@@ -2506,12 +2506,11 @@ class App {
 	}
 	
 	public function get_peer_by_server_name($server_name, $allow_new) {
-		$server_name = trim(strtolower(strip_tags($server_name)));
+		$server_name = rtrim(trim(strtolower(strip_tags($server_name))), "/");
 		$initial_server_name = $server_name;
 		if (substr($server_name, 0, 7) == "http://") $server_name = substr($server_name, 7, strlen($server_name)-7);
 		if (substr($server_name, 0, 8) == "https://") $server_name = substr($server_name, 8, strlen($server_name)-8);
 		if (substr($server_name, 0, 4) == "www.") $server_name = substr($server_name, 4, strlen($server_name)-4);
-		if ($server_name[strlen($server_name)-1] == "/") $server_name = substr($server_name, 0, strlen($server_name)-1);
 		
 		$peer = $this->run_query("SELECT * FROM peers WHERE peer_identifier=:peer_identifier;", ['peer_identifier'=>$server_name])->fetch();
 		
