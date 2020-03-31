@@ -64,47 +64,58 @@ class eSportsGameDefinition {
 	public function events_starting_between_blocks(&$game, $from_block, $to_block) {
 		$events = [];
 		
-		$gde_r = $this->app->run_query("SELECT gde.*, sp.entity_name AS sport_name, le.entity_name AS league_name FROM game_defined_events gde LEFT JOIN entities sp ON gde.sport_entity_id=sp.entity_id LEFT JOIN entities le ON gde.league_entity_id=le.entity_id WHERE gde.game_id=:game_id AND gde.event_starting_block>=:from_block AND gde.event_starting_block<=:to_block;", [
+		$info = $this->app->run_query("SELECT MIN(event_index), MAX(event_index) FROM game_defined_events WHERE game_id=:game_id AND event_starting_block>=:from_block AND event_starting_block<=:to_block;", [
 			'game_id' => $game->db_game['game_id'],
 			'from_block' => $from_block,
 			'to_block' => $to_block
 		]);
 		
-		while ($db_gde = $gde_r->fetch()) {
-			$gdo_r = $this->app->fetch_game_defined_options($game->db_game['game_id'], $db_gde['event_index'], false, false);
+		if ($info->rowCount() > 0) {
+			$info = $info->fetch();
 			
-			$possible_outcomes = [];
-			while ($db_gdo = $gdo_r->fetch()) {
-				$new_gdo = [
-					"title"=>$db_gdo['name'],
-					'entity_id'=>$db_gdo['entity_id']
-				];
-				if (!empty($db_gdo['target_probability'])) $new_gdo["target_probability"] = $db_gdo['target_probability'];
+			$gde_r = $this->app->run_query("SELECT gde.*, sp.entity_name AS sport_name, le.entity_name AS league_name FROM game_defined_events gde LEFT JOIN entities sp ON gde.sport_entity_id=sp.entity_id LEFT JOIN entities le ON gde.league_entity_id=le.entity_id WHERE gde.game_id=:game_id AND gde.event_index>=:from_event_index AND gde.event_index<=:to_event_index;", [
+				'game_id' => $game->db_game['game_id'],
+				'from_event_index' => $info['MIN(event_index)'],
+				'to_event_index' => $info['MAX(event_index)']
+			]);
+			
+			while ($db_gde = $gde_r->fetch()) {
+				$gdo_r = $this->app->fetch_game_defined_options($game->db_game['game_id'], $db_gde['event_index'], false, false);
 				
-				array_push($possible_outcomes, $new_gdo);
+				$possible_outcomes = [];
+				while ($db_gdo = $gdo_r->fetch()) {
+					$new_gdo = [
+						"title"=>$db_gdo['name'],
+						'entity_id'=>$db_gdo['entity_id']
+					];
+					if (!empty($db_gdo['target_probability'])) $new_gdo["target_probability"] = $db_gdo['target_probability'];
+					
+					array_push($possible_outcomes, $new_gdo);
+				}
+				
+				$event = array(
+					"event_index" => $db_gde['event_index'],
+					"event_starting_block" => $db_gde['event_starting_block'],
+					"event_final_block" => $db_gde['event_final_block'],
+					"event_outcome_block" => $db_gde['event_outcome_block'],
+					"event_payout_block" => $db_gde['event_payout_block'],
+					"event_starting_time" => $db_gde['event_starting_time'],
+					"event_final_time" => $db_gde['event_final_time'],
+					"event_payout_time" => $db_gde['event_payout_time'],
+					"event_name" => $db_gde['event_name'],
+					"option_name" => $db_gde['option_name'],
+					"option_name_plural" => $db_gde['option_name_plural'],
+					"payout_rule" => $db_gde['payout_rule'],
+					"payout_rate" => 1,
+					"outcome_index" => $db_gde['outcome_index'],
+					"possible_outcomes" => $possible_outcomes
+				);
+				if (!empty($db_gde['sport_name'])) $event["sport"] = $db_gde['sport_name'];
+				if (!empty($db_gde['league_name'])) $event["league"] = $db_gde['league_name'];
+				if (!empty($db_gde['external_identifier'])) $event["external_identifier"] = $db_gde['external_identifier'];
+				
+				array_push($events, $event);
 			}
-			
-			$event = array(
-				"event_index" => $db_gde['event_index'],
-				"event_starting_block" => $db_gde['event_starting_block'],
-				"event_final_block" => $db_gde['event_final_block'],
-				"event_payout_block" => $db_gde['event_payout_block'],
-				"event_starting_time" => $db_gde['event_starting_time'],
-				"event_final_time" => $db_gde['event_final_time'],
-				"event_payout_time" => $db_gde['event_payout_time'],
-				"event_name" => $db_gde['event_name'],
-				"option_name" => $db_gde['option_name'],
-				"option_name_plural" => $db_gde['option_name_plural'],
-				"payout_rule" => $db_gde['payout_rule'],
-				"payout_rate" => 1,
-				"outcome_index" => $db_gde['outcome_index'],
-				"possible_outcomes" => $possible_outcomes
-			);
-			if (!empty($db_gde['sport_name'])) $event["sport"] = $db_gde['sport_name'];
-			if (!empty($db_gde['league_name'])) $event["league"] = $db_gde['league_name'];
-			if (!empty($db_gde['external_identifier'])) $event["external_identifier"] = $db_gde['external_identifier'];
-			
-			array_push($events, $event);
 		}
 		
 		return $events;
