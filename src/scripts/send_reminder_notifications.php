@@ -30,7 +30,7 @@ while ($db_running_game = $running_games->fetch()) {
 				
 				$subject = $app->format_seconds(round($seconds_left/60)*60)." left to bet in ".$running_game->db_game['name']." ".$current_event->db_event['event_name'];
 				
-				$notify_users = $app->run_query("SELECT * FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.notification_preference='email' AND u.notification_email LIKE '%@%' AND ug.game_id=:game_id GROUP BY ug.user_id;", ['game_id' => $running_game->db_game['game_id']]);
+				$notify_users = $app->run_query("SELECT ug.*, u.notification_email FROM user_games ug JOIN users u ON ug.user_id=u.user_id WHERE ug.notification_preference='email' AND u.notification_email LIKE '%@%' AND ug.game_id=:game_id GROUP BY ug.user_id;", ['game_id' => $running_game->db_game['game_id']]);
 				
 				while ($notify_user = $notify_users->fetch()) {
 					$sec_since_last_notification = time() - $notify_user['latest_event_reminder_time'];
