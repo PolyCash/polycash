@@ -947,14 +947,13 @@ if ($thisuser && $game) {
 					<h3>Notifications</h3>
 					<button class="btn btn-success" onclick="$('#notification_modal').modal('show');">Notification Settings</button>
 					<br/>
+					<br/>
 					
-					<h2>Choose your strategy</h2>
+					<h3>Choose your strategy</h3>
 					<p>
 						Select a staking strategy and your coins will automatically be staked even when you're not online.
 					</p>
-					<p>
-						<button class="btn btn-sm btn-warning" onclick="thisPageManager.apply_my_strategy();">Apply my strategy now</button>
-					</p>
+					
 					<form method="post" action="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">
 						<input type="hidden" name="action" value="save_voting_strategy" />
 						<input type="hidden" id="voting_strategy_id" name="voting_strategy_id" value="<?php echo $user_strategy['strategy_id']; ?>" />
@@ -994,6 +993,7 @@ if ($thisuser && $game) {
 							</div>
 						</div>
 						
+						<?php /*
 						<div class="row bordered_row">
 							<div class="col-md-2">
 								<input type="radio" id="voting_strategy_by_entity" name="voting_strategy" value="by_entity"<?php if ($user_strategy['voting_strategy'] == "by_entity") echo ' checked="checked"'; ?>><label class="plainlabel" for="voting_strategy_by_entity">&nbsp;Vote&nbsp;by&nbsp;option</label>
@@ -1001,7 +1001,7 @@ if ($thisuser && $game) {
 							<div class="col-md-10">
 								<label class="plainlabel" for="voting_strategy_by_entity"> 
 									Vote for these options every time. The percentages you enter below must add up to 100.<br/>
-									<?php /*<a href="" onclick="thisPageManager.by_entity_reset_pct(); return false;">Set all to zero</a> <div style="margin-left: 15px; display: inline-block;" id="entity_pct_subtotal">&nbsp;</div>*/ ?>
+									<a href="" onclick="thisPageManager.by_entity_reset_pct(); return false;">Set all to zero</a> <div style="margin-left: 15px; display: inline-block;" id="entity_pct_subtotal">&nbsp;</div>
 								</label><br/>
 								<?php
 								$entities_by_game = $game->entities_by_game();
@@ -1025,7 +1025,6 @@ if ($thisuser && $game) {
 								?>
 							</div>
 						</div>
-						<?php /*
 						<div class="row bordered_row">
 							<div class="col-md-2">
 								<input type="radio" id="voting_strategy_by_rank" name="voting_strategy" value="by_rank"<?php if ($user_strategy['voting_strategy'] == "by_rank") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_rank">&nbsp;Vote&nbsp;by&nbsp;rank</label>
@@ -1068,12 +1067,12 @@ if ($thisuser && $game) {
 								<button class="btn btn-success" onclick="thisPageManager.show_featured_strategies(); return false;">Choose a strategy</button>
 							</div>
 						</div>
-						
+						<?php /*
 						<div class="row bordered_row">
 							<div class="col-md-12">
 								<br/><br/>
 								<b>Settings</b><br/>
-								These settings apply to "Plan my votes" and "Vote by option" options above.<br/>
+								These settings apply if you selected the "Plan my votes" option above.<br/>
 								Wait until <input size="4" type="text" name="aggregate_threshold" id="aggregate_threshold" value="<?php echo $user_strategy['aggregate_threshold']; ?>" />% of my coins are available to vote. <br/>
 								Only vote in these blocks of the round:<br/>
 								
@@ -1106,10 +1105,11 @@ if ($thisuser && $game) {
 								</div>
 								
 								Only vote for options which have between <input type="tel" size="4" value="<?php echo $user_strategy['min_votesum_pct']; ?>" name="min_votesum_pct" id="min_votesum_pct" />% and <input type="tel" size="4" value="<?php echo $user_strategy['max_votesum_pct']; ?>" name="max_votesum_pct" id="max_votesum_pct" />% of the current votes.<br/>
-								<?php /*
-								Maintain <input type="tel" size="6" id="min_coins_available" name="min_coins_available" value="<?php echo round($user_strategy['min_coins_available'], 2); ?>" /> EMP available at all times.  This number of coins will be reserved and won't be voted. */ ?>
+								
+								Maintain <input type="tel" size="6" id="min_coins_available" name="min_coins_available" value="<?php echo round($user_strategy['min_coins_available'], 2); ?>" /> EMP available at all times.  This number of coins will be reserved and won't be voted.
 							</div>
 						</div>
+						 */ ?>
 						<br/>
 						<button class="btn btn-primary" type="submit">Save my Strategy</button>
 					</form>
