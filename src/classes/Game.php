@@ -3702,13 +3702,13 @@ class Game {
 		$eligible_for_faucet = false;
 		$time_available = false;
 		
-		$target_sec_per_claim = 3600*24;
-		$min_sec_between_claims = 3600*12;
+		$sec_per_faucet_claim = $this->db_game['sec_per_faucet_claim'];
+		$min_sec_between_claims = $this->db_game['min_sec_between_claims'];
 		
 		if ($earliest_join_time) {
 			$sec_since_joined = time() - $earliest_join_time;
 			
-			$allowed_claims = ceil($sec_since_joined/$target_sec_per_claim);
+			$allowed_claims = ceil($sec_since_joined/$sec_per_faucet_claim);
 			
 			if ($user_faucet_claims < $allowed_claims) {
 				if ($most_recent_claim_time <= time()-$min_sec_between_claims) {
@@ -3717,7 +3717,7 @@ class Game {
 				}
 				else $time_available = $most_recent_claim_time + $min_sec_between_claims;
 			}
-			else $time_available = $earliest_join_time + ($allowed_claims*$target_sec_per_claim);
+			else $time_available = $earliest_join_time + ($allowed_claims*$sec_per_faucet_claim);
 		}
 		
 		return [
