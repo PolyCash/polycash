@@ -550,7 +550,7 @@ var PageManager = function() {
 		});
 	}
 	this.openChatWindow = function(userId) {
-		if (typeof userId2ChatWindowId[userId] === 'undefined' || userId2ChatWindowId[userId] === false) {
+		if (typeof this.userId2ChatWindowId[userId] === 'undefined' || this.userId2ChatWindowId[userId] === false) {
 			var chatWindowId = chatWindows.length;
 			this.newChatWindow(chatWindowId, userId);
 		}
