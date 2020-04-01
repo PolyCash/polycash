@@ -114,7 +114,7 @@ class PeerVerifier {
 				}
 				if ($local_info[$i] != $remote_info[$i]) {
 					echo "First error on line #$i<br/>\n";
-					echo "local: <pre>".json_encode($local_info[$i])."</pre> remote: <pre>".json_encode($remote_info[$i])."</pre>\n";
+					echo "<pre>local: ".json_encode($local_info[$i])."</pre><pre>remote: ".json_encode($remote_info[$i])."</pre>\n";
 					if ($i > 0) $i=$loop_to;
 					$any_error = true;
 				}
@@ -135,7 +135,7 @@ class PeerVerifier {
 					echo "Error on line #$i:\n";
 					echo json_encode($local_info[$i], JSON_PRETTY_PRINT)."\n";
 					echo json_encode($remote_info[$i], JSON_PRETTY_PRINT)."\n";
-					echo "<a href=\"/explorer/games/".$this->game_identifier."/events/".$local_info[$i]->event_index."\">".$local_info[$i]->event_name."</a> vs <a href=\"".$this->remote_url_base."/explorer/games/".$this->game_identifier."/events/".$remote_info[$i]->event_index."\">".$remote_info[$i]->event_name."</a><br/>\n";
+					echo "local <a href=\"/explorer/games/".$this->game_identifier."/events/".$local_info[$i]->event_index."\">".$local_info[$i]->event_name."</a> vs remote <a href=\"".$this->remote_url_base."/explorer/games/".$this->game_identifier."/events/".$remote_info[$i]->event_index."\">".$remote_info[$i]->event_name."</a><br/>\n";
 					$error_count++;
 				}
 			}
@@ -153,7 +153,7 @@ class PeerVerifier {
 				}
 				if ($local_info[$i] != $remote_info[$i]) {
 					echo "First error found<br/>\n";
-					echo "<pre>".json_encode($local_info[$i])."</pre><pre>".json_encode($remote_info[$i])."</pre>\n";
+					echo "<pre>local: ".json_encode($local_info[$i])."</pre><pre>remote: ".json_encode($remote_info[$i])."</pre>\n";
 					if ($i > 0) $i = $loop_to;
 					$any_error = true;
 				}
