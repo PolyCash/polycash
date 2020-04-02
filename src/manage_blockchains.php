@@ -51,6 +51,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 				
 				$new_blockchain_message = "";
 				$new_blockchain_id = $app->create_blockchain_from_definition($new_blockchain_def, $thisuser, $new_blockchain_message);
+				$app->blockchain_ensure_currencies();
 				
 				if ($new_blockchain_id) {
 					echo "Great, your blockchain has been created!<br/>\n";

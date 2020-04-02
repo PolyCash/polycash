@@ -351,6 +351,7 @@ else {
 					$every_event_bet_reminder_minutes = (int) $_REQUEST['every_event_bet_reminder_minutes'];
 					$sec_per_faucet_claim = (int) $_REQUEST['sec_per_faucet_claim'];
 					$min_sec_between_claims = (int) $_REQUEST['min_sec_between_claims'];
+					$bonus_claims = (int) $_REQUEST['bonus_claims'];
 					
 					$definitive_game_peer_on = $_REQUEST['definitive_game_peer_on'];
 					if ($definitive_game_peer_on == 1) {
@@ -373,7 +374,7 @@ else {
 						}
 					}
 					
-					$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, faucet_policy=:faucet_policy, hide_module=:hide_module, definitive_game_peer_id=:definitive_game_peer_id, every_event_bet_reminder_minutes=:every_event_bet_reminder_minutes, sec_per_faucet_claim=:sec_per_faucet_claim, min_sec_between_claims=:min_sec_between_claims WHERE game_id=:game_id;", [
+					$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, faucet_policy=:faucet_policy, hide_module=:hide_module, definitive_game_peer_id=:definitive_game_peer_id, every_event_bet_reminder_minutes=:every_event_bet_reminder_minutes, sec_per_faucet_claim=:sec_per_faucet_claim, min_sec_between_claims=:min_sec_between_claims, bonus_claims=:bonus_claims WHERE game_id=:game_id;", [
 						'featured' => $featured,
 						'public_players' => $public_players,
 						'faucet_policy' => $faucet_policy,
@@ -382,7 +383,8 @@ else {
 						'game_id' => $game->db_game['game_id'],
 						'every_event_bet_reminder_minutes' => $every_event_bet_reminder_minutes,
 						'sec_per_faucet_claim' => $sec_per_faucet_claim,
-						'min_sec_between_claims' => $min_sec_between_claims
+						'min_sec_between_claims' => $min_sec_between_claims,
+						'bonus_claims' => $bonus_claims
 					]);
 					
 					$game->db_game['featured'] = $featured;
@@ -392,6 +394,7 @@ else {
 					$game->db_game['every_event_bet_reminder_minutes'] = $every_event_bet_reminder_minutes;
 					$game->db_game['min_sec_between_claims'] = $min_sec_between_claims;
 					$game->db_game['sec_per_faucet_claim'] = $sec_per_faucet_claim;
+					$game->db_game['bonus_claims'] = $bonus_claims;
 					
 					$messages .= "Game internal settings have been updated.<br/>\n";
 				}
@@ -736,6 +739,10 @@ else {
 										<div class="form-group">
 											<label for="min_sec_between_claims">If users go for a long time without claiming from the faucet, they may be eligible to claim many times.  How many seconds must these users wait between claims?</label>
 											<input type="text" class="form-control" name="min_sec_between_claims" id="min_sec_between_claims" value="<?php echo $game->db_game['min_sec_between_claims']; ?>" />
+										</div>
+										<div class="form-group">
+											<label for="bonus_claims">How many extra faucet claims should users get upon signing up?</label>
+											<input type="text" class="form-control" name="bonus_claims" id="bonus_claims" value="<?php echo $game->db_game['bonus_claims']; ?>" />
 										</div>
 										<div class="form-group">
 											<label for="hide_module">Should the game's module be hidden when displaying game definition to the public?</label>

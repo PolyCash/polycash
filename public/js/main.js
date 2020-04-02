@@ -550,7 +550,7 @@ var PageManager = function() {
 		});
 	}
 	this.openChatWindow = function(userId) {
-		if (typeof userId2ChatWindowId[userId] === 'undefined' || userId2ChatWindowId[userId] === false) {
+		if (typeof this.userId2ChatWindowId[userId] === 'undefined' || this.userId2ChatWindowId[userId] === false) {
 			var chatWindowId = chatWindows.length;
 			this.newChatWindow(chatWindowId, userId);
 		}
@@ -1935,7 +1935,8 @@ var PageManager = function() {
 		$('#donate_game_id').val(game_id);
 		$('#set_for_sale_game_id').val(game_id);
 		
-		var optionsAsString = "<option value='blockchain'>"+blockchain_coin_name+"</option>\n";
+		var optionsAsString = "<option value=''>-- Select Currency --</option>\n";
+		optionsAsString += "<option value='blockchain'>"+blockchain_coin_name+"</option>\n";
 		optionsAsString += "<option value='game'>"+game_coin_name+"</option>\n";
 		$("#spend_withdraw_coin_type").find('option').remove().end().append($(optionsAsString));
 		

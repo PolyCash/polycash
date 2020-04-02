@@ -592,8 +592,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 									<div class="row">
 										<div class="col-sm-8"><input type="text" class="form-control" id="spend_withdraw_amount" style="text-align: right;" /></div>
 										<div class="col-sm-4">
-											<select class="form-control" id="spend_withdraw_coin_type">
-											</select>
+											<select class="form-control" id="spend_withdraw_coin_type" required="required"></select>
 										</div>
 									</div>
 								</div>

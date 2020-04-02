@@ -85,12 +85,17 @@ class PeerVerifier {
 			return $out_obj;
 		}
 		else if ($this->mode == "blockchain") {
-			$all_blocks = $this->app->run_query("SELECT * FROM blocks WHERE blockchain_id=:blockchain_id AND block_id>0 ORDER BY block_id ASC;", ['blockchain_id'=>$this->blockchain->db_blockchain['blockchain_id']]);
+			$all_blocks = $this->app->run_query("SELECT block_id, num_transactions, sum_coins_in, sum_coins_out FROM blocks WHERE blockchain_id=:blockchain_id AND block_id>0 ORDER BY block_id ASC;", ['blockchain_id'=>$this->blockchain->db_blockchain['blockchain_id']]);
 			
 			$out_obj = [];
 			
 			while ($block = $all_blocks->fetch()) {
-				array_push($out_obj, ["block_id"=>$block['block_id'], "num_transactions"=>$block['num_transactions']]);
+				array_push($out_obj, [
+					"block_id" => $block['block_id'],
+					"num_transactions" => $block['num_transactions'],
+					"sum_coins_in" => $block['sum_coins_in'],
+					"sum_coins_out" => $block['sum_coins_out']
+				]);
 			}
 			
 			return $out_obj;
@@ -109,7 +114,7 @@ class PeerVerifier {
 				}
 				if ($local_info[$i] != $remote_info[$i]) {
 					echo "First error on line #$i<br/>\n";
-					echo "<pre>".json_encode($local_info[$i])."</pre><pre>".json_encode($remote_info[$i])."</pre>\n";
+					echo "<pre>local: ".json_encode($local_info[$i])."</pre><pre>remote: ".json_encode($remote_info[$i])."</pre>\n";
 					if ($i > 0) $i=$loop_to;
 					$any_error = true;
 				}
@@ -130,7 +135,7 @@ class PeerVerifier {
 					echo "Error on line #$i:\n";
 					echo json_encode($local_info[$i], JSON_PRETTY_PRINT)."\n";
 					echo json_encode($remote_info[$i], JSON_PRETTY_PRINT)."\n";
-					echo "<a href=\"/explorer/games/".$this->game_identifier."/events/".$local_info[$i]->event_index."\">".$local_info[$i]->event_name."</a> vs <a href=\"".$this->remote_url_base."/explorer/games/".$this->game_identifier."/events/".$remote_info[$i]->event_index."\">".$remote_info[$i]->event_name."</a><br/>\n";
+					echo "local <a href=\"/explorer/games/".$this->game_identifier."/events/".$local_info[$i]->event_index."\">".$local_info[$i]->event_name."</a> vs remote <a href=\"".$this->remote_url_base."/explorer/games/".$this->game_identifier."/events/".$remote_info[$i]->event_index."\">".$remote_info[$i]->event_name."</a><br/>\n";
 					$error_count++;
 				}
 			}
@@ -148,7 +153,7 @@ class PeerVerifier {
 				}
 				if ($local_info[$i] != $remote_info[$i]) {
 					echo "First error found<br/>\n";
-					echo "<pre>".json_encode($local_info[$i])."</pre><pre>".json_encode($remote_info[$i])."</pre>\n";
+					echo "<pre>local: ".json_encode($local_info[$i])."</pre><pre>remote: ".json_encode($remote_info[$i])."</pre>\n";
 					if ($i > 0) $i = $loop_to;
 					$any_error = true;
 				}
