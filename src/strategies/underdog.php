@@ -95,8 +95,8 @@ if ($user_game) {
 					
 					if ($burn_game_amount < 0 || $burn_game_amount > $game_amount_sum) die("Failed to determine a valid burn amount (".$burn_game_amount." vs ".$game_amount_sum.").");
 					
-					$burn_address = $app->fetch_addresses_in_account($account['account_id'], 0, 1)[0];
-					$separator_addresses = $app->fetch_addresses_in_account($account['account_id'], 1, $num_events);
+					$burn_address = $app->fetch_addresses_in_account($account, 0, 1)[0];
+					$separator_addresses = $app->fetch_addresses_in_account($account, 1, $num_events);
 					$separator_frac = 0.25;
 					
 					$io_nonfee_amount = $io_amount_sum-$fee_amount;
@@ -116,7 +116,7 @@ if ($user_game) {
 						$thisevent_io_amounts = [];
 						$thisevent_address_ids = [];
 						
-						$this_address = $app->fetch_addresses_in_account($account['account_id'], $option['option_index'], 1)[0];
+						$this_address = $app->fetch_addresses_in_account($account, $option['option_index'], 1)[0];
 						
 						if ($this_address) {
 							$io_separator_amount = floor($io_amount_per_event*$separator_frac);
