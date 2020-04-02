@@ -3708,16 +3708,27 @@ class Game {
 		if ($earliest_join_time) {
 			$sec_since_joined = time() - $earliest_join_time;
 			
-			$allowed_claims = ceil($sec_since_joined/$sec_per_faucet_claim);
+			$seeking_claim = $user_faucet_claims+1;
+			$seeking_claim_after_bonus = $seeking_claim - $this->db_game['bonus_claims'];
 			
-			if ($user_faucet_claims < $allowed_claims) {
-				if ($most_recent_claim_time <= time()-$min_sec_between_claims) {
+			$time_claim_available = $earliest_join_time + ($seeking_claim_after_bonus*$sec_per_faucet_claim);
+			
+			if (time() > $time_claim_available) {
+				$sec_since_last_claim = time() - $most_recent_claim_time;
+				
+				if ($sec_since_last_claim >= $min_sec_between_claims) {
 					$time_available = time();
 					$eligible_for_faucet = true;
 				}
-				else $time_available = $most_recent_claim_time + $min_sec_between_claims;
+				else {
+					$time_available = $most_recent_claim_time + $min_sec_between_claims;
+					$eligible_for_faucet = false;
+				}
 			}
-			else $time_available = $earliest_join_time + ($allowed_claims*$sec_per_faucet_claim);
+			else {
+				$eligible_for_faucet = false;
+				$time_available = $time_claim_available;
+			}
 		}
 		
 		return [

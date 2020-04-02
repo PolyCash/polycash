@@ -662,7 +662,11 @@ if ($thisuser && $game) {
 					<div class="modal-dialog">
 						<div class="modal-content">
 							<div class="modal-header">
-								<h4 class="modal-title">Game Invitations</h4>
+								<b class="modal-title">Game Invitations</b>
+								
+								<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+									<span aria-hidden="true">&times;</span>
+								</button>
 							</div>
 							<div class="modal-body" id="game_invitations_inner">
 							</div>
@@ -1196,7 +1200,11 @@ if ($thisuser && $game) {
 			<div class="modal-dialog">
 				<div class="modal-content">
 					<div class="modal-header">
-						<h4 class="modal-title">New message from <?php echo AppSettings::getParam('site_name'); ?></h4>
+						<b class="modal-title">New message from <?php echo AppSettings::getParam('site_name'); ?></b>
+						
+						<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+							<span aria-hidden="true">&times;</span>
+						</button>
 					</div>
 					<div class="modal-body">
 						<p>
@@ -1217,7 +1225,11 @@ if ($thisuser && $game) {
 			<div class="modal-dialog">
 				<div class="modal-content">
 					<div class="modal-header">
-						<h4 class="modal-title">Notification Settings</h4>
+						<b class="modal-title">Notification Settings</b>
+						
+						<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+							<span aria-hidden="true">&times;</span>
+						</button>
 					</div>
 					<div class="modal-body">
 						<div class="form-group">
@@ -1256,7 +1268,11 @@ if ($thisuser && $game) {
 			<div class="modal-dialog" style="width: 80%; max-width: 1000px;">
 				<div class="modal-content">
 					<div class="modal-header">
-						<h4 class="modal-title">My Planned Votes</h4>
+						<b class="modal-title">My Planned Votes</b>
+						
+						<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+							<span aria-hidden="true">&times;</span>
+						</button>
 					</div>
 					<div class="modal-body">
 						<p>
@@ -1317,7 +1333,11 @@ if ($thisuser && $game) {
 			<div class="modal-dialog modal-lg">
 				<div class="modal-content">
 					<div class="modal-header">
-						<h4 class="modal-title"><?php echo $game->db_game['name']; ?>: Sell your <?php echo $game->db_game['coin_name_plural']; ?></h4>
+						<b class="modal-title"><?php echo $game->db_game['name']; ?>: Sell your <?php echo $game->db_game['coin_name_plural']; ?></b>
+						
+						<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+							<span aria-hidden="true">&times;</span>
+						</button>
 					</div>
 					<div class="modal-body">
 						<div id="sellout_modal_content"></div>
