@@ -1054,7 +1054,7 @@ class Blockchain {
 				
 				$this->load_all_blocks(TRUE, $print_debug, 30);
 				
-				if ($this->db_blockchain['p2p_mode'] == "rpc" && $this->db_blockchain['load_unconfirmed_transactions'] == 1 && $this->db_blockchain['last_complete_block'] == $this->last_block_id()) {
+				if ($this->db_blockchain['load_unconfirmed_transactions'] == 1 && $this->db_blockchain['last_complete_block'] == $this->last_block_id()) {
 					$txt = "Loading unconfirmed transactions...\n";
 					if ($print_debug) {
 						echo $txt;
@@ -1261,14 +1261,20 @@ class Blockchain {
 	
 	public function load_unconfirmed_transactions($max_execution_time) {
 		$start_time = microtime(true);
-		$this->load_coin_rpc();
-		$unconfirmed_txs = $this->coin_rpc->getrawmempool();
 		
-		if (empty($unconfirmed_txs['code']) && !empty($unconfirmed_txs)) {
-			for ($i=0; $i<count($unconfirmed_txs); $i++) {
-				$this->walletnotify($unconfirmed_txs[$i], TRUE);
-				if ($max_execution_time && (microtime(true)-$start_time) > $max_execution_time) $i=count($unconfirmed_txs);
+		if ($this->db_blockchain['p2p_mode'] == "rpc") {
+			$this->load_coin_rpc();
+			$unconfirmed_txs = $this->coin_rpc->getrawmempool();
+			
+			if (empty($unconfirmed_txs['code']) && !empty($unconfirmed_txs)) {
+				for ($i=0; $i<count($unconfirmed_txs); $i++) {
+					$this->walletnotify($unconfirmed_txs[$i], TRUE);
+					if ($max_execution_time && (microtime(true)-$start_time) > $max_execution_time) $i=count($unconfirmed_txs);
+				}
 			}
+		}
+		else if ($this->db_blockchain['p2p_mode'] == "web_api") {
+			
 		}
 	}
 	
