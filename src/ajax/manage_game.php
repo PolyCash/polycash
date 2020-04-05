@@ -504,7 +504,14 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 				else if ($action == "reset") {
 					if (!empty($_REQUEST['from_block'])) {
 						$from_block = (int) $_REQUEST['from_block'];
+						
 						$game->reset_blocks_from_block($from_block);
+						
+						$reset_from_event_index = $game->reset_block_to_event_index($from_block);
+						
+						if ($reset_from_event_index !== false) {
+							$game->reset_events_from_index($reset_from_event_index);
+						}
 					}
 					else {
 						$game->delete_reset_game('reset');

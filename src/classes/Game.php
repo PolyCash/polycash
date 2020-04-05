@@ -793,6 +793,19 @@ class Game {
 		$this->blockchain->app->dbh->commit();
 	}
 	
+	public function reset_block_to_event_index($block_id) {
+		$event_info = $this->blockchain->app->run_query("SELECT MIN(event_index) FROM events WHERE game_id=:game_id AND event_starting_block>=:ref_block;", [
+			'game_id' => $this->db_game['game_id'],
+			'ref_block' => $block_id
+		]);
+		
+		if ($event_info->rowCount() > 0) {
+			$event_info = $event_info->fetch();
+			return (int) $event_info['MIN(event_index)'];
+		}
+		else return false;
+	}
+	
 	public function delete_reset_game($delete_or_reset) {
 		$this->blockchain->app->dbh->beginTransaction();
 		

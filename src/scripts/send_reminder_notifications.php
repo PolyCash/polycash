@@ -24,7 +24,7 @@ while ($db_running_game = $running_games->fetch()) {
 			$event_html = str_replace('href="/', 'href="'.AppSettings::getParam('base_url').'/', $event_html);
 			$event_html = str_replace(' style="font-size: 88%"', '', $event_html);
 			
-			if ($seconds_left > 0 && $seconds_left <= $db_running_game['every_event_bet_reminder_minutes']*60) {
+			if ($current_event->db_event['event_index']%2 == 0 && $seconds_left > 0 && $seconds_left <= $db_running_game['every_event_bet_reminder_minutes']*60) {
 				$ref_user_game = false;
 				$faucet_io = $running_game->check_faucet($ref_user_game);
 				

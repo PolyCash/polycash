@@ -273,6 +273,34 @@ if ($uri_parts[1] == "api") {
 		}
 		else $app->output_message(2, "Error: invalid blockchain identifier.", false);
 	}
+	else if ($uri_parts[2] == "unconfirmed_transactions") {
+		$blockchain_identifier = $uri_parts[3];
+		$db_blockchain = $app->fetch_blockchain_by_identifier($blockchain_identifier);
+		
+		if ($db_blockchain) {
+			$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
+			
+			$tx_q = "SELECT transaction_id, transaction_desc, tx_hash, amount, fee_amount, time_created, num_inputs, num_outputs FROM transactions WHERE blockchain_id=:blockchain_id AND block_id IS NULL;";
+			$tx_r = $app->run_query($tx_q, [
+				'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
+			]);
+			
+			$transactions = [];
+			
+			while ($tx = $tx_r->fetch(PDO::FETCH_ASSOC)) {
+				list($inputs, $outputs) = $app->web_api_transaction_ios($tx['transaction_id']);
+				
+				unset($tx['transaction_id']);
+				$tx['inputs'] = $inputs;
+				$tx['outputs'] = $outputs;
+				
+				array_push($transactions, $tx);
+			}
+			
+			$app->output_message(1, "", ['transactions' => $transactions]);
+		}
+		else $app->output_message(2, "Error: invalid blockchain identifier.", false);
+	}
 	else if ($uri_parts[2] == "groups") {
 		$db_group = $app->fetch_group_by_description($_REQUEST['group']);
 		
