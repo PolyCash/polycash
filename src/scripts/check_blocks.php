@@ -96,23 +96,24 @@ if ($app->running_as_admin()) {
 				
 				$this_block_error = false;
 				if ($check_block['num_ios_in'] != $num_ios_in) {
-					echo $num_ios_in." ios in but expected ".$check_block['num_ios_in'].". ";
+					echo "\n".$num_ios_in." ios in but expected ".$check_block['num_ios_in'];
 					$this_block_error = true;
 				}
 				if ($check_block['num_ios_out'] != $num_ios_out) {
-					echo $num_ios_out." ios out but expected ".$check_block['num_ios_out'].". ";
+					echo "\n".$num_ios_out." ios out but expected ".$check_block['num_ios_out'];
 					$this_block_error = true;
 				}
 				
-				$tx_wrong_ios_in = $app->run_query("SELECT t.position_in_block, t.tx_hash, t.num_inputs, COUNT(*) FROM transaction_ios io JOIN transactions t ON io.spend_transaction_id=t.transaction_id WHERE t.block_id=:block_id AND t.blockchain_id=:blockchain_id GROUP BY io.spend_transaction_id HAVING COUNT(*) != t.num_inputs;", [
-					'block_id' => $check_block['block_id'],
-					'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
-				]);
+				list($any_error, $any_ios_in_error, $any_ios_out_error) = BlockchainVerifier::verifyBlock($app, $blockchain->db_blockchain['blockchain_id'], $check_block['block_id']);
 				
-				if ($tx_wrong_ios_in->rowCount() > 0) {
-					echo $tx_wrong_ios_in->rowCount()." tx with incorrect ios. ";
-					echo "\n".json_encode($tx_wrong_ios_in->fetchAll(PDO::FETCH_ASSOC), JSON_PRETTY_PRINT)."\n";
+				if ($any_ios_in_error) {
 					$this_block_error = true;
+					echo "\ninvalid ios in";
+				}
+				
+				if ($any_ios_out_error) {
+					$this_block_error = true;
+					echo "\ninvalid ios out";
 				}
 				
 				if (!$this_block_error) echo "ok";

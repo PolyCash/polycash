@@ -221,22 +221,43 @@ class Blockchain {
 						if ($db_transaction['transaction_desc'] != "transaction") $coins_created += $db_transaction['amount'];
 					}
 					
-					if (!$tx_error) {
+					$any_error = false;
+					
+					if ($tx_error) {
+						$any_error = true;
+					}
+					else {
+						list($verification_any_error) = BlockchainVerifier::verifyBlock($this->app, $this->db_blockchain['blockchain_id'], $db_block['block_id']);
+						
+						if ($verification_any_error) $any_error = true;
+					}
+					
+					if ($any_error) {
+						if ($this->db_blockchain['p2p_mode'] == "web_api") {
+							$this->app->log_message("Block verification failed, resetting ".$this->db_blockchain['blockchain_name']." from ".$db_block['block_id']);
+							$this->delete_blocks_from_height($db_block['block_id']);
+						}
+						else $this->app->log_message("Block verification failed for ".$this->db_blockchain['blockchain_name']." at height ".$db_block['block_id']);
+					}
+					else {
 						$this->app->run_query("UPDATE blocks SET locally_saved=1, time_loaded=:time_loaded WHERE internal_block_id=:internal_block_id;", [
 							'time_loaded' => time(),
 							'internal_block_id' => $db_block['internal_block_id']
 						]);
 						$db_block['locally_saved'] = 1;
 						$this->set_last_complete_block($db_block['block_id']);
+						$this->set_block_stats($db_block);
 					}
-					$this->set_block_stats($db_block);
 					
 					$this->app->run_query("UPDATE blocks SET load_time=load_time+:add_load_time WHERE internal_block_id=:internal_block_id;", [
 						'add_load_time' => (microtime(true)-$start_time),
 						'internal_block_id' => $db_block['internal_block_id']
 					]);
 					
-					$html .= "Took ".(microtime(true)-$start_time)." sec to add block #".$db_block['block_id']."<br/>\n";
+					$html .= (microtime(true)-$start_time)." sec to add block #".$db_block['block_id'].": ";
+					if ($any_error) $html .= "failed";
+					else $html .= "successful";
+					$html .= "\n";
 				}
 				else $this->set_last_complete_block($db_block['block_id']);
 			}

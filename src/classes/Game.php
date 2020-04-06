@@ -2021,7 +2021,7 @@ class Game {
 			$prev_event = $this->latest_event();
 			
 			if ($prev_event) {
-				$prev_option = $this->blockchain->app->run_query("SELECT * FROM options WHERE event_id=:event_id ORDER BY option_index DESC LIMIT 1;", [
+				$prev_option = $this->blockchain->app->run_query("SELECT * FROM options WHERE event_id=:event_id ORDER BY event_option_index DESC LIMIT 1;", [
 					'event_id' => $prev_event['event_id']
 				])->fetch();
 				$option_offset = $prev_option['option_index']+1-$options_begin_at_index;

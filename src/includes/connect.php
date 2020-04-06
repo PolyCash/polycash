@@ -42,11 +42,13 @@ include(AppSettings::srcPath()."/classes/Api.php");
 include(AppSettings::srcPath()."/classes/App.php");
 include(AppSettings::srcPath()."/classes/JsonRPCClient.php");
 include(AppSettings::srcPath()."/classes/Blockchain.php");
-include(AppSettings::srcPath()."/classes/Game.php");
+include(AppSettings::srcPath()."/classes/BlockchainVerifier.php");
 include(AppSettings::srcPath()."/classes/Event.php");
-if (AppSettings::getParam('pageview_tracking_enabled')) include(AppSettings::srcPath()."/classes/PageviewController.php");
-include(AppSettings::srcPath()."/classes/User.php");
+include(AppSettings::srcPath()."/classes/Game.php");
 include(AppSettings::srcPath()."/classes/GameDefinition.php");
+include(AppSettings::srcPath()."/classes/User.php");
+
+if (AppSettings::getParam('pageview_tracking_enabled')) include(AppSettings::srcPath()."/classes/PageviewController.php");
 
 if (empty($skip_select_db)) $skip_select_db = false;
 $app = new App($skip_select_db);
