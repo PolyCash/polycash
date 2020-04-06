@@ -737,7 +737,7 @@ if ($thisuser && $game) {
 						<div id="change_user_game" style="margin-top: -3px;">
 							<select id="select_user_game" class="form-control input-sm" onchange="thisPageManager.change_user_game();">
 								<?php
-								$user_games_by_game = $app->run_query("SELECT * FROM user_games WHERE user_id=:user_id AND game_id=:game_id;", [
+								$user_games_by_game = $app->run_query("SELECT * FROM user_games WHERE user_id=:user_id AND game_id=:game_id ORDER BY account_id ASC;", [
 									'user_id' => $thisuser->db_user['user_id'],
 									'game_id' => $game->db_game['game_id']
 								]);

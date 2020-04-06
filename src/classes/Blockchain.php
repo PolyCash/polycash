@@ -1324,10 +1324,10 @@ class Blockchain {
 					
 					if (!$existing_tx) {
 						$transaction_id = $this->add_transaction_from_web_api(false, $json_unconfirmed_tx);
+						
+						$successful = true;
+						$db_transaction = $this->add_transaction($json_unconfirmed_tx['tx_hash'], false, true, $successful, false, [false], false);
 					}
-					
-					$successful = true;
-					$db_transaction = $this->add_transaction($json_unconfirmed_tx['tx_hash'], false, true, $successful, false, [false], false);
 				}
 			}
 		}
