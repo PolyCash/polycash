@@ -271,7 +271,11 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 				$account_q .= " LIMIT 100";
 				$account_r = $app->run_query($account_q, $account_params);
 				
+				$show_balances = false;
+				if ($account_r->rowCount() <= 10 || !empty($_REQUEST['show_balances'])) $show_balances = true;
+				
 				if ($selected_account_id) {
+					$show_balances = true;
 					$selected_account = $account_r->fetch();
 					$account_r = $app->run_query($account_q, $account_params);
 					echo '
@@ -297,7 +301,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					
 					if ($account['game_id'] > 0) {
 						$account_game = new Game($blockchain, $account['game_id']);
-						$account_value = $account_game->account_balance($account['account_id']);
+						if ($show_balances) $account_value = $account_game->account_balance($account['account_id']);
 					}
 					else $account_game = false;
 					
@@ -315,15 +319,19 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					if (!$selected_account_id) echo '</a>';
 					echo '</div>';
 					
-					$balance = $app->account_balance($account['account_id']);
+					if ($show_balances) $balance = $app->account_balance($account['account_id']);
 					
 					echo '<div class="col-sm-2 greentext" style="text-align: right">';
-					if ($account['game_id'] > 0) echo $app->format_bignum($account_value/pow(10,$account_game->db_game['decimal_places'])).' '.$account_game->db_game['coin_name_plural'];
+					if ($account['game_id'] > 0) {
+						if ($show_balances) echo $app->format_bignum($account_value/pow(10,$account_game->db_game['decimal_places'])).' ';
+						echo $account_game->db_game['coin_name_plural'];
+					}
 					else echo "&nbsp;";
 					echo '</div>';
 					
 					echo '<div class="col-sm-2 greentext" style="text-align: right">';
-					echo $app->format_bignum($balance/pow(10,$blockchain->db_blockchain['decimal_places'])).' '.$account['short_name_plural'];
+					if ($show_balances) echo $app->format_bignum($balance/pow(10,$blockchain->db_blockchain['decimal_places']));
+					echo ' '.$account['short_name_plural'];
 					echo '</div>';
 					
 					if ($selected_account_id) {
