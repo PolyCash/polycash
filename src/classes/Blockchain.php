@@ -1030,10 +1030,24 @@ class Blockchain {
 					$startblock_r = $this->app->run_query($startblock_q, $startblock_params);
 				}
 				else {
-					$txt = "sync_coind failed, block $last_block_id is missing.\n";
+					$txt = "sync_coind failed for ".$this->db_blockchain['blockchain_name']." block $last_block_id is missing.\n";
 					if ($print_debug) echo $txt;
 					else $html .= $txt;
-					$this->app->log_then_die($txt);
+					$this->app->log_message($txt);
+					
+					if ($this->db_blockchain['p2p_mode'] == "web_api") {
+						$last_complete_block = $this->last_complete_block_id();
+						$reset_from_block = $last_complete_block+1;
+						
+						$txt = "Deleting ".$this->db_blockchain['blockchain_name']." blocks from $reset_from_block.\n";
+						if ($print_debug) echo $txt;
+						else $html .= $txt;
+						$this->app->log_message($txt);
+						
+						$this->delete_blocks_from_height($reset_from_block);
+					}
+					
+					return false;
 				}
 			}
 			
