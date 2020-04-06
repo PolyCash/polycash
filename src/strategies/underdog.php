@@ -86,9 +86,9 @@ if ($user_game) {
 						if ($amount_mode != "inflation_only" && $game_amount_sum >= $burn_game_amount*1.2) $keep_looping = false;
 					}
 					
-					$recycle_io = $app->fetch_recycle_ios_in_account($account['account_id'], 1)[0];
+					$recycle_ios = $app->fetch_recycle_ios_in_account($account['account_id'], false);
 					
-					if ($recycle_io) {
+					foreach ($recycle_ios as $recycle_io) {
 						array_push($io_ids, $recycle_io['io_id']);
 						$io_amount_sum += $recycle_io['amount'];
 					}

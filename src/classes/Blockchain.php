@@ -216,6 +216,8 @@ class Blockchain {
 						$successful = true;
 						$db_transaction = $this->add_transaction($tx_hash, $db_block['block_id'], true, $successful, $i, [false], $print_debug);
 						
+						if (!$successful) $tx_error = true;
+						
 						if ($db_transaction['transaction_desc'] != "transaction") $coins_created += $db_transaction['amount'];
 					}
 					

@@ -2084,6 +2084,8 @@ class Game {
 					'block_id' => $block_id
 				]);
 				
+				if ($change_gdes->rowCount() > 0) $this->blockchain->app->log_message("Adding ".$change_gdes->rowCount()." events to ".$this->db_game['name'].", option_offset=".$option_offset.", ".$ensured_block.":".$block_id.", from_event_index=".$from_event_index);
+				
 				$msg .= "Ensuring ".$change_gdes->rowCount()." events from game definition.\n";
 				
 				while ($game_defined_event = $change_gdes->fetch()) {

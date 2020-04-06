@@ -3552,7 +3552,18 @@ class App {
 	}
 	
 	public function fetch_recycle_ios_in_account($account_id, $quantity) {
-		return $this->run_limited_query("SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE k.account_id=:account_id AND k.option_index=0 AND io.spend_status='unspent' ORDER BY io.amount DESC LIMIT :quantity;", ['account_id'=>$account_id, 'quantity'=>$quantity])->fetchAll();
+		$fetch_q = "SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE k.account_id=:account_id AND k.option_index=0 AND io.spend_status='unspent' ORDER BY io.amount DESC";
+		
+		$fetch_params = [
+			'account_id' => $account_id
+		];
+		
+		if ($quantity) {
+			$fetch_q .= " LIMIT :quantity";
+			$fetch_params['quantity'] = $quantity;
+		}
+		
+		return $this->run_limited_query($fetch_q, $fetch_params)->fetchAll();
 	}
 	
 	public function set_strategy_time_next_apply($strategy_id, $time_next_apply) {
