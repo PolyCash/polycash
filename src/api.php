@@ -165,6 +165,8 @@ if ($uri_parts[1] == "api") {
 	}
 	else if (count($uri_parts) >= 5 && ($uri_parts[2] == "block" || $uri_parts[2] == "blocks")) {
 		$blockchain_identifier = $uri_parts[3];
+		$no_cache = false;
+		if (!empty($_REQUEST['no_cache'])) $no_cache = true;
 		
 		if ($uri_parts[2] == "block") {
 			$block_height = (int) $uri_parts[4];
@@ -182,9 +184,10 @@ if ($uri_parts[1] == "api") {
 			$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
 			
 			$block_params = [
-				'blockchain_id' => $blockchain->db_blockchain['blockchain_id']
+				'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
+				'complete_block' => (int)$blockchain->db_blockchain['last_complete_block']
 			];
-			$block_q = "SELECT block_id, block_hash, num_transactions, time_mined, json_transactions FROM blocks WHERE block_id<=".(int)$blockchain->db_blockchain['last_complete_block']." AND blockchain_id=:blockchain_id";
+			$block_q = "WHERE block_id<=:complete_block AND blockchain_id=:blockchain_id";
 			if ($uri_parts[2] == "block") {
 				$block_q .= " AND block_id=:block_id";
 				$block_params['block_id'] = $block_height;
@@ -194,7 +197,11 @@ if ($uri_parts[1] == "api") {
 				$block_params['from_block_height'] = $from_block_height;
 				$block_params['to_block_height'] = $to_block_height;
 			}
-			$block_r = $app->run_query($block_q, $block_params);
+			if ($no_cache) {
+				$app->run_query("UPDATE blocks SET transactions_html='', json_transactions='' ".$block_q, $block_params);
+			}
+			
+			$block_r = $app->run_query("SELECT block_id, block_hash, num_transactions, time_mined, json_transactions FROM blocks ".$block_q, $block_params);
 			
 			$blocks = [];
 			
@@ -228,6 +235,8 @@ if ($uri_parts[1] == "api") {
 						'block_id' => $db_block['block_id']
 					]);
 				}
+				
+				unset($db_block['json_transactions']);
 				
 				array_push($blocks, $db_block);
 			}
