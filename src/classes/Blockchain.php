@@ -161,7 +161,7 @@ class Blockchain {
 	// Loads a block for blockchains with p2p_mode = web_api/none. (The 2 modes for dev blockchains)
 	public function web_api_add_block(&$db_block, &$api_block, $headers_only, $print_debug) {
 		$start_time = microtime(true);
-		$html = "";
+		$any_error = false;
 		
 		if (empty($api_block)) {
 			$api_response = $this->web_api_fetch_block($db_block['block_id']);
@@ -221,8 +221,6 @@ class Blockchain {
 						if ($db_transaction['transaction_desc'] != "transaction") $coins_created += $db_transaction['amount'];
 					}
 					
-					$any_error = false;
-					
 					if ($tx_error) {
 						$any_error = true;
 					}
@@ -234,10 +232,19 @@ class Blockchain {
 					
 					if ($any_error) {
 						if ($this->db_blockchain['p2p_mode'] == "web_api") {
-							$this->app->log_message("Block verification failed, resetting ".$this->db_blockchain['blockchain_name']." from ".$db_block['block_id']);
+							$msg = "Block verification failed, resetting ".$this->db_blockchain['blockchain_name']." from ".$db_block['block_id'];
+							if ($print_debug) echo $msg."\n";
+							$this->app->log_message($msg);
+							
+							$refresh_cache_block = $this->web_api_fetch_blocks($db_block['block_id'], $db_block['block_id'], true);
+							
 							$this->delete_blocks_from_height($db_block['block_id']);
 						}
-						else $this->app->log_message("Block verification failed for ".$this->db_blockchain['blockchain_name']." at height ".$db_block['block_id']);
+						else {
+							$msg = "Block verification failed for ".$this->db_blockchain['blockchain_name']." at height ".$db_block['block_id'];
+							if ($print_debug) $msg."\n";
+							$this->app->log_message($msg);
+						}
 					}
 					else {
 						$this->app->run_query("UPDATE blocks SET locally_saved=1, time_loaded=:time_loaded WHERE internal_block_id=:internal_block_id;", [
@@ -253,17 +260,15 @@ class Blockchain {
 						'add_load_time' => (microtime(true)-$start_time),
 						'internal_block_id' => $db_block['internal_block_id']
 					]);
-					
-					$html .= (microtime(true)-$start_time)." sec to add block #".$db_block['block_id'].": ";
-					if ($any_error) $html .= "failed";
-					else $html .= "successful";
-					$html .= "\n";
 				}
 				else $this->set_last_complete_block($db_block['block_id']);
 			}
 		}
+		else $any_error = true;
 		
-		return $html;
+		$successful = !$any_error;
+		
+		return $successful;
 	}
 	
 	// Loads a block for blockchains with p2p_mode="rpc" (bitcoin etc)
@@ -1206,7 +1211,7 @@ class Blockchain {
 			$load_to_block = $load_from_block+$load_at_once-1;
 			
 			if ($this->db_blockchain['p2p_mode'] == "web_api") {
-				$ref_api_blocks = $this->web_api_fetch_blocks($load_from_block, $load_to_block);
+				$ref_api_blocks = $this->web_api_fetch_blocks($load_from_block, $load_to_block, false);
 			}
 			else $ref_api_blocks = [];
 			
@@ -1245,13 +1250,15 @@ class Blockchain {
 							$load_to_block = $load_from_block+$load_at_once-1;
 							
 							$loop_i = 0;
-							$ref_api_blocks = $this->web_api_fetch_blocks($load_from_block, $load_to_block);
+							$ref_api_blocks = $this->web_api_fetch_blocks($load_from_block, $load_to_block, false);
 						}
 						if (empty($ref_api_blocks[$loop_i])) $keep_looping = false;
 						else {
 							$ref_api_blocks[$loop_i] = get_object_vars($ref_api_blocks[$loop_i]);
-							$this->web_api_add_block($unknown_block, $ref_api_blocks[$loop_i], false, $print_debug);
-							$blocks_loaded++;
+							$web_api_block_successful = $this->web_api_add_block($unknown_block, $ref_api_blocks[$loop_i], false, $print_debug);
+							
+							if ($web_api_block_successful) $blocks_loaded++;
+							else $keep_looping = false;
 						}
 					}
 					$loop_i++;
@@ -2320,8 +2327,9 @@ class Blockchain {
 		return get_object_vars(json_decode($remote_response_raw));
 	}
 	
-	public function web_api_fetch_blocks($from_block_height, $to_block_height) {
+	public function web_api_fetch_blocks($from_block_height, $to_block_height, $no_cache) {
 		$remote_url = $this->authoritative_peer['base_url']."/api/blocks/".$this->db_blockchain['url_identifier']."/".$from_block_height.":".$to_block_height;
+		if ($no_cache) $remote_url .= "?no_cache=1";
 		
 		if ($raw_response = file_get_contents($remote_url)) {
 			if ($remote_response = json_decode($raw_response)) return $remote_response->blocks;
