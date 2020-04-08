@@ -540,3 +540,9 @@ a.selected {
 	overflow-x: hidden;
 	overflow-y: scroll;
 }
+.my_bets_row {
+	line-height: 180%;
+}
+.my_bets_row:hover {
+	background-color: #f4f4f4;
+}

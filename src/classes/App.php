@@ -2938,7 +2938,7 @@ class App {
 			$net_stake += $my_stake/pow(10,$game->db_game['decimal_places']);
 			if (empty($bet['winning_option_id']) && (string)$bet['track_payout_price'] == "" && $bet['outcome_index'] != -1) $pending_stake += $my_stake/pow(10,$game->db_game['decimal_places']);
 			
-			if ($div_td == "div") $this_bet_html .= '<div class="col-sm-1 text-center">';
+			if ($div_td == "div") $this_bet_html .= '<div class="col-md-1 text-center">';
 			else $this_bet_html .= '<td>';
 			$this_bet_html .= '<a href="';
 			if ($div_td == "td") $this_bet_html .= AppSettings::getParam('base_url');
@@ -2954,7 +2954,7 @@ class App {
 			else $this_bet_html .= "</td>\n";
 			
 			if ($div_td == "div") {
-				$this_bet_html .= "<div class=\"col-sm-1 text-center";
+				$this_bet_html .= "<div class=\"col-md-1 text-center";
 				if ($bet['spend_status'] == "unconfirmed") $this_bet_html .= " yellowtext";
 				$this_bet_html .= "\">";
 			}
@@ -2964,7 +2964,7 @@ class App {
 			else $this_bet_html .= "</td>\n";
 			
 			if ($div_td == "div") {
-				$this_bet_html .= "<div class=\"col-sm-1 text-center";
+				$this_bet_html .= "<div class=\"col-md-1 text-center";
 				if ($bet['spend_status'] == "unconfirmed") $this_bet_html .= " yellowtext";
 				$this_bet_html .= "\">";
 			}
@@ -2975,7 +2975,7 @@ class App {
 			else $this_bet_html .= "</td>\n";
 			
 			if ($div_td == "div") {
-				$this_bet_html .= "<div class=\"col-sm-1";
+				$this_bet_html .= "<div class=\"col-md-1";
 				if ($bet['spend_status'] == "unconfirmed") $this_bet_html .= " yellowtext";
 				$this_bet_html .= "\">";
 			}
@@ -2984,13 +2984,13 @@ class App {
 			if ($div_td == "div") $this_bet_html .= "</div>\n";
 			else $this_bet_html .= "</td>\n";
 			
-			if ($div_td == "div") $this_bet_html .= "<div class=\"col-sm-2 text-center\">";
+			if ($div_td == "div") $this_bet_html .= "<div class=\"col-md-2 text-center\">";
 			else $this_bet_html .= "<td>";
 			$this_bet_html .= $bet['option_name'];
 			if ($div_td == "div") $this_bet_html .= "</div>\n";
 			else $this_bet_html .= "</td>\n";
 			
-			if ($div_td == "div") $this_bet_html .= "<div class=\"col-sm-3\">";
+			if ($div_td == "div") $this_bet_html .= "<div class=\"col-md-3\">";
 			else $this_bet_html .= "<td>";
 			$this_bet_html .= "<a target=\"_blank\" href=\"";
 			if ($div_td == "td") $this_bet_html .= AppSettings::getParam('base_url');
@@ -3024,7 +3024,7 @@ class App {
 			}
 			
 			if ($div_td == "div") {
-				$this_bet_html .= "<div class=\"col-sm-3";
+				$this_bet_html .= "<div class=\"col-md-3";
 				if (empty($bet['winning_option_id']) && (string)$bet['track_payout_price'] == "") {}
 				else if ($delta >= 0) $this_bet_html .= " greentext";
 				else $this_bet_html .= " redtext";
@@ -3077,7 +3077,7 @@ class App {
 			}
 		}
 		
-		if ($div_td == 'div') $this_bet_html = "<div class=\"col-sm-1\">";
+		if ($div_td == 'div') $this_bet_html = "<div class=\"col-md-1\">";
 		else $this_bet_html = '<td>';
 		
 		$this_bet_html .= "<a href=\"".AppSettings::getParam('base_url')."/explorer/games/".$game->db_game['url_identifier']."/utxo/".$bet['tx_hash']."/".$bet['game_out_index']."\">".$this->format_bignum($effective_paid/pow(10, $game->db_game['decimal_places']))."&nbsp;".$game->db_game['coin_abbreviation']."</a>";
@@ -3085,19 +3085,19 @@ class App {
 		if ($div_td == 'div') $this_bet_html .= "</div>\n";
 		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
 		
-		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-sm-2\">";
+		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-md-2\">";
 		else $this_bet_html .= "<td>";
 		$this_bet_html .= $this->format_bignum($current_leverage)."X &nbsp; ".$bet['option_name'];
 		if ($div_td == 'div') $this_bet_html .= "</div>\n";
 		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
 		
-		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-sm-1 text-center\">";
+		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-md-1 text-center\">";
 		else $this_bet_html .= "<td>";
 		$this_bet_html .= "$".$this->format_bignum($bet['track_min_price'])."&nbsp;-&nbsp;$".$this->format_bignum($bet['track_max_price']);
 		if ($div_td == 'div') $this_bet_html .= "</div>\n";
 		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
 		
-		if ($div_td == 'div') $this_bet_html .= '<div class="col-sm-2">';
+		if ($div_td == 'div') $this_bet_html .= '<div class="col-md-2">';
 		else $this_bet_html .= "<td>";
 		
 		if ($bet['event_option_index'] != 0) $this_bet_html .= '-';
@@ -3111,7 +3111,7 @@ class App {
 		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
 		
 		$track_performance_pct = 100*(($track_pay_price/$bought_price_usd)-1);
-		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-sm-3\">";
+		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-md-3\">";
 		else $this_bet_html .= "<td>";
 		$this_bet_html .= $bet['track_name_short']." ";
 		if ($track_performance_pct >= 0) $this_bet_html .= '<font class="greentext">+'.$this->to_significant_digits($track_performance_pct, 4).'%</font>';
@@ -3123,7 +3123,7 @@ class App {
 		if ($div_td == 'div') $this_bet_html .= "</div>\n";
 		else $this_bet_html .= "&nbsp;&nbsp;</td>\n";
 		
-		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-sm-3\">";
+		if ($div_td == 'div') $this_bet_html .= "<div class=\"col-md-3\">";
 		else $this_bet_html .= "<td>";
 		$this_bet_html .= $this->format_bignum($fair_io_value/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_abbreviation']." &nbsp; ";
 		if ($bet_net_delta >= 0) $this_bet_html .= '<font class="greentext">+';

@@ -1361,23 +1361,23 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						
 						$bet_table_headers['linear'] = '
 						<div class="row">
-							<div class="col-sm-1 boldtext">Amt Paid</div>
-							<div class="col-sm-2 boldtext">Option Purchased</div>
-							<div class="col-sm-1 text-center boldtext">Range</div>
-							<div class="col-sm-2 boldtext">Position Purchased</div>
-							<div class="col-sm-3 boldtext">Asset Performance</div>
-							<div class="col-sm-3 boldtext">Position Performance</div>
+							<div class="col-md-1 boldtext">Amt Paid</div>
+							<div class="col-md-2 boldtext">Option Purchased</div>
+							<div class="col-md-1 text-center boldtext">Range</div>
+							<div class="col-md-2 boldtext">Position Purchased</div>
+							<div class="col-md-3 boldtext">Asset Performance</div>
+							<div class="col-md-3 boldtext">Position Performance</div>
 						</div>';
 						
 						$bet_table_headers['binary'] = '
 						<div class="row">
-							<div class="col-sm-1 boldtext text-center">Stake</div>
-							<div class="col-sm-1 boldtext text-center">Payout</div>
-							<div class="col-sm-1 text-center boldtext">Odds</div>
-							<div class="col-sm-1 boldtext">Effectiveness</div>
-							<div class="col-sm-2 boldtext text-center">Your Bet</div>
-							<div class="col-sm-3 boldtext">Event</div>
-							<div class="col-sm-3 boldtext">Outcome</div>
+							<div class="col-md-1 boldtext text-center">Stake</div>
+							<div class="col-md-1 boldtext text-center">Payout</div>
+							<div class="col-md-1 text-center boldtext">Odds</div>
+							<div class="col-md-1 boldtext">Effectiveness</div>
+							<div class="col-md-2 boldtext text-center">Your Bet</div>
+							<div class="col-md-3 boldtext">Event</div>
+							<div class="col-md-3 boldtext">Outcome</div>
 						</div>';
 						
 						$bet_tables = [
@@ -1411,7 +1411,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								if (isset($_REQUEST['selected_io_id']) && $bet['io_id'] == $_REQUEST['selected_io_id']) $this_bet_html = "<b>".$this_bet_html."</b>\n";
 								
 								if (!empty($this_bet_html)) {
-									$this_bet_html = '<div class="row">'.$this_bet_html."</div>\n";
+									$this_bet_html = '<div class="row my_bets_row">'.$this_bet_html."</div>\n";
 									
 									if (empty($bet['winning_option_id']) && $bet['outcome_index'] != -1) $bet_tables['binary']['unresolved'] .= $this_bet_html;
 									else $bet_tables['binary']['resolved'] .= $this_bet_html;
@@ -1425,7 +1425,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 								$this_bet_html = $app->render_linear_bet('div', $bet, $game, $inflation_stake, $effective_paid, $current_leverage, $equivalent_contracts, $borrow_delta, $track_pay_price, $bought_price_usd, $fair_io_value, $bet_net_delta, $net_delta, $net_stake, $pending_stake, $resolved_fees_paid, $num_wins, $num_losses, $num_unresolved, $num_refunded, $unresolved_net_delta);
 								
 								if (!empty($this_bet_html)) {
-									$this_bet_html = '<div class="row">'.$this_bet_html."</div>\n";
+									$this_bet_html = '<div class="row my_bets_row">'.$this_bet_html."</div>\n";
 									
 									if (empty($bet['winning_option_id']) && (string)$bet['track_payout_price'] == "" && $bet['outcome_index'] != -1) $bet_tables['linear']['unresolved'] .= $this_bet_html;
 									else $bet_tables['linear']['resolved'] .= $this_bet_html;
