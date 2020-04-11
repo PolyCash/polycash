@@ -135,11 +135,10 @@ class Game {
 								'transaction_id' => $transaction_id,
 								'io_id' => $transaction_input['io_id']
 							];
-							$update_input_q = "UPDATE transaction_ios SET spend_count=spend_count+1, spend_transaction_id=:transaction_id, spend_transaction_ids=CONCAT(spend_transaction_ids, ':transaction_id,')";
+							$update_input_q = "UPDATE transaction_ios SET spend_transaction_id=:transaction_id";
 							if ($block_id !== false) {
-								$update_input_q .= ", spend_status='spent', spend_block_id=:spend_block_id, spend_round_id=:spend_round_id";
+								$update_input_q .= ", spend_status='spent', spend_block_id=:spend_block_id";
 								$update_input_params['spend_block_id'] = $block_id;
-								$update_input_params['spend_round_id'] = $this->block_to_round($block_id);
 							}
 							$update_input_q .= " WHERE io_id=:io_id;";
 							$this->blockchain->app->run_query($update_input_q, $update_input_params);

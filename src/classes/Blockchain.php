@@ -506,7 +506,7 @@ class Blockchain {
 				$spend_io_ids[count($spend_io_ids)] = $spend_io['io_id'];
 				$input_sum += $spend_io['amount'];
 				
-				if ($block_height === false) {
+				if ($block_height !== false) {
 					$this_io_cbd = ($block_height - $spend_io['create_block_id'])*$spend_io['amount'];
 					$coin_blocks_destroyed += $this_io_cbd;
 					$this->app->run_query("UPDATE transaction_ios SET spend_status='spent', spend_block_id=:spend_block_id, coin_blocks_created=:coin_blocks_created WHERE io_id=:io_id;", [
@@ -1384,12 +1384,19 @@ class Blockchain {
 	}
 	
 	public function delete_blocks_from_height($block_height) {
-		$this->app->run_query("DELETE s.* FROM game_sellouts s JOIN games g ON s.game_id=g.game_id WHERE g.blockchain_id=:blockchain_id AND s.in_block_id >= :sellout_block_id;", [
+		// Reset IOs that have been confirmed spent ahead of this block
+		$this->app->run_query("UPDATE transaction_ios io SET io.coin_blocks_created=0, io.spend_transaction_id=NULL, io.spend_status='unspent', io.in_index=NULL, io.spend_block_id=NULL WHERE io.blockchain_id=:blockchain_id AND io.spend_block_id >= :spend_block_id;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
-			'sellout_block_id' => $block_height
+			'spend_block_id' => $block_height
 		]);
 		
-		$this->app->run_query("DELETE io.*, gio.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id=:blockchain_id AND t.block_id >= :create_block_id;", [
+		// Reset IOs that have been spent but the spend has not been confirmed
+		$this->app->run_query("UPDATE transaction_ios io JOIN transactions t ON io.spend_transaction_id=t.transaction_id SET io.coin_blocks_created=0, io.spend_transaction_id=NULL, io.spend_status='unspent', io.in_index=NULL, io.spend_block_id=NULL WHERE t.blockchain_id=:blockchain_id AND t.block_id IS NULL;", [
+			'blockchain_id' => $this->db_blockchain['blockchain_id']
+		]);
+		
+		// Delete any confirmed transactions and IOs created from this block
+		$this->app->run_query("DELETE io.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.blockchain_id=:blockchain_id AND t.block_id >= :create_block_id;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'create_block_id' => $block_height
 		]);
@@ -1398,23 +1405,29 @@ class Blockchain {
 			'block_id' => $block_height
 		]);
 		
-		$this->app->run_query("DELETE io.*, gio.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id=:blockchain_id AND t.block_id IS NULL;", [
+		// Delete any outputs of unconfirmed transactions
+		$this->app->run_query("DELETE io.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.blockchain_id=:blockchain_id AND t.block_id IS NULL;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id']
 		]);
+		
+		// Delete any unconfirmed transactions
 		$this->app->run_query("DELETE FROM transactions WHERE blockchain_id=:blockchain_id AND block_id IS NULL;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id']
 		]);
 		
-		$this->app->run_query("UPDATE transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id SET gio.spend_round_id=NULL, io.coin_blocks_created=0, gio.coin_rounds_created=0, gio.votes=0, io.spend_transaction_id=NULL, io.spend_count=NULL, io.spend_status='unspent', io.in_index=NULL, gio.payout_io_id=NULL WHERE io.blockchain_id=:blockchain_id AND io.spend_block_id >= :spend_block_id;", [
-			'blockchain_id' => $this->db_blockchain['blockchain_id'],
-			'spend_block_id' => $block_height
-		]);
+		// Delete records from the blocks table
 		$this->app->run_query("DELETE FROM blocks WHERE blockchain_id=:blockchain_id AND block_id >= :block_id;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'block_id' => $block_height
 		]);
 		
 		$this->set_last_complete_block($block_height-1);
+		
+		$associated_games = $this->associated_games([]);
+		
+		foreach ($associated_games as $associated_game) {
+			$associated_game->reset_blocks_from_block($block_height);
+		}
 	}
 	
 	public function add_genesis_block() {
@@ -2056,17 +2069,20 @@ class Blockchain {
 						$update_input_params = [
 							'io_id' => $transaction_input['io_id']
 						];
-						$update_input_q = "UPDATE transaction_ios SET spend_count=spend_count+1";
+						$update_input_q = "UPDATE transaction_ios SET ";
+						
+						if ($block_id !== false) {
+							$update_input_q .= "spend_status='spent', spend_block_id=:block_id";
+							$update_input_params['block_id'] = $block_id;
+						}
+						else $update_input_q .= "spend_status='unconfirmed'";
+						
 						if (!empty($transaction_id)) {
-							$update_input_q .= ", spend_transaction_id=:transaction_id, in_index=:in_index, spend_transaction_ids=CONCAT(spend_transaction_ids, ':transaction_id,')";
+							$update_input_q .= ", spend_transaction_id=:transaction_id, in_index=:in_index";
 							$update_input_params['transaction_id'] = $transaction_id;
 							$update_input_params['in_index'] = $in_index;
 						}
-						if ($block_id !== false) {
-							$update_input_q .= ", spend_status='spent', spend_block_id=:block_id";
-							$update_input_params['block_id'] = $block_id;
-						}
-						else $update_input_q .= ", spend_status='unconfirmed'";
+						
 						$update_input_q .= " WHERE io_id=:io_id;";
 						$this->app->run_query($update_input_q, $update_input_params);
 						
@@ -2392,13 +2408,25 @@ class Blockchain {
 		
 		for ($in_index=0; $in_index<count($tx['inputs']); $in_index++) {
 			$tx_input = get_object_vars($tx['inputs'][$in_index]);
-			$this->app->run_query("UPDATE transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id SET io.spend_transaction_id=:transaction_id, io.in_index=:in_index WHERE t.blockchain_id=:blockchain_id AND t.tx_hash=:tx_hash AND io.out_index=:out_index;", [
+			
+			$update_input_q = "UPDATE transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id SET io.spend_transaction_id=:transaction_id, io.in_index=:in_index";
+			
+			$update_input_params = [
 				'transaction_id' => $transaction_id,
 				'in_index' => $in_index,
 				'blockchain_id' => $this->db_blockchain['blockchain_id'],
 				'tx_hash' => $tx_input['tx_hash'],
 				'out_index' => $tx_input['out_index']
-			]);
+			];
+			
+			if ($block_height !== false) {
+				$update_input_q .= ", io.spend_block_id=:spend_block_id";
+				$update_input_params['spend_block_id'] = $block_height;
+			}
+			
+			$update_input_q .= " WHERE t.blockchain_id=:blockchain_id AND t.tx_hash=:tx_hash AND io.out_index=:out_index;";
+			
+			$this->app->run_query($update_input_q, $update_input_params);
 		}
 		
 		$first_passthrough_index = false;

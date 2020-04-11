@@ -268,7 +268,6 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					$account_q .= " AND ca.account_id=:account_id";
 					$account_params['account_id'] = $selected_account_id;
 				}
-				$account_q .= " LIMIT 100";
 				$account_r = $app->run_query($account_q, $account_params);
 				
 				$show_balances = false;
