@@ -294,6 +294,9 @@ class GameDefinition {
 			$log_message .= "Resetting events from #".$set_events_from_index."\n";
 			$game->reset_events_from_index($set_events_from_index);
 			
+			$events_earliest_affected_block = $game->event_index_to_affected_block($set_events_from_index);
+			$reset_block = $game->blockchain->app->min_excluding_false([$reset_block, $events_earliest_affected_block]);
+			
 			$set_events_from_pos = $set_events_from_index-$event_array_pos_to_index_offset;
 			
 			if (!is_numeric($reset_block)) $reset_block = $new_game_obj['events'][$set_events_from_pos]->event_starting_block;
