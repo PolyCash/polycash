@@ -770,6 +770,8 @@ class Game {
 	}
 	
 	public function reset_events_from_index($event_index) {
+		$this->blockchain->app->log_message("Deleting ".$this->db_game['name']." events from ".$event_index);
+		
 		$this->blockchain->app->dbh->beginTransaction();
 		
 		$this->blockchain->app->run_query("DELETE e.*, o.* FROM events e LEFT JOIN options o ON e.event_id=o.event_id WHERE e.game_id=:game_id AND e.event_index >= :event_index;", [
@@ -806,6 +808,8 @@ class Game {
 	}
 	
 	public function delete_reset_game($delete_or_reset) {
+		$this->blockchain->app->log_message("Resetting ".$this->db_game['name']." (".$delete_or_reset.")");
+		
 		$this->blockchain->app->dbh->beginTransaction();
 		
 		$this->blockchain->app->run_query("DELETE FROM game_blocks WHERE game_id=:game_id;", ['game_id'=>$this->db_game['game_id']]);
@@ -2460,7 +2464,12 @@ class Game {
 		
 		if ($definitive_peer) {
 			$send_hash = $this->db_game['cached_definition_hash'];
-			if ($this->db_game['defined_cached_definition_hash'] != $this->db_game['cached_definition_hash']) $send_hash = "";
+			
+			if (empty($send_hash)) {
+				GameDefinition::set_cached_definition_hashes($this);
+				$send_hash = $this->db_game['cached_definition_hash'];
+			}
+			
 			$api_url = $definitive_peer['base_url']."/api/".$this->db_game['url_identifier']."/definition/?definition_hash=".$send_hash;
 			
 			if ($print_debug) {
@@ -2474,6 +2483,7 @@ class Game {
 				if ($api_response->definition->url_identifier == $this->db_game['url_identifier']) {
 					if ($api_response->definition_hash == $send_hash) $error_message = "Already in sync.\n";
 					else {
+						$this->blockchain->app->log_message("Syncing ".$this->db_game['name']." from ".$api_url);
 						$ref_user = false;
 						$db_new_game = false;
 						GameDefinition::set_game_from_definition($this->blockchain->app, $api_response->definition, $ref_user, $error_message, $db_new_game, true);
@@ -4150,6 +4160,19 @@ class Game {
 		return $this->blockchain->app->run_query("SELECT * FROM featured_strategies fs LEFT JOIN currency_accounts ca ON fs.reference_account_id=ca.account_id WHERE fs.game_id=:game_id;", [
 			'game_id' => $this->db_game['game_id']
 		]);
+	}
+	
+	public function event_index_to_affected_block($event_index) {
+		$info = $this->blockchain->app->run_query("SELECT MIN(event_starting_block) FROM events WHERE game_id=:game_id AND event_index <= :event_index;", [
+			'game_id' => $this->db_game['game_id'],
+			'event_index' => $event_index
+		]);
+		
+		if ($info->rowCount() > 0) {
+			$info = $info->fetch();
+			return (int) $info['MIN(event_starting_block)'];
+		}
+		else return false;
 	}
 }
 ?>
