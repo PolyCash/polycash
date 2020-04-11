@@ -4151,5 +4151,17 @@ class Game {
 			'game_id' => $this->db_game['game_id']
 		]);
 	}
+	
+	public function event_index_to_affected_block($event_index) {
+		$info = $this->blockchain->app->run_query("SELECT MIN(event_starting_block) FROM events WHERE game_id=:game_id AND event_index <= :event_index;", [
+			'event_index' => $event_index
+		]);
+		
+		if ($info->rowCount() > 0) {
+			$info = $info->fetch();
+			return (int) $info['MIN(event_starting_block)'];
+		}
+		else return false;
+	}
 }
 ?>
