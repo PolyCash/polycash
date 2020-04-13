@@ -1087,12 +1087,7 @@ class Game {
 		
 		$this->db_game['seconds_per_block'] = $this->blockchain->db_blockchain['seconds_per_block'];
 		
-		// Game->sync() only syncs to remote when game is fully loaded
-		// So set fully loaded to trigger sync to remote
-		if (!empty($this->db_game['definitive_game_peer_id'])) {
-			$this->set_loaded_until_block($this->blockchain->last_block_id());
-		}
-		else $this->set_loaded_until_block(null);
+		$this->set_loaded_until_block(null);
 	}
 	
 	public function max_game_io_index() {
