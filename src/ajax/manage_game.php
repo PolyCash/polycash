@@ -75,7 +75,8 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 					$initial_game_def = json_decode($default_game_def_txt);
 				}
 				else {
-					eval('$module = new '.$game_module.'GameDefinition($app);');
+					$module_class = $game_module."GameDefinition";
+					$module = new $module_class($app);
 					$initial_game_def = json_decode($module->game_def_base_txt);
 				}
 				

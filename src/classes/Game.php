@@ -11,9 +11,9 @@ class Game {
 		$this->game_id = $game_id;
 		$this->update_db_game();
 		
-		// Game.module is a restricted field. Only admins can add modules
 		if (!empty($this->db_game['module'])) {
-			eval('$this->module = new '.$this->db_game['module'].'GameDefinition($this->blockchain->app);');
+			$module_class = $this->db_game['module'].'GameDefinition';
+			$this->module = new $module_class($this->blockchain->app);
 		}
 	}
 	
@@ -760,8 +760,7 @@ class Game {
 			'game_id' => $this->db_game['game_id'],
 			'block_id' => $block_height
 		]);
-		$this->blockchain->app->run_query("UPDATE games SET loaded_until_block=:loaded_until_block, coins_in_existence=0, cached_pending_bets=NULL, cached_vote_supply=NULL WHERE game_id=:game_id;", [
-			'loaded_until_block' => ($block_height-1),
+		$this->blockchain->app->run_query("UPDATE games SET loaded_until_block=NULL, coins_in_existence=0, cached_pending_bets=NULL, cached_vote_supply=NULL WHERE game_id=:game_id;", [
 			'game_id' => $this->db_game['game_id']
 		]);
 		
@@ -2504,6 +2503,8 @@ class Game {
 		$sync_start_time = microtime(true);
 		$last_set_loaded_time = microtime(true);
 		
+		if ((string) $this->db_game['loaded_until_block'] == "") $this->set_loaded_until_block(null);
+		
 		$load_block_height = $this->db_game['loaded_until_block']+1;
 		$to_block_height = $this->blockchain->last_block_id();
 		
@@ -4163,7 +4164,11 @@ class Game {
 			'event_index' => $event_index
 		])->fetch();
 		
-		if ($info) return $info['MIN(event_starting_block)'];
+		if ($info) {
+			$affected_block = $info['MIN(event_starting_block)'];
+			if ($affected_block <= $this->blockchain->last_block_id()) return $affected_block;
+			else return false;
+		}
 		else return false;
 	}
 }

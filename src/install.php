@@ -78,7 +78,8 @@ if ($app->running_as_admin()) {
 						echo "<br/><b>Installing module $module_name</b><br/>\n";
 						
 						if ($existing_module = $app->check_module($module_name)) {
-							eval('$game_def = new '.$module_name.'GameDefinition($app);');
+							$module_class = $module_name.'GameDefinition';
+							$game_def = new $module_class($app);
 							
 							$conflicting_game = $app->fetch_game_by_identifier($game_def->game_def->url_identifier);
 							

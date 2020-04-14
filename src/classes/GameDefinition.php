@@ -314,11 +314,10 @@ class GameDefinition {
 			}
 		}
 		
-		if (is_numeric($reset_block)) {
-			$log_message .= "Resetting blocks from #".$reset_block."\n";
-			$game->reset_blocks_from_block($reset_block);
-		}
-		else $log_message .= "Failed to determine a reset block.\n";
+		if (!is_numeric($reset_block)) $reset_block = $game->blockchain->last_block_id();
+		
+		$log_message .= "Resetting blocks from #".$reset_block."\n";
+		$game->reset_blocks_from_block($reset_block);
 		
 		self::record_migration($game, $user_id, $migration_type, $show_internal_params, $initial_game_def, $new_game_def);
 		
