@@ -3771,7 +3771,7 @@ class Game {
 			if (empty($user_game) || $eligible_for_faucet) {
 				$faucet_account = $this->check_set_faucet_account();
 				
-				$faucet_io = $this->blockchain->app->run_query("SELECT *, SUM(gio.colored_amount) AS colored_amount_sum FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id=:game_id AND io.spend_status='unspent' AND k.account_id=:account_id AND gio.option_id IS NULL GROUP BY a.address_id ORDER BY colored_amount_sum DESC;", [
+				$faucet_io = $this->blockchain->app->run_query("SELECT *, SUM(gio.colored_amount) AS colored_amount_sum FROM address_keys k JOIN transaction_game_ios gio ON gio.address_id=k.address_id WHERE gio.game_id=:game_id AND k.account_id=:account_id AND gio.option_id IS NULL GROUP BY k.address_id;", [
 					'game_id' => $this->db_game['game_id'],
 					'account_id' => $faucet_account['account_id']
 				])->fetch();

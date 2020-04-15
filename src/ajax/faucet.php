@@ -14,26 +14,36 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		$action = $_REQUEST['action'] ?? "claim";
 		
 		if ($action == "claim") {
-			$faucet_io = $game->check_faucet($user_game);
+			$keep_claiming = true;
+			$claim_count = 0;
+			$max_claims = empty(AppSettings::getParam('faucet_max_claims_enabled')) ? 1 : 100;
 			
-			if ($faucet_io) {
-				$app->run_query("UPDATE address_keys SET account_id=:account_id WHERE address_key_id=:address_key_id;", [
-					'account_id' => $user_game['account_id'],
-					'address_key_id' => $faucet_io['address_key_id']
-				]);
-				$app->run_query("UPDATE addresses SET user_id=:user_id WHERE address_id=:address_id;", [
-					'user_id' => $thisuser->db_user['user_id'],
-					'address_id' => $faucet_io['address_id']
-				]);
-				$app->run_query("UPDATE user_games SET faucet_claims=faucet_claims+1, latest_claim_time=:latest_claim_time WHERE user_game_id=:user_game_id;", [
-					'user_game_id' => $user_game['user_game_id'],
-					'latest_claim_time' => time()
-				]);
+			do {
+				$faucet_io = $game->check_faucet($user_game);
 				
-				$app->set_site_constant("last_faucet_giveaway_time", time());
-				
-				$app->output_message(1, "Successful!", false);
+				if ($faucet_io) {
+					$app->run_query("UPDATE address_keys SET account_id=:account_id WHERE address_key_id=:address_key_id;", [
+						'account_id' => $user_game['account_id'],
+						'address_key_id' => $faucet_io['address_key_id']
+					]);
+					$app->run_query("UPDATE addresses SET user_id=:user_id WHERE address_id=:address_id;", [
+						'user_id' => $thisuser->db_user['user_id'],
+						'address_id' => $faucet_io['address_id']
+					]);
+					$app->run_query("UPDATE user_games SET faucet_claims=faucet_claims+1, latest_claim_time=:latest_claim_time WHERE user_game_id=:user_game_id;", [
+						'user_game_id' => $user_game['user_game_id'],
+						'latest_claim_time' => time()
+					]);
+					
+					$claim_count++;
+					
+					if ($claim_count >= $max_claims) $keep_claiming = false;
+				}
+				else $keep_claiming = false;
 			}
+			while ($keep_claiming);
+			
+			if ($claim_count > 0) $app->output_message(1, "Successful!", false);
 			else $app->output_message(4, "No money is available right now from the faucet.", false);
 		}
 		else if ($action == "check") {

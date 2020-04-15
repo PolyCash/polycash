@@ -32,6 +32,7 @@
 	"cachebuster": 1001,
 	"disable_address_generation": false,
 	"fix_game_blocks_disabled": false,
+	"faucet_max_claims_enabled": true,
 	"restrict_ip_address": false,
 	"memory_limit": "1024M"
 }
