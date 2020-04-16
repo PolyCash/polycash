@@ -119,8 +119,9 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 								<td><?php
 								if ($blockchain->db_blockchain['p2p_mode'] == "rpc") echo "RPC / Daemon";
 								else {
-									echo "Web";
-									if ($blockchain->db_blockchain['p2p_mode'] == "none") echo " (Authoritative)";
+									echo "Web &nbsp; ";
+									if ($blockchain->db_blockchain['p2p_mode'] == "none") echo "(Authoritative)";
+									else echo "(".$blockchain->authoritative_peer['base_url'].")";
 								}
 								?></td>
 								<td><?php echo $blockchain->db_blockchain['blockchain_name']; ?></td>
