@@ -64,12 +64,13 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 				
 				if ($existing_blockchain) {
 					if ($_REQUEST['action'] == "save_blockchain_params") {
-						$app->run_query("UPDATE blockchains SET rpc_host=:rpc_host, rpc_username=:rpc_username, rpc_password=:rpc_password, rpc_port=:rpc_port, first_required_block=:first_required_block WHERE blockchain_id=:blockchain_id;", [
+						$app->run_query("UPDATE blockchains SET rpc_host=:rpc_host, rpc_username=:rpc_username, rpc_password=:rpc_password, rpc_port=:rpc_port, first_required_block=:first_required_block, last_complete_block=:last_complete_block WHERE blockchain_id=:blockchain_id;", [
 							'rpc_host' => $_REQUEST['rpc_host'],
 							'rpc_username' => $_REQUEST['rpc_username'],
 							'rpc_password' => $_REQUEST['rpc_password'],
 							'rpc_port' => $_REQUEST['rpc_port'],
 							'first_required_block' => $_REQUEST['first_required_block'],
+							'last_complete_block' => ($_REQUEST['first_required_block']-1),
 							'blockchain_id' => $existing_blockchain['blockchain_id']
 						]);
 					}

@@ -16,7 +16,7 @@ if ($app->running_as_admin() || $app->user_is_admin($thisuser)) {
 	if (!empty($_REQUEST['block_id'])) $from_block_id = (int) $_REQUEST['block_id'];
 	else $from_block_id = false;
 	
-	$process_lock_name = "load_blocks";
+	$process_lock_name = "load_blocks_".$blockchain_id;
 	
 	echo "Waiting for block loading script to finish";
 	do {
