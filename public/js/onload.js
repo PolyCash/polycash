@@ -1,5 +1,6 @@
 $(document).on('expanded.pushMenu', function() {toggle_push_menu('expand');});
 $(document).on('collapsed.pushMenu', function() {toggle_push_menu('collapse');});
+$.ajaxSetup({ cache: false });
 
 $(window).keydown(function(e){
 	var key = (e.which) ? e.which : e.keyCode;

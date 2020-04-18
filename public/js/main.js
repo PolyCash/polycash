@@ -2142,6 +2142,7 @@ var PageManager = function() {
 				action: "finish_join_tx",
 				io_id: this.account_io_id,
 				join_io_id: $('#join_tx_io_id').val(),
+				tx_fee: $('#join_tx_fee').val(),
 				synchronizer_token: this.synchronizer_token
 			},
 			success: function(spend_response) {

@@ -925,7 +925,7 @@ if ($thisuser && $game) {
 						
 						Pay fees on every transaction of:<br/>
 						<div class="row">
-							<div class="col-sm-4"><input class="form-control" name="transaction_fee" value="<?php echo $app->format_bignum($user_strategy['transaction_fee']); ?>" placeholder="0.0001" /></div>
+							<div class="col-sm-4"><input class="form-control" name="transaction_fee" value="<?php echo $app->format_bignum($user_strategy['transaction_fee']); ?>" placeholder="<?php echo $game->db_game['default_transaction_fee']; ?>" /></div>
 							<div class="col-sm-4 form-control-static"><?php
 							echo $game->blockchain->db_blockchain['coin_name_plural'];
 							?></div>
@@ -1205,9 +1205,11 @@ if ($thisuser && $game) {
 						<p>
 							It's recommended that you select an auto strategy so that your account will gain value while you sleep. You can change your auto strategy at any time by logging in and clicking the "Settings" tab to the left.
 						</p>
-						<p>
-							<button class="btn btn-primary" onclick="$('#intro_message').modal('hide'); thisPageManager.show_featured_strategies();">Choose an auto-strategy</button>
-						</p>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-sm btn-warning" data-dismiss="modal"><i class="fas fa-times"></i> &nbsp; Close</button>
+						 &nbsp;&nbsp;or&nbsp;&nbsp;
+						<button class="btn btn-sm btn-primary" onclick="$('#intro_message').modal('hide'); thisPageManager.show_featured_strategies();"><i class="fas fa-list"></i> &nbsp; Choose an auto-strategy</button>
 					</div>
 				</div>
 			</div>

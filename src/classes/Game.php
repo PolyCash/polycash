@@ -3514,7 +3514,7 @@ class Game {
 								'address_id' => $escrow_address['address_id']
 							])->fetch()['SUM(amount)']);
 							
-							$fee_amount = (int)(0.0001*pow(10,$this->blockchain->db_blockchain['decimal_places']));
+							$fee_amount = (int)($this->db_game['default_transaction_fee']*pow(10,$this->blockchain->db_blockchain['decimal_places']));
 							
 							$refund_amount = ($coins_into_escrow+$value_destroyed_coins) - $fee_amount;
 							

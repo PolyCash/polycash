@@ -164,7 +164,8 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 						$joinable_ios = $app->run_query($joinable_ios_q, $joinable_ios_params);
 						
 						$html = '<form action="/accounts/" method="get" onsubmit="thisPageManager.finish_join_tx(); return false;">';
-						$html .= '<select id="join_tx_io_id" name="join_tx_io_id" class="form-control">'."\n";
+						
+						$html .= '<div class="form-group"><select id="join_tx_io_id" name="join_tx_io_id" class="form-control">'."\n";
 						$html .= '<option value="">-- Please Select --</option>'."\n";
 						while ($db_io = $joinable_ios->fetch()) {
 							$html .= '<option value="'.$db_io['io_id'].'">';
@@ -173,7 +174,13 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 							if ($key_account['game_id'] > 0) $html .= ')';
 							$html .= ' '.$db_io['address'].'</option>'."\n";
 						}
-						$html .= "</select>\n";
+						$html .= "</select></div>\n";
+						
+						$html .= '<div class="form-group">';
+						$html .= '<label for="join_tx_fee">Transaction fee:</label>';
+						$html .= '<input id="join_tx_fee" type="text" class="form-control" value="'.($db_game ? $db_game['default_transaction_fee'] : "").'" />';
+						$html .= "</div>\n";
+						
 						$html .= '<button class="btn btn-primary">Join UTXOs</button>'."\n";
 						$html .= "</form>\n";
 						
@@ -192,7 +199,8 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 							])->fetch();
 							
 							if ($join_key_account) {
-								$fee_amount = (int)(0.0001*pow(10,$blockchain->db_blockchain['decimal_places']));
+								$tx_fee = (float) $_REQUEST['tx_fee'];
+								$fee_amount = (int)($tx_fee*pow(10,$blockchain->db_blockchain['decimal_places']));
 								$amount = $db_io['amount']+$join_db_io['amount']-$fee_amount;
 								
 								$new_normal_address = $app->new_normal_address_key($join_key_account['currency_id'], $join_key_account);

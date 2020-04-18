@@ -20,7 +20,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 			$sale_currency_id = $sale_blockchain->currency_id();
 			
 			$satoshis_each = pow(10,$db_game['decimal_places'])*$amount_each;
-			$fee_amount = (int) (0.0001*pow(10,$sale_blockchain->db_blockchain['decimal_places']));
+			$fee_amount = (int) ($sale_game->db_game['default_transaction_fee']*pow(10,$sale_blockchain->db_blockchain['decimal_places']));
 			
 			if ($quantity > 0 && $satoshis_each > 0) {
 				$total_cost_satoshis = $quantity*$satoshis_each;
@@ -125,6 +125,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		$utxos_each = (int) $_REQUEST['donate_utxos_each'];
 		$quantity = (int) $_REQUEST['donate_quantity'];
 		$game_id = (int) $_REQUEST['donate_game_id'];
+		$tx_fee = (float) $_REQUEST['donate_tx_fee'];
 		
 		$db_game = $app->fetch_game_by_id($game_id);
 		
@@ -135,7 +136,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 			$satoshis_each = pow(10,$db_game['decimal_places'])*$amount_each;
 			$satoshis_each_utxo = ceil($satoshis_each/$utxos_each);
 			$satoshis_each = $satoshis_each_utxo*$utxos_each;
-			$fee_amount = (int)(0.0001*pow(10,$db_game['decimal_places']));
+			$fee_amount = (int)($tx_fee*pow(10,$donate_blockchain->db_blockchain['decimal_places']));
 			
 			if ($quantity > 0 && $satoshis_each > 0) {
 				$total_cost_satoshis = $quantity*$satoshis_each;
@@ -585,7 +586,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								<option value="withdraw">Spend</option>
 								<option value="split">Split into pieces</option>
 								<option value="buyin">Buy in to a game</option>
-								<option value="faucet">Donate to a faucet</option>
+								<option value="faucet">Donate to faucet</option>
 								<option value="set_for_sale">Set as for sale</option>
 								<option value="join_tx">Join with another UTXO</option>
 							</select>
@@ -638,6 +639,10 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								<div class="form-group">
 									<label for="donate_quantity">How many faucet contributions do you want to make?</label>
 									<input type="text" class="form-control" name="donate_quantity" />
+								</div>
+								<div class="form-group">
+									<label for="donate_tx_fee">Transaction fee:</label>
+									<input type="text" class="form-control" name="donate_tx_fee" value="<?php echo $account_game->db_game['default_transaction_fee']; ?>" />
 								</div>
 								<div class="form-group">
 									<button class="btn btn-primary">Donate to Faucet</button>

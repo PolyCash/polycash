@@ -69,7 +69,7 @@
 
 <script type="text/javascript" src="/js/lodash.min.js"></script>
 <script type="text/javascript" src="/js/jquery-1.11.3.js"></script>
-<script type="text/javascript" src="/js/onload.js"></script>
+<script type="text/javascript" src="/js/onload.js<?php if (!empty(AppSettings::getParam('cachebuster'))) echo '?v='.AppSettings::getParam('cachebuster'); ?>"></script>
 
 <script type="text/javascript">
 <?php if ($thisuser) echo "thisPageManager.synchronizer_token = '".$thisuser->get_synchronizer_token()."';\n"; ?>

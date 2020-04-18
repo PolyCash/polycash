@@ -352,6 +352,7 @@ else {
 					$sec_per_faucet_claim = (int) $_REQUEST['sec_per_faucet_claim'];
 					$min_sec_between_claims = (int) $_REQUEST['min_sec_between_claims'];
 					$bonus_claims = (int) $_REQUEST['bonus_claims'];
+					$default_transaction_fee = (float) $_REQUEST['default_transaction_fee'];
 					
 					$definitive_game_peer_on = $_REQUEST['definitive_game_peer_on'];
 					if ($definitive_game_peer_on == 1) {
@@ -374,7 +375,7 @@ else {
 						}
 					}
 					
-					$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, faucet_policy=:faucet_policy, hide_module=:hide_module, definitive_game_peer_id=:definitive_game_peer_id, every_event_bet_reminder_minutes=:every_event_bet_reminder_minutes, sec_per_faucet_claim=:sec_per_faucet_claim, min_sec_between_claims=:min_sec_between_claims, bonus_claims=:bonus_claims WHERE game_id=:game_id;", [
+					$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, faucet_policy=:faucet_policy, hide_module=:hide_module, definitive_game_peer_id=:definitive_game_peer_id, every_event_bet_reminder_minutes=:every_event_bet_reminder_minutes, sec_per_faucet_claim=:sec_per_faucet_claim, min_sec_between_claims=:min_sec_between_claims, bonus_claims=:bonus_claims, default_transaction_fee=:default_transaction_fee WHERE game_id=:game_id;", [
 						'featured' => $featured,
 						'public_players' => $public_players,
 						'faucet_policy' => $faucet_policy,
@@ -384,7 +385,8 @@ else {
 						'every_event_bet_reminder_minutes' => $every_event_bet_reminder_minutes,
 						'sec_per_faucet_claim' => $sec_per_faucet_claim,
 						'min_sec_between_claims' => $min_sec_between_claims,
-						'bonus_claims' => $bonus_claims
+						'bonus_claims' => $bonus_claims,
+						'default_transaction_fee' => $default_transaction_fee
 					]);
 					
 					$game->db_game['featured'] = $featured;
@@ -395,6 +397,7 @@ else {
 					$game->db_game['min_sec_between_claims'] = $min_sec_between_claims;
 					$game->db_game['sec_per_faucet_claim'] = $sec_per_faucet_claim;
 					$game->db_game['bonus_claims'] = $bonus_claims;
+					$game->db_game['default_transaction_fee'] = $default_transaction_fee;
 					
 					$messages .= "Game internal settings have been updated.<br/>\n";
 				}
@@ -780,8 +783,12 @@ else {
 											<label for="every_event_bet_reminder_minutes">How many minutes before each event ends should the reminder be sent?</label>
 											<input class="form-control" name="every_event_bet_reminder_minutes" id="every_event_bet_reminder_minutes" value="<?php echo $game->db_game['every_event_bet_reminder_minutes']; ?>" />
 										</div>
+										<div class="form-group">
+											<label for="default_transaction_fee">When users join a game what should their default transaction fee be? (<?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?>)</label>
+											<input type="text" class="form-control" name="default_transaction_fee" id="default_transaction_fee" value="<?php echo $game->db_game['default_transaction_fee']; ?>" />
+										</div>
 										
-										<input type="submit" class="btn btn-primary" value="Save Settings" />
+										<input type="submit" class="btn btn-success" value="Save Settings" />
 									</form>
 								</div>
 							</div>
@@ -1014,17 +1021,15 @@ else {
 								<div class="col-sm-10"><input type="text" class="form-control" id="game_definition_hash" value="<?php echo $game_def_hash; ?>" /></div>
 							</div>
 							
-							<textarea id="game_definition" style="width: 100%; min-height: 400px; background-color: #f5f5f5; border: 1px solid #cccccc; margin-top: 10px;"><?php echo $game_def_str; ?></textarea>
-							
-							<p>
-								<button class="btn btn-sm btn-primary" onclick="thisPageManager.manage_game_set_event_blocks(false);">Set Event Blocks</button>
-							</p>
+							<textarea id="game_definition" style="width: 100%; min-height: 400px; background-color: #f5f5f5; border: 1px solid #cccccc; margin-top: 10px;"><?php echo json_encode($game_def, JSON_PRETTY_PRINT); ?></textarea>
 						</div>
 					</div>
 					<script type="text/javascript">
-					$('#game_definition').dblclick(function() {
-						$('#game_definition').focus().select();
-					});
+					window.onload = function() {
+						$('#game_definition').dblclick(function() {
+							$('#game_definition').focus().select();
+						});
+					};
 					</script>
 					<?php
 				}

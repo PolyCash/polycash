@@ -1135,7 +1135,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 																<label for="spend_unresolved_whole_fee">How much do you want to pay in fees?</label>
 																<div class="row">
 																	<div class="col-sm-6">
-																		<input type="text" class="form-control" id="spend_unresolved_whole_fee" placeholder="0.0001" required="true" />
+																		<input type="text" class="form-control" id="spend_unresolved_whole_fee" placeholder="<?php echo $game->db_game['default_transaction_fee']; ?>" required="true" />
 																	</div>
 																	<div class="col-sm-6 form-control-static">
 																		<?php echo $blockchain->db_blockchain['coin_name_plural']; ?>

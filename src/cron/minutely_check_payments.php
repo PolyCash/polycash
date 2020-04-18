@@ -77,7 +77,7 @@ if ($app->running_as_admin()) {
 						}
 						
 						if ($game_coins_in >= $buyin_amount_int) {
-							$chain_fee_float = 0.0001;
+							$chain_fee_float = $game->db_game['default_transaction_fee'];
 							$chain_fee_int = (int)($chain_fee_float*pow(10, $game->blockchain->db_blockchain['decimal_places']));
 							
 							$chain_coins_per_game_coin = ($chain_coins_in-$chain_fee_int)/$game_coins_in;
@@ -130,7 +130,7 @@ if ($app->running_as_admin()) {
 						
 						$strategy = $app->fetch_strategy_by_id($invoice_address['strategy_id']);
 						if ($strategy) $fee_amount_int = $strategy['transaction_fee']*pow(10,$game->blockchain->db_blockchain['decimal_places']);
-						else $fee_amount_int = 0.0001*pow(10,$game->blockchain->db_blockchain['decimal_places']);
+						else $fee_amount_int = $game->db_game['default_transaction_fee']*pow(10,$game->blockchain->db_blockchain['decimal_places']);
 						
 						$amount_paid_int = (int) ($amount_paid_float*pow(10,$game->blockchain->db_blockchain['decimal_places']));
 						
