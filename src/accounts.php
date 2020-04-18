@@ -385,11 +385,14 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						<div class="tab-content" style="padding-top: 10px;">
 							<div id="primary_address_'.$account['account_id'].'" class="tab-pane'.($account_selected_tab == "primary_address" ? ' active' : ' fade').'">';
 						
-						echo "<p>You can deposit ".$account['short_name_plural'];
-						if ($account_game) echo " or ".$account_game->db_game['coin_name_plural'];
-						echo " to this account by sending to:</p>";
-						echo '<a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$account['pub_key'].'">'.$account['pub_key']."</a><br/>\n";
-						echo '<img style="margin: 10px;" src="/render_qr_code.php?data='.$account['pub_key'].'" />';
+						if (empty($account['pub_key'])) echo "<p>You haven't set a primary address for this account.</p>\n";
+						else {
+							echo "<p>You can deposit ".$account['short_name_plural'];
+							if ($account_game) echo " or ".$account_game->db_game['coin_name_plural'];
+							echo " to this account by sending to:</p>";
+							echo '<a href="/explorer/blockchains/'.$blockchain->db_blockchain['url_identifier'].'/addresses/'.$account['pub_key'].'">'.$account['pub_key']."</a><br/>\n";
+							echo '<img style="margin: 10px;" src="/render_qr_code.php?data='.$account['pub_key'].'" />';
+						}
 						
 						echo '
 							</div>

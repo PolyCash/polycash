@@ -28,14 +28,17 @@ if ($app->running_as_admin()) {
 			
 			$game_q = "SELECT * FROM games g JOIN blockchains b ON g.blockchain_id=b.blockchain_id WHERE ";
 			if ($only_game_id) $game_q .= "g.game_id=".$only_game_id;
-			else $game_q .= "b.online=1 AND g.game_status IN('published','running') AND g.save_every_definition=1";
+			else $game_q .= "b.online=1 AND g.game_status IN('published','running')";
 			$db_running_games = $app->run_query($game_q);
 			
 			while ($db_running_game = $db_running_games->fetch()) {
 				if (empty($blockchains[$db_running_game['blockchain_id']])) $blockchains[$db_running_game['blockchain_id']] = new Blockchain($app, $db_running_game['blockchain_id']);
 				$running_game = new Game($blockchains[$db_running_game['blockchain_id']], $db_running_game['game_id']);
-				GameDefinition::set_cached_definition_hashes($running_game);
+				
+				if ($running_game->db_game['save_every_definition']) GameDefinition::set_cached_definition_hashes($running_game);
+				
 				$running_game->set_cached_fields();
+				
 				if ($print_debug) echo "Set ".$running_game->db_game['name']." at ".round(microtime(true)-$loop_start_time, 8)."\n";
 			}
 			
