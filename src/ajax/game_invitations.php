@@ -18,47 +18,51 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 
 				if ($perm_to_invite) {
 					if ($action == "manage") {
-						$my_invitations = $app->run_query("SELECT * FROM game_invitations i LEFT JOIN users u ON i.used_user_id=u.user_id LEFT JOIN async_email_deliveries d ON i.sent_email_id=d.delivery_id WHERE i.game_id=:game_id AND i.inviter_id=:inviter_id ORDER BY invitation_id ASC;", [
-							'game_id' => $game->db_game['game_id'],
-							'inviter_id' => $thisuser->db_user['user_id']
-						]);
-						
-						echo 'You\'ve generated '.$my_invitations->rowCount().' invitations for this game.<br/>';
-						
-						while ($invitation = $my_invitations->fetch()) {
-							echo '<div class="row">';
-							echo '<div class="col-sm-6">';
-							if ($invitation['used_user_id'] > 0) echo 'Claimed by '.$invitation['username'];
-							else echo 'Unclaimed';
-							echo '</div>';
-							echo '<div class="col-sm-6">';
-							
-							if ($invitation['sent_email_id'] == 0) {
-								if ($invitation['used_user_id'] == 0) {
-									echo '<a href="" onclick="thisPageManager.send_invitation('.$game->db_game['game_id'].', '.$invitation['invitation_id'].', \'email\'); return false;">Send by email</a>&nbsp;&nbsp; ';
-									echo '<a href="" onclick="thisPageManager.send_invitation('.$game->db_game['game_id'].', '.$invitation['invitation_id'].', \'user\'); return false;">Send to user</a>';
-								}
-							}
-							else {
-								echo "Sent to ".$invitation['to_email'];
-							}
-							
-							echo '</div>';
-							echo "</div>\n";
-						}
 						?>
-						<button class="btn btn-sm btn-success" onclick="thisPageManager.generate_invitation(<?php echo $game->db_game['game_id']; ?>);">Generate an Invitation</button>
-						<br/><br/>
-						Or invite bulk users by uploading a CSV:<br/>
-						<form id="invite_upload_form" action="/manage/<?php echo $game->db_game['url_identifier']; ?>/" method="post" enctype="multipart/form-data">
-							<input type="hidden" name="last" value="invite_upload_csv" />
-							<input type="hidden" name="next" value="events" />
-							<input type="file" name="csv_file" class="btn btn-sm btn-warning" onchange="$('#invite_upload_form').submit();" />
-							<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
-						</form>
-						<br/>
-						<br/>
-						<button type="button" class="btn btn-sm btn-default" data-dismiss="modal">Close</button>
+						<div class="modal-body">
+							<?php
+							$my_invitations = $app->run_query("SELECT * FROM game_invitations i LEFT JOIN users u ON i.used_user_id=u.user_id LEFT JOIN async_email_deliveries d ON i.sent_email_id=d.delivery_id WHERE i.game_id=:game_id AND i.inviter_id=:inviter_id ORDER BY invitation_id ASC;", [
+								'game_id' => $game->db_game['game_id'],
+								'inviter_id' => $thisuser->db_user['user_id']
+							]);
+							
+							echo 'You\'ve generated '.$my_invitations->rowCount().' invitations for this game.<br/>';
+							
+							while ($invitation = $my_invitations->fetch()) {
+								echo '<div class="row">';
+								echo '<div class="col-sm-6">';
+								if ($invitation['used_user_id'] > 0) echo 'Claimed by '.$invitation['username'];
+								else echo 'Unclaimed';
+								echo '</div>';
+								echo '<div class="col-sm-6">';
+								
+								if ($invitation['sent_email_id'] == 0) {
+									if ($invitation['used_user_id'] == 0) {
+										echo '<a href="" onclick="thisPageManager.send_invitation('.$game->db_game['game_id'].', '.$invitation['invitation_id'].', \'email\'); return false;">Send by email</a>&nbsp;&nbsp; ';
+										echo '<a href="" onclick="thisPageManager.send_invitation('.$game->db_game['game_id'].', '.$invitation['invitation_id'].', \'user\'); return false;">Send to user</a>';
+									}
+								}
+								else {
+									echo "Sent to ".$invitation['to_email'];
+								}
+								
+								echo '</div>';
+								echo "</div>\n";
+							}
+							?>
+							<button class="btn btn-sm btn-success" onclick="thisPageManager.generate_invitation(<?php echo $game->db_game['game_id']; ?>);"><i class="fas fa-plus-circle"></i> &nbsp; Generate an Invitation</button>
+							<br/><br/>
+							Or invite bulk users by uploading a CSV:<br/>
+							<form id="invite_upload_form" action="/manage/<?php echo $game->db_game['url_identifier']; ?>/" method="post" enctype="multipart/form-data">
+								<input type="hidden" name="last" value="invite_upload_csv" />
+								<input type="hidden" name="next" value="events" />
+								<input type="file" name="csv_file" class="btn btn-sm btn-primary" onchange="$('#invite_upload_form').submit();" />
+								<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
+							</form>
+						</div>
+						<div class="modal-footer">
+							<button type="button" class="btn btn-sm btn-warning" data-dismiss="modal"><i class="fas fa-times"></i> &nbsp; Close</button>
+						</div>
 						<?php
 					}
 					else if ($action == "send") {

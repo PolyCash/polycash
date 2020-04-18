@@ -668,7 +668,7 @@ if ($thisuser && $game) {
 									<span aria-hidden="true">&times;</span>
 								</button>
 							</div>
-							<div class="modal-body" id="game_invitations_inner">
+							<div id="game_invitations_inner">
 							</div>
 						</div>
 					</div>
@@ -917,16 +917,6 @@ if ($thisuser && $game) {
 					<div class="panel-title">Settings</div>
 				</div>
 				<div class="panel-body">
-					<?php
-					if ($user_game['payout_address_id'] > 0) {
-						$payout_address = $app->fetch_external_address_by_id($user_game['payout_address_id']);
-						echo "Payout address: ".$payout_address['address'];
-					}
-					else {
-						echo "You haven't specified a payout address for this game.";
-					}
-					?>
-					<br/>
 					<h3>Transaction Fees</h3>
 					<form method="post" action="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">
 						<input type="hidden" name="action" value="save_voting_strategy_fees" />
@@ -942,14 +932,14 @@ if ($thisuser && $game) {
 						</div>
 						<div class="row">
 							<div class="col-sm-3">
-								<button class="btn btn-primary" type="submit">Save</button>
+								<button class="btn btn-sm btn-success" type="submit"><i class="fas fa-check-circle"></i> &nbsp; Save</button>
 							</div>
 						</div>
 					</form>
 					<br/>
 					
 					<h3>Notifications</h3>
-					<button class="btn btn-success" onclick="$('#notification_modal').modal('show');">Notification Settings</button>
+					<button class="btn btn-sm btn-primary" onclick="$('#notification_modal').modal('show');"><i class="fas fa-envelope"></i> &nbsp; Notification Settings</button>
 					<br/>
 					<br/>
 					
@@ -1059,7 +1049,7 @@ if ($thisuser && $game) {
 								<input type="radio" id="voting_strategy_by_plan" name="voting_strategy" value="by_plan"<?php if ($user_strategy['voting_strategy'] == "by_plan") echo ' checked="checked"'; ?>><label class="plainlabel" for="voting_strategy_by_plan">&nbsp;Plan&nbsp;my&nbsp;votes</label>
 							</div>
 							<div class="col-md-10">
-								<button class="btn btn-success" onclick="thisPageManager.show_planned_votes(); return false;">Edit my planned votes</button>
+								<button class="btn btn-sm btn-primary" onclick="thisPageManager.show_planned_votes(); return false;"><i class="fas fa-th"></i> &nbsp; Edit my planned votes</button>
 							</div>
 						</div>
 						
@@ -1068,7 +1058,7 @@ if ($thisuser && $game) {
 								<input type="radio" id="voting_strategy_featured" name="voting_strategy" value="featured"<?php if ($user_strategy['voting_strategy'] == "featured") echo ' checked="checked"'; ?>><label class="plainlabel" for="voting_strategy_featured">&nbsp;Choose a strategy</label>
 							</div>
 							<div class="col-md-10">
-								<button class="btn btn-success" onclick="thisPageManager.show_featured_strategies(); return false;">Choose a strategy</button>
+								<button class="btn btn-sm btn-primary" onclick="thisPageManager.show_featured_strategies(); return false;"><i class="fas fa-list"></i> &nbsp; Choose a strategy</button>
 							</div>
 						</div>
 						<?php /*
@@ -1115,7 +1105,7 @@ if ($thisuser && $game) {
 						</div>
 						 */ ?>
 						<br/>
-						<button class="btn btn-primary" type="submit">Save my Strategy</button>
+						<button class="btn btn-sm btn-success" type="submit"><i class="fas fa-check-circle"></i> &nbsp; Save my Strategy</button>
 					</form>
 					<br/>
 				</div>
@@ -1170,7 +1160,7 @@ if ($thisuser && $game) {
 								<input class="form-control" type="text" id="withdraw_address" />
 							</div>
 							<div class="form-group">
-								<button class="btn btn-success" id="withdraw_btn" onclick="thisPageManager.attempt_withdrawal();">Send <?php echo $game->db_game['coin_name_plural']; ?></button>
+								<button class="btn btn-sm btn-success" id="withdraw_btn" onclick="thisPageManager.attempt_withdrawal();"><i class="fas fa-arrow-circle-right"></i> &nbsp; Send <?php echo $game->db_game['coin_name_plural']; ?></button>
 								<div id="withdraw_message" style="display: none; margin-top: 15px;"></div>
 							</div>
 						</div>
@@ -1188,7 +1178,9 @@ if ($thisuser && $game) {
 					<?php
 					$perm_to_invite = $thisuser->user_can_invite_game($user_game);
 					if ($perm_to_invite) {
-						echo '<a class="btn btn-primary" href="" onclick="thisPageManager.manage_game_invitations('.$game->db_game['game_id'].'); return false;">Invitations</a>';
+						?>
+						<a class="btn btn-sm btn-primary" href="" onclick="thisPageManager.manage_game_invitations(<?php echo $game->db_game['game_id']; ?>); return false;"><i class="fas fa-share"></i> &nbsp; Invitations</a>
+						<?php
 					}
 					else echo "Sorry, you don't have permission to send invitations for this game.";
 					?>
@@ -1242,8 +1234,11 @@ if ($thisuser && $game) {
 						<div class="form-group">
 							<input <?php if ($user_game['notification_preference'] == "none") echo 'style="display: none;" '; ?>class="form-control" type="text" name="notification_email" id="notification_email" placeholder="Enter your email address" value="<?php echo $thisuser->db_user['notification_email']; ?>" />
 						</div>
-						
-						<button id="notification_save_btn" class="btn btn-primary" onclick="thisPageManager.save_notification_preferences();"><i class="fas fa-check-circle"></i> &nbsp; Save Notification Settings</button>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-sm btn-warning" data-dismiss="modal"><i class="fas fa-times"></i> &nbsp; Close</button>
+						 &nbsp;&nbsp;or&nbsp;&nbsp; 
+						<button id="notification_save_btn" class="btn btn-sm btn-success" onclick="thisPageManager.save_notification_preferences();"><i class="fas fa-check-circle"></i> &nbsp; Save Notification Settings</button>
 					</div>
 				</div>
 			</div>
@@ -1259,7 +1254,7 @@ if ($thisuser && $game) {
 							<span aria-hidden="true">&times;</span>
 						</button>
 					</div>
-					<div class="modal-body" id="featured_strategies_inner"></div>
+					<div id="featured_strategies_inner"></div>
 				</div>
 			</div>
 		</div>
@@ -1279,9 +1274,9 @@ if ($thisuser && $game) {
 							Set your planned votes by clicking on the options below.  You can vote on more than one option in each round. Keep clicking on an option to increase its votes.  Or right click to remove all votes from an option.  Your planned votes are confidential and cannot be seen by other players.
 						</p>
 						
-						<button id="scramble_plan_btn" class="btn btn-sm btn-warning" onclick="thisPageManager.scramble_strategy(<?php echo $user_strategy['strategy_id']; ?>); return false;">Randomize my Votes</button>
+						<button id="scramble_plan_btn" class="btn btn-sm btn-danger" onclick="thisPageManager.scramble_strategy(<?php echo $user_strategy['strategy_id']; ?>); return false;"><i class="fas fa-asterisk"></i> &nbsp; Randomize my Votes</button>
 						
-						<font style="margin-left: 25px;">Load rounds: </font><input type="text" size="5" id="select_from_round" value="<?php echo $game->round_to_display_round($plan_start_round); ?>" /> to <input type="text" size="5" id="select_to_round" value="<?php echo $game->round_to_display_round($plan_stop_round); ?>" /> <button class="btn btn-primary btn-sm" onclick="thisPageManager.load_plan_rounds(); return false;">Go</button>
+						<font style="margin-left: 25px;">Load rounds: </font><input type="text" size="5" id="select_from_round" value="<?php echo $game->round_to_display_round($plan_start_round); ?>" /> to <input type="text" size="5" id="select_to_round" value="<?php echo $game->round_to_display_round($plan_stop_round); ?>" /> <button class="btn btn-primary btn-sm" onclick="thisPageManager.load_plan_rounds(); return false;"><i class="fas fa-arrow-right"></i> &nbsp; Go</button>
 						
 						<br/>
 						<div id="plan_rows" style="margin: 10px 0px; max-height: 350px; overflow-y: scroll; border: 1px solid #bbb; padding: 0px 10px;">
@@ -1296,9 +1291,9 @@ if ($thisuser && $game) {
 						<input type="hidden" id="to_round" name="to_round" value="<?php echo $game->round_to_display_round($plan_stop_round); ?>" />
 					</div>
 					<div class="modal-footer">
-						<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+						<button type="button" class="btn btn-sm btn-warning" data-dismiss="modal"><i class="fas fa-times"></i> &nbsp; Close</button>
 						 &nbsp;&nbsp;or&nbsp;&nbsp; 
-						<button id="save_plan_btn" class="btn btn-success" onclick="thisPageManager.save_plan_allocations(); return false;">Save Changes</button>
+						<button id="save_plan_btn" class="btn btn-sm btn-success" onclick="thisPageManager.save_plan_allocations(); return false;"><i class="fas fa-check-circle"></i> &nbsp; Save Changes</button>
 					</div>
 				</div>
 			</div>
