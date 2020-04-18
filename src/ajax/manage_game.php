@@ -116,10 +116,11 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 						$var_type = $verbatim_vars[$i][0];
 						$var_name = $verbatim_vars[$i][1];
 						
-						if ($initial_game_def->$var_name != "") {
+						if (property_exists($initial_game_def, $var_name)) {
 							$new_game_params[$var_name] = $initial_game_def->$var_name;
 						}
 					}
+					
 					$game = Game::create_game($blockchain, $new_game_params);
 					
 					$show_internal_params = false;
