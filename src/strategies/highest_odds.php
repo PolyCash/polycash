@@ -17,7 +17,12 @@ if ($user_game) {
 	$coins_per_vote = $app->coins_per_vote($game->db_game);
 	$fee_amount = (int) ($fee*pow(10, $blockchain->db_blockchain['decimal_places']));
 	
-	$hours_between_applications = 2;
+	$early_or_late = "late";
+	if ($_REQUEST['early_or_late'] == "early") $early_or_late = "early";
+	
+	$bet_quantity = (int) $_REQUEST['bet_quantity'] ?? 2;
+	
+	$hours_between_applications = $_REQUEST['hours'] ?? 2;
 	$sec_between_applications = 60*60*$hours_between_applications;
 	$rand_sec_offset = rand(0, $sec_between_applications*2);
 	
@@ -29,7 +34,7 @@ if ($user_game) {
 		if ($account) {
 			$event_q = "SELECT * FROM events ev JOIN options op ON ev.event_id=op.event_id WHERE ev.game_id=:game_id";
 			$event_q .= " AND ev.event_starting_block <= :mining_block_id AND ev.event_final_block > :mining_block_id";
-			$event_q .= " AND (ev.event_starting_time IS NULL OR ev.event_starting_time < NOW()) AND (ev.event_final_time IS NULL OR ev.event_final_time > NOW()) GROUP BY ev.event_id ORDER BY ev.event_index ASC LIMIT 2;";
+			$event_q .= " AND (ev.event_starting_time IS NULL OR ev.event_starting_time < NOW()) AND (ev.event_final_time IS NULL OR ev.event_final_time > NOW()) GROUP BY ev.event_id ORDER BY ev.event_index ".($early_or_late == "late" ? "ASC" : "DESC")." LIMIT ".$bet_quantity.";";
 			$db_events = $app->run_query($event_q, [
 				'game_id' => $game->db_game['game_id'],
 				'mining_block_id' => $mining_block_id
