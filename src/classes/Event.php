@@ -933,50 +933,57 @@ class Event {
 	}
 	
 	public function update_option_votes($last_block_id, $round_id) {
-		$effectiveness_factor = $this->block_id_to_effectiveness_factor($last_block_id+1);
-		
+		// Initialize all option values to zero
 		$this->game->blockchain->app->run_query("UPDATE options SET coin_score=0, unconfirmed_coin_score=0, coin_block_score=0, unconfirmed_coin_block_score=0, coin_round_score=0, unconfirmed_coin_round_score=0, destroy_score=0, unconfirmed_destroy_score=0, votes=0, unconfirmed_votes=0, effective_destroy_score=0, unconfirmed_effective_destroy_score=0 WHERE event_id=:event_id;", ['event_id'=>$this->db_event['event_id']]);
 		
+		// Set option confirmed values
 		$this->game->blockchain->app->run_query("UPDATE options op INNER JOIN (
 			SELECT option_id, SUM(colored_amount) sum_amount, SUM(coin_blocks_destroyed) sum_cbd, SUM(coin_rounds_destroyed) sum_crd, SUM(votes) sum_votes, SUM(destroy_amount) sum_destroyed, SUM(effective_destroy_amount) sum_effective_destroyed FROM transaction_game_ios 
 			WHERE event_id=:event_id AND create_round_id IS NOT NULL AND colored_amount > 0
 			GROUP BY option_id
 		) i ON op.option_id=i.option_id SET op.coin_score=i.sum_amount, op.coin_block_score=i.sum_cbd, op.coin_round_score=i.sum_crd, op.votes=i.sum_votes, op.destroy_score=i.sum_destroyed, op.effective_destroy_score=i.sum_effective_destroyed WHERE op.event_id=:event_id;", ['event_id'=>$this->db_event['event_id']]);
 		
-		if ($this->game->db_game['payout_weight'] == "coin") {
-			$this->game->blockchain->app->run_query("UPDATE options op INNER JOIN (
-				SELECT option_id, SUM(colored_amount) sum_amount, SUM(colored_amount)*:effectiveness_factor sum_votes, SUM(destroy_amount) sum_destroyed FROM transaction_game_ios 
-				WHERE event_id=:event_id AND create_round_id IS NULL AND colored_amount > 0
-				GROUP BY option_id
-			) i ON op.option_id=i.option_id SET op.unconfirmed_coin_score=i.sum_amount, op.unconfirmed_votes=i.sum_votes, op.unconfirmed_destroy_score=i.sum_destroyed WHERE op.event_id=:event_id;", [
-				'effectiveness_factor' => $effectiveness_factor,
-				'event_id' => $this->db_event['event_id']
-			]);
-		}
-		else if ($this->game->db_game['payout_weight'] == "coin_block") {
-			$this->game->blockchain->app->run_query("UPDATE options op INNER JOIN (
-				SELECT option_id, SUM(ref_coin_blocks+(:ref_block_id-ref_block_id)*colored_amount) sum_cbd, SUM(ref_coin_blocks+(:ref_block_id-ref_block_id)*colored_amount)*:effectiveness_factor sum_votes, SUM(destroy_amount) sum_destroyed, SUM(destroy_amount)*:effectiveness_factor unconfirmed_sum_destroyed FROM transaction_game_ios 
-				WHERE event_id=:event_id AND create_round_id IS NULL AND colored_amount > 0
-				GROUP BY option_id
-			) i ON op.option_id=i.option_id SET op.unconfirmed_coin_block_score=i.sum_cbd, op.unconfirmed_votes=i.sum_votes, op.unconfirmed_destroy_score=i.sum_destroyed, op.unconfirmed_effective_destroy_score=i.unconfirmed_sum_destroyed WHERE op.event_id=:event_id;", [
-				'ref_block_id' => ($last_block_id+1),
-				'effectiveness_factor' => $effectiveness_factor,
-				'event_id' => $this->db_event['event_id']
-			]);
-		}
-		else { // payout_weight = "coin_round"
-			if (empty($round_id)) $round_id = $this->game->block_to_round($last_block_id+1);
-			$this->game->blockchain->app->run_query("UPDATE options op INNER JOIN (
-				SELECT option_id, SUM(ref_coin_rounds+(:round_id-ref_round_id)*colored_amount) sum_crd, SUM(ref_coin_rounds+(:round_id-ref_round_id)*colored_amount)*:effectiveness_factor sum_votes, SUM(destroy_amount) sum_destroyed, SUM(destroy_amount)*:effectiveness_factor unconfirmed_sum_destroyed FROM transaction_game_ios
-				WHERE event_id=:event_id AND create_round_id IS NULL AND colored_amount > 0
-				GROUP BY option_id
-			) i ON op.option_id=i.option_id SET op.unconfirmed_coin_round_score=i.sum_crd, op.unconfirmed_votes=i.sum_votes, op.unconfirmed_destroy_score=i.sum_destroyed, op.unconfirmed_effective_destroy_score=i.unconfirmed_sum_destroyed WHERE op.event_id=:event_id;", [
-				'round_id' => $round_id,
-				'effectiveness_factor' => $effectiveness_factor,
-				'event_id' => $this->db_event['event_id']
-			]);
+		// Only set unconfirmed option values when the event is in progress to exclude bets confirmed too late
+		if ($last_block_id < $this->db_event['event_final_block']) {
+			$effectiveness_factor = $this->block_id_to_effectiveness_factor($last_block_id+1);
+			
+			// 3 different queries to set option unconfirmed values depending on the event payout weight type
+			if ($this->game->db_game['payout_weight'] == "coin") {
+				$this->game->blockchain->app->run_query("UPDATE options op INNER JOIN (
+					SELECT option_id, SUM(colored_amount) sum_amount, SUM(colored_amount)*:effectiveness_factor sum_votes, SUM(destroy_amount) sum_destroyed FROM transaction_game_ios 
+					WHERE event_id=:event_id AND create_round_id IS NULL AND colored_amount > 0
+					GROUP BY option_id
+				) i ON op.option_id=i.option_id SET op.unconfirmed_coin_score=i.sum_amount, op.unconfirmed_votes=i.sum_votes, op.unconfirmed_destroy_score=i.sum_destroyed WHERE op.event_id=:event_id;", [
+					'effectiveness_factor' => $effectiveness_factor,
+					'event_id' => $this->db_event['event_id']
+				]);
+			}
+			else if ($this->game->db_game['payout_weight'] == "coin_block") {
+				$this->game->blockchain->app->run_query("UPDATE options op INNER JOIN (
+					SELECT option_id, SUM(ref_coin_blocks+(:ref_block_id-ref_block_id)*colored_amount) sum_cbd, SUM(ref_coin_blocks+(:ref_block_id-ref_block_id)*colored_amount)*:effectiveness_factor sum_votes, SUM(destroy_amount) sum_destroyed, SUM(destroy_amount)*:effectiveness_factor unconfirmed_sum_destroyed FROM transaction_game_ios 
+					WHERE event_id=:event_id AND create_round_id IS NULL AND colored_amount > 0
+					GROUP BY option_id
+				) i ON op.option_id=i.option_id SET op.unconfirmed_coin_block_score=i.sum_cbd, op.unconfirmed_votes=i.sum_votes, op.unconfirmed_destroy_score=i.sum_destroyed, op.unconfirmed_effective_destroy_score=i.unconfirmed_sum_destroyed WHERE op.event_id=:event_id;", [
+					'ref_block_id' => ($last_block_id+1),
+					'effectiveness_factor' => $effectiveness_factor,
+					'event_id' => $this->db_event['event_id']
+				]);
+			}
+			else { // payout_weight = "coin_round"
+				if (empty($round_id)) $round_id = $this->game->block_to_round($last_block_id+1);
+				$this->game->blockchain->app->run_query("UPDATE options op INNER JOIN (
+					SELECT option_id, SUM(ref_coin_rounds+(:round_id-ref_round_id)*colored_amount) sum_crd, SUM(ref_coin_rounds+(:round_id-ref_round_id)*colored_amount)*:effectiveness_factor sum_votes, SUM(destroy_amount) sum_destroyed, SUM(destroy_amount)*:effectiveness_factor unconfirmed_sum_destroyed FROM transaction_game_ios
+					WHERE event_id=:event_id AND create_round_id IS NULL AND colored_amount > 0
+					GROUP BY option_id
+				) i ON op.option_id=i.option_id SET op.unconfirmed_coin_round_score=i.sum_crd, op.unconfirmed_votes=i.sum_votes, op.unconfirmed_destroy_score=i.sum_destroyed, op.unconfirmed_effective_destroy_score=i.unconfirmed_sum_destroyed WHERE op.event_id=:event_id;", [
+					'round_id' => $round_id,
+					'effectiveness_factor' => $effectiveness_factor,
+					'event_id' => $this->db_event['event_id']
+				]);
+			}
 		}
 		
+		// Now set event values by summing up the option values
 		$this->game->blockchain->app->run_query("UPDATE events e JOIN (
 			SELECT SUM(:payout_weight_score) sum_score, SUM(destroy_score) destroy_score, SUM(votes) sum_votes, SUM(effective_destroy_score) effective_destroy_score, SUM(:unconfirmed_payout_weight_score) sum_unconfirmed_score, SUM(unconfirmed_votes) sum_unconfirmed_votes, SUM(unconfirmed_destroy_score) sum_unconfirmed_destroy_score, SUM(unconfirmed_effective_destroy_score) sum_unconfirmed_effective_destroy_score FROM options WHERE event_id=:event_id
 		) op SET e.sum_score=op.sum_score, e.destroy_score=op.destroy_score, e.sum_votes=op.sum_votes, e.effective_destroy_score=op.effective_destroy_score, e.sum_unconfirmed_score=op.sum_unconfirmed_score, e.sum_unconfirmed_votes=op.sum_unconfirmed_votes, e.sum_unconfirmed_destroy_score=op.sum_unconfirmed_destroy_score, e.sum_unconfirmed_effective_destroy_score=op.sum_unconfirmed_effective_destroy_score WHERE e.event_id=:event_id;", [

@@ -87,6 +87,7 @@ if ($app->running_as_admin()) {
 				echo "Script time: ".(microtime(true)-$script_start_time);
 				if ($any_success) echo ", sleeping ".$sleep_usec/pow(10,6)." seconds.";
 				echo "\n\n";
+				$app->flush_buffers();
 			}
 			if ($any_success) usleep($sleep_usec);
 		}
