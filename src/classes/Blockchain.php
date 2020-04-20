@@ -626,13 +626,15 @@ class Blockchain {
 		if ($this->db_blockchain['p2p_mode'] != "rpc") {
 			$outputs = [];
 			
-			$this->app->run_query("UPDATE transaction_ios SET spend_status='unspent', create_block_id=:create_block_id WHERE create_transaction_id=:create_transaction_id;", [
-				'create_block_id' => $block_height,
-				'create_transaction_id' => $db_transaction_id
-			]);
+			if ((string) $block_height !== "") {
+				$this->app->run_query("UPDATE transaction_ios SET spend_status='unspent', create_block_id=:create_block_id WHERE create_transaction_id=:create_transaction_id;", [
+					'create_block_id' => $block_height,
+					'create_transaction_id' => $db_transaction_id
+				]);
+			}
 			
 			$out_ios = $this->app->run_query("SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:create_transaction_id ORDER BY io.out_index ASC;", [
-				'create_transaction_id' => $existing_tx['transaction_id']
+				'create_transaction_id' => $db_transaction_id
 			]);
 			
 			$out_index=0;
@@ -2005,7 +2007,9 @@ class Blockchain {
 		$this->db_blockchain['creator_id'] = $user->db_user['user_id'];
 	}
 	
+	// Returns the transaction ID if successful or false if not successful
 	public function create_transaction($type, $amounts, $block_id, $io_ids, $address_ids, $transaction_fee, &$error_message) {
+		// Step 1, sanity checks
 		if ($transaction_fee < 0) {
 			$error_message = "Tried creating a transaction with a negative transaction fee ($transaction_fee).\n";
 			return false;
@@ -2030,216 +2034,226 @@ class Blockchain {
 		$affected_input_ids = [];
 		$created_input_ids = [];
 		
-		if (($type == "coinbase" || $utxo_balance == $amount) && count($amounts) == count($address_ids)) {
-			$num_inputs = 0;
-			if ($io_ids) $num_inputs = count($io_ids);
-			
-			if ($this->db_blockchain['p2p_mode'] != "rpc") {
-				$tx_hash = $this->app->random_hex_string(32);
-				$new_tx_params = [
-					'blockchain_id' => $this->db_blockchain['blockchain_id'],
-					'fee_amount' => $transaction_fee,
-					'num_inputs' => $num_inputs,
-					'num_outputs' => count($amounts),
-					'tx_hash' => $tx_hash,
-					'transaction_desc' => $type,
-					'amount' => $amount,
-					'time_created' => time()
-				];
-				$new_tx_q = "INSERT INTO transactions SET blockchain_id=:blockchain_id, fee_amount=:fee_amount, has_all_inputs=1, has_all_outputs=1, num_inputs=:num_inputs, num_outputs=:num_outputs, tx_hash=:tx_hash, transaction_desc=:transaction_desc, amount=:amount";
-				if ($block_id !== false) {
-					$new_tx_q .= ", block_id=:block_id";
-					$new_tx_params['block_id'] = $block_id;
-				}
-				$new_tx_q .= ", time_created=:time_created;";
-				$this->app->run_query($new_tx_q, $new_tx_params);
-				$transaction_id = $this->app->last_insert_id();
-			}
-			
-			$input_sum = 0;
-			$coin_blocks_destroyed = 0;
-			
-			if ($type == "coinbase") {}
-			else {
-				$tx_inputs = $this->app->run_query("SELECT *, io.address_id AS address_id, io.amount AS amount FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.spend_status IN ('unspent','unconfirmed') AND io.blockchain_id=:blockchain_id AND io.io_id IN (".implode(",", array_map("intval", $io_ids)).") ORDER BY io.amount ASC;", [
-					'blockchain_id' => $this->db_blockchain['blockchain_id']
-				]);
-				
-				$ref_block_id = $this->last_block_id()+1;
-				$ref_cbd = 0;
-				
-				$in_index = 0;
-				
-				while ($transaction_input = $tx_inputs->fetch()) {
-					if ($input_sum < $amount) {
-						$update_input_params = [
-							'io_id' => $transaction_input['io_id']
-						];
-						$update_input_q = "UPDATE transaction_ios SET ";
-						
-						if ($block_id !== false) {
-							$update_input_q .= "spend_status='spent', spend_block_id=:block_id";
-							$update_input_params['block_id'] = $block_id;
-						}
-						else $update_input_q .= "spend_status='unconfirmed'";
-						
-						if (!empty($transaction_id)) {
-							$update_input_q .= ", spend_transaction_id=:transaction_id, in_index=:in_index";
-							$update_input_params['transaction_id'] = $transaction_id;
-							$update_input_params['in_index'] = $in_index;
-						}
-						
-						$update_input_q .= " WHERE io_id=:io_id;";
-						$this->app->run_query($update_input_q, $update_input_params);
-						
-						$input_sum += $transaction_input['amount'];
-						$ref_cbd += ($ref_block_id-$transaction_input['create_block_id'])*$transaction_input['amount'];
-						
-						if ($block_id !== false) {
-							$coin_blocks_destroyed += ($block_id - $transaction_input['create_block_id'])*$transaction_input['amount'];
-						}
-						
-						$affected_input_ids[count($affected_input_ids)] = $transaction_input['io_id'];
-						
-						$raw_txin[count($raw_txin)] = array(
-							"txid"=>$transaction_input['tx_hash'],
-							"vout"=>intval($transaction_input['out_index'])
-						);
-					}
-					$in_index++;
-				}
-			}
-			
-			$output_error = false;
-			$out_index = 0;
-			$first_passthrough_index = false;
-			
-			for ($out_index=0; $out_index<count($amounts); $out_index++) {
-				if (!$output_error) {
-					$address_id = $address_ids[$out_index];
-					
-					if ($address_id) {
-						$address = $this->app->fetch_address_by_id($address_id);
-						
-						if ($first_passthrough_index == false && $address['is_passthrough_address'] == 1) $first_passthrough_index = $out_index;
-						
-						if ($this->db_blockchain['p2p_mode'] != "rpc") {
-							$spend_status = $type == "coinbase" ? "unspent" : "unconfirmed";
-							
-							$new_output_params = [
-								'blockchain_id' => $this->db_blockchain['blockchain_id'],
-								'spend_status' => $spend_status,
-								'out_index' => $out_index,
-								'is_destroy' => $address['is_destroy_address'],
-								'is_separator' => $address['is_separator_address'],
-								'is_passthrough' => $address['is_passthrough_address'],
-								'is_receiver' => ($first_passthrough_index !== false && $address['is_destroy_address']+$address['is_separator_address']+$address['is_passthrough_address'] == 0) ? 1 : 0,
-								'address_id' => $address_id,
-								'option_index' => $address['option_index'],
-								'create_transaction_id' => $transaction_id,
-								'amount' => $amounts[$out_index]
-							];
-							$new_output_q = "INSERT INTO transaction_ios SET blockchain_id=:blockchain_id, spend_status=:spend_status, out_index=:out_index, script_type='pubkeyhash', ";
-							if (!empty($address['user_id'])) {
-								$new_output_q .= "user_id=:user_id, ";
-								$new_output_params['user_id'] = $address['user_id'];
-							}
-							$new_output_q .= "is_destroy=:is_destroy, is_separator=:is_separator, is_passthrough=:is_passthrough, is_receiver=:is_receiver, address_id=:address_id, option_index=:option_index, ";
-							
-							if ($block_id !== false) {
-								if ($input_sum == 0) $output_cbd = 0;
-								else $output_cbd = floor($coin_blocks_destroyed*($amounts[$out_index]/$input_sum));
-								
-								if ($input_sum == 0) $output_crd = 0;
-								else $output_crd = floor($coin_rounds_destroyed*($amounts[$out_index]/$input_sum));
-								
-								$new_output_q .= "coin_blocks_destroyed=:output_cbd, ";
-								$new_output_params['output_cbd'] = $output_cbd;
-							}
-							if ($block_id !== false) {
-								$new_output_q .= "create_block_id=:block_id, ";
-								$new_output_params['block_id'] = $block_id;
-							}
-							$new_output_q .= "create_transaction_id=:create_transaction_id, amount=:amount;";
-							
-							$this->app->run_query($new_output_q, $new_output_params);
-							$created_input_ids[count($created_input_ids)] = $this->app->last_insert_id();
-						}
-						else if ($this->db_blockchain['p2p_mode'] == "rpc") {
-							if (empty($raw_txout[$address['address']])) $raw_txout[$address['address']] = 0;
-							$raw_txout[$address['address']] += $amounts[$out_index]/pow(10,$this->db_blockchain['decimal_places']);
-						}
-					}
-					else $output_error = true;
-				}
-			}
-			
-			if ($output_error) {
-				$error_message = "There was an error creating the outputs.";
-				//$this->blockchain->app->cancel_transaction($transaction_id, $affected_input_ids, false);
-				return false;
-			}
-			else {
-				$successful = false;
-				$this->load_coin_rpc();
-				
-				if ($this->db_blockchain['p2p_mode'] == "rpc") {
-					try {
-						foreach ($raw_txout as $addr => $amount) {
-							$raw_txout[$addr] = sprintf('%.'.$this->db_blockchain['decimal_places'].'F', $amount);
-						}
-						$raw_transaction = $this->coin_rpc->createrawtransaction($raw_txin, $raw_txout);
-						try {
-							$signed_raw_transaction = $this->coin_rpc->signrawtransactionwithwallet($raw_transaction);
-						}
-						catch (Exception $e) {
-							$signed_raw_transaction = $this->coin_rpc->signrawtransaction($raw_transaction);
-						}
-						$decoded_transaction = $this->coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
-						$tx_hash = $decoded_transaction['txid'];
-						
-						$sendraw_response = $this->coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
-						
-						if (isset($sendraw_response['message'])) {
-							$error_message = $sendraw_response['message'];
-							return false;
-						}
-						else {
-							$verified_tx_hash = $sendraw_response;
-							
-							$this->walletnotify($verified_tx_hash, FALSE);
-							
-							$db_transaction = $this->fetch_transaction_by_hash($verified_tx_hash);
-							
-							if ($db_transaction) {
-								$error_message = "Success!";
-								return $db_transaction['transaction_id'];
-							}
-							else {
-								$error_message = "Failed to find the TX in db after sending.";
-								return false;
-							}
-						}
-					}
-					catch (Exception $e) {
-						$error_message = "There was an error with one of the RPC calls.";
-						return false;
-					}
-				}
-				$this->add_transaction($tx_hash, $block_id, true, $successful, false, [false], false);
-				
-				if ($this->db_blockchain['p2p_mode'] == "web_api") {
-					$this->web_api_push_transaction($transaction_id);
-				}
-				
-				$error_message = "Finished adding the transaction";
-				return $transaction_id;
-			}
-		}
-		else {
+		if (count($amounts) != count($address_ids) || ($type != "coinbase" && $utxo_balance != $amount)) {
 			$error_message = "Invalid balance or inputs.";
 			return false;
 		}
+		
+		$num_inputs = 0;
+		if ($io_ids) $num_inputs = count($io_ids);
+		
+		// Step 2, insert the transaction if it's a web api blockchain
+		if ($this->db_blockchain['p2p_mode'] != "rpc") {
+			$tx_hash = $this->app->random_hex_string(32);
+			$new_tx_params = [
+				'blockchain_id' => $this->db_blockchain['blockchain_id'],
+				'fee_amount' => $transaction_fee,
+				'num_inputs' => $num_inputs,
+				'num_outputs' => count($amounts),
+				'tx_hash' => $tx_hash,
+				'transaction_desc' => $type,
+				'amount' => $amount,
+				'time_created' => time()
+			];
+			$new_tx_q = "INSERT INTO transactions SET blockchain_id=:blockchain_id, fee_amount=:fee_amount, has_all_inputs=1, has_all_outputs=1, num_inputs=:num_inputs, num_outputs=:num_outputs, tx_hash=:tx_hash, transaction_desc=:transaction_desc, amount=:amount";
+			if ($block_id !== false) {
+				$new_tx_q .= ", block_id=:block_id";
+				$new_tx_params['block_id'] = $block_id;
+			}
+			$new_tx_q .= ", time_created=:time_created;";
+			$this->app->run_query($new_tx_q, $new_tx_params);
+			$transaction_id = $this->app->last_insert_id();
+		}
+		
+		// Step 3, process the inputs
+		$input_sum = 0;
+		$coin_blocks_destroyed = 0;
+		
+		if ($type == "coinbase") {}
+		else {
+			$tx_inputs = $this->app->run_query("SELECT *, io.address_id AS address_id, io.amount AS amount FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE io.spend_status IN ('unspent','unconfirmed') AND io.blockchain_id=:blockchain_id AND io.io_id IN (".implode(",", array_map("intval", $io_ids)).") ORDER BY io.amount ASC;", [
+				'blockchain_id' => $this->db_blockchain['blockchain_id']
+			]);
+			
+			$ref_block_id = $this->last_block_id()+1;
+			$ref_cbd = 0;
+			
+			$in_index = 0;
+			
+			while ($transaction_input = $tx_inputs->fetch()) {
+				if ($input_sum < $amount) {
+					$update_input_params = [
+						'io_id' => $transaction_input['io_id']
+					];
+					$update_input_q = "UPDATE transaction_ios SET ";
+					
+					if ($block_id !== false) {
+						$update_input_q .= "spend_status='spent', spend_block_id=:block_id";
+						$update_input_params['block_id'] = $block_id;
+					}
+					else $update_input_q .= "spend_status='unconfirmed'";
+					
+					if (!empty($transaction_id)) {
+						$update_input_q .= ", spend_transaction_id=:transaction_id, in_index=:in_index";
+						$update_input_params['transaction_id'] = $transaction_id;
+						$update_input_params['in_index'] = $in_index;
+					}
+					
+					$update_input_q .= " WHERE io_id=:io_id;";
+					$this->app->run_query($update_input_q, $update_input_params);
+					
+					$input_sum += $transaction_input['amount'];
+					$ref_cbd += ($ref_block_id-$transaction_input['create_block_id'])*$transaction_input['amount'];
+					
+					if ($block_id !== false) {
+						$coin_blocks_destroyed += ($block_id - $transaction_input['create_block_id'])*$transaction_input['amount'];
+					}
+					
+					$affected_input_ids[count($affected_input_ids)] = $transaction_input['io_id'];
+					
+					$raw_txin[count($raw_txin)] = array(
+						"txid"=>$transaction_input['tx_hash'],
+						"vout"=>intval($transaction_input['out_index'])
+					);
+				}
+				$in_index++;
+			}
+		}
+		
+		// Step 4, create the outputs
+		$output_error = false;
+		$out_index = 0;
+		$first_passthrough_index = false;
+		
+		for ($out_index=0; $out_index<count($amounts); $out_index++) {
+			if (!$output_error) {
+				$address_id = $address_ids[$out_index];
+				
+				if ($address_id) {
+					$address = $this->app->fetch_address_by_id($address_id);
+					
+					if ($first_passthrough_index == false && $address['is_passthrough_address'] == 1) $first_passthrough_index = $out_index;
+					
+					if ($this->db_blockchain['p2p_mode'] != "rpc") {
+						$spend_status = $type == "coinbase" ? "unspent" : "unconfirmed";
+						
+						$new_output_params = [
+							'blockchain_id' => $this->db_blockchain['blockchain_id'],
+							'spend_status' => $spend_status,
+							'out_index' => $out_index,
+							'is_destroy' => $address['is_destroy_address'],
+							'is_separator' => $address['is_separator_address'],
+							'is_passthrough' => $address['is_passthrough_address'],
+							'is_receiver' => ($first_passthrough_index !== false && $address['is_destroy_address']+$address['is_separator_address']+$address['is_passthrough_address'] == 0) ? 1 : 0,
+							'address_id' => $address_id,
+							'option_index' => $address['option_index'],
+							'create_transaction_id' => $transaction_id,
+							'amount' => $amounts[$out_index]
+						];
+						$new_output_q = "INSERT INTO transaction_ios SET blockchain_id=:blockchain_id, spend_status=:spend_status, out_index=:out_index, script_type='pubkeyhash', ";
+						if (!empty($address['user_id'])) {
+							$new_output_q .= "user_id=:user_id, ";
+							$new_output_params['user_id'] = $address['user_id'];
+						}
+						$new_output_q .= "is_destroy=:is_destroy, is_separator=:is_separator, is_passthrough=:is_passthrough, is_receiver=:is_receiver, address_id=:address_id, option_index=:option_index, ";
+						
+						if ($block_id !== false) {
+							if ($input_sum == 0) $output_cbd = 0;
+							else $output_cbd = floor($coin_blocks_destroyed*($amounts[$out_index]/$input_sum));
+							
+							if ($input_sum == 0) $output_crd = 0;
+							else $output_crd = floor($coin_rounds_destroyed*($amounts[$out_index]/$input_sum));
+							
+							$new_output_q .= "coin_blocks_destroyed=:output_cbd, ";
+							$new_output_params['output_cbd'] = $output_cbd;
+						}
+						if ($block_id !== false) {
+							$new_output_q .= "create_block_id=:block_id, ";
+							$new_output_params['block_id'] = $block_id;
+						}
+						$new_output_q .= "create_transaction_id=:create_transaction_id, amount=:amount;";
+						
+						$this->app->run_query($new_output_q, $new_output_params);
+						$created_input_ids[count($created_input_ids)] = $this->app->last_insert_id();
+					}
+					else if ($this->db_blockchain['p2p_mode'] == "rpc") {
+						if (empty($raw_txout[$address['address']])) $raw_txout[$address['address']] = 0;
+						$raw_txout[$address['address']] += $amounts[$out_index]/pow(10,$this->db_blockchain['decimal_places']);
+					}
+				}
+				else $output_error = true;
+			}
+		}
+		
+		if ($output_error) {
+			$error_message = "There was an error creating the outputs.";
+			return false;
+		}
+		
+		// Step 5, broadcast the transaction via RPC for RPC blockchains
+		// Or process it like any read transaction for web api blockchains
+		$broadcast_successful = false;
+		$this->load_coin_rpc();
+		
+		if ($this->db_blockchain['p2p_mode'] == "rpc") {
+			try {
+				foreach ($raw_txout as $addr => $amount) {
+					$raw_txout[$addr] = sprintf('%.'.$this->db_blockchain['decimal_places'].'F', $amount);
+				}
+				$raw_transaction = $this->coin_rpc->createrawtransaction($raw_txin, $raw_txout);
+				try {
+					$signed_raw_transaction = $this->coin_rpc->signrawtransactionwithwallet($raw_transaction);
+				}
+				catch (Exception $e) {
+					$signed_raw_transaction = $this->coin_rpc->signrawtransaction($raw_transaction);
+				}
+				$decoded_transaction = $this->coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
+				$tx_hash = $decoded_transaction['txid'];
+				
+				$sendraw_response = $this->coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
+				
+				if (isset($sendraw_response['message'])) {
+					$error_message = $sendraw_response['message'];
+					$broadcast_successful = false;
+				}
+				else {
+					$verified_tx_hash = $sendraw_response;
+					
+					$this->walletnotify($verified_tx_hash, FALSE);
+					
+					$db_transaction = $this->fetch_transaction_by_hash($verified_tx_hash);
+					
+					if ($db_transaction) {
+						$transaction_id = $db_transaction['transaction_id'];
+						$error_message = "Success!";
+						$broadcast_successful = true;
+					}
+					else {
+						$error_message = "Failed to find the TX in db after sending.";
+						$broadcast_successful = false;
+					}
+				}
+			}
+			catch (Exception $e) {
+				$error_message = "There was an error with one of the RPC calls.";
+				$broadcast_successful = false;
+			}
+		}
+		else {
+			$broadcast_successful = true;
+			
+			$add_successful = null;
+			$this->add_transaction($tx_hash, $block_id, true, $add_successful, false, [false], false);
+			
+			if ($this->db_blockchain['p2p_mode'] == "web_api") {
+				$this->web_api_push_transaction($transaction_id);
+			}
+			
+			$error_message = "Finished adding the transaction";
+		}
+		
+		if ($broadcast_successful) return $transaction_id;
+		else return false;
 	}
 	
 	public function new_block(&$log_text) {
@@ -2304,9 +2318,11 @@ class Blockchain {
 		list($verification_any_error) = BlockchainVerifier::verifyBlock($this->app, $this->db_blockchain['blockchain_id'], $created_block_id);
 		
 		if ($verification_any_error || $tx_error) {
-			$msg = "Block verification failed when creating ".$this->db_blockchain['blockchain_name']." block ".$db_block['block_id'];
+			$msg = "Block verification failed when creating ".$this->db_blockchain['blockchain_name']." block ".$created_block_id;
 			$this->app->log_message($msg);
 			$log_text .= $message;
+			
+			$this->delete_blocks_from_height($created_block_id);
 			
 			return false;
 		}
