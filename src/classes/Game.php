@@ -3733,7 +3733,7 @@ class Game {
 			
 			$time_claim_available = $earliest_join_time + ($seeking_claim_after_bonus*$sec_per_faucet_claim);
 			
-			if (time() > $time_claim_available) {
+			if (time() >= $time_claim_available) {
 				$sec_since_last_claim = time() - $most_recent_claim_time;
 				
 				if ($sec_since_last_claim >= $min_sec_between_claims) {

@@ -279,7 +279,7 @@ class Blockchain {
 		
 		$db_block = $this->fetch_block_by_id($block_height);
 		
-		if ($db_block && $db_block['locally_saved'] == 0 && !empty($db_block['num_transactions'])) {
+		if ($db_block && $db_block['locally_saved'] == 0) {
 			$message = "Incomplete block found, resetting ".$this->db_blockchain['blockchain_name']." from block ".$block_height;
 			$this->app->log_message($message);
 			
@@ -354,6 +354,9 @@ class Blockchain {
 					$this->try_start_games($block_height);
 				}
 				
+				list($verification_error) = BlockchainVerifier::verifyBlock($this->app, $this->db_blockchain['blockchain_id'], $block_height);
+				if ($verification_error) $any_error = true;
+				
 				$update_block_params = [
 					'add_load_time' => (microtime(true)-$start_time),
 					'internal_block_id' => $db_block['internal_block_id']
@@ -374,6 +377,10 @@ class Blockchain {
 				}
 				$update_block_q .= "load_time=load_time+:add_load_time WHERE internal_block_id=:internal_block_id;";
 				$this->app->run_query($update_block_q, $update_block_params);
+				
+				if ($any_error) {
+					$this->delete_blocks_from_height($block_height);
+				}
 				
 				if ($print_debug) {
 					echo (microtime(true)-$start_time)." sec<br/>\n";
