@@ -3,7 +3,7 @@
 	"site_name_short": "PolyCash",
 	"site_name": "PolyCash",
 	"site_domain": "",
-	"mysql_server": "localhost",
+	"mysql_server": "127.0.0.1",
 	"mysql_user": "",
 	"mysql_password": "",
 	"database": "",

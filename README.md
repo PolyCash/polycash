@@ -15,7 +15,7 @@ To get started, first install and secure Apache, MySQL and PHP (at least version
 Make sure to set the following params in your config.json to something like the following:
 ```
 "site_domain": "localhost",
-"mysql_server": "localhost",
+"mysql_server": "127.0.0.1",
 "mysql_user": "mysqluser",
 "mysql_password": "somesecurepass",
 "database": "polycash",
