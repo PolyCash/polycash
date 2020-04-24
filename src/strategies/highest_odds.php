@@ -20,7 +20,7 @@ if ($user_game) {
 	$early_or_late = "late";
 	if ($_REQUEST['early_or_late'] == "early") $early_or_late = "early";
 	
-	$bet_quantity = (int) $_REQUEST['bet_quantity'] ?? 2;
+	$bet_quantity = empty($_REQUEST['bet_quantity']) ? 2 : (int) $_REQUEST['bet_quantity'];
 	
 	$hours_between_applications = $_REQUEST['hours'] ?? 2;
 	$sec_between_applications = 60*60*$hours_between_applications;

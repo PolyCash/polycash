@@ -279,7 +279,7 @@ class Blockchain {
 		
 		$db_block = $this->fetch_block_by_id($block_height);
 		
-		if ($db_block && $db_block['locally_saved'] == 0) {
+		if ($db_block && $db_block['locally_saved'] == 0 && !empty($db_block['num_transactions'])) {
 			$message = "Incomplete block found, resetting ".$this->db_blockchain['blockchain_name']." from block ".$block_height;
 			$this->app->log_message($message);
 			
