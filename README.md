@@ -31,7 +31,7 @@ If you want to allow users to log in with an email address, enter your sendgrid 
 
 Next, configure cron to poll PolyCash every minute. This keeps PolyCash in sync at all times. Add this line to your /etc/crontab:
 ```
-* * * * * root /usr/bin/php /var/www/html/polycash/src/cron/minutely.php
+* * * * * root /usr/bin/php /var/www/polycash/src/cron/minutely.php
 ```
 
 Set "pageview_tracking_enabled": true in your config.json if you want to track all pageviews.  If you don't set this parameter, no IP addresses or pageviews will be tracked.
