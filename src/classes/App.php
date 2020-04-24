@@ -6,10 +6,13 @@ class App {
 		try {
 			$this->dbh = new PDO("mysql:host=".AppSettings::getParam('mysql_server').";charset=utf8", AppSettings::getParam('mysql_user'), AppSettings::getParam('mysql_password')) or die("Error, failed to connect to the database.");
 		}
-		catch (PDOException $err) {}
+		catch (PDOException $err) {
+			die('There was an error connecting to MySQL. Check your mysql credentials.');
+		}
 		
 		if (!$skip_select_db) {
-			$this->select_db(AppSettings::getParam('mysql_database'));
+			if (empty(AppSettings::getParam('mysql_database'))) die('You need to specify a database name in your configuration.');
+			else $this->select_db(AppSettings::getParam('mysql_database'));
 		}
 	}
 	

@@ -20,17 +20,20 @@ if (!empty(AppSettings::getParam('memory_limit'))) ini_set('memory_limit', AppSe
 
 if ((string) AppSettings::getParam('options_begin_at_index') == "") die('Please add this line to your src/config/config.json: "options_begin_at_index": 10');
 
-if (empty(AppSettings::getParam('coin_brand_name'))) die("Please set the 'coin_brand_name' parameter in your src/config/config.json");
+if (empty(AppSettings::getParam('coin_brand_name'))) die('Please set the "coin_brand_name" parameter in your src/config/config.json');
 
 if (!empty($allow_no_https)) {}
-else if (AppSettings::getParam('base_url') && !AppSettings::runningFromCommandline()) {
-	if (isset($_SERVER['HTTPS'])) $requested_base_url = "https";
-	else $requested_base_url = "http";
-	$requested_base_url .= "://".$_SERVER['HTTP_HOST'];
-	
-	if ($requested_base_url != AppSettings::getParam('base_url')) {
-		header("Location: ".AppSettings::getParam('base_url').$_SERVER['REQUEST_URI']);
-		die();
+else if (!AppSettings::runningFromCommandline()) {
+	if (empty(AppSettings::getParam('site_domain'))) die('Please set "site_domain" in your configuration to a URL like "localhost"');
+	else {
+		if (isset($_SERVER['HTTPS'])) $requested_base_url = "https";
+		else $requested_base_url = "http";
+		$requested_base_url .= "://".$_SERVER['HTTP_HOST'];
+		
+		if ($requested_base_url != AppSettings::getParam('base_url')) {
+			header("Location: ".AppSettings::getParam('base_url').$_SERVER['REQUEST_URI']);
+			die();
+		}
 	}
 }
 

@@ -14,7 +14,7 @@ class AppSettings {
 			self::$publicPath = realpath(dirname(dirname(dirname(__FILE__))))."/public";
 			$config_path = self::$srcPath."/config/config.json";
 			
-			if ($config_path) {
+			if (is_file($config_path)) {
 				$config_fh = fopen($config_path, 'r');
 				if ($config_str = fread($config_fh, filesize($config_path))) {
 					self::$settings = json_decode($config_str) or die("Failed to parse the config file.");
@@ -24,20 +24,25 @@ class AppSettings {
 					
 					if (!empty(self::$settings->dev_site_domain) && $_SERVER['SERVER_NAME'] == self::$settings->dev_site_domain) {
 						self::setIsDev(true);
-						$base_url .= self::$settings->dev_site_domain;
+						$site_domain = self::$settings->dev_site_domain;
 						self::$settings->mysql_database = self::$settings->dev_database;
 					}
 					else {
 						self::setIsDev(false);
-						$base_url .= self::$settings->site_domain;
+						$site_domain = self::$settings->site_domain;
 						self::$settings->mysql_database = self::$settings->database;
 					}
+					
+					$http_prefix = "http";
+					if (strlen($site_domain) >= strlen($http_prefix) && substr($site_domain, 0, strlen($http_prefix)) == $http_prefix) die('Please don\'t include a prefix like "http://" in your site domain');
+					
+					$base_url .= $site_domain;
 					
 					self::$settings->base_url = $base_url;
 				}
 				else die("Failed to read the config file.");
 			}
-			else die("Please create the file config/config.json");
+			else die("Please create the file src/config/config.json");
 		}
 	}
 	
