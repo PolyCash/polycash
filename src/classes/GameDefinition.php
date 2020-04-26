@@ -296,8 +296,6 @@ class GameDefinition {
 			$events_earliest_affected_block = $game->event_index_to_affected_block($set_events_from_index);
 			$reset_block = $game->blockchain->app->min_excluding_false([$reset_block, $events_earliest_affected_block]);
 			
-			$game->reset_events_from_index($set_events_from_index);
-			
 			$set_events_from_pos = $set_events_from_index-$event_array_pos_to_index_offset;
 			
 			if (!is_numeric($reset_block)) $reset_block = $new_game_obj['events'][$set_events_from_pos]->event_starting_block;
@@ -317,7 +315,7 @@ class GameDefinition {
 		if (!is_numeric($reset_block)) $reset_block = $game->blockchain->last_block_id();
 		
 		$log_message .= "Resetting blocks from #".$reset_block."\n";
-		$game->reset_blocks_from_block($reset_block);
+		$game->schedule_game_reset($reset_block);
 		
 		self::record_migration($game, $user_id, $migration_type, $show_internal_params, $initial_game_def, $new_game_def);
 		

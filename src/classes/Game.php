@@ -23,6 +23,21 @@ class Game {
 		if (!$this->db_game) throw new Exception("Error, could not load game #".$this->game_id);
 	}
 	
+	public function fetch_extra_info() {
+		if (empty($this->db_game['extra_info'])) return [];
+		else return (array) json_decode($this->db_game['extra_info']);
+	}
+	
+	public function set_extra_info($extra_info) {
+		if ($extra_info == []) $extra_info_txt = "";
+		else $extra_info_txt = json_encode($extra_info, JSON_PRETTY_PRINT);
+		
+		$this->blockchain->app->run_query("UPDATE games SET extra_info=:extra_info WHERE game_id=:game_id;", [
+			'extra_info' => $extra_info_txt,
+			'game_id' => $this->db_game['game_id']
+		]);
+	}
+	
 	public static function create_game(&$blockchain, $params) {
 		$params['blockchain_id'] = $blockchain->db_blockchain['blockchain_id'];
 		$new_game_q = "INSERT INTO games SET ";
@@ -2447,6 +2462,24 @@ class Game {
 		return $error_message;
 	}
 	
+	public function schedule_game_reset($from_block, $from_index=null) {
+		$extra_info = $this->fetch_extra_info();
+		$extra_info['pending_reset'] = 1;
+		
+		if ($from_block !== null) {
+			$extra_info['reset_from_block'] = $from_block;
+			
+			$reset_from_event_index = $this->reset_block_to_event_index($from_block);
+			if ($from_index !== null && $from_index < $reset_from_event_index) $reset_from_event_index = $from_index;
+			
+			if ($reset_from_event_index !== false) {
+				$extra_info['reset_from_event_index'] = $reset_from_event_index;
+			}
+		}
+		
+		$this->set_extra_info($extra_info);
+	}
+	
 	public function sync_with_definitive_peer($print_debug) {
 		$error_message = "";
 		$definitive_peer = $this->get_definitive_peer();
@@ -2505,6 +2538,35 @@ class Game {
 		
 		if ((string) $this->db_game['loaded_until_block'] == "") $this->set_loaded_until_block(null);
 		
+		$extra_info = $this->fetch_extra_info();
+		if (!empty($extra_info['pending_reset'])) {
+			if ($show_debug) {
+				echo "Resetting the game..\n";
+				$this->blockchain->app->flush_buffers();
+			}
+			
+			if (array_key_exists($extra_info, "reset_from_block")) {
+				$this->reset_blocks_from_block($extra_info['reset_from_block']);
+				$this->set_loaded_until_block($extra_info['reset_from_block']-1);
+				$this->set_events_until_block($extra_info['reset_from_block']-1);
+				unset($extra_info['reset_from_block']);
+				
+				if (array_key_exists($extra_info, "reset_from_event_index")) {
+					$this->reset_events_from_index($extra_info['reset_from_event_index']);
+					unset($extra_info['reset_from_event_index']);
+				}
+			}
+			else {
+				$this->delete_reset_game('reset');
+				$this->set_loaded_until_block($this->db_game['game_starting_block']-1);
+				$this->set_events_until_block($this->db_game['game_starting_block']-1);
+			}
+			
+			unset($extra_info['pending_reset']);
+			
+			$this->set_extra_info($extra_info);
+		}
+		
 		$load_block_height = $this->db_game['loaded_until_block']+1;
 		$to_block_height = $this->blockchain->last_block_id();
 		
@@ -2519,7 +2581,6 @@ class Game {
 			GameDefinition::set_cached_definition_hashes($this);
 			
 			if ($show_debug) {
-				echo $sync_definitive_message;
 				echo $ensure_events_debug_text;
 				$this->blockchain->app->flush_buffers();
 			}

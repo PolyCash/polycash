@@ -13,36 +13,10 @@ if ($app->running_as_admin()) {
 	if ($game) {
 		if ($_REQUEST['block_id'] > 0) {
 			$block_id = (int)$_REQUEST['block_id'];
-			$process_lock_name = "load_game";
 			
-			echo "Waiting for game loading script to finish";
-			do {
-				echo ". ";
-				$app->flush_buffers();
-				sleep(1);
-				$process_locked = $app->check_process_running($process_lock_name);
-			}
-			while ($process_locked);
+			$game->schedule_game_reset($block_id);
 			
-			echo "now resetting the game<br/>\n";
-			$app->flush_buffers();
-			
-			$app->set_site_constant($process_lock_name, getmypid());
-			$game->reset_blocks_from_block($block_id);
-			
-			if (!empty($game->db_game['module'])) {
-				$db_reset_event = $app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_starting_block <= :block_id ORDER BY event_index DESC LIMIT 1;", [
-					'game_id' => $game->db_game['game_id'],
-					'block_id' => $block_id
-				])->fetch();
-				
-				if ($db_reset_event) {
-					$game->reset_events_from_index($db_reset_event['event_index']);
-				}
-			}
-			
-			echo $game->db_game['name']." has been reset from block ".$block_id."\n";
-			$app->set_site_constant($process_lock_name, 0);
+			echo "Game reset scheduled for ".$game->db_game['name']." block ".$block_id."\n";
 		}
 		else echo "Invalid block supplied.\n";
 	}
