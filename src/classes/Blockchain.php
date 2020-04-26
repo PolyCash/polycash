@@ -1441,7 +1441,7 @@ class Blockchain {
 		$associated_games = $this->associated_games([]);
 		
 		foreach ($associated_games as $associated_game) {
-			$associated_game->reset_blocks_from_block($block_height);
+			$associated_game->schedule_game_reset($block_height);
 		}
 	}
 	

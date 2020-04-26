@@ -504,21 +504,12 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 			else if (in_array($action, ['start','publish','unpublish','complete','delete','reset'])) {
 				if ($action == "delete") $app->output_message(2, "This function is disabled", false);
 				else if ($action == "reset") {
-					if (!empty($_REQUEST['from_block'])) {
-						$from_block = (int) $_REQUEST['from_block'];
-						
-						$game->reset_blocks_from_block($from_block);
-						
-						$reset_from_event_index = $game->reset_block_to_event_index($from_block);
-						
-						if ($reset_from_event_index !== false) {
-							$game->reset_events_from_index($reset_from_event_index);
-						}
-					}
-					else {
-						$game->delete_reset_game('reset');
-					}
-					$app->output_message(2, "This game has been reset.", false);
+					$reset_from_block = empty($_REQUEST['from_block']) ? null : (int) $_REQUEST['from_block'];
+					if ($reset_from_block !== null) $reset_from_block = min($game->last_block_id(), $reset_from_block);
+					
+					$game->schedule_game_reset($reset_from_block);
+					
+					$app->output_message(2, "Game reset has been scheduled and will be applied shortly.", false);
 				}
 				else if ($action == "start") {
 					$game->start_game();
