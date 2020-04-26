@@ -2465,6 +2465,9 @@ class Game {
 	
 	public function schedule_game_reset($from_block, $from_index=null) {
 		$extra_info = $this->fetch_extra_info();
+		
+		unset($extra_info['reset_from_block']);
+		unset($extra_info['reset_from_event_index']);
 		$extra_info['pending_reset'] = 1;
 		
 		if ($from_block !== null) {
@@ -2548,13 +2551,13 @@ class Game {
 				$this->blockchain->app->flush_buffers();
 			}
 			
-			if (array_key_exists($extra_info, "reset_from_block")) {
+			if (array_key_exists("reset_from_block", $extra_info)) {
 				$this->reset_blocks_from_block($extra_info['reset_from_block']);
 				$this->set_loaded_until_block($extra_info['reset_from_block']-1);
 				$this->set_events_until_block($extra_info['reset_from_block']-1);
 				unset($extra_info['reset_from_block']);
 				
-				if (array_key_exists($extra_info, "reset_from_event_index")) {
+				if (array_key_exists("reset_from_event_index", $extra_info)) {
 					$this->reset_events_from_index($extra_info['reset_from_event_index']);
 					unset($extra_info['reset_from_event_index']);
 				}
