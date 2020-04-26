@@ -315,7 +315,7 @@ class GameDefinition {
 		if (!is_numeric($reset_block)) $reset_block = $game->blockchain->last_block_id();
 		
 		$log_message .= "Resetting blocks from #".$reset_block."\n";
-		$game->schedule_game_reset($reset_block);
+		$game->schedule_game_reset($reset_block, $set_events_from_index);
 		
 		self::record_migration($game, $user_id, $migration_type, $show_internal_params, $initial_game_def, $new_game_def);
 		

@@ -2300,6 +2300,7 @@ class Game {
 			'block_id' => $block_id,
 			'game_id' => $this->db_game['game_id']
 		]);
+		$this->db_game['events_until_block'] = $block_id;
 	}
 	
 	public function add_event_type($db_option_entities, $event_entity, $event_i) {
@@ -2464,6 +2465,9 @@ class Game {
 	
 	public function schedule_game_reset($from_block, $from_index=null) {
 		$extra_info = $this->fetch_extra_info();
+		
+		unset($extra_info['reset_from_block']);
+		unset($extra_info['reset_from_event_index']);
 		$extra_info['pending_reset'] = 1;
 		
 		if ($from_block !== null) {
@@ -2536,8 +2540,10 @@ class Game {
 		$sync_start_time = microtime(true);
 		$last_set_loaded_time = microtime(true);
 		
+		// Set loaded until block if needed
 		if ((string) $this->db_game['loaded_until_block'] == "") $this->set_loaded_until_block(null);
 		
+		// Reset game if there's a reset scheduled
 		$extra_info = $this->fetch_extra_info();
 		if (!empty($extra_info['pending_reset'])) {
 			if ($show_debug) {
@@ -2545,13 +2551,13 @@ class Game {
 				$this->blockchain->app->flush_buffers();
 			}
 			
-			if (array_key_exists($extra_info, "reset_from_block")) {
+			if (array_key_exists("reset_from_block", $extra_info)) {
 				$this->reset_blocks_from_block($extra_info['reset_from_block']);
 				$this->set_loaded_until_block($extra_info['reset_from_block']-1);
 				$this->set_events_until_block($extra_info['reset_from_block']-1);
 				unset($extra_info['reset_from_block']);
 				
-				if (array_key_exists($extra_info, "reset_from_event_index")) {
+				if (array_key_exists("reset_from_event_index", $extra_info)) {
 					$this->reset_events_from_index($extra_info['reset_from_event_index']);
 					unset($extra_info['reset_from_event_index']);
 				}
@@ -2569,9 +2575,16 @@ class Game {
 		
 		$load_block_height = $this->db_game['loaded_until_block']+1;
 		$to_block_height = $this->blockchain->last_block_id();
-		
 		$ensure_block_id = $to_block_height+1;
 		
+		// Load events
+		$ensure_events_debug_text = $this->ensure_events_until_block($ensure_block_id);
+		if ($show_debug) {
+			echo $ensure_events_debug_text;
+			$this->blockchain->app->flush_buffers();
+		}
+		
+		// Sync with peer
 		if (!empty($this->db_game['definitive_game_peer_id']) && $this->db_game['loaded_until_block'] == $this->blockchain->last_block_id()) {
 			$sync_definitive_message = $this->sync_with_definitive_peer($show_debug);
 			
@@ -2587,12 +2600,14 @@ class Game {
 		}
 		else if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
 		
+		// Load events
 		$ensure_events_debug_text = $this->ensure_events_until_block($ensure_block_id);
 		if ($show_debug) {
 			echo $ensure_events_debug_text;
 			$this->blockchain->app->flush_buffers();
 		}
 		
+		// Load blocks
 		if ($to_block_height >= $load_block_height) {
 			if ($show_debug) {
 				echo $this->db_game['name'].".. loading blocks ".$load_block_height." to ".$to_block_height."\n";
