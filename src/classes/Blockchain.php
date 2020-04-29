@@ -1441,7 +1441,11 @@ class Blockchain {
 		$associated_games = $this->associated_games([]);
 		
 		foreach ($associated_games as $associated_game) {
-			$associated_game->schedule_game_reset($block_height);
+			if ((string) $associated_game->db_game['loaded_until_block'] == "") $associated_game->set_loaded_until_block(null);
+			
+			if ($associated_game->db_game['loaded_until_block'] > $block_height && $block_height >= $associated_game->db_game['game_starting_block']) {
+				$associated_game->schedule_game_reset($block_height);
+			}
 		}
 	}
 	
