@@ -1457,7 +1457,7 @@ class Game {
 			if (empty($this->db_game['events_until_block'])) $events_until_block = $this->db_game['game_starting_block'];
 			else $events_until_block = $this->db_game['events_until_block'];
 			
-			$events_pct_complete = ($events_until_block-$this->db_game['game_starting_block'])/$total_game_blocks;
+			$events_pct_complete = (max($events_until_block, $this->db_game['game_starting_block'])-$this->db_game['game_starting_block'])/$total_game_blocks;
 			$html .= "<p>Loading events.. <a target=\"_blank\" href=\"/explorer/games/".$this->db_game['url_identifier']."/events/\">".round(100*$events_pct_complete, 2)."% complete</a>.</p>\n";
 		}
 		
