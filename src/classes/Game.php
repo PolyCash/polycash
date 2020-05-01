@@ -833,7 +833,7 @@ class Game {
 		
 		$delete_limit = 20000;
 		$max_io_index = $this->max_game_io_index();
-		$delete_gio_queries = ceil($max_io_index/$delete_limit);
+		$delete_gio_queries = ceil(($max_io_index+1)/$delete_limit);
 		$this->blockchain->app->run_query("DELETE FROM transaction_game_ios WHERE game_id=:game_id AND game_io_index IS NULL;", ['game_id'=>$this->db_game['game_id']]);
 		
 		for ($d=0; $d<$delete_gio_queries; $d++) {
