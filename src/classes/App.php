@@ -794,8 +794,11 @@ class App {
 	}
 	
 	public function update_all_currency_prices() {
-		$reference_currency_id = $this->get_site_constant('reference_currency_id');
-		$currency_urls = $this->run_query("SELECT * FROM currencies c JOIN oracle_urls o ON c.oracle_url_id=o.oracle_url_id WHERE c.currency_id != :currency_id GROUP BY o.oracle_url_id;", ['currency_id'=>$reference_currency_id]);
+		$reference_currency = $this->get_reference_currency();
+		$usd_currency = $this->fetch_currency_by_id(1);
+		$ref_currency_info = $this->exchange_rate_between_currencies($usd_currency['currency_id'], $reference_currency['currency_id'], time(), $reference_currency['currency_id']);
+		
+		$currency_urls = $this->run_query("SELECT * FROM currencies c JOIN oracle_urls o ON c.oracle_url_id=o.oracle_url_id WHERE c.currency_id != :currency_id GROUP BY o.oracle_url_id;", ['currency_id'=>$reference_currency['currency_id']]);
 		
 		while ($currency_url = $currency_urls->fetch()) {
 			$api_response_raw = file_get_contents($currency_url['url']);
@@ -804,33 +807,44 @@ class App {
 			$currencies_by_url = $this->run_query("SELECT * FROM currencies WHERE oracle_url_id=:oracle_url_id;", ['oracle_url_id'=>$currency_url['oracle_url_id']]);
 			
 			while ($currency = $currencies_by_url->fetch()) {
+				$price_in_ref_currency = null;
+				$price_usd = null;
+				
 				if ($currency_url['format_id'] == 2) {
 					$api_response = json_decode($api_response_raw);
-					$price = $api_response->USD->bid;
+					$price_usd = $api_response->USD->bid;
 				}
 				else if ($currency_url['format_id'] == 1) {
 					$api_response = json_decode($api_response_raw);
 					if (!empty($api_response->rates)) {
 						$api_rates = (array) $api_response->rates;
-						$price = 1/($api_rates[$currency['abbreviation']]);
+						$price_usd = 1/($api_rates[$currency['abbreviation']]);
 					}
 				}
 				else if ($currency_url['format_id'] == 3) {
 					$coin_data_raw = $this->first_snippet_between($api_response_raw, '<script id="__NEXT_DATA__" type="application/json">', '</script>');
 					$coin_data = json_decode($coin_data_raw);
-					$price_usd = $coin_data->props->initialState->cryptocurrency->listingLatest->data[0]->quote->USD->price;
+					$price_data = AppSettings::arrayToMapOnKey($coin_data->props->initialState->cryptocurrency->listingLatest->data, "symbol");
 					
-					if ($price_usd > 0) $price = 1/$price_usd;
-					else $price = 0;
+					if ($currency['currency_id'] == $usd_currency['currency_id']) {
+						$price_in_ref_currency = 1/$price_data['BTC']->quote->USD->price;
+					}
+					else {
+						$price_usd = $price_data[$currency['abbreviation']]->quote->USD->price;
+					}
 				}
 				
-				$price = round($price, 10);
+				if ($price_in_ref_currency == null) {
+					$price_in_ref_currency = $price_usd/$ref_currency_info['exchange_rate'];
+				}
 				
-				if ($price > 0) {
+				$price_in_ref_currency = $this->to_significant_digits($price_in_ref_currency, 10);
+				
+				if ($price_in_ref_currency > 0) {
 					$this->run_query("INSERT INTO currency_prices SET currency_id=:currency_id, reference_currency_id=:reference_currency_id, price=:price, time_added=:time_added;", [
 						'currency_id' => $currency['currency_id'],
-						'reference_currency_id' => $reference_currency_id,
-						'price' => $price,
+						'reference_currency_id' => $reference_currency['currency_id'],
+						'price' => $price_in_ref_currency,
 						'time_added' => time()
 					]);
 				}
@@ -2580,9 +2594,13 @@ class App {
 		return $thisuser;
 	}
 	
+	public function fetch_currencies($filter_parameters) {
+		return $this->run_query("SELECT * FROM currencies ORDER BY currency_id ASC;");
+	}
+	
 	public function fetch_currency_prices() {
 		$prices = [];
-		$all_currencies = $this->run_query("SELECT * FROM currencies ORDER BY currency_id ASC;");
+		$all_currencies = $this->fetch_currencies([]);
 		
 		while ($db_currency = $all_currencies->fetch()) {
 			$prices[$db_currency['currency_id']] = $this->latest_currency_price($db_currency['currency_id']);
