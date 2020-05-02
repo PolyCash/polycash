@@ -2463,7 +2463,7 @@ class Game {
 		return $error_message;
 	}
 	
-	public function schedule_game_reset($from_block, $from_index=null) {
+	public function schedule_game_reset($from_block, $from_index=null, $migration_id=null) {
 		$extra_info = $this->fetch_extra_info();
 		
 		unset($extra_info['reset_from_block']);
@@ -2482,6 +2482,13 @@ class Game {
 		}
 		
 		$this->set_extra_info($extra_info);
+		
+		if ($migration_id) {
+			$this->blockchain->app->run_query("UPDATE game_definition_migrations SET extra_info=:extra_info WHERE migration_id=:migration_id;", [
+				'extra_info' => json_encode(['reset_from_block' => $from_block, 'reset_from_event_index' => $reset_from_event_index], JSON_PRETTY_PRINT),
+				'migration_id' => $migration_id
+			]);
+		}
 	}
 	
 	public function sync_with_definitive_peer($print_debug) {

@@ -35,7 +35,7 @@ if ($app->running_as_admin()) {
 				if (empty($blockchains[$db_running_game['blockchain_id']])) $blockchains[$db_running_game['blockchain_id']] = new Blockchain($app, $db_running_game['blockchain_id']);
 				$running_game = new Game($blockchains[$db_running_game['blockchain_id']], $db_running_game['game_id']);
 				
-				if ($running_game->db_game['save_every_definition']) GameDefinition::set_cached_definition_hashes($running_game);
+				if ($running_game->db_game['save_every_definition'] || $only_game_id) GameDefinition::set_cached_definition_hashes($running_game);
 				
 				$running_game->set_cached_fields();
 				

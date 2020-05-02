@@ -206,6 +206,8 @@ class GameDefinition {
 		];
 		
 		$game->blockchain->app->run_query($new_migration_q, $new_migration_params);
+		
+		return $game->blockchain->app->run_query("SELECT * FROM game_definition_migrations WHERE migration_id=:migration_id;", ['migration_id' => $game->blockchain->app->last_insert_id()])->fetch();
 	}
 	
 	public static function migrate_game_definitions(&$game, $user_id, $migration_type, $show_internal_params, &$initial_game_def, &$new_game_def) {
@@ -315,9 +317,10 @@ class GameDefinition {
 		if (!is_numeric($reset_block)) $reset_block = $game->blockchain->last_block_id();
 		
 		$log_message .= "Resetting blocks from #".$reset_block."\n";
-		$game->schedule_game_reset($reset_block, $set_events_from_index);
 		
-		self::record_migration($game, $user_id, $migration_type, $show_internal_params, $initial_game_def, $new_game_def);
+		$migration = self::record_migration($game, $user_id, $migration_type, $show_internal_params, $initial_game_def, $new_game_def);
+		
+		$game->schedule_game_reset($reset_block, $set_events_from_index, $migration['migration_id']);
 		
 		$game->update_db_game();
 		
