@@ -60,6 +60,9 @@ else if ($uri_parts[1] == "manage") {
 else if ($uri_parts[1] == "manage_blockchains") {
 	include($src_path."/manage_blockchains.php");
 }
+else if ($uri_parts[1] == "manage_currencies") {
+	include($src_path."/manage_currencies.php");
+}
 else if ($uri_parts[1] == "groups") {
 	include($src_path."/manage_groups.php");
 }

@@ -102,6 +102,7 @@ if (empty($nav_tab_selected)) $nav_tab_selected = "";
 					<li<?php if ($nav_tab_selected == "install") echo ' class="active"'; ?>><a href="/install.php?key=<?php echo AppSettings::getParam('operator_key'); ?>"><i class="fa fa-download"></i> <span>Install</span></a></li>
 					<li<?php if ($nav_tab_selected == "import") echo ' class="active"'; ?>><a href="/import/"><i class="fa fa-plus-square"></i> <span>Import</span></a></li>
 					<li<?php if ($nav_tab_selected == "manage_blockchains") echo ' class="active"'; ?>><a href="/manage_blockchains/"><i class="fa fa-cube"></i> <span>Manage Blockchains</span></a></li>
+					<li<?php if ($nav_tab_selected == "manage_currencies") echo ' class="active"'; ?>><a href="/manage_currencies/"><i class="fa fa-signal"></i> <span>Manage Currencies</span></a></li>
 				</ul>
 				<?php
 			}

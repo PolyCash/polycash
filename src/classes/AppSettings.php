@@ -84,5 +84,16 @@ class AppSettings {
 	public static function standardHash(&$string) {
 		return hash("sha256", $string);
 	}
+	
+	public static function arrayToMapOnKey(&$array, $key) {
+		$map = [];
+		
+		foreach ($array as &$element) {
+			if (isset($element->$key)) $map[$element->$key] = $element;
+			else if (array_key_exists($key, $element)) $map[$element[$key]] = (object) $element;
+		}
+		
+		return $map;
+	}
 }
 ?>
