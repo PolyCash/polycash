@@ -49,18 +49,21 @@ class GameDefinition {
 		}
 		
 		$escrow_amounts = [];
-		
-		if ($definition_mode == "actual") {
-			$escrow_amounts_q = "SELECT * FROM game_escrow_amounts ea JOIN currencies c ON ea.currency_id=c.currency_id WHERE ea.game_id=:game_id ORDER BY c.short_name_plural ASC;";
-		}
-		else if ($definition_mode == "defined") {
-			$escrow_amounts_q = "SELECT * FROM game_defined_escrow_amounts ea JOIN currencies c ON ea.currency_id=c.currency_id WHERE ea.game_id=:game_id ORDER BY c.short_name_plural ASC;";
-		}
-		
-		$db_escrow_amounts = $app->run_query($escrow_amounts_q, ['game_id'=>$game->db_game['game_id']]);
+		$db_escrow_amounts = EscrowAmount::fetch_escrow_amounts_in_game($game, $definition_mode);
+		$escrow_position = 0;
 		
 		while ($escrow_amount = $db_escrow_amounts->fetch()) {
-			$escrow_amounts[$escrow_amount['short_name_plural']] = (float) $escrow_amount['amount'];
+			$this_escrow_amount = [
+				'type' => $escrow_amount['escrow_type'],
+				'currency' => $escrow_amount['abbreviation']
+			];
+			
+			if ($escrow_amount['escrow_type'] == "fixed") $this_escrow_amount['amount'] = (float) $escrow_amount['amount'];
+			else $this_escrow_amount['relative_amount'] = (float) $escrow_amount['relative_amount'];
+			
+			array_push($escrow_amounts, $this_escrow_amount);
+			
+			$escrow_position++;
 		}
 		
 		$game_definition['escrow_amounts'] = $escrow_amounts;
@@ -247,17 +250,15 @@ class GameDefinition {
 		$game->blockchain->app->run_query("DELETE FROM game_escrow_amounts WHERE game_id=:game_id;", ['game_id'=>$game->db_game['game_id']]);
 		
 		if (!empty($new_game_obj['escrow_amounts'])) {
-			foreach ($new_game_obj['escrow_amounts'] as $currency_identifier => $amount) {
-				$escrow_currency = $game->blockchain->app->run_query("SELECT * FROM currencies WHERE short_name_plural=:currency_identifier;", [
-					'currency_identifier' => $currency_identifier
-				])->fetch();
+			$escrow_position = 0;
+			
+			foreach ($new_game_obj['escrow_amounts'] as &$an_escrow_amount) {
+				$escrow_currency = $game->blockchain->app->fetch_currency_by_abbreviation($an_escrow_amount['currency']);
 				
 				if ($escrow_currency) {
-					$game->blockchain->app->run_query("INSERT INTO game_escrow_amounts SET game_id=:game_id, currency_id=:currency_id, amount=:amount;", [
-						'game_id' => $game->db_game['game_id'],
-						'currency_id' => $escrow_currency['currency_id'],
-						'amount' => $amount
-					]);
+					EscrowAmount::insert_escrow_amount($game->blockchain->app, $game->db_game['game_id'], $escrow_currency['currency_id'], "actual", $escrow_position, $an_escrow_amount);
+					
+					$escrow_position++;
 				}
 			}
 		}
@@ -463,17 +464,17 @@ class GameDefinition {
 								$app->run_query("DELETE FROM game_defined_escrow_amounts WHERE game_id=:game_id;", ['game_id'=>$game->db_game['game_id']]);
 								
 								if (!empty($game_def->escrow_amounts)) {
-									foreach ($game_def->escrow_amounts as $currency_identifier => $amount) {
-										$escrow_currency = $app->run_query("SELECT * FROM currencies WHERE short_name_plural=:currency_identifier;", [
-											'currency_identifier'=>$currency_identifier
-										])->fetch();
+									$escrow_position = 0;
+									
+									foreach ($game_def->escrow_amounts as $escrow_amount) {
+										$escrow_amount = (array) $escrow_amount;
+										
+										$escrow_currency = $app->fetch_currency_by_abbreviation($escrow_amount['currency']);
 										
 										if ($escrow_currency) {
-											$app->run_query("INSERT INTO game_defined_escrow_amounts SET game_id=:game_id, currency_id=:currency_id, amount=:amount;", [
-												'game_id' => $game->db_game['game_id'],
-												'currency_id' => $escrow_currency['currency_id'],
-												'amount' => $amount
-											]);
+											EscrowAmount::insert_escrow_amount($app, $game->db_game['game_id'], $escrow_currency['currency_id'], "defined", $escrow_position, $escrow_amount);
+											
+											$escrow_position++;
 										}
 									}
 								}

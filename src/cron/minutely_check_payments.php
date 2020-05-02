@@ -53,8 +53,8 @@ if ($app->running_as_admin()) {
 					$pay_game_out_index = false;
 					
 					if ($invoice_address['invoice_type'] == "sale_buyin") {
-						$escrow_value_float = $game->escrow_value_in_currency($invoice_address['pay_currency_id']);
 						$coins_in_existence = $game->coins_in_existence(false, false)+$game->pending_bets(false);
+						$escrow_value_float = $game->escrow_value_in_currency($invoice_address['pay_currency_id'], $coins_in_existence/pow(10, $game->db_game['decimal_places']));
 						$exchange_rate = $coins_in_existence/pow(10, $game->db_game['decimal_places'])/$escrow_value_float;
 						$buyin_amount_int = ceil($amount_paid_float*$exchange_rate*pow(10, $game->db_game['decimal_places']));
 						$sale_game_account = $game->check_set_game_sale_account($ref_user);
@@ -214,8 +214,8 @@ if ($app->running_as_admin()) {
 				if ($print_debug) echo $invoice_address['address']." ".$address_balance_float.", paid: ".$amount_paid_float."\n";
 				
 				if ($amount_paid_float > 0) {
-					$escrow_value_float = $game->escrow_value_in_currency($sellout_currency['currency_id']);
 					$coins_in_existence = $game->coins_in_existence(false, false)+$game->pending_bets(false);
+					$escrow_value_float = $game->escrow_value_in_currency($sellout_currency['currency_id'], $coins_in_existence/pow(10, $game->db_game['decimal_places']));
 					$exchange_rate = $coins_in_existence/pow(10, $game->db_game['decimal_places'])/$escrow_value_float;
 					
 					$sellout_account = $game->check_set_blockchain_sale_account($ref_user, $sellout_currency);

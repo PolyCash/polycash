@@ -1220,7 +1220,7 @@ class Game {
 		
 		$display_currency = $this->blockchain->app->fetch_currency_by_id($user_game['display_currency_id']);
 		
-		$escrow_value = $this->escrow_value_in_currency($display_currency['currency_id']);
+		$escrow_value = $this->escrow_value_in_currency($display_currency['currency_id'], $coins_in_existence/pow(10, $this->db_game['decimal_places']));
 		
 		if ($coins_in_existence > 0) {
 			$display_value = floor(($account_value/$coins_in_existence)*$escrow_value);
@@ -4025,18 +4025,25 @@ class Game {
 		return $log_text;
 	}
 	
-	public function escrow_value_in_currency($currency_id) {
+	public function escrow_value_in_currency($currency_id, $coins_in_existence) {
+		$reference_currency = $this->blockchain->app->get_reference_currency();
+		
 		$total_value = 0;
 		
-		$escrow_amounts = $this->blockchain->app->run_query("SELECT * FROM game_escrow_amounts ea JOIN currencies c ON ea.currency_id=c.currency_id WHERE ea.game_id=:game_id;", [
-			'game_id'=>$this->db_game['game_id']
-		]);
+		$escrow_amounts = EscrowAmount::fetch_escrow_amounts_in_game($this, "actual");
 		
 		while ($escrow_amount = $escrow_amounts->fetch()) {
-			$conversion_rate = $this->blockchain->app->currency_conversion_rate($currency_id, $escrow_amount['currency_id']);
-			$value_in_currency = $escrow_amount['amount']*$conversion_rate['conversion_rate'];
-			$total_value += $value_in_currency;
+			$exchange_rate_info = $this->blockchain->app->exchange_rate_between_currencies($currency_id, $escrow_amount['currency_id'], time(), $reference_currency['currency_id']);
+			
+			if ($escrow_amount['escrow_type'] == "fixed") {
+				$total_value += $escrow_amount['amount']*$exchange_rate_info['exchange_rate'];
+			}
+			else {
+				$total_value += $escrow_amount['relative_amount']*$coins_in_existence*$exchange_rate_info['exchange_rate'];
+			}
 		}
+		
+		$total_value = $this->blockchain->app->to_significant_digits($total_value, 10);
 		
 		return $total_value;
 	}

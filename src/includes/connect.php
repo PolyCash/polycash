@@ -46,6 +46,7 @@ include(AppSettings::srcPath()."/classes/App.php");
 include(AppSettings::srcPath()."/classes/JsonRPCClient.php");
 include(AppSettings::srcPath()."/classes/Blockchain.php");
 include(AppSettings::srcPath()."/classes/BlockchainVerifier.php");
+include(AppSettings::srcPath()."/classes/EscrowAmount.php");
 include(AppSettings::srcPath()."/classes/Event.php");
 include(AppSettings::srcPath()."/classes/Game.php");
 include(AppSettings::srcPath()."/classes/GameDefinition.php");

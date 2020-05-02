@@ -54,9 +54,7 @@ class RockPaperScissorsFastGameDefinition {
 			"default_payout_block_delay": 0,
 			"default_payout_rule": "binary",
 			"view_mode": "default",
-			"escrow_amounts": {
-				"dollars": 100000000
-			}
+			"escrow_amounts": []
 		}';
 		
 		$this->game_def = json_decode($this->game_def_base_txt);

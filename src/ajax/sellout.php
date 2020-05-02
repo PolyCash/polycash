@@ -10,7 +10,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 			$coins_in_existence = ($game->coins_in_existence(false, true)+$game->pending_bets(true))/pow(10, $game->db_game['decimal_places']);
 			
 			$sellout_currency = $app->fetch_currency_by_id($user_game['buyin_currency_id']);
-			$escrow_value = $game->escrow_value_in_currency($user_game['buyin_currency_id']);
+			$escrow_value = $game->escrow_value_in_currency($user_game['buyin_currency_id'], $coins_in_existence);
 			$ref_user = false;
 			$game_sale_account = $game->check_set_game_sale_account($ref_user);
 			

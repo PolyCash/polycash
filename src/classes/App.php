@@ -1318,7 +1318,8 @@ class App {
 				$html .= "</div></div>\n";
 			}
 			
-			$total_supply_disp = $this->format_bignum(($coins_in_existence+$vote_supply_value+$game_pending_bets)/pow(10,$db_game['decimal_places']));
+			$total_supply = ($coins_in_existence+$vote_supply_value+$game_pending_bets)/pow(10,$db_game['decimal_places']);
+			$total_supply_disp = $this->format_bignum($total_supply);
 			$html .= '<div class="row"><div class="col-sm-5">Total supply:</div><div class="col-sm-7">';
 			$html .= $total_supply_disp.' ';
 			if ($total_supply_disp == "1") $html .= $db_game['coin_name'];
@@ -1395,12 +1396,17 @@ class App {
 		}
 		
 		if ($game) {
-			$escrow_r = $this->run_query("SELECT * FROM game_escrow_amounts esa JOIN currencies c ON esa.currency_id=c.currency_id WHERE esa.game_id=:game_id ORDER BY c.short_name_plural ASC;", ['game_id'=>$game->db_game['game_id']]);
+			$escrow_amounts = EscrowAmount::fetch_escrow_amounts_in_game($game, "actual");
 			
-			if ($escrow_r->rowCount() > 0) {
+			if ($escrow_amounts->rowCount() > 0) {
 				$html .= '<div class="row"><div class="col-sm-5">Backed by:</div><div class="col-sm-7">';
-				while ($escrow_amount = $escrow_r->fetch()) {
-					$html .= $this->format_bignum($escrow_amount['amount'])." ".$escrow_amount['short_name_plural']."<br/>\n";
+				while ($escrow_amount = $escrow_amounts->fetch()) {
+					if ($escrow_amount['escrow_type'] == "fixed") {
+						$html .= $this->format_bignum($escrow_amount['amount'])." ".$escrow_amount['abbreviation']."<br/>\n";
+					}
+					else {
+						$html .= $this->format_bignum($total_supply*$escrow_amount['relative_amount'])." ".$escrow_amount['abbreviation']."<br/>\n";
+					}
 				}
 				$html .= "</div></div>\n";
 			}
@@ -1508,6 +1514,10 @@ class App {
 			return $coins_per_vote;
 		}
 		else return 0;
+	}
+	
+	public function fetch_currency_by_abbreviation($abbreviation) {
+		return $this->run_query("SELECT * FROM currencies WHERE abbreviation_id=:abbreviation;", ['abbreviation' => $abbreviation])->fetch();
 	}
 	
 	public function fetch_currency_by_id($currency_id) {

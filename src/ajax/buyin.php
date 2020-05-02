@@ -6,11 +6,20 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 	$user_game = $thisuser->ensure_user_in_game($game, false);
 	
 	if ($user_game) {
+		if (!empty($_REQUEST['change_to_currency_id'])) {
+			$change_to_currency_id = (int) $_REQUEST['change_to_currency_id'];
+			$app->run_query("UPDATE user_games SET buyin_currency_id=:buyin_currency_id WHERE user_game_id=:user_game_id;", [
+				'buyin_currency_id' => $change_to_currency_id,
+				'user_game_id' => $user_game['user_game_id']
+			]);
+			$user_game['buyin_currency_id'] = $change_to_currency_id;
+		}
+		
 		$coins_in_existence = ($game->coins_in_existence(false, true)+$game->pending_bets(true))/pow(10, $game->db_game['decimal_places']);
 		
 		if ($game->db_game['buyin_policy'] == "for_sale") {
 			$buyin_currency = $app->fetch_currency_by_id($user_game['buyin_currency_id']);
-			$escrow_value = $game->escrow_value_in_currency($user_game['buyin_currency_id']);
+			$escrow_value = $game->escrow_value_in_currency($user_game['buyin_currency_id'], $coins_in_existence);
 			$ref_user = false;
 			$pay_to_account = $game->check_set_blockchain_sale_account($ref_user, $buyin_currency);
 			$game_sale_account = $game->check_set_game_sale_account($ref_user);
@@ -89,10 +98,19 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 			else $content_html .= "There was an error loading this invoice.";
 		}
 		else {
-			$content_html = '<p>';
-			$content_html .= "Right now, there are ".$app->format_bignum($coins_in_existence)." ".$game->db_game['coin_name_plural']." in existence";
-			$content_html .= " and the exchange rate is ".$app->format_bignum($exchange_rate)." ".$game->db_game['coin_name_plural']." per ".$buyin_currency['short_name'].". ";
-			$content_html .= '<p>';
+			$content_html = "<p>Which currency would you like to pay with?<br/>\n";
+			$content_html .= '<select class="form-control" id="buyin_currency_id" name="buyin_currency_id" onchange="thisPageManager.change_buyin_currency(this);">';
+			$content_html .= "<option value=\"\">-- Please Select --</option>\n";
+			$buyin_currencies = $app->run_query("SELECT * FROM currencies c JOIN blockchains b ON c.blockchain_id=b.blockchain_id WHERE b.p2p_mode='rpc' ORDER BY c.name ASC;");
+			while ($a_buyin_currency = $buyin_currencies->fetch()) {
+				$content_html .= "<option ";
+				if ($a_buyin_currency['currency_id'] == $buyin_currency['currency_id']) $content_html .= "selected=\"selected\" ";
+				$content_html .= "value=\"".$a_buyin_currency['currency_id']."\">".$a_buyin_currency['name']."</option>\n";
+			}
+			$content_html .= "</select>\n";
+			$content_html .= "</p>\n";
+			
+			$content_html .= "<p>The exchange rate is ".$app->format_bignum($exchange_rate)." ".$game->db_game['coin_name_plural']." per ".$buyin_currency['short_name'].".</p>\n";
 			
 			$content_html .= '<p>';
 			$buyin_limit = 0;

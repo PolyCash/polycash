@@ -1792,12 +1792,17 @@ var PageManager = function() {
 			this.render_plan_round(i);
 		}
 	}
-	this.manage_buyin = function(action) {
+	this.change_buyin_currency = function(select_element) {
+		this.manage_buyin('initiate', select_element.value);
+	};
+	this.manage_buyin = function(action, change_to_currency_id=null) {
 		var buyin_params = {
 			action: action,
 			game_id: games[0].game_id,
 			synchronizer_token: this.synchronizer_token
 		};
+		
+		if (change_to_currency_id) buyin_params.change_to_currency_id = change_to_currency_id;
 		
 		if (action == "check_amount") {
 			buyin_params.buyin_amount = $('#buyin_amount').val();

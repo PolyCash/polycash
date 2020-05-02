@@ -72,9 +72,7 @@ class VirtualStockMarketGameDefinition {
 			"default_payout_block_delay": 0,
 			"default_payout_rule": "linear",
 			"view_mode": "default",
-			"escrow_amounts": {
-				"dollars": 1000000000
-			}
+			"escrow_amounts": []
 		}';
 		
 		$this->game_def = json_decode($this->game_def_base_txt);
