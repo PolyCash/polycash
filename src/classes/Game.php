@@ -823,6 +823,19 @@ class Game {
 		else return false;
 	}
 	
+	public function reset_event_index_to_block($event_index) {
+		$event_info = $this->blockchain->app->run_query("SELECT MIN(event_starting_block) FROM events WHERE game_id=:game_id AND event_index>=:event_index;", [
+			'game_id' => $this->db_game['game_id'],
+			'event_index' => $event_index
+		]);
+		
+		if ($event_info->rowCount() > 0) {
+			$event_info = $event_info->fetch();
+			return $event_info['MIN(event_starting_block)'];
+		}
+		else return false;
+	}
+	
 	public function delete_reset_game($delete_or_reset) {
 		$this->blockchain->app->log_message("Resetting ".$this->db_game['name']." (".$delete_or_reset.")");
 		
@@ -2471,14 +2484,17 @@ class Game {
 		$extra_info['pending_reset'] = 1;
 		
 		if ($from_block !== null) {
-			$extra_info['reset_from_block'] = $from_block;
-			
 			$reset_from_event_index = $this->reset_block_to_event_index($from_block);
 			if ($from_index !== null && $from_index < $reset_from_event_index) $reset_from_event_index = $from_index;
 			
 			if ($reset_from_event_index !== false) {
 				$extra_info['reset_from_event_index'] = $reset_from_event_index;
+				
+				$adjusted_from_block = $this->reset_event_index_to_block($reset_from_event_index);
+				if ((string)$adjusted_from_block != "" && $adjusted_from_block < $from_block) $from_block = $adjusted_from_block;
 			}
+			
+			$extra_info['reset_from_block'] = $from_block;
 		}
 		
 		$this->set_extra_info($extra_info);

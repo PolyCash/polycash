@@ -21,6 +21,7 @@ if ($app->running_as_admin()) {
 		
 		$script_target_time = 549;
 		$loop_target_time = 30;
+		$max_sec_between_caching = 90;
 		$blockchains = [];
 		
 		do {
@@ -35,7 +36,7 @@ if ($app->running_as_admin()) {
 				if (empty($blockchains[$db_running_game['blockchain_id']])) $blockchains[$db_running_game['blockchain_id']] = new Blockchain($app, $db_running_game['blockchain_id']);
 				$running_game = new Game($blockchains[$db_running_game['blockchain_id']], $db_running_game['game_id']);
 				
-				if ($running_game->db_game['save_every_definition'] || $only_game_id) GameDefinition::set_cached_definition_hashes($running_game);
+				if ($running_game->db_game['save_every_definition'] || $only_game_id || (time()-$running_game->db_game['cached_definition_time']) >= $max_sec_between_caching) GameDefinition::set_cached_definition_hashes($running_game);
 				
 				$running_game->set_cached_fields();
 				
