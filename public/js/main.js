@@ -1836,12 +1836,17 @@ var PageManager = function() {
 			}
 		});
 	}
-	this.manage_sellout = function(action) {
+	this.change_sellout_currency = function(select_element) {
+		this.manage_sellout('initiate', select_element.value);
+	};
+	this.manage_sellout = function(action, change_to_currency_id=null) {
 		var sellout_params = {
 			action: action,
 			game_id: games[0].game_id,
 			synchronizer_token: this.synchronizer_token
 		};
+		
+		if (change_to_currency_id) sellout_params.change_to_currency_id = change_to_currency_id;
 		
 		if (action == "confirm" || action == "check_amount") {
 			sellout_params.sellout_amount = $('#sellout_amount').val();

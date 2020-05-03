@@ -86,6 +86,16 @@ class User {
 		return $html;
 	}
 	
+	public function set_buyin_currency(&$user_game, $change_to_currency_id) {
+		$this->app->run_query("UPDATE user_games SET buyin_currency_id=:buyin_currency_id WHERE user_game_id=:user_game_id;", [
+			'buyin_currency_id' => $change_to_currency_id,
+			'user_game_id' => $user_game['user_game_id']
+		]);
+		$user_game['buyin_currency_id'] = $change_to_currency_id;
+		
+		return $user_game;
+	}
+	
 	public function ensure_user_in_game(&$game, $force_new) {
 		$existing_user_games = $this->app->run_query("SELECT *, ug.user_id AS user_id, ug.game_id AS game_id FROM user_games ug JOIN games g ON ug.game_id=g.game_id LEFT JOIN user_strategies us ON us.strategy_id=ug.strategy_id LEFT JOIN featured_strategies fs ON us.featured_strategy_id=fs.featured_strategy_id WHERE ug.user_id=:user_id AND ug.game_id=:game_id ORDER BY ug.selected DESC;", [
 			'user_id' => $this->db_user['user_id'],

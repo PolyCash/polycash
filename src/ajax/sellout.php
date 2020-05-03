@@ -6,6 +6,11 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 	$user_game = $thisuser->ensure_user_in_game($game, false);
 	
 	if ($user_game) {
+		if (!empty($_REQUEST['change_to_currency_id'])) {
+			$change_to_currency_id = (int) $_REQUEST['change_to_currency_id'];
+			$user_game = $thisuser->set_buyin_currency($user_game, $change_to_currency_id);
+		}
+		
 		if ($game->db_game['sellout_policy'] == "on") {
 			$coins_in_existence = ($game->coins_in_existence(false, true)+$game->pending_bets(true))/pow(10, $game->db_game['decimal_places']);
 			
@@ -37,10 +42,19 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 				}
 				
 				if ($_REQUEST['action'] == "initiate") {
-					$content_html .= '<p>';
-					$content_html .= "Right now, there are ".$app->format_bignum($coins_in_existence)." ".$game->db_game['coin_name_plural']." in existence";
-					$content_html .= " and the exchange rate is ".$app->format_bignum($exchange_rate)." ".$game->db_game['coin_name_plural']." per ".$sellout_currency['short_name'].". ";
-					$content_html .= '<p>';
+					$content_html .= "<p>Which currency would you like to receive?<br/>\n";
+					$content_html .= '<select class="form-control" id="buyin_currency_id" name="buyin_currency_id" onchange="thisPageManager.change_sellout_currency(this);">';
+					$content_html .= "<option value=\"\">-- Please Select --</option>\n";
+					$buyin_currencies = $app->run_query("SELECT * FROM currencies c JOIN blockchains b ON c.blockchain_id=b.blockchain_id WHERE b.p2p_mode='rpc' ORDER BY c.name ASC;");
+					while ($a_buyin_currency = $buyin_currencies->fetch()) {
+						$content_html .= "<option ";
+						if ($a_buyin_currency['currency_id'] == $sellout_currency['currency_id']) $content_html .= "selected=\"selected\" ";
+						$content_html .= "value=\"".$a_buyin_currency['currency_id']."\">".$a_buyin_currency['name']."</option>\n";
+					}
+					$content_html .= "</select>\n";
+					$content_html .= "</p>\n";
+					
+					$content_html .= "<p>The exchange rate is ".$app->format_bignum($exchange_rate)." ".$game->db_game['coin_name_plural']." per ".$sellout_currency['short_name'].".<p>";
 					
 					$content_html .= "<p>There are ".$app->format_bignum($blockchain_sale_amount/pow(10, $sellout_blockchain->db_blockchain['decimal_places']))." ".$sellout_blockchain->db_blockchain['coin_name_plural']." for sale (".$app->format_bignum($game_forsale_amount)." ".$game->db_game['coin_name_plural'].").<p>\n";
 					
@@ -63,13 +77,13 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 					
 					if ($game->db_game['buyin_policy'] == "for_sale") {
 						if ($sellout_amount > $game_forsale_amount) {
-							$content_html .= '<p class="redtext">Don\'t send that many '.$game->db_game['coin_name_plural'].'. There are only '.$app->format_bignum($game_forsale_amount).' '.$game->db_game['coin_name_plural']." for sale.</p>\n";
+							$content_html .= '<p class="redtext">Don\'t sell that many '.$game->db_game['coin_name_plural'].'. There are only '.$app->format_bignum($blockchain_sale_amount).' '.$sellout_blockchain->db_blockchain['coin_name_plural']." available.</p>\n";
 						}
 					}
 					
 					$content_html .= '
 					<p>
-						'.(float)$user_game['transaction_fee'].' '.$sellout_currency['short_name'].' tx fee
+						'.$app->format_bignum($user_game['transaction_fee']).' '.$sellout_currency['short_name'].' tx fee
 					</p>
 					<p>
 						'.$sellout_amount.' '.$game->db_game['coin_name_plural'].' will get you approximately '.$app->format_bignum($sellout_receive_amount).' '.$sellout_currency['short_name_plural'].' after fees.

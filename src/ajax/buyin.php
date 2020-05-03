@@ -8,11 +8,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 	if ($user_game) {
 		if (!empty($_REQUEST['change_to_currency_id'])) {
 			$change_to_currency_id = (int) $_REQUEST['change_to_currency_id'];
-			$app->run_query("UPDATE user_games SET buyin_currency_id=:buyin_currency_id WHERE user_game_id=:user_game_id;", [
-				'buyin_currency_id' => $change_to_currency_id,
-				'user_game_id' => $user_game['user_game_id']
-			]);
-			$user_game['buyin_currency_id'] = $change_to_currency_id;
+			$user_game = $thisuser->set_buyin_currency($user_game, $change_to_currency_id);
 		}
 		
 		$coins_in_existence = ($game->coins_in_existence(false, true)+$game->pending_bets(true))/pow(10, $game->db_game['decimal_places']);

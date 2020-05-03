@@ -401,6 +401,18 @@ else {
 					
 					$messages .= "Game internal settings have been updated.<br/>\n";
 				}
+				else if ($last_action == "claim_account") {
+					$account_id = (int) $_REQUEST['account_id'];
+					
+					$claim_account = $app->fetch_account_by_id($account_id);
+					
+					if (empty($claim_account['user_id']) && $claim_account['game_id'] == $game->db_game['game_id'] && ($claim_account['is_game_sale_account'] || $claim_account['is_blockchain_sale_account'])) {
+						$app->run_query("UPDATE currency_accounts SET user_id=:user_id WHERE account_id=:account_id;", [
+							'user_id' => $thisuser->db_user['user_id'],
+							'account_id' => $claim_account['account_id']
+						]);
+					}
+				}
 			}
 			
 			$manage_game_action = "";
@@ -715,7 +727,33 @@ else {
 										<button id="delete_game_btn" class="btn btn-danger" style="display: none;" onclick="thisPageManager.manage_game(<?php echo $game->db_game['game_id']; ?>, 'delete'); return false;">Delete</button>
 										<button id="reset_game_btn" class="btn btn-warning" onclick="thisPageManager.manage_game(<?php echo $game->db_game['game_id']; ?>, 'reset'); return false;">Reset</button>
 									</div>
-									
+									<?php
+									if ($app->user_is_admin($thisuser)) {
+										$sale_accounts = $app->run_query("SELECT * FROM currency_accounts ca JOIN currencies c ON ca.currency_id=c.currency_id LEFT JOIN users u ON ca.user_id=u.user_id WHERE ca.game_id=:game_id AND (ca.is_game_sale_account=1 OR ca.is_blockchain_sale_account=1);", ['game_id' => $game->db_game['game_id']]);
+										
+										echo '<p>This game has '.$sale_accounts->rowCount()." sale accounts.</p>\n";
+										
+										echo "<table style=\"width: 100%;\">\n";
+										
+										while ($sale_account = $sale_accounts->fetch()) {
+											echo "<tr>\n";
+											
+											echo "<td>";
+											if ($sale_account['user_id'] == $thisuser->db_user['user_id']) echo '<a href="/accounts/?account_id='.$sale_account['account_id'].'">';
+											echo $sale_account['account_name'];
+											if ($sale_account['user_id'] == $thisuser->db_user['user_id']) echo '</a>';
+											echo "</td>\n";
+											
+											echo "<td>".(empty($sale_account['username']) ? "Not owned &nbsp; <a href=\"/manage/".$game->db_game['url_identifier']."/?next=internal_settings&last=claim_account&account_id=".$sale_account['account_id']."&synchronizer_token=".$thisuser->get_synchronizer_token()."\">Claim</a>" : $sale_account['username'])."</td>\n";
+											
+											echo "</tr>\n";
+										}
+										
+										echo "</table>\n";
+										
+										echo "<br/>\n";
+									}
+									?>
 									<form method="get" action="/manage/<?php echo $game->db_game['url_identifier']; ?>/">
 										<input type="hidden" name="next" value="internal_settings" />
 										<input type="hidden" name="last" value="internal_settings" />
