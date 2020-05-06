@@ -75,7 +75,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 				if ($game->db_game['buyin_policy'] == "for_sale") {
 					$max_buyin_amount = $game_sale_amount/pow(10, $game->db_game['decimal_places'])/$exchange_rate;
 					if ($buyin_amount > $max_buyin_amount) {
-						$content_html .= '<p class="redtext">Don\'t send that many '.$buyin_blockchain->db_blockchain['coin_name_plural'].'. There are only '.$app->format_bignum($game_sale_amount/pow(10, $game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].' for sale ('.$app->format_bignum($max_buyin_amount)." ".$buyin_currency['abbreviation'].")</p>\n";
+						$content_html .= '<p class="redtext">Don\'t send that many '.$buyin_blockchain->db_blockchain['coin_name_plural'].'. There are only '.$app->format_bignum($game_sale_amount/pow(10, $game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].' available ('.$app->format_bignum($max_buyin_amount)." ".$buyin_currency['abbreviation'].")</p>\n";
 					}
 				}
 				
@@ -94,7 +94,11 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 			else $content_html .= "There was an error loading this invoice.";
 		}
 		else {
-			$content_html = "<p>Which currency would you like to pay with?<br/>\n";
+			$content_html = '<p>You can get '.$game->db_game['coin_name_plural'].' by depositing another currency like Bitcoin or Litecoin here. If you already have '.$game->db_game['coin_name_plural'].' elsewhere and want to send them to this wallet, go to <a href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=4">Send & Receive</a> instead.</p>'."\n";
+			
+			$content_html .= '<p>If you find that there are no '.$game->db_game['coin_name_plural'].' available here, you may need to use an external exchange to buy '.$game->db_game['coin_name_plural'].".</p>\n";
+			
+			$content_html .= '<div class="form-group"><label for="buyin_currency_id">What do you want to deposit?</label>';
 			$content_html .= '<select class="form-control" id="buyin_currency_id" name="buyin_currency_id" onchange="thisPageManager.change_buyin_currency(this);">';
 			$content_html .= "<option value=\"\">-- Please Select --</option>\n";
 			$buyin_currencies = $app->run_query("SELECT * FROM currencies c JOIN blockchains b ON c.blockchain_id=b.blockchain_id WHERE b.p2p_mode='rpc' ORDER BY c.name ASC;");
@@ -104,7 +108,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 				$content_html .= "value=\"".$a_buyin_currency['currency_id']."\">".$a_buyin_currency['name']."</option>\n";
 			}
 			$content_html .= "</select>\n";
-			$content_html .= "</p>\n";
+			$content_html .= "</div>\n";
 			
 			$content_html .= "<p>The exchange rate is ".$app->format_bignum($exchange_rate)." ".$game->db_game['coin_name_plural']." per ".$buyin_currency['short_name'].".</p>\n";
 			
@@ -130,7 +134,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 				if ($buyin_blockchain->db_blockchain['online'] == 1) {
 					$content_html .= '
 					<p>
-						How many '.$buyin_currency['short_name_plural'].' do you want to spend?
+						How many '.$buyin_currency['short_name_plural'].' do you want to deposit?
 					</p>
 					<p>
 						<div class="row">

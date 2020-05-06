@@ -457,14 +457,6 @@ class App {
 		$command = $this->php_binary_location()." ".AppSettings::srcPath()."/scripts/async_email_deliver.php delivery_id=".$delivery_id." > /dev/null 2>/dev/null &";
 		exec($command);
 		
-		/*$curl_url = AppSettings::getParam('base_url')."/scripts/async_email_deliver.php?delivery_id=".$delivery_id;
-		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL, $curl_url);
-		curl_setopt($ch, CURLOPT_HEADER, 0);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		$output = curl_exec($ch);
-		curl_close($ch);*/
-
 		return $delivery_id;
 	}
 	

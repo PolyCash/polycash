@@ -2784,19 +2784,21 @@ var PageManager = function() {
 		window.location = '/manage/'+games[0].game_url_identifier+'/?next=events&event_filter='+$('#manage_game_event_filter').val();
 	}
 	this.apply_my_strategy = function() {
-		$.ajax({
-			url: "/strategies/apply_strategy.php",
-			dataType: "json",
-			data: {
-				game_id: games[0].game_id,
-				synchronizer_token: this.synchronizer_token
-			},
-			success: function(strategy_response) {
-				$('#apply_my_strategy_status').html(strategy_response.message);
-				$('#apply_my_strategy_status').slideDown('fast');
-				setTimeout(function() {$('#apply_my_strategy_status').slideUp('fast');}, 10000);
-			}
-		});
+		if (confirm('Are you sure you want to apply your strategy?')) {
+			$.ajax({
+				url: "/strategies/apply_strategy.php",
+				dataType: "json",
+				data: {
+					game_id: games[0].game_id,
+					synchronizer_token: this.synchronizer_token
+				},
+				success: function(strategy_response) {
+					$('#apply_my_strategy_status').html(strategy_response.message);
+					$('#apply_my_strategy_status').slideDown('fast');
+					setTimeout(function() {$('#apply_my_strategy_status').slideUp('fast');}, 10000);
+				}
+			});
+		}
 	}
 	this.new_group_member = function(group_id) {
 		var member_name = prompt("Please enter a name:");

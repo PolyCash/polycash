@@ -42,7 +42,10 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 				}
 				
 				if ($_REQUEST['action'] == "initiate") {
-					$content_html .= "<p>Which currency would you like to receive?<br/>\n";
+					$content_html .= '<p>You can use the form below to exchange your '.$game->db_game['coin_name_plural'].' for Bitcoin or Litecoin. If instead you want send your '.$game->db_game['coin_name_plural'].' somewhere please go to <a href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=4">Send & Receive</a>.</p>';
+					$content_html .= '<p>If you find that there are no '.$sellout_blockchain->db_blockchain['coin_name_plural'].' available here, you may need to use an external exchange to convert your '.$game->db_game['coin_name_plural'].'.</p>'."\n";
+					
+					$content_html .= '<div class="form-group"><label for="buyin_currency_id">What do you want to receive?</label>';
 					$content_html .= '<select class="form-control" id="buyin_currency_id" name="buyin_currency_id" onchange="thisPageManager.change_sellout_currency(this);">';
 					$content_html .= "<option value=\"\">-- Please Select --</option>\n";
 					$buyin_currencies = $app->run_query("SELECT * FROM currencies c JOIN blockchains b ON c.blockchain_id=b.blockchain_id WHERE b.p2p_mode='rpc' ORDER BY c.name ASC;");
@@ -52,11 +55,11 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 						$content_html .= "value=\"".$a_buyin_currency['currency_id']."\">".$a_buyin_currency['name']."</option>\n";
 					}
 					$content_html .= "</select>\n";
-					$content_html .= "</p>\n";
+					$content_html .= "</div>\n";
 					
 					$content_html .= "<p>The exchange rate is ".$app->format_bignum($exchange_rate)." ".$game->db_game['coin_name_plural']." per ".$sellout_currency['short_name'].".<p>";
 					
-					$content_html .= "<p>There are ".$app->format_bignum($blockchain_sale_amount/pow(10, $sellout_blockchain->db_blockchain['decimal_places']))." ".$sellout_blockchain->db_blockchain['coin_name_plural']." for sale (".$app->format_bignum($game_forsale_amount)." ".$game->db_game['coin_name_plural'].").<p>\n";
+					$content_html .= "<p>There are ".$app->format_bignum($blockchain_sale_amount/pow(10, $sellout_blockchain->db_blockchain['decimal_places']))." ".$sellout_blockchain->db_blockchain['coin_name_plural']." available (".$app->format_bignum($game_forsale_amount)." ".$game->db_game['coin_name_plural'].").<p>\n";
 					
 					if ($game->db_game['buyin_policy'] != 'for_sale' || $sellout_blockchain->db_blockchain['online'] == 1) {
 						$content_html .= '

@@ -688,11 +688,11 @@ if ($thisuser && $game) {
 				</div>
 				<?php
 				if ($game->db_game['buyin_policy'] != "none") { ?>
-					<button class="btn btn-sm btn-success" style="margin-top: 8px;" onclick="thisPageManager.manage_buyin('initiate');"><i class="fas fa-shopping-cart"></i> &nbsp; Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
+					<button class="btn btn-sm btn-success" style="margin-top: 8px;" onclick="thisPageManager.manage_buyin('initiate');"><i class="fas fa-arrow-down"></i> &nbsp; Deposit</button>
 					<?php
 				}
 				if ($game->db_game['sellout_policy'] == "on") { ?>
-					<button class="btn btn-sm btn-warning" style="margin-top: 8px;" onclick="thisPageManager.manage_sellout('initiate');"><i class="fas fa-exchange-alt"></i> &nbsp; Sell your <?php echo $game->db_game['coin_name_plural']; ?></button>
+					<button class="btn btn-sm btn-warning" style="margin-top: 8px;" onclick="thisPageManager.manage_sellout('initiate');"><i class="fas fa-arrow-up"></i> &nbsp; Withdraw</button>
 					<?php
 				}
 				
@@ -1114,54 +1114,54 @@ if ($thisuser && $game) {
 		<div id="tabcontent4" style="display: none;" class="tabcontent">
 			<div class="panel panel-default">
 				<div class="panel-heading">
-					<div class="panel-title">Deposit or Withdraw</div>
+					<div class="panel-title">Send &amp; receive <?php echo $game->db_game['coin_name_plural']; ?></div>
 				</div>
 				<div class="panel-body">
-					<?php
-					if ($game->db_game['buyin_policy'] != "none") { ?>
-						<p>
-							You can buy <?php echo $game->db_game['coin_name_plural']; ?> by clicking below.  Once your payment is confirmed, <?php echo $game->db_game['coin_name_plural']; ?> will be added to your account based on the exchange rate at the time of confirmation.
-						</p>
-						<p>
-							<button class="btn btn-sm btn-success" onclick="thisPageManager.manage_buyin('initiate');"><i class="fas fa-shopping-cart"></i> &nbsp; Buy more <?php echo $game->db_game['coin_name_plural']; ?></button>
-						</p>
-						<?php
-					}
-					?>
-					<p>
-						You can also deposit <?php echo $game->db_game['coin_name_plural']; ?> directly to this account. Visit <a href="/accounts/?account_id=<?php echo $user_game['account_id']; ?>">My Accounts</a> to see a list of your addresses.
-						<?php
-						$game_account = $app->fetch_account_by_id($user_game['account_id']);
-						
-						if (!empty($game_account['current_address_id'])) {
-							$default_address = $app->fetch_address_by_id($game_account['current_address_id']);
-							echo "<br/>Or send ".$game->db_game['coin_name_plural']." to this address:<br/>\n";
-							echo $default_address['address']."<br/>\n";
-							echo '<img style="margin: 10px;" src="/render_qr_code.php?data='.$default_address['address'].'" />';
-						}
-						?>
-					</p>
-					<br/>
-					
-					<p>To withdraw <?php echo $game->db_game['coin_name_plural']; ?> please enter <?php echo $app->prepend_a_or_an($game->db_game['name']); ?> address below.</p>
-					
 					<div class="row">
-						<div class="col-md-6">
-							<div class="form-group">
-								<label for="withdraw_amount">Amount (<?php echo $game->db_game['coin_name_plural']; ?>):</label>
-								<input class="form-control" type="tel" placeholder="0.000" id="withdraw_amount" style="text-align: right;" />
-							</div>
-							<div class="form-group">
-								<label for="withdraw_fee">Fee (<?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?>):</label>
-								<input class="form-control" type="tel" value="<?php echo $app->format_bignum($user_strategy['transaction_fee']); ?>" id="withdraw_fee" style="text-align: right;" />
-							</div>
-							<div class="form-group">
-								<label for="withdraw_address">Address:</label>
-								<input class="form-control" type="text" id="withdraw_address" />
-							</div>
-							<div class="form-group">
-								<button class="btn btn-sm btn-success" id="withdraw_btn" onclick="thisPageManager.attempt_withdrawal();"><i class="fas fa-arrow-circle-right"></i> &nbsp; Send <?php echo $game->db_game['coin_name_plural']; ?></button>
-								<div id="withdraw_message" style="display: none; margin-top: 15px;"></div>
+						<div class="col-sm-6">
+							<p><b>Receive <?php echo $game->db_game['coin_name_plural']; ?></b></p>
+							<p>
+								<?php
+								$game_account = $app->fetch_account_by_id($user_game['account_id']);
+								
+								if (!empty($game_account['current_address_id'])) {
+									$default_address = $app->fetch_address_by_id($game_account['current_address_id']);
+									
+									echo "<p>You can receive ".$game->db_game['coin_name_plural']." with this address:</p>\n";
+									echo "<p>".$default_address['address']."</p>\n";
+									
+									echo '<img style="margin: 10px;" src="/render_qr_code.php?data='.$default_address['address'].'" />';
+								}
+								?>
+							</p>
+							<p>
+								To see all of your addresses visit <a href="/accounts/?account_id=<?php echo $user_game['account_id']; ?>">My Accounts</a>.
+							</p>
+						</div>
+						<div class="col-sm-6">
+							<p><b>Send <?php echo $game->db_game['coin_name_plural']; ?></b></p>
+							
+							<p>To withdraw <?php echo $game->db_game['coin_name_plural']; ?> enter <?php echo $app->prepend_a_or_an($game->db_game['name']); ?> address below.</p>
+							
+							<div class="row">
+								<div class="col-md-6">
+									<div class="form-group">
+										<label for="withdraw_amount">Amount (<?php echo $game->db_game['coin_name_plural']; ?>):</label>
+										<input class="form-control" type="tel" placeholder="0.000" id="withdraw_amount" style="text-align: right;" />
+									</div>
+									<div class="form-group">
+										<label for="withdraw_fee">Fee (<?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?>):</label>
+										<input class="form-control" type="tel" value="<?php echo $app->format_bignum($user_strategy['transaction_fee']); ?>" id="withdraw_fee" style="text-align: right;" />
+									</div>
+									<div class="form-group">
+										<label for="withdraw_address">Address:</label>
+										<input class="form-control" type="text" id="withdraw_address" />
+									</div>
+									<div class="form-group">
+										<button class="btn btn-sm btn-success" id="withdraw_btn" onclick="thisPageManager.attempt_withdrawal();"><i class="fas fa-arrow-circle-right"></i> &nbsp; Send <?php echo $game->db_game['coin_name_plural']; ?></button>
+										<div id="withdraw_message" style="display: none; margin-top: 15px;"></div>
+									</div>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -1311,7 +1311,7 @@ if ($thisuser && $game) {
 			<div class="modal-dialog modal-lg">
 				<div class="modal-content">
 					<div class="modal-header">
-						<b class="modal-title"><?php echo $game->db_game['name']; ?>: Buy more <?php echo $game->db_game['coin_name_plural']; ?></b>
+						<b class="modal-title"><?php echo $game->db_game['name']; ?>: Get <?php echo $game->db_game['coin_name_plural']; ?></b>
 						
 						<button type="button" class="close" data-dismiss="modal" aria-label="Close">
 							<span aria-hidden="true">&times;</span>
@@ -1330,7 +1330,7 @@ if ($thisuser && $game) {
 			<div class="modal-dialog modal-lg">
 				<div class="modal-content">
 					<div class="modal-header">
-						<b class="modal-title"><?php echo $game->db_game['name']; ?>: Sell your <?php echo $game->db_game['coin_name_plural']; ?></b>
+						<b class="modal-title"><?php echo $game->db_game['name']; ?>: Exchange &amp; withdraw</b>
 						
 						<button type="button" class="close" data-dismiss="modal" aria-label="Close">
 							<span aria-hidden="true">&times;</span>
