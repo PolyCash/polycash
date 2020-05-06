@@ -252,7 +252,8 @@ class GameDefinition {
 		if (!empty($new_game_obj['escrow_amounts'])) {
 			$escrow_position = 0;
 			
-			foreach ($new_game_obj['escrow_amounts'] as &$an_escrow_amount) {
+			foreach ($new_game_obj['escrow_amounts'] as $an_escrow_amount) {
+				$an_escrow_amount = (array) $an_escrow_amount;
 				$escrow_currency = $game->blockchain->app->fetch_currency_by_abbreviation($an_escrow_amount['currency']);
 				
 				if ($escrow_currency) {

@@ -1509,7 +1509,7 @@ class App {
 	}
 	
 	public function fetch_currency_by_abbreviation($abbreviation) {
-		return $this->run_query("SELECT * FROM currencies WHERE abbreviation_id=:abbreviation;", ['abbreviation' => $abbreviation])->fetch();
+		return $this->run_query("SELECT * FROM currencies WHERE abbreviation=:abbreviation;", ['abbreviation' => $abbreviation])->fetch();
 	}
 	
 	public function fetch_currency_by_id($currency_id) {
