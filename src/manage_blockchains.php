@@ -23,6 +23,8 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 	}
 	else {
 		if (!empty($_REQUEST['action']) && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'])) {
+			$first_required_block = (string) $_REQUEST['first_required_block'] == "" ? null : (int) $_REQUEST['first_required_block'];
+			
 			if ($_REQUEST['action'] == "new_blockchain") {
 				$p2p_mode = $_REQUEST['p2p_mode'];
 				if (!in_array($p2p_mode, ['rpc', 'none', 'web'])) $p2p_mode = "none";
@@ -34,7 +36,6 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 				
 				$seconds_per_block = (int) $_REQUEST['seconds_per_block'];
 				$decimal_places = (int) $_REQUEST['decimal_places'];
-				$first_required_block = (int) $_REQUEST['first_required_block'];
 				$initial_pow_reward = ((float) $_REQUEST['initial_pow_reward'])*pow(10, $decimal_places);
 				
 				$new_blockchain_def = json_encode([
@@ -69,8 +70,8 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 							'rpc_username' => $_REQUEST['rpc_username'],
 							'rpc_password' => $_REQUEST['rpc_password'],
 							'rpc_port' => $_REQUEST['rpc_port'],
-							'first_required_block' => $_REQUEST['first_required_block'],
-							'last_complete_block' => ($_REQUEST['first_required_block']-1),
+							'first_required_block' => $first_required_block,
+							'last_complete_block' => (string) $first_required_block == "" ? null : ($_REQUEST['first_required_block']-1),
 							'blockchain_id' => $existing_blockchain['blockchain_id']
 						]);
 					}

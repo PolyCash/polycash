@@ -85,12 +85,20 @@ class AppSettings {
 		return hash("sha256", $string);
 	}
 	
-	public static function arrayToMapOnKey(&$array, $key) {
+	public static function arrayToMapOnKey(&$array, $key, $many_per_key=false) {
 		$map = [];
 		
 		foreach ($array as &$element) {
-			if (isset($element->$key)) $map[$element->$key] = $element;
-			else if (array_key_exists($key, $element)) $map[$element[$key]] = (object) $element;
+			$key_val = null;
+			
+			if (isset($element->$key)) $key_val = $element->$key;
+			else if (array_key_exists($key, $element)) $key_val = $element[$key];
+			
+			if ($many_per_key) {
+				if (!array_key_exists($key_val, $map)) $map[$key_val] = [];
+				array_push($map[$key_val], (object) $element);
+			}
+			else $map[$key_val] = (object) $element;
 		}
 		
 		return $map;

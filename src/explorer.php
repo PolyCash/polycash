@@ -817,39 +817,44 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 							
 							echo '<div class="panel-body">';
 							
-							echo "<p>".$blockchain->db_blockchain['blockchain_name']." is synced from block <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$blockchain->db_blockchain['first_required_block']."\">#".$blockchain->db_blockchain['first_required_block']."</a> to block <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$complete_block_id."\">#".$complete_block_id."</a></p>\n";
-							
-							if (!empty($recent_block)) {
-								echo "<p>Last block loaded was <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$recent_block['block_id']."\">#".$recent_block['block_id']."</a> (loaded ".$app->format_seconds(time()-$recent_block['time_loaded'])." ago)</p>\n";
+							if ((string) $blockchain->db_blockchain['first_required_block'] == "") {
+								echo "<p>".$blockchain->db_blockchain['blockchain_name']." is running in light mode.</p>\n";
 							}
+							else {
+								echo "<p>".$blockchain->db_blockchain['blockchain_name']." is synced from block <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$blockchain->db_blockchain['first_required_block']."\">#".$blockchain->db_blockchain['first_required_block']."</a> to block <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$complete_block_id."\">#".$complete_block_id."</a></p>\n";
 							
-							$pending_blocks = $last_block_id - $complete_block_id;
-							
-							if ($pending_blocks > 0) {
-								$loadtime = $app->run_query("SELECT COUNT(*), SUM(load_time) FROM blocks WHERE blockchain_id=:blockchain_id AND locally_saved=1 AND block_id >= :ref_block;", [
-									'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
-									'ref_block' => $complete_block_id-10
-								])->fetch();
-								
-								if ($loadtime['COUNT(*)'] > 0) $avg_loadtime = $loadtime['SUM(load_time)']/$loadtime['COUNT(*)'];
-								else $avg_loadtime = 0;
-								
-								$sec_left = round($avg_loadtime*$pending_blocks);
-								echo "<p>".number_format($pending_blocks)." blocks haven't loaded yet (".$app->format_seconds($sec_left)." left)</p>\n";
-							}
-							
-							$associated_games = $blockchain->associated_games(array("running"));
-							if (count($associated_games) > 0) {
-								echo "<p>";
-								echo count($associated_games)." game";
-								if (count($associated_games) == 1) echo " is";
-								else echo "s are";
-								echo " currently running on this blockchain.<br/>\n";
-								
-								for ($i=0; $i<count($associated_games); $i++) {
-									echo "<a href=\"/explorer/games/".$associated_games[$i]->db_game['url_identifier']."/events/\">".$associated_games[$i]->db_game['name']."</a><br/>\n";
+								if (!empty($recent_block)) {
+									echo "<p>Last block loaded was <a href=\"/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']."/blocks/".$recent_block['block_id']."\">#".$recent_block['block_id']."</a> (loaded ".$app->format_seconds(time()-$recent_block['time_loaded'])." ago)</p>\n";
 								}
-								echo "</p>\n";
+								
+								$pending_blocks = $last_block_id - $complete_block_id;
+								
+								if ($pending_blocks > 0) {
+									$loadtime = $app->run_query("SELECT COUNT(*), SUM(load_time) FROM blocks WHERE blockchain_id=:blockchain_id AND locally_saved=1 AND block_id >= :ref_block;", [
+										'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
+										'ref_block' => $complete_block_id-10
+									])->fetch();
+									
+									if ($loadtime['COUNT(*)'] > 0) $avg_loadtime = $loadtime['SUM(load_time)']/$loadtime['COUNT(*)'];
+									else $avg_loadtime = 0;
+									
+									$sec_left = round($avg_loadtime*$pending_blocks);
+									echo "<p>".number_format($pending_blocks)." blocks haven't loaded yet (".$app->format_seconds($sec_left)." left)</p>\n";
+								}
+							
+								$associated_games = $blockchain->associated_games(array("running"));
+								if (count($associated_games) > 0) {
+									echo "<p>";
+									echo count($associated_games)." game";
+									if (count($associated_games) == 1) echo " is";
+									else echo "s are";
+									echo " currently running on this blockchain.<br/>\n";
+									
+									for ($i=0; $i<count($associated_games); $i++) {
+										echo "<a href=\"/explorer/games/".$associated_games[$i]->db_game['url_identifier']."/events/\">".$associated_games[$i]->db_game['name']."</a><br/>\n";
+									}
+									echo "</p>\n";
+								}
 							}
 							?>
 							<div class="row">

@@ -80,7 +80,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 				}
 				
 				$content_html .= '<p>
-					For '.$buyin_amount.' '.$buyin_currency['short_name_plural'].', you\'ll receive approximately '.$app->format_bignum($receive_amount).' '.$game->db_game['coin_name_plural'].'. Send '.$buyin_currency['short_name_plural'].' to <a target="_blank" href="/explorer/blockchains/'.$buyin_blockchain->db_blockchain['url_identifier'].'/addresses/'.$invoice_address['address'].'">'.$invoice_address['address'].'</a>
+					For '.$buyin_amount.' '.$buyin_currency['short_name_plural'].', you\'ll receive approximately '.$app->format_bignum($receive_amount).' '.$game->db_game['coin_name_plural'].'. Send '.$buyin_currency['short_name_plural'].' to '.$invoice_address['address'].'
 				</p>
 				<p>
 					<center><img style="margin: 10px;" src="/render_qr_code.php?data='.$invoice_address['address'].'" /></center>
