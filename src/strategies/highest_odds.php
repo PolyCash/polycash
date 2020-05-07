@@ -17,8 +17,7 @@ if ($user_game) {
 	$coins_per_vote = $app->coins_per_vote($game->db_game);
 	$fee_amount = (int) ($fee*pow(10, $blockchain->db_blockchain['decimal_places']));
 	
-	$early_or_late = "late";
-	if ($_REQUEST['early_or_late'] == "early") $early_or_late = "early";
+	$early_or_late = $_REQUEST['early_or_late'] ?? "late";
 	
 	$bet_quantity = empty($_REQUEST['bet_quantity']) ? 2 : (int) $_REQUEST['bet_quantity'];
 	
