@@ -252,7 +252,7 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 		var option_display_name = this_option.name;
 		
 		if (this.refresh_page != "wallet") {
-			var add_option_url = '/wallet/'+games[0].game_url_identifier+'/?action=start_bet&event_index='+event_index+'&option_id='+option_id;
+			var add_option_url = '/wallet/'+games[this.instance_id].game_url_identifier+'/?action=start_bet&event_index='+event_index+'&option_id='+option_id;
 			if (thisuser) {
 				window.location = add_option_url;
 			}
@@ -281,7 +281,7 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 		$.ajax({
 			url: "/ajax/set_user_game_event_index.php",
 			data: {
-				game_id: games[0].game_id,
+				game_id: games[this.instance_id].game_id,
 				event_index: this.selected_event_index,
 				synchronizer_token: this.pageManager.synchronizer_token
 			}
