@@ -471,42 +471,51 @@ class Blockchain {
 			}
 		}
 		
-		if ($add_transaction) {
-			// Check for existing TX and maybe reset its outputs if it's being confirmed (for transaction malleability)
-			$existing_tx = $this->fetch_transaction_by_hash($tx_hash);
+		if (!$add_transaction) {
+			if ($show_debug) echo "TX failed pre-checks\n";
+			return false;
+		}
+		
+		// Check for existing TX and maybe reset its outputs if it's being confirmed (for transaction malleability)
+		$existing_tx = $this->fetch_transaction_by_hash($tx_hash);
+		
+		if ($existing_tx) {
+			$db_transaction_id = $existing_tx['transaction_id'];
 			
-			if ($existing_tx) {
-				$db_transaction_id = $existing_tx['transaction_id'];
+			if ($this->db_blockchain['p2p_mode'] == "rpc") {
+				// Now handle cases where we are adding by RPC and there's an existing transaction
 				
-				if ($this->db_blockchain['p2p_mode'] == "rpc") {
-					// Now handle cases where we are adding by RPC and there's an existing transaction
+				// If only_vout is set, we are adding an output before the first require block
+				// and therefore need to run add_transaction without deleting anything
+				
+				if ((string) $only_vout == "") {
+					// If existing tx is unconfirmed and we are trying to add as unconfirmed, load_unconfirmed_transactions is just trying to add unnecessarily so skip
 					
-					// If only_vout is set, we are adding an output before the first require block
-					// and therefore need to run add_transaction without deleting anything
+					// Else if existing tx matches the block we're adding in, why was this function called?
+					// (maybe trying to load blocks before first required block without resetting the blockchain first?) So skip
 					
-					if ($only_vout === false) {
-						// If existing tx is unconfirmed and we are trying to add as unconfirmed, load_unconfirmed_transactions is just trying to add unnecessarily so skip
-						
-						// Else if existing tx matches the block we're adding in, why was this function called?
-						// (maybe trying to load blocks before first required block without resetting the blockchain first?) So skip
-						
-						// Else we are confirming an unconfirmed transaction so delete outputs and re-add (solves transaction malleability)
-						
-						if ($block_height === false && $existing_tx['block_id'] == "") $add_transaction = false;
-						else if ($existing_tx['block_id'] == $block_height) $add_transaction = false;
-						else {
-							$this->app->run_query("DELETE io.*, gio.* FROM transaction_ios io LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE io.create_transaction_id=:transaction_id;", [
-								'transaction_id' => $existing_tx['transaction_id']
-							]);
-						}
+					// Else we are confirming an unconfirmed transaction so delete outputs and re-add (solves transaction malleability)
+					
+					if ((string) $block_height == "" && (string) $existing_tx['block_id'] == "") {
+						$add_transaction = false;
+						$successful = true;
+					}
+					else if ($existing_tx['block_id'] == $block_height) {
+						$add_transaction = false;
+						$successful = true;
+					}
+					else {
+						$this->app->run_query("DELETE io.*, gio.* FROM transaction_ios io LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE io.create_transaction_id=:transaction_id;", [
+							'transaction_id' => $existing_tx['transaction_id']
+						]);
 					}
 				}
 			}
-			else if ($this->db_blockchain['p2p_mode'] != "rpc") $add_transaction = false;
-			// If this is not an RPC blockchain, existing transaction is required.
-			// "none" and "web_api" blockchains have no coin daemon that can give data about the TX
-			// so they first insert transactions and then call this function to process the TX
 		}
+		else if ($this->db_blockchain['p2p_mode'] != "rpc") $add_transaction = false;
+		// If this is not an RPC blockchain, existing transaction is required.
+		// "none" and "web_api" blockchains have no coin daemon that can give data about the TX
+		// so they first insert transactions and then call this function to process the TX
 		
 		if (!$add_transaction) return false;
 		
@@ -1024,9 +1033,13 @@ class Blockchain {
 	}
 	
 	public function walletnotify($tx_hash, $skip_set_site_constant) {
-		$require_inputs = true;
-		$successful = true;
-		$this->add_transaction($tx_hash, false, $require_inputs, $successful, false, [false], false);
+		$existing_tx = $this->fetch_transaction_by_hash($tx_hash);
+		
+		if (!$existing_tx) {
+			$require_inputs = true;
+			$successful = true;
+			$this->add_transaction($tx_hash, false, $require_inputs, $successful, false, [false], false);
+		}
 	}
 	
 	public function sync_coind($print_debug) {
