@@ -17,6 +17,9 @@ if ($user_game) {
 	$coins_per_vote = $app->coins_per_vote($game->db_game);
 	$fee_amount = (int) ($fee*pow(10, $blockchain->db_blockchain['decimal_places']));
 	
+	$amount_per_event = null;
+	if (!empty($_REQUEST['amount_per_event'])) $amount_per_event = (float) $_REQUEST['amount_per_event'];
+	
 	$hours_between_applications = 12;
 	$sec_between_applications = 60*60*$hours_between_applications;
 	$rand_sec_offset = rand(0, $sec_between_applications*2);
@@ -42,21 +45,26 @@ if ($user_game) {
 				$amount_mode = "per_event";
 				if (!empty($_REQUEST['amount_mode']) && $_REQUEST['amount_mode'] == "inflation_only") $amount_mode = "inflation_only";
 				
-				if ($amount_mode == "per_event") {
-					$aggressiveness = "low";
-					$frac_mature_bal = 0.5;
-					
-					if (!empty($_REQUEST['aggressiveness']) && $_REQUEST['aggressiveness'] == "high") {
-						$aggressiveness = "high";
-						$frac_mature_bal = 0.5;
-					}
-					
-					$mature_balance = $user->mature_balance($game, $user_game);
-					$coins_per_event = floor($mature_balance*$frac_mature_bal/$num_events);
+				if ($amount_per_event > 0) {
+					$coins_per_event = round($amount_per_event*pow(10, $game->db_game['decimal_places']));
 				}
 				else {
-					list($user_votes, $votes_value) = $thisuser->user_current_votes($game, $last_block_id, $round_id, $user_game);
-					$coins_per_event = ceil($votes_value/$num_events);
+					if ($amount_mode == "per_event") {
+						$aggressiveness = "low";
+						$frac_mature_bal = 0.5;
+						
+						if (!empty($_REQUEST['aggressiveness']) && $_REQUEST['aggressiveness'] == "high") {
+							$aggressiveness = "high";
+							$frac_mature_bal = 0.5;
+						}
+						
+						$mature_balance = $user->mature_balance($game, $user_game);
+						$coins_per_event = floor($mature_balance*$frac_mature_bal/$num_events);
+					}
+					else {
+						list($user_votes, $votes_value) = $thisuser->user_current_votes($game, $last_block_id, $round_id, $user_game);
+						$coins_per_event = ceil($votes_value/$num_events);
+					}
 				}
 				
 				if ($coins_per_event > 0) {
