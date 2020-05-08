@@ -81,6 +81,11 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 								if ($total_cost_satoshis < $colored_coin_sum && $coin_sum > ($chain_coins_each*$quantity) - $fee_amount) {
 									$remainder_satoshis = $coin_sum - ($chain_coins_each*$quantity) - $fee_amount;
 									
+									if ($remainder_satoshis < 15) {
+										$fee_amount += $remainder_satoshis;
+										$remainder_satoshis = 0;
+									}
+									
 									$send_address_ids = [];
 									$amounts = [];
 									
@@ -295,6 +300,8 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					if ($account_r->rowCount() != 1) echo "s";
 					echo ".</p>\n";
 				}
+				
+				echo $account_r->rowCount()." accounts<br/>\n";
 				
 				while ($account = $account_r->fetch()) {
 					$blockchain = new Blockchain($app, $account['blockchain_id']);

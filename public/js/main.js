@@ -819,7 +819,7 @@ var PageManager = function() {
 			this.output_amounts_need_update = true;
 		}
 		
-		var max_burn_amount = Math.floor(amount_sums[1]*0.9/Math.pow(10,games[0].decimal_places));
+		var max_burn_amount = amount_sums[1]*0.9/Math.pow(10,games[0].decimal_places);
 		$('#max_burn_amount').html("Up to "+this.format_coins(max_burn_amount));
 	}
 	this.render_bet_input = function(index_id) {

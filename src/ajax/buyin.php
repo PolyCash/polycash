@@ -179,9 +179,10 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 		
 		list($num_buyin_invoices, $buyin_invoices_html) = $game->display_buyins_by_user_game($user_game['user_game_id']);
 		
-		$invoices_html = "";
+		$invoices_html = '<p style="margin-top: 10px;">Please wait for your '.$buyin_blockchain->db_blockchain['blockchain_name'].' payment to be confirmed before '.$game->db_game['coin_name_plural'].' will be deposited to your account.</p>'."\n";
+		
 		if ($num_buyin_invoices > 0) {
-			$invoices_html .= '<p style="margin-top: 10px;">You have '.$num_buyin_invoices.' buyin address';
+			$invoices_html .= '<p>You have '.$num_buyin_invoices.' buyin address';
 			if ($num_buyin_invoices != 1) $invoices_html .= 'es';
 			$invoices_html .= '. <div class="buyin_sellout_list">'.$buyin_invoices_html."</div></p>\n";
 		}
