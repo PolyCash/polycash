@@ -93,6 +93,10 @@ else {
 									<label for="new_game_genesis_escrow_amount">For the UTXO you selected, how many coins should be deposited to escrow?</label>
 									<input type="text" id="new_game_genesis_escrow_amount" class="form-control" />
 								</div>
+								<div class="form-group">
+									<label for="new_game_genesis_fee">How much do you want to pay in fees for the genesis TX?</label>
+									<input type="text" id="new_game_genesis_fee" class="form-control" value="0.0001" />
+								</div>
 							</div>
 							<div class="form-group">
 								<button id="new_game_save_btn" class="btn btn-primary">Save &amp; Continue</button>

@@ -1223,7 +1223,7 @@ class Game {
 		$escrow_value = $this->escrow_value_in_currency($display_currency['currency_id'], $coins_in_existence/pow(10, $this->db_game['decimal_places']));
 		
 		if ($coins_in_existence > 0) {
-			$display_value = floor(($account_value/$coins_in_existence)*$escrow_value);
+			$display_value = ($account_value/$coins_in_existence)*$escrow_value;
 		}
 		else $display_value = 0;
 		

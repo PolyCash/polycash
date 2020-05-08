@@ -147,6 +147,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 					else {
 						$genesis_io_id = (int) $_REQUEST['genesis_io_id'];
 						$escrow_amount = (float) $_REQUEST['escrow_amount'];
+						$genesis_fee = (float) $_REQUEST['genesis_fee'];
 						
 						$genesis_io = $app->run_query("SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id JOIN currency_accounts ca ON k.account_id=ca.account_id WHERE io.io_id=:genesis_io_id AND ca.user_id=:user_id;", [
 							'genesis_io_id' => $genesis_io_id,
@@ -155,7 +156,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 						
 						if ($genesis_io) {
 							$escrow_amount = $escrow_amount*pow(10, $blockchain->db_blockchain['decimal_places']);
-							$fee_amount = $user_strategy['transaction_fee']*pow(10, $blockchain->db_blockchain['decimal_places']);
+							$fee_amount = (int) ($genesis_fee*pow(10, $blockchain->db_blockchain['decimal_places']));
 							$genesis_remainder = $genesis_io['amount']-$escrow_amount-$fee_amount;
 							
 							if ($escrow_amount > 0) {

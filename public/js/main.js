@@ -1161,6 +1161,7 @@ var PageManager = function() {
 		else {
 			new_game_params.genesis_io_id = $('#new_game_genesis_io_id').val();
 			new_game_params.escrow_amount = $('#new_game_genesis_escrow_amount').val();
+			new_game_params.genesis_fee = $('#new_game_genesis_fee').val();
 		}
 		
 		$.ajax({

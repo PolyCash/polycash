@@ -94,9 +94,9 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 			else $content_html .= "There was an error loading this invoice.";
 		}
 		else {
-			$content_html = '<p>You can get '.$game->db_game['coin_name_plural'].' by depositing another currency like Bitcoin or Litecoin here. If you already have '.$game->db_game['coin_name_plural'].' elsewhere and want to send them to this wallet, go to <a href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=4">Send & Receive</a> instead.</p>'."\n";
+			$content_html = '<p>You can get '.$game->db_game['coin_name_plural'].' ('.$game->db_game['coin_abbreviation'].') by depositing another currency like Bitcoin or Litecoin here. If you already have '.$game->db_game['coin_name_plural'].' elsewhere and want to send them to this wallet, go to <a href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=4">Send & Receive</a> instead.</p>'."\n";
 			
-			$content_html .= '<p>If you find that there are no '.$game->db_game['coin_name_plural'].' available here, you may need to use an external exchange to buy '.$game->db_game['coin_name_plural'].".</p>\n";
+			$content_html .= '<p>If you find that there are no '.$game->db_game['coin_name_plural'].' available here, you may need to use an external exchange to buy '.$game->db_game['coin_abbreviation'].".</p>\n";
 			
 			$content_html .= '<div class="form-group"><label for="buyin_currency_id">What do you want to deposit?</label>';
 			$content_html .= '<select class="form-control" id="buyin_currency_id" name="buyin_currency_id" onchange="thisPageManager.change_buyin_currency(this);">';
