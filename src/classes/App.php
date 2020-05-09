@@ -1099,7 +1099,7 @@ class App {
 				if ($faucet_io) echo 'Join now & receive '.$this->format_bignum($faucet_io['colored_amount_sum']/pow(10,$featured_game->db_game['decimal_places'])).' '.$featured_game->db_game['coin_name_plural'];
 				else echo 'Play Now';
 				echo "</a>";
-				echo ' <a href="/explorer/games/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-sm btn-primary"><i class="fas fa-database"></i> &nbsp; '.ucwords($featured_game->db_game['event_type_name']).' Results</a>';
+				echo ' <a href="/explorer/games/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-sm btn-primary"><i class="fas fa-list"></i> &nbsp; '.ucwords($featured_game->db_game['event_type_name']).' Results</a>';
 				echo "</p>\n";
 				
 				if ($featured_game->db_game['module'] == "CoinBattles") {
@@ -1120,7 +1120,7 @@ class App {
 				if ($faucet_io) echo 'Join now & receive '.$this->format_bignum($faucet_io['colored_amount_sum']/pow(10,$featured_game->db_game['decimal_places'])).' '.$featured_game->db_game['coin_name_plural'];
 				else echo 'Play Now';
 				echo '</a>';
-				echo ' <a href="/explorer/games/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-sm btn-primary"><i class="fas fa-database"></i> &nbsp; '.ucwords($featured_game->db_game['event_type_name']).' Results</a>';
+				echo ' <a href="/explorer/games/'.$featured_game->db_game['url_identifier'].'/events/" class="btn btn-sm btn-primary"><i class="fas fa-list"></i> &nbsp; '.ucwords($featured_game->db_game['event_type_name']).' Results</a>';
 				echo "</center><br/>\n";
 				
 				if ($counter%(12/$cell_width) == 1) echo '</div><div class="row">';

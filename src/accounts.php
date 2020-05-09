@@ -301,8 +301,6 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					echo ".</p>\n";
 				}
 				
-				echo $account_r->rowCount()." accounts<br/>\n";
-				
 				while ($account = $account_r->fetch()) {
 					$blockchain = new Blockchain($app, $account['blockchain_id']);
 					
