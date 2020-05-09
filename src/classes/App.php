@@ -3737,5 +3737,9 @@ class App {
 			'user_game_id' => $user_game_id
 		]);
 	}
+	
+	public function invoice_ios_by_invoice($invoice_id) {
+		return $this->run_query("SELECT * FROM currency_invoice_ios WHERE invoice_id=:invoice_id;", ['invoice_id' => $invoice_id])->fetchAll();
+	}
 }
 ?>
