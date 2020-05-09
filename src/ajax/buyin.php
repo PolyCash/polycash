@@ -11,6 +11,8 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 			$user_game = $thisuser->set_buyin_currency($user_game, $change_to_currency_id);
 		}
 		
+		$user_enters_game_amount = true;
+		
 		$coins_in_existence = ($game->coins_in_existence(false, true)+$game->pending_bets(true))/pow(10, $game->db_game['decimal_places']);
 		
 		if ($game->db_game['buyin_policy'] == "for_sale") {
@@ -52,10 +54,20 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 				else $content_html .= "Failed to generate a deposit address.";
 			}
 			
-			$buyin_amount = floatval(str_replace(",", "", urldecode($_REQUEST['buyin_amount'])));
-			$color_amount = floatval(str_replace(",", "", urldecode($_REQUEST['color_amount'])));
-			$pay_amount = $buyin_amount+$color_amount;
-			$receive_amount = $buyin_amount*$exchange_rate;
+			if ($user_enters_game_amount) {
+				$color_amount = 0;
+				
+				$receive_amount = floatval(str_replace(",", "", urldecode($_REQUEST['buyin_amount'])));
+				$pay_amount = $receive_amount/$exchange_rate;
+				$buyin_amount = $pay_amount;
+			}
+			else {
+				$buyin_amount = floatval(str_replace(",", "", urldecode($_REQUEST['buyin_amount'])));
+				$color_amount = floatval(str_replace(",", "", urldecode($_REQUEST['color_amount'])));
+				
+				$pay_amount = $buyin_amount+$color_amount;
+				$receive_amount = $buyin_amount*$exchange_rate;
+			}
 			
 			$invoice = $app->run_query("SELECT * FROM currency_invoices ci JOIN user_games ug ON ci.user_game_id=ug.user_game_id WHERE ci.invoice_id=:invoice_id AND ci.user_game_id=:user_game_id;", [
 				'invoice_id' => $invoice_id,
@@ -79,8 +91,14 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 					}
 				}
 				
-				$content_html .= '<p>
-					For '.$buyin_amount.' '.$buyin_currency['short_name_plural'].', you\'ll receive approximately '.$app->format_bignum($receive_amount).' '.$game->db_game['coin_name_plural'].'. Send '.$buyin_currency['short_name_plural'].' to '.$invoice_address['address'].'
+				$content_html .= '<p>';
+				if ($user_enters_game_amount) {
+					$content_html .= 'To get '.$receive_amount.' '.$game->db_game['coin_name_plural'].', please deposit '.$pay_amount.' '.$buyin_currency['short_name_plural'].'. ';
+				}
+				else {
+					$content_html .= 'For '.$buyin_amount.' '.$buyin_currency['short_name_plural'].', you\'ll receive approximately '.$app->format_bignum($receive_amount).' '.$game->db_game['coin_name_plural'].'. ';
+				}
+				$content_html .= 'Send '.$buyin_currency['short_name_plural'].' to '.$invoice_address['address'].'
 				</p>
 				<p>
 					<center><img style="margin: 10px;" src="/render_qr_code.php?data='.$invoice_address['address'].'" /></center>
@@ -132,17 +150,32 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 			
 			if ($game->db_game['buyin_policy'] == "for_sale") {
 				if ($buyin_blockchain->db_blockchain['online'] == 1) {
-					$content_html .= '
-					<p>
-						How many '.$buyin_currency['short_name_plural'].' do you want to deposit?
-					</p>
-					<p>
-						<div class="row">
-							<div class="col-sm-12">
-								<input type="text" class="form-control" id="buyin_amount">
+					if ($user_enters_game_amount) {
+						$content_html .= '
+						<p>
+							How many '.$game->db_game['coin_name_plural'].' do you want to receive?
+						</p>
+						<p>
+							<div class="row">
+								<div class="col-sm-12">
+									<input type="text" class="form-control" id="buyin_amount">
+								</div>
 							</div>
-						</div>
-					</p>';
+						</p>';
+					}
+					else {
+						$content_html .= '
+						<p>
+							How many '.$buyin_currency['short_name_plural'].' do you want to deposit?
+						</p>
+						<p>
+							<div class="row">
+								<div class="col-sm-12">
+									<input type="text" class="form-control" id="buyin_amount">
+								</div>
+							</div>
+						</p>';
+					}
 					
 					$content_html .= '<button class="btn btn-primary" onclick="thisPageManager.manage_buyin(\'check_amount\');">Check</button>'."\n";
 				}
