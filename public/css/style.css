@@ -546,3 +546,9 @@ a.selected {
 .my_bets_row:hover {
 	background-color: #f4f4f4;
 }
+#explorer_block_list .row {
+	line-height: 180%;
+}
+#explorer_block_list .row:hover {
+	background-color: #f4f4f4;
+}
