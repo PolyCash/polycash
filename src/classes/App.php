@@ -1291,6 +1291,7 @@ class App {
 		$html .= $genesis_amount_disp.' ';
 		if ($genesis_amount_disp == "1") $html .= $db_game['coin_name'];
 		else $html .= $db_game['coin_name_plural'];
+		$html .= ' ('.$db_game['coin_abbreviation'].')';
 		$html .= '</a>';
 		$html .= "</div></div>\n";
 		
