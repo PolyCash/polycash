@@ -256,41 +256,30 @@ class Game {
 				if ($this->blockchain->db_blockchain['p2p_mode'] == "rpc") {
 					$this->blockchain->load_coin_rpc();
 					
+					$raw_transaction = $this->blockchain->coin_rpc->createrawtransaction($raw_txin, $raw_txout);
 					try {
-						$raw_transaction = $this->blockchain->coin_rpc->createrawtransaction($raw_txin, $raw_txout);
-						$signed_raw_transaction = $this->blockchain->coin_rpc->signrawtransaction($raw_transaction);
-						$decoded_transaction = $this->blockchain->coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
-						$tx_hash = $decoded_transaction['txid'];
+						$signed_raw_transaction = $this->blockchain->coin_rpc->signrawtransactionwithwallet($raw_transaction);
 					}
 					catch (Exception $e) {
-						$error_message = "RPC call failed: createrawtransaction";
-						return false;
+						$signed_raw_transaction = $this->blockchain->coin_rpc->signrawtransaction($raw_transaction);
 					}
+					$decoded_transaction = $this->blockchain->coin_rpc->decoderawtransaction($signed_raw_transaction['hex']);
+					$tx_hash = $decoded_transaction['txid'];
+					$sendraw_response = $this->blockchain->coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
 					
-					if (!empty($tx_hash)) {
-						try {
-							$verified_tx_hash = $this->blockchain->coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
-						}
-						catch (Exception $e) {
-							$rpc_error = true;
-						}
-						
-						if (!$rpc_error) {
-							$this->blockchain->walletnotify($verified_tx_hash, FALSE);
-							$this->update_option_votes();
-							
-							$db_transaction = $this->blockchain->app->run_query("SELECT * FROM transactions WHERE tx_hash=:tx_hash;", ['tx_hash'=>$tx_hash])->fetch();
-							
-							return $db_transaction['transaction_id'];
-						}
-						else {
-							$error_message = "RPC called failed: sendrawtransaction ".$signed_raw_transaction['hex'].".";
-							return false;
-						}
+					if (isset($sendraw_response['message'])) {
+						$error_message = "Failed to create transaction: ".$sendraw_response['message'];
+						return false;
 					}
 					else {
-						$error_message = "Failed to sign the transaction.";
-						return false;
+						$verified_tx_hash = $sendraw_response;
+						
+						$this->blockchain->walletnotify($verified_tx_hash, FALSE);
+						$this->update_option_votes();
+						
+						$db_transaction = $this->blockchain->app->run_query("SELECT * FROM transactions WHERE tx_hash=:tx_hash;", ['tx_hash'=>$tx_hash])->fetch();
+						
+						return $db_transaction['transaction_id'];
 					}
 				}
 				else {
