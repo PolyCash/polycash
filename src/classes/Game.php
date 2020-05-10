@@ -2049,11 +2049,6 @@ class Game {
 			}
 			
 			if (!empty($this->db_game['module']) && !$this->get_definitive_peer()) {
-				$db_last_gde = $this->blockchain->app->run_query("SELECT * FROM game_defined_events WHERE game_id=:game_id AND event_starting_block < :block_id ORDER BY event_index DESC LIMIT 1;", [
-					'game_id' => $this->db_game['game_id'],
-					'block_id' => $block_id
-				])->fetch();
-				
 				$event_verbatim_vars = $this->blockchain->app->event_verbatim_vars();
 				
 				$gdes_to_add = $this->module->events_starting_between_blocks($this, $ensured_block, $block_id);
@@ -2094,13 +2089,18 @@ class Game {
 			if (in_array($this->db_game['event_rule'], ["", "game_definition"])) {
 				$optional_event_fields = ['sport_entity_id','league_entity_id','next_event_index','outcome_index','event_starting_time','event_final_time','event_payout_time','track_max_price','track_min_price','track_payout_price','track_name_short','track_entity_id','option_block_rule','external_identifier'];
 				
-				$change_gdes = $this->blockchain->app->run_query("SELECT * FROM game_defined_events WHERE game_id=:game_id AND event_index >= :from_event_index AND event_starting_block <= :block_id ORDER BY event_index ASC;", [
+				$to_event_index = $this->blockchain->app->run_query("SELECT MAX(event_index) FROM game_defined_events WHERE game_id=:game_id AND event_starting_block <= :ref_block;", [
+					'game_id' => $this->db_game['game_id'],
+					'ref_block' => $block_id
+				])->fetch()['MAX(event_index)'];
+				
+				$change_gdes = $this->blockchain->app->run_query("SELECT * FROM game_defined_events WHERE game_id=:game_id AND event_index >= :from_event_index AND event_index <= :to_event_index ORDER BY event_index ASC;", [
 					'game_id' => $this->db_game['game_id'],
 					'from_event_index' => $from_event_index,
-					'block_id' => $block_id
+					'to_event_index' => $to_event_index
 				]);
 				
-				$msg .= "Ensuring ".$change_gdes->rowCount()." events from game definition.\n";
+				$msg .= "Ensuring ".$change_gdes->rowCount()." events from game definition (".$from_event_index.":".$to_event_index.").\n";
 				
 				while ($game_defined_event = $change_gdes->fetch()) {
 					$event_start_time = microtime(true);
