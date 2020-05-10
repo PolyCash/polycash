@@ -4203,7 +4203,8 @@ class Game {
 			else $display_amount_sold = $invoice['confirmed_amount_paid'];
 			$html .= '<div class="col-sm-3">'.$this->blockchain->app->format_bignum($display_amount_sold).' '.$this->db_game['coin_name_plural'].' sold</div>';
 			
-			$invoice_ios = $this->blockchain->app->run_query("SELECT * FROM currency_invoice_ios WHERE invoice_id='".$invoice['invoice_id']."';")->fetchAll();
+			$invoice_ios = $this->blockchain->app->invoice_ios_by_invoice($invoice['invoice_id']);
+			
 			$html .= '<div class="col-sm-3">';
 			if (count($invoice_ios) == 0) {
 				if ($invoice['confirmed_amount_paid'] == 0) $html .= 'Pending';

@@ -1054,10 +1054,10 @@ else {
 					<?php
 				}
 				else if ($next_action == "currency_conversions") {
-					$currency_conversions = $app->run_query("SELECT * FROM currency_invoices i JOIN user_games ug ON i.user_game_id=ug.user_game_id JOIN users u ON ug.user_id=u.user_id JOIN currencies c ON i.pay_currency_id=c.currency_id WHERE i.invoice_type='sale_buyin' AND i.status != 'unpaid' AND ug.game_id=:game_id;", ['game_id' => $game->db_game['game_id']])->fetchAll();
+					$currency_conversions = $app->run_query("SELECT i.invoice_id, i.invoice_type, i.confirmed_amount_paid, c.blockchain_id, b.decimal_places, b.url_identifier, b.coin_name_plural, c.abbreviation, u.username FROM currency_invoices i JOIN user_games ug ON i.user_game_id=ug.user_game_id JOIN users u ON ug.user_id=u.user_id JOIN currencies c ON i.pay_currency_id=c.currency_id JOIN blockchains b ON c.blockchain_id=b.blockchain_id WHERE i.invoice_type IN ('sale_buyin', 'sellout') AND i.status != 'unpaid' AND ug.game_id=:game_id;", ['game_id' => $game->db_game['game_id']])->fetchAll();
 					?>
 					<div class="row">
-						<div class="col-lg-8">
+						<div class="col-lg-12">
 							<div class="panel panel-info">
 								<div class="panel-heading">
 									<div class="panel-title">Currency conversions for <?php echo $game->db_game['name']." (#".$game->db_game['game_id'].")"; ?></div>
@@ -1067,23 +1067,39 @@ else {
 									foreach ($currency_conversions as $currency_conversion) {
 										$invoice_ios = $app->invoice_ios_by_invoice($currency_conversion['invoice_id']);
 										$received_utxo_html = "";
-										$sum_received_float = 0;
+										$conversion_game_amount_float = 0;
+										$conversion_blockchain_amount_float = 0;
+										
 										foreach ($invoice_ios as $invoice_io) {
-											$io = $app->fetch_io_by_hash_out_index($game->blockchain->db_blockchain['blockchain_id'], $invoice_io['tx_hash'], $invoice_io['out_index']);
+											$invoice_io_blockchain_id = $currency_conversion['invoice_type'] == "sale_buyin" ? $game->blockchain->db_blockchain['blockchain_id'] : $currency_conversion['blockchain_id'];
 											
-											$game_amount = $game->game_amount_by_io($io['io_id']);
+											$io = $app->fetch_io_by_hash_out_index($invoice_io_blockchain_id, $invoice_io['tx_hash'], $invoice_io['out_index']);
 											
-											$received_utxo_html .= '<a href="/explorer/games/'.$game->db_game['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['game_out_index'].'/">'.$app->format_bignum($game_amount/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']."</a> ";
-											
-											$sum_received_float += $game_amount/pow(10, $game->db_game['decimal_places']);
+											if ($currency_conversion['invoice_type'] == "sale_buyin") {
+												$game_amount = $game->game_amount_by_io($io['io_id']);
+												
+												$received_utxo_html .= '<a href="/explorer/games/'.$game->db_game['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['game_out_index'].'/">'.$app->format_bignum($game_amount/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_name_plural']."</a> ";
+												
+												$conversion_game_amount_float += $game_amount/pow(10, $game->db_game['decimal_places']);
+											}
+											else {
+												$received_utxo_html .= '<a href="/explorer/blockchains/'.$currency_conversion['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['out_index'].'/">'.$app->format_bignum($io['amount']/pow(10, $currency_conversion['decimal_places']))." ".$currency_conversion['coin_name_plural']."</a><br/>\n";
+												
+												$conversion_blockchain_amount_float += $io['amount']/pow(10, $currency_conversion['decimal_places']);
+											}
 										}
 										
-										$actual_exchange_rate = $sum_received_float/$currency_conversion['confirmed_amount_paid'];
+										if ($currency_conversion['invoice_type'] == "sale_buyin") $exchange_rate = $conversion_game_amount_float/$currency_conversion['confirmed_amount_paid'];
+										else $exchange_rate = $currency_conversion['confirmed_amount_paid']/$conversion_blockchain_amount_float;
 										
 										echo '<div class="row">';
-										echo '<div class="col-sm-3">'.$currency_conversion['username']."</div>";
-										echo '<div class="col-sm-3">'.(float) $currency_conversion['confirmed_amount_paid']." ".$currency_conversion['abbreviation']." &rarr; ".$received_utxo_html."</div>";
-										echo '<div class="col-sm-2">'.$app->format_bignum($actual_exchange_rate).' '.$game->db_game['coin_abbreviation']."/".$currency_conversion['abbreviation']."</div>\n";
+										echo '<div class="col-sm-2">'.$currency_conversion['username']."</div>";
+										echo '<div class="col-sm-1">'.($currency_conversion['invoice_type'] == "sale_buyin" ? "Buyin" : "Sellout")."</div>";
+										echo '<div class="col-sm-3">'.(float) $currency_conversion['confirmed_amount_paid'].' ';
+										if ($currency_conversion['invoice_type'] == "sale_buyin") echo $currency_conversion['abbreviation'];
+										else echo $game->db_game['coin_abbreviation'];
+										echo " &rarr; ".$received_utxo_html."</div>";
+										echo '<div class="col-sm-3">'.$app->format_bignum($exchange_rate).' '.$game->db_game['coin_abbreviation']."/".$currency_conversion['abbreviation']."</div>\n";
 										
 										echo "</div>\n";
 									}
