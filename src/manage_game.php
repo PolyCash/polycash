@@ -1054,7 +1054,7 @@ else {
 					<?php
 				}
 				else if ($next_action == "currency_conversions") {
-					$currency_conversions = $app->run_query("SELECT i.invoice_id, i.invoice_type, i.confirmed_amount_paid, c.blockchain_id, b.decimal_places, b.url_identifier, b.coin_name_plural, c.abbreviation, u.username FROM currency_invoices i JOIN user_games ug ON i.user_game_id=ug.user_game_id JOIN users u ON ug.user_id=u.user_id JOIN currencies c ON i.pay_currency_id=c.currency_id JOIN blockchains b ON c.blockchain_id=b.blockchain_id WHERE i.invoice_type IN ('sale_buyin', 'sellout') AND i.status != 'unpaid' AND ug.game_id=:game_id;", ['game_id' => $game->db_game['game_id']])->fetchAll();
+					$currency_conversions = $app->run_query("SELECT i.invoice_id, i.invoice_type, i.confirmed_amount_paid, c.blockchain_id, b.decimal_places, b.url_identifier, b.coin_name_plural, c.abbreviation, u.username, a.address FROM currency_invoices i JOIN user_games ug ON i.user_game_id=ug.user_game_id JOIN users u ON ug.user_id=u.user_id JOIN currencies c ON i.pay_currency_id=c.currency_id JOIN blockchains b ON c.blockchain_id=b.blockchain_id JOIN addresses a ON i.address_id=a.address_id WHERE i.invoice_type IN ('sale_buyin', 'sellout') AND i.status != 'unpaid' AND ug.game_id=:game_id;", ['game_id' => $game->db_game['game_id']])->fetchAll();
 					?>
 					<div class="row">
 						<div class="col-lg-12">
@@ -1095,10 +1095,19 @@ else {
 										echo '<div class="row">';
 										echo '<div class="col-sm-2">'.$currency_conversion['username']."</div>";
 										echo '<div class="col-sm-1">'.($currency_conversion['invoice_type'] == "sale_buyin" ? "Buyin" : "Sellout")."</div>";
-										echo '<div class="col-sm-3">'.(float) $currency_conversion['confirmed_amount_paid'].' ';
+										echo '<div class="col-sm-3">';
+										
+										if ($currency_conversion['invoice_type'] == "sale_buyin") echo '<a href="/explorer/blockchains/'.$currency_conversion['url_identifier'].'/addresses/'.$currency_conversion['address'].'">';
+										else echo '<a href="/explorer/games/'.$game->db_game['url_identifier'].'/addresses/'.$currency_conversion['address'].'">';
+										
+										echo (float) $currency_conversion['confirmed_amount_paid'].' ';
+										
 										if ($currency_conversion['invoice_type'] == "sale_buyin") echo $currency_conversion['abbreviation'];
 										else echo $game->db_game['coin_abbreviation'];
-										echo " &rarr; ".$received_utxo_html."</div>";
+										
+										echo "</a>";
+										
+										echo "&rarr; ".$received_utxo_html."</div>";
 										echo '<div class="col-sm-3">'.$app->format_bignum($exchange_rate).' '.$game->db_game['coin_abbreviation']."/".$currency_conversion['abbreviation']."</div>\n";
 										
 										echo "</div>\n";
