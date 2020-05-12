@@ -42,8 +42,15 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 		if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "check_amount") {
 			$content_html = "";
 			
-			if (!empty($_REQUEST['invoice_id'])) $invoice_id = (int) $_REQUEST['invoice_id'];
-			else {
+			if (!empty($_REQUEST['invoice_id'])) {
+				$invoice_id = (int) $_REQUEST['invoice_id'];
+				
+				$invoice = $app->fetch_invoice_by_id($invoice_id);
+				
+				if ($invoice['blockchain_id'] != $buyin_blockchain->db_blockchain['blockchain_id']) $invoice = null;
+			}
+			
+			if (!$invoice) {
 				if ($pay_to_account) {
 					$invoice_type = "buyin";
 					if ($game->db_game['buyin_policy'] == "for_sale") $invoice_type = "sale_buyin";
@@ -69,10 +76,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 				$receive_amount = $buyin_amount*$exchange_rate;
 			}
 			
-			$invoice = $app->run_query("SELECT * FROM currency_invoices ci JOIN user_games ug ON ci.user_game_id=ug.user_game_id WHERE ci.invoice_id=:invoice_id AND ci.user_game_id=:user_game_id;", [
-				'invoice_id' => $invoice_id,
-				'user_game_id' => $user_game['user_game_id']
-			])->fetch();
+			$invoice = $app->fetch_invoice_by_id($invoice_id);
 			
 			if ($invoice) {
 				$invoice_address = $app->fetch_address_by_id($invoice['address_id']);
@@ -93,7 +97,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 				
 				$content_html .= '<p>';
 				if ($user_enters_game_amount) {
-					$content_html .= 'To get '.$receive_amount.' '.$game->db_game['coin_name_plural'].', please deposit '.$pay_amount.' '.$buyin_currency['short_name_plural'].'. ';
+					$content_html .= 'To get '.$receive_amount.' '.$game->db_game['coin_name_plural'].', please deposit '.$app->to_significant_digits($pay_amount, 8).' '.$buyin_currency['short_name_plural'].'. ';
 				}
 				else {
 					$content_html .= 'For '.$buyin_amount.' '.$buyin_currency['short_name_plural'].', you\'ll receive approximately '.$app->format_bignum($receive_amount).' '.$game->db_game['coin_name_plural'].'. ';

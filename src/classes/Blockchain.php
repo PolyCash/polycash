@@ -2028,11 +2028,19 @@ class Blockchain {
 		else return false;
 	}
 	
-	public function account_balance($account_id) {
-		return (int)($this->app->run_query("SELECT SUM(io.amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.blockchain_id=:blockchain_id AND io.spend_status='unspent' AND k.account_id=:account_id AND io.create_block_id IS NOT NULL;", [
-			'blockchain_id' => $this->db_blockchain['blockchain_id'],
-			'account_id' => $account_id
-		])->fetch(PDO::FETCH_NUM)[0]);
+	public function account_balance($account_id, $include_unconfirmed=false) {
+		if ($include_unconfirmed) {
+			return (int)($this->app->run_query("SELECT SUM(io.amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.blockchain_id=:blockchain_id AND io.spend_status IN ('unspent','unconfirmed') AND k.account_id=:account_id;", [
+				'blockchain_id' => $this->db_blockchain['blockchain_id'],
+				'account_id' => $account_id
+			])->fetch(PDO::FETCH_NUM)[0]);
+		}
+		else {
+			return (int)($this->app->run_query("SELECT SUM(io.amount) FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.blockchain_id=:blockchain_id AND io.spend_status='unspent' AND k.account_id=:account_id AND io.create_block_id IS NOT NULL;", [
+				'blockchain_id' => $this->db_blockchain['blockchain_id'],
+				'account_id' => $account_id
+			])->fetch(PDO::FETCH_NUM)[0]);
+		}
 	}
 	
 	public function user_immature_balance(&$user_game) {
@@ -2680,6 +2688,14 @@ class Blockchain {
 		}
 		
 		return [$any_error, $error_message];
+	}
+	
+	public function spendable_ios_in_blockchain_account($account_id) {
+		$spendable_io_params = [
+			'account_id' => $account_id
+		];
+		$spendable_io_q = "SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status IN ('unspent') AND k.account_id=:account_id ORDER BY io.io_id ASC;";
+		return $this->app->run_query($spendable_io_q, $spendable_io_params);
 	}
 }
 ?>

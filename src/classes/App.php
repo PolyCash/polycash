@@ -3741,5 +3741,18 @@ class App {
 	public function invoice_ios_by_invoice($invoice_id) {
 		return $this->run_query("SELECT * FROM currency_invoice_ios WHERE invoice_id=:invoice_id;", ['invoice_id' => $invoice_id])->fetchAll();
 	}
+	
+	public function set_target_balance($account_id, $target_balance) {
+		$this->run_query("UPDATE currency_accounts SET target_balance=:target_balance WHERE account_id=:account_id;", [
+			'target_balance' => $target_balance,
+			'account_id' => $account_id
+		]);
+	}
+	
+	public function fetch_invoice_by_id($invoice_id) {
+		return $this->run_query("SELECT * FROM currency_invoices ci JOIN user_games ug ON ci.user_game_id=ug.user_game_id WHERE ci.invoice_id=:invoice_id;", [
+			'invoice_id' => $invoice_id
+		])->fetch();
+	}
 }
 ?>
