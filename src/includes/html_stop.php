@@ -94,23 +94,5 @@ if (AppSettings::getParam('signup_captcha_required')) { ?>
 <script type="text/javascript" src="https://www.google.com/jsapi"></script>
 <script type='text/javascript' src='https://www.google.com/recaptcha/api.js'></script>
 <?php } ?>
-
-<?php
-$left_menu_open = 1;
-if (AppSettings::getParam('pageview_tracking_enabled')) {
-	if (empty($viewer_id)) $viewer_id = $pageviewController->insert_pageview($thisuser);
-	$viewer = $pageviewController->get_viewer($viewer_id);
-	$left_menu_open = $viewer['left_menu_open'];
-}
-else if ($thisuser) $left_menu_open = $thisuser->db_user['left_menu_open'];
-
-if ($left_menu_open == 0) {
-	?>
-	<script type="text/javascript">
-	$('[data-toggle="push-menu"]').pushMenu('toggle');
-	</script>
-	<?php
-}
-?>
 </body>
 </html>

@@ -1,5 +1,5 @@
-$(document).on('expanded.pushMenu', function() {toggle_push_menu('expand');});
-$(document).on('collapsed.pushMenu', function() {toggle_push_menu('collapse');});
+$(document).on('expanded.pushMenu', function() {thisPageManager.toggle_push_menu('expand');});
+$(document).on('collapsed.pushMenu', function() {thisPageManager.toggle_push_menu('collapse');});
 $.ajaxSetup({ cache: false });
 
 $(window).keydown(function(e){
