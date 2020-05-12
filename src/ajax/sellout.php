@@ -28,7 +28,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 				else $exchange_rate = 0;
 				
 				$blockchain_sale_account = $game->check_set_blockchain_sale_account($ref_user, $sellout_currency);
-				$blockchain_sale_amount = $sellout_blockchain->account_balance($blockchain_sale_account['account_id']);
+				$blockchain_sale_amount = $sellout_blockchain->account_balance($blockchain_sale_account['account_id'], true);
 				$game_forsale_amount = ($blockchain_sale_amount/pow(10, $sellout_blockchain->db_blockchain['decimal_places']))*$exchange_rate;
 				
 				$output_obj = [];

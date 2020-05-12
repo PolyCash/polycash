@@ -2637,10 +2637,6 @@ class App {
 		return $prices;
 	}
 	
-	public function account_balance($account_id) {
-		return $this->run_query("SELECT SUM(io.amount) FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id AND io.spend_status='unspent';", ['account_id'=>$account_id])->fetch()['SUM(io.amount)'];
-	}
-	
 	public function card_public_vars() {
 		return ['peer_card_id', 'mint_time', 'amount', 'purity', 'status'];
 	}

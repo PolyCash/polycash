@@ -107,21 +107,40 @@ if ($app->running_as_admin()) {
 								if ($avail_amount >= $add_amount) {
 									echo "send: ".$add_amount."\n";
 									
+									$withdrawal_address = $app->new_normal_address_key($sale_account['currency_id'], $sale_account);
+									
 									list($withdrawal, $returned_headers, $error_message) = $client->apiRequest("/withdrawals/crypto", "POST", [
 										"amount" => $add_amount,
 										"currency" => $sale_account['abbreviation'],
-										"crypto_address" => $account_address['address']
+										"crypto_address" => $withdrawal_address['address']
 									]);
 									
 									echo "withdrawal: ".$withdrawal->id."\n";
+									
+									sleep(2);
+									
+									$blockchains_by_id[$sale_account['blockchain_id']]->load_coin_rpc();
+									$all_wallet_txns = $blockchains_by_id[$sale_account['blockchain_id']]->coin_rpc->listreceivedbyaddress(0);
+									
+									$withdrawal_address_txns = AppSettings::arrayToMapOnKey($all_wallet_txns, "address", true);
+									
+									if (!empty($withdrawal_address_txns[$withdrawal_address['address']])) {
+										if ($withdrawal_address_txns[$withdrawal_address['address']]->confirmations == 0) {
+											foreach ($withdrawal_address_txns[$account_address['address']]->txids as $tx_hash) {
+												$blockchains_by_id[$sale_account['blockchain_id']]->walletnotify($tx_hash, true);
+												echo "walletnotify ".$tx_hash."\n";
+											}
+										}
+									}
 								}
 							}
 						}
 						else {
 							$fee_amount_float = $send_fee_by_currency[$sale_account['abbreviation']];
 							$sell_amount_float = $add_amount*(-1) - $fee_amount_float;
+							$successful_send = false;
 							
-							if ($deposit_address_by_currency[$sale_account['abbreviation']] && $sell_amount_float > $min_buy_amounts[$sale_account['abbreviation']]/10) {
+							if ($deposit_address_by_currency[$sale_account['abbreviation']] && $sell_amount_float > $min_buy_amounts[$sale_account['abbreviation']]/2) {
 								$fee_amount = $fee_amount_float*pow(10, $blockchains_by_id[$sale_account['blockchain_id']]->db_blockchain['decimal_places']);
 								
 								$sell_amount_int = (int) ($sell_amount_float*pow(10, $blockchains_by_id[$sale_account['blockchain_id']]->db_blockchain['decimal_places']));
@@ -129,59 +148,67 @@ if ($app->running_as_admin()) {
 								echo "send ".$sell_amount_float."\n";
 								
 								$spendable_ios = $blockchains_by_id[$sale_account['blockchain_id']]->spendable_ios_in_blockchain_account($sale_account['account_id'])->fetchAll();
-								$spendable_io_pos = 0;
-								$io_ids = [];
-								$address_ids = [];
-								$io_inputs_sum = 0;
 								
-								do {
-									array_push($io_ids, $spendable_ios[$spendable_io_pos]['io_id']);
-									$io_inputs_sum += $spendable_ios[$spendable_io_pos]['amount'];
-									$spendable_io_pos++;
-								}
-								while (!empty($spendable_ios[$spendable_io_pos]['amount']) && $io_inputs_sum < $fee_amount+$sell_amount_int);
-								
-								if ($io_inputs_sum >= $fee_amount+$sell_amount_int) {
-									$deposit_address = $blockchains_by_id[$sale_account['blockchain_id']]->create_or_fetch_address($deposit_address_by_currency[$sale_account['abbreviation']], true, false, false, false, false);
+								if (count($spendable_ios) > 0) {
+									$spendable_io_pos = 0;
+									$io_ids = [];
+									$address_ids = [];
+									$io_inputs_sum = 0;
 									
-									if ($deposit_address) {
-										$deposit_address_ids = [$deposit_address['address_id']];
-										$io_amounts = [$sell_amount_int];
-										
-										if ($sell_amount_int+$fee_amount < $io_inputs_sum) {
-											$refund_amount = $io_inputs_sum - $fee_amount - $sell_amount_int;
-											
-											$refund_address = $app->new_normal_address_key($sale_account['currency_id'], $sale_account);
-											
-											array_push($deposit_address_ids, $refund_address['address_id']);
-											array_push($io_amounts, $refund_amount);
-										}
-										
-										$error_message = null;
-										$transaction_id = $blockchains_by_id[$sale_account['blockchain_id']]->create_transaction("transaction", $io_amounts, false, $io_ids, $deposit_address_ids, $fee_amount, $error_message);
-										
-										if ($transaction_id) {
-											$transaction = $app->fetch_transaction_by_id($transaction_id);
-											echo "tx: ".$transaction['tx_hash']."\n";
-										}
-										else echo "error: ".$error_message."\n";
+									do {
+										array_push($io_ids, $spendable_ios[$spendable_io_pos]['io_id']);
+										$io_inputs_sum += $spendable_ios[$spendable_io_pos]['amount'];
+										$spendable_io_pos++;
 									}
+									while (!empty($spendable_ios[$spendable_io_pos]['amount']) && $io_inputs_sum < $fee_amount+$sell_amount_int);
+									
+									if ($io_inputs_sum >= $fee_amount+$sell_amount_int) {
+										$deposit_address = $blockchains_by_id[$sale_account['blockchain_id']]->create_or_fetch_address($deposit_address_by_currency[$sale_account['abbreviation']], true, false, false, false, false);
+										
+										if ($deposit_address) {
+											$deposit_address_ids = [$deposit_address['address_id']];
+											$io_amounts = [$sell_amount_int];
+											
+											if ($sell_amount_int+$fee_amount < $io_inputs_sum) {
+												$refund_amount = $io_inputs_sum - $fee_amount - $sell_amount_int;
+												
+												$refund_address = $app->new_normal_address_key($sale_account['currency_id'], $sale_account);
+												
+												array_push($deposit_address_ids, $refund_address['address_id']);
+												array_push($io_amounts, $refund_amount);
+											}
+											
+											$error_message = null;
+											$transaction_id = $blockchains_by_id[$sale_account['blockchain_id']]->create_transaction("transaction", $io_amounts, false, $io_ids, $deposit_address_ids, $fee_amount, $error_message);
+											
+											if ($transaction_id) {
+												$transaction = $app->fetch_transaction_by_id($transaction_id);
+												echo "tx: ".$transaction['tx_hash']."\n";
+												$successful_send = true;
+											}
+											else echo "error: ".$error_message."\n";
+										}
+									}
+									else echo "not enough ".$blockchains_by_id[$sale_account['blockchain_id']]->db_blockchain['coin_name_plural']." to complete the send\n";
 								}
+								else echo "not enough confirmed ".$blockchains_by_id[$sale_account['blockchain_id']]->db_blockchain['coin_name_plural']."\n";
 							}
 							
-							echo "sell: ".$sell_amount_float."\n";
-							
-							if ($accounts_by_abbrev[$sale_account['abbreviation']]->available > $sell_amount_float) {
-								list($sell_order, $returned_headers, $error_message) = $client->apiRequest("/orders", "POST", [
-									"size" => $sell_amount_float,
-									"side" => "sell",
-									"type" => "market",
-									"product_id" => $sale_account['abbreviation']."-USD"
-								]);
+							if ($successful_send) {
+								echo "sell: ".$sell_amount_float."\n";
 								
-								echo "order: ".$sell_order->id."\n";
+								if ($accounts_by_abbrev[$sale_account['abbreviation']]->available > $sell_amount_float) {
+									list($sell_order, $returned_headers, $error_message) = $client->apiRequest("/orders", "POST", [
+										"size" => $sell_amount_float,
+										"side" => "sell",
+										"type" => "market",
+										"product_id" => $sale_account['abbreviation']."-USD"
+									]);
+									
+									echo "order: ".$sell_order->id."\n";
+								}
+								else echo "can't afford it\n";
 							}
-							else echo "can't afford it\n";
 						}
 					}
 				}

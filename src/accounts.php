@@ -337,7 +337,10 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					if (!$selected_account_id) echo '</a>';
 					echo '</div>';
 					
-					if ($show_balances) $balance = $app->account_balance($account['account_id']);
+					if ($show_balances) {
+						$balance = $blockchain->account_balance($account['account_id']);
+						$unconfirmed_balance = $blockchain->account_balance($account['account_id'], true);
+					}
 					
 					echo '<div class="col-sm-2 greentext" style="text-align: right">';
 					if ($account['game_id'] > 0) {
@@ -347,9 +350,14 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					else echo "&nbsp;";
 					echo '</div>';
 					
-					echo '<div class="col-sm-2 greentext" style="text-align: right">';
-					if ($show_balances) echo $app->format_bignum($balance/pow(10,$blockchain->db_blockchain['decimal_places']));
-					echo ' '.$account['short_name_plural'];
+					echo '<div class="col-sm-2" style="text-align: right">';
+					if ($show_balances) {
+						echo '<font class="text-success">'.$app->format_bignum($balance/pow(10,$blockchain->db_blockchain['decimal_places'])).' '.$account['short_name_plural'].'</font>';
+						
+						if ($unconfirmed_balance != $balance) {
+							echo ' &nbsp; <font class="text-warning">('.$app->format_bignum($unconfirmed_balance/pow(10,$blockchain->db_blockchain['decimal_places'])).')</font>';
+						}
+					}
 					echo '</div>';
 					
 					if ($selected_account_id) {
