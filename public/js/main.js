@@ -1851,6 +1851,7 @@ var PageManager = function() {
 		
 		if (action == "confirm" || action == "check_amount") {
 			sellout_params.sellout_amount = $('#sellout_amount').val();
+			sellout_params.fee_amount = $('#sellout_fee').val();
 		}
 		if (action == "confirm") {
 			sellout_params.address = $('#sellout_blockchain_address').val();
@@ -1867,6 +1868,8 @@ var PageManager = function() {
 					$('#sellout_modal_content').html(sellout_response.content_html);
 					$('#sellout_modal_invoices').html(sellout_response.invoices_html);
 					$('#sellout_modal').modal('show');
+					
+					setTimeout(function() {$('#sellout_amount').focus()}, 1000);
 				}
 				else if (action == 'check_amount') {
 					$('#sellout_modal_details').html(sellout_response.content_html);

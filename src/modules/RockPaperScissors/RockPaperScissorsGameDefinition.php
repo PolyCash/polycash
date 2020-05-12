@@ -36,7 +36,7 @@ class RockPaperScissorsGameDefinition {
 			"game_buyin_cap": 0,
 			"sellout_policy": "off",
 			"sellout_confirmations": 0,
-			"coin_name": "dollars",
+			"coin_name": "dollar",
 			"coin_name_plural": "dollars",
 			"coin_abbreviation": "USDF",
 			"escrow_address": "",
