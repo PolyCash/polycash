@@ -81,30 +81,28 @@ if ($app->running_as_admin()) {
 								
 								echo "avail: ".$avail_amount."\n";
 								
-								if ($avail_amount <= $add_amount) {
-									$buy_amount = max($add_amount-$avail_amount, $min_buy_amounts[$sale_account['abbreviation']]);
-									
-									echo "buy: ".$buy_amount."\n";
-									
-									list($order, $returned_headers, $error_message) = $client->apiRequest("/orders", "POST", [
-										"size" => $buy_amount,
-										"side" => "buy",
-										"type" => "market",
-										"product_id" => $sale_account['abbreviation']."-USD"
-									]);
-									
-									echo "order: ".$order->id."\n";
-									
-									usleep(50000);
-									
-									list($cb_accounts, $returned_headers, $error_message) = $client->apiRequest("/accounts", "GET", [
-										'currency' => $sale_account['abbreviation']
-									]);
-									
-									$accounts_by_abbrev = AppSettings::arrayToMapOnKey($cb_accounts, "currency");
-									
-									$avail_amount = $accounts_by_abbrev[$sale_account['abbreviation']]->available;
-								}
+								$buy_amount = max($add_amount-$avail_amount, $min_buy_amounts[$sale_account['abbreviation']]);
+								
+								echo "buy: ".$buy_amount."\n";
+								
+								list($order, $returned_headers, $error_message) = $client->apiRequest("/orders", "POST", [
+									"size" => $buy_amount,
+									"side" => "buy",
+									"type" => "market",
+									"product_id" => $sale_account['abbreviation']."-USD"
+								]);
+								
+								echo "order: ".$order->id."\n";
+								
+								usleep(50000);
+								
+								list($cb_accounts, $returned_headers, $error_message) = $client->apiRequest("/accounts", "GET", [
+									'currency' => $sale_account['abbreviation']
+								]);
+								
+								$accounts_by_abbrev = AppSettings::arrayToMapOnKey($cb_accounts, "currency");
+								
+								$avail_amount = $accounts_by_abbrev[$sale_account['abbreviation']]->available;
 								
 								if ($avail_amount >= $add_amount) {
 									echo "send: ".$add_amount."\n";
