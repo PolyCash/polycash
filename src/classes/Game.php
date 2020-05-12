@@ -4177,14 +4177,14 @@ class Game {
 				foreach ($invoice_ios as $invoice_io) {
 					$io = $this->blockchain->app->fetch_io_by_hash_out_index($this->blockchain->db_blockchain['blockchain_id'], $invoice_io['tx_hash'], $invoice_io['out_index']);
 					$game_amount = $this->game_amount_by_io($io['io_id']);
-					$html .= '<a href="/explorer/games/'.$this->db_game['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['game_out_index'].'/">'.$this->blockchain->app->format_bignum($game_amount/pow(10, $this->db_game['decimal_places']))." ".$this->db_game['coin_name_plural']."</a><br/>\n";
+					$html .= '<a target="_blank" href="/explorer/games/'.$this->db_game['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['game_out_index'].'/">'.$this->blockchain->app->format_bignum($game_amount/pow(10, $this->db_game['decimal_places']))." ".$this->db_game['coin_name_plural']."</a><br/>\n";
 				}
 			}
 			$html .= '</div>';
 			
 			$html .= '<div class="col-sm-6">';
 			if (time() > $invoice['expire_time'] - 3600*2) $html .= '<font class="redtext">Expired</font> &nbsp; ';
-			$html .= '<a href="/explorer/blockchains/'.$invoice['url_identifier'].'/addresses/'.$invoice['address'].'/">'.$invoice['address'].'</a>';
+			$html .= '<a target="_blank" href="/explorer/blockchains/'.$invoice['url_identifier'].'/addresses/'.$invoice['address'].'/">'.$invoice['address'].'</a>';
 			$html .= '</div>';
 			$html .= "</div>\n";
 		}
@@ -4194,7 +4194,7 @@ class Game {
 	
 	public function display_sellouts_by_user_game($user_game_id) {
 		$html = "";
-		$invoices = $this->blockchain->app->run_query("SELECT * FROM currency_invoices i JOIN addresses a ON i.address_id=a.address_id JOIN currencies c ON i.pay_currency_id=c.currency_id JOIN blockchains b ON  c.blockchain_id=b.blockchain_id WHERE i.invoice_type='sellout' AND i.user_game_id=:user_game_id ORDER BY i.invoice_id DESC;", ['user_game_id'=>$user_game_id]);
+		$invoices = $this->blockchain->app->run_query("SELECT i.*, b.blockchain_id, b.decimal_places, b.url_identifier, b.coin_name_plural, a.address AS invoice_address, ra.address AS receiver_address FROM currency_invoices i JOIN addresses a ON i.address_id=a.address_id JOIN currencies c ON i.pay_currency_id=c.currency_id JOIN blockchains b ON  c.blockchain_id=b.blockchain_id JOIN addresses ra ON i.receive_address_id=ra.address_id WHERE i.invoice_type='sellout' AND i.user_game_id=:user_game_id ORDER BY i.invoice_id DESC;", ['user_game_id'=>$user_game_id]);
 		$num_invoices = $invoices->rowCount();
 		
 		while ($invoice = $invoices->fetch()) {
@@ -4207,20 +4207,22 @@ class Game {
 			
 			$html .= '<div class="col-sm-3">';
 			if (count($invoice_ios) == 0) {
+				$html .= '<a target="_blank" href="/explorer/blockchains/'.$invoice['url_identifier'].'/addresses/'.$invoice['receiver_address'].'">';
 				if ($invoice['confirmed_amount_paid'] == 0) $html .= 'Pending';
 				else $html .= ucwords($invoice['status']);
+				$html .= '</a>';
 			}
 			else {
 				foreach ($invoice_ios as $invoice_io) {
 					$io = $this->blockchain->app->fetch_io_by_hash_out_index($invoice['blockchain_id'], $invoice_io['tx_hash'], $invoice_io['out_index']);
-					$html .= '<a href="/explorer/blockchains/'.$invoice['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['out_index'].'/">'.$this->blockchain->app->format_bignum($io['amount']/pow(10, $invoice['decimal_places']))." ".$invoice['coin_name_plural']."</a><br/>\n";
+					$html .= '<a target="_blank" href="/explorer/blockchains/'.$invoice['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['out_index'].'/">'.$this->blockchain->app->format_bignum($io['amount']/pow(10, $invoice['decimal_places']))." ".$invoice['coin_name_plural']."</a><br/>\n";
 				}
 			}
 			$html .= '</div>';
 			
 			$html .= '<div class="col-sm-6">';
 			if (time() > $invoice['expire_time'] - 3600*2) $html .= '<font class="redtext">Expired</font> &nbsp; ';
-			$html .= '<a href="/explorer/games/'.$this->db_game['url_identifier'].'/addresses/'.$invoice['address'].'/">'.$invoice['address'].'</a>';
+			$html .= '<a target="_blank" href="/explorer/games/'.$this->db_game['url_identifier'].'/addresses/'.$invoice['invoice_address'].'/">'.$invoice['invoice_address'].'</a>';
 			$html .= '</div>';
 			$html .= "</div>\n";
 		}

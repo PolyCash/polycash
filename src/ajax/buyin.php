@@ -42,8 +42,15 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 		if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "check_amount") {
 			$content_html = "";
 			
-			if (!empty($_REQUEST['invoice_id'])) $invoice_id = (int) $_REQUEST['invoice_id'];
-			else {
+			if (!empty($_REQUEST['invoice_id'])) {
+				$invoice_id = (int) $_REQUEST['invoice_id'];
+				
+				$invoice = $app->fetch_invoice_by_id($invoice_id);
+				
+				if ($invoice['pay_currency_id'] != $buyin_currency['currency_id']) $invoice = null;
+			}
+			
+			if (!$invoice) {
 				if ($pay_to_account) {
 					$invoice_type = "buyin";
 					if ($game->db_game['buyin_policy'] == "for_sale") $invoice_type = "sale_buyin";
@@ -69,10 +76,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 				$receive_amount = $buyin_amount*$exchange_rate;
 			}
 			
-			$invoice = $app->run_query("SELECT * FROM currency_invoices ci JOIN user_games ug ON ci.user_game_id=ug.user_game_id WHERE ci.invoice_id=:invoice_id AND ci.user_game_id=:user_game_id;", [
-				'invoice_id' => $invoice_id,
-				'user_game_id' => $user_game['user_game_id']
-			])->fetch();
+			$invoice = $app->fetch_invoice_by_id($invoice_id);
 			
 			if ($invoice) {
 				$invoice_address = $app->fetch_address_by_id($invoice['address_id']);
@@ -84,28 +88,33 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 					'invoice_id' => $invoice['invoice_id']
 				]);
 				
+				$buyin_amount_ok = true;
+				
 				if ($game->db_game['buyin_policy'] == "for_sale") {
 					$max_buyin_amount = $game_sale_amount/pow(10, $game->db_game['decimal_places'])/$exchange_rate;
 					if ($buyin_amount > $max_buyin_amount) {
+						$buyin_amount_ok = false;
 						$content_html .= '<p class="redtext">Don\'t send that many '.$buyin_blockchain->db_blockchain['coin_name_plural'].'. There are only '.$app->format_bignum($game_sale_amount/pow(10, $game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].' available ('.$app->format_bignum($max_buyin_amount)." ".$buyin_currency['abbreviation'].")</p>\n";
 					}
 				}
 				
-				$content_html .= '<p>';
-				if ($user_enters_game_amount) {
-					$content_html .= 'To get '.$receive_amount.' '.$game->db_game['coin_name_plural'].', please deposit '.$pay_amount.' '.$buyin_currency['short_name_plural'].'. ';
+				if ($buyin_amount_ok) {
+					$content_html .= '<p>';
+					if ($user_enters_game_amount) {
+						$content_html .= 'To get '.$receive_amount.' '.$game->db_game['coin_name_plural'].', please deposit '.$app->to_significant_digits($pay_amount, 8).' '.$buyin_currency['short_name_plural'].'. ';
+					}
+					else {
+						$content_html .= 'For '.$buyin_amount.' '.$buyin_currency['short_name_plural'].', you\'ll receive approximately '.$app->format_bignum($receive_amount).' '.$game->db_game['coin_name_plural'].'. ';
+					}
+					$content_html .= 'Send '.$buyin_currency['short_name_plural'].' to '.$invoice_address['address'].'
+					</p>
+					<p>
+						<center><img style="margin: 10px;" src="/render_qr_code.php?data='.$invoice_address['address'].'" /></center>
+					</p>
+					<p>
+						'.ucfirst($game->db_game['coin_name_plural']).' will automatically be credited to this account when your payment is received.
+					</p>';
 				}
-				else {
-					$content_html .= 'For '.$buyin_amount.' '.$buyin_currency['short_name_plural'].', you\'ll receive approximately '.$app->format_bignum($receive_amount).' '.$game->db_game['coin_name_plural'].'. ';
-				}
-				$content_html .= 'Send '.$buyin_currency['short_name_plural'].' to '.$invoice_address['address'].'
-				</p>
-				<p>
-					<center><img style="margin: 10px;" src="/render_qr_code.php?data='.$invoice_address['address'].'" /></center>
-				</p>
-				<p>
-					'.ucfirst($game->db_game['coin_name_plural']).' will automatically be credited to this account when your payment is received.
-				</p>';
 				
 				$output_obj['invoice_id'] = $invoice['invoice_id'];
 			}
@@ -152,16 +161,10 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 				if ($buyin_blockchain->db_blockchain['online'] == 1) {
 					if ($user_enters_game_amount) {
 						$content_html .= '
-						<p>
-							How many '.$game->db_game['coin_name_plural'].' do you want to receive?
-						</p>
-						<p>
-							<div class="row">
-								<div class="col-sm-12">
-									<input type="text" class="form-control" id="buyin_amount">
-								</div>
-							</div>
-						</p>';
+						<div class="form-group">
+							<label for="buyin_amount">How many '.$game->db_game['coin_name_plural'].' do you want to receive?</label>
+							<input type="text" class="form-control" id="buyin_amount" />
+						</div>';
 					}
 					else {
 						$content_html .= '

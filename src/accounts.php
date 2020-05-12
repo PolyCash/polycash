@@ -243,6 +243,19 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		else echo "Invalid game ID.<br/>\n";
 		die();
 	}
+	else if ($action == "set_target_balance") {
+		$target_account = $app->fetch_account_by_id($_REQUEST['account_id']);
+		
+		if ($target_account['is_blockchain_sale_account'] && $app->user_is_admin($thisuser)) {
+			$target_balance = (float) $_REQUEST['target_balance'];
+			
+			if ($target_balance >= 0) {
+				if ($target_balance == 0) $target_balance = "";
+				
+				$app->set_target_balance($target_account['account_id'], $target_balance);
+			}
+		}
+	}
 }
 
 $pagetitle = "My Accounts";
@@ -324,7 +337,10 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					if (!$selected_account_id) echo '</a>';
 					echo '</div>';
 					
-					if ($show_balances) $balance = $app->account_balance($account['account_id']);
+					if ($show_balances) {
+						$balance = $blockchain->account_balance($account['account_id']);
+						$unconfirmed_balance = $blockchain->account_balance($account['account_id'], true);
+					}
 					
 					echo '<div class="col-sm-2 greentext" style="text-align: right">';
 					if ($account['game_id'] > 0) {
@@ -334,9 +350,14 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 					else echo "&nbsp;";
 					echo '</div>';
 					
-					echo '<div class="col-sm-2 greentext" style="text-align: right">';
-					if ($show_balances) echo $app->format_bignum($balance/pow(10,$blockchain->db_blockchain['decimal_places']));
-					echo ' '.$account['short_name_plural'];
+					echo '<div class="col-sm-2" style="text-align: right">';
+					if ($show_balances) {
+						echo '<font class="text-success">'.$app->format_bignum($balance/pow(10,$blockchain->db_blockchain['decimal_places'])).' '.$account['short_name_plural'].'</font>';
+						
+						if ($unconfirmed_balance != $balance) {
+							echo ' &nbsp; <font class="text-warning">('.$app->format_bignum($unconfirmed_balance/pow(10,$blockchain->db_blockchain['decimal_places'])).')</font>';
+						}
+					}
 					echo '</div>';
 					
 					if ($selected_account_id) {
@@ -384,8 +405,12 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 						<ul class="nav nav-tabs">
 							<li '.($account_selected_tab == "primary_address" ? 'class="active" ' : '').'role="presentation"><a data-toggle="tab" href="#primary_address_'.$account['account_id'].'">Deposit Address</a></li>
 							<li '.($account_selected_tab == "transactions" ? 'class="active" ' : '').'role="presentation"><a data-toggle="tab" href="#transactions_'.$account['account_id'].'">Transactions</a></li>
-							<li '.($account_selected_tab == "addresses" ? 'class="active" ' : '').'role="presentation"><a data-toggle="tab" href="#addresses_'.$account['account_id'].'">Addresses</a></li>
-						</ul>';
+							<li '.($account_selected_tab == "addresses" ? 'class="active" ' : '').'role="presentation"><a data-toggle="tab" href="#addresses_'.$account['account_id'].'">Addresses</a></li>';
+							
+							if ($app->user_is_admin($thisuser) && $account['is_blockchain_sale_account']) {
+								echo '<li '.($account_selected_tab == "target" ? 'class="active" ' : '').'role="presentation"><a data-toggle="tab" href="#target_'.$account['account_id'].'">Target Balance</a></li>';
+							}
+						echo '</ul>';
 						
 						echo '
 						<div class="tab-content" style="padding-top: 10px;">
@@ -400,9 +425,37 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 							echo '<img style="margin: 10px;" src="/render_qr_code.php?data='.$account['pub_key'].'" />';
 						}
 						
-						echo '
-							</div>
-							<div id="transactions_'.$account['account_id'].'" class="tab-pane'.($account_selected_tab == "transactions" ? ' active' : ' fade').'">';
+						echo "</div>\n";
+						
+						if ($app->user_is_admin($thisuser) && $account['is_blockchain_sale_account']) {
+							echo '<div id="target_'.$account['account_id'].'" class="tab-pane'.($account_selected_tab == "target" ? ' active' : ' fade').'">';
+							if ($selected_account_id) {
+								?>
+								<form method="post" action="/accounts/?account_id=<?php echo $account['account_id']; ?>">
+									<input type="hidden" name="account_id" value="<?php echo $account['account_id']; ?>" />
+									<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
+									<input type="hidden" name="action" value="set_target_balance" />
+									<input type="hidden" name="selected_tab" value="target" />
+									
+									<div class="form-group">
+										<label for="target_balance_<?php echo $account['account_id']; ?>">Target balance:</label>
+										<div class="row">
+											<div class="col-sm-4">
+												<input type="text" name="target_balance" id="target_balance_<?php echo $account['account_id']; ?>" class="form-control" value="<?php echo $account['target_balance']; ?>" />
+											</div>
+											<div class="col-sm-8 form-control-static">
+												<?php echo $blockchain->db_blockchain['coin_name_plural']; ?>
+											</div>
+										</div>
+									</div>
+									<input type="submit" class="btn btn-success" value="Save" />
+								</form>
+								<?php
+							}
+							echo "</div>\n";
+						}
+						
+						echo '<div id="transactions_'.$account['account_id'].'" class="tab-pane'.($account_selected_tab == "transactions" ? ' active' : ' fade').'">';
 						
 						echo "<p>Rendering ".($transaction_in_r->rowCount() + $transaction_out_r->rowCount())." transactions.</p>";
 						

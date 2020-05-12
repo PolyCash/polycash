@@ -355,6 +355,15 @@ class App {
 		if (is_resource($ensure_addresses_process)) $process_count++;
 		else $html .= "Failed to start a process for caching game definitions.<br/>\n";
 		
+		if (!empty(AppSettings::getParam('coinbase_key'))) {
+			$cmd = $this->php_binary_location().' "'.$script_path_name.'/cron/process_target_balances.php"';
+			if (PHP_OS == "WINNT") $cmd .= " > NUL 2>&1";
+			else $cmd .= " 2>&1 >/dev/null";
+			$target_balances_process = proc_open($cmd, $pipe_config, $pipes);
+			if (is_resource($target_balances_process)) $process_count++;
+			else $html .= "Failed to start a process for target balances.<br/>\n";
+		}
+		
 		$html .= "Started ".$process_count." background processes.<br/>\n";
 		return $html;
 	}
@@ -2628,10 +2637,6 @@ class App {
 		return $prices;
 	}
 	
-	public function account_balance($account_id) {
-		return $this->run_query("SELECT SUM(io.amount) FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id JOIN addresses a ON io.address_id=a.address_id JOIN address_keys k ON a.address_id=k.address_id WHERE k.account_id=:account_id AND io.spend_status='unspent';", ['account_id'=>$account_id])->fetch()['SUM(io.amount)'];
-	}
-	
 	public function card_public_vars() {
 		return ['peer_card_id', 'mint_time', 'amount', 'purity', 'status'];
 	}
@@ -3740,6 +3745,19 @@ class App {
 	
 	public function invoice_ios_by_invoice($invoice_id) {
 		return $this->run_query("SELECT * FROM currency_invoice_ios WHERE invoice_id=:invoice_id;", ['invoice_id' => $invoice_id])->fetchAll();
+	}
+	
+	public function set_target_balance($account_id, $target_balance) {
+		$this->run_query("UPDATE currency_accounts SET target_balance=:target_balance WHERE account_id=:account_id;", [
+			'target_balance' => $target_balance,
+			'account_id' => $account_id
+		]);
+	}
+	
+	public function fetch_invoice_by_id($invoice_id) {
+		return $this->run_query("SELECT * FROM currency_invoices ci JOIN user_games ug ON ci.user_game_id=ug.user_game_id WHERE ci.invoice_id=:invoice_id;", [
+			'invoice_id' => $invoice_id
+		])->fetch();
 	}
 }
 ?>

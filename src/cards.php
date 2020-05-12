@@ -56,7 +56,7 @@ if (!empty($_REQUEST['action'])) {
 						if ($how_many > 0) {
 							$cost = $how_many*$denomination['denomination']*pow(10, $fv_blockchain->db_blockchain['decimal_places']);
 							$fee = (int) (0.0001*pow(10, $fv_blockchain->db_blockchain['decimal_places']));
-							$account_balance = $app->account_balance($currency_account['account_id']);
+							$account_balance = $fv_blockchain->account_balance($currency_account['account_id']);
 							
 							if ($cost+$fee <= $account_balance) {
 								$io_ids = [];
