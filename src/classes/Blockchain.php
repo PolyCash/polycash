@@ -2620,7 +2620,7 @@ class Blockchain {
 				$last_block_id = $this->last_block_id();
 				$mining_block_id = $last_block_id+1;
 				
-				$rpc_transactions = $this->coin_rpc->listtransactions();
+				$rpc_transactions = $this->coin_rpc->listreceivedbyaddress(0);
 				
 				$tx_by_confirmations = AppSettings::arrayToMapOnKey($rpc_transactions, "confirmations", true);
 				
@@ -2631,47 +2631,51 @@ class Blockchain {
 				if ($print_debug) echo "Processing ".count($rpc_transactions)." transactions.\n";
 				
 				foreach ($relevant_confirmations as $confirmation_count) {
-					foreach ($tx_by_confirmations[$confirmation_count] as $rpc_transaction) {
-						$confirmed_block_id = null;
-						
-						if (!empty($rpc_transaction->confirmations)) {
-							$expected_block_height = $mining_block_id - $rpc_transaction->confirmations;
-							$expected_db_block = $this->fetch_block_by_id($expected_block_height);
+					foreach ($tx_by_confirmations[$confirmation_count] as $rpc_tx_by_address) {
+						foreach ($rpc_tx_by_address->txids as $tx_hash) {
+							$confirmed_block_id = null;
 							
-							if (empty($expected_db_block['block_hash'])) {
-								$this->set_block_hash_by_height($expected_db_block['block_id']);
+							$rpc_transaction = (object) $this->coin_rpc->gettransaction($tx_hash);
+							
+							if (!empty($rpc_transaction->confirmations)) {
+								$expected_block_height = $mining_block_id - $rpc_transaction->confirmations;
 								$expected_db_block = $this->fetch_block_by_id($expected_block_height);
+								
+								if (empty($expected_db_block['block_hash'])) {
+									$this->set_block_hash_by_height($expected_db_block['block_id']);
+									$expected_db_block = $this->fetch_block_by_id($expected_block_height);
+								}
+								
+								if ($expected_db_block['block_hash'] == $rpc_transaction->blockhash) $confirmed_block_id = $expected_db_block['block_id'];
+								else {
+									$tx_rpc_block = (object) $this->coin_rpc->getblock($rpc_transaction->blockhash);
+									$corrected_db_block = $this->fetch_block_by_id($tx_rpc_block->height);
+									
+									if (empty($corrected_db_block['block_hash'])) $this->set_block_hash_by_height($tx_rpc_block->height);
+									
+									$corrected_db_block = $this->fetch_block_by_id($tx_rpc_block->height);
+									
+									$confirmed_block_id = $corrected_db_block['block_id'];
+								}
 							}
 							
-							if ($expected_db_block['block_hash'] == $rpc_transaction->blockhash) $confirmed_block_id = $expected_db_block['block_id'];
+							$existing_tx = $this->fetch_transaction_by_hash($rpc_transaction->txid);
+							
+							if ($print_debug) echo "Processing tx: ".$rpc_transaction->txid." (block #".$confirmed_block_id."): ";
+							
+							if ($existing_tx && $existing_tx['block_id'] == $confirmed_block_id && $existing_tx['has_all_outputs']) {
+								if ($print_debug) echo "skip\n";
+							}
 							else {
-								$tx_rpc_block = (object) $this->coin_rpc->getblock($rpc_transaction->blockhash);
-								$corrected_db_block = $this->fetch_block_by_id($tx_rpc_block->height);
+								$require_inputs = false;
+								$tx_successful = null;
+								$transaction = $this->add_transaction($rpc_transaction->txid, $confirmed_block_id, $require_inputs, $tx_successful, $rpc_transaction->blockindex, [false], $print_debug);
 								
-								if (empty($corrected_db_block['block_hash'])) $this->set_block_hash_by_height($tx_rpc_block->height);
-								
-								$corrected_db_block = $this->fetch_block_by_id($tx_rpc_block->height);
-								
-								$confirmed_block_id = $corrected_db_block['block_id'];
-							}
-						}
-						
-						$existing_tx = $this->fetch_transaction_by_hash($rpc_transaction->txid);
-						
-						if ($print_debug) echo "Processing tx: ".$rpc_transaction->txid." (block #".$confirmed_block_id."): ";
-						
-						if ($existing_tx && $existing_tx['block_id'] == $confirmed_block_id && $existing_tx['has_all_outputs']) {
-							if ($print_debug) echo "skip\n";
-						}
-						else {
-							$require_inputs = false;
-							$tx_successful = null;
-							$transaction = $this->add_transaction($rpc_transaction->txid, $confirmed_block_id, $require_inputs, $tx_successful, $rpc_transaction->blockindex, [false], $print_debug);
-							
-							if ($print_debug) {
-								if ($tx_successful) echo "successful";
-								else echo "failed";
-								echo "\n";
+								if ($print_debug) {
+									if ($tx_successful) echo "successful";
+									else echo "failed";
+									echo "\n";
+								}
 							}
 						}
 					}
