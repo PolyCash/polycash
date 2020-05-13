@@ -868,52 +868,6 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 				</div>
 			</div>
 		</div>
-		<div id="section_withdraw_btc" style="display: none;">
-			<div class="panel panel-info">
-				<div class="panel-heading">
-					<div class="panel-title">Withdraw Bitcoins</div>
-				</div>
-				<div class="panel-body">
-					<div class="form-group">Your withdrawal limit is <div class="coinsymbol"></div><?php
-						$btc_withdraw_limit = round($networth*$currency_prices[$btc_currency['currency_id']]['price'], 8);
-						
-						echo $btc_withdraw_limit;?> BTC
-					</div>
-					<div class="form-group">
-						<label for="send_bitcoin_amount">How many BTC do you want to withdraw?</label>
-						<input class="form-control" type="text" size="10" id="send_bitcoin_amount" />
-					</div>
-					<div class="form-group">
-						<label for="send_bitcoin_address">Please enter a bitcoin address:</label>
-						<input class="form-control" type="text" size="30" id="send_bitcoin_address" />
-						
-						<a href="" onclick="$('#os_options').show(); return false;">Scan a QR code address</a>
-						<div style="display: none;" id="os_options">
-							Which are you using?<br/>
-							<a class="btn btn-default" href="" onclick="QRC.selectOS('iphone'); return false;">Mobile Phone</a>&nbsp;&nbsp;&nbsp;
-							<a class="btn btn-default" href="" onclick="QRC.selectOS('pc'); return false;">Computer</a>
-						</div>
-						<div id="qrUpload" style="display: none; border: 1px solid #ccc; padding: 10px;">
-							Please upload a picture of the QR code.
-							<div id="qrfile">
-								<canvas id="out-canvas" width="200" height="150"></canvas>
-								<div id="imghelp">
-									<input type="file" onchange="QRC.handleFiles(this.files)"/>
-								</div>
-							</div>
-						</div>
-						<div id="qrCam" style="display: none; border: 1px solid #ccc; padding: 10px;">
-							To scan an address, please share your web cam with the browser, then hold the QR code up to your web cam.
-							
-							<div id="outdiv"></div>
-							
-							<canvas id="qrCanvas" width="800" height="600"></canvas>
-						</div>
-					</div>
-					<button class="btn btn-success" onclick="thisPageManager.deposit_coins();">Withdraw Bitcoins</button>
-				</div>
-			</div>
-		</div>
 		<?php
 	}
 	?>
