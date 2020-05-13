@@ -21,7 +21,7 @@ if ($app->running_as_admin()) {
 		
 		$buyin_invoices = $app->run_query("SELECT *, ug.user_id AS user_id, ug.account_id AS user_game_account_id FROM user_games ug JOIN currency_invoices i ON ug.user_game_id=i.user_game_id JOIN addresses a ON i.address_id=a.address_id JOIN games g ON ug.game_id=g.game_id WHERE i.status IN ('unpaid','unconfirmed','confirmed') AND (i.status='unconfirmed' OR i.expire_time >= :current_time) AND i.invoice_type != 'sellout' GROUP BY a.address_id;", ['current_time'=>time()]);
 		
-		if ($print_debug) echo "Checking ".$buyin_invoices->rowCount()." buyin addresses.<br/>\n";
+		if ($print_debug) echo "Checking ".$buyin_invoices->rowCount()." buyin addresses.\n";
 		
 		while ($invoice_address = $buyin_invoices->fetch()) {
 			$transaction_id = false;
@@ -45,7 +45,7 @@ if ($app->running_as_admin()) {
 				
 				$amount_paid_float = $address_balance_float-$preexisting_balance_float;
 				
-				if ($print_debug) echo $invoice_address['address']." ".$address_balance_float.", paid: ".$amount_paid_float."<br/>\n";
+				if ($print_debug) echo $invoice_address['address']." ".$address_balance_float.", paid: ".$amount_paid_float."\n";
 				
 				if ($amount_paid_float > 0) {
 					$pay_tx_hash = false;
@@ -60,6 +60,9 @@ if ($app->running_as_admin()) {
 						$sale_game_account = $game->check_set_game_sale_account($ref_user);
 						$sale_game_account_balance_int = $game->account_balance($sale_game_account['account_id']);
 						
+						$chain_fee_float = $game->db_game['default_transaction_fee'];
+						$chain_fee_int = (int)($chain_fee_float*pow(10, $game->blockchain->db_blockchain['decimal_places']));
+						
 						$sale_spend_ios = $app->spendable_ios_in_account($sale_game_account['account_id'], $game->db_game['game_id'], $round_id, $last_block_id);
 						
 						$spend_ios = [];
@@ -68,7 +71,7 @@ if ($app->running_as_admin()) {
 						$chain_coins_in = 0;
 						
 						while ($spend_io = $sale_spend_ios->fetch()) {
-							if ($game_coins_in < $buyin_amount_int) {
+							if ($game_coins_in < $buyin_amount_int || $chain_coins_in < $chain_fee_int*5) {
 								array_push($spend_ios, $spend_io);
 								array_push($spend_io_ids, $spend_io['io_id']);
 								$game_coins_in += $spend_io['coins'];
@@ -77,9 +80,6 @@ if ($app->running_as_admin()) {
 						}
 						
 						if ($game_coins_in >= $buyin_amount_int) {
-							$chain_fee_float = $game->db_game['default_transaction_fee'];
-							$chain_fee_int = (int)($chain_fee_float*pow(10, $game->blockchain->db_blockchain['decimal_places']));
-							
 							$chain_coins_per_game_coin = ($chain_coins_in-$chain_fee_int)/$game_coins_in;
 							$send_chain_coins = ceil($buyin_amount_int*$chain_coins_per_game_coin);
 							
@@ -114,7 +114,10 @@ if ($app->running_as_admin()) {
 										
 										if ($print_debug) echo "Created tx: ".$transaction['tx_hash']."\n";
 									}
-									else if ($print_debug) echo "TX failed: ".$error_message."\n";
+									else if ($print_debug) {
+										echo "TX failed: ".$error_message."\n";
+										echo json_encode($amounts, JSON_PRETTY_PRINT)."\n"; 
+									}
 								}
 								else if ($print_debug) echo "Couldn't find an remainder address.\n";
 							}
@@ -169,7 +172,7 @@ if ($app->running_as_admin()) {
 							}
 							else if ($print_debug) echo "Failed to find an address to pay to for this user.\n";
 						}
-						else if ($print_debug) echo "fee: ".$app->format_bignum($fee_amount_int).", buyin: ".$app->format_bignum($buyin_amount_int).", color: ".$app->format_bignum($amount_to_color)."<br/>\n";
+						else if ($print_debug) echo "fee: ".$app->format_bignum($fee_amount_int).", buyin: ".$app->format_bignum($buyin_amount_int).", color: ".$app->format_bignum($amount_to_color)."\n";
 					}
 					
 					if ($transaction_id) {
@@ -189,7 +192,7 @@ if ($app->running_as_admin()) {
 					}
 					else if ($print_debug) echo "failed to create a transaction.\n";
 				}
-				else if ($print_debug) echo "amount paid: ".$amount_paid_float."<br/>\n";
+				else if ($print_debug) echo "amount paid: ".$amount_paid_float."\n";
 			}
 		}
 		
@@ -228,7 +231,7 @@ if ($app->running_as_admin()) {
 					if ($sellout_amount_int > 0) {
 						$sellout_cost_int = $sellout_amount_int+$fee_amount_int;
 						
-						if ($print_debug) echo "exchange rate: $exchange_rate, pay: $sellout_amount_int, tx fee: $fee_amount_int<br/>\n";
+						if ($print_debug) echo "exchange rate: $exchange_rate, pay: $sellout_amount_int, tx fee: $fee_amount_int\n";
 						
 						$spend_ios = $app->run_query("SELECT * FROM transaction_ios io JOIN address_keys k ON io.address_id=k.address_id WHERE io.spend_status IN ('unspent','unconfirmed') AND k.account_id=:account_id ORDER BY io.amount ASC;", ['account_id'=>$sellout_account['account_id']]);
 						
@@ -320,7 +323,7 @@ if ($app->running_as_admin()) {
 					if ($sellout_transaction) {
 						$refund_amount = $unprocessed_sellout['amount_out'] - $unprocessed_sellout['fee_amount'];
 						
-						if ($print_debug) echo "process sellout ".$unprocessed_sellout['in_tx_hash']."<br/>\n";
+						if ($print_debug) echo "process sellout ".$unprocessed_sellout['in_tx_hash']."\n";
 						
 						$input_sum = 0;
 						$io_ids = [];
@@ -362,10 +365,10 @@ if ($app->running_as_admin()) {
 									'sellout_id' => $unprocessed_sellout['sellout_id']
 								]);
 								
-								if ($print_debug) echo "Created sellout refund transaction ".$db_transaction['tx_hash']."<br/>\n";
+								if ($print_debug) echo "Created sellout refund transaction ".$db_transaction['tx_hash']."\n";
 							}
 							else {
-								if ($print_debug) echo "Failed to add transaction for sellout #".$unprocessed_sellout['sellout_id'].": ".$error_message."<br/>\n";
+								if ($print_debug) echo "Failed to add transaction for sellout #".$unprocessed_sellout['sellout_id'].": ".$error_message."\n";
 							}
 						}
 					}

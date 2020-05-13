@@ -85,14 +85,15 @@ if ($app->running_as_admin()) {
 								
 								echo "buy: ".$buy_amount."\n";
 								
-								list($order, $returned_headers, $error_message) = $client->apiRequest("/orders", "POST", [
+								list($buy_order, $returned_headers, $error_message) = $client->apiRequest("/orders", "POST", [
 									"size" => $buy_amount,
 									"side" => "buy",
 									"type" => "market",
 									"product_id" => $sale_account['abbreviation']."-USD"
 								]);
 								
-								echo "order: ".$order->id."\n";
+								if (!empty($buy_order->id)) echo "order: ".$buy_order->id."\n";
+								else echo json_encode([$buy_order, $error_message], JSON_PRETTY_PRINT)."\n";
 								
 								usleep(50000);
 								
@@ -199,13 +200,14 @@ if ($app->running_as_admin()) {
 								
 								if ($accounts_by_abbrev[$sale_account['abbreviation']]->available > $sell_amount_float) {
 									list($sell_order, $returned_headers, $error_message) = $client->apiRequest("/orders", "POST", [
-										"size" => $sell_amount_float,
+										"size" => (string) $sell_amount_float,
 										"side" => "sell",
 										"type" => "market",
 										"product_id" => $sale_account['abbreviation']."-USD"
 									]);
 									
-									echo "order: ".$sell_order->id."\n";
+									if (!empty($sell_order->id)) echo "order: ".$sell_order->id."\n";
+									else echo json_encode([$error_message, $sell_order], JSON_PRETTY_PRINT)."\n";
 								}
 								else echo "can't afford it\n";
 							}

@@ -357,6 +357,8 @@ else {
 					$min_sec_between_claims = (int) $_REQUEST['min_sec_between_claims'];
 					$bonus_claims = (int) $_REQUEST['bonus_claims'];
 					$default_transaction_fee = (float) $_REQUEST['default_transaction_fee'];
+					$min_buyin_amount = (float) $_REQUEST['min_buyin_amount'];
+					$min_sellout_amount = (float) $_REQUEST['min_sellout_amount'];
 					
 					$definitive_game_peer_on = $_REQUEST['definitive_game_peer_on'];
 					if ($definitive_game_peer_on == 1) {
@@ -379,7 +381,7 @@ else {
 						}
 					}
 					
-					$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, faucet_policy=:faucet_policy, hide_module=:hide_module, definitive_game_peer_id=:definitive_game_peer_id, every_event_bet_reminder_minutes=:every_event_bet_reminder_minutes, sec_per_faucet_claim=:sec_per_faucet_claim, min_sec_between_claims=:min_sec_between_claims, bonus_claims=:bonus_claims, default_transaction_fee=:default_transaction_fee WHERE game_id=:game_id;", [
+					$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, faucet_policy=:faucet_policy, hide_module=:hide_module, definitive_game_peer_id=:definitive_game_peer_id, every_event_bet_reminder_minutes=:every_event_bet_reminder_minutes, sec_per_faucet_claim=:sec_per_faucet_claim, min_sec_between_claims=:min_sec_between_claims, bonus_claims=:bonus_claims, default_transaction_fee=:default_transaction_fee, min_buyin_amount=:min_buyin_amount, min_sellout_amount=:min_sellout_amount WHERE game_id=:game_id;", [
 						'featured' => $featured,
 						'public_players' => $public_players,
 						'faucet_policy' => $faucet_policy,
@@ -390,7 +392,9 @@ else {
 						'sec_per_faucet_claim' => $sec_per_faucet_claim,
 						'min_sec_between_claims' => $min_sec_between_claims,
 						'bonus_claims' => $bonus_claims,
-						'default_transaction_fee' => $default_transaction_fee
+						'default_transaction_fee' => $default_transaction_fee,
+						'min_buyin_amount' => $min_buyin_amount,
+						'min_sellout_amount' => $min_sellout_amount
 					]);
 					
 					$game->db_game['featured'] = $featured;
@@ -402,6 +406,8 @@ else {
 					$game->db_game['sec_per_faucet_claim'] = $sec_per_faucet_claim;
 					$game->db_game['bonus_claims'] = $bonus_claims;
 					$game->db_game['default_transaction_fee'] = $default_transaction_fee;
+					$game->db_game['min_buyin_amount'] = $min_buyin_amount;
+					$game->db_game['min_sellout_amount'] = $min_sellout_amount;
 					
 					$messages .= "Game internal settings have been updated.<br/>\n";
 				}
@@ -832,6 +838,14 @@ else {
 										<div class="form-group">
 											<label for="default_transaction_fee">When users join a game what should their default transaction fee be? (<?php echo $game->blockchain->db_blockchain['coin_name_plural']; ?>)</label>
 											<input type="text" class="form-control" name="default_transaction_fee" id="default_transaction_fee" value="<?php echo $game->db_game['default_transaction_fee']; ?>" />
+										</div>
+										<div class="form-group">
+											<label for="min_buyin_amount">What's the minimum <?php echo $game->db_game['coin_name']; ?> amount for buy-in transactions? (Helps prevent buy-ins that fail due to dust restrictions)</label>
+											<input type="text" class="form-control" name="min_buyin_amount" id="min_buyin_amount" value="<?php echo $game->db_game['min_buyin_amount']; ?>" />
+										</div>
+										<div class="form-group">
+											<label for="min_sellout_amount">What's the minimum <?php echo $game->db_game['coin_name']; ?> amount for sell-out transactions?</label>
+											<input type="text" class="form-control" name="min_sellout_amount" id="min_sellout_amount" value="<?php echo $game->db_game['min_sellout_amount']; ?>" />
 										</div>
 										
 										<input type="submit" class="btn btn-success" value="Save Settings" />

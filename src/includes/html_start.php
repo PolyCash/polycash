@@ -116,7 +116,7 @@ else if ($thisuser) $left_menu_open = $thisuser->db_user['left_menu_open'];
 				</ul>
 				<?php
 			}
-			if ($nav_tab_selected == "cards" || $nav_tab_selected == "accounts") { ?>
+			if ($nav_tab_selected == "cards" || ($nav_tab_selected == "accounts" && empty($game))) { ?>
 				<ul class="sidebar-menu" data-widget="tree">
 					<li class="header">Cards</li>
 					<li id="section_link_cards"><a href="/cards/?start_section=cards"<?php if ($nav_subtab_selected == "cards") echo ' onclick="thisPageManager.open_page_section(\'cards\'); return false;"'; ?>><i class="fa fa-address-book"></i> <span>My Cards</span></a></li>

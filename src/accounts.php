@@ -264,13 +264,24 @@ $nav_subtab_selected = "";
 
 if (!empty($_REQUEST['redirect_key'])) $redirect_url = $app->get_redirect_by_key($_REQUEST['redirect_key']);
 
+if (!empty($_REQUEST['account_id'])) {
+	$selected_account_id = (int) $_REQUEST['account_id'];
+	$selected_account = $app->fetch_account_by_id($selected_account_id);
+	
+	if (!empty($selected_account['game_id']) && $selected_account['user_id'] == $thisuser->db_user['user_id']) {
+		$db_game = $app->fetch_game_by_id($selected_account['game_id']);
+		$blockchain = new Blockchain($app, $db_game['blockchain_id']);
+		$game = new Game($blockchain, $db_game['game_id']);
+	}
+	$selected_account = null;
+}
+else $selected_account_id = false;
+
 include(AppSettings::srcPath().'/includes/html_start.php');
 ?>
 <div class="container-fluid">
 	<?php
 	if ($thisuser) {
-		if (!empty($_REQUEST['account_id'])) $selected_account_id = (int) $_REQUEST['account_id'];
-		else $selected_account_id = false;
 		?>
 		<script type="text/javascript">
 		thisPageManager.selected_account_id = <?php if ($selected_account_id) echo $selected_account_id; else echo 'false'; ?>;

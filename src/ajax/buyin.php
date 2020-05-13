@@ -94,8 +94,13 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 					$max_buyin_amount = $game_sale_amount/pow(10, $game->db_game['decimal_places'])/$exchange_rate;
 					if ($buyin_amount > $max_buyin_amount) {
 						$buyin_amount_ok = false;
-						$content_html .= '<p class="redtext">Don\'t send that many '.$buyin_blockchain->db_blockchain['coin_name_plural'].'. There are only '.$app->format_bignum($game_sale_amount/pow(10, $game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].' available ('.$app->format_bignum($max_buyin_amount)." ".$buyin_currency['abbreviation'].")</p>\n";
+						$content_html .= '<p class="text-danger">Don\'t send that many '.$buyin_blockchain->db_blockchain['coin_name_plural'].'. There are only '.$app->format_bignum($game_sale_amount/pow(10, $game->db_game['decimal_places'])).' '.$game->db_game['coin_name_plural'].' available ('.$app->format_bignum($max_buyin_amount)." ".$buyin_currency['abbreviation'].")</p>\n";
 					}
+				}
+				
+				if ($game->db_game['min_buyin_amount'] && $receive_amount < $game->db_game['min_buyin_amount']) {
+					$content_html .= '<p class="text-danger">Please deposit at least '.$game->db_game['min_buyin_amount']." ".$game->db_game['coin_name_plural'].".</p>\n";
+					$buyin_amount_ok = false;
 				}
 				
 				if ($buyin_amount_ok) {
@@ -162,7 +167,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 					if ($user_enters_game_amount) {
 						$content_html .= '
 						<div class="form-group">
-							<label for="buyin_amount">How many '.$game->db_game['coin_name_plural'].' do you want to receive?</label>
+							<label for="buyin_amount">How many '.$game->db_game['coin_name_plural'].' do you want to receive?'.($game->db_game['min_buyin_amount'] ? ' &nbsp; (Minimum: '.$game->db_game['min_buyin_amount'].')' : '').'</label>
 							<input type="text" class="form-control" id="buyin_amount" />
 						</div>';
 					}
@@ -183,7 +188,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 					$content_html .= '<button class="btn btn-primary" onclick="thisPageManager.manage_buyin(\'check_amount\');">Check</button>'."\n";
 				}
 				else {
-					$content_html .= '<p class="redtext">You can\'t buy '.$game->db_game['coin_name_plural'].' with '.$buyin_currency['abbreviation'].' here right now. '.$buyin_blockchain->db_blockchain['blockchain_name']." is not running on this node.</p>\n";
+					$content_html .= '<p class="text-danger">You can\'t buy '.$game->db_game['coin_name_plural'].' with '.$buyin_currency['abbreviation'].' here right now. '.$buyin_blockchain->db_blockchain['blockchain_name']." is not running on this node.</p>\n";
 				}
 			}
 			else {

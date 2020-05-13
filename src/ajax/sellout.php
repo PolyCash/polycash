@@ -28,7 +28,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 				else $exchange_rate = 0;
 				
 				$blockchain_sale_account = $game->check_set_blockchain_sale_account($ref_user, $sellout_currency);
-				$blockchain_sale_amount = $sellout_blockchain->account_balance($blockchain_sale_account['account_id'], true);
+				$blockchain_sale_amount = $sellout_blockchain->account_balance($blockchain_sale_account['account_id'], false);
 				$game_forsale_amount = ($blockchain_sale_amount/pow(10, $sellout_blockchain->db_blockchain['decimal_places']))*$exchange_rate;
 				
 				$output_obj = [];
@@ -64,7 +64,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 					if ($game->db_game['buyin_policy'] != 'for_sale' || $sellout_blockchain->db_blockchain['online'] == 1) {
 						$content_html .= '
 						<div class="form-group">
-							<label for="sellout_amount">How many '.$game->db_game['coin_name_plural'].' do you want to change?</label>
+							<label for="sellout_amount">How many '.$game->db_game['coin_name_plural'].' do you want to change?'.($game->db_game['min_sellout_amount'] ? ' &nbsp; (Minimum: '.$game->db_game['min_sellout_amount'].')' : '').'</label>
 							<div class="row">
 								<div class="col-sm-6">
 									<input type="text" class="form-control" id="sellout_amount" style="text-align: right;" />
@@ -90,7 +90,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 						</p>'."\n";
 					}
 					else {
-						$content_html .= '<p class="redtext">You can\'t sell '.$game->db_game['coin_name_plural'].' for '.$sellout_currency['abbreviation'].' here right now. '.$sellout_blockchain->db_blockchain['blockchain_name']." is not running on this node.</p>\n";
+						$content_html .= '<p class="text-danger">You can\'t sell '.$game->db_game['coin_name_plural'].' for '.$sellout_currency['abbreviation'].' here right now. '.$sellout_blockchain->db_blockchain['blockchain_name']." is not running on this node.</p>\n";
 					}
 				}
 				else if ($_REQUEST['action'] == "check_amount") {
@@ -98,17 +98,20 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 					$fee_amount = max(0, (float) $_REQUEST['fee_amount']);
 					
 					if ($account_balance < $sellout_amount*pow(10, $game->db_game['decimal_places'])) {
-						$content_html .= '<p class="redtext">You don\'t have that many '.$game->db_game['coin_name_plural'].'.</p>';
+						$content_html .= '<p class="text-danger">You don\'t have that many '.$game->db_game['coin_name_plural'].'.</p>';
+					}
+					else if ($game->db_game['min_sellout_amount'] && $sellout_amount < $game->db_game['min_sellout_amount']) {
+						$content_html .= '<p class="text-danger">Please change at least '.$game->db_game['min_sellout_amount'].' '.$game->db_game['coin_name_plural'].".</p>\n";
 					}
 					else {
 						$sellout_receive_amount = $sellout_amount/$exchange_rate - $fee_amount;
 						
 						if ($game->db_game['buyin_policy'] == "for_sale" && $sellout_amount > $game_forsale_amount) {
-							$content_html .= '<p class="redtext">Don\'t sell that many '.$game->db_game['coin_name_plural'].'. There are only '.$app->format_bignum($blockchain_sale_amount/pow(10, $sellout_blockchain->db_blockchain['decimal_places'])).' '.$sellout_blockchain->db_blockchain['coin_name_plural']." available.</p>\n";
+							$content_html .= '<p class="text-danger">Don\'t sell that many '.$game->db_game['coin_name_plural'].'. There are only '.$app->format_bignum($blockchain_sale_amount/pow(10, $sellout_blockchain->db_blockchain['decimal_places'])).' '.$sellout_blockchain->db_blockchain['coin_name_plural']." available.</p>\n";
 						}
 						else {
 							if ($sellout_receive_amount <= 0) {
-								$content_html .= '<p class="redtext">That\'s not enough to conver transaction fees.</p>';
+								$content_html .= '<p class="text-danger">That\'s not enough to conver transaction fees.</p>';
 							}
 							else {
 								$content_html .= '

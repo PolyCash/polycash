@@ -1894,7 +1894,7 @@ class Game {
 		if ($mature_ios->rowCount() == 0) {
 			$html .= "You need ".$this->db_game['coin_name_plural']." to bet. To deposit ".$this->db_game['coin_name_plural'].", visit <a href=\"/accounts/?account_id=".$user_game['account_id']."\">your accounts page</a> to see a list of your addresses.";
 			if ($this->db_game['buyin_policy'] != "none") {
-				$html .= '<br/><button class="btn btn-sm btn-success" style="margin-top: 8px;" onclick="thisPageManager.manage_buyin(\'initiate\');"><i class="fas fa-shopping-cart"></i> &nbsp; Buy '.$this->db_game['coin_name_plural'].'</button>';
+				$html .= '<br/><button class="btn btn-sm btn-success" style="margin-top: 8px;" onclick="thisPageManager.manage_buyin(\'initiate\');"><i class="fas fa-arrow-down"></i> &nbsp; Get '.$this->db_game['coin_name_plural'].'</button>';
 			}
 		}
 		$html .= "</p>\n";

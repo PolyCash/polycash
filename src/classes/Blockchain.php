@@ -1950,13 +1950,13 @@ class Blockchain {
 	}
 	
 	public function total_paid_to_address(&$db_address, $confirmed_only) {
-		$balance_q = "SELECT SUM(amount) FROM transaction_ios WHERE blockchain_id=:blockchain_id AND address_id=:address_id";
-		if ($confirmed_only) $balance_q .= " AND spend_status IN ('spent','unspent')";
+		$balance_q = "SELECT SUM(io.amount) FROM transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id WHERE t.blockchain_id=:blockchain_id AND io.address_id=:address_id";
+		if ($confirmed_only) $balance_q .= " AND t.block_id IS NOT NULL";
 		
 		return $this->app->run_query($balance_q, [
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
 			'address_id' => $db_address['address_id']
-		])->fetch()['SUM(amount)'];
+		])->fetch()['SUM(io.amount)'];
 	}
 	
 	public function address_balance_at_block(&$db_address, $block_id) {
