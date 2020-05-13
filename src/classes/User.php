@@ -20,6 +20,10 @@ class User {
 		return $this->synchronizer_token;
 	}
 	
+	public static function email_login_message() {
+		return "We just sent you a verification email. Please open your inbox and click the link to log in.";
+	}
+	
 	public function immature_balance(&$game, &$user_game) {
 		$query_params = [
 			'game_id' => $game->db_game['game_id'],
@@ -109,9 +113,11 @@ class User {
 				'api_access_code' => $this->app->random_string(32),
 				'display_currency_id' => $game->db_game['default_display_currency_id'],
 				'buyin_currency_id' => $game->db_game['default_buyin_currency_id'],
-				'created_at' => time()
+				'created_at' => time(),
+				'show_intro_message' => $game->fetch_featured_strategies()->rowCount() > 0 ? 1 : 0,
+				'prompt_notification_preference' => empty($this->db_user['notification_email']) ? 1 : 0
 			];
-			$new_user_game_q = "INSERT INTO user_games SET user_id=:user_id, game_id=:game_id, api_access_code=:api_access_code, show_intro_message=1, notification_preference='email', prompt_notification_preference=1, betting_mode='principal', display_currency_id=:display_currency_id, buyin_currency_id=:buyin_currency_id, created_at=:created_at";
+			$new_user_game_q = "INSERT INTO user_games SET user_id=:user_id, game_id=:game_id, api_access_code=:api_access_code, show_intro_message=:show_intro_message, notification_preference='email', prompt_notification_preference=:prompt_notification_preference, betting_mode='principal', display_currency_id=:display_currency_id, buyin_currency_id=:buyin_currency_id, created_at=:created_at";
 			if (!empty($this->db_user['payout_address_id'])) {
 				$new_user_game_q .= ", payout_address_id=:payout_address_id";
 				$new_user_game_params['payout_address_id'] = $this->db_user['payout_address_id'];
@@ -231,10 +237,6 @@ class User {
 			}
 			$login_user_q .= " WHERE user_id=:user_id;";
 			$this->app->run_query($login_user_q, $login_user_params);
-			
-			$this->app->run_query("UPDATE user_games ug JOIN users u ON ug.user_id=u.user_id SET ug.prompt_notification_preference=1 WHERE (ug.notification_preference='none' OR u.notification_email='') AND ug.user_id=:user_id AND ug.prompt_notification_preference=0;", [
-				'user_id' => $this->db_user['user_id']
-			]);
 			
 			if (!empty($_REQUEST['invite_key'])) {
 				$user_game = false;

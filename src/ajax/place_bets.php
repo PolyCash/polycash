@@ -65,7 +65,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 	$amount_sum = 0;
 	for ($i=0; $i<count($amounts); $i++) {
 		if ($amounts[$i] < 0) {
-			$app->output_message(5, "Invalid amount specified.", false);
+			$app->output_message(5, "Not enough ".$game->blockchain->db_blockchain['coin_name_plural']." to cover fees. You may need to merge in some ".$game->blockchain->db_blockchain['coin_name_plural'].".", false);
 			die();
 		}
 		$amount_sum += $amounts[$i];

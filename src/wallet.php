@@ -1225,23 +1225,27 @@ if ($thisuser && $game) {
 							<span aria-hidden="true">&times;</span>
 						</button>
 					</div>
-					<div class="modal-body">
-						<div class="form-group">
-							<label for="notification_preference">Would you like to receive notifications about the performance of your accounts?</label>
-							<select class="form-control" id="notification_preference" name="notification_preference" onchange="thisPageManager.notification_pref_changed();">
-								<option <?php if ($user_game['notification_preference'] == "none") echo 'selected="selected" '; ?>value="none">No, don't notify me</option>
-								<option <?php if ($user_game['notification_preference'] == "email") echo 'selected="selected" '; ?>value="email">Yes, send me email notifications</option>
-							</select>
+					<form method="post" onsubmit="thisPageManager.save_notification_preferences(); return false;">
+						<div class="modal-body">
+							<div class="form-group">
+								<label for="notification_preference">Would you like to receive notifications about the performance of your accounts?</label>
+								<select class="form-control" id="notification_preference" name="notification_preference" onchange="thisPageManager.notification_pref_changed();" required="true">
+									<option value="">-- Please Select --</option>
+									<option <?php if ($user_game['notification_preference'] == "none") echo 'selected="selected" '; ?>value="none">No, don't notify me</option>
+									<option <?php if ($user_game['notification_preference'] == "email") echo 'selected="selected" '; ?>value="email">Yes, send me email notifications</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<input <?php if ($user_game['notification_preference'] == "none") echo 'style="display: none;" '; ?>class="form-control" type="text" name="notification_email" id="notification_email" placeholder="Enter your email address" value="<?php echo $thisuser->db_user['notification_email']; ?>" />
+							</div>
+							<p class="text-success" id="notification_modal_message" style="margin-top: 10px;"></p>
 						</div>
-						<div class="form-group">
-							<input <?php if ($user_game['notification_preference'] == "none") echo 'style="display: none;" '; ?>class="form-control" type="text" name="notification_email" id="notification_email" placeholder="Enter your email address" value="<?php echo $thisuser->db_user['notification_email']; ?>" />
+						<div class="modal-footer">
+							<button type="button" class="btn btn-sm btn-warning" data-dismiss="modal"><i class="fas fa-times"></i> &nbsp; Close</button>
+							 &nbsp;&nbsp;or&nbsp;&nbsp; 
+							<button type="submit" id="notification_save_btn" class="btn btn-sm btn-success"><i class="fas fa-check-circle"></i> &nbsp; Save Notification Settings</button>
 						</div>
-					</div>
-					<div class="modal-footer">
-						<button type="button" class="btn btn-sm btn-warning" data-dismiss="modal"><i class="fas fa-times"></i> &nbsp; Close</button>
-						 &nbsp;&nbsp;or&nbsp;&nbsp; 
-						<button id="notification_save_btn" class="btn btn-sm btn-success" onclick="thisPageManager.save_notification_preferences();"><i class="fas fa-check-circle"></i> &nbsp; Save Notification Settings</button>
-					</div>
+					</form>
 				</div>
 			</div>
 		</div>

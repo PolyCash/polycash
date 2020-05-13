@@ -16,7 +16,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 		if ($action == "claim") {
 			$keep_claiming = true;
 			$claim_count = 0;
-			$max_claims = empty(AppSettings::getParam('faucet_max_claims_enabled')) ? 1 : 100;
+			$max_claims = 100;
 			
 			do {
 				$faucet_io = $game->check_faucet($user_game);

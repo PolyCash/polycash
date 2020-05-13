@@ -29,7 +29,7 @@ else {
 			
 			if ($matched_user) {
 				if ($matched_user['login_method'] == "email") {
-					$message = "We just sent you a verification email. Please open that email to log in.";
+					$message = User::email_login_message();
 					$status_code = 2;
 				}
 				else {
@@ -43,7 +43,7 @@ else {
 					$status_code = 4;
 				}
 				else {
-					$message = "We just sent you a verification email. Please open your inbox and click the link to finish creating your account.";
+					$message = User::email_login_message();
 					$status_code = 1;
 				}
 			}

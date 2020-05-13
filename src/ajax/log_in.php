@@ -7,6 +7,7 @@ if ($thisuser) {
 }
 else {
 	$noinfo_message = "Incorrect username or password, please try again.";
+	
 	$username = $app->normalize_username($_REQUEST['username']);
 	$password = $app->strong_strip_tags($_REQUEST['password']);
 	if ($password == hash("sha256", "")) $password = "";
@@ -20,7 +21,7 @@ else {
 		if (empty($password)) {
 			$ref_user = false;
 			$app->send_login_link($ref_user, $redirect_url, $username);
-			$message = "We just sent you a verification email. Please open that email to log in.";
+			$message = User::email_login_message();
 			$error_code = 3;
 		}
 		else {
@@ -70,7 +71,7 @@ else {
 		}
 		else {
 			$app->send_login_link($existing_user, $redirect_url, $username);
-			$message = "We just sent you a verification email. Please open that email to log in.";
+			$message = User::email_login_message();
 			$error_code = 3;
 		}
 	}
