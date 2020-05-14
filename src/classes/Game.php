@@ -885,7 +885,7 @@ class Game {
 			$html .= '<div class="col-sm-3"><a href="/explorer/games/'.$this->db_game['url_identifier'].'/events/'.$db_event['event_index'].'">'.$db_event['event_name'].'</a></div>';
 			$html .= '<div class="col-sm-4">';
 			
-			if ($db_event['outcome_index'] == -1) $html .= '<font class="redtext">Canceled</font>';
+			if ($db_event['outcome_index'] == -1) $html .= '<font class="text-warning">Refunded</font>';
 			else if ($db_event['payout_rule'] == "binary") {
 				if ($db_event['winning_option_id'] > 0) {
 					if (!empty($db_event['option_block_rule'])) {
@@ -4159,34 +4159,48 @@ class Game {
 	
 	public function display_buyins_by_user_game($user_game_id) {
 		$html = "";
+		
+		$html .= '<div class="row header_row"><div class="col-sm-3">Amount Deposited</div><div class="col-sm-3">Amount Received</div><div class="col-sm-6">Deposit Address</div></div>'."\n";
+		
 		$invoices = $this->blockchain->app->run_query("SELECT * FROM currency_invoices i JOIN addresses a ON i.address_id=a.address_id JOIN currencies c ON i.pay_currency_id=c.currency_id JOIN blockchains b ON  c.blockchain_id=b.blockchain_id WHERE i.invoice_type IN ('sale_buyin','join_buyin','buyin') AND i.user_game_id=:user_game_id ORDER BY i.invoice_id DESC;", ['user_game_id'=>$user_game_id]);
 		$num_invoices = $invoices->rowCount();
 		
-		while ($invoice = $invoices->fetch()) {
-			$html .= '<div class="row">';
-			$html .= '<div class="col-sm-3">'.$this->blockchain->app->format_bignum($invoice['confirmed_amount_paid']).' '.$invoice['coin_name_plural'].' paid</div>';
-			
-			$invoice_ios = $this->blockchain->app->invoice_ios_by_invoice($invoice['invoice_id']);
-			
-			$html .= '<div class="col-sm-3">';
-			if (count($invoice_ios) == 0) {
-				if ($invoice['confirmed_amount_paid'] == 0) $html .= 'Awaiting&nbsp;Payment';
-				else $html .= ucwords($invoice['status']);
-			}
-			else {
-				foreach ($invoice_ios as $invoice_io) {
-					$io = $this->blockchain->app->fetch_io_by_hash_out_index($this->blockchain->db_blockchain['blockchain_id'], $invoice_io['tx_hash'], $invoice_io['out_index']);
-					$game_amount = $this->game_amount_by_io($io['io_id']);
-					$html .= '<a target="_blank" href="/explorer/games/'.$this->db_game['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['game_out_index'].'/">'.$this->blockchain->app->format_bignum($game_amount/pow(10, $this->db_game['decimal_places']))." ".$this->db_game['coin_name_plural']."</a><br/>\n";
+		if ($invoices->rowCount() == 0) {
+			$html .= '<div class="row"><div class="col-sm-12">You don\'t have any buyin addresses yet.</div></div>'."\n";
+		}
+		else {
+			while ($invoice = $invoices->fetch()) {
+				$html .= '<div class="row content_row">';
+				$html .= '<div class="col-sm-3">';
+				$unconfirmed_amount_paid = $this->blockchain->total_paid_to_address($invoice, false)/pow(10, $this->blockchain->db_blockchain['decimal_places']);
+				if ($invoice['confirmed_amount_paid'] == $unconfirmed_amount_paid) $html .= $this->blockchain->app->format_bignum($invoice['confirmed_amount_paid']);
+				else $html .= '<font class="text-warning">'.$this->blockchain->app->format_bignum($unconfirmed_amount_paid);
+				$html .= ' '.$invoice['coin_name_plural'];
+				if ($invoice['confirmed_amount_paid'] != $unconfirmed_amount_paid) $html .= '</font>';
+				$html .= '</div>';
+				
+				$invoice_ios = $this->blockchain->app->invoice_ios_by_invoice($invoice['invoice_id']);
+				
+				$html .= '<div class="col-sm-3">';
+				if (count($invoice_ios) == 0) {
+					if ($invoice['confirmed_amount_paid'] == 0) $html .= 'Awaiting&nbsp;Payment';
+					else $html .= ucwords($invoice['status']);
 				}
+				else {
+					foreach ($invoice_ios as $invoice_io) {
+						$io = $this->blockchain->app->fetch_io_by_hash_out_index($this->blockchain->db_blockchain['blockchain_id'], $invoice_io['tx_hash'], $invoice_io['out_index']);
+						$game_amount = $this->game_amount_by_io($io['io_id']);
+						$html .= '<a target="_blank" href="/explorer/games/'.$this->db_game['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['game_out_index'].'/">'.$this->blockchain->app->format_bignum($game_amount/pow(10, $this->db_game['decimal_places']))." ".$this->db_game['coin_name_plural']."</a><br/>\n";
+					}
+				}
+				$html .= '</div>';
+				
+				$html .= '<div class="col-sm-6">';
+				if (time() > $invoice['expire_time'] - 3600*2) $html .= '<font class="redtext">Expired</font> &nbsp; ';
+				$html .= '<a target="_blank" href="/explorer/blockchains/'.$invoice['url_identifier'].'/addresses/'.$invoice['address'].'/">'.$invoice['address'].'</a>';
+				$html .= '</div>';
+				$html .= "</div>\n";
 			}
-			$html .= '</div>';
-			
-			$html .= '<div class="col-sm-6">';
-			if (time() > $invoice['expire_time'] - 3600*2) $html .= '<font class="redtext">Expired</font> &nbsp; ';
-			$html .= '<a target="_blank" href="/explorer/blockchains/'.$invoice['url_identifier'].'/addresses/'.$invoice['address'].'/">'.$invoice['address'].'</a>';
-			$html .= '</div>';
-			$html .= "</div>\n";
 		}
 		
 		return [$num_invoices, $html];
@@ -4194,37 +4208,47 @@ class Game {
 	
 	public function display_sellouts_by_user_game($user_game_id) {
 		$html = "";
+		$html .= '<div class="row header_row"><div class="col-sm-3">Change Amount</div><div class="col-sm-3">Amount Received</div><div class="col-sm-3">Deposit '.ucfirst($this->db_game['coin_name']).' Address</div><div class="col-sm-3">Receive Address</div></div>'."\n";
+		
 		$invoices = $this->blockchain->app->run_query("SELECT i.*, b.blockchain_id, b.decimal_places, b.url_identifier, b.coin_name_plural, a.address AS invoice_address, ra.address AS receiver_address FROM currency_invoices i JOIN addresses a ON i.address_id=a.address_id JOIN currencies c ON i.pay_currency_id=c.currency_id JOIN blockchains b ON  c.blockchain_id=b.blockchain_id JOIN addresses ra ON i.receive_address_id=ra.address_id WHERE i.invoice_type='sellout' AND i.user_game_id=:user_game_id ORDER BY i.invoice_id DESC;", ['user_game_id'=>$user_game_id]);
 		$num_invoices = $invoices->rowCount();
 		
-		while ($invoice = $invoices->fetch()) {
-			$html .= '<div class="row">';
-			if ($invoice['confirmed_amount_paid'] == 0) $display_amount_sold = $invoice['buyin_amount'];
-			else $display_amount_sold = $invoice['confirmed_amount_paid'];
-			$html .= '<div class="col-sm-3">'.$this->blockchain->app->format_bignum($display_amount_sold).' '.$this->db_game['coin_name_plural'].' sold</div>';
-			
-			$invoice_ios = $this->blockchain->app->invoice_ios_by_invoice($invoice['invoice_id']);
-			
-			$html .= '<div class="col-sm-3">';
-			if (count($invoice_ios) == 0) {
-				$html .= '<a target="_blank" href="/explorer/blockchains/'.$invoice['url_identifier'].'/addresses/'.$invoice['receiver_address'].'">';
-				if ($invoice['confirmed_amount_paid'] == 0) $html .= 'Pending';
-				else $html .= ucwords($invoice['status']);
-				$html .= '</a>';
-			}
-			else {
-				foreach ($invoice_ios as $invoice_io) {
-					$io = $this->blockchain->app->fetch_io_by_hash_out_index($invoice['blockchain_id'], $invoice_io['tx_hash'], $invoice_io['out_index']);
-					$html .= '<a target="_blank" href="/explorer/blockchains/'.$invoice['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['out_index'].'/">'.$this->blockchain->app->format_bignum($io['amount']/pow(10, $invoice['decimal_places']))." ".$invoice['coin_name_plural']."</a><br/>\n";
+		if ($num_invoices == 0) {
+			$html .= '<div class="row content_row"><div class="col-sm-12">You don\'t have any withdrawal addresses yet.</div></div>'."\n";
+		}
+		else {
+			while ($invoice = $invoices->fetch()) {
+				$html .= '<div class="row content_row">';
+				if ($invoice['confirmed_amount_paid'] == 0) $display_amount_sold = $invoice['buyin_amount'];
+				else $display_amount_sold = $invoice['confirmed_amount_paid'];
+				$html .= '<div class="col-sm-3">'.$this->blockchain->app->format_bignum($display_amount_sold).' '.$this->db_game['coin_name_plural'].' sold</div>';
+				
+				$invoice_ios = $this->blockchain->app->invoice_ios_by_invoice($invoice['invoice_id']);
+				
+				$html .= '<div class="col-sm-3">';
+				if (count($invoice_ios) == 0) {
+					if ($invoice['confirmed_amount_paid'] == 0) $html .= 'Pending';
+					else $html .= ucwords($invoice['status']);
 				}
+				else {
+					foreach ($invoice_ios as $invoice_io) {
+						$io = $this->blockchain->app->fetch_io_by_hash_out_index($invoice['blockchain_id'], $invoice_io['tx_hash'], $invoice_io['out_index']);
+						$html .= '<a target="_blank" href="/explorer/blockchains/'.$invoice['url_identifier']."/utxo/".$invoice_io['tx_hash']."/".$invoice_io['out_index'].'/">'.$this->blockchain->app->format_bignum($io['amount']/pow(10, $invoice['decimal_places']))." ".$invoice['coin_name_plural']."</a><br/>\n";
+					}
+				}
+				$html .= '</div>';
+				
+				$html .= '<div class="col-sm-3" style="overflow: hidden;">';
+				if (time() > $invoice['expire_time'] - 3600*2) $html .= '<font class="redtext">Expired</font> &nbsp; ';
+				$html .= '<a target="_blank" href="/explorer/games/'.$this->db_game['url_identifier'].'/addresses/'.$invoice['invoice_address'].'/">'.$invoice['invoice_address'].'</a>';
+				$html .= '</div>';
+				
+				$html .= '<div class="col-sm-3" style="overflow: hidden;">';
+				$html .= '<a target="_blank" href="/explorer/blockchains/'.$invoice['url_identifier'].'/addresses/'.$invoice['receiver_address'].'/">'.$invoice['receiver_address'].'</a>';
+				$html .= "</div>\n";
+				
+				$html .= "</div>\n";
 			}
-			$html .= '</div>';
-			
-			$html .= '<div class="col-sm-6">';
-			if (time() > $invoice['expire_time'] - 3600*2) $html .= '<font class="redtext">Expired</font> &nbsp; ';
-			$html .= '<a target="_blank" href="/explorer/games/'.$this->db_game['url_identifier'].'/addresses/'.$invoice['invoice_address'].'/">'.$invoice['invoice_address'].'</a>';
-			$html .= '</div>';
-			$html .= "</div>\n";
 		}
 		
 		return [$num_invoices, $html];

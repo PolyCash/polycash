@@ -534,11 +534,20 @@ a.selected {
 }
 .buyin_sellout_list {
 	border: 1px solid #aaa;
-	padding: 5px;
+	padding: 0px 5px;
 	margin: 5px 0px;
-	max-height: 100px;
+	max-height: 150px;
 	overflow-x: hidden;
 	overflow-y: scroll;
+}
+.buyin_sellout_list .row {
+	line-height: 200%;
+}
+.buyin_sellout_list .content_row:hover {
+	background-color: #f4f4f4;
+}
+.buyin_sellout_list .header_row {
+	border-bottom: 1px solid #aaa;
 }
 .my_bets_row {
 	line-height: 180%;

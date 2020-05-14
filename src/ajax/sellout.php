@@ -121,13 +121,15 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 								<p>
 									'.$sellout_amount.' '.$game->db_game['coin_name_plural'].' will get you approximately '.$app->format_bignum($sellout_receive_amount).' '.$sellout_currency['short_name_plural'].' after fees.
 								</p>
-								<div class="form-group">
-									<label for="sellout_blockchain_address">What address should your '.$sellout_currency['short_name_plural'].' be sent to?</label>
-									<input type="text" class="form-control" id="sellout_blockchain_address" />
-								</div>
-								<p>
-									<button class="btn btn-success" onclick="thisPageManager.manage_sellout(\'confirm\');">Sell '.$game->db_game['coin_name_plural'].'</button>
-								</p>';
+								<form method="post" onsubmit="thisPageManager.manage_sellout(\'confirm\'); return false;">
+									<div class="form-group">
+										<label for="sellout_blockchain_address">What address should your '.$sellout_currency['short_name_plural'].' be sent to?</label>
+										<input type="text" class="form-control" id="sellout_blockchain_address" required="true" />
+									</div>
+									<p>
+										<button type="submit" class="btn btn-success">Sell '.$game->db_game['coin_name_plural'].'</button>
+									</p>
+								</form>';
 							}
 						}
 					}
@@ -222,14 +224,18 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 					}
 				}
 				
-				if (in_array($_REQUEST['action'], ['initiate','confirm'])) {
+				if (in_array($_REQUEST['action'], ['initiate','confirm','refresh'])) {
 					list($num_invoices, $sellout_invoices_html) = $game->display_sellouts_by_user_game($user_game['user_game_id']);
+					
 					if ($num_invoices > 0) {
 						$invoices_html = '<p style="margin-top: 10px;">You have '.$num_invoices.' sellout';
 						if ($num_invoices != 1) $invoices_html .= 's';
-						$invoices_html .= '. <div class="buyin_sellout_list">'.$sellout_invoices_html."</div></p>\n";
-						$output_obj['invoices_html'] = $invoices_html;
+						$invoices_html .= ".</p>\n";
 					}
+					
+					$invoices_html .= '<div class="buyin_sellout_list">'.$sellout_invoices_html."</div>\n";
+					$output_obj['invoices_html'] = $invoices_html;
+					$output_obj['invoices_hash'] = AppSettings::standardHash($invoices_html);
 				}
 				
 				if (!empty($content_html)) $output_obj['content_html'] = $content_html;

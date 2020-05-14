@@ -125,6 +125,7 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 			}
 			else $content_html .= "There was an error loading this invoice.";
 		}
+		else if (!empty($_REQUEST['action']) && $_REQUEST['action'] == "refresh") {}
 		else {
 			$content_html = '<p>You can get '.$game->db_game['coin_name_plural'].' ('.$game->db_game['coin_abbreviation'].') by depositing another currency like Bitcoin or Litecoin here. If you already have '.$game->db_game['coin_name_plural'].' elsewhere and want to send them to this wallet, go to <a href="/wallet/'.$game->db_game['url_identifier'].'/?initial_tab=4">Send & Receive</a> instead.</p>'."\n";
 			
@@ -225,11 +226,14 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 		if ($num_buyin_invoices > 0) {
 			$invoices_html .= '<p>You have '.$num_buyin_invoices.' buyin address';
 			if ($num_buyin_invoices != 1) $invoices_html .= 'es';
-			$invoices_html .= '. <div class="buyin_sellout_list">'.$buyin_invoices_html."</div></p>\n";
+			$invoices_html .= '. ';
 		}
+		
+		$invoices_html .= '<div class="buyin_sellout_list">'.$buyin_invoices_html."</div></p>\n";
 		
 		$output_obj['content_html'] = $content_html;
 		$output_obj['invoices_html'] = $invoices_html;
+		$output_obj['invoices_hash'] = AppSettings::standardHash($invoices_html);
 		
 		$app->output_message(1, "", $output_obj);
 	}

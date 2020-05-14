@@ -515,6 +515,11 @@ var PageManager = function() {
 	this.remove_utxo_ms = 50;
 	this.avoid_bet_buffer_blocks = 1;
 	
+	this.buyin_modal_open = false;
+	this.buyin_invoices_hash = "";
+	this.sellout_modal_open = false;
+	this.sellout_invoices_hash = "";
+	
 	this.format_coins = function(amount) {
 		if (amount >= Math.pow(10, 9)) {
 			return parseFloat((amount/Math.pow(10, 9)).toPrecision(5))+"B";
@@ -1820,7 +1825,9 @@ var PageManager = function() {
 			}
 		}
 		
-		$('#buyin_modal_details').hide();
+		if (action == "initiate" || action == "check_amount") {
+			$('#buyin_modal_details').hide();
+		}
 		
 		$.ajax({
 			url: "/ajax/buyin.php",
@@ -1829,20 +1836,37 @@ var PageManager = function() {
 			context: this,
 			success: function(buyin_response) {
 				if (action == "initiate") {
+					this.buyin_modal_open = true;
+					this.refresh_display_buyins();
+					
 					$('#buyin_modal_content').html(buyin_response.content_html);
 					$('#buyin_modal_invoices').html(buyin_response.invoices_html);
 					$('#buyin_modal').modal('show');
+					
 					setTimeout(function() {$('#buyin_amount').focus()}, 500);
+				}
+				else if (action == "refresh") {
+					if (this.buyin_invoices_hash != buyin_response.invoices_hash) {
+						$('#buyin_modal_invoices').html(buyin_response.invoices_html);
+						this.buyin_invoices_hash = buyin_response.invoices_hash;
+					}
 				}
 				else if (action == 'check_amount') {
 					$('#buyin_modal_details').html(buyin_response.content_html);
 					$('#buyin_modal_details').slideDown('fast');
 					$('#buyin_modal_invoices').html(buyin_response.invoices_html);
+					
 					this.invoice_id = buyin_response.invoice_id;
 				}
 			}
 		});
-	}
+	};
+	this.refresh_display_buyins = function() {
+		if (this.buyin_modal_open) {
+			this.manage_buyin('refresh');
+			setTimeout(function() {this.refresh_display_buyins()}.bind(this), 3000);
+		}
+	};
 	this.change_sellout_currency = function(select_element) {
 		this.manage_sellout('initiate', select_element.value);
 	};
@@ -1863,14 +1887,18 @@ var PageManager = function() {
 			sellout_params.address = $('#sellout_blockchain_address').val();
 		}
 		
-		if (action != 'confirm') $('#sellout_modal_details').hide();
+		if (action != 'confirm' && action != 'refresh') $('#sellout_modal_details').hide();
 		
 		$.ajax({
 			url: "/ajax/sellout.php",
 			data: sellout_params,
 			dataType: "json",
+			context: this,
 			success: function(sellout_response) {
 				if (action == "initiate") {
+					this.sellout_modal_open = true;
+					this.refresh_display_sellouts();
+					
 					$('#sellout_modal_content').html(sellout_response.content_html);
 					$('#sellout_modal_invoices').html(sellout_response.invoices_html);
 					$('#sellout_modal').modal('show');
@@ -1881,13 +1909,25 @@ var PageManager = function() {
 					$('#sellout_modal_details').html(sellout_response.content_html);
 					$('#sellout_modal_details').slideDown('fast');
 				}
+				else if (action == "refresh") {
+					if (this.sellout_invoices_hash != sellout_response.invoices_hash) {
+						$('#sellout_modal_invoices').html(sellout_response.invoices_html);
+						this.sellout_invoices_hash = sellout_response.invoices_hash;
+					}
+				}
 				else {
 					$('#sellout_modal_invoices').html(sellout_response.invoices_html);
 					alert(sellout_response.message);
 				}
 			}
 		});
-	}
+	};
+	this.refresh_display_sellouts = function() {
+		if (this.sellout_modal_open) {
+			this.manage_sellout('refresh');
+			setTimeout(function() {this.refresh_display_sellouts()}.bind(this), 3000);
+		}
+	};
 	this.scramble_strategy = function(strategy_id) {
 		var btn_default_text = $('#scramble_plan_btn').html();
 		var btn_loading_text = "Randomizing...";
