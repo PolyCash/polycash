@@ -2,10 +2,6 @@
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 require_once(dirname(dirname(__FILE__))."/classes/CoinbaseClient.php");
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 $script_start_time = microtime(true);
 
 $allowed_params = ['print_debug'];
@@ -81,30 +77,6 @@ if ($app->running_as_admin()) {
 								
 								echo "avail: ".$avail_amount."\n";
 								
-								$buy_amount = max($add_amount-$avail_amount, $min_buy_amounts[$sale_account['abbreviation']]);
-								
-								echo "buy: ".$buy_amount."\n";
-								
-								list($buy_order, $returned_headers, $error_message) = $client->apiRequest("/orders", "POST", [
-									"size" => $buy_amount,
-									"side" => "buy",
-									"type" => "market",
-									"product_id" => $sale_account['abbreviation']."-USD"
-								]);
-								
-								if (!empty($buy_order->id)) echo "order: ".$buy_order->id."\n";
-								else echo json_encode([$buy_order, $error_message], JSON_PRETTY_PRINT)."\n";
-								
-								usleep(50000);
-								
-								list($cb_accounts, $returned_headers, $error_message) = $client->apiRequest("/accounts", "GET", [
-									'currency' => $sale_account['abbreviation']
-								]);
-								
-								$accounts_by_abbrev = AppSettings::arrayToMapOnKey($cb_accounts, "currency");
-								
-								$avail_amount = $accounts_by_abbrev[$sale_account['abbreviation']]->available;
-								
 								if ($avail_amount >= $add_amount) {
 									echo "send: ".$add_amount."\n";
 									
@@ -134,6 +106,7 @@ if ($app->running_as_admin()) {
 										}
 									}
 								}
+								else echo "not enough\n";
 							}
 						}
 						else {
@@ -193,23 +166,6 @@ if ($app->running_as_admin()) {
 									else echo "not enough ".$blockchains_by_id[$sale_account['blockchain_id']]->db_blockchain['coin_name_plural']." to complete the send\n";
 								}
 								else echo "not enough confirmed ".$blockchains_by_id[$sale_account['blockchain_id']]->db_blockchain['coin_name_plural']."\n";
-							}
-							
-							if ($successful_send) {
-								echo "sell: ".$sell_amount_float."\n";
-								
-								if ($accounts_by_abbrev[$sale_account['abbreviation']]->available > $sell_amount_float) {
-									list($sell_order, $returned_headers, $error_message) = $client->apiRequest("/orders", "POST", [
-										"size" => (string) $sell_amount_float,
-										"side" => "sell",
-										"type" => "market",
-										"product_id" => $sale_account['abbreviation']."-USD"
-									]);
-									
-									if (!empty($sell_order->id)) echo "order: ".$sell_order->id."\n";
-									else echo json_encode([$error_message, $sell_order], JSON_PRETTY_PRINT)."\n";
-								}
-								else echo "can't afford it\n";
 							}
 						}
 					}

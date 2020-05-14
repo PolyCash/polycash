@@ -931,7 +931,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					$transaction_ids = [];
 					$transaction_ios = [];
 					
-					$transactions_by_address = $app->run_query("SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id WHERE t.blockchain_id=:blockchain_id AND i.address_id=:address_id GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;", [
+					$transactions_by_address = $app->run_query("SELECT *, t.amount as amount FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.create_transaction_id WHERE t.blockchain_id=:blockchain_id AND i.address_id=:address_id GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;", [
 						'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
 						'address_id' => $address['address_id']
 					]);
@@ -941,7 +941,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						array_push($transaction_ios, $transaction_io);
 					}
 					
-					$transactions_by_address = $app->run_query("SELECT * FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.spend_transaction_id WHERE t.blockchain_id=:blockchain_id AND i.address_id=:address_id GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;", [
+					$transactions_by_address = $app->run_query("SELECT *, t.amount as amount FROM transactions t JOIN transaction_ios i ON t.transaction_id=i.spend_transaction_id WHERE t.blockchain_id=:blockchain_id AND i.address_id=:address_id GROUP BY t.transaction_id ORDER BY t.transaction_id ASC;", [
 						'blockchain_id' => $blockchain->db_blockchain['blockchain_id'],
 						'address_id' => $address['address_id']
 					]);

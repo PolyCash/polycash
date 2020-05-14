@@ -1,5 +1,6 @@
 <?php
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
+require_once(dirname(dirname(__FILE__))."/classes/CoinbaseClient.php");
 
 $script_start_time = microtime(true);
 
@@ -183,11 +184,40 @@ if ($app->running_as_admin()) {
 							'invoice_id' => $invoice_address['invoice_id']
 						]);
 						
-						$app->run_query("INSERT INTO currency_invoice_ios SET invoice_id=:invoice_id, tx_hash=:tx_hash, out_index=:out_index, game_out_index=:game_out_index;", [
+						$invoice_io_extra_info = [];
+						
+						if (!empty(AppSettings::getParam('coinbase_key'))) {
+							$coinbase_client = new CoinbaseClient(AppSettings::getParam('coinbase_key'), AppSettings::getParam('coinbase_secret'), AppSettings::getParam('coinbase_passphrase'));
+							
+							echo "sell: ".$amount_paid_float."\n";
+							
+							list($sell_order, $returned_headers, $error_message) = $coinbase_client->apiRequest("/orders", "POST", [
+								"size" => (string) $amount_paid_float,
+								"side" => "sell",
+								"type" => "market",
+								"product_id" => $pay_currency['abbreviation']."-USD"
+							]);
+							
+							$invoice_io_extra_info['order'] = $sell_order;
+							
+							if (!empty($sell_order->id)) {
+								echo "order: ".$sell_order->id."\n";
+								
+								sleep(1);
+								
+								list($fulfillments, $returned_headers, $error_message) = $coinbase_client->apiRequest("/fills", "GET", ['order_id' => $sell_order->id]);
+								
+								$invoice_io_extra_info['fulfillments'] = $fulfillments;
+							}
+							else echo json_encode([$error_message, $sell_order], JSON_PRETTY_PRINT)."\n";
+						}
+						
+						$app->run_query("INSERT INTO currency_invoice_ios SET invoice_id=:invoice_id, tx_hash=:tx_hash, out_index=:out_index, game_out_index=:game_out_index, extra_info=:extra_info;", [
 							'invoice_id' => $invoice_address['invoice_id'],
 							'tx_hash' => $pay_tx_hash,
 							'out_index' => $pay_out_index,
-							'game_out_index' => $pay_game_out_index
+							'game_out_index' => $pay_game_out_index,
+							'extra_info' => json_encode($invoice_io_extra_info, JSON_PRETTY_PRINT)
 						]);
 					}
 					else if ($print_debug) echo "failed to create a transaction.\n";
@@ -277,9 +307,39 @@ if ($app->running_as_admin()) {
 									'invoice_id' => $invoice_address['invoice_id']
 								]);
 								
-								$app->run_query("INSERT INTO currency_invoice_ios SET invoice_id=:invoice_id, tx_hash=:tx_hash, out_index=0, game_out_index=NULL;", [
+								$invoice_io_extra_info = [];
+								
+								if (!empty(AppSettings::getParam('coinbase_key'))) {
+									$coinbase_client = new CoinbaseClient(AppSettings::getParam('coinbase_key'), AppSettings::getParam('coinbase_secret'), AppSettings::getParam('coinbase_passphrase'));
+									
+									$fulfill_buy_amount = $sellout_amount_int/pow(10, $sellout_blockchain->db_blockchain['decimal_places']);
+									echo "fulfill buy: ".$fulfill_buy_amount."\n";
+									
+									list($buy_order, $returned_headers, $error_message) = $coinbase_client->apiRequest("/orders", "POST", [
+										"size" => (string) $fulfill_buy_amount,
+										"side" => "buy",
+										"type" => "market",
+										"product_id" => $sellout_currency['abbreviation']."-USD"
+									]);
+									
+									$invoice_io_extra_info['order'] = $buy_order;
+									
+									if (!empty($buy_order->id)) {
+										echo "order: ".$buy_order->id."\n";
+										
+										sleep(1);
+									
+										list($fulfillments, $returned_headers, $error_message) = $coinbase_client->apiRequest("/fills", "GET", ['order_id' => $buy_order->id]);
+										
+										$invoice_io_extra_info['fulfillments'] = $fulfillments;
+									}
+									else echo json_encode([$buy_order, $error_message], JSON_PRETTY_PRINT)."\n";
+								}
+								
+								$app->run_query("INSERT INTO currency_invoice_ios SET invoice_id=:invoice_id, tx_hash=:tx_hash, out_index=0, game_out_index=NULL, extra_info=:extra_info;", [
 									'invoice_id' => $invoice_address['invoice_id'],
-									'tx_hash' => $transaction['tx_hash']
+									'tx_hash' => $transaction['tx_hash'],
+									'extra_info' => json_encode($invoice_io_extra_info, JSON_PRETTY_PRINT)
 								]);
 							}
 							
@@ -288,7 +348,7 @@ if ($app->running_as_admin()) {
 								else echo "Failed to create the transaction: ".$error_message."\n";
 							}
 						}
-						else if ($print_debug) echo "Couldn't find an remainder address.\n";
+						else if ($print_debug) echo "Couldn't find a remainder address.\n";
 					}
 					else if ($print_debug) echo "Invalid payment amount.\n";
 				}
