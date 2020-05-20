@@ -4,6 +4,10 @@ $script_start_time = microtime(true);
 require(AppSettings::srcPath().'/includes/connect.php');
 require(AppSettings::srcPath().'/includes/get_session.php');
 
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST');
+header("Access-Control-Allow-Headers: X-Requested-With");
+
 $uri = $_SERVER['REQUEST_URI'];
 $uri_parts = explode("/", $uri);
 
@@ -433,10 +437,12 @@ if ($uri_parts[1] == "api") {
 				
 				$event_vars = [
 					'event_id',
+					'event_index',
 					'event_type_id',
 					'event_name',
 					'event_starting_block',
 					'event_final_block',
+					'payout_rate',
 					'option_name',
 					'option_name_plural'
 				];
@@ -444,7 +450,8 @@ if ($uri_parts[1] == "api") {
 				for ($i=0; $i<count($game->current_events); $i++) {
 					for ($j=0; $j<count($event_vars); $j++) {
 						$api_event[$event_vars[$j]] = $game->current_events[$i]->db_event[$event_vars[$j]];
-						if (in_array($event_vars[$j], ['event_id', 'event_type_id', 'event_starting_block', 'event_final_block'])) $api_event[$event_vars[$j]] = (int) $api_event[$event_vars[$j]];
+						if (in_array($event_vars[$j], ['event_id', 'event_index', 'event_type_id', 'event_starting_block', 'event_final_block'])) $api_event[$event_vars[$j]] = (int) $api_event[$event_vars[$j]];
+						else if ($event_vars[$j] == "payout_rate") $api_event[$event_vars[$j]] = (float) $api_event[$event_vars[$j]];
 					}
 					$api_event['options'] = [];
 					
