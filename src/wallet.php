@@ -350,7 +350,6 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 	$aggregate_threshold = intval($_REQUEST['aggregate_threshold']);
 	$api_url = $app->strong_strip_tags($_REQUEST['api_url']);
 	if ($voting_strategy == "hit_url") $api_url = $app->strong_strip_tags($_REQUEST['hit_api_url']);
-	$by_rank_csv = "";
 	
 	if ($voting_strategy_id > 0) {
 		$user_strategy = $app->fetch_strategy_by_id($voting_strategy_id);
@@ -564,7 +563,7 @@ if ($thisuser && $game) {
 		$from_block_id = ($plan_start_round-1)*$game->db_game['round_length']+1;
 		$to_block_id = ($plan_stop_round-1)*$game->db_game['round_length']+1;
 		
-		$initial_load_events = $app->run_query("SELECT * FROM events e JOIN event_types t ON e.event_type_id=t.event_type_id WHERE e.game_id=:game_id AND e.event_starting_block >= :from_block_id AND e.event_starting_block <= :to_block_id ORDER BY e.event_id ASC;", [
+		$initial_load_events = $app->run_query("SELECT * FROM events WHERE game_id=:game_id AND event_starting_block >= :from_block_id AND event_starting_block <= :to_block_id ORDER BY event_id ASC;", [
 			'game_id' => $game->db_game['game_id'],
 			'from_block_id' => $from_block_id,
 			'to_block_id' => $to_block_id
@@ -576,7 +575,7 @@ if ($thisuser && $game) {
 			if ($i == 0) echo "games[0].all_events_start_index = ".$db_event['event_index'].";\n";
 			else if ($i == $num_initial_load_events-1) echo "games[0].all_events_stop_index = ".$db_event['event_index'].";\n";
 			
-			echo "games[0].all_events[".$db_event['event_index']."] = new GameEvent(games[0], ".$i.", ".$db_event['event_id'].", ".$db_event['event_index'].", ".$db_event['num_voting_options'].', "'.$db_event['vote_effectiveness_function'].'", "'.$db_event['effectiveness_param1'].'", '.$app->quote_escape($db_event['event_name']).", ".$db_event['event_starting_block'].", ".$db_event['event_final_block'].", ".$db_event['payout_rate'].");\n";
+			echo "games[0].all_events[".$db_event['event_index']."] = new GameEvent(games[0], ".$i.", ".$db_event['event_id'].", ".$db_event['event_index'].", ".$db_event['num_options'].', "'.$db_event['vote_effectiveness_function'].'", "'.$db_event['effectiveness_param1'].'", '.$app->quote_escape($db_event['event_name']).", ".$db_event['event_starting_block'].", ".$db_event['event_final_block'].", ".$db_event['payout_rate'].");\n";
 			echo "games[0].all_events_db_id_to_index[".$db_event['event_id']."] = ".$db_event['event_index'].";\n";
 			
 			$options_by_event = $app->fetch_options_by_event($db_event['event_id']);
@@ -986,64 +985,6 @@ if ($thisuser && $game) {
 								<a href="/api/about/">API documentation</a><br/>
 							</div>
 						</div>
-						
-						<?php /*
-						<div class="row bordered_row">
-							<div class="col-md-2">
-								<input type="radio" id="voting_strategy_by_entity" name="voting_strategy" value="by_entity"<?php if ($user_strategy['voting_strategy'] == "by_entity") echo ' checked="checked"'; ?>><label class="plainlabel" for="voting_strategy_by_entity">&nbsp;Vote&nbsp;by&nbsp;option</label>
-							</div>
-							<div class="col-md-10">
-								<label class="plainlabel" for="voting_strategy_by_entity"> 
-									Vote for these options every time. The percentages you enter below must add up to 100.<br/>
-									<a href="" onclick="thisPageManager.by_entity_reset_pct(); return false;">Set all to zero</a> <div style="margin-left: 15px; display: inline-block;" id="entity_pct_subtotal">&nbsp;</div>
-								</label><br/>
-								<?php
-								$entities_by_game = $game->entities_by_game();
-								$entity_i = 0;
-								while ($entity = $entities_by_game->fetch()) {
-									$pct_points = $app->run_query("SELECT * FROM user_strategy_entities WHERE strategy_id=:strategy_id AND entity_id=:entity_id;", [
-										'strategy_id' => $user_strategy['strategy_id'],
-										'entity_id' => $entity['entity_id']
-									])->fetch()['pct_points'];
-									
-									if ($entity_i%4 == 0) echo '<div class="row">';
-									echo '<div class="col-md-3">';
-									echo '<input type="tel" size="4" name="entity_pct_'.$entity['entity_id'].'" id="entity_pct_'.$entity_i.'" placeholder="0" value="'.$pct_points.'" />';
-									echo '<label class="plainlabel" for="entity_pct_'.$entity_i.'">% ';
-									echo $entity['entity_name']."</label>";
-									echo '</div>';
-									if ($entity_i%4 == 3) echo "</div>\n";
-									$entity_i++;
-								}
-								if ($entity_i%4 != 0) echo "</div>\n";
-								?>
-							</div>
-						</div>
-						<div class="row bordered_row">
-							<div class="col-md-2">
-								<input type="radio" id="voting_strategy_by_rank" name="voting_strategy" value="by_rank"<?php if ($user_strategy['voting_strategy'] == "by_rank") echo ' checked'; ?>><label class="plainlabel" for="voting_strategy_by_rank">&nbsp;Vote&nbsp;by&nbsp;rank</label>
-							</div>
-							<div class="col-md-10">
-								<label class="plainlabel" for="voting_strategy_by_rank">
-									Split up my free balance and vote it across options ranked:
-								</label><br/>
-								<input type="checkbox" id="rank_check_all" onchange="thisPageManager.rank_check_all_changed();" /><label class="plainlabel" for="rank_check_all"> All</label><br/>
-								<?php
-								$by_rank_ranks = explode(",", $user_strategy['by_rank_ranks']);
-								
-								for ($rank=1; $rank<=$game->db_game['num_voting_options']; $rank++) {
-									if ($rank%4 == 1) echo '<div class="row">';
-									echo '<div class="col-md-3">';
-									echo '<input type="checkbox" name="by_rank_'.$rank.'" id="by_rank_'.$rank.'" value="1"';
-									if (in_array($rank, $by_rank_ranks)) echo ' checked="checked"';
-									echo '><label class="plainlabel" for="by_rank_'.$rank.'"> '.$app->to_ranktext($rank)."</label>";
-									echo '</div>';
-									if ($rank%4 == 0 || $rank == $game->db_game['num_voting_options']) echo "</div>\n";
-								}
-								?>
-							</div>
-						</div>
-						*/ ?>
 						<div class="row bordered_row">
 							<div class="col-md-2">
 								<input type="radio" id="voting_strategy_by_plan" name="voting_strategy" value="by_plan"<?php if ($user_strategy['voting_strategy'] == "by_plan") echo ' checked="checked"'; ?>><label class="plainlabel" for="voting_strategy_by_plan">&nbsp;Plan&nbsp;my&nbsp;votes</label>

@@ -77,13 +77,13 @@ var PlanRound = function(round_id) {
 	this.event_ids = [];
 	this.sum_points = 0;
 };
-var GameEvent = function(game, game_event_index, event_id, real_event_index, num_voting_options, vote_effectiveness_function, effectiveness_param1, option_block_rule, event_name, event_starting_block, event_final_block, payout_rate) {
+var GameEvent = function(game, game_event_index, event_id, real_event_index, num_options, vote_effectiveness_function, effectiveness_param1, option_block_rule, event_name, event_starting_block, event_final_block, payout_rate) {
 	this.game = game;
 	this.game_event_index = game_event_index;
 	this.event_id = event_id;
 	this.real_event_index = real_event_index;
 	
-	this.num_voting_options = num_voting_options;
+	this.num_options = num_options;
 	this.vote_effectiveness_function = vote_effectiveness_function;
 	this.effectiveness_param1 = effectiveness_param1;
 	this.option_block_rule = option_block_rule;
@@ -682,7 +682,7 @@ var PageManager = function() {
 	this.rank_check_all_changed = function() {
 		var set_checked = false;
 		if ($('#rank_check_all').is(":checked")) set_checked = true;
-		for (var i=1; i<=games[0].num_voting_options; i++) {
+		for (var i=1; i<=games[0].num_options; i++) {
 			$('#by_rank_'+i).prop("checked", set_checked);
 		}
 	}
@@ -694,7 +694,7 @@ var PageManager = function() {
 		}
 	}
 	this.by_entity_reset_pct = function() {
-		for (var option_id=1; option_id<=games[0].num_voting_options; option_id++) {
+		for (var option_id=1; option_id<=games[0].num_options; option_id++) {
 			$('#option_pct_'+option_id).val("0");
 		}
 	}
