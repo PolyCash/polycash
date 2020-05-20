@@ -820,7 +820,7 @@ class Blockchain {
 					
 					if ($input_io['is_coinbase'] == 1) {
 						if (empty($events_by_option_id[$input_io['option_id']])) {
-							$db_event = $this->app->run_query("SELECT ev.*, et.* FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id WHERE ev.event_id=:event_id;", [
+							$db_event = $this->app->run_query("SELECT * FROM events WHERE event_id=:event_id;", [
 								'event_id' => $input_io['event_id']
 							])->fetch();
 							$events_by_option_id[$input_io['option_id']] = new Event($color_game, $db_event, false);
@@ -906,7 +906,7 @@ class Blockchain {
 								
 								if (!empty($events_by_option_id[$option_id])) $event = $events_by_option_id[$option_id];
 								else {
-									$db_event = $this->app->run_query("SELECT ev.*, et.* FROM options op JOIN events ev ON op.event_id=ev.event_id JOIN event_types et ON ev.event_type_id=et.event_type_id WHERE op.option_id=:option_id;", [
+									$db_event = $this->app->run_query("SELECT ev.* FROM options op JOIN events ev ON op.event_id=ev.event_id WHERE op.option_id=:option_id;", [
 										'option_id' => $option_id
 									])->fetch();
 									$events_by_option_id[$option_id] = new Event($color_game, $db_event, false);

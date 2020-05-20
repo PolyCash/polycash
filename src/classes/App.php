@@ -399,18 +399,17 @@ class App {
 	public function generate_game_by_type($game_type, $default_blockchain_id) {
 		$blockchain = new Blockchain($this, $default_blockchain_id);
 		
-		$skip_game_type_vars = ['name','url_identifier','target_open_games','default_game_winning_inflation','default_logo_image_id','identifier_case_sensitive'];
+		$skip_game_type_vars = ['name','url_identifier','target_open_games','default_logo_image_id','identifier_case_sensitive'];
 		
 		$series_index = (int)($this->run_query("SELECT MAX(game_series_index) FROM games WHERE game_type_id=:game_type_id;", ['game_type_id'=>$game_type['game_type_id']])->fetch()['MAX(game_series_index)']+1);
 		
 		$game_name = $game_type['name'];
-		if ($game_type['event_rule'] == "entity_type_option_group") $game_name .= $series_index;
+		if ($series_index > 0) $game_name .= $series_index;
 		
 		$new_game_params = [
 			'game_series_index' => $series_index,
 			'name' => $game_name,
 			'url_identifier' => $this->game_url_identifier($game_name),
-			'game_winning_inflation' => $game_type['default_game_winning_inflation'],
 			'logo_image_id' => $game_type['default_logo_image_id']
 		];
 		
@@ -1783,9 +1782,6 @@ class App {
 			['string', 'genesis_tx_hash', true],
 			['int', 'genesis_amount', true],
 			['int', 'game_starting_block', true],
-			['string', 'game_winning_rule', true],
-			['string', 'game_winning_field', true],
-			['float', 'game_winning_inflation', true],
 			['float', 'default_payout_rate', true],
 			['string', 'default_vote_effectiveness_function', true],
 			['string', 'default_effectiveness_param1', true],

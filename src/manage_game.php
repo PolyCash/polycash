@@ -645,11 +645,8 @@ else {
 										</div>
 										<div class="form-group">
 											<label for="game_form_event_rule">Event rule:</label>
-											<select id="game_form_event_rule" class="form-control" onchange="thisPageManager.game_form_event_rule_changed();">
+											<select id="game_form_event_rule" class="form-control">
 												<option value="game_definition">Game definition</option>
-												<option value="single_event_series">Single, repeating event</option>
-												<option value="entity_type_option_group">One event for each item in a group</option>
-												<option value="all_pairs">Head to head between all options</option>
 											</select>
 										</div>
 										<div class="form-group">
@@ -670,23 +667,6 @@ else {
 												}
 												?>
 											</select>
-										</div>
-										<div id="game_form_event_rule_entity_type_option_group">
-											<div class="form-group">
-												<label for="game_form_events_per_round">Events per round:</label>
-												<input class="form-control" type="text" id="game_form_events_per_round" style="text-align: right" />
-											</div>
-											<div class="form-group">
-												<label for="game_form_event_entity_type_id">One event for each of these:</label>
-												<select id="game_form_event_entity_type_id" class="form-control">
-													<?php
-													$all_entity_types = $app->run_query("SELECT * FROM entity_types ORDER BY entity_name ASC;");
-													while ($entity_type = $all_entity_types->fetch()) {
-														echo '<option value="'.$entity_type['entity_type_id'].'">'.$entity_type['entity_name']."</option>\n";
-													}
-													?>
-												</select>
-											</div>
 										</div>
 										<div class="form-group">
 											<label for="game_form_default_betting_mode">Default betting mode:</label>
