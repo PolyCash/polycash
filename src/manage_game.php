@@ -1048,6 +1048,11 @@ else {
 					<?php
 				}
 				else if ($next_action == "currency_conversions") {
+					$usd_currency = $app->fetch_currency_by_abbreviation("USD");
+					$coins_in_existence_float = ($game->coins_in_existence(false, true)+$game->pending_bets(true))/pow(10, $game->db_game['decimal_places']);
+					$game_escrow_value_usd = $game->escrow_value_in_currency($usd_currency['currency_id'], $coins_in_existence_float);
+					$usd_per_game_coin = $game_escrow_value_usd/$coins_in_existence_float;
+					
 					$currency_conversions = $app->run_query("SELECT i.invoice_id, i.invoice_type, i.confirmed_amount_paid, c.blockchain_id, b.decimal_places, b.url_identifier, b.coin_name_plural, c.abbreviation, u.username, a.address FROM currency_invoices i JOIN user_games ug ON i.user_game_id=ug.user_game_id JOIN users u ON ug.user_id=u.user_id JOIN currencies c ON i.pay_currency_id=c.currency_id JOIN blockchains b ON c.blockchain_id=b.blockchain_id JOIN addresses a ON i.address_id=a.address_id WHERE i.invoice_type IN ('sale_buyin', 'sellout') AND i.status != 'unpaid' AND ug.game_id=:game_id;", ['game_id' => $game->db_game['game_id']])->fetchAll();
 					?>
 					<div class="row">
@@ -1057,6 +1062,13 @@ else {
 									<div class="panel-title">Currency conversions for <?php echo $game->db_game['name']." (#".$game->db_game['game_id'].")"; ?></div>
 								</div>
 								<div class="panel-body">
+									<div class="row" style="font-weight: bold;">
+										<div class="col-sm-2">User</div>
+										<div class="col-sm-1">Type</div>
+										<div class="col-sm-3">User Converted</div>
+										<div class="col-sm-3">Fulfillment(s)</div>
+										<div class="col-sm-3">Net Gain or Loss</div>
+									</div>
 									<?php
 									foreach ($currency_conversions as $currency_conversion) {
 										$invoice_ios = $app->invoice_ios_by_invoice($currency_conversion['invoice_id']);
@@ -1083,6 +1095,9 @@ else {
 											}
 										}
 										
+										if ($currency_conversion['invoice_type'] == "sale_buyin") $conversion_blockchain_amount_float = $currency_conversion['confirmed_amount_paid'];
+										else $conversion_game_amount_float = $currency_conversion['confirmed_amount_paid'];
+										
 										if ($currency_conversion['invoice_type'] == "sale_buyin") $exchange_rate = $conversion_game_amount_float/$currency_conversion['confirmed_amount_paid'];
 										else $exchange_rate = $currency_conversion['confirmed_amount_paid']/$conversion_blockchain_amount_float;
 										
@@ -1102,7 +1117,65 @@ else {
 										echo "</a>";
 										
 										echo "&rarr; ".$received_utxo_html."</div>";
-										echo '<div class="col-sm-3">'.$app->format_bignum($exchange_rate).' '.$game->db_game['coin_abbreviation']."/".$currency_conversion['abbreviation']."</div>\n";
+										
+										$fulfillment_size_sum = 0;
+										$fulfillment_usd_sum = 0;
+										$fulfillment_usd_fees = 0;
+										$rendered_fulfillments = "";
+										
+										foreach ($invoice_ios as $invoice_io) {
+											if (!empty($invoice_io['extra_info'])) {
+												$extra_info = json_decode($invoice_io['extra_info']);
+												
+												if (!empty($extra_info->fulfillments)) {
+													foreach ($extra_info->fulfillments as $fulfillment) {
+														if ($currency_conversion['invoice_type'] == "sale_buyin") {
+															$rendered_fulfillments .= $app->format_bignum($fulfillment->size)." ".$currency_conversion['abbreviation']." &rarr; $".$app->format_bignum($fulfillment->usd_volume - $fulfillment->fee)."<br/>\n";
+														}
+														else {
+															$rendered_fulfillments .= "$".$app->format_bignum($fulfillment->usd_volume+$fulfillment->fee)." &rarr; ".$app->format_bignum($fulfillment->size)." ".$currency_conversion['abbreviation']."<br/>\n";
+														}
+														
+														$fulfillment_size_sum += $fulfillment->size;
+														$fulfillment_usd_sum += $fulfillment->usd_volume;
+														$fulfillment_usd_fees += $fulfillment->fee;
+													}
+												}
+											}
+										}
+										
+										echo '<div class="col-sm-3">'.$rendered_fulfillments."</div>\n";
+										
+										$amount_not_fulfilled = $conversion_blockchain_amount_float - $fulfillment_size_sum;
+										$fraction_fulfilled = $fulfillment_size_sum/$conversion_blockchain_amount_float;
+										$fulfilled_game_amount_float = $conversion_game_amount_float*$fraction_fulfilled;
+										
+										$conversion_game_amount_in_usd = $usd_per_game_coin*$conversion_game_amount_float;
+										$fulfilled_game_amount_in_usd = $usd_per_game_coin*$fulfilled_game_amount_float;
+										
+										echo '<div class="col-sm-3">';
+										
+										if ($fulfillment_size_sum > 0) {
+											if ($currency_conversion['invoice_type'] == "sale_buyin") {
+												$node_income = $fulfillment_usd_sum - $fulfillment_usd_fees;
+												$node_expenses = $fulfilled_game_amount_in_usd;
+												$gain_on_fulfillment_usd = $node_income - $node_expenses;
+											}
+											else {
+												$node_income = $fulfilled_game_amount_in_usd;
+												$node_expenses = $fulfillment_usd_sum + $fulfillment_usd_fees;
+												$gain_on_fulfillment_usd = $node_income - $node_expenses;
+											}
+											
+											if ($gain_on_fulfillment > 0) echo '<font class="text-success">Gain of $'.$app->format_bignum($gain_on_fulfillment_usd)."</font> &nbsp; ";
+											else echo '<font class="text-warning">Loss of $'.$app->format_bignum(abs($gain_on_fulfillment_usd))."</font> &nbsp; ";
+										}
+										
+										if ($amount_not_fulfilled != 0) {
+											echo $amount_not_fulfilled." ".$currency_conversion['abbreviation']." not fulfilled";
+										}
+										
+										echo '</div>';
 										
 										echo "</div>\n";
 									}
