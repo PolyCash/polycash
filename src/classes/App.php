@@ -404,7 +404,7 @@ class App {
 		$series_index = (int)($this->run_query("SELECT MAX(game_series_index) FROM games WHERE game_type_id=:game_type_id;", ['game_type_id'=>$game_type['game_type_id']])->fetch()['MAX(game_series_index)']+1);
 		
 		$game_name = $game_type['name'];
-		if ($game_type['event_rule'] == "entity_type_option_group") $game_name .= $series_index;
+		if ($series_index > 0) $game_name .= $series_index;
 		
 		$new_game_params = [
 			'game_series_index' => $series_index,

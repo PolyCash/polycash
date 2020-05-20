@@ -14,7 +14,7 @@ class Event {
 	}
 	
 	public function load_db_event($event_id) {
-		$this->db_event = $this->game->blockchain->app->run_query("SELECT *, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities en ON et.entity_id=en.entity_id LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.event_id=:event_id;", ['event_id'=>$event_id])->fetch();
+		$this->db_event = $this->game->blockchain->app->run_query("SELECT *, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.event_id=:event_id;", ['event_id'=>$event_id])->fetch();
 		if (!$this->db_event) {
 			throw new Exception("Failed to load event #".$event_id);
 		}

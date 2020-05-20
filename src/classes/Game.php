@@ -1727,7 +1727,7 @@ class Game {
 		$this->current_events = [];
 		$mining_block_id = $this->blockchain->last_block_id()+1;
 		
-		$db_events = $this->blockchain->app->run_query("SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities en ON et.entity_id=en.entity_id WHERE ev.game_id=:game_id AND ev.event_starting_block<=:ref_block_id AND ev.event_final_block>=:ref_block_id ORDER BY ev.event_id ASC;", [
+		$db_events = $this->blockchain->app->run_query("SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id WHERE ev.game_id=:game_id AND ev.event_starting_block<=:ref_block_id AND ev.event_final_block>=:ref_block_id ORDER BY ev.event_id ASC;", [
 			'game_id' => $this->db_game['game_id'],
 			'ref_block_id' => $mining_block_id
 		]);
@@ -1743,7 +1743,7 @@ class Game {
 			'game_id' => $this->db_game['game_id'],
 			'block_id' => $block_id
 		];
-		$events_q = "SELECT *, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities en ON et.entity_id=en.entity_id LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id=:game_id AND ev.event_starting_block<=:block_id AND ev.event_final_block>=:block_id";
+		$events_q = "SELECT *, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id=:game_id AND ev.event_starting_block<=:block_id AND ev.event_final_block>=:block_id";
 		if (!empty($filter_arr['date'])) {
 			$events_q .= " AND DATE(ev.event_final_time)=:filter_date";
 			$events_params['filter_date'] = $filter_arr['date'];
@@ -1763,7 +1763,7 @@ class Game {
 	
 	public function events_by_outcome_block($block_id) {
 		$events = [];
-		$db_events = $this->blockchain->app->run_query("SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities en ON et.entity_id=en.entity_id WHERE ev.game_id=:game_id AND ev.event_outcome_block=:block_id ORDER BY ev.event_index ASC;", [
+		$db_events = $this->blockchain->app->run_query("SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id WHERE ev.game_id=:game_id AND ev.event_outcome_block=:block_id ORDER BY ev.event_index ASC;", [
 			'game_id' => $this->db_game['game_id'],
 			'block_id' => $block_id
 		]);
@@ -1776,7 +1776,7 @@ class Game {
 	
 	public function events_by_payout_block($block_id) {
 		$events = [];
-		$db_events = $this->blockchain->app->run_query("SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities en ON et.entity_id=en.entity_id WHERE ev.game_id=:game_id AND ev.event_payout_block=:block_id ORDER BY ev.event_index ASC;", [
+		$db_events = $this->blockchain->app->run_query("SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id WHERE ev.game_id=:game_id AND ev.event_payout_block=:block_id ORDER BY ev.event_index ASC;", [
 			'game_id' => $this->db_game['game_id'],
 			'block_id' => $block_id
 		]);
@@ -1790,7 +1790,7 @@ class Game {
 	public function events_by_final_block($block_id) {
 		$events = [];
 		
-		$db_events = $this->blockchain->app->run_query("SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id LEFT JOIN entities en ON et.entity_id=en.entity_id WHERE ev.game_id=:game_id AND ev.event_final_block=:block_id AND ev.event_final_block != ev.event_payout_block ORDER BY ev.event_index ASC;", [
+		$db_events = $this->blockchain->app->run_query("SELECT * FROM events ev JOIN event_types et ON ev.event_type_id=et.event_type_id WHERE ev.game_id=:game_id AND ev.event_final_block=:block_id AND ev.event_final_block != ev.event_payout_block ORDER BY ev.event_index ASC;", [
 			'game_id' => $this->db_game['game_id'],
 			'block_id' => $block_id
 		]);
@@ -1988,32 +1988,6 @@ class Game {
 		return $this->db_game['default_effectiveness_param1'];
 	}
 	
-	public function all_pairs_points_to_index($num_options) {
-		$points_to_index = [];
-		$min_points = 1;
-		$max_points = $num_options*2-3;
-		$total_pairs = 0;
-		$midpoint_num_pairs = floor($num_options/2);
-		$midpoint_points = ceil($max_points/2);
-		
-		for ($points=$min_points; $points<=$max_points; $points++) {
-			$dist_from_midpoint = abs($midpoint_points - $points);
-			if ($num_options%2 == 0) $pairs_less_than_midpoint = ceil($dist_from_midpoint/2);
-			else $pairs_less_than_midpoint = floor($dist_from_midpoint/2);
-			$pairs_here = $midpoint_num_pairs - $pairs_less_than_midpoint;
-			$points_to_index[$points] = (int) $total_pairs;
-			$total_pairs += $pairs_here;
-		}
-		return $points_to_index;
-	}
-	
-	public function event_index_to_all_pairs_points($points_to_index, $event_index) {
-		for ($points=1; $points<count($points_to_index); $points++) {
-			if ($points_to_index[$points] <= $event_index && $points_to_index[$points+1] > $event_index) return $points;
-		}
-		return count($points_to_index);
-	}
-	
 	public function latest_event() {
 		return $this->blockchain->app->run_query("SELECT * FROM events WHERE game_id=:game_id ORDER BY event_index DESC LIMIT 1;", [
 			'game_id' => $this->db_game['game_id']
@@ -2122,15 +2096,13 @@ class Game {
 						]);
 						
 						if ($existing_event_type_r->rowCount() == 0) {
-							$this->blockchain->app->run_query("INSERT INTO event_types SET url_identifier=:url_identifier, name=:name, event_winning_rule=:event_winning_rule, vote_effectiveness_function=:vote_effectiveness_function, effectiveness_param1=:effectiveness_param1, max_voting_fraction=:max_voting_fraction, num_voting_options=:num_voting_options, default_option_max_width=:default_option_max_width;", [
+							$this->blockchain->app->run_query("INSERT INTO event_types SET url_identifier=:url_identifier, event_winning_rule=:event_winning_rule, vote_effectiveness_function=:vote_effectiveness_function, effectiveness_param1=:effectiveness_param1, max_voting_fraction=:max_voting_fraction, num_voting_options=:num_voting_options;", [
 								'url_identifier' => $etype_url_id,
-								'name' => $game_defined_event['event_name'],
 								'event_winning_rule' => $this->db_game['event_winning_rule'],
 								'vote_effectiveness_function' => $this->db_game['default_vote_effectiveness_function'],
 								'effectiveness_param1' => $this->db_game['default_effectiveness_param1'],
 								'max_voting_fraction' => $this->db_game['default_max_voting_fraction'],
-								'num_voting_options' => $gdo_r->rowCount(),
-								'default_option_max_width' => $this->db_game['default_option_max_width']
+								'num_voting_options' => $gdo_r->rowCount()
 							]);
 							$event_type_id = $this->blockchain->app->last_insert_id();
 							
@@ -2154,7 +2126,7 @@ class Game {
 							'option_name' => $game_defined_event['option_name'],
 							'option_name_plural' => $game_defined_event['option_name_plural'],
 							'num_options' => $num_options,
-							'option_max_width' => $event_type['default_option_max_width']
+							'option_max_width' => $this->db_game['default_option_max_width']
 						];
 						$new_event_q = "INSERT INTO events SET game_id=:game_id, event_type_id=:event_type_id, event_index=:event_index, event_starting_block=:event_starting_block, event_final_block=:event_final_block, event_outcome_block=:event_outcome_block, event_payout_block=:event_payout_block, payout_rule=:payout_rule, payout_rate=:payout_rate, event_name=:event_name, option_name=:option_name, option_name_plural=:option_name_plural, num_options=:num_options, option_max_width=:option_max_width";
 						
@@ -2199,90 +2171,6 @@ class Game {
 						}
 						
 						$option_offset += $num_options;
-						$add_count++;
-					}
-				}
-			}
-			
-			if ($this->db_game['event_rule'] == "entity_type_option_group" || $this->db_game['event_rule'] == "single_event_series" || $this->db_game['event_rule'] == "all_pairs") {
-				if ($this->db_game['event_rule'] == "entity_type_option_group") {
-					$entity_type = $this->blockchain->app->fetch_entity_type_by_id($this->db_game['event_entity_type_id']);
-					
-					if (!$entity_type) die("Error: game type ".$this->db_game['game_type_id']." requires an event_entity_type_id.\n");
-				}
-				
-				$option_group = $this->blockchain->app->fetch_group_by_id($this->db_game['option_group_id']);
-				
-				$db_option_entities = $this->blockchain->app->run_query("SELECT * FROM entities e JOIN option_group_memberships mem ON e.entity_id=mem.entity_id WHERE mem.option_group_id=:option_group_id ORDER BY e.entity_id ASC;", ['option_group_id'=>$this->db_game['option_group_id']])->fetchAll();
-				
-				if ($this->db_game['event_rule'] == "all_pairs") {
-					$all_pairs_points_to_index = $this->all_pairs_points_to_index(count($db_option_entities));
-				}
-				
-				$event_i = 0;
-				$round_option_i = 1;
-				
-				if ($ensured_round > 0) $start_round = $ensured_round+1;
-				else $start_round = $this->block_to_round($this->db_game['game_starting_block']);
-				
-				if ($this->db_game['event_rule'] == "entity_type_option_group") {
-					$num_event_types = (int)($this->blockchain->app->run_query("SELECT COUNT(*) FROM entities WHERE entity_type_id=:entity_type_id ORDER BY entity_id ASC;", ['entity_type_id'=>$entity_type['entity_type_id']])->fetch()['COUNT(*)']);
-					
-					for ($i=$start_round; $i<=$round_id; $i++) {
-						$round_first_event_i = $this->db_game['events_per_round']*($i-$this->block_to_round($this->db_game['game_starting_block']));
-						$offset = $round_first_event_i%$num_event_types;
-						$entities_by_round_params = [
-							'entity_type_id' => $entity_type['entity_type_id'],
-							'events_per_round' => $this->db_game['events_per_round']
-						];
-						$entities_by_round_q = "SELECT * FROM entities WHERE entity_type_id=:entity_type_id ORDER BY entity_id ASC LIMIT :events_per_round";
-						if ($offset > 0) {
-							$entities_by_round_q .= " OFFSET ".((int)$offset);
-						}
-						$entities_by_round = $this->blockchain->app->run_limited_query($entities_by_round_q, $entities_by_round_params);
-						
-						for ($j=0; $j<$this->db_game['events_per_round']; $j++) {
-							$event_i = $round_first_event_i+$j;
-							$event_entity = $entities_by_round->fetch();
-							$event_type = $this->add_event_type($db_option_entities, $event_entity, $event_i);
-							$this->add_event_by_event_type($event_type, $db_option_entities, $option_group, $round_option_i, $event_i, $event_type['name'], $event_entity);
-							$add_count++;
-						}
-					}
-				}
-				else if ($this->db_game['event_rule'] == "all_pairs") {
-					$max_points = count($db_option_entities)-1;
-					$num_pairs = (pow($max_points, 2) + $max_points)/2;
-					
-					for ($i=$start_round; $i<=$round_id; $i++) {
-						$round_first_event_i = $this->db_game['events_per_round']*($i-$this->block_to_round($this->db_game['game_starting_block']));
-						$offset = $round_first_event_i%$num_pairs;
-						
-						for ($j=0; $j<$this->db_game['events_per_round']; $j++) {
-							$event_i = $round_first_event_i+$j;
-							$event_ii = $event_i%$num_pairs;
-							$points = $this->event_index_to_all_pairs_points($all_pairs_points_to_index, $event_ii);
-							$this_points_start_index = $all_pairs_points_to_index[$points];
-							$index_within_points = $event_ii-$this_points_start_index;
-							if ($points <= $max_points) $first_entity_index = $index_within_points;
-							else $first_entity_index = $points - $max_points + $index_within_points;
-							$second_entity_index = $points - $first_entity_index;
-							
-							$option_entities[0] = $db_option_entities[$first_entity_index];
-							$option_entities[1] = $db_option_entities[$second_entity_index];
-							$event_type = $this->add_event_type($option_entities, false, $event_i);
-							$this->add_event_by_event_type($event_type, $option_entities, $option_group, $round_option_i, $event_i, $event_type['name'], false);
-							$add_count++;
-						}
-					}
-				}
-				else {
-					$event_type = $this->add_event_type($db_option_entities, false, false);
-					for ($i=$start_round-1; $i<=$round_id; $i++) {
-						$event_i = $i-$this->block_to_round($this->db_game['game_starting_block']);
-						$event_name = $event_type['name']." #".($event_i+1);
-						$this->add_event_by_event_type($event_type, $db_option_entities, $option_group, $round_option_i, $event_i, $event_name, false);
-						$event_i++;
 						$add_count++;
 					}
 				}
@@ -2344,11 +2232,6 @@ class Game {
 				'max_voting_fraction' => $this->db_game['default_max_voting_fraction']
 			];
 			$new_event_type_q = "INSERT INTO event_types SET game_id=:game_id, event_winning_rule='max_below_cap', option_group_id=:option_group_id";
-			if ($head_to_head) {
-				$new_event_type_q .= ", primary_entity_id=:primary_entity_id, secondary_entity_id=:secondary_entity_id";
-				$new_event_type_params['primary_entity_id'] = $db_option_entities[0]['entity_id'];
-				$new_event_type_params['secondary_entity_id'] = $db_option_entities[1]['entity_id'];
-			}
 			if ($event_entity) {
 				$new_event_type_q .= ", entity_id=:entity_id";
 				$new_event_type_params['entity_id'] = $event_entity['entity_id'];

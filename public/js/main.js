@@ -1329,7 +1329,6 @@ var PageManager = function() {
 					}
 
 					this.game_form_start_condition_changed();
-					this.game_form_event_rule_changed();
 				}
 				else {
 					if (action == "switch") $('#switch_game_btn').html(switch_link_text);
@@ -1392,11 +1391,6 @@ var PageManager = function() {
 			$('#game_form_game_buyin_cap_disp').show();
 		}
 		else $('#game_form_game_buyin_cap_disp').hide();
-	}
-	this.game_form_event_rule_changed = function() {
-		var event_rule = $('#game_form_event_rule').val();
-		if (event_rule == "entity_type_option_group") $('#game_form_event_rule_entity_type_option_group').show();
-		else $('#game_form_event_rule_entity_type_option_group').hide();
 	}
 	this.save_game = function(action) {
 		var save_link_text = $('#save_game_btn').html();
