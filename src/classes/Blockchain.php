@@ -326,9 +326,12 @@ class Blockchain {
 				for ($i=0; $i<count($lastblock_rpc['tx']); $i++) {
 					$tx_hash = $lastblock_rpc['tx'][$i];
 					$successful = true;
+					$add_tx_ref_time = microtime(true);
 					$db_transaction = $this->add_transaction($tx_hash, $block_height, true, $successful, $i, [false], $print_debug);
 					if ($print_debug) {
+						$add_tx_time = microtime(true)-$add_tx_ref_time;
 						echo ". ";
+						if ($add_tx_time > 1) echo "#".$i." took ".round($add_tx_time, 4)." sec ";
 						$this->app->flush_buffers();
 					}
 					if (!$successful) {
@@ -442,7 +445,7 @@ class Blockchain {
 				else $transaction_rpc = $this->coin_rpc->getrawtransaction($tx_hash, true);
 				
 				if (!$transaction_rpc) $add_transaction = false;
-				else if ($block_height === false) {
+				else if ((string) $block_height == "") {
 					if (!empty($transaction_rpc['blockhash'])) {
 						$tx_block = $this->fetch_block_by_hash($transaction_rpc['blockhash']);
 						
@@ -794,7 +797,7 @@ class Blockchain {
 		}
 		
 		// Step 3, if tx is associated with games, process this transaction through each associated game
-		if (count($spend_io_ids) > 0 && $block_height === false) {
+		if (count($spend_io_ids) > 0 && (string) $block_height == "" && $only_vout === false) {
 			$ref_block_id = $this->last_block_id()+1;
 			
 			$events_by_option_id = [];
@@ -1014,7 +1017,7 @@ class Blockchain {
 			'transaction_id' => $db_transaction_id
 		];
 		$update_tx_q = "UPDATE transactions SET load_time=load_time+:add_load_time";
-		if (!$only_vout) $update_tx_q .= ", has_all_outputs=1";
+		if ($only_vout === false) $update_tx_q .= ", has_all_outputs=1";
 		if ($require_inputs) $update_tx_q .= ", has_all_inputs=1";
 		if ((string)$block_height !== "") {
 			$update_tx_q .= ", block_id=:block_id";
@@ -1627,7 +1630,7 @@ class Blockchain {
 		]);
 	}
 	
-	public function sync_initial($from_block_id) {
+	public function sync_initial($from_block_id, $print_debug=false) {
 		$log_text = "";
 		$start_time = microtime(true);
 		$this->load_coin_rpc();
@@ -1664,7 +1667,7 @@ class Blockchain {
 				$this->db_blockchain['genesis_address'] = "";
 			}
 			
-			$this->reset_blockchain();
+			$this->reset_blockchain($print_debug);
 			
 			if (in_array($this->db_blockchain['p2p_mode'], ["none","web_api"])) {
 				$returnvals = $this->add_genesis_block();
@@ -1681,7 +1684,9 @@ class Blockchain {
 		return $log_text;
 	}
 	
-	public function reset_blockchain() {
+	public function reset_blockchain($print_debug=false) {
+		$ref_time = microtime(true);
+		
 		$associated_games = $this->associated_games(false);
 		for ($i=0; $i<count($associated_games); $i++) {
 			$associated_games[$i]->delete_reset_game('reset');
@@ -1693,9 +1698,23 @@ class Blockchain {
 		$this->app->run_query("DELETE FROM transaction_ios WHERE blockchain_id=:blockchain_id;", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id']
 		]);
-		$this->app->run_query("DELETE FROM blocks WHERE blockchain_id=:blockchain_id;", [
-			'blockchain_id' => $this->db_blockchain['blockchain_id']
-		]);
+		
+		$delete_limit = 50000;
+		$last_block_id = $this->last_block_id();
+		$delete_queries = ceil(($last_block_id+1)/$delete_limit);
+		
+		for ($del_i=0; $del_i<$delete_queries; $del_i++) {
+			$this->app->run_query("DELETE FROM blocks WHERE blockchain_id=:blockchain_id AND block_id>=:from_block_id AND block_id<=:to_block_id;", [
+				'blockchain_id' => $this->db_blockchain['blockchain_id'],
+				'from_block_id' => $del_i*$delete_limit,
+				'to_block_id' => ($del_i+1)*$delete_limit
+			]);
+			
+			if ($print_debug) {
+				echo $del_i."/".$delete_queries." at ".round(microtime(true)-$ref_time, 4)."\n";
+				$this->app->flush_buffers();
+			}
+		}
 	}
 	
 	public function block_next_prev_links($block, $explore_mode) {
