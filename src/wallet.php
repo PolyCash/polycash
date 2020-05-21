@@ -500,7 +500,7 @@ if ($thisuser && $game) {
 	$blockchain_last_block = $game->blockchain->fetch_block_by_id($blockchain_last_block_id);
 }
 ?>
-<div class="container-fluid" style="padding-top: 15px;">
+<div class="container-fluid">
 	<?php
 	if ($message != "") {
 		echo '<font style="display: block; margin: 10px 0px;" class="';
@@ -630,6 +630,7 @@ if ($thisuser && $game) {
 		$top_nav_show_search = true;
 		$explorer_type = "games";
 		$explore_mode = "wallet";
+		echo "<br/>\n";
 		include('includes/explorer_top_nav.php');
 		?>
 		<div class="panel panel-default" style="margin-top: 15px;">
@@ -1303,7 +1304,12 @@ if ($thisuser && $game) {
 		$top_nav_show_search = true;
 		$explorer_type = "games";
 		$explore_mode = "wallet";
-		include('includes/explorer_top_nav.php');
+		
+		if (empty(AppSettings::getParam('signup_content_page'))) {
+			echo "<br/>\n";
+			include('includes/explorer_top_nav.php');
+		}
+		
 		include(AppSettings::srcPath()."/includes/html_login.php");
 	}
 	?>

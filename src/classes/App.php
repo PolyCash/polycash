@@ -1103,7 +1103,10 @@ class App {
 				$ref_user_game = false;
 				$faucet_io = $featured_game->check_faucet($ref_user_game);
 				
-				echo '<p><a href="/'.$featured_game->db_game['url_identifier'].'/" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; ';
+				$play_now_url = '/'.$featured_game->db_game['url_identifier'].'/';
+				if (!empty(AppSettings::getParam('limited_navigation'))) $play_now_url = '/wallet'.$play_now_url;
+				
+				echo '<p><a href="'.$play_now_url.'" class="btn btn-sm btn-success"><i class="fas fa-play-circle"></i> &nbsp; ';
 				if ($faucet_io) echo 'Join now & receive '.$this->format_bignum($faucet_io['colored_amount_sum']/pow(10,$featured_game->db_game['decimal_places'])).' '.$featured_game->db_game['coin_name_plural'];
 				else echo 'Play Now';
 				echo "</a>";

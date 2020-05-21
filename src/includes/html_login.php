@@ -5,6 +5,11 @@ if (!empty($_REQUEST['redirect_key']) && empty($redirect_url)) $redirect_url = $
 <input type="hidden" name="invite_key" value="<?php if (!empty($_REQUEST['invite_key'])) echo $app->strong_strip_tags($app->make_alphanumeric($_REQUEST['invite_key'], "")); ?>" />
 <?php
 if (!empty(AppSettings::getParam('signup_content_page'))) {
+	?>
+	<script type="text/javascript">
+	thisPageManager.selected_panel = 'login';
+	</script>
+	<?php
 	include(dirname(dirname(__FILE__))."/pages/".AppSettings::getParam('signup_content_page'));
 }
 else {

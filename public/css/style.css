@@ -5,9 +5,10 @@ html, body {
 .content-wrapper {
 	background-color:#EFF3F8;
 }
-.panel-default .panel-heading {
+.panel-default > .panel-heading {
 	background-color: #fff ! important;
 }
+
 .polycash_header {
 	position: relative;
 	text-align: center;
