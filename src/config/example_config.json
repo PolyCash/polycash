@@ -31,6 +31,7 @@
 	"disable_address_generation": false,
 	"fix_game_blocks_disabled": false,
 	"restrict_ip_address": false,
+	"limited_navigation": false,
 	"memory_limit": "1024M",
 	"coinbase_key": "",
 	"coinbase_secret": "",

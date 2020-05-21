@@ -13,7 +13,9 @@ if (!empty($blockchain) || !empty($game)) {
 				<?php if ($game) { ?>
 				<li><a <?php if ($explore_mode == 'wallet') echo 'class="selected" '; ?>href="/wallet/<?php echo $game->db_game['url_identifier']; ?>/">Wallet</a></li>
 				<li><a <?php if ($explore_mode == 'my_bets') echo 'class="selected" '; ?>href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/my_bets/">My Bets</a></li>
+				<?php if (empty(AppSettings::getParam('limited_navigation'))) { ?>
 				<li><a <?php if ($explore_mode == 'about') echo 'class="selected" '; ?>href="/<?php echo $game->db_game['url_identifier']; ?>/">About</a></li>
+				<?php } ?>
 				<?php } ?>
 				<li><a <?php if ($explore_mode == 'blocks') echo 'class="selected" '; ?>href="/explorer/<?php echo $explorer_type; ?>/<?php
 				if ($game) echo $game->db_game['url_identifier'];

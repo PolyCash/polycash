@@ -3,7 +3,12 @@ if (!empty($_REQUEST['redirect_key']) && empty($redirect_url)) $redirect_url = $
 ?>
 <input type="hidden" id="redirect_key" value="<?php if ($redirect_url) echo $redirect_url['redirect_key']; ?>" />
 <input type="hidden" name="invite_key" value="<?php if (!empty($_REQUEST['invite_key'])) echo $app->strong_strip_tags($app->make_alphanumeric($_REQUEST['invite_key'], "")); ?>" />
-
+<?php
+if (!empty(AppSettings::getParam('signup_content_page'))) {
+	include(dirname(dirname(__FILE__))."/pages/".AppSettings::getParam('signup_content_page'));
+}
+else {
+?>
 <div class="panel panel-default" style="margin-top: 15px;">
 	<div class="panel-heading">
 		<div class="panel-title">To continue, please register for a user account.</div>
@@ -17,8 +22,8 @@ if (!empty($_REQUEST['redirect_key']) && empty($redirect_url)) $redirect_url = $
 		</p>
 	</div>
 </div>
-
-<div class="panel panel-default" style="display: none;" id="login_panel">
+<?php } ?>
+<div class="panel panel-default" <?php if (empty(AppSettings::getParam('signup_content_page'))) echo 'style="display: none;" '; ?>id="login_panel">
 	<div class="panel-heading">
 		<div class="panel-title">Please enter your username or email address</div>
 	</div>
