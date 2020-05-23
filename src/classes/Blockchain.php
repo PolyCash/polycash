@@ -352,7 +352,7 @@ class Blockchain {
 		
 		$tx_hash_csv = "'".implode("','", array_keys($tx_hash_to_pos))."'";
 		
-		$this->app->run_query("DELETE io.*, t.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id WHERE t.blockchain_id=:blockchain_id AND t.tx_hash IN (".$tx_hash_csv.");", [
+		$this->app->run_query("DELETE t.*, io.*, gio.* FROM transactions t LEFT JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id LEFT JOIN transaction_game_ios gio ON gio.io_id=io.io_id WHERE t.blockchain_id=:blockchain_id AND t.tx_hash IN (".$tx_hash_csv.");", [
 			'blockchain_id' => $this->db_blockchain['blockchain_id']
 		]);
 		
@@ -501,6 +501,7 @@ class Blockchain {
 				$this->app->run_query("DELETE FROM transaction_ios WHERE io_id IN (".implode(",", $input_io_ids).");");
 				
 				$io_fields = [
+					'io_id',
 					'blockchain_id',
 					'address_id',
 					'user_id',
