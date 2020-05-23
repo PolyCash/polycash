@@ -20,7 +20,7 @@ if ($thisuser && $app->synchronizer_ok($thisuser, $_REQUEST['synchronizer_token'
 			$sale_currency_id = $sale_blockchain->currency_id();
 			
 			$satoshis_each = pow(10,$db_game['decimal_places'])*$amount_each;
-			$fee_amount = (int) ($sale_game->db_game['default_transaction_fee']*pow(10,$sale_blockchain->db_blockchain['decimal_places']));
+			$fee_amount = (int) ($_REQUEST['set_for_sale_fee']*pow(10,$sale_blockchain->db_blockchain['decimal_places']));
 			
 			if ($quantity > 0 && $satoshis_each > 0) {
 				$total_cost_satoshis = $quantity*$satoshis_each;
@@ -726,15 +726,19 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 								<input type="hidden" name="synchronizer_token" value="<?php echo $thisuser->get_synchronizer_token(); ?>" />
 								
 								<div class="form-group">
-									<label for="donate_amount_each">How many in-game coins should be in each UTXO?</label>
-									<input type="text" class="form-control" name="set_for_sale_amount_each" />
+									<label for="set_for_sale_amount_each">How many in-game coins do you want to transfer to the sale account?</label>
+									<input type="text" class="form-control" name="set_for_sale_amount_each" id="set_for_sale_amount_each" />
+								</div>
+								<div class="form-group" style="display: none;">
+									<label for="set_for_sale_quantity">How many UTXOs do you want to make?</label>
+									<input type="text" class="form-control" name="set_for_sale_quantity" id="set_for_sale_quantity" value="1" />
 								</div>
 								<div class="form-group">
-									<label for="donate_quantity">How many UTXOs do you want to make?</label>
-									<input type="text" class="form-control" name="set_for_sale_quantity" />
+									<label for="set_for_sale_fee">What fee do you want to pay to get this TX confirmed?</label>
+									<input type="text" class="form-control" name="set_for_sale_fee" id="set_for_sale_fee" value="<?php echo $account_game->db_game['default_transaction_fee']; ?>" />
 								</div>
 								<div class="form-group">
-									<button class="btn btn-primary">Set for sale</button>
+									<button class="btn btn-success">Set for sale</button>
 								</div>
 							</form>
 						</div>
