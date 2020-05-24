@@ -2615,13 +2615,13 @@ class Game {
 			$this->set_block_stats($game_block);
 			
 			// If nothing was added this block & it's allowed, add game blocks in bulk
-			if ($relevant_tx_count == 0 && in_array($this->db_game['buyin_policy'], ["none", "for_sale"])) {
+			if ($this->db_game['bulk_add_blocks'] && $relevant_tx_count == 0 && in_array($this->db_game['buyin_policy'], ["none", "for_sale"])) {
 				$last_block_id = $this->blockchain->last_block_id();
 				
 				if ($last_block_id > $block_height+5) {
 					$next_required_block_id = $last_block_id;
 					
-					$next_spend_block = $this->blockchain->app->run_query("SELECT t.block_id FROM transaction_ios io JOIN transactions t ON io.spend_transaction_id=t.transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id=:game_id AND t.block_id>:block_id AND t.blockchain_id=:blockchain_id ORDER BY t.block_id ASC LIMIT 1;", [
+					$next_spend_block = $this->blockchain->app->run_query("SELECT MIN(io.spend_block_id) FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id=:game_id AND io.spend_block_id>:block_id AND io.blockchain_id=:blockchain_id", [
 						'game_id' => $this->db_game['game_id'],
 						'block_id' => $block_height,
 						'blockchain_id' => $this->blockchain->db_blockchain['blockchain_id']

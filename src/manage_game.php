@@ -359,6 +359,7 @@ else {
 					$default_transaction_fee = (float) $_REQUEST['default_transaction_fee'];
 					$min_buyin_amount = (float) $_REQUEST['min_buyin_amount'];
 					$min_sellout_amount = (float) $_REQUEST['min_sellout_amount'];
+					$bulk_add_blocks = (int) $_REQUEST['bulk_add_blocks'];
 					
 					$definitive_game_peer_on = $_REQUEST['definitive_game_peer_on'];
 					if ($definitive_game_peer_on == 1) {
@@ -381,7 +382,7 @@ else {
 						}
 					}
 					
-					$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, faucet_policy=:faucet_policy, hide_module=:hide_module, definitive_game_peer_id=:definitive_game_peer_id, every_event_bet_reminder_minutes=:every_event_bet_reminder_minutes, sec_per_faucet_claim=:sec_per_faucet_claim, min_sec_between_claims=:min_sec_between_claims, bonus_claims=:bonus_claims, default_transaction_fee=:default_transaction_fee, min_buyin_amount=:min_buyin_amount, min_sellout_amount=:min_sellout_amount WHERE game_id=:game_id;", [
+					$app->run_query("UPDATE games SET featured=:featured, public_players=:public_players, faucet_policy=:faucet_policy, hide_module=:hide_module, definitive_game_peer_id=:definitive_game_peer_id, every_event_bet_reminder_minutes=:every_event_bet_reminder_minutes, sec_per_faucet_claim=:sec_per_faucet_claim, min_sec_between_claims=:min_sec_between_claims, bonus_claims=:bonus_claims, default_transaction_fee=:default_transaction_fee, min_buyin_amount=:min_buyin_amount, min_sellout_amount=:min_sellout_amount, bulk_add_blocks=:bulk_add_blocks WHERE game_id=:game_id;", [
 						'featured' => $featured,
 						'public_players' => $public_players,
 						'faucet_policy' => $faucet_policy,
@@ -394,7 +395,8 @@ else {
 						'bonus_claims' => $bonus_claims,
 						'default_transaction_fee' => $default_transaction_fee,
 						'min_buyin_amount' => $min_buyin_amount,
-						'min_sellout_amount' => $min_sellout_amount
+						'min_sellout_amount' => $min_sellout_amount,
+						'bulk_add_blocks' => $bulk_add_blocks
 					]);
 					
 					$game->db_game['featured'] = $featured;
@@ -408,6 +410,7 @@ else {
 					$game->db_game['default_transaction_fee'] = $default_transaction_fee;
 					$game->db_game['min_buyin_amount'] = $min_buyin_amount;
 					$game->db_game['min_sellout_amount'] = $min_sellout_amount;
+					$game->db_game['bulk_add_blocks'] = $bulk_add_blocks;
 					
 					$messages .= "Game internal settings have been updated.<br/>\n";
 				}
@@ -826,6 +829,13 @@ else {
 										<div class="form-group">
 											<label for="min_sellout_amount">What's the minimum <?php echo $game->db_game['coin_name']; ?> amount for sell-out transactions?</label>
 											<input type="text" class="form-control" name="min_sellout_amount" id="min_sellout_amount" value="<?php echo $game->db_game['min_sellout_amount']; ?>" />
+										</div>
+										<div class="form-group">
+											<label for="bulk_add_blocks">Should empty blocks be processed in bulk? (May lead to slower loading in games with many transactions)</label>
+											<select class="form-control" name="bulk_add_blocks" id="bulk_add_blocks">
+												<option value="0">No</option>
+												<option value="1"<?php if ($game->db_game['bulk_add_blocks']) echo ' selected="selected"'; ?>>Yes</option>
+											</select>
 										</div>
 										
 										<input type="submit" class="btn btn-success" value="Save Settings" />
