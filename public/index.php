@@ -63,6 +63,9 @@ else if ($uri_parts[1] == "manage_blockchains") {
 else if ($uri_parts[1] == "manage_currencies") {
 	include($src_path."/manage_currencies.php");
 }
+else if ($uri_parts[1] == "analytics") {
+	include($src_path."/analytics.php");
+}
 else if ($uri_parts[1] == "groups") {
 	include($src_path."/manage_groups.php");
 }

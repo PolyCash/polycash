@@ -118,6 +118,7 @@ else if ($thisuser) $left_menu_open = $thisuser->db_user['left_menu_open'];
 					<li<?php if ($nav_tab_selected == "import") echo ' class="active"'; ?>><a href="/import/"><i class="fa fa-plus-square"></i> <span>Import</span></a></li>
 					<li<?php if ($nav_tab_selected == "manage_blockchains") echo ' class="active"'; ?>><a href="/manage_blockchains/"><i class="fa fa-cube"></i> <span>Manage Blockchains</span></a></li>
 					<li<?php if ($nav_tab_selected == "manage_currencies") echo ' class="active"'; ?>><a href="/manage_currencies/"><i class="fa fa-signal"></i> <span>Manage Currencies</span></a></li>
+					<li<?php if ($nav_tab_selected == "analytics") echo ' class="active"'; ?>><a href="/analytics/"><i class="fa fa-table"></i> <span>Analytics</span></a></li>
 				</ul>
 				<?php
 			}

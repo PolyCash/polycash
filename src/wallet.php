@@ -966,7 +966,7 @@ if ($thisuser && $game) {
 						
 						<div class="row bordered_row">
 							<div class="col-md-2">
-								<input type="radio" id="voting_strategy_api" name="voting_strategy" value="hit_url"<?php if ($user_strategy['voting_strategy'] == "hit_url") echo ' checked="checked"'; ?>><label class="plainlabel" for="voting_strategy_api">&nbsp;Hit URL</label>
+								<input type="radio" id="hit_api_url" name="voting_strategy" value="hit_url"<?php if ($user_strategy['voting_strategy'] == "hit_url") echo ' checked="checked"'; ?>><label class="plainlabel" for="hit_api_url">&nbsp;Hit URL</label>
 							</div>
 							<div class="col-md-10">
 								<label class="plainlabel" for="hit_api_url">Hit this URL every minute</label>

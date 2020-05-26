@@ -212,12 +212,13 @@ if ($app->running_as_admin()) {
 							else echo json_encode([$error_message, $sell_order], JSON_PRETTY_PRINT)."\n";
 						}
 						
-						$app->run_query("INSERT INTO currency_invoice_ios SET invoice_id=:invoice_id, tx_hash=:tx_hash, out_index=:out_index, game_out_index=:game_out_index, extra_info=:extra_info;", [
+						$app->run_query("INSERT INTO currency_invoice_ios SET invoice_id=:invoice_id, tx_hash=:tx_hash, out_index=:out_index, game_out_index=:game_out_index, extra_info=:extra_info, time_created=:time_created;", [
 							'invoice_id' => $invoice_address['invoice_id'],
 							'tx_hash' => $pay_tx_hash,
 							'out_index' => $pay_out_index,
 							'game_out_index' => $pay_game_out_index,
-							'extra_info' => json_encode($invoice_io_extra_info, JSON_PRETTY_PRINT)
+							'extra_info' => json_encode($invoice_io_extra_info, JSON_PRETTY_PRINT),
+							'time_created' => time()
 						]);
 					}
 					else if ($print_debug) echo "failed to create a transaction.\n";
@@ -336,10 +337,11 @@ if ($app->running_as_admin()) {
 									else echo json_encode([$buy_order, $error_message], JSON_PRETTY_PRINT)."\n";
 								}
 								
-								$app->run_query("INSERT INTO currency_invoice_ios SET invoice_id=:invoice_id, tx_hash=:tx_hash, out_index=0, game_out_index=NULL, extra_info=:extra_info;", [
+								$app->run_query("INSERT INTO currency_invoice_ios SET invoice_id=:invoice_id, tx_hash=:tx_hash, out_index=0, game_out_index=NULL, extra_info=:extra_info, time_created=:time_created;", [
 									'invoice_id' => $invoice_address['invoice_id'],
 									'tx_hash' => $transaction['tx_hash'],
-									'extra_info' => json_encode($invoice_io_extra_info, JSON_PRETTY_PRINT)
+									'extra_info' => json_encode($invoice_io_extra_info, JSON_PRETTY_PRINT),
+									'time_created' => time()
 								]);
 							}
 							

@@ -59,6 +59,7 @@ class PageviewController {
 				'viewer_id' => $ip_identifier['viewer_id'],
 				'ip_id' => $ip_identifier['identifier_id'],
 				'time' => time(),
+				'pageview_date' => date("Y-m-d"),
 				'pv_page_id' => $pv_page_id,
 				'refer_url' => $refer_url
 			];
@@ -67,7 +68,7 @@ class PageviewController {
 				$new_pv_q .= "user_id=:user_id, ";
 				$new_pv_params['user_id'] = $thisuser->db_user['user_id'];
 			}
-			$new_pv_q .= "viewer_id=:viewer_id, ip_id=:ip_id, time=:time, pv_page_id=:pv_page_id, refer_url=:refer_url;";
+			$new_pv_q .= "viewer_id=:viewer_id, ip_id=:ip_id, time=:time, pageview_date=:pageview_date, pv_page_id=:pv_page_id, refer_url=:refer_url;";
 			$this->app->run_query($new_pv_q, $new_pv_params);
 			$pageview_id = $this->app->last_insert_id();
 			
