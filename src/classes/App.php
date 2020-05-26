@@ -1984,6 +1984,8 @@ class App {
 				];
 				$import_q = "INSERT INTO blockchains SET online=1, p2p_mode=:p2p_mode, creator_id=:creator_id, ";
 				
+				if ($p2p_mode != "rpc") $import_q .= "first_required_block=1, ";
+				
 				$peer = false;
 				$import_params['authoritative_peer_id'] = null;
 				if ($blockchain_def->peer != "none") {
@@ -3291,6 +3293,12 @@ class App {
 		@ob_start();
 	}
 	
+	public function print_debug($s) {
+		echo $s."\n";
+		$this->flush_buffers();
+		return $s;
+	}
+	
 	public function fetch_group_by_description($description) {
 		return $this->run_query("SELECT * FROM option_groups WHERE description=:description;", ['description'=>$description])->fetch();
 	}
@@ -3422,7 +3430,6 @@ class App {
 			$new_address_q .= ", primary_blockchain_id=:blockchain_id, option_index=:option_index, vote_identifier=:vote_identifier, is_destroy_address=:is_destroy_address, is_separator_address=:is_separator_address, is_passthrough_address=:is_passthrough_address, address=:address, time_created=:time_created;";
 			$this->run_query($new_address_q, $new_address_params);
 			$address_id = $this->last_insert_id();
-			$this->flush_buffers();
 			
 			return $this->insert_address_key([
 				'currency_id' => $blockchain->currency_id(),

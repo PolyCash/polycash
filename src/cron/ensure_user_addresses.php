@@ -24,10 +24,7 @@ if ($app->running_as_admin()) {
 		$running_games = [];
 		$blockchains = [];
 		
-		if ($print_debug) {
-			echo "Giving addresses to users.\n";
-			$app->flush_buffers();
-		}
+		if ($print_debug) $app->print_debug("Giving addresses to users.");
 		
 		for ($game_i=0; $game_i<count($db_running_games); $game_i++) {
 			if (empty($blockchains[$db_running_games[$game_i]['blockchain_id']])) $blockchains[$db_running_games[$game_i]['blockchain_id']] = new Blockchain($app, $db_running_games[$game_i]['blockchain_id']);
@@ -43,10 +40,7 @@ if ($app->running_as_admin()) {
 					'to_option_index' => $to_option_index
 				]);
 				
-				if ($print_debug) {
-					echo "Looping through ".$user_games->rowCount()." users for ".$running_games[$game_i]->db_game['name'].".<br/>\n";
-					$app->flush_buffers();
-				}
+				if ($print_debug) $app->print_debug("Looping through ".$user_games->rowCount()." users for ".$running_games[$game_i]->db_game['name'].".");
 				
 				while ($user_game = $user_games->fetch()) {
 					$user = new User($app, $user_game['user_id']);
@@ -60,10 +54,7 @@ if ($app->running_as_admin()) {
 		}
 		
 		$need_address_blockchain_ids = [];
-		if ($print_debug) {
-			echo "Now filling address sets for ".count($db_running_games)." games.<br/>\n";
-			$app->flush_buffers();
-		}
+		if ($print_debug) $app->print_debug("Now filling address sets for ".count($db_running_games)." games.");
 		
 		for ($game_i=0; $game_i<count($running_games); $game_i++) {
 			list($from_option_index, $to_option_index) = $running_games[$game_i]->option_index_range();
@@ -101,20 +92,15 @@ if ($app->running_as_admin()) {
 				
 				if ((int)$unallocated_separator_info['COUNT(*)'] < $min_unallocated_separators) {
 					$need_address_blockchain_ids[$blockchain_id] = true;
-					if ($print_debug) {
-						echo $blockchain->db_blockchain['blockchain_name']." needs ".$min_unallocated_separators." but only has ".$unallocated_separator_info['COUNT(*)']."\n";
-						$app->flush_buffers();
-					}
+					
+					if ($print_debug) $app->print_debug($blockchain->db_blockchain['blockchain_name']." needs ".$min_unallocated_separators." but only has ".$unallocated_separator_info['COUNT(*)']);
 				}
 			}
 		}
 		
 		$need_address_blockchain_ids = array_keys($need_address_blockchain_ids);
 		
-		if ($print_debug) {
-			echo "Now generating addresses for ".count($need_address_blockchain_ids)." blockchains.\n";
-			$app->flush_buffers();
-		}
+		if ($print_debug) $app->print_debug("Now generating addresses for ".count($need_address_blockchain_ids)." blockchains.");
 		
 		if (count($need_address_blockchain_ids) > 0) {
 			$need_address_db_blockchains = $app->run_query("SELECT * FROM blockchains WHERE blockchain_id IN (".implode(",", array_map("intval", $need_address_blockchain_ids)).");")->fetchAll();

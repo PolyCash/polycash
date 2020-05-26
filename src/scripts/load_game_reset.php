@@ -24,15 +24,14 @@ if ($app->running_as_admin()) {
 		}
 		while ($process_locked);
 		
-		echo "now resetting the game<br/>\n";
-		$app->flush_buffers();
+		$app->print_debug("now resetting the game");
 		
 		$app->set_site_constant($process_lock_name, getmypid());
 		
 		$game->delete_reset_game($action);
 		$game->start_game();
 		
-		echo "Great, ".$game->db_game['name']." has been ".$action."!\n";
+		$app->print_debug("Great, ".$game->db_game['name']." has been ".$action."!");
 		
 		$app->set_site_constant($process_lock_name, 0);
 	}

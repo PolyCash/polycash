@@ -385,8 +385,7 @@ class Game {
 			$apply_strategies = $this->blockchain->app->run_query($strategies_q, $strategies_params);
 			
 			if ($print_debug) {
-				echo "Applying user strategies for block #".$mining_block_id." of ".$this->db_game['name']." looping through ".$apply_strategies->rowCount()." users.<br/>\n";
-				$this->blockchain->app->flush_buffers();
+				$this->blockchain->app->print_debug("Applying user strategies for block #".$mining_block_id." of ".$this->db_game['name']." looping through ".$apply_strategies->rowCount()." users.");
 			}
 			
 			while (microtime(true)-$ref_time < $max_seconds && $user_game = $apply_strategies->fetch()) {
@@ -403,10 +402,6 @@ class Game {
 					
 					if (!$api_response || $api_response->status_code > 3) {
 						$this->blockchain->app->set_strategy_time_next_apply($user_game['strategy_id'], time()+60*60);
-					}
-					else {
-						//$this->load_current_events();
-						//$this->update_option_votes();
 					}
 					
 					if ($print_debug) {
@@ -2084,10 +2079,7 @@ class Game {
 		$error_message = "";
 		$definitive_peer = $this->get_definitive_peer();
 		
-		if ($print_debug) {
-			echo "Syncing with definitive peer..\n";
-			$this->blockchain->app->flush_buffers();
-		}
+		if ($print_debug) $this->blockchain->app->print_debug("Syncing with definitive peer..");
 		
 		if ($definitive_peer) {
 			$send_hash = $this->db_game['cached_definition_hash'];
@@ -2099,10 +2091,7 @@ class Game {
 			
 			$api_url = $definitive_peer['base_url']."/api/".$this->db_game['url_identifier']."/definition/?definition_hash=".$send_hash;
 			
-			if ($print_debug) {
-				echo $api_url."\n";
-				$this->blockchain->app->flush_buffers();
-			}
+			if ($print_debug) $this->blockchain->app->print_debug($api_url);
 			
 			$api_response = json_decode($this->blockchain->app->safe_fetch_url($api_url));
 
@@ -2124,10 +2113,7 @@ class Game {
 		}
 		else $error_message .= "This game does not have a definitive peer.\n";
 		
-		if ($print_debug) {
-			echo $error_message;
-			$this->blockchain->app->flush_buffers();
-		}
+		if ($print_debug) $this->blockchain->app->print_debug($error_message);
 		
 		return $error_message;
 	}
@@ -2142,10 +2128,7 @@ class Game {
 		// Reset game if there's a reset scheduled
 		$extra_info = $this->fetch_extra_info();
 		if (!empty($extra_info['pending_reset'])) {
-			if ($show_debug) {
-				echo "Resetting the game..\n";
-				$this->blockchain->app->flush_buffers();
-			}
+			if ($show_debug) $this->blockchain->app->print_debug("Resetting the game..");
 			
 			if (array_key_exists("reset_from_block", $extra_info)) {
 				$this->reset_blocks_from_block($extra_info['reset_from_block']);
@@ -2175,10 +2158,7 @@ class Game {
 		
 		// Load events
 		$ensure_events_debug_text = $this->ensure_events_until_block($ensure_block_id);
-		if ($show_debug) {
-			echo $ensure_events_debug_text;
-			$this->blockchain->app->flush_buffers();
-		}
+		if ($show_debug) $this->blockchain->app->print_debug($ensure_events_debug_text);
 		
 		// Sync with peer
 		if (!empty($this->db_game['definitive_game_peer_id']) && $this->db_game['loaded_until_block'] == $this->blockchain->last_block_id()) {
@@ -2189,26 +2169,17 @@ class Game {
 			
 			GameDefinition::set_cached_definition_hashes($this);
 			
-			if ($show_debug) {
-				echo $ensure_events_debug_text;
-				$this->blockchain->app->flush_buffers();
-			}
+			if ($show_debug) $this->blockchain->app->print_debug($ensure_events_debug_text);
 		}
 		else if ($this->db_game['finite_events'] == 1) $ensure_block_id = max($ensure_block_id, $this->max_gde_starting_block());
 		
 		// Load events
 		$ensure_events_debug_text = $this->ensure_events_until_block($ensure_block_id);
-		if ($show_debug) {
-			echo $ensure_events_debug_text;
-			$this->blockchain->app->flush_buffers();
-		}
+		if ($show_debug) $this->blockchain->app->print_debug($ensure_events_debug_text);
 		
 		// Load blocks
 		if ($to_block_height >= $load_block_height) {
-			if ($show_debug) {
-				echo $this->db_game['name'].".. loading blocks ".$load_block_height." to ".$to_block_height."\n";
-				$this->blockchain->app->flush_buffers();
-			}
+			if ($show_debug) $this->blockchain->app->print_debug($this->db_game['name'].".. loading blocks ".$load_block_height." to ".$to_block_height);
 			
 			if ($load_block_height == $this->db_game['game_starting_block']) $game_io_index = 0;
 			else {
@@ -2222,10 +2193,7 @@ class Game {
 				
 				if ($successful) $this->set_loaded_until_block($block_height);
 				
-				if ($show_debug) {
-					echo $log_text;
-					$this->blockchain->app->flush_buffers();
-				}
+				if ($show_debug) $this->blockchain->app->print_debug($log_text);
 				
 				if (microtime(true)-$last_set_loaded_time >= 3) {
 					if ($max_load_seconds && microtime(true)-$sync_start_time >= $max_load_seconds) {
@@ -2235,13 +2203,8 @@ class Game {
 				}
 				if (!$successful) $block_height = $to_block_height+1;
 			}
-			
-			$this->blockchain->app->flush_buffers();
 		}
-		else if ($show_debug) {
-			echo $this->db_game['name']." is already fully loaded.\n";
-			$this->blockchain->app->flush_buffers();
-		}
+		else if ($show_debug) $this->blockchain->app->print_debug($this->db_game['name']." is already fully loaded.");
 		
 		$this->update_option_votes();
 	}

@@ -29,8 +29,7 @@ if ($app->running_as_admin() || $app->user_is_admin($thisuser)) {
 	}
 	while ($process_locked);
 	
-	echo "now inserting empty blocks<br/>\n";
-	$app->flush_buffers();
+	$app->print_debug("now inserting empty blocks");
 	
 	$app->set_site_constant($process_lock_name, getmypid());
 	echo $blockchain->sync_initial($from_block_id, $print_debug);

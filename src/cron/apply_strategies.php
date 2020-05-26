@@ -37,8 +37,7 @@ if ($app->running_as_admin()) {
 				$running_game = new Game($blockchains[$db_running_game['blockchain_id']], $db_running_game['game_id']);
 				
 				if ($print_debug) {
-					echo "Apply user strategies for ".$running_game->db_game['name']."...\n";
-					$app->flush_buffers();
+					$app->print_debug("Apply user strategies for ".$running_game->db_game['name']."...");
 				}
 				$running_game->apply_user_strategies($print_debug, 30);
 				if ($print_debug) {
@@ -51,8 +50,7 @@ if ($app->running_as_admin()) {
 			$sleep_usec = max(0, round(pow(10,6)*($loop_target_time - $loop_time)));
 			
 			if ($print_debug) {
-				echo "Script run time: ".(microtime(true)-$script_start_time).", sleeping ".$sleep_usec/pow(10,6)." seconds.\n";
-				$app->flush_buffers();
+				$app->print_debug("Script run time: ".(microtime(true)-$script_start_time).", sleeping ".$sleep_usec/pow(10,6)." seconds.");
 			}
 			
 			if ($sleep_usec > 0) usleep($sleep_usec);

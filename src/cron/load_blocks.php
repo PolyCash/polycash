@@ -74,7 +74,7 @@ if ($app->running_as_admin()) {
 				
 				if (!$error) {
 					$any_success = true;
-					$blockchain->sync_coind($print_debug);
+					$blockchain->sync_blockchain($print_debug);
 					if ($print_debug) echo "\n";
 				}
 			}
@@ -83,18 +83,15 @@ if ($app->running_as_admin()) {
 			$loop_time = $loop_stop_time-$loop_start_time;
 			$loop_target_time = max($min_loop_target_time, $loop_time);
 			$sleep_usec = round(pow(10,6)*($loop_target_time - $loop_time));
-			if ($print_debug) {
-				echo "Script time: ".(microtime(true)-$script_start_time);
-				if ($any_success) echo ", sleeping ".$sleep_usec/pow(10,6)." seconds.";
-				echo "\n\n";
-				$app->flush_buffers();
-			}
+			
+			if ($print_debug) $app->print_debug("Script time: ".(microtime(true)-$script_start_time).($any_success ? ", sleeping ".$sleep_usec/pow(10,6) : "")." seconds.\n");
+			
 			if ($any_success) usleep($sleep_usec);
 		}
 		while ($any_success && microtime(true) < $script_start_time + ($script_target_time-$loop_target_time));
 	}
 	else {
-		if ($print_debug) echo "Block loading script is already running, skip...\n";
+		if ($print_debug) $app->print_debug("Block loading script is already running, skip...");
 	}
 }
 else echo "Please supply the correct key.\n";

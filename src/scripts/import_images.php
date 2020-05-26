@@ -28,10 +28,7 @@ if ($app->running_as_admin()) {
 						$error_message = "";
 						$db_image = $app->add_image($raw_image, $extension, $access_key, $error_message);
 						
-						if (!empty($error_message)) {
-							echo $error_message;
-							$app->flush_buffers();
-						}
+						if (!empty($error_message)) $app->print_debug($error_message);
 						
 						if ($db_image) {
 							$app->run_query("UPDATE entities SET default_image_id=:image_id WHERE entity_id=:entity_id;", [
