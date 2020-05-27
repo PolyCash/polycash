@@ -9,8 +9,7 @@ require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 if ($app->running_as_admin()) {
 	do {
 		echo $app->start_regular_background_processes();
-		echo "Waiting 60 seconds...\n";
-		if (!AppSettings::runningFromCommandline()) $app->flush_buffers();
+		$app->print_debug("Waiting 60 seconds...");
 		sleep(60);
 	}
 	while (true);

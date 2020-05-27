@@ -40,10 +40,7 @@ if ($app->running_as_admin()) {
 			$loop_time = $loop_stop_time-$loop_start_time;
 			$sleep_usec = max(0, round(pow(10,6)*($loop_target_time - $loop_time)));
 			
-			if ($print_debug) {
-				echo "Script run time: ".(microtime(true)-$script_start_time).", sleeping ".$sleep_usec/pow(10,6)." seconds.\n\n";
-				$app->flush_buffers();
-			}
+			if ($print_debug) $app->print_debug("Script run time: ".(microtime(true)-$script_start_time).", sleeping ".$sleep_usec/pow(10,6)." seconds.\n");
 			
 			usleep($sleep_usec);
 		}

@@ -48,10 +48,9 @@ if ($app->running_as_admin()) {
 			
 			if ($loop_time < $loop_target_time) {
 				$sleep_usec = round(pow(10,6)*($loop_target_time - $loop_time));
-				if ($print_debug) {
-					echo "Sleeping ".round($loop_target_time - $loop_time, 2)." sec\n";
-					$app->flush_buffers();
-				}
+				
+				if ($print_debug) $app->print_debug("Sleeping ".round($loop_target_time - $loop_time, 2)." sec");
+				
 				usleep($sleep_usec);
 			}
 		}

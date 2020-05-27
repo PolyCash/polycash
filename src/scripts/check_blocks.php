@@ -48,8 +48,7 @@ if ($app->running_as_admin()) {
 			$check_blocks_q .= " AND block_id>= :first_required_block ORDER BY block_id ASC;";
 			$check_blocks = $app->run_query($check_blocks_q, $check_blocks_params);
 			
-			echo $db_blockchain['blockchain_name'].": checking ".$check_blocks->rowCount()." blocks<br/>\n";
-			$app->flush_buffers();
+			$app->print_debug($db_blockchain['blockchain_name'].": checking ".$check_blocks->rowCount()." blocks");
 			
 			while ($check_block = $check_blocks->fetch()) {
 				$num_trans = $blockchain->set_block_stats($check_block);
@@ -75,8 +74,7 @@ if ($app->running_as_admin()) {
 			
 			$check_blocks = $app->run_query($check_blocks_q, $check_blocks_params);
 			
-			echo $blockchain->db_blockchain['blockchain_name'].": checking ".$check_blocks->rowCount()." blocks<br/>\n";
-			$app->flush_buffers();
+			$app->print_debug($blockchain->db_blockchain['blockchain_name'].": checking ".$check_blocks->rowCount()." blocks");
 			
 			echo "<pre>\n";
 			while ($check_block = $check_blocks->fetch()) {
