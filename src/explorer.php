@@ -1520,23 +1520,21 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						
 						list($game_def_hash, $game_def) = GameDefinition::fetch_game_definition($game, $definition_mode, false, true);
 						?>
-						<div class="panel panel-info">
-							<div class="panel-heading">
-								<div class="panel-title">Game definition for <?php echo $game->db_game['name']; ?></div>
+						<div class="panel-heading">
+							<div class="panel-title">Game definition for <?php echo $game->db_game['name']; ?></div>
+						</div>
+						<div class="panel-body">
+							<p>
+								<a <?php if ($definition_mode == "defined") echo 'class="selected" '; ?>href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/definition/?definition_mode=defined">As Defined</a>
+								 &nbsp;&nbsp; 
+								<a <?php if ($definition_mode == "actual") echo 'class="selected" '; ?>href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/definition/?definition_mode=actual">Actual Game</a>
+							</p>
+							<div class="row">
+								<div class="col-sm-2"><label class="form-control-static" for="definition_hash">Definition hash:</label></div>
+								<div class="col-sm-10"><input type="text" class="form-control" id="definition_hash" value="<?php echo $game_def_hash; ?>" /></div>
 							</div>
-							<div class="panel-body">
-								<p>
-									<a <?php if ($definition_mode == "defined") echo 'class="selected" '; ?>href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/definition/?definition_mode=defined">As Defined</a>
-									 &nbsp;&nbsp; 
-									<a <?php if ($definition_mode == "actual") echo 'class="selected" '; ?>href="/explorer/games/<?php echo $game->db_game['url_identifier']; ?>/definition/?definition_mode=actual">Actual Game</a>
-								</p>
-								<div class="row">
-									<div class="col-sm-2"><label class="form-control-static" for="definition_hash">Definition hash:</label></div>
-									<div class="col-sm-10"><input type="text" class="form-control" id="definition_hash" value="<?php echo $game_def_hash; ?>" /></div>
-								</div>
-								
-								<textarea class="definition" id="definition"><?php echo GameDefinition::game_def_to_text($game_def); ?></textarea>
-							</div>
+							
+							<textarea class="definition" id="definition"><?php echo GameDefinition::game_def_to_text($game_def); ?></textarea>
 						</div>
 						<?php
 					}
@@ -1545,18 +1543,16 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						$blockchain_def_str = json_encode($blockchain_def, JSON_PRETTY_PRINT);
 						$blockchain_def_hash = AppSettings::standardHash($blockchain_def_str);
 						?>
-						<div class="panel panel-info">
-							<div class="panel-heading">
-								<div class="panel-title"><?php echo $blockchain->db_blockchain['blockchain_name']; ?> blockchain definition</div>
+						<div class="panel-heading">
+							<div class="panel-title"><?php echo $blockchain->db_blockchain['blockchain_name']; ?> blockchain definition</div>
+						</div>
+						<div class="panel-body">
+							<div class="row">
+								<div class="col-sm-2"><label class="form-control-static" for="definition_hash">Definition hash:</label></div>
+								<div class="col-sm-10"><input type="text" class="form-control" id="definition_hash" value="<?php echo $blockchain_def_hash; ?>" /></div>
 							</div>
-							<div class="panel-body">
-								<div class="row">
-									<div class="col-sm-2"><label class="form-control-static" for="definition_hash">Definition hash:</label></div>
-									<div class="col-sm-10"><input type="text" class="form-control" id="definition_hash" value="<?php echo $blockchain_def_hash; ?>" /></div>
-								</div>
-								
-								<textarea class="definition" id="definition"><?php echo $blockchain_def_str; ?></textarea>
-							</div>
+							
+							<textarea class="definition" id="definition"><?php echo $blockchain_def_str; ?></textarea>
 						</div>
 						<?php
 					}
