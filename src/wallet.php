@@ -673,17 +673,30 @@ if ($thisuser && $game) {
 						</div>
 					</div>
 				</div>
-				<div style="overflow: hidden;">
-					<div class="row">
-						<div class="col-sm-2">Account&nbsp;value:</div>
-						<div class="col-sm-3" style="text-align: right;" id="account_value"><?php
-						echo $game->account_value_html($account_value, $user_game, $game_pending_bets, $vote_supply_value);
-						?></div>
+				<div class="row">
+					<div class="col-sm-6">
+						<div class="row">
+							<div class="col-sm-4">Account&nbsp;value:</div>
+							<div class="col-sm-6" style="text-align: right;" id="account_value"><?php
+							echo $game->account_value_html($account_value, $user_game, $game_pending_bets, $vote_supply_value);
+							?></div>
+						</div>
+						<div id="wallet_text_stats" style="display: block;">
+							<?php
+							echo $thisuser->wallet_text_stats($game, $blockchain_current_round, $blockchain_last_block_id, $blockchain_block_within_round, $mature_balance, $immature_balance, $user_votes, $votes_value, $user_pending_bets, $user_game);
+							?>
+						</div>
 					</div>
-				</div>
-				<div id="wallet_text_stats">
 					<?php
-					echo $thisuser->wallet_text_stats($game, $blockchain_current_round, $blockchain_last_block_id, $blockchain_block_within_round, $mature_balance, $immature_balance, $user_votes, $votes_value, $user_pending_bets, $user_game);
+					if (!empty($game->db_game['wallet_promo_text'])) {
+						?>
+						<div class="col-sm-6">
+							<div style="float: right; display: inline-block; margin-right: 20px;">
+							<?php echo $game->db_game['wallet_promo_text']; ?>
+							</div>
+						</div>
+						<?php
+					}
 					?>
 				</div>
 				<?php
