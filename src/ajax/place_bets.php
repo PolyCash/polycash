@@ -93,8 +93,13 @@ if ($thisuser && $game && $app->synchronizer_ok($thisuser, $_REQUEST['synchroniz
 		die();
 	}
 	else if ($io_info['SUM(io.amount)'] != $fee+$burn_amount+$amount_sum) {
-		$app->output_message(8, "Error: amounts don't add up correctly: ".$io_info['SUM(io.amount)']." vs ($fee+$burn_amount+$amount_sum)", false);
-		die();
+		$overpaid_amount = ($fee+$burn_amount+$amount_sum) - $io_info['SUM(io.amount)'];
+		
+		if (abs($overpaid_amount) <= 1) $fee -= $overpaid_amount;
+		else {
+			$app->output_message(8, "Error: amounts don't add up correctly. You're overpaying by ".$overpaid_amount." satoshis.", false);
+			die();
+		}
 	}
 	
 	// Now create the transaction
