@@ -9,7 +9,7 @@ $db_game = $app->fetch_game_by_id($game_id);
 $blockchain = new Blockchain($app, $db_game['blockchain_id']);
 $game = new Game($blockchain, $db_game['game_id']);
 
-if ($game->db_game['module'] == "RockPaperScissors") {
+if ($game->db_game['module'] == "RockPaperScissorsFast") {
 	$peer_host_name = "https://poly.cash";
 	
 	for ($option_index=0; $option_index<3; $option_index++) {

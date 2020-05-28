@@ -44,7 +44,7 @@
 		<?php
 		}
 		
-		$online_blockchains = $app->run_query("SELECT * FROM blockchains b LEFT JOIN images i ON b.default_image_id=i.image_id WHERE b.online=1;");
+		$online_blockchains = $app->run_query("SELECT * FROM blockchains b LEFT JOIN images i ON b.default_image_id=i.image_id WHERE b.online=1 AND b.blockchain_featured=1;");
 		
 		while ($db_blockchain = $online_blockchains->fetch()) {
 			$blockchain = new Blockchain($app, $db_blockchain['blockchain_id']);
