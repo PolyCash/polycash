@@ -19,6 +19,7 @@ class Analytics {
 			if ($mode == "signups") $qty_query = "SELECT COUNT(*) FROM users WHERE time_created >= '".$day_start."' AND time_created < '".$day_end."';";
 			else if ($mode == "logins") $qty_query = "SELECT COUNT(DISTINCT(user_id)) FROM user_sessions WHERE login_time >= '".$day_start."' AND login_time < '".$day_end."';";
 			else if ($mode == "currency_conversions") $qty_query = "SELECT COUNT(*) FROM currency_invoice_ios WHERE time_created >= '".$day_start."' AND time_created <= '".$day_end."';";
+			else if ($mode == "emails") $qty_query = "SELECT COUNT(*) FROM async_email_deliveries WHERE time_created >= '".$day_start."' AND time_created <= '".$day_end."';";
 			else if ($mode == "viewers") $qty_query = "SELECT COUNT(DISTINCT(viewer_id)) FROM pageviews WHERE pageview_date='".date("Y-m-d", ($day_start+$day_end)/2)."';";
 			
 			$qty = $app->run_query($qty_query)->fetch(PDO::FETCH_NUM)[0];
@@ -48,7 +49,6 @@ class Analytics {
 		
 		$max = round($max*1.2);
 		$chl = substr($chl, 0, strlen($chl)-1);
-		$chm = substr($chm, 0, strlen($chm)-1);
 		$pix_per_view = round(100/$max, 0);
 		
 		$chd = "";

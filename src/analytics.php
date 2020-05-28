@@ -31,6 +31,7 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 		$login_chart_url = Analytics::get_chart_url($app, "logins", $from_date, $to_date, 1000, 120, "ff9900");
 		$conversion_chart_url = Analytics::get_chart_url($app, "currency_conversions", $from_date, $to_date, 1000, 120, "ff5500");
 		$viewer_chart_url = Analytics::get_chart_url($app, "viewers", $from_date, $to_date, 1000, 120, "cc0077");
+		$email_chart_url = Analytics::get_chart_url($app, "emails", $from_date, $to_date, 1000, 120, "7700ff");
 		?>
 		<div class="panel panel-default" style="margin-top: 15px;">
 			<div class="panel-heading">
@@ -67,6 +68,9 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 				
 				<h4>Unique viewers</h4>
 				<img src="<?php echo $viewer_chart_url; ?>" style="max-width: 100%; margin: 8px 0px;" />
+				
+				<h4>Emails delivered</h4>
+				<img src="<?php echo $email_chart_url; ?>" style="max-width: 100%; margin: 8px 0px;" />
 			</div>
 		</div>
 		<?php
