@@ -3,7 +3,7 @@ set_time_limit(0);
 require_once(dirname(dirname(__FILE__))."/includes/connect.php");
 
 $script_target_time = 290;
-$loop_target_time = 5;
+$loop_target_time = 1;
 $script_start_time = microtime(true);
 
 $allowed_params = ['print_debug', 'game_id'];
