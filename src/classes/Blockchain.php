@@ -2602,6 +2602,8 @@ class Blockchain {
 	}
 	
 	public function add_transaction_from_web_api($block_height, &$tx) {
+		$this->app->dbh->beginTransaction();
+		
 		$new_tx_params = [
 			'time_created' => time(),
 			'blockchain_id' => $this->db_blockchain['blockchain_id'],
@@ -2670,6 +2672,8 @@ class Blockchain {
 				'is_receiver' => ($first_passthrough_index !== false && $db_address['is_destroy_address']+$db_address['is_separator_address']+$db_address['is_passthrough_address'] == 0) ? 1 : 0
 			]);
 		}
+		
+		$this->app->dbh->commit();
 		
 		return $transaction_id;
 	}
