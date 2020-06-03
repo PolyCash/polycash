@@ -324,6 +324,11 @@ class GameDefinition {
 		
 		$game->schedule_game_reset($reset_block, $set_events_from_index, $migration['migration_id']);
 		
+		$game_extra_info = json_decode($game->db_game['extra_info']);
+		
+		if (!empty($game_extra_info->reset_from_block)) $log_message .= "Adjusted reset block: ".$game_extra_info->reset_from_block."\n";
+		if (!empty($game_extra_info->reset_from_event_index)) $log_message .= "Adjusted event index: ".$game_extra_info->reset_from_event_index."\n";
+		
 		$game->update_db_game();
 		
 		return $log_message;
