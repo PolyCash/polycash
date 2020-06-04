@@ -1886,6 +1886,13 @@ class Game {
 					'ref_block' => $block_id
 				])->fetch()['MAX(event_index)'];
 				
+				$searchtext_leagues = $this->blockchain->app->run_query("SELECT le.entity_id, le.entity_name FROM game_defined_events gde JOIN entities le ON gde.league_entity_id=le.entity_id WHERE gde.game_id=:game_id AND gde.event_index >= :from_event_index AND gde.event_index <= :to_event_index ORDER BY gde.event_index ASC;", [
+					'game_id' => $this->db_game['game_id'],
+					'from_event_index' => $from_event_index,
+					'to_event_index' => $to_event_index
+				])->fetchAll();
+				$searchtext_leagues_by_id = (array) AppSettings::arrayToMapOnKey($searchtext_leagues, "entity_id");
+				
 				$change_gdes = $this->blockchain->app->run_query("SELECT * FROM game_defined_events WHERE game_id=:game_id AND event_index >= :from_event_index AND event_index <= :to_event_index ORDER BY event_index ASC;", [
 					'game_id' => $this->db_game['game_id'],
 					'from_event_index' => $from_event_index,
@@ -1904,7 +1911,15 @@ class Game {
 					}
 					else {
 						$gdo_r = $this->blockchain->app->fetch_game_defined_options($this->db_game['game_id'], $game_defined_event['event_index'], false, false);
-						$num_options = $gdo_r->rowCount();
+						$game_defined_options = $gdo_r->fetchAll();
+						$num_options = count($game_defined_options);
+						
+						$event_searchtext = $game_defined_event['event_name'];
+						foreach ($game_defined_options as $game_defined_option) {
+							$event_searchtext .= $game_defined_option['name'];
+						}
+						if (!empty($game_defined_event['league_entity_id'])) $event_searchtext .= $searchtext_leagues_by_id[$game_defined_event['league_entity_id']]->entity_name;
+						$event_searchtext = strtolower($this->blockchain->app->make_alphanumeric($event_searchtext, ""));
 						
 						$event_outcome_block = $game_defined_event['event_outcome_block'] ? $game_defined_event['event_outcome_block'] : $game_defined_event['event_payout_block'];
 						
@@ -1921,9 +1936,10 @@ class Game {
 							'option_name' => $game_defined_event['option_name'],
 							'option_name_plural' => $game_defined_event['option_name_plural'],
 							'num_options' => $num_options,
-							'option_max_width' => $this->db_game['default_option_max_width']
+							'option_max_width' => $this->db_game['default_option_max_width'],
+							'searchtext' => $event_searchtext
 						];
-						$new_event_q = "INSERT INTO events SET game_id=:game_id, event_index=:event_index, event_starting_block=:event_starting_block, event_final_block=:event_final_block, event_outcome_block=:event_outcome_block, event_payout_block=:event_payout_block, payout_rule=:payout_rule, payout_rate=:payout_rate, event_name=:event_name, option_name=:option_name, option_name_plural=:option_name_plural, num_options=:num_options, option_max_width=:option_max_width";
+						$new_event_q = "INSERT INTO events SET game_id=:game_id, event_index=:event_index, event_starting_block=:event_starting_block, event_final_block=:event_final_block, event_outcome_block=:event_outcome_block, event_payout_block=:event_payout_block, payout_rule=:payout_rule, payout_rate=:payout_rate, event_name=:event_name, option_name=:option_name, option_name_plural=:option_name_plural, num_options=:num_options, option_max_width=:option_max_width, searchtext=:searchtext";
 						
 						foreach ($optional_event_fields as $optional_event_field) {
 							if ((string)$game_defined_event[$optional_event_field] != "") {
@@ -1936,7 +1952,7 @@ class Game {
 						$event_id = $this->blockchain->app->last_insert_id();
 						
 						$option_i = 0;
-						while ($game_defined_option = $gdo_r->fetch()) {
+						foreach ($game_defined_options as $game_defined_option) {
 							$option_index = $option_i + $option_offset;
 							if ($this->db_game['max_simultaneous_options']) $option_index = $option_index%$this->db_game['max_simultaneous_options'];
 							$option_index += $options_begin_at_index;

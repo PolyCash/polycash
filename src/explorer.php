@@ -44,7 +44,7 @@ if (rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer") $explore_mode = "explore
 else if ($game && rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer/games/".$game->db_game['url_identifier']) $explore_mode = "blocks";
 else if (!$game && $blockchain && rtrim($_SERVER['REQUEST_URI'], "/") == "/explorer/blockchains/".$blockchain->db_blockchain['url_identifier']) $explore_mode = "blocks";
 
-if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($explore_mode, array('blocks','addresses','transactions','utxos','utxo','definition'))) || ($game && in_array($explore_mode, array('events','blocks','addresses','transactions','utxos','utxo','my_bets','definition')))) {
+if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($explore_mode, array('blocks','addresses','transactions','utxos','utxo','definition'))) || ($game && in_array($explore_mode, array('events','blocks','addresses','transactions','utxos','utxo','my_bets','definition','search')))) {
 	if ($game) {
 		$last_block_id = $blockchain->last_block_id();
 		$current_round = $game->block_to_round($last_block_id+1);
@@ -268,6 +268,11 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 	else if ($explore_mode == "definition") {
 		if ($game) $pagetitle = $game->db_game['name']." game definition";
 		else $pagetitle = $blockchain->db_blockchain['blockchain_name']." blockchain definition";
+		$mode_error = false;
+	}
+	else if ($explore_mode == "search") {
+		$pagetitle = $game->db_game['name']." search results";
+		$search_term = strip_tags(urldecode($_REQUEST['for']));
 		$mode_error = false;
 	}
 	
@@ -1565,6 +1570,23 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 					}
 					</script>
 					<?php
+				}
+				else if ($explore_mode == "search") {
+					$search_string = strtolower($app->make_alphanumeric($search_term, ""));
+					$matching_events = $app->run_query("SELECT * FROM events WHERE game_id=:game_id AND searchtext LIKE '%".$search_string."%' ORDER BY event_index DESC;", ['game_id' => $game->db_game['game_id']])->fetchAll();
+					
+					echo '<div class="panel-heading"><div class="panel-title">';
+					echo $game->db_game['name'].' Search Results &nbsp; "'.$search_term.'"';
+					echo "</div></div>\n";
+					
+					echo '<div class="panel-body">';
+					echo '<p>Found '.count($matching_events)." matching events.</p>\n";
+					
+					foreach ($matching_events as $matching_event) {
+						echo $matching_event['event_index'].'. <a href="/explorer/games/'.$game->db_game['url_identifier'].'/events/'.$matching_event['event_index'].'">'.$matching_event['event_name']."</a><br/>\n";
+					}
+					
+					echo "</div>\n";
 				}
 				?>
 			</div>

@@ -76,7 +76,7 @@ class App {
 		return $min_value;
 	}
 	
-	public function make_alphanumeric($string, $extrachars) {
+	public function make_alphanumeric($string, $extrachars="") {
 		$allowed_chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".$extrachars;
 		$new_string = "";
 		
