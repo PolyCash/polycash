@@ -943,6 +943,19 @@ class Game {
 		else return false;
 	}
 	
+	public function option_indices_to_id_in_block($option_indices, $block_height, &$option_index_to_id) {
+		$option_indices_csv = implode(",", array_keys($option_indices));
+		
+		$options = $this->blockchain->app->run_query("SELECT op.option_index, op.option_id FROM options op JOIN events e ON op.event_id=e.event_id WHERE e.game_id=:game_id AND op.option_index IN (".$option_indices_csv.") AND e.event_starting_block<=:block_id AND e.event_final_block>=:block_id;", [
+			'game_id' => $this->db_game['game_id'],
+			'block_id' => $block_height
+		])->fetchAll();
+		
+		foreach ($options as $option) {
+			$option_index_to_id[$option['option_index']] = $option['option_id'];
+		}
+	}
+	
 	public function generate_invitation($inviter_id, &$invitation, $user_id) {
 		$new_invitation_params = [
 			'game_id' => $this->db_game['game_id'],
@@ -2314,6 +2327,7 @@ class Game {
 			$keep_looping = true;
 			$relevant_tx_count = 0;
 			$events_by_option_id = [];
+			$option_indices_this_block = [];
 			
 			do {
 				$relevant_transactions = $this->blockchain->app->run_query("SELECT * FROM transaction_ios io JOIN transactions t ON io.spend_transaction_id=t.transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id=:game_id AND t.block_id=:block_id AND t.blockchain_id=:blockchain_id AND gio.spend_round_id IS NULL GROUP BY t.transaction_id ORDER BY t.position_in_block ASC;", [
@@ -2405,24 +2419,32 @@ class Game {
 						$separator_outputs = $this->blockchain->app->run_query("SELECT io.*, a.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:transaction_id AND a.is_separator_address=1 ORDER BY io.out_index ASC;", ['transaction_id'=>$db_transaction['transaction_id']])->fetchAll();
 						$next_separator_i = 0;
 						
-						$regular_outputs = $this->blockchain->app->run_query("SELECT io.*, a.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:transaction_id AND a.is_destroy_address=0 AND a.is_separator_address=0 AND a.is_passthrough_address=0 AND io.is_receiver=0 ORDER BY io.out_index ASC;", ['transaction_id'=>$db_transaction['transaction_id']]);
-						$num_regular_outputs = $regular_outputs->rowCount();
+						$regular_outputs = $this->blockchain->app->run_query("SELECT io.*, a.* FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:transaction_id AND a.is_destroy_address=0 AND a.is_separator_address=0 AND a.is_passthrough_address=0 AND io.is_receiver=0 ORDER BY io.out_index ASC;", ['transaction_id'=>$db_transaction['transaction_id']])->fetchAll();
 						$output_i = 0;
 						
 						$this->blockchain->app->dbh->beginTransaction();
 						$this->blockchain->app->run_query("DELETE gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.create_transaction_id=:transaction_id;", ['transaction_id'=>$db_transaction['transaction_id']]);
 						
-						if ($num_regular_outputs > 0) {
+						if (count($regular_outputs) > 0) {
+							$new_option_indices = [];
+							foreach ($regular_outputs as $regular_output) {
+								if (empty($option_indices_this_block[$regular_output['option_index']])) $new_option_indices[$regular_output['option_index']] = true;
+							}
+							
+							if (count($new_option_indices) > 0) {
+								$this->option_indices_to_id_in_block($new_option_indices, $block_height, $option_indices_this_block);
+							}
+							
 							$insert_q = "INSERT INTO transaction_game_ios (game_id, io_id, address_id, game_out_index, game_io_index, is_coinbase, coin_blocks_destroyed, coin_rounds_destroyed, create_block_id, create_round_id, colored_amount, destroy_amount, option_id, contract_parts, event_id, effectiveness_factor, votes, effective_destroy_amount, is_resolved, resolved_before_spent) VALUES ";
 							
-							while ($regular_output = $regular_outputs->fetch()) {
+							foreach ($regular_outputs as $regular_output) {
 								$payout_insert_q = "";
 								
 								$gio_amount = floor($tx_game_nondestroy_amount*$regular_output['amount']/$tx_chain_regular_sum);
 								$cbd = floor($cbd_in*$regular_output['amount']/$tx_chain_regular_sum);
 								$crd = floor($crd_in*$regular_output['amount']/$tx_chain_regular_sum);
 								
-								if ($output_i == $num_regular_outputs-1) $this_destroy_amount = $tx_game_destroy_amount-$game_destroy_sum;
+								if ($output_i == count($regular_outputs)-1) $this_destroy_amount = $tx_game_destroy_amount-$game_destroy_sum;
 								else $this_destroy_amount = floor($tx_game_destroy_amount*$regular_output['amount']/$tx_chain_regular_sum);
 								
 								$game_destroy_sum += $this_destroy_amount;
@@ -2432,7 +2454,8 @@ class Game {
 								$game_out_index++;
 								
 								if ($regular_output['option_index'] != "") {
-									$option_id = $this->option_index_to_option_id_in_block($regular_output['option_index'], $block_height);
+									$option_id = $option_indices_this_block[$regular_output['option_index']];
+									
 									if ($option_id) {
 										$using_separator = false;
 										if (!empty($separator_outputs[$next_separator_i])) {

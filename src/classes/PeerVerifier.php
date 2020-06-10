@@ -41,7 +41,7 @@ class PeerVerifier {
 		if ($this->mode == "game_ios") {
 			$total_issued = 0;
 			
-			$confirmed_gios = $this->app->run_query("SELECT io.spend_status, io.create_block_id AS io_create_block_id, gio.* FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id=:game_id AND gio.game_io_index IS NOT NULL ORDER BY gio.game_io_index ASC;", ['game_id'=>$this->game->db_game['game_id']]);
+			$confirmed_gios = $this->app->run_query("SELECT io.spend_status, io.create_block_id AS io_create_block_id, gio.game_io_index, gio.create_block_id, gio.colored_amount, gio.coin_rounds_created FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id=:game_id AND gio.game_io_index IS NOT NULL ORDER BY gio.game_io_index ASC;", ['game_id'=>$this->game->db_game['game_id']]);
 			
 			$out_obj = [["in_existence"=>$this->game->coins_in_existence($this->blockchain->last_block_id(), false), "total"=>0]];
 			
@@ -50,7 +50,7 @@ class PeerVerifier {
 				$total_issued += $game_io['colored_amount'];
 			}
 			
-			$unconfirmed_gios = $this->app->run_query("SELECT t.tx_hash, io.spend_status, io.create_block_id AS io_create_block_id, gio.* FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id=:game_id AND gio.game_io_index IS NULL ORDER BY t.tx_hash ASC, gio.game_out_index ASC;", ['game_id' => $this->game->db_game['game_id']]);
+			$unconfirmed_gios = $this->app->run_query("SELECT io.spend_status, io.create_block_id AS io_create_block_id, gio.game_io_index, gio.create_block_id, gio.colored_amount, gio.coin_rounds_created FROM transactions t JOIN transaction_ios io ON t.transaction_id=io.create_transaction_id JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id=:game_id AND gio.game_io_index IS NULL ORDER BY t.tx_hash ASC, gio.game_out_index ASC;", ['game_id' => $this->game->db_game['game_id']]);
 			
 			while ($game_io = $unconfirmed_gios->fetch()) {
 				array_push($out_obj, [null, $game_io['io_create_block_id'], $game_io['create_block_id'], $game_io['colored_amount'], $game_io['spend_status'], $game_io['coin_rounds_created']]);
