@@ -2348,9 +2348,26 @@ class Game {
 						$input_ios = $this->blockchain->app->run_query("SELECT * FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE io.spend_transaction_id=:transaction_id AND gio.game_id=:game_id;", [
 							'transaction_id' => $db_transaction['transaction_id'],
 							'game_id' => $this->db_game['game_id']
-						]);
+						])->fetchAll();
 						
-						while ($input_io = $input_ios->fetch()) {
+						$these_option_ids = [];
+						foreach ($input_ios as $input_io) {
+							if ($input_io['is_coinbase'] == 1 && empty($events_by_option_id[$input_io['option_id']])) {
+								array_push($these_option_ids, $input_io['option_id']);
+							}
+						}
+						if (count($these_option_ids) > 0) {
+							$these_db_events = $this->blockchain->app->run_query("SELECT op.option_id, ev.* FROM events ev JOIN options op ON ev.event_id=op.event_id WHERE op.option_id IN (".implode(",", $these_option_ids).");")->fetchAll();
+							foreach ($these_db_events as $this_db_event) {
+								$events_by_option_id[$this_db_event['option_id']] = new Event($this, $this_db_event, false);
+							}
+						}
+						
+						$gio_ids_in = [];
+						$resolved_before_spent_gio_ids = [];
+						$unresolved_before_spent_gio_ids = [];
+						
+						foreach ($input_ios as $input_io) {
 							$tx_game_input_sum += $input_io['colored_amount'];
 							
 							$gio_in_coin_blocks = $input_io['colored_amount']*($block_height - $input_io['create_block_id']);
@@ -2358,38 +2375,30 @@ class Game {
 							$cbd_in += $gio_in_coin_blocks;
 							$crd_in += $gio_in_coin_rounds;
 							
-							$update_input_q = "UPDATE transaction_game_ios SET spend_round_id=:spend_round_id, coin_blocks_created=:coin_blocks_created, coin_rounds_created=:coin_rounds_created";
-							$update_input_params = [
-								'spend_round_id' => $round_id,
-								'coin_blocks_created' => $gio_in_coin_blocks,
-								'coin_rounds_created' => $gio_in_coin_rounds,
-								'game_io_id' => $input_io['game_io_id']
-							];
+							array_push($gio_ids_in, $input_io['game_io_id']);
 							
 							if ($input_io['is_coinbase'] == 1) {
-								if (empty($events_by_option_id[$input_io['option_id']])) {
-									$db_event = $this->blockchain->app->run_query("SELECT * FROM events WHERE event_id=:event_id;", ['event_id'=>$input_io['event_id']])->fetch();
-									$events_by_option_id[$input_io['option_id']] = new Event($this, $db_event, false);
-								}
-								
-								$resolved_before_spent = $input_io['resolved_before_spent'];
-								
 								if ($block_height < $events_by_option_id[$input_io['option_id']]->db_event['event_payout_block']) {
-									$resolved_before_spent = 0;
+									if ($input_io['resolved_before_spent'] != 0) {
+										array_push($unresolved_before_spent_gio_ids, $input_io['game_io_id']);
+									}
 								}
 								else if ($block_height >= $events_by_option_id[$input_io['option_id']]->db_event['event_payout_block']) {
-									$resolved_before_spent = 1;
-								}
-								
-								if ($resolved_before_spent != $input_io['resolved_before_spent']) {
-									$update_input_q .= ", resolved_before_spent=:resolved_before_spent";
-									$update_input_params['resolved_before_spent'] = $resolved_before_spent;
+									if ($input_io['resolved_before_spent'] != 1) {
+										array_push($resolved_before_spent_gio_ids, $input_io['game_io_id']);
+									}
 								}
 							}
-							
-							$update_input_q .= " WHERE game_io_id=:game_io_id;";
-							
-							$this->blockchain->app->run_query($update_input_q, $update_input_params);
+						}
+						
+						$this->blockchain->app->run_query("UPDATE transaction_game_ios SET spend_round_id=".$round_id.", coin_blocks_created=colored_amount*(".$block_height."-create_block_id), coin_rounds_created=colored_amount*(".$round_id."-create_round_id) WHERE game_io_id IN (".implode(",", $gio_ids_in).");");
+						
+						if (count($resolved_before_spent_gio_ids) > 0) {
+							$this->blockchain->app->run_query("UPDATE transaction_game_ios SET resolved_before_spent=1 WHERE game_io_id IN (".implode(",", $resolved_before_spent_gio_ids).");");
+						}
+						
+						if (count($unresolved_before_spent_gio_ids) > 0) {
+							$this->blockchain->app->run_query("UPDATE transaction_game_ios SET resolved_before_spent=0 WHERE game_io_id IN (".implode(",", $unresolved_before_spent_gio_ids).");");
 						}
 						
 						$output_ios = $this->blockchain->app->run_query("SELECT * FROM transaction_ios io JOIN addresses a ON io.address_id=a.address_id WHERE io.create_transaction_id=:create_transaction_id;", [
