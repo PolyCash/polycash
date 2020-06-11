@@ -2444,6 +2444,26 @@ class Game {
 								$this->option_indices_to_id_in_block($new_option_indices, $block_height, $option_indices_this_block);
 							}
 							
+							$new_option_ids = [];
+							foreach ($regular_outputs as $regular_output) {
+								if ($regular_output['option_index'] != "") {
+									if (!empty($option_indices_this_block[$regular_output['option_index']])) {
+										$option_id = $option_indices_this_block[$regular_output['option_index']];
+										
+										if (empty($events_by_option_id[$option_id])) {
+											array_push($new_option_ids, $option_id);
+										}
+									}
+								}
+							}
+							
+							if (count($new_option_ids) > 0) {
+								$these_db_events = $this->blockchain->app->run_query("SELECT op.option_id, ev.* FROM events ev JOIN options op ON ev.event_id=op.event_id WHERE op.option_id IN (".implode(",", $new_option_ids).");")->fetchAll();
+								foreach ($these_db_events as $this_db_event) {
+									$events_by_option_id[$this_db_event['option_id']] = new Event($this, $this_db_event, false);
+								}
+							}
+							
 							$insert_q = "INSERT INTO transaction_game_ios (game_id, io_id, address_id, game_out_index, game_io_index, is_coinbase, coin_blocks_destroyed, coin_rounds_destroyed, create_block_id, create_round_id, colored_amount, destroy_amount, option_id, contract_parts, event_id, effectiveness_factor, votes, effective_destroy_amount, is_resolved, resolved_before_spent) VALUES ";
 							
 							foreach ($regular_outputs as $regular_output) {
@@ -2463,9 +2483,9 @@ class Game {
 								$game_out_index++;
 								
 								if ($regular_output['option_index'] != "") {
-									$option_id = $option_indices_this_block[$regular_output['option_index']];
-									
-									if ($option_id) {
+									if (!empty($option_indices_this_block[$regular_output['option_index']])) {
+										$option_id = $option_indices_this_block[$regular_output['option_index']];
+										
 										$using_separator = false;
 										if (!empty($separator_outputs[$next_separator_i])) {
 											$payout_io_id = $separator_outputs[$next_separator_i]['io_id'];
@@ -2476,11 +2496,6 @@ class Game {
 										else {
 											$payout_io_id = $regular_output['io_id'];
 											$payout_address_id = $regular_output['address_id'];
-										}
-										
-										if (empty($events_by_option_id[$option_id])) {
-											$db_event = $this->blockchain->app->run_query("SELECT ev.* FROM options op JOIN events ev ON op.event_id=ev.event_id WHERE op.option_id=:option_id;", ['option_id'=>$option_id])->fetch();
-											$events_by_option_id[$option_id] = new Event($this, $db_event, false);
 										}
 										
 										$effectiveness_factor = $events_by_option_id[$option_id]->block_id_to_effectiveness_factor($block_height);
