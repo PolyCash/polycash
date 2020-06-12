@@ -9,6 +9,8 @@ if ($app->running_as_admin()) {
 	$block_id = (int) $_REQUEST['block_id'];
 	
 	$blockchain = new Blockchain($app, $blockchain_id);
+	if ($block_id < $blockchain->db_blockchain['first_required_block']) die("Please reset this blockchain from block #".$blockchain->db_blockchain['first_required_block']." or higher.\n");
+	
 	$blockchain->delete_blocks_from_height($block_id);
 	
 	echo "Done\n";
