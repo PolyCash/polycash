@@ -205,7 +205,7 @@ if ($uri_parts[1] == "api") {
 				$app->run_query("UPDATE blocks SET transactions_html='', json_transactions='' ".$block_q, $block_params);
 			}
 			
-			$block_r = $app->run_query("SELECT block_id, block_hash, num_transactions, time_mined, json_transactions FROM blocks ".$block_q, $block_params);
+			$block_r = $app->run_query("SELECT block_id, block_hash, num_transactions, time_mined, json_transactions FROM blocks ".$block_q." ORDER BY block_id ASC;", $block_params);
 			
 			$blocks = [];
 			
