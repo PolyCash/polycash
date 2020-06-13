@@ -2057,7 +2057,7 @@ class Game {
 					$api_url = $definitive_peer['base_url']."/api/".$this->db_game['url_identifier']."/events/".$imageless_option['event_index']."/options/".$imageless_option['event_option_index'];
 					$api_response = json_decode($this->blockchain->app->safe_fetch_url($api_url));
 					
-					if ($api_response->status_code == 1) {
+					if ($api_response->status_code == 1 && !empty($api_response->option->image_url)) {
 						$db_image = $this->blockchain->app->set_entity_image_from_url($api_response->option->image_url, $imageless_option['entity_id'], $error_message);
 					}
 					else $error_message .= "Failed to set image for ".$imageless_option['name'].": ".$api_url."\n";
