@@ -2048,24 +2048,21 @@ class Game {
 		$definitive_peer = $this->get_definitive_peer();
 		
 		if ($definitive_peer) {
-			$imageless_options = $this->blockchain->app->run_query("SELECT * FROM options op JOIN events ev ON op.event_id=ev.event_id LEFT JOIN entities en ON op.entity_id=en.entity_id WHERE ev.game_id=:game_id AND op.image_id IS NULL GROUP BY en.entity_id;", [
+			$imageless_options = $this->blockchain->app->run_query("SELECT en.*, op.event_option_index, ev.event_index FROM options op JOIN events ev ON op.event_id=ev.event_id JOIN entities en ON op.entity_id=en.entity_id WHERE ev.game_id=:game_id AND op.image_id IS NULL GROUP BY en.entity_id;", [
 				'game_id' => $this->db_game['game_id']
 			]);
 			
 			while ($imageless_option = $imageless_options->fetch()) {
-				$api_url = $definitive_peer['base_url']."/api/".$this->db_game['url_identifier']."/events/".$imageless_option['event_index']."/options/".$imageless_option['event_option_index'];
-				$api_response = json_decode($this->blockchain->app->safe_fetch_url($api_url));
-				
-				if ($api_response->status_code == 1) {
-					$recommended_entity_type = $this->blockchain->app->check_set_entity_type($api_response->option->entity_type);
-					$recommended_entity = $this->blockchain->app->check_set_entity($recommended_entity_type['entity_type_id'], $api_response->option->entity);
+				if (empty($imageless_option['default_image_id'])) {
+					$api_url = $definitive_peer['base_url']."/api/".$this->db_game['url_identifier']."/events/".$imageless_option['event_index']."/options/".$imageless_option['event_option_index'];
+					$api_response = json_decode($this->blockchain->app->safe_fetch_url($api_url));
 					
-					if (empty($recommended_entity['default_image_id'])) {
-						$db_image = $this->blockchain->app->set_entity_image_from_url($api_response->option->image_url, $recommended_entity['entity_id'], $error_message);
+					if ($api_response->status_code == 1) {
+						$db_image = $this->blockchain->app->set_entity_image_from_url($api_response->option->image_url, $imageless_option['entity_id'], $error_message);
 					}
-					else $error_message .= $imageless_option['name']." already has an image.\n";
+					else $error_message .= "Failed to set image for ".$imageless_option['name'].": ".$api_url."\n";
 				}
-				else $error_message .= "Failed to set image for ".$imageless_option['name'].": ".$api_url."\n";
+				else $error_message .= $imageless_option['name']." already has an image.\n";
 			}
 		}
 		else $error_message .= "This game does not have a definitive peer.\n";
