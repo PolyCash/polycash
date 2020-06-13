@@ -1790,7 +1790,8 @@ class App {
 			['float', 'default_max_voting_fraction', true],
 			['int', 'default_option_max_width', false],
 			['int', 'default_payout_block_delay', true],
-			['string', 'view_mode', true]
+			['string', 'view_mode', true],
+			['string', 'order_options_by', true]
 		];
 	}
 	

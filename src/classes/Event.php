@@ -21,12 +21,20 @@ class Event {
 	}
 	
 	public function round_voting_stats() {
-		$coins_per_vote = $this->game->blockchain->app->coins_per_vote($this->game->db_game);
+		$stats_params = [
+			'event_id' => $this->db_event['event_id']
+		];
 		
-		return $this->game->blockchain->app->run_query("SELECT * FROM options op LEFT JOIN images i ON op.image_id=i.image_id LEFT JOIN entities e ON op.entity_id=e.entity_id WHERE op.event_id=:event_id ORDER BY ((op.votes+op.unconfirmed_votes)*:coins_per_vote)+(op.effective_destroy_score+op.unconfirmed_effective_destroy_score) DESC, op.option_id ASC;", [
-			'event_id' => $this->db_event['event_id'],
-			'coins_per_vote' => $coins_per_vote
-		]);
+		if ($this->game->db_game['order_options_by'] == "option_index") {
+			$order_by = "op.event_option_index ASC";
+		}
+		else { // order_options_by = "bets"
+			$coins_per_vote = $this->game->blockchain->app->coins_per_vote($this->game->db_game);
+			$order_by = "((op.votes+op.unconfirmed_votes)*:coins_per_vote)+(op.effective_destroy_score+op.unconfirmed_effective_destroy_score) DESC, op.option_id ASC";
+			$stats_params['coins_per_vote'] = $coins_per_vote;
+		}
+		
+		return $this->game->blockchain->app->run_query("SELECT * FROM options op LEFT JOIN images i ON op.image_id=i.image_id LEFT JOIN entities e ON op.entity_id=e.entity_id WHERE op.event_id=:event_id ORDER BY ".$order_by.";", $stats_params);
 	}
 
 	public function total_votes_in_round($include_unconfirmed) {
