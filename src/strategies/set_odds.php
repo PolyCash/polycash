@@ -20,7 +20,7 @@ if ($user_game) {
 	$amount_per_event = null;
 	if (!empty($_REQUEST['amount_per_event'])) $amount_per_event = (float) $_REQUEST['amount_per_event'];
 	
-	$hours_between_applications = 12;
+	$hours_between_applications = 0.1;
 	$sec_between_applications = 60*60*$hours_between_applications;
 	$rand_sec_offset = rand(0, $sec_between_applications*2);
 	
