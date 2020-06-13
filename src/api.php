@@ -522,17 +522,19 @@ if ($uri_parts[1] == "api") {
 						$db_option = $app->run_query("SELECT *, en.entity_name AS entity_name, et.entity_name AS entity_type FROM options op LEFT JOIN entities en ON op.entity_id=en.entity_id LEFT JOIN images i ON op.image_id=i.image_id LEFT JOIN entity_types et ON en.entity_type_id=et.entity_type_id WHERE op.event_id='".$db_event['event_id']."' AND op.event_option_index=:event_option_index;", ['event_option_index' => $event_option_index])->fetch();
 						
 						if ($db_option) {
-							$image_url = AppSettings::getParam('base_url').$app->image_url($db_option);
-							
 							$api_option = [
 								'title'=>$db_option['name'],
 								'entity'=>$db_option['entity_name'],
 								'entity_type'=>$db_option['entity_type'],
 								'event_index'=>(int)$db_event['event_index'],
 								'option_index'=>(int)$db_option['option_index'],
-								'event_option_index'=>(int)$db_option['event_option_index'],
-								'image_url'=>$image_url
+								'event_option_index'=>(int)$db_option['event_option_index']
 							];
+							
+							if (!empty($db_option['image_id'])) {
+								$image_url = AppSettings::getParam('base_url').$app->image_url($db_option);
+								$api_option['image_url'] = $image_url;
+							}
 							
 							$api_output = ['status_code'=>1, 'message'=>'Successful', 'option'=>$api_option];
 						}
