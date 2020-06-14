@@ -68,6 +68,9 @@ if (!empty($_REQUEST['filter_date'])) {
 	$filter_time = strtotime($_REQUEST['filter_date']);
 	$filter_arr['date'] = date("Y-m-d", $filter_time);
 }
+if (!empty($_REQUEST['filter_term'])) {
+	$filter_arr['term'] = urldecode($_REQUEST['filter_term']);
+}
 
 if (isset($_REQUEST['event_hashes'])) $event_hashes = explode(",", $_REQUEST['event_hashes']);
 else $event_hashes = [];

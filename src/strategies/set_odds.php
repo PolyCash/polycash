@@ -103,7 +103,7 @@ if ($user_game) {
 						$io_amount_sum += $recycle_io['amount'];
 					}
 					
-					if ($burn_game_amount < 0 || $burn_game_amount > $game_amount_sum*1.2) die("Failed to determine a valid burn amount (".$burn_game_amount." vs ".$game_amount_sum.").");
+					if ($burn_game_amount < 0 || $burn_game_amount > $game_amount_sum*1.2) $app->output_message(8, "You don't have enough money for this TX.", false);
 					
 					$io_nonfee_amount = $io_amount_sum-$fee_amount;
 					$game_coins_per_coin = $game_amount_sum/$io_nonfee_amount;

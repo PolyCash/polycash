@@ -350,6 +350,7 @@ var Game = function(pageManager, game_id, last_block_id, last_transaction_id, ma
 					game_loop_index: this.game_loop_index,
 					event_hashes: _.map(this.events, 'rendered_event_hash').join(","),
 					filter_date: this.filter_date ? this.filter_date : "",
+					filter_term: document.getElementById('filter_by_term').value ? encodeURIComponent(document.getElementById('filter_by_term').value) : "",
 					synchronizer_token: this.pageManager.synchronizer_token
 				},
 				context: this,

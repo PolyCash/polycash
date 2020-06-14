@@ -1579,6 +1579,10 @@ class Game {
 			$events_q .= " AND DATE(ev.event_final_time)=:filter_date";
 			$events_params['filter_date'] = $filter_arr['date'];
 		}
+		if (!empty($filter_arr['term'])) {
+			$term = strtolower($this->blockchain->app->make_alphanumeric(strip_tags($filter_arr['term'])));
+			$events_q .= " AND ev.searchtext LIKE '%".$term."%'";
+		}
 		if (!empty($filter_arr['require_option_block_rule'])) {
 			$events_q .= " AND ev.option_block_rule IS NOT NULL";
 		}
@@ -3558,6 +3562,9 @@ class Game {
 	public function event_filter_html() {
 		$html = '
 		<form class="form-inline">
+			<div class="form-group" style="margin-right: 15px;">
+				<input type="text" id="filter_by_term" class="form-control input-sm" placeholder="Search" />
+			</div>
 			<div class="form-group">
 				<label for="filter_by_date">Date:</label> &nbsp;&nbsp; 
 				<select class="form-control input-sm" id="filter_by_date" onchange="thisPageManager.filter_changed(\'date\');">
