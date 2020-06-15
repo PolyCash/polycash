@@ -73,11 +73,15 @@ class GameDefinition {
 		
 		if ($definition_mode == "defined") {
 			$events_q = "SELECT ev.*, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM game_defined_events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id=:game_id ORDER BY ev.event_index ASC;";
+			$options_q = "SELECT event_index, name, entity_id, target_probability FROM game_defined_options WHERE game_id=:game_id ORDER BY event_index ASC, option_index ASC;";
 		}
 		else {
 			$events_q = "SELECT ev.*, sp.entity_name AS sport_name, lg.entity_name AS league_name FROM events ev LEFT JOIN entities sp ON ev.sport_entity_id=sp.entity_id LEFT JOIN entities lg ON ev.league_entity_id=lg.entity_id WHERE ev.game_id=:game_id ORDER BY ev.event_index ASC;";
+			$options_q = "SELECT ev.event_index, op.name, op.entity_id, op.target_probability FROM events ev JOIN options op ON ev.event_id=op.event_id WHERE ev.game_id=:game_id ORDER BY ev.event_index ASC, op.event_option_index ASC;";
 		}
 		$db_events = $app->run_query($events_q, ['game_id'=>$game->db_game['game_id']]);
+		$db_options = $app->run_query($options_q, ['game_id'=>$game->db_game['game_id']])->fetchAll(PDO::FETCH_ASSOC);
+		$options_by_event_index = AppSettings::arrayToMapOnKey($db_options, "event_index", true);
 		
 		$i=0;
 		while ($db_event = $db_events->fetch()) {
@@ -102,19 +106,12 @@ class GameDefinition {
 			if (!empty($db_event['league_name'])) $temp_event['league'] = $db_event['league_name'];
 			if (!empty($db_event['external_identifier']) && $show_internal_params) $temp_event['external_identifier'] = $db_event['external_identifier'];
 			
-			if ($definition_mode == "defined") {
-				$db_options = $app->fetch_game_defined_options($game->db_game['game_id'], $db_event['event_index'], false, false);
-			}
-			else {
-				$db_options = $app->fetch_options_by_event($db_event['event_id']);
-			}
-			
 			$j = 0;
-			while ($option = $db_options->fetch()) {
-				$possible_outcome = ["title"=>$option['name']];
+			foreach ($options_by_event_index[$db_event['event_index']] as $option) {
+				$possible_outcome = ["title"=>$option->name];
 				if ($show_internal_params) {
-					if (!empty($option['target_probability'])) $possible_outcome['target_probability'] = $option['target_probability'];
-					if (!empty($option['entity_id'])) $possible_outcome['entity_id'] = $option['entity_id'];
+					if (!empty($option->target_probability)) $possible_outcome['target_probability'] = $option->target_probability;
+					if (!empty($option->entity_id)) $possible_outcome['entity_id'] = $option->entity_id;
 				}
 				$temp_event['possible_outcomes'][$j] = $possible_outcome;
 				$j++;
