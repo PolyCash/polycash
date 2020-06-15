@@ -3563,7 +3563,7 @@ class Game {
 		$html = '
 		<form class="form-inline">
 			<div class="form-group" style="margin-right: 15px;">
-				<input type="text" id="filter_by_term" class="form-control input-sm" placeholder="Search" />
+				<input type="text" id="filter_by_term" class="form-control input-sm" placeholder="Search '.$this->db_game['event_type_name_plural'].'" />
 			</div>
 			<div class="form-group">
 				<label for="filter_by_date">Date:</label> &nbsp;&nbsp; 

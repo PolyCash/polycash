@@ -49,7 +49,7 @@ if (!empty($blockchain) || !empty($game)) {
 		<?php if ($top_nav_show_search) { ?>
 		<form onsubmit="thisPageManager.explorer_search(); return false;">
 			<div class="col-sm-4 row-no-padding">
-				<input type="text" class="form-control" placeholder="Search..." id="explorer_search"<?php if (!empty($search_term)) echo ' value="'.str_replace('"', '', $search_term).'"'; ?>/>
+				<input type="text" class="form-control" placeholder="Search addresses & transactions" id="explorer_search"<?php if (!empty($search_term)) echo ' value="'.str_replace('"', '', $search_term).'"'; ?>/>
 			</div>
 			<div class="col-sm-1 row-no-padding">
 				<button type="submit" class="btn btn-primary">Go</button>
