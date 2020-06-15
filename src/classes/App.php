@@ -3765,5 +3765,13 @@ class App {
 			'invoice_id' => $invoice_id
 		])->fetch();
 	}
+	
+	public function set_net_risk_view(&$user_game, $net_risk_view) {
+		$this->run_query("UPDATE user_games SET net_risk_view=:net_risk_view WHERE user_game_id=:user_game_id;", [
+			'net_risk_view' => $net_risk_view,
+			'user_game_id' => $user_game['user_game_id']
+		]);
+		$user_game['net_risk_view'] = $net_risk_view;
+	}
 }
 ?>

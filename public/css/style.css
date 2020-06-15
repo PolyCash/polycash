@@ -568,3 +568,6 @@ a.selected {
 #explorer_block_list .row:hover {
 	background-color: #f4f4f4;
 }
+.my_votes_table .row {
+	line-height: 180% ! important;
+}
