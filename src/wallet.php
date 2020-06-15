@@ -768,6 +768,12 @@ if ($thisuser && $game) {
 								<option value="new">Create a new account</option>
 							</select>
 						</div>
+						<div style="display: inline-block; float: right; margin-top: -3px;">
+							<select class="form-control input-sm" id="net_risk_view">
+								<option value="0">Show each bet</option>
+								<option value="1"<?php if ($user_game['net_risk_view']) echo ' selected="selected"'; ?>>Show net risk by option</option>
+							</select>
+						</div>
 					</div>
 				</div>
 				<div class="panel-body">
