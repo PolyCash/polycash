@@ -20,9 +20,17 @@ if (!$game) {
 }
 $game->load_current_events();
 
+$net_risk_view_changed = false;
+
 if ($thisuser) {
 	$thisuser->set_user_active();
 	$user_game = $thisuser->ensure_user_in_game($game, false);
+	
+	$net_risk_view = (int) ($_REQUEST['net_risk_view'] ?? 0);
+	if ($user_game['net_risk_view'] != $net_risk_view) {
+		$app->set_net_risk_view($user_game, $net_risk_view);
+		$net_risk_view_changed = true;
+	}
 }
 
 $blockchain_last_block_id = $game->blockchain->last_block_id();
@@ -90,7 +98,7 @@ for ($render_event_i=0; $render_event_i<count($these_events); $render_event_i++)
 	$rendered_event_hash = substr($rendered_event_hash, 0, 8);
 	$display_event_ids .= $these_events[$render_event_i]->db_event['event_id'].",";
 	
-	if (isset($event_hashes[$render_event_i]) && $event_hashes[$render_event_i] == $rendered_event_hash) {
+	if (isset($event_hashes[$render_event_i]) && $event_hashes[$render_event_i] == $rendered_event_hash && !$net_risk_view_changed) {
 		$output['rendered_events'][$render_event_i] = ["hash" => false, "html" => ""];
 	}
 	else {
