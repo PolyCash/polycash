@@ -1492,7 +1492,7 @@ var PageManager = function() {
 					success: function(place_bets_response) {
 						$('#confirm_compose_bets_btn').html(bet_btn_text);
 						
-						var remove_utxos_delay_ms = 1500;
+						var remove_utxos_delay_ms = 100;
 						var num_inputs = this.bet_inputs.length;
 						
 						if (place_bets_response.status_code == 1) {
@@ -1507,8 +1507,15 @@ var PageManager = function() {
 								this.remove_all_outputs();
 								
 								for (var i=0; i<num_inputs; i++) {
-									this.remove_utxo_from_vote(0, false);
+									$('#selected_utxo_'+i).remove();
+									$('#select_utxo_'+this.bet_inputs[i].ref_io.io_id).show();
 								}
+								this.bet_inputs = [];
+								this.io_id2input_index = {};
+								
+								this.set_input_amount_sums();
+								this.refresh_compose_bets();
+								this.refresh_output_amounts();
 							}.bind(this), remove_utxos_delay_ms);
 						}
 						else {
