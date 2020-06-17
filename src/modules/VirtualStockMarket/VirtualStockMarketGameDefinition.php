@@ -69,6 +69,7 @@ class VirtualStockMarketGameDefinition {
 			"default_payout_block_delay": 0,
 			"default_payout_rule": "linear",
 			"view_mode": "default",
+			"order_options_by": "option_index",
 			"escrow_amounts": []
 		}';
 		

@@ -15,6 +15,18 @@ if ($_REQUEST['action'] == "unsubscribe") {
 	])->fetch();
 	
 	if ($delivery) {
+		$unsubscribe_users = $app->run_query("SELECT * FROM users WHERE notification_email=:email;", [
+			'email' => $delivery['to_email']
+		])->fetchAll(PDO::FETCH_ASSOC);
+		
+		foreach ($unsubscribe_users as $unsubscribe_user) {
+			if ($unsubscribe_user['unsubscribed'] == 0) {
+				$app->run_query("UPDATE users SET unsubscribed=1 WHERE user_id=:user_id;", [
+					'user_id' => $unsubscribe_user['user_id']
+				]);
+			}
+		}
+		
 		$unsubscribe_q = "UPDATE users u JOIN user_games ug ON u.user_id=ug.user_id SET ug.notification_preference='none' WHERE u.notification_email=:email";
 		$unsubscribe_params = [
 			'email' => $delivery['to_email']

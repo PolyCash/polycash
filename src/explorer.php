@@ -1454,7 +1454,7 @@ if ($explore_mode == "explorer_home" || ($blockchain && !$game && in_array($expl
 						else $user_game_show_balances = false;
 						?>
 						<div id="change_user_game">
-							<select id="select_user_game" class="form-control" onchange="thisPageManager.explorer_change_user_game();">
+							<select id="select_user_game" class="form-control input-sm" onchange="thisPageManager.explorer_change_user_game();">
 								<?php
 								while ($db_user_game = $my_user_games->fetch()) {
 									echo "<option ";
