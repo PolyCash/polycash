@@ -24,6 +24,10 @@ if ($user_game) {
 	$sec_between_applications = 60*60*$hours_between_applications;
 	$rand_sec_offset = rand(0, $sec_between_applications*2);
 	
+	if ($game->last_block_id() != $blockchain->last_block_id()) {
+		$app->output_message(9, "The game is not fully loaded.", false);
+		die();
+	}
 	if (time() > $user_game['time_next_apply'] || !empty($_REQUEST['force'])) {
 		$account = $app->fetch_account_by_id($user_game['account_id']);
 		
@@ -78,7 +82,7 @@ if ($user_game) {
 					$io_ids = [];
 					$keep_looping = true;
 					
-					while ($keep_looping && $io = $spendable_ios_in_account->fetch()) {
+					while ($io = $spendable_ios_in_account->fetch()) {
 						$game_amount_sum += $io['coins'];
 						$io_amount_sum += $io['amount'];
 						
@@ -103,7 +107,10 @@ if ($user_game) {
 						$io_amount_sum += $recycle_io['amount'];
 					}
 					
-					if ($burn_game_amount < 0 || $burn_game_amount > $game_amount_sum*1.2) $app->output_message(8, "You don't have enough money for this TX.", false);
+					if ($burn_game_amount < 0 || $burn_game_amount > $game_amount_sum*1.2) {
+						$app->output_message(8, "You don't have enough money for this TX.", false);
+						die();
+					}
 					
 					$io_nonfee_amount = $io_amount_sum-$fee_amount;
 					$game_coins_per_coin = $game_amount_sum/$io_nonfee_amount;

@@ -22,6 +22,10 @@ if ($user_game) {
 	
 	$account = $app->fetch_account_by_id($user_game['account_id']);
 	
+	if ($game->last_block_id() != $blockchain->last_block_id()) {
+		$app->output_message(9, "The game is not fully loaded.", false);
+		die();
+	}
 	if ($account) {
 		$mature_balance = $user->mature_balance($game, $user_game);
 		$user_pending_bets = $game->user_pending_bets($user_game);

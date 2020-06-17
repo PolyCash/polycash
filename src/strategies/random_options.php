@@ -20,6 +20,10 @@ if ($user_game) {
 	$sec_between_applications = 60*60*4;
 	$rand_sec_offset = rand(0, $sec_between_applications*2);
 	
+	if ($game->last_block_id() != $blockchain->last_block_id()) {
+		$app->output_message(9, "The game is not fully loaded.", false);
+		die();
+	}
 	if (time() > $user_game['time_next_apply'] || !empty($_REQUEST['force'])) {
 		$account = $app->fetch_account_by_id($user_game['account_id']);
 		
