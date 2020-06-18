@@ -559,7 +559,7 @@ class App {
 	}
 	
 	public function cancel_transaction($transaction_id, $affected_input_ids, $created_input_ids) {
-		$this->run_query("DELETE FROM transactions WHERE transaction_id=:transaction_id;", ['transaction_id'=>$transaction_id]);
+		if ($transaction_id) $this->run_query("DELETE FROM transactions WHERE transaction_id=:transaction_id;", ['transaction_id'=>$transaction_id]);
 		
 		if (count($affected_input_ids) > 0) {
 			$this->run_query("UPDATE transaction_ios SET spend_status='unspent', spend_transaction_id=NULL, spend_block_id=NULL WHERE io_id IN (".implode(",", array_map('intval', $affected_input_ids)).");");

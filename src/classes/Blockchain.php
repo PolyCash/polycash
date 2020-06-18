@@ -2397,6 +2397,7 @@ class Blockchain {
 				$sendraw_response = $this->coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
 				
 				if (isset($sendraw_response['message'])) {
+					$this->app->cancel_transaction($transaction_id ?? null, $affected_input_ids, $created_input_ids);
 					$error_message = $sendraw_response['message'];
 					$broadcast_successful = false;
 				}

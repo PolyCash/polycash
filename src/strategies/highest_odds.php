@@ -76,7 +76,7 @@ if ($user_game) {
 					$io_ids = [];
 					$keep_looping = true;
 					
-					while ($keep_looping && $io = $spendable_ios_in_account->fetch()) {
+					while ($io = $spendable_ios_in_account->fetch()) {
 						$game_amount_sum += $io['coins'];
 						$io_amount_sum += $io['amount'];
 						
