@@ -562,7 +562,9 @@ class App {
 		if ($transaction_id) $this->run_query("DELETE FROM transactions WHERE transaction_id=:transaction_id;", ['transaction_id'=>$transaction_id]);
 		
 		if (count($affected_input_ids) > 0) {
-			$this->run_query("UPDATE transaction_ios SET spend_status='unspent', spend_transaction_id=NULL, spend_block_id=NULL WHERE io_id IN (".implode(",", array_map('intval', $affected_input_ids)).");");
+			$this->run_query("UPDATE transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id SET io.spend_status='unspent', io.spend_transaction_id=NULL, io.spend_block_id=NULL WHERE io.io_id IN (".implode(",", array_map('intval', $affected_input_ids)).") AND t.block_id IS NOT NULL;");
+			
+			$this->run_query("UPDATE transaction_ios io JOIN transactions t ON io.create_transaction_id=t.transaction_id SET io.spend_status='unconfirmed', io.spend_transaction_id=NULL, io.spend_block_id=NULL WHERE io.io_id IN (".implode(",", array_map('intval', $affected_input_ids)).") AND t.block_id IS NULL;");
 		}
 		
 		if ($created_input_ids && count($created_input_ids) > 0) {
