@@ -85,6 +85,7 @@ class Game {
 		$raw_txout = [];
 		$affected_input_ids = [];
 		$created_input_ids = [];
+		$transaction_id = null;
 		
 		if ($type == "coinbase") $amount_ok = true;
 		else if ($utxo_balance == $amount || (!$io_ids && $amount <= $mature_balance)) $amount_ok = true;
@@ -150,9 +151,9 @@ class Game {
 								'transaction_id' => $transaction_id,
 								'io_id' => $transaction_input['io_id']
 							];
-							$update_input_q = "UPDATE transaction_ios SET spend_transaction_id=:transaction_id";
+							$update_input_q = "UPDATE transaction_ios SET spend_transaction_id=:transaction_id, spend_status='spent'";
 							if ($block_id !== false) {
-								$update_input_q .= ", spend_status='spent', spend_block_id=:spend_block_id";
+								$update_input_q .= ", spend_block_id=:spend_block_id";
 								$update_input_params['spend_block_id'] = $block_id;
 							}
 							$update_input_q .= " WHERE io_id=:io_id;";
@@ -268,6 +269,7 @@ class Game {
 					$sendraw_response = $this->blockchain->coin_rpc->sendrawtransaction($signed_raw_transaction['hex']);
 					
 					if (isset($sendraw_response['message'])) {
+						$this->blockchain->app->cancel_transaction($transaction_id, $affected_input_ids, false);
 						$error_message = "Failed to create transaction: ".$sendraw_response['message'];
 						return false;
 					}

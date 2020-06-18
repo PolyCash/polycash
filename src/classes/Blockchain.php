@@ -2269,13 +2269,12 @@ class Blockchain {
 					$update_input_params = [
 						'io_id' => $transaction_input['io_id']
 					];
-					$update_input_q = "UPDATE transaction_ios SET ";
+					$update_input_q = "UPDATE transaction_ios SET spend_status='spent'";
 					
 					if ($block_id !== false) {
-						$update_input_q .= "spend_status='spent', spend_block_id=:block_id";
+						$update_input_q .= ", spend_block_id=:block_id";
 						$update_input_params['block_id'] = $block_id;
 					}
-					else $update_input_q .= "spend_status='unconfirmed'";
 					
 					if (!empty($transaction_id)) {
 						$update_input_q .= ", spend_transaction_id=:transaction_id, in_index=:in_index";
