@@ -27,8 +27,13 @@ if ($app->running_as_admin()) {
 			}
 			else {
 				$app->run_query("CREATE DATABASE ".AppSettings::getParam('mysql_database'));
+				$app->dbh->query("USE ".AppSettings::getParam('mysql_database').";") or die("Failed to create database '".AppSettings::getParam('mysql_database')."'");
 				$app->select_db(AppSettings::getParam('mysql_database'));
-				
+			}
+			
+			$table_exists = $app->run_query("SHOW TABLES;")->rowCount() > 0;
+			
+			if (!$table_exists) {
 				$cmd = $app->mysql_binary_location()." -u ".AppSettings::getParam('mysql_user')." -h ".AppSettings::getParam('mysql_server');
 				if (AppSettings::getParam('mysql_password') != "") $cmd .= " -p'".AppSettings::getParam('mysql_password')."'";
 				
@@ -38,7 +43,6 @@ if ($app->running_as_admin()) {
 				$cmd .= " ".AppSettings::getParam('mysql_database')." < ".$base_schema_path;
 				echo exec($cmd);
 			}
-			$app->load_module_classes();
 			
 			$table_exists = $app->run_query("SHOW TABLES;")->rowCount() > 0;
 			if (!$table_exists) {
@@ -46,6 +50,7 @@ if ($app->running_as_admin()) {
 				die();
 			}
 			
+			$app->load_module_classes();
 			$app->update_schema();
 			
 			if (empty(AppSettings::getParam('identifier_case_sensitive'))) die('Please set the variable "identifier_case_sensitive" in your config file.');
