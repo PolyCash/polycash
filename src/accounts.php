@@ -301,7 +301,7 @@ include(AppSettings::srcPath().'/includes/html_start.php');
 				$account_r = $app->run_query($account_q, $account_params);
 				
 				$show_balances = false;
-				if ($account_r->rowCount() <= 10 || !empty($_REQUEST['show_balances'])) $show_balances = true;
+				if ($account_r->rowCount() <= 50 || !empty($_REQUEST['show_balances'])) $show_balances = true;
 				
 				if ($selected_account_id) {
 					$show_balances = true;

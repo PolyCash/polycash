@@ -126,7 +126,10 @@ include(AppSettings::srcPath()."/includes/html_start.php");
 									else echo "(".$blockchain->authoritative_peer['base_url'].")";
 								}
 								?></td>
-								<td><?php echo $blockchain->db_blockchain['blockchain_name']; ?></td>
+								<td>
+									<?php echo $blockchain->db_blockchain['blockchain_name']; ?><br/>
+									<?php echo $blockchain->db_blockchain['seconds_per_block']; ?> second blocks
+								</td>
 								<td><?php
 								if ($blockchain->db_blockchain['online']) echo '<font class="text-success">Enabled</font>';
 								else echo '<font class="text-danger">Disabled</font>';
