@@ -630,7 +630,7 @@ class Event {
 					$spent_this_op = $betinfo_by_option_id[$option_id]['spent'] ?? 0;
 					$potential_delta = $payout_this_op - $sum_spent;
 					
-					$html .= '<font class="'.($potential_delta > 0 ? 'green' : 'red').'text">';
+					$html .= '<font class="'.($potential_delta >= 0 ? 'green' : 'red').'text">';
 					$html .= '<div class="row"><div class="col-sm-6">Staked '.$this->game->blockchain->app->format_bignum($spent_this_op/pow(10, $this->game->db_game['decimal_places'])).' on '.$db_option->name.'</div><div class="col-sm-6">';
 					if ($potential_delta >= 0) $html .= '+';
 					else $html .= '-';
@@ -1030,10 +1030,8 @@ class Event {
 		
 		// Now set event values by summing up the option values
 		$this->game->blockchain->app->run_query("UPDATE events e JOIN (
-			SELECT SUM(:payout_weight_score) sum_score, SUM(destroy_score) destroy_score, SUM(votes) sum_votes, SUM(effective_destroy_score) effective_destroy_score, SUM(:unconfirmed_payout_weight_score) sum_unconfirmed_score, SUM(unconfirmed_votes) sum_unconfirmed_votes, SUM(unconfirmed_destroy_score) sum_unconfirmed_destroy_score, SUM(unconfirmed_effective_destroy_score) sum_unconfirmed_effective_destroy_score FROM options WHERE event_id=:event_id
+			SELECT SUM(".$this->game->db_game['payout_weight']."_score) sum_score, SUM(destroy_score) destroy_score, SUM(votes) sum_votes, SUM(effective_destroy_score) effective_destroy_score, SUM(unconfirmed_".$this->game->db_game['payout_weight']."_score) sum_unconfirmed_score, SUM(unconfirmed_votes) sum_unconfirmed_votes, SUM(unconfirmed_destroy_score) sum_unconfirmed_destroy_score, SUM(unconfirmed_effective_destroy_score) sum_unconfirmed_effective_destroy_score FROM options WHERE event_id=:event_id
 		) op SET e.sum_score=op.sum_score, e.destroy_score=op.destroy_score, e.sum_votes=op.sum_votes, e.effective_destroy_score=op.effective_destroy_score, e.sum_unconfirmed_score=op.sum_unconfirmed_score, e.sum_unconfirmed_votes=op.sum_unconfirmed_votes, e.sum_unconfirmed_destroy_score=op.sum_unconfirmed_destroy_score, e.sum_unconfirmed_effective_destroy_score=op.sum_unconfirmed_effective_destroy_score WHERE e.event_id=:event_id;", [
-			'payout_weight_score' => $this->game->db_game['payout_weight']."_score",
-			'unconfirmed_payout_weight_score' => "unconfirmed_".$this->game->db_game['payout_weight']."_score",
 			'event_id' => $this->db_event['event_id']
 		]);
 	}
