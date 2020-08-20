@@ -3667,9 +3667,7 @@ class Game {
 	
 	public function user_pending_bets(&$user_game) {
 		$coins_per_vote = $this->blockchain->app->coins_per_vote($this->db_game);
-		$info = $this->blockchain->app->run_query("SELECT SUM(p.destroy_amount) as destroy_amount, SUM(:payout_weight_field) as inflation_score, SUM(:ref_votes_field) as ref_votes FROM transaction_game_ios gio JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.game_id=:game_id AND gio.is_resolved=0 AND k.account_id=:account_id;", [
-			'payout_weight_field' => "p.".$this->db_game['payout_weight']."s_destroyed",
-			'ref_votes_field' => "p.ref_".$this->db_game['payout_weight']."s",
+		$info = $this->blockchain->app->run_query("SELECT SUM(p.destroy_amount) as destroy_amount, SUM(p.".$this->db_game['payout_weight']."s_destroyed) as inflation_score, SUM(p.ref_".$this->db_game['payout_weight']."s) as ref_votes FROM transaction_game_ios gio JOIN transaction_game_ios p ON gio.parent_io_id=p.game_io_id JOIN transaction_ios io ON gio.io_id=io.io_id JOIN address_keys k ON io.address_id=k.address_id WHERE gio.game_id=:game_id AND gio.is_resolved=0 AND k.account_id=:account_id;", [
 			'game_id' => $this->db_game['game_id'],
 			'account_id' => $user_game['account_id']
 		])->fetch();
