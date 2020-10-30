@@ -2650,7 +2650,7 @@ class Game {
 				if ($last_block_id > $block_height+5) {
 					$next_required_block_id = $last_block_id;
 					
-					$next_spend_block = $this->blockchain->app->run_query("SELECT MIN(io.spend_block_id) FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id=:game_id AND io.spend_block_id>:block_id AND io.blockchain_id=:blockchain_id", [
+					$next_spend_block = $this->blockchain->app->run_query("SELECT MIN(io.spend_block_id) AS block_id FROM transaction_ios io JOIN transaction_game_ios gio ON io.io_id=gio.io_id WHERE gio.game_id=:game_id AND io.spend_block_id>:block_id AND io.blockchain_id=:blockchain_id", [
 						'game_id' => $this->db_game['game_id'],
 						'block_id' => $block_height,
 						'blockchain_id' => $this->blockchain->db_blockchain['blockchain_id']
