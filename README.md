@@ -23,10 +23,9 @@ Make sure to set the following params in your config.json to something like the 
 ```
 "operator_key" is a parameter which allows a site administrator to perform certain actions like updating the application.  If you are installing PolyCash on a public facing server, be sure to set a secure value for this parameter.
 
-If you want to allow users to log in with an email address, enter your sendgrid credentials into these variables in your config file:
+If you want to allow users to log in with an email address, enter your sendgrid API key in your config file:
 ```
-"sendgrid_user": "",
-"sendgrid_pass": ""
+"sendgrid_api_key": ""
 ```
 
 Next, configure cron to poll PolyCash every minute. This keeps PolyCash in sync at all times. Add this line to your /etc/crontab:

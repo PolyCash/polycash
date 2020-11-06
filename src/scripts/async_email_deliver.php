@@ -26,52 +26,88 @@ if ($app->running_as_admin()) {
 		if ($deliveries->rowCount() == 1) {
 			$delivery = $deliveries->fetch();
 			
-			$url = 'https://api.sendgrid.com/';
-			
-			$params = array(
-				'api_user'	=> AppSettings::getParam('sendgrid_user'),
-				'api_key'	=> AppSettings::getParam('sendgrid_pass'),
-				'subject'	=> $delivery['subject'],
-				'html'		=> $delivery['message'],
-				'from'		=> $delivery['from_email'],
-				'fromname'	=> $delivery['from_name'],
-				'bcc'		=> $delivery['bcc']
-			);
+			$sendgrid_api_url = 'https://api.sendgrid.com/v3/mail/send';
 			
 			$to_list = explode(",", $delivery['to_email']);
-			for ($i=0; $i<count($to_list); $i++) {
-				$params["to[$i]"] = $to_list[$i];
+			$to_list_formatted = [];
+			foreach ($to_list as $to_email) {
+				array_push($to_list_formatted, [
+					'email' => $to_email
+				]);
 			}
 			
-			if ($delivery['cc'] != "") {
+			$sendgrid_personalizations = [
+				'to' => $to_list_formatted,
+				'subject'	=> $delivery['subject']
+			];
+			
+			if (!empty($delivery['cc'])) {
 				$cc_list = explode(",", $delivery['cc']);
-				for ($j=0; $j<count($cc_list); $j++) {
-					$params["cc[$j]"] = $cc_list[$j];
+				$sendgrid_personalizations['cc'] = [];
+				
+				foreach ($cc_list as $cc_email) {
+					array_push($sendgrid_personalizations['cc'], [
+						'email' => $cc_email
+					]);
 				}
 			}
 			
-			$request =  $url.'api/mail.send.json';
+			if (!empty($delivery['bcc'])) {
+				$bcc_list = explode(",", $delivery['bcc']);
+				$sendgrid_personalizations['bcc'] = [];
+				
+				foreach ($bcc_list as $bcc_email) {
+					array_push($sendgrid_personalizations['bcc'], [
+						'email' => $bcc_email
+					]);
+				}
+			}
 			
-			$session = curl_init($request);
-			curl_setopt ($session, CURLOPT_POST, true);
-			curl_setopt ($session, CURLOPT_POSTFIELDS, $params);
-			curl_setopt($session, CURLOPT_HEADER, false);
-			curl_setopt($session, CURLOPT_RETURNTRANSFER, true);
-			$response = curl_exec($session);
-			curl_close($session);
+			$sendgrid_payload = [
+				'personalizations' => [$sendgrid_personalizations],
+				'from' => [
+					'email' => $delivery['from_email'],
+					'name' => $delivery['from_name']
+				],
+				'content' => [[
+					'type' => 'text/html',
+					'value' => $delivery['message']
+				]]
+			];
 			
-			$json_response = json_decode($response);
-			if ($json_response->message == "success") $successful = 1;
+			$curl_handle = curl_init($sendgrid_api_url);
+			
+			curl_setopt_array($curl_handle, [
+				CURLOPT_POST => true,
+				CURLOPT_POSTFIELDS => json_encode($sendgrid_payload),
+				CURLOPT_HTTPHEADER => [
+					"content-type: application/json",
+					"Authorization: Bearer ".AppSettings::getParam('sendgrid_api_key'),
+				],
+				CURLOPT_RETURNTRANSFER => true
+			]);
+			
+			$sendgrid_response_raw = curl_exec($curl_handle);
+			$sendgrid_response_code = curl_getinfo($curl_handle, CURLINFO_HTTP_CODE);
+			curl_close($curl_handle);
+			
+			if ($sendgrid_response_code == 202) $successful = 1;
 			else $successful = 0;
+			
+			$sendgrid_response = json_decode($sendgrid_response_raw);
+			$save_sendgrid_response = json_encode([
+				'http_code' => $sendgrid_response_code,
+				'response' => $sendgrid_response
+			], JSON_PRETTY_PRINT);
 			
 			$app->run_query("UPDATE async_email_deliveries SET time_delivered=:time_delivered, successful=:successful, sendgrid_response=:sendgrid_response WHERE delivery_id=:delivery_id;", [
 				'time_delivered' => time(),
 				'successful' => $successful,
-				'sendgrid_response' => $response,
+				'sendgrid_response' => $save_sendgrid_response,
 				'delivery_id' => $delivery['delivery_id']
 			]);
 			
-			echo "response from Sendgrid was: ".$response;
+			echo $save_sendgrid_response."\n";
 		}
 		else {
 			echo "Not delivering the email, maybe it was already delivered.\n";
