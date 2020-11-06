@@ -744,35 +744,37 @@ if ($thisuser && $game) {
 		<div id="tabcontent0" class="tabcontent">
 			<div class="panel panel-default">
 				<div class="panel-heading">
-					<div class="panel-title">
+					<div class="panel-title" style="overflow: hidden; line-height: 200%;">
 						Play Now
 						
-						<div id="change_user_game" style="margin-top: -3px;">
-							<select id="select_user_game" class="form-control input-sm" onchange="thisPageManager.change_user_game();">
-								<?php
-								$user_games_by_game = $app->run_query("SELECT * FROM user_games WHERE user_id=:user_id AND game_id=:game_id ORDER BY account_id ASC;", [
-									'user_id' => $thisuser->db_user['user_id'],
-									'game_id' => $game->db_game['game_id']
-								]);
-								if ($user_games_by_game->rowCount() <= 5) $user_game_show_balances = true;
-								else $user_game_show_balances = false;
-								
-								while ($db_user_game = $user_games_by_game->fetch()) {
-									echo "<option ";
-									if ($db_user_game['user_game_id'] == $user_game['user_game_id']) echo "selected=\"selected\" ";
-									echo "value=\"".$db_user_game['user_game_id']."\">Account #".$db_user_game['account_id'];
-									if ($user_game_show_balances) echo " &nbsp;&nbsp; ".$app->format_bignum(($game->account_balance($db_user_game['account_id'])+$game->user_pending_bets($db_user_game))/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_abbreviation'];
-									echo "</option>\n";
-								}
-								?>
-								<option value="new">Create a new account</option>
-							</select>
-						</div>
-						<div style="display: inline-block; float: right; margin-top: -3px;">
-							<select class="form-control input-sm" id="net_risk_view">
-								<option value="0">Show each bet</option>
-								<option value="1"<?php if ($user_game['net_risk_view']) echo ' selected="selected"'; ?>>Show net risk by option</option>
-							</select>
+						<div style="display: inline-block; float: right;">
+							<div id="change_user_game">
+								<select id="select_user_game" class="form-control input-sm" onchange="thisPageManager.change_user_game();">
+									<?php
+									$user_games_by_game = $app->run_query("SELECT * FROM user_games WHERE user_id=:user_id AND game_id=:game_id ORDER BY account_id ASC;", [
+										'user_id' => $thisuser->db_user['user_id'],
+										'game_id' => $game->db_game['game_id']
+									]);
+									if ($user_games_by_game->rowCount() <= 5) $user_game_show_balances = true;
+									else $user_game_show_balances = false;
+									
+									while ($db_user_game = $user_games_by_game->fetch()) {
+										echo "<option ";
+										if ($db_user_game['user_game_id'] == $user_game['user_game_id']) echo "selected=\"selected\" ";
+										echo "value=\"".$db_user_game['user_game_id']."\">Account #".$db_user_game['account_id'];
+										if ($user_game_show_balances) echo " &nbsp;&nbsp; ".$app->format_bignum(($game->account_balance($db_user_game['account_id'])+$game->user_pending_bets($db_user_game))/pow(10, $game->db_game['decimal_places']))." ".$game->db_game['coin_abbreviation'];
+										echo "</option>\n";
+									}
+									?>
+									<option value="new">Create a new account</option>
+								</select>
+							</div>
+							<div style="display: inline-block; float: right;">
+								<select class="form-control input-sm" id="net_risk_view">
+									<option value="0">Show each bet</option>
+									<option value="1"<?php if ($user_game['net_risk_view']) echo ' selected="selected"'; ?>>Show net risk by option</option>
+								</select>
+							</div>
 						</div>
 					</div>
 				</div>
