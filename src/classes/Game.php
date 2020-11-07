@@ -2656,7 +2656,7 @@ class Game {
 						'blockchain_id' => $this->blockchain->db_blockchain['blockchain_id']
 					])->fetch();
 					
-					if ($next_spend_block) {
+					if ($next_spend_block && !empty($next_spend_block['block_id'])) {
 						if ($next_spend_block['block_id'] < $next_required_block_id) $next_required_block_id = $next_spend_block['block_id'];
 					}
 					
@@ -2665,7 +2665,7 @@ class Game {
 						'block_height' => $block_height
 					])->fetch();
 					
-					if ($next_event_final_block) {
+					if ($next_event_final_block && !empty($next_event_final_block['event_final_block'])) {
 						if ($next_event_final_block['event_final_block'] < $next_required_block_id) $next_required_block_id = $next_event_final_block['event_final_block'];
 					}
 					
@@ -2674,7 +2674,7 @@ class Game {
 						'block_height' => $block_height
 					])->fetch();
 					
-					if ($next_event_payout_block) {
+					if ($next_event_payout_block && !empty($next_event_payout_block['event_payout_block'])) {
 						if ($next_event_payout_block['event_payout_block'] < $next_required_block_id) $next_required_block_id = $next_event_payout_block['event_payout_block'];
 					}
 					
