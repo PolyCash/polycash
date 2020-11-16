@@ -299,9 +299,10 @@ else {
 											'event_starting_time' => $event_starting_time,
 											'event_final_time' => $event_final_time,
 											'event_payout_time' => $event_payout_time,
+											'option_name' => 'team',
+											'option_name_plural' => 'teams'
 										];
-										$gde_ins_q = "INSERT INTO game_defined_events SET game_id=:game_id, sport_entity_id=:sport_entity_id, league_entity_id=:league_entity_id, external_identifier=:external_identifier, payout_rate=:payout_rate, outcome_index=:outcome_index, event_index=:event_index, event_name=:event_name, event_starting_time=:event_starting_time, event_final_time=:event_final_time, event_payout_time=:event_payout_time, option_name='team', option_name_plural='teams';";
-										$app->run_query($gde_ins_q, $gde_ins_params);
+										$app->run_insert_query("game_defined_events", $gde_ins_params);
 										
 										$gdo_home_params = [
 											'game_id' => $game->db_game['game_id'],
@@ -319,10 +320,9 @@ else {
 											'entity_id' => $away_entity['entity_id'],
 											'target_probability' => $away_target_prob ? $away_target_prob : null
 										];
-										$gdo_ins_q = "INSERT INTO game_defined_options SET game_id=:game_id, event_index=:event_index, option_index=:option_index, name=:name, entity_id=:entity_id, target_probability=:target_probability;";
 										
-										$app->run_query($gdo_ins_q, $gdo_home_params);
-										$app->run_query($gdo_ins_q, $gdo_away_params);
+										$app->run_insert_query("game_defined_options", $gdo_home_params);
+										$app->run_insert_query("game_defined_options", $gdo_away_params);
 										
 										if ($ties_allowed) {
 											$gdo_tie_params = [

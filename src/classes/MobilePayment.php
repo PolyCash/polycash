@@ -30,14 +30,15 @@ class MobilePayment {
 	}
 	
 	public function create() {
-		$this->app->run_query("INSERT INTO mobile_payments SET currency_id=:currency_id, amount=:amount, payment_status='pending', time_created=:time_created, phone_number=:phone_number, first_name=:first_name, last_name=:last_name, payment_key=:payment_key;", [
+		$this->app->run_insert_query("mobile_payments", [
 			'currency_id' => $this->currency_id,
 			'amount' => $this->amount,
 			'time_created' => time(),
 			'phone_number' => $this->phone_number,
 			'first_name' => $this->first_name,
 			'last_name' => $this->last_name,
-			'payment_key' => $this->app->random_string(16)
+			'payment_key' => $this->app->random_string(16),
+			'payment_status' => 'pending'
 		]);
 		
 		$this->payment_id = $this->app->last_insert_id();

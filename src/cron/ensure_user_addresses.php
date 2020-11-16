@@ -68,7 +68,7 @@ if ($app->running_as_admin()) {
 					$num_sets_needed = $buffer_address_sets-count($game_addrsets);
 					
 					for ($new_addrset_i=0; $new_addrset_i<$num_sets_needed; $new_addrset_i++) {
-						$app->run_query("INSERT INTO address_sets SET game_id=:game_id;", [
+						$app->run_insert_query("address_sets", [
 							'game_id' => $running_games[$game_i]->db_game['game_id']
 						]);
 					}

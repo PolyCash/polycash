@@ -40,12 +40,7 @@ class Game {
 	
 	public static function create_game(&$blockchain, $params) {
 		$params['blockchain_id'] = $blockchain->db_blockchain['blockchain_id'];
-		$new_game_q = "INSERT INTO games SET ";
-		foreach ($params as $var => $val) {
-			$new_game_q .= $var."=:".$var.", ";
-		}
-		$new_game_q = substr($new_game_q, 0, -2).";";
-		$blockchain->app->run_query($new_game_q, $params);
+		$blockchain->app->run_insert_query("games", $params);
 		$game_id = $blockchain->app->last_insert_id();
 		
 		return new Game($blockchain, $game_id);
@@ -103,16 +98,15 @@ class Game {
 					'tx_hash' => $new_tx_hash,
 					'transaction_desc' => $type,
 					'amount' => $amount,
-					'time_created' => time()
+					'time_created' => time(),
+					'has_all_inputs' => 1,
+					'has_all_outputs' => 1
 				];
-				$new_tx_q = "INSERT INTO transactions SET blockchain_id=:blockchain_id, fee_amount=:fee_amount, has_all_inputs=1, has_all_outputs=1, num_inputs=:num_inputs, num_outputs=:num_outputs, tx_hash=:tx_hash, transaction_desc=:transaction_desc, amount=:amount";
 				if ($block_id !== false) {
-					$new_tx_q .= ", block_id=:block_id, round_id=:round_id";
 					$new_tx_params['block_id'] = $block_id;
 					$new_tx_params['round_id'] = $this->block_to_round($block_id);
 				}
-				$new_tx_q .= ", time_created=:time_created;";
-				$this->blockchain->app->run_query($new_tx_q, $new_tx_params);
+				$this->blockchain->app->run_query("transactions", $new_tx_params);
 				$transaction_id = $this->blockchain->app->last_insert_id();
 			}
 			
@@ -208,15 +202,14 @@ class Game {
 								'is_receiver' => ($first_passthrough_index !== false && $address['is_destroy_address']+$address['is_separator_address']+$address['is_passthrough_address'] == 0) ? 1 : 0,
 								'address_id' => $address_id,
 								'option_index' => $address['option_index'],
-								'transaction_id' => $transaction_id,
-								'amount' => $amounts[$out_index]
+								'create_transaction_id' => $transaction_id,
+								'amount' => $amounts[$out_index],
+								'script_type' => 'pubkeyhash',
+								'spend_status' => 'unconfirmed'
 							];
-							$new_output_q = "INSERT INTO transaction_ios SET blockchain_id=:blockchain_id, script_type='pubkeyhash', spend_status='unconfirmed', out_index=:out_index, ";
 							if (!empty($address['user_id'])) {
-								$new_output_q .= "user_id=:user_id, ";
 								$new_output_params['user_id'] = $address['user_id'];
 							}
-							$new_output_q .= "is_destroy=:is_destroy, is_separator=:is_separator, is_passthrough=:is_passthrough, is_receiver=:is_receiver, address_id=:address_id, option_index=:option_index, ";
 							
 							if ($block_id !== false) {
 								if ($input_sum == 0) $output_cbd = 0;
@@ -225,18 +218,15 @@ class Game {
 								if ($input_sum == 0) $output_crd = 0;
 								else $output_crd = floor($coin_rounds_destroyed*($amounts[$out_index]/$input_sum));
 								
-								$new_output_q .= "coin_blocks_destroyed=:output_cbd, coin_rounds_destroyed=:output_crd, ";
-								$new_output_params['output_cbd'] = $output_cbd;
-								$new_output_params['output_crd'] = $output_crd;
+								$new_output_params['coin_blocks_destroyed'] = $output_cbd;
+								$new_output_params['coin_rounds_destroyed'] = $output_crd;
 							}
 							if ($block_id !== false) {
-								$new_output_q .= "create_block_id=:block_id, create_round_id=:round_id, ";
-								$new_output_params['block_id'] = $block_id;
-								$new_output_params['round_id'] = $this->block_to_round($block_id);
+								$new_output_params['create_block_id'] = $block_id;
+								$new_output_params['create_round_id'] = $this->block_to_round($block_id);
 							}
-							$new_output_q .= "create_transaction_id=:transaction_id, amount=:amount;";
 							
-							$this->blockchain->app->run_query($new_output_q, $new_output_params);
+							$this->blockchain->app->run_insert_query("transaction_ios", $new_output_params);
 							$created_input_ids[count($created_input_ids)] = $this->blockchain->app->last_insert_id();
 						}
 						
@@ -964,18 +954,13 @@ class Game {
 			'invitation_key' => strtolower($this->blockchain->app->random_string(32)),
 			'time_created' => time()
 		];
-		$new_invitation_q = "INSERT INTO game_invitations SET game_id=:game_id";
 		if ($inviter_id > 0) {
-			$new_invitation_q .= ", inviter_id=:inviter_id";
 			$new_invitation_params['inviter_id'] = $inviter_id;
 		}
-		$new_invitation_q .= ", invitation_key=:invitation_key, time_created=:time_created";
 		if ($user_id) {
-			$new_invitation_q .= ", used_user_id=:user_id";
-			$new_invitation_params['user_id'] = $user_id;
+			$new_invitation_params['used_user_id'] = $user_id;
 		}
-		$new_invitation_q .= ";";
-		$this->blockchain->app->run_query($new_invitation_q, $new_invitation_params);
+		$this->blockchain->app->run_insert_query("game_invitations", $new_invitation_params);
 		$invitation_id = $this->blockchain->app->last_insert_id();
 		
 		$invitation = $this->blockchain->app->run_query("SELECT * FROM game_invitations WHERE invitation_id=:invitation_id;", ['invitation_id'=>$invitation_id])->fetch();
@@ -1121,15 +1106,19 @@ class Game {
 					$colored_coins = floor($colored_coins_generated*$non_escrow_io['amount']/$non_escrowed_coins);
 					$sum_colored_coins += $colored_coins;
 					
-					$this->blockchain->app->run_query("INSERT INTO transaction_game_ios SET io_id=:io_id, address_id=:address_id, game_id=:game_id, is_coinbase=0, colored_amount=:amount, create_block_id=:block_id, create_round_id=:round_id, coin_blocks_destroyed=0, coin_rounds_destroyed=0, is_resolved=1, game_out_index=:game_out_index, game_io_index=:game_io_index;", [
+					$this->blockchain->app->run_insert_query("transaction_game_ios", [
 						'io_id' => $non_escrow_io['io_id'],
 						'address_id' => $non_escrow_io['address_id'],
 						'game_id' => $this->db_game['game_id'],
-						'amount' => $colored_coins,
-						'block_id' => $transaction['block_id'],
-						'round_id' => $create_round_id,
+						'colored_amount' => $colored_coins,
+						'create_block_id' => $transaction['block_id'],
+						'create_round_id' => $create_round_id,
 						'game_out_index' => $game_out_index,
-						'game_io_index' => $game_io_index
+						'game_io_index' => $game_io_index,
+						'is_coinbase' => 0,
+						'coin_blocks_destroyed' => 0,
+						'coin_rounds_destroyed' => 0,
+						'is_resolved' => 1
 					]);
 					
 					$game_io_index++;
@@ -1487,7 +1476,7 @@ class Game {
 				if (empty($used_option_ids[$option_list[$option_index]['option_id']])) {
 					$points = round($weight_map[$i]*rand(1, 5));
 					
-					$this->blockchain->app->run_query("INSERT INTO strategy_round_allocations SET strategy_id=:strategy_id, round_id=:round_id, option_id=:option_id, points=:points;", [
+					$this->blockchain->app->run_insert_query("strategy_round_allocations", [
 						'strategy_id' => $strategy['strategy_id'],
 						'round_id' => $round_id,
 						'option_id' => $option_list[$option_index]['option_id'],
@@ -1958,16 +1947,13 @@ class Game {
 							'option_max_width' => $this->db_game['default_option_max_width'],
 							'searchtext' => $event_searchtext
 						];
-						$new_event_q = "INSERT INTO events SET game_id=:game_id, event_index=:event_index, event_starting_block=:event_starting_block, event_final_block=:event_final_block, event_outcome_block=:event_outcome_block, event_payout_block=:event_payout_block, payout_rule=:payout_rule, payout_rate=:payout_rate, event_name=:event_name, option_name=:option_name, option_name_plural=:option_name_plural, num_options=:num_options, option_max_width=:option_max_width, searchtext=:searchtext";
 						
 						foreach ($optional_event_fields as $optional_event_field) {
 							if ((string)$game_defined_event[$optional_event_field] != "") {
-								$new_event_q .= ", ".$optional_event_field."=:".$optional_event_field;
 								$new_event_params[$optional_event_field] = $game_defined_event[$optional_event_field];
 							}
 						}
-						$new_event_q .= ";";
-						$this->blockchain->app->run_query($new_event_q, $new_event_params);
+						$this->blockchain->app->run_insert_query("events", $new_event_params);
 						$event_id = $this->blockchain->app->last_insert_id();
 						
 						$option_i = 0;
@@ -1986,8 +1972,6 @@ class Game {
 								'entity_id' => empty($game_defined_option['entity_id']) ? null : $game_defined_option['entity_id'],
 								'target_probability' => empty($game_defined_option['target_probability']) ? null : $game_defined_option['target_probability']
 							];
-							$new_option_q = "INSERT INTO options SET event_id=:event_id, name=:name, vote_identifier=:vote_identifier, option_index=:option_index, event_option_index=:event_option_index, entity_id=:entity_id, target_probability=:target_probability, image_id=:image_id";
-							
 							$new_option_params['image_id'] = null;
 							if (!empty($game_defined_option['entity_id'])) {
 								$entity = $this->blockchain->app->fetch_entity_by_id($game_defined_option['entity_id']);
@@ -1996,7 +1980,7 @@ class Game {
 								}
 							}
 							
-							$this->blockchain->app->run_query($new_option_q, $new_option_params);
+							$this->blockchain->app->run_insert_query("options", $new_option_params);
 							$option_i++;
 						}
 						
@@ -2282,10 +2266,12 @@ class Game {
 				$msg = "Creating new game block #".$block_height."\n";
 				$log_text .= $msg;
 				
-				$this->blockchain->app->run_query("INSERT INTO game_blocks SET game_id=:game_id, block_id=:block_id, locally_saved=0, num_transactions=0, time_created=:time_created;", [
+				$this->blockchain->app->run_insert_query("game_blocks", [
 					'game_id' => $this->db_game['game_id'],
 					'block_id' => $block_height,
-					'time_created' => time()
+					'time_created' => time(),
+					'locally_saved' => 0,
+					'num_transactions' => 0
 				]);
 				$game_block_id = $this->blockchain->app->last_insert_id();
 				
@@ -3238,10 +3224,10 @@ class Game {
 								$in_io_i++;
 							}
 							
-							$this->blockchain->app->run_query("INSERT INTO game_sellouts SET game_id=:game_id, in_block_id=:block_id, in_tx_hash=:tx_hash, color_amount_in=:color_amount_in, exchange_rate=:exchange_rate, amount_in=:amount_in, amount_out=:amount_out, out_amounts=:out_amounts, fee_amount=:fee_amount;", [
+							$this->blockchain->app->run_insert_query("game_sellouts", [
 								'game_id' => $this->db_game['game_id'],
-								'block_id' => $block_id,
-								'tx_hash' => $transaction['tx_hash'],
+								'in_block_id' => $block_id,
+								'in_tx_hash' => $transaction['tx_hash'],
 								'color_amount_in' => $coloredcoins_destroyed,
 								'exchange_rate' => $exchange_rate,
 								'amount_in' => $coins_into_escrow,
@@ -3738,7 +3724,7 @@ class Game {
 			]);
 			
 			if ($game_peer_r->rowCount() == 0) {
-				$this->blockchain->app->run_query("INSERT INTO game_peers SET game_id=:game_id, peer_id=:peer_id;", [
+				$this->blockchain->app->run_insert_query("game_peers", [
 					'game_id' => $this->db_game['game_id'],
 					'peer_id' => $peer['peer_id']
 				]);

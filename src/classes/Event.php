@@ -957,7 +957,7 @@ class Event {
 				if ($rand_prob <= $score_prob) $score = 1;
 				else $score = 0;
 				
-				$this->game->blockchain->app->run_query("INSERT INTO option_blocks SET rand_chars=:rand_chars, rand_prob=:rand_prob, score=:score, option_id=:option_id, block_height=:block_height;", [
+				$this->game->blockchain->app->run_insert_query("option_blocks", [
 					'rand_chars' => $rand_chars,
 					'rand_prob' => $rand_prob,
 					'score' => $score,

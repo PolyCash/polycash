@@ -11,18 +11,10 @@ class EscrowAmount {
 			'escrow_position' => $escrow_position
 		];
 		
-		$insert_q = "INSERT INTO ".$table_name." SET game_id=:game_id, currency_id=:currency_id, escrow_type=:escrow_type, escrow_position=:escrow_position";
+		if ($escrow_amount_arr['type'] == "dynamic") $insert_params['relative_amount'] = $escrow_amount_arr['relative_amount'];
+		else $insert_params['amount'] = $escrow_amount_arr['amount'];
 		
-		if ($escrow_amount_arr['type'] == "dynamic") {
-			$insert_params['relative_amount'] = $escrow_amount_arr['relative_amount'];
-			$insert_q .= ", relative_amount=:relative_amount";
-		}
-		else {
-			$insert_params['amount'] = $escrow_amount_arr['amount'];
-			$insert_q .= ", amount=:amount";
-		}
-		
-		$app->run_query($insert_q, $insert_params);
+		$app->run_insert_query($table_name, $insert_params);
 	}
 	
 	public static function fetch_escrow_amounts_in_game(&$game, $defined_or_actual) {

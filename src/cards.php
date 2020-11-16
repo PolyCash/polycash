@@ -116,11 +116,13 @@ if (!empty($_REQUEST['action'])) {
 										'redeem_url' => AppSettings::getParam('base_url'),
 										'text_color' => empty($fv_currency['default_design_text_color']) ? null : $fv_currency['default_design_text_color']
 									];
-									$new_card_design_q = "INSERT INTO card_designs SET image_id=:image_id, denomination_id=:denomination_id, purity=:purity, display_name=:display_name, display_title=:display_title, display_email=:display_email, display_pnum=:display_pnum, time_created=:time_created, user_id=:user_id, redeem_url=:redeem_url, text_color=:text_color;";
-									$app->run_query($new_card_design_q, $new_card_params);
+									$app->run_insert_query("card_designs", $new_card_params);
 									$design_id = $app->last_insert_id();
 									
-									$app->run_query("INSERT INTO card_printrequests SET peer_id=:peer_id, secrets_present=1, design_id=:design_id, user_id=:user_id, how_many=:how_many, print_status='not-printed', pay_status='not-received', time_created=:time_created;", [
+									$app->run_insert_query("card_printrequests", [
+										'secrets_present' => 1,
+										'print_status' => 'not-printed',
+										'pay_status' => 'not-received',
 										'peer_id' => $this_peer['peer_id'],
 										'design_id' => $design_id,
 										'user_id' => $thisuser->db_user['user_id'],
@@ -145,8 +147,9 @@ if (!empty($_REQUEST['action'])) {
 										$card_id = $i+$first_id;
 										$secret = $app->random_number(16);
 										$secret_hash = $app->card_secret_to_hash($secret);
-										$app->run_query("INSERT INTO cards SET design_id=:design_id, peer_id=:peer_id, purity=:purity, group_id=:group_id, secret=:secret, secret_hash=:secret_hash, peer_card_id=:peer_card_id, mint_time=:mint_time, currency_id=:currency_id, fv_currency_id=:fv_currency_id, amount=:amount, status='issued', io_tx_hash=:io_tx_hash, io_out_index=:io_out_index;", [
+										$app->run_insert_query("cards", [
 											'design_id' => $design_id,
+											'status' => 'issued',
 											'peer_id' => $this_peer['peer_id'],
 											'purity' => $purity,
 											'group_id' => $card_group_id,
@@ -462,13 +465,10 @@ if (!empty($_REQUEST['action'])) {
 								'currency_id' => $currency['currency_id'],
 								'fv_currency_id' => $fv_currency['currency_id']
 							];
-							$new_card_q = "INSERT INTO cards SET peer_id=:peer_id, currency_id=:currency_id, fv_currency_id=:fv_currency_id, ";
 							for ($j=0; $j<count($card_public_vars); $j++) {
-								$new_card_q .= $card_public_vars[$j]."=:".$card_public_vars[$j].", ";
 								$new_card_params[$card_public_vars[$j]] = $import_card[$card_public_vars[$j]];
 							}
-							$new_card_q = substr($new_card_q, 0, strlen($new_card_q)-2).";";
-							$app->run_query($new_card_q, $new_card_params);
+							$app->run_insert_query("cards", $new_card_params);
 							
 							$add_count++;
 						}

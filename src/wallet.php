@@ -151,7 +151,7 @@ if ($thisuser) {
 				
 				if ($payout_address != "") {
 					$base_currency = $app->fetch_currency_by_id($game->blockchain->currency_id());
-					$app->run_query("INSERT INTO external_addresses SET user_id=:user_id, currency_id=:currency_id, address=:address, time_created=:time_created;", [
+					$app->run_insert_query("external_addresses", [
 						'user_id' => $thisuser->db_user['user_id'],
 						'currency_id' => $base_currency['currency_id'],
 						'address' => $payout_address,
@@ -357,7 +357,7 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 		if (!$user_strategy || $user_strategy['user_id'] != $thisuser->db_user['user_id']) die("Invalid strategy ID");
 	}
 	else {
-		$app->run_query("INSERT INTO user_strategies SET user_id=:user_id, game_id=:game_id;", [
+		$app->run_insert_query("user_strategies", [
 			'user_id' => $thisuser->db_user['user_id'],
 			'game_id' => $game->db_game['game_id']
 		]);
@@ -428,7 +428,7 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 			foreach ($entities_by_game as $entity) {
 				$entity_pct = intval($_REQUEST['entity_pct_'.$entity['entity_id']]);
 				if ($entity_pct > 0) {
-					$app->run_query("INSERT INTO user_strategy_entities SET strategy_id=:strategy_id, entity_id=:entity_id, pct_points=:pct_points;", [
+					$app->run_insert_query("user_strategy_entities", [
 						'strategy_id' => $user_strategy['strategy_id'],
 						'entity_id' => $entity['entity_id'],
 						'pct_points' => $entity_pct
@@ -451,7 +451,7 @@ if ($thisuser && ($_REQUEST['action'] == "save_voting_strategy" || $_REQUEST['ac
 			
 			if (isset($_REQUEST['vote_on_block_'.$block]) && $_REQUEST['vote_on_block_'.$block] == "1") {
 				if (!$strategy_block) {
-					$app->run_query("INSERT INTO user_strategy_blocks SET strategy_id=:strategy_id, block_within_round=:block_within_round;", [
+					$app->run_insert_query("user_strategy_blocks", [
 						'strategy_id' => $user_strategy['strategy_id'],
 						'block_within_round' => $block
 					]);

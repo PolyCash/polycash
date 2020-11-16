@@ -150,7 +150,7 @@ class GameDefinition {
 		$existing_def = self::get_game_definition_by_hash($app, $game_def_hash);
 		
 		if (!$existing_def) {
-			$app->run_query("INSERT INTO game_definitions SET definition_hash=:definition_hash, definition=:definition;", [
+			$app->run_insert_query("game_definitions", [
 				'definition_hash' => $game_def_hash,
 				'definition' => self::game_def_to_text($game_def)
 			]);
@@ -194,7 +194,6 @@ class GameDefinition {
 		self::check_set_game_definition($game->blockchain->app, $initial_hash, $initial_game_def);
 		self::check_set_game_definition($game->blockchain->app, $final_hash, $final_game_def);
 		
-		$new_migration_q = "INSERT INTO game_definition_migrations SET game_id=:game_id, user_id=:user_id, migration_time=:migration_time, migration_type=:migration_type, internal_params=:internal_params, from_hash=:from_hash, to_hash=:to_hash;";
 		$new_migration_params = [
 			'game_id' => $game->db_game['game_id'],
 			'user_id' => $user_id,
@@ -205,7 +204,7 @@ class GameDefinition {
 			'to_hash' => $final_hash,
 		];
 		
-		$game->blockchain->app->run_query($new_migration_q, $new_migration_params);
+		$game->blockchain->app->run_insert_query("game_definition_migrations", $new_migration_params);
 		
 		return $game->blockchain->app->run_query("SELECT * FROM game_definition_migrations WHERE migration_id=:migration_id;", ['migration_id' => $game->blockchain->app->last_insert_id()])->fetch();
 	}
@@ -361,11 +360,16 @@ class GameDefinition {
 						$url_identifier = "private-chain-".$chain_id;
 						$chain_pow_reward = 25*pow(10,$decimal_places);
 						
-						$app->run_query("INSERT INTO blockchains SET online=1, p2p_mode='none', blockchain_name=:blockchain_name, url_identifier=:url_identifier, coin_name='chaincoin', coin_name_plural='chaincoins', seconds_per_block=30, decimal_places=:decimal_places, initial_pow_reward=:initial_pow_reward;", [
+						$app->run_insert_query("blockchains", [
 							'blockchain_name' => "Private Chain ".$chain_id,
 							'url_identifier' => $url_identifier,
 							'decimal_places' => $decimal_places,
-							'initial_pow_reward' => $chain_pow_reward
+							'initial_pow_reward' => $chain_pow_reward,
+							'online' => 1,
+							'p2p_mode' => 'none',
+							'coin_name' => 'chaincoin',
+							'coin_name_plural' => 'chaincoins',
+							'seconds_per_block' => 30
 						]);
 						$blockchain_id = $app->last_insert_id();
 						
